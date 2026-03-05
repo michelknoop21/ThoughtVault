@@ -1,0 +1,53 @@
+#!/bin/bash
+# Auto version bump + version branch + push on commits to main
+# Skips if:
+#   - Not on main branch
+#   - Commit message is already a version bump (prevents infinite loop)
+#   - VERSION_BUMP_IN_PROGRESS env var is set
+
+set -e
+
+BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+if [ "$BRANCH" != "main" ]; then
+    exit 0
+fi
+
+LAST_MSG=$(git log -1 --pretty=%s)
+if echo "$LAST_MSG" | grep -q "^chore(release):"; then
+    exit 0
+fi
+
+if [ "$VERSION_BUMP_IN_PROGRESS" = "1" ]; then
+    exit 0
+fi
+
+export VERSION_BUMP_IN_PROGRESS=1
+
+VERSION_FILE="$(git rev-parse --show-toplevel)/VERSION"
+if [ ! -f "$VERSION_FILE" ]; then
+    echo "VERSION file not found, skipping version bump"
+    exit 0
+fi
+
+CURRENT=$(cat "$VERSION_FILE" | tr -d '[:space:]')
+MAJOR=$(echo "$CURRENT" | cut -d. -f1)
+MINOR=$(echo "$CURRENT" | cut -d. -f2)
+PATCH=$(echo "$CURRENT" | cut -d. -f3)
+
+NEW_PATCH=$((PATCH + 1))
+NEW_VERSION="${MAJOR}.${MINOR}.${NEW_PATCH}"
+
+echo "$NEW_VERSION" > "$VERSION_FILE"
+
+git add "$VERSION_FILE"
+git commit -m "chore(release): ${NEW_VERSION}"
+
+git tag "v${NEW_VERSION}"
+
+git branch "v${NEW_VERSION}"
+
+git push origin main --tags 2>/dev/null || echo "⚠️  Auto-push failed (no network?). Run: git push origin main --tags && git push origin v${NEW_VERSION}"
+git push origin "v${NEW_VERSION}" 2>/dev/null || true
+
+echo "✅ Version bumped: ${CURRENT} → ${NEW_VERSION}"
+echo "✅ Branch v${NEW_VERSION} created and pushed"

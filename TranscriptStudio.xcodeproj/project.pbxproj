@@ -1,0 +1,708 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		AA000001 /* TranscriptStudioApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000001 /* TranscriptStudioApp.swift */; };
+		AA000002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000002 /* ContentView.swift */; };
+		AA000003 /* Color+Brand.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000003 /* Color+Brand.swift */; };
+		AA000004 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000004 /* Theme.swift */; };
+		AA000005 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000005 /* Models.swift */; };
+		AA000006 /* Analytics.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000006 /* Analytics.swift */; };
+		AA000007 /* APIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000007 /* APIService.swift */; };
+		AA000008 /* AudioRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000008 /* AudioRecorder.swift */; };
+		AA000009 /* BiometricService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000009 /* BiometricService.swift */; };
+		AA000010 /* CalendarService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000010 /* CalendarService.swift */; };
+		AA000011 /* CrashReporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000011 /* CrashReporter.swift */; };
+		AA000012 /* DebugLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000012 /* DebugLogger.swift */; };
+		AA000013 /* KeychainService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000013 /* KeychainService.swift */; };
+		AA000014 /* LLMService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000014 /* LLMService.swift */; };
+		AA000015 /* NetworkMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000015 /* NetworkMonitor.swift */; };
+		AA000016 /* OfflineQueue.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000016 /* OfflineQueue.swift */; };
+		AA000017 /* OnDeviceTranscriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000017 /* OnDeviceTranscriber.swift */; };
+		AA000018 /* SystemAudioCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000018 /* SystemAudioCapture.swift */; };
+		AA000019 /* AuthViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000019 /* AuthViewModel.swift */; };
+		AA000020 /* RecordingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000020 /* RecordingViewModel.swift */; };
+		AA000021 /* TranscriptsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000021 /* TranscriptsViewModel.swift */; };
+		AA000022 /* AccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000022 /* AccountView.swift */; };
+		AA000023 /* AdminView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000023 /* AdminView.swift */; };
+		AA000024 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000024 /* HomeView.swift */; };
+		AA000025 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000025 /* LoginView.swift */; };
+		AA000026 /* NotuleResultView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000026 /* NotuleResultView.swift */; };
+		AA000027 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000027 /* OnboardingView.swift */; };
+		AA000028 /* ProcessingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000028 /* ProcessingView.swift */; };
+		AA000029 /* ProfilesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000029 /* ProfilesView.swift */; };
+		AA000030 /* RecordingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000030 /* RecordingView.swift */; };
+		AA000031 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000031 /* SettingsView.swift */; };
+		AA000032 /* TranscriptsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000032 /* TranscriptsView.swift */; };
+		AA000033 /* OnboardingViewiOSStub.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000033 /* OnboardingViewiOSStub.swift */; };
+		AA000034 /* FloatingWidgetPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000034 /* FloatingWidgetPanel.swift */; };
+		AA000035 /* CallAlertView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000035 /* CallAlertView.swift */; };
+		AA000036 /* ProfilePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000036 /* ProfilePicker.swift */; };
+		AA000037 /* RecordingWidgetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000037 /* RecordingWidgetView.swift */; };
+		AA000038 /* StatusBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000038 /* StatusBadge.swift */; };
+		AA000039 /* TranscriptCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000039 /* TranscriptCard.swift */; };
+		AA000040 /* WaveformView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000040 /* WaveformView.swift */; };
+		AA000041 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = FA000041 /* Localizable.strings */; };
+		AA000042 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = FA000042 /* Localizable.strings */; };
+		AA000043 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = FA000043 /* PrivacyInfo.xcprivacy */; };
+		AA000044 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = FA000046 /* Assets.xcassets */; };
+		AB000001 /* TranscriptStudioTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000001 /* TranscriptStudioTests.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		C97D23FC2F597ACE00F5A1D8 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = PP000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = TT000001;
+			remoteInfo = TranscriptStudio;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		FA000001 /* TranscriptStudioApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptStudioApp.swift; sourceTree = "<group>"; };
+		FA000002 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		FA000003 /* Color+Brand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Color+Brand.swift"; sourceTree = "<group>"; };
+		FA000004 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		FA000005 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		FA000006 /* Analytics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Analytics.swift; sourceTree = "<group>"; };
+		FA000007 /* APIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIService.swift; sourceTree = "<group>"; };
+		FA000008 /* AudioRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioRecorder.swift; sourceTree = "<group>"; };
+		FA000009 /* BiometricService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BiometricService.swift; sourceTree = "<group>"; };
+		FA000010 /* CalendarService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarService.swift; sourceTree = "<group>"; };
+		FA000011 /* CrashReporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrashReporter.swift; sourceTree = "<group>"; };
+		FA000012 /* DebugLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugLogger.swift; sourceTree = "<group>"; };
+		FA000013 /* KeychainService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainService.swift; sourceTree = "<group>"; };
+		FA000014 /* LLMService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMService.swift; sourceTree = "<group>"; };
+		FA000015 /* NetworkMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkMonitor.swift; sourceTree = "<group>"; };
+		FA000016 /* OfflineQueue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineQueue.swift; sourceTree = "<group>"; };
+		FA000017 /* OnDeviceTranscriber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnDeviceTranscriber.swift; sourceTree = "<group>"; };
+		FA000018 /* SystemAudioCapture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemAudioCapture.swift; sourceTree = "<group>"; };
+		FA000019 /* AuthViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthViewModel.swift; sourceTree = "<group>"; };
+		FA000020 /* RecordingViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingViewModel.swift; sourceTree = "<group>"; };
+		FA000021 /* TranscriptsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptsViewModel.swift; sourceTree = "<group>"; };
+		FA000022 /* AccountView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountView.swift; sourceTree = "<group>"; };
+		FA000023 /* AdminView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminView.swift; sourceTree = "<group>"; };
+		FA000024 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
+		FA000025 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
+		FA000026 /* NotuleResultView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotuleResultView.swift; sourceTree = "<group>"; };
+		FA000027 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		FA000028 /* ProcessingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessingView.swift; sourceTree = "<group>"; };
+		FA000029 /* ProfilesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfilesView.swift; sourceTree = "<group>"; };
+		FA000030 /* RecordingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingView.swift; sourceTree = "<group>"; };
+		FA000031 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		FA000032 /* TranscriptsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptsView.swift; sourceTree = "<group>"; };
+		FA000033 /* OnboardingViewiOSStub.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingViewiOSStub.swift; sourceTree = "<group>"; };
+		FA000034 /* FloatingWidgetPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloatingWidgetPanel.swift; sourceTree = "<group>"; };
+		FA000035 /* CallAlertView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CallAlertView.swift; sourceTree = "<group>"; };
+		FA000036 /* ProfilePicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfilePicker.swift; sourceTree = "<group>"; };
+		FA000037 /* RecordingWidgetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingWidgetView.swift; sourceTree = "<group>"; };
+		FA000038 /* StatusBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusBadge.swift; sourceTree = "<group>"; };
+		FA000039 /* TranscriptCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptCard.swift; sourceTree = "<group>"; };
+		FA000040 /* WaveformView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaveformView.swift; sourceTree = "<group>"; };
+		FA000041 /* Localizable.strings */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = Localizable.strings; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
+		FA000042 /* Localizable.strings */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = Localizable.strings; path = nl.lproj/Localizable.strings; sourceTree = "<group>"; };
+		FA000043 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		FA000044 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		FA000045 /* TranscriptStudio.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TranscriptStudio.entitlements; sourceTree = "<group>"; };
+		FA000046 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		FB000001 /* TranscriptStudioTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptStudioTests.swift; sourceTree = "<group>"; };
+		FC000001 /* TranscriptStudio.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TranscriptStudio.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		FC000002 /* TranscriptStudioTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TranscriptStudioTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		BP000003 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		BP000012 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		GG000000 /* TranscriptStudioApp */ = {
+			isa = PBXGroup;
+			children = (
+				GG000001 /* TranscriptStudio */,
+				GG000099 /* TranscriptStudioTests */,
+				GG000090 /* Products */,
+			);
+			name = TranscriptStudioApp;
+			sourceTree = "<group>";
+		};
+		GG000001 /* TranscriptStudio */ = {
+			isa = PBXGroup;
+			children = (
+				GG000010 /* App */,
+				GG000020 /* Extensions */,
+				GG000030 /* Models */,
+				GG000040 /* Services */,
+				GG000050 /* ViewModels */,
+				GG000060 /* Views */,
+				GG000070 /* Resources */,
+				FA000046 /* Assets.xcassets */,
+				FA000044 /* Info.plist */,
+				FA000045 /* TranscriptStudio.entitlements */,
+				FA000043 /* PrivacyInfo.xcprivacy */,
+			);
+			path = TranscriptStudio;
+			sourceTree = "<group>";
+		};
+		GG000010 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				FA000001 /* TranscriptStudioApp.swift */,
+				FA000002 /* ContentView.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		GG000020 /* Extensions */ = {
+			isa = PBXGroup;
+			children = (
+				FA000003 /* Color+Brand.swift */,
+				FA000004 /* Theme.swift */,
+			);
+			path = Extensions;
+			sourceTree = "<group>";
+		};
+		GG000030 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				FA000005 /* Models.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		GG000040 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				FA000006 /* Analytics.swift */,
+				FA000007 /* APIService.swift */,
+				FA000008 /* AudioRecorder.swift */,
+				FA000009 /* BiometricService.swift */,
+				FA000010 /* CalendarService.swift */,
+				FA000011 /* CrashReporter.swift */,
+				FA000012 /* DebugLogger.swift */,
+				FA000013 /* KeychainService.swift */,
+				FA000014 /* LLMService.swift */,
+				FA000015 /* NetworkMonitor.swift */,
+				FA000016 /* OfflineQueue.swift */,
+				FA000017 /* OnDeviceTranscriber.swift */,
+				FA000018 /* SystemAudioCapture.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		GG000050 /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				FA000019 /* AuthViewModel.swift */,
+				FA000020 /* RecordingViewModel.swift */,
+				FA000021 /* TranscriptsViewModel.swift */,
+			);
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		GG000060 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				FA000022 /* AccountView.swift */,
+				FA000023 /* AdminView.swift */,
+				FA000024 /* HomeView.swift */,
+				FA000025 /* LoginView.swift */,
+				FA000026 /* NotuleResultView.swift */,
+				FA000027 /* OnboardingView.swift */,
+				FA000028 /* ProcessingView.swift */,
+				FA000029 /* ProfilesView.swift */,
+				FA000030 /* RecordingView.swift */,
+				FA000031 /* SettingsView.swift */,
+				FA000032 /* TranscriptsView.swift */,
+				FA000033 /* OnboardingViewiOSStub.swift */,
+				FA000034 /* FloatingWidgetPanel.swift */,
+				GG000061 /* Components */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		GG000061 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				FA000035 /* CallAlertView.swift */,
+				FA000036 /* ProfilePicker.swift */,
+				FA000037 /* RecordingWidgetView.swift */,
+				FA000038 /* StatusBadge.swift */,
+				FA000039 /* TranscriptCard.swift */,
+				FA000040 /* WaveformView.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		GG000070 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				FA000041 /* Localizable.strings */,
+				FA000042 /* Localizable.strings */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		GG000090 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				FC000001 /* TranscriptStudio.app */,
+				FC000002 /* TranscriptStudioTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		GG000099 /* TranscriptStudioTests */ = {
+			isa = PBXGroup;
+			children = (
+				FB000001 /* TranscriptStudioTests.swift */,
+			);
+			path = TranscriptStudioTests;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		TT000001 /* TranscriptStudio */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = XC000010 /* Build configuration list for PBXNativeTarget "TranscriptStudio" */;
+			buildPhases = (
+				BP000001 /* Sources */,
+				BP000002 /* Resources */,
+				BP000003 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = TranscriptStudio;
+			productName = TranscriptStudio;
+			productReference = FC000001 /* TranscriptStudio.app */;
+			productType = "com.apple.product-type.application";
+		};
+		TT000002 /* TranscriptStudioTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = XC000020 /* Build configuration list for PBXNativeTarget "TranscriptStudioTests" */;
+			buildPhases = (
+				BP000011 /* Sources */,
+				BP000012 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				TD000001 /* PBXTargetDependency */,
+			);
+			name = TranscriptStudioTests;
+			productName = TranscriptStudioTests;
+			productReference = FC000002 /* TranscriptStudioTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		PP000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1540;
+				LastUpgradeCheck = 2630;
+				TargetAttributes = {
+					TT000001 = {
+						CreatedOnToolsVersion = 15.4;
+					};
+					TT000002 = {
+						CreatedOnToolsVersion = 15.4;
+						TestTargetID = TT000001;
+					};
+				};
+			};
+			buildConfigurationList = XC000001 /* Build configuration list for PBXProject "TranscriptStudio" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				nl,
+				Base,
+			);
+			mainGroup = GG000000 /* TranscriptStudioApp */;
+			productRefGroup = GG000090 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				TT000001 /* TranscriptStudio */,
+				TT000002 /* TranscriptStudioTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		BP000002 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AA000041 /* Localizable.strings in Resources */,
+				AA000042 /* Localizable.strings in Resources */,
+				AA000043 /* PrivacyInfo.xcprivacy in Resources */,
+				AA000044 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		BP000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AA000001 /* TranscriptStudioApp.swift in Sources */,
+				AA000002 /* ContentView.swift in Sources */,
+				AA000003 /* Color+Brand.swift in Sources */,
+				AA000004 /* Theme.swift in Sources */,
+				AA000005 /* Models.swift in Sources */,
+				AA000006 /* Analytics.swift in Sources */,
+				AA000007 /* APIService.swift in Sources */,
+				AA000008 /* AudioRecorder.swift in Sources */,
+				AA000009 /* BiometricService.swift in Sources */,
+				AA000010 /* CalendarService.swift in Sources */,
+				AA000011 /* CrashReporter.swift in Sources */,
+				AA000012 /* DebugLogger.swift in Sources */,
+				AA000013 /* KeychainService.swift in Sources */,
+				AA000014 /* LLMService.swift in Sources */,
+				AA000015 /* NetworkMonitor.swift in Sources */,
+				AA000016 /* OfflineQueue.swift in Sources */,
+				AA000017 /* OnDeviceTranscriber.swift in Sources */,
+				AA000018 /* SystemAudioCapture.swift in Sources */,
+				AA000019 /* AuthViewModel.swift in Sources */,
+				AA000020 /* RecordingViewModel.swift in Sources */,
+				AA000021 /* TranscriptsViewModel.swift in Sources */,
+				AA000022 /* AccountView.swift in Sources */,
+				AA000023 /* AdminView.swift in Sources */,
+				AA000024 /* HomeView.swift in Sources */,
+				AA000025 /* LoginView.swift in Sources */,
+				AA000026 /* NotuleResultView.swift in Sources */,
+				AA000027 /* OnboardingView.swift in Sources */,
+				AA000028 /* ProcessingView.swift in Sources */,
+				AA000029 /* ProfilesView.swift in Sources */,
+				AA000030 /* RecordingView.swift in Sources */,
+				AA000031 /* SettingsView.swift in Sources */,
+				AA000032 /* TranscriptsView.swift in Sources */,
+				AA000033 /* OnboardingViewiOSStub.swift in Sources */,
+				AA000034 /* FloatingWidgetPanel.swift in Sources */,
+				AA000035 /* CallAlertView.swift in Sources */,
+				AA000036 /* ProfilePicker.swift in Sources */,
+				AA000037 /* RecordingWidgetView.swift in Sources */,
+				AA000038 /* StatusBadge.swift in Sources */,
+				AA000039 /* TranscriptCard.swift in Sources */,
+				AA000040 /* WaveformView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		BP000011 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AB000001 /* TranscriptStudioTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		TD000001 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = TT000001 /* TranscriptStudio */;
+			targetProxy = C97D23FC2F597ACE00F5A1D8 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		XC000002 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		XC000003 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+			};
+			name = Release;
+		};
+		XC000011 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = TranscriptStudio/TranscriptStudio.entitlements;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = XL9KN38ATX;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
+				ENABLE_RESOURCE_ACCESS_AUDIO_INPUT = YES;
+				ENABLE_RESOURCE_ACCESS_CALENDARS = YES;
+				ENABLE_RESOURCE_ACCESS_CAMERA = YES;
+				ENABLE_USER_SELECTED_FILES = readwrite;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = TranscriptStudio/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = nl.prezent.TranscriptStudio;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "macosx iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2,7";
+			};
+			name = Debug;
+		};
+		XC000012 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = TranscriptStudio/TranscriptStudio.entitlements;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = XL9KN38ATX;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
+				ENABLE_RESOURCE_ACCESS_AUDIO_INPUT = YES;
+				ENABLE_RESOURCE_ACCESS_CALENDARS = YES;
+				ENABLE_RESOURCE_ACCESS_CAMERA = YES;
+				ENABLE_USER_SELECTED_FILES = readwrite;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = TranscriptStudio/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = nl.prezent.TranscriptStudio;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "macosx iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2,7";
+			};
+			name = Release;
+		};
+		XC000021 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = nl.prezent.TranscriptStudioTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "macosx iphoneos iphonesimulator";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 6.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/TranscriptStudio.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/TranscriptStudio";
+			};
+			name = Debug;
+		};
+		XC000022 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = nl.prezent.TranscriptStudioTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "macosx iphoneos iphonesimulator";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 6.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/TranscriptStudio.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/TranscriptStudio";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		XC000001 /* Build configuration list for PBXProject "TranscriptStudio" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				XC000002 /* Debug */,
+				XC000003 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		XC000010 /* Build configuration list for PBXNativeTarget "TranscriptStudio" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				XC000011 /* Debug */,
+				XC000012 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		XC000020 /* Build configuration list for PBXNativeTarget "TranscriptStudioTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				XC000021 /* Debug */,
+				XC000022 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = PP000001 /* Project object */;
+}

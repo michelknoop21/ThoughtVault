@@ -1,0 +1,132 @@
+/* Widget window — floating always-on-top recording control */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #widget-root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  background: transparent;
+}
+
+body {
+  font-family: "Segoe UI Variable", "Segoe UI", -apple-system, system-ui, sans-serif;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.95);
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+/* Acrylic glass effect background */
+.widget-shell {
+  width: 100%;
+  height: 100%;
+  background: rgba(18, 18, 18, 0.75);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Drag region at top */
+.widget-drag-region {
+  height: 28px;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  cursor: grab;
+}
+
+.widget-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.60);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Recording status indicator */
+.widget-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px 8px;
+}
+
+.widget-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #E50074;
+  animation: widget-pulse 1.5s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+.widget-status-dot.paused {
+  background: #FFB347;
+  animation: none;
+}
+
+@keyframes widget-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.6; transform: scale(0.85); }
+}
+
+.widget-timer {
+  font-size: 22px;
+  font-weight: 300;
+  font-variant-numeric: tabular-nums;
+  color: rgba(255, 255, 255, 0.95);
+  letter-spacing: 0.02em;
+}
+
+/* Waveform area */
+.widget-waveform {
+  flex: 1;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+}
+
+/* Controls */
+.widget-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 12px 12px;
+}
+
+.widget-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.90);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 67ms ease;
+  width: 36px;
+  height: 36px;
+}
+
+.widget-btn:hover { background: rgba(255, 255, 255, 0.20); }
+.widget-btn:active { background: rgba(255, 255, 255, 0.08); }
+
+.widget-btn-stop {
+  background: rgba(229, 0, 116, 0.80);
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+}
+.widget-btn-stop:hover { background: rgba(229, 0, 116, 1.00); }

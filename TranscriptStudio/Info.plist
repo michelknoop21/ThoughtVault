@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "https://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Bundle identity -->
+	<key>CFBundleIdentifier</key>
+	<string>nl.prezent.TranscriptStudio</string>
+
+	<key>CFBundleName</key>
+	<string>TranscriptStudio</string>
+
+	<key>CFBundleDisplayName</key>
+	<string>TranscriptStudio</string>
+
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+
+	<key>CFBundleShortVersionString</key>
+	<string>$(MARKETING_VERSION)</string>
+
+	<key>CFBundleVersion</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
+
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+
+	<!-- Minimum macOS version -->
+	<key>LSMinimumSystemVersion</key>
+	<string>14.0</string>
+
+	<!-- Supported platforms -->
+	<key>CFBundleSupportedPlatforms</key>
+	<array>
+		<string>MacOSX</string>
+	</array>
+
+	<!-- Custom URL scheme: transcriptstudio:// -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>nl.prezent.TranscriptStudio</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>transcriptstudio</string>
+			</array>
+		</dict>
+	</array>
+
+	<!-- Background modes -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>audio</string>
+	</array>
+
+	<!-- Privacy usage descriptions (Dutch — primary language) -->
+	<key>NSMicrophoneUsageDescription</key>
+	<string>TranscriptStudio heeft toegang tot uw microfoon nodig om vergaderingen op te nemen voor transcriptie.</string>
+
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>TranscriptStudio heeft toegang tot uw agenda nodig om aankomende videovergaderingen te detecteren en u te herinneren aan opnemen.</string>
+
+	<key>NSScreenCaptureUsageDescription</key>
+	<string>TranscriptStudio heeft toestemming voor schermopname nodig om systeemaudio van videovergaderingen vast te leggen.</string>
+
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>TranscriptStudio gebruikt spraakherkenning voor offline transcriptie op uw apparaat.</string>
+
+	<key>NSFaceIDUsageDescription</key>
+	<string>TranscriptStudio gebruikt Face ID voor snelle en veilige toegang tot uw account.</string>
+</dict>
+</plist>

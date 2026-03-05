@@ -1,0 +1,144 @@
+/* Localizable.strings — Nederlands (primaire taal)
+   TranscriptStudio
+   nl.prezent.TranscriptStudio
+*/
+
+// MARK: - Navigatie & Tabs
+"tab.home"           = "Home";
+"tab.recording"      = "Opnemen";
+"tab.transcripts"    = "Notulen";
+"tab.settings"       = "Instellingen";
+
+// MARK: - Opname-bediening
+"recording.start"             = "Start opname";
+"recording.stop"              = "Stop en upload";
+"recording.pause"             = "Pauzeer";
+"recording.resume"            = "Hervat";
+"recording.cancel"            = "Annuleer";
+"recording.micOnly"           = "Microfoon";
+"recording.systemAudio"       = "Systeemgeluid";
+"recording.combined"          = "Gecombineerd";
+
+// MARK: - Opname-statussen
+"state.idle"            = "Klaar om op te nemen";
+"state.preparing"       = "Voorbereiden…";
+"state.recording"       = "Opname bezig";
+"state.paused"          = "Gepauzeerd";
+"state.stopping"        = "Stoppen…";
+"state.uploading"       = "Uploaden…";
+"state.error"           = "Er is een fout opgetreden";
+
+// MARK: - Upload-voortgang
+"upload.progress"       = "Uploaden… %d%%";
+
+// MARK: - Transcriptie / Verwerking
+"processing.transcribing"   = "Spraak wordt omgezet naar tekst…";
+"processing.generating"     = "Notulen worden gegenereerd…";
+"processing.liveHint"       = "Transcriptie wordt gegenereerd terwijl u opneemt…";
+
+// MARK: - Notulenlijst
+"transcripts.title"          = "Notulen";
+"transcripts.empty"          = "Nog geen notulen";
+"transcripts.emptySubtitle"  = "Neem een vergadering op om te beginnen.";
+"transcripts.searchPlaceholder" = "Zoek in notulen…";
+
+// MARK: - Sortering & Filter
+"sort.newestFirst"      = "Nieuwste eerst";
+"sort.oldestFirst"      = "Oudste eerst";
+"filter.all"            = "Alles";
+"filter.today"          = "Vandaag";
+"filter.week"           = "Deze week";
+"filter.month"          = "Deze maand";
+
+// MARK: - Acties op notulen
+"action.open"           = "Openen";
+"action.delete"         = "Verwijderen";
+"action.retry"          = "Opnieuw";
+"action.uploadNow"      = "Upload nu";
+"action.rename"         = "Hernoemen";
+"action.share"          = "Delen";
+"action.copyText"       = "Transcriptie kopiëren";
+"action.copyNotes"      = "Notulen kopiëren";
+
+// MARK: - Verwijder-bevestiging
+"delete.title"          = "Notulen verwijderen";
+"delete.message"        = "Weet u zeker dat u \"%@\" permanent wilt verwijderen? Dit kan niet ongedaan worden gemaakt.";
+"delete.confirm"        = "Verwijderen";
+"delete.cancel"         = "Annuleer";
+
+// MARK: - Opgeslagen opnames
+"savedRecordings.title" = "Opgeslagen opnames";
+
+// MARK: - Instellingen
+"settings.title"                = "Instellingen";
+"settings.connection"           = "Verbinding";
+"settings.serverURL"            = "Server-URL";
+"settings.serverURLPlaceholder" = "https://uw-server.example.com";
+"settings.onDeviceSpeech"       = "Spraakherkenning op apparaat";
+"settings.onDeviceSpeechDetail" = "Transcribeer audio lokaal zonder het naar de server te sturen.";
+"settings.notulenProvider"      = "Notulenanbieder";
+"settings.recordingMode"        = "Opnamemodus";
+"settings.profile"              = "Profiel";
+"settings.account"              = "Account";
+"settings.logout"               = "Uitloggen";
+"settings.deleteAccount"        = "Account verwijderen";
+"settings.exportData"           = "Mijn gegevens exporteren";
+"settings.biometric"            = "Biometrisch inloggen";
+"settings.biometricDetail"      = "Gebruik Face ID of Touch ID om de app te ontgrendelen.";
+"settings.version"              = "Versie";
+
+// MARK: - Verificatie
+"auth.email"                    = "E-mailadres";
+"auth.password"                 = "Wachtwoord";
+"auth.login"                    = "Inloggen";
+"auth.twoFactor"                = "Tweefactorcode";
+"auth.twoFactorPlaceholder"     = "6-cijferige code";
+"auth.verify"                   = "Verifiëren";
+"auth.usePassword"              = "Gebruik wachtwoord";
+"auth.biometricPrompt"          = "Log in bij TranscriptStudio";
+
+// MARK: - Biometrische verificatie
+"biometric.reason"              = "Verifieer uzelf om TranscriptStudio te openen";
+"biometric.fallback"            = "Gebruik wachtwoord";
+
+// MARK: - Foutmeldingen
+"error.network"                 = "Netwerkfout. Controleer uw verbinding.";
+"error.sessionExpired"          = "Uw sessie is verlopen. Log opnieuw in.";
+"error.uploadFailed"            = "Upload mislukt. De opname is offline opgeslagen.";
+"error.fileTooLarge"            = "De opname overschrijdt het maximum van 200 MB.";
+"error.micPermission"           = "Microfoontoegang is vereist om op te nemen. Schakel dit in via Systeeminstellingen.";
+"error.screenCapturePermission" = "Schermopname-toestemming is vereist om systeemgeluid vast te leggen.";
+"error.unknown"                 = "Er is een onverwachte fout opgetreden.";
+"error.serverURL"               = "Voer een geldige HTTPS-server-URL in via Instellingen.";
+
+// MARK: - Verplichte update
+"forceUpdate.title"             = "Update vereist";
+"forceUpdate.message"           = "Een nieuwere versie van TranscriptStudio is vereist. Werk de app bij om door te gaan.";
+"forceUpdate.button"            = "Bijwerken";
+
+// MARK: - Offline banner
+"offline.queuedItems"           = "%d item(s) wachten op upload";
+"offline.noConnection"          = "Geen internetverbinding";
+"offline.uploadWhenConnected"   = "Uploads worden hervat zodra u online bent.";
+
+// MARK: - Agenda / Oproepmelding
+"callAlert.title"               = "Vergadering begint binnenkort";
+"callAlert.message"             = "\"%@\" begint over 1 minuut. Wilt u beginnen met opnemen?";
+"callAlert.startRecording"      = "Start opname";
+"callAlert.dismiss"             = "Sluiten";
+
+// MARK: - Menubalk
+"menuBar.idle"                  = "TranscriptStudio";
+"menuBar.recording"             = "Opname bezig";
+"menuBar.uploading"             = "Uploaden";
+"menuBar.openApp"               = "TranscriptStudio openen";
+"menuBar.quit"                  = "Stoppen";
+
+// MARK: - Toegankelijkheid
+"a11y.waveform"                 = "Audiovisualisatie";
+"a11y.recordButton"             = "Start opname";
+"a11y.stopButton"               = "Stop en upload opname";
+"a11y.pauseButton"              = "Pauzeer opname";
+"a11y.resumeButton"             = "Hervat opname";
+"a11y.duration"                 = "Opnameduur: %@";
+"a11y.progress"                 = "Verwerking: %d procent gereed";

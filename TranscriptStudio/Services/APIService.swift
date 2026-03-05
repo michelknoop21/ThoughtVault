@@ -1,0 +1,651 @@
+import Foundation
+import SwiftUI
+import OSLog
+
+private let logger = Logger(subsystem: "nl.prezent.TranscriptStudio", category: "APIService")
+
+// MARK: - URL Validation Error
+
+enum URLValidationError: LocalizedError {
+    case httpsRequired
+    case invalidURL
+
+    var errorDescription: String? {
+        switch self {
+        case .httpsRequired:
+            return "De server URL moet HTTPS gebruiken voor een veilige verbinding."
+        case .invalidURL:
+            return "De opgegeven server URL is ongeldig."
+        }
+    }
+}
+
+// MARK: - API Error
+
+enum APIError: LocalizedError {
+    case invalidResponse
+    case httpError(Int, String?)
+    case decodingError(Error)
+    case fileTooLarge
+    case sessionExpired
+    case networkError(Error)
+
+    var errorDescription: String? {
+        switch self {
+        case .invalidResponse:
+            return "Ongeldige serverrespons ontvangen."
+        case .httpError(let code, let message):
+            return message ?? "Serverfout (HTTP \(code))."
+        case .decodingError(let error):
+            return "Fout bij verwerken van serverrespons: \(error.localizedDescription)"
+        case .fileTooLarge:
+            return "Bestand is groter dan de maximale grootte van 200 MB."
+        case .sessionExpired:
+            return "Sessie verlopen, log opnieuw in."
+        case .networkError(let error):
+            return "Netwerkfout: \(error.localizedDescription)"
+        }
+    }
+}
+
+// MARK: - Response Models (local API-only types)
+
+struct TSUserInfo: Codable {
+    let id: String
+    let email: String
+    let name: String?
+    let role: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id = "user_id"
+        case email = "username"
+        case name
+        case role
+    }
+
+    var displayName: String {
+        name ?? email
+    }
+
+    var displayFirstName: String {
+        if let name = name, let first = name.split(separator: " ").first {
+            return String(first)
+        }
+        return email
+    }
+}
+
+
+struct AdminUser: Codable, Identifiable {
+    let id: String
+    let email: String
+    let name: String?
+    let role: String
+    let createdAt: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case email
+        case name
+        case role
+        case createdAt = "created_at"
+    }
+}
+
+struct VersionCheckResponse: Codable {
+    let minimumVersion: String?
+    let currentVersion: String?
+    let isSupported: Bool?
+
+    enum CodingKeys: String, CodingKey {
+        case minimumVersion = "minimum_version"
+        case currentVersion = "current_version"
+        case isSupported = "is_supported"
+    }
+}
+
+// MARK: - APIService
+
+actor APIService {
+    static let shared = APIService()
+
+    private let session: URLSession
+    private let decoder: JSONDecoder
+
+    private init() {
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 30
+        config.timeoutIntervalForResource = 300
+        self.session = URLSession(configuration: config)
+
+        self.decoder = JSONDecoder()
+    }
+
+    // MARK: - Configuration Helpers
+
+    private func serverURL() -> String {
+        // Read from UserDefaults (AppStorage key "serverURL")
+        return UserDefaults.standard.string(forKey: "serverURL") ?? "https://n8n.prezent.nl"
+    }
+
+    private func authToken() -> String? {
+        return KeychainService.shared.load(for: "authToken")
+    }
+
+    private func validatedBaseURL() throws -> URL {
+        let raw = serverURL()
+        guard let url = URL(string: raw) else {
+            throw URLValidationError.invalidURL
+        }
+        guard url.scheme?.lowercased() == "https" else {
+            throw URLValidationError.httpsRequired
+        }
+        return url
+    }
+
+    // MARK: - Request Building
+
+    private func request(
+        path: String,
+        method: String = "GET",
+        body: Data? = nil,
+        contentType: String? = "application/json",
+        authenticated: Bool = true
+    ) throws -> URLRequest {
+        let base = try validatedBaseURL()
+        guard let url = URL(string: path, relativeTo: base) else {
+            throw URLValidationError.invalidURL
+        }
+
+        var req = URLRequest(url: url)
+        req.httpMethod = method
+        req.httpBody = body
+
+        if let ct = contentType {
+            req.setValue(ct, forHTTPHeaderField: "Content-Type")
+        }
+
+        if authenticated, let token = authToken() {
+            req.setValue(token, forHTTPHeaderField: "X-User-Token")
+        }
+
+        return req
+    }
+
+    // MARK: - Response Handling
+
+    private func perform<T: Decodable>(_ req: URLRequest, retries: Int = 2) async throws -> T {
+        do {
+            let (data, response) = try await session.data(for: req)
+            return try handleResponse(data: data, response: response)
+        } catch let apiErr as APIError {
+            throw apiErr
+        } catch {
+            // Retry transient errors with exponential backoff
+            if retries > 0 {
+                let delay: UInt64 = retries == 2 ? 1_000_000_000 : 2_000_000_000
+                try await Task.sleep(nanoseconds: delay)
+                return try await perform(req, retries: retries - 1)
+            }
+            throw APIError.networkError(error)
+        }
+    }
+
+    private func performVoid(_ req: URLRequest, retries: Int = 2) async throws {
+        do {
+            let (data, response) = try await session.data(for: req)
+            let _: EmptyResponse = try handleResponse(data: data, response: response)
+        } catch let apiErr as APIError {
+            throw apiErr
+        } catch {
+            if retries > 0 {
+                let delay: UInt64 = retries == 2 ? 1_000_000_000 : 2_000_000_000
+                try await Task.sleep(nanoseconds: delay)
+                return try await performVoid(req, retries: retries - 1)
+            }
+            throw APIError.networkError(error)
+        }
+    }
+
+    private func handleResponse<T: Decodable>(data: Data, response: URLResponse) throws -> T {
+        guard let http = response as? HTTPURLResponse else {
+            throw APIError.invalidResponse
+        }
+
+        if http.statusCode == 401 {
+            throw APIError.sessionExpired
+        }
+
+        guard (200..<300).contains(http.statusCode) else {
+            let message = extractErrorMessage(from: data)
+            throw APIError.httpError(http.statusCode, message)
+        }
+
+        // Handle empty responses
+        if T.self == EmptyResponse.self, let empty = EmptyResponse() as? T {
+            return empty
+        }
+
+        do {
+            return try decoder.decode(T.self, from: data)
+        } catch {
+            logger.error("Decoding error for \(T.self): \(error)")
+            throw APIError.decodingError(error)
+        }
+    }
+
+    private func extractErrorMessage(from data: Data) -> String? {
+        if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+            return json["detail"] as? String
+                ?? json["message"] as? String
+                ?? json["error"] as? String
+        }
+        return String(data: data, encoding: .utf8)
+    }
+
+    // MARK: - Authentication
+
+    func login(email: String, password: String) async throws -> LoginResponse {
+        let body = try JSONEncoder().encode(["username": email, "password": password])
+        let req = try request(path: "/tstudio/api/auth/login", method: "POST", body: body, authenticated: false)
+        return try await perform(req)
+    }
+
+    func verifyTwoFactor(tempToken: String, code: String) async throws -> LoginResponse {
+        let payload = ["temp_token": tempToken, "code": code]
+        let body = try JSONEncoder().encode(payload)
+        let req = try request(path: "/tstudio/api/auth/verify-2fa", method: "POST", body: body, authenticated: false)
+        return try await perform(req)
+    }
+
+    func getCurrentUser() async throws -> TSUserInfo {
+        let req = try request(path: "/tstudio/api/auth/me", method: "GET")
+        return try await perform(req)
+    }
+
+    func logout() async {
+        // Logout is client-side only: no server endpoint.
+        KeychainService.shared.delete(for: "authToken")
+    }
+
+    // MARK: - Audio Upload
+
+    func uploadAudio(
+        fileURL: URL,
+        profileId: String,
+        onProgress: @escaping @Sendable (Double) -> Void
+    ) async throws -> TranscriptTask {
+        // Enforce 200 MB limit
+        let attributes = try FileManager.default.attributesOfItem(atPath: fileURL.path)
+        let fileSize = attributes[.size] as? Int ?? 0
+        let maxBytes = 200 * 1024 * 1024
+        if fileSize > maxBytes {
+            throw APIError.fileTooLarge
+        }
+
+        let base = try validatedBaseURL()
+        guard let url = URL(string: "/tstudio/api/transcribe", relativeTo: base) else {
+            throw URLValidationError.invalidURL
+        }
+
+        let boundary = "Boundary-\(UUID().uuidString)"
+        var body = Data()
+
+        // Add file field
+        let fileData = try Data(contentsOf: fileURL)
+        let filename = fileURL.lastPathComponent
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"file\"; filename=\"\(filename)\"\r\n".data(using: .utf8)!)
+        body.append("Content-Type: audio/wav\r\n\r\n".data(using: .utf8)!)
+        body.append(fileData)
+        body.append("\r\n".data(using: .utf8)!)
+
+        // Add profile_id field
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"profile_id\"\r\n\r\n".data(using: .utf8)!)
+        body.append("\(profileId)\r\n".data(using: .utf8)!)
+
+        body.append("--\(boundary)--\r\n".data(using: .utf8)!)
+
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        req.httpBody = body
+
+        if let token = authToken() {
+            req.setValue(token, forHTTPHeaderField: "X-User-Token")
+        }
+
+        // Report progress (best-effort estimate since URLSession upload progress
+        // is not trivially available here without a delegate; emit 0 and 1)
+        onProgress(0.0)
+        let (data, response) = try await session.data(for: req)
+        onProgress(1.0)
+
+        return try handleResponse(data: data, response: response)
+    }
+
+    // MARK: - Text Transcription Upload
+
+    func uploadTranscriptionText(transcription: String, profileId: String) async throws -> TranscriptTask {
+        let payload: [String: String] = ["transcription": transcription, "profile_id": profileId]
+        let body = try JSONEncoder().encode(payload)
+        let req = try request(path: "/tstudio/api/transcribe-text", method: "POST", body: body)
+        return try await perform(req)
+    }
+
+    // MARK: - Task Streaming
+
+    /// Returns the SSE stream URL and authentication token needed to connect to the task event stream.
+    func taskStreamInfo(taskId: String) async throws -> (url: URL, token: String) {
+        let base = try validatedBaseURL()
+        guard let url = URL(string: "/tstudio/api/task/\(taskId)/stream", relativeTo: base) else {
+            throw URLValidationError.invalidURL
+        }
+        let token = authToken() ?? ""
+        return (url, token)
+    }
+
+    func getTaskStatus(taskId: String) async throws -> TranscriptTask {
+        let req = try request(path: "/tstudio/api/task/\(taskId)")
+        return try await perform(req)
+    }
+
+    // MARK: - Transcripts
+
+    func getTranscripts(
+        page: Int = 1,
+        limit: Int = 20,
+        search: String? = nil,
+        sortBy: String? = nil
+    ) async throws -> TranscriptsResponse {
+        var components = URLComponents()
+        components.queryItems = [
+            URLQueryItem(name: "page", value: "\(page)"),
+            URLQueryItem(name: "limit", value: "\(limit)")
+        ]
+        if let search = search, !search.isEmpty {
+            components.queryItems?.append(URLQueryItem(name: "search", value: search))
+        }
+        if let sortBy = sortBy {
+            components.queryItems?.append(URLQueryItem(name: "sort_by", value: sortBy))
+        }
+        let queryString = components.percentEncodedQuery.map { "?\($0)" } ?? ""
+        let req = try request(path: "/tstudio/api/transcripts\(queryString)")
+        return try await perform(req)
+    }
+
+    func getTranscript(id: String) async throws -> Transcript {
+        let req = try request(path: "/tstudio/api/transcripts/\(id)")
+        return try await perform(req)
+    }
+
+    func deleteTranscript(id: String) async throws {
+        let req = try request(path: "/tstudio/api/transcripts/\(id)", method: "DELETE")
+        try await performVoid(req)
+    }
+
+    func updateTranscriptTitle(id: String, title: String) async throws {
+        let body = try JSONEncoder().encode(["title": title])
+        let req = try request(path: "/tstudio/api/transcripts/\(id)", method: "PATCH", body: body)
+        try await performVoid(req)
+    }
+
+    func updateTranscriptTags(id: String, tags: [String]) async throws {
+        let body = try JSONEncoder().encode(["tags": tags])
+        let req = try request(path: "/tstudio/api/transcripts/\(id)", method: "PATCH", body: body)
+        try await performVoid(req)
+    }
+
+    // MARK: - Notule Regeneration
+
+    func regenerateNotule(transcriptId: String, profileId: String) async throws -> TranscriptTask {
+        let payload: [String: String] = ["transcript_id": transcriptId, "profile_id": profileId]
+        let body = try JSONEncoder().encode(payload)
+        let req = try request(path: "/tstudio/api/transcripts/\(transcriptId)/regenerate", method: "POST", body: body)
+        return try await perform(req)
+    }
+
+    // MARK: - Profiles
+
+    func getProfiles() async throws -> [Profile] {
+        let req = try request(path: "/tstudio/api/profiles")
+        return try await perform(req)
+    }
+
+    func createProfile(
+        name: String,
+        systemPrompt: String,
+        notulePrompt: String,
+        template: String?
+    ) async throws -> Profile {
+        var payload: [String: String] = [
+            "name": name,
+            "system_prompt": systemPrompt,
+            "notule_prompt": notulePrompt
+        ]
+        if let template = template {
+            payload["template"] = template
+        }
+        let body = try JSONEncoder().encode(payload)
+        let req = try request(path: "/tstudio/api/profiles", method: "POST", body: body)
+        return try await perform(req)
+    }
+
+    func deleteProfile(id: String) async throws {
+        let req = try request(path: "/tstudio/api/profiles/\(id)", method: "DELETE")
+        try await performVoid(req)
+    }
+
+    // MARK: - Version Check
+
+    func checkMinimumVersion() async throws -> Bool {
+        let req = try request(path: "/tstudio/api/version")
+        let response: VersionCheckResponse = try await perform(req)
+        return response.isSupported ?? true
+    }
+
+    // MARK: - Admin
+
+    func getAdminUsers() async throws -> [AdminUser] {
+        let req = try request(path: "/tstudio/api/admin/users")
+        return try await perform(req)
+    }
+
+    func deleteUser(id: String) async throws {
+        let req = try request(path: "/tstudio/api/admin/users/\(id)", method: "DELETE")
+        try await performVoid(req)
+    }
+
+    func getAdminStats() async throws -> AdminStats {
+        let req = try request(path: "/tstudio/api/admin/stats")
+        return try await perform(req)
+    }
+
+    func createUser(email: String, name: String?, role: String) async throws {
+        var payload: [String: String] = ["email": email, "role": role]
+        if let name = name, !name.isEmpty {
+            payload["name"] = name
+        }
+        let body = try JSONEncoder().encode(payload)
+        let req = try request(path: "/tstudio/api/admin/users", method: "POST", body: body)
+        try await performVoid(req)
+    }
+
+    func getAdminInvitations() async throws -> [AdminInvitation] {
+        let req = try request(path: "/tstudio/api/admin/invitations")
+        return try await perform(req)
+    }
+
+    func createInvitation(email: String, role: String) async throws {
+        let payload = ["email": email, "role": role]
+        let body = try JSONEncoder().encode(payload)
+        let req = try request(path: "/tstudio/api/admin/invitations", method: "POST", body: body)
+        try await performVoid(req)
+    }
+
+    func getAdminBugReports() async throws -> [AdminBugReport] {
+        let req = try request(path: "/tstudio/api/admin/bug-reports")
+        return try await perform(req)
+    }
+
+    func updateBugReportStatus(id: String, status: String) async throws {
+        let payload = ["status": status]
+        let body = try JSONEncoder().encode(payload)
+        let req = try request(path: "/tstudio/api/admin/bug-reports/\(id)/status", method: "PATCH", body: body)
+        try await performVoid(req)
+    }
+
+    func getAdminErrors() async throws -> [AdminError] {
+        let req = try request(path: "/tstudio/api/admin/errors")
+        return try await perform(req)
+    }
+}
+
+// MARK: - Helpers
+
+private struct EmptyResponse: Codable {
+    init() {}
+    init(from decoder: Decoder) throws {}
+}
+
+// MARK: - SSEClient
+
+/// Connects to a Server-Sent Events stream and delivers parsed events on a callback.
+/// Implements automatic reconnection with exponential backoff up to 5 attempts.
+final class SSEClient: @unchecked Sendable {
+    enum SSEEvent {
+        case taskUpdate(TranscriptTask)
+        case error(Error)
+        case completed
+    }
+
+    private let url: URL
+    private let token: String
+    private var dataTask: URLSessionDataTask?
+    private var reconnectAttempts = 0
+    private let maxReconnectAttempts = 5
+    private var isStopped = false
+    private var buffer = ""
+
+    var onEvent: ((SSEEvent) -> Void)?
+
+    init(url: URL, token: String) {
+        self.url = url
+        self.token = token
+    }
+
+    func connect() {
+        isStopped = false
+        reconnectAttempts = 0
+        startStream()
+    }
+
+    func disconnect() {
+        isStopped = true
+        dataTask?.cancel()
+        dataTask = nil
+    }
+
+    private func startStream() {
+        var request = URLRequest(url: url)
+        request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
+        request.setValue(token, forHTTPHeaderField: "X-User-Token")
+        request.cachePolicy = .reloadIgnoringLocalCacheData
+        request.timeoutInterval = 300
+
+        let session = URLSession(configuration: .default, delegate: SSEDelegate(client: self), delegateQueue: nil)
+        dataTask = session.dataTask(with: request)
+        dataTask?.resume()
+    }
+
+    fileprivate func handleData(_ data: Data) {
+        guard let text = String(data: data, encoding: .utf8) else { return }
+        buffer += text
+
+        // Process complete SSE messages (separated by double newline)
+        let messages = buffer.components(separatedBy: "\n\n")
+        buffer = messages.last ?? ""
+
+        for message in messages.dropLast() {
+            parseMessage(message)
+        }
+    }
+
+    private func parseMessage(_ message: String) {
+        var eventType = "message"
+        var dataLines: [String] = []
+
+        for line in message.components(separatedBy: "\n") {
+            if line.hasPrefix("event:") {
+                eventType = line.dropFirst("event:".count).trimmingCharacters(in: .whitespaces)
+            } else if line.hasPrefix("data:") {
+                let dataContent = String(line.dropFirst("data:".count).trimmingCharacters(in: .whitespaces))
+                dataLines.append(dataContent)
+            }
+        }
+
+        let jsonString = dataLines.joined(separator: "\n")
+        guard !jsonString.isEmpty, let jsonData = jsonString.data(using: .utf8) else { return }
+
+        // Handle terminal events
+        if eventType == "done" || eventType == "completed" {
+            onEvent?(.completed)
+            return
+        }
+
+        // Attempt to decode as TranscriptTask
+        do {
+            let decoder = JSONDecoder()
+            let task = try decoder.decode(TranscriptTask.self, from: jsonData)
+            onEvent?(.taskUpdate(task))
+
+            // Stop on terminal task states
+            if task.status == .completed || task.status == .error {
+                onEvent?(.completed)
+            }
+        } catch {
+            logger.debug("SSE: Could not decode event data as TranscriptTask: \(error)")
+        }
+    }
+
+    fileprivate func handleCompletion(error: Error?) {
+        if isStopped { return }
+
+        if let error = error {
+            // Reconnect with exponential backoff
+            if reconnectAttempts < maxReconnectAttempts {
+                reconnectAttempts += 1
+                let backoffSeconds = min(pow(2.0, Double(reconnectAttempts)), 16.0)
+                logger.info("SSE: Reconnecting in \(backoffSeconds)s (attempt \(self.reconnectAttempts)/\(self.maxReconnectAttempts))")
+                DispatchQueue.global().asyncAfter(deadline: .now() + backoffSeconds) { [weak self] in
+                    guard let self, !self.isStopped else { return }
+                    self.startStream()
+                }
+            } else {
+                logger.error("SSE: Max reconnect attempts reached.")
+                onEvent?(.error(error))
+            }
+        } else {
+            onEvent?(.completed)
+        }
+    }
+}
+
+// MARK: - SSEDelegate
+
+private class SSEDelegate: NSObject, URLSessionDataDelegate, @unchecked Sendable {
+    weak var client: SSEClient?
+
+    init(client: SSEClient) {
+        self.client = client
+    }
+
+    func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
+        client?.handleData(data)
+    }
+
+    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+        client?.handleCompletion(error: error)
+    }
+}

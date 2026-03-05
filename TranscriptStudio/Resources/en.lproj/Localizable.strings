@@ -1,0 +1,144 @@
+/* Localizable.strings — English
+   TranscriptStudio
+   nl.prezent.TranscriptStudio
+*/
+
+// MARK: - Navigation & Tabs
+"tab.home"           = "Home";
+"tab.recording"      = "Record";
+"tab.transcripts"    = "Transcripts";
+"tab.settings"       = "Settings";
+
+// MARK: - Recording Controls
+"recording.start"             = "Start recording";
+"recording.stop"              = "Stop & upload";
+"recording.pause"             = "Pause";
+"recording.resume"            = "Resume";
+"recording.cancel"            = "Cancel";
+"recording.micOnly"           = "Microphone";
+"recording.systemAudio"       = "System audio";
+"recording.combined"          = "Combined";
+
+// MARK: - Recording States
+"state.idle"            = "Ready to record";
+"state.preparing"       = "Preparing…";
+"state.recording"       = "Recording";
+"state.paused"          = "Paused";
+"state.stopping"        = "Stopping…";
+"state.uploading"       = "Uploading…";
+"state.error"           = "An error occurred";
+
+// MARK: - Upload Progress
+"upload.progress"       = "Uploading… %d%%";
+
+// MARK: - Transcription / Processing
+"processing.transcribing"   = "Converting speech to text…";
+"processing.generating"     = "Generating meeting notes…";
+"processing.liveHint"       = "Live transcription will appear as you record…";
+
+// MARK: - Transcript List
+"transcripts.title"         = "Transcripts";
+"transcripts.empty"         = "No transcripts yet";
+"transcripts.emptySubtitle" = "Record a meeting to get started.";
+"transcripts.searchPlaceholder" = "Search transcripts…";
+
+// MARK: - Sort & Filter
+"sort.newestFirst"      = "Newest first";
+"sort.oldestFirst"      = "Oldest first";
+"filter.all"            = "All";
+"filter.today"          = "Today";
+"filter.week"           = "This week";
+"filter.month"          = "This month";
+
+// MARK: - Transcript Actions
+"action.open"           = "Open";
+"action.delete"         = "Delete";
+"action.retry"          = "Retry";
+"action.uploadNow"      = "Upload now";
+"action.rename"         = "Rename";
+"action.share"          = "Share";
+"action.copyText"       = "Copy transcription";
+"action.copyNotes"      = "Copy notes";
+
+// MARK: - Deletion Confirmation
+"delete.title"          = "Delete transcript";
+"delete.message"        = "Are you sure you want to permanently delete \"%@\"? This action cannot be undone.";
+"delete.confirm"        = "Delete";
+"delete.cancel"         = "Cancel";
+
+// MARK: - Saved Recordings
+"savedRecordings.title" = "Saved recordings";
+
+// MARK: - Settings
+"settings.title"                = "Settings";
+"settings.connection"           = "Connection";
+"settings.serverURL"            = "Server URL";
+"settings.serverURLPlaceholder" = "https://your-server.example.com";
+"settings.onDeviceSpeech"       = "On-device speech recognition";
+"settings.onDeviceSpeechDetail" = "Transcribe audio locally without sending it to the server.";
+"settings.notulenProvider"      = "Notes provider";
+"settings.recordingMode"        = "Recording mode";
+"settings.profile"              = "Profile";
+"settings.account"              = "Account";
+"settings.logout"               = "Sign out";
+"settings.deleteAccount"        = "Delete account";
+"settings.exportData"           = "Export my data";
+"settings.biometric"            = "Biometric login";
+"settings.biometricDetail"      = "Use Face ID or Touch ID to unlock the app.";
+"settings.version"              = "Version";
+
+// MARK: - Authentication
+"auth.email"                    = "Email";
+"auth.password"                 = "Password";
+"auth.login"                    = "Sign in";
+"auth.twoFactor"                = "Two-factor code";
+"auth.twoFactorPlaceholder"     = "6-digit code";
+"auth.verify"                   = "Verify";
+"auth.usePassword"              = "Use password";
+"auth.biometricPrompt"          = "Sign in to TranscriptStudio";
+
+// MARK: - Biometric Auth
+"biometric.reason"              = "Authenticate to access TranscriptStudio";
+"biometric.fallback"            = "Use password";
+
+// MARK: - Errors
+"error.network"                 = "Network error. Please check your connection.";
+"error.sessionExpired"          = "Your session has expired. Please sign in again.";
+"error.uploadFailed"            = "Upload failed. The recording has been saved offline.";
+"error.fileTooLarge"            = "The recording exceeds the 200 MB limit.";
+"error.micPermission"           = "Microphone access is required to record. Please enable it in System Settings.";
+"error.screenCapturePermission" = "Screen recording permission is required to capture system audio.";
+"error.unknown"                 = "An unexpected error occurred.";
+"error.serverURL"               = "Please enter a valid HTTPS server URL in Settings.";
+
+// MARK: - Force Update
+"forceUpdate.title"             = "Update required";
+"forceUpdate.message"           = "A newer version of TranscriptStudio is required. Please update the app to continue.";
+"forceUpdate.button"            = "Update";
+
+// MARK: - Offline Banner
+"offline.queuedItems"           = "%d item(s) waiting to upload";
+"offline.noConnection"          = "No internet connection";
+"offline.uploadWhenConnected"   = "Uploads will resume when you are online.";
+
+// MARK: - Calendar / Call Alert
+"callAlert.title"               = "Meeting starting soon";
+"callAlert.message"             = "\"%@\" starts in 1 minute. Would you like to start recording?";
+"callAlert.startRecording"      = "Start recording";
+"callAlert.dismiss"             = "Dismiss";
+
+// MARK: - Menu Bar
+"menuBar.idle"                  = "TranscriptStudio";
+"menuBar.recording"             = "Recording";
+"menuBar.uploading"             = "Uploading";
+"menuBar.openApp"               = "Open TranscriptStudio";
+"menuBar.quit"                  = "Quit";
+
+// MARK: - Accessibility
+"a11y.waveform"                 = "Audio waveform";
+"a11y.recordButton"             = "Start recording";
+"a11y.stopButton"               = "Stop and upload recording";
+"a11y.pauseButton"              = "Pause recording";
+"a11y.resumeButton"             = "Resume recording";
+"a11y.duration"                 = "Recording duration: %@";
+"a11y.progress"                 = "Processing: %d percent complete";

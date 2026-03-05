@@ -4,7 +4,7 @@ import type {
   Transcript,
   Profile,
   AdminUser,
-  BugReport,
+  AdminFeedback,
   SystemHealth,
   InviteCode,
 } from "../types";
@@ -106,13 +106,14 @@ class APIService {
   // Auth
   async login(email: string, password: string): Promise<LoginResponse> {
     return this.request<LoginResponse>("POST", "/tstudio/api/auth/login", {
-      email,
+      username: email,
       password,
     });
   }
 
-  async verify2FA(tempToken: string, code: string): Promise<LoginResponse> {
-    return this.request<LoginResponse>("POST", "/tstudio/api/auth/2fa/verify", {
+  async verify2FA(username: string, tempToken: string, code: string): Promise<LoginResponse> {
+    return this.request<LoginResponse>("POST", "/tstudio/api/auth/login/verify-2fa", {
+      username,
       temp_token: tempToken,
       code,
     });
@@ -214,22 +215,25 @@ class APIService {
   // Profiles
   async getProfiles(): Promise<Profile[]> {
     try {
-      return await this.request<Profile[]>("GET", "/tstudio/api/profiles");
+      const response = await this.request<{ profiles: Profile[] }>("GET", "/tstudio/api/profiles/accessible");
+      return response.profiles ?? [];
     } catch {
       return [];
     }
   }
 
   async createProfile(profile: Omit<Profile, "id">): Promise<Profile> {
-    return this.request<Profile>("POST", "/tstudio/api/profiles", profile);
+    const response = await this.request<{ success: boolean; profile: Profile }>("POST", "/tstudio/api/profiles/me", profile);
+    return response.profile;
   }
 
   async updateProfile(id: string, updates: Partial<Profile>): Promise<Profile> {
-    return this.request<Profile>("PUT", `/tstudio/api/profiles/${id}`, updates);
+    await this.request<{ success: boolean }>("PUT", `/tstudio/api/profiles/me/${id}`, updates);
+    return { id, ...updates } as Profile;
   }
 
   async deleteProfile(id: string): Promise<void> {
-    return this.request<void>("DELETE", `/tstudio/api/profiles/${id}`);
+    return this.request<void>("DELETE", `/tstudio/api/profiles/me/${id}`);
   }
 
   // Admin
@@ -253,7 +257,7 @@ class APIService {
     role: "user" | "admin"
   ): Promise<AdminUser> {
     return this.request<AdminUser>("POST", "/tstudio/api/admin/users", {
-      email,
+      username: email,
       password,
       name,
       role,
@@ -264,20 +268,80 @@ class APIService {
     return this.request<void>("DELETE", `/tstudio/api/admin/users/${userId}`);
   }
 
-  async getBugReports(): Promise<BugReport[]> {
+  async resetUserPassword(userId: string, password: string): Promise<void> {
+    return this.request<void>("POST", `/tstudio/api/admin/users/${userId}/password`, {
+      password,
+    });
+  }
+
+  async resetUser2FA(userId: string): Promise<void> {
+    return this.request<void>("POST", `/tstudio/api/admin/users/${userId}/2fa/reset`);
+  }
+
+  async getFeedback(): Promise<AdminFeedback[]> {
     try {
-      return await this.request<BugReport[]>("GET", "/tstudio/api/admin/bug-reports");
+      return await this.request<AdminFeedback[]>("GET", "/tstudio/api/admin/feedback");
     } catch {
       return [];
     }
   }
 
-  async getSystemHealth(): Promise<SystemHealth> {
-    return this.request<SystemHealth>("GET", "/tstudio/api/admin/health");
+  async updateFeedback(id: string, status: string, response?: string): Promise<void> {
+    return this.request<void>("PUT", `/tstudio/api/admin/feedback/${id}`, {
+      status,
+      ...(response ? { response } : {}),
+    });
   }
 
-  async generateInviteCode(): Promise<InviteCode> {
-    return this.request<InviteCode>("POST", "/tstudio/api/admin/invite-codes");
+  async deleteFeedback(id: string): Promise<void> {
+    return this.request<void>("DELETE", `/tstudio/api/admin/feedback/${id}`);
+  }
+
+  async getFeedbackPendingCount(): Promise<number> {
+    const data = await this.request<{ count: number }>("GET", "/tstudio/api/admin/feedback/pending-count");
+    return data.count;
+  }
+
+  async getMySettings(): Promise<{ ms365_client_id?: string; ms365_tenant_id?: string }> {
+    return this.request<{ ms365_client_id?: string; ms365_tenant_id?: string }>(
+      "GET",
+      "/tstudio/api/settings/me"
+    );
+  }
+
+  async getSystemHealth(): Promise<SystemHealth> {
+    return this.request<SystemHealth>("GET", "/tstudio/api/health");
+  }
+
+  async getDashboardMetrics(days: number = 7): Promise<Record<string, unknown>> {
+    return this.request<Record<string, unknown>>("GET", `/tstudio/api/admin/dashboard/metrics?days=${days}`);
+  }
+
+  async getAdminErrors(limit: number = 50): Promise<unknown[]> {
+    return this.request<unknown[]>("GET", `/tstudio/api/admin/errors?limit=${limit}`);
+  }
+
+  async getAdminActivity(limit: number = 50): Promise<unknown[]> {
+    return this.request<unknown[]>("GET", `/tstudio/api/admin/activity?limit=${limit}`);
+  }
+
+  async generateInviteCode(maxUses: number = 1, expiresHours: number = 48): Promise<InviteCode> {
+    return this.request<InviteCode>("POST", "/tstudio/api/admin/invites", {
+      max_uses: maxUses,
+      expires_hours: expiresHours,
+    });
+  }
+
+  async getInviteCodes(): Promise<InviteCode[]> {
+    try {
+      return await this.request<InviteCode[]>("GET", "/tstudio/api/admin/invites");
+    } catch {
+      return [];
+    }
+  }
+
+  async deleteInviteCode(code: string): Promise<void> {
+    return this.request<void>("DELETE", `/tstudio/api/admin/invites/${code}`);
   }
 }
 

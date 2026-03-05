@@ -225,6 +225,26 @@ _Append-only log. Each entry records context, decision, and consequences._
 
 ---
 
+## DEC-015 — API Field Name Mismatches: Root Causes and Resolutions
+
+**Date:** 2026-03-05
+**Status:** Accepted
+
+**Context:** Three decoding failures were discovered when running the macOS app against the live backend for the first time:
+1. Login returned HTTP 422 because the client sent `"email"` but the server's Pydantic model requires `"username"`.
+2. `/auth/me` returned `user_id` and `username`, but `TSUserInfo` expected `id` and `email`.
+3. `GET /transcripts` returned `{"items": [...]}` with no pagination keys, but `TranscriptsResponse` mapped `items` via a `CodingKey` aliased to `"transcripts"` (inverted).
+
+**Decision:** Fix all three at the API boundary (`APIService.swift` / `Models.swift`) without changing internal app code. Use `CodingKeys` enums for field renaming. Make fields optional when the backend conditionally omits them (e.g., `requires_two_factor` only present when 2FA is triggered; `total`/`page`/`limit` never returned by the transcripts endpoint).
+
+**Consequences:**
+- Internal app code continues to use idiomatic Swift names (`id`, `email`, `items`).
+- The API boundary (`CodingKeys`) is the single place to update if backend field names change.
+- `Optional` fields that are conditionally absent decode safely as `nil` instead of throwing.
+- When backend pagination is added to `GET /transcripts` in future, `total`/`page`/`limit` will decode automatically without any client code change.
+
+---
+
 ## DEC-014 — GDPR Compliance in AccountView
 
 **Date:** 2026-03

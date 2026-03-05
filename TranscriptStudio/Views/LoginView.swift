@@ -6,6 +6,7 @@
 // Forced light mode to maintain consistent brand presentation.
 
 import SwiftUI
+import AppKit
 
 // MARK: - LoginView
 
@@ -57,6 +58,14 @@ struct LoginView: View {
 
     private var brandingHeader: some View {
         VStack(spacing: TS.Spacing.md) {
+            // App icon
+            Image(nsImage: NSApp.applicationIconImage)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 64, height: 64)
+                .clipShape(RoundedRectangle(cornerRadius: 14))
+                .shadow(color: .black.opacity(0.12), radius: 4, y: 2)
+
             // Yinga brand bar
             YingaBar(height: 4)
                 .frame(width: 80)

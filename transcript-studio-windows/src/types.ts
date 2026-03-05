@@ -61,10 +61,15 @@ export interface Transcript {
 export interface Profile {
   id: string;
   name: string;
-  system_prompt: string;
-  notule_prompt: string;
+  description?: string;
+  icon?: string;
+  system_prompt?: string;
+  notule_prompt?: string;
   notule_template?: string;
-  is_default: boolean;
+  is_default?: boolean;
+  isDefault?: boolean;
+  isOwn?: boolean;
+  isPublic?: boolean;
 }
 
 export const DEFAULT_PROFILES: Profile[] = [
@@ -134,6 +139,17 @@ export interface BugReport {
   description: string;
   status: "open" | "in_progress" | "resolved" | "closed";
   created_at: string;
+}
+
+export interface AdminFeedback {
+  id: string;
+  category: string;
+  status: string;
+  title: string;
+  description: string;
+  user_id?: string;
+  created_at: string;
+  response?: string;
 }
 
 export interface SystemHealth {

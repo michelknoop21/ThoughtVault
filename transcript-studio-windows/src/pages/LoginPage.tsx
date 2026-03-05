@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../services/api";
 import { useAuthStore } from "../stores/authStore";
+import { TitleBar } from "../components/layout/TitleBar";
+import appLogo from "../assets/app-logo.png";
 
 function extractMessage(err: unknown): string {
   if (typeof err === "string") return err;
@@ -52,7 +54,7 @@ export function LoginPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await api.verify2FA(tempToken, twoFactorCode);
+      const response = await api.verify2FA(email, tempToken, twoFactorCode);
       const userWithRole = response.user ?? decodeUserFromToken(response.token);
       setToken(response.token);
       setUser(userWithRole);
@@ -73,14 +75,8 @@ export function LoginPage() {
         background: "var(--bg-solid-tertiary)",
       }}
     >
-      {/* Minimal drag region */}
-      <div
-        data-tauri-drag-region
-        style={{ height: 40, flexShrink: 0 }}
-      />
-
-      {/* Brand bar */}
-      <div className="brand-bar" />
+      {/* Title bar with window controls and YingaBar */}
+      <TitleBar />
 
       <div
         style={{
@@ -92,41 +88,38 @@ export function LoginPage() {
         }}
       >
         <div style={{ width: "100%", maxWidth: 360 }}>
-          {/* Logo & title */}
+          {/* Branding header — matches macOS LoginView */}
           <div style={{ textAlign: "center", marginBottom: 32 }}>
-            <div
+            <img
+              src={appLogo}
+              alt="TranscriptStudio"
               style={{
                 width: 64,
                 height: 64,
-                background: "var(--fill-accent-default)",
                 borderRadius: 16,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
                 margin: "0 auto 16px",
-                boxShadow: "var(--shadow-md)",
+                display: "block",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
               }}
-            >
-              <span style={{ fontSize: 28, color: "#fff", fontWeight: 700 }}>TS</span>
-            </div>
+            />
             <h1
               style={{
                 fontSize: 24,
                 fontWeight: 600,
-                color: "var(--text-primary)",
+                color: "var(--fill-accent-default)",
                 margin: 0,
               }}
             >
-              Transcript Studio
+              TranscriptStudio
             </h1>
             <p
               style={{
-                fontSize: 14,
+                fontSize: 13,
                 color: "var(--text-tertiary)",
                 marginTop: 4,
               }}
             >
-              {tempToken ? "Voer uw authenticatiecode in" : "Log in om door te gaan"}
+              by Prezent / Yinga
             </p>
           </div>
 

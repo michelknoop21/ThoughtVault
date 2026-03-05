@@ -112,10 +112,19 @@ struct RecordingView: View {
                 .foregroundStyle(Color.labelSecondary)
 
             HStack(spacing: TS.Spacing.xs) {
-                modePill(.microphone, color: Color.brandPrimary)
+                meetingModePill(
+                    mode: .microphone,
+                    label: "Fysieke meeting",
+                    icon: "person.2.fill",
+                    color: Color.brandSecondary
+                )
                 #if os(macOS)
-                modePill(.systemAudio, color: Color.brandSecondary)
-                modePill(.combined, color: Color.brandAccent)
+                meetingModePill(
+                    mode: .combined,
+                    label: "Videocall",
+                    icon: "video.fill",
+                    color: Color.brandPrimary
+                )
                 #endif
             }
         }
@@ -123,7 +132,7 @@ struct RecordingView: View {
     }
 
     @ViewBuilder
-    private func modePill(_ mode: RecordingMode, color: Color) -> some View {
+    private func meetingModePill(mode: RecordingMode, label: String, icon: String, color: Color) -> some View {
         let isSelected = recordingVM.selectedMode == mode
         Button {
             withAnimation(TS.Animation.smooth) {
@@ -131,9 +140,9 @@ struct RecordingView: View {
             }
         } label: {
             HStack(spacing: TS.Spacing.xs) {
-                Image(systemName: mode.iconName)
+                Image(systemName: icon)
                     .font(.system(size: 13, weight: .semibold))
-                Text(mode.displayName)
+                Text(label)
                     .font(TS.Font.footnoteSemibold)
             }
             .foregroundStyle(isSelected ? .white : color)

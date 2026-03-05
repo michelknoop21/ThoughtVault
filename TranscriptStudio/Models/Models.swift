@@ -144,25 +144,20 @@ enum RecordingState: Equatable, Sendable {
 struct Profile: Identifiable, Codable, Hashable, Sendable {
     var id: String
     var name: String
-    var systemPrompt: String
-    var notulePrompt: String
+    var description: String?
+    var icon: String?
+    var systemPrompt: String?
+    var notulePrompt: String?
     var template: String?
-    var isDefault: Bool
-
-    enum CodingKeys: String, CodingKey {
-        case id
-        case name
-        case systemPrompt = "system_prompt"
-        case notulePrompt = "notule_prompt"
-        case template
-        case isDefault = "is_default"
-    }
+    var isDefault: Bool?
 
     // MARK: Default profiles
 
     static let zakelijk = Profile(
         id: "zakelijk",
         name: "Zakelijk",
+        description: "Zakelijke vergadernotulen",
+        icon: "briefcase.fill",
         systemPrompt: "Je bent een professionele notulist die zakelijke vergaderingen nauwkeurig en beknopt samenvat.",
         notulePrompt: "Maak professionele notulen van deze vergadering. Includeer: aanwezigen (indien vermeld), agendapunten, besluiten, actiepunten met eigenaar en deadline, en een korte samenvatting.",
         template: nil,
@@ -172,6 +167,8 @@ struct Profile: Identifiable, Codable, Hashable, Sendable {
     static let informeel = Profile(
         id: "informeel",
         name: "Informeel",
+        description: "Informele gesprekssamenvattingen",
+        icon: "bubble.left.and.bubble.right.fill",
         systemPrompt: "Je bent een vriendelijke assistent die gesprekken in begrijpelijke taal samenvat.",
         notulePrompt: "Vat dit gesprek samen in een informele, leesbare stijl. Benoem de belangrijkste onderwerpen en afspraken die zijn gemaakt.",
         template: nil,
@@ -181,6 +178,8 @@ struct Profile: Identifiable, Codable, Hashable, Sendable {
     static let technisch = Profile(
         id: "technisch",
         name: "Technisch",
+        description: "Technische vergadernotulen",
+        icon: "wrench.and.screwdriver.fill",
         systemPrompt: "Je bent een technische notulist gespecialiseerd in software ontwikkeling en IT-projecten.",
         notulePrompt: "Maak technische notulen van dit overleg. Focus op: architectuurbesluiten, technische afspraken, bugs/issues besproken, sprint-items, en actiepunten voor het team.",
         template: nil,
@@ -291,21 +290,24 @@ struct Transcript: Identifiable, Codable, Hashable, Sendable {
 
         title = try container.decode(String.self, forKey: .title)
 
-        // Flexible date decoding: try multiple formats
-        let dateString = try container.decode(String.self, forKey: .date)
+        // Flexible date decoding: try `date` field, fall back to `created_at`
+        let rawCreatedAt = try? container.decodeIfPresent(String.self, forKey: .createdAt)
+        let dateString = (try? container.decodeIfPresent(String.self, forKey: .date)) ?? rawCreatedAt
         let iso8601Formatter = ISO8601DateFormatter()
         iso8601Formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        if let parsed = iso8601Formatter.date(from: dateString) {
+        if let ds = dateString, let parsed = iso8601Formatter.date(from: ds) {
             date = parsed
-        } else {
+        } else if let ds = dateString {
             let fallback = ISO8601DateFormatter()
-            date = fallback.date(from: dateString) ?? Date()
+            date = fallback.date(from: ds) ?? Date()
+        } else {
+            date = Date()
         }
 
         rawTranscription = try container.decodeIfPresent(String.self, forKey: .rawTranscription)
         notuleHtml = try container.decodeIfPresent(String.self, forKey: .notuleHtml)
         tags = (try? container.decodeIfPresent([String].self, forKey: .tags)) ?? []
-        createdAt = try container.decodeIfPresent(String.self, forKey: .createdAt)
+        createdAt = rawCreatedAt
         duration = try container.decodeIfPresent(Double.self, forKey: .duration)
         profileName = try container.decodeIfPresent(String.self, forKey: .profileName)
     }

@@ -79,6 +79,7 @@ final class AuthViewModel {
                 // 2FA is required — hold state for the verification step
                 requiresTwoFactor = true
                 tempToken = tt
+                userEmail = email
                 isLoading = false
                 return
             }
@@ -127,7 +128,7 @@ final class AuthViewModel {
         errorMessage = nil
 
         do {
-            let response = try await APIService.shared.verifyTwoFactor(tempToken: tt, code: code)
+            let response = try await APIService.shared.verifyTwoFactor(username: userEmail, tempToken: tt, code: code)
 
             let token = response.token ?? ""
             guard !token.isEmpty else {
@@ -224,7 +225,8 @@ final class AuthViewModel {
 
     func logout() {
         KeychainService.shared.delete(for: "authToken")
-        BiometricService.shared.removeBiometricToken()
+        // Keep the biometric token so Face ID / Touch ID login works on next launch.
+        // Only remove it when the user explicitly disables biometric login in Settings.
 
         isAuthenticated = false
         currentUser = nil

@@ -159,23 +159,13 @@ struct HomeView: View {
                     label: "Fysieke meeting",
                     icon: "person.2.fill"
                 )
-                quickStartPill(
-                    mode: .microphone,
-                    color: Color.brandPrimary,
-                    label: "Microfoon"
-                )
 
                 #if os(macOS)
                 quickStartPill(
-                    mode: .systemAudio,
-                    color: Color.brandSecondary,
-                    label: "Systeemgeluid"
-                )
-
-                quickStartPill(
                     mode: .combined,
-                    color: Color.brandAccent,
-                    label: "Gecombineerd"
+                    color: Color.brandPrimary,
+                    label: "Videocall",
+                    icon: "video.fill"
                 )
                 #endif
             }

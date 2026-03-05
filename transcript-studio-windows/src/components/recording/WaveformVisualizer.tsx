@@ -4,20 +4,42 @@ interface WaveformVisualizerProps {
   level: number; // 0–100
   isPaused: boolean;
   height?: number;
-  barCount?: number;
-  color?: string;
 }
+
+interface WaveConfig {
+  freq: number;
+  amp: number;
+  phase: number;
+  speed: number;
+  color: string;
+  lineWidth: number;
+  blur: number;
+}
+
+const WAVES: WaveConfig[] = [
+  // Background glow layers (wide, blurred)
+  { freq: 1.2, amp: 0.28, phase: 0.0, speed: 0.6, color: "rgba(0, 194, 255, 0.12)", lineWidth: 8, blur: 12 },
+  { freq: 1.5, amp: 0.22, phase: 1.2, speed: 0.8, color: "rgba(229, 0, 116, 0.08)", lineWidth: 6, blur: 10 },
+
+  // Mid layers
+  { freq: 1.0, amp: 0.32, phase: 0.5, speed: 0.5, color: "rgba(0, 194, 255, 0.15)", lineWidth: 3, blur: 4 },
+  { freq: 1.8, amp: 0.18, phase: 2.0, speed: 0.9, color: "rgba(115, 89, 243, 0.12)", lineWidth: 2.5, blur: 3 },
+
+  // Sharp foreground waves
+  { freq: 1.3, amp: 0.30, phase: 0.0, speed: 0.7, color: "rgba(0, 194, 255, 0.65)", lineWidth: 2.0, blur: 0 },
+  { freq: 1.6, amp: 0.22, phase: 1.0, speed: 0.85, color: "rgba(89, 115, 230, 0.55)", lineWidth: 1.8, blur: 0 },
+  { freq: 2.0, amp: 0.15, phase: 2.5, speed: 1.1, color: "rgba(140, 77, 217, 0.45)", lineWidth: 1.5, blur: 0 },
+  { freq: 1.1, amp: 0.25, phase: 3.5, speed: 0.55, color: "rgba(229, 0, 116, 0.30)", lineWidth: 1.5, blur: 0 },
+];
 
 export function WaveformVisualizer({
   level,
   isPaused,
   height = 48,
-  barCount = 32,
-  color = "rgba(229, 0, 116, 0.85)",
 }: WaveformVisualizerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const historyRef = useRef<number[]>(new Array(barCount).fill(0));
   const animFrameRef = useRef<number>(0);
+  const smoothLevelRef = useRef<number>(0);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -26,42 +48,70 @@ export function WaveformVisualizer({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    // Push new level into history, shift old values
-    historyRef.current.push(isPaused ? 0 : level / 100);
-    if (historyRef.current.length > barCount) {
-      historyRef.current.shift();
-    }
+    // Smooth the level for organic feel
+    const targetLevel = isPaused ? 5 : Math.max(5, level);
+    smoothLevelRef.current += (targetLevel - smoothLevelRef.current) * 0.15;
+    const currentLevel = smoothLevelRef.current / 100;
 
-    const draw = () => {
+    const draw = (time: number) => {
       const { width, height: h } = canvas;
       ctx.clearRect(0, 0, width, h);
 
-      const barWidth = (width / barCount) * 0.6;
-      const gap = (width / barCount) * 0.4;
+      const timeSec = time / 1000;
 
-      historyRef.current.forEach((val, i) => {
-        const barHeight = Math.max(2, val * h * 0.9);
-        const x = i * (barWidth + gap);
-        const y = (h - barHeight) / 2;
+      for (const wave of WAVES) {
+        ctx.save();
 
-        // Fade older bars
-        const alpha = 0.3 + (i / barCount) * 0.7;
-        ctx.fillStyle = color.replace("0.85", alpha.toFixed(2));
+        if (wave.blur > 0) {
+          ctx.filter = `blur(${wave.blur}px)`;
+        }
+
+        ctx.strokeStyle = wave.color;
+        ctx.lineWidth = wave.lineWidth;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
         ctx.beginPath();
-        ctx.roundRect(x, y, barWidth, barHeight, 2);
-        ctx.fill();
-      });
+
+        const midY = h / 2;
+        const amplitude = h * wave.amp * currentLevel;
+        const steps = width;
+
+        for (let x = 0; x <= steps; x++) {
+          const progress = x / steps;
+          // Envelope: taper at edges
+          const envelope = Math.sin(progress * Math.PI);
+          const envShaped = Math.pow(envelope, 0.8);
+
+          // Composite sine
+          const phase1 = progress * wave.freq * 2 * Math.PI + timeSec * wave.speed + wave.phase;
+          const phase2 = progress * wave.freq * 1.3 * Math.PI + timeSec * wave.speed * 0.7 + wave.phase * 1.5;
+          const waveVal = Math.sin(phase1) * 0.7 + Math.sin(phase2) * 0.3;
+
+          const y = midY + waveVal * amplitude * envShaped;
+
+          if (x === 0) {
+            ctx.moveTo(x, y);
+          } else {
+            ctx.lineTo(x, y);
+          }
+        }
+
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      animFrameRef.current = requestAnimationFrame(draw);
     };
 
     animFrameRef.current = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(animFrameRef.current);
-  }, [level, isPaused, barCount, color]);
+  }, [level, isPaused]);
 
   return (
     <canvas
       ref={canvasRef}
-      width={200}
-      height={height}
+      width={400}
+      height={height * 2}
       style={{ width: "100%", height }}
     />
   );

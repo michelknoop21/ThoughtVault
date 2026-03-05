@@ -6,6 +6,11 @@
 // profiles, transcription preferences, permissions, calendar, account, and feedback.
 
 import SwiftUI
+import AVFoundation
+import Speech
+#if os(macOS)
+import ScreenCaptureKit
+#endif
 
 // MARK: - SettingsView
 
@@ -29,6 +34,9 @@ struct SettingsView: View {
     @State private var showServerURLSaved: Bool = false
     @State private var showLogoutConfirm: Bool = false
     @State private var showBugReportSheet: Bool = false
+    @State private var micPermissionGranted: Bool? = nil
+    @State private var speechPermissionGranted: Bool? = nil
+    @State private var screenRecordingGranted: Bool? = nil
 
     var body: some View {
         Form {
@@ -49,6 +57,7 @@ struct SettingsView: View {
             Task {
                 await loadProfiles()
                 await checkServerConnection()
+                await checkPermissions()
             }
         }
         .confirmationDialog(
@@ -260,20 +269,23 @@ struct SettingsView: View {
             permissionRow(
                 icon: "mic.fill",
                 title: "Microfoon",
-                description: "Vereist voor audio-opnames"
+                description: "Vereist voor audio-opnames",
+                status: micPermissionGranted
             )
 
             permissionRow(
                 icon: "waveform",
                 title: "Spraakherkenning",
-                description: "Vereist voor on-device transcriptie"
+                description: "Vereist voor on-device transcriptie",
+                status: speechPermissionGranted
             )
 
             #if os(macOS)
             permissionRow(
                 icon: "rectangle.dashed",
                 title: "Schermopname",
-                description: "Vereist voor systeemgeluidsopname"
+                description: "Vereist voor systeemgeluidsopname",
+                status: screenRecordingGranted
             )
             #endif
 
@@ -302,7 +314,7 @@ struct SettingsView: View {
         }
     }
 
-    private func permissionRow(icon: String, title: String, description: String) -> some View {
+    private func permissionRow(icon: String, title: String, description: String, status: Bool? = nil) -> some View {
         HStack(spacing: TS.Spacing.sm) {
             Image(systemName: icon)
                 .font(.system(size: 16))
@@ -318,6 +330,26 @@ struct SettingsView: View {
             }
 
             Spacer()
+
+            HStack(spacing: TS.Spacing.xs) {
+                switch status {
+                case .none:
+                    Image(systemName: "questionmark.circle")
+                        .foregroundStyle(Color.labelTertiary)
+                case .some(true):
+                    Text("Verleend")
+                        .font(TS.Font.footnote)
+                        .foregroundStyle(Color.statusSuccess)
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(Color.statusSuccess)
+                case .some(false):
+                    Text("Geweigerd")
+                        .font(TS.Font.footnote)
+                        .foregroundStyle(Color.statusError)
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(Color.statusError)
+                }
+            }
         }
     }
 
@@ -413,6 +445,9 @@ struct SettingsView: View {
                 .tint(Color.brandPrimary)
                 .onChange(of: biometricLoginEnabled) { _, enabled in
                     BiometricService.shared.isEnabled = enabled
+                    if !enabled {
+                        BiometricService.shared.removeBiometricToken()
+                    }
                 }
             }
         } header: {
@@ -481,6 +516,9 @@ struct SettingsView: View {
                 .tint(Color.brandPrimary)
                 .onChange(of: biometricLoginEnabled) { _, enabled in
                     BiometricService.shared.isEnabled = enabled
+                    if !enabled {
+                        BiometricService.shared.removeBiometricToken()
+                    }
                 }
             }
 
@@ -574,6 +612,26 @@ struct SettingsView: View {
         } catch {
             serverConnected = false
         }
+    }
+
+    private func checkPermissions() async {
+        // Microphone
+        let micStatus = AVCaptureDevice.authorizationStatus(for: .audio)
+        micPermissionGranted = micStatus == .authorized
+
+        // Speech recognition
+        let speechStatus = SFSpeechRecognizer.authorizationStatus()
+        speechPermissionGranted = speechStatus == .authorized
+
+        // Screen recording (macOS only)
+        #if os(macOS)
+        do {
+            _ = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: false)
+            screenRecordingGranted = true
+        } catch {
+            screenRecordingGranted = false
+        }
+        #endif
     }
 
     private func appVersion() -> String {

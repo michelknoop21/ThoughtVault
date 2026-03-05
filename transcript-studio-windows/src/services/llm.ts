@@ -106,7 +106,7 @@ export class LLMService {
       return generateWithOpenAICompatible(
         config.ollamaUrl,
         config.ollamaModel,
-        profile.system_prompt,
+        profile.system_prompt ?? "",
         userPrompt,
         onProgress
       );
@@ -116,7 +116,7 @@ export class LLMService {
       return generateWithOpenAICompatible(
         config.lmStudioUrl,
         config.lmStudioModel,
-        profile.system_prompt,
+        profile.system_prompt ?? "",
         userPrompt,
         onProgress
       );

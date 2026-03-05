@@ -1,6 +1,6 @@
 # TranscriptStudio — Architecture
 
-_Last updated: 2026-03-05_
+_Last updated: 2026-03-05 (session 2)_
 
 ---
 
@@ -19,7 +19,7 @@ Both desktop clients share a common REST + SSE API and are deployed independentl
 
 ## Backend
 
-**Stack:** FastAPI · insanely-fast-whisper · n8n · SQLAlchemy · SQLite (default) / PostgreSQL (optional) · Redis (optional)
+**Stack:** FastAPI · insanely-fast-whisper · n8n · SQLAlchemy · PostgreSQL (productie) / SQLite (development fallback) · Redis (optional)
 
 **Deployment:** Docker Compose on AWS EC2 GPU instance at `https://n8n.prezent.nl`
 
@@ -29,6 +29,9 @@ Both desktop clients share a common REST + SSE API and are deployed independentl
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
+| POST | `/tstudio/api/auth/login` | Login with `username` + `password`; returns `{token, requires_2fa?, temp_token?}` |
+| POST | `/tstudio/api/auth/verify-2fa` | Verify TOTP code with `temp_token`; returns `{token}` |
+| GET | `/tstudio/api/auth/me` | Returns `{user_id, username, role}` for the authenticated user |
 | POST | `/tstudio/api/upload` | Upload audio file; creates Task with status `pending` |
 | GET | `/tstudio/api/task/{id}` | Get task detail |
 | GET | `/tstudio/api/task/{id}/stream` | SSE stream of task status transitions |
@@ -37,6 +40,14 @@ Both desktop clients share a common REST + SSE API and are deployed independentl
 | GET | `/tstudio/api/tasks` | List all tasks for authenticated user |
 | PATCH | `/tstudio/api/tasks/{id}` | Update task metadata (tags, title) |
 | DELETE | `/tstudio/api/tasks/{id}` | Delete task and associated data |
+| GET | `/tstudio/api/transcripts` | Returns `{items: Transcript[]}` — no pagination keys |
+
+**Authentication:** All requests require `X-User-Token: <token>` header (not `Authorization: Bearer`). Login sends `username` field (which accepts email addresses as value).
+
+**Field name notes (verified against backend source):**
+- `/auth/me` returns `user_id` and `username` (not `id` / `email`)
+- `/auth/login` returns `requires_2fa` (not `requires_two_factor`) and `temp_token` — both omitted on standard login
+- `/transcripts` returns `{"items": [...]}` only — `total`/`page`/`limit` are not currently returned
 
 ### Transcription Data Flow
 
@@ -62,7 +73,7 @@ Client                    Backend                    n8n / Claude
 
 **Authentication:** Token-based with `X-User-Token` header. Tokens remain valid until server-side `SESSION_INACTIVITY_DAYS` expiry.
 
-**Database:** SQLite default for simple deployment. Optional PostgreSQL + Redis for horizontal scaling.
+**Database:** PostgreSQL 15 in productie. SQLite ondersteund als development fallback. Optional Redis voor caching.
 
 ---
 

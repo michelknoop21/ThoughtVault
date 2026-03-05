@@ -153,22 +153,28 @@ export function OnboardingWizard() {
             <StepContent
               icon={<StepIcon icon={<Calendar24Regular style={{ fontSize: 28 }} />} />}
               title="Agenda integratie"
-              description="Verbind uw Microsoft 365 agenda om aankomende vergaderingen te zien. Dit is optioneel."
+              description={
+                settings.ms365_client_id
+                  ? "Verbind uw Microsoft 365 agenda om aankomende vergaderingen te zien. Dit is optioneel."
+                  : "Agenda-koppeling is nog niet geconfigureerd door de beheerder. U kunt dit later instellen via Instellingen."
+              }
             >
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                <button
-                  onClick={handleConnectCalendar}
-                  className="btn btn-accent"
-                  style={{ width: "100%", padding: "9px 16px", fontSize: 14 }}
-                >
-                  Verbinden met Microsoft 365
-                </button>
+                {settings.ms365_client_id ? (
+                  <button
+                    onClick={handleConnectCalendar}
+                    className="btn btn-accent"
+                    style={{ width: "100%", padding: "9px 16px", fontSize: 14 }}
+                  >
+                    Verbinden met Microsoft 365
+                  </button>
+                ) : null}
                 <button
                   onClick={handleNext}
                   className="btn btn-ghost"
                   style={{ width: "100%", fontSize: 13 }}
                 >
-                  Overslaan
+                  {settings.ms365_client_id ? "Overslaan" : "Volgende"}
                 </button>
               </div>
             </StepContent>

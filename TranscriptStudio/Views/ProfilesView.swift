@@ -19,8 +19,8 @@ struct ProfilesView: View {
     @State private var profileToDelete: Profile? = nil
     @State private var showDeleteConfirm: Bool = false
 
-    var defaultProfiles: [Profile] { profiles.filter { $0.isDefault } }
-    var customProfiles: [Profile] { profiles.filter { !$0.isDefault } }
+    var defaultProfiles: [Profile] { profiles.filter { $0.isDefault == true } }
+    var customProfiles: [Profile] { profiles.filter { $0.isDefault != true } }
 
     var body: some View {
         List {
@@ -151,7 +151,7 @@ struct ProfilesView: View {
                     }
                 }
 
-                Text(profile.systemPrompt)
+                Text(profile.description ?? profile.systemPrompt ?? "")
                     .font(TS.Font.caption)
                     .foregroundStyle(Color.labelSecondary)
                     .lineLimit(2)
@@ -211,8 +211,8 @@ struct ProfilesView: View {
         do {
             let created = try await APIService.shared.createProfile(
                 name: profile.name,
-                systemPrompt: profile.systemPrompt,
-                notulePrompt: profile.notulePrompt,
+                systemPrompt: profile.systemPrompt ?? "",
+                notulePrompt: profile.notulePrompt ?? "",
                 template: profile.template
             )
             profiles.append(created)
@@ -322,8 +322,8 @@ struct ProfileEditSheet: View {
         .onAppear {
             if let profile = existingProfile {
                 name = profile.name
-                systemPrompt = profile.systemPrompt
-                notulePrompt = profile.notulePrompt
+                systemPrompt = profile.systemPrompt ?? ""
+                notulePrompt = profile.notulePrompt ?? ""
                 template = profile.template ?? ""
             }
         }

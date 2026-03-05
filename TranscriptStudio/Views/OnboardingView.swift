@@ -8,6 +8,10 @@
 import SwiftUI
 import Speech
 import AVFoundation
+import EventKit
+#if os(macOS)
+import ScreenCaptureKit
+#endif
 
 // MARK: - OnboardingView
 
@@ -19,44 +23,68 @@ struct OnboardingView: View {
     @State private var micPermission: PermissionState = .unknown
     @State private var speechPermission: PermissionState = .unknown
     @State private var calendarPermission: PermissionState = .unknown
+    @State private var screenRecordingPermission: PermissionState = .unknown
     @State private var isAnimatingIn: Bool = false
 
     enum OnboardingStep: Int, CaseIterable {
-        case welcome     = 0
-        case microphoon  = 1
-        case spraak      = 2
-        case agenda      = 3
-        case klaar       = 4
+        case welcome        = 0
+        case microphoon     = 1
+        case spraak         = 2
+        case agenda         = 3
+        case schermopname   = 4
+        case klaar          = 5
 
         var title: String {
             switch self {
-            case .welcome:    return "Welkom bij TranscriptStudio"
-            case .microphoon: return "Microfoontoestemming"
-            case .spraak:     return "Spraakherkenning"
-            case .agenda:     return "Agenda"
-            case .klaar:      return "Alles klaar!"
+            case .welcome:       return "Welkom bij TranscriptStudio"
+            case .microphoon:    return "Microfoontoestemming"
+            case .spraak:        return "Spraakherkenning"
+            case .agenda:        return "Agenda"
+            case .schermopname:  return "Schermopname"
+            case .klaar:         return "Alles klaar!"
             }
         }
 
         var icon: String {
             switch self {
-            case .welcome:    return "waveform.badge.mic"
-            case .microphoon: return "mic.fill"
-            case .spraak:     return "waveform"
-            case .agenda:     return "calendar"
-            case .klaar:      return "checkmark.seal.fill"
+            case .welcome:       return "waveform.badge.mic"
+            case .microphoon:    return "mic.fill"
+            case .spraak:        return "waveform"
+            case .agenda:        return "calendar"
+            case .schermopname:  return "rectangle.dashed.badge.record"
+            case .klaar:         return "checkmark.seal.fill"
             }
         }
 
         var gradientColors: [Color] {
             switch self {
-            case .welcome:    return [Color.gradientPurple, Color.gradientBlue]
-            case .microphoon: return [Color.gradientBlue, Color.brandSecondary.opacity(0.5)]
-            case .spraak:     return [Color.gradientGreen, Color.brandAccent.opacity(0.4)]
-            case .agenda:     return [Color.gradientOrange, Color.brandOrange.opacity(0.4)]
-            case .klaar:      return [Color.brandPrimary.opacity(0.3), Color.gradientPurple]
+            case .welcome:       return [Color.gradientPurple, Color.gradientBlue]
+            case .microphoon:    return [Color.gradientBlue, Color.brandSecondary.opacity(0.5)]
+            case .spraak:        return [Color.gradientGreen, Color.brandAccent.opacity(0.4)]
+            case .agenda:        return [Color.gradientOrange, Color.brandOrange.opacity(0.4)]
+            case .schermopname:  return [Color.gradientBlue, Color.brandPrimary.opacity(0.4)]
+            case .klaar:         return [Color.brandPrimary.opacity(0.3), Color.gradientPurple]
             }
         }
+
+        /// Whether this step is available on the current platform.
+        var isAvailableOnCurrentPlatform: Bool {
+            switch self {
+            case .schermopname:
+                #if os(macOS)
+                return true
+                #else
+                return false
+                #endif
+            default:
+                return true
+            }
+        }
+    }
+
+    /// Steps visible on the current platform (excludes macOS-only steps on iOS).
+    private var visibleSteps: [OnboardingStep] {
+        OnboardingStep.allCases.filter { $0.isAvailableOnCurrentPlatform }
     }
 
     enum PermissionState {
@@ -94,7 +122,7 @@ struct OnboardingView: View {
 
                 // Content area
                 TabView(selection: $currentStep) {
-                    ForEach(OnboardingStep.allCases, id: \.self) { step in
+                    ForEach(visibleSteps, id: \.self) { step in
                         stepContent(step)
                             .tag(step)
                     }
@@ -121,7 +149,7 @@ struct OnboardingView: View {
 
     private var stepIndicator: some View {
         HStack(spacing: TS.Spacing.sm) {
-            ForEach(OnboardingStep.allCases, id: \.self) { step in
+            ForEach(visibleSteps, id: \.self) { step in
                 Capsule()
                     .fill(step == currentStep ? Color.brandPrimary : Color.brandPrimary.opacity(0.20))
                     .frame(width: step == currentStep ? 24 : 8, height: 8)
@@ -137,11 +165,12 @@ struct OnboardingView: View {
     @ViewBuilder
     private func stepContent(_ step: OnboardingStep) -> some View {
         switch step {
-        case .welcome:    welcomeStep
-        case .microphoon: microphoonStep
-        case .spraak:     spraakStep
-        case .agenda:     agendaStep
-        case .klaar:      klaarStep
+        case .welcome:       welcomeStep
+        case .microphoon:    microphoonStep
+        case .spraak:        spraakStep
+        case .agenda:        agendaStep
+        case .schermopname:  schermopnameStep
+        case .klaar:         klaarStep
         }
     }
 
@@ -316,6 +345,54 @@ struct OnboardingView: View {
         }
     }
 
+    // MARK: Schermopname Step (macOS only)
+
+    private var schermopnameStep: some View {
+        #if os(macOS)
+        VStack(spacing: TS.Spacing.xl) {
+            Spacer()
+
+            permissionIcon(systemName: "rectangle.dashed.badge.record", permission: screenRecordingPermission)
+
+            VStack(spacing: TS.Spacing.sm) {
+                Text("Schermopname")
+                    .font(TS.Font.title2Bold)
+                    .foregroundStyle(Color.labelPrimary)
+                Text("TranscriptStudio heeft schermopname-toestemming nodig om systeemaudio van videovergaderingen op te nemen.")
+                    .font(TS.Font.callout)
+                    .foregroundStyle(Color.labelSecondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, TS.Spacing.xl)
+            }
+
+            permissionStatusRow(permission: screenRecordingPermission, label: "Schermopname toegang")
+
+            if screenRecordingPermission == .unknown {
+                Button("Toestemming verlenen") {
+                    Task { await requestScreenRecordingPermission() }
+                }
+                .buttonStyle(PrimaryButtonStyle())
+            } else if screenRecordingPermission == .denied {
+                VStack(spacing: TS.Spacing.sm) {
+                    Text("Toegang geweigerd — open Systeeminstellingen om dit te wijzigen.")
+                        .font(TS.Font.caption)
+                        .foregroundStyle(Color.statusError)
+                        .multilineTextAlignment(.center)
+                    Button("Systeeminstellingen openen") {
+                        openSystemSettings()
+                    }
+                    .buttonStyle(SecondaryButtonStyle())
+                }
+            }
+
+            Spacer()
+            Spacer()
+        }
+        #else
+        EmptyView()
+        #endif
+    }
+
     // MARK: Klaar Step
 
     private var klaarStep: some View {
@@ -347,6 +424,9 @@ struct OnboardingView: View {
                 summaryRow(icon: "mic.fill", label: "Microfoon", permission: micPermission)
                 summaryRow(icon: "waveform", label: "Spraakherkenning", permission: speechPermission)
                 summaryRow(icon: "calendar", label: "Agenda", permission: calendarPermission)
+                #if os(macOS)
+                summaryRow(icon: "rectangle.dashed.badge.record", label: "Schermopname", permission: screenRecordingPermission)
+                #endif
             }
             .padding(TS.Spacing.md)
             .background(Color.surfacePrimary.opacity(0.8))
@@ -406,11 +486,9 @@ struct OnboardingView: View {
 
     private var navigationFooter: some View {
         HStack {
-            if currentStep.rawValue > 0 {
+            if currentStep != visibleSteps.first {
                 Button {
-                    withAnimation(TS.Animation.smooth) {
-                        currentStep = OnboardingStep(rawValue: currentStep.rawValue - 1) ?? .welcome
-                    }
+                    goBackStep()
                 } label: {
                     HStack(spacing: TS.Spacing.xs) {
                         Image(systemName: "chevron.left")
@@ -458,14 +536,27 @@ struct OnboardingView: View {
 
         let calStatus = await checkCalendarStatus()
         calendarPermission = calStatus
+
+        #if os(macOS)
+        await checkScreenRecordingPermission()
+        #endif
     }
 
     private func checkCalendarStatus() async -> PermissionState {
-        #if os(macOS)
-        return .unknown // Check via EKEventStore on macOS
-        #else
-        return .unknown
-        #endif
+        let status = EKEventStore.authorizationStatus(for: .event)
+        if #available(macOS 14, iOS 17, *) {
+            switch status {
+            case .fullAccess: return .granted
+            case .denied, .restricted: return .denied
+            default: return .unknown
+            }
+        } else {
+            switch status {
+            case .authorized: return .granted
+            case .denied, .restricted: return .denied
+            default: return .unknown
+            }
+        }
     }
 
     private func requestMicPermission() async {
@@ -496,6 +587,34 @@ struct OnboardingView: View {
         }
     }
 
+    #if os(macOS)
+    private func checkScreenRecordingPermission() async {
+        do {
+            _ = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: false)
+            await MainActor.run {
+                screenRecordingPermission = .granted
+            }
+        } catch {
+            // If the call fails, permission has not been granted.
+            // We cannot distinguish "not yet asked" from "denied" via ScreenCaptureKit,
+            // so we keep .unknown until the user explicitly requests.
+            await MainActor.run {
+                if screenRecordingPermission != .unknown {
+                    screenRecordingPermission = .denied
+                }
+            }
+        }
+    }
+
+    private func requestScreenRecordingPermission() async {
+        // CGRequestScreenCaptureAccess opens System Settings for the user to grant permission.
+        CGRequestScreenCaptureAccess()
+        // Re-check after a brief delay to allow the user to grant permission.
+        try? await Task.sleep(for: .seconds(1))
+        await checkScreenRecordingPermission()
+    }
+    #endif
+
     private func openSystemSettings() {
         #if os(macOS)
         NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security")!)
@@ -506,8 +625,20 @@ struct OnboardingView: View {
 
     private func advanceStep() {
         withAnimation(TS.Animation.smooth) {
-            if let next = OnboardingStep(rawValue: currentStep.rawValue + 1) {
-                currentStep = next
+            let steps = visibleSteps
+            if let currentIndex = steps.firstIndex(of: currentStep),
+               currentIndex + 1 < steps.count {
+                currentStep = steps[currentIndex + 1]
+            }
+        }
+    }
+
+    private func goBackStep() {
+        withAnimation(TS.Animation.smooth) {
+            let steps = visibleSteps
+            if let currentIndex = steps.firstIndex(of: currentStep),
+               currentIndex > 0 {
+                currentStep = steps[currentIndex - 1]
             }
         }
     }

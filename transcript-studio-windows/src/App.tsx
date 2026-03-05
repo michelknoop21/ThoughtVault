@@ -13,7 +13,10 @@ import { AdminPage } from "./pages/AdminPage";
 import { OnboardingWizard } from "./components/onboarding/OnboardingWizard";
 import { useAuthStore } from "./stores/authStore";
 import { useSettingsStore } from "./stores/settingsStore";
+import { useProfilesStore } from "./stores/profilesStore";
 import { MicrosoftGraphService } from "./services/microsoftGraph";
+import { api } from "./services/api";
+import type { Profile } from "./types";
 
 function AppShell({ children }: { children: React.ReactNode }) {
   return (
@@ -39,7 +42,25 @@ function AppShell({ children }: { children: React.ReactNode }) {
 
 function ProtectedRoutes() {
   const { isAuthenticated } = useAuthStore();
-  const { has_completed_onboarding } = useSettingsStore();
+  const { has_completed_onboarding, updateSettings } = useSettingsStore();
+  const setProfiles = useProfilesStore((s) => s.setProfiles);
+
+  // Load profiles and OAuth config from API on auth
+  useEffect(() => {
+    if (isAuthenticated) {
+      api.getProfiles().then((profiles: Profile[]) => {
+        if (profiles.length > 0) {
+          setProfiles(profiles);
+        }
+      });
+      api.getMySettings().then((settings) => {
+        updateSettings({
+          ms365_client_id: settings.ms365_client_id || undefined,
+          ms365_tenant_id: settings.ms365_tenant_id || undefined,
+        });
+      }).catch(() => { /* ignore - settings will remain as-is */ });
+    }
+  }, [isAuthenticated, setProfiles, updateSettings]);
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;

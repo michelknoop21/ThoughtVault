@@ -74,6 +74,11 @@ struct ContentView: View {
         .task {
             await checkMinimumVersion()
         }
+        .onChange(of: authVM.isAuthenticated) { _, isAuth in
+            if isAuth {
+                Task { await recordingVM.reloadProfiles() }
+            }
+        }
         .alert("Update vereist", isPresented: $showForceUpdateAlert) {
             Button("Update nu") {
                 if let url = URL(string: "https://transcriptstudio.app/download") {
@@ -87,12 +92,21 @@ struct ContentView: View {
 
     // MARK: - Authenticated View
 
+    @ViewBuilder
     private var authenticatedView: some View {
 #if os(macOS)
         macOSView
+            .task { await fetchCalendarIfGranted() }
 #else
         iOSView
+            .task { await fetchCalendarIfGranted() }
 #endif
+    }
+
+    private func fetchCalendarIfGranted() async {
+        if calendarService.hasCalendarAccess {
+            await calendarService.fetchUpcomingMeetings()
+        }
     }
 
 #if os(macOS)
@@ -112,9 +126,26 @@ struct ContentView: View {
 
     private var sidebarView: some View {
         VStack(spacing: 0) {
-            // Brand stripe
+            // Brand stripe at very top
             YingaBar()
-                .padding(.top, 8)
+
+            // App icon + title
+            HStack(spacing: 8) {
+                Image("AppLogo")
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 24, height: 24)
+                    .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
+
+                Text("Transcript Studio")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Color.labelPrimary)
+
+                Spacer()
+            }
+            .padding(.horizontal, 12)
+            .padding(.top, 10)
+            .padding(.bottom, 4)
 
             // User profile section
             userProfileSection
@@ -159,6 +190,8 @@ struct ContentView: View {
             .padding(.bottom, 12)
         }
         .listStyle(.sidebar)
+        .navigationTitle("")
+        .toolbar(removing: .sidebarToggle)
     }
 
     private var userProfileSection: some View {

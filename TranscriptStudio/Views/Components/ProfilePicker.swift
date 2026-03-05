@@ -60,7 +60,7 @@ private struct ProfileChip: View {
                     .lineLimit(1)
 
                 // Default indicator
-                if profile.isDefault {
+                if profile.isDefault == true {
                     Image(systemName: "star.fill")
                         .font(.system(size: 9))
                         .foregroundStyle(isSelected ? Color.white.opacity(0.7) : Color.brandPrimary.opacity(0.5))

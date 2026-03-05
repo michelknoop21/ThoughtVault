@@ -13,7 +13,7 @@ enum AdminTab: String, CaseIterable {
     case overzicht = "Overzicht"
     case gebruikers = "Gebruikers"
     case uitnodigingen = "Uitnodigingen"
-    case bugRapporten = "Bug Rapporten"
+    case feedback = "Feedback"
     case fouten = "Fouten"
 
     var icon: String {
@@ -21,7 +21,7 @@ enum AdminTab: String, CaseIterable {
         case .overzicht: return "chart.bar.fill"
         case .gebruikers: return "person.2.fill"
         case .uitnodigingen: return "envelope.fill"
-        case .bugRapporten: return "ladybug.fill"
+        case .feedback: return "bubble.left.and.text.bubble.right.fill"
         case .fouten: return "exclamationmark.triangle.fill"
         }
     }
@@ -38,7 +38,7 @@ struct AdminView: View {
     @State private var users: [AdminUser] = []
     @State private var stats: AdminStats? = nil
     @State private var invitations: [AdminInvitation] = []
-    @State private var bugReports: [AdminBugReport] = []
+    @State private var feedbackItems: [AdminFeedback] = []
     @State private var errors: [AdminError] = []
     @State private var isLoading = false
     @State private var errorMessage: String? = nil
@@ -51,12 +51,13 @@ struct AdminView: View {
 
     // Create user form
     @State private var newUserEmail = ""
+    @State private var newUserPassword = ""
     @State private var newUserName = ""
     @State private var newUserRole = "user"
 
     // Create invitation form
-    @State private var newInvitationEmail = ""
-    @State private var newInvitationRole = "user"
+    @State private var newInviteMaxUses = 1
+    @State private var newInviteExpiresHours = 48
 
     var filteredUsers: [AdminUser] {
         if searchText.isEmpty { return users }
@@ -213,8 +214,8 @@ struct AdminView: View {
                 gebruikersTab
             case .uitnodigingen:
                 uitnodigingenTab
-            case .bugRapporten:
-                bugRapportenTab
+            case .feedback:
+                feedbackTab
             case .fouten:
                 foutenTab
             }
@@ -289,6 +290,7 @@ struct AdminView: View {
                 Spacer()
                 Button {
                     newUserEmail = ""
+                    newUserPassword = ""
                     newUserName = ""
                     newUserRole = "user"
                     showCreateUserSheet = true
@@ -416,8 +418,8 @@ struct AdminView: View {
             HStack {
                 Spacer()
                 Button {
-                    newInvitationEmail = ""
-                    newInvitationRole = "user"
+                    newInviteMaxUses = 1
+                    newInviteExpiresHours = 48
                     showCreateInvitationSheet = true
                 } label: {
                     Label("Uitnodiging aanmaken", systemImage: "plus")
@@ -455,45 +457,73 @@ struct AdminView: View {
                 Circle()
                     .fill(Color.brandPrimary.opacity(0.12))
                     .frame(width: 36, height: 36)
-                Image(systemName: "envelope.fill")
+                Image(systemName: "ticket.fill")
                     .font(TS.Font.footnote)
                     .foregroundStyle(Color.brandPrimary)
             }
 
             // Info
             VStack(alignment: .leading, spacing: 2) {
-                Text(invitation.email)
-                    .font(TS.Font.bodyMedium)
+                Text(invitation.code)
+                    .font(.system(size: 14, weight: .semibold, design: .monospaced))
                     .foregroundStyle(Color.labelPrimary)
-                if let createdAt = invitation.createdAt {
-                    Text("Verstuurd: \(formattedDate(createdAt))")
-                        .font(TS.Font.micro)
-                        .foregroundStyle(Color.labelTertiary)
+                HStack(spacing: TS.Spacing.sm) {
+                    if let createdAt = invitation.createdAt {
+                        Text(formattedDate(createdAt))
+                            .font(TS.Font.micro)
+                            .foregroundStyle(Color.labelTertiary)
+                    }
+                    if let remaining = invitation.usesRemaining, let max = invitation.maxUses {
+                        Text("\(remaining)/\(max) gebruikt")
+                            .font(TS.Font.micro)
+                            .foregroundStyle(Color.labelTertiary)
+                    }
                 }
             }
 
             Spacer()
 
-            // Role badge
-            Text(invitation.role.capitalized)
-                .font(TS.Font.microSemibold)
-                .padding(.horizontal, TS.Spacing.sm)
-                .padding(.vertical, TS.Spacing.xs)
-                .background(roleColor(invitation.role).opacity(0.12))
-                .foregroundStyle(roleColor(invitation.role))
-                .clipShape(Capsule())
+            // Copy button
+            Button {
+                #if os(macOS)
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(invitation.code, forType: .string)
+                #endif
+            } label: {
+                Image(systemName: "doc.on.doc")
+                    .font(TS.Font.footnote)
+                    .foregroundStyle(Color.labelSecondary)
+            }
+            .buttonStyle(.plain)
 
-            // Status indicator
-            if invitation.usedAt != nil {
-                Text("Gebruikt")
+            // Status
+            let isExpired = {
+                guard let exp = invitation.expiresAt else { return false }
+                let iso = ISO8601DateFormatter()
+                iso.formatOptions = [.withInternetDateTime]
+                guard let date = iso.date(from: exp) else { return false }
+                return date < Date()
+            }()
+            let remaining = invitation.usesRemaining ?? 1
+
+            if remaining == 0 {
+                Text("Opgebruikt")
                     .font(TS.Font.microSemibold)
                     .padding(.horizontal, TS.Spacing.sm)
                     .padding(.vertical, TS.Spacing.xs)
                     .background(Color.statusSuccess.opacity(0.12))
                     .foregroundStyle(Color.statusSuccess)
                     .clipShape(Capsule())
+            } else if isExpired {
+                Text("Verlopen")
+                    .font(TS.Font.microSemibold)
+                    .padding(.horizontal, TS.Spacing.sm)
+                    .padding(.vertical, TS.Spacing.xs)
+                    .background(Color.statusError.opacity(0.12))
+                    .foregroundStyle(Color.statusError)
+                    .clipShape(Capsule())
             } else {
-                Text("Openstaand")
+                Text("Actief")
                     .font(TS.Font.microSemibold)
                     .padding(.horizontal, TS.Spacing.sm)
                     .padding(.vertical, TS.Spacing.xs)
@@ -505,16 +535,16 @@ struct AdminView: View {
         .padding(.vertical, TS.Spacing.xs)
     }
 
-    // MARK: - Bug Rapporten Tab
+    // MARK: - Feedback Tab
 
-    private var bugRapportenTab: some View {
+    private var feedbackTab: some View {
         ScrollView {
-            if bugReports.isEmpty {
+            if feedbackItems.isEmpty {
                 VStack(spacing: TS.Spacing.md) {
-                    Image(systemName: "ladybug")
+                    Image(systemName: "bubble.left.and.text.bubble.right")
                         .font(.system(size: 40))
                         .foregroundStyle(Color.labelTertiary)
-                    Text("Geen bug rapporten")
+                    Text("Geen feedback")
                         .font(TS.Font.callout)
                         .foregroundStyle(Color.labelSecondary)
                 }
@@ -522,8 +552,8 @@ struct AdminView: View {
                 .padding(.top, TS.Spacing.xxl)
             } else {
                 LazyVStack(spacing: TS.Spacing.md) {
-                    ForEach(bugReports) { report in
-                        bugReportCard(report)
+                    ForEach(feedbackItems) { item in
+                        feedbackCard(item)
                     }
                 }
                 .padding(TS.Spacing.md)
@@ -531,74 +561,78 @@ struct AdminView: View {
         }
     }
 
-    private func bugReportCard(_ report: AdminBugReport) -> some View {
+    private func feedbackCard(_ item: AdminFeedback) -> some View {
         VStack(alignment: .leading, spacing: TS.Spacing.sm) {
             // Top row: category + status badges
             HStack(spacing: TS.Spacing.sm) {
-                // Category badge
-                Text(bugCategoryLabel(report.category))
+                Text(feedbackCategoryLabel(item.category))
                     .font(TS.Font.microSemibold)
                     .padding(.horizontal, TS.Spacing.sm)
                     .padding(.vertical, TS.Spacing.xs)
-                    .background(bugCategoryColor(report.category).opacity(0.12))
-                    .foregroundStyle(bugCategoryColor(report.category))
+                    .background(feedbackCategoryColor(item.category).opacity(0.12))
+                    .foregroundStyle(feedbackCategoryColor(item.category))
                     .clipShape(Capsule())
 
-                // Status badge
-                Text(bugStatusLabel(report.status))
+                Text(feedbackStatusLabel(item.status))
                     .font(TS.Font.microSemibold)
                     .padding(.horizontal, TS.Spacing.sm)
                     .padding(.vertical, TS.Spacing.xs)
-                    .background(bugStatusColor(report.status).opacity(0.12))
-                    .foregroundStyle(bugStatusColor(report.status))
+                    .background(feedbackStatusColor(item.status).opacity(0.12))
+                    .foregroundStyle(feedbackStatusColor(item.status))
                     .clipShape(Capsule())
 
                 Spacer()
 
-                if let createdAt = report.createdAt {
+                if let createdAt = item.createdAt {
                     Text(formattedDate(createdAt))
                         .font(TS.Font.captionMonospaced)
                         .foregroundStyle(Color.labelTertiary)
                 }
             }
 
-            // Title
-            Text(report.title)
+            Text(item.title)
                 .font(TS.Font.bodyMedium)
                 .foregroundStyle(Color.labelPrimary)
 
-            // Reporter
-            Text(report.reporterEmail)
-                .font(TS.Font.caption)
-                .foregroundStyle(Color.labelTertiary)
-
-            // Description
-            if !report.description.isEmpty {
-                Text(report.description)
+            if !item.description.isEmpty {
+                Text(item.description)
                     .font(TS.Font.footnote)
                     .foregroundStyle(Color.labelSecondary)
                     .lineLimit(3)
             }
 
-            // Status action buttons
+            if let response = item.response, !response.isEmpty {
+                HStack(spacing: TS.Spacing.xs) {
+                    Image(systemName: "arrowshape.turn.up.left.fill")
+                        .font(TS.Font.micro)
+                    Text(response)
+                        .font(TS.Font.footnote)
+                        .lineLimit(2)
+                }
+                .foregroundStyle(Color.brandPrimary)
+                .padding(TS.Spacing.sm)
+                .background(Color.brandPrimary.opacity(0.06))
+                .clipShape(RoundedRectangle(cornerRadius: TS.Radius.sm))
+            }
+
             Divider()
 
             HStack(spacing: TS.Spacing.sm) {
-                statusActionButton("Nieuw", targetStatus: "new", currentStatus: report.status, reportId: report.id)
-                statusActionButton("In behandeling", targetStatus: "in_progress", currentStatus: report.status, reportId: report.id)
-                statusActionButton("Opgelost", targetStatus: "resolved", currentStatus: report.status, reportId: report.id)
+                feedbackStatusButton("Nieuw", targetStatus: "new", currentStatus: item.status, itemId: item.id)
+                feedbackStatusButton("In behandeling", targetStatus: "in_progress", currentStatus: item.status, itemId: item.id)
+                feedbackStatusButton("Opgelost", targetStatus: "resolved", currentStatus: item.status, itemId: item.id)
             }
         }
         .padding(TS.Spacing.md)
         .modernCard()
     }
 
-    private func statusActionButton(_ label: String, targetStatus: String, currentStatus: String, reportId: String) -> some View {
+    private func feedbackStatusButton(_ label: String, targetStatus: String, currentStatus: String, itemId: String) -> some View {
         Button {
             Task {
                 do {
-                    try await APIService.shared.updateBugReportStatus(id: reportId, status: targetStatus)
-                    await loadBugReports()
+                    try await APIService.shared.updateAdminFeedback(id: itemId, status: targetStatus, response: nil)
+                    await loadFeedback()
                 } catch {
                     errorMessage = "Status bijwerken mislukt: \(error.localizedDescription)"
                 }
@@ -651,7 +685,7 @@ struct AdminView: View {
         VStack(alignment: .leading, spacing: TS.Spacing.sm) {
             // Type badge + timestamp
             HStack {
-                Text(adminError.type)
+                Text(adminError.type ?? "Error")
                     .font(TS.Font.microSemibold)
                     .padding(.horizontal, TS.Spacing.sm)
                     .padding(.vertical, TS.Spacing.xs)
@@ -682,7 +716,7 @@ struct AdminView: View {
                 .lineLimit(4)
 
             // Reporter
-            if let reporter = adminError.reporterEmail, !reporter.isEmpty {
+            if let reporter = adminError.userId, !reporter.isEmpty {
                 HStack(spacing: TS.Spacing.xs) {
                     Image(systemName: "person")
                         .font(TS.Font.micro)
@@ -709,6 +743,14 @@ struct AdminView: View {
                     .font(TS.Font.footnoteSemibold)
                     .foregroundStyle(Color.labelSecondary)
                 TextField("gebruiker@voorbeeld.nl", text: $newUserEmail)
+                    .textFieldStyle(.roundedBorder)
+            }
+
+            VStack(alignment: .leading, spacing: TS.Spacing.sm) {
+                Text("Wachtwoord")
+                    .font(TS.Font.footnoteSemibold)
+                    .foregroundStyle(Color.labelSecondary)
+                SecureField("Minimaal 8 tekens", text: $newUserPassword)
                     .textFieldStyle(.roundedBorder)
             }
 
@@ -742,6 +784,7 @@ struct AdminView: View {
                         do {
                             try await APIService.shared.createUser(
                                 email: newUserEmail,
+                                password: newUserPassword,
                                 name: newUserName.isEmpty ? nil : newUserName,
                                 role: newUserRole
                             )
@@ -753,7 +796,7 @@ struct AdminView: View {
                     }
                 }
                 .buttonStyle(PrimaryButtonStyle())
-                .disabled(newUserEmail.isEmpty)
+                .disabled(newUserEmail.isEmpty || newUserPassword.isEmpty)
             }
         }
         .padding(TS.Spacing.xl)
@@ -764,25 +807,26 @@ struct AdminView: View {
 
     private var createInvitationSheet: some View {
         VStack(spacing: TS.Spacing.lg) {
-            Text("Nieuwe uitnodiging")
+            Text("Nieuwe uitnodigingscode")
                 .font(TS.Font.title3Bold)
                 .foregroundStyle(Color.labelPrimary)
 
             VStack(alignment: .leading, spacing: TS.Spacing.sm) {
-                Text("E-mailadres")
+                Text("Maximaal gebruik")
                     .font(TS.Font.footnoteSemibold)
                     .foregroundStyle(Color.labelSecondary)
-                TextField("gebruiker@voorbeeld.nl", text: $newInvitationEmail)
-                    .textFieldStyle(.roundedBorder)
+                Stepper("\(newInviteMaxUses)x", value: $newInviteMaxUses, in: 1...100)
             }
 
             VStack(alignment: .leading, spacing: TS.Spacing.sm) {
-                Text("Rol")
+                Text("Geldig voor")
                     .font(TS.Font.footnoteSemibold)
                     .foregroundStyle(Color.labelSecondary)
-                Picker("Rol", selection: $newInvitationRole) {
-                    Text("User").tag("user")
-                    Text("Admin").tag("admin")
+                Picker("Geldigheid", selection: $newInviteExpiresHours) {
+                    Text("24 uur").tag(24)
+                    Text("48 uur").tag(48)
+                    Text("7 dagen").tag(168)
+                    Text("30 dagen").tag(720)
                 }
                 .pickerStyle(.segmented)
             }
@@ -793,12 +837,12 @@ struct AdminView: View {
                 }
                 .buttonStyle(SecondaryButtonStyle())
 
-                Button("Verstuur") {
+                Button("Aanmaken") {
                     Task {
                         do {
                             try await APIService.shared.createInvitation(
-                                email: newInvitationEmail,
-                                role: newInvitationRole
+                                maxUses: newInviteMaxUses,
+                                expiresHours: newInviteExpiresHours
                             )
                             showCreateInvitationSheet = false
                             await loadInvitations()
@@ -808,7 +852,6 @@ struct AdminView: View {
                     }
                 }
                 .buttonStyle(PrimaryButtonStyle())
-                .disabled(newInvitationEmail.isEmpty)
             }
         }
         .padding(TS.Spacing.xl)
@@ -825,7 +868,7 @@ struct AdminView: View {
         }
     }
 
-    private func bugCategoryLabel(_ category: String) -> String {
+    private func feedbackCategoryLabel(_ category: String) -> String {
         switch category.lowercased() {
         case "bug":     return "Bug"
         case "feature": return "Feature"
@@ -834,7 +877,7 @@ struct AdminView: View {
         }
     }
 
-    private func bugCategoryColor(_ category: String) -> Color {
+    private func feedbackCategoryColor(_ category: String) -> Color {
         switch category.lowercased() {
         case "bug":     return Color.statusError
         case "feature": return Color.statusSuccess
@@ -843,7 +886,7 @@ struct AdminView: View {
         }
     }
 
-    private func bugStatusLabel(_ status: String) -> String {
+    private func feedbackStatusLabel(_ status: String) -> String {
         switch status.lowercased() {
         case "new":         return "Nieuw"
         case "in_progress": return "In behandeling"
@@ -852,7 +895,7 @@ struct AdminView: View {
         }
     }
 
-    private func bugStatusColor(_ status: String) -> Color {
+    private func feedbackStatusColor(_ status: String) -> Color {
         switch status.lowercased() {
         case "new":         return Color.brandPrimary
         case "in_progress": return Color.brandOrange
@@ -890,7 +933,7 @@ struct AdminView: View {
         async let statsResult: () = loadStats()
         async let usersResult: () = loadUsers()
         async let invitationsResult: () = loadInvitations()
-        async let bugReportsResult: () = loadBugReports()
+        async let bugReportsResult: () = loadFeedback()
         async let errorsResult: () = loadErrors()
 
         _ = await (statsResult, usersResult, invitationsResult, bugReportsResult, errorsResult)
@@ -921,11 +964,11 @@ struct AdminView: View {
         }
     }
 
-    private func loadBugReports() async {
+    private func loadFeedback() async {
         do {
-            bugReports = try await APIService.shared.getAdminBugReports()
+            feedbackItems = try await APIService.shared.getAdminFeedback()
         } catch {
-            print("AdminView: bug rapporten laden mislukt: \(error.localizedDescription)")
+            print("AdminView: feedback laden mislukt: \(error.localizedDescription)")
         }
     }
 
@@ -966,46 +1009,69 @@ struct AdminStats: Codable {
 }
 
 struct AdminInvitation: Codable, Identifiable {
-    let id: String
-    let email: String
-    let role: String
+    var id: String { code }
+    let code: String
+    let createdBy: String?
+    let usesRemaining: Int?
+    let maxUses: Int?
+    let expiresAt: String?
     let createdAt: String?
-    let usedAt: String?
 
     enum CodingKeys: String, CodingKey {
-        case id, email, role
+        case code
+        case createdBy = "created_by"
+        case usesRemaining = "uses_remaining"
+        case maxUses = "max_uses"
+        case expiresAt = "expires_at"
         case createdAt = "created_at"
-        case usedAt = "used_at"
     }
 }
 
-struct AdminBugReport: Codable, Identifiable {
+struct AdminFeedback: Codable, Identifiable {
     let id: String
     let category: String
     let status: String
     let title: String
     let description: String
-    let reporterEmail: String
+    let userId: String?
     let createdAt: String?
+    let response: String?
 
     enum CodingKeys: String, CodingKey {
-        case id, category, status, title, description
-        case reporterEmail = "reporter_email"
+        case id, category, status, title, description, response
+        case userId = "user_id"
         case createdAt = "created_at"
     }
 }
 
 struct AdminError: Codable, Identifiable {
     let id: String
-    let type: String
+    let type: String?
     let endpoint: String?
     let message: String
-    let reporterEmail: String?
+    let severity: String?
+    let userId: String?
     let createdAt: String?
 
     enum CodingKeys: String, CodingKey {
-        case id, type, endpoint, message
-        case reporterEmail = "reporter_email"
+        case id, type, endpoint, message, severity
+        case userId = "user_id"
+        case createdAt = "created_at"
+    }
+}
+
+struct AdminActivity: Codable, Identifiable {
+    let id: String
+    let actionType: String
+    let userId: String?
+    let details: String?
+    let createdAt: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case actionType = "action_type"
+        case userId = "user_id"
+        case details
         case createdAt = "created_at"
     }
 }

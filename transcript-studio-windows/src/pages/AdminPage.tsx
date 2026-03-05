@@ -3,7 +3,6 @@ import {
   People24Regular,
   Bug24Regular,
   HeartPulse24Regular,
-  Delete24Regular,
   Home24Regular,
   Mail24Regular,
   Copy24Regular,
@@ -13,22 +12,22 @@ import {
   ArrowRight24Regular,
 } from "@fluentui/react-icons";
 import { api } from "../services/api";
-import type { AdminUser, BugReport, SystemHealth } from "../types";
+import type { AdminUser, AdminFeedback, SystemHealth } from "../types";
 
-type Tab = "overview" | "users" | "invitations" | "bugs" | "health";
+type Tab = "overview" | "users" | "invitations" | "feedback" | "health";
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "overview", label: "Overzicht", icon: <Home24Regular style={{ fontSize: 16 }} /> },
   { id: "users", label: "Gebruikers", icon: <People24Regular style={{ fontSize: 16 }} /> },
   { id: "invitations", label: "Uitnodigingen", icon: <Mail24Regular style={{ fontSize: 16 }} /> },
-  { id: "bugs", label: "Bug Rapporten", icon: <Bug24Regular style={{ fontSize: 16 }} /> },
+  { id: "feedback", label: "Feedback", icon: <Bug24Regular style={{ fontSize: 16 }} /> },
   { id: "health", label: "Fouten", icon: <HeartPulse24Regular style={{ fontSize: 16 }} /> },
 ];
 
 export function AdminPage() {
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [users, setUsers] = useState<AdminUser[]>([]);
-  const [bugReports, setBugReports] = useState<BugReport[]>([]);
+  const [feedbackItems, setFeedbackItems] = useState<AdminFeedback[]>([]);
   const [health, setHealth] = useState<SystemHealth | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -40,20 +39,20 @@ export function AdminPage() {
     setIsLoading(true);
     try {
       if (activeTab === "overview") {
-        const [usersData, bugsData, healthData] = await Promise.all([
+        const [usersData, feedbackData, healthData] = await Promise.all([
           api.getAdminUsers(),
-          api.getBugReports(),
+          api.getFeedback(),
           api.getSystemHealth(),
         ]);
         setUsers(usersData);
-        setBugReports(bugsData);
+        setFeedbackItems(feedbackData);
         setHealth(healthData);
       } else if (activeTab === "users") {
         const data = await api.getAdminUsers();
         setUsers(data);
-      } else if (activeTab === "bugs") {
-        const data = await api.getBugReports();
-        setBugReports(data);
+      } else if (activeTab === "feedback") {
+        const data = await api.getFeedback();
+        setFeedbackItems(data);
       } else if (activeTab === "health") {
         const data = await api.getSystemHealth();
         setHealth(data);
@@ -115,7 +114,7 @@ export function AdminPage() {
         )}
 
         {!isLoading && activeTab === "overview" && (
-          <OverviewTab users={users} bugReports={bugReports} health={health} />
+          <OverviewTab users={users} feedbackItems={feedbackItems} health={health} />
         )}
         {!isLoading && activeTab === "users" && (
           <UsersTab users={users} onDelete={handleDeleteUser} />
@@ -123,8 +122,8 @@ export function AdminPage() {
         {!isLoading && activeTab === "invitations" && (
           <InvitationsTab />
         )}
-        {!isLoading && activeTab === "bugs" && (
-          <BugsTab reports={bugReports} />
+        {!isLoading && activeTab === "feedback" && (
+          <FeedbackTab items={feedbackItems} onReload={() => loadData()} />
         )}
         {!isLoading && activeTab === "health" && health && (
           <HealthTab health={health} />
@@ -140,20 +139,16 @@ export function AdminPage() {
 
 function OverviewTab({
   users,
-  bugReports,
+  feedbackItems,
   health,
 }: {
   users: AdminUser[];
-  bugReports: BugReport[];
+  feedbackItems: AdminFeedback[];
   health: SystemHealth | null;
 }) {
   const totalTranscripts = users.reduce((sum, u) => sum + u.transcripts_count, 0);
   const totalTasks = health ? health.active_tasks + health.transcription_queue_length : 0;
-  const recentErrors = bugReports.filter((b) => {
-    const created = new Date(b.created_at);
-    const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    return created > dayAgo && b.status === "open";
-  }).length;
+  const pendingFeedback = feedbackItems.filter((f) => f.status === "new" || f.status === "open").length;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -201,8 +196,8 @@ function OverviewTab({
           <div className="stat-card-icon" style={{ background: "rgba(188, 0, 22, 0.10)", color: "#BC0016" }}>
             <Warning24Regular />
           </div>
-          <span className="stat-card-value">{recentErrors}</span>
-          <span className="stat-card-label">Fouten (24u)</span>
+          <span className="stat-card-value">{pendingFeedback}</span>
+          <span className="stat-card-label">Open feedback</span>
         </div>
       </div>
     </div>
@@ -482,10 +477,10 @@ function InvitationsTab() {
    Bug Rapporten Tab
    ============================================================ */
 
-function BugsTab({ reports }: { reports: BugReport[] }) {
+function FeedbackTab({ items, onReload }: { items: AdminFeedback[]; onReload: () => void }) {
   function getStatusBadgeClass(status: string): string {
     switch (status) {
-      case "open": return "status-badge-new";
+      case "new": case "open": return "status-badge-new";
       case "in_progress": return "status-badge-in-progress";
       case "resolved": return "status-badge-resolved";
       case "closed": return "status-badge-closed";
@@ -495,77 +490,77 @@ function BugsTab({ reports }: { reports: BugReport[] }) {
 
   function getStatusLabel(status: string): string {
     switch (status) {
-      case "open": return "New";
-      case "in_progress": return "In Progress";
-      case "resolved": return "Resolved";
-      case "closed": return "Closed";
+      case "new": case "open": return "Nieuw";
+      case "in_progress": return "In behandeling";
+      case "resolved": return "Opgelost";
+      case "closed": return "Gesloten";
       default: return status;
     }
   }
 
-  function getCategoryClass(description: string): { cls: string; label: string } {
-    const lower = description.toLowerCase();
-    if (lower.includes("feature") || lower.includes("verbetering")) {
-      return { cls: "category-feature", label: "Feature" };
+  function getCategoryClass(category: string): { cls: string; label: string } {
+    switch (category.toLowerCase()) {
+      case "bug": return { cls: "category-bug", label: "Bug" };
+      case "feature": return { cls: "category-feature", label: "Feature" };
+      default: return { cls: "category-general", label: "Algemeen" };
     }
-    if (lower.includes("bug") || lower.includes("fout") || lower.includes("error") || lower.includes("crash")) {
-      return { cls: "category-bug", label: "Bug" };
+  }
+
+  async function handleStatusChange(id: string, status: string) {
+    try {
+      await api.updateFeedback(id, status);
+      onReload();
+    } catch (err) {
+      console.error("Update feedback status failed:", err);
     }
-    return { cls: "category-general", label: "General" };
   }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      {reports.length === 0 ? (
-        <p style={{ fontSize: 13, color: "var(--text-tertiary)" }}>Geen bugrapporten</p>
+      {items.length === 0 ? (
+        <p style={{ fontSize: 13, color: "var(--text-tertiary)" }}>Geen feedback</p>
       ) : (
-        reports.map((report) => {
-          const cat = getCategoryClass(report.description);
+        items.map((item) => {
+          const cat = getCategoryClass(item.category);
           return (
-            <div key={report.id} className="card" style={{ padding: "14px 16px" }}>
-              {/* Top row: category + status */}
+            <div key={item.id} className="card" style={{ padding: "14px 16px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                 <span className={cat.cls}>{cat.label}</span>
-                <span className={getStatusBadgeClass(report.status)}>
-                  {getStatusLabel(report.status)}
+                <span className={getStatusBadgeClass(item.status)}>
+                  {getStatusLabel(item.status)}
                 </span>
               </div>
 
-              {/* Title — first line of description */}
               <p style={{ fontSize: 14, fontWeight: 600, color: "var(--text-primary)", marginBottom: 4 }}>
-                {report.description.split("\n")[0].substring(0, 80)}
+                {item.title}
               </p>
 
-              {/* Reporter */}
-              <p style={{ fontSize: 12, color: "var(--text-tertiary)", marginBottom: 6 }}>
-                {report.user_email}
-              </p>
-
-              {/* Description */}
               <p style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.5, marginBottom: 10 }}>
-                {report.description}
+                {item.description}
               </p>
 
-              {/* Bottom row: actions + date */}
+              {item.response && (
+                <p style={{ fontSize: 12, color: "var(--fill-accent-default)", marginBottom: 8, padding: "6px 10px", background: "rgba(229,0,116,0.06)", borderRadius: "var(--radius-sm)" }}>
+                  Reactie: {item.response}
+                </p>
+              )}
+
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div style={{ display: "flex", gap: 6 }}>
-                  {report.status === "open" && (
-                    <button className="btn" style={{ fontSize: 11, padding: "4px 10px" }}>
+                  {(item.status === "new" || item.status === "open") && (
+                    <button className="btn" style={{ fontSize: 11, padding: "4px 10px" }} onClick={() => handleStatusChange(item.id, "in_progress")}>
                       <ArrowRight24Regular style={{ fontSize: 12 }} />
-                      In Progress
+                      In behandeling
                     </button>
                   )}
-                  {(report.status === "open" || report.status === "in_progress") && (
-                    <button className="btn" style={{ fontSize: 11, padding: "4px 10px" }}>
-                      Resolved
+                  {(item.status === "new" || item.status === "open" || item.status === "in_progress") && (
+                    <button className="btn" style={{ fontSize: 11, padding: "4px 10px" }} onClick={() => handleStatusChange(item.id, "resolved")}>
+                      Opgelost
                     </button>
                   )}
-                  <button className="btn" style={{ fontSize: 11, padding: "4px 10px" }}>
-                    Reageer
-                  </button>
                 </div>
                 <p style={{ fontSize: 11, color: "var(--text-disabled)" }}>
-                  {new Date(report.created_at).toLocaleDateString("nl-NL", {
+                  {new Date(item.created_at).toLocaleDateString("nl-NL", {
                     day: "numeric",
                     month: "short",
                     year: "numeric",

@@ -1519,8 +1519,8 @@ private struct ProfileSelectionSheet: View {
                                 Text(profile.name)
                                     .font(TS.Font.bodyMedium)
                                     .foregroundStyle(Color.labelPrimary)
-                                if !profile.notulePrompt.isEmpty {
-                                    Text(profile.notulePrompt)
+                                if let prompt = profile.description ?? profile.notulePrompt, !prompt.isEmpty {
+                                    Text(prompt)
                                         .font(TS.Font.caption)
                                         .foregroundStyle(Color.labelSecondary)
                                         .lineLimit(2)

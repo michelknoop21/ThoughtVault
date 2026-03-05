@@ -9,7 +9,6 @@ import {
   Delete24Regular,
   People24Regular,
 } from "@fluentui/react-icons";
-import { useAuthStore } from "../stores/authStore";
 import { useRecordingStore } from "../stores/recordingStore";
 import { useTranscriptsStore } from "../stores/transcriptsStore";
 import { useCalendarStore } from "../stores/calendarStore";
@@ -19,7 +18,6 @@ import type { CalendarEvent, Transcript } from "../types";
 
 export function HomePage() {
   const navigate = useNavigate();
-  const user = useAuthStore((s) => s.user);
   const { setMode, setAutoStart } = useRecordingStore();
   const { transcripts, setTranscripts, deleteTranscript } = useTranscriptsStore();
   const calendar = useCalendarStore();
@@ -370,8 +368,3 @@ function formatDate(dateStr: string): string {
   });
 }
 
-function formatDuration(seconds: number): string {
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return m > 0 ? `${m}m ${s}s` : `${s}s`;
-}

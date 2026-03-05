@@ -2,8 +2,8 @@
 // TranscriptStudio
 // nl.prezent.TranscriptStudio
 //
-// Animated waveform visualization with spring physics bars
-// using brand colors. Updates at 60 FPS when active.
+// Flowing organic sine wave visualization with multiple layered curves
+// in blue/purple/pink with soft glow. Reacts to audio levels.
 
 import SwiftUI
 
@@ -11,114 +11,109 @@ import SwiftUI
 
 struct WaveformView: View {
 
-    /// Audio level values in range 0.0–1.0, one per bar.
+    /// Audio level values in range 0.0–1.0.
     let levels: [Float]
 
-    /// When false, bars animate to a flat idle state.
+    /// When false, waves animate at minimal amplitude.
     let isActive: Bool
 
-    // MARK: - Constants
+    // MARK: - Computed
 
-    private let barCount: Int = 24
-    private let barSpacing: CGFloat = 3
-    private let minBarHeight: CGFloat = 4
-    private let springStiffness: Double = 350
-    private let springDamping: Double = 20
-
-    var body: some View {
-        GeometryReader { geometry in
-            let barWidth = max(2, (geometry.size.width - CGFloat(barCount - 1) * barSpacing) / CGFloat(barCount))
-            let maxHeight = geometry.size.height
-
-            HStack(alignment: .center, spacing: barSpacing) {
-                ForEach(0..<barCount, id: \.self) { index in
-                    AnimatedBar(
-                        targetHeight: barHeight(index: index, maxHeight: maxHeight),
-                        barWidth: barWidth,
-                        colorIndex: index,
-                        isActive: isActive,
-                        springStiffness: springStiffness,
-                        springDamping: springDamping
-                    )
-                }
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-        }
-    }
-
-    // MARK: - Height Calculation
-
-    private func barHeight(index: Int, maxHeight: CGFloat) -> CGFloat {
-        guard isActive, !levels.isEmpty else {
-            // Idle: show subtle flat heartbeat-style minimum
-            return minBarHeight + idleHeight(index: index, maxHeight: maxHeight)
-        }
-
-        let levelIndex = index % levels.count
-        let level = CGFloat(max(0, min(1, levels[levelIndex])))
-
-        // Apply a slight mirroring for visual symmetry
-        let mirrorFactor = 1.0 - abs(CGFloat(index) / CGFloat(barCount) - 0.5) * 0.4
-        return max(minBarHeight, level * maxHeight * 0.85 * mirrorFactor)
-    }
-
-    private func idleHeight(index: Int, maxHeight: CGFloat) -> CGFloat {
-        // Subtle sine-shaped idle pattern
-        let position = CGFloat(index) / CGFloat(barCount)
-        let base = sin(position * .pi) * maxHeight * 0.06
-        return max(0, base)
-    }
-}
-
-// MARK: - AnimatedBar
-
-private struct AnimatedBar: View {
-
-    let targetHeight: CGFloat
-    let barWidth: CGFloat
-    let colorIndex: Int
-    let isActive: Bool
-    let springStiffness: Double
-    let springDamping: Double
-
-    @State private var animatedHeight: CGFloat = 4
-
-    private var barColor: Color {
-        // Alternate between neonBlue and brandPrimary with a slight phase
-        let cycle = colorIndex % 6
-        switch cycle {
-        case 0, 5: return Color.brandPrimary
-        case 1, 4: return Color.neonBlue
-        case 2, 3: return Color.brandPrimary.opacity(0.75)
-        default:   return Color.neonBlue.opacity(0.75)
-        }
-    }
-
-    private var gradient: LinearGradient {
-        LinearGradient(
-            colors: [
-                barColor.opacity(isActive ? 1.0 : 0.35),
-                barColor.opacity(isActive ? 0.55 : 0.15)
-            ],
-            startPoint: .top,
-            endPoint: .bottom
-        )
+    /// Average audio level for wave amplitude
+    private var averageLevel: CGFloat {
+        guard isActive, !levels.isEmpty else { return 0.05 }
+        let avg = levels.reduce(Float(0), +) / Float(levels.count)
+        return CGFloat(max(0.05, min(1.0, avg)))
     }
 
     var body: some View {
-        RoundedRectangle(cornerRadius: barWidth / 2, style: .continuous)
-            .fill(gradient)
-            .frame(width: barWidth, height: animatedHeight)
-            .onChange(of: targetHeight) { _, newHeight in
-                withAnimation(
-                    .interpolatingSpring(stiffness: springStiffness, damping: springDamping)
-                ) {
-                    animatedHeight = newHeight
+        TimelineView(.animation(minimumInterval: 1.0 / 60.0)) { timeline in
+            Canvas { context, size in
+                let time = timeline.date.timeIntervalSinceReferenceDate
+                drawWaves(context: context, size: size, time: time)
+            }
+        }
+    }
+
+    // MARK: - Wave Drawing
+
+    private func drawWaves(context: GraphicsContext, size: CGSize, time: Double) {
+        let level = averageLevel
+
+        // Wave configurations: (frequency, amplitude multiplier, phase offset, speed, color)
+        let waves: [(freq: Double, amp: Double, phase: Double, speed: Double, color: Color, lineWidth: CGFloat, blur: CGFloat)] = [
+            // Background glow layer (wide, blurred)
+            (freq: 1.2, amp: 0.28, phase: 0.0,  speed: 0.6, color: Color.neonBlue.opacity(0.12), lineWidth: 8, blur: 12),
+            (freq: 1.5, amp: 0.22, phase: 1.2,  speed: 0.8, color: Color.brandPrimary.opacity(0.08), lineWidth: 6, blur: 10),
+
+            // Mid layers (subtle fill)
+            (freq: 1.0, amp: 0.32, phase: 0.5,  speed: 0.5, color: Color.neonBlue.opacity(0.15), lineWidth: 3, blur: 4),
+            (freq: 1.8, amp: 0.18, phase: 2.0,  speed: 0.9, color: Color(red: 0.45, green: 0.35, blue: 0.95).opacity(0.12), lineWidth: 2.5, blur: 3),
+
+            // Sharp foreground waves
+            (freq: 1.3, amp: 0.30, phase: 0.0,  speed: 0.7, color: Color.neonBlue.opacity(0.65), lineWidth: 2.0, blur: 0),
+            (freq: 1.6, amp: 0.22, phase: 1.0,  speed: 0.85, color: Color(red: 0.35, green: 0.45, blue: 0.90).opacity(0.55), lineWidth: 1.8, blur: 0),
+            (freq: 2.0, amp: 0.15, phase: 2.5,  speed: 1.1, color: Color(red: 0.55, green: 0.30, blue: 0.85).opacity(0.45), lineWidth: 1.5, blur: 0),
+            (freq: 1.1, amp: 0.25, phase: 3.5,  speed: 0.55, color: Color.brandPrimary.opacity(0.30), lineWidth: 1.5, blur: 0),
+        ]
+
+        for wave in waves {
+            var ctx = context
+
+            if wave.blur > 0 {
+                ctx.addFilter(.blur(radius: wave.blur))
+            }
+
+            let path = wavePath(
+                size: size,
+                frequency: wave.freq,
+                amplitudeMultiplier: wave.amp * Double(level),
+                phaseOffset: wave.phase,
+                speed: wave.speed,
+                time: time
+            )
+
+            ctx.stroke(
+                path,
+                with: .color(wave.color),
+                style: StrokeStyle(lineWidth: wave.lineWidth, lineCap: .round, lineJoin: .round)
+            )
+        }
+    }
+
+    private func wavePath(
+        size: CGSize,
+        frequency: Double,
+        amplitudeMultiplier: Double,
+        phaseOffset: Double,
+        speed: Double,
+        time: Double
+    ) -> Path {
+        let midY = size.height / 2
+        let amplitude = size.height * amplitudeMultiplier
+        let steps = Int(size.width)
+
+        return Path { path in
+            for x in 0...steps {
+                let progress = Double(x) / Double(steps)
+                // Envelope: taper at edges for organic shape
+                let envelope = sin(progress * .pi)
+                let envShaped = pow(envelope, 0.8)
+
+                // Composite sine for organic movement
+                let phase1 = progress * frequency * 2.0 * .pi + time * speed + phaseOffset
+                let phase2 = progress * frequency * 1.3 * .pi + time * speed * 0.7 + phaseOffset * 1.5
+                let wave = sin(phase1) * 0.7 + sin(phase2) * 0.3
+
+                let y = midY + wave * amplitude * envShaped
+
+                if x == 0 {
+                    path.move(to: CGPoint(x: CGFloat(x), y: y))
+                } else {
+                    path.addLine(to: CGPoint(x: CGFloat(x), y: y))
                 }
             }
-            .onAppear {
-                animatedHeight = targetHeight
-            }
+        }
     }
 }
 

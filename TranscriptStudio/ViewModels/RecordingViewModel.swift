@@ -126,11 +126,9 @@ final class RecordingViewModel {
         setupSleepWakeObservers()
 #endif
 
-        // Restore profile from UserDefaults if available
-        if let savedId = UserDefaults.standard.string(forKey: "lastSelectedProfileId") {
-            Task {
-                await loadDefaultProfile(savedId: savedId)
-            }
+        // Load profiles from API (restore saved selection if available)
+        Task {
+            await loadDefaultProfile(savedId: UserDefaults.standard.string(forKey: "lastSelectedProfileId") ?? "")
         }
     }
 
@@ -147,17 +145,29 @@ final class RecordingViewModel {
 
     // MARK: - Profile Loading
 
+    /// Reload profiles from API. Call after login to fetch user-specific profiles.
+    func reloadProfiles() async {
+        await loadDefaultProfile(savedId: UserDefaults.standard.string(forKey: "lastSelectedProfileId") ?? "")
+    }
+
     private func loadDefaultProfile(savedId: String) async {
+        var profiles: [Profile]
         do {
-            let profiles = try await APIService.shared.getProfiles()
-            availableProfiles = profiles
-            if let match = profiles.first(where: { $0.id == savedId }) {
-                selectedProfile = match
-            } else if let first = profiles.first {
-                selectedProfile = first
-            }
+            profiles = try await APIService.shared.getProfiles()
         } catch {
-            os_log("[RecordingVM] Could not load profiles on init: %{public}@", log: .default, type: .error, error.localizedDescription)
+            os_log("[RecordingVM] Could not load profiles from API, using defaults: %{public}@", log: .default, type: .error, error.localizedDescription)
+            profiles = Profile.defaults
+        }
+
+        if profiles.isEmpty {
+            profiles = Profile.defaults
+        }
+
+        availableProfiles = profiles
+        if let match = profiles.first(where: { $0.id == savedId }) {
+            selectedProfile = match
+        } else if let first = profiles.first {
+            selectedProfile = first
         }
     }
 

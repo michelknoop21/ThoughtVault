@@ -5,6 +5,35 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2026-03-05] — Login fixes, API field mapping corrections
+
+### macOS
+
+#### Fixed
+- **Login HTTP 422 error**: `APIService.login()` was sending `"email"` as the JSON field name
+  but the backend expects `"username"`. Fixed by updating the request body dictionary key while
+  keeping the Swift parameter named `email` for semantic clarity (see DEC-015).
+- **`LoginResponse` decoding error**: On a standard login (no 2FA), the server returns only
+  `token` — not `requires_two_factor`. Both fields are now `Optional` in `LoginResponse` and
+  `AuthViewModel` uses `?? ""` + `guard !token.isEmpty` instead of `guard let` to handle both
+  optional and non-optional compiler interpretations during incremental builds.
+- **`TSUserInfo` decoding error**: `/tstudio/api/auth/me` returns `user_id` and `username`
+  (not `id` and `email`). Added `CodingKeys` to `TSUserInfo` mapping `id ← "user_id"` and
+  `email ← "username"`.
+- **`TranscriptsResponse` decoding error**: `GET /tstudio/api/transcripts` returns
+  `{"items": [...]}` — the server does not include `transcripts`, `total`, `page`, or `limit`
+  keys. Removed incorrect `CodingKeys` mapping, corrected key to `items`, and made
+  `total`/`page`/`limit` optional (`Int?`) to avoid decoding failure.
+- **`TranscriptsViewModel`**: Updated `hasMore` calculation to handle optional `response.total`
+  using `.map { $0 > count } ?? true` pattern.
+
+#### Changed
+- **Swift compilation errors on incremental build**: Compiler saw stale `String` (non-optional)
+  for `response.token` due to derived data cache. Resolved by rewriting binding as
+  `let token = response.token ?? ""` which is valid regardless of optionality.
+
+---
+
 ## [Unreleased]
 
 ### macOS

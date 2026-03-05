@@ -4,7 +4,7 @@ import {
   MicRecord24Regular,
   DocumentText24Regular,
   Settings24Regular,
-  ShieldPerson24Regular,
+  ShieldPersonRegular,
 } from "@fluentui/react-icons";
 import { useAuthStore } from "../../stores/authStore";
 
@@ -25,7 +25,7 @@ export function Sidebar() {
       {/* Bottom items */}
       <SidebarItem to="/settings" icon={<Settings24Regular />} label="Instellingen" />
       {isAdmin && (
-        <SidebarItem to="/admin" icon={<ShieldPerson24Regular />} label="Admin" />
+        <SidebarItem to="/admin" icon={<ShieldPersonRegular />} label="Admin" />
       )}
     </nav>
   );

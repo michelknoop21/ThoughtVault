@@ -303,8 +303,8 @@ body {
   font-size: var(--font-body);
   font-weight: 400;
   border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: background var(--transition-fast), border-color var(--transition-fast);
+  cursor: default;
+  transition: all var(--transition-hover);
   border: 1px solid var(--stroke-control-secondary);
   background: var(--fill-control-default);
   color: var(--text-primary);
@@ -1093,9 +1093,9 @@ input, textarea, select {
 }
 
 .stat-card-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radius-md);
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;

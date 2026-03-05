@@ -1,93 +1,422 @@
-# Transcript Studio native
+# TranscriptStudio
 
+Cross-platform desktop app voor vergaderopnames, transcriptie en automatische notulengeneratie. Native macOS client (Swift 6 / SwiftUI) en Windows client (Tauri 2 / React) met een gedeelde FastAPI + Whisper backend.
 
+**Versie:** 1.0.3
+**Bundle ID:** `nl.prezent.TranscriptStudio`
+**Repository:** [gitlab.prezent.nl/michelk/transcript-studio-native](https://gitlab.prezent.nl/michelk/transcript-studio-native)
+**Backend:** `https://n8n.prezent.nl/tstudio/api/`
 
-## Getting started
+---
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+## Inhoudsopgave
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+- [Wat doet het](#wat-doet-het)
+- [Platforms](#platforms)
+- [Vereisten](#vereisten)
+- [Installatie en ontwikkeling](#installatie-en-ontwikkeling)
+- [Bouwen](#bouwen)
+- [Testen](#testen)
+- [Configuratie](#configuratie)
+- [Projectstructuur](#projectstructuur)
+- [Technische stack](#technische-stack)
+- [Architectuur](#architectuur)
+- [Conventies](#conventies)
+- [Versiebeheer](#versiebeheer)
+- [Bekende issues](#bekende-issues)
+- [Documentatie](#documentatie)
 
-## Add your files
+---
 
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
+## Wat doet het
+
+TranscriptStudio neemt vergaderingen op, transcribeert de audio via GPU-versnelde Whisper, en genereert gestructureerde notulen via een LLM-pipeline. Gebruikers starten een opname in een klik, en ontvangen notulen in HTML-formaat die exporteerbaar zijn naar DOCX, PDF, Markdown en plain text.
+
+Kernfunctionaliteit:
+- **Opnemen** — microfoon, systeemaudio, of gecombineerd (beide tegelijk)
+- **Transcriberen** — cloud (Whisper GPU) of on-device (SFSpeechRecognizer / whisper-rs)
+- **Notulen genereren** — cloud (n8n + Ollama) of lokaal (Ollama / LM Studio / Apple Intelligence)
+- **Offline-first** — audio wordt altijd lokaal opgeslagen, uploads worden automatisch herhaald bij reconnect
+- **Profielen** — configureerbare notitiestijlen per vergadertype (besluitenlijst, actiepunten, etc.)
+- **Kalenderintegratie** — EventKit (macOS) / Microsoft Graph (Windows) voor automatische vergaderdetectie
+- **Admin panel** — gebruikersbeheer, invite codes, profielbeheer, systeem metrics
+
+---
+
+## Platforms
+
+| Platform | Technologie | Minimaal | Status |
+|----------|------------|----------|--------|
+| macOS | Swift 6 / SwiftUI / `@Observable` | macOS 14 Sonoma | Productie |
+| Windows | Tauri 2.10 / React 19 / TypeScript | Windows 11 | Actieve ontwikkeling |
+| iOS | SwiftUI Live Activity (widget only) | iOS 17 | Productie |
+
+---
+
+## Vereisten
+
+### macOS app
+- macOS 14 Sonoma of nieuwer
+- Xcode 16 of nieuwer
+- Code signing: open `TranscriptStudio.xcodeproj` → Signing & Capabilities → stel je Team in
+
+### Windows app
+- Node.js 20+
+- Rust toolchain via [rustup](https://rustup.rs)
+- Tauri CLI: `cargo install tauri-cli`
+- Ontwikkeling vereist een Windows-omgeving (VM of native)
+
+### Backend (niet in deze repo)
+- Docker + Docker Compose
+- NVIDIA GPU met actuele drivers (voor Whisper GPU-transcriptie)
+- Draait op AWS EC2 GPU instance
+
+---
+
+## Installatie en ontwikkeling
+
+### macOS
+
+```bash
+# Open in Xcode
+open TranscriptStudio.xcodeproj
+
+# Of bouw via CLI (zonder code signing)
+xcodebuild -project TranscriptStudio.xcodeproj \
+  -scheme TranscriptStudio \
+  -configuration Debug \
+  build CODE_SIGNING_ALLOWED=NO
+
+# Met code signing (vereist provisioning profile)
+xcodebuild -project TranscriptStudio.xcodeproj \
+  -scheme TranscriptStudio \
+  build
+```
+
+### Windows
+
+```bash
+cd transcript-studio-windows
+npm install          # MOET binnen Windows-omgeving draaien
+npm run tauri dev    # Start development server + Tauri window
+```
+
+### Backend
+
+De backend draait apart. Zie de backend repo voor Docker Compose configuratie.
+
+```bash
+docker compose up
+```
+
+---
+
+## Bouwen
+
+### macOS release build
+
+```bash
+xcodebuild -project TranscriptStudio.xcodeproj \
+  -scheme TranscriptStudio \
+  -configuration Release \
+  build
+```
+
+### Windows release build
+
+```bash
+cd transcript-studio-windows
+npm run tauri build
+```
+
+Dit produceert een MSI installer in `src-tauri/target/release/bundle/`.
+
+---
+
+## Testen
+
+### macOS
+
+```bash
+xcodebuild test \
+  -project TranscriptStudio.xcodeproj \
+  -scheme TranscriptStudioTests
+```
+
+### Windows
+
+```bash
+cd transcript-studio-windows
+npm test
+```
+
+---
+
+## Configuratie
+
+Beide clients hebben **geen** `.env` bestanden of environment variabelen nodig. Alle configuratie gaat via de Settings-pagina in de app:
+
+| Instelling | Standaard | Beschrijving |
+|-----------|----------|-------------|
+| Server URL | `https://n8n.prezent.nl` | Backend API endpoint |
+| On-device transcriptie | Uit | Schakel lokale SFSpeechRecognizer / whisper-rs in |
+| LLM provider | Cloud (n8n) | Keuze uit: Cloud, Ollama, LM Studio, Apple Intelligence |
+| Opnamemodus | Microfoon | Keuze uit: Microfoon, Systeemaudio, Gecombineerd |
+
+---
+
+## Projectstructuur
 
 ```
-cd existing_repo
-git remote add origin https://gitlab.prezent.nl/ai-coding/transcript-studio-native.git
-git branch -M main
-git push -uf origin main
+TranscriptStudioApp/
+│
+├── TranscriptStudio/                  # macOS/iOS app (Swift 6, SwiftUI)
+│   ├── App/                           # Entry point, ContentView, AppDelegate
+│   │   ├── TranscriptStudioApp.swift  #   Window config (1100x750, min 900x600)
+│   │   ├── ContentView.swift          #   Root view, NavigationSplitView + TabView
+│   │   └── AppDelegate.swift          #   MenuBarExtra, FloatingWidgetController
+│   ├── Models/                        # Codable data modellen
+│   │   ├── Models.swift               #   TranscriptTask, Profile, User, etc.
+│   │   ├── TaskStatus.swift           #   10-state pipeline enum
+│   │   ├── RecordingMode.swift        #   microphone / systemAudio / combined
+│   │   └── QueuedItem.swift           #   OfflineQueue persistence model
+│   ├── Services/                      # Business logic en integraties
+│   │   ├── APIService.swift           #   actor: REST, SSE, field mapping, retry
+│   │   ├── AudioRecorder.swift        #   AVFoundation mic capture, 60 Hz metering
+│   │   ├── SystemAudioCapture.swift   #   ScreenCaptureKit system audio
+│   │   ├── OnDeviceTranscriber.swift  #   SFSpeechRecognizer / whisper-rs
+│   │   ├── LLMService.swift           #   Protocol + provider implementations
+│   │   ├── LLMServiceFactory.swift    #   Provider selectie (N8N/Ollama/LMStudio/Apple)
+│   │   ├── NetworkMonitor.swift       #   NWPathMonitor reachability
+│   │   ├── OfflineQueue.swift         #   Disk-persisted upload queue met retry
+│   │   ├── CalendarService.swift      #   EventKit vergaderdetectie
+│   │   ├── BiometricService.swift     #   Face ID / Touch ID via LAContext
+│   │   ├── KeychainService.swift      #   Secure token storage (Secure Enclave)
+│   │   ├── Analytics.swift            #   Usage event tracking
+│   │   ├── CrashReporter.swift        #   Crash capture en reporting
+│   │   ├── DebugLogger.swift          #   Structured logging
+│   │   └── FloatingWidgetController.swift  # NSPanel overlay tijdens opname
+│   ├── ViewModels/                    # @Observable, @MainActor
+│   │   ├── AuthViewModel.swift        #   Login, biometrie, token lifecycle
+│   │   ├── RecordingViewModel.swift   #   Opname state machine, upload, queue
+│   │   └── TranscriptsViewModel.swift #   Zoeken, filteren, tags, bulk ops
+│   ├── Views/                         # SwiftUI views
+│   │   ├── HomeView.swift             #   Landing screen, quick-start
+│   │   ├── LoginView.swift            #   Email/wachtwoord + biometrie
+│   │   ├── RecordingView.swift        #   Idle setup vs. actieve opname
+│   │   ├── TranscriptsView.swift      #   Transcript bibliotheek
+│   │   ├── ProcessingView.swift       #   SSE voortgang tijdens transcriptie
+│   │   ├── NotuleResultView.swift     #   HTML notulen + export
+│   │   ├── SettingsView.swift         #   App voorkeuren
+│   │   ├── ProfilesView.swift         #   Profiel CRUD
+│   │   ├── AccountView.swift          #   GDPR: data export, account verwijdering
+│   │   ├── AdminView.swift            #   Gebruikersbeheer, invite codes
+│   │   └── Components/               #   Herbruikbare UI componenten
+│   ├── Extensions/                    # Design tokens en kleuren
+│   │   ├── Color+Brand.swift          #   Color.brandPrimary, etc.
+│   │   └── Theme.swift                #   TS.Spacing, TS.Font, TS.Radius
+│   └── Resources/
+│       ├── nl.lproj/Localizable.strings  # Nederlands (primair)
+│       ├── en.lproj/Localizable.strings  # Engels (fallback)
+│       └── TranscriptStudio.entitlements # Sandbox, audio, calendar, ScreenCaptureKit
+│
+├── transcript-studio-windows/         # Windows app (Tauri 2, React 19)
+│   ├── src/                           # React frontend
+│   │   ├── components/                #   calendar/, layout/, onboarding/, recording/, etc.
+│   │   ├── services/                  #   api.ts, llm.ts, microsoftGraph.ts, sse.ts
+│   │   ├── stores/                    #   Zustand stores (auth, recording, transcripts, etc.)
+│   │   └── pages/                     #   Home, Login, Recording, Transcripts, Settings, Admin
+│   └── src-tauri/                     # Rust backend commands
+│       └── src/                       #   Audio (WASAPI), auth (keyring), OAuth PKCE, etc.
+│
+├── RecordingActivityWidget/           # iOS Live Activity (Dynamic Island + lock screen)
+│
+├── docs/                              # Gedetailleerde documentatie
+│   ├── README.md                      #   Developer onboarding
+│   ├── PRD.md                         #   Product Requirements Document
+│   ├── ARCHITECTURE.md                #   Systeemontwerp en directory structuur
+│   ├── API.md                         #   Volledige backend API referentie
+│   ├── DECISIONS.md                   #   Architectural Decision Records
+│   └── CHANGELOG.md                   #   Versiehistorie
+│
+├── .githooks/                         # Git hooks (post-commit versioning)
+├── VERSION                            # Huidige versie (auto-bumped op main)
+├── CLAUDE.md                          # AI assistant instructies
+└── .gitignore
 ```
 
-## Integrate with your tools
+---
 
-- [ ] [Set up project integrations](https://gitlab.prezent.nl/ai-coding/transcript-studio-native/-/settings/integrations)
+## Technische stack
 
-## Collaborate with your team
+### macOS / iOS
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
+| Component | Technologie | Versie |
+|-----------|-------------|--------|
+| Taal | Swift | 6+ (strict concurrency) |
+| UI framework | SwiftUI | macOS 14+ / iOS 17+ |
+| State management | `@Observable` macro | Swift 5.9+ |
+| Concurrency | `actor`, `@MainActor`, `async/await` | Swift Concurrency |
+| Audio capture | AVFoundation + ScreenCaptureKit | macOS 13+ |
+| Authenticatie | LocalAuthentication (biometrie) + Keychain | — |
+| Kalender | EventKit | — |
+| Netwerk | URLSession + NWPathMonitor | — |
 
-## Test and Deploy
+### Windows
 
-Use the built-in continuous integration in GitLab.
+| Component | Technologie | Versie |
+|-----------|-------------|--------|
+| Framework | Tauri | 2.10 |
+| Frontend | React + TypeScript | React 19 |
+| Build tool | Vite | — |
+| Styling | Tailwind CSS | — |
+| State management | Zustand | — |
+| Audio capture | WASAPI (via Rust) | — |
+| Kalender | Microsoft Graph API + OAuth PKCE | — |
+| Icons | Fluent UI | — |
 
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+### Backend (aparte repo)
 
-***
+| Component | Technologie |
+|-----------|-------------|
+| Framework | FastAPI (Python) |
+| Transcriptie | insanely-fast-whisper (GPU) |
+| Notulengeneratie | n8n + Ollama (ministral-3:8b) |
+| Database | PostgreSQL 15 (productie) / SQLite (development) |
+| Deployment | Docker Compose op AWS EC2 GPU instance |
 
-# Editing this README
+---
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
+## Architectuur
 
-## Suggestions for a good README
+### Lagenstructuur (macOS)
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+```
+View (SwiftUI)
+    ↓
+ViewModel (@Observable, @MainActor — orchestreert)
+    ↓
+Service (actor/class — businesslogica, API calls, hardware)
+    ↓
+Model (Codable structs — data representatie)
+```
 
-## Name
-Choose a self-explaining name for your project.
+Dit is MVVM met een servicelaag. ViewModels zijn dun en orchestreren; services bevatten de logica.
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+### Data flow
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+```
+Opname starten
+    → AudioRecorder / SystemAudioCapture schrijft WAV naar disk
+    → RecordingViewModel stopt opname
+    → APIService.upload() stuurt audio naar backend
+    → OfflineQueue vangt op als netwerk niet beschikbaar is
+    → NetworkMonitor triggert retry bij reconnect
+    → SSE stream levert real-time status updates
+    → TranscriptsViewModel toont resultaat
+```
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+### Authenticatie flow
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+```
+1. POST /auth/login { username, password }
+   → Zonder 2FA: { token, user_id, role }
+   → Met 2FA:    { requires_2fa: true, temp_token }
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+2. POST /auth/login/verify-2fa { username, temp_token, code }
+   → { token, user_id, role }
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+3. Token opgeslagen in OS Keychain (Secure Enclave op macOS)
+4. Biometrische login haalt token op via LAContext
+5. Alle requests gebruiken X-User-Token header
+```
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+### Cross-platform conventies
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+| Conventie | Detail |
+|-----------|--------|
+| Audio formaat | 16 kHz mono 16-bit PCM WAV op beide platforms |
+| Offline-first | OfflineQueue op beide platforms, retry bij reconnect |
+| Real-time status | SSE stream (geen polling) |
+| UI taal | Nederlands (nl_NL) overal |
+| Field mapping | Backend veldnamen worden genormaliseerd aan de API-grens per client |
+| Auth header | `X-User-Token` (macOS) of `Authorization: Bearer` (Windows) |
+| Configuratie | Geen environment variabelen — alles via Settings UI |
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+---
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+## Conventies
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+### macOS (Swift)
 
-## License
-For open source projects, say how it is licensed.
+- Gebruik `@Observable` — **niet** `ObservableObject` / `@Published` / Combine
+- ViewModels zijn `@MainActor` classes
+- Services zijn `actor` (thread-safe) of `@Observable class`
+- Alle UI strings in het **Nederlands** via `Localizable.strings`
+- Design tokens via `TS.Spacing`, `TS.Font`, `TS.Radius` (Theme.swift)
+- Kleuren via `Color.brandPrimary`, `Color.labelPrimary` etc. (Color+Brand.swift)
+- Field mapping van backend naar Swift types in `APIService.swift` via `CodingKeys`
+- `async/await` overal — geen completion handlers, geen Combine
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+### Windows (TypeScript)
+
+- Zustand stores voor state management
+- Field mapping in `src/services/api.ts` — interne code gebruikt nooit backend veldnamen
+- Tailwind CSS voor styling met Fluent UI design language
+- Tauri IPC commands voor native functionaliteit (audio, keychain, filesystem)
+
+### Beide platforms
+
+- **Kopieer bestaande patronen.** Kijk hoe iets al gedaan wordt voordat je iets nieuws bedenkt.
+- **Klein en lokaal.** Bugfix is een bugfix, geen refactorkans.
+- **Geen dead code.** Geen uitgecommentarieerde blokken, geen ongebruikte parameters.
+- Code en comments in het **Engels**. UI strings in het **Nederlands**.
+
+---
+
+## Versiebeheer
+
+Versies worden automatisch beheerd via een git post-commit hook:
+
+- Elke commit op `main` bumpt automatisch de **patch** versie
+- Versie staat in het `VERSION` bestand (momenteel `1.0.3`)
+- Feature branches en detached HEAD triggeren **geen** bump
+- Hook activeren: `git config core.hooksPath .githooks`
+
+Handmatig bumpen:
+
+```bash
+# VERSION bestand direct aanpassen voor major/minor bumps
+echo "2.0.0" > VERSION
+git add VERSION && git commit -m "chore: bump major version to 2.0.0"
+```
+
+---
+
+## Bekende issues
+
+| Issue | Locatie | Workaround |
+|-------|---------|-----------|
+| `notifications(for:)` beschikbaar maar crasht | `AuthViewModel.swift` | Gebruik `notifications(named:)` voor async NotificationCenter |
+| Sidebar toggle moet per tab verwijderd worden | Alle NavigationStack tabs | `.toolbar(removing: .sidebarToggle)` op elk individueel tabblad |
+| Combined mode audio mixing | `RecordingViewModel` | Gebruikt `mixAudioFiles()` — element-wise max over PCM frames |
+| Backend cleanup verwijdert actieve taken | Server-side | `cleanup_old_tasks()` verwijdert taken >24h, ook als ze nog `queued` zijn |
+
+---
+
+## Documentatie
+
+Gedetailleerde documentatie staat in [`docs/`](docs/):
+
+| Document | Beschrijving |
+|----------|-------------|
+| [README.md](docs/README.md) | Developer onboarding, vereisten, build commando's |
+| [PRD.md](docs/PRD.md) | Product Requirements: doelgroep, features, scope, technische eisen |
+| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Systeemontwerp: backend data flow, service laag, directory structuur per platform |
+| [API.md](docs/API.md) | Volledige backend API referentie: alle endpoints, auth flows, datamodellen, rate limits |
+| [DECISIONS.md](docs/DECISIONS.md) | Architectural Decision Records (ADRs): rationale voor technische keuzes |
+| [CHANGELOG.md](docs/CHANGELOG.md) | Versiehistorie en release notes |
+
+---
+
+*Prezent Internet B.V. — TranscriptStudio v1.0.3*

@@ -5,11 +5,24 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
-## [2026-03-05] — Login fixes, API field mapping corrections
+## [2026-03-05] — Admin panel API alignment, entitlements, biometric fixes (v1.0.3)
 
 ### macOS
 
 #### Fixed
+- **Admin stats endpoint**: Changed from undocumented `/admin/stats` to correct
+  `/admin/dashboard/metrics` endpoint per backend API documentation.
+- **Admin user creation**: Added missing `password` parameter and corrected field naming from
+  `"email"` to `"username"` in `createUser` API call.
+- **Invitation system overhaul**: Replaced email-based invitation model with backend's invite
+  code system using `max_uses`/`expires_hours` parameters. Corrected endpoint paths from
+  `/admin/invitations` to `/admin/invites`. Added `deleteInvitation` method.
+- **macOS entitlements**: Repaired sandboxing and device permission entitlements for audio
+  input, calendar access, and ScreenCaptureKit.
+- **Biometric token persistence**: Fixed token not being cleared from Keychain on logout,
+  preventing stale biometric sessions.
+- **Duplicate UI elements**: Removed duplicate sidebar toggle, title bar, and logo elements
+  from macOS app navigation.
 - **Login HTTP 422 error**: `APIService.login()` was sending `"email"` as the JSON field name
   but the backend expects `"username"`. Fixed by updating the request body dictionary key while
   keeping the Swift parameter named `email` for semantic clarity (see DEC-015).
@@ -31,6 +44,11 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Swift compilation errors on incremental build**: Compiler saw stale `String` (non-optional)
   for `response.token` due to derived data cache. Resolved by rewriting binding as
   `let token = response.token ?? ""` which is valid regardless of optionality.
+
+#### Added
+- **Git repository**: Initialized with automatic semantic versioning system via post-commit
+  hook. Version tracked in `VERSION` file, auto-bumped on commits to `main`.
+- **GitLab remote**: Connected to `gitlab.prezent.nl/michelk/transcript-studio-native`.
 
 ---
 

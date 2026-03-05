@@ -56,6 +56,14 @@ Both clients default to `https://n8n.prezent.nl` as the backend server. The URL 
 
 ---
 
+## Version
+
+Current version: **1.0.3** (tracked in `VERSION` file, auto-bumped on commits to `main`).
+
+Repository: [gitlab.prezent.nl/michelk/transcript-studio-native](https://gitlab.prezent.nl/michelk/transcript-studio-native)
+
+---
+
 ## Documentation Index
 
 | File | Purpose |
@@ -63,5 +71,6 @@ Both clients default to `https://n8n.prezent.nl` as the backend server. The URL 
 | `README.md` | This file — developer onboarding, prerequisites, build commands |
 | `PRD.md` | Product Requirements Document: target users, features, technical requirements, out of scope |
 | `ARCHITECTURE.md` | System design: dual-platform overview, backend data flow, macOS service layer, directory structure |
+| `API.md` | Complete backend API reference: all endpoints, auth flows, data models, rate limits |
 | `DECISIONS.md` | Architectural Decision Records (ADRs): rationale for key technical choices |
 | `CHANGELOG.md` | Version history and release notes |

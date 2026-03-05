@@ -245,6 +245,40 @@ _Append-only log. Each entry records context, decision, and consequences._
 
 ---
 
+## DEC-016 — Admin API Invite Code Model Over Email Invitations
+
+**Date:** 2026-03-05
+**Status:** Accepted
+
+**Context:** The macOS admin panel was designed with an email-based invitation system (send invite to email with role), but the backend implements a reusable invite code system with configurable usage limits and expiration.
+
+**Decision:** Replace the email-invitation model entirely with the backend's invite code approach. Admin creates codes with `max_uses` and `expires_hours`; users register using a code. Endpoint paths corrected from `/admin/invitations` to `/admin/invites`.
+
+**Consequences:**
+- Admin panel now matches the actual backend capability.
+- Invite codes can be shared through any channel (email, chat, print) — more flexible than server-side email.
+- The AdminView's Uitnodigingen tab UI needs to collect max-uses and expiration instead of email/role.
+- `deleteInvitation` added for revoking active codes.
+
+---
+
+## DEC-017 — Automatic Semantic Versioning via Git Post-Commit Hook
+
+**Date:** 2026-03-05
+**Status:** Accepted
+
+**Context:** Manual version tracking was error-prone and often forgotten. A consistent version number is needed for force-update checks and release management.
+
+**Decision:** Implement automatic patch-level version bumping via a `.githooks/post-commit` hook. Version is stored in a `VERSION` file at the project root. Only commits to `main` trigger a bump; feature branches and detached HEAD are excluded.
+
+**Consequences:**
+- Every commit to `main` produces a new version automatically.
+- Version is accessible to the app at build time for display and force-update comparison.
+- Major and minor bumps require manual intervention (editing `VERSION` directly).
+- Hook must be activated via `git config core.hooksPath .githooks`.
+
+---
+
 ## DEC-014 — GDPR Compliance in AccountView
 
 **Date:** 2026-03

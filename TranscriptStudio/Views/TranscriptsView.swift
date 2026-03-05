@@ -13,6 +13,22 @@ import AppKit
 import UIKit
 #endif
 
+// MARK: - Main Tab Enum
+
+enum MainTab: String, CaseIterable, Identifiable {
+    case notulen = "Notulen"
+    case transcripties = "Transcripties"
+
+    var id: String { rawValue }
+
+    var icon: String {
+        switch self {
+        case .notulen:      return "doc.text.fill"
+        case .transcripties: return "text.alignleft.fill"
+        }
+    }
+}
+
 // MARK: - TranscriptsView
 
 struct TranscriptsView: View {
@@ -40,6 +56,7 @@ struct TranscriptsView: View {
 
     // MARK: State — navigation
 
+    @State private var selectedMainTab: MainTab = .notulen
     @State private var selectedTranscript: Transcript? = nil
 
     // MARK: Enums
@@ -60,6 +77,14 @@ struct TranscriptsView: View {
 
     private var filteredTranscripts: [Transcript] {
         var result = transcripts
+
+        // Filter by main tab
+        switch selectedMainTab {
+        case .notulen:
+            result = result.filter { $0.notuleHtml != nil && !$0.notuleHtml!.isEmpty }
+        case .transcripties:
+            result = result.filter { $0.rawTranscription != nil && !$0.rawTranscription!.isEmpty }
+        }
 
         // Search
         if !searchText.isEmpty {
@@ -118,11 +143,12 @@ struct TranscriptsView: View {
                 VStack(spacing: 0) {
                     searchBar
                     filtersRow
+                    mainTabBar
                     tagFilterRow
                     mainContent
                 }
             }
-            .navigationTitle("Transcripties")
+            .navigationTitle("Notulen & Transcripties")
             .toolbar { toolbarContent }
             .navigationDestination(item: $selectedTranscript) { transcript in
                 TranscriptDetailView(transcript: transcript)
@@ -273,6 +299,60 @@ struct TranscriptsView: View {
                             }
                         }
                 }
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Main Tab Bar
+
+    private var mainTabBar: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: TS.Spacing.lg) {
+                ForEach(MainTab.allCases) { tab in
+                    mainTabButton(tab)
+                }
+            }
+            .padding(.horizontal, TS.Spacing.md)
+            .padding(.vertical, TS.Spacing.sm)
+        }
+        .background(Color.surfaceSecondary)
+        .overlay(alignment: .bottom) {
+            Divider()
+        }
+    }
+
+    @Namespace private var mainTabNamespace
+
+    private func mainTabButton(_ tab: MainTab) -> some View {
+        Button {
+            withAnimation(TS.Animation.smooth) {
+                selectedMainTab = tab
+                selectedTranscript = nil
+            }
+        } label: {
+            VStack(spacing: TS.Spacing.xs) {
+                HStack(spacing: TS.Spacing.xs) {
+                    Image(systemName: tab.icon)
+                        .font(TS.Font.footnote)
+                    Text(tab.rawValue)
+                        .font(TS.Font.footnoteSemibold)
+                }
+                .foregroundStyle(selectedMainTab == tab ? Color.brandPrimary : Color.labelSecondary)
+                .padding(.horizontal, TS.Spacing.xs)
+
+                ZStack {
+                    Rectangle()
+                        .fill(Color.clear)
+                        .frame(height: 2)
+
+                    if selectedMainTab == tab {
+                        Rectangle()
+                            .fill(Color.brandPrimary)
+                            .frame(height: 2)
+                            .matchedGeometryEffect(id: "main_tab_indicator", in: mainTabNamespace)
+                    }
+                }
+            }
         }
         .buttonStyle(.plain)
     }

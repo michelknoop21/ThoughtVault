@@ -193,6 +193,7 @@
 [data-theme="dark"] .mic-button-large { box-shadow: 0 4px 24px rgba(229, 0, 116, 0.50); }
 [data-theme="dark"] .mic-button-large:hover { box-shadow: 0 6px 32px rgba(229, 0, 116, 0.60); }
 [data-theme="dark"] .error-banner { background: rgba(255, 153, 164, 0.10); border-color: rgba(255, 153, 164, 0.25); }
+[data-theme="dark"] .icon-btn-danger:hover { background: rgba(255, 153, 164, 0.12); }
 
 /* High contrast mode */
 @media (forced-colors: active) {
@@ -302,7 +303,7 @@ body {
   font-family: var(--font-family);
   font-size: var(--font-body);
   font-weight: 400;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   cursor: default;
   transition: all var(--transition-hover);
   border: 1px solid var(--stroke-control-secondary);
@@ -425,6 +426,9 @@ body {
   color: var(--text-primary);
   line-height: 1.6;
   font-size: var(--font-body);
+  max-width: 72ch;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 .prose h1, .prose h2, .prose h3 { color: var(--text-primary); font-weight: 600; margin: 1em 0 0.5em; }
 .prose h1 { font-size: 1.5em; }
@@ -979,14 +983,31 @@ input, textarea, select {
 }
 
 .sidebar-logo {
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
 }
 
 .sidebar-user-section {
   padding: 8px 14px 10px;
+  align-items: center;
+}
+
+.sidebar-user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  flex: 1;
+}
+
+.sidebar-role-badge {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--fill-accent-default);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .sidebar-divider {
@@ -1093,13 +1114,14 @@ input, textarea, select {
 }
 
 .stat-card-icon {
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
+  font-size: 20px;
+  flex-shrink: 0;
 }
 
 .stat-card-value {
@@ -1119,8 +1141,8 @@ input, textarea, select {
    ============================================================ */
 
 .user-avatar {
-  width: 36px;
-  height: 36px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -1192,8 +1214,15 @@ input, textarea, select {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 20px;
-  padding: 16px;
+  gap: 16px;
+  padding: 12px 16px;
+}
+
+@media (min-width: 1200px) {
+  .recording-controls {
+    gap: 24px;
+    padding: 16px 20px;
+  }
 }
 
 .recording-control-btn {
@@ -1210,6 +1239,14 @@ input, textarea, select {
   cursor: default;
   transition: all var(--transition-hover);
   color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+@media (max-width: 900px) {
+  .recording-control-btn {
+    width: 48px;
+    height: 48px;
+  }
 }
 
 .recording-control-btn:hover {
@@ -1233,6 +1270,12 @@ input, textarea, select {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   font-weight: 500;
+}
+
+@media (max-width: 900px) {
+  .recording-control-label {
+    font-size: 9px;
+  }
 }
 
 .recording-control-btn.stop .recording-control-label {
@@ -1276,9 +1319,11 @@ input, textarea, select {
    ============================================================ */
 
 .page-scroll {
-  height: 100%;
+  flex: 1;
   display: flex;
   flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
   background:
     radial-gradient(ellipse at 30% 30%, rgba(229, 0, 116, 0.04) 0%, transparent 50%),
     radial-gradient(ellipse at 70% 70%, rgba(0, 123, 196, 0.03) 0%, transparent 50%);
@@ -1307,7 +1352,6 @@ input, textarea, select {
 
 .page-content {
   flex: 1;
-  overflow-y: auto;
   padding: var(--spacing-xl);
   display: flex;
   flex-direction: column;
@@ -1368,12 +1412,12 @@ input, textarea, select {
    ============================================================ */
 
 .section-label {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   color: var(--text-tertiary);
   text-transform: uppercase;
-  letter-spacing: 0.10em;
-  margin-bottom: 10px;
+  letter-spacing: 0.08em;
+  margin-bottom: 8px;
 }
 
 /* ============================================================
@@ -1569,36 +1613,125 @@ input, textarea, select {
 }
 
 /* ============================================================
-   Quick Start Button (Home page)
+   Hero CTA Card (Home page — matches macOS ctaCard)
    ============================================================ */
 
-.quick-start-btn {
+.hero-cta-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, var(--fill-accent-default), #a0005a);
+  border: none;
+  border-radius: var(--radius-lg);
+  color: #fff;
+  cursor: default;
+  transition: all var(--transition-hover);
+  font-family: inherit;
+  box-shadow: 0 6px 24px rgba(229, 0, 116, 0.35);
+}
+
+.hero-cta-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 32px rgba(229, 0, 116, 0.45);
+}
+
+.hero-cta-card:active {
+  transform: scale(0.98);
+}
+
+.hero-cta-rings {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  padding: 14px 18px;
-  background: rgba(229, 0, 116, 0.06);
-  border: 1px solid rgba(229, 0, 116, 0.18);
-  border-radius: var(--radius-md);
-  color: var(--text-primary);
-  font-size: 13px;
+}
+
+.hero-cta-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, 0.22);
+}
+
+.hero-cta-ring-1 { width: 48px; height: 48px; }
+.hero-cta-ring-2 { width: 18px; height: 18px; }
+.hero-cta-ring-3 { width: 24px; height: 24px; }
+
+.hero-cta-mic {
+  font-size: 20px;
+  color: #fff;
+  z-index: 1;
+}
+
+.hero-cta-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.hero-cta-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.hero-cta-subtitle {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.hero-cta-chevron {
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.65);
+  flex-shrink: 0;
+}
+
+/* Quick Start Pills (below hero CTA) */
+
+.quick-start-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  background: rgba(229, 0, 116, 0.08);
+  border: 1px solid rgba(229, 0, 116, 0.22);
+  border-radius: 100px;
+  color: var(--fill-accent-default);
+  font-size: 12px;
   font-weight: 600;
   cursor: default;
   transition: all var(--transition-hover);
   font-family: inherit;
 }
 
-.quick-start-btn:hover {
-  background: rgba(229, 0, 116, 0.10);
-  border-color: rgba(229, 0, 116, 0.30);
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(229, 0, 116, 0.15);
+.quick-start-pill:hover {
+  background: rgba(229, 0, 116, 0.14);
+  border-color: rgba(229, 0, 116, 0.35);
 }
 
-.quick-start-btn:active {
-  transform: scale(0.97);
-  box-shadow: none;
+.quick-start-pill:active {
+  transform: scale(0.96);
+}
+
+/* Error banner inline (for load errors) */
+
+.error-banner-inline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  background: rgba(188, 0, 22, 0.06);
+  border: 1px solid rgba(188, 0, 22, 0.18);
+  border-radius: var(--radius-sm);
+  color: var(--fill-system-critical);
+  font-size: 13px;
 }
 
 /* ============================================================
@@ -1609,7 +1742,7 @@ input, textarea, select {
   padding: 10px 14px;
   background: rgba(188, 0, 22, 0.08);
   border: 1px solid rgba(188, 0, 22, 0.25);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-sm);
   font-size: 13px;
   color: var(--text-error);
 }
@@ -1631,6 +1764,15 @@ input, textarea, select {
 .empty-state-text {
   font-size: 13px;
   color: var(--text-tertiary);
+  line-height: 1.5;
+}
+
+/* Empty state icon */
+.empty-state-icon {
+  font-size: 48px;
+  color: var(--stroke-divider);
+  margin-bottom: 12px;
+  display: inline-block;
 }
 
 /* ============================================================
@@ -1639,7 +1781,7 @@ input, textarea, select {
 
 .flex-row { display: flex; align-items: center; }
 .flex-col { display: flex; flex-direction: column; }
-.flex-1 { flex: 1; min-width: 0; }
+.flex-1 { flex: 1; min-width: 0; min-height: 0; }
 .flex-shrink-0 { flex-shrink: 0; }
 .gap-4 { gap: 4px; }
 .gap-6 { gap: 6px; }
@@ -1724,19 +1866,19 @@ input, textarea, select {
    ============================================================ */
 
 .settings-icon {
-  font-size: 18px;
+  font-size: 20px;
   color: var(--fill-accent-default);
   flex-shrink: 0;
 }
 
 .settings-icon-muted {
-  font-size: 18px;
+  font-size: 20px;
   color: var(--text-tertiary);
   flex-shrink: 0;
 }
 
 .settings-label {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   color: var(--text-primary);
 }
@@ -1744,13 +1886,14 @@ input, textarea, select {
 .settings-desc {
   font-size: var(--font-caption);
   color: var(--text-tertiary);
-  margin-top: 1px;
+  margin-top: 2px;
+  line-height: 1.3;
 }
 
 .settings-desc-success {
   font-size: var(--font-caption);
   color: var(--fill-system-success);
-  margin-top: 1px;
+  margin-top: 2px;
 }
 
 /* Avatar */
@@ -1848,7 +1991,7 @@ input, textarea, select {
 
 .login-card {
   padding: var(--spacing-xl);
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-lg);
 }
 
 .login-form {
@@ -1994,9 +2137,32 @@ input, textarea, select {
    ============================================================ */
 
 .transcripts-list-panel {
+  display: flex;
+  flex-direction: column;
   border-right: 1px solid var(--stroke-divider);
   background: var(--surface-card);
   overflow: hidden;
+  width: 320px;
+  flex-shrink: 0;
+}
+
+/* Responsive: collapse list panel on smaller windows */
+@media (max-width: 1023px) {
+  .transcripts-list-panel {
+    width: 280px;
+  }
+}
+
+@media (min-width: 1400px) {
+  .transcripts-list-panel {
+    width: 360px;
+  }
+}
+
+/* List panel cards should not hover-scale */
+.transcripts-list-panel .card:hover {
+  transform: none;
+  box-shadow: var(--shadow-sm);
 }
 
 .transcripts-list-header {
@@ -2068,6 +2234,7 @@ input, textarea, select {
 
 .transcripts-detail-panel {
   display: flex;
+  flex-direction: column;
   overflow: hidden;
 }
 
@@ -2162,6 +2329,20 @@ input, textarea, select {
   animation: spin 1s linear infinite;
 }
 
+/* Main tab bar for Notulen/Transcripties switch */
+.transcripts-main-tab-bar {
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--stroke-divider);
+  background: var(--surface-secondary);
+}
+
+.transcripts-empty-icon-large {
+  font-size: 48px;
+  color: var(--stroke-divider);
+  display: block;
+  margin: 0 auto 16px;
+}
+
 /* ============================================================
    Yinga Footer Branding
    ============================================================ */
@@ -2199,4 +2380,20 @@ input, textarea, select {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+.page-content-medium {
+  max-width: 680px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Sidebar developed by text */
+.sidebar-developed-by {
+  font-size: 9px;
+  color: var(--text-disabled);
+  text-align: center;
+  margin-top: 4px;
+  letter-spacing: 0.02em;
 }

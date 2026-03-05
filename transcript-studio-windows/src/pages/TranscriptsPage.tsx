@@ -12,6 +12,8 @@ import {
   Dismiss24Regular,
   Timer24Regular,
   Share24Regular,
+  Document24Regular,
+  Clipboard24Regular,
 } from "@fluentui/react-icons";
 import { marked } from "marked";
 import { useTranscriptsStore } from "../stores/transcriptsStore";
@@ -26,7 +28,13 @@ interface ContextMenu {
 }
 
 type TimeFilter = "alles" | "vandaag" | "week" | "maand";
+type MainTab = "notulen" | "transcripties";
 type DetailTab = "notule" | "transcriptie";
+
+const MAIN_TABS = [
+  { id: "notulen" as const, label: "Notulen", icon: <Document24Regular /> },
+  { id: "transcripties" as const, label: "Transcripties", icon: <Clipboard24Regular /> },
+];
 
 export function TranscriptsPage() {
   const {
@@ -39,7 +47,8 @@ export function TranscriptsPage() {
   const [editTitle, setEditTitle] = useState("");
   const [regeneratingId, setRegeneratingId] = useState<string | null>(null);
   const [timeFilter, setTimeFilter] = useState<TimeFilter>("alles");
-  const [activeTab, setActiveTab] = useState<DetailTab>("notule");
+  const [mainTab, setMainTab] = useState<MainTab>("notulen");
+  const [detailTab, setDetailTab] = useState<DetailTab>("notule");
   const editInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -135,10 +144,52 @@ export function TranscriptsPage() {
     }
   }
 
-  function handleExport(transcript: Transcript, format: "html" | "md") {
-    if (!transcript.notule_html) return;
-    const content = transcript.notule_html;
-    const blob = new Blob([content], { type: format === "html" ? "text/html" : "text/markdown" });
+  function handleExport(transcript: Transcript, format: "html" | "txt" | "pdf") {
+    if (format === "pdf" && transcript.notule_html) {
+      // For PDF export, we'll use the browser's print functionality
+      const printWindow = window.open("", "_blank");
+      if (printWindow) {
+        printWindow.document.write(`
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="utf-8">
+            <title>${transcript.title || "Notulen"}</title>
+            <style>
+              body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 12pt; line-height: 1.6; color: #1a1a1a; margin: 0; padding: 20pt; }
+              h1 { font-size: 18pt; font-weight: 700; color: #E50074; margin-bottom: 12pt; }
+              h2 { font-size: 14pt; font-weight: 600; margin-top: 16pt; }
+              h3 { font-size: 12pt; font-weight: 600; margin-top: 12pt; }
+              p { margin: 6pt 0; }
+              ul, ol { margin: 6pt 0; padding-left: 20pt; }
+              li { margin: 3pt 0; }
+              table { border-collapse: collapse; width: 100%; margin: 12pt 0; }
+              th, td { border: 1px solid #ddd; padding: 6pt 8pt; text-align: left; }
+              th { background: #f5f5f5; font-weight: 600; }
+            </style>
+          </head>
+          <body>
+            <h1>${transcript.title || "Notulen"}</h1>
+            <p style="color: #666; font-size: 10pt;">
+              ${formatDate(transcript.created_at)} · ${formatDuration(transcript.duration_seconds)}
+            </p>
+            ${transcript.notule_html}
+          </body>
+          </html>
+        `);
+        printWindow.document.close();
+        setTimeout(() => {
+          printWindow.print();
+        }, 250);
+      }
+      return;
+    }
+
+    // For HTML and TXT export
+    const content = format === "html" ? transcript.notule_html : transcript.raw_transcription;
+    if (!content) return;
+
+    const blob = new Blob([content], { type: format === "html" ? "text/html" : "text/plain" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -177,14 +228,22 @@ export function TranscriptsPage() {
     return true;
   }
 
-  const selected = transcripts.find((t) => t.id === selectedId);
-  const filtered = transcripts.filter((t) => {
+  // Filter transcripts based on main tab
+  const filteredTranscripts = transcripts.filter((t) => {
     const matchesSearch = !searchQuery || t.title.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesTags = selectedTags.length === 0 || selectedTags.some((tag) => t.tags.includes(tag));
     const matchesTime = filterByTime(t);
-    return matchesSearch && matchesTags && matchesTime;
+
+    // Filter by main tab
+    const matchesTab =
+      mainTab === "notulen"
+        ? t.notule_html && t.notule_html.length > 0
+        : t.raw_transcription && t.raw_transcription.length > 0;
+
+    return matchesSearch && matchesTags && matchesTime && matchesTab;
   });
 
+  const selected = transcripts.find((t) => t.id === selectedId);
   const allTags = Array.from(new Set(transcripts.flatMap((t) => t.tags)));
 
   const timeFilterOptions: { key: TimeFilter; label: string }[] = [
@@ -195,12 +254,12 @@ export function TranscriptsPage() {
   ];
 
   return (
-    <div className="flex-row" style={{ height: "100%" }}>
+    <div className="flex-row" style={{ flex: 1, overflow: "hidden" }}>
       {/* List panel */}
-      <div className="flex-col flex-shrink-0 transcripts-list-panel" style={{ width: 320 }}>
+      <div className="flex-col flex-shrink-0 transcripts-list-panel">
         {/* Page header */}
         <div className="transcripts-list-header">
-          <h1 className="text-subtitle transcripts-list-title">Notulen</h1>
+          <h1 className="text-subtitle transcripts-list-title">Notulen & Transcripties</h1>
 
           {/* Search */}
           <div className="search-box transcripts-search-margin">
@@ -227,6 +286,23 @@ export function TranscriptsPage() {
           </div>
         </div>
 
+        {/* Main Tab Bar */}
+        <div className="tab-bar transcripts-main-tab-bar">
+          {MAIN_TABS.map((tab) => (
+            <button
+              key={tab.id}
+              className={`tab-item${mainTab === tab.id ? " active" : ""}`}
+              onClick={() => {
+                setMainTab(tab.id);
+                setSelectedId(null);
+              }}
+            >
+              {tab.icon}
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
         {/* Tags */}
         {allTags.length > 0 && (
           <div className="flex-row gap-6 transcripts-tags-bar">
@@ -250,18 +326,19 @@ export function TranscriptsPage() {
 
         {/* List */}
         <div className="flex-1 transcripts-list-scroll">
-          {filtered.length === 0 ? (
+          {filteredTranscripts.length === 0 ? (
             <div className="empty-state-text transcripts-empty-list">
-              Geen notulen gevonden
+              {mainTab === "notulen" ? "Geen notulen gevonden" : "Geen transcripties gevonden"}
             </div>
           ) : (
-            filtered.map((transcript) => (
+            filteredTranscripts.map((transcript) => (
               <div
                 key={transcript.id}
                 className={`session-card${selectedId === transcript.id ? " active" : ""}`}
                 onClick={() => {
                   setSelectedId(transcript.id);
-                  setActiveTab("notule");
+                  // Auto-select appropriate detail tab based on main tab
+                  setDetailTab(mainTab === "notulen" ? "notule" : "transcriptie");
                 }}
                 onContextMenu={(e) => handleContextMenu(e, transcript)}
               >
@@ -289,15 +366,23 @@ export function TranscriptsPage() {
                       {timeAgo(transcript.created_at)}
                     </p>
                     {/* Preview text */}
-                    {transcript.notule_html && (
+                    {mainTab === "notulen" && transcript.notule_html && (
                       <p className="session-card-preview">
                         {stripHtml(transcript.notule_html)}
                       </p>
                     )}
+                    {mainTab === "transcripties" && transcript.raw_transcription && (
+                      <p className="session-card-preview">
+                        {transcript.raw_transcription.slice(0, 150)}...
+                      </p>
+                    )}
                     {/* Status badges */}
                     <div className="flex-row gap-6 transcripts-badges-row">
-                      {transcript.notule_html && (
+                      {mainTab === "notulen" && transcript.notule_html && (
                         <span className="status-badge-success">Notule beschikbaar</span>
+                      )}
+                      {mainTab === "transcripties" && transcript.raw_transcription && (
+                        <span className="status-badge-neutral">Transcriptie beschikbaar</span>
                       )}
                       {transcript.tags.slice(0, 2).map((tag) => (
                         <span key={tag} className="tag-chip">
@@ -382,31 +467,61 @@ export function TranscriptsPage() {
               </div>
             </div>
 
-            {/* Tab switch */}
-            <div className="tab-bar transcripts-tab-bar">
-              <button
-                className={`tab-item${activeTab === "notule" ? " active" : ""}`}
-                onClick={() => setActiveTab("notule")}
-              >
-                Notule
-              </button>
-              <button
-                className={`tab-item${activeTab === "transcriptie" ? " active" : ""}`}
-                onClick={() => setActiveTab("transcriptie")}
-              >
-                Transcriptie
-              </button>
-            </div>
+            {/* Tab switch - only show if both notule and transcript are available */}
+            {(selected.notule_html || selected.raw_transcription) && (
+              <div className="tab-bar transcripts-tab-bar">
+                {selected.notule_html && (
+                  <button
+                    className={`tab-item${detailTab === "notule" ? " active" : ""}`}
+                    onClick={() => setDetailTab("notule")}
+                  >
+                    Notule
+                  </button>
+                )}
+                {selected.raw_transcription && (
+                  <button
+                    className={`tab-item${detailTab === "transcriptie" ? " active" : ""}`}
+                    onClick={() => setDetailTab("transcriptie")}
+                  >
+                    Transcriptie
+                  </button>
+                )}
+              </div>
+            )}
 
             {/* Action bar below tabs */}
             <div className="flex-row gap-8 flex-shrink-0 transcripts-action-bar">
               <button
                 className="btn btn-amber"
-                onClick={() => handleExport(selected, "html")}
-                disabled={!selected.notule_html}
+                onClick={() => {
+                  if (detailTab === "notule") {
+                    handleExport(selected, "pdf");
+                  } else {
+                    handleExport(selected, "txt");
+                  }
+                }}
+                disabled={
+                  detailTab === "notule" ? !selected.notule_html : !selected.raw_transcription
+                }
               >
                 <Share24Regular className="transcripts-icon-md" />
-                Deel & Exporteer
+                {detailTab === "notule" ? "Exporteer PDF" : "Kopieer"}
+              </button>
+              <button
+                className="btn btn-secondary"
+                onClick={() => {
+                  if (detailTab === "notule" && selected.notule_html) {
+                    handleExport(selected, "html");
+                  } else if (selected.raw_transcription) {
+                    handleCopyTranscription(selected.raw_transcription);
+                  }
+                }}
+                disabled={
+                  detailTab === "notule" ? !selected.notule_html : !selected.raw_transcription
+                }
+              >
+                <ArrowDownload24Regular className="transcripts-icon-md" />
+                {detailTab === "notule" ? "Exporteer HTML" : "Kopieer transcriptie"}
               </button>
               <button className="icon-btn" onClick={() => startEdit(selected)} title="Bewerken">
                 <Edit24Regular className="transcripts-icon-lg" />
@@ -415,7 +530,7 @@ export function TranscriptsPage() {
 
             {/* Content area */}
             <div className="flex-1 transcripts-content-scroll">
-              {activeTab === "notule" ? (
+              {detailTab === "notule" ? (
                 <>
                   {selected.notule_html ? (
                     <div
@@ -428,6 +543,7 @@ export function TranscriptsPage() {
                     />
                   ) : (
                     <div className="text-center transcripts-empty-content">
+                      <Document24Regular className="transcripts-empty-icon-large" />
                       <p className="text-tertiary transcripts-empty-content-text">
                         Geen notulen beschikbaar
                       </p>
@@ -443,28 +559,6 @@ export function TranscriptsPage() {
               ) : (
                 /* Transcriptie tab */
                 <div>
-                  {/* Top actions */}
-                  <div className="flex-row gap-8 transcripts-transcription-actions">
-                    <button
-                      className="btn btn-secondary"
-                      onClick={() => {
-                        setActiveTab("notule");
-                      }}
-                    >
-                      <Dismiss24Regular className="transcripts-icon-md" />
-                      Sluiten
-                    </button>
-                    {selected.raw_transcription && (
-                      <button
-                        className="btn btn-secondary"
-                        onClick={() => handleCopyTranscription(selected.raw_transcription!)}
-                      >
-                        <Copy24Regular className="transcripts-icon-md" />
-                        Kopieer
-                      </button>
-                    )}
-                  </div>
-
                   {selected.raw_transcription ? (
                     <div className="card transcripts-transcription-card">
                       <p className="text-body-strong text-accent transcripts-transcription-title">
@@ -479,6 +573,7 @@ export function TranscriptsPage() {
                     </div>
                   ) : (
                     <div className="text-center transcripts-empty-content">
+                      <Clipboard24Regular className="transcripts-empty-icon-large" />
                       <p className="text-tertiary transcripts-empty-content-text">
                         Geen transcriptie beschikbaar
                       </p>
@@ -493,7 +588,7 @@ export function TranscriptsPage() {
             <div className="text-center">
               <Tag24Regular className="transcripts-empty-icon" />
               <p className="empty-state-text">
-                Selecteer een notule om te bekijken
+                Selecteer een {mainTab === "notulen" ? "notitie" : "transcriptie"} om te bekijken
               </p>
             </div>
           </div>
@@ -509,14 +604,22 @@ export function TranscriptsPage() {
         >
           <button
             className="context-menu-item"
-            onClick={() => { startEdit(contextMenu.transcript); setContextMenu(null); }}
+            onClick={() => {
+              startEdit(contextMenu.transcript);
+              setContextMenu(null);
+            }}
           >
             <Edit24Regular className="transcripts-icon-md" />
             Bewerken
           </button>
           <button
             className="context-menu-item"
-            onClick={() => { handleExport(contextMenu.transcript, "html"); setContextMenu(null); }}
+            onClick={() => {
+              if (contextMenu.transcript.notule_html) {
+                handleExport(contextMenu.transcript, "pdf");
+              }
+              setContextMenu(null);
+            }}
           >
             <ArrowDownload24Regular className="transcripts-icon-md" />
             Exporteren
@@ -530,7 +633,10 @@ export function TranscriptsPage() {
           </button>
           <button
             className="context-menu-item"
-            onClick={() => { handleRegenerate(contextMenu.transcript); setContextMenu(null); }}
+            onClick={() => {
+              handleRegenerate(contextMenu.transcript);
+              setContextMenu(null);
+            }}
           >
             <ArrowSync24Regular className="transcripts-icon-md" />
             Hertranscribeer
@@ -538,7 +644,10 @@ export function TranscriptsPage() {
           <div className="context-menu-divider" />
           <button
             className="context-menu-item context-menu-item-danger"
-            onClick={() => { handleDelete(contextMenu.transcript); setContextMenu(null); }}
+            onClick={() => {
+              handleDelete(contextMenu.transcript);
+              setContextMenu(null);
+            }}
           >
             <Delete24Regular className="transcripts-icon-md" />
             Verwijderen

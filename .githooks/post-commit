@@ -1,9 +1,12 @@
 #!/bin/bash
-# Auto version bump + version branch + push on commits to main
-# Skips if:
-#   - Not on main branch
-#   - Commit message is already a version bump (prevents infinite loop)
-#   - VERSION_BUMP_IN_PROGRESS env var is set
+# Auto version bump + release branch + push on commits to main
+#
+# On every commit to main (except version bumps themselves):
+# 1. Bumps patch version in VERSION file
+# 2. Commits the version bump
+# 3. Creates tag v{version}
+# 4. Creates branch release/{version}
+# 5. Pushes main, tag, and branch to origin
 
 set -e
 
@@ -12,6 +15,7 @@ if [ "$BRANCH" != "main" ]; then
     exit 0
 fi
 
+# Prevent infinite loop
 LAST_MSG=$(git log -1 --pretty=%s)
 if echo "$LAST_MSG" | grep -q "^chore(release):"; then
     exit 0
@@ -25,29 +29,30 @@ export VERSION_BUMP_IN_PROGRESS=1
 
 VERSION_FILE="$(git rev-parse --show-toplevel)/VERSION"
 if [ ! -f "$VERSION_FILE" ]; then
-    echo "VERSION file not found, skipping version bump"
+    echo "⚠️  VERSION file not found, skipping version bump"
     exit 0
 fi
 
+# Read and bump version
 CURRENT=$(cat "$VERSION_FILE" | tr -d '[:space:]')
 MAJOR=$(echo "$CURRENT" | cut -d. -f1)
 MINOR=$(echo "$CURRENT" | cut -d. -f2)
 PATCH=$(echo "$CURRENT" | cut -d. -f3)
-
 NEW_PATCH=$((PATCH + 1))
 NEW_VERSION="${MAJOR}.${MINOR}.${NEW_PATCH}"
 
+# Update VERSION file and commit
 echo "$NEW_VERSION" > "$VERSION_FILE"
-
 git add "$VERSION_FILE"
 git commit -m "chore(release): ${NEW_VERSION}"
 
+# Create tag and release branch
 git tag "v${NEW_VERSION}"
+git branch "release/${NEW_VERSION}"
 
-git branch "v${NEW_VERSION}"
-
-git push origin main --tags 2>/dev/null || echo "⚠️  Auto-push failed (no network?). Run: git push origin main --tags && git push origin v${NEW_VERSION}"
-git push origin "v${NEW_VERSION}" 2>/dev/null || true
+# Push everything to remote
+git push origin main "release/${NEW_VERSION}" --tags 2>/dev/null \
+    || echo "⚠️  Auto-push failed. Run: git push origin main release/${NEW_VERSION} --tags"
 
 echo "✅ Version bumped: ${CURRENT} → ${NEW_VERSION}"
-echo "✅ Branch v${NEW_VERSION} created and pushed"
+echo "✅ Tag v${NEW_VERSION} + branch release/${NEW_VERSION} created and pushed"

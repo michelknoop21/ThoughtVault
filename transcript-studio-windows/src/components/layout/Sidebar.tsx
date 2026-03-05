@@ -7,20 +7,60 @@ import {
   ShieldPersonRegular,
 } from "@fluentui/react-icons";
 import { useAuthStore } from "../../stores/authStore";
+import appLogo from "../../assets/app-logo.png";
 
 export function Sidebar() {
   const user = useAuthStore((s) => s.user);
   const isAdmin = user?.role === "admin";
 
+  const userInitial = (() => {
+    if (user?.name) {
+      const first = user.name.split(" ")[0];
+      if (first) return first[0].toUpperCase();
+    }
+    if (user?.email) return user.email[0].toUpperCase();
+    return "?";
+  })();
+
+  const userDisplayName = user?.name || user?.email || "";
+
   return (
     <nav className="sidebar">
+      {/* Logo + app title */}
+      <div className="sidebar-logo-section flex-row gap-10">
+        <img
+          src={appLogo}
+          alt="Transcript Studio"
+          className="sidebar-logo"
+        />
+        <span className="text-body-strong">
+          Transcript Studio
+        </span>
+      </div>
+
+      {/* User profile */}
+      {user && (
+        <div className="sidebar-user-section flex-row gap-10">
+          <div className="avatar avatar-sm avatar-subtle">
+            {userInitial}
+          </div>
+          <span className="text-caption text-secondary truncate">
+            {userDisplayName}
+          </span>
+        </div>
+      )}
+
+      <hr className="sidebar-divider" />
+
       {/* Main navigation */}
       <SidebarItem to="/" icon={<Home24Regular />} label="Home" />
       <SidebarItem to="/recording" icon={<MicRecord24Regular />} label="Opnemen" />
       <SidebarItem to="/transcripts" icon={<DocumentText24Regular />} label="Notulen" />
 
       {/* Spacer pushes bottom items down */}
-      <div style={{ flex: 1 }} />
+      <div className="flex-1" />
+
+      <hr className="sidebar-divider" />
 
       {/* Bottom items */}
       <SidebarItem to="/settings" icon={<Settings24Regular />} label="Instellingen" />

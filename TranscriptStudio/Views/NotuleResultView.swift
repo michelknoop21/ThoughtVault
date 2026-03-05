@@ -83,6 +83,12 @@ struct NotuleResultView: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            #if os(macOS)
+            YingaFooter()
+                .background(Color.surfacePrimary)
+                .overlay(alignment: .top) { Divider() }
+            #endif
         }
         .background(Color.surfacePrimary)
     }
@@ -400,8 +406,9 @@ struct NotuleResultView: View {
         let webView = WKWebView(frame: NSRect(x: 0, y: 0, width: 595, height: 842))
         webView.loadHTMLString(styledHTML(html), baseURL: nil)
 
-        // Brief delay for render
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+        // Brief delay for WKWebView to finish rendering before printing
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(800))
             let op = webView.printOperation(with: printInfo)
             op.showsPrintPanel = true
             op.showsProgressPanel = true

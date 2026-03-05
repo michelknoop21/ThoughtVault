@@ -28,13 +28,20 @@ import { enqueue } from "../services/offlineQueue";
 import { WaveformVisualizer } from "../components/recording/WaveformVisualizer";
 import type { TranscriptTask } from "../types";
 
-// Profile icon mapping
-function getProfileIcon(name: string): string {
+import {
+  Briefcase24Regular,
+  ChatMultiple24Regular,
+  Wrench24Regular,
+  ClipboardText24Regular,
+} from "@fluentui/react-icons";
+
+function getProfileIcon(name: string): React.ReactNode {
   const lower = name.toLowerCase();
-  if (lower.includes("zakelijk")) return "\u{1F4BC}";
-  if (lower.includes("informeel")) return "\u{1F4AC}";
-  if (lower.includes("technisch")) return "\u{1F527}";
-  return "\u{1F4CB}";
+  const style = { fontSize: 14 };
+  if (lower.includes("zakelijk")) return <Briefcase24Regular style={style} />;
+  if (lower.includes("informeel")) return <ChatMultiple24Regular style={style} />;
+  if (lower.includes("technisch")) return <Wrench24Regular style={style} />;
+  return <ClipboardText24Regular style={style} />;
 }
 
 export function RecordingPage() {
@@ -193,55 +200,30 @@ export function RecordingPage() {
   const canGoBack = phase === "idle";
 
   return (
-    <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
+    <div className="page-scroll">
       {/* Header */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 12,
-          padding: "12px 16px",
-          borderBottom: "1px solid var(--stroke-divider)",
-          background: "var(--surface-card)",
-          flexShrink: 0,
-        }}
-      >
+      <div className="page-header flex-row gap-12">
         <button
           onClick={() => canGoBack && navigate("/")}
           disabled={!canGoBack}
-          className="btn btn-ghost"
-          style={{ width: 36, height: 36, padding: 0, opacity: canGoBack ? 1 : 0.4 }}
+          className="btn btn-ghost icon-btn"
           title="Terug"
         >
-          <ArrowLeft24Regular style={{ fontSize: 20 }} />
+          <ArrowLeft24Regular />
         </button>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <div className="flex-row gap-8">
           {mode === "combined"
-            ? <VideoChat24Regular style={{ color: "var(--fill-accent-default)", fontSize: 22 }} />
-            : <MicRecord24Regular style={{ color: "var(--fill-accent-default)", fontSize: 22 }} />
+            ? <VideoChat24Regular className="text-accent" />
+            : <MicRecord24Regular className="text-accent" />
           }
-          <h1 style={{ fontSize: 16, fontWeight: 600, color: "var(--text-primary)" }}>
+          <h1 className="page-title" style={{ fontSize: 16 }}>
             {mode === "combined" ? "Videocall opnemen" : "Vergadering opnemen"}
           </h1>
         </div>
       </div>
 
       {/* Body */}
-      <div
-        style={{
-          flex: 1,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: 32,
-          gap: 24,
-          maxWidth: 600,
-          margin: "0 auto",
-          width: "100%",
-          overflowY: "auto",
-        }}
-      >
+      <div className="flex-1 flex-col text-center" style={{ alignItems: "center", justifyContent: "center", padding: 32, gap: 24, maxWidth: 600, margin: "0 auto", width: "100%", overflowY: "auto" }}>
         {phase === "idle" && (
           <IdleState
             mode={mode}
@@ -254,26 +236,15 @@ export function RecordingPage() {
         )}
 
         {phase === "preparing" && (
-          <div style={{ textAlign: "center" }}>
-            <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+          <div className="text-center">
+            <div className="flex-row" style={{ position: "relative", justifyContent: "center", margin: "0 auto 16px" }}>
               <div className="mic-pulse-ring mic-pulse-ring-1" />
               <div className="mic-pulse-ring mic-pulse-ring-2" />
-              <div
-                style={{
-                  width: 96,
-                  height: 96,
-                  borderRadius: "50%",
-                  background: "rgba(229, 0, 116, 0.08)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  animation: "widget-pulse 1.5s ease-in-out infinite",
-                }}
-              >
-                <MicRecord24Regular style={{ fontSize: 40, color: "var(--fill-accent-default)" }} />
+              <div className="flex-row" style={{ width: 80, height: 80, borderRadius: "50%", background: "rgba(229, 0, 116, 0.08)", justifyContent: "center", animation: "widget-pulse 1.5s ease-in-out infinite" }}>
+                <MicRecord24Regular className="text-accent" style={{ fontSize: 28 }} />
               </div>
             </div>
-            <p style={{ color: "var(--text-secondary)" }}>Microfoon initialiseren...</p>
+            <p className="text-secondary">Microfoon initialiseren...</p>
           </div>
         )}
 
@@ -293,17 +264,7 @@ export function RecordingPage() {
       </div>
 
       {error && (
-        <div
-          style={{
-            margin: 16,
-            padding: "10px 14px",
-            background: "rgba(188, 0, 22, 0.08)",
-            border: "1px solid rgba(188, 0, 22, 0.25)",
-            borderRadius: 8,
-            fontSize: 13,
-            color: "var(--text-error)",
-          }}
-        >
+        <div className="error-banner" style={{ margin: 16 }}>
           {error}
         </div>
       )}
@@ -322,69 +283,63 @@ function IdleState({
   onStart: () => void;
 }) {
   return (
-    <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: 28, alignItems: "center" }}>
+    <div className="flex-col gap-20" style={{ width: "100%", gap: 28, alignItems: "center" }}>
       {/* Section header */}
-      <div style={{ textAlign: "center" }}>
-        <p style={{
-          fontSize: 13,
-          fontWeight: 700,
-          color: "var(--fill-accent-default)",
-          textTransform: "uppercase",
-          letterSpacing: "0.08em",
-          marginBottom: 4,
-        }}>
+      <div className="text-center">
+        <p className="section-label text-accent" style={{ marginBottom: 4 }}>
           NIEUWE OPNAME
         </p>
-        <p style={{ fontSize: 13, color: "var(--text-tertiary)" }}>
+        <p className="text-caption text-tertiary">
           Kies bron en profiel, klik daarna om op te nemen
         </p>
       </div>
 
-      {/* Mode selector */}
+      {/* Mode selector — pill capsules matching macOS */}
       <div style={{ width: "100%" }}>
-        <p style={{ fontSize: 12, fontWeight: 600, color: "var(--text-tertiary)", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+        <p className="section-label">
           Opnamemodus
         </p>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-          {(["combined", "microphone"] as const).map((m) => (
-            <button
-              key={m}
-              onClick={() => onSetMode(m)}
-              className="card"
-              style={{
-                padding: 16,
-                textAlign: "left",
-                cursor: "pointer",
-                border: mode === m
-                  ? "2px solid var(--fill-accent-default)"
-                  : "1px solid var(--stroke-card)",
-                background: mode === m ? "rgba(229, 0, 116, 0.05)" : "var(--surface-card)",
-                transition: "all 67ms ease",
-              }}
-            >
-              <div style={{ marginBottom: 8, color: "var(--fill-accent-default)" }}>
+        <div className="flex-row gap-8">
+          {(["combined", "microphone"] as const).map((m) => {
+            const isActive = mode === m;
+            return (
+              <button
+                key={m}
+                onClick={() => onSetMode(m)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "8px 16px",
+                  borderRadius: "var(--radius-xs)",
+                  border: isActive ? "1px solid var(--fill-accent-default)" : "1px solid rgba(229, 0, 116, 0.20)",
+                  background: isActive ? "var(--fill-accent-default)" : "rgba(229, 0, 116, 0.06)",
+                  color: isActive ? "#fff" : "var(--text-primary)",
+                  fontSize: 13,
+                  fontWeight: isActive ? 600 : 500,
+                  cursor: "default",
+                  transition: "all 180ms ease",
+                  fontFamily: "inherit",
+                  boxShadow: isActive ? "0 2px 8px rgba(229, 0, 116, 0.35)" : "none",
+                }}
+              >
                 {m === "combined"
-                  ? <VideoChat24Regular style={{ fontSize: 24 }} />
-                  : <MicRecord24Regular style={{ fontSize: 24 }} />
+                  ? <VideoChat24Regular style={{ fontSize: 16 }} />
+                  : <MicRecord24Regular style={{ fontSize: 16 }} />
                 }
-              </div>
-              <p style={{ fontWeight: 600, color: "var(--text-primary)", fontSize: 14 }}>
-                {m === "combined" ? "Videocall" : "Fysieke meeting"}
-              </p>
-              <p style={{ fontSize: 12, color: "var(--text-tertiary)", marginTop: 2 }}>
-                {m === "combined" ? "Microfoon + systeemaudio" : "Alleen microfoon"}
-              </p>
-            </button>
-          ))}
+                <span>{m === "combined" ? "Videocall" : "Fysieke meeting"}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
       {/* Profile selector as cards with emoji icons */}
       <div style={{ width: "100%" }}>
-        <p style={{ fontSize: 12, fontWeight: 600, color: "var(--text-tertiary)", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+        <p className="section-label">
           Profiel
         </p>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <div className="flex-col gap-8">
           {profiles.map((profile) => (
             <button
               key={profile.id}
@@ -398,9 +353,9 @@ function IdleState({
         </div>
       </div>
 
-      {/* Large pink mic button with pulse rings */}
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, paddingTop: 8 }}>
-        <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center", width: 220, height: 220 }}>
+      {/* Mic button with concentric rings — matches macOS */}
+      <div className="flex-col gap-12" style={{ alignItems: "center", paddingTop: 8 }}>
+        <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center", width: 180, height: 180 }}>
           <div className="mic-pulse-ring mic-pulse-ring-1" />
           <div className="mic-pulse-ring mic-pulse-ring-2" />
           <div className="mic-pulse-ring mic-pulse-ring-3" />
@@ -409,10 +364,10 @@ function IdleState({
             className="mic-button-large"
             title="Opname starten"
           >
-            <MicRecord24Regular style={{ fontSize: 48, color: "#fff" }} />
+            <MicRecord24Regular style={{ fontSize: 28, color: "#fff" }} />
           </button>
         </div>
-        <p style={{ fontSize: 13, color: "var(--text-tertiary)" }}>
+        <p className="text-caption text-tertiary">
           Klik om op te nemen
         </p>
       </div>
@@ -435,16 +390,17 @@ function ActiveState({
   const seconds = (elapsed % 60).toString().padStart(2, "0");
 
   return (
-    <div style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center", gap: 20 }}>
-      {/* Timer */}
-      <div style={{ textAlign: "center" }}>
+    <div className="flex-col gap-20" style={{ width: "100%", alignItems: "center" }}>
+      {/* Timer — matches macOS 56pt thin monospaced */}
+      <div className="text-center">
         <div
           style={{
-            fontSize: 72,
+            fontSize: 52,
             fontWeight: 200,
             fontVariantNumeric: "tabular-nums",
+            fontFamily: "'Segoe UI Variable', 'Segoe UI', system-ui, monospace",
             color: "var(--text-primary)",
-            letterSpacing: "0.02em",
+            letterSpacing: "0.04em",
             lineHeight: 1,
             marginBottom: 10,
           }}
@@ -459,15 +415,12 @@ function ActiveState({
       </div>
 
       {/* Waveform */}
-      <div
-        className="card"
-        style={{ padding: "16px 20px", width: "100%", height: 80 }}
-      >
+      <div className="card card-static" style={{ padding: "16px 20px", width: "100%", height: 80 }}>
         <WaveformVisualizer level={audioLevel} isPaused={isPaused} height={48} />
       </div>
 
-      {/* Large mic button */}
-      <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center", width: 160, height: 160 }}>
+      {/* Mic button — active recording */}
+      <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center", width: 120, height: 120 }}>
         {!isPaused && (
           <>
             <div className="mic-pulse-ring mic-pulse-ring-1" />
@@ -479,32 +432,23 @@ function ActiveState({
           className="mic-button-large"
           title="Stoppen"
         >
-          <MicRecord24Regular style={{ fontSize: 44, color: "#fff" }} />
+          <MicRecord24Regular style={{ fontSize: 28, color: "#fff" }} />
         </button>
       </div>
-      <p style={{ fontSize: 13, color: "var(--text-tertiary)", marginTop: -8 }}>
+      <p className="text-caption text-tertiary" style={{ marginTop: -8 }}>
         {isPaused ? "Klik om te hervatten" : "Klik om te pauzeren"}
       </p>
 
       {/* Live transcription card */}
       {task?.raw_transcription && (
-        <div
-          className="card"
-          style={{ padding: 14, width: "100%", textAlign: "left", maxHeight: 130, overflow: "hidden" }}
-        >
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-            <span style={{
-              fontSize: 11,
-              fontWeight: 700,
-              color: "var(--fill-accent-default)",
-              textTransform: "uppercase",
-              letterSpacing: "0.06em",
-            }}>
+        <div className="card" style={{ padding: 14, width: "100%", textAlign: "left", maxHeight: 130, overflow: "hidden" }}>
+          <div className="flex-row justify-between" style={{ marginBottom: 8 }}>
+            <span className="section-label text-accent" style={{ marginBottom: 0 }}>
               LIVE TRANSCRIPTIE
             </span>
-            <span style={{ fontSize: 11, color: "var(--text-tertiary)" }}>Op apparaat</span>
+            <span className="text-caption text-tertiary">Op apparaat</span>
           </div>
-          <p style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.5 }}>
+          <p className="text-body text-secondary" style={{ lineHeight: 1.5 }}>
             {task.raw_transcription}
           </p>
         </div>
@@ -518,8 +462,8 @@ function ActiveState({
           title={isPaused ? "Hervatten" : "Pauzeren"}
         >
           {isPaused
-            ? <Play24Regular style={{ fontSize: 24, color: "var(--text-primary)" }} />
-            : <Pause24Regular style={{ fontSize: 24, color: "var(--text-primary)" }} />
+            ? <Play24Regular style={{ fontSize: 24 }} />
+            : <Pause24Regular style={{ fontSize: 24 }} />
           }
           <span className="recording-control-label">
             {isPaused ? "HERVAT" : "PAUZE"}
@@ -591,7 +535,7 @@ function UploadingState({ task }: { task: Partial<TranscriptTask> | null }) {
   return (
     <div className="processing-view">
       {/* Title */}
-      <p style={{ fontSize: 20, fontWeight: 600, color: "var(--text-primary)" }}>
+      <p className="text-subtitle">
         AI Processing
       </p>
 
@@ -609,43 +553,32 @@ function UploadingState({ task }: { task: Partial<TranscriptTask> | null }) {
           />
         </svg>
         <div className="progress-text">
-          <span style={{ fontSize: 32, fontWeight: 600, color: "var(--text-primary)" }}>
+          <span style={{ fontSize: 32, fontWeight: 600 }}>
             {progress}%
           </span>
         </div>
       </div>
 
       {/* Status text */}
-      <div style={{ textAlign: "center" }}>
-        <p style={{ fontSize: 14, color: "var(--text-secondary)", marginBottom: 4 }}>
+      <div className="text-center">
+        <p className="text-body text-secondary" style={{ marginBottom: 4 }}>
           {label}
         </p>
-        <p style={{ fontSize: 12, color: "var(--text-tertiary)" }}>
+        <p className="text-caption text-tertiary">
           {subLabel}
         </p>
       </div>
 
       {/* Progress steps card */}
       <div className="card" style={{ width: "100%", padding: "16px 20px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-          <div style={{
-            width: 8,
-            height: 8,
-            borderRadius: "50%",
-            background: "var(--fill-accent-default)",
-          }} />
-          <span style={{
-            fontSize: 11,
-            fontWeight: 700,
-            textTransform: "uppercase",
-            letterSpacing: "0.06em",
-            color: "var(--text-tertiary)",
-          }}>
+        <div className="flex-row gap-8" style={{ marginBottom: 12 }}>
+          <div className="live-dot" style={{ animation: "none" }} />
+          <span className="section-label" style={{ marginBottom: 0 }}>
             VOORTGANG
           </span>
         </div>
-        <div style={{ display: "flex", flexDirection: "column" }}>
-          {steps.map((step, i) => {
+        <div className="flex-col">
+          {steps.map((step) => {
             const stepIdx = statusOrder.indexOf(step.key);
             const isCompleted = currentIdx > stepIdx;
             const isActive = currentIdx === stepIdx;

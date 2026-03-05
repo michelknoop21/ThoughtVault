@@ -450,6 +450,49 @@ actor APIService {
         try await performVoid(req)
     }
 
+    // MARK: - Settings
+
+    struct MySettingsResponse: Decodable {
+        let ms365_client_id: String?
+        let ms365_tenant_id: String?
+    }
+
+    func getMySettings() async throws -> MySettingsResponse {
+        let req = try request(path: "/tstudio/api/settings/me")
+        return try await perform(req)
+    }
+
+    // MARK: - Calendar Tokens
+
+    struct CalendarTokensResponse: Decodable {
+        let access_token: String?
+        let refresh_token: String?
+        let token_expiry: Double?
+        let email: String?
+    }
+
+    func getCalendarTokens() async throws -> CalendarTokensResponse {
+        let req = try request(path: "/tstudio/api/calendar/me")
+        return try await perform(req)
+    }
+
+    func saveCalendarTokens(accessToken: String, refreshToken: String, tokenExpiry: Double, email: String) async throws {
+        let payload: [String: Any] = [
+            "access_token": accessToken,
+            "refresh_token": refreshToken,
+            "token_expiry": tokenExpiry,
+            "email": email
+        ]
+        let body = try JSONSerialization.data(withJSONObject: payload)
+        let req = try request(path: "/tstudio/api/calendar/me", method: "POST", body: body)
+        try await performVoid(req)
+    }
+
+    func deleteCalendarTokens() async throws {
+        let req = try request(path: "/tstudio/api/calendar/me", method: "DELETE")
+        try await performVoid(req)
+    }
+
     // MARK: - Version Check
 
     func checkMinimumVersion() async throws -> Bool {
@@ -668,7 +711,8 @@ final class SSEClient: @unchecked Sendable {
                 reconnectAttempts += 1
                 let backoffSeconds = min(pow(2.0, Double(reconnectAttempts)), 16.0)
                 logger.info("SSE: Reconnecting in \(backoffSeconds)s (attempt \(self.reconnectAttempts)/\(self.maxReconnectAttempts))")
-                DispatchQueue.global().asyncAfter(deadline: .now() + backoffSeconds) { [weak self] in
+                Task { [weak self] in
+                    try? await Task.sleep(for: .seconds(backoffSeconds))
                     guard let self, !self.isStopped else { return }
                     self.startStream()
                 }

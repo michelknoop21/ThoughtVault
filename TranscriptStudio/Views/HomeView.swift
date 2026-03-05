@@ -42,6 +42,10 @@ struct HomeView: View {
                         quickStartSection
                         activeProcessingSection
                         recentTranscriptsSection
+
+                        #if os(macOS)
+                        YingaFooter()
+                        #endif
                     }
                     .padding(.horizontal, TS.Spacing.md)
                     .padding(.vertical, TS.Spacing.lg)
@@ -127,7 +131,17 @@ struct HomeView: View {
 
     private var greetingText: String {
         let hour = Calendar.current.component(.hour, from: Date())
-        let name = authVM.currentUser?.name?.components(separatedBy: " ").first ?? ""
+        let firstName: String = {
+            if let name = authVM.currentUser?.name,
+               let first = name.split(separator: " ").first, !first.isEmpty {
+                return String(first)
+            }
+            if let email = authVM.currentUser?.email,
+               let local = email.split(separator: "@").first, !local.isEmpty {
+                return String(local)
+            }
+            return ""
+        }()
         let greeting: String
         if hour < 12 {
             greeting = "Goedemorgen"
@@ -136,7 +150,7 @@ struct HomeView: View {
         } else {
             greeting = "Goedenavond"
         }
-        return name.isEmpty ? greeting : "\(greeting), \(name)"
+        return firstName.isEmpty ? greeting : "\(greeting), \(firstName)"
     }
 
     // MARK: Quick start

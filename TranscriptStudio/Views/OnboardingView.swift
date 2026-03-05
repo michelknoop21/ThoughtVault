@@ -18,6 +18,7 @@ import ScreenCaptureKit
 struct OnboardingView: View {
 
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding: Bool = false
+    @Environment(CalendarService.self) private var calendarService
 
     @State private var currentStep: OnboardingStep = .welcome
     @State private var micPermission: PermissionState = .unknown
@@ -305,6 +306,8 @@ struct OnboardingView: View {
 
     // MARK: Agenda Step
 
+    @State private var connectingMicrosoft = false
+
     private var agendaStep: some View {
         VStack(spacing: TS.Spacing.xl) {
             Spacer()
@@ -315,21 +318,84 @@ struct OnboardingView: View {
                 Text("Agenda")
                     .font(TS.Font.title2Bold)
                     .foregroundStyle(Color.labelPrimary)
-                Text("TranscriptStudio detecteert aankomende Teams-, Zoom- en Meet-vergaderingen en biedt een snelkoppeling om een opname te starten.")
+                Text("Hoe wil je je agenda koppelen?")
                     .font(TS.Font.callout)
                     .foregroundStyle(Color.labelSecondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, TS.Spacing.xl)
             }
 
-            permissionStatusRow(permission: calendarPermission, label: "Agenda toegang")
-
             VStack(spacing: TS.Spacing.sm) {
-                if calendarPermission == .unknown {
-                    Button("Agenda koppelen") {
-                        Task { await requestCalendarPermission() }
+                // Apple Calendar option
+                Button {
+                    calendarService.activeProvider = .apple
+                    Task { await requestCalendarPermission() }
+                } label: {
+                    HStack(spacing: TS.Spacing.md) {
+                        Image(systemName: "calendar")
+                            .font(.title3)
+                            .frame(width: 28)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Apple Agenda")
+                                .font(TS.Font.bodyMedium)
+                            Text("Gebruikt je macOS kalenders (Outlook, Google, iCloud)")
+                                .font(TS.Font.caption)
+                                .foregroundStyle(Color.labelSecondary)
+                        }
+                        Spacer()
+                        if calendarPermission == .granted {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(Color.statusSuccess)
+                        }
                     }
-                    .buttonStyle(PrimaryButtonStyle())
+                    .padding(TS.Spacing.md)
+                    .background(Color.surfaceSecondary)
+                    .clipShape(RoundedRectangle(cornerRadius: TS.Radius.md))
+                }
+                .buttonStyle(.plain)
+
+                // Microsoft 365 option (only if configured)
+                if calendarService.isMicrosoftConfigured {
+                    Button {
+                        calendarService.activeProvider = .microsoft
+                        connectingMicrosoft = true
+                        Task {
+                            do {
+                                try await MicrosoftGraphService.shared.initiateAuth()
+                                await calendarService.updateMicrosoftConnection()
+                                advanceStep()
+                            } catch {
+                                // User cancelled or error — stay on step
+                            }
+                            connectingMicrosoft = false
+                        }
+                    } label: {
+                        HStack(spacing: TS.Spacing.md) {
+                            Image(systemName: "cloud")
+                                .font(.title3)
+                                .frame(width: 28)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Microsoft 365")
+                                    .font(TS.Font.bodyMedium)
+                                Text("Koppel rechtstreeks met je Microsoft werkaccount")
+                                    .font(TS.Font.caption)
+                                    .foregroundStyle(Color.labelSecondary)
+                            }
+                            Spacer()
+                            if connectingMicrosoft {
+                                ProgressView()
+                                    .controlSize(.small)
+                            } else if calendarService.isMicrosoftConnected {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundStyle(Color.statusSuccess)
+                            }
+                        }
+                        .padding(TS.Spacing.md)
+                        .background(Color.surfaceSecondary)
+                        .clipShape(RoundedRectangle(cornerRadius: TS.Radius.md))
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(connectingMicrosoft)
                 }
 
                 Button("Overslaan") {
@@ -523,6 +589,12 @@ struct OnboardingView: View {
         .padding(.horizontal, TS.Spacing.xl)
         .padding(.vertical, TS.Spacing.lg)
         .background(Color.white.opacity(0.3))
+        .overlay(alignment: .bottom) {
+            #if os(macOS)
+            YingaFooter()
+                .padding(.bottom, TS.Spacing.xs)
+            #endif
+        }
     }
 
     // MARK: - Permission Requests

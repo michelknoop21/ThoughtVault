@@ -77,6 +77,8 @@ struct ContentView: View {
         .onChange(of: authVM.isAuthenticated) { _, isAuth in
             if isAuth {
                 Task { await recordingVM.reloadProfiles() }
+                Task { await calendarService.refreshMicrosoftState() }
+                Task { await MicrosoftGraphService.shared.loadTokensFromBackend() }
             }
         }
         .alert("Update vereist", isPresented: $showForceUpdateAlert) {
@@ -130,25 +132,28 @@ struct ContentView: View {
             YingaBar()
 
             // App icon + title
-            HStack(spacing: 8) {
+            HStack(spacing: 10) {
                 Image("AppLogo")
                     .resizable()
                     .aspectRatio(contentMode: .fit)
-                    .frame(width: 24, height: 24)
-                    .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
+                    .frame(width: 36, height: 36)
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    .shadow(color: .black.opacity(0.15), radius: 3, y: 1)
 
                 Text("Transcript Studio")
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(Color.labelPrimary)
 
                 Spacer()
             }
             .padding(.horizontal, 12)
-            .padding(.top, 10)
-            .padding(.bottom, 4)
+            .padding(.top, 12)
+            .padding(.bottom, 6)
 
-            // User profile section
-            userProfileSection
+            // User profile section (only show when logged in user data is available)
+            if authVM.currentUser != nil {
+                userProfileSection
+            }
 
             Divider()
                 .padding(.vertical, 8)
@@ -166,6 +171,8 @@ struct ContentView: View {
             .padding(.horizontal, 8)
 
             Spacer()
+
+            YingaFooter()
 
             Divider()
                 .padding(.vertical, 8)

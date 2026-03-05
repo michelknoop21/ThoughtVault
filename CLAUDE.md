@@ -1,38 +1,34 @@
-# TranscriptStudioApp - Claude Code Instructies
+# TranscriptStudioApp
 
-## Project overzicht
-Native macOS/iOS app (Swift 6, SwiftUI) voor vergaderopnames, transcriptie en notulengeneratie.
-- **macOS app**: `/TranscriptStudio/` — Swift 6, SwiftUI, @Observable
-- **Windows app**: `/transcript-studio-windows/` — Tauri 2, React/TypeScript
-- **Widget**: `/RecordingActivityWidget/` — iOS Live Activity
+## Stack
+Native macOS/iOS (Swift 6, SwiftUI, `@Observable`) + Windows (Tauri 2, React/TypeScript).
+Backend: FastAPI op `https://n8n.prezent.nl/tstudio/api/` — zie @docs/API.md.
+Projectstructuur: @README.md
 
-## Architectuur
-- **MVVM**: ViewModels (AuthViewModel, RecordingViewModel, TranscriptsViewModel)
-- **Services**: APIService, AudioRecorder, SystemAudioCapture, BiometricService, KeychainService, etc.
-- **Backend API**: https://n8n.prezent.nl — endpoints onder `/tstudio/api/`
-
-## Bouwen
+## Commands
 ```bash
-# macOS app bouwen
+# macOS build (zonder signing)
 xcodebuild -project TranscriptStudio.xcodeproj -scheme TranscriptStudio -configuration Debug build CODE_SIGNING_ALLOWED=NO
 
-# Build met signing (vereist provisioning profile)
-xcodebuild -project TranscriptStudio.xcodeproj -scheme TranscriptStudio build
-```
-
-## Belangrijke patronen
-- Gebruik `@Observable` (NIET `ObservableObject/@Published`) — migratie voltooid
-- Alle strings in Dutch (nl_NL) via `Localizable.strings`
-- Design tokens via `TS.Spacing`, `TS.Font`, `TS.Radius` (Theme.swift)
-- Kleuren via `Color.brandPrimary`, `Color.labelPrimary` etc. (Color+Brand.swift)
-- Bundle ID: `nl.prezent.TranscriptStudio`
-
-## Bekende issues
-- `AuthViewModel.swift`: gebruik `notifications(named:)` niet `notifications(for:)` voor async NotificationCenter
-- Combined recording mode: gebruikt `mixAudioFiles()` in RecordingViewModel
-- Sidebar toggle: `.toolbar(removing: .sidebarToggle)` op elk individueel NavigationStack tabblad
-
-## Tests
-```bash
+# Tests
 xcodebuild test -project TranscriptStudio.xcodeproj -scheme TranscriptStudioTests
+
+# Windows dev
+cd transcript-studio-windows && npm run tauri dev
 ```
+
+## IMPORTANT: macOS Code Patterns
+- Gebruik `@Observable` — NOOIT `ObservableObject/@Published`
+- `async/await` overal — geen Combine, geen completion handlers
+- ViewModels: `@MainActor class`, Services: `actor`
+- UI strings Nederlands via `Localizable.strings`, code/comments in het Engels
+- Design tokens: `TS.Spacing`, `TS.Font`, `TS.Radius` (Theme.swift)
+- Kleuren: `Color.brandPrimary`, `Color.labelPrimary` (Color+Brand.swift)
+
+## Gotchas
+- `notifications(named:)` gebruiken, NIET `notifications(for:)` in AuthViewModel
+- Sidebar toggle: `.toolbar(removing: .sidebarToggle)` op ELKE individuele NavigationStack tab
+- Combined recording: `mixAudioFiles()` in RecordingViewModel (element-wise max over PCM)
+- Auth header: macOS → `X-User-Token`, Windows → `Authorization: Bearer` (beide geaccepteerd)
+- Backend `username` veld is het e-mailadres (niet `email`)
+- Versioning: elke commit op `main` bumpt automatisch patch via `.githooks/post-commit`

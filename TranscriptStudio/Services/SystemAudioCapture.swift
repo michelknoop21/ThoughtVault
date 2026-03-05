@@ -3,6 +3,13 @@ import AVFoundation
 import Foundation
 import ScreenCaptureKit
 
+// MARK: - CaptureResult
+
+struct CaptureResult {
+    let systemAudioURL: URL?
+    let microphoneURL: URL?
+}
+
 // MARK: - SystemAudioCapture
 
 @Observable
@@ -14,17 +21,21 @@ final class SystemAudioCapture: NSObject {
     var isCapturing: Bool = false
     var duration: TimeInterval = 0
     var audioLevels: [Float] = Array(repeating: 0, count: 60)
+    var micAudioLevels: [Float] = Array(repeating: 0, count: 60)
     var hasPermission: Bool = false
     var errorMessage: String? = nil
     var currentOutputURL: URL? = nil
+    var currentMicURL: URL? = nil
 
     // MARK: - Private
 
     private var stream: SCStream?
     private var audioFile: AVAudioFile?
+    private var micAudioFile: AVAudioFile?
     private var streamOutput: AudioStreamOutput?
     private var durationTimer: Timer?
     private var startDate: Date?
+    private var capturingMicrophone: Bool = false
 
     // MARK: - Init / Deinit
 
@@ -46,7 +57,7 @@ final class SystemAudioCapture: NSObject {
     // MARK: - Capture Lifecycle
 
     @discardableResult
-    func startCapture() async throws -> URL {
+    func startCapture(includeMicrophone: Bool = false) async throws -> URL {
         // Verify permission
         let shareableContent: SCShareableContent
         do {
@@ -58,8 +69,9 @@ final class SystemAudioCapture: NSObject {
             throw error
         }
 
-        // Prepare output file
-        let outputURL = makeOutputURL()
+        // Prepare output files
+        let outputURL = makeOutputURL(prefix: "system_audio")
+        let micURL = includeMicrophone ? makeOutputURL(prefix: "mic_audio") : nil
 
         // Build stream configuration — audio-only, minimal video (ScreenCaptureKit requires video config)
         let config = SCStreamConfiguration()
@@ -67,6 +79,9 @@ final class SystemAudioCapture: NSObject {
         config.sampleRate = 16_000
         config.channelCount = 1
         config.excludesCurrentProcessAudio = false
+        if #available(macOS 15.0, *) {
+            config.captureMicrophone = includeMicrophone
+        }
 
         // Minimal video to satisfy ScreenCaptureKit requirements (2x2 px @ 1 fps)
         config.width = 2
@@ -95,7 +110,7 @@ final class SystemAudioCapture: NSObject {
                           userInfo: [NSLocalizedDescriptionKey: "Kon audioformaat niet aanmaken."])
         }
 
-        // Open output AVAudioFile
+        // Open output AVAudioFile for system audio
         let file: AVAudioFile
         do {
             file = try AVAudioFile(forWriting: outputURL, settings: audioFormat.settings)
@@ -105,25 +120,65 @@ final class SystemAudioCapture: NSObject {
         }
         self.audioFile = file
 
-        // Set up stream output handler
-        let output = AudioStreamOutput(audioFile: file) { [weak self] level in
-            Task { @MainActor in
-                guard let self else { return }
-                var levels = self.audioLevels
-                levels.removeFirst()
-                levels.append(level)
-                self.audioLevels = levels
+        // Open output AVAudioFile for microphone (if requested)
+        var micFile: AVAudioFile? = nil
+        if let micURL {
+            do {
+                micFile = try AVAudioFile(forWriting: micURL, settings: audioFormat.settings)
+            } catch {
+                self.errorMessage = "Kon microfoonbestand niet aanmaken: \(error.localizedDescription)"
+                throw error
             }
         }
+        self.micAudioFile = micFile
+
+        // Set up stream output handler
+        let output = AudioStreamOutput(
+            systemAudioFile: file,
+            microphoneAudioFile: micFile,
+            systemLevelHandler: { [weak self] level in
+                Task { @MainActor in
+                    guard let self else { return }
+                    var levels = self.audioLevels
+                    levels.removeFirst()
+                    levels.append(level)
+                    self.audioLevels = levels
+                }
+            },
+            micLevelHandler: includeMicrophone ? { [weak self] level in
+                Task { @MainActor in
+                    guard let self else { return }
+                    var levels = self.micAudioLevels
+                    levels.removeFirst()
+                    levels.append(level)
+                    self.micAudioLevels = levels
+                }
+            } : nil,
+            errorHandler: { [weak self] error in
+                Task { @MainActor in
+                    guard let self else { return }
+                    self.errorMessage = "Stream fout: \(error.localizedDescription)"
+                }
+            }
+        )
         self.streamOutput = output
 
-        // Create and start stream
-        let captureStream = SCStream(filter: filter, configuration: config, delegate: nil)
+        // Create and start stream — pass delegate for error reporting
+        let captureStream = SCStream(filter: filter, configuration: config, delegate: output)
         try captureStream.addStreamOutput(
             output,
             type: .audio,
             sampleHandlerQueue: DispatchQueue.global(qos: .userInitiated)
         )
+        if includeMicrophone {
+            if #available(macOS 15.0, *) {
+                try captureStream.addStreamOutput(
+                    output,
+                    type: .microphone,
+                    sampleHandlerQueue: DispatchQueue.global(qos: .userInitiated)
+                )
+            }
+        }
         try await captureStream.startCapture()
 
         self.stream = captureStream
@@ -132,9 +187,12 @@ final class SystemAudioCapture: NSObject {
         self.startDate = now
 
         self.currentOutputURL = outputURL
+        self.currentMicURL = micURL
+        self.capturingMicrophone = includeMicrophone
         self.isCapturing = true
         self.duration = 0
         self.audioLevels = Array(repeating: 0, count: 60)
+        self.micAudioLevels = Array(repeating: 0, count: 60)
         self.errorMessage = nil
 
         startDurationTimer()
@@ -142,8 +200,10 @@ final class SystemAudioCapture: NSObject {
         return outputURL
     }
 
-    func stopCapture() async -> URL? {
-        guard isCapturing, let captureStream = stream else { return currentOutputURL }
+    func stopCapture() async -> CaptureResult {
+        guard isCapturing, let captureStream = stream else {
+            return CaptureResult(systemAudioURL: currentOutputURL, microphoneURL: currentMicURL)
+        }
 
         do {
             try await captureStream.stopCapture()
@@ -154,17 +214,19 @@ final class SystemAudioCapture: NSObject {
         stream = nil
         streamOutput = nil
         audioFile = nil
+        micAudioFile = nil
 
         durationTimer?.invalidate()
         durationTimer = nil
 
-        let url = currentOutputURL
+        let result = CaptureResult(systemAudioURL: currentOutputURL, microphoneURL: currentMicURL)
 
         self.isCapturing = false
+        self.capturingMicrophone = false
 
         resetMetrics()
 
-        return url
+        return result
     }
 
     // MARK: - Duration Timer
@@ -184,37 +246,76 @@ final class SystemAudioCapture: NSObject {
     func resetMetrics() {
         self.duration = 0
         self.audioLevels = Array(repeating: 0, count: 60)
+        self.micAudioLevels = Array(repeating: 0, count: 60)
     }
 
     // MARK: - File URL
 
-    private func makeOutputURL() -> URL {
+    private func makeOutputURL(prefix: String) -> URL {
         let timestamp = Int(Date().timeIntervalSince1970)
         return URL(fileURLWithPath: NSTemporaryDirectory())
-            .appendingPathComponent("system_audio_\(timestamp).wav")
+            .appendingPathComponent("\(prefix)_\(timestamp).wav")
     }
 }
 
 // MARK: - AudioStreamOutput
 
-private final class AudioStreamOutput: NSObject, SCStreamOutput {
+private final class AudioStreamOutput: NSObject, SCStreamOutput, SCStreamDelegate {
 
-    private let audioFile: AVAudioFile
-    private let levelHandler: (Float) -> Void
+    private let systemAudioFile: AVAudioFile
+    private let microphoneAudioFile: AVAudioFile?
+    private let systemLevelHandler: (Float) -> Void
+    private let micLevelHandler: ((Float) -> Void)?
+    private let errorHandler: (Error) -> Void
 
-    init(audioFile: AVAudioFile, levelHandler: @escaping (Float) -> Void) {
-        self.audioFile = audioFile
-        self.levelHandler = levelHandler
+    init(
+        systemAudioFile: AVAudioFile,
+        microphoneAudioFile: AVAudioFile?,
+        systemLevelHandler: @escaping (Float) -> Void,
+        micLevelHandler: ((Float) -> Void)?,
+        errorHandler: @escaping (Error) -> Void
+    ) {
+        self.systemAudioFile = systemAudioFile
+        self.microphoneAudioFile = microphoneAudioFile
+        self.systemLevelHandler = systemLevelHandler
+        self.micLevelHandler = micLevelHandler
+        self.errorHandler = errorHandler
     }
+
+    // MARK: - SCStreamOutput
 
     func stream(
         _ stream: SCStream,
         didOutputSampleBuffer sampleBuffer: CMSampleBuffer,
         of outputType: SCStreamOutputType
     ) {
-        guard outputType == .audio, sampleBuffer.isValid else { return }
+        guard sampleBuffer.isValid else { return }
 
-        // Convert CMSampleBuffer to AVAudioPCMBuffer and write to file
+        if outputType == .audio {
+            writeSamples(from: sampleBuffer, to: systemAudioFile, levelHandler: systemLevelHandler)
+            return
+        }
+
+        if #available(macOS 15.0, *), outputType == .microphone {
+            guard let micFile = microphoneAudioFile else { return }
+            writeSamples(from: sampleBuffer, to: micFile, levelHandler: micLevelHandler ?? { _ in })
+            return
+        }
+    }
+
+    // MARK: - SCStreamDelegate
+
+    func stream(_ stream: SCStream, didStopWithError error: Error) {
+        errorHandler(error)
+    }
+
+    // MARK: - Sample Writing
+
+    private func writeSamples(
+        from sampleBuffer: CMSampleBuffer,
+        to audioFile: AVAudioFile,
+        levelHandler: (Float) -> Void
+    ) {
         do {
             try sampleBuffer.withAudioBufferList { audioBufferList, blockBuffer in
                 guard

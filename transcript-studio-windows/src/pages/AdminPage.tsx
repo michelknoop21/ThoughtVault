@@ -17,11 +17,11 @@ import type { AdminUser, AdminFeedback, SystemHealth } from "../types";
 type Tab = "overview" | "users" | "invitations" | "feedback" | "health";
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
-  { id: "overview", label: "Overzicht", icon: <Home24Regular style={{ fontSize: 16 }} /> },
-  { id: "users", label: "Gebruikers", icon: <People24Regular style={{ fontSize: 16 }} /> },
-  { id: "invitations", label: "Uitnodigingen", icon: <Mail24Regular style={{ fontSize: 16 }} /> },
-  { id: "feedback", label: "Feedback", icon: <Bug24Regular style={{ fontSize: 16 }} /> },
-  { id: "health", label: "Fouten", icon: <HeartPulse24Regular style={{ fontSize: 16 }} /> },
+  { id: "overview", label: "Overzicht", icon: <Home24Regular /> },
+  { id: "users", label: "Gebruikers", icon: <People24Regular /> },
+  { id: "invitations", label: "Uitnodigingen", icon: <Mail24Regular /> },
+  { id: "feedback", label: "Feedback", icon: <Bug24Regular /> },
+  { id: "health", label: "Fouten", icon: <HeartPulse24Regular /> },
 ];
 
 export function AdminPage() {
@@ -75,19 +75,10 @@ export function AdminPage() {
   }
 
   return (
-    <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
+    <div className="page-scroll">
       {/* Page header */}
-      <div
-        style={{
-          padding: "12px 16px",
-          borderBottom: "1px solid var(--stroke-divider)",
-          background: "var(--surface-card)",
-          flexShrink: 0,
-        }}
-      >
-        <h1 style={{ fontSize: 18, fontWeight: 600, color: "var(--text-primary)", margin: 0 }}>
-          Beheer
-        </h1>
+      <div className="page-header">
+        <h1 className="page-title-sm">Beheer</h1>
       </div>
 
       {/* Tab bar — underline style */}
@@ -97,7 +88,6 @@ export function AdminPage() {
             key={tab.id}
             className={`tab-item${activeTab === tab.id ? " active" : ""}`}
             onClick={() => setActiveTab(tab.id)}
-            style={{ display: "flex", alignItems: "center", gap: 6 }}
           >
             {tab.icon}
             {tab.label}
@@ -106,9 +96,9 @@ export function AdminPage() {
       </div>
 
       {/* Tab content */}
-      <div style={{ flex: 1, overflowY: "auto", padding: 24 }}>
+      <div className="page-content">
         {isLoading && (
-          <div style={{ textAlign: "center", padding: 32, color: "var(--text-tertiary)", fontSize: 13 }}>
+          <div className="text-center text-caption" style={{ padding: 32 }}>
             Laden...
           </div>
         )}
@@ -151,14 +141,12 @@ function OverviewTab({
   const pendingFeedback = feedbackItems.filter((f) => f.status === "new" || f.status === "open").length;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <p style={{ fontSize: 14, fontWeight: 600, color: "var(--text-primary)" }}>
-        Systeem statistieken
-      </p>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+    <div className="flex-col gap-16">
+      <p className="text-body-strong">Systeem statistieken</p>
+      <div className="grid-2 gap-12">
         {/* Gebruikers */}
         <div className="stat-card">
-          <div className="stat-card-icon" style={{ background: "rgba(229, 0, 116, 0.10)", color: "#E50074" }}>
+          <div className="stat-card-icon stat-icon-accent">
             <People24Regular />
           </div>
           <span className="stat-card-value">{users.length}</span>
@@ -167,7 +155,7 @@ function OverviewTab({
 
         {/* Notulen */}
         <div className="stat-card">
-          <div className="stat-card-icon" style={{ background: "rgba(15, 123, 15, 0.10)", color: "#0F7B0F" }}>
+          <div className="stat-card-icon stat-icon-success">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
               <polyline points="14 2 14 8 20 8" />
@@ -181,7 +169,7 @@ function OverviewTab({
 
         {/* Taken totaal */}
         <div className="stat-card">
-          <div className="stat-card-icon" style={{ background: "rgba(157, 93, 0, 0.10)", color: "#9D5D00" }}>
+          <div className="stat-card-icon stat-icon-caution">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="9 11 12 14 22 4" />
               <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" />
@@ -191,9 +179,9 @@ function OverviewTab({
           <span className="stat-card-label">Taken totaal</span>
         </div>
 
-        {/* Fouten (24u) */}
+        {/* Open feedback */}
         <div className="stat-card">
-          <div className="stat-card-icon" style={{ background: "rgba(188, 0, 22, 0.10)", color: "#BC0016" }}>
+          <div className="stat-card-icon stat-icon-critical">
             <Warning24Regular />
           </div>
           <span className="stat-card-value">{pendingFeedback}</span>
@@ -243,10 +231,10 @@ function UsersTab({ users, onDelete }: { users: AdminUser[]; onDelete: (id: stri
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+    <div className="flex-col gap-12">
       {/* Header with create button */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <p style={{ fontSize: 12, color: "var(--text-tertiary)" }}>{users.length} gebruikers</p>
+      <div className="flex-row justify-between">
+        <p className="text-caption">{users.length} gebruikers</p>
         <button
           className="btn btn-accent"
           onClick={() => setShowCreateForm(!showCreateForm)}
@@ -257,65 +245,37 @@ function UsersTab({ users, onDelete }: { users: AdminUser[]; onDelete: (id: stri
 
       {/* Create user form */}
       {showCreateForm && (
-        <div className="card" style={{ padding: 16, display: "flex", flexDirection: "column", gap: 10 }}>
+        <div className="card flex-col gap-10" style={{ padding: 16 }}>
           <input
+            className="input"
             type="text"
             placeholder="Naam"
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
-            style={{
-              padding: "8px 12px",
-              fontSize: 13,
-              border: "1px solid var(--stroke-divider)",
-              borderRadius: "var(--radius-sm)",
-              background: "var(--fill-control-default)",
-              color: "var(--text-primary)",
-            }}
           />
           <input
+            className="input"
             type="email"
             placeholder="E-mail"
             value={newEmail}
             onChange={(e) => setNewEmail(e.target.value)}
-            style={{
-              padding: "8px 12px",
-              fontSize: 13,
-              border: "1px solid var(--stroke-divider)",
-              borderRadius: "var(--radius-sm)",
-              background: "var(--fill-control-default)",
-              color: "var(--text-primary)",
-            }}
           />
           <input
+            className="input"
             type="password"
             placeholder="Wachtwoord"
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
-            style={{
-              padding: "8px 12px",
-              fontSize: 13,
-              border: "1px solid var(--stroke-divider)",
-              borderRadius: "var(--radius-sm)",
-              background: "var(--fill-control-default)",
-              color: "var(--text-primary)",
-            }}
           />
           <select
+            className="select"
             value={newRole}
             onChange={(e) => setNewRole(e.target.value as "user" | "admin")}
-            style={{
-              padding: "8px 12px",
-              fontSize: 13,
-              border: "1px solid var(--stroke-divider)",
-              borderRadius: "var(--radius-sm)",
-              background: "var(--fill-control-default)",
-              color: "var(--text-primary)",
-            }}
           >
             <option value="user">User</option>
             <option value="admin">Admin</option>
           </select>
-          <div style={{ display: "flex", gap: 8 }}>
+          <div className="flex-row gap-8">
             <button className="btn btn-accent" onClick={handleCreate} disabled={creating}>
               {creating ? "Aanmaken..." : "Aanmaken"}
             </button>
@@ -328,82 +288,41 @@ function UsersTab({ users, onDelete }: { users: AdminUser[]; onDelete: (id: stri
 
       {/* User cards */}
       {users.map((user) => (
-        <div
-          key={user.id}
-          className="card"
-          style={{
-            padding: "12px 14px",
-            display: "flex",
-            alignItems: "center",
-            gap: 12,
-          }}
-        >
+        <div key={user.id} className="card flex-row gap-12" style={{ padding: "12px 14px" }}>
           {/* Avatar */}
           <div className="user-avatar">
             {getInitial(user.name)}
           </div>
 
           {/* User info */}
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontSize: 14, fontWeight: 600, color: "var(--text-primary)" }}>
-                {user.name}
-              </span>
-              <span
-                style={{
-                  padding: "1px 8px",
-                  borderRadius: 9999,
-                  fontSize: 11,
-                  fontWeight: 500,
-                  background: user.role === "admin" ? "rgba(229,0,116,0.10)" : "var(--fill-control-secondary)",
-                  color: user.role === "admin" ? "var(--fill-accent-default)" : "var(--text-secondary)",
-                }}
-              >
+          <div className="flex-1">
+            <div className="flex-row gap-8">
+              <span className="text-body-strong">{user.name}</span>
+              <span className={`role-badge ${user.role === "admin" ? "role-badge-admin" : "role-badge-user"}`}>
                 {user.role === "admin" ? "Admin" : "User"}
               </span>
-              {/* 2FA indicator — shown if user has role admin (proxy for 2FA enabled) */}
               {user.role === "admin" && (
                 <ShieldCheckmark24Regular style={{ fontSize: 14, color: "var(--fill-system-success)" }} />
               )}
             </div>
-            <p style={{ fontSize: 12, color: "var(--text-tertiary)", marginTop: 2 }}>
-              {user.email}
-            </p>
+            <p className="text-caption" style={{ marginTop: 2 }}>{user.email}</p>
           </div>
 
           {/* Action buttons */}
-          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+          <div className="flex-row gap-4">
             <button
+              className="icon-btn icon-btn-sm"
               onClick={() => copyToClipboard(user.email)}
-              style={{
-                display: "flex",
-                padding: 6,
-                background: "transparent",
-                border: "none",
-                color: "var(--text-tertiary)",
-                cursor: "pointer",
-                borderRadius: "var(--radius-sm)",
-              }}
               title="Kopieer e-mail"
             >
-              <Copy24Regular style={{ fontSize: 16 }} />
+              <Copy24Regular />
             </button>
             <button
+              className="icon-btn icon-btn-sm icon-btn-danger"
               onClick={() => onDelete(user.id)}
-              style={{
-                display: "flex",
-                padding: 6,
-                background: "transparent",
-                border: "none",
-                color: "var(--text-tertiary)",
-                cursor: "pointer",
-                borderRadius: "var(--radius-sm)",
-              }}
               title="Meer opties"
-              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--text-error)"; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--text-tertiary)"; }}
             >
-              <MoreHorizontal24Regular style={{ fontSize: 16 }} />
+              <MoreHorizontal24Regular />
             </button>
           </div>
         </div>
@@ -433,40 +352,28 @@ function InvitationsTab() {
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <p style={{ fontSize: 14, fontWeight: 600, color: "var(--text-primary)" }}>
-          Uitnodigingscodes
-        </p>
+    <div className="flex-col gap-16">
+      <div className="flex-row justify-between">
+        <p className="text-body-strong">Uitnodigingscodes</p>
         <button className="btn btn-accent" onClick={handleGenerate} disabled={generating}>
           {generating ? "Genereren..." : "Code genereren"}
         </button>
       </div>
 
       {inviteCode && (
-        <div className="card" style={{ padding: 16, display: "flex", alignItems: "center", gap: 12 }}>
-          <code
-            style={{
-              flex: 1,
-              fontSize: 16,
-              fontWeight: 600,
-              color: "var(--text-primary)",
-              letterSpacing: "0.05em",
-            }}
-          >
-            {inviteCode}
-          </code>
+        <div className="card flex-row gap-12" style={{ padding: 16 }}>
+          <code className="flex-1 invite-code">{inviteCode}</code>
           <button
             className="btn"
             onClick={() => navigator.clipboard.writeText(inviteCode).catch(() => {})}
           >
-            <Copy24Regular style={{ fontSize: 16 }} />
+            <Copy24Regular />
             Kopieer
           </button>
         </div>
       )}
 
-      <p style={{ fontSize: 13, color: "var(--text-tertiary)" }}>
+      <p className="text-caption">
         Genereer een uitnodigingscode om nieuwe gebruikers toegang te geven tot TranscriptStudio.
       </p>
     </div>
@@ -516,50 +423,44 @@ function FeedbackTab({ items, onReload }: { items: AdminFeedback[]; onReload: ()
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+    <div className="flex-col gap-10">
       {items.length === 0 ? (
-        <p style={{ fontSize: 13, color: "var(--text-tertiary)" }}>Geen feedback</p>
+        <p className="text-caption">Geen feedback</p>
       ) : (
         items.map((item) => {
           const cat = getCategoryClass(item.category);
           return (
-            <div key={item.id} className="card" style={{ padding: "14px 16px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <div key={item.id} className="card feedback-card">
+              <div className="flex-row justify-between" style={{ marginBottom: 8 }}>
                 <span className={cat.cls}>{cat.label}</span>
                 <span className={getStatusBadgeClass(item.status)}>
                   {getStatusLabel(item.status)}
                 </span>
               </div>
 
-              <p style={{ fontSize: 14, fontWeight: 600, color: "var(--text-primary)", marginBottom: 4 }}>
-                {item.title}
-              </p>
+              <p className="text-body-strong" style={{ marginBottom: 4 }}>{item.title}</p>
 
-              <p style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.5, marginBottom: 10 }}>
-                {item.description}
-              </p>
+              <p className="feedback-description">{item.description}</p>
 
               {item.response && (
-                <p style={{ fontSize: 12, color: "var(--fill-accent-default)", marginBottom: 8, padding: "6px 10px", background: "rgba(229,0,116,0.06)", borderRadius: "var(--radius-sm)" }}>
-                  Reactie: {item.response}
-                </p>
+                <p className="feedback-response">Reactie: {item.response}</p>
               )}
 
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div style={{ display: "flex", gap: 6 }}>
+              <div className="flex-row justify-between">
+                <div className="flex-row gap-6">
                   {(item.status === "new" || item.status === "open") && (
-                    <button className="btn" style={{ fontSize: 11, padding: "4px 10px" }} onClick={() => handleStatusChange(item.id, "in_progress")}>
+                    <button className="btn btn-sm" onClick={() => handleStatusChange(item.id, "in_progress")}>
                       <ArrowRight24Regular style={{ fontSize: 12 }} />
                       In behandeling
                     </button>
                   )}
                   {(item.status === "new" || item.status === "open" || item.status === "in_progress") && (
-                    <button className="btn" style={{ fontSize: 11, padding: "4px 10px" }} onClick={() => handleStatusChange(item.id, "resolved")}>
+                    <button className="btn btn-sm" onClick={() => handleStatusChange(item.id, "resolved")}>
                       Opgelost
                     </button>
                   )}
                 </div>
-                <p style={{ fontSize: 11, color: "var(--text-disabled)" }}>
+                <p className="feedback-date">
                   {new Date(item.created_at).toLocaleDateString("nl-NL", {
                     day: "numeric",
                     month: "short",
@@ -616,23 +517,15 @@ function HealthTab({ health }: { health: SystemHealth }) {
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+    <div className="flex-col gap-12">
       {/* System status summary */}
-      <div className="card" style={{ padding: "14px 16px", display: "flex", alignItems: "center", gap: 12 }}>
-        <div
-          style={{
-            width: 10,
-            height: 10,
-            borderRadius: "50%",
-            background: apiStatusColor,
-            flexShrink: 0,
-          }}
-        />
-        <div style={{ flex: 1 }}>
-          <p style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)" }}>
+      <div className="card flex-row gap-12" style={{ padding: "14px 16px" }}>
+        <div className="health-dot flex-shrink-0" style={{ background: apiStatusColor }} />
+        <div className="flex-1">
+          <p className="text-body-strong" style={{ fontSize: 13 }}>
             Systeem status: {health.api_status.toUpperCase()}
           </p>
-          <p style={{ fontSize: 12, color: "var(--text-tertiary)" }}>
+          <p className="text-caption">
             Versie {health.version} | Opslag: {health.storage_used_gb.toFixed(1)} GB | Actieve taken: {health.active_tasks} | Wachtrij: {health.transcription_queue_length}
           </p>
         </div>
@@ -640,39 +533,33 @@ function HealthTab({ health }: { health: SystemHealth }) {
 
       {/* Error log cards */}
       {errorEntries.length === 0 ? (
-        <div style={{ textAlign: "center", padding: 32 }}>
-          <p style={{ fontSize: 13, color: "var(--text-tertiary)" }}>
+        <div className="empty-state">
+          <p className="empty-state-text">
             Geen fouten gevonden. Het systeem draait normaal.
           </p>
         </div>
       ) : (
         errorEntries.map((entry, i) => (
-          <div key={i} className="card" style={{ padding: "14px 16px" }}>
+          <div key={i} className="card error-card">
             {/* Error type badge */}
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+            <div className="flex-row gap-8" style={{ marginBottom: 6 }}>
               <span className="error-type-badge">{entry.type}</span>
             </div>
 
             {/* Endpoint */}
-            <p style={{ fontSize: 12, color: "var(--text-tertiary)", fontFamily: "monospace", marginBottom: 4 }}>
-              {entry.endpoint}
-            </p>
+            <p className="error-endpoint">{entry.endpoint}</p>
 
             {/* Timestamp */}
-            <p style={{ fontSize: 11, color: "var(--text-disabled)", marginBottom: 6 }}>
+            <p className="error-timestamp">
               {new Date(entry.timestamp).toLocaleString("nl-NL")}
             </p>
 
             {/* Error message */}
-            <p style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.5 }}>
-              {entry.message}
-            </p>
+            <p className="error-message">{entry.message}</p>
 
             {/* User/reporter */}
             {entry.user && (
-              <p style={{ fontSize: 12, color: "var(--text-tertiary)", marginTop: 6 }}>
-                Gemeld door: {entry.user}
-              </p>
+              <p className="error-reporter">Gemeld door: {entry.user}</p>
             )}
           </div>
         ))

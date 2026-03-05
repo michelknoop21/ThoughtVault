@@ -12,15 +12,24 @@ import {
 import { useRecordingStore } from "../stores/recordingStore";
 import { useTranscriptsStore } from "../stores/transcriptsStore";
 import { useCalendarStore } from "../stores/calendarStore";
+import { useAuthStore } from "../stores/authStore";
 import { api } from "../services/api";
 import { MicrosoftGraphService } from "../services/microsoftGraph";
 import type { CalendarEvent, Transcript } from "../types";
+
+function getGreeting(name?: string, email?: string): string {
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Goedemorgen" : hour < 18 ? "Goedemiddag" : "Goedenavond";
+  const firstName = name?.split(" ")[0] || email?.split("@")[0] || "";
+  return firstName ? `${greeting}, ${firstName}` : greeting;
+}
 
 export function HomePage() {
   const navigate = useNavigate();
   const { setMode, setAutoStart } = useRecordingStore();
   const { transcripts, setTranscripts, deleteTranscript } = useTranscriptsStore();
   const calendar = useCalendarStore();
+  const user = useAuthStore((s) => s.user);
   const [upcomingEvents, setUpcomingEvents] = useState<CalendarEvent[]>([]);
 
   useEffect(() => {
@@ -61,35 +70,35 @@ export function HomePage() {
   }
 
   return (
-    <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 20, overflowY: "auto", height: "100%" }}>
+    <div className="page-content">
+
+      {/* Greeting */}
+      <section>
+        <h2 className="text-subtitle">{getGreeting(user?.name, user?.email)}</h2>
+        <p className="text-caption" style={{ marginTop: 4 }}>
+          Wat wil je vandaag transcriberen?
+        </p>
+      </section>
 
       {/* Upcoming meetings */}
       {upcomingEvents.length > 0 && (
         <section>
-          <p style={{ fontSize: 11, fontWeight: 600, color: "var(--text-tertiary)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>
-            Aankomende vergaderingen
-          </p>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <p className="section-label">Aankomende vergaderingen</p>
+          <div className="flex-col gap-8">
             {upcomingEvents.map((event) => (
-              <div
-                key={event.id}
-                className="card session-card"
-                style={{ display: "flex", alignItems: "center", gap: 12 }}
-              >
+              <div key={event.id} className="card session-card flex-row gap-12">
                 <CalendarLtr24Regular style={{ fontSize: 18, color: "var(--fill-accent-default)", flexShrink: 0 }} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontSize: 13, fontWeight: 500, color: "var(--text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {event.title}
-                  </p>
-                  <p style={{ fontSize: 12, color: "var(--text-tertiary)", marginTop: 1 }}>
+                <div className="flex-1" style={{ minWidth: 0 }}>
+                  <p className="truncate" style={{ fontSize: 13, fontWeight: 500, color: "var(--text-primary)" }}>{event.title}</p>
+                  <p className="text-caption" style={{ marginTop: 1 }}>
                     {formatEventTime(event.start, event.end)}
                   </p>
                 </div>
                 {event.join_url && (
                   <button
                     onClick={() => handleRecordMeeting(event)}
-                    className="btn btn-accent"
-                    style={{ padding: "4px 10px", fontSize: 12, flexShrink: 0 }}
+                    className="btn btn-accent flex-shrink-0"
+                    style={{ padding: "4px 10px", fontSize: 12 }}
                   >
                     <MicRecord24Regular style={{ fontSize: 13 }} />
                     Direct opnemen
@@ -101,26 +110,17 @@ export function HomePage() {
         </section>
       )}
 
-      {/* Recent sessions — primary content */}
-      <section style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
-        <p style={{ fontSize: 11, fontWeight: 600, color: "var(--text-tertiary)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>
-          Recente sessies
-        </p>
+      {/* Recent sessions */}
+      <section style={{ flex: 1, minHeight: 0 }} className="flex-col">
+        <p className="section-label">Recente sessies</p>
         {transcripts.length === 0 ? (
-          <div
-            style={{
-              padding: "24px 16px",
-              textAlign: "center",
-              border: "1px dashed var(--stroke-divider)",
-              borderRadius: "var(--radius-lg)",
-            }}
-          >
-            <p style={{ fontSize: 13, color: "var(--text-tertiary)" }}>
+          <div className="empty-state">
+            <p className="empty-state-text">
               Nog geen transcripten. Start een opname om te beginnen.
             </p>
           </div>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 10, overflowY: "auto", flex: 1 }}>
+          <div className="flex-col gap-10" style={{ overflowY: "auto", flex: 1 }}>
             {transcripts.map((transcript) => (
               <SessionCard
                 key={transcript.id}
@@ -133,72 +133,21 @@ export function HomePage() {
         )}
       </section>
 
-      {/* Quick start — bottom */}
-      <section style={{ flexShrink: 0 }}>
-        <p style={{ fontSize: 11, fontWeight: 600, color: "var(--text-tertiary)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>
-          Snel starten
-        </p>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-          <button
-            onClick={() => handleQuickStart("microphone")}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 8,
-              padding: "12px 16px",
-              background: "transparent",
-              border: "1px solid var(--stroke-card)",
-              borderRadius: "var(--radius-lg)",
-              color: "var(--text-primary)",
-              fontSize: 13,
-              fontWeight: 500,
-              cursor: "pointer",
-              transition: "border-color 67ms ease, background 67ms ease",
-            }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--fill-accent-default)";
-              (e.currentTarget as HTMLButtonElement).style.background = "rgba(229, 0, 116, 0.04)";
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--stroke-card)";
-              (e.currentTarget as HTMLButtonElement).style.background = "transparent";
-            }}
-          >
+      {/* Quick start */}
+      <section className="flex-shrink-0">
+        <p className="section-label">Snel starten</p>
+        <div className="grid-2 gap-12">
+          <button onClick={() => handleQuickStart("microphone")} className="quick-start-btn">
             <People24Regular style={{ fontSize: 18, color: "var(--fill-accent-default)" }} />
             Fysieke meeting
           </button>
-          <button
-            onClick={() => handleQuickStart("combined")}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 8,
-              padding: "12px 16px",
-              background: "transparent",
-              border: "1px solid var(--stroke-card)",
-              borderRadius: "var(--radius-lg)",
-              color: "var(--text-primary)",
-              fontSize: 13,
-              fontWeight: 500,
-              cursor: "pointer",
-              transition: "border-color 67ms ease, background 67ms ease",
-            }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--fill-accent-default)";
-              (e.currentTarget as HTMLButtonElement).style.background = "rgba(229, 0, 116, 0.04)";
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--stroke-card)";
-              (e.currentTarget as HTMLButtonElement).style.background = "transparent";
-            }}
-          >
+          <button onClick={() => handleQuickStart("combined")} className="quick-start-btn">
             <VideoChat24Regular style={{ fontSize: 18, color: "var(--fill-accent-default)" }} />
             Videocall
           </button>
         </div>
       </section>
+
     </div>
   );
 }
@@ -218,76 +167,29 @@ function SessionCard({
   const isComplete = !!transcript.notule_html || !!transcript.raw_transcription;
 
   return (
-    <div
-      className="card session-card"
-      onClick={onClick}
-    >
-      {/* Header row: badge + date + menu */}
+    <div className="card session-card" onClick={onClick}>
+      {/* Header row */}
       <div className="session-card-header">
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <div className="flex-row gap-8">
           <span className="status-badge-accent">Sessie</span>
-          <span style={{ fontSize: 11, color: "var(--text-tertiary)" }}>
-            {formatDate(transcript.created_at)}
-          </span>
+          <span className="text-caption">{formatDate(transcript.created_at)}</span>
         </div>
         <div style={{ position: "relative" }}>
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setMenuOpen(!menuOpen);
-            }}
-            style={{
-              padding: 4,
-              background: "transparent",
-              border: "none",
-              color: "var(--text-tertiary)",
-              cursor: "pointer",
-              borderRadius: "var(--radius-sm)",
-              display: "flex",
-            }}
+            onClick={(e) => { e.stopPropagation(); setMenuOpen(!menuOpen); }}
+            className="icon-btn icon-btn-sm"
           >
             <MoreHorizontal24Regular style={{ fontSize: 16 }} />
           </button>
           {menuOpen && (
             <div
-              style={{
-                position: "absolute",
-                right: 0,
-                top: "100%",
-                background: "var(--surface-card)",
-                border: "1px solid var(--stroke-card)",
-                borderRadius: "var(--radius-md)",
-                boxShadow: "var(--shadow-lg)",
-                zIndex: 10,
-                minWidth: 140,
-                padding: 4,
-              }}
+              className="context-menu"
+              style={{ position: "absolute", right: 0, top: "100%" }}
               onClick={(e) => e.stopPropagation()}
             >
               <button
-                onClick={() => {
-                  setMenuOpen(false);
-                  onDelete(transcript);
-                }}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  width: "100%",
-                  padding: "8px 12px",
-                  background: "transparent",
-                  border: "none",
-                  color: "var(--text-error)",
-                  fontSize: 12,
-                  cursor: "pointer",
-                  borderRadius: "var(--radius-sm)",
-                }}
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.background = "rgba(196, 43, 28, 0.06)";
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.background = "transparent";
-                }}
+                onClick={() => { setMenuOpen(false); onDelete(transcript); }}
+                className="context-menu-item context-menu-item-danger"
               >
                 <Delete24Regular style={{ fontSize: 14 }} />
                 Verwijderen
@@ -298,26 +200,18 @@ function SessionCard({
       </div>
 
       {/* Title */}
-      <p className="session-card-title">
-        {transcript.title || "Naamloze opname"}
-      </p>
+      <p className="session-card-title">{transcript.title || "Naamloze opname"}</p>
 
-      {/* Preview text */}
-      {previewText && (
-        <p className="session-card-preview">
-          {previewText}
-        </p>
-      )}
+      {/* Preview */}
+      {previewText && <p className="session-card-preview">{previewText}</p>}
 
-      {/* Bottom row: time ago + status */}
-      <div className="session-card-meta">
-        <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+      {/* Bottom row */}
+      <div className="session-card-meta flex-row gap-8">
+        <span className="flex-row gap-4">
           <Clock24Regular style={{ fontSize: 12 }} />
           {formatTimeAgo(transcript.created_at)}
         </span>
-        {isComplete && (
-          <span className="status-badge-success">Voltooid</span>
-        )}
+        {isComplete && <span className="status-badge-success">Voltooid</span>}
       </div>
     </div>
   );
@@ -325,7 +219,6 @@ function SessionCard({
 
 function getPreviewText(transcript: Transcript): string {
   if (transcript.notule_html) {
-    // Strip HTML tags for preview
     const text = transcript.notule_html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
     return text.slice(0, 200);
   }
@@ -367,4 +260,3 @@ function formatDate(dateStr: string): string {
     year: "numeric",
   });
 }
-

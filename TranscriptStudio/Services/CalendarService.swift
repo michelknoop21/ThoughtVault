@@ -62,6 +62,20 @@ final class CalendarService: @unchecked Sendable {
 
     private(set) var hasCalendarAccess: Bool = false
     private(set) var upcomingMeetings: [CalendarEvent] = []
+    private(set) var isMicrosoftConnected: Bool = false
+    private(set) var microsoftAccountEmail: String?
+
+    var activeProvider: CalendarProvider {
+        get {
+            CalendarProvider(rawValue: UserDefaults.standard.string(forKey: "calendarProvider") ?? "apple") ?? .apple
+        }
+        set {
+            UserDefaults.standard.set(newValue.rawValue, forKey: "calendarProvider")
+        }
+    }
+
+    /// True if the admin has configured Microsoft 365 OAuth credentials.
+    private(set) var isMicrosoftConfigured: Bool = false
 
     // MARK: - Private
 
@@ -108,10 +122,58 @@ final class CalendarService: @unchecked Sendable {
         }
     }
 
+    // MARK: - Microsoft 365 State
+
+    /// Loads OAuth config and token state from MicrosoftGraphService.
+    func refreshMicrosoftState() async {
+        let graph = MicrosoftGraphService.shared
+        await graph.fetchOAuthConfig()
+        let configured = await graph.isConfigured
+        let connected = await graph.isConnected
+        let email = await graph.accountEmail
+
+        await MainActor.run {
+            self.isMicrosoftConfigured = configured
+            self.isMicrosoftConnected = connected
+            self.microsoftAccountEmail = email
+        }
+
+        if connected {
+            await fetchUpcomingMeetings()
+        }
+    }
+
+    /// Update Microsoft connection state after auth completes.
+    func updateMicrosoftConnection() async {
+        let graph = MicrosoftGraphService.shared
+        let connected = await graph.isConnected
+        let email = await graph.accountEmail
+
+        await MainActor.run {
+            self.isMicrosoftConnected = connected
+            self.microsoftAccountEmail = email
+        }
+    }
+
+    func disconnectMicrosoft() async {
+        await MicrosoftGraphService.shared.disconnect()
+        await MainActor.run {
+            self.isMicrosoftConnected = false
+            self.microsoftAccountEmail = nil
+            if activeProvider == .microsoft {
+                self.upcomingMeetings = []
+            }
+        }
+    }
+
     // MARK: - Fetch Meetings
 
     /// Fetches upcoming meetings for the next 24 hours that contain a video meeting link.
     func fetchUpcomingMeetings() async {
+        if activeProvider == .microsoft {
+            await fetchMicrosoftMeetings()
+            return
+        }
         guard hasCalendarAccess else { return }
 
         let now = Date()
@@ -214,5 +276,15 @@ final class CalendarService: @unchecked Sendable {
             return nil
         }
         return String(text[swiftRange])
+    }
+
+    // MARK: - Microsoft Graph Meetings
+
+    private func fetchMicrosoftMeetings() async {
+        let events = await MicrosoftGraphService.shared.getUpcomingEvents()
+        await MainActor.run {
+            self.upcomingMeetings = events.sorted { $0.date < $1.date }
+        }
+        logger.info("CalendarService: \(events.count) Microsoft 365 meetings detected")
     }
 }

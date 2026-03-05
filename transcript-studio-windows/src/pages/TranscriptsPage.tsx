@@ -195,87 +195,31 @@ export function TranscriptsPage() {
   ];
 
   return (
-    <div style={{ display: "flex", height: "100%" }}>
+    <div className="flex-row" style={{ height: "100%" }}>
       {/* List panel */}
-      <div
-        style={{
-          width: 320,
-          flexShrink: 0,
-          display: "flex",
-          flexDirection: "column",
-          borderRight: "1px solid var(--stroke-divider)",
-          background: "var(--surface-card)",
-        }}
-      >
+      <div className="flex-col flex-shrink-0 transcripts-list-panel" style={{ width: 320 }}>
         {/* Page header */}
-        <div style={{ padding: "16px 14px 0 14px" }}>
-          <h1
-            style={{
-              fontSize: "var(--font-subtitle)",
-              fontWeight: 700,
-              color: "var(--text-primary)",
-              marginBottom: 12,
-            }}
-          >
-            Notulen
-          </h1>
+        <div className="transcripts-list-header">
+          <h1 className="text-subtitle transcripts-list-title">Notulen</h1>
 
           {/* Search */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              padding: "6px 10px",
-              background: "var(--fill-control-default)",
-              borderRadius: "var(--radius-sm)",
-              border: "1px solid var(--stroke-control-secondary)",
-              marginBottom: 10,
-            }}
-          >
-            <Search24Regular style={{ fontSize: 15, color: "var(--text-tertiary)", flexShrink: 0 }} />
+          <div className="search-box transcripts-search-margin">
+            <Search24Regular className="text-tertiary flex-shrink-0 transcripts-icon-sm" />
             <input
               type="text"
               placeholder="Zoeken..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              style={{
-                flex: 1,
-                background: "transparent",
-                border: "none",
-                outline: "none",
-                fontSize: 13,
-                color: "var(--text-primary)",
-              }}
             />
           </div>
 
           {/* Time filter pills */}
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
+          <div className="flex-row gap-6 transcripts-filter-wrap">
             {timeFilterOptions.map((opt) => (
               <button
                 key={opt.key}
                 onClick={() => setTimeFilter(opt.key)}
-                style={{
-                  padding: "4px 12px",
-                  fontSize: 12,
-                  fontWeight: timeFilter === opt.key ? 600 : 400,
-                  borderRadius: "var(--radius-pill)",
-                  border: "1px solid",
-                  cursor: "pointer",
-                  transition: "background 67ms ease",
-                  ...(timeFilter === opt.key
-                    ? {
-                        background: "var(--fill-accent-default)",
-                        color: "var(--text-on-accent)",
-                        borderColor: "var(--fill-accent-default)",
-                      }
-                    : {
-                        background: "transparent",
-                        color: "var(--text-secondary)",
-                        borderColor: "var(--stroke-control-secondary)",
-                      }),
-                }}
+                className={`filter-pill${timeFilter === opt.key ? " active" : ""}`}
               >
                 {opt.label}
               </button>
@@ -285,15 +229,7 @@ export function TranscriptsPage() {
 
         {/* Tags */}
         {allTags.length > 0 && (
-          <div
-            style={{
-              padding: "6px 14px 8px",
-              borderBottom: "1px solid var(--stroke-divider)",
-              display: "flex",
-              flexWrap: "wrap",
-              gap: 6,
-            }}
-          >
+          <div className="flex-row gap-6 transcripts-tags-bar">
             {allTags.map((tag) => (
               <button
                 key={tag}
@@ -304,17 +240,7 @@ export function TranscriptsPage() {
                       : [...selectedTags, tag]
                   )
                 }
-                style={{
-                  padding: "2px 8px",
-                  fontSize: 12,
-                  borderRadius: 9999,
-                  border: "1px solid",
-                  cursor: "pointer",
-                  transition: "background 67ms ease",
-                  ...(selectedTags.includes(tag)
-                    ? { background: "var(--fill-accent-default)", color: "#fff", borderColor: "var(--fill-accent-default)" }
-                    : { background: "transparent", color: "var(--text-secondary)", borderColor: "var(--stroke-control-secondary)" }),
-                }}
+                className={`filter-pill${selectedTags.includes(tag) ? " active" : ""}`}
               >
                 {tag}
               </button>
@@ -323,9 +249,9 @@ export function TranscriptsPage() {
         )}
 
         {/* List */}
-        <div style={{ flex: 1, overflowY: "auto" }}>
+        <div className="flex-1 transcripts-list-scroll">
           {filtered.length === 0 ? (
-            <div style={{ padding: 24, textAlign: "center", fontSize: 13, color: "var(--text-tertiary)" }}>
+            <div className="empty-state-text transcripts-empty-list">
               Geen notulen gevonden
             </div>
           ) : (
@@ -339,8 +265,8 @@ export function TranscriptsPage() {
                 }}
                 onContextMenu={(e) => handleContextMenu(e, transcript)}
               >
-                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
+                <div className="flex-row items-start justify-between gap-8">
+                  <div className="flex-1">
                     {editingId === transcript.id ? (
                       <input
                         ref={editInputRef}
@@ -352,67 +278,29 @@ export function TranscriptsPage() {
                           if (e.key === "Escape") setEditingId(null);
                         }}
                         onClick={(e) => e.stopPropagation()}
-                        style={{
-                          width: "100%",
-                          fontSize: 13,
-                          fontWeight: 600,
-                          background: "transparent",
-                          border: "none",
-                          borderBottom: "1px solid var(--fill-accent-default)",
-                          outline: "none",
-                          color: "var(--text-primary)",
-                        }}
+                        className="transcripts-edit-input"
                       />
                     ) : (
-                      <p
-                        style={{
-                          fontSize: 13,
-                          fontWeight: 600,
-                          color: "var(--text-primary)",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
+                      <p className="text-body-strong truncate transcripts-item-title">
                         {transcript.title || "Naamloze opname"}
                       </p>
                     )}
-                    <p style={{ fontSize: 12, color: "var(--text-tertiary)", marginTop: 2 }}>
+                    <p className="text-caption transcripts-item-meta">
                       {timeAgo(transcript.created_at)}
                     </p>
                     {/* Preview text */}
                     {transcript.notule_html && (
-                      <p
-                        style={{
-                          fontSize: 12,
-                          color: "var(--text-secondary)",
-                          marginTop: 4,
-                          lineHeight: 1.4,
-                          display: "-webkit-box",
-                          WebkitLineClamp: 2,
-                          WebkitBoxOrient: "vertical",
-                          overflow: "hidden",
-                        }}
-                      >
+                      <p className="session-card-preview">
                         {stripHtml(transcript.notule_html)}
                       </p>
                     )}
                     {/* Status badges */}
-                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6, flexWrap: "wrap" }}>
+                    <div className="flex-row gap-6 transcripts-badges-row">
                       {transcript.notule_html && (
                         <span className="status-badge-success">Notule beschikbaar</span>
                       )}
                       {transcript.tags.slice(0, 2).map((tag) => (
-                        <span
-                          key={tag}
-                          style={{
-                            padding: "1px 6px",
-                            fontSize: 11,
-                            background: "var(--fill-control-secondary)",
-                            color: "var(--text-secondary)",
-                            borderRadius: "var(--radius-sm)",
-                          }}
-                        >
+                        <span key={tag} className="tag-chip">
                           {tag}
                         </span>
                       ))}
@@ -420,29 +308,11 @@ export function TranscriptsPage() {
                   </div>
                   {/* Three-dot menu */}
                   <button
+                    className="icon-btn icon-btn-sm"
                     onClick={(e) => handleThreeDotMenu(e, transcript)}
-                    style={{
-                      width: 28,
-                      height: 28,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      background: "transparent",
-                      border: "none",
-                      color: "var(--text-tertiary)",
-                      cursor: "pointer",
-                      borderRadius: "var(--radius-sm)",
-                      flexShrink: 0,
-                      marginTop: 2,
-                    }}
-                    onMouseEnter={(e) => {
-                      (e.currentTarget as HTMLButtonElement).style.background = "var(--fill-control-secondary)";
-                    }}
-                    onMouseLeave={(e) => {
-                      (e.currentTarget as HTMLButtonElement).style.background = "transparent";
-                    }}
+                    title="Meer opties"
                   >
-                    <MoreHorizontal24Regular style={{ fontSize: 16 }} />
+                    <MoreHorizontal24Regular className="transcripts-icon-md" />
                   </button>
                 </div>
               </div>
@@ -452,43 +322,27 @@ export function TranscriptsPage() {
       </div>
 
       {/* Detail panel */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+      <div className="flex-1 flex-col transcripts-detail-panel">
         {selected ? (
           <>
             {/* Top bar */}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                padding: "8px 16px",
-                borderBottom: "1px solid var(--stroke-divider)",
-                background: "var(--surface-card)",
-                flexShrink: 0,
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <IconButton onClick={() => setSelectedId(null)} title="Terug">
-                  <ArrowLeft24Regular style={{ fontSize: 18 }} />
-                </IconButton>
-                <IconButton
+            <div className="flex-row justify-between flex-shrink-0 transcripts-detail-topbar">
+              <div className="flex-row gap-8">
+                <button className="icon-btn" onClick={() => setSelectedId(null)} title="Terug">
+                  <ArrowLeft24Regular className="transcripts-icon-lg" />
+                </button>
+                <button
+                  className="icon-btn"
                   onClick={() => handleRegenerate(selected)}
                   disabled={regeneratingId === selected.id}
                   title="Hertranscribeer"
                 >
                   <Timer24Regular
-                    style={{
-                      fontSize: 18,
-                      ...(regeneratingId === selected.id && { animation: "spin 1s linear infinite" }),
-                    }}
+                    className={`transcripts-icon-lg${regeneratingId === selected.id ? " transcripts-spin" : ""}`}
                   />
-                </IconButton>
+                </button>
                 <span
-                  style={{
-                    fontSize: 12,
-                    color: "var(--text-secondary)",
-                    cursor: regeneratingId === selected.id ? "not-allowed" : "pointer",
-                  }}
+                  className="text-caption text-secondary transcripts-regenerate-label"
                   onClick={() => {
                     if (regeneratingId !== selected.id) handleRegenerate(selected);
                   }}
@@ -496,64 +350,40 @@ export function TranscriptsPage() {
                   Hertranscribeer
                 </span>
               </div>
-              <IconButton
+              <button
+                className="icon-btn"
                 onClick={(e) => handleThreeDotMenu(e as unknown as React.MouseEvent, selected)}
                 title="Meer opties"
               >
-                <MoreHorizontal24Regular style={{ fontSize: 18 }} />
-              </IconButton>
+                <MoreHorizontal24Regular className="transcripts-icon-lg" />
+              </button>
             </div>
 
             {/* Detail header info */}
-            <div
-              style={{
-                padding: "12px 16px 0",
-                flexShrink: 0,
-              }}
-            >
-              <h2 style={{ fontSize: 16, fontWeight: 600, color: "var(--text-primary)", margin: 0 }}>
+            <div className="flex-shrink-0 transcripts-detail-header">
+              <h2 className="transcripts-detail-title">
                 {selected.title || "Naamloze opname"}
               </h2>
-              <p style={{ fontSize: 12, color: "var(--text-tertiary)", marginTop: 2 }}>
+              <p className="text-caption transcripts-detail-meta">
                 {formatDate(selected.created_at)} · {formatDuration(selected.duration_seconds)}
                 {selected.profile_name && ` · ${selected.profile_name}`}
               </p>
 
               {/* Tags with + Tag chip */}
-              <div style={{ display: "flex", gap: 6, marginTop: 8, flexWrap: "wrap", alignItems: "center" }}>
+              <div className="flex-row gap-6 items-start transcripts-detail-tags">
                 {selected.tags.map((tag) => (
-                  <span
-                    key={tag}
-                    style={{
-                      padding: "2px 8px",
-                      fontSize: 12,
-                      background: "var(--fill-control-secondary)",
-                      color: "var(--text-secondary)",
-                      borderRadius: "var(--radius-pill)",
-                    }}
-                  >
+                  <span key={tag} className="tag-chip-pill">
                     {tag}
                   </span>
                 ))}
-                <button
-                  style={{
-                    padding: "2px 8px",
-                    fontSize: 12,
-                    background: "transparent",
-                    color: "var(--text-tertiary)",
-                    border: "1px dashed var(--stroke-control-secondary)",
-                    borderRadius: "var(--radius-pill)",
-                    cursor: "pointer",
-                  }}
-                  title="Tag toevoegen"
-                >
+                <button className="tag-chip-add" title="Tag toevoegen">
                   + Tag
                 </button>
               </div>
             </div>
 
             {/* Tab switch */}
-            <div className="tab-bar" style={{ margin: "12px 16px 0" }}>
+            <div className="tab-bar transcripts-tab-bar">
               <button
                 className={`tab-item${activeTab === "notule" ? " active" : ""}`}
                 onClick={() => setActiveTab("notule")}
@@ -569,31 +399,22 @@ export function TranscriptsPage() {
             </div>
 
             {/* Action bar below tabs */}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                padding: "8px 16px",
-                flexShrink: 0,
-              }}
-            >
+            <div className="flex-row gap-8 flex-shrink-0 transcripts-action-bar">
               <button
                 className="btn btn-amber"
                 onClick={() => handleExport(selected, "html")}
                 disabled={!selected.notule_html}
-                style={{ fontSize: 13 }}
               >
-                <Share24Regular style={{ fontSize: 16 }} />
+                <Share24Regular className="transcripts-icon-md" />
                 Deel & Exporteer
               </button>
-              <IconButton onClick={() => startEdit(selected)} title="Bewerken">
-                <Edit24Regular style={{ fontSize: 18 }} />
-              </IconButton>
+              <button className="icon-btn" onClick={() => startEdit(selected)} title="Bewerken">
+                <Edit24Regular className="transcripts-icon-lg" />
+              </button>
             </div>
 
             {/* Content area */}
-            <div style={{ flex: 1, overflowY: "auto", padding: "0 16px 24px" }}>
+            <div className="flex-1 transcripts-content-scroll">
               {activeTab === "notule" ? (
                 <>
                   {selected.notule_html ? (
@@ -606,14 +427,13 @@ export function TranscriptsPage() {
                       }}
                     />
                   ) : (
-                    <div style={{ textAlign: "center", paddingTop: 48 }}>
-                      <p style={{ color: "var(--text-tertiary)", marginBottom: 16, fontSize: 14 }}>
+                    <div className="text-center transcripts-empty-content">
+                      <p className="text-tertiary transcripts-empty-content-text">
                         Geen notulen beschikbaar
                       </p>
                       <button
                         onClick={() => handleRegenerate(selected)}
-                        className="btn btn-accent"
-                        style={{ padding: "8px 20px" }}
+                        className="btn btn-accent transcripts-generate-btn"
                       >
                         Notulen genereren
                       </button>
@@ -624,67 +444,42 @@ export function TranscriptsPage() {
                 /* Transcriptie tab */
                 <div>
                   {/* Top actions */}
-                  <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+                  <div className="flex-row gap-8 transcripts-transcription-actions">
                     <button
                       className="btn btn-secondary"
                       onClick={() => {
                         setActiveTab("notule");
                       }}
-                      style={{ fontSize: 13 }}
                     >
-                      <Dismiss24Regular style={{ fontSize: 16 }} />
+                      <Dismiss24Regular className="transcripts-icon-md" />
                       Sluiten
                     </button>
                     {selected.raw_transcription && (
                       <button
                         className="btn btn-secondary"
                         onClick={() => handleCopyTranscription(selected.raw_transcription!)}
-                        style={{ fontSize: 13 }}
                       >
-                        <Copy24Regular style={{ fontSize: 16 }} />
+                        <Copy24Regular className="transcripts-icon-md" />
                         Kopieer
                       </button>
                     )}
                   </div>
 
                   {selected.raw_transcription ? (
-                    <div className="card" style={{ padding: 16 }}>
-                      <p
-                        style={{
-                          fontSize: 14,
-                          fontWeight: 600,
-                          color: "var(--text-accent)",
-                          marginBottom: 8,
-                        }}
-                      >
+                    <div className="card transcripts-transcription-card">
+                      <p className="text-body-strong text-accent transcripts-transcription-title">
                         {selected.title || "Naamloze opname"}
                       </p>
-                      <p
-                        style={{
-                          fontSize: 11,
-                          fontWeight: 600,
-                          color: "var(--text-tertiary)",
-                          letterSpacing: "0.05em",
-                          marginBottom: 8,
-                          textTransform: "uppercase",
-                        }}
-                      >
+                      <p className="section-label">
                         RUWE TRANSCRIPTIE
                       </p>
-                      <div
-                        style={{
-                          fontSize: 13,
-                          color: "var(--text-secondary)",
-                          whiteSpace: "pre-wrap",
-                          lineHeight: 1.6,
-                        }}
-                      >
+                      <div className="transcripts-transcription-body">
                         {selected.raw_transcription}
                       </div>
                     </div>
                   ) : (
-                    <div style={{ textAlign: "center", paddingTop: 48 }}>
-                      <p style={{ color: "var(--text-tertiary)", fontSize: 14 }}>
+                    <div className="text-center transcripts-empty-content">
+                      <p className="text-tertiary transcripts-empty-content-text">
                         Geen transcriptie beschikbaar
                       </p>
                     </div>
@@ -694,10 +489,10 @@ export function TranscriptsPage() {
             </div>
           </>
         ) : (
-          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <div style={{ textAlign: "center" }}>
-              <Tag24Regular style={{ fontSize: 48, color: "var(--stroke-divider)", display: "block", margin: "0 auto 12px" }} />
-              <p style={{ color: "var(--text-tertiary)", fontSize: 13 }}>
+          <div className="flex-1 flex-col transcripts-empty-detail">
+            <div className="text-center">
+              <Tag24Regular className="transcripts-empty-icon" />
+              <p className="empty-state-text">
                 Selecteer een notule om te bekijken
               </p>
             </div>
@@ -708,136 +503,49 @@ export function TranscriptsPage() {
       {/* Context menu */}
       {contextMenu && (
         <div
-          style={{
-            position: "fixed",
-            left: contextMenu.x,
-            top: contextMenu.y,
-            zIndex: 1000,
-            background: "var(--surface-flyout)",
-            border: "1px solid var(--stroke-card)",
-            borderRadius: "var(--radius-md)",
-            boxShadow: "var(--shadow-flyout)",
-            padding: "4px 0",
-            minWidth: 160,
-          }}
+          className="context-menu"
+          style={{ left: contextMenu.x, top: contextMenu.y }}
           onClick={(e) => e.stopPropagation()}
         >
-          <ContextMenuItem
-            icon={<Edit24Regular style={{ fontSize: 16 }} />}
-            label="Bewerken"
+          <button
+            className="context-menu-item"
             onClick={() => { startEdit(contextMenu.transcript); setContextMenu(null); }}
-          />
-          <ContextMenuItem
-            icon={<ArrowDownload24Regular style={{ fontSize: 16 }} />}
-            label="Exporteren"
+          >
+            <Edit24Regular className="transcripts-icon-md" />
+            Bewerken
+          </button>
+          <button
+            className="context-menu-item"
             onClick={() => { handleExport(contextMenu.transcript, "html"); setContextMenu(null); }}
-          />
-          <ContextMenuItem
-            icon={<Tag24Regular style={{ fontSize: 16 }} />}
-            label="Tags beheren"
+          >
+            <ArrowDownload24Regular className="transcripts-icon-md" />
+            Exporteren
+          </button>
+          <button
+            className="context-menu-item"
             onClick={() => setContextMenu(null)}
-          />
-          <ContextMenuItem
-            icon={<ArrowSync24Regular style={{ fontSize: 16 }} />}
-            label="Hertranscribeer"
+          >
+            <Tag24Regular className="transcripts-icon-md" />
+            Tags beheren
+          </button>
+          <button
+            className="context-menu-item"
             onClick={() => { handleRegenerate(contextMenu.transcript); setContextMenu(null); }}
-          />
-          <div style={{ height: 1, background: "var(--stroke-divider)", margin: "4px 0" }} />
-          <ContextMenuItem
-            icon={<Delete24Regular style={{ fontSize: 16 }} />}
-            label="Verwijderen"
-            danger
+          >
+            <ArrowSync24Regular className="transcripts-icon-md" />
+            Hertranscribeer
+          </button>
+          <div className="context-menu-divider" />
+          <button
+            className="context-menu-item context-menu-item-danger"
             onClick={() => { handleDelete(contextMenu.transcript); setContextMenu(null); }}
-          />
+          >
+            <Delete24Regular className="transcripts-icon-md" />
+            Verwijderen
+          </button>
         </div>
       )}
     </div>
-  );
-}
-
-function IconButton({
-  children, onClick, title, disabled, danger,
-}: {
-  children: React.ReactNode;
-  onClick: (e: React.MouseEvent) => void;
-  title?: string;
-  disabled?: boolean;
-  danger?: boolean;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      title={title}
-      style={{
-        width: 32,
-        height: 32,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        background: "transparent",
-        border: "none",
-        color: danger ? "var(--text-tertiary)" : "var(--text-tertiary)",
-        cursor: disabled ? "not-allowed" : "pointer",
-        borderRadius: "var(--radius-sm)",
-        opacity: disabled ? 0.4 : 1,
-        transition: "background 67ms ease, color 67ms ease",
-      }}
-      onMouseEnter={(e) => {
-        if (!disabled) {
-          (e.currentTarget as HTMLButtonElement).style.background = danger
-            ? "rgba(188, 0, 22, 0.08)"
-            : "var(--fill-control-secondary)";
-          (e.currentTarget as HTMLButtonElement).style.color = danger
-            ? "var(--text-error)"
-            : "var(--text-primary)";
-        }
-      }}
-      onMouseLeave={(e) => {
-        (e.currentTarget as HTMLButtonElement).style.background = "transparent";
-        (e.currentTarget as HTMLButtonElement).style.color = "var(--text-tertiary)";
-      }}
-    >
-      {children}
-    </button>
-  );
-}
-
-function ContextMenuItem({
-  icon, label, danger, onClick,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  danger?: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      style={{
-        width: "100%",
-        display: "flex",
-        alignItems: "center",
-        gap: 10,
-        padding: "7px 14px",
-        fontSize: 13,
-        background: "transparent",
-        border: "none",
-        color: danger ? "var(--text-error)" : "var(--text-primary)",
-        cursor: "pointer",
-        textAlign: "left",
-        transition: "background 67ms ease",
-      }}
-      onMouseEnter={(e) => {
-        (e.currentTarget as HTMLButtonElement).style.background = "var(--fill-control-secondary)";
-      }}
-      onMouseLeave={(e) => {
-        (e.currentTarget as HTMLButtonElement).style.background = "transparent";
-      }}
-    >
-      {icon}
-      {label}
-    </button>
   );
 }
 

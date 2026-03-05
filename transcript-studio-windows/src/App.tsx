@@ -4,6 +4,7 @@ import { listen } from "@tauri-apps/api/event";
 import { TitleBar } from "./components/layout/TitleBar";
 import { Sidebar } from "./components/layout/Sidebar";
 import { CallAlertOverlay } from "./components/calendar/CallAlertOverlay";
+import { YingaFooter } from "./components/brand/YingaFooter";
 import { LoginPage } from "./pages/LoginPage";
 import { HomePage } from "./pages/HomePage";
 import { RecordingPage } from "./pages/RecordingPage";
@@ -27,11 +28,16 @@ function AppShell({ children }: { children: React.ReactNode }) {
         <main
           style={{
             flex: 1,
-            overflow: "auto",
+            display: "flex",
+            flexDirection: "column",
+            overflow: "hidden",
             background: "var(--bg-solid-secondary)",
           }}
         >
-          {children}
+          <div style={{ flex: 1, overflow: "auto" }}>
+            {children}
+          </div>
+          <YingaFooter compact />
         </main>
       </div>
       {/* Calendar call alert — overlays on top of content */}

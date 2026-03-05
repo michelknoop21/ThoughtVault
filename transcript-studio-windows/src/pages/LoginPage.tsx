@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { api } from "../services/api";
 import { useAuthStore } from "../stores/authStore";
 import { TitleBar } from "../components/layout/TitleBar";
+import { YingaFooter } from "../components/brand/YingaFooter";
 import appLogo from "../assets/app-logo.png";
 
 function extractMessage(err: unknown): string {
@@ -67,86 +68,33 @@ export function LoginPage() {
   }
 
   return (
-    <div
-      style={{
-        height: "100%",
-        display: "flex",
-        flexDirection: "column",
-        background: "var(--bg-solid-tertiary)",
-      }}
-    >
+    <div className="page-scroll">
       {/* Title bar with window controls and YingaBar */}
       <TitleBar />
 
-      <div
-        style={{
-          flex: 1,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: 32,
-        }}
-      >
-        <div style={{ width: "100%", maxWidth: 360 }}>
+      <div className="login-container">
+        <div className="login-content">
           {/* Branding header — matches macOS LoginView */}
-          <div style={{ textAlign: "center", marginBottom: 32 }}>
+          <div className="text-center" style={{ marginBottom: 32 }}>
             <img
               src={appLogo}
               alt="TranscriptStudio"
-              style={{
-                width: 64,
-                height: 64,
-                borderRadius: 16,
-                margin: "0 auto 16px",
-                display: "block",
-                boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
-              }}
+              className="login-logo"
             />
-            <h1
-              style={{
-                fontSize: 24,
-                fontWeight: 600,
-                color: "var(--fill-accent-default)",
-                margin: 0,
-              }}
-            >
-              TranscriptStudio
-            </h1>
-            <p
-              style={{
-                fontSize: 13,
-                color: "var(--text-tertiary)",
-                marginTop: 4,
-              }}
-            >
-              by Prezent / Yinga
-            </p>
+            <h1 className="text-accent login-title">Transcript Studio</h1>
           </div>
 
           {/* Error */}
           {error && (
-            <div
-              style={{
-                marginBottom: 16,
-                padding: "10px 14px",
-                background: "rgba(188, 0, 22, 0.08)",
-                border: "1px solid rgba(188, 0, 22, 0.25)",
-                borderRadius: 8,
-                fontSize: 13,
-                color: "var(--text-error)",
-              }}
-            >
+            <div className="error-banner">
               {error}
             </div>
           )}
 
           {/* Form */}
-          <div
-            className="card-elevated"
-            style={{ padding: 24, borderRadius: 12 }}
-          >
+          <div className="card-elevated login-card">
             {!tempToken ? (
-              <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <form onSubmit={handleLogin} className="login-form">
                 <FormField label="E-mailadres">
                   <input
                     type="email"
@@ -155,7 +103,7 @@ export function LoginPage() {
                     required
                     autoFocus
                     placeholder="naam@bedrijf.nl"
-                    style={inputStyle}
+                    className="input"
                   />
                 </FormField>
 
@@ -166,21 +114,20 @@ export function LoginPage() {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     placeholder="••••••••"
-                    style={inputStyle}
+                    className="input"
                   />
                 </FormField>
 
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="btn btn-accent"
-                  style={{ width: "100%", padding: "9px 16px", fontSize: 14, fontWeight: 600 }}
+                  className="btn btn-accent login-btn"
                 >
                   {isLoading ? "Inloggen..." : "Inloggen"}
                 </button>
               </form>
             ) : (
-              <form onSubmit={handle2FA} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <form onSubmit={handle2FA} className="login-form">
                 <FormField label="Authenticatiecode">
                   <input
                     type="text"
@@ -190,8 +137,8 @@ export function LoginPage() {
                     autoFocus
                     maxLength={6}
                     placeholder="000000"
+                    className="input"
                     style={{
-                      ...inputStyle,
                       textAlign: "center",
                       fontSize: 24,
                       letterSpacing: "0.4em",
@@ -202,8 +149,7 @@ export function LoginPage() {
                 <button
                   type="submit"
                   disabled={isLoading || twoFactorCode.length !== 6}
-                  className="btn btn-accent"
-                  style={{ width: "100%", padding: "9px 16px", fontSize: 14, fontWeight: 600 }}
+                  className="btn btn-accent login-btn"
                 >
                   {isLoading ? "Verifiëren..." : "Verifiëren"}
                 </button>
@@ -211,8 +157,7 @@ export function LoginPage() {
                 <button
                   type="button"
                   onClick={() => { setTempToken(null); setTwoFactorCode(""); }}
-                  className="btn btn-ghost"
-                  style={{ width: "100%", fontSize: 13 }}
+                  className="btn btn-ghost login-btn-back"
                 >
                   Terug naar inloggen
                 </button>
@@ -221,16 +166,9 @@ export function LoginPage() {
           </div>
 
           {/* Footer */}
-          <p
-            style={{
-              textAlign: "center",
-              fontSize: 12,
-              color: "var(--text-disabled)",
-              marginTop: 24,
-            }}
-          >
-            © 2026 Prezent Internet B.V.
-          </p>
+          <div className="login-footer">
+            <YingaFooter />
+          </div>
         </div>
       </div>
     </div>
@@ -239,26 +177,12 @@ export function LoginPage() {
 
 function FormField({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-      <label style={{ fontSize: 13, fontWeight: 500, color: "var(--text-secondary)" }}>
-        {label}
-      </label>
+    <div className="form-field">
+      <label className="form-label">{label}</label>
       {children}
     </div>
   );
 }
-
-const inputStyle: React.CSSProperties = {
-  width: "100%",
-  padding: "7px 10px",
-  background: "var(--fill-control-default)",
-  border: "1px solid var(--stroke-control-secondary)",
-  borderBottom: "1px solid var(--stroke-control-default)",
-  borderRadius: 6,
-  color: "var(--text-primary)",
-  fontSize: 14,
-  outline: "none",
-};
 
 /** Decode user info from JWT payload as fallback when backend omits role field */
 function decodeUserFromToken(token: string) {

@@ -50,50 +50,41 @@ export function SettingsPage() {
   }
 
   return (
-    <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
+    <div className="page-scroll">
       {/* Page header */}
-      <div
-        style={{
-          padding: "12px 16px",
-          borderBottom: "1px solid var(--stroke-divider)",
-          background: "var(--surface-card)",
-          flexShrink: 0,
-        }}
-      >
-        <h1 style={{ fontSize: 18, fontWeight: 600, color: "var(--text-primary)", margin: 0 }}>
-          Instellingen
-        </h1>
+      <div className="page-header">
+        <h1 className="page-title-sm">Instellingen</h1>
       </div>
 
       {/* Scrollable settings groups */}
-      <div style={{ flex: 1, overflowY: "auto", padding: 24 }}>
-        <div style={{ maxWidth: 520, display: "flex", flexDirection: "column", gap: 28 }}>
+      <div className="page-content">
+        <div className="page-content-narrow">
 
           {/* Verbinding */}
           <div className="settings-group">
             <p className="settings-group-label">Verbinding</p>
             <div className="settings-row">
-              <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1 }}>
-                <Globe24Regular style={{ fontSize: 18, color: "var(--fill-accent-default)", flexShrink: 0 }} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontSize: 13, fontWeight: 500, color: "var(--text-primary)" }}>Server URL</p>
-                  <p style={{ fontSize: 12, color: "var(--text-tertiary)", marginTop: 1 }}>Backend verbinding</p>
+              <div className="flex-row gap-10 flex-1">
+                <Globe24Regular className="settings-icon" />
+                <div className="flex-1">
+                  <p className="settings-label">Server URL</p>
+                  <p className="settings-desc">Backend verbinding</p>
                 </div>
               </div>
             </div>
             <div style={{ padding: "0 14px 12px" }}>
-              <div style={{ display: "flex", gap: 8 }}>
+              <div className="flex-row gap-8">
                 <input
                   type="url"
                   value={serverUrl}
                   onChange={(e) => setServerUrl(e.target.value)}
                   placeholder="https://n8n.prezent.nl"
-                  style={inputStyle}
+                  className="input"
                 />
                 <button
                   onClick={handleSaveServer}
-                  className="btn btn-accent"
-                  style={{ padding: "7px 14px", fontSize: 12, flexShrink: 0 }}
+                  className="btn btn-accent flex-shrink-0"
+                  style={{ padding: "7px 14px", fontSize: 12 }}
                 >
                   {serverSaved ? "Opgeslagen" : "Opslaan"}
                 </button>
@@ -105,13 +96,13 @@ export function SettingsPage() {
           <div className="settings-group">
             <p className="settings-group-label">Notulen</p>
             <div className="settings-row">
-              <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1 }}>
-                <DocumentText24Regular style={{ fontSize: 18, color: "var(--fill-accent-default)", flexShrink: 0 }} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontSize: 13, fontWeight: 500, color: "var(--text-primary)" }}>Profiel</p>
-                  <p style={{ fontSize: 12, color: "var(--text-tertiary)", marginTop: 1 }}>Schrijfstijl voor notulen</p>
+              <div className="flex-row gap-10 flex-1">
+                <DocumentText24Regular className="settings-icon" />
+                <div className="flex-1">
+                  <p className="settings-label">Profiel</p>
+                  <p className="settings-desc">Schrijfstijl voor notulen</p>
                 </div>
-                <span style={{ fontSize: 12, color: "var(--text-tertiary)", flexShrink: 0 }}>
+                <span className="text-caption flex-shrink-0">
                   {profiles.length} {profiles.length === 1 ? "profiel" : "profielen"}
                 </span>
               </div>
@@ -122,11 +113,11 @@ export function SettingsPage() {
           <div className="settings-group">
             <p className="settings-group-label">Notulen generatie</p>
             <div className="settings-row">
-              <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1 }}>
-                <Brain24Regular style={{ fontSize: 18, color: "var(--fill-accent-default)", flexShrink: 0 }} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontSize: 13, fontWeight: 500, color: "var(--text-primary)" }}>Provider</p>
-                  <p style={{ fontSize: 12, color: "var(--text-tertiary)", marginTop: 1 }}>
+              <div className="flex-row gap-10 flex-1">
+                <Brain24Regular className="settings-icon" />
+                <div className="flex-1">
+                  <p className="settings-label">Provider</p>
+                  <p className="settings-desc">
                     {settings.notulen_provider === "cloud"
                       ? "Cloud (N8N + Claude)"
                       : settings.notulen_provider === "ollama"
@@ -141,7 +132,7 @@ export function SettingsPage() {
                       notulen_provider: e.target.value as "cloud" | "ollama" | "lm-studio",
                     })
                   }
-                  style={selectStyle}
+                  className="select"
                 >
                   <option value="cloud">Cloud (N8N + Claude)</option>
                   <option value="ollama">Ollama (lokaal)</option>
@@ -158,7 +149,7 @@ export function SettingsPage() {
                       type="url"
                       value={settings.ollama_url}
                       onChange={(e) => settings.updateSettings({ ollama_url: e.target.value })}
-                      style={inputStyle}
+                      className="input"
                     />
                   </SettingsField>
                 </div>
@@ -169,7 +160,7 @@ export function SettingsPage() {
                       value={settings.ollama_model}
                       onChange={(e) => settings.updateSettings({ ollama_model: e.target.value })}
                       placeholder="llama3.2"
-                      style={inputStyle}
+                      className="input"
                     />
                   </SettingsField>
                 </div>
@@ -184,7 +175,7 @@ export function SettingsPage() {
                       type="url"
                       value={settings.lm_studio_url}
                       onChange={(e) => settings.updateSettings({ lm_studio_url: e.target.value })}
-                      style={inputStyle}
+                      className="input"
                     />
                   </SettingsField>
                 </div>
@@ -195,7 +186,7 @@ export function SettingsPage() {
                       value={settings.lm_studio_model}
                       onChange={(e) => settings.updateSettings({ lm_studio_model: e.target.value })}
                       placeholder="local-model"
-                      style={inputStyle}
+                      className="input"
                     />
                   </SettingsField>
                 </div>
@@ -209,11 +200,11 @@ export function SettingsPage() {
             {calendar.isConnected ? (
               <>
                 <div className="settings-row">
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1 }}>
-                    <Calendar24Regular style={{ fontSize: 18, color: "var(--fill-system-success)", flexShrink: 0 }} />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ fontSize: 13, fontWeight: 500, color: "var(--text-primary)" }}>Microsoft 365</p>
-                      <p style={{ fontSize: 12, color: "var(--fill-system-success)", marginTop: 1 }}>
+                  <div className="flex-row gap-10 flex-1">
+                    <Calendar24Regular className="settings-icon" style={{ color: "var(--fill-system-success)" }} />
+                    <div className="flex-1">
+                      <p className="settings-label">Microsoft 365</p>
+                      <p className="settings-desc-success">
                         Verbonden — {calendar.accountEmail}
                       </p>
                     </div>
@@ -232,11 +223,11 @@ export function SettingsPage() {
             ) : hasOAuthConfig ? (
               <>
                 <div className="settings-row">
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1 }}>
-                    <Calendar24Regular style={{ fontSize: 18, color: "var(--text-tertiary)", flexShrink: 0 }} />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ fontSize: 13, fontWeight: 500, color: "var(--text-primary)" }}>Microsoft 365</p>
-                      <p style={{ fontSize: 12, color: "var(--text-tertiary)", marginTop: 1 }}>Niet verbonden</p>
+                  <div className="flex-row gap-10 flex-1">
+                    <Calendar24Regular className="settings-icon-muted" />
+                    <div className="flex-1">
+                      <p className="settings-label">Microsoft 365</p>
+                      <p className="settings-desc">Niet verbonden</p>
                     </div>
                   </div>
                 </div>
@@ -245,7 +236,7 @@ export function SettingsPage() {
                     onClick={handleConnect365}
                     disabled={isConnecting}
                     className="btn btn-accent"
-                    style={{ alignSelf: "flex-start", padding: "7px 14px", fontSize: 12 }}
+                    style={{ padding: "7px 14px", fontSize: 12 }}
                   >
                     {isConnecting ? "Verbinden..." : "Verbinden met Microsoft 365"}
                   </button>
@@ -253,11 +244,11 @@ export function SettingsPage() {
               </>
             ) : (
               <div className="settings-row">
-                <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1 }}>
-                  <Calendar24Regular style={{ fontSize: 18, color: "var(--text-tertiary)", flexShrink: 0 }} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ fontSize: 13, fontWeight: 500, color: "var(--text-primary)" }}>Microsoft 365</p>
-                    <p style={{ fontSize: 12, color: "var(--text-tertiary)", marginTop: 1 }}>
+                <div className="flex-row gap-10 flex-1">
+                  <Calendar24Regular className="settings-icon-muted" />
+                  <div className="flex-1">
+                    <p className="settings-label">Microsoft 365</p>
+                    <p className="settings-desc">
                       Agenda-koppeling niet geconfigureerd. Neem contact op met de beheerder.
                     </p>
                   </div>
@@ -270,30 +261,16 @@ export function SettingsPage() {
           <div className="settings-group">
             <p className="settings-group-label">Account</p>
             <div className="settings-row">
-              <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1 }}>
-                <div
-                  style={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: "50%",
-                    background: "var(--fill-accent-default)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "#fff",
-                    fontWeight: 600,
-                    fontSize: 13,
-                    flexShrink: 0,
-                  }}
-                >
+              <div className="flex-row gap-10 flex-1">
+                <div className="avatar avatar-accent">
                   {user?.name?.charAt(0).toUpperCase() || "?"}
                 </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontSize: 13, fontWeight: 500, color: "var(--text-primary)" }}>{user?.name}</p>
-                  <p style={{ fontSize: 12, color: "var(--text-tertiary)", marginTop: 1 }}>{user?.email}</p>
+                <div className="flex-1">
+                  <p className="settings-label">{user?.name}</p>
+                  <p className="settings-desc">{user?.email}</p>
                 </div>
                 {user?.role === "admin" && (
-                  <span className="status-badge-accent" style={{ fontSize: 11 }}>Admin</span>
+                  <span className="status-badge-accent">Admin</span>
                 )}
               </div>
             </div>
@@ -312,13 +289,13 @@ export function SettingsPage() {
           <div className="settings-group">
             <p className="settings-group-label">Feedback</p>
             <div className="settings-row" style={{ cursor: "pointer" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1 }}>
-                <ChatBubblesQuestion24Regular style={{ fontSize: 18, color: "var(--fill-accent-default)", flexShrink: 0 }} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontSize: 13, fontWeight: 500, color: "var(--text-primary)" }}>Bug melden</p>
-                  <p style={{ fontSize: 12, color: "var(--text-tertiary)", marginTop: 1 }}>Meld een probleem of suggestie</p>
+              <div className="flex-row gap-10 flex-1">
+                <ChatBubblesQuestion24Regular className="settings-icon" />
+                <div className="flex-1">
+                  <p className="settings-label">Bug melden</p>
+                  <p className="settings-desc">Meld een probleem of suggestie</p>
                 </div>
-                <ChevronRight24Regular style={{ fontSize: 14, color: "var(--text-tertiary)" }} />
+                <ChevronRight24Regular className="settings-icon-muted" style={{ fontSize: 14 }} />
               </div>
             </div>
           </div>
@@ -327,16 +304,16 @@ export function SettingsPage() {
           <div className="settings-group">
             <p className="settings-group-label">Over</p>
             <div className="settings-row">
-              <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1 }}>
-                <Info24Regular style={{ fontSize: 18, color: "var(--text-tertiary)", flexShrink: 0 }} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontSize: 13, fontWeight: 500, color: "var(--text-primary)" }}>TranscriptStudio</p>
-                  <p style={{ fontSize: 12, color: "var(--text-tertiary)", marginTop: 1 }}>Versie 0.1.0 — Windows (Tauri 2)</p>
+              <div className="flex-row gap-10 flex-1">
+                <Info24Regular className="settings-icon-muted" />
+                <div className="flex-1">
+                  <p className="settings-label">TranscriptStudio</p>
+                  <p className="settings-desc">Versie 0.1.0 — Windows (Tauri 2)</p>
                 </div>
               </div>
             </div>
             <div style={{ padding: "4px 14px 12px" }}>
-              <p style={{ fontSize: 12, color: "var(--text-tertiary)" }}>
+              <p className="text-caption">
                 Ontwikkeld door Prezent Internet B.V.
               </p>
             </div>
@@ -350,36 +327,9 @@ export function SettingsPage() {
 
 function SettingsField({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-      <label style={{ fontSize: 12, fontWeight: 500, color: "var(--text-secondary)" }}>{label}</label>
+    <div className="form-field">
+      <label className="form-label-sm">{label}</label>
       {children}
     </div>
   );
 }
-
-const inputStyle: React.CSSProperties = {
-  width: "100%",
-  padding: "7px 10px",
-  background: "var(--fill-control-default)",
-  border: "1px solid var(--stroke-control-secondary)",
-  borderBottom: "1px solid var(--stroke-control-default)",
-  borderRadius: "var(--radius-sm)",
-  color: "var(--text-primary)",
-  fontSize: 13,
-  outline: "none",
-  fontFamily: "inherit",
-};
-
-const selectStyle: React.CSSProperties = {
-  padding: "6px 10px",
-  background: "var(--fill-control-default)",
-  border: "1px solid var(--stroke-control-secondary)",
-  borderBottom: "1px solid var(--stroke-control-default)",
-  borderRadius: "var(--radius-sm)",
-  color: "var(--text-primary)",
-  fontSize: 12,
-  outline: "none",
-  fontFamily: "inherit",
-  cursor: "pointer",
-  flexShrink: 0,
-};

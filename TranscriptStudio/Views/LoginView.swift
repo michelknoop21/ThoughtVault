@@ -32,23 +32,33 @@ struct LoginView: View {
             )
             .ignoresSafeArea()
 
-            ScrollView {
-                VStack(spacing: TS.Spacing.xl) {
-                    Spacer(minLength: TS.Spacing.xxl)
+            VStack(spacing: 0) {
+                // Yinga brand bar full width under window title bar
+                YingaBar(height: 4)
 
-                    // Branding
-                    brandingHeader
+                ScrollView {
+                    VStack(spacing: TS.Spacing.xl) {
+                        Spacer(minLength: TS.Spacing.xxl)
 
-                    // Main card
-                    if authVM.requiresTwoFactor {
-                        twoFactorCard
-                    } else {
-                        loginCard
+                        // Branding
+                        brandingHeader
+
+                        // Main card
+                        if authVM.requiresTwoFactor {
+                            twoFactorCard
+                        } else {
+                            loginCard
+                        }
+
+                        Spacer(minLength: TS.Spacing.xl)
+
+                        // Footer
+                        yingaFooter
+
+                        Spacer(minLength: TS.Spacing.md)
                     }
-
-                    Spacer(minLength: TS.Spacing.xl)
+                    .padding(.horizontal, TS.Spacing.xl)
                 }
-                .padding(.horizontal, TS.Spacing.xl)
             }
         }
         .preferredColorScheme(.light)
@@ -66,21 +76,16 @@ struct LoginView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 14))
                 .shadow(color: .black.opacity(0.12), radius: 4, y: 2)
 
-            // Yinga brand bar
-            YingaBar(height: 4)
-                .frame(width: 80)
-                .clipShape(RoundedRectangle(cornerRadius: 2))
-
-            VStack(spacing: TS.Spacing.xs) {
-                Text("TranscriptStudio")
-                    .font(TS.Font.largeTitleBold)
-                    .foregroundStyle(Color.brandPrimary)
-
-                Text("by Prezent / Yinga")
-                    .font(TS.Font.callout)
-                    .foregroundStyle(Color.labelSecondary)
-            }
+            Text("Transcript Studio")
+                .font(TS.Font.largeTitleBold)
+                .foregroundStyle(Color.brandPrimary)
         }
+    }
+
+    // MARK: - Yinga Footer
+
+    private var yingaFooter: some View {
+        YingaFooter()
     }
 
     // MARK: - Login Card

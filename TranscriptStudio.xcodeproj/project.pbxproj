@@ -17,6 +17,7 @@
 		AA000008 /* AudioRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000008 /* AudioRecorder.swift */; };
 		AA000009 /* BiometricService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000009 /* BiometricService.swift */; };
 		AA000010 /* CalendarService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000010 /* CalendarService.swift */; };
+		AA000050 /* MicrosoftGraphService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000050 /* MicrosoftGraphService.swift */; };
 		AA000011 /* CrashReporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000011 /* CrashReporter.swift */; };
 		AA000012 /* DebugLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000012 /* DebugLogger.swift */; };
 		AA000013 /* KeychainService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000013 /* KeychainService.swift */; };
@@ -75,6 +76,7 @@
 		FA000008 /* AudioRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioRecorder.swift; sourceTree = "<group>"; };
 		FA000009 /* BiometricService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BiometricService.swift; sourceTree = "<group>"; };
 		FA000010 /* CalendarService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarService.swift; sourceTree = "<group>"; };
+		FA000050 /* MicrosoftGraphService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MicrosoftGraphService.swift; sourceTree = "<group>"; };
 		FA000011 /* CrashReporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrashReporter.swift; sourceTree = "<group>"; };
 		FA000012 /* DebugLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugLogger.swift; sourceTree = "<group>"; };
 		FA000013 /* KeychainService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainService.swift; sourceTree = "<group>"; };
@@ -200,6 +202,7 @@
 				FA000012 /* DebugLogger.swift */,
 				FA000013 /* KeychainService.swift */,
 				FA000014 /* LLMService.swift */,
+				FA000050 /* MicrosoftGraphService.swift */,
 				FA000015 /* NetworkMonitor.swift */,
 				FA000016 /* OfflineQueue.swift */,
 				FA000017 /* OnDeviceTranscriber.swift */,
@@ -383,6 +386,7 @@
 				AA000008 /* AudioRecorder.swift in Sources */,
 				AA000009 /* BiometricService.swift in Sources */,
 				AA000010 /* CalendarService.swift in Sources */,
+				AA000050 /* MicrosoftGraphService.swift in Sources */,
 				AA000011 /* CrashReporter.swift in Sources */,
 				AA000012 /* DebugLogger.swift in Sources */,
 				AA000013 /* KeychainService.swift in Sources */,

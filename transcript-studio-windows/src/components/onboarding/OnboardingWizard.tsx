@@ -9,6 +9,9 @@ import {
 } from "@fluentui/react-icons";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { MicrosoftGraphService } from "../../services/microsoftGraph";
+import { YingaBar } from "../brand/YingaBar";
+import { YingaFooter } from "../brand/YingaFooter";
+import appLogo from "../../assets/app-logo.png";
 
 type Step = 0 | 1 | 2 | 3 | 4;
 
@@ -46,11 +49,12 @@ export function OnboardingWizard() {
       style={{
         height: "100%",
         display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
+        flexDirection: "column",
         background: "var(--bg-solid-tertiary)",
       }}
     >
+      <YingaBar />
+      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
       <div style={{ width: "100%", maxWidth: 440, padding: 32 }}>
         {/* Progress dots */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginBottom: 32 }}>
@@ -73,23 +77,20 @@ export function OnboardingWizard() {
           {step === 0 && (
             <StepContent
               icon={
-                <div
+                <img
+                  src={appLogo}
+                  alt="Transcript Studio"
                   style={{
                     width: 64,
                     height: 64,
-                    background: "var(--fill-accent-default)",
                     borderRadius: 16,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
                     margin: "0 auto 16px",
-                    boxShadow: "var(--shadow-md)",
+                    display: "block",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
                   }}
-                >
-                  <span style={{ fontSize: 24, color: "#fff", fontWeight: 700 }}>TS</span>
-                </div>
+                />
               }
-              title="Welkom bij TranscriptStudio"
+              title="Welkom bij Transcript Studio"
               description="Neem vergaderingen op, genereer automatisch notulen en sla alles overzichtelijk op. Laten we uw setup in orde maken."
             />
           )}
@@ -239,6 +240,11 @@ export function OnboardingWizard() {
             </button>
           )}
         </div>
+
+        <div style={{ marginTop: 32 }}>
+          <YingaFooter />
+        </div>
+      </div>
       </div>
     </div>
   );

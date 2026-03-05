@@ -49,8 +49,8 @@ final class RecordingViewModel {
 #endif
         case .combined:
 #if os(macOS)
-            let mic = audioRecorder.audioLevels
             let sys = systemAudioCapture.audioLevels
+            let mic = systemAudioCapture.micAudioLevels
             let count = min(mic.count, sys.count)
             var merged = [Float](repeating: 0, count: count)
             for i in 0..<count {
@@ -66,7 +66,7 @@ final class RecordingViewModel {
     /// Duration from the primary active recorder.
     var duration: TimeInterval {
 #if os(macOS)
-        if selectedMode == .systemAudio {
+        if selectedMode == .systemAudio || selectedMode == .combined {
             return systemAudioCapture.duration
         }
 #endif
@@ -208,7 +208,7 @@ final class RecordingViewModel {
             // Stop recorder synchronously via the sleep notification path
             _ = await audioRecorder.stopRecording()
 #if os(macOS)
-            _ = await systemAudioCapture.stopCapture()
+            let _ = await systemAudioCapture.stopCapture()
 #endif
             await MainActor.run {
                 self.recordingState = .idle
@@ -266,10 +266,8 @@ final class RecordingViewModel {
 
             case .combined:
 #if os(macOS)
-                // Start both recorders concurrently
-                async let micStart: Void = audioRecorder.startRecording()
-                async let sysStart: URL = systemAudioCapture.startCapture()
-                _ = try await (micStart, sysStart)
+                // Single SCStream captures both system audio and microphone
+                try await systemAudioCapture.startCapture(includeMicrophone: true)
 #else
                 try await audioRecorder.startRecording()
 #endif
@@ -291,9 +289,13 @@ final class RecordingViewModel {
 
     func pauseRecording() {
         guard case .recording = recordingState else { return }
-        audioRecorder.pauseRecording()
 #if os(macOS)
+        if selectedMode != .combined {
+            audioRecorder.pauseRecording()
+        }
         // SystemAudioCapture does not support pause; let it continue running
+#else
+        audioRecorder.pauseRecording()
 #endif
         recordingState = .paused
         liveTranscriptionTask?.cancel()
@@ -303,7 +305,13 @@ final class RecordingViewModel {
 
     func resumeRecording() {
         guard case .paused = recordingState else { return }
+#if os(macOS)
+        if selectedMode != .combined {
+            audioRecorder.resumeRecording()
+        }
+#else
         audioRecorder.resumeRecording()
+#endif
         recordingState = .recording
         Task { await startLiveTranscriptionIfEnabled() }
     }
@@ -314,30 +322,30 @@ final class RecordingViewModel {
         await MainActor.run { recordingState = .stopping }
         await stopLiveTranscription()
 
-        let micURL = await audioRecorder.stopRecording()
-
-#if os(macOS)
-        let sysURL = await systemAudioCapture.stopCapture()
-#endif
-
         // Determine final audio URL
         let finalURL: URL?
 
 #if os(macOS)
         switch selectedMode {
         case .microphone:
+            _ = await systemAudioCapture.stopCapture()
+            let micURL = await audioRecorder.stopRecording()
             finalURL = micURL
         case .systemAudio:
-            finalURL = sysURL
+            let result = await systemAudioCapture.stopCapture()
+            _ = await audioRecorder.stopRecording()
+            finalURL = result.systemAudioURL
         case .combined:
-            if let mic = micURL, let sys = sysURL {
-                // Mix mic + system audio into a single file
+            let result = await systemAudioCapture.stopCapture()
+            // In combined mode, audioRecorder is not used — both sources come from SCStream
+            if let sys = result.systemAudioURL, let mic = result.microphoneURL {
                 finalURL = await mixAudioFiles(micURL: mic, systemURL: sys)
             } else {
-                finalURL = micURL ?? sysURL
+                finalURL = result.systemAudioURL ?? result.microphoneURL
             }
         }
 #else
+        let micURL = await audioRecorder.stopRecording()
         finalURL = micURL
 #endif
 
@@ -357,7 +365,15 @@ final class RecordingViewModel {
 
         // Decide upload path
         if networkMonitor.isConnected {
-            if preferOnDeviceTranscription && onDeviceTranscriptionAvailable {
+#if os(macOS)
+            // ScreenCaptureKit produces float32 PCM that SFSpeechRecognizer cannot reliably
+            // process. For systemAudio and combined modes, always use cloud transcription.
+            let canUseOnDevice = preferOnDeviceTranscription && onDeviceTranscriptionAvailable
+                && selectedMode == .microphone
+#else
+            let canUseOnDevice = preferOnDeviceTranscription && onDeviceTranscriptionAvailable
+#endif
+            if canUseOnDevice {
                 await transcribeOnDeviceThenUpload(url: url, profileId: profile.id)
             } else {
                 await uploadFile(url, profileId: profile.id)
@@ -371,15 +387,23 @@ final class RecordingViewModel {
         guard recordingState == .recording || recordingState == .paused else { return }
 
         await stopLiveTranscription()
-        _ = await audioRecorder.stopRecording()
 #if os(macOS)
-        _ = await systemAudioCapture.stopCapture()
+        let captureResult = await systemAudioCapture.stopCapture()
 #endif
+        _ = await audioRecorder.stopRecording()
 
-        // Delete the recording file
+        // Delete recording files
         if let url = audioRecorder.currentRecordingURL {
             try? FileManager.default.removeItem(at: url)
         }
+#if os(macOS)
+        if let url = captureResult.systemAudioURL {
+            try? FileManager.default.removeItem(at: url)
+        }
+        if let url = captureResult.microphoneURL {
+            try? FileManager.default.removeItem(at: url)
+        }
+#endif
 
         await MainActor.run {
             recordingState = .idle
@@ -623,6 +647,11 @@ final class RecordingViewModel {
 
     func startLiveTranscriptionIfEnabled() async {
         guard onDeviceTranscriptionAvailable, preferOnDeviceTranscription else { return }
+#if os(macOS)
+        // ScreenCaptureKit holds exclusive microphone access in systemAudio/combined mode.
+        // Starting a second AVAudioEngine tap would conflict and produce no audio.
+        guard selectedMode == .microphone else { return }
+#endif
 
         await MainActor.run {
             isLiveTranscribing = true

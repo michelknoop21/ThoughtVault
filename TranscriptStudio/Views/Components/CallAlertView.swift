@@ -89,7 +89,8 @@ struct CallAlertView: View {
                         withAnimation(TS.Animation.smooth) {
                             isVisible = false
                         }
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                        Task {
+                            try? await Task.sleep(for: .milliseconds(350))
                             onDismiss()
                         }
                     }
@@ -101,7 +102,8 @@ struct CallAlertView: View {
                         withAnimation(TS.Animation.smooth) {
                             isVisible = false
                         }
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                        Task {
+                            try? await Task.sleep(for: .milliseconds(350))
                             onSnooze()
                         }
                     } label: {
@@ -120,7 +122,8 @@ struct CallAlertView: View {
                         withAnimation(TS.Animation.smooth) {
                             isVisible = false
                         }
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        Task {
+                            try? await Task.sleep(for: .milliseconds(300))
                             onStartRecording()
                         }
                     } label: {

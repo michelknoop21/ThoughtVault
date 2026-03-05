@@ -49,6 +49,12 @@ struct SettingsView: View {
             accountSection
             feedbackSection
             overSection
+
+            #if os(macOS)
+            Section {
+                YingaFooter()
+            }
+            #endif
         }
         .formStyle(.grouped)
         .navigationTitle("Instellingen")
@@ -357,9 +363,72 @@ struct SettingsView: View {
 
     private var agendaSection: some View {
         Section {
+            // Provider picker (only show when Microsoft is configured)
+            if calendarService.isMicrosoftConfigured {
+                Picker("Agendabron", selection: Binding(
+                    get: { calendarService.activeProvider },
+                    set: { newProvider in
+                        calendarService.activeProvider = newProvider
+                        Task { await calendarService.fetchUpcomingMeetings() }
+                    }
+                )) {
+                    Text("Apple Agenda").tag(CalendarProvider.apple)
+                    Text("Microsoft 365").tag(CalendarProvider.microsoft)
+                }
+                .pickerStyle(.segmented)
+                .padding(.vertical, TS.Spacing.xs)
+            }
+
+            // Apple Calendar provider
+            if calendarService.activeProvider == .apple {
+                appleCalendarStatus
+            }
+
+            // Microsoft 365 provider
+            if calendarService.activeProvider == .microsoft {
+                microsoftCalendarStatus
+            }
+
+            // Upcoming meetings (regardless of provider)
+            if !calendarService.upcomingMeetings.isEmpty {
+                VStack(alignment: .leading, spacing: TS.Spacing.xs) {
+                    Text("Aankomende vergaderingen")
+                        .font(TS.Font.footnoteSemibold)
+                        .foregroundStyle(Color.labelSecondary)
+
+                    ForEach(calendarService.upcomingMeetings) { meeting in
+                        HStack(spacing: TS.Spacing.sm) {
+                            Image(systemName: meeting.platform.iconName)
+                                .font(TS.Font.footnote)
+                                .foregroundStyle(Color.brandSecondary)
+                            Text(meeting.title)
+                                .font(TS.Font.footnote)
+                                .lineLimit(1)
+                            Spacer()
+                            Text(meeting.formattedTime)
+                                .font(TS.Font.captionMonospaced)
+                                .foregroundStyle(Color.labelTertiary)
+                        }
+                    }
+                }
+                .padding(.vertical, TS.Spacing.xs)
+            }
+        } header: {
+            Text("Agenda")
+        } footer: {
+            Text("TranscriptStudio detecteert Teams-, Zoom- en Meet-vergaderingen en biedt een snelkoppeling om opnames te starten.")
+                .font(TS.Font.caption)
+                .foregroundStyle(Color.labelTertiary)
+        }
+    }
+
+    // MARK: - Apple Calendar Status
+
+    private var appleCalendarStatus: some View {
+        Group {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Agenda toegang")
+                    Text("Apple Agenda")
                         .font(TS.Font.body)
                     Text(calendarService.hasCalendarAccess
                         ? "Verbonden — vergaderingen worden gedetecteerd"
@@ -390,36 +459,78 @@ struct SettingsView: View {
                 }
                 .buttonStyle(.plain)
             }
+        }
+    }
 
-            if calendarService.hasCalendarAccess && !calendarService.upcomingMeetings.isEmpty {
-                VStack(alignment: .leading, spacing: TS.Spacing.xs) {
-                    Text("Aankomende vergaderingen")
-                        .font(TS.Font.footnoteSemibold)
-                        .foregroundStyle(Color.labelSecondary)
+    // MARK: - Microsoft Calendar Status
 
-                    ForEach(calendarService.upcomingMeetings) { meeting in
-                        HStack(spacing: TS.Spacing.sm) {
-                            Image(systemName: meeting.platform.iconName)
-                                .font(TS.Font.footnote)
-                                .foregroundStyle(Color.brandSecondary)
-                            Text(meeting.title)
-                                .font(TS.Font.footnote)
-                                .lineLimit(1)
-                            Spacer()
-                            Text(meeting.formattedTime)
-                                .font(TS.Font.captionMonospaced)
-                                .foregroundStyle(Color.labelTertiary)
-                        }
+    @State private var isMicrosoftConnecting = false
+
+    private var microsoftCalendarStatus: some View {
+        Group {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Microsoft 365")
+                        .font(TS.Font.body)
+                    if calendarService.isMicrosoftConnected {
+                        Text(calendarService.microsoftAccountEmail ?? "Verbonden")
+                            .font(TS.Font.caption)
+                            .foregroundStyle(Color.statusSuccess)
+                    } else {
+                        Text("Niet verbonden")
+                            .font(TS.Font.caption)
+                            .foregroundStyle(Color.labelSecondary)
                     }
                 }
-                .padding(.vertical, TS.Spacing.xs)
+
+                Spacer()
+
+                Image(systemName: calendarService.isMicrosoftConnected
+                    ? "checkmark.circle.fill"
+                    : "xmark.circle")
+                    .foregroundStyle(calendarService.isMicrosoftConnected
+                        ? Color.statusSuccess
+                        : Color.labelTertiary)
             }
-        } header: {
-            Text("Agenda")
-        } footer: {
-            Text("TranscriptStudio detecteert Teams-, Zoom- en Meet-vergaderingen en biedt een snelkoppeling om opnames te starten.")
-                .font(TS.Font.caption)
-                .foregroundStyle(Color.labelTertiary)
+
+            if calendarService.isMicrosoftConnected {
+                Button {
+                    Task {
+                        await calendarService.disconnectMicrosoft()
+                    }
+                } label: {
+                    Text("Verbinding verbreken")
+                        .font(TS.Font.bodyMedium)
+                        .foregroundStyle(Color.statusError)
+                }
+                .buttonStyle(.plain)
+            } else {
+                Button {
+                    isMicrosoftConnecting = true
+                    Task {
+                        do {
+                            try await MicrosoftGraphService.shared.initiateAuth()
+                            await calendarService.updateMicrosoftConnection()
+                            await calendarService.fetchUpcomingMeetings()
+                        } catch {
+                            // Auth cancelled or failed — user can retry
+                        }
+                        isMicrosoftConnecting = false
+                    }
+                } label: {
+                    HStack(spacing: TS.Spacing.xs) {
+                        if isMicrosoftConnecting {
+                            ProgressView()
+                                .controlSize(.small)
+                        }
+                        Text("Verbinden met Microsoft 365")
+                            .font(TS.Font.bodyMedium)
+                            .foregroundStyle(Color.brandSecondary)
+                    }
+                }
+                .buttonStyle(.plain)
+                .disabled(isMicrosoftConnecting)
+            }
         }
     }
 

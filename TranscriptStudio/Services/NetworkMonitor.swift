@@ -44,7 +44,7 @@ final class NetworkMonitor: @unchecked Sendable {
         monitor.pathUpdateHandler = { [weak self] path in
             let nowConnected = path.status == .satisfied
 
-            DispatchQueue.main.async { [weak self] in
+            Task { @MainActor [weak self] in
                 guard let self else { return }
                 let wasConnected = self.isConnected
                 self.isConnected = nowConnected

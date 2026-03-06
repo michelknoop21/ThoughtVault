@@ -58,6 +58,7 @@ struct CallAlertView: View {
                             .foregroundStyle(Color.labelTertiary)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel("Melding sluiten")
                 }
 
                 // Meeting details

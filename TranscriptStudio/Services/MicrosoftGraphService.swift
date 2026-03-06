@@ -279,10 +279,16 @@ actor MicrosoftGraphService {
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
 
-            if let http = response as? HTTPURLResponse, http.statusCode == 401 {
-                // Token expired — disconnect
-                await disconnect()
-                return []
+            if let http = response as? HTTPURLResponse {
+                if http.statusCode == 401 {
+                    logger.warning("Graph API token expired, disconnecting")
+                    await disconnect()
+                    return []
+                }
+                if http.statusCode != 200 {
+                    logger.error("Graph API returned HTTP \(http.statusCode)")
+                    return []
+                }
             }
 
             let graphResponse = try JSONDecoder().decode(GraphCalendarResponse.self, from: data)

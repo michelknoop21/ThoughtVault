@@ -119,7 +119,17 @@ struct RecordingView: View {
 
             VStack(spacing: TS.Spacing.md) {
                 recordingTypeSection
-                if !recordingVM.availableProfiles.isEmpty {
+                if recordingVM.availableProfiles.isEmpty {
+                    HStack(spacing: TS.Spacing.sm) {
+                        ProgressView()
+                            .scaleEffect(0.7)
+                        Text("Profielen laden...")
+                            .font(TS.Font.caption)
+                            .foregroundStyle(Color.labelTertiary)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(TS.Spacing.md)
+                } else {
                     profileSection
                 }
             }
@@ -157,6 +167,7 @@ struct RecordingView: View {
                     }
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Start opname")
 
                 Text("Tik om op te nemen")
                     .font(TS.Font.footnote)
@@ -392,6 +403,7 @@ struct RecordingView: View {
                         .foregroundStyle(Color.labelTertiary)
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Waarschuwing sluiten")
             }
             .padding(TS.Spacing.sm)
             .background {

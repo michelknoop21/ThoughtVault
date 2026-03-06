@@ -31,12 +31,7 @@ final class CrashReporter: @unchecked Sendable {
         #if DEBUG
         logger.debug("CrashReporter: configured (DEBUG stub — no real crash reporting)")
         #else
-        // TODO: Initialize real crash reporting SDK here.
-        // Example for Sentry:
-        //   SentrySDK.start { options in
-        //       options.dsn = "https://your-dsn@sentry.io/your-project"
-        //       options.environment = "production"
-        //   }
+        // Integrate a crash reporting SDK (e.g. Sentry) here when ready.
         logger.info("CrashReporter: configured")
         #endif
     }
@@ -54,11 +49,7 @@ final class CrashReporter: @unchecked Sendable {
         #if DEBUG
         logger.error("CrashReporter: [non-fatal] \(error.localizedDescription) (context: \(contextString))")
         #else
-        // TODO: Forward to real crash reporting SDK here.
-        // Example for Sentry:
-        //   var sentryEvent = Event(error: error)
-        //   sentryEvent.tags = ["context": contextString]
-        //   SentrySDK.capture(event: sentryEvent)
+        // Forward to crash reporting SDK here when integrated.
         logger.error("CrashReporter: non-fatal error recorded — \(error.localizedDescription, privacy: .public)")
         #endif
     }
@@ -74,7 +65,7 @@ final class CrashReporter: @unchecked Sendable {
         #if DEBUG
         logger.error("CrashReporter: [message] \(message) (context: \(contextString))")
         #else
-        // TODO: Forward to real crash reporting SDK here.
+        // Forward to crash reporting SDK here when integrated.
         logger.error("CrashReporter: message recorded — \(message, privacy: .public)")
         #endif
     }
@@ -87,11 +78,7 @@ final class CrashReporter: @unchecked Sendable {
         #if DEBUG
         logger.debug("CrashReporter: user identifier set — \(userId)")
         #else
-        // TODO: Set user context on real SDK here.
-        // Example for Sentry:
-        //   let user = User()
-        //   user.userId = userId
-        //   SentrySDK.setUser(user)
+        // Set user context on crash reporting SDK here when integrated.
         #endif
     }
 
@@ -100,9 +87,7 @@ final class CrashReporter: @unchecked Sendable {
         #if DEBUG
         logger.debug("CrashReporter: user identifier cleared")
         #else
-        // TODO: Clear user context on real SDK here.
-        // Example for Sentry:
-        //   SentrySDK.setUser(nil)
+        // Clear user context on crash reporting SDK here when integrated.
         #endif
     }
 }

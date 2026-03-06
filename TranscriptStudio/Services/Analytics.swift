@@ -30,7 +30,7 @@ final class Analytics: Sendable {
             logger.debug("Analytics: \(event)")
         }
         #endif
-        // TODO: Integrate real analytics SDK (e.g. Amplitude, PostHog, TelemetryDeck) here.
+        // Integrate analytics SDK here when ready (e.g. TelemetryDeck).
     }
 
     // MARK: - Convenience Methods

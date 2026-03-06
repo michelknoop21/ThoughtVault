@@ -349,6 +349,7 @@ struct AdminView: View {
                         .foregroundStyle(Color.labelTertiary)
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Zoekveld wissen")
             }
         }
         .padding(TS.Spacing.sm)
@@ -435,6 +436,7 @@ struct AdminView: View {
             .buttonStyle(.plain)
             .menuStyle(.borderlessButton)
             .fixedSize()
+            .accessibilityLabel("Gebruikersopties")
         }
         .padding(.vertical, TS.Spacing.xs)
     }
@@ -524,6 +526,7 @@ struct AdminView: View {
                     .foregroundStyle(Color.labelSecondary)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Code kopiëren")
 
             // Status
             let isExpired = {

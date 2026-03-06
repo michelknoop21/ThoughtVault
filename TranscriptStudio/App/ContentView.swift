@@ -274,9 +274,14 @@ struct ContentView: View {
         switch tab {
         case .home:
             NavigationStack {
-                HomeView(onStartRecording: { _ in
-                    selectedTab = .record
-                })
+                HomeView(
+                    onStartRecording: { _ in
+                        selectedTab = .record
+                    },
+                    onNavigateToTranscripts: {
+                        selectedTab = .transcripts
+                    }
+                )
             }
 #if os(macOS)
             .toolbar(removing: .sidebarToggle)

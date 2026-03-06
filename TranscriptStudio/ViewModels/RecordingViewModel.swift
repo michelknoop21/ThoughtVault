@@ -113,6 +113,7 @@ final class RecordingViewModel {
     nonisolated(unsafe) private var liveTranscriptionTask: Task<Void, Never>?
     @ObservationIgnored
     nonisolated(unsafe) private var pendingRemovalTasks: [String: Task<Void, Never>] = [:]
+    private var isProcessingQueue = false
     private var networkMonitor = NetworkMonitor.shared
 
     // MARK: - Init
@@ -380,12 +381,12 @@ final class RecordingViewModel {
             return
         }
 
-        // Validate file has actual audio content (not just a WAV header)
+        // Validate file has actual audio content (16kHz mono 16-bit = ~32KB/sec, minimum 3 seconds)
         let fileSize = (try? FileManager.default.attributesOfItem(atPath: url.path))?[.size] as? Int64 ?? 0
-        if fileSize < 1024 {
-            os_log("[RecordingVM] Recording file too small (%lld bytes), likely empty", log: log, type: .error, fileSize)
+        if fileSize < 96_000 {
+            os_log("[RecordingVM] Recording file too small (%lld bytes), likely too short", log: log, type: .error, fileSize)
             await MainActor.run {
-                recordingState = .error("Opname is leeg of te kort om te verwerken.")
+                recordingState = .error("Opname is te kort (minimaal 3 seconden). Probeer opnieuw.")
             }
             return
         }
@@ -571,7 +572,10 @@ final class RecordingViewModel {
 
     func processQueueOnStartupIfNeeded() async {
         guard networkMonitor.isConnected else { return }
+        guard !isProcessingQueue else { return }
         guard let profileId = selectedProfile?.id else { return }
+        isProcessingQueue = true
+        defer { isProcessingQueue = false }
 
         let queued = offlineQueue.items
         guard !queued.isEmpty else { return }
@@ -733,6 +737,10 @@ final class RecordingViewModel {
 
         do {
             let (url, token) = try await APIService.shared.taskStreamInfo(taskId: taskId)
+
+            // Re-check after suspension point to prevent duplicate streams
+            guard sseClients[taskId] == nil else { return }
+
             let client = SSEClient(url: url, token: token)
 
             client.onEvent = { [weak self] event in

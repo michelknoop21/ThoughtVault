@@ -82,15 +82,23 @@ struct AdminUser: Codable, Identifiable {
     let name: String?
     let role: String
     let createdAt: String?
+    let updatedAt: String?
+    let lastLogin: String?
+    let twofaEnabled: Bool?
     let noteCount: Int?
+    let inviteCodeUsed: String?
 
     enum CodingKeys: String, CodingKey {
-        case id = "user_id"
+        case id
         case email = "username"
         case name
         case role
         case createdAt = "created_at"
+        case updatedAt = "updated_at"
+        case lastLogin = "last_login"
+        case twofaEnabled = "twofa_enabled"
         case noteCount = "note_count"
+        case inviteCodeUsed = "invite_code_used"
     }
 }
 
@@ -411,10 +419,32 @@ actor APIService {
     }
 
     func updateNotuleHTML(taskId: String, html: String) async throws {
-        let payload: [String: String] = ["notule_html": html]
+        // First fetch the note ID linked to this transcript
+        guard let noteId = try await getTranscriptNoteId(taskId: taskId) else {
+            throw URLError(.badURL, userInfo: [NSLocalizedDescriptionKey: "Geen notule gevonden voor dit transcript"])
+        }
+        let payload: [String: String] = ["html": html]
         let body = try JSONEncoder().encode(payload)
-        let req = try request(path: "/tstudio/api/transcripts/\(taskId)", method: "PATCH", body: body)
+        let req = try request(path: "/tstudio/api/notes/\(noteId)", method: "PUT", body: body)
         try await performVoid(req)
+    }
+
+    /// Fetch the note ID linked to a transcript, if any.
+    private func getTranscriptNoteId(taskId: String) async throws -> String? {
+        let req = try request(path: "/tstudio/api/transcripts/\(taskId)/notes")
+        let (data, response) = try await session.data(for: req)
+        let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
+        guard statusCode == 200 else { return nil }
+        guard let json = try? JSONSerialization.jsonObject(with: data) else { return nil }
+        if let array = json as? [[String: Any]], let first = array.first {
+            if let id = first["id"] as? String { return id }
+            if let id = first["id"] as? Int { return String(id) }
+        }
+        if let dict = json as? [String: Any] {
+            if let id = dict["id"] as? String { return id }
+            if let id = dict["id"] as? Int { return String(id) }
+        }
+        return nil
     }
 
     /// Fetch linked notes for a transcript. Returns HTML string if available.
@@ -423,7 +453,6 @@ actor APIService {
         let (data, response) = try await session.data(for: req)
         let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
         guard statusCode == 200 else { return nil }
-        // Response could be an array of notes or a single note object with html field
         if let json = try? JSONSerialization.jsonObject(with: data) {
             if let array = json as? [[String: Any]], let first = array.first {
                 return first["html"] as? String ?? first["notule_html"] as? String
@@ -542,8 +571,10 @@ actor APIService {
     // MARK: - Admin
 
     func getAdminUsers() async throws -> [AdminUser] {
+        struct Wrapper: Decodable { let items: [AdminUser] }
         let req = try request(path: "/tstudio/api/admin/users")
-        return try await perform(req)
+        let wrapper: Wrapper = try await perform(req)
+        return wrapper.items
     }
 
     func deleteUser(id: String) async throws {
@@ -567,8 +598,10 @@ actor APIService {
     }
 
     func getAdminInvitations() async throws -> [AdminInvitation] {
+        struct Wrapper: Decodable { let items: [AdminInvitation] }
         let req = try request(path: "/tstudio/api/admin/invites")
-        return try await perform(req)
+        let wrapper: Wrapper = try await perform(req)
+        return wrapper.items
     }
 
     func createInvitation(maxUses: Int, expiresHours: Int) async throws {
@@ -584,8 +617,10 @@ actor APIService {
     }
 
     func getAdminFeedback() async throws -> [AdminFeedback] {
+        struct Wrapper: Decodable { let items: [AdminFeedback] }
         let req = try request(path: "/tstudio/api/admin/feedback")
-        return try await perform(req)
+        let wrapper: Wrapper = try await perform(req)
+        return wrapper.items
     }
 
     func updateAdminFeedback(id: String, status: String, response: String?) async throws {
@@ -611,8 +646,10 @@ actor APIService {
     }
 
     func getAdminErrors() async throws -> [AdminError] {
+        struct Wrapper: Decodable { let errors: [AdminError] }
         let req = try request(path: "/tstudio/api/admin/errors")
-        return try await perform(req)
+        let wrapper: Wrapper = try await perform(req)
+        return wrapper.errors
     }
 
     struct AdminSettingsResponse: Decodable {

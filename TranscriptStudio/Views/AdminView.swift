@@ -253,20 +253,20 @@ struct AdminView: View {
                         color: Color.brandPrimary
                     )
                     statCard(
-                        value: "\(stats?.totalTranscripts ?? 0)",
+                        value: "\(stats?.totalNotes ?? 0)",
                         label: "Notulen",
                         icon: "doc.text.fill",
                         color: Color.statusSuccess
                     )
                     statCard(
-                        value: "\(stats?.totalTasks ?? 0)",
-                        label: "Taken totaal",
-                        icon: "checklist",
+                        value: "\(stats?.transcriptionsToday ?? 0)",
+                        label: "Transcripties vandaag",
+                        icon: "waveform",
                         color: Color.brandOrange
                     )
                     statCard(
-                        value: "\(stats?.errors24h ?? 0)",
-                        label: "Fouten (24u)",
+                        value: "\(stats?.errors7d ?? 0)",
+                        label: "Fouten (7 dagen)",
                         icon: "exclamationmark.triangle.fill",
                         color: Color.statusError
                     )
@@ -633,7 +633,7 @@ struct AdminView: View {
                     .lineLimit(3)
             }
 
-            if let response = item.response, !response.isEmpty {
+            if let response = item.adminResponse, !response.isEmpty {
                 HStack(spacing: TS.Spacing.xs) {
                     Image(systemName: "arrowshape.turn.up.left.fill")
                         .font(TS.Font.micro)
@@ -717,7 +717,7 @@ struct AdminView: View {
         VStack(alignment: .leading, spacing: TS.Spacing.sm) {
             // Type badge + timestamp
             HStack {
-                Text(adminError.type ?? "Error")
+                Text(adminError.errorType ?? "Error")
                     .font(TS.Font.microSemibold)
                     .padding(.horizontal, TS.Spacing.sm)
                     .padding(.vertical, TS.Spacing.xs)
@@ -742,7 +742,7 @@ struct AdminView: View {
             }
 
             // Error message
-            Text(adminError.message)
+            Text(adminError.errorMessage ?? "Onbekende fout")
                 .font(.system(.caption, design: .monospaced))
                 .foregroundStyle(Color.labelSecondary)
                 .lineLimit(4)
@@ -1069,54 +1069,73 @@ struct AdminView: View {
     private func loadData() async {
         isLoading = true
         errorMessage = nil
+        var failedSections: [String] = []
 
-        async let statsResult: () = loadStats()
-        async let usersResult: () = loadUsers()
-        async let invitationsResult: () = loadInvitations()
-        async let bugReportsResult: () = loadFeedback()
-        async let errorsResult: () = loadErrors()
+        async let statsResult = loadStats()
+        async let usersResult = loadUsers()
+        async let invitationsResult = loadInvitations()
+        async let bugReportsResult = loadFeedback()
+        async let errorsResult = loadErrors()
 
-        _ = await (statsResult, usersResult, invitationsResult, bugReportsResult, errorsResult)
+        let results = await [statsResult, usersResult, invitationsResult, bugReportsResult, errorsResult]
+        failedSections = results.compactMap { $0 }
+
+        if failedSections.count == results.count {
+            errorMessage = "Kan geen verbinding maken met de backend."
+        } else if !failedSections.isEmpty {
+            errorMessage = "Kon niet laden: \(failedSections.joined(separator: ", "))"
+        }
+
         isLoading = false
     }
 
-    private func loadStats() async {
+    private func loadStats() async -> String? {
         do {
             stats = try await APIService.shared.getAdminStats()
+            return nil
         } catch {
             DebugLogger.shared.error(error, context: "Stats laden", category: "Admin")
+            return "statistieken"
         }
     }
 
-    private func loadUsers() async {
+    private func loadUsers() async -> String? {
         do {
             users = try await APIService.shared.getAdminUsers()
+            return nil
         } catch {
             DebugLogger.shared.error(error, context: "Gebruikers laden", category: "Admin")
+            return "gebruikers"
         }
     }
 
-    private func loadInvitations() async {
+    private func loadInvitations() async -> String? {
         do {
             invitations = try await APIService.shared.getAdminInvitations()
+            return nil
         } catch {
             DebugLogger.shared.error(error, context: "Uitnodigingen laden", category: "Admin")
+            return "uitnodigingen"
         }
     }
 
-    private func loadFeedback() async {
+    private func loadFeedback() async -> String? {
         do {
             feedbackItems = try await APIService.shared.getAdminFeedback()
+            return nil
         } catch {
             DebugLogger.shared.error(error, context: "Feedback laden", category: "Admin")
+            return "feedback"
         }
     }
 
-    private func loadErrors() async {
+    private func loadErrors() async -> String? {
         do {
             errors = try await APIService.shared.getAdminErrors()
+            return nil
         } catch {
             DebugLogger.shared.error(error, context: "Fouten laden", category: "Admin")
+            return "fouten"
         }
     }
 
@@ -1136,15 +1155,15 @@ struct AdminView: View {
 
 struct AdminStats: Codable {
     let totalUsers: Int
-    let totalTranscripts: Int
-    let totalTasks: Int
-    let errors24h: Int
+    let totalNotes: Int
+    let transcriptionsToday: Int
+    let errors7d: Int
 
     enum CodingKeys: String, CodingKey {
         case totalUsers = "total_users"
-        case totalTranscripts = "total_transcripts"
-        case totalTasks = "total_tasks"
-        case errors24h = "errors_24h"
+        case totalNotes = "total_notes"
+        case transcriptionsToday = "transcriptions_today"
+        case errors7d = "errors_7d"
     }
 }
 
@@ -1174,27 +1193,45 @@ struct AdminFeedback: Codable, Identifiable {
     let title: String
     let description: String
     let userId: String?
+    let username: String?
     let createdAt: String?
-    let response: String?
+    let updatedAt: String?
+    let adminResponse: String?
+    let adminUserId: String?
+    let resolvedAt: String?
+    let responseReadAt: String?
 
     enum CodingKeys: String, CodingKey {
-        case id, category, status, title, description, response
+        case id, category, status, title, description, username
         case userId = "user_id"
         case createdAt = "created_at"
+        case updatedAt = "updated_at"
+        case adminResponse = "admin_response"
+        case adminUserId = "admin_user_id"
+        case resolvedAt = "resolved_at"
+        case responseReadAt = "response_read_at"
     }
 }
 
 struct AdminError: Codable, Identifiable {
     let id: String
-    let type: String?
+    let errorType: String?
     let endpoint: String?
-    let message: String
+    let method: String?
+    let errorMessage: String?
+    let errorDetail: String?
+    let statusCode: Int?
     let severity: String?
     let userId: String?
+    let username: String?
     let createdAt: String?
 
     enum CodingKeys: String, CodingKey {
-        case id, type, endpoint, message, severity
+        case id, endpoint, method, severity, username
+        case errorType = "error_type"
+        case errorMessage = "error_message"
+        case errorDetail = "error_detail"
+        case statusCode = "status_code"
         case userId = "user_id"
         case createdAt = "created_at"
     }

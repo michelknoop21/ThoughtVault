@@ -25,12 +25,12 @@ struct RecordingWidgetView: View {
                 levels: recordingVM.audioLevels,
                 isActive: recordingVM.recordingState == .recording
             )
-            .frame(width: 60, height: 28)
+            .frame(width: 80, height: 32)
 
             // Duration
             Text(formattedDuration)
-                .font(TS.Font.captionMonospaced)
-                .foregroundStyle(.white)
+                .font(TS.Font.footnoteMonospaced)
+                .foregroundStyle(Color.labelPrimary)
                 .monospacedDigit()
                 .frame(minWidth: 46, alignment: .leading)
 
@@ -46,19 +46,20 @@ struct RecordingWidgetView: View {
         .padding(.vertical, TS.Spacing.sm + 2)
         .background {
             if #available(macOS 26.0, iOS 26.0, *) {
-                RoundedRectangle(cornerRadius: TS.Radius.xl, style: .continuous)
+                RoundedRectangle(cornerRadius: TS.Radius.lg, style: .continuous)
                     .fill(.ultraThinMaterial)
             } else {
-                RoundedRectangle(cornerRadius: TS.Radius.xl, style: .continuous)
-                    .fill(Color.backgroundDark.opacity(0.90))
+                RoundedRectangle(cornerRadius: TS.Radius.lg, style: .continuous)
+                    .fill(.ultraThickMaterial)
             }
         }
+        .clipShape(RoundedRectangle(cornerRadius: TS.Radius.lg, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: TS.Radius.xl, style: .continuous)
+            RoundedRectangle(cornerRadius: TS.Radius.lg, style: .continuous)
                 .stroke(
                     recordingVM.recordingState == .recording
                         ? Color.brandPrimary.opacity(0.40)
-                        : Color.white.opacity(0.12),
+                        : Color.borderPrimary.opacity(0.5),
                     lineWidth: 1
                 )
         }
@@ -87,7 +88,7 @@ struct RecordingWidgetView: View {
                 .frame(width: 16, height: 16)
         case .stopping, .preparing:
             ProgressView()
-                .tint(.white)
+                .tint(Color.labelPrimary)
                 .controlSize(.small)
                 .frame(width: 16, height: 16)
         default:
@@ -101,8 +102,8 @@ struct RecordingWidgetView: View {
 
     private var stateLabel: some View {
         Text(stateLabelText)
-            .font(TS.Font.microSemibold)
-            .foregroundStyle(.white.opacity(0.65))
+            .font(TS.Font.captionSemibold)
+            .foregroundStyle(Color.labelSecondary)
             .lineLimit(1)
     }
 
@@ -130,8 +131,8 @@ struct RecordingWidgetView: View {
                     recordingVM.pauseRecording()
                 } label: {
                     Image(systemName: "pause.fill")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.8))
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundStyle(Color.labelPrimary.opacity(0.8))
                 }
                 .buttonStyle(.plain)
 
@@ -146,8 +147,8 @@ struct RecordingWidgetView: View {
                     recordingVM.resumeRecording()
                 } label: {
                     Image(systemName: "play.fill")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.8))
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundStyle(Color.labelPrimary.opacity(0.8))
                 }
                 .buttonStyle(.plain)
 

@@ -323,10 +323,10 @@ export function SettingsPage() {
                   <p className="settings-desc">
                     Neem contact op met{" "}
                     <a
-                      href="mailto:support@prezent.nl?subject=Account%20verwijderen%20TranscriptStudio"
+                      href="mailto:support@yinga.nl?subject=Account%20verwijderen%20TranscriptStudio"
                       style={{ color: "var(--text-accent)", textDecoration: "none" }}
                     >
-                      support@prezent.nl
+                      support@yinga.nl
                     </a>
                     {" "}om je account te laten verwijderen. Verzoeken worden binnen 30 dagen verwerkt conform de AVG.
                   </p>
@@ -346,11 +346,6 @@ export function SettingsPage() {
                   <p className="settings-desc">Versie 1.0.10 — Windows (Tauri 2)</p>
                 </div>
               </div>
-            </div>
-            <div style={{ padding: "4px 14px 12px" }}>
-              <p className="text-caption">
-                Ontwikkeld door Prezent Internet B.V.
-              </p>
             </div>
           </div>
 

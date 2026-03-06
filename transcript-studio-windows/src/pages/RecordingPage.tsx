@@ -26,6 +26,7 @@ import { api } from "../services/api";
 import { createSSEClient } from "../services/sse";
 import { enqueue } from "../services/offlineQueue";
 import { WaveformVisualizer } from "../components/recording/WaveformVisualizer";
+import { SavedRecordings } from "../components/recording/SavedRecordings";
 import type { TranscriptTask } from "../types";
 
 import {
@@ -274,6 +275,61 @@ export function RecordingPage() {
   );
 }
 
+function MeetingDetectionBanner({ onRecord }: { onRecord: () => void }) {
+  const [meetingApp, setMeetingApp] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function check() {
+      try {
+        const { detectMeetingApps } = await import("../services/tauriCommands");
+        const apps = await detectMeetingApps();
+        const running = apps.find((a) => a.is_running);
+        if (!cancelled && running) {
+          setMeetingApp(running.name);
+        }
+      } catch {
+        // Meeting detection not available
+      }
+    }
+    check();
+    const interval = setInterval(check, 15000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, []);
+
+  if (!meetingApp) return null;
+
+  return (
+    <div
+      className="card card-static flex-row gap-10"
+      style={{
+        width: "100%",
+        padding: "10px 14px",
+        alignItems: "center",
+        borderLeft: "3px solid var(--fill-accent)",
+      }}
+    >
+      <VideoChat24Regular style={{ fontSize: 18, color: "var(--fill-accent)", flexShrink: 0 }} />
+      <div className="flex-1" style={{ minWidth: 0 }}>
+        <p style={{ fontSize: 13, fontWeight: 500, color: "var(--text-primary)" }}>
+          {meetingApp} is actief
+        </p>
+        <p className="text-caption text-secondary">
+          Wil je de vergadering opnemen?
+        </p>
+      </div>
+      <button
+        className="btn btn-accent flex-shrink-0"
+        onClick={onRecord}
+        style={{ padding: "4px 12px", fontSize: 12 }}
+      >
+        <MicRecord24Regular style={{ fontSize: 13 }} />
+        Opnemen
+      </button>
+    </div>
+  );
+}
+
 function IdleState({
   mode, profileId, profiles, onSetMode, onSetProfile, onStart,
 }: {
@@ -286,6 +342,9 @@ function IdleState({
 }) {
   return (
     <div className="flex-col gap-20" style={{ width: "100%", gap: 28, alignItems: "center" }}>
+      {/* Meeting detection banner */}
+      <MeetingDetectionBanner onRecord={() => { onSetMode("combined"); onStart(); }} />
+
       {/* Section header */}
       <div className="text-center">
         <p className="section-label text-accent" style={{ marginBottom: 4 }}>
@@ -373,6 +432,11 @@ function IdleState({
           Klik om op te nemen
         </p>
       </div>
+
+      {/* Saved recordings */}
+      <SavedRecordings onReprocess={() => {
+        onStart();
+      }} />
     </div>
   );
 }
@@ -442,7 +506,7 @@ function ActiveState({
       </p>
 
       {/* Live transcription card */}
-      {task?.raw_transcription && (
+      {task?.raw_transcription && typeof task.raw_transcription === "string" && (
         <div className="card card-static" style={{ padding: 14, width: "100%", textAlign: "left", maxHeight: 130, overflow: "hidden" }}>
           <div className="flex-row justify-between" style={{ marginBottom: 8 }}>
             <span className="section-label text-accent" style={{ marginBottom: 0 }}>
@@ -497,8 +561,11 @@ function ActiveState({
 }
 
 function UploadingState({ task }: { task: Partial<TranscriptTask> | null }) {
+  const navigate = useNavigate();
   const progress = task?.progress ?? 0;
   const status = task?.status ?? "uploading";
+  const isCompleted = status === "completed";
+  const isFailed = status === "failed";
 
   const statusLabels: Record<string, string> = {
     uploading: "Audio wordt geupload...",
@@ -609,6 +676,36 @@ function UploadingState({ task }: { task: Partial<TranscriptTask> | null }) {
           })}
         </div>
       </div>
+
+      {/* Live transcription text from SSE */}
+      {task?.raw_transcription && typeof task.raw_transcription === "string" && (
+        <div className="card card-static" style={{ width: "100%", padding: "12px 16px", textAlign: "left", maxHeight: 150, overflowY: "auto" }}>
+          <span className="section-label text-accent" style={{ marginBottom: 6, display: "block" }}>
+            LIVE TRANSCRIPTIE
+          </span>
+          <p className="text-body text-secondary" style={{ lineHeight: 1.5, fontSize: 12 }}>
+            {task.raw_transcription}
+          </p>
+        </div>
+      )}
+
+      {/* Completion link */}
+      {isCompleted && (
+        <button
+          className="btn btn-accent"
+          onClick={() => navigate("/transcripts")}
+          style={{ marginTop: 8 }}
+        >
+          Bekijk transcript
+        </button>
+      )}
+
+      {/* Error state */}
+      {isFailed && task?.error_message && (
+        <div className="error-banner" style={{ width: "100%" }}>
+          {task.error_message}
+        </div>
+      )}
     </div>
   );
 }

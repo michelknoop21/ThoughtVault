@@ -7,6 +7,11 @@ import type {
   AdminFeedback,
   SystemHealth,
   InviteCode,
+  TwoFAStatus,
+  TwoFASetupResponse,
+  TwoFAVerifyResponse,
+  FeedbackSubmission,
+  UserFeedback,
 } from "../types";
 
 /** Extract a human-readable message from any thrown value. */
@@ -23,26 +28,36 @@ function extractErrorMessage(err: unknown): string {
   return "Onbekende fout";
 }
 
+/** Safely extract a string value, returning fallback for objects/null. */
+function safeString(val: unknown, fallback: string): string {
+  if (typeof val === "string") return val;
+  if (val == null) return fallback;
+  if (typeof val === "number") return String(val);
+  return fallback;
+}
+
+/** Safely extract an optional string value. */
+function safeOptionalString(...vals: unknown[]): string | undefined {
+  for (const val of vals) {
+    if (typeof val === "string") return val;
+  }
+  return undefined;
+}
+
 /** Normalize a backend transcript object to our Transcript type. */
 function mapTranscript(raw: unknown): Transcript {
   const r = raw as Record<string, unknown>;
-  const rawTranscription =
-    (r.raw_transcription as string | undefined)
-    ?? (r.transcription as string | undefined);
-  const notuleHtml =
-    (r.notule_html as string | undefined)
-    ?? (r.result as string | undefined);
 
   return {
-    id: String(r.id ?? r.task_id ?? ""),
-    title: String(r.title ?? r.filename ?? "Naamloze opname"),
-    raw_transcription: rawTranscription,
-    notule_html: notuleHtml,
+    id: safeString(r.id ?? r.task_id, ""),
+    title: safeString(r.title ?? r.filename, "Naamloze opname"),
+    raw_transcription: safeOptionalString(r.raw_transcription, r.transcription),
+    notule_html: safeOptionalString(r.notule_html, r.result),
     duration_seconds: Number(r.duration ?? r.duration_seconds ?? 0),
-    profile_name: (r.profile_name as string) ?? undefined,
-    tags: Array.isArray(r.tags) ? r.tags.map(String) : [],
-    created_at: String(r.created_at ?? r.date ?? new Date().toISOString()),
-    updated_at: String(r.updated_at ?? r.created_at ?? new Date().toISOString()),
+    profile_name: safeOptionalString(r.profile_name),
+    tags: Array.isArray(r.tags) ? r.tags.filter((t): t is string => typeof t === "string") : [],
+    created_at: safeString(r.created_at ?? r.date, new Date().toISOString()),
+    updated_at: safeString(r.updated_at ?? r.created_at, new Date().toISOString()),
   };
 }
 
@@ -84,7 +99,7 @@ class APIService {
       "Content-Type": "application/json",
     };
     if (this.token) {
-      headers["Authorization"] = `Bearer ${this.token}`;
+      headers["X-User-Token"] = this.token;
     }
 
     let response: { status: number; body: string; headers: Record<string, string> };
@@ -108,7 +123,8 @@ class APIService {
       let errorMessage = `HTTP ${response.status}`;
       try {
         const errorData = JSON.parse(response.body);
-        errorMessage = errorData.message || errorData.error || errorData.detail || errorMessage;
+        const extracted = errorData.message || errorData.error || errorData.detail;
+        errorMessage = (typeof extracted === "string" ? extracted : null) || errorMessage;
       } catch {
         if (response.body) errorMessage = response.body;
       }
@@ -181,7 +197,7 @@ class APIService {
   }
 
   async updateTranscript(id: string, updates: Partial<Transcript>): Promise<Transcript> {
-    return this.request<Transcript>("PATCH", `/tstudio/api/transcripts/${id}`, updates);
+    return this.request<Transcript>("PUT", `/tstudio/api/transcripts/${id}`, updates);
   }
 
   async deleteTranscript(id: string): Promise<void> {
@@ -189,9 +205,28 @@ class APIService {
   }
 
   async updateNotuleHTML(id: string, notuleHtml: string): Promise<Transcript> {
-    const data = await this.request<unknown>("PATCH", `/tstudio/api/transcripts/${id}`, {
-      notule_html: notuleHtml,
-    });
+    // Get the linked note ID for this transcript
+    const notesData = await this.request<{ items?: Array<{ id: string }> }>(
+      "GET",
+      `/tstudio/api/transcripts/${id}/notes`
+    );
+    const noteId = notesData.items?.[0]?.id;
+
+    if (noteId) {
+      // Update existing note via notes endpoint
+      await this.request<unknown>("PUT", `/tstudio/api/notes/${noteId}`, {
+        html: notuleHtml,
+      });
+    } else {
+      // No linked note exists — create one
+      await this.request<unknown>("POST", `/tstudio/api/notes`, {
+        html: notuleHtml,
+        source_file: `notule_${id}`,
+      });
+    }
+
+    // Return updated transcript
+    const data = await this.request<unknown>("GET", `/tstudio/api/transcripts/${id}`);
     return mapTranscript(data);
   }
 
@@ -215,7 +250,7 @@ class APIService {
   ): Promise<{ task_id: string }> {
     const headers: Record<string, string> = {};
     if (this.token) {
-      headers["Authorization"] = `Bearer ${this.token}`;
+      headers["X-User-Token"] = this.token;
     }
 
     const response = await invoke<{ status: number; body: string }>(
@@ -233,7 +268,8 @@ class APIService {
       let errorMessage = `Upload mislukt: HTTP ${response.status}`;
       try {
         const errorData = JSON.parse(response.body);
-        errorMessage = errorData.message || errorData.detail || errorMessage;
+        const extracted = errorData.message || errorData.detail;
+        errorMessage = (typeof extracted === "string" ? extracted : null) || errorMessage;
       } catch {
         // ignore
       }
@@ -373,6 +409,129 @@ class APIService {
 
   async deleteInviteCode(code: string): Promise<void> {
     return this.request<void>("DELETE", `/tstudio/api/admin/invites/${code}`);
+  }
+
+  // Auth — password change
+  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    return this.request<void>("POST", "/tstudio/api/auth/change-password", {
+      current_password: currentPassword,
+      new_password: newPassword,
+    });
+  }
+
+  // Auth — 2FA management
+  async get2FAStatus(): Promise<TwoFAStatus> {
+    return this.request<TwoFAStatus>("GET", "/tstudio/api/auth/2fa/status");
+  }
+
+  async setup2FA(): Promise<TwoFASetupResponse> {
+    return this.request<TwoFASetupResponse>("POST", "/tstudio/api/auth/2fa/setup");
+  }
+
+  async verify2FASetup(code: string): Promise<TwoFAVerifyResponse> {
+    return this.request<TwoFAVerifyResponse>("POST", "/tstudio/api/auth/2fa/verify-setup", { code });
+  }
+
+  async disable2FA(password: string): Promise<void> {
+    return this.request<void>("POST", "/tstudio/api/auth/2fa/disable", { password });
+  }
+
+  async regenerateBackupCodes(): Promise<TwoFAVerifyResponse> {
+    return this.request<TwoFAVerifyResponse>("POST", "/tstudio/api/auth/2fa/regenerate-backup-codes");
+  }
+
+  // Auth — password reset
+  async requestPasswordReset(email: string): Promise<void> {
+    return this.request<void>("POST", "/tstudio/api/auth/password-reset/request", { username: email });
+  }
+
+  async verifyPasswordReset(email: string, code: string): Promise<{ reset_token: string }> {
+    return this.request<{ reset_token: string }>("POST", "/tstudio/api/auth/password-reset/verify", {
+      username: email,
+      code,
+    });
+  }
+
+  async completePasswordReset(resetToken: string, newPassword: string): Promise<void> {
+    return this.request<void>("POST", "/tstudio/api/auth/password-reset/complete", {
+      reset_token: resetToken,
+      new_password: newPassword,
+    });
+  }
+
+  // Profiles — visibility, public, copy
+  async setProfileVisibility(id: string, isPublic: boolean): Promise<void> {
+    return this.request<void>("PATCH", `/tstudio/api/profiles/me/${id}/visibility`, { is_public: isPublic });
+  }
+
+  async getPublicProfiles(search?: string): Promise<Profile[]> {
+    const query = search ? `?search=${encodeURIComponent(search)}` : "";
+    const data = await this.request<{ profiles?: Profile[] } | Profile[]>("GET", `/tstudio/api/profiles/public${query}`);
+    return Array.isArray(data) ? data : data.profiles ?? [];
+  }
+
+  async copyProfile(id: string): Promise<Profile> {
+    const data = await this.request<{ profile?: Profile } & Profile>("POST", `/tstudio/api/profiles/${id}/copy`);
+    return data.profile ?? data;
+  }
+
+  // Transcripts — tags
+  async getAllTags(): Promise<string[]> {
+    const data = await this.request<{ tags?: string[] } | string[]>("GET", "/tstudio/api/transcripts/tags");
+    return Array.isArray(data) ? data : data.tags ?? [];
+  }
+
+  async updateTranscriptTags(id: string, add: string[], remove: string[]): Promise<void> {
+    return this.request<void>("PATCH", `/tstudio/api/transcripts/${id}/tags`, { add, remove });
+  }
+
+  // Transcripts — bulk operations
+  async bulkDeleteTranscripts(ids: string[]): Promise<void> {
+    return this.request<void>("POST", "/tstudio/api/transcripts/bulk-delete", { ids });
+  }
+
+  async bulkExportTranscripts(ids: string[], format: "txt" | "docx" = "txt"): Promise<Blob> {
+    const response = await this.request<unknown>("POST", `/tstudio/api/transcripts/bulk-export?format=${format}`, { ids });
+    return response as unknown as Blob;
+  }
+
+  async bulkAddTags(ids: string[], tags: string[]): Promise<void> {
+    return this.request<void>("POST", "/tstudio/api/transcripts/bulk-tags", { ids, tags, action: "add" });
+  }
+
+  // Feedback (user-facing)
+  async submitFeedback(feedback: FeedbackSubmission): Promise<void> {
+    return this.request<void>("POST", "/tstudio/api/feedback", feedback);
+  }
+
+  async getMyFeedback(): Promise<UserFeedback[]> {
+    try {
+      return await this.request<UserFeedback[]>("GET", "/tstudio/api/feedback/my");
+    } catch {
+      return [];
+    }
+  }
+
+  async getUnreadFeedbackCount(): Promise<number> {
+    try {
+      const data = await this.request<{ count: number }>("GET", "/tstudio/api/feedback/unread-count");
+      return data.count;
+    } catch {
+      return 0;
+    }
+  }
+
+  async markFeedbackRead(id: string): Promise<void> {
+    return this.request<void>("POST", `/tstudio/api/feedback/${id}/mark-read`);
+  }
+
+  // Version
+  async checkVersion(): Promise<{ minimum_version: string; version: string } | null> {
+    try {
+      return await this.request<{ minimum_version: string; version: string }>("GET", `/tstudio/api/version`);
+    } catch {
+      return null;
+    }
   }
 }
 

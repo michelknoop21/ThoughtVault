@@ -30,10 +30,11 @@ class FloatingWidgetController {
     func show(recordingVM: RecordingViewModel) {
         guard floatingWindow == nil else { return }
 
-        let contentView = NSHostingView(
+        let hostingView = NSHostingView(
             rootView: RecordingWidgetView()
                 .environment(recordingVM)
         )
+        hostingView.layer?.backgroundColor = .clear
 
         let panel = NSPanel(
             contentRect: NSRect(x: 0, y: 0, width: 280, height: 64),
@@ -41,7 +42,7 @@ class FloatingWidgetController {
             backing: .buffered,
             defer: false
         )
-        panel.contentView = contentView
+        panel.contentView = hostingView
         panel.isOpaque = false
         panel.backgroundColor = .clear
         panel.level = .floating

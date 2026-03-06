@@ -47,14 +47,15 @@ export function OnboardingWizard() {
   return (
     <div
       style={{
-        height: "100%",
+        flex: 1,
+        minHeight: 0,
         display: "flex",
         flexDirection: "column",
         background: "var(--bg-solid-tertiary)",
       }}
     >
       <YingaBar />
-      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", minHeight: 0 }}>
       <div style={{ width: "100%", maxWidth: 440, padding: 32 }}>
         {/* Progress dots */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginBottom: 32 }}>
@@ -241,10 +242,10 @@ export function OnboardingWizard() {
           )}
         </div>
 
-        <div style={{ marginTop: 32 }}>
-          <YingaFooter />
-        </div>
       </div>
+      </div>
+      <div style={{ marginTop: "auto", flexShrink: 0 }}>
+        <YingaFooter />
       </div>
     </div>
   );

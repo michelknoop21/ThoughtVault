@@ -419,32 +419,9 @@ actor APIService {
     }
 
     func updateNotuleHTML(taskId: String, html: String) async throws {
-        // First fetch the note ID linked to this transcript
-        guard let noteId = try await getTranscriptNoteId(taskId: taskId) else {
-            throw URLError(.badURL, userInfo: [NSLocalizedDescriptionKey: "Geen notule gevonden voor dit transcript"])
-        }
-        let payload: [String: String] = ["html": html]
-        let body = try JSONEncoder().encode(payload)
-        let req = try request(path: "/tstudio/api/notes/\(noteId)", method: "PUT", body: body)
+        let body = try JSONEncoder().encode(["notule_html": html])
+        let req = try request(path: "/tstudio/api/transcripts/\(taskId)", method: "PUT", body: body)
         try await performVoid(req)
-    }
-
-    /// Fetch the note ID linked to a transcript, if any.
-    private func getTranscriptNoteId(taskId: String) async throws -> String? {
-        let req = try request(path: "/tstudio/api/transcripts/\(taskId)/notes")
-        let (data, response) = try await session.data(for: req)
-        let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
-        guard statusCode == 200 else { return nil }
-        guard let json = try? JSONSerialization.jsonObject(with: data) else { return nil }
-        if let array = json as? [[String: Any]], let first = array.first {
-            if let id = first["id"] as? String { return id }
-            if let id = first["id"] as? Int { return String(id) }
-        }
-        if let dict = json as? [String: Any] {
-            if let id = dict["id"] as? String { return id }
-            if let id = dict["id"] as? Int { return String(id) }
-        }
-        return nil
     }
 
     /// Fetch linked notes for a transcript. Returns HTML string if available.

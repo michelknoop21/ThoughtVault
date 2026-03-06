@@ -128,7 +128,7 @@ struct EditableHTMLWebView: NSViewRepresentable {
         let editableAttr = editable ? "contenteditable=\"true\"" : ""
         let editingCSS = editable ? """
             #content { outline: none; min-height: 200px; cursor: text; }
-            #content:focus { box-shadow: inset 0 0 0 2px rgba(229, 0, 116, 0.15); border-radius: 4px; }
+            #content:focus { box-shadow: inset 0 0 0 2px rgba(229, 0, 116, 0.12); border-radius: 6px; }
             """ : ""
         let changeScript = editable ? """
             <script>
@@ -149,38 +149,133 @@ struct EditableHTMLWebView: NSViewRepresentable {
         <head>
         <meta charset="utf-8">
         <style>
+        :root {
+            --text-primary: #2c2c30;
+            --text-secondary: #555560;
+            --text-tertiary: #8e8e93;
+            --heading: #1a2744;
+            --brand: #E50074;
+            --brand-light: #fef2f8;
+            --brand-border: rgba(229, 0, 116, 0.15);
+            --border: #d8dce3;
+            --surface-elevated: #f8f8fa;
+            --bg-blockquote: #fef6fb;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --text-primary: #f0f0f4;
+                --text-secondary: #9e9ea8;
+                --text-tertiary: #6c6c74;
+                --heading: #c8d4e8;
+                --brand: #ff3b8a;
+                --brand-light: #1f0a15;
+                --brand-border: rgba(255, 59, 138, 0.20);
+                --border: #38383d;
+                --surface-elevated: #222228;
+                --bg-blockquote: #1f0e18;
+            }
+        }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
-            font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
-            font-size: 14px;
-            line-height: 1.65;
-            color: #1a1a1a;
+            font-family: -apple-system, 'SF Pro Text', 'Helvetica Neue', Arial, sans-serif;
+            font-size: 14.5px;
+            line-height: 1.72;
+            color: var(--text-primary);
             background: transparent;
-            padding: 24px;
+            padding: 28px 32px;
+            -webkit-font-smoothing: antialiased;
         }
-        @media (prefers-color-scheme: dark) {
-            body { color: #e5e5e5; }
-            th { background: #2a2a2a; }
-            td, th { border-color: #444; }
-            blockquote { background: #1a1020; }
+        h1 {
+            font-size: 21px;
+            font-weight: 700;
+            color: var(--heading);
+            margin-bottom: 4px;
+            letter-spacing: -0.3px;
+            line-height: 1.3;
         }
-        h1 { font-size: 24px; font-weight: 700; color: #E50074; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid #E50074; }
-        h2 { font-size: 18px; font-weight: 600; color: #333; margin-top: 24px; margin-bottom: 8px; }
-        h3 { font-size: 15px; font-weight: 600; color: #555; margin-top: 16px; margin-bottom: 6px; }
-        @media (prefers-color-scheme: dark) {
-            h2 { color: #ccc; }
-            h3 { color: #aaa; }
+        h1 + p, h1 + .datum {
+            margin-top: 0;
+            padding-bottom: 14px;
+            border-bottom: 1.5px solid var(--border);
+            margin-bottom: 16px;
         }
-        p  { margin: 8px 0; }
-        ul, ol { margin: 8px 0 8px 20px; }
+        h2 {
+            font-size: 15.5px;
+            font-weight: 700;
+            color: var(--heading);
+            margin-top: 24px;
+            margin-bottom: 8px;
+            letter-spacing: -0.1px;
+        }
+        h3 {
+            font-size: 14.5px;
+            font-weight: 700;
+            color: var(--heading);
+            margin-top: 20px;
+            margin-bottom: 6px;
+        }
+        p { margin: 8px 0; }
+        ul, ol { margin: 8px 0 8px 24px; }
         li { margin: 4px 0; }
-        strong { font-weight: 600; }
-        em { font-style: italic; color: #555; }
-        @media (prefers-color-scheme: dark) { em { color: #aaa; } }
-        table { border-collapse: collapse; width: 100%; margin: 12px 0; }
-        th, td { border: 1px solid #e0e0e0; padding: 8px 12px; text-align: left; }
-        th { background: #f8f8f8; font-weight: 600; }
-        blockquote { border-left: 3px solid #E50074; margin: 12px 0; padding: 8px 16px; background: #fef6fb; }
+        li::marker { color: var(--text-primary); }
+        strong { font-weight: 600; color: var(--text-primary); }
+        em { font-style: italic; color: var(--text-secondary); }
+        a { color: var(--brand); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 16px 0;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+        th, td {
+            border: 1px solid var(--border);
+            padding: 10px 14px;
+            text-align: left;
+            font-size: 13.5px;
+        }
+        th {
+            background: var(--surface-elevated);
+            font-weight: 600;
+            font-size: 12.5px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+        }
+        blockquote {
+            border-left: 3px solid var(--brand);
+            margin: 16px 0;
+            padding: 12px 20px;
+            background: var(--bg-blockquote);
+            border-radius: 0 8px 8px 0;
+            font-style: italic;
+            color: var(--text-secondary);
+        }
+        hr {
+            border: none;
+            height: 1px;
+            background: var(--border);
+            margin: 24px 0;
+        }
+        code {
+            font-family: 'SF Mono', Menlo, monospace;
+            font-size: 0.9em;
+            background: var(--surface-elevated);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+        pre {
+            background: var(--surface-elevated);
+            padding: 16px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 12px 0;
+            border: 1px solid var(--border);
+        }
+        pre code { background: none; padding: 0; }
+        ::selection { background: rgba(229, 0, 116, 0.18); }
         \(editingCSS)
         </style>
         </head>
@@ -200,47 +295,64 @@ struct FormattingToolbar: View {
     let webView: WKWebView?
 
     var body: some View {
-        HStack(spacing: TS.Spacing.xs) {
-            formatButton(icon: "bold", command: "bold")
-            formatButton(icon: "italic", command: "italic")
-            formatButton(icon: "underline", command: "underline")
+        HStack(spacing: 2) {
+            Group {
+                formatButton(icon: "bold", command: "bold")
+                formatButton(icon: "italic", command: "italic")
+                formatButton(icon: "underline", command: "underline")
+            }
 
-            Divider().frame(height: 20)
+            toolbarDivider
 
-            formatButton(icon: "list.bullet", command: "insertUnorderedList")
-            formatButton(icon: "list.number", command: "insertOrderedList")
+            Group {
+                formatButton(icon: "list.bullet", command: "insertUnorderedList")
+                formatButton(icon: "list.number", command: "insertOrderedList")
+            }
 
-            Divider().frame(height: 20)
+            toolbarDivider
 
             Menu {
                 Button("Kop 1") { EditableHTMLWebView.execCommand(webView, command: "formatBlock", value: "h1") }
                 Button("Kop 2") { EditableHTMLWebView.execCommand(webView, command: "formatBlock", value: "h2") }
                 Button("Kop 3") { EditableHTMLWebView.execCommand(webView, command: "formatBlock", value: "h3") }
+                Divider()
                 Button("Paragraaf") { EditableHTMLWebView.execCommand(webView, command: "formatBlock", value: "p") }
+                Button("Citaat") { EditableHTMLWebView.execCommand(webView, command: "formatBlock", value: "blockquote") }
             } label: {
                 HStack(spacing: 3) {
                     Image(systemName: "textformat.size")
-                        .font(.system(size: 13, weight: .medium))
+                        .font(.system(size: 12, weight: .medium))
                     Image(systemName: "chevron.down")
-                        .font(.system(size: 8, weight: .semibold))
+                        .font(.system(size: 7, weight: .bold))
                 }
                 .foregroundStyle(Color.labelSecondary)
-                .frame(height: 28)
-                .padding(.horizontal, TS.Spacing.xs)
+                .frame(width: 44, height: 28)
+                .background {
+                    RoundedRectangle(cornerRadius: TS.Radius.xs, style: .continuous)
+                        .fill(Color.clear)
+                }
+                .contentShape(Rectangle())
             }
             .menuStyle(.borderlessButton)
             .fixedSize()
 
             Spacer()
         }
-        .padding(.horizontal, TS.Spacing.sm)
+        .padding(.horizontal, TS.Spacing.xs + 2)
         .padding(.vertical, TS.Spacing.xs)
         .background(Color.surfaceSecondary)
         .clipShape(RoundedRectangle(cornerRadius: TS.Radius.sm, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: TS.Radius.sm, style: .continuous)
-                .stroke(Color.borderPrimary.opacity(0.45), lineWidth: 1)
+                .stroke(Color.borderPrimary.opacity(0.5), lineWidth: 1)
         }
+    }
+
+    private var toolbarDivider: some View {
+        Rectangle()
+            .fill(Color.borderPrimary)
+            .frame(width: 1, height: 18)
+            .padding(.horizontal, TS.Spacing.xs)
     }
 
     private func formatButton(icon: String, command: String) -> some View {
@@ -250,7 +362,11 @@ struct FormattingToolbar: View {
             Image(systemName: icon)
                 .font(.system(size: 13, weight: .medium))
                 .foregroundStyle(Color.labelSecondary)
-                .frame(width: 28, height: 28)
+                .frame(width: 30, height: 28)
+                .background {
+                    RoundedRectangle(cornerRadius: TS.Radius.xs, style: .continuous)
+                        .fill(Color.clear)
+                }
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

@@ -46,6 +46,7 @@ struct TranscriptStudioApp: App {
         } label: {
             MenuBarStatusLabel(recordingVM: recordingVM)
         }
+        .menuBarExtraStyle(.menu)
 #endif
     }
 
@@ -67,6 +68,14 @@ struct RootView: View {
         }
 #if os(macOS)
         .frame(minWidth: 900, minHeight: 600)
+        .onChange(of: recordingVM.recordingState) { _, newState in
+            switch newState {
+            case .recording, .paused, .preparing, .stopping, .uploading:
+                FloatingWidgetController.shared.show(recordingVM: recordingVM)
+            case .idle, .error:
+                FloatingWidgetController.shared.hide()
+            }
+        }
 #endif
     }
 
@@ -78,6 +87,7 @@ struct RootView: View {
 struct MenuBarContentView: View {
     @Environment(RecordingViewModel.self) private var recordingVM
     @Environment(AuthViewModel.self) private var authVM
+    @Environment(CalendarService.self) private var calendarService
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -166,15 +176,53 @@ struct MenuBarContentView: View {
                 }
             }
 
+            // Upcoming meetings
+            if !calendarService.upcomingMeetings.isEmpty {
+                Divider()
+                    .padding(.vertical, 4)
+
+                Text("Aankomende vergaderingen")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 12)
+
+                ForEach(calendarService.upcomingMeetings.prefix(3)) { meeting in
+                    Button {
+                        NSApplication.shared.activate(ignoringOtherApps: true)
+                        if let url = meeting.meetingURL {
+                            NSWorkspace.shared.open(url)
+                        }
+                    } label: {
+                        Label {
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(meeting.title)
+                                    .lineLimit(1)
+                                Text(meetingTimeText(meeting))
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(.secondary)
+                            }
+                        } icon: {
+                            Image(systemName: meeting.platform.iconName)
+                        }
+                    }
+                }
+            }
+
             Divider()
                 .padding(.vertical, 4)
+
+            Button {
+                NSApplication.shared.activate(ignoringOtherApps: true)
+            } label: {
+                Label("Open Transcript Studio", systemImage: "macwindow")
+            }
 
             Button("Afsluiten") {
                 NSApplication.shared.terminate(nil)
             }
             .padding(.bottom, 4)
         }
-        .frame(width: 220)
+        .frame(width: 250)
     }
 
     private var statusText: String {
@@ -195,6 +243,19 @@ struct MenuBarContentView: View {
             return "Fout opgetreden"
         }
     }
+
+    private func meetingTimeText(_ meeting: CalendarEvent) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        let start = formatter.string(from: meeting.date)
+        let end = formatter.string(from: meeting.endDate)
+
+        if meeting.startsWithin(minutes: 15) {
+            return "Begint zo (\(start))"
+        }
+        return "\(start) – \(end)"
+    }
+
 }
 
 // MARK: - MenuBar Status Label (macOS)
@@ -206,37 +267,43 @@ struct MenuBarStatusLabel: View {
         switch recordingVM.recordingState {
         case .recording:
             HStack(spacing: 4) {
-                Circle()
-                    .fill(Color.red)
-                    .frame(width: 6, height: 6)
+                menuBarIcon
+                    .foregroundStyle(.red)
                 Text(formattedDuration)
                     .font(.system(size: 12, weight: .medium, design: .monospaced))
             }
 
         case .paused:
             HStack(spacing: 4) {
-                Circle()
-                    .fill(Color.orange)
-                    .frame(width: 6, height: 6)
+                menuBarIcon
+                    .foregroundStyle(.orange)
                 Text(formattedDuration)
                     .font(.system(size: 12, weight: .medium, design: .monospaced))
             }
             .opacity(0.7)
 
         case .uploading:
-            Image(systemName: "arrow.up.circle.fill")
-                .symbolRenderingMode(.hierarchical)
-                .foregroundStyle(.blue)
+            HStack(spacing: 4) {
+                menuBarIcon
+                    .foregroundStyle(.blue)
+                Image(systemName: "arrow.up")
+                    .font(.system(size: 8, weight: .bold))
+            }
 
         case .preparing, .stopping:
-            Image(systemName: "waveform.circle")
-                .symbolRenderingMode(.hierarchical)
+            menuBarIcon
                 .opacity(0.7)
 
         case .idle, .error:
-            Image(systemName: "waveform.circle")
-                .symbolRenderingMode(.hierarchical)
+            menuBarIcon
         }
+    }
+
+    private var menuBarIcon: some View {
+        Image("MenuBarIcon")
+            .resizable()
+            .aspectRatio(contentMode: .fit)
+            .frame(width: 18, height: 18)
     }
 
     private var formattedDuration: String {

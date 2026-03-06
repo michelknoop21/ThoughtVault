@@ -106,7 +106,11 @@ struct ContentView: View {
     }
 
     private func fetchCalendarIfGranted() async {
-        if calendarService.hasCalendarAccess {
+        // Load Microsoft 365 OAuth config and tokens on every app start
+        await calendarService.refreshMicrosoftState()
+        await MicrosoftGraphService.shared.loadTokensFromBackend()
+
+        if calendarService.hasCalendarAccess || calendarService.isMicrosoftConnected {
             await calendarService.fetchUpcomingMeetings()
         }
     }
@@ -297,7 +301,7 @@ struct ContentView: View {
 
         case .transcripts:
             NavigationStack {
-                TranscriptsView()
+                TranscriptsView(selectedTab: selectedTab)
             }
 #if os(macOS)
             .toolbar(removing: .sidebarToggle)

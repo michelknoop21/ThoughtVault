@@ -255,11 +255,11 @@ function SessionCard({
 }
 
 function getPreviewText(transcript: Transcript): string {
-  if (transcript.notule_html) {
+  if (typeof transcript.notule_html === "string" && transcript.notule_html) {
     const text = transcript.notule_html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
     return text.slice(0, 200);
   }
-  if (transcript.raw_transcription) {
+  if (typeof transcript.raw_transcription === "string" && transcript.raw_transcription) {
     return transcript.raw_transcription.slice(0, 200);
   }
   return "";

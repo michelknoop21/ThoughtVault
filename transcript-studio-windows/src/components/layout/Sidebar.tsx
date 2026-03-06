@@ -6,49 +6,52 @@ import {
   Settings24Regular,
   ShieldPersonRegular,
   Person24Regular,
+  NotepadPerson24Regular,
+  PersonAccounts24Regular,
+  SignOut24Regular,
 } from "@fluentui/react-icons";
 import { useAuthStore } from "../../stores/authStore";
+import { api } from "../../services/api";
 import appLogo from "../../assets/app-logo.png";
 
 export function Sidebar() {
-  const user = useAuthStore((s) => s.user);
+  const { user, logout } = useAuthStore();
   const isAdmin = user?.role === "admin";
 
-  const userInitial = (() => {
-    if (user?.name) {
-      const first = user.name.trim().split(" ")[0];
-      if (first) return first[0].toUpperCase();
-    }
-    if (user?.email) return user.email[0].toUpperCase();
-    return null;
+  // Display name: full name > email prefix > email
+  const userDisplayName = (() => {
+    if (user?.name && user.name.trim()) return user.name.trim();
+    if (user?.email) return user.email.split("@")[0];
+    return "";
   })();
 
-  const userDisplayName = user?.name || user?.email || "";
+  const userInitial = userDisplayName ? userDisplayName[0].toUpperCase() : null;
+
+  async function handleLogout() {
+    await api.logout();
+    logout();
+  }
 
   return (
     <nav className="sidebar">
       {/* Logo + app title */}
-      <div className="sidebar-logo-section flex-col" style={{ alignItems: "center", gap: 2 }}>
+      <div className="sidebar-logo-section">
         <img
           src={appLogo}
           alt="Transcript Studio"
           className="sidebar-logo"
         />
-        <span className="sidebar-developed-by">
-          Prezent
-        </span>
+        <span className="sidebar-app-name">Transcript Studio</span>
       </div>
 
       {/* User profile */}
       {user && (
-        <div className="sidebar-user-section flex-row gap-10">
+        <div className="sidebar-user-section">
           <div className="avatar avatar-sm avatar-accent">
             {userInitial ?? <Person24Regular style={{ fontSize: 14 }} />}
           </div>
           <div className="sidebar-user-info">
-            <span className="text-caption truncate" style={{ color: "var(--text-primary)", fontWeight: 500 }}>
-              {userDisplayName}
-            </span>
+            <span className="sidebar-user-name">{userDisplayName}</span>
             {isAdmin && (
               <span className="sidebar-role-badge">Admin</span>
             )}
@@ -62,6 +65,7 @@ export function Sidebar() {
       <SidebarItem to="/" icon={<Home24Regular />} label="Home" shortcut="Ctrl+1" />
       <SidebarItem to="/recording" icon={<MicRecord24Regular />} label="Opnemen" shortcut="Ctrl+2" />
       <SidebarItem to="/transcripts" icon={<DocumentText24Regular />} label="Notulen" shortcut="Ctrl+3" />
+      <SidebarItem to="/profiles" icon={<NotepadPerson24Regular />} label="Profielen" shortcut="Ctrl+5" />
 
       {/* Spacer pushes bottom items down */}
       <div className="flex-1" />
@@ -69,10 +73,24 @@ export function Sidebar() {
       <hr className="sidebar-divider" />
 
       {/* Bottom items */}
+      <SidebarItem to="/account" icon={<PersonAccounts24Regular />} label="Account" />
       <SidebarItem to="/settings" icon={<Settings24Regular />} label="Instellingen" shortcut="Ctrl+4" />
       {isAdmin && (
         <SidebarItem to="/admin" icon={<ShieldPersonRegular />} label="Beheer" />
       )}
+
+      <hr className="sidebar-divider" />
+
+      {/* Logout button */}
+      <button
+        onClick={handleLogout}
+        className="sidebar-item"
+        style={{ border: "none", width: "100%", textAlign: "left", cursor: "default", fontFamily: "inherit" }}
+        title="Uitloggen"
+      >
+        <span className="sidebar-item-icon"><SignOut24Regular /></span>
+        <span className="sidebar-item-label">Uitloggen</span>
+      </button>
     </nav>
   );
 }

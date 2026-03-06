@@ -17,6 +17,8 @@ function extractMessage(err: unknown): string {
   return "Inloggen mislukt";
 }
 
+type LoginView = "login" | "2fa" | "reset-request" | "reset-verify" | "reset-complete";
+
 export function LoginPage() {
   const navigate = useNavigate();
   const { setToken, setUser } = useAuthStore();
@@ -26,6 +28,13 @@ export function LoginPage() {
   const [tempToken, setTempToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [view, setView] = useState<LoginView>("login");
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetCode, setResetCode] = useState("");
+  const [resetToken, setResetToken] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -35,8 +44,8 @@ export function LoginPage() {
       const response = await api.login(email, password);
       if (response.requires_2fa && response.temp_token) {
         setTempToken(response.temp_token);
+        setView("2fa");
       } else {
-        // Decode role from JWT if not in response
         const userWithRole = response.user ?? decodeUserFromToken(response.token);
         setToken(response.token);
         setUser(userWithRole);
@@ -67,8 +76,71 @@ export function LoginPage() {
     }
   }
 
+  async function handleResetRequest(e: React.FormEvent) {
+    e.preventDefault();
+    setIsLoading(true);
+    setError(null);
+    try {
+      await api.requestPasswordReset(resetEmail);
+      setView("reset-verify");
+    } catch (err) {
+      setError(extractMessage(err));
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function handleResetVerify(e: React.FormEvent) {
+    e.preventDefault();
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await api.verifyPasswordReset(resetEmail, resetCode);
+      setResetToken(result.reset_token);
+      setView("reset-complete");
+    } catch (err) {
+      setError(extractMessage(err));
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function handleResetComplete(e: React.FormEvent) {
+    e.preventDefault();
+    if (newPassword !== confirmPassword) {
+      setError("Wachtwoorden komen niet overeen");
+      return;
+    }
+    setIsLoading(true);
+    setError(null);
+    try {
+      await api.completePasswordReset(resetToken, newPassword);
+      setSuccessMessage("Wachtwoord succesvol gewijzigd. Je kunt nu inloggen.");
+      setView("login");
+      setResetEmail("");
+      setResetCode("");
+      setResetToken("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (err) {
+      setError(extractMessage(err));
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  function backToLogin() {
+    setView("login");
+    setError(null);
+    setSuccessMessage(null);
+    setTempToken(null);
+    setTwoFactorCode("");
+    setResetEmail("");
+    setResetCode("");
+  }
+
   return (
-    <div className="page-scroll">
+    <div className="app-shell" style={{ borderRadius: 8, overflow: "hidden" }}>
       {/* Title bar with window controls and YingaBar */}
       <TitleBar />
 
@@ -84,6 +156,13 @@ export function LoginPage() {
             <h1 className="text-accent login-title">Transcript Studio</h1>
           </div>
 
+          {/* Success message */}
+          {successMessage && (
+            <div className="error-banner" style={{ background: "var(--accent-bg-accent)", color: "var(--text-success)", borderColor: "var(--status-success)" }}>
+              {successMessage}
+            </div>
+          )}
+
           {/* Error */}
           {error && (
             <div className="error-banner">
@@ -93,7 +172,7 @@ export function LoginPage() {
 
           {/* Form */}
           <div className="card-elevated login-card">
-            {!tempToken ? (
+            {view === "login" && (
               <form onSubmit={handleLogin} className="login-form">
                 <FormField label="E-mailadres">
                   <input
@@ -125,8 +204,18 @@ export function LoginPage() {
                 >
                   {isLoading ? "Inloggen..." : "Inloggen"}
                 </button>
+
+                <button
+                  type="button"
+                  onClick={() => { setView("reset-request"); setError(null); setSuccessMessage(null); }}
+                  className="btn btn-ghost login-btn-back"
+                >
+                  Wachtwoord vergeten?
+                </button>
               </form>
-            ) : (
+            )}
+
+            {view === "2fa" && (
               <form onSubmit={handle2FA} className="login-form">
                 <FormField label="Authenticatiecode">
                   <input
@@ -156,7 +245,126 @@ export function LoginPage() {
 
                 <button
                   type="button"
-                  onClick={() => { setTempToken(null); setTwoFactorCode(""); }}
+                  onClick={backToLogin}
+                  className="btn btn-ghost login-btn-back"
+                >
+                  Terug naar inloggen
+                </button>
+              </form>
+            )}
+
+            {view === "reset-request" && (
+              <form onSubmit={handleResetRequest} className="login-form">
+                <p className="text-caption" style={{ marginBottom: 8, color: "var(--text-secondary)" }}>
+                  Voer je e-mailadres in. Je ontvangt een verificatiecode om je wachtwoord te resetten.
+                </p>
+                <FormField label="E-mailadres">
+                  <input
+                    type="email"
+                    value={resetEmail}
+                    onChange={(e) => setResetEmail(e.target.value)}
+                    required
+                    autoFocus
+                    placeholder="naam@bedrijf.nl"
+                    className="input"
+                  />
+                </FormField>
+
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="btn btn-accent login-btn"
+                >
+                  {isLoading ? "Versturen..." : "Code versturen"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={backToLogin}
+                  className="btn btn-ghost login-btn-back"
+                >
+                  Terug naar inloggen
+                </button>
+              </form>
+            )}
+
+            {view === "reset-verify" && (
+              <form onSubmit={handleResetVerify} className="login-form">
+                <p className="text-caption" style={{ marginBottom: 8, color: "var(--text-secondary)" }}>
+                  Voer de verificatiecode in die naar {resetEmail} is gestuurd.
+                </p>
+                <FormField label="Verificatiecode">
+                  <input
+                    type="text"
+                    value={resetCode}
+                    onChange={(e) => setResetCode(e.target.value.replace(/\D/g, ""))}
+                    required
+                    autoFocus
+                    maxLength={6}
+                    placeholder="000000"
+                    className="input"
+                    style={{
+                      textAlign: "center",
+                      fontSize: 24,
+                      letterSpacing: "0.4em",
+                    }}
+                  />
+                </FormField>
+
+                <button
+                  type="submit"
+                  disabled={isLoading || resetCode.length < 4}
+                  className="btn btn-accent login-btn"
+                >
+                  {isLoading ? "Verifiëren..." : "Verifiëren"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={backToLogin}
+                  className="btn btn-ghost login-btn-back"
+                >
+                  Terug naar inloggen
+                </button>
+              </form>
+            )}
+
+            {view === "reset-complete" && (
+              <form onSubmit={handleResetComplete} className="login-form">
+                <FormField label="Nieuw wachtwoord">
+                  <input
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    required
+                    autoFocus
+                    placeholder="••••••••"
+                    className="input"
+                  />
+                </FormField>
+
+                <FormField label="Bevestig wachtwoord">
+                  <input
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                    placeholder="••••••••"
+                    className="input"
+                  />
+                </FormField>
+
+                <button
+                  type="submit"
+                  disabled={isLoading || !newPassword || !confirmPassword}
+                  className="btn btn-accent login-btn"
+                >
+                  {isLoading ? "Opslaan..." : "Wachtwoord opslaan"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={backToLogin}
                   className="btn btn-ghost login-btn-back"
                 >
                   Terug naar inloggen
@@ -165,12 +373,9 @@ export function LoginPage() {
             )}
           </div>
 
-          {/* Footer */}
-          <div className="login-footer">
-            <YingaFooter />
-          </div>
         </div>
       </div>
+      <YingaFooter />
     </div>
   );
 }

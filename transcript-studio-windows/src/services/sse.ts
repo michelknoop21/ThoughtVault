@@ -54,22 +54,24 @@ export class SSEClient {
   }
 }
 
+/** Safely extract a string value, skipping objects/arrays. */
+function safeStr(val: unknown): string | undefined {
+  if (typeof val === "string") return val;
+  return undefined;
+}
+
 function normalizeTaskUpdate(raw: Record<string, unknown>): Partial<TranscriptTask> {
   return {
     task_id: String(raw.task_id ?? ""),
     status: raw.status as TranscriptTask["status"],
     progress: Number(raw.progress ?? 0),
-    raw_transcription:
-      (raw.raw_transcription as string | undefined)
-      ?? (raw.transcription as string | undefined),
-    notule_html:
-      (raw.notule_html as string | undefined)
-      ?? (raw.result as string | undefined),
-    error_message: raw.error_message as string | undefined,
+    raw_transcription: safeStr(raw.raw_transcription) ?? safeStr(raw.transcription),
+    notule_html: safeStr(raw.notule_html) ?? safeStr(raw.result),
+    error_message: safeStr(raw.error_message),
     duration_seconds: typeof raw.duration_seconds === "number" ? raw.duration_seconds : undefined,
     mode: (raw.mode as TranscriptTask["mode"]) ?? "microphone",
     created_at: String(raw.created_at ?? new Date().toISOString()),
-    profile_id: raw.profile_id as string | undefined,
+    profile_id: safeStr(raw.profile_id),
   };
 }
 

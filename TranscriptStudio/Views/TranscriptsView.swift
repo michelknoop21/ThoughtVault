@@ -26,6 +26,9 @@ struct TranscriptsView: View {
 
     @Environment(RecordingViewModel.self) var recordingVM
 
+    /// Current sidebar tab — used to dismiss detail view on tab change.
+    var selectedTab: AppTab = .transcripts
+
     // MARK: State — list
 
     @State private var transcripts: [Transcript] = []
@@ -163,6 +166,11 @@ struct TranscriptsView: View {
             Text("Deze transcriptie wordt permanent verwijderd.")
         }
         .task { await loadTranscripts() }
+        .onChange(of: selectedTab) { _, newTab in
+            if newTab != .transcripts {
+                selectedTranscript = nil
+            }
+        }
     }
 
     // MARK: - Background blobs
@@ -928,25 +936,44 @@ struct TranscriptDetailView: View {
         self._fullTranscript = State(initialValue: transcript)
     }
 
+    // MARK: State — loading
+
+    @State private var isLoadingDetail = true
+
     // MARK: Body
 
     var body: some View {
         VStack(spacing: 0) {
-            // Header bar: meta info + action buttons
-            VStack(spacing: TS.Spacing.xs) {
-                progressBanners
-                tagsSection
-                actionButtons
+            // Progress / error banners
+            progressBanners
+                .padding(.horizontal, TS.Spacing.md)
+                .padding(.top, TS.Spacing.sm)
+
+            // Header: tags + action bar + tab bar
+            VStack(spacing: TS.Spacing.sm) {
+                headerBar
                 tabBar
             }
-            .padding(.horizontal, TS.Spacing.md)
-            .padding(.vertical, TS.Spacing.sm)
+            .padding(.top, TS.Spacing.sm)
             .background(Color.surfacePrimary)
             .overlay(alignment: .bottom) { Divider() }
 
             // Content fills remaining space
-            contentArea
+            if isLoadingDetail {
+                VStack(spacing: TS.Spacing.sm) {
+                    Spacer()
+                    ProgressView()
+                        .scaleEffect(0.9)
+                    Text("Laden...")
+                        .font(TS.Font.footnote)
+                        .foregroundStyle(Color.labelTertiary)
+                    Spacer()
+                }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                contentArea
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
         }
         .navigationTitle(fullTranscript.title)
         #if os(iOS)
@@ -972,6 +999,7 @@ struct TranscriptDetailView: View {
             .environment(recordingVM)
         }
         .task {
+            isLoadingDetail = true
             do {
                 fullTranscript = try await APIService.shared.getTranscript(taskId: transcript.taskId)
                 logger.info("Detail fetch success for \(transcript.taskId): notuleHtml=\(fullTranscript.notuleHtml != nil), rawTranscription=\(fullTranscript.rawTranscription != nil)")
@@ -985,11 +1013,34 @@ struct TranscriptDetailView: View {
                         logger.info("Loaded notule from /notes endpoint for \(transcript.taskId)")
                     }
                 }
+
+                // Auto-select appropriate tab
+                let finalHasNotule = !(fullTranscript.notuleHtml ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                let finalHasRaw = !(fullTranscript.rawTranscription ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                if !finalHasNotule && finalHasRaw {
+                    selectedTab = .raw
+                }
             } catch {
                 logger.error("Detail fetch failed for \(transcript.taskId): \(error)")
                 errorMessage = error.localizedDescription
             }
+            isLoadingDetail = false
         }
+    }
+
+    // MARK: - Header bar (tags on left, actions on right)
+
+    private var headerBar: some View {
+        HStack(alignment: .center, spacing: TS.Spacing.sm) {
+            // Tags on the left
+            tagsSection
+
+            Spacer(minLength: TS.Spacing.sm)
+
+            // Action buttons on the right
+            actionButtons
+        }
+        .padding(.horizontal, TS.Spacing.md)
     }
 
     // MARK: - Progress banners
@@ -1066,88 +1117,82 @@ struct TranscriptDetailView: View {
     // MARK: - Tags section
 
     private var tagsSection: some View {
-        VStack(alignment: .leading, spacing: TS.Spacing.xs) {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: TS.Spacing.xs) {
-                    ForEach(fullTranscript.tags, id: \.self) { tag in
-                        HStack(spacing: 4) {
-                            Text(tag)
-                                .font(TS.Font.captionMedium)
-                                .foregroundStyle(Color.brandSecondary)
-                            Button {
-                                Task { await removeTag(tag) }
-                            } label: {
-                                Image(systemName: "xmark")
-                                    .font(.system(size: 9, weight: .bold))
-                                    .foregroundStyle(Color.brandSecondary.opacity(0.70))
-                            }
-                            .buttonStyle(.plain)
-                        }
-                        .padding(.horizontal, TS.Spacing.sm)
-                        .padding(.vertical, 5)
-                        .background {
-                            Capsule().fill(Color.accentBgSecondary)
-                                .overlay { Capsule().stroke(Color.brandSecondary.opacity(0.25), lineWidth: 1) }
-                        }
-                    }
-
-                    if showAddTagField {
-                        HStack(spacing: 4) {
-                            TextField("Nieuw tag", text: $newTagText)
-                                .font(TS.Font.captionMedium)
-                                .textFieldStyle(.plain)
-                                .frame(width: 90)
-                                .onSubmit { Task { await confirmAddTag() } }
-
-                            Button {
-                                Task { await confirmAddTag() }
-                            } label: {
-                                Image(systemName: "checkmark")
-                                    .font(.system(size: 10, weight: .bold))
-                                    .foregroundStyle(Color.brandAccent)
-                            }
-                            .buttonStyle(.plain)
-                            .accessibilityLabel("Tag toevoegen")
-
-                            Button {
-                                newTagText = ""
-                                showAddTagField = false
-                            } label: {
-                                Image(systemName: "xmark")
-                                    .font(.system(size: 10, weight: .bold))
-                                    .foregroundStyle(Color.labelTertiary)
-                            }
-                            .buttonStyle(.plain)
-                            .accessibilityLabel("Annuleren")
-                        }
-                        .padding(.horizontal, TS.Spacing.sm)
-                        .padding(.vertical, 5)
-                        .background {
-                            Capsule().fill(Color.surfaceSecondary)
-                                .overlay { Capsule().stroke(Color.borderPrimary, lineWidth: 1) }
-                        }
-                    } else {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: TS.Spacing.xs) {
+                ForEach(fullTranscript.tags, id: \.self) { tag in
+                    HStack(spacing: 4) {
+                        Text(tag)
+                            .font(TS.Font.captionMedium)
+                            .foregroundStyle(Color.brandSecondary)
                         Button {
-                            withAnimation(TS.Animation.smooth) {
-                                showAddTagField = true
-                            }
+                            Task { await removeTag(tag) }
                         } label: {
-                            HStack(spacing: 3) {
-                                Image(systemName: "plus")
-                                    .font(.system(size: 10, weight: .bold))
-                                Text("Tag")
-                                    .font(TS.Font.captionMedium)
-                            }
-                            .foregroundStyle(Color.labelSecondary)
-                            .padding(.horizontal, TS.Spacing.sm)
-                            .padding(.vertical, 5)
-                            .background {
-                                Capsule().fill(Color.surfaceTertiary)
-                                    .overlay { Capsule().stroke(Color.borderPrimary, lineWidth: 1) }
-                            }
+                            Image(systemName: "xmark")
+                                .font(.system(size: 8, weight: .bold))
+                                .foregroundStyle(Color.brandSecondary.opacity(0.55))
                         }
                         .buttonStyle(.plain)
                     }
+                    .padding(.horizontal, TS.Spacing.sm)
+                    .padding(.vertical, 4)
+                    .background {
+                        Capsule().fill(Color.accentBgSecondary)
+                            .overlay { Capsule().stroke(Color.brandSecondary.opacity(0.20), lineWidth: 1) }
+                    }
+                }
+
+                if showAddTagField {
+                    HStack(spacing: 4) {
+                        TextField("Tag...", text: $newTagText)
+                            .font(TS.Font.captionMedium)
+                            .textFieldStyle(.plain)
+                            .frame(width: 80)
+                            .onSubmit { Task { await confirmAddTag() } }
+
+                        Button {
+                            Task { await confirmAddTag() }
+                        } label: {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 9, weight: .bold))
+                                .foregroundStyle(Color.brandAccent)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Tag toevoegen")
+
+                        Button {
+                            newTagText = ""
+                            showAddTagField = false
+                        } label: {
+                            Image(systemName: "xmark")
+                                .font(.system(size: 9, weight: .bold))
+                                .foregroundStyle(Color.labelTertiary)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Annuleren")
+                    }
+                    .padding(.horizontal, TS.Spacing.sm)
+                    .padding(.vertical, 4)
+                    .background {
+                        Capsule().fill(Color.surfaceSecondary)
+                            .overlay { Capsule().stroke(Color.brandPrimary.opacity(0.3), lineWidth: 1) }
+                    }
+                } else {
+                    Button {
+                        withAnimation(TS.Animation.smooth) {
+                            showAddTagField = true
+                        }
+                    } label: {
+                        Image(systemName: "plus")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(Color.labelTertiary)
+                            .frame(width: 24, height: 24)
+                            .background {
+                                Circle().fill(Color.surfaceTertiary)
+                                    .overlay { Circle().stroke(Color.borderPrimary, lineWidth: 1) }
+                            }
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Tag toevoegen")
                 }
             }
         }
@@ -1156,105 +1201,14 @@ struct TranscriptDetailView: View {
     // MARK: - Action buttons
 
     private var actionButtons: some View {
-        HStack(spacing: TS.Spacing.sm) {
-            // Primary "Deel & Exporteer" button (orange, prominent)
-            Menu {
-                Button {
-                    shareContent()
-                } label: {
-                    Label("Delen...", systemImage: "square.and.arrow.up")
-                }
-                Divider()
-                Button {
-                    exportAsPDF()
-                } label: {
-                    Label("Exporteer als PDF", systemImage: "doc.richtext")
-                }
-                Button {
-                    exportAsMarkdown()
-                } label: {
-                    Label("Exporteer als Markdown", systemImage: "doc.plaintext")
-                }
-                Button {
-                    exportAsTXT()
-                } label: {
-                    Label("Exporteer als TXT", systemImage: "doc.text")
-                }
-                Divider()
-                Button {
-                    copyContent()
-                } label: {
-                    Label("Kopieer", systemImage: "doc.on.doc")
-                }
-            } label: {
-                HStack(spacing: TS.Spacing.xs) {
-                    Image(systemName: "square.and.arrow.up")
-                        .font(.system(size: 14, weight: .semibold))
-                    Text("Deel & Exporteer")
-                        .font(TS.Font.footnoteSemibold)
-                }
-                .foregroundStyle(.white)
-                .padding(.horizontal, TS.Spacing.md)
-                .padding(.vertical, TS.Spacing.sm + 2)
-                .background {
-                    Capsule(style: .continuous)
-                        .fill(Color.brandOrange)
-                        .shadow(color: Color.brandOrange.opacity(0.35), radius: 8, y: 3)
-                }
-            }
-            .menuStyle(.borderlessButton)
-            .fixedSize()
-
-            // Edit notule content button
-            if !isEditingNotule, let html = fullTranscript.notuleHtml, !html.isEmpty {
-                Button {
-                    editedHTML = html
-                    withAnimation(TS.Animation.smooth) {
-                        isEditingNotule = true
-                        selectedTab = .notule
-                    }
-                } label: {
-                    HStack(spacing: TS.Spacing.xs) {
-                        Image(systemName: "pencil")
-                            .font(.system(size: 12, weight: .semibold))
-                        Text("Bewerken")
-                            .font(TS.Font.captionSemibold)
-                    }
-                    .foregroundStyle(Color.brandSecondary)
-                    .padding(.horizontal, TS.Spacing.sm)
-                    .padding(.vertical, TS.Spacing.xs + 2)
-                    .background {
-                        Capsule().fill(Color.accentBgSecondary)
-                            .overlay { Capsule().stroke(Color.brandSecondary.opacity(0.25), lineWidth: 1) }
-                    }
-                }
-                .buttonStyle(.plain)
-            }
-
-            // Edit title button
-            Button {
-                pendingTitle = fullTranscript.title
-                showTitleEditAlert = true
-            } label: {
-                Image(systemName: "character.cursor.ibeam")
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundStyle(Color.labelSecondary)
-                    .frame(width: 36, height: 36)
-                    .background {
-                        Circle().fill(Color.surfaceSecondary)
-                            .shadow(color: .black.opacity(0.06), radius: 4, y: 1)
-                    }
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Titel bewerken")
-
-            Spacer()
-
-            // Regenereer button (pill)
+        HStack(spacing: TS.Spacing.xs) {
+            // Regenerate (AI action — prominent)
             if isRegenerating {
                 HStack(spacing: TS.Spacing.xs) {
-                    ProgressView().scaleEffect(0.7).tint(Color.brandPrimary)
-                    Text("Genereren...").font(TS.Font.captionSemibold).foregroundStyle(Color.brandPrimary)
+                    ProgressView().scaleEffect(0.65).tint(Color.brandPrimary)
+                    Text("Genereren...")
+                        .font(TS.Font.captionSemibold)
+                        .foregroundStyle(Color.brandPrimary)
                 }
                 .padding(.horizontal, TS.Spacing.sm)
                 .padding(.vertical, TS.Spacing.xs + 2)
@@ -1265,20 +1219,86 @@ struct TranscriptDetailView: View {
                     showProfileSheet = true
                 } label: {
                     HStack(spacing: TS.Spacing.xs) {
-                        Image(systemName: "sparkles").font(.system(size: 12, weight: .semibold))
-                        Text("Regenereer").font(TS.Font.captionSemibold)
+                        Image(systemName: "sparkles")
+                            .font(.system(size: 11, weight: .semibold))
+                        Text("Regenereer")
+                            .font(TS.Font.captionSemibold)
                     }
                     .foregroundStyle(Color.brandPrimary)
                     .padding(.horizontal, TS.Spacing.sm)
                     .padding(.vertical, TS.Spacing.xs + 2)
                     .background {
                         Capsule().fill(Color.accentBgPrimary)
-                            .overlay { Capsule().stroke(Color.brandPrimary.opacity(0.25), lineWidth: 1) }
+                            .overlay { Capsule().stroke(Color.brandPrimary.opacity(0.20), lineWidth: 1) }
                     }
                 }
                 .buttonStyle(.plain)
             }
+
+            // Edit notule
+            if !isEditingNotule, let html = fullTranscript.notuleHtml, !html.isEmpty {
+                detailIconButton(icon: "pencil", label: "Bewerken") {
+                    editedHTML = html
+                    withAnimation(TS.Animation.smooth) {
+                        isEditingNotule = true
+                        selectedTab = .notule
+                    }
+                }
+            }
+
+            // Edit title
+            detailIconButton(icon: "character.cursor.ibeam", label: "Titel bewerken") {
+                pendingTitle = fullTranscript.title
+                showTitleEditAlert = true
+            }
+
+            // Export menu
+            Menu {
+                Button { shareContent() } label: {
+                    Label("Delen...", systemImage: "square.and.arrow.up")
+                }
+                Divider()
+                Button { exportAsPDF() } label: {
+                    Label("PDF", systemImage: "doc.richtext")
+                }
+                Button { exportAsMarkdown() } label: {
+                    Label("Markdown", systemImage: "doc.plaintext")
+                }
+                Button { exportAsTXT() } label: {
+                    Label("Platte tekst", systemImage: "doc.text")
+                }
+                Divider()
+                Button { copyContent() } label: {
+                    Label("Kopieer tekst", systemImage: "doc.on.doc")
+                }
+            } label: {
+                Image(systemName: "square.and.arrow.up")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(Color.labelSecondary)
+                    .frame(width: 30, height: 30)
+                    .background {
+                        Circle().fill(Color.surfaceSecondary)
+                            .overlay { Circle().stroke(Color.borderPrimary, lineWidth: 1) }
+                    }
+            }
+            .menuStyle(.borderlessButton)
+            .fixedSize()
         }
+    }
+
+    private func detailIconButton(icon: String, label: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(Color.labelSecondary)
+                .frame(width: 30, height: 30)
+                .background {
+                    Circle().fill(Color.surfaceSecondary)
+                        .overlay { Circle().stroke(Color.borderPrimary, lineWidth: 1) }
+                }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
     }
 
     // MARK: - Tab bar
@@ -1293,16 +1313,14 @@ struct TranscriptDetailView: View {
             if hasNotule || hasRaw {
                 HStack(spacing: 0) {
                     if hasNotule {
-                        tabBarButton(.notule, icon: "doc.text.fill", label: "Notule")
+                        tabBarButton(.notule, icon: "doc.text.fill", label: "Notulen")
                     }
                     if hasRaw {
                         tabBarButton(.raw, icon: "waveform", label: "Transcriptie")
                     }
                     Spacer()
                 }
-                .overlay(alignment: .bottom) {
-                    Divider()
-                }
+                .padding(.horizontal, TS.Spacing.md)
             }
         }
     }
@@ -1314,23 +1332,23 @@ struct TranscriptDetailView: View {
                 selectedTab = tab
             }
         } label: {
-            VStack(spacing: TS.Spacing.xs) {
+            VStack(spacing: 0) {
                 HStack(spacing: TS.Spacing.xs) {
                     Image(systemName: icon)
-                        .font(.system(size: 13, weight: .medium))
+                        .font(.system(size: 12, weight: .medium))
                     Text(label)
                         .font(TS.Font.footnoteSemibold)
                 }
                 .foregroundStyle(isActive ? Color.brandPrimary : Color.labelTertiary)
-                .padding(.horizontal, TS.Spacing.sm)
-                .padding(.vertical, TS.Spacing.xs)
+                .padding(.horizontal, TS.Spacing.md)
+                .padding(.vertical, TS.Spacing.sm)
 
-                ZStack {
+                ZStack(alignment: .bottom) {
                     Rectangle().fill(Color.clear).frame(height: 2)
                     if isActive {
-                        Rectangle()
+                        RoundedRectangle(cornerRadius: 1)
                             .fill(Color.brandPrimary)
-                            .frame(height: 2)
+                            .frame(height: 2.5)
                             .matchedGeometryEffect(id: "detail_tab_indicator", in: detailTabNamespace)
                     }
                 }
@@ -1440,12 +1458,11 @@ struct TranscriptDetailView: View {
     private var rawTranscriptView: some View {
         if let raw = fullTranscript.rawTranscription, !raw.isEmpty {
             ScrollView {
-                VStack(alignment: .leading, spacing: TS.Spacing.sm) {
-                    HStack {
-                        Text("RUWE TRANSCRIPTIE")
-                            .font(TS.Font.microBold)
+                VStack(alignment: .leading, spacing: TS.Spacing.md) {
+                    HStack(alignment: .center) {
+                        Label("Ruwe transcriptie", systemImage: "waveform")
+                            .font(TS.Font.captionSemibold)
                             .foregroundStyle(Color.labelTertiary)
-                            .kerning(1.5)
                         Spacer()
                         Button {
                             #if os(macOS)
@@ -1462,17 +1479,24 @@ struct TranscriptDetailView: View {
                                     .font(TS.Font.captionSemibold)
                             }
                             .foregroundStyle(Color.brandPrimary)
+                            .padding(.horizontal, TS.Spacing.sm)
+                            .padding(.vertical, TS.Spacing.xs)
+                            .background {
+                                Capsule().fill(Color.accentBgPrimary)
+                            }
                         }
                         .buttonStyle(.plain)
                     }
 
                     Text(raw)
-                        .font(TS.Font.body)
+                        .font(.system(size: 14.5, weight: .regular))
                         .foregroundStyle(Color.labelPrimary)
+                        .lineSpacing(6)
                         .textSelection(.enabled)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .padding(TS.Spacing.lg)
+                .padding(.horizontal, TS.Spacing.lg)
+                .padding(.vertical, TS.Spacing.lg)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
@@ -1494,13 +1518,10 @@ struct TranscriptDetailView: View {
 
     @ToolbarContentBuilder
     private var detailToolbar: some ToolbarContent {
+        // Intentionally empty — all actions are in the header bar.
+        // NavigationStack provides the back button automatically.
         ToolbarItem(placement: .primaryAction) {
-            Button {
-                copyContent()
-            } label: {
-                Image(systemName: "doc.on.doc")
-            }
-            .accessibilityLabel("Kopieer inhoud")
+            EmptyView()
         }
     }
 
@@ -1647,16 +1668,18 @@ struct TranscriptDetailView: View {
         <!DOCTYPE html>
         <html><head><meta charset="utf-8">
         <style>
-        body { font-family: -apple-system, Helvetica Neue, Arial, sans-serif; font-size: 12pt; line-height: 1.6; color: #1a1a1a; margin: 0; padding: 20pt; }
-        h1 { font-size: 18pt; font-weight: 700; color: #E50074; margin-bottom: 12pt; }
-        h2 { font-size: 14pt; font-weight: 600; margin-top: 16pt; }
-        h3 { font-size: 12pt; font-weight: 600; margin-top: 12pt; }
-        p  { margin: 6pt 0; }
-        ul, ol { margin: 6pt 0; padding-left: 20pt; }
-        li { margin: 3pt 0; }
-        table { border-collapse: collapse; width: 100%; margin: 12pt 0; }
-        th, td { border: 1px solid #ddd; padding: 6pt 8pt; text-align: left; }
-        th { background: #f5f5f5; font-weight: 600; }
+        body { font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif; font-size: 11.5pt; line-height: 1.65; color: #2c2c30; margin: 0; padding: 28pt 36pt; }
+        h1 { font-size: 18pt; font-weight: 700; color: #E50074; margin-bottom: 14pt; padding-bottom: 8pt; border-bottom: 1.5pt solid rgba(229,0,116,0.15); }
+        h2 { font-size: 14pt; font-weight: 650; margin-top: 20pt; margin-bottom: 8pt; }
+        h3 { font-size: 12pt; font-weight: 600; color: #555; margin-top: 16pt; margin-bottom: 6pt; }
+        p { margin: 7pt 0; }
+        ul, ol { margin: 7pt 0; padding-left: 22pt; }
+        li { margin: 4pt 0; }
+        strong { font-weight: 600; }
+        table { border-collapse: collapse; width: 100%; margin: 14pt 0; }
+        th, td { border: 1px solid #e0e0e0; padding: 7pt 10pt; text-align: left; font-size: 10.5pt; }
+        th { background: #f8f8fa; font-weight: 600; font-size: 9.5pt; text-transform: uppercase; letter-spacing: 0.4pt; color: #666; }
+        blockquote { border-left: 2.5pt solid #E50074; margin: 12pt 0; padding: 8pt 16pt; background: #fef6fb; }
         </style>
         </head><body>\(html)</body></html>
         """

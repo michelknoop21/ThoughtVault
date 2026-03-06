@@ -191,6 +191,45 @@ export interface QueuedUpload {
   retry_count: number;
 }
 
+// 2FA
+export interface TwoFAStatus {
+  enabled: boolean;
+  backup_codes_remaining?: number;
+}
+
+export interface TwoFASetupResponse {
+  qr_code: string;
+  secret: string;
+}
+
+export interface TwoFAVerifyResponse {
+  backup_codes: string[];
+}
+
+// Feedback (user-facing)
+export interface FeedbackSubmission {
+  category: "bug" | "feature" | "general";
+  title: string;
+  description: string;
+}
+
+export interface UserFeedback {
+  id: string;
+  category: string;
+  title: string;
+  description: string;
+  status: string;
+  response?: string;
+  created_at: string;
+}
+
+// Version check
+export interface VersionCheck {
+  minimum_version: string;
+  current_version: string;
+  is_supported: boolean;
+}
+
 // Settings
 export interface AppSettings {
   server_url: string;

@@ -18,6 +18,9 @@ import {
   TextDescription24Regular,
   Code24Regular,
   Copy24Regular,
+  Add24Regular,
+  CheckboxChecked24Regular,
+  CheckboxUnchecked24Regular,
 } from "@fluentui/react-icons";
 import { marked } from "marked";
 import { useTranscriptsStore } from "../stores/transcriptsStore";
@@ -58,7 +61,14 @@ export function TranscriptsPage() {
   const [editedHTML, setEditedHTML] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [tagsDialogId, setTagsDialogId] = useState<string | null>(null);
+  const [newTagInput, setNewTagInput] = useState("");
+  const [availableTags, setAvailableTags] = useState<string[]>([]);
+  const [bulkSelected, setBulkSelected] = useState<Set<string>>(new Set());
+  const [bulkMode, setBulkMode] = useState(false);
   const toast = useToast();
+  const isLoading = useTranscriptsStore((s) => s.isLoading);
   const editInputRef = useRef<HTMLInputElement>(null);
   const editorRef = useRef<HTMLDivElement>(null);
   const exportBtnRef = useRef<HTMLButtonElement>(null);
@@ -89,9 +99,17 @@ export function TranscriptsPage() {
 
   async function loadTranscripts() {
     setIsLoading(true);
-    const data = await api.getTranscripts({ search: searchQuery });
-    setTranscripts(data);
-    setIsLoading(false);
+    setLoadError(null);
+    try {
+      const data = await api.getTranscripts();
+      setTranscripts(data);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Laden mislukt";
+      setLoadError(msg);
+      toast.show("Notulen laden mislukt: " + msg, "error");
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   function closeContextMenu() {
@@ -114,8 +132,10 @@ export function TranscriptsPage() {
     try {
       await api.deleteTranscript(transcript.id);
       deleteTranscript(transcript.id);
+      toast.show("Verwijderd", "success");
     } catch (err) {
-      console.error("Delete failed:", err);
+      const msg = err instanceof Error ? err.message : "Verwijderen mislukt";
+      toast.show(msg, "error");
     }
   }
 
@@ -127,9 +147,9 @@ export function TranscriptsPage() {
   async function saveEdit(id: string) {
     try {
       const updated = await api.updateTranscript(id, { title: editTitle });
-      updateTranscript(id, { title: updated.title });
+      updateTranscript(id, { title: updated.title || editTitle });
     } catch (err) {
-      console.error("Update failed:", err);
+      toast.show("Naam opslaan mislukt", "error");
     } finally {
       setEditingId(null);
     }
@@ -190,8 +210,9 @@ export function TranscriptsPage() {
           }, 8000);
         }
       );
-    } catch {
+    } catch (err) {
       setRegeneratingId(null);
+      toast.show("Hertranscriberen mislukt", "error");
     }
   }
 
@@ -254,6 +275,78 @@ ${transcript.notule_html}
     });
   }, [toast]);
 
+  // --- Tags management ---
+  async function openTagsDialog(transcriptId: string) {
+    setTagsDialogId(transcriptId);
+    setNewTagInput("");
+    try {
+      const tags = await api.getAllTags();
+      setAvailableTags(tags);
+    } catch {
+      // Use tags from current transcripts as fallback
+      setAvailableTags(Array.from(new Set(transcripts.flatMap((t) => t.tags))));
+    }
+  }
+
+  async function handleAddTag(transcriptId: string, tag: string) {
+    const trimmed = tag.trim();
+    if (!trimmed) return;
+    try {
+      await api.updateTranscriptTags(transcriptId, [trimmed], []);
+      const transcript = transcripts.find((t) => t.id === transcriptId);
+      if (transcript && !transcript.tags.includes(trimmed)) {
+        updateTranscript(transcriptId, { tags: [...transcript.tags, trimmed] });
+      }
+      setNewTagInput("");
+    } catch {
+      toast.show("Tag toevoegen mislukt", "error");
+    }
+  }
+
+  async function handleRemoveTag(transcriptId: string, tag: string) {
+    try {
+      await api.updateTranscriptTags(transcriptId, [], [tag]);
+      const transcript = transcripts.find((t) => t.id === transcriptId);
+      if (transcript) {
+        updateTranscript(transcriptId, { tags: transcript.tags.filter((t) => t !== tag) });
+      }
+    } catch {
+      toast.show("Tag verwijderen mislukt", "error");
+    }
+  }
+
+  // --- Bulk operations ---
+  function toggleBulkSelect(id: string) {
+    setBulkSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function selectAllFiltered() {
+    if (bulkSelected.size === filteredTranscripts.length) {
+      setBulkSelected(new Set());
+    } else {
+      setBulkSelected(new Set(filteredTranscripts.map((t) => t.id)));
+    }
+  }
+
+  async function handleBulkDelete() {
+    if (bulkSelected.size === 0) return;
+    const ids = Array.from(bulkSelected);
+    try {
+      await api.bulkDeleteTranscripts(ids);
+      ids.forEach((id) => deleteTranscript(id));
+      setBulkSelected(new Set());
+      setBulkMode(false);
+      toast.show(`${ids.length} items verwijderd`, "success");
+    } catch {
+      toast.show("Bulk verwijderen mislukt", "error");
+    }
+  }
+
   function filterByTime(transcript: Transcript): boolean {
     if (timeFilter === "alles") return true;
     const created = new Date(transcript.created_at);
@@ -300,11 +393,21 @@ ${transcript.notule_html}
   ];
 
   return (
-    <div className="flex-row" style={{ flex: 1, overflow: "hidden" }}>
+    <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
       {/* List panel */}
-      <div className="flex-col flex-shrink-0 transcripts-list-panel">
+      <div className="transcripts-list-panel">
         <div className="transcripts-list-header">
-          <h1 className="text-subtitle transcripts-list-title">Notulen & Transcripties</h1>
+          <div className="flex-row justify-between" style={{ alignItems: "center" }}>
+            <h1 className="text-subtitle transcripts-list-title" style={{ margin: 0 }}>Notulen & Transcripties</h1>
+            <button
+              className={`icon-btn icon-btn-sm${bulkMode ? " active" : ""}`}
+              onClick={() => { setBulkMode(!bulkMode); setBulkSelected(new Set()); }}
+              title="Selectiemodus"
+              style={bulkMode ? { color: "var(--fill-accent)" } : undefined}
+            >
+              <CheckboxChecked24Regular style={{ fontSize: 16 }} />
+            </button>
+          </div>
 
           <div className="search-box transcripts-search-margin">
             <Search24Regular className="text-tertiary flex-shrink-0 transcripts-icon-sm" />
@@ -366,8 +469,40 @@ ${transcript.notule_html}
           </div>
         )}
 
+        {bulkMode && (
+          <div className="flex-row gap-8 bulk-action-bar">
+            <button className="btn btn-sm" onClick={selectAllFiltered} style={{ fontSize: 11, padding: "3px 8px" }}>
+              {bulkSelected.size === filteredTranscripts.length ? "Deselecteer alles" : "Selecteer alles"}
+            </button>
+            {bulkSelected.size > 0 && (
+              <>
+                <span className="text-caption">{bulkSelected.size} geselecteerd</span>
+                <button
+                  className="btn btn-sm"
+                  style={{ fontSize: 11, padding: "3px 8px", color: "var(--text-error)" }}
+                  onClick={handleBulkDelete}
+                >
+                  <Delete24Regular style={{ fontSize: 12 }} />
+                  Verwijderen
+                </button>
+              </>
+            )}
+          </div>
+        )}
+
         <div className="flex-1 transcripts-list-scroll">
-          {filteredTranscripts.length === 0 ? (
+          {isLoading ? (
+            <div className="transcripts-empty-list">
+              <p className="text-caption text-secondary">Laden...</p>
+            </div>
+          ) : loadError ? (
+            <div className="transcripts-empty-list">
+              <p className="text-caption" style={{ color: "var(--fill-system-critical)" }}>{loadError}</p>
+              <button className="btn btn-sm" onClick={loadTranscripts} style={{ marginTop: 8 }}>
+                Opnieuw proberen
+              </button>
+            </div>
+          ) : filteredTranscripts.length === 0 ? (
             <div className="empty-state-text transcripts-empty-list">
               {mainTab === "notulen" ? "Geen notulen gevonden" : "Geen transcripties gevonden"}
             </div>
@@ -377,13 +512,25 @@ ${transcript.notule_html}
                 key={transcript.id}
                 className={`session-card${selectedId === transcript.id ? " active" : ""}`}
                 onClick={() => {
-                  setSelectedId(transcript.id);
-                  setDetailTab(mainTab === "notulen" ? "notule" : "transcriptie");
-                  setIsEditingNotule(false);
+                  if (bulkMode) {
+                    toggleBulkSelect(transcript.id);
+                  } else {
+                    setSelectedId(transcript.id);
+                    setDetailTab(mainTab === "notulen" ? "notule" : "transcriptie");
+                    setIsEditingNotule(false);
+                  }
                 }}
                 onContextMenu={(e) => handleContextMenu(e, transcript)}
               >
                 <div className="flex-row items-start justify-between gap-8">
+                  {bulkMode && (
+                    <span style={{ flexShrink: 0, marginTop: 2, color: bulkSelected.has(transcript.id) ? "var(--fill-accent)" : "var(--text-tertiary)" }}>
+                      {bulkSelected.has(transcript.id)
+                        ? <CheckboxChecked24Regular style={{ fontSize: 18 }} />
+                        : <CheckboxUnchecked24Regular style={{ fontSize: 18 }} />
+                      }
+                    </span>
+                  )}
                   <div className="flex-1">
                     {editingId === transcript.id ? (
                       <input
@@ -445,7 +592,7 @@ ${transcript.notule_html}
       </div>
 
       {/* Detail panel */}
-      <div className="flex-1 flex-col transcripts-detail-panel bg-blobs">
+      <div className="flex-1 transcripts-detail-panel bg-blobs">
         <div className="bg-blob bg-blob-blue" style={{ opacity: 0.5 }} />
         {selected ? (
           <>
@@ -496,7 +643,7 @@ ${transcript.notule_html}
                 {selected.tags.map((tag) => (
                   <span key={tag} className="tag-chip-pill">{tag}</span>
                 ))}
-                <button className="tag-chip-add" title="Tag toevoegen">+ Tag</button>
+                <button className="tag-chip-add" title="Tag toevoegen" onClick={() => openTagsDialog(selected.id)}>+ Tag</button>
               </div>
             </div>
 
@@ -667,7 +814,7 @@ ${transcript.notule_html}
                       </p>
                       <p className="section-label">RUWE TRANSCRIPTIE</p>
                       <div className="transcripts-transcription-body">
-                        {selected.raw_transcription}
+                        {typeof selected.raw_transcription === "string" ? selected.raw_transcription : ""}
                       </div>
                     </div>
                   ) : (
@@ -683,7 +830,7 @@ ${transcript.notule_html}
             </div>
           </>
         ) : (
-          <div className="flex-1 flex-col transcripts-empty-detail">
+          <div className="transcripts-empty-detail" style={{ flex: 1, display: "flex", flexDirection: "column" }}>
             <div className="text-center">
               <Tag24Regular className="transcripts-empty-icon" />
               <p className="empty-state-text">
@@ -741,7 +888,10 @@ ${transcript.notule_html}
           </button>
           <button
             className="context-menu-item"
-            onClick={() => setContextMenu(null)}
+            onClick={() => {
+              openTagsDialog(contextMenu.transcript.id);
+              setContextMenu(null);
+            }}
           >
             <Tag24Regular className="transcripts-icon-md" />
             Tags beheren
@@ -767,6 +917,98 @@ ${transcript.notule_html}
             <Delete24Regular className="transcripts-icon-md" />
             Verwijderen
           </button>
+        </div>
+      )}
+
+      {/* Tags dialog */}
+      {tagsDialogId && (
+        <div
+          style={{
+            position: "fixed", inset: 0, zIndex: 1000,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            background: "rgba(0,0,0,0.3)", backdropFilter: "blur(4px)",
+          }}
+          onClick={() => setTagsDialogId(null)}
+        >
+          <div
+            className="card"
+            style={{ width: "100%", maxWidth: 360, padding: 20, background: "var(--surface-primary)", margin: "0 16px" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12 }}>Tags beheren</h3>
+
+            {/* Current tags */}
+            <div className="flex-row gap-6" style={{ flexWrap: "wrap", marginBottom: 12 }}>
+              {transcripts.find((t) => t.id === tagsDialogId)?.tags.map((tag) => (
+                <span key={tag} className="tag-chip-pill flex-row gap-4" style={{ alignItems: "center" }}>
+                  {tag}
+                  <button
+                    onClick={() => handleRemoveTag(tagsDialogId, tag)}
+                    style={{ background: "none", border: "none", cursor: "pointer", padding: 0, color: "var(--text-tertiary)", fontSize: 12 }}
+                  >
+                    <Dismiss24Regular style={{ fontSize: 12 }} />
+                  </button>
+                </span>
+              ))}
+              {(transcripts.find((t) => t.id === tagsDialogId)?.tags.length ?? 0) === 0 && (
+                <span className="text-caption text-secondary">Geen tags</span>
+              )}
+            </div>
+
+            {/* Add new tag */}
+            <div className="flex-row gap-8" style={{ marginBottom: 12 }}>
+              <input
+                type="text"
+                value={newTagInput}
+                onChange={(e) => setNewTagInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && newTagInput.trim()) {
+                    handleAddTag(tagsDialogId, newTagInput);
+                  }
+                }}
+                placeholder="Nieuwe tag..."
+                className="input"
+                style={{ flex: 1 }}
+                autoFocus
+              />
+              <button
+                className="btn btn-accent"
+                onClick={() => handleAddTag(tagsDialogId, newTagInput)}
+                disabled={!newTagInput.trim()}
+                style={{ padding: "7px 12px", fontSize: 12 }}
+              >
+                <Add24Regular style={{ fontSize: 14 }} />
+                Toevoegen
+              </button>
+            </div>
+
+            {/* Suggested tags from other transcripts */}
+            {availableTags.filter((t) => !transcripts.find((tr) => tr.id === tagsDialogId)?.tags.includes(t)).length > 0 && (
+              <>
+                <p className="text-caption text-secondary" style={{ marginBottom: 6 }}>Beschikbare tags</p>
+                <div className="flex-row gap-6" style={{ flexWrap: "wrap" }}>
+                  {availableTags
+                    .filter((t) => !transcripts.find((tr) => tr.id === tagsDialogId)?.tags.includes(t))
+                    .map((tag) => (
+                      <button
+                        key={tag}
+                        className="filter-pill"
+                        onClick={() => handleAddTag(tagsDialogId, tag)}
+                        style={{ fontSize: 11 }}
+                      >
+                        + {tag}
+                      </button>
+                    ))}
+                </div>
+              </>
+            )}
+
+            <div style={{ marginTop: 16, textAlign: "right" }}>
+              <button className="btn btn-secondary" onClick={() => setTagsDialogId(null)} style={{ fontSize: 12 }}>
+                Sluiten
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

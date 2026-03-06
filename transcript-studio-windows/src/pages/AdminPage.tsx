@@ -10,8 +10,13 @@ import {
   ShieldCheckmark24Regular,
   Warning24Regular,
   ArrowRight24Regular,
+  Delete24Regular,
+  Key24Regular,
+  LockClosed24Regular,
 } from "@fluentui/react-icons";
 import { api } from "../services/api";
+import { useAuthStore } from "../stores/authStore";
+import { useToast } from "../components/ui/InfoBar";
 import type { AdminUser, AdminFeedback, SystemHealth } from "../types";
 
 type Tab = "overview" | "users" | "invitations" | "feedback" | "health";
@@ -25,6 +30,7 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
 ];
 
 export function AdminPage() {
+  const user = useAuthStore((s) => s.user);
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [feedbackItems, setFeedbackItems] = useState<AdminFeedback[]>([]);
@@ -69,9 +75,19 @@ export function AdminPage() {
     try {
       await api.deleteAdminUser(userId);
       setUsers((prev) => prev.filter((u) => u.id !== userId));
-    } catch (err) {
-      console.error("Delete user failed:", err);
+    } catch {
+      alert("Verwijderen mislukt");
     }
+  }
+
+  if (user?.role !== "admin") {
+    return (
+      <div className="page-scroll">
+        <div className="page-content" style={{ alignItems: "center", justifyContent: "center", flex: 1 }}>
+          <p className="text-secondary">Geen toegang. Alleen beheerders kunnen deze pagina bekijken.</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -107,7 +123,7 @@ export function AdminPage() {
           <OverviewTab users={users} feedbackItems={feedbackItems} health={health} />
         )}
         {!isLoading && activeTab === "users" && (
-          <UsersTab users={users} onDelete={handleDeleteUser} />
+          <UsersTab users={users} onDelete={handleDeleteUser} onReload={() => loadData()} />
         )}
         {!isLoading && activeTab === "invitations" && (
           <InvitationsTab />
@@ -196,13 +212,25 @@ function OverviewTab({
    Gebruikers Tab
    ============================================================ */
 
-function UsersTab({ users, onDelete }: { users: AdminUser[]; onDelete: (id: string) => void }) {
+function UsersTab({ users, onDelete, onReload }: { users: AdminUser[]; onDelete: (id: string) => void; onReload: () => void }) {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newEmail, setNewEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [newName, setNewName] = useState("");
   const [newRole, setNewRole] = useState<"user" | "admin">("user");
   const [creating, setCreating] = useState(false);
+  const [menuUserId, setMenuUserId] = useState<string | null>(null);
+  const [menuPos, setMenuPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [resetPasswordId, setResetPasswordId] = useState<string | null>(null);
+  const [newPasswordValue, setNewPasswordValue] = useState("");
+  const toast = useToast();
+
+  useEffect(() => {
+    if (!menuUserId) return;
+    function close() { setMenuUserId(null); }
+    document.addEventListener("click", close);
+    return () => document.removeEventListener("click", close);
+  }, [menuUserId]);
 
   async function handleCreate() {
     if (!newEmail || !newPassword || !newName) return;
@@ -214,16 +242,44 @@ function UsersTab({ users, onDelete }: { users: AdminUser[]; onDelete: (id: stri
       setNewPassword("");
       setNewName("");
       setNewRole("user");
-      window.location.reload();
+      toast.show("Gebruiker aangemaakt", "success");
+      onReload();
     } catch (err) {
-      console.error("Create user failed:", err);
+      toast.show("Aanmaken mislukt", "error");
     } finally {
       setCreating(false);
     }
   }
 
-  function copyToClipboard(text: string) {
-    navigator.clipboard.writeText(text).catch(() => {});
+  async function handleResetPassword(userId: string) {
+    if (!newPasswordValue || newPasswordValue.length < 8) {
+      toast.show("Wachtwoord moet minimaal 8 tekens zijn", "error");
+      return;
+    }
+    try {
+      await api.resetUserPassword(userId, newPasswordValue);
+      toast.show("Wachtwoord gereset", "success");
+      setResetPasswordId(null);
+      setNewPasswordValue("");
+    } catch {
+      toast.show("Wachtwoord resetten mislukt", "error");
+    }
+  }
+
+  async function handleReset2FA(userId: string) {
+    try {
+      await api.resetUser2FA(userId);
+      toast.show("2FA gereset", "success");
+    } catch {
+      toast.show("2FA resetten mislukt", "error");
+    }
+  }
+
+  function openMenu(e: React.MouseEvent, userId: string) {
+    e.stopPropagation();
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    setMenuPos({ x: rect.right, y: rect.bottom });
+    setMenuUserId(userId);
   }
 
   function getInitial(name: string): string {
@@ -288,45 +344,117 @@ function UsersTab({ users, onDelete }: { users: AdminUser[]; onDelete: (id: stri
 
       {/* User cards */}
       {users.map((user) => (
-        <div key={user.id} className="card flex-row gap-12" style={{ padding: "12px 14px" }}>
-          {/* Avatar */}
-          <div className="user-avatar">
-            {getInitial(user.name)}
-          </div>
+        <div key={user.id} className="flex-col gap-0">
+          <div className="card flex-row gap-12" style={{ padding: "12px 14px" }}>
+            {/* Avatar */}
+            <div className="user-avatar">
+              {getInitial(user.name)}
+            </div>
 
-          {/* User info */}
-          <div className="flex-1">
-            <div className="flex-row gap-8">
-              <span className="text-body-strong">{user.name}</span>
-              <span className={`role-badge ${user.role === "admin" ? "role-badge-admin" : "role-badge-user"}`}>
-                {user.role === "admin" ? "Admin" : "User"}
-              </span>
-              {user.role === "admin" && (
-                <ShieldCheckmark24Regular style={{ fontSize: 14, color: "var(--fill-system-success)" }} />
+            {/* User info */}
+            <div className="flex-1">
+              <div className="flex-row gap-8">
+                <span className="text-body-strong">{user.name}</span>
+                <span className={`role-badge ${user.role === "admin" ? "role-badge-admin" : "role-badge-user"}`}>
+                  {user.role === "admin" ? "Admin" : "User"}
+                </span>
+                {user.role === "admin" && (
+                  <ShieldCheckmark24Regular style={{ fontSize: 14, color: "var(--fill-system-success)" }} />
+                )}
+              </div>
+              <p className="text-caption" style={{ marginTop: 2 }}>{user.email}</p>
+              {user.last_login && (
+                <p className="text-caption" style={{ marginTop: 1, color: "var(--text-tertiary)" }}>
+                  Laatst actief: {new Date(user.last_login).toLocaleDateString("nl-NL")}
+                </p>
               )}
             </div>
-            <p className="text-caption" style={{ marginTop: 2 }}>{user.email}</p>
-          </div>
 
-          {/* Action buttons */}
-          <div className="flex-row gap-4">
+            {/* Action button */}
             <button
               className="icon-btn icon-btn-sm"
-              onClick={() => copyToClipboard(user.email)}
-              title="Kopieer e-mail"
-            >
-              <Copy24Regular />
-            </button>
-            <button
-              className="icon-btn icon-btn-sm icon-btn-danger"
-              onClick={() => onDelete(user.id)}
+              onClick={(e) => openMenu(e, user.id)}
               title="Meer opties"
             >
               <MoreHorizontal24Regular />
             </button>
           </div>
+
+          {/* Reset password inline form */}
+          {resetPasswordId === user.id && (
+            <div className="card card-attached flex-row gap-8">
+              <input
+                className="input"
+                type="password"
+                placeholder="Nieuw wachtwoord (min. 8 tekens)"
+                value={newPasswordValue}
+                onChange={(e) => setNewPasswordValue(e.target.value)}
+                style={{ flex: 1 }}
+                onKeyDown={(e) => { if (e.key === "Enter") handleResetPassword(user.id); }}
+              />
+              <button className="btn btn-accent btn-sm" onClick={() => handleResetPassword(user.id)}>
+                Opslaan
+              </button>
+              <button className="btn btn-sm" onClick={() => { setResetPasswordId(null); setNewPasswordValue(""); }}>
+                Annuleren
+              </button>
+            </div>
+          )}
         </div>
       ))}
+
+      {/* Context menu */}
+      {menuUserId && (
+        <div
+          className="context-menu"
+          style={{ left: menuPos.x, top: menuPos.y }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            className="context-menu-item"
+            onClick={() => {
+              navigator.clipboard.writeText(users.find((u) => u.id === menuUserId)?.email || "").catch(() => {});
+              toast.show("E-mail gekopieerd", "success");
+              setMenuUserId(null);
+            }}
+          >
+            <Copy24Regular style={{ fontSize: 16 }} />
+            Kopieer e-mail
+          </button>
+          <button
+            className="context-menu-item"
+            onClick={() => {
+              setResetPasswordId(menuUserId);
+              setNewPasswordValue("");
+              setMenuUserId(null);
+            }}
+          >
+            <Key24Regular style={{ fontSize: 16 }} />
+            Wachtwoord resetten
+          </button>
+          <button
+            className="context-menu-item"
+            onClick={() => {
+              handleReset2FA(menuUserId);
+              setMenuUserId(null);
+            }}
+          >
+            <LockClosed24Regular style={{ fontSize: 16 }} />
+            2FA resetten
+          </button>
+          <div className="context-menu-divider" />
+          <button
+            className="context-menu-item context-menu-item-danger"
+            onClick={() => {
+              onDelete(menuUserId);
+              setMenuUserId(null);
+            }}
+          >
+            <Delete24Regular style={{ fontSize: 16 }} />
+            Verwijderen
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -338,14 +466,16 @@ function UsersTab({ users, onDelete }: { users: AdminUser[]; onDelete: (id: stri
 function InvitationsTab() {
   const [inviteCode, setInviteCode] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
+  const toast = useToast();
 
   async function handleGenerate() {
     setGenerating(true);
     try {
       const result = await api.generateInviteCode();
       setInviteCode(result.code);
-    } catch (err) {
-      console.error("Generate invite failed:", err);
+      toast.show("Uitnodigingscode gegenereerd", "success");
+    } catch {
+      toast.show("Genereren mislukt", "error");
     } finally {
       setGenerating(false);
     }
@@ -365,7 +495,10 @@ function InvitationsTab() {
           <code className="flex-1 invite-code">{inviteCode}</code>
           <button
             className="btn"
-            onClick={() => navigator.clipboard.writeText(inviteCode).catch(() => {})}
+            onClick={() => {
+              navigator.clipboard.writeText(inviteCode).catch(() => {});
+              toast.show("Code gekopieerd", "success");
+            }}
           >
             <Copy24Regular />
             Kopieer
@@ -385,6 +518,8 @@ function InvitationsTab() {
    ============================================================ */
 
 function FeedbackTab({ items, onReload }: { items: AdminFeedback[]; onReload: () => void }) {
+  const toast = useToast();
+
   function getStatusBadgeClass(status: string): string {
     switch (status) {
       case "new": case "open": return "status-badge-new";
@@ -416,9 +551,10 @@ function FeedbackTab({ items, onReload }: { items: AdminFeedback[]; onReload: ()
   async function handleStatusChange(id: string, status: string) {
     try {
       await api.updateFeedback(id, status);
+      toast.show("Status bijgewerkt", "success");
       onReload();
-    } catch (err) {
-      console.error("Update feedback status failed:", err);
+    } catch {
+      toast.show("Status bijwerken mislukt", "error");
     }
   }
 
@@ -525,8 +661,8 @@ function HealthTab({ health }: { health: SystemHealth }) {
           <p className="text-body-strong" style={{ fontSize: 13 }}>
             Systeem status: {health.api_status.toUpperCase()}
           </p>
-          <p className="text-caption">
-            Versie {health.version} | Opslag: {health.storage_used_gb.toFixed(1)} GB | Actieve taken: {health.active_tasks} | Wachtrij: {health.transcription_queue_length}
+          <p className="text-caption" style={{ overflowWrap: "anywhere" }}>
+            Versie {health.version} · Opslag: {health.storage_used_gb.toFixed(1)} GB · Actieve taken: {health.active_tasks} · Wachtrij: {health.transcription_queue_length}
           </p>
         </div>
       </div>

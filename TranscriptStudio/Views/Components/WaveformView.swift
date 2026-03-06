@@ -17,8 +17,11 @@ private struct WaveConfig {
     let smoothingDown: CGFloat // release speed
     let phaseOffset: CGFloat   // initial phase offset
     let lineWidth: CGFloat
+    let glowWidth: CGFloat     // wider stroke drawn behind for neon glow
+    let glowOpacity: CGFloat
     let color: Color
     let isPrimary: Bool
+    let historyOffset: Int     // how many samples back this wave reads from
 }
 
 // MARK: - WaveformView
@@ -33,19 +36,20 @@ struct WaveformView: View {
 
     // MARK: Constants
 
-    private let idleAmplitude: CGFloat = 0.01
+    private let idleAmplitude: CGFloat = 0.03
 
     private let waveConfigs: [WaveConfig] = [
-        WaveConfig(frequency: 1.5,  speed: 9.0,  amplitudeScale: 1.0,  smoothingUp: 0.35, smoothingDown: 0.08, phaseOffset: 0.0,  lineWidth: 2.5, color: Color.brandPrimary,                                isPrimary: true),
-        WaveConfig(frequency: 1.8,  speed: 7.2,  amplitudeScale: 0.82, smoothingUp: 0.25, smoothingDown: 0.10, phaseOffset: 1.2,  lineWidth: 1.0, color: Color(red: 0.80, green: 0.0, blue: 0.60),          isPrimary: false),
-        WaveConfig(frequency: 1.2,  speed: 11.5, amplitudeScale: 0.70, smoothingUp: 0.18, smoothingDown: 0.06, phaseOffset: 2.8,  lineWidth: 1.0, color: Color(red: 0.60, green: 0.0, blue: 0.80),          isPrimary: false),
-        WaveConfig(frequency: 2.1,  speed: 5.8,  amplitudeScale: 0.55, smoothingUp: 0.40, smoothingDown: 0.12, phaseOffset: 4.1,  lineWidth: 1.0, color: Color.neonBlue,                                    isPrimary: false),
-        WaveConfig(frequency: 0.9,  speed: 13.0, amplitudeScale: 0.40, smoothingUp: 0.15, smoothingDown: 0.05, phaseOffset: 5.5,  lineWidth: 1.0, color: Color(red: 0.40, green: 0.20, blue: 1.0),          isPrimary: false),
+        WaveConfig(frequency: 1.5,  speed: 9.0,  amplitudeScale: 1.0,  smoothingUp: 0.70, smoothingDown: 0.20, phaseOffset: 0.0,  lineWidth: 3.0, glowWidth: 8.0,  glowOpacity: 0.20, color: Color.brandPrimary,                          isPrimary: true,  historyOffset: 0),
+        WaveConfig(frequency: 1.8,  speed: 7.2,  amplitudeScale: 0.82, smoothingUp: 0.60, smoothingDown: 0.18, phaseOffset: 1.2,  lineWidth: 1.5, glowWidth: 5.0,  glowOpacity: 0.18, color: Color(red: 0.3, green: 0.4, blue: 1.0),     isPrimary: false, historyOffset: 5),
+        WaveConfig(frequency: 1.2,  speed: 11.5, amplitudeScale: 0.70, smoothingUp: 0.55, smoothingDown: 0.16, phaseOffset: 2.8,  lineWidth: 1.5, glowWidth: 5.0,  glowOpacity: 0.16, color: Color(red: 0.5, green: 0.2, blue: 1.0),     isPrimary: false, historyOffset: 10),
+        WaveConfig(frequency: 2.1,  speed: 5.8,  amplitudeScale: 0.55, smoothingUp: 0.50, smoothingDown: 0.15, phaseOffset: 4.1,  lineWidth: 1.5, glowWidth: 5.0,  glowOpacity: 0.15, color: Color.neonBlue,                              isPrimary: false, historyOffset: 15),
+        WaveConfig(frequency: 0.9,  speed: 13.0, amplitudeScale: 0.40, smoothingUp: 0.45, smoothingDown: 0.15, phaseOffset: 5.5,  lineWidth: 1.5, glowWidth: 5.0,  glowOpacity: 0.15, color: Color(red: 0.2, green: 0.5, blue: 1.0),     isPrimary: false, historyOffset: 20),
     ]
 
-    // MARK: State — one smoothed level per wave
+    // MARK: State — one smoothed level per wave + per-wave jitter seed
 
-    @State private var smoothedLevels: [CGFloat] = [0.01, 0.01, 0.01, 0.01, 0.01]
+    @State private var smoothedLevels: [CGFloat] = [0.03, 0.03, 0.03, 0.03, 0.03]
+    @State private var jitterSeeds: [CGFloat] = (0..<5).map { _ in CGFloat.random(in: 0...1000) }
 
     var body: some View {
         TimelineView(.animation(minimumInterval: 1.0 / 60.0)) { timeline in
@@ -63,23 +67,42 @@ struct WaveformView: View {
     // MARK: - Level Smoothing (per wave)
 
     private func updateSmoothedLevels() {
-        let rawLevel: CGFloat
-        if isActive, !levels.isEmpty {
-            // Use fewer recent samples for snappier response
-            let count = min(levels.count, 4)
-            let recent = levels.suffix(count)
-            // Weighted toward the most recent sample
-            let peak = CGFloat(recent.max() ?? 0)
-            let avg = CGFloat(recent.reduce(Float(0), +) / Float(count))
-            rawLevel = max(peak * 0.7 + avg * 0.3, idleAmplitude)
-        } else {
-            rawLevel = idleAmplitude
-        }
+        let time = Date.timeIntervalSinceReferenceDate
 
         for i in waveConfigs.indices {
-            let target = rawLevel * waveConfigs[i].amplitudeScale
-            let delta = target - smoothedLevels[i]
-            let rate = delta > 0 ? waveConfigs[i].smoothingUp : waveConfigs[i].smoothingDown
+            let config = waveConfigs[i]
+
+            let rawLevel: CGFloat
+            if isActive, !levels.isEmpty {
+                // Each wave reads from a different time offset in the levels array
+                let offset = config.historyOffset
+                let endIndex = max(0, levels.count - offset)
+                if endIndex > 0 {
+                    let count = min(endIndex, 3)
+                    let startIndex = endIndex - count
+                    let slice = levels[startIndex..<endIndex]
+                    let peak = CGFloat(slice.max() ?? 0)
+                    let avg = CGFloat(slice.reduce(Float(0), +) / Float(count))
+                    let base = max(peak * 0.7 + avg * 0.3, idleAmplitude)
+                    // Compress dynamic range so quiet sounds are more visible
+                    rawLevel = pow(base, 0.6)
+                } else {
+                    rawLevel = idleAmplitude
+                }
+            } else {
+                rawLevel = idleAmplitude
+            }
+
+            // Per-wave amplitude jitter for natural variation
+            let jitter = 0.85 + 0.30 * (0.5 + 0.5 * sin(time * 3.7 + jitterSeeds[i]))
+            let target = rawLevel * config.amplitudeScale * jitter
+
+            // Idle sine breathing so waves move independently even in silence
+            let idleBreathing = idleAmplitude * (0.5 + 0.5 * sin(time * (1.2 + Double(i) * 0.3) + jitterSeeds[i]))
+            let finalTarget = max(target, idleBreathing)
+
+            let delta = finalTarget - smoothedLevels[i]
+            let rate = delta > 0 ? config.smoothingUp : config.smoothingDown
             smoothedLevels[i] += delta * rate
         }
     }
@@ -98,7 +121,6 @@ struct WaveformView: View {
             let path = Path { path in
                 for x in stride(from: 0, through: size.width, by: 1.0) {
                     let normalized = (x - midX) / midX
-                    // Parabolic envelope: tapers to zero at edges
                     let envelope = -(normalized * normalized) + 1.0
 
                     let y = envelope * maxAmplitude * level
@@ -115,6 +137,18 @@ struct WaveformView: View {
 
             let opacity = config.isPrimary ? 1.0 : min(1.0, (CGFloat(i) / CGFloat(waveConfigs.count)) / 3.0 + 1.0 / 3.0)
 
+            // Glow pass — wider, translucent stroke behind the main line
+            var glowCtx = context
+            if !config.isPrimary {
+                glowCtx.blendMode = .plusLighter
+            }
+            glowCtx.stroke(
+                path,
+                with: .color(config.color.opacity(config.glowOpacity)),
+                style: StrokeStyle(lineWidth: config.glowWidth, lineCap: .round, lineJoin: .round)
+            )
+
+            // Main stroke
             var ctx = context
             if !config.isPrimary {
                 ctx.blendMode = .plusLighter

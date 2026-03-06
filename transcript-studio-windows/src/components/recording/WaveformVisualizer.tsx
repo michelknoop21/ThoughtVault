@@ -131,8 +131,9 @@ export function WaveformVisualizer({
         smoothed[i] += delta * rate;
       }
 
-      // Draw
-      const w = parseFloat(canvas.style.width) || canvas.width;
+      // Draw — use canvas backing size divided by DPR for CSS pixel width
+      const dpr = window.devicePixelRatio || 1;
+      const w = canvas.width / dpr;
       const h = height;
       ctx.clearRect(0, 0, w, h);
 

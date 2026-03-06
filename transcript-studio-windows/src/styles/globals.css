@@ -445,6 +445,7 @@
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
+  scrollbar-gutter: stable;
   position: relative;
   display: flex;
   flex-direction: column;
@@ -855,7 +856,8 @@
 .filter-pill {
   display: inline-flex;
   align-items: center;
-  padding: 4px 12px;
+  padding: 6px 12px;
+  min-height: 32px;
   border-radius: var(--radius-xl);
   font-family: var(--font-family);
   font-size: var(--font-caption);
@@ -1003,6 +1005,21 @@
 .settings-row {
   padding: 10px 14px;
   transition: background var(--duration-quick) var(--ease-quick);
+}
+
+.settings-row > .flex-row {
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.settings-row > .flex-row > .flex-1 {
+  min-width: 140px;
+}
+
+.settings-row .select {
+  flex-shrink: 0;
+  min-width: 160px;
+  max-width: 100%;
 }
 
 .settings-row:hover {
@@ -1274,6 +1291,15 @@
 .icon-btn-sm {
   width: 28px;
   height: 28px;
+  /* Ensure 44px minimum touch target via transparent padding */
+  position: relative;
+}
+
+.icon-btn-sm::after {
+  content: "";
+  position: absolute;
+  inset: -8px;
+  /* Expands hit area to 44px while keeping visual 28px */
 }
 
 .icon-btn-danger:hover {
@@ -1620,6 +1646,7 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  scrollbar-gutter: stable;
   padding: var(--space-sm);
   display: flex;
   flex-direction: column;
@@ -1669,6 +1696,7 @@
 
 .transcripts-action-bar {
   padding: var(--space-sm) var(--space-lg);
+  flex-wrap: wrap;
 }
 
 .transcripts-content-scroll {
@@ -2006,4 +2034,108 @@
   font-size: var(--font-micro);
   color: var(--text-tertiary);
   font-weight: 400;
+}
+
+/* ============================================================
+   Windows High Contrast & Accessibility
+   ============================================================ */
+
+@media (forced-colors: active) {
+  .card, .card-static {
+    border: 2px solid ButtonText;
+    background: Canvas;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .btn, .btn-accent, .btn-secondary, .btn-sm {
+    background: ButtonFace;
+    color: ButtonText;
+    border: 2px solid ButtonText;
+    forced-color-adjust: none;
+  }
+
+  .btn-accent {
+    background: Highlight;
+    color: HighlightText;
+    border-color: Highlight;
+  }
+
+  .sidebar {
+    border-right: 2px solid ButtonText;
+    background: Canvas;
+  }
+
+  .sidebar-nav-item.active {
+    background: Highlight;
+    color: HighlightText;
+  }
+
+  .icon-btn, .icon-btn-sm {
+    border: 1px solid ButtonText;
+  }
+
+  .input, .select {
+    border: 2px solid ButtonText;
+    background: Field;
+    color: FieldText;
+  }
+
+  .input:focus, .select:focus {
+    outline: 2px solid Highlight;
+    outline-offset: 1px;
+  }
+
+  .settings-group {
+    border: 1px solid ButtonText;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .filter-pill {
+    border: 1px solid ButtonText;
+  }
+
+  .filter-pill.active {
+    background: Highlight;
+    color: HighlightText;
+    border-color: Highlight;
+  }
+
+  .brand-bar,
+  .brand-bar > div {
+    forced-color-adjust: none;
+  }
+}
+
+@media (prefers-contrast: more) {
+  :root {
+    --card-bg: rgba(255, 255, 255, 0.95);
+    --card-border: rgba(0, 0, 0, 0.3);
+    --border-primary: #999;
+    --border-secondary: #BBB;
+    --text-secondary: #444;
+    --text-tertiary: #555;
+  }
+
+  [data-theme="dark"] {
+    --card-bg: rgba(30, 30, 30, 0.95);
+    --card-border: rgba(255, 255, 255, 0.3);
+    --border-primary: #777;
+    --border-secondary: #555;
+    --text-secondary: #CCC;
+    --text-tertiary: #AAA;
+  }
+
+  .card, .card-static {
+    border-width: 2px;
+  }
+
+  .settings-group {
+    border-width: 2px;
+  }
+
+  .input, .select {
+    border-width: 2px;
+  }
 }

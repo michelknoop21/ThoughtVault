@@ -11,15 +11,12 @@ import {
   Mail24Regular,
 } from "@fluentui/react-icons";
 import { useSettingsStore } from "../stores/settingsStore";
-import { useAuthStore } from "../stores/authStore";
 import { useCalendarStore } from "../stores/calendarStore";
 import { useProfilesStore } from "../stores/profilesStore";
-import { api } from "../services/api";
 import { MicrosoftGraphService } from "../services/microsoftGraph";
 
 export function SettingsPage() {
   const settings = useSettingsStore();
-  const { user, logout } = useAuthStore();
   const calendar = useCalendarStore();
   const profiles = useProfilesStore((s) => s.profiles);
 
@@ -44,11 +41,6 @@ export function SettingsPage() {
     } finally {
       setIsConnecting(false);
     }
-  }
-
-  async function handleLogout() {
-    await api.logout();
-    logout();
   }
 
   return (
@@ -257,34 +249,6 @@ export function SettingsPage() {
                 </div>
               </div>
             )}
-          </div>
-
-          {/* Account */}
-          <div className="settings-group">
-            <p className="settings-group-label">Account</p>
-            <div className="settings-row">
-              <div className="flex-row gap-10 flex-1">
-                <div className="avatar avatar-accent">
-                  {user?.name?.charAt(0).toUpperCase() || "?"}
-                </div>
-                <div className="flex-1">
-                  <p className="settings-label">{user?.name}</p>
-                  <p className="settings-desc">{user?.email}</p>
-                </div>
-                {user?.role === "admin" && (
-                  <span className="status-badge-accent">Admin</span>
-                )}
-              </div>
-            </div>
-            <div style={{ padding: "0 14px 12px" }}>
-              <button
-                onClick={handleLogout}
-                className="btn btn-secondary"
-                style={{ fontSize: 12, color: "var(--text-error)", borderColor: "rgba(188,0,22,0.3)" }}
-              >
-                Uitloggen
-              </button>
-            </div>
           </div>
 
           {/* Feedback */}

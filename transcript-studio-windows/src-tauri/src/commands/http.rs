@@ -1,7 +1,7 @@
 use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::io::Write;
+
 use tauri::{AppHandle, Emitter};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -94,31 +94,32 @@ pub async fn http_upload_file(
     // Generate a unique boundary (same approach as macOS)
     let boundary = format!("Boundary-{}", uuid::Uuid::new_v4());
 
-    // Build multipart body manually to match macOS format exactly
-    let mut body = Vec::new();
+    // Build multipart body manually with RFC 2046 \r\n line endings.
+    // writeln! uses \n which python-multipart (FastAPI) rejects.
+    let mut body: Vec<u8> = Vec::new();
 
     // Add file part
-    writeln!(body, "--{}", boundary).map_err(|e| e.to_string())?;
-    writeln!(body, "Content-Disposition: form-data; name=\"{}\"; filename=\"{}\"", field_name, filename).map_err(|e| e.to_string())?;
-    writeln!(body, "Content-Type: audio/wav").map_err(|e| e.to_string())?;
-    writeln!(body).map_err(|e| e.to_string())?; // Empty line after headers
+    body.extend_from_slice(format!("--{}\r\n", boundary).as_bytes());
+    body.extend_from_slice(format!("Content-Disposition: form-data; name=\"{}\"; filename=\"{}\"\r\n", field_name, filename).as_bytes());
+    body.extend_from_slice(b"Content-Type: audio/wav\r\n");
+    body.extend_from_slice(b"\r\n");
     body.extend_from_slice(&file_bytes);
-    writeln!(body).map_err(|e| e.to_string())?;
+    body.extend_from_slice(b"\r\n");
 
     // Add additional fields (profile_id, mode)
     if let Some(fields) = &additional_fields {
         eprintln!("[Upload] Additional fields: {:?}", fields);
         for (key, value) in fields {
-            writeln!(body, "--{}", boundary).map_err(|e| e.to_string())?;
-            writeln!(body, "Content-Disposition: form-data; name=\"{}\"", key).map_err(|e| e.to_string())?;
-            writeln!(body).map_err(|e| e.to_string())?;
-            writeln!(body, "{}", value).map_err(|e| e.to_string())?;
+            body.extend_from_slice(format!("--{}\r\n", boundary).as_bytes());
+            body.extend_from_slice(format!("Content-Disposition: form-data; name=\"{}\"\r\n", key).as_bytes());
+            body.extend_from_slice(b"\r\n");
+            body.extend_from_slice(value.as_bytes());
+            body.extend_from_slice(b"\r\n");
         }
     }
 
     // End boundary
-    writeln!(body, "--{}--", boundary).map_err(|e| e.to_string())?;
-    writeln!(body).map_err(|e| e.to_string())?;
+    body.extend_from_slice(format!("--{}--\r\n", boundary).as_bytes());
 
     eprintln!("[Upload] Multipart body size: {} bytes", body.len());
 
@@ -128,9 +129,11 @@ pub async fn http_upload_file(
         .map_err(|e| e.to_string())?;
 
     let content_type = format!("multipart/form-data; boundary={}", boundary);
+    let body_len = body.len();
 
     let mut req = client.post(&url)
         .header("Content-Type", content_type)
+        .header("Content-Length", body_len.to_string())
         .body(body);
 
     // Add authentication and other headers

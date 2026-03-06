@@ -365,6 +365,13 @@ struct RecordingView: View {
                     .foregroundStyle(Color.statusError)
                     .multilineTextAlignment(.leading)
                 Spacer()
+                Button {
+                    recordingVM.clearError()
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(Color.statusError.opacity(0.6))
+                }
+                .buttonStyle(.plain)
             }
             .padding(TS.Spacing.sm)
             .background {

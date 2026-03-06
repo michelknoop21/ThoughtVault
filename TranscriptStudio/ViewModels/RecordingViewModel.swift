@@ -497,7 +497,8 @@ final class RecordingViewModel {
             await MainActor.run {
                 self.lastFailedUploadURL = url
                 self.lastFailedUploadReason = .unknown
-                self.recordingState = .error(error.localizedDescription)
+                self.recordingState = .idle
+                self.showRetrySheet = true
                 self.uploadProgress = 0
             }
         }
@@ -777,6 +778,11 @@ final class RecordingViewModel {
             activeTasks[index] = updatedTask
         }
 
+        // Reset recording state so user can start a new recording
+        if updatedTask.status == .error, case .error = recordingState {
+            recordingState = .idle
+        }
+
         // Remove completed / error tasks from active list after a short delay
         if updatedTask.status == .completed || updatedTask.status == .error {
             let taskId = updatedTask.taskId
@@ -791,6 +797,13 @@ final class RecordingViewModel {
     }
 
     // MARK: - Task Management
+
+    func clearError() {
+        guard case .error = recordingState else { return }
+        recordingState = .idle
+        lastFailedUploadURL = nil
+        lastFailedUploadReason = nil
+    }
 
     func removeTask(_ taskId: String) {
         activeTasks.removeAll { $0.taskId == taskId }

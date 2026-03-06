@@ -134,10 +134,23 @@ pub async fn pause_recording(
     state: tauri::State<'_, SharedRecordingState>,
 ) -> Result<(), String> {
     let guard = state.lock().map_err(|e| e.to_string())?;
+
+    if !guard.is_recording {
+        return Err("Geen actieve opname".to_string());
+    }
+
+    if guard.is_paused {
+        // Already paused — no-op is fine
+        return Ok(());
+    }
+
     if let Some(ref tx) = guard.cmd_tx {
         tx.try_send(RecordingCommand::Pause)
             .map_err(|e| format!("Pauze mislukt: {}", e))?;
+    } else {
+        return Err("Opnamekanaal is gesloten".to_string());
     }
+
     Ok(())
 }
 
@@ -146,10 +159,23 @@ pub async fn resume_recording(
     state: tauri::State<'_, SharedRecordingState>,
 ) -> Result<(), String> {
     let guard = state.lock().map_err(|e| e.to_string())?;
+
+    if !guard.is_recording {
+        return Err("Geen actieve opname".to_string());
+    }
+
+    if !guard.is_paused {
+        // Already recording — no-op is fine
+        return Ok(());
+    }
+
     if let Some(ref tx) = guard.cmd_tx {
         tx.try_send(RecordingCommand::Resume)
             .map_err(|e| format!("Hervatten mislukt: {}", e))?;
+    } else {
+        return Err("Opnamekanaal is gesloten".to_string());
     }
+
     Ok(())
 }
 

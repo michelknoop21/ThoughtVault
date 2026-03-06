@@ -265,14 +265,19 @@ class APIService {
     );
 
     if (response.status >= 400) {
-      let errorMessage = `Upload mislukt: HTTP ${response.status}`;
+      let errorMessage = `Upload mislukt (HTTP ${response.status})`;
       try {
         const errorData = JSON.parse(response.body);
-        const extracted = errorData.message || errorData.detail;
-        errorMessage = (typeof extracted === "string" ? extracted : null) || errorMessage;
+        const extracted = errorData.message || errorData.detail || errorData.error;
+        if (typeof extracted === "string") {
+          errorMessage = `Upload mislukt: ${extracted}`;
+        }
       } catch {
-        // ignore
+        if (response.body && response.body.length < 200) {
+          errorMessage = `Upload mislukt: ${response.body}`;
+        }
       }
+      console.error("[API] Upload error:", { status: response.status, body: response.body });
       throw new Error(errorMessage);
     }
 

@@ -2,7 +2,7 @@ use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::Sample;
 use hound::{SampleFormat as HoundSampleFormat, WavSpec, WavWriter};
 use std::sync::{Arc, Mutex};
-use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, AtomicU64, Ordering};
 use tokio::sync::mpsc;
 use super::types::{AudioDevice, RecordingCommand, RecordingEvent, RecordingMode};
 
@@ -122,25 +122,35 @@ fn recording_thread_body(
     let is_paused = Arc::new(AtomicBool::new(false));
     let is_paused_clone = Arc::clone(&is_paused);
 
+    // Track samples written for debugging
+    let samples_written = Arc::new(AtomicU64::new(0));
+    let samples_written_clone = Arc::clone(&samples_written);
+
     let event_tx_clone = event_tx.clone();
+
+    eprintln!("[Audio] WAV file created: {}", output_path);
 
     // Build the appropriate input stream based on the device's sample format
     let input_stream = match sample_format {
         cpal::SampleFormat::I16 => build_input_stream_i16(
-            &input_device, &config, writer_clone, is_paused_clone, event_tx_clone,
+            &input_device, &config, writer_clone, is_paused_clone, event_tx_clone, samples_written_clone,
         )?,
         cpal::SampleFormat::F32 => build_input_stream_f32(
-            &input_device, &config, writer_clone, is_paused_clone, event_tx_clone,
+            &input_device, &config, writer_clone, is_paused_clone, event_tx_clone, samples_written_clone,
         )?,
         _ => return Err("Niet-ondersteunde sample format".to_string()),
     };
 
     // Optional loopback stream for combined mode (Windows WASAPI loopback)
-    let _loopback_stream: Option<Box<dyn StreamTrait>> = if mode == RecordingMode::Combined {
+    // IMPORTANT: Keep this alive until recording stops - dropping the stream stops callbacks!
+    let loopback_stream_holder: Option<Box<dyn StreamTrait>> = if mode == RecordingMode::Combined {
         #[cfg(target_os = "windows")]
         {
-            match try_build_loopback_stream(&host, Arc::clone(&writer), Arc::clone(&is_paused)) {
-                Ok(stream) => Some(Box::new(stream)),
+            match try_build_loopback_stream(&host, Arc::clone(&writer), Arc::clone(&is_paused), event_tx.clone()) {
+                Ok(stream) => {
+                    eprintln!("[Audio] Loopback stream gestart voor systeemaudio opname");
+                    Some(Box::new(stream))
+                },
                 Err(e) => {
                     eprintln!("[Audio] Loopback niet beschikbaar, alleen microfoon: {}", e);
                     None
@@ -152,6 +162,9 @@ fn recording_thread_body(
     } else {
         None
     };
+
+    // Prevent "unused" warning - we explicitly keep this alive
+    let _ = loopback_stream_holder;
 
     input_stream.play().map_err(|e| format!("Kan stream niet starten: {}", e))?;
 
@@ -174,18 +187,34 @@ fn recording_thread_body(
 
     let duration = start.elapsed().as_secs_f64();
 
+    // Log samples written before finalize
+    let total_samples = samples_written.load(Ordering::Relaxed);
+    eprintln!("[Audio] Stopping recording: {} samples written ({:.2}s)", total_samples, duration);
+
     // Finalize WAV
     drop(input_stream);
     if let Ok(mut guard) = writer.lock() {
         if let Some(w) = guard.take() {
-            let _ = w.finalize();
+            eprintln!("[Audio] Finalizing WAV file...");
+            if let Err(e) = w.finalize() {
+                eprintln!("[Audio] ERROR finalizing WAV: {}", e);
+            } else {
+                eprintln!("[Audio] WAV file finalized successfully");
+            }
+        } else {
+            eprintln!("[Audio] ERROR: writer was already None during finalize!");
         }
+    } else {
+        eprintln!("[Audio] ERROR: Failed to lock writer for finalize!");
     }
 
+    let output_path_clone = output_path.clone();
     let _ = event_tx.send(RecordingEvent::Stopped {
-        file_path: output_path,
+        file_path: output_path_clone,
         duration_seconds: duration,
     });
+
+    eprintln!("[Audio] Recording stopped, file: {}", output_path);
 
     Ok(())
 }
@@ -197,9 +226,11 @@ fn build_input_stream_i16(
     writer: Arc<Mutex<Option<WavWriter<std::io::BufWriter<std::fs::File>>>>>,
     is_paused: Arc<AtomicBool>,
     event_tx: mpsc::UnboundedSender<RecordingEvent>,
+    samples_written: Arc<AtomicU64>,
 ) -> Result<cpal::Stream, String> {
     let writer_clone = Arc::clone(&writer);
     let event_tx_clone = event_tx.clone();
+    let samples_written_clone = Arc::clone(&samples_written);
 
     // Shared state for audio level tracking across callbacks
     let level_counter = Arc::new(AtomicUsize::new(0));
@@ -207,9 +238,19 @@ fn build_input_stream_i16(
     let level_counter_clone = Arc::clone(&level_counter);
     let level_sum_sq_clone = Arc::clone(&level_sum_sq);
 
+    // Log first callback
+    let first_callback = Arc::new(AtomicBool::new(true));
+    let first_callback_clone = Arc::clone(&first_callback);
+
+    eprintln!("[Audio] Building i16 input stream...");
+
     let stream = device.build_input_stream(
         config,
         move |data: &[i16], _| {
+            if first_callback_clone.swap(false, Ordering::Relaxed) {
+                eprintln!("[Audio] FIRST CALLBACK: {} samples received", data.len());
+            }
+
             if is_paused.load(Ordering::Relaxed) {
                 return;
             }
@@ -220,17 +261,25 @@ fn build_input_stream_i16(
                         // Write i16 directly to WAV
                         let _ = w.write_sample(sample);
 
+                        // Track samples written
+                        let count = samples_written_clone.fetch_add(1, Ordering::Relaxed) + 1;
+
+                        // Log every ~5 seconds (5 * 16000 = 80000 samples)
+                        if count % 80000 == 0 {
+                            eprintln!("[Audio] Written {} samples (~{} seconds)", count, count / 16000);
+                        }
+
                         // Calculate audio level for visualization
                         // Normalize i16 to f32 in [-1.0, 1.0]
                         let normalized = sample.to_float_sample();
                         if let Ok(mut sum_sq) = level_sum_sq_clone.lock() {
                             *sum_sq += normalized * normalized;
                         }
-                        let count = level_counter_clone.fetch_add(1, Ordering::Relaxed) + 1;
+                        let level_count = level_counter_clone.fetch_add(1, Ordering::Relaxed) + 1;
 
-                        if count >= LEVEL_EMIT_INTERVAL_SAMPLES {
+                        if level_count >= LEVEL_EMIT_INTERVAL_SAMPLES {
                             let rms = if let Ok(sum_sq) = level_sum_sq_clone.lock() {
-                                (*sum_sq / count as f32).sqrt()
+                                (*sum_sq / level_count as f32).sqrt()
                             } else {
                                 0.0
                             };
@@ -241,7 +290,11 @@ fn build_input_stream_i16(
                             }
                         }
                     }
+                } else {
+                    eprintln!("[Audio] ERROR: writer is None in callback!");
                 }
+            } else {
+                eprintln!("[Audio] ERROR: Failed to lock writer mutex in callback!");
             }
         },
         |err| eprintln!("[Audio] Stream error: {}", err),
@@ -258,9 +311,11 @@ fn build_input_stream_f32(
     writer: Arc<Mutex<Option<WavWriter<std::io::BufWriter<std::fs::File>>>>>,
     is_paused: Arc<AtomicBool>,
     event_tx: mpsc::UnboundedSender<RecordingEvent>,
+    samples_written: Arc<AtomicU64>,
 ) -> Result<cpal::Stream, String> {
     let writer_clone = Arc::clone(&writer);
     let event_tx_clone = event_tx.clone();
+    let samples_written_clone = Arc::clone(&samples_written);
 
     // Shared state for audio level tracking across callbacks
     let level_counter = Arc::new(AtomicUsize::new(0));
@@ -268,9 +323,19 @@ fn build_input_stream_f32(
     let level_counter_clone = Arc::clone(&level_counter);
     let level_sum_sq_clone = Arc::clone(&level_sum_sq);
 
+    // Log first callback
+    let first_callback = Arc::new(AtomicBool::new(true));
+    let first_callback_clone = Arc::clone(&first_callback);
+
+    eprintln!("[Audio] Building f32 input stream...");
+
     let stream = device.build_input_stream(
         config,
         move |data: &[f32], _| {
+            if first_callback_clone.swap(false, Ordering::Relaxed) {
+                eprintln!("[Audio] FIRST CALLBACK (f32): {} samples received", data.len());
+            }
+
             if is_paused.load(Ordering::Relaxed) {
                 return;
             }
@@ -282,14 +347,22 @@ fn build_input_stream_f32(
                         let s16 = (sample.clamp(-1.0, 1.0) * i16::MAX as f32) as i16;
                         let _ = w.write_sample(s16);
 
+                        // Track samples written
+                        let count = samples_written_clone.fetch_add(1, Ordering::Relaxed) + 1;
+
+                        // Log every ~5 seconds
+                        if count % 80000 == 0 {
+                            eprintln!("[Audio] Written {} samples (~{} seconds)", count, count / 16000);
+                        }
+
                         if let Ok(mut sum_sq) = level_sum_sq_clone.lock() {
                             *sum_sq += sample * sample;
                         }
-                        let count = level_counter_clone.fetch_add(1, Ordering::Relaxed) + 1;
+                        let level_count = level_counter_clone.fetch_add(1, Ordering::Relaxed) + 1;
 
-                        if count >= LEVEL_EMIT_INTERVAL_SAMPLES {
+                        if level_count >= LEVEL_EMIT_INTERVAL_SAMPLES {
                             let rms = if let Ok(sum_sq) = level_sum_sq_clone.lock() {
-                                (*sum_sq / count as f32).sqrt()
+                                (*sum_sq / level_count as f32).sqrt()
                             } else {
                                 0.0
                             };
@@ -300,7 +373,11 @@ fn build_input_stream_f32(
                             }
                         }
                     }
+                } else {
+                    eprintln!("[Audio] ERROR: writer is None in f32 callback!");
                 }
+            } else {
+                eprintln!("[Audio] ERROR: Failed to lock writer mutex in f32 callback!");
             }
         },
         |err| eprintln!("[Audio] Stream error: {}", err),
@@ -317,6 +394,7 @@ fn try_build_loopback_stream(
     host: &cpal::Host,
     writer: Arc<Mutex<Option<WavWriter<std::io::BufWriter<std::fs::File>>>>>,
     is_paused: Arc<AtomicBool>,
+    event_tx: mpsc::UnboundedSender<RecordingEvent>,
 ) -> Result<impl StreamTrait, String> {
     use cpal::traits::HostTrait;
 
@@ -339,6 +417,14 @@ fn try_build_loopback_stream(
     match sample_format {
         cpal::SampleFormat::I16 => {
             let writer_clone = Arc::clone(&writer);
+            let event_tx_clone = event_tx.clone();
+
+            // Audio level tracking for loopback stream
+            let level_counter = Arc::new(AtomicUsize::new(0));
+            let level_sum_sq = Arc::new(Mutex::new(0.0f32));
+            let level_counter_clone = Arc::clone(&level_counter);
+            let level_sum_sq_clone = Arc::clone(&level_sum_sq);
+
             let stream = output_device.build_input_stream(
                 &config,
                 move |data: &[i16], _| {
@@ -346,9 +432,29 @@ fn try_build_loopback_stream(
                         return;
                     }
                     if let Ok(mut guard) = writer_clone.lock() {
-                        if let Some(ref mut w) = *guard {
+                        if let Some(ref mut w) = &mut *guard {
                             for &sample in data {
                                 let _ = w.write_sample(sample);
+
+                                // Calculate audio level for visualization
+                                let normalized = sample.to_float_sample();
+                                if let Ok(mut sum_sq) = level_sum_sq_clone.lock() {
+                                    *sum_sq += normalized * normalized;
+                                }
+                                let count = level_counter_clone.fetch_add(1, Ordering::Relaxed) + 1;
+
+                                if count >= LEVEL_EMIT_INTERVAL_SAMPLES {
+                                    let rms = if let Ok(sum_sq) = level_sum_sq_clone.lock() {
+                                        (*sum_sq / count as f32).sqrt()
+                                    } else {
+                                        0.0
+                                    };
+                                    let _ = event_tx_clone.send(RecordingEvent::AudioLevel(rms));
+                                    level_counter_clone.store(0, Ordering::Relaxed);
+                                    if let Ok(mut sum_sq) = level_sum_sq_clone.lock() {
+                                        *sum_sq = 0.0;
+                                    }
+                                }
                             }
                         }
                     }
@@ -361,6 +467,14 @@ fn try_build_loopback_stream(
         }
         cpal::SampleFormat::F32 => {
             let writer_clone = Arc::clone(&writer);
+            let event_tx_clone = event_tx.clone();
+
+            // Audio level tracking for loopback stream
+            let level_counter = Arc::new(AtomicUsize::new(0));
+            let level_sum_sq = Arc::new(Mutex::new(0.0f32));
+            let level_counter_clone = Arc::clone(&level_counter);
+            let level_sum_sq_clone = Arc::clone(&level_sum_sq);
+
             let stream = output_device.build_input_stream(
                 &config,
                 move |data: &[f32], _| {
@@ -368,10 +482,29 @@ fn try_build_loopback_stream(
                         return;
                     }
                     if let Ok(mut guard) = writer_clone.lock() {
-                        if let Some(ref mut w) = *guard {
+                        if let Some(ref mut w) = &mut *guard {
                             for &sample in data {
                                 let s16 = (sample.clamp(-1.0, 1.0) * i16::MAX as f32) as i16;
                                 let _ = w.write_sample(s16);
+
+                                // Calculate audio level for visualization
+                                if let Ok(mut sum_sq) = level_sum_sq_clone.lock() {
+                                    *sum_sq += sample * sample;
+                                }
+                                let count = level_counter_clone.fetch_add(1, Ordering::Relaxed) + 1;
+
+                                if count >= LEVEL_EMIT_INTERVAL_SAMPLES {
+                                    let rms = if let Ok(sum_sq) = level_sum_sq_clone.lock() {
+                                        (*sum_sq / count as f32).sqrt()
+                                    } else {
+                                        0.0
+                                    };
+                                    let _ = event_tx_clone.send(RecordingEvent::AudioLevel(rms));
+                                    level_counter_clone.store(0, Ordering::Relaxed);
+                                    if let Ok(mut sum_sq) = level_sum_sq_clone.lock() {
+                                        *sum_sq = 0.0;
+                                    }
+                                }
                             }
                         }
                     }

@@ -191,15 +191,31 @@ export function RecordingPage() {
   }
 
   async function handlePause() {
-    await pauseRecording();
-    setPhase("paused");
-    stopTimer();
+    try {
+      await pauseRecording();
+      setPhase("paused");
+      stopTimer();
+    } catch (error) {
+      console.error("Pauze mislukt:", error);
+      // If channel is closed, the recording has likely stopped
+      // Reset to idle state
+      setPhase("idle");
+      stopTimer();
+    }
   }
 
   async function handleResume() {
-    await resumeRecording();
-    setPhase("recording");
-    startTimer();
+    try {
+      await resumeRecording();
+      setPhase("recording");
+      startTimer();
+    } catch (error) {
+      console.error("Hervatten mislukt:", error);
+      // If channel is closed, the recording has likely stopped
+      // Reset to idle state
+      setPhase("idle");
+      stopTimer();
+    }
   }
 
   const elapsed = useRecordingStore((s) => s.elapsedSeconds);

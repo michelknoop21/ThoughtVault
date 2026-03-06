@@ -35,7 +35,12 @@
 	<key>CFBundleSupportedPlatforms</key>
 	<array>
 		<string>MacOSX</string>
+		<string>iPhoneOS</string>
 	</array>
+
+	<!-- iOS launch screen (required for iOS) -->
+	<key>UILaunchScreen</key>
+	<dict/>
 
 	<!-- Custom URL scheme: transcriptstudio:// -->
 	<key>CFBundleURLTypes</key>

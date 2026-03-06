@@ -519,6 +519,8 @@ struct AdminView: View {
                 #if os(macOS)
                 NSPasteboard.general.clearContents()
                 NSPasteboard.general.setString(invitation.code, forType: .string)
+                #else
+                UIPasteboard.general.string = invitation.code
                 #endif
             } label: {
                 Image(systemName: "doc.on.doc")

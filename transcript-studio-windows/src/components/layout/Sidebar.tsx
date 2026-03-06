@@ -22,7 +22,7 @@ export function Sidebar() {
   const userDisplayName = (() => {
     if (user?.name && user.name.trim()) return user.name.trim();
     if (user?.email) return user.email.split("@")[0];
-    return "";
+    return "Gebruiker";
   })();
 
   const userInitial = userDisplayName ? userDisplayName[0].toUpperCase() : null;

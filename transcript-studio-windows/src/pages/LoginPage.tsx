@@ -231,6 +231,7 @@ export function LoginPage() {
                       textAlign: "center",
                       fontSize: 24,
                       letterSpacing: "0.4em",
+                      maxWidth: "100%",
                     }}
                   />
                 </FormField>

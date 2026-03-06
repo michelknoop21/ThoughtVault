@@ -6,14 +6,17 @@ import {
   Pause24Regular,
   Play24Regular,
   ArrowLeft24Regular,
+  ArrowUpload24Regular,
   VideoChat24Regular,
+  Checkmark24Regular,
+  Dismiss24Regular,
 } from "@fluentui/react-icons";
 import { listen } from "@tauri-apps/api/event";
 import { useRecordingStore } from "../stores/recordingStore";
 import { useSettingsStore } from "../stores/settingsStore";
 import { useTranscriptsStore } from "../stores/transcriptsStore";
 import { useProfilesStore } from "../stores/profilesStore";
-import { useAudioLevel } from "../hooks/useAudioLevel";
+import { useAudioLevels } from "../hooks/useAudioLevel";
 import { openWidgetWindow, closeWidgetWindow } from "../hooks/useWidgetWindow";
 import {
   startRecording,
@@ -50,17 +53,17 @@ export function RecordingPage() {
   const {
     mode, phase, autoStart,
     setMode, setPhase, setFilePath, setElapsedSeconds,
-    setAutoStart, setCurrentTask, reset,
+    setAutoStart, reset,
+    addBackgroundTask, updateBackgroundTask, removeBackgroundTask, backgroundTasks,
   } = useRecordingStore();
   const settings = useSettingsStore();
   const { addTranscript } = useTranscriptsStore();
   const profiles = useProfilesStore((s) => s.profiles);
 
   const [selectedProfileId, setSelectedProfileId] = useState(settings.default_profile_id);
-  const [task, setTask] = useState<Partial<TranscriptTask> | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const audioLevel = useAudioLevel();
+  const audioLevels = useAudioLevels();
   const elapsedRef = useRef(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const filePathRef = useRef<string>("");
@@ -153,30 +156,32 @@ export function RecordingPage() {
     try {
       const { task_id } = await api.uploadRecording(filePath, selectedProfileId, mode);
 
-      const initialTask: TranscriptTask = {
+      const bgTask: TranscriptTask = {
         task_id,
         status: "uploading",
         progress: 0,
         mode,
         created_at: new Date().toISOString(),
       };
-      setTask(initialTask);
-      setCurrentTask(initialTask);
 
+      // Move task to background and reset recording to idle
+      addBackgroundTask(bgTask);
+      reset();
+
+      // SSE updates go to background task store
       const sseClient = createSSEClient(api.getStreamUrl(task_id));
       sseClient.connect(
         (update) => {
-          setTask((prev) => ({ ...prev, ...update }));
-          setCurrentTask({ ...initialTask, ...update });
+          updateBackgroundTask(task_id, update);
         },
         (err) => {
           console.error("[SSE] Error:", err);
+          updateBackgroundTask(task_id, { status: "failed", error_message: "Verbinding verloren" });
         },
         async () => {
           const transcripts = await api.getTranscripts({ limit: 1 });
           if (transcripts[0]) addTranscript(transcripts[0]);
-          reset();
-          navigate("/transcripts");
+          removeBackgroundTask(task_id);
         }
       );
     } catch (err) {
@@ -254,17 +259,36 @@ export function RecordingPage() {
         {(phase === "recording" || phase === "paused") && (
           <ActiveState
             elapsed={elapsed}
-            audioLevel={audioLevel}
+            audioLevels={audioLevels}
             isPaused={phase === "paused"}
-            task={task}
             onStop={handleStopRecording}
             onPause={handlePause}
             onResume={handleResume}
           />
         )}
 
-        {phase === "uploading" && <UploadingState task={task} />}
+        {phase === "uploading" && (
+          <div className="text-center">
+            <div className="flex-row" style={{ position: "relative", justifyContent: "center", margin: "0 auto 16px" }}>
+              <div className="mic-pulse-ring mic-pulse-ring-1" />
+              <div className="mic-pulse-ring mic-pulse-ring-2" />
+              <div className="flex-row" style={{ width: 80, height: 80, borderRadius: "50%", background: "rgba(229, 0, 116, 0.08)", justifyContent: "center", animation: "widget-pulse 1.5s ease-in-out infinite" }}>
+                <ArrowUpload24Regular className="text-accent" style={{ fontSize: 28 }} />
+              </div>
+            </div>
+            <p className="text-secondary">Uploaden...</p>
+          </div>
+        )}
       </div>
+
+      {/* Background processing tasks — visible while user can start new recordings */}
+      {backgroundTasks.length > 0 && (
+        <div style={{ padding: "0 16px 16px", position: "relative", zIndex: 1 }}>
+          {backgroundTasks.map((bgTask) => (
+            <BackgroundTaskCard key={bgTask.task_id} task={bgTask} />
+          ))}
+        </div>
+      )}
 
       {error && (
         <div className="error-banner" style={{ margin: 16 }}>
@@ -442,12 +466,11 @@ function IdleState({
 }
 
 function ActiveState({
-  elapsed, audioLevel, isPaused, task, onStop, onPause, onResume,
+  elapsed, audioLevels, isPaused, onStop, onPause, onResume,
 }: {
   elapsed: number;
-  audioLevel: number;
+  audioLevels: number[];
   isPaused: boolean;
-  task: Partial<TranscriptTask> | null;
   onStop: () => void;
   onPause: () => void;
   onResume: () => void;
@@ -482,7 +505,7 @@ function ActiveState({
 
       {/* Waveform */}
       <div className="card card-static" style={{ padding: "16px 20px", width: "100%" }}>
-        <WaveformVisualizer level={audioLevel} isPaused={isPaused} height={120} />
+        <WaveformVisualizer levels={audioLevels} isActive={!isPaused} height={120} />
       </div>
 
       {/* Mic button — active recording */}
@@ -504,21 +527,6 @@ function ActiveState({
       <p className="text-caption text-tertiary" style={{ marginTop: -8 }}>
         {isPaused ? "Klik om te hervatten" : "Klik om te pauzeren"}
       </p>
-
-      {/* Live transcription card */}
-      {task?.raw_transcription && typeof task.raw_transcription === "string" && (
-        <div className="card card-static" style={{ padding: 14, width: "100%", textAlign: "left", maxHeight: 130, overflow: "hidden" }}>
-          <div className="flex-row justify-between" style={{ marginBottom: 8 }}>
-            <span className="section-label text-accent" style={{ marginBottom: 0 }}>
-              LIVE TRANSCRIPTIE
-            </span>
-            <span className="text-caption text-tertiary">Op apparaat</span>
-          </div>
-          <p className="text-body text-secondary" style={{ lineHeight: 1.5 }}>
-            {task.raw_transcription}
-          </p>
-        </div>
-      )}
 
       {/* Control buttons: PAUZE / NOTITIE / STOP */}
       <div className="recording-controls">
@@ -560,152 +568,88 @@ function ActiveState({
   );
 }
 
-function UploadingState({ task }: { task: Partial<TranscriptTask> | null }) {
+function BackgroundTaskCard({ task }: { task: TranscriptTask }) {
   const navigate = useNavigate();
-  const progress = task?.progress ?? 0;
-  const status = task?.status ?? "uploading";
-  const isCompleted = status === "completed";
+  const { removeBackgroundTask } = useRecordingStore();
+
+  const status = task.status ?? "uploading";
+  const progress = task.progress ?? 0;
   const isFailed = status === "failed";
 
   const statusLabels: Record<string, string> = {
-    uploading: "Audio wordt geupload...",
-    converting: "Audio wordt geconverteerd...",
-    transcribing: "Spraak wordt omgezet naar tekst...",
-    generating: "AI notulen structureren...",
-    completed: "Voltooid!",
+    uploading: "Uploaden...",
+    converting: "Converteren...",
+    transcribing: "Transcriberen...",
+    generating: "Notulen genereren...",
+    completed: "Voltooid",
     failed: "Mislukt",
   };
-  const statusSubLabels: Record<string, string> = {
-    uploading: "Uploaden",
-    converting: "Converteren",
-    transcribing: "Transcriberen",
-    generating: "Structureren",
-    completed: "Klaar",
-    failed: "Fout",
-  };
   const label = statusLabels[status] ?? "Verwerken...";
-  const subLabel = statusSubLabels[status] ?? "Verwerken";
-
-  // Progress steps
-  const steps = [
-    { key: "uploading", label: "Audio uploaden" },
-    { key: "converting", label: "Audio converteren" },
-    { key: "transcribing", label: "Spraak naar tekst" },
-    { key: "generating", label: "AI notulen structureren" },
-  ];
-  const statusOrder = ["uploading", "converting", "transcribing", "generating", "completed"];
-  const currentIdx = statusOrder.indexOf(status);
-
-  // Circular progress ring calculations
-  const radius = 60;
-  const circumference = 2 * Math.PI * radius;
-  const offset = circumference - (progress / 100) * circumference;
 
   return (
-    <div className="processing-view">
-      {/* Title */}
-      <p className="text-subtitle">
-        AI Processing
-      </p>
-
-      {/* Circular progress */}
-      <div className="circular-progress">
-        <svg width="140" height="140">
-          <circle className="progress-track" cx="70" cy="70" r={radius} />
-          <circle
-            className="progress-fill"
-            cx="70"
-            cy="70"
-            r={radius}
-            strokeDasharray={circumference}
-            strokeDashoffset={offset}
-          />
-        </svg>
-        <div className="progress-text">
-          <span style={{ fontSize: 32, fontWeight: 600 }}>
-            {progress}%
-          </span>
-        </div>
-      </div>
-
-      {/* Status text */}
-      <div className="text-center">
-        <p className="text-body text-secondary" style={{ marginBottom: 4 }}>
-          {label}
-        </p>
-        <p className="text-caption text-tertiary">
-          {subLabel}
-        </p>
-      </div>
-
-      {/* Progress steps card */}
-      <div className="card card-static" style={{ width: "100%", padding: "16px 20px" }}>
-        <div className="flex-row gap-8" style={{ marginBottom: 12 }}>
-          <div className="live-dot" style={{ animation: "none" }} />
-          <span className="section-label" style={{ marginBottom: 0 }}>
-            VOORTGANG
-          </span>
-        </div>
-        <div className="flex-col">
-          {steps.map((step) => {
-            const stepIdx = statusOrder.indexOf(step.key);
-            const isCompleted = currentIdx > stepIdx;
-            const isActive = currentIdx === stepIdx;
-            const stateClass = isCompleted ? "completed" : isActive ? "active" : "pending";
-
-            return (
-              <div key={step.key} className={`processing-step ${stateClass}`}>
-                <span className="step-icon">
-                  {isCompleted ? (
-                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                      <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  ) : isActive ? (
-                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                      <circle cx="6" cy="6" r="5" stroke="currentColor" strokeWidth="1.5" strokeDasharray="8 4"/>
-                    </svg>
-                  ) : (
-                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                      <circle cx="6" cy="6" r="2.5" fill="currentColor"/>
-                    </svg>
-                  )}
-                </span>
-                <span>{step.label}</span>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Live transcription text from SSE */}
-      {task?.raw_transcription && typeof task.raw_transcription === "string" && (
-        <div className="card card-static" style={{ width: "100%", padding: "12px 16px", textAlign: "left", maxHeight: 150, overflowY: "auto" }}>
-          <span className="section-label text-accent" style={{ marginBottom: 6, display: "block" }}>
-            LIVE TRANSCRIPTIE
-          </span>
-          <p className="text-body text-secondary" style={{ lineHeight: 1.5, fontSize: 12 }}>
-            {task.raw_transcription}
-          </p>
-        </div>
+    <div
+      className="card card-static"
+      style={{
+        padding: "10px 14px",
+        display: "flex",
+        alignItems: "center",
+        gap: 12,
+        marginBottom: 8,
+      }}
+    >
+      {/* Status indicator */}
+      {isFailed ? (
+        <Dismiss24Regular style={{ fontSize: 16, color: "var(--status-error)", flexShrink: 0 }} />
+      ) : status === "completed" ? (
+        <Checkmark24Regular style={{ fontSize: 16, color: "var(--status-success)", flexShrink: 0 }} />
+      ) : (
+        <div className="live-dot" style={{ flexShrink: 0 }} />
       )}
 
-      {/* Completion link */}
-      {isCompleted && (
+      {/* Label + progress */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+          <span className="text-body" style={{ fontWeight: 500 }}>{label}</span>
+          <span className="text-caption text-tertiary">{progress}%</span>
+        </div>
+        <div style={{
+          height: 3,
+          borderRadius: 2,
+          background: "var(--border-secondary)",
+          overflow: "hidden",
+        }}>
+          <div style={{
+            height: "100%",
+            width: `${progress}%`,
+            background: isFailed ? "var(--status-error)" : "var(--interactive-bg)",
+            borderRadius: 2,
+            transition: "width 300ms ease",
+          }} />
+        </div>
+      </div>
+
+      {/* Action button */}
+      {status === "completed" ? (
         <button
-          className="btn btn-accent"
-          onClick={() => navigate("/transcripts")}
-          style={{ marginTop: 8 }}
+          className="btn btn-secondary"
+          style={{ padding: "4px 10px", fontSize: 12 }}
+          onClick={() => {
+            removeBackgroundTask(task.task_id);
+            navigate("/transcripts");
+          }}
         >
-          Bekijk transcript
+          Bekijk
         </button>
-      )}
-
-      {/* Error state */}
-      {isFailed && task?.error_message && (
-        <div className="error-banner" style={{ width: "100%" }}>
-          {task.error_message}
-        </div>
-      )}
+      ) : isFailed ? (
+        <button
+          className="btn btn-ghost"
+          style={{ padding: "4px 8px", fontSize: 12 }}
+          onClick={() => removeBackgroundTask(task.task_id)}
+          title="Verwijderen"
+        >
+          <Dismiss24Regular style={{ fontSize: 14 }} />
+        </button>
+      ) : null}
     </div>
   );
 }

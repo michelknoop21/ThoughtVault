@@ -7,6 +7,9 @@
 
 import SwiftUI
 import WebKit
+#if os(iOS)
+import UIKit
+#endif
 
 // MARK: - NotuleResultView
 
@@ -299,6 +302,8 @@ struct NotuleResultView: View {
                             #if os(macOS)
                             NSPasteboard.general.clearContents()
                             NSPasteboard.general.setString(raw, forType: .string)
+                            #else
+                            UIPasteboard.general.string = raw
                             #endif
                         }
                         .buttonStyle(SecondaryButtonStyle())
@@ -412,6 +417,7 @@ struct NotuleResultView: View {
         showExportMenu = false
         guard let html = task.notuleHtml else { return }
 
+        #if os(macOS)
         let printInfo = NSPrintInfo.shared
         printInfo.paperSize = NSSize(width: 595, height: 842) // A4
         printInfo.topMargin = 36
@@ -430,6 +436,18 @@ struct NotuleResultView: View {
             op.showsProgressPanel = true
             op.run()
         }
+        #else
+        let webView = WKWebView(frame: CGRect(x: 0, y: 0, width: 595, height: 842))
+        webView.loadHTMLString(styledHTML(html), baseURL: nil)
+
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(800))
+            let printFormatter = webView.viewPrintFormatter()
+            let printController = UIPrintInteractionController.shared
+            printController.printFormatter = printFormatter
+            printController.present(animated: true)
+        }
+        #endif
     }
 
     private func exportAsTXT() {
@@ -444,6 +462,7 @@ struct NotuleResultView: View {
             .replacingOccurrences(of: "&nbsp;", with: " ")
             .trimmingCharacters(in: .whitespacesAndNewlines)
 
+        #if os(macOS)
         let panel = NSSavePanel()
         panel.nameFieldStringValue = "notulen.txt"
         panel.allowedContentTypes = [.plainText]
@@ -454,6 +473,19 @@ struct NotuleResultView: View {
                 exportError = "Exporteren mislukt: \(error.localizedDescription)"
             }
         }
+        #else
+        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("notulen.txt")
+        do {
+            try decoded.write(to: tempURL, atomically: true, encoding: .utf8)
+            let activityVC = UIActivityViewController(activityItems: [tempURL], applicationActivities: nil)
+            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+               let rootVC = windowScene.windows.first?.rootViewController {
+                rootVC.present(activityVC, animated: true)
+            }
+        } catch {
+            exportError = "Exporteren mislukt: \(error.localizedDescription)"
+        }
+        #endif
     }
 
     private func exportAsDOCX() {
@@ -470,10 +502,18 @@ struct NotuleResultView: View {
         guard let html = task.notuleHtml else { return }
         let stripped = html.replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)
 
+        #if os(macOS)
         let picker = NSSharingServicePicker(items: [stripped])
         if let window = NSApp.keyWindow, let view = window.contentView {
             picker.show(relativeTo: .zero, of: view, preferredEdge: .minY)
         }
+        #else
+        let activityVC = UIActivityViewController(activityItems: [stripped], applicationActivities: nil)
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let rootVC = windowScene.windows.first?.rootViewController {
+            rootVC.present(activityVC, animated: true)
+        }
+        #endif
     }
 
     private func styledHTML(_ html: String) -> String {
@@ -511,6 +551,7 @@ struct NotuleResultView: View {
 
 // MARK: - HTMLWebView
 
+#if os(macOS)
 struct HTMLWebView: NSViewRepresentable {
     let htmlContent: String
 
@@ -557,6 +598,57 @@ struct HTMLWebView: NSViewRepresentable {
         webView.loadHTMLString(styled, baseURL: nil)
     }
 }
+#else
+struct HTMLWebView: UIViewRepresentable {
+    let htmlContent: String
+
+    func makeUIView(context: Context) -> WKWebView {
+        let config = WKWebViewConfiguration()
+        let webView = WKWebView(frame: .zero, configuration: config)
+        webView.isOpaque = false
+        webView.backgroundColor = .clear
+        webView.scrollView.backgroundColor = .clear
+        return webView
+    }
+
+    func updateUIView(_ webView: WKWebView, context: Context) {
+        let styled = """
+        <!DOCTYPE html>
+        <html>
+        <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+            font-size: 14px;
+            line-height: 1.65;
+            color: #1a1a1a;
+            background: transparent;
+            padding: 16px;
+        }
+        h1 { font-size: 22px; font-weight: 700; color: #E50074; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid #E50074; }
+        h2 { font-size: 18px; font-weight: 600; color: #333; margin-top: 24px; margin-bottom: 8px; }
+        h3 { font-size: 15px; font-weight: 600; color: #555; margin-top: 16px; margin-bottom: 6px; }
+        p  { margin: 8px 0; }
+        ul, ol { margin: 8px 0 8px 20px; }
+        li { margin: 4px 0; }
+        strong { font-weight: 600; }
+        em { font-style: italic; color: #555; }
+        table { border-collapse: collapse; width: 100%; margin: 12px 0; }
+        th, td { border: 1px solid #e0e0e0; padding: 8px 12px; text-align: left; }
+        th { background: #f8f8f8; font-weight: 600; }
+        blockquote { border-left: 3px solid #E50074; margin: 12px 0; padding: 8px 16px; background: #fef6fb; }
+        </style>
+        </head>
+        <body>\(htmlContent)</body>
+        </html>
+        """
+        webView.loadHTMLString(styled, baseURL: nil)
+    }
+}
+#endif
 
 // MARK: - Preview
 

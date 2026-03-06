@@ -570,46 +570,50 @@ struct SettingsView: View {
 
     private var accountSection: some View {
         Section {
-            if let user = authVM.currentUser {
-                HStack(spacing: TS.Spacing.sm) {
-                    ZStack {
-                        Circle()
-                            .fill(Color.brandPrimary.opacity(0.12))
-                            .frame(width: 40, height: 40)
-                        Text(String(user.email.prefix(1)).uppercased())
-                            .font(TS.Font.headlineBold)
-                            .foregroundStyle(Color.brandPrimary)
-                    }
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        if let name = user.name, !name.isEmpty {
-                            Text(name)
-                                .font(TS.Font.bodyMedium)
+            NavigationLink {
+                AccountView()
+            } label: {
+                if let user = authVM.currentUser {
+                    HStack(spacing: TS.Spacing.sm) {
+                        ZStack {
+                            Circle()
+                                .fill(Color.brandSecondary.opacity(0.12))
+                                .frame(width: 40, height: 40)
+                            Text(String((user.name ?? user.email).prefix(1)).uppercased())
+                                .font(TS.Font.headlineBold)
+                                .foregroundStyle(Color.brandSecondary)
                         }
-                        Text(user.email)
-                            .font(TS.Font.footnote)
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            if let name = user.name, !name.isEmpty {
+                                Text(name)
+                                    .font(TS.Font.bodyMedium)
+                            }
+                            Text(user.email)
+                                .font(TS.Font.footnote)
+                                .foregroundStyle(Color.labelSecondary)
+                        }
+
+                        Spacer()
+
+                        if let role = user.role {
+                            Text(role == "admin" ? "Admin" : "Gebruiker")
+                                .font(TS.Font.microSemibold)
+                                .padding(.horizontal, TS.Spacing.sm)
+                                .padding(.vertical, TS.Spacing.xs)
+                                .background(Color.brandPrimary.opacity(0.10))
+                                .foregroundStyle(Color.brandPrimary)
+                                .clipShape(RoundedRectangle(cornerRadius: TS.Radius.xs))
+                        }
+                    }
+                } else {
+                    HStack(spacing: TS.Spacing.sm) {
+                        Image(systemName: "person.circle")
+                            .foregroundStyle(Color.labelTertiary)
+                        Text(authVM.userEmail.isEmpty ? "Niet ingelogd" : authVM.userEmail)
+                            .font(TS.Font.body)
                             .foregroundStyle(Color.labelSecondary)
                     }
-
-                    Spacer()
-
-                    if let role = user.role {
-                        Text(role)
-                            .font(TS.Font.microSemibold)
-                            .padding(.horizontal, TS.Spacing.sm)
-                            .padding(.vertical, TS.Spacing.xs)
-                            .background(Color.brandPrimary.opacity(0.10))
-                            .foregroundStyle(Color.brandPrimary)
-                            .clipShape(RoundedRectangle(cornerRadius: TS.Radius.xs))
-                    }
-                }
-            } else {
-                HStack(spacing: TS.Spacing.sm) {
-                    Image(systemName: "person.circle")
-                        .foregroundStyle(Color.labelTertiary)
-                    Text(authVM.userEmail.isEmpty ? "Niet ingelogd" : authVM.userEmail)
-                        .font(TS.Font.body)
-                        .foregroundStyle(Color.labelSecondary)
                 }
             }
 

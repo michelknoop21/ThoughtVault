@@ -1,7 +1,6 @@
-use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use tokio::sync::mpsc;
-use tauri::{AppHandle, Emitter, Manager};
+use tauri::{AppHandle, Emitter};
 use crate::audio::{
     recorder,
     types::{AudioDevice, RecordingCommand, RecordingEvent, RecordingMode, RecordingResult},

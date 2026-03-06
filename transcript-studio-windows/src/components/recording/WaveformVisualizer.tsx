@@ -1,48 +1,61 @@
 import { useEffect, useRef } from "react";
 
 interface WaveformVisualizerProps {
-  level: number; // 0–100
-  isPaused: boolean;
+  /** Audio level values in range 0.0-1.0 (newest last) */
+  levels: number[];
+  /** When false, waves animate at minimal idle amplitude */
+  isActive: boolean;
+  /** Container height in px (default: 120) */
   height?: number;
 }
 
-// Each wave has independent frequency, speed, smoothing and color
-interface WaveLineConfig {
+// Per-wave config — matches macOS WaveformView.swift WaveConfig exactly
+interface WaveConfig {
   frequency: number;
-  speed: number;        // radians per second
-  ampScale: number;     // fraction of max amplitude
-  smoothUp: number;     // attack rate (0-1, higher = snappier)
-  smoothDown: number;   // release rate
-  phaseOffset: number;  // initial phase offset so waves start desynchronized
-  color: string;
+  speed: number;         // radians per second
+  amplitudeScale: number;
+  smoothUp: number;      // attack rate (0-1)
+  smoothDown: number;    // release rate
+  phaseOffset: number;   // initial phase offset
   lineWidth: number;
-  envelopePower: number;
-  blendMode: GlobalCompositeOperation;
+  glowWidth: number;     // wider stroke behind for neon glow
+  glowOpacity: number;
+  color: [number, number, number]; // RGB 0-255
+  isPrimary: boolean;
+  historyOffset: number; // how many samples back this wave reads
 }
 
-const WAVE_LINES: WaveLineConfig[] = [
-  // Primary bold wave — fastest attack
-  { frequency: 1.5,  speed: 9.0,   ampScale: 0.28,  smoothUp: 0.40, smoothDown: 0.10, phaseOffset: 0.0,  color: "rgba(0, 204, 255, 0.65)",   lineWidth: 2.0, envelopePower: 0.85, blendMode: "lighter" },
-  // Secondary waves — each with unique timing
-  { frequency: 1.8,  speed: 7.2,   ampScale: 0.24,  smoothUp: 0.30, smoothDown: 0.08, phaseOffset: 1.2,  color: "rgba(102, 51, 255, 0.55)",  lineWidth: 1.2, envelopePower: 0.85, blendMode: "lighter" },
-  { frequency: 1.2,  speed: 11.5,  ampScale: 0.22,  smoothUp: 0.20, smoothDown: 0.06, phaseOffset: 2.8,  color: "rgba(230, 0, 255, 0.50)",   lineWidth: 1.0, envelopePower: 0.85, blendMode: "lighter" },
-  { frequency: 2.1,  speed: 5.8,   ampScale: 0.20,  smoothUp: 0.45, smoothDown: 0.12, phaseOffset: 4.1,  color: "rgba(51, 255, 230, 0.50)",  lineWidth: 1.0, envelopePower: 0.85, blendMode: "lighter" },
-  { frequency: 0.9,  speed: 13.0,  ampScale: 0.18,  smoothUp: 0.15, smoothDown: 0.05, phaseOffset: 5.5,  color: "rgba(80, 40, 255, 0.40)",   lineWidth: 0.8, envelopePower: 0.85, blendMode: "lighter" },
-  // Background glow waves — slow, wide, soft
-  { frequency: 0.4,  speed: 2.5,   ampScale: 0.35,  smoothUp: 0.12, smoothDown: 0.04, phaseOffset: 0.5,  color: "rgba(102, 51, 255, 0.12)",  lineWidth: 30,  envelopePower: 0.6,  blendMode: "screen" },
-  { frequency: 0.6,  speed: 3.5,   ampScale: 0.30,  smoothUp: 0.10, smoothDown: 0.03, phaseOffset: 3.0,  color: "rgba(0, 204, 255, 0.10)",   lineWidth: 24,  envelopePower: 0.6,  blendMode: "screen" },
-  { frequency: 0.3,  speed: 2.0,   ampScale: 0.25,  smoothUp: 0.08, smoothDown: 0.03, phaseOffset: 1.8,  color: "rgba(230, 0, 255, 0.08)",   lineWidth: 30,  envelopePower: 0.6,  blendMode: "screen" },
+// Matches macOS waveConfigs array — same frequencies, speeds, colors, offsets
+const WAVE_CONFIGS: WaveConfig[] = [
+  // Primary bold wave — brandPrimary #E50074
+  { frequency: 1.5,  speed: 9.0,  amplitudeScale: 1.0,  smoothUp: 0.70, smoothDown: 0.20, phaseOffset: 0.0,  lineWidth: 3.0, glowWidth: 8.0,  glowOpacity: 0.20, color: [229, 0, 116],   isPrimary: true,  historyOffset: 0  },
+  // Wave 2 — blue-purple (0.3, 0.4, 1.0)
+  { frequency: 1.8,  speed: 7.2,  amplitudeScale: 0.82, smoothUp: 0.60, smoothDown: 0.18, phaseOffset: 1.2,  lineWidth: 1.5, glowWidth: 5.0,  glowOpacity: 0.18, color: [77, 102, 255],  isPrimary: false, historyOffset: 5  },
+  // Wave 3 — purple (0.5, 0.2, 1.0)
+  { frequency: 1.2,  speed: 11.5, amplitudeScale: 0.70, smoothUp: 0.55, smoothDown: 0.16, phaseOffset: 2.8,  lineWidth: 1.5, glowWidth: 5.0,  glowOpacity: 0.16, color: [128, 51, 255],  isPrimary: false, historyOffset: 10 },
+  // Wave 4 — neonBlue #00C2FF
+  { frequency: 2.1,  speed: 5.8,  amplitudeScale: 0.55, smoothUp: 0.50, smoothDown: 0.15, phaseOffset: 4.1,  lineWidth: 1.5, glowWidth: 5.0,  glowOpacity: 0.15, color: [0, 194, 255],   isPrimary: false, historyOffset: 15 },
+  // Wave 5 — blue (0.2, 0.5, 1.0)
+  { frequency: 0.9,  speed: 13.0, amplitudeScale: 0.40, smoothUp: 0.45, smoothDown: 0.15, phaseOffset: 5.5,  lineWidth: 1.5, glowWidth: 5.0,  glowOpacity: 0.15, color: [51, 128, 255],  isPrimary: false, historyOffset: 20 },
 ];
 
+const IDLE_AMPLITUDE = 0.03;
+const NUM_WAVES = WAVE_CONFIGS.length;
+
 export function WaveformVisualizer({
-  level,
-  isPaused,
-  height = 48,
+  levels,
+  isActive,
+  height = 120,
 }: WaveformVisualizerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animFrameRef = useRef<number>(0);
-  // One smoothed level per wave for independent amplitude response
-  const smoothLevelsRef = useRef<number[]>(WAVE_LINES.map(() => 0));
+  const smoothedLevelsRef = useRef<number[]>(WAVE_CONFIGS.map(() => IDLE_AMPLITUDE));
+  const jitterSeedsRef = useRef<number[]>(WAVE_CONFIGS.map(() => Math.random() * 1000));
+  const levelsRef = useRef(levels);
+  const isActiveRef = useRef(isActive);
+
+  levelsRef.current = levels;
+  isActiveRef.current = isActive;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -66,64 +79,108 @@ export function WaveformVisualizer({
     resize();
 
     const observer = new ResizeObserver(resize);
-    observer.observe(canvas.parentElement!);
+    if (canvas.parentElement) observer.observe(canvas.parentElement);
 
     const draw = (time: number) => {
-      const targetLevel = isPaused ? 2 : Math.max(level, 2);
+      const timeSec = time / 1000;
+      const currentLevels = levelsRef.current;
+      const active = isActiveRef.current;
+      const smoothed = smoothedLevelsRef.current;
+      const seeds = jitterSeedsRef.current;
 
-      // Update each wave's smoothed level independently
-      const levels = smoothLevelsRef.current;
-      for (let i = 0; i < WAVE_LINES.length; i++) {
-        const cfg = WAVE_LINES[i];
-        const delta = targetLevel - levels[i];
+      // Update smoothed levels per wave — matches macOS updateSmoothedLevels()
+      for (let i = 0; i < NUM_WAVES; i++) {
+        const cfg = WAVE_CONFIGS[i];
+
+        let rawLevel: number;
+        if (active && currentLevels.length > 0) {
+          // Each wave reads from a different offset in the levels history
+          const endIndex = Math.max(0, currentLevels.length - cfg.historyOffset);
+          if (endIndex > 0) {
+            const count = Math.min(endIndex, 3);
+            const startIndex = endIndex - count;
+            const slice = currentLevels.slice(startIndex, endIndex);
+            const peak = Math.max(...slice);
+            const avg = slice.reduce((a, b) => a + b, 0) / count;
+            const base = Math.max(peak * 0.7 + avg * 0.3, IDLE_AMPLITUDE);
+            // Compress dynamic range and boost visibility
+            // pow(x, 0.45) expands low values more aggressively than 0.6
+            // then scale up so even modest input fills the waveform area
+            rawLevel = Math.pow(base, 0.45) * 1.4;
+          } else {
+            rawLevel = IDLE_AMPLITUDE;
+          }
+        } else {
+          rawLevel = IDLE_AMPLITUDE;
+        }
+
+        // Per-wave jitter for natural variation
+        const jitter = 0.85 + 0.30 * (0.5 + 0.5 * Math.sin(timeSec * 3.7 + seeds[i]));
+        const target = rawLevel * cfg.amplitudeScale * jitter;
+
+        // When active, ensure a minimum visible amplitude so waves are clearly "alive"
+        const activeFloor = active ? 0.08 : 0;
+        // Idle sine breathing so waves move independently in silence
+        const idleBreathing = IDLE_AMPLITUDE * (0.5 + 0.5 * Math.sin(timeSec * (1.2 + i * 0.3) + seeds[i]));
+        const finalTarget = Math.max(target, idleBreathing, activeFloor);
+
+        const delta = finalTarget - smoothed[i];
         const rate = delta > 0 ? cfg.smoothUp : cfg.smoothDown;
-        levels[i] += delta * rate;
+        smoothed[i] += delta * rate;
       }
 
-      const w = canvas.style.width ? parseFloat(canvas.style.width) : canvas.width;
+      // Draw
+      const w = parseFloat(canvas.style.width) || canvas.width;
       const h = height;
       ctx.clearRect(0, 0, w, h);
 
-      const timeSec = time / 1000;
+      const midX = w / 2;
+      const midY = h / 2;
+      const maxAmplitude = midY - 4;
 
-      // Draw glow waves first (last entries in config), then sharp lines on top
-      // Sort: blendMode "screen" first, then "lighter"
-      const glowIndices: number[] = [];
-      const lineIndices: number[] = [];
-      for (let i = 0; i < WAVE_LINES.length; i++) {
-        if (WAVE_LINES[i].blendMode === "screen") glowIndices.push(i);
-        else lineIndices.push(i);
-      }
+      // Draw waves back to front (wave 4 first, primary last on top)
+      for (let i = NUM_WAVES - 1; i >= 0; i--) {
+        const cfg = WAVE_CONFIGS[i];
+        const wavePhase = -(timeSec * cfg.speed) + cfg.phaseOffset;
+        const level = smoothed[i];
 
-      // Glow layer
-      ctx.save();
-      ctx.globalCompositeOperation = "screen";
-      for (const i of glowIndices) {
-        const cfg = WAVE_LINES[i];
-        const waveLevel = Math.pow(Math.max(0, levels[i]) / 100, 0.52);
-        const phase = cfg.phaseOffset + timeSec * cfg.speed;
-        ctx.filter = `blur(${Math.round(cfg.lineWidth)}px)`;
-        drawWavePath(ctx, w, h, cfg.frequency, h * cfg.ampScale * waveLevel, phase, cfg.envelopePower);
-        ctx.strokeStyle = cfg.color;
-        ctx.lineWidth = cfg.lineWidth;
+        // Build path — parabolic envelope -(x^2)+1 matches macOS exactly
+        ctx.beginPath();
+        for (let x = 0; x <= w; x++) {
+          const normalized = (x - midX) / midX;
+          const envelope = -(normalized * normalized) + 1.0;
+          const y = envelope * maxAmplitude * level
+            * Math.sin(2 * Math.PI * (x / w) * cfg.frequency + wavePhase)
+            + midY;
+          if (x === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+
+        const [r, g, b] = cfg.color;
+        const opacity = cfg.isPrimary
+          ? 1.0
+          : Math.min(1.0, (i / NUM_WAVES) / 3.0 + 1.0 / 3.0);
+
+        // Glow pass — wider translucent stroke behind main line
+        ctx.save();
+        if (!cfg.isPrimary) ctx.globalCompositeOperation = "screen";
+        ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${cfg.glowOpacity})`;
+        ctx.lineWidth = cfg.glowWidth;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
         ctx.stroke();
-      }
-      ctx.filter = "none";
-      ctx.restore();
+        ctx.restore();
 
-      // Sharp line layer
-      ctx.save();
-      ctx.globalCompositeOperation = "lighter";
-      for (const i of lineIndices) {
-        const cfg = WAVE_LINES[i];
-        const waveLevel = Math.pow(Math.max(0, levels[i]) / 100, 0.52);
-        const phase = cfg.phaseOffset + timeSec * cfg.speed;
-        drawWavePath(ctx, w, h, cfg.frequency, h * cfg.ampScale * waveLevel, phase, cfg.envelopePower);
-        ctx.strokeStyle = cfg.color;
+        // Main stroke
+        ctx.save();
+        if (!cfg.isPrimary) ctx.globalCompositeOperation = "screen";
+        ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${opacity})`;
         ctx.lineWidth = cfg.lineWidth;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
         ctx.stroke();
+        ctx.restore();
       }
-      ctx.restore();
 
       animFrameRef.current = requestAnimationFrame(draw);
     };
@@ -133,40 +190,12 @@ export function WaveformVisualizer({
       cancelAnimationFrame(animFrameRef.current);
       observer.disconnect();
     };
-  }, [level, isPaused, height]);
+  }, [height]);
 
   return (
     <canvas
       ref={canvasRef}
-      className="block w-full"
+      style={{ display: "block", width: "100%", height }}
     />
   );
-}
-
-function drawWavePath(
-  ctx: CanvasRenderingContext2D,
-  width: number,
-  height: number,
-  frequency: number,
-  amplitude: number,
-  phase: number,
-  envelopePower: number,
-) {
-  ctx.beginPath();
-  const midY = height / 2;
-  const steps = Math.max(width, 200);
-
-  for (let x = 0; x <= steps; x++) {
-    const xProgress = x / steps;
-    const envelope = Math.pow(Math.sin(xProgress * Math.PI), envelopePower);
-
-    const y = midY + Math.sin(2 * Math.PI * xProgress * frequency + phase) * amplitude * envelope;
-    const px = xProgress * width;
-
-    if (x === 0) {
-      ctx.moveTo(px, y);
-    } else {
-      ctx.lineTo(px, y);
-    }
-  }
 }

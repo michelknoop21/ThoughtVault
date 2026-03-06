@@ -27,6 +27,7 @@ import { useTranscriptsStore } from "../stores/transcriptsStore";
 import { api } from "../services/api";
 import { createSSEClient } from "../services/sse";
 import { useToast } from "../components/ui/InfoBar";
+import { clampMenuPosition } from "../utils/menuPosition";
 import type { Transcript } from "../types";
 
 interface ContextMenu {
@@ -119,13 +120,15 @@ export function TranscriptsPage() {
   function handleContextMenu(e: React.MouseEvent, transcript: Transcript) {
     e.preventDefault();
     e.stopPropagation();
-    setContextMenu({ x: e.clientX, y: e.clientY, transcript });
+    const pos = clampMenuPosition(e.clientX, e.clientY);
+    setContextMenu({ x: pos.x, y: pos.y, transcript });
   }
 
   function handleThreeDotMenu(e: React.MouseEvent, transcript: Transcript) {
     e.stopPropagation();
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    setContextMenu({ x: rect.right, y: rect.bottom, transcript });
+    const pos = clampMenuPosition(rect.right, rect.bottom);
+    setContextMenu({ x: pos.x, y: pos.y, transcript });
   }
 
   async function handleDelete(transcript: Transcript) {
@@ -685,7 +688,7 @@ ${transcript.notule_html}
                       Exporteren
                     </button>
                     {exportMenuOpen && selected.notule_html && (
-                      <div className="context-menu" style={{ left: 0, top: "100%", marginTop: 4, minWidth: 180 }}>
+                      <div className="context-menu" style={{ right: 0, top: "100%", marginTop: 4, minWidth: 180 }}>
                         <button className="context-menu-item" onClick={() => { handleExportPDF(selected); setExportMenuOpen(false); }}>
                           <DocumentPdf24Regular className="transcripts-icon-md" />
                           Exporteer PDF
@@ -932,7 +935,7 @@ ${transcript.notule_html}
         >
           <div
             className="card"
-            style={{ width: "100%", maxWidth: 360, padding: 20, background: "var(--surface-primary)", margin: "0 16px" }}
+            style={{ width: "100%", maxWidth: "min(360px, calc(100vw - 32px))", padding: 20, background: "var(--surface-primary)", margin: "0 16px" }}
             onClick={(e) => e.stopPropagation()}
           >
             <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12 }}>Tags beheren</h3>

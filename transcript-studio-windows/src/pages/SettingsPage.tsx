@@ -121,7 +121,7 @@ export function SettingsPage() {
                   <p className="settings-label">Provider</p>
                   <p className="settings-desc">
                     {settings.notulen_provider === "cloud"
-                      ? "Cloud (N8N + Claude)"
+                      ? "Cloud"
                       : settings.notulen_provider === "ollama"
                       ? "Ollama (lokaal)"
                       : "LM Studio (lokaal)"}
@@ -136,7 +136,7 @@ export function SettingsPage() {
                   }
                   className="select"
                 >
-                  <option value="cloud">Cloud (N8N + Claude)</option>
+                  <option value="cloud">Cloud</option>
                   <option value="ollama">Ollama (lokaal)</option>
                   <option value="lm-studio">LM Studio (lokaal)</option>
                 </select>

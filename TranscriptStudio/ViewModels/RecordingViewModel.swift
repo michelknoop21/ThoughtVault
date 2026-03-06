@@ -289,7 +289,9 @@ final class RecordingViewModel {
 
             await MainActor.run {
                 recordingState = .recording
+                #if os(macOS)
                 sleepInterruptedFileURL = nil
+                #endif
             }
 
             await startLiveTranscriptionIfEnabled()

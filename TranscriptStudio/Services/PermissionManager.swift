@@ -11,6 +11,8 @@ import OSLog
 import Speech
 #if os(macOS)
 import ScreenCaptureKit
+#elseif os(iOS)
+import UIKit
 #endif
 
 private let log = Logger(subsystem: "nl.prezent.TranscriptStudio", category: "Permissions")

@@ -17,6 +17,7 @@ import {
 import { api } from "../services/api";
 import { useAuthStore } from "../stores/authStore";
 import { useToast } from "../components/ui/InfoBar";
+import { clampMenuPosition } from "../utils/menuPosition";
 import type { AdminUser, AdminFeedback, SystemHealth } from "../types";
 
 type Tab = "overview" | "users" | "invitations" | "feedback" | "health";
@@ -278,7 +279,8 @@ function UsersTab({ users, onDelete, onReload }: { users: AdminUser[]; onDelete:
   function openMenu(e: React.MouseEvent, userId: string) {
     e.stopPropagation();
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    setMenuPos({ x: rect.right, y: rect.bottom });
+    const pos = clampMenuPosition(rect.right, rect.bottom);
+    setMenuPos(pos);
     setMenuUserId(userId);
   }
 

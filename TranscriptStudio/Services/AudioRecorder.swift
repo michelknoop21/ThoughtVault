@@ -146,10 +146,14 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
 
     func requestPermission() async {
 #if os(iOS)
-        let session = AVAudioSession.sharedInstance()
-        let granted = await withCheckedContinuation { continuation in
-            session.requestRecordPermission { granted in
-                continuation.resume(returning: granted)
+        let granted: Bool
+        if #available(iOS 17.0, *) {
+            granted = await AVAudioApplication.requestRecordPermission()
+        } else {
+            granted = await withCheckedContinuation { continuation in
+                AVAudioSession.sharedInstance().requestRecordPermission { result in
+                    continuation.resume(returning: result)
+                }
             }
         }
         await MainActor.run { self.hasPermission = granted }

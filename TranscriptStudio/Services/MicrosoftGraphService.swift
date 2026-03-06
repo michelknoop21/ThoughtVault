@@ -1,6 +1,9 @@
 import Foundation
 import AuthenticationServices
 import OSLog
+#if os(iOS)
+import UIKit
+#endif
 
 private let logger = Logger(subsystem: "nl.prezent.TranscriptStudio", category: "MicrosoftGraph")
 
@@ -404,7 +407,14 @@ private final class AuthPresentationContext: NSObject, ASWebAuthenticationPresen
     static let shared = AuthPresentationContext()
 
     func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
+        #if os(macOS)
         NSApplication.shared.keyWindow ?? ASPresentationAnchor()
+        #else
+        UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .flatMap { $0.windows }
+            .first { $0.isKeyWindow } ?? ASPresentationAnchor()
+        #endif
     }
 }
 

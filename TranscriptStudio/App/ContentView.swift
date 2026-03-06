@@ -1,4 +1,7 @@
 import SwiftUI
+#if os(iOS)
+import UIKit
+#endif
 
 // MARK: - App Tab
 
@@ -84,7 +87,11 @@ struct ContentView: View {
         .alert("Update vereist", isPresented: $showForceUpdateAlert) {
             Button("Update nu") {
                 if let url = URL(string: "https://transcriptstudio.app/download") {
+                    #if os(macOS)
                     NSWorkspace.shared.open(url)
+                    #else
+                    UIApplication.shared.open(url)
+                    #endif
                 }
             }
         } message: {
@@ -210,11 +217,11 @@ struct ContentView: View {
             // Avatar circle
             ZStack {
                 Circle()
-                    .fill(Color.brandPrimary.opacity(0.2))
+                    .fill(Color.brandSecondary.opacity(0.2))
                     .frame(width: 32, height: 32)
                 Text(authVM.currentUser?.displayFirstName.prefix(1).uppercased() ?? "?")
                     .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(Color.brandPrimary)
+                    .foregroundStyle(Color.brandSecondary)
             }
 
             VStack(alignment: .leading, spacing: 1) {

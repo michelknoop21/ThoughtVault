@@ -154,7 +154,7 @@ export function SavedRecordings({
       </div>
 
       {/* List */}
-      <div style={{ maxHeight: 200, overflowY: "auto" }}>
+      <div style={{ maxHeight: 400, overflowY: "auto" }}>
         {isLoading ? (
           <div style={{ padding: 14, textAlign: "center" }}>
             <span className="text-caption text-secondary">Laden...</span>

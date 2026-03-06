@@ -278,6 +278,50 @@ actor APIService {
         KeychainService.shared.delete(for: "authToken")
     }
 
+    // MARK: - Password & 2FA
+
+    func changePassword(currentPassword: String, newPassword: String) async throws {
+        let body = try JSONEncoder().encode([
+            "current_password": currentPassword,
+            "new_password": newPassword
+        ])
+        let req = try request(path: "/tstudio/api/auth/change-password", method: "POST", body: body)
+        try await performVoid(req)
+    }
+
+    func get2FAStatus() async throws -> TwoFAStatus {
+        let req = try request(path: "/tstudio/api/auth/2fa/status", method: "GET")
+        return try await perform(req)
+    }
+
+    func setup2FA() async throws -> TwoFASetupResponse {
+        let req = try request(path: "/tstudio/api/auth/2fa/setup", method: "POST")
+        return try await perform(req)
+    }
+
+    func verify2FASetup(code: String) async throws -> TwoFAVerifyResponse {
+        let body = try JSONEncoder().encode(["code": code])
+        let req = try request(path: "/tstudio/api/auth/2fa/verify-setup", method: "POST", body: body)
+        return try await perform(req)
+    }
+
+    func disable2FA(password: String) async throws {
+        let body = try JSONEncoder().encode(["password": password])
+        let req = try request(path: "/tstudio/api/auth/2fa/disable", method: "POST", body: body)
+        try await performVoid(req)
+    }
+
+    func regenerateBackupCodes() async throws -> TwoFAVerifyResponse {
+        let req = try request(path: "/tstudio/api/auth/2fa/regenerate-backup-codes", method: "POST")
+        return try await perform(req)
+    }
+
+    func updateUserName(_ name: String) async throws {
+        let body = try JSONEncoder().encode(["name": name])
+        let req = try request(path: "/tstudio/api/auth/update-name", method: "POST", body: body)
+        try await performVoid(req)
+    }
+
     // MARK: - Audio Upload
 
     func uploadAudio(

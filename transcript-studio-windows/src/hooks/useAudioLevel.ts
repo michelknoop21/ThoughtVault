@@ -1,10 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { createAudioLevelNormalizer } from "../services/audioLevel";
 
+/** Max samples to keep in history (≈1 second at 60Hz) */
+const HISTORY_SIZE = 60;
+
 /**
  * Subscribes to the "audio-level" event emitted by the Rust backend at ~60Hz.
- * Returns the current RMS level as a percentage 0–100.
+ * Returns the current RMS level as a percentage 0-100.
  */
 export function useAudioLevel(): number {
   const [level, setLevel] = useState(0);
@@ -22,4 +25,31 @@ export function useAudioLevel(): number {
   }, []);
 
   return level;
+}
+
+/**
+ * Returns a rolling history of audio levels normalized to 0.0-1.0.
+ * Matches the macOS WaveformView `levels: [Float]` interface.
+ */
+export function useAudioLevels(): number[] {
+  const [levels, setLevels] = useState<number[]>([]);
+  const bufferRef = useRef<number[]>([]);
+
+  useEffect(() => {
+    const normalizeLevel = createAudioLevelNormalizer();
+
+    const unlisten = listen<number>("audio-level", (event) => {
+      const normalized = normalizeLevel(event.payload) / 100; // 0-100 → 0.0-1.0
+      const buf = bufferRef.current;
+      buf.push(normalized);
+      if (buf.length > HISTORY_SIZE) buf.shift();
+      setLevels([...buf]);
+    });
+
+    return () => {
+      unlisten.then((fn) => fn());
+    };
+  }, []);
+
+  return levels;
 }

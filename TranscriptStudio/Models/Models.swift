@@ -460,6 +460,30 @@ struct TwoFactorRequest: Codable, Sendable {
 
 struct TwoFAStatus: Codable, Sendable {
     let enabled: Bool
+    let backupCodesRemaining: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case enabled
+        case backupCodesRemaining = "backup_codes_remaining"
+    }
+}
+
+struct TwoFASetupResponse: Codable, Sendable {
+    let qrCode: String
+    let secret: String
+
+    enum CodingKeys: String, CodingKey {
+        case qrCode = "qr_code"
+        case secret
+    }
+}
+
+struct TwoFAVerifyResponse: Codable, Sendable {
+    let backupCodes: [String]
+
+    enum CodingKeys: String, CodingKey {
+        case backupCodes = "backup_codes"
+    }
 }
 
 // MARK: - QueuedItem

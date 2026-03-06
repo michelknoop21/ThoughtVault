@@ -258,7 +258,7 @@ export function ProfilesPage() {
       {/* Create/Edit Modal */}
       {showModal && (
         <ModalOverlay onClose={() => setShowModal(false)}>
-          <div className="card" style={{ width: "100%", maxWidth: 480, maxHeight: "80vh", overflow: "auto", padding: 20, margin: "0 16px" }}>
+          <div className="card" style={{ width: "100%", maxWidth: "min(480px, calc(100vw - 32px))", maxHeight: "80vh", overflow: "auto", padding: 20, margin: "0 16px" }}>
             <p className="text-body-strong" style={{ marginBottom: 16 }}>
               {editingProfile ? "Profiel bewerken" : "Nieuw profiel"}
             </p>

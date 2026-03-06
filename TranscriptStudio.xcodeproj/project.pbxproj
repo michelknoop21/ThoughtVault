@@ -118,6 +118,7 @@
 		FA000043 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		FA000044 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		FA000045 /* TranscriptStudio.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TranscriptStudio.entitlements; sourceTree = "<group>"; };
+		FA000047 /* TranscriptStudio-iOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "TranscriptStudio-iOS.entitlements"; sourceTree = "<group>"; };
 		FA000046 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		FB000001 /* TranscriptStudioTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptStudioTests.swift; sourceTree = "<group>"; };
 		FC000001 /* TranscriptStudio.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TranscriptStudio.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -165,6 +166,7 @@
 				FA000046 /* Assets.xcassets */,
 				FA000044 /* Info.plist */,
 				FA000045 /* TranscriptStudio.entitlements */,
+				FA000047 /* TranscriptStudio-iOS.entitlements */,
 				FA000043 /* PrivacyInfo.xcprivacy */,
 			);
 			path = TranscriptStudio;
@@ -577,7 +579,9 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = TranscriptStudio/TranscriptStudio.entitlements;
+				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = TranscriptStudio/TranscriptStudio.entitlements;
+				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = TranscriptStudio/TranscriptStudio-iOS.entitlements;
+				"CODE_SIGN_ENTITLEMENTS[sdk=iphonesimulator*]" = TranscriptStudio/TranscriptStudio-iOS.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
@@ -597,6 +601,7 @@
 					"@executable_path/../Frameworks",
 					"@executable_path/../../Frameworks",
 				);
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = nl.prezent.TranscriptStudio;
@@ -606,7 +611,7 @@
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 6.0;
-				TARGETED_DEVICE_FAMILY = "1,2,7";
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
 		};
@@ -615,7 +620,9 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = TranscriptStudio/TranscriptStudio.entitlements;
+				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = TranscriptStudio/TranscriptStudio.entitlements;
+				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = TranscriptStudio/TranscriptStudio-iOS.entitlements;
+				"CODE_SIGN_ENTITLEMENTS[sdk=iphonesimulator*]" = TranscriptStudio/TranscriptStudio-iOS.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
@@ -635,6 +642,7 @@
 					"@executable_path/../Frameworks",
 					"@executable_path/../../Frameworks",
 				);
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = nl.prezent.TranscriptStudio;
@@ -644,7 +652,7 @@
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 6.0;
-				TARGETED_DEVICE_FAMILY = "1,2,7";
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
 		};

@@ -1,7 +1,8 @@
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
-use hound::{SampleFormat, WavSpec, WavWriter};
+use cpal::Sample;
+use hound::{SampleFormat as HoundSampleFormat, WavSpec, WavWriter};
 use std::sync::{Arc, Mutex};
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use tokio::sync::mpsc;
 use super::types::{AudioDevice, RecordingCommand, RecordingEvent, RecordingMode};
 
@@ -91,17 +92,26 @@ fn recording_thread_body(
             .ok_or("Geen standaard audio-invoerapparaat gevonden")?
     };
 
-    let config = cpal::StreamConfig {
-        channels: CHANNELS,
-        sample_rate: cpal::SampleRate(SAMPLE_RATE),
-        buffer_size: cpal::BufferSize::Default,
-    };
+    // Probe the device for supported sample format - this is critical!
+    // Most Windows devices support i16, not f32. We must build the stream
+    // with a callback that matches the device's native format.
+    let supported = input_device
+        .supported_input_configs()
+        .map_err(|e| format!("Kan audio configs niet lezen: {}", e))?
+        .find(|c| c.channels() >= CHANNELS && c.min_sample_rate() <= cpal::SampleRate(SAMPLE_RATE)
+            && c.max_sample_rate() >= cpal::SampleRate(SAMPLE_RATE))
+        .ok_or("Geen geschikte audio configuratie gevonden")?;
+
+    let sample_format = supported.sample_format();
+    let config: cpal::StreamConfig = supported.clone().with_sample_rate(cpal::SampleRate(SAMPLE_RATE)).into();
+
+    eprintln!("[Audio] Device sample format: {:?}, config: {:?}", sample_format, config);
 
     let wav_spec = WavSpec {
         channels: CHANNELS,
         sample_rate: SAMPLE_RATE,
         bits_per_sample: BITS_PER_SAMPLE,
-        sample_format: SampleFormat::Int,
+        sample_format: HoundSampleFormat::Int,
     };
 
     let writer = WavWriter::create(&output_path, wav_spec)
@@ -113,42 +123,20 @@ fn recording_thread_body(
     let is_paused_clone = Arc::clone(&is_paused);
 
     let event_tx_clone = event_tx.clone();
-    let mut level_sample_counter = 0usize;
-    let mut level_sum_sq = 0.0f32;
 
-    let input_stream = input_device.build_input_stream(
-        &config,
-        move |data: &[f32], _| {
-            if is_paused_clone.load(Ordering::Relaxed) {
-                return;
-            }
-
-            // Write samples
-            if let Ok(mut guard) = writer_clone.lock() {
-                if let Some(ref mut w) = *guard {
-                    for &sample in data {
-                        let s16 = (sample.clamp(-1.0, 1.0) * i16::MAX as f32) as i16;
-                        let _ = w.write_sample(s16);
-                        level_sum_sq += sample * sample;
-                        level_sample_counter += 1;
-                        if level_sample_counter >= LEVEL_EMIT_INTERVAL_SAMPLES {
-                            let rms = (level_sum_sq / level_sample_counter as f32).sqrt();
-                            let _ = event_tx_clone.send(RecordingEvent::AudioLevel(rms));
-                            level_sum_sq = 0.0;
-                            level_sample_counter = 0;
-                        }
-                    }
-                }
-            }
-        },
-        |err| eprintln!("[Audio] Stream error: {}", err),
-        None,
-    ).map_err(|e| format!("Kan audio stream niet openen: {}", e))?;
+    // Build the appropriate input stream based on the device's sample format
+    let input_stream = match sample_format {
+        cpal::SampleFormat::I16 => build_input_stream_i16(
+            &input_device, &config, writer_clone, is_paused_clone, event_tx_clone,
+        )?,
+        cpal::SampleFormat::F32 => build_input_stream_f32(
+            &input_device, &config, writer_clone, is_paused_clone, event_tx_clone,
+        )?,
+        _ => return Err("Niet-ondersteunde sample format".to_string()),
+    };
 
     // Optional loopback stream for combined mode (Windows WASAPI loopback)
     let _loopback_stream: Option<Box<dyn StreamTrait>> = if mode == RecordingMode::Combined {
-        // Try to get a WASAPI loopback device (render → loopback capture)
-        // On non-Windows or if unavailable, silently skip
         #[cfg(target_os = "windows")]
         {
             match try_build_loopback_stream(&host, Arc::clone(&writer), Arc::clone(&is_paused)) {
@@ -202,6 +190,126 @@ fn recording_thread_body(
     Ok(())
 }
 
+/// Build an input stream for devices that output i16 samples (most Windows devices)
+fn build_input_stream_i16(
+    device: &cpal::Device,
+    config: &cpal::StreamConfig,
+    writer: Arc<Mutex<Option<WavWriter<std::io::BufWriter<std::fs::File>>>>>,
+    is_paused: Arc<AtomicBool>,
+    event_tx: mpsc::UnboundedSender<RecordingEvent>,
+) -> Result<cpal::Stream, String> {
+    let writer_clone = Arc::clone(&writer);
+    let event_tx_clone = event_tx.clone();
+
+    // Shared state for audio level tracking across callbacks
+    let level_counter = Arc::new(AtomicUsize::new(0));
+    let level_sum_sq = Arc::new(Mutex::new(0.0f32));
+    let level_counter_clone = Arc::clone(&level_counter);
+    let level_sum_sq_clone = Arc::clone(&level_sum_sq);
+
+    let stream = device.build_input_stream(
+        config,
+        move |data: &[i16], _| {
+            if is_paused.load(Ordering::Relaxed) {
+                return;
+            }
+
+            if let Ok(mut guard) = writer_clone.lock() {
+                if let Some(ref mut w) = *guard {
+                    for &sample in data {
+                        // Write i16 directly to WAV
+                        let _ = w.write_sample(sample);
+
+                        // Calculate audio level for visualization
+                        // Normalize i16 to f32 in [-1.0, 1.0]
+                        let normalized = sample.to_float_sample();
+                        if let Ok(mut sum_sq) = level_sum_sq_clone.lock() {
+                            *sum_sq += normalized * normalized;
+                        }
+                        let count = level_counter_clone.fetch_add(1, Ordering::Relaxed) + 1;
+
+                        if count >= LEVEL_EMIT_INTERVAL_SAMPLES {
+                            let rms = if let Ok(sum_sq) = level_sum_sq_clone.lock() {
+                                (*sum_sq / count as f32).sqrt()
+                            } else {
+                                0.0
+                            };
+                            let _ = event_tx_clone.send(RecordingEvent::AudioLevel(rms));
+                            level_counter_clone.store(0, Ordering::Relaxed);
+                            if let Ok(mut sum_sq) = level_sum_sq_clone.lock() {
+                                *sum_sq = 0.0;
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        |err| eprintln!("[Audio] Stream error: {}", err),
+        None,
+    ).map_err(|e| format!("Kan i16 audio stream niet openen: {}", e))?;
+
+    Ok(stream)
+}
+
+/// Build an input stream for devices that output f32 samples
+fn build_input_stream_f32(
+    device: &cpal::Device,
+    config: &cpal::StreamConfig,
+    writer: Arc<Mutex<Option<WavWriter<std::io::BufWriter<std::fs::File>>>>>,
+    is_paused: Arc<AtomicBool>,
+    event_tx: mpsc::UnboundedSender<RecordingEvent>,
+) -> Result<cpal::Stream, String> {
+    let writer_clone = Arc::clone(&writer);
+    let event_tx_clone = event_tx.clone();
+
+    // Shared state for audio level tracking across callbacks
+    let level_counter = Arc::new(AtomicUsize::new(0));
+    let level_sum_sq = Arc::new(Mutex::new(0.0f32));
+    let level_counter_clone = Arc::clone(&level_counter);
+    let level_sum_sq_clone = Arc::clone(&level_sum_sq);
+
+    let stream = device.build_input_stream(
+        config,
+        move |data: &[f32], _| {
+            if is_paused.load(Ordering::Relaxed) {
+                return;
+            }
+
+            if let Ok(mut guard) = writer_clone.lock() {
+                if let Some(ref mut w) = *guard {
+                    for &sample in data {
+                        // Convert f32 to i16 for WAV output
+                        let s16 = (sample.clamp(-1.0, 1.0) * i16::MAX as f32) as i16;
+                        let _ = w.write_sample(s16);
+
+                        if let Ok(mut sum_sq) = level_sum_sq_clone.lock() {
+                            *sum_sq += sample * sample;
+                        }
+                        let count = level_counter_clone.fetch_add(1, Ordering::Relaxed) + 1;
+
+                        if count >= LEVEL_EMIT_INTERVAL_SAMPLES {
+                            let rms = if let Ok(sum_sq) = level_sum_sq_clone.lock() {
+                                (*sum_sq / count as f32).sqrt()
+                            } else {
+                                0.0
+                            };
+                            let _ = event_tx_clone.send(RecordingEvent::AudioLevel(rms));
+                            level_counter_clone.store(0, Ordering::Relaxed);
+                            if let Ok(mut sum_sq) = level_sum_sq_clone.lock() {
+                                *sum_sq = 0.0;
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        |err| eprintln!("[Audio] Stream error: {}", err),
+        None,
+    ).map_err(|e| format!("Kan f32 audio stream niet openen: {}", e))?;
+
+    Ok(stream)
+}
+
 /// Build a WASAPI loopback capture stream on Windows.
 /// The loopback mixes into the same WAV writer.
 #[cfg(target_os = "windows")]
@@ -216,31 +324,64 @@ fn try_build_loopback_stream(
     let output_device = host.default_output_device()
         .ok_or("Geen standaard uitvoerapparaat voor loopback")?;
 
-    let config = cpal::StreamConfig {
-        channels: CHANNELS,
-        sample_rate: cpal::SampleRate(SAMPLE_RATE),
-        buffer_size: cpal::BufferSize::Default,
-    };
+    // Probe loopback device for supported format
+    let supported = output_device
+        .supported_input_configs()
+        .map_err(|e| format!("Kan loopback configs niet lezen: {}", e))?
+        .find(|c| c.channels() >= CHANNELS && c.min_sample_rate() <= cpal::SampleRate(SAMPLE_RATE)
+            && c.max_sample_rate() >= cpal::SampleRate(SAMPLE_RATE))
+        .ok_or("Geen geschikte loopback configuratie gevonden")?;
 
-    let stream = output_device.build_input_stream(
-        &config,
-        move |data: &[f32], _| {
-            if is_paused.load(Ordering::Relaxed) {
-                return;
-            }
-            if let Ok(mut guard) = writer.lock() {
-                if let Some(ref mut w) = *guard {
-                    for &sample in data {
-                        let s16 = (sample.clamp(-1.0, 1.0) * i16::MAX as f32) as i16;
-                        let _ = w.write_sample(s16);
+    let sample_format = supported.sample_format();
+    let config: cpal::StreamConfig = supported.clone().with_sample_rate(cpal::SampleRate(SAMPLE_RATE)).into();
+
+    // Loopback also needs format-specific handling
+    match sample_format {
+        cpal::SampleFormat::I16 => {
+            let writer_clone = Arc::clone(&writer);
+            let stream = output_device.build_input_stream(
+                &config,
+                move |data: &[i16], _| {
+                    if is_paused.load(Ordering::Relaxed) {
+                        return;
                     }
-                }
-            }
-        },
-        |err| eprintln!("[Audio] Loopback stream error: {}", err),
-        None,
-    ).map_err(|e| format!("Loopback stream fout: {}", e))?;
-
-    stream.play().map_err(|e| format!("Kan loopback stream niet starten: {}", e))?;
-    Ok(stream)
+                    if let Ok(mut guard) = writer_clone.lock() {
+                        if let Some(ref mut w) = *guard {
+                            for &sample in data {
+                                let _ = w.write_sample(sample);
+                            }
+                        }
+                    }
+                },
+                |err| eprintln!("[Audio] Loopback stream error: {}", err),
+                None,
+            ).map_err(|e| format!("Loopback i16 stream fout: {}", e))?;
+            stream.play().map_err(|e| format!("Kan loopback stream niet starten: {}", e))?;
+            Ok(stream)
+        }
+        cpal::SampleFormat::F32 => {
+            let writer_clone = Arc::clone(&writer);
+            let stream = output_device.build_input_stream(
+                &config,
+                move |data: &[f32], _| {
+                    if is_paused.load(Ordering::Relaxed) {
+                        return;
+                    }
+                    if let Ok(mut guard) = writer_clone.lock() {
+                        if let Some(ref mut w) = *guard {
+                            for &sample in data {
+                                let s16 = (sample.clamp(-1.0, 1.0) * i16::MAX as f32) as i16;
+                                let _ = w.write_sample(s16);
+                            }
+                        }
+                    }
+                },
+                |err| eprintln!("[Audio] Loopback stream error: {}", err),
+                None,
+            ).map_err(|e| format!("Loopback f32 stream fout: {}", e))?;
+            stream.play().map_err(|e| format!("Kan loopback stream niet starten: {}", e))?;
+            Ok(stream)
+        }
+        _ => Err("Niet-ondersteunde loopback sample format".to_string()),
+    }
 }

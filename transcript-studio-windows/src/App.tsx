@@ -1,10 +1,12 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { TitleBar } from "./components/layout/TitleBar";
 import { Sidebar } from "./components/layout/Sidebar";
 import { CallAlertOverlay } from "./components/calendar/CallAlertOverlay";
 import { YingaFooter } from "./components/brand/YingaFooter";
+import { ErrorBoundary } from "./components/ui/ErrorBoundary";
+import { InfoBarHost } from "./components/ui/InfoBar";
 import { LoginPage } from "./pages/LoginPage";
 import { HomePage } from "./pages/HomePage";
 import { RecordingPage } from "./pages/RecordingPage";
@@ -46,6 +48,40 @@ function AppShell({ children }: { children: React.ReactNode }) {
   );
 }
 
+function KeyboardShortcuts() {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      // Ignore if user is typing in an input/textarea/contenteditable
+      const target = e.target as HTMLElement;
+      if (
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.isContentEditable
+      ) {
+        return;
+      }
+
+      const ctrl = e.ctrlKey || e.metaKey;
+
+      // Ctrl+1..4 = Navigate tabs
+      if (ctrl && e.key === "1") { e.preventDefault(); navigate("/"); }
+      if (ctrl && e.key === "2") { e.preventDefault(); navigate("/recording"); }
+      if (ctrl && e.key === "3") { e.preventDefault(); navigate("/transcripts"); }
+      if (ctrl && e.key === "4") { e.preventDefault(); navigate("/settings"); }
+
+      // Ctrl+R = Go to recording page
+      if (ctrl && e.key === "r") { e.preventDefault(); navigate("/recording"); }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [navigate]);
+
+  return null;
+}
+
 function ProtectedRoutes() {
   const { isAuthenticated } = useAuthStore();
   const { has_completed_onboarding, updateSettings } = useSettingsStore();
@@ -82,6 +118,7 @@ function ProtectedRoutes() {
 
   return (
     <AppShell>
+      <KeyboardShortcuts />
       <Routes>
         <Route path="/"            element={<HomePage />} />
         <Route path="/recording"   element={<RecordingPage />} />
@@ -119,13 +156,16 @@ export default function App() {
   }, []);
 
   return (
-    <BrowserRouter>
-      <div style={{ height: "100%" }}>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/*"     element={<ProtectedRoutes />} />
-        </Routes>
-      </div>
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <div style={{ height: "100%" }}>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/*"     element={<ProtectedRoutes />} />
+          </Routes>
+          <InfoBarHost />
+        </div>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }

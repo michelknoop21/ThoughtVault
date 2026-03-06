@@ -59,9 +59,9 @@ export function Sidebar() {
       <hr className="sidebar-divider" />
 
       {/* Main navigation */}
-      <SidebarItem to="/" icon={<Home24Regular />} label="Home" />
-      <SidebarItem to="/recording" icon={<MicRecord24Regular />} label="Opnemen" />
-      <SidebarItem to="/transcripts" icon={<DocumentText24Regular />} label="Notulen" />
+      <SidebarItem to="/" icon={<Home24Regular />} label="Home" shortcut="Ctrl+1" />
+      <SidebarItem to="/recording" icon={<MicRecord24Regular />} label="Opnemen" shortcut="Ctrl+2" />
+      <SidebarItem to="/transcripts" icon={<DocumentText24Regular />} label="Notulen" shortcut="Ctrl+3" />
 
       {/* Spacer pushes bottom items down */}
       <div className="flex-1" />
@@ -69,7 +69,7 @@ export function Sidebar() {
       <hr className="sidebar-divider" />
 
       {/* Bottom items */}
-      <SidebarItem to="/settings" icon={<Settings24Regular />} label="Instellingen" />
+      <SidebarItem to="/settings" icon={<Settings24Regular />} label="Instellingen" shortcut="Ctrl+4" />
       {isAdmin && (
         <SidebarItem to="/admin" icon={<ShieldPersonRegular />} label="Beheer" />
       )}
@@ -81,10 +81,12 @@ function SidebarItem({
   to,
   icon,
   label,
+  shortcut,
 }: {
   to: string;
   icon: React.ReactNode;
   label: string;
+  shortcut?: string;
 }) {
   return (
     <NavLink
@@ -93,9 +95,13 @@ function SidebarItem({
       className={({ isActive }) =>
         `sidebar-item${isActive ? " active" : ""}`
       }
+      title={shortcut ? `${label} (${shortcut})` : label}
     >
       <span className="sidebar-item-icon">{icon}</span>
       <span className="sidebar-item-label">{label}</span>
+      {shortcut && (
+        <span className="sidebar-item-shortcut">{shortcut}</span>
+      )}
     </NavLink>
   );
 }

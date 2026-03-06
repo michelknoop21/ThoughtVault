@@ -7,6 +7,8 @@ import {
   ChatBubblesQuestion24Regular,
   Info24Regular,
   ChevronRight24Regular,
+  ShieldLock24Regular,
+  Mail24Regular,
 } from "@fluentui/react-icons";
 import { useSettingsStore } from "../stores/settingsStore";
 import { useAuthStore } from "../stores/authStore";
@@ -288,7 +290,7 @@ export function SettingsPage() {
           {/* Feedback */}
           <div className="settings-group">
             <p className="settings-group-label">Feedback</p>
-            <div className="settings-row" style={{ cursor: "pointer" }}>
+            <div className="settings-row" style={{ cursor: "default" }}>
               <div className="flex-row gap-10 flex-1">
                 <ChatBubblesQuestion24Regular className="settings-icon" />
                 <div className="flex-1">
@@ -296,6 +298,39 @@ export function SettingsPage() {
                   <p className="settings-desc">Meld een probleem of suggestie</p>
                 </div>
                 <ChevronRight24Regular className="settings-icon-muted" style={{ fontSize: 14 }} />
+              </div>
+            </div>
+          </div>
+
+          {/* Privacy & Gegevens (GDPR) */}
+          <div className="settings-group">
+            <p className="settings-group-label">Privacy & gegevens</p>
+            <div className="settings-row">
+              <div className="flex-row gap-10 flex-1">
+                <ShieldLock24Regular className="settings-icon" />
+                <div className="flex-1">
+                  <p className="settings-label">Gegevens exporteren (AVG)</p>
+                  <p className="settings-desc">Download al je opnames en transcripties</p>
+                </div>
+                <ChevronRight24Regular className="settings-icon-muted" style={{ fontSize: 14 }} />
+              </div>
+            </div>
+            <div className="settings-row">
+              <div className="flex-row gap-10 flex-1">
+                <Mail24Regular className="settings-icon" style={{ color: "var(--fill-system-critical)" }} />
+                <div className="flex-1">
+                  <p className="settings-label">Account verwijderen</p>
+                  <p className="settings-desc">
+                    Neem contact op met{" "}
+                    <a
+                      href="mailto:support@prezent.nl?subject=Account%20verwijderen%20TranscriptStudio"
+                      style={{ color: "var(--text-accent)", textDecoration: "none" }}
+                    >
+                      support@prezent.nl
+                    </a>
+                    {" "}om je account te laten verwijderen. Verzoeken worden binnen 30 dagen verwerkt conform de AVG.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
@@ -308,7 +343,7 @@ export function SettingsPage() {
                 <Info24Regular className="settings-icon-muted" />
                 <div className="flex-1">
                   <p className="settings-label">TranscriptStudio</p>
-                  <p className="settings-desc">Versie 0.1.0 — Windows (Tauri 2)</p>
+                  <p className="settings-desc">Versie 1.0.10 — Windows (Tauri 2)</p>
                 </div>
               </div>
             </div>

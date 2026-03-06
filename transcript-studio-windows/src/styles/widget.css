@@ -114,7 +114,7 @@ body {
   background: rgba(255, 255, 255, 0.12);
   color: rgba(255, 255, 255, 0.90);
   border-radius: 8px;
-  cursor: pointer;
+  cursor: default;
   transition: background 67ms ease;
   width: 36px;
   height: 36px;

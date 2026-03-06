@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import {
   Search24Regular,
   Delete24Regular,
@@ -8,17 +8,22 @@ import {
   ArrowSync24Regular,
   MoreHorizontal24Regular,
   ArrowLeft24Regular,
-  Copy24Regular,
-  Dismiss24Regular,
   Timer24Regular,
   Share24Regular,
   Document24Regular,
   Clipboard24Regular,
+  Checkmark24Regular,
+  Dismiss24Regular,
+  DocumentPdf24Regular,
+  TextDescription24Regular,
+  Code24Regular,
+  Copy24Regular,
 } from "@fluentui/react-icons";
 import { marked } from "marked";
 import { useTranscriptsStore } from "../stores/transcriptsStore";
 import { api } from "../services/api";
 import { createSSEClient } from "../services/sse";
+import { useToast } from "../components/ui/InfoBar";
 import type { Transcript } from "../types";
 
 interface ContextMenu {
@@ -49,7 +54,14 @@ export function TranscriptsPage() {
   const [timeFilter, setTimeFilter] = useState<TimeFilter>("alles");
   const [mainTab, setMainTab] = useState<MainTab>("notulen");
   const [detailTab, setDetailTab] = useState<DetailTab>("notule");
+  const [isEditingNotule, setIsEditingNotule] = useState(false);
+  const [editedHTML, setEditedHTML] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const toast = useToast();
   const editInputRef = useRef<HTMLInputElement>(null);
+  const editorRef = useRef<HTMLDivElement>(null);
+  const exportBtnRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     loadTranscripts();
@@ -62,6 +74,18 @@ export function TranscriptsPage() {
       editInputRef.current.focus();
     }
   }, [editingId]);
+
+  // Close export menu on outside click
+  useEffect(() => {
+    if (!exportMenuOpen) return;
+    function handleClick(e: MouseEvent) {
+      if (exportBtnRef.current && !exportBtnRef.current.contains(e.target as Node)) {
+        setExportMenuOpen(false);
+      }
+    }
+    document.addEventListener("click", handleClick);
+    return () => document.removeEventListener("click", handleClick);
+  }, [exportMenuOpen]);
 
   async function loadTranscripts() {
     setIsLoading(true);
@@ -111,6 +135,33 @@ export function TranscriptsPage() {
     }
   }
 
+  // --- Notule inline editing ---
+  function startNotuleEdit(transcript: Transcript) {
+    setEditedHTML(transcript.notule_html || "");
+    setIsEditingNotule(true);
+  }
+
+  function cancelNotuleEdit() {
+    setIsEditingNotule(false);
+    setEditedHTML("");
+  }
+
+  async function saveNotuleEdit(transcript: Transcript) {
+    if (!editedHTML.trim()) return;
+    setIsSaving(true);
+    try {
+      await api.updateNotuleHTML(transcript.id, editedHTML);
+      updateTranscript(transcript.id, { notule_html: editedHTML });
+      setIsEditingNotule(false);
+      toast.show("Notule opgeslagen", "success");
+    } catch (err) {
+      console.error("Save notule failed:", err);
+      toast.show("Opslaan mislukt", "error");
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
   async function handleRegenerate(transcript: Transcript) {
     setRegeneratingId(transcript.id);
     try {
@@ -144,65 +195,64 @@ export function TranscriptsPage() {
     }
   }
 
-  function handleExport(transcript: Transcript, format: "html" | "txt" | "pdf") {
-    if (format === "pdf" && transcript.notule_html) {
-      // For PDF export, we'll use the browser's print functionality
-      const printWindow = window.open("", "_blank");
-      if (printWindow) {
-        printWindow.document.write(`
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <meta charset="utf-8">
-            <title>${transcript.title || "Notulen"}</title>
-            <style>
-              body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 12pt; line-height: 1.6; color: #1a1a1a; margin: 0; padding: 20pt; }
-              h1 { font-size: 18pt; font-weight: 700; color: #E50074; margin-bottom: 12pt; }
-              h2 { font-size: 14pt; font-weight: 600; margin-top: 16pt; }
-              h3 { font-size: 12pt; font-weight: 600; margin-top: 12pt; }
-              p { margin: 6pt 0; }
-              ul, ol { margin: 6pt 0; padding-left: 20pt; }
-              li { margin: 3pt 0; }
-              table { border-collapse: collapse; width: 100%; margin: 12pt 0; }
-              th, td { border: 1px solid #ddd; padding: 6pt 8pt; text-align: left; }
-              th { background: #f5f5f5; font-weight: 600; }
-            </style>
-          </head>
-          <body>
-            <h1>${transcript.title || "Notulen"}</h1>
-            <p style="color: #666; font-size: 10pt;">
-              ${formatDate(transcript.created_at)} · ${formatDuration(transcript.duration_seconds)}
-            </p>
-            ${transcript.notule_html}
-          </body>
-          </html>
-        `);
-        printWindow.document.close();
-        setTimeout(() => {
-          printWindow.print();
-        }, 250);
-      }
-      return;
-    }
+  // --- Export functions ---
+  function handleExportPDF(transcript: Transcript) {
+    if (!transcript.notule_html) return;
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) return;
+    printWindow.document.write(`<!DOCTYPE html>
+<html><head>
+<meta charset="utf-8">
+<title>${transcript.title || "Notulen"}</title>
+<style>
+  body { font-family: 'Segoe UI Variable', 'Segoe UI', -apple-system, system-ui, sans-serif; font-size: 12pt; line-height: 1.6; color: #1a1a1a; margin: 0; padding: 20pt; }
+  h1 { font-size: 18pt; font-weight: 700; color: #E50074; margin-bottom: 12pt; }
+  h2 { font-size: 14pt; font-weight: 600; margin-top: 16pt; }
+  h3 { font-size: 12pt; font-weight: 600; margin-top: 12pt; }
+  p { margin: 6pt 0; }
+  ul, ol { margin: 6pt 0; padding-left: 20pt; }
+  li { margin: 3pt 0; }
+  table { border-collapse: collapse; width: 100%; margin: 12pt 0; }
+  th, td { border: 1px solid #ddd; padding: 6pt 8pt; text-align: left; }
+  th { background: #f5f5f5; font-weight: 600; }
+</style>
+</head><body>
+<h1>${transcript.title || "Notulen"}</h1>
+<p style="color: #666; font-size: 10pt;">
+  ${formatDate(transcript.created_at)} · ${formatDuration(transcript.duration_seconds)}
+</p>
+${transcript.notule_html}
+</body></html>`);
+    printWindow.document.close();
+    setTimeout(() => printWindow.print(), 250);
+  }
 
-    // For HTML and TXT export
-    const content = format === "html" ? transcript.notule_html : transcript.raw_transcription;
+  function handleExportTXT(transcript: Transcript) {
+    const content = transcript.notule_html
+      ? stripHtml(transcript.notule_html)
+      : transcript.raw_transcription;
     if (!content) return;
-
-    const blob = new Blob([content], { type: format === "html" ? "text/html" : "text/plain" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${transcript.title || "notulen"}.${format}`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadFile(content, `${transcript.title || "notulen"}.txt`, "text/plain");
   }
 
-  function handleCopyTranscription(text: string) {
-    navigator.clipboard.writeText(text).catch(() => {
-      // fallback: ignore
+  function handleExportMarkdown(transcript: Transcript) {
+    if (!transcript.notule_html) return;
+    const md = htmlToMarkdown(transcript.notule_html);
+    downloadFile(md, `${transcript.title || "notulen"}.md`, "text/markdown");
+  }
+
+  function handleExportHTML(transcript: Transcript) {
+    if (!transcript.notule_html) return;
+    downloadFile(transcript.notule_html, `${transcript.title || "notulen"}.html`, "text/html");
+  }
+
+  const handleCopy = useCallback((text: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      toast.show("Gekopieerd naar klembord", "success");
+    }).catch(() => {
+      toast.show("Kopiëren mislukt", "error");
     });
-  }
+  }, [toast]);
 
   function filterByTime(transcript: Transcript): boolean {
     if (timeFilter === "alles") return true;
@@ -228,18 +278,14 @@ export function TranscriptsPage() {
     return true;
   }
 
-  // Filter transcripts based on main tab
   const filteredTranscripts = transcripts.filter((t) => {
     const matchesSearch = !searchQuery || t.title.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesTags = selectedTags.length === 0 || selectedTags.some((tag) => t.tags.includes(tag));
     const matchesTime = filterByTime(t);
-
-    // Filter by main tab
     const matchesTab =
       mainTab === "notulen"
         ? t.notule_html && t.notule_html.length > 0
         : t.raw_transcription && t.raw_transcription.length > 0;
-
     return matchesSearch && matchesTags && matchesTime && matchesTab;
   });
 
@@ -257,11 +303,9 @@ export function TranscriptsPage() {
     <div className="flex-row" style={{ flex: 1, overflow: "hidden" }}>
       {/* List panel */}
       <div className="flex-col flex-shrink-0 transcripts-list-panel">
-        {/* Page header */}
         <div className="transcripts-list-header">
           <h1 className="text-subtitle transcripts-list-title">Notulen & Transcripties</h1>
 
-          {/* Search */}
           <div className="search-box transcripts-search-margin">
             <Search24Regular className="text-tertiary flex-shrink-0 transcripts-icon-sm" />
             <input
@@ -272,7 +316,6 @@ export function TranscriptsPage() {
             />
           </div>
 
-          {/* Time filter pills */}
           <div className="flex-row gap-6 transcripts-filter-wrap">
             {timeFilterOptions.map((opt) => (
               <button
@@ -286,7 +329,6 @@ export function TranscriptsPage() {
           </div>
         </div>
 
-        {/* Main Tab Bar */}
         <div className="tab-bar transcripts-main-tab-bar">
           {MAIN_TABS.map((tab) => (
             <button
@@ -295,6 +337,7 @@ export function TranscriptsPage() {
               onClick={() => {
                 setMainTab(tab.id);
                 setSelectedId(null);
+                setIsEditingNotule(false);
               }}
             >
               {tab.icon}
@@ -303,7 +346,6 @@ export function TranscriptsPage() {
           ))}
         </div>
 
-        {/* Tags */}
         {allTags.length > 0 && (
           <div className="flex-row gap-6 transcripts-tags-bar">
             {allTags.map((tag) => (
@@ -324,7 +366,6 @@ export function TranscriptsPage() {
           </div>
         )}
 
-        {/* List */}
         <div className="flex-1 transcripts-list-scroll">
           {filteredTranscripts.length === 0 ? (
             <div className="empty-state-text transcripts-empty-list">
@@ -337,8 +378,8 @@ export function TranscriptsPage() {
                 className={`session-card${selectedId === transcript.id ? " active" : ""}`}
                 onClick={() => {
                   setSelectedId(transcript.id);
-                  // Auto-select appropriate detail tab based on main tab
                   setDetailTab(mainTab === "notulen" ? "notule" : "transcriptie");
+                  setIsEditingNotule(false);
                 }}
                 onContextMenu={(e) => handleContextMenu(e, transcript)}
               >
@@ -365,7 +406,6 @@ export function TranscriptsPage() {
                     <p className="text-caption transcripts-item-meta">
                       {timeAgo(transcript.created_at)}
                     </p>
-                    {/* Preview text */}
                     {mainTab === "notulen" && transcript.notule_html && (
                       <p className="session-card-preview">
                         {stripHtml(transcript.notule_html)}
@@ -376,7 +416,6 @@ export function TranscriptsPage() {
                         {transcript.raw_transcription.slice(0, 150)}...
                       </p>
                     )}
-                    {/* Status badges */}
                     <div className="flex-row gap-6 transcripts-badges-row">
                       {mainTab === "notulen" && transcript.notule_html && (
                         <span className="status-badge-success">Notule beschikbaar</span>
@@ -391,7 +430,6 @@ export function TranscriptsPage() {
                       ))}
                     </div>
                   </div>
-                  {/* Three-dot menu */}
                   <button
                     className="icon-btn icon-btn-sm"
                     onClick={(e) => handleThreeDotMenu(e, transcript)}
@@ -413,7 +451,7 @@ export function TranscriptsPage() {
             {/* Top bar */}
             <div className="flex-row justify-between flex-shrink-0 transcripts-detail-topbar">
               <div className="flex-row gap-8">
-                <button className="icon-btn" onClick={() => setSelectedId(null)} title="Terug">
+                <button className="icon-btn" onClick={() => { setSelectedId(null); setIsEditingNotule(false); }} title="Terug">
                   <ArrowLeft24Regular className="transcripts-icon-lg" />
                 </button>
                 <button
@@ -444,7 +482,7 @@ export function TranscriptsPage() {
               </button>
             </div>
 
-            {/* Detail header info */}
+            {/* Detail header */}
             <div className="flex-shrink-0 transcripts-detail-header">
               <h2 className="transcripts-detail-title">
                 {selected.title || "Naamloze opname"}
@@ -453,27 +491,21 @@ export function TranscriptsPage() {
                 {formatDate(selected.created_at)} · {formatDuration(selected.duration_seconds)}
                 {selected.profile_name && ` · ${selected.profile_name}`}
               </p>
-
-              {/* Tags with + Tag chip */}
               <div className="flex-row gap-6 items-start transcripts-detail-tags">
                 {selected.tags.map((tag) => (
-                  <span key={tag} className="tag-chip-pill">
-                    {tag}
-                  </span>
+                  <span key={tag} className="tag-chip-pill">{tag}</span>
                 ))}
-                <button className="tag-chip-add" title="Tag toevoegen">
-                  + Tag
-                </button>
+                <button className="tag-chip-add" title="Tag toevoegen">+ Tag</button>
               </div>
             </div>
 
-            {/* Tab switch - only show if both notule and transcript are available */}
+            {/* Tab switch */}
             {(selected.notule_html || selected.raw_transcription) && (
               <div className="tab-bar transcripts-tab-bar">
                 {selected.notule_html && (
                   <button
                     className={`tab-item${detailTab === "notule" ? " active" : ""}`}
-                    onClick={() => setDetailTab("notule")}
+                    onClick={() => { setDetailTab("notule"); setIsEditingNotule(false); }}
                   >
                     Notule
                   </button>
@@ -481,7 +513,7 @@ export function TranscriptsPage() {
                 {selected.raw_transcription && (
                   <button
                     className={`tab-item${detailTab === "transcriptie" ? " active" : ""}`}
-                    onClick={() => setDetailTab("transcriptie")}
+                    onClick={() => { setDetailTab("transcriptie"); setIsEditingNotule(false); }}
                   >
                     Transcriptie
                   </button>
@@ -489,43 +521,101 @@ export function TranscriptsPage() {
               </div>
             )}
 
-            {/* Action bar below tabs */}
+            {/* Action bar */}
             <div className="flex-row gap-8 flex-shrink-0 transcripts-action-bar">
-              <button
-                className="btn btn-amber"
-                onClick={() => {
-                  if (detailTab === "notule") {
-                    handleExport(selected, "pdf");
-                  } else {
-                    handleExport(selected, "txt");
-                  }
-                }}
-                disabled={
-                  detailTab === "notule" ? !selected.notule_html : !selected.raw_transcription
-                }
-              >
-                <Share24Regular className="transcripts-icon-md" />
-                {detailTab === "notule" ? "Exporteer PDF" : "Kopieer"}
-              </button>
-              <button
-                className="btn btn-secondary"
-                onClick={() => {
-                  if (detailTab === "notule" && selected.notule_html) {
-                    handleExport(selected, "html");
-                  } else if (selected.raw_transcription) {
-                    handleCopyTranscription(selected.raw_transcription);
-                  }
-                }}
-                disabled={
-                  detailTab === "notule" ? !selected.notule_html : !selected.raw_transcription
-                }
-              >
-                <ArrowDownload24Regular className="transcripts-icon-md" />
-                {detailTab === "notule" ? "Exporteer HTML" : "Kopieer transcriptie"}
-              </button>
-              <button className="icon-btn" onClick={() => startEdit(selected)} title="Bewerken">
-                <Edit24Regular className="transcripts-icon-lg" />
-              </button>
+              {detailTab === "notule" ? (
+                <>
+                  {/* Export dropdown */}
+                  <div style={{ position: "relative" }}>
+                    <button
+                      ref={exportBtnRef}
+                      className="btn btn-amber"
+                      onClick={() => setExportMenuOpen(!exportMenuOpen)}
+                      disabled={!selected.notule_html}
+                    >
+                      <Share24Regular className="transcripts-icon-md" />
+                      Exporteren
+                    </button>
+                    {exportMenuOpen && selected.notule_html && (
+                      <div className="context-menu" style={{ left: 0, top: "100%", marginTop: 4, minWidth: 180 }}>
+                        <button className="context-menu-item" onClick={() => { handleExportPDF(selected); setExportMenuOpen(false); }}>
+                          <DocumentPdf24Regular className="transcripts-icon-md" />
+                          Exporteer PDF
+                        </button>
+                        <button className="context-menu-item" onClick={() => { handleExportMarkdown(selected); setExportMenuOpen(false); }}>
+                          <Code24Regular className="transcripts-icon-md" />
+                          Exporteer Markdown
+                        </button>
+                        <button className="context-menu-item" onClick={() => { handleExportTXT(selected); setExportMenuOpen(false); }}>
+                          <TextDescription24Regular className="transcripts-icon-md" />
+                          Exporteer TXT
+                        </button>
+                        <button className="context-menu-item" onClick={() => { handleExportHTML(selected); setExportMenuOpen(false); }}>
+                          <ArrowDownload24Regular className="transcripts-icon-md" />
+                          Exporteer HTML
+                        </button>
+                        <div className="context-menu-divider" />
+                        <button className="context-menu-item" onClick={() => { handleCopy(stripHtml(selected.notule_html!)); setExportMenuOpen(false); }}>
+                          <Copy24Regular className="transcripts-icon-md" />
+                          Kopieer tekst
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Edit / Save / Cancel buttons */}
+                  {isEditingNotule ? (
+                    <>
+                      <button
+                        className="btn btn-accent"
+                        onClick={() => saveNotuleEdit(selected)}
+                        disabled={isSaving}
+                      >
+                        <Checkmark24Regular className="transcripts-icon-md" />
+                        {isSaving ? "Opslaan..." : "Opslaan"}
+                      </button>
+                      <button
+                        className="btn"
+                        onClick={cancelNotuleEdit}
+                        disabled={isSaving}
+                      >
+                        <Dismiss24Regular className="transcripts-icon-md" />
+                        Annuleren
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      className="btn btn-secondary"
+                      onClick={() => startNotuleEdit(selected)}
+                      disabled={!selected.notule_html}
+                    >
+                      <Edit24Regular className="transcripts-icon-md" />
+                      Bewerken
+                    </button>
+                  )}
+                </>
+              ) : (
+                <>
+                  <button
+                    className="btn btn-amber"
+                    onClick={() => {
+                      if (selected.raw_transcription) handleCopy(selected.raw_transcription);
+                    }}
+                    disabled={!selected.raw_transcription}
+                  >
+                    <Copy24Regular className="transcripts-icon-md" />
+                    Kopieer transcriptie
+                  </button>
+                  <button
+                    className="btn btn-secondary"
+                    onClick={() => handleExportTXT(selected)}
+                    disabled={!selected.raw_transcription}
+                  >
+                    <ArrowDownload24Regular className="transcripts-icon-md" />
+                    Exporteer TXT
+                  </button>
+                </>
+              )}
             </div>
 
             {/* Content area */}
@@ -533,14 +623,25 @@ export function TranscriptsPage() {
               {detailTab === "notule" ? (
                 <>
                   {selected.notule_html ? (
-                    <div
-                      className="prose"
-                      dangerouslySetInnerHTML={{
-                        __html: selected.notule_html.startsWith("<")
-                          ? selected.notule_html
-                          : (marked(selected.notule_html) as string),
-                      }}
-                    />
+                    isEditingNotule ? (
+                      <div
+                        ref={editorRef}
+                        className="prose notule-editor"
+                        contentEditable
+                        suppressContentEditableWarning
+                        dangerouslySetInnerHTML={{ __html: editedHTML }}
+                        onInput={(e) => setEditedHTML((e.target as HTMLDivElement).innerHTML)}
+                      />
+                    ) : (
+                      <div
+                        className="prose"
+                        dangerouslySetInnerHTML={{
+                          __html: selected.notule_html.startsWith("<")
+                            ? selected.notule_html
+                            : (marked(selected.notule_html) as string),
+                        }}
+                      />
+                    )
                   ) : (
                     <div className="text-center transcripts-empty-content">
                       <Document24Regular className="transcripts-empty-icon-large" />
@@ -557,16 +658,13 @@ export function TranscriptsPage() {
                   )}
                 </>
               ) : (
-                /* Transcriptie tab */
                 <div>
                   {selected.raw_transcription ? (
                     <div className="card transcripts-transcription-card">
                       <p className="text-body-strong text-accent transcripts-transcription-title">
                         {selected.title || "Naamloze opname"}
                       </p>
-                      <p className="section-label">
-                        RUWE TRANSCRIPTIE
-                      </p>
+                      <p className="section-label">RUWE TRANSCRIPTIE</p>
                       <div className="transcripts-transcription-body">
                         {selected.raw_transcription}
                       </div>
@@ -610,13 +708,29 @@ export function TranscriptsPage() {
             }}
           >
             <Edit24Regular className="transcripts-icon-md" />
-            Bewerken
+            Naam bewerken
           </button>
+          {contextMenu.transcript.notule_html && (
+            <button
+              className="context-menu-item"
+              onClick={() => {
+                setSelectedId(contextMenu.transcript.id);
+                setDetailTab("notule");
+                startNotuleEdit(contextMenu.transcript);
+                setContextMenu(null);
+              }}
+            >
+              <Document24Regular className="transcripts-icon-md" />
+              Notule bewerken
+            </button>
+          )}
           <button
             className="context-menu-item"
             onClick={() => {
               if (contextMenu.transcript.notule_html) {
-                handleExport(contextMenu.transcript, "pdf");
+                handleExportPDF(contextMenu.transcript);
+              } else if (contextMenu.transcript.raw_transcription) {
+                handleExportTXT(contextMenu.transcript);
               }
               setContextMenu(null);
             }}
@@ -656,6 +770,40 @@ export function TranscriptsPage() {
       )}
     </div>
   );
+}
+
+// --- Utilities ---
+
+function downloadFile(content: string, filename: string, mimeType: string) {
+  const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function htmlToMarkdown(html: string): string {
+  let md = html;
+  md = md.replace(/<h1[^>]*>(.*?)<\/h1>/gi, "\n# $1\n");
+  md = md.replace(/<h2[^>]*>(.*?)<\/h2>/gi, "\n## $1\n");
+  md = md.replace(/<h3[^>]*>(.*?)<\/h3>/gi, "\n### $1\n");
+  md = md.replace(/<h4[^>]*>(.*?)<\/h4>/gi, "\n#### $1\n");
+  md = md.replace(/<(strong|b)[^>]*>(.*?)<\/\1>/gi, "**$2**");
+  md = md.replace(/<(em|i)[^>]*>(.*?)<\/\1>/gi, "*$2*");
+  md = md.replace(/<li[^>]*>(.*?)<\/li>/gi, "- $1\n");
+  md = md.replace(/<br\s*\/?>/gi, "\n");
+  md = md.replace(/<\/p>/gi, "\n\n");
+  md = md.replace(/<blockquote[^>]*>(.*?)<\/blockquote>/gi, "> $1\n");
+  md = md.replace(/<[^>]+>/g, "");
+  md = md.replace(/&amp;/g, "&");
+  md = md.replace(/&lt;/g, "<");
+  md = md.replace(/&gt;/g, ">");
+  md = md.replace(/&nbsp;/g, " ");
+  md = md.replace(/&quot;/g, '"');
+  md = md.replace(/\n{3,}/g, "\n\n");
+  return md.trim();
 }
 
 function formatDate(dateStr: string): string {

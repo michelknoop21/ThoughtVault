@@ -188,6 +188,13 @@ class APIService {
     return this.request<void>("DELETE", `/tstudio/api/transcripts/${id}`);
   }
 
+  async updateNotuleHTML(id: string, notuleHtml: string): Promise<Transcript> {
+    const data = await this.request<unknown>("PATCH", `/tstudio/api/transcripts/${id}`, {
+      notule_html: notuleHtml,
+    });
+    return mapTranscript(data);
+  }
+
   async regenerateNotule(id: string, profileId: string): Promise<{ task_id: string }> {
     return this.request<{ task_id: string }>(
       "POST",

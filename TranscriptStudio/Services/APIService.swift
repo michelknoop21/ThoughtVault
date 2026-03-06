@@ -377,47 +377,70 @@ actor APIService {
         return try await perform(req)
     }
 
-    func getTranscript(id: String) async throws -> Transcript {
-        let req = try request(path: "/tstudio/api/transcripts/\(id)")
+    func getTranscript(taskId: String) async throws -> Transcript {
+        let req = try request(path: "/tstudio/api/transcripts/\(taskId)")
         let (data, response) = try await session.data(for: req)
         let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
-        logger.info("GET transcript \(id): HTTP \(statusCode), \(data.count) bytes")
-        if let json = String(data: data.prefix(500), encoding: .utf8) {
-            logger.debug("Response preview: \(json)")
+        logger.info("GET transcript \(taskId): HTTP \(statusCode), \(data.count) bytes")
+        if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+            let keys = json.keys.sorted().joined(separator: ", ")
+            logger.info("Response keys: \(keys)")
+            let notulePresent = json["notule_html"] != nil && !(json["notule_html"] as? String ?? "").isEmpty
+            let resultPresent = json["result"] != nil && !(json["result"] as? String ?? "").isEmpty
+            let rawPresent = json["raw_transcription"] != nil && !(json["raw_transcription"] as? String ?? "").isEmpty
+            logger.info("Content: notule_html=\(notulePresent), result=\(resultPresent), raw_transcription=\(rawPresent)")
         }
         return try handleResponse(data: data, response: response)
     }
 
-    func deleteTranscript(id: String) async throws {
-        let req = try request(path: "/tstudio/api/transcripts/\(id)", method: "DELETE")
+    func deleteTranscript(taskId: String) async throws {
+        let req = try request(path: "/tstudio/api/transcripts/\(taskId)", method: "DELETE")
         try await performVoid(req)
     }
 
-    func updateTranscriptTitle(id: String, title: String) async throws {
+    func updateTranscriptTitle(taskId: String, title: String) async throws {
         let body = try JSONEncoder().encode(["title": title])
-        let req = try request(path: "/tstudio/api/transcripts/\(id)", method: "PATCH", body: body)
+        let req = try request(path: "/tstudio/api/transcripts/\(taskId)", method: "PATCH", body: body)
         try await performVoid(req)
     }
 
-    func updateTranscriptTags(id: String, tags: [String]) async throws {
+    func updateTranscriptTags(taskId: String, tags: [String]) async throws {
         let body = try JSONEncoder().encode(["tags": tags])
-        let req = try request(path: "/tstudio/api/transcripts/\(id)", method: "PATCH", body: body)
+        let req = try request(path: "/tstudio/api/transcripts/\(taskId)", method: "PATCH", body: body)
         try await performVoid(req)
     }
 
-    func updateNotuleHTML(id: String, html: String) async throws {
+    func updateNotuleHTML(taskId: String, html: String) async throws {
         let payload: [String: String] = ["notule_html": html]
         let body = try JSONEncoder().encode(payload)
-        let req = try request(path: "/tstudio/api/transcripts/\(id)", method: "PATCH", body: body)
+        let req = try request(path: "/tstudio/api/transcripts/\(taskId)", method: "PATCH", body: body)
         try await performVoid(req)
+    }
+
+    /// Fetch linked notes for a transcript. Returns HTML string if available.
+    func getTranscriptNotes(taskId: String) async throws -> String? {
+        let req = try request(path: "/tstudio/api/transcripts/\(taskId)/notes")
+        let (data, response) = try await session.data(for: req)
+        let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
+        guard statusCode == 200 else { return nil }
+        // Response could be an array of notes or a single note object with html field
+        if let json = try? JSONSerialization.jsonObject(with: data) {
+            if let array = json as? [[String: Any]], let first = array.first {
+                return first["html"] as? String ?? first["notule_html"] as? String
+            }
+            if let dict = json as? [String: Any] {
+                return dict["html"] as? String ?? dict["notule_html"] as? String
+            }
+        }
+        return nil
     }
 
     // MARK: - Notule Regeneration
 
-    func regenerateNotule(transcriptId: String, profileId: String) async throws -> TranscriptTask {
-        let payload: [String: String] = ["transcript_id": transcriptId, "profile_id": profileId]
+    func regenerateNotule(taskId: String, profileId: String) async throws -> TranscriptTask {
+        let payload: [String: String] = ["transcript_id": taskId, "profile_id": profileId]
         let body = try JSONEncoder().encode(payload)
-        let req = try request(path: "/tstudio/api/transcripts/\(transcriptId)/regenerate", method: "POST", body: body)
+        let req = try request(path: "/tstudio/api/transcripts/\(taskId)/regenerate", method: "POST", body: body)
         return try await perform(req)
     }
 

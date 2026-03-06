@@ -200,9 +200,11 @@ export function RecordingPage() {
   const canGoBack = phase === "idle";
 
   return (
-    <div className="page-scroll">
+    <div className="page-scroll bg-blobs">
+      <div className="bg-blob bg-blob-magenta" style={{ top: "-150px", right: "-100px", left: "auto" }} />
+      <div className="bg-blob bg-blob-neon" />
       {/* Header */}
-      <div className="page-header flex-row gap-12">
+      <div className="page-header flex-row gap-12" style={{ position: "relative", zIndex: 1 }}>
         <button
           onClick={() => canGoBack && navigate("/")}
           disabled={!canGoBack}
@@ -223,7 +225,7 @@ export function RecordingPage() {
       </div>
 
       {/* Body */}
-      <div className="flex-1 flex-col text-center" style={{ alignItems: "center", justifyContent: "center", padding: 32, gap: 24, maxWidth: 600, margin: "0 auto", width: "100%" }}>
+      <div className="flex-1 flex-col text-center" style={{ position: "relative", zIndex: 1, alignItems: "center", justifyContent: "center", padding: 32, gap: 24, maxWidth: 600, margin: "0 auto", width: "100%" }}>
         {phase === "idle" && (
           <IdleState
             mode={mode}

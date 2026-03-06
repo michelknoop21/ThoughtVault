@@ -3,9 +3,23 @@
 // nl.prezent.TranscriptStudio
 //
 // Siri-style waveform based on the SCSiriWaveformView algorithm by Stefan Ceriu.
-// Five overlapping sine waves with parabolic envelope and continuous phase travel.
+// Five overlapping sine waves with independent phase, frequency and amplitude response.
 
 import SwiftUI
+
+// MARK: - Wave Configuration
+
+private struct WaveConfig {
+    let frequency: CGFloat
+    let speed: CGFloat         // radians per second — each wave travels independently
+    let amplitudeScale: CGFloat
+    let smoothingUp: CGFloat   // attack speed (0-1, higher = faster response)
+    let smoothingDown: CGFloat // release speed
+    let phaseOffset: CGFloat   // initial phase offset
+    let lineWidth: CGFloat
+    let color: Color
+    let isPrimary: Bool
+}
 
 // MARK: - WaveformView
 
@@ -19,63 +33,76 @@ struct WaveformView: View {
 
     // MARK: Constants
 
-    private let numberOfWaves = 5
-    private let frequency: CGFloat = 1.5
     private let idleAmplitude: CGFloat = 0.01
-    private let primaryLineWidth: CGFloat = 2.5
-    private let secondaryLineWidth: CGFloat = 1.0
 
-    // MARK: State
+    private let waveConfigs: [WaveConfig] = [
+        WaveConfig(frequency: 1.5,  speed: 9.0,  amplitudeScale: 1.0,  smoothingUp: 0.35, smoothingDown: 0.08, phaseOffset: 0.0,  lineWidth: 2.5, color: Color.brandPrimary,                                isPrimary: true),
+        WaveConfig(frequency: 1.8,  speed: 7.2,  amplitudeScale: 0.82, smoothingUp: 0.25, smoothingDown: 0.10, phaseOffset: 1.2,  lineWidth: 1.0, color: Color(red: 0.80, green: 0.0, blue: 0.60),          isPrimary: false),
+        WaveConfig(frequency: 1.2,  speed: 11.5, amplitudeScale: 0.70, smoothingUp: 0.18, smoothingDown: 0.06, phaseOffset: 2.8,  lineWidth: 1.0, color: Color(red: 0.60, green: 0.0, blue: 0.80),          isPrimary: false),
+        WaveConfig(frequency: 2.1,  speed: 5.8,  amplitudeScale: 0.55, smoothingUp: 0.40, smoothingDown: 0.12, phaseOffset: 4.1,  lineWidth: 1.0, color: Color.neonBlue,                                    isPrimary: false),
+        WaveConfig(frequency: 0.9,  speed: 13.0, amplitudeScale: 0.40, smoothingUp: 0.15, smoothingDown: 0.05, phaseOffset: 5.5,  lineWidth: 1.0, color: Color(red: 0.40, green: 0.20, blue: 1.0),          isPrimary: false),
+    ]
 
-    @State private var smoothedLevel: CGFloat = 0.01
+    // MARK: State — one smoothed level per wave
+
+    @State private var smoothedLevels: [CGFloat] = [0.01, 0.01, 0.01, 0.01, 0.01]
 
     var body: some View {
         TimelineView(.animation(minimumInterval: 1.0 / 60.0)) { timeline in
             let time = timeline.date.timeIntervalSinceReferenceDate
-            // Phase travels left at ~9 rad/sec (0.15 * 60fps)
-            let phase = -time * 9.0
 
             Canvas { context, size in
-                drawWaves(context: context, size: size, phase: phase)
+                drawWaves(context: context, size: size, time: time)
             }
             .onChange(of: time) {
-                updateSmoothedLevel()
+                updateSmoothedLevels()
             }
         }
     }
 
-    // MARK: - Level Smoothing
+    // MARK: - Level Smoothing (per wave)
 
-    private func updateSmoothedLevel() {
-        let targetLevel: CGFloat
+    private func updateSmoothedLevels() {
+        let rawLevel: CGFloat
         if isActive, !levels.isEmpty {
-            let count = min(levels.count, 10)
-            let avg = levels.suffix(count).reduce(Float(0), +) / Float(count)
-            targetLevel = max(CGFloat(avg), idleAmplitude)
+            // Use fewer recent samples for snappier response
+            let count = min(levels.count, 4)
+            let recent = levels.suffix(count)
+            // Weighted toward the most recent sample
+            let peak = CGFloat(recent.max() ?? 0)
+            let avg = CGFloat(recent.reduce(Float(0), +) / Float(count))
+            rawLevel = max(peak * 0.7 + avg * 0.3, idleAmplitude)
         } else {
-            targetLevel = idleAmplitude
+            rawLevel = idleAmplitude
         }
-        smoothedLevel += (targetLevel - smoothedLevel) * 0.12
+
+        for i in waveConfigs.indices {
+            let target = rawLevel * waveConfigs[i].amplitudeScale
+            let delta = target - smoothedLevels[i]
+            let rate = delta > 0 ? waveConfigs[i].smoothingUp : waveConfigs[i].smoothingDown
+            smoothedLevels[i] += delta * rate
+        }
     }
 
     // MARK: - Wave Drawing
 
-    private func drawWaves(context: GraphicsContext, size: CGSize, phase: Double) {
+    private func drawWaves(context: GraphicsContext, size: CGSize, time: Double) {
         let midX = size.width / 2
         let midY = size.height / 2
         let maxAmplitude = midY - 4
 
-        for i in 0..<numberOfWaves {
-            let progress = 1.0 - CGFloat(i) / CGFloat(numberOfWaves)
-            let normedAmplitude = (1.5 * progress - 0.4) * smoothedLevel
+        for (i, config) in waveConfigs.enumerated() {
+            let wavePhase = -(time * config.speed) + config.phaseOffset
+            let level = smoothedLevels[i]
 
             let path = Path { path in
                 for x in stride(from: 0, through: size.width, by: 1.0) {
                     let normalized = (x - midX) / midX
-                    let scaling = -(normalized * normalized) + 1.0
+                    // Parabolic envelope: tapers to zero at edges
+                    let envelope = -(normalized * normalized) + 1.0
 
-                    let y = scaling * maxAmplitude * normedAmplitude
-                        * sin(2 * .pi * (x / size.width) * frequency + phase)
+                    let y = envelope * maxAmplitude * level
+                        * sin(2 * .pi * (x / size.width) * config.frequency + wavePhase)
                         + midY
 
                     if x == 0 {
@@ -86,33 +113,16 @@ struct WaveformView: View {
                 }
             }
 
-            let isPrimary = (i == 0)
-            let lineWidth = isPrimary ? primaryLineWidth : secondaryLineWidth
-            let alpha = min(1.0, (CGFloat(i) / CGFloat(numberOfWaves)) / 3.0 + 1.0 / 3.0)
-            let multiplier = isPrimary ? 1.0 : alpha
-
-            let waveColor: Color
-            switch i {
-            case 0:
-                waveColor = Color.brandPrimary.opacity(multiplier)
-            case 1:
-                waveColor = Color(red: 0.80, green: 0.0, blue: 0.60).opacity(multiplier)
-            case 2:
-                waveColor = Color(red: 0.60, green: 0.0, blue: 0.80).opacity(multiplier)
-            case 3:
-                waveColor = Color.neonBlue.opacity(multiplier * 0.7)
-            default:
-                waveColor = Color(red: 0.40, green: 0.20, blue: 1.0).opacity(multiplier * 0.5)
-            }
+            let opacity = config.isPrimary ? 1.0 : min(1.0, (CGFloat(i) / CGFloat(waveConfigs.count)) / 3.0 + 1.0 / 3.0)
 
             var ctx = context
-            if !isPrimary {
+            if !config.isPrimary {
                 ctx.blendMode = .plusLighter
             }
             ctx.stroke(
                 path,
-                with: .color(waveColor),
-                style: StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round)
+                with: .color(config.color.opacity(opacity)),
+                style: StrokeStyle(lineWidth: config.lineWidth, lineCap: .round, lineJoin: .round)
             )
         }
     }

@@ -33,7 +33,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
             display: "flex",
             flexDirection: "column",
             overflow: "hidden",
-            background: "var(--bg-solid-secondary)",
+            background: "var(--surface-secondary)",
           }}
         >
           <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>

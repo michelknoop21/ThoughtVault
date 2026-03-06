@@ -196,15 +196,16 @@ final class TranscriptsViewModel {
 
     // MARK: - Delete
 
-    /// Deletes a transcript by id from both the server and the local list.
+    /// Deletes a transcript by taskId from both the server and the local list.
     func deleteTranscript(id: String) async {
+        guard let transcript = transcripts.first(where: { $0.id == id }) else { return }
         do {
-            try await APIService.shared.deleteTranscript(id: id)
+            try await APIService.shared.deleteTranscript(taskId: transcript.taskId)
             transcripts.removeAll { $0.id == id }
-            logger.info("Deleted transcript \(id)")
+            logger.info("Deleted transcript \(transcript.taskId)")
         } catch {
             errorMessage = error.localizedDescription
-            logger.error("Failed to delete transcript \(id): \(error.localizedDescription)")
+            logger.error("Failed to delete transcript \(transcript.taskId): \(error.localizedDescription)")
         }
     }
 

@@ -213,7 +213,7 @@ struct NotuleResultView: View {
                             var updatedTags = task.tags
                             updatedTags.append(newTagText)
                             do {
-                                try await APIService.shared.updateTranscriptTags(id: task.id, tags: updatedTags)
+                                try await APIService.shared.updateTranscriptTags(taskId: task.taskId, tags: updatedTags)
                             } catch {
                                 exportError = "Tag opslaan mislukt: \(error.localizedDescription)"
                             }

@@ -119,50 +119,48 @@ struct TranscriptsView: View {
     // MARK: Body
 
     var body: some View {
-        NavigationStack {
-            ZStack {
-                backgroundBlobs
-                VStack(spacing: 0) {
-                    searchBar
-                    filtersRow
-                    tagFilterRow
-                    mainContent
-                }
+        ZStack {
+            backgroundBlobs
+            VStack(spacing: 0) {
+                searchBar
+                filtersRow
+                tagFilterRow
+                mainContent
             }
-            .navigationTitle("Notulen")
-            .toolbar { toolbarContent }
-            .navigationDestination(item: $selectedTranscript) { transcript in
-                TranscriptDetailView(transcript: transcript)
+        }
+        .navigationTitle("Notulen")
+        .toolbar { toolbarContent }
+        .navigationDestination(item: $selectedTranscript) { transcript in
+            TranscriptDetailView(transcript: transcript)
+        }
+        .confirmationDialog(
+            "Geselecteerde transcripties verwijderen?",
+            isPresented: $showBulkDeleteConfirm,
+            titleVisibility: .visible
+        ) {
+            Button("Verwijder \(selectedIds.count)", role: .destructive) {
+                Task { await bulkDelete() }
             }
-            .confirmationDialog(
-                "Geselecteerde transcripties verwijderen?",
-                isPresented: $showBulkDeleteConfirm,
-                titleVisibility: .visible
-            ) {
-                Button("Verwijder \(selectedIds.count)", role: .destructive) {
-                    Task { await bulkDelete() }
+            Button("Annuleren", role: .cancel) {}
+        } message: {
+            Text("Dit kan niet ongedaan worden gemaakt.")
+        }
+        .confirmationDialog(
+            "Transcriptie verwijderen?",
+            isPresented: $showSingleDeleteConfirm,
+            titleVisibility: .visible
+        ) {
+            Button("Verwijderen", role: .destructive) {
+                if let transcript = transcriptToDelete {
+                    Task { await deleteTranscript(transcript) }
                 }
-                Button("Annuleren", role: .cancel) {}
-            } message: {
-                Text("Dit kan niet ongedaan worden gemaakt.")
+                transcriptToDelete = nil
             }
-            .confirmationDialog(
-                "Transcriptie verwijderen?",
-                isPresented: $showSingleDeleteConfirm,
-                titleVisibility: .visible
-            ) {
-                Button("Verwijderen", role: .destructive) {
-                    if let transcript = transcriptToDelete {
-                        Task { await deleteTranscript(transcript) }
-                    }
-                    transcriptToDelete = nil
-                }
-                Button("Annuleren", role: .cancel) {
-                    transcriptToDelete = nil
-                }
-            } message: {
-                Text("Deze transcriptie wordt permanent verwijderd.")
+            Button("Annuleren", role: .cancel) {
+                transcriptToDelete = nil
             }
+        } message: {
+            Text("Deze transcriptie wordt permanent verwijderd.")
         }
         .task { await loadTranscripts() }
     }
@@ -358,27 +356,37 @@ struct TranscriptsView: View {
     // MARK: - Main content
 
     private var mainContent: some View {
-        ScrollView {
-            LazyVStack(spacing: TS.Spacing.sm) {
+        List {
+            Section {
                 offlineQueueBanner
                 errorBanner
                 activeProcessingSection
                 errorTasksSection
+            }
+            .listRowSeparator(.hidden)
+            .listRowInsets(EdgeInsets(top: 0, leading: TS.Spacing.md, bottom: 0, trailing: TS.Spacing.md))
+            .listRowBackground(Color.clear)
 
-                if isLoading && transcripts.isEmpty {
-                    ProgressView("Laden...")
-                        .padding(TS.Spacing.xl)
-                } else if filteredTranscripts.isEmpty {
-                    emptyState
-                } else {
-                    ForEach(filteredTranscripts) { transcript in
-                        transcriptCardRow(transcript)
-                    }
+            if isLoading && transcripts.isEmpty {
+                ProgressView("Laden...")
+                    .padding(TS.Spacing.xl)
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
+            } else if filteredTranscripts.isEmpty {
+                emptyState
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
+            } else {
+                ForEach(filteredTranscripts) { transcript in
+                    transcriptCardRow(transcript)
+                        .listRowSeparator(.hidden)
+                        .listRowInsets(EdgeInsets(top: TS.Spacing.sm / 2, leading: TS.Spacing.md, bottom: TS.Spacing.sm / 2, trailing: TS.Spacing.md))
+                        .listRowBackground(Color.clear)
                 }
             }
-            .padding(.horizontal, TS.Spacing.md)
-            .padding(.vertical, TS.Spacing.sm)
         }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
     }
 
     // MARK: Offline queue banner
@@ -554,33 +562,13 @@ struct TranscriptsView: View {
 
     private func transcriptCardRow(_ transcript: Transcript) -> some View {
         ZStack(alignment: .topTrailing) {
-            NavigationLink(value: transcript) {
+            Button {
+                selectedTranscript = transcript
+            } label: {
                 TranscriptListCard(transcript: transcript)
                     .contentShape(RoundedRectangle(cornerRadius: TS.Radius.md, style: .continuous))
             }
             .buttonStyle(.plain)
-            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                Button(role: .destructive) {
-                    transcriptToDelete = transcript
-                    showSingleDeleteConfirm = true
-                } label: {
-                    Label("Verwijderen", systemImage: "trash")
-                }
-            }
-            .contextMenu {
-                Button {
-                    selectedTranscript = transcript
-                } label: {
-                    Label("Openen", systemImage: "arrow.up.right.square")
-                }
-                Divider()
-                Button(role: .destructive) {
-                    transcriptToDelete = transcript
-                    showSingleDeleteConfirm = true
-                } label: {
-                    Label("Verwijderen", systemImage: "trash")
-                }
-            }
 
             // Selection overlay
             if isSelecting {
@@ -589,9 +577,32 @@ struct TranscriptsView: View {
                 TranscriptCardMenu(
                     transcript: transcript,
                     onDelete: {
-                        Task { await deleteTranscript(transcript) }
+                        transcriptToDelete = transcript
+                        showSingleDeleteConfirm = true
                     }
                 )
+            }
+        }
+        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+            Button(role: .destructive) {
+                transcriptToDelete = transcript
+                showSingleDeleteConfirm = true
+            } label: {
+                Label("Verwijderen", systemImage: "trash")
+            }
+        }
+        .contextMenu {
+            Button {
+                selectedTranscript = transcript
+            } label: {
+                Label("Openen", systemImage: "arrow.up.right.square")
+            }
+            Divider()
+            Button(role: .destructive) {
+                transcriptToDelete = transcript
+                showSingleDeleteConfirm = true
+            } label: {
+                Label("Verwijderen", systemImage: "trash")
             }
         }
     }
@@ -677,7 +688,7 @@ struct TranscriptsView: View {
 
     private func deleteTranscript(_ transcript: Transcript) async {
         do {
-            try await APIService.shared.deleteTranscript(id: transcript.id)
+            try await APIService.shared.deleteTranscript(taskId: transcript.taskId)
             withAnimation(TS.Animation.smooth) {
                 transcripts.removeAll { $0.id == transcript.id }
             }
@@ -692,8 +703,12 @@ struct TranscriptsView: View {
         var failCount = 0
 
         for id in idsToDelete {
+            guard let transcript = transcripts.first(where: { $0.id == id }) else {
+                failCount += 1
+                continue
+            }
             do {
-                try await APIService.shared.deleteTranscript(id: id)
+                try await APIService.shared.deleteTranscript(taskId: transcript.taskId)
                 deletedIds.insert(id)
             } catch {
                 failCount += 1
@@ -958,10 +973,20 @@ struct TranscriptDetailView: View {
         }
         .task {
             do {
-                fullTranscript = try await APIService.shared.getTranscript(id: transcript.id)
-                logger.info("Detail fetch success for \(transcript.id): notuleHtml=\(fullTranscript.notuleHtml != nil), rawTranscription=\(fullTranscript.rawTranscription != nil)")
+                fullTranscript = try await APIService.shared.getTranscript(taskId: transcript.taskId)
+                logger.info("Detail fetch success for \(transcript.taskId): notuleHtml=\(fullTranscript.notuleHtml != nil), rawTranscription=\(fullTranscript.rawTranscription != nil)")
+
+                // If notule_html is empty, try fetching linked notes separately
+                let hasNotule = !(fullTranscript.notuleHtml ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                if !hasNotule {
+                    if let html = try? await APIService.shared.getTranscriptNotes(taskId: transcript.taskId),
+                       !html.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        fullTranscript.notuleHtml = html
+                        logger.info("Loaded notule from /notes endpoint for \(transcript.taskId)")
+                    }
+                }
             } catch {
-                logger.error("Detail fetch failed for \(transcript.id): \(error)")
+                logger.error("Detail fetch failed for \(transcript.taskId): \(error)")
                 errorMessage = error.localizedDescription
             }
         }
@@ -1487,7 +1512,7 @@ struct TranscriptDetailView: View {
         let original = fullTranscript.title
         fullTranscript.title = newTitle
         do {
-            try await APIService.shared.updateTranscriptTitle(id: fullTranscript.id, title: newTitle)
+            try await APIService.shared.updateTranscriptTitle(taskId: fullTranscript.taskId, title: newTitle)
         } catch {
             fullTranscript.title = original
             errorMessage = error.localizedDescription
@@ -1498,7 +1523,7 @@ struct TranscriptDetailView: View {
         let original = fullTranscript.tags
         fullTranscript.tags.removeAll { $0 == tag }
         do {
-            try await APIService.shared.updateTranscriptTags(id: fullTranscript.id, tags: fullTranscript.tags)
+            try await APIService.shared.updateTranscriptTags(taskId: fullTranscript.taskId, tags: fullTranscript.tags)
         } catch {
             fullTranscript.tags = original
             errorMessage = error.localizedDescription
@@ -1517,7 +1542,7 @@ struct TranscriptDetailView: View {
         newTagText = ""
         showAddTagField = false
         do {
-            try await APIService.shared.updateTranscriptTags(id: fullTranscript.id, tags: fullTranscript.tags)
+            try await APIService.shared.updateTranscriptTags(taskId: fullTranscript.taskId, tags: fullTranscript.tags)
         } catch {
             fullTranscript.tags = original
             errorMessage = error.localizedDescription
@@ -1533,8 +1558,8 @@ struct TranscriptDetailView: View {
             isEditingNotule = false
         }
         do {
-            try await APIService.shared.updateNotuleHTML(id: fullTranscript.id, html: html)
-            logger.info("Notule saved for \(fullTranscript.id)")
+            try await APIService.shared.updateNotuleHTML(taskId: fullTranscript.taskId, html: html)
+            logger.info("Notule saved for \(fullTranscript.taskId)")
         } catch {
             fullTranscript.notuleHtml = original
             errorMessage = "Opslaan mislukt: \(error.localizedDescription)"
@@ -1548,7 +1573,7 @@ struct TranscriptDetailView: View {
         regeneratingMessage = "Notule wordt geregenereerd..."
         do {
             let task = try await APIService.shared.regenerateNotule(
-                transcriptId: fullTranscript.id,
+                taskId: fullTranscript.taskId,
                 profileId: profileId
             )
             // Poll every 4 seconds, max 60 iterations (4 minutes)

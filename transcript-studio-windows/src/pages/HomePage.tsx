@@ -81,8 +81,10 @@ export function HomePage() {
   }
 
   return (
-    <div className="page-scroll">
-    <div className="page-content">
+    <div className="page-scroll bg-blobs">
+    <div className="bg-blob bg-blob-magenta" />
+    <div className="bg-blob bg-blob-blue" />
+    <div className="page-content" style={{ position: "relative", zIndex: 1 }}>
 
       {/* Greeting */}
       <section>

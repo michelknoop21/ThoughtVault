@@ -445,7 +445,8 @@ ${transcript.notule_html}
       </div>
 
       {/* Detail panel */}
-      <div className="flex-1 flex-col transcripts-detail-panel">
+      <div className="flex-1 flex-col transcripts-detail-panel bg-blobs">
+        <div className="bg-blob bg-blob-blue" style={{ opacity: 0.5 }} />
         {selected ? (
           <>
             {/* Top bar */}

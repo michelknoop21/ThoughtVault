@@ -5,14 +5,12 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Yinga brand accent (#E50074 pink — replaces Windows blue)
         accent: {
           DEFAULT: "#E50074",
           hover: "rgba(229,0,116,0.90)",
           pressed: "rgba(229,0,116,0.80)",
           light: "rgba(229,0,116,0.08)",
         },
-        // Semantic text tokens (map to CSS vars for auto dark-mode)
         text: {
           primary: "var(--text-primary)",
           secondary: "var(--text-secondary)",
@@ -21,31 +19,29 @@ export default {
           error: "var(--text-error)",
           success: "var(--text-success)",
         },
-        // Semantic surface tokens
         surface: {
-          DEFAULT: "var(--surface-default)",
-          card: "var(--surface-card)",
-          elevated: "var(--surface-elevated)",
-          flyout: "var(--surface-flyout)",
+          DEFAULT: "var(--surface-primary)",
+          secondary: "var(--surface-secondary)",
+          tertiary: "var(--surface-tertiary)",
+          card: "var(--card-bg)",
+          elevated: "var(--card-bg-hover)",
         },
-        // Fill tokens
         fill: {
-          control: "var(--fill-control-default)",
-          "control-secondary": "var(--fill-control-secondary)",
+          control: "var(--fill-control)",
+          "control-hover": "var(--fill-control-hover)",
         },
-        // Stroke tokens
         stroke: {
-          divider: "var(--stroke-divider)",
-          card: "var(--stroke-card)",
-          control: "var(--stroke-control-secondary)",
+          divider: "var(--border-primary)",
+          card: "var(--card-border)",
         },
-        // Status
-        danger: "var(--fill-system-critical)",
-        success: "var(--fill-system-success)",
-        warning: "var(--fill-system-caution)",
+        danger: "var(--status-error)",
+        success: "var(--status-success)",
+        warning: "var(--status-warning)",
       },
       fontFamily: {
         sans: [
+          "SF Pro Rounded",
+          "SF Pro",
           "Segoe UI Variable",
           "Segoe UI",
           "-apple-system",
@@ -54,11 +50,12 @@ export default {
         ],
       },
       borderRadius: {
-        sm: "4px",
-        DEFAULT: "6px",
-        md: "8px",
-        lg: "12px",
-        xl: "12px",
+        xs: "6px",
+        sm: "12px",
+        DEFAULT: "12px",
+        md: "16px",
+        lg: "20px",
+        xl: "25px",
       },
     },
   },

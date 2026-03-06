@@ -300,6 +300,8 @@ struct TranscriptTask: Identifiable, Codable, Sendable {
 
 struct Transcript: Identifiable, Codable, Hashable, Sendable {
     var id: String
+    /// Server-assigned task identifier used for all API calls (detail, update, delete).
+    var taskId: String
     var title: String
     var date: Date
     var rawTranscription: String?
@@ -311,6 +313,7 @@ struct Transcript: Identifiable, Codable, Hashable, Sendable {
 
     enum CodingKeys: String, CodingKey {
         case id
+        case taskId = "task_id"
         case title
         case date
         case rawTranscription = "raw_transcription"
@@ -319,10 +322,17 @@ struct Transcript: Identifiable, Codable, Hashable, Sendable {
         case createdAt = "created_at"
         case duration
         case profileName = "profile_name"
+        // Backend sometimes returns these alternative field names
+        case transcription
+        case result
+        case filename
     }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
+
+        // Decode task_id (used for all API calls)
+        let decodedTaskId = try container.decodeIfPresent(String.self, forKey: .taskId) ?? ""
 
         // Flexible ID decoding: accept both String and Int from backend
         if let stringId = try? container.decode(String.self, forKey: .id) {
@@ -333,7 +343,13 @@ struct Transcript: Identifiable, Codable, Hashable, Sendable {
             id = UUID().uuidString
         }
 
-        title = try container.decode(String.self, forKey: .title)
+        // Use task_id for API calls; fall back to id if task_id is absent
+        taskId = decodedTaskId.isEmpty ? id : decodedTaskId
+
+        // Flexible title: fall back to filename
+        let decodedTitle = try? container.decodeIfPresent(String.self, forKey: .title)
+        let decodedFilename = try? container.decodeIfPresent(String.self, forKey: .filename)
+        title = decodedTitle ?? decodedFilename ?? "Naamloze opname"
 
         // Flexible date decoding: try `date` field, fall back to `created_at`
         let rawCreatedAt = try? container.decodeIfPresent(String.self, forKey: .createdAt)
@@ -349,8 +365,14 @@ struct Transcript: Identifiable, Codable, Hashable, Sendable {
             date = Date()
         }
 
-        rawTranscription = try container.decodeIfPresent(String.self, forKey: .rawTranscription)
-        notuleHtml = try container.decodeIfPresent(String.self, forKey: .notuleHtml)
+        // Flexible field names: raw_transcription or transcription
+        rawTranscription = (try? container.decodeIfPresent(String.self, forKey: .rawTranscription))
+            ?? (try? container.decodeIfPresent(String.self, forKey: .transcription))
+
+        // Flexible field names: notule_html or result
+        notuleHtml = (try? container.decodeIfPresent(String.self, forKey: .notuleHtml))
+            ?? (try? container.decodeIfPresent(String.self, forKey: .result))
+
         tags = (try? container.decodeIfPresent([String].self, forKey: .tags)) ?? []
         createdAt = rawCreatedAt
         duration = try container.decodeIfPresent(Double.self, forKey: .duration)
@@ -360,6 +382,7 @@ struct Transcript: Identifiable, Codable, Hashable, Sendable {
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(id, forKey: .id)
+        try container.encode(taskId, forKey: .taskId)
         try container.encode(title, forKey: .title)
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
@@ -374,6 +397,7 @@ struct Transcript: Identifiable, Codable, Hashable, Sendable {
 
     init(
         id: String = UUID().uuidString,
+        taskId: String = "",
         title: String,
         date: Date = Date(),
         rawTranscription: String? = nil,
@@ -384,6 +408,7 @@ struct Transcript: Identifiable, Codable, Hashable, Sendable {
         profileName: String? = nil
     ) {
         self.id = id
+        self.taskId = taskId.isEmpty ? id : taskId
         self.title = title
         self.date = date
         self.rawTranscription = rawTranscription

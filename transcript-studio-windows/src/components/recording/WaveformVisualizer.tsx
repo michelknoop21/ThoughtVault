@@ -69,9 +69,11 @@ export function WaveformVisualizer({
       const parent = canvas.parentElement;
       if (!parent) return;
       const dpr = window.devicePixelRatio || 1;
-      const w = parent.clientWidth;
-      canvas.width = w * dpr;
-      canvas.height = height * dpr;
+      // clientWidth on the parent includes padding; use the content box via computedStyle
+      const style = getComputedStyle(parent);
+      const w = parent.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+      canvas.width = Math.round(w * dpr);
+      canvas.height = Math.round(height * dpr);
       canvas.style.width = `${w}px`;
       canvas.style.height = `${height}px`;
       ctx!.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -136,7 +138,10 @@ export function WaveformVisualizer({
 
       const midX = w / 2;
       const midY = h / 2;
-      const maxAmplitude = midY - 4;
+      // Add padding to account for glow width and line width so waves don't get clipped
+      const maxGlowWidth = Math.max(...WAVE_CONFIGS.map(c => c.glowWidth));
+      const padding = 4 + maxGlowWidth / 2;
+      const maxAmplitude = Math.min(midY, (w / 2)) - padding;
 
       // Draw waves back to front (wave 4 first, primary last on top)
       for (let i = NUM_WAVES - 1; i >= 0; i--) {

@@ -1,6 +1,7 @@
 use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::io::Write;
 use tauri::{AppHandle, Emitter};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -61,8 +62,8 @@ pub async fn proxy_request(request: HttpRequest) -> Result<HttpResponse, String>
     Ok(HttpResponse { status, body, headers: resp_headers })
 }
 
-/// Multipart file upload — reads file from disk, sends as audio/wav.
-/// Extensive logging to aid debugging upload issues.
+/// Multipart file upload — manually constructs multipart/form-data body to match macOS behavior.
+/// This bypasses reqwest's multipart builder which may cause boundary/header issues with FastAPI.
 #[tauri::command]
 pub async fn http_upload_file(
     url: String,
@@ -90,35 +91,56 @@ pub async fn http_upload_file(
     eprintln!("[Upload] Filename: {}", filename);
     eprintln!("[Upload] Field name: {}", field_name);
 
-    let file_part = reqwest::multipart::Part::bytes(file_bytes)
-        .file_name(filename.clone())
-        .mime_str("audio/wav")
-        .map_err(|e| e.to_string())?;
+    // Generate a unique boundary (same approach as macOS)
+    let boundary = format!("Boundary-{}", uuid::Uuid::new_v4());
 
-    let mut form = reqwest::multipart::Form::new()
-        .part(field_name.clone(), file_part);
+    // Build multipart body manually to match macOS format exactly
+    let mut body = Vec::new();
 
+    // Add file part
+    writeln!(body, "--{}", boundary).map_err(|e| e.to_string())?;
+    writeln!(body, "Content-Disposition: form-data; name=\"{}\"; filename=\"{}\"", field_name, filename).map_err(|e| e.to_string())?;
+    writeln!(body, "Content-Type: audio/wav").map_err(|e| e.to_string())?;
+    writeln!(body).map_err(|e| e.to_string())?; // Empty line after headers
+    body.extend_from_slice(&file_bytes);
+    writeln!(body).map_err(|e| e.to_string())?;
+
+    // Add additional fields (profile_id, mode)
     if let Some(fields) = &additional_fields {
         eprintln!("[Upload] Additional fields: {:?}", fields);
         for (key, value) in fields {
-            form = form.text(key.clone(), value.clone());
+            writeln!(body, "--{}", boundary).map_err(|e| e.to_string())?;
+            writeln!(body, "Content-Disposition: form-data; name=\"{}\"", key).map_err(|e| e.to_string())?;
+            writeln!(body).map_err(|e| e.to_string())?;
+            writeln!(body, "{}", value).map_err(|e| e.to_string())?;
         }
     }
+
+    // End boundary
+    writeln!(body, "--{}--", boundary).map_err(|e| e.to_string())?;
+    writeln!(body).map_err(|e| e.to_string())?;
+
+    eprintln!("[Upload] Multipart body size: {} bytes", body.len());
 
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(120))
         .build()
         .map_err(|e| e.to_string())?;
 
-    let mut req = client.post(&url).multipart(form);
+    let content_type = format!("multipart/form-data; boundary={}", boundary);
 
+    let mut req = client.post(&url)
+        .header("Content-Type", content_type)
+        .body(body);
+
+    // Add authentication and other headers
     if let Some(hdrs) = headers {
         for (key, value) in &hdrs {
             req = req.header(key.as_str(), value.as_str());
         }
     }
 
-    eprintln!("[Upload] Sending request...");
+    eprintln!("[Upload] Sending request with Content-Type: multipart/form-data; boundary={}...", boundary);
     let response = req.send().await.map_err(|e| {
         eprintln!("[Upload] Request failed: {}", e);
         e.to_string()

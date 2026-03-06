@@ -92,6 +92,18 @@ export function RecordingPage() {
     return () => { unlisten.then((fn) => fn()); };
   }, [phase]);
 
+  // Listen for recording-error event from Rust backend
+  useEffect(() => {
+    const unlisten = listen<string>("recording-error", (event) => {
+      console.error("[Recording] Backend error:", event.payload);
+      setError(`Opname fout: ${event.payload}`);
+      setPhase("idle");
+      stopTimer();
+      closeWidgetWindow().catch(console.error);
+    });
+    return () => { unlisten.then((fn) => fn()); };
+  }, []);
+
   function startTimer() {
     elapsedRef.current = 0;
     timerRef.current = setInterval(() => {
@@ -142,8 +154,6 @@ export function RecordingPage() {
   }
 
   async function handleUpload(filePath: string) {
-    setPhase("uploading");
-
     const networkStatus = await getNetworkStatus().catch(() => ({ is_online: false }));
 
     if (!networkStatus.is_online) {
@@ -153,22 +163,26 @@ export function RecordingPage() {
       return;
     }
 
+    // Immediately add a background task and reset to idle so the user can start a new recording
+    const tempId = `pending-${Date.now()}`;
+    const bgTask: TranscriptTask = {
+      task_id: tempId,
+      status: "uploading",
+      progress: 0,
+      mode,
+      created_at: new Date().toISOString(),
+    };
+    addBackgroundTask(bgTask);
+    reset();
+
+    // Upload and SSE tracking happen in the background
     try {
       const { task_id } = await api.uploadRecording(filePath, selectedProfileId, mode);
 
-      const bgTask: TranscriptTask = {
-        task_id,
-        status: "uploading",
-        progress: 0,
-        mode,
-        created_at: new Date().toISOString(),
-      };
+      // Replace temp task with real task_id
+      updateBackgroundTask(tempId, { task_id, status: "uploading", progress: 10 });
 
-      // Move task to background and reset recording to idle
-      addBackgroundTask(bgTask);
-      reset();
-
-      // SSE updates go to background task store
+      // SSE updates go to background task store (use real task_id from here)
       const sseClient = createSSEClient(api.getStreamUrl(task_id));
       sseClient.connect(
         (update) => {
@@ -185,8 +199,11 @@ export function RecordingPage() {
         }
       );
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Upload mislukt");
-      setPhase("idle");
+      // Upload failed — update background task to show error
+      updateBackgroundTask(tempId, {
+        status: "failed",
+        error_message: err instanceof Error ? err.message : "Upload mislukt",
+      });
     }
   }
 
@@ -283,7 +300,7 @@ export function RecordingPage() {
           />
         )}
 
-        {phase === "uploading" && (
+        {phase === "stopping" && (
           <div className="text-center">
             <div className="flex-row" style={{ position: "relative", justifyContent: "center", margin: "0 auto 16px" }}>
               <div className="mic-pulse-ring mic-pulse-ring-1" />
@@ -292,7 +309,7 @@ export function RecordingPage() {
                 <ArrowUpload24Regular className="text-accent" style={{ fontSize: 28 }} />
               </div>
             </div>
-            <p className="text-secondary">Uploaden...</p>
+            <p className="text-secondary">Opname afronden...</p>
           </div>
         )}
       </div>
@@ -520,7 +537,7 @@ function ActiveState({
       </div>
 
       {/* Waveform */}
-      <div className="card card-static" style={{ padding: "16px 20px", width: "100%" }}>
+      <div className="card card-static" style={{ padding: "16px 20px", width: "100%", overflow: "hidden" }}>
         <WaveformVisualizer levels={audioLevels} isActive={!isPaused} height={120} />
       </div>
 

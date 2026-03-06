@@ -268,9 +268,19 @@ class APIService {
       let errorMessage = `Upload mislukt (HTTP ${response.status})`;
       try {
         const errorData = JSON.parse(response.body);
-        const extracted = errorData.message || errorData.detail || errorData.error;
+        const extracted = errorData.message || errorData.error;
         if (typeof extracted === "string") {
           errorMessage = `Upload mislukt: ${extracted}`;
+        } else if (errorData.detail) {
+          // FastAPI 422 returns detail as array of validation errors
+          if (Array.isArray(errorData.detail)) {
+            const fields = errorData.detail.map((d: { loc?: string[]; msg?: string }) =>
+              `${(d.loc || []).join(".")}: ${d.msg || "ongeldig"}`
+            ).join("; ");
+            errorMessage = `Upload mislukt: ${fields}`;
+          } else if (typeof errorData.detail === "string") {
+            errorMessage = `Upload mislukt: ${errorData.detail}`;
+          }
         }
       } catch {
         if (response.body && response.body.length < 200) {

@@ -133,7 +133,7 @@ pub async fn stop_recording(
 pub async fn pause_recording(
     state: tauri::State<'_, SharedRecordingState>,
 ) -> Result<(), String> {
-    let guard = state.lock().map_err(|e| e.to_string())?;
+    let mut guard = state.lock().map_err(|e| e.to_string())?;
 
     if !guard.is_recording {
         return Err("Geen actieve opname".to_string());
@@ -151,6 +151,9 @@ pub async fn pause_recording(
         return Err("Opnamekanaal is gesloten".to_string());
     }
 
+    // Update shared state to reflect paused status
+    guard.is_paused = true;
+
     Ok(())
 }
 
@@ -158,7 +161,7 @@ pub async fn pause_recording(
 pub async fn resume_recording(
     state: tauri::State<'_, SharedRecordingState>,
 ) -> Result<(), String> {
-    let guard = state.lock().map_err(|e| e.to_string())?;
+    let mut guard = state.lock().map_err(|e| e.to_string())?;
 
     if !guard.is_recording {
         return Err("Geen actieve opname".to_string());
@@ -175,6 +178,9 @@ pub async fn resume_recording(
     } else {
         return Err("Opnamekanaal is gesloten".to_string());
     }
+
+    // Update shared state to reflect recording status
+    guard.is_paused = false;
 
     Ok(())
 }

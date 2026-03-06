@@ -1,6 +1,6 @@
 # TranscriptStudio — Architecture
 
-_Last updated: 2026-03-05 (session 2)_
+_Last updated: 2026-03-06 (session 3)_
 
 ---
 
@@ -222,25 +222,29 @@ src/
 │   ├── calendar/           # Call alert overlay, meeting list
 │   ├── layout/             # Sidebar, header, navigation
 │   ├── onboarding/         # First-run setup flow
-│   ├── recording/          # RecordingPanel, WaveformView, TimerDisplay
+│   ├── recording/          # RecordingPanel, WaveformVisualizer, SavedRecordings, RecordingWidget
 │   ├── settings/           # Settings tabs (server, LLM, audio, account)
-│   └── transcripts/        # TranscriptCard, TranscriptList, NotesViewer
+│   ├── transcripts/        # TranscriptCard, TranscriptList, NotesViewer
+│   └── FeedbackWidget.tsx  # Bug reporting and feedback submission
 ├── services/
 │   ├── api.ts              # All backend REST calls + field mapping boundary
 │   ├── llm.ts              # Local LLM provider abstraction
 │   ├── microsoftGraph.ts   # M365 calendar via Microsoft Graph API
 │   ├── offlineQueue.ts     # Tauri plugin-store backed queue
-│   └── sse.ts              # EventSource SSE wrapper
+│   ├── sse.ts              # EventSource SSE wrapper
+│   └── crashReporter.ts    # Crash capture and structured logging
 ├── stores/
 │   ├── auth.ts             # User, token, biometric state (Zustand)
 │   ├── calendar.ts         # Meeting list, call-alert state
 │   ├── profiles.ts         # Profile CRUD
-│   ├── recording.ts        # Recording state machine
+│   ├── recording.ts        # Recording state machine, background task tracking
 │   ├── settings.ts         # App configuration
 │   └── transcripts.ts      # Transcript list, search, filters
 └── pages/
     ├── Home.tsx, Login.tsx, Recording.tsx
     ├── Transcripts.tsx, Settings.tsx, Admin.tsx
+    ├── AccountPage.tsx     # GDPR export/delete
+    └── ProfilesPage.tsx    # Profile management
 ```
 
 **Data persistence:**
@@ -266,7 +270,7 @@ src/
 | UI language | Dutch (nl_NL) throughout both clients |
 | Audio format | 16 kHz mono 16-bit PCM WAV on both platforms |
 | Field mapping | Backend field names normalized at API boundary on each client |
-| Auth | `X-User-Token` header on all authenticated requests |
+| Auth headers | Both `X-User-Token` and `Authorization: Bearer` accepted by backend; macOS uses `X-User-Token`, Windows uses `Authorization: Bearer` |
 
 ---
 

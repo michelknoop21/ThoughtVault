@@ -5,6 +5,62 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2026-03-06] — Recording error handling, waveform visibility, cross-platform fixes (v1.0.12 - v1.0.16)
+
+### v1.0.16 (2026-03-06)
+
+#### Fixed
+- **Recording error handling**: Added comprehensive error handling for recording failures with debug logging
+- **Improved state management**: Better handling of recording state transitions on error conditions
+
+### v1.0.15 (2026-03-06)
+
+#### Fixed
+- **Cross-platform iOS/macOS compilation**: Added conditional UIKit imports for iOS-specific features (pasteboard, activity controller, OAuth presentation)
+- **Waveform visibility**: Improved waveform amplitude compression and scaling for better visibility of quiet recordings
+- **Account management**: Enhanced GDPR account deletion and data export flows
+
+#### Changed
+- **macOS deployment target**: iOS 17.0 deployment configured for iPhone and iPad support
+- **Background task tracking**: Added background task display in RecordingPage UI
+
+### v1.0.14 (2026-03-06)
+
+#### Added
+- **macOS menu bar icon**: Added native menu bar icon assets for TranscriptStudio
+
+#### Fixed
+- **Windows app layout**: Footer positioning fixed — footer now displays correctly at bottom instead of taking over full page
+- **API authentication**: Aligned auth header format between platforms (X-User-Token vs Authorization: Bearer)
+
+### v1.0.13 (2026-03-06)
+
+#### Fixed
+- **Admin panel models**: Aligned admin panel data models with actual backend API response shapes
+- **User management endpoints**: Corrected field mappings for user creation and role management
+
+### v1.0.12 (2026-03-06)
+
+#### Added
+- **Windows app redesign**: Complete visual redesign matching macOS design language
+- **WaveformVisualizer**: Multi-wave rendering system with 5 layered sine waves, dynamic range compression, and idle breathing animation
+- **ProfilesPage**: Profile management page with create/edit/delete functionality
+- **AccountPage**: Account settings with GDPR export and deletion
+- **FeedbackWidget**: In-app bug reporting and feedback submission
+- **SavedRecordings**: List view of saved recordings with playback and management
+- **RecordingWidget**: Improved recording controls with timer and visual feedback
+
+#### Changed
+- **Tailwind configuration**: Updated design tokens matching macOS Color+Brand.swift palette
+- **Global styles**: Comprehensive CSS overhaul for consistent cross-platform appearance
+- **API service**: Improved error handling and field mapping alignment with macOS APIService
+
+#### Fixed
+- **Waveform visibility**: Barely visible soundwave recordings display improved through amplitude compression
+- **Recording state management**: Better handling of upload failures and retry logic
+
+---
+
 ## [2026-03-05] — Admin panel API alignment, entitlements, biometric fixes (v1.0.3)
 
 ### macOS

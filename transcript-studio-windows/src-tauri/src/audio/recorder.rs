@@ -6,11 +6,15 @@ use std::sync::atomic::{AtomicBool, AtomicUsize, AtomicU64, Ordering};
 use tokio::sync::mpsc;
 use super::types::{AudioDevice, RecordingCommand, RecordingEvent, RecordingMode};
 
-const SAMPLE_RATE: u32 = 16000;
+const TARGET_SAMPLE_RATE: u32 = 16000;
 const CHANNELS: u16 = 1;
 const BITS_PER_SAMPLE: u16 = 16;
+
 /// Emit audio level events ~60 times per second
-const LEVEL_EMIT_INTERVAL_SAMPLES: usize = SAMPLE_RATE as usize / 60;
+/// Will be calculated dynamically based on actual sample rate
+fn level_emit_interval(sample_rate: u32) -> usize {
+    (sample_rate / 60) as usize
+}
 
 pub fn get_devices() -> Vec<AudioDevice> {
     let host = cpal::default_host();
@@ -95,21 +99,60 @@ fn recording_thread_body(
     // Probe the device for supported sample format - this is critical!
     // Most Windows devices support i16, not f32. We must build the stream
     // with a callback that matches the device's native format.
-    let supported = input_device
+    let configs = input_device
         .supported_input_configs()
-        .map_err(|e| format!("Kan audio configs niet lezen: {}", e))?
-        .find(|c| c.channels() >= CHANNELS && c.min_sample_rate() <= cpal::SampleRate(SAMPLE_RATE)
-            && c.max_sample_rate() >= cpal::SampleRate(SAMPLE_RATE))
-        .ok_or("Geen geschikte audio configuratie gevonden")?;
+        .map_err(|e| format!("Kan audio configs niet lezen: {}", e))?;
+
+    // Debug: log all available configs and collect them for later use
+    eprintln!("[Audio] Available configs for device:");
+    let configs_vec: Vec<_> = configs
+        .map(|cfg| {
+            eprintln!("  channels={:?}, min_rate={:?}, max_rate={:?}, format={:?}",
+                cfg.channels(), cfg.min_sample_rate(), cfg.max_sample_rate(), cfg.sample_format());
+            cfg
+        })
+        .collect();
+
+    if configs_vec.is_empty() {
+        return Err("Geen audio configuraties gevonden".to_string());
+    }
+
+    // Find a config that supports our requirements
+    // Prefer TARGET_SAMPLE_RATE (16000), but fall back to any supported rate
+    let supported = configs_vec
+        .iter()
+        .find(|c| c.channels() >= CHANNELS
+            && c.min_sample_rate() <= cpal::SampleRate(TARGET_SAMPLE_RATE)
+            && c.max_sample_rate() >= cpal::SampleRate(TARGET_SAMPLE_RATE))
+        .or_else(|| {
+            // Fall back to any config with enough channels, preferring higher sample rates
+            eprintln!("[Audio] {} Hz niet beschikbaar, valt terug op alternatief", TARGET_SAMPLE_RATE);
+            configs_vec.iter()
+                .filter(|c| c.channels() >= CHANNELS)
+                .max_by_key(|c| c.max_sample_rate())
+        })
+        .ok_or_else(|| {
+            format!("Geen geschikte audio configuratie gevonden (zoekt: {} kanalen)", CHANNELS)
+        })?;
 
     let sample_format = supported.sample_format();
-    let config: cpal::StreamConfig = supported.clone().with_sample_rate(cpal::SampleRate(SAMPLE_RATE)).into();
+
+    // Use the closest sample rate to TARGET, clamped to device's supported range
+    let device_min = supported.min_sample_rate().0;
+    let device_max = supported.max_sample_rate().0;
+    let actual_sample_rate = TARGET_SAMPLE_RATE.clamp(device_min, device_max);
+
+    eprintln!("[Audio] Using sample rate: {} Hz (device range: {}-{})", actual_sample_rate, device_min, device_max);
+
+    let config: cpal::StreamConfig = supported.clone()
+        .with_sample_rate(cpal::SampleRate(actual_sample_rate))
+        .into();
 
     eprintln!("[Audio] Device sample format: {:?}, config: {:?}", sample_format, config);
 
     let wav_spec = WavSpec {
         channels: CHANNELS,
-        sample_rate: SAMPLE_RATE,
+        sample_rate: actual_sample_rate,
         bits_per_sample: BITS_PER_SAMPLE,
         sample_format: HoundSampleFormat::Int,
     };
@@ -133,10 +176,10 @@ fn recording_thread_body(
     // Build the appropriate input stream based on the device's sample format
     let input_stream = match sample_format {
         cpal::SampleFormat::I16 => build_input_stream_i16(
-            &input_device, &config, writer_clone, is_paused_clone, event_tx_clone, samples_written_clone,
+            &input_device, &config, actual_sample_rate, writer_clone, is_paused_clone, event_tx_clone, samples_written_clone,
         )?,
         cpal::SampleFormat::F32 => build_input_stream_f32(
-            &input_device, &config, writer_clone, is_paused_clone, event_tx_clone, samples_written_clone,
+            &input_device, &config, actual_sample_rate, writer_clone, is_paused_clone, event_tx_clone, samples_written_clone,
         )?,
         _ => return Err("Niet-ondersteunde sample format".to_string()),
     };
@@ -146,7 +189,7 @@ fn recording_thread_body(
     let loopback_stream_holder: Option<Box<dyn StreamTrait>> = if mode == RecordingMode::Combined {
         #[cfg(target_os = "windows")]
         {
-            match try_build_loopback_stream(&host, Arc::clone(&writer), Arc::clone(&is_paused), event_tx.clone()) {
+            match try_build_loopback_stream(&host, actual_sample_rate, Arc::clone(&writer), Arc::clone(&is_paused), event_tx.clone()) {
                 Ok(stream) => {
                     eprintln!("[Audio] Loopback stream gestart voor systeemaudio opname");
                     Some(Box::new(stream))
@@ -223,6 +266,7 @@ fn recording_thread_body(
 fn build_input_stream_i16(
     device: &cpal::Device,
     config: &cpal::StreamConfig,
+    sample_rate: u32,
     writer: Arc<Mutex<Option<WavWriter<std::io::BufWriter<std::fs::File>>>>>,
     is_paused: Arc<AtomicBool>,
     event_tx: mpsc::UnboundedSender<RecordingEvent>,
@@ -244,6 +288,9 @@ fn build_input_stream_i16(
 
     eprintln!("[Audio] Building i16 input stream...");
 
+    // Calculate emit interval based on actual sample rate
+    let emit_interval = level_emit_interval(sample_rate);
+
     let stream = device.build_input_stream(
         config,
         move |data: &[i16], _| {
@@ -263,10 +310,11 @@ fn build_input_stream_i16(
 
                         // Track samples written
                         let count = samples_written_clone.fetch_add(1, Ordering::Relaxed) + 1;
+                        let count_usize = count as usize;
 
-                        // Log every ~5 seconds (5 * 16000 = 80000 samples)
-                        if count % 80000 == 0 {
-                            eprintln!("[Audio] Written {} samples (~{} seconds)", count, count / 16000);
+                        // Log every ~5 seconds
+                        if count_usize % (5 * sample_rate as usize) == 0 {
+                            eprintln!("[Audio] Written {} samples (~{} seconds)", count, count_usize / sample_rate as usize);
                         }
 
                         // Calculate audio level for visualization
@@ -277,7 +325,7 @@ fn build_input_stream_i16(
                         }
                         let level_count = level_counter_clone.fetch_add(1, Ordering::Relaxed) + 1;
 
-                        if level_count >= LEVEL_EMIT_INTERVAL_SAMPLES {
+                        if level_count >= emit_interval {
                             let rms = if let Ok(sum_sq) = level_sum_sq_clone.lock() {
                                 (*sum_sq / level_count as f32).sqrt()
                             } else {
@@ -308,6 +356,7 @@ fn build_input_stream_i16(
 fn build_input_stream_f32(
     device: &cpal::Device,
     config: &cpal::StreamConfig,
+    sample_rate: u32,
     writer: Arc<Mutex<Option<WavWriter<std::io::BufWriter<std::fs::File>>>>>,
     is_paused: Arc<AtomicBool>,
     event_tx: mpsc::UnboundedSender<RecordingEvent>,
@@ -329,6 +378,9 @@ fn build_input_stream_f32(
 
     eprintln!("[Audio] Building f32 input stream...");
 
+    // Calculate emit interval based on actual sample rate
+    let emit_interval = level_emit_interval(sample_rate);
+
     let stream = device.build_input_stream(
         config,
         move |data: &[f32], _| {
@@ -349,10 +401,11 @@ fn build_input_stream_f32(
 
                         // Track samples written
                         let count = samples_written_clone.fetch_add(1, Ordering::Relaxed) + 1;
+                        let count_usize = count as usize;
 
                         // Log every ~5 seconds
-                        if count % 80000 == 0 {
-                            eprintln!("[Audio] Written {} samples (~{} seconds)", count, count / 16000);
+                        if count_usize % (5 * sample_rate as usize) == 0 {
+                            eprintln!("[Audio] Written {} samples (~{} seconds)", count, count_usize / sample_rate as usize);
                         }
 
                         if let Ok(mut sum_sq) = level_sum_sq_clone.lock() {
@@ -360,7 +413,7 @@ fn build_input_stream_f32(
                         }
                         let level_count = level_counter_clone.fetch_add(1, Ordering::Relaxed) + 1;
 
-                        if level_count >= LEVEL_EMIT_INTERVAL_SAMPLES {
+                        if level_count >= emit_interval {
                             let rms = if let Ok(sum_sq) = level_sum_sq_clone.lock() {
                                 (*sum_sq / level_count as f32).sqrt()
                             } else {
@@ -392,6 +445,7 @@ fn build_input_stream_f32(
 #[cfg(target_os = "windows")]
 fn try_build_loopback_stream(
     host: &cpal::Host,
+    sample_rate: u32,
     writer: Arc<Mutex<Option<WavWriter<std::io::BufWriter<std::fs::File>>>>>,
     is_paused: Arc<AtomicBool>,
     event_tx: mpsc::UnboundedSender<RecordingEvent>,
@@ -403,15 +457,35 @@ fn try_build_loopback_stream(
         .ok_or("Geen standaard uitvoerapparaat voor loopback")?;
 
     // Probe loopback device for supported format
-    let supported = output_device
+    let configs_vec: Vec<_> = output_device
         .supported_input_configs()
         .map_err(|e| format!("Kan loopback configs niet lezen: {}", e))?
-        .find(|c| c.channels() >= CHANNELS && c.min_sample_rate() <= cpal::SampleRate(SAMPLE_RATE)
-            && c.max_sample_rate() >= cpal::SampleRate(SAMPLE_RATE))
+        .collect();
+
+    // Find a config that supports our requirements, or fall back to any compatible config
+    let supported = configs_vec
+        .iter()
+        .find(|c| c.channels() >= CHANNELS
+            && c.min_sample_rate() <= cpal::SampleRate(sample_rate)
+            && c.max_sample_rate() >= cpal::SampleRate(sample_rate))
+        .or_else(|| {
+            eprintln!("[Audio] Loopback: {} Hz niet beschikbaar, zoekt alternatief", sample_rate);
+            configs_vec.iter()
+                .filter(|c| c.channels() >= CHANNELS)
+                .max_by_key(|c| c.max_sample_rate())
+        })
         .ok_or("Geen geschikte loopback configuratie gevonden")?;
 
     let sample_format = supported.sample_format();
-    let config: cpal::StreamConfig = supported.clone().with_sample_rate(cpal::SampleRate(SAMPLE_RATE)).into();
+
+    // Use the closest sample rate to target, clamped to device's supported range
+    let device_min = supported.min_sample_rate().0;
+    let device_max = supported.max_sample_rate().0;
+    let actual_sample_rate = sample_rate.clamp(device_min, device_max);
+
+    let config: cpal::StreamConfig = supported.clone()
+        .with_sample_rate(cpal::SampleRate(actual_sample_rate))
+        .into();
 
     // Loopback also needs format-specific handling
     match sample_format {
@@ -424,6 +498,9 @@ fn try_build_loopback_stream(
             let level_sum_sq = Arc::new(Mutex::new(0.0f32));
             let level_counter_clone = Arc::clone(&level_counter);
             let level_sum_sq_clone = Arc::clone(&level_sum_sq);
+
+            // Calculate emit interval based on actual sample rate
+            let emit_interval = level_emit_interval(actual_sample_rate);
 
             let stream = output_device.build_input_stream(
                 &config,
@@ -443,7 +520,7 @@ fn try_build_loopback_stream(
                                 }
                                 let count = level_counter_clone.fetch_add(1, Ordering::Relaxed) + 1;
 
-                                if count >= LEVEL_EMIT_INTERVAL_SAMPLES {
+                                if count >= emit_interval {
                                     let rms = if let Ok(sum_sq) = level_sum_sq_clone.lock() {
                                         (*sum_sq / count as f32).sqrt()
                                     } else {
@@ -475,6 +552,9 @@ fn try_build_loopback_stream(
             let level_counter_clone = Arc::clone(&level_counter);
             let level_sum_sq_clone = Arc::clone(&level_sum_sq);
 
+            // Calculate emit interval based on actual sample rate
+            let emit_interval = level_emit_interval(actual_sample_rate);
+
             let stream = output_device.build_input_stream(
                 &config,
                 move |data: &[f32], _| {
@@ -493,7 +573,7 @@ fn try_build_loopback_stream(
                                 }
                                 let count = level_counter_clone.fetch_add(1, Ordering::Relaxed) + 1;
 
-                                if count >= LEVEL_EMIT_INTERVAL_SAMPLES {
+                                if count >= emit_interval {
                                     let rms = if let Ok(sum_sq) = level_sum_sq_clone.lock() {
                                         (*sum_sq / count as f32).sqrt()
                                     } else {

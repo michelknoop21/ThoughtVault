@@ -292,3 +292,52 @@ _Append-only log. Each entry records context, decision, and consequences._
 - App Store compliant with privacy nutrition labels.
 - Backend deletion endpoint implementation is pending — client shows confirmation dialog and calls the endpoint when available.
 - Data export produces a JSON file containing task history, transcripts, notes, and profile settings.
+
+---
+
+## DEC-018 — Multi-Wave Waveform Visualizer for Cross-Platform Consistency
+
+**Date:** 2026-03-06
+**Status:** Accepted
+
+**Context:** Windows WaveformVisualizer showed barely visible waveforms for quiet recordings. macOS had a single-wave sine visualizer. Both platforms needed improvement and consistency.
+
+**Decision:** Implement a 5-layer multi-wave rendering system on Windows matching the macOS visual language. Each wave has independent frequency (0.9-2.1), speed (5.8-13.0 rad/s), phase offset, and history buffer sampling point (0-20 samples). Added dynamic range compression (pow 0.6) to make quieter sounds more visible, per-wave jitter for natural variation, and idle breathing animation at 3% amplitude during silence.
+
+**Consequences:**
+- Waveforms are now clearly visible even for quiet recordings.
+- Cross-platform visual consistency between macOS and Windows apps.
+- Primary wave (brand pink) rendered boldest (3px line, 8px glow); four secondary waves (blues/purples) use screen blend mode for additive color mixing.
+- Idle breathing animation keeps the interface "alive" even when no audio is present.
+
+---
+
+## DEC-019 — Conditional UIKit Imports for Cross-Platform Compilation
+
+**Date:** 2026-03-06
+**Status:** Accepted
+
+**Context:** macOS-only code was importing UIKit unconditionally, causing iOS/macOS cross-compilation failures. UIKit is iOS-only; AppKit is the macOS equivalent for many features.
+
+**Decision:** Add conditional compilation blocks (`#if canImport(UIKit)`) around all UIKit-specific imports and usages. This includes pasteboard access, activity controllers for sharing, and OAuth window presentation.
+
+**Consequences:**
+- Single codebase compiles for both iOS 17+ and macOS 14+ targets.
+- Features like clipboard copy, share sheets, and OAuth presentation work correctly on both platforms.
+- Code is slightly more verbose due to conditional compilation, but avoids duplicate implementations.
+
+---
+
+## DEC-020 — Background Task Tracking in Recording UI
+
+**Date:** 2026-03-06
+**Status:** Accepted
+
+**Context:** Users had no visibility into background upload tasks after stopping a recording. The Windows app lacked the task tracking infrastructure that macOS had.
+
+**Decision:** Add background task display section in RecordingPage showing active uploads with progress indicators. Store tracks multiple active tasks simultaneously with status updates via SSE.
+
+**Consequences:**
+- Users can see upload progress even after navigating away from the recording screen.
+- Better UX for slow network conditions — users know their recordings are being processed.
+- Windows implementation now matches macOS background task visibility.

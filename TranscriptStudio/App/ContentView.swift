@@ -242,8 +242,13 @@ struct ContentView: View {
     }
 
     private var detailView: some View {
-        ZStack {
+        VStack(spacing: 0) {
+            PermissionBanner()
+                .padding(.horizontal, TS.Spacing.md)
+                .padding(.top, TS.Spacing.sm)
+
             tabContent(for: selectedTab)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
 #endif

@@ -26,7 +26,7 @@ final class KeychainService: Sendable {
 
         let status = SecItemAdd(query as CFDictionary, nil)
         if status != errSecSuccess {
-            print("[KeychainService] SecItemAdd failed for key '\(key)': \(status)")
+            DebugLogger.shared.error("SecItemAdd failed for key '\(key)': \(status)", category: "Keychain")
         }
     }
 

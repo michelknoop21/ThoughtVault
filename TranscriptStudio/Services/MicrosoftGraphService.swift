@@ -36,13 +36,14 @@ actor MicrosoftGraphService {
 
     // MARK: - Constants
 
-    private let scopes = ["User.Read", "Calendars.Read"]
+    nonisolated private let scopes = ["User.Read", "Calendars.Read"]
     private let graphBase = "https://graph.microsoft.com/v1.0"
-    private let redirectURI = "transcript-studio://auth/callback"
+    nonisolated private let redirectURI = "transcript-studio://auth/callback"
 
     // MARK: - PKCE State
 
     private var codeVerifier: String?
+    private var oauthState: String?
 
     // MARK: - Configuration
 
@@ -106,13 +107,16 @@ actor MicrosoftGraphService {
         await service.setCodeVerifier(verifier)
 
         let state = UUID().uuidString
+        await service.setOAuthState(state)
 
-        var components = URLComponents(string: "https://login.microsoftonline.com/\(tenantId)/oauth2/v2.0/authorize")!
+        guard var components = URLComponents(string: "https://login.microsoftonline.com/\(tenantId)/oauth2/v2.0/authorize") else {
+            throw MicrosoftGraphError.invalidURL
+        }
         components.queryItems = [
             URLQueryItem(name: "client_id", value: clientId),
             URLQueryItem(name: "response_type", value: "code"),
-            URLQueryItem(name: "redirect_uri", value: await service.redirectURI),
-            URLQueryItem(name: "scope", value: await service.scopes.joined(separator: " ")),
+            URLQueryItem(name: "redirect_uri", value: service.redirectURI),
+            URLQueryItem(name: "scope", value: service.scopes.joined(separator: " ")),
             URLQueryItem(name: "response_mode", value: "query"),
             URLQueryItem(name: "code_challenge", value: challenge),
             URLQueryItem(name: "code_challenge_method", value: "S256"),
@@ -149,12 +153,22 @@ actor MicrosoftGraphService {
             throw MicrosoftGraphError.noAuthCode
         }
 
+        let returnedState = components.queryItems?.first(where: { $0.name == "state" })?.value
+        let expectedState = await service.oauthState
+        if returnedState != expectedState {
+            throw MicrosoftGraphError.invalidURL
+        }
+
         // Exchange code for tokens
         try await service.exchangeCodeForTokens(code: code)
     }
 
     private func setCodeVerifier(_ verifier: String) {
         self.codeVerifier = verifier
+    }
+
+    private func setOAuthState(_ state: String) {
+        self.oauthState = state
     }
 
     // MARK: - Token Exchange
@@ -167,10 +181,13 @@ actor MicrosoftGraphService {
             throw MicrosoftGraphError.missingVerifier
         }
 
-        let tokenURL = URL(string: "https://login.microsoftonline.com/\(tenantId)/oauth2/v2.0/token")!
+        guard let tokenURL = URL(string: "https://login.microsoftonline.com/\(tenantId)/oauth2/v2.0/token") else {
+            throw MicrosoftGraphError.invalidURL
+        }
 
         var request = URLRequest(url: tokenURL)
         request.httpMethod = "POST"
+        request.timeoutInterval = 30
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
 
         let params = [
@@ -202,14 +219,20 @@ actor MicrosoftGraphService {
         self.tokenExpiry = expiry
         self.accountEmail = email
         self.codeVerifier = nil
+        self.oauthState = nil
 
         // Save tokens to backend for cross-device sync
-        try? await APIService.shared.saveCalendarTokens(
-            accessToken: tokenResponse.access_token,
-            refreshToken: tokenResponse.refresh_token ?? "",
-            tokenExpiry: expiry.timeIntervalSince1970,
-            email: email
-        )
+        do {
+            try await APIService.shared.saveCalendarTokens(
+                accessToken: tokenResponse.access_token,
+                refreshToken: tokenResponse.refresh_token ?? "",
+                tokenExpiry: expiry.timeIntervalSince1970,
+                email: email
+            )
+        } catch {
+            logger.error("Failed to sync calendar tokens to backend: \(error.localizedDescription)")
+            CrashReporter.shared.recordError(error, context: "MicrosoftGraphService.saveCalendarTokens")
+        }
 
         logger.info("Microsoft 365 connected for \(email)")
     }
@@ -217,7 +240,11 @@ actor MicrosoftGraphService {
     // MARK: - User Profile
 
     private func fetchUserEmail(accessToken: String) async throws -> String {
-        var request = URLRequest(url: URL(string: "\(graphBase)/me")!)
+        guard let meURL = URL(string: "\(graphBase)/me") else {
+            throw MicrosoftGraphError.invalidURL
+        }
+        var request = URLRequest(url: meURL)
+        request.timeoutInterval = 15
         request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
 
         let (data, _) = try await URLSession.shared.data(for: request)
@@ -234,7 +261,7 @@ actor MicrosoftGraphService {
         let tomorrow = now.addingTimeInterval(24 * 60 * 60)
         let formatter = ISO8601DateFormatter()
 
-        var components = URLComponents(string: "\(graphBase)/me/calendarView")!
+        guard var components = URLComponents(string: "\(graphBase)/me/calendarView") else { return [] }
         components.queryItems = [
             URLQueryItem(name: "startDateTime", value: formatter.string(from: now)),
             URLQueryItem(name: "endDateTime", value: formatter.string(from: tomorrow)),
@@ -246,6 +273,7 @@ actor MicrosoftGraphService {
         guard let url = components.url else { return [] }
 
         var request = URLRequest(url: url)
+        request.timeoutInterval = 15
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
 
         do {
@@ -294,7 +322,12 @@ actor MicrosoftGraphService {
         tokenExpiry = nil
         accountEmail = nil
 
-        try? await APIService.shared.deleteCalendarTokens()
+        do {
+            try await APIService.shared.deleteCalendarTokens()
+        } catch {
+            logger.error("Failed to delete calendar tokens from backend: \(error.localizedDescription)")
+            CrashReporter.shared.recordError(error, context: "MicrosoftGraphService.deleteCalendarTokens")
+        }
         logger.info("Microsoft 365 disconnected")
     }
 

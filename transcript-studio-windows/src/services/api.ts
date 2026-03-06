@@ -23,6 +23,29 @@ function extractErrorMessage(err: unknown): string {
   return "Onbekende fout";
 }
 
+/** Normalize a backend transcript object to our Transcript type. */
+function mapTranscript(raw: unknown): Transcript {
+  const r = raw as Record<string, unknown>;
+  const rawTranscription =
+    (r.raw_transcription as string | undefined)
+    ?? (r.transcription as string | undefined);
+  const notuleHtml =
+    (r.notule_html as string | undefined)
+    ?? (r.result as string | undefined);
+
+  return {
+    id: String(r.id ?? r.task_id ?? ""),
+    title: String(r.title ?? r.filename ?? "Naamloze opname"),
+    raw_transcription: rawTranscription,
+    notule_html: notuleHtml,
+    duration_seconds: Number(r.duration ?? r.duration_seconds ?? 0),
+    profile_name: (r.profile_name as string) ?? undefined,
+    tags: Array.isArray(r.tags) ? r.tags.map(String) : [],
+    created_at: String(r.created_at ?? r.date ?? new Date().toISOString()),
+    updated_at: String(r.updated_at ?? r.created_at ?? new Date().toISOString()),
+  };
+}
+
 class APIService {
   private get baseUrl(): string {
     const stored = localStorage.getItem("settings-store");
@@ -139,21 +162,22 @@ class APIService {
     if (params?.tags?.length) query.set("tags", params.tags.join(","));
     if (params?.limit) query.set("limit", params.limit.toString());
     if (params?.offset) query.set("offset", params.offset.toString());
+    query.set("page", "1");
+    query.set("sort_by", "newest");
 
     const path = `/tstudio/api/transcripts${query.toString() ? "?" + query : ""}`;
-    try {
-      const data = await this.request<Transcript[] | { items: Transcript[] }>(
-        "GET",
-        path
-      );
-      return Array.isArray(data) ? data : data.items || [];
-    } catch {
-      return [];
-    }
+    const data = await this.request<unknown>("GET", path);
+    const raw: unknown[] = Array.isArray(data)
+      ? data
+      : (data as Record<string, unknown>).items as unknown[]
+        || (data as Record<string, unknown>).transcripts as unknown[]
+        || [];
+    return raw.map(mapTranscript);
   }
 
   async getTranscript(id: string): Promise<Transcript> {
-    return this.request<Transcript>("GET", `/tstudio/api/transcripts/${id}`);
+    const data = await this.request<unknown>("GET", `/tstudio/api/transcripts/${id}`);
+    return mapTranscript(data);
   }
 
   async updateTranscript(id: string, updates: Partial<Transcript>): Promise<Transcript> {
@@ -173,7 +197,7 @@ class APIService {
   }
 
   getStreamUrl(taskId: string): string {
-    return `${this.baseUrl}/tstudio/api/tasks/${taskId}/stream`;
+    return `${this.baseUrl}/tstudio/api/task/${taskId}/stream`;
   }
 
   // Upload

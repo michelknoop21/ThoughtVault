@@ -1,10 +1,13 @@
 import AVFoundation
 import Foundation
+import OSLog
 #if os(iOS)
 import UIKit
 #elseif os(macOS)
 import AppKit
 #endif
+
+private let log = Logger(subsystem: "nl.prezent.TranscriptStudio", category: "AudioRecorder")
 
 // MARK: - Error
 
@@ -61,6 +64,7 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
     private var audioRecorder: AVAudioRecorder?
     private var meteringTimer: Timer?
     private var durationTimer: Timer?
+    private var lastDiagnosticLog: Date = .distantPast
 
 #if os(iOS)
     private var backgroundTask: UIBackgroundTaskIdentifier = .invalid
@@ -191,12 +195,15 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
             recorder.delegate = self
             recorder.isMeteringEnabled = true
             guard recorder.record() else {
+                log.error("[AudioRecorder] AVAudioRecorder.record() returned false for \(url.lastPathComponent)")
                 throw AudioRecorderError.failedToStart
             }
             self.audioRecorder = recorder
+            log.info("[AudioRecorder] Started recording to \(url.lastPathComponent) — 16kHz mono PCM")
         } catch let error as AudioRecorderError {
             throw error
         } catch {
+            log.error("[AudioRecorder] Failed to create AVAudioRecorder: \(error.localizedDescription)")
             throw AudioRecorderError.failedToStart
         }
 
@@ -228,6 +235,7 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
         guard isRecording else { return currentRecordingURL }
 
         audioRecorder?.stop()
+        audioRecorder = nil  // Force dealloc to flush WAV header
         finalizeTimers()
 
 #if os(iOS)
@@ -244,10 +252,14 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
 
         resetMetrics()
 
-        // Validate minimum file size
+        // Log file size for diagnostics
         if let url, let attrs = try? FileManager.default.attributesOfItem(atPath: url.path),
-           let size = attrs[.size] as? Int64, size < Self.minimumValidFileSize {
-            return nil
+           let size = attrs[.size] as? Int64 {
+            log.info("[AudioRecorder] Recording stopped — file size: \(size) bytes at \(url.lastPathComponent)")
+            if size < Self.minimumValidFileSize {
+                log.warning("[AudioRecorder] File too small (\(size) bytes < \(Self.minimumValidFileSize)), discarding")
+                return nil
+            }
         }
 
         return url
@@ -256,22 +268,25 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
     // MARK: - Timers
 
     private func startTimers() {
-        meteringTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / 60.0, repeats: true) { [weak self] _ in
-            self?.updateMetering()
-        }
-        durationTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-            guard let self, let recorder = self.audioRecorder, !self.isPaused else { return }
-            Task { @MainActor in
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            self.meteringTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / 60.0, repeats: true) { [weak self] _ in
+                self?.updateMetering()
+            }
+            self.durationTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+                guard let self, let recorder = self.audioRecorder, !self.isPaused else { return }
                 self.duration = recorder.currentTime
             }
         }
     }
 
     private func finalizeTimers() {
-        meteringTimer?.invalidate()
-        meteringTimer = nil
-        durationTimer?.invalidate()
-        durationTimer = nil
+        DispatchQueue.main.async { [weak self] in
+            self?.meteringTimer?.invalidate()
+            self?.meteringTimer = nil
+            self?.durationTimer?.invalidate()
+            self?.durationTimer = nil
+        }
     }
 
     // MARK: - Metering
@@ -290,12 +305,17 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
         }
         let level = max(0, min(1, normalized))
 
-        Task { @MainActor in
-            var levels = self.audioLevels
-            levels.removeFirst()
-            levels.append(level)
-            self.audioLevels = levels
+        // Diagnostic logging every 5 seconds
+        let now = Date()
+        if now.timeIntervalSince(lastDiagnosticLog) >= 5.0 {
+            lastDiagnosticLog = now
+            log.info("[AudioRecorder] Metering — dB=\(db, format: .fixed(precision: 1)), normalized=\(level, format: .fixed(precision: 3)), duration=\(self.duration, format: .fixed(precision: 1))s")
         }
+
+        var levels = self.audioLevels
+        levels.removeFirst()
+        levels.append(level)
+        self.audioLevels = levels
     }
 
     // MARK: - Reset

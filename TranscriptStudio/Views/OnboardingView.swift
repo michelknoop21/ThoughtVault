@@ -118,6 +118,9 @@ struct OnboardingView: View {
             .animation(TS.Animation.gentle, value: currentStep)
 
             VStack(spacing: 0) {
+                // Full-width brand bar directly under title bar
+                YingaBar()
+
                 // Step indicator
                 stepIndicator
 
@@ -137,6 +140,9 @@ struct OnboardingView: View {
                 // Navigation buttons
                 navigationFooter
             }
+#if os(macOS)
+            .toolbar(.hidden)
+#endif
         }
         .onAppear {
             withAnimation(TS.Animation.gentle) {
@@ -180,11 +186,6 @@ struct OnboardingView: View {
     private var welcomeStep: some View {
         VStack(spacing: TS.Spacing.xl) {
             Spacer()
-
-            // Brand bar
-            YingaBar(height: 4)
-                .frame(width: 80)
-                .clipShape(RoundedRectangle(cornerRadius: 2))
 
             // Hero icon
             ZStack {
@@ -639,14 +640,12 @@ struct OnboardingView: View {
     }
 
     private func requestSpeechPermission() async {
-        await withCheckedContinuation { continuation in
+        let status = await withCheckedContinuation { continuation in
             SFSpeechRecognizer.requestAuthorization { status in
-                Task { @MainActor in
-                    self.speechPermission = status == .authorized ? .granted : .denied
-                }
-                continuation.resume()
+                continuation.resume(returning: status)
             }
         }
+        speechPermission = status == .authorized ? .granted : .denied
     }
 
     private func requestCalendarPermission() async {

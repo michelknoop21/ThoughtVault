@@ -82,13 +82,15 @@ struct AdminUser: Codable, Identifiable {
     let name: String?
     let role: String
     let createdAt: String?
+    let noteCount: Int?
 
     enum CodingKeys: String, CodingKey {
-        case id
-        case email
+        case id = "user_id"
+        case email = "username"
         case name
         case role
         case createdAt = "created_at"
+        case noteCount = "note_count"
     }
 }
 
@@ -377,7 +379,13 @@ actor APIService {
 
     func getTranscript(id: String) async throws -> Transcript {
         let req = try request(path: "/tstudio/api/transcripts/\(id)")
-        return try await perform(req)
+        let (data, response) = try await session.data(for: req)
+        let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
+        logger.info("GET transcript \(id): HTTP \(statusCode), \(data.count) bytes")
+        if let json = String(data: data.prefix(500), encoding: .utf8) {
+            logger.debug("Response preview: \(json)")
+        }
+        return try handleResponse(data: data, response: response)
     }
 
     func deleteTranscript(id: String) async throws {
@@ -393,6 +401,13 @@ actor APIService {
 
     func updateTranscriptTags(id: String, tags: [String]) async throws {
         let body = try JSONEncoder().encode(["tags": tags])
+        let req = try request(path: "/tstudio/api/transcripts/\(id)", method: "PATCH", body: body)
+        try await performVoid(req)
+    }
+
+    func updateNotuleHTML(id: String, html: String) async throws {
+        let payload: [String: String] = ["notule_html": html]
+        let body = try JSONEncoder().encode(payload)
         let req = try request(path: "/tstudio/api/transcripts/\(id)", method: "PATCH", body: body)
         try await performVoid(req)
     }
@@ -514,7 +529,7 @@ actor APIService {
     }
 
     func getAdminStats() async throws -> AdminStats {
-        let req = try request(path: "/tstudio/api/admin/dashboard/metrics")
+        let req = try request(path: "/tstudio/api/admin/metrics")
         return try await perform(req)
     }
 
@@ -575,6 +590,31 @@ actor APIService {
     func getAdminErrors() async throws -> [AdminError] {
         let req = try request(path: "/tstudio/api/admin/errors")
         return try await perform(req)
+    }
+
+    struct AdminSettingsResponse: Decodable {
+        let webhookUrl: String?
+        let notificationWebhookUrl: String?
+        let ms365_client_id: String?
+        let ms365_tenant_id: String?
+    }
+
+    func getAdminSettings() async throws -> AdminSettingsResponse {
+        let req = try request(path: "/tstudio/api/admin/settings")
+        return try await perform(req)
+    }
+
+    func updateAdminSettings(ms365ClientId: String?, ms365TenantId: String?) async throws {
+        var payload: [String: String] = [:]
+        if let clientId = ms365ClientId {
+            payload["ms365_client_id"] = clientId
+        }
+        if let tenantId = ms365TenantId {
+            payload["ms365_tenant_id"] = tenantId
+        }
+        let body = try JSONEncoder().encode(payload)
+        let req = try request(path: "/tstudio/api/admin/settings", method: "POST", body: body)
+        try await performVoid(req)
     }
 
     func resetUserPassword(id: String, newPassword: String) async throws {

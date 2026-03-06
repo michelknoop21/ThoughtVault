@@ -67,7 +67,7 @@ enum DateFilter: String, CaseIterable, Identifiable {
 
 // MARK: - TranscriptsViewModel
 
-@Observable
+@MainActor @Observable
 final class TranscriptsViewModel {
 
     // MARK: - Published State
@@ -135,7 +135,6 @@ final class TranscriptsViewModel {
     // MARK: - Load
 
     /// Loads the first page of transcripts, replacing any existing results.
-    @MainActor
     func loadTranscripts() async {
         guard !isLoading else { return }
 
@@ -163,7 +162,6 @@ final class TranscriptsViewModel {
     }
 
     /// Loads the next page of transcripts and appends them to the existing list.
-    @MainActor
     func loadMore() async {
         guard !isLoading, hasMore else { return }
 
@@ -199,7 +197,6 @@ final class TranscriptsViewModel {
     // MARK: - Delete
 
     /// Deletes a transcript by id from both the server and the local list.
-    @MainActor
     func deleteTranscript(id: String) async {
         do {
             try await APIService.shared.deleteTranscript(id: id)
@@ -214,7 +211,6 @@ final class TranscriptsViewModel {
     // MARK: - Reload Helpers
 
     /// Resets all filters and reloads from page 1.
-    @MainActor
     func reset() async {
         searchQuery = ""
         sortOrder = .newestFirst

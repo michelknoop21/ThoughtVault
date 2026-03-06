@@ -3,6 +3,7 @@ import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { stopRecording, pauseRecording, resumeRecording } from "../../services/tauriCommands";
 import { WaveformVisualizer } from "./WaveformVisualizer";
+import { createAudioLevelNormalizer } from "../../services/audioLevel";
 import {
   Stop24Regular,
   Pause24Regular,
@@ -16,6 +17,8 @@ export function RecordingWidget() {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
+    const normalizeLevel = createAudioLevelNormalizer();
+
     // Start timer
     timerRef.current = setInterval(() => {
       setElapsed((s) => s + 1);
@@ -23,8 +26,7 @@ export function RecordingWidget() {
 
     // Listen for audio level updates from Rust backend
     const unlistenLevel = listen<number>("audio-level", (event) => {
-      // RMS 0.0–1.0 → percentage 0–100
-      setAudioLevel(Math.min(100, event.payload * 100 * 4));
+      setAudioLevel(normalizeLevel(event.payload));
     });
 
     // Listen for recording stopped event

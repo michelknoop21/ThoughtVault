@@ -15,6 +15,7 @@ enum AdminTab: String, CaseIterable {
     case uitnodigingen = "Uitnodigingen"
     case feedback = "Feedback"
     case fouten = "Fouten"
+    case instellingen = "Instellingen"
 
     var icon: String {
         switch self {
@@ -23,6 +24,7 @@ enum AdminTab: String, CaseIterable {
         case .uitnodigingen: return "envelope.fill"
         case .feedback: return "bubble.left.and.text.bubble.right.fill"
         case .fouten: return "exclamationmark.triangle.fill"
+        case .instellingen: return "gearshape.fill"
         }
     }
 }
@@ -58,6 +60,12 @@ struct AdminView: View {
     // Create invitation form
     @State private var newInviteMaxUses = 1
     @State private var newInviteExpiresHours = 48
+
+    // Admin settings
+    @State private var ms365ClientId = ""
+    @State private var ms365TenantId = ""
+    @State private var isLoadingSettings = false
+    @State private var showSettingsSaved = false
 
     var filteredUsers: [AdminUser] {
         if searchText.isEmpty { return users }
@@ -218,6 +226,8 @@ struct AdminView: View {
                 feedbackTab
             case .fouten:
                 foutenTab
+            case .instellingen:
+                instellingenTab
             }
         }
     }
@@ -226,59 +236,70 @@ struct AdminView: View {
 
     private var overzichtTab: some View {
         ScrollView {
-            LazyVGrid(
-                columns: [GridItem(.flexible()), GridItem(.flexible())],
-                spacing: TS.Spacing.md
-            ) {
-                statCard(
-                    value: "\(stats?.totalUsers ?? 0)",
-                    label: "Gebruikers",
-                    icon: "person.2.fill",
-                    color: Color.brandPrimary
-                )
-                statCard(
-                    value: "\(stats?.totalTranscripts ?? 0)",
-                    label: "Notulen",
-                    icon: "doc.text.fill",
-                    color: Color.statusSuccess
-                )
-                statCard(
-                    value: "\(stats?.totalTasks ?? 0)",
-                    label: "Taken totaal",
-                    icon: "checklist",
-                    color: Color.brandOrange
-                )
-                statCard(
-                    value: "\(stats?.errors24h ?? 0)",
-                    label: "Fouten 24u",
-                    icon: "exclamationmark.triangle.fill",
-                    color: Color.statusError
-                )
+            VStack(alignment: .leading, spacing: TS.Spacing.md) {
+                Text("Systeem statistieken")
+                    .font(TS.Font.captionSemibold)
+                    .foregroundStyle(Color.labelSecondary)
+                    .padding(.horizontal, TS.Spacing.xs)
+
+                LazyVGrid(
+                    columns: [GridItem(.flexible()), GridItem(.flexible())],
+                    spacing: TS.Spacing.md
+                ) {
+                    statCard(
+                        value: "\(stats?.totalUsers ?? 0)",
+                        label: "Gebruikers",
+                        icon: "person.2.fill",
+                        color: Color.brandPrimary
+                    )
+                    statCard(
+                        value: "\(stats?.totalTranscripts ?? 0)",
+                        label: "Notulen",
+                        icon: "doc.text.fill",
+                        color: Color.statusSuccess
+                    )
+                    statCard(
+                        value: "\(stats?.totalTasks ?? 0)",
+                        label: "Taken totaal",
+                        icon: "checklist",
+                        color: Color.brandOrange
+                    )
+                    statCard(
+                        value: "\(stats?.errors24h ?? 0)",
+                        label: "Fouten (24u)",
+                        icon: "exclamationmark.triangle.fill",
+                        color: Color.statusError
+                    )
+                }
             }
             .padding(TS.Spacing.md)
         }
     }
 
     private func statCard(value: String, label: String, icon: String, color: Color) -> some View {
-        VStack(spacing: TS.Spacing.sm) {
-            ZStack {
-                Circle()
-                    .fill(color.opacity(0.12))
-                    .frame(width: 44, height: 44)
-                Image(systemName: icon)
-                    .font(.system(size: 20))
-                    .foregroundStyle(color)
-            }
+        VStack(alignment: .leading, spacing: TS.Spacing.sm) {
+            Image(systemName: icon)
+                .font(.system(size: 28))
+                .foregroundStyle(color)
+
             Text(value)
-                .font(TS.Font.title2Bold)
+                .font(.system(size: 36, weight: .bold, design: .rounded))
                 .foregroundStyle(Color.labelPrimary)
+
             Text(label)
                 .font(TS.Font.caption)
                 .foregroundStyle(Color.labelSecondary)
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(TS.Spacing.md)
-        .modernCard()
+        .background {
+            RoundedRectangle(cornerRadius: TS.Radius.md, style: .continuous)
+                .fill(Color.surfaceSecondary)
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: TS.Radius.md, style: .continuous)
+                .stroke(Color.borderSecondary, lineWidth: 1)
+        }
     }
 
     // MARK: - Gebruikers Tab
@@ -342,39 +363,45 @@ struct AdminView: View {
     }
 
     private func userRow(_ user: AdminUser) -> some View {
-        HStack(spacing: TS.Spacing.sm) {
+        HStack(spacing: TS.Spacing.md) {
             // Avatar
             ZStack {
                 Circle()
-                    .fill(roleColor(user.role).opacity(0.12))
-                    .frame(width: 36, height: 36)
+                    .fill(Color.surfaceTertiary)
+                    .frame(width: 44, height: 44)
                 Text(String((user.name ?? user.email).prefix(1)).uppercased())
-                    .font(TS.Font.headlineBold)
-                    .foregroundStyle(roleColor(user.role))
+                    .font(TS.Font.title3Bold)
+                    .foregroundStyle(Color.labelSecondary)
             }
 
             // Info
-            VStack(alignment: .leading, spacing: 2) {
-                if let name = user.name, !name.isEmpty {
-                    Text(name)
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: TS.Spacing.sm) {
+                    Text(user.name ?? user.email)
                         .font(TS.Font.bodyMedium)
                         .foregroundStyle(Color.labelPrimary)
+
+                    Text(user.role.capitalized)
+                        .font(TS.Font.microSemibold)
+                        .foregroundStyle(Color.labelSecondary)
+                        .padding(.horizontal, TS.Spacing.sm)
+                        .padding(.vertical, 3)
+                        .background(Color.surfaceTertiary)
+                        .clipShape(Capsule())
                 }
-                Text(user.email)
-                    .font(TS.Font.footnote)
-                    .foregroundStyle(Color.labelSecondary)
+                if user.name != nil {
+                    Text(user.email)
+                        .font(TS.Font.footnote)
+                        .foregroundStyle(Color.labelTertiary)
+                }
             }
 
             Spacer()
 
-            // Role badge
-            Text(user.role.capitalized)
-                .font(TS.Font.microSemibold)
-                .padding(.horizontal, TS.Spacing.sm)
-                .padding(.vertical, TS.Spacing.xs)
-                .background(roleColor(user.role).opacity(0.12))
-                .foregroundStyle(roleColor(user.role))
-                .clipShape(Capsule())
+            // 2FA lock icon
+            Image(systemName: "lock.open")
+                .font(.system(size: 16))
+                .foregroundStyle(Color.labelTertiary)
 
             // Context menu
             Menu {
@@ -399,13 +426,15 @@ struct AdminView: View {
                     }
                 }
             } label: {
-                Image(systemName: "ellipsis")
-                    .font(TS.Font.body)
-                    .foregroundStyle(Color.labelSecondary)
-                    .frame(width: 28, height: 28)
+                Image(systemName: "ellipsis.circle")
+                    .font(.system(size: 20))
+                    .foregroundStyle(Color.labelTertiary)
+                    .frame(width: 32, height: 32)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .menuStyle(.borderlessButton)
+            .fixedSize()
         }
         .padding(.vertical, TS.Spacing.xs)
     }
@@ -730,6 +759,114 @@ struct AdminView: View {
         .modernCard()
     }
 
+    // MARK: - Instellingen Tab
+
+    private var instellingenTab: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: TS.Spacing.lg) {
+                // Microsoft 365 OAuth section
+                VStack(alignment: .leading, spacing: TS.Spacing.md) {
+                    HStack(spacing: TS.Spacing.sm) {
+                        Image(systemName: "calendar.badge.clock")
+                            .font(.system(size: 20))
+                            .foregroundStyle(Color.brandPrimary)
+                        Text("Microsoft 365 Agenda")
+                            .font(TS.Font.title3Bold)
+                            .foregroundStyle(Color.labelPrimary)
+                    }
+
+                    Text("Configureer OAuth credentials zodat gebruikers hun Microsoft 365 agenda kunnen koppelen. Maak een App Registration aan in Azure Portal met redirect URI: transcript-studio://auth/callback")
+                        .font(TS.Font.footnote)
+                        .foregroundStyle(Color.labelSecondary)
+
+                    VStack(alignment: .leading, spacing: TS.Spacing.sm) {
+                        Text("Client ID")
+                            .font(TS.Font.footnoteSemibold)
+                            .foregroundStyle(Color.labelSecondary)
+                        TextField("xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx", text: $ms365ClientId)
+                            .textFieldStyle(.roundedBorder)
+                            .font(TS.Font.body)
+                            .autocorrectionDisabled()
+                    }
+
+                    VStack(alignment: .leading, spacing: TS.Spacing.sm) {
+                        Text("Tenant ID")
+                            .font(TS.Font.footnoteSemibold)
+                            .foregroundStyle(Color.labelSecondary)
+                        TextField("xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx", text: $ms365TenantId)
+                            .textFieldStyle(.roundedBorder)
+                            .font(TS.Font.body)
+                            .autocorrectionDisabled()
+                    }
+
+                    HStack(spacing: TS.Spacing.md) {
+                        Button {
+                            Task { await saveAdminSettings() }
+                        } label: {
+                            HStack(spacing: TS.Spacing.xs) {
+                                if isLoadingSettings {
+                                    ProgressView()
+                                        .controlSize(.small)
+                                }
+                                Text("Opslaan")
+                            }
+                        }
+                        .buttonStyle(PrimaryButtonStyle())
+                        .disabled(isLoadingSettings)
+
+                        if showSettingsSaved {
+                            HStack(spacing: TS.Spacing.xs) {
+                                Image(systemName: "checkmark.circle.fill")
+                                Text("Opgeslagen")
+                            }
+                            .font(TS.Font.footnote)
+                            .foregroundStyle(Color.statusSuccess)
+                            .transition(.scale.combined(with: .opacity))
+                        }
+                    }
+                }
+                .padding(TS.Spacing.md)
+                .modernCard()
+            }
+            .padding(TS.Spacing.md)
+        }
+        .task {
+            await loadAdminSettings()
+        }
+    }
+
+    private func loadAdminSettings() async {
+        do {
+            let settings = try await APIService.shared.getAdminSettings()
+            ms365ClientId = settings.ms365_client_id ?? ""
+            ms365TenantId = settings.ms365_tenant_id ?? ""
+        } catch {
+            DebugLogger.shared.error(error, context: "Instellingen laden", category: "Admin")
+        }
+    }
+
+    private func saveAdminSettings() async {
+        isLoadingSettings = true
+        defer { isLoadingSettings = false }
+        do {
+            try await APIService.shared.updateAdminSettings(
+                ms365ClientId: ms365ClientId,
+                ms365TenantId: ms365TenantId
+            )
+            withAnimation(TS.Animation.quick) {
+                showSettingsSaved = true
+            }
+            Task {
+                try? await Task.sleep(nanoseconds: 2_000_000_000)
+                withAnimation(TS.Animation.quick) {
+                    showSettingsSaved = false
+                }
+            }
+        } catch {
+            errorMessage = "Instellingen opslaan mislukt: \(error.localizedDescription)"
+        }
+    }
+
     // MARK: - Create User Sheet
 
     private var createUserSheet: some View {
@@ -944,7 +1081,7 @@ struct AdminView: View {
         do {
             stats = try await APIService.shared.getAdminStats()
         } catch {
-            print("AdminView: stats laden mislukt: \(error.localizedDescription)")
+            DebugLogger.shared.error(error, context: "Stats laden", category: "Admin")
         }
     }
 
@@ -952,7 +1089,7 @@ struct AdminView: View {
         do {
             users = try await APIService.shared.getAdminUsers()
         } catch {
-            print("AdminView: gebruikers laden mislukt: \(error.localizedDescription)")
+            DebugLogger.shared.error(error, context: "Gebruikers laden", category: "Admin")
         }
     }
 
@@ -960,7 +1097,7 @@ struct AdminView: View {
         do {
             invitations = try await APIService.shared.getAdminInvitations()
         } catch {
-            print("AdminView: uitnodigingen laden mislukt: \(error.localizedDescription)")
+            DebugLogger.shared.error(error, context: "Uitnodigingen laden", category: "Admin")
         }
     }
 
@@ -968,7 +1105,7 @@ struct AdminView: View {
         do {
             feedbackItems = try await APIService.shared.getAdminFeedback()
         } catch {
-            print("AdminView: feedback laden mislukt: \(error.localizedDescription)")
+            DebugLogger.shared.error(error, context: "Feedback laden", category: "Admin")
         }
     }
 
@@ -976,7 +1113,7 @@ struct AdminView: View {
         do {
             errors = try await APIService.shared.getAdminErrors()
         } catch {
-            print("AdminView: fouten laden mislukt: \(error.localizedDescription)")
+            DebugLogger.shared.error(error, context: "Fouten laden", category: "Admin")
         }
     }
 

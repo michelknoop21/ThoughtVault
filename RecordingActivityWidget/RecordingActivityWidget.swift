@@ -157,20 +157,20 @@ struct LockScreenRecordingView: View {
 struct NeonWaveformBars: View {
     let levels: [Float]
 
-    /// Neon gradient colours, electric blue → purple → deep magenta
+    /// Vibrant neon colors from the reference image: neon blue → deep purple → magenta
     private let neonColors: [Color] = [
-        Color(red: 0.35, green: 0.65, blue: 1.00), // electric blue
-        Color(red: 0.45, green: 0.55, blue: 1.00),
-        Color(red: 0.55, green: 0.40, blue: 1.00),
-        Color(red: 0.65, green: 0.30, blue: 0.95),
-        Color(red: 0.70, green: 0.25, blue: 0.88),
-        Color(red: 0.75, green: 0.18, blue: 0.82),
-        Color(red: 0.78, green: 0.14, blue: 0.76),
-        Color(red: 0.75, green: 0.10, blue: 0.75)  // deep magenta
+        Color(red: 0.0, green: 0.8, blue: 1.0), // neon blue
+        Color(red: 0.1, green: 0.6, blue: 1.0),
+        Color(red: 0.3, green: 0.4, blue: 1.0),
+        Color(red: 0.5, green: 0.2, blue: 1.0), // deep purple
+        Color(red: 0.7, green: 0.1, blue: 1.0),
+        Color(red: 0.8, green: 0.0, blue: 1.0), // magenta
+        Color(red: 0.9, green: 0.0, blue: 0.8),
+        Color(red: 1.0, green: 0.0, blue: 0.6)  // hot pink
     ]
 
     var body: some View {
-        HStack(alignment: .center, spacing: 3) {
+        HStack(alignment: .center, spacing: 4) {
             ForEach(0..<8, id: \.self) { index in
                 let level = CGFloat(index < levels.count ? levels[index] : 0.0)
                 let color = neonColors[index]
@@ -186,31 +186,35 @@ struct NeonWaveformBar: View {
 
     var body: some View {
         GeometryReader { geo in
-            let minHeight: CGFloat = 4
-            let barHeight = max(minHeight, geo.size.height * level)
+            let minHeight: CGFloat = 5
+            let barHeight = max(minHeight, geo.size.height * pow(level, 0.7)) // Boost visibility
 
             ZStack(alignment: .center) {
-                // Glow layer
+                // Intense outer glow
                 Capsule()
-                    .fill(color.opacity(level * 0.6))
-                    .blur(radius: 4)
-                    .frame(width: geo.size.width + 2, height: barHeight + 2)
-                    .animation(.easeInOut(duration: 0.2), value: level)
+                    .fill(color.opacity(0.4))
+                    .blur(radius: 6)
+                    .frame(width: geo.size.width + 4, height: barHeight + 6)
+                
+                // Mid glow
+                Capsule()
+                    .fill(color.opacity(0.6))
+                    .blur(radius: 2)
+                    .frame(width: geo.size.width + 1, height: barHeight + 2)
 
-                // Sharp bar
+                // Sharp neon core
                 Capsule()
                     .fill(
                         LinearGradient(
-                            colors: [color, color.opacity(0.7)],
+                            colors: [.white.opacity(0.8), color, color.opacity(0.8)],
                             startPoint: .top,
                             endPoint: .bottom
                         )
                     )
                     .frame(width: geo.size.width, height: barHeight)
-                    .scaleEffect(y: 1.0, anchor: .center)
-                    .animation(.easeInOut(duration: 0.2), value: level)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: level)
         }
     }
 }
@@ -220,29 +224,28 @@ struct NeonWaveformBar: View {
 struct MiniWaveformBars: View {
     let levels: [Float]
 
-    /// Samples 4 evenly-spaced bars from the 8-bar levels array.
     private var sampledLevels: [Float] {
-        guard levels.count >= 4 else { return Array(repeating: 0.3, count: 4) }
+        guard levels.count >= 4 else { return [0.3, 0.5, 0.4, 0.6] }
         return [levels[0], levels[2], levels[4], levels[6]]
     }
 
     var body: some View {
-        HStack(alignment: .center, spacing: 2) {
+        HStack(alignment: .center, spacing: 2.5) {
             ForEach(0..<4, id: \.self) { index in
                 let level = CGFloat(sampledLevels[index])
+                let color = index < 2 ? Color(red: 0.0, green: 0.8, blue: 1.0) : Color(red: 0.8, green: 0.0, blue: 1.0)
+                
                 Capsule()
                     .fill(
                         LinearGradient(
-                            colors: [
-                                Color(red: 0.35, green: 0.65, blue: 1.0),
-                                Color(red: 0.65, green: 0.30, blue: 0.95)
-                            ],
+                            colors: [.white.opacity(0.5), color],
                             startPoint: .top,
                             endPoint: .bottom
                         )
                     )
-                    .frame(width: 3, height: max(3, 16 * level))
-                    .animation(.easeInOut(duration: 0.2), value: level)
+                    .frame(width: 3.5, height: max(4, 16 * pow(level, 0.6)))
+                    .shadow(color: color.opacity(0.8), radius: 2)
+                    .animation(.spring(response: 0.3, dampingFraction: 0.7), value: level)
             }
         }
     }

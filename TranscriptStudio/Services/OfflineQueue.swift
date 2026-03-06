@@ -31,6 +31,7 @@ final class OfflineQueue: @unchecked Sendable {
 
     var count: Int { items.count }
     var isEmpty: Bool { items.isEmpty }
+    private(set) var lastPersistError: String? = nil
 
     // MARK: - Private
 
@@ -105,8 +106,11 @@ final class OfflineQueue: @unchecked Sendable {
         do {
             let data = try JSONEncoder().encode(items)
             try data.write(to: storageURL, options: .atomic)
+            lastPersistError = nil
         } catch {
+            lastPersistError = error.localizedDescription
             logger.error("OfflineQueue: failed to persist — \(error.localizedDescription)")
+            CrashReporter.shared.recordError(error, context: "OfflineQueue.persist")
         }
     }
 
@@ -121,7 +125,8 @@ final class OfflineQueue: @unchecked Sendable {
             logger.info("OfflineQueue: loaded \(self.items.count) persisted item(s)")
         } catch {
             logger.error("OfflineQueue: failed to load persisted queue — \(error.localizedDescription)")
-            // Corrupt file: reset to empty
+            lastPersistError = "Wachtrij kon niet geladen worden en is gewist."
+            CrashReporter.shared.recordError(error, context: "OfflineQueue.load")
             items = []
             try? FileManager.default.removeItem(at: storageURL)
         }

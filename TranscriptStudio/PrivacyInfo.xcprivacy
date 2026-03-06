@@ -1,66 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "https://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<!--
-    PrivacyInfo.xcprivacy
-    TranscriptStudio
-    nl.prezent.TranscriptStudio
-
-    Apple Privacy Manifest — required for App Store submission.
-    Declares required-reason APIs, data types collected, and tracking status.
-    https://developer.apple.com/documentation/bundleresources/privacy_manifest_files
--->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<!--
-	    NSPrivacyTracking
-	    The app does NOT use data for tracking across other companies' apps and
-	    websites. Set to false.
-	-->
 	<key>NSPrivacyTracking</key>
 	<false/>
-
-	<!--
-	    NSPrivacyTrackingDomains
-	    No external tracking domains are contacted.
-	-->
 	<key>NSPrivacyTrackingDomains</key>
 	<array/>
-
-	<!--
-	    NSPrivacyCollectedDataTypes
-	    Data collected and its purpose.
-	-->
 	<key>NSPrivacyCollectedDataTypes</key>
 	<array>
-		<!-- Audio recordings (microphone input) -->
-		<dict>
-			<key>NSPrivacyCollectedDataType</key>
-			<string>NSPrivacyCollectedDataTypeAudioData</string>
-			<key>NSPrivacyCollectedDataTypeLinked</key>
-			<false/>
-			<key>NSPrivacyCollectedDataTypeTracking</key>
-			<false/>
-			<key>NSPrivacyCollectedDataTypePurposes</key>
-			<array>
-				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
-			</array>
-		</dict>
-
-		<!-- User-entered text (transcripts, titles, tags) -->
-		<dict>
-			<key>NSPrivacyCollectedDataType</key>
-			<string>NSPrivacyCollectedDataTypeOtherUserContent</string>
-			<key>NSPrivacyCollectedDataTypeLinked</key>
-			<true/>
-			<key>NSPrivacyCollectedDataTypeTracking</key>
-			<false/>
-			<key>NSPrivacyCollectedDataTypePurposes</key>
-			<array>
-				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
-			</array>
-		</dict>
-
-		<!-- Email address (login credential) -->
 		<dict>
 			<key>NSPrivacyCollectedDataType</key>
 			<string>NSPrivacyCollectedDataTypeEmailAddress</string>
@@ -73,44 +20,35 @@
 				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
 			</array>
 		</dict>
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeAudioData</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
 	</array>
-
-	<!--
-	    NSPrivacyAccessedAPITypes
-	    Required-reason API declarations.
-	-->
 	<key>NSPrivacyAccessedAPITypes</key>
 	<array>
-		<!-- NSFileSystemFreeSize — used to check available disk space before recording -->
-		<dict>
-			<key>NSPrivacyAccessedAPIType</key>
-			<string>NSPrivacyAccessedAPICategoryFileTimestamp</string>
-			<key>NSPrivacyAccessedAPITypeReasons</key>
-			<array>
-				<!-- DDA9.1: Show file timestamps in UI -->
-				<string>DDA9.1</string>
-			</array>
-		</dict>
-
-		<!-- NSFileSystemFreeSize — disk space check before starting a recording -->
-		<dict>
-			<key>NSPrivacyAccessedAPIType</key>
-			<string>NSPrivacyAccessedAPICategoryDiskSpace</string>
-			<key>NSPrivacyAccessedAPITypeReasons</key>
-			<array>
-				<!-- E174.1: Write files to disk (audio recording) -->
-				<string>E174.1</string>
-			</array>
-		</dict>
-
-		<!-- UserDefaults — stores serverURL, app preferences -->
 		<dict>
 			<key>NSPrivacyAccessedAPIType</key>
 			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>
 			<key>NSPrivacyAccessedAPITypeReasons</key>
 			<array>
-				<!-- CA92.1: Access info from same app -->
 				<string>CA92.1</string>
+			</array>
+		</dict>
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryFileTimestamp</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>C617.1</string>
 			</array>
 		</dict>
 	</array>

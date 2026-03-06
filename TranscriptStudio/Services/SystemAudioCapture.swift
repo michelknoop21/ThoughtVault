@@ -1,7 +1,10 @@
 #if os(macOS)
-import AVFoundation
+@preconcurrency import AVFoundation
 import Foundation
+import OSLog
 import ScreenCaptureKit
+
+private let log = OSLog(subsystem: "nl.prezent.TranscriptStudio", category: "SystemAudio")
 
 // MARK: - CaptureResult
 
@@ -36,6 +39,7 @@ final class SystemAudioCapture: NSObject {
     private var durationTimer: Timer?
     private var startDate: Date?
     private var capturingMicrophone: Bool = false
+    private let sampleHandlerQueue = DispatchQueue(label: "nl.prezent.TranscriptStudio.SystemAudioCapture.samples")
 
     // MARK: - Init / Deinit
 
@@ -73,7 +77,7 @@ final class SystemAudioCapture: NSObject {
         let outputURL = makeOutputURL(prefix: "system_audio")
         let micURL = includeMicrophone ? makeOutputURL(prefix: "mic_audio") : nil
 
-        // Build stream configuration — audio-only, minimal video (ScreenCaptureKit requires video config)
+        // Build stream configuration — audio capture with minimal video workload.
         let config = SCStreamConfiguration()
         config.capturesAudio = true
         config.sampleRate = 16_000
@@ -82,8 +86,7 @@ final class SystemAudioCapture: NSObject {
         if #available(macOS 15.0, *) {
             config.captureMicrophone = includeMicrophone
         }
-
-        // Minimal video to satisfy ScreenCaptureKit requirements (2x2 px @ 1 fps)
+        // Keep video workload as low as possible; we ignore screen buffers.
         config.width = 2
         config.height = 2
         config.minimumFrameInterval = CMTime(value: 1, timescale: 1)
@@ -168,14 +171,19 @@ final class SystemAudioCapture: NSObject {
         try captureStream.addStreamOutput(
             output,
             type: .audio,
-            sampleHandlerQueue: DispatchQueue.global(qos: .userInitiated)
+            sampleHandlerQueue: sampleHandlerQueue
+        )
+        try captureStream.addStreamOutput(
+            output,
+            type: .screen,
+            sampleHandlerQueue: sampleHandlerQueue
         )
         if includeMicrophone {
             if #available(macOS 15.0, *) {
                 try captureStream.addStreamOutput(
                     output,
                     type: .microphone,
-                    sampleHandlerQueue: DispatchQueue.global(qos: .userInitiated)
+                    sampleHandlerQueue: sampleHandlerQueue
                 )
             }
         }
@@ -205,21 +213,46 @@ final class SystemAudioCapture: NSObject {
             return CaptureResult(systemAudioURL: currentOutputURL, microphoneURL: currentMicURL)
         }
 
+        // 1. Stop the stream — no new samples will be delivered
         do {
             try await captureStream.stopCapture()
         } catch {
-            // Non-fatal — proceed to clean up regardless
+            os_log("[SystemAudio] Failed to stop capture stream: %{public}@", log: log, error.localizedDescription)
         }
 
+        // 2. Remove stream reference
         stream = nil
+
+        // 3. Remove output handler (stops writing)
         streamOutput = nil
+
+        // 4. Flush any enqueued sample writes before releasing AVAudioFile references
+        sampleHandlerQueue.sync {}
+
+        // 5. Flush audio files by releasing references —
+        //    no concurrent writer exists at this point
         audioFile = nil
         micAudioFile = nil
 
         durationTimer?.invalidate()
         durationTimer = nil
 
+        // Converters are released with streamOutput (AudioStreamOutput owns them)
+
         let result = CaptureResult(systemAudioURL: currentOutputURL, microphoneURL: currentMicURL)
+
+        // Log final file sizes for diagnostics
+        let fm = FileManager.default
+        if let sysURL = result.systemAudioURL,
+           let attrs = try? fm.attributesOfItem(atPath: sysURL.path),
+           let size = attrs[.size] as? Int64 {
+            os_log("[SystemAudio] System audio file size: %lld bytes at %{public}@", log: log, size, sysURL.lastPathComponent)
+        }
+        if let micURL = result.microphoneURL,
+           let attrs = try? fm.attributesOfItem(atPath: micURL.path),
+           let size = attrs[.size] as? Int64 {
+            os_log("[SystemAudio] Mic audio file size: %lld bytes at %{public}@", log: log, size, micURL.lastPathComponent)
+        }
 
         self.isCapturing = false
         self.capturingMicrophone = false
@@ -284,21 +317,40 @@ private final class AudioStreamOutput: NSObject, SCStreamOutput, SCStreamDelegat
 
     // MARK: - SCStreamOutput
 
+    private var hasLoggedAudioFormat = false
+    private var hasLoggedMicFormat = false
+    private var systemFramesReceived: UInt64 = 0
+    private var systemFramesWritten: UInt64 = 0
+    private var micFramesReceived: UInt64 = 0
+    private var micFramesWritten: UInt64 = 0
+    private var lastDiagnosticLog: Date = .distantPast
+
     func stream(
         _ stream: SCStream,
         didOutputSampleBuffer sampleBuffer: CMSampleBuffer,
         of outputType: SCStreamOutputType
     ) {
         guard sampleBuffer.isValid else { return }
+        if outputType == .screen { return }
 
         if outputType == .audio {
-            writeSamples(from: sampleBuffer, to: systemAudioFile, levelHandler: systemLevelHandler)
+            if !hasLoggedAudioFormat, let desc = sampleBuffer.formatDescription?.audioStreamBasicDescription {
+                hasLoggedAudioFormat = true
+                os_log("[SystemAudio] System audio format: %.0f Hz, %d ch, flags=0x%X",
+                       log: log, desc.mSampleRate, desc.mChannelsPerFrame, desc.mFormatFlags)
+            }
+            writeSamples(from: sampleBuffer, to: systemAudioFile, levelHandler: systemLevelHandler, streamLabel: "system")
             return
         }
 
         if #available(macOS 15.0, *), outputType == .microphone {
             guard let micFile = microphoneAudioFile else { return }
-            writeSamples(from: sampleBuffer, to: micFile, levelHandler: micLevelHandler ?? { _ in })
+            if !hasLoggedMicFormat, let desc = sampleBuffer.formatDescription?.audioStreamBasicDescription {
+                hasLoggedMicFormat = true
+                os_log("[SystemAudio] Microphone format: %.0f Hz, %d ch, flags=0x%X",
+                       log: log, desc.mSampleRate, desc.mChannelsPerFrame, desc.mFormatFlags)
+            }
+            writeSamples(from: sampleBuffer, to: micFile, levelHandler: micLevelHandler ?? { _ in }, streamLabel: "mic")
             return
         }
     }
@@ -311,50 +363,139 @@ private final class AudioStreamOutput: NSObject, SCStreamOutput, SCStreamDelegat
 
     // MARK: - Sample Writing
 
+    /// Lazily created converters for resampling audio from ScreenCaptureKit's native format
+    /// (often 48 kHz stereo) to the output file's format (16 kHz mono).
+    /// Keyed by the audio file's hash to support separate converters for system and mic streams.
+    private var converters: [ObjectIdentifier: AVAudioConverter] = [:]
+    private var converterFormats: [ObjectIdentifier: AVAudioFormat] = [:]
+
     private func writeSamples(
         from sampleBuffer: CMSampleBuffer,
         to audioFile: AVAudioFile,
-        levelHandler: (Float) -> Void
+        levelHandler: (Float) -> Void,
+        streamLabel: String
     ) {
         do {
             try sampleBuffer.withAudioBufferList { audioBufferList, blockBuffer in
-                guard
-                    let description = sampleBuffer.formatDescription?.audioStreamBasicDescription,
-                    let format = AVAudioFormat(
-                        standardFormatWithSampleRate: description.mSampleRate,
-                        channels: description.mChannelsPerFrame
-                    ),
+                guard let description = sampleBuffer.formatDescription?.audioStreamBasicDescription
+                else { return }
+
+                // ScreenCaptureKit may deliver interleaved or non-interleaved float32.
+                let isInterleaved = description.mFormatFlags & kAudioFormatFlagIsNonInterleaved == 0
+
+                guard let sourceFormat = AVAudioFormat(
+                    commonFormat: .pcmFormatFloat32,
+                    sampleRate: description.mSampleRate,
+                    channels: description.mChannelsPerFrame,
+                    interleaved: isInterleaved
+                ),
                     let pcmBuffer = AVAudioPCMBuffer(
-                        pcmFormat: format,
+                        pcmFormat: sourceFormat,
                         bufferListNoCopy: audioBufferList.unsafePointer
                     )
                 else { return }
+
+                let incomingFrames = UInt64(pcmBuffer.frameLength)
 
                 // Calculate RMS level for waveform visualization
                 let level = calculateLevel(from: pcmBuffer)
                 levelHandler(level)
 
-                // Write samples to file
-                try audioFile.write(from: pcmBuffer)
+                let fileFormat = audioFile.processingFormat
+                var framesWritten: UInt64 = 0
+
+                // If source format matches file format, write directly
+                if sourceFormat.sampleRate == fileFormat.sampleRate
+                    && sourceFormat.channelCount == fileFormat.channelCount {
+                    try audioFile.write(from: pcmBuffer)
+                    framesWritten = incomingFrames
+                } else {
+                    // Resample: ScreenCaptureKit often delivers 48 kHz stereo even when
+                    // we requested 16 kHz mono. Convert to match the output file.
+                    let fileKey = ObjectIdentifier(audioFile)
+                    if converters[fileKey] == nil || converterFormats[fileKey] != sourceFormat {
+                        converters[fileKey] = AVAudioConverter(from: sourceFormat, to: fileFormat)
+                        converterFormats[fileKey] = sourceFormat
+                    }
+                    guard let conv = converters[fileKey] else { return }
+
+                    let ratio = fileFormat.sampleRate / sourceFormat.sampleRate
+                    let outputFrames = AVAudioFrameCount(Double(pcmBuffer.frameLength) * ratio)
+                    guard let outputBuffer = AVAudioPCMBuffer(
+                        pcmFormat: fileFormat, frameCapacity: outputFrames
+                    ) else { return }
+
+                    var error: NSError?
+                    conv.convert(to: outputBuffer, error: &error) { _, outStatus in
+                        outStatus.pointee = .haveData
+                        return pcmBuffer
+                    }
+                    if let error {
+                        os_log("[SystemAudio] Converter error (%{public}@): %{public}@", log: log, streamLabel, error.localizedDescription)
+                        return
+                    }
+
+                    if outputBuffer.frameLength > 0 {
+                        try audioFile.write(from: outputBuffer)
+                        framesWritten = UInt64(outputBuffer.frameLength)
+                    }
+                }
+
+                // Update diagnostic counters
+                if streamLabel == "system" {
+                    systemFramesReceived += incomingFrames
+                    systemFramesWritten += framesWritten
+                } else {
+                    micFramesReceived += incomingFrames
+                    micFramesWritten += framesWritten
+                }
+
+                // Log diagnostics every 5 seconds
+                let now = Date()
+                if now.timeIntervalSince(lastDiagnosticLog) >= 5.0 {
+                    lastDiagnosticLog = now
+                    os_log("[SystemAudio] Diagnostics — system: %llu received / %llu written, mic: %llu received / %llu written, level=%.3f (%{public}@)",
+                           log: log,
+                           systemFramesReceived, systemFramesWritten,
+                           micFramesReceived, micFramesWritten,
+                           level, streamLabel)
+                }
             }
         } catch {
-            // Non-fatal write error; continue capturing
+            os_log("[SystemAudio] Write error (%{public}@): %{public}@", log: log, streamLabel, error.localizedDescription)
         }
     }
 
     // MARK: - Level Calculation
 
     private func calculateLevel(from buffer: AVAudioPCMBuffer) -> Float {
-        guard let channelData = buffer.floatChannelData else { return 0 }
         let frameCount = Int(buffer.frameLength)
         guard frameCount > 0 else { return 0 }
 
-        let samples = channelData[0]
+        let channels = Int(buffer.format.channelCount)
+        let isInterleaved = buffer.format.isInterleaved
+
         var sumOfSquares: Float = 0
-        for i in 0..<frameCount {
-            let sample = samples[i]
-            sumOfSquares += sample * sample
+
+        if isInterleaved {
+            // Interleaved: samples are packed [L, R, L, R, ...] in a single buffer
+            guard let data = buffer.audioBufferList.pointee.mBuffers.mData else { return 0 }
+            let samples = data.assumingMemoryBound(to: Float.self)
+            let stride = max(channels, 1)
+            for i in Swift.stride(from: 0, to: frameCount * stride, by: stride) {
+                let sample = samples[i]
+                sumOfSquares += sample * sample
+            }
+        } else {
+            // Non-interleaved: separate buffer per channel
+            guard let channelData = buffer.floatChannelData else { return 0 }
+            let samples = channelData[0]
+            for i in 0..<frameCount {
+                let sample = samples[i]
+                sumOfSquares += sample * sample
+            }
         }
+
         let rms = sqrt(sumOfSquares / Float(frameCount))
 
         // Convert RMS to dB with -60dB floor

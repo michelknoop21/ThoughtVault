@@ -5,6 +5,7 @@ import {
   DocumentText24Regular,
   Settings24Regular,
   ShieldPersonRegular,
+  Person24Regular,
 } from "@fluentui/react-icons";
 import { useAuthStore } from "../../stores/authStore";
 import appLogo from "../../assets/app-logo.png";
@@ -15,11 +16,11 @@ export function Sidebar() {
 
   const userInitial = (() => {
     if (user?.name) {
-      const first = user.name.split(" ")[0];
+      const first = user.name.trim().split(" ")[0];
       if (first) return first[0].toUpperCase();
     }
     if (user?.email) return user.email[0].toUpperCase();
-    return "?";
+    return null;
   })();
 
   const userDisplayName = user?.name || user?.email || "";
@@ -27,26 +28,31 @@ export function Sidebar() {
   return (
     <nav className="sidebar">
       {/* Logo + app title */}
-      <div className="sidebar-logo-section flex-row gap-10">
+      <div className="sidebar-logo-section flex-col" style={{ alignItems: "center", gap: 2 }}>
         <img
           src={appLogo}
           alt="Transcript Studio"
           className="sidebar-logo"
         />
-        <span className="text-body-strong">
-          Transcript Studio
+        <span className="sidebar-developed-by">
+          Prezent
         </span>
       </div>
 
       {/* User profile */}
       {user && (
         <div className="sidebar-user-section flex-row gap-10">
-          <div className="avatar avatar-sm avatar-subtle">
-            {userInitial}
+          <div className="avatar avatar-sm avatar-accent">
+            {userInitial ?? <Person24Regular style={{ fontSize: 14 }} />}
           </div>
-          <span className="text-caption text-secondary truncate">
-            {userDisplayName}
-          </span>
+          <div className="sidebar-user-info">
+            <span className="text-caption truncate" style={{ color: "var(--text-primary)", fontWeight: 500 }}>
+              {userDisplayName}
+            </span>
+            {isAdmin && (
+              <span className="sidebar-role-badge">Admin</span>
+            )}
+          </div>
         </div>
       )}
 
@@ -65,7 +71,7 @@ export function Sidebar() {
       {/* Bottom items */}
       <SidebarItem to="/settings" icon={<Settings24Regular />} label="Instellingen" />
       {isAdmin && (
-        <SidebarItem to="/admin" icon={<ShieldPersonRegular />} label="Admin" />
+        <SidebarItem to="/admin" icon={<ShieldPersonRegular />} label="Beheer" />
       )}
     </nav>
   );

@@ -6,55 +6,6 @@ interface WaveformVisualizerProps {
   height?: number;
 }
 
-interface WaveConfig {
-  freq: number;
-  amp: number;
-  phase: number;
-  speed: number;
-  color: string;
-  lineWidth: number;
-  blur: number;
-}
-
-// Layer 1: Deep background glow (very wide, heavy blur)
-const GLOW_WAVES: WaveConfig[] = [
-  { freq: 0.6, amp: 0.35, phase: 0.0, speed: 0.3, color: "rgba(13, 26, 153, 0.18)", lineWidth: 18, blur: 28 },
-  { freq: 0.8, amp: 0.30, phase: 1.5, speed: 0.4, color: "rgba(38, 13, 140, 0.15)", lineWidth: 14, blur: 22 },
-  { freq: 1.0, amp: 0.28, phase: 0.8, speed: 0.35, color: "rgba(0, 115, 217, 0.12)", lineWidth: 12, blur: 20 },
-];
-
-// Layer 2: Mid glow (moderate blur, richer colors)
-const MID_WAVES: WaveConfig[] = [
-  { freq: 1.2, amp: 0.32, phase: 0.0, speed: 0.55, color: "rgba(0, 153, 255, 0.18)", lineWidth: 7, blur: 10 },
-  { freq: 1.5, amp: 0.25, phase: 1.2, speed: 0.7, color: "rgba(102, 38, 230, 0.14)", lineWidth: 6, blur: 8 },
-  { freq: 0.9, amp: 0.30, phase: 2.5, speed: 0.45, color: "rgba(0, 194, 255, 0.16)", lineWidth: 5, blur: 7 },
-  { freq: 1.8, amp: 0.20, phase: 0.3, speed: 0.8, color: "rgba(179, 0, 153, 0.10)", lineWidth: 5, blur: 6 },
-];
-
-// Layer 3: Sharp foreground waves (no blur, vivid)
-const SHARP_WAVES: WaveConfig[] = [
-  { freq: 1.0, amp: 0.34, phase: 0.0, speed: 0.5, color: "rgba(0, 179, 255, 0.70)", lineWidth: 2.2, blur: 0 },
-  { freq: 1.3, amp: 0.28, phase: 0.8, speed: 0.65, color: "rgba(51, 102, 255, 0.60)", lineWidth: 2.0, blur: 0 },
-  { freq: 1.6, amp: 0.22, phase: 1.5, speed: 0.80, color: "rgba(115, 64, 242, 0.55)", lineWidth: 1.8, blur: 0 },
-  { freq: 2.0, amp: 0.16, phase: 2.2, speed: 1.0, color: "rgba(140, 38, 217, 0.50)", lineWidth: 1.5, blur: 0 },
-  { freq: 1.1, amp: 0.30, phase: 3.0, speed: 0.55, color: "rgba(0, 140, 242, 0.55)", lineWidth: 1.8, blur: 0 },
-  { freq: 1.7, amp: 0.18, phase: 4.0, speed: 0.90, color: "rgba(204, 0, 128, 0.35)", lineWidth: 1.5, blur: 0 },
-];
-
-// Layer 4: Bright accent highlights (thin, high-frequency shimmer)
-const ACCENT_WAVES: WaveConfig[] = [
-  { freq: 2.4, amp: 0.12, phase: 0.5, speed: 1.3, color: "rgba(0, 230, 255, 0.45)", lineWidth: 1.2, blur: 0 },
-  { freq: 2.8, amp: 0.10, phase: 1.8, speed: 1.5, color: "rgba(179, 77, 255, 0.35)", lineWidth: 1.0, blur: 0 },
-  { freq: 3.2, amp: 0.08, phase: 3.2, speed: 1.7, color: "rgba(230, 0, 115, 0.30)", lineWidth: 0.8, blur: 0 },
-];
-
-const ALL_WAVES: WaveConfig[] = [
-  ...GLOW_WAVES,
-  ...MID_WAVES,
-  ...SHARP_WAVES,
-  ...ACCENT_WAVES,
-];
-
 export function WaveformVisualizer({
   level,
   isPaused,
@@ -71,74 +22,119 @@ export function WaveformVisualizer({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
+    // Colors from the reference image
+    const neonBlue = "rgba(0, 204, 255, 0.5)";
+    const deepPurple = "rgba(102, 51, 255, 0.45)";
+    const brightMagenta = "rgba(230, 0, 255, 0.4)";
+    const cyanHighlight = "rgba(51, 255, 230, 0.6)";
+
     const draw = (time: number) => {
-      const targetLevel = isPaused ? 5 : Math.max(5, level);
-      smoothLevelRef.current +=
-        (targetLevel - smoothLevelRef.current) * 0.15;
-      const currentLevel = smoothLevelRef.current / 100;
+      const targetLevel = isPaused ? 0 : level;
+      const delta = targetLevel - smoothLevelRef.current;
+      smoothLevelRef.current += delta * (delta > 0 ? 0.30 : 0.14);
+      const currentLevel = Math.pow(Math.max(0, smoothLevelRef.current) / 100, 0.52);
 
       const { width, height: h } = canvas;
       ctx.clearRect(0, 0, width, h);
 
       const timeSec = time / 1000;
+      // 1. Background Glows
+      ctx.save();
+      ctx.globalCompositeOperation = "screen";
+      const glowConfigs = [
+        { color: "rgba(102, 51, 255, 0.12)", blur: 30, amp: 0.45, freq: 0.4, speed: 0.25 },
+        { color: "rgba(0, 204, 255, 0.10)",  blur: 24, amp: 0.40, freq: 0.6, speed: 0.35 },
+        { color: "rgba(230, 0, 255, 0.08)", blur: 35, amp: 0.35, freq: 0.3, speed: 0.20 }
+      ];
 
-      for (const wave of ALL_WAVES) {
-        ctx.save();
-
-        if (wave.blur > 0) {
-          ctx.filter = `blur(${wave.blur}px)`;
-        }
-
-        ctx.strokeStyle = wave.color;
-        ctx.lineWidth = wave.lineWidth;
-        ctx.lineCap = "round";
-        ctx.lineJoin = "round";
-        ctx.beginPath();
-
-        const midY = h / 2;
-        const amplitude = h * wave.amp * currentLevel;
-        const steps = width;
-
-        for (let x = 0; x <= steps; x++) {
-          const progress = x / steps;
-
-          // Envelope: smooth taper at edges with steeper falloff
-          const envelope = Math.sin(progress * Math.PI);
-          const envShaped = Math.pow(envelope, 0.65);
-
-          // Triple-harmonic composite for complex organic motion
-          const phase1 =
-            progress * wave.freq * 2 * Math.PI +
-            timeSec * wave.speed +
-            wave.phase;
-          const phase2 =
-            progress * wave.freq * 1.3 * Math.PI +
-            timeSec * wave.speed * 0.7 +
-            wave.phase * 1.5;
-          const phase3 =
-            progress * wave.freq * 3.1 * Math.PI +
-            timeSec * wave.speed * 1.3 +
-            wave.phase * 0.8;
-          const waveVal =
-            Math.sin(phase1) * 0.55 +
-            Math.sin(phase2) * 0.30 +
-            Math.sin(phase3) * 0.15;
-
-          const y = midY + waveVal * amplitude * envShaped;
-
-          if (x === 0) {
-            ctx.moveTo(x, y);
-          } else {
-            ctx.lineTo(x, y);
-          }
-        }
-
+      for (const glow of glowConfigs) {
+        ctx.filter = `blur(${glow.blur}px)`;
+        drawWavePath(ctx, width, h, glow.freq, h * glow.amp * currentLevel, timeSec * glow.speed, 0.6);
+        ctx.strokeStyle = glow.color;
+        ctx.lineWidth = 35;
         ctx.stroke();
-        ctx.restore();
       }
+      ctx.restore();
+
+      // 2. Dense Neon Lines
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      const lineCount = 12;
+      for (let i = 0; i < lineCount; i++) {
+        const progress = i / lineCount;
+        let color = neonBlue;
+        if (progress > 0.33) color = deepPurple;
+        if (progress > 0.66) color = brightMagenta;
+
+        const freq = 0.8 + i * 0.12;
+        const amp = (0.28 - i * 0.01) * h * currentLevel;
+        const speed = 0.6 + i * 0.08;
+        const phase = i * 0.45 + timeSec * speed;
+
+        drawWavePath(ctx, width, h, freq, amp, phase, 0.85);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1.0;
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      // 3. Bright Core Lines
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      for (let i = 0; i < 3; i++) {
+        const freq = 1.1 + i * 0.4;
+        const amp = (0.16 - i * 0.03) * h * currentLevel;
+        const phase = timeSec * (1.1 + i * 0.3) + i * 2.0;
+
+        drawWavePath(ctx, width, h, freq, amp, phase, 1.3);
+        ctx.strokeStyle = cyanHighlight;
+        ctx.lineWidth = 0.8;
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      // 4. White Center Core
+      ctx.save();
+      drawWavePath(ctx, width, h, 0.5, 0.05 * h * currentLevel, timeSec * 0.8, 1.8);
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.4)";
+      ctx.lineWidth = 0.5;
+      ctx.stroke();
+      ctx.restore();
 
       animFrameRef.current = requestAnimationFrame(draw);
     };
+
+    function drawWavePath(
+      ctx: CanvasRenderingContext2D,
+      width: number,
+      height: number,
+      frequency: number,
+      amplitude: number,
+      phase: number,
+      envelopePower: number
+    ) {
+      ctx.beginPath();
+      const midY = height / 2;
+      const steps = width;
+
+      for (let x = 0; x <= steps; x++) {
+        const xProgress = x / steps;
+        const envelope = Math.pow(Math.sin(xProgress * Math.PI), envelopePower);
+
+        const w1 = Math.sin(xProgress * frequency * 2.0 * Math.PI + phase);
+        const w2 = Math.sin(xProgress * frequency * 3.5 * Math.PI + phase * 0.7) * 0.3;
+        const w3 = Math.sin(xProgress * frequency * 1.2 * Math.PI + phase * 1.4) * 0.2;
+        const combinedWave = (w1 + w2 + w3) / 1.5;
+
+        const y = midY + combinedWave * amplitude * envelope;
+
+        if (x === 0) {
+          ctx.moveTo(x, y);
+        } else {
+          ctx.lineTo(x, y);
+        }
+      }
+    }
 
     animFrameRef.current = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(animFrameRef.current);
@@ -147,9 +143,10 @@ export function WaveformVisualizer({
   return (
     <canvas
       ref={canvasRef}
-      width={400}
+      width={canvasRef.current?.parentElement?.clientWidth || 400}
       height={height * 2}
-      style={{ width: "100%", height }}
+      className="block w-full"
+      style={{ height }}
     />
   );
 }

@@ -32,7 +32,7 @@ import {
   Briefcase24Regular,
   ChatMultiple24Regular,
   Wrench24Regular,
-  ClipboardText24Regular,
+  DocumentText24Regular,
 } from "@fluentui/react-icons";
 
 function getProfileIcon(name: string): React.ReactNode {
@@ -41,7 +41,7 @@ function getProfileIcon(name: string): React.ReactNode {
   if (lower.includes("zakelijk")) return <Briefcase24Regular style={style} />;
   if (lower.includes("informeel")) return <ChatMultiple24Regular style={style} />;
   if (lower.includes("technisch")) return <Wrench24Regular style={style} />;
-  return <ClipboardText24Regular style={style} />;
+  return <DocumentText24Regular style={style} />;
 }
 
 export function RecordingPage() {
@@ -223,7 +223,7 @@ export function RecordingPage() {
       </div>
 
       {/* Body */}
-      <div className="flex-1 flex-col text-center" style={{ alignItems: "center", justifyContent: "center", padding: 32, gap: 24, maxWidth: 600, margin: "0 auto", width: "100%", overflowY: "auto" }}>
+      <div className="flex-1 flex-col text-center" style={{ alignItems: "center", justifyContent: "center", padding: 32, gap: 24, maxWidth: 600, margin: "0 auto", width: "100%" }}>
         {phase === "idle" && (
           <IdleState
             mode={mode}
@@ -395,8 +395,8 @@ function ActiveState({
       <div className="text-center">
         <div
           style={{
-            fontSize: 52,
-            fontWeight: 200,
+            fontSize: 56,
+            fontWeight: 100,
             fontVariantNumeric: "tabular-nums",
             fontFamily: "'Segoe UI Variable', 'Segoe UI', system-ui, monospace",
             color: "var(--text-primary)",
@@ -441,7 +441,7 @@ function ActiveState({
 
       {/* Live transcription card */}
       {task?.raw_transcription && (
-        <div className="card" style={{ padding: 14, width: "100%", textAlign: "left", maxHeight: 130, overflow: "hidden" }}>
+        <div className="card card-static" style={{ padding: 14, width: "100%", textAlign: "left", maxHeight: 130, overflow: "hidden" }}>
           <div className="flex-row justify-between" style={{ marginBottom: 8 }}>
             <span className="section-label text-accent" style={{ marginBottom: 0 }}>
               LIVE TRANSCRIPTIE
@@ -570,7 +570,7 @@ function UploadingState({ task }: { task: Partial<TranscriptTask> | null }) {
       </div>
 
       {/* Progress steps card */}
-      <div className="card" style={{ width: "100%", padding: "16px 20px" }}>
+      <div className="card card-static" style={{ width: "100%", padding: "16px 20px" }}>
         <div className="flex-row gap-8" style={{ marginBottom: 12 }}>
           <div className="live-dot" style={{ animation: "none" }} />
           <span className="section-label" style={{ marginBottom: 0 }}>

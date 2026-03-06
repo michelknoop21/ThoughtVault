@@ -28,7 +28,7 @@ struct HomeView: View {
     @State private var isLoadingRecent = false
     @State private var loadError: String? = nil
     @State private var selectedTranscriptForNav: Transcript? = nil
-    @State private var showDeleteConfirmFor: Transcript? = nil
+    @State private var showAllRecent = false
 
     // MARK: Body
 
@@ -37,9 +37,10 @@ struct HomeView: View {
             ZStack {
                 backgroundBlobs
                 ScrollView {
-                    VStack(spacing: TS.Spacing.xl) {
+                    VStack(spacing: TS.Spacing.lg) {
                         headerSection
                         quickStartSection
+                        overviewSection
                         activeProcessingSection
                         recentTranscriptsSection
 
@@ -236,11 +237,12 @@ struct HomeView: View {
 
     @ViewBuilder
     private func quickStartPill(mode: RecordingMode, color: Color, label: String, icon: String? = nil) -> some View {
+        let symbolName = (icon?.isEmpty == false) ? icon! : mode.iconName
         Button {
             onStartRecording?(mode)
         } label: {
             HStack(spacing: TS.Spacing.xs) {
-                Image(systemName: icon ?? mode.iconName)
+                Image(systemName: symbolName)
                     .font(.system(size: 13, weight: .semibold))
                 Text(label)
                     .font(TS.Font.footnoteSemibold)
@@ -261,6 +263,55 @@ struct HomeView: View {
     }
 
     // MARK: Active processing
+
+    private var overviewSection: some View {
+        HStack(spacing: TS.Spacing.sm) {
+            overviewStat(
+                title: "Actieve taken",
+                value: "\(recordingVM.activeTasks.filter { $0.status.isActive }.count)",
+                icon: "gearshape.2.fill",
+                color: Color.brandPrimary
+            )
+            overviewStat(
+                title: "Wachtrij",
+                value: "\(recordingVM.offlineQueue.count)",
+                icon: "tray.fill",
+                color: Color.brandSecondary
+            )
+            overviewStat(
+                title: "Recent",
+                value: "\(recentTranscripts.count)",
+                icon: "doc.text",
+                color: Color.brandOrange
+            )
+        }
+    }
+
+    private func overviewStat(title: String, value: String, icon: String, color: Color) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(color)
+                Text(title)
+                    .font(TS.Font.microBold)
+                    .foregroundStyle(Color.labelTertiary)
+            }
+            Text(value)
+                .font(TS.Font.title3Bold)
+                .foregroundStyle(Color.labelPrimary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(TS.Spacing.sm)
+        .background {
+            RoundedRectangle(cornerRadius: TS.Radius.sm, style: .continuous)
+                .fill(Color.surfacePrimary)
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: TS.Radius.sm, style: .continuous)
+                .stroke(Color.borderPrimary.opacity(0.45), lineWidth: 1)
+        }
+    }
 
     @ViewBuilder
     private var activeProcessingSection: some View {
@@ -336,6 +387,14 @@ struct HomeView: View {
                 if isLoadingRecent {
                     ProgressView()
                         .scaleEffect(0.7)
+                } else if recentTranscripts.count > 3 {
+                    Button(showAllRecent ? "Toon minder" : "Toon meer") {
+                        withAnimation(TS.Animation.smooth) {
+                            showAllRecent.toggle()
+                        }
+                    }
+                    .font(TS.Font.footnoteSemibold)
+                    .foregroundStyle(Color.brandPrimary)
                 }
             }
 
@@ -345,7 +404,7 @@ struct HomeView: View {
                 emptyRecentState
             } else {
                 VStack(spacing: TS.Spacing.sm) {
-                    ForEach(recentTranscripts) { transcript in
+                    ForEach(showAllRecent ? recentTranscripts : Array(recentTranscripts.prefix(3))) { transcript in
                         HomeSessionCard(
                             transcript: transcript,
                             onTap: {
@@ -353,9 +412,6 @@ struct HomeView: View {
                             },
                             onDelete: {
                                 Task { await deleteTranscript(transcript) }
-                            },
-                            onRefresh: {
-                                Task { await loadRecentTranscripts() }
                             }
                         )
                     }
@@ -412,7 +468,7 @@ struct HomeView: View {
         isLoadingRecent = true
         loadError = nil
         do {
-            let response = try await APIService.shared.getTranscripts(page: 1, limit: 5, sortBy: "newest")
+            let response = try await APIService.shared.getTranscripts(page: 1, limit: 12, sortBy: "newest")
             recentTranscripts = response.items
         } catch {
             loadError = error.localizedDescription
@@ -425,7 +481,7 @@ struct HomeView: View {
             try await APIService.shared.deleteTranscript(id: transcript.id)
             recentTranscripts.removeAll { $0.id == transcript.id }
         } catch {
-            // TODO: surface error to user
+            loadError = "Verwijderen mislukt: \(error.localizedDescription)"
         }
     }
 }
@@ -437,7 +493,6 @@ struct HomeSessionCard: View {
     let transcript: Transcript
     let onTap: () -> Void
     let onDelete: () -> Void
-    let onRefresh: () -> Void
 
     @State private var isHovered = false
     @State private var showDeleteConfirm = false
@@ -477,7 +532,7 @@ struct HomeSessionCard: View {
     }
 
     private var cardContent: some View {
-        VStack(alignment: .leading, spacing: TS.Spacing.xs) {
+        VStack(alignment: .leading, spacing: 6) {
             HStack {
                 Text(transcript.title)
                     .font(TS.Font.subheadlineSemibold)
@@ -506,32 +561,21 @@ struct HomeSessionCard: View {
                 Text("Voltooid")
                     .font(TS.Font.micro)
                     .foregroundStyle(Color.statusSuccess)
+
+                if let profile = transcript.profileName, !profile.isEmpty {
+                    Text("• \(profile)")
+                        .font(TS.Font.micro)
+                        .foregroundStyle(Color.labelTertiary)
+                        .lineLimit(1)
+                }
             }
 
             if let preview = previewText, !preview.isEmpty {
                 Text(preview)
                     .font(TS.Font.footnote)
                     .foregroundStyle(Color.labelSecondary)
-                    .lineLimit(2)
+                    .lineLimit(1)
                     .padding(.top, 2)
-            }
-
-            if !transcript.tags.isEmpty {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: TS.Spacing.xs) {
-                        ForEach(transcript.tags, id: \.self) { tag in
-                            Text(tag)
-                                .font(TS.Font.micro)
-                                .foregroundStyle(Color.brandSecondary)
-                                .padding(.horizontal, TS.Spacing.xs)
-                                .padding(.vertical, 3)
-                                .background {
-                                    Capsule()
-                                        .fill(Color.accentBgSecondary)
-                                }
-                        }
-                    }
-                }
             }
         }
         .padding(TS.Spacing.md)

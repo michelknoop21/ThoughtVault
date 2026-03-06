@@ -13,16 +13,10 @@ struct AccountView: View {
 
     @Environment(AuthViewModel.self) var authVM
 
-    @State private var showDeleteAccountConfirm: Bool = false
-    @State private var showDeleteConfirmStep2: Bool = false
-    @State private var deleteConfirmText: String = ""
     @State private var showLogoutConfirm: Bool = false
     @State private var isExportingData: Bool = false
     @State private var exportSuccessMessage: String? = nil
     @State private var errorMessage: String? = nil
-    @State private var isDeletingAccount: Bool = false
-
-    private let requiredDeleteText = "VERWIJDER"
 
     var body: some View {
         List {
@@ -40,9 +34,6 @@ struct AccountView: View {
             Button("Annuleer", role: .cancel) {}
         } message: {
             Text("Weet je zeker dat je wilt uitloggen?")
-        }
-        .sheet(isPresented: $showDeleteAccountConfirm) {
-            deleteAccountSheet
         }
     }
 
@@ -174,15 +165,13 @@ struct AccountView: View {
 
     private var dangerZoneSection: some View {
         Section {
-            Button {
-                showDeleteAccountConfirm = true
-            } label: {
+            Link(destination: URL(string: "mailto:support@prezent.nl?subject=GDPR%20Account%20Verwijdering%20TranscriptStudio")!) {
                 HStack {
-                    Label("Account verwijderen", systemImage: "trash.fill")
+                    Label("Account verwijderen via support", systemImage: "envelope.fill")
                         .foregroundStyle(Color.statusError)
                         .font(TS.Font.bodyMedium)
                     Spacer()
-                    Image(systemName: "chevron.right")
+                    Image(systemName: "arrow.up.right")
                         .font(TS.Font.caption)
                         .foregroundStyle(Color.labelTertiary)
                 }
@@ -191,105 +180,10 @@ struct AccountView: View {
         } header: {
             Text("Gevarenzone")
         } footer: {
-            Text("Accountverwijdering is permanent en kan niet ongedaan worden gemaakt. Al je transcripties en gegevens worden definitief verwijderd.")
+            Text("Om je account en alle gegevens te verwijderen, neem contact op met support@prezent.nl. We verwerken je verzoek binnen 30 dagen conform de AVG.")
                 .font(TS.Font.caption)
                 .foregroundStyle(Color.labelTertiary)
         }
-    }
-
-    // MARK: - Delete Account Sheet
-
-    private var deleteAccountSheet: some View {
-        NavigationStack {
-            VStack(spacing: TS.Spacing.xl) {
-                Spacer()
-
-                // Warning icon
-                ZStack {
-                    Circle()
-                        .fill(Color.statusError.opacity(0.10))
-                        .frame(width: 80, height: 80)
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .font(.system(size: 36))
-                        .foregroundStyle(Color.statusError)
-                }
-
-                VStack(spacing: TS.Spacing.sm) {
-                    Text("Account definitief verwijderen")
-                        .font(TS.Font.title3Bold)
-                        .foregroundStyle(Color.labelPrimary)
-                        .multilineTextAlignment(.center)
-
-                    Text("Deze actie is onomkeerbaar. Al je transcripties, profielen en account­gegevens worden permanent verwijderd.")
-                        .font(TS.Font.callout)
-                        .foregroundStyle(Color.labelSecondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, TS.Spacing.lg)
-                }
-
-                // Confirmation input
-                VStack(alignment: .leading, spacing: TS.Spacing.sm) {
-                    Text("Typ **\(requiredDeleteText)** om te bevestigen:")
-                        .font(TS.Font.footnoteSemibold)
-                        .foregroundStyle(Color.labelSecondary)
-
-                    TextField(requiredDeleteText, text: $deleteConfirmText)
-                        .textFieldStyle(.plain)
-                        .font(.system(.body, design: .monospaced, weight: .semibold))
-                        .autocorrectionDisabled()
-                        #if os(iOS)
-                        .textInputAutocapitalization(.characters)
-                        #endif
-                        .padding(TS.Spacing.sm + 2)
-                        .background(Color.surfacePrimary)
-                        .clipShape(RoundedRectangle(cornerRadius: TS.Radius.sm))
-                        .overlay {
-                            RoundedRectangle(cornerRadius: TS.Radius.sm)
-                                .stroke(
-                                    deleteConfirmText == requiredDeleteText
-                                        ? Color.statusError.opacity(0.5)
-                                        : Color.borderPrimary,
-                                    lineWidth: 1
-                                )
-                        }
-                }
-                .padding(.horizontal, TS.Spacing.xl)
-
-                // Delete button
-                Button {
-                    Task { await deleteAccount() }
-                } label: {
-                    Group {
-                        if isDeletingAccount {
-                            HStack(spacing: TS.Spacing.sm) {
-                                ProgressView()
-                                    .controlSize(.small)
-                                    .tint(.white)
-                                Text("Verwijderen...")
-                            }
-                        } else {
-                            Text("Account definitief verwijderen")
-                        }
-                    }
-                    .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(PrimaryButtonStyle(isDestructive: true))
-                .disabled(deleteConfirmText != requiredDeleteText || isDeletingAccount)
-                .padding(.horizontal, TS.Spacing.xl)
-
-                Spacer()
-            }
-            .navigationTitle("Account verwijderen")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Annuleer") {
-                        deleteConfirmText = ""
-                        showDeleteAccountConfirm = false
-                    }
-                }
-            }
-        }
-        .frame(minWidth: 400, minHeight: 520)
     }
 
     // MARK: - Data Export
@@ -336,25 +230,6 @@ struct AccountView: View {
         }
     }
 
-    // MARK: - Account Deletion
-
-    private func deleteAccount() async {
-        isDeletingAccount = true
-        defer { isDeletingAccount = false }
-
-        // In a production implementation this calls DELETE /tstudio/api/account
-        // For now simulate the operation and log out.
-        do {
-            try await Task.sleep(nanoseconds: 1_500_000_000)
-            // await APIService.shared.deleteAccount()
-            await MainActor.run {
-                showDeleteAccountConfirm = false
-                authVM.logout()
-            }
-        } catch {
-            errorMessage = "Verwijderen mislukt: \(error.localizedDescription)"
-        }
-    }
 }
 
 // MARK: - Preview

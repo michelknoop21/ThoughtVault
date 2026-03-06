@@ -8,6 +8,7 @@ import {
   MoreHorizontal24Regular,
   Delete24Regular,
   People24Regular,
+  ChevronRight24Regular,
 } from "@fluentui/react-icons";
 import { useRecordingStore } from "../stores/recordingStore";
 import { useTranscriptsStore } from "../stores/transcriptsStore";
@@ -27,10 +28,11 @@ function getGreeting(name?: string, email?: string): string {
 export function HomePage() {
   const navigate = useNavigate();
   const { setMode, setAutoStart } = useRecordingStore();
-  const { transcripts, setTranscripts, deleteTranscript } = useTranscriptsStore();
+  const { transcripts, setTranscripts, deleteTranscript, isLoading, setIsLoading } = useTranscriptsStore();
   const calendar = useCalendarStore();
   const user = useAuthStore((s) => s.user);
   const [upcomingEvents, setUpcomingEvents] = useState<CalendarEvent[]>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     loadRecentTranscripts();
@@ -40,8 +42,17 @@ export function HomePage() {
   }, []);
 
   async function loadRecentTranscripts() {
-    const data = await api.getTranscripts({ limit: 50 });
-    setTranscripts(data);
+    setIsLoading(true);
+    setLoadError(null);
+    try {
+      const data = await api.getTranscripts({ limit: 50 });
+      setTranscripts(data);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Laden mislukt";
+      setLoadError(msg);
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   async function loadCalendarEvents() {
@@ -70,6 +81,7 @@ export function HomePage() {
   }
 
   return (
+    <div className="page-scroll">
     <div className="page-content">
 
       {/* Greeting */}
@@ -78,6 +90,35 @@ export function HomePage() {
         <p className="text-caption" style={{ marginTop: 4 }}>
           Wat wil je vandaag transcriberen?
         </p>
+      </section>
+
+      {/* Hero CTA — start recording */}
+      <section>
+        <p className="section-label">Snel starten</p>
+        <button onClick={() => handleQuickStart("microphone")} className="hero-cta-card">
+          <div className="hero-cta-rings">
+            <div className="hero-cta-ring hero-cta-ring-1" />
+            <div className="hero-cta-ring hero-cta-ring-2" />
+            <div className="hero-cta-ring hero-cta-ring-3" />
+            <MicRecord24Regular className="hero-cta-mic" />
+          </div>
+          <div className="hero-cta-text">
+            <span className="hero-cta-title">Start nieuwe opname</span>
+            <span className="hero-cta-subtitle">Tik om direct te beginnen met opnemen</span>
+          </div>
+          <ChevronRight24Regular className="hero-cta-chevron" />
+        </button>
+
+        <div className="flex-row gap-10" style={{ marginTop: 10 }}>
+          <button onClick={() => handleQuickStart("microphone")} className="quick-start-pill">
+            <People24Regular style={{ fontSize: 14 }} />
+            Fysieke meeting
+          </button>
+          <button onClick={() => handleQuickStart("combined")} className="quick-start-pill">
+            <VideoChat24Regular style={{ fontSize: 14 }} />
+            Videocall
+          </button>
+        </div>
       </section>
 
       {/* Upcoming meetings */}
@@ -112,15 +153,23 @@ export function HomePage() {
 
       {/* Recent sessions */}
       <section style={{ flex: 1, minHeight: 0 }} className="flex-col">
-        <p className="section-label">Recente sessies</p>
-        {transcripts.length === 0 ? (
+        <div className="flex-row justify-between" style={{ alignItems: "center" }}>
+          <p className="section-label" style={{ margin: 0 }}>Recente sessies</p>
+          {isLoading && <span className="text-caption" style={{ color: "var(--fill-accent-default)" }}>Laden...</span>}
+        </div>
+        {loadError ? (
+          <div className="error-banner-inline">
+            <span>{loadError}</span>
+            <button className="btn btn-sm" onClick={loadRecentTranscripts}>Opnieuw</button>
+          </div>
+        ) : transcripts.length === 0 && !isLoading ? (
           <div className="empty-state">
             <p className="empty-state-text">
               Nog geen transcripten. Start een opname om te beginnen.
             </p>
           </div>
         ) : (
-          <div className="flex-col gap-10" style={{ overflowY: "auto", flex: 1 }}>
+          <div className="flex-col gap-10">
             {transcripts.map((transcript) => (
               <SessionCard
                 key={transcript.id}
@@ -133,21 +182,7 @@ export function HomePage() {
         )}
       </section>
 
-      {/* Quick start */}
-      <section className="flex-shrink-0">
-        <p className="section-label">Snel starten</p>
-        <div className="grid-2 gap-12">
-          <button onClick={() => handleQuickStart("microphone")} className="quick-start-btn">
-            <People24Regular style={{ fontSize: 18, color: "var(--fill-accent-default)" }} />
-            Fysieke meeting
-          </button>
-          <button onClick={() => handleQuickStart("combined")} className="quick-start-btn">
-            <VideoChat24Regular style={{ fontSize: 18, color: "var(--fill-accent-default)" }} />
-            Videocall
-          </button>
-        </div>
-      </section>
-
+    </div>
     </div>
   );
 }

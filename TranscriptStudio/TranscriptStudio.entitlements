@@ -8,7 +8,7 @@
 	<true/>
 	<key>com.apple.security.device.audio-input</key>
 	<true/>
-	<key>com.apple.security.device.camera</key>
+	<key>com.apple.security.screen-capture</key>
 	<true/>
 	<key>com.apple.security.personal-information.calendars</key>
 	<true/>
@@ -20,5 +20,7 @@
 	<array>
 		<string>$(AppIdentifierPrefix)nl.prezent.TranscriptStudio</string>
 	</array>
+	<key>com.apple.security.network.local</key>
+	<true/>
 </dict>
 </plist>

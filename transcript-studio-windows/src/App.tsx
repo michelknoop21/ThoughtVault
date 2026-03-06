@@ -34,7 +34,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
             background: "var(--bg-solid-secondary)",
           }}
         >
-          <div style={{ flex: 1, overflow: "auto" }}>
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
             {children}
           </div>
           <YingaFooter compact />

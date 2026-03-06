@@ -4,6 +4,7 @@ import OSLog
 import SwiftUI
 #if os(macOS)
 import AppKit
+import ScreenCaptureKit
 #endif
 
 private let log = OSLog(subsystem: "nl.prezent.TranscriptStudio", category: "RecordingVM")
@@ -31,6 +32,7 @@ final class RecordingViewModel {
     var lastFailedUploadReason: UploadFailureReason?
     var savedRecordings: [SavedRecording] = []
     var showRetrySheet: Bool = false
+    var audioMixFallbackOccurred: Bool = false
 
     // MARK: - Audio Properties (computed, @Observable-compatible)
 
@@ -50,7 +52,7 @@ final class RecordingViewModel {
         case .combined:
 #if os(macOS)
             let sys = systemAudioCapture.audioLevels
-            let mic = systemAudioCapture.micAudioLevels
+            let mic = audioRecorder.audioLevels
             let count = min(mic.count, sys.count)
             var merged = [Float](repeating: 0, count: count)
             for i in 0..<count {
@@ -107,7 +109,10 @@ final class RecordingViewModel {
 
     // MARK: - Private
 
-    private var liveTranscriptionTask: Task<Void, Never>?
+    @ObservationIgnored
+    nonisolated(unsafe) private var liveTranscriptionTask: Task<Void, Never>?
+    @ObservationIgnored
+    nonisolated(unsafe) private var pendingRemovalTasks: [String: Task<Void, Never>] = [:]
     private var networkMonitor = NetworkMonitor.shared
 
     // MARK: - Init
@@ -133,6 +138,8 @@ final class RecordingViewModel {
     }
 
     deinit {
+        liveTranscriptionTask?.cancel()
+        for task in pendingRemovalTasks.values { task.cancel() }
 #if os(macOS)
         if let sleepObserver {
             NSWorkspace.shared.notificationCenter.removeObserver(sleepObserver)
@@ -229,7 +236,10 @@ final class RecordingViewModel {
     func startRecording() async {
         guard recordingState == .idle else { return }
 
-        await MainActor.run { recordingState = .preparing }
+        await MainActor.run {
+            recordingState = .preparing
+            audioMixFallbackOccurred = false
+        }
 
         // Request permissions
         await audioRecorder.requestPermission()
@@ -242,10 +252,10 @@ final class RecordingViewModel {
 
 #if os(macOS)
         if selectedMode == .systemAudio || selectedMode == .combined {
-            await systemAudioCapture.checkPermission()
-            guard systemAudioCapture.hasPermission else {
+            let hasScreenPermission = await ensureScreenCapturePermission()
+            guard hasScreenPermission else {
                 await MainActor.run {
-                    recordingState = .error("Schermopnamemachtiging vereist voor systeemaudio. Geef toegang via Systeeminstell.")
+                    recordingState = .error("Schermopname-toegang is vereist voor videocall-opname. Geef toegang in Systeeminstellingen > Privacy en beveiliging > Scherm- en systeemaudio-opname, en herstart daarna de app.")
                 }
                 return
             }
@@ -266,8 +276,11 @@ final class RecordingViewModel {
 
             case .combined:
 #if os(macOS)
-                // Single SCStream captures both system audio and microphone
-                try await systemAudioCapture.startCapture(includeMicrophone: true)
+                // Capture system audio via ScreenCaptureKit and microphone via AVAudioRecorder.
+                // This avoids relying on SCStream microphone output, which is not reliable
+                // across all macOS versions/configurations.
+                _ = try await systemAudioCapture.startCapture(includeMicrophone: false)
+                try await audioRecorder.startRecording()
 #else
                 try await audioRecorder.startRecording()
 #endif
@@ -281,6 +294,12 @@ final class RecordingViewModel {
             await startLiveTranscriptionIfEnabled()
 
         } catch {
+#if os(macOS)
+            if selectedMode == .systemAudio || selectedMode == .combined {
+                _ = await systemAudioCapture.stopCapture()
+            }
+#endif
+            _ = await audioRecorder.stopRecording()
             await MainActor.run {
                 recordingState = .error(error.localizedDescription)
             }
@@ -290,7 +309,7 @@ final class RecordingViewModel {
     func pauseRecording() {
         guard case .recording = recordingState else { return }
 #if os(macOS)
-        if selectedMode != .combined {
+        if selectedMode != .systemAudio {
             audioRecorder.pauseRecording()
         }
         // SystemAudioCapture does not support pause; let it continue running
@@ -306,7 +325,7 @@ final class RecordingViewModel {
     func resumeRecording() {
         guard case .paused = recordingState else { return }
 #if os(macOS)
-        if selectedMode != .combined {
+        if selectedMode != .systemAudio {
             audioRecorder.resumeRecording()
         }
 #else
@@ -337,11 +356,16 @@ final class RecordingViewModel {
             finalURL = result.systemAudioURL
         case .combined:
             let result = await systemAudioCapture.stopCapture()
-            // In combined mode, audioRecorder is not used — both sources come from SCStream
-            if let sys = result.systemAudioURL, let mic = result.microphoneURL {
-                finalURL = await mixAudioFiles(micURL: mic, systemURL: sys)
+            let micURL = await audioRecorder.stopRecording()
+            if let sys = result.systemAudioURL, let mic = micURL {
+                let mixed = await mixAudioFiles(micURL: mic, systemURL: sys)
+                if mixed == mic {
+                    audioMixFallbackOccurred = true
+                }
+                finalURL = mixed
             } else {
-                finalURL = result.systemAudioURL ?? result.microphoneURL
+                audioMixFallbackOccurred = true
+                finalURL = result.systemAudioURL ?? micURL
             }
         }
 #else
@@ -350,6 +374,16 @@ final class RecordingViewModel {
 #endif
 
         guard let url = finalURL else {
+            await MainActor.run {
+                recordingState = .error("Opname is leeg of te kort om te verwerken.")
+            }
+            return
+        }
+
+        // Validate file has actual audio content (not just a WAV header)
+        let fileSize = (try? FileManager.default.attributesOfItem(atPath: url.path))?[.size] as? Int64 ?? 0
+        if fileSize < 1024 {
+            os_log("[RecordingVM] Recording file too small (%lld bytes), likely empty", log: log, type: .error, fileSize)
             await MainActor.run {
                 recordingState = .error("Opname is leeg of te kort om te verwerken.")
             }
@@ -549,8 +583,15 @@ final class RecordingViewModel {
         for item in queued {
             switch item {
             case .audio(let url, _):
+                let stateBefore = recordingState
                 await uploadFile(url, profileId: profileId)
-                offlineQueue.removeItem(item)
+                // Only remove from queue if upload succeeded (state went back to idle without error)
+                if case .error = recordingState {
+                    os_log("[RecordingVM] Offline queue item upload failed, keeping in queue for retry", log: .default, type: .error)
+                    await MainActor.run { recordingState = stateBefore }
+                } else {
+                    offlineQueue.removeItem(item)
+                }
             case .text(let transcription, let pid, _):
                 do {
                     let task = try await APIService.shared.uploadTranscriptionText(
@@ -561,7 +602,7 @@ final class RecordingViewModel {
                     await startSSEStream(for: task.taskId)
                     offlineQueue.removeItem(item)
                 } catch {
-                    os_log("[RecordingVM] Failed to process queued text item: %{public}@", log: .default, type: .error, error.localizedDescription)
+                    os_log("[RecordingVM] Failed to process queued text item, keeping in queue: %{public}@", log: .default, type: .error, error.localizedDescription)
                 }
             }
         }
@@ -657,6 +698,7 @@ final class RecordingViewModel {
             isLiveTranscribing = true
         }
 
+        liveTranscriptionTask?.cancel()
         liveTranscriptionTask = Task {
             do {
                 try await onDeviceTranscriber.startLiveTranscription { [weak self] partial in
@@ -727,11 +769,13 @@ final class RecordingViewModel {
 
         // Remove completed / error tasks from active list after a short delay
         if updatedTask.status == .completed || updatedTask.status == .error {
-            Task {
+            let taskId = updatedTask.taskId
+            pendingRemovalTasks[taskId]?.cancel()
+            pendingRemovalTasks[taskId] = Task {
                 try? await Task.sleep(nanoseconds: 3_000_000_000)
-                await MainActor.run {
-                    self.removeTask(updatedTask.taskId)
-                }
+                guard !Task.isCancelled else { return }
+                self.removeTask(taskId)
+                self.pendingRemovalTasks.removeValue(forKey: taskId)
             }
         }
     }
@@ -851,5 +895,18 @@ final class RecordingViewModel {
             return .unknown
         }
     }
-}
 
+#if os(macOS)
+    private func ensureScreenCapturePermission() async -> Bool {
+        await systemAudioCapture.checkPermission()
+        if systemAudioCapture.hasPermission { return true }
+
+        // Triggers the macOS permission flow in System Settings.
+        _ = CGRequestScreenCaptureAccess()
+        try? await Task.sleep(for: .seconds(1))
+
+        await systemAudioCapture.checkPermission()
+        return systemAudioCapture.hasPermission
+    }
+#endif
+}

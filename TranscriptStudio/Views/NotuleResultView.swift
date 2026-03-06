@@ -15,17 +15,11 @@ struct NotuleResultView: View {
     let task: TranscriptTask
     let onDismiss: () -> Void
 
-    @Environment(RecordingViewModel.self) var recordingVM
-
     @State private var selectedTab: ResultTab = .notule
     @State private var showExportMenu: Bool = false
-    @State private var isExporting: Bool = false
     @State private var exportError: String? = nil
-    @State private var isEditing: Bool = false
-    @State private var editableNotuleHtml: String = ""
     @State private var showAddTag: Bool = false
     @State private var newTagText: String = ""
-    @Namespace private var tabNamespace
 
     enum ResultTab: String, CaseIterable {
         case notule = "Notulen"
@@ -41,47 +35,21 @@ struct NotuleResultView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Toolbar
             toolbar
 
-            // Tab selector
+            resultMetaBar
             tabBar
 
-            // Content
-            Group {
+            VStack(spacing: TS.Spacing.md) {
                 switch selectedTab {
                 case .notule:
-                    if let html = task.notuleHtml, !html.isEmpty {
-                        ZStack(alignment: .topTrailing) {
-                            HTMLWebView(htmlContent: html)
-
-                            // Edit toggle button
-                            Button {
-                                isEditing.toggle()
-                                if isEditing {
-                                    editableNotuleHtml = html
-                                }
-                            } label: {
-                                Image(systemName: isEditing ? "xmark" : "pencil")
-                                    .font(.system(size: 14, weight: .medium))
-                                    .foregroundStyle(isEditing ? Color.statusError : Color.brandPrimary)
-                                    .padding(TS.Spacing.sm)
-                                    .background {
-                                        Circle()
-                                            .fill(Color.surfaceSecondary)
-                                            .shadow(color: .black.opacity(0.1), radius: 4, y: 2)
-                                    }
-                            }
-                            .buttonStyle(.plain)
-                            .padding(TS.Spacing.md)
-                        }
-                    } else {
-                        emptyNotuleView
-                    }
+                    notuleView
                 case .transcriptie:
                     transcriptieView
                 }
             }
+            .padding(.horizontal, TS.Spacing.md)
+            .padding(.vertical, TS.Spacing.md)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             #if os(macOS)
@@ -91,6 +59,13 @@ struct NotuleResultView: View {
             #endif
         }
         .background(Color.surfacePrimary)
+        .onAppear {
+            let hasNotule = !(task.notuleHtml ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            let hasRaw = !(task.rawTranscription ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            if !hasNotule && hasRaw {
+                selectedTab = .transcriptie
+            }
+        }
     }
 
     // MARK: - Toolbar
@@ -112,14 +87,13 @@ struct NotuleResultView: View {
 
                 Spacer()
 
-                Text("Resultaat")
+                Text(task.status == .completed ? "Notulen klaar" : "Resultaat")
                     .font(TS.Font.headlineBold)
                     .foregroundStyle(Color.labelPrimary)
 
                 Spacer()
 
                 HStack(spacing: TS.Spacing.sm) {
-                    // Add tag button
                     Button {
                         showAddTag.toggle()
                     } label: {
@@ -141,32 +115,12 @@ struct NotuleResultView: View {
                         addTagPopover
                     }
 
-                    // Hertranscribeer button
-                    Button {
-                        // TODO: trigger retranscription
-                    } label: {
-                        HStack(spacing: TS.Spacing.xs) {
-                            Image(systemName: "arrow.clockwise")
-                            Text("Hertranscribeer")
-                        }
-                        .font(TS.Font.footnoteSemibold)
-                        .foregroundStyle(Color.brandPrimary)
-                        .padding(.horizontal, TS.Spacing.sm)
-                        .padding(.vertical, TS.Spacing.xs)
-                        .background {
-                            Capsule()
-                                .fill(Color.accentBgPrimary)
-                        }
-                    }
-                    .buttonStyle(.plain)
-
-                    // Export button
                     Button {
                         showExportMenu = true
                     } label: {
                         HStack(spacing: TS.Spacing.xs) {
                             Image(systemName: "square.and.arrow.up")
-                            Text("Deel & Exporteer")
+                            Text("Exporteer")
                         }
                         .font(TS.Font.footnoteSemibold)
                         .foregroundStyle(.white)
@@ -184,12 +138,47 @@ struct NotuleResultView: View {
                 }
             }
             .padding(.horizontal, TS.Spacing.md)
-            .padding(.vertical, TS.Spacing.sm + 2)
+            .padding(.vertical, TS.Spacing.sm)
             .background(Color.surfacePrimary)
             .overlay(alignment: .bottom) {
                 Divider()
             }
         }
+    }
+
+    private var resultMetaBar: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: TS.Spacing.xs) {
+                metaPill(icon: "waveform", text: task.status.displayName, color: task.status == .error ? Color.statusError : Color.brandPrimary)
+                if let createdAt = task.createdAt {
+                    metaPill(icon: "calendar", text: formattedDate(createdAt), color: Color.labelSecondary)
+                }
+                if let profileId = task.profileId, !profileId.isEmpty {
+                    metaPill(icon: "person.fill", text: profileId.capitalized, color: Color.brandSecondary)
+                }
+                if !task.tags.isEmpty {
+                    ForEach(task.tags.prefix(3), id: \.self) { tag in
+                        metaPill(icon: "tag.fill", text: tag, color: Color.brandOrange)
+                    }
+                }
+            }
+            .padding(.horizontal, TS.Spacing.md)
+            .padding(.vertical, TS.Spacing.xs)
+        }
+        .background(Color.surfaceSecondary.opacity(0.65))
+    }
+
+    private func metaPill(icon: String, text: String, color: Color) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.system(size: 10, weight: .semibold))
+            Text(text)
+                .font(TS.Font.captionMedium)
+        }
+        .foregroundStyle(color)
+        .padding(.horizontal, TS.Spacing.sm)
+        .padding(.vertical, 6)
+        .background(Capsule().fill(color.opacity(0.10)))
     }
 
     // MARK: - Add Tag Popover
@@ -223,7 +212,11 @@ struct NotuleResultView: View {
                         Task {
                             var updatedTags = task.tags
                             updatedTags.append(newTagText)
-                            try? await APIService.shared.updateTranscriptTags(id: task.id, tags: updatedTags)
+                            do {
+                                try await APIService.shared.updateTranscriptTags(id: task.id, tags: updatedTags)
+                            } catch {
+                                exportError = "Tag opslaan mislukt: \(error.localizedDescription)"
+                            }
                         }
                         newTagText = ""
                         showAddTag = false
@@ -240,7 +233,7 @@ struct NotuleResultView: View {
     // MARK: - Tab Bar
 
     private var tabBar: some View {
-        HStack(spacing: 0) {
+        HStack(spacing: TS.Spacing.xs) {
             ForEach(ResultTab.allCases, id: \.self) { tab in
                 Button {
                     withAnimation(TS.Animation.smooth) {
@@ -252,25 +245,42 @@ struct NotuleResultView: View {
                         Text(tab.rawValue)
                             .font(TS.Font.footnoteSemibold)
                     }
+                    .frame(maxWidth: .infinity)
                     .foregroundStyle(selectedTab == tab ? Color.brandPrimary : Color.labelSecondary)
                     .padding(.vertical, TS.Spacing.sm)
                     .padding(.horizontal, TS.Spacing.md)
-                    .overlay(alignment: .bottom) {
-                        if selectedTab == tab {
-                            Rectangle()
-                                .fill(Color.brandPrimary)
-                                .frame(height: 2)
-                                .matchedGeometryEffect(id: "resultTabIndicator", in: tabNamespace)
-                        }
+                    .background {
+                        RoundedRectangle(cornerRadius: TS.Radius.sm, style: .continuous)
+                            .fill(selectedTab == tab ? Color.accentBgPrimary : Color.surfaceSecondary)
+                    }
+                    .overlay {
+                        RoundedRectangle(cornerRadius: TS.Radius.sm, style: .continuous)
+                            .stroke(selectedTab == tab ? Color.brandPrimary.opacity(0.35) : Color.borderPrimary.opacity(0.5), lineWidth: 1)
                     }
                 }
                 .buttonStyle(.plain)
             }
-            Spacer()
         }
-        .background(Color.surfaceSecondary)
+        .padding(.horizontal, TS.Spacing.md)
+        .padding(.top, TS.Spacing.sm)
         .overlay(alignment: .bottom) {
             Divider()
+        }
+    }
+
+    @ViewBuilder
+    private var notuleView: some View {
+        if let html = task.notuleHtml, !html.isEmpty {
+            HTMLWebView(htmlContent: html)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color.surfacePrimary)
+                .clipShape(RoundedRectangle(cornerRadius: TS.Radius.md, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: TS.Radius.md, style: .continuous)
+                        .stroke(Color.borderPrimary.opacity(0.45), lineWidth: 1)
+                }
+        } else {
+            emptyNotuleView
         }
     }
 
@@ -279,20 +289,11 @@ struct NotuleResultView: View {
     private var transcriptieView: some View {
         Group {
             if let raw = task.rawTranscription, !raw.isEmpty {
-                VStack(spacing: 0) {
-                    ScrollView {
-                        VStack(alignment: .leading, spacing: TS.Spacing.md) {
-                            Text(raw)
-                                .font(TS.Font.body)
-                                .foregroundStyle(Color.labelPrimary)
-                                .textSelection(.enabled)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                        .padding(TS.Spacing.lg)
-                    }
-
-                    // Action buttons
-                    HStack(spacing: TS.Spacing.sm) {
+                VStack(spacing: TS.Spacing.sm) {
+                    HStack {
+                        Text("Ruwe transcriptie")
+                            .font(TS.Font.footnoteSemibold)
+                            .foregroundStyle(Color.labelSecondary)
                         Spacer()
                         Button("Kopieer") {
                             #if os(macOS)
@@ -301,15 +302,24 @@ struct NotuleResultView: View {
                             #endif
                         }
                         .buttonStyle(SecondaryButtonStyle())
-
-                        Button("Sluiten") {
-                            onDismiss()
-                        }
-                        .buttonStyle(PrimaryButtonStyle())
                     }
-                    .padding(TS.Spacing.md)
+
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: TS.Spacing.md) {
+                            Text(raw)
+                                .font(TS.Font.body)
+                                .foregroundStyle(Color.labelPrimary)
+                                .textSelection(.enabled)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .padding(TS.Spacing.md)
+                    }
                     .background(Color.surfacePrimary)
-                    .overlay(alignment: .top) { Divider() }
+                    .clipShape(RoundedRectangle(cornerRadius: TS.Radius.md, style: .continuous))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: TS.Radius.md, style: .continuous)
+                            .stroke(Color.borderPrimary.opacity(0.45), lineWidth: 1)
+                    }
                 }
             } else {
                 VStack(spacing: TS.Spacing.md) {
@@ -340,6 +350,12 @@ struct NotuleResultView: View {
                 .foregroundStyle(Color.labelTertiary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.surfacePrimary)
+        .clipShape(RoundedRectangle(cornerRadius: TS.Radius.md, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: TS.Radius.md, style: .continuous)
+                .stroke(Color.borderPrimary.opacity(0.45), lineWidth: 1)
+        }
     }
 
     // MARK: - Export Menu
@@ -478,6 +494,14 @@ struct NotuleResultView: View {
         <body>\(html)</body>
         </html>
         """
+    }
+
+    private func formattedDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "nl_NL")
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        return formatter.string(from: date)
     }
 }
 

@@ -22,6 +22,9 @@ struct ProcessingView: View {
     @State private var isFetchingResult: Bool = false
     @State private var fetchedTask: TranscriptTask?
     @State private var shimmerPhase: CGFloat = -1.0
+    @State private var isStalled = false
+    @State private var lastStatusChange = Date()
+    @State private var stalledCheckTask: Task<Void, Never>? = nil
 
     private var displayTask: TranscriptTask {
         fetchedTask ?? task
@@ -29,17 +32,24 @@ struct ProcessingView: View {
 
     var body: some View {
         Group {
-            if navigateToResult, let resultTask = fetchedTask ?? (task.notuleHtml != nil ? task : nil) {
+            if navigateToResult, let resultTask = fetchedTask ?? (hasResultContent(task) ? task : nil) {
                 NotuleResultView(task: resultTask, onDismiss: onDismiss)
             } else {
                 processingContent
             }
         }
         .onChange(of: task.status) { _, newStatus in
+            lastStatusChange = Date()
+            isStalled = false
             handleStatusChange(newStatus)
         }
         .onChange(of: task.notuleHtml) { _, html in
-            if html != nil && task.status == .completed {
+            if html?.isEmpty == false && task.status == .completed {
+                scheduleNavigation()
+            }
+        }
+        .onChange(of: task.rawTranscription) { _, raw in
+            if raw?.isEmpty == false && task.status == .completed {
                 scheduleNavigation()
             }
         }
@@ -48,12 +58,27 @@ struct ProcessingView: View {
                 showError = true
             }
             if task.status == .completed {
-                if task.notuleHtml != nil {
+                if hasResultContent(task) {
                     scheduleNavigation()
                 } else {
                     Task { await fetchResultFromServer() }
                 }
             }
+            stalledCheckTask = Task {
+                while !Task.isCancelled {
+                    try? await Task.sleep(for: .seconds(30))
+                    guard !Task.isCancelled else { return }
+                    if task.status != .completed && task.status != .error {
+                        let elapsed = Date().timeIntervalSince(lastStatusChange)
+                        if elapsed > 120 {
+                            await MainActor.run { isStalled = true }
+                        }
+                    }
+                }
+            }
+        }
+        .onDisappear {
+            stalledCheckTask?.cancel()
         }
     }
 
@@ -99,6 +124,33 @@ struct ProcessingView: View {
 
                 // Transcript preview panel
                 transcriptPreviewPanel
+
+                if isStalled {
+                    HStack(spacing: TS.Spacing.sm) {
+                        Image(systemName: "clock.badge.exclamationmark")
+                            .foregroundStyle(Color.brandOrange)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Verwerking lijkt vast te zitten")
+                                .font(TS.Font.footnoteMedium)
+                                .foregroundStyle(.white)
+                            Text("Laatste update was meer dan 2 minuten geleden")
+                                .font(TS.Font.caption)
+                                .foregroundStyle(Color.white.opacity(0.6))
+                        }
+                        Spacer()
+                        Button("Sluiten") {
+                            onDismiss()
+                        }
+                        .buttonStyle(SecondaryButtonStyle())
+                    }
+                    .padding(TS.Spacing.md)
+                    .background(Color.brandOrange.opacity(0.12))
+                    .clipShape(RoundedRectangle(cornerRadius: TS.Radius.md))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: TS.Radius.md)
+                            .stroke(Color.brandOrange.opacity(0.30), lineWidth: 1)
+                    }
+                }
 
                 Spacer()
 
@@ -406,7 +458,7 @@ struct ProcessingView: View {
             showError = true
         }
         if status == .completed {
-            if task.notuleHtml != nil {
+            if hasResultContent(task) {
                 scheduleNavigation()
             } else {
                 Task { await fetchResultFromServer() }
@@ -428,7 +480,7 @@ struct ProcessingView: View {
 
         // First attempt
         if let result = try? await APIService.shared.getTaskStatus(taskId: task.taskId) {
-            if result.notuleHtml != nil {
+            if hasResultContent(result) {
                 await MainActor.run {
                     fetchedTask = result
                     isFetchingResult = false
@@ -445,12 +497,18 @@ struct ProcessingView: View {
                 fetchedTask = result
                 isFetchingResult = false
             }
-            if result.notuleHtml != nil {
+            if hasResultContent(result) {
                 scheduleNavigation()
             }
         } else {
             await MainActor.run { isFetchingResult = false }
         }
+    }
+
+    private func hasResultContent(_ task: TranscriptTask) -> Bool {
+        let hasNotule = !(task.notuleHtml ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        let hasRaw = !(task.rawTranscription ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        return hasNotule || hasRaw
     }
 }
 

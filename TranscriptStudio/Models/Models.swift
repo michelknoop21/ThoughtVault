@@ -249,6 +249,51 @@ struct TranscriptTask: Identifiable, Codable, Sendable {
         self.profileId = profileId
         self.createdAt = createdAt
     }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+
+        let decodedTaskId = try container.decodeIfPresent(String.self, forKey: .taskId) ?? ""
+        let decodedId = try container.decodeIfPresent(String.self, forKey: .id)
+        self.id = decodedId?.isEmpty == false ? decodedId! : (decodedTaskId.isEmpty ? UUID().uuidString : decodedTaskId)
+        self.taskId = decodedTaskId
+        self.filename = try container.decodeIfPresent(String.self, forKey: .filename) ?? ""
+
+        if let rawStatus = try container.decodeIfPresent(String.self, forKey: .status),
+           let parsedStatus = TaskStatus(rawValue: rawStatus) {
+            self.status = parsedStatus
+        } else {
+            self.status = .pending
+        }
+
+        self.rawTranscription = try container.decodeIfPresent(String.self, forKey: .rawTranscription)
+        self.notuleHtml = try container.decodeIfPresent(String.self, forKey: .notuleHtml)
+        self.errorMessage = try container.decodeIfPresent(String.self, forKey: .errorMessage)
+        self.localAudioPath = try container.decodeIfPresent(String.self, forKey: .localAudioPath)
+        self.progress = try container.decodeIfPresent(Double.self, forKey: .progress) ?? 0.0
+        self.tags = try container.decodeIfPresent([String].self, forKey: .tags) ?? []
+        self.profileId = try container.decodeIfPresent(String.self, forKey: .profileId)
+        self.createdAt = Self.decodeDateLossy(from: container, key: .createdAt)
+    }
+
+    private static func decodeDateLossy(from container: KeyedDecodingContainer<CodingKeys>, key: CodingKeys) -> Date? {
+        if let date = try? container.decodeIfPresent(Date.self, forKey: key) {
+            return date
+        }
+        if let rawString = try? container.decodeIfPresent(String.self, forKey: key),
+           !rawString.isEmpty {
+            let iso = ISO8601DateFormatter()
+            if let parsed = iso.date(from: rawString) { return parsed }
+            let fallback = DateFormatter()
+            fallback.locale = Locale(identifier: "en_US_POSIX")
+            fallback.dateFormat = "yyyy-MM-dd HH:mm:ss"
+            if let parsed = fallback.date(from: rawString) { return parsed }
+        }
+        if let unix = try? container.decodeIfPresent(Double.self, forKey: key) {
+            return Date(timeIntervalSince1970: unix)
+        }
+        return nil
+    }
 }
 
 // MARK: - Transcript

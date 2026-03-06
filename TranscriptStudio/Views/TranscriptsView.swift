@@ -7,11 +7,15 @@
 // and export capabilities.
 
 import SwiftUI
+import WebKit
+import os
 #if os(macOS)
 import AppKit
 #else
 import UIKit
 #endif
+
+private let logger = Logger(subsystem: "nl.prezent.TranscriptStudio", category: "TranscriptsView")
 
 // MARK: - Main Tab Enum
 
@@ -24,7 +28,7 @@ enum MainTab: String, CaseIterable, Identifiable {
     var icon: String {
         switch self {
         case .notulen:      return "doc.text.fill"
-        case .transcripties: return "text.alignleft.fill"
+        case .transcripties: return "text.alignleft"
         }
     }
 }
@@ -53,6 +57,8 @@ struct TranscriptsView: View {
     @State private var isSelecting = false
     @State private var selectedIds: Set<String> = []
     @State private var showBulkDeleteConfirm = false
+    @State private var transcriptToDelete: Transcript? = nil
+    @State private var showSingleDeleteConfirm = false
 
     // MARK: State — navigation
 
@@ -64,8 +70,8 @@ struct TranscriptsView: View {
     enum DateFilter: String, CaseIterable, Identifiable {
         case all    = "Alles"
         case today  = "Vandaag"
-        case week   = "Week"
-        case month  = "Maand"
+        case week   = "Deze week"
+        case month  = "Deze maand"
         var id: String { rawValue }
     }
 
@@ -148,7 +154,7 @@ struct TranscriptsView: View {
                     mainContent
                 }
             }
-            .navigationTitle("Notulen & Transcripties")
+            .navigationTitle("Notulen")
             .toolbar { toolbarContent }
             .navigationDestination(item: $selectedTranscript) { transcript in
                 TranscriptDetailView(transcript: transcript)
@@ -164,6 +170,23 @@ struct TranscriptsView: View {
                 Button("Annuleren", role: .cancel) {}
             } message: {
                 Text("Dit kan niet ongedaan worden gemaakt.")
+            }
+            .confirmationDialog(
+                "Transcriptie verwijderen?",
+                isPresented: $showSingleDeleteConfirm,
+                titleVisibility: .visible
+            ) {
+                Button("Verwijderen", role: .destructive) {
+                    if let transcript = transcriptToDelete {
+                        Task { await deleteTranscript(transcript) }
+                    }
+                    transcriptToDelete = nil
+                }
+                Button("Annuleren", role: .cancel) {
+                    transcriptToDelete = nil
+                }
+            } message: {
+                Text("Deze transcriptie wordt permanent verwijderd.")
             }
         }
         .task { await loadTranscripts() }
@@ -489,6 +512,14 @@ struct TranscriptsView: View {
                 }
                 .font(TS.Font.footnoteSemibold)
                 .foregroundStyle(Color.brandPrimary)
+                Button {
+                    loadErrorMessage = nil
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(Color.labelTertiary)
+                }
+                .buttonStyle(.plain)
             }
             .padding(TS.Spacing.sm)
             .background {
@@ -607,7 +638,8 @@ struct TranscriptsView: View {
             .buttonStyle(.plain)
             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                 Button(role: .destructive) {
-                    Task { await deleteTranscript(transcript) }
+                    transcriptToDelete = transcript
+                    showSingleDeleteConfirm = true
                 } label: {
                     Label("Verwijderen", systemImage: "trash")
                 }
@@ -620,7 +652,8 @@ struct TranscriptsView: View {
                 }
                 Divider()
                 Button(role: .destructive) {
-                    Task { await deleteTranscript(transcript) }
+                    transcriptToDelete = transcript
+                    showSingleDeleteConfirm = true
                 } label: {
                     Label("Verwijderen", systemImage: "trash")
                 }
@@ -709,6 +742,9 @@ struct TranscriptsView: View {
                 sortBy: sortNewest ? "newest" : "oldest"
             )
             transcripts = response.items
+            let withNotule = response.items.filter { $0.notuleHtml != nil && !$0.notuleHtml!.isEmpty }.count
+            let withRaw = response.items.filter { $0.rawTranscription != nil && !$0.rawTranscription!.isEmpty }.count
+            logger.info("Loaded \(response.items.count) transcripts: \(withNotule) with notule, \(withRaw) with raw")
         } catch {
             loadErrorMessage = error.localizedDescription
         }
@@ -728,13 +764,26 @@ struct TranscriptsView: View {
 
     private func bulkDelete() async {
         let idsToDelete = selectedIds
+        var deletedIds: Set<String> = []
+        var failCount = 0
+
         for id in idsToDelete {
-            try? await APIService.shared.deleteTranscript(id: id)
+            do {
+                try await APIService.shared.deleteTranscript(id: id)
+                deletedIds.insert(id)
+            } catch {
+                failCount += 1
+            }
         }
+
         withAnimation(TS.Animation.smooth) {
-            transcripts.removeAll { idsToDelete.contains($0.id) }
-            selectedIds.removeAll()
-            isSelecting = false
+            transcripts.removeAll { deletedIds.contains($0.id) }
+            selectedIds.subtract(deletedIds)
+            if selectedIds.isEmpty { isSelecting = false }
+        }
+
+        if failCount > 0 {
+            loadErrorMessage = "\(failCount) van \(idsToDelete.count) item(s) konden niet worden verwijderd."
         }
     }
 }
@@ -746,31 +795,43 @@ struct TranscriptListCard: View {
     let transcript: Transcript
     @State private var isHovered = false
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: TS.Spacing.xs) {
-            HStack {
-                Text(transcript.title)
-                    .font(TS.Font.subheadlineSemibold)
-                    .foregroundStyle(Color.labelPrimary)
-                    .lineLimit(1)
-                Spacer(minLength: TS.Spacing.xl)
-            }
+    var hasNotule: Bool {
+        !(transcript.notuleHtml ?? "").isEmpty
+    }
 
-            Text(formattedDate)
-                .font(TS.Font.captionMonospaced)
+    var body: some View {
+        VStack(alignment: .leading, spacing: TS.Spacing.sm) {
+            // Title
+            Text(transcript.title)
+                .font(TS.Font.subheadlineSemibold)
+                .foregroundStyle(Color.labelPrimary)
+                .lineLimit(2)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            // Relative date
+            Text(relativeDate)
+                .font(TS.Font.caption)
                 .foregroundStyle(Color.labelTertiary)
 
+            // Preview text
             if let preview = previewText, !preview.isEmpty {
                 Text(preview)
                     .font(TS.Font.footnote)
                     .foregroundStyle(Color.labelSecondary)
-                    .lineLimit(2)
+                    .lineLimit(3)
                     .padding(.top, 1)
             }
 
-            if !transcript.tags.isEmpty {
-                HStack(spacing: TS.Spacing.xs) {
-                    ForEach(transcript.tags.prefix(4), id: \.self) { tag in
+            // Notule badge or tags
+            HStack(spacing: TS.Spacing.sm) {
+                if hasNotule {
+                    Label("Notule beschikbaar", systemImage: "doc.text.fill")
+                        .font(TS.Font.captionMedium)
+                        .foregroundStyle(Color.brandAccent)
+                }
+
+                if !transcript.tags.isEmpty {
+                    ForEach(transcript.tags.prefix(hasNotule ? 2 : 4), id: \.self) { tag in
                         Text(tag)
                             .font(TS.Font.micro)
                             .foregroundStyle(Color.brandSecondary)
@@ -780,13 +841,14 @@ struct TranscriptListCard: View {
                                 Capsule().fill(Color.accentBgSecondary)
                             }
                     }
-                    if transcript.tags.count > 4 {
-                        Text("+\(transcript.tags.count - 4)")
+                    if transcript.tags.count > (hasNotule ? 2 : 4) {
+                        Text("+\(transcript.tags.count - (hasNotule ? 2 : 4))")
                             .font(TS.Font.micro)
                             .foregroundStyle(Color.labelTertiary)
                     }
                 }
             }
+            .padding(.top, TS.Spacing.xs)
         }
         .padding(TS.Spacing.md)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -794,12 +856,21 @@ struct TranscriptListCard: View {
         .modernCard(isHovered: isHovered)
     }
 
-    private var formattedDate: String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "nl_NL")
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .short
-        return formatter.string(from: transcript.date)
+    private var relativeDate: String {
+        let interval = Date().timeIntervalSince(transcript.date)
+        if interval < 3600 {
+            let min = Int(interval / 60)
+            return "\(max(min, 1)) minuten geleden"
+        } else if interval < 86400 {
+            let hr = Int(interval / 3600)
+            return "\(hr) uur geleden"
+        } else {
+            let formatter = DateFormatter()
+            formatter.locale = Locale(identifier: "nl_NL")
+            formatter.dateStyle = .medium
+            formatter.timeStyle = .short
+            return formatter.string(from: transcript.date)
+        }
     }
 
     private var previewText: String? {
@@ -901,6 +972,11 @@ struct TranscriptDetailView: View {
     @State private var isRetranscribing = false
     @State private var retranscribeMessage = ""
 
+    // MARK: State — editing notulen
+
+    @State private var isEditingNotule = false
+    @State private var editedHTML = ""
+
     // MARK: State — errors
 
     @State private var errorMessage: String? = nil
@@ -915,19 +991,22 @@ struct TranscriptDetailView: View {
     // MARK: Body
 
     var body: some View {
-        ZStack(alignment: .top) {
-            ScrollView {
-                VStack(alignment: .leading, spacing: TS.Spacing.md) {
-                    progressBanners
-                    titleSection
-                    tagsSection
-                    actionButtons
-                    tabBar
-                    contentArea
-                }
-                .padding(.horizontal, TS.Spacing.md)
-                .padding(.vertical, TS.Spacing.md)
+        VStack(spacing: 0) {
+            // Header bar: meta info + action buttons
+            VStack(spacing: TS.Spacing.xs) {
+                progressBanners
+                tagsSection
+                actionButtons
+                tabBar
             }
+            .padding(.horizontal, TS.Spacing.md)
+            .padding(.vertical, TS.Spacing.sm)
+            .background(Color.surfacePrimary)
+            .overlay(alignment: .bottom) { Divider() }
+
+            // Content fills remaining space
+            contentArea
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .navigationTitle(fullTranscript.title)
         #if os(iOS)
@@ -955,8 +1034,10 @@ struct TranscriptDetailView: View {
         .task {
             do {
                 fullTranscript = try await APIService.shared.getTranscript(id: transcript.id)
+                logger.info("Detail fetch success for \(transcript.id): notuleHtml=\(fullTranscript.notuleHtml != nil), rawTranscription=\(fullTranscript.rawTranscription != nil)")
             } catch {
-                // fallback to passed-in value silently
+                logger.error("Detail fetch failed for \(transcript.id): \(error)")
+                errorMessage = error.localizedDescription
             }
         }
     }
@@ -1029,44 +1110,6 @@ struct TranscriptDetailView: View {
                         .stroke(color.opacity(0.20), lineWidth: 1)
                 }
         }
-    }
-
-    // MARK: - Title section
-
-    @ViewBuilder private var titleSection: some View {
-        HStack(alignment: .top) {
-            Text(fullTranscript.title)
-                .font(TS.Font.title3Bold)
-                .foregroundStyle(Color.labelPrimary)
-
-            Spacer()
-
-            Button {
-                pendingTitle = fullTranscript.title
-                showTitleEditAlert = true
-            } label: {
-                Image(systemName: "pencil")
-                    .font(.system(size: 14))
-                    .foregroundStyle(Color.labelSecondary)
-                    .frame(width: 30, height: 30)
-                    .background {
-                        Circle().fill(Color.surfaceSecondary)
-                    }
-            }
-            .buttonStyle(.plain)
-        }
-
-        Text(formattedDate)
-            .font(TS.Font.captionMonospaced)
-            .foregroundStyle(Color.labelTertiary)
-    }
-
-    private var formattedDate: String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "nl_NL")
-        formatter.dateStyle = .full
-        formatter.timeStyle = .short
-        return formatter.string(from: fullTranscript.date)
     }
 
     // MARK: - Tags section
@@ -1160,160 +1203,186 @@ struct TranscriptDetailView: View {
     // MARK: - Action buttons
 
     private var actionButtons: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: TS.Spacing.sm) {
-                actionPill(
-                    icon: "sparkles",
-                    label: "Regenereer",
-                    color: Color.brandPrimary,
-                    isLoading: isRegenerating
-                ) {
+        HStack(spacing: TS.Spacing.sm) {
+            // Primary "Deel & Exporteer" button (orange, prominent)
+            Menu {
+                Button {
+                    shareContent()
+                } label: {
+                    Label("Delen...", systemImage: "square.and.arrow.up")
+                }
+                Divider()
+                Button {
+                    exportAsPDF()
+                } label: {
+                    Label("Exporteer als PDF", systemImage: "doc.richtext")
+                }
+                Button {
+                    exportAsMarkdown()
+                } label: {
+                    Label("Exporteer als Markdown", systemImage: "doc.plaintext")
+                }
+                Button {
+                    exportAsTXT()
+                } label: {
+                    Label("Exporteer als TXT", systemImage: "doc.text")
+                }
+                Divider()
+                Button {
+                    copyContent()
+                } label: {
+                    Label("Kopieer", systemImage: "doc.on.doc")
+                }
+            } label: {
+                HStack(spacing: TS.Spacing.xs) {
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.system(size: 14, weight: .semibold))
+                    Text("Deel & Exporteer")
+                        .font(TS.Font.footnoteSemibold)
+                }
+                .foregroundStyle(.white)
+                .padding(.horizontal, TS.Spacing.md)
+                .padding(.vertical, TS.Spacing.sm + 2)
+                .background {
+                    Capsule(style: .continuous)
+                        .fill(Color.brandOrange)
+                        .shadow(color: Color.brandOrange.opacity(0.35), radius: 8, y: 3)
+                }
+            }
+            .menuStyle(.borderlessButton)
+            .fixedSize()
+
+            // Edit notule content button
+            if !isEditingNotule, let html = fullTranscript.notuleHtml, !html.isEmpty {
+                Button {
+                    editedHTML = html
+                    withAnimation(TS.Animation.smooth) {
+                        isEditingNotule = true
+                        selectedTab = .notule
+                    }
+                } label: {
+                    HStack(spacing: TS.Spacing.xs) {
+                        Image(systemName: "pencil")
+                            .font(.system(size: 12, weight: .semibold))
+                        Text("Bewerken")
+                            .font(TS.Font.captionSemibold)
+                    }
+                    .foregroundStyle(Color.brandSecondary)
+                    .padding(.horizontal, TS.Spacing.sm)
+                    .padding(.vertical, TS.Spacing.xs + 2)
+                    .background {
+                        Capsule().fill(Color.accentBgSecondary)
+                            .overlay { Capsule().stroke(Color.brandSecondary.opacity(0.25), lineWidth: 1) }
+                    }
+                }
+                .buttonStyle(.plain)
+            }
+
+            // Edit title button
+            Button {
+                pendingTitle = fullTranscript.title
+                showTitleEditAlert = true
+            } label: {
+                Image(systemName: "character.cursor.ibeam")
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(Color.labelSecondary)
+                    .frame(width: 36, height: 36)
+                    .background {
+                        Circle().fill(Color.surfaceSecondary)
+                            .shadow(color: .black.opacity(0.06), radius: 4, y: 1)
+                    }
+            }
+            .buttonStyle(.plain)
+
+            Spacer()
+
+            // Regenereer button (pill)
+            if isRegenerating {
+                HStack(spacing: TS.Spacing.xs) {
+                    ProgressView().scaleEffect(0.7).tint(Color.brandPrimary)
+                    Text("Genereren...").font(TS.Font.captionSemibold).foregroundStyle(Color.brandPrimary)
+                }
+                .padding(.horizontal, TS.Spacing.sm)
+                .padding(.vertical, TS.Spacing.xs + 2)
+                .background { Capsule().fill(Color.accentBgPrimary) }
+            } else if !isEditingNotule {
+                Button {
                     profileSheetMode = .regenerate
                     showProfileSheet = true
+                } label: {
+                    HStack(spacing: TS.Spacing.xs) {
+                        Image(systemName: "sparkles").font(.system(size: 12, weight: .semibold))
+                        Text("Regenereer").font(TS.Font.captionSemibold)
+                    }
+                    .foregroundStyle(Color.brandPrimary)
+                    .padding(.horizontal, TS.Spacing.sm)
+                    .padding(.vertical, TS.Spacing.xs + 2)
+                    .background {
+                        Capsule().fill(Color.accentBgPrimary)
+                            .overlay { Capsule().stroke(Color.brandPrimary.opacity(0.25), lineWidth: 1) }
+                    }
                 }
-
-                actionPill(
-                    icon: "waveform",
-                    label: "Hertranscribeer",
-                    color: Color.brandSecondary,
-                    isLoading: isRetranscribing
-                ) {
-                    profileSheetMode = .retranscribe
-                    showProfileSheet = true
-                }
-
-                actionPill(
-                    icon: "doc.on.doc",
-                    label: "Kopieer",
-                    color: Color.brandAccent
-                ) {
-                    copyContent()
-                }
-
-                exportMenu
-            }
-            .padding(.horizontal, 1)
-        }
-    }
-
-    private func actionPill(
-        icon: String,
-        label: String,
-        color: Color,
-        isLoading: Bool = false,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            HStack(spacing: TS.Spacing.xs) {
-                if isLoading {
-                    ProgressView()
-                        .scaleEffect(0.7)
-                        .tint(color)
-                } else {
-                    Image(systemName: icon)
-                        .font(.system(size: 13, weight: .semibold))
-                }
-                Text(label)
-                    .font(TS.Font.captionSemibold)
-            }
-            .foregroundStyle(color)
-            .padding(.horizontal, TS.Spacing.sm)
-            .padding(.vertical, TS.Spacing.xs + 2)
-            .background {
-                Capsule()
-                    .fill(color.opacity(0.10))
-                    .overlay { Capsule().stroke(color.opacity(0.25), lineWidth: 1) }
+                .buttonStyle(.plain)
             }
         }
-        .buttonStyle(.plain)
-        .disabled(isLoading)
-    }
-
-    private var exportMenu: some View {
-        Menu {
-            Button {
-                exportAs(.txt)
-            } label: {
-                Label("Exporteer als TXT", systemImage: "doc.text")
-            }
-            Button {
-                exportAs(.pdf)
-            } label: {
-                Label("Exporteer als PDF", systemImage: "doc.richtext")
-            }
-            Button {
-                exportAs(.word)
-            } label: {
-                Label("Exporteer als Word", systemImage: "doc.fill")
-            }
-            Divider()
-            Button {
-                shareContent()
-            } label: {
-                Label("Delen...", systemImage: "square.and.arrow.up")
-            }
-        } label: {
-            HStack(spacing: TS.Spacing.xs) {
-                Image(systemName: "arrow.up.doc")
-                    .font(.system(size: 13, weight: .semibold))
-                Text("Exporteer")
-                    .font(TS.Font.captionSemibold)
-            }
-            .foregroundStyle(Color.brandOrange)
-            .padding(.horizontal, TS.Spacing.sm)
-            .padding(.vertical, TS.Spacing.xs + 2)
-            .background {
-                Capsule()
-                    .fill(Color.brandOrange.opacity(0.10))
-                    .overlay { Capsule().stroke(Color.brandOrange.opacity(0.25), lineWidth: 1) }
-            }
-        }
-        .menuStyle(.borderlessButton)
-        .fixedSize()
     }
 
     // MARK: - Tab bar
+
+    @Namespace private var detailTabNamespace
 
     private var tabBar: some View {
         let hasNotule = !(fullTranscript.notuleHtml ?? "").isEmpty
         let hasRaw = !(fullTranscript.rawTranscription ?? "").isEmpty
 
         return Group {
-            if hasNotule && hasRaw {
+            if hasNotule || hasRaw {
                 HStack(spacing: 0) {
-                    tabBarButton(.notule, label: "Notule")
-                    tabBarButton(.raw, label: "Transcriptie")
+                    if hasNotule {
+                        tabBarButton(.notule, icon: "doc.text.fill", label: "Notule")
+                    }
+                    if hasRaw {
+                        tabBarButton(.raw, icon: "waveform", label: "Transcriptie")
+                    }
+                    Spacer()
                 }
-                .background {
-                    RoundedRectangle(cornerRadius: TS.Radius.xs, style: .continuous)
-                        .fill(Color.surfaceSecondary)
+                .overlay(alignment: .bottom) {
+                    Divider()
                 }
             }
         }
     }
 
-    private func tabBarButton(_ tab: DetailTab, label: String) -> some View {
+    private func tabBarButton(_ tab: DetailTab, icon: String, label: String) -> some View {
         let isActive = selectedTab == tab
         return Button {
             withAnimation(TS.Animation.quick) {
                 selectedTab = tab
             }
         } label: {
-            Text(label)
-                .font(TS.Font.footnoteSemibold)
-                .foregroundStyle(isActive ? Color.brandPrimary : Color.labelSecondary)
-                .padding(.horizontal, TS.Spacing.md)
-                .padding(.vertical, TS.Spacing.xs + 2)
-                .overlay(alignment: .bottom) {
+            VStack(spacing: TS.Spacing.xs) {
+                HStack(spacing: TS.Spacing.xs) {
+                    Image(systemName: icon)
+                        .font(.system(size: 13, weight: .medium))
+                    Text(label)
+                        .font(TS.Font.footnoteSemibold)
+                }
+                .foregroundStyle(isActive ? Color.brandPrimary : Color.labelTertiary)
+                .padding(.horizontal, TS.Spacing.sm)
+                .padding(.vertical, TS.Spacing.xs)
+
+                ZStack {
+                    Rectangle().fill(Color.clear).frame(height: 2)
                     if isActive {
                         Rectangle()
                             .fill(Color.brandPrimary)
                             .frame(height: 2)
+                            .matchedGeometryEffect(id: "detail_tab_indicator", in: detailTabNamespace)
                     }
                 }
+            }
         }
         .buttonStyle(.plain)
-        .frame(maxWidth: .infinity)
     }
 
     // MARK: - Content area
@@ -1325,19 +1394,22 @@ struct TranscriptDetailView: View {
 
         if !hasNotule && !hasRaw {
             VStack(spacing: TS.Spacing.sm) {
-                Image(systemName: "doc.text")
-                    .font(.system(size: 36))
-                    .foregroundStyle(Color.labelTertiary)
-                Text("Geen inhoud beschikbaar")
+                Spacer()
+                Image(systemName: errorMessage != nil ? "exclamationmark.triangle" : "doc.text")
+                    .font(.system(size: 40))
+                    .foregroundStyle(errorMessage != nil ? Color.statusWarning : Color.labelTertiary)
+                Text(errorMessage != nil ? "Laden mislukt" : "Geen inhoud beschikbaar")
                     .font(TS.Font.callout)
                     .foregroundStyle(Color.labelSecondary)
-                Text("ID: \(fullTranscript.id)")
-                    .font(TS.Font.captionMonospaced)
-                    .foregroundStyle(Color.labelTertiary)
+                if let error = errorMessage {
+                    Text(error)
+                        .font(TS.Font.caption)
+                        .foregroundStyle(Color.labelTertiary)
+                        .multilineTextAlignment(.center)
+                }
+                Spacer()
             }
-            .frame(maxWidth: .infinity)
-            .padding(TS.Spacing.xl)
-            .modernCard()
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if selectedTab == .notule, let html = fullTranscript.notuleHtml, !html.isEmpty {
             htmlContentView(html)
         } else if selectedTab == .raw || fullTranscript.notuleHtml == nil || fullTranscript.notuleHtml!.isEmpty {
@@ -1346,46 +1418,121 @@ struct TranscriptDetailView: View {
     }
 
     private func htmlContentView(_ html: String) -> some View {
-        // Strip HTML to plain text for display. A WebView would be ideal but
-        // for reconstruction we render stripped text with proper formatting.
-        let plain = html
-            .replacingOccurrences(of: "<br\\s*/?>", with: "\n", options: .regularExpression)
-            .replacingOccurrences(of: "</p>", with: "\n\n")
-            .replacingOccurrences(of: "</h[1-6]>", with: "\n", options: .regularExpression)
-            .replacingOccurrences(of: "<li>", with: "• ")
-            .replacingOccurrences(of: "</li>", with: "\n")
-            .replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)
-            .trimmingCharacters(in: .whitespacesAndNewlines)
+        VStack(spacing: 0) {
+            if isEditingNotule {
+                FormattingToolbar(webView: editableWebViewRef)
+                    .padding(.horizontal, TS.Spacing.md)
+                    .padding(.vertical, TS.Spacing.xs)
+            }
 
-        return ScrollView {
-            Text(plain)
-                .font(TS.Font.body)
-                .foregroundStyle(Color.labelPrimary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(TS.Spacing.md)
+            EditableHTMLWebView(
+                htmlContent: html,
+                editedHTML: $editedHTML,
+                isEditing: isEditingNotule,
+                onWebViewReady: { editableWebViewRef = $0 }
+            )
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .overlay {
+                if isEditingNotule {
+                    RoundedRectangle(cornerRadius: 0)
+                        .stroke(Color.brandPrimary.opacity(0.3), lineWidth: 2)
+                }
+            }
+
+            if isEditingNotule {
+                editingActionBar
+                    .padding(.horizontal, TS.Spacing.md)
+                    .padding(.vertical, TS.Spacing.sm)
+                    .background(Color.surfacePrimary)
+                    .overlay(alignment: .top) { Divider() }
+            }
         }
-        .frame(maxHeight: 500)
-        .modernCard()
     }
+
+    private var editingActionBar: some View {
+        HStack(spacing: TS.Spacing.sm) {
+            Button {
+                withAnimation(TS.Animation.smooth) {
+                    isEditingNotule = false
+                    editedHTML = ""
+                }
+            } label: {
+                Text("Annuleren")
+                    .font(TS.Font.footnoteSemibold)
+            }
+            .buttonStyle(SecondaryButtonStyle())
+
+            Spacer()
+
+            Button {
+                Task { await saveNotuleEdits() }
+            } label: {
+                HStack(spacing: TS.Spacing.xs) {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 12, weight: .semibold))
+                    Text("Opslaan")
+                        .font(TS.Font.footnoteSemibold)
+                }
+            }
+            .buttonStyle(PrimaryButtonStyle())
+            .disabled(editedHTML.isEmpty)
+        }
+        .padding(.top, TS.Spacing.sm)
+    }
+
+    @State private var editableWebViewRef: WKWebView? = nil
 
     @ViewBuilder
     private var rawTranscriptView: some View {
         if let raw = fullTranscript.rawTranscription, !raw.isEmpty {
             ScrollView {
-                Text(raw)
-                    .font(TS.Font.bodyMonospaced)
-                    .foregroundStyle(Color.labelPrimary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(TS.Spacing.md)
+                VStack(alignment: .leading, spacing: TS.Spacing.sm) {
+                    HStack {
+                        Text("RUWE TRANSCRIPTIE")
+                            .font(TS.Font.microBold)
+                            .foregroundStyle(Color.labelTertiary)
+                            .kerning(1.5)
+                        Spacer()
+                        Button {
+                            #if os(macOS)
+                            NSPasteboard.general.clearContents()
+                            NSPasteboard.general.setString(raw, forType: .string)
+                            #else
+                            UIPasteboard.general.string = raw
+                            #endif
+                        } label: {
+                            HStack(spacing: TS.Spacing.xs) {
+                                Image(systemName: "doc.on.doc")
+                                    .font(.system(size: 11, weight: .medium))
+                                Text("Kopieer")
+                                    .font(TS.Font.captionSemibold)
+                            }
+                            .foregroundStyle(Color.brandPrimary)
+                        }
+                        .buttonStyle(.plain)
+                    }
+
+                    Text(raw)
+                        .font(TS.Font.body)
+                        .foregroundStyle(Color.labelPrimary)
+                        .textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .padding(TS.Spacing.lg)
             }
-            .frame(maxHeight: 500)
-            .modernCard()
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
-            Text("Geen ruwe transcriptie beschikbaar")
-                .font(TS.Font.footnote)
-                .foregroundStyle(Color.labelTertiary)
-                .padding(TS.Spacing.md)
-                .modernCard()
+            VStack(spacing: TS.Spacing.sm) {
+                Spacer()
+                Image(systemName: "waveform.slash")
+                    .font(.system(size: 36))
+                    .foregroundStyle(Color.labelTertiary)
+                Text("Geen ruwe transcriptie beschikbaar")
+                    .font(TS.Font.footnote)
+                    .foregroundStyle(Color.labelTertiary)
+                Spacer()
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
 
@@ -1445,6 +1592,25 @@ struct TranscriptDetailView: View {
             fullTranscript.tags = original
             errorMessage = error.localizedDescription
         }
+    }
+
+    private func saveNotuleEdits() async {
+        let html = editedHTML.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !html.isEmpty else { return }
+        let original = fullTranscript.notuleHtml
+        fullTranscript.notuleHtml = html
+        withAnimation(TS.Animation.smooth) {
+            isEditingNotule = false
+        }
+        do {
+            try await APIService.shared.updateNotuleHTML(id: fullTranscript.id, html: html)
+            logger.info("Notule saved for \(fullTranscript.id)")
+        } catch {
+            fullTranscript.notuleHtml = original
+            errorMessage = "Opslaan mislukt: \(error.localizedDescription)"
+            logger.error("Save notule failed: \(error)")
+        }
+        editedHTML = ""
     }
 
     private func startRegenerate(profileId: String) async {
@@ -1519,45 +1685,131 @@ struct TranscriptDetailView: View {
         #endif
     }
 
-    private enum ExportFormat { case txt, pdf, word }
+    private func exportAsPDF() {
+        guard let html = fullTranscript.notuleHtml ?? fullTranscript.rawTranscription else { return }
 
-    private func exportAs(_ format: ExportFormat) {
-        // Export implementation — delegates to platform share sheet
-        let content = fullTranscript.rawTranscription
-            ?? fullTranscript.notuleHtml
-                .flatMap { $0.isEmpty ? nil : $0 }
-                .map {
-                    $0.replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)
-                }
-            ?? ""
-
-        let ext: String
-        switch format {
-        case .txt:  ext = "txt"
-        case .pdf:  ext = "pdf"
-        case .word: ext = "docx"
-        }
-
-        let filename = "\(fullTranscript.title).\(ext)"
-        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
-        try? content.write(to: tempURL, atomically: true, encoding: .utf8)
+        let styledHTML = """
+        <!DOCTYPE html>
+        <html><head><meta charset="utf-8">
+        <style>
+        body { font-family: -apple-system, Helvetica Neue, Arial, sans-serif; font-size: 12pt; line-height: 1.6; color: #1a1a1a; margin: 0; padding: 20pt; }
+        h1 { font-size: 18pt; font-weight: 700; color: #E50074; margin-bottom: 12pt; }
+        h2 { font-size: 14pt; font-weight: 600; margin-top: 16pt; }
+        h3 { font-size: 12pt; font-weight: 600; margin-top: 12pt; }
+        p  { margin: 6pt 0; }
+        ul, ol { margin: 6pt 0; padding-left: 20pt; }
+        li { margin: 3pt 0; }
+        table { border-collapse: collapse; width: 100%; margin: 12pt 0; }
+        th, td { border: 1px solid #ddd; padding: 6pt 8pt; text-align: left; }
+        th { background: #f5f5f5; font-weight: 600; }
+        </style>
+        </head><body>\(html)</body></html>
+        """
 
         #if os(macOS)
-        let panel = NSSavePanel()
-        panel.nameFieldStringValue = filename
-        panel.allowedContentTypes = []
-        panel.begin { response in
-            if response == .OK, let destination = panel.url {
-                try? FileManager.default.copyItem(at: tempURL, to: destination)
-            }
+        let printInfo = NSPrintInfo.shared
+        printInfo.paperSize = NSSize(width: 595, height: 842)
+        printInfo.topMargin = 36
+        printInfo.bottomMargin = 36
+        printInfo.leftMargin = 54
+        printInfo.rightMargin = 54
+
+        let webView = WKWebView(frame: NSRect(x: 0, y: 0, width: 595, height: 842))
+        webView.loadHTMLString(styledHTML, baseURL: nil)
+
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(800))
+            let op = webView.printOperation(with: printInfo)
+            op.showsPrintPanel = true
+            op.showsProgressPanel = true
+            op.run()
         }
         #else
+        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("\(fullTranscript.title).html")
+        try? styledHTML.write(to: tempURL, atomically: true, encoding: .utf8)
         let activityVC = UIActivityViewController(activityItems: [tempURL], applicationActivities: nil)
         if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
            let rootVC = windowScene.windows.first?.rootViewController {
             rootVC.present(activityVC, animated: true)
         }
         #endif
+    }
+
+    private func exportAsTXT() {
+        let html = fullTranscript.notuleHtml ?? fullTranscript.rawTranscription ?? ""
+        let stripped = html
+            .replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)
+            .replacingOccurrences(of: "&amp;", with: "&")
+            .replacingOccurrences(of: "&lt;", with: "<")
+            .replacingOccurrences(of: "&gt;", with: ">")
+            .replacingOccurrences(of: "&nbsp;", with: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        #if os(macOS)
+        let panel = NSSavePanel()
+        panel.nameFieldStringValue = "\(fullTranscript.title).txt"
+        panel.allowedContentTypes = [.plainText]
+        if panel.runModal() == .OK, let url = panel.url {
+            try? stripped.write(to: url, atomically: true, encoding: .utf8)
+        }
+        #else
+        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("\(fullTranscript.title).txt")
+        try? stripped.write(to: tempURL, atomically: true, encoding: .utf8)
+        let activityVC = UIActivityViewController(activityItems: [tempURL], applicationActivities: nil)
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let rootVC = windowScene.windows.first?.rootViewController {
+            rootVC.present(activityVC, animated: true)
+        }
+        #endif
+    }
+
+    private func exportAsMarkdown() {
+        let html = fullTranscript.notuleHtml ?? fullTranscript.rawTranscription ?? ""
+        let md = Self.htmlToMarkdown(html)
+
+        #if os(macOS)
+        let panel = NSSavePanel()
+        panel.nameFieldStringValue = "\(fullTranscript.title).md"
+        panel.allowedContentTypes = [.plainText]
+        if panel.runModal() == .OK, let url = panel.url {
+            try? md.write(to: url, atomically: true, encoding: .utf8)
+        }
+        #else
+        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("\(fullTranscript.title).md")
+        try? md.write(to: tempURL, atomically: true, encoding: .utf8)
+        let activityVC = UIActivityViewController(activityItems: [tempURL], applicationActivities: nil)
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let rootVC = windowScene.windows.first?.rootViewController {
+            rootVC.present(activityVC, animated: true)
+        }
+        #endif
+    }
+
+    private static func htmlToMarkdown(_ html: String) -> String {
+        var md = html
+        // Block-level replacements
+        md = md.replacingOccurrences(of: "<h1[^>]*>(.*?)</h1>", with: "\n# $1\n", options: .regularExpression)
+        md = md.replacingOccurrences(of: "<h2[^>]*>(.*?)</h2>", with: "\n## $1\n", options: .regularExpression)
+        md = md.replacingOccurrences(of: "<h3[^>]*>(.*?)</h3>", with: "\n### $1\n", options: .regularExpression)
+        md = md.replacingOccurrences(of: "<h4[^>]*>(.*?)</h4>", with: "\n#### $1\n", options: .regularExpression)
+        md = md.replacingOccurrences(of: "<strong>(.*?)</strong>", with: "**$1**", options: .regularExpression)
+        md = md.replacingOccurrences(of: "<b>(.*?)</b>", with: "**$1**", options: .regularExpression)
+        md = md.replacingOccurrences(of: "<em>(.*?)</em>", with: "*$1*", options: .regularExpression)
+        md = md.replacingOccurrences(of: "<i>(.*?)</i>", with: "*$1*", options: .regularExpression)
+        md = md.replacingOccurrences(of: "<li>(.*?)</li>", with: "- $1", options: .regularExpression)
+        md = md.replacingOccurrences(of: "<br\\s*/?>", with: "\n", options: .regularExpression)
+        md = md.replacingOccurrences(of: "<p[^>]*>(.*?)</p>", with: "\n$1\n", options: .regularExpression)
+        md = md.replacingOccurrences(of: "<blockquote[^>]*>(.*?)</blockquote>", with: "\n> $1\n", options: .regularExpression)
+        // Remove remaining tags
+        md = md.replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)
+        // Decode entities
+        md = md.replacingOccurrences(of: "&amp;", with: "&")
+        md = md.replacingOccurrences(of: "&lt;", with: "<")
+        md = md.replacingOccurrences(of: "&gt;", with: ">")
+        md = md.replacingOccurrences(of: "&nbsp;", with: " ")
+        // Collapse excessive blank lines
+        md = md.replacingOccurrences(of: "\n{3,}", with: "\n\n", options: .regularExpression)
+        return md.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private func shareContent() {

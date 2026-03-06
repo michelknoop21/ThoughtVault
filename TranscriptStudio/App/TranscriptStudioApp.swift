@@ -5,6 +5,7 @@ struct TranscriptStudioApp: App {
     @State private var authVM = AuthViewModel()
     @State private var recordingVM = RecordingViewModel()
     let calendarService = CalendarService.shared
+    let permissionManager = PermissionManager.shared
     let debugLogger = DebugLogger.shared
 
     var body: some Scene {
@@ -13,7 +14,9 @@ struct TranscriptStudioApp: App {
                 .environment(authVM)
                 .environment(recordingVM)
                 .environment(calendarService)
+                .environment(permissionManager)
                 .task {
+                    await permissionManager.checkAllPermissions()
                     AudioRecorder.cleanupOldRecordings(
                         protecting: recordingVM.offlineQueue.queuedAudioURLs
                     )
@@ -31,6 +34,7 @@ struct TranscriptStudioApp: App {
                 .environment(authVM)
                 .environment(recordingVM)
                 .environment(calendarService)
+                .environment(permissionManager)
         }
 
         MenuBarExtra {
@@ -38,6 +42,7 @@ struct TranscriptStudioApp: App {
                 .environment(authVM)
                 .environment(recordingVM)
                 .environment(calendarService)
+                .environment(permissionManager)
         } label: {
             MenuBarStatusLabel(recordingVM: recordingVM)
         }

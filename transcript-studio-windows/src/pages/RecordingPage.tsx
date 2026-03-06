@@ -415,8 +415,8 @@ function ActiveState({
       </div>
 
       {/* Waveform */}
-      <div className="card card-static" style={{ padding: "16px 20px", width: "100%", height: 80 }}>
-        <WaveformVisualizer level={audioLevel} isPaused={isPaused} height={48} />
+      <div className="card card-static" style={{ padding: "16px 20px", width: "100%" }}>
+        <WaveformVisualizer level={audioLevel} isPaused={isPaused} height={120} />
       </div>
 
       {/* Mic button — active recording */}

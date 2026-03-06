@@ -448,7 +448,11 @@ struct NotuleResultView: View {
         panel.nameFieldStringValue = "notulen.txt"
         panel.allowedContentTypes = [.plainText]
         if panel.runModal() == .OK, let url = panel.url {
-            try? decoded.write(to: url, atomically: true, encoding: .utf8)
+            do {
+                try decoded.write(to: url, atomically: true, encoding: .utf8)
+            } catch {
+                exportError = "Exporteren mislukt: \(error.localizedDescription)"
+            }
         }
     }
 

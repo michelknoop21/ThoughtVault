@@ -238,6 +238,7 @@ struct TranscriptsView: View {
                         .foregroundStyle(Color.labelTertiary)
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Zoekveld wissen")
             }
         }
         .padding(.horizontal, TS.Spacing.md)
@@ -520,6 +521,7 @@ struct TranscriptsView: View {
                         .foregroundStyle(Color.labelTertiary)
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Foutmelding sluiten")
             }
             .padding(TS.Spacing.sm)
             .background {
@@ -726,6 +728,7 @@ struct TranscriptsView: View {
                 } label: {
                     Image(systemName: "checkmark.circle")
                 }
+                .accessibilityLabel("Selectiemodus")
             }
         }
     }
@@ -915,6 +918,7 @@ struct TranscriptCardMenu: View {
         .menuStyle(.borderlessButton)
         .fixedSize()
         .padding(TS.Spacing.xs)
+        .accessibilityLabel("Meer opties")
         .confirmationDialog(
             "Transcriptie verwijderen?",
             isPresented: $showDeleteConfirm,
@@ -1078,6 +1082,7 @@ struct TranscriptDetailView: View {
                         .foregroundStyle(Color.labelTertiary)
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Foutmelding sluiten")
             }
             .padding(TS.Spacing.sm)
             .background {
@@ -1156,6 +1161,7 @@ struct TranscriptDetailView: View {
                                     .foregroundStyle(Color.brandAccent)
                             }
                             .buttonStyle(.plain)
+                            .accessibilityLabel("Tag toevoegen")
 
                             Button {
                                 newTagText = ""
@@ -1166,6 +1172,7 @@ struct TranscriptDetailView: View {
                                     .foregroundStyle(Color.labelTertiary)
                             }
                             .buttonStyle(.plain)
+                            .accessibilityLabel("Annuleren")
                         }
                         .padding(.horizontal, TS.Spacing.sm)
                         .padding(.vertical, 5)
@@ -1293,6 +1300,7 @@ struct TranscriptDetailView: View {
                     }
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Titel bewerken")
 
             Spacer()
 
@@ -1546,6 +1554,7 @@ struct TranscriptDetailView: View {
             } label: {
                 Image(systemName: "doc.on.doc")
             }
+            .accessibilityLabel("Kopieer inhoud")
         }
     }
 
@@ -1726,7 +1735,12 @@ struct TranscriptDetailView: View {
         }
         #else
         let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("\(fullTranscript.title).html")
-        try? styledHTML.write(to: tempURL, atomically: true, encoding: .utf8)
+        do {
+            try styledHTML.write(to: tempURL, atomically: true, encoding: .utf8)
+        } catch {
+            errorMessage = "Exporteren mislukt: \(error.localizedDescription)"
+            return
+        }
         let activityVC = UIActivityViewController(activityItems: [tempURL], applicationActivities: nil)
         if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
            let rootVC = windowScene.windows.first?.rootViewController {
@@ -1750,11 +1764,20 @@ struct TranscriptDetailView: View {
         panel.nameFieldStringValue = "\(fullTranscript.title).txt"
         panel.allowedContentTypes = [.plainText]
         if panel.runModal() == .OK, let url = panel.url {
-            try? stripped.write(to: url, atomically: true, encoding: .utf8)
+            do {
+                try stripped.write(to: url, atomically: true, encoding: .utf8)
+            } catch {
+                errorMessage = "Exporteren mislukt: \(error.localizedDescription)"
+            }
         }
         #else
         let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("\(fullTranscript.title).txt")
-        try? stripped.write(to: tempURL, atomically: true, encoding: .utf8)
+        do {
+            try stripped.write(to: tempURL, atomically: true, encoding: .utf8)
+        } catch {
+            errorMessage = "Exporteren mislukt: \(error.localizedDescription)"
+            return
+        }
         let activityVC = UIActivityViewController(activityItems: [tempURL], applicationActivities: nil)
         if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
            let rootVC = windowScene.windows.first?.rootViewController {
@@ -1772,11 +1795,20 @@ struct TranscriptDetailView: View {
         panel.nameFieldStringValue = "\(fullTranscript.title).md"
         panel.allowedContentTypes = [.plainText]
         if panel.runModal() == .OK, let url = panel.url {
-            try? md.write(to: url, atomically: true, encoding: .utf8)
+            do {
+                try md.write(to: url, atomically: true, encoding: .utf8)
+            } catch {
+                errorMessage = "Exporteren mislukt: \(error.localizedDescription)"
+            }
         }
         #else
         let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("\(fullTranscript.title).md")
-        try? md.write(to: tempURL, atomically: true, encoding: .utf8)
+        do {
+            try md.write(to: tempURL, atomically: true, encoding: .utf8)
+        } catch {
+            errorMessage = "Exporteren mislukt: \(error.localizedDescription)"
+            return
+        }
         let activityVC = UIActivityViewController(activityItems: [tempURL], applicationActivities: nil)
         if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
            let rootVC = windowScene.windows.first?.rootViewController {

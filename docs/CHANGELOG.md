@@ -5,6 +5,38 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2026-03-07] — API URL refactoring, admin fixes, build pipeline (v1.0.17 - v1.0.21)
+
+### v1.0.21 (2026-03-07)
+
+#### Added
+- **Build & release pipeline**: Four shell scripts in `scripts/` for automated version sync, building (DMG/MSI), uploading to server, and orchestrated release
+- **Clickable shortcuts**: `.command` files in `scripts/` for Finder double-click execution
+- **Server-side download hosting**: Nginx `/tstudio/download/` route serving static release artifacts from EC2
+- **Release manifest**: `releases.json` on server with latest version info and download URLs per platform
+- **Release documentation**: `docs/RELEASE.md` with complete pipeline guide
+
+### v1.0.20 (2026-03-07)
+
+#### Fixed
+- **API URL centralization** (macOS + Windows): Base URL now includes `/tstudio/api/` prefix, removing redundant path segments from all endpoint definitions
+- **Admin page data fetching** (Windows): Fixed user display, transcript count calculation, and feedback field mapping to match backend response format
+- **Date parsing** (macOS): Enhanced `TranscriptTask` with comprehensive ISO8601 formatters and fallback date parsers for consistent date display
+- **TaskStatus decoding** (macOS): Fixed enum decoding for snake_case backend values (`no_speech`, `processing_webhook`)
+- **Upload URL construction** (macOS): Fixed `uploadAudio` and `taskStreamInfo` URL construction after base URL refactoring
+
+#### Changed
+- **Version sync**: `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` in Xcode pbxproj, `tauri.conf.json`, and `Cargo.toml` now synced to `VERSION` file (was hardcoded at 1.0/1.0.10)
+- **Windows app types**: `AdminUser`, `AdminFeedback`, and `AdminStats` interfaces aligned with actual backend response shapes
+
+### v1.0.17 - v1.0.19 (2026-03-06 - 2026-03-07)
+
+#### Fixed
+- **App freeze after transcription error**: Reset recording state when backend returns error, preventing UI lockup
+- **422 upload error**: Fixed multipart encoding and added Content-Length header for reliable audio uploads
+
+---
+
 ## [2026-03-06] — Recording error handling, waveform visibility, cross-platform fixes (v1.0.12 - v1.0.16)
 
 ### v1.0.16 (2026-03-06)

@@ -58,9 +58,26 @@ Both clients default to `https://n8n.prezent.nl` as the backend server. The URL 
 
 ## Version
 
-Current version: **1.0.16** (tracked in `VERSION` file, auto-bumped on commits to `main`).
+Current version: **1.0.21** (tracked in `VERSION` file, auto-bumped on commits to `main`).
 
 Repository: [gitlab.prezent.nl/michelk/transcript-studio-native](https://gitlab.prezent.nl/michelk/transcript-studio-native)
+
+---
+
+## Building & Releasing
+
+Release artifacts (DMG/MSI) are built and distributed via scripts in `scripts/`:
+
+```bash
+./scripts/release.sh              # Full pipeline: sync version → build → upload
+./scripts/release.sh --no-upload  # Build without uploading
+```
+
+Or use the `.command` files in `scripts/` — double-click in Finder to run.
+
+Downloads hosted at: `https://n8n.prezent.nl/tstudio/download/`
+
+See [RELEASE.md](RELEASE.md) for the complete guide.
 
 ---
 
@@ -74,3 +91,4 @@ Repository: [gitlab.prezent.nl/michelk/transcript-studio-native](https://gitlab.
 | `API.md` | Complete backend API reference: all endpoints, auth flows, data models, rate limits |
 | `DECISIONS.md` | Architectural Decision Records (ADRs): rationale for key technical choices |
 | `CHANGELOG.md` | Version history and release notes |
+| `RELEASE.md` | Build & release pipeline: scripts, shortcuts, server-side setup |

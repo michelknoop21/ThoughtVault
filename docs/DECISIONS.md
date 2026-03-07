@@ -341,3 +341,38 @@ _Append-only log. Each entry records context, decision, and consequences._
 - Users can see upload progress even after navigating away from the recording screen.
 - Better UX for slow network conditions — users know their recordings are being processed.
 - Windows implementation now matches macOS background task visibility.
+
+---
+
+## DEC-021 — Centralized API Base URL with Path Prefix
+
+**Date:** 2026-03-07
+**Status:** Accepted
+
+**Context:** Both macOS and Windows apps had `/tstudio/api/` hardcoded in every individual endpoint path. This meant changing the API path prefix required updating 30+ endpoint definitions per platform.
+
+**Decision:** Move the `/tstudio/api/` prefix into the base URL configuration. All endpoint paths are now relative (e.g., `/transcripts` instead of `/tstudio/api/transcripts`). The default base URL is `https://n8n.prezent.nl/tstudio/api`.
+
+**Consequences:**
+- Single place to change the API path prefix on each platform.
+- Settings UI stores the full base URL including the API path.
+- Existing users who configured a custom server URL need to append `/tstudio/api` (handled by default value update).
+- macOS uses relative URL resolution (`URL(string:relativeTo:)`); Windows uses string concatenation.
+
+---
+
+## DEC-022 — Automated Build Pipeline with Ad-Hoc Signing
+
+**Date:** 2026-03-07
+**Status:** Accepted
+
+**Context:** Building release artifacts was manual and error-prone. The `VERSION` file was not synced to platform build configs (Xcode had `MARKETING_VERSION = 1.0`, Tauri had `1.0.10`). No distribution mechanism existed for delivering builds to users.
+
+**Decision:** Create four shell scripts (`sync-version.sh`, `build.sh`, `upload.sh`, `release.sh`) that automate the full release pipeline. macOS builds use ad-hoc code signing (`codesign --force --deep --sign -`) for internal distribution. Release artifacts are uploaded to EC2 and served via nginx at `/tstudio/download/`.
+
+**Consequences:**
+- Version numbers are consistent across all platform configs before every build.
+- DMG/MSI artifacts are versioned and downloadable at a stable URL.
+- Ad-hoc signed apps require "right-click → Open" on first launch (Gatekeeper bypass).
+- Full Apple Developer signing can be added later by replacing `-` with a signing identity in `build.sh`.
+- `.command` files provide clickable Finder shortcuts for non-technical release managers.

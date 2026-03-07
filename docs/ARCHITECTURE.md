@@ -1,6 +1,6 @@
 # TranscriptStudio — Architecture
 
-_Last updated: 2026-03-06 (session 3)_
+_Last updated: 2026-03-07 (session 4)_
 
 ---
 
@@ -280,6 +280,25 @@ src/
 |-----------|---------|
 | Backend | AWS EC2 GPU instance, Docker Compose |
 | Backend URL | `https://n8n.prezent.nl` (configurable) |
-| macOS app | Direct distribution / Mac App Store |
-| Windows app | MSI installer / direct download |
+| macOS app | DMG via `https://n8n.prezent.nl/tstudio/download/` |
+| Windows app | MSI via `https://n8n.prezent.nl/tstudio/download/` |
 | iOS widget | App Store (bundled with macOS app) |
+| Release manifest | `https://n8n.prezent.nl/tstudio/download/releases.json` |
+
+### Build & Release Pipeline
+
+Version is managed via the `VERSION` file (auto-bumped on commits to `main` by `.githooks/post-commit`). Release scripts in `scripts/` handle the full pipeline:
+
+```
+VERSION file (source of truth)
+       ↓
+ sync-version.sh  →  Xcode pbxproj + tauri.conf.json + Cargo.toml
+       ↓
+   build.sh       →  DMG (macOS) or MSI (Windows) in build/
+       ↓
+  upload.sh       →  scp to server + releases.json manifest update
+```
+
+**Server-side hosting:** The `n8n_nginx` container serves static files from `/home/michelk/tstudio-releases/` at `/tstudio/download/` via an `alias` directive. The volume is mounted read-only in `docker-compose.yml`.
+
+See [RELEASE.md](RELEASE.md) for detailed usage instructions and clickable Finder shortcuts.

@@ -13,6 +13,8 @@ import {
   Delete24Regular,
   Key24Regular,
   LockClosed24Regular,
+  Settings24Regular,
+  Calendar24Regular,
 } from "@fluentui/react-icons";
 import { api } from "../services/api";
 import { useAuthStore } from "../stores/authStore";
@@ -20,7 +22,7 @@ import { useToast } from "../components/ui/InfoBar";
 import { clampMenuPosition } from "../utils/menuPosition";
 import type { AdminUser, AdminFeedback, SystemHealth } from "../types";
 
-type Tab = "overview" | "users" | "invitations" | "feedback" | "health";
+type Tab = "overview" | "users" | "invitations" | "feedback" | "health" | "settings";
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "overview", label: "Overzicht", icon: <Home24Regular /> },
@@ -28,6 +30,7 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "invitations", label: "Uitnodigingen", icon: <Mail24Regular /> },
   { id: "feedback", label: "Feedback", icon: <Bug24Regular /> },
   { id: "health", label: "Fouten", icon: <HeartPulse24Regular /> },
+  { id: "settings", label: "Instellingen", icon: <Settings24Regular /> },
 ];
 
 export function AdminPage() {
@@ -52,14 +55,14 @@ export function AdminPage() {
           api.getSystemHealth(),
         ]);
         setUsers(usersData);
-        setFeedbackItems(feedbackData);
+        setFeedbackItems(Array.isArray(feedbackData) ? feedbackData : []);
         setHealth(healthData);
       } else if (activeTab === "users") {
         const data = await api.getAdminUsers();
         setUsers(data);
       } else if (activeTab === "feedback") {
         const data = await api.getFeedback();
-        setFeedbackItems(data);
+        setFeedbackItems(Array.isArray(data) ? data : []);
       } else if (activeTab === "health") {
         const data = await api.getSystemHealth();
         setHealth(data);
@@ -135,6 +138,9 @@ export function AdminPage() {
         {!isLoading && activeTab === "health" && health && (
           <HealthTab health={health} />
         )}
+        {!isLoading && activeTab === "settings" && (
+          <SettingsTab />
+        )}
       </div>
     </div>
   );
@@ -153,7 +159,7 @@ function OverviewTab({
   feedbackItems: AdminFeedback[];
   health: SystemHealth | null;
 }) {
-  const totalTranscripts = users.reduce((sum, u) => sum + u.transcripts_count, 0);
+  const totalTranscripts = users.reduce((sum, u) => sum + (u.note_count ?? u.transcripts_count ?? 0), 0);
   const totalTasks = health ? health.active_tasks + health.transcription_queue_length : 0;
   const pendingFeedback = feedbackItems.filter((f) => f.status === "new" || f.status === "open").length;
 
@@ -284,8 +290,9 @@ function UsersTab({ users, onDelete, onReload }: { users: AdminUser[]; onDelete:
     setMenuUserId(userId);
   }
 
-  function getInitial(name: string): string {
-    return name.charAt(0).toUpperCase();
+  function getInitial(name?: string): string {
+    if (!name) return "?";
+    return String(name).charAt(0).toUpperCase();
   }
 
   return (
@@ -310,6 +317,7 @@ function UsersTab({ users, onDelete, onReload }: { users: AdminUser[]; onDelete:
             placeholder="Naam"
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
+            style={{ width: "100%", minWidth: 0 }}
           />
           <input
             className="input"
@@ -317,6 +325,7 @@ function UsersTab({ users, onDelete, onReload }: { users: AdminUser[]; onDelete:
             placeholder="E-mail"
             value={newEmail}
             onChange={(e) => setNewEmail(e.target.value)}
+            style={{ width: "100%", minWidth: 0 }}
           />
           <input
             className="input"
@@ -324,16 +333,18 @@ function UsersTab({ users, onDelete, onReload }: { users: AdminUser[]; onDelete:
             placeholder="Wachtwoord"
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
+            style={{ width: "100%", minWidth: 0 }}
           />
           <select
             className="select"
             value={newRole}
             onChange={(e) => setNewRole(e.target.value as "user" | "admin")}
+            style={{ width: "100%", minWidth: 0 }}
           >
             <option value="user">User</option>
             <option value="admin">Admin</option>
           </select>
-          <div className="flex-row gap-8">
+          <div className="flex-row gap-8" style={{ flexWrap: "wrap" }}>
             <button className="btn btn-accent" onClick={handleCreate} disabled={creating}>
               {creating ? "Aanmaken..." : "Aanmaken"}
             </button>
@@ -347,16 +358,16 @@ function UsersTab({ users, onDelete, onReload }: { users: AdminUser[]; onDelete:
       {/* User cards */}
       {users.map((user) => (
         <div key={user.id} className="flex-col gap-0">
-          <div className="card flex-row gap-12" style={{ padding: "12px 14px" }}>
+          <div className="card flex-row gap-12" style={{ padding: "12px 14px", flexWrap: "wrap" }}>
             {/* Avatar */}
             <div className="user-avatar">
               {getInitial(user.name)}
             </div>
 
             {/* User info */}
-            <div className="flex-1">
-              <div className="flex-row gap-8">
-                <span className="text-body-strong">{user.name}</span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div className="flex-row gap-8" style={{ flexWrap: "wrap" }}>
+                <span className="text-body-strong">{user.name || "Onbekend"}</span>
                 <span className={`role-badge ${user.role === "admin" ? "role-badge-admin" : "role-badge-user"}`}>
                   {user.role === "admin" ? "Admin" : "User"}
                 </span>
@@ -364,7 +375,9 @@ function UsersTab({ users, onDelete, onReload }: { users: AdminUser[]; onDelete:
                   <ShieldCheckmark24Regular style={{ fontSize: 14, color: "var(--fill-system-success)" }} />
                 )}
               </div>
-              <p className="text-caption" style={{ marginTop: 2 }}>{user.email}</p>
+              <p className="text-caption" style={{ marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {user.email || user.username}
+              </p>
               {user.last_login && (
                 <p className="text-caption" style={{ marginTop: 1, color: "var(--text-tertiary)" }}>
                   Laatst actief: {new Date(user.last_login).toLocaleDateString("nl-NL")}
@@ -415,7 +428,8 @@ function UsersTab({ users, onDelete, onReload }: { users: AdminUser[]; onDelete:
           <button
             className="context-menu-item"
             onClick={() => {
-              navigator.clipboard.writeText(users.find((u) => u.id === menuUserId)?.email || "").catch(() => {});
+              const user = users.find((u) => u.id === menuUserId);
+              navigator.clipboard.writeText(user?.email || user?.username || "").catch(() => {});
               toast.show("E-mail gekopieerd", "success");
               setMenuUserId(null);
             }}
@@ -569,7 +583,7 @@ function FeedbackTab({ items, onReload }: { items: AdminFeedback[]; onReload: ()
           const cat = getCategoryClass(item.category);
           return (
             <div key={item.id} className="card feedback-card">
-              <div className="flex-row justify-between" style={{ marginBottom: 8 }}>
+              <div className="flex-row justify-between" style={{ marginBottom: 8, flexWrap: "wrap", gap: 8 }}>
                 <span className={cat.cls}>{cat.label}</span>
                 <span className={getStatusBadgeClass(item.status)}>
                   {getStatusLabel(item.status)}
@@ -580,12 +594,12 @@ function FeedbackTab({ items, onReload }: { items: AdminFeedback[]; onReload: ()
 
               <p className="feedback-description">{item.description}</p>
 
-              {item.response && (
-                <p className="feedback-response">Reactie: {item.response}</p>
+              {(item.response || item.admin_response) && (
+                <p className="feedback-response">Reactie: {item.response ?? item.admin_response}</p>
               )}
 
-              <div className="flex-row justify-between">
-                <div className="flex-row gap-6">
+              <div className="flex-row justify-between" style={{ flexWrap: "wrap", gap: 8 }}>
+                <div className="flex-row gap-6" style={{ flexWrap: "wrap" }}>
                   {(item.status === "new" || item.status === "open") && (
                     <button className="btn btn-sm" onClick={() => handleStatusChange(item.id, "in_progress")}>
                       <ArrowRight24Regular style={{ fontSize: 12 }} />
@@ -599,11 +613,11 @@ function FeedbackTab({ items, onReload }: { items: AdminFeedback[]; onReload: ()
                   )}
                 </div>
                 <p className="feedback-date">
-                  {new Date(item.created_at).toLocaleDateString("nl-NL", {
+                  {item.created_at ? new Date(item.created_at).toLocaleDateString("nl-NL", {
                     day: "numeric",
                     month: "short",
                     year: "numeric",
-                  })}
+                  }) : "-"}
                 </p>
               </div>
             </div>
@@ -620,10 +634,11 @@ function FeedbackTab({ items, onReload }: { items: AdminFeedback[]; onReload: ()
 
 function HealthTab({ health }: { health: SystemHealth }) {
   // Show system health as error-log style cards
+  const apiStatus = health.api_status || "unknown";
   const apiStatusColor =
-    health.api_status === "ok"
+    apiStatus === "ok"
       ? "var(--fill-system-success)"
-      : health.api_status === "degraded"
+      : apiStatus === "degraded"
       ? "var(--fill-system-caution)"
       : "var(--fill-system-critical)";
 
@@ -636,19 +651,19 @@ function HealthTab({ health }: { health: SystemHealth }) {
     user?: string;
   }[] = [];
 
-  if (health.api_status !== "ok") {
+  if (apiStatus !== "ok") {
     errorEntries.push({
       type: "API-Status",
-      endpoint: "/tstudio/api/health",
+      endpoint: "/health",
       timestamp: new Date().toISOString(),
-      message: `API status: ${health.api_status.toUpperCase()}. Actieve taken: ${health.active_tasks}, Wachtrij: ${health.transcription_queue_length}`,
+      message: `API status: ${apiStatus.toUpperCase()}. Actieve taken: ${health.active_tasks ?? 0}, Wachtrij: ${health.transcription_queue_length ?? 0}`,
     });
   }
 
-  if (health.transcription_queue_length > 10) {
+  if ((health.transcription_queue_length ?? 0) > 10) {
     errorEntries.push({
       type: "Queue-Warning",
-      endpoint: "/tstudio/api/transcribe",
+      endpoint: "/transcribe",
       timestamp: new Date().toISOString(),
       message: `Transcriptie wachtrij is lang: ${health.transcription_queue_length} items wachtend`,
     });
@@ -661,10 +676,10 @@ function HealthTab({ health }: { health: SystemHealth }) {
         <div className="health-dot flex-shrink-0" style={{ background: apiStatusColor }} />
         <div className="flex-1">
           <p className="text-body-strong" style={{ fontSize: 13 }}>
-            Systeem status: {health.api_status.toUpperCase()}
+            Systeem status: {apiStatus.toUpperCase()}
           </p>
           <p className="text-caption" style={{ overflowWrap: "anywhere" }}>
-            Versie {health.version} · Opslag: {health.storage_used_gb.toFixed(1)} GB · Actieve taken: {health.active_tasks} · Wachtrij: {health.transcription_queue_length}
+            Versie {health.version || "onbekend"} · Opslag: {(health.storage_used_gb ?? 0).toFixed(1)} GB · Actieve taken: {health.active_tasks ?? 0} · Wachtrij: {health.transcription_queue_length ?? 0}
           </p>
         </div>
       </div>
@@ -702,6 +717,108 @@ function HealthTab({ health }: { health: SystemHealth }) {
           </div>
         ))
       )}
+    </div>
+  );
+}
+
+/* ============================================================
+   Instellingen Tab (Microsoft 365 OAuth)
+   ============================================================ */
+
+function SettingsTab() {
+  const [ms365ClientId, setMs365ClientId] = useState("");
+  const [ms365TenantId, setMs365TenantId] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [showSaved, setShowSaved] = useState(false);
+  const toast = useToast();
+
+  useEffect(() => {
+    loadSettings();
+  }, []);
+
+  async function loadSettings() {
+    try {
+      const settings = await api.getAdminSettings();
+      setMs365ClientId(settings.ms365_client_id ?? "");
+      setMs365TenantId(settings.ms365_tenant_id ?? "");
+    } catch (err) {
+      console.error("Settings load failed:", err);
+    }
+  }
+
+  async function handleSave() {
+    setIsLoading(true);
+    setShowSaved(false);
+    try {
+      await api.updateAdminSettings(ms365ClientId || undefined, ms365TenantId || undefined);
+      setShowSaved(true);
+      setTimeout(() => setShowSaved(false), 3000);
+      toast.show("Instellingen opgeslagen", "success");
+    } catch {
+      toast.show("Opslaan mislukt", "error");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  return (
+    <div className="flex-col gap-16">
+      {/* Microsoft 365 OAuth Section */}
+      <div className="card flex-col gap-12" style={{ padding: 16 }}>
+        <div className="flex-row gap-8">
+          <Calendar24Regular style={{ fontSize: 20, color: "var(--fill-brand-primary)" }} />
+          <p className="text-body-strong">Microsoft 365 Agenda</p>
+        </div>
+
+        <p className="text-caption" style={{ color: "var(--text-secondary)" }}>
+          Configureer OAuth credentials zodat gebruikers hun Microsoft 365 agenda kunnen koppelen.
+          Maak een App Registration aan in Azure Portal met redirect URI: <code>transcript-studio://auth/callback</code>
+        </p>
+
+        {/* Client ID */}
+        <div className="flex-col gap-4">
+          <label className="form-label">Client ID</label>
+          <input
+            className="input"
+            type="text"
+            placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+            value={ms365ClientId}
+            onChange={(e) => setMs365ClientId(e.target.value)}
+            style={{ fontFamily: "monospace" }}
+          />
+        </div>
+
+        {/* Tenant ID */}
+        <div className="flex-col gap-4">
+          <label className="form-label">Tenant ID</label>
+          <input
+            className="input"
+            type="text"
+            placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+            value={ms365TenantId}
+            onChange={(e) => setMs365TenantId(e.target.value)}
+            style={{ fontFamily: "monospace" }}
+          />
+        </div>
+
+        {/* Actions */}
+        <div className="flex-row gap-8">
+          <button
+            className="btn btn-accent"
+            onClick={handleSave}
+            disabled={isLoading}
+          >
+            {isLoading ? "Opslaan..." : "Opslaan"}
+          </button>
+
+          {showSaved && (
+            <div className="flex-row gap-6" style={{ color: "var(--fill-system-success)" }}>
+              <span style={{ fontSize: 14 }}>✓</span>
+              <span className="text-caption">Opgeslagen</span>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

@@ -16,8 +16,8 @@ enum TaskStatus: String, Codable, Sendable {
     case transcribing
     case transcribed
     case queued
-    case processingWebhook
-    case generatingLocal
+    case processingWebhook = "processing_webhook"
+    case generatingLocal = "generating_local"
     case completed
     case error
 
@@ -354,13 +354,27 @@ struct Transcript: Identifiable, Codable, Hashable, Sendable {
         // Flexible date decoding: try `date` field, fall back to `created_at`
         let rawCreatedAt = try? container.decodeIfPresent(String.self, forKey: .createdAt)
         let dateString = (try? container.decodeIfPresent(String.self, forKey: .date)) ?? rawCreatedAt
-        let iso8601Formatter = ISO8601DateFormatter()
-        iso8601Formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        if let ds = dateString, let parsed = iso8601Formatter.date(from: ds) {
-            date = parsed
-        } else if let ds = dateString {
-            let fallback = ISO8601DateFormatter()
-            date = fallback.date(from: ds) ?? Date()
+
+        if let ds = dateString {
+            // Try ISO8601 with fractional seconds first
+            let isoFrac = ISO8601DateFormatter()
+            isoFrac.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            if let parsed = isoFrac.date(from: ds) {
+                date = parsed
+            } else {
+                // Try standard ISO8601 (without fractional seconds)
+                let iso = ISO8601DateFormatter()
+                if let parsed = iso.date(from: ds) {
+                    date = parsed
+                } else {
+                    // Fallback: "yyyy-MM-dd HH:mm:ss" (no T separator, no timezone)
+                    let fallback = DateFormatter()
+                    fallback.dateFormat = "yyyy-MM-dd HH:mm:ss"
+                    fallback.locale = Locale(identifier: "en_US_POSIX")
+                    fallback.timeZone = TimeZone(identifier: "UTC")
+                    date = fallback.date(from: ds) ?? Date()
+                }
+            }
         } else {
             date = Date()
         }

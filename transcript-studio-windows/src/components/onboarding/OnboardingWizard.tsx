@@ -19,7 +19,7 @@ const STEPS = ["Welkom", "Server", "Microfoon", "Agenda", "Klaar"];
 
 export function OnboardingWizard() {
   const [step, setStep] = useState<Step>(0);
-  const [serverUrl, setServerUrl] = useState("https://n8n.prezent.nl");
+  const [serverUrl, setServerUrl] = useState("https://n8n.prezent.nl/tstudio/api");
   const settings = useSettingsStore();
 
   function handleNext() {
@@ -110,7 +110,7 @@ export function OnboardingWizard() {
                   type="url"
                   value={serverUrl}
                   onChange={(e) => setServerUrl(e.target.value)}
-                  placeholder="https://n8n.prezent.nl"
+                  placeholder="https://n8n.prezent.nl/tstudio/api"
                   style={{
                     width: "100%",
                     padding: "7px 10px",

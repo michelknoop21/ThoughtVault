@@ -161,25 +161,27 @@ struct TranscriptCard: View {
     // MARK: - Formatting Helpers
 
     private func formattedDate(_ dateString: String) -> String {
-        let iso = ISO8601DateFormatter()
-        iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        if let date = iso.date(from: dateString) {
-            let df = DateFormatter()
-            df.locale = Locale(identifier: "nl_NL")
-            df.dateStyle = .medium
-            df.timeStyle = .short
-            return df.string(from: date)
-        }
-        // Fallback: strip seconds precision
-        let iso2 = ISO8601DateFormatter()
-        if let date = iso2.date(from: dateString) {
-            let df = DateFormatter()
-            df.locale = Locale(identifier: "nl_NL")
-            df.dateStyle = .medium
-            df.timeStyle = .short
-            return df.string(from: date)
-        }
-        return dateString
+        let parsedDate: Date? = {
+            // Try ISO8601 with fractional seconds
+            let isoFrac = ISO8601DateFormatter()
+            isoFrac.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            if let d = isoFrac.date(from: dateString) { return d }
+            // Try standard ISO8601
+            let iso = ISO8601DateFormatter()
+            if let d = iso.date(from: dateString) { return d }
+            // Fallback: "yyyy-MM-dd HH:mm:ss"
+            let fallback = DateFormatter()
+            fallback.dateFormat = "yyyy-MM-dd HH:mm:ss"
+            fallback.locale = Locale(identifier: "en_US_POSIX")
+            fallback.timeZone = TimeZone(identifier: "UTC")
+            return fallback.date(from: dateString)
+        }()
+        guard let date = parsedDate else { return dateString }
+        let df = DateFormatter()
+        df.locale = Locale(identifier: "nl_NL")
+        df.dateStyle = .medium
+        df.timeStyle = .short
+        return df.string(from: date)
     }
 
     private var transcriptPreview: String? {

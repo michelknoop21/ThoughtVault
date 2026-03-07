@@ -21,7 +21,7 @@ struct SettingsView: View {
 
     // MARK: - AppStorage
 
-    @AppStorage("serverURL") private var serverURL: String = "https://n8n.prezent.nl"
+    @AppStorage("serverURL") private var serverURL: String = "https://n8n.prezent.nl/tstudio/api"
     @AppStorage("defaultProfile") private var defaultProfile: String = ""
     @AppStorage("preferOnDeviceTranscription") private var preferOnDeviceTranscription: Bool = false
     @AppStorage("biometricLoginEnabled") private var biometricLoginEnabled: Bool = false
@@ -93,7 +93,7 @@ struct SettingsView: View {
                     .foregroundStyle(Color.labelSecondary)
 
                 HStack {
-                    TextField("https://n8n.prezent.nl", text: $serverURLInput)
+                    TextField("https://n8n.prezent.nl/tstudio/api", text: $serverURLInput)
                         .textFieldStyle(.plain)
                         .font(TS.Font.body)
                         .autocorrectionDisabled()

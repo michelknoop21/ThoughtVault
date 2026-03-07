@@ -46,7 +46,14 @@ export function LoginPage() {
         setTempToken(response.temp_token);
         setView("2fa");
       } else {
-        const userWithRole = response.user ?? decodeUserFromToken(response.token);
+        const userWithRole = {
+          id: response.user_id,
+          email: email,
+          name: email.split("@")[0],
+          role: response.role,
+          is_active: true,
+          created_at: new Date().toISOString(),
+        };
         setToken(response.token);
         setUser(userWithRole);
         navigate("/", { replace: true });
@@ -65,7 +72,14 @@ export function LoginPage() {
     setError(null);
     try {
       const response = await api.verify2FA(email, tempToken, twoFactorCode);
-      const userWithRole = response.user ?? decodeUserFromToken(response.token);
+      const userWithRole = {
+        id: response.user_id,
+        email: email,
+        name: email.split("@")[0],
+        role: response.role,
+        is_active: true,
+        created_at: new Date().toISOString(),
+      };
       setToken(response.token);
       setUser(userWithRole);
       navigate("/", { replace: true });
@@ -388,21 +402,4 @@ function FormField({ label, children }: { label: string; children: React.ReactNo
       {children}
     </div>
   );
-}
-
-/** Decode user info from JWT payload as fallback when backend omits role field */
-function decodeUserFromToken(token: string) {
-  try {
-    const payload = JSON.parse(atob(token.split(".")[1]));
-    return {
-      id: payload.sub || payload.user_id || "",
-      email: payload.email || "",
-      name: payload.name || payload.email || "",
-      role: payload.role || "user",
-      is_active: true,
-      created_at: new Date().toISOString(),
-    };
-  } catch {
-    return { id: "", email: "", name: "", role: "user" as const, is_active: true, created_at: "" };
-  }
 }

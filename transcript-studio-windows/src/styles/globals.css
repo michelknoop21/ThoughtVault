@@ -1927,6 +1927,65 @@
   border-top-right-radius: 0;
 }
 
+/* ============================================================
+   Responsive: Admin page improvements
+   ============================================================ */
+
+/* Admin grid - adaptive columns based on container width */
+@media (min-width: 1280px) {
+  .grid-2 {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (max-width: 900px) {
+  .grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* User cards - truncate long emails on compact */
+@media (max-width: 600px) {
+  .user-avatar {
+    width: 32px;
+    height: 32px;
+    font-size: var(--font-micro);
+  }
+
+  .role-badge {
+    font-size: 9px;
+    padding: 1px 6px;
+  }
+}
+
+/* Invite code - prevent overflow */
+.invite-code {
+  overflow-wrap: break-word;
+  word-break: break-all;
+  min-width: 0;
+}
+
+/* Context menu - ensure it stays within viewport */
+.context-menu {
+  max-width: 280px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+/* Form inputs - ensure they don't overflow flex containers */
+.input, .select {
+  min-width: 0;
+  flex-shrink: 1;
+}
+
+/* Admin user card - ensure text doesn't cause overflow */
+.text-caption {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
 /* Bulk action bar (e.g. transcripts bulk mode) */
 .bulk-action-bar {
   padding: 6px 14px;

@@ -12,6 +12,8 @@ import type {
   TwoFAVerifyResponse,
   FeedbackSubmission,
   UserFeedback,
+  PaginatedResponse,
+  ProfilesResponse,
 } from "../types";
 
 /** Extract a human-readable message from any thrown value. */
@@ -44,6 +46,23 @@ function safeOptionalString(...vals: unknown[]): string | undefined {
   return undefined;
 }
 
+/** Safely extract an array from various possible response formats. */
+function safeArray<T>(data: unknown): T[] {
+  if (Array.isArray(data)) return data as T[];
+  if (data && typeof data === "object") {
+    const obj = data as Record<string, unknown>;
+    // Check for common wrapper formats
+    if (Array.isArray(obj.items)) return obj.items as T[];
+    if (Array.isArray(obj.data)) return obj.data as T[];
+    if (Array.isArray(obj.results)) return obj.results as T[];
+    if (Array.isArray(obj.profiles)) return obj.profiles as T[];
+    if (Array.isArray(obj.users)) return obj.users as T[];
+    if (Array.isArray(obj.transcripts)) return obj.transcripts as T[];
+    if (Array.isArray(obj.tags)) return obj.tags as T[];
+  }
+  return [];
+}
+
 /** Normalize a backend transcript object to our Transcript type. */
 function mapTranscript(raw: unknown): Transcript {
   const r = raw as Record<string, unknown>;
@@ -74,7 +93,7 @@ class APIService {
         // fall through
       }
     }
-    return "https://n8n.prezent.nl";
+    return "https://n8n.prezent.nl/tstudio/api";
   }
 
   private get token(): string | null {
@@ -144,14 +163,14 @@ class APIService {
 
   // Auth
   async login(email: string, password: string): Promise<LoginResponse> {
-    return this.request<LoginResponse>("POST", "/tstudio/api/auth/login", {
+    return this.request<LoginResponse>("POST", "/auth/login", {
       username: email,
       password,
     });
   }
 
   async verify2FA(username: string, tempToken: string, code: string): Promise<LoginResponse> {
-    return this.request<LoginResponse>("POST", "/tstudio/api/auth/login/verify-2fa", {
+    return this.request<LoginResponse>("POST", "/auth/login/verify-2fa", {
       username,
       temp_token: tempToken,
       code,
@@ -160,7 +179,7 @@ class APIService {
 
   async logout(): Promise<void> {
     try {
-      await this.request<void>("POST", "/tstudio/api/auth/logout");
+      await this.request<void>("POST", "/auth/logout");
     } catch {
       // ignore logout errors
     }
@@ -181,65 +200,62 @@ class APIService {
     query.set("page", "1");
     query.set("sort_by", "newest");
 
-    const path = `/tstudio/api/transcripts${query.toString() ? "?" + query : ""}`;
+    const path = `/transcripts${query.toString() ? "?" + query : ""}`;
     const data = await this.request<unknown>("GET", path);
-    const raw: unknown[] = Array.isArray(data)
-      ? data
-      : (data as Record<string, unknown>).items as unknown[]
-        || (data as Record<string, unknown>).transcripts as unknown[]
-        || [];
-    return raw.map(mapTranscript);
+    return safeArray<unknown>(data).map(mapTranscript);
   }
 
   async getTranscript(id: string): Promise<Transcript> {
-    const data = await this.request<unknown>("GET", `/tstudio/api/transcripts/${id}`);
+    const data = await this.request<unknown>("GET", `/transcripts/${id}`);
     return mapTranscript(data);
   }
 
   async updateTranscript(id: string, updates: Partial<Transcript>): Promise<Transcript> {
-    return this.request<Transcript>("PUT", `/tstudio/api/transcripts/${id}`, updates);
+    return this.request<Transcript>("PUT", `/transcripts/${id}`, updates);
   }
 
   async deleteTranscript(id: string): Promise<void> {
-    return this.request<void>("DELETE", `/tstudio/api/transcripts/${id}`);
+    return this.request<void>("DELETE", `/transcripts/${id}`);
   }
 
   async updateNotuleHTML(id: string, notuleHtml: string): Promise<Transcript> {
     // Get the linked note ID for this transcript
-    const notesData = await this.request<{ items?: Array<{ id: string }> }>(
+    const notesData = await this.request<{ items?: Array<{ id: string }> } | Array<{ id: string }>>(
       "GET",
-      `/tstudio/api/transcripts/${id}/notes`
+      `/transcripts/${id}/notes`
     );
-    const noteId = notesData.items?.[0]?.id;
+    // Handle both array and wrapped response formats
+    const items = Array.isArray(notesData) ? notesData : notesData.items;
+    const noteId = items?.[0]?.id;
 
     if (noteId) {
       // Update existing note via notes endpoint
-      await this.request<unknown>("PUT", `/tstudio/api/notes/${noteId}`, {
+      await this.request<unknown>("PUT", `/notes/${noteId}`, {
         html: notuleHtml,
       });
     } else {
       // No linked note exists — create one
-      await this.request<unknown>("POST", `/tstudio/api/notes`, {
+      await this.request<unknown>("POST", `/notes`, {
         html: notuleHtml,
         source_file: `notule_${id}`,
       });
     }
 
     // Return updated transcript
-    const data = await this.request<unknown>("GET", `/tstudio/api/transcripts/${id}`);
+    const data = await this.request<unknown>("GET", `/transcripts/${id}`);
     return mapTranscript(data);
   }
 
   async regenerateNotule(id: string, profileId: string): Promise<{ task_id: string }> {
     return this.request<{ task_id: string }>(
       "POST",
-      `/tstudio/api/transcripts/${id}/regenerate`,
+      `/transcripts/${id}/regenerate`,
       { profile_id: profileId }
     );
   }
 
   getStreamUrl(taskId: string): string {
-    return `${this.baseUrl}/tstudio/api/task/${taskId}/stream`;
+    return `${this.baseUrl}/task/${taskId}/stream`;
   }
 
   // Upload
@@ -256,7 +272,7 @@ class APIService {
     const response = await invoke<{ status: number; body: string }>(
       "http_upload_file",
       {
-        url: `${this.baseUrl}/tstudio/api/transcribe`,
+        url: `${this.baseUrl}/transcribe`,
         filePath,
         fieldName: "file",
         additionalFields: { profile_id: profileId, mode },
@@ -297,37 +313,47 @@ class APIService {
   // Profiles
   async getProfiles(): Promise<Profile[]> {
     try {
-      const response = await this.request<{ profiles: Profile[] }>("GET", "/tstudio/api/profiles/accessible");
-      return response.profiles ?? [];
+      const data = await this.request<Profile[] | ProfilesResponse>("GET", "/profiles/accessible");
+      return safeArray<Profile>(data);
     } catch {
       return [];
     }
   }
 
   async createProfile(profile: Omit<Profile, "id">): Promise<Profile> {
-    const response = await this.request<{ success: boolean; profile: Profile }>("POST", "/tstudio/api/profiles/me", profile);
-    return response.profile;
+    const response = await this.request<{ success: boolean; profile: Profile } | { id: string } & Partial<Profile>>(
+      "POST",
+      "/profiles/me",
+      profile
+    );
+    // Handle both { success, profile } and { id, ...profile } formats
+    if ("profile" in response && response.profile) return response.profile;
+    return response as Profile;
   }
 
   async updateProfile(id: string, updates: Partial<Profile>): Promise<Profile> {
-    await this.request<{ success: boolean }>("PUT", `/tstudio/api/profiles/me/${id}`, updates);
+    await this.request<{ success: boolean }>("PUT", `/profiles/me/${id}`, updates);
     return { id, ...updates } as Profile;
   }
 
   async deleteProfile(id: string): Promise<void> {
-    return this.request<void>("DELETE", `/tstudio/api/profiles/me/${id}`);
+    return this.request<void>("DELETE", `/profiles/me/${id}`);
   }
 
   // Admin
   async getAdminUsers(): Promise<AdminUser[]> {
     try {
-      const data = await this.request<AdminUser[] | { items?: AdminUser[]; users?: AdminUser[] }>(
+      // Backend returns { "items": [...] }
+      const data = await this.request<{ items?: AdminUser[] }>(
         "GET",
-        "/tstudio/api/admin/users"
+        "/admin/users"
       );
-      if (Array.isArray(data)) return data;
-      return data.items || data.users || [];
-    } catch {
+      console.log("[API] getAdminUsers response:", data);
+      const users = safeArray<AdminUser>(data);
+      console.log("[API] getAdminUsers parsed:", users);
+      return users;
+    } catch (err) {
+      console.error("[API] getAdminUsers error:", err);
       return [];
     }
   }
@@ -338,7 +364,7 @@ class APIService {
     name: string,
     role: "user" | "admin"
   ): Promise<AdminUser> {
-    return this.request<AdminUser>("POST", "/tstudio/api/admin/users", {
+    return this.request<AdminUser>("POST", "/admin/users", {
       username: email,
       password,
       name,
@@ -347,68 +373,129 @@ class APIService {
   }
 
   async deleteAdminUser(userId: string): Promise<void> {
-    return this.request<void>("DELETE", `/tstudio/api/admin/users/${userId}`);
+    return this.request<void>("DELETE", `/admin/users/${userId}`);
   }
 
   async resetUserPassword(userId: string, password: string): Promise<void> {
-    return this.request<void>("POST", `/tstudio/api/admin/users/${userId}/password`, {
+    return this.request<void>("POST", `/admin/users/${userId}/password`, {
       password,
     });
   }
 
   async resetUser2FA(userId: string): Promise<void> {
-    return this.request<void>("POST", `/tstudio/api/admin/users/${userId}/2fa/reset`);
+    return this.request<void>("POST", `/admin/users/${userId}/2fa/reset`);
   }
 
   async getFeedback(): Promise<AdminFeedback[]> {
     try {
-      return await this.request<AdminFeedback[]>("GET", "/tstudio/api/admin/feedback");
+      const data = await this.request<AdminFeedback[] | PaginatedResponse<AdminFeedback>>(
+        "GET",
+        "/admin/feedback"
+      );
+      return safeArray<AdminFeedback>(data);
     } catch {
       return [];
     }
   }
 
   async updateFeedback(id: string, status: string, response?: string): Promise<void> {
-    return this.request<void>("PUT", `/tstudio/api/admin/feedback/${id}`, {
+    return this.request<void>("PUT", `/admin/feedback/${id}`, {
       status,
       ...(response ? { response } : {}),
     });
   }
 
   async deleteFeedback(id: string): Promise<void> {
-    return this.request<void>("DELETE", `/tstudio/api/admin/feedback/${id}`);
+    return this.request<void>("DELETE", `/admin/feedback/${id}`);
   }
 
   async getFeedbackPendingCount(): Promise<number> {
-    const data = await this.request<{ count: number }>("GET", "/tstudio/api/admin/feedback/pending-count");
-    return data.count;
+    try {
+      const data = await this.request<unknown>("GET", "/admin/feedback/pending-count");
+      if (data && typeof data === "object") {
+        const obj = data as Record<string, unknown>;
+        // Backend sends pending_count
+        if (typeof obj.pending_count === "number") return obj.pending_count;
+        if (typeof obj.count === "number") return obj.count;
+        if (typeof obj.pending === "number") return obj.pending;
+      }
+      return 0;
+    } catch {
+      return 0;
+    }
   }
 
   async getMySettings(): Promise<{ ms365_client_id?: string; ms365_tenant_id?: string }> {
-    return this.request<{ ms365_client_id?: string; ms365_tenant_id?: string }>(
-      "GET",
-      "/tstudio/api/settings/me"
-    );
+    try {
+      return await this.request<{ ms365_client_id?: string; ms365_tenant_id?: string }>(
+        "GET",
+        "/settings/me"
+      ) ?? {};
+    } catch {
+      return {};
+    }
+  }
+
+  async getAdminSettings(): Promise<{ ms365_client_id?: string; ms365_tenant_id?: string }> {
+    try {
+      return await this.request<{ ms365_client_id?: string; ms365_tenant_id?: string }>(
+        "GET",
+        "/admin/settings"
+      ) ?? {};
+    } catch {
+      return {};
+    }
+  }
+
+  async updateAdminSettings(ms365ClientId?: string, ms365TenantId?: string): Promise<void> {
+    const payload: Record<string, string> = {};
+    if (ms365ClientId) payload["ms365_client_id"] = ms365ClientId;
+    if (ms365TenantId) payload["ms365_tenant_id"] = ms365TenantId;
+    await this.request<void>("POST", "/admin/settings", payload);
   }
 
   async getSystemHealth(): Promise<SystemHealth> {
-    return this.request<SystemHealth>("GET", "/tstudio/api/health");
+    try {
+      return await this.request<SystemHealth>("GET", "/health");
+    } catch {
+      return {
+        api_status: "down",
+        transcription_queue_length: 0,
+        active_tasks: 0,
+        storage_used_gb: 0,
+        version: "unknown",
+      };
+    }
   }
 
   async getDashboardMetrics(days: number = 7): Promise<Record<string, unknown>> {
-    return this.request<Record<string, unknown>>("GET", `/tstudio/api/admin/dashboard/metrics?days=${days}`);
+    try {
+      return await this.request<Record<string, unknown>>("GET", `/admin/dashboard/metrics?days=${days}`);
+    } catch {
+      return {};
+    }
   }
 
   async getAdminErrors(limit: number = 50): Promise<unknown[]> {
-    return this.request<unknown[]>("GET", `/tstudio/api/admin/errors?limit=${limit}`);
+    try {
+      const data = await this.request<unknown[] | PaginatedResponse<unknown>>("GET", `/admin/errors?limit=${limit}`);
+      return safeArray<unknown>(data);
+    } catch {
+      return [];
+    }
   }
 
   async getAdminActivity(limit: number = 50): Promise<unknown[]> {
-    return this.request<unknown[]>("GET", `/tstudio/api/admin/activity?limit=${limit}`);
+    try {
+      const data = await this.request<unknown[] | PaginatedResponse<unknown>>("GET", `/admin/activity?limit=${limit}`);
+      return safeArray<unknown>(data);
+    } catch {
+      return [];
+    }
   }
 
   async generateInviteCode(maxUses: number = 1, expiresHours: number = 48): Promise<InviteCode> {
-    return this.request<InviteCode>("POST", "/tstudio/api/admin/invites", {
+    return this.request<InviteCode>("POST", "/admin/invites", {
       max_uses: maxUses,
       expires_hours: expiresHours,
     });
@@ -416,19 +503,20 @@ class APIService {
 
   async getInviteCodes(): Promise<InviteCode[]> {
     try {
-      return await this.request<InviteCode[]>("GET", "/tstudio/api/admin/invites");
+      const data = await this.request<InviteCode[] | PaginatedResponse<InviteCode>>("GET", "/admin/invites");
+      return safeArray<InviteCode>(data);
     } catch {
       return [];
     }
   }
 
   async deleteInviteCode(code: string): Promise<void> {
-    return this.request<void>("DELETE", `/tstudio/api/admin/invites/${code}`);
+    return this.request<void>("DELETE", `/admin/invites/${code}`);
   }
 
   // Auth — password change
   async changePassword(currentPassword: string, newPassword: string): Promise<void> {
-    return this.request<void>("POST", "/tstudio/api/auth/change-password", {
+    return this.request<void>("POST", "/auth/change-password", {
       current_password: currentPassword,
       new_password: newPassword,
     });
@@ -436,39 +524,39 @@ class APIService {
 
   // Auth — 2FA management
   async get2FAStatus(): Promise<TwoFAStatus> {
-    return this.request<TwoFAStatus>("GET", "/tstudio/api/auth/2fa/status");
+    return this.request<TwoFAStatus>("GET", "/auth/2fa/status");
   }
 
   async setup2FA(): Promise<TwoFASetupResponse> {
-    return this.request<TwoFASetupResponse>("POST", "/tstudio/api/auth/2fa/setup");
+    return this.request<TwoFASetupResponse>("POST", "/auth/2fa/setup");
   }
 
   async verify2FASetup(code: string): Promise<TwoFAVerifyResponse> {
-    return this.request<TwoFAVerifyResponse>("POST", "/tstudio/api/auth/2fa/verify-setup", { code });
+    return this.request<TwoFAVerifyResponse>("POST", "/auth/2fa/verify-setup", { code });
   }
 
   async disable2FA(password: string): Promise<void> {
-    return this.request<void>("POST", "/tstudio/api/auth/2fa/disable", { password });
+    return this.request<void>("POST", "/auth/2fa/disable", { password });
   }
 
   async regenerateBackupCodes(): Promise<TwoFAVerifyResponse> {
-    return this.request<TwoFAVerifyResponse>("POST", "/tstudio/api/auth/2fa/regenerate-backup-codes");
+    return this.request<TwoFAVerifyResponse>("POST", "/auth/2fa/regenerate-backup-codes");
   }
 
   // Auth — password reset
   async requestPasswordReset(email: string): Promise<void> {
-    return this.request<void>("POST", "/tstudio/api/auth/password-reset/request", { username: email });
+    return this.request<void>("POST", "/auth/password-reset/request", { username: email });
   }
 
   async verifyPasswordReset(email: string, code: string): Promise<{ reset_token: string }> {
-    return this.request<{ reset_token: string }>("POST", "/tstudio/api/auth/password-reset/verify", {
+    return this.request<{ reset_token: string }>("POST", "/auth/password-reset/verify", {
       username: email,
       code,
     });
   }
 
   async completePasswordReset(resetToken: string, newPassword: string): Promise<void> {
-    return this.request<void>("POST", "/tstudio/api/auth/password-reset/complete", {
+    return this.request<void>("POST", "/auth/password-reset/complete", {
       reset_token: resetToken,
       new_password: newPassword,
     });
@@ -476,52 +564,62 @@ class APIService {
 
   // Profiles — visibility, public, copy
   async setProfileVisibility(id: string, isPublic: boolean): Promise<void> {
-    return this.request<void>("PATCH", `/tstudio/api/profiles/me/${id}/visibility`, { is_public: isPublic });
+    return this.request<void>("PATCH", `/profiles/me/${id}/visibility`, { is_public: isPublic });
   }
 
   async getPublicProfiles(search?: string): Promise<Profile[]> {
-    const query = search ? `?search=${encodeURIComponent(search)}` : "";
-    const data = await this.request<{ profiles?: Profile[] } | Profile[]>("GET", `/tstudio/api/profiles/public${query}`);
-    return Array.isArray(data) ? data : data.profiles ?? [];
+    try {
+      const query = search ? `?search=${encodeURIComponent(search)}` : "";
+      const data = await this.request<Profile[] | ProfilesResponse>("GET", `/profiles/public${query}`);
+      return safeArray<Profile>(data);
+    } catch {
+      return [];
+    }
   }
 
   async copyProfile(id: string): Promise<Profile> {
-    const data = await this.request<{ profile?: Profile } & Profile>("POST", `/tstudio/api/profiles/${id}/copy`);
+    const data = await this.request<{ profile?: Profile } & Profile>("POST", `/profiles/${id}/copy`);
     return data.profile ?? data;
   }
 
   // Transcripts — tags
   async getAllTags(): Promise<string[]> {
-    const data = await this.request<{ tags?: string[] } | string[]>("GET", "/tstudio/api/transcripts/tags");
-    return Array.isArray(data) ? data : data.tags ?? [];
+    try {
+      const data = await this.request<{ tags?: string[] } | string[]>("GET", "/transcripts/tags");
+      if (Array.isArray(data)) return data as string[];
+      return (data?.tags ?? []) as string[];
+    } catch {
+      return [];
+    }
   }
 
   async updateTranscriptTags(id: string, add: string[], remove: string[]): Promise<void> {
-    return this.request<void>("PATCH", `/tstudio/api/transcripts/${id}/tags`, { add, remove });
+    return this.request<void>("PATCH", `/transcripts/${id}/tags`, { add, remove });
   }
 
   // Transcripts — bulk operations
   async bulkDeleteTranscripts(ids: string[]): Promise<void> {
-    return this.request<void>("POST", "/tstudio/api/transcripts/bulk-delete", { ids });
+    return this.request<void>("POST", "/transcripts/bulk-delete", { ids });
   }
 
   async bulkExportTranscripts(ids: string[], format: "txt" | "docx" = "txt"): Promise<Blob> {
-    const response = await this.request<unknown>("POST", `/tstudio/api/transcripts/bulk-export?format=${format}`, { ids });
+    const response = await this.request<unknown>("POST", `/transcripts/bulk-export?format=${format}`, { ids });
     return response as unknown as Blob;
   }
 
   async bulkAddTags(ids: string[], tags: string[]): Promise<void> {
-    return this.request<void>("POST", "/tstudio/api/transcripts/bulk-tags", { ids, tags, action: "add" });
+    return this.request<void>("POST", "/transcripts/bulk-tags", { ids, tags, action: "add" });
   }
 
   // Feedback (user-facing)
   async submitFeedback(feedback: FeedbackSubmission): Promise<void> {
-    return this.request<void>("POST", "/tstudio/api/feedback", feedback);
+    return this.request<void>("POST", "/feedback", feedback);
   }
 
   async getMyFeedback(): Promise<UserFeedback[]> {
     try {
-      return await this.request<UserFeedback[]>("GET", "/tstudio/api/feedback/my");
+      const data = await this.request<UserFeedback[] | PaginatedResponse<UserFeedback>>("GET", "/feedback/my");
+      return safeArray<UserFeedback>(data);
     } catch {
       return [];
     }
@@ -529,21 +627,25 @@ class APIService {
 
   async getUnreadFeedbackCount(): Promise<number> {
     try {
-      const data = await this.request<{ count: number }>("GET", "/tstudio/api/feedback/unread-count");
-      return data.count;
+      const data = await this.request<unknown>("GET", "/feedback/unread-count");
+      if (data && typeof data === "object") {
+        const obj = data as Record<string, unknown>;
+        return typeof obj.count === "number" ? obj.count : typeof obj.unread === "number" ? obj.unread : 0;
+      }
+      return 0;
     } catch {
       return 0;
     }
   }
 
   async markFeedbackRead(id: string): Promise<void> {
-    return this.request<void>("POST", `/tstudio/api/feedback/${id}/mark-read`);
+    return this.request<void>("POST", `/feedback/${id}/mark-read`);
   }
 
   // Version
-  async checkVersion(): Promise<{ minimum_version: string; version: string } | null> {
+  async checkVersion(): Promise<{ minimum_version: string; current_version: string; is_supported?: boolean } | null> {
     try {
-      return await this.request<{ minimum_version: string; version: string }>("GET", `/tstudio/api/version`);
+      return await this.request<{ minimum_version: string; current_version: string; is_supported?: boolean }>("GET", `/version`);
     } catch {
       return null;
     }

@@ -184,6 +184,7 @@ function ProtectedRoutes() {
 }
 
 function UpdateRequiredOverlay({ currentVersion, minimumVersion }: { currentVersion: string; minimumVersion: string }) {
+  const serverUrl = useSettingsStore((s) => s.server_url);
   return (
     <div style={{
       position: "fixed", inset: 0, zIndex: 9999,
@@ -201,7 +202,7 @@ function UpdateRequiredOverlay({ currentVersion, minimumVersion }: { currentVers
           </p>
         </div>
         <a
-          href="https://n8n.prezent.nl/tstudio/download"
+          href={`${serverUrl.replace(/\/api\/?$/, "")}/download`}
           target="_blank"
           rel="noopener noreferrer"
           className="btn btn-accent"

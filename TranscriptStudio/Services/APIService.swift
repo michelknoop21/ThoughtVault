@@ -135,7 +135,7 @@ actor APIService {
 
     private func serverURL() -> String {
         // Read from UserDefaults (AppStorage key "serverURL")
-        return UserDefaults.standard.string(forKey: "serverURL") ?? "https://n8n.prezent.nl"
+        return UserDefaults.standard.string(forKey: "serverURL") ?? "https://n8n.prezent.nl/tstudio/api"
     }
 
     private func authToken() -> String? {
@@ -143,7 +143,9 @@ actor APIService {
     }
 
     private func validatedBaseURL() throws -> URL {
-        let raw = serverURL()
+        var raw = serverURL()
+        // Ensure trailing slash for correct relative URL resolution
+        if !raw.hasSuffix("/") { raw += "/" }
         guard let url = URL(string: raw) else {
             throw URLValidationError.invalidURL
         }
@@ -163,7 +165,9 @@ actor APIService {
         authenticated: Bool = true
     ) throws -> URLRequest {
         let base = try validatedBaseURL()
-        guard let url = URL(string: path, relativeTo: base) else {
+        // Strip leading slash so URL resolves relative to base path (not root)
+        let relativePath = path.hasPrefix("/") ? String(path.dropFirst()) : path
+        guard let url = URL(string: relativePath, relativeTo: base) else {
             throw URLValidationError.invalidURL
         }
 
@@ -257,19 +261,19 @@ actor APIService {
 
     func login(email: String, password: String) async throws -> LoginResponse {
         let body = try JSONEncoder().encode(["username": email, "password": password])
-        let req = try request(path: "/tstudio/api/auth/login", method: "POST", body: body, authenticated: false)
+        let req = try request(path: "/auth/login", method: "POST", body: body, authenticated: false)
         return try await perform(req)
     }
 
     func verifyTwoFactor(username: String, tempToken: String, code: String) async throws -> LoginResponse {
         let payload = ["username": username, "temp_token": tempToken, "code": code]
         let body = try JSONEncoder().encode(payload)
-        let req = try request(path: "/tstudio/api/auth/login/verify-2fa", method: "POST", body: body, authenticated: false)
+        let req = try request(path: "/auth/login/verify-2fa", method: "POST", body: body, authenticated: false)
         return try await perform(req)
     }
 
     func getCurrentUser() async throws -> TSUserInfo {
-        let req = try request(path: "/tstudio/api/auth/me", method: "GET")
+        let req = try request(path: "/auth/me", method: "GET")
         return try await perform(req)
     }
 
@@ -285,40 +289,40 @@ actor APIService {
             "current_password": currentPassword,
             "new_password": newPassword
         ])
-        let req = try request(path: "/tstudio/api/auth/change-password", method: "POST", body: body)
+        let req = try request(path: "/auth/change-password", method: "POST", body: body)
         try await performVoid(req)
     }
 
     func get2FAStatus() async throws -> TwoFAStatus {
-        let req = try request(path: "/tstudio/api/auth/2fa/status", method: "GET")
+        let req = try request(path: "/auth/2fa/status", method: "GET")
         return try await perform(req)
     }
 
     func setup2FA() async throws -> TwoFASetupResponse {
-        let req = try request(path: "/tstudio/api/auth/2fa/setup", method: "POST")
+        let req = try request(path: "/auth/2fa/setup", method: "POST")
         return try await perform(req)
     }
 
     func verify2FASetup(code: String) async throws -> TwoFAVerifyResponse {
         let body = try JSONEncoder().encode(["code": code])
-        let req = try request(path: "/tstudio/api/auth/2fa/verify-setup", method: "POST", body: body)
+        let req = try request(path: "/auth/2fa/verify-setup", method: "POST", body: body)
         return try await perform(req)
     }
 
     func disable2FA(password: String) async throws {
         let body = try JSONEncoder().encode(["password": password])
-        let req = try request(path: "/tstudio/api/auth/2fa/disable", method: "POST", body: body)
+        let req = try request(path: "/auth/2fa/disable", method: "POST", body: body)
         try await performVoid(req)
     }
 
     func regenerateBackupCodes() async throws -> TwoFAVerifyResponse {
-        let req = try request(path: "/tstudio/api/auth/2fa/regenerate-backup-codes", method: "POST")
+        let req = try request(path: "/auth/2fa/regenerate-backup-codes", method: "POST")
         return try await perform(req)
     }
 
     func updateUserName(_ name: String) async throws {
         let body = try JSONEncoder().encode(["name": name])
-        let req = try request(path: "/tstudio/api/auth/update-name", method: "POST", body: body)
+        let req = try request(path: "/auth/update-name", method: "POST", body: body)
         try await performVoid(req)
     }
 
@@ -338,7 +342,7 @@ actor APIService {
         }
 
         let base = try validatedBaseURL()
-        guard let url = URL(string: "/tstudio/api/transcribe", relativeTo: base) else {
+        guard let url = URL(string: "transcribe", relativeTo: base) else {
             throw URLValidationError.invalidURL
         }
 
@@ -384,7 +388,7 @@ actor APIService {
     func uploadTranscriptionText(transcription: String, profileId: String) async throws -> TranscriptTask {
         let payload: [String: String] = ["transcription": transcription, "profile_id": profileId]
         let body = try JSONEncoder().encode(payload)
-        let req = try request(path: "/tstudio/api/transcribe-text", method: "POST", body: body)
+        let req = try request(path: "/transcribe-text", method: "POST", body: body)
         return try await perform(req)
     }
 
@@ -393,7 +397,7 @@ actor APIService {
     /// Returns the SSE stream URL and authentication token needed to connect to the task event stream.
     func taskStreamInfo(taskId: String) async throws -> (url: URL, token: String) {
         let base = try validatedBaseURL()
-        guard let url = URL(string: "/tstudio/api/task/\(taskId)/stream", relativeTo: base) else {
+        guard let url = URL(string: "task/\(taskId)/stream", relativeTo: base) else {
             throw URLValidationError.invalidURL
         }
         let token = authToken() ?? ""
@@ -401,7 +405,7 @@ actor APIService {
     }
 
     func getTaskStatus(taskId: String) async throws -> TranscriptTask {
-        let req = try request(path: "/tstudio/api/task/\(taskId)")
+        let req = try request(path: "/task/\(taskId)")
         return try await perform(req)
     }
 
@@ -425,12 +429,12 @@ actor APIService {
             components.queryItems?.append(URLQueryItem(name: "sort_by", value: sortBy))
         }
         let queryString = components.percentEncodedQuery.map { "?\($0)" } ?? ""
-        let req = try request(path: "/tstudio/api/transcripts\(queryString)")
+        let req = try request(path: "/transcripts\(queryString)")
         return try await perform(req)
     }
 
     func getTranscript(taskId: String) async throws -> Transcript {
-        let req = try request(path: "/tstudio/api/transcripts/\(taskId)")
+        let req = try request(path: "/transcripts/\(taskId)")
         let (data, response) = try await session.data(for: req)
         let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
         logger.info("GET transcript \(taskId): HTTP \(statusCode), \(data.count) bytes")
@@ -446,31 +450,31 @@ actor APIService {
     }
 
     func deleteTranscript(taskId: String) async throws {
-        let req = try request(path: "/tstudio/api/transcripts/\(taskId)", method: "DELETE")
+        let req = try request(path: "/transcripts/\(taskId)", method: "DELETE")
         try await performVoid(req)
     }
 
     func updateTranscriptTitle(taskId: String, title: String) async throws {
         let body = try JSONEncoder().encode(["title": title])
-        let req = try request(path: "/tstudio/api/transcripts/\(taskId)", method: "PATCH", body: body)
+        let req = try request(path: "/transcripts/\(taskId)", method: "PATCH", body: body)
         try await performVoid(req)
     }
 
     func updateTranscriptTags(taskId: String, tags: [String]) async throws {
         let body = try JSONEncoder().encode(["tags": tags])
-        let req = try request(path: "/tstudio/api/transcripts/\(taskId)", method: "PATCH", body: body)
+        let req = try request(path: "/transcripts/\(taskId)", method: "PATCH", body: body)
         try await performVoid(req)
     }
 
     func updateNotuleHTML(taskId: String, html: String) async throws {
         let body = try JSONEncoder().encode(["notule_html": html])
-        let req = try request(path: "/tstudio/api/transcripts/\(taskId)", method: "PUT", body: body)
+        let req = try request(path: "/transcripts/\(taskId)", method: "PUT", body: body)
         try await performVoid(req)
     }
 
     /// Fetch linked notes for a transcript. Returns HTML string if available.
     func getTranscriptNotes(taskId: String) async throws -> String? {
-        let req = try request(path: "/tstudio/api/transcripts/\(taskId)/notes")
+        let req = try request(path: "/transcripts/\(taskId)/notes")
         let (data, response) = try await session.data(for: req)
         let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
         guard statusCode == 200 else { return nil }
@@ -490,14 +494,14 @@ actor APIService {
     func regenerateNotule(taskId: String, profileId: String) async throws -> TranscriptTask {
         let payload: [String: String] = ["transcript_id": taskId, "profile_id": profileId]
         let body = try JSONEncoder().encode(payload)
-        let req = try request(path: "/tstudio/api/transcripts/\(taskId)/regenerate", method: "POST", body: body)
+        let req = try request(path: "/transcripts/\(taskId)/regenerate", method: "POST", body: body)
         return try await perform(req)
     }
 
     // MARK: - Profiles
 
     func getProfiles() async throws -> [Profile] {
-        let req = try request(path: "/tstudio/api/profiles/accessible")
+        let req = try request(path: "/profiles/accessible")
         let wrapper: ProfilesResponse = try await perform(req)
         return wrapper.profiles
     }
@@ -523,7 +527,7 @@ actor APIService {
             payload["outputTemplate"] = template
         }
         let body = try JSONEncoder().encode(payload)
-        let req = try request(path: "/tstudio/api/profiles/me", method: "POST", body: body)
+        let req = try request(path: "/profiles/me", method: "POST", body: body)
         let response: CreateProfileResponse = try await perform(req)
         return response.profile
     }
@@ -534,7 +538,7 @@ actor APIService {
     }
 
     func deleteProfile(id: String) async throws {
-        let req = try request(path: "/tstudio/api/profiles/me/\(id)", method: "DELETE")
+        let req = try request(path: "/profiles/me/\(id)", method: "DELETE")
         try await performVoid(req)
     }
 
@@ -546,7 +550,7 @@ actor APIService {
     }
 
     func getMySettings() async throws -> MySettingsResponse {
-        let req = try request(path: "/tstudio/api/settings/me")
+        let req = try request(path: "/settings/me")
         return try await perform(req)
     }
 
@@ -560,7 +564,7 @@ actor APIService {
     }
 
     func getCalendarTokens() async throws -> CalendarTokensResponse {
-        let req = try request(path: "/tstudio/api/calendar/me")
+        let req = try request(path: "/calendar/me")
         return try await perform(req)
     }
 
@@ -572,19 +576,19 @@ actor APIService {
             "email": email
         ]
         let body = try JSONSerialization.data(withJSONObject: payload)
-        let req = try request(path: "/tstudio/api/calendar/me", method: "POST", body: body)
+        let req = try request(path: "/calendar/me", method: "POST", body: body)
         try await performVoid(req)
     }
 
     func deleteCalendarTokens() async throws {
-        let req = try request(path: "/tstudio/api/calendar/me", method: "DELETE")
+        let req = try request(path: "/calendar/me", method: "DELETE")
         try await performVoid(req)
     }
 
     // MARK: - Version Check
 
     func checkMinimumVersion() async throws -> Bool {
-        let req = try request(path: "/tstudio/api/version")
+        let req = try request(path: "/version")
         let response: VersionCheckResponse = try await perform(req)
         return response.isSupported ?? true
     }
@@ -593,18 +597,18 @@ actor APIService {
 
     func getAdminUsers() async throws -> [AdminUser] {
         struct Wrapper: Decodable { let items: [AdminUser] }
-        let req = try request(path: "/tstudio/api/admin/users")
+        let req = try request(path: "/admin/users")
         let wrapper: Wrapper = try await perform(req)
         return wrapper.items
     }
 
     func deleteUser(id: String) async throws {
-        let req = try request(path: "/tstudio/api/admin/users/\(id)", method: "DELETE")
+        let req = try request(path: "/admin/users/\(id)", method: "DELETE")
         try await performVoid(req)
     }
 
     func getAdminStats() async throws -> AdminStats {
-        let req = try request(path: "/tstudio/api/admin/metrics")
+        let req = try request(path: "/admin/metrics")
         return try await perform(req)
     }
 
@@ -614,13 +618,13 @@ actor APIService {
             payload["name"] = name
         }
         let body = try JSONEncoder().encode(payload)
-        let req = try request(path: "/tstudio/api/admin/users", method: "POST", body: body)
+        let req = try request(path: "/admin/users", method: "POST", body: body)
         try await performVoid(req)
     }
 
     func getAdminInvitations() async throws -> [AdminInvitation] {
         struct Wrapper: Decodable { let items: [AdminInvitation] }
-        let req = try request(path: "/tstudio/api/admin/invites")
+        let req = try request(path: "/admin/invites")
         let wrapper: Wrapper = try await perform(req)
         return wrapper.items
     }
@@ -628,18 +632,18 @@ actor APIService {
     func createInvitation(maxUses: Int, expiresHours: Int) async throws {
         let payload: [String: Int] = ["max_uses": maxUses, "expires_hours": expiresHours]
         let body = try JSONEncoder().encode(payload)
-        let req = try request(path: "/tstudio/api/admin/invites", method: "POST", body: body)
+        let req = try request(path: "/admin/invites", method: "POST", body: body)
         try await performVoid(req)
     }
 
     func deleteInvitation(code: String) async throws {
-        let req = try request(path: "/tstudio/api/admin/invites/\(code)", method: "DELETE")
+        let req = try request(path: "/admin/invites/\(code)", method: "DELETE")
         try await performVoid(req)
     }
 
     func getAdminFeedback() async throws -> [AdminFeedback] {
         struct Wrapper: Decodable { let items: [AdminFeedback] }
-        let req = try request(path: "/tstudio/api/admin/feedback")
+        let req = try request(path: "/admin/feedback")
         let wrapper: Wrapper = try await perform(req)
         return wrapper.items
     }
@@ -650,25 +654,25 @@ actor APIService {
             payload["response"] = response
         }
         let body = try JSONEncoder().encode(payload)
-        let req = try request(path: "/tstudio/api/admin/feedback/\(id)", method: "PUT", body: body)
+        let req = try request(path: "/admin/feedback/\(id)", method: "PUT", body: body)
         try await performVoid(req)
     }
 
     func deleteAdminFeedback(id: String) async throws {
-        let req = try request(path: "/tstudio/api/admin/feedback/\(id)", method: "DELETE")
+        let req = try request(path: "/admin/feedback/\(id)", method: "DELETE")
         try await performVoid(req)
     }
 
     func getAdminFeedbackPendingCount() async throws -> Int {
         struct CountResponse: Codable { let count: Int }
-        let req = try request(path: "/tstudio/api/admin/feedback/pending-count")
+        let req = try request(path: "/admin/feedback/pending-count")
         let result: CountResponse = try await perform(req)
         return result.count
     }
 
     func getAdminErrors() async throws -> [AdminError] {
         struct Wrapper: Decodable { let errors: [AdminError] }
-        let req = try request(path: "/tstudio/api/admin/errors")
+        let req = try request(path: "/admin/errors")
         let wrapper: Wrapper = try await perform(req)
         return wrapper.errors
     }
@@ -681,7 +685,7 @@ actor APIService {
     }
 
     func getAdminSettings() async throws -> AdminSettingsResponse {
-        let req = try request(path: "/tstudio/api/admin/settings")
+        let req = try request(path: "/admin/settings")
         return try await perform(req)
     }
 
@@ -694,24 +698,24 @@ actor APIService {
             payload["ms365_tenant_id"] = tenantId
         }
         let body = try JSONEncoder().encode(payload)
-        let req = try request(path: "/tstudio/api/admin/settings", method: "POST", body: body)
+        let req = try request(path: "/admin/settings", method: "POST", body: body)
         try await performVoid(req)
     }
 
     func resetUserPassword(id: String, newPassword: String) async throws {
         let payload = ["password": newPassword]
         let body = try JSONEncoder().encode(payload)
-        let req = try request(path: "/tstudio/api/admin/users/\(id)/password", method: "POST", body: body)
+        let req = try request(path: "/admin/users/\(id)/password", method: "POST", body: body)
         try await performVoid(req)
     }
 
     func resetUser2FA(id: String) async throws {
-        let req = try request(path: "/tstudio/api/admin/users/\(id)/2fa/reset", method: "POST")
+        let req = try request(path: "/admin/users/\(id)/2fa/reset", method: "POST")
         try await performVoid(req)
     }
 
     func getAdminActivity(limit: Int = 50) async throws -> [AdminActivity] {
-        let req = try request(path: "/tstudio/api/admin/activity?limit=\(limit)")
+        let req = try request(path: "/admin/activity?limit=\(limit)")
         return try await perform(req)
     }
 }

@@ -72,7 +72,7 @@ export function SettingsPage() {
                   type="url"
                   value={serverUrl}
                   onChange={(e) => setServerUrl(e.target.value)}
-                  placeholder="https://n8n.prezent.nl"
+                  placeholder="https://n8n.prezent.nl/tstudio/api"
                   className="input"
                 />
                 <button

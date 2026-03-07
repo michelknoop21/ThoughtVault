@@ -1,0 +1,55 @@
+#!/bin/bash
+# Sync VERSION file to all platform build configs
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+ROOT_DIR="$(dirname "$SCRIPT_DIR")"
+VERSION_FILE="$ROOT_DIR/VERSION"
+
+if [ ! -f "$VERSION_FILE" ]; then
+    echo "ERROR: VERSION file not found at $VERSION_FILE"
+    exit 1
+fi
+
+VERSION=$(cat "$VERSION_FILE" | tr -d '[:space:]')
+PATCH=$(echo "$VERSION" | cut -d. -f3)
+
+echo "Syncing version $VERSION to all platform configs..."
+
+# 1. Xcode project.pbxproj — MARKETING_VERSION (all occurrences)
+PBXPROJ="$ROOT_DIR/TranscriptStudio.xcodeproj/project.pbxproj"
+if [ -f "$PBXPROJ" ]; then
+    sed -i '' "s/MARKETING_VERSION = [^;]*/MARKETING_VERSION = $VERSION/" "$PBXPROJ"
+    sed -i '' "s/CURRENT_PROJECT_VERSION = [^;]*/CURRENT_PROJECT_VERSION = $PATCH/" "$PBXPROJ"
+    echo "  Updated: project.pbxproj (MARKETING_VERSION=$VERSION, CURRENT_PROJECT_VERSION=$PATCH)"
+else
+    echo "  Skipped: project.pbxproj (not found)"
+fi
+
+# 2. Tauri tauri.conf.json
+TAURI_CONF="$ROOT_DIR/transcript-studio-windows/src-tauri/tauri.conf.json"
+if [ -f "$TAURI_CONF" ]; then
+    sed -i '' "s/\"version\": \"[^\"]*\"/\"version\": \"$VERSION\"/" "$TAURI_CONF"
+    echo "  Updated: tauri.conf.json (version=$VERSION)"
+else
+    echo "  Skipped: tauri.conf.json (not found)"
+fi
+
+# 3. Cargo.toml — first version under [package] only
+CARGO_TOML="$ROOT_DIR/transcript-studio-windows/src-tauri/Cargo.toml"
+if [ -f "$CARGO_TOML" ]; then
+    # Use awk to only replace the first version = "..." line (under [package])
+    awk -v ver="$VERSION" '
+        !done && /^version = "/ {
+            print "version = \"" ver "\""
+            done = 1
+            next
+        }
+        { print }
+    ' "$CARGO_TOML" > "$CARGO_TOML.tmp" && mv "$CARGO_TOML.tmp" "$CARGO_TOML"
+    echo "  Updated: Cargo.toml (version=$VERSION)"
+else
+    echo "  Skipped: Cargo.toml (not found)"
+fi
+
+echo "Version sync complete: $VERSION"

@@ -32,3 +32,28 @@ cd transcript-studio-windows && npm run tauri dev
 - Auth header: macOS → `X-User-Token`, Windows → `Authorization: Bearer` (beide geaccepteerd)
 - Backend `username` veld is het e-mailadres (niet `email`)
 - Versioning: elke commit op `main` bumpt automatisch patch via `.githooks/post-commit`
+- Na version bump: `scripts/sync-version.sh` draaien om VERSION naar alle platform configs te syncen
+
+## Build & Release Pipeline
+```bash
+# Sync VERSION naar Xcode pbxproj, tauri.conf.json, Cargo.toml
+scripts/sync-version.sh
+
+# Build release artifact (DMG op macOS, MSI op Windows)
+scripts/build.sh
+
+# Upload artifact naar server + update releases.json manifest
+scripts/upload.sh
+
+# Volledige pipeline (sync → build → upload)
+scripts/release.sh
+scripts/release.sh --no-upload   # zonder upload
+```
+
+Artifacts worden gehost op `https://n8n.prezent.nl/tstudio/download/`
+Manifest: `https://n8n.prezent.nl/tstudio/download/releases.json`
+
+### Server-side infra
+- Nginx (`n8n_nginx` container) serveert static files via `/tstudio/download/` → `/srv/tstudio-releases/`
+- Host directory: `/home/michelk/tstudio-releases/` (volume mount in n8n-prezent docker-compose)
+- Config: `/home/michelk/n8n-prezent/nginx/default.conf`

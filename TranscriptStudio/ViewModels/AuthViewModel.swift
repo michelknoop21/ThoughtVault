@@ -96,10 +96,20 @@ final class AuthViewModel {
             // Save biometric token opportunistically so Face ID / Touch ID
             // can be offered on next launch.
             if BiometricService.shared.isEnabled {
-                try? await BiometricService.shared.saveTokenWithBiometrics(token)
+                do {
+                    try await BiometricService.shared.saveTokenWithBiometrics(token)
+                } catch {
+                    logger.error("Failed to save biometric token: \(error.localizedDescription)")
+                }
             }
 
-            let userInfo = try? await APIService.shared.getCurrentUser()
+            let userInfo: TSUserInfo?
+            do {
+                userInfo = try await APIService.shared.getCurrentUser()
+            } catch {
+                logger.error("Failed to fetch current user after login: \(error.localizedDescription)")
+                userInfo = nil
+            }
 
             currentUser = userInfo
             userEmail = email
@@ -111,7 +121,7 @@ final class AuthViewModel {
 
         } catch {
             isLoading = false
-            errorMessage = error.localizedDescription
+            errorMessage = dutchErrorMessage(for: error)
             logger.error("Login failed: \(error.localizedDescription)")
         }
     }
@@ -139,10 +149,20 @@ final class AuthViewModel {
             KeychainService.shared.save(token, for: "authToken")
 
             if BiometricService.shared.isEnabled {
-                try? await BiometricService.shared.saveTokenWithBiometrics(token)
+                do {
+                    try await BiometricService.shared.saveTokenWithBiometrics(token)
+                } catch {
+                    logger.error("Failed to save biometric token after 2FA: \(error.localizedDescription)")
+                }
             }
 
-            let userInfo = try? await APIService.shared.getCurrentUser()
+            let userInfo: TSUserInfo?
+            do {
+                userInfo = try await APIService.shared.getCurrentUser()
+            } catch {
+                logger.error("Failed to fetch current user after 2FA: \(error.localizedDescription)")
+                userInfo = nil
+            }
 
             currentUser = userInfo
             userEmail = userInfo?.email ?? userEmail
@@ -156,7 +176,7 @@ final class AuthViewModel {
 
         } catch {
             isLoading = false
-            errorMessage = error.localizedDescription
+            errorMessage = dutchErrorMessage(for: error)
             logger.error("Two-factor verification failed: \(error.localizedDescription)")
         }
     }
@@ -206,7 +226,13 @@ final class AuthViewModel {
 
             KeychainService.shared.save(token, for: "authToken")
 
-            let userInfo = try? await APIService.shared.getCurrentUser()
+            let userInfo: TSUserInfo?
+            do {
+                userInfo = try await APIService.shared.getCurrentUser()
+            } catch {
+                logger.error("Failed to fetch current user after biometric login: \(error.localizedDescription)")
+                userInfo = nil
+            }
             currentUser = userInfo
             loginTimestamp = Date()
             isAuthenticated = true
@@ -216,7 +242,7 @@ final class AuthViewModel {
 
         } catch {
             isLoading = false
-            errorMessage = error.localizedDescription
+            errorMessage = dutchErrorMessage(for: error)
             logger.error("Biometric login error: \(error.localizedDescription)")
         }
     }
@@ -236,6 +262,33 @@ final class AuthViewModel {
         loginTimestamp = nil
 
         logger.info("User logged out.")
+    }
+
+    // MARK: - Error Localisation
+
+    /// Returns a Dutch error message suitable for display to the user.
+    /// APIError and URLValidationError already provide Dutch descriptions;
+    /// for other errors a generic fallback is used.
+    private func dutchErrorMessage(for error: Error) -> String {
+        if let apiError = error as? APIError {
+            return apiError.localizedDescription
+        }
+        if let urlError = error as? URLValidationError {
+            return urlError.localizedDescription
+        }
+        if let urlError = error as? URLError {
+            switch urlError.code {
+            case .notConnectedToInternet, .networkConnectionLost:
+                return "Geen internetverbinding. Controleer je netwerk en probeer het opnieuw."
+            case .timedOut:
+                return "De server reageert niet. Probeer het later opnieuw."
+            case .cannotFindHost, .cannotConnectToHost:
+                return "Kan geen verbinding maken met de server."
+            default:
+                return "Netwerkfout. Probeer het later opnieuw."
+            }
+        }
+        return "Er is een onverwachte fout opgetreden. Probeer het opnieuw."
     }
 
     // MARK: - Auth Invalidation Observer

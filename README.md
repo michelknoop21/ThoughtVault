@@ -2,7 +2,7 @@
 
 Cross-platform desktop app voor vergaderopnames, transcriptie en automatische notulengeneratie. Native macOS client (Swift 6 / SwiftUI) en Windows client (Tauri 2 / React) met een gedeelde FastAPI + Whisper backend.
 
-**Versie:** 1.0.16
+**Versie:** 1.0.22
 **Bundle ID:** `nl.prezent.TranscriptStudio`
 **Repository:** [gitlab.prezent.nl/michelk/transcript-studio-native](https://gitlab.prezent.nl/michelk/transcript-studio-native)
 **Backend:** `https://n8n.prezent.nl/tstudio/api/`
@@ -113,23 +113,34 @@ docker compose up
 
 ## Bouwen
 
-### macOS release build
+### Geautomatiseerde release build
 
 ```bash
+# Volledige pipeline: sync versie → build DMG/MSI → upload naar server
+./scripts/release.sh
+
+# Alleen bouwen zonder upload
+./scripts/release.sh --no-upload
+```
+
+Of dubbelklik op de `.command` bestanden in `scripts/` via Finder.
+
+Zie [docs/RELEASE.md](docs/RELEASE.md) voor de complete pipeline documentatie.
+
+### Handmatige builds
+
+```bash
+# macOS
 xcodebuild -project TranscriptStudio.xcodeproj \
   -scheme TranscriptStudio \
   -configuration Release \
+  -destination "platform=macOS,arch=arm64" \
   build
-```
 
-### Windows release build
-
-```bash
+# Windows
 cd transcript-studio-windows
 npm run tauri build
 ```
-
-Dit produceert een MSI installer in `src-tauri/target/release/bundle/`.
 
 ---
 
@@ -237,7 +248,8 @@ TranscriptStudioApp/
 │   ├── ARCHITECTURE.md                #   Systeemontwerp en directory structuur
 │   ├── API.md                         #   Volledige backend API referentie
 │   ├── DECISIONS.md                   #   Architectural Decision Records
-│   └── CHANGELOG.md                   #   Versiehistorie
+│   ├── CHANGELOG.md                   #   Versiehistorie
+│   └── RELEASE.md                     #   Build & release pipeline
 │
 ├── .githooks/                         # Git hooks (post-commit versioning)
 ├── VERSION                            # Huidige versie (auto-bumped op main)
@@ -379,7 +391,7 @@ Opname starten
 Versies worden automatisch beheerd via een git post-commit hook:
 
 - Elke commit op `main` bumpt automatisch de **patch** versie
-- Versie staat in het `VERSION` bestand (momenteel `1.0.3`)
+- Versie staat in het `VERSION` bestand (auto-bumped)
 - Feature branches en detached HEAD triggeren **geen** bump
 - Hook activeren: `git config core.hooksPath .githooks`
 
@@ -416,7 +428,8 @@ Gedetailleerde documentatie staat in [`docs/`](docs/):
 | [API.md](docs/API.md) | Volledige backend API referentie: alle endpoints, auth flows, datamodellen, rate limits |
 | [DECISIONS.md](docs/DECISIONS.md) | Architectural Decision Records (ADRs): rationale voor technische keuzes |
 | [CHANGELOG.md](docs/CHANGELOG.md) | Versiehistorie en release notes |
+| [RELEASE.md](docs/RELEASE.md) | Build & release pipeline: scripts, shortcuts, server-side setup |
 
 ---
 
-*Prezent Internet B.V. — TranscriptStudio v1.0.3*
+*Prezent Internet B.V. — TranscriptStudio v1.0.22*

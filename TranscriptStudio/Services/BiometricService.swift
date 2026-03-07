@@ -6,6 +6,14 @@ import SwiftUI
 
 private let logger = Logger(subsystem: "nl.prezent.TranscriptStudio", category: "BiometricService")
 
+// MARK: - Token Wrapper
+
+/// Wraps an authentication token with an expiry date for time-limited biometric storage.
+private struct TokenWrapper: Codable {
+    let token: String
+    let expiresAt: Date
+}
+
 enum BiometricType {
     case none
     case faceID
@@ -70,8 +78,10 @@ final class BiometricService: @unchecked Sendable {
     // MARK: - Token Storage
 
     /// Save an authentication token to the Keychain protected by biometric access control.
+    /// The token is wrapped with a 24-hour expiry date.
     func saveTokenWithBiometrics(_ token: String) async throws {
-        guard let data = token.data(using: .utf8) else {
+        let wrapper = TokenWrapper(token: token, expiresAt: Date().addingTimeInterval(24 * 60 * 60))
+        guard let data = try? JSONEncoder().encode(wrapper) else {
             throw BiometricError.invalidToken
         }
 
@@ -108,6 +118,8 @@ final class BiometricService: @unchecked Sendable {
     /// Load the biometric-protected token. On iOS, the Keychain automatically prompts for
     /// biometric authentication via the access control flags. Use `loadBiometricToken(context:)`
     /// on macOS to pass the already-authenticated LAContext explicitly.
+    ///
+    /// Returns `nil` if the token has expired (24-hour TTL) and removes it from the Keychain.
     func loadBiometricToken() async throws -> String? {
         let query: [CFString: Any] = [
             kSecClass: kSecClassGenericPassword,
@@ -130,18 +142,33 @@ final class BiometricService: @unchecked Sendable {
         }
 
         guard status == errSecSuccess,
-              let data = result as? Data,
-              let token = String(data: data, encoding: .utf8)
+              let data = result as? Data
         else {
             throw BiometricError.keychainError(status)
         }
 
-        return token
+        // Decode the TokenWrapper and check expiry
+        guard let wrapper = try? JSONDecoder().decode(TokenWrapper.self, from: data) else {
+            // Legacy token stored as plain string — treat as expired and remove
+            logger.info("Biometric token is in legacy format, removing.")
+            removeBiometricToken()
+            return nil
+        }
+
+        if wrapper.expiresAt < Date() {
+            logger.info("Biometric token expired, removing from Keychain.")
+            removeBiometricToken()
+            return nil
+        }
+
+        return wrapper.token
     }
 
     /// macOS-specific variant: passes an already-authenticated LAContext to the Keychain query,
     /// which is required because macOS does not automatically link the biometric session to
     /// subsequent Keychain operations the way iOS does.
+    ///
+    /// Returns `nil` if the token has expired (24-hour TTL) and removes it from the Keychain.
     func loadBiometricToken(context: LAContext) async throws -> String? {
         let query: [CFString: Any] = [
             kSecClass: kSecClassGenericPassword,
@@ -160,13 +187,26 @@ final class BiometricService: @unchecked Sendable {
         }
 
         guard status == errSecSuccess,
-              let data = result as? Data,
-              let token = String(data: data, encoding: .utf8)
+              let data = result as? Data
         else {
             throw BiometricError.keychainError(status)
         }
 
-        return token
+        // Decode the TokenWrapper and check expiry
+        guard let wrapper = try? JSONDecoder().decode(TokenWrapper.self, from: data) else {
+            // Legacy token stored as plain string — treat as expired and remove
+            logger.info("Biometric token is in legacy format, removing.")
+            removeBiometricToken()
+            return nil
+        }
+
+        if wrapper.expiresAt < Date() {
+            logger.info("Biometric token expired, removing from Keychain.")
+            removeBiometricToken()
+            return nil
+        }
+
+        return wrapper.token
     }
 
     /// Remove the biometric-protected token from the Keychain.

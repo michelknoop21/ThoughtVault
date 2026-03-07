@@ -77,6 +77,8 @@ export function InfoBarHost() {
       flexDirection: "column",
       gap: 8,
       maxWidth: 380,
+      maxHeight: "calc(100vh - 80px)",
+      overflowY: "auto",
     }}>
       {toasts.map((toast) => (
         <InfoBarItem key={toast.id} toast={toast} onDismiss={() => dismiss(toast.id)} />
@@ -121,15 +123,20 @@ function InfoBarItem({ toast, onDismiss }: { toast: Toast; onDismiss: () => void
       </span>
       <button
         onClick={onDismiss}
+        aria-label="Melding sluiten"
         style={{
           background: "none",
           border: "none",
           color: "var(--text-tertiary)",
           cursor: "default",
-          padding: 2,
+          padding: 0,
+          width: 28,
+          height: 28,
+          minWidth: 28,
           flexShrink: 0,
           display: "flex",
           alignItems: "center",
+          justifyContent: "center",
         }}
       >
         <Dismiss16Regular />

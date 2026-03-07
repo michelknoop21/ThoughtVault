@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Globe24Regular,
   DocumentText24Regular,
@@ -9,27 +9,72 @@ import {
   ChevronRight24Regular,
   ShieldLock24Regular,
   Mail24Regular,
+  CheckmarkCircle24Regular,
+  ErrorCircle24Regular,
 } from "@fluentui/react-icons";
+import { api } from "../services/api";
 import { useSettingsStore } from "../stores/settingsStore";
 import { useCalendarStore } from "../stores/calendarStore";
 import { useProfilesStore } from "../stores/profilesStore";
 import { MicrosoftGraphService } from "../services/microsoftGraph";
+import { getVersion } from "@tauri-apps/api/app";
 
 export function SettingsPage() {
+  const [appVersion, setAppVersion] = useState("");
+
+  useEffect(() => {
+    getVersion().then(setAppVersion).catch(() => setAppVersion("onbekend"));
+  }, []);
   const settings = useSettingsStore();
   const calendar = useCalendarStore();
   const profiles = useProfilesStore((s) => s.profiles);
 
   const [serverUrl, setServerUrl] = useState(settings.server_url);
   const [serverSaved, setServerSaved] = useState(false);
+  const [serverError, setServerError] = useState<string | null>(null);
+  const [connectionStatus, setConnectionStatus] = useState<"idle" | "testing" | "success" | "error">("idle");
   const [isConnecting, setIsConnecting] = useState(false);
 
   const hasOAuthConfig = Boolean(settings.ms365_client_id && settings.ms365_tenant_id);
 
+  function validateUrl(url: string): string | null {
+    if (!url.trim()) return "URL mag niet leeg zijn";
+    try {
+      const parsed = new URL(url);
+      if (parsed.protocol !== "https:") return "URL moet HTTPS gebruiken";
+      return null;
+    } catch {
+      return "Ongeldig URL-formaat";
+    }
+  }
+
   function handleSaveServer() {
+    const error = validateUrl(serverUrl);
+    if (error) {
+      setServerError(error);
+      return;
+    }
+    setServerError(null);
     settings.updateSettings({ server_url: serverUrl });
     setServerSaved(true);
     setTimeout(() => setServerSaved(false), 2000);
+  }
+
+  async function handleTestConnection() {
+    const error = validateUrl(serverUrl);
+    if (error) {
+      setServerError(error);
+      return;
+    }
+    setServerError(null);
+    setConnectionStatus("testing");
+    try {
+      const health = await api.getSystemHealth();
+      setConnectionStatus(health.api_status !== "down" ? "success" : "error");
+    } catch {
+      setConnectionStatus("error");
+    }
+    setTimeout(() => setConnectionStatus("idle"), 3000);
   }
 
   async function handleConnect365() {
@@ -67,20 +112,37 @@ export function SettingsPage() {
               </div>
             </div>
             <div style={{ padding: "0 14px 12px" }}>
-              <div className="flex-row gap-8">
-                <input
-                  type="url"
-                  value={serverUrl}
-                  onChange={(e) => setServerUrl(e.target.value)}
-                  placeholder="https://n8n.prezent.nl/tstudio/api"
-                  className="input"
-                />
+              <div className="flex-col gap-6">
+                <div className="flex-row gap-8">
+                  <input
+                    type="url"
+                    value={serverUrl}
+                    onChange={(e) => { setServerUrl(e.target.value); setServerError(null); }}
+                    placeholder="https://n8n.prezent.nl/tstudio/api"
+                    className="input"
+                  />
+                  <button
+                    onClick={handleSaveServer}
+                    className="btn btn-accent btn-sm flex-shrink-0"
+                  >
+                    {serverSaved ? "Opgeslagen" : "Opslaan"}
+                  </button>
+                </div>
+                {serverError && (
+                  <p style={{ color: "var(--fill-system-critical)", fontSize: "var(--font-caption)", margin: 0 }}>
+                    {serverError}
+                  </p>
+                )}
                 <button
-                  onClick={handleSaveServer}
-                  className="btn btn-accent flex-shrink-0"
-                  style={{ padding: "7px 14px", fontSize: 12 }}
+                  onClick={handleTestConnection}
+                  className="btn btn-secondary btn-sm"
+                  disabled={connectionStatus === "testing"}
+                  style={{ alignSelf: "flex-start" }}
                 >
-                  {serverSaved ? "Opgeslagen" : "Opslaan"}
+                  {connectionStatus === "testing" ? "Testen..." :
+                   connectionStatus === "success" ? <><CheckmarkCircle24Regular style={{ fontSize: 14 }} /> Verbonden</> :
+                   connectionStatus === "error" ? <><ErrorCircle24Regular style={{ fontSize: 14 }} /> Niet bereikbaar</> :
+                   "Test verbinding"}
                 </button>
               </div>
             </div>
@@ -207,8 +269,7 @@ export function SettingsPage() {
                 <div style={{ padding: "0 14px 12px" }}>
                   <button
                     onClick={() => calendar.disconnect()}
-                    className="btn btn-secondary"
-                    style={{ fontSize: 12 }}
+                    className="btn btn-secondary btn-sm"
                   >
                     Verbinding verbreken
                   </button>
@@ -229,8 +290,7 @@ export function SettingsPage() {
                   <button
                     onClick={handleConnect365}
                     disabled={isConnecting}
-                    className="btn btn-accent"
-                    style={{ padding: "7px 14px", fontSize: 12 }}
+                    className="btn btn-accent btn-sm"
                   >
                     {isConnecting ? "Verbinden..." : "Verbinden met Microsoft 365"}
                   </button>
@@ -307,7 +367,7 @@ export function SettingsPage() {
                 <Info24Regular className="settings-icon-muted" />
                 <div className="flex-1">
                   <p className="settings-label">TranscriptStudio</p>
-                  <p className="settings-desc">Versie 1.0.10 — Windows (Tauri 2)</p>
+                  <p className="settings-desc">Versie {appVersion || "..."} — Windows (Tauri 2)</p>
                 </div>
               </div>
             </div>

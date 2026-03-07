@@ -11,15 +11,17 @@
   },
   "dependencies": {
     "@fluentui/react-icons": "^2.0.264",
+    "@types/dompurify": "^3.0.5",
+    "dompurify": "^3.3.2",
+    "marked": "^15.0.7",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.1.5",
-    "zustand": "^5.0.3",
-    "marked": "^15.0.7"
+    "zustand": "^5.0.3"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^2.2.7",
     "@tauri-apps/api": "^2.2.0",
+    "@tauri-apps/cli": "^2.2.7",
     "@tauri-apps/plugin-deep-link": "^2.2.0",
     "@tauri-apps/plugin-notification": "^2.2.1",
     "@tauri-apps/plugin-shell": "^2.2.0",

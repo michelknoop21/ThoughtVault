@@ -39,6 +39,7 @@ export function AdminPage() {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [feedbackItems, setFeedbackItems] = useState<AdminFeedback[]>([]);
   const [health, setHealth] = useState<SystemHealth | null>(null);
+  const [adminErrors, setAdminErrors] = useState<Record<string, unknown>[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -64,8 +65,12 @@ export function AdminPage() {
         const data = await api.getFeedback();
         setFeedbackItems(Array.isArray(data) ? data : []);
       } else if (activeTab === "health") {
-        const data = await api.getSystemHealth();
-        setHealth(data);
+        const [healthData, errorsData] = await Promise.all([
+          api.getSystemHealth(),
+          api.getAdminErrors(50),
+        ]);
+        setHealth(healthData);
+        setAdminErrors(errorsData as Record<string, unknown>[]);
       }
     } catch (err) {
       console.error("Admin load failed:", err);
@@ -136,7 +141,7 @@ export function AdminPage() {
           <FeedbackTab items={feedbackItems} onReload={() => loadData()} />
         )}
         {!isLoading && activeTab === "health" && health && (
-          <HealthTab health={health} />
+          <HealthTab health={health} errors={adminErrors} onReload={() => loadData()} />
         )}
         {!isLoading && activeTab === "settings" && (
           <SettingsTab />
@@ -159,8 +164,8 @@ function OverviewTab({
   feedbackItems: AdminFeedback[];
   health: SystemHealth | null;
 }) {
-  const totalTranscripts = users.reduce((sum, u) => sum + (u.note_count ?? u.transcripts_count ?? 0), 0);
-  const totalTasks = health ? health.active_tasks + health.transcription_queue_length : 0;
+  const totalTranscripts = users.reduce((sum, u) => sum + (Number(u.note_count ?? u.transcripts_count) || 0), 0);
+  const totalTasks = health ? (Number(health.active_tasks) || 0) + (Number(health.transcription_queue_length) || 0) : 0;
   const pendingFeedback = feedbackItems.filter((f) => f.status === "new" || f.status === "open").length;
 
   return (
@@ -290,9 +295,10 @@ function UsersTab({ users, onDelete, onReload }: { users: AdminUser[]; onDelete:
     setMenuUserId(userId);
   }
 
-  function getInitial(name?: string): string {
-    if (!name) return "?";
-    return String(name).charAt(0).toUpperCase();
+  function getInitial(name?: string, username?: string): string {
+    const val = name || username;
+    if (!val) return "?";
+    return String(val).charAt(0).toUpperCase();
   }
 
   return (
@@ -361,13 +367,13 @@ function UsersTab({ users, onDelete, onReload }: { users: AdminUser[]; onDelete:
           <div className="card flex-row gap-12" style={{ padding: "12px 14px", flexWrap: "wrap" }}>
             {/* Avatar */}
             <div className="user-avatar">
-              {getInitial(user.name)}
+              {getInitial(user.name, user.username)}
             </div>
 
             {/* User info */}
             <div style={{ flex: 1, minWidth: 0 }}>
               <div className="flex-row gap-8" style={{ flexWrap: "wrap" }}>
-                <span className="text-body-strong">{user.name || "Onbekend"}</span>
+                <span className="text-body-strong">{user.name || user.username || "Onbekend"}</span>
                 <span className={`role-badge ${user.role === "admin" ? "role-badge-admin" : "role-badge-user"}`}>
                   {user.role === "admin" ? "Admin" : "User"}
                 </span>
@@ -389,6 +395,7 @@ function UsersTab({ users, onDelete, onReload }: { users: AdminUser[]; onDelete:
             <button
               className="icon-btn icon-btn-sm"
               onClick={(e) => openMenu(e, user.id)}
+              aria-label="Meer opties"
               title="Meer opties"
             >
               <MoreHorizontal24Regular />
@@ -397,7 +404,7 @@ function UsersTab({ users, onDelete, onReload }: { users: AdminUser[]; onDelete:
 
           {/* Reset password inline form */}
           {resetPasswordId === user.id && (
-            <div className="card card-attached flex-row gap-8">
+            <div className="card card-attached flex-row gap-8" style={{ flexWrap: "wrap" }}>
               <input
                 className="input"
                 type="password"
@@ -535,6 +542,10 @@ function InvitationsTab() {
 
 function FeedbackTab({ items, onReload }: { items: AdminFeedback[]; onReload: () => void }) {
   const toast = useToast();
+  const [showArchived, setShowArchived] = useState(false);
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  const visibleItems = showArchived ? items : items.filter((f) => f.status !== "archived");
 
   function getStatusBadgeClass(status: string): string {
     switch (status) {
@@ -542,6 +553,7 @@ function FeedbackTab({ items, onReload }: { items: AdminFeedback[]; onReload: ()
       case "in_progress": return "status-badge-in-progress";
       case "resolved": return "status-badge-resolved";
       case "closed": return "status-badge-closed";
+      case "archived": return "status-badge-closed";
       default: return "status-badge-closed";
     }
   }
@@ -552,6 +564,7 @@ function FeedbackTab({ items, onReload }: { items: AdminFeedback[]; onReload: ()
       case "in_progress": return "In behandeling";
       case "resolved": return "Opgelost";
       case "closed": return "Gesloten";
+      case "archived": return "Gearchiveerd";
       default: return status;
     }
   }
@@ -565,24 +578,57 @@ function FeedbackTab({ items, onReload }: { items: AdminFeedback[]; onReload: ()
   }
 
   async function handleStatusChange(id: string, status: string) {
+    if (busyId) return;
+    setBusyId(id);
     try {
       await api.updateFeedback(id, status);
       toast.show("Status bijgewerkt", "success");
       onReload();
     } catch {
       toast.show("Status bijwerken mislukt", "error");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function handleDelete(id: string) {
+    if (busyId) return;
+    if (!confirm("Feedback definitief verwijderen?")) return;
+    setBusyId(id);
+    try {
+      await api.deleteFeedback(id);
+      toast.show("Feedback verwijderd", "success");
+      onReload();
+    } catch {
+      toast.show("Verwijderen mislukt", "error");
+    } finally {
+      setBusyId(null);
     }
   }
 
   return (
     <div className="flex-col gap-10">
-      {items.length === 0 ? (
+      {/* Filter toggle */}
+      <div className="flex-row justify-between" style={{ alignItems: "center" }}>
+        <p className="text-caption">{visibleItems.length} item{visibleItems.length !== 1 ? "s" : ""}</p>
+        <label className="flex-row gap-6" style={{ alignItems: "center", cursor: "default", fontSize: 12 }}>
+          <input
+            type="checkbox"
+            checked={showArchived}
+            onChange={(e) => setShowArchived(e.target.checked)}
+          />
+          <span className="text-caption">Toon gearchiveerd</span>
+        </label>
+      </div>
+
+      {visibleItems.length === 0 ? (
         <p className="text-caption">Geen feedback</p>
       ) : (
-        items.map((item) => {
+        visibleItems.map((item) => {
           const cat = getCategoryClass(item.category);
+          const isArchived = item.status === "archived";
           return (
-            <div key={item.id} className="card feedback-card">
+            <div key={item.id} className="card feedback-card" style={isArchived ? { opacity: 0.6 } : undefined}>
               <div className="flex-row justify-between" style={{ marginBottom: 8, flexWrap: "wrap", gap: 8 }}>
                 <span className={cat.cls}>{cat.label}</span>
                 <span className={getStatusBadgeClass(item.status)}>
@@ -600,17 +646,37 @@ function FeedbackTab({ items, onReload }: { items: AdminFeedback[]; onReload: ()
 
               <div className="flex-row justify-between" style={{ flexWrap: "wrap", gap: 8 }}>
                 <div className="flex-row gap-6" style={{ flexWrap: "wrap" }}>
-                  {(item.status === "new" || item.status === "open") && (
-                    <button className="btn btn-sm" onClick={() => handleStatusChange(item.id, "in_progress")}>
-                      <ArrowRight24Regular style={{ fontSize: 12 }} />
-                      In behandeling
+                  {isArchived ? (
+                    <button className="btn btn-sm" disabled={busyId === item.id} onClick={() => handleStatusChange(item.id, "open")}>
+                      Herstellen
                     </button>
+                  ) : (
+                    <>
+                      {(item.status === "new" || item.status === "open") && (
+                        <button className="btn btn-sm" disabled={busyId === item.id} onClick={() => handleStatusChange(item.id, "in_progress")}>
+                          <ArrowRight24Regular style={{ fontSize: 12 }} />
+                          In behandeling
+                        </button>
+                      )}
+                      {(item.status === "new" || item.status === "open" || item.status === "in_progress") && (
+                        <button className="btn btn-sm" disabled={busyId === item.id} onClick={() => handleStatusChange(item.id, "resolved")}>
+                          Opgelost
+                        </button>
+                      )}
+                      <button className="btn btn-sm" disabled={busyId === item.id} onClick={() => handleStatusChange(item.id, "archived")}>
+                        Archiveren
+                      </button>
+                    </>
                   )}
-                  {(item.status === "new" || item.status === "open" || item.status === "in_progress") && (
-                    <button className="btn btn-sm" onClick={() => handleStatusChange(item.id, "resolved")}>
-                      Opgelost
-                    </button>
-                  )}
+                  <button
+                    className="btn btn-sm"
+                    disabled={busyId === item.id}
+                    style={{ color: "var(--text-error)" }}
+                    onClick={() => handleDelete(item.id)}
+                  >
+                    <Delete24Regular style={{ fontSize: 12 }} />
+                    Verwijderen
+                  </button>
                 </div>
                 <p className="feedback-date">
                   {item.created_at ? new Date(item.created_at).toLocaleDateString("nl-NL", {
@@ -632,8 +698,7 @@ function FeedbackTab({ items, onReload }: { items: AdminFeedback[]; onReload: ()
    Fouten Tab (was: Health)
    ============================================================ */
 
-function HealthTab({ health }: { health: SystemHealth }) {
-  // Show system health as error-log style cards
+function HealthTab({ health, errors, onReload }: { health: SystemHealth; errors: Record<string, unknown>[]; onReload: () => void }) {
   const apiStatus = health.api_status || "unknown";
   const apiStatusColor =
     apiStatus === "ok"
@@ -642,31 +707,13 @@ function HealthTab({ health }: { health: SystemHealth }) {
       ? "var(--fill-system-caution)"
       : "var(--fill-system-critical)";
 
-  // Build error entries from available health data
-  const errorEntries: {
-    type: string;
-    endpoint: string;
-    timestamp: string;
-    message: string;
-    user?: string;
-  }[] = [];
-
-  if (apiStatus !== "ok") {
-    errorEntries.push({
-      type: "API-Status",
-      endpoint: "/health",
-      timestamp: new Date().toISOString(),
-      message: `API status: ${apiStatus.toUpperCase()}. Actieve taken: ${health.active_tasks ?? 0}, Wachtrij: ${health.transcription_queue_length ?? 0}`,
-    });
-  }
-
-  if ((health.transcription_queue_length ?? 0) > 10) {
-    errorEntries.push({
-      type: "Queue-Warning",
-      endpoint: "/transcribe",
-      timestamp: new Date().toISOString(),
-      message: `Transcriptie wachtrij is lang: ${health.transcription_queue_length} items wachtend`,
-    });
+  function severityColor(severity: string): string {
+    switch (severity.toLowerCase()) {
+      case "error": case "critical": return "var(--fill-system-critical)";
+      case "warning": return "var(--fill-system-caution)";
+      case "info": return "var(--fill-brand-primary)";
+      default: return "var(--fill-system-critical)";
+    }
   }
 
   return (
@@ -679,43 +726,56 @@ function HealthTab({ health }: { health: SystemHealth }) {
             Systeem status: {apiStatus.toUpperCase()}
           </p>
           <p className="text-caption" style={{ overflowWrap: "anywhere" }}>
-            Versie {health.version || "onbekend"} · Opslag: {(health.storage_used_gb ?? 0).toFixed(1)} GB · Actieve taken: {health.active_tasks ?? 0} · Wachtrij: {health.transcription_queue_length ?? 0}
+            {health.model ? `Model: ${health.model}` : ""}{health.device ? ` · ${health.device.toUpperCase()}` : ""}{health.max_upload_size_mb ? ` · Max upload: ${health.max_upload_size_mb} MB` : ""} · Actieve taken: {health.active_tasks ?? 0} · Wachtrij: {health.transcription_queue_length ?? 0}
           </p>
         </div>
+        <button
+          className="btn btn-sm"
+          onClick={onReload}
+          title="Vernieuwen"
+          style={{ flexShrink: 0 }}
+        >
+          Vernieuwen
+        </button>
       </div>
 
-      {/* Error log cards */}
-      {errorEntries.length === 0 ? (
+      {/* Backend error logs */}
+      {errors.length === 0 ? (
         <div className="empty-state">
           <p className="empty-state-text">
             Geen fouten gevonden. Het systeem draait normaal.
           </p>
         </div>
       ) : (
-        errorEntries.map((entry, i) => (
-          <div key={i} className="card error-card">
-            {/* Error type badge */}
-            <div className="flex-row gap-8" style={{ marginBottom: 6 }}>
-              <span className="error-type-badge">{entry.type}</span>
+        errors.map((entry, i) => {
+          const type = String(entry.type ?? entry.error_type ?? entry.level ?? "error");
+          const severity = String(entry.severity ?? entry.level ?? entry.type ?? entry.error_type ?? "error");
+          const message = String(entry.message ?? entry.error ?? entry.error_message ?? entry.detail ?? "Onbekende fout");
+          const timestamp = String(entry.timestamp ?? entry.created_at ?? entry.date ?? "");
+          const endpoint = String(entry.endpoint ?? entry.path ?? entry.url ?? "");
+          const user = String(entry.user ?? entry.username ?? entry.user_id ?? "");
+          const sevColor = severityColor(severity);
+
+          return (
+            <div key={i} className="card error-card" style={{ borderLeft: `3px solid ${sevColor}` }}>
+              <div className="flex-row gap-8" style={{ marginBottom: 6 }}>
+                <span className="error-type-badge" style={{ background: `color-mix(in srgb, ${sevColor} 15%, transparent)`, color: sevColor }}>
+                  {type}
+                </span>
+              </div>
+              {endpoint && <p className="error-endpoint">{endpoint}</p>}
+              {timestamp && (
+                <p className="error-timestamp">
+                  {new Date(timestamp).toLocaleString("nl-NL")}
+                </p>
+              )}
+              <p className="error-message">{message}</p>
+              {user && user !== "undefined" && (
+                <p className="error-reporter">Gebruiker: {user}</p>
+              )}
             </div>
-
-            {/* Endpoint */}
-            <p className="error-endpoint">{entry.endpoint}</p>
-
-            {/* Timestamp */}
-            <p className="error-timestamp">
-              {new Date(entry.timestamp).toLocaleString("nl-NL")}
-            </p>
-
-            {/* Error message */}
-            <p className="error-message">{entry.message}</p>
-
-            {/* User/reporter */}
-            {entry.user && (
-              <p className="error-reporter">Gemeld door: {entry.user}</p>
-            )}
-          </div>
-        ))
+          );
+        })
       )}
     </div>
   );

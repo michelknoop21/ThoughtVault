@@ -32,6 +32,7 @@ struct SettingsView: View {
     @State private var isLoadingProfiles: Bool = false
     @State private var serverURLInput: String = ""
     @State private var showServerURLSaved: Bool = false
+    @State private var serverURLError: String? = nil
     @State private var showLogoutConfirm: Bool = false
     @State private var showBugReportSheet: Bool = false
     @State private var micPermissionGranted: Bool? = nil
@@ -97,6 +98,9 @@ struct SettingsView: View {
                         .textFieldStyle(.plain)
                         .font(TS.Font.body)
                         .autocorrectionDisabled()
+                        .onChange(of: serverURLInput) { _, _ in
+                            serverURLError = nil
+                        }
                         #if os(iOS)
                         .textInputAutocapitalization(.never)
                         .keyboardType(.URL)
@@ -109,7 +113,24 @@ struct SettingsView: View {
                     }
 
                     Button("Opslaan") {
-                        serverURL = serverURLInput
+                        // Validate URL
+                        let trimmed = serverURLInput.trimmingCharacters(in: .whitespacesAndNewlines)
+                        guard let url = URL(string: trimmed), url.host != nil else {
+                            withAnimation(TS.Animation.quick) {
+                                serverURLError = "Ongeldige URL. Voer een geldige URL in."
+                            }
+                            return
+                        }
+                        guard url.scheme == "https" else {
+                            withAnimation(TS.Animation.quick) {
+                                serverURLError = "Alleen HTTPS-verbindingen zijn toegestaan."
+                            }
+                            return
+                        }
+
+                        serverURLError = nil
+                        serverURL = trimmed
+                        serverURLInput = trimmed
                         withAnimation(TS.Animation.quick) {
                             showServerURLSaved = true
                         }
@@ -122,6 +143,13 @@ struct SettingsView: View {
                     }
                     .buttonStyle(SecondaryButtonStyle())
                     .disabled(serverURLInput == serverURL || serverURLInput.isEmpty)
+                }
+
+                if let error = serverURLError {
+                    Text(error)
+                        .font(TS.Font.caption)
+                        .foregroundStyle(Color.statusError)
+                        .transition(.opacity)
                 }
             }
             .padding(.vertical, TS.Spacing.xs)

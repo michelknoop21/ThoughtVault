@@ -55,7 +55,7 @@ export function OnboardingWizard() {
       }}
     >
       <YingaBar />
-      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", minHeight: 0 }}>
+      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", minHeight: 0, overflowY: "auto" }}>
       <div style={{ width: "100%", maxWidth: 440, padding: 32 }}>
         {/* Progress dots */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginBottom: 32 }}>

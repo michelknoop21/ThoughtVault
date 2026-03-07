@@ -165,6 +165,7 @@ export default function FeedbackWidget() {
         onMouseLeave={(e) => {
           e.currentTarget.style.transform = "scale(1)";
         }}
+        aria-label="Feedback openen"
         title="Feedback"
       >
         <ChatBubblesQuestion24Regular />
@@ -203,7 +204,7 @@ export default function FeedbackWidget() {
             bottom: 78,
             zIndex: 1001,
             width: 360,
-            maxHeight: 500,
+            maxHeight: "calc(100vh - 110px)",
             background: "var(--card-bg)",
             backdropFilter: `blur(var(--card-blur))`,
             border: "1px solid var(--card-border)",
@@ -238,14 +239,18 @@ export default function FeedbackWidget() {
             </span>
             <button
               onClick={() => setOpen(false)}
+              aria-label="Feedback sluiten"
               style={{
                 background: "none",
                 border: "none",
                 color: "var(--text-tertiary)",
                 cursor: "default",
-                padding: 4,
+                padding: 0,
+                width: 28,
+                height: 28,
                 display: "flex",
                 alignItems: "center",
+                justifyContent: "center",
               }}
             >
               <Dismiss16Regular />

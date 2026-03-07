@@ -1,3 +1,6 @@
+import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
+import { useAuthStore } from "../stores/authStore";
 import type { TranscriptTask } from "../types";
 
 type SSECallback = (task: Partial<TranscriptTask>) => void;
@@ -5,7 +8,8 @@ type ErrorCallback = (error: Error) => void;
 type CompleteCallback = () => void;
 
 export class SSEClient {
-  private eventSource: EventSource | null = null;
+  private unlisten: (() => void) | null = null;
+  private unlistenDone: (() => void) | null = null;
   private url: string;
   private token: string | null;
 
@@ -14,21 +18,17 @@ export class SSEClient {
     this.token = token;
   }
 
-  connect(
+  async connect(
     onUpdate: SSECallback,
     onError?: ErrorCallback,
     onComplete?: CompleteCallback
-  ): void {
-    // Append token as query param since EventSource doesn't support custom headers
-    const urlWithAuth = this.token
-      ? `${this.url}?token=${encodeURIComponent(this.token)}`
-      : this.url;
+  ): Promise<void> {
+    const eventName = `sse-${Date.now()}`;
 
-    this.eventSource = new EventSource(urlWithAuth);
-
-    this.eventSource.onmessage = (event) => {
+    // Listen for SSE data events from Tauri backend
+    this.unlisten = await listen<string>(eventName, (event) => {
       try {
-        const data = normalizeTaskUpdate(JSON.parse(event.data));
+        const data = normalizeTaskUpdate(JSON.parse(event.payload));
         onUpdate(data);
 
         if (data.status === "completed" || data.status === "failed" || data.status === "cancelled") {
@@ -38,19 +38,36 @@ export class SSEClient {
       } catch (e) {
         console.error("[SSE] Parse error:", e);
       }
-    };
+    });
 
-    this.eventSource.onerror = () => {
+    this.unlistenDone = await listen(`${eventName}-done`, () => {
       this.disconnect();
-      onError?.(new Error("SSE verbinding verbroken"));
-    };
+      onComplete?.();
+    });
+
+    // Start the SSE stream via Tauri IPC — token goes in headers, not URL
+    const headers: Record<string, string> = {};
+    if (this.token) {
+      headers["Authorization"] = `Bearer ${this.token}`;
+    }
+
+    try {
+      await invoke("http_sse_stream", {
+        url: this.url,
+        headers: Object.keys(headers).length > 0 ? headers : null,
+        eventName,
+      });
+    } catch (e) {
+      this.disconnect();
+      onError?.(new Error(typeof e === "string" ? e : "SSE verbinding mislukt"));
+    }
   }
 
   disconnect(): void {
-    if (this.eventSource) {
-      this.eventSource.close();
-      this.eventSource = null;
-    }
+    this.unlisten?.();
+    this.unlisten = null;
+    this.unlistenDone?.();
+    this.unlistenDone = null;
   }
 }
 
@@ -76,15 +93,6 @@ function normalizeTaskUpdate(raw: Record<string, unknown>): Partial<TranscriptTa
 }
 
 export function createSSEClient(url: string): SSEClient {
-  const stored = localStorage.getItem("auth-store");
-  let token: string | null = null;
-  if (stored) {
-    try {
-      const auth = JSON.parse(stored);
-      token = auth.state?.token || null;
-    } catch {
-      // ignore
-    }
-  }
+  const token = useAuthStore.getState().token;
   return new SSEClient(url, token);
 }

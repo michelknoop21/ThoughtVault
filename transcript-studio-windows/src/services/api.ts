@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { useAuthStore } from "../stores/authStore";
 import type {
   LoginResponse,
   Transcript,
@@ -81,6 +82,19 @@ function mapTranscript(raw: unknown): Transcript {
 }
 
 class APIService {
+  private cache = new Map<string, { data: unknown; ts: number }>();
+  private CACHE_TTL = 3000;
+
+  private getCached<T>(key: string): T | null {
+    const entry = this.cache.get(key);
+    if (entry && Date.now() - entry.ts < this.CACHE_TTL) return entry.data as T;
+    return null;
+  }
+
+  private setCache(key: string, data: unknown): void {
+    this.cache.set(key, { data, ts: Date.now() });
+  }
+
   private get baseUrl(): string {
     const stored = localStorage.getItem("settings-store");
     if (stored) {
@@ -97,16 +111,7 @@ class APIService {
   }
 
   private get token(): string | null {
-    const stored = localStorage.getItem("auth-store");
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        return parsed?.state?.token ?? parsed?.token ?? null;
-      } catch {
-        return null;
-      }
-    }
-    return null;
+    return useAuthStore.getState().token;
   }
 
   private async request<T>(
@@ -114,6 +119,13 @@ class APIService {
     path: string,
     body?: unknown
   ): Promise<T> {
+    // Check token expiry before making authenticated requests
+    const authStore = useAuthStore.getState();
+    if (authStore.isTokenExpired()) {
+      authStore.logout();
+      throw new Error("Sessie verlopen. Log opnieuw in.");
+    }
+
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
     };
@@ -121,13 +133,16 @@ class APIService {
       headers["X-User-Token"] = this.token;
     }
 
+    const requestUrl = `${this.baseUrl}${path}`;
+    if (import.meta.env.DEV) console.log(`[API] ${method} ${requestUrl}`);
+
     let response: { status: number; body: string; headers: Record<string, string> };
     try {
       response = await invoke<{ status: number; body: string; headers: Record<string, string> }>(
         "proxy_request",
         {
           request: {
-            url: `${this.baseUrl}${path}`,
+            url: requestUrl,
             method,
             headers,
             body: body ? JSON.stringify(body) : undefined,
@@ -138,15 +153,39 @@ class APIService {
       throw new Error(extractErrorMessage(err));
     }
 
+    if (import.meta.env.DEV) console.log(`[API] ${method} ${path} → ${response.status} (${response.body.length} bytes)`);
+
     if (response.status >= 400) {
-      let errorMessage = `HTTP ${response.status}`;
+      // Try to extract server error message first
+      let serverMessage: string | null = null;
       try {
         const errorData = JSON.parse(response.body);
         const extracted = errorData.message || errorData.error || errorData.detail;
-        errorMessage = (typeof extracted === "string" ? extracted : null) || errorMessage;
-      } catch {
-        if (response.body) errorMessage = response.body;
+        if (typeof extracted === "string") serverMessage = extracted;
+      } catch { /* no parseable body */ }
+
+      // Dutch error messages by status code
+      let errorMessage: string;
+      switch (response.status) {
+        case 401: errorMessage = "Sessie verlopen. Log opnieuw in."; break;
+        case 403: errorMessage = "Geen toegang tot deze functie."; break;
+        case 404: errorMessage = serverMessage || "Niet gevonden."; break;
+        case 409: errorMessage = serverMessage || "Conflict: de gegevens zijn gewijzigd."; break;
+        case 422: errorMessage = serverMessage || "Ongeldige invoer."; break;
+        case 429: errorMessage = "Te veel verzoeken. Probeer het later opnieuw."; break;
+        default:
+          if (response.status >= 500) {
+            errorMessage = "Serverfout. Probeer het later opnieuw.";
+          } else {
+            errorMessage = serverMessage || `Fout ${response.status}`;
+          }
       }
+
+      // Auto-logout on auth errors
+      if (response.status === 401) {
+        useAuthStore.getState().logout();
+      }
+
       throw new Error(errorMessage);
     }
 
@@ -157,7 +196,7 @@ class APIService {
     try {
       return JSON.parse(response.body) as T;
     } catch {
-      throw new Error(`Ongeldig JSON antwoord van server`);
+      throw new Error(`Ongeldig JSON antwoord van server: ${response.body.substring(0, 200)}`);
     }
   }
 
@@ -193,7 +232,7 @@ class APIService {
     offset?: number;
   }): Promise<Transcript[]> {
     const query = new URLSearchParams();
-    if (params?.search) query.set("search", params.search);
+    if (params?.search) query.set("search", params.search.slice(0, 255));
     if (params?.tags?.length) query.set("tags", params.tags.join(","));
     if (params?.limit) query.set("limit", params.limit.toString());
     if (params?.offset) query.set("offset", params.offset.toString());
@@ -303,7 +342,7 @@ class APIService {
           errorMessage = `Upload mislukt: ${response.body}`;
         }
       }
-      console.error("[API] Upload error:", { status: response.status, body: response.body });
+      if (import.meta.env.DEV) console.error("[API] Upload error:", { status: response.status, body: response.body });
       throw new Error(errorMessage);
     }
 
@@ -342,18 +381,18 @@ class APIService {
 
   // Admin
   async getAdminUsers(): Promise<AdminUser[]> {
+    const cached = this.getCached<AdminUser[]>("admin-users");
+    if (cached) return cached;
     try {
-      // Backend returns { "items": [...] }
       const data = await this.request<{ items?: AdminUser[] }>(
         "GET",
         "/admin/users"
       );
-      console.log("[API] getAdminUsers response:", data);
       const users = safeArray<AdminUser>(data);
-      console.log("[API] getAdminUsers parsed:", users);
+      this.setCache("admin-users", users);
       return users;
     } catch (err) {
-      console.error("[API] getAdminUsers error:", err);
+      if (import.meta.env.DEV) console.error("[API] getAdminUsers error:", err);
       return [];
     }
   }
@@ -364,6 +403,15 @@ class APIService {
     name: string,
     role: "user" | "admin"
   ): Promise<AdminUser> {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      throw new Error("Ongeldig e-mailadres");
+    }
+    if (password.length < 8) {
+      throw new Error("Wachtwoord moet minimaal 8 tekens bevatten");
+    }
+    if (!["user", "admin"].includes(role)) {
+      throw new Error("Ongeldige rol");
+    }
     return this.request<AdminUser>("POST", "/admin/users", {
       username: email,
       password,
@@ -387,12 +435,16 @@ class APIService {
   }
 
   async getFeedback(): Promise<AdminFeedback[]> {
+    const cached = this.getCached<AdminFeedback[]>("admin-feedback");
+    if (cached) return cached;
     try {
       const data = await this.request<AdminFeedback[] | PaginatedResponse<AdminFeedback>>(
         "GET",
         "/admin/feedback"
       );
-      return safeArray<AdminFeedback>(data);
+      const items = safeArray<AdminFeedback>(data);
+      this.setCache("admin-feedback", items);
+      return items;
     } catch {
       return [];
     }
@@ -401,7 +453,7 @@ class APIService {
   async updateFeedback(id: string, status: string, response?: string): Promise<void> {
     return this.request<void>("PUT", `/admin/feedback/${id}`, {
       status,
-      ...(response ? { response } : {}),
+      ...(response ? { admin_response: response } : {}),
     });
   }
 
@@ -455,8 +507,22 @@ class APIService {
   }
 
   async getSystemHealth(): Promise<SystemHealth> {
+    const cached = this.getCached<SystemHealth>("system-health");
+    if (cached) return cached;
     try {
-      return await this.request<SystemHealth>("GET", "/health");
+      const raw = await this.request<Record<string, unknown>>("GET", "/health");
+      const health: SystemHealth = {
+        api_status: (raw.api_status ?? raw.status ?? "unknown") as SystemHealth["api_status"],
+        transcription_queue_length: Number(raw.transcription_queue_length ?? raw.queue_length ?? 0) || 0,
+        active_tasks: Number(raw.active_tasks ?? 0) || 0,
+        storage_used_gb: Number(raw.storage_used_gb ?? 0) || 0,
+        version: String(raw.version ?? "unknown"),
+        model: raw.model as string | undefined,
+        device: raw.device as string | undefined,
+        max_upload_size_mb: Number(raw.max_upload_size_mb ?? 0) || 0,
+      };
+      this.setCache("system-health", health);
+      return health;
     } catch {
       return {
         api_status: "down",

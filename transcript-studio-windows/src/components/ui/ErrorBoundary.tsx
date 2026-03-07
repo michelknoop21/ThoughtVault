@@ -70,16 +70,9 @@ export class ErrorBoundary extends Component<Props, State> {
               window.location.hash = "/";
               window.location.reload();
             }}
+            className="btn btn-accent"
             style={{
-              padding: "6px 16px",
-              fontSize: 13,
-              fontWeight: 600,
               fontFamily: "inherit",
-              borderRadius: 4,
-              border: "1px solid transparent",
-              background: "var(--fill-accent-default)",
-              color: "#fff",
-              cursor: "default",
             }}
           >
             Herlaad applicatie

@@ -1,3 +1,4 @@
+import { useSettingsStore } from "../stores/settingsStore";
 import type { Profile, NotulenProvider } from "../types";
 
 interface LLMConfig {
@@ -11,27 +12,13 @@ interface LLMConfig {
 type ProgressCallback = (chunk: string) => void;
 
 function getConfig(): LLMConfig {
-  const stored = localStorage.getItem("settings-store");
-  if (stored) {
-    try {
-      const settings = JSON.parse(stored).state;
-      return {
-        provider: settings.notulen_provider || "cloud",
-        ollamaUrl: settings.ollama_url || "http://localhost:11434",
-        ollamaModel: settings.ollama_model || "llama3.2",
-        lmStudioUrl: settings.lm_studio_url || "http://localhost:1234",
-        lmStudioModel: settings.lm_studio_model || "local-model",
-      };
-    } catch {
-      // fall through
-    }
-  }
+  const settings = useSettingsStore.getState();
   return {
-    provider: "cloud",
-    ollamaUrl: "http://localhost:11434",
-    ollamaModel: "llama3.2",
-    lmStudioUrl: "http://localhost:1234",
-    lmStudioModel: "local-model",
+    provider: settings.notulen_provider || "cloud",
+    ollamaUrl: settings.ollama_url || "http://localhost:11434",
+    ollamaModel: settings.ollama_model || "llama3.2",
+    lmStudioUrl: settings.lm_studio_url || "http://localhost:1234",
+    lmStudioModel: settings.lm_studio_model || "local-model",
   };
 }
 

@@ -1,4 +1,4 @@
-# TranscriptStudioApp
+# TranscriptStudio
 
 ## Stack
 Native macOS/iOS (Swift 6, SwiftUI, `@Observable`) + Windows (Tauri 2, React/TypeScript).
@@ -15,6 +15,11 @@ xcodebuild test -project TranscriptStudio.xcodeproj -scheme TranscriptStudioTest
 
 # Windows dev
 cd transcript-studio-windows && npm run tauri dev
+
+# Release (sync version → build → upload)
+scripts/release.sh                # volledige pipeline
+scripts/release.sh --no-upload    # alleen build
+scripts/sync-version.sh           # alleen versie sync naar platform configs
 ```
 
 ## IMPORTANT: macOS Code Patterns
@@ -25,6 +30,29 @@ cd transcript-studio-windows && npm run tauri dev
 - Design tokens: `TS.Spacing`, `TS.Font`, `TS.Radius` (Theme.swift)
 - Kleuren: `Color.brandPrimary`, `Color.labelPrimary` (Color+Brand.swift)
 
+## Backend (productie)
+- **Server:** AWS EC2 GPU instance `michelk@3.69.205.209`
+- **Pad op server:** `/home/michelk/n8n/Transcript Studio/`
+- **Lokale repo:** `../transcript-studio-backend/` (zelfde parent directory)
+- **Container:** `n8n_transcript_studio` (Docker, nvidia runtime, bind-mount `.:/app`)
+- **API URL:** `https://n8n.prezent.nl/tstudio/api/` (nginx reverse proxy)
+- **Deployment:** code is bind-mounted, geen rebuild nodig — alleen file sync + restart:
+```bash
+# Sync alle code naar server
+rsync -avz --exclude '__pycache__' --exclude '*.pyc' --exclude 'data/' \
+  ../transcript-studio-backend/ michelk@3.69.205.209:"/home/michelk/n8n/Transcript Studio/"
+
+# Of één bestand
+scp ../transcript-studio-backend/path/to/file.py \
+  michelk@3.69.205.209:"/home/michelk/n8n/Transcript Studio/path/to/file.py"
+
+# Restart container (herlaadt uvicorn met nieuwe code)
+ssh michelk@3.69.205.209 "docker restart n8n_transcript_studio"
+
+# Logs bekijken
+ssh michelk@3.69.205.209 "docker logs n8n_transcript_studio --tail 50"
+```
+
 ## Gotchas
 - `notifications(named:)` gebruiken, NIET `notifications(for:)` in AuthViewModel
 - Sidebar toggle: `.toolbar(removing: .sidebarToggle)` op ELKE individuele NavigationStack tab
@@ -33,27 +61,4 @@ cd transcript-studio-windows && npm run tauri dev
 - Backend `username` veld is het e-mailadres (niet `email`)
 - Versioning: elke commit op `main` bumpt automatisch patch via `.githooks/post-commit`
 - Na version bump: `scripts/sync-version.sh` draaien om VERSION naar alle platform configs te syncen
-
-## Build & Release Pipeline
-```bash
-# Sync VERSION naar Xcode pbxproj, tauri.conf.json, Cargo.toml
-scripts/sync-version.sh
-
-# Build release artifact (DMG op macOS, MSI op Windows)
-scripts/build.sh
-
-# Upload artifact naar server + update releases.json manifest
-scripts/upload.sh
-
-# Volledige pipeline (sync → build → upload)
-scripts/release.sh
-scripts/release.sh --no-upload   # zonder upload
-```
-
-Artifacts worden gehost op `https://n8n.prezent.nl/tstudio/download/`
-Manifest: `https://n8n.prezent.nl/tstudio/download/releases.json`
-
-### Server-side infra
-- Nginx (`n8n_nginx` container) serveert static files via `/tstudio/download/` → `/srv/tstudio-releases/`
-- Host directory: `/home/michelk/tstudio-releases/` (volume mount in n8n-prezent docker-compose)
-- Config: `/home/michelk/n8n-prezent/nginx/default.conf`
+- Downloads: `https://n8n.prezent.nl/tstudio/download/` — zie @docs/RELEASE.md voor infra details

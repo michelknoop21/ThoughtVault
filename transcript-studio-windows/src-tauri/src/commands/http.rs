@@ -75,6 +75,19 @@ pub async fn http_upload_file(
     eprintln!("[Upload] Starting upload to: {}", url);
     eprintln!("[Upload] File path: {}", file_path);
 
+    // Check file size before reading into memory (500 MB limit)
+    const MAX_UPLOAD_SIZE: u64 = 500 * 1024 * 1024;
+    let metadata = tokio::fs::metadata(&file_path)
+        .await
+        .map_err(|e| format!("Kan bestand niet lezen ({}): {}", file_path, e))?;
+    if metadata.len() > MAX_UPLOAD_SIZE {
+        return Err(format!(
+            "Bestand te groot: {} MB (maximum: {} MB)",
+            metadata.len() / (1024 * 1024),
+            MAX_UPLOAD_SIZE / (1024 * 1024)
+        ));
+    }
+
     let file_bytes = tokio::fs::read(&file_path)
         .await
         .map_err(|e| format!("Kan bestand niet lezen ({}): {}", file_path, e))?;

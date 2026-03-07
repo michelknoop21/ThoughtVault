@@ -22,6 +22,7 @@ import {
   CheckboxChecked24Regular,
   CheckboxUnchecked24Regular,
 } from "@fluentui/react-icons";
+import DOMPurify from "dompurify";
 import { marked } from "marked";
 import { useTranscriptsStore } from "../stores/transcriptsStore";
 import { api } from "../services/api";
@@ -245,7 +246,7 @@ export function TranscriptsPage() {
 <p style="color: #666; font-size: 10pt;">
   ${formatDate(transcript.created_at)} · ${formatDuration(transcript.duration_seconds)}
 </p>
-${transcript.notule_html}
+${DOMPurify.sanitize(transcript.notule_html)}
 </body></html>`);
     printWindow.document.close();
     setTimeout(() => printWindow.print(), 250);
@@ -405,6 +406,7 @@ ${transcript.notule_html}
             <button
               className={`icon-btn icon-btn-sm${bulkMode ? " active" : ""}`}
               onClick={() => { setBulkMode(!bulkMode); setBulkSelected(new Set()); }}
+              aria-label="Selectiemodus"
               title="Selectiemodus"
               style={bulkMode ? { color: "var(--fill-accent)" } : undefined}
             >
@@ -474,7 +476,7 @@ ${transcript.notule_html}
 
         {bulkMode && (
           <div className="flex-row gap-8 bulk-action-bar">
-            <button className="btn btn-sm" onClick={selectAllFiltered} style={{ fontSize: 11, padding: "3px 8px" }}>
+            <button className="btn btn-sm" onClick={selectAllFiltered}>
               {bulkSelected.size === filteredTranscripts.length ? "Deselecteer alles" : "Selecteer alles"}
             </button>
             {bulkSelected.size > 0 && (
@@ -482,7 +484,7 @@ ${transcript.notule_html}
                 <span className="text-caption">{bulkSelected.size} geselecteerd</span>
                 <button
                   className="btn btn-sm"
-                  style={{ fontSize: 11, padding: "3px 8px", color: "var(--text-error)" }}
+                  style={{ color: "var(--text-error)" }}
                   onClick={handleBulkDelete}
                 >
                   <Delete24Regular style={{ fontSize: 12 }} />
@@ -583,6 +585,7 @@ ${transcript.notule_html}
                   <button
                     className="icon-btn icon-btn-sm"
                     onClick={(e) => handleThreeDotMenu(e, transcript)}
+                    aria-label="Meer opties"
                     title="Meer opties"
                   >
                     <MoreHorizontal24Regular className="transcripts-icon-md" />
@@ -602,13 +605,14 @@ ${transcript.notule_html}
             {/* Top bar */}
             <div className="flex-row justify-between flex-shrink-0 transcripts-detail-topbar">
               <div className="flex-row gap-8">
-                <button className="icon-btn" onClick={() => { setSelectedId(null); setIsEditingNotule(false); }} title="Terug">
+                <button className="icon-btn" onClick={() => { setSelectedId(null); setIsEditingNotule(false); }} aria-label="Terug naar lijst" title="Terug">
                   <ArrowLeft24Regular className="transcripts-icon-lg" />
                 </button>
                 <button
                   className="icon-btn"
                   onClick={() => handleRegenerate(selected)}
                   disabled={regeneratingId === selected.id}
+                  aria-label="Hertranscribeer"
                   title="Hertranscribeer"
                 >
                   <Timer24Regular
@@ -627,6 +631,7 @@ ${transcript.notule_html}
               <button
                 className="icon-btn"
                 onClick={(e) => handleThreeDotMenu(e as unknown as React.MouseEvent, selected)}
+                aria-label="Meer opties"
                 title="Meer opties"
               >
                 <MoreHorizontal24Regular className="transcripts-icon-lg" />
@@ -780,16 +785,18 @@ ${transcript.notule_html}
                         className="prose notule-editor"
                         contentEditable
                         suppressContentEditableWarning
-                        dangerouslySetInnerHTML={{ __html: editedHTML }}
+                        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(editedHTML) }}
                         onInput={(e) => setEditedHTML((e.target as HTMLDivElement).innerHTML)}
                       />
                     ) : (
                       <div
                         className="prose"
                         dangerouslySetInnerHTML={{
-                          __html: selected.notule_html.startsWith("<")
-                            ? selected.notule_html
-                            : (marked(selected.notule_html) as string),
+                          __html: DOMPurify.sanitize(
+                            selected.notule_html.startsWith("<")
+                              ? selected.notule_html
+                              : (marked(selected.notule_html) as string)
+                          ),
                         }}
                       />
                     )
@@ -947,7 +954,7 @@ ${transcript.notule_html}
                   {tag}
                   <button
                     onClick={() => handleRemoveTag(tagsDialogId, tag)}
-                    style={{ background: "none", border: "none", cursor: "pointer", padding: 0, color: "var(--text-tertiary)", fontSize: 12 }}
+                    style={{ background: "none", border: "none", cursor: "default", padding: 0, color: "var(--text-tertiary)", fontSize: 12, minWidth: 24, minHeight: 24, display: "inline-flex", alignItems: "center", justifyContent: "center" }}
                   >
                     <Dismiss24Regular style={{ fontSize: 12 }} />
                   </button>

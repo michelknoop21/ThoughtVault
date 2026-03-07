@@ -181,11 +181,14 @@ export interface AdminFeedback {
 }
 
 export interface SystemHealth {
-  api_status: "ok" | "degraded" | "down";
+  api_status: "ok" | "degraded" | "down" | "unknown";
   transcription_queue_length: number;
   active_tasks: number;
   storage_used_gb: number;
   version: string;
+  model?: string;
+  device?: string;
+  max_upload_size_mb?: number;
 }
 
 export interface InviteCode {

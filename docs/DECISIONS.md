@@ -376,3 +376,19 @@ _Append-only log. Each entry records context, decision, and consequences._
 - Ad-hoc signed apps require "right-click → Open" on first launch (Gatekeeper bypass).
 - Full Apple Developer signing can be added later by replacing `-` with a signing identity in `build.sh`.
 - `.command` files provide clickable Finder shortcuts for non-technical release managers.
+
+---
+
+## DEC-023 — Backend Feedback Status Validation Must Include "archived"
+
+**Date:** 2026-03-07
+**Status:** Accepted
+
+**Context:** Both macOS and Windows apps used `"archived"` as a feedback status for the admin archive feature, but the backend's `FeedbackUpdate` endpoint only validated `['new', 'in_progress', 'resolved', 'closed']`, causing a 400 Bad Request. The macOS app silently swallowed the error with `try?`, masking the bug. The Windows app showed "Status bijwerken mislukt" to the user. Additionally, both clients sent a `response` field for admin replies, but the Pydantic model expected `admin_response`.
+
+**Decision:** Add `"archived"` to the backend validation list in `feedback.py`. Fix both clients to send `admin_response` instead of `response`. No database migration needed — the `update_feedback` db operation has no status constraint.
+
+**Consequences:**
+- Archive/restore workflow now works on both platforms.
+- Admin responses are correctly stored and associated with the admin user.
+- Backend validation list and client status usage are now aligned: `new`, `in_progress`, `resolved`, `closed`, `archived`.

@@ -197,7 +197,7 @@ export function ProfilesPage() {
           <div className="settings-group">
             <div className="flex-row gap-10" style={{ padding: "0 14px" }}>
               <p className="settings-group-label" style={{ flex: 1, margin: 0 }}>Mijn profielen</p>
-              <button onClick={openCreate} className="btn btn-accent flex-shrink-0" style={{ padding: "5px 12px", fontSize: 12 }}>
+              <button onClick={openCreate} className="btn btn-accent btn-sm flex-shrink-0">
                 <Add24Regular style={{ fontSize: 14, marginRight: 4 }} />
                 Nieuw profiel
               </button>
@@ -228,7 +228,7 @@ export function ProfilesPage() {
             <p className="settings-group-label">Community</p>
             <div style={{ padding: "0 14px 12px" }}>
               {!showPublic ? (
-                <button onClick={loadPublicProfiles} className="btn btn-secondary" style={{ fontSize: 12 }}>
+                <button onClick={loadPublicProfiles} className="btn btn-secondary btn-sm">
                   <Globe24Regular style={{ fontSize: 14, marginRight: 4 }} />
                   Browse publieke profielen
                 </button>
@@ -292,11 +292,20 @@ export function ProfilesPage() {
                 />
               </div>
               <div className="form-field">
-                <label className="form-label">Systeem prompt</label>
+                <div className="flex-row justify-between" style={{ alignItems: "baseline" }}>
+                  <label className="form-label">Systeem prompt</label>
+                  <span className="text-caption" style={{ color: form.system_prompt.length > 4500 ? "var(--fill-system-critical)" : "var(--text-tertiary)" }}>
+                    {form.system_prompt.length}/5000
+                  </span>
+                </div>
                 <textarea
                   className="input"
                   value={form.system_prompt}
-                  onChange={(e) => setForm({ ...form, system_prompt: e.target.value })}
+                  onChange={(e) => {
+                    if (e.target.value.length <= 5000) {
+                      setForm({ ...form, system_prompt: e.target.value });
+                    }
+                  }}
                   rows={3}
                   placeholder="Instructies voor het AI model..."
                   style={{ resize: "vertical" }}
@@ -326,10 +335,10 @@ export function ProfilesPage() {
               </div>
             </div>
             <div className="flex-row gap-8" style={{ marginTop: 16, justifyContent: "flex-end" }}>
-              <button onClick={() => setShowModal(false)} className="btn btn-secondary" style={{ fontSize: 12 }}>
+              <button onClick={() => setShowModal(false)} className="btn btn-secondary btn-sm">
                 Annuleren
               </button>
-              <button onClick={handleSave} disabled={loading} className="btn btn-accent" style={{ fontSize: 12 }}>
+              <button onClick={handleSave} disabled={loading} className="btn btn-accent btn-sm">
                 {loading ? "Opslaan..." : "Opslaan"}
               </button>
             </div>
@@ -346,14 +355,14 @@ export function ProfilesPage() {
               Dit kan niet ongedaan worden gemaakt.
             </p>
             <div className="flex-row gap-8" style={{ justifyContent: "flex-end" }}>
-              <button onClick={() => setDeleteConfirm(null)} className="btn btn-secondary" style={{ fontSize: 12 }}>
+              <button onClick={() => setDeleteConfirm(null)} className="btn btn-secondary btn-sm">
                 Annuleren
               </button>
               <button
                 onClick={() => handleDelete(deleteConfirm)}
                 disabled={loading}
-                className="btn"
-                style={{ fontSize: 12, color: "var(--text-error)", borderColor: "rgba(188,0,22,0.3)" }}
+                className="btn btn-sm"
+                style={{ color: "var(--text-error)", borderColor: "rgba(188,0,22,0.3)" }}
               >
                 {loading ? "Verwijderen..." : "Verwijderen"}
               </button>
@@ -396,7 +405,7 @@ function ProfileCard({
         {/* Name + description */}
         <div className="flex-1" style={{ minWidth: 0 }}>
           <div className="flex-row gap-8" style={{ alignItems: "center" }}>
-            <p className="text-body-strong" style={{ margin: 0 }}>{profile.name}</p>
+            <p className="text-body-strong truncate" style={{ margin: 0 }}>{profile.name}</p>
             {isDefault && (
               <span className="status-badge-accent" style={{ fontSize: 10, padding: "1px 6px" }}>
                 Standaard
@@ -412,38 +421,38 @@ function ProfileCard({
         </div>
 
         {/* Actions */}
-        <div className="flex-row gap-8 flex-shrink-0" style={{ alignItems: "center" }}>
+        <div className="flex-row gap-8 flex-shrink-0" style={{ alignItems: "center", flexWrap: "wrap" }}>
           {showCopy && onCopy && (
-            <button onClick={onCopy} className="btn btn-secondary" style={{ padding: 4, fontSize: 12 }} title="Kopieer naar mijn profielen">
+            <button onClick={onCopy} className="icon-btn icon-btn-sm" title="Kopieer naar mijn profielen">
               <Copy24Regular style={{ fontSize: 16 }} />
             </button>
           )}
           {!readOnly && (
             <>
               {onSetDefault && !isDefault && (
-                <button onClick={onSetDefault} className="btn btn-secondary" style={{ padding: 4, fontSize: 12 }} title="Instellen als standaard">
+                <button onClick={onSetDefault} className="icon-btn icon-btn-sm" title="Instellen als standaard">
                   <Checkmark24Regular style={{ fontSize: 16 }} />
                 </button>
               )}
               {onToggleVisibility && (
-                <button onClick={onToggleVisibility} className="btn btn-secondary" style={{ padding: 4, fontSize: 12 }} title={profile.isPublic ? "Maak prive" : "Maak publiek"}>
+                <button onClick={onToggleVisibility} className="icon-btn icon-btn-sm" title={profile.isPublic ? "Maak prive" : "Maak publiek"}>
                   {profile.isPublic ? <LockClosed24Regular style={{ fontSize: 16 }} /> : <Globe24Regular style={{ fontSize: 16 }} />}
                 </button>
               )}
               {onEdit && (
-                <button onClick={onEdit} className="btn btn-secondary" style={{ padding: 4, fontSize: 12 }} title="Bewerken">
+                <button onClick={onEdit} className="icon-btn icon-btn-sm" title="Bewerken">
                   <Edit24Regular style={{ fontSize: 16 }} />
                 </button>
               )}
               {onDelete && (
-                <button onClick={onDelete} className="btn btn-secondary" style={{ padding: 4, fontSize: 12 }} title="Verwijderen">
-                  <Delete24Regular style={{ fontSize: 16, color: "var(--text-error)" }} />
+                <button onClick={onDelete} className="icon-btn icon-btn-sm icon-btn-danger" title="Verwijderen">
+                  <Delete24Regular style={{ fontSize: 16 }} />
                 </button>
               )}
             </>
           )}
           {readOnly && !showCopy && onSetDefault && !isDefault && (
-            <button onClick={onSetDefault} className="btn btn-secondary" style={{ padding: 4, fontSize: 12 }} title="Instellen als standaard">
+            <button onClick={onSetDefault} className="icon-btn icon-btn-sm" title="Instellen als standaard">
               <Checkmark24Regular style={{ fontSize: 16 }} />
             </button>
           )}

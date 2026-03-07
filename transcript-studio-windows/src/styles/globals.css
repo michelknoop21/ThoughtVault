@@ -206,7 +206,7 @@
   border: 1px solid var(--card-border);
   border-radius: var(--radius-md);
   box-shadow: var(--card-shadow);
-  transition: all var(--duration-hover) var(--ease-hover);
+  transition: background var(--duration-hover) var(--ease-hover), border-color var(--duration-hover) var(--ease-hover), box-shadow var(--duration-hover) var(--ease-hover), transform var(--duration-hover) var(--ease-hover), opacity var(--duration-hover) var(--ease-hover);
 }
 
 .card:hover {
@@ -246,7 +246,7 @@
   background: var(--fill-control);
   color: var(--text-primary);
   cursor: default;
-  transition: all var(--duration-quick) var(--ease-quick);
+  transition: background var(--duration-quick) var(--ease-quick), box-shadow var(--duration-quick) var(--ease-quick), transform var(--duration-quick) var(--ease-quick), opacity var(--duration-quick) var(--ease-quick);
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -361,7 +361,7 @@
   font-weight: 400;
   color: var(--text-primary);
   cursor: default;
-  transition: all var(--duration-hover) var(--ease-hover);
+  transition: background var(--duration-hover) var(--ease-hover), color var(--duration-hover) var(--ease-hover);
   text-decoration: none;
   position: relative;
 }
@@ -509,7 +509,7 @@
   position: relative;
   overflow: hidden;
   box-shadow: 0 4px 16px rgba(229, 0, 116, 0.20);
-  transition: all var(--duration-hover) var(--ease-hover);
+  transition: box-shadow var(--duration-hover) var(--ease-hover), transform var(--duration-hover) var(--ease-hover), opacity var(--duration-hover) var(--ease-hover);
   min-height: 100px;
 }
 
@@ -586,7 +586,7 @@
   font-size: var(--font-footnote);
   font-weight: 500;
   cursor: default;
-  transition: all var(--duration-hover) var(--ease-hover);
+  transition: background var(--duration-hover) var(--ease-hover), border-color var(--duration-hover) var(--ease-hover), color var(--duration-hover) var(--ease-hover);
 }
 
 .quick-start-pill:hover {
@@ -607,7 +607,7 @@
   border-radius: var(--radius-md);
   padding: var(--space-md);
   cursor: default;
-  transition: all var(--duration-hover) var(--ease-hover);
+  transition: border-color var(--duration-hover) var(--ease-hover), box-shadow var(--duration-hover) var(--ease-hover), transform var(--duration-hover) var(--ease-hover);
   box-shadow: var(--card-shadow);
 }
 
@@ -637,7 +637,7 @@
   justify-content: center;
   cursor: default;
   box-shadow: 0 4px 16px rgba(229, 0, 116, 0.40);
-  transition: all var(--duration-quick) var(--ease-quick);
+  transition: box-shadow var(--duration-quick) var(--ease-quick), transform var(--duration-quick) var(--ease-quick);
   z-index: 1;
   position: relative;
 }
@@ -690,7 +690,7 @@
   color: var(--text-primary);
   cursor: default;
   font-family: var(--font-family);
-  transition: all var(--duration-quick) var(--ease-quick);
+  transition: background var(--duration-quick) var(--ease-quick), border-color var(--duration-quick) var(--ease-quick);
 }
 
 .recording-control-btn:hover {
@@ -866,7 +866,7 @@
   border: 1px solid var(--border-primary);
   color: var(--text-secondary);
   cursor: default;
-  transition: all var(--duration-quick) var(--ease-quick);
+  transition: background var(--duration-quick) var(--ease-quick), border-color var(--duration-quick) var(--ease-quick), color var(--duration-quick) var(--ease-quick);
 }
 
 .filter-pill:hover {
@@ -897,7 +897,7 @@
   font-family: var(--font-family);
   font-size: var(--font-footnote);
   color: var(--text-primary);
-  transition: all var(--duration-hover) var(--ease-hover);
+  transition: border-color var(--duration-hover) var(--ease-hover), box-shadow var(--duration-hover) var(--ease-hover);
 }
 
 .profile-chip:hover {
@@ -1046,6 +1046,7 @@
   color: var(--status-success);
   margin-top: 1px;
   line-height: 1.45;
+  overflow-wrap: anywhere;
 }
 
 .settings-icon {
@@ -1280,7 +1281,15 @@
   border: none;
   color: var(--text-secondary);
   cursor: default;
-  transition: all var(--duration-quick) var(--ease-quick);
+  transition: background var(--duration-quick) var(--ease-quick), color var(--duration-quick) var(--ease-quick);
+  position: relative;
+}
+
+.icon-btn::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  /* Expands hit area to 44px while keeping visual 36px */
 }
 
 .icon-btn:hover {
@@ -1944,20 +1953,6 @@
   }
 }
 
-/* User cards - truncate long emails on compact */
-@media (max-width: 600px) {
-  .user-avatar {
-    width: 32px;
-    height: 32px;
-    font-size: var(--font-micro);
-  }
-
-  .role-badge {
-    font-size: 9px;
-    padding: 1px 6px;
-  }
-}
-
 /* Invite code - prevent overflow */
 .invite-code {
   overflow-wrap: break-word;
@@ -2011,6 +2006,7 @@
 .btn-sm {
   padding: 5px 10px;
   font-size: var(--font-caption);
+  min-height: 32px;
 }
 
 /* ============================================================

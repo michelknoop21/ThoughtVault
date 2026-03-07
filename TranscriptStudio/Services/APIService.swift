@@ -122,6 +122,9 @@ actor APIService {
     private let session: URLSession
     private let decoder: JSONDecoder
 
+    private var cachedBaseURL: URL?
+    private var cachedRawURL: String?
+
     private init() {
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = 30
@@ -146,12 +149,19 @@ actor APIService {
         var raw = serverURL()
         // Ensure trailing slash for correct relative URL resolution
         if !raw.hasSuffix("/") { raw += "/" }
+
+        // Return cached URL if the raw string hasn't changed
+        if raw == cachedRawURL, let cached = cachedBaseURL { return cached }
+
         guard let url = URL(string: raw) else {
             throw URLValidationError.invalidURL
         }
         guard url.scheme?.lowercased() == "https" else {
             throw URLValidationError.httpsRequired
         }
+
+        cachedBaseURL = url
+        cachedRawURL = raw
         return url
     }
 
@@ -231,7 +241,21 @@ actor APIService {
         }
 
         guard (200..<300).contains(http.statusCode) else {
-            let message = extractErrorMessage(from: data)
+            let detail = extractErrorMessage(from: data)
+            // Map HTTP status codes to user-friendly Dutch messages
+            let message: String
+            switch http.statusCode {
+            case 403:
+                message = detail ?? "Geen toegang."
+            case 404:
+                message = detail ?? "Niet gevonden."
+            case 429:
+                message = detail ?? "Te veel verzoeken. Probeer het later opnieuw."
+            case 500...:
+                message = detail ?? "Serverfout. Probeer het later opnieuw."
+            default:
+                message = detail ?? "Onverwachte fout (HTTP \(http.statusCode))."
+            }
             throw APIError.httpError(http.statusCode, message)
         }
 
@@ -651,7 +675,7 @@ actor APIService {
     func updateAdminFeedback(id: String, status: String, response: String?) async throws {
         var payload: [String: String] = ["status": status]
         if let response = response {
-            payload["response"] = response
+            payload["admin_response"] = response
         }
         let body = try JSONEncoder().encode(payload)
         let req = try request(path: "/admin/feedback/\(id)", method: "PUT", body: body)
@@ -671,10 +695,25 @@ actor APIService {
     }
 
     func getAdminErrors() async throws -> [AdminError] {
-        struct Wrapper: Decodable { let errors: [AdminError] }
+        struct ErrorsWrapper: Decodable { let errors: [AdminError] }
+        struct ItemsWrapper: Decodable { let items: [AdminError] }
         let req = try request(path: "/admin/errors")
-        let wrapper: Wrapper = try await perform(req)
-        return wrapper.errors
+        let (data, response) = try await session.data(for: req)
+        // Validate HTTP status
+        if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode >= 400 {
+            throw APIError.httpError(httpResponse.statusCode, String(data: data, encoding: .utf8))
+        }
+        let decoder = JSONDecoder()
+        // Try { errors: [...] } wrapper
+        if let wrapper = try? decoder.decode(ErrorsWrapper.self, from: data) {
+            return wrapper.errors
+        }
+        // Try { items: [...] } wrapper
+        if let wrapper = try? decoder.decode(ItemsWrapper.self, from: data) {
+            return wrapper.items
+        }
+        // Try flat array
+        return (try? decoder.decode([AdminError].self, from: data)) ?? []
     }
 
     struct AdminSettingsResponse: Decodable {
@@ -727,6 +766,13 @@ private struct EmptyResponse: Codable {
     init(from decoder: Decoder) throws {}
 }
 
+// MARK: - SSE Notification
+
+extension Notification.Name {
+    /// Posted when an SSE client exhausts all reconnection attempts.
+    static let sseConnectionFailed = Notification.Name("sseConnectionFailed")
+}
+
 // MARK: - SSEClient
 
 /// Connects to a Server-Sent Events stream and delivers parsed events on a callback.
@@ -766,6 +812,12 @@ final class SSEClient: @unchecked Sendable {
     }
 
     private func startStream() {
+        guard url.scheme?.lowercased() == "https" else {
+            logger.error("SSE connection refused: URL scheme is not HTTPS")
+            onEvent?(.error(URLError(.badURL)))
+            return
+        }
+
         var request = URLRequest(url: url)
         request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
         request.setValue(token, forHTTPHeaderField: "X-User-Token")
@@ -843,6 +895,7 @@ final class SSEClient: @unchecked Sendable {
                 }
             } else {
                 logger.error("SSE: Max reconnect attempts reached.")
+                NotificationCenter.default.post(name: .sseConnectionFailed, object: nil)
                 onEvent?(.error(error))
             }
         } else {

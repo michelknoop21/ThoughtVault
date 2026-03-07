@@ -102,7 +102,10 @@ export function AccountPage() {
 
   async function handleVerify2FASetup(e: React.FormEvent) {
     e.preventDefault();
-    if (verifyCode.length !== 6) return;
+    if (!/^\d{6}$/.test(verifyCode)) {
+      toast.show("Code moet exact 6 cijfers zijn", "error");
+      return;
+    }
     setTwoFALoading(true);
     try {
       const result: TwoFAVerifyResponse = await api.verify2FASetup(verifyCode);
@@ -180,7 +183,7 @@ export function AccountPage() {
                 </div>
                 <div className="flex-1">
                   {isEditingName ? (
-                    <div className="flex-row gap-8" style={{ alignItems: "center" }}>
+                    <div className="flex-row gap-8" style={{ alignItems: "center", flexWrap: "wrap" }}>
                       <input
                         type="text"
                         value={editName}
@@ -190,14 +193,13 @@ export function AccountPage() {
                           if (e.key === "Escape") setIsEditingName(false);
                         }}
                         className="input"
-                        style={{ flex: 1, padding: "5px 8px", fontSize: 13 }}
+                        style={{ flex: 1, minWidth: 120, padding: "5px 8px", fontSize: 13 }}
                         autoFocus
                         placeholder="Je volledige naam"
                       />
                       <button
                         onClick={handleSaveName}
-                        className="btn btn-accent"
-                        style={{ padding: "5px 10px", fontSize: 12 }}
+                        className="btn btn-accent btn-sm"
                       >
                         <Checkmark24Regular style={{ fontSize: 14 }} />
                         Opslaan
@@ -376,20 +378,18 @@ export function AccountPage() {
                         style={{ maxWidth: 200, letterSpacing: "4px", textAlign: "center" }}
                       />
                     </div>
-                    <div className="flex-row gap-8">
+                    <div className="flex-row gap-8" style={{ flexWrap: "wrap" }}>
                       <button
                         type="submit"
-                        className="btn btn-accent"
+                        className="btn btn-accent btn-sm"
                         disabled={twoFALoading || verifyCode.length !== 6}
-                        style={{ padding: "7px 14px", fontSize: 12 }}
                       >
                         {twoFALoading ? "Verifiëren..." : "Verifiëren en activeren"}
                       </button>
                       <button
                         type="button"
                         onClick={() => { setSetupData(null); setVerifyCode(""); }}
-                        className="btn btn-secondary"
-                        style={{ padding: "7px 14px", fontSize: 12 }}
+                        className="btn btn-secondary btn-sm"
                       >
                         Annuleren
                       </button>
@@ -420,8 +420,8 @@ export function AccountPage() {
                   </div>
                   <button
                     onClick={() => setBackupCodes(null)}
-                    className="btn btn-secondary"
-                    style={{ padding: "7px 14px", fontSize: 12, alignSelf: "flex-start" }}
+                    className="btn btn-secondary btn-sm"
+                    style={{ alignSelf: "flex-start" }}
                   >
                     Begrepen, sluiten
                   </button>
@@ -446,39 +446,37 @@ export function AccountPage() {
                           style={{ maxWidth: 300 }}
                         />
                       </div>
-                      <div className="flex-row gap-8">
+                      <div className="flex-row gap-8" style={{ flexWrap: "wrap" }}>
                         <button
                           type="submit"
-                          className="btn btn-secondary"
+                          className="btn btn-secondary btn-sm"
                           disabled={twoFALoading || !disablePassword}
-                          style={{ padding: "7px 14px", fontSize: 12, color: "var(--text-error)", borderColor: "rgba(188,0,22,0.3)" }}
+                          style={{ color: "var(--text-error)", borderColor: "rgba(188,0,22,0.3)" }}
                         >
                           {twoFALoading ? "Uitschakelen..." : "Bevestigen"}
                         </button>
                         <button
                           type="button"
                           onClick={() => { setShowDisableForm(false); setDisablePassword(""); }}
-                          className="btn btn-secondary"
-                          style={{ padding: "7px 14px", fontSize: 12 }}
+                          className="btn btn-secondary btn-sm"
                         >
                           Annuleren
                         </button>
                       </div>
                     </form>
                   ) : (
-                    <div className="flex-row gap-8">
+                    <div className="flex-row gap-8" style={{ flexWrap: "wrap" }}>
                       <button
                         onClick={() => setShowDisableForm(true)}
-                        className="btn btn-secondary"
-                        style={{ padding: "7px 14px", fontSize: 12, color: "var(--text-error)", borderColor: "rgba(188,0,22,0.3)" }}
+                        className="btn btn-secondary btn-sm"
+                        style={{ color: "var(--text-error)", borderColor: "rgba(188,0,22,0.3)" }}
                       >
                         2FA deactiveren
                       </button>
                       <button
                         onClick={handleRegenerateBackupCodes}
-                        className="btn btn-secondary"
+                        className="btn btn-secondary btn-sm"
                         disabled={twoFALoading}
-                        style={{ padding: "7px 14px", fontSize: 12 }}
                       >
                         {twoFALoading ? "Genereren..." : "Backup codes opnieuw genereren"}
                       </button>

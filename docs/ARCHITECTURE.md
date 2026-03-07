@@ -1,6 +1,6 @@
 # TranscriptStudio — Architecture
 
-_Last updated: 2026-03-07 (session 4)_
+_Last updated: 2026-03-07 (session 5)_
 
 ---
 
@@ -21,7 +21,13 @@ Both desktop clients share a common REST + SSE API and are deployed independentl
 
 **Stack:** FastAPI · insanely-fast-whisper · n8n · SQLAlchemy · PostgreSQL (productie) / SQLite (development fallback) · Redis (optional)
 
-**Deployment:** Docker Compose on AWS EC2 GPU instance at `https://n8n.prezent.nl`
+**Deployment:** Docker Compose on AWS EC2 GPU instance (Tesla T4) at `https://n8n.prezent.nl`
+- **Server:** `michelk@3.69.205.209`
+- **Path:** `/home/michelk/n8n/Transcript Studio/`
+- **Container:** `n8n_transcript_studio` (nvidia runtime, source bind-mounted via `.:/app`)
+- **Local repo:** `../transcript-studio-backend/` (relative to native app root)
+- **Deploy:** `rsync` code to server + `docker restart n8n_transcript_studio` (no rebuild needed)
+- **Nginx:** `n8n_nginx` container proxies `/tstudio/` to the backend container on port 5000
 
 **Data model:** `User`, `Task`, `Note`, `Profile`, `InviteCode`, `Setting`
 
@@ -42,7 +48,7 @@ Both desktop clients share a common REST + SSE API and are deployed independentl
 | DELETE | `/tstudio/api/tasks/{id}` | Delete task and associated data |
 | GET | `/tstudio/api/transcripts` | Returns `{items: Transcript[]}` — no pagination keys |
 
-**Authentication:** All requests require `X-User-Token: <token>` header (not `Authorization: Bearer`). Login sends `username` field (which accepts email addresses as value).
+**Authentication:** Requests use `X-User-Token: <token>` (macOS) or `Authorization: Bearer <token>` (Windows) — both accepted by backend. Login sends `username` field (which accepts email addresses as value).
 
 **Field name notes (verified against backend source):**
 - `/auth/me` returns `user_id` and `username` (not `id` / `email`)

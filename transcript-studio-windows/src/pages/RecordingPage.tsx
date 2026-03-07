@@ -67,6 +67,7 @@ export function RecordingPage() {
   const elapsedRef = useRef(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const filePathRef = useRef<string>("");
+  const isUploadingRef = useRef(false);
 
   useEffect(() => {
     if (autoStart && phase === "idle") {
@@ -80,7 +81,8 @@ export function RecordingPage() {
 
   // Listen for recording-stopped event from widget
   useEffect(() => {
-    const unlisten = listen<{ file_path: string; duration_seconds: number }>(
+    let unlistenFn: (() => void) | undefined;
+    listen<{ file_path: string; duration_seconds: number }>(
       "recording-stopped",
       (event) => {
         filePathRef.current = event.payload.file_path || filePathRef.current;
@@ -88,20 +90,21 @@ export function RecordingPage() {
           handleUpload(filePathRef.current);
         }
       }
-    );
-    return () => { unlisten.then((fn) => fn()); };
+    ).then((fn) => { unlistenFn = fn; }).catch(console.error);
+    return () => { unlistenFn?.(); };
   }, [phase]);
 
   // Listen for recording-error event from Rust backend
   useEffect(() => {
-    const unlisten = listen<string>("recording-error", (event) => {
+    let unlistenFn: (() => void) | undefined;
+    listen<string>("recording-error", (event) => {
       console.error("[Recording] Backend error:", event.payload);
       setError(`Opname fout: ${event.payload}`);
       setPhase("idle");
       stopTimer();
       closeWidgetWindow().catch(console.error);
-    });
-    return () => { unlisten.then((fn) => fn()); };
+    }).then((fn) => { unlistenFn = fn; }).catch(console.error);
+    return () => { unlistenFn?.(); };
   }, []);
 
   function startTimer() {
@@ -154,56 +157,64 @@ export function RecordingPage() {
   }
 
   async function handleUpload(filePath: string) {
-    const networkStatus = await getNetworkStatus().catch(() => ({ is_online: false }));
+    if (isUploadingRef.current) return;
+    isUploadingRef.current = true;
 
-    if (!networkStatus.is_online) {
-      await enqueue({ file_path: filePath, profile_id: selectedProfileId, mode });
-      setError("Geen internetverbinding. Opname is toegevoegd aan de wachtrij en wordt verstuurd zodra u weer online bent.");
-      reset();
-      return;
-    }
-
-    // Immediately add a background task and reset to idle so the user can start a new recording
-    const tempId = `pending-${Date.now()}`;
-    const bgTask: TranscriptTask = {
-      task_id: tempId,
-      status: "uploading",
-      progress: 0,
-      mode,
-      created_at: new Date().toISOString(),
-    };
-    addBackgroundTask(bgTask);
-    reset();
-
-    // Upload and SSE tracking happen in the background
     try {
-      const { task_id } = await api.uploadRecording(filePath, selectedProfileId, mode);
+      const networkStatus = await getNetworkStatus().catch(() => ({ is_online: false }));
 
-      // Replace temp task with real task_id
-      updateBackgroundTask(tempId, { task_id, status: "uploading", progress: 10 });
+      if (!networkStatus.is_online) {
+        await enqueue({ file_path: filePath, profile_id: selectedProfileId, mode });
+        setError("Geen internetverbinding. Opname is toegevoegd aan de wachtrij en wordt verstuurd zodra u weer online bent.");
+        reset();
+        return;
+      }
 
-      // SSE updates go to background task store (use real task_id from here)
-      const sseClient = createSSEClient(api.getStreamUrl(task_id));
-      sseClient.connect(
-        (update) => {
-          updateBackgroundTask(task_id, update);
-        },
-        (err) => {
-          console.error("[SSE] Error:", err);
-          updateBackgroundTask(task_id, { status: "failed", error_message: "Verbinding verloren" });
-        },
-        async () => {
-          const transcripts = await api.getTranscripts({ limit: 1 });
-          if (transcripts[0]) addTranscript(transcripts[0]);
-          removeBackgroundTask(task_id);
-        }
-      );
-    } catch (err) {
-      // Upload failed — update background task to show error
-      updateBackgroundTask(tempId, {
-        status: "failed",
-        error_message: err instanceof Error ? err.message : "Upload mislukt",
-      });
+      // Immediately add a background task and reset to idle so the user can start a new recording
+      const tempId = `pending-${Date.now()}`;
+      const bgTask: TranscriptTask = {
+        task_id: tempId,
+        status: "uploading",
+        progress: 0,
+        mode,
+        created_at: new Date().toISOString(),
+      };
+      addBackgroundTask(bgTask);
+      reset();
+
+      // Upload and SSE tracking happen in the background
+      try {
+        const { task_id } = await api.uploadRecording(filePath, selectedProfileId, mode);
+
+        // Replace temp task with real task_id
+        updateBackgroundTask(tempId, { task_id, status: "uploading", progress: 10 });
+
+        // SSE updates go to background task store (use real task_id from here)
+        const sseClient = createSSEClient(api.getStreamUrl(task_id));
+        sseClient.connect(
+          (update) => {
+            updateBackgroundTask(task_id, update);
+          },
+          (err) => {
+            console.error("[SSE] Error:", err);
+            updateBackgroundTask(task_id, { status: "failed", error_message: "Verbinding verloren" });
+          },
+          async () => {
+            const transcripts = await api.getTranscripts({ limit: 1 });
+            if (transcripts[0]) addTranscript(transcripts[0]);
+            removeBackgroundTask(task_id);
+          }
+        );
+      } catch (err) {
+        // Upload failed — enqueue for retry
+        await enqueue({ file_path: filePath, profile_id: selectedProfileId, mode }).catch(() => {});
+        updateBackgroundTask(tempId, {
+          status: "failed",
+          error_message: "Upload mislukt. Wordt automatisch opnieuw geprobeerd.",
+        });
+      }
+    } finally {
+      isUploadingRef.current = false;
     }
   }
 
@@ -248,6 +259,7 @@ export function RecordingPage() {
           onClick={() => canGoBack && navigate("/")}
           disabled={!canGoBack}
           className="btn btn-ghost icon-btn"
+          aria-label="Terug naar startpagina"
           title="Terug"
         >
           <ArrowLeft24Regular />
@@ -378,7 +390,7 @@ function MeetingDetectionBanner({ onRecord }: { onRecord: () => void }) {
       <button
         className="btn btn-accent flex-shrink-0"
         onClick={onRecord}
-        style={{ padding: "4px 12px", fontSize: 12 }}
+        style={{ padding: "6px 12px", fontSize: 12, minHeight: 32 }}
       >
         <MicRecord24Regular style={{ fontSize: 13 }} />
         Opnemen
@@ -480,6 +492,7 @@ function IdleState({
           <button
             onClick={onStart}
             className="mic-button-large"
+            aria-label="Start opname"
             title="Opname starten"
           >
             <MicRecord24Regular style={{ fontSize: 28, color: "#fff" }} />
@@ -552,6 +565,7 @@ function ActiveState({
         <button
           onClick={onStop}
           className="mic-button-large"
+          aria-label="Stop opname"
           title="Stoppen"
         >
           <MicRecord24Regular style={{ fontSize: 28, color: "#fff" }} />
@@ -645,6 +659,11 @@ function BackgroundTaskCard({ task }: { task: TranscriptTask }) {
           <span className="text-body" style={{ fontWeight: 500 }}>{label}</span>
           <span className="text-caption text-tertiary">{progress}%</span>
         </div>
+        {isFailed && task.error_message && (
+          <p className="text-caption" style={{ color: "var(--status-error)", marginBottom: 4 }}>
+            {task.error_message}
+          </p>
+        )}
         <div style={{
           height: 3,
           borderRadius: 2,
@@ -664,8 +683,7 @@ function BackgroundTaskCard({ task }: { task: TranscriptTask }) {
       {/* Action button */}
       {status === "completed" ? (
         <button
-          className="btn btn-secondary"
-          style={{ padding: "4px 10px", fontSize: 12 }}
+          className="btn btn-secondary btn-sm"
           onClick={() => {
             removeBackgroundTask(task.task_id);
             navigate("/transcripts");
@@ -675,8 +693,7 @@ function BackgroundTaskCard({ task }: { task: TranscriptTask }) {
         </button>
       ) : isFailed ? (
         <button
-          className="btn btn-ghost"
-          style={{ padding: "4px 8px", fontSize: 12 }}
+          className="btn btn-ghost btn-sm"
           onClick={() => removeBackgroundTask(task.task_id)}
           title="Verwijderen"
         >

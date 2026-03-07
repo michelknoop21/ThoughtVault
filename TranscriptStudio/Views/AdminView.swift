@@ -57,6 +57,11 @@ struct AdminView: View {
     @State private var newUserName = ""
     @State private var newUserRole = "user"
 
+    // Feedback filter
+    @State private var showArchivedFeedback = false
+    @State private var feedbackToDelete: AdminFeedback? = nil
+    @State private var showDeleteFeedbackConfirm = false
+
     // Create invitation form
     @State private var newInviteMaxUses = 1
     @State private var newInviteExpiresHours = 48
@@ -104,6 +109,18 @@ struct AdminView: View {
         }
         .sheet(isPresented: $showCreateInvitationSheet) {
             createInvitationSheet
+        }
+        .alert(
+            "Feedback verwijderen?",
+            isPresented: $showDeleteFeedbackConfirm,
+            presenting: feedbackToDelete
+        ) { item in
+            Button("Verwijderen", role: .destructive) {
+                Task { await deleteFeedback(item) }
+            }
+            Button("Annuleer", role: .cancel) {}
+        } message: { _ in
+            Text("Dit kan niet ongedaan worden gemaakt.")
         }
     }
 
@@ -571,32 +588,53 @@ struct AdminView: View {
 
     // MARK: - Feedback Tab
 
+    private var filteredFeedbackItems: [AdminFeedback] {
+        showArchivedFeedback ? feedbackItems : feedbackItems.filter { $0.status != "archived" }
+    }
+
     private var feedbackTab: some View {
         ScrollView {
-            if feedbackItems.isEmpty {
-                VStack(spacing: TS.Spacing.md) {
-                    Image(systemName: "bubble.left.and.text.bubble.right")
-                        .font(.system(size: 40))
-                        .foregroundStyle(Color.labelTertiary)
-                    Text("Geen feedback")
-                        .font(TS.Font.callout)
+            VStack(spacing: 0) {
+                // Filter toggle
+                HStack {
+                    Text("\(filteredFeedbackItems.count) item\(filteredFeedbackItems.count == 1 ? "" : "s")")
+                        .font(TS.Font.caption)
                         .foregroundStyle(Color.labelSecondary)
+                    Spacer()
+                    Toggle("Toon gearchiveerd", isOn: $showArchivedFeedback)
+                        .toggleStyle(.switch)
+                        .controlSize(.mini)
+                        .font(TS.Font.caption)
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.top, TS.Spacing.xxl)
-            } else {
-                LazyVStack(spacing: TS.Spacing.md) {
-                    ForEach(feedbackItems) { item in
-                        feedbackCard(item)
+                .padding(.horizontal, TS.Spacing.md)
+                .padding(.vertical, TS.Spacing.sm)
+
+                if filteredFeedbackItems.isEmpty {
+                    VStack(spacing: TS.Spacing.md) {
+                        Image(systemName: "bubble.left.and.text.bubble.right")
+                            .font(.system(size: 40))
+                            .foregroundStyle(Color.labelTertiary)
+                        Text("Geen feedback")
+                            .font(TS.Font.callout)
+                            .foregroundStyle(Color.labelSecondary)
                     }
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, TS.Spacing.xxl)
+                } else {
+                    LazyVStack(spacing: TS.Spacing.md) {
+                        ForEach(filteredFeedbackItems) { item in
+                            feedbackCard(item)
+                        }
+                    }
+                    .padding(TS.Spacing.md)
                 }
-                .padding(TS.Spacing.md)
             }
         }
     }
 
     private func feedbackCard(_ item: AdminFeedback) -> some View {
-        VStack(alignment: .leading, spacing: TS.Spacing.sm) {
+        let isArchived = item.status == "archived"
+        return VStack(alignment: .leading, spacing: TS.Spacing.sm) {
             // Top row: category + status badges
             HStack(spacing: TS.Spacing.sm) {
                 Text(feedbackCategoryLabel(item.category))
@@ -652,13 +690,46 @@ struct AdminView: View {
             Divider()
 
             HStack(spacing: TS.Spacing.sm) {
-                feedbackStatusButton("Nieuw", targetStatus: "new", currentStatus: item.status, itemId: item.id)
-                feedbackStatusButton("In behandeling", targetStatus: "in_progress", currentStatus: item.status, itemId: item.id)
-                feedbackStatusButton("Opgelost", targetStatus: "resolved", currentStatus: item.status, itemId: item.id)
+                if isArchived {
+                    feedbackStatusButton("Herstellen", targetStatus: "open", currentStatus: item.status, itemId: item.id)
+                } else {
+                    feedbackStatusButton("Nieuw", targetStatus: "new", currentStatus: item.status, itemId: item.id)
+                    feedbackStatusButton("In behandeling", targetStatus: "in_progress", currentStatus: item.status, itemId: item.id)
+                    feedbackStatusButton("Opgelost", targetStatus: "resolved", currentStatus: item.status, itemId: item.id)
+                }
             }
         }
         .padding(TS.Spacing.md)
         .modernCard()
+        .opacity(isArchived ? 0.6 : 1.0)
+        .contextMenu {
+            if isArchived {
+                Button {
+                    Task {
+                        try? await APIService.shared.updateAdminFeedback(id: item.id, status: "open", response: nil)
+                        await loadFeedback()
+                    }
+                } label: {
+                    Label("Herstellen", systemImage: "arrow.uturn.backward")
+                }
+            } else {
+                Button {
+                    Task {
+                        try? await APIService.shared.updateAdminFeedback(id: item.id, status: "archived", response: nil)
+                        await loadFeedback()
+                    }
+                } label: {
+                    Label("Archiveren", systemImage: "archivebox")
+                }
+            }
+            Divider()
+            Button(role: .destructive) {
+                feedbackToDelete = item
+                showDeleteFeedbackConfirm = true
+            } label: {
+                Label("Verwijderen", systemImage: "trash")
+            }
+        }
     }
 
     private func feedbackStatusButton(_ label: String, targetStatus: String, currentStatus: String, itemId: String) -> some View {
@@ -715,16 +786,26 @@ struct AdminView: View {
         }
     }
 
+    private func errorSeverityColor(_ adminError: AdminError) -> Color {
+        let severity = (adminError.severity ?? adminError.errorType ?? "error").lowercased()
+        switch severity {
+        case "warning": return Color.brandOrange
+        case "info":    return Color.brandPrimary
+        default:        return Color.statusError
+        }
+    }
+
     private func errorCard(_ adminError: AdminError) -> some View {
-        VStack(alignment: .leading, spacing: TS.Spacing.sm) {
+        let sevColor = errorSeverityColor(adminError)
+        return VStack(alignment: .leading, spacing: TS.Spacing.sm) {
             // Type badge + timestamp
             HStack {
                 Text(adminError.errorType ?? "Error")
                     .font(TS.Font.microSemibold)
                     .padding(.horizontal, TS.Spacing.sm)
                     .padding(.vertical, TS.Spacing.xs)
-                    .background(Color.statusError.opacity(0.12))
-                    .foregroundStyle(Color.statusError)
+                    .background(sevColor.opacity(0.12))
+                    .foregroundStyle(sevColor)
                     .clipShape(Capsule())
 
                 Spacer()
@@ -1033,6 +1114,7 @@ struct AdminView: View {
         case "new":         return "Nieuw"
         case "in_progress": return "In behandeling"
         case "resolved":    return "Opgelost"
+        case "archived":    return "Gearchiveerd"
         default:            return status.capitalized
         }
     }
@@ -1042,6 +1124,7 @@ struct AdminView: View {
         case "new":         return Color.brandPrimary
         case "in_progress": return Color.brandOrange
         case "resolved":    return Color.statusSuccess
+        case "archived":    return Color.labelTertiary
         default:            return Color.labelTertiary
         }
     }
@@ -1149,6 +1232,15 @@ struct AdminView: View {
             users.removeAll { $0.id == user.id }
         } catch {
             errorMessage = "Verwijderen mislukt: \(error.localizedDescription)"
+        }
+    }
+
+    private func deleteFeedback(_ item: AdminFeedback) async {
+        do {
+            try await APIService.shared.deleteAdminFeedback(id: item.id)
+            feedbackItems.removeAll { $0.id == item.id }
+        } catch {
+            errorMessage = "Feedback verwijderen mislukt: \(error.localizedDescription)"
         }
     }
 }

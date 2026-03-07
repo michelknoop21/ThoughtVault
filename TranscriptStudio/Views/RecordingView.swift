@@ -24,6 +24,7 @@ struct RecordingView: View {
     @State private var addNoteText = ""
     @State private var showNoteField = false
     @State private var showCancelConfirm = false
+    @State private var showProfileLoadError = false
 
     // MARK: Body
 
@@ -120,15 +121,49 @@ struct RecordingView: View {
             VStack(spacing: TS.Spacing.md) {
                 recordingTypeSection
                 if recordingVM.availableProfiles.isEmpty {
-                    HStack(spacing: TS.Spacing.sm) {
-                        ProgressView()
-                            .scaleEffect(0.7)
-                        Text("Profielen laden...")
-                            .font(TS.Font.caption)
-                            .foregroundStyle(Color.labelTertiary)
+                    if showProfileLoadError {
+                        VStack(spacing: TS.Spacing.sm) {
+                            HStack(spacing: TS.Spacing.sm) {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .foregroundStyle(Color.brandOrange)
+                                Text("Profielen konden niet geladen worden")
+                                    .font(TS.Font.caption)
+                                    .foregroundStyle(Color.labelSecondary)
+                            }
+                            Button {
+                                showProfileLoadError = false
+                                Task {
+                                    await recordingVM.reloadProfiles()
+                                    try? await Task.sleep(nanoseconds: 10_000_000_000)
+                                    if recordingVM.availableProfiles.isEmpty {
+                                        showProfileLoadError = true
+                                    }
+                                }
+                            } label: {
+                                Text("Opnieuw proberen")
+                                    .font(TS.Font.captionMedium)
+                            }
+                            .buttonStyle(SecondaryButtonStyle())
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(TS.Spacing.md)
+                    } else {
+                        HStack(spacing: TS.Spacing.sm) {
+                            ProgressView()
+                                .scaleEffect(0.7)
+                            Text("Profielen laden...")
+                                .font(TS.Font.caption)
+                                .foregroundStyle(Color.labelTertiary)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(TS.Spacing.md)
+                        .task {
+                            try? await Task.sleep(nanoseconds: 10_000_000_000)
+                            if recordingVM.availableProfiles.isEmpty {
+                                showProfileLoadError = true
+                            }
+                        }
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(TS.Spacing.md)
                 } else {
                     profileSection
                 }
@@ -372,6 +407,7 @@ struct RecordingView: View {
                         .foregroundStyle(Color.statusError.opacity(0.6))
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Foutmelding sluiten")
             }
             .padding(TS.Spacing.sm)
             .background {

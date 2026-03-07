@@ -237,7 +237,7 @@ function SessionCard({
       </div>
 
       {/* Title */}
-      <p className="session-card-title">{transcript.title || "Naamloze opname"}</p>
+      <p className="session-card-title truncate">{transcript.title || "Naamloze opname"}</p>
 
       {/* Preview */}
       {previewText && <p className="session-card-preview">{previewText}</p>}

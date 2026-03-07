@@ -87,10 +87,10 @@ struct TranscriptsView: View {
         case .today:
             result = result.filter { calendar.isDateInToday($0.date) }
         case .week:
-            let weekAgo = calendar.date(byAdding: .day, value: -7, to: now)!
+            guard let weekAgo = calendar.date(byAdding: .day, value: -7, to: now) else { break }
             result = result.filter { $0.date >= weekAgo }
         case .month:
-            let monthAgo = calendar.date(byAdding: .month, value: -1, to: now)!
+            guard let monthAgo = calendar.date(byAdding: .month, value: -1, to: now) else { break }
             result = result.filter { $0.date >= monthAgo }
         case .all:
             break

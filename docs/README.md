@@ -58,7 +58,7 @@ Both clients default to `https://n8n.prezent.nl` as the backend server. The URL 
 
 ## Version
 
-Current version: **1.0.21** (tracked in `VERSION` file, auto-bumped on commits to `main`).
+Current version: **1.0.22** (tracked in `VERSION` file, auto-bumped on commits to `main`).
 
 Repository: [gitlab.prezent.nl/michelk/transcript-studio-native](https://gitlab.prezent.nl/michelk/transcript-studio-native)
 

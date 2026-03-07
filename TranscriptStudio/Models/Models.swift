@@ -255,7 +255,7 @@ struct TranscriptTask: Identifiable, Codable, Sendable {
 
         let decodedTaskId = try container.decodeIfPresent(String.self, forKey: .taskId) ?? ""
         let decodedId = try container.decodeIfPresent(String.self, forKey: .id)
-        self.id = decodedId?.isEmpty == false ? decodedId! : (decodedTaskId.isEmpty ? UUID().uuidString : decodedTaskId)
+        self.id = decodedId.flatMap { $0.isEmpty ? nil : $0 } ?? (decodedTaskId.isEmpty ? UUID().uuidString : decodedTaskId)
         self.taskId = decodedTaskId
         self.filename = try container.decodeIfPresent(String.self, forKey: .filename) ?? ""
 

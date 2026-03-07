@@ -110,9 +110,11 @@ final class RecordingViewModel {
     // MARK: - Private
 
     @ObservationIgnored
-    nonisolated(unsafe) private var liveTranscriptionTask: Task<Void, Never>?
+    private var isStartingLiveTranscription = false
     @ObservationIgnored
-    nonisolated(unsafe) private var pendingRemovalTasks: [String: Task<Void, Never>] = [:]
+    private var liveTranscriptionTask: Task<Void, Never>?
+    @ObservationIgnored
+    private var pendingRemovalTasks: [String: Task<Void, Never>] = [:]
     private var isProcessingQueue = false
     private var networkMonitor = NetworkMonitor.shared
 
@@ -701,14 +703,20 @@ final class RecordingViewModel {
         guard selectedMode == .microphone else { return }
 #endif
 
+        // Prevent concurrent starts (e.g. rapid pause/resume)
+        guard !isStartingLiveTranscription else { return }
+        isStartingLiveTranscription = true
+        defer { isStartingLiveTranscription = false }
+
         await MainActor.run {
             isLiveTranscribing = true
         }
 
         liveTranscriptionTask?.cancel()
-        liveTranscriptionTask = Task {
+        liveTranscriptionTask = Task { @MainActor [weak self] in
+            guard let self else { return }
             do {
-                try await onDeviceTranscriber.startLiveTranscription { [weak self] partial in
+                try await self.onDeviceTranscriber.startLiveTranscription { [weak self] partial in
                     Task { @MainActor in
                         self?.liveTranscriptText = partial
                     }
@@ -718,9 +726,7 @@ final class RecordingViewModel {
                 os_log("[RecordingVM] Live transcription ended: %{public}@", log: .default, type: .info, error.localizedDescription)
             }
 
-            Task { @MainActor in
-                self.isLiveTranscribing = false
-            }
+            self.isLiveTranscribing = false
         }
     }
 
@@ -787,7 +793,7 @@ final class RecordingViewModel {
         if updatedTask.status == .completed || updatedTask.status == .error {
             let taskId = updatedTask.taskId
             pendingRemovalTasks[taskId]?.cancel()
-            pendingRemovalTasks[taskId] = Task {
+            pendingRemovalTasks[taskId] = Task { @MainActor in
                 try? await Task.sleep(nanoseconds: 3_000_000_000)
                 guard !Task.isCancelled else { return }
                 self.removeTask(taskId)
@@ -858,9 +864,12 @@ final class RecordingViewModel {
 
                 mixBuffer.frameLength = totalFrames
 
-                let micData = micBuffer.floatChannelData![0]
-                let sysData = sysBuffer.floatChannelData![0]
-                let mixData = mixBuffer.floatChannelData![0]
+                guard let micData = micBuffer.floatChannelData?[0],
+                      let sysData = sysBuffer.floatChannelData?[0],
+                      let mixData = mixBuffer.floatChannelData?[0] else {
+                    os_log("[RecordingVM] Audio mixing failed: nil channel data, using mic only", log: .default, type: .error)
+                    return micURL
+                }
 
                 for i in 0..<Int(totalFrames) {
                     let micSample: Float = i < Int(micBuffer.frameLength) ? micData[i] : 0

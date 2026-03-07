@@ -130,3 +130,7 @@ body {
   border-radius: 10px;
 }
 .widget-btn-stop:hover { background: rgba(229, 0, 116, 1.00); }
+
+@media (prefers-reduced-motion: reduce) {
+  .widget-status-dot { animation: none; }
+}

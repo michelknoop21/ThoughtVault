@@ -5,6 +5,27 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2026-03-07] — Security hardening, feedback bugfixes, backend deployment (v1.0.22)
+
+### v1.0.22 (2026-03-07)
+
+#### Fixed
+- **Feedback archive 400 error** (backend + both clients): Backend rejected "archived" as invalid status — added to validation whitelist in `feedback.py`. Both macOS and Windows clients sent `response` field but backend expects `admin_response` — fixed in `APIService.swift` and `api.ts`
+- **Duplicate delete calls** (Windows): Feedback delete button could fire multiple times before the first request completed, causing 404 errors on subsequent calls. Added `busyId` guard state to disable action buttons during pending operations
+
+#### Changed
+- **Security hardening** (Windows): Content Security Policy enabled in Tauri config, file size validation before upload, auth token moved from URL to headers in SSE client, XSS protection via DOMPurify sanitization, token storage migrated from localStorage to OS keyring
+- **API logging** (Windows): Console logs now only appear in development mode (`import.meta.env.DEV`)
+- **Search validation** (Windows): Added query length validation to prevent excessive API calls
+
+#### Added
+- **Backend deployment docs** in `CLAUDE.md`: Server address, deployment path, rsync/scp commands, container restart procedure
+
+#### Decisions
+- DEC-023: Backend feedback status validation (see [DECISIONS.md](DECISIONS.md))
+
+---
+
 ## [2026-03-07] — API URL refactoring, admin fixes, build pipeline (v1.0.17 - v1.0.21)
 
 ### v1.0.21 (2026-03-07)
@@ -137,19 +158,6 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Git repository**: Initialized with automatic semantic versioning system via post-commit
   hook. Version tracked in `VERSION` file, auto-bumped on commits to `main`.
 - **GitLab remote**: Connected to `gitlab.prezent.nl/michelk/transcript-studio-native`.
-
----
-
-## [Unreleased]
-
-### macOS
-
-- ActivityKit Live Activity support with Dynamic Island waveform widget
-- RecordingActivityAttributes model for real-time recording state propagation
-- LiveActivityManager service for activity lifecycle control (start / update / end)
-- Minimum window size constraint added to TranscriptStudioApp window configuration
-- Sidebar toggle fix: restored NavigationSplitView sidebar show/hide button
-- Home screen redesigned with Quick-Start recording card and live task progress list
 
 ---
 

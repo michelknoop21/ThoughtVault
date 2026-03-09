@@ -23,7 +23,6 @@ import {
   stopRecording,
   pauseRecording,
   resumeRecording,
-  getNetworkStatus,
 } from "../services/tauriCommands";
 import { api } from "../services/api";
 import { createSSEClient } from "../services/sse";
@@ -83,10 +82,11 @@ export function RecordingPage() {
     }
   }, []);
 
-  // Listen for recording-stopped event (emitted by Rust after stop_recording completes).
-  // This handles the case where the widget stops the recording — handleStopRecording
-  // is not called, so we need to trigger upload from here.
-  // Uses phaseRef to avoid stale closure (no [phase] dependency = no re-subscribe gap).
+  // Listen for recording-stopped event (emitted by Rust AFTER WAV file is finalized).
+  // This is the single upload trigger for ALL stop scenarios (user-initiated and widget-initiated).
+  // We must wait for this event because stop_recording() returns before the recording thread
+  // has finalized the WAV file — uploading earlier causes the file to be locked/incomplete
+  // on Windows, resulting in a 422 "file field required" error from the server.
   useEffect(() => {
     let unlistenFn: (() => void) | undefined;
     listen<{ file_path: string; duration_seconds: number }>(
@@ -96,11 +96,7 @@ export function RecordingPage() {
           filePathRef.current = event.payload.file_path;
         }
         const currentPhase = phaseRef.current;
-        // Only trigger upload if we're still in a recording phase (widget-initiated stop).
-        // When handleStopRecording triggers this, phase is already "stopping" and
-        // handleStopRecording calls handleUpload itself. The isUploadingRef guard
-        // prevents double execution in the race where both paths fire.
-        if (currentPhase === "recording" || currentPhase === "paused") {
+        if (currentPhase === "recording" || currentPhase === "paused" || currentPhase === "stopping") {
           handleUpload(filePathRef.current);
         }
       }
@@ -149,9 +145,11 @@ export function RecordingPage() {
     try {
       const result = await stopRecording();
       const filePath = result.file_path || filePathRef.current;
+      filePathRef.current = filePath;
       console.log("[Recording] Stopped — file:", filePath, "duration:", result.duration_seconds, "s");
       closeWidgetWindow().catch((e) => console.error("[Recording] Widget close failed:", e));
-      await handleUpload(filePath);
+      // Upload is triggered by the recording-stopped event listener, which fires
+      // after the WAV file is fully finalized by the recording thread.
     } catch (err) {
       console.error("[Recording] Stop failed:", err);
       setError(err instanceof Error ? err.message : "Stoppen mislukt");
@@ -168,15 +166,6 @@ export function RecordingPage() {
     console.log("[Recording] Upload starting —", filePath);
 
     try {
-      const networkStatus = await getNetworkStatus().catch(() => ({ is_online: false }));
-
-      if (!networkStatus.is_online) {
-        await enqueue({ file_path: filePath, profile_id: selectedProfileId, mode });
-        setError("Geen internetverbinding. Opname is toegevoegd aan de wachtrij en wordt verstuurd zodra u weer online bent.");
-        reset();
-        return;
-      }
-
       // Immediately add a background task and reset to idle so the user can start a new recording
       const tempId = `pending-${Date.now()}`;
       const bgTask: TranscriptTask = {
@@ -258,7 +247,7 @@ export function RecordingPage() {
         <div className="bg-blob bg-blob-neon" />
       </div>
       {/* Header */}
-      <div className="page-header flex-row gap-12" style={{ position: "relative", zIndex: 1 }}>
+      <div className="page-header flex-row gap-12">
         <button
           onClick={() => canGoBack && navigate("/")}
           disabled={!canGoBack}
@@ -273,14 +262,14 @@ export function RecordingPage() {
             ? <VideoChat24Regular className="text-accent" />
             : <MicRecord24Regular className="text-accent" />
           }
-          <h1 className="page-title" style={{ fontSize: 16 }}>
+          <h1 className="page-title-sm" style={{ fontSize: 16 }}>
             {mode === "combined" ? "Videocall opnemen" : "Vergadering opnemen"}
           </h1>
         </div>
       </div>
 
       {/* Body */}
-      <div className="flex-col text-center recording-body">
+      <div className="text-center recording-body">
         {phase === "idle" && (
           <IdleState
             mode={mode}
@@ -331,7 +320,7 @@ export function RecordingPage() {
 
       {/* Background processing tasks — visible while user can start new recordings */}
       {backgroundTasks.length > 0 && (
-        <div style={{ padding: "0 16px 16px", position: "relative", zIndex: 1 }}>
+        <div style={{ padding: "0 16px 16px" }}>
           {backgroundTasks.map((bgTask) => (
             <BackgroundTaskCard key={bgTask.task_id} task={bgTask} />
           ))}

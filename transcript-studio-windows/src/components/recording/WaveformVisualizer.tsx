@@ -146,7 +146,7 @@ export function WaveformVisualizer({
       for (let i = NUM_WAVES - 1; i >= 0; i--) {
         const cfg = WAVE_CONFIGS[i];
         const wavePhase = -(timeSec * cfg.speed) + cfg.phaseOffset;
-        const level = smoothed[i];
+        const level = Math.min(smoothed[i], 1.0);
 
         // Build path — parabolic envelope -(x^2)+1 matches macOS exactly
         ctx.beginPath();
@@ -192,6 +192,7 @@ export function WaveformVisualizer({
     animFrameRef.current = requestAnimationFrame(draw);
     return () => {
       cancelAnimationFrame(animFrameRef.current);
+      animFrameRef.current = 0;
       observer.disconnect();
     };
   }, [height]);

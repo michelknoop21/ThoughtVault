@@ -392,6 +392,7 @@
 
 .bg-blobs {
   position: relative;
+  isolation: isolate;
 }
 
 .bg-blobs-clip {
@@ -479,6 +480,8 @@
 
 .page-header {
   padding: var(--space-md) var(--space-lg) 0;
+  position: relative;
+  z-index: 1;
 }
 
 .page-title-sm {
@@ -642,11 +645,17 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: default;
+  cursor: pointer;
+  color: #FFFFFF;
   box-shadow: 0 4px 16px rgba(229, 0, 116, 0.40);
   transition: box-shadow var(--duration-quick) var(--ease-quick), transform var(--duration-quick) var(--ease-quick);
   z-index: 1;
   position: relative;
+}
+
+.mic-button-large svg {
+  fill: #FFFFFF;
+  color: #FFFFFF;
 }
 
 .mic-button-large:hover {
@@ -680,6 +689,7 @@
   border-radius: 50%;
   border: 1px solid rgba(229, 0, 116, 0.15);
   animation: mic-pulse 2s ease-in-out infinite;
+  pointer-events: none;
 }
 
 .mic-pulse-ring-1 { width: 120px; height: 120px; animation-delay: 0s; }
@@ -734,6 +744,11 @@
   background: rgba(239, 68, 68, 0.08);
 }
 
+.recording-control-btn:disabled {
+  cursor: default;
+  pointer-events: none;
+}
+
 .recording-control-label {
   font-size: var(--font-micro);
   font-weight: 600;
@@ -742,6 +757,8 @@
 }
 
 .recording-body {
+  display: flex;
+  flex-direction: column;
   position: relative;
   z-index: 1;
   align-items: center;
@@ -751,8 +768,8 @@
   max-width: 600px;
   margin-inline: auto;
   width: 100%;
-  flex: 1;
-  min-height: 0;
+  flex: 1 0 auto;
+  min-height: auto;
 }
 
 .idle-state {
@@ -2096,14 +2113,6 @@
 .input, .select {
   min-width: 0;
   flex-shrink: 1;
-}
-
-/* Admin user card - ensure text doesn't cause overflow */
-.text-caption {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 100%;
 }
 
 /* Bulk action bar (e.g. transcripts bulk mode) */

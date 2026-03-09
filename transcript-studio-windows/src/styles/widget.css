@@ -1,4 +1,4 @@
-/* Widget window — floating always-on-top recording control */
+/* Widget window — floating always-on-top recording pill (matches macOS RecordingWidgetView) */
 
 *, *::before, *::after {
   box-sizing: border-box;
@@ -21,89 +21,139 @@ body {
   user-select: none;
 }
 
-/* Acrylic glass effect background */
-.widget-shell {
-  width: 100%;
-  height: 100%;
-  background: rgba(18, 18, 18, 0.75);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 12px;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-/* Drag region at top */
-.widget-drag-region {
-  height: 28px;
-  padding: 0 12px;
+/* ---- Pill shell ---- */
+.widget-pill {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  flex-shrink: 0;
+  height: 100%;
+  background: rgba(18, 18, 18, 0.78);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 28px;
+  overflow: hidden;
+  box-shadow:
+    0 6px 20px rgba(0, 0, 0, 0.30),
+    0 0 24px rgba(229, 0, 116, 0.12);
+  transition: box-shadow 300ms ease, border-color 300ms ease;
+}
+
+.widget-pill.paused {
+  border-color: rgba(255, 179, 71, 0.35);
+  box-shadow:
+    0 6px 20px rgba(0, 0, 0, 0.30),
+    0 0 24px rgba(255, 179, 71, 0.08);
+}
+
+.widget-pill.stopping {
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.30);
+}
+
+/* ---- Drag region (entire left section) ---- */
+.widget-drag-region {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+  padding: 0 6px 0 12px;
+  height: 100%;
   cursor: grab;
 }
 
-.widget-title {
-  font-size: 11px;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.60);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-/* Recording status indicator */
-.widget-status {
+/* ---- Status badge ---- */
+.widget-badge {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 0 12px 8px;
-}
-
-.widget-status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #E50074;
-  animation: widget-pulse 1.5s ease-in-out infinite;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 20px;
   flex-shrink: 0;
 }
 
-.widget-status-dot.paused {
+.widget-badge.recording {
+  background: rgba(229, 0, 116, 0.14);
+}
+.widget-badge.paused {
+  background: rgba(255, 179, 71, 0.14);
+}
+.widget-badge.stopping {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.widget-badge-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.widget-badge-dot.recording {
+  background: #E50074;
+  animation: widget-pulse 1.4s ease-in-out infinite;
+}
+.widget-badge-dot.paused {
   background: #FFB347;
   animation: none;
 }
-
-@keyframes widget-pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50%       { opacity: 0.6; transform: scale(0.85); }
+.widget-badge-dot.stopping {
+  background: rgba(255, 255, 255, 0.4);
+  animation: widget-pulse 1s ease-in-out infinite;
 }
 
-.widget-timer {
-  font-size: 22px;
-  font-weight: 300;
-  font-variant-numeric: tabular-nums;
-  color: rgba(255, 255, 255, 0.95);
-  letter-spacing: 0.02em;
+.widget-badge-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  line-height: 1;
 }
 
-/* Waveform area */
+.widget-badge.recording .widget-badge-label { color: #E50074; }
+.widget-badge.paused .widget-badge-label { color: #FFB347; }
+.widget-badge.stopping .widget-badge-label { color: rgba(255, 255, 255, 0.5); }
+
+/* ---- Waveform ---- */
 .widget-waveform {
   flex: 1;
-  padding: 0 12px;
+  min-width: 60px;
+  max-width: 140px;
+  height: 32px;
   display: flex;
   align-items: center;
 }
 
-/* Controls */
-.widget-controls {
+/* ---- Timer ---- */
+.widget-timer {
+  font-size: 14px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: rgba(255, 255, 255, 0.92);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  min-width: 42px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* ---- Divider ---- */
+.widget-divider {
+  width: 1px;
+  height: 20px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 1px;
+  flex-shrink: 0;
+  margin: 0 4px;
+}
+
+/* ---- Action buttons ---- */
+.widget-actions {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 8px 12px 12px;
+  gap: 5px;
+  padding: 0 10px 0 4px;
+  flex-shrink: 0;
 }
 
 .widget-btn {
@@ -111,26 +161,60 @@ body {
   align-items: center;
   justify-content: center;
   border: none;
-  background: rgba(255, 255, 255, 0.12);
-  color: rgba(255, 255, 255, 0.90);
-  border-radius: 8px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.80);
+  border-radius: 50%;
   cursor: default;
-  transition: background 67ms ease;
-  width: 36px;
-  height: 36px;
+  transition: background 80ms ease, color 80ms ease;
+  width: 30px;
+  height: 30px;
 }
 
-.widget-btn:hover { background: rgba(255, 255, 255, 0.20); }
-.widget-btn:active { background: rgba(255, 255, 255, 0.08); }
+.widget-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 1);
+}
+.widget-btn:active {
+  background: rgba(255, 255, 255, 0.06);
+}
 
 .widget-btn-stop {
-  background: rgba(229, 0, 116, 0.80);
-  width: 42px;
-  height: 42px;
-  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border: none;
+  background: rgba(220, 38, 38, 0.85);
+  color: #fff;
+  border-radius: 20px;
+  cursor: default;
+  transition: background 80ms ease, box-shadow 150ms ease;
+  padding: 5px 11px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  line-height: 1;
+  box-shadow: 0 2px 6px rgba(220, 38, 38, 0.30);
 }
-.widget-btn-stop:hover { background: rgba(229, 0, 116, 1.00); }
+
+.widget-btn-stop:hover {
+  background: rgba(220, 38, 38, 1);
+  box-shadow: 0 2px 10px rgba(220, 38, 38, 0.45);
+}
+.widget-btn-stop:active {
+  background: rgba(185, 28, 28, 1);
+}
+.widget-btn-stop:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ---- Animations ---- */
+@keyframes widget-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.5; transform: scale(0.8); }
+}
 
 @media (prefers-reduced-motion: reduce) {
-  .widget-status-dot { animation: none; }
+  .widget-badge-dot { animation: none; }
 }

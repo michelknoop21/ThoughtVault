@@ -392,3 +392,20 @@ _Append-only log. Each entry records context, decision, and consequences._
 - Archive/restore workflow now works on both platforms.
 - Admin responses are correctly stored and associated with the admin user.
 - Backend validation list and client status usage are now aligned: `new`, `in_progress`, `resolved`, `closed`, `archived`.
+
+---
+
+## DEC-024 — Windows Widget Pill Design Parity with macOS
+
+**Date:** 2026-03-09
+**Status:** Accepted
+
+**Context:** The Windows floating recording widget existed in code but never appeared because `core:window:allow-create` (part of `core:window:default`) was missing from Tauri capabilities. The widget also used a vertical 240×140px card layout that didn't match the macOS pill-shaped overlay.
+
+**Decision:** Fix the missing Tauri permission by adding `core:window:default` and `core:webview:default` to capabilities. Redesign the widget as a 380×56px horizontal pill matching macOS `RecordingWidgetView`: status badge with state label (REC/PAUZE/STOP...), inline waveform, monospaced timer, divider, pause/resume button, and labeled stop button. Position bottom-right above the Windows taskbar.
+
+**Consequences:**
+- Widget now appears during recording on Windows, matching macOS feature parity.
+- Pill design is compact enough to stay visible without obscuring video call windows.
+- Widget communicates with the main window via Tauri events (`audio-level`, `recording-stopped`) — no shared store needed.
+- The Rust backend applies Windows 11 Acrylic effect to the widget via `window-vibrancy` on `tauri://webview-created` event.

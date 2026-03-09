@@ -5,6 +5,20 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2026-03-09] — Windows floating recording widget fix and redesign
+
+### Fixed
+- **Widget window not appearing** (Windows): Added missing `core:window:default` and `core:webview:default` Tauri permissions — the frontend was silently denied permission to create the widget window
+
+### Changed
+- **Widget redesign** (Windows): Replaced rectangular 240×140px card layout with horizontal 380×56px pill matching macOS `RecordingWidgetView` — includes status badge (REC/PAUZE/STOP...), inline waveform, monospaced timer, pause button, and labeled stop button
+- **Widget positioning** (Windows): Now anchors to bottom-right of primary monitor (above taskbar) matching macOS behavior, was previously top-left at (20, 20)
+
+### Decisions
+- DEC-024: Windows widget pill design parity with macOS (see [DECISIONS.md](DECISIONS.md))
+
+---
+
 ## [2026-03-07] — Security hardening, feedback bugfixes, backend deployment (v1.0.22)
 
 ### v1.0.22 (2026-03-07)

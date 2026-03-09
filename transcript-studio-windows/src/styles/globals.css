@@ -392,7 +392,14 @@
 
 .bg-blobs {
   position: relative;
+}
+
+.bg-blobs-clip {
+  position: absolute;
+  inset: 0;
   overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
 }
 
 .bg-blob {
@@ -650,6 +657,24 @@
   transform: scale(0.95);
 }
 
+.mic-button-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.mic-button-container-idle {
+  width: 180px;
+  height: 180px;
+}
+
+.mic-button-container-active {
+  width: 120px;
+  height: 120px;
+}
+
 .mic-pulse-ring {
   position: absolute;
   border-radius: 50%;
@@ -690,6 +715,8 @@
   color: var(--text-primary);
   cursor: default;
   font-family: var(--font-family);
+  min-height: 44px;
+  min-width: 44px;
   transition: background var(--duration-quick) var(--ease-quick), border-color var(--duration-quick) var(--ease-quick);
 }
 
@@ -712,6 +739,104 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
+}
+
+.recording-body {
+  position: relative;
+  z-index: 1;
+  align-items: center;
+  padding: 32px;
+  padding-bottom: clamp(24px, 8vh, 80px);
+  gap: 24px;
+  max-width: 600px;
+  margin-inline: auto;
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+}
+
+.idle-state {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+}
+
+@media (max-height: 700px) {
+  .idle-state { gap: 20px; }
+}
+@media (max-height: 620px) {
+  .idle-state { gap: 14px; }
+}
+@media (max-height: 560px) {
+  .idle-state { gap: 10px; }
+}
+
+.active-state {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+@media (max-height: 700px) {
+  .active-state { gap: 14px; }
+}
+@media (max-height: 620px) {
+  .active-state { gap: 10px; }
+}
+@media (max-height: 560px) {
+  .active-state { gap: 6px; }
+}
+
+.mode-selector-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: var(--radius-xs);
+  border: 1px solid rgba(229, 0, 116, 0.20);
+  background: rgba(229, 0, 116, 0.06);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: default;
+  transition: all 180ms ease;
+  font-family: inherit;
+}
+
+.mode-selector-btn.active {
+  border-color: var(--fill-accent-default);
+  background: var(--fill-accent-default);
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(229, 0, 116, 0.35);
+}
+
+.waveform-card {
+  padding: 16px 20px;
+  width: 100%;
+  overflow: hidden;
+}
+
+@media (max-height: 620px) {
+  .waveform-card { padding: 10px 14px; }
+}
+@media (max-height: 560px) {
+  .waveform-card { padding: 8px 12px; }
+}
+
+.recording-timer {
+  font-size: 56px;
+  font-weight: 100;
+  font-variant-numeric: tabular-nums;
+  font-family: 'Segoe UI Variable', 'Segoe UI', system-ui, monospace;
+  color: var(--text-primary);
+  letter-spacing: 0.04em;
+  line-height: 1;
+  margin-bottom: 10px;
 }
 
 /* ============================================================
@@ -1462,15 +1587,16 @@
   flex-direction: column;
   height: 100vh;
   background: var(--app-bg);
+  border-radius: 8px;
   overflow: hidden;
 }
 
 .app-main {
   flex: 1;
   min-width: 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
   background: var(--surface-secondary);
 }
 
@@ -1479,7 +1605,6 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
 }
 
 /* ============================================================
@@ -2089,6 +2214,133 @@
   font-size: var(--font-micro);
   color: var(--text-tertiary);
   font-weight: 400;
+}
+
+/* ============================================================
+   Responsive: Recording Page & Feedback Widget
+   ============================================================ */
+
+/* Small window height — shrink mic button and pulse rings */
+@media (max-height: 700px) {
+  .mic-button-large {
+    width: 64px;
+    height: 64px;
+  }
+
+  .mic-button-container-idle {
+    width: 144px;
+    height: 144px;
+  }
+
+  .mic-button-container-active {
+    width: 96px;
+    height: 96px;
+  }
+
+  .mic-pulse-ring-1 { width: 96px; height: 96px; }
+  .mic-pulse-ring-2 { width: 120px; height: 120px; }
+  .mic-pulse-ring-3 { width: 144px; height: 144px; }
+
+  .recording-control-btn {
+    padding: 8px 14px;
+  }
+
+  .recording-controls {
+    gap: var(--space-sm);
+  }
+
+  .recording-timer {
+    font-size: 44px;
+    margin-bottom: 6px;
+  }
+
+  .recording-body {
+    padding: 20px;
+    padding-bottom: 48px;
+    gap: 16px;
+  }
+}
+
+/* Very small window height — further reduce */
+@media (max-height: 620px) {
+  .mic-button-large {
+    width: 56px;
+    height: 56px;
+  }
+
+  .mic-button-container-idle {
+    width: 120px;
+    height: 120px;
+  }
+
+  .mic-button-container-active {
+    width: 80px;
+    height: 80px;
+  }
+
+  .mic-pulse-ring-1 { width: 80px; height: 80px; }
+  .mic-pulse-ring-2 { width: 100px; height: 100px; }
+  .mic-pulse-ring-3 { width: 120px; height: 120px; }
+
+  .recording-control-btn {
+    padding: 6px 12px;
+    gap: 4px;
+  }
+
+  .recording-timer {
+    font-size: 36px;
+    margin-bottom: 4px;
+  }
+
+  .recording-body {
+    padding: 12px;
+    padding-bottom: 32px;
+    gap: 12px;
+  }
+}
+
+/* Ultra-compact window height — minimum window (600px) minus titlebar */
+@media (max-height: 560px) {
+  .mic-button-large {
+    width: 48px;
+    height: 48px;
+  }
+
+  .mic-button-container-idle {
+    width: 96px;
+    height: 96px;
+  }
+
+  .mic-button-container-active {
+    width: 64px;
+    height: 64px;
+  }
+
+  .mic-pulse-ring-1 { width: 64px; height: 64px; }
+  .mic-pulse-ring-2 { width: 80px; height: 80px; }
+  .mic-pulse-ring-3 { width: 96px; height: 96px; }
+
+  .recording-timer {
+    font-size: 28px;
+    margin-bottom: 2px;
+  }
+
+  .recording-body {
+    padding: 8px;
+    padding-bottom: 16px;
+    gap: 8px;
+  }
+}
+
+/* Narrow window — compact recording controls */
+@media (max-width: 960px) {
+  .recording-controls {
+    gap: var(--space-sm);
+  }
+
+  .recording-control-btn {
+    padding: 10px 14px;
+  }
 }
 
 /* ============================================================

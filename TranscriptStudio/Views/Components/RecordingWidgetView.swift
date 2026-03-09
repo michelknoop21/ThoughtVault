@@ -4,6 +4,8 @@
 //
 // Compact floating recording widget panel. Shows current recording state,
 // live waveform, duration timer, and stop/upload action button.
+// Designed as a premium pill overlay (≈320×56px) with brand glow and
+// generous touch targets.
 
 import SwiftUI
 
@@ -15,108 +17,160 @@ struct RecordingWidgetView: View {
 
     @State private var isHovered: Bool = false
 
-    var body: some View {
-        HStack(spacing: TS.Spacing.sm) {
-            // Status indicator
-            statusIndicator
+    private var isRecording: Bool { recordingVM.recordingState == .recording }
+    private var isPaused: Bool { recordingVM.recordingState == .paused }
 
-            // Waveform
+    var body: some View {
+        HStack(spacing: 10) {
+            // Status indicator + state label
+            statusBadge
+
+            // Waveform — wider for better visual feedback
             WaveformView(
                 levels: recordingVM.audioLevels,
-                isActive: recordingVM.recordingState == .recording
+                isActive: isRecording
             )
-            .frame(width: 80, height: 32)
+            .frame(width: 120, height: 32)
+            .opacity(isPaused ? 0.4 : 1.0)
 
-            // Duration
+            // Duration — prominent monospaced timer
             Text(formattedDuration)
-                .font(TS.Font.footnoteMonospaced)
+                .font(.system(size: 15, weight: .medium, design: .monospaced))
                 .foregroundStyle(Color.labelPrimary)
                 .monospacedDigit()
-                .frame(minWidth: 46, alignment: .leading)
+                .frame(minWidth: 52, alignment: .trailing)
 
-            // State label
-            stateLabel
+            // Divider before controls
+            if isRecording || isPaused || recordingVM.recordingState == .uploading {
+                dividerBar
+            }
 
-            Spacer(minLength: TS.Spacing.xs)
-
-            // Action buttons
+            // Action buttons — larger touch targets
             actionButtons
         }
-        .padding(.horizontal, TS.Spacing.md)
-        .padding(.vertical, TS.Spacing.sm + 2)
-        .background {
-            if #available(macOS 26.0, iOS 26.0, *) {
-                RoundedRectangle(cornerRadius: TS.Radius.lg, style: .continuous)
-                    .fill(.ultraThinMaterial)
-            } else {
-                RoundedRectangle(cornerRadius: TS.Radius.lg, style: .continuous)
-                    .fill(.ultraThickMaterial)
-            }
-        }
-        .clipShape(RoundedRectangle(cornerRadius: TS.Radius.lg, style: .continuous))
+        .padding(.leading, 14)
+        .padding(.trailing, 10)
+        .padding(.vertical, 10)
+        .background { pillBackground }
+        .clipShape(Capsule())
         .overlay {
-            RoundedRectangle(cornerRadius: TS.Radius.lg, style: .continuous)
+            Capsule()
                 .stroke(
-                    recordingVM.recordingState == .recording
-                        ? Color.brandPrimary.opacity(0.40)
-                        : Color.borderPrimary.opacity(0.5),
+                    isRecording
+                        ? Color.brandPrimary.opacity(0.50)
+                        : isPaused
+                            ? Color.statusWarning.opacity(0.40)
+                            : Color.borderPrimary.opacity(0.4),
                     lineWidth: 1
                 )
         }
-        .shadow(color: .black.opacity(0.25), radius: 16, y: 4)
-        .scaleEffect(isHovered ? 1.01 : 1.0)
+        .shadow(color: .black.opacity(0.30), radius: 20, y: 6)
+        .shadow(
+            color: isRecording
+                ? Color.brandPrimary.opacity(0.15)
+                : Color.clear,
+            radius: 24, y: 0
+        )
+        .scaleEffect(isHovered ? 1.02 : 1.0)
         .animation(TS.Animation.hover, value: isHovered)
         .onHover { isHovered = $0 }
     }
 
-    // MARK: - Status Indicator
+    // MARK: - Pill Background
+
+    @ViewBuilder
+    private var pillBackground: some View {
+        if #available(macOS 26.0, iOS 26.0, *) {
+            Capsule()
+                .fill(.ultraThinMaterial)
+        } else {
+            Capsule()
+                .fill(.ultraThickMaterial)
+        }
+    }
+
+    // MARK: - Status Badge
+
+    private var statusBadge: some View {
+        HStack(spacing: 6) {
+            statusIndicator
+            Text(stateLabelText)
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(statusLabelColor)
+                .textCase(.uppercase)
+                .kerning(0.8)
+                .lineLimit(1)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(
+            Capsule()
+                .fill(statusBadgeBackground)
+        )
+    }
 
     @ViewBuilder
     private var statusIndicator: some View {
         switch recordingVM.recordingState {
         case .recording:
-            PulsingRecordingDot(size: 8)
+            PulsingRecordingDot(size: 7)
         case .paused:
-            Image(systemName: "pause.circle.fill")
-                .font(.system(size: 16))
+            Image(systemName: "pause.fill")
+                .font(.system(size: 9, weight: .bold))
                 .foregroundStyle(Color.statusWarning)
         case .uploading:
-            ProgressView(value: recordingVM.uploadProgress)
-                .progressViewStyle(.circular)
+            ProgressView()
                 .tint(Color.neonBlue)
-                .controlSize(.small)
-                .frame(width: 16, height: 16)
+                .controlSize(.mini)
+                .frame(width: 12, height: 12)
         case .stopping, .preparing:
             ProgressView()
-                .tint(Color.labelPrimary)
-                .controlSize(.small)
-                .frame(width: 16, height: 16)
+                .tint(Color.labelSecondary)
+                .controlSize(.mini)
+                .frame(width: 12, height: 12)
         default:
             Image(systemName: "mic.slash.fill")
-                .font(.system(size: 14))
+                .font(.system(size: 10))
                 .foregroundStyle(Color.labelTertiary)
         }
     }
 
-    // MARK: - State Label
+    private var statusLabelColor: Color {
+        switch recordingVM.recordingState {
+        case .recording: return Color.brandPrimary
+        case .paused: return Color.statusWarning
+        case .uploading: return Color.neonBlue
+        default: return Color.labelSecondary
+        }
+    }
 
-    private var stateLabel: some View {
-        Text(stateLabelText)
-            .font(TS.Font.captionSemibold)
-            .foregroundStyle(Color.labelSecondary)
-            .lineLimit(1)
+    private var statusBadgeBackground: Color {
+        switch recordingVM.recordingState {
+        case .recording: return Color.brandPrimary.opacity(0.12)
+        case .paused: return Color.statusWarning.opacity(0.12)
+        case .uploading: return Color.neonBlue.opacity(0.12)
+        default: return Color.labelSecondary.opacity(0.08)
+        }
     }
 
     private var stateLabelText: String {
         switch recordingVM.recordingState {
         case .idle:       return "Gereed"
-        case .preparing:  return "Voorbereiden..."
-        case .recording:  return "Opname"
-        case .paused:     return "Gepauzeerd"
-        case .stopping:   return "Stoppen..."
-        case .uploading:  return "Uploaden \(Int(recordingVM.uploadProgress * 100))%"
-        case .error(let msg): return String(msg.prefix(20))
+        case .preparing:  return "Start..."
+        case .recording:  return "Rec"
+        case .paused:     return "Pauze"
+        case .stopping:   return "Stop..."
+        case .uploading:  return "\(Int(recordingVM.uploadProgress * 100))%"
+        case .error(let msg): return String(msg.prefix(12))
         }
+    }
+
+    // MARK: - Divider
+
+    private var dividerBar: some View {
+        RoundedRectangle(cornerRadius: 1)
+            .fill(Color.labelTertiary.opacity(0.3))
+            .frame(width: 1, height: 20)
     }
 
     // MARK: - Action Buttons
@@ -125,50 +179,52 @@ struct RecordingWidgetView: View {
     private var actionButtons: some View {
         switch recordingVM.recordingState {
         case .recording:
-            HStack(spacing: TS.Spacing.xs) {
-                // Pause
-                Button {
+            HStack(spacing: 6) {
+                widgetIconButton(
+                    icon: "pause.fill",
+                    color: Color.labelPrimary,
+                    accessibilityLabel: "Pauzeer opname"
+                ) {
                     recordingVM.pauseRecording()
-                } label: {
-                    Image(systemName: "pause.fill")
-                        .font(.system(size: 15, weight: .medium))
-                        .foregroundStyle(Color.labelPrimary.opacity(0.8))
                 }
-                .buttonStyle(.plain)
-
-                // Stop & Upload
                 stopButton
             }
 
         case .paused:
-            HStack(spacing: TS.Spacing.xs) {
-                // Resume
-                Button {
+            HStack(spacing: 6) {
+                widgetIconButton(
+                    icon: "play.fill",
+                    color: Color.statusSuccess,
+                    accessibilityLabel: "Hervat opname"
+                ) {
                     recordingVM.resumeRecording()
-                } label: {
-                    Image(systemName: "play.fill")
-                        .font(.system(size: 15, weight: .medium))
-                        .foregroundStyle(Color.labelPrimary.opacity(0.8))
                 }
-                .buttonStyle(.plain)
-
-                // Stop & Upload
                 stopButton
             }
 
         case .uploading:
-            Button {
-                // No cancel during upload — show info
-            } label: {
-                Image(systemName: "arrow.up.circle.fill")
-                    .font(.system(size: 20))
-                    .foregroundStyle(Color.neonBlue)
-            }
-            .buttonStyle(.plain)
+            uploadIndicator
 
         default:
             EmptyView()
         }
+    }
+
+    private func widgetIconButton(
+        icon: String,
+        color: Color,
+        accessibilityLabel: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(color.opacity(0.85))
+                .frame(width: 32, height: 32)
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(accessibilityLabel)
     }
 
     private var stopButton: some View {
@@ -176,19 +232,43 @@ struct RecordingWidgetView: View {
             let vm = recordingVM
             Task { @MainActor in await vm.stopAndUpload() }
         } label: {
-            HStack(spacing: 4) {
+            HStack(spacing: 5) {
                 Image(systemName: "stop.fill")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: 10, weight: .bold))
                 Text("Stop")
-                    .font(TS.Font.microSemibold)
+                    .font(.system(size: 12, weight: .bold))
             }
             .foregroundStyle(.white)
-            .padding(.horizontal, TS.Spacing.sm)
-            .padding(.vertical, TS.Spacing.xs)
-            .background(Color.statusError)
-            .clipShape(Capsule())
+            .padding(.horizontal, 12)
+            .padding(.vertical, 7)
+            .background(
+                Capsule()
+                    .fill(Color.statusError)
+                    .shadow(color: Color.statusError.opacity(0.35), radius: 6, y: 2)
+            )
         }
         .buttonStyle(.plain)
+        .accessibilityLabel("Stop opname en upload")
+    }
+
+    private var uploadIndicator: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "arrow.up")
+                .font(.system(size: 12, weight: .bold))
+                .foregroundStyle(Color.neonBlue)
+
+            // Upload progress ring
+            ZStack {
+                Circle()
+                    .stroke(Color.neonBlue.opacity(0.2), lineWidth: 2.5)
+                Circle()
+                    .trim(from: 0, to: recordingVM.uploadProgress)
+                    .stroke(Color.neonBlue, style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
+                    .rotationEffect(.degrees(-90))
+            }
+            .frame(width: 20, height: 20)
+        }
+        .padding(.horizontal, 4)
     }
 
     // MARK: - Duration Formatting
@@ -212,7 +292,7 @@ struct RecordingWidgetView: View {
 #Preview("Recording") {
     RecordingWidgetView()
         .environment(RecordingViewModel())
-        .frame(width: 320)
+        .frame(width: 360)
         .padding()
         .background(Color.backgroundDark)
         .preferredColorScheme(.dark)

@@ -198,12 +198,13 @@ export default function FeedbackWidget() {
       {open && (
         <div
           ref={panelRef}
+          className="feedback-panel"
           style={{
             position: "fixed",
             right: 20,
             bottom: 78,
             zIndex: 1001,
-            width: 360,
+            width: Math.min(360, window.innerWidth - 40),
             maxHeight: "calc(100vh - 110px)",
             background: "var(--card-bg)",
             backdropFilter: `blur(var(--card-blur))`,

@@ -13,7 +13,6 @@ import {
 export function RecordingWidget() {
   const [elapsed, setElapsed] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
-  const [audioLevels, setAudioLevels] = useState<number[]>([]);
   const levelsBufferRef = useRef<number[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -25,13 +24,12 @@ export function RecordingWidget() {
       setElapsed((s) => s + 1);
     }, 1000);
 
-    // Listen for audio level updates from Rust backend
+    // Listen for audio level updates from Rust backend — write to ref only, no state
     const unlistenLevel = listen<number>("audio-level", (event) => {
       const normalized = normalizeLevel(event.payload) / 100; // 0-100 → 0.0-1.0
       const buf = levelsBufferRef.current;
       buf.push(normalized);
       if (buf.length > 60) buf.shift();
-      setAudioLevels([...buf]);
     });
 
     // Listen for recording stopped event
@@ -87,7 +85,7 @@ export function RecordingWidget() {
       </div>
 
       <div className="widget-waveform">
-        <WaveformVisualizer levels={audioLevels} isActive={!isPaused} />
+        <WaveformVisualizer levelsRef={levelsBufferRef} isActive={!isPaused} />
       </div>
 
       <div className="widget-controls">

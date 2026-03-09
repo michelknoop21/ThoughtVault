@@ -28,11 +28,11 @@ export function useAudioLevel(): number {
 }
 
 /**
- * Returns a rolling history of audio levels normalized to 0.0-1.0.
- * Matches the macOS WaveformView `levels: [Float]` interface.
+ * Returns a mutable ref to a rolling history of audio levels normalized to 0.0-1.0.
+ * Uses a ref instead of state to avoid triggering React re-renders at ~60Hz.
+ * The WaveformVisualizer reads from this ref via requestAnimationFrame.
  */
-export function useAudioLevels(): number[] {
-  const [levels, setLevels] = useState<number[]>([]);
+export function useAudioLevelsRef(): React.MutableRefObject<number[]> {
   const bufferRef = useRef<number[]>([]);
 
   useEffect(() => {
@@ -43,7 +43,6 @@ export function useAudioLevels(): number[] {
       const buf = bufferRef.current;
       buf.push(normalized);
       if (buf.length > HISTORY_SIZE) buf.shift();
-      setLevels([...buf]);
     });
 
     return () => {
@@ -51,5 +50,5 @@ export function useAudioLevels(): number[] {
     };
   }, []);
 
-  return levels;
+  return bufferRef;
 }

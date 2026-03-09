@@ -62,8 +62,7 @@ pub async fn proxy_request(request: HttpRequest) -> Result<HttpResponse, String>
     Ok(HttpResponse { status, body, headers: resp_headers })
 }
 
-/// Multipart file upload — manually constructs multipart/form-data body to match macOS behavior.
-/// This bypasses reqwest's multipart builder which may cause boundary/header issues with FastAPI.
+/// Multipart file upload using reqwest's built-in multipart builder.
 #[tauri::command]
 pub async fn http_upload_file(
     url: String,
@@ -104,50 +103,29 @@ pub async fn http_upload_file(
     eprintln!("[Upload] Filename: {}", filename);
     eprintln!("[Upload] Field name: {}", field_name);
 
-    // Generate a unique boundary (same approach as macOS)
-    let boundary = format!("Boundary-{}", uuid::Uuid::new_v4());
+    // Build multipart form using reqwest's builder
+    let file_part = reqwest::multipart::Part::bytes(file_bytes)
+        .file_name(filename)
+        .mime_str("audio/wav")
+        .map_err(|e| e.to_string())?;
 
-    // Build multipart body manually with RFC 2046 \r\n line endings.
-    // writeln! uses \n which python-multipart (FastAPI) rejects.
-    let mut body: Vec<u8> = Vec::new();
+    let mut form = reqwest::multipart::Form::new()
+        .part(field_name, file_part);
 
-    // Add file part
-    body.extend_from_slice(format!("--{}\r\n", boundary).as_bytes());
-    body.extend_from_slice(format!("Content-Disposition: form-data; name=\"{}\"; filename=\"{}\"\r\n", field_name, filename).as_bytes());
-    body.extend_from_slice(b"Content-Type: audio/wav\r\n");
-    body.extend_from_slice(b"\r\n");
-    body.extend_from_slice(&file_bytes);
-    body.extend_from_slice(b"\r\n");
-
-    // Add additional fields (profile_id, mode)
     if let Some(fields) = &additional_fields {
         eprintln!("[Upload] Additional fields: {:?}", fields);
         for (key, value) in fields {
-            body.extend_from_slice(format!("--{}\r\n", boundary).as_bytes());
-            body.extend_from_slice(format!("Content-Disposition: form-data; name=\"{}\"\r\n", key).as_bytes());
-            body.extend_from_slice(b"\r\n");
-            body.extend_from_slice(value.as_bytes());
-            body.extend_from_slice(b"\r\n");
+            form = form.text(key.clone(), value.clone());
         }
     }
-
-    // End boundary
-    body.extend_from_slice(format!("--{}--\r\n", boundary).as_bytes());
-
-    eprintln!("[Upload] Multipart body size: {} bytes", body.len());
 
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(120))
         .build()
         .map_err(|e| e.to_string())?;
 
-    let content_type = format!("multipart/form-data; boundary={}", boundary);
-    let body_len = body.len();
-
     let mut req = client.post(&url)
-        .header("Content-Type", content_type)
-        .header("Content-Length", body_len.to_string())
-        .body(body);
+        .multipart(form);
 
     // Add authentication and other headers
     if let Some(hdrs) = headers {
@@ -156,7 +134,7 @@ pub async fn http_upload_file(
         }
     }
 
-    eprintln!("[Upload] Sending request with Content-Type: multipart/form-data; boundary={}...", boundary);
+    eprintln!("[Upload] Sending multipart request...");
     let response = req.send().await.map_err(|e| {
         eprintln!("[Upload] Request failed: {}", e);
         e.to_string()

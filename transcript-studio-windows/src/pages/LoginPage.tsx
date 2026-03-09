@@ -154,7 +154,7 @@ export function LoginPage() {
   }
 
   return (
-    <div className="app-shell" style={{ borderRadius: 8, overflow: "hidden" }}>
+    <div className="app-shell">
       {/* Title bar with window controls and YingaBar */}
       <TitleBar />
 

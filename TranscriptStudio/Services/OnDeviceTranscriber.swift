@@ -11,8 +11,8 @@ private let logger = Logger(subsystem: "nl.prezent.TranscriptStudio", category: 
 
 /// On-device speech recognition using Apple's Speech framework with Dutch locale.
 /// Handles both full-file transcription and live microphone transcription during recording.
-@Observable
-final class OnDeviceTranscriber: @unchecked Sendable {
+@MainActor @Observable
+final class OnDeviceTranscriber {
 
     static let shared = OnDeviceTranscriber()
 
@@ -104,27 +104,24 @@ final class OnDeviceTranscriber: @unchecked Sendable {
             throw TranscriberError.permissionDenied
         }
 
+        isTranscribing = true
+        logger.info("OnDeviceTranscriber: starting file transcription for \(url.lastPathComponent)")
+
+        defer { isTranscribing = false }
+
         return try await withCheckedThrowingContinuation { continuation in
             let request = SFSpeechURLRecognitionRequest(url: url)
             request.shouldReportPartialResults = false
             request.requiresOnDeviceRecognition = recognizer.supportsOnDeviceRecognition
 
-            logger.info("OnDeviceTranscriber: starting file transcription for \(url.lastPathComponent)")
-
-            isTranscribing = true
-
-            recognitionTask = recognizer.recognitionTask(with: request) { [weak self] result, error in
-                guard let self else { return }
-
+            recognitionTask = recognizer.recognitionTask(with: request) { result, error in
                 if let error = error {
-                    self.isTranscribing = false
                     logger.error("OnDeviceTranscriber: transcription error — \(error.localizedDescription)")
                     continuation.resume(throwing: TranscriberError.recognitionFailed(error.localizedDescription))
                     return
                 }
 
                 if let result = result, result.isFinal {
-                    self.isTranscribing = false
                     let text = result.bestTranscription.formattedString
                     logger.info("OnDeviceTranscriber: transcription complete — \(text.count) characters")
                     if text.isEmpty {
@@ -178,7 +175,6 @@ final class OnDeviceTranscriber: @unchecked Sendable {
             guard self != nil else { return }
 
             if let error = error {
-                // Ignore cancellation errors (expected on stop)
                 let nsError = error as NSError
                 if nsError.code != 301 {
                     logger.error("OnDeviceTranscriber: live recognition error — \(error.localizedDescription)")
@@ -188,7 +184,9 @@ final class OnDeviceTranscriber: @unchecked Sendable {
 
             if let result = result {
                 let text = result.bestTranscription.formattedString
-                onPartialResult(text)
+                Task { @MainActor in
+                    onPartialResult(text)
+                }
             }
         }
     }

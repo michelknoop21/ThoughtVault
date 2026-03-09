@@ -599,7 +599,9 @@ ${DOMPurify.sanitize(transcript.notule_html)}
 
       {/* Detail panel */}
       <div className="flex-1 transcripts-detail-panel bg-blobs">
-        <div className="bg-blob bg-blob-blue" style={{ opacity: 0.5 }} />
+        <div className="bg-blobs-clip">
+          <div className="bg-blob bg-blob-blue" style={{ opacity: 0.5 }} />
+        </div>
         {selected ? (
           <>
             {/* Top bar */}

@@ -194,30 +194,31 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
             AVLinearPCMIsNonInterleaved: false
         ]
 
-        do {
-            let recorder = try AVAudioRecorder(url: url, settings: settings)
-            recorder.delegate = self
-            recorder.isMeteringEnabled = true
-            guard recorder.record() else {
-                log.error("[AudioRecorder] AVAudioRecorder.record() returned false for \(url.lastPathComponent)")
+        // AVAudioRecorder must be created and started on the main thread
+        // to avoid dispatch_assert_queue failures in CoreAudio.
+        try await MainActor.run {
+            do {
+                let recorder = try AVAudioRecorder(url: url, settings: settings)
+                recorder.delegate = self
+                recorder.isMeteringEnabled = true
+                guard recorder.record() else {
+                    log.error("[AudioRecorder] AVAudioRecorder.record() returned false for \(url.lastPathComponent)")
+                    throw AudioRecorderError.failedToStart
+                }
+                self.audioRecorder = recorder
+                self.currentRecordingURL = url
+                self.isRecording = true
+                self.isPaused = false
+                self.duration = 0
+                self.audioLevels = Array(repeating: 0, count: 60)
+                self.errorMessage = nil
+                log.info("[AudioRecorder] Started recording to \(url.lastPathComponent) — 16kHz mono PCM")
+            } catch let error as AudioRecorderError {
+                throw error
+            } catch {
+                log.error("[AudioRecorder] Failed to create AVAudioRecorder: \(error.localizedDescription)")
                 throw AudioRecorderError.failedToStart
             }
-            self.audioRecorder = recorder
-            log.info("[AudioRecorder] Started recording to \(url.lastPathComponent) — 16kHz mono PCM")
-        } catch let error as AudioRecorderError {
-            throw error
-        } catch {
-            log.error("[AudioRecorder] Failed to create AVAudioRecorder: \(error.localizedDescription)")
-            throw AudioRecorderError.failedToStart
-        }
-
-        await MainActor.run {
-            self.currentRecordingURL = url
-            self.isRecording = true
-            self.isPaused = false
-            self.duration = 0
-            self.audioLevels = Array(repeating: 0, count: 60)
-            self.errorMessage = nil
         }
 
         startTimers()
@@ -238,8 +239,14 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
     func stopRecording() async -> URL? {
         guard isRecording else { return currentRecordingURL }
 
-        audioRecorder?.stop()
-        audioRecorder = nil  // Force dealloc to flush WAV header
+        // AVAudioRecorder.stop() must run on the main thread to match
+        // the thread it was created/started on.
+        await MainActor.run {
+            audioRecorder?.stop()
+            audioRecorder = nil  // Force dealloc to flush WAV header
+            self.isRecording = false
+            self.isPaused = false
+        }
         finalizeTimers()
 
 #if os(iOS)
@@ -248,11 +255,6 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
 #endif
 
         let url = currentRecordingURL
-
-        await MainActor.run {
-            self.isRecording = false
-            self.isPaused = false
-        }
 
         resetMetrics()
 

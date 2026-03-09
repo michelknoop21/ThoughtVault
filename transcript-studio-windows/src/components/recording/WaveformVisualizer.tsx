@@ -1,8 +1,8 @@
 import { useEffect, useRef } from "react";
 
 interface WaveformVisualizerProps {
-  /** Audio level values in range 0.0-1.0 (newest last) */
-  levels: number[];
+  /** Ref to audio level values in range 0.0-1.0 (newest last) */
+  levelsRef: React.RefObject<number[]>;
   /** When false, waves animate at minimal idle amplitude */
   isActive: boolean;
   /** Container height in px (default: 120) */
@@ -43,7 +43,7 @@ const IDLE_AMPLITUDE = 0.03;
 const NUM_WAVES = WAVE_CONFIGS.length;
 
 export function WaveformVisualizer({
-  levels,
+  levelsRef,
   isActive,
   height = 120,
 }: WaveformVisualizerProps) {
@@ -51,10 +51,8 @@ export function WaveformVisualizer({
   const animFrameRef = useRef<number>(0);
   const smoothedLevelsRef = useRef<number[]>(WAVE_CONFIGS.map(() => IDLE_AMPLITUDE));
   const jitterSeedsRef = useRef<number[]>(WAVE_CONFIGS.map(() => Math.random() * 1000));
-  const levelsRef = useRef(levels);
   const isActiveRef = useRef(isActive);
 
-  levelsRef.current = levels;
   isActiveRef.current = isActive;
 
   useEffect(() => {

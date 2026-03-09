@@ -69,23 +69,24 @@ function OfflineQueueBanner() {
 
 function AppShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="app-shell" style={{ borderRadius: 8, overflow: "hidden" }}>
-      <TitleBar />
-      <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
-        <Sidebar />
-        <main className="app-main">
-          <OfflineQueueBanner />
-          <div className="app-main-content">
-            {children}
-          </div>
-          <YingaFooter compact />
-        </main>
+    <>
+      <div className="app-shell">
+        <TitleBar />
+        <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
+          <Sidebar />
+          <main className="app-main">
+            <OfflineQueueBanner />
+            <div className="app-main-content">
+              {children}
+            </div>
+            <YingaFooter compact />
+          </main>
+        </div>
       </div>
-      {/* Floating feedback widget */}
+      {/* Floating overlays — outside app-shell so position:fixed works correctly */}
       <FeedbackWidget />
-      {/* Calendar call alert — overlays on top of content */}
       <CallAlertOverlay />
-    </div>
+    </>
   );
 }
 
@@ -160,7 +161,7 @@ function ProtectedRoutes() {
 
   if (!has_completed_onboarding) {
     return (
-      <div className="app-shell" style={{ borderRadius: 8, overflow: "hidden" }}>
+      <div className="app-shell">
         <OnboardingWizard />
       </div>
     );

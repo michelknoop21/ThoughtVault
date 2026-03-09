@@ -34,10 +34,9 @@ class FloatingWidgetController {
             rootView: RecordingWidgetView()
                 .environment(recordingVM)
         )
-        hostingView.layer?.backgroundColor = .clear
 
         let panel = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 340, height: 72),
+            contentRect: NSRect(x: 0, y: 0, width: 380, height: 60),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
@@ -45,9 +44,9 @@ class FloatingWidgetController {
         panel.contentView = hostingView
         panel.isOpaque = false
         panel.backgroundColor = .clear
+        panel.hasShadow = false
         panel.level = .floating
         panel.collectionBehavior = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary]
-        panel.hasShadow = true
         panel.isMovableByWindowBackground = true
 
         updatePosition(for: panel)

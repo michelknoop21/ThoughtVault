@@ -16,7 +16,7 @@ import { useRecordingStore } from "../stores/recordingStore";
 import { useSettingsStore } from "../stores/settingsStore";
 import { useTranscriptsStore } from "../stores/transcriptsStore";
 import { useProfilesStore } from "../stores/profilesStore";
-import { useAudioLevels } from "../hooks/useAudioLevel";
+import { useAudioLevelsRef } from "../hooks/useAudioLevel";
 import { openWidgetWindow, closeWidgetWindow } from "../hooks/useWidgetWindow";
 import {
   startRecording,
@@ -50,12 +50,19 @@ function getProfileIcon(name: string): React.ReactNode {
 
 export function RecordingPage() {
   const navigate = useNavigate();
-  const {
-    mode, phase, autoStart,
-    setMode, setPhase, setFilePath, setElapsedSeconds,
-    setAutoStart, reset,
-    addBackgroundTask, updateBackgroundTask, removeBackgroundTask, backgroundTasks,
-  } = useRecordingStore();
+  const mode = useRecordingStore((s) => s.mode);
+  const phase = useRecordingStore((s) => s.phase);
+  const autoStart = useRecordingStore((s) => s.autoStart);
+  const backgroundTasks = useRecordingStore((s) => s.backgroundTasks);
+  const setMode = useRecordingStore((s) => s.setMode);
+  const setPhase = useRecordingStore((s) => s.setPhase);
+  const setFilePath = useRecordingStore((s) => s.setFilePath);
+  const setAutoStart = useRecordingStore((s) => s.setAutoStart);
+  const reset = useRecordingStore((s) => s.reset);
+  const addBackgroundTask = useRecordingStore((s) => s.addBackgroundTask);
+  const updateBackgroundTask = useRecordingStore((s) => s.updateBackgroundTask);
+  const removeBackgroundTask = useRecordingStore((s) => s.removeBackgroundTask);
+
   const settings = useSettingsStore();
   const { addTranscript } = useTranscriptsStore();
   const profiles = useProfilesStore((s) => s.profiles);
@@ -63,9 +70,7 @@ export function RecordingPage() {
   const [selectedProfileId, setSelectedProfileId] = useState(settings.default_profile_id);
   const [error, setError] = useState<string | null>(null);
 
-  const audioLevels = useAudioLevels();
-  const elapsedRef = useRef(0);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const audioLevelsRef = useAudioLevelsRef();
   const filePathRef = useRef<string>("");
   const isUploadingRef = useRef(false);
 
@@ -74,9 +79,6 @@ export function RecordingPage() {
       setAutoStart(false);
       handleStartRecording();
     }
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
   }, []);
 
   // Listen for recording-stopped event from widget
@@ -85,6 +87,7 @@ export function RecordingPage() {
     listen<{ file_path: string; duration_seconds: number }>(
       "recording-stopped",
       (event) => {
+        console.log("[Recording] Event: recording-stopped, phase:", phase, "payload:", event.payload);
         filePathRef.current = event.payload.file_path || filePathRef.current;
         if (phase === "recording" || phase === "paused") {
           handleUpload(filePathRef.current);
@@ -98,67 +101,60 @@ export function RecordingPage() {
   useEffect(() => {
     let unlistenFn: (() => void) | undefined;
     listen<string>("recording-error", (event) => {
-      console.error("[Recording] Backend error:", event.payload);
+      console.error("[Recording] Event: recording-error:", event.payload);
       setError(`Opname fout: ${event.payload}`);
       setPhase("idle");
-      stopTimer();
-      closeWidgetWindow().catch(console.error);
+      closeWidgetWindow().catch((e) => console.error("[Recording] Widget close on error failed:", e));
     }).then((fn) => { unlistenFn = fn; }).catch(console.error);
     return () => { unlistenFn?.(); };
   }, []);
 
-  function startTimer() {
-    elapsedRef.current = 0;
-    timerRef.current = setInterval(() => {
-      elapsedRef.current += 1;
-      setElapsedSeconds(elapsedRef.current);
-    }, 1000);
-  }
-
-  function stopTimer() {
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
-  }
-
   async function handleStartRecording() {
+    console.log("[Recording] Starting — phase: idle → preparing, mode:", mode);
     setPhase("preparing");
     setError(null);
 
     try {
       const outputDir = await getRecordingsDir();
+      console.log("[Recording] Output dir:", outputDir);
       const filePath = await startRecording(null, mode, outputDir);
+      console.log("[Recording] Started — file:", filePath);
       filePathRef.current = filePath;
       setFilePath(filePath);
       setPhase("recording");
-      startTimer();
-      // Open floating widget
-      openWidgetWindow().catch(console.error);
+      console.log("[Recording] Phase: preparing → recording, opening widget");
+      openWidgetWindow().catch((e) => console.error("[Recording] Widget open failed:", e));
     } catch (err) {
+      console.error("[Recording] Start failed:", err);
       setError(err instanceof Error ? err.message : "Opname starten mislukt");
       setPhase("idle");
     }
   }
 
   async function handleStopRecording() {
+    console.log("[Recording] Stopping — phase:", phase, "→ stopping");
     setPhase("stopping");
-    stopTimer();
 
     try {
       const result = await stopRecording();
       const filePath = result.file_path || filePathRef.current;
-      closeWidgetWindow().catch(console.error);
+      console.log("[Recording] Stopped — file:", filePath, "duration:", result.duration_seconds, "s");
+      closeWidgetWindow().catch((e) => console.error("[Recording] Widget close failed:", e));
       await handleUpload(filePath);
     } catch (err) {
+      console.error("[Recording] Stop failed:", err);
       setError(err instanceof Error ? err.message : "Stoppen mislukt");
       setPhase("idle");
     }
   }
 
   async function handleUpload(filePath: string) {
-    if (isUploadingRef.current) return;
+    if (isUploadingRef.current) {
+      console.log("[Recording] Upload skipped — already uploading");
+      return;
+    }
     isUploadingRef.current = true;
+    console.log("[Recording] Upload starting —", filePath);
 
     try {
       const networkStatus = await getNetworkStatus().catch(() => ({ is_online: false }));
@@ -219,40 +215,37 @@ export function RecordingPage() {
   }
 
   async function handlePause() {
+    console.log("[Recording] Pausing");
     try {
       await pauseRecording();
       setPhase("paused");
-      stopTimer();
+      console.log("[Recording] Paused");
     } catch (error) {
-      console.error("Pauze mislukt:", error);
-      // If channel is closed, the recording has likely stopped
-      // Reset to idle state
+      console.error("[Recording] Pause failed:", error);
       setPhase("idle");
-      stopTimer();
     }
   }
 
   async function handleResume() {
+    console.log("[Recording] Resuming");
     try {
       await resumeRecording();
       setPhase("recording");
-      startTimer();
+      console.log("[Recording] Resumed");
     } catch (error) {
-      console.error("Hervatten mislukt:", error);
-      // If channel is closed, the recording has likely stopped
-      // Reset to idle state
+      console.error("[Recording] Resume failed:", error);
       setPhase("idle");
-      stopTimer();
     }
   }
 
-  const elapsed = useRecordingStore((s) => s.elapsedSeconds);
   const canGoBack = phase === "idle";
 
   return (
     <div className="page-scroll bg-blobs">
-      <div className="bg-blob bg-blob-magenta" style={{ top: "-150px", right: "-100px", left: "auto" }} />
-      <div className="bg-blob bg-blob-neon" />
+      <div className="bg-blobs-clip">
+        <div className="bg-blob bg-blob-magenta" style={{ top: "-150px", right: "-100px", left: "auto" }} />
+        <div className="bg-blob bg-blob-neon" />
+      </div>
       {/* Header */}
       <div className="page-header flex-row gap-12" style={{ position: "relative", zIndex: 1 }}>
         <button
@@ -276,7 +269,7 @@ export function RecordingPage() {
       </div>
 
       {/* Body */}
-      <div className="flex-1 flex-col text-center" style={{ position: "relative", zIndex: 1, alignItems: "center", justifyContent: "center", padding: 32, gap: 24, maxWidth: 600, margin: "0 auto", width: "100%" }}>
+      <div className="flex-col text-center recording-body">
         {phase === "idle" && (
           <IdleState
             mode={mode}
@@ -290,10 +283,10 @@ export function RecordingPage() {
 
         {phase === "preparing" && (
           <div className="text-center">
-            <div className="flex-row" style={{ position: "relative", justifyContent: "center", margin: "0 auto 16px" }}>
+            <div className="mic-button-container mic-button-container-active" style={{ marginInline: "auto", marginBottom: 16 }}>
               <div className="mic-pulse-ring mic-pulse-ring-1" />
               <div className="mic-pulse-ring mic-pulse-ring-2" />
-              <div className="flex-row" style={{ width: 80, height: 80, borderRadius: "50%", background: "rgba(229, 0, 116, 0.08)", justifyContent: "center", animation: "widget-pulse 1.5s ease-in-out infinite" }}>
+              <div className="mic-button-large" style={{ background: "rgba(229, 0, 116, 0.08)", boxShadow: "none", animation: "widget-pulse 1.5s ease-in-out infinite" }}>
                 <MicRecord24Regular className="text-accent" style={{ fontSize: 28 }} />
               </div>
             </div>
@@ -303,8 +296,7 @@ export function RecordingPage() {
 
         {(phase === "recording" || phase === "paused") && (
           <ActiveState
-            elapsed={elapsed}
-            audioLevels={audioLevels}
+            audioLevelsRef={audioLevelsRef}
             isPaused={phase === "paused"}
             onStop={handleStopRecording}
             onPause={handlePause}
@@ -314,10 +306,10 @@ export function RecordingPage() {
 
         {phase === "stopping" && (
           <div className="text-center">
-            <div className="flex-row" style={{ position: "relative", justifyContent: "center", margin: "0 auto 16px" }}>
+            <div className="mic-button-container mic-button-container-active" style={{ marginInline: "auto", marginBottom: 16 }}>
               <div className="mic-pulse-ring mic-pulse-ring-1" />
               <div className="mic-pulse-ring mic-pulse-ring-2" />
-              <div className="flex-row" style={{ width: 80, height: 80, borderRadius: "50%", background: "rgba(229, 0, 116, 0.08)", justifyContent: "center", animation: "widget-pulse 1.5s ease-in-out infinite" }}>
+              <div className="mic-button-large" style={{ background: "rgba(229, 0, 116, 0.08)", boxShadow: "none", animation: "widget-pulse 1.5s ease-in-out infinite" }}>
                 <ArrowUpload24Regular className="text-accent" style={{ fontSize: 28 }} />
               </div>
             </div>
@@ -410,7 +402,7 @@ function IdleState({
   onStart: () => void;
 }) {
   return (
-    <div className="flex-col gap-20" style={{ width: "100%", gap: 28, alignItems: "center" }}>
+    <div className="idle-state">
       {/* Meeting detection banner */}
       <MeetingDetectionBanner onRecord={() => { onSetMode("combined"); onStart(); }} />
 
@@ -436,22 +428,7 @@ function IdleState({
               <button
                 key={m}
                 onClick={() => onSetMode(m)}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  padding: "8px 16px",
-                  borderRadius: "var(--radius-xs)",
-                  border: isActive ? "1px solid var(--fill-accent-default)" : "1px solid rgba(229, 0, 116, 0.20)",
-                  background: isActive ? "var(--fill-accent-default)" : "rgba(229, 0, 116, 0.06)",
-                  color: isActive ? "#fff" : "var(--text-primary)",
-                  fontSize: 13,
-                  fontWeight: isActive ? 600 : 500,
-                  cursor: "default",
-                  transition: "all 180ms ease",
-                  fontFamily: "inherit",
-                  boxShadow: isActive ? "0 2px 8px rgba(229, 0, 116, 0.35)" : "none",
-                }}
+                className={`mode-selector-btn ${isActive ? "active" : ""}`}
               >
                 {m === "combined"
                   ? <VideoChat24Regular style={{ fontSize: 16 }} />
@@ -484,8 +461,8 @@ function IdleState({
       </div>
 
       {/* Mic button with concentric rings — matches macOS */}
-      <div className="flex-col gap-12" style={{ alignItems: "center", paddingTop: 8 }}>
-        <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center", width: 180, height: 180 }}>
+      <div className="flex-col gap-12" style={{ alignItems: "center" }}>
+        <div className="mic-button-container mic-button-container-idle">
           <div className="mic-pulse-ring mic-pulse-ring-1" />
           <div className="mic-pulse-ring mic-pulse-ring-2" />
           <div className="mic-pulse-ring mic-pulse-ring-3" />
@@ -512,34 +489,34 @@ function IdleState({
 }
 
 function ActiveState({
-  elapsed, audioLevels, isPaused, onStop, onPause, onResume,
+  audioLevelsRef, isPaused, onStop, onPause, onResume,
 }: {
-  elapsed: number;
-  audioLevels: number[];
+  audioLevelsRef: React.RefObject<number[]>;
   isPaused: boolean;
   onStop: () => void;
   onPause: () => void;
   onResume: () => void;
 }) {
+  const [elapsed, setElapsed] = useState(0);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    if (!isPaused) {
+      timerRef.current = setInterval(() => setElapsed((s) => s + 1), 1000);
+    }
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [isPaused]);
+
   const minutes = Math.floor(elapsed / 60).toString().padStart(2, "0");
   const seconds = (elapsed % 60).toString().padStart(2, "0");
 
   return (
-    <div className="flex-col gap-20" style={{ width: "100%", alignItems: "center" }}>
+    <div className="active-state">
       {/* Timer — matches macOS 56pt thin monospaced */}
       <div className="text-center">
-        <div
-          style={{
-            fontSize: 56,
-            fontWeight: 100,
-            fontVariantNumeric: "tabular-nums",
-            fontFamily: "'Segoe UI Variable', 'Segoe UI', system-ui, monospace",
-            color: "var(--text-primary)",
-            letterSpacing: "0.04em",
-            lineHeight: 1,
-            marginBottom: 10,
-          }}
-        >
+        <div className="recording-timer">
           {minutes}:{seconds}
         </div>
         {/* LIVE badge */}
@@ -550,12 +527,12 @@ function ActiveState({
       </div>
 
       {/* Waveform */}
-      <div className="card card-static" style={{ padding: "16px 20px", width: "100%", overflow: "hidden" }}>
-        <WaveformVisualizer levels={audioLevels} isActive={!isPaused} height={120} />
+      <div className="card card-static waveform-card">
+        <WaveformVisualizer levelsRef={audioLevelsRef} isActive={!isPaused} />
       </div>
 
       {/* Mic button — active recording */}
-      <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center", width: 120, height: 120 }}>
+      <div className="mic-button-container mic-button-container-active">
         {!isPaused && (
           <>
             <div className="mic-pulse-ring mic-pulse-ring-1" />

@@ -73,6 +73,8 @@ export function RecordingPage() {
   const audioLevelsRef = useAudioLevelsRef();
   const filePathRef = useRef<string>("");
   const isUploadingRef = useRef(false);
+  const phaseRef = useRef(phase);
+  phaseRef.current = phase;
 
   useEffect(() => {
     if (autoStart && phase === "idle") {
@@ -81,21 +83,30 @@ export function RecordingPage() {
     }
   }, []);
 
-  // Listen for recording-stopped event from widget
+  // Listen for recording-stopped event (emitted by Rust after stop_recording completes).
+  // This handles the case where the widget stops the recording — handleStopRecording
+  // is not called, so we need to trigger upload from here.
+  // Uses phaseRef to avoid stale closure (no [phase] dependency = no re-subscribe gap).
   useEffect(() => {
     let unlistenFn: (() => void) | undefined;
     listen<{ file_path: string; duration_seconds: number }>(
       "recording-stopped",
       (event) => {
-        console.log("[Recording] Event: recording-stopped, phase:", phase, "payload:", event.payload);
-        filePathRef.current = event.payload.file_path || filePathRef.current;
-        if (phase === "recording" || phase === "paused") {
+        if (event.payload.file_path) {
+          filePathRef.current = event.payload.file_path;
+        }
+        const currentPhase = phaseRef.current;
+        // Only trigger upload if we're still in a recording phase (widget-initiated stop).
+        // When handleStopRecording triggers this, phase is already "stopping" and
+        // handleStopRecording calls handleUpload itself. The isUploadingRef guard
+        // prevents double execution in the race where both paths fire.
+        if (currentPhase === "recording" || currentPhase === "paused") {
           handleUpload(filePathRef.current);
         }
       }
     ).then((fn) => { unlistenFn = fn; }).catch(console.error);
     return () => { unlistenFn?.(); };
-  }, [phase]);
+  }, []);
 
   // Listen for recording-error event from Rust backend
   useEffect(() => {

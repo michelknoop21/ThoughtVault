@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { TitleBar } from "./components/layout/TitleBar";
 import { Sidebar } from "./components/layout/Sidebar";
@@ -30,22 +30,63 @@ initCrashReporter();
 
 function OfflineQueueBanner() {
   const [count, setCount] = useState(0);
+  const [processing, setProcessing] = useState(false);
+  const isProcessingRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
-    async function check() {
+
+    async function checkAndProcess() {
       try {
-        const { getQueue } = await import("./services/offlineQueue");
+        const { getQueue, processQueue } = await import("./services/offlineQueue");
         const queue = await getQueue();
-        if (!cancelled) setCount(queue.length);
+        if (cancelled) return;
+        setCount(queue.length);
+
+        // Try to process queued uploads if there are any and we're not already processing
+        if (queue.length > 0 && !isProcessingRef.current) {
+          try {
+            const { getNetworkStatus } = await import("./services/tauriCommands");
+            const status = await getNetworkStatus();
+            if (status.is_online && !isProcessingRef.current) {
+              isProcessingRef.current = true;
+              setProcessing(true);
+              await processQueue();
+              // Re-check queue after processing
+              const remaining = await getQueue();
+              if (!cancelled) setCount(remaining.length);
+              isProcessingRef.current = false;
+              setProcessing(false);
+            }
+          } catch {
+            isProcessingRef.current = false;
+            setProcessing(false);
+          }
+        }
       } catch {
         // Queue not available
       }
     }
-    check();
-    const interval = setInterval(check, 10000);
+    checkAndProcess();
+    const interval = setInterval(checkAndProcess, 15000);
     return () => { cancelled = true; clearInterval(interval); };
   }, []);
+
+  async function handleRetryNow() {
+    if (isProcessingRef.current) return;
+    isProcessingRef.current = true;
+    setProcessing(true);
+    try {
+      const { processQueue, getQueue } = await import("./services/offlineQueue");
+      await processQueue();
+      const remaining = await getQueue();
+      setCount(remaining.length);
+    } catch {
+      // retry failed
+    }
+    isProcessingRef.current = false;
+    setProcessing(false);
+  }
 
   if (count === 0) return null;
 
@@ -62,7 +103,29 @@ function OfflineQueueBanner() {
       flexShrink: 0,
     }}>
       <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#fff", opacity: 0.7, animation: "widget-pulse 1.5s ease-in-out infinite" }} />
-      {count} opname{count !== 1 ? "s" : ""} in wachtrij — wordt verstuurd bij verbinding
+      <span style={{ flex: 1 }}>
+        {processing
+          ? `${count} opname${count !== 1 ? "s" : ""} worden verstuurd...`
+          : `${count} opname${count !== 1 ? "s" : ""} in wachtrij — wordt verstuurd bij verbinding`
+        }
+      </span>
+      {!processing && (
+        <button
+          onClick={handleRetryNow}
+          style={{
+            background: "rgba(255,255,255,0.2)",
+            border: "none",
+            color: "#fff",
+            fontSize: 11,
+            fontWeight: 600,
+            padding: "2px 8px",
+            borderRadius: 4,
+            cursor: "pointer",
+          }}
+        >
+          Nu versturen
+        </button>
+      )}
     </div>
   );
 }

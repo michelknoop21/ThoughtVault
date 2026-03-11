@@ -395,10 +395,28 @@ _Append-only log. Each entry records context, decision, and consequences._
 
 ---
 
-## DEC-025 — reqwest Form API over Manual Multipart Construction
+## DEC-026 — Browser-Native FormData Upload over Rust reqwest
 
 **Date:** 2026-03-11
 **Status:** Accepted
+
+**Context:** Multiple attempts to fix the Windows upload 422 error via Rust's reqwest library all failed — both the `multipart::Form` API (DEC-025) and manual `Vec<u8>` body construction produced multipart bodies that FastAPI's python-multipart parser rejected. The macOS client using URLSession (OS-native HTTP stack) worked perfectly, suggesting the issue was specific to how reqwest encodes multipart data when combined with nginx reverse proxy settings.
+
+**Decision:** Remove the Rust-based upload path entirely. Read the WAV file via Tauri FS plugin (`readFile()` → `Uint8Array`), wrap it in browser-native `FormData` + `Blob`, and send with browser `fetch()`. This is identical to how an HTML `<form>` upload works — the most battle-tested multipart implementation available.
+
+**Consequences:**
+- Upload works reliably — browser FormData encoding is universally compatible with all HTTP servers.
+- Rust no longer involved in the upload HTTP request; `http_upload_file` command removed, `multipart` and `uuid` dependencies dropped.
+- Requires Tauri FS plugin with `fs:scope` permission allowing `$APPDATA/**` for reading recordings.
+- CORS must allow the Tauri WebView origin (`https://tauri.localhost`) since fetch goes directly from browser to backend.
+- The old file-readiness retry loop (20 attempts × 200ms) is unnecessary — the `recording-stopped` event already fires after WAV finalization.
+
+---
+
+## DEC-025 — reqwest Form API over Manual Multipart Construction
+
+**Date:** 2026-03-11
+**Status:** Superseded by DEC-026
 
 **Context:** Windows audio uploads returned HTTP 422 "field required" despite the multipart body being correctly formatted (verified via debug middleware). Manual construction sent a fixed `Vec<u8>` body with an explicit `Content-Length` header via `.body()`. The combination of this approach with nginx's `proxy_buffering off` + `chunked_transfer_encoding off` settings interfered with python-multipart's ability to parse the body. A previous investigation (DEC-prior) used manual construction to work around a missing `multipart` feature flag in `Cargo.toml`, but that flag has since been added.
 

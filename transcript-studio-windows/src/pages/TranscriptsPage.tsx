@@ -781,27 +781,47 @@ ${DOMPurify.sanitize(transcript.notule_html)}
               {detailTab === "notule" ? (
                 <>
                   {selected.notule_html ? (
-                    isEditingNotule ? (
-                      <div
-                        ref={editorRef}
-                        className="prose notule-editor"
-                        contentEditable
-                        suppressContentEditableWarning
-                        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(editedHTML) }}
-                        onInput={(e) => setEditedHTML((e.target as HTMLDivElement).innerHTML)}
-                      />
-                    ) : (
-                      <div
-                        className="prose"
-                        dangerouslySetInnerHTML={{
-                          __html: DOMPurify.sanitize(
-                            selected.notule_html.startsWith("<")
-                              ? selected.notule_html
-                              : (marked(selected.notule_html) as string)
-                          ),
-                        }}
-                      />
-                    )
+                    <div className="transcripts-document">
+                      <div className="transcripts-document-accent" />
+                      <div className="transcripts-document-header">
+                        <h3 className="transcripts-document-title">
+                          {selected.title || "Naamloze opname"}
+                        </h3>
+                        <div className="transcripts-document-meta">
+                          <span>{formatDate(selected.created_at)}</span>
+                          <span className="transcripts-document-meta-sep">·</span>
+                          <span>{formatDuration(selected.duration_seconds)}</span>
+                          {selected.profile_name && (
+                            <>
+                              <span className="transcripts-document-meta-sep">·</span>
+                              <span className="transcripts-document-meta-profile">{selected.profile_name}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      <div className="transcripts-document-divider" />
+                      {isEditingNotule ? (
+                        <div
+                          ref={editorRef}
+                          className="prose notule-editor transcripts-document-body"
+                          contentEditable
+                          suppressContentEditableWarning
+                          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(editedHTML) }}
+                          onInput={(e) => setEditedHTML((e.target as HTMLDivElement).innerHTML)}
+                        />
+                      ) : (
+                        <div
+                          className="prose transcripts-document-body"
+                          dangerouslySetInnerHTML={{
+                            __html: DOMPurify.sanitize(
+                              selected.notule_html.startsWith("<")
+                                ? selected.notule_html
+                                : (marked(selected.notule_html) as string)
+                            ),
+                          }}
+                        />
+                      )}
+                    </div>
                   ) : (
                     <div className="text-center transcripts-empty-content">
                       <Document24Regular className="transcripts-empty-icon-large" />
@@ -820,12 +840,18 @@ ${DOMPurify.sanitize(transcript.notule_html)}
               ) : (
                 <div>
                   {selected.raw_transcription ? (
-                    <div className="card transcripts-transcription-card">
-                      <p className="text-body-strong text-accent transcripts-transcription-title">
-                        {selected.title || "Naamloze opname"}
-                      </p>
-                      <p className="section-label">RUWE TRANSCRIPTIE</p>
-                      <div className="transcripts-transcription-body">
+                    <div className="transcripts-document">
+                      <div className="transcripts-document-accent" />
+                      <div className="transcripts-document-header">
+                        <h3 className="transcripts-document-title">Ruwe Transcriptie</h3>
+                        <div className="transcripts-document-meta">
+                          <span>{selected.title || "Naamloze opname"}</span>
+                          <span className="transcripts-document-meta-sep">·</span>
+                          <span>{formatDate(selected.created_at)}</span>
+                        </div>
+                      </div>
+                      <div className="transcripts-document-divider" />
+                      <div className="transcripts-document-body transcripts-transcription-body">
                         {typeof selected.raw_transcription === "string" ? selected.raw_transcription : ""}
                       </div>
                     </div>
@@ -1062,11 +1088,17 @@ function htmlToMarkdown(html: string): string {
 }
 
 function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString("nl-NL", {
+  const d = new Date(dateStr);
+  const datePart = d.toLocaleDateString("nl-NL", {
     day: "numeric",
     month: "short",
     year: "numeric",
   });
+  const timePart = d.toLocaleTimeString("nl-NL", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  return `${datePart} om ${timePart}`;
 }
 
 function formatDuration(seconds: number): string {

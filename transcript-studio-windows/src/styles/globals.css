@@ -1576,27 +1576,81 @@
 
 .prose {
   font-size: var(--font-body);
-  line-height: 1.65;
+  line-height: 1.7;
   color: var(--text-primary);
   overflow-wrap: anywhere;
   word-break: break-word;
 }
 
-.prose h1 { font-size: var(--font-title2); font-weight: 700; margin: 20px 0 8px; color: var(--text-accent); }
-.prose h2 { font-size: var(--font-title3); font-weight: 600; margin: 16px 0 6px; }
-.prose h3 { font-size: var(--font-callout); font-weight: 600; margin: 12px 0 4px; }
-.prose p { margin: 6px 0; }
-.prose ul, .prose ol { margin: 6px 0; padding-left: 20px; }
-.prose li { margin: 3px 0; }
-.prose table { border-collapse: collapse; width: 100%; margin: 12px 0; }
-.prose th, .prose td { border: 1px solid var(--border-primary); padding: 6px 10px; text-align: left; }
-.prose th { background: var(--surface-tertiary); font-weight: 600; }
-.prose blockquote { border-left: 3px solid var(--brand-primary); padding-left: 14px; color: var(--text-secondary); margin: 8px 0; }
+.prose h1 {
+  font-size: var(--font-title2);
+  font-weight: 700;
+  margin: 24px 0 12px;
+  padding-bottom: 8px;
+  color: var(--text-primary);
+  border-bottom: 2px solid var(--brand-primary);
+}
+.prose h2 {
+  font-size: var(--font-title3);
+  font-weight: 600;
+  margin: 20px 0 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border-secondary);
+}
+.prose h3 {
+  font-size: var(--font-callout);
+  font-weight: 600;
+  margin: 16px 0 6px;
+  color: var(--text-primary);
+}
+.prose p { margin: 8px 0; }
+.prose ul, .prose ol { margin: 8px 0; padding-left: 24px; }
+.prose li { margin: 4px 0; }
+.prose li::marker { color: var(--text-tertiary); }
+.prose table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 16px 0;
+  font-size: var(--font-body);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-xs);
+  overflow: hidden;
+}
+.prose th, .prose td {
+  border: 1px solid var(--border-secondary);
+  padding: 8px 12px;
+  text-align: left;
+}
+.prose th {
+  background: var(--surface-tertiary);
+  font-weight: 600;
+  font-size: var(--font-caption);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-secondary);
+}
+.prose tr:nth-child(even) td {
+  background: var(--surface-secondary);
+}
+.prose blockquote {
+  border-left: 3px solid var(--brand-primary);
+  padding-left: 16px;
+  color: var(--text-secondary);
+  margin: 12px 0;
+  font-style: italic;
+}
+.prose strong { color: var(--text-primary); }
+.prose a { color: var(--brand-secondary); text-decoration: underline; }
+.prose a:hover { color: var(--brand-primary); }
+.prose hr {
+  border: none;
+  border-top: 1px solid var(--border-secondary);
+  margin: 20px 0;
+}
 
 .notule-editor {
   outline: 2px solid var(--brand-primary);
-  border-radius: var(--radius-sm);
-  padding: var(--space-md);
+  outline-offset: -2px;
   min-height: 200px;
 }
 
@@ -1884,20 +1938,85 @@
   margin-top: var(--space-sm);
 }
 
-.transcripts-transcription-card {
-  padding: var(--space-md);
+/* Document card — professional meeting minutes style */
+.transcripts-document {
+  background: var(--surface-primary);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.03);
+  overflow: hidden;
+  position: relative;
 }
 
-.transcripts-transcription-title {
-  margin-bottom: var(--space-sm);
+.transcripts-document-accent {
+  height: 3px;
+  background: linear-gradient(90deg, var(--brand-primary), var(--brand-primary-dark));
+}
+
+.transcripts-document-header {
+  padding: var(--space-lg) var(--space-xl) var(--space-md);
+}
+
+.transcripts-document-title {
+  font-size: var(--font-title3);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 6px;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.transcripts-document-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--font-caption);
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.transcripts-document-meta-sep {
+  color: var(--text-tertiary);
+  margin: 0 2px;
+}
+
+.transcripts-document-meta-profile {
+  color: var(--brand-primary);
+  font-weight: 500;
+}
+
+.transcripts-document-divider {
+  height: 1px;
+  background: var(--border-secondary);
+  margin: 0 var(--space-xl);
+}
+
+.transcripts-document-body {
+  padding: var(--space-lg) var(--space-xl) var(--space-xl);
+}
+
+.transcripts-document-body.notule-editor {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: -2px;
+  border-radius: 0;
+  min-height: 200px;
 }
 
 .transcripts-transcription-body {
   font-size: var(--font-body);
-  line-height: 1.7;
+  line-height: 1.8;
   color: var(--text-primary);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+
+[data-theme="dark"] .transcripts-document {
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12), 0 4px 16px rgba(0, 0, 0, 0.10);
+}
+
+[data-theme="dark"] .prose tr:nth-child(even) td {
+  background: var(--surface-tertiary);
 }
 
 .transcripts-edit-input {

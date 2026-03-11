@@ -1,6 +1,6 @@
 # TranscriptStudio — Architecture
 
-_Last updated: 2026-03-07 (session 5)_
+_Last updated: 2026-03-11_
 
 ---
 
@@ -216,9 +216,11 @@ AVFoundation (mic)          ScreenCaptureKit (system)
 
 **Stack:** Tauri 2.10 · React 19 · TypeScript · Vite · Tailwind CSS · Zustand · Fluent UI icons
 
-**Rust backend commands:** audio (WASAPI), auth (keyring), filesystem, HTTP proxy, OAuth PKCE, process detection, system utilities
+**Rust backend commands:** audio (WASAPI), auth (keyring), filesystem, HTTP proxy, SSE streaming, process detection, system utilities
 
-**Audio pipeline:** WASAPI capture → 16 kHz mono 16-bit PCM WAV → `AppData/Recordings` → upload / offline queue → SSE progress
+**Audio pipeline:** WASAPI capture → 16 kHz mono 16-bit PCM WAV → `AppData/Recordings` → Tauri FS plugin reads file → browser `FormData` + `fetch()` upload → SSE progress
+
+**Upload path:** File upload uses browser-native `FormData` + `fetch()` instead of Rust reqwest. The Tauri FS plugin (`@tauri-apps/plugin-fs`) reads the WAV file from disk into a `Uint8Array`, which is wrapped in a `Blob` and appended to `FormData`. This ensures multipart encoding is identical to an HTML form upload. Other API calls (JSON REST) still use the Rust `proxy_request` command to bypass CORS.
 
 ### Frontend Structure
 

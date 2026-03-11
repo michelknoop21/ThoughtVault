@@ -5,6 +5,29 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2026-03-11] — Browser-native upload replaces reqwest multipart (v1.0.27)
+
+### Fixed
+- **Windows upload 422 finally resolved**: Replaced the entire Rust-based multipart upload path (`http_upload_file` in `http.rs`) with browser-native `FormData` + `fetch()`. The reqwest multipart encoding — both the `.multipart()` API (DEC-025) and manual `Vec<u8>` construction — was fundamentally incompatible with FastAPI's python-multipart parser behind nginx reverse proxy. Browser `FormData` produces the exact same encoding as an HTML form upload, which every backend supports.
+
+### Changed
+- **Upload architecture** (Windows): File is now read via Tauri FS plugin (`@tauri-apps/plugin-fs`), converted to a `Blob`, wrapped in `FormData`, and sent with browser `fetch()`. No Rust code involved in the upload HTTP request itself.
+- **Rust cleanup**: Removed `http_upload_file` command, `multipart` feature from reqwest, `uuid` crate dependency. Cleaned up unused imports (`Version`, `Uuid`).
+- **Backend CORS**: Added `https://tauri.localhost`, `http://tauri.localhost`, `http://localhost:1420` to default CORS origins (production uses `CORS_ORIGINS=*` env var so already open).
+
+### Added
+- **Tauri FS plugin**: `tauri-plugin-fs` (Rust) + `@tauri-apps/plugin-fs` (JS) for reading WAV files from disk into the browser context.
+- **FS scope permission**: `fs:scope` with `$APPDATA/**` allow path — required for the FS plugin to read recordings from AppData.
+
+### Decisions
+- DEC-026: Browser-native FormData upload over Rust reqwest (see [DECISIONS.md](DECISIONS.md))
+
+### Notes
+- The macOS client uses URLSession (OS-native HTTP stack) which never had this issue — only the Windows reqwest path was affected
+- The old retry loop (20 attempts × 200ms) for waiting on WAV finalization is no longer needed — the `recording-stopped` event already fires after finalization
+
+---
+
 ## [2026-03-11] — Fix Windows upload 422 error: remove debug middleware, switch to reqwest Form API
 
 ### Fixed

@@ -198,7 +198,7 @@ struct ModernCardModifier: ViewModifier {
                         .glassEffect(in: .rect(cornerRadius: TS.Radius.md))
                 } else {
                     RoundedRectangle(cornerRadius: TS.Radius.md, style: .continuous)
-                        .fill(.thickMaterial)
+                        .fill(.ultraThinMaterial)
                         .shadow(
                             color: .black.opacity(isHovered ? 0.12 : 0.06),
                             radius: isHovered ? 16 : 8,

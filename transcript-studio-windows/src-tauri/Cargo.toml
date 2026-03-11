@@ -4,6 +4,7 @@ version = "1.0.22"
 description = "TranscriptStudio - Meeting recorder and transcription app"
 authors = ["Prezent Internet B.V."]
 edition = "2021"
+default-run = "transcript-studio"
 
 [lib]
 name = "transcript_studio_lib"
@@ -23,11 +24,12 @@ tauri-plugin-deep-link      = "2"
 tauri-plugin-notification   = "2"
 tauri-plugin-store          = "2"
 tauri-plugin-single-instance = { version = "2", features = ["deep-link"] }
+tauri-plugin-fs            = "2"
 
 serde       = { version = "1", features = ["derive"] }
 serde_json  = "1"
 tokio       = { version = "1", features = ["full"] }
-reqwest     = { version = "0.12", features = ["json", "multipart", "stream"] }
+reqwest     = { version = "0.12", features = ["json", "stream"] }
 futures-util = "0.3"
 
 # Audio recording
@@ -39,8 +41,8 @@ keyring = "3"
 
 # Utilities
 chrono = { version = "0.4", features = ["serde"] }
-uuid   = { version = "1", features = ["v4"] }
 dirs   = "5"
+
 
 # Windows 11 native visual effects (Mica, Acrylic)
 window-vibrancy = "0.5"

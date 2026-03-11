@@ -49,8 +49,12 @@ pub async fn detect_meeting_apps() -> Result<Vec<MeetingApp>, String> {
 
     #[cfg(target_os = "windows")]
     {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+
         let output = std::process::Command::new("tasklist")
             .args(["/fo", "csv", "/nh"])
+            .creation_flags(CREATE_NO_WINDOW)
             .output()
             .map_err(|e| format!("tasklist mislukt: {}", e))?;
 

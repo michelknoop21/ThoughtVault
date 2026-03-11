@@ -16,6 +16,7 @@ pub fn run() {
         .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(tauri_plugin_single_instance::init(|_app, _args, _cwd| {}))
         .plugin(tauri_plugin_deep_link::init())
+        .plugin(tauri_plugin_fs::init())
         .setup(|app| {
             let main_window = app.get_webview_window("main").unwrap();
 
@@ -80,7 +81,6 @@ pub fn run() {
             commands::filesystem::concatenate_wav_files,
             // HTTP
             commands::http::proxy_request,
-            commands::http::http_upload_file,
             commands::http::http_sse_stream,
             // System
             commands::system::get_network_status,

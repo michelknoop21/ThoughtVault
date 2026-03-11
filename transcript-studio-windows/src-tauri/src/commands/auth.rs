@@ -1,14 +1,6 @@
 use keyring::Entry;
-use serde::{Deserialize, Serialize};
 
 const SERVICE_NAME: &str = "nl.prezent.transcript-studio";
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct CredentialResult {
-    pub success: bool,
-    pub value: Option<String>,
-    pub error: Option<String>,
-}
 
 #[tauri::command]
 pub async fn store_credential(key: String, value: String) -> Result<(), String> {

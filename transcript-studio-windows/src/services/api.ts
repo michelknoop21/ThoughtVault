@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { readFile } from "@tauri-apps/plugin-fs";
 import { useAuthStore } from "../stores/authStore";
 import type {
   LoginResponse,
@@ -297,37 +298,51 @@ class APIService {
     return `${this.baseUrl}/task/${taskId}/stream`;
   }
 
-  // Upload
+  // Upload — uses browser-native FormData + fetch for multipart encoding
   async uploadRecording(
     filePath: string,
     profileId: string,
     mode: string
   ): Promise<{ task_id: string }> {
-    const headers: Record<string, string> = {};
-    if (this.token) {
-      headers["X-User-Token"] = this.token;
+    const authStore = useAuthStore.getState();
+    if (authStore.isTokenExpired()) {
+      authStore.logout();
+      throw new Error("Sessie verlopen. Log opnieuw in.");
     }
 
-    const response = await invoke<{ status: number; body: string }>(
-      "http_upload_file",
-      {
-        url: `${this.baseUrl}/transcribe`,
-        filePath,
-        fieldName: "file",
-        additionalFields: { profile_id: profileId, mode },
-        headers,
-      }
-    );
+    // Read file bytes via Tauri FS plugin
+    const fileBytes = await readFile(filePath);
 
-    if (response.status >= 400) {
+    // Build FormData — browser handles multipart/form-data encoding
+    const filename = filePath.split(/[\\/]/).pop() || "recording.wav";
+    const blob = new Blob([fileBytes], { type: "audio/wav" });
+    const formData = new FormData();
+    formData.append("file", blob, filename);
+    formData.append("profile_id", profileId);
+    formData.append("mode", mode);
+
+    if (import.meta.env.DEV) console.log(`[API] Upload ${filename} (${fileBytes.length} bytes) to ${this.baseUrl}/transcribe`);
+
+    // Browser-native fetch — no Rust involved in upload
+    const response = await fetch(`${this.baseUrl}/transcribe`, {
+      method: "POST",
+      headers: {
+        "X-User-Token": this.token || "",
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorBody = await response.text();
+      if (import.meta.env.DEV) console.error("[API] Upload error:", { status: response.status, body: errorBody });
+
       let errorMessage = `Upload mislukt (HTTP ${response.status})`;
       try {
-        const errorData = JSON.parse(response.body);
+        const errorData = JSON.parse(errorBody);
         const extracted = errorData.message || errorData.error;
         if (typeof extracted === "string") {
           errorMessage = `Upload mislukt: ${extracted}`;
         } else if (errorData.detail) {
-          // FastAPI 422 returns detail as array of validation errors
           if (Array.isArray(errorData.detail)) {
             const fields = errorData.detail.map((d: { loc?: string[]; msg?: string }) =>
               `${(d.loc || []).join(".")}: ${d.msg || "ongeldig"}`
@@ -338,15 +353,14 @@ class APIService {
           }
         }
       } catch {
-        if (response.body && response.body.length < 200) {
-          errorMessage = `Upload mislukt: ${response.body}`;
+        if (errorBody.length < 200) {
+          errorMessage = `Upload mislukt: ${errorBody}`;
         }
       }
-      if (import.meta.env.DEV) console.error("[API] Upload error:", { status: response.status, body: response.body });
       throw new Error(errorMessage);
     }
 
-    return JSON.parse(response.body);
+    return await response.json();
   }
 
   // Profiles

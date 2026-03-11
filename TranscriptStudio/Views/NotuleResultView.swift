@@ -523,16 +523,38 @@ struct NotuleResultView: View {
         <head>
         <meta charset="utf-8">
         <style>
-        body { font-family: -apple-system, Helvetica Neue, Arial, sans-serif; font-size: 12pt; line-height: 1.6; color: #1a1a1a; margin: 0; padding: 20pt; }
-        h1 { font-size: 18pt; font-weight: 700; color: #E50074; margin-bottom: 12pt; }
-        h2 { font-size: 14pt; font-weight: 600; margin-top: 16pt; }
-        h3 { font-size: 12pt; font-weight: 600; margin-top: 12pt; }
+        :root {
+            --text-primary: #1a1a1a;
+            --text-heading: #333;
+            --text-subtle: #555;
+            --brand: #E50074;
+            --border: #e0e0e0;
+            --surface: #f8f8f8;
+            --surface-light: #f5f5f5;
+            --bg-blockquote: #fef6fb;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --text-primary: #f0f0f4;
+                --text-heading: #c8d4e8;
+                --text-subtle: #9e9ea8;
+                --brand: #ff3b8a;
+                --border: #38383d;
+                --surface: #222228;
+                --surface-light: #222228;
+                --bg-blockquote: #1f0e18;
+            }
+        }
+        body { font-family: -apple-system, Helvetica Neue, Arial, sans-serif; font-size: 12pt; line-height: 1.6; color: var(--text-primary); margin: 0; padding: 20pt; }
+        h1 { font-size: 18pt; font-weight: 700; color: var(--brand); margin-bottom: 12pt; }
+        h2 { font-size: 14pt; font-weight: 600; color: var(--text-heading); margin-top: 16pt; }
+        h3 { font-size: 12pt; font-weight: 600; color: var(--text-subtle); margin-top: 12pt; }
         p  { margin: 6pt 0; }
         ul, ol { margin: 6pt 0; padding-left: 20pt; }
         li { margin: 3pt 0; }
         table { border-collapse: collapse; width: 100%; margin: 12pt 0; }
-        th, td { border: 1px solid #ddd; padding: 6pt 8pt; text-align: left; }
-        th { background: #f5f5f5; font-weight: 600; }
+        th, td { border: 1px solid var(--border); padding: 6pt 8pt; text-align: left; }
+        th { background: var(--surface-light); font-weight: 600; }
         </style>
         </head>
         <body>\(html)</body>
@@ -569,27 +591,49 @@ struct HTMLWebView: NSViewRepresentable {
         <head>
         <meta charset="utf-8">
         <style>
+        :root {
+            --text-primary: #1a1a1a;
+            --text-heading: #333;
+            --text-subtle: #555;
+            --brand: #E50074;
+            --border: #e0e0e0;
+            --surface: #f8f8f8;
+            --surface-light: #f5f5f5;
+            --bg-blockquote: #fef6fb;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --text-primary: #f0f0f4;
+                --text-heading: #c8d4e8;
+                --text-subtle: #9e9ea8;
+                --brand: #ff3b8a;
+                --border: #38383d;
+                --surface: #222228;
+                --surface-light: #222228;
+                --bg-blockquote: #1f0e18;
+            }
+        }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
             font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
             font-size: 14px;
             line-height: 1.65;
-            color: #1a1a1a;
+            color: var(--text-primary);
             background: transparent;
             padding: 24px;
         }
-        h1 { font-size: 24px; font-weight: 700; color: #E50074; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid #E50074; }
-        h2 { font-size: 18px; font-weight: 600; color: #333; margin-top: 24px; margin-bottom: 8px; }
-        h3 { font-size: 15px; font-weight: 600; color: #555; margin-top: 16px; margin-bottom: 6px; }
+        h1 { font-size: 24px; font-weight: 700; color: var(--brand); margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid var(--brand); }
+        h2 { font-size: 18px; font-weight: 600; color: var(--text-heading); margin-top: 24px; margin-bottom: 8px; }
+        h3 { font-size: 15px; font-weight: 600; color: var(--text-subtle); margin-top: 16px; margin-bottom: 6px; }
         p  { margin: 8px 0; }
         ul, ol { margin: 8px 0 8px 20px; }
         li { margin: 4px 0; }
         strong { font-weight: 600; }
-        em { font-style: italic; color: #555; }
+        em { font-style: italic; color: var(--text-subtle); }
         table { border-collapse: collapse; width: 100%; margin: 12px 0; }
-        th, td { border: 1px solid #e0e0e0; padding: 8px 12px; text-align: left; }
-        th { background: #f8f8f8; font-weight: 600; }
-        blockquote { border-left: 3px solid #E50074; margin: 12px 0; padding: 8px 16px; background: #fef6fb; }
+        th, td { border: 1px solid var(--border); padding: 8px 12px; text-align: left; }
+        th { background: var(--surface); font-weight: 600; }
+        blockquote { border-left: 3px solid var(--brand); margin: 12px 0; padding: 8px 16px; background: var(--bg-blockquote); }
         </style>
         </head>
         <body>\(htmlContent)</body>
@@ -619,27 +663,49 @@ struct HTMLWebView: UIViewRepresentable {
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <style>
+        :root {
+            --text-primary: #1a1a1a;
+            --text-heading: #333;
+            --text-subtle: #555;
+            --brand: #E50074;
+            --border: #e0e0e0;
+            --surface: #f8f8f8;
+            --surface-light: #f5f5f5;
+            --bg-blockquote: #fef6fb;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --text-primary: #f0f0f4;
+                --text-heading: #c8d4e8;
+                --text-subtle: #9e9ea8;
+                --brand: #ff3b8a;
+                --border: #38383d;
+                --surface: #222228;
+                --surface-light: #222228;
+                --bg-blockquote: #1f0e18;
+            }
+        }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
             font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
             font-size: 14px;
             line-height: 1.65;
-            color: #1a1a1a;
+            color: var(--text-primary);
             background: transparent;
             padding: 16px;
         }
-        h1 { font-size: 22px; font-weight: 700; color: #E50074; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid #E50074; }
-        h2 { font-size: 18px; font-weight: 600; color: #333; margin-top: 24px; margin-bottom: 8px; }
-        h3 { font-size: 15px; font-weight: 600; color: #555; margin-top: 16px; margin-bottom: 6px; }
+        h1 { font-size: 22px; font-weight: 700; color: var(--brand); margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid var(--brand); }
+        h2 { font-size: 18px; font-weight: 600; color: var(--text-heading); margin-top: 24px; margin-bottom: 8px; }
+        h3 { font-size: 15px; font-weight: 600; color: var(--text-subtle); margin-top: 16px; margin-bottom: 6px; }
         p  { margin: 8px 0; }
         ul, ol { margin: 8px 0 8px 20px; }
         li { margin: 4px 0; }
         strong { font-weight: 600; }
-        em { font-style: italic; color: #555; }
+        em { font-style: italic; color: var(--text-subtle); }
         table { border-collapse: collapse; width: 100%; margin: 12px 0; }
-        th, td { border: 1px solid #e0e0e0; padding: 8px 12px; text-align: left; }
-        th { background: #f8f8f8; font-weight: 600; }
-        blockquote { border-left: 3px solid #E50074; margin: 12px 0; padding: 8px 16px; background: #fef6fb; }
+        th, td { border: 1px solid var(--border); padding: 8px 12px; text-align: left; }
+        th { background: var(--surface); font-weight: 600; }
+        blockquote { border-left: 3px solid var(--brand); margin: 12px 0; padding: 8px 16px; background: var(--bg-blockquote); }
         </style>
         </head>
         <body>\(htmlContent)</body>

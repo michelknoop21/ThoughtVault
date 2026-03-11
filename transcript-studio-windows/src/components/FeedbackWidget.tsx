@@ -141,6 +141,7 @@ export default function FeedbackWidget() {
       <button
         ref={buttonRef}
         onClick={() => setOpen((prev) => !prev)}
+        className="feedback-fab"
         style={{
           position: "fixed",
           right: 20,
@@ -158,12 +159,6 @@ export default function FeedbackWidget() {
           cursor: "default",
           boxShadow: "var(--btn-primary-shadow)",
           transition: "transform 150ms var(--ease-smooth), box-shadow 150ms var(--ease-smooth)",
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.transform = "scale(1.08)";
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.transform = "scale(1)";
         }}
         aria-label="Feedback openen"
         title="Feedback"
@@ -477,19 +472,6 @@ export default function FeedbackWidget() {
         </div>
       )}
 
-      {/* Inline keyframes */}
-      <style>{`
-        @keyframes feedbackSlideIn {
-          from {
-            opacity: 0;
-            transform: translateY(8px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-      `}</style>
     </>
   );
 }

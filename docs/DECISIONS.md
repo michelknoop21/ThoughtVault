@@ -395,6 +395,23 @@ _Append-only log. Each entry records context, decision, and consequences._
 
 ---
 
+## DEC-025 — reqwest Form API over Manual Multipart Construction
+
+**Date:** 2026-03-11
+**Status:** Accepted
+
+**Context:** Windows audio uploads returned HTTP 422 "field required" despite the multipart body being correctly formatted (verified via debug middleware). Manual construction sent a fixed `Vec<u8>` body with an explicit `Content-Length` header via `.body()`. The combination of this approach with nginx's `proxy_buffering off` + `chunked_transfer_encoding off` settings interfered with python-multipart's ability to parse the body. A previous investigation (DEC-prior) used manual construction to work around a missing `multipart` feature flag in `Cargo.toml`, but that flag has since been added.
+
+**Decision:** Replace the manual `Vec<u8>` multipart body with reqwest's `multipart::Form` API. Reqwest manages the boundary, `Content-Type` header, and body encoding internally. Remove the explicit `Content-Length` header and `http1_only()` constraint.
+
+**Consequences:**
+- Reqwest handles multipart encoding correctly and compatibly across platforms.
+- Body is sent as `Transfer-Encoding: chunked` (streaming) rather than fixed-length — compatible with nginx upstream.
+- Less code to maintain; no risk of manually constructed boundary format bugs.
+- The `multipart` feature must remain in `Cargo.toml` (`reqwest = { features = ["multipart", ...] }`).
+
+---
+
 ## DEC-024 — Windows Widget Pill Design Parity with macOS
 
 **Date:** 2026-03-09

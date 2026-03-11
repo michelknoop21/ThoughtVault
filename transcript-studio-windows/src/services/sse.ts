@@ -48,7 +48,7 @@ export class SSEClient {
     // Start the SSE stream via Tauri IPC — token goes in headers, not URL
     const headers: Record<string, string> = {};
     if (this.token) {
-      headers["Authorization"] = `Bearer ${this.token}`;
+      headers["X-User-Token"] = this.token;
     }
 
     try {

@@ -162,6 +162,7 @@ struct ProcessingView: View {
             .padding(.horizontal, TS.Spacing.lg)
             .padding(.bottom, TS.Spacing.xl)
         }
+        .preferredColorScheme(.dark)
     }
 
     // MARK: - Progress Step Checklist

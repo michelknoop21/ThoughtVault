@@ -81,7 +81,7 @@ function OfflineQueueBanner() {
       gap: 8,
       flexShrink: 0,
     }}>
-      <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#fff", opacity: 0.7, animation: "widget-pulse 1.5s ease-in-out infinite" }} />
+      <span className="status-pulse" style={{ width: 8, height: 8, borderRadius: "50%", background: "#fff" }} />
       <span style={{ flex: 1 }}>
         {processing
           ? `${count} opname${count !== 1 ? "s" : ""} worden verstuurd...`

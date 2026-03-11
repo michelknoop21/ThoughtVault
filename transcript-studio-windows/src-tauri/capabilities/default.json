@@ -20,6 +20,13 @@
     "notification:default",
     "store:default",
     "deep-link:default",
-    "deep-link:allow-get-current"
+    "deep-link:allow-get-current",
+    "fs:default",
+    "fs:allow-read",
+    "fs:read-all",
+    {
+      "identifier": "fs:scope",
+      "allow": ["$APPDATA/**"]
+    }
   ]
 }

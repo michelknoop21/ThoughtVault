@@ -91,7 +91,7 @@ body {
 
 .widget-badge-dot.recording {
   background: #E50074;
-  animation: widget-pulse 1.4s ease-in-out infinite;
+  animation: widget-pulse 1.2s ease-in-out infinite;
 }
 .widget-badge-dot.paused {
   background: #FFB347;
@@ -99,7 +99,7 @@ body {
 }
 .widget-badge-dot.stopping {
   background: rgba(255, 255, 255, 0.4);
-  animation: widget-pulse 1s ease-in-out infinite;
+  animation: widget-pulse 1.2s ease-in-out infinite;
 }
 
 .widget-badge-label {

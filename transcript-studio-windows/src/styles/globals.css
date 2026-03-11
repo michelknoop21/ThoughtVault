@@ -889,6 +889,11 @@
   50% { opacity: 0.3; }
 }
 
+/* Preparing/stopping state — subtle breathing on mic button */
+.mic-preparing {
+  animation: status-pulse 1.2s ease-in-out infinite;
+}
+
 /* ============================================================
    Status Badges — matches macOS StatusBadge
    ============================================================ */
@@ -2159,16 +2164,49 @@
 }
 
 /* ============================================================
-   Waveform card override
+   Shared pulse animation for recording indicators
    ============================================================ */
 
-.widget-pulse {
-  animation: widget-pulse 1.5s ease-in-out infinite;
+.status-pulse {
+  animation: status-pulse 1.2s ease-in-out infinite;
 }
 
-@keyframes widget-pulse {
+@keyframes status-pulse {
   0%, 100% { transform: scale(1); opacity: 0.6; }
   50% { transform: scale(1.08); opacity: 1; }
+}
+
+/* ============================================================
+   CallAlert reveal animation
+   ============================================================ */
+
+@keyframes reveal-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-reveal-up {
+  animation: reveal-up 250ms var(--ease-gentle);
+}
+
+/* ============================================================
+   Feedback widget button hover
+   ============================================================ */
+
+.feedback-fab:hover {
+  transform: scale(1.08);
+}
+.feedback-fab:active {
+  transform: scale(0.95);
+}
+
+/* ============================================================
+   Feedback panel slide-in
+   ============================================================ */
+
+@keyframes feedbackSlideIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 /* ============================================================

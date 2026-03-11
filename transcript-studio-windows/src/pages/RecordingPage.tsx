@@ -117,19 +117,15 @@ export function RecordingPage() {
   }, []);
 
   async function handleStartRecording() {
-    console.log("[Recording] Starting — phase: idle → preparing, mode:", mode);
     setPhase("preparing");
     setError(null);
 
     try {
       const outputDir = await getRecordingsDir();
-      console.log("[Recording] Output dir:", outputDir);
       const filePath = await startRecording(null, mode, outputDir);
-      console.log("[Recording] Started — file:", filePath);
       filePathRef.current = filePath;
       setFilePath(filePath);
       setPhase("recording");
-      console.log("[Recording] Phase: preparing → recording, opening widget");
       openWidgetWindow().catch((e) => console.error("[Recording] Widget open failed:", e));
     } catch (err) {
       console.error("[Recording] Start failed:", err);
@@ -139,14 +135,12 @@ export function RecordingPage() {
   }
 
   async function handleStopRecording() {
-    console.log("[Recording] Stopping — phase:", phase, "→ stopping");
     setPhase("stopping");
 
     try {
       const result = await stopRecording();
       const filePath = result.file_path || filePathRef.current;
       filePathRef.current = filePath;
-      console.log("[Recording] Stopped — file:", filePath, "duration:", result.duration_seconds, "s");
       closeWidgetWindow().catch((e) => console.error("[Recording] Widget close failed:", e));
       // Upload is triggered by the recording-stopped event listener, which fires
       // after the WAV file is fully finalized by the recording thread.
@@ -158,12 +152,8 @@ export function RecordingPage() {
   }
 
   async function handleUpload(filePath: string) {
-    if (isUploadingRef.current) {
-      console.log("[Recording] Upload skipped — already uploading");
-      return;
-    }
+    if (isUploadingRef.current) return;
     isUploadingRef.current = true;
-    console.log("[Recording] Upload starting —", filePath);
 
     try {
       // Immediately add a background task and reset to idle so the user can start a new recording
@@ -202,11 +192,13 @@ export function RecordingPage() {
           }
         );
       } catch (err) {
+        const msg = err instanceof Error ? err.message : "Upload mislukt";
+        console.error("[Recording] Upload failed:", msg);
         // Upload failed — enqueue for retry
         await enqueue({ file_path: filePath, profile_id: selectedProfileId, mode }).catch(() => {});
         updateBackgroundTask(tempId, {
           status: "failed",
-          error_message: "Upload mislukt. Wordt automatisch opnieuw geprobeerd.",
+          error_message: msg,
         });
       }
     } finally {
@@ -215,11 +207,9 @@ export function RecordingPage() {
   }
 
   async function handlePause() {
-    console.log("[Recording] Pausing");
     try {
       await pauseRecording();
       setPhase("paused");
-      console.log("[Recording] Paused");
     } catch (error) {
       console.error("[Recording] Pause failed:", error);
       setPhase("idle");
@@ -227,11 +217,9 @@ export function RecordingPage() {
   }
 
   async function handleResume() {
-    console.log("[Recording] Resuming");
     try {
       await resumeRecording();
       setPhase("recording");
-      console.log("[Recording] Resumed");
     } catch (error) {
       console.error("[Recording] Resume failed:", error);
       setPhase("idle");
@@ -286,7 +274,7 @@ export function RecordingPage() {
             <div className="mic-button-container mic-button-container-active" style={{ marginInline: "auto", marginBottom: 16 }}>
               <div className="mic-pulse-ring mic-pulse-ring-1" />
               <div className="mic-pulse-ring mic-pulse-ring-2" />
-              <div className="mic-button-large" style={{ background: "rgba(229, 0, 116, 0.08)", boxShadow: "none", animation: "widget-pulse 1.5s ease-in-out infinite" }}>
+              <div className="mic-button-large mic-preparing" style={{ background: "rgba(229, 0, 116, 0.08)", boxShadow: "none" }}>
                 <MicRecord24Regular className="text-accent" style={{ fontSize: 28 }} />
               </div>
             </div>
@@ -309,7 +297,7 @@ export function RecordingPage() {
             <div className="mic-button-container mic-button-container-active" style={{ marginInline: "auto", marginBottom: 16 }}>
               <div className="mic-pulse-ring mic-pulse-ring-1" />
               <div className="mic-pulse-ring mic-pulse-ring-2" />
-              <div className="mic-button-large" style={{ background: "rgba(229, 0, 116, 0.08)", boxShadow: "none", animation: "widget-pulse 1.5s ease-in-out infinite" }}>
+              <div className="mic-button-large mic-preparing" style={{ background: "rgba(229, 0, 116, 0.08)", boxShadow: "none" }}>
                 <ArrowUpload24Regular className="text-accent" style={{ fontSize: 28 }} />
               </div>
             </div>
@@ -480,10 +468,8 @@ function IdleState({
         </p>
       </div>
 
-      {/* Saved recordings */}
-      <SavedRecordings onReprocess={() => {
-        onStart();
-      }} />
+      {/* Saved recordings — reprocess uploads the existing file */}
+      <SavedRecordings />
     </div>
   );
 }

@@ -5,6 +5,38 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2026-03-11] — Fix Windows upload 422 error: remove debug middleware, switch to reqwest Form API
+
+### Fixed
+- **422 "field required" on Windows uploads** (backend + Windows): Two separate issues combined to cause all Windows audio uploads to fail:
+  1. `upload_debug_middleware` in `app.py` called `await request.body()` inside `BaseHTTPMiddleware`. This consumed the ASGI receive channel, leaving an empty stream for FastAPI's multipart parser → 422.
+  2. After removing the middleware, uploads still failed because `http_upload_file` in `http.rs` used manual `Vec<u8>` body construction with an explicit `Content-Length` header. The combination of this with nginx's `proxy_buffering off` + `chunked_transfer_encoding off` settings caused python-multipart to fail to parse the multipart body.
+
+### Changed
+- **Backend**: Removed `upload_debug_middleware` from `app.py` — body format confirmed correct, middleware served its purpose
+- **Windows Rust backend** (`src-tauri/src/commands/http.rs`): Replaced manual multipart body construction with reqwest's `multipart::Form` API. Removed `http1_only()` constraint and explicit `Content-Length` header — reqwest now manages these
+
+### Notes
+- Cleared stale `__pycache__` on the server after removing the middleware (caused a separate `TranscribeTextRequest` NameError on restart)
+- Python manual body tests confirmed body format was always correct — the issue was at the HTTP layer, not the multipart encoding
+- Requires Tauri app rebuild to deploy the Rust change
+
+### Decisions
+- DEC-025: reqwest Form API over manual multipart construction (see [DECISIONS.md](DECISIONS.md))
+
+---
+
+## [2026-03-10] — Waveform visual redesign: blue-violet neon fabric
+
+### Changed
+- **Waveform visualization** (macOS + Windows): Complete visual redesign of the recording waveform to match a neon blue-violet fabric reference. 5 waves → 12 overlapping waves with a blue → violet → pink neon color palette. Thinner, more varied line widths (0.6–2.5px), stronger glow on primary wave (glowWidth 12, opacity 0.25), and wider frequency/speed ranges (0.7–3.2 freq, 3.8–14.5 speed) create a dense woven-thread effect. Primary wave color changed from magenta (#E50074) to electric blue (0.30, 0.50, 1.0). History offsets tightened (steps of 2 instead of 5) for more responsive staggering.
+
+### Notes
+- Dynamics (smoothing, envelope, jitter) unchanged — only colors, wave count, and sizing parameters were modified
+- Both `WaveformView.swift` and `WaveformVisualizer.tsx` updated in lockstep
+
+---
+
 ## [2026-03-09] — Windows floating recording widget fix and redesign
 
 ### Fixed

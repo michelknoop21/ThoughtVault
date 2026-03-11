@@ -7,10 +7,8 @@ import { availableMonitors } from "@tauri-apps/api/window";
  * positioned bottom-right of the primary monitor (matching macOS behavior).
  */
 export async function openWidgetWindow(): Promise<void> {
-  console.log("[Widget] Opening widget window");
   const existing = await WebviewWindow.getByLabel("recording-widget");
   if (existing) {
-    console.log("[Widget] Existing widget found — showing and focusing");
     await existing.show();
     await existing.setFocus();
     return;
@@ -34,7 +32,6 @@ export async function openWidgetWindow(): Promise<void> {
     console.warn("[Widget] Could not get monitor info:", e);
   }
 
-  console.log("[Widget] Creating widget window at", x, y);
   try {
     new WebviewWindow("recording-widget", {
       url: "widget.html",
@@ -53,7 +50,6 @@ export async function openWidgetWindow(): Promise<void> {
       x,
       y,
     });
-    console.log("[Widget] Widget window created");
   } catch (err) {
     console.error("[Widget] Failed to create window:", err);
     throw err;
@@ -61,12 +57,8 @@ export async function openWidgetWindow(): Promise<void> {
 }
 
 export async function closeWidgetWindow(): Promise<void> {
-  console.log("[Widget] Closing widget window");
   const widget = await WebviewWindow.getByLabel("recording-widget");
   if (widget) {
     await widget.close();
-    console.log("[Widget] Widget closed");
-  } else {
-    console.log("[Widget] No widget found to close");
   }
 }

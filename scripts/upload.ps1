@@ -9,26 +9,50 @@ $BuildDir = Join-Path $RootDir "build"
 $Server = "michelk@3.69.205.209"
 $RemoteDir = "/home/michelk/tstudio-releases"
 
-$Artifact = "TranscriptStudio-$Version.msi"
-$Platform = "windows"
-$ArtifactPath = Join-Path $BuildDir $Artifact
+$DmgArtifact = "TranscriptStudio-$Version.dmg"
+$MsiArtifact = "TranscriptStudio-$Version.msi"
+$DmgPath = Join-Path $BuildDir $DmgArtifact
+$MsiPath = Join-Path $BuildDir $MsiArtifact
 
-if (-not (Test-Path $ArtifactPath)) {
-    Write-Error "Artifact not found at $ArtifactPath. Run scripts\build.ps1 first."
+New-Item -ItemType Directory -Force -Path $BuildDir | Out-Null
+
+# Auto-find MSI from Tauri build output if not already in build/
+if (-not (Test-Path $MsiPath)) {
+    $TauriMsi = Get-ChildItem -Path (Join-Path $RootDir "transcript-studio-windows\src-tauri\target\release\bundle") -Filter "*.msi" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($TauriMsi) {
+        Copy-Item $TauriMsi.FullName -Destination $MsiPath -Force
+        Write-Host "  Found MSI in Tauri output, copied to build/"
+    }
+}
+
+$HasDmg = Test-Path $DmgPath
+$HasMsi = Test-Path $MsiPath
+
+if (-not $HasDmg -and -not $HasMsi) {
+    Write-Error "No artifacts found in $BuildDir. Expected $DmgArtifact and/or $MsiArtifact. Run scripts\build.ps1 first."
     exit 1
 }
 
 $DownloadPage = Join-Path $ScriptDir "download-page.html"
 $FeaturesPage = Join-Path $ScriptDir "features-page.html"
 
-Write-Host "Uploading $Artifact to server..."
+Write-Host "Uploading artifacts to server..."
 
 # Ensure remote directory exists
 ssh $Server "mkdir -p $RemoteDir"
 
-# Upload artifact
-scp $ArtifactPath "${Server}:${RemoteDir}/${Artifact}"
-Write-Host "  Uploaded: $Artifact"
+# Upload artifacts
+$ManifestUpdates = @()
+if ($HasDmg) {
+    scp $DmgPath "${Server}:${RemoteDir}/${DmgArtifact}"
+    Write-Host "  Uploaded: $DmgArtifact"
+    $ManifestUpdates += "macos"
+}
+if ($HasMsi) {
+    scp $MsiPath "${Server}:${RemoteDir}/${MsiArtifact}"
+    Write-Host "  Uploaded: $MsiArtifact"
+    $ManifestUpdates += "windows"
+}
 
 # Upload website pages
 if (Test-Path $DownloadPage) {
@@ -40,10 +64,19 @@ if (Test-Path $FeaturesPage) {
     Write-Host "  Updated: features page"
 }
 
+# Upload screenshots
+$ScreenshotsDir = Join-Path $ScriptDir "screenshots"
+if (Test-Path $ScreenshotsDir) {
+    ssh $Server "mkdir -p $RemoteDir/screenshots"
+    scp (Join-Path $ScreenshotsDir "*.png") "${Server}:${RemoteDir}/screenshots/"
+    Write-Host "  Updated: screenshots"
+}
+
 # Update releases.json manifest on server
 Write-Host "Updating releases.json..."
+$PlatformsStr = $ManifestUpdates -join ","
 $PythonScript = @"
-import json, os
+import json
 
 manifest_path = '$RemoteDir/releases.json'
 try:
@@ -53,11 +86,20 @@ except (FileNotFoundError, json.JSONDecodeError):
     data = {}
 
 data['latest_version'] = '$Version'
-data['$Platform'] = {
-    'url': '/tstudio/download/$Artifact',
-    'version': '$Version',
-    'filename': '$Artifact'
-}
+
+platforms = '$PlatformsStr'.split(',')
+if 'macos' in platforms:
+    data['macos'] = {
+        'url': '/tstudio/download/$DmgArtifact',
+        'version': '$Version',
+        'filename': '$DmgArtifact'
+    }
+if 'windows' in platforms:
+    data['windows'] = {
+        'url': '/tstudio/download/$MsiArtifact',
+        'version': '$Version',
+        'filename': '$MsiArtifact'
+    }
 
 with open(manifest_path, 'w') as f:
     json.dump(data, f, indent=2)
@@ -69,6 +111,11 @@ ssh $Server "python3 -c `"$($PythonScript -replace '"', '\"')`""
 
 Write-Host ""
 Write-Host "Upload complete."
-Write-Host "  Artifact:  https://n8n.prezent.nl/tstudio/download/$Artifact"
+if ($HasDmg) {
+    Write-Host "  macOS:     https://n8n.prezent.nl/tstudio/download/$DmgArtifact"
+}
+if ($HasMsi) {
+    Write-Host "  Windows:   https://n8n.prezent.nl/tstudio/download/$MsiArtifact"
+}
 Write-Host "  Manifest:  https://n8n.prezent.nl/tstudio/download/releases.json"
 Write-Host "  Downloads: https://n8n.prezent.nl/tstudio/download/"

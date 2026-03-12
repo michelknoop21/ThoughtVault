@@ -58,6 +58,27 @@ if [ "$OS" = "Darwin" ]; then
     echo "Build complete: $DMG_PATH"
     echo "Size: $(du -h "$DMG_PATH" | cut -f1)"
 
+    # Check for Windows MSI in build/ for upcoming upload
+    MSI_NAME="TranscriptStudio-${VERSION}.msi"
+    MSI_PATH="$BUILD_DIR/$MSI_NAME"
+    # Also check Tauri output directory in case target/ was synced from Windows
+    if [ ! -f "$MSI_PATH" ]; then
+        TAURI_MSI=$(find "$ROOT_DIR/transcript-studio-windows/src-tauri/target/release/bundle" -name "*.msi" -type f 2>/dev/null | head -1)
+        if [ -n "$TAURI_MSI" ]; then
+            cp "$TAURI_MSI" "$MSI_PATH"
+            echo ""
+            echo "Windows MSI found in Tauri output, copied as: $MSI_NAME"
+        fi
+    fi
+    if [ -f "$MSI_PATH" ]; then
+        echo "Windows MSI ready: $MSI_PATH"
+        echo "Size: $(du -h "$MSI_PATH" | cut -f1)"
+    else
+        echo ""
+        echo "NOTE: No Windows MSI found."
+        echo "  Place it in build/ as: $MSI_NAME"
+    fi
+
 else
     # Windows (or Linux): Tauri build → MSI
     WINDOWS_DIR="$ROOT_DIR/transcript-studio-windows"

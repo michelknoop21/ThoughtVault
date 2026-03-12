@@ -73,12 +73,17 @@ class LLMServiceFactory {
             return OpenAICompatibleLLMService(baseURL: baseURL, model: model)
 
         case .appleIntelligence:
+            #if canImport(FoundationModels)
             if #available(macOS 26, iOS 26, *) {
                 return AppleFoundationModelService()
             } else {
                 logger.warning("LLMServiceFactory: Apple Intelligence requested but OS version too low; falling back to stub")
                 return CloudLLMServiceStub()
             }
+            #else
+            logger.warning("LLMServiceFactory: Apple Intelligence not available on this SDK; falling back to stub")
+            return CloudLLMServiceStub()
+            #endif
         }
     }
 }

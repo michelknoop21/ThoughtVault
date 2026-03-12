@@ -188,23 +188,31 @@ enum TS {
 struct ModernCardModifier: ViewModifier {
     var isHovered: Bool = false
 
+    @ViewBuilder
+    static func fallbackBackground(isHovered: Bool) -> some View {
+        RoundedRectangle(cornerRadius: TS.Radius.md, style: .continuous)
+            .fill(.ultraThinMaterial)
+            .shadow(
+                color: .black.opacity(isHovered ? 0.12 : 0.06),
+                radius: isHovered ? 16 : 8,
+                y: isHovered ? 6 : 3
+            )
+    }
+
     func body(content: Content) -> some View {
         content
             .background {
+                #if compiler(>=6.2)
                 if #available(macOS 26.0, iOS 26.0, *) {
                     RoundedRectangle(cornerRadius: TS.Radius.md, style: .continuous)
                         .fill(.clear)
-                        // glassEffect applied to the background layer
                         .glassEffect(in: .rect(cornerRadius: TS.Radius.md))
                 } else {
-                    RoundedRectangle(cornerRadius: TS.Radius.md, style: .continuous)
-                        .fill(.ultraThinMaterial)
-                        .shadow(
-                            color: .black.opacity(isHovered ? 0.12 : 0.06),
-                            radius: isHovered ? 16 : 8,
-                            y: isHovered ? 6 : 3
-                        )
+                    ModernCardModifier.fallbackBackground(isHovered: isHovered)
                 }
+                #else
+                ModernCardModifier.fallbackBackground(isHovered: isHovered)
+                #endif
             }
             .overlay {
                 RoundedRectangle(cornerRadius: TS.Radius.md, style: .continuous)

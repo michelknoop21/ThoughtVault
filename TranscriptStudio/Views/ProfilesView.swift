@@ -23,52 +23,74 @@ struct ProfilesView: View {
     var customProfiles: [Profile] { profiles.filter { $0.isDefault != true } }
 
     var body: some View {
-        List {
-            // Default profiles section
-            Section {
-                ForEach(defaultProfiles) { profile in
-                    profileRow(profile, isDefault: true)
-                }
-            } header: {
-                Text("Standaard profielen")
-            } footer: {
-                Text("Standaard profielen kunnen niet worden bewerkt of verwijderd.")
-                    .font(TS.Font.caption)
-                    .foregroundStyle(Color.labelTertiary)
-            }
+        ScrollView {
+            VStack(spacing: TS.Spacing.lg) {
+                // Default profiles section
+                VStack(alignment: .leading, spacing: TS.Spacing.sm) {
+                    sectionHeader("Standaard profielen", icon: "star.fill", color: .brandSecondary)
 
-            // Custom profiles section
-            Section {
-                if customProfiles.isEmpty {
-                    HStack {
-                        Image(systemName: "plus.circle.dashed")
-                            .foregroundStyle(Color.labelTertiary)
-                        Text("Nog geen aangepaste profielen. Maak er een aan via de '+' knop.")
-                            .font(TS.Font.footnote)
-                            .foregroundStyle(Color.labelSecondary)
+                    VStack(spacing: TS.Spacing.sm) {
+                        ForEach(defaultProfiles) { profile in
+                            ProfileCard(
+                                profile: profile,
+                                isDefault: true,
+                                onEdit: nil,
+                                onDelete: nil
+                            )
+                        }
                     }
-                    .padding(.vertical, TS.Spacing.xs)
-                } else {
-                    ForEach(customProfiles) { profile in
-                        profileRow(profile, isDefault: false)
-                    }
+
+                    Text("Standaard profielen kunnen niet worden bewerkt of verwijderd.")
+                        .font(TS.Font.caption)
+                        .foregroundStyle(Color.labelTertiary)
+                        .padding(.horizontal, TS.Spacing.xs)
                 }
-            } header: {
-                HStack {
-                    Text("Aangepaste profielen")
-                    Spacer()
-                    Button {
-                        showCreateSheet = true
-                    } label: {
-                        Image(systemName: "plus")
-                            .font(TS.Font.footnoteMedium)
+
+                // Custom profiles section
+                VStack(alignment: .leading, spacing: TS.Spacing.sm) {
+                    HStack {
+                        sectionHeader("Aangepaste profielen", icon: "slider.horizontal.3", color: .brandPrimary)
+                        Spacer()
+                        Button {
+                            showCreateSheet = true
+                        } label: {
+                            HStack(spacing: TS.Spacing.xs) {
+                                Image(systemName: "plus")
+                                    .font(.system(size: 11, weight: .bold))
+                                Text("Nieuw")
+                                    .font(TS.Font.captionSemibold)
+                            }
                             .foregroundStyle(Color.brandPrimary)
+                            .padding(.horizontal, TS.Spacing.sm + 2)
+                            .padding(.vertical, TS.Spacing.xs + 1)
+                            .background(Color.brandPrimary.opacity(0.10))
+                            .clipShape(Capsule())
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
+
+                    if customProfiles.isEmpty {
+                        emptyCustomState
+                    } else {
+                        VStack(spacing: TS.Spacing.sm) {
+                            ForEach(customProfiles) { profile in
+                                ProfileCard(
+                                    profile: profile,
+                                    isDefault: false,
+                                    onEdit: { profileToEdit = profile },
+                                    onDelete: {
+                                        profileToDelete = profile
+                                        showDeleteConfirm = true
+                                    }
+                                )
+                            }
+                        }
+                    }
                 }
             }
+            .padding(TS.Spacing.lg)
         }
-        .listStyle(.inset)
+        .background(Color.surfaceSecondary.opacity(0.5))
         .navigationTitle("Profielen")
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
@@ -113,7 +135,6 @@ struct ProfilesView: View {
             ProfileEditSheet(
                 existingProfile: profile,
                 onSave: { updated in
-                    // For now treat as create (no update endpoint discovered)
                     Task {
                         await deleteProfile(profile)
                         await createProfile(updated)
@@ -125,72 +146,63 @@ struct ProfilesView: View {
         }
     }
 
-    // MARK: - Profile Row
+    // MARK: - Section Header
 
-    private func profileRow(_ profile: Profile, isDefault: Bool) -> some View {
+    private func sectionHeader(_ title: String, icon: String, color: Color) -> some View {
         HStack(spacing: TS.Spacing.sm) {
-            // Color dot
-            Circle()
-                .fill(profileColor(profile))
-                .frame(width: 10, height: 10)
-
-            VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: TS.Spacing.xs) {
-                    Text(profile.name)
-                        .font(TS.Font.bodyMedium)
-                        .foregroundStyle(Color.labelPrimary)
-
-                    if isDefault {
-                        Text("Standaard")
-                            .font(TS.Font.microSemibold)
-                            .foregroundStyle(Color.brandSecondary)
-                            .padding(.horizontal, TS.Spacing.xs)
-                            .padding(.vertical, 2)
-                            .background(Color.brandSecondary.opacity(0.10))
-                            .clipShape(Capsule())
-                    }
-                }
-
-                Text(profile.description ?? profile.systemPrompt ?? "")
-                    .font(TS.Font.caption)
-                    .foregroundStyle(Color.labelSecondary)
-                    .lineLimit(2)
-            }
-
-            Spacer()
-
-            if !isDefault {
-                HStack(spacing: TS.Spacing.xs) {
-                    Button {
-                        profileToEdit = profile
-                    } label: {
-                        Image(systemName: "pencil")
-                            .font(TS.Font.footnote)
-                            .foregroundStyle(Color.labelSecondary)
-                    }
-                    .buttonStyle(.plain)
-
-                    Button {
-                        profileToDelete = profile
-                        showDeleteConfirm = true
-                    } label: {
-                        Image(systemName: "trash")
-                            .font(TS.Font.footnote)
-                            .foregroundStyle(Color.statusError.opacity(0.7))
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
+            Image(systemName: icon)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(color)
+            Text(title)
+                .font(TS.Font.footnoteSemibold)
+                .foregroundStyle(Color.labelSecondary)
+                .textCase(.uppercase)
+                .tracking(0.5)
         }
-        .padding(.vertical, TS.Spacing.xs)
+        .padding(.horizontal, TS.Spacing.xs)
     }
 
-    private func profileColor(_ profile: Profile) -> Color {
-        switch profile.id {
-        case "zakelijk":  return Color.brandPrimary
-        case "informeel": return Color.brandAccent
-        case "technisch": return Color.brandSecondary
-        default:          return Color.brandOrange
+    // MARK: - Empty State
+
+    private var emptyCustomState: some View {
+        VStack(spacing: TS.Spacing.md) {
+            ZStack {
+                Circle()
+                    .fill(Color.brandPrimary.opacity(0.08))
+                    .frame(width: 56, height: 56)
+                Image(systemName: "plus.rectangle.on.folder")
+                    .font(.system(size: 24, weight: .medium))
+                    .foregroundStyle(Color.brandPrimary.opacity(0.6))
+            }
+
+            VStack(spacing: TS.Spacing.xs) {
+                Text("Geen aangepaste profielen")
+                    .font(TS.Font.bodyMedium)
+                    .foregroundStyle(Color.labelPrimary)
+                Text("Maak een profiel aan om notulen in een eigen stijl te genereren.")
+                    .font(TS.Font.footnote)
+                    .foregroundStyle(Color.labelSecondary)
+                    .multilineTextAlignment(.center)
+            }
+
+            Button {
+                showCreateSheet = true
+            } label: {
+                HStack(spacing: TS.Spacing.xs) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 12, weight: .bold))
+                    Text("Profiel aanmaken")
+                        .font(TS.Font.footnoteSemibold)
+                }
+            }
+            .buttonStyle(SecondaryButtonStyle())
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, TS.Spacing.xl)
+        .background {
+            RoundedRectangle(cornerRadius: TS.Radius.md, style: .continuous)
+                .fill(Color.surfacePrimary.opacity(0.5))
+                .strokeBorder(Color.borderPrimary.opacity(0.5), style: StrokeStyle(lineWidth: 1, dash: [6, 4]))
         }
     }
 
@@ -202,7 +214,6 @@ struct ProfilesView: View {
         if let remote = try? await APIService.shared.getProfiles() {
             profiles = remote
         } else {
-            // Fallback to built-in defaults
             profiles = Profile.defaults
         }
     }
@@ -227,6 +238,128 @@ struct ProfilesView: View {
             profiles.removeAll { $0.id == profile.id }
         } catch {
             errorMessage = error.localizedDescription
+        }
+    }
+}
+
+// MARK: - Profile Card
+
+private struct ProfileCard: View {
+    let profile: Profile
+    let isDefault: Bool
+    let onEdit: (() -> Void)?
+    let onDelete: (() -> Void)?
+
+    @State private var isHovered = false
+
+    private var iconName: String {
+        profile.icon ?? profileIcon(for: profile.id)
+    }
+
+    private var accentColor: Color {
+        profileAccent(for: profile.id)
+    }
+
+    var body: some View {
+        HStack(spacing: TS.Spacing.md) {
+            // Icon
+            ZStack {
+                RoundedRectangle(cornerRadius: TS.Radius.sm, style: .continuous)
+                    .fill(accentColor.opacity(0.12))
+                    .frame(width: 44, height: 44)
+                Image(systemName: iconName)
+                    .font(.system(size: 18, weight: .medium))
+                    .foregroundStyle(accentColor)
+            }
+
+            // Info
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: TS.Spacing.sm) {
+                    Text(profile.name)
+                        .font(TS.Font.bodySemibold)
+                        .foregroundStyle(Color.labelPrimary)
+
+                    if isDefault {
+                        Text("Standaard")
+                            .font(TS.Font.microSemibold)
+                            .foregroundStyle(accentColor)
+                            .padding(.horizontal, TS.Spacing.sm)
+                            .padding(.vertical, 3)
+                            .background(accentColor.opacity(0.10))
+                            .clipShape(Capsule())
+                    }
+                }
+
+                Text(profile.description ?? profile.systemPrompt ?? "")
+                    .font(TS.Font.footnote)
+                    .foregroundStyle(Color.labelSecondary)
+                    .lineLimit(2)
+            }
+
+            Spacer(minLength: 0)
+
+            // Actions
+            if !isDefault {
+                HStack(spacing: TS.Spacing.xs) {
+                    actionButton(icon: "pencil", color: .labelSecondary) {
+                        onEdit?()
+                    }
+                    actionButton(icon: "trash", color: .statusError.opacity(0.7)) {
+                        onDelete?()
+                    }
+                }
+                .opacity(isHovered ? 1 : 0.5)
+            }
+        }
+        .padding(TS.Spacing.md)
+        .background {
+            RoundedRectangle(cornerRadius: TS.Radius.md, style: .continuous)
+                .fill(Color.surfacePrimary)
+                .shadow(
+                    color: .black.opacity(isHovered ? 0.08 : 0.04),
+                    radius: isHovered ? 8 : 4,
+                    y: isHovered ? 2 : 1
+                )
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: TS.Radius.md, style: .continuous)
+                .stroke(
+                    isHovered ? accentColor.opacity(0.3) : Color.borderPrimary.opacity(0.5),
+                    lineWidth: 1
+                )
+        }
+        .onHover { hovering in
+            withAnimation(TS.Animation.hover) { isHovered = hovering }
+        }
+    }
+
+    private func actionButton(icon: String, color: Color, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(color)
+                .frame(width: 32, height: 32)
+                .background(Color.surfaceSecondary.opacity(0.8))
+                .clipShape(RoundedRectangle(cornerRadius: TS.Radius.xs, style: .continuous))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func profileIcon(for id: String) -> String {
+        switch id {
+        case "zakelijk":  return "briefcase.fill"
+        case "informeel": return "bubble.left.and.bubble.right.fill"
+        case "technisch": return "wrench.and.screwdriver.fill"
+        default:          return "doc.text.fill"
+        }
+    }
+
+    private func profileAccent(for id: String) -> Color {
+        switch id {
+        case "zakelijk":  return .brandPrimary
+        case "informeel": return .brandAccent
+        case "technisch": return .brandSecondary
+        default:          return .brandOrange
         }
     }
 }

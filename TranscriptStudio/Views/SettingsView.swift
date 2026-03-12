@@ -584,7 +584,18 @@ struct SettingsView: View {
                 .tint(Color.brandPrimary)
                 .onChange(of: biometricLoginEnabled) { _, enabled in
                     BiometricService.shared.isEnabled = enabled
-                    if !enabled {
+                    if enabled {
+                        if let token = KeychainService.shared.load(for: "authToken") {
+                            Task {
+                                do {
+                                    try await BiometricService.shared.saveTokenWithBiometrics(token)
+                                } catch {
+                                    biometricLoginEnabled = false
+                                    BiometricService.shared.isEnabled = false
+                                }
+                            }
+                        }
+                    } else {
                         BiometricService.shared.removeBiometricToken()
                     }
                 }
@@ -659,7 +670,18 @@ struct SettingsView: View {
                 .tint(Color.brandPrimary)
                 .onChange(of: biometricLoginEnabled) { _, enabled in
                     BiometricService.shared.isEnabled = enabled
-                    if !enabled {
+                    if enabled {
+                        if let token = KeychainService.shared.load(for: "authToken") {
+                            Task {
+                                do {
+                                    try await BiometricService.shared.saveTokenWithBiometrics(token)
+                                } catch {
+                                    biometricLoginEnabled = false
+                                    BiometricService.shared.isEnabled = false
+                                }
+                            }
+                        }
+                    } else {
                         BiometricService.shared.removeBiometricToken()
                     }
                 }

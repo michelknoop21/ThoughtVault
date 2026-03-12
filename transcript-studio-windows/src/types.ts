@@ -9,7 +9,8 @@ export type TaskStatus =
   | "failed"
   | "cancelled"
   | "queued"
-  | "paused";
+  | "paused"
+  | "error";
 
 export const TaskStatusLabels: Record<TaskStatus, string> = {
   pending: "Wachten...",
@@ -22,6 +23,7 @@ export const TaskStatusLabels: Record<TaskStatus, string> = {
   cancelled: "Geannuleerd",
   queued: "In wachtrij",
   paused: "Gepauzeerd",
+  error: "Fout",
 };
 
 // Recording modes

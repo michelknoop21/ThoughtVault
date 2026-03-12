@@ -5,6 +5,28 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2026-03-12] — Collapsible sidebar, full transcript pagination & waveform improvements (v1.0.32)
+
+### Added
+- **Collapsible sidebar** (macOS, `ContentView.swift`): New collapse/expand system replacing the previous `columnVisibility` toggle that completely hid the sidebar with no recovery. Collapsed mode shows a minimal 52px icon column with navigation icons and an expand button at the bottom. Expanded mode shows the full sidebar with a collapse button in the profile section. Keyboard shortcut `Shift+Cmd+S` toggles between states. Tooltips on all collapsed icons for discoverability.
+- **Full transcript pagination** (macOS + Windows): Both platforms now automatically paginate through all transcript pages. Previously only the first page (up to 100 items) was loaded. The `loadTranscripts()` function (macOS `TranscriptsView.swift`) and `getTranscripts()` method (Windows `api.ts`) now loop through pages of 100 items until all transcripts are fetched, using response item count and total as stop conditions.
+- **Delete saved recordings** (macOS, `RecordingViewModel.swift` + `RecordingView.swift`): New `deleteSavedRecording()` method locates the WAV file on disk, deletes it via FileManager, and removes it from the in-memory list. Context menu on saved recording rows provides "Opnieuw verwerken" (reprocess) and "Verwijderen" (delete with destructive role and trash icon).
+- **Pending task recovery on app restart** (macOS, `RecordingViewModel.swift` + `ContentView.swift`): Tasks that were in progress when the app was quit are now recovered on next launch and integrated into the authentication flow.
+
+### Changed
+- **Waveform rendering** (macOS, `WaveformView.swift`): Replaced right-angle polyline rendering with smooth bezier curve interpolation for more organic waveform shapes. Updated wave parameters and visual appearance.
+- **ReprocessSheet styling** (macOS, `RecordingView.swift`): Added `.formStyle(.grouped)` and explicit frame sizing (min 420×340pt, ideal 460×380pt) to ensure consistent modal presentation on macOS.
+- **FloatingWidgetPanel** (macOS): Minor styling adjustments.
+- **AdminView** (macOS): Minor UI adjustments.
+- **Microsoft Graph** (Windows, `microsoftGraph.ts`): Minor improvements to API call handling.
+- **HomePage** (Windows, `HomePage.tsx`): UI refinements.
+
+### Notes
+- The collapsible sidebar ensures users can always access the logout button in the profile section, which was previously inaccessible when the sidebar was fully hidden.
+- Transcript pagination error handling retains partially loaded data rather than showing nothing when an error occurs mid-pagination.
+
+---
+
 ## [2026-03-12] — Task management: cancel, delete, and monitor active tasks
 
 ### Added

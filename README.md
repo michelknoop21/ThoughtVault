@@ -2,7 +2,7 @@
 
 Cross-platform desktop app voor vergaderopnames, transcriptie en automatische notulengeneratie. Native macOS client (Swift 6 / SwiftUI) en Windows client (Tauri 2 / React) met een gedeelde FastAPI + Whisper backend.
 
-**Versie:** 1.0.28
+**Versie:** 1.0.32
 **Bundle ID:** `nl.prezent.TranscriptStudio`
 **Repository:** [gitlab.prezent.nl/michelk/transcript-studio-native](https://gitlab.prezent.nl/michelk/transcript-studio-native)
 **Backend:** `https://n8n.prezent.nl/tstudio/api/`
@@ -184,7 +184,7 @@ TranscriptStudioApp/
 ├── TranscriptStudio/                  # macOS/iOS app (Swift 6, SwiftUI)
 │   ├── App/                           # Entry point, ContentView, AppDelegate
 │   │   ├── TranscriptStudioApp.swift  #   Window config (1100x750, min 900x600)
-│   │   ├── ContentView.swift          #   Root view, NavigationSplitView + TabView
+│   │   ├── ContentView.swift          #   Root view, collapsible sidebar + TabView (Home, Opnemen, Taken, Notulen, Instellingen, Admin)
 │   │   └── AppDelegate.swift          #   MenuBarExtra, FloatingWidgetController
 │   ├── Models/                        # Codable data modellen
 │   │   ├── Models.swift               #   TranscriptTask, Profile, User, etc.
@@ -236,7 +236,7 @@ TranscriptStudioApp/
 │   │   ├── components/                #   calendar/, layout/, onboarding/, recording/, etc.
 │   │   ├── services/                  #   api.ts, llm.ts, microsoftGraph.ts, sse.ts
 │   │   ├── stores/                    #   Zustand stores (auth, recording, transcripts, etc.)
-│   │   └── pages/                     #   Home, Login, Recording, Transcripts, Settings, Admin
+│   │   └── pages/                     #   Home, Login, Recording, Tasks, Transcripts, Settings, Admin
 │   └── src-tauri/                     # Rust backend commands
 │       └── src/                       #   Audio (WASAPI), auth (keyring), OAuth PKCE, etc.
 │
@@ -432,4 +432,4 @@ Gedetailleerde documentatie staat in [`docs/`](docs/):
 
 ---
 
-*Prezent Internet B.V. — TranscriptStudio v1.0.22*
+*Prezent Internet B.V. — TranscriptStudio v1.0.32*

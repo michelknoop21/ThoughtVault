@@ -27,6 +27,8 @@ if [ ! -f "$ARTIFACT_PATH" ]; then
     exit 1
 fi
 
+DOWNLOAD_PAGE="$SCRIPT_DIR/download-page.html"
+
 echo "Uploading $ARTIFACT to server..."
 
 # Ensure remote directory exists
@@ -35,6 +37,12 @@ ssh "$SERVER" "mkdir -p $REMOTE_DIR"
 # Upload artifact
 scp "$ARTIFACT_PATH" "$SERVER:$REMOTE_DIR/$ARTIFACT"
 echo "  Uploaded: $ARTIFACT"
+
+# Upload download page
+if [ -f "$DOWNLOAD_PAGE" ]; then
+    scp "$DOWNLOAD_PAGE" "$SERVER:$REMOTE_DIR/index.html"
+    echo "  Updated: download page"
+fi
 
 # Update releases.json manifest on server
 echo "Updating releases.json..."
@@ -63,5 +71,6 @@ print('  Updated releases.json')
 
 echo ""
 echo "Upload complete."
-echo "  Artifact: https://n8n.prezent.nl/tstudio/download/$ARTIFACT"
-echo "  Manifest: https://n8n.prezent.nl/tstudio/download/releases.json"
+echo "  Artifact:  https://n8n.prezent.nl/tstudio/download/$ARTIFACT"
+echo "  Manifest:  https://n8n.prezent.nl/tstudio/download/releases.json"
+echo "  Downloads: https://n8n.prezent.nl/tstudio/download/"

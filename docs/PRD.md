@@ -98,7 +98,15 @@ The product consists of three client surfaces sharing a common backend:
 - Queue items reference the local audio file path; files are protected from cleanup while queued.
 - Status visible in UI: pending upload count shown in recording controls.
 
-### 3.7 Authentication and Security
+### 3.7 Task Management
+
+- **Taken tab** (macOS + Windows): Dedicated view showing all active and recent tasks with real-time status, progress bars, and relative timestamps. Auto-refreshes every 10 seconds.
+- **Cancel task**: Users can cancel in-progress tasks (pending through processingWebhook). Backend removes task from Redis queues, sets status to `cancelled`, and broadcasts via SSE.
+- **Delete task**: Users can delete any task (active or completed). Active tasks are automatically cancelled before deletion.
+- **Pending task recovery**: Tasks in progress when the app was quit are recovered on next launch.
+- **Backend endpoints**: `POST /task/{id}/cancel` and `DELETE /task/{id}` with ownership checks and admin bypass.
+
+### 3.8 Authentication and Security
 
 - Token-based authentication with `X-User-Token` request header.
 - Tokens remain valid until server-side `SESSION_INACTIVITY_DAYS` expiry.
@@ -107,7 +115,7 @@ The product consists of three client surfaces sharing a common backend:
 - Admin user management: invite codes, enable/disable users, role assignment.
 - GDPR: data export (JSON) and account deletion flows in `AccountView`. `PrivacyInfo.xcprivacy` manifest included.
 
-### 3.8 Calendar Integration
+### 3.9 Calendar Integration
 
 | Platform | Integration |
 |---------|-----------|
@@ -120,9 +128,9 @@ The product consists of three client surfaces sharing a common backend:
 - **Windows OAuth flow**: Opens system browser for Microsoft login → deep-link callback (`transcript-studio://auth/callback`) → token exchange via Tauri proxy (bypasses CORS). Requires Azure AD App Registration with custom redirect URI.
 - **Admin configuration**: MS365 `client_id` and `tenant_id` set via admin settings panel, distributed to clients via `/settings/me` endpoint.
 
-### 3.9 UI Surfaces (macOS)
+### 3.10 UI Surfaces (macOS)
 
-1. **Main window** — default 1100×750 px, minimum 900×600 px. Tab-based navigation: Home, Recording, Transcripts, Settings.
+1. **Main window** — default 1100×750 px, minimum 900×600 px. Collapsible sidebar with navigation: Home, Opnemen, Taken, Notulen, Instellingen, Admin. Sidebar collapses to 52px icon column (Shift+Cmd+S toggle).
 2. **MenuBarExtra** — recording controls + live duration counter + task progress bar accessible from menu bar at all times.
 3. **FloatingWidgetPanel** — overlay widget visible during active recording showing timer and waveform.
 4. **Live Activity (iOS)** — lock screen and Dynamic Island widget via `RecordingActivityWidget` target.

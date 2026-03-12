@@ -46,14 +46,16 @@ Both desktop clients share a common REST + SSE API and are deployed independentl
 | GET | `/tstudio/api/tasks` | List all tasks for authenticated user |
 | PATCH | `/tstudio/api/tasks/{id}` | Update task metadata (tags, title) |
 | DELETE | `/tstudio/api/tasks/{id}` | Delete task and associated data |
-| GET | `/tstudio/api/transcripts` | Returns `{items: Transcript[]}` — no pagination keys |
+| POST | `/tstudio/api/task/{id}/cancel` | Cancel in-progress task (ownership check, admin bypass) |
+| DELETE | `/tstudio/api/task/{id}` | Delete task; active tasks cancelled first |
+| GET | `/tstudio/api/transcripts` | Returns `{items: Transcript[], total: int}` — paginate with `?page=N&limit=100` |
 
 **Authentication:** Requests use `X-User-Token: <token>` (macOS) or `Authorization: Bearer <token>` (Windows) — both accepted by backend. Login sends `username` field (which accepts email addresses as value).
 
 **Field name notes (verified against backend source):**
 - `/auth/me` returns `user_id` and `username` (not `id` / `email`)
 - `/auth/login` returns `requires_2fa` (not `requires_two_factor`) and `temp_token` — both omitted on standard login
-- `/transcripts` returns `{"items": [...]}` only — `total`/`page`/`limit` are not currently returned
+- `/transcripts` returns `{"items": [...], "total": N}` — both clients paginate with `?page=N&limit=100` until all items loaded
 
 ### Transcription Data Flow
 
@@ -97,7 +99,7 @@ Client                    Backend                    n8n / Claude
 TranscriptStudio/
 ├── App/
 │   ├── TranscriptStudioApp.swift       # App entry point, window configuration (1100×750, min 900×600)
-│   ├── ContentView.swift               # Root view, NavigationSplitView + TabView
+│   ├── ContentView.swift               # Root view, NavigationSplitView + TabView (Home, Opnemen, Taken, Notulen, Instellingen, Admin)
 │   └── AppDelegate.swift               # MenuBarExtra, FloatingWidgetController
 │
 ├── Models/
@@ -205,7 +207,7 @@ AVFoundation (mic)          ScreenCaptureKit (system)
 
 | Surface | Description |
 |---------|-------------|
-| Main window | `NavigationSplitView` (sidebar + detail), default 1100×750, minimum 900×600 |
+| Main window | `NavigationSplitView` (collapsible sidebar + detail), default 1100×750, minimum 900×600. Sidebar collapses to 52px icon column with expand button; Shift+Cmd+S toggle. |
 | MenuBarExtra | `MenuBarExtra("TranscriptStudio", systemImage:)` — recording controls, live duration, task progress |
 | FloatingWidgetPanel | `NSPanel` overlay (non-activating, always on top) shown during active recording |
 | iOS Live Activity | `RecordingActivityWidget` target — Dynamic Island + lock screen progress via ActivityKit |
@@ -253,8 +255,8 @@ src/
 │   ├── settings.ts         # App configuration
 │   └── transcripts.ts      # Transcript list, search, filters
 └── pages/
-    ├── Home.tsx, Login.tsx, Recording.tsx
-    ├── Transcripts.tsx, Settings.tsx, Admin.tsx
+    ├── HomePage.tsx, LoginPage.tsx, RecordingPage.tsx
+    ├── TranscriptsPage.tsx, TasksPage.tsx, SettingsPage.tsx, AdminPage.tsx
     ├── AccountPage.tsx     # GDPR export/delete
     └── ProfilesPage.tsx    # Profile management
 ```

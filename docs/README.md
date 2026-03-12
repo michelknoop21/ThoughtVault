@@ -71,7 +71,7 @@ Requires Azure AD App Registration with:
 
 ## Version
 
-Current version: **1.0.28** (tracked in `VERSION` file, auto-bumped on commits to `main`).
+Current version: **1.0.32** (tracked in `VERSION` file, auto-bumped on commits to `main`).
 
 Repository: [gitlab.prezent.nl/michelk/transcript-studio-native](https://gitlab.prezent.nl/michelk/transcript-studio-native)
 

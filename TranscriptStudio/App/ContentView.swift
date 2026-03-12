@@ -69,6 +69,7 @@ struct ContentView: View {
 
     @State private var selectedTab: AppTab = .home
     @State private var columnVisibility: NavigationSplitViewVisibility = .automatic
+    @State private var sidebarCollapsed = false
     @State private var showForceUpdateAlert = false
     @State private var callAlertMeeting: CalendarEvent? = nil
     @State private var callAlertDismissed: Set<String> = []
@@ -185,11 +186,24 @@ struct ContentView: View {
     private var macOSView: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
             sidebarView
-                .navigationSplitViewColumnWidth(min: 190, ideal: 210, max: 270)
+                .navigationSplitViewColumnWidth(
+                    min: sidebarCollapsed ? 52 : 190,
+                    ideal: sidebarCollapsed ? 52 : 210,
+                    max: sidebarCollapsed ? 52 : 270
+                )
         } detail: {
             detailView
         }
         .navigationSplitViewStyle(.balanced)
+        // Force sidebar always visible — collapse is handled by our custom UI
+        .onAppear {
+            columnVisibility = .automatic
+        }
+        .onChange(of: columnVisibility) { _, newValue in
+            if newValue == .detailOnly {
+                columnVisibility = .automatic
+            }
+        }
         // Hidden keyboard shortcuts
         .overlay(alignment: .topLeading) {
             keyboardShortcutsOverlay
@@ -201,6 +215,21 @@ struct ContentView: View {
             // Brand stripe at very top
             YingaBar()
 
+            if sidebarCollapsed {
+                // Collapsed: icon-only sidebar
+                collapsedSidebarContent
+            } else {
+                // Expanded: full sidebar
+                expandedSidebarContent
+            }
+        }
+        .listStyle(.sidebar)
+        .navigationTitle("")
+        .toolbar(removing: .sidebarToggle)
+    }
+
+    private var expandedSidebarContent: some View {
+        VStack(spacing: 0) {
             // App icon + title
             HStack(spacing: 10) {
                 Image("AppLogo")
@@ -266,9 +295,66 @@ struct ContentView: View {
             .padding(.horizontal, 8)
             .padding(.bottom, 12)
         }
-        .listStyle(.sidebar)
-        .navigationTitle("")
-        .toolbar(removing: .sidebarToggle)
+    }
+
+    private var collapsedSidebarContent: some View {
+        VStack(spacing: 0) {
+            // App icon only
+            Image("AppLogo")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 28, height: 28)
+                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                .shadow(color: .black.opacity(0.15), radius: 2, y: 1)
+                .padding(.top, 12)
+                .padding(.bottom, 10)
+
+            Divider()
+                .padding(.vertical, 8)
+
+            // Icon-only navigation
+            VStack(spacing: 4) {
+                ForEach(visibleTabs) { tab in
+                    Button { selectedTab = tab } label: {
+                        Image(systemName: selectedTab == tab ? tab.selectedIcon : tab.icon)
+                            .font(.system(size: 15))
+                            .frame(width: 32, height: 32)
+                            .foregroundStyle(selectedTab == tab ? .white : .primary)
+                            .background {
+                                RoundedRectangle(cornerRadius: 7)
+                                    .fill(selectedTab == tab ? Color.brandPrimary : Color.clear)
+                                    .shadow(
+                                        color: selectedTab == tab ? Color.brandPrimary.opacity(0.3) : .clear,
+                                        radius: 4, y: 2
+                                    )
+                            }
+                    }
+                    .buttonStyle(.plain)
+                    .help(tab.title)
+                }
+            }
+            .padding(.horizontal, 6)
+
+            Spacer()
+
+            Divider()
+                .padding(.vertical, 8)
+
+            // Expand button
+            Button {
+                withAnimation(TS.Animation.smooth) {
+                    sidebarCollapsed = false
+                }
+            } label: {
+                Image(systemName: "sidebar.right")
+                    .font(.system(size: 13))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 32, height: 32)
+            }
+            .buttonStyle(.plain)
+            .help("Menu uitklappen")
+            .padding(.bottom, 12)
+        }
     }
 
     private var userProfileSection: some View {
@@ -295,10 +381,10 @@ struct ContentView: View {
 
             Spacer()
 
-            // Sidebar toggle button
+            // Sidebar collapse button
             Button {
                 withAnimation(TS.Animation.smooth) {
-                    columnVisibility = columnVisibility == .detailOnly ? .automatic : .detailOnly
+                    sidebarCollapsed = true
                 }
             } label: {
                 Image(systemName: "sidebar.left")
@@ -428,7 +514,7 @@ struct ContentView: View {
             // Sidebar toggle ⇧⌘S
             Button("") {
                 withAnimation(TS.Animation.smooth) {
-                    columnVisibility = columnVisibility == .detailOnly ? .automatic : .detailOnly
+                    sidebarCollapsed.toggle()
                 }
             }
             .keyboardShortcut("s", modifiers: [.command, .shift])

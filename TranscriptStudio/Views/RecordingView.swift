@@ -43,6 +43,7 @@ struct RecordingView: View {
         .sheet(isPresented: $showReprocessSheet) {
             ReprocessSheet(recording: selectedReprocessRecording)
                 .environment(recordingVM)
+                .frame(minWidth: 420, idealWidth: 460, minHeight: 340, idealHeight: 380)
         }
     }
 
@@ -628,6 +629,24 @@ struct RecordingView: View {
             .padding(.vertical, TS.Spacing.xs)
         }
         .buttonStyle(.plain)
+        .contextMenu {
+            Button {
+                selectedReprocessRecording = recording
+                showReprocessSheet = true
+            } label: {
+                Label("Opnieuw verwerken", systemImage: "arrow.clockwise")
+            }
+
+            Divider()
+
+            Button(role: .destructive) {
+                withAnimation(TS.Animation.smooth) {
+                    recordingVM.deleteSavedRecording(recording)
+                }
+            } label: {
+                Label("Verwijderen", systemImage: "trash")
+            }
+        }
     }
 
     // MARK: - Active recording view
@@ -1031,6 +1050,7 @@ private struct ReprocessSheet: View {
                     .tint(Color.brandPrimary)
                 }
             }
+            .formStyle(.grouped)
             .navigationTitle(isRetryMode ? "Opnieuw proberen" : "Opnieuw verwerken")
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)

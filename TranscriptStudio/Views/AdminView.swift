@@ -707,7 +707,7 @@ struct AdminView: View {
                 Button {
                     Task {
                         try? await APIService.shared.updateAdminFeedback(id: item.id, status: "open", response: nil)
-                        await loadFeedback()
+                        _ = await loadFeedback()
                     }
                 } label: {
                     Label("Herstellen", systemImage: "arrow.uturn.backward")
@@ -716,7 +716,7 @@ struct AdminView: View {
                 Button {
                     Task {
                         try? await APIService.shared.updateAdminFeedback(id: item.id, status: "archived", response: nil)
-                        await loadFeedback()
+                        _ = await loadFeedback()
                     }
                 } label: {
                     Label("Archiveren", systemImage: "archivebox")
@@ -737,7 +737,7 @@ struct AdminView: View {
             Task {
                 do {
                     try await APIService.shared.updateAdminFeedback(id: itemId, status: targetStatus, response: nil)
-                    await loadFeedback()
+                    _ = await loadFeedback()
                 } catch {
                     errorMessage = "Status bijwerken mislukt: \(error.localizedDescription)"
                 }
@@ -1012,7 +1012,7 @@ struct AdminView: View {
                                 role: newUserRole
                             )
                             showCreateUserSheet = false
-                            await loadUsers()
+                            _ = await loadUsers()
                         } catch {
                             errorMessage = "Aanmaken mislukt: \(error.localizedDescription)"
                         }
@@ -1068,7 +1068,7 @@ struct AdminView: View {
                                 expiresHours: newInviteExpiresHours
                             )
                             showCreateInvitationSheet = false
-                            await loadInvitations()
+                            _ = await loadInvitations()
                         } catch {
                             errorMessage = "Uitnodiging mislukt: \(error.localizedDescription)"
                         }

@@ -32,6 +32,7 @@ class FloatingWidgetController {
 
         let hostingView = NSHostingView(
             rootView: RecordingWidgetView()
+                .padding(30) // Room for shadows outside the capsule
                 .environment(recordingVM)
         )
         // Ensure the hosting view has a transparent layer so the capsule
@@ -40,7 +41,7 @@ class FloatingWidgetController {
         hostingView.layer?.backgroundColor = .clear
 
         let panel = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 380, height: 60),
+            contentRect: NSRect(x: 0, y: 0, width: 440, height: 120),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
@@ -90,7 +91,10 @@ class FloatingWidgetController {
 
     private func updatePosition(for panel: NSPanel) {
         guard let screen = NSScreen.main else { return }
-        let margin: CGFloat = 20
+        // The panel is oversized (30pt padding on each side) to give shadows room.
+        // Offset the margin so the visible capsule lands 20pt from the screen edge.
+        let shadowPadding: CGFloat = 30
+        let margin: CGFloat = 20 - shadowPadding
         let x = screen.visibleFrame.maxX - panel.frame.width - margin
         let y = screen.visibleFrame.minY + margin
         panel.setFrameOrigin(NSPoint(x: x, y: y))

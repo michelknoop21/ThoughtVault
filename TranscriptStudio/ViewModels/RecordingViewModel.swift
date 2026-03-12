@@ -706,6 +706,14 @@ final class RecordingViewModel {
         }
     }
 
+    func deleteSavedRecording(_ recording: SavedRecording) {
+        let urls = AudioRecorder.savedRecordingURLs()
+        if let url = urls.first(where: { $0.lastPathComponent == recording.filename }) {
+            try? FileManager.default.removeItem(at: url)
+        }
+        savedRecordings.removeAll { $0.id == recording.id }
+    }
+
     func hasLocalAudio(for transcriptId: String) -> Bool {
         let key = "localAudio_\(transcriptId)"
         guard let path = UserDefaults.standard.string(forKey: key) else { return false }

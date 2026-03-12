@@ -255,19 +255,52 @@ class APIService {
     search?: string;
     tags?: string[];
     limit?: number;
-    offset?: number;
   }): Promise<Transcript[]> {
-    const query = new URLSearchParams();
-    if (params?.search) query.set("search", params.search.slice(0, 255));
-    if (params?.tags?.length) query.set("tags", params.tags.join(","));
-    if (params?.limit) query.set("limit", params.limit.toString());
-    if (params?.offset) query.set("offset", params.offset.toString());
-    query.set("page", "1");
-    query.set("sort_by", "newest");
+    // When a specific limit is requested (e.g. limit: 1 for latest), do a single request
+    if (params?.limit) {
+      const query = new URLSearchParams();
+      if (params.search) query.set("search", params.search.slice(0, 255));
+      if (params.tags?.length) query.set("tags", params.tags.join(","));
+      query.set("limit", params.limit.toString());
+      query.set("page", "1");
+      query.set("sort_by", "newest");
 
-    const path = `/transcripts${query.toString() ? "?" + query : ""}`;
-    const data = await this.request<unknown>("GET", path);
-    return safeArray<unknown>(data).map(mapTranscript);
+      const path = `/transcripts?${query}`;
+      const data = await this.request<unknown>("GET", path);
+      return safeArray<unknown>(data).map(mapTranscript);
+    }
+
+    // No limit specified — auto-paginate to load all transcripts
+    const pageSize = 100;
+    let page = 1;
+    const all: Transcript[] = [];
+
+    while (true) {
+      const query = new URLSearchParams();
+      if (params?.search) query.set("search", params.search.slice(0, 255));
+      if (params?.tags?.length) query.set("tags", params.tags.join(","));
+      query.set("limit", pageSize.toString());
+      query.set("page", page.toString());
+      query.set("sort_by", "newest");
+
+      const path = `/transcripts?${query}`;
+      const data = await this.request<unknown>("GET", path);
+      const items = safeArray<unknown>(data).map(mapTranscript);
+      all.push(...items);
+
+      // Stop if we got fewer items than the page size (last page)
+      if (items.length < pageSize) break;
+
+      // Also stop if the response included a total and we have them all
+      if (data && typeof data === "object") {
+        const total = (data as Record<string, unknown>).total;
+        if (typeof total === "number" && all.length >= total) break;
+      }
+
+      page++;
+    }
+
+    return all;
   }
 
   async getTranscript(id: string): Promise<Transcript> {

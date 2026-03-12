@@ -156,7 +156,10 @@ export class MicrosoftGraphService {
           request: {
             url: `${GRAPH_BASE}/me/calendar/calendarView?${params}`,
             method: "GET",
-            headers: { Authorization: `Bearer ${calendarStore.accessToken}` },
+            headers: {
+              Authorization: `Bearer ${calendarStore.accessToken}`,
+              Prefer: 'outlook.timezone="UTC"',
+            },
           },
         }
       );
@@ -173,8 +176,8 @@ export class MicrosoftGraphService {
       const events: CalendarEvent[] = (data.value || []).map((e: Record<string, unknown>) => ({
         id: e.id as string,
         title: e.subject as string,
-        start: (e.start as Record<string, string>).dateTime,
-        end: (e.end as Record<string, string>).dateTime,
+        start: (e.start as Record<string, string>).dateTime + "Z",
+        end: (e.end as Record<string, string>).dateTime + "Z",
         join_url: (e.onlineMeeting as Record<string, string> | null)?.joinUrl,
         platform: detectPlatform((e.onlineMeeting as Record<string, string> | null)?.joinUrl),
         organizer: ((e.organizer as Record<string, Record<string, string>>)?.emailAddress?.name),

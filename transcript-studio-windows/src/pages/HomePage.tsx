@@ -293,7 +293,18 @@ function formatEventTime(start: string, end: string): string {
   const e = new Date(end);
   const fmt = (d: Date) =>
     d.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" });
-  return `${fmt(s)} – ${fmt(e)}`;
+
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const eventDay = new Date(s.getFullYear(), s.getMonth(), s.getDate());
+  const diffDays = Math.round((eventDay.getTime() - today.getTime()) / 86400000);
+
+  let dayLabel = "";
+  if (diffDays === 0) dayLabel = "Vandaag";
+  else if (diffDays === 1) dayLabel = "Morgen";
+  else dayLabel = s.toLocaleDateString("nl-NL", { weekday: "long", day: "numeric", month: "short" });
+
+  return `${dayLabel}, ${fmt(s)} – ${fmt(e)}`;
 }
 
 function formatDate(dateStr: string): string {

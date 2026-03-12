@@ -134,26 +134,39 @@ final class TranscriptsViewModel {
 
     // MARK: - Load
 
-    /// Loads the first page of transcripts, replacing any existing results.
+    /// Loads all transcripts across all pages, replacing any existing results.
     func loadTranscripts() async {
         guard !isLoading else { return }
 
         isLoading = true
         errorMessage = nil
         page = 1
-        hasMore = true
+        hasMore = false
+
+        var allItems: [Transcript] = []
+        var currentPage = 1
 
         do {
-            let response = try await APIService.shared.getTranscripts(
-                page: 1,
-                limit: pageSize,
-                search: searchQuery.isEmpty ? nil : searchQuery,
-                sortBy: sortOrder.apiValue
-            )
-            transcripts = response.items
-            hasMore = response.items.count >= pageSize && (response.total.map { $0 > response.items.count } ?? true)
-            logger.info("Loaded \(response.items.count) transcripts (total: \(response.total ?? -1))")
+            while true {
+                let response = try await APIService.shared.getTranscripts(
+                    page: currentPage,
+                    limit: pageSize,
+                    search: searchQuery.isEmpty ? nil : searchQuery,
+                    sortBy: sortOrder.apiValue
+                )
+                allItems.append(contentsOf: response.items)
+
+                if response.items.count < pageSize { break }
+                if let total = response.total, allItems.count >= total { break }
+
+                currentPage += 1
+            }
+
+            transcripts = allItems
+            page = currentPage
+            logger.info("Loaded \(allItems.count) transcripts across \(currentPage) page(s)")
         } catch {
+            if !allItems.isEmpty { transcripts = allItems }
             errorMessage = error.localizedDescription
             logger.error("Failed to load transcripts: \(error.localizedDescription)")
         }

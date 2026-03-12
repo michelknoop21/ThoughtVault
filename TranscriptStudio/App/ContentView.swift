@@ -73,6 +73,7 @@ struct ContentView: View {
     @State private var showForceUpdateAlert = false
     @State private var callAlertMeeting: CalendarEvent? = nil
     @State private var callAlertDismissed: Set<String> = []
+    @State private var transcriptsNavPath = NavigationPath()
 
     var body: some View {
         Group {
@@ -84,6 +85,9 @@ struct ContentView: View {
         }
         .task {
             await checkMinimumVersion()
+        }
+        .onChange(of: selectedTab) { _, _ in
+            transcriptsNavPath = NavigationPath()
         }
         .onChange(of: authVM.isAuthenticated) { _, isAuth in
             if isAuth {
@@ -460,8 +464,8 @@ struct ContentView: View {
 #endif
 
         case .transcripts:
-            NavigationStack {
-                TranscriptsView(selectedTab: selectedTab)
+            NavigationStack(path: $transcriptsNavPath) {
+                TranscriptsView(transcriptsNavPath: $transcriptsNavPath)
             }
 #if os(macOS)
             .toolbar(removing: .sidebarToggle)

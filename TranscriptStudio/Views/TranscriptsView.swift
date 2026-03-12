@@ -26,8 +26,8 @@ struct TranscriptsView: View {
 
     @Environment(RecordingViewModel.self) var recordingVM
 
-    /// Current sidebar tab — used to dismiss detail view on tab change.
-    var selectedTab: AppTab = .transcripts
+    /// Navigation path — controlled by ContentView to dismiss on tab change.
+    @Binding var transcriptsNavPath: NavigationPath
 
     // MARK: State — list
 
@@ -47,10 +47,6 @@ struct TranscriptsView: View {
     @State private var showBulkDeleteConfirm = false
     @State private var transcriptToDelete: Transcript? = nil
     @State private var showSingleDeleteConfirm = false
-
-    // MARK: State — navigation
-
-    @State private var selectedTranscript: Transcript? = nil
 
     // MARK: State — auto-refresh debounce
 
@@ -137,7 +133,7 @@ struct TranscriptsView: View {
         }
         .navigationTitle("Notulen")
         .toolbar { toolbarContent }
-        .navigationDestination(item: $selectedTranscript) { transcript in
+        .navigationDestination(for: Transcript.self) { transcript in
             TranscriptDetailView(transcript: transcript)
         }
         .confirmationDialog(
@@ -170,14 +166,8 @@ struct TranscriptsView: View {
             Text("Deze transcriptie wordt permanent verwijderd.")
         }
         .task { await loadTranscripts() }
-        .onChange(of: selectedTab) { _, newTab in
-            if newTab != .transcripts {
-                selectedTranscript = nil
-            }
-        }
 #if os(macOS)
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
-            guard selectedTab == .transcripts else { return }
             guard Date().timeIntervalSince(lastRefreshDate) >= 10 else { return }
             Task { await loadTranscripts() }
         }
@@ -582,7 +572,7 @@ struct TranscriptsView: View {
     private func transcriptCardRow(_ transcript: Transcript) -> some View {
         ZStack(alignment: .topTrailing) {
             Button {
-                selectedTranscript = transcript
+                transcriptsNavPath.append(transcript)
             } label: {
                 TranscriptListCard(transcript: transcript)
                     .contentShape(RoundedRectangle(cornerRadius: TS.Radius.md, style: .continuous))
@@ -612,7 +602,7 @@ struct TranscriptsView: View {
         }
         .contextMenu {
             Button {
-                selectedTranscript = transcript
+                transcriptsNavPath.append(transcript)
             } label: {
                 Label("Openen", systemImage: "arrow.up.right.square")
             }
@@ -931,6 +921,7 @@ struct TranscriptDetailView: View {
 
     @Environment(RecordingViewModel.self) var recordingVM
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
 
     // MARK: State — document
 
@@ -1444,6 +1435,7 @@ struct TranscriptDetailView: View {
                 htmlContent: html,
                 editedHTML: $editedHTML,
                 isEditing: isEditingNotule,
+                isDarkMode: colorScheme == .dark,
                 onWebViewReady: { editableWebViewRef = $0 }
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -1929,6 +1921,6 @@ private struct ProfileSelectionSheet: View {
 // MARK: - Preview
 
 #Preview {
-    TranscriptsView()
+    TranscriptsView(transcriptsNavPath: .constant(NavigationPath()))
         .environment(RecordingViewModel())
 }

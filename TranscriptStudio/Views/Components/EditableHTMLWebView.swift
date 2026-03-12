@@ -17,6 +17,7 @@ struct EditableHTMLWebView: NSViewRepresentable {
     let htmlContent: String
     @Binding var editedHTML: String
     let isEditing: Bool
+    let isDarkMode: Bool
     var onWebViewReady: ((WKWebView) -> Void)?
 
     func makeCoordinator() -> Coordinator {
@@ -37,11 +38,13 @@ struct EditableHTMLWebView: NSViewRepresentable {
     func updateNSView(_ webView: WKWebView, context: Context) {
         let currentEditing = context.coordinator.currentlyEditing
         let contentChanged = context.coordinator.lastLoadedHTML != htmlContent
+        let darkChanged = context.coordinator.lastDarkMode != isDarkMode
 
-        if contentChanged || currentEditing != isEditing {
+        if contentChanged || currentEditing != isEditing || darkChanged {
             context.coordinator.currentlyEditing = isEditing
             context.coordinator.lastLoadedHTML = htmlContent
-            let styled = Self.styledHTML(htmlContent, editable: isEditing)
+            context.coordinator.lastDarkMode = isDarkMode
+            let styled = Self.styledHTML(htmlContent, editable: isEditing, isDark: isDarkMode)
             webView.loadHTMLString(styled, baseURL: nil)
         }
     }
@@ -53,6 +56,7 @@ struct EditableHTMLWebView: NSViewRepresentable {
         weak var webView: WKWebView?
         var currentlyEditing = false
         var lastLoadedHTML: String?
+        var lastDarkMode: Bool?
 
         init(editedHTML: Binding<String>) {
             self.editedHTML = editedHTML
@@ -125,7 +129,7 @@ struct EditableHTMLWebView: NSViewRepresentable {
 
     // MARK: - Styled HTML Template
 
-    private static func styledHTML(_ html: String, editable: Bool) -> String {
+    private static func styledHTML(_ html: String, editable: Bool, isDark: Bool) -> String {
         let editableAttr = editable ? "contenteditable=\"true\"" : ""
         let editingCSS = editable ? """
             #content { outline: none; min-height: 200px; cursor: text; }
@@ -143,10 +147,11 @@ struct EditableHTMLWebView: NSViewRepresentable {
             });
             </script>
             """ : ""
+        let darkClass = isDark ? "dark" : ""
 
         return """
         <!DOCTYPE html>
-        <html>
+        <html class="\(darkClass)">
         <head>
         <meta charset="utf-8">
         <style>
@@ -162,19 +167,17 @@ struct EditableHTMLWebView: NSViewRepresentable {
             --surface-elevated: #f8f8fa;
             --bg-blockquote: #fef6fb;
         }
-        @media (prefers-color-scheme: dark) {
-            :root {
-                --text-primary: #f0f0f4;
-                --text-secondary: #9e9ea8;
-                --text-tertiary: #6c6c74;
-                --heading: #c8d4e8;
-                --brand: #ff3b8a;
-                --brand-light: #1f0a15;
-                --brand-border: rgba(255, 59, 138, 0.20);
-                --border: #38383d;
-                --surface-elevated: #222228;
-                --bg-blockquote: #1f0e18;
-            }
+        html.dark {
+            --text-primary: #f0f0f4;
+            --text-secondary: #9e9ea8;
+            --text-tertiary: #6c6c74;
+            --heading: #c8d4e8;
+            --brand: #ff3b8a;
+            --brand-light: #1f0a15;
+            --brand-border: rgba(255, 59, 138, 0.20);
+            --border: #38383d;
+            --surface-elevated: #222228;
+            --bg-blockquote: #1f0e18;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -294,6 +297,7 @@ struct EditableHTMLWebView: UIViewRepresentable {
     let htmlContent: String
     @Binding var editedHTML: String
     let isEditing: Bool
+    let isDarkMode: Bool
     var onWebViewReady: ((WKWebView) -> Void)?
 
     func makeCoordinator() -> Coordinator {
@@ -316,11 +320,13 @@ struct EditableHTMLWebView: UIViewRepresentable {
     func updateUIView(_ webView: WKWebView, context: Context) {
         let currentEditing = context.coordinator.currentlyEditing
         let contentChanged = context.coordinator.lastLoadedHTML != htmlContent
+        let darkChanged = context.coordinator.lastDarkMode != isDarkMode
 
-        if contentChanged || currentEditing != isEditing {
+        if contentChanged || currentEditing != isEditing || darkChanged {
             context.coordinator.currentlyEditing = isEditing
             context.coordinator.lastLoadedHTML = htmlContent
-            let styled = Self.styledHTML(htmlContent, editable: isEditing)
+            context.coordinator.lastDarkMode = isDarkMode
+            let styled = Self.styledHTML(htmlContent, editable: isEditing, isDark: isDarkMode)
             webView.loadHTMLString(styled, baseURL: nil)
         }
     }
@@ -330,6 +336,7 @@ struct EditableHTMLWebView: UIViewRepresentable {
         weak var webView: WKWebView?
         var currentlyEditing = false
         var lastLoadedHTML: String?
+        var lastDarkMode: Bool?
 
         init(editedHTML: Binding<String>) {
             self.editedHTML = editedHTML

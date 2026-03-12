@@ -18,6 +18,8 @@ struct NotuleResultView: View {
     let task: TranscriptTask
     let onDismiss: () -> Void
 
+    @Environment(\.colorScheme) private var colorScheme
+
     @State private var selectedTab: ResultTab = .notule
     @State private var showExportMenu: Bool = false
     @State private var exportError: String? = nil
@@ -274,7 +276,7 @@ struct NotuleResultView: View {
     @ViewBuilder
     private var notuleView: some View {
         if let html = task.notuleHtml, !html.isEmpty {
-            HTMLWebView(htmlContent: html)
+            HTMLWebView(htmlContent: html, isDarkMode: colorScheme == .dark)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(Color.surfacePrimary)
                 .clipShape(RoundedRectangle(cornerRadius: TS.Radius.md, style: .continuous))
@@ -576,6 +578,7 @@ struct NotuleResultView: View {
 #if os(macOS)
 struct HTMLWebView: NSViewRepresentable {
     let htmlContent: String
+    let isDarkMode: Bool
 
     func makeNSView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
@@ -585,9 +588,10 @@ struct HTMLWebView: NSViewRepresentable {
     }
 
     func updateNSView(_ webView: WKWebView, context: Context) {
+        let darkClass = isDarkMode ? "dark" : ""
         let styled = """
         <!DOCTYPE html>
-        <html>
+        <html class="\(darkClass)">
         <head>
         <meta charset="utf-8">
         <style>
@@ -601,17 +605,15 @@ struct HTMLWebView: NSViewRepresentable {
             --surface-light: #f5f5f5;
             --bg-blockquote: #fef6fb;
         }
-        @media (prefers-color-scheme: dark) {
-            :root {
-                --text-primary: #f0f0f4;
-                --text-heading: #c8d4e8;
-                --text-subtle: #9e9ea8;
-                --brand: #ff3b8a;
-                --border: #38383d;
-                --surface: #222228;
-                --surface-light: #222228;
-                --bg-blockquote: #1f0e18;
-            }
+        html.dark {
+            --text-primary: #f0f0f4;
+            --text-heading: #c8d4e8;
+            --text-subtle: #9e9ea8;
+            --brand: #ff3b8a;
+            --border: #38383d;
+            --surface: #222228;
+            --surface-light: #222228;
+            --bg-blockquote: #1f0e18;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -645,6 +647,7 @@ struct HTMLWebView: NSViewRepresentable {
 #else
 struct HTMLWebView: UIViewRepresentable {
     let htmlContent: String
+    let isDarkMode: Bool
 
     func makeUIView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
@@ -656,9 +659,10 @@ struct HTMLWebView: UIViewRepresentable {
     }
 
     func updateUIView(_ webView: WKWebView, context: Context) {
+        let darkClass = isDarkMode ? "dark" : ""
         let styled = """
         <!DOCTYPE html>
-        <html>
+        <html class="\(darkClass)">
         <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -673,17 +677,15 @@ struct HTMLWebView: UIViewRepresentable {
             --surface-light: #f5f5f5;
             --bg-blockquote: #fef6fb;
         }
-        @media (prefers-color-scheme: dark) {
-            :root {
-                --text-primary: #f0f0f4;
-                --text-heading: #c8d4e8;
-                --text-subtle: #9e9ea8;
-                --brand: #ff3b8a;
-                --border: #38383d;
-                --surface: #222228;
-                --surface-light: #222228;
-                --bg-blockquote: #1f0e18;
-            }
+        html.dark {
+            --text-primary: #f0f0f4;
+            --text-heading: #c8d4e8;
+            --text-subtle: #9e9ea8;
+            --brand: #ff3b8a;
+            --border: #38383d;
+            --surface: #222228;
+            --surface-light: #222228;
+            --bg-blockquote: #1f0e18;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {

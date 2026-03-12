@@ -826,6 +826,25 @@ final class RecordingViewModel {
         }
     }
 
+    // MARK: - Pending Task Recovery
+
+    /// Checks the server for any active tasks and reconnects SSE streams so the
+    /// user can see progress after an app restart.
+    func checkPendingTasks() async {
+        do {
+            let active = try await APIService.shared.getActiveTasks()
+            for task in active where task.status.isActive {
+                addTask(task)
+                await startSSEStream(for: task.taskId)
+            }
+            if !active.isEmpty {
+                os_log("[RecordingVM] Recovered %d pending task(s)", log: log, type: .info, active.count)
+            }
+        } catch {
+            os_log("[RecordingVM] Could not check pending tasks: %{public}@", log: log, type: .error, error.localizedDescription)
+        }
+    }
+
     // MARK: - Task Management
 
     func clearError() {

@@ -75,11 +75,29 @@ export function TranscriptsPage() {
   const editorRef = useRef<HTMLDivElement>(null);
   const exportBtnRef = useRef<HTMLButtonElement>(null);
 
+  const lastLoadRef = useRef<number>(0);
+
+  const refreshTranscripts = useCallback(async () => {
+    lastLoadRef.current = Date.now();
+    await loadTranscripts();
+  }, []);
+
   useEffect(() => {
-    loadTranscripts();
+    refreshTranscripts();
     document.addEventListener("click", closeContextMenu);
     return () => document.removeEventListener("click", closeContextMenu);
   }, []);
+
+  // Auto-refresh when window regains focus (debounced: skip if loaded <10s ago)
+  useEffect(() => {
+    function handleFocus() {
+      if (Date.now() - lastLoadRef.current > 10_000) {
+        refreshTranscripts();
+      }
+    }
+    window.addEventListener("focus", handleFocus);
+    return () => window.removeEventListener("focus", handleFocus);
+  }, [refreshTranscripts]);
 
   useEffect(() => {
     if (editingId && editInputRef.current) {
@@ -403,15 +421,26 @@ ${DOMPurify.sanitize(transcript.notule_html)}
         <div className="transcripts-list-header">
           <div className="flex-row justify-between" style={{ alignItems: "center" }}>
             <h1 className="text-subtitle transcripts-list-title" style={{ margin: 0 }}>Notulen & Transcripties</h1>
-            <button
-              className={`icon-btn icon-btn-sm${bulkMode ? " active" : ""}`}
-              onClick={() => { setBulkMode(!bulkMode); setBulkSelected(new Set()); }}
-              aria-label="Selectiemodus"
-              title="Selectiemodus"
-              style={bulkMode ? { color: "var(--fill-accent)" } : undefined}
-            >
-              <CheckboxChecked24Regular style={{ fontSize: 16 }} />
-            </button>
+            <div className="flex-row gap-4">
+              <button
+                className="icon-btn icon-btn-sm"
+                onClick={refreshTranscripts}
+                disabled={isLoading}
+                aria-label="Vernieuwen"
+                title="Vernieuwen"
+              >
+                <ArrowSync24Regular style={{ fontSize: 16, animation: isLoading ? "spin 1s linear infinite" : undefined }} />
+              </button>
+              <button
+                className={`icon-btn icon-btn-sm${bulkMode ? " active" : ""}`}
+                onClick={() => { setBulkMode(!bulkMode); setBulkSelected(new Set()); }}
+                aria-label="Selectiemodus"
+                title="Selectiemodus"
+                style={bulkMode ? { color: "var(--fill-accent)" } : undefined}
+              >
+                <CheckboxChecked24Regular style={{ fontSize: 16 }} />
+              </button>
+            </div>
           </div>
 
           <div className="search-box transcripts-search-margin">

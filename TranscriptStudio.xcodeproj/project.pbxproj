@@ -33,6 +33,7 @@
 		AA000019 /* AuthViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000019 /* AuthViewModel.swift */; };
 		AA000020 /* RecordingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000020 /* RecordingViewModel.swift */; };
 		AA000021 /* TranscriptsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000021 /* TranscriptsViewModel.swift */; };
+		AA000055 /* TasksViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000055 /* TasksViewModel.swift */; };
 		AA000022 /* AccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000022 /* AccountView.swift */; };
 		AA000023 /* AdminView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000023 /* AdminView.swift */; };
 		AA000024 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000024 /* HomeView.swift */; };
@@ -56,6 +57,7 @@
 		AA000042 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = FA000042 /* Localizable.strings */; };
 		AA000043 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = FA000043 /* PrivacyInfo.xcprivacy */; };
 		AA000044 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = FA000046 /* Assets.xcassets */; };
+		AA000056 /* TasksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000056 /* TasksView.swift */; };
 		AB000001 /* TranscriptStudioTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000001 /* TranscriptStudioTests.swift */; };
 /* End PBXBuildFile section */
 
@@ -96,6 +98,8 @@
 		FA000019 /* AuthViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthViewModel.swift; sourceTree = "<group>"; };
 		FA000020 /* RecordingViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingViewModel.swift; sourceTree = "<group>"; };
 		FA000021 /* TranscriptsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptsViewModel.swift; sourceTree = "<group>"; };
+		FA000055 /* TasksViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TasksViewModel.swift; sourceTree = "<group>"; };
+		FA000056 /* TasksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TasksView.swift; sourceTree = "<group>"; };
 		FA000022 /* AccountView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountView.swift; sourceTree = "<group>"; };
 		FA000023 /* AdminView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminView.swift; sourceTree = "<group>"; };
 		FA000024 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
@@ -228,6 +232,7 @@
 			children = (
 				FA000019 /* AuthViewModel.swift */,
 				FA000020 /* RecordingViewModel.swift */,
+				FA000055 /* TasksViewModel.swift */,
 				FA000021 /* TranscriptsViewModel.swift */,
 			);
 			path = ViewModels;
@@ -247,6 +252,7 @@
 				FA000030 /* RecordingView.swift */,
 				FA000031 /* SettingsView.swift */,
 				FA000032 /* TranscriptsView.swift */,
+				FA000056 /* TasksView.swift */,
 				FA000033 /* OnboardingViewiOSStub.swift */,
 				FA000034 /* FloatingWidgetPanel.swift */,
 				GG000061 /* Components */,
@@ -412,6 +418,7 @@
 				AA000019 /* AuthViewModel.swift in Sources */,
 				AA000020 /* RecordingViewModel.swift in Sources */,
 				AA000021 /* TranscriptsViewModel.swift in Sources */,
+				AA000055 /* TasksViewModel.swift in Sources */,
 				AA000022 /* AccountView.swift in Sources */,
 				AA000023 /* AdminView.swift in Sources */,
 				AA000024 /* HomeView.swift in Sources */,
@@ -435,6 +442,7 @@
 				AA000052 /* PermissionBanner.swift in Sources */,
 				AA000053 /* EditableHTMLWebView.swift in Sources */,
 				AA000054 /* MeetingNotificationService.swift in Sources */,
+				AA000056 /* TasksView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -2,6 +2,7 @@ import { NavLink } from "react-router-dom";
 import {
   Home24Regular,
   MicRecord24Regular,
+  TaskListLtr24Regular,
   DocumentText24Regular,
   Settings24Regular,
   ShieldPersonRegular,
@@ -64,6 +65,7 @@ export function Sidebar() {
       {/* Main navigation */}
       <SidebarItem to="/" icon={<Home24Regular />} label="Home" shortcut="Ctrl+1" />
       <SidebarItem to="/recording" icon={<MicRecord24Regular />} label="Opnemen" shortcut="Ctrl+2" />
+      <SidebarItem to="/tasks" icon={<TaskListLtr24Regular />} label="Taken" />
       <SidebarItem to="/transcripts" icon={<DocumentText24Regular />} label="Notulen" shortcut="Ctrl+3" />
       <SidebarItem to="/profiles" icon={<NotepadPerson24Regular />} label="Profielen" shortcut="Ctrl+5" />
 

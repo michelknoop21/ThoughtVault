@@ -4,6 +4,7 @@ import SwiftUI
 struct TranscriptStudioApp: App {
     @State private var authVM = AuthViewModel()
     @State private var recordingVM = RecordingViewModel()
+    @State private var tasksVM = TasksViewModel()
     let calendarService = CalendarService.shared
     let permissionManager = PermissionManager.shared
     let debugLogger = DebugLogger.shared
@@ -13,6 +14,7 @@ struct TranscriptStudioApp: App {
             RootView()
                 .environment(authVM)
                 .environment(recordingVM)
+                .environment(tasksVM)
                 .environment(calendarService)
                 .environment(permissionManager)
                 .task {
@@ -35,6 +37,7 @@ struct TranscriptStudioApp: App {
             SettingsView()
                 .environment(authVM)
                 .environment(recordingVM)
+                .environment(tasksVM)
                 .environment(calendarService)
                 .environment(permissionManager)
         }
@@ -43,6 +46,7 @@ struct TranscriptStudioApp: App {
             MenuBarContentView()
                 .environment(authVM)
                 .environment(recordingVM)
+                .environment(tasksVM)
                 .environment(calendarService)
                 .environment(permissionManager)
         } label: {

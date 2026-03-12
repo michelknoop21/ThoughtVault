@@ -41,15 +41,17 @@ private let gradientStops: [Gradient.Stop] = [
 
 struct WaveformView: View {
 
-    /// Audio level values in range 0.0-1.0 (newest last).
-    let levels: [Float]
+    /// Closure that provides current audio levels (0.0-1.0) — called each frame
+    /// so the waveform always reflects the latest metering data without relying
+    /// on SwiftUI observation to re-create the view.
+    let levelProvider: () -> [Float]
 
     /// When false, waves animate at minimal amplitude.
     let isActive: Bool
 
     // MARK: Constants
 
-    private let idleAmplitude: CGFloat = 0.0
+    private let idleAmplitude: CGFloat = 0.01
 
     // 18 waves — thin threads that weave together into a neon fabric
     private let waveConfigs: [WaveConfig] = [
@@ -104,22 +106,22 @@ struct WaveformView: View {
 
     private func updateSmoothedLevels() {
         let time = Date.timeIntervalSinceReferenceDate
+        let currentLevels = levelProvider()
 
         for i in waveConfigs.indices {
             let config = waveConfigs[i]
 
             let rawLevel: CGFloat
-            if isActive, !levels.isEmpty {
+            if isActive, !currentLevels.isEmpty {
                 let offset = config.historyOffset
-                let endIndex = max(0, levels.count - offset)
+                let endIndex = max(0, currentLevels.count - offset)
                 if endIndex > 0 {
                     let count = min(endIndex, 3)
                     let startIndex = endIndex - count
-                    let slice = levels[startIndex..<endIndex]
+                    let slice = currentLevels[startIndex..<endIndex]
                     let peak = CGFloat(slice.max() ?? 0)
                     let avg = CGFloat(slice.reduce(Float(0), +) / Float(count))
-                    let base = max(peak * 0.7 + avg * 0.3, idleAmplitude)
-                    rawLevel = pow(base, 0.6)
+                    rawLevel = max(peak * 0.7 + avg * 0.3, idleAmplitude)
                 } else {
                     rawLevel = idleAmplitude
                 }
@@ -201,7 +203,7 @@ struct WaveformView: View {
 
 #Preview("Active") {
     WaveformView(
-        levels: (0..<60).map { _ in Float.random(in: 0.05...0.9) },
+        levelProvider: { (0..<60).map { _ in Float.random(in: 0.05...0.9) } },
         isActive: true
     )
     .frame(height: 160)
@@ -211,7 +213,7 @@ struct WaveformView: View {
 
 #Preview("Idle") {
     WaveformView(
-        levels: [],
+        levelProvider: { [] },
         isActive: false
     )
     .frame(height: 160)

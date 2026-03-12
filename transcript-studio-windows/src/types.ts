@@ -35,13 +35,18 @@ export interface TranscriptTask {
   task_id: string;
   status: TaskStatus;
   progress: number; // 0-100
+  message?: string;
   raw_transcription?: string;
   notule_html?: string;
   error_message?: string;
+  filename?: string;
+  extracted_title?: string;
   profile_id?: string;
   mode: RecordingMode;
   duration_seconds?: number;
   created_at: string;
+  updated_at?: string;
+  queue_position?: number;
 }
 
 // Completed saved transcript

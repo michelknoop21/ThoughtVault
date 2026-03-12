@@ -7,6 +7,7 @@
 "tab.home"           = "Home";
 "tab.recording"      = "Record";
 "tab.transcripts"    = "Transcripts";
+"tab.tasks"          = "Tasks";
 "tab.settings"       = "Settings";
 
 // MARK: - Recording Controls

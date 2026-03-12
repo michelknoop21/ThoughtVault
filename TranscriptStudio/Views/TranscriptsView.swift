@@ -52,6 +52,10 @@ struct TranscriptsView: View {
 
     @State private var selectedTranscript: Transcript? = nil
 
+    // MARK: State — auto-refresh debounce
+
+    @State private var lastRefreshDate: Date = .distantPast
+
     // MARK: Enums
 
     enum DateFilter: String, CaseIterable, Identifiable {
@@ -171,6 +175,13 @@ struct TranscriptsView: View {
                 selectedTranscript = nil
             }
         }
+#if os(macOS)
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            guard selectedTab == .transcripts else { return }
+            guard Date().timeIntervalSince(lastRefreshDate) >= 10 else { return }
+            Task { await loadTranscripts() }
+        }
+#endif
     }
 
     // MARK: - Background blobs
@@ -661,14 +672,29 @@ struct TranscriptsView: View {
                     }
                 }
             } else {
-                Button {
-                    withAnimation(TS.Animation.smooth) {
-                        isSelecting = true
+                HStack(spacing: TS.Spacing.sm) {
+                    Button {
+                        Task { await loadTranscripts() }
+                    } label: {
+                        Image(systemName: "arrow.clockwise")
+                            .rotationEffect(.degrees(isLoading ? 360 : 0))
+                            .animation(
+                                isLoading ? .linear(duration: 1).repeatForever(autoreverses: false) : .default,
+                                value: isLoading
+                            )
                     }
-                } label: {
-                    Image(systemName: "checkmark.circle")
+                    .accessibilityLabel("Vernieuwen")
+                    .disabled(isLoading)
+
+                    Button {
+                        withAnimation(TS.Animation.smooth) {
+                            isSelecting = true
+                        }
+                    } label: {
+                        Image(systemName: "checkmark.circle")
+                    }
+                    .accessibilityLabel("Selectiemodus")
                 }
-                .accessibilityLabel("Selectiemodus")
             }
         }
     }
@@ -685,6 +711,7 @@ struct TranscriptsView: View {
                 sortBy: sortNewest ? "newest" : "oldest"
             )
             transcripts = response.items
+            lastRefreshDate = Date()
             let withNotule = response.items.filter { $0.notuleHtml != nil && !$0.notuleHtml!.isEmpty }.count
             let withRaw = response.items.filter { $0.rawTranscription != nil && !$0.rawTranscription!.isEmpty }.count
             logger.info("Loaded \(response.items.count) transcripts: \(withNotule) with notule, \(withRaw) with raw")

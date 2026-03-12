@@ -757,6 +757,28 @@ actor APIService {
         let req = try request(path: "/admin/activity?limit=\(limit)")
         return try await perform(req)
     }
+
+    // MARK: - Task Management
+
+    /// Fetch active tasks for the current user.
+    func getActiveTasks() async throws -> [TranscriptTask] {
+        struct Wrapper: Decodable { let tasks: [TranscriptTask] }
+        let req = try request(path: "/tasks/active")
+        let wrapper: Wrapper = try await perform(req)
+        return wrapper.tasks
+    }
+
+    /// Cancel an in-progress task.
+    func cancelTask(taskId: String) async throws {
+        let req = try request(path: "/task/\(taskId)/cancel", method: "POST")
+        try await performVoid(req)
+    }
+
+    /// Delete a task (active or completed).
+    func deleteTask(taskId: String) async throws {
+        let req = try request(path: "/task/\(taskId)", method: "DELETE")
+        try await performVoid(req)
+    }
 }
 
 // MARK: - Helpers

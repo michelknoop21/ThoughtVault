@@ -27,7 +27,7 @@ struct RecordingWidgetView: View {
 
             // Waveform — wider for better visual feedback
             WaveformView(
-                levels: recordingVM.audioLevels,
+                levelProvider: { recordingVM.audioLevels },
                 isActive: isRecording
             )
             .frame(width: 120, height: 32)

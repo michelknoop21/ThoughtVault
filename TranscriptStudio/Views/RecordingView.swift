@@ -722,7 +722,7 @@ struct RecordingView: View {
     private var waveformDisplay: some View {
         VStack(spacing: TS.Spacing.sm) {
             WaveformView(
-                levels: recordingVM.audioLevels,
+                levelProvider: { recordingVM.audioLevels },
                 isActive: recordingVM.recordingState == .recording
             )
             .frame(height: 160)

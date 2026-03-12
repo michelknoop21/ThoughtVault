@@ -331,7 +331,56 @@ data: {"task_id":"uuid","status":"completed","notule_html":"<p>...</p>",...}
 Terminale events: `done`, `completed`. Terminale statussen: `completed`, `error`, `failed`, `cancelled`.
 
 ### GET `/tstudio/api/tasks/active`
-Lijst actieve taken voor huidige gebruiker.
+Lijst actieve taken voor huidige gebruiker. Auth vereist.
+
+```json
+// Response
+{
+  "tasks": [
+    {
+      "task_id": "uuid",
+      "status": "transcribing",
+      "progress": 45,
+      "message": "Transcriberen...",
+      "filename": "recording.wav",
+      "extracted_title": "Team Standup",
+      "profile_id": "default",
+      "created_at": "2026-03-12T10:00:00Z",
+      "updated_at": "2026-03-12T10:05:00Z",
+      "queue_position": null
+    }
+  ]
+}
+```
+
+### POST `/tstudio/api/task/{task_id}/cancel`
+Annuleer een lopende taak. Verwijdert de taak uit transcriptie- en webhook-queues, zet status op `cancelled`, en broadcast via SSE.
+
+Auth vereist. Alleen eigen taken, tenzij admin.
+
+```json
+// Response (200)
+{ "success": true, "task_id": "uuid", "message": "Task cancelled" }
+
+// Errors
+// 404: Task not found
+// 403: Not authorized to cancel this task
+// 409: Task already in terminal state (completed/error/cancelled)
+```
+
+### DELETE `/tstudio/api/task/{task_id}`
+Verwijder een taak (actief of voltooid). Actieve taken worden eerst geannuleerd.
+
+Auth vereist. Alleen eigen taken, tenzij admin.
+
+```json
+// Response (200)
+{ "success": true, "task_id": "uuid", "message": "Task deleted" }
+
+// Errors
+// 404: Task not found
+// 403: Not authorized to delete this task
+```
 
 ### Task Status Flow
 
@@ -351,6 +400,7 @@ pending → uploading → converting → transcribing → transcribed → queued
 | `processing_webhook` | n8n verwerkt notulengeneratie |
 | `completed` | Alles klaar, notulen beschikbaar |
 | `no_speech` | Hallucination detection: audio bevat geen herkenbare spraak (Whisper output was garbled/repetitief) |
+| `cancelled` | Geannuleerd door gebruiker |
 | `error` | Fout opgetreden |
 
 ---

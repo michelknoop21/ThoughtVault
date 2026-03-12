@@ -4,6 +4,7 @@ import { useAuthStore } from "../stores/authStore";
 import type {
   LoginResponse,
   Transcript,
+  TranscriptTask,
   Profile,
   AdminUser,
   AdminFeedback,
@@ -60,6 +61,7 @@ function safeArray<T>(data: unknown): T[] {
     if (Array.isArray(obj.profiles)) return obj.profiles as T[];
     if (Array.isArray(obj.users)) return obj.users as T[];
     if (Array.isArray(obj.transcripts)) return obj.transcripts as T[];
+    if (Array.isArray(obj.tasks)) return obj.tasks as T[];
     if (Array.isArray(obj.tags)) return obj.tags as T[];
   }
   return [];
@@ -79,6 +81,29 @@ function mapTranscript(raw: unknown): Transcript {
     tags: Array.isArray(r.tags) ? r.tags.filter((t): t is string => typeof t === "string") : [],
     created_at: safeString(r.created_at ?? r.date, new Date().toISOString()),
     updated_at: safeString(r.updated_at ?? r.created_at, new Date().toISOString()),
+  };
+}
+
+/** Normalize a backend task object to our TranscriptTask type. */
+function mapTask(raw: unknown): TranscriptTask {
+  const r = raw as Record<string, unknown>;
+
+  return {
+    task_id: safeString(r.task_id ?? r.id, ""),
+    status: safeString(r.status, "pending") as TranscriptTask["status"],
+    progress: Number(r.progress ?? 0),
+    message: safeOptionalString(r.message),
+    raw_transcription: safeOptionalString(r.raw_transcription, r.transcription),
+    notule_html: safeOptionalString(r.notule_html, r.result),
+    error_message: safeOptionalString(r.error_message, r.error),
+    filename: safeOptionalString(r.filename),
+    extracted_title: safeOptionalString(r.extracted_title, r.title),
+    profile_id: safeOptionalString(r.profile_id),
+    mode: (safeString(r.mode, "microphone") as TranscriptTask["mode"]),
+    duration_seconds: r.duration_seconds != null ? Number(r.duration_seconds) : undefined,
+    created_at: safeString(r.created_at, new Date().toISOString()),
+    updated_at: safeOptionalString(r.updated_at),
+    queue_position: r.queue_position != null ? Number(r.queue_position) : undefined,
   };
 }
 
@@ -294,8 +319,26 @@ class APIService {
     );
   }
 
+  async getTaskStatus(taskId: string): Promise<{ task_id: string; status: string; progress: number }> {
+    return this.request<{ task_id: string; status: string; progress: number }>("GET", `/task/${taskId}`);
+  }
+
   getStreamUrl(taskId: string): string {
     return `${this.baseUrl}/task/${taskId}/stream`;
+  }
+
+  // Tasks
+  async getActiveTasks(): Promise<TranscriptTask[]> {
+    const data = await this.request<unknown>("GET", "/tasks/active");
+    return safeArray<unknown>(data).map(mapTask);
+  }
+
+  async cancelTask(taskId: string): Promise<void> {
+    await this.request<{ success: boolean }>("POST", `/task/${taskId}/cancel`);
+  }
+
+  async deleteTask(taskId: string): Promise<void> {
+    await this.request<{ success: boolean }>("DELETE", `/task/${taskId}`);
   }
 
   // Upload — uses browser-native FormData + fetch for multipart encoding

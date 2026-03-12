@@ -38,29 +38,30 @@ struct LoginView: View {
                 // Yinga brand bar full width under window title bar
                 YingaBar(height: 4)
 
-                ScrollView {
-                    VStack(spacing: TS.Spacing.xl) {
-                        Spacer(minLength: TS.Spacing.xxl)
+                Spacer()
 
-                        // Branding
-                        brandingHeader
+                // Branding
+                brandingHeader
 
-                        // Main card
-                        if authVM.requiresTwoFactor {
-                            twoFactorCard
-                        } else {
-                            loginCard
-                        }
+                Spacer()
+                    .frame(maxHeight: TS.Spacing.xl)
 
-                        Spacer(minLength: TS.Spacing.xl)
-
-                        // Footer
-                        yingaFooter
-
-                        Spacer(minLength: TS.Spacing.md)
+                // Main card
+                Group {
+                    if authVM.requiresTwoFactor {
+                        twoFactorCard
+                    } else {
+                        loginCard
                     }
-                    .padding(.horizontal, TS.Spacing.xl)
                 }
+                .frame(maxWidth: 400)
+                .padding(.horizontal, TS.Spacing.xl)
+
+                Spacer()
+
+                // Footer
+                yingaFooter
+                    .padding(.bottom, TS.Spacing.sm)
             }
         }
         .preferredColorScheme(.light)
@@ -161,6 +162,8 @@ struct LoginView: View {
                         } label: {
                             Image(systemName: isPasswordVisible ? "eye.slash" : "eye")
                                 .foregroundStyle(Color.labelTertiary)
+                                .frame(width: 24, height: 24)
+                                .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
                     }
@@ -204,6 +207,10 @@ struct LoginView: View {
             if BiometricService.shared.isEnabled {
                 biometricLoginButton
             }
+        }
+        .onSubmit {
+            guard !authVM.isLoading && !email.isEmpty && !password.isEmpty else { return }
+            Task { await authVM.login(email: email, password: password) }
         }
         .padding(TS.Spacing.lg)
         .modernCard()
@@ -348,5 +355,5 @@ struct LoginView: View {
 #Preview {
     LoginView()
         .environment(AuthViewModel())
-        .frame(width: 400, height: 600)
+        .frame(width: 900, height: 600)
 }

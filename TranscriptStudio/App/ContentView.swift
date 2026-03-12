@@ -8,6 +8,7 @@ import UIKit
 enum AppTab: String, CaseIterable, Identifiable {
     case home
     case record
+    case tasks
     case transcripts
     case settings
     case admin
@@ -18,6 +19,7 @@ enum AppTab: String, CaseIterable, Identifiable {
         switch self {
         case .home:        return "Home"
         case .record:      return "Opnemen"
+        case .tasks:       return "Taken"
         case .transcripts: return "Notulen"
         case .settings:    return "Instellingen"
         case .admin:       return "Admin"
@@ -28,6 +30,7 @@ enum AppTab: String, CaseIterable, Identifiable {
         switch self {
         case .home:        return "house"
         case .record:      return "mic"
+        case .tasks:       return "list.bullet.clipboard"
         case .transcripts: return "doc.text"
         case .settings:    return "gear"
         case .admin:       return "person.badge.key"
@@ -38,6 +41,7 @@ enum AppTab: String, CaseIterable, Identifiable {
         switch self {
         case .home:        return "house.fill"
         case .record:      return "mic.fill"
+        case .tasks:       return "list.bullet.clipboard.fill"
         case .transcripts: return "doc.text.fill"
         case .settings:    return "gear"
         case .admin:       return "person.badge.key.fill"
@@ -48,9 +52,10 @@ enum AppTab: String, CaseIterable, Identifiable {
         switch self {
         case .home:        return "1"
         case .record:      return "2"
-        case .transcripts: return "3"
-        case .settings:    return "4"
-        case .admin:       return "5"
+        case .tasks:       return "3"
+        case .transcripts: return "4"
+        case .settings:    return "5"
+        case .admin:       return "6"
         }
     }
 }
@@ -82,6 +87,7 @@ struct ContentView: View {
         .onChange(of: authVM.isAuthenticated) { _, isAuth in
             if isAuth {
                 Task { await recordingVM.reloadProfiles() }
+                Task { await recordingVM.checkPendingTasks() }
                 Task { await calendarService.refreshMicrosoftState() }
                 Task { await MicrosoftGraphService.shared.loadTokensFromBackend() }
             }
@@ -354,6 +360,14 @@ struct ContentView: View {
         case .record:
             NavigationStack {
                 RecordingView()
+            }
+#if os(macOS)
+            .toolbar(removing: .sidebarToggle)
+#endif
+
+        case .tasks:
+            NavigationStack {
+                TasksView()
             }
 #if os(macOS)
             .toolbar(removing: .sidebarToggle)

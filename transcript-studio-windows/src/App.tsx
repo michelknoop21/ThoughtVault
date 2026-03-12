@@ -15,14 +15,18 @@ import { ProfilesPage } from "./pages/ProfilesPage";
 import { AccountPage } from "./pages/AccountPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { AdminPage } from "./pages/AdminPage";
+import { TasksPage } from "./pages/TasksPage";
 import FeedbackWidget from "./components/FeedbackWidget";
 import { ProcessingBar } from "./components/ProcessingBar";
 import { OnboardingWizard } from "./components/onboarding/OnboardingWizard";
 import { useAuthStore } from "./stores/authStore";
 import { useSettingsStore } from "./stores/settingsStore";
 import { useProfilesStore } from "./stores/profilesStore";
+import { useRecordingStore } from "./stores/recordingStore";
+import { useTranscriptsStore } from "./stores/transcriptsStore";
 import { MicrosoftGraphService } from "./services/microsoftGraph";
 import { api } from "./services/api";
+import { createSSEClient } from "./services/sse";
 import { initCrashReporter } from "./services/crashReporter";
 import { initMeetingNotifications } from "./services/meetingNotifications";
 import type { Profile } from "./types";
@@ -165,6 +169,11 @@ function ProtectedRoutes() {
   const { has_completed_onboarding, updateSettings } = useSettingsStore();
   const setProfiles = useProfilesStore((s) => s.setProfiles);
 
+  const addBackgroundTask = useRecordingStore((s) => s.addBackgroundTask);
+  const updateBackgroundTask = useRecordingStore((s) => s.updateBackgroundTask);
+  const removeBackgroundTask = useRecordingStore((s) => s.removeBackgroundTask);
+  const { addTranscript } = useTranscriptsStore();
+
   // Load profiles and OAuth config from API on auth
   useEffect(() => {
     if (isAuthenticated) {
@@ -181,6 +190,48 @@ function ProtectedRoutes() {
       }).catch(() => { /* ignore - settings will remain as-is */ });
     }
   }, [isAuthenticated, setProfiles, updateSettings]);
+
+  // Recover active tasks on app start via /tasks/active endpoint
+  const recoveryRanRef = useRef(false);
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    if (recoveryRanRef.current) return;
+    recoveryRanRef.current = true;
+
+    (async () => {
+      try {
+        const activeTasks = await api.getActiveTasks();
+        for (const task of activeTasks) {
+          addBackgroundTask({
+            task_id: task.task_id,
+            status: task.status as "uploading",
+            progress: task.progress ?? 0,
+            mode: task.mode ?? ("microphone" as const),
+            created_at: task.created_at,
+          });
+
+          const sseClient = createSSEClient(api.getStreamUrl(task.task_id));
+          sseClient.connect(
+            (update) => updateBackgroundTask(task.task_id, update),
+            (err) => {
+              console.error("[TaskRecovery] SSE error:", err);
+              updateBackgroundTask(task.task_id, { status: "failed", error_message: "Verbinding verloren" });
+            },
+            async () => {
+              const transcripts = await api.getTranscripts({ limit: 1 });
+              if (transcripts[0]) addTranscript(transcripts[0]);
+              removeBackgroundTask(task.task_id);
+            }
+          );
+        }
+        if (activeTasks.length > 0) {
+          console.log(`[TaskRecovery] Recovered ${activeTasks.length} active task(s)`);
+        }
+      } catch {
+        // Recovery failed — not critical
+      }
+    })();
+  }, [isAuthenticated]);
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
@@ -200,6 +251,7 @@ function ProtectedRoutes() {
       <Routes>
         <Route path="/"            element={<HomePage />} />
         <Route path="/recording"   element={<RecordingPage />} />
+        <Route path="/tasks"       element={<TasksPage />} />
         <Route path="/transcripts" element={<TranscriptsPage />} />
         <Route path="/profiles"    element={<ProfilesPage />} />
         <Route path="/account"     element={<AccountPage />} />

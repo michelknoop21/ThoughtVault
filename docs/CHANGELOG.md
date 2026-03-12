@@ -5,6 +5,20 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2026-03-12] — Task management: cancel, delete, and monitor active tasks
+
+### Added
+- **Task management view** (macOS + Windows): New "Taken" tab/page showing all active and recent tasks with real-time status, progress bars, and relative timestamps. Auto-refreshes every 10 seconds.
+- **Cancel task** (backend + macOS + Windows): Users can cancel in-progress tasks (pending through processing_webhook). Removes task from transcription and webhook Redis queues, sets status to `cancelled`, broadcasts cancellation via SSE to connected clients.
+- **Delete task** (backend + macOS + Windows): Users can delete any task (active or completed). Active tasks are automatically cancelled before deletion.
+- **Backend endpoints**: `POST /task/{task_id}/cancel` and `DELETE /task/{task_id}` with ownership checks, admin bypass, and activity logging.
+
+### Changed
+- **macOS sidebar**: Added "Taken" tab between "Opnemen" and "Notulen" (keyboard shortcut Cmd+3, existing shortcuts shifted)
+- **Windows sidebar**: Added "Taken" nav item between "Opnemen" and "Notulen"
+
+---
+
 ## [2026-03-12] — Fix Windows combined recording: loopback stream drop + audio mixing
 
 ### Fixed

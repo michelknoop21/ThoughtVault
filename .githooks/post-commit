@@ -41,18 +41,32 @@ PATCH=$(echo "$CURRENT" | cut -d. -f3)
 NEW_PATCH=$((PATCH + 1))
 NEW_VERSION="${MAJOR}.${MINOR}.${NEW_PATCH}"
 
-# Update VERSION file and commit
+# Update VERSION file
 echo "$NEW_VERSION" > "$VERSION_FILE"
+
+# Sync version to all platform configs (pbxproj, tauri.conf.json, Cargo.toml)
+SYNC_SCRIPT="$(git rev-parse --show-toplevel)/scripts/sync-version.sh"
+if [ -f "$SYNC_SCRIPT" ]; then
+    bash "$SYNC_SCRIPT"
+fi
+
+# Commit version bump + synced configs
 git add "$VERSION_FILE"
+git add -u  # pick up changes from sync-version.sh
 git commit -m "chore(release): ${NEW_VERSION}"
 
 # Create tag and release branch
 git tag "v${NEW_VERSION}"
 git branch "release/${NEW_VERSION}"
 
-# Push everything to remote
+# Push everything to remotes
 git push origin main "release/${NEW_VERSION}" --tags 2>/dev/null \
-    || echo "⚠️  Auto-push failed. Run: git push origin main release/${NEW_VERSION} --tags"
+    || echo "⚠️  Auto-push to origin failed. Run: git push origin main release/${NEW_VERSION} --tags"
+
+# Push to GitHub (triggers CI/CD build + deploy)
+git push github main --tags 2>/dev/null \
+    || echo "⚠️  Auto-push to github failed. Run: git push github main --tags"
 
 echo "✅ Version bumped: ${CURRENT} → ${NEW_VERSION}"
 echo "✅ Tag v${NEW_VERSION} + branch release/${NEW_VERSION} created and pushed"
+echo "🚀 GitHub Actions build triggered — check: https://github.com/michelknoop21/transcript-studio-native/actions"

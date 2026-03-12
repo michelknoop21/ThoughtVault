@@ -211,8 +211,11 @@ export function RecordingPage() {
         }
         const msg = err instanceof Error ? err.message : "Upload mislukt";
         console.error("[Recording] Upload failed:", msg);
-        // Upload failed — enqueue for retry
-        await enqueue({ file_path: filePath, profile_id: selectedProfileId, mode }).catch(() => {});
+        // Only enqueue for retry on network/server errors, not client errors (4xx)
+        const isClientError = msg.includes("HTTP 4");
+        if (!isClientError) {
+          await enqueue({ file_path: filePath, profile_id: selectedProfileId, mode }).catch(() => {});
+        }
         updateBackgroundTask(tempId, {
           status: "failed",
           error_message: msg,

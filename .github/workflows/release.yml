@@ -1,0 +1,214 @@
+name: Release Build
+
+on:
+  push:
+    tags: ['v*']
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  # Extract version from tag
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Extract version from tag
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+  # macOS: build DMG
+  build-macos:
+    needs: prepare
+    runs-on: macos-latest
+    env:
+      VERSION: ${{ needs.prepare.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Xcode archive
+        run: |
+          xcodebuild archive \
+            -project TranscriptStudio.xcodeproj \
+            -scheme TranscriptStudio \
+            -configuration Release \
+            -destination "platform=macOS,arch=arm64" \
+            -archivePath build/TranscriptStudio.xcarchive \
+            CODE_SIGNING_ALLOWED=NO \
+            SKIP_INSTALL=NO \
+            | tail -5
+
+      - name: Export and sign app
+        run: |
+          mkdir -p build/export
+          cp -R build/TranscriptStudio.xcarchive/Products/Applications/TranscriptStudio.app build/export/ 2>/dev/null \
+            || cp -R build/TranscriptStudio.xcarchive/Products/usr/local/bin/TranscriptStudio.app build/export/
+          codesign --force --deep --sign - build/export/TranscriptStudio.app
+
+      - name: Create DMG
+        run: |
+          hdiutil create \
+            -volname "TranscriptStudio $VERSION" \
+            -srcfolder build/export \
+            -ov -format UDZO \
+            "build/TranscriptStudio-${VERSION}.dmg"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-dmg
+          path: build/TranscriptStudio-*.dmg
+
+  # Windows: build MSI (x64)
+  build-windows:
+    needs: prepare
+    runs-on: windows-latest
+    env:
+      VERSION: ${{ needs.prepare.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install frontend dependencies
+        working-directory: transcript-studio-windows
+        run: npm install
+
+      - name: Build Tauri app
+        working-directory: transcript-studio-windows
+        run: npm run tauri build
+
+      - name: Copy MSI to build dir
+        shell: bash
+        run: |
+          mkdir -p build
+          MSI=$(find transcript-studio-windows/src-tauri/target/release/bundle -name "*.msi" -type f | head -1)
+          if [ -z "$MSI" ]; then
+            echo "ERROR: MSI not found"
+            exit 1
+          fi
+          cp "$MSI" "build/TranscriptStudio_${VERSION}_x64.msi"
+          echo "Built: TranscriptStudio_${VERSION}_x64.msi"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-msi
+          path: build/TranscriptStudio_*.msi
+
+  # Upload artifacts to server
+  deploy:
+    needs: [prepare, build-macos, build-windows]
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.prepare.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: build
+          merge-multiple: true
+
+      - name: List artifacts
+        run: ls -lh build/
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H 3.69.205.209 >> ~/.ssh/known_hosts
+
+      - name: Upload to server
+        env:
+          SERVER: michelk@3.69.205.209
+          REMOTE_DIR: /home/michelk/tstudio-releases
+        run: |
+          ssh $SERVER "mkdir -p $REMOTE_DIR"
+
+          DMG="TranscriptStudio-${VERSION}.dmg"
+          MSI_X64="TranscriptStudio_${VERSION}_x64.msi"
+
+          HAS_MACOS=false
+          HAS_WINDOWS_X64=false
+
+          if [ -f "build/$DMG" ]; then
+            scp "build/$DMG" "$SERVER:$REMOTE_DIR/$DMG"
+            echo "Uploaded: $DMG"
+            HAS_MACOS=true
+          fi
+
+          if [ -f "build/$MSI_X64" ]; then
+            scp "build/$MSI_X64" "$SERVER:$REMOTE_DIR/$MSI_X64"
+            echo "Uploaded: $MSI_X64"
+            HAS_WINDOWS_X64=true
+          fi
+
+          # Upload website pages
+          if [ -f "scripts/download-page.html" ]; then
+            scp scripts/download-page.html "$SERVER:$REMOTE_DIR/index.html"
+            echo "Updated: download page"
+          fi
+          if [ -f "scripts/features-page.html" ]; then
+            scp scripts/features-page.html "$SERVER:$REMOTE_DIR/features.html"
+            echo "Updated: features page"
+          fi
+
+          # Upload screenshots
+          if [ -d "scripts/screenshots" ]; then
+            ssh $SERVER "mkdir -p $REMOTE_DIR/screenshots"
+            scp scripts/screenshots/*.png "$SERVER:$REMOTE_DIR/screenshots/"
+            echo "Updated: screenshots"
+          fi
+
+          # Update releases.json
+          ssh $SERVER "python3 -c \"
+          import json
+
+          manifest_path = '$REMOTE_DIR/releases.json'
+          try:
+              with open(manifest_path) as f:
+                  data = json.load(f)
+          except (FileNotFoundError, json.JSONDecodeError):
+              data = {}
+
+          data['latest_version'] = '$VERSION'
+
+          if '$HAS_MACOS' == 'true':
+              data['macos'] = {
+                  'url': '/tstudio/download/$DMG',
+                  'version': '$VERSION',
+                  'filename': '$DMG'
+              }
+          if '$HAS_WINDOWS_X64' == 'true':
+              data['windows_x64'] = {
+                  'url': '/tstudio/download/$MSI_X64',
+                  'version': '$VERSION',
+                  'filename': '$MSI_X64'
+              }
+              data['windows'] = {
+                  'url': '/tstudio/download/$MSI_X64',
+                  'version': '$VERSION',
+                  'filename': '$MSI_X64'
+              }
+
+          with open(manifest_path, 'w') as f:
+              json.dump(data, f, indent=2)
+
+          print('Updated releases.json')
+          \""
+
+          echo ""
+          echo "Release $VERSION deployed!"
+          echo "  macOS:    https://n8n.prezent.nl/tstudio/download/$DMG"
+          echo "  Windows:  https://n8n.prezent.nl/tstudio/download/$MSI_X64"
+          echo "  Manifest: https://n8n.prezent.nl/tstudio/download/releases.json"

@@ -16,6 +16,8 @@ async function getStore(): Promise<Store> {
 export async function enqueue(item: Omit<QueuedUpload, "id" | "created_at" | "retry_count">): Promise<void> {
   const s = await getStore();
   const existing = (await s.get<QueuedUpload[]>(QUEUE_STORE_KEY)) || [];
+  // Don't enqueue if the same file is already in the queue
+  if (existing.some((e) => e.file_path === item.file_path)) return;
   const newItem: QueuedUpload = {
     ...item,
     id: crypto.randomUUID(),
@@ -53,7 +55,7 @@ export async function processQueue(): Promise<void> {
   if (queue.length === 0) return;
 
   for (const item of queue) {
-    if (item.retry_count >= 5) {
+    if (item.retry_count >= 3) {
       await removeFromQueue(item.id);
       continue;
     }

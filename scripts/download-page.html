@@ -4,323 +4,476 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Download - Transcript Studio</title>
-    <meta name="description" content="Download Transcript Studio voor macOS of Windows.">
+    <meta name="description" content="Download Transcript Studio voor macOS of Windows. Van vergadering naar notule in één klik.">
+
+    <!-- Favicon -->
     <link rel="icon" type="image/png" href="/tstudio/static/favicon-32x32.png">
+    <link rel="apple-touch-icon" href="/tstudio/static/apple-touch-icon.png">
+
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="/tstudio/static/css/landing.css">
+
+    <!-- Preload fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+
     <style>
-        :root {
-            --brand-primary: #E50074;
-            --brand-secondary: #007BC4;
-            --bg: #FFFFFF;
-            --bg-alt: #F5F5F7;
-            --text: #333339;
-            --text-secondary: #6B6B78;
-            --text-muted: #9999A6;
-            --border: rgba(148, 163, 184, 0.2);
-            --glass-bg: rgba(255, 255, 255, 0.7);
-            --glass-border: rgba(255, 255, 255, 0.4);
-            --shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.06);
-            --shadow-md: 0 8px 24px rgba(15, 23, 42, 0.08);
-            --shadow-lg: 0 20px 50px rgba(15, 23, 42, 0.12);
-            --radius-md: 12px;
-            --radius-lg: 16px;
-            --radius-xl: 20px;
+    /* ===========================================
+       Download Page — extends landing.css
+       =========================================== */
+    .download-hero {
+        position: relative;
+        min-height: 100vh;
+        padding-top: 120px;
+        padding-bottom: var(--space-16);
+        overflow: hidden;
+    }
+
+    .download-hero::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background:
+            radial-gradient(ellipse 80% 60% at 20% 20%, rgba(229, 0, 116, 0.08) 0%, transparent 50%),
+            radial-gradient(ellipse 60% 50% at 80% 60%, rgba(0, 123, 196, 0.06) 0%, transparent 50%);
+        animation: heroGradientShift 20s ease-in-out infinite;
+        pointer-events: none;
+    }
+
+    [data-theme="dark"] .download-hero::before {
+        background:
+            radial-gradient(ellipse 80% 60% at 20% 20%, rgba(0, 168, 255, 0.1) 0%, transparent 50%),
+            radial-gradient(ellipse 60% 50% at 80% 60%, rgba(255, 26, 140, 0.08) 0%, transparent 50%);
+    }
+
+    .download-content {
+        position: relative;
+        z-index: 1;
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 0 var(--space-6);
+    }
+
+    .download-header {
+        text-align: center;
+        margin-bottom: var(--space-12);
+    }
+
+    .download-title {
+        font-size: clamp(2rem, 4vw + 1rem, 3rem);
+        line-height: 1.1;
+        letter-spacing: -0.03em;
+        margin-bottom: var(--space-4);
+    }
+
+    .download-subtitle {
+        font-size: clamp(1rem, 1.2vw + 0.5rem, 1.25rem);
+        color: var(--landing-text-secondary);
+        line-height: 1.7;
+        max-width: 600px;
+        margin: 0 auto var(--space-6);
+    }
+
+    .download-version-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-2);
+        padding: var(--space-2) var(--space-4);
+        background: var(--landing-glass-bg);
+        backdrop-filter: blur(8px);
+        border: 1px solid var(--landing-glass-border);
+        border-radius: var(--radius-xl);
+        font-size: 0.85rem;
+        font-weight: 500;
+        color: var(--brand-primary);
+    }
+
+    /* Platform Cards */
+    .download-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--space-6);
+        margin-bottom: var(--space-12);
+    }
+
+    @media (max-width: 640px) {
+        .download-grid { grid-template-columns: 1fr; }
+    }
+
+    .download-card {
+        position: relative;
+        background: var(--landing-glass-bg);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid var(--landing-glass-border);
+        border-radius: var(--radius-lg);
+        padding: var(--space-8);
+        text-align: center;
+        transition: all var(--dur-slow) var(--ease);
+        overflow: hidden;
+    }
+
+    .download-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, var(--brand-primary), var(--brand-secondary));
+        opacity: 0;
+        transition: opacity var(--dur) var(--ease);
+    }
+
+    .download-card:hover {
+        background: var(--landing-glass-hover);
+        transform: translateY(-6px);
+        box-shadow:
+            var(--landing-shadow-lg),
+            0 0 50px rgba(0, 123, 196, 0.08);
+    }
+
+    .download-card:hover::before {
+        opacity: 1;
+    }
+
+    .download-card.recommended {
+        border-color: var(--brand-primary);
+        box-shadow: 0 0 0 1px var(--brand-primary), var(--landing-shadow-sm);
+    }
+
+    .download-card.recommended::before {
+        opacity: 1;
+    }
+
+    .download-recommended-label {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-1);
+        background: linear-gradient(135deg, var(--brand-primary) 0%, #c30062 100%);
+        color: white;
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        padding: var(--space-1) var(--space-3);
+        border-radius: var(--radius-xl);
+        margin-bottom: var(--space-4);
+    }
+
+    .download-card-icon {
+        width: 64px;
+        height: 64px;
+        border-radius: var(--radius-md);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto var(--space-4);
+        transition: all var(--dur-slow) var(--ease);
+    }
+
+    .download-card-icon--macos {
+        background: rgba(0, 123, 196, 0.1);
+        color: var(--brand-secondary);
+    }
+
+    .download-card-icon--windows {
+        background: rgba(0, 123, 196, 0.1);
+        color: var(--brand-secondary);
+    }
+
+    .download-card:hover .download-card-icon {
+        transform: scale(1.1) rotate(3deg);
+        background: linear-gradient(135deg, rgba(229, 0, 116, 0.15), rgba(0, 123, 196, 0.15));
+    }
+
+    .download-card-icon svg {
+        width: 32px;
+        height: 32px;
+    }
+
+    .download-card-name {
+        font-family: system-ui, -apple-system, 'Space Grotesk', sans-serif;
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--landing-text);
+        margin-bottom: var(--space-1);
+    }
+
+    .download-card-version {
+        font-size: 0.85rem;
+        color: var(--landing-text-muted);
+        margin-bottom: var(--space-6);
+    }
+
+    .download-card-filename {
+        font-size: 0.8rem;
+        color: var(--landing-text-muted);
+        margin-top: var(--space-3);
+    }
+
+    /* Requirements Section */
+    .download-requirements {
+        background: var(--landing-glass-bg);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid var(--landing-glass-border);
+        border-radius: var(--radius-lg);
+        padding: var(--space-6) var(--space-8);
+        margin-bottom: var(--space-8);
+        transition: all var(--dur) var(--ease);
+    }
+
+    .download-requirements:hover {
+        background: var(--landing-glass-hover);
+        box-shadow: var(--landing-shadow-sm);
+    }
+
+    .download-requirements h3 {
+        font-family: system-ui, -apple-system, 'Space Grotesk', sans-serif;
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: var(--landing-text);
+        margin-bottom: var(--space-4);
+    }
+
+    .download-req-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--space-3) var(--space-8);
+    }
+
+    @media (max-width: 640px) {
+        .download-req-grid { grid-template-columns: 1fr; }
+    }
+
+    .download-req-item {
+        display: flex;
+        align-items: center;
+        gap: var(--space-3);
+        font-size: 0.9rem;
+        color: var(--landing-text-secondary);
+    }
+
+    .download-req-item svg {
+        width: 16px;
+        height: 16px;
+        flex-shrink: 0;
+        color: var(--brand-accent);
+    }
+
+    .download-req-label {
+        font-weight: 500;
+        color: var(--landing-text);
+        min-width: 5rem;
+    }
+
+    /* Loading & Error States */
+    .download-loading {
+        grid-column: 1 / -1;
+        text-align: center;
+        padding: var(--space-12);
+        color: var(--landing-text-muted);
+    }
+
+    .download-loading-spinner {
+        width: 32px;
+        height: 32px;
+        border: 3px solid var(--landing-border);
+        border-top-color: var(--brand-primary);
+        border-radius: 50%;
+        animation: downloadSpin 0.8s linear infinite;
+        margin: 0 auto var(--space-4);
+    }
+
+    @keyframes downloadSpin {
+        to { transform: rotate(360deg); }
+    }
+
+    /* Reduced Motion */
+    @media (prefers-reduced-motion: reduce) {
+        .download-hero::before,
+        .landing-hero-orb {
+            animation: none !important;
         }
-
-        @media (prefers-color-scheme: dark) {
-            :root {
-                --bg: #0B0C15;
-                --bg-alt: #191C28;
-                --text: #F2F2F7;
-                --text-secondary: #9E9EAE;
-                --text-muted: #6B6B7A;
-                --border: rgba(255, 255, 255, 0.1);
-                --glass-bg: rgba(22, 24, 30, 0.8);
-                --glass-border: rgba(255, 255, 255, 0.08);
-                --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
-                --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.4);
-                --shadow-lg: 0 20px 50px rgba(0, 0, 0, 0.5);
-            }
-        }
-
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-
-        body {
-            font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        .container {
-            max-width: 800px;
-            width: 100%;
-            padding: 3rem 1.5rem;
-        }
-
-        .header {
-            text-align: center;
-            margin-bottom: 3rem;
-        }
-
-        .header .logo {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.75rem;
-            text-decoration: none;
-            color: var(--text);
-            margin-bottom: 1.5rem;
-        }
-
-        .header .logo img {
-            height: 40px;
-            width: auto;
-        }
-
-        .header .logo span {
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 1.25rem;
-            font-weight: 600;
-        }
-
-        .header h1 {
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 2.25rem;
-            font-weight: 700;
-            margin-bottom: 0.5rem;
-        }
-
-        .header p {
-            color: var(--text-secondary);
-            font-size: 1.1rem;
-        }
-
-        .version-badge {
-            display: inline-block;
-            background: var(--bg-alt);
-            border: 1px solid var(--border);
-            border-radius: 999px;
-            padding: 0.25rem 0.75rem;
-            font-size: 0.85rem;
-            color: var(--text-secondary);
-            margin-top: 0.75rem;
-        }
-
-        .platforms {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1.5rem;
-            margin-bottom: 3rem;
-        }
-
-        @media (max-width: 600px) {
-            .platforms { grid-template-columns: 1fr; }
-        }
-
-        .platform-card {
-            background: var(--glass-bg);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-xl);
-            padding: 2rem;
-            text-align: center;
-            transition: transform 200ms cubic-bezier(0.2, 0.7, 0.2, 1), box-shadow 200ms;
-        }
-
-        .platform-card:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-md);
-        }
-
-        .platform-card.recommended {
+        .download-loading-spinner {
+            animation: none !important;
             border-color: var(--brand-primary);
-            box-shadow: 0 0 0 1px var(--brand-primary), var(--shadow-sm);
         }
-
-        .platform-icon {
-            font-size: 2.5rem;
-            margin-bottom: 1rem;
-        }
-
-        .platform-name {
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 1.25rem;
-            font-weight: 600;
-            margin-bottom: 0.25rem;
-        }
-
-        .platform-version {
-            color: var(--text-muted);
-            font-size: 0.85rem;
-            margin-bottom: 1.25rem;
-        }
-
-        .platform-ext {
-            color: var(--text-secondary);
-            font-size: 0.8rem;
-            margin-top: 0.75rem;
-        }
-
-        .download-btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            background: var(--brand-primary);
-            color: #fff;
-            border: none;
-            border-radius: var(--radius-md);
-            padding: 0.75rem 1.5rem;
-            font-size: 1rem;
-            font-weight: 600;
-            font-family: inherit;
-            cursor: pointer;
-            text-decoration: none;
-            transition: background 200ms, transform 150ms;
-        }
-
-        .download-btn:hover {
-            background: #C80066;
-            transform: scale(1.02);
-        }
-
-        .download-btn:active {
-            transform: scale(0.98);
-        }
-
-        .download-btn.secondary {
-            background: var(--bg-alt);
-            color: var(--text);
-            border: 1px solid var(--border);
-        }
-
-        .download-btn.secondary:hover {
-            background: var(--border);
-        }
-
-        .download-btn svg {
-            width: 18px;
-            height: 18px;
-            fill: currentColor;
-        }
-
-        .download-btn.unavailable {
-            background: var(--bg-alt);
-            color: var(--text-muted);
-            border: 1px solid var(--border);
-            cursor: default;
-            pointer-events: none;
-        }
-
-        .requirements {
-            background: var(--bg-alt);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-lg);
-            padding: 1.5rem 2rem;
-            margin-bottom: 2rem;
-        }
-
-        .requirements h3 {
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 1rem;
-            font-weight: 600;
-            margin-bottom: 1rem;
-        }
-
-        .requirements-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 0.5rem 2rem;
-        }
-
-        @media (max-width: 600px) {
-            .requirements-grid { grid-template-columns: 1fr; }
-        }
-
-        .req-item {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            font-size: 0.9rem;
-            color: var(--text-secondary);
-        }
-
-        .req-item .label {
-            color: var(--text-muted);
-            min-width: 5rem;
-        }
-
-        .footer {
-            text-align: center;
-            padding: 2rem 0;
-            color: var(--text-muted);
-            font-size: 0.85rem;
-        }
-
-        .footer a {
-            color: var(--brand-primary);
-            text-decoration: none;
-        }
-
-        .footer a:hover {
-            text-decoration: underline;
-        }
-
-        .loading {
-            text-align: center;
-            padding: 2rem;
-            color: var(--text-muted);
-        }
-
-        .recommended-label {
-            display: inline-block;
-            background: var(--brand-primary);
-            color: #fff;
-            font-size: 0.7rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            padding: 0.2rem 0.6rem;
-            border-radius: 999px;
-            margin-bottom: 0.75rem;
-        }
+    }
     </style>
 </head>
-<body>
-    <div class="container">
-        <div class="header">
-            <a href="/tstudio/landing" class="logo">
-                <img src="/tstudio/static/Transcriptstudio.png" alt="Transcript Studio">
-                <span>Transcript Studio</span>
+<body class="landing-page">
+
+    <!-- Floating Orbs Background -->
+    <div class="landing-hero-orb landing-hero-orb--primary" aria-hidden="true"></div>
+    <div class="landing-hero-orb landing-hero-orb--secondary" aria-hidden="true"></div>
+
+    <!-- Header -->
+    <header class="landing-header" id="header">
+        <nav class="landing-nav">
+            <a href="/tstudio/landing" class="landing-logo">
+                <img src="/tstudio/static/Transcriptstudio.png" alt="Transcript Studio Logo">
+                <span class="landing-logo-text">Transcript Studio</span>
             </a>
-            <h1>Download</h1>
-            <p>Kies de versie voor jouw besturingssysteem</p>
-            <div class="version-badge" id="version-badge">Versie laden...</div>
-        </div>
 
-        <div class="platforms" id="platforms">
-            <div class="loading">Downloads laden...</div>
-        </div>
+            <div class="landing-nav-links">
+                <a href="/tstudio/landing#features" class="landing-nav-link">Features</a>
+                <a href="/tstudio/landing#hoe-werkt-het" class="landing-nav-link">Hoe werkt het</a>
+            </div>
 
-        <div class="requirements">
-            <h3>Systeemvereisten</h3>
-            <div class="requirements-grid">
-                <div class="req-item"><span class="label">macOS</span> macOS 14 Sonoma of nieuwer</div>
-                <div class="req-item"><span class="label">Windows</span> Windows 11</div>
-                <div class="req-item"><span class="label">Opslag</span> 50 MB vrije ruimte</div>
-                <div class="req-item"><span class="label">Internet</span> Vereist voor transcriptie</div>
+            <div class="landing-nav-actions">
+                <button class="theme-toggle" id="themeToggle" aria-label="Thema wisselen">
+                    <svg class="theme-icon-light" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+                    </svg>
+                    <svg class="theme-icon-dark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+                    </svg>
+                </button>
+                <a href="/tstudio/login" class="landing-btn landing-btn--primary">Inloggen</a>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Hero / Download Section -->
+    <section class="download-hero">
+        <div class="download-content">
+
+            <div class="download-header landing-reveal">
+                <h1 class="download-title">Download <span class="gradient-text">Transcript Studio</span></h1>
+                <p class="download-subtitle">Installeer de native app voor de beste ervaring. Beschikbaar voor macOS en Windows.</p>
+                <div class="download-version-badge" id="version-badge">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                        <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <span>Versie laden...</span>
+                </div>
+            </div>
+
+            <div class="download-grid landing-stagger-grid" id="platforms">
+                <div class="download-loading">
+                    <div class="download-loading-spinner"></div>
+                    Downloads laden...
+                </div>
+            </div>
+
+            <div class="download-requirements landing-reveal">
+                <h3>Systeemvereisten</h3>
+                <div class="download-req-grid">
+                    <div class="download-req-item">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        <span class="download-req-label">macOS</span> macOS 14 Sonoma+
+                    </div>
+                    <div class="download-req-item">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        <span class="download-req-label">Windows</span> Windows 11
+                    </div>
+                    <div class="download-req-item">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        <span class="download-req-label">Opslag</span> 50 MB vrije ruimte
+                    </div>
+                    <div class="download-req-item">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        <span class="download-req-label">Internet</span> Vereist voor transcriptie
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="landing-footer">
+        <div class="landing-container">
+            <div class="landing-footer-content">
+                <div class="landing-footer-links">
+                    <a href="/tstudio/landing#features" class="landing-footer-link">Features</a>
+                    <a href="/tstudio/landing#hoe-werkt-het" class="landing-footer-link">Hoe werkt het</a>
+                    <a href="/tstudio/login" class="landing-footer-link">Inloggen</a>
+                </div>
+
+                <p class="landing-footer-credits">
+                    <strong>Developed by</strong>
+                    <a href="https://www.yinga.nl" target="_blank" rel="noopener">
+                        <img src="https://www.yinga.nl/wp-content/uploads/2023/03/logo.svg" alt="Yinga">
+                    </a>
+                </p>
             </div>
         </div>
+    </footer>
 
-        <div class="footer">
-            <p>Transcript Studio door <a href="https://prezent.nl">Prezent Internet B.V.</a></p>
-        </div>
-    </div>
-
+    <!-- Scripts -->
     <script>
+    (function() {
+        'use strict';
+
+        // =====================================
+        // Theme Toggle
+        // =====================================
+        const themeToggle = document.getElementById('themeToggle');
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const stored = localStorage.getItem('ts-theme');
+
+        const theme = stored || (prefersDark ? 'dark' : 'light');
+        if (theme === 'dark') {
+            document.documentElement.setAttribute('data-theme', 'dark');
+        }
+
+        themeToggle?.addEventListener('click', () => {
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            if (isDark) {
+                document.documentElement.removeAttribute('data-theme');
+                localStorage.setItem('ts-theme', 'light');
+            } else {
+                document.documentElement.setAttribute('data-theme', 'dark');
+                localStorage.setItem('ts-theme', 'dark');
+            }
+        });
+
+        // =====================================
+        // Header Scroll Effect
+        // =====================================
+        const header = document.getElementById('header');
+
+        window.addEventListener('scroll', () => {
+            if (window.pageYOffset > 50) {
+                header.classList.add('scrolled');
+            } else {
+                header.classList.remove('scrolled');
+            }
+        }, { passive: true });
+
+        // =====================================
+        // Scroll Reveal
+        // =====================================
+        const revealElements = document.querySelectorAll('.landing-reveal, .landing-stagger-grid');
+
+        const revealObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        });
+
+        revealElements.forEach(el => revealObserver.observe(el));
+
+        // =====================================
+        // Platform Icons (SVG)
+        // =====================================
+        const ICONS = {
+            macos: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>',
+            windows: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 12V6.75l6-1.32v6.48L3 12zm6.73-.07l8.27.55V5.4l-8.27 1.2v5.33zM3 13l6 .09v6.81l-6-1.32V13zm6.73-.02l8.27-.55V20l-8.27-1.2v-5.82z"/></svg>',
+            download: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>'
+        };
+
+        // =====================================
+        // OS Detection
+        // =====================================
         function detectOS() {
             const ua = navigator.userAgent;
             if (ua.includes('Mac')) return 'macos';
@@ -328,6 +481,9 @@
             return null;
         }
 
+        // =====================================
+        // Load & Render Releases
+        // =====================================
         async function loadReleases() {
             try {
                 const res = await fetch('/tstudio/download/releases.json');
@@ -336,54 +492,62 @@
                 render(data);
             } catch (e) {
                 document.getElementById('platforms').innerHTML =
-                    '<div class="loading">Kon downloads niet laden. Probeer het later opnieuw.</div>';
+                    '<div class="download-loading">Kon downloads niet laden. Probeer het later opnieuw.</div>';
             }
         }
 
         function render(data) {
             const userOS = detectOS();
+
+            // Update version badge
             const badge = document.getElementById('version-badge');
-            badge.textContent = 'Versie ' + (data.latest_version || '?');
+            badge.querySelector('span').textContent = 'Versie ' + (data.latest_version || '?');
 
             const container = document.getElementById('platforms');
             container.innerHTML = '';
 
             const platforms = [
-                { key: 'macos', name: 'macOS', icon: '\uD83D\uDDA5\uFE0F', ext: '.dmg' },
-                { key: 'windows', name: 'Windows', icon: '\uD83D\uDDA5\uFE0F', ext: '.msi' }
+                { key: 'macos', name: 'macOS', ext: '.dmg' },
+                { key: 'windows', name: 'Windows', ext: '.msi' }
             ];
 
             platforms.forEach(p => {
                 const info = data[p.key];
                 const isRecommended = userOS === p.key;
                 const card = document.createElement('div');
-                card.className = 'platform-card' + (isRecommended ? ' recommended' : '');
+                card.className = 'download-card' + (isRecommended ? ' recommended' : '');
 
-                let inner = '';
+                let html = '';
+
                 if (isRecommended) {
-                    inner += '<div class="recommended-label">Aanbevolen voor jou</div>';
+                    html += '<div class="download-recommended-label">Aanbevolen voor jou</div>';
                 }
-                inner += '<div class="platform-icon">' + (p.key === 'macos' ? '\uF8FF' : '\u229E') + '</div>';
-                inner += '<div class="platform-name">' + p.name + '</div>';
+
+                html += '<div class="download-card-icon download-card-icon--' + p.key + '">' + ICONS[p.key] + '</div>';
+                html += '<div class="download-card-name">' + p.name + '</div>';
 
                 if (info) {
-                    inner += '<div class="platform-version">v' + info.version + '</div>';
-                    inner += '<a href="' + info.url + '" class="download-btn">' +
-                        '<svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>' +
-                        'Download' +
+                    html += '<div class="download-card-version">v' + info.version + '</div>';
+                    html += '<a href="' + info.url + '" class="landing-btn landing-btn--primary landing-btn--large">' +
+                        ICONS.download + ' Download ' + p.ext +
                         '</a>';
-                    inner += '<div class="platform-ext">' + info.filename + '</div>';
+                    html += '<div class="download-card-filename">' + info.filename + '</div>';
                 } else {
-                    inner += '<div class="platform-version">Nog niet beschikbaar</div>';
-                    inner += '<span class="download-btn unavailable">Binnenkort beschikbaar</span>';
+                    html += '<div class="download-card-version">Nog niet beschikbaar</div>';
+                    html += '<span class="landing-btn landing-btn--secondary" style="opacity:.5;pointer-events:none">Binnenkort beschikbaar</span>';
                 }
 
-                card.innerHTML = inner;
+                card.innerHTML = html;
                 container.appendChild(card);
             });
+
+            // Re-trigger stagger animation
+            container.classList.remove('visible');
+            requestAnimationFrame(() => container.classList.add('visible'));
         }
 
         loadReleases();
+    })();
     </script>
 </body>
 </html>

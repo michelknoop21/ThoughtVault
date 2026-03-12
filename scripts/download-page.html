@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Download - Transcript Studio</title>
+    <meta name="description" content="Download Transcript Studio voor macOS of Windows.">
+    <link rel="icon" type="image/png" href="/tstudio/static/favicon-32x32.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --brand-primary: #E50074;
+            --brand-secondary: #007BC4;
+            --bg: #FFFFFF;
+            --bg-alt: #F5F5F7;
+            --text: #333339;
+            --text-secondary: #6B6B78;
+            --text-muted: #9999A6;
+            --border: rgba(148, 163, 184, 0.2);
+            --glass-bg: rgba(255, 255, 255, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.4);
+            --shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.06);
+            --shadow-md: 0 8px 24px rgba(15, 23, 42, 0.08);
+            --shadow-lg: 0 20px 50px rgba(15, 23, 42, 0.12);
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --radius-xl: 20px;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #0B0C15;
+                --bg-alt: #191C28;
+                --text: #F2F2F7;
+                --text-secondary: #9E9EAE;
+                --text-muted: #6B6B7A;
+                --border: rgba(255, 255, 255, 0.1);
+                --glass-bg: rgba(22, 24, 30, 0.8);
+                --glass-border: rgba(255, 255, 255, 0.08);
+                --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+                --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.4);
+                --shadow-lg: 0 20px 50px rgba(0, 0, 0, 0.5);
+            }
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            max-width: 800px;
+            width: 100%;
+            padding: 3rem 1.5rem;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .header .logo {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            text-decoration: none;
+            color: var(--text);
+            margin-bottom: 1.5rem;
+        }
+
+        .header .logo img {
+            height: 40px;
+            width: auto;
+        }
+
+        .header .logo span {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .header h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 2.25rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        .version-badge {
+            display: inline-block;
+            background: var(--bg-alt);
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            padding: 0.25rem 0.75rem;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-top: 0.75rem;
+        }
+
+        .platforms {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+
+        @media (max-width: 600px) {
+            .platforms { grid-template-columns: 1fr; }
+        }
+
+        .platform-card {
+            background: var(--glass-bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-xl);
+            padding: 2rem;
+            text-align: center;
+            transition: transform 200ms cubic-bezier(0.2, 0.7, 0.2, 1), box-shadow 200ms;
+        }
+
+        .platform-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .platform-card.recommended {
+            border-color: var(--brand-primary);
+            box-shadow: 0 0 0 1px var(--brand-primary), var(--shadow-sm);
+        }
+
+        .platform-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .platform-name {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .platform-version {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .platform-ext {
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            margin-top: 0.75rem;
+        }
+
+        .download-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: var(--brand-primary);
+            color: #fff;
+            border: none;
+            border-radius: var(--radius-md);
+            padding: 0.75rem 1.5rem;
+            font-size: 1rem;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            text-decoration: none;
+            transition: background 200ms, transform 150ms;
+        }
+
+        .download-btn:hover {
+            background: #C80066;
+            transform: scale(1.02);
+        }
+
+        .download-btn:active {
+            transform: scale(0.98);
+        }
+
+        .download-btn.secondary {
+            background: var(--bg-alt);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .download-btn.secondary:hover {
+            background: var(--border);
+        }
+
+        .download-btn svg {
+            width: 18px;
+            height: 18px;
+            fill: currentColor;
+        }
+
+        .download-btn.unavailable {
+            background: var(--bg-alt);
+            color: var(--text-muted);
+            border: 1px solid var(--border);
+            cursor: default;
+            pointer-events: none;
+        }
+
+        .requirements {
+            background: var(--bg-alt);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .requirements h3 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .requirements-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem 2rem;
+        }
+
+        @media (max-width: 600px) {
+            .requirements-grid { grid-template-columns: 1fr; }
+        }
+
+        .req-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .req-item .label {
+            color: var(--text-muted);
+            min-width: 5rem;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 2rem 0;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        .footer a {
+            color: var(--brand-primary);
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-muted);
+        }
+
+        .recommended-label {
+            display: inline-block;
+            background: var(--brand-primary);
+            color: #fff;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 0.2rem 0.6rem;
+            border-radius: 999px;
+            margin-bottom: 0.75rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <a href="/tstudio/landing" class="logo">
+                <img src="/tstudio/static/Transcriptstudio.png" alt="Transcript Studio">
+                <span>Transcript Studio</span>
+            </a>
+            <h1>Download</h1>
+            <p>Kies de versie voor jouw besturingssysteem</p>
+            <div class="version-badge" id="version-badge">Versie laden...</div>
+        </div>
+
+        <div class="platforms" id="platforms">
+            <div class="loading">Downloads laden...</div>
+        </div>
+
+        <div class="requirements">
+            <h3>Systeemvereisten</h3>
+            <div class="requirements-grid">
+                <div class="req-item"><span class="label">macOS</span> macOS 14 Sonoma of nieuwer</div>
+                <div class="req-item"><span class="label">Windows</span> Windows 11</div>
+                <div class="req-item"><span class="label">Opslag</span> 50 MB vrije ruimte</div>
+                <div class="req-item"><span class="label">Internet</span> Vereist voor transcriptie</div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>Transcript Studio door <a href="https://prezent.nl">Prezent Internet B.V.</a></p>
+        </div>
+    </div>
+
+    <script>
+        function detectOS() {
+            const ua = navigator.userAgent;
+            if (ua.includes('Mac')) return 'macos';
+            if (ua.includes('Win')) return 'windows';
+            return null;
+        }
+
+        async function loadReleases() {
+            try {
+                const res = await fetch('/tstudio/download/releases.json');
+                if (!res.ok) throw new Error('Kon releases niet laden');
+                const data = await res.json();
+                render(data);
+            } catch (e) {
+                document.getElementById('platforms').innerHTML =
+                    '<div class="loading">Kon downloads niet laden. Probeer het later opnieuw.</div>';
+            }
+        }
+
+        function render(data) {
+            const userOS = detectOS();
+            const badge = document.getElementById('version-badge');
+            badge.textContent = 'Versie ' + (data.latest_version || '?');
+
+            const container = document.getElementById('platforms');
+            container.innerHTML = '';
+
+            const platforms = [
+                { key: 'macos', name: 'macOS', icon: '\uD83D\uDDA5\uFE0F', ext: '.dmg' },
+                { key: 'windows', name: 'Windows', icon: '\uD83D\uDDA5\uFE0F', ext: '.msi' }
+            ];
+
+            platforms.forEach(p => {
+                const info = data[p.key];
+                const isRecommended = userOS === p.key;
+                const card = document.createElement('div');
+                card.className = 'platform-card' + (isRecommended ? ' recommended' : '');
+
+                let inner = '';
+                if (isRecommended) {
+                    inner += '<div class="recommended-label">Aanbevolen voor jou</div>';
+                }
+                inner += '<div class="platform-icon">' + (p.key === 'macos' ? '\uF8FF' : '\u229E') + '</div>';
+                inner += '<div class="platform-name">' + p.name + '</div>';
+
+                if (info) {
+                    inner += '<div class="platform-version">v' + info.version + '</div>';
+                    inner += '<a href="' + info.url + '" class="download-btn">' +
+                        '<svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>' +
+                        'Download' +
+                        '</a>';
+                    inner += '<div class="platform-ext">' + info.filename + '</div>';
+                } else {
+                    inner += '<div class="platform-version">Nog niet beschikbaar</div>';
+                    inner += '<span class="download-btn unavailable">Binnenkort beschikbaar</span>';
+                }
+
+                card.innerHTML = inner;
+                container.appendChild(card);
+            });
+        }
+
+        loadReleases();
+    </script>
+</body>
+</html>

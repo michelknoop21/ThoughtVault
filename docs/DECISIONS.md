@@ -480,3 +480,38 @@ _Append-only log. Each entry records context, decision, and consequences._
 - Error responses from Microsoft now include status code and body in console logs, improving future debugging.
 - The existing `proxy_request` command in `http.rs` required no changes — it already supports POST with custom headers and body.
 - Browser CSP `connect-src` entries for `login.microsoftonline.com` and `graph.microsoft.com` are no longer needed for these calls (but kept for forward compatibility).
+
+---
+
+## DEC-029 — Collapsible Sidebar Replacing columnVisibility Toggle
+
+**Date:** 2026-03-12
+**Status:** Accepted
+
+**Context:** The macOS sidebar used SwiftUI's `NavigationSplitViewVisibility` (`columnVisibility`) state to toggle sidebar visibility. When the sidebar was hidden, it was completely removed from the view hierarchy with no affordance to restore it. This locked users out of the profile section containing the logout button — the only way to recover was to restart the app.
+
+**Decision:** Replace the `columnVisibility`-based toggle with a custom `sidebarCollapsed` boolean state in `ContentView.swift`. Collapsed mode renders a minimal 52px-wide column showing only navigation icons with tooltips and an expand button at the bottom. Expanded mode shows the full sidebar with a collapse button in the profile section. Toggle via `Shift+Cmd+S` keyboard shortcut.
+
+**Consequences:**
+- Users always have a visible path to expand the sidebar and access logout, settings, and profile.
+- The collapsed icon column provides quick navigation without occupying full sidebar width.
+- Tooltips on collapsed icons ensure discoverability of each tab's purpose.
+- The `Shift+Cmd+S` shortcut mirrors common sidebar toggle patterns in macOS apps (Finder, Xcode).
+- The `columnVisibility` state is no longer used — sidebar visibility is entirely managed by the custom `sidebarCollapsed` property.
+
+---
+
+## DEC-030 — Auto-Pagination for Transcript Loading
+
+**Date:** 2026-03-12
+**Status:** Accepted
+
+**Context:** Both macOS and Windows clients fetched only the first page of transcripts (up to 100 items). Users with more than 100 transcripts could not see older entries in the transcript library.
+
+**Decision:** Implement automatic pagination in `TranscriptsView.loadTranscripts()` (macOS) and `getTranscripts()` (Windows `api.ts`). Both loop through pages of 100 items each, accumulating results until either the page returns fewer items than requested or the response total is reached. Error handling retains partially loaded data rather than showing nothing.
+
+**Consequences:**
+- All transcripts are now visible regardless of total count.
+- Initial load time increases linearly with transcript count (one API call per 100 items).
+- Partial load on error preserves user experience — some data is better than no data.
+- No UI pagination controls needed — the list loads completely on mount.

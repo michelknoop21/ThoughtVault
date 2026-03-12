@@ -104,6 +104,7 @@ See [RELEASE.md](RELEASE.md) for the complete guide.
 | Version not bumping on commit | Run `git config core.hooksPath .githooks` to activate the post-commit hook |
 | OAuth callback not working (Windows) | Verify `transcript-studio://auth/callback` is registered in Azure AD as "Mobile and desktop" redirect URI (NOT SPA type) |
 | Upload 422 error (Windows) | Upload uses browser `FormData` + `fetch()` — ensure CORS allows Tauri origins (`https://tauri.localhost`, `http://localhost:1420`) |
+| macOS sidebar appears stuck/collapsed | Press `Shift+Cmd+S` to toggle sidebar expand/collapse, or click the expand arrow at the bottom of the icon column |
 
 ---
 

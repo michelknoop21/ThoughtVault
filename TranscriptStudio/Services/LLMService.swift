@@ -282,7 +282,7 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
 
 // MARK: - AppleFoundationModelService
 
-#if os(macOS) || os(iOS)
+#if canImport(FoundationModels)
 import FoundationModels
 
 /// LLM service implementation using Apple's on-device Foundation Models framework.

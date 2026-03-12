@@ -444,3 +444,21 @@ _Append-only log. Each entry records context, decision, and consequences._
 - Pill design is compact enough to stay visible without obscuring video call windows.
 - Widget communicates with the main window via Tauri events (`audio-level`, `recording-stopped`) — no shared store needed.
 - The Rust backend applies Windows 11 Acrylic effect to the widget via `window-vibrancy` on `tauri://webview-created` event.
+
+---
+
+## DEC-027 — Route Microsoft Graph API Through Tauri proxy_request for CORS Bypass
+
+**Date:** 2026-03-12
+**Status:** Accepted
+
+**Context:** The Windows app's Microsoft 365 OAuth token exchange failed with a generic "Token uitwisseling mislukt" error. Investigation revealed the root cause: `microsoftGraph.ts` used browser `fetch()` to call Microsoft's token endpoint. The redirect URI `transcript-studio://auth/callback` is registered in Azure AD as a "Mobile and desktop applications" type, not SPA. Microsoft's `/oauth2/v2.0/token` endpoint only returns CORS headers (`Access-Control-Allow-Origin`) for SPA-type redirect URIs. The Tauri WebView origin (`http://localhost:1420` in dev, `https://tauri.localhost` in production) was blocked by the missing CORS headers.
+
+**Decision:** Replace all browser `fetch()` calls to Microsoft APIs with `invoke("proxy_request")`, which routes through the Rust reqwest HTTP client. Reqwest is not subject to browser CORS restrictions. This applies to three calls: token exchange (`/oauth2/v2.0/token`), user profile (`/me`), and calendar events (`/me/calendarView`).
+
+**Consequences:**
+- OAuth token exchange works reliably regardless of Azure AD redirect URI type configuration.
+- All Microsoft Graph API calls are consistent — no mix of browser fetch and Tauri proxy.
+- Error responses from Microsoft now include status code and body in console logs, improving future debugging.
+- The existing `proxy_request` command in `http.rs` required no changes — it already supports POST with custom headers and body.
+- Browser CSP `connect-src` entries for `login.microsoftonline.com` and `graph.microsoft.com` are no longer needed for these calls (but kept for forward compatibility).

@@ -337,7 +337,7 @@ Lijst actieve taken voor huidige gebruiker.
 
 ```
 pending → uploading → converting → transcribing → transcribed → queued → processing_webhook → completed
-                                                                                            → error
+                                          ↘ no_speech (hallucination detected)              → error
 ```
 
 | Status | Beschrijving |
@@ -350,6 +350,7 @@ pending → uploading → converting → transcribing → transcribed → queued
 | `queued` | In webhook queue voor n8n |
 | `processing_webhook` | n8n verwerkt notulengeneratie |
 | `completed` | Alles klaar, notulen beschikbaar |
+| `no_speech` | Hallucination detection: audio bevat geen herkenbare spraak (Whisper output was garbled/repetitief) |
 | `error` | Fout opgetreden |
 
 ---

@@ -65,6 +65,8 @@ struct ContentView: View {
     @State private var selectedTab: AppTab = .home
     @State private var columnVisibility: NavigationSplitViewVisibility = .automatic
     @State private var showForceUpdateAlert = false
+    @State private var callAlertMeeting: CalendarEvent? = nil
+    @State private var callAlertDismissed: Set<String> = []
 
     var body: some View {
         Group {
@@ -106,6 +108,41 @@ struct ContentView: View {
 #if os(macOS)
         macOSView
             .task { await fetchCalendarIfGranted() }
+            .overlay(alignment: .bottomTrailing) {
+                if let meeting = callAlertMeeting {
+                    CallAlertView(
+                        meeting: meeting,
+                        onStartRecording: {
+                            callAlertMeeting = nil
+                            recordingVM.selectedMode = meeting.meetingURL != nil ? .combined : .microphone
+                            Task { await recordingVM.startRecording() }
+                        },
+                        onSnooze: {
+                            callAlertMeeting = nil
+                            // Will re-appear after 2 minutes via the periodic check
+                        },
+                        onDismiss: {
+                            callAlertDismissed.insert(meeting.id)
+                            callAlertMeeting = nil
+                        }
+                    )
+                    .padding(TS.Spacing.lg)
+                    .frame(width: 420)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
+            }
+            .task {
+                while !Task.isCancelled {
+                    checkForUpcomingMeeting()
+                    try? await Task.sleep(for: .seconds(60))
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .meetingRecordRequested)) { _ in
+                // Start recording directly when user taps OS notification action
+                recordingVM.selectedMode = .combined
+                Task { await recordingVM.startRecording() }
+                callAlertMeeting = nil
+            }
 #else
         iOSView
             .task { await fetchCalendarIfGranted() }
@@ -119,6 +156,18 @@ struct ContentView: View {
 
         if calendarService.hasCalendarAccess || calendarService.isMicrosoftConnected {
             await calendarService.fetchUpcomingMeetings()
+        }
+    }
+
+    private func checkForUpcomingMeeting() {
+        let now = Date()
+        let meeting = calendarService.upcomingMeetings.first { event in
+            !callAlertDismissed.contains(event.id) &&
+            event.date > now &&
+            event.date.timeIntervalSince(now) <= 5 * 60
+        }
+        withAnimation(TS.Animation.smooth) {
+            callAlertMeeting = meeting
         }
     }
 

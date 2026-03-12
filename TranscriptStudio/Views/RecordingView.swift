@@ -374,6 +374,14 @@ struct RecordingView: View {
                     .font(TS.Font.footnoteMedium)
                     .foregroundStyle(Color.brandSecondary)
                 Spacer()
+                Button {
+                    recordingVM.cancelUpload()
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(Color.brandSecondary.opacity(0.6))
+                }
+                .buttonStyle(.plain)
+                .help("Upload annuleren")
             }
             .padding(TS.Spacing.sm)
             .background {

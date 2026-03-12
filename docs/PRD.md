@@ -1,6 +1,6 @@
 # TranscriptStudio — Product Requirements Document
 
-_Last updated: 2026-03-05_
+_Last updated: 2026-03-12_
 
 ---
 
@@ -62,6 +62,7 @@ The product consists of three client surfaces sharing a common backend:
 - Client receives real-time status via Server-Sent Events at `GET /tstudio/api/task/{id}/stream`.
 - Status pipeline: `pending → uploading → converting → transcribing → transcribed → processingWebhook → completed`.
 - Re-transcription supported within 7-day audio retention window.
+- **Hallucination detection**: Backend detects garbled/nonsensical Whisper output (repetitive patterns, nonsense tokens) when audio contains no clear speech. Returns `no_speech` status instead of garbage transcript text.
 
 ### 3.3 Local / On-Device Transcription
 
@@ -111,11 +112,13 @@ The product consists of three client surfaces sharing a common backend:
 | Platform | Integration |
 |---------|-----------|
 | macOS | EventKit (local + Exchange calendars) |
-| Windows | Microsoft Graph API (Microsoft 365) |
+| Windows | Microsoft Graph API (Microsoft 365) via OAuth PKCE + deep-link callback |
 
 - Detects upcoming meetings and shows an overlay alert when a call starts.
 - Meeting title used to auto-suggest profile for note generation.
 - Change detection: `EKEventStoreChangedNotification` (macOS) + timer polling as fallback.
+- **Windows OAuth flow**: Opens system browser for Microsoft login → deep-link callback (`transcript-studio://auth/callback`) → token exchange via Tauri proxy (bypasses CORS). Requires Azure AD App Registration with custom redirect URI.
+- **Admin configuration**: MS365 `client_id` and `tenant_id` set via admin settings panel, distributed to clients via `/settings/me` endpoint.
 
 ### 3.9 UI Surfaces (macOS)
 

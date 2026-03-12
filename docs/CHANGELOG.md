@@ -5,6 +5,27 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2026-03-12] — Microsoft 365 OAuth fix, hallucination detection, transcript visibility
+
+### Fixed
+- **OAuth token exchange CORS failure** (Windows): `microsoftGraph.ts` used browser `fetch()` to call Microsoft's `/oauth2/v2.0/token` endpoint. Microsoft only returns CORS headers for SPA-type redirect URIs, not desktop/mobile custom schemes (`transcript-studio://auth/callback`). Replaced all `fetch()` calls to Microsoft APIs with Tauri `proxy_request` command (reqwest in Rust), which bypasses CORS entirely.
+- **Deep-link payload parsing** (Windows): Tauri deep-link plugin emits URLs as a JSON array (`["transcript-studio://..."]`), but `event.payload().to_string()` produced the raw JSON string. Added `serde_json` array parsing with fallback to quote-trimming in `lib.rs`.
+- **Admin settings save HTTP 500** (backend): `save_setting()` in `admin.py` used SQLite-only `INSERT OR REPLACE` syntax. Production runs PostgreSQL, which requires `INSERT ... ON CONFLICT DO UPDATE`. Fixed by importing the PostgreSQL-compatible `save_setting` from `db_operations.py`.
+- **Transcript visibility** (Windows): Transcripts not appearing in the list after login — fixed store initialization and data fetching order.
+
+### Added
+- **Whisper hallucination detection** (backend): Added detection for garbled/hallucinated Whisper output when audio files contain no clear speech. Checks for repetitive patterns, nonsense character sequences, and statistically improbable token distributions. Returns `no_speech` status instead of garbage transcript text.
+
+### Decisions
+- DEC-027: Route Microsoft Graph API through Tauri proxy_request for CORS bypass (see [DECISIONS.md](DECISIONS.md))
+
+### Notes
+- The `transcript-studio://auth/callback` redirect URI must be registered in Azure AD App Registration under "Mobile and desktop applications" — not as SPA type
+- All three Microsoft API calls (token exchange, user profile, calendar events) now use `proxy_request` for consistency
+- Previous OAuth attempts showed correct authorization codes arriving via deep-link — the failure was exclusively in the token exchange step
+
+---
+
 ## [2026-03-11] — Browser-native upload replaces reqwest multipart (v1.0.27)
 
 ### Fixed

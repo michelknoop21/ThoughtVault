@@ -19,6 +19,7 @@ Cross-platform audio transcription app with native macOS (Swift 6) and Windows (
 - Node.js 20+
 - Rust toolchain via [rustup](https://rustup.rs)
 - Tauri CLI: `cargo install tauri-cli`
+- **Must be developed on a Windows machine** (WASAPI audio capture, native window effects)
 
 ### Backend
 - Docker + Docker Compose
@@ -26,25 +27,31 @@ Cross-platform audio transcription app with native macOS (Swift 6) and Windows (
 
 ---
 
-## Development
+## First-time setup
+
+### Git hooks (required)
+```bash
+git config core.hooksPath .githooks
+```
+This enables automatic patch version bumping on commits to `main`.
 
 ### macOS
 ```bash
 open TranscriptStudio.xcodeproj
-# Build & run from Xcode, or via CLI:
-xcodebuild -scheme TranscriptStudio -sdk macosx build CODE_SIGNING_ALLOWED=NO
+# Build & run from Xcode, or via CLI (without code signing):
+xcodebuild -project TranscriptStudio.xcodeproj -scheme TranscriptStudio -configuration Debug build CODE_SIGNING_ALLOWED=NO
 ```
 
 ### Windows
 ```bash
 cd transcript-studio-windows
-npm install          # must run inside Windows VM (see .npmrc)
-npm run tauri dev
+npm install          # must run inside Windows environment
+npm run tauri dev    # starts Vite dev server + Tauri window
 ```
 
-### Backend
+### Backend (separate repo)
 ```bash
-# See backend repo / Docker Compose configuration
+# See ../transcript-studio-backend/ for Docker Compose configuration
 docker compose up
 ```
 
@@ -54,11 +61,17 @@ docker compose up
 
 Both clients default to `https://n8n.prezent.nl` as the backend server. The URL is configurable in the app's Settings screen — no environment variables or `.env` files required on the client side.
 
+### Microsoft 365 Calendar (Windows)
+Requires Azure AD App Registration with:
+- Redirect URI: `transcript-studio://auth/callback` (type: Mobile and desktop applications)
+- API permissions: `User.Read`, `Calendars.Read`
+- Admin configures `ms365_client_id` and `ms365_tenant_id` via the admin settings panel
+
 ---
 
 ## Version
 
-Current version: **1.0.22** (tracked in `VERSION` file, auto-bumped on commits to `main`).
+Current version: **1.0.28** (tracked in `VERSION` file, auto-bumped on commits to `main`).
 
 Repository: [gitlab.prezent.nl/michelk/transcript-studio-native](https://gitlab.prezent.nl/michelk/transcript-studio-native)
 
@@ -71,6 +84,7 @@ Release artifacts (DMG/MSI) are built and distributed via scripts in `scripts/`:
 ```bash
 ./scripts/release.sh              # Full pipeline: sync version → build → upload
 ./scripts/release.sh --no-upload  # Build without uploading
+./scripts/sync-version.sh         # Sync VERSION to all platform configs
 ```
 
 Or use the `.command` files in `scripts/` — double-click in Finder to run.
@@ -78,6 +92,18 @@ Or use the `.command` files in `scripts/` — double-click in Finder to run.
 Downloads hosted at: `https://n8n.prezent.nl/tstudio/download/`
 
 See [RELEASE.md](RELEASE.md) for the complete guide.
+
+---
+
+## Troubleshooting
+
+| Problem | Solution |
+|---------|----------|
+| macOS build fails with signing error | Add `CODE_SIGNING_ALLOWED=NO` flag, or set your Team in Xcode |
+| Windows `npm install` fails | Must run on Windows, not macOS — native WASAPI bindings require Windows |
+| Version not bumping on commit | Run `git config core.hooksPath .githooks` to activate the post-commit hook |
+| OAuth callback not working (Windows) | Verify `transcript-studio://auth/callback` is registered in Azure AD as "Mobile and desktop" redirect URI (NOT SPA type) |
+| Upload 422 error (Windows) | Upload uses browser `FormData` + `fetch()` — ensure CORS allows Tauri origins (`https://tauri.localhost`, `http://localhost:1420`) |
 
 ---
 

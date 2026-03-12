@@ -72,7 +72,7 @@ function mapTranscript(raw: unknown): Transcript {
   return {
     id: safeString(r.id ?? r.task_id, ""),
     title: safeString(r.title ?? r.filename, "Naamloze opname"),
-    raw_transcription: safeOptionalString(r.raw_transcription, r.transcription),
+    raw_transcription: safeOptionalString(r.raw_transcription, r.transcription, r.original_transcription),
     notule_html: safeOptionalString(r.notule_html, r.result),
     duration_seconds: Number(r.duration ?? r.duration_seconds ?? 0),
     profile_name: safeOptionalString(r.profile_name),
@@ -302,7 +302,8 @@ class APIService {
   async uploadRecording(
     filePath: string,
     profileId: string,
-    mode: string
+    mode: string,
+    signal?: AbortSignal
   ): Promise<{ task_id: string }> {
     const authStore = useAuthStore.getState();
     if (authStore.isTokenExpired()) {
@@ -330,6 +331,7 @@ class APIService {
         "X-User-Token": this.token || "",
       },
       body: formData,
+      signal,
     });
 
     if (!response.ok) {
@@ -360,7 +362,9 @@ class APIService {
       throw new Error(errorMessage);
     }
 
-    return await response.json();
+    const result = await response.json();
+    if (import.meta.env.DEV) console.log(`[API] Upload complete → task_id: ${result.task_id}`);
+    return result;
   }
 
   // Profiles

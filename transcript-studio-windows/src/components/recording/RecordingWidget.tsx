@@ -17,12 +17,33 @@ export function RecordingWidget() {
   const [state, setState] = useState<WidgetState>("recording");
   const levelsBufferRef = useRef<number[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const startedAtRef = useRef<number>(Date.now());
+  const pausedDurationRef = useRef<number>(0);
+  const pausedAtRef = useRef<number | null>(null);
 
   useEffect(() => {
     const normalizeLevel = createAudioLevelNormalizer();
 
+    function calcElapsed() {
+      const now = Date.now();
+      const totalPaused = pausedDurationRef.current + (pausedAtRef.current ? now - pausedAtRef.current : 0);
+      return Math.floor((now - startedAtRef.current - totalPaused) / 1000);
+    }
+
+    // Receive synced start time from main window
+    const unlistenSync = listen<{ recordingStartedAt: number | null; pausedDuration: number }>(
+      "widget-sync-timer",
+      (event) => {
+        if (event.payload.recordingStartedAt) {
+          startedAtRef.current = event.payload.recordingStartedAt;
+          pausedDurationRef.current = event.payload.pausedDuration ?? 0;
+          setElapsed(calcElapsed());
+        }
+      }
+    );
+
     timerRef.current = setInterval(() => {
-      setElapsed((s) => s + 1);
+      setElapsed(calcElapsed());
     }, 1000);
 
     const unlistenLevel = listen<number>("audio-level", (event) => {
@@ -39,6 +60,7 @@ export function RecordingWidget() {
 
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
+      unlistenSync.then((fn) => fn());
       unlistenLevel.then((fn) => fn());
       unlistenStopped.then((fn) => fn());
     };
@@ -59,10 +81,20 @@ export function RecordingWidget() {
     try {
       if (state === "paused") {
         await resumeRecording();
-        timerRef.current = setInterval(() => setElapsed((s) => s + 1), 1000);
+        // Accumulate paused duration
+        if (pausedAtRef.current) {
+          pausedDurationRef.current += Date.now() - pausedAtRef.current;
+          pausedAtRef.current = null;
+        }
+        timerRef.current = setInterval(() => {
+          const now = Date.now();
+          const totalPaused = pausedDurationRef.current;
+          setElapsed(Math.floor((now - startedAtRef.current - totalPaused) / 1000));
+        }, 1000);
         setState("recording");
       } else {
         await pauseRecording();
+        pausedAtRef.current = Date.now();
         if (timerRef.current) clearInterval(timerRef.current);
         setState("paused");
       }

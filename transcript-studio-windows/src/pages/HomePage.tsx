@@ -38,6 +38,8 @@ export function HomePage() {
     loadRecentTranscripts();
     if (calendar.isConnected) {
       loadCalendarEvents();
+      const interval = setInterval(loadCalendarEvents, 5 * 60 * 1000);
+      return () => clearInterval(interval);
     }
   }, []);
 
@@ -57,7 +59,9 @@ export function HomePage() {
 
   async function loadCalendarEvents() {
     const events = await MicrosoftGraphService.getUpcomingEvents();
-    setUpcomingEvents(events.slice(0, 3));
+    const now = Date.now();
+    const future = events.filter((e) => new Date(e.end).getTime() > now);
+    setUpcomingEvents(future.slice(0, 3));
   }
 
   function handleQuickStart(mode: "microphone" | "combined") {

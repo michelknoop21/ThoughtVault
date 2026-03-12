@@ -1,3 +1,4 @@
+import { invoke } from "@tauri-apps/api/core";
 import type { CalendarEvent } from "../types";
 import { useCalendarStore } from "../stores/calendarStore";
 import { useSettingsStore } from "../stores/settingsStore";
@@ -78,33 +79,48 @@ export class MicrosoftGraphService {
     const tenantId = settings.ms365_tenant_id!;
     const clientId = settings.ms365_client_id!;
 
-    const tokenResponse = await fetch(
-      `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`,
+    // Use Tauri proxy to bypass CORS — Microsoft's token endpoint doesn't return
+    // CORS headers for non-SPA (desktop/mobile) redirect URIs
+    const tokenBody = new URLSearchParams({
+      client_id: clientId,
+      grant_type: "authorization_code",
+      code,
+      redirect_uri: "transcript-studio://auth/callback",
+      code_verifier: this.codeVerifier,
+      scope: SCOPES.join(" "),
+    }).toString();
+
+    const tokenResponse = await invoke<{ status: number; body: string; headers: Record<string, string> }>(
+      "proxy_request",
       {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({
-          client_id: clientId,
-          grant_type: "authorization_code",
-          code,
-          redirect_uri: "transcript-studio://auth/callback",
-          code_verifier: this.codeVerifier,
-          scope: SCOPES.join(" "),
-        }),
+        request: {
+          url: `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`,
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: tokenBody,
+        },
       }
     );
 
-    if (!tokenResponse.ok) {
-      throw new Error("Token uitwisseling mislukt");
+    if (tokenResponse.status !== 200) {
+      console.error("[OAuth] Token exchange failed:", tokenResponse.status, tokenResponse.body);
+      throw new Error(`Token uitwisseling mislukt: ${tokenResponse.status}`);
     }
 
-    const tokens = await tokenResponse.json();
+    const tokens = JSON.parse(tokenResponse.body);
 
-    // Get user profile
-    const profileResponse = await fetch(`${GRAPH_BASE}/me`, {
-      headers: { Authorization: `Bearer ${tokens.access_token}` },
-    });
-    const profile = await profileResponse.json();
+    // Get user profile via proxy
+    const profileResponse = await invoke<{ status: number; body: string; headers: Record<string, string> }>(
+      "proxy_request",
+      {
+        request: {
+          url: `${GRAPH_BASE}/me`,
+          method: "GET",
+          headers: { Authorization: `Bearer ${tokens.access_token}` },
+        },
+      }
+    );
+    const profile = JSON.parse(profileResponse.body);
 
     const calendarStore = useCalendarStore.getState();
     calendarStore.setConnected(
@@ -134,23 +150,26 @@ export class MicrosoftGraphService {
     });
 
     try {
-      const response = await fetch(
-        `${GRAPH_BASE}/me/calendarView?${params}`,
+      const response = await invoke<{ status: number; body: string; headers: Record<string, string> }>(
+        "proxy_request",
         {
-          headers: { Authorization: `Bearer ${calendarStore.accessToken}` },
+          request: {
+            url: `${GRAPH_BASE}/me/calendar/calendarView?${params}`,
+            method: "GET",
+            headers: { Authorization: `Bearer ${calendarStore.accessToken}` },
+          },
         }
       );
 
-      if (!response.ok) {
+      if (response.status !== 200) {
         if (response.status === 401) {
-          // Token expired
           calendarStore.disconnect();
           return [];
         }
         throw new Error(`Graph API error: ${response.status}`);
       }
 
-      const data = await response.json();
+      const data = JSON.parse(response.body);
       const events: CalendarEvent[] = (data.value || []).map((e: Record<string, unknown>) => ({
         id: e.id as string,
         title: e.subject as string,

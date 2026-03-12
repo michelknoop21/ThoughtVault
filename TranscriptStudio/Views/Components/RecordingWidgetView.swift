@@ -267,6 +267,14 @@ struct RecordingWidgetView: View {
                     .rotationEffect(.degrees(-90))
             }
             .frame(width: 20, height: 20)
+
+            widgetIconButton(
+                icon: "xmark",
+                color: Color.labelSecondary,
+                accessibilityLabel: "Upload annuleren"
+            ) {
+                recordingVM.cancelUpload()
+            }
         }
         .padding(.horizontal, 4)
     }

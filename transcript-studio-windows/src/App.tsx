@@ -16,6 +16,7 @@ import { AccountPage } from "./pages/AccountPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { AdminPage } from "./pages/AdminPage";
 import FeedbackWidget from "./components/FeedbackWidget";
+import { ProcessingBar } from "./components/ProcessingBar";
 import { OnboardingWizard } from "./components/onboarding/OnboardingWizard";
 import { useAuthStore } from "./stores/authStore";
 import { useSettingsStore } from "./stores/settingsStore";
@@ -23,6 +24,7 @@ import { useProfilesStore } from "./stores/profilesStore";
 import { MicrosoftGraphService } from "./services/microsoftGraph";
 import { api } from "./services/api";
 import { initCrashReporter } from "./services/crashReporter";
+import { initMeetingNotifications } from "./services/meetingNotifications";
 import type { Profile } from "./types";
 
 // Initialize crash reporter immediately
@@ -100,6 +102,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
         <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
           <Sidebar />
           <main className="app-main">
+            <ProcessingBar />
             <OfflineQueueBanner />
             <div className="app-main-content">
               {children}
@@ -268,6 +271,12 @@ export default function App() {
     })();
   }, []);
 
+  // Initialize meeting notification permissions
+  useEffect(() => {
+    if (!("__TAURI_INTERNALS__" in window)) return;
+    initMeetingNotifications().catch(() => {});
+  }, []);
+
   // Detect system theme preference
   useEffect(() => {
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
@@ -280,10 +289,20 @@ export default function App() {
   }, []);
 
   // Handle Microsoft 365 OAuth deep-link callbacks
+  // The deep-link plugin payload is a JSON array of URLs, e.g. ["transcript-studio://auth/callback?code=..."]
   useEffect(() => {
     const unlisten = listen<string>("oauth-callback", async (event) => {
       try {
-        await MicrosoftGraphService.handleAuthCallback(event.payload);
+        let callbackUrl = event.payload;
+        // Payload from Rust may be a JSON array string — extract the URL
+        try {
+          const parsed = JSON.parse(callbackUrl);
+          if (Array.isArray(parsed) && parsed.length > 0) callbackUrl = parsed[0];
+        } catch { /* not JSON, use as-is */ }
+
+        if (!callbackUrl?.startsWith("transcript-studio://auth/callback")) return;
+        console.log("[OAuth] Processing callback URL:", callbackUrl);
+        await MicrosoftGraphService.handleAuthCallback(callbackUrl);
       } catch (err) {
         console.error("[OAuth] Callback error:", err);
       }

@@ -1684,6 +1684,121 @@
 }
 
 /* ============================================================
+   Processing Bar — global upload/transcription status
+   ============================================================ */
+
+.processing-bar {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 8px 12px;
+  background: var(--surface-secondary);
+}
+
+.processing-bar-item {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-xs);
+  background: var(--card-bg);
+  backdrop-filter: blur(var(--card-blur));
+  -webkit-backdrop-filter: blur(var(--card-blur));
+  border: 1px solid var(--card-border);
+}
+
+.processing-bar-track {
+  position: absolute;
+  inset: 0;
+  opacity: 0.08;
+  transition: width 400ms var(--ease-gentle);
+}
+
+.processing-bar-content {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  font-size: var(--font-caption);
+}
+
+.processing-bar-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+}
+
+.processing-bar-pulse {
+  display: block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  animation: processing-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes processing-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.85); }
+}
+
+.processing-bar-label {
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.processing-bar-error {
+  flex: 1;
+  min-width: 0;
+  color: var(--status-error);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.processing-bar-percent {
+  margin-left: auto;
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.processing-bar-action {
+  all: unset;
+  cursor: pointer;
+  font-size: var(--font-caption);
+  font-weight: 600;
+  color: var(--interactive-text);
+  padding: 2px 8px;
+  border-radius: var(--radius-xs);
+  transition: background var(--duration-quick) var(--ease-quick);
+}
+.processing-bar-action:hover {
+  background: var(--interactive-bg-hover);
+}
+
+.processing-bar-dismiss {
+  all: unset;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  color: var(--text-tertiary);
+  transition: background var(--duration-quick) var(--ease-quick), color var(--duration-quick) var(--ease-quick);
+}
+.processing-bar-dismiss:hover {
+  background: var(--fill-control-hover);
+  color: var(--text-primary);
+}
+
+/* ============================================================
    Sidebar extras
    ============================================================ */
 

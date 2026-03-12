@@ -21,6 +21,7 @@
 		AA000051 /* PermissionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000051 /* PermissionManager.swift */; };
 		AA000052 /* PermissionBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000052 /* PermissionBanner.swift */; };
 		AA000053 /* EditableHTMLWebView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000053 /* EditableHTMLWebView.swift */; };
+		AA000054 /* MeetingNotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000054 /* MeetingNotificationService.swift */; };
 		AA000011 /* CrashReporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000011 /* CrashReporter.swift */; };
 		AA000012 /* DebugLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000012 /* DebugLogger.swift */; };
 		AA000013 /* KeychainService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000013 /* KeychainService.swift */; };
@@ -83,6 +84,7 @@
 		FA000051 /* PermissionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionManager.swift; sourceTree = "<group>"; };
 		FA000052 /* PermissionBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionBanner.swift; sourceTree = "<group>"; };
 		FA000053 /* EditableHTMLWebView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditableHTMLWebView.swift; sourceTree = "<group>"; };
+		FA000054 /* MeetingNotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeetingNotificationService.swift; sourceTree = "<group>"; };
 		FA000011 /* CrashReporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrashReporter.swift; sourceTree = "<group>"; };
 		FA000012 /* DebugLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugLogger.swift; sourceTree = "<group>"; };
 		FA000013 /* KeychainService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainService.swift; sourceTree = "<group>"; };
@@ -210,6 +212,7 @@
 				FA000012 /* DebugLogger.swift */,
 				FA000013 /* KeychainService.swift */,
 				FA000014 /* LLMService.swift */,
+				FA000054 /* MeetingNotificationService.swift */,
 				FA000050 /* MicrosoftGraphService.swift */,
 				FA000015 /* NetworkMonitor.swift */,
 				FA000051 /* PermissionManager.swift */,
@@ -431,6 +434,7 @@
 				AA000051 /* PermissionManager.swift in Sources */,
 				AA000052 /* PermissionBanner.swift in Sources */,
 				AA000053 /* EditableHTMLWebView.swift in Sources */,
+				AA000054 /* MeetingNotificationService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

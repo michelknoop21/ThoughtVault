@@ -21,6 +21,8 @@ struct TranscriptStudioApp: App {
                         protecting: recordingVM.offlineQueue.queuedAudioURLs
                     )
                     await recordingVM.processQueueOnStartupIfNeeded()
+                    MeetingNotificationService.shared.setup()
+                    await MeetingNotificationService.shared.requestPermission()
                 }
         }
 #if os(macOS)

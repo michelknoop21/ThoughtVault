@@ -1,5 +1,6 @@
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { availableMonitors } from "@tauri-apps/api/window";
+import { emit } from "@tauri-apps/api/event";
 
 /**
  * Opens the floating recording widget window.
@@ -33,7 +34,7 @@ export async function openWidgetWindow(): Promise<void> {
   }
 
   try {
-    new WebviewWindow("recording-widget", {
+    const widget = new WebviewWindow("recording-widget", {
       url: "widget.html",
       title: "Opname",
       width,
@@ -43,12 +44,32 @@ export async function openWidgetWindow(): Promise<void> {
       maxHeight: 56,
       decorations: false,
       transparent: true,
+      shadow: false,
       resizable: false,
       alwaysOnTop: true,
       skipTaskbar: true,
       center: false,
+      visible: false, // start hidden, show after creation completes
       x,
       y,
+    });
+
+    // Wait for the window to be fully created, then show it and send the start time
+    widget.once("tauri://created", async () => {
+      try {
+        await widget.show();
+        await widget.setFocus();
+        // Send the recording start timestamp so the widget timer stays in sync
+        const { useRecordingStore } = await import("../stores/recordingStore");
+        const { recordingStartedAt, pausedDuration } = useRecordingStore.getState();
+        await emit("widget-sync-timer", { recordingStartedAt, pausedDuration });
+      } catch (e) {
+        console.error("[Widget] Show after create failed:", e);
+      }
+    });
+
+    widget.once("tauri://error", (e) => {
+      console.error("[Widget] Window creation error:", e);
     });
   } catch (err) {
     console.error("[Widget] Failed to create window:", err);

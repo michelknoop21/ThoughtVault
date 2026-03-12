@@ -30,7 +30,11 @@ export const useTranscriptsStore = create<TranscriptsState>()((set) => ({
   isLoading: false,
   setTranscripts: (transcripts) => set({ transcripts }),
   addTranscript: (transcript) =>
-    set((state) => ({ transcripts: [transcript, ...state.transcripts] })),
+    set((state) => ({
+      transcripts: state.transcripts.some((t) => t.id === transcript.id)
+        ? state.transcripts
+        : [transcript, ...state.transcripts],
+    })),
   updateTranscript: (id, updates) =>
     set((state) => ({
       transcripts: state.transcripts.map((t) =>

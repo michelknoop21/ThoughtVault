@@ -8,11 +8,9 @@ import {
   ArrowLeft24Regular,
   ArrowUpload24Regular,
   VideoChat24Regular,
-  Checkmark24Regular,
-  Dismiss24Regular,
 } from "@fluentui/react-icons";
 import { listen } from "@tauri-apps/api/event";
-import { useRecordingStore } from "../stores/recordingStore";
+import { useRecordingStore, registerAbortController, unregisterAbortController } from "../stores/recordingStore";
 import { useSettingsStore } from "../stores/settingsStore";
 import { useTranscriptsStore } from "../stores/transcriptsStore";
 import { useProfilesStore } from "../stores/profilesStore";
@@ -52,11 +50,13 @@ export function RecordingPage() {
   const mode = useRecordingStore((s) => s.mode);
   const phase = useRecordingStore((s) => s.phase);
   const autoStart = useRecordingStore((s) => s.autoStart);
-  const backgroundTasks = useRecordingStore((s) => s.backgroundTasks);
   const setMode = useRecordingStore((s) => s.setMode);
   const setPhase = useRecordingStore((s) => s.setPhase);
   const setFilePath = useRecordingStore((s) => s.setFilePath);
   const setAutoStart = useRecordingStore((s) => s.setAutoStart);
+  const startTimer = useRecordingStore((s) => s.startTimer);
+  const pauseTimer = useRecordingStore((s) => s.pauseTimer);
+  const resumeTimer = useRecordingStore((s) => s.resumeTimer);
   const reset = useRecordingStore((s) => s.reset);
   const addBackgroundTask = useRecordingStore((s) => s.addBackgroundTask);
   const updateBackgroundTask = useRecordingStore((s) => s.updateBackgroundTask);
@@ -126,7 +126,15 @@ export function RecordingPage() {
       filePathRef.current = filePath;
       setFilePath(filePath);
       setPhase("recording");
+      startTimer();
       openWidgetWindow().catch((e) => console.error("[Recording] Widget open failed:", e));
+      // Minimize main window if recording was auto-started from calendar alert
+      if (useRecordingStore.getState().minimizeOnAutoStart) {
+        useRecordingStore.getState().setMinimizeOnAutoStart(false);
+        import("@tauri-apps/api/window").then(({ getCurrentWindow }) => {
+          getCurrentWindow().minimize();
+        }).catch((e) => console.error("[Recording] Minimize failed:", e));
+      }
     } catch (err) {
       console.error("[Recording] Start failed:", err);
       setError(err instanceof Error ? err.message : "Opname starten mislukt");
@@ -169,10 +177,13 @@ export function RecordingPage() {
       reset();
 
       // Upload and SSE tracking happen in the background
+      const abortController = new AbortController();
+      registerAbortController(tempId, abortController);
       try {
-        const { task_id } = await api.uploadRecording(filePath, selectedProfileId, mode);
+        const { task_id } = await api.uploadRecording(filePath, selectedProfileId, mode, abortController.signal);
 
-        // Replace temp task with real task_id
+        // Replace temp task with real task_id — move abort controller to new key
+        unregisterAbortController(tempId);
         updateBackgroundTask(tempId, { task_id, status: "uploading", progress: 10 });
 
         // SSE updates go to background task store (use real task_id from here)
@@ -192,6 +203,13 @@ export function RecordingPage() {
           }
         );
       } catch (err) {
+        unregisterAbortController(tempId);
+        // User cancelled — just remove the task, don't enqueue for retry
+        if (err instanceof DOMException && err.name === "AbortError") {
+          console.log("[Recording] Upload cancelled by user");
+          removeBackgroundTask(tempId);
+          return;
+        }
         const msg = err instanceof Error ? err.message : "Upload mislukt";
         console.error("[Recording] Upload failed:", msg);
         // Upload failed — enqueue for retry
@@ -210,6 +228,7 @@ export function RecordingPage() {
     try {
       await pauseRecording();
       setPhase("paused");
+      pauseTimer();
     } catch (error) {
       console.error("[Recording] Pause failed:", error);
       setPhase("idle");
@@ -220,6 +239,7 @@ export function RecordingPage() {
     try {
       await resumeRecording();
       setPhase("recording");
+      resumeTimer();
     } catch (error) {
       console.error("[Recording] Resume failed:", error);
       setPhase("idle");
@@ -305,15 +325,6 @@ export function RecordingPage() {
           </div>
         )}
       </div>
-
-      {/* Background processing tasks — visible while user can start new recordings */}
-      {backgroundTasks.length > 0 && (
-        <div style={{ padding: "0 16px 16px" }}>
-          {backgroundTasks.map((bgTask) => (
-            <BackgroundTaskCard key={bgTask.task_id} task={bgTask} />
-          ))}
-        </div>
-      )}
 
       {error && (
         <div className="error-banner" style={{ margin: 16 }}>
@@ -483,17 +494,24 @@ function ActiveState({
   onPause: () => void;
   onResume: () => void;
 }) {
+  const recordingStartedAt = useRecordingStore((s) => s.recordingStartedAt);
+  const pausedAt = useRecordingStore((s) => s.pausedAt);
+  const pausedDuration = useRecordingStore((s) => s.pausedDuration);
   const [elapsed, setElapsed] = useState(0);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    if (!isPaused) {
-      timerRef.current = setInterval(() => setElapsed((s) => s + 1), 1000);
+    function calcElapsed() {
+      if (!recordingStartedAt) return 0;
+      const now = Date.now();
+      const totalPaused = pausedDuration + (pausedAt ? now - pausedAt : 0);
+      return Math.floor((now - recordingStartedAt - totalPaused) / 1000);
     }
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, [isPaused]);
+    setElapsed(calcElapsed());
+    if (!isPaused) {
+      const id = setInterval(() => setElapsed(calcElapsed()), 1000);
+      return () => clearInterval(id);
+    }
+  }, [isPaused, recordingStartedAt, pausedAt, pausedDuration]);
 
   const minutes = Math.floor(elapsed / 60).toString().padStart(2, "0");
   const seconds = (elapsed % 60).toString().padStart(2, "0");
@@ -574,95 +592,6 @@ function ActiveState({
           <span className="recording-control-label">STOP</span>
         </button>
       </div>
-    </div>
-  );
-}
-
-function BackgroundTaskCard({ task }: { task: TranscriptTask }) {
-  const navigate = useNavigate();
-  const { removeBackgroundTask } = useRecordingStore();
-
-  const status = task.status ?? "uploading";
-  const progress = task.progress ?? 0;
-  const isFailed = status === "failed";
-
-  const statusLabels: Record<string, string> = {
-    uploading: "Uploaden...",
-    converting: "Converteren...",
-    transcribing: "Transcriberen...",
-    generating: "Notulen genereren...",
-    completed: "Voltooid",
-    failed: "Mislukt",
-  };
-  const label = statusLabels[status] ?? "Verwerken...";
-
-  return (
-    <div
-      className="card card-static"
-      style={{
-        padding: "10px 14px",
-        display: "flex",
-        alignItems: "center",
-        gap: 12,
-        marginBottom: 8,
-      }}
-    >
-      {/* Status indicator */}
-      {isFailed ? (
-        <Dismiss24Regular style={{ fontSize: 16, color: "var(--status-error)", flexShrink: 0 }} />
-      ) : status === "completed" ? (
-        <Checkmark24Regular style={{ fontSize: 16, color: "var(--status-success)", flexShrink: 0 }} />
-      ) : (
-        <div className="live-dot" style={{ flexShrink: 0 }} />
-      )}
-
-      {/* Label + progress */}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-          <span className="text-body" style={{ fontWeight: 500 }}>{label}</span>
-          <span className="text-caption text-tertiary">{progress}%</span>
-        </div>
-        {isFailed && task.error_message && (
-          <p className="text-caption" style={{ color: "var(--status-error)", marginBottom: 4 }}>
-            {task.error_message}
-          </p>
-        )}
-        <div style={{
-          height: 3,
-          borderRadius: 2,
-          background: "var(--border-secondary)",
-          overflow: "hidden",
-        }}>
-          <div style={{
-            height: "100%",
-            width: `${progress}%`,
-            background: isFailed ? "var(--status-error)" : "var(--interactive-bg)",
-            borderRadius: 2,
-            transition: "width 300ms ease",
-          }} />
-        </div>
-      </div>
-
-      {/* Action button */}
-      {status === "completed" ? (
-        <button
-          className="btn btn-secondary btn-sm"
-          onClick={() => {
-            removeBackgroundTask(task.task_id);
-            navigate("/transcripts");
-          }}
-        >
-          Bekijk
-        </button>
-      ) : isFailed ? (
-        <button
-          className="btn btn-ghost btn-sm"
-          onClick={() => removeBackgroundTask(task.task_id)}
-          title="Verwijderen"
-        >
-          <Dismiss24Regular style={{ fontSize: 14 }} />
-        </button>
-      ) : null}
     </div>
   );
 }

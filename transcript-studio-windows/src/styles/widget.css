@@ -26,12 +26,15 @@ body {
   display: flex;
   align-items: center;
   height: 100%;
-  background: rgba(18, 18, 18, 0.78);
+  background: rgba(18, 18, 18, 0.88);
   backdrop-filter: blur(24px) saturate(180%);
   -webkit-backdrop-filter: blur(24px) saturate(180%);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 28px;
   overflow: hidden;
+  /* Force-clip backdrop-filter to the border-radius shape */
+  -webkit-mask-image: -webkit-radial-gradient(circle, white 100%, black 100%);
+  mask-image: radial-gradient(circle, white 100%, black 100%);
   box-shadow:
     0 6px 20px rgba(0, 0, 0, 0.30),
     0 0 24px rgba(229, 0, 116, 0.12);

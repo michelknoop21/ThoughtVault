@@ -9,6 +9,7 @@ import {
 import { useCalendarStore } from "../../stores/calendarStore";
 import { useRecordingStore } from "../../stores/recordingStore";
 import { MicrosoftGraphService } from "../../services/microsoftGraph";
+import { sendMeetingNotification } from "../../services/meetingNotifications";
 import type { CalendarEvent } from "../../types";
 
 const ALERT_LOOKAHEAD_MS = 5 * 60 * 1000; // 5 minutes before meeting
@@ -50,6 +51,10 @@ export function CallAlertOverlay() {
     });
 
     setUpcomingAlert(upcoming || null);
+    // Send OS notification for the detected meeting
+    if (upcoming) {
+      sendMeetingNotification(upcoming);
+    }
   }
 
   function handleDismiss() {
@@ -63,6 +68,8 @@ export function CallAlertOverlay() {
     const mode = event.join_url ? "combined" : "microphone";
     setMode(mode);
     setAutoStart(true);
+    // Signal that main window should minimize after recording starts
+    useRecordingStore.getState().setMinimizeOnAutoStart(true);
     handleDismiss();
     navigate("/recording");
   }

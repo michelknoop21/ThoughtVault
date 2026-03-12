@@ -1,6 +1,6 @@
 # TranscriptStudio — Architecture
 
-_Last updated: 2026-03-11_
+_Last updated: 2026-03-12_
 
 ---
 
@@ -235,9 +235,10 @@ src/
 │   ├── transcripts/        # TranscriptCard, TranscriptList, NotesViewer
 │   └── FeedbackWidget.tsx  # Bug reporting and feedback submission
 ├── services/
-│   ├── api.ts              # All backend REST calls + field mapping boundary
+│   ├── api.ts              # All backend REST calls + field mapping boundary (uses Tauri proxy_request)
 │   ├── llm.ts              # Local LLM provider abstraction
-│   ├── microsoftGraph.ts   # M365 calendar via Microsoft Graph API
+│   ├── microsoftGraph.ts   # M365 calendar via Microsoft Graph API (all calls via Tauri proxy_request, DEC-027)
+│   ├── tauriCommands.ts    # TypeScript wrappers for Tauri IPC commands (audio, filesystem, system)
 │   ├── offlineQueue.ts     # Tauri plugin-store backed queue
 │   ├── sse.ts              # EventSource SSE wrapper
 │   └── crashReporter.ts    # Crash capture and structured logging
@@ -256,14 +257,15 @@ src/
 ```
 
 **Data persistence:**
-- `localStorage` — auth token, UI preferences
+- OS keychain — auth token and credentials (via `keyring` Rust crate, migrated from localStorage in v1.0.22)
+- `localStorage` — UI preferences, onboarding state
+- `sessionStorage` — OAuth state parameter (temporary, cleared after callback)
 - `Tauri plugin-store` — offline queue persistence
-- OS keychain — credentials (via Tauri `plugin-stronghold` / `keyring` crate)
 - `AppData/Recordings` — audio files (7-day cleanup)
 
 **External integrations:**
 - TranscriptStudio API at `n8n.prezent.nl` (configurable endpoint)
-- Microsoft Graph — M365 calendar access + OAuth PKCE for meeting detection
+- Microsoft Graph — M365 calendar access + OAuth PKCE for meeting detection. All Microsoft API calls (token exchange, user profile, calendar events) route through Tauri `proxy_request` command to bypass browser CORS restrictions (see DEC-027)
 - Ollama / LM Studio — local LLM generation (configurable HTTP endpoint)
 
 ---

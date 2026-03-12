@@ -195,6 +195,11 @@ final class CalendarService: @unchecked Sendable {
             self.upcomingMeetings = sorted
         }
 
+        // Schedule OS notifications for approaching meetings
+        for meeting in sorted where meeting.startsWithin(minutes: 15) {
+            await MeetingNotificationService.shared.scheduleIfNeeded(for: meeting)
+        }
+
         logger.info("CalendarService: \(sorted.count) upcoming video meetings detected")
     }
 
@@ -285,6 +290,12 @@ final class CalendarService: @unchecked Sendable {
         await MainActor.run {
             self.upcomingMeetings = events.sorted { $0.date < $1.date }
         }
+
+        // Schedule OS notifications for approaching meetings
+        for meeting in upcomingMeetings where meeting.startsWithin(minutes: 15) {
+            await MeetingNotificationService.shared.scheduleIfNeeded(for: meeting)
+        }
+
         logger.info("CalendarService: \(events.count) Microsoft 365 meetings detected")
     }
 }

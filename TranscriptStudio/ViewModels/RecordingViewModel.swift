@@ -115,6 +115,8 @@ final class RecordingViewModel {
     private var liveTranscriptionTask: Task<Void, Never>?
     @ObservationIgnored
     private var pendingRemovalTasks: [String: Task<Void, Never>] = [:]
+    @ObservationIgnored
+    private var uploadTask: Task<Void, Never>?
     private var isProcessingQueue = false
     private var networkMonitor = NetworkMonitor.shared
 
@@ -460,50 +462,72 @@ final class RecordingViewModel {
             lastFailedUploadReason = nil
         }
 
-        do {
-            let task = try await APIService.shared.uploadAudio(
-                fileURL: url,
-                profileId: profileId
-            ) { [weak self] progress in
-                Task { @MainActor in
-                    self?.uploadProgress = progress
+        uploadTask = Task {
+            do {
+                try Task.checkCancellation()
+
+                let task = try await APIService.shared.uploadAudio(
+                    fileURL: url,
+                    profileId: profileId
+                ) { [weak self] progress in
+                    Task { @MainActor in
+                        self?.uploadProgress = progress
+                    }
+                }
+
+                try Task.checkCancellation()
+
+                await MainActor.run {
+                    self.addTask(task)
+                    recordingState = .idle
+                    uploadProgress = 0
+                }
+
+                // Save local audio path reference
+                if !task.taskId.isEmpty {
+                    await startSSEStream(for: task.taskId)
+                }
+
+                // Persist local path for local audio playback
+                saveLocalAudioPath(url: url, taskId: task.taskId)
+                loadSavedRecordings()
+
+            } catch is CancellationError {
+                os_log("[RecordingVM] Upload cancelled by user", log: log, type: .info)
+                await MainActor.run {
+                    self.recordingState = .idle
+                    self.uploadProgress = 0
+                }
+            } catch let error as APIError {
+                let reason = uploadFailureReason(from: error)
+                await MainActor.run {
+                    self.lastFailedUploadURL = url
+                    self.lastFailedUploadReason = reason
+                    self.recordingState = .idle
+                    self.showRetrySheet = reason.isRetryable
+                    self.uploadProgress = 0
+                }
+                os_log("[RecordingVM] Upload failed: %{public}@", log: .default, type: .error, error.localizedDescription)
+            } catch {
+                await MainActor.run {
+                    self.lastFailedUploadURL = url
+                    self.lastFailedUploadReason = .unknown
+                    self.recordingState = .idle
+                    self.showRetrySheet = true
+                    self.uploadProgress = 0
                 }
             }
-
-            await MainActor.run {
-                self.addTask(task)
-                recordingState = .idle
-                uploadProgress = 0
-            }
-
-            // Save local audio path reference
-            if !task.taskId.isEmpty {
-                await startSSEStream(for: task.taskId)
-            }
-
-            // Persist local path for local audio playback
-            saveLocalAudioPath(url: url, taskId: task.taskId)
-            loadSavedRecordings()
-
-        } catch let error as APIError {
-            let reason = uploadFailureReason(from: error)
-            await MainActor.run {
-                self.lastFailedUploadURL = url
-                self.lastFailedUploadReason = reason
-                self.recordingState = .idle
-                self.showRetrySheet = reason.isRetryable
-                self.uploadProgress = 0
-            }
-            os_log("[RecordingVM] Upload failed: %{public}@", log: .default, type: .error, error.localizedDescription)
-        } catch {
-            await MainActor.run {
-                self.lastFailedUploadURL = url
-                self.lastFailedUploadReason = .unknown
-                self.recordingState = .idle
-                self.showRetrySheet = true
-                self.uploadProgress = 0
-            }
         }
+
+        await uploadTask?.value
+        uploadTask = nil
+    }
+
+    func cancelUpload() {
+        uploadTask?.cancel()
+        uploadTask = nil
+        recordingState = .idle
+        uploadProgress = 0
     }
 
     // MARK: - On-Device Transcription

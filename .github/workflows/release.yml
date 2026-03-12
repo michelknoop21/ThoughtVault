@@ -41,7 +41,7 @@ jobs:
             -archivePath build/TranscriptStudio.xcarchive \
             CODE_SIGNING_ALLOWED=NO \
             SKIP_INSTALL=NO \
-            SWIFT_STRICT_CONCURRENCY=targeted \
+            SWIFT_VERSION=5 \
             2>&1 | tee /tmp/xcodebuild.log | tail -30
 
       - name: Show build errors (if failed)

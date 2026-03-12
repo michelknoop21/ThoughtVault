@@ -21,6 +21,10 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Microsoft Graph** (Windows, `microsoftGraph.ts`): Minor improvements to API call handling.
 - **HomePage** (Windows, `HomePage.tsx`): UI refinements.
 
+### Decisions
+- DEC-029: Collapsible sidebar replacing columnVisibility toggle (see [DECISIONS.md](DECISIONS.md))
+- DEC-030: Auto-pagination for transcript loading (see [DECISIONS.md](DECISIONS.md))
+
 ### Notes
 - The collapsible sidebar ensures users can always access the logout button in the profile section, which was previously inaccessible when the sidebar was fully hidden.
 - Transcript pagination error handling retains partially loaded data rather than showing nothing when an error occurs mid-pagination.

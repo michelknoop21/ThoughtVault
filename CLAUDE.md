@@ -55,7 +55,7 @@ ssh michelk@3.69.205.209 "docker logs n8n_transcript_studio --tail 50"
 
 ## Gotchas
 - `notifications(named:)` gebruiken, NIET `notifications(for:)` in AuthViewModel
-- Sidebar toggle: `.toolbar(removing: .sidebarToggle)` op ELKE individuele NavigationStack tab
+- Sidebar: custom collapsible sidebar (52px icon column ↔ full sidebar), toggle via `Shift+Cmd+S`. Niet meer `columnVisibility` gebruiken (DEC-029)
 - Combined recording: `mixAudioFiles()` in RecordingViewModel (element-wise max over PCM)
 - Auth header: macOS → `X-User-Token`, Windows → `Authorization: Bearer` (beide geaccepteerd)
 - Backend `username` veld is het e-mailadres (niet `email`)

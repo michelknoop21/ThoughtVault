@@ -206,7 +206,6 @@ export function RecordingPage() {
         unregisterAbortController(tempId);
         // User cancelled — just remove the task, don't enqueue for retry
         if (err instanceof DOMException && err.name === "AbortError") {
-          console.log("[Recording] Upload cancelled by user");
           removeBackgroundTask(tempId);
           return;
         }

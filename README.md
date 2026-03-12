@@ -410,7 +410,7 @@ git add VERSION && git commit -m "chore: bump major version to 2.0.0"
 | Issue | Locatie | Workaround |
 |-------|---------|-----------|
 | `notifications(for:)` beschikbaar maar crasht | `AuthViewModel.swift` | Gebruik `notifications(named:)` voor async NotificationCenter |
-| Sidebar toggle moet per tab verwijderd worden | Alle NavigationStack tabs | `.toolbar(removing: .sidebarToggle)` op elk individueel tabblad |
+| Sidebar toggle moet per tab verwijderd worden | Alle NavigationStack tabs | Opgelost in v1.0.32: custom collapsible sidebar vervangt `columnVisibility` (DEC-029). `Shift+Cmd+S` toggle. |
 | Combined mode audio mixing | `RecordingViewModel` | Gebruikt `mixAudioFiles()` — element-wise max over PCM frames |
 | Backend cleanup verwijdert actieve taken | Server-side | `cleanup_old_tasks()` verwijdert taken >24h, ook als ze nog `queued` zijn |
 

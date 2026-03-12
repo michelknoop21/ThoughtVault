@@ -1,1343 +1,1507 @@
 <!DOCTYPE html>
-<html lang="nl">
+<html lang="nl" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Features - Transcript Studio</title>
-    <meta name="description" content="Ontdek alle features van Transcript Studio. AI transcriptie, automatische notulen, native desktop apps en meer.">
+    <meta name="description" content="Ontdek alle features van Transcript Studio. AI-transcriptie, automatische notulen, native desktop apps voor macOS en Windows.">
 
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="/tstudio/static/favicon-32x32.png">
     <link rel="apple-touch-icon" href="/tstudio/static/apple-touch-icon.png">
 
-    <!-- Google Fonts -->
+    <!-- Google Fonts: Instrument Serif (editorial display) + Outfit (body) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
     <style>
-    /* ===========================================
-       1. CSS Variables - Landing Design System
-       =========================================== */
-    :root {
-        /* Brand Colors */
-        --brand-primary: #E50074;
-        --brand-secondary: #007BC4;
-        --brand-accent: #009F3C;
-
-        /* Light Theme */
-        --landing-bg: #FFFFFF;
-        --landing-bg-alt: #F5F5F7;
-        --landing-text: #333339;
-        --landing-text-secondary: #6B6B78;
-        --landing-text-muted: #9999A6;
-        --landing-border: rgba(148, 163, 184, 0.2);
-
-        /* Glassmorphism */
-        --landing-glass-bg: rgba(255, 255, 255, 0.7);
-        --landing-glass-border: rgba(255, 255, 255, 0.4);
-        --landing-glass-hover: rgba(255, 255, 255, 0.9);
-
-        /* Shadows */
-        --landing-shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.06);
-        --landing-shadow-md: 0 8px 24px rgba(15, 23, 42, 0.08);
-        --landing-shadow-lg: 0 20px 50px rgba(15, 23, 42, 0.12);
-        --landing-shadow-glow: 0 0 60px rgba(229, 0, 116, 0.1);
-
-        /* Border Radius */
-        --radius-sm: 6px;
-        --radius-md: 12px;
-        --radius-lg: 16px;
-        --radius-xl: 20px;
-        --radius-2xl: 25px;
-
-        /* Spacing */
-        --space-1: 0.25rem;
-        --space-2: 0.5rem;
-        --space-3: 0.75rem;
-        --space-4: 1rem;
-        --space-6: 1.5rem;
-        --space-8: 2rem;
-        --space-10: 2.5rem;
-        --space-12: 3rem;
-        --space-16: 4rem;
-        --space-20: 5rem;
-        --space-24: 6rem;
-
-        /* Motion */
-        --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
-        --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
-        --dur-fast: 150ms;
-        --dur: 200ms;
-        --dur-slow: 400ms;
-    }
-
-    /* Dark Theme */
-    [data-theme="dark"] {
-        --landing-bg: #0B0C15;
-        --landing-bg-alt: #191C28;
-        --landing-text: #F2F2F7;
-        --landing-text-secondary: #9E9EAE;
-        --landing-text-muted: #6B6B7A;
-        --landing-border: rgba(255, 255, 255, 0.1);
-
-        --landing-glass-bg: rgba(22, 24, 30, 0.8);
-        --landing-glass-border: rgba(255, 255, 255, 0.08);
-        --landing-glass-hover: rgba(32, 34, 42, 0.9);
-
-        --landing-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
-        --landing-shadow-md: 0 8px 24px rgba(0, 0, 0, 0.4);
-        --landing-shadow-lg: 0 20px 50px rgba(0, 0, 0, 0.5);
-        --landing-shadow-glow: 0 0 80px rgba(229, 0, 116, 0.15);
-    }
-
-    /* ===========================================
-       2. Base Styles
-       =========================================== */
+    /* ============================================
+       RESET & BASE
+       ============================================ */
     *, *::before, *::after {
         box-sizing: border-box;
         margin: 0;
         padding: 0;
     }
 
+    /* ============================================
+       DESIGN TOKENS
+       ============================================ */
+    :root {
+        /* Brand palette */
+        --magenta: oklch(0.55 0.24 0);
+        --blue: oklch(0.55 0.15 240);
+        --green: oklch(0.58 0.17 150);
+        --orange: oklch(0.72 0.16 65);
+
+        /* Brand hex fallbacks for backgrounds where oklch might not interpolate well */
+        --magenta-hex: #E50074;
+        --blue-hex: #007BC4;
+        --green-hex: #009F3C;
+        --orange-hex: #F39200;
+
+        /* Typography */
+        --font-display: 'Instrument Serif', Georgia, serif;
+        --font-body: 'Outfit', system-ui, sans-serif;
+
+        /* Light theme */
+        --bg: oklch(0.97 0.005 80);
+        --bg-dark: #0D1117;
+        --bg-surface: oklch(0.99 0.003 80);
+        --text: oklch(0.15 0.01 260);
+        --text-secondary: oklch(0.40 0.01 260);
+        --text-muted: oklch(0.55 0.01 260);
+        --border: oklch(0.90 0.005 80);
+        --border-hover: oklch(0.82 0.005 80);
+
+        /* Spacing scale (8px base) */
+        --sp-1: 4px;
+        --sp-2: 8px;
+        --sp-3: 12px;
+        --sp-4: 16px;
+        --sp-5: 24px;
+        --sp-6: 32px;
+        --sp-7: 48px;
+        --sp-8: 64px;
+        --sp-9: 96px;
+        --sp-10: 128px;
+
+        /* Radii */
+        --radius-sm: 4px;
+        --radius-md: 8px;
+        --radius-lg: 12px;
+    }
+
+    [data-theme="dark"] {
+        --bg: oklch(0.12 0.01 260);
+        --bg-surface: oklch(0.16 0.01 260);
+        --text: oklch(0.93 0.005 80);
+        --text-secondary: oklch(0.70 0.005 80);
+        --text-muted: oklch(0.50 0.01 80);
+        --border: oklch(0.24 0.01 260);
+        --border-hover: oklch(0.32 0.01 260);
+        --bg-dark: #080B10;
+    }
+
+    /* ============================================
+       BASE STYLES
+       ============================================ */
     html {
         scroll-behavior: smooth;
     }
 
+    @media (prefers-reduced-motion: reduce) {
+        html { scroll-behavior: auto; }
+    }
+
     body {
-        font-family: system-ui, -apple-system, 'Plus Jakarta Sans', sans-serif;
-        background: var(--landing-bg);
-        color: var(--landing-text);
+        font-family: var(--font-body);
+        font-size: 16px;
         line-height: 1.6;
+        color: var(--text);
+        background: var(--bg);
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
         overflow-x: hidden;
-    }
-
-    h1, h2, h3, h4, h5, h6 {
-        font-family: system-ui, -apple-system, 'Space Grotesk', 'Plus Jakarta Sans', sans-serif;
-        font-weight: 700;
-        line-height: 1.2;
-        letter-spacing: -0.02em;
-        color: var(--landing-text);
-    }
-
-    a {
-        color: inherit;
-        text-decoration: none;
     }
 
     img {
         max-width: 100%;
         height: auto;
+        display: block;
     }
 
-    /* ===========================================
-       3. Header & Navigation
-       =========================================== */
-    .landing-header {
+    /* ============================================
+       ACCESSIBILITY
+       ============================================ */
+    .skip-link {
+        position: absolute;
+        top: -100%;
+        left: var(--sp-4);
+        background: var(--magenta-hex);
+        color: #FFFFFF;
+        padding: var(--sp-3) var(--sp-5);
+        border-radius: var(--radius-sm);
+        font-weight: 600;
+        z-index: 9999;
+        text-decoration: none;
+    }
+
+    .skip-link:focus {
+        top: var(--sp-4);
+    }
+
+    :focus-visible {
+        outline: 2px solid var(--magenta-hex);
+        outline-offset: 2px;
+    }
+
+    /* ============================================
+       CONTAINER
+       ============================================ */
+    .container {
+        width: 100%;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 var(--sp-5);
+    }
+
+    .container--narrow {
+        max-width: 800px;
+    }
+
+    /* ============================================
+       YINGABAR (top stripe)
+       ============================================ */
+    .yingabar {
+        display: flex;
+        height: 3px;
         position: fixed;
         top: 0;
         left: 0;
         right: 0;
-        z-index: 100;
-        background: var(--landing-glass-bg);
+        z-index: 1001;
+    }
+
+    .yingabar span { flex: 1; }
+    .yingabar span:nth-child(1) { background: var(--magenta-hex); }
+    .yingabar span:nth-child(2) { background: var(--blue-hex); }
+    .yingabar span:nth-child(3) { background: var(--green-hex); }
+    .yingabar span:nth-child(4) { background: var(--orange-hex); }
+
+    /* ============================================
+       HEADER
+       ============================================ */
+    .site-header {
+        position: sticky;
+        top: 3px;
+        z-index: 1000;
+        background: color-mix(in oklch, var(--bg) 85%, transparent);
         backdrop-filter: blur(16px);
         -webkit-backdrop-filter: blur(16px);
-        border-bottom: 1px solid var(--landing-glass-border);
-        transition: all var(--dur) var(--ease);
+        border-bottom: 1px solid var(--border);
+        padding: 0 var(--sp-5);
     }
 
-    .landing-header.scrolled {
-        background: var(--landing-glass-hover);
-        box-shadow: var(--landing-shadow-sm);
-    }
-
-    .landing-nav {
-        max-width: 1280px;
+    .header-inner {
+        max-width: 1200px;
         margin: 0 auto;
-        padding: var(--space-4) var(--space-6);
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: var(--space-8);
+        height: 56px;
     }
 
-    .landing-logo {
+    .header-logo {
         display: flex;
         align-items: center;
-        gap: var(--space-3);
+        gap: var(--sp-3);
         text-decoration: none;
+        color: var(--text);
+        font-family: var(--font-body);
+        font-weight: 600;
+        font-size: 0.9375rem;
+        letter-spacing: -0.01em;
     }
 
-    .landing-logo img {
-        height: 48px;
-        width: auto;
-        object-fit: contain;
+    .header-logo img {
+        width: 28px;
+        height: 28px;
+        border-radius: 6px;
     }
 
-    .landing-logo-text {
-        font-family: 'Space Grotesk', sans-serif;
-        font-size: 1.25rem;
-        font-weight: 700;
-        color: var(--landing-text);
+    .header-nav {
+        display: flex;
+        gap: var(--sp-6);
     }
 
-    .landing-nav-links {
-        display: none;
-        align-items: center;
-        gap: var(--space-8);
-    }
-
-    @media (min-width: 768px) {
-        .landing-nav-links {
-            display: flex;
-        }
-    }
-
-    .landing-nav-link {
-        position: relative;
-        font-size: 0.95rem;
+    .header-nav a {
+        text-decoration: none;
+        color: var(--text-secondary);
+        font-size: 0.875rem;
         font-weight: 500;
-        color: var(--landing-text-secondary);
-        text-decoration: none;
-        transition: color var(--dur) var(--ease);
-        padding: var(--space-2) 0;
+        letter-spacing: 0.01em;
+        transition: color 0.15s;
+        padding: var(--sp-2) 0;
     }
 
-    .landing-nav-link::after {
-        content: '';
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        width: 0;
-        height: 2px;
-        background: linear-gradient(90deg, var(--brand-primary), var(--brand-secondary));
-        border-radius: 1px;
-        transition: width var(--dur-slow) var(--ease);
+    .header-nav a:hover,
+    .header-nav a[aria-current="page"] {
+        color: var(--text);
     }
 
-    .landing-nav-link:hover {
-        color: var(--landing-text);
-    }
-
-    .landing-nav-link:hover::after {
-        width: 100%;
-    }
-
-    .landing-nav-link.active {
-        color: var(--landing-text);
-    }
-
-    .landing-nav-link.active::after {
-        width: 100%;
-    }
-
-    .landing-nav-actions {
+    .header-actions {
         display: flex;
         align-items: center;
-        gap: var(--space-3);
+        gap: var(--sp-3);
     }
 
-    /* Theme Toggle */
     .theme-toggle {
-        width: 44px;
-        height: 44px;
-        border-radius: 50%;
-        border: 1px solid var(--landing-border);
-        background: var(--landing-glass-bg);
-        color: var(--landing-text-secondary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        background: transparent;
         cursor: pointer;
-        display: grid;
-        place-items: center;
-        transition: all var(--dur) var(--ease);
+        color: var(--text-muted);
+        transition: color 0.15s, border-color 0.15s;
     }
 
     .theme-toggle:hover {
-        background: var(--landing-glass-hover);
-        color: var(--landing-text);
-        transform: scale(1.05);
-        box-shadow: var(--landing-shadow-md);
+        color: var(--text);
+        border-color: var(--border-hover);
     }
 
     .theme-toggle svg {
-        width: 20px;
-        height: 20px;
+        width: 16px;
+        height: 16px;
     }
 
-    .theme-icon-dark { display: none; }
-    [data-theme="dark"] .theme-icon-light { display: none; }
-    [data-theme="dark"] .theme-icon-dark { display: block; }
+    [data-theme="dark"] .theme-toggle .icon-sun { display: block; }
+    [data-theme="dark"] .theme-toggle .icon-moon { display: none; }
+    [data-theme="light"] .theme-toggle .icon-sun { display: none; }
+    [data-theme="light"] .theme-toggle .icon-moon { display: block; }
 
-    /* Buttons */
-    .landing-btn {
+    .btn-header {
         display: inline-flex;
         align-items: center;
-        justify-content: center;
-        gap: var(--space-2);
-        padding: var(--space-3) var(--space-6);
-        font-family: 'Plus Jakarta Sans', sans-serif;
-        font-size: 0.95rem;
+        padding: var(--sp-2) var(--sp-4);
+        font-family: var(--font-body);
+        font-size: 0.8125rem;
         font-weight: 600;
-        text-decoration: none;
-        border-radius: var(--radius-md);
+        letter-spacing: 0.02em;
+        border-radius: var(--radius-sm);
         border: none;
+        background: var(--text);
+        color: var(--bg);
         cursor: pointer;
-        transition: all var(--dur) var(--ease);
-        min-height: 44px;
+        text-decoration: none;
+        transition: opacity 0.15s;
+        min-height: 36px;
     }
 
-    .landing-btn--primary {
-        background: linear-gradient(135deg, var(--brand-primary) 0%, #c30062 100%);
-        color: white;
-        box-shadow: 0 4px 14px rgba(229, 0, 116, 0.3);
+    .btn-header:hover {
+        opacity: 0.85;
     }
 
-    .landing-btn--primary:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 24px rgba(229, 0, 116, 0.4);
+    /* Mobile hamburger */
+    .mobile-menu-btn {
+        display: none;
+        appearance: none;
+        background: none;
+        border: none;
+        width: 44px;
+        height: 44px;
+        cursor: pointer;
+        color: var(--text);
+        padding: var(--sp-2);
     }
 
-    .landing-btn--secondary {
-        background: var(--landing-glass-bg);
-        backdrop-filter: blur(8px);
-        border: 1px solid var(--landing-border);
-        color: var(--landing-text);
+    .mobile-menu-btn svg {
+        width: 24px;
+        height: 24px;
     }
 
-    .landing-btn--secondary:hover {
-        background: var(--landing-glass-hover);
-        border-color: var(--brand-primary);
-        color: var(--brand-primary);
+    .mobile-nav {
+        display: none;
     }
 
-    .landing-btn--outline {
-        background: transparent;
-        border: 2px solid var(--landing-border);
-        color: var(--landing-text);
+    @media (max-width: 639px) {
+        .header-nav,
+        .header-actions .btn-header {
+            display: none;
+        }
+
+        .mobile-menu-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .mobile-nav[aria-hidden="false"] {
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            top: 59px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--bg);
+            padding: var(--sp-6) var(--sp-5);
+            gap: var(--sp-1);
+            z-index: 999;
+        }
+
+        .mobile-nav a {
+            display: block;
+            padding: var(--sp-4) var(--sp-3);
+            text-decoration: none;
+            color: var(--text);
+            font-size: 1.125rem;
+            font-weight: 500;
+            border-radius: var(--radius-sm);
+            transition: background 0.15s;
+        }
+
+        .mobile-nav a:hover {
+            background: var(--border);
+        }
+
+        .mobile-nav .mobile-cta {
+            margin-top: auto;
+            display: flex;
+            flex-direction: column;
+            gap: var(--sp-3);
+            padding-top: var(--sp-6);
+            border-top: 1px solid var(--border);
+        }
+
+        .mobile-nav .mobile-cta a {
+            text-align: center;
+            padding: var(--sp-4);
+            border-radius: var(--radius-sm);
+            font-weight: 600;
+        }
+
+        .mobile-nav .mobile-cta a:first-child {
+            background: var(--text);
+            color: var(--bg);
+        }
+
+        .mobile-nav .mobile-cta a:last-child {
+            border: 1px solid var(--border);
+        }
     }
 
-    .landing-btn--outline:hover {
-        border-color: var(--brand-primary);
-        color: var(--brand-primary);
-        background: rgba(229, 0, 116, 0.05);
+    /* ============================================
+       HERO
+       ============================================ */
+    .hero {
+        padding: var(--sp-9) 0 var(--sp-10);
     }
 
-    .landing-btn--large {
-        padding: var(--space-4) var(--space-8);
-        font-size: 1rem;
-        min-height: 52px;
-    }
-
-    .landing-btn:active {
-        transform: translateY(1px) scale(0.98);
-    }
-
-    .landing-btn svg {
-        width: 20px;
-        height: 20px;
-        flex-shrink: 0;
-    }
-
-    /* ===========================================
-       4. Floating Orbs
-       =========================================== */
-    .landing-hero-orb {
-        position: fixed;
-        border-radius: 50%;
-        filter: blur(80px);
-        opacity: 0.3;
-        pointer-events: none;
-        animation: orbFloat 25s ease-in-out infinite;
-        z-index: 0;
-    }
-
-    .landing-hero-orb--primary {
-        width: 500px;
-        height: 500px;
-        background: var(--brand-primary);
-        top: -10%;
-        left: -5%;
-        animation-delay: 0s;
-    }
-
-    .landing-hero-orb--secondary {
-        width: 400px;
-        height: 400px;
-        background: var(--brand-secondary);
-        bottom: 10%;
-        right: -10%;
-        animation-delay: -8s;
-    }
-
-    @keyframes orbFloat {
-        0%, 100% { transform: translate(0, 0) scale(1); }
-        25% { transform: translate(40px, -30px) scale(1.05); }
-        50% { transform: translate(-20px, 40px) scale(0.95); }
-        75% { transform: translate(30px, 20px) scale(1.02); }
-    }
-
-    @keyframes heroGradientShift {
-        0%, 100% { transform: translate(0, 0) scale(1); opacity: 1; }
-        33% { transform: translate(2%, -2%) scale(1.02); opacity: 0.9; }
-        66% { transform: translate(-2%, 2%) scale(1.03); opacity: 0.95; }
-    }
-
-    /* ===========================================
-       5. Shared Section Styles
-       =========================================== */
-    .landing-section {
-        position: relative;
-        padding: var(--space-24) 0;
-    }
-
-    .landing-section--alt {
-        background: var(--landing-bg-alt);
-    }
-
-    .landing-section--alt::before {
-        content: '';
-        position: absolute;
-        inset: 0;
-        background:
-            radial-gradient(ellipse 40% 30% at 0% 50%, rgba(229, 0, 116, 0.03) 0%, transparent 50%),
-            radial-gradient(ellipse 40% 30% at 100% 50%, rgba(0, 123, 196, 0.03) 0%, transparent 50%);
-        pointer-events: none;
-    }
-
-    .landing-container {
-        max-width: 1280px;
-        margin: 0 auto;
-        padding: 0 var(--space-6);
-    }
-
-    .landing-section-header {
-        text-align: center;
-        max-width: 800px;
-        margin: 0 auto var(--space-16);
-    }
-
-    .landing-section-title {
-        font-size: clamp(1.75rem, 3vw + 0.5rem, 2.5rem);
-        margin-bottom: var(--space-4);
-    }
-
-    .landing-section-subtitle {
-        font-size: 1.125rem;
-        color: var(--landing-text-secondary);
-        line-height: 1.7;
-    }
-
-    .gradient-text {
-        background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-    }
-
-    /* ===========================================
-       6. Hero Section
-       =========================================== */
-    .features-hero {
-        position: relative;
-        padding-top: 140px;
-        padding-bottom: var(--space-16);
-        overflow: hidden;
-    }
-
-    .features-hero::before {
-        content: '';
-        position: absolute;
-        inset: 0;
-        background:
-            radial-gradient(ellipse 80% 60% at 20% 20%, rgba(229, 0, 116, 0.08) 0%, transparent 50%),
-            radial-gradient(ellipse 60% 50% at 80% 60%, rgba(0, 123, 196, 0.06) 0%, transparent 50%),
-            radial-gradient(ellipse 50% 40% at 40% 80%, rgba(0, 159, 60, 0.04) 0%, transparent 40%);
-        animation: heroGradientShift 20s ease-in-out infinite;
-        pointer-events: none;
-    }
-
-    [data-theme="dark"] .features-hero::before {
-        background:
-            radial-gradient(ellipse 80% 60% at 20% 20%, rgba(0, 168, 255, 0.1) 0%, transparent 50%),
-            radial-gradient(ellipse 60% 50% at 80% 60%, rgba(255, 26, 140, 0.08) 0%, transparent 50%),
-            radial-gradient(ellipse 50% 40% at 40% 80%, rgba(0, 214, 143, 0.05) 0%, transparent 40%);
-    }
-
-    .features-hero-content {
-        position: relative;
-        z-index: 1;
-        text-align: center;
-        max-width: 800px;
-        margin: 0 auto;
-        padding: 0 var(--space-6);
-    }
-
-    .features-hero-title {
-        font-size: clamp(2rem, 4vw + 1rem, 3.25rem);
-        line-height: 1.1;
-        letter-spacing: -0.03em;
-        margin-bottom: var(--space-6);
-    }
-
-    .features-hero-subtitle {
-        font-size: clamp(1.05rem, 1.3vw + 0.5rem, 1.3rem);
-        color: var(--landing-text-secondary);
-        line-height: 1.7;
-        max-width: 650px;
-        margin: 0 auto;
-    }
-
-    /* ===========================================
-       7. Feature Cards Grid
-       =========================================== */
-    .landing-feature-grid {
+    .hero-inner {
         display: grid;
         grid-template-columns: 1fr;
-        gap: var(--space-6);
+        gap: var(--sp-8);
+        align-items: center;
+    }
+
+    @media (min-width: 768px) {
+        .hero-inner {
+            grid-template-columns: 5fr 7fr;
+            gap: var(--sp-9);
+        }
+    }
+
+    .hero-label {
+        display: inline-block;
+        font-family: var(--font-body);
+        font-size: 0.75rem;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--magenta-hex);
+        margin-bottom: var(--sp-5);
+    }
+
+    .hero h1 {
+        font-family: var(--font-display);
+        font-style: italic;
+        font-size: clamp(2.5rem, 6vw, 4.5rem);
+        line-height: 1.05;
+        letter-spacing: -0.02em;
+        color: var(--text);
+        text-wrap: balance;
+        margin-bottom: var(--sp-5);
+    }
+
+    .hero-description {
+        font-size: clamp(1rem, 1.5vw, 1.125rem);
+        color: var(--text-secondary);
+        line-height: 1.6;
+        max-width: 50ch;
+        text-wrap: pretty;
+        margin-bottom: var(--sp-6);
+    }
+
+    .hero-ctas {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--sp-3);
+    }
+
+    .btn-primary {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--sp-2);
+        padding: var(--sp-3) var(--sp-6);
+        font-family: var(--font-body);
+        font-size: 0.9375rem;
+        font-weight: 600;
+        border-radius: var(--radius-sm);
+        border: none;
+        background: var(--magenta-hex);
+        color: #FFFFFF;
+        cursor: pointer;
+        text-decoration: none;
+        transition: opacity 0.15s, transform 0.15s;
+        min-height: 48px;
+    }
+
+    .btn-primary:hover {
+        opacity: 0.9;
+        transform: translateY(-1px);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .btn-primary:hover { transform: none; }
+    }
+
+    .btn-secondary {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--sp-2);
+        padding: var(--sp-3) var(--sp-6);
+        font-family: var(--font-body);
+        font-size: 0.9375rem;
+        font-weight: 500;
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--border);
+        background: transparent;
+        color: var(--text);
+        cursor: pointer;
+        text-decoration: none;
+        transition: border-color 0.15s, background 0.15s;
+        min-height: 48px;
+    }
+
+    .btn-secondary:hover {
+        border-color: var(--border-hover);
+        background: var(--border);
+    }
+
+    .hero-visual {
+        position: relative;
+    }
+
+    .hero-screenshot {
+        position: relative;
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+        box-shadow:
+            0 4px 6px -1px oklch(0 0 0 / 0.08),
+            0 20px 40px -8px oklch(0 0 0 / 0.12);
+        transform: rotate(1.2deg);
+        transition: transform 0.4s ease-out;
+    }
+
+    .hero-screenshot:hover {
+        transform: rotate(0deg) scale(1.01);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .hero-screenshot { transform: none; }
+        .hero-screenshot:hover { transform: none; }
+    }
+
+    .hero-screenshot img {
+        width: 100%;
+        display: block;
+    }
+
+    @media (max-width: 767px) {
+        .hero {
+            padding: var(--sp-7) 0 var(--sp-8);
+        }
+        .hero-screenshot {
+            transform: rotate(0deg);
+        }
+    }
+
+    /* ============================================
+       SECTION SPACING
+       ============================================ */
+    .section {
+        padding: var(--sp-10) 0;
+    }
+
+    @media (max-width: 767px) {
+        .section {
+            padding: var(--sp-8) 0;
+        }
+    }
+
+    /* ============================================
+       FEATURE SPOTLIGHTS (01, 02, 03)
+       ============================================ */
+    .spotlights {
+        border-top: 1px solid var(--border);
+    }
+
+    .spotlights-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: var(--sp-8);
+    }
+
+    @media (min-width: 768px) {
+        .spotlights-grid {
+            grid-template-columns: repeat(3, 1fr);
+            gap: var(--sp-7);
+        }
+    }
+
+    .spotlight {
+        position: relative;
+    }
+
+    .spotlight-number {
+        font-family: var(--font-display);
+        font-size: clamp(3rem, 5vw, 4.5rem);
+        line-height: 1;
+        letter-spacing: -0.03em;
+        margin-bottom: var(--sp-4);
+        display: block;
+    }
+
+    .spotlight-number--magenta { color: var(--magenta-hex); }
+    .spotlight-number--blue { color: var(--blue-hex); }
+    .spotlight-number--green { color: var(--green-hex); }
+
+    .spotlight h3 {
+        font-family: var(--font-display);
+        font-size: clamp(1.25rem, 2vw, 1.5rem);
+        font-weight: 400;
+        line-height: 1.2;
+        letter-spacing: -0.01em;
+        margin-bottom: var(--sp-3);
+    }
+
+    .spotlight p {
+        font-size: 0.9375rem;
+        color: var(--text-secondary);
+        line-height: 1.6;
+        text-wrap: pretty;
+        max-width: 38ch;
+    }
+
+    /* ============================================
+       COMPACT FEATURES LIST
+       ============================================ */
+    .compact-features {
+        padding: var(--sp-9) 0;
+    }
+
+    .compact-features-header {
+        margin-bottom: var(--sp-7);
+    }
+
+    .compact-features-header h2 {
+        font-family: var(--font-display);
+        font-size: clamp(1.75rem, 3vw, 2.5rem);
+        letter-spacing: -0.02em;
+        line-height: 1.1;
+        text-wrap: balance;
+    }
+
+    .compact-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: var(--sp-6);
     }
 
     @media (min-width: 640px) {
-        .landing-feature-grid {
+        .compact-grid {
             grid-template-columns: repeat(2, 1fr);
+            gap: var(--sp-7) var(--sp-8);
         }
     }
 
-    @media (min-width: 1024px) {
-        .landing-feature-grid {
-            grid-template-columns: repeat(3, 1fr);
-        }
-    }
-
-    .landing-feature-card {
-        position: relative;
-        background: var(--landing-glass-bg);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        border: 1px solid var(--landing-glass-border);
-        border-radius: var(--radius-lg);
-        padding: var(--space-6);
-        transition: all var(--dur-slow) var(--ease);
-        overflow: hidden;
-    }
-
-    .landing-feature-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 3px;
-        background: linear-gradient(90deg, var(--brand-primary), var(--brand-secondary));
-        opacity: 0;
-        transition: opacity var(--dur) var(--ease);
-    }
-
-    .landing-feature-card:hover {
-        background: var(--landing-glass-hover);
-        border-color: var(--brand-secondary);
-        transform: translateY(-6px);
-        box-shadow:
-            var(--landing-shadow-lg),
-            0 0 50px rgba(0, 123, 196, 0.08);
-    }
-
-    .landing-feature-card:hover::before {
-        opacity: 1;
-    }
-
-    .landing-feature-icon {
-        width: 56px;
-        height: 56px;
-        border-radius: var(--radius-md);
+    .compact-item {
         display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-bottom: var(--space-4);
-        transition: all var(--dur-slow) var(--ease);
+        gap: var(--sp-4);
+        align-items: flex-start;
     }
 
-    .landing-feature-icon--primary {
-        background: rgba(229, 0, 116, 0.1);
-        color: var(--brand-primary);
-    }
-
-    .landing-feature-icon--secondary {
-        background: rgba(0, 123, 196, 0.1);
-        color: var(--brand-secondary);
-    }
-
-    .landing-feature-icon--accent {
-        background: rgba(0, 159, 60, 0.1);
-        color: var(--brand-accent);
-    }
-
-    .landing-feature-card:hover .landing-feature-icon {
-        transform: scale(1.1) rotate(3deg);
-        background: linear-gradient(135deg, rgba(229, 0, 116, 0.15), rgba(0, 123, 196, 0.15));
-    }
-
-    .landing-feature-icon svg {
-        width: 28px;
-        height: 28px;
-    }
-
-    .landing-feature-title {
-        font-size: 1.125rem;
-        font-weight: 600;
-        margin-bottom: var(--space-2);
-    }
-
-    .landing-feature-desc {
-        font-size: 0.95rem;
-        color: var(--landing-text-secondary);
-        line-height: 1.6;
-    }
-
-    /* ===========================================
-       8. How It Works Section
-       =========================================== */
-    .landing-steps-grid {
-        display: grid;
-        grid-template-columns: 1fr;
-        gap: var(--space-8);
-        position: relative;
-    }
-
-    @media (min-width: 768px) {
-        .landing-steps-grid {
-            grid-template-columns: repeat(3, 1fr);
-            gap: var(--space-6);
-        }
-    }
-
-    .landing-step {
-        text-align: center;
-        position: relative;
-    }
-
-    .landing-step-number {
-        width: 64px;
-        height: 64px;
+    .compact-dot {
+        width: 8px;
+        height: 8px;
         border-radius: 50%;
-        background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 100%);
-        color: white;
-        font-family: 'Space Grotesk', sans-serif;
-        font-size: 1.5rem;
-        font-weight: 700;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin: 0 auto var(--space-6);
-        position: relative;
-        z-index: 2;
-        box-shadow: 0 8px 24px rgba(229, 0, 116, 0.3);
-    }
-
-    .landing-step-card {
-        background: var(--landing-glass-bg);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        border: 1px solid var(--landing-glass-border);
-        border-radius: var(--radius-lg);
-        padding: var(--space-6);
-        height: 100%;
-        transition: all var(--dur) var(--ease);
-    }
-
-    .landing-step-card:hover {
-        background: var(--landing-glass-hover);
-        transform: translateY(-4px);
-        box-shadow: var(--landing-shadow-md);
-    }
-
-    .landing-step-icon {
-        width: 64px;
-        height: 64px;
-        border-radius: var(--radius-md);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin: 0 auto var(--space-4);
-    }
-
-    .landing-step-icon svg {
-        width: 32px;
-        height: 32px;
-    }
-
-    .landing-step-title {
-        font-size: 1.25rem;
-        font-weight: 600;
-        margin-bottom: var(--space-2);
-    }
-
-    .landing-step-desc {
-        font-size: 0.95rem;
-        color: var(--landing-text-secondary);
-        line-height: 1.6;
-    }
-
-    /* Timeline Connector */
-    @media (min-width: 768px) {
-        .landing-steps-connector {
-            position: absolute;
-            top: 32px;
-            left: calc(16.67% + 32px);
-            right: calc(16.67% + 32px);
-            height: 3px;
-            background: var(--landing-border);
-            z-index: 1;
-        }
-
-        .landing-steps-connector::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            height: 100%;
-            width: 0;
-            background: linear-gradient(90deg, var(--brand-primary), var(--brand-secondary));
-            transition: width 1.5s var(--ease);
-        }
-
-        .landing-steps-grid.visible .landing-steps-connector::after {
-            width: 100%;
-        }
-    }
-
-    /* ===========================================
-       9. Platform Support Cards
-       =========================================== */
-    .platform-grid {
-        display: grid;
-        grid-template-columns: 1fr;
-        gap: var(--space-6);
-    }
-
-    @media (min-width: 768px) {
-        .platform-grid {
-            grid-template-columns: repeat(2, 1fr);
-        }
-    }
-
-    .platform-card {
-        position: relative;
-        background: var(--landing-glass-bg);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        border: 1px solid var(--landing-glass-border);
-        border-radius: var(--radius-lg);
-        padding: var(--space-8);
-        transition: all var(--dur-slow) var(--ease);
-        overflow: hidden;
-    }
-
-    .platform-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 3px;
-        background: linear-gradient(90deg, var(--brand-primary), var(--brand-secondary));
-        opacity: 0;
-        transition: opacity var(--dur) var(--ease);
-    }
-
-    .platform-card:hover {
-        background: var(--landing-glass-hover);
-        transform: translateY(-6px);
-        box-shadow: var(--landing-shadow-lg), 0 0 50px rgba(0, 123, 196, 0.08);
-    }
-
-    .platform-card:hover::before {
-        opacity: 1;
-    }
-
-    .platform-card-header {
-        display: flex;
-        align-items: center;
-        gap: var(--space-4);
-        margin-bottom: var(--space-6);
-    }
-
-    .platform-card-icon {
-        width: 56px;
-        height: 56px;
-        border-radius: var(--radius-md);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: rgba(0, 123, 196, 0.1);
-        color: var(--brand-secondary);
-        transition: all var(--dur-slow) var(--ease);
-    }
-
-    .platform-card:hover .platform-card-icon {
-        transform: scale(1.1) rotate(3deg);
-        background: linear-gradient(135deg, rgba(229, 0, 116, 0.15), rgba(0, 123, 196, 0.15));
-    }
-
-    .platform-card-icon svg {
-        width: 28px;
-        height: 28px;
-    }
-
-    .platform-card-name {
-        font-family: system-ui, -apple-system, 'Space Grotesk', sans-serif;
-        font-size: 1.25rem;
-        font-weight: 700;
-    }
-
-    .platform-card-sub {
-        font-size: 0.85rem;
-        color: var(--landing-text-muted);
-        margin-top: 2px;
-    }
-
-    .platform-specs {
-        list-style: none;
-        padding: 0;
-        margin: 0;
-        display: flex;
-        flex-direction: column;
-        gap: var(--space-3);
-    }
-
-    .platform-spec {
-        display: flex;
-        align-items: center;
-        gap: var(--space-3);
-        font-size: 0.9rem;
-        color: var(--landing-text-secondary);
-    }
-
-    .platform-spec svg {
-        width: 16px;
-        height: 16px;
         flex-shrink: 0;
-        color: var(--brand-accent);
+        margin-top: 8px;
     }
 
-    /* ===========================================
-       10. CTA Section
-       =========================================== */
-    .landing-cta {
-        position: relative;
-        background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 100%);
-        border-radius: var(--radius-2xl);
-        padding: var(--space-16) var(--space-8);
-        overflow: hidden;
+    .compact-dot--magenta { background: var(--magenta-hex); }
+    .compact-dot--blue { background: var(--blue-hex); }
+    .compact-dot--green { background: var(--green-hex); }
+    .compact-dot--orange { background: var(--orange-hex); }
+
+    .compact-item h3 {
+        font-family: var(--font-body);
+        font-size: 1rem;
+        font-weight: 600;
+        margin-bottom: var(--sp-1);
+        line-height: 1.3;
+    }
+
+    .compact-item p {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+        line-height: 1.55;
+        text-wrap: pretty;
+    }
+
+    /* ============================================
+       SCREENSHOT SHOWCASE (dark bg, tab nav)
+       ============================================ */
+    .showcase {
+        background: var(--bg-dark);
+        color: #FFFFFF;
+        padding: var(--sp-10) 0;
+    }
+
+    .showcase-header {
         text-align: center;
+        margin-bottom: var(--sp-7);
     }
 
-    .landing-cta::before {
-        content: '';
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        width: 200%;
-        height: 200%;
-        background: radial-gradient(circle, rgba(255, 255, 255, 0.15) 0%, transparent 50%);
-        transform: translate(-50%, -50%) scale(0);
-        animation: ctaPulse 5s ease-in-out infinite;
+    .showcase-header h2 {
+        font-family: var(--font-display);
+        font-size: clamp(1.75rem, 3vw, 2.5rem);
+        letter-spacing: -0.02em;
+        line-height: 1.1;
+        color: #FFFFFF;
+        margin-bottom: var(--sp-3);
     }
 
-    @keyframes ctaPulse {
-        0%, 100% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
-        50% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+    .showcase-header p {
+        font-size: 1rem;
+        color: oklch(0.70 0.005 80);
+        line-height: 1.5;
     }
 
-    .landing-cta-content {
-        position: relative;
-        z-index: 1;
-        max-width: 700px;
+    .showcase-tabs {
+        display: flex;
+        justify-content: center;
+        gap: var(--sp-2);
+        margin-bottom: var(--sp-7);
+        flex-wrap: wrap;
+    }
+
+    .showcase-tab {
+        appearance: none;
+        border: 1px solid oklch(0.30 0.01 260);
+        background: transparent;
+        color: oklch(0.60 0.005 80);
+        padding: var(--sp-2) var(--sp-4);
+        font-family: var(--font-body);
+        font-size: 0.8125rem;
+        font-weight: 500;
+        letter-spacing: 0.01em;
+        border-radius: 100px;
+        cursor: pointer;
+        transition: all 0.2s;
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .showcase-tab:hover {
+        border-color: oklch(0.45 0.01 260);
+        color: oklch(0.85 0.005 80);
+    }
+
+    .showcase-tab[aria-selected="true"] {
+        background: #FFFFFF;
+        color: var(--bg-dark);
+        border-color: #FFFFFF;
+        font-weight: 600;
+    }
+
+    .showcase-display {
+        max-width: 960px;
         margin: 0 auto;
     }
 
-    .landing-cta-title {
-        font-size: clamp(1.75rem, 3vw + 0.5rem, 2.5rem);
-        color: white;
-        margin-bottom: var(--space-4);
+    .showcase-window {
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+        background: oklch(0.18 0.01 260);
+        box-shadow: 0 24px 80px oklch(0 0 0 / 0.4);
     }
 
-    .landing-cta-subtitle {
-        font-size: 1.125rem;
-        color: rgba(255, 255, 255, 0.9);
-        line-height: 1.7;
-        margin-bottom: var(--space-8);
-    }
-
-    .landing-cta-actions {
+    .showcase-chrome {
         display: flex;
-        flex-wrap: wrap;
-        gap: var(--space-4);
-        justify-content: center;
-    }
-
-    .landing-cta .landing-btn--primary {
-        background: white;
-        color: var(--brand-primary);
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-    }
-
-    .landing-cta .landing-btn--primary:hover {
-        background: rgba(255, 255, 255, 0.9);
-        transform: translateY(-2px);
-        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
-    }
-
-    .landing-cta .landing-btn--outline {
-        border-color: rgba(255, 255, 255, 0.5);
-        color: white;
-    }
-
-    .landing-cta .landing-btn--outline:hover {
-        background: rgba(255, 255, 255, 0.1);
-        border-color: white;
-    }
-
-    /* ===========================================
-       11. Footer
-       =========================================== */
-    .landing-footer {
-        padding: var(--space-12) 0;
-        border-top: 1px solid var(--landing-border);
-    }
-
-    .landing-footer-content {
-        display: flex;
-        flex-direction: column;
         align-items: center;
-        gap: var(--space-6);
+        gap: var(--sp-2);
+        padding: var(--sp-3) var(--sp-4);
+        background: oklch(0.18 0.01 260);
+        border-bottom: 1px solid oklch(0.22 0.01 260);
     }
 
-    @media (min-width: 768px) {
-        .landing-footer-content {
-            flex-direction: row;
-            justify-content: space-between;
+    .showcase-chrome-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: oklch(0.30 0.01 260);
+    }
+
+    .showcase-chrome-dot:nth-child(1) { background: #FF5F57; }
+    .showcase-chrome-dot:nth-child(2) { background: #FEBC2E; }
+    .showcase-chrome-dot:nth-child(3) { background: #28C840; }
+
+    .showcase-chrome-title {
+        margin-left: var(--sp-3);
+        font-size: 0.75rem;
+        font-weight: 500;
+        color: oklch(0.50 0.01 260);
+    }
+
+    .showcase-img-wrap {
+        display: none;
+    }
+
+    .showcase-img-wrap[data-active="true"] {
+        display: block;
+    }
+
+    .showcase-img-wrap img {
+        width: 100%;
+        display: block;
+    }
+
+    @media (max-width: 767px) {
+        .showcase {
+            padding: var(--sp-8) 0;
         }
     }
 
-    .landing-footer-links {
+    /* ============================================
+       HOW IT WORKS
+       ============================================ */
+    .how-it-works {
+        border-top: 1px solid var(--border);
+    }
+
+    .how-header {
+        text-align: center;
+        margin-bottom: var(--sp-9);
+    }
+
+    .how-header h2 {
+        font-family: var(--font-display);
+        font-size: clamp(1.75rem, 3vw, 2.5rem);
+        letter-spacing: -0.02em;
+        line-height: 1.1;
+        text-wrap: balance;
+        margin-bottom: var(--sp-3);
+    }
+
+    .how-header p {
+        font-size: 1rem;
+        color: var(--text-secondary);
+    }
+
+    .steps-row {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: var(--sp-7);
+        position: relative;
+    }
+
+    @media (min-width: 768px) {
+        .steps-row {
+            grid-template-columns: repeat(3, 1fr);
+            gap: var(--sp-8);
+            text-align: center;
+        }
+
+        /* Connecting line */
+        .steps-row::before {
+            content: '';
+            position: absolute;
+            top: 38px;
+            left: calc(16.67% + 32px);
+            right: calc(16.67% + 32px);
+            height: 1px;
+            background: var(--border);
+        }
+    }
+
+    .step {
+        position: relative;
+    }
+
+    .step-num {
+        font-family: var(--font-display);
+        font-size: clamp(2.5rem, 4vw, 3.5rem);
+        line-height: 1;
+        letter-spacing: -0.03em;
+        color: var(--magenta-hex);
+        margin-bottom: var(--sp-4);
+        position: relative;
+        z-index: 1;
+        background: var(--bg);
+        display: inline-block;
+    }
+
+    @media (min-width: 768px) {
+        .step-num {
+            padding: 0 var(--sp-4);
+        }
+    }
+
+    .step h3 {
+        font-family: var(--font-display);
+        font-size: 1.25rem;
+        font-weight: 400;
+        margin-bottom: var(--sp-3);
+        line-height: 1.2;
+    }
+
+    .step p {
+        font-size: 0.9375rem;
+        color: var(--text-secondary);
+        line-height: 1.6;
+        text-wrap: pretty;
+    }
+
+    @media (min-width: 768px) {
+        .step p {
+            max-width: 32ch;
+            margin: 0 auto;
+        }
+    }
+
+    /* ============================================
+       PLATFORMS
+       ============================================ */
+    .platforms {
+        border-top: 1px solid var(--border);
+    }
+
+    .platforms-header {
+        margin-bottom: var(--sp-8);
+    }
+
+    .platforms-header h2 {
+        font-family: var(--font-display);
+        font-size: clamp(1.75rem, 3vw, 2.5rem);
+        letter-spacing: -0.02em;
+        line-height: 1.1;
+        text-wrap: balance;
+        margin-bottom: var(--sp-3);
+    }
+
+    .platforms-header p {
+        font-size: 1rem;
+        color: var(--text-secondary);
+    }
+
+    .platforms-row {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: var(--sp-7);
+    }
+
+    @media (min-width: 768px) {
+        .platforms-row {
+            grid-template-columns: 1fr 1px 1fr;
+            gap: var(--sp-8);
+        }
+    }
+
+    .platform-divider {
+        display: none;
+    }
+
+    @media (min-width: 768px) {
+        .platform-divider {
+            display: block;
+            background: var(--border);
+            align-self: stretch;
+        }
+    }
+
+    .platform-col h3 {
+        font-family: var(--font-display);
+        font-size: 1.5rem;
+        font-weight: 400;
+        margin-bottom: var(--sp-5);
         display: flex;
         align-items: center;
-        gap: var(--space-6);
+        gap: var(--sp-3);
     }
 
-    .landing-footer-link {
-        font-size: 0.9rem;
-        color: var(--landing-text-secondary);
-        text-decoration: none;
-        transition: color var(--dur) var(--ease);
+    .platform-col h3 svg {
+        width: 24px;
+        height: 24px;
+        flex-shrink: 0;
     }
 
-    .landing-footer-link:hover {
-        color: var(--brand-primary);
-    }
-
-    .landing-footer-credits {
+    .platform-list {
+        list-style: none;
         display: flex;
-        align-items: center;
-        gap: var(--space-2);
-        font-size: 0.9rem;
-        color: var(--landing-text-muted);
+        flex-direction: column;
+        gap: var(--sp-4);
     }
 
-    .landing-footer-credits a {
+    .platform-list li {
+        font-size: 0.9375rem;
+        color: var(--text-secondary);
+        line-height: 1.5;
+        padding-left: var(--sp-5);
+        position: relative;
+    }
+
+    .platform-list li::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 8px;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--green-hex);
+    }
+
+    @media (max-width: 767px) {
+        .platform-col + .platform-divider + .platform-col {
+            padding-top: var(--sp-7);
+            border-top: 1px solid var(--border);
+        }
+    }
+
+    /* ============================================
+       CTA
+       ============================================ */
+    .cta-section {
+        background: var(--magenta-hex);
+        color: #FFFFFF;
+        padding: var(--sp-10) 0;
+    }
+
+    .cta-inner {
+        text-align: center;
+        max-width: 640px;
+        margin: 0 auto;
+    }
+
+    .cta-section h2 {
+        font-family: var(--font-display);
+        font-style: italic;
+        font-size: clamp(2rem, 4vw, 3rem);
+        color: #FFFFFF;
+        margin-bottom: var(--sp-4);
+        letter-spacing: -0.02em;
+        line-height: 1.1;
+    }
+
+    .cta-section p {
+        color: oklch(0.95 0.01 0);
+        font-size: clamp(1rem, 1.5vw, 1.125rem);
+        margin: 0 auto var(--sp-7);
+        max-width: 45ch;
+        text-wrap: pretty;
+    }
+
+    .cta-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: var(--sp-3);
+    }
+
+    .btn-cta-primary {
         display: inline-flex;
+        align-items: center;
+        gap: var(--sp-2);
+        padding: var(--sp-4) var(--sp-7);
+        font-family: var(--font-body);
+        font-size: 1rem;
+        font-weight: 600;
+        border-radius: var(--radius-sm);
+        border: none;
+        background: #FFFFFF;
+        color: var(--magenta-hex);
+        cursor: pointer;
+        text-decoration: none;
+        transition: opacity 0.15s, transform 0.15s;
+        min-height: 48px;
     }
 
-    .landing-footer-credits img {
-        height: 32px;
+    .btn-cta-primary:hover {
+        opacity: 0.92;
+        transform: translateY(-1px);
+    }
+
+    .btn-cta-secondary {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--sp-2);
+        padding: var(--sp-4) var(--sp-7);
+        font-family: var(--font-body);
+        font-size: 1rem;
+        font-weight: 500;
+        border-radius: var(--radius-sm);
+        border: 2px solid oklch(1 0 0 / 0.35);
+        background: transparent;
+        color: #FFFFFF;
+        cursor: pointer;
+        text-decoration: none;
+        transition: border-color 0.15s, background 0.15s;
+        min-height: 48px;
+    }
+
+    .btn-cta-secondary:hover {
+        border-color: #FFFFFF;
+        background: oklch(1 0 0 / 0.1);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .btn-cta-primary:hover,
+        .btn-cta-secondary:hover {
+            transform: none;
+        }
+    }
+
+    /* ============================================
+       FOOTER
+       ============================================ */
+    .site-footer {
+        border-top: 1px solid var(--border);
+        padding: var(--sp-7) 0 var(--sp-6);
+    }
+
+    .footer-yingabar {
+        display: flex;
+        height: 3px;
+        margin-bottom: var(--sp-7);
+    }
+
+    .footer-yingabar span { flex: 1; }
+    .footer-yingabar span:nth-child(1) { background: var(--magenta-hex); }
+    .footer-yingabar span:nth-child(2) { background: var(--blue-hex); }
+    .footer-yingabar span:nth-child(3) { background: var(--green-hex); }
+    .footer-yingabar span:nth-child(4) { background: var(--orange-hex); }
+
+    .footer-inner {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .footer-credit {
+        display: flex;
+        align-items: center;
+        gap: var(--sp-2);
+        font-size: 0.8125rem;
+        color: var(--text-muted);
+        text-decoration: none;
+    }
+
+    .footer-credit img {
+        height: 20px;
         width: auto;
+        opacity: 0.6;
+        transition: opacity 0.15s;
     }
 
-    /* ===========================================
-       12. Scroll Reveal Animations
-       =========================================== */
-    .landing-reveal {
+    .footer-credit:hover img {
+        opacity: 1;
+    }
+
+    /* ============================================
+       SCROLL REVEAL ANIMATIONS
+       ============================================ */
+    .reveal {
         opacity: 0;
-        transform: translateY(40px);
-        transition: opacity 0.8s var(--ease), transform 0.8s var(--ease);
+        transform: translateY(24px);
+        transition: opacity 0.6s ease-out, transform 0.6s ease-out;
     }
 
-    .landing-reveal.visible {
+    .reveal.visible {
         opacity: 1;
         transform: translateY(0);
     }
 
-    .landing-stagger-grid > * {
-        opacity: 0;
-        transform: translateY(30px) scale(0.96);
-        transition: opacity 0.6s var(--ease), transform 0.6s var(--ease);
-    }
+    .reveal-delay-1 { transition-delay: 0.1s; }
+    .reveal-delay-2 { transition-delay: 0.2s; }
+    .reveal-delay-3 { transition-delay: 0.3s; }
+    .reveal-delay-4 { transition-delay: 0.35s; }
+    .reveal-delay-5 { transition-delay: 0.4s; }
+    .reveal-delay-6 { transition-delay: 0.45s; }
+    .reveal-delay-7 { transition-delay: 0.5s; }
 
-    .landing-stagger-grid.visible > *:nth-child(1) { transition-delay: 0ms; }
-    .landing-stagger-grid.visible > *:nth-child(2) { transition-delay: 80ms; }
-    .landing-stagger-grid.visible > *:nth-child(3) { transition-delay: 160ms; }
-    .landing-stagger-grid.visible > *:nth-child(4) { transition-delay: 240ms; }
-    .landing-stagger-grid.visible > *:nth-child(5) { transition-delay: 320ms; }
-    .landing-stagger-grid.visible > *:nth-child(6) { transition-delay: 400ms; }
-    .landing-stagger-grid.visible > *:nth-child(7) { transition-delay: 480ms; }
-    .landing-stagger-grid.visible > *:nth-child(8) { transition-delay: 560ms; }
-    .landing-stagger-grid.visible > *:nth-child(9) { transition-delay: 640ms; }
-
-    .landing-stagger-grid.visible > * {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-    }
-
-    /* ===========================================
-       13. Reduced Motion
-       =========================================== */
     @media (prefers-reduced-motion: reduce) {
-        *, *::before, *::after {
-            animation-duration: 0.01ms !important;
-            animation-iteration-count: 1 !important;
-            transition-duration: 0.01ms !important;
+        .reveal {
+            opacity: 1;
+            transform: none;
+            transition: none;
         }
+    }
 
-        .landing-reveal,
-        .landing-stagger-grid > * {
-            opacity: 1 !important;
-            transform: none !important;
-        }
+    /* ============================================
+       PAGE LOAD
+       ============================================ */
+    @keyframes page-enter {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
 
-        .features-hero::before,
-        .landing-hero-orb,
-        .landing-cta::before {
-            animation: none !important;
-            display: none;
-        }
+    body {
+        animation: page-enter 0.35s ease-out;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        body { animation: none; }
     }
     </style>
 </head>
 <body>
 
-    <!-- Floating Orbs Background -->
-    <div class="landing-hero-orb landing-hero-orb--primary" aria-hidden="true"></div>
-    <div class="landing-hero-orb landing-hero-orb--secondary" aria-hidden="true"></div>
-
     <!-- Skip to content -->
-    <a href="#main" style="position:absolute;top:-100px;left:0;padding:8px 16px;background:var(--brand-primary);color:white;z-index:200;border-radius:0 0 8px 0;font-weight:600;transition:top .2s;" onfocus="this.style.top='0'" onblur="this.style.top='-100px'">Ga naar inhoud</a>
+    <a href="#main" class="skip-link">Ga naar inhoud</a>
+
+    <!-- Yingabar -->
+    <div class="yingabar" aria-hidden="true">
+        <span></span><span></span><span></span><span></span>
+    </div>
 
     <!-- Header -->
-    <header class="landing-header" id="header">
-        <nav class="landing-nav">
-            <a href="/tstudio/landing" class="landing-logo">
-                <img src="/tstudio/static/Transcriptstudio.png" alt="Transcript Studio Logo">
-                <span class="landing-logo-text">Transcript Studio</span>
+    <header class="site-header">
+        <div class="header-inner">
+            <a href="/tstudio/landing" class="header-logo" aria-label="Transcript Studio - Home">
+                <img src="/tstudio/static/Transcriptstudio.png" alt="" width="28" height="28">
+                <span>Transcript Studio</span>
             </a>
 
-            <div class="landing-nav-links">
-                <a href="/tstudio/download/features.html" class="landing-nav-link active">Features</a>
-                <a href="/tstudio/download/" class="landing-nav-link">Download</a>
-            </div>
+            <nav class="header-nav" aria-label="Hoofdnavigatie">
+                <a href="/tstudio/download/features.html" aria-current="page">Features</a>
+                <a href="/tstudio/download/">Download</a>
+                <a href="/tstudio/login">Inloggen</a>
+            </nav>
 
-            <div class="landing-nav-actions">
-                <button class="theme-toggle" id="themeToggle" aria-label="Thema wisselen">
-                    <svg class="theme-icon-light" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+            <div class="header-actions">
+                <button class="theme-toggle" aria-label="Wissel thema" type="button">
+                    <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
                     </svg>
-                    <svg class="theme-icon-dark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+                    <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"/>
+                        <line x1="12" y1="1" x2="12" y2="3"/>
+                        <line x1="12" y1="21" x2="12" y2="23"/>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                        <line x1="1" y1="12" x2="3" y2="12"/>
+                        <line x1="21" y1="12" x2="23" y2="12"/>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
                     </svg>
                 </button>
-                <a href="/tstudio/login" class="landing-btn landing-btn--primary">Inloggen</a>
+                <a href="/tstudio/download/" class="btn-header">Download</a>
+            </div>
+
+            <button class="mobile-menu-btn" aria-label="Menu openen" aria-expanded="false" aria-controls="mobile-nav" type="button">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="3" y1="6" x2="21" y2="6"/>
+                    <line x1="3" y1="12" x2="21" y2="12"/>
+                    <line x1="3" y1="18" x2="21" y2="18"/>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Mobile navigation -->
+        <nav id="mobile-nav" class="mobile-nav" aria-hidden="true" aria-label="Mobiele navigatie">
+            <a href="/tstudio/download/features.html" aria-current="page">Features</a>
+            <a href="/tstudio/download/">Download</a>
+            <div class="mobile-cta">
+                <a href="/tstudio/download/">Download</a>
+                <a href="/tstudio/login">Inloggen</a>
             </div>
         </nav>
     </header>
 
-    <!-- Main Content -->
+    <!-- Main content -->
     <main id="main">
 
-        <!-- Hero Section -->
-        <section class="features-hero">
-            <div class="features-hero-content landing-reveal">
-                <h1 class="features-hero-title">Alles wat je nodig hebt voor <span class="gradient-text">perfecte notulen</span></h1>
-                <p class="features-hero-subtitle">Van AI-gestuurde transcriptie tot automatische notulengeneratie. Transcript Studio combineert krachtige technologie met een intuitive interface.</p>
-            </div>
-        </section>
-
-        <!-- Core Features Grid -->
-        <section class="landing-section landing-section--alt" id="features">
-            <div class="landing-container">
-                <div class="landing-section-header landing-reveal">
-                    <h2 class="landing-section-title">Krachtige <span class="gradient-text">features</span></h2>
-                    <p class="landing-section-subtitle">Alles wat je team nodig heeft om vergaderingen efficienter te verwerken</p>
-                </div>
-
-                <div class="landing-feature-grid landing-stagger-grid">
-
-                    <!-- 1. AI Transcriptie -->
-                    <div class="landing-feature-card">
-                        <div class="landing-feature-icon landing-feature-icon--primary">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M12 2a3 3 0 00-3 3v7a3 3 0 006 0V5a3 3 0 00-3-3z"/>
-                                <path d="M19 10v2a7 7 0 01-14 0v-2"/>
-                                <line x1="12" y1="19" x2="12" y2="22"/>
-                                <line x1="8" y1="22" x2="16" y2="22"/>
-                            </svg>
-                        </div>
-                        <h3 class="landing-feature-title">AI Transcriptie</h3>
-                        <p class="landing-feature-desc">GPU-versnelde Whisper transcriptie met hoge nauwkeurigheid. Ondersteunt Nederlands, Engels en vele andere talen.</p>
-                    </div>
-
-                    <!-- 2. Automatische Notulen -->
-                    <div class="landing-feature-card">
-                        <div class="landing-feature-icon landing-feature-icon--secondary">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
-                                <polyline points="14 2 14 8 20 8"/>
-                                <line x1="16" y1="13" x2="8" y2="13"/>
-                                <line x1="16" y1="17" x2="8" y2="17"/>
-                                <polyline points="10 9 9 9 8 9"/>
-                            </svg>
-                        </div>
-                        <h3 class="landing-feature-title">Automatische Notulen</h3>
-                        <p class="landing-feature-desc">AI genereert gestructureerde notulen van je transcript. Met besluitenlijsten, actiepunten en samenvattingen.</p>
-                    </div>
-
-                    <!-- 3. Native Desktop App -->
-                    <div class="landing-feature-card">
-                        <div class="landing-feature-icon landing-feature-icon--accent">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
-                                <line x1="8" y1="21" x2="16" y2="21"/>
-                                <line x1="12" y1="17" x2="12" y2="21"/>
-                            </svg>
-                        </div>
-                        <h3 class="landing-feature-title">Native Desktop App</h3>
-                        <p class="landing-feature-desc">Beschikbaar voor macOS en Windows als native applicatie. Sneller, betrouwbaarder en beter geintegreerd met je OS.</p>
-                    </div>
-
-                    <!-- 4. Opnemen in de App -->
-                    <div class="landing-feature-card">
-                        <div class="landing-feature-icon landing-feature-icon--primary">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <circle cx="12" cy="12" r="10"/>
-                                <circle cx="12" cy="12" r="4" fill="currentColor" stroke="none"/>
-                            </svg>
-                        </div>
-                        <h3 class="landing-feature-title">Opnemen in de App</h3>
-                        <p class="landing-feature-desc">Neem vergaderingen direct op via microfoon, systeemaudio of beide tegelijk. Geen externe tools nodig.</p>
-                    </div>
-
-                    <!-- 5. Kalenderintegratie -->
-                    <div class="landing-feature-card">
-                        <div class="landing-feature-icon landing-feature-icon--secondary">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                                <line x1="16" y1="2" x2="16" y2="6"/>
-                                <line x1="8" y1="2" x2="8" y2="6"/>
-                                <line x1="3" y1="10" x2="21" y2="10"/>
-                            </svg>
-                        </div>
-                        <h3 class="landing-feature-title">Kalenderintegratie</h3>
-                        <p class="landing-feature-desc">Automatische vergaderdetectie via EventKit (macOS) en Microsoft Graph (Windows). Start opnames vanuit je agenda.</p>
-                    </div>
-
-                    <!-- 6. Profielen -->
-                    <div class="landing-feature-card">
-                        <div class="landing-feature-icon landing-feature-icon--accent">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
-                                <circle cx="12" cy="7" r="4"/>
-                            </svg>
-                        </div>
-                        <h3 class="landing-feature-title">Profielen</h3>
-                        <p class="landing-feature-desc">Configureerbare notitiestijlen per vergadertype. Van formele besluitenlijsten tot beknopte samenvattingen.</p>
-                    </div>
-
-                    <!-- 7. Offline-first -->
-                    <div class="landing-feature-card">
-                        <div class="landing-feature-icon landing-feature-icon--primary">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <line x1="1" y1="1" x2="23" y2="23"/>
-                                <path d="M16.72 11.06A10.94 10.94 0 0119 12.55"/>
-                                <path d="M5 12.55a10.94 10.94 0 015.17-2.39"/>
-                                <path d="M10.71 5.05A16 16 0 0122.56 9"/>
-                                <path d="M1.42 9a15.91 15.91 0 014.7-2.88"/>
-                                <path d="M8.53 16.11a6 6 0 016.95 0"/>
-                                <line x1="12" y1="20" x2="12.01" y2="20"/>
-                            </svg>
-                        </div>
-                        <h3 class="landing-feature-title">Offline-first</h3>
-                        <p class="landing-feature-desc">Audio wordt altijd lokaal opgeslagen. Uploads worden automatisch herhaald zodra je weer online bent.</p>
-                    </div>
-
-                    <!-- 8. Export Opties -->
-                    <div class="landing-feature-card">
-                        <div class="landing-feature-icon landing-feature-icon--secondary">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
-                                <polyline points="7 10 12 15 17 10"/>
-                                <line x1="12" y1="15" x2="12" y2="3"/>
-                            </svg>
-                        </div>
-                        <h3 class="landing-feature-title">Export Opties</h3>
-                        <p class="landing-feature-desc">Download notulen als PDF, HTML, DOCX of Markdown. Deel ze direct met collega's of archiveer ze.</p>
-                    </div>
-
-                    <!-- 9. 2FA -->
-                    <div class="landing-feature-card">
-                        <div class="landing-feature-icon landing-feature-icon--accent">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                            </svg>
-                        </div>
-                        <h3 class="landing-feature-title">Tweefactorauthenticatie</h3>
-                        <p class="landing-feature-desc">Extra beveiliging met 2FA. Je bedrijfsgegevens en transcripties blijven altijd veilig beschermd.</p>
-                    </div>
-
-                </div>
-            </div>
-        </section>
-
-        <!-- How It Works -->
-        <section class="landing-section" id="hoe-werkt-het">
-            <div class="landing-container">
-                <div class="landing-section-header landing-reveal">
-                    <h2 class="landing-section-title">Hoe werkt <span class="gradient-text">het?</span></h2>
-                    <p class="landing-section-subtitle">In drie simpele stappen naar perfecte notulen</p>
-                </div>
-
-                <div class="landing-steps-grid landing-stagger-grid" style="position:relative;">
-                    <div class="landing-steps-connector" aria-hidden="true"></div>
-
-                    <div class="landing-step">
-                        <div class="landing-step-number">1</div>
-                        <div class="landing-step-card">
-                            <div class="landing-step-icon" style="background: rgba(229, 0, 116, 0.1); color: var(--brand-primary);">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
-                                    <polyline points="17 8 12 3 7 8"/>
-                                    <line x1="12" y1="3" x2="12" y2="15"/>
-                                </svg>
-                            </div>
-                            <h3 class="landing-step-title">Opnemen of uploaden</h3>
-                            <p class="landing-step-desc">Start een opname in de app of upload een bestaand audiobestand. Ondersteunt MP3, WAV, M4A en meer.</p>
+        <!-- ==========================================
+             SECTION 1: HERO
+             ========================================== -->
+        <section class="hero">
+            <div class="container">
+                <div class="hero-inner">
+                    <div class="hero-content">
+                        <span class="hero-label">Features</span>
+                        <h1>Alles wat je nodig hebt voor perfecte notulen</h1>
+                        <p class="hero-description">
+                            Van opname tot notulendocument in enkele minuten.
+                            Transcript Studio combineert GPU-versnelde transcriptie met
+                            slimme AI-notulering in een native desktop app.
+                        </p>
+                        <div class="hero-ctas">
+                            <a href="/tstudio/download/" class="btn-primary">Gratis downloaden</a>
+                            <a href="#hoe-het-werkt" class="btn-secondary">Hoe het werkt</a>
                         </div>
                     </div>
-
-                    <div class="landing-step">
-                        <div class="landing-step-number">2</div>
-                        <div class="landing-step-card">
-                            <div class="landing-step-icon" style="background: rgba(0, 123, 196, 0.1); color: var(--brand-secondary);">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <circle cx="12" cy="12" r="10"/>
-                                    <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/>
-                                    <line x1="12" y1="17" x2="12.01" y2="17"/>
-                                </svg>
-                            </div>
-                            <h3 class="landing-step-title">AI transcribeert en analyseert</h3>
-                            <p class="landing-step-desc">GPU-versnelde Whisper transcribeert de audio. Vervolgens analyseert een LLM de inhoud en structureert de notulen.</p>
-                        </div>
-                    </div>
-
-                    <div class="landing-step">
-                        <div class="landing-step-number">3</div>
-                        <div class="landing-step-card">
-                            <div class="landing-step-icon" style="background: rgba(0, 159, 60, 0.1); color: var(--brand-accent);">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
-                                    <polyline points="22 4 12 14.01 9 11.01"/>
-                                </svg>
-                            </div>
-                            <h3 class="landing-step-title">Professionele notulen ontvangen</h3>
-                            <p class="landing-step-desc">Bekijk het resultaat, pas de stijl aan en exporteer als PDF, DOCX of Markdown. Klaar om te delen.</p>
+                    <div class="hero-visual">
+                        <div class="hero-screenshot">
+                            <img src="/tstudio/download/screenshots/notulen.png"
+                                 alt="Transcript Studio notulenweergave met automatisch gegenereerde vergadernotulen"
+                                 loading="eager"
+                                 fetchpriority="high"
+                                 width="1200" height="800">
                         </div>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- Platform Support -->
-        <section class="landing-section landing-section--alt">
-            <div class="landing-container">
-                <div class="landing-section-header landing-reveal">
-                    <h2 class="landing-section-title">Beschikbaar op <span class="gradient-text">jouw platform</span></h2>
-                    <p class="landing-section-subtitle">Native apps die optimaal presteren op elk besturingssysteem</p>
+        <!-- ==========================================
+             SECTION 2: FEATURE SPOTLIGHTS (01, 02, 03)
+             ========================================== -->
+        <section class="spotlights section" aria-labelledby="spotlights-heading">
+            <div class="container">
+                <div class="spotlights-grid">
+                    <article class="spotlight reveal">
+                        <span class="spotlight-number spotlight-number--magenta" aria-hidden="true">01</span>
+                        <h3 id="spotlights-heading">GPU-versnelde transcriptie</h3>
+                        <p>Whisper large-v3 op dedicated GPU-hardware. Nauwkeurig Nederlands, met spreker-herkenning en tijdstempels.</p>
+                    </article>
+                    <article class="spotlight reveal reveal-delay-1">
+                        <span class="spotlight-number spotlight-number--blue" aria-hidden="true">02</span>
+                        <h3>Automatische notulering</h3>
+                        <p>AI genereert gestructureerde notulen met besluiten, actiepunten en een samenvatting. Direct exporteerbaar naar DOCX of PDF.</p>
+                    </article>
+                    <article class="spotlight reveal reveal-delay-2">
+                        <span class="spotlight-number spotlight-number--green" aria-hidden="true">03</span>
+                        <h3>Lokale AI-verwerking</h3>
+                        <p>Mits je hardware het toelaat: verwerk alles lokaal via Apple Intelligence, Ollama of LM Studio. Je data verlaat nooit je machine.</p>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==========================================
+             SECTION 3: COMPACT FEATURES LIST (7 remaining)
+             ========================================== -->
+        <section class="compact-features" aria-labelledby="features-heading">
+            <div class="container">
+                <div class="compact-features-header reveal">
+                    <h2 id="features-heading">En verder</h2>
                 </div>
 
-                <div class="platform-grid landing-stagger-grid">
-                    <div class="platform-card">
-                        <div class="platform-card-header">
-                            <div class="platform-card-icon">
-                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
-                            </div>
-                            <div>
-                                <div class="platform-card-name">macOS</div>
-                                <div class="platform-card-sub">macOS 14 Sonoma of nieuwer</div>
-                            </div>
+                <div class="compact-grid">
+                    <article class="compact-item reveal reveal-delay-1">
+                        <span class="compact-dot compact-dot--magenta" aria-hidden="true"></span>
+                        <div>
+                            <h3>Vergaderprofielen</h3>
+                            <p>Pas de notitiestijl aan per vergadertype. Bestuursvergadering, standup, brainstorm -- elk type krijgt het juiste format.</p>
                         </div>
-                        <ul class="platform-specs">
-                            <li class="platform-spec">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                Swift 6 met SwiftUI
-                            </li>
-                            <li class="platform-spec">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                Native audio-opname met ScreenCaptureKit
-                            </li>
-                            <li class="platform-spec">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                Touch ID / Face ID authenticatie
-                            </li>
-                            <li class="platform-spec">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                EventKit kalenderintegratie
-                            </li>
+                    </article>
+
+                    <article class="compact-item reveal reveal-delay-2">
+                        <span class="compact-dot compact-dot--blue" aria-hidden="true"></span>
+                        <div>
+                            <h3>Flexibele opname</h3>
+                            <p>Neem op via microfoon, systeemaudio of beide tegelijk. Ideaal voor zowel fysieke als online vergaderingen.</p>
+                        </div>
+                    </article>
+
+                    <article class="compact-item reveal reveal-delay-3">
+                        <span class="compact-dot compact-dot--blue" aria-hidden="true"></span>
+                        <div>
+                            <h3>Offline-first</h3>
+                            <p>Audio wordt altijd lokaal bewaard. Geen internet? Uploads worden automatisch hervat zodra je weer verbinding hebt.</p>
+                        </div>
+                    </article>
+
+                    <article class="compact-item reveal reveal-delay-4">
+                        <span class="compact-dot compact-dot--blue" aria-hidden="true"></span>
+                        <div>
+                            <h3>Kalenderintegratie</h3>
+                            <p>Automatische vergaderdetectie via je macOS-agenda of Microsoft 365. Een klik en je neemt op.</p>
+                        </div>
+                    </article>
+
+                    <article class="compact-item reveal reveal-delay-5">
+                        <span class="compact-dot compact-dot--green" aria-hidden="true"></span>
+                        <div>
+                            <h3>Meerdere exportformaten</h3>
+                            <p>Exporteer naar DOCX, PDF, Markdown of platte tekst. Deel resultaten direct met je team.</p>
+                        </div>
+                    </article>
+
+                    <article class="compact-item reveal reveal-delay-6">
+                        <span class="compact-dot compact-dot--green" aria-hidden="true"></span>
+                        <div>
+                            <h3>Beveiliging &amp; privacy</h3>
+                            <p>Touch ID / Face ID login, token-opslag in Secure Enclave, en audio die nooit onnodig de server bereikt.</p>
+                        </div>
+                    </article>
+
+                    <article class="compact-item reveal reveal-delay-7">
+                        <span class="compact-dot compact-dot--orange" aria-hidden="true"></span>
+                        <div>
+                            <h3>Teambeheer</h3>
+                            <p>Admin-paneel voor gebruikers en invite codes. Beheer profielen, bekijk systeemstatistieken en configureer op organisatieniveau.</p>
+                        </div>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==========================================
+             SECTION 4: SCREENSHOT SHOWCASE (dark bg, tabs)
+             ========================================== -->
+        <section class="showcase" aria-labelledby="showcase-heading">
+            <div class="container">
+                <div class="showcase-header reveal">
+                    <h2 id="showcase-heading">De app van dichtbij</h2>
+                    <p>Native desktop-ervaring op macOS en Windows.</p>
+                </div>
+
+                <div class="showcase-tabs reveal reveal-delay-1" role="tablist" aria-label="Schermafbeeldingen">
+                    <button class="showcase-tab" role="tab" aria-selected="true" aria-controls="ss-notulen" id="tab-notulen" type="button">Notulen</button>
+                    <button class="showcase-tab" role="tab" aria-selected="false" aria-controls="ss-home" id="tab-home" type="button">Home</button>
+                    <button class="showcase-tab" role="tab" aria-selected="false" aria-controls="ss-opname" id="tab-opname" type="button">Opname</button>
+                    <button class="showcase-tab" role="tab" aria-selected="false" aria-controls="ss-profielen" id="tab-profielen" type="button">Profielen</button>
+                    <button class="showcase-tab" role="tab" aria-selected="false" aria-controls="ss-instellingen" id="tab-instellingen" type="button">Instellingen</button>
+                </div>
+
+                <div class="showcase-display reveal reveal-delay-2">
+                    <div class="showcase-window">
+                        <div class="showcase-chrome">
+                            <span class="showcase-chrome-dot"></span>
+                            <span class="showcase-chrome-dot"></span>
+                            <span class="showcase-chrome-dot"></span>
+                            <span class="showcase-chrome-title" id="showcase-active-title">Notulen</span>
+                        </div>
+
+                        <div class="showcase-img-wrap" id="ss-notulen" role="tabpanel" aria-labelledby="tab-notulen" data-active="true">
+                            <img src="/tstudio/download/screenshots/notulen.png"
+                                 alt="Notulenweergave met samenvatting, besluiten en actiepunten"
+                                 loading="lazy" width="1200" height="800">
+                        </div>
+                        <div class="showcase-img-wrap" id="ss-home" role="tabpanel" aria-labelledby="tab-home" data-active="false">
+                            <img src="/tstudio/download/screenshots/home.png"
+                                 alt="Startscherm met recente vergaderingen en snelstartknop"
+                                 loading="lazy" width="1200" height="800">
+                        </div>
+                        <div class="showcase-img-wrap" id="ss-opname" role="tabpanel" aria-labelledby="tab-opname" data-active="false">
+                            <img src="/tstudio/download/screenshots/recording.png"
+                                 alt="Opnamescherm met audiometing en vergaderinformatie"
+                                 loading="lazy" width="1200" height="800">
+                        </div>
+                        <div class="showcase-img-wrap" id="ss-profielen" role="tabpanel" aria-labelledby="tab-profielen" data-active="false">
+                            <img src="/tstudio/download/screenshots/profielen.png"
+                                 alt="Profielbeheer voor verschillende vergadertypes"
+                                 loading="lazy" width="1200" height="800">
+                        </div>
+                        <div class="showcase-img-wrap" id="ss-instellingen" role="tabpanel" aria-labelledby="tab-instellingen" data-active="false">
+                            <img src="/tstudio/download/screenshots/instellingen.png"
+                                 alt="Instellingenscherm met opname- en transcriptieopties"
+                                 loading="lazy" width="1200" height="800">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==========================================
+             SECTION 5: HOW IT WORKS
+             ========================================== -->
+        <section class="how-it-works section" id="hoe-het-werkt" aria-labelledby="steps-heading">
+            <div class="container">
+                <div class="how-header reveal">
+                    <h2 id="steps-heading">Hoe het werkt</h2>
+                    <p>Van vergadering tot notulendocument in drie stappen.</p>
+                </div>
+
+                <div class="steps-row">
+                    <div class="step reveal">
+                        <div class="step-num" aria-hidden="true">01</div>
+                        <h3>Opnemen</h3>
+                        <p>Start een opname met een klik. Kies je microfoon, systeemaudio of beide. Audio wordt lokaal opgeslagen.</p>
+                    </div>
+                    <div class="step reveal reveal-delay-1">
+                        <div class="step-num" aria-hidden="true">02</div>
+                        <h3>Transcriberen</h3>
+                        <p>De audio wordt automatisch getranscribeerd door Whisper op GPU-hardware. Snel en nauwkeurig, ook voor Nederlands.</p>
+                    </div>
+                    <div class="step reveal reveal-delay-2">
+                        <div class="step-num" aria-hidden="true">03</div>
+                        <h3>Notulen ontvangen</h3>
+                        <p>AI genereert gestructureerde notulen op basis van het transcript. Exporteer naar DOCX, PDF of deel direct.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==========================================
+             SECTION 6: PLATFORMS
+             ========================================== -->
+        <section class="platforms section" aria-labelledby="platform-heading">
+            <div class="container">
+                <div class="platforms-header reveal">
+                    <h2 id="platform-heading">Beschikbaar voor macOS en Windows</h2>
+                    <p>Native apps die voelen alsof ze erbij horen. Geen Electron, geen browser-wrapper.</p>
+                </div>
+
+                <div class="platforms-row">
+                    <div class="platform-col reveal">
+                        <h3>
+                            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
+                            </svg>
+                            macOS
+                        </h3>
+                        <ul class="platform-list">
+                            <li>Swift 6 en SwiftUI -- volledig native</li>
+                            <li>ScreenCaptureKit voor systeemaudio</li>
+                            <li>Touch ID en Secure Enclave integratie</li>
+                            <li>EventKit kalenderintegratie</li>
+                            <li>macOS 14 Sonoma of nieuwer</li>
                         </ul>
                     </div>
 
-                    <div class="platform-card">
-                        <div class="platform-card-header">
-                            <div class="platform-card-icon">
-                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 12V6.75l6-1.32v6.48L3 12zm6.73-.07l8.27.55V5.4l-8.27 1.2v5.33zM3 13l6 .09v6.81l-6-1.32V13zm6.73-.02l8.27-.55V20l-8.27-1.2v-5.82z"/></svg>
-                            </div>
-                            <div>
-                                <div class="platform-card-name">Windows</div>
-                                <div class="platform-card-sub">Windows 11</div>
-                            </div>
-                        </div>
-                        <ul class="platform-specs">
-                            <li class="platform-spec">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                Tauri 2 met React 19
-                            </li>
-                            <li class="platform-spec">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                WASAPI audio-opname via Rust
-                            </li>
-                            <li class="platform-spec">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                Windows Hello authenticatie
-                            </li>
-                            <li class="platform-spec">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                Microsoft Graph kalenderintegratie
-                            </li>
+                    <div class="platform-divider" aria-hidden="true"></div>
+
+                    <div class="platform-col reveal reveal-delay-1">
+                        <h3>
+                            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                <path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.9-1.801"/>
+                            </svg>
+                            Windows
+                        </h3>
+                        <ul class="platform-list">
+                            <li>Tauri 2 met React -- lichtgewicht en snel</li>
+                            <li>WASAPI voor systeemaudio-opname</li>
+                            <li>Windows Credential Manager</li>
+                            <li>Microsoft 365 kalenderintegratie</li>
+                            <li>Windows 11 of nieuwer</li>
                         </ul>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- CTA Section -->
-        <section class="landing-section">
-            <div class="landing-container">
-                <div class="landing-cta landing-reveal">
-                    <div class="landing-cta-content">
-                        <h2 class="landing-cta-title">Klaar om te beginnen?</h2>
-                        <p class="landing-cta-subtitle">Download Transcript Studio en ervaar hoe AI je vergaderingen transformeert naar professionele notulen.</p>
-                        <div class="landing-cta-actions">
-                            <a href="/tstudio/download/" class="landing-btn landing-btn--primary landing-btn--large">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
-                                Download
-                            </a>
-                            <a href="/tstudio/login" class="landing-btn landing-btn--outline landing-btn--large">Inloggen</a>
-                        </div>
+        <!-- ==========================================
+             SECTION 7: CTA
+             ========================================== -->
+        <section class="cta-section" aria-labelledby="cta-heading">
+            <div class="container">
+                <div class="cta-inner reveal">
+                    <h2 id="cta-heading">Klaar om te beginnen?</h2>
+                    <p>Download Transcript Studio gratis en ervaar hoe eenvoudig notulen maken kan zijn.</p>
+                    <div class="cta-buttons">
+                        <a href="/tstudio/download/" class="btn-cta-primary">Download voor macOS</a>
+                        <a href="/tstudio/download/" class="btn-cta-secondary">Download voor Windows</a>
                     </div>
                 </div>
             </div>
@@ -1346,83 +1510,146 @@
     </main>
 
     <!-- Footer -->
-    <footer class="landing-footer">
-        <div class="landing-container">
-            <div class="landing-footer-content">
-                <div class="landing-footer-links">
-                    <a href="/tstudio/download/features.html" class="landing-footer-link">Features</a>
-                    <a href="/tstudio/download/" class="landing-footer-link">Download</a>
-                    <a href="/tstudio/login" class="landing-footer-link">Inloggen</a>
-                </div>
-                <p class="landing-footer-credits">
-                    <strong>Developed by</strong>
-                    <a href="https://www.yinga.nl" target="_blank" rel="noopener">
-                        <img src="https://www.yinga.nl/wp-content/uploads/2023/03/logo.svg" alt="Yinga">
-                    </a>
-                </p>
+    <footer class="site-footer">
+        <div class="container">
+            <div class="footer-yingabar" aria-hidden="true">
+                <span></span><span></span><span></span><span></span>
+            </div>
+            <div class="footer-inner">
+                <a href="https://www.yinga.nl" target="_blank" rel="noopener noreferrer" class="footer-credit" aria-label="Design door Yinga">
+                    <span>Design door</span>
+                    <img src="https://www.yinga.nl/wp-content/uploads/2023/03/logo.svg" alt="Yinga" width="60" height="20">
+                </a>
             </div>
         </div>
     </footer>
 
-    <!-- Scripts -->
+    <!-- JS: theme toggle, mobile menu, showcase tabs, scroll reveal -->
     <script>
     (function() {
         'use strict';
 
-        // =====================================
-        // Theme Toggle
-        // =====================================
-        var themeToggle = document.getElementById('themeToggle');
-        var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        // ——— Theme toggle ———
+        var html = document.documentElement;
+        var themeBtn = document.querySelector('.theme-toggle');
         var stored = localStorage.getItem('ts-theme');
-        var theme = stored || (prefersDark ? 'dark' : 'light');
 
-        if (theme === 'dark') {
-            document.documentElement.setAttribute('data-theme', 'dark');
+        if (stored) {
+            html.setAttribute('data-theme', stored);
+        } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            html.setAttribute('data-theme', 'dark');
         }
 
-        themeToggle.addEventListener('click', function() {
-            var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-            if (isDark) {
-                document.documentElement.removeAttribute('data-theme');
-                localStorage.setItem('ts-theme', 'light');
-            } else {
-                document.documentElement.setAttribute('data-theme', 'dark');
-                localStorage.setItem('ts-theme', 'dark');
-            }
+        themeBtn.addEventListener('click', function() {
+            var current = html.getAttribute('data-theme');
+            var next = current === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', next);
+            localStorage.setItem('ts-theme', next);
+            themeBtn.setAttribute('aria-label',
+                next === 'dark' ? 'Schakel naar licht thema' : 'Schakel naar donker thema'
+            );
         });
 
-        // =====================================
-        // Header Scroll Effect
-        // =====================================
-        var header = document.getElementById('header');
+        // ——— Mobile menu ———
+        var menuBtn = document.querySelector('.mobile-menu-btn');
+        var mobileNav = document.getElementById('mobile-nav');
 
-        window.addEventListener('scroll', function() {
-            if (window.pageYOffset > 50) {
-                header.classList.add('scrolled');
-            } else {
-                header.classList.remove('scrolled');
-            }
-        }, { passive: true });
+        if (menuBtn && mobileNav) {
+            menuBtn.addEventListener('click', function() {
+                var expanded = menuBtn.getAttribute('aria-expanded') === 'true';
+                menuBtn.setAttribute('aria-expanded', String(!expanded));
+                mobileNav.setAttribute('aria-hidden', String(expanded));
+                document.body.style.overflow = expanded ? '' : 'hidden';
 
-        // =====================================
-        // Scroll Reveal
-        // =====================================
-        var revealElements = document.querySelectorAll('.landing-reveal, .landing-stagger-grid');
-
-        var revealObserver = new IntersectionObserver(function(entries) {
-            entries.forEach(function(entry) {
-                if (entry.isIntersecting) {
-                    entry.target.classList.add('visible');
+                var svg = menuBtn.querySelector('svg');
+                if (!expanded) {
+                    svg.innerHTML = '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>';
+                    menuBtn.setAttribute('aria-label', 'Menu sluiten');
+                } else {
+                    svg.innerHTML = '<line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>';
+                    menuBtn.setAttribute('aria-label', 'Menu openen');
                 }
             });
-        }, {
-            threshold: 0.1,
-            rootMargin: '0px 0px -50px 0px'
+
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && menuBtn.getAttribute('aria-expanded') === 'true') {
+                    menuBtn.click();
+                    menuBtn.focus();
+                    document.body.style.overflow = '';
+                }
+            });
+        }
+
+        // ——— Screenshot showcase tabs ———
+        var tabs = document.querySelectorAll('.showcase-tab');
+        var panels = document.querySelectorAll('.showcase-img-wrap');
+        var chromeTitle = document.getElementById('showcase-active-title');
+
+        tabs.forEach(function(tab) {
+            tab.addEventListener('click', function() {
+                var targetId = tab.getAttribute('aria-controls');
+
+                // Deactivate all tabs
+                tabs.forEach(function(t) { t.setAttribute('aria-selected', 'false'); });
+                panels.forEach(function(p) { p.setAttribute('data-active', 'false'); });
+
+                // Activate clicked tab
+                tab.setAttribute('aria-selected', 'true');
+                var panel = document.getElementById(targetId);
+                if (panel) panel.setAttribute('data-active', 'true');
+
+                // Update chrome title
+                if (chromeTitle) chromeTitle.textContent = tab.textContent;
+            });
+
+            // Keyboard navigation for tabs
+            tab.addEventListener('keydown', function(e) {
+                var tabList = Array.from(tabs);
+                var idx = tabList.indexOf(tab);
+                var nextIdx;
+
+                if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    nextIdx = (idx + 1) % tabList.length;
+                    tabList[nextIdx].focus();
+                    tabList[nextIdx].click();
+                } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    nextIdx = (idx - 1 + tabList.length) % tabList.length;
+                    tabList[nextIdx].focus();
+                    tabList[nextIdx].click();
+                }
+            });
         });
 
-        revealElements.forEach(function(el) { revealObserver.observe(el); });
+        // ——— Scroll reveal ———
+        var prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        if (!prefersReducedMotion) {
+            var revealElements = document.querySelectorAll('.reveal');
+            var observer = new IntersectionObserver(function(entries) {
+                entries.forEach(function(entry) {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, {
+                threshold: 0.15,
+                rootMargin: '0px 0px -40px 0px'
+            });
+
+            revealElements.forEach(function(el) {
+                observer.observe(el);
+            });
+        } else {
+            // Show everything immediately if reduced motion is preferred
+            document.querySelectorAll('.reveal').forEach(function(el) {
+                el.classList.add('visible');
+            });
+        }
     })();
     </script>
+
 </body>
 </html>

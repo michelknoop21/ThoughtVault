@@ -13,943 +13,966 @@
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&family=Syne:wght@700;800&display=swap" rel="stylesheet">
 
     <style>
-    /* ===========================================
-       1. CSS Variables - Landing Design System
-       =========================================== */
-    :root {
-        /* Brand Colors */
-        --brand-primary: #E50074;
-        --brand-secondary: #007BC4;
-        --brand-accent: #009F3C;
-
-        /* Light Theme */
-        --landing-bg: #FFFFFF;
-        --landing-bg-alt: #F5F5F7;
-        --landing-text: #333339;
-        --landing-text-secondary: #6B6B78;
-        --landing-text-muted: #9999A6;
-        --landing-border: rgba(148, 163, 184, 0.2);
-
-        /* Glassmorphism */
-        --landing-glass-bg: rgba(255, 255, 255, 0.7);
-        --landing-glass-border: rgba(255, 255, 255, 0.4);
-        --landing-glass-hover: rgba(255, 255, 255, 0.9);
-
-        /* Shadows */
-        --landing-shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.06);
-        --landing-shadow-md: 0 8px 24px rgba(15, 23, 42, 0.08);
-        --landing-shadow-lg: 0 20px 50px rgba(15, 23, 42, 0.12);
-        --landing-shadow-glow: 0 0 60px rgba(229, 0, 116, 0.1);
-
-        /* Border Radius */
-        --radius-sm: 6px;
-        --radius-md: 12px;
-        --radius-lg: 16px;
-        --radius-xl: 20px;
-        --radius-2xl: 25px;
-
-        /* Spacing */
-        --space-1: 0.25rem;
-        --space-2: 0.5rem;
-        --space-3: 0.75rem;
-        --space-4: 1rem;
-        --space-6: 1.5rem;
-        --space-8: 2rem;
-        --space-10: 2.5rem;
-        --space-12: 3rem;
-        --space-16: 4rem;
-        --space-20: 5rem;
-        --space-24: 6rem;
-
-        /* Motion */
-        --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
-        --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
-        --dur-fast: 150ms;
-        --dur: 200ms;
-        --dur-slow: 400ms;
-    }
-
-    /* Dark Theme */
-    [data-theme="dark"] {
-        --landing-bg: #0B0C15;
-        --landing-bg-alt: #191C28;
-        --landing-text: #F2F2F7;
-        --landing-text-secondary: #9E9EAE;
-        --landing-text-muted: #6B6B7A;
-        --landing-border: rgba(255, 255, 255, 0.1);
-
-        --landing-glass-bg: rgba(22, 24, 30, 0.8);
-        --landing-glass-border: rgba(255, 255, 255, 0.08);
-        --landing-glass-hover: rgba(32, 34, 42, 0.9);
-
-        --landing-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
-        --landing-shadow-md: 0 8px 24px rgba(0, 0, 0, 0.4);
-        --landing-shadow-lg: 0 20px 50px rgba(0, 0, 0, 0.5);
-        --landing-shadow-glow: 0 0 80px rgba(229, 0, 116, 0.15);
-    }
-
-    /* ===========================================
-       2. Base Styles
-       =========================================== */
-    *, *::before, *::after {
-        box-sizing: border-box;
-        margin: 0;
-        padding: 0;
-    }
-
-    html {
-        scroll-behavior: smooth;
-    }
-
-    body {
-        font-family: system-ui, -apple-system, 'Plus Jakarta Sans', sans-serif;
-        background: var(--landing-bg);
-        color: var(--landing-text);
-        line-height: 1.6;
-        overflow-x: hidden;
-    }
-
-    h1, h2, h3, h4, h5, h6 {
-        font-family: system-ui, -apple-system, 'Space Grotesk', 'Plus Jakarta Sans', sans-serif;
-        font-weight: 700;
-        line-height: 1.2;
-        letter-spacing: -0.02em;
-        color: var(--landing-text);
-    }
-
-    a {
-        color: inherit;
-        text-decoration: none;
-    }
-
-    img {
-        max-width: 100%;
-        height: auto;
-    }
-
-    /* ===========================================
-       3. Header & Navigation
-       =========================================== */
-    .landing-header {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        z-index: 100;
-        background: var(--landing-glass-bg);
-        backdrop-filter: blur(16px);
-        -webkit-backdrop-filter: blur(16px);
-        border-bottom: 1px solid var(--landing-glass-border);
-        transition: all var(--dur) var(--ease);
-    }
-
-    .landing-header.scrolled {
-        background: var(--landing-glass-hover);
-        box-shadow: var(--landing-shadow-sm);
-    }
-
-    .landing-nav {
-        max-width: 1280px;
-        margin: 0 auto;
-        padding: var(--space-4) var(--space-6);
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: var(--space-8);
-    }
-
-    .landing-logo {
-        display: flex;
-        align-items: center;
-        gap: var(--space-3);
-        text-decoration: none;
-    }
-
-    .landing-logo img {
-        height: 48px;
-        width: auto;
-        object-fit: contain;
-    }
-
-    .landing-logo-text {
-        font-family: 'Space Grotesk', sans-serif;
-        font-size: 1.25rem;
-        font-weight: 700;
-        color: var(--landing-text);
-    }
-
-    .landing-nav-links {
-        display: none;
-        align-items: center;
-        gap: var(--space-8);
-    }
-
-    @media (min-width: 768px) {
-        .landing-nav-links {
-            display: flex;
-        }
-    }
-
-    .landing-nav-link {
-        position: relative;
-        font-size: 0.95rem;
-        font-weight: 500;
-        color: var(--landing-text-secondary);
-        text-decoration: none;
-        transition: color var(--dur) var(--ease);
-        padding: var(--space-2) 0;
-    }
-
-    .landing-nav-link::after {
-        content: '';
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        width: 0;
-        height: 2px;
-        background: linear-gradient(90deg, var(--brand-primary), var(--brand-secondary));
-        border-radius: 1px;
-        transition: width var(--dur-slow) var(--ease);
-    }
-
-    .landing-nav-link:hover {
-        color: var(--landing-text);
-    }
-
-    .landing-nav-link:hover::after {
-        width: 100%;
-    }
-
-    .landing-nav-link.active {
-        color: var(--landing-text);
-    }
-
-    .landing-nav-link.active::after {
-        width: 100%;
-    }
-
-    .landing-nav-actions {
-        display: flex;
-        align-items: center;
-        gap: var(--space-3);
-    }
-
-    /* Theme Toggle */
-    .theme-toggle {
-        width: 44px;
-        height: 44px;
-        border-radius: 50%;
-        border: 1px solid var(--landing-border);
-        background: var(--landing-glass-bg);
-        color: var(--landing-text-secondary);
-        cursor: pointer;
-        display: grid;
-        place-items: center;
-        transition: all var(--dur) var(--ease);
-    }
-
-    .theme-toggle:hover {
-        background: var(--landing-glass-hover);
-        color: var(--landing-text);
-        transform: scale(1.05);
-        box-shadow: var(--landing-shadow-md);
-    }
-
-    .theme-toggle svg {
-        width: 20px;
-        height: 20px;
-    }
-
-    .theme-icon-dark { display: none; }
-    [data-theme="dark"] .theme-icon-light { display: none; }
-    [data-theme="dark"] .theme-icon-dark { display: block; }
-
-    /* Buttons */
-    .landing-btn {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: var(--space-2);
-        padding: var(--space-3) var(--space-6);
-        font-family: 'Plus Jakarta Sans', sans-serif;
-        font-size: 0.95rem;
-        font-weight: 600;
-        text-decoration: none;
-        border-radius: var(--radius-md);
-        border: none;
-        cursor: pointer;
-        transition: all var(--dur) var(--ease);
-        min-height: 44px;
-    }
-
-    .landing-btn--primary {
-        background: linear-gradient(135deg, var(--brand-primary) 0%, #c30062 100%);
-        color: white;
-        box-shadow: 0 4px 14px rgba(229, 0, 116, 0.3);
-    }
-
-    .landing-btn--primary:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 24px rgba(229, 0, 116, 0.4);
-    }
-
-    .landing-btn--secondary {
-        background: var(--landing-glass-bg);
-        backdrop-filter: blur(8px);
-        border: 1px solid var(--landing-border);
-        color: var(--landing-text);
-    }
-
-    .landing-btn--secondary:hover {
-        background: var(--landing-glass-hover);
-        border-color: var(--brand-primary);
-        color: var(--brand-primary);
-    }
-
-    .landing-btn--large {
-        padding: var(--space-4) var(--space-8);
-        font-size: 1rem;
-        min-height: 52px;
-    }
-
-    .landing-btn:active {
-        transform: translateY(1px) scale(0.98);
-    }
-
-    .landing-btn svg {
-        width: 20px;
-        height: 20px;
-        flex-shrink: 0;
-    }
-
-    /* ===========================================
-       4. Floating Orbs
-       =========================================== */
-    .landing-hero-orb {
-        position: fixed;
-        border-radius: 50%;
-        filter: blur(80px);
-        opacity: 0.3;
-        pointer-events: none;
-        animation: orbFloat 25s ease-in-out infinite;
-        z-index: 0;
-    }
-
-    .landing-hero-orb--primary {
-        width: 500px;
-        height: 500px;
-        background: var(--brand-primary);
-        top: -10%;
-        left: -5%;
-        animation-delay: 0s;
-    }
-
-    .landing-hero-orb--secondary {
-        width: 400px;
-        height: 400px;
-        background: var(--brand-secondary);
-        bottom: 10%;
-        right: -10%;
-        animation-delay: -8s;
-    }
-
-    @keyframes orbFloat {
-        0%, 100% { transform: translate(0, 0) scale(1); }
-        25% { transform: translate(40px, -30px) scale(1.05); }
-        50% { transform: translate(-20px, 40px) scale(0.95); }
-        75% { transform: translate(30px, 20px) scale(1.02); }
-    }
-
-    /* ===========================================
-       5. Hero / Download Section
-       =========================================== */
-    .download-hero {
-        position: relative;
-        min-height: 100vh;
-        padding-top: 120px;
-        padding-bottom: var(--space-16);
-        overflow: hidden;
-    }
-
-    .download-hero::before {
-        content: '';
-        position: absolute;
-        inset: 0;
-        background:
-            radial-gradient(ellipse 80% 60% at 20% 20%, rgba(229, 0, 116, 0.08) 0%, transparent 50%),
-            radial-gradient(ellipse 60% 50% at 80% 60%, rgba(0, 123, 196, 0.06) 0%, transparent 50%);
-        animation: heroGradientShift 20s ease-in-out infinite;
-        pointer-events: none;
-    }
-
-    [data-theme="dark"] .download-hero::before {
-        background:
-            radial-gradient(ellipse 80% 60% at 20% 20%, rgba(0, 168, 255, 0.1) 0%, transparent 50%),
-            radial-gradient(ellipse 60% 50% at 80% 60%, rgba(255, 26, 140, 0.08) 0%, transparent 50%);
-    }
-
-    @keyframes heroGradientShift {
-        0%, 100% { transform: translate(0, 0) scale(1); opacity: 1; }
-        33% { transform: translate(2%, -2%) scale(1.02); opacity: 0.9; }
-        66% { transform: translate(-2%, 2%) scale(1.03); opacity: 0.95; }
-    }
-
-    .download-content {
-        position: relative;
-        z-index: 1;
-        max-width: 900px;
-        margin: 0 auto;
-        padding: 0 var(--space-6);
-    }
-
-    .download-header {
-        text-align: center;
-        margin-bottom: var(--space-12);
-    }
-
-    .download-title {
-        font-size: clamp(2rem, 4vw + 1rem, 3rem);
-        line-height: 1.1;
-        letter-spacing: -0.03em;
-        margin-bottom: var(--space-4);
-    }
-
-    .gradient-text {
-        background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-    }
-
-    .download-subtitle {
-        font-size: clamp(1rem, 1.2vw + 0.5rem, 1.25rem);
-        color: var(--landing-text-secondary);
-        line-height: 1.7;
-        max-width: 600px;
-        margin: 0 auto var(--space-6);
-    }
-
-    .download-version-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: var(--space-2);
-        padding: var(--space-2) var(--space-4);
-        background: var(--landing-glass-bg);
-        backdrop-filter: blur(8px);
-        border: 1px solid var(--landing-glass-border);
-        border-radius: var(--radius-xl);
-        font-size: 0.85rem;
-        font-weight: 500;
-        color: var(--brand-primary);
-    }
-
-    /* ===========================================
-       6. Platform Cards
-       =========================================== */
-    .download-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: var(--space-6);
-        margin-bottom: var(--space-12);
-    }
-
-    @media (max-width: 640px) {
-        .download-grid { grid-template-columns: 1fr; }
-    }
-
-    .download-card {
-        position: relative;
-        background: var(--landing-glass-bg);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        border: 1px solid var(--landing-glass-border);
-        border-radius: var(--radius-lg);
-        padding: var(--space-8);
-        text-align: center;
-        transition: all var(--dur-slow) var(--ease);
-        overflow: hidden;
-    }
-
-    .download-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 3px;
-        background: linear-gradient(90deg, var(--brand-primary), var(--brand-secondary));
-        opacity: 0;
-        transition: opacity var(--dur) var(--ease);
-    }
-
-    .download-card:hover {
-        background: var(--landing-glass-hover);
-        transform: translateY(-6px);
-        box-shadow:
-            var(--landing-shadow-lg),
-            0 0 50px rgba(0, 123, 196, 0.08);
-    }
-
-    .download-card:hover::before {
-        opacity: 1;
-    }
-
-    .download-card.recommended {
-        border-color: var(--brand-primary);
-        box-shadow: 0 0 0 1px var(--brand-primary), var(--landing-shadow-sm);
-    }
-
-    .download-card.recommended::before {
-        opacity: 1;
-    }
-
-    .download-recommended-label {
-        display: inline-flex;
-        align-items: center;
-        gap: var(--space-1);
-        background: linear-gradient(135deg, var(--brand-primary) 0%, #c30062 100%);
-        color: white;
-        font-size: 0.7rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        padding: var(--space-1) var(--space-3);
-        border-radius: var(--radius-xl);
-        margin-bottom: var(--space-4);
-    }
-
-    .download-card-icon {
-        width: 64px;
-        height: 64px;
-        border-radius: var(--radius-md);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin: 0 auto var(--space-4);
-        transition: all var(--dur-slow) var(--ease);
-    }
-
-    .download-card-icon--macos {
-        background: rgba(0, 123, 196, 0.1);
-        color: var(--brand-secondary);
-    }
-
-    .download-card-icon--windows {
-        background: rgba(0, 123, 196, 0.1);
-        color: var(--brand-secondary);
-    }
-
-    .download-card:hover .download-card-icon {
-        transform: scale(1.1) rotate(3deg);
-        background: linear-gradient(135deg, rgba(229, 0, 116, 0.15), rgba(0, 123, 196, 0.15));
-    }
-
-    .download-card-icon svg {
-        width: 32px;
-        height: 32px;
-    }
-
-    .download-card-name {
-        font-family: system-ui, -apple-system, 'Space Grotesk', sans-serif;
-        font-size: 1.25rem;
-        font-weight: 700;
-        color: var(--landing-text);
-        margin-bottom: var(--space-1);
-    }
-
-    .download-card-version {
-        font-size: 0.85rem;
-        color: var(--landing-text-muted);
-        margin-bottom: var(--space-6);
-    }
-
-    .download-card-filename {
-        font-size: 0.8rem;
-        color: var(--landing-text-muted);
-        margin-top: var(--space-3);
-    }
-
-    /* ===========================================
-       7. Requirements Section
-       =========================================== */
-    .download-requirements {
-        background: var(--landing-glass-bg);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        border: 1px solid var(--landing-glass-border);
-        border-radius: var(--radius-lg);
-        padding: var(--space-6) var(--space-8);
-        margin-bottom: var(--space-8);
-        transition: all var(--dur) var(--ease);
-    }
-
-    .download-requirements:hover {
-        background: var(--landing-glass-hover);
-        box-shadow: var(--landing-shadow-sm);
-    }
-
-    .download-requirements h3 {
-        font-family: system-ui, -apple-system, 'Space Grotesk', sans-serif;
-        font-size: 1.125rem;
-        font-weight: 600;
-        color: var(--landing-text);
-        margin-bottom: var(--space-4);
-    }
-
-    .download-req-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: var(--space-3) var(--space-8);
-    }
-
-    @media (max-width: 640px) {
-        .download-req-grid { grid-template-columns: 1fr; }
-    }
-
-    .download-req-item {
-        display: flex;
-        align-items: center;
-        gap: var(--space-3);
-        font-size: 0.9rem;
-        color: var(--landing-text-secondary);
-    }
-
-    .download-req-item svg {
-        width: 16px;
-        height: 16px;
-        flex-shrink: 0;
-        color: var(--brand-accent);
-    }
-
-    .download-req-label {
-        font-weight: 500;
-        color: var(--landing-text);
-        min-width: 5rem;
-    }
-
-    /* ===========================================
-       8. Footer
-       =========================================== */
-    .landing-footer {
-        padding: var(--space-12) 0;
-        border-top: 1px solid var(--landing-border);
-    }
-
-    .landing-container {
-        max-width: 1280px;
-        margin: 0 auto;
-        padding: 0 var(--space-6);
-    }
-
-    .landing-footer-content {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: var(--space-6);
-    }
-
-    @media (min-width: 768px) {
-        .landing-footer-content {
-            flex-direction: row;
-            justify-content: space-between;
-        }
-    }
-
-    .landing-footer-links {
-        display: flex;
-        align-items: center;
-        gap: var(--space-6);
-    }
-
-    .landing-footer-link {
-        font-size: 0.9rem;
-        color: var(--landing-text-secondary);
-        text-decoration: none;
-        transition: color var(--dur) var(--ease);
-    }
-
-    .landing-footer-link:hover {
-        color: var(--brand-primary);
-    }
-
-    .landing-footer-credits {
-        display: flex;
-        align-items: center;
-        gap: var(--space-2);
-        font-size: 0.9rem;
-        color: var(--landing-text-muted);
-    }
-
-    .landing-footer-credits a {
-        display: inline-flex;
-    }
-
-    .landing-footer-credits img {
-        height: 32px;
-        width: auto;
-    }
-
-    /* ===========================================
-       9. Scroll Reveal Animations
-       =========================================== */
-    .landing-reveal {
-        opacity: 0;
-        transform: translateY(40px);
-        transition: opacity 0.8s var(--ease), transform 0.8s var(--ease);
-    }
-
-    .landing-reveal.visible {
-        opacity: 1;
-        transform: translateY(0);
-    }
-
-    .landing-stagger-grid > * {
-        opacity: 0;
-        transform: translateY(30px) scale(0.96);
-        transition: opacity 0.6s var(--ease), transform 0.6s var(--ease);
-    }
-
-    .landing-stagger-grid.visible > *:nth-child(1) { transition-delay: 0ms; }
-    .landing-stagger-grid.visible > *:nth-child(2) { transition-delay: 80ms; }
-    .landing-stagger-grid.visible > *:nth-child(3) { transition-delay: 160ms; }
-    .landing-stagger-grid.visible > *:nth-child(4) { transition-delay: 240ms; }
-
-    .landing-stagger-grid.visible > * {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-    }
-
-    /* ===========================================
-       10. Loading & Error States
-       =========================================== */
-    .download-loading {
-        grid-column: 1 / -1;
-        text-align: center;
-        padding: var(--space-12);
-        color: var(--landing-text-muted);
-    }
-
-    .download-loading-spinner {
-        width: 32px;
-        height: 32px;
-        border: 3px solid var(--landing-border);
-        border-top-color: var(--brand-primary);
-        border-radius: 50%;
-        animation: downloadSpin 0.8s linear infinite;
-        margin: 0 auto var(--space-4);
-    }
-
-    @keyframes downloadSpin {
-        to { transform: rotate(360deg); }
-    }
-
-    /* ===========================================
-       11. Reduced Motion
-       =========================================== */
-    @media (prefers-reduced-motion: reduce) {
+    /* ========================================
+       Layer order
+       ======================================== */
+    @layer reset, base, layout, components, utilities;
+
+    /* ========================================
+       Reset
+       ======================================== */
+    @layer reset {
         *, *::before, *::after {
-            animation-duration: 0.01ms !important;
-            animation-iteration-count: 1 !important;
-            transition-duration: 0.01ms !important;
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+    }
+
+    /* ========================================
+       Base — variables & defaults
+       ======================================== */
+    @layer base {
+        :root {
+            --font-display: 'Outfit', system-ui, sans-serif;
+            --font-body: 'Outfit', system-ui, sans-serif;
+
+            /* Brand — fixed across themes */
+            --brand-pink: #E50074;
+            --brand-blue: #007BC4;
+            --brand-green: #009F3C;
+            --brand-orange: #F39200;
+
+            /* Light theme (default) */
+            --bg: #FAFAF8;
+            --bg-surface: #FFFFFF;
+            --text: #1A1A1A;
+            --text-secondary: #5A5A5A;
+            --text-muted: #8A8A8A;
+            --border: #E8E8E4;
+
+            /* Derived */
+            --card-shadow: 0 1px 3px rgba(0,0,0,0.04);
+            --focus-ring: 0 0 0 2px var(--bg), 0 0 0 4px var(--brand-pink);
+
+            /* Spacing scale (8px base) */
+            --s-4: 4px;
+            --s-8: 8px;
+            --s-12: 12px;
+            --s-16: 16px;
+            --s-24: 24px;
+            --s-32: 32px;
+            --s-48: 48px;
+            --s-64: 64px;
+            --s-96: 96px;
+            --s-128: 128px;
+
+            /* Radii — varied per context */
+            --radius-badge: 4px;
+            --radius-button: 6px;
+            --radius-card: 8px;
+            --radius-section: 0px;
+
+            /* Motion */
+            --ease: cubic-bezier(0.25, 0.1, 0.25, 1);
+            --dur: 180ms;
         }
 
-        .landing-reveal,
-        .landing-stagger-grid > * {
-            opacity: 1 !important;
-            transform: none !important;
+        [data-theme="dark"] {
+            --bg: #0D1117;
+            --bg-surface: #161B22;
+            --text: #E6EDF3;
+            --text-secondary: #8B949E;
+            --text-muted: #6E7681;
+            --border: #30363D;
+            --card-shadow: 0 1px 3px rgba(0,0,0,0.2);
         }
 
-        .download-hero::before,
-        .landing-hero-orb {
-            animation: none !important;
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        html {
+            font-size: 16px;
+            -webkit-text-size-adjust: 100%;
+            scroll-behavior: smooth;
+            color-scheme: light dark;
+        }
+
+        body {
+            font-family: var(--font-body);
+            font-weight: 400;
+            line-height: 1.6;
+            color: var(--text);
+            background-color: var(--bg);
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        img { max-width: 100%; display: block; }
+
+        a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        button {
+            font: inherit;
+            cursor: pointer;
+            border: none;
+            background: none;
+            color: inherit;
+        }
+
+        :focus-visible {
+            outline: none;
+            box-shadow: var(--focus-ring);
+            border-radius: var(--radius-button);
+        }
+    }
+
+    /* ========================================
+       Layout
+       ======================================== */
+    @layer layout {
+        .skip-link {
+            position: absolute;
+            top: -100%;
+            left: var(--s-16);
+            z-index: 1000;
+            padding: var(--s-8) var(--s-16);
+            background: var(--brand-pink);
+            color: #fff;
+            font-weight: 500;
+            border-radius: var(--radius-button);
+
+            &:focus {
+                top: var(--s-16);
+            }
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1120px;
+            margin-inline: auto;
+            padding-inline: var(--s-24);
+        }
+
+        /* Yingabar */
+        .yingabar {
+            display: flex;
+            height: 4px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 200;
+
+            & span {
+                flex: 1;
+            }
+            & span:nth-child(1) { background: var(--brand-pink); }
+            & span:nth-child(2) { background: var(--brand-blue); }
+            & span:nth-child(3) { background: var(--brand-green); }
+            & span:nth-child(4) { background: var(--brand-orange); }
+        }
+
+        /* Header */
+        .site-header {
+            position: fixed;
+            top: 4px;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            background: var(--bg);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .header-inner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 64px;
+        }
+
+        .logo-link {
+            display: flex;
+            align-items: center;
+            gap: var(--s-12);
+            flex-shrink: 0;
+
+            & img {
+                height: 32px;
+                width: auto;
+            }
+
+            & .logo-text {
+                font-family: var(--font-display);
+                font-weight: 700;
+                font-size: clamp(1rem, 2vw, 1.125rem);
+                letter-spacing: -0.01em;
+            }
+        }
+
+        .main-nav {
             display: none;
         }
 
-        .download-loading-spinner {
-            animation: none !important;
-            border-color: var(--brand-primary);
+        .main-nav-list {
+            display: flex;
+            list-style: none;
+            gap: var(--s-32);
+        }
+
+        .nav-link {
+            font-size: 0.9375rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            transition: color var(--dur) var(--ease);
+            padding: var(--s-8) 0;
+
+            &:hover { color: var(--text); }
+            &[aria-current="page"] {
+                color: var(--text);
+                border-bottom: 2px solid var(--brand-pink);
+            }
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: var(--s-12);
+        }
+
+        .theme-toggle {
+            width: 44px;
+            height: 44px;
+            display: grid;
+            place-items: center;
+            border-radius: var(--radius-button);
+            transition: background var(--dur) var(--ease);
+
+            & svg {
+                width: 20px;
+                height: 20px;
+            }
+
+            &:hover {
+                background: var(--border);
+            }
+        }
+
+        .btn-login {
+            display: none;
+            font-size: 0.875rem;
+            font-weight: 500;
+            padding: var(--s-8) var(--s-24);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-button);
+            transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease);
+
+            &:hover {
+                border-color: var(--text-muted);
+                background: var(--bg-surface);
+            }
+        }
+
+        .hamburger {
+            width: 44px;
+            height: 44px;
+            display: grid;
+            place-items: center;
+            border-radius: var(--radius-button);
+
+            & span {
+                display: block;
+                width: 20px;
+                height: 2px;
+                background: var(--text);
+                position: relative;
+                transition: background var(--dur) var(--ease);
+
+                &::before, &::after {
+                    content: '';
+                    position: absolute;
+                    left: 0;
+                    width: 100%;
+                    height: 2px;
+                    background: var(--text);
+                    transition: transform var(--dur) var(--ease);
+                }
+                &::before { top: -6px; }
+                &::after { top: 6px; }
+            }
+        }
+
+        .hamburger[aria-expanded="true"] span {
+            background: transparent;
+            &::before { transform: translateY(6px) rotate(45deg); }
+            &::after { transform: translateY(-6px) rotate(-45deg); }
+        }
+
+        /* Mobile menu */
+        .mobile-nav {
+            display: none;
+            position: fixed;
+            top: 68px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 90;
+            background: var(--bg);
+            padding: var(--s-32) var(--s-24);
+
+            &[data-open="true"] {
+                display: flex;
+                flex-direction: column;
+                gap: var(--s-24);
+            }
+        }
+
+        .mobile-nav-link {
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: 1.5rem;
+            padding: var(--s-12) 0;
+            border-bottom: 1px solid var(--border);
+
+            &[aria-current="page"] {
+                color: var(--brand-pink);
+            }
+        }
+
+        .mobile-nav-actions {
+            margin-top: auto;
+            padding-bottom: var(--s-48);
+        }
+
+        .mobile-login-btn {
+            display: block;
+            text-align: center;
+            padding: var(--s-16) var(--s-24);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-button);
+            font-weight: 500;
+            font-size: 1rem;
+        }
+
+        @media (min-width: 768px) {
+            .main-nav { display: block; }
+            .btn-login { display: inline-flex; }
+            .hamburger { display: none; }
+        }
+
+        /* Main content offset */
+        main {
+            padding-top: 68px;
+        }
+    }
+
+    /* ========================================
+       Components
+       ======================================== */
+    @layer components {
+
+        /* === Hero === */
+        .hero {
+            padding-top: var(--s-48);
+            padding-bottom: var(--s-48);
+        }
+
+        .hero-label {
+            display: inline-block;
+            font-size: 0.8125rem;
+            font-weight: 500;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: var(--brand-pink);
+            margin-bottom: var(--s-16);
+        }
+
+        .hero-title {
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: clamp(2.25rem, 5vw, 3.25rem);
+            line-height: 1.2;
+            letter-spacing: -0.02em;
+            color: var(--text);
+            text-wrap: balance;
+            max-width: 20ch;
+            margin-bottom: var(--s-16);
+        }
+
+        .hero-subtitle {
+            font-size: clamp(1rem, 2vw, 1.25rem);
+            font-weight: 300;
+            line-height: 1.5;
+            color: var(--text-secondary);
+            max-width: 50ch;
+            text-wrap: pretty;
+            margin-bottom: var(--s-24);
+        }
+
+        .version-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--s-8);
+            font-size: 0.8125rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            padding: var(--s-4) var(--s-12);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-badge);
+            letter-spacing: 0.02em;
+        }
+
+        .version-badge .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--brand-green);
+        }
+
+        /* === Download cards === */
+        .download-grid {
+            display: grid;
+            gap: var(--s-24);
+            margin-top: var(--s-48);
+        }
+
+        @media (min-width: 640px) {
+            .download-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        .download-card {
+            position: relative;
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-card);
+            padding: var(--s-32);
+            box-shadow: var(--card-shadow);
+            transition: border-color var(--dur) var(--ease);
+            display: flex;
+            flex-direction: column;
+            gap: var(--s-24);
+
+            &:hover {
+                border-color: var(--brand-pink);
+            }
+        }
+
+        .card-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+        }
+
+        .platform-info {
+            display: flex;
+            align-items: center;
+            gap: var(--s-16);
+        }
+
+        .platform-icon {
+            width: 48px;
+            height: 48px;
+            display: grid;
+            place-items: center;
+            color: var(--text);
+
+            & svg {
+                width: 32px;
+                height: 32px;
+            }
+        }
+
+        .platform-meta {
+            & h3 {
+                font-family: var(--font-display);
+                font-weight: 700;
+                font-size: 1.25rem;
+                letter-spacing: -0.01em;
+                line-height: 1.2;
+            }
+
+            & p {
+                font-size: 0.875rem;
+                color: var(--text-muted);
+                margin-top: 2px;
+            }
+        }
+
+        .recommended-badge {
+            display: none;
+            font-size: 0.6875rem;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: var(--brand-pink);
+            border: 1px solid var(--brand-pink);
+            border-radius: var(--radius-badge);
+            padding: 3px 8px;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .download-card[data-recommended="true"] .recommended-badge {
+            display: inline-block;
+        }
+
+        .card-body {
+            flex: 1;
+        }
+
+        .file-info {
+            font-size: 0.8125rem;
+            color: var(--text-muted);
+        }
+
+        .card-footer {
+            margin-top: auto;
+        }
+
+        .btn-download {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--s-8);
+            width: 100%;
+            padding: var(--s-12) var(--s-24);
+            background: var(--brand-pink);
+            color: #FFFFFF;
+            font-weight: 600;
+            font-size: 0.9375rem;
+            border-radius: var(--radius-button);
+            transition: background var(--dur) var(--ease);
+            min-height: 48px;
+
+            & svg {
+                width: 18px;
+                height: 18px;
+            }
+
+            &:hover {
+                background: #C70064;
+            }
+        }
+
+        .download-card[data-recommended="true"] .btn-download {
+            background: var(--brand-pink);
+        }
+
+        .btn-secondary-download {
+            background: transparent;
+            color: var(--text);
+            border: 1px solid var(--border);
+
+            &:hover {
+                background: var(--border);
+            }
+        }
+
+        /* === System requirements === */
+        .sysreq-section {
+            padding: var(--s-64) 0;
+            margin-top: var(--s-48);
+            border-top: 1px solid var(--border);
+        }
+
+        .sysreq-title {
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: clamp(1.25rem, 2.5vw, 1.5rem);
+            line-height: 1.2;
+            letter-spacing: -0.015em;
+            margin-bottom: var(--s-32);
+        }
+
+        .sysreq-grid {
+            display: grid;
+            gap: var(--s-32);
+        }
+
+        @media (min-width: 640px) {
+            .sysreq-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        .sysreq-block {
+            & h3 {
+                display: flex;
+                align-items: center;
+                gap: var(--s-8);
+                font-family: var(--font-display);
+                font-weight: 700;
+                font-size: 1rem;
+                margin-bottom: var(--s-16);
+
+                & svg {
+                    width: 24px;
+                    height: 24px;
+                    flex-shrink: 0;
+                }
+            }
+
+            & ul {
+                list-style: none;
+                display: flex;
+                flex-direction: column;
+                gap: var(--s-12);
+            }
+
+            & li {
+                display: flex;
+                align-items: flex-start;
+                gap: var(--s-12);
+                font-size: 0.9375rem;
+                line-height: 1.5;
+                color: var(--text-secondary);
+
+                &::before {
+                    content: '';
+                    flex-shrink: 0;
+                    width: 18px;
+                    height: 18px;
+                    margin-top: 2px;
+                    background: var(--brand-green);
+                    -webkit-mask-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 6L9 17l-5-5'/%3E%3C/svg%3E");
+                    mask-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 6L9 17l-5-5'/%3E%3C/svg%3E");
+                    -webkit-mask-size: contain;
+                    mask-size: contain;
+                    -webkit-mask-repeat: no-repeat;
+                    mask-repeat: no-repeat;
+                }
+            }
+        }
+
+        /* === Install note === */
+        .install-note {
+            margin-top: var(--s-48);
+            padding: var(--s-24) var(--s-32);
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--brand-blue);
+            border-radius: 0 var(--radius-card) var(--radius-card) 0;
+
+            & h3 {
+                font-family: var(--font-display);
+                font-weight: 700;
+                font-size: 1rem;
+                margin-bottom: var(--s-8);
+            }
+
+            & p {
+                font-size: 0.9375rem;
+                color: var(--text-secondary);
+                line-height: 1.6;
+                text-wrap: pretty;
+                max-width: 65ch;
+
+                & code {
+                    font-family: 'SF Mono', 'Cascadia Code', 'JetBrains Mono', monospace;
+                    font-size: 0.8125em;
+                    background: var(--border);
+                    padding: 2px 6px;
+                    border-radius: 3px;
+                }
+            }
+        }
+
+        /* === Footer === */
+        .site-footer {
+            margin-top: var(--s-96);
+            border-top: 1px solid var(--border);
+        }
+
+        .footer-yingabar {
+            height: 3px;
+            display: flex;
+
+            & span { flex: 1; }
+            & span:nth-child(1) { background: var(--brand-pink); }
+            & span:nth-child(2) { background: var(--brand-blue); }
+            & span:nth-child(3) { background: var(--brand-green); }
+            & span:nth-child(4) { background: var(--brand-orange); }
+        }
+
+        .footer-inner {
+            padding: var(--s-32) 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .footer-credit {
+            display: flex;
+            align-items: center;
+            gap: var(--s-8);
+            font-size: 0.8125rem;
+            color: var(--text-muted);
+
+            & img {
+                height: 20px;
+                width: auto;
+                opacity: 0.6;
+                transition: opacity var(--dur) var(--ease);
+            }
+
+            &:hover img {
+                opacity: 1;
+            }
+        }
+    }
+
+    /* ========================================
+       Utilities
+       ======================================== */
+    @layer utilities {
+        .visually-hidden {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border-width: 0;
         }
     }
     </style>
 </head>
 <body>
+    <a href="#main-content" class="skip-link">Ga naar hoofdinhoud</a>
 
-    <!-- Floating Orbs Background -->
-    <div class="landing-hero-orb landing-hero-orb--primary" aria-hidden="true"></div>
-    <div class="landing-hero-orb landing-hero-orb--secondary" aria-hidden="true"></div>
-
-    <!-- Skip to content -->
-    <a href="#main" style="position:absolute;top:-100px;left:0;padding:8px 16px;background:var(--brand-primary);color:white;z-index:200;border-radius:0 0 8px 0;font-weight:600;transition:top .2s;" onfocus="this.style.top='0'" onblur="this.style.top='-100px'">Ga naar inhoud</a>
+    <!-- Yingabar -->
+    <div class="yingabar" role="presentation"><span></span><span></span><span></span><span></span></div>
 
     <!-- Header -->
-    <header class="landing-header" id="header">
-        <nav class="landing-nav">
-            <a href="/tstudio/landing" class="landing-logo">
-                <img src="/tstudio/static/Transcriptstudio.png" alt="Transcript Studio Logo">
-                <span class="landing-logo-text">Transcript Studio</span>
+    <header class="site-header">
+        <div class="container header-inner">
+            <a href="/tstudio/landing" class="logo-link" aria-label="Transcript Studio - naar startpagina">
+                <img src="/tstudio/static/Transcriptstudio.png" alt="" width="32" height="32">
+                <span class="logo-text">Transcript Studio</span>
             </a>
 
-            <div class="landing-nav-links">
-                <a href="/tstudio/download/features.html" class="landing-nav-link">Features</a>
-                <a href="/tstudio/download/" class="landing-nav-link active">Download</a>
-            </div>
+            <nav class="main-nav" aria-label="Hoofdnavigatie">
+                <ul class="main-nav-list">
+                    <li><a href="/tstudio/download/features.html" class="nav-link">Features</a></li>
+                    <li><a href="/tstudio/download/" class="nav-link" aria-current="page">Download</a></li>
+                </ul>
+            </nav>
 
-            <div class="landing-nav-actions">
-                <button class="theme-toggle" id="themeToggle" aria-label="Thema wisselen">
-                    <svg class="theme-icon-light" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
-                    </svg>
-                    <svg class="theme-icon-dark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
-                    </svg>
+            <div class="header-actions">
+                <button class="theme-toggle" id="themeToggle" type="button" aria-label="Wissel thema">
+                    <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+                    <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
                 </button>
-                <a href="/tstudio/login" class="landing-btn landing-btn--primary">Inloggen</a>
+                <a href="/tstudio/login" class="btn-login">Inloggen</a>
+                <button class="hamburger" id="hamburgerBtn" type="button" aria-label="Menu openen" aria-expanded="false" aria-controls="mobileNav">
+                    <span></span>
+                </button>
             </div>
-        </nav>
+        </div>
     </header>
 
-    <!-- Main Content -->
-    <main id="main">
-        <section class="download-hero">
-            <div class="download-content">
+    <!-- Mobile nav -->
+    <nav class="mobile-nav" id="mobileNav" aria-label="Mobiel menu">
+        <a href="/tstudio/download/features.html" class="mobile-nav-link">Features</a>
+        <a href="/tstudio/download/" class="mobile-nav-link" aria-current="page">Download</a>
+        <div class="mobile-nav-actions">
+            <a href="/tstudio/login" class="mobile-login-btn">Inloggen</a>
+        </div>
+    </nav>
 
-                <div class="download-header landing-reveal">
-                    <h1 class="download-title">Download <span class="gradient-text">Transcript Studio</span></h1>
-                    <p class="download-subtitle">Installeer de native app voor de beste ervaring. Beschikbaar voor macOS en Windows.</p>
-                    <div class="download-version-badge" id="version-badge">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                        </svg>
-                        <span>Versie laden...</span>
+    <!-- Main -->
+    <main id="main-content">
+        <section class="hero">
+            <div class="container">
+                <span class="hero-label" aria-hidden="true">Gratis downloaden</span>
+                <h1 class="hero-title">Download Transcript Studio</h1>
+                <p class="hero-subtitle">Van vergadering naar notule in een klik. Beschikbaar voor macOS en Windows.</p>
+                <div class="version-badge" id="versionBadge" aria-label="Versie-informatie">
+                    <span class="dot" aria-hidden="true"></span>
+                    <span id="versionText">Versie laden...</span>
+                </div>
+
+                <!-- Download cards -->
+                <div class="download-grid">
+                    <!-- macOS -->
+                    <div class="download-card" id="macosCard" data-recommended="false">
+                        <div class="card-header">
+                            <div class="platform-info">
+                                <div class="platform-icon" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+                                </div>
+                                <div class="platform-meta">
+                                    <h3>macOS</h3>
+                                    <p id="macosVersion">DMG installer</p>
+                                </div>
+                            </div>
+                            <span class="recommended-badge">Aanbevolen voor jou</span>
+                        </div>
+                        <div class="card-body">
+                            <p class="file-info" id="macosFile"></p>
+                        </div>
+                        <div class="card-footer">
+                            <a href="#" id="macosDownload" class="btn-download" download>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                                Download voor macOS
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Windows -->
+                    <div class="download-card" id="windowsCard" data-recommended="false">
+                        <div class="card-header">
+                            <div class="platform-info">
+                                <div class="platform-icon" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 12V6.75l6-1.32v6.48L3 12zm6.73-.07l8.27.55V5.4l-8.27 1.2v5.33zM3 13l6 .09v6.81l-6-1.32V13zm6.73-.02l8.27-.55V20l-8.27-1.2v-5.82z"/></svg>
+                                </div>
+                                <div class="platform-meta">
+                                    <h3>Windows</h3>
+                                    <p id="windowsVersion">MSI installer</p>
+                                </div>
+                            </div>
+                            <span class="recommended-badge">Aanbevolen voor jou</span>
+                        </div>
+                        <div class="card-body">
+                            <p class="file-info" id="windowsFile"></p>
+                        </div>
+                        <div class="card-footer">
+                            <a href="#" id="windowsDownload" class="btn-download btn-secondary-download" download>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                                Download voor Windows
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- System Requirements -->
+        <section class="sysreq-section" aria-labelledby="sysreq-heading">
+            <div class="container">
+                <h2 class="sysreq-title" id="sysreq-heading">Systeemvereisten</h2>
+                <div class="sysreq-grid">
+                    <div class="sysreq-block">
+                        <h3>
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+                            macOS
+                        </h3>
+                        <ul>
+                            <li>macOS 14 Sonoma of nieuwer</li>
+                            <li>Apple Silicon (M1) of Intel processor</li>
+                            <li>Minimaal 4 GB RAM</li>
+                            <li>100 MB vrije schijfruimte</li>
+                            <li>Internetverbinding voor transcriptie</li>
+                        </ul>
+                    </div>
+                    <div class="sysreq-block">
+                        <h3>
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 12V6.75l6-1.32v6.48L3 12zm6.73-.07l8.27.55V5.4l-8.27 1.2v5.33zM3 13l6 .09v6.81l-6-1.32V13zm6.73-.02l8.27-.55V20l-8.27-1.2v-5.82z"/></svg>
+                            Windows
+                        </h3>
+                        <ul>
+                            <li>Windows 11 of nieuwer</li>
+                            <li>64-bit processor (x86_64)</li>
+                            <li>Minimaal 4 GB RAM</li>
+                            <li>200 MB vrije schijfruimte</li>
+                            <li>Internetverbinding voor transcriptie</li>
+                        </ul>
                     </div>
                 </div>
 
-                <div class="download-grid landing-stagger-grid" id="platforms">
-                    <div class="download-loading">
-                        <div class="download-loading-spinner"></div>
-                        Downloads laden...
-                    </div>
+                <!-- Install note -->
+                <div class="install-note">
+                    <h3>Installatie-instructies</h3>
+                    <p>
+                        <strong>macOS:</strong> Open het DMG-bestand en sleep Transcript Studio naar je Programma's-map.
+                        Bij eerste keer openen: klik rechts op de app, kies "Open" en bevestig.
+                    </p>
+                    <p style="margin-top: var(--s-8);">
+                        <strong>Windows:</strong> Voer het MSI-bestand uit en volg de installatie-wizard.
+                        De app wordt geinstalleerd in <code>C:\Program Files\Transcript Studio</code>.
+                    </p>
                 </div>
-
-                <div class="download-requirements landing-reveal">
-                    <h3>Systeemvereisten</h3>
-                    <div class="download-req-grid">
-                        <div class="download-req-item">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                            <span class="download-req-label">macOS</span> macOS 14 Sonoma+
-                        </div>
-                        <div class="download-req-item">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                            <span class="download-req-label">Windows</span> Windows 11
-                        </div>
-                        <div class="download-req-item">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                            <span class="download-req-label">Opslag</span> 50 MB vrije ruimte
-                        </div>
-                        <div class="download-req-item">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                            <span class="download-req-label">Internet</span> Vereist voor transcriptie
-                        </div>
-                    </div>
-                </div>
-
             </div>
         </section>
     </main>
 
     <!-- Footer -->
-    <footer class="landing-footer">
-        <div class="landing-container">
-            <div class="landing-footer-content">
-                <div class="landing-footer-links">
-                    <a href="/tstudio/download/features.html" class="landing-footer-link">Features</a>
-                    <a href="/tstudio/download/" class="landing-footer-link">Download</a>
-                    <a href="/tstudio/login" class="landing-footer-link">Inloggen</a>
-                </div>
-                <p class="landing-footer-credits">
-                    <strong>Developed by</strong>
-                    <a href="https://www.yinga.nl" target="_blank" rel="noopener">
-                        <img src="https://www.yinga.nl/wp-content/uploads/2023/03/logo.svg" alt="Yinga">
-                    </a>
-                </p>
-            </div>
+    <footer class="site-footer">
+        <div class="footer-yingabar" role="presentation"><span></span><span></span><span></span><span></span></div>
+        <div class="container footer-inner">
+            <a href="https://www.yinga.nl" target="_blank" rel="noopener" class="footer-credit" aria-label="Design door Yinga">
+                <span>Design door</span>
+                <img src="https://www.yinga.nl/wp-content/uploads/2023/03/logo.svg" alt="Yinga" width="60" height="20">
+            </a>
         </div>
     </footer>
 
-    <!-- Scripts -->
     <script>
     (function() {
         'use strict';
 
-        // =====================================
-        // Theme Toggle
-        // =====================================
-        var themeToggle = document.getElementById('themeToggle');
-        var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        var stored = localStorage.getItem('ts-theme');
-        var theme = stored || (prefersDark ? 'dark' : 'light');
+        // ---- Theme ----
+        var THEME_KEY = 'ts-theme';
+        var html = document.documentElement;
+        var toggle = document.getElementById('themeToggle');
+        var iconSun = toggle.querySelector('.icon-sun');
+        var iconMoon = toggle.querySelector('.icon-moon');
 
-        if (theme === 'dark') {
-            document.documentElement.setAttribute('data-theme', 'dark');
+        function applyTheme(theme) {
+            html.setAttribute('data-theme', theme);
+            localStorage.setItem(THEME_KEY, theme);
+            if (theme === 'dark') {
+                iconSun.style.display = 'none';
+                iconMoon.style.display = 'block';
+                toggle.setAttribute('aria-label', 'Schakel naar licht thema');
+            } else {
+                iconSun.style.display = 'block';
+                iconMoon.style.display = 'none';
+                toggle.setAttribute('aria-label', 'Schakel naar donker thema');
+            }
         }
 
-        themeToggle.addEventListener('click', function() {
-            var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-            if (isDark) {
-                document.documentElement.removeAttribute('data-theme');
-                localStorage.setItem('ts-theme', 'light');
-            } else {
-                document.documentElement.setAttribute('data-theme', 'dark');
-                localStorage.setItem('ts-theme', 'dark');
-            }
+        var saved = localStorage.getItem(THEME_KEY);
+        if (saved) {
+            applyTheme(saved);
+        } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            applyTheme('dark');
+        } else {
+            applyTheme('light');
+        }
+
+        toggle.addEventListener('click', function() {
+            var current = html.getAttribute('data-theme');
+            applyTheme(current === 'dark' ? 'light' : 'dark');
         });
 
-        // =====================================
-        // Header Scroll Effect
-        // =====================================
-        var header = document.getElementById('header');
+        // ---- Mobile menu ----
+        var hamburger = document.getElementById('hamburgerBtn');
+        var mobileNav = document.getElementById('mobileNav');
 
-        window.addEventListener('scroll', function() {
-            if (window.pageYOffset > 50) {
-                header.classList.add('scrolled');
-            } else {
-                header.classList.remove('scrolled');
-            }
-        }, { passive: true });
-
-        // =====================================
-        // Scroll Reveal
-        // =====================================
-        var revealElements = document.querySelectorAll('.landing-reveal, .landing-stagger-grid');
-
-        var revealObserver = new IntersectionObserver(function(entries) {
-            entries.forEach(function(entry) {
-                if (entry.isIntersecting) {
-                    entry.target.classList.add('visible');
-                }
-            });
-        }, {
-            threshold: 0.1,
-            rootMargin: '0px 0px -50px 0px'
+        hamburger.addEventListener('click', function() {
+            var open = mobileNav.getAttribute('data-open') === 'true';
+            mobileNav.setAttribute('data-open', open ? 'false' : 'true');
+            hamburger.setAttribute('aria-expanded', open ? 'false' : 'true');
+            hamburger.setAttribute('aria-label', open ? 'Menu openen' : 'Menu sluiten');
+            document.body.style.overflow = open ? '' : 'hidden';
         });
 
-        revealElements.forEach(function(el) { revealObserver.observe(el); });
-
-        // =====================================
-        // Platform Icons (SVG)
-        // =====================================
-        var ICONS = {
-            macos: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>',
-            windows: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 12V6.75l6-1.32v6.48L3 12zm6.73-.07l8.27.55V5.4l-8.27 1.2v5.33zM3 13l6 .09v6.81l-6-1.32V13zm6.73-.02l8.27-.55V20l-8.27-1.2v-5.82z"/></svg>',
-            download: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>'
-        };
-
-        // =====================================
-        // OS Detection
-        // =====================================
+        // ---- OS detection ----
         function detectOS() {
             var ua = navigator.userAgent;
             if (ua.indexOf('Mac') !== -1) return 'macos';
@@ -957,75 +980,57 @@
             return null;
         }
 
-        // =====================================
-        // Load & Render Releases
-        // =====================================
-        function loadReleases() {
-            fetch('/tstudio/download/releases.json')
-                .then(function(res) {
-                    if (!res.ok) throw new Error('Kon releases niet laden');
-                    return res.json();
-                })
-                .then(function(data) {
-                    render(data);
-                })
-                .catch(function() {
-                    document.getElementById('platforms').innerHTML =
-                        '<div class="download-loading">Kon downloads niet laden. Probeer het later opnieuw.</div>';
-                });
+        var detectedOS = detectOS();
+        var macosCard = document.getElementById('macosCard');
+        var windowsCard = document.getElementById('windowsCard');
+        var macosBtn = document.getElementById('macosDownload');
+        var windowsBtn = document.getElementById('windowsDownload');
+
+        if (detectedOS === 'macos') {
+            macosCard.setAttribute('data-recommended', 'true');
+            macosBtn.classList.remove('btn-secondary-download');
+            windowsBtn.classList.add('btn-secondary-download');
+        } else if (detectedOS === 'windows') {
+            windowsCard.setAttribute('data-recommended', 'true');
+            windowsBtn.classList.remove('btn-secondary-download');
+            macosBtn.classList.add('btn-secondary-download');
+            // Put recommended card first visually on mobile
+            windowsCard.parentNode.insertBefore(windowsCard, macosCard);
         }
 
-        function render(data) {
-            var userOS = detectOS();
+        // ---- Fetch releases ----
+        fetch('/tstudio/download/releases.json')
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+                var version = data.latest_version || '—';
+                document.getElementById('versionText').textContent = 'Versie ' + version;
 
-            // Update version badge
-            var badge = document.getElementById('version-badge');
-            badge.querySelector('span').textContent = 'Versie ' + (data.latest_version || '?');
-
-            var container = document.getElementById('platforms');
-            container.innerHTML = '';
-
-            var platforms = [
-                { key: 'macos', name: 'macOS', ext: '.dmg' },
-                { key: 'windows', name: 'Windows', ext: '.msi' }
-            ];
-
-            platforms.forEach(function(p) {
-                var info = data[p.key];
-                var isRecommended = userOS === p.key;
-                var card = document.createElement('div');
-                card.className = 'download-card' + (isRecommended ? ' recommended' : '');
-
-                var html = '';
-
-                if (isRecommended) {
-                    html += '<div class="download-recommended-label">Aanbevolen voor jou</div>';
+                if (data.macos) {
+                    document.getElementById('macosVersion').textContent = 'DMG installer — v' + data.macos.version;
+                    document.getElementById('macosFile').textContent = data.macos.filename;
+                    document.getElementById('macosDownload').href = data.macos.url;
                 }
 
-                html += '<div class="download-card-icon download-card-icon--' + p.key + '">' + ICONS[p.key] + '</div>';
-                html += '<div class="download-card-name">' + p.name + '</div>';
-
-                if (info) {
-                    html += '<div class="download-card-version">v' + info.version + '</div>';
-                    html += '<a href="' + info.url + '" class="landing-btn landing-btn--primary landing-btn--large">' +
-                        ICONS.download + ' Download ' + p.ext +
-                        '</a>';
-                    html += '<div class="download-card-filename">' + info.filename + '</div>';
-                } else {
-                    html += '<div class="download-card-version">Nog niet beschikbaar</div>';
-                    html += '<span class="landing-btn landing-btn--secondary" style="opacity:.5;pointer-events:none;">Binnenkort beschikbaar</span>';
+                if (data.windows) {
+                    document.getElementById('windowsVersion').textContent = 'MSI installer — v' + data.windows.version;
+                    document.getElementById('windowsFile').textContent = data.windows.filename;
+                    document.getElementById('windowsDownload').href = data.windows.url;
                 }
-
-                card.innerHTML = html;
-                container.appendChild(card);
+            })
+            .catch(function() {
+                document.getElementById('versionText').textContent = 'Versie niet beschikbaar';
             });
 
-            // Re-trigger stagger animation
-            container.classList.remove('visible');
-            requestAnimationFrame(function() { container.classList.add('visible'); });
-        }
-
-        loadReleases();
+        // ---- Escape closes mobile nav ----
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && mobileNav.getAttribute('data-open') === 'true') {
+                mobileNav.setAttribute('data-open', 'false');
+                hamburger.setAttribute('aria-expanded', 'false');
+                hamburger.setAttribute('aria-label', 'Menu openen');
+                document.body.style.overflow = '';
+                hamburger.focus();
+            }
+        });
     })();
     </script>
 </body>

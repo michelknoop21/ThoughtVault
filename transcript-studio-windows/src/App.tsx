@@ -31,7 +31,6 @@ import { initCrashReporter } from "./services/crashReporter";
 import { initMeetingNotifications } from "./services/meetingNotifications";
 import type { Profile } from "./types";
 
-// Initialize crash reporter immediately
 initCrashReporter();
 
 function OfflineQueueBanner() {
@@ -224,9 +223,6 @@ function ProtectedRoutes() {
             }
           );
         }
-        if (activeTasks.length > 0) {
-          console.log(`[TaskRecovery] Recovered ${activeTasks.length} active task(s)`);
-        }
       } catch {
         // Recovery failed — not critical
       }
@@ -323,7 +319,6 @@ export default function App() {
     })();
   }, []);
 
-  // Initialize meeting notification permissions
   useEffect(() => {
     if (!("__TAURI_INTERNALS__" in window)) return;
     initMeetingNotifications().catch(() => {});
@@ -353,7 +348,6 @@ export default function App() {
         } catch { /* not JSON, use as-is */ }
 
         if (!callbackUrl?.startsWith("transcript-studio://auth/callback")) return;
-        console.log("[OAuth] Processing callback URL:", callbackUrl);
         await MicrosoftGraphService.handleAuthCallback(callbackUrl);
       } catch (err) {
         console.error("[OAuth] Callback error:", err);

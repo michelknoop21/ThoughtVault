@@ -28,7 +28,7 @@ try {
         exit 1
     }
 
-    $MsiName = "TranscriptStudio-$Version.msi"
+    $MsiName = "TranscriptStudio_$Version.msi"
     $MsiDest = Join-Path $BuildDir $MsiName
     Copy-Item $MsiSource.FullName -Destination $MsiDest -Force
 

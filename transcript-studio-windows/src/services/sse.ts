@@ -31,7 +31,7 @@ export class SSEClient {
         const data = normalizeTaskUpdate(JSON.parse(event.payload));
         onUpdate(data);
 
-        if (data.status === "completed" || data.status === "failed" || data.status === "cancelled") {
+        if (data.status === "completed" || data.status === "failed" || data.status === "cancelled" || data.status === "error") {
           this.disconnect();
           onComplete?.();
         }

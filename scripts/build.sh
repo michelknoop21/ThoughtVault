@@ -59,7 +59,7 @@ if [ "$OS" = "Darwin" ]; then
     echo "Size: $(du -h "$DMG_PATH" | cut -f1)"
 
     # Check for Windows MSI in build/ for upcoming upload
-    MSI_NAME="TranscriptStudio-${VERSION}.msi"
+    MSI_NAME="TranscriptStudio_${VERSION}.msi"
     MSI_PATH="$BUILD_DIR/$MSI_NAME"
     # Also check Tauri output directory in case target/ was synced from Windows
     if [ ! -f "$MSI_PATH" ]; then
@@ -82,7 +82,7 @@ if [ "$OS" = "Darwin" ]; then
 else
     # Windows (or Linux): Tauri build → MSI
     WINDOWS_DIR="$ROOT_DIR/transcript-studio-windows"
-    MSI_NAME="TranscriptStudio-${VERSION}.msi"
+    MSI_NAME="TranscriptStudio_${VERSION}.msi"
 
     if [ ! -d "$WINDOWS_DIR" ]; then
         echo "ERROR: transcript-studio-windows directory not found"

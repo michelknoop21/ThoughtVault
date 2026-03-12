@@ -10,7 +10,7 @@ $Server = "michelk@3.69.205.209"
 $RemoteDir = "/home/michelk/tstudio-releases"
 
 $DmgArtifact = "TranscriptStudio-$Version.dmg"
-$MsiArtifact = "TranscriptStudio-$Version.msi"
+$MsiArtifact = "TranscriptStudio_$Version.msi"
 $DmgPath = Join-Path $BuildDir $DmgArtifact
 $MsiPath = Join-Path $BuildDir $MsiArtifact
 

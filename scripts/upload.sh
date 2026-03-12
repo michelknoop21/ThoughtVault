@@ -11,7 +11,7 @@ SERVER="michelk@3.69.205.209"
 REMOTE_DIR="/home/michelk/tstudio-releases"
 
 DMG_ARTIFACT="TranscriptStudio-${VERSION}.dmg"
-MSI_ARTIFACT="TranscriptStudio-${VERSION}.msi"
+MSI_ARTIFACT="TranscriptStudio_${VERSION}.msi"
 DMG_PATH="$BUILD_DIR/$DMG_ARTIFACT"
 MSI_PATH="$BUILD_DIR/$MSI_ARTIFACT"
 

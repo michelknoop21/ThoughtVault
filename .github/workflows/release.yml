@@ -27,23 +27,36 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer
+
       - name: Build Xcode archive
         run: |
+          set -o pipefail
           xcodebuild archive \
             -project TranscriptStudio.xcodeproj \
             -scheme TranscriptStudio \
             -configuration Release \
-            -destination "platform=macOS,arch=arm64" \
+            -destination "generic/platform=macOS" \
             -archivePath build/TranscriptStudio.xcarchive \
             CODE_SIGNING_ALLOWED=NO \
             SKIP_INSTALL=NO \
-            | tail -5
+            2>&1 | tee /tmp/xcodebuild.log | tail -30
+
+      - name: Show build errors (if failed)
+        if: failure()
+        run: grep -A 5 "error:" /tmp/xcodebuild.log || true
 
       - name: Export and sign app
         run: |
           mkdir -p build/export
-          cp -R build/TranscriptStudio.xcarchive/Products/Applications/TranscriptStudio.app build/export/ 2>/dev/null \
-            || cp -R build/TranscriptStudio.xcarchive/Products/usr/local/bin/TranscriptStudio.app build/export/
+          APP_PATH=$(find build/TranscriptStudio.xcarchive/Products -name "TranscriptStudio.app" -type d | head -1)
+          if [ -z "$APP_PATH" ]; then
+            echo "ERROR: .app not found in archive"
+            find build/TranscriptStudio.xcarchive/Products -type d
+            exit 1
+          fi
+          cp -R "$APP_PATH" build/export/
           codesign --force --deep --sign - build/export/TranscriptStudio.app
 
       - name: Create DMG

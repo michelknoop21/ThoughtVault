@@ -35,6 +35,7 @@ struct SettingsView: View {
     @State private var serverURLError: String? = nil
     @State private var showLogoutConfirm: Bool = false
     @State private var showBugReportSheet: Bool = false
+    @State private var biometricError: String? = nil
     @State private var micPermissionGranted: Bool? = nil
     @State private var speechPermissionGranted: Bool? = nil
     @State private var screenRecordingGranted: Bool? = nil
@@ -562,49 +563,6 @@ struct SettingsView: View {
         }
     }
 
-    // MARK: - Biometrisch (Biometric)
-
-    private var biometricSection: some View {
-        Section {
-            if BiometricService.shared.availableType != .none {
-                Toggle(isOn: $biometricLoginEnabled) {
-                    let type = BiometricService.shared.availableType
-                    HStack(spacing: TS.Spacing.sm) {
-                        Image(systemName: type == .faceID ? "faceid" : "touchid")
-                            .foregroundStyle(Color.brandPrimary)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(type == .faceID ? "Face ID inloggen" : "Touch ID inloggen")
-                                .font(TS.Font.body)
-                            Text("Log in zonder wachtwoord")
-                                .font(TS.Font.caption)
-                                .foregroundStyle(Color.labelSecondary)
-                        }
-                    }
-                }
-                .tint(Color.brandPrimary)
-                .onChange(of: biometricLoginEnabled) { _, enabled in
-                    BiometricService.shared.isEnabled = enabled
-                    if enabled {
-                        if let token = KeychainService.shared.load(for: "authToken") {
-                            Task {
-                                do {
-                                    try await BiometricService.shared.saveTokenWithBiometrics(token)
-                                } catch {
-                                    biometricLoginEnabled = false
-                                    BiometricService.shared.isEnabled = false
-                                }
-                            }
-                        }
-                    } else {
-                        BiometricService.shared.removeBiometricToken()
-                    }
-                }
-            }
-        } header: {
-            Text("Beveiliging")
-        }
-    }
-
     // MARK: - Account
 
     private var accountSection: some View {
@@ -658,31 +616,45 @@ struct SettingsView: View {
 
             // Biometric toggle in account section
             if BiometricService.shared.availableType != .none {
-                Toggle(isOn: $biometricLoginEnabled) {
-                    let type = BiometricService.shared.availableType
-                    HStack(spacing: TS.Spacing.sm) {
-                        Image(systemName: type == .faceID ? "faceid" : "touchid")
-                            .foregroundStyle(Color.brandPrimary)
-                        Text(type == .faceID ? "Face ID inloggen" : "Touch ID inloggen")
-                            .font(TS.Font.body)
+                VStack(alignment: .leading, spacing: TS.Spacing.xs) {
+                    Toggle(isOn: $biometricLoginEnabled) {
+                        let type = BiometricService.shared.availableType
+                        HStack(spacing: TS.Spacing.sm) {
+                            Image(systemName: type == .faceID ? "faceid" : "touchid")
+                                .foregroundStyle(Color.brandPrimary)
+                            Text(type == .faceID ? "Face ID inloggen" : "Touch ID inloggen")
+                                .font(TS.Font.body)
+                        }
                     }
-                }
-                .tint(Color.brandPrimary)
-                .onChange(of: biometricLoginEnabled) { _, enabled in
-                    BiometricService.shared.isEnabled = enabled
-                    if enabled {
-                        if let token = KeychainService.shared.load(for: "authToken") {
+                    .tint(Color.brandPrimary)
+                    .onChange(of: biometricLoginEnabled) { _, enabled in
+                        biometricError = nil
+                        BiometricService.shared.isEnabled = enabled
+                        if enabled {
+                            guard let token = KeychainService.shared.load(for: "authToken") else {
+                                biometricError = "Geen actieve sessie. Log eerst in met e-mail en wachtwoord."
+                                biometricLoginEnabled = false
+                                BiometricService.shared.isEnabled = false
+                                return
+                            }
                             Task {
                                 do {
                                     try await BiometricService.shared.saveTokenWithBiometrics(token)
                                 } catch {
+                                    biometricError = error.localizedDescription
                                     biometricLoginEnabled = false
                                     BiometricService.shared.isEnabled = false
                                 }
                             }
+                        } else {
+                            BiometricService.shared.removeBiometricToken()
                         }
-                    } else {
-                        BiometricService.shared.removeBiometricToken()
+                    }
+
+                    if let error = biometricError {
+                        Text(error)
+                            .font(TS.Font.caption)
+                            .foregroundStyle(Color.statusError)
                     }
                 }
             }

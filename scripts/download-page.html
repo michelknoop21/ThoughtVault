@@ -580,6 +580,24 @@
             }
         }
 
+        .alt-arch-link {
+            display: block;
+            text-align: center;
+            margin-top: var(--s-8);
+            font-size: 0.8125rem;
+            color: var(--text-muted);
+
+            & a {
+                color: var(--brand-blue);
+                text-decoration: underline;
+                text-underline-offset: 2px;
+
+                &:hover {
+                    color: var(--brand-pink);
+                }
+            }
+        }
+
         /* === System requirements === */
         .sysreq-section {
             padding: var(--s-64) 0;
@@ -853,8 +871,9 @@
                         <div class="card-footer">
                             <a href="#" id="windowsDownload" class="btn-download btn-secondary-download" download>
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
-                                Download voor Windows
+                                <span id="windowsDownloadLabel">Download voor Windows</span>
                             </a>
+                            <p class="alt-arch-link" id="windowsAltArch" style="display:none"></p>
                         </div>
                     </div>
                 </div>
@@ -886,7 +905,7 @@
                         </h3>
                         <ul>
                             <li>Windows 11 of nieuwer</li>
-                            <li>64-bit processor (x86_64)</li>
+                            <li>64-bit processor (x64 of ARM64)</li>
                             <li>Minimaal 4 GB RAM</li>
                             <li>200 MB vrije schijfruimte</li>
                             <li>Internetverbinding voor transcriptie</li>
@@ -972,7 +991,7 @@
             document.body.style.overflow = open ? '' : 'hidden';
         });
 
-        // ---- OS detection ----
+        // ---- OS & architecture detection ----
         function detectOS() {
             var ua = navigator.userAgent;
             if (ua.indexOf('Mac') !== -1) return 'macos';
@@ -980,7 +999,24 @@
             return null;
         }
 
+        function detectWindowsArch() {
+            // Use User-Agent Client Hints API if available (modern Chrome/Edge)
+            if (navigator.userAgentData && navigator.userAgentData.getHighEntropyValues) {
+                return navigator.userAgentData.getHighEntropyValues(['architecture']).then(function(ua) {
+                    return ua.architecture === 'arm' ? 'arm64' : 'x64';
+                }).catch(function() { return detectWindowsArchFallback(); });
+            }
+            return Promise.resolve(detectWindowsArchFallback());
+        }
+
+        function detectWindowsArchFallback() {
+            var ua = navigator.userAgent;
+            if (ua.indexOf('ARM') !== -1 || ua.indexOf('Aarch64') !== -1) return 'arm64';
+            return 'x64';
+        }
+
         var detectedOS = detectOS();
+        var detectedArch = 'x64'; // default
         var macosCard = document.getElementById('macosCard');
         var windowsCard = document.getElementById('windowsCard');
         var macosBtn = document.getElementById('macosDownload');
@@ -994,32 +1030,55 @@
             windowsCard.setAttribute('data-recommended', 'true');
             windowsBtn.classList.remove('btn-secondary-download');
             macosBtn.classList.add('btn-secondary-download');
-            // Put recommended card first visually on mobile
             windowsCard.parentNode.insertBefore(windowsCard, macosCard);
         }
 
-        // ---- Fetch releases ----
-        fetch('/tstudio/download/releases.json')
-            .then(function(res) { return res.json(); })
-            .then(function(data) {
-                var version = data.latest_version || '—';
-                document.getElementById('versionText').textContent = 'Versie ' + version;
+        // Detect Windows architecture, then fetch releases
+        var archPromise = (detectedOS === 'windows') ? detectWindowsArch() : Promise.resolve('x64');
 
-                if (data.macos) {
-                    document.getElementById('macosVersion').textContent = 'DMG installer — v' + data.macos.version;
-                    document.getElementById('macosFile').textContent = data.macos.filename;
-                    document.getElementById('macosDownload').href = data.macos.url;
-                }
+        archPromise.then(function(arch) {
+            detectedArch = arch;
+            return fetch('/tstudio/download/releases.json');
+        })
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+            var version = data.latest_version || '—';
+            document.getElementById('versionText').textContent = 'Versie ' + version;
 
-                if (data.windows) {
-                    document.getElementById('windowsVersion').textContent = 'MSI installer — v' + data.windows.version;
-                    document.getElementById('windowsFile').textContent = data.windows.filename;
-                    document.getElementById('windowsDownload').href = data.windows.url;
-                }
-            })
-            .catch(function() {
-                document.getElementById('versionText').textContent = 'Versie niet beschikbaar';
-            });
+            if (data.macos) {
+                document.getElementById('macosVersion').textContent = 'DMG installer — v' + data.macos.version;
+                document.getElementById('macosFile').textContent = data.macos.filename;
+                document.getElementById('macosDownload').href = data.macos.url;
+            }
+
+            // Windows: select the right architecture
+            var winPrimary = detectedArch === 'arm64' ? data.windows_arm64 : (data.windows_x64 || data.windows);
+            var winAlt = detectedArch === 'arm64' ? (data.windows_x64 || data.windows) : data.windows_arm64;
+            var primaryLabel = detectedArch === 'arm64' ? 'ARM64' : 'x64';
+            var altLabel = detectedArch === 'arm64' ? 'x64' : 'ARM64';
+
+            if (winPrimary) {
+                document.getElementById('windowsVersion').textContent = 'MSI installer (' + primaryLabel + ') — v' + winPrimary.version;
+                document.getElementById('windowsFile').textContent = winPrimary.filename;
+                document.getElementById('windowsDownload').href = winPrimary.url;
+                document.getElementById('windowsDownloadLabel').textContent = 'Download voor Windows (' + primaryLabel + ')';
+            } else if (data.windows) {
+                // Fallback to legacy single-arch entry
+                document.getElementById('windowsVersion').textContent = 'MSI installer — v' + data.windows.version;
+                document.getElementById('windowsFile').textContent = data.windows.filename;
+                document.getElementById('windowsDownload').href = data.windows.url;
+            }
+
+            // Show alternative architecture link
+            if (winAlt) {
+                var altEl = document.getElementById('windowsAltArch');
+                altEl.innerHTML = 'Ook beschikbaar voor <a href="' + winAlt.url + '" download>Windows ' + altLabel + '</a>';
+                altEl.style.display = 'block';
+            }
+        })
+        .catch(function() {
+            document.getElementById('versionText').textContent = 'Versie niet beschikbaar';
+        });
 
         // ---- Escape closes mobile nav ----
         document.addEventListener('keydown', function(e) {

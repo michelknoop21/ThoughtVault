@@ -11,45 +11,49 @@ SERVER="michelk@3.69.205.209"
 REMOTE_DIR="/home/michelk/tstudio-releases"
 
 DMG_ARTIFACT="TranscriptStudio-${VERSION}.dmg"
-MSI_ARTIFACT="TranscriptStudio_${VERSION}.msi"
+MSI_X64_ARTIFACT="TranscriptStudio_${VERSION}_x64.msi"
+MSI_ARM64_ARTIFACT="TranscriptStudio_${VERSION}_arm64.msi"
+# Legacy name (for backwards compatibility detection)
+MSI_LEGACY_ARTIFACT="TranscriptStudio_${VERSION}.msi"
+
 DMG_PATH="$BUILD_DIR/$DMG_ARTIFACT"
-MSI_PATH="$BUILD_DIR/$MSI_ARTIFACT"
+MSI_X64_PATH="$BUILD_DIR/$MSI_X64_ARTIFACT"
+MSI_ARM64_PATH="$BUILD_DIR/$MSI_ARM64_ARTIFACT"
 
 mkdir -p "$BUILD_DIR"
 
-# Auto-find MSI from Tauri build output if not already in build/
-if [ ! -f "$MSI_PATH" ]; then
-    TAURI_MSI=$(find "$ROOT_DIR/transcript-studio-windows/src-tauri/target/release/bundle" -name "*.msi" -type f 2>/dev/null | head -1)
-    if [ -n "$TAURI_MSI" ]; then
-        cp "$TAURI_MSI" "$MSI_PATH"
-        echo "  Found MSI in Tauri output, copied to build/"
+# Auto-find MSIs from Tauri build output if not already in build/
+for TARGET_ARCH in x86_64-pc-windows-msvc aarch64-pc-windows-msvc; do
+    if [ "$TARGET_ARCH" = "x86_64-pc-windows-msvc" ]; then
+        MSI_CHECK="$MSI_X64_PATH"
+        ARCH_LABEL="x64"
+    else
+        MSI_CHECK="$MSI_ARM64_PATH"
+        ARCH_LABEL="arm64"
     fi
-fi
+    if [ ! -f "$MSI_CHECK" ]; then
+        TAURI_MSI=$(find "$ROOT_DIR/transcript-studio-windows/src-tauri/target/$TARGET_ARCH/release/bundle" -name "*.msi" -type f 2>/dev/null | head -1)
+        if [ -n "$TAURI_MSI" ]; then
+            cp "$TAURI_MSI" "$MSI_CHECK"
+            echo "  Found $ARCH_LABEL MSI in Tauri output, copied to build/"
+        fi
+    fi
+done
 
-# Also check the server for an existing MSI if we only have a DMG locally
-if [ ! -f "$MSI_PATH" ] && [ -f "$DMG_PATH" ]; then
-    echo "  No local MSI found, checking server for existing Windows release..."
-    REMOTE_MSI_VERSION=$(ssh "$SERVER" "python3 -c \"
-import json
-try:
-    with open('$REMOTE_DIR/releases.json') as f:
-        data = json.load(f)
-    print(data.get('windows', {}).get('version', ''))
-except:
-    print('')
-\"" 2>/dev/null || true)
-    if [ -n "$REMOTE_MSI_VERSION" ]; then
-        echo "  Server has Windows MSI v${REMOTE_MSI_VERSION} (will be preserved in manifest)"
-    fi
+# Backwards compat: rename legacy single MSI to x64
+if [ ! -f "$MSI_X64_PATH" ] && [ -f "$BUILD_DIR/$MSI_LEGACY_ARTIFACT" ]; then
+    cp "$BUILD_DIR/$MSI_LEGACY_ARTIFACT" "$MSI_X64_PATH"
+    echo "  Renamed legacy MSI to x64"
 fi
 
 FOUND_ANY=false
 if [ -f "$DMG_PATH" ]; then FOUND_ANY=true; fi
-if [ -f "$MSI_PATH" ]; then FOUND_ANY=true; fi
+if [ -f "$MSI_X64_PATH" ]; then FOUND_ANY=true; fi
+if [ -f "$MSI_ARM64_PATH" ]; then FOUND_ANY=true; fi
 
 if [ "$FOUND_ANY" = false ]; then
     echo "ERROR: No artifacts found in $BUILD_DIR"
-    echo "Expected: $DMG_ARTIFACT and/or $MSI_ARTIFACT"
+    echo "Expected: $DMG_ARTIFACT and/or $MSI_X64_ARTIFACT / $MSI_ARM64_ARTIFACT"
     echo "Run scripts/build.sh first."
     exit 1
 fi
@@ -63,20 +67,24 @@ echo "Uploading artifacts to server..."
 ssh "$SERVER" "mkdir -p $REMOTE_DIR"
 
 # Upload artifacts
-MANIFEST_UPDATES=""
+HAS_MACOS=false
+HAS_WINDOWS_X64=false
+HAS_WINDOWS_ARM64=false
+
 if [ -f "$DMG_PATH" ]; then
     scp "$DMG_PATH" "$SERVER:$REMOTE_DIR/$DMG_ARTIFACT"
     echo "  Uploaded: $DMG_ARTIFACT"
-    MANIFEST_UPDATES="macos"
+    HAS_MACOS=true
 fi
-if [ -f "$MSI_PATH" ]; then
-    scp "$MSI_PATH" "$SERVER:$REMOTE_DIR/$MSI_ARTIFACT"
-    echo "  Uploaded: $MSI_ARTIFACT"
-    if [ -n "$MANIFEST_UPDATES" ]; then
-        MANIFEST_UPDATES="$MANIFEST_UPDATES,windows"
-    else
-        MANIFEST_UPDATES="windows"
-    fi
+if [ -f "$MSI_X64_PATH" ]; then
+    scp "$MSI_X64_PATH" "$SERVER:$REMOTE_DIR/$MSI_X64_ARTIFACT"
+    echo "  Uploaded: $MSI_X64_ARTIFACT"
+    HAS_WINDOWS_X64=true
+fi
+if [ -f "$MSI_ARM64_PATH" ]; then
+    scp "$MSI_ARM64_PATH" "$SERVER:$REMOTE_DIR/$MSI_ARM64_ARTIFACT"
+    echo "  Uploaded: $MSI_ARM64_ARTIFACT"
+    HAS_WINDOWS_ARM64=true
 fi
 
 # Upload website pages
@@ -111,20 +119,30 @@ except (FileNotFoundError, json.JSONDecodeError):
 
 data['latest_version'] = '$VERSION'
 
-platforms = '$MANIFEST_UPDATES'.split(',')
-if 'macos' in platforms:
+if $HAS_MACOS:
     data['macos'] = {
         'url': '/tstudio/download/$DMG_ARTIFACT',
         'version': '$VERSION',
         'filename': '$DMG_ARTIFACT'
     }
-if 'windows' in platforms:
-    data['windows'] = {
-        'url': '/tstudio/download/$MSI_ARTIFACT',
+if $HAS_WINDOWS_X64:
+    data['windows_x64'] = {
+        'url': '/tstudio/download/$MSI_X64_ARTIFACT',
         'version': '$VERSION',
-        'filename': '$MSI_ARTIFACT'
+        'filename': '$MSI_X64_ARTIFACT'
     }
-# Preserve existing platform entries that weren't updated
+    # Keep 'windows' pointing to x64 as the default
+    data['windows'] = {
+        'url': '/tstudio/download/$MSI_X64_ARTIFACT',
+        'version': '$VERSION',
+        'filename': '$MSI_X64_ARTIFACT'
+    }
+if $HAS_WINDOWS_ARM64:
+    data['windows_arm64'] = {
+        'url': '/tstudio/download/$MSI_ARM64_ARTIFACT',
+        'version': '$VERSION',
+        'filename': '$MSI_ARM64_ARTIFACT'
+    }
 
 with open(manifest_path, 'w') as f:
     json.dump(data, f, indent=2)
@@ -135,10 +153,13 @@ print('  Updated releases.json')
 echo ""
 echo "Upload complete."
 if [ -f "$DMG_PATH" ]; then
-    echo "  macOS:     https://n8n.prezent.nl/tstudio/download/$DMG_ARTIFACT"
+    echo "  macOS:         https://n8n.prezent.nl/tstudio/download/$DMG_ARTIFACT"
 fi
-if [ -f "$MSI_PATH" ]; then
-    echo "  Windows:   https://n8n.prezent.nl/tstudio/download/$MSI_ARTIFACT"
+if [ -f "$MSI_X64_PATH" ]; then
+    echo "  Windows x64:   https://n8n.prezent.nl/tstudio/download/$MSI_X64_ARTIFACT"
 fi
-echo "  Manifest:  https://n8n.prezent.nl/tstudio/download/releases.json"
-echo "  Downloads: https://n8n.prezent.nl/tstudio/download/"
+if [ -f "$MSI_ARM64_PATH" ]; then
+    echo "  Windows arm64: https://n8n.prezent.nl/tstudio/download/$MSI_ARM64_ARTIFACT"
+fi
+echo "  Manifest:      https://n8n.prezent.nl/tstudio/download/releases.json"
+echo "  Downloads:     https://n8n.prezent.nl/tstudio/download/"

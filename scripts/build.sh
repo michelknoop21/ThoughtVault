@@ -58,31 +58,38 @@ if [ "$OS" = "Darwin" ]; then
     echo "Build complete: $DMG_PATH"
     echo "Size: $(du -h "$DMG_PATH" | cut -f1)"
 
-    # Check for Windows MSI in build/ for upcoming upload
-    MSI_NAME="TranscriptStudio_${VERSION}.msi"
-    MSI_PATH="$BUILD_DIR/$MSI_NAME"
-    # Also check Tauri output directory in case target/ was synced from Windows
-    if [ ! -f "$MSI_PATH" ]; then
-        TAURI_MSI=$(find "$ROOT_DIR/transcript-studio-windows/src-tauri/target/release/bundle" -name "*.msi" -type f 2>/dev/null | head -1)
-        if [ -n "$TAURI_MSI" ]; then
-            cp "$TAURI_MSI" "$MSI_PATH"
-            echo ""
-            echo "Windows MSI found in Tauri output, copied as: $MSI_NAME"
+    # Check for Windows MSIs in build/ for upcoming upload
+    FOUND_MSI=false
+    for ARCH in x64 arm64; do
+        MSI_NAME="TranscriptStudio_${VERSION}_${ARCH}.msi"
+        MSI_PATH="$BUILD_DIR/$MSI_NAME"
+        if [ -f "$MSI_PATH" ]; then
+            echo "Windows MSI ($ARCH) ready: $MSI_PATH ($(du -h "$MSI_PATH" | cut -f1))"
+            FOUND_MSI=true
         fi
+    done
+    # Also check Tauri output directory in case target/ was synced from Windows
+    if [ "$FOUND_MSI" = false ]; then
+        for TARGET_ARCH in x86_64-pc-windows-msvc aarch64-pc-windows-msvc; do
+            if [ "$TARGET_ARCH" = "x86_64-pc-windows-msvc" ]; then ARCH_LABEL="x64"; else ARCH_LABEL="arm64"; fi
+            TAURI_MSI=$(find "$ROOT_DIR/transcript-studio-windows/src-tauri/target/$TARGET_ARCH/release/bundle" -name "*.msi" -type f 2>/dev/null | head -1)
+            if [ -n "$TAURI_MSI" ]; then
+                MSI_NAME="TranscriptStudio_${VERSION}_${ARCH_LABEL}.msi"
+                cp "$TAURI_MSI" "$BUILD_DIR/$MSI_NAME"
+                echo "Windows MSI ($ARCH_LABEL) found in Tauri output, copied as: $MSI_NAME"
+                FOUND_MSI=true
+            fi
+        done
     fi
-    if [ -f "$MSI_PATH" ]; then
-        echo "Windows MSI ready: $MSI_PATH"
-        echo "Size: $(du -h "$MSI_PATH" | cut -f1)"
-    else
+    if [ "$FOUND_MSI" = false ]; then
         echo ""
         echo "NOTE: No Windows MSI found."
-        echo "  Place it in build/ as: $MSI_NAME"
+        echo "  Place them in build/ as: TranscriptStudio_${VERSION}_x64.msi / TranscriptStudio_${VERSION}_arm64.msi"
     fi
 
 else
     # Windows (or Linux): Tauri build → MSI
     WINDOWS_DIR="$ROOT_DIR/transcript-studio-windows"
-    MSI_NAME="TranscriptStudio_${VERSION}.msi"
 
     if [ ! -d "$WINDOWS_DIR" ]; then
         echo "ERROR: transcript-studio-windows directory not found"
@@ -90,18 +97,45 @@ else
     fi
 
     cd "$WINDOWS_DIR"
-    echo "Running Tauri build..."
-    npm run tauri build
 
-    # Find the MSI in the Tauri output
-    MSI_SOURCE=$(find src-tauri/target/release/bundle -name "*.msi" -type f 2>/dev/null | head -1)
-    if [ -z "$MSI_SOURCE" ]; then
-        echo "ERROR: MSI not found in Tauri build output"
-        exit 1
+    # Build targets: --x64-only or --arm64-only for single arch, default builds both
+    TARGETS=()
+    if [ "$1" = "--x64-only" ]; then
+        TARGETS=("x86_64-pc-windows-msvc")
+    elif [ "$1" = "--arm64-only" ]; then
+        TARGETS=("aarch64-pc-windows-msvc")
+    else
+        TARGETS=("x86_64-pc-windows-msvc" "aarch64-pc-windows-msvc")
     fi
 
-    cp "$MSI_SOURCE" "$BUILD_DIR/$MSI_NAME"
+    for TARGET_ARCH in "${TARGETS[@]}"; do
+        if [ "$TARGET_ARCH" = "x86_64-pc-windows-msvc" ]; then
+            ARCH_LABEL="x64"
+            MSI_NAME="TranscriptStudio_${VERSION}_x64.msi"
+        else
+            ARCH_LABEL="arm64"
+            MSI_NAME="TranscriptStudio_${VERSION}_arm64.msi"
+        fi
+
+        echo ""
+        echo "Building for $ARCH_LABEL ($TARGET_ARCH)..."
+        npm run tauri build -- --target "$TARGET_ARCH"
+
+        # Find the MSI in the Tauri output
+        MSI_SOURCE=$(find src-tauri/target/"$TARGET_ARCH"/release/bundle -name "*.msi" -type f 2>/dev/null | head -1)
+        if [ -z "$MSI_SOURCE" ]; then
+            MSI_SOURCE=$(find src-tauri/target/release/bundle -name "*.msi" -type f 2>/dev/null | head -1)
+        fi
+        if [ -z "$MSI_SOURCE" ]; then
+            echo "ERROR: MSI not found for $ARCH_LABEL"
+            exit 1
+        fi
+
+        cp "$MSI_SOURCE" "$BUILD_DIR/$MSI_NAME"
+        echo "Built: $BUILD_DIR/$MSI_NAME ($(du -h "$BUILD_DIR/$MSI_NAME" | cut -f1))"
+    done
+
     echo ""
-    echo "Build complete: $BUILD_DIR/$MSI_NAME"
-    echo "Size: $(du -h "$BUILD_DIR/$MSI_NAME" | cut -f1)"
+    echo "Windows build complete!"
+    ls -lh "$BUILD_DIR"/TranscriptStudio_${VERSION}_*.msi 2>/dev/null
 fi

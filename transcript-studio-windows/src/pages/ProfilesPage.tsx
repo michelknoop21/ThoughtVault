@@ -6,7 +6,7 @@ import {
   Copy24Regular,
   Globe24Regular,
   LockClosed24Regular,
-  Checkmark24Regular,
+  Star24Regular,
 } from "@fluentui/react-icons";
 import { useProfilesStore } from "../stores/profilesStore";
 import { api } from "../services/api";
@@ -169,7 +169,6 @@ export function ProfilesPage() {
 
   return (
     <div className="page-scroll">
-      {/* Page header */}
       <div className="page-header">
         <h1 className="page-title-sm">Profielen</h1>
       </div>
@@ -180,7 +179,7 @@ export function ProfilesPage() {
           {/* Standaard profielen */}
           <div className="settings-group">
             <p className="settings-group-label">Standaard profielen</p>
-            <div className="flex-col gap-8" style={{ padding: "0 14px 12px" }}>
+            <div className="profile-list">
               {defaultProfiles.map((profile) => (
                 <ProfileCard
                   key={profile.id}
@@ -195,16 +194,16 @@ export function ProfilesPage() {
 
           {/* Mijn profielen */}
           <div className="settings-group">
-            <div className="flex-row gap-10" style={{ padding: "0 14px" }}>
-              <p className="settings-group-label" style={{ flex: 1, margin: 0 }}>Mijn profielen</p>
-              <button onClick={openCreate} className="btn btn-accent btn-sm flex-shrink-0">
-                <Add24Regular style={{ fontSize: 14, marginRight: 4 }} />
+            <div className="profile-section-header">
+              <p className="settings-group-label" style={{ margin: 0 }}>Mijn profielen</p>
+              <button onClick={openCreate} className="btn btn-accent btn-sm">
+                <Add24Regular style={{ fontSize: 14 }} />
                 Nieuw profiel
               </button>
             </div>
-            <div className="flex-col gap-8" style={{ padding: "8px 14px 12px" }}>
+            <div className="profile-list">
               {myProfiles.length === 0 ? (
-                <p className="text-caption" style={{ padding: "8px 0" }}>
+                <p className="text-caption profile-empty">
                   Je hebt nog geen eigen profielen. Maak er een aan of kopieer een publiek profiel.
                 </p>
               ) : (
@@ -226,14 +225,14 @@ export function ProfilesPage() {
           {/* Browse publieke profielen */}
           <div className="settings-group">
             <p className="settings-group-label">Community</p>
-            <div style={{ padding: "0 14px 12px" }}>
+            <div className="profile-list">
               {!showPublic ? (
                 <button onClick={loadPublicProfiles} className="btn btn-secondary btn-sm">
-                  <Globe24Regular style={{ fontSize: 14, marginRight: 4 }} />
+                  <Globe24Regular style={{ fontSize: 14 }} />
                   Browse publieke profielen
                 </button>
               ) : (
-                <div className="flex-col gap-8">
+                <>
                   {publicProfiles.length === 0 ? (
                     <p className="text-caption">Geen publieke profielen gevonden.</p>
                   ) : (
@@ -247,7 +246,7 @@ export function ProfilesPage() {
                       />
                     ))
                   )}
-                </div>
+                </>
               )}
             </div>
           </div>
@@ -258,8 +257,8 @@ export function ProfilesPage() {
       {/* Create/Edit Modal */}
       {showModal && (
         <ModalOverlay onClose={() => setShowModal(false)}>
-          <div className="card" style={{ width: "100%", maxWidth: "min(480px, calc(100vw - 32px))", maxHeight: "80vh", overflow: "auto", padding: 20, margin: "0 16px" }}>
-            <p className="text-body-strong" style={{ marginBottom: 16 }}>
+          <div className="card profile-modal">
+            <p className="text-body-strong profile-modal-title">
               {editingProfile ? "Profiel bewerken" : "Nieuw profiel"}
             </p>
             <div className="flex-col gap-10">
@@ -292,7 +291,7 @@ export function ProfilesPage() {
                 />
               </div>
               <div className="form-field">
-                <div className="flex-row justify-between" style={{ alignItems: "baseline" }}>
+                <div className="profile-prompt-header">
                   <label className="form-label">Systeem prompt</label>
                   <span className="text-caption" style={{ color: form.system_prompt.length > 4500 ? "var(--fill-system-critical)" : "var(--text-tertiary)" }}>
                     {form.system_prompt.length}/5000
@@ -334,7 +333,7 @@ export function ProfilesPage() {
                 />
               </div>
             </div>
-            <div className="flex-row gap-8" style={{ marginTop: 16, justifyContent: "flex-end" }}>
+            <div className="profile-modal-actions">
               <button onClick={() => setShowModal(false)} className="btn btn-secondary btn-sm">
                 Annuleren
               </button>
@@ -349,12 +348,12 @@ export function ProfilesPage() {
       {/* Delete confirmation */}
       {deleteConfirm && (
         <ModalOverlay onClose={() => setDeleteConfirm(null)}>
-          <div className="card" style={{ width: "100%", maxWidth: 360, padding: 20, margin: "0 16px" }}>
+          <div className="card profile-modal-confirm">
             <p className="text-body-strong" style={{ marginBottom: 8 }}>Profiel verwijderen?</p>
             <p className="text-caption" style={{ marginBottom: 16 }}>
               Dit kan niet ongedaan worden gemaakt.
             </p>
-            <div className="flex-row gap-8" style={{ justifyContent: "flex-end" }}>
+            <div className="profile-modal-actions">
               <button onClick={() => setDeleteConfirm(null)} className="btn btn-secondary btn-sm">
                 Annuleren
               </button>
@@ -397,66 +396,62 @@ function ProfileCard({
   onCopy?: () => void;
 }) {
   return (
-    <div className="card" style={{ padding: "12px 14px" }}>
-      <div className="flex-row gap-10">
-        {/* Icon */}
-        <span style={{ fontSize: 22, lineHeight: 1 }}>{profile.icon || "📄"}</span>
+    <div className="card-static profile-card">
+      {/* Icon */}
+      <span className="profile-card-icon">{profile.icon || "📄"}</span>
 
-        {/* Name + description */}
-        <div className="flex-1" style={{ minWidth: 0 }}>
-          <div className="flex-row gap-8" style={{ alignItems: "center" }}>
-            <p className="text-body-strong truncate" style={{ margin: 0 }}>{profile.name}</p>
-            {isDefault && (
-              <span className="status-badge-accent" style={{ fontSize: 10, padding: "1px 6px" }}>
-                Standaard
-              </span>
-            )}
-            {profile.isPublic && (
-              <Globe24Regular style={{ fontSize: 12, color: "var(--text-tertiary)" }} />
-            )}
-          </div>
-          {profile.description && (
-            <p className="text-caption" style={{ margin: "2px 0 0" }}>{profile.description}</p>
+      {/* Name + description */}
+      <div className="profile-card-info">
+        <div className="profile-card-name-row">
+          <p className="text-body-strong truncate" style={{ margin: 0 }}>{profile.name}</p>
+          {isDefault && (
+            <span className="status-badge-accent profile-badge">Standaard</span>
+          )}
+          {profile.isPublic && (
+            <Globe24Regular style={{ fontSize: 12, color: "var(--text-tertiary)", flexShrink: 0 }} />
           )}
         </div>
+        {profile.description && (
+          <p className="text-caption" style={{ margin: 0 }}>{profile.description}</p>
+        )}
+      </div>
 
-        {/* Actions */}
-        <div className="flex-row gap-8 flex-shrink-0" style={{ alignItems: "center", flexWrap: "wrap" }}>
-          {showCopy && onCopy && (
-            <button onClick={onCopy} className="icon-btn icon-btn-sm" title="Kopieer naar mijn profielen">
-              <Copy24Regular style={{ fontSize: 16 }} />
-            </button>
-          )}
-          {!readOnly && (
-            <>
-              {onSetDefault && !isDefault && (
-                <button onClick={onSetDefault} className="icon-btn icon-btn-sm" title="Instellen als standaard">
-                  <Checkmark24Regular style={{ fontSize: 16 }} />
-                </button>
-              )}
-              {onToggleVisibility && (
-                <button onClick={onToggleVisibility} className="icon-btn icon-btn-sm" title={profile.isPublic ? "Maak prive" : "Maak publiek"}>
-                  {profile.isPublic ? <LockClosed24Regular style={{ fontSize: 16 }} /> : <Globe24Regular style={{ fontSize: 16 }} />}
-                </button>
-              )}
-              {onEdit && (
-                <button onClick={onEdit} className="icon-btn icon-btn-sm" title="Bewerken">
-                  <Edit24Regular style={{ fontSize: 16 }} />
-                </button>
-              )}
-              {onDelete && (
-                <button onClick={onDelete} className="icon-btn icon-btn-sm icon-btn-danger" title="Verwijderen">
-                  <Delete24Regular style={{ fontSize: 16 }} />
-                </button>
-              )}
-            </>
-          )}
-          {readOnly && !showCopy && onSetDefault && !isDefault && (
-            <button onClick={onSetDefault} className="icon-btn icon-btn-sm" title="Instellen als standaard">
-              <Checkmark24Regular style={{ fontSize: 16 }} />
-            </button>
-          )}
-        </div>
+      {/* Actions */}
+      <div className="profile-card-actions">
+        {showCopy && onCopy && (
+          <button onClick={onCopy} className="icon-btn icon-btn-sm" title="Kopieer naar mijn profielen">
+            <Copy24Regular style={{ fontSize: 16 }} />
+          </button>
+        )}
+        {!readOnly && (
+          <>
+            {onSetDefault && !isDefault && (
+              <button onClick={onSetDefault} className="icon-btn icon-btn-sm" title="Instellen als standaard">
+                <Star24Regular style={{ fontSize: 16 }} />
+              </button>
+            )}
+            {onToggleVisibility && (
+              <button onClick={onToggleVisibility} className="icon-btn icon-btn-sm" title={profile.isPublic ? "Maak prive" : "Maak publiek"}>
+                {profile.isPublic ? <LockClosed24Regular style={{ fontSize: 16 }} /> : <Globe24Regular style={{ fontSize: 16 }} />}
+              </button>
+            )}
+            {onEdit && (
+              <button onClick={onEdit} className="icon-btn icon-btn-sm" title="Bewerken">
+                <Edit24Regular style={{ fontSize: 16 }} />
+              </button>
+            )}
+            {onDelete && (
+              <button onClick={onDelete} className="icon-btn icon-btn-sm icon-btn-danger" title="Verwijderen">
+                <Delete24Regular style={{ fontSize: 16 }} />
+              </button>
+            )}
+          </>
+        )}
+        {readOnly && !showCopy && onSetDefault && !isDefault && (
+          <button onClick={onSetDefault} className="icon-btn icon-btn-sm" title="Instellen als standaard">
+            <Star24Regular style={{ fontSize: 16 }} />
+          </button>
+        )}
       </div>
     </div>
   );
@@ -466,15 +461,7 @@ function ProfileCard({
 function ModalOverlay({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
   return (
     <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(0,0,0,0.4)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        zIndex: 1000,
-      }}
+      className="profile-overlay"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}

@@ -1209,6 +1209,118 @@
 }
 
 /* ============================================================
+   Profiles Page
+   ============================================================ */
+
+.profile-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 14px 12px;
+}
+
+.profile-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 14px;
+  gap: 12px;
+}
+
+.profile-section-header .btn {
+  gap: 4px;
+}
+
+.profile-empty {
+  padding: 8px 0;
+}
+
+.profile-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+}
+
+.profile-card-icon {
+  font-size: 24px;
+  line-height: 1;
+  width: 32px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.profile-card-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.profile-card-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.profile-badge {
+  font-size: 10px;
+  padding: 1px 6px;
+  flex-shrink: 0;
+}
+
+.profile-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.profile-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.profile-modal {
+  width: 100%;
+  max-width: min(480px, calc(100vw - 32px));
+  max-height: 80vh;
+  overflow: auto;
+  padding: 20px;
+  margin: 0 16px;
+}
+
+.profile-modal-title {
+  margin-bottom: 16px;
+}
+
+.profile-modal-confirm {
+  width: 100%;
+  max-width: 360px;
+  padding: 20px;
+  margin: 0 16px;
+}
+
+.profile-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.profile-prompt-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+/* ============================================================
    Context Menu — acrylic flyout
    ============================================================ */
 

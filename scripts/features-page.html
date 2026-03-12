@@ -1,0 +1,1428 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Features - Transcript Studio</title>
+    <meta name="description" content="Ontdek alle features van Transcript Studio. AI transcriptie, automatische notulen, native desktop apps en meer.">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/tstudio/static/favicon-32x32.png">
+    <link rel="apple-touch-icon" href="/tstudio/static/apple-touch-icon.png">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+    /* ===========================================
+       1. CSS Variables - Landing Design System
+       =========================================== */
+    :root {
+        /* Brand Colors */
+        --brand-primary: #E50074;
+        --brand-secondary: #007BC4;
+        --brand-accent: #009F3C;
+
+        /* Light Theme */
+        --landing-bg: #FFFFFF;
+        --landing-bg-alt: #F5F5F7;
+        --landing-text: #333339;
+        --landing-text-secondary: #6B6B78;
+        --landing-text-muted: #9999A6;
+        --landing-border: rgba(148, 163, 184, 0.2);
+
+        /* Glassmorphism */
+        --landing-glass-bg: rgba(255, 255, 255, 0.7);
+        --landing-glass-border: rgba(255, 255, 255, 0.4);
+        --landing-glass-hover: rgba(255, 255, 255, 0.9);
+
+        /* Shadows */
+        --landing-shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.06);
+        --landing-shadow-md: 0 8px 24px rgba(15, 23, 42, 0.08);
+        --landing-shadow-lg: 0 20px 50px rgba(15, 23, 42, 0.12);
+        --landing-shadow-glow: 0 0 60px rgba(229, 0, 116, 0.1);
+
+        /* Border Radius */
+        --radius-sm: 6px;
+        --radius-md: 12px;
+        --radius-lg: 16px;
+        --radius-xl: 20px;
+        --radius-2xl: 25px;
+
+        /* Spacing */
+        --space-1: 0.25rem;
+        --space-2: 0.5rem;
+        --space-3: 0.75rem;
+        --space-4: 1rem;
+        --space-6: 1.5rem;
+        --space-8: 2rem;
+        --space-10: 2.5rem;
+        --space-12: 3rem;
+        --space-16: 4rem;
+        --space-20: 5rem;
+        --space-24: 6rem;
+
+        /* Motion */
+        --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+        --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+        --dur-fast: 150ms;
+        --dur: 200ms;
+        --dur-slow: 400ms;
+    }
+
+    /* Dark Theme */
+    [data-theme="dark"] {
+        --landing-bg: #0B0C15;
+        --landing-bg-alt: #191C28;
+        --landing-text: #F2F2F7;
+        --landing-text-secondary: #9E9EAE;
+        --landing-text-muted: #6B6B7A;
+        --landing-border: rgba(255, 255, 255, 0.1);
+
+        --landing-glass-bg: rgba(22, 24, 30, 0.8);
+        --landing-glass-border: rgba(255, 255, 255, 0.08);
+        --landing-glass-hover: rgba(32, 34, 42, 0.9);
+
+        --landing-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+        --landing-shadow-md: 0 8px 24px rgba(0, 0, 0, 0.4);
+        --landing-shadow-lg: 0 20px 50px rgba(0, 0, 0, 0.5);
+        --landing-shadow-glow: 0 0 80px rgba(229, 0, 116, 0.15);
+    }
+
+    /* ===========================================
+       2. Base Styles
+       =========================================== */
+    *, *::before, *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+    }
+
+    html {
+        scroll-behavior: smooth;
+    }
+
+    body {
+        font-family: system-ui, -apple-system, 'Plus Jakarta Sans', sans-serif;
+        background: var(--landing-bg);
+        color: var(--landing-text);
+        line-height: 1.6;
+        overflow-x: hidden;
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+        font-family: system-ui, -apple-system, 'Space Grotesk', 'Plus Jakarta Sans', sans-serif;
+        font-weight: 700;
+        line-height: 1.2;
+        letter-spacing: -0.02em;
+        color: var(--landing-text);
+    }
+
+    a {
+        color: inherit;
+        text-decoration: none;
+    }
+
+    img {
+        max-width: 100%;
+        height: auto;
+    }
+
+    /* ===========================================
+       3. Header & Navigation
+       =========================================== */
+    .landing-header {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 100;
+        background: var(--landing-glass-bg);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border-bottom: 1px solid var(--landing-glass-border);
+        transition: all var(--dur) var(--ease);
+    }
+
+    .landing-header.scrolled {
+        background: var(--landing-glass-hover);
+        box-shadow: var(--landing-shadow-sm);
+    }
+
+    .landing-nav {
+        max-width: 1280px;
+        margin: 0 auto;
+        padding: var(--space-4) var(--space-6);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-8);
+    }
+
+    .landing-logo {
+        display: flex;
+        align-items: center;
+        gap: var(--space-3);
+        text-decoration: none;
+    }
+
+    .landing-logo img {
+        height: 48px;
+        width: auto;
+        object-fit: contain;
+    }
+
+    .landing-logo-text {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--landing-text);
+    }
+
+    .landing-nav-links {
+        display: none;
+        align-items: center;
+        gap: var(--space-8);
+    }
+
+    @media (min-width: 768px) {
+        .landing-nav-links {
+            display: flex;
+        }
+    }
+
+    .landing-nav-link {
+        position: relative;
+        font-size: 0.95rem;
+        font-weight: 500;
+        color: var(--landing-text-secondary);
+        text-decoration: none;
+        transition: color var(--dur) var(--ease);
+        padding: var(--space-2) 0;
+    }
+
+    .landing-nav-link::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 0;
+        height: 2px;
+        background: linear-gradient(90deg, var(--brand-primary), var(--brand-secondary));
+        border-radius: 1px;
+        transition: width var(--dur-slow) var(--ease);
+    }
+
+    .landing-nav-link:hover {
+        color: var(--landing-text);
+    }
+
+    .landing-nav-link:hover::after {
+        width: 100%;
+    }
+
+    .landing-nav-link.active {
+        color: var(--landing-text);
+    }
+
+    .landing-nav-link.active::after {
+        width: 100%;
+    }
+
+    .landing-nav-actions {
+        display: flex;
+        align-items: center;
+        gap: var(--space-3);
+    }
+
+    /* Theme Toggle */
+    .theme-toggle {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        border: 1px solid var(--landing-border);
+        background: var(--landing-glass-bg);
+        color: var(--landing-text-secondary);
+        cursor: pointer;
+        display: grid;
+        place-items: center;
+        transition: all var(--dur) var(--ease);
+    }
+
+    .theme-toggle:hover {
+        background: var(--landing-glass-hover);
+        color: var(--landing-text);
+        transform: scale(1.05);
+        box-shadow: var(--landing-shadow-md);
+    }
+
+    .theme-toggle svg {
+        width: 20px;
+        height: 20px;
+    }
+
+    .theme-icon-dark { display: none; }
+    [data-theme="dark"] .theme-icon-light { display: none; }
+    [data-theme="dark"] .theme-icon-dark { display: block; }
+
+    /* Buttons */
+    .landing-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: var(--space-2);
+        padding: var(--space-3) var(--space-6);
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-size: 0.95rem;
+        font-weight: 600;
+        text-decoration: none;
+        border-radius: var(--radius-md);
+        border: none;
+        cursor: pointer;
+        transition: all var(--dur) var(--ease);
+        min-height: 44px;
+    }
+
+    .landing-btn--primary {
+        background: linear-gradient(135deg, var(--brand-primary) 0%, #c30062 100%);
+        color: white;
+        box-shadow: 0 4px 14px rgba(229, 0, 116, 0.3);
+    }
+
+    .landing-btn--primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(229, 0, 116, 0.4);
+    }
+
+    .landing-btn--secondary {
+        background: var(--landing-glass-bg);
+        backdrop-filter: blur(8px);
+        border: 1px solid var(--landing-border);
+        color: var(--landing-text);
+    }
+
+    .landing-btn--secondary:hover {
+        background: var(--landing-glass-hover);
+        border-color: var(--brand-primary);
+        color: var(--brand-primary);
+    }
+
+    .landing-btn--outline {
+        background: transparent;
+        border: 2px solid var(--landing-border);
+        color: var(--landing-text);
+    }
+
+    .landing-btn--outline:hover {
+        border-color: var(--brand-primary);
+        color: var(--brand-primary);
+        background: rgba(229, 0, 116, 0.05);
+    }
+
+    .landing-btn--large {
+        padding: var(--space-4) var(--space-8);
+        font-size: 1rem;
+        min-height: 52px;
+    }
+
+    .landing-btn:active {
+        transform: translateY(1px) scale(0.98);
+    }
+
+    .landing-btn svg {
+        width: 20px;
+        height: 20px;
+        flex-shrink: 0;
+    }
+
+    /* ===========================================
+       4. Floating Orbs
+       =========================================== */
+    .landing-hero-orb {
+        position: fixed;
+        border-radius: 50%;
+        filter: blur(80px);
+        opacity: 0.3;
+        pointer-events: none;
+        animation: orbFloat 25s ease-in-out infinite;
+        z-index: 0;
+    }
+
+    .landing-hero-orb--primary {
+        width: 500px;
+        height: 500px;
+        background: var(--brand-primary);
+        top: -10%;
+        left: -5%;
+        animation-delay: 0s;
+    }
+
+    .landing-hero-orb--secondary {
+        width: 400px;
+        height: 400px;
+        background: var(--brand-secondary);
+        bottom: 10%;
+        right: -10%;
+        animation-delay: -8s;
+    }
+
+    @keyframes orbFloat {
+        0%, 100% { transform: translate(0, 0) scale(1); }
+        25% { transform: translate(40px, -30px) scale(1.05); }
+        50% { transform: translate(-20px, 40px) scale(0.95); }
+        75% { transform: translate(30px, 20px) scale(1.02); }
+    }
+
+    @keyframes heroGradientShift {
+        0%, 100% { transform: translate(0, 0) scale(1); opacity: 1; }
+        33% { transform: translate(2%, -2%) scale(1.02); opacity: 0.9; }
+        66% { transform: translate(-2%, 2%) scale(1.03); opacity: 0.95; }
+    }
+
+    /* ===========================================
+       5. Shared Section Styles
+       =========================================== */
+    .landing-section {
+        position: relative;
+        padding: var(--space-24) 0;
+    }
+
+    .landing-section--alt {
+        background: var(--landing-bg-alt);
+    }
+
+    .landing-section--alt::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background:
+            radial-gradient(ellipse 40% 30% at 0% 50%, rgba(229, 0, 116, 0.03) 0%, transparent 50%),
+            radial-gradient(ellipse 40% 30% at 100% 50%, rgba(0, 123, 196, 0.03) 0%, transparent 50%);
+        pointer-events: none;
+    }
+
+    .landing-container {
+        max-width: 1280px;
+        margin: 0 auto;
+        padding: 0 var(--space-6);
+    }
+
+    .landing-section-header {
+        text-align: center;
+        max-width: 800px;
+        margin: 0 auto var(--space-16);
+    }
+
+    .landing-section-title {
+        font-size: clamp(1.75rem, 3vw + 0.5rem, 2.5rem);
+        margin-bottom: var(--space-4);
+    }
+
+    .landing-section-subtitle {
+        font-size: 1.125rem;
+        color: var(--landing-text-secondary);
+        line-height: 1.7;
+    }
+
+    .gradient-text {
+        background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    /* ===========================================
+       6. Hero Section
+       =========================================== */
+    .features-hero {
+        position: relative;
+        padding-top: 140px;
+        padding-bottom: var(--space-16);
+        overflow: hidden;
+    }
+
+    .features-hero::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background:
+            radial-gradient(ellipse 80% 60% at 20% 20%, rgba(229, 0, 116, 0.08) 0%, transparent 50%),
+            radial-gradient(ellipse 60% 50% at 80% 60%, rgba(0, 123, 196, 0.06) 0%, transparent 50%),
+            radial-gradient(ellipse 50% 40% at 40% 80%, rgba(0, 159, 60, 0.04) 0%, transparent 40%);
+        animation: heroGradientShift 20s ease-in-out infinite;
+        pointer-events: none;
+    }
+
+    [data-theme="dark"] .features-hero::before {
+        background:
+            radial-gradient(ellipse 80% 60% at 20% 20%, rgba(0, 168, 255, 0.1) 0%, transparent 50%),
+            radial-gradient(ellipse 60% 50% at 80% 60%, rgba(255, 26, 140, 0.08) 0%, transparent 50%),
+            radial-gradient(ellipse 50% 40% at 40% 80%, rgba(0, 214, 143, 0.05) 0%, transparent 40%);
+    }
+
+    .features-hero-content {
+        position: relative;
+        z-index: 1;
+        text-align: center;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 0 var(--space-6);
+    }
+
+    .features-hero-title {
+        font-size: clamp(2rem, 4vw + 1rem, 3.25rem);
+        line-height: 1.1;
+        letter-spacing: -0.03em;
+        margin-bottom: var(--space-6);
+    }
+
+    .features-hero-subtitle {
+        font-size: clamp(1.05rem, 1.3vw + 0.5rem, 1.3rem);
+        color: var(--landing-text-secondary);
+        line-height: 1.7;
+        max-width: 650px;
+        margin: 0 auto;
+    }
+
+    /* ===========================================
+       7. Feature Cards Grid
+       =========================================== */
+    .landing-feature-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: var(--space-6);
+    }
+
+    @media (min-width: 640px) {
+        .landing-feature-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    @media (min-width: 1024px) {
+        .landing-feature-grid {
+            grid-template-columns: repeat(3, 1fr);
+        }
+    }
+
+    .landing-feature-card {
+        position: relative;
+        background: var(--landing-glass-bg);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid var(--landing-glass-border);
+        border-radius: var(--radius-lg);
+        padding: var(--space-6);
+        transition: all var(--dur-slow) var(--ease);
+        overflow: hidden;
+    }
+
+    .landing-feature-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, var(--brand-primary), var(--brand-secondary));
+        opacity: 0;
+        transition: opacity var(--dur) var(--ease);
+    }
+
+    .landing-feature-card:hover {
+        background: var(--landing-glass-hover);
+        border-color: var(--brand-secondary);
+        transform: translateY(-6px);
+        box-shadow:
+            var(--landing-shadow-lg),
+            0 0 50px rgba(0, 123, 196, 0.08);
+    }
+
+    .landing-feature-card:hover::before {
+        opacity: 1;
+    }
+
+    .landing-feature-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: var(--radius-md);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: var(--space-4);
+        transition: all var(--dur-slow) var(--ease);
+    }
+
+    .landing-feature-icon--primary {
+        background: rgba(229, 0, 116, 0.1);
+        color: var(--brand-primary);
+    }
+
+    .landing-feature-icon--secondary {
+        background: rgba(0, 123, 196, 0.1);
+        color: var(--brand-secondary);
+    }
+
+    .landing-feature-icon--accent {
+        background: rgba(0, 159, 60, 0.1);
+        color: var(--brand-accent);
+    }
+
+    .landing-feature-card:hover .landing-feature-icon {
+        transform: scale(1.1) rotate(3deg);
+        background: linear-gradient(135deg, rgba(229, 0, 116, 0.15), rgba(0, 123, 196, 0.15));
+    }
+
+    .landing-feature-icon svg {
+        width: 28px;
+        height: 28px;
+    }
+
+    .landing-feature-title {
+        font-size: 1.125rem;
+        font-weight: 600;
+        margin-bottom: var(--space-2);
+    }
+
+    .landing-feature-desc {
+        font-size: 0.95rem;
+        color: var(--landing-text-secondary);
+        line-height: 1.6;
+    }
+
+    /* ===========================================
+       8. How It Works Section
+       =========================================== */
+    .landing-steps-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: var(--space-8);
+        position: relative;
+    }
+
+    @media (min-width: 768px) {
+        .landing-steps-grid {
+            grid-template-columns: repeat(3, 1fr);
+            gap: var(--space-6);
+        }
+    }
+
+    .landing-step {
+        text-align: center;
+        position: relative;
+    }
+
+    .landing-step-number {
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 100%);
+        color: white;
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 1.5rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto var(--space-6);
+        position: relative;
+        z-index: 2;
+        box-shadow: 0 8px 24px rgba(229, 0, 116, 0.3);
+    }
+
+    .landing-step-card {
+        background: var(--landing-glass-bg);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid var(--landing-glass-border);
+        border-radius: var(--radius-lg);
+        padding: var(--space-6);
+        height: 100%;
+        transition: all var(--dur) var(--ease);
+    }
+
+    .landing-step-card:hover {
+        background: var(--landing-glass-hover);
+        transform: translateY(-4px);
+        box-shadow: var(--landing-shadow-md);
+    }
+
+    .landing-step-icon {
+        width: 64px;
+        height: 64px;
+        border-radius: var(--radius-md);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto var(--space-4);
+    }
+
+    .landing-step-icon svg {
+        width: 32px;
+        height: 32px;
+    }
+
+    .landing-step-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: var(--space-2);
+    }
+
+    .landing-step-desc {
+        font-size: 0.95rem;
+        color: var(--landing-text-secondary);
+        line-height: 1.6;
+    }
+
+    /* Timeline Connector */
+    @media (min-width: 768px) {
+        .landing-steps-connector {
+            position: absolute;
+            top: 32px;
+            left: calc(16.67% + 32px);
+            right: calc(16.67% + 32px);
+            height: 3px;
+            background: var(--landing-border);
+            z-index: 1;
+        }
+
+        .landing-steps-connector::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 0;
+            background: linear-gradient(90deg, var(--brand-primary), var(--brand-secondary));
+            transition: width 1.5s var(--ease);
+        }
+
+        .landing-steps-grid.visible .landing-steps-connector::after {
+            width: 100%;
+        }
+    }
+
+    /* ===========================================
+       9. Platform Support Cards
+       =========================================== */
+    .platform-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: var(--space-6);
+    }
+
+    @media (min-width: 768px) {
+        .platform-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    .platform-card {
+        position: relative;
+        background: var(--landing-glass-bg);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid var(--landing-glass-border);
+        border-radius: var(--radius-lg);
+        padding: var(--space-8);
+        transition: all var(--dur-slow) var(--ease);
+        overflow: hidden;
+    }
+
+    .platform-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, var(--brand-primary), var(--brand-secondary));
+        opacity: 0;
+        transition: opacity var(--dur) var(--ease);
+    }
+
+    .platform-card:hover {
+        background: var(--landing-glass-hover);
+        transform: translateY(-6px);
+        box-shadow: var(--landing-shadow-lg), 0 0 50px rgba(0, 123, 196, 0.08);
+    }
+
+    .platform-card:hover::before {
+        opacity: 1;
+    }
+
+    .platform-card-header {
+        display: flex;
+        align-items: center;
+        gap: var(--space-4);
+        margin-bottom: var(--space-6);
+    }
+
+    .platform-card-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: var(--radius-md);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0, 123, 196, 0.1);
+        color: var(--brand-secondary);
+        transition: all var(--dur-slow) var(--ease);
+    }
+
+    .platform-card:hover .platform-card-icon {
+        transform: scale(1.1) rotate(3deg);
+        background: linear-gradient(135deg, rgba(229, 0, 116, 0.15), rgba(0, 123, 196, 0.15));
+    }
+
+    .platform-card-icon svg {
+        width: 28px;
+        height: 28px;
+    }
+
+    .platform-card-name {
+        font-family: system-ui, -apple-system, 'Space Grotesk', sans-serif;
+        font-size: 1.25rem;
+        font-weight: 700;
+    }
+
+    .platform-card-sub {
+        font-size: 0.85rem;
+        color: var(--landing-text-muted);
+        margin-top: 2px;
+    }
+
+    .platform-specs {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-3);
+    }
+
+    .platform-spec {
+        display: flex;
+        align-items: center;
+        gap: var(--space-3);
+        font-size: 0.9rem;
+        color: var(--landing-text-secondary);
+    }
+
+    .platform-spec svg {
+        width: 16px;
+        height: 16px;
+        flex-shrink: 0;
+        color: var(--brand-accent);
+    }
+
+    /* ===========================================
+       10. CTA Section
+       =========================================== */
+    .landing-cta {
+        position: relative;
+        background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 100%);
+        border-radius: var(--radius-2xl);
+        padding: var(--space-16) var(--space-8);
+        overflow: hidden;
+        text-align: center;
+    }
+
+    .landing-cta::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle, rgba(255, 255, 255, 0.15) 0%, transparent 50%);
+        transform: translate(-50%, -50%) scale(0);
+        animation: ctaPulse 5s ease-in-out infinite;
+    }
+
+    @keyframes ctaPulse {
+        0%, 100% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+        50% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+    }
+
+    .landing-cta-content {
+        position: relative;
+        z-index: 1;
+        max-width: 700px;
+        margin: 0 auto;
+    }
+
+    .landing-cta-title {
+        font-size: clamp(1.75rem, 3vw + 0.5rem, 2.5rem);
+        color: white;
+        margin-bottom: var(--space-4);
+    }
+
+    .landing-cta-subtitle {
+        font-size: 1.125rem;
+        color: rgba(255, 255, 255, 0.9);
+        line-height: 1.7;
+        margin-bottom: var(--space-8);
+    }
+
+    .landing-cta-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-4);
+        justify-content: center;
+    }
+
+    .landing-cta .landing-btn--primary {
+        background: white;
+        color: var(--brand-primary);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    }
+
+    .landing-cta .landing-btn--primary:hover {
+        background: rgba(255, 255, 255, 0.9);
+        transform: translateY(-2px);
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
+    }
+
+    .landing-cta .landing-btn--outline {
+        border-color: rgba(255, 255, 255, 0.5);
+        color: white;
+    }
+
+    .landing-cta .landing-btn--outline:hover {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: white;
+    }
+
+    /* ===========================================
+       11. Footer
+       =========================================== */
+    .landing-footer {
+        padding: var(--space-12) 0;
+        border-top: 1px solid var(--landing-border);
+    }
+
+    .landing-footer-content {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: var(--space-6);
+    }
+
+    @media (min-width: 768px) {
+        .landing-footer-content {
+            flex-direction: row;
+            justify-content: space-between;
+        }
+    }
+
+    .landing-footer-links {
+        display: flex;
+        align-items: center;
+        gap: var(--space-6);
+    }
+
+    .landing-footer-link {
+        font-size: 0.9rem;
+        color: var(--landing-text-secondary);
+        text-decoration: none;
+        transition: color var(--dur) var(--ease);
+    }
+
+    .landing-footer-link:hover {
+        color: var(--brand-primary);
+    }
+
+    .landing-footer-credits {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        font-size: 0.9rem;
+        color: var(--landing-text-muted);
+    }
+
+    .landing-footer-credits a {
+        display: inline-flex;
+    }
+
+    .landing-footer-credits img {
+        height: 32px;
+        width: auto;
+    }
+
+    /* ===========================================
+       12. Scroll Reveal Animations
+       =========================================== */
+    .landing-reveal {
+        opacity: 0;
+        transform: translateY(40px);
+        transition: opacity 0.8s var(--ease), transform 0.8s var(--ease);
+    }
+
+    .landing-reveal.visible {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    .landing-stagger-grid > * {
+        opacity: 0;
+        transform: translateY(30px) scale(0.96);
+        transition: opacity 0.6s var(--ease), transform 0.6s var(--ease);
+    }
+
+    .landing-stagger-grid.visible > *:nth-child(1) { transition-delay: 0ms; }
+    .landing-stagger-grid.visible > *:nth-child(2) { transition-delay: 80ms; }
+    .landing-stagger-grid.visible > *:nth-child(3) { transition-delay: 160ms; }
+    .landing-stagger-grid.visible > *:nth-child(4) { transition-delay: 240ms; }
+    .landing-stagger-grid.visible > *:nth-child(5) { transition-delay: 320ms; }
+    .landing-stagger-grid.visible > *:nth-child(6) { transition-delay: 400ms; }
+    .landing-stagger-grid.visible > *:nth-child(7) { transition-delay: 480ms; }
+    .landing-stagger-grid.visible > *:nth-child(8) { transition-delay: 560ms; }
+    .landing-stagger-grid.visible > *:nth-child(9) { transition-delay: 640ms; }
+
+    .landing-stagger-grid.visible > * {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+
+    /* ===========================================
+       13. Reduced Motion
+       =========================================== */
+    @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+        }
+
+        .landing-reveal,
+        .landing-stagger-grid > * {
+            opacity: 1 !important;
+            transform: none !important;
+        }
+
+        .features-hero::before,
+        .landing-hero-orb,
+        .landing-cta::before {
+            animation: none !important;
+            display: none;
+        }
+    }
+    </style>
+</head>
+<body>
+
+    <!-- Floating Orbs Background -->
+    <div class="landing-hero-orb landing-hero-orb--primary" aria-hidden="true"></div>
+    <div class="landing-hero-orb landing-hero-orb--secondary" aria-hidden="true"></div>
+
+    <!-- Skip to content -->
+    <a href="#main" style="position:absolute;top:-100px;left:0;padding:8px 16px;background:var(--brand-primary);color:white;z-index:200;border-radius:0 0 8px 0;font-weight:600;transition:top .2s;" onfocus="this.style.top='0'" onblur="this.style.top='-100px'">Ga naar inhoud</a>
+
+    <!-- Header -->
+    <header class="landing-header" id="header">
+        <nav class="landing-nav">
+            <a href="/tstudio/landing" class="landing-logo">
+                <img src="/tstudio/static/Transcriptstudio.png" alt="Transcript Studio Logo">
+                <span class="landing-logo-text">Transcript Studio</span>
+            </a>
+
+            <div class="landing-nav-links">
+                <a href="/tstudio/download/features.html" class="landing-nav-link active">Features</a>
+                <a href="/tstudio/download/" class="landing-nav-link">Download</a>
+            </div>
+
+            <div class="landing-nav-actions">
+                <button class="theme-toggle" id="themeToggle" aria-label="Thema wisselen">
+                    <svg class="theme-icon-light" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+                    </svg>
+                    <svg class="theme-icon-dark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+                    </svg>
+                </button>
+                <a href="/tstudio/login" class="landing-btn landing-btn--primary">Inloggen</a>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Main Content -->
+    <main id="main">
+
+        <!-- Hero Section -->
+        <section class="features-hero">
+            <div class="features-hero-content landing-reveal">
+                <h1 class="features-hero-title">Alles wat je nodig hebt voor <span class="gradient-text">perfecte notulen</span></h1>
+                <p class="features-hero-subtitle">Van AI-gestuurde transcriptie tot automatische notulengeneratie. Transcript Studio combineert krachtige technologie met een intuitive interface.</p>
+            </div>
+        </section>
+
+        <!-- Core Features Grid -->
+        <section class="landing-section landing-section--alt" id="features">
+            <div class="landing-container">
+                <div class="landing-section-header landing-reveal">
+                    <h2 class="landing-section-title">Krachtige <span class="gradient-text">features</span></h2>
+                    <p class="landing-section-subtitle">Alles wat je team nodig heeft om vergaderingen efficienter te verwerken</p>
+                </div>
+
+                <div class="landing-feature-grid landing-stagger-grid">
+
+                    <!-- 1. AI Transcriptie -->
+                    <div class="landing-feature-card">
+                        <div class="landing-feature-icon landing-feature-icon--primary">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 2a3 3 0 00-3 3v7a3 3 0 006 0V5a3 3 0 00-3-3z"/>
+                                <path d="M19 10v2a7 7 0 01-14 0v-2"/>
+                                <line x1="12" y1="19" x2="12" y2="22"/>
+                                <line x1="8" y1="22" x2="16" y2="22"/>
+                            </svg>
+                        </div>
+                        <h3 class="landing-feature-title">AI Transcriptie</h3>
+                        <p class="landing-feature-desc">GPU-versnelde Whisper transcriptie met hoge nauwkeurigheid. Ondersteunt Nederlands, Engels en vele andere talen.</p>
+                    </div>
+
+                    <!-- 2. Automatische Notulen -->
+                    <div class="landing-feature-card">
+                        <div class="landing-feature-icon landing-feature-icon--secondary">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+                                <polyline points="14 2 14 8 20 8"/>
+                                <line x1="16" y1="13" x2="8" y2="13"/>
+                                <line x1="16" y1="17" x2="8" y2="17"/>
+                                <polyline points="10 9 9 9 8 9"/>
+                            </svg>
+                        </div>
+                        <h3 class="landing-feature-title">Automatische Notulen</h3>
+                        <p class="landing-feature-desc">AI genereert gestructureerde notulen van je transcript. Met besluitenlijsten, actiepunten en samenvattingen.</p>
+                    </div>
+
+                    <!-- 3. Native Desktop App -->
+                    <div class="landing-feature-card">
+                        <div class="landing-feature-icon landing-feature-icon--accent">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                                <line x1="8" y1="21" x2="16" y2="21"/>
+                                <line x1="12" y1="17" x2="12" y2="21"/>
+                            </svg>
+                        </div>
+                        <h3 class="landing-feature-title">Native Desktop App</h3>
+                        <p class="landing-feature-desc">Beschikbaar voor macOS en Windows als native applicatie. Sneller, betrouwbaarder en beter geintegreerd met je OS.</p>
+                    </div>
+
+                    <!-- 4. Opnemen in de App -->
+                    <div class="landing-feature-card">
+                        <div class="landing-feature-icon landing-feature-icon--primary">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10"/>
+                                <circle cx="12" cy="12" r="4" fill="currentColor" stroke="none"/>
+                            </svg>
+                        </div>
+                        <h3 class="landing-feature-title">Opnemen in de App</h3>
+                        <p class="landing-feature-desc">Neem vergaderingen direct op via microfoon, systeemaudio of beide tegelijk. Geen externe tools nodig.</p>
+                    </div>
+
+                    <!-- 5. Kalenderintegratie -->
+                    <div class="landing-feature-card">
+                        <div class="landing-feature-icon landing-feature-icon--secondary">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                                <line x1="16" y1="2" x2="16" y2="6"/>
+                                <line x1="8" y1="2" x2="8" y2="6"/>
+                                <line x1="3" y1="10" x2="21" y2="10"/>
+                            </svg>
+                        </div>
+                        <h3 class="landing-feature-title">Kalenderintegratie</h3>
+                        <p class="landing-feature-desc">Automatische vergaderdetectie via EventKit (macOS) en Microsoft Graph (Windows). Start opnames vanuit je agenda.</p>
+                    </div>
+
+                    <!-- 6. Profielen -->
+                    <div class="landing-feature-card">
+                        <div class="landing-feature-icon landing-feature-icon--accent">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
+                                <circle cx="12" cy="7" r="4"/>
+                            </svg>
+                        </div>
+                        <h3 class="landing-feature-title">Profielen</h3>
+                        <p class="landing-feature-desc">Configureerbare notitiestijlen per vergadertype. Van formele besluitenlijsten tot beknopte samenvattingen.</p>
+                    </div>
+
+                    <!-- 7. Offline-first -->
+                    <div class="landing-feature-card">
+                        <div class="landing-feature-icon landing-feature-icon--primary">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="1" y1="1" x2="23" y2="23"/>
+                                <path d="M16.72 11.06A10.94 10.94 0 0119 12.55"/>
+                                <path d="M5 12.55a10.94 10.94 0 015.17-2.39"/>
+                                <path d="M10.71 5.05A16 16 0 0122.56 9"/>
+                                <path d="M1.42 9a15.91 15.91 0 014.7-2.88"/>
+                                <path d="M8.53 16.11a6 6 0 016.95 0"/>
+                                <line x1="12" y1="20" x2="12.01" y2="20"/>
+                            </svg>
+                        </div>
+                        <h3 class="landing-feature-title">Offline-first</h3>
+                        <p class="landing-feature-desc">Audio wordt altijd lokaal opgeslagen. Uploads worden automatisch herhaald zodra je weer online bent.</p>
+                    </div>
+
+                    <!-- 8. Export Opties -->
+                    <div class="landing-feature-card">
+                        <div class="landing-feature-icon landing-feature-icon--secondary">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                                <polyline points="7 10 12 15 17 10"/>
+                                <line x1="12" y1="15" x2="12" y2="3"/>
+                            </svg>
+                        </div>
+                        <h3 class="landing-feature-title">Export Opties</h3>
+                        <p class="landing-feature-desc">Download notulen als PDF, HTML, DOCX of Markdown. Deel ze direct met collega's of archiveer ze.</p>
+                    </div>
+
+                    <!-- 9. 2FA -->
+                    <div class="landing-feature-card">
+                        <div class="landing-feature-icon landing-feature-icon--accent">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                            </svg>
+                        </div>
+                        <h3 class="landing-feature-title">Tweefactorauthenticatie</h3>
+                        <p class="landing-feature-desc">Extra beveiliging met 2FA. Je bedrijfsgegevens en transcripties blijven altijd veilig beschermd.</p>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+        <!-- How It Works -->
+        <section class="landing-section" id="hoe-werkt-het">
+            <div class="landing-container">
+                <div class="landing-section-header landing-reveal">
+                    <h2 class="landing-section-title">Hoe werkt <span class="gradient-text">het?</span></h2>
+                    <p class="landing-section-subtitle">In drie simpele stappen naar perfecte notulen</p>
+                </div>
+
+                <div class="landing-steps-grid landing-stagger-grid" style="position:relative;">
+                    <div class="landing-steps-connector" aria-hidden="true"></div>
+
+                    <div class="landing-step">
+                        <div class="landing-step-number">1</div>
+                        <div class="landing-step-card">
+                            <div class="landing-step-icon" style="background: rgba(229, 0, 116, 0.1); color: var(--brand-primary);">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                                    <polyline points="17 8 12 3 7 8"/>
+                                    <line x1="12" y1="3" x2="12" y2="15"/>
+                                </svg>
+                            </div>
+                            <h3 class="landing-step-title">Opnemen of uploaden</h3>
+                            <p class="landing-step-desc">Start een opname in de app of upload een bestaand audiobestand. Ondersteunt MP3, WAV, M4A en meer.</p>
+                        </div>
+                    </div>
+
+                    <div class="landing-step">
+                        <div class="landing-step-number">2</div>
+                        <div class="landing-step-card">
+                            <div class="landing-step-icon" style="background: rgba(0, 123, 196, 0.1); color: var(--brand-secondary);">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="10"/>
+                                    <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/>
+                                    <line x1="12" y1="17" x2="12.01" y2="17"/>
+                                </svg>
+                            </div>
+                            <h3 class="landing-step-title">AI transcribeert en analyseert</h3>
+                            <p class="landing-step-desc">GPU-versnelde Whisper transcribeert de audio. Vervolgens analyseert een LLM de inhoud en structureert de notulen.</p>
+                        </div>
+                    </div>
+
+                    <div class="landing-step">
+                        <div class="landing-step-number">3</div>
+                        <div class="landing-step-card">
+                            <div class="landing-step-icon" style="background: rgba(0, 159, 60, 0.1); color: var(--brand-accent);">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
+                                    <polyline points="22 4 12 14.01 9 11.01"/>
+                                </svg>
+                            </div>
+                            <h3 class="landing-step-title">Professionele notulen ontvangen</h3>
+                            <p class="landing-step-desc">Bekijk het resultaat, pas de stijl aan en exporteer als PDF, DOCX of Markdown. Klaar om te delen.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Platform Support -->
+        <section class="landing-section landing-section--alt">
+            <div class="landing-container">
+                <div class="landing-section-header landing-reveal">
+                    <h2 class="landing-section-title">Beschikbaar op <span class="gradient-text">jouw platform</span></h2>
+                    <p class="landing-section-subtitle">Native apps die optimaal presteren op elk besturingssysteem</p>
+                </div>
+
+                <div class="platform-grid landing-stagger-grid">
+                    <div class="platform-card">
+                        <div class="platform-card-header">
+                            <div class="platform-card-icon">
+                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+                            </div>
+                            <div>
+                                <div class="platform-card-name">macOS</div>
+                                <div class="platform-card-sub">macOS 14 Sonoma of nieuwer</div>
+                            </div>
+                        </div>
+                        <ul class="platform-specs">
+                            <li class="platform-spec">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                Swift 6 met SwiftUI
+                            </li>
+                            <li class="platform-spec">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                Native audio-opname met ScreenCaptureKit
+                            </li>
+                            <li class="platform-spec">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                Touch ID / Face ID authenticatie
+                            </li>
+                            <li class="platform-spec">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                EventKit kalenderintegratie
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="platform-card">
+                        <div class="platform-card-header">
+                            <div class="platform-card-icon">
+                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 12V6.75l6-1.32v6.48L3 12zm6.73-.07l8.27.55V5.4l-8.27 1.2v5.33zM3 13l6 .09v6.81l-6-1.32V13zm6.73-.02l8.27-.55V20l-8.27-1.2v-5.82z"/></svg>
+                            </div>
+                            <div>
+                                <div class="platform-card-name">Windows</div>
+                                <div class="platform-card-sub">Windows 11</div>
+                            </div>
+                        </div>
+                        <ul class="platform-specs">
+                            <li class="platform-spec">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                Tauri 2 met React 19
+                            </li>
+                            <li class="platform-spec">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                WASAPI audio-opname via Rust
+                            </li>
+                            <li class="platform-spec">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                Windows Hello authenticatie
+                            </li>
+                            <li class="platform-spec">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                Microsoft Graph kalenderintegratie
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- CTA Section -->
+        <section class="landing-section">
+            <div class="landing-container">
+                <div class="landing-cta landing-reveal">
+                    <div class="landing-cta-content">
+                        <h2 class="landing-cta-title">Klaar om te beginnen?</h2>
+                        <p class="landing-cta-subtitle">Download Transcript Studio en ervaar hoe AI je vergaderingen transformeert naar professionele notulen.</p>
+                        <div class="landing-cta-actions">
+                            <a href="/tstudio/download/" class="landing-btn landing-btn--primary landing-btn--large">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                                Download
+                            </a>
+                            <a href="/tstudio/login" class="landing-btn landing-btn--outline landing-btn--large">Inloggen</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="landing-footer">
+        <div class="landing-container">
+            <div class="landing-footer-content">
+                <div class="landing-footer-links">
+                    <a href="/tstudio/download/features.html" class="landing-footer-link">Features</a>
+                    <a href="/tstudio/download/" class="landing-footer-link">Download</a>
+                    <a href="/tstudio/login" class="landing-footer-link">Inloggen</a>
+                </div>
+                <p class="landing-footer-credits">
+                    <strong>Developed by</strong>
+                    <a href="https://www.yinga.nl" target="_blank" rel="noopener">
+                        <img src="https://www.yinga.nl/wp-content/uploads/2023/03/logo.svg" alt="Yinga">
+                    </a>
+                </p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script>
+    (function() {
+        'use strict';
+
+        // =====================================
+        // Theme Toggle
+        // =====================================
+        var themeToggle = document.getElementById('themeToggle');
+        var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        var stored = localStorage.getItem('ts-theme');
+        var theme = stored || (prefersDark ? 'dark' : 'light');
+
+        if (theme === 'dark') {
+            document.documentElement.setAttribute('data-theme', 'dark');
+        }
+
+        themeToggle.addEventListener('click', function() {
+            var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            if (isDark) {
+                document.documentElement.removeAttribute('data-theme');
+                localStorage.setItem('ts-theme', 'light');
+            } else {
+                document.documentElement.setAttribute('data-theme', 'dark');
+                localStorage.setItem('ts-theme', 'dark');
+            }
+        });
+
+        // =====================================
+        // Header Scroll Effect
+        // =====================================
+        var header = document.getElementById('header');
+
+        window.addEventListener('scroll', function() {
+            if (window.pageYOffset > 50) {
+                header.classList.add('scrolled');
+            } else {
+                header.classList.remove('scrolled');
+            }
+        }, { passive: true });
+
+        // =====================================
+        // Scroll Reveal
+        // =====================================
+        var revealElements = document.querySelectorAll('.landing-reveal, .landing-stagger-grid');
+
+        var revealObserver = new IntersectionObserver(function(entries) {
+            entries.forEach(function(entry) {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        });
+
+        revealElements.forEach(function(el) { revealObserver.observe(el); });
+    })();
+    </script>
+</body>
+</html>

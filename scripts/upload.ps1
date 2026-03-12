@@ -19,6 +19,7 @@ if (-not (Test-Path $ArtifactPath)) {
 }
 
 $DownloadPage = Join-Path $ScriptDir "download-page.html"
+$FeaturesPage = Join-Path $ScriptDir "features-page.html"
 
 Write-Host "Uploading $Artifact to server..."
 
@@ -29,10 +30,14 @@ ssh $Server "mkdir -p $RemoteDir"
 scp $ArtifactPath "${Server}:${RemoteDir}/${Artifact}"
 Write-Host "  Uploaded: $Artifact"
 
-# Upload download page
+# Upload website pages
 if (Test-Path $DownloadPage) {
     scp $DownloadPage "${Server}:${RemoteDir}/index.html"
     Write-Host "  Updated: download page"
+}
+if (Test-Path $FeaturesPage) {
+    scp $FeaturesPage "${Server}:${RemoteDir}/features.html"
+    Write-Host "  Updated: features page"
 }
 
 # Update releases.json manifest on server

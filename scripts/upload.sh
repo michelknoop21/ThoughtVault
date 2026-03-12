@@ -28,6 +28,7 @@ if [ ! -f "$ARTIFACT_PATH" ]; then
 fi
 
 DOWNLOAD_PAGE="$SCRIPT_DIR/download-page.html"
+FEATURES_PAGE="$SCRIPT_DIR/features-page.html"
 
 echo "Uploading $ARTIFACT to server..."
 
@@ -38,10 +39,14 @@ ssh "$SERVER" "mkdir -p $REMOTE_DIR"
 scp "$ARTIFACT_PATH" "$SERVER:$REMOTE_DIR/$ARTIFACT"
 echo "  Uploaded: $ARTIFACT"
 
-# Upload download page
+# Upload website pages
 if [ -f "$DOWNLOAD_PAGE" ]; then
     scp "$DOWNLOAD_PAGE" "$SERVER:$REMOTE_DIR/index.html"
     echo "  Updated: download page"
+fi
+if [ -f "$FEATURES_PAGE" ]; then
+    scp "$FEATURES_PAGE" "$SERVER:$REMOTE_DIR/features.html"
+    echo "  Updated: features page"
 fi
 
 # Update releases.json manifest on server

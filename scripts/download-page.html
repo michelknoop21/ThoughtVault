@@ -4,22 +4,367 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Download - Transcript Studio</title>
-    <meta name="description" content="Download Transcript Studio voor macOS of Windows. Van vergadering naar notule in één klik.">
+    <meta name="description" content="Download Transcript Studio voor macOS of Windows. Van vergadering naar notule in een klik.">
 
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="/tstudio/static/favicon-32x32.png">
     <link rel="apple-touch-icon" href="/tstudio/static/apple-touch-icon.png">
 
-    <!-- Stylesheets -->
-    <link rel="stylesheet" href="/tstudio/static/css/landing.css">
-
-    <!-- Preload fonts -->
+    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 
     <style>
     /* ===========================================
-       Download Page — extends landing.css
+       1. CSS Variables - Landing Design System
+       =========================================== */
+    :root {
+        /* Brand Colors */
+        --brand-primary: #E50074;
+        --brand-secondary: #007BC4;
+        --brand-accent: #009F3C;
+
+        /* Light Theme */
+        --landing-bg: #FFFFFF;
+        --landing-bg-alt: #F5F5F7;
+        --landing-text: #333339;
+        --landing-text-secondary: #6B6B78;
+        --landing-text-muted: #9999A6;
+        --landing-border: rgba(148, 163, 184, 0.2);
+
+        /* Glassmorphism */
+        --landing-glass-bg: rgba(255, 255, 255, 0.7);
+        --landing-glass-border: rgba(255, 255, 255, 0.4);
+        --landing-glass-hover: rgba(255, 255, 255, 0.9);
+
+        /* Shadows */
+        --landing-shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.06);
+        --landing-shadow-md: 0 8px 24px rgba(15, 23, 42, 0.08);
+        --landing-shadow-lg: 0 20px 50px rgba(15, 23, 42, 0.12);
+        --landing-shadow-glow: 0 0 60px rgba(229, 0, 116, 0.1);
+
+        /* Border Radius */
+        --radius-sm: 6px;
+        --radius-md: 12px;
+        --radius-lg: 16px;
+        --radius-xl: 20px;
+        --radius-2xl: 25px;
+
+        /* Spacing */
+        --space-1: 0.25rem;
+        --space-2: 0.5rem;
+        --space-3: 0.75rem;
+        --space-4: 1rem;
+        --space-6: 1.5rem;
+        --space-8: 2rem;
+        --space-10: 2.5rem;
+        --space-12: 3rem;
+        --space-16: 4rem;
+        --space-20: 5rem;
+        --space-24: 6rem;
+
+        /* Motion */
+        --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+        --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+        --dur-fast: 150ms;
+        --dur: 200ms;
+        --dur-slow: 400ms;
+    }
+
+    /* Dark Theme */
+    [data-theme="dark"] {
+        --landing-bg: #0B0C15;
+        --landing-bg-alt: #191C28;
+        --landing-text: #F2F2F7;
+        --landing-text-secondary: #9E9EAE;
+        --landing-text-muted: #6B6B7A;
+        --landing-border: rgba(255, 255, 255, 0.1);
+
+        --landing-glass-bg: rgba(22, 24, 30, 0.8);
+        --landing-glass-border: rgba(255, 255, 255, 0.08);
+        --landing-glass-hover: rgba(32, 34, 42, 0.9);
+
+        --landing-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+        --landing-shadow-md: 0 8px 24px rgba(0, 0, 0, 0.4);
+        --landing-shadow-lg: 0 20px 50px rgba(0, 0, 0, 0.5);
+        --landing-shadow-glow: 0 0 80px rgba(229, 0, 116, 0.15);
+    }
+
+    /* ===========================================
+       2. Base Styles
+       =========================================== */
+    *, *::before, *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+    }
+
+    html {
+        scroll-behavior: smooth;
+    }
+
+    body {
+        font-family: system-ui, -apple-system, 'Plus Jakarta Sans', sans-serif;
+        background: var(--landing-bg);
+        color: var(--landing-text);
+        line-height: 1.6;
+        overflow-x: hidden;
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+        font-family: system-ui, -apple-system, 'Space Grotesk', 'Plus Jakarta Sans', sans-serif;
+        font-weight: 700;
+        line-height: 1.2;
+        letter-spacing: -0.02em;
+        color: var(--landing-text);
+    }
+
+    a {
+        color: inherit;
+        text-decoration: none;
+    }
+
+    img {
+        max-width: 100%;
+        height: auto;
+    }
+
+    /* ===========================================
+       3. Header & Navigation
+       =========================================== */
+    .landing-header {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 100;
+        background: var(--landing-glass-bg);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border-bottom: 1px solid var(--landing-glass-border);
+        transition: all var(--dur) var(--ease);
+    }
+
+    .landing-header.scrolled {
+        background: var(--landing-glass-hover);
+        box-shadow: var(--landing-shadow-sm);
+    }
+
+    .landing-nav {
+        max-width: 1280px;
+        margin: 0 auto;
+        padding: var(--space-4) var(--space-6);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-8);
+    }
+
+    .landing-logo {
+        display: flex;
+        align-items: center;
+        gap: var(--space-3);
+        text-decoration: none;
+    }
+
+    .landing-logo img {
+        height: 48px;
+        width: auto;
+        object-fit: contain;
+    }
+
+    .landing-logo-text {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--landing-text);
+    }
+
+    .landing-nav-links {
+        display: none;
+        align-items: center;
+        gap: var(--space-8);
+    }
+
+    @media (min-width: 768px) {
+        .landing-nav-links {
+            display: flex;
+        }
+    }
+
+    .landing-nav-link {
+        position: relative;
+        font-size: 0.95rem;
+        font-weight: 500;
+        color: var(--landing-text-secondary);
+        text-decoration: none;
+        transition: color var(--dur) var(--ease);
+        padding: var(--space-2) 0;
+    }
+
+    .landing-nav-link::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 0;
+        height: 2px;
+        background: linear-gradient(90deg, var(--brand-primary), var(--brand-secondary));
+        border-radius: 1px;
+        transition: width var(--dur-slow) var(--ease);
+    }
+
+    .landing-nav-link:hover {
+        color: var(--landing-text);
+    }
+
+    .landing-nav-link:hover::after {
+        width: 100%;
+    }
+
+    .landing-nav-link.active {
+        color: var(--landing-text);
+    }
+
+    .landing-nav-link.active::after {
+        width: 100%;
+    }
+
+    .landing-nav-actions {
+        display: flex;
+        align-items: center;
+        gap: var(--space-3);
+    }
+
+    /* Theme Toggle */
+    .theme-toggle {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        border: 1px solid var(--landing-border);
+        background: var(--landing-glass-bg);
+        color: var(--landing-text-secondary);
+        cursor: pointer;
+        display: grid;
+        place-items: center;
+        transition: all var(--dur) var(--ease);
+    }
+
+    .theme-toggle:hover {
+        background: var(--landing-glass-hover);
+        color: var(--landing-text);
+        transform: scale(1.05);
+        box-shadow: var(--landing-shadow-md);
+    }
+
+    .theme-toggle svg {
+        width: 20px;
+        height: 20px;
+    }
+
+    .theme-icon-dark { display: none; }
+    [data-theme="dark"] .theme-icon-light { display: none; }
+    [data-theme="dark"] .theme-icon-dark { display: block; }
+
+    /* Buttons */
+    .landing-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: var(--space-2);
+        padding: var(--space-3) var(--space-6);
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-size: 0.95rem;
+        font-weight: 600;
+        text-decoration: none;
+        border-radius: var(--radius-md);
+        border: none;
+        cursor: pointer;
+        transition: all var(--dur) var(--ease);
+        min-height: 44px;
+    }
+
+    .landing-btn--primary {
+        background: linear-gradient(135deg, var(--brand-primary) 0%, #c30062 100%);
+        color: white;
+        box-shadow: 0 4px 14px rgba(229, 0, 116, 0.3);
+    }
+
+    .landing-btn--primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(229, 0, 116, 0.4);
+    }
+
+    .landing-btn--secondary {
+        background: var(--landing-glass-bg);
+        backdrop-filter: blur(8px);
+        border: 1px solid var(--landing-border);
+        color: var(--landing-text);
+    }
+
+    .landing-btn--secondary:hover {
+        background: var(--landing-glass-hover);
+        border-color: var(--brand-primary);
+        color: var(--brand-primary);
+    }
+
+    .landing-btn--large {
+        padding: var(--space-4) var(--space-8);
+        font-size: 1rem;
+        min-height: 52px;
+    }
+
+    .landing-btn:active {
+        transform: translateY(1px) scale(0.98);
+    }
+
+    .landing-btn svg {
+        width: 20px;
+        height: 20px;
+        flex-shrink: 0;
+    }
+
+    /* ===========================================
+       4. Floating Orbs
+       =========================================== */
+    .landing-hero-orb {
+        position: fixed;
+        border-radius: 50%;
+        filter: blur(80px);
+        opacity: 0.3;
+        pointer-events: none;
+        animation: orbFloat 25s ease-in-out infinite;
+        z-index: 0;
+    }
+
+    .landing-hero-orb--primary {
+        width: 500px;
+        height: 500px;
+        background: var(--brand-primary);
+        top: -10%;
+        left: -5%;
+        animation-delay: 0s;
+    }
+
+    .landing-hero-orb--secondary {
+        width: 400px;
+        height: 400px;
+        background: var(--brand-secondary);
+        bottom: 10%;
+        right: -10%;
+        animation-delay: -8s;
+    }
+
+    @keyframes orbFloat {
+        0%, 100% { transform: translate(0, 0) scale(1); }
+        25% { transform: translate(40px, -30px) scale(1.05); }
+        50% { transform: translate(-20px, 40px) scale(0.95); }
+        75% { transform: translate(30px, 20px) scale(1.02); }
+    }
+
+    /* ===========================================
+       5. Hero / Download Section
        =========================================== */
     .download-hero {
         position: relative;
@@ -46,6 +391,12 @@
             radial-gradient(ellipse 60% 50% at 80% 60%, rgba(255, 26, 140, 0.08) 0%, transparent 50%);
     }
 
+    @keyframes heroGradientShift {
+        0%, 100% { transform: translate(0, 0) scale(1); opacity: 1; }
+        33% { transform: translate(2%, -2%) scale(1.02); opacity: 0.9; }
+        66% { transform: translate(-2%, 2%) scale(1.03); opacity: 0.95; }
+    }
+
     .download-content {
         position: relative;
         z-index: 1;
@@ -64,6 +415,13 @@
         line-height: 1.1;
         letter-spacing: -0.03em;
         margin-bottom: var(--space-4);
+    }
+
+    .gradient-text {
+        background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
     }
 
     .download-subtitle {
@@ -88,7 +446,9 @@
         color: var(--brand-primary);
     }
 
-    /* Platform Cards */
+    /* ===========================================
+       6. Platform Cards
+       =========================================== */
     .download-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -212,7 +572,9 @@
         margin-top: var(--space-3);
     }
 
-    /* Requirements Section */
+    /* ===========================================
+       7. Requirements Section
+       =========================================== */
     .download-requirements {
         background: var(--landing-glass-bg);
         backdrop-filter: blur(12px);
@@ -268,7 +630,101 @@
         min-width: 5rem;
     }
 
-    /* Loading & Error States */
+    /* ===========================================
+       8. Footer
+       =========================================== */
+    .landing-footer {
+        padding: var(--space-12) 0;
+        border-top: 1px solid var(--landing-border);
+    }
+
+    .landing-container {
+        max-width: 1280px;
+        margin: 0 auto;
+        padding: 0 var(--space-6);
+    }
+
+    .landing-footer-content {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: var(--space-6);
+    }
+
+    @media (min-width: 768px) {
+        .landing-footer-content {
+            flex-direction: row;
+            justify-content: space-between;
+        }
+    }
+
+    .landing-footer-links {
+        display: flex;
+        align-items: center;
+        gap: var(--space-6);
+    }
+
+    .landing-footer-link {
+        font-size: 0.9rem;
+        color: var(--landing-text-secondary);
+        text-decoration: none;
+        transition: color var(--dur) var(--ease);
+    }
+
+    .landing-footer-link:hover {
+        color: var(--brand-primary);
+    }
+
+    .landing-footer-credits {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        font-size: 0.9rem;
+        color: var(--landing-text-muted);
+    }
+
+    .landing-footer-credits a {
+        display: inline-flex;
+    }
+
+    .landing-footer-credits img {
+        height: 32px;
+        width: auto;
+    }
+
+    /* ===========================================
+       9. Scroll Reveal Animations
+       =========================================== */
+    .landing-reveal {
+        opacity: 0;
+        transform: translateY(40px);
+        transition: opacity 0.8s var(--ease), transform 0.8s var(--ease);
+    }
+
+    .landing-reveal.visible {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    .landing-stagger-grid > * {
+        opacity: 0;
+        transform: translateY(30px) scale(0.96);
+        transition: opacity 0.6s var(--ease), transform 0.6s var(--ease);
+    }
+
+    .landing-stagger-grid.visible > *:nth-child(1) { transition-delay: 0ms; }
+    .landing-stagger-grid.visible > *:nth-child(2) { transition-delay: 80ms; }
+    .landing-stagger-grid.visible > *:nth-child(3) { transition-delay: 160ms; }
+    .landing-stagger-grid.visible > *:nth-child(4) { transition-delay: 240ms; }
+
+    .landing-stagger-grid.visible > * {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+
+    /* ===========================================
+       10. Loading & Error States
+       =========================================== */
     .download-loading {
         grid-column: 1 / -1;
         text-align: center;
@@ -290,12 +746,28 @@
         to { transform: rotate(360deg); }
     }
 
-    /* Reduced Motion */
+    /* ===========================================
+       11. Reduced Motion
+       =========================================== */
     @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+        }
+
+        .landing-reveal,
+        .landing-stagger-grid > * {
+            opacity: 1 !important;
+            transform: none !important;
+        }
+
         .download-hero::before,
         .landing-hero-orb {
             animation: none !important;
+            display: none;
         }
+
         .download-loading-spinner {
             animation: none !important;
             border-color: var(--brand-primary);
@@ -303,11 +775,14 @@
     }
     </style>
 </head>
-<body class="landing-page">
+<body>
 
     <!-- Floating Orbs Background -->
     <div class="landing-hero-orb landing-hero-orb--primary" aria-hidden="true"></div>
     <div class="landing-hero-orb landing-hero-orb--secondary" aria-hidden="true"></div>
+
+    <!-- Skip to content -->
+    <a href="#main" style="position:absolute;top:-100px;left:0;padding:8px 16px;background:var(--brand-primary);color:white;z-index:200;border-radius:0 0 8px 0;font-weight:600;transition:top .2s;" onfocus="this.style.top='0'" onblur="this.style.top='-100px'">Ga naar inhoud</a>
 
     <!-- Header -->
     <header class="landing-header" id="header">
@@ -318,16 +793,16 @@
             </a>
 
             <div class="landing-nav-links">
-                <a href="/tstudio/landing#features" class="landing-nav-link">Features</a>
-                <a href="/tstudio/landing#hoe-werkt-het" class="landing-nav-link">Hoe werkt het</a>
+                <a href="/tstudio/download/features.html" class="landing-nav-link">Features</a>
+                <a href="/tstudio/download/" class="landing-nav-link active">Download</a>
             </div>
 
             <div class="landing-nav-actions">
                 <button class="theme-toggle" id="themeToggle" aria-label="Thema wisselen">
-                    <svg class="theme-icon-light" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <svg class="theme-icon-light" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
                     </svg>
-                    <svg class="theme-icon-dark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <svg class="theme-icon-dark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
                     </svg>
                 </button>
@@ -336,63 +811,64 @@
         </nav>
     </header>
 
-    <!-- Hero / Download Section -->
-    <section class="download-hero">
-        <div class="download-content">
+    <!-- Main Content -->
+    <main id="main">
+        <section class="download-hero">
+            <div class="download-content">
 
-            <div class="download-header landing-reveal">
-                <h1 class="download-title">Download <span class="gradient-text">Transcript Studio</span></h1>
-                <p class="download-subtitle">Installeer de native app voor de beste ervaring. Beschikbaar voor macOS en Windows.</p>
-                <div class="download-version-badge" id="version-badge">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
-                        <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
-                    <span>Versie laden...</span>
-                </div>
-            </div>
-
-            <div class="download-grid landing-stagger-grid" id="platforms">
-                <div class="download-loading">
-                    <div class="download-loading-spinner"></div>
-                    Downloads laden...
-                </div>
-            </div>
-
-            <div class="download-requirements landing-reveal">
-                <h3>Systeemvereisten</h3>
-                <div class="download-req-grid">
-                    <div class="download-req-item">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                        <span class="download-req-label">macOS</span> macOS 14 Sonoma+
-                    </div>
-                    <div class="download-req-item">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                        <span class="download-req-label">Windows</span> Windows 11
-                    </div>
-                    <div class="download-req-item">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                        <span class="download-req-label">Opslag</span> 50 MB vrije ruimte
-                    </div>
-                    <div class="download-req-item">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                        <span class="download-req-label">Internet</span> Vereist voor transcriptie
+                <div class="download-header landing-reveal">
+                    <h1 class="download-title">Download <span class="gradient-text">Transcript Studio</span></h1>
+                    <p class="download-subtitle">Installeer de native app voor de beste ervaring. Beschikbaar voor macOS en Windows.</p>
+                    <div class="download-version-badge" id="version-badge">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <span>Versie laden...</span>
                     </div>
                 </div>
-            </div>
 
-        </div>
-    </section>
+                <div class="download-grid landing-stagger-grid" id="platforms">
+                    <div class="download-loading">
+                        <div class="download-loading-spinner"></div>
+                        Downloads laden...
+                    </div>
+                </div>
+
+                <div class="download-requirements landing-reveal">
+                    <h3>Systeemvereisten</h3>
+                    <div class="download-req-grid">
+                        <div class="download-req-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            <span class="download-req-label">macOS</span> macOS 14 Sonoma+
+                        </div>
+                        <div class="download-req-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            <span class="download-req-label">Windows</span> Windows 11
+                        </div>
+                        <div class="download-req-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            <span class="download-req-label">Opslag</span> 50 MB vrije ruimte
+                        </div>
+                        <div class="download-req-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            <span class="download-req-label">Internet</span> Vereist voor transcriptie
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+    </main>
 
     <!-- Footer -->
     <footer class="landing-footer">
         <div class="landing-container">
             <div class="landing-footer-content">
                 <div class="landing-footer-links">
-                    <a href="/tstudio/landing#features" class="landing-footer-link">Features</a>
-                    <a href="/tstudio/landing#hoe-werkt-het" class="landing-footer-link">Hoe werkt het</a>
+                    <a href="/tstudio/download/features.html" class="landing-footer-link">Features</a>
+                    <a href="/tstudio/download/" class="landing-footer-link">Download</a>
                     <a href="/tstudio/login" class="landing-footer-link">Inloggen</a>
                 </div>
-
                 <p class="landing-footer-credits">
                     <strong>Developed by</strong>
                     <a href="https://www.yinga.nl" target="_blank" rel="noopener">
@@ -411,17 +887,17 @@
         // =====================================
         // Theme Toggle
         // =====================================
-        const themeToggle = document.getElementById('themeToggle');
-        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        const stored = localStorage.getItem('ts-theme');
+        var themeToggle = document.getElementById('themeToggle');
+        var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        var stored = localStorage.getItem('ts-theme');
+        var theme = stored || (prefersDark ? 'dark' : 'light');
 
-        const theme = stored || (prefersDark ? 'dark' : 'light');
         if (theme === 'dark') {
             document.documentElement.setAttribute('data-theme', 'dark');
         }
 
-        themeToggle?.addEventListener('click', () => {
-            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        themeToggle.addEventListener('click', function() {
+            var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
             if (isDark) {
                 document.documentElement.removeAttribute('data-theme');
                 localStorage.setItem('ts-theme', 'light');
@@ -434,9 +910,9 @@
         // =====================================
         // Header Scroll Effect
         // =====================================
-        const header = document.getElementById('header');
+        var header = document.getElementById('header');
 
-        window.addEventListener('scroll', () => {
+        window.addEventListener('scroll', function() {
             if (window.pageYOffset > 50) {
                 header.classList.add('scrolled');
             } else {
@@ -447,10 +923,10 @@
         // =====================================
         // Scroll Reveal
         // =====================================
-        const revealElements = document.querySelectorAll('.landing-reveal, .landing-stagger-grid');
+        var revealElements = document.querySelectorAll('.landing-reveal, .landing-stagger-grid');
 
-        const revealObserver = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
+        var revealObserver = new IntersectionObserver(function(entries) {
+            entries.forEach(function(entry) {
                 if (entry.isIntersecting) {
                     entry.target.classList.add('visible');
                 }
@@ -460,64 +936,67 @@
             rootMargin: '0px 0px -50px 0px'
         });
 
-        revealElements.forEach(el => revealObserver.observe(el));
+        revealElements.forEach(function(el) { revealObserver.observe(el); });
 
         // =====================================
         // Platform Icons (SVG)
         // =====================================
-        const ICONS = {
+        var ICONS = {
             macos: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>',
             windows: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 12V6.75l6-1.32v6.48L3 12zm6.73-.07l8.27.55V5.4l-8.27 1.2v5.33zM3 13l6 .09v6.81l-6-1.32V13zm6.73-.02l8.27-.55V20l-8.27-1.2v-5.82z"/></svg>',
-            download: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>'
+            download: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>'
         };
 
         // =====================================
         // OS Detection
         // =====================================
         function detectOS() {
-            const ua = navigator.userAgent;
-            if (ua.includes('Mac')) return 'macos';
-            if (ua.includes('Win')) return 'windows';
+            var ua = navigator.userAgent;
+            if (ua.indexOf('Mac') !== -1) return 'macos';
+            if (ua.indexOf('Win') !== -1) return 'windows';
             return null;
         }
 
         // =====================================
         // Load & Render Releases
         // =====================================
-        async function loadReleases() {
-            try {
-                const res = await fetch('/tstudio/download/releases.json');
-                if (!res.ok) throw new Error('Kon releases niet laden');
-                const data = await res.json();
-                render(data);
-            } catch (e) {
-                document.getElementById('platforms').innerHTML =
-                    '<div class="download-loading">Kon downloads niet laden. Probeer het later opnieuw.</div>';
-            }
+        function loadReleases() {
+            fetch('/tstudio/download/releases.json')
+                .then(function(res) {
+                    if (!res.ok) throw new Error('Kon releases niet laden');
+                    return res.json();
+                })
+                .then(function(data) {
+                    render(data);
+                })
+                .catch(function() {
+                    document.getElementById('platforms').innerHTML =
+                        '<div class="download-loading">Kon downloads niet laden. Probeer het later opnieuw.</div>';
+                });
         }
 
         function render(data) {
-            const userOS = detectOS();
+            var userOS = detectOS();
 
             // Update version badge
-            const badge = document.getElementById('version-badge');
+            var badge = document.getElementById('version-badge');
             badge.querySelector('span').textContent = 'Versie ' + (data.latest_version || '?');
 
-            const container = document.getElementById('platforms');
+            var container = document.getElementById('platforms');
             container.innerHTML = '';
 
-            const platforms = [
+            var platforms = [
                 { key: 'macos', name: 'macOS', ext: '.dmg' },
                 { key: 'windows', name: 'Windows', ext: '.msi' }
             ];
 
-            platforms.forEach(p => {
-                const info = data[p.key];
-                const isRecommended = userOS === p.key;
-                const card = document.createElement('div');
+            platforms.forEach(function(p) {
+                var info = data[p.key];
+                var isRecommended = userOS === p.key;
+                var card = document.createElement('div');
                 card.className = 'download-card' + (isRecommended ? ' recommended' : '');
 
-                let html = '';
+                var html = '';
 
                 if (isRecommended) {
                     html += '<div class="download-recommended-label">Aanbevolen voor jou</div>';
@@ -534,7 +1013,7 @@
                     html += '<div class="download-card-filename">' + info.filename + '</div>';
                 } else {
                     html += '<div class="download-card-version">Nog niet beschikbaar</div>';
-                    html += '<span class="landing-btn landing-btn--secondary" style="opacity:.5;pointer-events:none">Binnenkort beschikbaar</span>';
+                    html += '<span class="landing-btn landing-btn--secondary" style="opacity:.5;pointer-events:none;">Binnenkort beschikbaar</span>';
                 }
 
                 card.innerHTML = html;
@@ -543,7 +1022,7 @@
 
             // Re-trigger stagger animation
             container.classList.remove('visible');
-            requestAnimationFrame(() => container.classList.add('visible'));
+            requestAnimationFrame(function() { container.classList.add('visible'); });
         }
 
         loadReleases();

@@ -119,13 +119,13 @@ except (FileNotFoundError, json.JSONDecodeError):
 
 data['latest_version'] = '$VERSION'
 
-if $HAS_MACOS:
+if '$HAS_MACOS' == 'true':
     data['macos'] = {
         'url': '/tstudio/download/$DMG_ARTIFACT',
         'version': '$VERSION',
         'filename': '$DMG_ARTIFACT'
     }
-if $HAS_WINDOWS_X64:
+if '$HAS_WINDOWS_X64' == 'true':
     data['windows_x64'] = {
         'url': '/tstudio/download/$MSI_X64_ARTIFACT',
         'version': '$VERSION',
@@ -137,7 +137,7 @@ if $HAS_WINDOWS_X64:
         'version': '$VERSION',
         'filename': '$MSI_X64_ARTIFACT'
     }
-if $HAS_WINDOWS_ARM64:
+if '$HAS_WINDOWS_ARM64' == 'true':
     data['windows_arm64'] = {
         'url': '/tstudio/download/$MSI_ARM64_ARTIFACT',
         'version': '$VERSION',

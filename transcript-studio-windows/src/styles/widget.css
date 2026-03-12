@@ -33,8 +33,8 @@ body {
   border-radius: 28px;
   overflow: hidden;
   /* Force-clip backdrop-filter to the border-radius shape */
-  -webkit-mask-image: -webkit-radial-gradient(circle, white 100%, black 100%);
-  mask-image: radial-gradient(circle, white 100%, black 100%);
+  -webkit-mask-image: linear-gradient(#fff 0 0);
+  mask-image: linear-gradient(#fff 0 0);
   box-shadow:
     0 6px 20px rgba(0, 0, 0, 0.30),
     0 0 24px rgba(229, 0, 116, 0.12);

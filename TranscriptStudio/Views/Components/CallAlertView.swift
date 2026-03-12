@@ -95,7 +95,7 @@ struct CallAlertView: View {
                             onDismiss()
                         }
                     }
-                    .buttonStyle(SecondaryButtonStyle())
+                    .buttonStyle(AlertSecondaryButtonStyle())
 
                     // Snooze
                     Button {
@@ -113,7 +113,7 @@ struct CallAlertView: View {
                             Text("Herinnering")
                         }
                     }
-                    .buttonStyle(SecondaryButtonStyle())
+                    .buttonStyle(AlertSecondaryButtonStyle())
                     .disabled(isSnoozing)
 
                     Spacer()
@@ -133,7 +133,7 @@ struct CallAlertView: View {
                             Text("Start opname")
                         }
                     }
-                    .buttonStyle(PrimaryButtonStyle())
+                    .buttonStyle(AlertPrimaryButtonStyle())
                 }
             }
             .padding(TS.Spacing.md)
@@ -196,6 +196,58 @@ struct CallAlertView: View {
         case .meet:  return Color.platformMeet
         case .other: return Color.brandSecondary
         }
+    }
+}
+
+// MARK: - Alert-Specific Compact Button Styles
+
+/// Compact secondary button for the call alert overlay.
+private struct AlertSecondaryButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(TS.Font.footnoteSemibold)
+            .foregroundStyle(Color.brandPrimary)
+            .lineLimit(1)
+            .fixedSize(horizontal: true, vertical: false)
+            .padding(.horizontal, TS.Spacing.md)
+            .padding(.vertical, TS.Spacing.sm)
+            .background {
+                RoundedRectangle(cornerRadius: TS.Radius.sm, style: .continuous)
+                    .fill(Color.brandPrimary.opacity(configuration.isPressed ? 0.12 : 0.08))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: TS.Radius.sm, style: .continuous)
+                            .stroke(Color.brandPrimary.opacity(0.35), lineWidth: 1)
+                    }
+            }
+            .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
+            .animation(TS.Animation.quick, value: configuration.isPressed)
+    }
+}
+
+/// Compact primary button for the call alert overlay.
+private struct AlertPrimaryButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(TS.Font.footnoteSemibold)
+            .foregroundStyle(.white)
+            .lineLimit(1)
+            .fixedSize(horizontal: true, vertical: false)
+            .padding(.horizontal, TS.Spacing.md)
+            .padding(.vertical, TS.Spacing.sm)
+            .background {
+                RoundedRectangle(cornerRadius: TS.Radius.sm, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.brandPrimary, Color.brandPrimary.opacity(0.82)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .shadow(color: Color.brandPrimary.opacity(0.30), radius: 8, y: 3)
+            }
+            .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
+            .opacity(configuration.isPressed ? 0.88 : 1.0)
+            .animation(TS.Animation.quick, value: configuration.isPressed)
     }
 }
 

@@ -181,6 +181,6 @@ The following capabilities are explicitly excluded from the current product scop
 ## 7. Open Questions
 
 - Windows Hello biometric authentication: implementation approach to be decided.
-- `cpal` stream `Send`-safety for system audio capture on Windows: investigation ongoing.
+- `cpal` stream `Send`-safety: resolved — recording runs on a dedicated OS thread (not a tokio task) to avoid `!Send` constraints.
 - Timeline for activating `whisper-rs` local transcription as non-optional dependency on Windows.
 - Apple Intelligence (Foundation Models) API stability for local LLM generation on macOS 26+.

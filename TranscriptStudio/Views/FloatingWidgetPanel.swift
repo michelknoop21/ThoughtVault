@@ -34,6 +34,10 @@ class FloatingWidgetController {
             rootView: RecordingWidgetView()
                 .environment(recordingVM)
         )
+        // Ensure the hosting view has a transparent layer so the capsule
+        // shape is the only visible element (no rectangular corners).
+        hostingView.wantsLayer = true
+        hostingView.layer?.backgroundColor = .clear
 
         let panel = NSPanel(
             contentRect: NSRect(x: 0, y: 0, width: 380, height: 60),

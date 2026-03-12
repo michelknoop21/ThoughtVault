@@ -5,6 +5,26 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2026-03-12] — Fix Windows combined recording: loopback stream drop + audio mixing
+
+### Fixed
+- **WASAPI loopback stream immediately dropped** (Windows, `src-tauri/src/audio/recorder.rs:210`): The line `let _ = loopback_stream_holder;` was intended to suppress an "unused variable" warning while keeping the stream alive. However, Rust's bare `_` pattern does not create a binding — it moves and immediately drops the value. The loopback stream was destroyed before `input_stream.play()` even started, meaning **system audio was never captured** in combined mode. Fixed by changing to `let _loopback = loopback_stream_holder;` (underscore-prefixed name creates a real binding that lives until end of scope).
+- **Concurrent WAV write corruption** (Windows, `recorder.rs`): Mic and loopback streams both wrote samples to the same `Arc<Mutex<WavWriter>>`. Since both callbacks fire from separate OS audio threads, samples were interleaved in arbitrary chunks — producing garbled audio, not a proper mix. Refactored to write mic and loopback to **separate WAV files**. After recording stops, both files are mixed via `mix_wav_files()` using element-wise max by absolute value (consistent with macOS `mixAudioFiles()` approach).
+
+### Changed
+- **Windows audio pipeline** (`recorder.rs`): Combined mode now creates two WAV files: `recording_{ts}.wav` (mic) and `recording_{ts}.loopback.wav` (system audio). After both streams finalize, `mix_wav_files()` reads both files, produces a mixed output, writes it back to the mic path, and deletes the loopback temp file. If mixing fails, the mic-only audio is preserved as fallback.
+
+### Decisions
+- DEC-028: Separate file recording with post-mix for combined mode (see [DECISIONS.md](DECISIONS.md))
+
+### Notes
+- WASAPI loopback requires **no special permissions** on Windows — it's built into Windows Core Audio
+- Microphone muting has **no effect** on loopback capture (independent audio devices)
+- The `let _ = x` vs `let _x = x` distinction in Rust is a known footgun — bare `_` drops immediately, underscore-prefixed names keep the value alive
+- This must be tested on Windows to verify loopback capture works end-to-end
+
+---
+
 ## [2026-03-12] — Microsoft 365 OAuth fix, hallucination detection, transcript visibility
 
 ### Fixed

@@ -447,6 +447,24 @@ _Append-only log. Each entry records context, decision, and consequences._
 
 ---
 
+## DEC-028 — Separate File Recording with Post-Mix for Windows Combined Mode
+
+**Date:** 2026-03-12
+**Status:** Accepted
+
+**Context:** Windows combined mode (mic + system audio) had two critical bugs in `src-tauri/src/audio/recorder.rs`. First, `let _ = loopback_stream_holder;` on line 210 immediately dropped the WASAPI loopback stream due to Rust's `_` pattern semantics — bare `_` does not bind and drops the value immediately, unlike `_name` which creates a real binding. The loopback stream was destroyed before recording even started. Second, even if the stream survived, both mic and loopback callbacks wrote to the same `Arc<Mutex<WavWriter>>`, interleaving samples in arbitrary chunks from two OS audio threads. This produced garbled audio instead of a proper mix.
+
+**Decision:** Fix the drop bug (`let _loopback = ...`) and refactor combined recording to write mic and loopback to separate WAV files. After both streams stop, `mix_wav_files()` reads both files and produces a mixed output using element-wise max by absolute value — the same algorithm macOS uses in `RecordingViewModel.mixAudioFiles()`. The loopback temp file is deleted after mixing.
+
+**Consequences:**
+- System audio is now actually captured via WASAPI loopback in combined mode.
+- Audio quality is correct — no interleaved sample corruption from concurrent writes.
+- Slight increase in disk usage during recording (two files), but the temp file is deleted immediately after mixing.
+- If loopback initialization fails or mixing fails, the system gracefully degrades to mic-only audio.
+- WASAPI loopback requires no special permissions — it captures the default output device's audio stream.
+
+---
+
 ## DEC-027 — Route Microsoft Graph API Through Tauri proxy_request for CORS Bypass
 
 **Date:** 2026-03-12

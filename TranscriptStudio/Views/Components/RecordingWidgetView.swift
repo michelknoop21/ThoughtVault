@@ -53,6 +53,7 @@ struct RecordingWidgetView: View {
         .padding(.vertical, 10)
         .background { pillBackground }
         .clipShape(Capsule())
+        .contentShape(Capsule())
         .overlay {
             Capsule()
                 .stroke(

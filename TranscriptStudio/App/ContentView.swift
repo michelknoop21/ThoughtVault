@@ -169,6 +169,10 @@ struct ContentView: View {
         withAnimation(TS.Animation.smooth) {
             callAlertMeeting = meeting
         }
+        // Also send OS notification so the alert appears even when app is in background
+        if let meeting {
+            Task { await MeetingNotificationService.shared.scheduleIfNeeded(for: meeting) }
+        }
     }
 
 #if os(macOS)

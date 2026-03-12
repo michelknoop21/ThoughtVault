@@ -134,7 +134,7 @@ export function RecordingWidget() {
       </div>
 
       {/* Divider */}
-      <div className="widget-divider" />
+      <div className="widget-divider" data-tauri-drag-region />
 
       {/* Action buttons */}
       <div className="widget-actions">

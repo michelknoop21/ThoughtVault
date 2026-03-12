@@ -218,7 +218,10 @@ AVFoundation (mic)          ScreenCaptureKit (system)
 
 **Rust backend commands:** audio (WASAPI), auth (keyring), filesystem, HTTP proxy, SSE streaming, process detection, system utilities
 
-**Audio pipeline:** WASAPI capture → 16 kHz mono 16-bit PCM WAV → `AppData/Recordings` → Tauri FS plugin reads file → browser `FormData` + `fetch()` upload → SSE progress
+**Audio pipeline:**
+- **Microphone mode:** WASAPI input → 16 kHz mono 16-bit PCM WAV → `AppData/Recordings`
+- **Combined mode:** Mic writes to `recording_{ts}.wav`, WASAPI loopback (system audio) writes to `recording_{ts}.loopback.wav` → after recording stops, `mix_wav_files()` merges both using element-wise max → temp loopback file deleted
+- **Upload:** Tauri FS plugin reads WAV → browser `FormData` + `fetch()` → SSE progress
 
 **Upload path:** File upload uses browser-native `FormData` + `fetch()` instead of Rust reqwest. The Tauri FS plugin (`@tauri-apps/plugin-fs`) reads the WAV file from disk into a `Uint8Array`, which is wrapped in a `Blob` and appended to `FormData`. This ensures multipart encoding is identical to an HTML form upload. Other API calls (JSON REST) still use the Rust `proxy_request` command to bypass CORS.
 

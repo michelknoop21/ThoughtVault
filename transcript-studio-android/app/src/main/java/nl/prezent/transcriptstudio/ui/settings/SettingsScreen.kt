@@ -43,12 +43,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import nl.prezent.transcriptstudio.BuildConfig
+import nl.prezent.transcriptstudio.R
 import nl.prezent.transcriptstudio.ui.components.TSCard
 import nl.prezent.transcriptstudio.ui.components.TSPrimaryButton
 import nl.prezent.transcriptstudio.ui.components.TSSecondaryButton
@@ -64,6 +67,9 @@ fun SettingsScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
+    val feedbackSentMessage = stringResource(R.string.settings_feedback_sent)
+    val passwordChangedMessage = stringResource(R.string.settings_feedback_password_changed)
+
     LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
             when (event) {
@@ -75,14 +81,14 @@ fun SettingsScreen(
 
     LaunchedEffect(uiState.feedbackSuccess) {
         if (uiState.feedbackSuccess) {
-            snackbarHostState.showSnackbar("Feedback verzonden")
+            snackbarHostState.showSnackbar(feedbackSentMessage)
             viewModel.clearFeedbackSuccess()
         }
     }
 
     LaunchedEffect(uiState.passwordSuccess) {
         if (uiState.passwordSuccess) {
-            snackbarHostState.showSnackbar("Wachtwoord gewijzigd")
+            snackbarHostState.showSnackbar(passwordChangedMessage)
         }
     }
 
@@ -203,7 +209,7 @@ private fun SettingsContent(
     }
 }
 
-// ── Server Section ──────────────────────────────────────────────────────
+// -- Server Section --
 
 @Composable
 private fun ServerSection(
@@ -218,14 +224,14 @@ private fun ServerSection(
 ) {
     TSCard(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(TS.Spacing.md)) {
-            SectionTitle("Server configuratie")
+            SectionTitle(stringResource(R.string.settings_server_title))
 
             Spacer(modifier = Modifier.height(TS.Spacing.sm))
 
             OutlinedTextField(
                 value = baseUrl,
                 onValueChange = onUpdateBaseUrl,
-                label = { Text("Server URL") },
+                label = { Text(stringResource(R.string.settings_server_url_label)) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Uri,
@@ -239,7 +245,7 @@ private fun ServerSection(
             OutlinedTextField(
                 value = apiPrefix,
                 onValueChange = onUpdateApiPrefix,
-                label = { Text("API prefix") },
+                label = { Text(stringResource(R.string.settings_api_prefix_label)) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                 modifier = Modifier.fillMaxWidth(),
@@ -253,7 +259,7 @@ private fun ServerSection(
             Spacer(modifier = Modifier.height(TS.Spacing.md))
 
             TSPrimaryButton(
-                text = if (saving) "Opslaan..." else "Opslaan",
+                text = if (saving) stringResource(R.string.settings_saving) else stringResource(R.string.settings_save),
                 onClick = onSave,
                 enabled = !saving,
                 modifier = Modifier.fillMaxWidth(),
@@ -274,7 +280,7 @@ private fun ConnectionStatusRow(
         when (status) {
             SettingsViewModel.ConnectionStatus.Unknown -> {
                 Text(
-                    text = "Verbinding niet getest",
+                    text = stringResource(R.string.settings_connection_unknown),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -282,7 +288,7 @@ private fun ConnectionStatusRow(
             SettingsViewModel.ConnectionStatus.Checking -> {
                 CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
                 Text(
-                    text = "Verbinden...",
+                    text = stringResource(R.string.settings_connection_checking),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -290,12 +296,12 @@ private fun ConnectionStatusRow(
             SettingsViewModel.ConnectionStatus.Connected -> {
                 Icon(
                     imageVector = Icons.Filled.CheckCircle,
-                    contentDescription = "Verbonden",
+                    contentDescription = stringResource(R.string.settings_connection_connected_cd),
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(16.dp),
                 )
                 Text(
-                    text = "Verbonden",
+                    text = stringResource(R.string.settings_connection_connected),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary,
                 )
@@ -303,12 +309,12 @@ private fun ConnectionStatusRow(
             SettingsViewModel.ConnectionStatus.Error -> {
                 Icon(
                     imageVector = Icons.Filled.Warning,
-                    contentDescription = "Verbinding mislukt",
+                    contentDescription = stringResource(R.string.settings_connection_error_cd),
                     tint = MaterialTheme.colorScheme.error,
                     modifier = Modifier.size(16.dp),
                 )
                 Text(
-                    text = "Verbinding mislukt",
+                    text = stringResource(R.string.settings_connection_error),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
                 )
@@ -318,7 +324,7 @@ private fun ConnectionStatusRow(
         Spacer(modifier = Modifier.weight(1f))
 
         Text(
-            text = "Test verbinding",
+            text = stringResource(R.string.settings_connection_test),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.clickable(onClick = onCheck),
@@ -326,7 +332,7 @@ private fun ConnectionStatusRow(
     }
 }
 
-// ── Account Section ─────────────────────────────────────────────────────
+// -- Account Section --
 
 @Composable
 private fun AccountSection(
@@ -347,16 +353,16 @@ private fun AccountSection(
 ) {
     TSCard(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(TS.Spacing.md)) {
-            SectionTitle("Account")
+            SectionTitle(stringResource(R.string.settings_account_title))
 
             Spacer(modifier = Modifier.height(TS.Spacing.sm))
 
             // User info
             if (userName.isNotBlank()) {
-                ReadOnlyField(label = "Naam", value = userName)
+                ReadOnlyField(label = stringResource(R.string.settings_account_name), value = userName)
             }
             if (userEmail.isNotBlank()) {
-                ReadOnlyField(label = "E-mail", value = userEmail)
+                ReadOnlyField(label = stringResource(R.string.settings_account_email), value = userEmail)
             }
 
             Row(
@@ -364,7 +370,7 @@ private fun AccountSection(
                 horizontalArrangement = Arrangement.spacedBy(TS.Spacing.sm),
             ) {
                 Text(
-                    text = "Rol",
+                    text = stringResource(R.string.settings_account_role),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -375,7 +381,7 @@ private fun AccountSection(
 
             // Password change
             Text(
-                text = "Wachtwoord wijzigen",
+                text = stringResource(R.string.settings_password_change_title),
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
             )
@@ -385,7 +391,7 @@ private fun AccountSection(
             OutlinedTextField(
                 value = currentPassword,
                 onValueChange = onUpdateCurrentPassword,
-                label = { Text("Huidig wachtwoord") },
+                label = { Text(stringResource(R.string.settings_password_current)) },
                 singleLine = true,
                 visualTransformation = PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(
@@ -400,7 +406,7 @@ private fun AccountSection(
             OutlinedTextField(
                 value = newPassword,
                 onValueChange = onUpdateNewPassword,
-                label = { Text("Nieuw wachtwoord") },
+                label = { Text(stringResource(R.string.settings_password_new)) },
                 singleLine = true,
                 visualTransformation = PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(
@@ -415,7 +421,7 @@ private fun AccountSection(
             OutlinedTextField(
                 value = confirmPassword,
                 onValueChange = onUpdateConfirmPassword,
-                label = { Text("Bevestig wachtwoord") },
+                label = { Text(stringResource(R.string.settings_password_confirm)) },
                 singleLine = true,
                 visualTransformation = PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(
@@ -431,7 +437,7 @@ private fun AccountSection(
 
             AnimatedVisibility(visible = passwordSuccess) {
                 Text(
-                    text = "Wachtwoord gewijzigd",
+                    text = stringResource(R.string.settings_password_changed),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(vertical = TS.Spacing.xs),
@@ -441,7 +447,7 @@ private fun AccountSection(
             Spacer(modifier = Modifier.height(TS.Spacing.sm))
 
             TSPrimaryButton(
-                text = if (passwordChanging) "Wijzigen..." else "Wachtwoord wijzigen",
+                text = if (passwordChanging) stringResource(R.string.settings_password_changing) else stringResource(R.string.settings_password_change_button),
                 onClick = onChangePassword,
                 enabled = !passwordChanging,
                 modifier = Modifier.fillMaxWidth(),
@@ -450,7 +456,7 @@ private fun AccountSection(
             Spacer(modifier = Modifier.height(TS.Spacing.lg))
 
             TSSecondaryButton(
-                text = "Uitloggen",
+                text = stringResource(R.string.settings_logout),
                 onClick = onLogout,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -476,8 +482,8 @@ private fun ReadOnlyField(label: String, value: String) {
 @Composable
 private fun RoleBadge(role: String) {
     val displayText = when (role) {
-        "admin" -> "Beheerder"
-        else -> "Gebruiker"
+        "admin" -> stringResource(R.string.settings_role_admin)
+        else -> stringResource(R.string.settings_role_user)
     }
     val color = when (role) {
         "admin" -> MaterialTheme.colorScheme.primary
@@ -495,7 +501,7 @@ private fun RoleBadge(role: String) {
     )
 }
 
-// ── Feedback Section ────────────────────────────────────────────────────
+// -- Feedback Section --
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -514,7 +520,7 @@ private fun FeedbackSection(
 
     TSCard(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(TS.Spacing.md)) {
-            SectionTitle("Feedback")
+            SectionTitle(stringResource(R.string.settings_feedback_title))
 
             Spacer(modifier = Modifier.height(TS.Spacing.sm))
 
@@ -526,7 +532,7 @@ private fun FeedbackSection(
                     value = category,
                     onValueChange = {},
                     readOnly = true,
-                    label = { Text("Categorie") },
+                    label = { Text(stringResource(R.string.settings_feedback_category)) },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -553,7 +559,7 @@ private fun FeedbackSection(
             OutlinedTextField(
                 value = title,
                 onValueChange = onUpdateTitle,
-                label = { Text("Titel") },
+                label = { Text(stringResource(R.string.settings_feedback_item_title)) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                 modifier = Modifier.fillMaxWidth(),
@@ -564,7 +570,7 @@ private fun FeedbackSection(
             OutlinedTextField(
                 value = description,
                 onValueChange = onUpdateDescription,
-                label = { Text("Beschrijving") },
+                label = { Text(stringResource(R.string.settings_feedback_description)) },
                 minLines = 3,
                 maxLines = 6,
                 modifier = Modifier.fillMaxWidth(),
@@ -573,7 +579,7 @@ private fun FeedbackSection(
             Spacer(modifier = Modifier.height(TS.Spacing.md))
 
             TSPrimaryButton(
-                text = if (submitting) "Verzenden..." else "Verstuur",
+                text = if (submitting) stringResource(R.string.settings_feedback_submitting) else stringResource(R.string.settings_feedback_submit),
                 onClick = onSubmit,
                 enabled = !submitting && title.isNotBlank() && description.isNotBlank(),
                 modifier = Modifier.fillMaxWidth(),
@@ -582,7 +588,7 @@ private fun FeedbackSection(
     }
 }
 
-// ── About Section ───────────────────────────────────────────────────────
+// -- About Section --
 
 @Composable
 private fun AboutSection() {
@@ -591,19 +597,19 @@ private fun AboutSection() {
             modifier = Modifier.padding(TS.Spacing.md),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            SectionTitle("Over")
+            SectionTitle(stringResource(R.string.settings_about_title))
 
             Spacer(modifier = Modifier.height(TS.Spacing.sm))
 
             Text(
-                text = "TranscriptStudio voor Android",
+                text = stringResource(R.string.settings_about_app_name),
                 style = MaterialTheme.typography.bodyLarge,
             )
 
             Spacer(modifier = Modifier.height(TS.Spacing.xs))
 
             Text(
-                text = "Versie 1.0.58",
+                text = stringResource(R.string.settings_about_version, BuildConfig.VERSION_NAME),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -615,7 +621,7 @@ private fun AboutSection() {
     }
 }
 
-// ── Admin Section ───────────────────────────────────────────────────────
+// -- Admin Section --
 
 @Composable
 private fun AdminSection(onNavigateToAdmin: () -> Unit) {
@@ -633,26 +639,26 @@ private fun AdminSection(onNavigateToAdmin: () -> Unit) {
         ) {
             Column {
                 Text(
-                    text = "Beheerder",
+                    text = stringResource(R.string.settings_admin_title),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                 )
                 Text(
-                    text = "Gebruikers, invite codes en systeem",
+                    text = stringResource(R.string.settings_admin_subtitle),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = "Ga naar beheerder",
+                contentDescription = stringResource(R.string.settings_admin_navigate),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
 }
 
-// ── Shared ──────────────────────────────────────────────────────────────
+// -- Shared --
 
 @Composable
 private fun SectionTitle(title: String) {

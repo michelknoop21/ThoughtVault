@@ -11,6 +11,7 @@ import {
   Mail24Regular,
   CheckmarkCircle24Regular,
   ErrorCircle24Regular,
+  ArrowSync24Regular,
 } from "@fluentui/react-icons";
 import { api } from "../services/api";
 import { useSettingsStore } from "../stores/settingsStore";
@@ -355,6 +356,28 @@ export function SettingsPage() {
                     {" "}om je account te laten verwijderen. Verzoeken worden binnen 30 dagen verwerkt conform de AVG.
                   </p>
                 </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Updates */}
+          <div className="settings-group">
+            <p className="settings-group-label">Updates</p>
+            <div className="settings-row">
+              <div className="flex-row gap-10 flex-1">
+                <ArrowSync24Regular className="settings-icon" />
+                <div className="flex-1">
+                  <p className="settings-label">Controleer op updates</p>
+                  <p className="settings-desc">Toon een melding op de homepage als er een nieuwe versie beschikbaar is</p>
+                </div>
+                <label className="toggle-switch">
+                  <input
+                    type="checkbox"
+                    checked={settings.check_for_updates}
+                    onChange={(e) => settings.updateSettings({ check_for_updates: e.target.checked })}
+                  />
+                  <span className="toggle-slider" />
+                </label>
               </div>
             </div>
           </div>

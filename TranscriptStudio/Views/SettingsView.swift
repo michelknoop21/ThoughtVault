@@ -51,6 +51,7 @@ struct SettingsView: View {
             accountSection
             feedbackSection
             overSection
+            updatesSection
 
             #if os(macOS)
             Section {
@@ -729,6 +730,27 @@ struct SettingsView: View {
             }
         } header: {
             Text("Over")
+        }
+    }
+
+    // MARK: - Updates
+
+    @AppStorage("checkForUpdates") private var checkForUpdates = true
+
+    private var updatesSection: some View {
+        Section {
+            Toggle(isOn: $checkForUpdates) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Controleer op updates")
+                        .font(TS.Font.body)
+                    Text("Toon een melding op de homepage als er een nieuwe versie beschikbaar is")
+                        .font(TS.Font.caption)
+                        .foregroundStyle(Color.labelSecondary)
+                }
+            }
+            .tint(Color.brandPrimary)
+        } header: {
+            Text("Updates")
         }
     }
 

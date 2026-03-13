@@ -5,6 +5,7 @@ struct TranscriptStudioApp: App {
     @State private var authVM = AuthViewModel()
     @State private var recordingVM = RecordingViewModel()
     @State private var tasksVM = TasksViewModel()
+    @State private var updateCheckService = UpdateCheckService()
     let calendarService = CalendarService.shared
     let permissionManager = PermissionManager.shared
     let debugLogger = DebugLogger.shared
@@ -15,6 +16,7 @@ struct TranscriptStudioApp: App {
                 .environment(authVM)
                 .environment(recordingVM)
                 .environment(tasksVM)
+                .environment(updateCheckService)
                 .environment(calendarService)
                 .environment(permissionManager)
                 .task {

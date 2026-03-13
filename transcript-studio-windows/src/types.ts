@@ -325,6 +325,8 @@ export interface AppSettings {
   default_profile_id: string;
   default_recording_mode: RecordingMode;
   has_completed_onboarding: boolean;
+  check_for_updates: boolean;
+  dismissed_update_version: string;
   ms365_tenant_id?: string;
   ms365_client_id?: string;
 }
@@ -339,4 +341,6 @@ export const DEFAULT_SETTINGS: AppSettings = {
   default_profile_id: "zakelijk",
   default_recording_mode: "combined",
   has_completed_onboarding: false,
+  check_for_updates: true,
+  dismissed_update_version: "",
 };

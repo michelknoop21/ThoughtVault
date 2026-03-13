@@ -22,6 +22,7 @@
 		AA000052 /* PermissionBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000052 /* PermissionBanner.swift */; };
 		AA000053 /* EditableHTMLWebView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000053 /* EditableHTMLWebView.swift */; };
 		AA000054 /* MeetingNotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000054 /* MeetingNotificationService.swift */; };
+		AA000057 /* UpdateCheckService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000057 /* UpdateCheckService.swift */; };
 		AA000011 /* CrashReporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000011 /* CrashReporter.swift */; };
 		AA000012 /* DebugLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000012 /* DebugLogger.swift */; };
 		AA000013 /* KeychainService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000013 /* KeychainService.swift */; };
@@ -87,6 +88,7 @@
 		FA000052 /* PermissionBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionBanner.swift; sourceTree = "<group>"; };
 		FA000053 /* EditableHTMLWebView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditableHTMLWebView.swift; sourceTree = "<group>"; };
 		FA000054 /* MeetingNotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeetingNotificationService.swift; sourceTree = "<group>"; };
+		FA000057 /* UpdateCheckService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateCheckService.swift; sourceTree = "<group>"; };
 		FA000011 /* CrashReporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrashReporter.swift; sourceTree = "<group>"; };
 		FA000012 /* DebugLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugLogger.swift; sourceTree = "<group>"; };
 		FA000013 /* KeychainService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainService.swift; sourceTree = "<group>"; };
@@ -223,6 +225,7 @@
 				FA000016 /* OfflineQueue.swift */,
 				FA000017 /* OnDeviceTranscriber.swift */,
 				FA000018 /* SystemAudioCapture.swift */,
+				FA000057 /* UpdateCheckService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -442,6 +445,7 @@
 				AA000052 /* PermissionBanner.swift in Sources */,
 				AA000053 /* EditableHTMLWebView.swift in Sources */,
 				AA000054 /* MeetingNotificationService.swift in Sources */,
+				AA000057 /* UpdateCheckService.swift in Sources */,
 				AA000056 /* TasksView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

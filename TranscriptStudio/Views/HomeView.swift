@@ -15,6 +15,7 @@ struct HomeView: View {
 
     @Environment(RecordingViewModel.self) var recordingVM
     @Environment(AuthViewModel.self) var authVM
+    @Environment(UpdateCheckService.self) var updateCheck
 
     // MARK: Closure delegation
 
@@ -27,6 +28,9 @@ struct HomeView: View {
 
     // MARK: State
 
+    @AppStorage("checkForUpdates") private var checkForUpdates = true
+    @AppStorage("dismissedUpdateVersion") private var dismissedUpdateVersion = ""
+
     @State private var recentTranscripts: [Transcript] = []
     @State private var isLoadingRecent = false
     @State private var loadError: String? = nil
@@ -38,6 +42,12 @@ struct HomeView: View {
             backgroundBlobs
             ScrollView {
                 VStack(spacing: TS.Spacing.xl) {
+                    if checkForUpdates,
+                       let version = updateCheck.availableVersion,
+                       dismissedUpdateVersion != version {
+                        updateBanner(version: version)
+                    }
+
                     headerSection
 
                     quickStartSection
@@ -62,6 +72,9 @@ struct HomeView: View {
         .navigationBarTitleDisplayMode(.inline)
         #endif
         .task { await loadRecentTranscripts() }
+        .task {
+            if checkForUpdates { await updateCheck.checkForUpdate() }
+        }
     }
 
     // MARK: - Subviews
@@ -492,6 +505,69 @@ struct HomeView: View {
         }
     }
 
+    // MARK: Update banner
+
+    private func updateBanner(version: String) -> some View {
+        HStack(spacing: TS.Spacing.sm) {
+            Image(systemName: "arrow.down.circle.fill")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(.white)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Versie \(version) is beschikbaar")
+                    .font(TS.Font.footnoteSemibold)
+                    .foregroundStyle(.white)
+            }
+
+            Spacer()
+
+            if let url = updateCheck.downloadURL {
+                Button {
+                    #if os(macOS)
+                    NSWorkspace.shared.open(url)
+                    #else
+                    UIApplication.shared.open(url)
+                    #endif
+                } label: {
+                    Text("Download")
+                        .font(TS.Font.captionSemibold)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, TS.Spacing.sm)
+                        .padding(.vertical, TS.Spacing.xs)
+                        .background {
+                            Capsule(style: .continuous)
+                                .fill(Color.white.opacity(0.22))
+                        }
+                }
+                .buttonStyle(.plain)
+            }
+
+            Button {
+                withAnimation(TS.Animation.quick) {
+                    dismissedUpdateVersion = version
+                }
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(Color.white.opacity(0.7))
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, TS.Spacing.md)
+        .padding(.vertical, TS.Spacing.sm)
+        .background {
+            RoundedRectangle(cornerRadius: TS.Radius.sm, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [Color.brandPrimary, Color.brandPrimaryDark],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+        }
+        .transition(.move(edge: .top).combined(with: .opacity))
+    }
+
     // MARK: - Helpers
 
     private func loadRecentTranscripts() async {
@@ -513,4 +589,5 @@ struct HomeView: View {
     HomeView()
         .environment(RecordingViewModel())
         .environment(AuthViewModel())
+        .environment(UpdateCheckService())
 }

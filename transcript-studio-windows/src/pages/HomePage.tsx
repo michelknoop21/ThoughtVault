@@ -14,8 +14,11 @@ import { useRecordingStore } from "../stores/recordingStore";
 import { useTranscriptsStore } from "../stores/transcriptsStore";
 import { useCalendarStore } from "../stores/calendarStore";
 import { useAuthStore } from "../stores/authStore";
+import { useSettingsStore } from "../stores/settingsStore";
 import { api } from "../services/api";
 import { MicrosoftGraphService } from "../services/microsoftGraph";
+import { useUpdateCheck } from "../hooks/useUpdateCheck";
+import { UpdateBanner } from "../components/ui/UpdateBanner";
 import type { CalendarEvent, Transcript } from "../types";
 
 function getGreeting(name?: string, email?: string): string {
@@ -31,6 +34,9 @@ export function HomePage() {
   const { transcripts, setTranscripts, deleteTranscript, isLoading, setIsLoading } = useTranscriptsStore();
   const calendar = useCalendarStore();
   const user = useAuthStore((s) => s.user);
+  const { isUpdateAvailable, latestVersion, downloadUrl } = useUpdateCheck();
+  const dismissedVersion = useSettingsStore((s) => s.dismissed_update_version);
+  const updateSettings = useSettingsStore((s) => s.updateSettings);
   const [upcomingEvents, setUpcomingEvents] = useState<CalendarEvent[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -91,6 +97,17 @@ export function HomePage() {
       <div className="bg-blob bg-blob-blue" />
     </div>
     <div className="page-content" style={{ position: "relative", zIndex: 1 }}>
+
+      {/* Update banner */}
+      {isUpdateAvailable && latestVersion && dismissedVersion !== latestVersion && (
+        <section>
+          <UpdateBanner
+            version={latestVersion}
+            downloadUrl={downloadUrl}
+            onDismiss={() => updateSettings({ dismissed_update_version: latestVersion })}
+          />
+        </section>
+      )}
 
       {/* Greeting */}
       <section>

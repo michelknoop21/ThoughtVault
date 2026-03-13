@@ -33,7 +33,16 @@ fun AppNavHost(
                 }
             })
         }
-        composable<Home> { HomeScreen() }
+        composable<Home> {
+            HomeScreen(
+                onNavigateToRecording = {
+                    navController.navigate(Recording)
+                },
+                onNavigateToTask = { id ->
+                    navController.navigate(TranscriptDetail(id))
+                },
+            )
+        }
         composable<Recording> { RecordingScreen() }
         composable<Tasks> {
             TasksScreen(onNavigateToTranscript = { id ->

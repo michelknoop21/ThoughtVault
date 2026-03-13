@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">TranscriptStudio</string>
+
+    <!-- Home screen -->
+    <string name="home_title">Home</string>
+    <string name="home_greeting_morning">Goedemorgen, %1$s</string>
+    <string name="home_greeting_afternoon">Goedemiddag, %1$s</string>
+    <string name="home_greeting_evening">Goedenavond, %1$s</string>
+    <string name="home_greeting_fallback">Welkom</string>
+    <string name="home_quick_start">Nieuwe opname starten</string>
+    <string name="home_active_tasks">Actieve taken</string>
+    <string name="home_recent_transcripts">Recente notulen</string>
+    <string name="home_view_all_tasks">Alle taken bekijken</string>
+    <string name="home_view_all_transcripts">Alle notulen bekijken</string>
+    <string name="home_no_active_tasks">Geen actieve taken</string>
+    <string name="home_no_recent_transcripts">Nog geen notulen</string>
+    <string name="home_error_load">Kan gegevens niet laden. Probeer het opnieuw.</string>
+
+    <!-- Recording screen -->
+    <string name="recording_title">Opnemen</string>
+    <string name="recording_select_profile">Selecteer profiel</string>
+    <string name="recording_start">Start opname</string>
+    <string name="recording_stop">Stop</string>
+    <string name="recording_pause">Pauze</string>
+    <string name="recording_resume">Hervat</string>
+    <string name="recording_cancel">Annuleren</string>
+    <string name="recording_cancel_confirm_title">Opname annuleren</string>
+    <string name="recording_cancel_confirm_message">Weet je zeker dat je de opname wilt annuleren? Het audiobestand wordt verwijderd.</string>
+    <string name="recording_cancel_confirm_yes">Verwijderen</string>
+    <string name="recording_cancel_confirm_no">Terug</string>
+    <string name="recording_uploading">Uploaden…</string>
+    <string name="recording_upload_success">Opname verzonden voor verwerking</string>
+    <string name="recording_upload_queued">Opname in wachtrij (geen verbinding)</string>
+    <string name="recording_upload_failed">Upload mislukt: %1$s</string>
+    <string name="recording_permission_required">Microfoon toegang is vereist voor opname</string>
+    <string name="recording_no_profiles">Geen profielen beschikbaar</string>
+    <string name="recording_active">Opname actief</string>
+    <string name="recording_paused">Gepauzeerd</string>
+    <string name="recording_idle_subtitle">Kies een profiel en start een opname</string>
+
+    <!-- Foreground service notification -->
+    <string name="notification_channel_recording">Opname</string>
+    <string name="notification_channel_recording_desc">Meldingen tijdens actieve audio-opname</string>
+    <string name="notification_recording_title">Opname actief</string>
+    <string name="notification_recording_text">Opnameduur: %1$s</string>
+    <string name="notification_action_stop">Stop</string>
+</resources>

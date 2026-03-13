@@ -40,10 +40,17 @@ fun AppNavHost(
                 navController.navigate(TranscriptDetail(id))
             })
         }
-        composable<Transcripts> { TranscriptsScreen() }
+        composable<Transcripts> {
+            TranscriptsScreen(onNavigateToDetail = { id ->
+                navController.navigate(TranscriptDetail(id))
+            })
+        }
         composable<TranscriptDetail> { backStackEntry ->
             val detail = backStackEntry.toRoute<TranscriptDetail>()
-            TranscriptDetailScreen(transcriptId = detail.id)
+            TranscriptDetailScreen(
+                transcriptId = detail.id,
+                onNavigateBack = { navController.popBackStack() },
+            )
         }
         composable<Settings> { SettingsScreen() }
         composable<Admin> { AdminScreen() }

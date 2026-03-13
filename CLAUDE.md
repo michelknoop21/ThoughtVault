@@ -14,7 +14,7 @@ xcodebuild -project TranscriptStudio.xcodeproj -scheme TranscriptStudio -configu
 xcodebuild test -project TranscriptStudio.xcodeproj -scheme TranscriptStudioTests
 
 # Windows dev
-cd transcript-studio-windows && npm run tauri dev
+cd windows && npm run tauri dev
 
 # Release (sync version → build → upload)
 scripts/release.sh                # volledige pipeline
@@ -52,6 +52,9 @@ ssh michelk@3.69.205.209 "docker restart n8n_transcript_studio"
 # Logs bekijken
 ssh michelk@3.69.205.209 "docker logs n8n_transcript_studio --tail 50"
 ```
+
+## Roadmap
+- **Multi-instance deployment** — Meerdere klanten bedienen met dezelfde codebase. Zie @docs/PLAN-MULTI-INSTANCE.md en DEC-033.
 
 ## Gotchas
 - `notifications(named:)` gebruiken, NIET `notifications(for:)` in AuthViewModel

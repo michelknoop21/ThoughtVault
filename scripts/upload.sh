@@ -24,7 +24,7 @@ for TARGET_ARCH in x86_64-pc-windows-msvc aarch64-pc-windows-msvc; do
         ARCH_LABEL="arm64"
     fi
     if [ ! -f "$MSI_CHECK" ]; then
-        TAURI_MSI=$(find "$ROOT_DIR/transcript-studio-windows/src-tauri/target/$TARGET_ARCH/release/bundle" -name "*.msi" -type f 2>/dev/null | head -1)
+        TAURI_MSI=$(find "$ROOT_DIR/windows/src-tauri/target/$TARGET_ARCH/release/bundle" -name "*.msi" -type f 2>/dev/null | head -1)
         if [ -n "$TAURI_MSI" ]; then
             cp "$TAURI_MSI" "$MSI_CHECK"
             echo "  Found $ARCH_LABEL MSI in Tauri output, copied to build/"

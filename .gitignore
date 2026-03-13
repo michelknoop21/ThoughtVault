@@ -27,10 +27,10 @@ Package.resolved
 ._*
 
 # Tauri / Node
-transcript-studio-windows/node_modules/
-transcript-studio-windows/dist/
-transcript-studio-windows/src-tauri/target/
-transcript-studio-windows/.vite/
+windows/node_modules/
+windows/dist/
+windows/src-tauri/target/
+windows/.vite/
 
 # Environment
 .env

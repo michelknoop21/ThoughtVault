@@ -170,11 +170,11 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Install frontend dependencies
-        working-directory: transcript-studio-windows
+        working-directory: windows
         run: npm install
 
       - name: Build Tauri app
-        working-directory: transcript-studio-windows
+        working-directory: windows
         env:
           TAURI_CONFIG: '{"identifier":"${{ env.BUNDLE_ID_WINDOWS }}","productName":"${{ env.TAURI_PRODUCT_NAME }}"}'
         run: npm run tauri build
@@ -183,7 +183,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p build
-          MSI=$(find transcript-studio-windows/src-tauri/target/release/bundle -name "*.msi" -type f | head -1)
+          MSI=$(find windows/src-tauri/target/release/bundle -name "*.msi" -type f | head -1)
           if [ -z "$MSI" ]; then
             echo "ERROR: MSI not found"
             exit 1

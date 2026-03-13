@@ -5,6 +5,13 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2026-03-13] — Documentatie: Apple telefonie beperking
+
+### Added
+- **Bekende issues: Apple telefonie niet opneembaar** (`README.md` bekende issues tabel): Gedocumenteerd dat iPhone-doorschakeling (FaceTime relay / Telefoon-app via Mac) niet werkt met de Systeemgeluid- of Gecombineerd-opnamemodus. Apple routeert deze audio via een privé audiopad (`com.apple.avconference` / CoreTelephony) dat buiten het bereik van ScreenCaptureKit valt. Dit is een macOS-platformbeperking, geen bug in TranscriptStudio. Workarounds: gebruik een VoIP-app (Teams/Zoom/WhatsApp Desktop), microfoonmodus met speaker, of een virtuele audio-driver (BlackHole/Loopback).
+
+---
+
 ## [2026-03-13] — Profile UX simplification + timezone fix (v1.0.50)
 
 ### Changed

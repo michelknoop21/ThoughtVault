@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../services/api";
 import { useAuthStore } from "../stores/authStore";
@@ -21,7 +21,15 @@ type LoginView = "login" | "2fa" | "reset-request" | "reset-verify" | "reset-com
 
 export function LoginPage() {
   const navigate = useNavigate();
-  const { setToken, setUser } = useAuthStore();
+  const { setToken, setUser, isAuthenticated } = useAuthStore();
+
+  // Redirect to home if already authenticated (e.g. keyring loaded late)
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate("/", { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [twoFactorCode, setTwoFactorCode] = useState("");

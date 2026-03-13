@@ -27,7 +27,7 @@ else
 fi
 
 # 2. Tauri tauri.conf.json
-TAURI_CONF="$ROOT_DIR/transcript-studio-windows/src-tauri/tauri.conf.json"
+TAURI_CONF="$ROOT_DIR/windows/src-tauri/tauri.conf.json"
 if [ -f "$TAURI_CONF" ]; then
     sed -i '' "s/\"version\": \"[^\"]*\"/\"version\": \"$VERSION\"/" "$TAURI_CONF"
     echo "  Updated: tauri.conf.json (version=$VERSION)"
@@ -36,7 +36,7 @@ else
 fi
 
 # 3. Cargo.toml — first version under [package] only
-CARGO_TOML="$ROOT_DIR/transcript-studio-windows/src-tauri/Cargo.toml"
+CARGO_TOML="$ROOT_DIR/windows/src-tauri/Cargo.toml"
 if [ -f "$CARGO_TOML" ]; then
     # Use awk to only replace the first version = "..." line (under [package])
     awk -v ver="$VERSION" '

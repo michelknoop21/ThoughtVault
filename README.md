@@ -96,7 +96,7 @@ xcodebuild -project TranscriptStudio.xcodeproj \
 ### Windows
 
 ```bash
-cd transcript-studio-windows
+cd windows
 npm install          # MOET binnen Windows-omgeving draaien
 npm run tauri dev    # Start development server + Tauri window
 ```
@@ -138,7 +138,7 @@ xcodebuild -project TranscriptStudio.xcodeproj \
   build
 
 # Windows
-cd transcript-studio-windows
+cd windows
 npm run tauri build
 ```
 
@@ -157,7 +157,7 @@ xcodebuild test \
 ### Windows
 
 ```bash
-cd transcript-studio-windows
+cd windows
 npm test
 ```
 
@@ -181,7 +181,7 @@ Beide clients hebben **geen** `.env` bestanden of environment variabelen nodig. 
 ```
 TranscriptStudioApp/
 │
-├── TranscriptStudio/                  # macOS/iOS app (Swift 6, SwiftUI)
+├── macos/                             # macOS/iOS app (Swift 6, SwiftUI)
 │   ├── App/                           # Entry point, ContentView, AppDelegate
 │   │   ├── TranscriptStudioApp.swift  #   Window config (1100x750, min 900x600)
 │   │   ├── ContentView.swift          #   Root view, collapsible sidebar + TabView (Home, Opnemen, Taken, Notulen, Instellingen, Admin)
@@ -231,7 +231,7 @@ TranscriptStudioApp/
 │       ├── en.lproj/Localizable.strings  # Engels (fallback)
 │       └── TranscriptStudio.entitlements # Sandbox, audio, calendar, ScreenCaptureKit
 │
-├── transcript-studio-windows/         # Windows app (Tauri 2, React 19)
+├── windows/                           # Windows app (Tauri 2, React 19)
 │   ├── src/                           # React frontend
 │   │   ├── components/                #   calendar/, layout/, onboarding/, recording/, etc.
 │   │   ├── services/                  #   api.ts, llm.ts, microsoftGraph.ts, sse.ts
@@ -240,7 +240,7 @@ TranscriptStudioApp/
 │   └── src-tauri/                     # Rust backend commands
 │       └── src/                       #   Audio (WASAPI), auth (keyring), OAuth PKCE, etc.
 │
-├── RecordingActivityWidget/           # iOS Live Activity (Dynamic Island + lock screen)
+├── ios-widget/                        # iOS Live Activity (Dynamic Island + lock screen)
 │
 ├── docs/                              # Gedetailleerde documentatie
 │   ├── README.md                      #   Developer onboarding
@@ -413,6 +413,7 @@ git add VERSION && git commit -m "chore: bump major version to 2.0.0"
 | Sidebar toggle moet per tab verwijderd worden | Alle NavigationStack tabs | Opgelost in v1.0.32: custom collapsible sidebar vervangt `columnVisibility` (DEC-029). `Shift+Cmd+S` toggle. |
 | Combined mode audio mixing | `RecordingViewModel` | Gebruikt `mixAudioFiles()` — element-wise max over PCM frames |
 | Backend cleanup verwijdert actieve taken | Server-side | `cleanup_old_tasks()` verwijdert taken >24h, ook als ze nog `queued` zijn |
+| Apple telefonie (iPhone-doorschakeling) niet opneembaar via Systeemgeluid | `SystemAudioCapture.swift` | Apple routeert FaceTime/iPhone-relay audio via een privé audiopad (`com.apple.avconference` / CoreTelephony) dat niet beschikbaar is voor ScreenCaptureKit. Gebruik in plaats daarvan een VoIP-app (Teams, Zoom, WhatsApp Desktop) op de Mac, of gebruik Microfoon-modus met speaker aan. Een virtuele audio-driver (BlackHole, Loopback) kan als workaround dienen. |
 
 ---
 
@@ -429,6 +430,7 @@ Gedetailleerde documentatie staat in [`docs/`](docs/):
 | [DECISIONS.md](docs/DECISIONS.md) | Architectural Decision Records (ADRs): rationale voor technische keuzes |
 | [CHANGELOG.md](docs/CHANGELOG.md) | Versiehistorie en release notes |
 | [RELEASE.md](docs/RELEASE.md) | Build & release pipeline: scripts, shortcuts, server-side setup |
+| [PLAN-MULTI-INSTANCE.md](docs/PLAN-MULTI-INSTANCE.md) | Roadmap: multi-instance deployment voor meerdere klanten |
 
 ---
 

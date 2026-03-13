@@ -145,13 +145,6 @@ class APIService {
     path: string,
     body?: unknown
   ): Promise<T> {
-    // Check token expiry before making authenticated requests
-    const authStore = useAuthStore.getState();
-    if (authStore.isTokenExpired()) {
-      authStore.logout();
-      throw new Error("Sessie verlopen. Log opnieuw in.");
-    }
-
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
     };
@@ -381,12 +374,6 @@ class APIService {
     mode: string,
     signal?: AbortSignal
   ): Promise<{ task_id: string }> {
-    const authStore = useAuthStore.getState();
-    if (authStore.isTokenExpired()) {
-      authStore.logout();
-      throw new Error("Sessie verlopen. Log opnieuw in.");
-    }
-
     // Read file bytes via Tauri FS plugin
     const fileBytes = await readFile(filePath);
 
@@ -450,12 +437,6 @@ class APIService {
     onProgress: (fraction: number) => void,
     signal?: AbortSignal
   ): Promise<{ task_id: string }> {
-    const authStore = useAuthStore.getState();
-    if (authStore.isTokenExpired()) {
-      authStore.logout();
-      throw new Error("Sessie verlopen. Log opnieuw in.");
-    }
-
     const fileBytes = await readFile(filePath);
     const filename = filePath.split(/[\\/]/).pop() || "recording.wav";
     const blob = new Blob([fileBytes], { type: "audio/wav" });
@@ -717,18 +698,48 @@ class APIService {
     }
   }
 
-  async getAdminErrors(limit: number = 50): Promise<unknown[]> {
+  async getAdminErrors(params: {
+    limit?: number;
+    severity?: string;
+    user_id?: string;
+    search?: string;
+    start_date?: string;
+    end_date?: string;
+  } = {}): Promise<unknown[]> {
     try {
-      const data = await this.request<unknown[] | PaginatedResponse<unknown>>("GET", `/admin/errors?limit=${limit}`);
+      const query = new URLSearchParams();
+      if (params.limit) query.set("limit", String(params.limit));
+      if (params.severity) query.set("severity", params.severity);
+      if (params.user_id) query.set("user_id", params.user_id);
+      if (params.search) query.set("search", params.search);
+      if (params.start_date) query.set("start_date", params.start_date);
+      if (params.end_date) query.set("end_date", params.end_date);
+      const qs = query.toString();
+      const data = await this.request<unknown[] | PaginatedResponse<unknown>>("GET", `/admin/errors${qs ? `?${qs}` : ""}`);
       return safeArray<unknown>(data);
     } catch {
       return [];
     }
   }
 
-  async getAdminActivity(limit: number = 50): Promise<unknown[]> {
+  async getAdminActivity(params: {
+    limit?: number;
+    user_id?: string;
+    action_type?: string;
+    search?: string;
+    start_date?: string;
+    end_date?: string;
+  } = {}): Promise<unknown[]> {
     try {
-      const data = await this.request<unknown[] | PaginatedResponse<unknown>>("GET", `/admin/activity?limit=${limit}`);
+      const query = new URLSearchParams();
+      if (params.limit) query.set("limit", String(params.limit));
+      if (params.user_id) query.set("user_id", params.user_id);
+      if (params.action_type) query.set("action_type", params.action_type);
+      if (params.search) query.set("search", params.search);
+      if (params.start_date) query.set("start_date", params.start_date);
+      if (params.end_date) query.set("end_date", params.end_date);
+      const qs = query.toString();
+      const data = await this.request<unknown[] | PaginatedResponse<unknown>>("GET", `/admin/activity${qs ? `?${qs}` : ""}`);
       return safeArray<unknown>(data);
     } catch {
       return [];

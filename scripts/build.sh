@@ -78,7 +78,7 @@ if [ "$OS" = "Darwin" ]; then
     if [ "$FOUND_MSI" = false ]; then
         for TARGET_ARCH in x86_64-pc-windows-msvc aarch64-pc-windows-msvc; do
             if [ "$TARGET_ARCH" = "x86_64-pc-windows-msvc" ]; then ARCH_LABEL="x64"; else ARCH_LABEL="arm64"; fi
-            TAURI_MSI=$(find "$ROOT_DIR/transcript-studio-windows/src-tauri/target/$TARGET_ARCH/release/bundle" -name "*.msi" -type f 2>/dev/null | head -1)
+            TAURI_MSI=$(find "$ROOT_DIR/windows/src-tauri/target/$TARGET_ARCH/release/bundle" -name "*.msi" -type f 2>/dev/null | head -1)
             if [ -n "$TAURI_MSI" ]; then
                 MSI_DEST="${MSI_PREFIX}_${VERSION}_${ARCH_LABEL}.msi"
                 cp "$TAURI_MSI" "$BUILD_DIR/$MSI_DEST"
@@ -95,10 +95,10 @@ if [ "$OS" = "Darwin" ]; then
 
 else
     # Windows (or Linux): Tauri build → MSI
-    WINDOWS_DIR="$ROOT_DIR/transcript-studio-windows"
+    WINDOWS_DIR="$ROOT_DIR/windows"
 
     if [ ! -d "$WINDOWS_DIR" ]; then
-        echo "ERROR: transcript-studio-windows directory not found"
+        echo "ERROR: windows directory not found"
         exit 1
     fi
 

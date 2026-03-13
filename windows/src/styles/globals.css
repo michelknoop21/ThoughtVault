@@ -2420,6 +2420,268 @@
   border-radius: 50%;
 }
 
+/* ============================================================
+   Logging Tab — table, filters, pagination
+   ============================================================ */
+
+/* Sub-tab toggle */
+.log-sub-tabs {
+  display: flex;
+  gap: 0;
+  background: var(--surface-secondary);
+  border-radius: var(--radius-sm);
+  padding: 2px;
+  width: fit-content;
+}
+.log-sub-tab {
+  padding: 6px 16px;
+  font-size: var(--font-caption);
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.log-sub-tab:hover { color: var(--text-primary); }
+.log-sub-tab.active {
+  background: var(--card-bg);
+  color: var(--text-primary);
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+}
+.log-sub-tab-count {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  font-weight: 400;
+}
+
+/* Filter bar */
+.log-filter-bar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.log-filter-search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius-sm);
+  padding: 0 10px;
+  flex: 1;
+  min-width: 200px;
+  max-width: 340px;
+  height: 32px;
+}
+.log-filter-search:focus-within {
+  border-color: var(--fill-brand-primary);
+}
+.log-filter-search-input {
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: var(--font-caption);
+  color: var(--text-primary);
+  width: 100%;
+}
+.log-filter-search-input::placeholder { color: var(--text-tertiary); }
+.log-filter-clear-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-tertiary);
+  padding: 2px;
+  border-radius: 2px;
+}
+.log-filter-clear-btn:hover { color: var(--text-primary); }
+
+.log-filter-select {
+  height: 32px;
+  padding: 0 10px;
+  font-size: var(--font-caption);
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  min-width: 120px;
+  max-width: 180px;
+}
+.log-filter-date {
+  height: 32px;
+  padding: 0 8px;
+  font-size: var(--font-caption);
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  max-width: 140px;
+}
+
+/* Log table */
+.log-table-wrapper {
+  overflow-x: auto;
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-sm);
+  background: var(--card-bg);
+}
+.log-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-caption);
+}
+.log-table thead th {
+  text-align: left;
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  background: var(--surface-secondary);
+  border-bottom: 1px solid var(--card-border);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  white-space: nowrap;
+}
+.log-table tbody tr {
+  border-bottom: 1px solid var(--card-border);
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.log-table tbody tr:last-child { border-bottom: none; }
+.log-table tbody tr:hover { background: var(--surface-secondary); }
+.log-table tbody tr.expanded { background: var(--surface-secondary); }
+.log-table td {
+  padding: 8px 12px;
+  vertical-align: top;
+}
+.log-table-time {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
+.log-table-user {
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 160px;
+}
+.log-table-endpoint { font-family: var(--font-mono); color: var(--text-secondary); font-size: 11px; }
+.log-table-type { color: var(--text-secondary); }
+.log-table-message { max-width: 300px; }
+.log-endpoint-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: block;
+  max-width: 200px;
+}
+.log-message-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow-wrap: anywhere;
+}
+
+/* Action badges */
+.log-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: var(--radius-xs);
+  white-space: nowrap;
+}
+.log-badge-auth { background: var(--accent-bg-secondary); color: var(--brand-secondary); }
+.log-badge-upload { background: var(--accent-bg-primary); color: var(--fill-brand-primary); }
+.log-badge-danger { background: rgba(239, 68, 68, 0.10); color: var(--status-error); }
+.log-badge-success { background: rgba(34, 197, 94, 0.10); color: var(--fill-system-success); }
+.log-badge-default { background: var(--surface-tertiary); color: var(--text-secondary); }
+
+/* Expanded row details */
+.log-expanded-details {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--card-border);
+}
+.log-detail-line {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin: 2px 0;
+}
+.log-detail-label {
+  font-weight: 600;
+  color: var(--text-tertiary);
+}
+.log-stacktrace {
+  margin-top: 6px;
+  padding: 8px;
+  background: var(--surface-tertiary);
+  border-radius: var(--radius-xs);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-secondary);
+  overflow-x: auto;
+  max-height: 200px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* Pagination */
+.log-pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+}
+.log-pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.log-pagination-page {
+  min-width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+}
+.log-pagination-page:hover { background: var(--surface-secondary); }
+.log-pagination-page.active {
+  background: var(--fill-brand-primary);
+  color: white;
+  font-weight: 600;
+}
+.log-pagination-dots {
+  min-width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
 /* Card attached below another card (e.g. reset password form) */
 .card-attached {
   padding: 8px 14px;

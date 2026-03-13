@@ -536,6 +536,28 @@ _Append-only log. Each entry records context, decision, and consequences._
 
 ---
 
+## DEC-033 — Multi-Instance Over Multi-Tenant for Scaling to Multiple Customers
+
+**Date:** 2026-03-13
+**Status:** Accepted
+
+**Context:** TranscriptStudio is currently a single-tenant system — one backend container, one database, one n8n flow. To serve multiple customers, two approaches were evaluated: (1) multi-tenant — adding an organization layer throughout the entire stack (database, auth, API, clients), estimated at 3-4 weeks of development with high security risk from potential data isolation bugs; (2) multi-instance — deploying a separate backend container + database + Redis index per customer using the same Docker image, requiring only deployment tooling with zero application code changes for the basic setup.
+
+**Decision:** Adopt multi-instance deployment. Each customer gets their own Docker container, PostgreSQL database, Redis DB index, and Docker volume for file storage. Shared resources: GPU (Whisper model), Ollama LLM, nginx reverse proxy, and a single parameterized n8n flow. A separate `transcript-studio-ops` repository holds tenant configs (.env files with credentials) and management scripts. No fork per customer — all instances run the same Docker image with different environment variables. Customer-specific needs are addressed through three levels: (1) configuration via env vars (90%), (2) feature flags in code (8%), (3) webhooks or custom n8n flows (2%).
+
+**Consequences:**
+- Complete data isolation between customers — separate databases, volumes, and Redis indices.
+- Zero application code changes for basic multi-instance (only env var-driven configuration).
+- Small backend changes needed: configurable `API_ROOT_PATH`, `CALLBACK_PATH_PREFIX`, and dynamic callback URL in n8n webhook payload.
+- One universal n8n flow serves all customers — callback URL and admin key are passed dynamically in the payload.
+- GPU memory is the scaling bottleneck: each container loads Whisper (~3.2GB for medium model). At >4 customers, a shared Whisper microservice is needed.
+- Operational overhead scales linearly with customers — mitigated by `manage-tenant.sh` automation.
+- Credentials and tenant configs are kept in a separate private ops repo, not in the application code.
+- Viable for 1-10 customers. At >20 customers, reconsider multi-tenant architecture.
+- Full plan documented in `docs/PLAN-MULTI-INSTANCE.md`.
+
+---
+
 ## DEC-032 — Simplified Profile Creation with Style Picker
 
 **Date:** 2026-03-13

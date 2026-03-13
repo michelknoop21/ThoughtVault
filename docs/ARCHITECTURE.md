@@ -8,9 +8,9 @@ _Last updated: 2026-03-13_
 
 TranscriptStudio is a cross-platform meeting transcription system consisting of:
 
-- **macOS client** — Swift 6+ / SwiftUI native app (`/TranscriptStudio/`)
-- **Windows client** — Tauri 2.10 / React 19 / TypeScript desktop app (`/transcript-studio-windows/`)
-- **iOS Widget** — SwiftUI Live Activity (`/RecordingActivityWidget/`)
+- **macOS client** — Swift 6+ / SwiftUI native app (`/macos/`)
+- **Windows client** — Tauri 2.10 / React 19 / TypeScript desktop app (`/windows/`)
+- **iOS Widget** — SwiftUI Live Activity (`/ios-widget/`)
 - **Backend** — FastAPI (Python) with GPU-accelerated Whisper transcription and n8n workflow orchestration
 
 Both desktop clients share a common REST + SSE API and are deployed independently.
@@ -96,7 +96,7 @@ Client                    Backend                    n8n / Claude
 ### Directory Structure
 
 ```
-TranscriptStudio/
+macos/
 ├── App/
 │   ├── TranscriptStudioApp.swift       # App entry point, window configuration (1100×750, min 900×600)
 │   ├── ContentView.swift               # Root view, NavigationSplitView + TabView (Home, Opnemen, Taken, Notulen, Instellingen, Admin)

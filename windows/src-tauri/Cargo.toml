@@ -1,6 +1,6 @@
 [package]
 name = "transcript-studio"
-version = "1.0.51"
+version = "1.0.52"
 description = "TranscriptStudio - Meeting recorder and transcription app"
 authors = ["Prezent Internet B.V."]
 edition = "2021"

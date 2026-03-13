@@ -164,7 +164,7 @@ function KeyboardShortcuts() {
 }
 
 function ProtectedRoutes() {
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, isInitializing } = useAuthStore();
   const { has_completed_onboarding, updateSettings } = useSettingsStore();
   const setProfiles = useProfilesStore((s) => s.setProfiles);
 
@@ -228,6 +228,10 @@ function ProtectedRoutes() {
       }
     })();
   }, [isAuthenticated]);
+
+  if (isInitializing) {
+    return null;
+  }
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;

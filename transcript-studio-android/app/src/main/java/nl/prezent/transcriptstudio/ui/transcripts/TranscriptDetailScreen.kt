@@ -45,8 +45,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
+import nl.prezent.transcriptstudio.R
 import nl.prezent.transcriptstudio.ui.components.EmptyState
 import nl.prezent.transcriptstudio.ui.components.TSPrimaryButton
 import nl.prezent.transcriptstudio.ui.theme.TS
@@ -111,20 +113,20 @@ fun TranscriptDetailScreen(
                     }) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Terug",
+                            contentDescription = stringResource(R.string.transcript_detail_back),
                         )
                     }
                 },
                 actions = {
                     if (state.isEditing) {
                         TextButton(onClick = { viewModel.saveTitle(state.editTitle) }) {
-                            Text("Opslaan")
+                            Text(stringResource(R.string.transcript_detail_save))
                         }
                     } else {
                         IconButton(onClick = { showMenu = true }) {
                             Icon(
                                 imageVector = Icons.Default.MoreVert,
-                                contentDescription = "Menu",
+                                contentDescription = stringResource(R.string.transcript_detail_menu),
                             )
                         }
                         DropdownMenu(
@@ -132,14 +134,14 @@ fun TranscriptDetailScreen(
                             onDismissRequest = { showMenu = false },
                         ) {
                             DropdownMenuItem(
-                                text = { Text("Titel bewerken") },
+                                text = { Text(stringResource(R.string.transcript_detail_edit_title)) },
                                 onClick = {
                                     showMenu = false
                                     viewModel.startEditTitle()
                                 },
                             )
                             DropdownMenuItem(
-                                text = { Text("Delen") },
+                                text = { Text(stringResource(R.string.transcript_detail_share)) },
                                 leadingIcon = {
                                     Icon(Icons.Default.Share, contentDescription = null)
                                 },
@@ -149,7 +151,7 @@ fun TranscriptDetailScreen(
                                 },
                             )
                             DropdownMenuItem(
-                                text = { Text("Opnieuw genereren") },
+                                text = { Text(stringResource(R.string.transcript_detail_regenerate)) },
                                 leadingIcon = {
                                     Icon(Icons.Default.Refresh, contentDescription = null)
                                 },
@@ -161,7 +163,7 @@ fun TranscriptDetailScreen(
                             DropdownMenuItem(
                                 text = {
                                     Text(
-                                        "Verwijderen",
+                                        stringResource(R.string.transcript_detail_delete),
                                         color = MaterialTheme.colorScheme.error,
                                     )
                                 },
@@ -210,12 +212,12 @@ fun TranscriptDetailScreen(
                         Tab(
                             selected = state.selectedTab == 0,
                             onClick = { viewModel.selectTab(0) },
-                            text = { Text("Notulen") },
+                            text = { Text(stringResource(R.string.transcript_detail_tab_notule)) },
                         )
                         Tab(
                             selected = state.selectedTab == 1,
                             onClick = { viewModel.selectTab(1) },
-                            text = { Text("Transcriptie") },
+                            text = { Text(stringResource(R.string.transcript_detail_tab_transcription)) },
                         )
                     }
 
@@ -239,16 +241,16 @@ fun TranscriptDetailScreen(
     if (state.showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { viewModel.hideDeleteDialog() },
-            title = { Text("Transcriptie verwijderen") },
-            text = { Text("Weet je zeker dat je deze transcriptie wilt verwijderen?") },
+            title = { Text(stringResource(R.string.transcript_detail_delete_title)) },
+            text = { Text(stringResource(R.string.transcript_detail_delete_message)) },
             confirmButton = {
                 TextButton(onClick = { viewModel.deleteTranscript() }) {
-                    Text("Verwijderen", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.transcript_detail_delete_confirm), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { viewModel.hideDeleteDialog() }) {
-                    Text("Annuleren")
+                    Text(stringResource(R.string.transcript_detail_delete_dismiss))
                 }
             },
         )
@@ -273,8 +275,8 @@ private fun NotuleTab(
     if (html.isNullOrBlank()) {
         EmptyState(
             icon = Icons.Default.Refresh,
-            title = "Geen notulen beschikbaar",
-            subtitle = "De notulen worden nog gegenereerd",
+            title = stringResource(R.string.transcript_detail_notule_empty_title),
+            subtitle = stringResource(R.string.transcript_detail_notule_empty_subtitle),
             modifier = Modifier
                 .fillMaxSize()
                 .padding(TS.Spacing.xl),
@@ -320,7 +322,7 @@ private fun TranscriptionTab(transcription: String?) {
     if (transcription.isNullOrBlank()) {
         EmptyState(
             icon = Icons.Default.Refresh,
-            title = "Geen transcriptie beschikbaar",
+            title = stringResource(R.string.transcript_detail_transcription_empty_title),
             modifier = Modifier
                 .fillMaxSize()
                 .padding(TS.Spacing.xl),
@@ -354,14 +356,14 @@ private fun RegenerateDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Opnieuw genereren") },
+        title = { Text(stringResource(R.string.transcript_detail_regenerate_title)) },
         text = {
             if (profiles.isEmpty()) {
-                Text("Geen profielen beschikbaar.")
+                Text(stringResource(R.string.transcript_detail_regenerate_no_profiles))
             } else {
                 Column {
                     Text(
-                        text = "Kies een profiel:",
+                        text = stringResource(R.string.transcript_detail_regenerate_choose),
                         style = MaterialTheme.typography.bodyMedium,
                         modifier = Modifier.padding(bottom = TS.Spacing.sm),
                     )
@@ -397,13 +399,13 @@ private fun RegenerateDialog(
         },
         confirmButton = {
             TSPrimaryButton(
-                text = "Genereer",
+                text = stringResource(R.string.transcript_detail_regenerate_confirm),
                 onClick = { onConfirm(selectedProfileId) },
             )
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Annuleren")
+                Text(stringResource(R.string.transcript_detail_regenerate_dismiss))
             }
         },
     )

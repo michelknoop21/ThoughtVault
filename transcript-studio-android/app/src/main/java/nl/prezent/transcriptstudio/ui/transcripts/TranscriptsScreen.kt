@@ -35,8 +35,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import nl.prezent.transcriptstudio.R
 import nl.prezent.transcriptstudio.ui.components.EmptyState
 import nl.prezent.transcriptstudio.ui.components.TSCard
 import nl.prezent.transcriptstudio.ui.theme.TS
@@ -60,7 +62,7 @@ fun TranscriptsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Notulen") },
+                title = { Text(stringResource(R.string.transcripts_title)) },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface,
                 ),
@@ -80,11 +82,11 @@ fun TranscriptsScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = TS.Spacing.md, vertical = TS.Spacing.sm),
-                placeholder = { Text("Zoeken in transcripties...") },
+                placeholder = { Text(stringResource(R.string.transcripts_search_placeholder)) },
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Default.Search,
-                        contentDescription = "Zoeken",
+                        contentDescription = stringResource(R.string.transcripts_search_content_description),
                     )
                 },
                 singleLine = true,
@@ -104,8 +106,8 @@ fun TranscriptsScreen(
                 state.transcripts.isEmpty() && !state.isRefreshing -> {
                     EmptyState(
                         icon = Icons.Default.Description,
-                        title = "Geen transcripties",
-                        subtitle = "Transcripties verschijnen hier na verwerking",
+                        title = stringResource(R.string.transcripts_empty_title),
+                        subtitle = stringResource(R.string.transcripts_empty_subtitle),
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(TS.Spacing.xl),

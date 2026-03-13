@@ -37,8 +37,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.hilt.navigation.compose.hiltViewModel
+import nl.prezent.transcriptstudio.R
 import nl.prezent.transcriptstudio.data.model.TaskStatus
 import nl.prezent.transcriptstudio.data.model.TranscriptTask
 import nl.prezent.transcriptstudio.ui.components.EmptyState
@@ -72,7 +74,7 @@ fun TasksScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Taken") },
+                title = { Text(stringResource(R.string.tasks_title)) },
             )
         },
     ) { padding ->
@@ -90,8 +92,8 @@ fun TasksScreen(
                 ) {
                     EmptyState(
                         icon = Icons.Default.Assignment,
-                        title = "Geen actieve taken",
-                        subtitle = "Start een opname om taken te zien",
+                        title = stringResource(R.string.tasks_empty_title),
+                        subtitle = stringResource(R.string.tasks_empty_subtitle),
                     )
                 }
             } else {
@@ -157,19 +159,19 @@ private fun TaskCard(
     if (showCancelDialog) {
         AlertDialog(
             onDismissRequest = { showCancelDialog = false },
-            title = { Text("Taak annuleren") },
-            text = { Text("Weet je zeker dat je deze taak wilt annuleren?") },
+            title = { Text(stringResource(R.string.tasks_cancel_title)) },
+            text = { Text(stringResource(R.string.tasks_cancel_message)) },
             confirmButton = {
                 TextButton(onClick = {
                     showCancelDialog = false
                     onCancel()
                 }) {
-                    Text("Annuleren", color = StatusError)
+                    Text(stringResource(R.string.tasks_cancel_confirm), color = StatusError)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showCancelDialog = false }) {
-                    Text("Terug")
+                    Text(stringResource(R.string.tasks_cancel_dismiss))
                 }
             },
         )
@@ -239,7 +241,7 @@ private fun TaskCard(
                     IconButton(onClick = { showCancelDialog = true }) {
                         Icon(
                             imageVector = Icons.Default.Close,
-                            contentDescription = "Annuleren",
+                            contentDescription = stringResource(R.string.tasks_cancel_content_description),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }

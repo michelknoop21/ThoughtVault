@@ -30,6 +30,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -37,6 +38,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
 import androidx.hilt.navigation.compose.hiltViewModel
+import nl.prezent.transcriptstudio.R
 import nl.prezent.transcriptstudio.ui.components.TSCard
 import nl.prezent.transcriptstudio.ui.components.TSPrimaryButton
 import nl.prezent.transcriptstudio.ui.components.YingaBar
@@ -76,7 +78,7 @@ fun LoginScreen(
         Spacer(modifier = Modifier.height(TS.Spacing.xxl))
 
         Text(
-            text = "TranscriptStudio",
+            text = stringResource(R.string.login_app_title),
             style = MaterialTheme.typography.headlineMedium,
             color = MaterialTheme.colorScheme.onBackground,
         )
@@ -127,7 +129,7 @@ private fun LoginForm(
             OutlinedTextField(
                 value = state.email,
                 onValueChange = onEmailChange,
-                label = { Text("E-mailadres") },
+                label = { Text(stringResource(R.string.login_email_label)) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Email,
@@ -142,7 +144,7 @@ private fun LoginForm(
             OutlinedTextField(
                 value = state.password,
                 onValueChange = onPasswordChange,
-                label = { Text("Wachtwoord") },
+                label = { Text(stringResource(R.string.login_password_label)) },
                 singleLine = true,
                 visualTransformation = if (passwordVisible) {
                     VisualTransformation.None
@@ -158,9 +160,9 @@ private fun LoginForm(
                                 Icons.Default.Visibility
                             },
                             contentDescription = if (passwordVisible) {
-                                "Wachtwoord verbergen"
+                                stringResource(R.string.login_password_hide)
                             } else {
-                                "Wachtwoord tonen"
+                                stringResource(R.string.login_password_show)
                             },
                         )
                     }
@@ -188,7 +190,7 @@ private fun LoginForm(
             Spacer(modifier = Modifier.height(TS.Spacing.md))
 
             TSPrimaryButton(
-                text = if (state.isLoading) "" else "Inloggen",
+                text = if (state.isLoading) "" else stringResource(R.string.login_button),
                 onClick = onLogin,
                 enabled = !state.isLoading,
                 modifier = Modifier.fillMaxWidth(),
@@ -212,7 +214,7 @@ private fun LoginForm(
         modifier = Modifier.padding(top = TS.Spacing.sm),
     ) {
         Text(
-            text = "Wachtwoord vergeten?",
+            text = stringResource(R.string.login_forgot_password),
             color = BrandPrimary,
         )
     }
@@ -225,7 +227,7 @@ private fun LoginForm(
         ) {
             Icon(
                 imageVector = Icons.Default.Fingerprint,
-                contentDescription = "Inloggen met biometrie",
+                contentDescription = stringResource(R.string.login_biometric),
                 tint = BrandPrimary,
                 modifier = Modifier.size(48.dp),
             )
@@ -250,7 +252,7 @@ private fun TwoFAForm(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
-                text = "Voer de verificatiecode in",
+                text = stringResource(R.string.login_2fa_title),
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurface,
             )
@@ -265,7 +267,7 @@ private fun TwoFAForm(
                         onCodeChange(value)
                     }
                 },
-                label = { Text("Verificatiecode") },
+                label = { Text(stringResource(R.string.login_2fa_code_label)) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Number,
@@ -290,7 +292,7 @@ private fun TwoFAForm(
             Spacer(modifier = Modifier.height(TS.Spacing.md))
 
             TSPrimaryButton(
-                text = if (state.isLoading) "" else "Verifieer",
+                text = if (state.isLoading) "" else stringResource(R.string.login_2fa_verify),
                 onClick = onVerify,
                 enabled = !state.isLoading,
                 modifier = Modifier.fillMaxWidth(),
@@ -311,7 +313,7 @@ private fun TwoFAForm(
 
             TextButton(onClick = onCancel) {
                 Text(
-                    text = "Annuleer",
+                    text = stringResource(R.string.login_2fa_cancel),
                     color = BrandPrimary,
                 )
             }

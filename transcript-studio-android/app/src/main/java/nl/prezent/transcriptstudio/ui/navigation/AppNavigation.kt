@@ -52,7 +52,16 @@ fun AppNavHost(
                 onNavigateBack = { navController.popBackStack() },
             )
         }
-        composable<Settings> { SettingsScreen() }
+        composable<Settings> {
+            SettingsScreen(
+                onLogout = {
+                    navController.navigate(Login) {
+                        popUpTo(navController.graph.id) { inclusive = true }
+                    }
+                },
+                onNavigateToAdmin = { navController.navigate(Admin) },
+            )
+        }
         composable<Admin> { AdminScreen() }
     }
 }

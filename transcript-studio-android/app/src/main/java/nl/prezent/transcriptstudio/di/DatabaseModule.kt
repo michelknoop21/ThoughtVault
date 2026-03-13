@@ -23,7 +23,8 @@ object DatabaseModule {
         context,
         AppDatabase::class.java,
         "transcript_studio.db",
-    ).build()
+    ).fallbackToDestructiveMigration()
+        .build()
 
     @Provides
     fun provideQueuedUploadDao(database: AppDatabase): QueuedUploadDao =

@@ -741,8 +741,16 @@ struct RecordingView: View {
     private var waveformDisplay: some View {
         VStack(spacing: TS.Spacing.sm) {
             WaveformView(
-                levelProvider: { recordingVM.audioLevels },
-                isActive: recordingVM.recordingState == .recording
+                  levelProvider: {
+                      let levels = recordingVM.audioLevels
+                      if let last = levels.last { return last }
+                      // Fallback to RMS if no last sample available
+                      let count = Float(levels.count)
+                      guard count > 0 else { return 0 }
+                      let sumSquares = levels.reduce(0) { $0 + $1 * $1 }
+                      return sqrt(sumSquares / count)
+                  },
+                  isActive: recordingVM.recordingState == .recording
             )
             .frame(height: 160)
             .frame(maxWidth: .infinity)

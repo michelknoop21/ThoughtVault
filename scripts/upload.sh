@@ -8,6 +8,7 @@ source "$SCRIPT_DIR/env.sh"
 DMG_PATH="$BUILD_DIR/$DMG_NAME"
 MSI_X64_PATH="$BUILD_DIR/$MSI_X64_NAME"
 MSI_ARM64_PATH="$BUILD_DIR/$MSI_ARM64_NAME"
+APK_PATH="$BUILD_DIR/$APK_NAME"
 
 # Legacy name (for backwards compatibility detection)
 MSI_LEGACY_ARTIFACT="TranscriptStudio_${VERSION}.msi"
@@ -42,10 +43,11 @@ FOUND_ANY=false
 if [ -f "$DMG_PATH" ]; then FOUND_ANY=true; fi
 if [ -f "$MSI_X64_PATH" ]; then FOUND_ANY=true; fi
 if [ -f "$MSI_ARM64_PATH" ]; then FOUND_ANY=true; fi
+if [ -f "$APK_PATH" ]; then FOUND_ANY=true; fi
 
 if [ "$FOUND_ANY" = false ]; then
     echo "ERROR: No artifacts found in $BUILD_DIR"
-    echo "Expected: $DMG_NAME and/or $MSI_X64_NAME / $MSI_ARM64_NAME"
+    echo "Expected: $DMG_NAME and/or $MSI_X64_NAME / $MSI_ARM64_NAME / $APK_NAME"
     echo "Run scripts/build.sh first."
     exit 1
 fi
@@ -62,6 +64,7 @@ ssh "$SERVER" "mkdir -p $REMOTE_DIR"
 HAS_MACOS=false
 HAS_WINDOWS_X64=false
 HAS_WINDOWS_ARM64=false
+HAS_ANDROID=false
 
 if [ -f "$DMG_PATH" ]; then
     scp "$DMG_PATH" "$SERVER:$REMOTE_DIR/$DMG_NAME"
@@ -77,6 +80,11 @@ if [ -f "$MSI_ARM64_PATH" ]; then
     scp "$MSI_ARM64_PATH" "$SERVER:$REMOTE_DIR/$MSI_ARM64_NAME"
     echo "  Uploaded: $MSI_ARM64_NAME"
     HAS_WINDOWS_ARM64=true
+fi
+if [ -f "$APK_PATH" ]; then
+    scp "$APK_PATH" "$SERVER:$REMOTE_DIR/$APK_NAME"
+    echo "  Uploaded: $APK_NAME"
+    HAS_ANDROID=true
 fi
 
 # Upload website pages
@@ -138,6 +146,12 @@ if channel == 'production':
             'version': '$VERSION',
             'filename': '$MSI_ARM64_NAME'
         }
+    if '$HAS_ANDROID' == 'true':
+        data['android'] = {
+            'url': '/tstudio/download/$APK_NAME',
+            'version': '$VERSION',
+            'filename': '$APK_NAME'
+        }
 else:
     data['dev_latest_version'] = '$VERSION'
 
@@ -159,6 +173,12 @@ else:
             'version': '$VERSION',
             'filename': '$MSI_ARM64_NAME'
         }
+    if '$HAS_ANDROID' == 'true':
+        data['dev_android'] = {
+            'url': '/tstudio/download/$APK_NAME',
+            'version': '$VERSION',
+            'filename': '$APK_NAME'
+        }
 
 with open(manifest_path, 'w') as f:
     json.dump(data, f, indent=2)
@@ -176,6 +196,9 @@ if [ -f "$MSI_X64_PATH" ]; then
 fi
 if [ -f "$MSI_ARM64_PATH" ]; then
     echo "  Windows arm64: https://n8n.prezent.nl/tstudio/download/$MSI_ARM64_NAME"
+fi
+if [ -f "$APK_PATH" ]; then
+    echo "  Android:       https://n8n.prezent.nl/tstudio/download/$APK_NAME"
 fi
 echo "  Manifest:      https://n8n.prezent.nl/tstudio/download/releases.json"
 echo "  Downloads:     https://n8n.prezent.nl/tstudio/download/"

@@ -52,4 +52,12 @@ else
     echo "  Skipped: Cargo.toml (not found)"
 fi
 
+# 4. Android build.gradle.kts — reads from ../VERSION at build time, no file edit needed
+ANDROID_BUILD="$ROOT_DIR/transcript-studio-android/app/build.gradle.kts"
+if [ -f "$ANDROID_BUILD" ]; then
+    echo "  Android: reads VERSION at build time (no edit needed)"
+else
+    echo "  Skipped: Android build.gradle.kts (not found)"
+fi
+
 echo "Version sync complete: $VERSION"

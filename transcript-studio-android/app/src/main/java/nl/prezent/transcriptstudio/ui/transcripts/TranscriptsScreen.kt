@@ -11,16 +11,17 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Icon
+import androidx.compose.ui.unit.dp
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -36,11 +37,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import nl.prezent.transcriptstudio.R
 import nl.prezent.transcriptstudio.ui.components.EmptyState
 import nl.prezent.transcriptstudio.ui.components.TSCard
+import nl.prezent.transcriptstudio.ui.components.TSTextField
 import nl.prezent.transcriptstudio.ui.theme.TS
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -76,20 +77,23 @@ fun TranscriptsScreen(
                 .padding(padding),
         ) {
             // Search bar
-            OutlinedTextField(
+            TSTextField(
                 value = state.searchQuery,
                 onValueChange = { viewModel.updateSearch(it) },
+                label = "",
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = TS.Spacing.md, vertical = TS.Spacing.sm),
-                placeholder = { Text(stringResource(R.string.transcripts_search_placeholder)) },
+                placeholder = stringResource(R.string.transcripts_search_placeholder),
+                singleLine = true,
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Default.Search,
                         contentDescription = stringResource(R.string.transcripts_search_content_description),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                        modifier = Modifier.size(20.dp),
                     )
                 },
-                singleLine = true,
             )
 
             // Content

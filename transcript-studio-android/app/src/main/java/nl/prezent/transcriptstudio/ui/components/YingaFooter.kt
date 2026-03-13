@@ -9,11 +9,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import nl.prezent.transcriptstudio.ui.theme.TS
 
 /**
  * "Developed by Yinga" footer for consistent branding.
- * Matches the iOS YingaFooter from Theme.swift.
+ * Matches the macOS YingaFooter from Theme.swift.
  */
 @Composable
 fun YingaFooter(modifier: Modifier = Modifier) {
@@ -25,10 +26,10 @@ fun YingaFooter(modifier: Modifier = Modifier) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = "Developed by ",
+            text = "Developed by  ",
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        YingaLogo()
+        YingaLogo(height = 20.dp)
     }
 }

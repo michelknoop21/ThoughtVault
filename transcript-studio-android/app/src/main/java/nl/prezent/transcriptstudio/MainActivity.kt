@@ -1,9 +1,9 @@
 package nl.prezent.transcriptstudio
 
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.fragment.app.FragmentActivity
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -35,6 +35,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import dagger.hilt.android.AndroidEntryPoint
+import nl.prezent.transcriptstudio.data.remote.AuthEventBus
 import nl.prezent.transcriptstudio.data.repository.AuthRepository
 import nl.prezent.transcriptstudio.ui.navigation.AppNavHost
 import nl.prezent.transcriptstudio.ui.navigation.Home
@@ -62,9 +63,10 @@ private val bottomNavItems = listOf(
 )
 
 @AndroidEntryPoint
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
 
     @Inject lateinit var authRepository: AuthRepository
+    @Inject lateinit var authEventBus: AuthEventBus
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
@@ -86,6 +88,20 @@ class MainActivity : ComponentActivity() {
                         false
                     }
                     isInitializing = false
+                }
+
+                // Observe 401 session-expired events and navigate to login
+                LaunchedEffect(Unit) {
+                    authEventBus.events.collect { event ->
+                        when (event) {
+                            AuthEventBus.Event.SessionExpired -> {
+                                isAuthenticated = false
+                                navController.navigate(Login) {
+                                    popUpTo(navController.graph.id) { inclusive = true }
+                                }
+                            }
+                        }
+                    }
                 }
 
                 if (isInitializing) {
@@ -116,21 +132,16 @@ private fun MainContent(
 ) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
-    val showBottomBar = currentDestination?.hasRoute<Login>() != true
+    val currentRoute = currentDestination?.route
+    val showBottomBar = currentRoute != null && !currentRoute.contains("Login")
 
     Scaffold(
         bottomBar = {
             if (showBottomBar) {
                 NavigationBar {
                     bottomNavItems.forEach { item ->
-                        val selected = when (item.route) {
-                            Home -> currentDestination?.hasRoute<Home>() == true
-                            Recording -> currentDestination?.hasRoute<Recording>() == true
-                            Tasks -> currentDestination?.hasRoute<Tasks>() == true
-                            Transcripts -> currentDestination?.hasRoute<Transcripts>() == true
-                            Settings -> currentDestination?.hasRoute<Settings>() == true
-                            else -> false
-                        }
+                        val routeClass = item.route::class.qualifiedName.orEmpty()
+                        val selected = currentRoute?.contains(routeClass) == true
                         NavigationBarItem(
                             selected = selected,
                             onClick = {

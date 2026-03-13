@@ -203,7 +203,7 @@ class RecordingViewModel @Inject constructor(
                 try {
                     offlineQueueManager.enqueue(
                         filePath = file.absolutePath,
-                        profileId = profileId.toIntOrNull() ?: 0,
+                        profileId = profileId,
                         type = "audio",
                     )
                     _uiState.update { it.copy(isUploading = false) }
@@ -237,7 +237,7 @@ class RecordingViewModel @Inject constructor(
                 try {
                     offlineQueueManager.enqueue(
                         filePath = file.absolutePath,
-                        profileId = profileId.toIntOrNull() ?: 0,
+                        profileId = profileId,
                         type = "audio",
                     )
                     _uiState.update { it.copy(isUploading = false) }

@@ -55,7 +55,10 @@
     <string name="login_button">Inloggen</string>
     <string name="login_forgot_password">Wachtwoord vergeten?</string>
     <string name="login_biometric">Inloggen met biometrie</string>
+    <string name="login_title">Inloggen</string>
+    <string name="login_subtitle">Voer je e-mailadres en wachtwoord in</string>
     <string name="login_2fa_title">Voer de verificatiecode in</string>
+    <string name="login_2fa_subtitle">Voer de 6-cijferige code in uit je authenticator app</string>
     <string name="login_2fa_code_label">Verificatiecode</string>
     <string name="login_2fa_verify">Verifieer</string>
     <string name="login_2fa_cancel">Annuleer</string>

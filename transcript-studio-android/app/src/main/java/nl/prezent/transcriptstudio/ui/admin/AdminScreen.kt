@@ -43,7 +43,6 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.SnackbarHost
@@ -72,6 +71,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import nl.prezent.transcriptstudio.R
+import nl.prezent.transcriptstudio.ui.components.TSTextField
 import nl.prezent.transcriptstudio.data.model.AdminSettings
 import nl.prezent.transcriptstudio.data.model.AdminUser
 import nl.prezent.transcriptstudio.data.model.ErrorLog
@@ -529,25 +529,22 @@ private fun CreateUserDialog(
         title = { Text(stringResource(R.string.admin_create_user_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(TS.Spacing.sm)) {
-                OutlinedTextField(
+                TSTextField(
                     value = username,
                     onValueChange = { username = it },
-                    label = { Text(stringResource(R.string.admin_create_user_email)) },
-                    singleLine = true,
+                    label = stringResource(R.string.admin_create_user_email),
                     modifier = Modifier.fillMaxWidth(),
                 )
-                OutlinedTextField(
+                TSTextField(
                     value = password,
                     onValueChange = { password = it },
-                    label = { Text(stringResource(R.string.admin_create_user_password)) },
-                    singleLine = true,
+                    label = stringResource(R.string.admin_create_user_password),
                     modifier = Modifier.fillMaxWidth(),
                 )
-                OutlinedTextField(
+                TSTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text(stringResource(R.string.admin_create_user_name)) },
-                    singleLine = true,
+                    label = stringResource(R.string.admin_create_user_name),
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(TS.Spacing.sm)) {
@@ -601,11 +598,10 @@ private fun ResetPasswordDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(TS.Spacing.sm)) {
                 Text(stringResource(R.string.admin_reset_password_message, username))
-                OutlinedTextField(
+                TSTextField(
                     value = newPassword,
                     onValueChange = { newPassword = it },
-                    label = { Text(stringResource(R.string.admin_reset_password_label)) },
-                    singleLine = true,
+                    label = stringResource(R.string.admin_reset_password_label),
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
@@ -797,18 +793,16 @@ private fun CreateInviteDialog(
         title = { Text(stringResource(R.string.admin_invites_create_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(TS.Spacing.sm)) {
-                OutlinedTextField(
+                TSTextField(
                     value = maxUses,
                     onValueChange = { maxUses = it.filter { c -> c.isDigit() } },
-                    label = { Text(stringResource(R.string.admin_invites_max_uses)) },
-                    singleLine = true,
+                    label = stringResource(R.string.admin_invites_max_uses),
                     modifier = Modifier.fillMaxWidth(),
                 )
-                OutlinedTextField(
+                TSTextField(
                     value = expiresHours,
                     onValueChange = { expiresHours = it.filter { c -> c.isDigit() } },
-                    label = { Text(stringResource(R.string.admin_invites_valid_hours)) },
-                    singleLine = true,
+                    label = stringResource(R.string.admin_invites_valid_hours),
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
@@ -998,13 +992,12 @@ private fun FeedbackCard(
                 }
 
                 // Admin response field
-                OutlinedTextField(
+                TSTextField(
                     value = adminResponse,
                     onValueChange = { adminResponse = it },
-                    label = { Text(stringResource(R.string.admin_feedback_response_label)) },
+                    label = stringResource(R.string.admin_feedback_response_label),
                     modifier = Modifier.fillMaxWidth(),
-                    minLines = 2,
-                    maxLines = 5,
+                    singleLine = false,
                 )
 
                 Spacer(modifier = Modifier.height(TS.Spacing.sm))
@@ -1283,41 +1276,37 @@ private fun SettingsTab(
         item { Spacer(modifier = Modifier.height(TS.Spacing.sm)) }
 
         item {
-            OutlinedTextField(
+            TSTextField(
                 value = webhookUrl,
                 onValueChange = { webhookUrl = it },
-                label = { Text(stringResource(R.string.admin_settings_webhook_url)) },
-                singleLine = true,
+                label = stringResource(R.string.admin_settings_webhook_url),
                 modifier = Modifier.fillMaxWidth(),
             )
         }
 
         item {
-            OutlinedTextField(
+            TSTextField(
                 value = notificationWebhookUrl,
                 onValueChange = { notificationWebhookUrl = it },
-                label = { Text(stringResource(R.string.admin_settings_notification_webhook)) },
-                singleLine = true,
+                label = stringResource(R.string.admin_settings_notification_webhook),
                 modifier = Modifier.fillMaxWidth(),
             )
         }
 
         item {
-            OutlinedTextField(
+            TSTextField(
                 value = ms365ClientId,
                 onValueChange = { ms365ClientId = it },
-                label = { Text(stringResource(R.string.admin_settings_ms365_client_id)) },
-                singleLine = true,
+                label = stringResource(R.string.admin_settings_ms365_client_id),
                 modifier = Modifier.fillMaxWidth(),
             )
         }
 
         item {
-            OutlinedTextField(
+            TSTextField(
                 value = ms365TenantId,
                 onValueChange = { ms365TenantId = it },
-                label = { Text(stringResource(R.string.admin_settings_ms365_tenant_id)) },
-                singleLine = true,
+                label = stringResource(R.string.admin_settings_ms365_tenant_id),
                 modifier = Modifier.fillMaxWidth(),
             )
         }

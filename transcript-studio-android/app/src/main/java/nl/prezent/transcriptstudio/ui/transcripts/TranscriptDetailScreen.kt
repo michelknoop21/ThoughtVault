@@ -24,7 +24,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -51,6 +50,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import nl.prezent.transcriptstudio.R
 import nl.prezent.transcriptstudio.ui.components.EmptyState
 import nl.prezent.transcriptstudio.ui.components.TSPrimaryButton
+import nl.prezent.transcriptstudio.ui.components.TSTextField
 import nl.prezent.transcriptstudio.ui.theme.TS
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -88,9 +88,10 @@ fun TranscriptDetailScreen(
             TopAppBar(
                 title = {
                     if (state.isEditing) {
-                        OutlinedTextField(
+                        TSTextField(
                             value = state.editTitle,
                             onValueChange = { viewModel.updateEditTitle(it) },
+                            label = "",
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth(),
                             textStyle = MaterialTheme.typography.titleMedium,

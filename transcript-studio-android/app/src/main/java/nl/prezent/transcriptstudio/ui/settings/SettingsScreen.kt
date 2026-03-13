@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -53,6 +52,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import nl.prezent.transcriptstudio.BuildConfig
 import nl.prezent.transcriptstudio.R
 import nl.prezent.transcriptstudio.ui.components.TSCard
+import nl.prezent.transcriptstudio.ui.components.TSTextField
 import nl.prezent.transcriptstudio.ui.components.TSPrimaryButton
 import nl.prezent.transcriptstudio.ui.components.TSSecondaryButton
 import nl.prezent.transcriptstudio.ui.components.YingaFooter
@@ -228,10 +228,10 @@ private fun ServerSection(
 
             Spacer(modifier = Modifier.height(TS.Spacing.sm))
 
-            OutlinedTextField(
+            TSTextField(
                 value = baseUrl,
                 onValueChange = onUpdateBaseUrl,
-                label = { Text(stringResource(R.string.settings_server_url_label)) },
+                label = stringResource(R.string.settings_server_url_label),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Uri,
@@ -242,10 +242,10 @@ private fun ServerSection(
 
             Spacer(modifier = Modifier.height(TS.Spacing.sm))
 
-            OutlinedTextField(
+            TSTextField(
                 value = apiPrefix,
                 onValueChange = onUpdateApiPrefix,
-                label = { Text(stringResource(R.string.settings_api_prefix_label)) },
+                label = stringResource(R.string.settings_api_prefix_label),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                 modifier = Modifier.fillMaxWidth(),
@@ -388,10 +388,10 @@ private fun AccountSection(
 
             Spacer(modifier = Modifier.height(TS.Spacing.sm))
 
-            OutlinedTextField(
+            TSTextField(
                 value = currentPassword,
                 onValueChange = onUpdateCurrentPassword,
-                label = { Text(stringResource(R.string.settings_password_current)) },
+                label = stringResource(R.string.settings_password_current),
                 singleLine = true,
                 visualTransformation = PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(
@@ -403,10 +403,10 @@ private fun AccountSection(
 
             Spacer(modifier = Modifier.height(TS.Spacing.sm))
 
-            OutlinedTextField(
+            TSTextField(
                 value = newPassword,
                 onValueChange = onUpdateNewPassword,
-                label = { Text(stringResource(R.string.settings_password_new)) },
+                label = stringResource(R.string.settings_password_new),
                 singleLine = true,
                 visualTransformation = PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(
@@ -418,22 +418,27 @@ private fun AccountSection(
 
             Spacer(modifier = Modifier.height(TS.Spacing.sm))
 
-            OutlinedTextField(
+            TSTextField(
                 value = confirmPassword,
                 onValueChange = onUpdateConfirmPassword,
-                label = { Text(stringResource(R.string.settings_password_confirm)) },
+                label = stringResource(R.string.settings_password_confirm),
                 singleLine = true,
                 visualTransformation = PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Password,
                     imeAction = ImeAction.Done,
                 ),
-                isError = passwordError != null,
-                supportingText = if (passwordError != null) {
-                    { Text(passwordError) }
-                } else null,
                 modifier = Modifier.fillMaxWidth(),
             )
+
+            if (passwordError != null) {
+                Text(
+                    text = passwordError,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(top = TS.Spacing.xs),
+                )
+            }
 
             AnimatedVisibility(visible = passwordSuccess) {
                 Text(
@@ -556,10 +561,10 @@ private fun FeedbackSection(
 
             Spacer(modifier = Modifier.height(TS.Spacing.sm))
 
-            OutlinedTextField(
+            TSTextField(
                 value = title,
                 onValueChange = onUpdateTitle,
-                label = { Text(stringResource(R.string.settings_feedback_item_title)) },
+                label = stringResource(R.string.settings_feedback_item_title),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                 modifier = Modifier.fillMaxWidth(),
@@ -567,12 +572,11 @@ private fun FeedbackSection(
 
             Spacer(modifier = Modifier.height(TS.Spacing.sm))
 
-            OutlinedTextField(
+            TSTextField(
                 value = description,
                 onValueChange = onUpdateDescription,
-                label = { Text(stringResource(R.string.settings_feedback_description)) },
-                minLines = 3,
-                maxLines = 6,
+                label = stringResource(R.string.settings_feedback_description),
+                singleLine = false,
                 modifier = Modifier.fillMaxWidth(),
             )
 

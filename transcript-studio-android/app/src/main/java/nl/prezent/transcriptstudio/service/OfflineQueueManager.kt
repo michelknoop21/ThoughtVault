@@ -6,7 +6,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import nl.prezent.transcriptstudio.data.local.QueuedUpload
 import nl.prezent.transcriptstudio.data.local.QueuedUploadDao
@@ -41,7 +40,6 @@ class OfflineQueueManager @Inject constructor(
         // Observe connectivity changes and drain queue when online
         scope.launch {
             networkMonitor.isOnline
-                .distinctUntilChanged()
                 .collectLatest { online ->
                     if (online) {
                         drainQueue()
@@ -53,7 +51,7 @@ class OfflineQueueManager @Inject constructor(
     /**
      * Enqueue a file for upload when the network becomes available.
      */
-    suspend fun enqueue(filePath: String, profileId: Int, type: String = "audio") {
+    suspend fun enqueue(filePath: String, profileId: String, type: String = "audio") {
         queuedUploadDao.insert(
             QueuedUpload(
                 type = type,

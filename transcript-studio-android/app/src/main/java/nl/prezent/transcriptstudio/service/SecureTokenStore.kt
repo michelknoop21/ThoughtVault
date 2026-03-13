@@ -59,7 +59,7 @@ class SecureTokenStore @Inject constructor(
         }
     }
 
-    suspend fun clearToken() {
+    override suspend fun clearToken() {
         dataStore.edit { prefs ->
             prefs.remove(KEY_ENCRYPTED_TOKEN)
         }

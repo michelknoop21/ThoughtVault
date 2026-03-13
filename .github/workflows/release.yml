@@ -18,6 +18,7 @@ on:
 
 env:
   NODE_VERSION: '20'
+  JAVA_VERSION: '21'
 
 jobs:
   # Extract version and determine channel
@@ -28,6 +29,7 @@ jobs:
       channel: ${{ steps.channel.outputs.channel }}
       dmg_name: ${{ steps.names.outputs.dmg_name }}
       msi_x64_name: ${{ steps.names.outputs.msi_x64_name }}
+      apk_name: ${{ steps.names.outputs.apk_name }}
       app_display_name: ${{ steps.names.outputs.app_display_name }}
       bundle_id_macos: ${{ steps.names.outputs.bundle_id_macos }}
       bundle_id_windows: ${{ steps.names.outputs.bundle_id_windows }}
@@ -69,6 +71,7 @@ jobs:
           if [ "$CHANNEL" = "production" ]; then
             echo "dmg_name=TranscriptStudio-${VERSION}.dmg" >> $GITHUB_OUTPUT
             echo "msi_x64_name=TranscriptStudio_${VERSION}_x64.msi" >> $GITHUB_OUTPUT
+            echo "apk_name=TranscriptStudio-${VERSION}.apk" >> $GITHUB_OUTPUT
             echo "app_display_name=TranscriptStudio" >> $GITHUB_OUTPUT
             echo "bundle_id_macos=nl.prezent.TranscriptStudio" >> $GITHUB_OUTPUT
             echo "bundle_id_windows=nl.prezent.transcript-studio" >> $GITHUB_OUTPUT
@@ -76,6 +79,7 @@ jobs:
           else
             echo "dmg_name=TranscriptStudio-Dev-${VERSION}.dmg" >> $GITHUB_OUTPUT
             echo "msi_x64_name=TranscriptStudio-Dev_${VERSION}_x64.msi" >> $GITHUB_OUTPUT
+            echo "apk_name=TranscriptStudio-Dev-${VERSION}.apk" >> $GITHUB_OUTPUT
             echo "app_display_name=TranscriptStudio Dev" >> $GITHUB_OUTPUT
             echo "bundle_id_macos=nl.prezent.TranscriptStudio.dev" >> $GITHUB_OUTPUT
             echo "bundle_id_windows=nl.prezent.transcript-studio-dev" >> $GITHUB_OUTPUT
@@ -197,15 +201,58 @@ jobs:
           name: windows-msi
           path: build/${{ env.MSI_X64_NAME }}
 
+  # Android: build APK
+  build-android:
+    needs: prepare
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.prepare.outputs.version }}
+      CHANNEL: ${{ needs.prepare.outputs.channel }}
+      APK_NAME: ${{ needs.prepare.outputs.apk_name }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build release APK
+        working-directory: transcript-studio-android
+        run: ./gradlew assembleRelease
+
+      - name: Copy APK to build dir
+        run: |
+          mkdir -p build
+          APK=$(find transcript-studio-android/app/build/outputs/apk/release -name "*.apk" -type f | head -1)
+          if [ -z "$APK" ]; then
+            echo "ERROR: APK not found"
+            find transcript-studio-android/app/build/outputs -type f || true
+            exit 1
+          fi
+          cp "$APK" "build/$APK_NAME"
+          echo "Built: $APK_NAME ($(du -h "build/$APK_NAME" | cut -f1))"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: build/${{ env.APK_NAME }}
+
   # Upload artifacts to server
   deploy:
-    needs: [prepare, build-macos, build-windows]
+    needs: [prepare, build-macos, build-windows, build-android]
     runs-on: ubuntu-latest
     env:
       VERSION: ${{ needs.prepare.outputs.version }}
       CHANNEL: ${{ needs.prepare.outputs.channel }}
       DMG_NAME: ${{ needs.prepare.outputs.dmg_name }}
       MSI_X64_NAME: ${{ needs.prepare.outputs.msi_x64_name }}
+      APK_NAME: ${{ needs.prepare.outputs.apk_name }}
     steps:
       - uses: actions/checkout@v4
 
@@ -234,6 +281,7 @@ jobs:
 
           HAS_MACOS=false
           HAS_WINDOWS_X64=false
+          HAS_ANDROID=false
 
           if [ -f "build/$DMG_NAME" ]; then
             scp "build/$DMG_NAME" "$SERVER:$REMOTE_DIR/$DMG_NAME"
@@ -245,6 +293,12 @@ jobs:
             scp "build/$MSI_X64_NAME" "$SERVER:$REMOTE_DIR/$MSI_X64_NAME"
             echo "Uploaded: $MSI_X64_NAME"
             HAS_WINDOWS_X64=true
+          fi
+
+          if [ -f "build/$APK_NAME" ]; then
+            scp "build/$APK_NAME" "$SERVER:$REMOTE_DIR/$APK_NAME"
+            echo "Uploaded: $APK_NAME"
+            HAS_ANDROID=true
           fi
 
           # Upload website pages
@@ -296,6 +350,12 @@ jobs:
                       'version': '$VERSION',
                       'filename': '$MSI_X64_NAME'
                   }
+              if '$HAS_ANDROID' == 'true':
+                  data['android'] = {
+                      'url': '/tstudio/download/$APK_NAME',
+                      'version': '$VERSION',
+                      'filename': '$APK_NAME'
+                  }
           else:
               data['dev_latest_version'] = '$VERSION'
               if '$HAS_MACOS' == 'true':
@@ -310,6 +370,12 @@ jobs:
                       'version': '$VERSION',
                       'filename': '$MSI_X64_NAME'
                   }
+              if '$HAS_ANDROID' == 'true':
+                  data['dev_android'] = {
+                      'url': '/tstudio/download/$APK_NAME',
+                      'version': '$VERSION',
+                      'filename': '$APK_NAME'
+                  }
 
           with open(manifest_path, 'w') as f:
               json.dump(data, f, indent=2)
@@ -321,6 +387,7 @@ jobs:
           echo "$CHANNEL release $VERSION deployed!"
           echo "  macOS:    https://n8n.prezent.nl/tstudio/download/$DMG_NAME"
           echo "  Windows:  https://n8n.prezent.nl/tstudio/download/$MSI_X64_NAME"
+          echo "  Android:  https://n8n.prezent.nl/tstudio/download/$APK_NAME"
           echo "  Manifest: https://n8n.prezent.nl/tstudio/download/releases.json"
 
       - name: Extract release notes from CHANGELOG
@@ -360,6 +427,12 @@ jobs:
             TITLE="TranscriptStudio v$VERSION"
           fi
 
+          # Collect available artifacts
+          ARTIFACTS=""
+          [ -f "build/$DMG_NAME" ] && ARTIFACTS="$ARTIFACTS build/$DMG_NAME"
+          [ -f "build/$MSI_X64_NAME" ] && ARTIFACTS="$ARTIFACTS build/$MSI_X64_NAME"
+          [ -f "build/$APK_NAME" ] && ARTIFACTS="$ARTIFACTS build/$APK_NAME"
+
           # Delete existing release for this tag (in case of re-deploy)
           gh release delete "$TAG_NAME" --yes 2>/dev/null || true
 
@@ -367,4 +440,4 @@ jobs:
             --title "$TITLE" \
             --notes-file /tmp/release-notes.md \
             $PRERELEASE \
-            build/$DMG_NAME build/$MSI_X64_NAME
+            $ARTIFACTS

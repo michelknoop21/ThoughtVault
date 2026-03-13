@@ -27,7 +27,15 @@ struct RecordingWidgetView: View {
 
             // Waveform — wider for better visual feedback
             WaveformView(
-                levelProvider: { recordingVM.audioLevels },
+                levelProvider: {
+                    let levels = recordingVM.audioLevels
+                    if let last = levels.last { return last }
+                    // Fallback to RMS if no last sample available
+                    let count = Float(levels.count)
+                    guard count > 0 else { return 0 }
+                    let sumSquares = levels.reduce(0) { $0 + $1 * $1 }
+                    return sqrt(sumSquares / count)
+                },
                 isActive: isRecording
             )
             .frame(width: 120, height: 32)
@@ -306,3 +314,4 @@ struct RecordingWidgetView: View {
         .background(Color.backgroundDark)
         .preferredColorScheme(.dark)
 }
+

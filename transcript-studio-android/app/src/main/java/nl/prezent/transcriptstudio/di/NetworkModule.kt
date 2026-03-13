@@ -8,6 +8,7 @@ import kotlinx.serialization.json.Json
 import nl.prezent.transcriptstudio.BuildConfig
 import nl.prezent.transcriptstudio.data.remote.ApiService
 import nl.prezent.transcriptstudio.data.remote.AuthInterceptor
+import nl.prezent.transcriptstudio.data.remote.DynamicBaseUrlInterceptor
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -31,7 +32,10 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideOkHttpClient(authInterceptor: AuthInterceptor): OkHttpClient {
+    fun provideOkHttpClient(
+        dynamicBaseUrlInterceptor: DynamicBaseUrlInterceptor,
+        authInterceptor: AuthInterceptor,
+    ): OkHttpClient {
         val loggingInterceptor = HttpLoggingInterceptor().apply {
             level = if (BuildConfig.DEBUG) {
                 HttpLoggingInterceptor.Level.BODY
@@ -41,6 +45,7 @@ object NetworkModule {
         }
 
         return OkHttpClient.Builder()
+            .addInterceptor(dynamicBaseUrlInterceptor)
             .addInterceptor(authInterceptor)
             .addInterceptor(loggingInterceptor)
             .connectTimeout(30, TimeUnit.SECONDS)
@@ -55,12 +60,13 @@ object NetworkModule {
         okHttpClient: OkHttpClient,
         json: Json,
     ): Retrofit {
-        // Default base URL — can be overridden at runtime via SettingsRepository.
-        // Retrofit requires a base URL at construction time; we use the default
-        // and the actual URL is managed by SettingsRepository for dynamic switching.
+        // Placeholder base URL — DynamicBaseUrlInterceptor rewrites all request URLs
+        // at runtime using the full API URL from SettingsRepository.
+        // IMPORTANT: Must NOT include /tstudio/api/ path here, because the interceptor
+        // prepends the base path to the request path. Including it here would double it.
         val contentType = "application/json".toMediaType()
         return Retrofit.Builder()
-            .baseUrl("https://n8n.prezent.nl/tstudio/api/")
+            .baseUrl("https://localhost/")
             .client(okHttpClient)
             .addConverterFactory(json.asConverterFactory(contentType))
             .build()

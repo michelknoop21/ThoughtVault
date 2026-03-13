@@ -78,6 +78,7 @@ class TranscriptsViewModel @Inject constructor(
     }
 
     fun updateSearch(query: String) {
+        _uiState.update { it.copy(searchQuery = query) }
         _searchQuery.value = query
     }
 

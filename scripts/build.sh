@@ -3,22 +3,26 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-ROOT_DIR="$(dirname "$SCRIPT_DIR")"
-VERSION=$(cat "$ROOT_DIR/VERSION" | tr -d '[:space:]')
-BUILD_DIR="$ROOT_DIR/build"
+source "$SCRIPT_DIR/env.sh"
+
 OS=$(uname -s)
 
 mkdir -p "$BUILD_DIR"
 
-echo "Building TranscriptStudio $VERSION for $OS..."
+echo "Building $APP_DISPLAY_NAME $VERSION ($BUILD_CHANNEL) for $OS..."
 
 if [ "$OS" = "Darwin" ]; then
     # macOS: xcodebuild archive → export .app → create DMG
     ARCHIVE_PATH="$BUILD_DIR/TranscriptStudio.xcarchive"
-    APP_NAME="TranscriptStudio"
-    DMG_NAME="TranscriptStudio-${VERSION}.dmg"
     DMG_PATH="$BUILD_DIR/$DMG_NAME"
     EXPORT_DIR="$BUILD_DIR/export"
+
+    # Determine app name from bundle — xcodebuild uses PRODUCT_NAME for the .app filename
+    if [ "$BUILD_CHANNEL" = "production" ]; then
+        APP_NAME="TranscriptStudio"
+    else
+        APP_NAME="TranscriptStudio Dev"
+    fi
 
     echo "Step 1/4: Archiving..."
     xcodebuild archive \
@@ -29,6 +33,8 @@ if [ "$OS" = "Darwin" ]; then
         -archivePath "$ARCHIVE_PATH" \
         CODE_SIGNING_ALLOWED=NO \
         SKIP_INSTALL=NO \
+        PRODUCT_BUNDLE_IDENTIFIER="$BUNDLE_ID_MACOS" \
+        PRODUCT_NAME="$APP_DISPLAY_NAME" \
         | tail -1
 
     echo "Step 2/4: Exporting .app..."
@@ -45,7 +51,7 @@ if [ "$OS" = "Darwin" ]; then
     echo "Step 4/4: Creating DMG..."
     rm -f "$DMG_PATH"
     hdiutil create \
-        -volname "$APP_NAME $VERSION" \
+        -volname "$APP_DISPLAY_NAME $VERSION" \
         -srcfolder "$EXPORT_DIR" \
         -ov \
         -format UDZO \
@@ -61,8 +67,8 @@ if [ "$OS" = "Darwin" ]; then
     # Check for Windows MSIs in build/ for upcoming upload
     FOUND_MSI=false
     for ARCH in x64 arm64; do
-        MSI_NAME="TranscriptStudio_${VERSION}_${ARCH}.msi"
-        MSI_PATH="$BUILD_DIR/$MSI_NAME"
+        MSI_CHECK="${MSI_PREFIX}_${VERSION}_${ARCH}.msi"
+        MSI_PATH="$BUILD_DIR/$MSI_CHECK"
         if [ -f "$MSI_PATH" ]; then
             echo "Windows MSI ($ARCH) ready: $MSI_PATH ($(du -h "$MSI_PATH" | cut -f1))"
             FOUND_MSI=true
@@ -74,9 +80,9 @@ if [ "$OS" = "Darwin" ]; then
             if [ "$TARGET_ARCH" = "x86_64-pc-windows-msvc" ]; then ARCH_LABEL="x64"; else ARCH_LABEL="arm64"; fi
             TAURI_MSI=$(find "$ROOT_DIR/transcript-studio-windows/src-tauri/target/$TARGET_ARCH/release/bundle" -name "*.msi" -type f 2>/dev/null | head -1)
             if [ -n "$TAURI_MSI" ]; then
-                MSI_NAME="TranscriptStudio_${VERSION}_${ARCH_LABEL}.msi"
-                cp "$TAURI_MSI" "$BUILD_DIR/$MSI_NAME"
-                echo "Windows MSI ($ARCH_LABEL) found in Tauri output, copied as: $MSI_NAME"
+                MSI_DEST="${MSI_PREFIX}_${VERSION}_${ARCH_LABEL}.msi"
+                cp "$TAURI_MSI" "$BUILD_DIR/$MSI_DEST"
+                echo "Windows MSI ($ARCH_LABEL) found in Tauri output, copied as: $MSI_DEST"
                 FOUND_MSI=true
             fi
         done
@@ -84,7 +90,7 @@ if [ "$OS" = "Darwin" ]; then
     if [ "$FOUND_MSI" = false ]; then
         echo ""
         echo "NOTE: No Windows MSI found."
-        echo "  Place them in build/ as: TranscriptStudio_${VERSION}_x64.msi / TranscriptStudio_${VERSION}_arm64.msi"
+        echo "  Place them in build/ as: ${MSI_PREFIX}_${VERSION}_x64.msi / ${MSI_PREFIX}_${VERSION}_arm64.msi"
     fi
 
 else
@@ -97,6 +103,9 @@ else
     fi
 
     cd "$WINDOWS_DIR"
+
+    # Build-time config override for Tauri (bundle ID + product name)
+    export TAURI_CONFIG="{\"identifier\":\"$BUNDLE_ID_WINDOWS\",\"productName\":\"$TAURI_PRODUCT_NAME\"}"
 
     # Build targets: --x64-only or --arm64-only for single arch, default builds both
     TARGETS=()
@@ -111,10 +120,10 @@ else
     for TARGET_ARCH in "${TARGETS[@]}"; do
         if [ "$TARGET_ARCH" = "x86_64-pc-windows-msvc" ]; then
             ARCH_LABEL="x64"
-            MSI_NAME="TranscriptStudio_${VERSION}_x64.msi"
+            MSI_DEST="$MSI_X64_NAME"
         else
             ARCH_LABEL="arm64"
-            MSI_NAME="TranscriptStudio_${VERSION}_arm64.msi"
+            MSI_DEST="$MSI_ARM64_NAME"
         fi
 
         echo ""
@@ -131,11 +140,11 @@ else
             exit 1
         fi
 
-        cp "$MSI_SOURCE" "$BUILD_DIR/$MSI_NAME"
-        echo "Built: $BUILD_DIR/$MSI_NAME ($(du -h "$BUILD_DIR/$MSI_NAME" | cut -f1))"
+        cp "$MSI_SOURCE" "$BUILD_DIR/$MSI_DEST"
+        echo "Built: $BUILD_DIR/$MSI_DEST ($(du -h "$BUILD_DIR/$MSI_DEST" | cut -f1))"
     done
 
     echo ""
     echo "Windows build complete!"
-    ls -lh "$BUILD_DIR"/TranscriptStudio_${VERSION}_*.msi 2>/dev/null
+    ls -lh "$BUILD_DIR"/${MSI_PREFIX}_${VERSION}_*.msi 2>/dev/null
 fi

@@ -180,7 +180,11 @@ export function RecordingPage() {
       const abortController = new AbortController();
       registerAbortController(tempId, abortController);
       try {
-        const { task_id } = await api.uploadRecording(filePath, selectedProfileId, mode, abortController.signal);
+        const { task_id } = await api.uploadRecordingWithProgress(
+          filePath, selectedProfileId, mode,
+          (fraction) => updateBackgroundTask(tempId, { progress: Math.round(fraction * 100) }),
+          abortController.signal
+        );
 
         // Replace temp task with real task_id — move abort controller to new key
         unregisterAbortController(tempId);

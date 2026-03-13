@@ -3,20 +3,79 @@ name: Release Build
 on:
   push:
     tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: 'Build channel'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - production
 
 env:
   NODE_VERSION: '20'
 
 jobs:
-  # Extract version from tag
+  # Extract version and determine channel
   prepare:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.version.outputs.version }}
+      channel: ${{ steps.channel.outputs.channel }}
+      dmg_name: ${{ steps.names.outputs.dmg_name }}
+      msi_x64_name: ${{ steps.names.outputs.msi_x64_name }}
+      app_display_name: ${{ steps.names.outputs.app_display_name }}
+      bundle_id_macos: ${{ steps.names.outputs.bundle_id_macos }}
+      bundle_id_windows: ${{ steps.names.outputs.bundle_id_windows }}
+      tauri_product_name: ${{ steps.names.outputs.tauri_product_name }}
     steps:
-      - name: Extract version from tag
+      - uses: actions/checkout@v4
+
+      - name: Extract version
         id: version
-        run: echo "version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            echo "version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+          else
+            VERSION=$(cat VERSION | tr -d '[:space:]')
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Determine channel
+        id: channel
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            echo "channel=production" >> $GITHUB_OUTPUT
+          else
+            echo "channel=${{ inputs.channel || 'dev' }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set artifact names
+        id: names
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          CHANNEL="${{ steps.channel.outputs.channel }}"
+
+          if [ "$CHANNEL" = "production" ]; then
+            echo "dmg_name=TranscriptStudio-${VERSION}.dmg" >> $GITHUB_OUTPUT
+            echo "msi_x64_name=TranscriptStudio_${VERSION}_x64.msi" >> $GITHUB_OUTPUT
+            echo "app_display_name=TranscriptStudio" >> $GITHUB_OUTPUT
+            echo "bundle_id_macos=nl.prezent.TranscriptStudio" >> $GITHUB_OUTPUT
+            echo "bundle_id_windows=nl.prezent.transcript-studio" >> $GITHUB_OUTPUT
+            echo "tauri_product_name=TranscriptStudio" >> $GITHUB_OUTPUT
+          else
+            echo "dmg_name=TranscriptStudio-Dev-${VERSION}.dmg" >> $GITHUB_OUTPUT
+            echo "msi_x64_name=TranscriptStudio-Dev_${VERSION}_x64.msi" >> $GITHUB_OUTPUT
+            echo "app_display_name=TranscriptStudio Dev" >> $GITHUB_OUTPUT
+            echo "bundle_id_macos=nl.prezent.TranscriptStudio.dev" >> $GITHUB_OUTPUT
+            echo "bundle_id_windows=nl.prezent.transcript-studio-dev" >> $GITHUB_OUTPUT
+            echo "tauri_product_name=TranscriptStudio Dev" >> $GITHUB_OUTPUT
+          fi
+
+          echo "Channel: $CHANNEL"
+          echo "Version: $VERSION"
 
   # macOS: build DMG
   build-macos:
@@ -24,6 +83,10 @@ jobs:
     runs-on: macos-latest
     env:
       VERSION: ${{ needs.prepare.outputs.version }}
+      CHANNEL: ${{ needs.prepare.outputs.channel }}
+      APP_DISPLAY_NAME: ${{ needs.prepare.outputs.app_display_name }}
+      BUNDLE_ID_MACOS: ${{ needs.prepare.outputs.bundle_id_macos }}
+      DMG_NAME: ${{ needs.prepare.outputs.dmg_name }}
     steps:
       - uses: actions/checkout@v4
 
@@ -42,6 +105,8 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             SKIP_INSTALL=NO \
             SWIFT_VERSION=5 \
+            PRODUCT_BUNDLE_IDENTIFIER="$BUNDLE_ID_MACOS" \
+            PRODUCT_NAME="$APP_DISPLAY_NAME" \
             2>&1 | tee /tmp/xcodebuild.log | tail -30
 
       - name: Show build errors (if failed)
@@ -51,28 +116,29 @@ jobs:
       - name: Export and sign app
         run: |
           mkdir -p build/export
-          APP_PATH=$(find build/TranscriptStudio.xcarchive/Products -name "TranscriptStudio.app" -type d | head -1)
+          APP_PATH=$(find build/TranscriptStudio.xcarchive/Products -name "*.app" -type d | head -1)
           if [ -z "$APP_PATH" ]; then
             echo "ERROR: .app not found in archive"
             find build/TranscriptStudio.xcarchive/Products -type d
             exit 1
           fi
           cp -R "$APP_PATH" build/export/
-          codesign --force --deep --sign - build/export/TranscriptStudio.app
+          APP_NAME=$(basename "$APP_PATH")
+          codesign --force --deep --sign - "build/export/$APP_NAME"
 
       - name: Create DMG
         run: |
           hdiutil create \
-            -volname "TranscriptStudio $VERSION" \
+            -volname "$APP_DISPLAY_NAME $VERSION" \
             -srcfolder build/export \
             -ov -format UDZO \
-            "build/TranscriptStudio-${VERSION}.dmg"
+            "build/$DMG_NAME"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: macos-dmg
-          path: build/TranscriptStudio-*.dmg
+          path: build/${{ env.DMG_NAME }}
 
   # Windows: build MSI (x64)
   build-windows:
@@ -80,6 +146,10 @@ jobs:
     runs-on: windows-latest
     env:
       VERSION: ${{ needs.prepare.outputs.version }}
+      CHANNEL: ${{ needs.prepare.outputs.channel }}
+      BUNDLE_ID_WINDOWS: ${{ needs.prepare.outputs.bundle_id_windows }}
+      TAURI_PRODUCT_NAME: ${{ needs.prepare.outputs.tauri_product_name }}
+      MSI_X64_NAME: ${{ needs.prepare.outputs.msi_x64_name }}
     steps:
       - uses: actions/checkout@v4
 
@@ -97,6 +167,8 @@ jobs:
 
       - name: Build Tauri app
         working-directory: transcript-studio-windows
+        env:
+          TAURI_CONFIG: '{"identifier":"${{ env.BUNDLE_ID_WINDOWS }}","productName":"${{ env.TAURI_PRODUCT_NAME }}"}'
         run: npm run tauri build
 
       - name: Copy MSI to build dir
@@ -108,14 +180,14 @@ jobs:
             echo "ERROR: MSI not found"
             exit 1
           fi
-          cp "$MSI" "build/TranscriptStudio_${VERSION}_x64.msi"
-          echo "Built: TranscriptStudio_${VERSION}_x64.msi"
+          cp "$MSI" "build/$MSI_X64_NAME"
+          echo "Built: $MSI_X64_NAME"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: windows-msi
-          path: build/TranscriptStudio_*.msi
+          path: build/${{ env.MSI_X64_NAME }}
 
   # Upload artifacts to server
   deploy:
@@ -123,6 +195,9 @@ jobs:
     runs-on: ubuntu-latest
     env:
       VERSION: ${{ needs.prepare.outputs.version }}
+      CHANNEL: ${{ needs.prepare.outputs.channel }}
+      DMG_NAME: ${{ needs.prepare.outputs.dmg_name }}
+      MSI_X64_NAME: ${{ needs.prepare.outputs.msi_x64_name }}
     steps:
       - uses: actions/checkout@v4
 
@@ -149,21 +224,18 @@ jobs:
         run: |
           ssh $SERVER "mkdir -p $REMOTE_DIR"
 
-          DMG="TranscriptStudio-${VERSION}.dmg"
-          MSI_X64="TranscriptStudio_${VERSION}_x64.msi"
-
           HAS_MACOS=false
           HAS_WINDOWS_X64=false
 
-          if [ -f "build/$DMG" ]; then
-            scp "build/$DMG" "$SERVER:$REMOTE_DIR/$DMG"
-            echo "Uploaded: $DMG"
+          if [ -f "build/$DMG_NAME" ]; then
+            scp "build/$DMG_NAME" "$SERVER:$REMOTE_DIR/$DMG_NAME"
+            echo "Uploaded: $DMG_NAME"
             HAS_MACOS=true
           fi
 
-          if [ -f "build/$MSI_X64" ]; then
-            scp "build/$MSI_X64" "$SERVER:$REMOTE_DIR/$MSI_X64"
-            echo "Uploaded: $MSI_X64"
+          if [ -f "build/$MSI_X64_NAME" ]; then
+            scp "build/$MSI_X64_NAME" "$SERVER:$REMOTE_DIR/$MSI_X64_NAME"
+            echo "Uploaded: $MSI_X64_NAME"
             HAS_WINDOWS_X64=true
           fi
 
@@ -184,7 +256,7 @@ jobs:
             echo "Updated: screenshots"
           fi
 
-          # Update releases.json
+          # Update releases.json — dev writes to dev_* fields, production to existing fields
           ssh $SERVER "python3 -c \"
           import json
 
@@ -195,34 +267,50 @@ jobs:
           except (FileNotFoundError, json.JSONDecodeError):
               data = {}
 
-          data['latest_version'] = '$VERSION'
+          channel = '$CHANNEL'
 
-          if '$HAS_MACOS' == 'true':
-              data['macos'] = {
-                  'url': '/tstudio/download/$DMG',
-                  'version': '$VERSION',
-                  'filename': '$DMG'
-              }
-          if '$HAS_WINDOWS_X64' == 'true':
-              data['windows_x64'] = {
-                  'url': '/tstudio/download/$MSI_X64',
-                  'version': '$VERSION',
-                  'filename': '$MSI_X64'
-              }
-              data['windows'] = {
-                  'url': '/tstudio/download/$MSI_X64',
-                  'version': '$VERSION',
-                  'filename': '$MSI_X64'
-              }
+          if channel == 'production':
+              data['latest_version'] = '$VERSION'
+              if '$HAS_MACOS' == 'true':
+                  data['macos'] = {
+                      'url': '/tstudio/download/$DMG_NAME',
+                      'version': '$VERSION',
+                      'filename': '$DMG_NAME'
+                  }
+              if '$HAS_WINDOWS_X64' == 'true':
+                  data['windows_x64'] = {
+                      'url': '/tstudio/download/$MSI_X64_NAME',
+                      'version': '$VERSION',
+                      'filename': '$MSI_X64_NAME'
+                  }
+                  data['windows'] = {
+                      'url': '/tstudio/download/$MSI_X64_NAME',
+                      'version': '$VERSION',
+                      'filename': '$MSI_X64_NAME'
+                  }
+          else:
+              data['dev_latest_version'] = '$VERSION'
+              if '$HAS_MACOS' == 'true':
+                  data['dev_macos'] = {
+                      'url': '/tstudio/download/$DMG_NAME',
+                      'version': '$VERSION',
+                      'filename': '$DMG_NAME'
+                  }
+              if '$HAS_WINDOWS_X64' == 'true':
+                  data['dev_windows_x64'] = {
+                      'url': '/tstudio/download/$MSI_X64_NAME',
+                      'version': '$VERSION',
+                      'filename': '$MSI_X64_NAME'
+                  }
 
           with open(manifest_path, 'w') as f:
               json.dump(data, f, indent=2)
 
-          print('Updated releases.json')
+          print('Updated releases.json (' + channel + ')')
           \""
 
           echo ""
-          echo "Release $VERSION deployed!"
-          echo "  macOS:    https://n8n.prezent.nl/tstudio/download/$DMG"
-          echo "  Windows:  https://n8n.prezent.nl/tstudio/download/$MSI_X64"
+          echo "$CHANNEL release $VERSION deployed!"
+          echo "  macOS:    https://n8n.prezent.nl/tstudio/download/$DMG_NAME"
+          echo "  Windows:  https://n8n.prezent.nl/tstudio/download/$MSI_X64_NAME"
           echo "  Manifest: https://n8n.prezent.nl/tstudio/download/releases.json"

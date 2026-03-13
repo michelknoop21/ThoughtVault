@@ -598,6 +598,126 @@
             }
         }
 
+        /* === Beta section === */
+        .beta-section {
+            padding: var(--s-64) 0;
+            margin-top: var(--s-48);
+            border-top: 1px solid var(--border);
+        }
+
+        .beta-header {
+            display: flex;
+            align-items: center;
+            gap: var(--s-12);
+            margin-bottom: var(--s-8);
+        }
+
+        .beta-title {
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: clamp(1.25rem, 2.5vw, 1.5rem);
+            line-height: 1.2;
+            letter-spacing: -0.015em;
+        }
+
+        .beta-badge {
+            font-size: 0.6875rem;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: #fff;
+            background: var(--brand-orange);
+            border-radius: var(--radius-badge);
+            padding: 3px 10px;
+        }
+
+        .beta-description {
+            font-size: 0.9375rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            max-width: 65ch;
+            margin-bottom: var(--s-24);
+        }
+
+        .beta-grid {
+            display: grid;
+            gap: var(--s-16);
+        }
+
+        @media (min-width: 640px) {
+            .beta-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        .beta-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--brand-orange);
+            border-radius: 0 var(--radius-card) var(--radius-card) 0;
+            padding: var(--s-24);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: var(--s-16);
+        }
+
+        .beta-card-info {
+            & h4 {
+                font-family: var(--font-display);
+                font-weight: 700;
+                font-size: 1rem;
+            }
+
+            & p {
+                font-size: 0.8125rem;
+                color: var(--text-muted);
+                margin-top: 2px;
+            }
+        }
+
+        .btn-beta-download {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--s-8);
+            padding: var(--s-8) var(--s-16);
+            background: transparent;
+            color: var(--text);
+            font-weight: 500;
+            font-size: 0.875rem;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-button);
+            transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease);
+            white-space: nowrap;
+
+            & svg {
+                width: 16px;
+                height: 16px;
+            }
+
+            &:hover {
+                border-color: var(--brand-orange);
+                background: var(--bg-surface);
+            }
+        }
+
+        .beta-version-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--s-8);
+            font-size: 0.8125rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            margin-bottom: var(--s-16);
+        }
+
+        .beta-version-badge .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--brand-orange);
+        }
+
         /* === System requirements === */
         .sysreq-section {
             padding: var(--s-64) 0;
@@ -880,6 +1000,46 @@
             </div>
         </section>
 
+        <!-- Beta / Dev section -->
+        <section class="beta-section" id="betaSection" aria-labelledby="beta-heading" style="display:none">
+            <div class="container">
+                <div class="beta-header">
+                    <h2 class="beta-title" id="beta-heading">Ontwikkelversie</h2>
+                    <span class="beta-badge">Beta</span>
+                </div>
+                <p class="beta-description">
+                    Test de nieuwste functies voordat ze officieel worden uitgebracht. Deze versie kan naast de stabiele versie worden geinstalleerd.
+                    Niet bedoeld voor productiegebruik.
+                </p>
+                <div class="beta-version-badge" id="betaVersionBadge">
+                    <span class="dot" aria-hidden="true"></span>
+                    <span id="betaVersionText"></span>
+                </div>
+                <div class="beta-grid">
+                    <div class="beta-card" id="betaMacosCard" style="display:none">
+                        <div class="beta-card-info">
+                            <h4>macOS</h4>
+                            <p id="betaMacosFile"></p>
+                        </div>
+                        <a href="#" id="betaMacosDownload" class="btn-beta-download" download>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                            Download DMG
+                        </a>
+                    </div>
+                    <div class="beta-card" id="betaWindowsCard" style="display:none">
+                        <div class="beta-card-info">
+                            <h4>Windows</h4>
+                            <p id="betaWindowsFile"></p>
+                        </div>
+                        <a href="#" id="betaWindowsDownload" class="btn-beta-download" download>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                            Download MSI
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <!-- System Requirements -->
         <section class="sysreq-section" aria-labelledby="sysreq-heading">
             <div class="container">
@@ -1074,6 +1234,25 @@
                 var altEl = document.getElementById('windowsAltArch');
                 altEl.innerHTML = 'Ook beschikbaar voor <a href="' + winAlt.url + '" download>Windows ' + altLabel + '</a>';
                 altEl.style.display = 'block';
+            }
+
+            // ---- Dev / Beta downloads ----
+            var hasDevBuilds = data.dev_macos || data.dev_windows_x64;
+            if (hasDevBuilds) {
+                document.getElementById('betaSection').style.display = '';
+                document.getElementById('betaVersionText').textContent = 'Dev versie ' + (data.dev_latest_version || '—');
+
+                if (data.dev_macos) {
+                    document.getElementById('betaMacosCard').style.display = '';
+                    document.getElementById('betaMacosFile').textContent = data.dev_macos.filename;
+                    document.getElementById('betaMacosDownload').href = data.dev_macos.url;
+                }
+
+                if (data.dev_windows_x64) {
+                    document.getElementById('betaWindowsCard').style.display = '';
+                    document.getElementById('betaWindowsFile').textContent = data.dev_windows_x64.filename;
+                    document.getElementById('betaWindowsDownload').href = data.dev_windows_x64.url;
+                }
             }
         })
         .catch(function() {

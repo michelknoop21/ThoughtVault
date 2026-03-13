@@ -392,16 +392,13 @@ actor APIService {
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
-        req.httpBody = body
-
         if let token = authToken() {
             req.setValue(token, forHTTPHeaderField: "X-User-Token")
         }
 
-        // Report progress (best-effort estimate since URLSession upload progress
-        // is not trivially available here without a delegate; emit 0 and 1)
+        let delegate = UploadProgressDelegate(onProgress: onProgress)
         onProgress(0.0)
-        let (data, response) = try await session.data(for: req)
+        let (data, response) = try await session.upload(for: req, from: body, delegate: delegate)
         onProgress(1.0)
 
         return try handleResponse(data: data, response: response)
@@ -923,6 +920,28 @@ final class SSEClient: @unchecked Sendable {
         } else {
             onEvent?(.completed)
         }
+    }
+}
+
+// MARK: - UploadProgressDelegate
+
+private class UploadProgressDelegate: NSObject, URLSessionTaskDelegate, @unchecked Sendable {
+    private let onProgress: @Sendable (Double) -> Void
+
+    init(onProgress: @escaping @Sendable (Double) -> Void) {
+        self.onProgress = onProgress
+    }
+
+    func urlSession(
+        _ session: URLSession,
+        task: URLSessionTask,
+        didSendBodyData bytesSent: Int64,
+        totalBytesSent: Int64,
+        totalBytesExpectedToSend: Int64
+    ) {
+        guard totalBytesExpectedToSend > 0 else { return }
+        let fraction = Double(totalBytesSent) / Double(totalBytesExpectedToSend)
+        onProgress(min(fraction, 0.99))
     }
 }
 

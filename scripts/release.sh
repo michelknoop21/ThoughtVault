@@ -9,12 +9,18 @@ UPLOAD=true
 for arg in "$@"; do
     case $arg in
         --no-upload) UPLOAD=false ;;
-        *) echo "Unknown option: $arg"; echo "Usage: $0 [--no-upload]"; exit 1 ;;
+        --production) export BUILD_CHANNEL=production ;;
+        *) echo "Unknown option: $arg"; echo "Usage: $0 [--production] [--no-upload]"; exit 1 ;;
     esac
 done
 
-VERSION=$(cat "$(dirname "$SCRIPT_DIR")/VERSION" | tr -d '[:space:]')
-echo "=== TranscriptStudio Release Pipeline v$VERSION ==="
+source "$SCRIPT_DIR/env.sh"
+
+CHANNEL_LABEL=$(echo "$BUILD_CHANNEL" | awk '{print toupper(substr($0,1,1)) tolower(substr($0,2))}')
+echo "=== TranscriptStudio $CHANNEL_LABEL Release Pipeline v$VERSION ==="
+if [ "$BUILD_CHANNEL" = "dev" ]; then
+    echo "    Channel: DEV (use --production for production builds)"
+fi
 echo ""
 
 # Step 1: Sync version
@@ -36,4 +42,4 @@ else
 fi
 
 echo ""
-echo "=== Release $VERSION complete ==="
+echo "=== $CHANNEL_LABEL Release $VERSION complete ==="

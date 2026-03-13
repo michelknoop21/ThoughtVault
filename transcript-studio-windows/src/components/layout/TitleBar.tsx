@@ -1,14 +1,20 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { getName } from "@tauri-apps/api/app";
 import {
   Dismiss20Regular,
   Subtract20Regular,
   SquareMultiple20Regular,
 } from "@fluentui/react-icons";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { YingaBar } from "../brand/YingaBar";
 
 export function TitleBar() {
   const [isMaximized, setIsMaximized] = useState(false);
+  const [appName, setAppName] = useState("TranscriptStudio");
+
+  useEffect(() => {
+    getName().then(setAppName).catch(() => {});
+  }, []);
 
   async function handleMinimize() {
     const win = getCurrentWindow();
@@ -49,7 +55,7 @@ export function TitleBar() {
         {/* Drag area — covers everything except window controls */}
         <div data-tauri-drag-region style={{ flex: 1, paddingLeft: 12, display: "flex", alignItems: "center" }}>
           <span style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 500 }}>
-            TranscriptStudio
+            {appName}
           </span>
         </div>
 

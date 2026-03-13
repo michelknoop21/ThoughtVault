@@ -3,22 +3,14 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-ROOT_DIR="$(dirname "$SCRIPT_DIR")"
-VERSION=$(cat "$ROOT_DIR/VERSION" | tr -d '[:space:]')
-BUILD_DIR="$ROOT_DIR/build"
+source "$SCRIPT_DIR/env.sh"
 
-SERVER="michelk@3.69.205.209"
-REMOTE_DIR="/home/michelk/tstudio-releases"
+DMG_PATH="$BUILD_DIR/$DMG_NAME"
+MSI_X64_PATH="$BUILD_DIR/$MSI_X64_NAME"
+MSI_ARM64_PATH="$BUILD_DIR/$MSI_ARM64_NAME"
 
-DMG_ARTIFACT="TranscriptStudio-${VERSION}.dmg"
-MSI_X64_ARTIFACT="TranscriptStudio_${VERSION}_x64.msi"
-MSI_ARM64_ARTIFACT="TranscriptStudio_${VERSION}_arm64.msi"
 # Legacy name (for backwards compatibility detection)
 MSI_LEGACY_ARTIFACT="TranscriptStudio_${VERSION}.msi"
-
-DMG_PATH="$BUILD_DIR/$DMG_ARTIFACT"
-MSI_X64_PATH="$BUILD_DIR/$MSI_X64_ARTIFACT"
-MSI_ARM64_PATH="$BUILD_DIR/$MSI_ARM64_ARTIFACT"
 
 mkdir -p "$BUILD_DIR"
 
@@ -53,7 +45,7 @@ if [ -f "$MSI_ARM64_PATH" ]; then FOUND_ANY=true; fi
 
 if [ "$FOUND_ANY" = false ]; then
     echo "ERROR: No artifacts found in $BUILD_DIR"
-    echo "Expected: $DMG_ARTIFACT and/or $MSI_X64_ARTIFACT / $MSI_ARM64_ARTIFACT"
+    echo "Expected: $DMG_NAME and/or $MSI_X64_NAME / $MSI_ARM64_NAME"
     echo "Run scripts/build.sh first."
     exit 1
 fi
@@ -61,7 +53,7 @@ fi
 DOWNLOAD_PAGE="$SCRIPT_DIR/download-page.html"
 FEATURES_PAGE="$SCRIPT_DIR/features-page.html"
 
-echo "Uploading artifacts to server..."
+echo "Uploading $BUILD_CHANNEL artifacts to server..."
 
 # Ensure remote directory exists
 ssh "$SERVER" "mkdir -p $REMOTE_DIR"
@@ -72,18 +64,18 @@ HAS_WINDOWS_X64=false
 HAS_WINDOWS_ARM64=false
 
 if [ -f "$DMG_PATH" ]; then
-    scp "$DMG_PATH" "$SERVER:$REMOTE_DIR/$DMG_ARTIFACT"
-    echo "  Uploaded: $DMG_ARTIFACT"
+    scp "$DMG_PATH" "$SERVER:$REMOTE_DIR/$DMG_NAME"
+    echo "  Uploaded: $DMG_NAME"
     HAS_MACOS=true
 fi
 if [ -f "$MSI_X64_PATH" ]; then
-    scp "$MSI_X64_PATH" "$SERVER:$REMOTE_DIR/$MSI_X64_ARTIFACT"
-    echo "  Uploaded: $MSI_X64_ARTIFACT"
+    scp "$MSI_X64_PATH" "$SERVER:$REMOTE_DIR/$MSI_X64_NAME"
+    echo "  Uploaded: $MSI_X64_NAME"
     HAS_WINDOWS_X64=true
 fi
 if [ -f "$MSI_ARM64_PATH" ]; then
-    scp "$MSI_ARM64_PATH" "$SERVER:$REMOTE_DIR/$MSI_ARM64_ARTIFACT"
-    echo "  Uploaded: $MSI_ARM64_ARTIFACT"
+    scp "$MSI_ARM64_PATH" "$SERVER:$REMOTE_DIR/$MSI_ARM64_NAME"
+    echo "  Uploaded: $MSI_ARM64_NAME"
     HAS_WINDOWS_ARM64=true
 fi
 
@@ -106,7 +98,8 @@ if [ -d "$SCREENSHOTS_DIR" ]; then
 fi
 
 # Update releases.json manifest on server
-echo "Updating releases.json..."
+# Dev channel writes to dev_* fields, production to existing fields
+echo "Updating releases.json ($BUILD_CHANNEL)..."
 ssh "$SERVER" "python3 -c \"
 import json
 
@@ -117,49 +110,72 @@ try:
 except (FileNotFoundError, json.JSONDecodeError):
     data = {}
 
-data['latest_version'] = '$VERSION'
+channel = '$BUILD_CHANNEL'
 
-if '$HAS_MACOS' == 'true':
-    data['macos'] = {
-        'url': '/tstudio/download/$DMG_ARTIFACT',
-        'version': '$VERSION',
-        'filename': '$DMG_ARTIFACT'
-    }
-if '$HAS_WINDOWS_X64' == 'true':
-    data['windows_x64'] = {
-        'url': '/tstudio/download/$MSI_X64_ARTIFACT',
-        'version': '$VERSION',
-        'filename': '$MSI_X64_ARTIFACT'
-    }
-    # Keep 'windows' pointing to x64 as the default
-    data['windows'] = {
-        'url': '/tstudio/download/$MSI_X64_ARTIFACT',
-        'version': '$VERSION',
-        'filename': '$MSI_X64_ARTIFACT'
-    }
-if '$HAS_WINDOWS_ARM64' == 'true':
-    data['windows_arm64'] = {
-        'url': '/tstudio/download/$MSI_ARM64_ARTIFACT',
-        'version': '$VERSION',
-        'filename': '$MSI_ARM64_ARTIFACT'
-    }
+if channel == 'production':
+    data['latest_version'] = '$VERSION'
+
+    if '$HAS_MACOS' == 'true':
+        data['macos'] = {
+            'url': '/tstudio/download/$DMG_NAME',
+            'version': '$VERSION',
+            'filename': '$DMG_NAME'
+        }
+    if '$HAS_WINDOWS_X64' == 'true':
+        data['windows_x64'] = {
+            'url': '/tstudio/download/$MSI_X64_NAME',
+            'version': '$VERSION',
+            'filename': '$MSI_X64_NAME'
+        }
+        data['windows'] = {
+            'url': '/tstudio/download/$MSI_X64_NAME',
+            'version': '$VERSION',
+            'filename': '$MSI_X64_NAME'
+        }
+    if '$HAS_WINDOWS_ARM64' == 'true':
+        data['windows_arm64'] = {
+            'url': '/tstudio/download/$MSI_ARM64_NAME',
+            'version': '$VERSION',
+            'filename': '$MSI_ARM64_NAME'
+        }
+else:
+    data['dev_latest_version'] = '$VERSION'
+
+    if '$HAS_MACOS' == 'true':
+        data['dev_macos'] = {
+            'url': '/tstudio/download/$DMG_NAME',
+            'version': '$VERSION',
+            'filename': '$DMG_NAME'
+        }
+    if '$HAS_WINDOWS_X64' == 'true':
+        data['dev_windows_x64'] = {
+            'url': '/tstudio/download/$MSI_X64_NAME',
+            'version': '$VERSION',
+            'filename': '$MSI_X64_NAME'
+        }
+    if '$HAS_WINDOWS_ARM64' == 'true':
+        data['dev_windows_arm64'] = {
+            'url': '/tstudio/download/$MSI_ARM64_NAME',
+            'version': '$VERSION',
+            'filename': '$MSI_ARM64_NAME'
+        }
 
 with open(manifest_path, 'w') as f:
     json.dump(data, f, indent=2)
 
-print('  Updated releases.json')
+print('  Updated releases.json (' + channel + ')')
 \""
 
 echo ""
-echo "Upload complete."
+echo "Upload complete ($BUILD_CHANNEL)."
 if [ -f "$DMG_PATH" ]; then
-    echo "  macOS:         https://n8n.prezent.nl/tstudio/download/$DMG_ARTIFACT"
+    echo "  macOS:         https://n8n.prezent.nl/tstudio/download/$DMG_NAME"
 fi
 if [ -f "$MSI_X64_PATH" ]; then
-    echo "  Windows x64:   https://n8n.prezent.nl/tstudio/download/$MSI_X64_ARTIFACT"
+    echo "  Windows x64:   https://n8n.prezent.nl/tstudio/download/$MSI_X64_NAME"
 fi
 if [ -f "$MSI_ARM64_PATH" ]; then
-    echo "  Windows arm64: https://n8n.prezent.nl/tstudio/download/$MSI_ARM64_ARTIFACT"
+    echo "  Windows arm64: https://n8n.prezent.nl/tstudio/download/$MSI_ARM64_NAME"
 fi
 echo "  Manifest:      https://n8n.prezent.nl/tstudio/download/releases.json"
 echo "  Downloads:     https://n8n.prezent.nl/tstudio/download/"

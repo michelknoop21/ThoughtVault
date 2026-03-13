@@ -443,6 +443,87 @@ class APIService {
     return result;
   }
 
+  async uploadRecordingWithProgress(
+    filePath: string,
+    profileId: string,
+    mode: string,
+    onProgress: (fraction: number) => void,
+    signal?: AbortSignal
+  ): Promise<{ task_id: string }> {
+    const authStore = useAuthStore.getState();
+    if (authStore.isTokenExpired()) {
+      authStore.logout();
+      throw new Error("Sessie verlopen. Log opnieuw in.");
+    }
+
+    const fileBytes = await readFile(filePath);
+    const filename = filePath.split(/[\\/]/).pop() || "recording.wav";
+    const blob = new Blob([fileBytes], { type: "audio/wav" });
+    const formData = new FormData();
+    formData.append("file", blob, filename);
+    formData.append("profile_id", profileId);
+    formData.append("mode", mode);
+
+    if (import.meta.env.DEV) console.log(`[API] Upload with progress ${filename} (${fileBytes.length} bytes)`);
+
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", `${this.baseUrl}/transcribe`);
+      xhr.setRequestHeader("X-User-Token", this.token || "");
+
+      if (signal) {
+        signal.addEventListener("abort", () => xhr.abort(), { once: true });
+      }
+
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable && e.total > 0) {
+          onProgress(Math.min(e.loaded / e.total, 0.99));
+        }
+      };
+
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            const result = JSON.parse(xhr.responseText);
+            if (import.meta.env.DEV) console.log(`[API] Upload complete → task_id: ${result.task_id}`);
+            onProgress(1.0);
+            resolve(result);
+          } catch {
+            reject(new Error("Upload mislukt: ongeldig antwoord van server"));
+          }
+        } else {
+          let errorMessage = `Upload mislukt (HTTP ${xhr.status})`;
+          try {
+            const errorData = JSON.parse(xhr.responseText);
+            const extracted = errorData.message || errorData.error;
+            if (typeof extracted === "string") {
+              errorMessage = `Upload mislukt: ${extracted}`;
+            } else if (errorData.detail) {
+              if (Array.isArray(errorData.detail)) {
+                const fields = errorData.detail.map((d: { loc?: string[]; msg?: string }) =>
+                  `${(d.loc || []).join(".")}: ${d.msg || "ongeldig"}`
+                ).join("; ");
+                errorMessage = `Upload mislukt: ${fields}`;
+              } else if (typeof errorData.detail === "string") {
+                errorMessage = `Upload mislukt: ${errorData.detail}`;
+              }
+            }
+          } catch {
+            if (xhr.responseText.length < 200) {
+              errorMessage = `Upload mislukt: ${xhr.responseText}`;
+            }
+          }
+          reject(new Error(errorMessage));
+        }
+      };
+
+      xhr.onerror = () => reject(new Error("Upload mislukt: netwerkfout"));
+      xhr.onabort = () => reject(new DOMException("Upload geannuleerd", "AbortError"));
+
+      xhr.send(formData);
+    });
+  }
+
   // Profiles
   async getProfiles(): Promise<Profile[]> {
     try {

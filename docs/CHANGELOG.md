@@ -5,6 +5,16 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2026-03-12] — Fix biometric toggle race condition (v1.0.49)
+
+### Fixed
+- **Biometric toggle race condition** (macOS, `SettingsView.swift`): Touch ID inschakelen faalde stilletjes door een duplicate `biometricSection` in SettingsView. Beide secties hadden een `onChange` handler op dezelfde `@AppStorage("biometricLoginEnabled")` key, waardoor `saveTokenWithBiometrics` twee keer parallel werd aangeroepen. Dit veroorzaakte een `errSecDuplicateItem` Keychain-fout (de tweede aanroep probeerde een token op te slaan dat de eerste net had geschreven). Na de fout werd de toggle stilletjes gereset naar uit, zonder foutmelding aan de gebruiker. Opgelost door de ongebruikte duplicate `biometricSection` te verwijderen, een guard toe te voegen die controleert of er een geldig auth token aanwezig is voordat de Keychain-operatie start, en gebruikersfeedback toe te voegen bij fouten zodat mislukte biometrische activering zichtbaar is in de UI.
+
+### Notes
+- Versies 1.0.33 t/m 1.0.48 bevatten uitsluitend CI-configuratie en release pipeline fixes (Swift 5 modus voor CI, Xcode 16.x compatibiliteit). Geen functionele wijzigingen.
+
+---
+
 ## [2026-03-12] — Collapsible sidebar, full transcript pagination & waveform improvements (v1.0.32)
 
 ### Added

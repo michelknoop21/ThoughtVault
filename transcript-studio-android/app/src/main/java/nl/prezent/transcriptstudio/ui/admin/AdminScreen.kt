@@ -65,11 +65,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import nl.prezent.transcriptstudio.R
 import nl.prezent.transcriptstudio.data.model.AdminSettings
 import nl.prezent.transcriptstudio.data.model.AdminUser
 import nl.prezent.transcriptstudio.data.model.ErrorLog
@@ -92,15 +94,6 @@ import nl.prezent.transcriptstudio.ui.theme.TS
 
 private data class AdminTab(val title: String, val icon: ImageVector)
 
-private val adminTabs = listOf(
-    AdminTab("Overzicht", Icons.Default.Dashboard),
-    AdminTab("Gebruikers", Icons.Default.People),
-    AdminTab("Uitnodigingen", Icons.Default.VpnKey),
-    AdminTab("Feedback", Icons.Default.Feedback),
-    AdminTab("Logging", Icons.Default.BugReport),
-    AdminTab("Instellingen", Icons.Default.Settings),
-)
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdminScreen(
@@ -109,6 +102,15 @@ fun AdminScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+
+    val adminTabs = listOf(
+        AdminTab(stringResource(R.string.admin_tab_overview), Icons.Default.Dashboard),
+        AdminTab(stringResource(R.string.admin_tab_users), Icons.Default.People),
+        AdminTab(stringResource(R.string.admin_tab_invites), Icons.Default.VpnKey),
+        AdminTab(stringResource(R.string.admin_tab_feedback), Icons.Default.Feedback),
+        AdminTab(stringResource(R.string.admin_tab_logging), Icons.Default.BugReport),
+        AdminTab(stringResource(R.string.admin_tab_settings), Icons.Default.Settings),
+    )
 
     // Show success/error messages via snackbar
     LaunchedEffect(uiState.successMessage) {
@@ -127,12 +129,12 @@ fun AdminScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Beheer") },
+                title = { Text(stringResource(R.string.admin_title)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Terug",
+                            contentDescription = stringResource(R.string.admin_back),
                         )
                     }
                 },
@@ -208,7 +210,7 @@ fun AdminScreen(
     }
 }
 
-// ── Tab 0: Dashboard ────────────────────────────────────────────────────
+// -- Tab 0: Dashboard --
 
 @Composable
 private fun DashboardTab(
@@ -226,7 +228,7 @@ private fun DashboardTab(
         ) {
             EmptyState(
                 icon = Icons.Default.Dashboard,
-                title = "Geen gegevens beschikbaar",
+                title = stringResource(R.string.admin_dashboard_empty),
             )
         }
         return
@@ -246,12 +248,12 @@ private fun DashboardTab(
                 horizontalArrangement = Arrangement.spacedBy(TS.Spacing.sm),
             ) {
                 StatCard(
-                    label = "Gebruikers",
+                    label = stringResource(R.string.admin_stat_users),
                     value = stats.totalUsers.toString(),
                     modifier = Modifier.weight(1f),
                 )
                 StatCard(
-                    label = "Actief",
+                    label = stringResource(R.string.admin_stat_active),
                     value = stats.activeUsers.toString(),
                     modifier = Modifier.weight(1f),
                 )
@@ -264,12 +266,12 @@ private fun DashboardTab(
                 horizontalArrangement = Arrangement.spacedBy(TS.Spacing.sm),
             ) {
                 StatCard(
-                    label = "Transcripties",
+                    label = stringResource(R.string.admin_stat_transcriptions),
                     value = stats.totalNotes.toString(),
                     modifier = Modifier.weight(1f),
                 )
                 StatCard(
-                    label = "Actieve taken",
+                    label = stringResource(R.string.admin_stat_active_tasks),
                     value = stats.activeTasks.toString(),
                     modifier = Modifier.weight(1f),
                 )
@@ -282,12 +284,12 @@ private fun DashboardTab(
                 horizontalArrangement = Arrangement.spacedBy(TS.Spacing.sm),
             ) {
                 StatCard(
-                    label = "Feedback",
+                    label = stringResource(R.string.admin_stat_feedback),
                     value = stats.pendingFeedback.toString(),
                     modifier = Modifier.weight(1f),
                 )
                 StatCard(
-                    label = "Fouten",
+                    label = stringResource(R.string.admin_stat_errors),
                     value = stats.errorCount.toString(),
                     modifier = Modifier.weight(1f),
                 )
@@ -326,7 +328,7 @@ private fun StatCard(
     }
 }
 
-// ── Tab 1: Users ────────────────────────────────────────────────────────
+// -- Tab 1: Users --
 
 @Composable
 private fun UsersTab(
@@ -364,7 +366,7 @@ private fun UsersTab(
 
         item {
             TSPrimaryButton(
-                text = "Nieuwe gebruiker",
+                text = stringResource(R.string.admin_users_create),
                 onClick = { showCreateDialog = true },
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -380,7 +382,7 @@ private fun UsersTab(
                 ) {
                     EmptyState(
                         icon = Icons.Default.People,
-                        title = "Geen gebruikers",
+                        title = stringResource(R.string.admin_users_empty),
                     )
                 }
             }
@@ -412,9 +414,9 @@ private fun UserCard(
 
     if (showDeleteDialog) {
         ConfirmDialog(
-            title = "Gebruiker verwijderen",
-            message = "Weet je zeker dat je ${user.username} wilt verwijderen? Dit kan niet ongedaan worden.",
-            confirmText = "Verwijderen",
+            title = stringResource(R.string.admin_users_delete_title),
+            message = stringResource(R.string.admin_users_delete_message, user.username),
+            confirmText = stringResource(R.string.admin_feedback_delete_confirm),
             onConfirm = {
                 onDelete(userId)
                 showDeleteDialog = false
@@ -470,13 +472,13 @@ private fun UserCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Text(
-                    text = if (user.lastLogin != null) "Laatst ingelogd: ${formatDateTime(user.lastLogin)}" else "Nog niet ingelogd",
+                    text = if (user.lastLogin != null) stringResource(R.string.admin_users_last_login, formatDateTime(user.lastLogin)) else stringResource(R.string.admin_users_never_logged_in),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 if (user.noteCount != null) {
                     Text(
-                        text = "${user.noteCount} notulen",
+                        text = stringResource(R.string.admin_users_note_count, user.noteCount),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -490,12 +492,12 @@ private fun UserCard(
                 horizontalArrangement = Arrangement.spacedBy(TS.Spacing.sm),
             ) {
                 TSSecondaryButton(
-                    text = "Wachtwoord",
+                    text = stringResource(R.string.admin_users_password_button),
                     onClick = { showResetPasswordDialog = true },
                 )
                 if (user.twofaEnabled == true) {
                     TSSecondaryButton(
-                        text = "Reset 2FA",
+                        text = stringResource(R.string.admin_users_reset_2fa),
                         onClick = { onReset2FA(userId) },
                     )
                 }
@@ -503,7 +505,7 @@ private fun UserCard(
                 IconButton(onClick = { showDeleteDialog = true }) {
                     Icon(
                         imageVector = Icons.Default.Delete,
-                        contentDescription = "Verwijderen",
+                        contentDescription = stringResource(R.string.admin_users_delete_cd),
                         tint = StatusError,
                     )
                 }
@@ -524,27 +526,27 @@ private fun CreateUserDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Nieuwe gebruiker") },
+        title = { Text(stringResource(R.string.admin_create_user_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(TS.Spacing.sm)) {
                 OutlinedTextField(
                     value = username,
                     onValueChange = { username = it },
-                    label = { Text("E-mailadres") },
+                    label = { Text(stringResource(R.string.admin_create_user_email)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
                 OutlinedTextField(
                     value = password,
                     onValueChange = { password = it },
-                    label = { Text("Wachtwoord") },
+                    label = { Text(stringResource(R.string.admin_create_user_password)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("Naam (optioneel)") },
+                    label = { Text(stringResource(R.string.admin_create_user_name)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -552,12 +554,12 @@ private fun CreateUserDialog(
                     FilterChip(
                         selected = role == "user",
                         onClick = { role = "user" },
-                        label = { Text("Gebruiker") },
+                        label = { Text(stringResource(R.string.admin_create_user_role_user)) },
                     )
                     FilterChip(
                         selected = role == "admin",
                         onClick = { role = "admin" },
-                        label = { Text("Admin") },
+                        label = { Text(stringResource(R.string.admin_create_user_role_admin)) },
                     )
                 }
             }
@@ -574,12 +576,12 @@ private fun CreateUserDialog(
                 },
                 enabled = username.isNotBlank() && password.isNotBlank(),
             ) {
-                Text("Aanmaken")
+                Text(stringResource(R.string.admin_create_user_confirm))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Annuleren")
+                Text(stringResource(R.string.admin_create_user_cancel))
             }
         },
     )
@@ -595,14 +597,14 @@ private fun ResetPasswordDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Wachtwoord resetten") },
+        title = { Text(stringResource(R.string.admin_reset_password_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(TS.Spacing.sm)) {
-                Text("Nieuw wachtwoord voor $username")
+                Text(stringResource(R.string.admin_reset_password_message, username))
                 OutlinedTextField(
                     value = newPassword,
                     onValueChange = { newPassword = it },
-                    label = { Text("Nieuw wachtwoord") },
+                    label = { Text(stringResource(R.string.admin_reset_password_label)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -613,18 +615,18 @@ private fun ResetPasswordDialog(
                 onClick = { onConfirm(newPassword) },
                 enabled = newPassword.isNotBlank(),
             ) {
-                Text("Resetten")
+                Text(stringResource(R.string.admin_reset_password_confirm))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Annuleren")
+                Text(stringResource(R.string.admin_reset_password_cancel))
             }
         },
     )
 }
 
-// ── Tab 2: Invite Codes ─────────────────────────────────────────────────
+// -- Tab 2: Invite Codes --
 
 @Composable
 private fun InvitesTab(
@@ -660,7 +662,7 @@ private fun InvitesTab(
 
         item {
             TSPrimaryButton(
-                text = "Nieuwe code",
+                text = stringResource(R.string.admin_invites_create),
                 onClick = { showCreateDialog = true },
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -676,7 +678,7 @@ private fun InvitesTab(
                 ) {
                     EmptyState(
                         icon = Icons.Default.VpnKey,
-                        title = "Geen uitnodigingscodes",
+                        title = stringResource(R.string.admin_invites_empty),
                     )
                 }
             }
@@ -703,9 +705,9 @@ private fun InviteCodeCard(
 
     if (showDeleteDialog) {
         ConfirmDialog(
-            title = "Code verwijderen",
-            message = "Weet je zeker dat je code ${inviteCode.code} wilt verwijderen?",
-            confirmText = "Verwijderen",
+            title = stringResource(R.string.admin_invites_delete_title),
+            message = stringResource(R.string.admin_invites_delete_message, inviteCode.code),
+            confirmText = stringResource(R.string.admin_feedback_delete_confirm),
             onConfirm = {
                 onDelete()
                 showDeleteDialog = false
@@ -739,14 +741,14 @@ private fun InviteCodeCard(
                     }) {
                         Icon(
                             imageVector = Icons.Default.ContentCopy,
-                            contentDescription = "Kopieer code",
+                            contentDescription = stringResource(R.string.admin_invites_copy_cd),
                             modifier = Modifier.size(20.dp),
                         )
                     }
                     IconButton(onClick = { showDeleteDialog = true }) {
                         Icon(
                             imageVector = Icons.Default.Delete,
-                            contentDescription = "Verwijderen",
+                            contentDescription = stringResource(R.string.admin_invites_delete_cd),
                             tint = StatusError,
                             modifier = Modifier.size(20.dp),
                         )
@@ -761,13 +763,13 @@ private fun InviteCodeCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Text(
-                    text = "Gebruikt: ${inviteCode.currentUses}/${inviteCode.maxUses}",
+                    text = stringResource(R.string.admin_invites_usage, inviteCode.currentUses, inviteCode.maxUses),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 if (inviteCode.expiresAt != null) {
                     Text(
-                        text = "Verloopt: ${formatDateTime(inviteCode.expiresAt)}",
+                        text = stringResource(R.string.admin_invites_expires, formatDateTime(inviteCode.expiresAt)),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -776,7 +778,7 @@ private fun InviteCodeCard(
 
             if (!inviteCode.isActive) {
                 Spacer(modifier = Modifier.height(TS.Spacing.xs))
-                StatusBadge(text = "Inactief", color = StatusError)
+                StatusBadge(text = stringResource(R.string.admin_invites_inactive), color = StatusError)
             }
         }
     }
@@ -792,20 +794,20 @@ private fun CreateInviteDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Nieuwe uitnodigingscode") },
+        title = { Text(stringResource(R.string.admin_invites_create_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(TS.Spacing.sm)) {
                 OutlinedTextField(
                     value = maxUses,
                     onValueChange = { maxUses = it.filter { c -> c.isDigit() } },
-                    label = { Text("Max aantal keer te gebruiken") },
+                    label = { Text(stringResource(R.string.admin_invites_max_uses)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
                 OutlinedTextField(
                     value = expiresHours,
                     onValueChange = { expiresHours = it.filter { c -> c.isDigit() } },
-                    label = { Text("Geldig voor (uren)") },
+                    label = { Text(stringResource(R.string.admin_invites_valid_hours)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -820,18 +822,18 @@ private fun CreateInviteDialog(
                     )
                 },
             ) {
-                Text("Aanmaken")
+                Text(stringResource(R.string.admin_invites_create_confirm))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Annuleren")
+                Text(stringResource(R.string.admin_invites_create_cancel))
             }
         },
     )
 }
 
-// ── Tab 3: Feedback ─────────────────────────────────────────────────────
+// -- Tab 3: Feedback --
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -854,8 +856,8 @@ private fun FeedbackTab(
         ) {
             EmptyState(
                 icon = Icons.Default.Feedback,
-                title = "Geen feedback",
-                subtitle = "Er is nog geen feedback ontvangen",
+                title = stringResource(R.string.admin_feedback_empty_title),
+                subtitle = stringResource(R.string.admin_feedback_empty_subtitle),
             )
         }
         return
@@ -900,9 +902,9 @@ private fun FeedbackCard(
 
     if (showDeleteDialog) {
         ConfirmDialog(
-            title = "Feedback verwijderen",
-            message = "Weet je zeker dat je dit feedback-item wilt verwijderen?",
-            confirmText = "Verwijderen",
+            title = stringResource(R.string.admin_feedback_delete_title),
+            message = stringResource(R.string.admin_feedback_delete_message),
+            confirmText = stringResource(R.string.admin_feedback_delete_confirm),
             onConfirm = {
                 onDelete(feedbackId)
                 showDeleteDialog = false
@@ -929,7 +931,7 @@ private fun FeedbackCard(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = feedback.title ?: "Geen titel",
+                        text = feedback.title ?: stringResource(R.string.admin_feedback_no_title),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
                         maxLines = if (expanded) Int.MAX_VALUE else 1,
@@ -968,7 +970,7 @@ private fun FeedbackCard(
             ) {
                 Icon(
                     imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                    contentDescription = if (expanded) "Inklappen" else "Uitklappen",
+                    contentDescription = if (expanded) stringResource(R.string.admin_feedback_collapse) else stringResource(R.string.admin_feedback_expand),
                     modifier = Modifier.size(16.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -988,7 +990,7 @@ private fun FeedbackCard(
 
                 if (feedback.createdAt != null) {
                     Text(
-                        text = "Ontvangen: ${formatDateTime(feedback.createdAt)}",
+                        text = stringResource(R.string.admin_feedback_received, formatDateTime(feedback.createdAt)),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -999,7 +1001,7 @@ private fun FeedbackCard(
                 OutlinedTextField(
                     value = adminResponse,
                     onValueChange = { adminResponse = it },
-                    label = { Text("Admin reactie") },
+                    label = { Text(stringResource(R.string.admin_feedback_response_label)) },
                     modifier = Modifier.fillMaxWidth(),
                     minLines = 2,
                     maxLines = 5,
@@ -1016,7 +1018,7 @@ private fun FeedbackCard(
                     // Status dropdown
                     Box {
                         TSSecondaryButton(
-                            text = "Status: ${feedback.status ?: "open"}",
+                            text = stringResource(R.string.admin_feedback_status_prefix, feedback.status ?: "open"),
                             onClick = { showStatusMenu = true },
                         )
                         DropdownMenu(
@@ -1037,7 +1039,7 @@ private fun FeedbackCard(
 
                     if (adminResponse.isNotBlank() && adminResponse != (feedback.adminResponse ?: "")) {
                         TSPrimaryButton(
-                            text = "Opslaan",
+                            text = stringResource(R.string.admin_feedback_save),
                             onClick = { onUpdateResponse(feedbackId, adminResponse) },
                         )
                     }
@@ -1047,7 +1049,7 @@ private fun FeedbackCard(
                     IconButton(onClick = { showDeleteDialog = true }) {
                         Icon(
                             imageVector = Icons.Default.Delete,
-                            contentDescription = "Verwijderen",
+                            contentDescription = stringResource(R.string.admin_feedback_delete_cd),
                             tint = StatusError,
                         )
                     }
@@ -1063,15 +1065,16 @@ private fun feedbackStatusColor(status: String?) = when (status) {
     else -> BrandSecondary
 }
 
+@Composable
 private fun feedbackStatusLabel(status: String) = when (status) {
-    "open" -> "Open"
-    "in_progress" -> "In behandeling"
-    "resolved" -> "Opgelost"
-    "closed" -> "Gesloten"
+    "open" -> stringResource(R.string.admin_feedback_status_open)
+    "in_progress" -> stringResource(R.string.admin_feedback_status_in_progress)
+    "resolved" -> stringResource(R.string.admin_feedback_status_resolved)
+    "closed" -> stringResource(R.string.admin_feedback_status_closed)
     else -> status
 }
 
-// ── Tab 4: Error Logs ───────────────────────────────────────────────────
+// -- Tab 4: Error Logs --
 
 @Composable
 private fun ErrorLogsTab(
@@ -1102,7 +1105,7 @@ private fun ErrorLogsTab(
                 FilterChip(
                     selected = severityFilter == null,
                     onClick = { onSeverityFilterChange(null) },
-                    label = { Text("Alle") },
+                    label = { Text(stringResource(R.string.admin_logs_filter_all)) },
                 )
                 FilterChip(
                     selected = severityFilter == "error",
@@ -1132,8 +1135,8 @@ private fun ErrorLogsTab(
                 ) {
                     EmptyState(
                         icon = Icons.Default.BugReport,
-                        title = "Geen logs",
-                        subtitle = "Er zijn geen foutmeldingen gevonden",
+                        title = stringResource(R.string.admin_logs_empty_title),
+                        subtitle = stringResource(R.string.admin_logs_empty_subtitle),
                     )
                 }
             }
@@ -1176,7 +1179,7 @@ private fun ErrorLogCard(log: ErrorLog) {
                         color = severityColor(log.severity),
                     )
                     Text(
-                        text = log.message ?: "Geen bericht",
+                        text = log.message ?: stringResource(R.string.admin_logs_no_message),
                         style = MaterialTheme.typography.bodyMedium,
                         maxLines = if (expanded) Int.MAX_VALUE else 1,
                         overflow = TextOverflow.Ellipsis,
@@ -1184,7 +1187,7 @@ private fun ErrorLogCard(log: ErrorLog) {
                 }
                 Icon(
                     imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                    contentDescription = if (expanded) "Inklappen" else "Uitklappen",
+                    contentDescription = if (expanded) stringResource(R.string.admin_feedback_collapse) else stringResource(R.string.admin_feedback_expand),
                     modifier = Modifier.size(16.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -1217,7 +1220,7 @@ private fun ErrorLogCard(log: ErrorLog) {
                 if (log.username != null) {
                     Spacer(modifier = Modifier.height(TS.Spacing.xs))
                     Text(
-                        text = "Gebruiker: ${log.username}",
+                        text = stringResource(R.string.admin_logs_user, log.username),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -1244,7 +1247,7 @@ private fun severityColor(severity: String?) = when (severity?.lowercase()) {
     else -> BrandAccent
 }
 
-// ── Tab 5: Settings ─────────────────────────────────────────────────────
+// -- Tab 5: Settings --
 
 @Composable
 private fun SettingsTab(
@@ -1283,7 +1286,7 @@ private fun SettingsTab(
             OutlinedTextField(
                 value = webhookUrl,
                 onValueChange = { webhookUrl = it },
-                label = { Text("Webhook URL") },
+                label = { Text(stringResource(R.string.admin_settings_webhook_url)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -1293,7 +1296,7 @@ private fun SettingsTab(
             OutlinedTextField(
                 value = notificationWebhookUrl,
                 onValueChange = { notificationWebhookUrl = it },
-                label = { Text("Notificatie webhook URL") },
+                label = { Text(stringResource(R.string.admin_settings_notification_webhook)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -1303,7 +1306,7 @@ private fun SettingsTab(
             OutlinedTextField(
                 value = ms365ClientId,
                 onValueChange = { ms365ClientId = it },
-                label = { Text("Microsoft 365 Client ID") },
+                label = { Text(stringResource(R.string.admin_settings_ms365_client_id)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -1313,7 +1316,7 @@ private fun SettingsTab(
             OutlinedTextField(
                 value = ms365TenantId,
                 onValueChange = { ms365TenantId = it },
-                label = { Text("Microsoft 365 Tenant ID") },
+                label = { Text(stringResource(R.string.admin_settings_ms365_tenant_id)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -1321,7 +1324,7 @@ private fun SettingsTab(
 
         item {
             TSPrimaryButton(
-                text = if (isSaving) "Opslaan..." else "Opslaan",
+                text = if (isSaving) stringResource(R.string.admin_settings_saving) else stringResource(R.string.admin_settings_save),
                 onClick = {
                     onSave(
                         AdminSettings(
@@ -1341,7 +1344,7 @@ private fun SettingsTab(
     }
 }
 
-// ── Shared Components ───────────────────────────────────────────────────
+// -- Shared Components --
 
 @Composable
 private fun LoadingIndicator() {
@@ -1372,7 +1375,7 @@ private fun ConfirmDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Annuleren")
+                Text(stringResource(R.string.admin_confirm_cancel))
             }
         },
     )

@@ -26,10 +26,20 @@ fun AppNavHost(
         startDestination = if (isAuthenticated) Home else Login,
         modifier = modifier,
     ) {
-        composable<Login> { LoginScreen() }
+        composable<Login> {
+            LoginScreen(onLoginSuccess = {
+                navController.navigate(Home) {
+                    popUpTo<Login> { inclusive = true }
+                }
+            })
+        }
         composable<Home> { HomeScreen() }
         composable<Recording> { RecordingScreen() }
-        composable<Tasks> { TasksScreen() }
+        composable<Tasks> {
+            TasksScreen(onNavigateToTranscript = { id ->
+                navController.navigate(TranscriptDetail(id))
+            })
+        }
         composable<Transcripts> { TranscriptsScreen() }
         composable<TranscriptDetail> { backStackEntry ->
             val detail = backStackEntry.toRoute<TranscriptDetail>()

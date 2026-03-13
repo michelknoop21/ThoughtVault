@@ -2,7 +2,9 @@ name: Release Build
 
 on:
   push:
-    tags: ['v*']
+    tags:
+      - 'v*'        # Production: git tag v1.0.50 && git push github v1.0.50
+      - 'dev-v*'    # Dev: git tag dev-v1.0.50 && git push github dev-v1.0.50
   workflow_dispatch:
     inputs:
       channel:
@@ -37,7 +39,11 @@ jobs:
         id: version
         run: |
           if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            # v1.0.50 → 1.0.50
             echo "version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+          elif [[ "$GITHUB_REF" == refs/tags/dev-v* ]]; then
+            # dev-v1.0.50 → 1.0.50
+            echo "version=${GITHUB_REF_NAME#dev-v}" >> $GITHUB_OUTPUT
           else
             VERSION=$(cat VERSION | tr -d '[:space:]')
             echo "version=$VERSION" >> $GITHUB_OUTPUT
@@ -48,6 +54,8 @@ jobs:
         run: |
           if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
             echo "channel=production" >> $GITHUB_OUTPUT
+          elif [[ "$GITHUB_REF" == refs/tags/dev-v* ]]; then
+            echo "channel=dev" >> $GITHUB_OUTPUT
           else
             echo "channel=${{ inputs.channel || 'dev' }}" >> $GITHUB_OUTPUT
           fi
@@ -314,3 +322,49 @@ jobs:
           echo "  macOS:    https://n8n.prezent.nl/tstudio/download/$DMG_NAME"
           echo "  Windows:  https://n8n.prezent.nl/tstudio/download/$MSI_X64_NAME"
           echo "  Manifest: https://n8n.prezent.nl/tstudio/download/releases.json"
+
+      - name: Extract release notes from CHANGELOG
+        id: notes
+        run: |
+          # Extract the first changelog section (everything between first and second "---")
+          NOTES=$(awk '/^---$/{n++} n==1{if(!/^---$/)print} n==2{exit}' docs/CHANGELOG.md)
+          if [ -z "$NOTES" ]; then
+            NOTES="Release v$VERSION ($CHANNEL)"
+          fi
+          # Write to file to preserve formatting
+          echo "$NOTES" > /tmp/release-notes.md
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG_NAME="${{ github.ref_name }}"
+          PRERELEASE=""
+
+          # For workflow_dispatch (no tag), create the tag first
+          if [[ "$TAG_NAME" != v* ]] && [[ "$TAG_NAME" != dev-v* ]]; then
+            if [ "$CHANNEL" = "production" ]; then
+              TAG_NAME="v$VERSION"
+            else
+              TAG_NAME="dev-v$VERSION"
+            fi
+            git tag "$TAG_NAME" || true
+            git push origin "$TAG_NAME" 2>/dev/null || true
+          fi
+
+          # Dev releases are pre-releases
+          if [ "$CHANNEL" = "dev" ]; then
+            PRERELEASE="--prerelease"
+            TITLE="TranscriptStudio Dev v$VERSION"
+          else
+            TITLE="TranscriptStudio v$VERSION"
+          fi
+
+          # Delete existing release for this tag (in case of re-deploy)
+          gh release delete "$TAG_NAME" --yes 2>/dev/null || true
+
+          gh release create "$TAG_NAME" \
+            --title "$TITLE" \
+            --notes-file /tmp/release-notes.md \
+            $PRERELEASE \
+            build/$DMG_NAME build/$MSI_X64_NAME

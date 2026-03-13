@@ -1,6 +1,6 @@
 # TranscriptStudio — Architecture
 
-_Last updated: 2026-03-12_
+_Last updated: 2026-03-13_
 
 ---
 
@@ -138,7 +138,7 @@ TranscriptStudio/
 │   ├── ProcessingView.swift            # SSE progress display during transcription
 │   ├── NotuleResultView.swift          # Rendered HTML notes + export actions
 │   ├── SettingsView.swift              # App preferences, server URL, on-device toggle
-│   ├── ProfilesView.swift              # Profile CRUD
+│   ├── ProfilesView.swift              # Profile CRUD with style picker (Zakelijk/Informeel/Technisch) + single opdracht field
 │   ├── AccountView.swift               # GDPR: data export, account deletion
 │   └── Components/
 │       ├── WaveformView.swift          # Animated level meter waveform
@@ -161,7 +161,7 @@ TranscriptStudio/
 
 | Service | Type | Responsibility |
 |---------|------|---------------|
-| `APIService` | `actor` | REST calls, SSE streaming, retry with exponential backoff, field mapping |
+| `APIService` | `actor` | REST calls, SSE streaming, retry with exponential backoff, field mapping, upload progress via `UploadProgressDelegate` |
 | `AudioRecorder` | `@Observable class` | AVFoundation mic capture, 16 kHz WAV, 60 Hz level metering, pause/resume, 7-day cleanup |
 | `SystemAudioCapture` | `@Observable class` | ScreenCaptureKit system audio, `SCStreamConfiguration` audio-only mode |
 | `OnDeviceTranscriber` | `actor` | SFSpeechRecognizer on-device transcription, optional whisper-rs GGML |

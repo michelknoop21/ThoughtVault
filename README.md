@@ -2,7 +2,7 @@
 
 Cross-platform desktop app voor vergaderopnames, transcriptie en automatische notulengeneratie. Native macOS client (Swift 6 / SwiftUI) en Windows client (Tauri 2 / React) met een gedeelde FastAPI + Whisper backend.
 
-**Versie:** 1.0.49
+**Versie:** 1.0.50
 **Bundle ID:** `nl.prezent.TranscriptStudio`
 **Repository:** [gitlab.prezent.nl/michelk/transcript-studio-native](https://gitlab.prezent.nl/michelk/transcript-studio-native)
 **Backend:** `https://n8n.prezent.nl/tstudio/api/`
@@ -432,4 +432,4 @@ Gedetailleerde documentatie staat in [`docs/`](docs/):
 
 ---
 
-*Prezent Internet B.V. — TranscriptStudio v1.0.49*
+*Prezent Internet B.V. — TranscriptStudio v1.0.50*

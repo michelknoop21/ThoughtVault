@@ -501,6 +501,24 @@ _Append-only log. Each entry records context, decision, and consequences._
 
 ---
 
+## DEC-031 — Build-Time Overrides for Dev/Production Channels
+
+**Date:** 2026-03-13
+**Status:** Accepted
+
+**Context:** Elke build was automatisch een productie-release. Er was geen manier om snel een dev/beta build te maken met eigen bundle ID voor side-by-side installatie naast productie. Een dev pipeline was nodig voor het testen van nieuwe functies voordat ze naar productie gaan.
+
+**Decision:** Build-time overrides via een `BUILD_CHANNEL` environment variabele (standaard `dev`). Geen bestanden in de repo worden permanent aangepast — `pbxproj` en `tauri.conf.json` behouden hun productie-waarden. Dev builds overschrijven ze tijdelijk: macOS via xcodebuild command-line settings (`PRODUCT_BUNDLE_IDENTIFIER`, `PRODUCT_NAME`), Windows via de `TAURI_CONFIG` env var die een JSON merge doet over tauri.conf.json. Een gedeeld `scripts/env.sh` bestand centraliseert alle channel-afhankelijke configuratie. GitHub Actions krijgt `workflow_dispatch` trigger naast de bestaande tag trigger. Het releases.json manifest op de server bevat aparte `dev_*` velden naast de bestaande productie-velden.
+
+**Consequences:**
+- Dev en productie builds zijn side-by-side installeerbaar (gescheiden bundle ID's en app data).
+- Repository source files blijven altijd productie-waarden — geen risico op per ongeluk deployen met dev-configuratie.
+- Dev is de standaard bij lokale builds en manual dispatch; productie vereist expliciet `--production` of een `v*` tag push.
+- De download page toont automatisch een beta sectie wanneer dev builds beschikbaar zijn.
+- `scripts/env.sh` is de single source of truth voor channel-configuratie — alle scripts sourcen dit bestand.
+
+---
+
 ## DEC-030 — Auto-Pagination for Transcript Loading
 
 **Date:** 2026-03-12
@@ -515,3 +533,21 @@ _Append-only log. Each entry records context, decision, and consequences._
 - Initial load time increases linearly with transcript count (one API call per 100 items).
 - Partial load on error preserves user experience — some data is better than no data.
 - No UI pagination controls needed — the list loads completely on mount.
+
+---
+
+## DEC-032 — Simplified Profile Creation with Style Picker
+
+**Date:** 2026-03-13
+**Status:** Accepted
+
+**Context:** Profile creation required users to fill in three text fields: "Systeemprompt" (AI personality/role), "Notulenprompt" (instructions for note generation), and "Sjabloon" (HTML template). User feedback indicated this was confusing — most users don't understand the difference between a system prompt and a notule prompt, and the technical jargon ("prompt", "sjabloon") was a barrier. The majority of use cases fall into one of three styles (zakelijk, informeel, technisch) that only differ in the system prompt.
+
+**Decision:** Replace the dual-prompt form with a simplified flow in both macOS (`ProfilesView.swift → ProfileEditSheet`) and Windows (`ProfilesPage.tsx`). The new form has: (1) a **name** field, (2) a visual **style picker** with three options (Zakelijk/Informeel/Technisch) — each with an icon, label, and description — that maps to a predefined system prompt, and (3) a single **opdracht** field ("Wat moet er in de notulen staan?") with placeholder examples. The system prompt and HTML template fields are preserved in a collapsible "Geavanceerde opties" section for power users. When editing an existing profile, the style picker auto-detects which style matches the saved system prompt; profiles with custom system prompts open in advanced mode.
+
+**Consequences:**
+- Profile creation reduced from 3 required fields to 2 (name + opdracht). Style defaults to "Zakelijk".
+- Backend API contract unchanged — clients still send `system_prompt` + `notule_prompt` strings. The simplification is entirely client-side.
+- Existing profiles with custom system prompts continue to work — they show the advanced section when edited.
+- The three style system prompts match the existing default profiles in `Models.swift` / `types.ts`, ensuring consistency.
+- Users who need full control can still access the raw system prompt via the advanced toggle.

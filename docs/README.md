@@ -71,7 +71,7 @@ Requires Azure AD App Registration with:
 
 ## Version
 
-Current version: **1.0.49** (tracked in `VERSION` file, auto-bumped on commits to `main`).
+Current version: **1.0.50** (tracked in `VERSION` file, auto-bumped on commits to `main`).
 
 Repository: [gitlab.prezent.nl/michelk/transcript-studio-native](https://gitlab.prezent.nl/michelk/transcript-studio-native)
 
@@ -79,15 +79,19 @@ Repository: [gitlab.prezent.nl/michelk/transcript-studio-native](https://gitlab.
 
 ## Building & Releasing
 
-Release artifacts (DMG/MSI) are built and distributed via scripts in `scripts/`:
+Release builds are deployed via GitHub Actions. Two deploy scripts handle the full flow:
 
 ```bash
-./scripts/release.sh              # Full pipeline: sync version → build → upload
-./scripts/release.sh --no-upload  # Build without uploading
-./scripts/sync-version.sh         # Sync VERSION to all platform configs
+./scripts/deploy-dev.sh           # Dev build → GitHub Actions → download page (beta section)
+./scripts/deploy-production.sh    # Production build → GitHub Actions → download page
 ```
 
-Or use the `.command` files in `scripts/` — double-click in Finder to run.
+Local builds (without GitHub Actions):
+```bash
+./scripts/release.sh              # Dev build + upload (default)
+./scripts/release.sh --production # Production build + upload
+./scripts/release.sh --no-upload  # Build without uploading
+```
 
 Downloads hosted at: `https://n8n.prezent.nl/tstudio/download/`
 

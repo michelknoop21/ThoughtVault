@@ -5,6 +5,63 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2026-03-13] — Profile UX simplification + timezone fix (v1.0.50)
+
+### Changed
+- **Simplified profile creation** (macOS `ProfilesView.swift`, Windows `ProfilesPage.tsx`): Replaced the confusing dual-prompt form (system prompt + notule prompt) with a streamlined flow. Users now pick a **style** (Zakelijk/Informeel/Technisch) from a visual card selector and enter a single **opdracht** describing what the notes should contain. The style determines the AI's system prompt automatically. Previous "system prompt" and "HTML template" fields are hidden behind a collapsible "Geavanceerde opties" section for power users. Existing profiles with custom system prompts are automatically detected and shown in advanced mode when edited.
+- **Profile form labels** (macOS + Windows): Field labels changed from technical jargon ("Systeemprompt", "Notulenprompt") to user-friendly Dutch ("Stijl", "Wat moet er in de notulen staan?") with placeholder examples and descriptive footer text.
+
+### Fixed
+- **Email timestamps show Amsterdam time** (backend `routes/transcription.py`): Notification emails ("Notule klaar" and "Veiligheidscontrole geblokkeerd") displayed UTC time (e.g., "14:30 UTC"). Changed to `Europe/Amsterdam` timezone using `ZoneInfo`. The Dockerfile already had `TZ=Europe/Amsterdam` configured, but the Python code explicitly used `datetime.now(timezone.utc)` for display formatting. Internal API timestamps (ISO format for client consumption) remain UTC — clients handle timezone conversion via their own `DateFormatter` / locale settings.
+
+### Decisions
+- Zie [DEC-032](DECISIONS.md) voor de rationale achter de profiel UX vereenvoudiging.
+
+### Notes
+- Backend change deployed directly via `scp` + `docker restart n8n_transcript_studio`.
+- The three default styles (Zakelijk/Informeel/Technisch) use the same system prompts as the existing default profiles in `Models.swift` / `types.ts`, ensuring backward compatibility.
+- Backend API contract unchanged — still receives `system_prompt` + `notule_prompt` strings. The simplification is entirely client-side.
+
+---
+
+## [2026-03-13] — Real-time upload progress tracking (macOS & Windows)
+
+### Added
+- **Upload progress delegate** (macOS, `APIService.swift`): New `UploadProgressDelegate` class implementing `URLSessionTaskDelegate` with `urlSession(_:task:didSendBodyData:totalBytesSent:totalBytesExpectedToSend:)`. Reports byte-level upload progress (capped at 0.99 to reserve 1.0 for confirmed completion). The `uploadAudio()` method now uses `session.upload(for:from:delegate:)` instead of `session.data(for:)`, removing `req.httpBody` since the body is passed directly to the upload call.
+- **XHR-based upload with progress** (Windows, `api.ts`): New `uploadRecordingWithProgress()` method using `XMLHttpRequest` with `upload.onprogress` for real-time byte progress. Browser `fetch()` doesn't support upload progress events, so XHR is used. Same FormData construction, error handling, and abort signal support as the existing `uploadRecording()`.
+
+### Changed
+- **RecordingPage upload call** (Windows, `RecordingPage.tsx` line 183): Replaced `api.uploadRecording()` with `api.uploadRecordingWithProgress()`, passing an `onProgress` callback that updates the background task progress percentage.
+
+### Notes
+- No UI changes needed — macOS `RecordingWidgetView.swift` already renders `recordingVM.uploadProgress` as a circular progress ring, and Windows `ProcessingBar.tsx` already renders `task.progress` as a percentage with animated bar.
+- Progress capped at 99% during transfer; 100% only set after server confirms successful upload.
+
+---
+
+## [2026-03-13] — Dev/beta build pipeline met GitHub Actions
+
+### Added
+- **Dev/beta build channel** (`scripts/env.sh`, `scripts/build.sh`, `scripts/release.sh`, `scripts/upload.sh`): Nieuw `BUILD_CHANNEL` systeem (standaard `dev`, expliciet `--production` voor productie). Dev builds krijgen eigen bundle ID (`nl.prezent.TranscriptStudio.dev`), app naam ("TranscriptStudio Dev"), en artifact namen (`TranscriptStudio-Dev-*.dmg`). Side-by-side installeerbaar naast productie.
+- **GitHub Actions dual-trigger** (`.github/workflows/release.yml`): Naast de bestaande `v*` tag trigger (productie) zijn er nu twee extra triggers: `dev-v*` tags voor dev builds en `workflow_dispatch` voor handmatige channel keuze. Beide channels bouwen met correcte bundle ID's, product namen en artifact namen via build-time overrides (`PRODUCT_BUNDLE_IDENTIFIER` voor xcodebuild, `TAURI_CONFIG` env var voor Tauri).
+- **GitHub Releases met release notes** (`.github/workflows/release.yml` deploy job): Na deploy worden automatisch GitHub Releases aangemaakt. Release notes worden uit de eerste entry van `docs/CHANGELOG.md` geëxtraheerd. Dev releases worden gemarkeerd als pre-release; productie releases als volledige release. DMG en MSI worden als downloadbare assets aan de release gehangen.
+- **Deploy scripts** (`scripts/deploy-dev.sh`, `scripts/deploy-production.sh`): One-command deploy scripts. `deploy-dev.sh` maakt een `dev-v{version}` tag en pusht naar GitHub; `deploy-production.sh` maakt een `v{version}` tag. Beide pushen eerst de laatste commits, creëren de tag, en laten GitHub Actions de rest doen (build → upload → release notes).
+- **Dev sectie op download page** (`scripts/download-page.html`): "Ontwikkelversie (Beta)" sectie met oranje badge, wordt automatisch getoond wanneer `dev_*` velden in releases.json aanwezig zijn. Leest `dev_macos` en `dev_windows_x64` uit het manifest.
+- **Shared build config** (`scripts/env.sh`): Nieuw bestand dat door alle build scripts wordt gesourced. Centraliseert `VERSION`, `BUILD_DIR`, `SERVER`, en channel-afhankelijke variabelen (`APP_DISPLAY_NAME`, `BUNDLE_ID_MACOS`, `DMG_NAME`, etc.).
+
+### Changed
+- **Dynamische TitleBar** (`transcript-studio-windows/src/components/layout/TitleBar.tsx`): Hardcoded "TranscriptStudio" vervangen door `getName()` uit `@tauri-apps/api/app`. Toont automatisch "TranscriptStudio Dev" of "TranscriptStudio" afhankelijk van build channel.
+- **releases.json manifest**: Dev builds schrijven naar `dev_latest_version`, `dev_macos`, `dev_windows_x64` velden. Productie builds schrijven naar de bestaande velden. Beide channels bestaan naast elkaar in hetzelfde manifest.
+
+### Decisions
+- Zie [DEC-031](DECISIONS.md) voor de rationale achter build-time overrides vs. repository wijzigingen.
+
+### Notes
+- Workflow: `v*` tag push = automatische productie build. Manual dispatch = keuze dev (default) of production.
+- Lokaal: `./scripts/release.sh` = dev, `./scripts/release.sh --production` = productie.
+
+---
+
 ## [2026-03-12] — Fix biometric toggle race condition (v1.0.49)
 
 ### Fixed

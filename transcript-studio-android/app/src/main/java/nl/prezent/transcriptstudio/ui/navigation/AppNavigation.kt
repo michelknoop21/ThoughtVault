@@ -62,6 +62,10 @@ fun AppNavHost(
                 onNavigateToAdmin = { navController.navigate(Admin) },
             )
         }
-        composable<Admin> { AdminScreen() }
+        composable<Admin> {
+            AdminScreen(
+                onNavigateBack = { navController.popBackStack() },
+            )
+        }
     }
 }

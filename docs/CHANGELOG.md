@@ -5,6 +5,27 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2026-03-13] — Directory herstructurering per platform
+
+### Changed
+- **Directory renames** (`git mv`): `TranscriptStudio/` → `macos/`, `transcript-studio-windows/` → `windows/`, `RecordingActivityWidget/` → `ios-widget/`. Consistent lowercase platform namen op root level. `TranscriptStudio.xcodeproj` en `TranscriptStudioTests` blijven ongewijzigd (Xcode scheme/target namen).
+- **Xcode project** (`TranscriptStudio.xcodeproj/project.pbxproj`): Group path `TranscriptStudio` → `macos`, entitlements paden (`CODE_SIGN_ENTITLEMENTS`), en `INFOPLIST_FILE` bijgewerkt naar `macos/` prefix.
+- **Build scripts** (`scripts/sync-version.sh`, `build.sh`, `upload.sh`, `sync-version.ps1`, `build.ps1`, `upload.ps1`): Alle `transcript-studio-windows` referenties → `windows`.
+- **GitHub Actions** (`.github/workflows/release.yml`): `working-directory` en `find` paden bijgewerkt.
+- **Documentatie** (`CLAUDE.md`, `README.md`, `docs/ARCHITECTURE.md`, `docs/RELEASE.md`, `docs/README.md`, `docs/CHANGELOG.md`, `skills/transcript-studio-android.md`): Alle directory referenties bijgewerkt.
+- **`.gitignore`**: Ignore patterns van `transcript-studio-windows/` → `windows/`.
+
+### Decisions
+- Zie [DEC-034](DECISIONS.md) voor de rationale.
+
+### Notes
+- `git mv` behoudt history tracking.
+- macOS build geverifieerd: `xcodebuild ... build CODE_SIGNING_ALLOWED=NO` — **BUILD SUCCEEDED**.
+- `scripts/sync-version.sh` geverifieerd: alle 3 platform configs succesvol bijgewerkt.
+- Historische plan-bestanden in `docs/plans/` en `.claude/plans/` zijn niet bijgewerkt — dit zijn snapshots van eerdere sessies.
+
+---
+
 ## [2026-03-13] — Documentatie: Apple telefonie beperking
 
 ### Added
@@ -57,7 +78,7 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Shared build config** (`scripts/env.sh`): Nieuw bestand dat door alle build scripts wordt gesourced. Centraliseert `VERSION`, `BUILD_DIR`, `SERVER`, en channel-afhankelijke variabelen (`APP_DISPLAY_NAME`, `BUNDLE_ID_MACOS`, `DMG_NAME`, etc.).
 
 ### Changed
-- **Dynamische TitleBar** (`transcript-studio-windows/src/components/layout/TitleBar.tsx`): Hardcoded "TranscriptStudio" vervangen door `getName()` uit `@tauri-apps/api/app`. Toont automatisch "TranscriptStudio Dev" of "TranscriptStudio" afhankelijk van build channel.
+- **Dynamische TitleBar** (`windows/src/components/layout/TitleBar.tsx`): Hardcoded "TranscriptStudio" vervangen door `getName()` uit `@tauri-apps/api/app`. Toont automatisch "TranscriptStudio Dev" of "TranscriptStudio" afhankelijk van build channel.
 - **releases.json manifest**: Dev builds schrijven naar `dev_latest_version`, `dev_macos`, `dev_windows_x64` velden. Productie builds schrijven naar de bestaande velden. Beide channels bestaan naast elkaar in hetzelfde manifest.
 
 ### Decisions

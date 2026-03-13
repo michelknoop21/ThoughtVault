@@ -99,8 +99,8 @@ Leest de versie uit `VERSION` en past deze aan in:
 | Bestand | Wat wordt aangepast |
 |---------|-------------------|
 | `TranscriptStudio.xcodeproj/project.pbxproj` | `MARKETING_VERSION` (4x) + `CURRENT_PROJECT_VERSION` (patch als integer) |
-| `transcript-studio-windows/src-tauri/tauri.conf.json` | `"version"` veld |
-| `transcript-studio-windows/src-tauri/Cargo.toml` | eerste `version = "..."` onder `[package]` |
+| `windows/src-tauri/tauri.conf.json` | `"version"` veld |
+| `windows/src-tauri/Cargo.toml` | eerste `version = "..."` onder `[package]` |
 
 ### `build.sh` — Release artifact bouwen
 
@@ -115,7 +115,7 @@ Sources `env.sh` voor channel-configuratie. Detecteert automatisch het besturing
 
 **Windows:**
 1. Zet `TAURI_CONFIG` env var met channel-specifieke `identifier` en `productName`
-2. `npm run tauri build` in `transcript-studio-windows/`
+2. `npm run tauri build` in `windows/`
 3. Kopieert MSI uit Tauri output
 4. Output: `build/$MSI_X64_NAME`
 

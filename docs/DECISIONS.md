@@ -573,3 +573,20 @@ _Append-only log. Each entry records context, decision, and consequences._
 - Existing profiles with custom system prompts continue to work — they show the advanced section when edited.
 - The three style system prompts match the existing default profiles in `Models.swift` / `types.ts`, ensuring consistency.
 - Users who need full control can still access the raw system prompt via the advanced toggle.
+
+---
+
+## DEC-034 — Directory Restructuring to Lowercase Platform Names
+
+**Date:** 2026-03-13
+**Status:** Accepted
+
+**Context:** De repository had inconsistente directory-namen: `TranscriptStudio/` (CamelCase) voor de macOS source, `transcript-studio-windows/` (kebab-case) voor Windows, en `RecordingActivityWidget/` (CamelCase) voor de iOS widget. Met de toevoeging van `transcript-studio-android/` werd de naamgeving nog onoverzichtelijker. Nieuwe ontwikkelaars en AI-assistenten moesten telkens raden welke conventie gebruikt werd.
+
+**Decision:** Hernoem naar consistente lowercase platform namen: `macos/`, `windows/`, `ios-widget/`. Laat `TranscriptStudio.xcodeproj` en `TranscriptStudioTests` ongemoeid — deze zijn gekoppeld aan Xcode schemes, targets en build settings; hernoemen zou disproportioneel risico opleveren voor minimale winst. Gebruik `git mv` om history te behouden.
+
+**Consequences:**
+- Alle build scripts, CI/CD workflows, .gitignore, en documentatie moesten bijgewerkt worden (~20 bestanden).
+- Xcode `project.pbxproj` vereiste exacte pad-aanpassingen voor group path, entitlements, en Info.plist referenties.
+- Historische plan-bestanden (`docs/plans/`, `.claude/plans/`) zijn niet bijgewerkt — ze zijn snapshots van eerdere sessies.
+- Toekomstige platform directories volgen nu automatisch het patroon: `android/`, `web/`, etc.

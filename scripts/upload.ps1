@@ -18,7 +18,7 @@ New-Item -ItemType Directory -Force -Path $BuildDir | Out-Null
 
 # Auto-find MSI from Tauri build output if not already in build/
 if (-not (Test-Path $MsiPath)) {
-    $TauriMsi = Get-ChildItem -Path (Join-Path $RootDir "transcript-studio-windows\src-tauri\target\release\bundle") -Filter "*.msi" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+    $TauriMsi = Get-ChildItem -Path (Join-Path $RootDir "windows\src-tauri\target\release\bundle") -Filter "*.msi" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
     if ($TauriMsi) {
         Copy-Item $TauriMsi.FullName -Destination $MsiPath -Force
         Write-Host "  Found MSI in Tauri output, copied to build/"

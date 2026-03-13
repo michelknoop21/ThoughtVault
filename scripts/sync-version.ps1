@@ -28,7 +28,7 @@ if (Test-Path $Pbxproj) {
 }
 
 # 2. Tauri tauri.conf.json
-$TauriConf = Join-Path $RootDir "transcript-studio-windows\src-tauri\tauri.conf.json"
+$TauriConf = Join-Path $RootDir "windows\src-tauri\tauri.conf.json"
 if (Test-Path $TauriConf) {
     $content = Get-Content $TauriConf -Raw
     $content = $content -replace '"version": "[^"]*"', "`"version`": `"$Version`""
@@ -39,7 +39,7 @@ if (Test-Path $TauriConf) {
 }
 
 # 3. Cargo.toml — first version under [package] only
-$CargoToml = Join-Path $RootDir "transcript-studio-windows\src-tauri\Cargo.toml"
+$CargoToml = Join-Path $RootDir "windows\src-tauri\Cargo.toml"
 if (Test-Path $CargoToml) {
     $lines = Get-Content $CargoToml
     $done = $false

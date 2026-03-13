@@ -44,7 +44,7 @@ xcodebuild -project TranscriptStudio.xcodeproj -scheme TranscriptStudio -configu
 
 ### Windows
 ```bash
-cd transcript-studio-windows
+cd windows
 npm install          # must run inside Windows environment
 npm run tauri dev    # starts Vite dev server + Tauri window
 ```

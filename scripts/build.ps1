@@ -10,9 +10,9 @@ New-Item -ItemType Directory -Force -Path $BuildDir | Out-Null
 
 Write-Host "Building TranscriptStudio $Version for Windows..."
 
-$WindowsDir = Join-Path $RootDir "transcript-studio-windows"
+$WindowsDir = Join-Path $RootDir "windows"
 if (-not (Test-Path $WindowsDir)) {
-    Write-Error "transcript-studio-windows directory not found"
+    Write-Error "windows directory not found"
     exit 1
 }
 

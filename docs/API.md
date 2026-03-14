@@ -17,6 +17,7 @@
 - [Instellingen](#instellingen)
 - [Kalender](#kalender)
 - [Feedback](#feedback)
+- [API Keys](#api-keys)
 - [Admin Endpoints](#admin-endpoints)
 - [n8n Workflow Integratie](#n8n-workflow-integratie)
 - [Datamodellen](#datamodellen)
@@ -80,6 +81,21 @@ Authorization: Bearer <token>
 
 **Beide worden geaccepteerd door de backend.** De auth-middleware checkt eerst `X-User-Token`, dan `Authorization: Bearer`.
 
+### API key authenticatie
+
+Voor externe integraties (scripts, CI/CD, webhooks) zonder interactieve login:
+```
+X-API-Key: tskey_<32 hex chars>
+```
+
+- Key formaat: `tskey_` + 32 hex chars (38 chars totaal)
+- Twee scopes: `full` (lezen + schrijven) en `read` (alleen lezen — 403 op write endpoints)
+- Keys worden aangemaakt via sessie-token en eenmalig getoond; alleen de SHA-256 hash wordt opgeslagen
+- Max 10 actieve keys per gebruiker
+- Authenticatie volgorde: `X-User-Token` → `X-API-Key` → `X-Admin-API-Key`
+
+Zie [API Keys](#api-keys) voor CRUD endpoints.
+
 ### Admin authenticatie
 
 Server-to-server communicatie (n8n callbacks) gebruikt:
@@ -112,7 +128,7 @@ De `temp_token` is 5 minuten geldig en wordt in-memory bewaard.
 
 | Middleware | Beschrijving |
 |-----------|-------------|
-| **CORS** | Origins via `CORS_ORIGINS` env var. Standaard: `https://n8n.prezent.nl`. Methoden: GET, POST, PUT, DELETE, OPTIONS |
+| **CORS** | Origins via `CORS_ORIGINS` env var. Standaard: `https://n8n.prezent.nl`. Methoden: GET, POST, PUT, DELETE, OPTIONS. Headers: incl. `X-API-Key` |
 | **CSRF** | Valideert `Origin`/`Referer` op POST/PUT/DELETE/PATCH. Exempt: `/callback`, `/queue/callback`, `/task/`, `/health` |
 | **Rate Limiting** | Via SlowAPI, per-endpoint (zie [Rate Limiting](#rate-limiting)) |
 | **Error Logging** | Vangt unhandled exceptions, logt naar `error_logs` tabel |
@@ -610,6 +626,82 @@ Microsoft 365 OAuth tokens worden server-side opgeslagen voor cross-device sync.
 | PUT | `/tstudio/api/admin/feedback/{id}` | Status/reactie bijwerken |
 | DELETE | `/tstudio/api/admin/feedback/{id}` | Verwijderen |
 | GET | `/tstudio/api/admin/feedback/pending-count` | Aantal nieuw/onbeoordeeld |
+
+---
+
+## API Keys
+
+Beheer van per-user API keys voor externe integraties. Keys worden eenmalig getoond bij aanmaak — alleen de SHA-256 hash wordt opgeslagen.
+
+### POST `/tstudio/api/api-keys`
+Maak een nieuwe API key aan. **Alleen via sessie-token** (`X-User-Token` / `Authorization: Bearer`), niet via bestaande API key.
+
+```json
+// Request
+{
+  "name": "CI/CD pipeline",
+  "scope": "full",
+  "expires_at": "2027-01-01T00:00:00Z"
+}
+```
+
+| Veld | Verplicht | Beschrijving |
+|------|-----------|-------------|
+| `name` | Ja | Beschrijvende naam voor de key |
+| `scope` | Nee | `full` (default) of `read` |
+| `expires_at` | Nee | ISO8601 vervaldatum (null = nooit) |
+
+```json
+// Response (201)
+{
+  "id": "uuid",
+  "key": "tskey_a1b2c3d4e5f6...",
+  "name": "CI/CD pipeline",
+  "key_prefix": "tskey_a1",
+  "scope": "full",
+  "expires_at": "2027-01-01T00:00:00Z",
+  "created_at": "2026-03-14T10:00:00Z"
+}
+```
+
+> **Let op:** Het `key` veld wordt alleen in deze response getoond. Bewaar de key veilig — bij verlies moet een nieuwe aangemaakt worden.
+
+**Fouten:**
+- `400` — Max 10 actieve keys bereikt
+- `403` — Aanmaak via API key niet toegestaan (alleen sessie-token)
+
+### GET `/tstudio/api/api-keys`
+Lijst eigen API keys. Werkt met sessie-token of API key.
+
+```json
+// Response
+{
+  "keys": [
+    {
+      "id": "uuid",
+      "name": "CI/CD pipeline",
+      "key_prefix": "tskey_a1",
+      "scope": "full",
+      "is_active": true,
+      "created_at": "2026-03-14T10:00:00Z",
+      "expires_at": "2027-01-01T00:00:00Z",
+      "last_used_at": "2026-03-14T12:30:00Z"
+    }
+  ]
+}
+```
+
+### DELETE `/tstudio/api/api-keys/{id}`
+Revoke een API key (soft-delete: `is_active=false`). **Alleen via sessie-token.**
+
+```json
+// Response (200)
+{ "message": "API key revoked" }
+
+// Fouten
+// 403: Revoke via API key niet toegestaan
+// 404: Key niet gevonden of niet van deze gebruiker
+```
 
 ---
 

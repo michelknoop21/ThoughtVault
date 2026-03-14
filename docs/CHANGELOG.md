@@ -5,6 +5,30 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2026-03-14] — Per-user API keys
+
+### Added
+- **API key model** (backend `models.py`): Nieuw `ApiKey` model met SHA-256 hash opslag, `key_prefix` (eerste 8 chars voor identificatie), `scope` (`full` of `read`), `expires_at`, `is_active` soft-delete flag, en `last_used_at` tracking (max 1x per minuut bijgewerkt). Tabel wordt automatisch aangemaakt via `Base.metadata.create_all()` bij container restart.
+- **API key CRUD endpoints** (backend `routes/api_keys.py`): Nieuw routerbestand met drie endpoints:
+  - `POST /api-keys` — Maak API key aan (alleen via sessie-token, voorkomt key self-replication). Max 10 actieve keys per gebruiker. Key formaat: `tskey_` + 32 hex chars (38 chars totaal). Ruwe key wordt eenmalig getoond bij aanmaak.
+  - `GET /api-keys` — Lijst eigen keys (sessie-token of API key). Toont prefix, naam, scope, aanmaakdatum, laatste gebruik — nooit de volledige key.
+  - `DELETE /api-keys/{id}` — Revoke key via soft-delete (`is_active=false`), alleen via sessie-token.
+- **API key authenticatie** (backend `services/auth_service.py`): `get_user_by_api_key()` zoekt gebruiker op via SHA-256 hash van de meegestuurde key. `authenticate_request()` uitgebreid met 3e parameter `x_api_key` — volgorde: `X-User-Token` → `X-API-Key` → `X-Admin-API-Key`.
+- **Scope enforcement** (backend `services/auth_service.py`): `check_write_scope()` helper die 403 retourneert bij write-operaties met een `read`-scope API key. Alle write endpoints in `transcription.py`, `transcripts.py`, `profiles.py`, `notes.py`, `settings.py`, `feedback.py`, `calendar.py` controleren scope.
+- **`X-API-Key` header** (backend `app.py`): Toegevoegd aan CORS `allow_headers`, `api_keys_router` geregistreerd.
+- **Rate limiting** (backend `rate_limiting.py`): API key prefix als rate limit key (i.p.v. user token).
+- **Error logging** (backend `middleware/error_logging.py`): Fallback naar API key voor gebruikersidentificatie bij foutrapportage.
+
+### Decisions
+- Zie [DEC-036](DECISIONS.md) voor de rationale achter het API key ontwerp.
+
+### Notes
+- Alleen de backend is aangepast. Client-side UI voor API key management is nog niet geïmplementeerd.
+- Bestaande sessie-token authenticatie blijft ongewijzigd werken.
+- API keys hebben geen sliding window expiry — ze verlopen op de ingestelde `expires_at` datum (of nooit als die niet gezet is).
+
+---
+
 ## [2026-03-14] — YouTube transcriptie + Blog Samenvatting profiel
 
 ### Added

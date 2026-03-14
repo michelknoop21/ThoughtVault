@@ -608,3 +608,30 @@ _Append-only log. Each entry records context, decision, and consequences._
 - Nieuwe task status `downloading` vereist exhaustive switch updates op alle clients (macOS `TasksView.swift`, `ProcessingView.swift`; Windows `types.ts`).
 - Feature flag via `GET /features` endpoint (ongeauthenticeerd) laat clients de YouTube UI conditioneel tonen.
 - `source_type` en `source_url` kolommen op Task model voor traceerbaarheid van de bron.
+
+---
+
+## DEC-036 — Per-User API Keys met Hash-Only Opslag
+
+**Date:** 2026-03-14
+**Status:** Accepted
+
+**Context:** Externe systemen (scripts, CI/CD, integraties) moeten de TranscriptStudio API kunnen aanspreken zonder interactieve login. Sessie-tokens zijn ongeschikt: ze verlopen na 7 dagen inactiviteit en vereisen username/password om te verkrijgen. Een API key systeem is nodig dat (1) veilig is bij database-lekken, (2) scope-beperking ondersteunt, en (3) geen nieuwe aanvalsvectoren introduceert voor key-replicatie.
+
+**Decision:**
+- Key formaat: `tskey_` prefix + 32 hex chars (38 chars totaal). Prefix maakt keys herkenbaar in logs en secret scanners.
+- Alleen SHA-256 hash opgeslagen in database — ruwe key wordt eenmalig getoond bij aanmaak. Bij verlies moet een nieuwe key aangemaakt worden.
+- Twee scopes: `full` (lezen + schrijven) en `read` (alleen lezen, 403 op write endpoints). Scope enforcement op elke write route via `check_write_scope()`.
+- Authenticatie volgorde: `X-User-Token` → `X-API-Key` → `X-Admin-API-Key`. Bestaande auth flow blijft ongewijzigd.
+- API key CRUD (aanmaken, revoken) is alleen beschikbaar via sessie-token — voorkomt dat een gelekte API key zichzelf kan repliceren.
+- Max 10 actieve keys per gebruiker.
+- Soft-delete bij revoke (`is_active=false`) — audit trail blijft behouden.
+- `last_used_at` wordt max 1x per minuut bijgewerkt om database writes te beperken.
+
+**Consequences:**
+- Database-lek onthult geen bruikbare keys (alleen hashes).
+- Read-only integraties kunnen geen data muteren, zelfs bij key compromise.
+- Gelekte API key kan geen nieuwe keys aanmaken (CRUD vereist sessie-token).
+- Geen sliding window expiry op API keys — ze zijn geldig tot expliciet gerevoked of tot `expires_at`.
+- Alle bestaande route files zijn aangepast om `X-API-Key` header te accepteren en scope te controleren.
+- Client-side UI voor key management moet nog gebouwd worden (macOS, Windows, Android).

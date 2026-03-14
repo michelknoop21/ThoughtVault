@@ -368,6 +368,7 @@ Opname starten
 3. Token opgeslagen in OS Keychain (Secure Enclave op macOS)
 4. Biometrische login haalt token op via LAContext
 5. Alle requests gebruiken X-User-Token header
+6. Alternatief: X-API-Key header met per-user API key (voor externe integraties)
 ```
 
 ### Cross-platform conventies
@@ -379,7 +380,7 @@ Opname starten
 | Real-time status | SSE stream (geen polling) |
 | UI taal | Nederlands (nl_NL) overal |
 | Field mapping | Backend veldnamen worden genormaliseerd aan de API-grens per client |
-| Auth header | `X-User-Token` (macOS) of `Authorization: Bearer` (Windows) |
+| Auth header | `X-User-Token` (macOS), `Authorization: Bearer` (Windows/Android), `X-API-Key` (externe integraties) |
 | Configuratie | Geen environment variabelen — alles via Settings UI |
 
 ---

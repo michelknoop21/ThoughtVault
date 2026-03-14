@@ -12,6 +12,7 @@ TranscriptStudio is a cross-platform meeting transcription system consisting of:
 - **Windows client** — Tauri 2.10 / React 19 / TypeScript desktop app (`/windows/`)
 - **Android client** — Kotlin 2.x / Jetpack Compose / Material 3 (`/transcript-studio-android/`)
 - **iOS Widget** — SwiftUI Live Activity (`/ios-widget/`)
+- **Web app** — Server-rendered Jinja2 templates with vanilla JS (`../transcript-studio-backend/templates/`, `../transcript-studio-backend/static/`)
 - **Backend** — FastAPI (Python) with GPU-accelerated Whisper transcription and n8n workflow orchestration
 
 All clients share a common REST + SSE API and are deployed independently.
@@ -30,7 +31,7 @@ All clients share a common REST + SSE API and are deployed independently.
 - **Deploy:** `rsync` code to server + `docker restart n8n_transcript_studio` (no rebuild needed)
 - **Nginx:** `n8n_nginx` container proxies `/tstudio/` to the backend container on port 5000
 
-**Data model:** `User`, `Task`, `Note`, `Profile`, `InviteCode`, `Setting`
+**Data model:** `User`, `Task`, `Note`, `Profile`, `InviteCode`, `Setting`, `ApiKey`
 
 ### API Endpoints
 
@@ -53,7 +54,12 @@ All clients share a common REST + SSE API and are deployed independently.
 | DELETE | `/tstudio/api/task/{id}` | Delete task; active tasks cancelled first |
 | GET | `/tstudio/api/transcripts` | Returns `{items: Transcript[], total: int}` — paginate with `?page=N&limit=100` |
 
-**Authentication:** Requests use `X-User-Token: <token>` (macOS) or `Authorization: Bearer <token>` (Windows) — both accepted by backend. Login sends `username` field (which accepts email addresses as value).
+**Authentication:** Three auth methods, checked in order:
+1. `X-User-Token: <token>` (macOS) or `Authorization: Bearer <token>` (Windows/Android) — session tokens from login
+2. `X-API-Key: tskey_<32 hex>` — per-user API keys for external integrations (two scopes: `full` and `read`)
+3. `X-Admin-API-Key: <key>` — server-to-server (n8n callbacks)
+
+Login sends `username` field (which accepts email addresses as value).
 
 **Field name notes (verified against backend source):**
 - `/auth/me` returns `user_id` and `username` (not `id` / `email`)
@@ -376,7 +382,7 @@ transcript-studio-android/app/src/main/java/nl/prezent/transcriptstudio/
 | UI language | Dutch (nl_NL) throughout all clients |
 | Audio format | 16 kHz mono 16-bit PCM WAV on all platforms |
 | Field mapping | Backend field names normalized at API boundary on each client |
-| Auth headers | Both `X-User-Token` and `Authorization: Bearer` accepted by backend; macOS uses `X-User-Token`, Windows and Android use `Authorization: Bearer` |
+| Auth headers | `X-User-Token` (macOS), `Authorization: Bearer` (Windows/Android), `X-API-Key` (external integrations) — all accepted by backend |
 
 ---
 

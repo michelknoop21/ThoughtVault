@@ -33,6 +33,8 @@ class TranscriptDetailViewModel @Inject constructor(
         val isLoading: Boolean = true,
         val isEditing: Boolean = false,
         val editTitle: String = "",
+        val isEditingNotule: Boolean = false,
+        val isSavingNotule: Boolean = false,
         val error: String? = null,
         val showRegenerateDialog: Boolean = false,
         val showDeleteDialog: Boolean = false,
@@ -182,6 +184,40 @@ class TranscriptDetailViewModel @Inject constructor(
 
     fun selectTab(index: Int) {
         _uiState.update { it.copy(selectedTab = index) }
+    }
+
+    fun startEditNotule() {
+        _uiState.update { it.copy(isEditingNotule = true) }
+    }
+
+    fun cancelEditNotule() {
+        _uiState.update { it.copy(isEditingNotule = false) }
+    }
+
+    fun saveNotuleHtml(html: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isSavingNotule = true) }
+            try {
+                val updated = transcriptRepository.updateTranscript(
+                    taskId = transcriptId,
+                    notuleHtml = html,
+                )
+                _uiState.update {
+                    it.copy(
+                        transcript = updated,
+                        isEditingNotule = false,
+                        isSavingNotule = false,
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        isSavingNotule = false,
+                        error = "Kan notulen niet opslaan: ${e.localizedMessage}",
+                    )
+                }
+            }
+        }
     }
 
     fun shareTranscript(context: Context) {

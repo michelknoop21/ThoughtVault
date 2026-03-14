@@ -38,6 +38,7 @@ data class TranscriptsResponse(
 data class TranscriptUpdateRequest(
     val transcription: String? = null,
     val title: String? = null,
+    @SerialName("notule_html") val notuleHtml: String? = null,
     val tags: List<String>? = null,
     @SerialName("reset_to_original") val resetToOriginal: Boolean? = null,
 )

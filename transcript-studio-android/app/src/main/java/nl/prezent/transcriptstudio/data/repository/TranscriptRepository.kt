@@ -25,6 +25,7 @@ class TranscriptRepository @Inject constructor(
         taskId: String,
         title: String? = null,
         transcription: String? = null,
+        notuleHtml: String? = null,
         tags: List<String>? = null,
         resetToOriginal: Boolean? = null,
     ): Transcript = apiService.updateTranscript(
@@ -32,6 +33,7 @@ class TranscriptRepository @Inject constructor(
         body = TranscriptUpdateRequest(
             title = title,
             transcription = transcription,
+            notuleHtml = notuleHtml,
             tags = tags,
             resetToOriginal = resetToOriginal,
         ),

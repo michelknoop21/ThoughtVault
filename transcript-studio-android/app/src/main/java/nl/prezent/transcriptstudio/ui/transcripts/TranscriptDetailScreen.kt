@@ -1,26 +1,47 @@
 package nl.prezent.transcriptstudio.ui.transcripts
 
+import android.annotation.SuppressLint
 import android.webkit.WebView
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.FormatBold
+import androidx.compose.material.icons.filled.FormatItalic
+import androidx.compose.material.icons.filled.FormatListBulleted
+import androidx.compose.material.icons.filled.FormatListNumbered
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Title
+import androidx.compose.material.icons.filled.Undo
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -43,14 +64,18 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
 import nl.prezent.transcriptstudio.R
 import nl.prezent.transcriptstudio.ui.components.EmptyState
 import nl.prezent.transcriptstudio.ui.components.TSPrimaryButton
 import nl.prezent.transcriptstudio.ui.components.TSTextField
+import nl.prezent.transcriptstudio.ui.theme.BrandPrimary
 import nl.prezent.transcriptstudio.ui.theme.TS
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -83,6 +108,9 @@ fun TranscriptDetailScreen(
         }
     }
 
+    // Keep a reference to the WebView for JS interaction
+    var webViewRef by remember { mutableStateOf<WebView?>(null) }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -100,91 +128,145 @@ fun TranscriptDetailScreen(
                         Text(
                             text = state.transcript?.effectiveTitle ?: "",
                             maxLines = 1,
+                            fontWeight = FontWeight.Bold,
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
                 },
                 navigationIcon = {
                     IconButton(onClick = {
-                        if (state.isEditing) {
-                            viewModel.cancelEditTitle()
-                        } else {
-                            onNavigateBack()
+                        when {
+                            state.isEditingNotule -> viewModel.cancelEditNotule()
+                            state.isEditing -> viewModel.cancelEditTitle()
+                            else -> onNavigateBack()
                         }
                     }) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            imageVector = if (state.isEditingNotule) Icons.Default.Close
+                            else Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = stringResource(R.string.transcript_detail_back),
                         )
                     }
                 },
                 actions = {
-                    if (state.isEditing) {
-                        TextButton(onClick = { viewModel.saveTitle(state.editTitle) }) {
-                            Text(stringResource(R.string.transcript_detail_save))
-                        }
-                    } else {
-                        IconButton(onClick = { showMenu = true }) {
-                            Icon(
-                                imageVector = Icons.Default.MoreVert,
-                                contentDescription = stringResource(R.string.transcript_detail_menu),
-                            )
-                        }
-                        DropdownMenu(
-                            expanded = showMenu,
-                            onDismissRequest = { showMenu = false },
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.transcript_detail_edit_title)) },
-                                onClick = {
-                                    showMenu = false
-                                    viewModel.startEditTitle()
-                                },
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.transcript_detail_share)) },
-                                leadingIcon = {
-                                    Icon(Icons.Default.Share, contentDescription = null)
-                                },
-                                onClick = {
-                                    showMenu = false
-                                    viewModel.shareTranscript(context)
-                                },
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.transcript_detail_regenerate)) },
-                                leadingIcon = {
-                                    Icon(Icons.Default.Refresh, contentDescription = null)
-                                },
-                                onClick = {
-                                    showMenu = false
-                                    viewModel.showRegenerateDialog()
-                                },
-                            )
-                            DropdownMenuItem(
-                                text = {
-                                    Text(
-                                        stringResource(R.string.transcript_detail_delete),
-                                        color = MaterialTheme.colorScheme.error,
-                                    )
-                                },
-                                leadingIcon = {
+                    when {
+                        state.isEditingNotule -> {
+                            // Save button when editing notule
+                            if (state.isSavingNotule) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier
+                                        .size(24.dp)
+                                        .padding(end = TS.Spacing.sm),
+                                    strokeWidth = 2.dp,
+                                    color = BrandPrimary,
+                                )
+                            } else {
+                                IconButton(onClick = {
+                                    // Extract HTML from WebView and save
+                                    webViewRef?.evaluateJavascript(
+                                        "document.getElementById('editor').innerHTML"
+                                    ) { result ->
+                                        // JS returns a JSON-encoded string
+                                        val html = result
+                                            ?.removeSurrounding("\"")
+                                            ?.replace("\\n", "\n")
+                                            ?.replace("\\\"", "\"")
+                                            ?.replace("\\/", "/")
+                                            ?.replace("\\u003C", "<")
+                                            ?.replace("\\u003E", ">")
+                                            ?: ""
+                                        viewModel.saveNotuleHtml(html)
+                                    }
+                                }) {
                                     Icon(
-                                        Icons.Default.Delete,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.error,
+                                        imageVector = Icons.Default.Save,
+                                        contentDescription = stringResource(R.string.transcript_detail_save),
+                                        tint = BrandPrimary,
                                     )
-                                },
-                                onClick = {
-                                    showMenu = false
-                                    viewModel.showDeleteDialog()
-                                },
-                            )
+                                }
+                            }
+                        }
+
+                        state.isEditing -> {
+                            TextButton(onClick = { viewModel.saveTitle(state.editTitle) }) {
+                                Text(stringResource(R.string.transcript_detail_save))
+                            }
+                        }
+
+                        else -> {
+                            // Edit notule button (only on notule tab with content)
+                            if (state.selectedTab == 0 && !state.transcript?.effectiveNotuleHtml.isNullOrBlank()) {
+                                IconButton(onClick = { viewModel.startEditNotule() }) {
+                                    Icon(
+                                        imageVector = Icons.Default.Edit,
+                                        contentDescription = stringResource(R.string.transcript_detail_edit_notule),
+                                    )
+                                }
+                            }
+
+                            IconButton(onClick = { showMenu = true }) {
+                                Icon(
+                                    imageVector = Icons.Default.MoreVert,
+                                    contentDescription = stringResource(R.string.transcript_detail_menu),
+                                )
+                            }
+                            DropdownMenu(
+                                expanded = showMenu,
+                                onDismissRequest = { showMenu = false },
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.transcript_detail_edit_title)) },
+                                    onClick = {
+                                        showMenu = false
+                                        viewModel.startEditTitle()
+                                    },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.transcript_detail_share)) },
+                                    leadingIcon = {
+                                        Icon(Icons.Default.Share, contentDescription = null)
+                                    },
+                                    onClick = {
+                                        showMenu = false
+                                        viewModel.shareTranscript(context)
+                                    },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.transcript_detail_regenerate)) },
+                                    leadingIcon = {
+                                        Icon(Icons.Default.Refresh, contentDescription = null)
+                                    },
+                                    onClick = {
+                                        showMenu = false
+                                        viewModel.showRegenerateDialog()
+                                    },
+                                )
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            stringResource(R.string.transcript_detail_delete),
+                                            color = MaterialTheme.colorScheme.error,
+                                        )
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            Icons.Default.Delete,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.error,
+                                        )
+                                    },
+                                    onClick = {
+                                        showMenu = false
+                                        viewModel.showDeleteDialog()
+                                    },
+                                )
+                            }
                         }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
                 ),
             )
         },
@@ -198,7 +280,7 @@ fun TranscriptDetailScreen(
                         .padding(padding),
                     contentAlignment = Alignment.Center,
                 ) {
-                    CircularProgressIndicator()
+                    CircularProgressIndicator(color = BrandPrimary)
                 }
             }
 
@@ -208,17 +290,43 @@ fun TranscriptDetailScreen(
                         .fillMaxSize()
                         .padding(padding),
                 ) {
-                    // Tab row
-                    TabRow(selectedTabIndex = state.selectedTab) {
-                        Tab(
-                            selected = state.selectedTab == 0,
-                            onClick = { viewModel.selectTab(0) },
-                            text = { Text(stringResource(R.string.transcript_detail_tab_notule)) },
-                        )
-                        Tab(
-                            selected = state.selectedTab == 1,
-                            onClick = { viewModel.selectTab(1) },
-                            text = { Text(stringResource(R.string.transcript_detail_tab_transcription)) },
+                    // Tab row (hidden when editing notule)
+                    if (!state.isEditingNotule) {
+                        TabRow(
+                            selectedTabIndex = state.selectedTab,
+                            containerColor = MaterialTheme.colorScheme.surface,
+                            contentColor = BrandPrimary,
+                        ) {
+                            Tab(
+                                selected = state.selectedTab == 0,
+                                onClick = { viewModel.selectTab(0) },
+                                text = { Text(stringResource(R.string.transcript_detail_tab_notule)) },
+                            )
+                            Tab(
+                                selected = state.selectedTab == 1,
+                                onClick = { viewModel.selectTab(1) },
+                                text = { Text(stringResource(R.string.transcript_detail_tab_transcription)) },
+                            )
+                        }
+                    }
+
+                    // Formatting toolbar (visible when editing)
+                    AnimatedVisibility(
+                        visible = state.isEditingNotule,
+                        enter = slideInVertically { -it },
+                        exit = slideOutVertically { -it },
+                    ) {
+                        FormattingToolbar(
+                            onCommand = { command ->
+                                webViewRef?.evaluateJavascript(
+                                    "document.execCommand('$command', false, null)", null
+                                )
+                            },
+                            onHeading = {
+                                webViewRef?.evaluateJavascript(
+                                    "document.execCommand('formatBlock', false, 'h3')", null
+                                )
+                            },
                         )
                     }
 
@@ -227,6 +335,8 @@ fun TranscriptDetailScreen(
                         0 -> NotuleTab(
                             html = state.transcript?.effectiveNotuleHtml,
                             isDarkTheme = isDarkTheme,
+                            isEditing = state.isEditingNotule,
+                            onWebViewReady = { webViewRef = it },
                         )
 
                         1 -> TranscriptionTab(
@@ -268,10 +378,13 @@ fun TranscriptDetailScreen(
     }
 }
 
+@SuppressLint("SetJavaScriptEnabled")
 @Composable
 private fun NotuleTab(
     html: String?,
     isDarkTheme: Boolean,
+    isEditing: Boolean = false,
+    onWebViewReady: (WebView) -> Unit = {},
 ) {
     if (html.isNullOrBlank()) {
         EmptyState(
@@ -283,37 +396,101 @@ private fun NotuleTab(
                 .padding(TS.Spacing.xl),
         )
     } else {
+        val bgColor = if (isDarkTheme) "#1A1C29" else "#FFFFFF"
+        val fgColor = if (isDarkTheme) "#F2F2F8" else "#33333B"
+        val focusOutline = if (isEditing) "outline: none;" else ""
+        val caretColor = if (isEditing) "caret-color: #E50074;" else ""
+
         val styledHtml = buildString {
             append("<!DOCTYPE html><html><head>")
             append("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">")
             append("<style>")
-            if (isDarkTheme) {
-                append("body { background: #1A1C29; color: #F2F2F8; ")
-            } else {
-                append("body { background: #FFFFFF; color: #33333B; ")
-            }
+            append("body { background: $bgColor; color: $fgColor; ")
             append("font-family: -apple-system, system-ui, sans-serif; ")
             append("padding: 16px; margin: 0; font-size: 15px; line-height: 1.6; }")
+            append("#editor { $focusOutline $caretColor min-height: 200px; }")
             append("a { color: #E50074; }")
             append("h1, h2, h3 { margin-top: 1em; margin-bottom: 0.5em; }")
             append("ul, ol { padding-left: 1.5em; }")
             append("</style></head><body>")
+            append("<div id=\"editor\"")
+            if (isEditing) {
+                append(" contenteditable=\"true\"")
+            }
+            append(">")
             append(html)
-            append("</body></html>")
+            append("</div></body></html>")
         }
 
         AndroidView(
             factory = { ctx ->
                 WebView(ctx).apply {
-                    settings.javaScriptEnabled = false
+                    settings.javaScriptEnabled = true
+                    settings.domStorageEnabled = true
                     setBackgroundColor(android.graphics.Color.TRANSPARENT)
                     loadDataWithBaseURL(null, styledHtml, "text/html", "UTF-8", null)
+                    onWebViewReady(this)
                 }
             },
             update = { webView ->
                 webView.loadDataWithBaseURL(null, styledHtml, "text/html", "UTF-8", null)
+                onWebViewReady(webView)
             },
             modifier = Modifier.fillMaxSize(),
+        )
+    }
+}
+
+/** Formatting toolbar for the notule editor — bold, italic, lists, headings. */
+@Composable
+private fun FormattingToolbar(
+    onCommand: (String) -> Unit,
+    onHeading: () -> Unit,
+) {
+    Column {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                .padding(horizontal = TS.Spacing.sm, vertical = TS.Spacing.xs),
+            horizontalArrangement = Arrangement.spacedBy(2.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            FormatButton(icon = Icons.Default.FormatBold, description = "Vet", onClick = { onCommand("bold") })
+            FormatButton(icon = Icons.Default.FormatItalic, description = "Cursief", onClick = { onCommand("italic") })
+
+            Spacer(modifier = Modifier.width(TS.Spacing.sm))
+
+            FormatButton(icon = Icons.Default.Title, description = "Kop", onClick = onHeading)
+
+            Spacer(modifier = Modifier.width(TS.Spacing.sm))
+
+            FormatButton(icon = Icons.Default.FormatListBulleted, description = "Opsomming", onClick = { onCommand("insertUnorderedList") })
+            FormatButton(icon = Icons.Default.FormatListNumbered, description = "Genummerde lijst", onClick = { onCommand("insertOrderedList") })
+
+            Spacer(modifier = Modifier.width(TS.Spacing.sm))
+
+            FormatButton(icon = Icons.Default.Undo, description = "Ongedaan maken", onClick = { onCommand("undo") })
+        }
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+    }
+}
+
+@Composable
+private fun FormatButton(
+    icon: ImageVector,
+    description: String,
+    onClick: () -> Unit,
+) {
+    IconButton(
+        onClick = onClick,
+        modifier = Modifier.size(36.dp),
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = description,
+            modifier = Modifier.size(20.dp),
+            tint = MaterialTheme.colorScheme.onSurface,
         )
     }
 }

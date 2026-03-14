@@ -104,6 +104,7 @@
     <string name="transcript_detail_regenerate_choose">Kies een profiel:</string>
     <string name="transcript_detail_regenerate_confirm">Genereer</string>
     <string name="transcript_detail_regenerate_dismiss">Annuleren</string>
+    <string name="transcript_detail_edit_notule">Notulen bewerken</string>
 
     <!-- Settings screen -->
     <string name="settings_server_title">Server configuratie</string>

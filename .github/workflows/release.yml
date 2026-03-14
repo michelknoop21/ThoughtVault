@@ -16,6 +16,9 @@ on:
           - dev
           - production
 
+permissions:
+  contents: write
+
 env:
   NODE_VERSION: '20'
   JAVA_VERSION: '21'

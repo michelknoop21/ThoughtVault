@@ -30,10 +30,22 @@ android {
         versionName = appVersion
     }
 
+    signingConfigs {
+        create("release") {
+            // For local development: use debug keystore for release builds
+            // Replace with production keystore for Play Store distribution
+            storeFile = file(System.getProperty("user.home") + "/.android/debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }

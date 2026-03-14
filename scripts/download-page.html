@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Transcript Studio — Jij vergadert, wij maken de notulen</title>
-    <meta name="description" content="Upload je vergaderopname en ontvang professionele notulen binnen minuten. AI-powered transcriptie en notulering voor macOS en Windows.">
+    <meta name="description" content="Upload je vergaderopname en ontvang professionele notulen binnen minuten. AI-powered transcriptie en notulering voor macOS, Windows en Android.">
 
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="/tstudio/static/favicon-32x32.png">
@@ -1011,6 +1011,10 @@
             @media (min-width: 640px) {
                 grid-template-columns: repeat(2, 1fr);
             }
+
+            @media (min-width: 960px) {
+                grid-template-columns: repeat(3, 1fr);
+            }
         }
 
         .download-card {
@@ -1084,8 +1088,8 @@
             gap: var(--sp-32);
             margin-top: var(--sp-48);
 
-            @media (min-width: 768px) {
-                grid-template-columns: repeat(2, 1fr);
+            @media (min-width: 960px) {
+                grid-template-columns: repeat(3, 1fr);
             }
         }
 
@@ -1620,7 +1624,7 @@
                 <div class="section-header reveal">
                     <p class="eyebrow">Download</p>
                     <h2 class="section-title">Probeer het zelf</h2>
-                    <p class="section-subtitle">Native apps voor macOS en Windows. Installeren en aan de slag — meer is het niet.</p>
+                    <p class="section-subtitle">Native apps voor macOS, Windows en Android. Installeren en aan de slag — meer is het niet.</p>
                     <div class="version-badge" id="versionBadge">
                         <span class="version-dot"></span>
                         <span id="versionText">Versie laden...</span>
@@ -1651,6 +1655,18 @@
                             Download voor Windows
                         </a>
                         <a href="#" class="download-alt-link" id="winAltLink" style="display:none"></a>
+                    </div>
+
+                    <!-- Android card -->
+                    <div class="download-card" id="androidCard" data-os="android" style="display:none">
+                        <div class="download-recommended-badge" style="display:none" id="androidBadge">Aanbevolen voor jou</div>
+                        <svg class="download-os-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18c0 .55.45 1 1 1h1v3.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V19h2v3.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V19h1c.55 0 1-.45 1-1V7H6v11zM3.5 7C2.67 7 2 7.67 2 8.5v7c0 .83.67 1.5 1.5 1.5S5 16.33 5 15.5v-7C5 7.67 4.33 7 3.5 7zm17 0c-.83 0-1.5.67-1.5 1.5v7c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5v-7c0-.83-.67-1.5-1.5-1.5zm-4.97-5.84l1.3-1.3c.2-.2.2-.51 0-.71-.2-.2-.51-.2-.71 0l-1.48 1.48C13.85.55 12.95.25 12 .25s-1.85.3-2.64.88L7.88.65c-.2-.2-.51-.2-.71 0-.2.2-.2.51 0 .71l1.3 1.3C7.17 3.65 6.25 5.23 6.25 7h11.5c0-1.77-.92-3.35-2.22-4.34zM10 5H9V4h1v1zm5 0h-1V4h1v1z"/></svg>
+                        <h3>Android</h3>
+                        <p class="download-info" id="androidInfo">APK installer</p>
+                        <a href="#" class="btn btn--outline btn--download" id="androidDownload" style="pointer-events:none;opacity:0.5">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            Download voor Android
+                        </a>
                     </div>
                 </div>
             </div>
@@ -1687,12 +1703,26 @@
                             <li>Internetverbinding voor cloud-transcriptie</li>
                         </ul>
                     </div>
+                    <div class="sysreq-card reveal" id="androidSysreq" style="display:none">
+                        <h3>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18c0 .55.45 1 1 1h1v3.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V19h2v3.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V19h1c.55 0 1-.45 1-1V7H6v11zM3.5 7C2.67 7 2 7.67 2 8.5v7c0 .83.67 1.5 1.5 1.5S5 16.33 5 15.5v-7C5 7.67 4.33 7 3.5 7zm17 0c-.83 0-1.5.67-1.5 1.5v7c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5v-7c0-.83-.67-1.5-1.5-1.5zm-4.97-5.84l1.3-1.3c.2-.2.2-.51 0-.71-.2-.2-.51-.2-.71 0l-1.48 1.48C13.85.55 12.95.25 12 .25s-1.85.3-2.64.88L7.88.65c-.2-.2-.51-.2-.71 0-.2.2-.2.51 0 .71l1.3 1.3C7.17 3.65 6.25 5.23 6.25 7h11.5c0-1.77-.92-3.35-2.22-4.34zM10 5H9V4h1v1zm5 0h-1V4h1v1z"/></svg>
+                            Android
+                        </h3>
+                        <ul class="sysreq-list">
+                            <li>Android 9 (Pie) of nieuwer</li>
+                            <li>ARM64 of x86_64 processor</li>
+                            <li>2 GB RAM</li>
+                            <li>50 MB vrije opslagruimte</li>
+                            <li>Internetverbinding voor cloud-transcriptie</li>
+                        </ul>
+                    </div>
                 </div>
 
                 <div class="install-note reveal">
                     <h4>Installatie-instructies</h4>
                     <p><strong>macOS:</strong> Open het DMG-bestand, sleep Transcript Studio naar de map Programma's. Bij de eerste keer openen: klik rechts op de app en kies "Open".</p>
                     <p style="margin-top:var(--sp-8)"><strong>Windows:</strong> Voer het MSI-bestand uit en volg de installatie-wizard. De app wordt geinstalleerd in C:\Program Files\Transcript Studio.</p>
+                    <p id="androidInstallNote" style="margin-top:var(--sp-8);display:none"><strong>Android:</strong> Download het APK-bestand en open het. Sta "Installatie uit onbekende bronnen" toe wanneer gevraagd.</p>
                 </div>
             </div>
         </section>
@@ -1726,6 +1756,15 @@
                         <a href="#" class="btn btn--outline btn--download" id="devWinDownload">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                             Download Beta voor Windows
+                        </a>
+                    </div>
+                    <div class="download-card" id="devAndroidCard" style="display:none">
+                        <svg class="download-os-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18c0 .55.45 1 1 1h1v3.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V19h2v3.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V19h1c.55 0 1-.45 1-1V7H6v11zM3.5 7C2.67 7 2 7.67 2 8.5v7c0 .83.67 1.5 1.5 1.5S5 16.33 5 15.5v-7C5 7.67 4.33 7 3.5 7zm17 0c-.83 0-1.5.67-1.5 1.5v7c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5v-7c0-.83-.67-1.5-1.5-1.5zm-4.97-5.84l1.3-1.3c.2-.2.2-.51 0-.71-.2-.2-.51-.2-.71 0l-1.48 1.48C13.85.55 12.95.25 12 .25s-1.85.3-2.64.88L7.88.65c-.2-.2-.51-.2-.71 0-.2.2-.2.51 0 .71l1.3 1.3C7.17 3.65 6.25 5.23 6.25 7h11.5c0-1.77-.92-3.35-2.22-4.34zM10 5H9V4h1v1zm5 0h-1V4h1v1z"/></svg>
+                        <h3>Android (Beta)</h3>
+                        <p class="download-info" id="devAndroidInfo">APK installer</p>
+                        <a href="#" class="btn btn--outline btn--download" id="devAndroidDownload">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            Download Beta voor Android
                         </a>
                     </div>
                 </div>
@@ -2102,8 +2141,21 @@
                     showAltLink(data.windows_arm64, 'ARM64');
                 }
 
+                // Android stable
+                if (data.android) {
+                    const androidCard = document.getElementById('androidCard');
+                    androidCard.style.display = '';
+                    const androidDl = document.getElementById('androidDownload');
+                    androidDl.href = data.android.url;
+                    androidDl.style.pointerEvents = '';
+                    androidDl.style.opacity = '';
+                    document.getElementById('androidInfo').textContent = data.android.filename;
+                    document.getElementById('androidSysreq').style.display = '';
+                    document.getElementById('androidInstallNote').style.display = '';
+                }
+
                 // Dev/Beta
-                if (data.dev_latest_version && (data.dev_macos || data.dev_windows_x64)) {
+                if (data.dev_latest_version && (data.dev_macos || data.dev_windows_x64 || data.dev_android)) {
                     const betaSection = document.getElementById('betaSection');
                     betaSection.classList.add('is-visible');
                     document.getElementById('devVersionText').textContent = 'Versie ' + data.dev_latest_version;
@@ -2120,6 +2172,13 @@
                         card.style.display = '';
                         document.getElementById('devWinDownload').href = data.dev_windows_x64.url;
                         document.getElementById('devWinInfo').textContent = data.dev_windows_x64.filename;
+                    }
+
+                    if (data.dev_android) {
+                        const card = document.getElementById('devAndroidCard');
+                        card.style.display = '';
+                        document.getElementById('devAndroidDownload').href = data.dev_android.url;
+                        document.getElementById('devAndroidInfo').textContent = data.dev_android.filename;
                     }
                 }
 
@@ -2156,8 +2215,23 @@
             const ua = navigator.userAgent;
             const isMac = /Macintosh|Mac OS X/i.test(ua);
             const isWin = /Windows/i.test(ua);
+            const isAndroid = /Android/i.test(ua);
 
-            if (isMac) {
+            if (isAndroid) {
+                const androidCard = document.getElementById('androidCard');
+                if (androidCard.style.display !== 'none') {
+                    document.getElementById('androidBadge').style.display = '';
+                    androidCard.classList.add('download-card--recommended');
+                    // Reorder: Android first
+                    const cards = document.getElementById('downloadCards');
+                    cards.insertBefore(androidCard, cards.firstChild);
+                    // Make Android button primary
+                    document.getElementById('androidDownload').classList.remove('btn--outline');
+                    document.getElementById('androidDownload').classList.add('btn--primary');
+                    document.getElementById('macDownload').classList.remove('btn--primary');
+                    document.getElementById('macDownload').classList.add('btn--outline');
+                }
+            } else if (isMac) {
                 document.getElementById('macBadge').style.display = '';
                 document.getElementById('macCard').classList.add('download-card--recommended');
             } else if (isWin) {

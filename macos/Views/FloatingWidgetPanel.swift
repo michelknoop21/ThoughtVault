@@ -20,6 +20,7 @@ class FloatingWidgetController {
     // MARK: - Private State
 
     private var floatingWindow: NSPanel?
+    private weak var observedRecordingVM: RecordingViewModel?
 
     private init() {}
 
@@ -59,6 +60,11 @@ class FloatingWidgetController {
         panel.orderFront(nil)
         floatingWindow = panel
 
+        // Observe state changes directly so the widget hides even when
+        // the main SwiftUI window is minimised or hidden.
+        observedRecordingVM = recordingVM
+        observeRecordingState()
+
         // Reposition when the screen configuration changes.
         NotificationCenter.default.addObserver(
             self,
@@ -70,6 +76,7 @@ class FloatingWidgetController {
 
     /// Hides and releases the floating panel.
     func hide() {
+        observedRecordingVM = nil
         floatingWindow?.close()
         floatingWindow = nil
         NotificationCenter.default.removeObserver(
@@ -102,6 +109,26 @@ class FloatingWidgetController {
 
     @objc private func screenParametersDidChange() {
         updatePosition()
+    }
+
+    /// Watches `recordingState` via Observation (not SwiftUI) so changes are
+    /// detected even when the main window is minimised or hidden.
+    private func observeRecordingState() {
+        guard let vm = observedRecordingVM else { return }
+
+        withObservationTracking {
+            _ = vm.recordingState
+        } onChange: { [weak self] in
+            Task { @MainActor in
+                guard let self, let vm = self.observedRecordingVM else { return }
+                switch vm.recordingState {
+                case .idle, .error:
+                    self.hide()
+                default:
+                    self.observeRecordingState()
+                }
+            }
+        }
     }
 }
 #endif

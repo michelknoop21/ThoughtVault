@@ -48,14 +48,69 @@ if [ "$OS" = "Darwin" ]; then
     codesign --force --deep --sign - "$EXPORT_DIR/$APP_NAME.app"
     echo "  Signed with ad-hoc signature"
 
-    echo "Step 4/4: Creating DMG..."
+    echo "Step 4/4: Creating styled DMG..."
     rm -f "$DMG_PATH"
+
+    # Generate background image
+    python3 "$SCRIPT_DIR/create-dmg-background.py"
+    BG_IMG="$SCRIPT_DIR/dmg-background.png"
+
+    # Add Applications symlink
+    ln -sf /Applications "$EXPORT_DIR/Applications"
+
+    # Create writable DMG
+    DMG_TEMP="$BUILD_DIR/tmp_rw.dmg"
+    rm -f "$DMG_TEMP"
     hdiutil create \
         -volname "$APP_DISPLAY_NAME $VERSION" \
         -srcfolder "$EXPORT_DIR" \
         -ov \
-        -format UDZO \
-        "$DMG_PATH"
+        -format UDRW \
+        -fs HFS+ \
+        "$DMG_TEMP"
+
+    # Mount writable DMG
+    MOUNT_DIR=$(hdiutil attach -readwrite -noverify -noautoopen "$DMG_TEMP" | awk '/Apple_HFS/ {for(i=3;i<=NF;i++) printf "%s ", $i; print ""}' | sed 's/ *$//')
+    echo "  Mounted at: $MOUNT_DIR"
+
+    # Copy background image into DMG (hidden folder)
+    mkdir -p "$MOUNT_DIR/.background"
+    cp "$BG_IMG" "$MOUNT_DIR/.background/background.png"
+
+    # Use AppleScript to set Finder window appearance
+    VOLNAME="$APP_DISPLAY_NAME $VERSION"
+    osascript << APPLESCRIPT
+tell application "Finder"
+    tell disk "$VOLNAME"
+        open
+        set current view of container window to icon view
+        set toolbar visible of container window to false
+        set statusbar visible of container window to false
+        set bounds of container window to {100, 100, 760, 500}
+        set viewOptions to icon view options of container window
+        set arrangement of viewOptions to not arranged
+        set icon size of viewOptions to 80
+        set text size of viewOptions to 12
+        set background picture of viewOptions to file ".background:background.png"
+        -- Position app icon on the left, Applications on the right
+        set position of item "$APP_NAME.app" of container window to {165, 200}
+        set position of item "Applications" of container window to {495, 200}
+        close
+        open
+        update without registering applications
+        delay 1
+        close
+    end tell
+end tell
+APPLESCRIPT
+
+    # Unmount
+    sync
+    hdiutil detach "$MOUNT_DIR" -quiet
+
+    # Convert to compressed read-only DMG
+    hdiutil convert "$DMG_TEMP" -format UDZO -imagekey zlib-level=9 -o "$DMG_PATH"
+    rm -f "$DMG_TEMP"
 
     # Clean up intermediate files
     rm -rf "$ARCHIVE_PATH" "$EXPORT_DIR"

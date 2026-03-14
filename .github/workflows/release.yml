@@ -141,13 +141,63 @@ jobs:
           APP_NAME=$(basename "$APP_PATH")
           codesign --force --deep --sign - "build/export/$APP_NAME"
 
-      - name: Create DMG
+      - name: Create styled DMG
         run: |
+          # Generate background image
+          python3 scripts/create-dmg-background.py
+
+          # Determine .app name from export
+          APP_NAME=$(ls build/export/ | grep '\.app$' | sed 's/\.app$//')
+          echo "App name: $APP_NAME"
+
+          # Add Applications symlink
+          ln -sf /Applications build/export/Applications
+
+          # Create writable DMG
           hdiutil create \
             -volname "$APP_DISPLAY_NAME $VERSION" \
             -srcfolder build/export \
-            -ov -format UDZO \
-            "build/$DMG_NAME"
+            -ov -format UDRW -fs HFS+ \
+            build/tmp_rw.dmg
+
+          # Mount, style, unmount
+          MOUNT_DIR=$(hdiutil attach -readwrite -noverify -noautoopen build/tmp_rw.dmg | awk '/Apple_HFS/ {for(i=3;i<=NF;i++) printf "%s ", $i; print ""}' | sed 's/ *$//')
+          echo "Mounted at: $MOUNT_DIR"
+
+          mkdir -p "$MOUNT_DIR/.background"
+          cp scripts/dmg-background.png "$MOUNT_DIR/.background/background.png"
+
+          VOLNAME="$APP_DISPLAY_NAME $VERSION"
+          osascript << APPLESCRIPT
+          tell application "Finder"
+              tell disk "$VOLNAME"
+                  open
+                  set current view of container window to icon view
+                  set toolbar visible of container window to false
+                  set statusbar visible of container window to false
+                  set bounds of container window to {100, 100, 760, 500}
+                  set viewOptions to icon view options of container window
+                  set arrangement of viewOptions to not arranged
+                  set icon size of viewOptions to 80
+                  set text size of viewOptions to 12
+                  set background picture of viewOptions to file ".background:background.png"
+                  set position of item "$APP_NAME.app" of container window to {165, 200}
+                  set position of item "Applications" of container window to {495, 200}
+                  close
+                  open
+                  update without registering applications
+                  delay 1
+                  close
+              end tell
+          end tell
+          APPLESCRIPT
+
+          sync
+          hdiutil detach "$MOUNT_DIR" -quiet
+
+          # Convert to compressed read-only DMG
+          hdiutil convert build/tmp_rw.dmg -format UDZO -imagekey zlib-level=9 -o "build/$DMG_NAME"
+          rm -f build/tmp_rw.dmg
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4

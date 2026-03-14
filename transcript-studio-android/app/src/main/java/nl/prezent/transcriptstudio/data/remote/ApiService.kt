@@ -139,7 +139,7 @@ interface ApiService {
     suspend fun deleteProfile(@Path("profileId") profileId: String): Response<Unit>
 
     @GET("profiles/accessible")
-    suspend fun getAccessibleProfiles(): List<Profile>
+    suspend fun getAccessibleProfiles(): ProfilesResponse
 
     // ── Feedback ─────────────────────────────────────────────────────────
 
@@ -158,7 +158,7 @@ interface ApiService {
     // ── Admin: Users ─────────────────────────────────────────────────────
 
     @GET("admin/users")
-    suspend fun getAdminUsers(): List<AdminUser>
+    suspend fun getAdminUsers(): AdminUsersResponse
 
     @POST("admin/users")
     suspend fun createUser(@Body body: CreateUserRequest): AdminUser

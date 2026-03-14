@@ -9,6 +9,8 @@
     <string name="home_greeting_evening">Goedenavond, %1$s</string>
     <string name="home_greeting_fallback">Welkom</string>
     <string name="home_quick_start">Nieuwe opname starten</string>
+    <string name="home_subtitle">Wat wil je vandaag transcriberen?</string>
+    <string name="home_cta_subtitle">Start direct een nieuwe opname</string>
     <string name="home_active_tasks">Actieve taken</string>
     <string name="home_recent_transcripts">Recente notulen</string>
     <string name="home_view_all_tasks">Alle taken bekijken</string>

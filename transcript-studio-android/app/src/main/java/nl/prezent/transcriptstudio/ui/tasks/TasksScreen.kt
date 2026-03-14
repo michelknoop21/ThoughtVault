@@ -21,10 +21,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -38,12 +38,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.hilt.navigation.compose.hiltViewModel
 import nl.prezent.transcriptstudio.R
 import nl.prezent.transcriptstudio.data.model.TaskStatus
 import nl.prezent.transcriptstudio.data.model.TranscriptTask
 import nl.prezent.transcriptstudio.ui.components.EmptyState
+import nl.prezent.transcriptstudio.ui.components.ErrorBanner
 import nl.prezent.transcriptstudio.ui.components.StatusBadge
 import nl.prezent.transcriptstudio.ui.components.TSCard
 import nl.prezent.transcriptstudio.ui.theme.BrandSecondary
@@ -71,19 +73,24 @@ fun TasksScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.tasks_title)) },
-            )
-        },
-    ) { padding ->
+    Column(modifier = Modifier.fillMaxSize()) {
+        TopAppBar(
+            title = {
+                Text(
+                    text = stringResource(R.string.tasks_title),
+                    fontWeight = FontWeight.Bold,
+                )
+            },
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = MaterialTheme.colorScheme.surface,
+                titleContentColor = MaterialTheme.colorScheme.onSurface,
+            ),
+        )
+
         PullToRefreshBox(
             isRefreshing = uiState.isRefreshing,
             onRefresh = viewModel::refresh,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding),
+            modifier = Modifier.fillMaxSize(),
         ) {
             if (uiState.tasks.isEmpty() && !uiState.isLoading) {
                 Box(
@@ -134,14 +141,7 @@ fun TasksScreen(
                         .padding(TS.Spacing.md),
                     contentAlignment = Alignment.TopCenter,
                 ) {
-                    TSCard(modifier = Modifier.fillMaxWidth()) {
-                        Text(
-                            text = uiState.error!!,
-                            modifier = Modifier.padding(TS.Spacing.md),
-                            color = StatusError,
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-                    }
+                    ErrorBanner(message = uiState.error!!)
                 }
             }
         }

@@ -26,7 +26,7 @@ class ProfileRepository @Inject constructor(
      * Get all accessible profiles (default + own + public).
      */
     suspend fun getAccessibleProfiles(): List<Profile> =
-        apiService.getAccessibleProfiles()
+        apiService.getAccessibleProfiles().profiles
 
     suspend fun createProfile(
         name: String,

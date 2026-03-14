@@ -1,14 +1,19 @@
 package nl.prezent.transcriptstudio.ui.recording
 
 import android.Manifest
-import android.content.Context
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,6 +26,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Cancel
@@ -47,15 +53,17 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -65,8 +73,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import nl.prezent.transcriptstudio.R
 import nl.prezent.transcriptstudio.service.RecordingForegroundService
+import nl.prezent.transcriptstudio.ui.components.ErrorBanner
 import nl.prezent.transcriptstudio.ui.components.PulsingRecordingDot
 import nl.prezent.transcriptstudio.ui.components.TSCard
 import nl.prezent.transcriptstudio.ui.components.TSPrimaryButton
@@ -146,15 +156,34 @@ fun RecordingScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.recording_title)) },
-            )
+            if (uiState.isIdle) {
+                TopAppBar(
+                    title = {
+                        Text(
+                            text = stringResource(R.string.recording_title),
+                            fontWeight = FontWeight.Bold,
+                        )
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    ),
+                )
+            }
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { padding ->
         AnimatedContent(
             targetState = uiState.isIdle,
             label = "recording-state-transition",
+            transitionSpec = {
+                (fadeIn(spring(stiffness = Spring.StiffnessMediumLow)) +
+                        scaleIn(initialScale = 0.96f, animationSpec = spring(stiffness = Spring.StiffnessMediumLow)))
+                    .togetherWith(
+                        fadeOut(spring(stiffness = Spring.StiffnessMediumLow)) +
+                                scaleOut(targetScale = 0.96f, animationSpec = spring(stiffness = Spring.StiffnessMediumLow))
+                    )
+            },
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
@@ -197,20 +226,30 @@ private fun IdleContent(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = TS.Spacing.md),
+            .padding(horizontal = TS.Spacing.lg),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Spacer(modifier = Modifier.height(TS.Spacing.xxl))
 
-        // Microphone icon
-        Icon(
-            imageVector = Icons.Default.Mic,
-            contentDescription = null,
-            modifier = Modifier.size(64.dp),
-            tint = BrandPrimary,
-        )
+        // Microphone icon with subtle accent background
+        Box(
+            modifier = Modifier
+                .size(96.dp)
+                .background(
+                    BrandPrimary.copy(alpha = 0.08f),
+                    CircleShape,
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = Icons.Default.Mic,
+                contentDescription = null,
+                modifier = Modifier.size(48.dp),
+                tint = BrandPrimary,
+            )
+        }
 
-        Spacer(modifier = Modifier.height(TS.Spacing.md))
+        Spacer(modifier = Modifier.height(TS.Spacing.lg))
 
         Text(
             text = stringResource(R.string.recording_idle_subtitle),
@@ -223,7 +262,11 @@ private fun IdleContent(
 
         // Profile selector
         if (uiState.isLoadingProfiles) {
-            CircularProgressIndicator(modifier = Modifier.size(24.dp))
+            CircularProgressIndicator(
+                modifier = Modifier.size(24.dp),
+                color = BrandPrimary,
+                strokeWidth = 2.dp,
+            )
         } else if (uiState.profiles.isNotEmpty()) {
             ProfileDropdown(
                 profiles = uiState.profiles,
@@ -241,7 +284,6 @@ private fun IdleContent(
 
         Spacer(modifier = Modifier.height(TS.Spacing.xl))
 
-        // Start button
         TSPrimaryButton(
             text = stringResource(R.string.recording_start),
             onClick = onStartRecording,
@@ -265,7 +307,11 @@ private fun IdleContent(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.padding(top = TS.Spacing.lg),
             ) {
-                CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                CircularProgressIndicator(
+                    modifier = Modifier.size(24.dp),
+                    color = BrandPrimary,
+                    strokeWidth = 2.dp,
+                )
                 Spacer(modifier = Modifier.height(TS.Spacing.sm))
                 Text(
                     text = stringResource(R.string.recording_uploading),
@@ -278,14 +324,7 @@ private fun IdleContent(
         // Error display
         if (uiState.error != null) {
             Spacer(modifier = Modifier.height(TS.Spacing.md))
-            TSCard(modifier = Modifier.fillMaxWidth()) {
-                Text(
-                    text = uiState.error,
-                    modifier = Modifier.padding(TS.Spacing.md),
-                    color = StatusError,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            }
+            ErrorBanner(message = uiState.error)
         }
 
         Spacer(modifier = Modifier.height(TS.Spacing.xl))
@@ -348,6 +387,15 @@ private fun ProfileDropdown(
     }
 }
 
+/** Immersive dark gradient for active recording screen */
+private val recordingBackground = Brush.verticalGradient(
+    colors = listOf(
+        Color(0xFF0B0C15),
+        Color(0xFF111225),
+        Color(0xFF0F1020),
+    ),
+)
+
 @Composable
 private fun ActiveRecordingContent(
     uiState: RecordingViewModel.UiState,
@@ -356,127 +404,143 @@ private fun ActiveRecordingContent(
     onStop: () -> Unit,
     onCancel: () -> Unit,
 ) {
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = TS.Spacing.md),
-        horizontalAlignment = Alignment.CenterHorizontally,
+            .background(recordingBackground),
     ) {
-        Spacer(modifier = Modifier.height(TS.Spacing.xl))
-
-        // Recording status indicator
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center,
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = TS.Spacing.lg),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            if (uiState.isRecording) {
-                PulsingRecordingDot(size = 10.dp)
-                Spacer(modifier = Modifier.width(TS.Spacing.sm))
-                Text(
-                    text = stringResource(R.string.recording_active),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = StatusError,
-                )
-            } else {
-                Text(
-                    text = stringResource(R.string.recording_paused),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+            Spacer(modifier = Modifier.height(TS.Spacing.xl))
+
+            // Recording status indicator
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+            ) {
+                if (uiState.isRecording) {
+                    PulsingRecordingDot(size = 10.dp)
+                    Spacer(modifier = Modifier.width(TS.Spacing.sm))
+                    Text(
+                        text = stringResource(R.string.recording_active),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = StatusError,
+                    )
+                } else {
+                    Text(
+                        text = stringResource(R.string.recording_paused),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.White.copy(alpha = 0.6f),
+                    )
+                }
             }
-        }
 
-        Spacer(modifier = Modifier.height(TS.Spacing.lg))
+            Spacer(modifier = Modifier.height(TS.Spacing.lg))
 
-        // Timer display
-        Text(
-            text = uiState.elapsedFormatted,
-            style = MaterialTheme.typography.displayLarge.copy(
-                fontWeight = FontWeight.Light,
-                fontSize = 72.sp,
-                letterSpacing = 2.sp,
-            ),
-            color = MaterialTheme.colorScheme.onSurface,
-        )
+            // Timer display — large, light, on dark background
+            Text(
+                text = uiState.elapsedFormatted,
+                style = MaterialTheme.typography.displayLarge.copy(
+                    fontWeight = FontWeight.Light,
+                    fontSize = 72.sp,
+                    letterSpacing = 2.sp,
+                ),
+                color = Color.White,
+            )
 
-        Spacer(modifier = Modifier.height(TS.Spacing.xl))
+            Spacer(modifier = Modifier.height(TS.Spacing.xl))
 
-        // Waveform visualizer
-        TSCard(modifier = Modifier.fillMaxWidth()) {
+            // Waveform — self-contained dark container, no TSCard wrapper
             WaveformVisualizer(
                 audioLevel = uiState.audioLevel,
                 isActive = uiState.isRecording,
-                modifier = Modifier.padding(TS.Spacing.md),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = TS.Spacing.sm),
             )
-        }
 
-        Spacer(modifier = Modifier.weight(1f))
+            Spacer(modifier = Modifier.weight(1f))
 
-        // Control buttons
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = TS.Spacing.xxl),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            // Cancel button
-            OutlinedIconButton(
-                onClick = onCancel,
-                modifier = Modifier.size(56.dp),
+            // Control buttons
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = TS.Spacing.xxl),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(
-                    imageVector = Icons.Default.Cancel,
-                    contentDescription = stringResource(R.string.recording_cancel),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-
-            // Pause/Resume button
-            if (uiState.isRecording) {
-                FilledIconButton(
-                    onClick = onPause,
+                // Cancel button
+                OutlinedIconButton(
+                    onClick = onCancel,
                     modifier = Modifier.size(56.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Cancel,
+                        contentDescription = stringResource(R.string.recording_cancel),
+                        tint = Color.White.copy(alpha = 0.7f),
+                    )
+                }
+
+                // Pause/Resume button
+                if (uiState.isRecording) {
+                    FilledIconButton(
+                        onClick = onPause,
+                        modifier = Modifier.size(56.dp),
+                        colors = IconButtonDefaults.filledIconButtonColors(
+                            containerColor = Color.White.copy(alpha = 0.15f),
+                            contentColor = Color.White,
+                        ),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Pause,
+                            contentDescription = stringResource(R.string.recording_pause),
+                        )
+                    }
+                } else {
+                    FilledIconButton(
+                        onClick = onResume,
+                        modifier = Modifier.size(56.dp),
+                        colors = IconButtonDefaults.filledIconButtonColors(
+                            containerColor = Color.White.copy(alpha = 0.15f),
+                            contentColor = Color.White,
+                        ),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.PlayArrow,
+                            contentDescription = stringResource(R.string.recording_resume),
+                        )
+                    }
+                }
+
+                // Stop button — prominent red
+                FilledIconButton(
+                    onClick = onStop,
+                    modifier = Modifier
+                        .size(72.dp)
+                        .shadow(
+                            elevation = 12.dp,
+                            shape = CircleShape,
+                            ambientColor = StatusError.copy(alpha = 0.3f),
+                            spotColor = StatusError.copy(alpha = 0.3f),
+                        ),
+                    shape = CircleShape,
                     colors = IconButtonDefaults.filledIconButtonColors(
-                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        containerColor = StatusError,
+                        contentColor = Color.White,
                     ),
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Pause,
-                        contentDescription = stringResource(R.string.recording_pause),
+                        imageVector = Icons.Default.Stop,
+                        contentDescription = stringResource(R.string.recording_stop),
+                        modifier = Modifier.size(36.dp),
                     )
                 }
-            } else {
-                FilledIconButton(
-                    onClick = onResume,
-                    modifier = Modifier.size(56.dp),
-                    colors = IconButtonDefaults.filledIconButtonColors(
-                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                    ),
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.PlayArrow,
-                        contentDescription = stringResource(R.string.recording_resume),
-                    )
-                }
-            }
-
-            // Stop button
-            FilledIconButton(
-                onClick = onStop,
-                modifier = Modifier.size(72.dp),
-                colors = IconButtonDefaults.filledIconButtonColors(
-                    containerColor = StatusError,
-                    contentColor = Color.White,
-                ),
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Stop,
-                    contentDescription = stringResource(R.string.recording_stop),
-                    modifier = Modifier.size(36.dp),
-                )
             }
         }
     }

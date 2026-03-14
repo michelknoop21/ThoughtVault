@@ -13,7 +13,7 @@ import nl.prezent.transcriptstudio.ui.theme.TS
 
 /**
  * Standard TranscriptStudio card — matches macOS ModernCardModifier.
- * Surface color with 1dp border (theme-adaptive) and subtle shadow.
+ * Surface color with subtle border, soft shadow, and branded radius.
  */
 @Composable
 fun TSCard(
@@ -22,16 +22,16 @@ fun TSCard(
 ) {
     Card(
         modifier = modifier,
-        shape = RoundedCornerShape(TS.Radius.md),
+        shape = RoundedCornerShape(TS.Radius.sm),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface,
         ),
         elevation = CardDefaults.cardElevation(
-            defaultElevation = 2.dp,
+            defaultElevation = 1.dp,
         ),
         border = BorderStroke(
-            width = 1.dp,
-            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.6f),
+            width = 0.5.dp,
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
         ),
         content = content,
     )

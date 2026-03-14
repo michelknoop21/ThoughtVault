@@ -2,11 +2,14 @@ package nl.prezent.transcriptstudio.ui.theme
 
 import android.app.Activity
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
@@ -17,19 +20,19 @@ import androidx.core.view.WindowCompat
  */
 private val LightColorScheme = lightColorScheme(
     primary = BrandPrimary,
-    onPrimary = androidx.compose.ui.graphics.Color.White,
+    onPrimary = Color.White,
     primaryContainer = AccentBgPrimaryLight,
     onPrimaryContainer = BrandPrimary,
     secondary = BrandSecondary,
-    onSecondary = androidx.compose.ui.graphics.Color.White,
+    onSecondary = Color.White,
     secondaryContainer = AccentBgSecondaryLight,
     onSecondaryContainer = BrandSecondary,
     tertiary = BrandAccent,
-    onTertiary = androidx.compose.ui.graphics.Color.White,
+    onTertiary = Color.White,
     tertiaryContainer = AccentBgAccentLight,
     onTertiaryContainer = BrandAccent,
     error = StatusError,
-    onError = androidx.compose.ui.graphics.Color.White,
+    onError = Color.White,
     errorContainer = StatusError.copy(alpha = 0.12f),
     onErrorContainer = StatusError,
     background = SurfacePrimaryLight,
@@ -55,19 +58,19 @@ private val LightColorScheme = lightColorScheme(
  */
 private val DarkColorScheme = darkColorScheme(
     primary = BrandPrimary,
-    onPrimary = androidx.compose.ui.graphics.Color.White,
+    onPrimary = Color.White,
     primaryContainer = AccentBgPrimaryDark,
     onPrimaryContainer = BrandPrimary,
     secondary = BrandSecondary,
-    onSecondary = androidx.compose.ui.graphics.Color.White,
+    onSecondary = Color.White,
     secondaryContainer = AccentBgSecondaryDark,
     onSecondaryContainer = BrandSecondary,
     tertiary = BrandAccent,
-    onTertiary = androidx.compose.ui.graphics.Color.White,
+    onTertiary = Color.White,
     tertiaryContainer = AccentBgAccentDark,
     onTertiaryContainer = BrandAccent,
     error = StatusError,
-    onError = androidx.compose.ui.graphics.Color.White,
+    onError = Color.White,
     errorContainer = StatusError.copy(alpha = 0.12f),
     onErrorContainer = StatusError,
     background = SurfacePrimaryDark,
@@ -88,6 +91,15 @@ private val DarkColorScheme = darkColorScheme(
     inversePrimary = BrandPrimary,
 )
 
+/** Material 3 shape scale using TS.Radius tokens. */
+private val TSShapes = Shapes(
+    extraSmall = RoundedCornerShape(TS.Radius.xs),
+    small = RoundedCornerShape(TS.Radius.sm),
+    medium = RoundedCornerShape(TS.Radius.md),
+    large = RoundedCornerShape(TS.Radius.lg),
+    extraLarge = RoundedCornerShape(TS.Radius.xl),
+)
+
 @Composable
 fun TranscriptStudioTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
@@ -100,6 +112,7 @@ fun TranscriptStudioTheme(
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
+            @Suppress("DEPRECATION")
             window.statusBarColor = colorScheme.surface.toArgb()
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
         }
@@ -108,6 +121,7 @@ fun TranscriptStudioTheme(
     MaterialTheme(
         colorScheme = colorScheme,
         typography = TSTypography,
+        shapes = TSShapes,
         content = content,
     )
 }

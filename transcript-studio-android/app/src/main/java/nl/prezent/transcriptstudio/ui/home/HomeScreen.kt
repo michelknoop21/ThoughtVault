@@ -1,5 +1,6 @@
 package nl.prezent.transcriptstudio.ui.home
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,6 +15,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Article
 import androidx.compose.material.icons.filled.ChevronRight
@@ -23,30 +26,35 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import nl.prezent.transcriptstudio.R
 import nl.prezent.transcriptstudio.data.model.TaskStatus
 import nl.prezent.transcriptstudio.data.model.Transcript
 import nl.prezent.transcriptstudio.data.model.TranscriptTask
+import nl.prezent.transcriptstudio.ui.components.ErrorBanner
 import nl.prezent.transcriptstudio.ui.components.StatusBadge
 import nl.prezent.transcriptstudio.ui.components.TSCard
-import nl.prezent.transcriptstudio.ui.components.TSPrimaryButton
-import nl.prezent.transcriptstudio.ui.components.YingaBar
 import nl.prezent.transcriptstudio.ui.theme.BrandPrimary
+import nl.prezent.transcriptstudio.ui.theme.BrandPrimaryDark
 import nl.prezent.transcriptstudio.ui.theme.BrandSecondary
 import nl.prezent.transcriptstudio.ui.theme.StatusError
 import nl.prezent.transcriptstudio.ui.theme.StatusSuccess
@@ -62,26 +70,32 @@ fun HomeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.home_title)) },
-            )
-        },
-    ) { padding ->
+    Column(modifier = Modifier.fillMaxSize()) {
+        // Branded top bar — clean surface with brand-colored title
+        TopAppBar(
+            title = {
+                Text(
+                    text = stringResource(R.string.home_title),
+                    fontWeight = FontWeight.Bold,
+                )
+            },
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = MaterialTheme.colorScheme.surface,
+                titleContentColor = MaterialTheme.colorScheme.onSurface,
+            ),
+        )
+
         PullToRefreshBox(
             isRefreshing = uiState.isRefreshing,
             onRefresh = viewModel::refresh,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding),
+            modifier = Modifier.fillMaxSize(),
         ) {
             if (uiState.isLoading) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center,
                 ) {
-                    CircularProgressIndicator()
+                    CircularProgressIndicator(color = BrandPrimary)
                 }
             } else {
                 LazyColumn(
@@ -90,10 +104,9 @@ fun HomeScreen(
                         .padding(horizontal = TS.Spacing.md),
                     verticalArrangement = Arrangement.spacedBy(TS.Spacing.md),
                 ) {
-                    // Top spacing
                     item { Spacer(modifier = Modifier.height(TS.Spacing.xs)) }
 
-                    // Greeting section
+                    // Greeting + branding
                     item {
                         GreetingSection(
                             userName = uiState.userName,
@@ -101,37 +114,23 @@ fun HomeScreen(
                         )
                     }
 
-                    // Quick-start button
+                    // Hero CTA card (matching macOS gradient CTA)
                     item {
-                        TSPrimaryButton(
-                            text = stringResource(R.string.home_quick_start),
-                            onClick = onNavigateToRecording,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
+                        HeroCTACard(onClick = onNavigateToRecording)
                     }
 
-                    // Error message
+                    // Error
                     if (uiState.error != null) {
                         item {
-                            TSCard(modifier = Modifier.fillMaxWidth()) {
-                                Text(
-                                    text = uiState.error!!,
-                                    modifier = Modifier.padding(TS.Spacing.md),
-                                    color = StatusError,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                )
-                            }
+                            ErrorBanner(message = uiState.error!!)
                         }
                     }
 
-                    // Active tasks section
+                    // Active tasks
                     if (uiState.activeTasks.isNotEmpty()) {
                         item {
-                            SectionHeader(
-                                title = stringResource(R.string.home_active_tasks),
-                            )
+                            SectionHeader(title = stringResource(R.string.home_active_tasks))
                         }
-
                         items(
                             items = uiState.activeTasks,
                             key = { "task-${it.effectiveId}" },
@@ -147,14 +146,11 @@ fun HomeScreen(
                         }
                     }
 
-                    // Recent transcripts section
+                    // Recent transcripts
                     if (uiState.recentTranscripts.isNotEmpty()) {
                         item {
-                            SectionHeader(
-                                title = stringResource(R.string.home_recent_transcripts),
-                            )
+                            SectionHeader(title = stringResource(R.string.home_recent_transcripts))
                         }
-
                         items(
                             items = uiState.recentTranscripts,
                             key = { "transcript-${it.effectiveId}" },
@@ -166,7 +162,6 @@ fun HomeScreen(
                         }
                     }
 
-                    // Bottom spacing
                     item { Spacer(modifier = Modifier.height(TS.Spacing.lg)) }
                 }
             }
@@ -180,9 +175,6 @@ private fun GreetingSection(
     greetingType: HomeViewModel.GreetingType,
 ) {
     Column {
-        YingaBar()
-        Spacer(modifier = Modifier.height(TS.Spacing.md))
-
         val greeting = when (greetingType) {
             HomeViewModel.GreetingType.MORNING -> {
                 if (userName != null) stringResource(R.string.home_greeting_morning, userName)
@@ -200,22 +192,100 @@ private fun GreetingSection(
 
         Text(
             text = greeting,
-            style = MaterialTheme.typography.headlineSmall,
+            style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface,
+        )
+
+        Spacer(modifier = Modifier.height(TS.Spacing.xs))
+
+        Text(
+            text = stringResource(R.string.home_subtitle),
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
 
+/**
+ * Hero CTA card with gradient background — matches macOS HomeView CTA.
+ * Gradient from BrandPrimary to BrandPrimaryDark with microphone icon.
+ */
 @Composable
-private fun SectionHeader(
-    title: String,
-) {
+private fun HeroCTACard(onClick: () -> Unit) {
+    val ctaGradient = Brush.linearGradient(
+        colors = listOf(BrandPrimary, BrandPrimaryDark),
+    )
+    val shape = RoundedCornerShape(TS.Radius.lg)
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(
+                elevation = 16.dp,
+                shape = shape,
+                ambientColor = BrandPrimary.copy(alpha = 0.25f),
+                spotColor = BrandPrimary.copy(alpha = 0.30f),
+            )
+            .clip(shape)
+            .background(ctaGradient)
+            .clickable(onClick = onClick)
+            .padding(horizontal = TS.Spacing.lg, vertical = TS.Spacing.lg),
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            // Mic icon in circle with glass effect
+            Box(
+                modifier = Modifier
+                    .size(52.dp)
+                    .background(Color.White.copy(alpha = 0.18f), CircleShape),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Mic,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(26.dp),
+                )
+            }
+
+            Spacer(modifier = Modifier.width(TS.Spacing.md))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.home_quick_start),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = stringResource(R.string.home_cta_subtitle),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.White.copy(alpha = 0.75f),
+                )
+            }
+
+            Icon(
+                imageVector = Icons.Default.ChevronRight,
+                contentDescription = null,
+                tint = Color.White.copy(alpha = 0.6f),
+                modifier = Modifier.size(20.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun SectionHeader(title: String) {
     Text(
-        text = title,
-        style = MaterialTheme.typography.titleMedium,
+        text = title.uppercase(),
+        style = MaterialTheme.typography.labelLarge,
         fontWeight = FontWeight.SemiBold,
-        color = MaterialTheme.colorScheme.onSurface,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        letterSpacing = 0.8.sp,
         modifier = Modifier.padding(top = TS.Spacing.sm),
     )
 }
@@ -326,17 +396,12 @@ private fun RecentTranscriptCard(
     }
 }
 
-/**
- * Formats an ISO date string to a short display format.
- * Falls back to the raw string if parsing fails.
- */
 private fun formatDate(isoDate: String): String {
     return try {
-        // ISO format: "2026-03-13T10:30:00" — take date part
         val datePart = isoDate.substringBefore("T")
         val parts = datePart.split("-")
         if (parts.size == 3) {
-            "${parts[2]}-${parts[1]}-${parts[0]}" // DD-MM-YYYY
+            "${parts[2]}-${parts[1]}-${parts[0]}"
         } else {
             isoDate
         }

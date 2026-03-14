@@ -326,7 +326,7 @@ struct EditableHTMLWebView: UIViewRepresentable {
             context.coordinator.currentlyEditing = isEditing
             context.coordinator.lastLoadedHTML = htmlContent
             context.coordinator.lastDarkMode = isDarkMode
-            let styled = Self.styledHTML(htmlContent, editable: isEditing, isDark: isDarkMode)
+            let styled = Self.styledHTML(htmlContent, editable: isEditing)
             webView.loadHTMLString(styled, baseURL: nil)
         }
     }
@@ -578,3 +578,4 @@ struct FormattingToolbar: View {
         .buttonStyle(.plain)
     }
 }
+

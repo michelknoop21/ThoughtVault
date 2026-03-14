@@ -6,13 +6,18 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Article
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
@@ -22,7 +27,6 @@ import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -37,11 +41,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.hilt.navigation.compose.hiltViewModel
 import nl.prezent.transcriptstudio.R
 import nl.prezent.transcriptstudio.ui.components.EmptyState
 import nl.prezent.transcriptstudio.ui.components.TSCard
 import nl.prezent.transcriptstudio.ui.components.TSTextField
+import nl.prezent.transcriptstudio.ui.theme.BrandSecondary
 import nl.prezent.transcriptstudio.ui.theme.TS
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -60,22 +66,24 @@ fun TranscriptsScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(modifier = Modifier.fillMaxSize()) {
             TopAppBar(
-                title = { Text(stringResource(R.string.transcripts_title)) },
+                title = {
+                    Text(
+                        text = stringResource(R.string.transcripts_title),
+                        fontWeight = FontWeight.Bold,
+                    )
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
                 ),
             )
-        },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding),
-        ) {
+
+            Column(
+                modifier = Modifier.fillMaxSize(),
+            ) {
             // Search bar
             TSTextField(
                 value = state.searchQuery,
@@ -145,7 +153,13 @@ fun TranscriptsScreen(
                     }
                 }
             }
+            }
         }
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter),
+        )
     }
 }
 
@@ -160,47 +174,77 @@ private fun TranscriptListItem(
             .fillMaxWidth()
             .clickable(onClick = onClick),
     ) {
-        Column(
-            modifier = Modifier.padding(TS.Spacing.md),
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(TS.Spacing.md),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text = transcript.effectiveTitle,
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onSurface,
+            Icon(
+                imageVector = Icons.Default.Article,
+                contentDescription = null,
+                modifier = Modifier.size(24.dp),
+                tint = BrandSecondary,
             )
-
-            if (transcript.createdAt != null) {
+            Spacer(modifier = Modifier.width(TS.Spacing.sm))
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = transcript.createdAt,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = TS.Spacing.xs),
+                    text = transcript.effectiveTitle,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
-            }
 
-            if (transcript.tags.isNotEmpty()) {
-                FlowRow(
-                    modifier = Modifier.padding(top = TS.Spacing.sm),
-                    horizontalArrangement = Arrangement.spacedBy(TS.Spacing.xs),
-                    verticalArrangement = Arrangement.spacedBy(TS.Spacing.xs),
-                ) {
-                    transcript.tags.forEach { tag ->
-                        AssistChip(
-                            onClick = { },
-                            label = {
-                                Text(
-                                    text = tag,
-                                    style = MaterialTheme.typography.labelSmall,
-                                )
-                            },
-                            colors = AssistChipDefaults.assistChipColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                            ),
-                            border = null,
-                        )
+                if (transcript.createdAt != null) {
+                    Text(
+                        text = formatDate(transcript.createdAt),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+
+                if (transcript.tags.isNotEmpty()) {
+                    FlowRow(
+                        modifier = Modifier.padding(top = TS.Spacing.xs),
+                        horizontalArrangement = Arrangement.spacedBy(TS.Spacing.xs),
+                        verticalArrangement = Arrangement.spacedBy(TS.Spacing.xs),
+                    ) {
+                        transcript.tags.forEach { tag ->
+                            AssistChip(
+                                onClick = { },
+                                label = {
+                                    Text(
+                                        text = tag,
+                                        style = MaterialTheme.typography.labelSmall,
+                                    )
+                                },
+                                colors = AssistChipDefaults.assistChipColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                ),
+                                border = null,
+                            )
+                        }
                     }
                 }
             }
+            Icon(
+                imageVector = Icons.Default.ChevronRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
+    }
+}
+
+private fun formatDate(isoDate: String): String {
+    return try {
+        val datePart = isoDate.substringBefore("T")
+        val parts = datePart.split("-")
+        if (parts.size == 3) {
+            "${parts[2]}-${parts[1]}-${parts[0]}"
+        } else {
+            isoDate
+        }
+    } catch (_: Exception) {
+        isoDate
     }
 }

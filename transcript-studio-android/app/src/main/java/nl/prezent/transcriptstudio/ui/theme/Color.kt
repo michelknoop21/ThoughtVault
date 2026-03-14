@@ -107,6 +107,12 @@ val StatusSuccess = Color(0xFF009F3C)
 /** Info — system blue */
 val StatusInfo = Color(0xFF007AFF)
 
+// Shimmer / glass tints for surface layering
+/** Ultra-light brand tint for hero section backgrounds (light mode) */
+val BrandTintLight = Color(0x08E50074) // 3% magenta tint
+/** Ultra-light secondary tint for decorative backgrounds (light mode) */
+val SecondaryTintLight = Color(0x07007BC4) // 3% blue tint
+
 // Platform brand colors (calendar integrations)
 val PlatformTeams = Color(0xFF4A35B0)
 val PlatformZoom = Color(0xFF2D8CFF)

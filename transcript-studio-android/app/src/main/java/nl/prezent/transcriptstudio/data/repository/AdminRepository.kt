@@ -12,7 +12,7 @@ class AdminRepository @Inject constructor(
 
     // ── Users ────────────────────────────────────────────────────────────
 
-    suspend fun getUsers(): List<AdminUser> = apiService.getAdminUsers()
+    suspend fun getUsers(): List<AdminUser> = apiService.getAdminUsers().items
 
     suspend fun createUser(
         username: String,

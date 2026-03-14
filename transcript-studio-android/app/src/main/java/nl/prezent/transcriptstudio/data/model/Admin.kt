@@ -19,6 +19,11 @@ data class AdminUser(
 )
 
 @Serializable
+data class AdminUsersResponse(
+    val items: List<AdminUser> = emptyList(),
+)
+
+@Serializable
 data class CreateUserRequest(
     val username: String,
     val password: String,

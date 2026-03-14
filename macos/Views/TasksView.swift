@@ -257,6 +257,7 @@ private struct TaskRow: View {
         case .error:                        return "exclamationmark.triangle.fill"
         case .pending, .queued:             return "clock.fill"
         case .uploading:                    return "arrow.up.circle.fill"
+        case .downloading:                  return "arrow.down.circle.fill"
         case .transcribing, .transcribed:   return "text.bubble.fill"
         case .converting:                   return "waveform"
         case .processingWebhook:            return "doc.text.fill"

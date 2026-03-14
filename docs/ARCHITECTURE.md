@@ -1,6 +1,6 @@
 # TranscriptStudio — Architecture
 
-_Last updated: 2026-03-13_
+_Last updated: 2026-03-14_
 
 ---
 
@@ -10,10 +10,11 @@ TranscriptStudio is a cross-platform meeting transcription system consisting of:
 
 - **macOS client** — Swift 6+ / SwiftUI native app (`/macos/`)
 - **Windows client** — Tauri 2.10 / React 19 / TypeScript desktop app (`/windows/`)
+- **Android client** — Kotlin 2.x / Jetpack Compose / Material 3 (`/transcript-studio-android/`)
 - **iOS Widget** — SwiftUI Live Activity (`/ios-widget/`)
 - **Backend** — FastAPI (Python) with GPU-accelerated Whisper transcription and n8n workflow orchestration
 
-Both desktop clients share a common REST + SSE API and are deployed independently.
+All clients share a common REST + SSE API and are deployed independently.
 
 ---
 
@@ -43,6 +44,8 @@ Both desktop clients share a common REST + SSE API and are deployed independentl
 | GET | `/tstudio/api/task/{id}/stream` | SSE stream of task status transitions |
 | POST | `/tstudio/api/transcribe` | Transcribe audio (internal) |
 | POST | `/tstudio/api/transcribe-text` | Generate notes from existing transcript text |
+| POST | `/tstudio/api/transcribe-youtube` | Transcribe YouTube video (URL → yt-dlp download → Whisper); requires `FEATURE_YOUTUBE_ENABLED=true` |
+| GET | `/tstudio/api/features` | Feature flags (`{"youtube_transcription": bool}`); no auth required |
 | GET | `/tstudio/api/tasks` | List all tasks for authenticated user |
 | PATCH | `/tstudio/api/tasks/{id}` | Update task metadata (tags, title) |
 | DELETE | `/tstudio/api/tasks/{id}` | Delete task and associated data |
@@ -76,6 +79,8 @@ Client                    Backend                    n8n / Claude
 ```
 
 **Status pipeline:** `pending → uploading → converting → transcribing → transcribed → processingWebhook → completed`
+
+**YouTube pipeline:** `pending → downloading → converting → transcribing → transcribed → processingWebhook → completed`
 
 **Field mapping:** `Task.result` → `notuleHtml` (macOS Swift) / `notule_html` (Windows TypeScript)
 
@@ -275,17 +280,103 @@ src/
 
 ---
 
+## Android Client
+
+**Stack:** Kotlin 2.x · Jetpack Compose · Material 3 · Hilt · Room · OkHttp + Retrofit · Kotlin Serialization
+
+**Architecture:** MVVM with Hilt dependency injection, Repository pattern, single-activity Compose navigation
+
+**Minimum deployment:** Android 9 (API 28) · Target SDK: 36
+
+**Status:** Active development (UI screens implemented, recording integration in progress)
+
+### Directory Structure
+
+```
+transcript-studio-android/app/src/main/java/nl/prezent/transcriptstudio/
+├── TranscriptStudioApp.kt              # @HiltAndroidApp entry point
+├── MainActivity.kt                     # Single activity, edge-to-edge, Compose host
+│
+├── data/
+│   ├── local/
+│   │   ├── AppDatabase.kt              # Room database (QueuedUpload table)
+│   │   ├── QueuedUpload.kt             # Offline queue entity
+│   │   └── QueuedUploadDao.kt          # Room DAO for queued uploads
+│   ├── model/
+│   │   ├── Admin.kt                    # Admin data models (users, invite codes, metrics)
+│   │   ├── Auth.kt                     # Login request/response, 2FA models
+│   │   ├── Profile.kt                  # Transcription profile model
+│   │   ├── Task.kt                     # Task model with status pipeline
+│   │   └── Transcript.kt              # Transcript model with HTML notes
+│   ├── remote/
+│   │   ├── ApiService.kt               # Retrofit interface — all REST endpoints
+│   │   ├── AuthInterceptor.kt          # OkHttp interceptor — adds Authorization header
+│   │   ├── DynamicBaseUrlInterceptor.kt # Configurable server URL
+│   │   └── SSEClient.kt               # OkHttp-based SSE streaming client
+│   └── repository/
+│       ├── AdminRepository.kt          # Admin operations (users, invite codes)
+│       ├── AuthRepository.kt           # Login, 2FA, token management
+│       ├── ProfileRepository.kt        # Profile CRUD
+│       ├── TaskRepository.kt           # Task operations + SSE streaming
+│       └── TranscriptRepository.kt     # Transcript list, detail, export
+│
+├── di/                                  # Hilt dependency injection modules
+│   ├── AuthModule.kt                   # Token store, biometric service
+│   ├── DatabaseModule.kt              # Room database singleton
+│   └── NetworkModule.kt               # OkHttp client, Retrofit, API service
+│
+├── service/
+│   ├── AudioRecorderService.kt         # MediaRecorder audio capture
+│   ├── BiometricService.kt            # AndroidX Biometric prompt
+│   ├── NetworkMonitor.kt              # ConnectivityManager reachability
+│   ├── OfflineQueueManager.kt         # Room-backed upload queue with retry
+│   ├── RecordingForegroundService.kt   # Foreground service for background recording
+│   ├── SecureTokenStore.kt            # EncryptedSharedPreferences (Tink)
+│   └── SettingsRepository.kt          # DataStore preferences
+│
+└── ui/
+    ├── navigation/
+    │   ├── AppNavigation.kt            # NavHost with type-safe routes
+    │   └── Routes.kt                   # Route definitions
+    ├── theme/
+    │   ├── Color.kt, Spacing.kt, Theme.kt, Type.kt  # Material 3 theme + design tokens
+    ├── components/                      # Reusable composables (TSCard, TSButton, StatusBadge, etc.)
+    ├── login/                           # LoginScreen + LoginViewModel
+    ├── home/                            # HomeScreen + HomeViewModel
+    ├── recording/                       # RecordingScreen + RecordingViewModel + WaveformVisualizer
+    ├── tasks/                           # TasksScreen + TasksViewModel (SSE real-time)
+    ├── transcripts/                     # TranscriptsScreen + TranscriptDetailScreen + ViewModels
+    ├── settings/                        # SettingsScreen + SettingsViewModel
+    └── admin/                           # AdminScreen + AdminViewModel (6 management tabs)
+```
+
+### Key Patterns
+
+| Pattern | Implementation |
+|---------|---------------|
+| DI | Hilt with `@HiltAndroidApp`, `@AndroidEntryPoint`, `@HiltViewModel` |
+| Networking | Retrofit + OkHttp with `AuthInterceptor` for token injection |
+| Local storage | Room (offline queue), DataStore (preferences), EncryptedSharedPreferences (tokens) |
+| SSE | Custom `SSEClient` using OkHttp streaming response |
+| State | `StateFlow` in ViewModels, `collectAsStateWithLifecycle()` in composables |
+| Navigation | Compose Navigation with type-safe routes |
+| Strings | All UI text in `res/values/strings.xml` (Dutch) |
+| Auth header | `Authorization: Bearer <token>` (same as Windows) |
+| Build | AGP 9.1, Gradle 9.x, version read from root `VERSION` file at build time |
+
+---
+
 ## Cross-Platform Conventions
 
 | Convention | Detail |
 |-----------|--------|
 | Configuration | No environment variables — all config via Settings UI |
-| Offline first | `OfflineQueue` on both platforms retries uploads on reconnect |
-| Real-time status | SSE stream used on both platforms, not polling |
-| UI language | Dutch (nl_NL) throughout both clients |
-| Audio format | 16 kHz mono 16-bit PCM WAV on both platforms |
+| Offline first | `OfflineQueue` on all platforms retries uploads on reconnect |
+| Real-time status | SSE stream used on all platforms, not polling |
+| UI language | Dutch (nl_NL) throughout all clients |
+| Audio format | 16 kHz mono 16-bit PCM WAV on all platforms |
 | Field mapping | Backend field names normalized at API boundary on each client |
-| Auth headers | Both `X-User-Token` and `Authorization: Bearer` accepted by backend; macOS uses `X-User-Token`, Windows uses `Authorization: Bearer` |
+| Auth headers | Both `X-User-Token` and `Authorization: Bearer` accepted by backend; macOS uses `X-User-Token`, Windows and Android use `Authorization: Bearer` |
 
 ---
 
@@ -297,13 +388,22 @@ src/
 | Backend URL | `https://n8n.prezent.nl` (configurable) |
 | macOS app | DMG via `https://n8n.prezent.nl/tstudio/download/` |
 | Windows app | MSI via `https://n8n.prezent.nl/tstudio/download/` |
+| Android app | APK via `https://n8n.prezent.nl/tstudio/download/` |
 | iOS widget | App Store (bundled with macOS app) |
 | Release manifest | `https://n8n.prezent.nl/tstudio/download/releases.json` |
 
 ### Build & Release Pipeline
 
-Version is managed via the `VERSION` file (auto-bumped on commits to `main` by `.githooks/post-commit`). Release scripts in `scripts/` handle the full pipeline:
+Version is managed via the `VERSION` file (auto-bumped on commits to `main` by `.githooks/post-commit`). Two deployment paths:
 
+**GitHub Actions (primary):** Triggered by tags (`v*` for production, `dev-v*` for dev). Builds all three platforms in parallel (macOS DMG, Windows MSI, Android APK), uploads to server, updates `releases.json`, and creates a GitHub Release with changelog-based release notes.
+
+```bash
+./scripts/deploy-dev.sh         # Create dev-v* tag → GitHub Actions
+./scripts/deploy-production.sh  # Create v* tag → GitHub Actions
+```
+
+**Local build (fallback):**
 ```
 VERSION file (source of truth)
        ↓
@@ -316,4 +416,4 @@ VERSION file (source of truth)
 
 **Server-side hosting:** The `n8n_nginx` container serves static files from `/home/michelk/tstudio-releases/` at `/tstudio/download/` via an `alias` directive. The volume is mounted read-only in `docker-compose.yml`.
 
-See [RELEASE.md](RELEASE.md) for detailed usage instructions and clickable Finder shortcuts.
+See [RELEASE.md](RELEASE.md) for detailed pipeline documentation.

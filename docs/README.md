@@ -49,6 +49,13 @@ npm install          # must run inside Windows environment
 npm run tauri dev    # starts Vite dev server + Tauri window
 ```
 
+### Android
+```bash
+cd transcript-studio-android
+./gradlew assembleDebug
+# Or open in Android Studio
+```
+
 ### Backend (separate repo)
 ```bash
 # See ../transcript-studio-backend/ for Docker Compose configuration
@@ -71,7 +78,7 @@ Requires Azure AD App Registration with:
 
 ## Version
 
-Current version: **1.0.50** (tracked in `VERSION` file, auto-bumped on commits to `main`).
+Current version: **1.0.73** (tracked in `VERSION` file, auto-bumped on commits to `main`).
 
 Repository: [gitlab.prezent.nl/michelk/transcript-studio-native](https://gitlab.prezent.nl/michelk/transcript-studio-native)
 

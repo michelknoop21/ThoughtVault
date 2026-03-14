@@ -12,6 +12,7 @@ import SwiftUI
 enum TaskStatus: String, Codable, Sendable {
     case pending
     case uploading
+    case downloading
     case converting
     case transcribing
     case transcribed
@@ -34,6 +35,7 @@ enum TaskStatus: String, Codable, Sendable {
         switch self {
         case .pending:           return 0.0
         case .uploading:         return 0.15
+        case .downloading:       return 0.10
         case .converting:        return 0.25
         case .transcribing:      return 0.45
         case .transcribed:       return 0.60
@@ -50,6 +52,7 @@ enum TaskStatus: String, Codable, Sendable {
         switch self {
         case .pending:           return "Wachten"
         case .uploading:         return "Uploaden"
+        case .downloading:       return "Downloaden..."
         case .converting:        return "Converteren"
         case .transcribing:      return "Transcriberen"
         case .transcribed:       return "Getranscribeerd"

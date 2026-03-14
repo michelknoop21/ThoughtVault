@@ -353,6 +353,20 @@ class APIService {
     return `${this.baseUrl}/task/${taskId}/stream`;
   }
 
+  // Features
+  async fetchFeatures(): Promise<Record<string, boolean>> {
+    return this.request<Record<string, boolean>>("GET", "/features");
+  }
+
+  // YouTube transcription
+  async transcribeYouTube(url: string, profileId: string): Promise<TranscriptTask> {
+    const data = await this.request<unknown>("POST", "/transcribe-youtube", {
+      url,
+      profile_id: profileId,
+    });
+    return mapTask(data);
+  }
+
   // Tasks
   async getActiveTasks(): Promise<TranscriptTask[]> {
     const data = await this.request<unknown>("GET", "/tasks/active");

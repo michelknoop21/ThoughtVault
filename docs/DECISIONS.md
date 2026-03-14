@@ -590,3 +590,21 @@ _Append-only log. Each entry records context, decision, and consequences._
 - Xcode `project.pbxproj` vereiste exacte pad-aanpassingen voor group path, entitlements, en Info.plist referenties.
 - Historische plan-bestanden (`docs/plans/`, `.claude/plans/`) zijn niet bijgewerkt — ze zijn snapshots van eerdere sessies.
 - Toekomstige platform directories volgen nu automatisch het patroon: `android/`, `web/`, etc.
+
+---
+
+## DEC-035 — YouTube Transcriptie via Backend Download (niet Client Upload)
+
+**Date:** 2026-03-14
+**Status:** Accepted
+
+**Context:** YouTube-video's moesten transcribeerbaar worden in TranscriptStudio. Twee architecturale opties: (1) client downloadt audio en uploadt naar backend zoals bij normale opnames, of (2) client stuurt alleen de URL, backend downloadt de audio zelf via `yt-dlp`. Optie 1 zou yt-dlp op elke client vereisen (complexe native dependency op macOS/Windows/Android) en grote downloads over het netwerk twee keer verplaatsen (YouTube → client → server).
+
+**Decision:** Backend downloadt YouTube audio via `yt-dlp` subprocess (`POST /transcribe-youtube`). Client stuurt alleen de URL. Nieuwe `downloading` task status toegevoegd aan de pipeline. Feature achter `FEATURE_YOUTUBE_ENABLED` flag zodat het per instance in/uitschakelbaar is. Rate limit 5/uur (strenger dan audio upload) om misbruik te voorkomen. Maximale videoduur configureerbaar via `YOUTUBE_MAX_DURATION_SECONDS` (default 7200s = 2 uur).
+
+**Consequences:**
+- Geen yt-dlp dependency nodig op clients — alleen een URL input veld en feature flag check.
+- Backend Dockerfile moet `yt-dlp` bevatten (pip install). ffmpeg was al aanwezig.
+- Nieuwe task status `downloading` vereist exhaustive switch updates op alle clients (macOS `TasksView.swift`, `ProcessingView.swift`; Windows `types.ts`).
+- Feature flag via `GET /features` endpoint (ongeauthenticeerd) laat clients de YouTube UI conditioneel tonen.
+- `source_type` en `source_url` kolommen op Task model voor traceerbaarheid van de bron.

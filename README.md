@@ -2,7 +2,7 @@
 
 Cross-platform desktop app voor vergaderopnames, transcriptie en automatische notulengeneratie. Native macOS client (Swift 6 / SwiftUI) en Windows client (Tauri 2 / React) met een gedeelde FastAPI + Whisper backend.
 
-**Versie:** 1.0.50
+**Versie:** 1.0.73
 **Bundle ID:** `nl.prezent.TranscriptStudio`
 **Repository:** [gitlab.prezent.nl/michelk/transcript-studio-native](https://gitlab.prezent.nl/michelk/transcript-studio-native)
 **Backend:** `https://n8n.prezent.nl/tstudio/api/`
@@ -49,6 +49,7 @@ Kernfunctionaliteit:
 |----------|------------|----------|--------|
 | macOS | Swift 6 / SwiftUI / `@Observable` | macOS 14 Sonoma | Productie |
 | Windows | Tauri 2.10 / React 19 / TypeScript | Windows 11 | Actieve ontwikkeling |
+| Android | Kotlin 2.x / Jetpack Compose / Material 3 | Android 9 (API 28) | Actieve ontwikkeling |
 | iOS | SwiftUI Live Activity (widget only) | iOS 17 | Productie |
 
 ---
@@ -140,6 +141,10 @@ xcodebuild -project TranscriptStudio.xcodeproj \
 # Windows
 cd windows
 npm run tauri build
+
+# Android
+cd transcript-studio-android
+./gradlew assembleRelease
 ```
 
 ---
@@ -240,6 +245,14 @@ TranscriptStudioApp/
 │   └── src-tauri/                     # Rust backend commands
 │       └── src/                       #   Audio (WASAPI), auth (keyring), OAuth PKCE, etc.
 │
+├── transcript-studio-android/          # Android app (Kotlin 2.x, Jetpack Compose)
+│   ├── app/src/main/java/nl/prezent/transcriptstudio/
+│   │   ├── data/                      #   Models, Retrofit API, Room DB, Repositories
+│   │   ├── di/                        #   Hilt dependency injection modules
+│   │   ├── service/                   #   Audio, biometric, network, token, settings
+│   │   └── ui/                        #   Compose screens + ViewModels per feature
+│   └── build.gradle.kts              #   AGP 9.1, SDK 36, dependencies
+│
 ├── ios-widget/                        # iOS Live Activity (Dynamic Island + lock screen)
 │
 ├── docs/                              # Gedetailleerde documentatie
@@ -286,6 +299,20 @@ TranscriptStudioApp/
 | Audio capture | WASAPI (via Rust) | — |
 | Kalender | Microsoft Graph API + OAuth PKCE | — |
 | Icons | Fluent UI | — |
+
+### Android
+
+| Component | Technologie | Versie |
+|-----------|-------------|--------|
+| Taal | Kotlin | 2.x |
+| UI framework | Jetpack Compose | Material 3 |
+| DI | Hilt | — |
+| Database | Room | — |
+| Netwerk | OkHttp + Retrofit | — |
+| Serialisatie | Kotlin Serialization | — |
+| State management | StateFlow + collectAsStateWithLifecycle | — |
+| Authenticatie | AndroidX Biometric + EncryptedSharedPreferences | — |
+| Build | AGP 9.1 / Gradle 9.x | SDK 36 |
 
 ### Backend (aparte repo)
 

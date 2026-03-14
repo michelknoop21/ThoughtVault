@@ -2,6 +2,7 @@
 export type TaskStatus =
   | "pending"
   | "uploading"
+  | "downloading"
   | "converting"
   | "transcribing"
   | "generating"
@@ -15,6 +16,7 @@ export type TaskStatus =
 export const TaskStatusLabels: Record<TaskStatus, string> = {
   pending: "Wachten...",
   uploading: "Uploaden...",
+  downloading: "Downloaden...",
   converting: "Converteren...",
   transcribing: "Transcriberen...",
   generating: "Notulen genereren...",
@@ -44,6 +46,8 @@ export interface TranscriptTask {
   filename?: string;
   extracted_title?: string;
   profile_id?: string;
+  source_type?: string;
+  source_url?: string;
   mode: RecordingMode;
   duration_seconds?: number;
   created_at: string;

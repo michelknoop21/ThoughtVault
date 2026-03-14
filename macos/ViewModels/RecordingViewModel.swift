@@ -34,6 +34,12 @@ final class RecordingViewModel {
     var showRetrySheet: Bool = false
     var audioMixFallbackOccurred: Bool = false
 
+    // YouTube transcription
+    var isYouTubeEnabled: Bool = false
+    var youtubeURL: String = ""
+    var isSubmittingYouTube: Bool = false
+    var youtubeError: String?
+
     // MARK: - Audio Properties (computed, @Observable-compatible)
 
     /// Combined audio levels from the active recorder(s). In combined mode the
@@ -139,6 +145,7 @@ final class RecordingViewModel {
         // Load profiles from API (restore saved selection if available)
         Task {
             await loadDefaultProfile(savedId: UserDefaults.standard.string(forKey: "lastSelectedProfileId") ?? "")
+            await checkFeatures()
         }
     }
 
@@ -872,6 +879,52 @@ final class RecordingViewModel {
         // Avoid duplicates
         if !activeTasks.contains(where: { $0.taskId == task.taskId }) {
             activeTasks.append(task)
+        }
+    }
+
+    // MARK: - Feature Flags
+
+    func checkFeatures() async {
+        do {
+            let features = try await APIService.shared.fetchFeatures()
+            await MainActor.run {
+                isYouTubeEnabled = features["youtube_transcription"] ?? false
+            }
+        } catch {
+            os_log("[RecordingVM] Could not load features: %{public}@", log: log, type: .error, error.localizedDescription)
+        }
+    }
+
+    // MARK: - YouTube Transcription
+
+    func submitYouTubeURL() async {
+        let url = youtubeURL.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !url.isEmpty else { return }
+        guard let profile = selectedProfile else {
+            youtubeError = "Geen profiel geselecteerd."
+            return
+        }
+
+        await MainActor.run {
+            isSubmittingYouTube = true
+            youtubeError = nil
+        }
+
+        do {
+            let task = try await APIService.shared.transcribeYouTube(url: url, profileId: profile.id)
+
+            await MainActor.run {
+                addTask(task)
+                isSubmittingYouTube = false
+                youtubeURL = ""
+            }
+
+            await startSSEStream(for: task.taskId)
+        } catch {
+            await MainActor.run {
+                isSubmittingYouTube = false
+                youtubeError = error.localizedDescription
+            }
         }
     }
 

@@ -5,6 +5,66 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2026-03-14] — YouTube transcriptie + Blog Samenvatting profiel
+
+### Added
+- **Blog Samenvatting profiel** (backend `profile_templates.py`): Nieuw 4e default profiel `blog_samenvatting` — genereert narratieve long-form samenvattingen als basis voor blogartikelen. Template bevat TL;DR box, thematische secties met blockquotes, en conclusie met key takeaways. Wordt automatisch aangemaakt via migratie `_migrate_add_blog_profile()` in `app.py`.
+- **Feature flag infrastructuur** (backend `config.py`, `routes/features.py`): `GET /features` endpoint retourneert in/uitschakelbare features als JSON (`{"youtube_transcription": true/false}`). Geen authenticatie vereist zodat clients features kunnen checken voor login. Config via `FEATURE_YOUTUBE_ENABLED` env var (default: `false`).
+- **YouTube transcriptie endpoint** (backend `routes/transcription.py`): `POST /transcribe-youtube` accepteert YouTube URL + optioneel `profile_id`. Valideert URL (strict regex voor youtube.com/watch, youtu.be, shorts, live), haalt metadata op via `yt-dlp --dump-json`, downloadt audio via `yt-dlp --extract-audio --audio-format wav`, en voert het in de normale Whisper pipeline. Rate limit: 5/uur per gebruiker.
+- **YouTube service** (backend `services/youtube_service.py`): Drie functies — `validate_youtube_url()`, `get_youtube_metadata()` (met duurcheck tegen `YOUTUBE_MAX_DURATION_SECONDS`, default 7200s), `download_youtube_audio()` (subprocess met 600s timeout).
+- **`downloading` task status** (backend `models.py`, macOS `Models.swift`, macOS `TasksView.swift`, macOS `ProcessingView.swift`, Windows `types.ts`): Nieuwe status in de pipeline voor YouTube downloads. Progress 10%, Nederlandse labels "Downloaden..." / "YouTube video wordt gedownload...".
+- **`source_type` / `source_url` velden** (backend `models.py`): Nieuwe kolommen op Task model om de bron van een transcriptie vast te leggen (bijv. `source_type="youtube"`, `source_url="https://..."`). Migratie `_migrate_add_source_fields()` voegt kolommen toe via ALTER TABLE.
+- **YouTube UI** (macOS `RecordingView.swift`, `RecordingViewModel.swift`): Conditionele YouTube card in idle state — verschijnt alleen als `isYouTubeEnabled` via feature flag. URL TextField, profiel picker (hergebruikt bestaande `profilePickerSection`), submit knop met loading state en foutmelding. Rood kleurthema voor YouTube branding.
+- **YouTube UI** (Windows `RecordingPage.tsx`, `recordingStore.ts`): YouTube sectie in IdleState met URL input, submit knop, en error display. Feature check via `api.fetchFeatures()` bij mount. Submit handler voegt task toe als background task met SSE tracking.
+- **API methodes** (macOS `APIService.swift`, Windows `api.ts`): `fetchFeatures()` (GET /features, ongeauthenticeerd) en `transcribeYouTube(url:profileId:)` (POST /transcribe-youtube) op beide platforms.
+- **yt-dlp** (backend `Dockerfile`): Toegevoegd aan pip install voor YouTube audio download.
+- **YouTube UI** (webapp `templates/pages/upload.html`): YouTube card met URL input, profiel selector en submit knop. Card is verborgen en wordt conditioneel getoond via `fetch('/tstudio/api/features')` bij page load. Submit handler doet `POST /transcribe-youtube` met auth token uit localStorage. Success-melding verwijst gebruiker naar taken.
+- **`downloading` status** (webapp `static/js/upload.js`): Toegevoegd aan `statusMap` met label "YouTube video downloaden..." en progress 15%.
+
+### Changed
+- **Backend config** (`config.py`): Pydantic v1/v2 compatibiliteit — `_env_field()` helper die `validation_alias` (v2) of `env` (v1) gebruikt afhankelijk van geïnstalleerde versie. `class Config` fallback voor servers zonder `pydantic-settings` package.
+- **Feature flag geactiveerd** (`docker-compose.yml`): `FEATURE_YOUTUBE_ENABLED=true` toegevoegd aan container env vars en container opnieuw aangemaakt. YouTube card is nu zichtbaar in webapp, macOS en Windows.
+
+### Decisions
+- Zie [DEC-035](DECISIONS.md) voor de rationale achter YouTube als backend-download.
+
+### Notes
+- YouTube feature is live op productie (`FEATURE_YOUTUBE_ENABLED=true`). `GET /features` retourneert `{"youtube_transcription": true}`.
+- Backend deployed en geverifieerd: blog profiel succesvol aangemaakt via migratie, `source_type`/`source_url` kolommen toegevoegd.
+- macOS build geverifieerd: `BUILD SUCCEEDED` (alle switch statements uitgebreid met `downloading` case).
+- Windows TypeScript compileert zonder fouten.
+- Webapp YouTube card getest: verschijnt conditioneel bij enabled feature.
+- Android client (Fase 6) nog niet geïmplementeerd.
+- Server heeft pydantic v1 (1.10.7) — config.py aangepast voor backward compatibility.
+- Container is handmatig opnieuw aangemaakt met `docker run` (niet via docker-compose) omdat docker-compose een build probeert die failt op ontbrekend pad.
+
+---
+
+## [2026-03-14] — Android client + CI/CD verbeteringen (v1.0.58–1.0.73)
+
+### Added
+- **Android client** (`transcript-studio-android/`): Volledig nieuw platform met Kotlin 2.x, Jetpack Compose, Material 3, Hilt DI, Room database en OkHttp/Retrofit networking. Alle UI screens geïmplementeerd: Login (email/wachtwoord + 2FA + biometrie), Home, Recording (waveform visualizer), Tasks (SSE real-time updates), Transcripts (lijst + detail met HTML rendering en export), Settings, en Admin (6 management tabs). Architectuur volgt Repository pattern met ViewModels, `StateFlow`, en `collectAsStateWithLifecycle()`. Offline queue via Room, tokens via EncryptedSharedPreferences (Tink), netwerk monitoring via ConnectivityManager. Package: `nl.prezent.transcriptstudio`, min SDK 28, target SDK 36.
+- **Android CI build** (`.github/workflows/release.yml`): `build-android` job bouwt APK op `ubuntu-latest` met JDK 21 en Gradle. APK wordt geüpload naar server en toegevoegd aan `releases.json` manifest (`android` / `dev_android` velden). Debug keystore wordt aangemaakt op CI runner omdat GitHub Actions geen standaard Android debug keystore heeft.
+- **Android download card** (`scripts/download-page.html`): Download pagina toont nu een Android APK card naast macOS en Windows.
+- **Styled DMG installer** (`scripts/create-dmg-background.py`, `.github/workflows/release.yml`): macOS DMG heeft nu een branded achtergrond met drag-to-Applications layout. Background image wordt gegenereerd via Python script met Pillow, AppleScript positioneert de app en Applications iconen.
+
+### Changed
+- **Waveform visualizer** (Windows `WaveformVisualizer.tsx`): Vereenvoudigd naar dezelfde aanpak als macOS — directe canvas rendering zonder complexe animation queue.
+- **Floating widget** (macOS `FloatingWidgetController.swift`): Fix voor widget die niet sloot na stoppen opname.
+- **Android strings** (`res/values/strings.xml`): Alle hardcoded Nederlandse UI strings geëxtraheerd naar strings.xml resource file.
+- **Android state collection** (alle screens): Gemigreerd van `collectAsState()` naar `collectAsStateWithLifecycle()` voor correcte lifecycle-aware state collection.
+
+### Fixed
+- **Android signing config** (`app/build.gradle.kts`): Release build gebruikt `signingConfigs.getByName("debug")` voor ad-hoc signing zonder Play Store vereiste. CI runner mist de standaard debug keystore — opgelost door `keytool` stap in GitHub Actions workflow.
+- **Android version display** (`BuildConfig.VERSION_NAME`): Versie wordt nu gelezen uit `VERSION` bestand via Gradle i.p.v. hardcoded string.
+
+### Notes
+- Android app is functioneel voor UI maar recording-integratie is nog in ontwikkeling.
+- Android build version wordt automatisch bepaald uit het root `VERSION` bestand via `build.gradle.kts`.
+- Deploy job wacht nu op alle drie de platform builds (macOS + Windows + Android) voordat artifacts naar server worden geüpload.
+
+---
+
 ## [2026-03-13] — Directory herstructurering per platform
 
 ### Changed

@@ -413,6 +413,40 @@ actor APIService {
         return try await perform(req)
     }
 
+    // MARK: - Features
+
+    func fetchFeatures() async throws -> [String: Bool] {
+        let req = try request(path: "/features", method: "GET", authenticated: false)
+        return try await perform(req)
+    }
+
+    // MARK: - YouTube Transcription
+
+    struct YouTubeTranscribeResponse: Codable {
+        let taskId: String
+        let status: String
+        let message: String?
+        let sourceType: String?
+        let sourceUrl: String?
+        let extractedTitle: String?
+
+        enum CodingKeys: String, CodingKey {
+            case taskId = "task_id"
+            case status
+            case message
+            case sourceType = "source_type"
+            case sourceUrl = "source_url"
+            case extractedTitle = "extracted_title"
+        }
+    }
+
+    func transcribeYouTube(url: String, profileId: String) async throws -> TranscriptTask {
+        let payload: [String: String] = ["url": url, "profile_id": profileId]
+        let body = try JSONEncoder().encode(payload)
+        let req = try request(path: "/transcribe-youtube", method: "POST", body: body)
+        return try await perform(req)
+    }
+
     // MARK: - Task Streaming
 
     /// Returns the SSE stream URL and authentication token needed to connect to the task event stream.

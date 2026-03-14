@@ -433,6 +433,7 @@ struct ProcessingView: View {
         switch status {
         case .pending:           return "Wachten op verwerking..."
         case .uploading:         return "Audio wordt geüpload..."
+        case .downloading:       return "YouTube video wordt gedownload..."
         case .converting:        return "Audio wordt verwerkt..."
         case .transcribing:      return "Spraak wordt omgezet naar tekst..."
         case .transcribed:       return "Transcriptie voltooid"

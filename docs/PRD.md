@@ -1,6 +1,6 @@
 # TranscriptStudio — Product Requirements Document
 
-_Last updated: 2026-03-12_
+_Last updated: 2026-03-14_
 
 ---
 
@@ -8,12 +8,13 @@ _Last updated: 2026-03-12_
 
 TranscriptStudio is a cross-platform desktop application for recording meetings, transcribing audio, and generating structured meeting notes. It targets business professionals who need automated meeting documentation with the option to keep sensitive content entirely on-device.
 
-The product consists of three client surfaces sharing a common backend:
+The product consists of four client surfaces sharing a common backend:
 
 | Platform | Technology | Status |
 |----------|-----------|--------|
 | macOS 14+ | Swift 6 / SwiftUI / @Observable | Production |
 | Windows 11 (ARM64 + x64) | Tauri 2 / React 19 / TypeScript | Active development |
+| Android 9+ (API 28) | Kotlin 2.x / Jetpack Compose / Material 3 | Active development |
 | iOS 17+ (Widget only) | SwiftUI Live Activity | Production |
 
 **Backend:** FastAPI (Python) + insanely-fast-whisper + n8n workflow orchestration, deployed at `https://n8n.prezent.nl`.
@@ -60,7 +61,7 @@ The product consists of three client surfaces sharing a common backend:
 - Audio uploaded to `POST /tstudio/api/upload` immediately after recording stops (or when network becomes available).
 - Backend queues a GPU-accelerated Whisper job (insanely-fast-whisper).
 - Client receives real-time status via Server-Sent Events at `GET /tstudio/api/task/{id}/stream`.
-- Status pipeline: `pending → uploading → converting → transcribing → transcribed → processingWebhook → completed`.
+- Status pipeline: `pending → uploading → converting → transcribing → transcribed → processingWebhook → completed` (audio upload) or `pending → downloading → converting → ...` (YouTube).
 - Re-transcription supported within 7-day audio retention window.
 - **Hallucination detection**: Backend detects garbled/nonsensical Whisper output (repetitive patterns, nonsense tokens) when audio contains no clear speech. Returns `no_speech` status instead of garbage transcript text.
 
@@ -90,6 +91,18 @@ The product consists of three client surfaces sharing a common backend:
 - A default profile is always present; custom profiles can be added, edited, and deleted.
 - Settings per profile: prompt text, language, tone (formal / informal).
 - Calendar integration auto-suggests a profile based on meeting title keywords.
+- **Blog Samenvatting** profiel: narratieve long-form samenvatting als basis voor blogartikelen. TL;DR, thematische secties, kernquotes, conclusie.
+
+### 3.11 YouTube Transcriptie
+
+- Users can paste a YouTube URL to transcribe video audio without recording.
+- Backend downloads audio via `yt-dlp`, then processes through the normal Whisper pipeline.
+- Feature is toggleable per instance via `FEATURE_YOUTUBE_ENABLED` environment variable (default: off).
+- Client UI shows a YouTube card in the recording screen only when the feature is enabled (checked via `GET /features`).
+- Maximum video duration configurable via `YOUTUBE_MAX_DURATION_SECONDS` (default: 2 hours).
+- Rate limited to 5 requests per hour per user.
+- Task gets `source_type="youtube"` and `source_url` for traceability.
+- Status pipeline: `pending → downloading → converting → transcribing → transcribed → processingWebhook → completed`.
 
 ### 3.6 Offline Queue
 
@@ -167,8 +180,7 @@ The following capabilities are explicitly excluded from the current product scop
 - **Real-time live transcription** during recording (transcription happens post-recording only)
 - **Video recording** of any kind
 - **Direct plugin integration** with Teams, Zoom, or Google Meet (calendar detection only, no SDK)
-- **Mobile app** (iOS app is widget-only; no full iOS recording interface)
-- **Android support**
+- **Full iOS app** (iOS is widget-only; no full iOS recording interface)
 - **End-to-end encryption** of audio or transcripts in transit
 - **Collaborative editing** of generated notes
 
@@ -181,7 +193,7 @@ The following capabilities are explicitly excluded from the current product scop
 | App launch time | Under 3 seconds |
 | Recording → notes | Delivered in under 3 user interactions |
 | Offline queue reliability | 100% of queued recordings processed on reconnect |
-| Platform parity | All core features available on macOS and Windows |
+| Platform parity | All core features available on macOS, Windows, and Android |
 | Transcription accuracy | Whisper large-v3 baseline on Dutch speech |
 
 ---

@@ -66,6 +66,15 @@ export function RecordingPage() {
   const { addTranscript } = useTranscriptsStore();
   const profiles = useProfilesStore((s) => s.profiles);
 
+  const isYouTubeEnabled = useRecordingStore((s) => s.isYouTubeEnabled);
+  const youtubeURL = useRecordingStore((s) => s.youtubeURL);
+  const isSubmittingYouTube = useRecordingStore((s) => s.isSubmittingYouTube);
+  const youtubeError = useRecordingStore((s) => s.youtubeError);
+  const setYouTubeEnabled = useRecordingStore((s) => s.setYouTubeEnabled);
+  const setYouTubeURL = useRecordingStore((s) => s.setYouTubeURL);
+  const setSubmittingYouTube = useRecordingStore((s) => s.setSubmittingYouTube);
+  const setYouTubeError = useRecordingStore((s) => s.setYouTubeError);
+
   const [selectedProfileId, setSelectedProfileId] = useState(settings.default_profile_id);
   const [error, setError] = useState<string | null>(null);
 
@@ -80,6 +89,13 @@ export function RecordingPage() {
       setAutoStart(false);
       handleStartRecording();
     }
+  }, []);
+
+  // Check feature flags on mount
+  useEffect(() => {
+    api.fetchFeatures()
+      .then((features) => setYouTubeEnabled(features.youtube_transcription ?? false))
+      .catch(() => setYouTubeEnabled(false));
   }, []);
 
   // Listen for recording-stopped event (emitted by Rust AFTER WAV file is finalized).
@@ -115,6 +131,47 @@ export function RecordingPage() {
     }).then((fn) => { unlistenFn = fn; }).catch(console.error);
     return () => { unlistenFn?.(); };
   }, []);
+
+  async function handleSubmitYouTube() {
+    const url = youtubeURL.trim();
+    if (!url) return;
+
+    const ytPattern = /^https?:\/\/(www\.)?(youtube\.com\/(watch\?v=|shorts\/|live\/)|youtu\.be\/)/;
+    if (!ytPattern.test(url)) {
+      setYouTubeError("Ongeldige YouTube URL");
+      return;
+    }
+
+    setSubmittingYouTube(true);
+    setYouTubeError(null);
+
+    try {
+      const task = await api.transcribeYouTube(url, selectedProfileId);
+
+      // Add as background task and track via SSE
+      addBackgroundTask(task);
+      setYouTubeURL("");
+
+      const sseClient = createSSEClient(api.getStreamUrl(task.task_id));
+      sseClient.connect(
+        (update) => updateBackgroundTask(task.task_id, update),
+        (err) => {
+          console.error("[SSE] YouTube task error:", err);
+          updateBackgroundTask(task.task_id, { status: "failed", error_message: "Verbinding verloren" });
+        },
+        async () => {
+          const transcripts = await api.getTranscripts({ limit: 1 });
+          if (transcripts[0]) addTranscript(transcripts[0]);
+          removeBackgroundTask(task.task_id);
+        }
+      );
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "YouTube transcriptie mislukt";
+      setYouTubeError(msg);
+    } finally {
+      setSubmittingYouTube(false);
+    }
+  }
 
   async function handleStartRecording() {
     setPhase("preparing");
@@ -292,6 +349,12 @@ export function RecordingPage() {
             onSetMode={setMode}
             onSetProfile={setSelectedProfileId}
             onStart={handleStartRecording}
+            isYouTubeEnabled={isYouTubeEnabled}
+            youtubeURL={youtubeURL}
+            isSubmittingYouTube={isSubmittingYouTube}
+            youtubeError={youtubeError}
+            onYouTubeURLChange={setYouTubeURL}
+            onSubmitYouTube={handleSubmitYouTube}
           />
         )}
 
@@ -398,6 +461,8 @@ function MeetingDetectionBanner({ onRecord }: { onRecord: () => void }) {
 
 function IdleState({
   mode, profileId, profiles, onSetMode, onSetProfile, onStart,
+  isYouTubeEnabled, youtubeURL, isSubmittingYouTube, youtubeError,
+  onYouTubeURLChange, onSubmitYouTube,
 }: {
   mode: string;
   profileId: string;
@@ -405,6 +470,12 @@ function IdleState({
   onSetMode: (m: "microphone" | "combined") => void;
   onSetProfile: (id: string) => void;
   onStart: () => void;
+  isYouTubeEnabled: boolean;
+  youtubeURL: string;
+  isSubmittingYouTube: boolean;
+  youtubeError: string | null;
+  onYouTubeURLChange: (url: string) => void;
+  onSubmitYouTube: () => void;
 }) {
   return (
     <div className="idle-state">
@@ -484,6 +555,44 @@ function IdleState({
           Klik om op te nemen
         </p>
       </div>
+
+      {/* YouTube transcription card */}
+      {isYouTubeEnabled && (
+        <div style={{ width: "100%" }}>
+          <p className="section-label" style={{ color: "#FF0000" }}>
+            YOUTUBE VIDEO
+          </p>
+          <div className="card card-static" style={{ padding: 16 }}>
+            <div className="flex-col gap-12">
+              <input
+                type="url"
+                value={youtubeURL}
+                onChange={(e) => onYouTubeURLChange(e.target.value)}
+                placeholder="Plak een YouTube URL..."
+                className="input"
+                style={{ width: "100%" }}
+                disabled={isSubmittingYouTube}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !isSubmittingYouTube) onSubmitYouTube();
+                }}
+              />
+              {youtubeError && (
+                <p style={{ fontSize: 12, color: "var(--fill-danger)", margin: 0 }}>
+                  {youtubeError}
+                </p>
+              )}
+              <button
+                className="btn btn-accent"
+                onClick={onSubmitYouTube}
+                disabled={isSubmittingYouTube || !youtubeURL.trim()}
+                style={{ alignSelf: "flex-start" }}
+              >
+                {isSubmittingYouTube ? "Bezig..." : "Transcriberen"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Saved recordings — reprocess uploads the existing file */}
       <SavedRecordings />

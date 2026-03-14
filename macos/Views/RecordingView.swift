@@ -89,6 +89,9 @@ struct RecordingView: View {
         ScrollView {
             VStack(spacing: TS.Spacing.lg) {
                 newRecordingCard
+                if recordingVM.isYouTubeEnabled {
+                    youtubeCard
+                }
                 uploadProgressView
                 audioMixFallbackBanner
                 errorBanner
@@ -211,6 +214,87 @@ struct RecordingView: View {
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, TS.Spacing.xl)
+        }
+        .background {
+            RoundedRectangle(cornerRadius: TS.Radius.lg, style: .continuous)
+                .fill(Color.surfacePrimary)
+                .shadow(color: .black.opacity(0.06), radius: 12, y: 4)
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: TS.Radius.lg, style: .continuous)
+                .stroke(Color.borderSecondary, lineWidth: 1)
+        }
+    }
+
+    // MARK: YouTube card
+
+    private var youtubeCard: some View {
+        VStack(spacing: 0) {
+            // Header
+            VStack(alignment: .leading, spacing: TS.Spacing.xs) {
+                HStack(spacing: TS.Spacing.sm) {
+                    Image(systemName: "play.rectangle.fill")
+                        .foregroundStyle(Color.red)
+                    Text("YOUTUBE VIDEO")
+                        .font(TS.Font.microBold)
+                        .foregroundStyle(Color.red)
+                        .kerning(1.5)
+                }
+                Text("Plak een YouTube URL om te transcriberen")
+                    .font(TS.Font.callout)
+                    .foregroundStyle(Color.labelSecondary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, TS.Spacing.lg)
+            .padding(.top, TS.Spacing.lg)
+            .padding(.bottom, TS.Spacing.md)
+
+            VStack(spacing: TS.Spacing.md) {
+                TextField("Plak een YouTube URL...", text: Binding(
+                    get: { recordingVM.youtubeURL },
+                    set: { recordingVM.youtubeURL = $0 }
+                ))
+                .textFieldStyle(.roundedBorder)
+                .font(TS.Font.body)
+
+                if !recordingVM.availableProfiles.isEmpty {
+                    profileSection
+                }
+
+                if let error = recordingVM.youtubeError {
+                    HStack(spacing: TS.Spacing.xs) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(Color.brandOrange)
+                        Text(error)
+                            .font(TS.Font.caption)
+                            .foregroundStyle(Color.labelSecondary)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+
+                Button {
+                    Task { await recordingVM.submitYouTubeURL() }
+                } label: {
+                    HStack(spacing: TS.Spacing.sm) {
+                        if recordingVM.isSubmittingYouTube {
+                            ProgressView()
+                                .scaleEffect(0.7)
+                        }
+                        Text(recordingVM.isSubmittingYouTube ? "Bezig..." : "Transcriberen")
+                            .font(TS.Font.bodyMedium)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, TS.Spacing.sm)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(Color.red)
+                .disabled(
+                    recordingVM.youtubeURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                    || recordingVM.isSubmittingYouTube
+                )
+            }
+            .padding(.horizontal, TS.Spacing.lg)
+            .padding(.bottom, TS.Spacing.lg)
         }
         .background {
             RoundedRectangle(cornerRadius: TS.Radius.lg, style: .continuous)

@@ -38,6 +38,12 @@ interface RecordingState {
   // Background processing: tasks that are uploading/processing while user can start new recordings
   backgroundTasks: TranscriptTask[];
 
+  // YouTube transcription
+  isYouTubeEnabled: boolean;
+  youtubeURL: string;
+  isSubmittingYouTube: boolean;
+  youtubeError: string | null;
+
   setMode: (mode: RecordingMode) => void;
   setPhase: (phase: RecordingPhase) => void;
   setCurrentTask: (task: TranscriptTask | null) => void;
@@ -53,6 +59,10 @@ interface RecordingState {
   updateBackgroundTask: (taskId: string, update: Partial<TranscriptTask>) => void;
   removeBackgroundTask: (taskId: string) => void;
   cancelBackgroundTask: (taskId: string) => void;
+  setYouTubeEnabled: (enabled: boolean) => void;
+  setYouTubeURL: (url: string) => void;
+  setSubmittingYouTube: (submitting: boolean) => void;
+  setYouTubeError: (error: string | null) => void;
   reset: () => void;
 }
 
@@ -69,6 +79,10 @@ export const useRecordingStore = create<RecordingState>()((set) => ({
   pausedAt: null,
   pausedDuration: 0,
   backgroundTasks: [],
+  isYouTubeEnabled: false,
+  youtubeURL: "",
+  isSubmittingYouTube: false,
+  youtubeError: null,
   setMode: (mode) => set({ mode }),
   setPhase: (phase) => set({ phase }),
   setCurrentTask: (task) => set({ currentTask: task }),
@@ -109,6 +123,10 @@ export const useRecordingStore = create<RecordingState>()((set) => ({
       backgroundTasks: state.backgroundTasks.filter((t) => t.task_id !== taskId),
     }));
   },
+  setYouTubeEnabled: (enabled) => set({ isYouTubeEnabled: enabled }),
+  setYouTubeURL: (url) => set({ youtubeURL: url }),
+  setSubmittingYouTube: (submitting) => set({ isSubmittingYouTube: submitting }),
+  setYouTubeError: (error) => set({ youtubeError: error }),
   reset: () =>
     set({
       phase: "idle",

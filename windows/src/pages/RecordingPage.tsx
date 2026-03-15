@@ -74,6 +74,8 @@ export function RecordingPage() {
   const setYouTubeURL = useRecordingStore((s) => s.setYouTubeURL);
   const setSubmittingYouTube = useRecordingStore((s) => s.setSubmittingYouTube);
   const setYouTubeError = useRecordingStore((s) => s.setYouTubeError);
+  const youtubeProfileId = useRecordingStore((s) => s.youtubeProfileId);
+  const setYouTubeProfileId = useRecordingStore((s) => s.setYouTubeProfileId);
 
   const [selectedProfileId, setSelectedProfileId] = useState(settings.default_profile_id);
   const [error, setError] = useState<string | null>(null);
@@ -97,6 +99,13 @@ export function RecordingPage() {
       .then((features) => setYouTubeEnabled(features.youtube_transcription ?? false))
       .catch(() => setYouTubeEnabled(false));
   }, []);
+
+  // Initialize YouTube profile ID from default when profiles load
+  useEffect(() => {
+    if (profiles.length > 0 && !youtubeProfileId) {
+      setYouTubeProfileId(settings.default_profile_id || profiles[0].id);
+    }
+  }, [profiles]);
 
   // Listen for recording-stopped event (emitted by Rust AFTER WAV file is finalized).
   // This is the single upload trigger for ALL stop scenarios (user-initiated and widget-initiated).
@@ -146,7 +155,7 @@ export function RecordingPage() {
     setYouTubeError(null);
 
     try {
-      const task = await api.transcribeYouTube(url, selectedProfileId);
+      const task = await api.transcribeYouTube(url, youtubeProfileId || selectedProfileId);
 
       // Add as background task and track via SSE
       addBackgroundTask(task);
@@ -355,6 +364,8 @@ export function RecordingPage() {
             youtubeError={youtubeError}
             onYouTubeURLChange={setYouTubeURL}
             onSubmitYouTube={handleSubmitYouTube}
+            youtubeProfileId={youtubeProfileId}
+            onYouTubeProfileChange={setYouTubeProfileId}
           />
         )}
 
@@ -462,7 +473,7 @@ function MeetingDetectionBanner({ onRecord }: { onRecord: () => void }) {
 function IdleState({
   mode, profileId, profiles, onSetMode, onSetProfile, onStart,
   isYouTubeEnabled, youtubeURL, isSubmittingYouTube, youtubeError,
-  onYouTubeURLChange, onSubmitYouTube,
+  onYouTubeURLChange, onSubmitYouTube, youtubeProfileId, onYouTubeProfileChange,
 }: {
   mode: string;
   profileId: string;
@@ -476,6 +487,8 @@ function IdleState({
   youtubeError: string | null;
   onYouTubeURLChange: (url: string) => void;
   onSubmitYouTube: () => void;
+  youtubeProfileId: string;
+  onYouTubeProfileChange: (id: string) => void;
 }) {
   return (
     <div className="idle-state">
@@ -559,10 +572,13 @@ function IdleState({
       {/* YouTube transcription card */}
       {isYouTubeEnabled && (
         <div style={{ width: "100%" }}>
-          <p className="section-label" style={{ color: "#FF0000" }}>
+          <p className="section-label" style={{ color: "#E61212" }}>
             YOUTUBE VIDEO
           </p>
-          <div className="card card-static" style={{ padding: 16 }}>
+          <p className="text-caption text-tertiary" style={{ marginTop: -4, marginBottom: 8 }}>
+            Plak een YouTube URL om te transcriberen
+          </p>
+          <div className="card card-static" style={{ padding: 16, borderColor: "rgba(230, 18, 18, 0.12)" }}>
             <div className="flex-col gap-12">
               <input
                 type="url"
@@ -576,13 +592,33 @@ function IdleState({
                   if (e.key === "Enter" && !isSubmittingYouTube) onSubmitYouTube();
                 }}
               />
+
+              {/* YouTube profile selector */}
+              {profiles.length > 0 && (
+                <div>
+                  <p className="section-label" style={{ marginBottom: 6, fontSize: 11 }}>Profiel</p>
+                  <div className="flex-col gap-8">
+                    {profiles.map((profile) => (
+                      <button
+                        key={profile.id}
+                        onClick={() => onYouTubeProfileChange(profile.id)}
+                        className={`profile-chip ${youtubeProfileId === profile.id ? "active" : ""}`}
+                      >
+                        <span className="profile-chip-icon">{getProfileIcon(profile.name)}</span>
+                        <span className="profile-chip-name">{profile.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {youtubeError && (
                 <p style={{ fontSize: 12, color: "var(--fill-danger)", margin: 0 }}>
                   {youtubeError}
                 </p>
               )}
               <button
-                className="btn btn-accent"
+                className="btn btn-youtube"
                 onClick={onSubmitYouTube}
                 disabled={isSubmittingYouTube || !youtubeURL.trim()}
                 style={{ alignSelf: "flex-start" }}

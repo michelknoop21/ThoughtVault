@@ -113,7 +113,7 @@ struct RecordingView: View {
                     .font(TS.Font.microBold)
                     .foregroundStyle(Color.brandPrimary)
                     .kerning(1.5)
-                Text("Kies bron en profiel, tik daarna om op te nemen")
+                Text("Kies bron en profiel, klik daarna om op te nemen")
                     .font(TS.Font.callout)
                     .foregroundStyle(Color.labelSecondary)
             }
@@ -172,7 +172,7 @@ struct RecordingView: View {
                     profileSection
                 }
             }
-            .padding(.horizontal, TS.Spacing.md)
+            .padding(.horizontal, TS.Spacing.lg)
             .padding(.bottom, TS.Spacing.sm)
 
             // Mic button
@@ -208,7 +208,7 @@ struct RecordingView: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel("Start opname")
 
-                Text("Tik om op te nemen")
+                Text("Klik om op te nemen")
                     .font(TS.Font.footnote)
                 .foregroundStyle(Color.labelTertiary)
             }
@@ -254,11 +254,21 @@ struct RecordingView: View {
                     get: { recordingVM.youtubeURL },
                     set: { recordingVM.youtubeURL = $0 }
                 ))
-                .textFieldStyle(.roundedBorder)
+                .textFieldStyle(.plain)
                 .font(TS.Font.body)
+                .padding(.horizontal, TS.Spacing.sm + 2)
+                .padding(.vertical, TS.Spacing.sm + 2)
+                .background {
+                    RoundedRectangle(cornerRadius: TS.Radius.sm, style: .continuous)
+                        .fill(Color.surfaceSecondary)
+                }
+                .overlay {
+                    RoundedRectangle(cornerRadius: TS.Radius.sm, style: .continuous)
+                        .stroke(Color.borderPrimary.opacity(0.5), lineWidth: 1)
+                }
 
                 if !recordingVM.availableProfiles.isEmpty {
-                    profileSection
+                    youtubeProfileSection
                 }
 
                 if let error = recordingVM.youtubeError {
@@ -279,18 +289,41 @@ struct RecordingView: View {
                         if recordingVM.isSubmittingYouTube {
                             ProgressView()
                                 .scaleEffect(0.7)
+                                .tint(.white)
                         }
                         Text(recordingVM.isSubmittingYouTube ? "Bezig..." : "Transcriberen")
-                            .font(TS.Font.bodyMedium)
+                            .font(TS.Font.bodySemibold)
                     }
+                    .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, TS.Spacing.sm)
+                    .padding(.vertical, TS.Spacing.sm + 2)
+                    .background {
+                        RoundedRectangle(cornerRadius: TS.Radius.sm, style: .continuous)
+                            .fill(
+                                LinearGradient(
+                                    colors: [
+                                        Color(red: 0.90, green: 0.07, blue: 0.07),
+                                        Color(red: 0.72, green: 0.0, blue: 0.0)
+                                    ],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .shadow(
+                                color: Color(red: 0.90, green: 0.07, blue: 0.07).opacity(0.30),
+                                radius: 8,
+                                y: 3
+                            )
+                    }
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(Color.red)
+                .buttonStyle(.plain)
                 .disabled(
                     recordingVM.youtubeURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                     || recordingVM.isSubmittingYouTube
+                )
+                .opacity(
+                    recordingVM.youtubeURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                    || recordingVM.isSubmittingYouTube ? 0.5 : 1.0
                 )
             }
             .padding(.horizontal, TS.Spacing.lg)
@@ -303,7 +336,7 @@ struct RecordingView: View {
         }
         .overlay {
             RoundedRectangle(cornerRadius: TS.Radius.lg, style: .continuous)
-                .stroke(Color.borderSecondary, lineWidth: 1)
+                .stroke(Color.red.opacity(0.12), lineWidth: 1)
         }
     }
 
@@ -313,11 +346,11 @@ struct RecordingView: View {
                 .font(TS.Font.footnoteSemibold)
                 .foregroundStyle(Color.labelSecondary)
 
-            VStack(spacing: TS.Spacing.sm) {
+            HStack(spacing: TS.Spacing.sm) {
                 recordingTypeOption(
                     icon: "person.2.fill",
                     title: "Fysieke meeting",
-                    subtitle: "Gebruik alleen je microfoon",
+                    subtitle: "Alleen microfoon",
                     color: Color.brandSecondary,
                     isSelected: recordingVM.selectedMode == .microphone,
                     action: { withAnimation(TS.Animation.smooth) { recordingVM.selectedMode = .microphone } }
@@ -327,22 +360,13 @@ struct RecordingView: View {
                 recordingTypeOption(
                     icon: "video.fill",
                     title: "Videocall",
-                    subtitle: "Neem microfoon en systeemgeluid op",
+                    subtitle: "Microfoon + systeemgeluid",
                     color: Color.brandPrimary,
                     isSelected: recordingVM.selectedMode == .combined,
                     action: { withAnimation(TS.Animation.smooth) { recordingVM.selectedMode = .combined } }
                 )
                 #endif
             }
-        }
-        .padding(TS.Spacing.md)
-        .background {
-            RoundedRectangle(cornerRadius: TS.Radius.md, style: .continuous)
-                .fill(Color.surfaceSecondary)
-        }
-        .overlay {
-            RoundedRectangle(cornerRadius: TS.Radius.md, style: .continuous)
-                .stroke(Color.borderPrimary.opacity(0.45), lineWidth: 1)
         }
     }
 
@@ -380,15 +404,6 @@ struct RecordingView: View {
                 .padding(.horizontal, TS.Spacing.xs)
             }
         }
-        .padding(TS.Spacing.md)
-        .background {
-            RoundedRectangle(cornerRadius: TS.Radius.md, style: .continuous)
-                .fill(Color.surfaceSecondary)
-        }
-        .overlay {
-            RoundedRectangle(cornerRadius: TS.Radius.md, style: .continuous)
-                .stroke(Color.borderPrimary.opacity(0.45), lineWidth: 1)
-        }
     }
 
     private var selectedProfileBinding: Binding<Profile?> {
@@ -398,41 +413,72 @@ struct RecordingView: View {
         )
     }
 
+    private var youtubeProfileSection: some View {
+        VStack(alignment: .leading, spacing: TS.Spacing.sm) {
+            HStack(spacing: TS.Spacing.xs) {
+                Text("Profiel")
+                    .font(TS.Font.footnoteSemibold)
+                    .foregroundStyle(Color.labelSecondary)
+                if let selected = recordingVM.youtubeSelectedProfile {
+                    Text(selected.name)
+                        .font(TS.Font.microBold)
+                        .foregroundStyle(Color.red)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 2)
+                        .background(Capsule().fill(Color.red.opacity(0.10)))
+                }
+            }
+
+            ProfilePicker(
+                profiles: recordingVM.availableProfiles,
+                selectedProfile: youtubeProfileBinding
+            )
+        }
+    }
+
+    private var youtubeProfileBinding: Binding<Profile?> {
+        Binding(
+            get: { recordingVM.youtubeSelectedProfile },
+            set: { recordingVM.youtubeSelectedProfile = $0 }
+        )
+    }
+
     private func recordingTypeOption(icon: String, title: String, subtitle: String, color: Color, isSelected: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            HStack(spacing: TS.Spacing.md) {
-                Image(systemName: icon)
-                    .font(.system(size: 18, weight: .medium))
-                    .foregroundStyle(color)
-                    .frame(width: 28)
+            VStack(spacing: TS.Spacing.sm) {
+                ZStack {
+                    Circle()
+                        .fill(isSelected ? color : color.opacity(0.10))
+                        .frame(width: 40, height: 40)
+                    Image(systemName: icon)
+                        .font(.system(size: 17, weight: .medium))
+                        .foregroundStyle(isSelected ? .white : color)
+                }
 
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(spacing: 2) {
                     Text(title)
-                        .font(TS.Font.body)
+                        .font(TS.Font.footnoteSemibold)
                         .foregroundStyle(Color.labelPrimary)
                     Text(subtitle)
                         .font(TS.Font.caption)
                         .foregroundStyle(Color.labelTertiary)
                 }
-
-                Spacer()
-
-                if isSelected {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(Color.brandPrimary)
-                }
+                .multilineTextAlignment(.center)
             }
-            .padding(.horizontal, TS.Spacing.md)
+            .frame(maxWidth: .infinity)
             .padding(.vertical, TS.Spacing.md)
+            .padding(.horizontal, TS.Spacing.sm)
             .contentShape(Rectangle())
             .background {
                 RoundedRectangle(cornerRadius: TS.Radius.sm, style: .continuous)
-                    .fill(isSelected ? Color.accentBgPrimary.opacity(0.45) : Color.surfacePrimary)
+                    .fill(isSelected ? Color.accentBgPrimary : Color.surfaceSecondary)
             }
             .overlay {
                 RoundedRectangle(cornerRadius: TS.Radius.sm, style: .continuous)
-                    .stroke(isSelected ? Color.brandPrimary.opacity(0.45) : Color.borderPrimary.opacity(0.4), lineWidth: 1)
+                    .stroke(
+                        isSelected ? Color.brandPrimary.opacity(0.5) : Color.borderPrimary.opacity(0.4),
+                        lineWidth: isSelected ? 1.5 : 1
+                    )
             }
         }
         .buttonStyle(.plain)

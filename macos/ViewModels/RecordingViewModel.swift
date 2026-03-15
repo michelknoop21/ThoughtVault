@@ -39,6 +39,7 @@ final class RecordingViewModel {
     var youtubeURL: String = ""
     var isSubmittingYouTube: Bool = false
     var youtubeError: String?
+    var youtubeSelectedProfile: Profile?
 
     // MARK: - Audio Properties (computed, @Observable-compatible)
 
@@ -187,6 +188,9 @@ final class RecordingViewModel {
             selectedProfile = match
         } else if let first = profiles.first {
             selectedProfile = first
+        }
+        if youtubeSelectedProfile == nil {
+            youtubeSelectedProfile = selectedProfile
         }
     }
 
@@ -900,7 +904,7 @@ final class RecordingViewModel {
     func submitYouTubeURL() async {
         let url = youtubeURL.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !url.isEmpty else { return }
-        guard let profile = selectedProfile else {
+        guard let profile = youtubeSelectedProfile else {
             youtubeError = "Geen profiel geselecteerd."
             return
         }

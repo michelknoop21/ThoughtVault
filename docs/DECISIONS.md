@@ -635,3 +635,55 @@ _Append-only log. Each entry records context, decision, and consequences._
 - Geen sliding window expiry op API keys — ze zijn geldig tot expliciet gerevoked of tot `expires_at`.
 - Alle bestaande route files zijn aangepast om `X-API-Key` header te accepteren en scope te controleren.
 - Client-side UI voor key management moet nog gebouwd worden (macOS, Windows, Android).
+
+---
+
+## DEC-037 — Database-Backed Feature Flags met Env Var Fallback
+
+**Date:** 2026-03-15
+**Status:** Accepted
+
+**Context:** Feature flags (zoals `FEATURE_YOUTUBE_ENABLED`) waren puur env var-gestuurd. Wijzigen vereiste container restart en SSH-toegang tot de server. Als admin wil je features direct in de UI kunnen in/uitschakelen zonder deployment.
+
+**Decision:** Feature flags worden opgeslagen in de bestaande `Settings` tabel (key-value store) met key `feature_{name}`. De `is_feature_enabled(key, env_default)` functie in `routes/features.py` checkt eerst de database; als er geen DB-entry is, valt het terug op de env var. Admin endpoints `GET /admin/features` en `POST /admin/features/{key}` bieden CRUD. Bekende features zijn gedefinieerd in `FEATURE_FLAGS` dict in `routes/admin.py` met display metadata (label, beschrijving, icoon).
+
+**Consequences:**
+- Admin kan features togglen via de web UI zonder container restart of SSH.
+- Env vars blijven werken als fallback — bestaande deployments breken niet.
+- Nieuwe features toevoegen = 1 entry in `FEATURE_FLAGS` dict + env var default in `config.py`.
+- Geen schema-migratie nodig — hergebruikt bestaande `Settings` tabel.
+- Feature state is per-instance (niet per-user) — alle gebruikers zien dezelfde features.
+
+---
+
+## DEC-038 — YouTube Anti-Bot Mitigatie met Browser Cookies + EJS Challenge Solver
+
+**Date:** 2026-03-15
+**Status:** Accepted
+
+**Context:** YouTube blokkeerde yt-dlp requests vanaf de EC2 server met `ERROR: [youtube] Sign in to confirm you're not a bot`. Root cause analyse toonde drie ontbrekende componenten: (1) geen browser cookies — YouTube ziet geen geauthenticeerde sessie vanaf een datacenter IP, (2) geen JavaScript runtime — yt-dlp 2026.x vereist een JS runtime (Node 20+, Deno 2+, Bun, of QuickJS) om YouTube's Proof of Origin challenges op te lossen, (3) geen EJS scripts — de challenge solver distributie (`yt-dlp-ejs`) was niet geïnstalleerd. Node v12 (Ubuntu 22.04 default) bleek te oud; `quickjs` Python binding werkte evenmin.
+
+**Decision:** Drie wijzigingen in de backend: (1) `youtube_service.py` — `_extra_ytdlp_args()` voegt `--cookies /app/cookies.txt` en `--js-runtimes node:/usr/local/bin/node` toe aan alle yt-dlp subprocess calls. `_ytdlp_cmd()` gebruikt `sys.executable -m yt_dlp` i.p.v. het binary om conda/pip dependency conflicten te vermijden. (2) `Dockerfile` — Node.js 20.18.3 LTS binary geïnstalleerd in `/usr/local/bin/node` (tar download, geen apt). `yt-dlp` vervangen door `yt-dlp[default]` dat `yt-dlp-ejs` als dependency meebrengt. (3) `config.py` — `YOUTUBE_COOKIES_FILE` env var (default `/app/cookies.txt`) configureerbaar. Cookies geëxporteerd vanuit Firefox via `yt-dlp --cookies-from-browser firefox`.
+
+**Consequences:**
+- YouTube transcriptie werkt weer vanaf de EC2 server (geverifieerd: metadata ophalen + audio download succesvol).
+- Cookies zijn niet permanent — ze verlopen en moeten periodiek vernieuwd worden vanuit een browser met actieve YouTube login.
+- Node.js 20 LTS en yt-dlp-ejs zijn persistent in de Docker image — overleven container rebuilds.
+- De cookies.txt staat op de bind-mounted code directory (`/app/cookies.txt`), niet in de Docker image — bewust om credentials uit het image te houden.
+
+---
+
+## DEC-039 — Onafhankelijke YouTube Profielselectie (Optie B)
+
+**Date:** 2026-03-15
+**Status:** Accepted
+
+**Context:** De YouTube transcriptie card en de opname card deelden dezelfde profielselectie (`selectedProfile` op macOS, `selectedProfileId` op Windows). Dit leidde tot verwarring: als een gebruiker profiel "Technisch" selecteerde voor een YouTube transcriptie, veranderde ook het profiel voor de volgende opname — en vice versa. De twee cards hebben fundamenteel verschillende use cases (live opname vs. URL-gebaseerde transcriptie) en moeten onafhankelijk configureerbaar zijn.
+
+**Decision:** Optie B gekozen: elke card krijgt een eigen profiel-state. macOS: `youtubeSelectedProfile: Profile?` in `RecordingViewModel.swift`, met eigen `youtubeProfileSection` view en `youtubeProfileBinding` in `RecordingView.swift`. Windows: `youtubeProfileId: string` in `recordingStore.ts`, met eigen `profile-chip` buttons in `RecordingPage.tsx`. Beide worden geïnitialiseerd vanuit het default profiel als fallback. `submitYouTubeURL()` gebruikt het YouTube-specifieke profiel.
+
+**Consequences:**
+- Gebruikers kunnen een ander profiel kiezen voor YouTube transcriptie dan voor opname, zonder wederzijdse interferentie.
+- Beide profiel-states worden onafhankelijk geïnitialiseerd vanuit het default profiel — geen extra configuratie nodig.
+- De YouTube card toont een rood accent-badge met de geselecteerde profielnaam, visueel onderscheidend van de opnamekaart.
+- Android heeft nog geen YouTube feature — wanneer die wordt toegevoegd, moet dezelfde onafhankelijke state-aanpak gevolgd worden.

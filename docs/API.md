@@ -748,6 +748,35 @@ Alle admin endpoints accepteren `X-User-Token` (admin-rol) **of** `X-Admin-API-K
 | POST | `/tstudio/api/admin/errors/export` | Exporteer error logs als CSV |
 | POST | `/tstudio/api/admin/logs/cleanup` | Verwijder oude logs. Query: `?days=90` |
 
+### Modules (Feature Flags)
+
+| Methode | Endpoint | Beschrijving |
+|---------|----------|-------------|
+| GET | `/tstudio/api/admin/features` | Alle feature flags met actuele status |
+| POST | `/tstudio/api/admin/features/{key}` | Feature in/uitschakelen: `{ "enabled": true }` |
+
+**GET response:**
+```json
+{
+  "features": [
+    {
+      "key": "youtube_transcription",
+      "label": "YouTube Transcriptie",
+      "description": "Transcribeer YouTube video's via URL. Vereist yt-dlp op de server.",
+      "icon": "youtube",
+      "enabled": true
+    }
+  ]
+}
+```
+
+**POST response:**
+```json
+{ "success": true, "message": "YouTube Transcriptie ingeschakeld" }
+```
+
+Feature flags worden opgeslagen in de `Settings` tabel met key `feature_{name}`. Als er geen DB-entry is, wordt de env var (`FEATURE_YOUTUBE_ENABLED` etc.) als fallback gebruikt. Zie [DEC-037](DECISIONS.md).
+
 ### Instellingen (admin)
 
 | Methode | Endpoint | Beschrijving |

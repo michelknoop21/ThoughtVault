@@ -1,0 +1,30 @@
+{
+  "configurations" : [
+    {
+      "id" : "FBEDAF5B-F7F3-4905-880D-D360C8E25487",
+      "name" : "Test Scheme Action",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "performanceAntipatternCheckerEnabled" : true,
+    "targetForVariableExpansion" : {
+      "containerPath" : "container:TranscriptStudio.xcodeproj",
+      "identifier" : "TT000001",
+      "name" : "TranscriptStudio"
+    }
+  },
+  "testTargets" : [
+    {
+      "parallelizable" : true,
+      "target" : {
+        "containerPath" : "container:TranscriptStudio.xcodeproj",
+        "identifier" : "TT000002",
+        "name" : "TranscriptStudioTests"
+      }
+    }
+  ],
+  "version" : 1
+}

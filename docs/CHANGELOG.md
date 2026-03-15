@@ -5,6 +5,62 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2026-03-15] — Recording view redesign + onafhankelijke YouTube profielselectie
+
+### Changed
+- **Recording idle view redesign** (macOS `macos/Views/RecordingView.swift`): Opnametype-opties (Microfoon, Videogesprek) herontworpen van verticale lijst naar horizontale kaarten met gecentreerde iconen (40×40 cirkel), korte labels ("Alleen microfoon", "Microfoon + systeemgeluid"), en `frame(maxWidth: .infinity)` voor gelijke breedte. Verwijderd: dubbel-geneste `.background`/`.overlay`/`.padding` op `recordingTypeSection` en `profileSection` — cards worden nu uitsluitend door de buitenste `.modernCard()` modifier gestyled.
+- **Content padding** (macOS `macos/Views/RecordingView.swift:175`): VStack padding gewijzigd van `TS.Spacing.md` (16pt) naar `TS.Spacing.lg` (24pt) zodat content uitlijnt met de header.
+- **"Tik" → "Klik"** (macOS `macos/Views/RecordingView.swift:116,211`): Instructieteksten gewijzigd van "Tik om op te nemen" / "tik daarna" naar "Klik om op te nemen" / "klik daarna" — macOS is geen touch interface.
+- **YouTube card styling** (macOS `macos/Views/RecordingView.swift`): Tekstveld gebruikt nu `.textFieldStyle(.plain)` met custom `surfaceSecondary` achtergrond + border overlay i.p.v. `.roundedBorder`. Verzendknop is custom gestyled met YouTube-rood gradient (`#E61212` → `#B80000`) + shadow i.p.v. `.borderedProminent`. Card border gewijzigd van `Color.borderSecondary` naar `Color.red.opacity(0.12)`.
+- **YouTube card styling** (Windows `windows/src/pages/RecordingPage.tsx`, `windows/src/styles/globals.css`): YouTube card herontworpen met rode rand-tint, ondertiteltekst, en nieuw `.btn-youtube` button-class (gradient `#E61212` → `#B80000`, witte tekst, rode shadow). Sectielabel kleur gewijzigd van `#FF0000` naar `#E61212`.
+
+### Added
+- **Onafhankelijke YouTube profielselectie** (macOS `macos/ViewModels/RecordingViewModel.swift:42`): Nieuw `youtubeSelectedProfile: Profile?` property. `submitYouTubeURL()` gebruikt nu `youtubeSelectedProfile` i.p.v. `selectedProfile`. Wordt geïnitialiseerd vanuit `loadDefaultProfile()` als fallback.
+- **YouTube profiel UI** (macOS `macos/Views/RecordingView.swift`): Nieuwe `youtubeProfileSection` view met rood accent-badge dat het geselecteerde profiel toont, plus eigen `ProfilePicker` met `youtubeProfileBinding`. Vervangt de eerder gedeelde `profileSection` in de YouTube card.
+- **YouTube profiel state** (Windows `windows/src/stores/recordingStore.ts`): `youtubeProfileId: string` toegevoegd aan Zustand store met `setYouTubeProfileId` setter. Geïnitialiseerd vanuit default profile via `useEffect` in `RecordingPage.tsx`.
+- **YouTube profiel picker** (Windows `windows/src/pages/RecordingPage.tsx`): Profielkiezer met `profile-chip` buttons in de YouTube card, onafhankelijk van de opnamekaart.
+- **`.btn-youtube` CSS class** (Windows `windows/src/styles/globals.css`): YouTube-rode gradient button met hover/active/disabled states.
+
+### Decisions
+- Zie [DEC-039](DECISIONS.md) voor de keuze van onafhankelijke YouTube profielselectie (Optie B).
+
+### Notes
+- Android heeft nog geen YouTube transcriptie feature — geen wijzigingen nodig.
+- De YouTube card heeft nu op zowel macOS als Windows een eigen profiel picker, onafhankelijk van de opnamekaart.
+
+---
+
+## [2026-03-15] — YouTube bot-detectie fix + Admin module toggle
+
+### Fixed
+- **YouTube bot-detectie** (backend `services/youtube_service.py`, `config.py`, `Dockerfile`): `ERROR: [youtube] Sign in to confirm you're not a bot` — root cause: drie ontbrekende zaken op de EC2 server: (1) geen browser cookies → YouTube herkent geen echte gebruiker, (2) geen JS runtime → yt-dlp kan YouTube's anti-bot challenge niet oplossen, (3) geen EJS scripts → challenge solver heeft geen solver distributie. Fix: `_extra_ytdlp_args()` helper voegt `--cookies` en `--js-runtimes node:/usr/local/bin/node` toe aan alle yt-dlp aanroepen. `_ytdlp_cmd()` gebruikt `python3 -m yt_dlp` i.p.v. het binary om dependency conflicten te voorkomen (conda vs pip installaties). Dockerfile aangepast met Node.js 20 LTS binary en `yt-dlp[default]` (bevat `yt-dlp-ejs` challenge solver). Cookies geëxporteerd vanuit Firefox en op server geplaatst (`/app/cookies.txt`, schrijfbaar voor appuser). Metadata timeout verhoogd van 30s naar 60s vanwege EJS challenge solving overhead.
+- **yt-dlp niet gevonden** (backend `services/youtube_service.py`): `FileNotFoundError: [Errno 2] No such file or directory: 'yt-dlp'` — root cause: `pip install yt-dlp` installeert de binary in `/home/appuser/.local/bin/` dat niet in het container PATH zit. Opgelost door `_ytdlp_cmd()` die `python3 -m yt_dlp` gebruikt — omzeilt PATH issues volledig.
+
+### Added
+- **Admin feature toggle endpoints** (backend `routes/admin.py`):
+  - `GET /admin/features` — retourneert alle bekende feature flags met actuele status, label, beschrijving en icoon. Admin-only.
+  - `POST /admin/features/{key}` — schakel feature in/uit. Slaat op in `Settings` tabel via `save_setting(f"feature_{key}", "true"/"false")`. Activity logging bij toggle.
+  - `FEATURE_FLAGS` dict definieert bekende features met display metadata. Momenteel alleen `youtube_transcription`.
+- **Database-backed feature flags** (backend `routes/features.py`): Nieuwe `is_feature_enabled(key, env_default)` functie — checkt eerst `Settings` tabel (`feature_{key}`), valt terug naar env var. Hierdoor kan een admin features togglen zonder container restart.
+- **Modules tab in admin UI** (backend `templates/pages/admin/modules.html`, `static/js/admin.js`): Nieuwe "Modules" tab in het admin dashboard met toggle switches per feature. YouTube module toont rood YouTube icoon. Toggle stuurt direct `POST /admin/features/{key}` en reflecteert resultaat. CSS toggle switch component met disabled state tijdens request.
+
+### Changed
+- **Feature flag check** (backend `routes/transcription.py`): `POST /transcribe-youtube` gebruikt nu `is_feature_enabled()` i.p.v. directe env var check, zodat admin toggle meteen werkt.
+- **Feature endpoint** (backend `routes/features.py`): `GET /features` gebruikt nu `is_feature_enabled()` met DB-first lookup.
+- **Dockerfile** (backend): Node.js 20.18.3 LTS toegevoegd voor yt-dlp EJS challenge solver. `yt-dlp` vervangen door `yt-dlp[default]` dat `yt-dlp-ejs` bundelt.
+- **youtube_service.py** (backend): `_find_ytdlp()` vervangen door `_ytdlp_cmd()` (module invocatie). `_cookies_args()` uitgebreid naar `_extra_ytdlp_args()` met cookies + JS runtime detectie.
+
+### Decisions
+- Zie [DEC-037](DECISIONS.md) voor database-backed feature flags.
+- Zie [DEC-038](DECISIONS.md) voor YouTube anti-bot mitigatie met cookies + EJS.
+
+### Notes
+- Cookies verlopen — bij herhaalde bot-detectie errors moeten nieuwe cookies vanuit een browser geëxporteerd worden (Firefox: `yt-dlp --cookies-from-browser firefox --cookies cookies.txt`).
+- Node.js en yt-dlp-ejs zijn nu in de Dockerfile gebakken — persistent bij container rebuild.
+- De admin module toggle werkt direct: uitschakelen verbergt de YouTube card op de upload pagina en retourneert 404 op het transcriptie endpoint.
+
+---
+
 ## [2026-03-14] — Per-user API keys
 
 ### Added

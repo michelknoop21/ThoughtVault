@@ -1,6 +1,6 @@
 # TranscriptStudio — Architecture
 
-_Last updated: 2026-03-14_
+_Last updated: 2026-03-15_
 
 ---
 
@@ -45,8 +45,10 @@ All clients share a common REST + SSE API and are deployed independently.
 | GET | `/tstudio/api/task/{id}/stream` | SSE stream of task status transitions |
 | POST | `/tstudio/api/transcribe` | Transcribe audio (internal) |
 | POST | `/tstudio/api/transcribe-text` | Generate notes from existing transcript text |
-| POST | `/tstudio/api/transcribe-youtube` | Transcribe YouTube video (URL → yt-dlp download → Whisper); requires `FEATURE_YOUTUBE_ENABLED=true` |
-| GET | `/tstudio/api/features` | Feature flags (`{"youtube_transcription": bool}`); no auth required |
+| POST | `/tstudio/api/transcribe-youtube` | Transcribe YouTube video (URL → yt-dlp download → Whisper); requires feature enabled |
+| GET | `/tstudio/api/features` | Feature flags (`{"youtube_transcription": bool}`); no auth required; DB-backed with env var fallback |
+| GET | `/tstudio/api/admin/features` | Admin: list all feature flags with status |
+| POST | `/tstudio/api/admin/features/{key}` | Admin: toggle feature on/off |
 | GET | `/tstudio/api/tasks` | List all tasks for authenticated user |
 | PATCH | `/tstudio/api/tasks/{id}` | Update task metadata (tags, title) |
 | DELETE | `/tstudio/api/tasks/{id}` | Delete task and associated data |
@@ -87,6 +89,8 @@ Client                    Backend                    n8n / Claude
 **Status pipeline:** `pending → uploading → converting → transcribing → transcribed → processingWebhook → completed`
 
 **YouTube pipeline:** `pending → downloading → converting → transcribing → transcribed → processingWebhook → completed`
+
+**YouTube infrastructure:** yt-dlp invoked via `python3 -m yt_dlp` (avoids conda/pip PATH conflicts). Requires three components on server: (1) browser cookies at `/app/cookies.txt` for YouTube auth (exported from Firefox, must be refreshed periodically), (2) Node.js 20+ at `/usr/local/bin/node` for EJS challenge solving, (3) `yt-dlp-ejs` package (installed via `pip install yt-dlp[default]`). Config: `YOUTUBE_COOKIES_FILE` env var (default `/app/cookies.txt`). See DEC-038.
 
 **Field mapping:** `Task.result` → `notuleHtml` (macOS Swift) / `notule_html` (Windows TypeScript)
 
@@ -369,6 +373,69 @@ transcript-studio-android/app/src/main/java/nl/prezent/transcriptstudio/
 | Strings | All UI text in `res/values/strings.xml` (Dutch) |
 | Auth header | `Authorization: Bearer <token>` (same as Windows) |
 | Build | AGP 9.1, Gradle 9.x, version read from root `VERSION` file at build time |
+
+---
+
+## Web App
+
+**Stack:** Jinja2 templates · vanilla JavaScript · CSS · HTMX (partial page loading)
+
+**Architecture:** Server-rendered HTML with progressive enhancement. Backend serves pages via `routes/pages.py`, templates extend `base.html`. JavaScript modules handle interactivity (recording, SSE streaming, admin actions). No build step — static assets served directly.
+
+**Location:** `../transcript-studio-backend/templates/` (templates) + `../transcript-studio-backend/static/` (JS/CSS)
+
+### Directory Structure
+
+```
+templates/
+├── base.html                      # HTML shell, nav, theme toggle, HTMX partial loading
+├── app.html                       # Authenticated app wrapper
+├── auth/                          # Login, register, password reset, 2FA pages
+├── components/                    # Reusable Jinja2 macros (modals, forms)
+├── pages/
+│   ├── upload.html                # Recording + file upload + YouTube transcription card
+│   ├── transcripts.html           # Transcript library with search/filter
+│   ├── notes.html                 # Note detail view with HTML rendering + export
+│   ├── settings.html              # User settings + profile selector
+│   ├── landing.html               # Public landing/download page
+│   ├── admin.html                 # Admin dashboard (includes tab partials below)
+│   └── admin/
+│       ├── dashboard.html         # Metrics overview (users, notes, errors)
+│       ├── users.html             # User management (CRUD, 2FA reset)
+│       ├── profiles.html          # Profile/prompt management
+│       ├── invites.html           # Invite code management
+│       ├── modules.html           # Feature flag toggles (YouTube etc.)
+│       ├── logs.html              # Error + activity log viewer
+│       ├── feedback.html          # User feedback management
+│       └── modals.html            # Modal dialogs (edit user, edit profile)
+
+static/
+├── css/
+│   ├── main.css                   # App styles, component styles, responsive layout
+│   ├── landing.css                # Public landing page styles
+│   └── registration.css           # Auth page styles
+└── js/
+    ├── admin.js                   # Admin tab management, CRUD operations, module toggles
+    ├── auth.js                    # Login, registration, 2FA flows
+    ├── upload.js                  # File upload, recording controls, SSE task tracking
+    ├── transcripts.js             # Transcript list, search, filtering
+    ├── notes.js                   # Note viewer, export actions
+    ├── recorder.js                # MediaRecorder audio capture
+    ├── settings.js                # Settings form handling
+    ├── theme.js                   # Dark/light mode toggle
+    └── utils.js                   # Shared helpers (auth token, fetch wrappers)
+```
+
+### Key Patterns
+
+| Pattern | Implementation |
+|---------|---------------|
+| Auth | Token stored in `localStorage`, sent as `X-User-Token` header |
+| Page loading | HTMX `hx-get` for partial page swaps within `app.html` shell |
+| Feature flags | `fetch('/tstudio/api/features')` at page load, conditionally show/hide UI |
+| SSE | Native `EventSource` for real-time task status updates |
+| Admin tabs | `data-tab` attribute toggling `display: none/block` on content divs |
+| File upload | `FormData` + `fetch()` with progress tracking |
 
 ---
 

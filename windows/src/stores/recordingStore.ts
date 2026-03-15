@@ -43,6 +43,7 @@ interface RecordingState {
   youtubeURL: string;
   isSubmittingYouTube: boolean;
   youtubeError: string | null;
+  youtubeProfileId: string;
 
   setMode: (mode: RecordingMode) => void;
   setPhase: (phase: RecordingPhase) => void;
@@ -63,6 +64,7 @@ interface RecordingState {
   setYouTubeURL: (url: string) => void;
   setSubmittingYouTube: (submitting: boolean) => void;
   setYouTubeError: (error: string | null) => void;
+  setYouTubeProfileId: (id: string) => void;
   reset: () => void;
 }
 
@@ -83,6 +85,7 @@ export const useRecordingStore = create<RecordingState>()((set) => ({
   youtubeURL: "",
   isSubmittingYouTube: false,
   youtubeError: null,
+  youtubeProfileId: "",
   setMode: (mode) => set({ mode }),
   setPhase: (phase) => set({ phase }),
   setCurrentTask: (task) => set({ currentTask: task }),
@@ -127,6 +130,7 @@ export const useRecordingStore = create<RecordingState>()((set) => ({
   setYouTubeURL: (url) => set({ youtubeURL: url }),
   setSubmittingYouTube: (submitting) => set({ isSubmittingYouTube: submitting }),
   setYouTubeError: (error) => set({ youtubeError: error }),
+  setYouTubeProfileId: (id) => set({ youtubeProfileId: id }),
   reset: () =>
     set({
       phase: "idle",

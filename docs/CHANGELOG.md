@@ -5,6 +5,17 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2026-03-16] — macOS 15 audio-only ScreenCaptureKit categorisatie
+
+### Changed
+- **SystemAudioCapture macOS 15+ audio-only modus** (`macos/Services/SystemAudioCapture.swift`): Op macOS 15+ wordt de `.screen` output niet meer toegevoegd aan `SCStream`. Hierdoor wordt de app in Systeeminstellingen gecategoriseerd als "Systeemaudio" in plaats van "Scherm- en systeemaudio-opname" — een betere UX omdat gebruikers geen schermopname-toestemming hoeven te verwachten voor een audio-only app. De video workload config (`width=2, height=2, minimumFrameInterval=1s, queueDepth=5`) is verplaatst naar een `#unavailable(macOS 15.0)` branch, want macOS 14 vereist minstens één `.screen` output om SCStream te laten functioneren. macOS 15 heeft `captureMicrophone` en hoeft geen screen output als fallback.
+- **Error message vereenvoudigd** (`macos/Services/SystemAudioCapture.swift:72`): "Schermopnamemachtiging is vereist voor systeemaudio-opname." → "Systeemaudio-machtiging is vereist voor opname." — consistenter met de macOS 15 categorisatie.
+
+### Decisions
+- See DEC-043 in [DECISIONS.md](DECISIONS.md) for the macOS 15 audio-only rationale.
+
+---
+
 ## [2026-03-16] — Threading fixes, YouTube card vereenvoudiging, CLAUDE.md optimalisatie
 
 ### Fixed

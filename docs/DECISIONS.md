@@ -687,3 +687,43 @@ _Append-only log. Each entry records context, decision, and consequences._
 - Beide profiel-states worden onafhankelijk geïnitialiseerd vanuit het default profiel — geen extra configuratie nodig.
 - De YouTube card toont een rood accent-badge met de geselecteerde profielnaam, visueel onderscheidend van de opnamekaart.
 - Android heeft nog geen YouTube feature — wanneer die wordt toegevoegd, moet dezelfde onafhankelijke state-aanpak gevolgd worden.
+
+---
+
+## DEC-040 — Video Call Detection via KVO Camera + Running App Matching
+
+**Date:** 2026-03-16
+**Status:** Accepted
+
+**Context:** TranscriptStudio detected only scheduled meetings via calendar integration (EventKit / Microsoft Graph). Ad-hoc video calls — someone calls you on Teams without a calendar invite — were not detected. Users had to manually navigate to the recording tab and start recording, missing the first minutes of unplanned calls. The goal was to show an automatic "Start opname" notification when a video call begins, reusing the existing `CallAlertView` and `MeetingNotificationService` infrastructure.
+
+**Decision:** Combine two signals in a new `VideoCallDetectionService` (`macos/Services/VideoCallDetectionService.swift`): (1) KVO observation on `AVCaptureDevice.default(for: .video)?.isInUseByAnotherApplication` — fires when any app activates the camera, (2) `NSWorkspace.shared.runningApplications` matched against a static dictionary of known video app bundle IDs (Teams, Zoom, FaceTime, Slack, Webex, Discord) and browser bundle IDs (Safari, Chrome, Edge, Brave, Arc, Firefox). Both signals must be true to trigger detection. A three-state machine (`idle → detected → cooldown`) with 60-second cooldown prevents re-triggering on brief camera cycles. Synthetic `CalendarEvent` objects (id prefixed with `videocall-`) are posted via `NotificationCenter` and fed into the existing `CallAlertView` and `MeetingNotificationService` paths unchanged. Fallback: when `AVCaptureDevice.default(for: .video)` returns nil (sandbox restriction without camera entitlement), the service degrades to a 10-second poll on running apps, alerting after 30 seconds of continuous video app presence.
+
+**Consequences:**
+- Both `isInUseByAnotherApplication` and `NSWorkspace.shared.runningApplications` are available in sandboxed macOS apps without additional entitlements — no camera stream access needed.
+- Browser-based video calls (Google Meet, Teams web) trigger detection via camera + browser match, but can false-positive on non-video WebRTC sites. Acceptable: dismiss in 1 click.
+- Audio-only calls are not detected (no camera activation). Calendar integration handles scheduled audio calls.
+- Calendar dedup prevents duplicate alerts when a scheduled meeting coincides with a detected video call.
+- Toggle via `@AppStorage("videoCallDetectionEnabled")` in Settings → Agenda section (default: on).
+- No changes to `CallAlertView`, `MeetingNotificationService`, or `CalendarEvent` struct — full infrastructure reuse.
+- Windows and Android do not yet have this feature; when added, similar process-monitoring APIs exist (`WTSEnumerateProcesses` on Windows, `ActivityManager` on Android).
+
+---
+
+## DEC-041 — YouTube Hybride Aanpak: Captions API + yt-dlp Fallback
+
+**Date:** 2026-03-16
+**Status:** Accepted
+
+**Context:** YouTube transcription used yt-dlp to download audio and run it through Whisper. This was fragile (yt-dlp breaks on YouTube changes, bot detection), slow (~15 min: download + GPU transcription), GPU-intensive, and technically in conflict with YouTube's ToS. Most YouTube videos already have captions (manual or auto-generated) that can be retrieved in ~1 second via the YouTube Data API v3, requiring no GPU at all.
+
+**Decision:** Implement a hybrid approach in `backend/services/youtube_service.py` and `backend/routes/transcription.py`. When the client sends an `X-Google-Token` header with the YouTube request, the backend first tries the YouTube Data API v3 (`captions.list` + `captions.download`) to fetch existing captions. Caption track priority: `nl standard > nl ASR > en standard > en ASR > any standard > any ASR`. If captions are found, the text is fed directly into the notule pipeline (same path as `/transcribe-text`: `split_into_chunks()` → `qm.enqueue()`) with `source_type: "youtube_captions"`. If no captions are available, the existing yt-dlp + Whisper path is used as fallback with `source_type: "youtube"`. Google OAuth (PKCE) is required — implemented in `macos/Services/GoogleAuthService.swift` following the `MicrosoftGraphService` pattern. The `/features` endpoint exposes `google_oauth_configured` and `google_oauth_client_id_macos` for client discovery.
+
+**Consequences:**
+- Caption retrieval completes in ~1 second vs ~15 minutes for yt-dlp + Whisper. Zero GPU usage for captioned videos.
+- YouTube Data API quota: 250 units/video (`captions.list` 50 + `captions.download` 200). Default 10,000 units/day = ~40 videos/day.
+- Google OAuth scope `youtube.force-ssl` is required for `captions.download`. Users must connect their Google account in the YouTube card UI.
+- Backward compatible: without `X-Google-Token`, the endpoint falls back to the existing yt-dlp path unchanged.
+- Admin configures Google OAuth Client IDs via Admin > Instellingen (same pattern as MS365 OAuth).
+- Windows and Android will follow later — backend is ready (accepts `google_oauth_client_id_windows` setting).
+- Refresh tokens stored in macOS Keychain via `KeychainService` (key: `googleRefreshToken`). Access tokens are in-memory (1 hour validity).

@@ -27,6 +27,9 @@ struct TranscriptStudioApp: App {
                     await recordingVM.processQueueOnStartupIfNeeded()
                     MeetingNotificationService.shared.setup()
                     await MeetingNotificationService.shared.requestPermission()
+                    #if os(macOS)
+                    VideoCallDetectionService.shared.startMonitoring()
+                    #endif
                 }
         }
 #if os(macOS)

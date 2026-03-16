@@ -1,6 +1,6 @@
 # TranscriptStudio — Product Requirements Document
 
-_Last updated: 2026-03-14_
+_Last updated: 2026-03-16_
 
 ---
 
@@ -138,6 +138,7 @@ The product consists of four client surfaces sharing a common backend:
 - Detects upcoming meetings and shows an overlay alert when a call starts.
 - Meeting title used to auto-suggest profile for note generation.
 - Change detection: `EKEventStoreChangedNotification` (macOS) + timer polling as fallback.
+- **Video call detection (macOS)**: Detects ad-hoc video calls by monitoring camera activation (KVO) combined with known video app process matching (Teams, Zoom, FaceTime, Slack, Webex, Discord, browsers). Shows the same "Start opname" alert as calendar-based detection. Configurable via Settings toggle (default: on). See DEC-040.
 - **Windows OAuth flow**: Opens system browser for Microsoft login → deep-link callback (`transcript-studio://auth/callback`) → token exchange via Tauri proxy (bypasses CORS). Requires Azure AD App Registration with custom redirect URI.
 - **Admin configuration**: MS365 `client_id` and `tenant_id` set via admin settings panel, distributed to clients via `/settings/me` endpoint.
 

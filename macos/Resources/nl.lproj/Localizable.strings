@@ -128,6 +128,12 @@
 "callAlert.startRecording"      = "Start opname";
 "callAlert.dismiss"             = "Sluiten";
 
+// MARK: - Videogesprek detectie
+"calldetection.notification.title" = "Videogesprek gedetecteerd";
+"calldetection.notification.body" = "%@ is actief";
+"calldetection.settings.toggle" = "Automatische vergaderdetectie";
+"calldetection.settings.description" = "Detecteert wanneer een videogesprek start en toont een melding om de opname te starten.";
+
 // MARK: - Menubalk
 "menuBar.idle"                  = "TranscriptStudio";
 "menuBar.recording"             = "Opname bezig";

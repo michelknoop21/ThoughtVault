@@ -125,7 +125,8 @@ struct ContentView: View {
                         meeting: meeting,
                         onStartRecording: {
                             callAlertMeeting = nil
-                            recordingVM.selectedMode = meeting.meetingURL != nil ? .combined : .microphone
+                            let isVideoCall = meeting.id.hasPrefix("videocall-")
+                            recordingVM.selectedMode = (meeting.meetingURL != nil || isVideoCall) ? .combined : .microphone
                             Task { await recordingVM.startRecording() }
                         },
                         onSnooze: {
@@ -134,6 +135,10 @@ struct ContentView: View {
                         },
                         onDismiss: {
                             callAlertDismissed.insert(meeting.id)
+                            if meeting.id.hasPrefix("videocall-") {
+                                let sessionId = String(meeting.id.dropFirst("videocall-".count))
+                                VideoCallDetectionService.shared.dismissSession(sessionId)
+                            }
                             callAlertMeeting = nil
                         }
                     )
@@ -153,6 +158,14 @@ struct ContentView: View {
                 recordingVM.selectedMode = .combined
                 Task { await recordingVM.startRecording() }
                 callAlertMeeting = nil
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .videoCallDetected)) { notification in
+                guard let event = notification.userInfo?["event"] as? CalendarEvent else { return }
+                guard !callAlertDismissed.contains(event.id) else { return }
+                guard recordingVM.recordingState == .idle else { return }
+                withAnimation(TS.Animation.smooth) {
+                    callAlertMeeting = event
+                }
             }
 #else
         iOSView

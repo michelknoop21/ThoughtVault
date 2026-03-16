@@ -420,6 +420,17 @@ actor APIService {
         return try await perform(req)
     }
 
+    struct FeaturesResponse: Decodable {
+        let youtube_transcription: Bool?
+        let google_oauth_configured: Bool?
+        let google_oauth_client_id_macos: String?
+    }
+
+    func fetchFeaturesExtended() async throws -> FeaturesResponse {
+        let req = try request(path: "/features", method: "GET", authenticated: false)
+        return try await perform(req)
+    }
+
     // MARK: - YouTube Transcription
 
     struct YouTubeTranscribeResponse: Codable {
@@ -440,10 +451,13 @@ actor APIService {
         }
     }
 
-    func transcribeYouTube(url: String, profileId: String) async throws -> TranscriptTask {
+    func transcribeYouTube(url: String, profileId: String, googleToken: String? = nil) async throws -> TranscriptTask {
         let payload: [String: String] = ["url": url, "profile_id": profileId]
         let body = try JSONEncoder().encode(payload)
-        let req = try request(path: "/transcribe-youtube", method: "POST", body: body)
+        var req = try request(path: "/transcribe-youtube", method: "POST", body: body)
+        if let googleToken {
+            req.setValue(googleToken, forHTTPHeaderField: "X-Google-Token")
+        }
         return try await perform(req)
     }
 
@@ -752,6 +766,8 @@ actor APIService {
         let notificationWebhookUrl: String?
         let ms365_client_id: String?
         let ms365_tenant_id: String?
+        let google_oauth_client_id_macos: String?
+        let google_oauth_client_id_windows: String?
     }
 
     func getAdminSettings() async throws -> AdminSettingsResponse {
@@ -759,13 +775,24 @@ actor APIService {
         return try await perform(req)
     }
 
-    func updateAdminSettings(ms365ClientId: String?, ms365TenantId: String?) async throws {
+    func updateAdminSettings(
+        ms365ClientId: String?,
+        ms365TenantId: String?,
+        googleOAuthClientIdMacos: String? = nil,
+        googleOAuthClientIdWindows: String? = nil
+    ) async throws {
         var payload: [String: String] = [:]
         if let clientId = ms365ClientId {
             payload["ms365_client_id"] = clientId
         }
         if let tenantId = ms365TenantId {
             payload["ms365_tenant_id"] = tenantId
+        }
+        if let gClientId = googleOAuthClientIdMacos {
+            payload["google_oauth_client_id_macos"] = gClientId
+        }
+        if let gClientIdWin = googleOAuthClientIdWindows {
+            payload["google_oauth_client_id_windows"] = gClientIdWin
         }
         let body = try JSONEncoder().encode(payload)
         let req = try request(path: "/admin/settings", method: "POST", body: body)
@@ -941,7 +968,7 @@ final class SSEClient: @unchecked Sendable {
                 reconnectAttempts += 1
                 let backoffSeconds = min(pow(2.0, Double(reconnectAttempts)), 16.0)
                 logger.info("SSE: Reconnecting in \(backoffSeconds)s (attempt \(self.reconnectAttempts)/\(self.maxReconnectAttempts))")
-                Task { [weak self] in
+                Task { @MainActor [weak self] in
                     try? await Task.sleep(for: .seconds(backoffSeconds))
                     guard let self, !self.isStopped else { return }
                     self.startStream()

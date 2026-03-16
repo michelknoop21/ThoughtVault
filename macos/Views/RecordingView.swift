@@ -249,6 +249,76 @@ struct RecordingView: View {
             .padding(.top, TS.Spacing.lg)
             .padding(.bottom, TS.Spacing.md)
 
+            // Google Account Connection
+            if recordingVM.isGoogleOAuthConfigured {
+                VStack(spacing: TS.Spacing.sm) {
+                    if recordingVM.isGoogleConnected {
+                        // Connected state
+                        HStack {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(Color.statusSuccess)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Google verbonden")
+                                    .font(TS.Font.footnoteSemibold)
+                                    .foregroundStyle(Color.labelPrimary)
+                                if let email = recordingVM.googleUserEmail {
+                                    Text(email)
+                                        .font(TS.Font.caption)
+                                        .foregroundStyle(Color.labelSecondary)
+                                }
+                            }
+                            Spacer()
+                            Button("Ontkoppel") {
+                                Task { await recordingVM.disconnectGoogle() }
+                            }
+                            .font(TS.Font.caption)
+                            .foregroundStyle(Color.labelSecondary)
+                        }
+                        .padding(TS.Spacing.sm)
+                        .background {
+                            RoundedRectangle(cornerRadius: TS.Radius.sm, style: .continuous)
+                                .fill(Color.statusSuccess.opacity(0.08))
+                        }
+                    } else {
+                        // Not connected — show connect button
+                        Button {
+                            Task { await recordingVM.connectGoogle() }
+                        } label: {
+                            HStack(spacing: TS.Spacing.sm) {
+                                Image(systemName: "person.badge.key.fill")
+                                    .foregroundStyle(Color.brandPrimary)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Verbind Google Account")
+                                        .font(TS.Font.footnoteSemibold)
+                                        .foregroundStyle(Color.labelPrimary)
+                                    Text("Nodig voor YouTube transcriptie")
+                                        .font(TS.Font.caption)
+                                        .foregroundStyle(Color.labelSecondary)
+                                }
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundStyle(Color.labelTertiary)
+                            }
+                            .padding(TS.Spacing.sm)
+                            .background {
+                                RoundedRectangle(cornerRadius: TS.Radius.sm, style: .continuous)
+                                    .fill(Color.surfaceSecondary)
+                            }
+                        }
+                        .buttonStyle(.plain)
+
+                        if let error = recordingVM.googleAuthError {
+                            Text(error)
+                                .font(TS.Font.caption)
+                                .foregroundStyle(Color.brandOrange)
+                        }
+                    }
+                }
+                .padding(.horizontal, TS.Spacing.lg)
+                .padding(.bottom, TS.Spacing.sm)
+            }
+
             VStack(spacing: TS.Spacing.md) {
                 TextField("Plak een YouTube URL...", text: Binding(
                     get: { recordingVM.youtubeURL },
@@ -276,6 +346,17 @@ struct RecordingView: View {
                         Image(systemName: "exclamationmark.triangle.fill")
                             .foregroundStyle(Color.brandOrange)
                         Text(error)
+                            .font(TS.Font.caption)
+                            .foregroundStyle(Color.labelSecondary)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+
+                if recordingVM.captionsNotAvailable {
+                    HStack(spacing: TS.Spacing.xs) {
+                        Image(systemName: "info.circle.fill")
+                            .foregroundStyle(Color.brandOrange)
+                        Text("Geen ondertiteling beschikbaar. Video wordt gedownload en getranscribeerd via Whisper (dit kan enkele minuten duren).")
                             .font(TS.Font.caption)
                             .foregroundStyle(Color.labelSecondary)
                     }
@@ -320,10 +401,12 @@ struct RecordingView: View {
                 .disabled(
                     recordingVM.youtubeURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                     || recordingVM.isSubmittingYouTube
+                    || (recordingVM.isGoogleOAuthConfigured && !recordingVM.isGoogleConnected)
                 )
                 .opacity(
                     recordingVM.youtubeURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                    || recordingVM.isSubmittingYouTube ? 0.5 : 1.0
+                    || recordingVM.isSubmittingYouTube
+                    || (recordingVM.isGoogleOAuthConfigured && !recordingVM.isGoogleConnected) ? 0.5 : 1.0
                 )
             }
             .padding(.horizontal, TS.Spacing.lg)

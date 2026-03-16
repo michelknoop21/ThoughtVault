@@ -13,6 +13,7 @@ private let logger = Logger(subsystem: "nl.prezent.TranscriptStudio", category: 
 
 extension Notification.Name {
     static let meetingRecordRequested = Notification.Name("meetingRecordRequested")
+    static let videoCallDetected = Notification.Name("videoCallDetected")
 }
 
 final class MeetingNotificationService: NSObject, UNUserNotificationCenterDelegate, @unchecked Sendable {

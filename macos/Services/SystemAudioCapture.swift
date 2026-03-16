@@ -223,7 +223,14 @@ final class SystemAudioCapture: NSObject {
         // 2. Remove stream reference
         stream = nil
 
-        // 3. Remove output handler (stops writing)
+        // 3. Log capture summary before releasing output handler
+        if let output = streamOutput {
+            os_log("[SystemAudio] Capture summary — system samples: %llu, screen samples: %llu, system frames received: %llu, written: %llu",
+                   log: log, output.systemSampleCount, output.screenSampleCount,
+                   output.systemFramesReceived, output.systemFramesWritten)
+        }
+
+        // 4. Remove output handler (stops writing)
         streamOutput = nil
 
         // 4. Flush any enqueued sample writes before releasing AVAudioFile references
@@ -319,25 +326,39 @@ private final class AudioStreamOutput: NSObject, SCStreamOutput, SCStreamDelegat
 
     private var hasLoggedAudioFormat = false
     private var hasLoggedMicFormat = false
-    private var systemFramesReceived: UInt64 = 0
-    private var systemFramesWritten: UInt64 = 0
+    private(set) var systemFramesReceived: UInt64 = 0
+    private(set) var systemFramesWritten: UInt64 = 0
     private var micFramesReceived: UInt64 = 0
     private var micFramesWritten: UInt64 = 0
     private var lastDiagnosticLog: Date = .distantPast
+    private(set) var systemSampleCount: UInt64 = 0
+    private(set) var screenSampleCount: UInt64 = 0
 
     func stream(
         _ stream: SCStream,
         didOutputSampleBuffer sampleBuffer: CMSampleBuffer,
         of outputType: SCStreamOutputType
     ) {
-        guard sampleBuffer.isValid else { return }
-        if outputType == .screen { return }
+        guard sampleBuffer.isValid else {
+            os_log("[SystemAudio] Received invalid sample buffer (type=%d)", log: log, outputType.rawValue)
+            return
+        }
+
+        if outputType == .screen {
+            screenSampleCount += 1
+            return
+        }
 
         if outputType == .audio {
-            if !hasLoggedAudioFormat, let desc = sampleBuffer.formatDescription?.audioStreamBasicDescription {
+            systemSampleCount += 1
+            if !hasLoggedAudioFormat {
                 hasLoggedAudioFormat = true
-                os_log("[SystemAudio] System audio format: %.0f Hz, %d ch, flags=0x%X",
-                       log: log, desc.mSampleRate, desc.mChannelsPerFrame, desc.mFormatFlags)
+                if let desc = sampleBuffer.formatDescription?.audioStreamBasicDescription {
+                    os_log("[SystemAudio] System audio format: %.0f Hz, %d ch, flags=0x%X, bitsPerChannel=%d",
+                           log: log, desc.mSampleRate, desc.mChannelsPerFrame, desc.mFormatFlags, desc.mBitsPerChannel)
+                } else {
+                    os_log("[SystemAudio] First system audio sample received but NO format description available", log: log)
+                }
             }
             writeSamples(from: sampleBuffer, to: systemAudioFile, levelHandler: systemLevelHandler, streamLabel: "system")
             return
@@ -378,7 +399,10 @@ private final class AudioStreamOutput: NSObject, SCStreamOutput, SCStreamDelegat
         do {
             try sampleBuffer.withAudioBufferList { audioBufferList, blockBuffer in
                 guard let description = sampleBuffer.formatDescription?.audioStreamBasicDescription
-                else { return }
+                else {
+                    os_log("[SystemAudio] No audio format description in sample buffer (%{public}@)", log: log, streamLabel)
+                    return
+                }
 
                 // ScreenCaptureKit may deliver interleaved or non-interleaved float32.
                 let isInterleaved = description.mFormatFlags & kAudioFormatFlagIsNonInterleaved == 0
@@ -388,12 +412,19 @@ private final class AudioStreamOutput: NSObject, SCStreamOutput, SCStreamDelegat
                     sampleRate: description.mSampleRate,
                     channels: description.mChannelsPerFrame,
                     interleaved: isInterleaved
-                ),
-                    let pcmBuffer = AVAudioPCMBuffer(
-                        pcmFormat: sourceFormat,
-                        bufferListNoCopy: audioBufferList.unsafePointer
-                    )
-                else { return }
+                ) else {
+                    os_log("[SystemAudio] Could not create AVAudioFormat: %.0f Hz, %d ch, interleaved=%d (%{public}@)",
+                           log: log, description.mSampleRate, description.mChannelsPerFrame, isInterleaved ? 1 : 0, streamLabel)
+                    return
+                }
+
+                guard let pcmBuffer = AVAudioPCMBuffer(
+                    pcmFormat: sourceFormat,
+                    bufferListNoCopy: audioBufferList.unsafePointer
+                ) else {
+                    os_log("[SystemAudio] Could not create PCM buffer from audio buffer list (%{public}@)", log: log, streamLabel)
+                    return
+                }
 
                 let incomingFrames = UInt64(pcmBuffer.frameLength)
 
@@ -417,16 +448,28 @@ private final class AudioStreamOutput: NSObject, SCStreamOutput, SCStreamDelegat
                         converters[fileKey] = AVAudioConverter(from: sourceFormat, to: fileFormat)
                         converterFormats[fileKey] = sourceFormat
                     }
-                    guard let conv = converters[fileKey] else { return }
+                    guard let conv = converters[fileKey] else {
+                        os_log("[SystemAudio] Could not create audio converter (%{public}@)", log: log, streamLabel)
+                        return
+                    }
 
                     let ratio = fileFormat.sampleRate / sourceFormat.sampleRate
                     let outputFrames = AVAudioFrameCount(Double(pcmBuffer.frameLength) * ratio)
                     guard let outputBuffer = AVAudioPCMBuffer(
                         pcmFormat: fileFormat, frameCapacity: outputFrames
-                    ) else { return }
+                    ) else {
+                        os_log("[SystemAudio] Could not create output buffer (%{public}@)", log: log, streamLabel)
+                        return
+                    }
 
+                    var inputConsumed = false
                     var error: NSError?
                     conv.convert(to: outputBuffer, error: &error) { _, outStatus in
+                        if inputConsumed {
+                            outStatus.pointee = .endOfStream
+                            return nil
+                        }
+                        inputConsumed = true
                         outStatus.pointee = .haveData
                         return pcmBuffer
                     }

@@ -41,6 +41,13 @@ final class RecordingViewModel {
     var youtubeError: String?
     var youtubeSelectedProfile: Profile?
 
+    // Google OAuth for YouTube
+    var isGoogleConnected: Bool = false
+    var googleUserEmail: String?
+    var googleAuthError: String?
+    var captionsNotAvailable: Bool = false
+    var isGoogleOAuthConfigured: Bool = false
+
     // MARK: - Audio Properties (computed, @Observable-compatible)
 
     /// Combined audio levels from the active recorder(s). In combined mode the
@@ -890,10 +897,17 @@ final class RecordingViewModel {
 
     func checkFeatures() async {
         do {
-            let features = try await APIService.shared.fetchFeatures()
+            let features = try await APIService.shared.fetchFeaturesExtended()
             await MainActor.run {
-                isYouTubeEnabled = features["youtube_transcription"] ?? false
+                isYouTubeEnabled = features.youtube_transcription ?? false
+                isGoogleOAuthConfigured = features.google_oauth_configured ?? false
             }
+            // Configure GoogleAuthService with client ID from backend
+            if let clientId = features.google_oauth_client_id_macos, !clientId.isEmpty {
+                await GoogleAuthService.shared.configure(clientId: clientId)
+            }
+            // Check existing Google connection
+            await checkGoogleConnection()
         } catch {
             os_log("[RecordingVM] Could not load features: %{public}@", log: log, type: .error, error.localizedDescription)
         }
@@ -912,10 +926,17 @@ final class RecordingViewModel {
         await MainActor.run {
             isSubmittingYouTube = true
             youtubeError = nil
+            captionsNotAvailable = false
         }
 
         do {
-            let task = try await APIService.shared.transcribeYouTube(url: url, profileId: profile.id)
+            // Get Google token if connected (for YouTube Captions API)
+            let googleToken = await GoogleAuthService.shared.getValidToken()
+            let task = try await APIService.shared.transcribeYouTube(
+                url: url,
+                profileId: profile.id,
+                googleToken: googleToken
+            )
 
             await MainActor.run {
                 addTask(task)
@@ -929,6 +950,42 @@ final class RecordingViewModel {
                 isSubmittingYouTube = false
                 youtubeError = error.localizedDescription
             }
+        }
+    }
+
+    // MARK: - Google OAuth
+
+    func connectGoogle() async {
+        googleAuthError = nil
+        do {
+            try await GoogleAuthService.shared.initiateAuth()
+            let connected = await GoogleAuthService.shared.isConnected
+            let email = await GoogleAuthService.shared.accountEmail
+            await MainActor.run {
+                isGoogleConnected = connected
+                googleUserEmail = email
+            }
+        } catch {
+            await MainActor.run {
+                googleAuthError = error.localizedDescription
+            }
+        }
+    }
+
+    func disconnectGoogle() async {
+        await GoogleAuthService.shared.disconnect()
+        await MainActor.run {
+            isGoogleConnected = false
+            googleUserEmail = nil
+        }
+    }
+
+    func checkGoogleConnection() async {
+        let token = await GoogleAuthService.shared.getValidToken()
+        let email = await GoogleAuthService.shared.accountEmail
+        await MainActor.run {
+            isGoogleConnected = token != nil
+            googleUserEmail = email
         }
     }
 

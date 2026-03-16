@@ -211,6 +211,8 @@ TranscriptStudioApp/
 │   │   ├── Analytics.swift            #   Usage event tracking
 │   │   ├── CrashReporter.swift        #   Crash capture en reporting
 │   │   ├── DebugLogger.swift          #   Structured logging
+│   │   ├── VideoCallDetectionService.swift # KVO camera + app detectie voor ad-hoc videogesprekken
+│   │   ├── GoogleAuthService.swift         #   Google OAuth PKCE voor YouTube Captions API
 │   │   └── FloatingWidgetController.swift  # NSPanel overlay tijdens opname
 │   ├── ViewModels/                    # @Observable, @MainActor
 │   │   ├── AuthViewModel.swift        #   Login, biometrie, token lifecycle

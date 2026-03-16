@@ -5,6 +5,56 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2026-03-16] — YouTube hybride aanpak: Captions API + yt-dlp fallback
+
+### Added
+- **Google OAuth service** (`macos/Services/GoogleAuthService.swift`): New `actor GoogleAuthService` implementing Google OAuth PKCE flow via `ASWebAuthenticationSession`. Follows the exact `MicrosoftGraphService` pattern: PKCE code verifier/challenge, token exchange with `https://oauth2.googleapis.com/token`, user email fetch from Google userinfo endpoint, automatic token refresh with 60-second margin, Keychain persistence of refresh token via `KeychainService` (key: `googleRefreshToken`). Scope: `youtube.force-ssl` (required for `captions.download`). Redirect URI: `transcript-studio://google/callback`. Error enum `GoogleAuthError` with Dutch descriptions.
+- **YouTube Data API v3 functions** (backend `services/youtube_service.py`): Six new async functions using `httpx.AsyncClient`: `extract_video_id()` parses 11-char ID from URL variants, `get_youtube_metadata_api()` calls `videos.list`, `list_caption_tracks()` calls `captions.list`, `select_best_caption_track()` prioritizes nl standard > nl ASR > en standard > en ASR > any, `download_caption_text()` fetches SRT and converts to plain text via `_srt_to_text()`, `fetch_youtube_captions()` orchestrates the full flow. Helper `_parse_iso8601_duration()` converts ISO 8601 durations (PT1H2M3S) to seconds.
+- **Google OAuth in features endpoint** (backend `routes/features.py`): `/features` response now includes `google_oauth_configured: bool` and `google_oauth_client_id_macos: string` for client discovery.
+- **Google OAuth admin settings** (backend `routes/admin.py`, `config.py`): Added `google_oauth_client_id_macos` and `google_oauth_client_id_windows` to `AdminSettingsUpdate` model, settings GET/POST endpoints, and env config. Same pattern as `ms365_client_id`.
+- **Google OAuth UI in YouTube card** (`macos/Views/RecordingView.swift`): Google connection section in YouTube card showing connected state (email + disconnect button) or connect button. URL field and submit disabled when not connected. Captions fallback info banner when `captionsNotAvailable` is true.
+- **Google OAuth admin fields** (`macos/Views/AdminView.swift`): Google OAuth Client ID fields (macOS + Windows) in Admin > Instellingen tab, sharing the existing save button with MS365 settings.
+- **API features extended** (`macos/Services/APIService.swift`): New `FeaturesResponse` struct and `fetchFeaturesExtended()` method for typed feature response including Google OAuth fields.
+
+### Changed
+- **`/transcribe-youtube` endpoint** (backend `routes/transcription.py`): Now accepts optional `X-Google-Token` header. When present, tries YouTube Data API captions first → if found, creates task as "transcribed" and enqueues to notule pipeline (same as `/transcribe-text` pattern) with `source_type: "youtube_captions"`. Falls back to yt-dlp + Whisper when no captions available, with `captions_available: false` in response.
+- **`transcribeYouTube()` method** (`macos/Services/APIService.swift`): Now accepts optional `googleToken` parameter, sends as `X-Google-Token` header.
+- **`AdminSettingsResponse`** (`macos/Services/APIService.swift`): Added `google_oauth_client_id_macos` and `google_oauth_client_id_windows` fields.
+- **`updateAdminSettings()`** (`macos/Services/APIService.swift`): Now accepts optional `googleOAuthClientIdMacos` and `googleOAuthClientIdWindows` parameters.
+- **`RecordingViewModel`** (`macos/ViewModels/RecordingViewModel.swift`): Added Google OAuth state (`isGoogleConnected`, `googleUserEmail`, `googleAuthError`, `captionsNotAvailable`, `isGoogleOAuthConfigured`). Added `connectGoogle()`, `disconnectGoogle()`, `checkGoogleConnection()` methods. Updated `checkFeatures()` to use `fetchFeaturesExtended()` and configure `GoogleAuthService`. Updated `submitYouTubeURL()` to pass Google token and require Google connection.
+- **Admin settings** (`macos/Views/AdminView.swift`): `loadAdminSettings()` and `saveAdminSettings()` now include Google OAuth fields.
+
+### Decisions
+- See DEC-041 in [DECISIONS.md](DECISIONS.md) for the hybrid captions-first architecture.
+
+### Notes
+- Windows and Android do not yet have Google OAuth — backend is ready (settings exist, `X-Google-Token` header is optional).
+- YouTube Data API quota: ~40 videos/day at default 10,000 units/day.
+- Google Cloud Console setup required: create OAuth Client ID (type: iOS, bundle ID: `nl.prezent.TranscriptStudio`), enable YouTube Data API v3, configure consent screen with `youtube.force-ssl` scope.
+- The Xcode project (`project.pbxproj`) was updated to include `GoogleAuthService.swift`.
+
+---
+
+## [2026-03-16] — Video call detection service
+
+### Added
+- **VideoCallDetectionService** (`macos/Services/VideoCallDetectionService.swift`): New `@Observable` singleton service that detects active video calls by combining two signals: (1) KVO observation on `AVCaptureDevice.default(for: .video)?.isInUseByAnotherApplication` and (2) `NSWorkspace.shared.runningApplications` matching against known video app bundle IDs (Teams, Zoom, FaceTime, Slack, Webex, Discord) and browser bundle IDs. Three-state machine: `idle → detected → cooldown (60s) → idle`. Posts `Notification.Name.videoCallDetected` with a synthetic `CalendarEvent` as userInfo, reusing the existing `CallAlertView` and `MeetingNotificationService` infrastructure. Includes calendar dedup (skips if a calendar meeting already covers the time window), session dismissal tracking, and a 10-second polling fallback when camera device is unavailable in sandbox.
+- **`.videoCallDetected` notification** (`macos/Services/MeetingNotificationService.swift`): New `Notification.Name` extension for video call detection events.
+- **ContentView `.onReceive`** (`macos/App/ContentView.swift:159-165`): Listens for `.videoCallDetected` notifications, shows existing `CallAlertView` overlay. "Start opname" action forces `.combined` recording mode for detected video calls (via `meeting.id.hasPrefix("videocall-")` check). "Negeer" action propagates dismissal to `VideoCallDetectionService.shared.dismissSession()`.
+- **Monitoring startup** (`macos/App/TranscriptStudioApp.swift:30-32`): `VideoCallDetectionService.shared.startMonitoring()` called in app `.task` block, guarded by `#if os(macOS)`.
+- **Settings toggle** (`macos/Views/SettingsView.swift`): "Automatische vergaderdetectie" toggle in Agenda section, bound to `@AppStorage("videoCallDetectionEnabled")` (default: true). macOS-only via `#if os(macOS)`.
+- **Localizable strings** (`macos/Resources/nl.lproj/Localizable.strings`): 4 new Dutch strings for video call detection notifications and settings.
+
+### Decisions
+- See DEC-040 in [DECISIONS.md](DECISIONS.md) for the KVO + running app detection approach.
+
+### Notes
+- Browser + camera detection can false-positive on non-video WebRTC sites — dismissed in 1 click.
+- Audio-only calls are not detected (no camera activation); calendar integration covers scheduled audio calls.
+- The service uses `@unchecked Sendable` because all mutable state is gated behind `@MainActor` methods.
+
+---
+
 ## [2026-03-15] — Recording view redesign + onafhankelijke YouTube profielselectie
 
 ### Changed

@@ -69,6 +69,8 @@ struct AdminView: View {
     // Admin settings
     @State private var ms365ClientId = ""
     @State private var ms365TenantId = ""
+    @State private var googleOAuthClientIdMacos = ""
+    @State private var googleOAuthClientIdWindows = ""
     @State private var isLoadingSettings = false
     @State private var showSettingsSaved = false
 
@@ -913,6 +915,44 @@ struct AdminView: View {
                 }
                 .padding(TS.Spacing.md)
                 .modernCard()
+
+                // Google OAuth section
+                VStack(alignment: .leading, spacing: TS.Spacing.md) {
+                    HStack(spacing: TS.Spacing.sm) {
+                        Image(systemName: "play.rectangle.fill")
+                            .font(.system(size: 20))
+                            .foregroundStyle(Color.red)
+                        Text("Google OAuth (YouTube)")
+                            .font(TS.Font.title3Bold)
+                            .foregroundStyle(Color.labelPrimary)
+                    }
+
+                    Text("Configureer Google OAuth credentials zodat gebruikers YouTube video's kunnen transcriberen via de Captions API. Maak een OAuth Client ID aan in Google Cloud Console met redirect URI: transcript-studio://google/callback")
+                        .font(TS.Font.footnote)
+                        .foregroundStyle(Color.labelSecondary)
+
+                    VStack(alignment: .leading, spacing: TS.Spacing.sm) {
+                        Text("Client ID (macOS)")
+                            .font(TS.Font.footnoteSemibold)
+                            .foregroundStyle(Color.labelSecondary)
+                        TextField("xxxxxxxx.apps.googleusercontent.com", text: $googleOAuthClientIdMacos)
+                            .textFieldStyle(.roundedBorder)
+                            .font(TS.Font.body)
+                            .autocorrectionDisabled()
+                    }
+
+                    VStack(alignment: .leading, spacing: TS.Spacing.sm) {
+                        Text("Client ID (Windows)")
+                            .font(TS.Font.footnoteSemibold)
+                            .foregroundStyle(Color.labelSecondary)
+                        TextField("xxxxxxxx.apps.googleusercontent.com", text: $googleOAuthClientIdWindows)
+                            .textFieldStyle(.roundedBorder)
+                            .font(TS.Font.body)
+                            .autocorrectionDisabled()
+                    }
+                }
+                .padding(TS.Spacing.md)
+                .modernCard()
             }
             .padding(TS.Spacing.md)
         }
@@ -926,6 +966,8 @@ struct AdminView: View {
             let settings = try await APIService.shared.getAdminSettings()
             ms365ClientId = settings.ms365_client_id ?? ""
             ms365TenantId = settings.ms365_tenant_id ?? ""
+            googleOAuthClientIdMacos = settings.google_oauth_client_id_macos ?? ""
+            googleOAuthClientIdWindows = settings.google_oauth_client_id_windows ?? ""
         } catch {
             DebugLogger.shared.error(error, context: "Instellingen laden", category: "Admin")
         }
@@ -937,7 +979,9 @@ struct AdminView: View {
         do {
             try await APIService.shared.updateAdminSettings(
                 ms365ClientId: ms365ClientId,
-                ms365TenantId: ms365TenantId
+                ms365TenantId: ms365TenantId,
+                googleOAuthClientIdMacos: googleOAuthClientIdMacos,
+                googleOAuthClientIdWindows: googleOAuthClientIdWindows
             )
             withAnimation(TS.Animation.quick) {
                 showSettingsSaved = true

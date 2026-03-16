@@ -25,6 +25,7 @@
 		AA000016 /* OfflineQueue.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000016 /* OfflineQueue.swift */; };
 		AA000017 /* OnDeviceTranscriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000017 /* OnDeviceTranscriber.swift */; };
 		AA000018 /* SystemAudioCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000018 /* SystemAudioCapture.swift */; };
+		AA000059 /* VideoCallDetectionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000059 /* VideoCallDetectionService.swift */; };
 		AA000019 /* AuthViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000019 /* AuthViewModel.swift */; };
 		AA000020 /* RecordingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000020 /* RecordingViewModel.swift */; };
 		AA000021 /* TranscriptsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000021 /* TranscriptsViewModel.swift */; };
@@ -59,6 +60,7 @@
 		AA000055 /* TasksViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000055 /* TasksViewModel.swift */; };
 		AA000056 /* TasksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000056 /* TasksView.swift */; };
 		AA000057 /* UpdateCheckService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000057 /* UpdateCheckService.swift */; };
+		AA000058 /* GoogleAuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000058 /* GoogleAuthService.swift */; };
 		AB000001 /* TranscriptStudioTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000001 /* TranscriptStudioTests.swift */; };
 /* End PBXBuildFile section */
 
@@ -92,6 +94,7 @@
 		FA000016 /* OfflineQueue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineQueue.swift; sourceTree = "<group>"; };
 		FA000017 /* OnDeviceTranscriber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnDeviceTranscriber.swift; sourceTree = "<group>"; };
 		FA000018 /* SystemAudioCapture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemAudioCapture.swift; sourceTree = "<group>"; };
+		FA000059 /* VideoCallDetectionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoCallDetectionService.swift; sourceTree = "<group>"; };
 		FA000019 /* AuthViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthViewModel.swift; sourceTree = "<group>"; };
 		FA000020 /* RecordingViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingViewModel.swift; sourceTree = "<group>"; };
 		FA000021 /* TranscriptsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptsViewModel.swift; sourceTree = "<group>"; };
@@ -129,6 +132,7 @@
 		FA000055 /* TasksViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TasksViewModel.swift; sourceTree = "<group>"; };
 		FA000056 /* TasksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TasksView.swift; sourceTree = "<group>"; };
 		FA000057 /* UpdateCheckService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateCheckService.swift; sourceTree = "<group>"; };
+		FA000058 /* GoogleAuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleAuthService.swift; sourceTree = "<group>"; };
 		FB000001 /* TranscriptStudioTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptStudioTests.swift; sourceTree = "<group>"; };
 		FC000001 /* TranscriptStudio.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TranscriptStudio.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		FC000002 /* TranscriptStudioTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TranscriptStudioTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -218,6 +222,7 @@
 				FA000010 /* CalendarService.swift */,
 				FA000011 /* CrashReporter.swift */,
 				FA000012 /* DebugLogger.swift */,
+				FA000058 /* GoogleAuthService.swift */,
 				FA000013 /* KeychainService.swift */,
 				FA000014 /* LLMService.swift */,
 				FA000054 /* MeetingNotificationService.swift */,
@@ -227,6 +232,7 @@
 				FA000016 /* OfflineQueue.swift */,
 				FA000017 /* OnDeviceTranscriber.swift */,
 				FA000018 /* SystemAudioCapture.swift */,
+				FA000059 /* VideoCallDetectionService.swift */,
 				FA000057 /* UpdateCheckService.swift */,
 			);
 			path = Services;
@@ -420,6 +426,7 @@
 				AA000016 /* OfflineQueue.swift in Sources */,
 				AA000017 /* OnDeviceTranscriber.swift in Sources */,
 				AA000018 /* SystemAudioCapture.swift in Sources */,
+				AA000059 /* VideoCallDetectionService.swift in Sources */,
 				AA000019 /* AuthViewModel.swift in Sources */,
 				AA000020 /* RecordingViewModel.swift in Sources */,
 				AA000021 /* TranscriptsViewModel.swift in Sources */,
@@ -448,6 +455,7 @@
 				AA000053 /* EditableHTMLWebView.swift in Sources */,
 				AA000054 /* MeetingNotificationService.swift in Sources */,
 				AA000057 /* UpdateCheckService.swift in Sources */,
+				AA000058 /* GoogleAuthService.swift in Sources */,
 				AA000056 /* TasksView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

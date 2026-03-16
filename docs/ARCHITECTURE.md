@@ -1,6 +1,6 @@
 # TranscriptStudio — Architecture
 
-_Last updated: 2026-03-15_
+_Last updated: 2026-03-16_
 
 ---
 
@@ -45,8 +45,8 @@ All clients share a common REST + SSE API and are deployed independently.
 | GET | `/tstudio/api/task/{id}/stream` | SSE stream of task status transitions |
 | POST | `/tstudio/api/transcribe` | Transcribe audio (internal) |
 | POST | `/tstudio/api/transcribe-text` | Generate notes from existing transcript text |
-| POST | `/tstudio/api/transcribe-youtube` | Transcribe YouTube video (URL → yt-dlp download → Whisper); requires feature enabled |
-| GET | `/tstudio/api/features` | Feature flags (`{"youtube_transcription": bool}`); no auth required; DB-backed with env var fallback |
+| POST | `/tstudio/api/transcribe-youtube` | Transcribe YouTube video; accepts optional `X-Google-Token` header for Captions API (instant), falls back to yt-dlp + Whisper |
+| GET | `/tstudio/api/features` | Feature flags + OAuth config (`{"youtube_transcription": bool, "google_oauth_configured": bool, "google_oauth_client_id_macos": str}`); no auth required |
 | GET | `/tstudio/api/admin/features` | Admin: list all feature flags with status |
 | POST | `/tstudio/api/admin/features/{key}` | Admin: toggle feature on/off |
 | GET | `/tstudio/api/tasks` | List all tasks for authenticated user |
@@ -88,9 +88,13 @@ Client                    Backend                    n8n / Claude
 
 **Status pipeline:** `pending → uploading → converting → transcribing → transcribed → processingWebhook → completed`
 
-**YouTube pipeline:** `pending → downloading → converting → transcribing → transcribed → processingWebhook → completed`
+**YouTube captions pipeline (primary):** `transcribed → processingWebhook → completed` (~1 second, no GPU). When `X-Google-Token` header is present and captions exist, the backend fetches caption text via YouTube Data API v3 (`captions.list` + `captions.download`), skips Whisper entirely, and feeds text into the notule pipeline. Caption track priority: nl standard > nl ASR > en standard > en ASR > any. Response includes `source_type: "youtube_captions"` and `captions_available: true`. See DEC-041.
 
-**YouTube infrastructure:** yt-dlp invoked via `python3 -m yt_dlp` (avoids conda/pip PATH conflicts). Requires three components on server: (1) browser cookies at `/app/cookies.txt` for YouTube auth (exported from Firefox, must be refreshed periodically), (2) Node.js 20+ at `/usr/local/bin/node` for EJS challenge solving, (3) `yt-dlp-ejs` package (installed via `pip install yt-dlp[default]`). Config: `YOUTUBE_COOKIES_FILE` env var (default `/app/cookies.txt`). See DEC-038.
+**YouTube yt-dlp pipeline (fallback):** `pending → downloading → converting → transcribing → transcribed → processingWebhook → completed`. Used when no captions available or no Google token provided.
+
+**YouTube infrastructure (yt-dlp fallback):** yt-dlp invoked via `python3 -m yt_dlp` (avoids conda/pip PATH conflicts). Requires three components on server: (1) browser cookies at `/app/cookies.txt` for YouTube auth (exported from Firefox, must be refreshed periodically), (2) Node.js 20+ at `/usr/local/bin/node` for EJS challenge solving, (3) `yt-dlp-ejs` package (installed via `pip install yt-dlp[default]`). Config: `YOUTUBE_COOKIES_FILE` env var (default `/app/cookies.txt`). See DEC-038.
+
+**Google OAuth (YouTube):** Admin configures `google_oauth_client_id_macos` via Admin > Instellingen. Client ID exposed via `/features` endpoint. macOS uses `GoogleAuthService` (actor, PKCE, `ASWebAuthenticationSession`) with scope `youtube.force-ssl`. Refresh token persisted in Keychain (key: `googleRefreshToken`). See DEC-041.
 
 **Field mapping:** `Task.result` → `notuleHtml` (macOS Swift) / `notule_html` (Windows TypeScript)
 
@@ -133,11 +137,14 @@ macos/
 │   ├── NetworkMonitor.swift            # NWPathMonitor reachability
 │   ├── OfflineQueue.swift              # Disk-persisted upload queue with retry
 │   ├── CalendarService.swift           # EventKit + EKEventStoreChangedNotification
+│   ├── MeetingNotificationService.swift # UNUserNotificationCenter delegate, OS notification scheduling
 │   ├── BiometricService.swift          # LAContext Face ID / Touch ID evaluation
 │   ├── KeychainService.swift           # Secure token storage (Secure Enclave)
 │   ├── Analytics.swift                 # Usage event tracking
 │   ├── CrashReporter.swift             # Crash capture and reporting
 │   ├── DebugLogger.swift               # Structured debug logging
+│   ├── VideoCallDetectionService.swift # KVO camera + running app detection for ad-hoc video calls
+│   ├── GoogleAuthService.swift        # Google OAuth PKCE for YouTube Captions API access
 │   └── FloatingWidgetController.swift  # NSPanel overlay during recording
 │
 ├── ViewModels/
@@ -185,11 +192,14 @@ macos/
 | `NetworkMonitor` | `@Observable class` | `NWPathMonitor` reachability, triggers OfflineQueue processing on reconnect |
 | `OfflineQueue` | `actor` | Disk-persisted JSON queue, atomic file writes, cleanup-safe references |
 | `CalendarService` | `@Observable class` | EventKit meeting fetch, `EKEventStoreChangedNotification`, call-start alerts |
+| `MeetingNotificationService` | `class` (singleton) | `UNUserNotificationCenter` delegate, schedules OS notifications for upcoming meetings, handles notification actions |
+| `VideoCallDetectionService` | `@Observable class` | KVO camera monitoring + running app detection, posts `.videoCallDetected` with synthetic `CalendarEvent` |
 | `BiometricService` | `actor` | `LAContext` biometric evaluation, Secure Enclave access |
 | `KeychainService` | `actor` | `SecItemAdd`/`SecItemCopyMatching` with `kSecAttrAccessibleWhenUnlocked` |
 | `Analytics` | `actor` | Session event recording, privacy-safe usage metrics |
 | `CrashReporter` | `actor` | Uncaught exception capture and structured crash log submission |
 | `DebugLogger` | `actor` | Structured log levels (debug/info/warning/error), in-app log viewer |
+| `GoogleAuthService` | `actor` | Google OAuth PKCE flow, token refresh, Keychain persistence for YouTube Captions API |
 | `FloatingWidgetController` | `class` | `NSPanel` floating overlay during active recording |
 
 ### State Management

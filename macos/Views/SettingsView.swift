@@ -25,6 +25,7 @@ struct SettingsView: View {
     @AppStorage("defaultProfile") private var defaultProfile: String = ""
     @AppStorage("preferOnDeviceTranscription") private var preferOnDeviceTranscription: Bool = false
     @AppStorage("biometricLoginEnabled") private var biometricLoginEnabled: Bool = false
+    @AppStorage("videoCallDetectionEnabled") private var videoCallDetectionEnabled: Bool = true
 
     // MARK: - Local State
 
@@ -443,6 +444,20 @@ struct SettingsView: View {
                 }
                 .padding(.vertical, TS.Spacing.xs)
             }
+            #if os(macOS)
+            Divider()
+
+            Toggle(isOn: $videoCallDetectionEnabled) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Automatische vergaderdetectie")
+                        .font(TS.Font.body)
+                    Text("Detecteert wanneer een videogesprek start en toont een melding om de opname te starten.")
+                        .font(TS.Font.caption)
+                        .foregroundStyle(Color.labelSecondary)
+                }
+            }
+            .tint(Color.brandPrimary)
+            #endif
         } header: {
             Text("Agenda")
         } footer: {

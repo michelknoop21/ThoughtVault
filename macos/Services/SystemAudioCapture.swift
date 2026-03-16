@@ -69,7 +69,7 @@ final class SystemAudioCapture: NSObject {
             self.hasPermission = true
         } catch {
             self.hasPermission = false
-            self.errorMessage = "Schermopnamemachtiging is vereist voor systeemaudio-opname."
+            self.errorMessage = "Systeemaudio-machtiging is vereist voor opname."
             throw error
         }
 
@@ -85,12 +85,13 @@ final class SystemAudioCapture: NSObject {
         config.excludesCurrentProcessAudio = false
         if #available(macOS 15.0, *) {
             config.captureMicrophone = includeMicrophone
+        } else {
+            // macOS 14: SCStream requires .screen output, so minimize video workload.
+            config.width = 2
+            config.height = 2
+            config.minimumFrameInterval = CMTime(value: 1, timescale: 1)
+            config.queueDepth = 5
         }
-        // Keep video workload as low as possible; we ignore screen buffers.
-        config.width = 2
-        config.height = 2
-        config.minimumFrameInterval = CMTime(value: 1, timescale: 1)
-        config.queueDepth = 5
 
         // Use first available display as capture target
         guard let display = shareableContent.displays.first else {
@@ -173,11 +174,16 @@ final class SystemAudioCapture: NSObject {
             type: .audio,
             sampleHandlerQueue: sampleHandlerQueue
         )
-        try captureStream.addStreamOutput(
-            output,
-            type: .screen,
-            sampleHandlerQueue: sampleHandlerQueue
-        )
+        if #unavailable(macOS 15.0) {
+            // macOS 14: SCStream requires at least one .screen output to function.
+            // On macOS 15+ we omit this so the app is categorized as "System Audio Only"
+            // instead of "Screen and System Audio Recording" in System Settings.
+            try captureStream.addStreamOutput(
+                output,
+                type: .screen,
+                sampleHandlerQueue: sampleHandlerQueue
+            )
+        }
         if includeMicrophone {
             if #available(macOS 15.0, *) {
                 try captureStream.addStreamOutput(

@@ -749,3 +749,20 @@ Vermijd `Task { @MainActor in }` in beide gevallen: het scheduled een nieuwe coo
 - `MainActor.assumeIsolated` in timer callbacks is zero-overhead (geen scheduling, geen context switch) en documenteert de threading verwachting.
 - Bestaande `@MainActor` methoden (`handleCameraActive`, `handleCameraInactive`, `enterCooldown`) hoeven niet gewijzigd te worden — ze worden nu correct aangeroepen vanuit de main queue/actor context.
 - Dit patroon moet gevolgd worden bij toekomstige KVO observers en system callbacks in `@Observable` classes.
+
+---
+
+## DEC-043 — macOS 15 Audio-Only ScreenCaptureKit Categorisatie
+
+**Date:** 2026-03-16
+**Status:** Accepted
+
+**Context:** `SystemAudioCapture` gebruikt ScreenCaptureKit (SCStream) voor systeemaudio-opname. Op macOS 14 vereist SCStream minstens één `.screen` output om te functioneren, zelfs als je alleen audio wilt opvangen. Daarom werd altijd een minimale video config meegegeven (`width=2, height=2, framerate=1fps`) om overhead te beperken. Het gevolg: macOS toont de app in Systeeminstellingen als "Scherm- en systeemaudio-opname" — misleidend voor een app die alleen audio opneemt. macOS 15 introduceert `SCStreamConfiguration.captureMicrophone` en maakt het mogelijk om alleen audio te streamen zonder `.screen` output.
+
+**Decision:** Gebruik `#unavailable(macOS 15.0)` om de `.screen` output en bijbehorende video config (`width`, `height`, `minimumFrameInterval`, `queueDepth`) alleen op macOS 14 in te stellen. Op macOS 15+ wordt geen `.screen` output toegevoegd aan de stream. De error message is aangepast van "Schermopnamemachtiging" naar "Systeemaudio-machtiging" om de nieuwe categorisatie te reflecteren.
+
+**Consequences:**
+- macOS 15+ toont de app als "Systeemaudio" in Systeeminstellingen — accurate categorisatie.
+- Geen onnodige video frames verwerkt op macOS 15+, vermindert CPU/GPU overhead.
+- macOS 14 blijft correct functioneren met de minimale video fallback.
+- De error message is nu platform-consistent: gebruikers zien geen verwijzing naar "schermopname" wanneer de app geen scherm opneemt.

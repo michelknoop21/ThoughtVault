@@ -481,21 +481,16 @@ actor APIService {
     // MARK: - Transcripts
 
     func getTranscripts(
-        page: Int = 1,
-        limit: Int = 20,
         search: String? = nil,
-        sortBy: String? = nil
+        tags: [String]? = nil
     ) async throws -> TranscriptsResponse {
         var components = URLComponents()
-        components.queryItems = [
-            URLQueryItem(name: "page", value: "\(page)"),
-            URLQueryItem(name: "limit", value: "\(limit)")
-        ]
+        components.queryItems = []
         if let search = search, !search.isEmpty {
             components.queryItems?.append(URLQueryItem(name: "search", value: search))
         }
-        if let sortBy = sortBy {
-            components.queryItems?.append(URLQueryItem(name: "sort_by", value: sortBy))
+        if let tags = tags, !tags.isEmpty {
+            components.queryItems?.append(URLQueryItem(name: "tags", value: tags.joined(separator: ",")))
         }
         let queryString = components.percentEncodedQuery.map { "?\($0)" } ?? ""
         let req = try request(path: "/transcripts\(queryString)")
@@ -739,25 +734,38 @@ actor APIService {
         return result.count
     }
 
-    func getAdminErrors() async throws -> [AdminError] {
+    func getAdminErrors(
+        limit: Int = 500,
+        severity: String? = nil,
+        userId: String? = nil,
+        search: String? = nil,
+        startDate: String? = nil,
+        endDate: String? = nil
+    ) async throws -> [AdminError] {
         struct ErrorsWrapper: Decodable { let errors: [AdminError] }
         struct ItemsWrapper: Decodable { let items: [AdminError] }
-        let req = try request(path: "/admin/errors")
+        var components = URLComponents()
+        components.path = "/admin/errors"
+        var queryItems = [URLQueryItem(name: "limit", value: "\(limit)")]
+        if let severity { queryItems.append(.init(name: "severity", value: severity)) }
+        if let userId { queryItems.append(.init(name: "user_id", value: userId)) }
+        if let search, !search.isEmpty { queryItems.append(.init(name: "search", value: search)) }
+        if let startDate { queryItems.append(.init(name: "start_date", value: startDate)) }
+        if let endDate { queryItems.append(.init(name: "end_date", value: endDate)) }
+        components.queryItems = queryItems
+        let path = components.string ?? "/admin/errors"
+        let req = try request(path: path)
         let (data, response) = try await session.data(for: req)
-        // Validate HTTP status
         if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode >= 400 {
             throw APIError.httpError(httpResponse.statusCode, String(data: data, encoding: .utf8))
         }
         let decoder = JSONDecoder()
-        // Try { errors: [...] } wrapper
         if let wrapper = try? decoder.decode(ErrorsWrapper.self, from: data) {
             return wrapper.errors
         }
-        // Try { items: [...] } wrapper
         if let wrapper = try? decoder.decode(ItemsWrapper.self, from: data) {
             return wrapper.items
         }
-        // Try flat array
         return (try? decoder.decode([AdminError].self, from: data)) ?? []
     }
 
@@ -768,6 +776,9 @@ actor APIService {
         let ms365_tenant_id: String?
         let google_oauth_client_id_macos: String?
         let google_oauth_client_id_windows: String?
+        let youtube_max_duration_minutes: Int?
+        let youtube_cookies_content: String?
+        let youtube_extractor_args: String?
     }
 
     func getAdminSettings() async throws -> AdminSettingsResponse {
@@ -779,9 +790,12 @@ actor APIService {
         ms365ClientId: String?,
         ms365TenantId: String?,
         googleOAuthClientIdMacos: String? = nil,
-        googleOAuthClientIdWindows: String? = nil
+        googleOAuthClientIdWindows: String? = nil,
+        youtubeMaxDurationMinutes: Int? = nil,
+        youtubeCookiesContent: String? = nil,
+        youtubeExtractorArgs: String? = nil
     ) async throws {
-        var payload: [String: String] = [:]
+        var payload: [String: Any] = [:]
         if let clientId = ms365ClientId {
             payload["ms365_client_id"] = clientId
         }
@@ -794,7 +808,16 @@ actor APIService {
         if let gClientIdWin = googleOAuthClientIdWindows {
             payload["google_oauth_client_id_windows"] = gClientIdWin
         }
-        let body = try JSONEncoder().encode(payload)
+        if let ytMaxDuration = youtubeMaxDurationMinutes {
+            payload["youtube_max_duration_minutes"] = ytMaxDuration
+        }
+        if let ytCookies = youtubeCookiesContent {
+            payload["youtube_cookies_content"] = ytCookies
+        }
+        if let ytExtArgs = youtubeExtractorArgs {
+            payload["youtube_extractor_args"] = ytExtArgs
+        }
+        let body = try JSONSerialization.data(withJSONObject: payload)
         let req = try request(path: "/admin/settings", method: "POST", body: body)
         try await performVoid(req)
     }
@@ -811,8 +834,25 @@ actor APIService {
         try await performVoid(req)
     }
 
-    func getAdminActivity(limit: Int = 50) async throws -> [AdminActivity] {
-        let req = try request(path: "/admin/activity?limit=\(limit)")
+    func getAdminActivity(
+        limit: Int = 500,
+        userId: String? = nil,
+        actionType: String? = nil,
+        search: String? = nil,
+        startDate: String? = nil,
+        endDate: String? = nil
+    ) async throws -> [AdminActivity] {
+        var components = URLComponents()
+        components.path = "/admin/activity"
+        var queryItems = [URLQueryItem(name: "limit", value: "\(limit)")]
+        if let userId { queryItems.append(.init(name: "user_id", value: userId)) }
+        if let actionType { queryItems.append(.init(name: "action_type", value: actionType)) }
+        if let search, !search.isEmpty { queryItems.append(.init(name: "search", value: search)) }
+        if let startDate { queryItems.append(.init(name: "start_date", value: startDate)) }
+        if let endDate { queryItems.append(.init(name: "end_date", value: endDate)) }
+        components.queryItems = queryItems
+        let path = components.string ?? "/admin/activity"
+        let req = try request(path: path)
         return try await perform(req)
     }
 

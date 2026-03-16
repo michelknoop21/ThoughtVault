@@ -1,7 +1,62 @@
 # TranscriptStudio — Changelog
 
-All notable changes to the TranscriptStudio macOS and Windows applications are documented here.
+All notable changes to the TranscriptStudio project (macOS, Windows, Android clients, web app, and backend) are documented here.
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+
+---
+
+## [2026-03-16] — Backend CSS bugfix: dark mode select chevron tiling
+
+### Fixed
+- **Dark mode `<select>` chevron tiling** (`static/css/main.css`, `templates/pages/admin.html`): The `background:` shorthand in dark mode styles was resetting `background-repeat` to `repeat`, causing the custom chevron SVG to tile across the entire `<select>` element instead of appearing once on the right. Fixed by changing `background:` to `background-color:` in 4 places:
+  - `[data-theme="dark"] select` (line ~2296)
+  - `[data-theme="dark"] select:focus` (line ~2304)
+  - `select:focus` light mode (line ~2165)
+  - `.log-filter-select` inline style in `admin.html` (line ~634)
+
+### Notes
+- The root cause: CSS `background:` is a shorthand that resets all sub-properties (`background-image`, `background-repeat`, `background-position`, etc.) to their initial values. The chevron was set via `background-image` on the base `select` rule, but the dark mode override used `background:` (shorthand) to change the color, which reset `background-repeat` to `repeat` and `background-image` was then inherited with repeat. Using `background-color:` (longhand) only changes the color without affecting other background properties.
+
+---
+
+## [2026-03-16] — Admin panel improvements and transcript loading simplification
+
+### Changed
+- **Admin Logging tab redesigned** (`macos/Views/AdminView.swift`, `windows/src/pages/AdminPage.tsx`): The "Fouten" tab is now a dual-subtab interface with "Activiteit" (activity logs) and "Fouten" (error logs). Includes filter bar with severity, user, action type, and text search. Expandable rows show full log details (stack traces, request context). Paginated display with 25 items per page.
+- **Admin Settings: YouTube configuration** (`macos/Views/AdminView.swift`, `windows/src/pages/AdminPage.tsx`): New fields in Admin > Instellingen for YouTube yt-dlp configuration: max video duration (minutes), cookies content (textarea for Netscape cookie format), extractor args (default: `youtube:player_client=mediaconnect`). Removes the need to SSH into the server and restart the container for cookie updates.
+- **Admin Settings: Google OAuth fields** (`macos/Views/AdminView.swift`, `windows/src/pages/AdminPage.tsx`): Google OAuth Client ID fields (macOS + Windows) added to the settings tab alongside existing MS365 fields.
+- **APIService filter parameters** (`macos/Services/APIService.swift`, `windows/src/services/api.ts`): `getAdminErrors()` and `getAdminActivity()` now accept filter parameters (`severity`, `userId`, `search`, `startDate`, `endDate`, `actionType`) instead of fetching a fixed list.
+- **AdminSettingsResponse extended** (`macos/Services/APIService.swift`, `windows/src/services/api.ts`): Now includes `youtube_max_duration_minutes`, `youtube_cookies_content`, `youtube_extractor_args` fields. `updateAdminSettings()` accepts these as optional parameters.
+- **Transcript pagination removed** (`macos/Services/APIService.swift`, `macos/ViewModels/TranscriptsViewModel.swift`, `macos/Views/TranscriptsView.swift`, `macos/Views/HomeView.swift`, `macos/Models/Models.swift`, `windows/src/services/api.ts`, `windows/src/pages/HomePage.tsx`, `windows/src/pages/RecordingPage.tsx`, `windows/src/App.tsx`): Client-side pagination loops removed from all transcript loading paths. Both platforms now fetch all transcripts in a single request without `page`/`limit`/`sort_by` query parameters. `TranscriptsResponse` model simplified to `{ items: [Transcript] }` — removed `total`, `page`, `limit` fields. ~80 lines of pagination loop logic removed.
+
+### Decisions
+- See DEC-045 in [DECISIONS.md](DECISIONS.md) for the transcript pagination removal rationale.
+- See DEC-046 in [DECISIONS.md](DECISIONS.md) for the admin panel enhancement rationale.
+
+---
+
+## [2026-03-16] — YouTube anonieme captions via youtube-transcript-api
+
+### Added
+- **Anonieme YouTube captions** (`backend/services/youtube_service.py`): Nieuwe functie `fetch_captions_anonymous()` haalt captions op via de `youtube-transcript-api` library — geen Google API key, geen OAuth token, geen Google account nodig. Taal-prioriteit: nl manual → nl auto → en manual → en auto → overige. Metadata (titel, duur) wordt opgehaald via bestaande `get_youtube_metadata()` (yt-dlp `--dump-json`).
+- **Dependency**: `youtube-transcript-api` toegevoegd aan `requirements.txt` en `Dockerfile`.
+
+### Changed
+- **YouTube endpoint prioriteitsvolgorde** (`backend/routes/transcription.py:transcribe_youtube()`): Nieuwe 3-staps flow:
+  1. **Anonieme captions** via `fetch_captions_anonymous()` (nieuw, geen auth)
+  2. **Google API captions** via `fetch_youtube_captions()` (als `X-Google-Token` header aanwezig)
+  3. **yt-dlp + Whisper** fallback (audio download + GPU transcriptie)
+
+  Voorheen was stap 1 niet beschikbaar en was Google OAuth vereist voor de fast-path.
+- **Feature flag default** (`backend/config.py`): `FEATURE_YOUTUBE_ENABLED` default gewijzigd van `False` naar `True`. YouTube transcriptie is nu standaard ingeschakeld — de anonieme captions maken Google OAuth setup overbodig.
+- **yt-dlp configuratie** (`backend/services/youtube_service.py`): `_extra_ytdlp_args()` uitgebreid met DB-overrides voor extractor args en cookies content. Nieuwe helper `_get_max_duration_seconds()` leest max duur uit DB settings met fallback naar env var. Nieuwe helper `_ensure_cookies_file()` schrijft cookies content vanuit DB naar disk.
+
+### Decisions
+- See DEC-044 in [DECISIONS.md](DECISIONS.md) for the anonymous captions rationale.
+
+### Notes
+- Clients (macOS/Windows) hebben **geen wijzigingen** nodig — de YouTube UI was al gebouwd en gated op de feature flag.
+- Deployed naar productie: `youtube-transcript-api` geïnstalleerd in Docker container, code gesynct, container herstart. Feature flag verified via `GET /features`.
 
 ---
 

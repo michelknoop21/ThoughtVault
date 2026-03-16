@@ -1,6 +1,6 @@
 # TranscriptStudio — Developer Documentation
 
-Cross-platform audio transcription app with native macOS (Swift 6) and Windows (Tauri 2) clients sharing a FastAPI + Whisper backend.
+Cross-platform audio transcription app with native macOS (Swift 6), Windows (Tauri 2), and Android (Kotlin/Compose) clients, plus a server-rendered web app, all sharing a FastAPI + Whisper backend.
 
 ---
 
@@ -66,7 +66,7 @@ docker compose up
 
 ## Configuration
 
-Both clients default to `https://n8n.prezent.nl` as the backend server. The URL is configurable in the app's Settings screen — no environment variables or `.env` files required on the client side.
+All clients default to `https://n8n.prezent.nl` as the backend server. The URL is configurable in the app's Settings screen — no environment variables or `.env` files required on the client side.
 
 ### Microsoft 365 Calendar (Windows)
 Requires Azure AD App Registration with:
@@ -78,7 +78,7 @@ Requires Azure AD App Registration with:
 
 ## Version
 
-Current version: **1.0.78** (tracked in `VERSION` file, auto-bumped on commits to `main`).
+Current version: **1.0.80** (tracked in `VERSION` file, auto-bumped on commits to `main`).
 
 Repository: [gitlab.prezent.nl/michelk/transcript-studio-native](https://gitlab.prezent.nl/michelk/transcript-studio-native)
 
@@ -125,8 +125,10 @@ See [RELEASE.md](RELEASE.md) for the complete guide.
 |------|---------|
 | `README.md` | This file — developer onboarding, prerequisites, build commands |
 | `PRD.md` | Product Requirements Document: target users, features, technical requirements, out of scope |
-| `ARCHITECTURE.md` | System design: dual-platform overview, backend data flow, macOS service layer, directory structure |
+| `ARCHITECTURE.md` | System design: multi-platform overview, backend data flow, service layers, directory structures |
 | `API.md` | Complete backend API reference: all endpoints, auth flows, data models, rate limits |
 | `DECISIONS.md` | Architectural Decision Records (ADRs): rationale for key technical choices |
 | `CHANGELOG.md` | Version history and release notes |
 | `RELEASE.md` | Build & release pipeline: scripts, shortcuts, server-side setup |
+| `PLAN-MULTI-INSTANCE.md` | Multi-instance deployment plan for serving multiple customers |
+| `ROADMAP-CODE-SIGNING.md` | Code signing roadmap for macOS and Windows builds |

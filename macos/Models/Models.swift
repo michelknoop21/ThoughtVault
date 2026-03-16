@@ -441,9 +441,6 @@ struct Transcript: Identifiable, Codable, Hashable, Sendable {
 
 struct TranscriptsResponse: Codable, Sendable {
     var items: [Transcript]
-    var total: Int?
-    var page: Int?
-    var limit: Int?
 }
 
 // MARK: - Authentication models

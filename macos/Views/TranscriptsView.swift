@@ -694,34 +694,15 @@ struct TranscriptsView: View {
     private func loadTranscripts() async {
         isLoading = true
         loadErrorMessage = nil
-        let pageSize = 100
-        var page = 1
-        var allItems: [Transcript] = []
 
         do {
-            while true {
-                let response = try await APIService.shared.getTranscripts(
-                    page: page,
-                    limit: pageSize,
-                    sortBy: sortNewest ? "newest" : "oldest"
-                )
-                allItems.append(contentsOf: response.items)
-
-                // Stop if last page or we have all items
-                if response.items.count < pageSize { break }
-                if let total = response.total, allItems.count >= total { break }
-
-                page += 1
-            }
-
-            transcripts = allItems
+            let response = try await APIService.shared.getTranscripts()
+            transcripts = response.items
             lastRefreshDate = Date()
-            let withNotule = allItems.filter { $0.notuleHtml != nil && !$0.notuleHtml!.isEmpty }.count
-            let withRaw = allItems.filter { $0.rawTranscription != nil && !$0.rawTranscription!.isEmpty }.count
-            logger.info("Loaded \(allItems.count) transcripts across \(page) page(s): \(withNotule) with notule, \(withRaw) with raw")
+            let withNotule = response.items.filter { $0.notuleHtml != nil && !$0.notuleHtml!.isEmpty }.count
+            let withRaw = response.items.filter { $0.rawTranscription != nil && !$0.rawTranscription!.isEmpty }.count
+            logger.info("Loaded \(response.items.count) transcripts: \(withNotule) with notule, \(withRaw) with raw")
         } catch {
-            // Keep any items loaded so far
-            if !allItems.isEmpty { transcripts = allItems }
             loadErrorMessage = error.localizedDescription
         }
         isLoading = false

@@ -1205,6 +1205,11 @@ function ErrorLogTable({
 function SettingsTab() {
   const [ms365ClientId, setMs365ClientId] = useState("");
   const [ms365TenantId, setMs365TenantId] = useState("");
+  const [googleOAuthClientIdMacos, setGoogleOAuthClientIdMacos] = useState("");
+  const [googleOAuthClientIdWindows, setGoogleOAuthClientIdWindows] = useState("");
+  const [youtubeMaxDurationMinutes, setYoutubeMaxDurationMinutes] = useState("120");
+  const [youtubeExtractorArgs, setYoutubeExtractorArgs] = useState("youtube:player_client=web;fetch_pot=always");
+  const [youtubeCookiesContent, setYoutubeCookiesContent] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showSaved, setShowSaved] = useState(false);
   const toast = useToast();
@@ -1218,6 +1223,11 @@ function SettingsTab() {
       const settings = await api.getAdminSettings();
       setMs365ClientId(settings.ms365_client_id ?? "");
       setMs365TenantId(settings.ms365_tenant_id ?? "");
+      setGoogleOAuthClientIdMacos(settings.google_oauth_client_id_macos ?? "");
+      setGoogleOAuthClientIdWindows(settings.google_oauth_client_id_windows ?? "");
+      setYoutubeMaxDurationMinutes(String(settings.youtube_max_duration_minutes ?? 120));
+      setYoutubeExtractorArgs(settings.youtube_extractor_args ?? "youtube:player_client=web;fetch_pot=always");
+      setYoutubeCookiesContent(settings.youtube_cookies_content ?? "");
     } catch (err) {
       console.error("Settings load failed:", err);
     }
@@ -1227,7 +1237,15 @@ function SettingsTab() {
     setIsLoading(true);
     setShowSaved(false);
     try {
-      await api.updateAdminSettings(ms365ClientId || undefined, ms365TenantId || undefined);
+      await api.updateAdminSettings({
+        ms365_client_id: ms365ClientId || undefined,
+        ms365_tenant_id: ms365TenantId || undefined,
+        google_oauth_client_id_macos: googleOAuthClientIdMacos || undefined,
+        google_oauth_client_id_windows: googleOAuthClientIdWindows || undefined,
+        youtube_max_duration_minutes: youtubeMaxDurationMinutes ? Number(youtubeMaxDurationMinutes) : undefined,
+        youtube_extractor_args: youtubeExtractorArgs || undefined,
+        youtube_cookies_content: youtubeCookiesContent,
+      });
       setShowSaved(true);
       setTimeout(() => setShowSaved(false), 3000);
       toast.show("Instellingen opgeslagen", "success");
@@ -1277,24 +1295,112 @@ function SettingsTab() {
             style={{ fontFamily: "monospace" }}
           />
         </div>
+      </div>
 
-        {/* Actions */}
+      {/* Google OAuth Section */}
+      <div className="card flex-col gap-12" style={{ padding: 16 }}>
         <div className="flex-row gap-8">
-          <button
-            className="btn btn-accent"
-            onClick={handleSave}
-            disabled={isLoading}
-          >
-            {isLoading ? "Opslaan..." : "Opslaan"}
-          </button>
-
-          {showSaved && (
-            <div className="flex-row gap-6" style={{ color: "var(--fill-system-success)" }}>
-              <span style={{ fontSize: 14 }}>✓</span>
-              <span className="text-caption">Opgeslagen</span>
-            </div>
-          )}
+          <ShieldCheckmark24Regular style={{ fontSize: 20, color: "var(--fill-brand-primary)" }} />
+          <p className="text-body-strong">Google OAuth (YouTube)</p>
         </div>
+
+        <p className="text-caption" style={{ color: "var(--text-secondary)" }}>
+          Configureer Google OAuth credentials zodat gebruikers YouTube video's kunnen transcriberen via de Captions API.
+          Maak een OAuth Client ID aan in Google Cloud Console met redirect URI: <code>transcript-studio://google/callback</code>
+        </p>
+
+        <div className="flex-col gap-4">
+          <label className="form-label">Client ID (macOS)</label>
+          <input
+            className="input"
+            type="text"
+            placeholder="xxxxxxxx.apps.googleusercontent.com"
+            value={googleOAuthClientIdMacos}
+            onChange={(e) => setGoogleOAuthClientIdMacos(e.target.value)}
+            style={{ fontFamily: "monospace" }}
+          />
+        </div>
+
+        <div className="flex-col gap-4">
+          <label className="form-label">Client ID (Windows)</label>
+          <input
+            className="input"
+            type="text"
+            placeholder="xxxxxxxx.apps.googleusercontent.com"
+            value={googleOAuthClientIdWindows}
+            onChange={(e) => setGoogleOAuthClientIdWindows(e.target.value)}
+            style={{ fontFamily: "monospace" }}
+          />
+        </div>
+      </div>
+
+      {/* YouTube Settings Section */}
+      <div className="card flex-col gap-12" style={{ padding: 16 }}>
+        <div className="flex-row gap-8">
+          <Warning24Regular style={{ fontSize: 20, color: "#ff0000" }} />
+          <p className="text-body-strong">YouTube Instellingen</p>
+        </div>
+
+        <p className="text-caption" style={{ color: "var(--text-secondary)" }}>
+          Configureer hoe yt-dlp YouTube video's downloadt. Standaard wordt de web client gebruikt met PO token authenticatie.
+        </p>
+
+        <div className="flex-col gap-4">
+          <label className="form-label">Maximale videoduur (minuten)</label>
+          <input
+            className="input"
+            type="number"
+            placeholder="120"
+            value={youtubeMaxDurationMinutes}
+            onChange={(e) => setYoutubeMaxDurationMinutes(e.target.value)}
+            style={{ width: 120 }}
+          />
+        </div>
+
+        <div className="flex-col gap-4">
+          <label className="form-label">yt-dlp Extractor Args</label>
+          <input
+            className="input"
+            type="text"
+            placeholder="youtube:player_client=web;fetch_pot=always"
+            value={youtubeExtractorArgs}
+            onChange={(e) => setYoutubeExtractorArgs(e.target.value)}
+            style={{ fontFamily: "monospace" }}
+          />
+        </div>
+
+        <div className="flex-col gap-4">
+          <label className="form-label">Cookies (optioneel)</label>
+          <p className="text-caption" style={{ color: "var(--text-tertiary)", marginTop: -4 }}>
+            Plak Netscape-formaat cookies voor video's die anoniem niet beschikbaar zijn.
+          </p>
+          <textarea
+            className="input"
+            placeholder="# Netscape HTTP Cookie File&#10;.youtube.com&#9;TRUE&#9;/&#9;..."
+            value={youtubeCookiesContent}
+            onChange={(e) => setYoutubeCookiesContent(e.target.value)}
+            rows={4}
+            style={{ fontFamily: "monospace", resize: "vertical" }}
+          />
+        </div>
+      </div>
+
+      {/* Actions */}
+      <div className="flex-row gap-8">
+        <button
+          className="btn btn-accent"
+          onClick={handleSave}
+          disabled={isLoading}
+        >
+          {isLoading ? "Opslaan..." : "Opslaan"}
+        </button>
+
+        {showSaved && (
+          <div className="flex-row gap-6" style={{ color: "var(--fill-system-success)" }}>
+            <span style={{ fontSize: 14 }}>✓</span>
+            <span className="text-caption">Opgeslagen</span>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -270,6 +270,50 @@ Stuur al getranscribeerde tekst (voor on-device transcriptie). **Rate limit: 20/
 { "task_id": "uuid", "status": "queued" }
 ```
 
+### POST `/tstudio/api/transcribe-youtube`
+Transcribeer een YouTube video. **Rate limit: 5/uur.** Vereist `FEATURE_YOUTUBE_ENABLED=true`.
+
+```json
+// Request
+{ "url": "https://www.youtube.com/watch?v=VIDEO_ID", "profile_id": "default" }
+```
+
+Headers (optioneel):
+- `X-Google-Token`: Google OAuth token voor YouTube Data API captions (secundaire bron)
+
+Prioriteitsvolgorde:
+1. **Anonieme captions** via `youtube-transcript-api` (geen auth nodig, ~1 seconde)
+2. **Google API captions** via YouTube Data API v3 (als `X-Google-Token` aanwezig)
+3. **yt-dlp + Whisper** fallback (audio download + GPU transcriptie, ~15 min)
+
+```json
+// Response (captions path)
+{
+  "task_id": "uuid",
+  "status": "queued",
+  "queue_position": 1,
+  "source_type": "youtube_captions",
+  "source_url": "https://...",
+  "extracted_title": "Video Title",
+  "captions_available": true,
+  "caption_type": "manual"
+}
+
+// Response (Whisper fallback)
+{
+  "task_id": "uuid",
+  "status": "pending",
+  "source_type": "youtube",
+  "source_url": "https://...",
+  "extracted_title": "Video Title"
+}
+```
+
+Fouten:
+- `400`: Ongeldige YouTube URL, video te lang, of video niet beschikbaar
+- `404`: YouTube feature niet ingeschakeld
+- `429`: Rate limit bereikt
+
 ### POST `/tstudio/api/task/{task_id}/regenerate`
 Genereer notulen opnieuw met ander profiel.
 
@@ -762,7 +806,7 @@ Alle admin endpoints accepteren `X-User-Token` (admin-rol) **of** `X-Admin-API-K
     {
       "key": "youtube_transcription",
       "label": "YouTube Transcriptie",
-      "description": "Transcribeer YouTube video's via URL. Vereist yt-dlp op de server.",
+      "description": "Transcribeer YouTube video's via URL. Haalt captions anoniem op, met yt-dlp + Whisper als fallback.",
       "icon": "youtube",
       "enabled": true
     }
@@ -781,7 +825,7 @@ Feature flags worden opgeslagen in de `Settings` tabel met key `feature_{name}`.
 
 | Methode | Endpoint | Beschrijving |
 |---------|----------|-------------|
-| GET | `/tstudio/api/admin/settings` | Globale settings (webhookUrl, notificationWebhookUrl, ms365_client_id, ms365_tenant_id) |
+| GET | `/tstudio/api/admin/settings` | Globale settings (webhookUrl, notificationWebhookUrl, ms365, google_oauth, youtube config) |
 | POST | `/tstudio/api/admin/settings` | Globale settings bijwerken |
 
 **POST body (alle velden optioneel):**
@@ -790,7 +834,12 @@ Feature flags worden opgeslagen in de `Settings` tabel met key `feature_{name}`.
   "webhookUrl": "https://...",
   "notificationWebhookUrl": "https://...",
   "ms365_client_id": "Azure App Registration client ID",
-  "ms365_tenant_id": "Azure tenant ID of 'common' voor multi-tenant"
+  "ms365_tenant_id": "Azure tenant ID of 'common' voor multi-tenant",
+  "google_oauth_client_id_macos": "xxxxxxxx.apps.googleusercontent.com",
+  "google_oauth_client_id_windows": "xxxxxxxx.apps.googleusercontent.com",
+  "youtube_max_duration_minutes": 120,
+  "youtube_cookies_content": "# Netscape HTTP Cookie File\n...",
+  "youtube_extractor_args": "youtube:player_client=mediaconnect"
 }
 ```
 
@@ -946,6 +995,7 @@ Bij fouten retourneert de backend JSON met een van deze velden:
 | POST `/auth/password-reset/complete` | 3/5 minuten |
 | POST `/transcribe` | 10/uur |
 | POST `/transcribe-text` | 20/uur |
+| POST `/transcribe-youtube` | 5/uur |
 
 ---
 

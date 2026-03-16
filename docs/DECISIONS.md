@@ -522,7 +522,7 @@ _Append-only log. Each entry records context, decision, and consequences._
 ## DEC-030 — Auto-Pagination for Transcript Loading
 
 **Date:** 2026-03-12
-**Status:** Accepted
+**Status:** Superseded by DEC-045
 
 **Context:** Both macOS and Windows clients fetched only the first page of transcripts (up to 100 items). Users with more than 100 transcripts could not see older entries in the transcript library.
 
@@ -765,4 +765,56 @@ Vermijd `Task { @MainActor in }` in beide gevallen: het scheduled een nieuwe coo
 - macOS 15+ toont de app als "Systeemaudio" in Systeeminstellingen — accurate categorisatie.
 - Geen onnodige video frames verwerkt op macOS 15+, vermindert CPU/GPU overhead.
 - macOS 14 blijft correct functioneren met de minimale video fallback.
-- De error message is nu platform-consistent: gebruikers zien geen verwijzing naar "schermopname" wanneer de app geen scherm opneemt.
+
+---
+
+## DEC-044 — YouTube Anonieme Captions als Primaire Fast-Path
+
+**Date:** 2026-03-16
+**Status:** Accepted (supersedes priority logic of DEC-041)
+
+**Context:** YouTube captions fast-path (DEC-041) vereiste een Google OAuth token via `X-Google-Token` header. Dit maakte de feature onbruikbaar zonder Google OAuth configuratie — admin moest een Google Cloud Console project opzetten, OAuth Client IDs configureren, en gebruikers moesten hun Google account koppelen. De `youtube-transcript-api` Python library haalt captions op via dezelfde interne YouTube endpoint die de YouTube website gebruikt, zonder enige authenticatie. Dit maakt de feature direct bruikbaar voor alle gebruikers.
+
+**Decision:** Nieuwe functie `fetch_captions_anonymous()` in `backend/services/youtube_service.py` als primaire captions bron. Gebruikt `youtube-transcript-api` library (v1.2.4) met `YouTubeTranscriptApi().list(video_id)` + `find_manually_created_transcript()` / `find_generated_transcript()`. Taal-prioriteit identiek aan DEC-041: nl manual → nl auto → en manual → en auto → any. Metadata via bestaande `get_youtube_metadata()` (yt-dlp `--dump-json`). Endpoint `transcribe_youtube()` in `backend/routes/transcription.py` gewijzigd naar 3-staps prioriteit: (1) anoniem via `fetch_captions_anonymous()`, (2) Google API via `fetch_youtube_captions()` als `X-Google-Token` aanwezig, (3) yt-dlp + Whisper fallback. Feature flag default gewijzigd naar `True` — YouTube transcriptie nu standaard ingeschakeld.
+
+**Consequences:**
+- YouTube captions werken direct voor alle gebruikers zonder Google OAuth setup. Zero configuratie vereist.
+- Google OAuth path (DEC-041) blijft intact als secundaire bron — nuttig wanneer `youtube-transcript-api` geblokkeerd wordt door YouTube (IP-based rate limiting, bot detection).
+- `youtube-transcript-api` is afhankelijk van YouTube's interne API — kan breken bij YouTube-wijzigingen (zelfde risico als yt-dlp). Library wordt actief onderhouden.
+- Feature flag default `True` betekent dat nieuwe installaties YouTube transcriptie direct beschikbaar hebben.
+- Clients hoeven niet aangepast — UI was al gebouwd en gated op feature flag. Geen `X-Google-Token` header nodig voor de primaire path.
+
+---
+
+## DEC-045 — Transcript Pagination Removed in Favor of Single-Request Loading
+
+**Date:** 2026-03-16
+**Status:** Accepted
+
+**Context:** Both macOS and Windows clients used client-side pagination to fetch transcripts (`?page=N&limit=100`), looping until all pages were loaded. The backend returns all transcripts for the authenticated user, and the typical transcript count per user (tens to low hundreds) makes pagination overhead unnecessary. The pagination loop added complexity to `TranscriptsViewModel` (macOS), `TranscriptsView` (macOS), `api.ts` (Windows), and required tracking `page`, `hasMore`, and `pageSize` state. The `TranscriptsResponse` model carried `total`, `page`, and `limit` fields that were only used for pagination control.
+
+**Decision:** Remove client-side pagination from all transcript loading paths. `APIService.getTranscripts()` (macOS) and `api.getTranscripts()` (Windows) now make a single request without `page`/`limit`/`sort_by` query parameters. The backend returns all matching transcripts in one response. `TranscriptsResponse` model simplified to `{ items: [Transcript] }` only. Client-side sorting and filtering handles display order. `HomeView` takes the first 3 items from the full response for "recent transcripts" instead of requesting `limit: 3`.
+
+**Consequences:**
+- Simpler code: removed ~80 lines of pagination loop logic across macOS ViewModel, View, and Windows service.
+- Single network request instead of N sequential requests — faster total load time for typical user transcript counts.
+- `TranscriptsResponse` model no longer carries `total`, `page`, `limit` — breaking change for any code relying on those fields.
+- All sorting and filtering now happens client-side — acceptable given current data volumes.
+- Not suitable if transcript counts grow to thousands per user — would need server-side pagination reintroduction.
+
+---
+
+## DEC-046 — Admin Panel: Enhanced Logging Tab and YouTube Configuration
+
+**Date:** 2026-03-16
+**Status:** Accepted
+
+**Context:** The admin panel's Logging tab (Fouten) only showed error logs in a basic table. Activity logs were not surfaced in the UI despite being available via `GET /admin/activity`. Additionally, YouTube configuration (max duration, yt-dlp cookies, extractor args) and Google OAuth Client IDs could only be set via environment variables or direct database manipulation, not through the admin UI.
+
+**Decision:** (1) Redesign the Logging tab as a dual-subtab interface with "Activiteit" (activity logs) and "Fouten" (error logs), including filter bars for severity, user, action type, and search. Expandable rows show full log details. Both macOS (`AdminView.swift`) and Windows (`AdminPage.tsx`) implementations. `APIService.getAdminErrors()` and `getAdminActivity()` now accept filter parameters (`severity`, `userId`, `search`, `startDate`, `endDate`, `actionType`). (2) Add YouTube configuration section to Admin > Instellingen: max duration (minutes), yt-dlp cookies content (textarea), extractor args. Add Google OAuth Client ID fields (macOS + Windows). Both platforms send these new fields via `updateAdminSettings()`.
+
+**Consequences:**
+- Admins can browse and filter both activity and error logs from the UI without SSH access.
+- YouTube yt-dlp configuration manageable through the admin panel — no need to restart the container for cookies or extractor arg changes.
+- Google OAuth Client IDs configurable per-platform through the admin UI.
+- Backend `GET /admin/settings` and `POST /admin/settings` now include `youtube_max_duration_minutes`, `youtube_cookies_content`, `youtube_extractor_args` fields.

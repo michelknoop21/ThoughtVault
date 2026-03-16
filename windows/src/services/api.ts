@@ -243,57 +243,19 @@ class APIService {
     }
   }
 
-  // Transcripts
+  // Transcripts — backend returns all matching transcripts in a single response
   async getTranscripts(params?: {
     search?: string;
     tags?: string[];
-    limit?: number;
   }): Promise<Transcript[]> {
-    // When a specific limit is requested (e.g. limit: 1 for latest), do a single request
-    if (params?.limit) {
-      const query = new URLSearchParams();
-      if (params.search) query.set("search", params.search.slice(0, 255));
-      if (params.tags?.length) query.set("tags", params.tags.join(","));
-      query.set("limit", params.limit.toString());
-      query.set("page", "1");
-      query.set("sort_by", "newest");
+    const query = new URLSearchParams();
+    if (params?.search) query.set("search", params.search.slice(0, 255));
+    if (params?.tags?.length) query.set("tags", params.tags.join(","));
 
-      const path = `/transcripts?${query}`;
-      const data = await this.request<unknown>("GET", path);
-      return safeArray<unknown>(data).map(mapTranscript);
-    }
-
-    // No limit specified — auto-paginate to load all transcripts
-    const pageSize = 100;
-    let page = 1;
-    const all: Transcript[] = [];
-
-    while (true) {
-      const query = new URLSearchParams();
-      if (params?.search) query.set("search", params.search.slice(0, 255));
-      if (params?.tags?.length) query.set("tags", params.tags.join(","));
-      query.set("limit", pageSize.toString());
-      query.set("page", page.toString());
-      query.set("sort_by", "newest");
-
-      const path = `/transcripts?${query}`;
-      const data = await this.request<unknown>("GET", path);
-      const items = safeArray<unknown>(data).map(mapTranscript);
-      all.push(...items);
-
-      // Stop if we got fewer items than the page size (last page)
-      if (items.length < pageSize) break;
-
-      // Also stop if the response included a total and we have them all
-      if (data && typeof data === "object") {
-        const total = (data as Record<string, unknown>).total;
-        if (typeof total === "number" && all.length >= total) break;
-      }
-
-      page++;
-    }
-
-    return all;
+    const qs = query.toString();
+    const path = qs ? `/transcripts?${qs}` : "/transcripts";
+    const data = await this.request<unknown>("GET", path);
+    return safeArray<unknown>(data).map(mapTranscript);
   }
 
   async getTranscript(id: string): Promise<Transcript> {
@@ -658,9 +620,25 @@ class APIService {
     }
   }
 
-  async getAdminSettings(): Promise<{ ms365_client_id?: string; ms365_tenant_id?: string }> {
+  async getAdminSettings(): Promise<{
+    ms365_client_id?: string;
+    ms365_tenant_id?: string;
+    google_oauth_client_id_macos?: string;
+    google_oauth_client_id_windows?: string;
+    youtube_max_duration_minutes?: number;
+    youtube_cookies_content?: string;
+    youtube_extractor_args?: string;
+  }> {
     try {
-      return await this.request<{ ms365_client_id?: string; ms365_tenant_id?: string }>(
+      return await this.request<{
+        ms365_client_id?: string;
+        ms365_tenant_id?: string;
+        google_oauth_client_id_macos?: string;
+        google_oauth_client_id_windows?: string;
+        youtube_max_duration_minutes?: number;
+        youtube_cookies_content?: string;
+        youtube_extractor_args?: string;
+      }>(
         "GET",
         "/admin/settings"
       ) ?? {};
@@ -669,10 +647,15 @@ class APIService {
     }
   }
 
-  async updateAdminSettings(ms365ClientId?: string, ms365TenantId?: string): Promise<void> {
-    const payload: Record<string, string> = {};
-    if (ms365ClientId) payload["ms365_client_id"] = ms365ClientId;
-    if (ms365TenantId) payload["ms365_tenant_id"] = ms365TenantId;
+  async updateAdminSettings(payload: {
+    ms365_client_id?: string;
+    ms365_tenant_id?: string;
+    google_oauth_client_id_macos?: string;
+    google_oauth_client_id_windows?: string;
+    youtube_max_duration_minutes?: number;
+    youtube_cookies_content?: string;
+    youtube_extractor_args?: string;
+  }): Promise<void> {
     await this.request<void>("POST", "/admin/settings", payload);
   }
 

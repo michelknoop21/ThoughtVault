@@ -217,7 +217,7 @@ function ProtectedRoutes() {
               updateBackgroundTask(task.task_id, { status: "failed", error_message: "Verbinding verloren" });
             },
             async () => {
-              const transcripts = await api.getTranscripts({ limit: 1 });
+              const transcripts = await api.getTranscripts();
               if (transcripts[0]) addTranscript(transcripts[0]);
               removeBackgroundTask(task.task_id);
             }

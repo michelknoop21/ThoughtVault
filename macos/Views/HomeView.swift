@@ -574,8 +574,8 @@ struct HomeView: View {
         isLoadingRecent = true
         loadError = nil
         do {
-            let response = try await APIService.shared.getTranscripts(page: 1, limit: 3, sortBy: "newest")
-            recentTranscripts = response.items
+            let response = try await APIService.shared.getTranscripts()
+            recentTranscripts = Array(response.items.prefix(3))
         } catch {
             loadError = error.localizedDescription
         }

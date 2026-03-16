@@ -96,13 +96,15 @@ The product consists of four client surfaces sharing a common backend:
 ### 3.11 YouTube Transcriptie
 
 - Users can paste a YouTube URL to transcribe video audio without recording.
-- Backend downloads audio via `yt-dlp`, then processes through the normal Whisper pipeline.
-- Feature is toggleable per instance via `FEATURE_YOUTUBE_ENABLED` environment variable (default: off).
+- **Primary path (captions):** Backend fetches existing captions anonymously via `youtube-transcript-api` — no API key or Google account required. Completes in ~1 second, no GPU usage. Language priority: nl manual → nl auto → en manual → en auto → any.
+- **Secondary path (Google API):** If anonymous captions fail and `X-Google-Token` header is present, tries YouTube Data API v3 captions.
+- **Fallback path (Whisper):** If no captions available, downloads audio via `yt-dlp` and processes through Whisper GPU pipeline.
+- Feature toggleable per instance via `FEATURE_YOUTUBE_ENABLED` environment variable (default: **on**).
 - Client UI shows a YouTube card in the recording screen only when the feature is enabled (checked via `GET /features`).
-- Maximum video duration configurable via `YOUTUBE_MAX_DURATION_SECONDS` (default: 2 hours).
+- Maximum video duration configurable via `YOUTUBE_MAX_DURATION_SECONDS` (default: 2 hours) or via admin DB setting `youtube_max_duration_minutes`.
 - Rate limited to 5 requests per hour per user.
-- Task gets `source_type="youtube"` and `source_url` for traceability.
-- Status pipeline: `pending → downloading → converting → transcribing → transcribed → processingWebhook → completed`.
+- Task gets `source_type="youtube_captions"` (captions path) or `source_type="youtube"` (Whisper path) and `source_url` for traceability.
+- Captions pipeline: `transcribed → processingWebhook → completed` (~1 sec). Whisper pipeline: `pending → downloading → converting → transcribing → transcribed → processingWebhook → completed`.
 
 ### 3.6 Offline Queue
 

@@ -29,6 +29,13 @@ enum AdminTab: String, CaseIterable {
     }
 }
 
+enum LogSubTab: String, CaseIterable {
+    case activity = "Activiteit"
+    case errors = "Fouten"
+}
+
+private let logPageSize = 25
+
 // MARK: - AdminView
 
 struct AdminView: View {
@@ -42,9 +49,20 @@ struct AdminView: View {
     @State private var invitations: [AdminInvitation] = []
     @State private var feedbackItems: [AdminFeedback] = []
     @State private var errors: [AdminError] = []
+    @State private var activityLogs: [AdminActivity] = []
     @State private var isLoading = false
     @State private var errorMessage: String? = nil
     @State private var searchText = ""
+
+    // Logging tab state
+    @State private var logSubTab: LogSubTab = .activity
+    @State private var logSearch = ""
+    @State private var logSeverityFilter = ""
+    @State private var logUserFilter = ""
+    @State private var logTypeFilter = ""
+    @State private var logPage = 1
+    @State private var isLoadingLogs = false
+    @State private var expandedLogRow: Int? = nil
     @State private var showCreateUserSheet = false
     @State private var showCreateInvitationSheet = false
     @State private var userToDelete: AdminUser? = nil
@@ -71,6 +89,9 @@ struct AdminView: View {
     @State private var ms365TenantId = ""
     @State private var googleOAuthClientIdMacos = ""
     @State private var googleOAuthClientIdWindows = ""
+    @State private var youtubeMaxDurationMinutes = "120"
+    @State private var youtubeCookiesContent = ""
+    @State private var youtubeExtractorArgs = "youtube:player_client=web;fetch_pot=always"
     @State private var isLoadingSettings = false
     @State private var showSettingsSaved = false
 
@@ -764,87 +785,528 @@ struct AdminView: View {
 
     // MARK: - Fouten Tab
 
+    // MARK: - Logging Tab (Activity + Errors)
+
     private var foutenTab: some View {
-        ScrollView {
-            if errors.isEmpty {
-                VStack(spacing: TS.Spacing.md) {
-                    Image(systemName: "checkmark.shield")
-                        .font(.system(size: 40))
-                        .foregroundStyle(Color.statusSuccess)
-                    Text("Geen fouten gevonden")
-                        .font(TS.Font.callout)
-                        .foregroundStyle(Color.labelSecondary)
+        VStack(spacing: 0) {
+            logFilterBar
+            logContent
+        }
+        .onChange(of: logSubTab) { _, _ in
+            logPage = 1
+            expandedLogRow = nil
+            Task { await reloadLogs() }
+        }
+        .onChange(of: logSeverityFilter) { _, _ in Task { await reloadLogs() } }
+        .onChange(of: logUserFilter) { _, _ in Task { await reloadLogs() } }
+        .onChange(of: logTypeFilter) { _, _ in Task { await reloadLogs() } }
+    }
+
+    private var logFilterBar: some View {
+        VStack(spacing: TS.Spacing.sm) {
+            // Sub-tab toggle
+            HStack(spacing: TS.Spacing.xs) {
+                ForEach(LogSubTab.allCases, id: \.self) { tab in
+                    Button {
+                        withAnimation(TS.Animation.smooth) { logSubTab = tab }
+                    } label: {
+                        HStack(spacing: TS.Spacing.xs) {
+                            Image(systemName: tab == .activity ? "clock.arrow.circlepath" : "exclamationmark.triangle")
+                                .font(TS.Font.micro)
+                            Text(tab.rawValue)
+                                .font(TS.Font.footnoteSemibold)
+                            let count = tab == .activity ? activityLogs.count : errors.count
+                            if count > 0 {
+                                Text("\(count)")
+                                    .font(TS.Font.micro)
+                                    .padding(.horizontal, 5)
+                                    .padding(.vertical, 1)
+                                    .background(Color.surfaceTertiary)
+                                    .clipShape(Capsule())
+                            }
+                        }
+                        .padding(.horizontal, TS.Spacing.md)
+                        .padding(.vertical, TS.Spacing.sm)
+                        .background(logSubTab == tab ? Color.surfacePrimary : Color.clear)
+                        .foregroundStyle(logSubTab == tab ? Color.labelPrimary : Color.labelSecondary)
+                        .clipShape(RoundedRectangle(cornerRadius: TS.Radius.md))
+                        .shadow(color: logSubTab == tab ? .black.opacity(0.05) : .clear, radius: 1, y: 1)
+                    }
+                    .buttonStyle(.plain)
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.top, TS.Spacing.xxl)
-            } else {
-                LazyVStack(spacing: TS.Spacing.md) {
-                    ForEach(errors) { error in
-                        errorCard(error)
+                Spacer()
+                if isLoadingLogs {
+                    ProgressView()
+                        .controlSize(.small)
+                }
+            }
+            .padding(.horizontal, TS.Spacing.md)
+            .padding(.vertical, TS.Spacing.xs)
+            .background(Color.surfaceSecondary)
+
+            // Filter row
+            HStack(spacing: TS.Spacing.sm) {
+                // Search field
+                HStack(spacing: TS.Spacing.xs) {
+                    Image(systemName: "magnifyingglass")
+                        .font(TS.Font.micro)
+                        .foregroundStyle(Color.labelTertiary)
+                    TextField(logSubTab == .activity ? "Zoek op gebruiker, actie..." : "Zoek op foutmelding, endpoint...", text: $logSearch)
+                        .font(TS.Font.footnote)
+                        .textFieldStyle(.plain)
+                        .onSubmit { Task { await reloadLogs() } }
+                    if !logSearch.isEmpty {
+                        Button {
+                            logSearch = ""
+                            Task { await reloadLogs() }
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(TS.Font.micro)
+                                .foregroundStyle(Color.labelTertiary)
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
-                .padding(TS.Spacing.md)
+                .padding(.horizontal, TS.Spacing.sm)
+                .padding(.vertical, 5)
+                .background(Color.surfaceSecondary)
+                .clipShape(RoundedRectangle(cornerRadius: TS.Radius.sm))
+                .frame(maxWidth: 260)
+
+                if logSubTab == .errors {
+                    // Severity filter
+                    Picker("", selection: $logSeverityFilter) {
+                        Text("Alle niveaus").tag("")
+                        Text("Error").tag("error")
+                        Text("Warning").tag("warning")
+                        Text("Info").tag("info")
+                    }
+                    .pickerStyle(.menu)
+                    .frame(width: 120)
+                } else {
+                    // Action type filter
+                    Picker("", selection: $logTypeFilter) {
+                        Text("Alle acties").tag("")
+                        Text("Login").tag("login")
+                        Text("Upload").tag("upload_complete")
+                        Text("Transcriptie").tag("transcription_complete")
+                        Text("Notule").tag("note_create")
+                    }
+                    .pickerStyle(.menu)
+                    .frame(width: 120)
+                }
+
+                // User filter
+                if !users.isEmpty {
+                    Picker("", selection: $logUserFilter) {
+                        Text("Alle gebruikers").tag("")
+                        ForEach(users) { user in
+                            Text(user.name ?? user.email).tag(user.id)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .frame(width: 140)
+                }
+
+                Spacer()
+
+                if hasLogFilters {
+                    Button("Wis filters") {
+                        clearLogFilters()
+                        Task { await reloadLogs() }
+                    }
+                    .font(TS.Font.caption)
+                    .foregroundStyle(Color.labelSecondary)
+                    .buttonStyle(.plain)
+                }
             }
+            .padding(.horizontal, TS.Spacing.md)
+            .padding(.vertical, TS.Spacing.xs)
+        }
+    }
+
+    private var hasLogFilters: Bool {
+        !logSearch.isEmpty || !logSeverityFilter.isEmpty || !logUserFilter.isEmpty || !logTypeFilter.isEmpty
+    }
+
+    private func clearLogFilters() {
+        logSearch = ""
+        logSeverityFilter = ""
+        logUserFilter = ""
+        logTypeFilter = ""
+        logPage = 1
+    }
+
+    @ViewBuilder
+    private var logContent: some View {
+        let currentData: [Any] = logSubTab == .activity ? activityLogs as [Any] : errors as [Any]
+        let totalItems = currentData.count
+        let totalPages = max(1, Int(ceil(Double(totalItems) / Double(logPageSize))))
+        let safePage = min(logPage, totalPages)
+        let startIdx = (safePage - 1) * logPageSize
+        let endIdx = min(startIdx + logPageSize, totalItems)
+
+        if totalItems == 0 && !isLoadingLogs {
+            VStack(spacing: TS.Spacing.md) {
+                Image(systemName: logSubTab == .activity ? "clock" : "checkmark.shield")
+                    .font(.system(size: 36))
+                    .foregroundStyle(logSubTab == .activity ? Color.labelTertiary : Color.statusSuccess)
+                Text(hasLogFilters
+                     ? "Geen resultaten voor deze filters"
+                     : logSubTab == .activity
+                     ? "Geen activiteit gevonden"
+                     : "Geen fouten gevonden. Het systeem draait normaal.")
+                    .font(TS.Font.callout)
+                    .foregroundStyle(Color.labelSecondary)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .padding(.top, TS.Spacing.xxl)
+        } else {
+            ScrollView {
+                LazyVStack(spacing: 0) {
+                    // Table header
+                    logTableHeader
+
+                    // Rows
+                    if logSubTab == .activity {
+                        let pageItems = Array(activityLogs[startIdx..<endIdx])
+                        ForEach(Array(pageItems.enumerated()), id: \.offset) { idx, entry in
+                            let globalIdx = startIdx + idx
+                            activityRow(entry, index: globalIdx)
+                        }
+                    } else {
+                        let pageItems = Array(errors[startIdx..<endIdx])
+                        ForEach(Array(pageItems.enumerated()), id: \.offset) { idx, entry in
+                            let globalIdx = startIdx + idx
+                            errorRow(entry, index: globalIdx)
+                        }
+                    }
+                }
+
+                // Pagination
+                if totalPages > 1 {
+                    logPagination(page: safePage, totalPages: totalPages, totalItems: totalItems, startIdx: startIdx, endIdx: endIdx)
+                }
+            }
+        }
+    }
+
+    private var logTableHeader: some View {
+        HStack(spacing: 0) {
+            if logSubTab == .activity {
+                Text("Tijd").frame(width: 130, alignment: .leading)
+                Text("Gebruiker").frame(width: 140, alignment: .leading)
+                Text("Actie").frame(width: 130, alignment: .leading)
+                Text("Endpoint").frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                Text("Tijd").frame(width: 130, alignment: .leading)
+                Text("Ernst").frame(width: 80, alignment: .leading)
+                Text("Type").frame(width: 120, alignment: .leading)
+                Text("Endpoint").frame(width: 180, alignment: .leading)
+                Text("Foutmelding").frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .font(TS.Font.microSemibold)
+        .foregroundStyle(Color.labelTertiary)
+        .textCase(.uppercase)
+        .padding(.horizontal, TS.Spacing.md)
+        .padding(.vertical, TS.Spacing.sm)
+        .background(Color.surfaceSecondary)
+    }
+
+    private func activityRow(_ entry: AdminActivity, index: Int) -> some View {
+        let isExpanded = expandedLogRow == index
+        return VStack(spacing: 0) {
+            Button {
+                withAnimation(TS.Animation.smooth) {
+                    expandedLogRow = isExpanded ? nil : index
+                }
+            } label: {
+                HStack(spacing: 0) {
+                    Text(logTimestamp(entry.createdAt))
+                        .font(TS.Font.captionMonospaced)
+                        .foregroundStyle(Color.labelTertiary)
+                        .frame(width: 130, alignment: .leading)
+                    Text(entry.username ?? "Systeem")
+                        .font(TS.Font.footnoteSemibold)
+                        .foregroundStyle(Color.labelPrimary)
+                        .frame(width: 140, alignment: .leading)
+                        .lineLimit(1)
+                    activityBadge(entry.actionType)
+                        .frame(width: 130, alignment: .leading)
+                    Text(entry.endpoint ?? "-")
+                        .font(TS.Font.captionMonospaced)
+                        .foregroundStyle(Color.labelSecondary)
+                        .lineLimit(1)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .padding(.horizontal, TS.Spacing.md)
+                .padding(.vertical, TS.Spacing.sm)
+                .background(isExpanded ? Color.surfaceSecondary : Color.clear)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            if isExpanded {
+                activityDetail(entry)
+            }
+
+            Divider()
+        }
+    }
+
+    private func activityBadge(_ actionType: String) -> some View {
+        let label = activityLabel(actionType)
+        let color = activityBadgeColor(actionType)
+        return Text(label)
+            .font(TS.Font.microSemibold)
+            .padding(.horizontal, TS.Spacing.sm)
+            .padding(.vertical, 2)
+            .background(color.opacity(0.12))
+            .foregroundStyle(color)
+            .clipShape(Capsule())
+    }
+
+    private func activityLabel(_ type: String) -> String {
+        let labels: [String: String] = [
+            "login": "Ingelogd", "logout": "Uitgelogd", "login_failed": "Login mislukt",
+            "upload_complete": "Upload", "transcription_complete": "Transcriptie",
+            "transcription_error": "Transcriptie fout", "note_create": "Notule aangemaakt",
+            "note_delete": "Notule verwijderd", "note_download": "Notule download",
+            "feedback_submitted": "Feedback", "admin_user_create": "Gebruiker aangemaakt",
+            "admin_user_delete": "Gebruiker verwijderd", "admin_password_reset": "Wachtwoord reset",
+        ]
+        return labels[type.lowercased()] ?? type
+    }
+
+    private func activityBadgeColor(_ type: String) -> Color {
+        let t = type.lowercased()
+        if t.contains("login") || t.contains("logout") { return .purple }
+        if t.contains("upload") || t.contains("transcri") { return Color.brandPrimary }
+        if t.contains("delet") { return Color.statusError }
+        if t.contains("creat") || t.contains("generat") { return Color.statusSuccess }
+        if t.contains("error") || t.contains("fail") { return Color.brandOrange }
+        return Color.labelSecondary
+    }
+
+    private func activityDetail(_ entry: AdminActivity) -> some View {
+        VStack(alignment: .leading, spacing: TS.Spacing.sm) {
+            if let details = entry.details, !details.isEmpty {
+                logDetailRow("Details", details)
+            }
+            if let ip = entry.ipAddress, !ip.isEmpty {
+                logDetailRow("IP", ip, mono: true)
+            }
+        }
+        .padding(TS.Spacing.md)
+        .background(Color.surfaceTertiary)
+    }
+
+    private func errorRow(_ entry: AdminError, index: Int) -> some View {
+        let isExpanded = expandedLogRow == index
+        let sevColor = errorSeverityColor(entry)
+        return VStack(spacing: 0) {
+            Button {
+                withAnimation(TS.Animation.smooth) {
+                    expandedLogRow = isExpanded ? nil : index
+                }
+            } label: {
+                HStack(spacing: 0) {
+                    Text(logTimestamp(entry.createdAt))
+                        .font(TS.Font.captionMonospaced)
+                        .foregroundStyle(Color.labelTertiary)
+                        .frame(width: 130, alignment: .leading)
+                    Text((entry.severity ?? "error").uppercased())
+                        .font(.system(size: 9, weight: .bold, design: .default))
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(sevColor.opacity(0.15))
+                        .foregroundStyle(sevColor)
+                        .clipShape(RoundedRectangle(cornerRadius: 3))
+                        .frame(width: 80, alignment: .leading)
+                    Text(entry.errorType ?? "Unknown")
+                        .font(TS.Font.caption)
+                        .foregroundStyle(Color.labelSecondary)
+                        .lineLimit(1)
+                        .frame(width: 120, alignment: .leading)
+                    Text(entry.endpoint ?? "-")
+                        .font(TS.Font.captionMonospaced)
+                        .foregroundStyle(Color.labelSecondary)
+                        .lineLimit(1)
+                        .frame(width: 180, alignment: .leading)
+                    Text(entry.errorMessage ?? "Onbekende fout")
+                        .font(TS.Font.caption)
+                        .foregroundStyle(Color.labelPrimary)
+                        .lineLimit(2)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .padding(.horizontal, TS.Spacing.md)
+                .padding(.vertical, TS.Spacing.sm)
+                .background(isExpanded ? Color.surfaceSecondary : Color.clear)
+                .overlay(alignment: .leading) {
+                    Rectangle()
+                        .fill(sevColor)
+                        .frame(width: 3)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            if isExpanded {
+                errorDetail(entry)
+            }
+
+            Divider()
         }
     }
 
     private func errorSeverityColor(_ adminError: AdminError) -> Color {
         let severity = (adminError.severity ?? adminError.errorType ?? "error").lowercased()
         switch severity {
-        case "warning": return Color.brandOrange
-        case "info":    return Color.brandPrimary
-        default:        return Color.statusError
+        case "critical": return Color.statusError
+        case "warning":  return Color.brandOrange
+        case "info":     return Color.brandPrimary
+        default:         return Color.statusError
         }
     }
 
-    private func errorCard(_ adminError: AdminError) -> some View {
-        let sevColor = errorSeverityColor(adminError)
-        return VStack(alignment: .leading, spacing: TS.Spacing.sm) {
-            // Type badge + timestamp
-            HStack {
-                Text(adminError.errorType ?? "Error")
-                    .font(TS.Font.microSemibold)
-                    .padding(.horizontal, TS.Spacing.sm)
-                    .padding(.vertical, TS.Spacing.xs)
-                    .background(sevColor.opacity(0.12))
-                    .foregroundStyle(sevColor)
-                    .clipShape(Capsule())
-
-                Spacer()
-
-                if let createdAt = adminError.createdAt {
-                    Text(formattedDate(createdAt))
-                        .font(TS.Font.captionMonospaced)
+    private func errorDetail(_ entry: AdminError) -> some View {
+        VStack(alignment: .leading, spacing: TS.Spacing.sm) {
+            if let msg = entry.errorMessage, !msg.isEmpty {
+                logDetailRow("Foutmelding", msg)
+            }
+            if let detail = entry.errorDetail, !detail.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("DETAIL")
+                        .font(.system(size: 9, weight: .semibold))
                         .foregroundStyle(Color.labelTertiary)
+                    ScrollView(.horizontal, showsIndicators: true) {
+                        Text(detail)
+                            .font(.system(size: 11, design: .monospaced))
+                            .foregroundStyle(Color.labelPrimary)
+                            .textSelection(.enabled)
+                    }
+                    .frame(maxHeight: 200)
+                    .padding(TS.Spacing.sm)
+                    .background(Color.surfacePrimary)
+                    .clipShape(RoundedRectangle(cornerRadius: TS.Radius.sm))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: TS.Radius.sm)
+                            .stroke(Color.borderPrimary, lineWidth: 1)
+                    )
                 }
             }
-
-            // Endpoint
-            if let endpoint = adminError.endpoint, !endpoint.isEmpty {
-                Text(endpoint)
-                    .font(TS.Font.footnoteMonospaced)
-                    .foregroundStyle(Color.labelPrimary)
-            }
-
-            // Error message
-            Text(adminError.errorMessage ?? "Onbekende fout")
-                .font(.system(.caption, design: .monospaced))
-                .foregroundStyle(Color.labelSecondary)
-                .lineLimit(4)
-
-            // Reporter
-            if let reporter = adminError.userId, !reporter.isEmpty {
-                HStack(spacing: TS.Spacing.xs) {
-                    Image(systemName: "person")
-                        .font(TS.Font.micro)
-                    Text(reporter)
-                        .font(TS.Font.caption)
+            HStack(spacing: TS.Spacing.lg) {
+                if let code = entry.statusCode {
+                    logDetailRow("Status", "\(code)", mono: true)
                 }
-                .foregroundStyle(Color.labelTertiary)
+                if let method = entry.method, !method.isEmpty {
+                    logDetailRow("Methode", method.uppercased(), mono: true)
+                }
+                if let user = entry.username ?? entry.userId, !user.isEmpty {
+                    logDetailRow("Gebruiker", user)
+                }
             }
         }
         .padding(TS.Spacing.md)
-        .modernCard()
+        .background(Color.surfaceTertiary)
+    }
+
+    private func logDetailRow(_ label: String, _ value: String, mono: Bool = false) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(label.uppercased())
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundStyle(Color.labelTertiary)
+            Text(value)
+                .font(mono ? TS.Font.captionMonospaced : TS.Font.caption)
+                .foregroundStyle(Color.labelPrimary)
+                .textSelection(.enabled)
+        }
+    }
+
+    private func logPagination(page: Int, totalPages: Int, totalItems: Int, startIdx: Int, endIdx: Int) -> some View {
+        HStack {
+            Text("\(startIdx + 1)–\(endIdx) van \(totalItems)")
+                .font(TS.Font.caption)
+                .foregroundStyle(Color.labelTertiary)
+            Spacer()
+            HStack(spacing: TS.Spacing.sm) {
+                Button {
+                    logPage = max(1, logPage - 1)
+                    expandedLogRow = nil
+                } label: {
+                    Image(systemName: "chevron.left")
+                        .font(TS.Font.caption)
+                }
+                .disabled(page <= 1)
+                .buttonStyle(.plain)
+
+                Text("Pagina \(page) van \(totalPages)")
+                    .font(TS.Font.captionSemibold)
+                    .foregroundStyle(Color.labelPrimary)
+
+                Button {
+                    logPage = min(totalPages, logPage + 1)
+                    expandedLogRow = nil
+                } label: {
+                    Image(systemName: "chevron.right")
+                        .font(TS.Font.caption)
+                }
+                .disabled(page >= totalPages)
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, TS.Spacing.md)
+        .padding(.vertical, TS.Spacing.sm)
+    }
+
+    private func logTimestamp(_ dateString: String?) -> String {
+        guard let dateString else { return "-" }
+        let iso = ISO8601DateFormatter()
+        iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        var date = iso.date(from: dateString)
+        if date == nil {
+            iso.formatOptions = [.withInternetDateTime]
+            date = iso.date(from: dateString)
+        }
+        guard let date else { return dateString.prefix(16).description }
+        let cal = Calendar.current
+        let now = Date()
+        let df = DateFormatter()
+        df.locale = Locale(identifier: "nl_NL")
+        df.timeStyle = .short
+        if cal.isDateInToday(date) {
+            return "Vandaag \(df.string(from: date))"
+        } else if cal.isDateInYesterday(date) {
+            return "Gisteren \(df.string(from: date))"
+        }
+        df.dateFormat = "d MMM HH:mm"
+        return df.string(from: date)
+    }
+
+    private func reloadLogs() async {
+        isLoadingLogs = true
+        expandedLogRow = nil
+        do {
+            if logSubTab == .activity {
+                activityLogs = try await APIService.shared.getAdminActivity(
+                    limit: 500,
+                    userId: logUserFilter.isEmpty ? nil : logUserFilter,
+                    actionType: logTypeFilter.isEmpty ? nil : logTypeFilter,
+                    search: logSearch.isEmpty ? nil : logSearch
+                )
+            } else {
+                errors = try await APIService.shared.getAdminErrors(
+                    limit: 500,
+                    severity: logSeverityFilter.isEmpty ? nil : logSeverityFilter,
+                    userId: logUserFilter.isEmpty ? nil : logUserFilter,
+                    search: logSearch.isEmpty ? nil : logSearch
+                )
+            }
+        } catch {
+            DebugLogger.shared.error(error, context: "Logs laden", category: "Admin")
+        }
+        isLoadingLogs = false
     }
 
     // MARK: - Instellingen Tab
@@ -953,6 +1415,90 @@ struct AdminView: View {
                 }
                 .padding(TS.Spacing.md)
                 .modernCard()
+
+                // YouTube settings section
+                VStack(alignment: .leading, spacing: TS.Spacing.md) {
+                    HStack(spacing: TS.Spacing.sm) {
+                        Image(systemName: "play.rectangle.fill")
+                            .font(.system(size: 20))
+                            .foregroundStyle(Color.red)
+                        Text("YouTube Instellingen")
+                            .font(TS.Font.title3Bold)
+                            .foregroundStyle(Color.labelPrimary)
+                    }
+
+                    Text("Configureer hoe yt-dlp YouTube video's downloadt. Standaard wordt de web client gebruikt met PO token authenticatie.")
+                        .font(TS.Font.footnote)
+                        .foregroundStyle(Color.labelSecondary)
+
+                    VStack(alignment: .leading, spacing: TS.Spacing.sm) {
+                        Text("Maximale videoduur (minuten)")
+                            .font(TS.Font.footnoteSemibold)
+                            .foregroundStyle(Color.labelSecondary)
+                        TextField("120", text: $youtubeMaxDurationMinutes)
+                            .textFieldStyle(.roundedBorder)
+                            .font(TS.Font.body)
+                            .frame(width: 120)
+                    }
+
+                    VStack(alignment: .leading, spacing: TS.Spacing.sm) {
+                        Text("yt-dlp Extractor Args")
+                            .font(TS.Font.footnoteSemibold)
+                            .foregroundStyle(Color.labelSecondary)
+                        TextField("youtube:player_client=web;fetch_pot=always", text: $youtubeExtractorArgs)
+                            .textFieldStyle(.roundedBorder)
+                            .font(TS.Font.body)
+                            .autocorrectionDisabled()
+                    }
+
+                    VStack(alignment: .leading, spacing: TS.Spacing.sm) {
+                        Text("Cookies (optioneel)")
+                            .font(TS.Font.footnoteSemibold)
+                            .foregroundStyle(Color.labelSecondary)
+                        Text("Plak Netscape-formaat cookies voor video's die anoniem niet beschikbaar zijn.")
+                            .font(TS.Font.caption)
+                            .foregroundStyle(Color.labelTertiary)
+                        TextEditor(text: $youtubeCookiesContent)
+                            .font(.system(.body, design: .monospaced))
+                            .frame(minHeight: 80, maxHeight: 160)
+                            .scrollContentBackground(.hidden)
+                            .padding(4)
+                            .background(Color.surfacePrimary)
+                            .clipShape(RoundedRectangle(cornerRadius: TS.Radius.sm))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: TS.Radius.sm)
+                                    .stroke(Color.borderPrimary, lineWidth: 1)
+                            )
+                    }
+
+                    HStack(spacing: TS.Spacing.md) {
+                        Button {
+                            Task { await saveAdminSettings() }
+                        } label: {
+                            HStack(spacing: TS.Spacing.xs) {
+                                if isLoadingSettings {
+                                    ProgressView()
+                                        .controlSize(.small)
+                                }
+                                Text("Opslaan")
+                            }
+                        }
+                        .buttonStyle(PrimaryButtonStyle())
+                        .disabled(isLoadingSettings)
+
+                        if showSettingsSaved {
+                            HStack(spacing: TS.Spacing.xs) {
+                                Image(systemName: "checkmark.circle.fill")
+                                Text("Opgeslagen")
+                            }
+                            .font(TS.Font.footnote)
+                            .foregroundStyle(Color.statusSuccess)
+                            .transition(.scale.combined(with: .opacity))
+                        }
+                    }
+                }
+                .padding(TS.Spacing.md)
+                .modernCard()
             }
             .padding(TS.Spacing.md)
         }
@@ -968,6 +1514,9 @@ struct AdminView: View {
             ms365TenantId = settings.ms365_tenant_id ?? ""
             googleOAuthClientIdMacos = settings.google_oauth_client_id_macos ?? ""
             googleOAuthClientIdWindows = settings.google_oauth_client_id_windows ?? ""
+            youtubeMaxDurationMinutes = settings.youtube_max_duration_minutes.map { String($0) } ?? "120"
+            youtubeCookiesContent = settings.youtube_cookies_content ?? ""
+            youtubeExtractorArgs = settings.youtube_extractor_args ?? "youtube:player_client=web;fetch_pot=always"
         } catch {
             DebugLogger.shared.error(error, context: "Instellingen laden", category: "Admin")
         }
@@ -981,7 +1530,10 @@ struct AdminView: View {
                 ms365ClientId: ms365ClientId,
                 ms365TenantId: ms365TenantId,
                 googleOAuthClientIdMacos: googleOAuthClientIdMacos,
-                googleOAuthClientIdWindows: googleOAuthClientIdWindows
+                googleOAuthClientIdWindows: googleOAuthClientIdWindows,
+                youtubeMaxDurationMinutes: Int(youtubeMaxDurationMinutes),
+                youtubeCookiesContent: youtubeCookiesContent,
+                youtubeExtractorArgs: youtubeExtractorArgs
             )
             withAnimation(TS.Animation.quick) {
                 showSettingsSaved = true
@@ -1205,8 +1757,9 @@ struct AdminView: View {
         async let invitationsResult = loadInvitations()
         async let bugReportsResult = loadFeedback()
         async let errorsResult = loadErrors()
+        async let activityResult = loadActivityLogs()
 
-        let results = await [statsResult, usersResult, invitationsResult, bugReportsResult, errorsResult]
+        let results = await [statsResult, usersResult, invitationsResult, bugReportsResult, errorsResult, activityResult]
         failedSections = results.compactMap { $0 }
 
         if failedSections.count == results.count {
@@ -1260,11 +1813,21 @@ struct AdminView: View {
 
     private func loadErrors() async -> String? {
         do {
-            errors = try await APIService.shared.getAdminErrors()
+            errors = try await APIService.shared.getAdminErrors(limit: 500)
             return nil
         } catch {
             DebugLogger.shared.error(error, context: "Fouten laden", category: "Admin")
             return "fouten"
+        }
+    }
+
+    private func loadActivityLogs() async -> String? {
+        do {
+            activityLogs = try await APIService.shared.getAdminActivity(limit: 500)
+            return nil
+        } catch {
+            DebugLogger.shared.error(error, context: "Activiteit laden", category: "Admin")
+            return "activiteit"
         }
     }
 
@@ -1379,14 +1942,17 @@ struct AdminActivity: Codable, Identifiable {
     let id: String
     let actionType: String
     let userId: String?
+    let username: String?
+    let endpoint: String?
     let details: String?
+    let ipAddress: String?
     let createdAt: String?
 
     enum CodingKeys: String, CodingKey {
-        case id
+        case id, username, endpoint, details
         case actionType = "action_type"
         case userId = "user_id"
-        case details
+        case ipAddress = "ip_address"
         case createdAt = "created_at"
     }
 }

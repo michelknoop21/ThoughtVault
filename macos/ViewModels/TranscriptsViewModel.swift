@@ -79,12 +79,6 @@ final class TranscriptsViewModel {
     var sortOrder: SortOrder = .newestFirst
     var selectedDateFilter: DateFilter = .all
     var selectedTags: Set<String> = []
-    var page: Int = 1
-    var hasMore: Bool = true
-
-    // MARK: - Private Constants
-
-    private let pageSize = 20
 
     // MARK: - Derived Properties
 
@@ -134,74 +128,22 @@ final class TranscriptsViewModel {
 
     // MARK: - Load
 
-    /// Loads all transcripts across all pages, replacing any existing results.
+    /// Loads all transcripts in a single request (backend returns everything).
     func loadTranscripts() async {
         guard !isLoading else { return }
 
         isLoading = true
         errorMessage = nil
-        page = 1
-        hasMore = false
-
-        var allItems: [Transcript] = []
-        var currentPage = 1
-
-        do {
-            while true {
-                let response = try await APIService.shared.getTranscripts(
-                    page: currentPage,
-                    limit: pageSize,
-                    search: searchQuery.isEmpty ? nil : searchQuery,
-                    sortBy: sortOrder.apiValue
-                )
-                allItems.append(contentsOf: response.items)
-
-                if response.items.count < pageSize { break }
-                if let total = response.total, allItems.count >= total { break }
-
-                currentPage += 1
-            }
-
-            transcripts = allItems
-            page = currentPage
-            logger.info("Loaded \(allItems.count) transcripts across \(currentPage) page(s)")
-        } catch {
-            if !allItems.isEmpty { transcripts = allItems }
-            errorMessage = error.localizedDescription
-            logger.error("Failed to load transcripts: \(error.localizedDescription)")
-        }
-
-        isLoading = false
-    }
-
-    /// Loads the next page of transcripts and appends them to the existing list.
-    func loadMore() async {
-        guard !isLoading, hasMore else { return }
-
-        isLoading = true
-        let nextPage = page + 1
 
         do {
             let response = try await APIService.shared.getTranscripts(
-                page: nextPage,
-                limit: pageSize,
-                search: searchQuery.isEmpty ? nil : searchQuery,
-                sortBy: sortOrder.apiValue
+                search: searchQuery.isEmpty ? nil : searchQuery
             )
-
-            let newItems = response.items.filter { incoming in
-                !transcripts.contains { $0.id == incoming.id }
-            }
-            transcripts.append(contentsOf: newItems)
-            page = nextPage
-            hasMore = response.items.count >= pageSize &&
-                      (response.total.map { $0 > transcripts.count } ?? true)
-
-            logger.info("Loaded page \(nextPage): +\(newItems.count) transcripts")
+            transcripts = response.items
+            logger.info("Loaded \(response.items.count) transcripts")
         } catch {
-            // Non-fatal — keep existing transcripts, surface error briefly
             errorMessage = error.localizedDescription
-            logger.error("Failed to load page \(nextPage): \(error.localizedDescription)")
+            logger.error("Failed to load transcripts: \(error.localizedDescription)")
         }
 
         isLoading = false

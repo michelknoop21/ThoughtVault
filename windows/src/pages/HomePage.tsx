@@ -53,7 +53,7 @@ export function HomePage() {
     setIsLoading(true);
     setLoadError(null);
     try {
-      const data = await api.getTranscripts({ limit: 50 });
+      const data = await api.getTranscripts();
       setTranscripts(data);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Laden mislukt";

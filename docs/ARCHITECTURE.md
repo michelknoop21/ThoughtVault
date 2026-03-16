@@ -45,7 +45,7 @@ All clients share a common REST + SSE API and are deployed independently.
 | GET | `/tstudio/api/task/{id}/stream` | SSE stream of task status transitions |
 | POST | `/tstudio/api/transcribe` | Transcribe audio (internal) |
 | POST | `/tstudio/api/transcribe-text` | Generate notes from existing transcript text |
-| POST | `/tstudio/api/transcribe-youtube` | Transcribe YouTube video; accepts optional `X-Google-Token` header for Captions API (instant), falls back to yt-dlp + Whisper |
+| POST | `/tstudio/api/transcribe-youtube` | Transcribe YouTube video; tries anonymous captions first (no auth), then Google Captions API (if `X-Google-Token` present), falls back to yt-dlp + Whisper |
 | GET | `/tstudio/api/features` | Feature flags + OAuth config (`{"youtube_transcription": bool, "google_oauth_configured": bool, "google_oauth_client_id_macos": str}`); no auth required |
 | GET | `/tstudio/api/admin/features` | Admin: list all feature flags with status |
 | POST | `/tstudio/api/admin/features/{key}` | Admin: toggle feature on/off |
@@ -54,7 +54,7 @@ All clients share a common REST + SSE API and are deployed independently.
 | DELETE | `/tstudio/api/tasks/{id}` | Delete task and associated data |
 | POST | `/tstudio/api/task/{id}/cancel` | Cancel in-progress task (ownership check, admin bypass) |
 | DELETE | `/tstudio/api/task/{id}` | Delete task; active tasks cancelled first |
-| GET | `/tstudio/api/transcripts` | Returns `{items: Transcript[], total: int}` — paginate with `?page=N&limit=100` |
+| GET | `/tstudio/api/transcripts` | Returns `{items: Transcript[]}` — all transcripts in single response. Optional `?search=&tags=tag1,tag2` filters |
 
 **Authentication:** Three auth methods, checked in order:
 1. `X-User-Token: <token>` (macOS) or `Authorization: Bearer <token>` (Windows/Android) — session tokens from login
@@ -66,7 +66,7 @@ Login sends `username` field (which accepts email addresses as value).
 **Field name notes (verified against backend source):**
 - `/auth/me` returns `user_id` and `username` (not `id` / `email`)
 - `/auth/login` returns `requires_2fa` (not `requires_two_factor`) and `temp_token` — both omitted on standard login
-- `/transcripts` returns `{"items": [...], "total": N}` — both clients paginate with `?page=N&limit=100` until all items loaded
+- `/transcripts` returns `{"items": [...]}` — single-request, no pagination needed (both clients load all transcripts at once)
 
 ### Transcription Data Flow
 
@@ -88,9 +88,9 @@ Client                    Backend                    n8n / Claude
 
 **Status pipeline:** `pending → uploading → converting → transcribing → transcribed → processingWebhook → completed`
 
-**YouTube captions pipeline (primary):** `transcribed → processingWebhook → completed` (~1 second, no GPU). When `X-Google-Token` header is present and captions exist, the backend fetches caption text via YouTube Data API v3 (`captions.list` + `captions.download`), skips Whisper entirely, and feeds text into the notule pipeline. Caption track priority: nl standard > nl ASR > en standard > en ASR > any. Response includes `source_type: "youtube_captions"` and `captions_available: true`. See DEC-041.
+**YouTube captions pipeline (primary):** `transcribed → processingWebhook → completed` (~1 second, no GPU). Three-step priority: (1) anonymous captions via `youtube-transcript-api` (no auth needed), (2) Google API captions via YouTube Data API v3 if `X-Google-Token` header present, (3) yt-dlp + Whisper fallback. Caption track priority: nl manual > nl ASR > en manual > en ASR > any. Response includes `source_type: "youtube_captions"` and `captions_available: true`. See DEC-044, DEC-041.
 
-**YouTube yt-dlp pipeline (fallback):** `pending → downloading → converting → transcribing → transcribed → processingWebhook → completed`. Used when no captions available or no Google token provided.
+**YouTube yt-dlp pipeline (fallback):** `pending → downloading → converting → transcribing → transcribed → processingWebhook → completed`. Used when no captions available from either anonymous or Google API sources.
 
 **YouTube infrastructure (yt-dlp fallback):** yt-dlp invoked via `python3 -m yt_dlp` (avoids conda/pip PATH conflicts). Requires three components on server: (1) browser cookies at `/app/cookies.txt` for YouTube auth (exported from Firefox, must be refreshed periodically), (2) Node.js 20+ at `/usr/local/bin/node` for EJS challenge solving, (3) `yt-dlp-ejs` package (installed via `pip install yt-dlp[default]`). Config: `YOUTUBE_COOKIES_FILE` env var (default `/app/cookies.txt`). See DEC-038.
 

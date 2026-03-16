@@ -39,14 +39,11 @@ final class RecordingViewModel {
     var youtubeURL: String = ""
     var isSubmittingYouTube: Bool = false
     var youtubeError: String?
-    var youtubeSelectedProfile: Profile?
-
     // Google OAuth for YouTube
     var isGoogleConnected: Bool = false
     var googleUserEmail: String?
     var googleAuthError: String?
     var captionsNotAvailable: Bool = false
-    var isGoogleOAuthConfigured: Bool = false
 
     // MARK: - Audio Properties (computed, @Observable-compatible)
 
@@ -195,9 +192,6 @@ final class RecordingViewModel {
             selectedProfile = match
         } else if let first = profiles.first {
             selectedProfile = first
-        }
-        if youtubeSelectedProfile == nil {
-            youtubeSelectedProfile = selectedProfile
         }
     }
 
@@ -900,7 +894,6 @@ final class RecordingViewModel {
             let features = try await APIService.shared.fetchFeaturesExtended()
             await MainActor.run {
                 isYouTubeEnabled = features.youtube_transcription ?? false
-                isGoogleOAuthConfigured = features.google_oauth_configured ?? false
             }
             // Configure GoogleAuthService with client ID from backend
             if let clientId = features.google_oauth_client_id_macos, !clientId.isEmpty {
@@ -918,7 +911,7 @@ final class RecordingViewModel {
     func submitYouTubeURL() async {
         let url = youtubeURL.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !url.isEmpty else { return }
-        guard let profile = youtubeSelectedProfile else {
+        guard let profile = selectedProfile else {
             youtubeError = "Geen profiel geselecteerd."
             return
         }

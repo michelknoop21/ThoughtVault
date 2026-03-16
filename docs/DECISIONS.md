@@ -676,7 +676,7 @@ _Append-only log. Each entry records context, decision, and consequences._
 ## DEC-039 — Onafhankelijke YouTube Profielselectie (Optie B)
 
 **Date:** 2026-03-15
-**Status:** Accepted
+**Status:** Superseded (2026-03-16) — teruggedraaid naar gedeeld profiel. Separate YouTube profielselectie bleek onnodige complexiteit; gebruikers verwachten hetzelfde profiel voor alle transcriptie-methodes.
 
 **Context:** De YouTube transcriptie card en de opname card deelden dezelfde profielselectie (`selectedProfile` op macOS, `selectedProfileId` op Windows). Dit leidde tot verwarring: als een gebruiker profiel "Technisch" selecteerde voor een YouTube transcriptie, veranderde ook het profiel voor de volgende opname — en vice versa. De twee cards hebben fundamenteel verschillende use cases (live opname vs. URL-gebaseerde transcriptie) en moeten onafhankelijk configureerbaar zijn.
 
@@ -727,3 +727,25 @@ _Append-only log. Each entry records context, decision, and consequences._
 - Admin configures Google OAuth Client IDs via Admin > Instellingen (same pattern as MS365 OAuth).
 - Windows and Android will follow later — backend is ready (accepts `google_oauth_client_id_windows` setting).
 - Refresh tokens stored in macOS Keychain via `KeychainService` (key: `googleRefreshToken`). Access tokens are in-memory (1 hour validity).
+
+---
+
+## DEC-042 — DispatchQueue.main.async voor KVO Callbacks in @Observable Classes
+
+**Date:** 2026-03-16
+**Status:** Accepted
+
+**Context:** `VideoCallDetectionService` is een `@Observable` class (niet `@MainActor`) die KVO gebruikt op `AVCaptureDevice.isInUseByAnotherApplication`. KVO callbacks worden geleverd op willekeurige dispatch queues — in de praktijk `com.apple.root.default-qos` (concurrent background queue). Het oorspronkelijke patroon `Task { @MainActor in self.handleCameraActive() }` crashte met `_dispatch_assert_queue_fail` omdat het capturen van `self` (een `@Observable` object geobserveerd door SwiftUI) op de background thread de observation tracking triggerde op de verkeerde queue. Hetzelfde risico bestond in `SystemAudioCapture` waar `Timer.scheduledTimer` callbacks in `Task { @MainActor in }` werden gewrapped terwijl ze al op de main run loop draaien.
+
+**Decision:** Twee patronen vastgelegd voor thread-hopping naar MainActor vanuit callbacks:
+1. **KVO/NotificationCenter callbacks** (onbekende thread): gebruik `DispatchQueue.main.async { [weak self] in ... }` — delay `guard let self` tot we op de main queue zijn, voorkom `@Observable` property access op background threads.
+2. **Timer callbacks** (main run loop): gebruik `MainActor.assumeIsolated { ... }` — zero-overhead assertie dat we al op de main thread zijn, vermijd onnodige task scheduling.
+
+Vermijd `Task { @MainActor in }` in beide gevallen: het scheduled een nieuwe cooperative task op de MainActor executor, wat subtiel verschilt van de GCD main queue en de dispatch assertion kan triggeren bij `@Observable` observation tracking.
+
+**Consequences:**
+- KVO callbacks capturen `self` niet meer op background threads — elimineert de `_dispatch_assert_queue_fail` crash.
+- `DispatchQueue.main.async` is synchrone dispatch naar de main queue, betrouwbaarder dan `Task { @MainActor in }` voor bridging tussen GCD en Swift concurrency.
+- `MainActor.assumeIsolated` in timer callbacks is zero-overhead (geen scheduling, geen context switch) en documenteert de threading verwachting.
+- Bestaande `@MainActor` methoden (`handleCameraActive`, `handleCameraInactive`, `enterCooldown`) hoeven niet gewijzigd te worden — ze worden nu correct aangeroepen vanuit de main queue/actor context.
+- Dit patroon moet gevolgd worden bij toekomstige KVO observers en system callbacks in `@Observable` classes.

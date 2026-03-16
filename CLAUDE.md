@@ -2,8 +2,7 @@
 
 ## Stack
 Native macOS/iOS (Swift 6, SwiftUI, `@Observable`) + Windows (Tauri 2, React/TypeScript).
-Backend: FastAPI op `https://n8n.prezent.nl/tstudio/api/` — zie @docs/API.md.
-Projectstructuur: @README.md
+Backend: FastAPI op `https://n8n.prezent.nl/tstudio/api/` — lees docs/API.md bij API-werk.
 
 ## Commands
 ```bash
@@ -53,9 +52,6 @@ ssh michelk@3.69.205.209 "docker restart n8n_transcript_studio"
 ssh michelk@3.69.205.209 "docker logs n8n_transcript_studio --tail 50"
 ```
 
-## Roadmap
-- **Multi-instance deployment** — Meerdere klanten bedienen met dezelfde codebase. Zie @docs/PLAN-MULTI-INSTANCE.md en DEC-033.
-
 ## Gotchas
 - `notifications(named:)` gebruiken, NIET `notifications(for:)` in AuthViewModel
 - Sidebar: custom collapsible sidebar (52px icon column ↔ full sidebar), toggle via `Shift+Cmd+S`. Niet meer `columnVisibility` gebruiken (DEC-029)
@@ -64,4 +60,5 @@ ssh michelk@3.69.205.209 "docker logs n8n_transcript_studio --tail 50"
 - Backend `username` veld is het e-mailadres (niet `email`)
 - Versioning: elke commit op `main` bumpt automatisch patch via `.githooks/post-commit`
 - Na version bump: `scripts/sync-version.sh` draaien om VERSION naar alle platform configs te syncen
-- Downloads: `https://n8n.prezent.nl/tstudio/download/` — zie @docs/RELEASE.md voor infra details
+- Downloads: `https://n8n.prezent.nl/tstudio/download/` — lees docs/RELEASE.md voor infra details
+- **Multi-instance deployment** — Lees docs/PLAN-MULTI-INSTANCE.md en DEC-033 wanneer relevant

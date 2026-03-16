@@ -273,10 +273,9 @@ final class SystemAudioCapture: NSObject {
 
     private func startDurationTimer() {
         durationTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-            Task { @MainActor [weak self] in
+            MainActor.assumeIsolated {
                 guard let self, let start = self.startDate else { return }
-                let elapsed = Date().timeIntervalSince(start)
-                self.duration = elapsed
+                self.duration = Date().timeIntervalSince(start)
             }
         }
     }
@@ -462,7 +461,7 @@ private final class AudioStreamOutput: NSObject, SCStreamOutput, SCStreamDelegat
                         return
                     }
 
-                    var inputConsumed = false
+                    nonisolated(unsafe) var inputConsumed = false
                     var error: NSError?
                     conv.convert(to: outputBuffer, error: &error) { _, outStatus in
                         if inputConsumed {

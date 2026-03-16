@@ -75,10 +75,10 @@ final class VideoCallDetectionService: @unchecked Sendable {
 
         if let camera = AVCaptureDevice.default(for: .video) {
             // KVO on camera in-use state
-            cameraObservation = camera.observe(\.isInUseByAnotherApplication, options: [.new]) { [weak self] device, change in
-                guard let self else { return }
+            cameraObservation = camera.observe(\.isInUseByAnotherApplication, options: [.new]) { [weak self] _, change in
                 let inUse = change.newValue ?? false
-                Task { @MainActor in
+                DispatchQueue.main.async {
+                    guard let self else { return }
                     if inUse {
                         self.handleCameraActive()
                     } else {
@@ -88,8 +88,8 @@ final class VideoCallDetectionService: @unchecked Sendable {
             }
             // Check initial state
             if camera.isInUseByAnotherApplication {
-                Task { @MainActor in
-                    handleCameraActive()
+                DispatchQueue.main.async { [weak self] in
+                    self?.handleCameraActive()
                 }
             }
             logger.info("VideoCallDetection: KVO monitoring started")
@@ -211,10 +211,12 @@ final class VideoCallDetectionService: @unchecked Sendable {
         state = .cooldown
         currentSessionId = nil
         cooldownTask?.cancel()
-        cooldownTask = Task { @MainActor in
+        cooldownTask = Task {
             try? await Task.sleep(for: .seconds(60))
             guard !Task.isCancelled else { return }
-            self.state = .idle
+            await MainActor.run {
+                self.state = .idle
+            }
             logger.info("VideoCallDetection: cooldown ended, returning to idle")
         }
     }

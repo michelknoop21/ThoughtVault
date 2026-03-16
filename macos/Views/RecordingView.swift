@@ -250,74 +250,72 @@ struct RecordingView: View {
             .padding(.bottom, TS.Spacing.md)
 
             // Google Account Connection
-            if recordingVM.isGoogleOAuthConfigured {
-                VStack(spacing: TS.Spacing.sm) {
-                    if recordingVM.isGoogleConnected {
-                        // Connected state
-                        HStack {
-                            Image(systemName: "checkmark.circle.fill")
-                                .foregroundStyle(Color.statusSuccess)
+            VStack(spacing: TS.Spacing.sm) {
+                if recordingVM.isGoogleConnected {
+                    // Connected state
+                    HStack {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(Color.statusSuccess)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Google verbonden")
+                                .font(TS.Font.footnoteSemibold)
+                                .foregroundStyle(Color.labelPrimary)
+                            if let email = recordingVM.googleUserEmail {
+                                Text(email)
+                                    .font(TS.Font.caption)
+                                    .foregroundStyle(Color.labelSecondary)
+                            }
+                        }
+                        Spacer()
+                        Button("Ontkoppel") {
+                            Task { await recordingVM.disconnectGoogle() }
+                        }
+                        .font(TS.Font.caption)
+                        .foregroundStyle(Color.labelSecondary)
+                    }
+                    .padding(TS.Spacing.sm)
+                    .background {
+                        RoundedRectangle(cornerRadius: TS.Radius.sm, style: .continuous)
+                            .fill(Color.statusSuccess.opacity(0.08))
+                    }
+                } else {
+                    // Not connected — show connect button
+                    Button {
+                        Task { await recordingVM.connectGoogle() }
+                    } label: {
+                        HStack(spacing: TS.Spacing.sm) {
+                            Image(systemName: "person.badge.key.fill")
+                                .foregroundStyle(Color.brandPrimary)
                             VStack(alignment: .leading, spacing: 2) {
-                                Text("Google verbonden")
+                                Text("Verbind Google Account")
                                     .font(TS.Font.footnoteSemibold)
                                     .foregroundStyle(Color.labelPrimary)
-                                if let email = recordingVM.googleUserEmail {
-                                    Text(email)
-                                        .font(TS.Font.caption)
-                                        .foregroundStyle(Color.labelSecondary)
-                                }
+                                Text("Nodig voor YouTube transcriptie")
+                                    .font(TS.Font.caption)
+                                    .foregroundStyle(Color.labelSecondary)
                             }
                             Spacer()
-                            Button("Ontkoppel") {
-                                Task { await recordingVM.disconnectGoogle() }
-                            }
-                            .font(TS.Font.caption)
-                            .foregroundStyle(Color.labelSecondary)
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(Color.labelTertiary)
                         }
                         .padding(TS.Spacing.sm)
                         .background {
                             RoundedRectangle(cornerRadius: TS.Radius.sm, style: .continuous)
-                                .fill(Color.statusSuccess.opacity(0.08))
-                        }
-                    } else {
-                        // Not connected — show connect button
-                        Button {
-                            Task { await recordingVM.connectGoogle() }
-                        } label: {
-                            HStack(spacing: TS.Spacing.sm) {
-                                Image(systemName: "person.badge.key.fill")
-                                    .foregroundStyle(Color.brandPrimary)
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text("Verbind Google Account")
-                                        .font(TS.Font.footnoteSemibold)
-                                        .foregroundStyle(Color.labelPrimary)
-                                    Text("Nodig voor YouTube transcriptie")
-                                        .font(TS.Font.caption)
-                                        .foregroundStyle(Color.labelSecondary)
-                                }
-                                Spacer()
-                                Image(systemName: "chevron.right")
-                                    .font(.system(size: 12, weight: .semibold))
-                                    .foregroundStyle(Color.labelTertiary)
-                            }
-                            .padding(TS.Spacing.sm)
-                            .background {
-                                RoundedRectangle(cornerRadius: TS.Radius.sm, style: .continuous)
-                                    .fill(Color.surfaceSecondary)
-                            }
-                        }
-                        .buttonStyle(.plain)
-
-                        if let error = recordingVM.googleAuthError {
-                            Text(error)
-                                .font(TS.Font.caption)
-                                .foregroundStyle(Color.brandOrange)
+                                .fill(Color.surfaceSecondary)
                         }
                     }
+                    .buttonStyle(.plain)
+
+                    if let error = recordingVM.googleAuthError {
+                        Text(error)
+                            .font(TS.Font.caption)
+                            .foregroundStyle(Color.brandOrange)
+                    }
                 }
-                .padding(.horizontal, TS.Spacing.lg)
-                .padding(.bottom, TS.Spacing.sm)
             }
+            .padding(.horizontal, TS.Spacing.lg)
+            .padding(.bottom, TS.Spacing.sm)
 
             VStack(spacing: TS.Spacing.md) {
                 TextField("Plak een YouTube URL...", text: Binding(
@@ -335,10 +333,6 @@ struct RecordingView: View {
                 .overlay {
                     RoundedRectangle(cornerRadius: TS.Radius.sm, style: .continuous)
                         .stroke(Color.borderPrimary.opacity(0.5), lineWidth: 1)
-                }
-
-                if !recordingVM.availableProfiles.isEmpty {
-                    youtubeProfileSection
                 }
 
                 if let error = recordingVM.youtubeError {
@@ -382,16 +376,13 @@ struct RecordingView: View {
                         RoundedRectangle(cornerRadius: TS.Radius.sm, style: .continuous)
                             .fill(
                                 LinearGradient(
-                                    colors: [
-                                        Color(red: 0.90, green: 0.07, blue: 0.07),
-                                        Color(red: 0.72, green: 0.0, blue: 0.0)
-                                    ],
+                                    colors: [Color.brandPrimary, Color.brandPrimary.opacity(0.85)],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
                                 )
                             )
                             .shadow(
-                                color: Color(red: 0.90, green: 0.07, blue: 0.07).opacity(0.30),
+                                color: Color.brandPrimary.opacity(0.30),
                                 radius: 8,
                                 y: 3
                             )
@@ -401,12 +392,10 @@ struct RecordingView: View {
                 .disabled(
                     recordingVM.youtubeURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                     || recordingVM.isSubmittingYouTube
-                    || (recordingVM.isGoogleOAuthConfigured && !recordingVM.isGoogleConnected)
                 )
                 .opacity(
                     recordingVM.youtubeURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                    || recordingVM.isSubmittingYouTube
-                    || (recordingVM.isGoogleOAuthConfigured && !recordingVM.isGoogleConnected) ? 0.5 : 1.0
+                    || recordingVM.isSubmittingYouTube ? 0.5 : 1.0
                 )
             }
             .padding(.horizontal, TS.Spacing.lg)
@@ -419,7 +408,7 @@ struct RecordingView: View {
         }
         .overlay {
             RoundedRectangle(cornerRadius: TS.Radius.lg, style: .continuous)
-                .stroke(Color.red.opacity(0.12), lineWidth: 1)
+                .stroke(Color.brandPrimary.opacity(0.12), lineWidth: 1)
         }
     }
 
@@ -493,36 +482,6 @@ struct RecordingView: View {
         Binding(
             get: { recordingVM.selectedProfile },
             set: { recordingVM.selectedProfile = $0 }
-        )
-    }
-
-    private var youtubeProfileSection: some View {
-        VStack(alignment: .leading, spacing: TS.Spacing.sm) {
-            HStack(spacing: TS.Spacing.xs) {
-                Text("Profiel")
-                    .font(TS.Font.footnoteSemibold)
-                    .foregroundStyle(Color.labelSecondary)
-                if let selected = recordingVM.youtubeSelectedProfile {
-                    Text(selected.name)
-                        .font(TS.Font.microBold)
-                        .foregroundStyle(Color.red)
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 2)
-                        .background(Capsule().fill(Color.red.opacity(0.10)))
-                }
-            }
-
-            ProfilePicker(
-                profiles: recordingVM.availableProfiles,
-                selectedProfile: youtubeProfileBinding
-            )
-        }
-    }
-
-    private var youtubeProfileBinding: Binding<Profile?> {
-        Binding(
-            get: { recordingVM.youtubeSelectedProfile },
-            set: { recordingVM.youtubeSelectedProfile = $0 }
         )
     }
 

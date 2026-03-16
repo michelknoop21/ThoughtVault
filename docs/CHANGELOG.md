@@ -5,6 +5,27 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2026-03-16] — Threading fixes, YouTube card vereenvoudiging, CLAUDE.md optimalisatie
+
+### Fixed
+- **VideoCallDetectionService threading crash** (`macos/Services/VideoCallDetectionService.swift`): KVO callback op `AVCaptureDevice.isInUseByAnotherApplication` werd geleverd op `com.apple.root.default-qos` (background queue). Het bestaande `Task { @MainActor in }` patroon veroorzaakte `_dispatch_assert_queue_fail` omdat `self` (een `@Observable` object geobserveerd door SwiftUI op MainActor) werd gecaptured op de background thread. Fix: KVO callback gebruikt nu `DispatchQueue.main.async` en vertraagt `guard let self` tot we op de main queue zijn (regels 78-88, 90-94). Cooldown task in `enterCooldown()` veranderd van redundant `Task { @MainActor in }` naar `Task` met expliciete `MainActor.run` voor state mutatie.
+- **SystemAudioCapture timer** (`macos/Services/SystemAudioCapture.swift:274-282`): `Timer.scheduledTimer` callback gebruikte `Task { @MainActor in }` ondanks dat timers van een `@MainActor` class al op de main run loop vuren. Vervangen door `MainActor.assumeIsolated` — zero-overhead en semantisch correct.
+
+### Changed
+- **YouTube card vereenvoudigd** (`macos/Views/RecordingView.swift`): Verwijderd: aparte YouTube profielpicker (`youtubeProfileSection`, `youtubeProfileBinding`) — YouTube transcriptie gebruikt nu hetzelfde profiel als reguliere opname (`selectedProfile`). YouTube-rode gradient kleuren (#E61212 → #B80000) vervangen door `Color.brandPrimary` voor consistente branding. Google OAuth connectiesectie altijd zichtbaar (niet meer achter `isGoogleOAuthConfigured` gate). Google verbinding niet meer vereist om YouTube URL te submitten.
+- **RecordingViewModel** (`macos/ViewModels/RecordingViewModel.swift`): `youtubeSelectedProfile: Profile?` property verwijderd. `submitYouTubeURL()` gebruikt nu `selectedProfile`. Initialisatielogica voor `youtubeSelectedProfile` uit `loadDefaultProfile()` verwijderd.
+- **CLAUDE.md geoptimaliseerd** (`CLAUDE.md`): Vier `@`-referenties verwijderd die 2.555 regels (~20k tokens) aan documentatie in elke sessie laadden: `@README.md` (dubbel geladen — README is al auto-injected), `@docs/API.md` (966 regels), `@docs/PLAN-MULTI-INSTANCE.md` (888 regels), `@docs/RELEASE.md` (234 regels). Roadmap sectie verplaatst als one-liner naar Gotchas. Referenties behouden als plain text zodat Claude docs on-demand kan lezen.
+
+### Decisions
+- See DEC-042 in [DECISIONS.md](DECISIONS.md) for the KVO callback threading pattern.
+- DEC-039 (onafhankelijke YouTube profielselectie) is superseded — teruggedraaid naar gedeeld profiel.
+
+### Notes
+- De threading crash manifesteerde zich als `_dispatch_assert_queue_fail` op Thread 2 (`com.apple.root.default-qos`). Root cause: KVO callbacks worden geleverd op willekeurige threads, en `@Observable` property access tracking triggerde op de verkeerde queue.
+- Windows YouTube card had al eerder YouTube-rode styling — die is niet meegenomen in deze sessie.
+
+---
+
 ## [2026-03-16] — YouTube hybride aanpak: Captions API + yt-dlp fallback
 
 ### Added

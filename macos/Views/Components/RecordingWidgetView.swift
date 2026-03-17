@@ -73,12 +73,12 @@ struct RecordingWidgetView: View {
                     lineWidth: 1
                 )
         }
-        .shadow(color: .black.opacity(0.30), radius: 20, y: 6)
+        .shadow(color: .black.opacity(0.12), radius: 8, y: 3)
         .shadow(
             color: isRecording
-                ? Color.brandPrimary.opacity(0.15)
+                ? Color.brandPrimary.opacity(0.10)
                 : Color.clear,
-            radius: 24, y: 0
+            radius: 12, y: 0
         )
         .scaleEffect(isHovered ? 1.02 : 1.0)
         .animation(TS.Animation.hover, value: isHovered)

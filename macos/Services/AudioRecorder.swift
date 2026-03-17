@@ -396,7 +396,7 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
         try session.setCategory(
             .playAndRecord,
             mode: .default,
-            options: [.defaultToSpeaker, .allowBluetooth, .allowBluetoothA2DP]
+            options: [.defaultToSpeaker, .allowBluetoothHFP, .allowBluetoothA2DP]
         )
         try session.setActive(true, options: .notifyOthersOnDeactivation)
     }
@@ -406,16 +406,22 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
     }
 
     private func beginBackgroundTask() {
-        backgroundTask = UIApplication.shared.beginBackgroundTask(withName: "AudioRecording") {
-            [weak self] in
-            self?.endBackgroundTask()
+        let task = MainActor.assumeIsolated {
+            UIApplication.shared.beginBackgroundTask(withName: "AudioRecording") {
+                [weak self] in
+                self?.endBackgroundTask()
+            }
         }
+        backgroundTask = task
     }
 
     private func endBackgroundTask() {
         guard backgroundTask != .invalid else { return }
-        UIApplication.shared.endBackgroundTask(backgroundTask)
+        let task = backgroundTask
         backgroundTask = .invalid
+        MainActor.assumeIsolated {
+            UIApplication.shared.endBackgroundTask(task)
+        }
     }
 #endif
 }

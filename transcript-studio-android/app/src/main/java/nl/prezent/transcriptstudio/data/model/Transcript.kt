@@ -14,7 +14,7 @@ data class Transcript(
     @SerialName("raw_transcription") val rawTranscription: String? = null,
     val transcription: String? = null,
     val tags: List<String> = emptyList(),
-    @SerialName("profile_id") val profileId: Int? = null,
+    @SerialName("profile_id") val profileId: String? = null,
     @SerialName("profile_name") val profileName: String? = null,
     val duration: Double? = null,
     @SerialName("created_at") val createdAt: String? = null,

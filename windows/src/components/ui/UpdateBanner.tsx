@@ -25,9 +25,14 @@ export function UpdateBanner({ version, downloadUrl, onDismiss }: UpdateBannerPr
       </div>
       {downloadUrl && (
         <button
-          onClick={(e) => {
+          onClick={async (e) => {
             e.stopPropagation();
-            window.open(downloadUrl, "_blank");
+            try {
+              const { open } = await import("@tauri-apps/plugin-shell");
+              await open(downloadUrl);
+            } catch {
+              window.open(downloadUrl, "_blank");
+            }
           }}
           className="btn btn-sm flex-shrink-0"
           style={{

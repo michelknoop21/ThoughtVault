@@ -43,7 +43,7 @@ class AdminRepository @Inject constructor(
     suspend fun createInviteCode(maxUses: Int = 1, expiresHours: Int = 48): InviteCode =
         apiService.createInviteCode(CreateInviteRequest(maxUses = maxUses, expiresHours = expiresHours))
 
-    suspend fun getInviteCodes(): List<InviteCode> = apiService.getInviteCodes()
+    suspend fun getInviteCodes(): List<InviteCode> = apiService.getInviteCodes().items
 
     suspend fun deleteInviteCode(code: String) {
         apiService.deleteInviteCode(code)
@@ -55,7 +55,7 @@ class AdminRepository @Inject constructor(
         status: String? = null,
         category: String? = null,
         userId: String? = null,
-    ): List<Feedback> = apiService.getAdminFeedback(status = status, category = category, userId = userId)
+    ): List<Feedback> = apiService.getAdminFeedback(status = status, category = category, userId = userId).items
 
     suspend fun getFeedbackDetail(id: Int): Feedback = apiService.getAdminFeedbackDetail(id)
 
@@ -84,7 +84,7 @@ class AdminRepository @Inject constructor(
         search: String? = null,
     ): List<ErrorLog> = apiService.getErrorLogs(
         limit = limit, severity = severity, userId = userId, search = search,
-    )
+    ).errors
 
     suspend fun getMetrics(): SystemStats = apiService.getMetrics()
 

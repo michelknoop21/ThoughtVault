@@ -1272,7 +1272,6 @@ struct AdminView: View {
         }
         guard let date else { return dateString.prefix(16).description }
         let cal = Calendar.current
-        let now = Date()
         let df = DateFormatter()
         df.locale = Locale(identifier: "nl_NL")
         df.timeStyle = .short

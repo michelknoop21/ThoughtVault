@@ -33,7 +33,7 @@ class FloatingWidgetController {
 
         let hostingView = NSHostingView(
             rootView: RecordingWidgetView()
-                .padding(30) // Room for shadows outside the capsule
+                .padding(16) // Room for shadows outside the capsule
                 .environment(recordingVM)
         )
         // Ensure the hosting view has a transparent layer so the capsule
@@ -98,9 +98,9 @@ class FloatingWidgetController {
 
     private func updatePosition(for panel: NSPanel) {
         guard let screen = NSScreen.main else { return }
-        // The panel is oversized (30pt padding on each side) to give shadows room.
+        // The panel is oversized (16pt padding on each side) to give shadows room.
         // Offset the margin so the visible capsule lands 20pt from the screen edge.
-        let shadowPadding: CGFloat = 30
+        let shadowPadding: CGFloat = 16
         let margin: CGFloat = 20 - shadowPadding
         let x = screen.visibleFrame.maxX - panel.frame.width - margin
         let y = screen.visibleFrame.minY + margin

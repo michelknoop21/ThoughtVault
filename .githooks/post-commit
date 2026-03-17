@@ -63,7 +63,8 @@ git branch "release/${NEW_VERSION}"
 git push origin main "release/${NEW_VERSION}" --tags 2>/dev/null \
     || echo "⚠️  Auto-push to origin failed. Run: git push origin main release/${NEW_VERSION} --tags"
 
-# GitHub push removed — use deploy-dev.sh / deploy-production.sh for releases
+git push github main --tags 2>/dev/null \
+    || echo "⚠️  Auto-push to github failed. Run: git push github main --tags"
 
 echo "✅ Version bumped: ${CURRENT} → ${NEW_VERSION}"
 echo "✅ Tag v${NEW_VERSION} + branch release/${NEW_VERSION} created and pushed"

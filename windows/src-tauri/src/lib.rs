@@ -29,19 +29,9 @@ pub fn run() {
                 }
             }
 
-            // When the recording-widget webview is created, apply Acrylic effect
-            let app_handle = app.handle().clone();
-            app.listen("tauri://webview-created", move |_event| {
-                #[cfg(target_os = "windows")]
-                {
-                    use window_vibrancy::apply_acrylic;
-                    if let Some(widget) = app_handle.get_webview_window("recording-widget") {
-                        if let Err(e) = apply_acrylic(&widget, Some((18, 18, 18, 200))) {
-                            eprintln!("[Window] Acrylic effect niet beschikbaar: {}", e);
-                        }
-                    }
-                }
-            });
+            // No vibrancy effect on the recording-widget — it uses CSS background
+            // with transparent: true on the window, so acrylic would fill the
+            // entire rectangular window behind the pill shape.
 
             // Handle deep-link OAuth callbacks (Microsoft 365)
             let app_handle2 = app.handle().clone();

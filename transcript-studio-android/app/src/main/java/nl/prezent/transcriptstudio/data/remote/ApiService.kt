@@ -181,7 +181,7 @@ interface ApiService {
     suspend fun createInviteCode(@Body body: CreateInviteRequest): InviteCode
 
     @GET("admin/invites")
-    suspend fun getInviteCodes(): List<InviteCode>
+    suspend fun getInviteCodes(): InviteCodesResponse
 
     @DELETE("admin/invites/{code}")
     suspend fun deleteInviteCode(@Path("code") code: String): Response<Unit>
@@ -193,7 +193,7 @@ interface ApiService {
         @Query("status") status: String? = null,
         @Query("category") category: String? = null,
         @Query("user_id") userId: String? = null,
-    ): List<Feedback>
+    ): AdminFeedbackResponse
 
     @GET("admin/feedback/{id}")
     suspend fun getAdminFeedbackDetail(@Path("id") id: Int): Feedback
@@ -218,7 +218,7 @@ interface ApiService {
         @Query("severity") severity: String? = null,
         @Query("user_id") userId: String? = null,
         @Query("search") search: String? = null,
-    ): List<ErrorLog>
+    ): ErrorLogsResponse
 
     @GET("admin/metrics")
     suspend fun getMetrics(): SystemStats

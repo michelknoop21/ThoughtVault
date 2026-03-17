@@ -36,21 +36,21 @@ body {
   -webkit-mask-image: linear-gradient(#fff 0 0);
   mask-image: linear-gradient(#fff 0 0);
   box-shadow:
-    0 6px 20px rgba(0, 0, 0, 0.30),
-    0 0 24px rgba(229, 0, 116, 0.12);
+    0 3px 8px rgba(0, 0, 0, 0.12),
+    0 0 12px rgba(229, 0, 116, 0.08);
   transition: box-shadow 300ms ease, border-color 300ms ease;
 }
 
 .widget-pill.paused {
   border-color: rgba(255, 179, 71, 0.35);
   box-shadow:
-    0 6px 20px rgba(0, 0, 0, 0.30),
-    0 0 24px rgba(255, 179, 71, 0.08);
+    0 3px 8px rgba(0, 0, 0, 0.12),
+    0 0 12px rgba(255, 179, 71, 0.06);
 }
 
 .widget-pill.stopping {
   border-color: rgba(255, 255, 255, 0.08);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.30);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12);
 }
 
 /* ---- Drag region (entire left section) ---- */

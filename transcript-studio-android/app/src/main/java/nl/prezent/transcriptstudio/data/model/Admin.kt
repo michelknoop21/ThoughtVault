@@ -76,6 +76,19 @@ data class FeedbackUpdateRequest(
 )
 
 @Serializable
+data class InviteCodesResponse(
+    val items: List<InviteCode> = emptyList(),
+)
+
+@Serializable
+data class AdminFeedbackResponse(
+    val items: List<Feedback> = emptyList(),
+    val total: Int? = null,
+    val limit: Int? = null,
+    val offset: Int? = null,
+)
+
+@Serializable
 data class ErrorLog(
     val id: Int? = null,
     val severity: String? = null,
@@ -85,6 +98,14 @@ data class ErrorLog(
     val username: String? = null,
     val endpoint: String? = null,
     @SerialName("created_at") val createdAt: String? = null,
+)
+
+@Serializable
+data class ErrorLogsResponse(
+    val errors: List<ErrorLog> = emptyList(),
+    val total: Int? = null,
+    val limit: Int? = null,
+    val offset: Int? = null,
 )
 
 @Serializable

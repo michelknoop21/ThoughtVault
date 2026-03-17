@@ -1417,7 +1417,9 @@ struct TranscriptDetailView: View {
                 editedHTML: $editedHTML,
                 isEditing: isEditingNotule,
                 isDarkMode: colorScheme == .dark,
-                onWebViewReady: { editableWebViewRef = $0 }
+                onWebViewReady: { ref in
+                    Task { @MainActor in editableWebViewRef = ref }
+                }
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .overlay {

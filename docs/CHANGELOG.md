@@ -5,6 +5,36 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2026-03-17] — Backend bugfix: reset_to_original parameter missing
+
+### Fixed
+- **`update_transcript()` crash on `reset_to_original`** (`backend/repositories/task_repo.py:302`): `PUT /transcripts/{task_id}` passed `reset_to_original=update.reset_to_original` to `update_transcript()`, but the function signature did not accept that parameter. Result: `TypeError: update_transcript() got an unexpected keyword argument 'reset_to_original'` on every transcript update request. Root cause: the route in `transcripts.py:161` was updated to support `reset_to_original` (clearing edited version to revert to original transcript), but the corresponding repository function was never updated with the new parameter.
+- **Fix**: Added `reset_to_original: bool = False` parameter to `update_transcript()` in `task_repo.py`. When `True`, sets `edited_transcription = None` and `edited_at = None`, effectively reverting the transcript to the original Whisper output. When `False` (default), existing behavior preserved.
+
+### Notes
+- Deployed to production: `task_repo.py` synced to server, container restarted. Verified clean startup.
+- This bug affected all platforms (macOS, Windows, web) — any transcript edit/update would fail with HTTP 500.
+
+---
+
+## [2026-03-17] — YouTube proxy support and bot detection resilience
+
+### Added
+- **YouTube proxy setting** (`macos/Views/AdminView.swift`, `windows/src/pages/AdminPage.tsx`): New "Proxy (optioneel)" field in Admin > Instellingen > YouTube section. Accepts SOCKS5 or HTTP proxy URL (e.g. `socks5://user:pass@host:port`) to route yt-dlp and youtube-transcript-api requests through a proxy, bypassing AWS IP-based YouTube blocks.
+- **`youtube_proxy` field** (`macos/Services/APIService.swift:AdminSettingsResponse`, `windows/src/services/api.ts`): Added to admin settings GET/POST on both platforms.
+
+### Changed
+- **Backend YouTube service** (commit message, backend changes in separate repo): oEmbed metadata fallback when yt-dlp is blocked by bot detection. Proxy support for both yt-dlp subprocess calls and `youtube-transcript-api` library. User-friendly Dutch error messages for YouTube bot detection scenarios. Anonymous captions decoupled from yt-dlp metadata dependency — metadata now fetched via oEmbed API (`https://noembed.com/embed`) as fallback when yt-dlp `--dump-json` fails due to bot detection.
+
+### Decisions
+- See DEC-047 in [DECISIONS.md](DECISIONS.md) for the YouTube proxy and bot detection resilience rationale.
+
+### Notes
+- Backend changes deployed separately — this changelog documents the client-side admin UI changes committed in this repo.
+- The proxy field is optional — when empty, requests go directly without proxy (existing behavior).
+
+---
+
 ## [2026-03-16] — Web login page: proper dark mode support
 
 ### Fixed

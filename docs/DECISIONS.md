@@ -818,3 +818,21 @@ Vermijd `Task { @MainActor in }` in beide gevallen: het scheduled een nieuwe coo
 - YouTube yt-dlp configuration manageable through the admin panel — no need to restart the container for cookies or extractor arg changes.
 - Google OAuth Client IDs configurable per-platform through the admin UI.
 - Backend `GET /admin/settings` and `POST /admin/settings` now include `youtube_max_duration_minutes`, `youtube_cookies_content`, `youtube_extractor_args` fields.
+
+---
+
+## DEC-047 — YouTube Proxy Support en Bot Detection Resilience
+
+**Date:** 2026-03-17
+**Status:** Accepted
+
+**Context:** YouTube blokkeert requests vanaf AWS server IP-adressen met bot-detectie ("Sign in to confirm you're not a bot"). Dit treft zowel `yt-dlp` (audio download + metadata) als `youtube-transcript-api` (anonieme captions). Browser cookies (DEC-038) en EJS challenge solving helpen soms, maar AWS datacenter IP-ranges worden steeds agressiever geblokkeerd. De anonieme captions flow (DEC-044) was ook afhankelijk van yt-dlp voor metadata (titel, duur) via `--dump-json`, waardoor een yt-dlp blokkade de hele captions pipeline uitschakelde.
+
+**Decision:** Drie wijzigingen: (1) **Proxy support**: nieuw `youtube_proxy` admin setting (SOCKS5/HTTP URL) dat wordt doorgegeven aan zowel yt-dlp (`--proxy` argument) als `youtube-transcript-api` (via `proxies` parameter). Configureerbaar via Admin > Instellingen op macOS (`AdminView.swift`) en Windows (`AdminPage.tsx`). (2) **oEmbed metadata fallback**: wanneer yt-dlp `--dump-json` faalt door bot-detectie, wordt metadata opgehaald via de oEmbed API (`https://noembed.com/embed?url=...`) — geeft titel en duur zonder authenticatie. (3) **Decoupled captions**: `fetch_captions_anonymous()` is losgekoppeld van de yt-dlp metadata dependency — gebruikt oEmbed als fallback, zodat captions nog steeds werken wanneer yt-dlp geblokkeerd is.
+
+**Consequences:**
+- YouTube transcriptie werkt weer vanaf AWS IPs wanneer een proxy geconfigureerd is die niet geblokkeerd wordt door YouTube.
+- Anonieme captions (DEC-044) zijn nu onafhankelijk van yt-dlp — als yt-dlp geblokkeerd is maar captions beschikbaar zijn, werkt de fast-path nog steeds via oEmbed metadata.
+- Proxy is optioneel — zonder configuratie gedraagt het systeem zich als voorheen (direct, zonder proxy).
+- Admin hoeft niet meer SSH-toegang tot de server te gebruiken om een proxy in te stellen — volledig via de UI.
+- oEmbed API biedt beperktere metadata dan yt-dlp (geen upload datum, geen exacte seconden) maar voldoende voor de transcriptie workflow (titel + geschatte duur).

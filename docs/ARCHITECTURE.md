@@ -1,6 +1,6 @@
 # TranscriptStudio — Architecture
 
-_Last updated: 2026-03-16_
+_Last updated: 2026-03-17_
 
 ---
 
@@ -92,7 +92,7 @@ Client                    Backend                    n8n / Claude
 
 **YouTube yt-dlp pipeline (fallback):** `pending → downloading → converting → transcribing → transcribed → processingWebhook → completed`. Used when no captions available from either anonymous or Google API sources.
 
-**YouTube infrastructure (yt-dlp fallback):** yt-dlp invoked via `python3 -m yt_dlp` (avoids conda/pip PATH conflicts). Requires three components on server: (1) browser cookies at `/app/cookies.txt` for YouTube auth (exported from Firefox, must be refreshed periodically), (2) Node.js 20+ at `/usr/local/bin/node` for EJS challenge solving, (3) `yt-dlp-ejs` package (installed via `pip install yt-dlp[default]`). Config: `YOUTUBE_COOKIES_FILE` env var (default `/app/cookies.txt`). See DEC-038.
+**YouTube infrastructure (yt-dlp fallback):** yt-dlp invoked via `python3 -m yt_dlp` (avoids conda/pip PATH conflicts). Requires three components on server: (1) browser cookies at `/app/cookies.txt` for YouTube auth (exported from Firefox, must be refreshed periodically), (2) Node.js 20+ at `/usr/local/bin/node` for EJS challenge solving, (3) `yt-dlp-ejs` package (installed via `pip install yt-dlp[default]`). Config: `YOUTUBE_COOKIES_FILE` env var (default `/app/cookies.txt`). Optional SOCKS5/HTTP proxy via `youtube_proxy` admin setting — applied to both yt-dlp (`--proxy`) and `youtube-transcript-api`. Metadata fallback: when yt-dlp `--dump-json` fails due to bot detection, oEmbed API (`noembed.com`) provides title and duration. See DEC-038, DEC-047.
 
 **Google OAuth (YouTube):** Admin configures `google_oauth_client_id_macos` via Admin > Instellingen. Client ID exposed via `/features` endpoint. macOS uses `GoogleAuthService` (actor, PKCE, `ASWebAuthenticationSession`) with scope `youtube.force-ssl`. Refresh token persisted in Keychain (key: `googleRefreshToken`). See DEC-041.
 

@@ -839,7 +839,8 @@ Feature flags worden opgeslagen in de `Settings` tabel met key `feature_{name}`.
   "google_oauth_client_id_windows": "xxxxxxxx.apps.googleusercontent.com",
   "youtube_max_duration_minutes": 120,
   "youtube_cookies_content": "# Netscape HTTP Cookie File\n...",
-  "youtube_extractor_args": "youtube:player_client=mediaconnect"
+  "youtube_extractor_args": "youtube:player_client=mediaconnect",
+  "youtube_proxy": "socks5://user:pass@host:port"
 }
 ```
 

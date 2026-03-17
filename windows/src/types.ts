@@ -263,6 +263,10 @@ export interface QueuedUpload {
   mode: RecordingMode;
   created_at: string;
   retry_count: number;
+  file_size_bytes?: number;
+  recording_duration_secs?: number;
+  file_name?: string;
+  last_error?: string;
 }
 
 // 2FA

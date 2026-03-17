@@ -281,10 +281,27 @@ export function RecordingPage() {
         }
         const msg = err instanceof Error ? err.message : "Upload mislukt";
         console.error("[Recording] Upload failed:", msg);
-        // Only enqueue for retry on network/server errors, not client errors (4xx)
-        const isClientError = msg.includes("HTTP 4");
+        // 401 is recoverable (auth token issue) — always enqueue for retry
+        // Only skip enqueue for true client errors (4xx excluding 401)
+        const isAuthError = msg.includes("HTTP 401");
+        const isClientError = msg.includes("HTTP 4") && !isAuthError;
         if (!isClientError) {
-          await enqueue({ file_path: filePath, profile_id: selectedProfileId, mode }).catch(() => {});
+          // Gather file metadata for queue banner display
+          let fileSizeBytes: number | undefined;
+          let fileName: string | undefined;
+          try {
+            const { stat } = await import("@tauri-apps/plugin-fs");
+            const info = await stat(filePath);
+            fileSizeBytes = info.size;
+          } catch { /* best-effort */ }
+          fileName = filePath.split(/[\\/]/).pop() || undefined;
+          await enqueue({
+            file_path: filePath,
+            profile_id: selectedProfileId,
+            mode,
+            file_size_bytes: fileSizeBytes,
+            file_name: fileName,
+          }).catch(() => {});
         }
         updateBackgroundTask(tempId, {
           status: "failed",

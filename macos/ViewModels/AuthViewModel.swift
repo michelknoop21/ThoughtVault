@@ -55,10 +55,22 @@ final class AuthViewModel {
     // MARK: - Auth State
 
     /// Restores the authenticated session from the Keychain on app launch.
+    /// Validates the token against the backend but never auto-logouts on failure.
     func checkAuthState() {
         if let token = KeychainService.shared.load(for: "authToken"), !token.isEmpty {
             isAuthenticated = true
             logger.info("Auth state restored from Keychain.")
+
+            // Validate token in background — never logout on failure
+            Task {
+                do {
+                    _ = try await APIService.shared.getProfiles()
+                    logger.info("Token validated against backend.")
+                } catch {
+                    logger.warning("Token validation failed: \(error.localizedDescription) — user stays authenticated.")
+                    // Show non-disruptive message if needed — the user stays logged in
+                }
+            }
         } else {
             isAuthenticated = false
         }
@@ -296,37 +308,18 @@ final class AuthViewModel {
     /// Listens for `.authDidInvalidate` notifications using Swift Concurrency's
     /// `NotificationCenter.notifications(named:)` API.
     ///
-    /// A 10-second grace period is applied after login to avoid a race condition
-    /// where in-flight requests started just before login resolve with a stale
-    /// token. Up to 3 failures within that window are tolerated before forcing
-    /// logout.
+    /// IMPORTANT: Never auto-logout. The user stays authenticated until they
+    /// explicitly log out. Auth errors are logged but do not trigger logout,
+    /// preventing recording loss during transient 401 responses.
     private func startAuthInvalidationObserver() {
         authObserverTask = Task { [weak self] in
-            var recentFailureCount = 0
-
             // IMPORTANT: Use notifications(named:) — NOT notifications(for:)
             // Swift's async NotificationCenter API requires the `named:` label.
             for await _ in NotificationCenter.default.notifications(named: .authDidInvalidate) {
                 guard let self else { return }
 
-                // Apply grace period: ignore failures within 10 seconds of login
-                if let loginTime = self.loginTimestamp,
-                   Date().timeIntervalSince(loginTime) < 10 {
-                    recentFailureCount += 1
-                    if recentFailureCount <= 3 {
-                        logger.debug("Auth invalidation within grace period (failure \(recentFailureCount)/3) — ignoring.")
-                        continue
-                    }
-                } else {
-                    // Reset counter outside of grace period
-                    recentFailureCount = 0
-                }
-
-                logger.warning("Auth token invalidated by server — forcing logout.")
-                self.logout()
-
-                // Reset after a forced logout so subsequent logins start fresh
-                recentFailureCount = 0
+                // Log the event but never logout — token stays in Keychain
+                logger.warning("Auth invalidation received — ignoring, user stays authenticated. Token will be retried automatically.")
             }
         }
     }

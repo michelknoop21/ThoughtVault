@@ -143,7 +143,8 @@ class APIService {
   private async request<T>(
     method: string,
     path: string,
-    body?: unknown
+    body?: unknown,
+    _retried?: boolean
   ): Promise<T> {
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
@@ -174,6 +175,13 @@ class APIService {
 
     if (import.meta.env.DEV) console.log(`[API] ${method} ${path} → ${response.status} (${response.body.length} bytes)`);
 
+    // Retry 401 once after 2s (transient server issues) — never auto-logout
+    if (response.status === 401 && !_retried) {
+      if (import.meta.env.DEV) console.log(`[API] 401 on ${path} — retrying in 2s`);
+      await new Promise((r) => setTimeout(r, 2000));
+      return this.request<T>(method, path, body, true);
+    }
+
     if (response.status >= 400) {
       // Try to extract server error message first
       let serverMessage: string | null = null;
@@ -186,7 +194,7 @@ class APIService {
       // Dutch error messages by status code
       let errorMessage: string;
       switch (response.status) {
-        case 401: errorMessage = "Sessie verlopen. Log opnieuw in."; break;
+        case 401: errorMessage = "Sessie probleem — wordt automatisch opgelost. (HTTP 401)"; break;
         case 403: errorMessage = "Geen toegang tot deze functie."; break;
         case 404: errorMessage = serverMessage || "Niet gevonden."; break;
         case 409: errorMessage = serverMessage || "Conflict: de gegevens zijn gewijzigd."; break;
@@ -200,10 +208,7 @@ class APIService {
           }
       }
 
-      // Auto-logout on auth errors
-      if (response.status === 401) {
-        useAuthStore.getState().logout();
-      }
+      // Never auto-logout — token stays in keyring, user stays authenticated
 
       throw new Error(errorMessage);
     }

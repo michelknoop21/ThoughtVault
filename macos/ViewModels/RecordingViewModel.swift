@@ -512,6 +512,11 @@ final class RecordingViewModel {
                 }
             } catch let error as APIError {
                 let reason = uploadFailureReason(from: error)
+                // On auth errors, enqueue to offline queue so the recording is not lost
+                if RecordingViewModel.isAuthError(error) {
+                    os_log("[RecordingVM] Auth error during upload — enqueuing to offline queue", log: .default, type: .info)
+                    self.offlineQueue.enqueue(.audio(url: url))
+                }
                 await MainActor.run {
                     self.lastFailedUploadURL = url
                     self.lastFailedUploadReason = reason

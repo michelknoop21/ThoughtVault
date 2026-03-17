@@ -29,14 +29,29 @@ import { api } from "./services/api";
 import { createSSEClient } from "./services/sse";
 import { initCrashReporter } from "./services/crashReporter";
 import { initMeetingNotifications } from "./services/meetingNotifications";
+import { useUploadQueueStore } from "./stores/uploadQueueStore";
+import { useToast } from "./components/ui/InfoBar";
 import type { Profile } from "./types";
 
 initCrashReporter();
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
+}
 
 function OfflineQueueBanner() {
   const [count, setCount] = useState(0);
   const [processing, setProcessing] = useState(false);
   const isProcessingRef = useRef(false);
+
+  // Upload queue progress state
+  const currentItem = useUploadQueueStore((s) => s.currentItem);
+  const progress = useUploadQueueStore((s) => s.progress);
+  const uploadSpeed = useUploadQueueStore((s) => s.uploadSpeed);
+  const queueItems = useUploadQueueStore((s) => s.items);
 
   useEffect(() => {
     let cancelled = false;
@@ -72,27 +87,59 @@ function OfflineQueueBanner() {
     return () => { cancelled = true; clearInterval(interval); };
   }, []);
 
-  if (count === 0) return null;
+  // Use queueItems count if available, otherwise fallback to poll count
+  const displayCount = queueItems.length > 0 ? queueItems.length : count;
+  if (displayCount === 0 && !currentItem) return null;
+
+  const fileName = currentItem?.file_name || currentItem?.file_path?.split(/[\\/]/).pop();
+  const fileSize = currentItem?.file_size_bytes;
+  const currentIndex = currentItem ? queueItems.findIndex((i) => i.id === currentItem.id) + 1 : 0;
 
   return (
     <div style={{
-      padding: "6px 14px",
+      padding: "8px 14px",
       background: "var(--fill-accent-default)",
       color: "#fff",
       fontSize: 12,
       fontWeight: 500,
-      display: "flex",
-      alignItems: "center",
-      gap: 8,
       flexShrink: 0,
     }}>
-      <span className="status-pulse" style={{ width: 8, height: 8, borderRadius: "50%", background: "#fff" }} />
-      <span style={{ flex: 1 }}>
-        {processing
-          ? `${count} opname${count !== 1 ? "s" : ""} worden verstuurd...`
-          : `${count} opname${count !== 1 ? "s" : ""} in wachtrij — wordt automatisch verstuurd`
-        }
-      </span>
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <span className="status-pulse" style={{ width: 8, height: 8, borderRadius: "50%", background: "#fff" }} />
+        <span style={{ flex: 1 }}>
+          {processing && currentItem ? (
+            <>
+              Uploaden: {fileName && <span>{fileName}</span>}
+              {fileSize ? ` (${formatBytes(fileSize)})` : ""}
+              {" — "}
+              {progress}%
+              {uploadSpeed > 0 && ` (${formatBytes(uploadSpeed)}/s)`}
+              {displayCount > 1 && ` [${currentIndex}/${displayCount}]`}
+            </>
+          ) : processing ? (
+            `${displayCount} opname${displayCount !== 1 ? "s" : ""} worden verstuurd...`
+          ) : (
+            `${displayCount} opname${displayCount !== 1 ? "s" : ""} in wachtrij — wordt automatisch verstuurd`
+          )}
+        </span>
+      </div>
+      {processing && currentItem && (
+        <div style={{
+          marginTop: 4,
+          height: 3,
+          borderRadius: 2,
+          background: "rgba(255,255,255,0.25)",
+          overflow: "hidden",
+        }}>
+          <div style={{
+            height: "100%",
+            width: `${progress}%`,
+            background: "#fff",
+            borderRadius: 2,
+            transition: "width 300ms ease",
+          }} />
+        </div>
+      )}
     </div>
   );
 }
@@ -173,21 +220,23 @@ function ProtectedRoutes() {
   const removeBackgroundTask = useRecordingStore((s) => s.removeBackgroundTask);
   const { addTranscript } = useTranscriptsStore();
 
-  // Load profiles and OAuth config from API on auth
+  // Validate token on app start — show toast if invalid, never auto-logout
+  const tokenValidatedRef = useRef(false);
   useEffect(() => {
-    if (isAuthenticated) {
-      api.getProfiles().then((profiles: Profile[]) => {
-        if (profiles.length > 0) {
-          setProfiles(profiles);
-        }
+    if (!isAuthenticated || tokenValidatedRef.current) return;
+    tokenValidatedRef.current = true;
+    api.getProfiles().then((profiles: Profile[]) => {
+      if (profiles.length > 0) setProfiles(profiles);
+    }).catch(() => {
+      // Token may be invalid — show non-disruptive message
+      useToast.getState().show("Sessie mogelijk verlopen. Log opnieuw in als er problemen zijn.", "warning");
+    });
+    api.getMySettings().then((settings) => {
+      updateSettings({
+        ms365_client_id: settings.ms365_client_id || undefined,
+        ms365_tenant_id: settings.ms365_tenant_id || undefined,
       });
-      api.getMySettings().then((settings) => {
-        updateSettings({
-          ms365_client_id: settings.ms365_client_id || undefined,
-          ms365_tenant_id: settings.ms365_tenant_id || undefined,
-        });
-      }).catch(() => { /* ignore - settings will remain as-is */ });
-    }
+    }).catch(() => { /* ignore - settings will remain as-is */ });
   }, [isAuthenticated, setProfiles, updateSettings]);
 
   // Recover active tasks on app start via /tasks/active endpoint

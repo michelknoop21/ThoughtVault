@@ -1210,6 +1210,7 @@ function SettingsTab() {
   const [youtubeMaxDurationMinutes, setYoutubeMaxDurationMinutes] = useState("120");
   const [youtubeExtractorArgs, setYoutubeExtractorArgs] = useState("youtube:player_client=web;fetch_pot=always");
   const [youtubeCookiesContent, setYoutubeCookiesContent] = useState("");
+  const [youtubeProxy, setYoutubeProxy] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showSaved, setShowSaved] = useState(false);
   const toast = useToast();
@@ -1228,6 +1229,7 @@ function SettingsTab() {
       setYoutubeMaxDurationMinutes(String(settings.youtube_max_duration_minutes ?? 120));
       setYoutubeExtractorArgs(settings.youtube_extractor_args ?? "youtube:player_client=web;fetch_pot=always");
       setYoutubeCookiesContent(settings.youtube_cookies_content ?? "");
+      setYoutubeProxy(settings.youtube_proxy ?? "");
     } catch (err) {
       console.error("Settings load failed:", err);
     }
@@ -1245,6 +1247,7 @@ function SettingsTab() {
         youtube_max_duration_minutes: youtubeMaxDurationMinutes ? Number(youtubeMaxDurationMinutes) : undefined,
         youtube_extractor_args: youtubeExtractorArgs || undefined,
         youtube_cookies_content: youtubeCookiesContent,
+        youtube_proxy: youtubeProxy || undefined,
       });
       setShowSaved(true);
       setTimeout(() => setShowSaved(false), 3000);
@@ -1365,6 +1368,21 @@ function SettingsTab() {
             placeholder="youtube:player_client=web;fetch_pot=always"
             value={youtubeExtractorArgs}
             onChange={(e) => setYoutubeExtractorArgs(e.target.value)}
+            style={{ fontFamily: "monospace" }}
+          />
+        </div>
+
+        <div className="flex-col gap-4">
+          <label className="form-label">Proxy (optioneel)</label>
+          <p className="text-caption" style={{ color: "var(--text-tertiary)", marginTop: -4 }}>
+            SOCKS5 of HTTP proxy om YouTube IP-blokkades te omzeilen. Voorbeeld: socks5://user:pass@host:port
+          </p>
+          <input
+            className="input"
+            type="text"
+            placeholder="socks5://host:port"
+            value={youtubeProxy}
+            onChange={(e) => setYoutubeProxy(e.target.value)}
             style={{ fontFamily: "monospace" }}
           />
         </div>

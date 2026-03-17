@@ -628,6 +628,7 @@ class APIService {
     youtube_max_duration_minutes?: number;
     youtube_cookies_content?: string;
     youtube_extractor_args?: string;
+    youtube_proxy?: string;
   }> {
     try {
       return await this.request<{
@@ -638,6 +639,7 @@ class APIService {
         youtube_max_duration_minutes?: number;
         youtube_cookies_content?: string;
         youtube_extractor_args?: string;
+        youtube_proxy?: string;
       }>(
         "GET",
         "/admin/settings"
@@ -655,6 +657,7 @@ class APIService {
     youtube_max_duration_minutes?: number;
     youtube_cookies_content?: string;
     youtube_extractor_args?: string;
+    youtube_proxy?: string;
   }): Promise<void> {
     await this.request<void>("POST", "/admin/settings", payload);
   }

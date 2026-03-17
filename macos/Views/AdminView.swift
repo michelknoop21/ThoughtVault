@@ -92,6 +92,7 @@ struct AdminView: View {
     @State private var youtubeMaxDurationMinutes = "120"
     @State private var youtubeCookiesContent = ""
     @State private var youtubeExtractorArgs = "youtube:player_client=web;fetch_pot=always"
+    @State private var youtubeProxy = ""
     @State private var isLoadingSettings = false
     @State private var showSettingsSaved = false
 
@@ -1452,6 +1453,19 @@ struct AdminView: View {
                     }
 
                     VStack(alignment: .leading, spacing: TS.Spacing.sm) {
+                        Text("Proxy (optioneel)")
+                            .font(TS.Font.footnoteSemibold)
+                            .foregroundStyle(Color.labelSecondary)
+                        Text("SOCKS5 of HTTP proxy om YouTube IP-blokkades te omzeilen. Voorbeeld: socks5://user:pass@host:port")
+                            .font(TS.Font.caption)
+                            .foregroundStyle(Color.labelTertiary)
+                        TextField("socks5://host:port", text: $youtubeProxy)
+                            .textFieldStyle(.roundedBorder)
+                            .font(TS.Font.body)
+                            .autocorrectionDisabled()
+                    }
+
+                    VStack(alignment: .leading, spacing: TS.Spacing.sm) {
                         Text("Cookies (optioneel)")
                             .font(TS.Font.footnoteSemibold)
                             .foregroundStyle(Color.labelSecondary)
@@ -1517,6 +1531,7 @@ struct AdminView: View {
             youtubeMaxDurationMinutes = settings.youtube_max_duration_minutes.map { String($0) } ?? "120"
             youtubeCookiesContent = settings.youtube_cookies_content ?? ""
             youtubeExtractorArgs = settings.youtube_extractor_args ?? "youtube:player_client=web;fetch_pot=always"
+            youtubeProxy = settings.youtube_proxy ?? ""
         } catch {
             DebugLogger.shared.error(error, context: "Instellingen laden", category: "Admin")
         }
@@ -1533,7 +1548,8 @@ struct AdminView: View {
                 googleOAuthClientIdWindows: googleOAuthClientIdWindows,
                 youtubeMaxDurationMinutes: Int(youtubeMaxDurationMinutes),
                 youtubeCookiesContent: youtubeCookiesContent,
-                youtubeExtractorArgs: youtubeExtractorArgs
+                youtubeExtractorArgs: youtubeExtractorArgs,
+                youtubeProxy: youtubeProxy
             )
             withAnimation(TS.Animation.quick) {
                 showSettingsSaved = true

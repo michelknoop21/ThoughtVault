@@ -779,6 +779,7 @@ actor APIService {
         let youtube_max_duration_minutes: Int?
         let youtube_cookies_content: String?
         let youtube_extractor_args: String?
+        let youtube_proxy: String?
     }
 
     func getAdminSettings() async throws -> AdminSettingsResponse {
@@ -793,7 +794,8 @@ actor APIService {
         googleOAuthClientIdWindows: String? = nil,
         youtubeMaxDurationMinutes: Int? = nil,
         youtubeCookiesContent: String? = nil,
-        youtubeExtractorArgs: String? = nil
+        youtubeExtractorArgs: String? = nil,
+        youtubeProxy: String? = nil
     ) async throws {
         var payload: [String: Any] = [:]
         if let clientId = ms365ClientId {
@@ -816,6 +818,9 @@ actor APIService {
         }
         if let ytExtArgs = youtubeExtractorArgs {
             payload["youtube_extractor_args"] = ytExtArgs
+        }
+        if let ytProxy = youtubeProxy {
+            payload["youtube_proxy"] = ytProxy
         }
         let body = try JSONSerialization.data(withJSONObject: payload)
         let req = try request(path: "/admin/settings", method: "POST", body: body)

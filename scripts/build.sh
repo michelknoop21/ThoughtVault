@@ -104,6 +104,11 @@ tell application "Finder"
 end tell
 APPLESCRIPT
 
+    # Hide internal folders so they don't show in Finder
+    SetFile -a V "$MOUNT_DIR/.background" 2>/dev/null || true
+    rm -rf "$MOUNT_DIR/.fseventsd" 2>/dev/null || true
+    rm -rf "$MOUNT_DIR/.Trashes" 2>/dev/null || true
+
     # Unmount
     sync
     hdiutil detach "$MOUNT_DIR" -quiet

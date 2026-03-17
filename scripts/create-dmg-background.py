@@ -86,19 +86,15 @@ ctx = cg.CGBitmapContextCreate(
 )
 
 # --- Background ---
-# Dark blue gradient approximation (solid dark blue-gray)
-cg.CGContextSetRGBFillColor(ctx, 0.094, 0.094, 0.157, 1.0)  # #18182a
+# Clean light background for readable icon labels
+cg.CGContextSetRGBFillColor(ctx, 0.949, 0.949, 0.969, 1.0)  # #F2F2F7 (system grouped bg)
 cg.CGContextFillRect(ctx, CGRect(CGPoint(0, 0), CGSize(WIDTH, HEIGHT)))
-
-# Slightly lighter bottom half for subtle gradient feel
-cg.CGContextSetRGBFillColor(ctx, 0.086, 0.118, 0.212, 0.4)  # #16213e overlay
-cg.CGContextFillRect(ctx, CGRect(CGPoint(0, 0), CGSize(WIDTH, HEIGHT // 2)))
 
 # --- Dashed arrow line ---
 # App icon at x≈165, Applications at x≈495, both at y≈200 (from top)
 arrow_y = CGFloat(HEIGHT - 200)  # CG y-axis is flipped
 
-cg.CGContextSetRGBStrokeColor(ctx, 1.0, 1.0, 1.0, 0.30)
+cg.CGContextSetRGBStrokeColor(ctx, 0.0, 0.0, 0.0, 0.20)
 cg.CGContextSetLineWidth(ctx, CGFloat(2.5))
 cg.CGContextSetLineCap(ctx, kCGLineCapRound)
 
@@ -112,7 +108,7 @@ cg.CGContextStrokePath(ctx)
 
 # --- Arrow head (solid) ---
 cg.CGContextSetLineDash(ctx, CGFloat(0), None, 0)
-cg.CGContextSetRGBStrokeColor(ctx, 1.0, 1.0, 1.0, 0.45)
+cg.CGContextSetRGBStrokeColor(ctx, 0.0, 0.0, 0.0, 0.30)
 cg.CGContextSetLineWidth(ctx, CGFloat(2.5))
 cg.CGContextSetLineJoin(ctx, kCGLineJoinRound)
 cg.CGContextSetLineCap(ctx, kCGLineCapRound)
@@ -148,7 +144,7 @@ font = ct.CTFontCreateWithName(font_name, CGFloat(13.0), None)
 # Create color
 cg.CGColorCreate.restype = ctypes.c_void_p
 cg.CGColorCreate.argtypes = [ctypes.c_void_p, ctypes.POINTER(CGFloat)]
-color_components = (CGFloat * 4)(1.0, 1.0, 1.0, 0.45)
+color_components = (CGFloat * 4)(0.0, 0.0, 0.0, 0.40)
 text_color = cg.CGColorCreate(color_space, color_components)
 
 # Attribute keys

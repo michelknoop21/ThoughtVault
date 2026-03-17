@@ -847,6 +847,8 @@ actor APIService {
         startDate: String? = nil,
         endDate: String? = nil
     ) async throws -> [AdminActivity] {
+        struct ActivitiesWrapper: Decodable { let activities: [AdminActivity] }
+        struct ItemsWrapper: Decodable { let items: [AdminActivity] }
         var components = URLComponents()
         components.path = "/admin/activity"
         var queryItems = [URLQueryItem(name: "limit", value: "\(limit)")]
@@ -858,7 +860,18 @@ actor APIService {
         components.queryItems = queryItems
         let path = components.string ?? "/admin/activity"
         let req = try request(path: path)
-        return try await perform(req)
+        let (data, response) = try await session.data(for: req)
+        if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode >= 400 {
+            throw APIError.httpError(httpResponse.statusCode, String(data: data, encoding: .utf8))
+        }
+        let decoder = JSONDecoder()
+        if let wrapper = try? decoder.decode(ActivitiesWrapper.self, from: data) {
+            return wrapper.activities
+        }
+        if let wrapper = try? decoder.decode(ItemsWrapper.self, from: data) {
+            return wrapper.items
+        }
+        return (try? decoder.decode([AdminActivity].self, from: data)) ?? []
     }
 
     // MARK: - Task Management

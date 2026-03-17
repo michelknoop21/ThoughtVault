@@ -5,6 +5,26 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2026-03-16] — Web login page: proper dark mode support
+
+### Fixed
+- **Login page ignored system dark mode** (`static/css/main.css`, `static/css/registration.css`, `templates/auth/login.html`): The login page forced a light theme in all modes — `[data-theme="dark"] .login-body` applied the same light gradient as light mode and overrode CSS custom properties (`--text-primary: #333339`, `--bg-card: white`) to light values. Meanwhile, global dark theme input styles (`[data-theme="dark"] input[type="email"]`) had higher CSS specificity (0,2,0) than the login-specific `.login-input` class (0,1,0), applying dark backgrounds (`var(--bg-tertiary)` = `#222439`) to input fields while text color remained dark (`#333339`) — making input text unreadable.
+- **Root cause**: Specificity conflict between forced-light login overrides and global dark theme form styles. The login page's approach of overriding CSS custom properties on `.login-body` didn't override the global `[data-theme="dark"] input[type="email/password"]` selectors that target elements directly.
+
+### Changed
+- **Login body**: `[data-theme="dark"] .login-body` now applies dark gradient (`#0B0C15` → `#191C28`) instead of forced-light. Removed the CSS variable overrides that forced `--text-primary`, `--text-secondary`, `--border-primary`, `--bg-card` to light values.
+- **Login card**: Added `[data-theme="dark"] .login-card` with dark translucent background (`rgba(25,28,40,0.85)`), dark border, stronger shadow.
+- **Login inputs**: Added `[data-theme="dark"] .login-body .login-input` / `.auth-input` / `input[type="email/password"]` with specificity (0,3,0) to override global dark input styles. Dark background, light text, magenta focus ring.
+- **Text elements**: `.login-card-title`, `.login-card-subtitle`, `.password-toggle`, `.login-forgot-link`, `.login-footer` switched from hardcoded hex colors to `var(--text-primary/secondary/tertiary)`.
+- **Registration CSS**: Added dark mode rules for `.strength-text`, `.strength-bar`, `.manual-code p`, `.step-header h3`, `.manual-code-fallback summary`, `.password-match.success`. New `.totp-secret-code` class replaces inline style on TOTP code display element.
+- **Login HTML**: Removed hardcoded `color: #666` on summary, hardcoded `background: #f8f9fa` on code element. Added `color: var(--text-primary)` on success screen headings. Fixed `var(--primary-color)` → `var(--primary)` on resend code link.
+
+### Notes
+- The login page now fully follows system dark/light mode preference (via `theme.js` `prefers-color-scheme` detection).
+- Files deployed: `static/css/main.css`, `static/css/registration.css`, `templates/auth/login.html`.
+
+---
+
 ## [2026-03-16] — Backend CSS bugfix: dark mode select chevron tiling
 
 ### Fixed

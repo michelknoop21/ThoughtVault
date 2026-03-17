@@ -446,6 +446,7 @@ static/
 | SSE | Native `EventSource` for real-time task status updates |
 | Admin tabs | `data-tab` attribute toggling `display: none/block` on content divs |
 | File upload | `FormData` + `fetch()` with progress tracking |
+| Theme | `theme.js` IIFE sets `data-theme="dark"` on `<html>` based on `prefers-color-scheme` or `localStorage` override. CSS uses `[data-theme="dark"]` selectors. Login page has dedicated dark mode styles (not forced-light). |
 
 ---
 

@@ -42,11 +42,13 @@ struct HomeView: View {
             backgroundBlobs
             ScrollView {
                 VStack(spacing: TS.Spacing.xl) {
+                    #if os(macOS)
                     if checkForUpdates,
                        let version = updateCheck.availableVersion,
                        dismissedUpdateVersion != version {
                         updateBanner(version: version)
                     }
+                    #endif
 
                     headerSection
 
@@ -72,9 +74,11 @@ struct HomeView: View {
         .navigationBarTitleDisplayMode(.inline)
         #endif
         .task { await loadRecentTranscripts() }
+        #if os(macOS)
         .task {
             if checkForUpdates { await updateCheck.checkForUpdate() }
         }
+        #endif
     }
 
     // MARK: - Subviews

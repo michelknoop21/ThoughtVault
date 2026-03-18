@@ -78,7 +78,7 @@ Requires Azure AD App Registration with:
 
 ## Version
 
-Current version: **1.0.84** (tracked in `VERSION` file, auto-bumped on commits to `main`).
+Current version: **1.0.88** (tracked in `VERSION` file, auto-bumped on commits to `main`).
 
 Repository: [gitlab.prezent.nl/michelk/transcript-studio-native](https://gitlab.prezent.nl/michelk/transcript-studio-native)
 
@@ -114,7 +114,7 @@ See [RELEASE.md](RELEASE.md) for the complete guide.
 | Windows `npm install` fails | Must run on Windows, not macOS — native WASAPI bindings require Windows |
 | Version not bumping on commit | Run `git config core.hooksPath .githooks` to activate the post-commit hook |
 | OAuth callback not working (Windows) | Verify `transcript-studio://auth/callback` is registered in Azure AD as "Mobile and desktop" redirect URI (NOT SPA type) |
-| Upload 422 error (Windows) | Upload uses browser `FormData` + `fetch()` — ensure CORS allows Tauri origins (`https://tauri.localhost`, `http://localhost:1420`) |
+| Upload fails (Windows) | Upload goes through Rust `proxy_upload` command (not browser fetch) — check server connectivity and 120 MB file size limit |
 | macOS sidebar appears stuck/collapsed | Press `Shift+Cmd+S` to toggle sidebar expand/collapse, or click the expand arrow at the bottom of the icon column |
 
 ---

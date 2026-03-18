@@ -106,9 +106,10 @@ De `ADMIN_KEY` is een environment variable op de server.
 
 ### Token levensduur
 
-- Sliding window van **7 dagen** inactiviteit
+- Sliding window van **365 dagen** inactiviteit (zie DEC-048)
 - Elke succesvolle request verlengt de expiry
 - Bij logout wordt het token uit de database verwijderd
+- Clients loggen **nooit** automatisch uit bij 401 errors — token blijft in keyring/Keychain
 
 ### 2FA flow
 
@@ -249,7 +250,7 @@ Upload audiobestand voor transcriptie. **Rate limit: 10/uur.**
 ```
 Content-Type: multipart/form-data
 Velden:
-  - file: audio/wav bestand (max 200 MB)
+  - file: audio/wav bestand (max 120 MB)
   - profile_id: "default" of custom profile ID
   - mode: "microphone" | "combined" (optioneel)
 ```
@@ -346,7 +347,7 @@ Health check (geen auth vereist).
 
 ```json
 // Response
-{ "model": "...", "device": "cuda", "max_upload_size": 200 }
+{ "model": "...", "device": "cuda", "max_upload_size": 120 }
 ```
 
 ---
@@ -956,12 +957,48 @@ Centraal object, geretourneerd door `/transcribe`, `/transcribe-text`, `/task/{i
 
 ## Foutafhandeling
 
-### Response formaat
+### Gestructureerd response formaat (DEC-049)
 
-Bij fouten retourneert de backend JSON met een van deze velden:
+Sinds 2026-03-18 retourneert de backend gestructureerde error responses via het gecentraliseerde error module (`app/errors.py`):
+
+```json
+{
+  "error_code": "file_too_large",
+  "message": "Het bestand is te groot. Maximaal 120 MB toegestaan.",
+  "detail": "File size 156 MB exceeds 120 MB limit"
+}
+```
+
+| Veld | Type | Beschrijving |
+|------|------|-------------|
+| `error_code` | string | Machine-readable foutcode (stabiel, gebruik dit voor branching) |
+| `message` | string | User-facing bericht in het Nederlands (toon direct aan gebruiker) |
+| `detail` | string | Technisch detail in het Engels (voor logging/debugging) |
+
+### Error codes
+
+| Error Code | HTTP Status | Nederlandse message |
+|-----------|-------------|-------------------|
+| `auth_required` | 401 | Inloggen is vereist. |
+| `read_only_key` | 403 | Deze API key heeft alleen leesrechten. |
+| `forbidden` | 403 | Geen toegang tot deze resource. |
+| `rate_limit_exceeded` | 429 | Te veel verzoeken. Probeer het later opnieuw. |
+| `file_too_large` | 413 | Het bestand is te groot. Maximaal 120 MB toegestaan. |
+| `queue_unavailable` | 503 | De verwerkingswachtrij is niet beschikbaar. Probeer het later opnieuw. |
+| `server_error` | 500 | Er is een serverfout opgetreden. Probeer het later opnieuw. |
+| `not_found` | 404 | Resource niet gevonden. |
+| `access_denied` | 403 | Geen toegang tot deze resource. |
+| `validation_error` | 400 | Ongeldige invoer. |
+| `audio_format_unsupported` | 400 | Dit audioformaat wordt niet ondersteund. |
+
+### Legacy response formaat
+
+Oudere endpoints of FastAPI-interne fouten kunnen nog steeds een van deze velden retourneren:
 - `"detail"` (FastAPI/Pydantic validatiefouten)
-- `"message"` (applicatiefouten)
+- `"message"` (applicatiefouten zonder error_code)
 - `"error"` (generieke fouten)
+
+Clients moeten eerst `error_code` checken, dan fallback naar `message`/`detail`/`error`.
 
 ### HTTP statuscodes
 
@@ -969,19 +1006,27 @@ Bij fouten retourneert de backend JSON met een van deze velden:
 |------|----------|
 | 200 | Succes |
 | 201 | Aangemaakt |
-| 400 | Ongeldige request |
-| 401 | Niet geauthenticeerd / sessie verlopen |
-| 403 | Geen toegang (verkeerde rol) |
-| 404 | Resource niet gevonden |
+| 400 | Ongeldige request (`validation_error`, `audio_format_unsupported`) |
+| 401 | Niet geauthenticeerd / sessie verlopen (`auth_required`) |
+| 403 | Geen toegang (`forbidden`, `read_only_key`, `access_denied`) |
+| 404 | Resource niet gevonden (`not_found`) |
+| 413 | Bestand te groot (`file_too_large`) |
 | 422 | Validatiefout (check veldnamen!) |
-| 429 | Rate limit bereikt |
-| 500 | Serverfout |
+| 429 | Rate limit bereikt (`rate_limit_exceeded`) |
+| 500 | Serverfout (`server_error`) |
+| 503 | Service niet beschikbaar (`queue_unavailable`) |
+
+### Client-side error handling
+
+**macOS:** `APIService.extractErrorInfo()` parseert `error_code` + `message` uit JSON response. `APIError.httpError(statusCode, message, errorCode)` bevat alle drie. `UploadFailureReason` mapped naar actionable Nederlandse beschrijvingen.
+
+**Windows:** `api.ts` `request()` en upload methods parsen `error_code` en gebruiken `message` direct. Fallback naar status-code-based Nederlandse berichten. `uploadQueueStore` tracked permanently failed items (>50 retries).
 
 ### Sessiebeheer bij 401
 
-**macOS:** `APIError.sessionExpired` → post `authDidInvalidate` notification → 10 seconden grace period (max 3 fouten) → force logout.
+**macOS:** `APIError.sessionExpired` → log warning, token stays in Keychain. Upload failures enqueued to `OfflineQueue`. See DEC-048.
 
-**Windows:** Token wordt gewist uit Zustand store → redirect naar login pagina.
+**Windows:** Retry request once after 2s, then throw error. Token stays in keyring. Never auto-logout. See DEC-048.
 
 ---
 

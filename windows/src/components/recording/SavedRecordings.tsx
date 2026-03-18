@@ -99,8 +99,10 @@ export function SavedRecordings({
         settings.default_recording_mode
       );
       toast.show("Opname opnieuw ingediend", "success");
-    } catch {
-      toast.show("Opnieuw verwerken mislukt", "error");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Onbekende fout";
+      console.error("[SavedRecordings] Reprocess failed:", msg, err);
+      toast.show(`Opnieuw verwerken mislukt: ${msg}`, "error");
     }
   }
 

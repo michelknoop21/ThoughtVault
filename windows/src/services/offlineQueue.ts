@@ -61,8 +61,10 @@ export async function processQueue(): Promise<void> {
   queueStore.setItems(queue);
 
   for (const item of queue) {
-    // Remove if max retries exceeded
+    // Remove if max retries exceeded — notify user
     if (item.retry_count >= MAX_RETRIES) {
+      const fileName = item.file_name || item.file_path.split(/[\\/]/).pop() || "onbekend bestand";
+      queueStore.addPermanentlyFailed({ id: item.id, fileName });
       await removeFromQueue(item.id);
       continue;
     }

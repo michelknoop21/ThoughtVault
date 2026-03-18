@@ -21,7 +21,11 @@ type LoginView = "login" | "2fa" | "reset-request" | "reset-verify" | "reset-com
 
 export function LoginPage() {
   const navigate = useNavigate();
-  const { setToken, setUser, isAuthenticated } = useAuthStore();
+  const {
+    setToken, setUser, isAuthenticated,
+    rememberMe, setRememberMe, saveCredentials,
+    pendingTwoFactor, clearPendingTwoFactor,
+  } = useAuthStore();
 
   // Redirect to home if already authenticated (e.g. keyring loaded late)
   useEffect(() => {
@@ -37,6 +41,18 @@ export function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState<LoginView>("login");
+
+  // If auto-login detected 2FA, jump straight to the 2FA view
+  useEffect(() => {
+    if (pendingTwoFactor) {
+      setEmail(pendingTwoFactor.email);
+      setTempToken(pendingTwoFactor.tempToken);
+      setView("2fa");
+      clearPendingTwoFactor();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const [resetEmail, setResetEmail] = useState("");
   const [resetCode, setResetCode] = useState("");
   const [resetToken, setResetToken] = useState("");
@@ -62,6 +78,7 @@ export function LoginPage() {
           is_active: true,
           created_at: new Date().toISOString(),
         };
+        if (rememberMe) await saveCredentials(email, password);
         setToken(response.token);
         setUser(userWithRole);
         navigate("/", { replace: true });
@@ -88,6 +105,7 @@ export function LoginPage() {
         is_active: true,
         created_at: new Date().toISOString(),
       };
+      if (rememberMe) await saveCredentials(email, password);
       setToken(response.token);
       setUser(userWithRole);
       navigate("/", { replace: true });
@@ -159,6 +177,7 @@ export function LoginPage() {
     setTwoFactorCode("");
     setResetEmail("");
     setResetCode("");
+    clearPendingTwoFactor();
   }
 
   return (
@@ -218,6 +237,15 @@ export function LoginPage() {
                     className="input"
                   />
                 </FormField>
+
+                <label className="form-checkbox">
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                  />
+                  Onthoud mij
+                </label>
 
                 <button
                   type="submit"

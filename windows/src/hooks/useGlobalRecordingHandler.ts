@@ -95,7 +95,7 @@ async function handleUpload(
         },
         (err) => {
           console.error("[SSE] Error:", err);
-          updateBackgroundTask(task_id, { status: "failed", error_message: "Verbinding verloren" });
+          updateBackgroundTask(task_id, { status: "failed", error_message: "Verbinding met de server verloren. De verwerking gaat door op de achtergrond \u2014 bekijk de status in Opnames." });
         },
         async () => {
           const transcripts = await api.getTranscripts();

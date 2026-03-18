@@ -53,7 +53,7 @@ class FloatingWidgetController {
         panel.hasShadow = false
         panel.level = .floating
         panel.collectionBehavior = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary]
-        panel.isMovableByWindowBackground = true
+        panel.isMovableByWindowBackground = false
 
         updatePosition(for: panel)
 

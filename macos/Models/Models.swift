@@ -577,12 +577,13 @@ enum UploadFailureReason: Sendable {
     case serverError(Int)   // HTTP status code
     case fileTooLarge
     case validationError(String)
+    case networkError
     case unknown
 
     /// Whether the user can meaningfully retry this failure.
     var isRetryable: Bool {
         switch self {
-        case .fileTooLarge: return false
+        case .fileTooLarge, .validationError: return false
         default: return true
         }
     }
@@ -594,6 +595,7 @@ enum UploadFailureReason: Sendable {
         case .serverError:        return "Serverfout"
         case .fileTooLarge:       return "Bestand te groot"
         case .validationError:    return "Validatiefout"
+        case .networkError:       return "Netwerkfout"
         case .unknown:            return "Onbekende fout"
         }
     }
@@ -604,13 +606,15 @@ enum UploadFailureReason: Sendable {
         case .authExpired:
             return "Je sessie is verlopen. Log opnieuw in om te uploaden."
         case .serverError(let code):
-            return "De server heeft een fout geretourneerd (HTTP \(code)). Probeer het later opnieuw."
+            return "De server heeft een fout gemeld (HTTP \(code)). Controleer je internetverbinding en probeer het over een paar minuten opnieuw."
         case .fileTooLarge:
-            return "Het audiobestand is te groot om te uploaden. Maak kortere opnames."
+            return "Het audiobestand is te groot (maximaal 120 MB). Maak kortere opnames."
         case .validationError(let message):
-            return "Validatiefout: \(message)"
+            return message
+        case .networkError:
+            return "Kan geen verbinding maken met de server. Controleer je internetverbinding. De opname is opgeslagen en wordt automatisch opnieuw geprobeerd."
         case .unknown:
-            return "Er is een onbekende fout opgetreden. Probeer het opnieuw."
+            return "Er is een onverwachte fout opgetreden. Controleer je internetverbinding en probeer het opnieuw. Als het probleem aanhoudt, herstart de app."
         }
     }
 
@@ -621,6 +625,7 @@ enum UploadFailureReason: Sendable {
         case .serverError:     return "exclamationmark.triangle.fill"
         case .fileTooLarge:    return "doc.fill.badge.plus"
         case .validationError: return "xmark.circle.fill"
+        case .networkError:    return "wifi.exclamationmark"
         case .unknown:         return "questionmark.circle.fill"
         }
     }

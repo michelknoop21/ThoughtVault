@@ -1494,6 +1494,21 @@
   color: var(--text-secondary);
 }
 
+.form-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  cursor: pointer;
+  font-size: var(--font-footnote);
+  color: var(--text-secondary);
+  user-select: none;
+}
+
+.form-checkbox input[type="checkbox"] {
+  cursor: pointer;
+  accent-color: var(--brand-primary);
+}
+
 /* ============================================================
    Avatars
    ============================================================ */

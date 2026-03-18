@@ -22,6 +22,10 @@ struct RecordingWidgetView: View {
 
     var body: some View {
         HStack(spacing: 10) {
+            #if os(macOS)
+            dragHandle
+            #endif
+
             // Status indicator + state label
             statusBadge
 
@@ -84,6 +88,27 @@ struct RecordingWidgetView: View {
         .animation(TS.Animation.hover, value: isHovered)
         .onHover { isHovered = $0 }
     }
+
+    // MARK: - Drag Handle
+
+    #if os(macOS)
+    private var dragHandle: some View {
+        VStack(spacing: 3) {
+            ForEach(0..<3, id: \.self) { _ in
+                HStack(spacing: 3) {
+                    ForEach(0..<2, id: \.self) { _ in
+                        Circle()
+                            .frame(width: 2.5, height: 2.5)
+                    }
+                }
+            }
+        }
+        .foregroundStyle(Color.labelTertiary.opacity(isHovered ? 0.7 : 0.4))
+        .frame(width: 20, height: 32)
+        .contentShape(Rectangle())
+        .overlay { WindowDragArea() }
+    }
+    #endif
 
     // MARK: - Pill Background
 
@@ -303,6 +328,36 @@ struct RecordingWidgetView: View {
         }
     }
 }
+
+// MARK: - Window Drag Support (macOS)
+
+#if os(macOS)
+private struct WindowDragArea: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSView {
+        let view = WindowDragNSView()
+        view.wantsLayer = true
+        view.layer?.backgroundColor = .clear
+        return view
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {}
+}
+
+private class WindowDragNSView: NSView {
+    override var mouseDownCanMoveWindow: Bool { true }
+    override var isOpaque: Bool { false }
+
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+
+    override func mouseDown(with event: NSEvent) {
+        window?.performDrag(with: event)
+    }
+
+    override func resetCursorRects() {
+        addCursorRect(bounds, cursor: .openHand)
+    }
+}
+#endif
 
 // MARK: - Preview
 

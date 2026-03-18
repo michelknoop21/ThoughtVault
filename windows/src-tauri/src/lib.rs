@@ -71,6 +71,7 @@ pub fn run() {
             commands::filesystem::concatenate_wav_files,
             // HTTP
             commands::http::proxy_request,
+            commands::http::proxy_upload,
             commands::http::http_sse_stream,
             // System
             commands::system::get_network_status,

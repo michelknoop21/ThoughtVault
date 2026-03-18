@@ -24,7 +24,7 @@ enum URLValidationError: LocalizedError {
 
 enum APIError: LocalizedError {
     case invalidResponse
-    case httpError(Int, String?)
+    case httpError(Int, String?, String?)  // statusCode, message, errorCode
     case decodingError(Error)
     case fileTooLarge
     case sessionExpired
@@ -34,17 +34,23 @@ enum APIError: LocalizedError {
         switch self {
         case .invalidResponse:
             return "Ongeldige serverrespons ontvangen."
-        case .httpError(let code, let message):
+        case .httpError(let code, let message, _):
             return message ?? "Serverfout (HTTP \(code))."
         case .decodingError(let error):
             return "Fout bij verwerken van serverrespons: \(error.localizedDescription)"
         case .fileTooLarge:
-            return "Bestand is groter dan de maximale grootte van 200 MB."
+            return "Het bestand is te groot (maximaal 120 MB). Maak kortere opnames of comprimeer het bestand."
         case .sessionExpired:
-            return "Sessie verlopen, log opnieuw in."
-        case .networkError(let error):
-            return "Netwerkfout: \(error.localizedDescription)"
+            return "Je sessie is verlopen. Log opnieuw in om door te gaan."
+        case .networkError:
+            return "Kan geen verbinding maken met de server. Controleer je internetverbinding."
         }
+    }
+
+    /// Machine-readable error code from the backend, if available.
+    var errorCode: String? {
+        if case .httpError(_, _, let code) = self { return code }
+        return nil
     }
 }
 
@@ -241,8 +247,12 @@ actor APIService {
         }
 
         guard (200..<300).contains(http.statusCode) else {
-            let detail = extractErrorMessage(from: data)
-            // Map HTTP status codes to user-friendly Dutch messages
+            let (detail, errorCode) = extractErrorInfo(from: data)
+            // If backend provides error_code + message, use it directly
+            if errorCode != nil, let detail {
+                throw APIError.httpError(http.statusCode, detail, errorCode)
+            }
+            // Fallback: map HTTP status codes to user-friendly Dutch messages
             let message: String
             switch http.statusCode {
             case 403:
@@ -256,7 +266,7 @@ actor APIService {
             default:
                 message = detail ?? "Onverwachte fout (HTTP \(http.statusCode))."
             }
-            throw APIError.httpError(http.statusCode, message)
+            throw APIError.httpError(http.statusCode, message, nil)
         }
 
         // Handle empty responses
@@ -272,13 +282,26 @@ actor APIService {
         }
     }
 
-    private func extractErrorMessage(from data: Data) -> String? {
-        if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-            return json["detail"] as? String
-                ?? json["message"] as? String
-                ?? json["error"] as? String
+    private func extractErrorInfo(from data: Data) -> (message: String?, errorCode: String?) {
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            return (String(data: data, encoding: .utf8), nil)
         }
-        return String(data: data, encoding: .utf8)
+        // Structured error format: error_code + message from backend
+        let errorCode = json["error_code"] as? String
+        if errorCode != nil, let message = json["message"] as? String {
+            return (message, errorCode)
+        }
+        // Fallback: try legacy formats (detail may be a string or dict)
+        let message: String?
+        if let detail = json["detail"] as? String {
+            message = detail
+        } else if let detailDict = json["detail"] as? [String: Any], let msg = detailDict["message"] as? String {
+            // APIError wraps detail as {"error_code": ..., "message": ..., "detail": ...}
+            return (msg, detailDict["error_code"] as? String)
+        } else {
+            message = json["message"] as? String ?? json["error"] as? String
+        }
+        return (message, errorCode)
     }
 
     // MARK: - Authentication
@@ -357,10 +380,10 @@ actor APIService {
         profileId: String,
         onProgress: @escaping @Sendable (Double) -> Void
     ) async throws -> TranscriptTask {
-        // Enforce 200 MB limit
+        // Enforce 120 MB limit (aligned with backend MAX_UPLOAD_SIZE)
         let attributes = try FileManager.default.attributesOfItem(atPath: fileURL.path)
         let fileSize = attributes[.size] as? Int ?? 0
-        let maxBytes = 200 * 1024 * 1024
+        let maxBytes = 120 * 1024 * 1024
         if fileSize > maxBytes {
             throw APIError.fileTooLarge
         }
@@ -757,7 +780,7 @@ actor APIService {
         let req = try request(path: path)
         let (data, response) = try await session.data(for: req)
         if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode >= 400 {
-            throw APIError.httpError(httpResponse.statusCode, String(data: data, encoding: .utf8))
+            throw APIError.httpError(httpResponse.statusCode, String(data: data, encoding: .utf8), nil)
         }
         let decoder = JSONDecoder()
         if let wrapper = try? decoder.decode(ErrorsWrapper.self, from: data) {
@@ -862,7 +885,7 @@ actor APIService {
         let req = try request(path: path)
         let (data, response) = try await session.data(for: req)
         if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode >= 400 {
-            throw APIError.httpError(httpResponse.statusCode, String(data: data, encoding: .utf8))
+            throw APIError.httpError(httpResponse.statusCode, String(data: data, encoding: .utf8), nil)
         }
         let decoder = JSONDecoder()
         if let wrapper = try? decoder.decode(ActivitiesWrapper.self, from: data) {

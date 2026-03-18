@@ -1,52 +1,213 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { invoke } from "@tauri-apps/api/core";
+import { api } from "../services/api";
 import type { User } from "../types";
 
 const CREDENTIAL_KEY = "auth_token";
+const SAVED_EMAIL_KEY = "saved_email";
+const SAVED_PASSWORD_KEY = "saved_password";
+const REMEMBER_ME_KEY = "remember_me";
 
 interface AuthState {
   token: string | null;
   user: User | null;
   isAuthenticated: boolean;
   isInitializing: boolean;
+  rememberMe: boolean;
+  pendingTwoFactor: { tempToken: string; email: string } | null;
   setToken: (token: string) => void;
   setUser: (user: User) => void;
   updateUserName: (name: string) => void;
+  setRememberMe: (value: boolean) => void;
+  saveCredentials: (email: string, password: string) => Promise<void>;
+  clearSavedCredentials: () => Promise<void>;
+  clearPendingTwoFactor: () => void;
   logout: () => void;
   loadTokenFromKeyring: () => Promise<void>;
 }
 
+/** Check if an error is likely a network/transient issue (not an auth failure). */
+function isNetworkError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  const lower = msg.toLowerCase();
+  return (
+    lower.includes("network") ||
+    lower.includes("fetch") ||
+    lower.includes("timeout") ||
+    lower.includes("dns") ||
+    lower.includes("econnrefused") ||
+    lower.includes("enotfound") ||
+    lower.includes("connection") ||
+    lower.includes("offline") ||
+    lower.includes("serverfout")
+  );
+}
+
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       token: null,
       user: null,
       isAuthenticated: false,
       isInitializing: true,
+      rememberMe: false,
+      pendingTwoFactor: null,
+
       setToken: (token) => {
-        // Store token in OS keyring, not localStorage
         invoke("store_credential", { key: CREDENTIAL_KEY, value: token }).catch((e) =>
           console.error("Failed to store token in keyring:", e)
         );
         set({ token, isAuthenticated: true });
       },
+
       setUser: (user) => set({ user }),
+
       updateUserName: (name) => set((state) => ({
         user: state.user ? { ...state.user, name } : null,
       })),
+
+      setRememberMe: (value) => set({ rememberMe: value }),
+
+      saveCredentials: async (email, password) => {
+        try {
+          await Promise.all([
+            invoke("store_credential", { key: SAVED_EMAIL_KEY, value: email }),
+            invoke("store_credential", { key: SAVED_PASSWORD_KEY, value: password }),
+            invoke("store_credential", { key: REMEMBER_ME_KEY, value: "true" }),
+          ]);
+        } catch (e) {
+          console.error("Failed to save credentials:", e);
+        }
+      },
+
+      clearSavedCredentials: async () => {
+        try {
+          await Promise.all([
+            invoke("delete_credential", { key: SAVED_EMAIL_KEY }).catch(() => {}),
+            invoke("delete_credential", { key: SAVED_PASSWORD_KEY }).catch(() => {}),
+            invoke("delete_credential", { key: REMEMBER_ME_KEY }).catch(() => {}),
+          ]);
+        } catch {
+          // ignore cleanup errors
+        }
+      },
+
+      clearPendingTwoFactor: () => set({ pendingTwoFactor: null }),
+
       logout: () => {
         invoke("delete_credential", { key: CREDENTIAL_KEY }).catch(() => {});
-        set({ token: null, user: null, isAuthenticated: false });
+        // Clear saved credentials on explicit logout
+        get().clearSavedCredentials();
+        set({ token: null, user: null, isAuthenticated: false, rememberMe: false, pendingTwoFactor: null });
       },
+
       loadTokenFromKeyring: async () => {
         try {
+          // Step 1: Try loading existing token
           const token = await invoke<string | null>("load_credential", { key: CREDENTIAL_KEY });
+
           if (token) {
+            // Token found — validate it with a quick API call
             set({ token, isAuthenticated: true });
+            try {
+              const profiles = await api.getProfiles();
+              if (profiles !== null) {
+                // Token is valid, we're done
+                return;
+              }
+            } catch {
+              // Token invalid — continue to auto-login attempt below
+              console.log("[Auth] Stored token invalid, attempting auto-login");
+            }
+          }
+
+          // Step 2: Check for saved credentials (remember me)
+          let rememberFlag: string | null = null;
+          try {
+            rememberFlag = await invoke<string | null>("load_credential", { key: REMEMBER_ME_KEY });
+          } catch {
+            // No remember me flag
+          }
+
+          if (rememberFlag !== "true") {
+            // No saved credentials — if we had a token, keep it (user can still work
+            // until it actually fails on a real request). Otherwise show login.
+            if (!token) {
+              set({ isAuthenticated: false, token: null });
+            }
+            return;
+          }
+
+          // Step 3: Load saved email + password
+          let savedEmail: string | null = null;
+          let savedPassword: string | null = null;
+          try {
+            [savedEmail, savedPassword] = await Promise.all([
+              invoke<string | null>("load_credential", { key: SAVED_EMAIL_KEY }),
+              invoke<string | null>("load_credential", { key: SAVED_PASSWORD_KEY }),
+            ]);
+          } catch {
+            // Corrupt keyring — clear and fall through
+          }
+
+          if (!savedEmail || !savedPassword) {
+            // Invalid saved credentials — clear them, keep existing token if any
+            get().clearSavedCredentials();
+            if (!token) {
+              set({ isAuthenticated: false, token: null });
+            }
+            return;
+          }
+
+          // Step 4: Attempt auto-login
+          set({ rememberMe: true });
+          try {
+            const response = await api.login(savedEmail, savedPassword);
+
+            if (response.requires_2fa && response.temp_token) {
+              // 2FA required — show 2FA screen directly (credentials stay saved)
+              set({
+                pendingTwoFactor: { tempToken: response.temp_token, email: savedEmail },
+                isAuthenticated: false,
+                token: null,
+              });
+              return;
+            }
+
+            // Login success — store new token
+            const newToken = response.token;
+            await invoke("store_credential", { key: CREDENTIAL_KEY, value: newToken }).catch(() => {});
+            const userWithRole: User = {
+              id: response.user_id,
+              email: savedEmail,
+              name: savedEmail.split("@")[0],
+              role: response.role,
+              is_active: true,
+              created_at: new Date().toISOString(),
+            };
+            set({ token: newToken, isAuthenticated: true, user: userWithRole });
+          } catch (err) {
+            if (isNetworkError(err)) {
+              // Network error — DON'T clear credentials (transient issue).
+              // If we had an old token, keep it so user can still work.
+              console.log("[Auth] Auto-login failed (network) — keeping credentials for next attempt");
+              if (token) {
+                // Keep the old token — user stays logged in, requests may
+                // work again once connectivity is restored
+                set({ token, isAuthenticated: true });
+              } else {
+                set({ isAuthenticated: false, token: null });
+              }
+            } else {
+              // Auth error (wrong password, account disabled etc.) — clear saved credentials
+              console.log("[Auth] Auto-login failed (auth error) — clearing saved credentials");
+              get().clearSavedCredentials();
+              set({ isAuthenticated: false, token: null, rememberMe: false });
+            }
           }
         } catch {
-          // Keyring unavailable — token stays null
+          // Keyring completely unavailable — token stays null
         } finally {
           set({ isInitializing: false });
         }
@@ -54,10 +215,10 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: "auth-store",
-      // Only persist user info to localStorage — token goes to keyring
-      partialize: (state) => ({ user: state.user }),
+      // Persist user info + rememberMe checkbox state to localStorage — token goes to keyring
+      partialize: (state) => ({ user: state.user, rememberMe: state.rememberMe }),
       onRehydrateStorage: () => (state) => {
-        // After rehydration, load token from keyring
+        // After rehydration, load token from keyring (+ auto-login if remember me)
         if (state) {
           state.loadTokenFromKeyring();
         }

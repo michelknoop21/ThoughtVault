@@ -1,5 +1,4 @@
 import { invoke } from "@tauri-apps/api/core";
-import { readFile } from "@tauri-apps/plugin-fs";
 import { useAuthStore } from "../stores/authStore";
 import type {
   LoginResponse,
@@ -194,23 +193,40 @@ class APIService {
     }
 
     if (response.status >= 400) {
-      // Try to extract server error message first
+      // Try to extract structured error response (error_code + message)
       let serverMessage: string | null = null;
+      let errorCode: string | null = null;
       try {
         const errorData = JSON.parse(response.body);
-        const extracted = errorData.message || errorData.error || errorData.detail;
-        if (typeof extracted === "string") serverMessage = extracted;
+        // Structured format: { error_code, message, detail }
+        if (errorData.error_code && typeof errorData.message === "string") {
+          errorCode = errorData.error_code;
+          serverMessage = errorData.message;
+        } else if (typeof errorData.detail === "object" && errorData.detail?.error_code) {
+          // FastAPI wraps HTTPException detail
+          errorCode = errorData.detail.error_code;
+          serverMessage = errorData.detail.message;
+        } else {
+          // Legacy formats
+          const extracted = errorData.message || errorData.error || errorData.detail;
+          if (typeof extracted === "string") serverMessage = extracted;
+        }
       } catch { /* no parseable body */ }
 
-      // Dutch error messages by status code
+      // If backend provided a structured error with Dutch message, use it directly
+      if (errorCode && serverMessage) {
+        throw new Error(serverMessage);
+      }
+
+      // Fallback: Dutch error messages by status code
       let errorMessage: string;
       switch (response.status) {
         case 401: errorMessage = "Sessie probleem — wordt automatisch opgelost. (HTTP 401)"; break;
-        case 403: errorMessage = "Geen toegang tot deze functie."; break;
+        case 403: errorMessage = serverMessage || "Geen toegang tot deze functie."; break;
         case 404: errorMessage = serverMessage || "Niet gevonden."; break;
         case 409: errorMessage = serverMessage || "Conflict: de gegevens zijn gewijzigd."; break;
         case 422: errorMessage = serverMessage || "Ongeldige invoer."; break;
-        case 429: errorMessage = "Te veel verzoeken. Probeer het later opnieuw."; break;
+        case 429: errorMessage = serverMessage || "Te veel verzoeken. Probeer het later opnieuw."; break;
         default:
           if (response.status >= 500) {
             errorMessage = "Serverfout. Probeer het later opnieuw.";
@@ -359,67 +375,60 @@ class APIService {
     await this.request<{ success: boolean }>("DELETE", `/task/${taskId}`);
   }
 
-  // Upload — uses browser-native FormData + fetch for multipart encoding
+  // Upload — uses Tauri Rust proxy for reliable multipart upload.
+  // This bypasses browser CORS/network restrictions that can cause silent failures.
   async uploadRecording(
     filePath: string,
     profileId: string,
     mode: string,
-    signal?: AbortSignal
+    _signal?: AbortSignal
   ): Promise<{ task_id: string }> {
-    // Read file bytes via Tauri FS plugin
-    const fileBytes = await readFile(filePath);
+    console.log(`[API] Upload ${filePath} via Rust proxy to ${this.baseUrl}/transcribe`);
 
-    // Build FormData — browser handles multipart/form-data encoding
-    const filename = filePath.split(/[\\/]/).pop() || "recording.wav";
-    const blob = new Blob([fileBytes], { type: "audio/wav" });
-    const formData = new FormData();
-    formData.append("file", blob, filename);
-    formData.append("profile_id", profileId);
-    formData.append("mode", mode);
+    let response: { status: number; body: string; headers: Record<string, string> };
+    try {
+      response = await invoke<{ status: number; body: string; headers: Record<string, string> }>(
+        "proxy_upload",
+        {
+          filePath,
+          uploadUrl: `${this.baseUrl}/transcribe`,
+          token: this.token || "",
+          profileId,
+          mode,
+        }
+      );
+    } catch (err) {
+      const msg = extractErrorMessage(err);
+      console.error("[API] proxy_upload failed:", msg);
+      throw new Error(msg);
+    }
 
-    if (import.meta.env.DEV) console.log(`[API] Upload ${filename} (${fileBytes.length} bytes) to ${this.baseUrl}/transcribe`);
+    console.log(`[API] Upload response: ${response.status} (${response.body.length} bytes)`);
 
-    // Browser-native fetch — no Rust involved in upload
-    const response = await fetch(`${this.baseUrl}/transcribe`, {
-      method: "POST",
-      headers: {
-        "X-User-Token": this.token || "",
-      },
-      body: formData,
-      signal,
-    });
-
-    if (!response.ok) {
-      const errorBody = await response.text();
-      if (import.meta.env.DEV) console.error("[API] Upload error:", { status: response.status, body: errorBody });
-
+    if (response.status >= 400) {
       let errorMessage = `Upload mislukt (HTTP ${response.status})`;
       try {
-        const errorData = JSON.parse(errorBody);
-        const extracted = errorData.message || errorData.error;
-        if (typeof extracted === "string") {
-          errorMessage = `Upload mislukt: ${extracted}`;
-        } else if (errorData.detail) {
-          if (Array.isArray(errorData.detail)) {
-            const fields = errorData.detail.map((d: { loc?: string[]; msg?: string }) =>
-              `${(d.loc || []).join(".")}: ${d.msg || "ongeldig"}`
-            ).join("; ");
-            errorMessage = `Upload mislukt: ${fields}`;
-          } else if (typeof errorData.detail === "string") {
-            errorMessage = `Upload mislukt: ${errorData.detail}`;
-          }
+        const errorData = JSON.parse(response.body);
+        // Structured format from backend
+        if (errorData.error_code && typeof errorData.message === "string") {
+          errorMessage = errorData.message;
+        } else if (typeof errorData.detail === "object" && errorData.detail?.message) {
+          errorMessage = errorData.detail.message;
+        } else {
+          const extracted = errorData.message || errorData.error || errorData.detail;
+          if (typeof extracted === "string") errorMessage = extracted;
         }
-      } catch {
-        if (errorBody.length < 200) {
-          errorMessage = `Upload mislukt: ${errorBody}`;
-        }
-      }
+      } catch { /* */ }
       throw new Error(errorMessage);
     }
 
-    const result = await response.json();
-    if (import.meta.env.DEV) console.log(`[API] Upload complete → task_id: ${result.task_id}`);
-    return result;
+    try {
+      const result = JSON.parse(response.body);
+      console.log(`[API] Upload complete → task_id: ${result.task_id}`);
+      return result;
+    } catch {
+      throw new Error(`Ongeldig antwoord van server: ${response.body.substring(0, 200)}`);
+    }
   }
 
   async uploadRecordingWithProgress(
@@ -429,72 +438,73 @@ class APIService {
     onProgress: (fraction: number) => void,
     signal?: AbortSignal
   ): Promise<{ task_id: string }> {
-    const fileBytes = await readFile(filePath);
-    const filename = filePath.split(/[\\/]/).pop() || "recording.wav";
-    const blob = new Blob([fileBytes], { type: "audio/wav" });
-    const formData = new FormData();
-    formData.append("file", blob, filename);
-    formData.append("profile_id", profileId);
-    formData.append("mode", mode);
+    // Use Rust proxy for reliable upload (no browser CORS/network issues)
+    console.log(`[API] Upload with progress ${filePath} via Rust proxy`);
+    onProgress(0.1);
 
-    if (import.meta.env.DEV) console.log(`[API] Upload with progress ${filename} (${fileBytes.length} bytes)`);
+    // Check for abort before starting
+    if (signal?.aborted) {
+      throw new DOMException("Upload geannuleerd", "AbortError");
+    }
 
-    return new Promise((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      xhr.open("POST", `${this.baseUrl}/transcribe`);
-      xhr.setRequestHeader("X-User-Token", this.token || "");
+    let response: { status: number; body: string; headers: Record<string, string> };
+    try {
+      // Listen for abort during upload
+      const abortPromise = signal
+        ? new Promise<never>((_, reject) => {
+            signal.addEventListener("abort", () => reject(new DOMException("Upload geannuleerd", "AbortError")), { once: true });
+          })
+        : null;
 
-      if (signal) {
-        signal.addEventListener("abort", () => xhr.abort(), { once: true });
-      }
-
-      xhr.upload.onprogress = (e) => {
-        if (e.lengthComputable && e.total > 0) {
-          onProgress(Math.min(e.loaded / e.total, 0.99));
+      const uploadPromise = invoke<{ status: number; body: string; headers: Record<string, string> }>(
+        "proxy_upload",
+        {
+          filePath,
+          uploadUrl: `${this.baseUrl}/transcribe`,
+          token: this.token || "",
+          profileId,
+          mode,
         }
-      };
+      );
 
-      xhr.onload = () => {
-        if (xhr.status >= 200 && xhr.status < 300) {
-          try {
-            const result = JSON.parse(xhr.responseText);
-            if (import.meta.env.DEV) console.log(`[API] Upload complete → task_id: ${result.task_id}`);
-            onProgress(1.0);
-            resolve(result);
-          } catch {
-            reject(new Error("Upload mislukt: ongeldig antwoord van server"));
-          }
+      onProgress(0.3);
+      response = abortPromise
+        ? await Promise.race([uploadPromise, abortPromise])
+        : await uploadPromise;
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") throw err;
+      const msg = extractErrorMessage(err);
+      console.error("[API] proxy_upload failed:", msg);
+      throw new Error(msg);
+    }
+
+    onProgress(0.9);
+
+    if (response.status >= 400) {
+      let errorMessage = `Upload mislukt (HTTP ${response.status})`;
+      try {
+        const errorData = JSON.parse(response.body);
+        // Structured format from backend
+        if (errorData.error_code && typeof errorData.message === "string") {
+          errorMessage = errorData.message;
+        } else if (typeof errorData.detail === "object" && errorData.detail?.message) {
+          errorMessage = errorData.detail.message;
         } else {
-          let errorMessage = `Upload mislukt (HTTP ${xhr.status})`;
-          try {
-            const errorData = JSON.parse(xhr.responseText);
-            const extracted = errorData.message || errorData.error;
-            if (typeof extracted === "string") {
-              errorMessage = `Upload mislukt: ${extracted}`;
-            } else if (errorData.detail) {
-              if (Array.isArray(errorData.detail)) {
-                const fields = errorData.detail.map((d: { loc?: string[]; msg?: string }) =>
-                  `${(d.loc || []).join(".")}: ${d.msg || "ongeldig"}`
-                ).join("; ");
-                errorMessage = `Upload mislukt: ${fields}`;
-              } else if (typeof errorData.detail === "string") {
-                errorMessage = `Upload mislukt: ${errorData.detail}`;
-              }
-            }
-          } catch {
-            if (xhr.responseText.length < 200) {
-              errorMessage = `Upload mislukt: ${xhr.responseText}`;
-            }
-          }
-          reject(new Error(errorMessage));
+          const extracted = errorData.message || errorData.error || errorData.detail;
+          if (typeof extracted === "string") errorMessage = extracted;
         }
-      };
+      } catch { /* */ }
+      throw new Error(errorMessage);
+    }
 
-      xhr.onerror = () => reject(new Error("Upload mislukt: netwerkfout"));
-      xhr.onabort = () => reject(new DOMException("Upload geannuleerd", "AbortError"));
-
-      xhr.send(formData);
-    });
+    try {
+      const result = JSON.parse(response.body);
+      console.log(`[API] Upload complete → task_id: ${result.task_id}`);
+      onProgress(1.0);
+      return result;
+    } catch {
+      throw new Error(`Ongeldig antwoord van server: ${response.body.substring(0, 200)}`);
+    }
   }
 
   // Profiles

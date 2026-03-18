@@ -1,15 +1,23 @@
 import { create } from "zustand";
 import type { QueuedUpload } from "../types";
 
+interface PermanentlyFailedItem {
+  id: string;
+  fileName: string;
+}
+
 interface UploadQueueState {
   currentItem: QueuedUpload | null;
   progress: number; // 0-100
   uploadSpeed: number; // bytes/sec
   items: QueuedUpload[];
+  permanentlyFailed: PermanentlyFailedItem[];
   startItem: (item: QueuedUpload) => void;
   updateProgress: (fraction: number) => void;
   finishItem: () => void;
   setItems: (items: QueuedUpload[]) => void;
+  addPermanentlyFailed: (item: PermanentlyFailedItem) => void;
+  clearPermanentlyFailed: () => void;
   reset: () => void;
 }
 
@@ -22,6 +30,7 @@ export const useUploadQueueStore = create<UploadQueueState>()((set, get) => {
     progress: 0,
     uploadSpeed: 0,
     items: [],
+    permanentlyFailed: [],
     startItem: (item) => {
       lastProgressTime = Date.now();
       lastProgressBytes = 0;
@@ -47,6 +56,9 @@ export const useUploadQueueStore = create<UploadQueueState>()((set, get) => {
       set({ currentItem: null, progress: 0, uploadSpeed: 0 });
     },
     setItems: (items) => set({ items }),
-    reset: () => set({ currentItem: null, progress: 0, uploadSpeed: 0, items: [] }),
+    addPermanentlyFailed: (item) =>
+      set((state) => ({ permanentlyFailed: [...state.permanentlyFailed, item] })),
+    clearPermanentlyFailed: () => set({ permanentlyFailed: [] }),
+    reset: () => set({ currentItem: null, progress: 0, uploadSpeed: 0, items: [], permanentlyFailed: [] }),
   };
 });

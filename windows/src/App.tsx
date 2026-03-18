@@ -53,6 +53,8 @@ function OfflineQueueBanner() {
   const progress = useUploadQueueStore((s) => s.progress);
   const uploadSpeed = useUploadQueueStore((s) => s.uploadSpeed);
   const queueItems = useUploadQueueStore((s) => s.items);
+  const permanentlyFailed = useUploadQueueStore((s) => s.permanentlyFailed);
+  const clearPermanentlyFailed = useUploadQueueStore((s) => s.clearPermanentlyFailed);
 
   useEffect(() => {
     let cancelled = false;
@@ -90,7 +92,39 @@ function OfflineQueueBanner() {
 
   // Use queueItems count if available, otherwise fallback to poll count
   const displayCount = queueItems.length > 0 ? queueItems.length : count;
-  if (displayCount === 0 && !currentItem) return null;
+
+  // Show permanently failed warning even when queue is empty
+  if (displayCount === 0 && !currentItem && permanentlyFailed.length === 0) return null;
+
+  // Permanently failed items warning
+  if (displayCount === 0 && !currentItem && permanentlyFailed.length > 0) {
+    return (
+      <div style={{
+        padding: "8px 14px",
+        background: "var(--fill-warning, #b45309)",
+        color: "#fff",
+        fontSize: 12,
+        fontWeight: 500,
+        flexShrink: 0,
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ flex: 1 }}>
+            {permanentlyFailed.map((item) => (
+              <div key={item.id}>
+                '{item.fileName}' kon na meerdere pogingen niet worden ge&uuml;pload. Ga naar Opgeslagen opnames om het handmatig te proberen.
+              </div>
+            ))}
+          </span>
+          <button
+            onClick={clearPermanentlyFailed}
+            style={{ background: "none", border: "none", color: "#fff", cursor: "pointer", fontSize: 14, padding: "2px 6px" }}
+          >
+            &times;
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const fileName = currentItem?.file_name || currentItem?.file_path?.split(/[\\/]/).pop();
   const fileSize = currentItem?.file_size_bytes;

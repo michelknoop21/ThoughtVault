@@ -516,6 +516,9 @@ final class RecordingViewModel {
                 if RecordingViewModel.isAuthError(error) {
                     os_log("[RecordingVM] Auth error during upload — enqueuing to offline queue", log: .default, type: .info)
                     self.offlineQueue.enqueue(.audio(url: url))
+                    await MainActor.run {
+                        self.offlineStatusMessage = "Upload uitgesteld vanwege een sessiefout. De opname is opgeslagen en wordt automatisch opnieuw geprobeerd."
+                    }
                 }
                 await MainActor.run {
                     self.lastFailedUploadURL = url
@@ -631,13 +634,30 @@ final class RecordingViewModel {
         }
 
         for item in queued {
+            // Enforce max retry limit
+            if item.retryCount >= 10 {
+                let filename: String
+                switch item {
+                case .audio(let url, _): filename = url.lastPathComponent
+                case .text: filename = "tekst-transcriptie"
+                }
+                offlineQueue.removeItem(item)
+                await MainActor.run {
+                    self.offlineStatusMessage = "Opname '\(filename)' kon na meerdere pogingen niet worden ge\u{00FC}pload. Ga naar Opgeslagen opnames om het handmatig opnieuw te proberen."
+                }
+                os_log("[RecordingVM] Offline queue item exceeded max retries, removed: %{public}@", log: .default, type: .error, filename)
+                continue
+            }
+
             switch item {
             case .audio(let url, _):
                 let stateBefore = recordingState
                 await uploadFile(url, profileId: profileId)
                 // Only remove from queue if upload succeeded (state went back to idle without error)
                 if case .error = recordingState {
-                    os_log("[RecordingVM] Offline queue item upload failed, keeping in queue for retry", log: .default, type: .error)
+                    os_log("[RecordingVM] Offline queue item upload failed, incrementing retry count", log: .default, type: .error)
+                    let updated = item.incrementingRetryCount()
+                    offlineQueue.replaceItem(item, with: updated)
                     await MainActor.run { recordingState = stateBefore }
                 } else {
                     offlineQueue.removeItem(item)
@@ -652,7 +672,9 @@ final class RecordingViewModel {
                     await startSSEStream(for: task.taskId)
                     offlineQueue.removeItem(item)
                 } catch {
-                    os_log("[RecordingVM] Failed to process queued text item, keeping in queue: %{public}@", log: .default, type: .error, error.localizedDescription)
+                    os_log("[RecordingVM] Failed to process queued text item, incrementing retry: %{public}@", log: .default, type: .error, error.localizedDescription)
+                    let updated = item.incrementingRetryCount()
+                    offlineQueue.replaceItem(item, with: updated)
                 }
             }
         }
@@ -721,6 +743,13 @@ final class RecordingViewModel {
         Task { @MainActor in
             self.savedRecordings = recordings
         }
+    }
+
+    func openRecordingsFolder() {
+        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        let dir = docs.appendingPathComponent("Recordings")
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        NSWorkspace.shared.open(dir)
     }
 
     func deleteSavedRecording(_ recording: SavedRecording) {
@@ -1067,7 +1096,7 @@ final class RecordingViewModel {
     static func isAuthError(_ error: Error) -> Bool {
         if let apiError = error as? APIError {
             if case .sessionExpired = apiError { return true }
-            if case .httpError(let code, _) = apiError, code == 401 { return true }
+            if case .httpError(let code, _, _) = apiError, code == 401 { return true }
         }
         return false
     }
@@ -1080,12 +1109,13 @@ final class RecordingViewModel {
             return .authExpired
         case .fileTooLarge:
             return .fileTooLarge
-        case .httpError(let code, let message):
+        case .httpError(let code, let message, _):
             if code == 401 { return .authExpired }
+            if code == 413 { return .fileTooLarge }
             if code == 422, let msg = message { return .validationError(msg) }
             return .serverError(code)
         case .networkError:
-            return .unknown
+            return .networkError
         default:
             return .unknown
         }

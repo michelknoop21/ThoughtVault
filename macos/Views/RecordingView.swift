@@ -45,6 +45,11 @@ struct RecordingView: View {
                 .environment(recordingVM)
                 .frame(minWidth: 420, idealWidth: 460, minHeight: 340, idealHeight: 380)
         }
+        .sheet(isPresented: Bindable(recordingVM).showRetrySheet) {
+            ReprocessSheet(recording: nil)
+                .environment(recordingVM)
+                .frame(minWidth: 420, idealWidth: 460, minHeight: 340, idealHeight: 380)
+        }
     }
 
     // MARK: - Background blobs
@@ -738,6 +743,16 @@ struct RecordingView: View {
                     }
 
                     Spacer()
+
+                    Button {
+                        recordingVM.openRecordingsFolder()
+                    } label: {
+                        Image(systemName: "folder")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(Color.labelTertiary)
+                    }
+                    .buttonStyle(.plain)
+                    .help("Toon in Finder")
 
                     Image(systemName: savedRecordingsExpanded ? "chevron.up" : "chevron.down")
                         .font(.system(size: 11, weight: .semibold))

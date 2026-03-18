@@ -71,11 +71,22 @@ function safeArray<T>(data: unknown): T[] {
 function mapTranscript(raw: unknown): Transcript {
   const r = raw as Record<string, unknown>;
 
+  // The list endpoint returns lightweight fields (preview, has_notes) without full text.
+  // The detail endpoint returns full result/transcription fields.
+  const notuleHtml = safeOptionalString(r.notule_html, r.result);
+  const rawTranscription = safeOptionalString(r.raw_transcription, r.transcription, r.original_transcription);
+  const preview = safeOptionalString(r.preview);
+  const hasNotes = notuleHtml != null || preview != null || r.has_notes === true;
+  const hasTranscription = rawTranscription != null || (r.has_transcription === true);
+
   return {
     id: safeString(r.id ?? r.task_id, ""),
     title: safeString(r.title ?? r.filename, "Naamloze opname"),
-    raw_transcription: safeOptionalString(r.raw_transcription, r.transcription, r.original_transcription),
-    notule_html: safeOptionalString(r.notule_html, r.result),
+    raw_transcription: rawTranscription,
+    notule_html: notuleHtml,
+    preview,
+    has_notes: hasNotes,
+    has_transcription: hasTranscription,
     duration_seconds: Number(r.duration ?? r.duration_seconds ?? 0),
     profile_name: safeOptionalString(r.profile_name),
     tags: Array.isArray(r.tags) ? r.tags.filter((t): t is string => typeof t === "string") : [],

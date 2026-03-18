@@ -9,8 +9,7 @@ import {
   ArrowUpload24Regular,
   VideoChat24Regular,
 } from "@fluentui/react-icons";
-import { listen } from "@tauri-apps/api/event";
-import { useRecordingStore, registerAbortController, unregisterAbortController } from "../stores/recordingStore";
+import { useRecordingStore } from "../stores/recordingStore";
 import { useSettingsStore } from "../stores/settingsStore";
 import { useTranscriptsStore } from "../stores/transcriptsStore";
 import { useProfilesStore } from "../stores/profilesStore";
@@ -24,10 +23,8 @@ import {
 } from "../services/tauriCommands";
 import { api } from "../services/api";
 import { createSSEClient } from "../services/sse";
-import { enqueue } from "../services/offlineQueue";
 import { WaveformVisualizer } from "../components/recording/WaveformVisualizer";
 import { SavedRecordings } from "../components/recording/SavedRecordings";
-import type { TranscriptTask } from "../types";
 
 import {
   Briefcase24Regular,
@@ -57,10 +54,10 @@ export function RecordingPage() {
   const startTimer = useRecordingStore((s) => s.startTimer);
   const pauseTimer = useRecordingStore((s) => s.pauseTimer);
   const resumeTimer = useRecordingStore((s) => s.resumeTimer);
-  const reset = useRecordingStore((s) => s.reset);
   const addBackgroundTask = useRecordingStore((s) => s.addBackgroundTask);
   const updateBackgroundTask = useRecordingStore((s) => s.updateBackgroundTask);
   const removeBackgroundTask = useRecordingStore((s) => s.removeBackgroundTask);
+  const setSelectedProfileId = useRecordingStore((s) => s.setSelectedProfileId);
 
   const settings = useSettingsStore();
   const { addTranscript } = useTranscriptsStore();
@@ -77,14 +74,19 @@ export function RecordingPage() {
   const youtubeProfileId = useRecordingStore((s) => s.youtubeProfileId);
   const setYouTubeProfileId = useRecordingStore((s) => s.setYouTubeProfileId);
 
-  const [selectedProfileId, setSelectedProfileId] = useState(settings.default_profile_id);
+  // Profile selection is stored globally so the global recording handler can access it
+  const selectedProfileId = useRecordingStore((s) => s.selectedProfileId);
   const [error, setError] = useState<string | null>(null);
 
   const audioLevelsRef = useAudioLevelsRef();
   const filePathRef = useRef<string>("");
-  const isUploadingRef = useRef(false);
-  const phaseRef = useRef(phase);
-  phaseRef.current = phase;
+
+  // Initialize selectedProfileId from settings default if not yet set
+  useEffect(() => {
+    if (!selectedProfileId && settings.default_profile_id) {
+      setSelectedProfileId(settings.default_profile_id);
+    }
+  }, [settings.default_profile_id]);
 
   useEffect(() => {
     if (autoStart && phase === "idle") {
@@ -107,39 +109,10 @@ export function RecordingPage() {
     }
   }, [profiles]);
 
-  // Listen for recording-stopped event (emitted by Rust AFTER WAV file is finalized).
-  // This is the single upload trigger for ALL stop scenarios (user-initiated and widget-initiated).
-  // We must wait for this event because stop_recording() returns before the recording thread
-  // has finalized the WAV file — uploading earlier causes the file to be locked/incomplete
-  // on Windows, resulting in a 422 "file field required" error from the server.
-  useEffect(() => {
-    let unlistenFn: (() => void) | undefined;
-    listen<{ file_path: string; duration_seconds: number }>(
-      "recording-stopped",
-      (event) => {
-        if (event.payload.file_path) {
-          filePathRef.current = event.payload.file_path;
-        }
-        const currentPhase = phaseRef.current;
-        if (currentPhase === "recording" || currentPhase === "paused" || currentPhase === "stopping") {
-          handleUpload(filePathRef.current);
-        }
-      }
-    ).then((fn) => { unlistenFn = fn; }).catch(console.error);
-    return () => { unlistenFn?.(); };
-  }, []);
-
-  // Listen for recording-error event from Rust backend
-  useEffect(() => {
-    let unlistenFn: (() => void) | undefined;
-    listen<string>("recording-error", (event) => {
-      console.error("[Recording] Event: recording-error:", event.payload);
-      setError(`Opname fout: ${event.payload}`);
-      setPhase("idle");
-      closeWidgetWindow().catch((e) => console.error("[Recording] Widget close on error failed:", e));
-    }).then((fn) => { unlistenFn = fn; }).catch(console.error);
-    return () => { unlistenFn?.(); };
-  }, []);
+  // NOTE: recording-stopped and recording-error event listeners are handled globally
+  // in useGlobalRecordingHandler (mounted in ProtectedRoutes) so they survive page navigation.
+  // This ensures uploads trigger even when the user stops from the floating widget
+  // while on a different page.
 
   async function handleSubmitYouTube() {
     const url = youtubeURL.trim();
@@ -222,94 +195,6 @@ export function RecordingPage() {
       console.error("[Recording] Stop failed:", err);
       setError(err instanceof Error ? err.message : "Stoppen mislukt");
       setPhase("idle");
-    }
-  }
-
-  async function handleUpload(filePath: string) {
-    if (isUploadingRef.current) return;
-    isUploadingRef.current = true;
-
-    try {
-      // Immediately add a background task and reset to idle so the user can start a new recording
-      const tempId = `pending-${Date.now()}`;
-      const bgTask: TranscriptTask = {
-        task_id: tempId,
-        status: "uploading",
-        progress: 0,
-        mode,
-        created_at: new Date().toISOString(),
-      };
-      addBackgroundTask(bgTask);
-      reset();
-
-      // Upload and SSE tracking happen in the background
-      const abortController = new AbortController();
-      registerAbortController(tempId, abortController);
-      try {
-        const { task_id } = await api.uploadRecordingWithProgress(
-          filePath, selectedProfileId, mode,
-          (fraction) => updateBackgroundTask(tempId, { progress: Math.round(fraction * 100) }),
-          abortController.signal
-        );
-
-        // Replace temp task with real task_id — move abort controller to new key
-        unregisterAbortController(tempId);
-        updateBackgroundTask(tempId, { task_id, status: "uploading", progress: 10 });
-
-        // SSE updates go to background task store (use real task_id from here)
-        const sseClient = createSSEClient(api.getStreamUrl(task_id));
-        sseClient.connect(
-          (update) => {
-            updateBackgroundTask(task_id, update);
-          },
-          (err) => {
-            console.error("[SSE] Error:", err);
-            updateBackgroundTask(task_id, { status: "failed", error_message: "Verbinding verloren" });
-          },
-          async () => {
-            const transcripts = await api.getTranscripts();
-            if (transcripts[0]) addTranscript(transcripts[0]);
-            removeBackgroundTask(task_id);
-          }
-        );
-      } catch (err) {
-        unregisterAbortController(tempId);
-        // User cancelled — just remove the task, don't enqueue for retry
-        if (err instanceof DOMException && err.name === "AbortError") {
-          removeBackgroundTask(tempId);
-          return;
-        }
-        const msg = err instanceof Error ? err.message : "Upload mislukt";
-        console.error("[Recording] Upload failed:", msg);
-        // 401 is recoverable (auth token issue) — always enqueue for retry
-        // Only skip enqueue for true client errors (4xx excluding 401)
-        const isAuthError = msg.includes("HTTP 401");
-        const isClientError = msg.includes("HTTP 4") && !isAuthError;
-        if (!isClientError) {
-          // Gather file metadata for queue banner display
-          let fileSizeBytes: number | undefined;
-          let fileName: string | undefined;
-          try {
-            const { stat } = await import("@tauri-apps/plugin-fs");
-            const info = await stat(filePath);
-            fileSizeBytes = info.size;
-          } catch { /* best-effort */ }
-          fileName = filePath.split(/[\\/]/).pop() || undefined;
-          await enqueue({
-            file_path: filePath,
-            profile_id: selectedProfileId,
-            mode,
-            file_size_bytes: fileSizeBytes,
-            file_name: fileName,
-          }).catch(() => {});
-        }
-        updateBackgroundTask(tempId, {
-          status: "failed",
-          error_message: msg,
-        });
-      }
-    } finally {
-      isUploadingRef.current = false;
     }
   }
 

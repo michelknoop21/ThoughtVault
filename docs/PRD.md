@@ -111,7 +111,9 @@ The product consists of four client surfaces sharing a common backend:
 - `OfflineQueue` service persists failed or queued uploads to disk.
 - `NetworkMonitor` (NWPathMonitor) watches reachability and triggers automatic retry on reconnect.
 - Queue items reference the local audio file path; files are protected from cleanup while queued.
-- Status visible in UI: pending upload count shown in recording controls.
+- **Retry limit:** 50 attempts per item (Windows); items removed when file no longer exists on disk.
+- **Auth error resilience:** 401 errors during upload always enqueue for retry (never discard). See DEC-048.
+- **Progress banner (Windows):** Shows filename, file size, progress bar with percentage, upload speed, and queue position (e.g. "Uploaden: recording.wav (12 MB) — 67% (2.3 MB/s) [1/3]").
 
 ### 3.7 Task Management
 
@@ -124,7 +126,8 @@ The product consists of four client surfaces sharing a common backend:
 ### 3.8 Authentication and Security
 
 - Token-based authentication with `X-User-Token` request header.
-- Tokens remain valid until server-side `SESSION_INACTIVITY_DAYS` expiry.
+- Tokens remain valid until server-side `SESSION_INACTIVITY_DAYS` expiry (365 days).
+- **Never auto-logout**: after login, users stay authenticated until explicit logout. Auth errors (401) are retried silently — token stays in keyring/Keychain. See DEC-048.
 - Biometric login (Face ID / Touch ID) on macOS via `BiometricService` + `KeychainService`.
 - Auth token stored in Keychain with `kSecAttrAccessibleWhenUnlocked` and Secure Enclave access control.
 - Admin user management: invite codes, enable/disable users, role assignment.

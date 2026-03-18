@@ -38,6 +38,9 @@ interface RecordingState {
   // Background processing: tasks that are uploading/processing while user can start new recordings
   backgroundTasks: TranscriptTask[];
 
+  // Profile selection — persisted in store so global recording handler can access it
+  selectedProfileId: string;
+
   // YouTube transcription
   isYouTubeEnabled: boolean;
   youtubeURL: string;
@@ -60,6 +63,7 @@ interface RecordingState {
   updateBackgroundTask: (taskId: string, update: Partial<TranscriptTask>) => void;
   removeBackgroundTask: (taskId: string) => void;
   cancelBackgroundTask: (taskId: string) => void;
+  setSelectedProfileId: (id: string) => void;
   setYouTubeEnabled: (enabled: boolean) => void;
   setYouTubeURL: (url: string) => void;
   setSubmittingYouTube: (submitting: boolean) => void;
@@ -80,6 +84,7 @@ export const useRecordingStore = create<RecordingState>()((set) => ({
   recordingStartedAt: null,
   pausedAt: null,
   pausedDuration: 0,
+  selectedProfileId: "",
   backgroundTasks: [],
   isYouTubeEnabled: false,
   youtubeURL: "",
@@ -126,6 +131,7 @@ export const useRecordingStore = create<RecordingState>()((set) => ({
       backgroundTasks: state.backgroundTasks.filter((t) => t.task_id !== taskId),
     }));
   },
+  setSelectedProfileId: (id) => set({ selectedProfileId: id }),
   setYouTubeEnabled: (enabled) => set({ isYouTubeEnabled: enabled }),
   setYouTubeURL: (url) => set({ youtubeURL: url }),
   setSubmittingYouTube: (submitting) => set({ isSubmittingYouTube: submitting }),

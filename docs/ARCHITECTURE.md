@@ -98,7 +98,7 @@ Client                    Backend                    n8n / Claude
 
 **Field mapping:** `Task.result` → `notuleHtml` (macOS Swift) / `notule_html` (Windows TypeScript)
 
-**Authentication:** Token-based with `X-User-Token` header. Tokens remain valid until server-side `SESSION_INACTIVITY_DAYS` expiry.
+**Authentication:** Token-based with `X-User-Token` header. Tokens remain valid until server-side `SESSION_INACTIVITY_DAYS` expiry (365 days). **Never auto-logout**: both macOS and Windows clients keep the token on 401 errors. Windows retries 401 once after 2s; macOS logs and ignores `.authDidInvalidate`. See DEC-048.
 
 **Database:** PostgreSQL 15 in productie. SQLite ondersteund als development fallback. Optional Redis voor caching.
 
@@ -278,7 +278,8 @@ src/
 │   ├── profiles.ts         # Profile CRUD
 │   ├── recording.ts        # Recording state machine, background task tracking
 │   ├── settings.ts         # App configuration
-│   └── transcripts.ts      # Transcript list, search, filters
+│   ├── transcripts.ts      # Transcript list, search, filters
+│   └── uploadQueueStore.ts # Offline queue upload progress (current item, %, speed)
 └── pages/
     ├── HomePage.tsx, LoginPage.tsx, RecordingPage.tsx
     ├── TranscriptsPage.tsx, TasksPage.tsx, SettingsPage.tsx, AdminPage.tsx

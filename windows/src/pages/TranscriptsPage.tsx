@@ -132,6 +132,22 @@ export function TranscriptsPage() {
     }
   }
 
+  async function selectAndLoadDetail(id: string) {
+    setSelectedId(id);
+    // Listing only returns lightweight fields — fetch full detail to get notule_html and raw_transcription
+    try {
+      const detail = await api.getTranscript(id);
+      updateTranscript(id, {
+        notule_html: detail.notule_html,
+        raw_transcription: detail.raw_transcription,
+        duration_seconds: detail.duration_seconds,
+        profile_name: detail.profile_name,
+      });
+    } catch {
+      // Detail load failed — listing data still shown
+    }
+  }
+
   function closeContextMenu() {
     setContextMenu(null);
   }
@@ -399,8 +415,8 @@ ${DOMPurify.sanitize(transcript.notule_html)}
     const matchesTime = filterByTime(t);
     const matchesTab =
       mainTab === "notulen"
-        ? t.notule_html && t.notule_html.length > 0
-        : t.raw_transcription && t.raw_transcription.length > 0;
+        ? (t.notule_html && t.notule_html.length > 0) || t.has_notes
+        : (t.raw_transcription && t.raw_transcription.length > 0) || t.has_transcription;
     return matchesSearch && matchesTags && matchesTime && matchesTab;
   });
 
@@ -549,7 +565,7 @@ ${DOMPurify.sanitize(transcript.notule_html)}
                   if (bulkMode) {
                     toggleBulkSelect(transcript.id);
                   } else {
-                    setSelectedId(transcript.id);
+                    selectAndLoadDetail(transcript.id);
                     setDetailTab(mainTab === "notulen" ? "notule" : "transcriptie");
                     setIsEditingNotule(false);
                   }
@@ -687,9 +703,9 @@ ${DOMPurify.sanitize(transcript.notule_html)}
             </div>
 
             {/* Tab switch */}
-            {(selected.notule_html || selected.raw_transcription) && (
+            {(selected.notule_html || selected.raw_transcription || selected.has_notes || selected.has_transcription) && (
               <div className="tab-bar transcripts-tab-bar">
-                {selected.notule_html && (
+                {(selected.notule_html || selected.has_notes) && (
                   <button
                     className={`tab-item${detailTab === "notule" ? " active" : ""}`}
                     onClick={() => { setDetailTab("notule"); setIsEditingNotule(false); }}
@@ -697,7 +713,7 @@ ${DOMPurify.sanitize(transcript.notule_html)}
                     Notule
                   </button>
                 )}
-                {selected.raw_transcription && (
+                {(selected.raw_transcription || selected.has_transcription) && (
                   <button
                     className={`tab-item${detailTab === "transcriptie" ? " active" : ""}`}
                     onClick={() => { setDetailTab("transcriptie"); setIsEditingNotule(false); }}

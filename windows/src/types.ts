@@ -61,6 +61,9 @@ export interface Transcript {
   title: string;
   raw_transcription?: string;
   notule_html?: string;
+  preview?: string;
+  has_notes?: boolean;
+  has_transcription?: boolean;
   duration_seconds: number;
   profile_name?: string;
   tags: string[];

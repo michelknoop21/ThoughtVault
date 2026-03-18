@@ -224,7 +224,7 @@ function SessionCard({
   const [menuOpen, setMenuOpen] = useState(false);
 
   const previewText = getPreviewText(transcript);
-  const isComplete = !!transcript.notule_html || !!transcript.raw_transcription;
+  const isComplete = !!transcript.notule_html || !!transcript.raw_transcription || transcript.has_notes || transcript.has_transcription;
 
   return (
     <div className="card session-card" onClick={onClick}>
@@ -284,6 +284,11 @@ function getPreviewText(transcript: Transcript): string {
   }
   if (typeof transcript.raw_transcription === "string" && transcript.raw_transcription) {
     return transcript.raw_transcription.slice(0, 200);
+  }
+  // Listing endpoint returns preview (first 200 chars of result) without full text
+  if (typeof transcript.preview === "string" && transcript.preview) {
+    const text = transcript.preview.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+    return text.slice(0, 200);
   }
   return "";
 }

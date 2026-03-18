@@ -5,6 +5,36 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2026-03-17] — Never auto-logout + upload queue progress banner
+
+### Fixed
+- **CRITICAL: Recording loss on 401** — `RecordingPage.tsx:285` classified HTTP 401 as a client error (`msg.includes("HTTP 4")`), preventing the recording from being enqueued for retry. The recording was silently lost. Fixed by excluding 401 from client error classification: `const isClientError = msg.includes("HTTP 4") && !msg.includes("HTTP 401")`.
+- **Auto-logout on 401 (Windows)** — `api.ts:204` called `useAuthStore.getState().logout()` on every 401 response, deleting the token from keyring. Replaced with: retry the request once after 2 seconds, then throw error without logging out. Token stays in keyring.
+- **Auto-logout on 401 (macOS)** — `AuthViewModel.swift:325` observer on `.authDidInvalidate` called `self.logout()` after grace period. Changed to log-only — user stays authenticated indefinitely until explicit logout.
+
+### Changed
+- **Offline queue retry limit** — `offlineQueue.ts:58`: max retries increased from 3 → 50. Items also removed if the source file no longer exists on disk (`@tauri-apps/plugin-fs` `exists()` check).
+- **Upload queue progress** — `offlineQueue.ts` now uses `api.uploadRecordingWithProgress()` with XHR progress callbacks, feeding `uploadQueueStore.ts`.
+- **OfflineQueueBanner** — `App.tsx:36-98`: Redesigned from plain text to show filename, file size, progress bar with percentage, upload speed (bytes/sec), and queue position (e.g. "1/3").
+- **RecordingPage enqueue metadata** — `RecordingPage.tsx:287`: Enqueue now includes `file_size_bytes` (via `stat()`), `file_name` for display in the progress banner.
+
+### Added
+- **`uploadQueueStore.ts`** — New Zustand store tracking: `currentItem`, `progress` (0-100), `uploadSpeed` (bytes/sec), `items` (full queue snapshot). Used by `OfflineQueueBanner` and `processQueue()`.
+- **`QueuedUpload` metadata fields** — `types.ts`: Added optional `file_size_bytes`, `recording_duration_secs`, `file_name`, `last_error` to the offline queue item interface (backwards-compatible).
+- **Token validation at startup (Windows)** — `App.tsx` `ProtectedRoutes`: validates token via `getProfiles()` on mount. On failure shows non-disruptive toast via `useToast` — never redirects to login.
+- **Token validation at startup (macOS)** — `AuthViewModel.swift` `checkAuthState()`: validates token via `getProfiles()` in background Task. On failure logs warning — user stays authenticated.
+- **Auth error → offline queue (macOS)** — `RecordingViewModel.swift:514`: on `APIError.sessionExpired` during upload, recording is enqueued to `OfflineQueue` before showing retry sheet, preventing recording loss.
+
+### Decisions
+- DEC-048: Never auto-logout after authentication
+
+### Notes
+- **Kernprincipe**: Na inloggen wordt de gebruiker NOOIT meer uitgelogd, tenzij ze zelf uitloggen. Backend heeft 365-dagen token expiry.
+- The 401 retry in `api.ts` uses a simple 2-second delay (not exponential backoff) — sufficient for transient server issues.
+- Both macOS and Windows builds verified: `xcodebuild` BUILD SUCCEEDED, `npx tsc --noEmit` clean.
+
+---
+
 ## [2026-03-17] — Documentation maintenance: archive old entries, fix version
 
 ### Changed
@@ -256,173 +286,5 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
-## [2026-03-14] — Per-user API keys
-
-### Added
-- **API key model** (backend `models.py`): Nieuw `ApiKey` model met SHA-256 hash opslag, `key_prefix` (eerste 8 chars voor identificatie), `scope` (`full` of `read`), `expires_at`, `is_active` soft-delete flag, en `last_used_at` tracking (max 1x per minuut bijgewerkt). Tabel wordt automatisch aangemaakt via `Base.metadata.create_all()` bij container restart.
-- **API key CRUD endpoints** (backend `routes/api_keys.py`): Nieuw routerbestand met drie endpoints:
-  - `POST /api-keys` — Maak API key aan (alleen via sessie-token, voorkomt key self-replication). Max 10 actieve keys per gebruiker. Key formaat: `tskey_` + 32 hex chars (38 chars totaal). Ruwe key wordt eenmalig getoond bij aanmaak.
-  - `GET /api-keys` — Lijst eigen keys (sessie-token of API key). Toont prefix, naam, scope, aanmaakdatum, laatste gebruik — nooit de volledige key.
-  - `DELETE /api-keys/{id}` — Revoke key via soft-delete (`is_active=false`), alleen via sessie-token.
-- **API key authenticatie** (backend `services/auth_service.py`): `get_user_by_api_key()` zoekt gebruiker op via SHA-256 hash van de meegestuurde key. `authenticate_request()` uitgebreid met 3e parameter `x_api_key` — volgorde: `X-User-Token` → `X-API-Key` → `X-Admin-API-Key`.
-- **Scope enforcement** (backend `services/auth_service.py`): `check_write_scope()` helper die 403 retourneert bij write-operaties met een `read`-scope API key. Alle write endpoints in `transcription.py`, `transcripts.py`, `profiles.py`, `notes.py`, `settings.py`, `feedback.py`, `calendar.py` controleren scope.
-- **`X-API-Key` header** (backend `app.py`): Toegevoegd aan CORS `allow_headers`, `api_keys_router` geregistreerd.
-- **Rate limiting** (backend `rate_limiting.py`): API key prefix als rate limit key (i.p.v. user token).
-- **Error logging** (backend `middleware/error_logging.py`): Fallback naar API key voor gebruikersidentificatie bij foutrapportage.
-
-### Decisions
-- Zie [DEC-036](DECISIONS.md) voor de rationale achter het API key ontwerp.
-
-### Notes
-- Alleen de backend is aangepast. Client-side UI voor API key management is nog niet geïmplementeerd.
-- Bestaande sessie-token authenticatie blijft ongewijzigd werken.
-- API keys hebben geen sliding window expiry — ze verlopen op de ingestelde `expires_at` datum (of nooit als die niet gezet is).
-
----
-
-## [2026-03-14] — YouTube transcriptie + Blog Samenvatting profiel
-
-### Added
-- **Blog Samenvatting profiel** (backend `profile_templates.py`): Nieuw 4e default profiel `blog_samenvatting` — genereert narratieve long-form samenvattingen als basis voor blogartikelen. Template bevat TL;DR box, thematische secties met blockquotes, en conclusie met key takeaways. Wordt automatisch aangemaakt via migratie `_migrate_add_blog_profile()` in `app.py`.
-- **Feature flag infrastructuur** (backend `config.py`, `routes/features.py`): `GET /features` endpoint retourneert in/uitschakelbare features als JSON (`{"youtube_transcription": true/false}`). Geen authenticatie vereist zodat clients features kunnen checken voor login. Config via `FEATURE_YOUTUBE_ENABLED` env var (default: `false`).
-- **YouTube transcriptie endpoint** (backend `routes/transcription.py`): `POST /transcribe-youtube` accepteert YouTube URL + optioneel `profile_id`. Valideert URL (strict regex voor youtube.com/watch, youtu.be, shorts, live), haalt metadata op via `yt-dlp --dump-json`, downloadt audio via `yt-dlp --extract-audio --audio-format wav`, en voert het in de normale Whisper pipeline. Rate limit: 5/uur per gebruiker.
-- **YouTube service** (backend `services/youtube_service.py`): Drie functies — `validate_youtube_url()`, `get_youtube_metadata()` (met duurcheck tegen `YOUTUBE_MAX_DURATION_SECONDS`, default 7200s), `download_youtube_audio()` (subprocess met 600s timeout).
-- **`downloading` task status** (backend `models.py`, macOS `Models.swift`, macOS `TasksView.swift`, macOS `ProcessingView.swift`, Windows `types.ts`): Nieuwe status in de pipeline voor YouTube downloads. Progress 10%, Nederlandse labels "Downloaden..." / "YouTube video wordt gedownload...".
-- **`source_type` / `source_url` velden** (backend `models.py`): Nieuwe kolommen op Task model om de bron van een transcriptie vast te leggen (bijv. `source_type="youtube"`, `source_url="https://..."`). Migratie `_migrate_add_source_fields()` voegt kolommen toe via ALTER TABLE.
-- **YouTube UI** (macOS `RecordingView.swift`, `RecordingViewModel.swift`): Conditionele YouTube card in idle state — verschijnt alleen als `isYouTubeEnabled` via feature flag. URL TextField, profiel picker (hergebruikt bestaande `profilePickerSection`), submit knop met loading state en foutmelding. Rood kleurthema voor YouTube branding.
-- **YouTube UI** (Windows `RecordingPage.tsx`, `recordingStore.ts`): YouTube sectie in IdleState met URL input, submit knop, en error display. Feature check via `api.fetchFeatures()` bij mount. Submit handler voegt task toe als background task met SSE tracking.
-- **API methodes** (macOS `APIService.swift`, Windows `api.ts`): `fetchFeatures()` (GET /features, ongeauthenticeerd) en `transcribeYouTube(url:profileId:)` (POST /transcribe-youtube) op beide platforms.
-- **yt-dlp** (backend `Dockerfile`): Toegevoegd aan pip install voor YouTube audio download.
-- **YouTube UI** (webapp `templates/pages/upload.html`): YouTube card met URL input, profiel selector en submit knop. Card is verborgen en wordt conditioneel getoond via `fetch('/tstudio/api/features')` bij page load. Submit handler doet `POST /transcribe-youtube` met auth token uit localStorage. Success-melding verwijst gebruiker naar taken.
-- **`downloading` status** (webapp `static/js/upload.js`): Toegevoegd aan `statusMap` met label "YouTube video downloaden..." en progress 15%.
-
-### Changed
-- **Backend config** (`config.py`): Pydantic v1/v2 compatibiliteit — `_env_field()` helper die `validation_alias` (v2) of `env` (v1) gebruikt afhankelijk van geïnstalleerde versie. `class Config` fallback voor servers zonder `pydantic-settings` package.
-- **Feature flag geactiveerd** (`docker-compose.yml`): `FEATURE_YOUTUBE_ENABLED=true` toegevoegd aan container env vars en container opnieuw aangemaakt. YouTube card is nu zichtbaar in webapp, macOS en Windows.
-
-### Decisions
-- Zie [DEC-035](DECISIONS.md) voor de rationale achter YouTube als backend-download.
-
-### Notes
-- YouTube feature is live op productie (`FEATURE_YOUTUBE_ENABLED=true`). `GET /features` retourneert `{"youtube_transcription": true}`.
-- Backend deployed en geverifieerd: blog profiel succesvol aangemaakt via migratie, `source_type`/`source_url` kolommen toegevoegd.
-- macOS build geverifieerd: `BUILD SUCCEEDED` (alle switch statements uitgebreid met `downloading` case).
-- Windows TypeScript compileert zonder fouten.
-- Webapp YouTube card getest: verschijnt conditioneel bij enabled feature.
-- Android client (Fase 6) nog niet geïmplementeerd.
-- Server heeft pydantic v1 (1.10.7) — config.py aangepast voor backward compatibility.
-- Container is handmatig opnieuw aangemaakt met `docker run` (niet via docker-compose) omdat docker-compose een build probeert die failt op ontbrekend pad.
-
----
-
-## [2026-03-14] — Android client + CI/CD verbeteringen (v1.0.58–1.0.73)
-
-### Added
-- **Android client** (`transcript-studio-android/`): Volledig nieuw platform met Kotlin 2.x, Jetpack Compose, Material 3, Hilt DI, Room database en OkHttp/Retrofit networking. Alle UI screens geïmplementeerd: Login (email/wachtwoord + 2FA + biometrie), Home, Recording (waveform visualizer), Tasks (SSE real-time updates), Transcripts (lijst + detail met HTML rendering en export), Settings, en Admin (6 management tabs). Architectuur volgt Repository pattern met ViewModels, `StateFlow`, en `collectAsStateWithLifecycle()`. Offline queue via Room, tokens via EncryptedSharedPreferences (Tink), netwerk monitoring via ConnectivityManager. Package: `nl.prezent.transcriptstudio`, min SDK 28, target SDK 36.
-- **Android CI build** (`.github/workflows/release.yml`): `build-android` job bouwt APK op `ubuntu-latest` met JDK 21 en Gradle. APK wordt geüpload naar server en toegevoegd aan `releases.json` manifest (`android` / `dev_android` velden). Debug keystore wordt aangemaakt op CI runner omdat GitHub Actions geen standaard Android debug keystore heeft.
-- **Android download card** (`scripts/download-page.html`): Download pagina toont nu een Android APK card naast macOS en Windows.
-- **Styled DMG installer** (`scripts/create-dmg-background.py`, `.github/workflows/release.yml`): macOS DMG heeft nu een branded achtergrond met drag-to-Applications layout. Background image wordt gegenereerd via Python script met Pillow, AppleScript positioneert de app en Applications iconen.
-
-### Changed
-- **Waveform visualizer** (Windows `WaveformVisualizer.tsx`): Vereenvoudigd naar dezelfde aanpak als macOS — directe canvas rendering zonder complexe animation queue.
-- **Floating widget** (macOS `FloatingWidgetController.swift`): Fix voor widget die niet sloot na stoppen opname.
-- **Android strings** (`res/values/strings.xml`): Alle hardcoded Nederlandse UI strings geëxtraheerd naar strings.xml resource file.
-- **Android state collection** (alle screens): Gemigreerd van `collectAsState()` naar `collectAsStateWithLifecycle()` voor correcte lifecycle-aware state collection.
-
-### Fixed
-- **Android signing config** (`app/build.gradle.kts`): Release build gebruikt `signingConfigs.getByName("debug")` voor ad-hoc signing zonder Play Store vereiste. CI runner mist de standaard debug keystore — opgelost door `keytool` stap in GitHub Actions workflow.
-- **Android version display** (`BuildConfig.VERSION_NAME`): Versie wordt nu gelezen uit `VERSION` bestand via Gradle i.p.v. hardcoded string.
-
-### Notes
-- Android app is functioneel voor UI maar recording-integratie is nog in ontwikkeling.
-- Android build version wordt automatisch bepaald uit het root `VERSION` bestand via `build.gradle.kts`.
-- Deploy job wacht nu op alle drie de platform builds (macOS + Windows + Android) voordat artifacts naar server worden geüpload.
-
----
-
-## [2026-03-13] — Directory herstructurering per platform
-
-### Changed
-- **Directory renames** (`git mv`): `TranscriptStudio/` → `macos/`, `transcript-studio-windows/` → `windows/`, `RecordingActivityWidget/` → `ios-widget/`. Consistent lowercase platform namen op root level. `TranscriptStudio.xcodeproj` en `TranscriptStudioTests` blijven ongewijzigd (Xcode scheme/target namen).
-- **Xcode project** (`TranscriptStudio.xcodeproj/project.pbxproj`): Group path `TranscriptStudio` → `macos`, entitlements paden (`CODE_SIGN_ENTITLEMENTS`), en `INFOPLIST_FILE` bijgewerkt naar `macos/` prefix.
-- **Build scripts** (`scripts/sync-version.sh`, `build.sh`, `upload.sh`, `sync-version.ps1`, `build.ps1`, `upload.ps1`): Alle `transcript-studio-windows` referenties → `windows`.
-- **GitHub Actions** (`.github/workflows/release.yml`): `working-directory` en `find` paden bijgewerkt.
-- **Documentatie** (`CLAUDE.md`, `README.md`, `docs/ARCHITECTURE.md`, `docs/RELEASE.md`, `docs/README.md`, `docs/CHANGELOG.md`, `skills/transcript-studio-android.md`): Alle directory referenties bijgewerkt.
-- **`.gitignore`**: Ignore patterns van `transcript-studio-windows/` → `windows/`.
-
-### Decisions
-- Zie [DEC-034](DECISIONS.md) voor de rationale.
-
-### Notes
-- `git mv` behoudt history tracking.
-- macOS build geverifieerd: `xcodebuild ... build CODE_SIGNING_ALLOWED=NO` — **BUILD SUCCEEDED**.
-- `scripts/sync-version.sh` geverifieerd: alle 3 platform configs succesvol bijgewerkt.
-- Historische plan-bestanden in `docs/plans/` en `.claude/plans/` zijn niet bijgewerkt — dit zijn snapshots van eerdere sessies.
-
----
-
-## [2026-03-13] — Documentatie: Apple telefonie beperking
-
-### Added
-- **Bekende issues: Apple telefonie niet opneembaar** (`README.md` bekende issues tabel): Gedocumenteerd dat iPhone-doorschakeling (FaceTime relay / Telefoon-app via Mac) niet werkt met de Systeemgeluid- of Gecombineerd-opnamemodus. Apple routeert deze audio via een privé audiopad (`com.apple.avconference` / CoreTelephony) dat buiten het bereik van ScreenCaptureKit valt. Dit is een macOS-platformbeperking, geen bug in TranscriptStudio. Workarounds: gebruik een VoIP-app (Teams/Zoom/WhatsApp Desktop), microfoonmodus met speaker, of een virtuele audio-driver (BlackHole/Loopback).
-
----
-
-## [2026-03-13] — Profile UX simplification + timezone fix (v1.0.50)
-
-### Changed
-- **Simplified profile creation** (macOS `ProfilesView.swift`, Windows `ProfilesPage.tsx`): Replaced the confusing dual-prompt form (system prompt + notule prompt) with a streamlined flow. Users now pick a **style** (Zakelijk/Informeel/Technisch) from a visual card selector and enter a single **opdracht** describing what the notes should contain. The style determines the AI's system prompt automatically. Previous "system prompt" and "HTML template" fields are hidden behind a collapsible "Geavanceerde opties" section for power users. Existing profiles with custom system prompts are automatically detected and shown in advanced mode when edited.
-- **Profile form labels** (macOS + Windows): Field labels changed from technical jargon ("Systeemprompt", "Notulenprompt") to user-friendly Dutch ("Stijl", "Wat moet er in de notulen staan?") with placeholder examples and descriptive footer text.
-
-### Fixed
-- **Email timestamps show Amsterdam time** (backend `routes/transcription.py`): Notification emails ("Notule klaar" and "Veiligheidscontrole geblokkeerd") displayed UTC time (e.g., "14:30 UTC"). Changed to `Europe/Amsterdam` timezone using `ZoneInfo`. The Dockerfile already had `TZ=Europe/Amsterdam` configured, but the Python code explicitly used `datetime.now(timezone.utc)` for display formatting. Internal API timestamps (ISO format for client consumption) remain UTC — clients handle timezone conversion via their own `DateFormatter` / locale settings.
-
-### Decisions
-- Zie [DEC-032](DECISIONS.md) voor de rationale achter de profiel UX vereenvoudiging.
-
-### Notes
-- Backend change deployed directly via `scp` + `docker restart n8n_transcript_studio`.
-- The three default styles (Zakelijk/Informeel/Technisch) use the same system prompts as the existing default profiles in `Models.swift` / `types.ts`, ensuring backward compatibility.
-- Backend API contract unchanged — still receives `system_prompt` + `notule_prompt` strings. The simplification is entirely client-side.
-
----
-
-## [2026-03-13] — Real-time upload progress tracking (macOS & Windows)
-
-### Added
-- **Upload progress delegate** (macOS, `APIService.swift`): New `UploadProgressDelegate` class implementing `URLSessionTaskDelegate` with `urlSession(_:task:didSendBodyData:totalBytesSent:totalBytesExpectedToSend:)`. Reports byte-level upload progress (capped at 0.99 to reserve 1.0 for confirmed completion). The `uploadAudio()` method now uses `session.upload(for:from:delegate:)` instead of `session.data(for:)`, removing `req.httpBody` since the body is passed directly to the upload call.
-- **XHR-based upload with progress** (Windows, `api.ts`): New `uploadRecordingWithProgress()` method using `XMLHttpRequest` with `upload.onprogress` for real-time byte progress. Browser `fetch()` doesn't support upload progress events, so XHR is used. Same FormData construction, error handling, and abort signal support as the existing `uploadRecording()`.
-
-### Changed
-- **RecordingPage upload call** (Windows, `RecordingPage.tsx` line 183): Replaced `api.uploadRecording()` with `api.uploadRecordingWithProgress()`, passing an `onProgress` callback that updates the background task progress percentage.
-
-### Notes
-- No UI changes needed — macOS `RecordingWidgetView.swift` already renders `recordingVM.uploadProgress` as a circular progress ring, and Windows `ProcessingBar.tsx` already renders `task.progress` as a percentage with animated bar.
-- Progress capped at 99% during transfer; 100% only set after server confirms successful upload.
-
----
-
-## [2026-03-13] — Dev/beta build pipeline met GitHub Actions
-
-### Added
-- **Dev/beta build channel** (`scripts/env.sh`, `scripts/build.sh`, `scripts/release.sh`, `scripts/upload.sh`): Nieuw `BUILD_CHANNEL` systeem (standaard `dev`, expliciet `--production` voor productie). Dev builds krijgen eigen bundle ID (`nl.prezent.TranscriptStudio.dev`), app naam ("TranscriptStudio Dev"), en artifact namen (`TranscriptStudio-Dev-*.dmg`). Side-by-side installeerbaar naast productie.
-- **GitHub Actions dual-trigger** (`.github/workflows/release.yml`): Naast de bestaande `v*` tag trigger (productie) zijn er nu twee extra triggers: `dev-v*` tags voor dev builds en `workflow_dispatch` voor handmatige channel keuze. Beide channels bouwen met correcte bundle ID's, product namen en artifact namen via build-time overrides (`PRODUCT_BUNDLE_IDENTIFIER` voor xcodebuild, `TAURI_CONFIG` env var voor Tauri).
-- **GitHub Releases met release notes** (`.github/workflows/release.yml` deploy job): Na deploy worden automatisch GitHub Releases aangemaakt. Release notes worden uit de eerste entry van `docs/CHANGELOG.md` geëxtraheerd. Dev releases worden gemarkeerd als pre-release; productie releases als volledige release. DMG en MSI worden als downloadbare assets aan de release gehangen.
-- **Deploy scripts** (`scripts/deploy-dev.sh`, `scripts/deploy-production.sh`): One-command deploy scripts. `deploy-dev.sh` maakt een `dev-v{version}` tag en pusht naar GitHub; `deploy-production.sh` maakt een `v{version}` tag. Beide pushen eerst de laatste commits, creëren de tag, en laten GitHub Actions de rest doen (build → upload → release notes).
-- **Dev sectie op download page** (`scripts/download-page.html`): "Ontwikkelversie (Beta)" sectie met oranje badge, wordt automatisch getoond wanneer `dev_*` velden in releases.json aanwezig zijn. Leest `dev_macos` en `dev_windows_x64` uit het manifest.
-- **Shared build config** (`scripts/env.sh`): Nieuw bestand dat door alle build scripts wordt gesourced. Centraliseert `VERSION`, `BUILD_DIR`, `SERVER`, en channel-afhankelijke variabelen (`APP_DISPLAY_NAME`, `BUNDLE_ID_MACOS`, `DMG_NAME`, etc.).
-
-### Changed
-- **Dynamische TitleBar** (`windows/src/components/layout/TitleBar.tsx`): Hardcoded "TranscriptStudio" vervangen door `getName()` uit `@tauri-apps/api/app`. Toont automatisch "TranscriptStudio Dev" of "TranscriptStudio" afhankelijk van build channel.
-- **releases.json manifest**: Dev builds schrijven naar `dev_latest_version`, `dev_macos`, `dev_windows_x64` velden. Productie builds schrijven naar de bestaande velden. Beide channels bestaan naast elkaar in hetzelfde manifest.
-
-### Decisions
-- Zie [DEC-031](DECISIONS.md) voor de rationale achter build-time overrides vs. repository wijzigingen.
-
-### Notes
-- Workflow: `v*` tag push = automatische productie build. Manual dispatch = keuze dev (default) of production.
-- Lokaal: `./scripts/release.sh` = dev, `./scripts/release.sh --production` = productie.
-
----
-
+_Entries from 2026-03-13 to 2026-03-14 archived to [archive/CHANGELOG-2026-03-13-to-2026-03-14.md](archive/CHANGELOG-2026-03-13-to-2026-03-14.md)._
 _Older entries (2026-02-27 to 2026-03-12) archived to [archive/CHANGELOG-2026-02-27-to-2026-03-12.md](archive/CHANGELOG-2026-02-27-to-2026-03-12.md)._

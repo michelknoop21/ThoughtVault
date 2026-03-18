@@ -30,6 +30,7 @@ import { createSSEClient } from "./services/sse";
 import { initCrashReporter } from "./services/crashReporter";
 import { initMeetingNotifications } from "./services/meetingNotifications";
 import { useUploadQueueStore } from "./stores/uploadQueueStore";
+import { useGlobalRecordingHandler } from "./hooks/useGlobalRecordingHandler";
 import { useToast } from "./components/ui/InfoBar";
 import type { Profile } from "./types";
 
@@ -238,6 +239,9 @@ function ProtectedRoutes() {
       });
     }).catch(() => { /* ignore - settings will remain as-is */ });
   }, [isAuthenticated, setProfiles, updateSettings]);
+
+  // Global recording stop/error handler — always active, survives page navigation
+  useGlobalRecordingHandler();
 
   // Recover active tasks on app start via /tasks/active endpoint
   const recoveryRanRef = useRef(false);

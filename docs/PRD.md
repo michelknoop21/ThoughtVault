@@ -1,6 +1,6 @@
 # TranscriptStudio — Product Requirements Document
 
-_Last updated: 2026-03-16_
+_Last updated: 2026-03-18_
 
 ---
 
@@ -111,8 +111,10 @@ The product consists of four client surfaces sharing a common backend:
 - `OfflineQueue` service persists failed or queued uploads to disk.
 - `NetworkMonitor` (NWPathMonitor) watches reachability and triggers automatic retry on reconnect.
 - Queue items reference the local audio file path; files are protected from cleanup while queued.
-- **Retry limit:** 50 attempts per item (Windows); items removed when file no longer exists on disk.
+- **Retry limit:** 50 attempts per item (Windows), 10 attempts (macOS); items removed when file no longer exists on disk.
+- **Permanently failed items (Windows):** Items exceeding retry limit are reported to `uploadQueueStore.permanentlyFailed` with filename. A warning banner in `OfflineQueueBanner` shows the failed filenames with a dismiss button.
 - **Auth error resilience:** 401 errors during upload always enqueue for retry (never discard). See DEC-048.
+- **Structured error messages:** Upload failures show actionable Dutch error messages based on structured `error_code` from backend. File size limit (120 MB) enforced client-side before upload. See DEC-049.
 - **Progress banner (Windows):** Shows filename, file size, progress bar with percentage, upload speed, and queue position (e.g. "Uploaden: recording.wav (12 MB) — 67% (2.3 MB/s) [1/3]").
 
 ### 3.7 Task Management
@@ -128,6 +130,7 @@ The product consists of four client surfaces sharing a common backend:
 - Token-based authentication with `X-User-Token` request header.
 - Tokens remain valid until server-side `SESSION_INACTIVITY_DAYS` expiry (365 days).
 - **Never auto-logout**: after login, users stay authenticated until explicit logout. Auth errors (401) are retried silently — token stays in keyring/Keychain. See DEC-048.
+- **Auto-login (Windows)**: "Onthoud mij" checkbox saves email + password in OS keyring. On startup, validates token and auto-logs in if remember-me is set. 2FA accounts auto-submit credentials, showing only code input. Network errors preserve credentials. Explicit logout clears all saved credentials. See DEC-050.
 - Biometric login (Face ID / Touch ID) on macOS via `BiometricService` + `KeychainService`.
 - Auth token stored in Keychain with `kSecAttrAccessibleWhenUnlocked` and Secure Enclave access control.
 - Admin user management: invite codes, enable/disable users, role assignment.

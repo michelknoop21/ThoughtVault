@@ -1,6 +1,6 @@
 # TranscriptStudio — Architecture
 
-_Last updated: 2026-03-17_
+_Last updated: 2026-03-18_
 
 ---
 
@@ -98,7 +98,9 @@ Client                    Backend                    n8n / Claude
 
 **Field mapping:** `Task.result` → `notuleHtml` (macOS Swift) / `notule_html` (Windows TypeScript)
 
-**Authentication:** Token-based with `X-User-Token` header. Tokens remain valid until server-side `SESSION_INACTIVITY_DAYS` expiry (365 days). **Never auto-logout**: both macOS and Windows clients keep the token on 401 errors. Windows retries 401 once after 2s; macOS logs and ignores `.authDidInvalidate`. See DEC-048.
+**Authentication:** Token-based with `X-User-Token` header. Tokens remain valid until server-side `SESSION_INACTIVITY_DAYS` expiry (365 days). **Never auto-logout**: both macOS and Windows clients keep the token on 401 errors. Windows retries 401 once after 2s; macOS logs and ignores `.authDidInvalidate`. See DEC-048. **Auto-login (Windows)**: "Onthoud mij" checkbox saves email + password in OS keyring (`saved_email`, `saved_password`, `remember_me` keys). On startup, `authStore.loadTokenFromKeyring()` validates existing token, then auto-logs in if remember-me is set. 2FA accounts auto-submit credentials and show only the code input. Network errors preserve credentials for next attempt. See DEC-050.
+
+**Error handling:** Centralized error module (`app/errors.py`) with `raise_api_error()` replacing all direct `HTTPException` calls. Standard JSON response format: `{"error_code": "auth_required", "message": "Inloggen is vereist.", "detail": "..."}`. 11 structured error codes with Dutch user-facing messages. 500 errors log the real exception but only return generic message to client. Audio upload validates file extension against allowlist. File size limit: 120 MB (enforced on backend and both clients). See DEC-049.
 
 **Database:** PostgreSQL 15 in productie. SQLite ondersteund als development fallback. Optional Redis voor caching.
 
@@ -183,7 +185,7 @@ macos/
 
 | Service | Type | Responsibility |
 |---------|------|---------------|
-| `APIService` | `actor` | REST calls, SSE streaming, retry with exponential backoff, field mapping, upload progress via `UploadProgressDelegate` |
+| `APIService` | `actor` | REST calls, SSE streaming, retry with exponential backoff, field mapping, upload progress via `UploadProgressDelegate`, structured error parsing (`extractErrorInfo()` for `error_code` + `message`) |
 | `AudioRecorder` | `@Observable class` | AVFoundation mic capture, 16 kHz WAV, 60 Hz level metering, pause/resume, 7-day cleanup |
 | `SystemAudioCapture` | `@Observable class` | ScreenCaptureKit system audio, `SCStreamConfiguration` audio-only mode |
 | `OnDeviceTranscriber` | `actor` | SFSpeechRecognizer on-device transcription, optional whisper-rs GGML |
@@ -248,9 +250,9 @@ AVFoundation (mic)          ScreenCaptureKit (system)
 **Audio pipeline:**
 - **Microphone mode:** WASAPI input → 16 kHz mono 16-bit PCM WAV → `AppData/Recordings`
 - **Combined mode:** Mic writes to `recording_{ts}.wav`, WASAPI loopback (system audio) writes to `recording_{ts}.loopback.wav` → after recording stops, `mix_wav_files()` merges both using element-wise max → temp loopback file deleted
-- **Upload:** Tauri FS plugin reads WAV → browser `FormData` + `fetch()` → SSE progress
+- **Upload:** Rust `proxy_upload` command streams WAV file in 64 KB chunks via reqwest multipart
 
-**Upload path:** File upload uses browser-native `FormData` + `fetch()` instead of Rust reqwest. The Tauri FS plugin (`@tauri-apps/plugin-fs`) reads the WAV file from disk into a `Uint8Array`, which is wrapped in a `Blob` and appended to `FormData`. This ensures multipart encoding is identical to an HTML form upload. Other API calls (JSON REST) still use the Rust `proxy_request` command to bypass CORS.
+**Upload path:** File upload goes through the Rust `proxy_upload` Tauri command (`commands/http.rs`), which streams the WAV file from disk using `tokio_util::io::ReaderStream` with 64 KB chunks. The file is never fully loaded into memory — `reqwest::multipart::Part::stream_with_length()` sends chunks directly to the server. Client-side file size validation (120 MB limit) uses file metadata before opening. All other API calls (JSON REST) use the Rust `proxy_request` command to bypass CORS.
 
 ### Frontend Structure
 
@@ -273,13 +275,13 @@ src/
 │   ├── sse.ts              # EventSource SSE wrapper
 │   └── crashReporter.ts    # Crash capture and structured logging
 ├── stores/
-│   ├── auth.ts             # User, token, biometric state (Zustand)
+│   ├── authStore.ts        # User, token, rememberMe, auto-login, pendingTwoFactor (Zustand + keyring)
 │   ├── calendar.ts         # Meeting list, call-alert state
 │   ├── profiles.ts         # Profile CRUD
 │   ├── recording.ts        # Recording state machine, background task tracking
 │   ├── settings.ts         # App configuration
 │   ├── transcripts.ts      # Transcript list, search, filters
-│   └── uploadQueueStore.ts # Offline queue upload progress (current item, %, speed)
+│   └── uploadQueueStore.ts # Offline queue upload progress (current item, %, speed) + permanently failed items tracking
 └── pages/
     ├── HomePage.tsx, LoginPage.tsx, RecordingPage.tsx
     ├── TranscriptsPage.tsx, TasksPage.tsx, SettingsPage.tsx, AdminPage.tsx
@@ -288,8 +290,8 @@ src/
 ```
 
 **Data persistence:**
-- OS keychain — auth token and credentials (via `keyring` Rust crate, migrated from localStorage in v1.0.22)
-- `localStorage` — UI preferences, onboarding state
+- OS keychain — auth token, saved credentials for auto-login (`saved_email`, `saved_password`, `remember_me`), via `keyring` Rust crate
+- `localStorage` — UI preferences, onboarding state, `rememberMe` checkbox state (via Zustand persist)
 - `sessionStorage` — OAuth state parameter (temporary, cleared after callback)
 - `Tauri plugin-store` — offline queue persistence
 - `AppData/Recordings` — audio files (7-day cleanup)

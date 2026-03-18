@@ -5,6 +5,81 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2026-03-18] — Streaming file upload (Windows memory fix)
+
+### Changed
+- **Streaming upload** (`windows/src-tauri/src/commands/http.rs:92-108`): Replaced `tokio::fs::read()` (loads entire WAV into `Vec<u8>`) with `ReaderStream::with_capacity(file, 64KB)` + `Part::stream_with_length()`. File is now streamed in 64 KB chunks during upload instead of buffered entirely in memory. A 100 MB WAV previously consumed 100 MB of heap; now uses ~64 KB.
+- **File size check before open** (`http.rs:107-113`): Size validation now uses `metadata.len()` instead of reading the file first — avoids allocating memory for oversized files that would be rejected anyway.
+- **Added `tokio-util` dependency** (`Cargo.toml`): `tokio-util = { version = "0.7", features = ["io"] }` for `ReaderStream`.
+
+### Notes
+- Root cause: Activity Monitor showed WebView2 process at 538 MB during uploads. Main contributor was `tokio::fs::read()` loading the entire WAV into memory.
+- Expected memory reduction: 100-200 MB during active uploads, bringing total app memory from ~628 MB to ~400-450 MB (rest is WebView2/Chromium baseline).
+- All 6 existing upload tests pass with the streaming implementation.
+
+---
+
+## [2026-03-18] — Auto-login / "Onthoud mij" feature (Windows)
+
+### Added
+- **"Onthoud mij" checkbox** (`windows/src/pages/LoginPage.tsx:240-247`): Checkbox between password field and submit button. When checked, email + password are saved to Windows Credential Manager after successful login (including 2FA completion). Checkbox state persisted in Zustand localStorage.
+- **Auto-login on startup** (`windows/src/stores/authStore.ts:105-213`): `loadTokenFromKeyring()` expanded to 4-step flow: (1) load existing token + validate via `getProfiles()`, (2) check `remember_me` flag in keyring, (3) load saved email + password, (4) call `api.login()` automatically. On 2FA accounts, auto-submits credentials — user sees only the 2FA code input.
+- **`pendingTwoFactor` state** (`authStore.ts:18`): Stores `{ tempToken, email }` when auto-login hits 2FA. LoginPage picks this up on mount and jumps to 2FA code view.
+- **`saveCredentials()` / `clearSavedCredentials()`** (`authStore.ts:72-94`): Store/remove `saved_email`, `saved_password`, `remember_me` keys in OS keyring via existing Tauri commands.
+- **`isNetworkError()` helper** (`authStore.ts:31-45`): Detects transient network errors (timeout, DNS, connection refused, offline) to distinguish from auth failures during auto-login.
+- **`.form-checkbox` CSS** (`globals.css`): Inline flex layout with branded accent color.
+
+### Changed
+- **`logout()` clears saved credentials** (`authStore.ts:98-103`): Explicit logout removes all saved credentials from keyring and resets `rememberMe` to `false`.
+- **`partialize` includes `rememberMe`** (`authStore.ts:219`): Checkbox state persisted to localStorage alongside user info.
+
+### Edge Cases
+- **Network offline during auto-login**: Credentials kept (transient). Old token preserved so user can keep working.
+- **Password changed server-side**: Auth error → saved credentials cleared, login page shown.
+- **2FA accounts**: Auto-submits email/password, shows only 2FA code screen. Credentials stay saved.
+- **Corrupt keyring data**: Partial credentials → clear and show login page.
+- **Token invalid without remember-me**: Old token kept for graceful degradation until real request fails.
+
+### Decisions
+- DEC-050: Auto-login via OS keyring credentials
+
+### Notes
+- No Rust changes needed — uses existing `store_credential`, `load_credential`, `delete_credential` commands.
+- Keyring keys: `auth_token` (existing), `saved_email`, `saved_password`, `remember_me`.
+- TypeScript compiles cleanly.
+
+---
+
+## [2026-03-18] — Duidelijke upload foutmeldingen across all layers
+
+### Added
+- **Gestructureerde error codes (backend)** (`src/insanely_fast_whisper_api/app/errors.py`): Nieuw gecentraliseerd error module met `raise_api_error()`, `APIError` (extends HTTPException), `api_error_response()`, en `validate_audio_extension()`. Definieert 11 gestructureerde error codes met Nederlandse user-facing messages. Standaard response format: `{"error_code": "...", "message": "...", "detail": "..."}`.
+- **`UploadFailureReason.networkError` (macOS)** (`macos/Models/Models.swift`): Nieuwe case voor netwerk-gerelateerde upload failures met Nederlands beschrijving en `wifi.exclamationmark` icoon.
+- **Retry sheet voor upload failures (macOS)** (`macos/Views/RecordingView.swift`): `.sheet` modifier voor `showRetrySheet` — presenteert `ReprocessSheet` in retry mode wanneer upload faalt.
+- **Permanently failed uploads (Windows)** (`windows/src/stores/uploadQueueStore.ts`): `permanentlyFailed` array met `addPermanentlyFailed()` en `clearPermanentlyFailed()` actions. Na 50 retries worden items gerapporteerd met bestandsnaam.
+- **Permanently failed banner (Windows)** (`windows/src/App.tsx`): `OfflineQueueBanner` toont waarschuwingsbanner voor permanent gefaalde uploads met bestandsnaam en dismiss-knop.
+
+### Changed
+- **Backend error responses gestandaardiseerd** (`services/auth_service.py`, `middleware/rate_limiting.py`, `routes/transcription.py`): ~30 raw `HTTPException` calls vervangen door `raise_api_error()` met gestructureerde error codes. 500 errors lekken geen raw exception strings meer naar clients. Error codes: `file_too_large`, `queue_unavailable`, `server_error`, `not_found`, `access_denied`, `auth_required`, `validation_error`, `audio_format_unsupported`, `rate_limit_exceeded`.
+- **Audio format validatie (backend)** (`routes/transcription.py`): Extension allowlist voor uploads — ongeldige formaten worden geweigerd met `audio_format_unsupported` error code.
+- **File size limiet verlaagd naar 120 MB** (`macos/Services/APIService.swift`, `windows/src-tauri/src/commands/http.rs`): Client-side validatie op beide platformen verlaagd van 200 MB naar 120 MB, consistent met backend limiet.
+- **`APIError.httpError` uitgebreid (macOS)** (`macos/Services/APIService.swift`): Nu 3 argumenten: `(statusCode, message, errorCode)`. Nieuwe `extractErrorInfo()` parseert gestructureerde `error_code` + `message` van backend met fallback naar legacy formaten. Error descriptions actionable in het Nederlands.
+- **`UploadFailureReason` descriptions (macOS)** (`macos/Models/Models.swift`): Alle descriptions bijgewerkt naar actionable Nederlands (120 MB limiet vermeld, verbindingsadvies, herstart suggestie).
+- **Upload retry limiet met user-facing message (macOS)** (`macos/ViewModels/RecordingViewModel.swift`): Queue processing incrementeert `retryCount` bij failure via `replaceItem()`, verwijdert items na 10 retries met user-visible message. Auth error tijdens upload zet `offlineStatusMessage`.
+- **Structured error parsing (Windows)** (`windows/src/services/api.ts`): `request()` en beide upload methods parsen `error_code` van backend responses en gebruiken `message` direct. Fallback naar status-code-based Nederlandse messages.
+- **Client-side file size check (Windows Rust)** (`windows/src-tauri/src/commands/http.rs`): 120 MB check voordat bestand wordt gelezen. Netwerk errors produceren specifieke Nederlandse messages per error type (timeout, connection refused, generiek).
+- **SSE connection-lost message (Windows)** (`windows/src/hooks/useGlobalRecordingHandler.ts`): Bijgewerkt met actionable Nederlands advies.
+
+### Decisions
+- DEC-049: Gestructureerde error codes across all layers
+
+### Notes
+- Backend error module definieert 11 error codes: `auth_required`, `read_only_key`, `forbidden`, `rate_limit_exceeded`, `file_too_large`, `queue_unavailable`, `server_error`, `not_found`, `access_denied`, `validation_error`, `audio_format_unsupported`.
+- macOS retry limiet: 10 pogingen. Windows retry limiet: 50 pogingen. Verschil door platform-specifieke offline queue implementatie.
+- File size limiet is nu consistent 120 MB op alle lagen (backend + beide clients).
+
+---
+
 ## [2026-03-17] — Never auto-logout + upload queue progress banner
 
 ### Fixed
@@ -73,218 +148,6 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
-## [2026-03-16] — Web login page: proper dark mode support
-
-### Fixed
-- **Login page ignored system dark mode** (`static/css/main.css`, `static/css/registration.css`, `templates/auth/login.html`): The login page forced a light theme in all modes — `[data-theme="dark"] .login-body` applied the same light gradient as light mode and overrode CSS custom properties (`--text-primary: #333339`, `--bg-card: white`) to light values. Meanwhile, global dark theme input styles (`[data-theme="dark"] input[type="email"]`) had higher CSS specificity (0,2,0) than the login-specific `.login-input` class (0,1,0), applying dark backgrounds (`var(--bg-tertiary)` = `#222439`) to input fields while text color remained dark (`#333339`) — making input text unreadable.
-- **Root cause**: Specificity conflict between forced-light login overrides and global dark theme form styles. The login page's approach of overriding CSS custom properties on `.login-body` didn't override the global `[data-theme="dark"] input[type="email/password"]` selectors that target elements directly.
-
-### Changed
-- **Login body**: `[data-theme="dark"] .login-body` now applies dark gradient (`#0B0C15` → `#191C28`) instead of forced-light. Removed the CSS variable overrides that forced `--text-primary`, `--text-secondary`, `--border-primary`, `--bg-card` to light values.
-- **Login card**: Added `[data-theme="dark"] .login-card` with dark translucent background (`rgba(25,28,40,0.85)`), dark border, stronger shadow.
-- **Login inputs**: Added `[data-theme="dark"] .login-body .login-input` / `.auth-input` / `input[type="email/password"]` with specificity (0,3,0) to override global dark input styles. Dark background, light text, magenta focus ring.
-- **Text elements**: `.login-card-title`, `.login-card-subtitle`, `.password-toggle`, `.login-forgot-link`, `.login-footer` switched from hardcoded hex colors to `var(--text-primary/secondary/tertiary)`.
-- **Registration CSS**: Added dark mode rules for `.strength-text`, `.strength-bar`, `.manual-code p`, `.step-header h3`, `.manual-code-fallback summary`, `.password-match.success`. New `.totp-secret-code` class replaces inline style on TOTP code display element.
-- **Login HTML**: Removed hardcoded `color: #666` on summary, hardcoded `background: #f8f9fa` on code element. Added `color: var(--text-primary)` on success screen headings. Fixed `var(--primary-color)` → `var(--primary)` on resend code link.
-
-### Notes
-- The login page now fully follows system dark/light mode preference (via `theme.js` `prefers-color-scheme` detection).
-- Files deployed: `static/css/main.css`, `static/css/registration.css`, `templates/auth/login.html`.
-
----
-
-## [2026-03-16] — Backend CSS bugfix: dark mode select chevron tiling
-
-### Fixed
-- **Dark mode `<select>` chevron tiling** (`static/css/main.css`, `templates/pages/admin.html`): The `background:` shorthand in dark mode styles was resetting `background-repeat` to `repeat`, causing the custom chevron SVG to tile across the entire `<select>` element instead of appearing once on the right. Fixed by changing `background:` to `background-color:` in 4 places:
-  - `[data-theme="dark"] select` (line ~2296)
-  - `[data-theme="dark"] select:focus` (line ~2304)
-  - `select:focus` light mode (line ~2165)
-  - `.log-filter-select` inline style in `admin.html` (line ~634)
-
-### Notes
-- The root cause: CSS `background:` is a shorthand that resets all sub-properties (`background-image`, `background-repeat`, `background-position`, etc.) to their initial values. The chevron was set via `background-image` on the base `select` rule, but the dark mode override used `background:` (shorthand) to change the color, which reset `background-repeat` to `repeat` and `background-image` was then inherited with repeat. Using `background-color:` (longhand) only changes the color without affecting other background properties.
-
----
-
-## [2026-03-16] — Admin panel improvements and transcript loading simplification
-
-### Changed
-- **Admin Logging tab redesigned** (`macos/Views/AdminView.swift`, `windows/src/pages/AdminPage.tsx`): The "Fouten" tab is now a dual-subtab interface with "Activiteit" (activity logs) and "Fouten" (error logs). Includes filter bar with severity, user, action type, and text search. Expandable rows show full log details (stack traces, request context). Paginated display with 25 items per page.
-- **Admin Settings: YouTube configuration** (`macos/Views/AdminView.swift`, `windows/src/pages/AdminPage.tsx`): New fields in Admin > Instellingen for YouTube yt-dlp configuration: max video duration (minutes), cookies content (textarea for Netscape cookie format), extractor args (default: `youtube:player_client=mediaconnect`). Removes the need to SSH into the server and restart the container for cookie updates.
-- **Admin Settings: Google OAuth fields** (`macos/Views/AdminView.swift`, `windows/src/pages/AdminPage.tsx`): Google OAuth Client ID fields (macOS + Windows) added to the settings tab alongside existing MS365 fields.
-- **APIService filter parameters** (`macos/Services/APIService.swift`, `windows/src/services/api.ts`): `getAdminErrors()` and `getAdminActivity()` now accept filter parameters (`severity`, `userId`, `search`, `startDate`, `endDate`, `actionType`) instead of fetching a fixed list.
-- **AdminSettingsResponse extended** (`macos/Services/APIService.swift`, `windows/src/services/api.ts`): Now includes `youtube_max_duration_minutes`, `youtube_cookies_content`, `youtube_extractor_args` fields. `updateAdminSettings()` accepts these as optional parameters.
-- **Transcript pagination removed** (`macos/Services/APIService.swift`, `macos/ViewModels/TranscriptsViewModel.swift`, `macos/Views/TranscriptsView.swift`, `macos/Views/HomeView.swift`, `macos/Models/Models.swift`, `windows/src/services/api.ts`, `windows/src/pages/HomePage.tsx`, `windows/src/pages/RecordingPage.tsx`, `windows/src/App.tsx`): Client-side pagination loops removed from all transcript loading paths. Both platforms now fetch all transcripts in a single request without `page`/`limit`/`sort_by` query parameters. `TranscriptsResponse` model simplified to `{ items: [Transcript] }` — removed `total`, `page`, `limit` fields. ~80 lines of pagination loop logic removed.
-
-### Decisions
-- See DEC-045 in [DECISIONS.md](DECISIONS.md) for the transcript pagination removal rationale.
-- See DEC-046 in [DECISIONS.md](DECISIONS.md) for the admin panel enhancement rationale.
-
----
-
-## [2026-03-16] — YouTube anonieme captions via youtube-transcript-api
-
-### Added
-- **Anonieme YouTube captions** (`backend/services/youtube_service.py`): Nieuwe functie `fetch_captions_anonymous()` haalt captions op via de `youtube-transcript-api` library — geen Google API key, geen OAuth token, geen Google account nodig. Taal-prioriteit: nl manual → nl auto → en manual → en auto → overige. Metadata (titel, duur) wordt opgehaald via bestaande `get_youtube_metadata()` (yt-dlp `--dump-json`).
-- **Dependency**: `youtube-transcript-api` toegevoegd aan `requirements.txt` en `Dockerfile`.
-
-### Changed
-- **YouTube endpoint prioriteitsvolgorde** (`backend/routes/transcription.py:transcribe_youtube()`): Nieuwe 3-staps flow:
-  1. **Anonieme captions** via `fetch_captions_anonymous()` (nieuw, geen auth)
-  2. **Google API captions** via `fetch_youtube_captions()` (als `X-Google-Token` header aanwezig)
-  3. **yt-dlp + Whisper** fallback (audio download + GPU transcriptie)
-
-  Voorheen was stap 1 niet beschikbaar en was Google OAuth vereist voor de fast-path.
-- **Feature flag default** (`backend/config.py`): `FEATURE_YOUTUBE_ENABLED` default gewijzigd van `False` naar `True`. YouTube transcriptie is nu standaard ingeschakeld — de anonieme captions maken Google OAuth setup overbodig.
-- **yt-dlp configuratie** (`backend/services/youtube_service.py`): `_extra_ytdlp_args()` uitgebreid met DB-overrides voor extractor args en cookies content. Nieuwe helper `_get_max_duration_seconds()` leest max duur uit DB settings met fallback naar env var. Nieuwe helper `_ensure_cookies_file()` schrijft cookies content vanuit DB naar disk.
-
-### Decisions
-- See DEC-044 in [DECISIONS.md](DECISIONS.md) for the anonymous captions rationale.
-
-### Notes
-- Clients (macOS/Windows) hebben **geen wijzigingen** nodig — de YouTube UI was al gebouwd en gated op de feature flag.
-- Deployed naar productie: `youtube-transcript-api` geïnstalleerd in Docker container, code gesynct, container herstart. Feature flag verified via `GET /features`.
-
----
-
-## [2026-03-16] — macOS 15 audio-only ScreenCaptureKit categorisatie
-
-### Changed
-- **SystemAudioCapture macOS 15+ audio-only modus** (`macos/Services/SystemAudioCapture.swift`): Op macOS 15+ wordt de `.screen` output niet meer toegevoegd aan `SCStream`. Hierdoor wordt de app in Systeeminstellingen gecategoriseerd als "Systeemaudio" in plaats van "Scherm- en systeemaudio-opname" — een betere UX omdat gebruikers geen schermopname-toestemming hoeven te verwachten voor een audio-only app. De video workload config (`width=2, height=2, minimumFrameInterval=1s, queueDepth=5`) is verplaatst naar een `#unavailable(macOS 15.0)` branch, want macOS 14 vereist minstens één `.screen` output om SCStream te laten functioneren. macOS 15 heeft `captureMicrophone` en hoeft geen screen output als fallback.
-- **Error message vereenvoudigd** (`macos/Services/SystemAudioCapture.swift:72`): "Schermopnamemachtiging is vereist voor systeemaudio-opname." → "Systeemaudio-machtiging is vereist voor opname." — consistenter met de macOS 15 categorisatie.
-
-### Decisions
-- See DEC-043 in [DECISIONS.md](DECISIONS.md) for the macOS 15 audio-only rationale.
-
----
-
-## [2026-03-16] — Threading fixes, YouTube card vereenvoudiging, CLAUDE.md optimalisatie
-
-### Fixed
-- **VideoCallDetectionService threading crash** (`macos/Services/VideoCallDetectionService.swift`): KVO callback op `AVCaptureDevice.isInUseByAnotherApplication` werd geleverd op `com.apple.root.default-qos` (background queue). Het bestaande `Task { @MainActor in }` patroon veroorzaakte `_dispatch_assert_queue_fail` omdat `self` (een `@Observable` object geobserveerd door SwiftUI op MainActor) werd gecaptured op de background thread. Fix: KVO callback gebruikt nu `DispatchQueue.main.async` en vertraagt `guard let self` tot we op de main queue zijn (regels 78-88, 90-94). Cooldown task in `enterCooldown()` veranderd van redundant `Task { @MainActor in }` naar `Task` met expliciete `MainActor.run` voor state mutatie.
-- **SystemAudioCapture timer** (`macos/Services/SystemAudioCapture.swift:274-282`): `Timer.scheduledTimer` callback gebruikte `Task { @MainActor in }` ondanks dat timers van een `@MainActor` class al op de main run loop vuren. Vervangen door `MainActor.assumeIsolated` — zero-overhead en semantisch correct.
-
-### Changed
-- **YouTube card vereenvoudigd** (`macos/Views/RecordingView.swift`): Verwijderd: aparte YouTube profielpicker (`youtubeProfileSection`, `youtubeProfileBinding`) — YouTube transcriptie gebruikt nu hetzelfde profiel als reguliere opname (`selectedProfile`). YouTube-rode gradient kleuren (#E61212 → #B80000) vervangen door `Color.brandPrimary` voor consistente branding. Google OAuth connectiesectie altijd zichtbaar (niet meer achter `isGoogleOAuthConfigured` gate). Google verbinding niet meer vereist om YouTube URL te submitten.
-- **RecordingViewModel** (`macos/ViewModels/RecordingViewModel.swift`): `youtubeSelectedProfile: Profile?` property verwijderd. `submitYouTubeURL()` gebruikt nu `selectedProfile`. Initialisatielogica voor `youtubeSelectedProfile` uit `loadDefaultProfile()` verwijderd.
-- **CLAUDE.md geoptimaliseerd** (`CLAUDE.md`): Vier `@`-referenties verwijderd die 2.555 regels (~20k tokens) aan documentatie in elke sessie laadden: `@README.md` (dubbel geladen — README is al auto-injected), `@docs/API.md` (966 regels), `@docs/PLAN-MULTI-INSTANCE.md` (888 regels), `@docs/RELEASE.md` (234 regels). Roadmap sectie verplaatst als one-liner naar Gotchas. Referenties behouden als plain text zodat Claude docs on-demand kan lezen.
-
-### Decisions
-- See DEC-042 in [DECISIONS.md](DECISIONS.md) for the KVO callback threading pattern.
-- DEC-039 (onafhankelijke YouTube profielselectie) is superseded — teruggedraaid naar gedeeld profiel.
-
-### Notes
-- De threading crash manifesteerde zich als `_dispatch_assert_queue_fail` op Thread 2 (`com.apple.root.default-qos`). Root cause: KVO callbacks worden geleverd op willekeurige threads, en `@Observable` property access tracking triggerde op de verkeerde queue.
-- Windows YouTube card had al eerder YouTube-rode styling — die is niet meegenomen in deze sessie.
-
----
-
-## [2026-03-16] — YouTube hybride aanpak: Captions API + yt-dlp fallback
-
-### Added
-- **Google OAuth service** (`macos/Services/GoogleAuthService.swift`): New `actor GoogleAuthService` implementing Google OAuth PKCE flow via `ASWebAuthenticationSession`. Follows the exact `MicrosoftGraphService` pattern: PKCE code verifier/challenge, token exchange with `https://oauth2.googleapis.com/token`, user email fetch from Google userinfo endpoint, automatic token refresh with 60-second margin, Keychain persistence of refresh token via `KeychainService` (key: `googleRefreshToken`). Scope: `youtube.force-ssl` (required for `captions.download`). Redirect URI: `transcript-studio://google/callback`. Error enum `GoogleAuthError` with Dutch descriptions.
-- **YouTube Data API v3 functions** (backend `services/youtube_service.py`): Six new async functions using `httpx.AsyncClient`: `extract_video_id()` parses 11-char ID from URL variants, `get_youtube_metadata_api()` calls `videos.list`, `list_caption_tracks()` calls `captions.list`, `select_best_caption_track()` prioritizes nl standard > nl ASR > en standard > en ASR > any, `download_caption_text()` fetches SRT and converts to plain text via `_srt_to_text()`, `fetch_youtube_captions()` orchestrates the full flow. Helper `_parse_iso8601_duration()` converts ISO 8601 durations (PT1H2M3S) to seconds.
-- **Google OAuth in features endpoint** (backend `routes/features.py`): `/features` response now includes `google_oauth_configured: bool` and `google_oauth_client_id_macos: string` for client discovery.
-- **Google OAuth admin settings** (backend `routes/admin.py`, `config.py`): Added `google_oauth_client_id_macos` and `google_oauth_client_id_windows` to `AdminSettingsUpdate` model, settings GET/POST endpoints, and env config. Same pattern as `ms365_client_id`.
-- **Google OAuth UI in YouTube card** (`macos/Views/RecordingView.swift`): Google connection section in YouTube card showing connected state (email + disconnect button) or connect button. URL field and submit disabled when not connected. Captions fallback info banner when `captionsNotAvailable` is true.
-- **Google OAuth admin fields** (`macos/Views/AdminView.swift`): Google OAuth Client ID fields (macOS + Windows) in Admin > Instellingen tab, sharing the existing save button with MS365 settings.
-- **API features extended** (`macos/Services/APIService.swift`): New `FeaturesResponse` struct and `fetchFeaturesExtended()` method for typed feature response including Google OAuth fields.
-
-### Changed
-- **`/transcribe-youtube` endpoint** (backend `routes/transcription.py`): Now accepts optional `X-Google-Token` header. When present, tries YouTube Data API captions first → if found, creates task as "transcribed" and enqueues to notule pipeline (same as `/transcribe-text` pattern) with `source_type: "youtube_captions"`. Falls back to yt-dlp + Whisper when no captions available, with `captions_available: false` in response.
-- **`transcribeYouTube()` method** (`macos/Services/APIService.swift`): Now accepts optional `googleToken` parameter, sends as `X-Google-Token` header.
-- **`AdminSettingsResponse`** (`macos/Services/APIService.swift`): Added `google_oauth_client_id_macos` and `google_oauth_client_id_windows` fields.
-- **`updateAdminSettings()`** (`macos/Services/APIService.swift`): Now accepts optional `googleOAuthClientIdMacos` and `googleOAuthClientIdWindows` parameters.
-- **`RecordingViewModel`** (`macos/ViewModels/RecordingViewModel.swift`): Added Google OAuth state (`isGoogleConnected`, `googleUserEmail`, `googleAuthError`, `captionsNotAvailable`, `isGoogleOAuthConfigured`). Added `connectGoogle()`, `disconnectGoogle()`, `checkGoogleConnection()` methods. Updated `checkFeatures()` to use `fetchFeaturesExtended()` and configure `GoogleAuthService`. Updated `submitYouTubeURL()` to pass Google token and require Google connection.
-- **Admin settings** (`macos/Views/AdminView.swift`): `loadAdminSettings()` and `saveAdminSettings()` now include Google OAuth fields.
-
-### Decisions
-- See DEC-041 in [DECISIONS.md](DECISIONS.md) for the hybrid captions-first architecture.
-
-### Notes
-- Windows and Android do not yet have Google OAuth — backend is ready (settings exist, `X-Google-Token` header is optional).
-- YouTube Data API quota: ~40 videos/day at default 10,000 units/day.
-- Google Cloud Console setup required: create OAuth Client ID (type: iOS, bundle ID: `nl.prezent.TranscriptStudio`), enable YouTube Data API v3, configure consent screen with `youtube.force-ssl` scope.
-- The Xcode project (`project.pbxproj`) was updated to include `GoogleAuthService.swift`.
-
----
-
-## [2026-03-16] — Video call detection service
-
-### Added
-- **VideoCallDetectionService** (`macos/Services/VideoCallDetectionService.swift`): New `@Observable` singleton service that detects active video calls by combining two signals: (1) KVO observation on `AVCaptureDevice.default(for: .video)?.isInUseByAnotherApplication` and (2) `NSWorkspace.shared.runningApplications` matching against known video app bundle IDs (Teams, Zoom, FaceTime, Slack, Webex, Discord) and browser bundle IDs. Three-state machine: `idle → detected → cooldown (60s) → idle`. Posts `Notification.Name.videoCallDetected` with a synthetic `CalendarEvent` as userInfo, reusing the existing `CallAlertView` and `MeetingNotificationService` infrastructure. Includes calendar dedup (skips if a calendar meeting already covers the time window), session dismissal tracking, and a 10-second polling fallback when camera device is unavailable in sandbox.
-- **`.videoCallDetected` notification** (`macos/Services/MeetingNotificationService.swift`): New `Notification.Name` extension for video call detection events.
-- **ContentView `.onReceive`** (`macos/App/ContentView.swift:159-165`): Listens for `.videoCallDetected` notifications, shows existing `CallAlertView` overlay. "Start opname" action forces `.combined` recording mode for detected video calls (via `meeting.id.hasPrefix("videocall-")` check). "Negeer" action propagates dismissal to `VideoCallDetectionService.shared.dismissSession()`.
-- **Monitoring startup** (`macos/App/TranscriptStudioApp.swift:30-32`): `VideoCallDetectionService.shared.startMonitoring()` called in app `.task` block, guarded by `#if os(macOS)`.
-- **Settings toggle** (`macos/Views/SettingsView.swift`): "Automatische vergaderdetectie" toggle in Agenda section, bound to `@AppStorage("videoCallDetectionEnabled")` (default: true). macOS-only via `#if os(macOS)`.
-- **Localizable strings** (`macos/Resources/nl.lproj/Localizable.strings`): 4 new Dutch strings for video call detection notifications and settings.
-
-### Decisions
-- See DEC-040 in [DECISIONS.md](DECISIONS.md) for the KVO + running app detection approach.
-
-### Notes
-- Browser + camera detection can false-positive on non-video WebRTC sites — dismissed in 1 click.
-- Audio-only calls are not detected (no camera activation); calendar integration covers scheduled audio calls.
-- The service uses `@unchecked Sendable` because all mutable state is gated behind `@MainActor` methods.
-
----
-
-## [2026-03-15] — Recording view redesign + onafhankelijke YouTube profielselectie
-
-### Changed
-- **Recording idle view redesign** (macOS `macos/Views/RecordingView.swift`): Opnametype-opties (Microfoon, Videogesprek) herontworpen van verticale lijst naar horizontale kaarten met gecentreerde iconen (40×40 cirkel), korte labels ("Alleen microfoon", "Microfoon + systeemgeluid"), en `frame(maxWidth: .infinity)` voor gelijke breedte. Verwijderd: dubbel-geneste `.background`/`.overlay`/`.padding` op `recordingTypeSection` en `profileSection` — cards worden nu uitsluitend door de buitenste `.modernCard()` modifier gestyled.
-- **Content padding** (macOS `macos/Views/RecordingView.swift:175`): VStack padding gewijzigd van `TS.Spacing.md` (16pt) naar `TS.Spacing.lg` (24pt) zodat content uitlijnt met de header.
-- **"Tik" → "Klik"** (macOS `macos/Views/RecordingView.swift:116,211`): Instructieteksten gewijzigd van "Tik om op te nemen" / "tik daarna" naar "Klik om op te nemen" / "klik daarna" — macOS is geen touch interface.
-- **YouTube card styling** (macOS `macos/Views/RecordingView.swift`): Tekstveld gebruikt nu `.textFieldStyle(.plain)` met custom `surfaceSecondary` achtergrond + border overlay i.p.v. `.roundedBorder`. Verzendknop is custom gestyled met YouTube-rood gradient (`#E61212` → `#B80000`) + shadow i.p.v. `.borderedProminent`. Card border gewijzigd van `Color.borderSecondary` naar `Color.red.opacity(0.12)`.
-- **YouTube card styling** (Windows `windows/src/pages/RecordingPage.tsx`, `windows/src/styles/globals.css`): YouTube card herontworpen met rode rand-tint, ondertiteltekst, en nieuw `.btn-youtube` button-class (gradient `#E61212` → `#B80000`, witte tekst, rode shadow). Sectielabel kleur gewijzigd van `#FF0000` naar `#E61212`.
-
-### Added
-- **Onafhankelijke YouTube profielselectie** (macOS `macos/ViewModels/RecordingViewModel.swift:42`): Nieuw `youtubeSelectedProfile: Profile?` property. `submitYouTubeURL()` gebruikt nu `youtubeSelectedProfile` i.p.v. `selectedProfile`. Wordt geïnitialiseerd vanuit `loadDefaultProfile()` als fallback.
-- **YouTube profiel UI** (macOS `macos/Views/RecordingView.swift`): Nieuwe `youtubeProfileSection` view met rood accent-badge dat het geselecteerde profiel toont, plus eigen `ProfilePicker` met `youtubeProfileBinding`. Vervangt de eerder gedeelde `profileSection` in de YouTube card.
-- **YouTube profiel state** (Windows `windows/src/stores/recordingStore.ts`): `youtubeProfileId: string` toegevoegd aan Zustand store met `setYouTubeProfileId` setter. Geïnitialiseerd vanuit default profile via `useEffect` in `RecordingPage.tsx`.
-- **YouTube profiel picker** (Windows `windows/src/pages/RecordingPage.tsx`): Profielkiezer met `profile-chip` buttons in de YouTube card, onafhankelijk van de opnamekaart.
-- **`.btn-youtube` CSS class** (Windows `windows/src/styles/globals.css`): YouTube-rode gradient button met hover/active/disabled states.
-
-### Decisions
-- Zie [DEC-039](DECISIONS.md) voor de keuze van onafhankelijke YouTube profielselectie (Optie B).
-
-### Notes
-- Android heeft nog geen YouTube transcriptie feature — geen wijzigingen nodig.
-- De YouTube card heeft nu op zowel macOS als Windows een eigen profiel picker, onafhankelijk van de opnamekaart.
-
----
-
-## [2026-03-15] — YouTube bot-detectie fix + Admin module toggle
-
-### Fixed
-- **YouTube bot-detectie** (backend `services/youtube_service.py`, `config.py`, `Dockerfile`): `ERROR: [youtube] Sign in to confirm you're not a bot` — root cause: drie ontbrekende zaken op de EC2 server: (1) geen browser cookies → YouTube herkent geen echte gebruiker, (2) geen JS runtime → yt-dlp kan YouTube's anti-bot challenge niet oplossen, (3) geen EJS scripts → challenge solver heeft geen solver distributie. Fix: `_extra_ytdlp_args()` helper voegt `--cookies` en `--js-runtimes node:/usr/local/bin/node` toe aan alle yt-dlp aanroepen. `_ytdlp_cmd()` gebruikt `python3 -m yt_dlp` i.p.v. het binary om dependency conflicten te voorkomen (conda vs pip installaties). Dockerfile aangepast met Node.js 20 LTS binary en `yt-dlp[default]` (bevat `yt-dlp-ejs` challenge solver). Cookies geëxporteerd vanuit Firefox en op server geplaatst (`/app/cookies.txt`, schrijfbaar voor appuser). Metadata timeout verhoogd van 30s naar 60s vanwege EJS challenge solving overhead.
-- **yt-dlp niet gevonden** (backend `services/youtube_service.py`): `FileNotFoundError: [Errno 2] No such file or directory: 'yt-dlp'` — root cause: `pip install yt-dlp` installeert de binary in `/home/appuser/.local/bin/` dat niet in het container PATH zit. Opgelost door `_ytdlp_cmd()` die `python3 -m yt_dlp` gebruikt — omzeilt PATH issues volledig.
-
-### Added
-- **Admin feature toggle endpoints** (backend `routes/admin.py`):
-  - `GET /admin/features` — retourneert alle bekende feature flags met actuele status, label, beschrijving en icoon. Admin-only.
-  - `POST /admin/features/{key}` — schakel feature in/uit. Slaat op in `Settings` tabel via `save_setting(f"feature_{key}", "true"/"false")`. Activity logging bij toggle.
-  - `FEATURE_FLAGS` dict definieert bekende features met display metadata. Momenteel alleen `youtube_transcription`.
-- **Database-backed feature flags** (backend `routes/features.py`): Nieuwe `is_feature_enabled(key, env_default)` functie — checkt eerst `Settings` tabel (`feature_{key}`), valt terug naar env var. Hierdoor kan een admin features togglen zonder container restart.
-- **Modules tab in admin UI** (backend `templates/pages/admin/modules.html`, `static/js/admin.js`): Nieuwe "Modules" tab in het admin dashboard met toggle switches per feature. YouTube module toont rood YouTube icoon. Toggle stuurt direct `POST /admin/features/{key}` en reflecteert resultaat. CSS toggle switch component met disabled state tijdens request.
-
-### Changed
-- **Feature flag check** (backend `routes/transcription.py`): `POST /transcribe-youtube` gebruikt nu `is_feature_enabled()` i.p.v. directe env var check, zodat admin toggle meteen werkt.
-- **Feature endpoint** (backend `routes/features.py`): `GET /features` gebruikt nu `is_feature_enabled()` met DB-first lookup.
-- **Dockerfile** (backend): Node.js 20.18.3 LTS toegevoegd voor yt-dlp EJS challenge solver. `yt-dlp` vervangen door `yt-dlp[default]` dat `yt-dlp-ejs` bundelt.
-- **youtube_service.py** (backend): `_find_ytdlp()` vervangen door `_ytdlp_cmd()` (module invocatie). `_cookies_args()` uitgebreid naar `_extra_ytdlp_args()` met cookies + JS runtime detectie.
-
-### Decisions
-- Zie [DEC-037](DECISIONS.md) voor database-backed feature flags.
-- Zie [DEC-038](DECISIONS.md) voor YouTube anti-bot mitigatie met cookies + EJS.
-
-### Notes
-- Cookies verlopen — bij herhaalde bot-detectie errors moeten nieuwe cookies vanuit een browser geëxporteerd worden (Firefox: `yt-dlp --cookies-from-browser firefox --cookies cookies.txt`).
-- Node.js en yt-dlp-ejs zijn nu in de Dockerfile gebakken — persistent bij container rebuild.
-- De admin module toggle werkt direct: uitschakelen verbergt de YouTube card op de upload pagina en retourneert 404 op het transcriptie endpoint.
-
----
-
+_Entries from 2026-03-15 to 2026-03-16 archived to [archive/CHANGELOG-2026-03-15-to-2026-03-16.md](archive/CHANGELOG-2026-03-15-to-2026-03-16.md)._
 _Entries from 2026-03-13 to 2026-03-14 archived to [archive/CHANGELOG-2026-03-13-to-2026-03-14.md](archive/CHANGELOG-2026-03-13-to-2026-03-14.md)._
 _Older entries (2026-02-27 to 2026-03-12) archived to [archive/CHANGELOG-2026-02-27-to-2026-03-12.md](archive/CHANGELOG-2026-02-27-to-2026-03-12.md)._

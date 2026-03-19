@@ -103,10 +103,10 @@ pub async fn do_proxy_upload(
         return Err("Opnamebestand is leeg (0 bytes)".to_string());
     }
 
-    const MAX_UPLOAD_SIZE: u64 = 120 * 1024 * 1024;
+    const MAX_UPLOAD_SIZE: u64 = 250 * 1024 * 1024;
     if file_size > MAX_UPLOAD_SIZE {
         return Err(format!(
-            "Het bestand is te groot ({:.0} MB). Maximaal 120 MB toegestaan. Maak kortere opnames.",
+            "Het bestand is te groot ({:.0} MB). Maximaal 250 MB toegestaan. Maak kortere opnames.",
             file_size as f64 / 1_048_576.0
         ));
     }

@@ -608,7 +608,7 @@ enum UploadFailureReason: Sendable {
         case .serverError(let code):
             return "De server heeft een fout gemeld (HTTP \(code)). Controleer je internetverbinding en probeer het over een paar minuten opnieuw."
         case .fileTooLarge:
-            return "Het audiobestand is te groot (maximaal 120 MB). Maak kortere opnames."
+            return "Het audiobestand is te groot (maximaal 250 MB). Maak kortere opnames."
         case .validationError(let message):
             return message
         case .networkError:

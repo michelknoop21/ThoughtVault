@@ -134,7 +134,7 @@ actor APIService {
     private init() {
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = 30
-        config.timeoutIntervalForResource = 300
+        config.timeoutIntervalForResource = 600
         self.session = URLSession(configuration: config)
 
         self.decoder = JSONDecoder()
@@ -394,23 +394,58 @@ actor APIService {
         }
 
         let boundary = "Boundary-\(UUID().uuidString)"
-        var body = Data()
-
-        // Add file field
-        let fileData = try Data(contentsOf: fileURL)
         let filename = fileURL.lastPathComponent
-        body.append("--\(boundary)\r\n".data(using: .utf8)!)
-        body.append("Content-Disposition: form-data; name=\"file\"; filename=\"\(filename)\"\r\n".data(using: .utf8)!)
-        body.append("Content-Type: audio/wav\r\n\r\n".data(using: .utf8)!)
-        body.append(fileData)
-        body.append("\r\n".data(using: .utf8)!)
 
-        // Add profile_id field
-        body.append("--\(boundary)\r\n".data(using: .utf8)!)
-        body.append("Content-Disposition: form-data; name=\"profile_id\"\r\n\r\n".data(using: .utf8)!)
-        body.append("\(profileId)\r\n".data(using: .utf8)!)
+        // Build multipart body by streaming audio in chunks to a temp file
+        let tempURL = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("upload_\(UUID().uuidString).tmp")
+        defer { try? FileManager.default.removeItem(at: tempURL) }
 
-        body.append("--\(boundary)--\r\n".data(using: .utf8)!)
+        guard let outputStream = OutputStream(url: tempURL, append: false) else {
+            throw APIError.invalidResponse
+        }
+        outputStream.open()
+        defer { outputStream.close() }
+
+        func writeString(_ s: String) {
+            let data = Data(s.utf8)
+            data.withUnsafeBytes { buffer in
+                _ = outputStream.write(buffer.bindMemory(to: UInt8.self).baseAddress!, maxLength: data.count)
+            }
+        }
+
+        // File part header
+        writeString("--\(boundary)\r\n")
+        writeString("Content-Disposition: form-data; name=\"file\"; filename=\"\(filename)\"\r\n")
+        writeString("Content-Type: audio/wav\r\n\r\n")
+
+        // Stream audio data in 64KB chunks
+        guard let inputStream = InputStream(url: fileURL) else {
+            throw APIError.invalidResponse
+        }
+        inputStream.open()
+        defer { inputStream.close() }
+
+        let chunkSize = 65_536
+        var buffer = [UInt8](repeating: 0, count: chunkSize)
+        while inputStream.hasBytesAvailable {
+            let bytesRead = inputStream.read(&buffer, maxLength: chunkSize)
+            if bytesRead > 0 {
+                outputStream.write(buffer, maxLength: bytesRead)
+            } else {
+                break
+            }
+        }
+
+        writeString("\r\n")
+
+        // Profile ID field
+        writeString("--\(boundary)\r\n")
+        writeString("Content-Disposition: form-data; name=\"profile_id\"\r\n\r\n")
+        writeString("\(profileId)\r\n")
+
+        writeString("--\(boundary)--\r\n")
+        outputStream.close()
 
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
@@ -421,7 +456,7 @@ actor APIService {
 
         let delegate = UploadProgressDelegate(onProgress: onProgress)
         onProgress(0.0)
-        let (data, response) = try await session.upload(for: req, from: body, delegate: delegate)
+        let (data, response) = try await session.upload(for: req, fromFile: tempURL, delegate: delegate)
         onProgress(1.0)
 
         return try handleResponse(data: data, response: response)

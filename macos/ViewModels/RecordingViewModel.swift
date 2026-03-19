@@ -528,7 +528,9 @@ final class RecordingViewModel {
                     self.uploadProgress = 0
                 }
                 os_log("[RecordingVM] Upload failed: %{public}@", log: .default, type: .error, error.localizedDescription)
+                loadSavedRecordings()
             } catch {
+                os_log("[RecordingVM] Upload failed (non-API): %{public}@", log: .default, type: .error, error.localizedDescription)
                 await MainActor.run {
                     self.lastFailedUploadURL = url
                     self.lastFailedUploadReason = .unknown
@@ -536,6 +538,7 @@ final class RecordingViewModel {
                     self.showRetrySheet = true
                     self.uploadProgress = 0
                 }
+                loadSavedRecordings()
             }
         }
 

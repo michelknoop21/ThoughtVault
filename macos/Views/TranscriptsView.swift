@@ -820,8 +820,8 @@ struct TranscriptListCard: View {
     private var relativeDate: String {
         let interval = Date().timeIntervalSince(transcript.date)
         if interval < 3600 {
-            let min = Int(interval / 60)
-            return "\(max(min, 1)) minuten geleden"
+            let minutes = max(Int(interval / 60), 1)
+            return "\(minutes) \(minutes == 1 ? "minuut" : "minuten") geleden"
         } else if interval < 86400 {
             let hr = Int(interval / 3600)
             return "\(hr) uur geleden"

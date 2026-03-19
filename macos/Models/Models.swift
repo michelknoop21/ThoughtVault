@@ -5,7 +5,57 @@
 // Core data models for the TranscriptStudio app.
 
 import Foundation
+import OSLog
 import SwiftUI
+
+// MARK: - DateParsing
+
+/// Parse date strings from the backend which may come in various ISO8601 formats.
+/// Python's datetime.isoformat() on naive datetimes produces "yyyy-MM-ddTHH:mm:ss.ffffff"
+/// without timezone suffix, which ISO8601DateFormatter cannot parse.
+enum DateParsing {
+    nonisolated(unsafe) private static let isoFrac: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return f
+    }()
+
+    nonisolated(unsafe) private static let iso: ISO8601DateFormatter = {
+        ISO8601DateFormatter()
+    }()
+
+    nonisolated(unsafe) private static let noTzFrac: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSSSS"
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.timeZone = TimeZone(identifier: "UTC")
+        return f
+    }()
+
+    nonisolated(unsafe) private static let noTz: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.timeZone = TimeZone(identifier: "UTC")
+        return f
+    }()
+
+    nonisolated(unsafe) private static let spaceSeparated: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.timeZone = TimeZone(identifier: "UTC")
+        return f
+    }()
+
+    static func parse(_ string: String) -> Date? {
+        isoFrac.date(from: string)
+            ?? iso.date(from: string)
+            ?? noTzFrac.date(from: string)
+            ?? noTz.date(from: string)
+            ?? spaceSeparated.date(from: string)
+    }
+}
 
 // MARK: - TaskStatus
 
@@ -285,12 +335,7 @@ struct TranscriptTask: Identifiable, Codable, Sendable {
         }
         if let rawString = try? container.decodeIfPresent(String.self, forKey: key),
            !rawString.isEmpty {
-            let iso = ISO8601DateFormatter()
-            if let parsed = iso.date(from: rawString) { return parsed }
-            let fallback = DateFormatter()
-            fallback.locale = Locale(identifier: "en_US_POSIX")
-            fallback.dateFormat = "yyyy-MM-dd HH:mm:ss"
-            if let parsed = fallback.date(from: rawString) { return parsed }
+            if let parsed = DateParsing.parse(rawString) { return parsed }
         }
         if let unix = try? container.decodeIfPresent(Double.self, forKey: key) {
             return Date(timeIntervalSince1970: unix)
@@ -359,24 +404,11 @@ struct Transcript: Identifiable, Codable, Hashable, Sendable {
         let dateString = (try? container.decodeIfPresent(String.self, forKey: .date)) ?? rawCreatedAt
 
         if let ds = dateString {
-            // Try ISO8601 with fractional seconds first
-            let isoFrac = ISO8601DateFormatter()
-            isoFrac.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-            if let parsed = isoFrac.date(from: ds) {
+            if let parsed = DateParsing.parse(ds) {
                 date = parsed
             } else {
-                // Try standard ISO8601 (without fractional seconds)
-                let iso = ISO8601DateFormatter()
-                if let parsed = iso.date(from: ds) {
-                    date = parsed
-                } else {
-                    // Fallback: "yyyy-MM-dd HH:mm:ss" (no T separator, no timezone)
-                    let fallback = DateFormatter()
-                    fallback.dateFormat = "yyyy-MM-dd HH:mm:ss"
-                    fallback.locale = Locale(identifier: "en_US_POSIX")
-                    fallback.timeZone = TimeZone(identifier: "UTC")
-                    date = fallback.date(from: ds) ?? Date()
-                }
+                os_log("Failed to parse Transcript date: %{public}@", type: .error, ds)
+                date = Date()
             }
         } else {
             date = Date()

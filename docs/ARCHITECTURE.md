@@ -1,6 +1,6 @@
 # TranscriptStudio — Architecture
 
-_Last updated: 2026-03-18_
+_Last updated: 2026-03-19_
 
 ---
 
@@ -100,9 +100,34 @@ Client                    Backend                    n8n / Claude
 
 **Authentication:** Token-based with `X-User-Token` header. Tokens remain valid until server-side `SESSION_INACTIVITY_DAYS` expiry (365 days). **Never auto-logout**: both macOS and Windows clients keep the token on 401 errors. Windows retries 401 once after 2s; macOS logs and ignores `.authDidInvalidate`. See DEC-048. **Auto-login (Windows)**: "Onthoud mij" checkbox saves email + password in OS keyring (`saved_email`, `saved_password`, `remember_me` keys). On startup, `authStore.loadTokenFromKeyring()` validates existing token, then auto-logs in if remember-me is set. 2FA accounts auto-submit credentials and show only the code input. Network errors preserve credentials for next attempt. See DEC-050.
 
-**Error handling:** Centralized error module (`app/errors.py`) with `raise_api_error()` replacing all direct `HTTPException` calls. Standard JSON response format: `{"error_code": "auth_required", "message": "Inloggen is vereist.", "detail": "..."}`. 11 structured error codes with Dutch user-facing messages. 500 errors log the real exception but only return generic message to client. Audio upload validates file extension against allowlist. File size limit: 120 MB (enforced on backend and both clients). See DEC-049.
+**Error handling:** Centralized error module (`app/errors.py`) with `raise_api_error()` replacing all direct `HTTPException` calls. Standard JSON response format: `{"error_code": "auth_required", "message": "Inloggen is vereist.", "detail": "..."}`. 11 structured error codes with Dutch user-facing messages. 500 errors log the real exception but only return generic message to client. Audio upload validates file extension against allowlist. File size limit: 500 MB on backend (`config.py`), 250 MB on clients (macOS/Windows). See DEC-049.
 
 **Database:** PostgreSQL 15 in productie. SQLite ondersteund als development fallback. Optional Redis voor caching.
+
+### Large File Pipeline Capacity
+
+The entire backend pipeline is designed to handle files up to 500 MB without modification. Analysis per component:
+
+| Component | Setting | Value | Notes |
+|-----------|---------|-------|-------|
+| **Nginx** | `client_max_body_size` | 500M | Maximum request body |
+| **Nginx** | `proxy_read_timeout` | 3600s (1 hour) | Sufficient for long transcriptions |
+| **Nginx** | `proxy_send_timeout` | 3600s (1 hour) | Sufficient for large uploads |
+| **Nginx** | `proxy_buffering` | off | Streaming, no buffer issues |
+| **Uvicorn** | Workers | 1 | Sequential processing |
+| **Uvicorn** | Body size limit | Unlimited | Backend `config.py` does validation |
+| **Upload endpoint** | Chunk size | 1 MB | Streaming in 1 MB chunks to disk |
+| **Upload endpoint** | Storage | `/tmp/whisper_uploads/` | Server has sufficient disk |
+| **Transcription queue** | Base timeout | 30 min | Files >50 MB get timeout ×2 = 60 min |
+| **Transcription queue** | Watchdog interval | 5 min | Checks for stuck tasks |
+| **Transcription queue** | Max retries | 2 | Retry on transient errors |
+| **FFmpeg conversion** | Timeout | None explicit | FFmpeg is fast even for 500 MB (seconds) |
+| **FFmpeg conversion** | Output | 16 kHz mono PCM | Output smaller than input |
+| **Whisper** | GPU | CUDA 12.1 | GPU accelerated |
+| **Whisper** | Memory optimization | Files >50 MB get optimized settings | Prevents OOM |
+| **SSE streaming** | Heartbeat | 30s | Keeps connection alive during processing |
+
+**Client-side limits:** macOS and Windows clients enforce 250 MB client-side. Backend accepts up to 500 MB (configurable in `config.py:max_upload_size`). The web interface has no client-side limit and relies on the backend limit.
 
 ---
 
@@ -248,11 +273,12 @@ AVFoundation (mic)          ScreenCaptureKit (system)
 **Rust backend commands:** audio (WASAPI), auth (keyring), filesystem, HTTP proxy, SSE streaming, process detection, system utilities
 
 **Audio pipeline:**
-- **Microphone mode:** WASAPI input → 16 kHz mono 16-bit PCM WAV → `AppData/Recordings`
-- **Combined mode:** Mic writes to `recording_{ts}.wav`, WASAPI loopback (system audio) writes to `recording_{ts}.loopback.wav` → after recording stops, `mix_wav_files()` merges both using element-wise max → temp loopback file deleted
+- **Microphone mode:** WASAPI input → `StreamingResampler` (device rate → 16 kHz in real-time callback) → mono 16-bit PCM WAV → `AppData/Recordings`
+- **Combined mode:** Mic writes to `recording_{ts}.wav`, WASAPI loopback (system audio) writes to `recording_{ts}.loopback.wav` — both streams resample to 16 kHz in their callbacks via independent `StreamingResampler` instances → after recording stops, `mix_wav_files()` merges both using element-wise max → temp loopback file deleted
+- **Resampling:** Windows devices typically run at 48 kHz (WASAPI doesn't support 16 kHz directly). `StreamingResampler` uses linear interpolation with `fractional_pos` state carried across callbacks for gapless chunk-boundary resampling. See DEC-051.
 - **Upload:** Rust `proxy_upload` command streams WAV file in 64 KB chunks via reqwest multipart
 
-**Upload path:** File upload goes through the Rust `proxy_upload` Tauri command (`commands/http.rs`), which streams the WAV file from disk using `tokio_util::io::ReaderStream` with 64 KB chunks. The file is never fully loaded into memory — `reqwest::multipart::Part::stream_with_length()` sends chunks directly to the server. Client-side file size validation (120 MB limit) uses file metadata before opening. All other API calls (JSON REST) use the Rust `proxy_request` command to bypass CORS.
+**Upload path:** File upload goes through the Rust `proxy_upload` Tauri command (`commands/http.rs`), which streams the WAV file from disk using `tokio_util::io::ReaderStream` with 64 KB chunks. The file is never fully loaded into memory — `reqwest::multipart::Part::stream_with_length()` sends chunks directly to the server. Client-side file size validation (250 MB limit) uses file metadata before opening. All other API calls (JSON REST) use the Rust `proxy_request` command to bypass CORS.
 
 ### Frontend Structure
 

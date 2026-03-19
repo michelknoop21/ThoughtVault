@@ -5,6 +5,33 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2026-03-19] — Windows audio resampling + upload limit 250 MB
+
+### Fixed
+- **Windows 48 kHz recording bloat** (`windows/src-tauri/src/audio/recorder.rs`): Windows audio devices typically output at 48 kHz. Previously, the WAV file was written at device rate (48 kHz), producing ~500 MB files for 1.5 hour meetings. Added `StreamingResampler` struct that downsamples in the audio callback itself using linear interpolation — no post-processing, no extra memory allocation, no CPU spike after recording. `fractional_pos` state carries across callbacks for gapless chunk-boundary resampling.
+- **WAV spec forced to 16 kHz**: Both mic and loopback WAV writers now always use `TARGET_SAMPLE_RATE` (16000 Hz) regardless of device rate. Resampling happens in real-time within `build_input_stream_i16()`, `build_input_stream_f32()`, and both loopback stream callbacks.
+- **Audio level calculation preserved**: Level metering runs on pre-resample samples (device rate) for accurate visualization. `samples_written` tracking counts resampled samples for correct duration logging.
+
+### Changed
+- **Upload limit raised to 250 MB** (was 120 MB) across all layers:
+  - Backend: `config.py:96` `max_upload_size = 250 * 1024 * 1024`
+  - Windows: `http.rs:106` `MAX_UPLOAD_SIZE = 250 * 1024 * 1024` + error message
+  - macOS: `APIService.swift:386` `maxBytes = 250 * 1024 * 1024` + `APIError.fileTooLarge` message
+  - macOS: `Models.swift:611` `UploadFailureReason.fileTooLarge` description
+  - Docs: `API.md` all 120 MB references updated
+
+### Decisions
+- DEC-051: Real-time streaming resampler for Windows audio
+
+### Notes
+- Root cause: Windows WASAPI devices don't support 16 kHz directly — they clamp to their minimum (typically 48 kHz). Result: 48000 × 2 bytes × 5400 sec = 518 MB.
+- After fix: 16000 × 2 bytes × 5400 sec = ~165 MB — fits within the new 250 MB limit.
+- The existing `mix_wav_files()` resampling logic remains as a safety net but will be a no-op since both WAVs are now 16 kHz.
+- Backend deployed and verified: `max_upload_size_mb: 250.0` in health check.
+- Both `cargo check` and `xcodebuild` pass cleanly.
+
+---
+
 ## [2026-03-18] — Streaming file upload (Windows memory fix)
 
 ### Changed

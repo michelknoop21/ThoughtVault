@@ -250,7 +250,7 @@ Upload audiobestand voor transcriptie. **Rate limit: 10/uur.**
 ```
 Content-Type: multipart/form-data
 Velden:
-  - file: audio/wav bestand (max 250 MB)
+  - file: audio/wav bestand (max 500 MB, backend; 250 MB client-side check)
   - profile_id: "default" of custom profile ID
   - mode: "microphone" | "combined" (optioneel)
 ```
@@ -347,7 +347,7 @@ Health check (geen auth vereist).
 
 ```json
 // Response
-{ "model": "...", "device": "cuda", "max_upload_size": 250 }
+{ "model": "...", "device": "cuda", "max_upload_size": 500 }
 ```
 
 ---
@@ -964,8 +964,8 @@ Sinds 2026-03-18 retourneert de backend gestructureerde error responses via het 
 ```json
 {
   "error_code": "file_too_large",
-  "message": "Het bestand is te groot. Maximaal 250 MB toegestaan.",
-  "detail": "File size 300 MB exceeds 250 MB limit"
+  "message": "Het bestand is te groot. Maximaal 500 MB toegestaan.",
+  "detail": "File size 600 MB exceeds 500 MB limit"
 }
 ```
 
@@ -983,7 +983,7 @@ Sinds 2026-03-18 retourneert de backend gestructureerde error responses via het 
 | `read_only_key` | 403 | Deze API key heeft alleen leesrechten. |
 | `forbidden` | 403 | Geen toegang tot deze resource. |
 | `rate_limit_exceeded` | 429 | Te veel verzoeken. Probeer het later opnieuw. |
-| `file_too_large` | 413 | Het bestand is te groot. Maximaal 250 MB toegestaan. |
+| `file_too_large` | 413 | Het bestand is te groot. Maximaal 500 MB toegestaan. |
 | `queue_unavailable` | 503 | De verwerkingswachtrij is niet beschikbaar. Probeer het later opnieuw. |
 | `server_error` | 500 | Er is een serverfout opgetreden. Probeer het later opnieuw. |
 | `not_found` | 404 | Resource niet gevonden. |

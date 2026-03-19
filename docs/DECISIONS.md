@@ -229,6 +229,25 @@ Keyring keys: `auth_token` (bestaand), `saved_email`, `saved_password`, `remembe
 
 ---
 
+## DEC-051 — Real-Time Streaming Resampler for Windows Audio
+
+**Date:** 2026-03-19
+**Status:** Accepted
+
+**Context:** Windows audio devices (WASAPI) typically operate at 48 kHz — when cpal requests 16 kHz, the rate is clamped to the device minimum (usually 44.1 or 48 kHz). The result: a 1.5 hour meeting produced a 489 MB WAV file (48000 × 2 bytes × 5400 seconds = 518 MB theoretical). Combined with the 120 MB upload limit, users could not upload recordings longer than ~20 minutes. The existing `resample()` function in `recorder.rs` was only used in `mix_wav_files()` post-recording — it could not address the file size problem because the WAV was already written at device rate.
+
+**Decision:** Add a `StreamingResampler` struct to `recorder.rs` that performs linear interpolation downsampling within the audio callback itself. Key design: `fractional_pos: f64` is carried across callback invocations, ensuring no samples are lost or duplicated at chunk boundaries. The resampler is injected into all four stream builders (mic i16, mic f32, loopback i16, loopback f32) as an `Arc<Mutex<StreamingResampler>>`. The WAV spec is set to `TARGET_SAMPLE_RATE` (16000 Hz) regardless of device rate. Audio level calculation runs on pre-resample samples for accurate visualization. Simultaneously, the upload limit was raised from 120 MB to 250 MB across backend (`config.py`), Windows (`http.rs`), and macOS (`APIService.swift`, `Models.swift`) to accommodate recordings up to ~2 hours 10 minutes at 16 kHz.
+
+**Consequences:**
+- File size reduced 3x for 48 kHz devices: 1.5 hour recording drops from ~500 MB to ~165 MB.
+- No post-processing CPU spike: resampling is distributed across real-time callbacks.
+- The existing `mix_wav_files()` resampling becomes a no-op (both WAVs already 16 kHz) but remains as safety net.
+- 250 MB limit supports recordings up to ~2h10m at 16 kHz mono 16-bit — sufficient for typical meetings.
+- Linear interpolation is sufficient quality for speech (Whisper's native input is 16 kHz).
+- Files changed: `recorder.rs` (StreamingResampler + all 4 stream builders), `http.rs`, `APIService.swift`, `Models.swift`, `config.py`, `API.md`.
+
+---
+
 ## DEC-047 — YouTube Proxy Support en Bot Detection Resilience
 
 **Date:** 2026-03-17

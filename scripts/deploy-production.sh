@@ -1,9 +1,9 @@
 #!/bin/bash
-# Deploy a production build via GitHub Actions
+# Deploy a production build via GitLab CI
 # Usage: ./scripts/deploy-production.sh
 #
-# Creates a v{version} tag and pushes it to GitHub,
-# which triggers the Release Build workflow with channel=production.
+# Creates a v{version} tag and pushes it to origin (GitLab),
+# which triggers the CI pipeline with channel=production.
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -24,18 +24,18 @@ if git tag -l "$TAG" | grep -q "$TAG"; then
     exit 1
 fi
 
-# Ensure github remote is up to date
-echo "Pushing latest commits to GitHub..."
-git push github main
+# Ensure origin remote is up to date
+echo "Pushing latest commits..."
+git push origin main
 
 # Create and push tag
 echo "Creating tag $TAG..."
 git tag "$TAG"
-git push github "$TAG"
+git push origin "$TAG"
 
 echo ""
 echo "Production build triggered!"
-echo "  Monitor: https://github.com/michelknoop21/transcript-studio-native/actions"
+echo "  Monitor: https://gitlab.prezent.nl/ai-coding/transcript-studio-native/-/pipelines"
 echo ""
 echo "Once complete, the production build will be available at:"
 echo "  https://n8n.prezent.nl/tstudio/download/"

@@ -33,23 +33,23 @@ BUILD_CHANNEL (dev | production)
 ### Via deploy scripts (aanbevolen)
 
 ```bash
-# Dev build deployen via GitHub Actions
+# Dev build deployen via GitLab CI
 ./scripts/deploy-dev.sh
 
-# Productie build deployen via GitHub Actions
+# Productie build deployen via GitLab CI
 ./scripts/deploy-production.sh
 ```
 
-Deze scripts pushen commits naar GitHub, maken een tag aan (`dev-v{version}` of `v{version}`), en GitHub Actions doet de rest: build → upload naar server → update releases.json → GitHub Release met release notes.
+Deze scripts pushen commits naar GitLab, maken een tag aan (`dev-v{version}` of `v{version}`), en GitLab CI doet de rest: build → upload naar server → update releases.json → GitLab Release met release notes.
 
-### Via GitHub Actions (handmatig)
+### Via GitLab CI (handmatig)
 
 | Trigger | Channel | Hoe |
 |---------|---------|-----|
-| Push `v*` tag | Production | `./scripts/deploy-production.sh` of `git tag v1.0.50 && git push github v1.0.50` |
-| Push `dev-v*` tag | Dev | `./scripts/deploy-dev.sh` of `git tag dev-v1.0.50 && git push github dev-v1.0.50` |
-| Manual dispatch | Dev (default) | Actions → Release Build → Run workflow → channel: dev |
-| Manual dispatch | Production | Actions → Release Build → Run workflow → channel: production |
+| Push `v*` tag | Production | `./scripts/deploy-production.sh` of `git tag v1.0.50 && git push origin v1.0.50` |
+| Push `dev-v*` tag | Dev | `./scripts/deploy-dev.sh` of `git tag dev-v1.0.50 && git push origin dev-v1.0.50` |
+| Manual pipeline | Dev (default) | GitLab → CI/CD → Pipelines → Run pipeline |
+| Manual pipeline | Production | GitLab → CI/CD → Pipelines → Run pipeline → Variable: CHANNEL=production |
 
 ### Via Terminal (lokale build)
 
@@ -133,40 +133,45 @@ Voert alle stappen sequentieel uit. Accepteert flags:
 - `--production` — zet `BUILD_CHANNEL=production` (standaard: `dev`)
 - `--no-upload` — slaat de upload stap over
 
-### `deploy-dev.sh` — Dev deploy via GitHub
+### `deploy-dev.sh` — Dev deploy via GitLab
 
 One-command dev deploy:
-1. Pusht laatste commits naar `github` remote
+1. Pusht laatste commits naar `origin` remote (GitLab)
 2. Maakt `dev-v{version}` tag aan (verwijdert bestaande tag als nodig)
-3. Pusht tag naar GitHub → triggert Release Build workflow met channel=dev
+3. Pusht tag naar GitLab → triggert CI pipeline met channel=dev
 
-### `deploy-production.sh` — Productie deploy via GitHub
+### `deploy-production.sh` — Productie deploy via GitLab
 
 One-command productie deploy:
-1. Pusht laatste commits naar `github` remote
+1. Pusht laatste commits naar `origin` remote (GitLab)
 2. Maakt `v{version}` tag aan (faalt als tag al bestaat — bump VERSION eerst)
-3. Pusht tag naar GitHub → triggert Release Build workflow met channel=production
+3. Pusht tag naar GitLab → triggert CI pipeline met channel=production
 
-## GitHub Actions Workflow
+## GitLab CI Pipeline
 
-Bestand: `.github/workflows/release.yml`
+Bestand: `.gitlab-ci.yml`
 
 **Triggers:**
-- `push tags: ['v*']` → automatisch productie build
-- `push tags: ['dev-v*']` → automatisch dev build
-- `workflow_dispatch` → handmatig, met channel keuze (default: dev)
+- Push `v*` tag → automatisch productie build
+- Push `dev-v*` tag → automatisch dev build
+- Handmatige pipeline → met optionele CHANNEL variabele (default: dev)
+
+**Runners:**
+- `linux,docker` → EC2 server (`3.69.205.209`) — prepare, build-android, deploy
+- `macos,xcode` → Michel's Mac (shell executor) — build-macos
+- `windows` → nog niet beschikbaar (build-windows overgeslagen)
 
 **Jobs:**
-1. `prepare` — bepaalt versie en channel uit tag of input, zet artifact namen als outputs
-2. `build-macos` — bouwt DMG op `macos-latest` met channel-specifieke overrides
-3. `build-windows` — bouwt MSI op `windows-latest` met `TAURI_CONFIG` override
-4. `deploy` — downloadt artifacts, uploadt naar server, update releases.json, maakt GitHub Release
+1. `prepare` — bepaalt versie en channel uit tag of variabele, zet artifact namen via dotenv
+2. `build-macos` — bouwt DMG op Mac runner met channel-specifieke overrides
+3. `build-windows` — bouwt MSI (uitgeschakeld tot Windows runner beschikbaar is)
+4. `build-android` — bouwt APK op Linux Docker runner
+5. `deploy` — uploadt artifacts naar server, update releases.json, maakt GitLab Release
 
-**GitHub Releases:**
+**GitLab Releases:**
 - Release notes worden automatisch uit de eerste entry van `docs/CHANGELOG.md` geëxtraheerd
-- Dev releases → GitHub pre-release
-- Productie releases → volledige GitHub release
-- DMG + MSI worden als downloadbare assets aan de release gehangen
+- Release asset links verwijzen naar de server download URLs
+- Releases worden aangemaakt via de GitLab API met `CI_JOB_TOKEN`
 
 ## Download URLs
 
@@ -228,7 +233,7 @@ De download route wordt bediend door de `n8n_nginx` container:
 1. Ontwikkel op een feature branch
 2. Merge naar `main` → post-commit hook bumpt `VERSION` automatisch (patch)
 3. Voor major/minor: pas `VERSION` handmatig aan
-4. **Dev release**: `./scripts/deploy-dev.sh` (maakt `dev-v*` tag, triggert GitHub Actions)
-5. **Productie release**: `./scripts/deploy-production.sh` (maakt `v*` tag, triggert GitHub Actions)
-6. GitHub Actions bouwt, uploadt naar server, en maakt GitHub Release met release notes
+4. **Dev release**: `./scripts/deploy-dev.sh` (maakt `dev-v*` tag, triggert GitLab CI)
+5. **Productie release**: `./scripts/deploy-production.sh` (maakt `v*` tag, triggert GitLab CI)
+6. GitLab CI bouwt, uploadt naar server, en maakt GitLab Release met release notes
 7. Download page op `https://n8n.prezent.nl/tstudio/download/` toont automatisch de juiste versies

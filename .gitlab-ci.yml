@@ -1,0 +1,410 @@
+# TranscriptStudio — GitLab CI/CD Pipeline
+#
+# All jobs run on Michel's Mac (shell executor).
+# Mac reaches GitLab for jobs AND EC2 server via SSH for deploys.
+#
+# Triggers:
+#   - Push v* tag     → production build + deploy
+#   - Push dev-v* tag → dev build + deploy
+#   - Manual pipeline → set CHANNEL variable (default: dev)
+#
+# Runner: Michel-Mac (shell executor, tags: shell,macos,xcode)
+# Windows: not yet available (build-windows skipped)
+
+workflow:
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^(dev-)?v\d/
+    - if: $CI_PIPELINE_SOURCE == "web"
+
+stages:
+  - prepare
+  - build
+  - deploy
+
+# ─── Prepare: version, channel, artifact names ────────────────────────────────
+prepare:
+  stage: prepare
+  tags: [shell]
+  script:
+    - |
+      if echo "$CI_COMMIT_TAG" | grep -qE '^v[0-9]'; then
+        VERSION="${CI_COMMIT_TAG#v}"
+        CHANNEL="production"
+      elif echo "$CI_COMMIT_TAG" | grep -qE '^dev-v[0-9]'; then
+        VERSION="${CI_COMMIT_TAG#dev-v}"
+        CHANNEL="dev"
+      else
+        VERSION=$(cat VERSION | tr -d '[:space:]')
+        CHANNEL="${CHANNEL:-dev}"
+      fi
+
+      if [ "$CHANNEL" = "production" ]; then
+        DMG_NAME="TranscriptStudio-${VERSION}.dmg"
+        MSI_X64_NAME="TranscriptStudio_${VERSION}_x64.msi"
+        APK_NAME="TranscriptStudio-${VERSION}.apk"
+        APP_DISPLAY_NAME="TranscriptStudio"
+        BUNDLE_ID_MACOS="nl.prezent.TranscriptStudio"
+        BUNDLE_ID_WINDOWS="nl.prezent.transcript-studio"
+        TAURI_PRODUCT_NAME="TranscriptStudio"
+      else
+        DMG_NAME="TranscriptStudio-Dev-${VERSION}.dmg"
+        MSI_X64_NAME="TranscriptStudio-Dev_${VERSION}_x64.msi"
+        APK_NAME="TranscriptStudio-Dev-${VERSION}.apk"
+        APP_DISPLAY_NAME="TranscriptStudio Dev"
+        BUNDLE_ID_MACOS="nl.prezent.TranscriptStudio.dev"
+        BUNDLE_ID_WINDOWS="nl.prezent.transcript-studio-dev"
+        TAURI_PRODUCT_NAME="TranscriptStudio Dev"
+      fi
+
+      {
+        echo "VERSION=$VERSION"
+        echo "CHANNEL=$CHANNEL"
+        echo "DMG_NAME=$DMG_NAME"
+        echo "MSI_X64_NAME=$MSI_X64_NAME"
+        echo "APK_NAME=$APK_NAME"
+        echo "APP_DISPLAY_NAME=$APP_DISPLAY_NAME"
+        echo "BUNDLE_ID_MACOS=$BUNDLE_ID_MACOS"
+        echo "BUNDLE_ID_WINDOWS=$BUNDLE_ID_WINDOWS"
+        echo "TAURI_PRODUCT_NAME=$TAURI_PRODUCT_NAME"
+      } > build.env
+
+      echo "Channel: $CHANNEL"
+      echo "Version: $VERSION"
+  artifacts:
+    reports:
+      dotenv: build.env
+
+# ─── macOS: build DMG ─────────────────────────────────────────────────────────
+build-macos:
+  stage: build
+  tags: [macos, xcode]
+  needs:
+    - job: prepare
+      artifacts: true
+  script:
+    - |
+      set -eo pipefail
+      xcodebuild archive \
+        -project TranscriptStudio.xcodeproj \
+        -scheme TranscriptStudio \
+        -configuration Release \
+        -destination "generic/platform=macOS" \
+        -archivePath build/TranscriptStudio.xcarchive \
+        CODE_SIGNING_ALLOWED=NO \
+        SKIP_INSTALL=NO \
+        SWIFT_VERSION=5 \
+        PRODUCT_BUNDLE_IDENTIFIER="$BUNDLE_ID_MACOS" \
+        PRODUCT_NAME="$APP_DISPLAY_NAME" \
+        2>&1 | tee /tmp/xcodebuild.log | tail -30
+    - |
+      mkdir -p build/export
+      APP_PATH=$(find build/TranscriptStudio.xcarchive/Products -name "*.app" -type d | head -1)
+      if [ -z "$APP_PATH" ]; then
+        echo "ERROR: .app not found in archive"
+        find build/TranscriptStudio.xcarchive/Products -type d
+        exit 1
+      fi
+      cp -R "$APP_PATH" build/export/
+      APP_NAME=$(basename "$APP_PATH")
+      codesign --force --deep --sign - "build/export/$APP_NAME"
+    - |
+      python3 scripts/create-dmg-background.py
+
+      APP_NAME=$(ls build/export/ | grep '\.app$' | sed 's/\.app$//')
+      echo "App name: $APP_NAME"
+
+      ln -sf /Applications build/export/Applications
+
+      hdiutil create \
+        -volname "$APP_DISPLAY_NAME $VERSION" \
+        -srcfolder build/export \
+        -ov -format UDRW -fs HFS+ \
+        build/tmp_rw.dmg
+
+      MOUNT_DIR=$(hdiutil attach -readwrite -noverify -noautoopen build/tmp_rw.dmg | awk '/Apple_HFS/ {for(i=3;i<=NF;i++) printf "%s ", $i; print ""}' | sed 's/ *$//')
+      echo "Mounted at: $MOUNT_DIR"
+
+      mkdir -p "$MOUNT_DIR/.background"
+      cp scripts/dmg-background.png "$MOUNT_DIR/.background/background.png"
+
+      VOLNAME="$APP_DISPLAY_NAME $VERSION"
+      osascript << APPLESCRIPT
+      tell application "Finder"
+          tell disk "$VOLNAME"
+              open
+              set current view of container window to icon view
+              set toolbar visible of container window to false
+              set statusbar visible of container window to false
+              set bounds of container window to {100, 100, 760, 500}
+              set viewOptions to icon view options of container window
+              set arrangement of viewOptions to not arranged
+              set icon size of viewOptions to 80
+              set text size of viewOptions to 12
+              set background picture of viewOptions to file ".background:background.png"
+              set position of item "${APP_NAME}.app" of container window to {165, 200}
+              set position of item "Applications" of container window to {495, 200}
+              close
+              open
+              update without registering applications
+              delay 1
+              close
+          end tell
+      end tell
+      APPLESCRIPT
+
+      sync
+      hdiutil detach "$MOUNT_DIR" -quiet
+
+      hdiutil convert build/tmp_rw.dmg -format UDZO -imagekey zlib-level=9 -o "build/$DMG_NAME"
+      rm -f build/tmp_rw.dmg
+  artifacts:
+    paths:
+      - build/*.dmg
+    expire_in: 1 week
+
+# ─── Windows: build MSI ───────────────────────────────────────────────────────
+# Disabled until a Windows runner is registered.
+# To enable: change rules to `- when: on_success` and register a runner with tag "windows"
+build-windows:
+  stage: build
+  tags: [windows]
+  needs:
+    - job: prepare
+      artifacts: true
+  allow_failure: true
+  rules:
+    - when: never
+  script:
+    - echo "Windows build — register a Windows runner to enable this job"
+  artifacts:
+    paths:
+      - build/*.msi
+    expire_in: 1 week
+
+# ─── Android: build APK ───────────────────────────────────────────────────────
+# Uses Mac's local JDK 21 + Android SDK (configured in runner environment)
+build-android:
+  stage: build
+  tags: [shell]
+  needs:
+    - job: prepare
+      artifacts: true
+  script:
+    - |
+      # Ensure debug keystore exists
+      if [ ! -f ~/.android/debug.keystore ]; then
+        mkdir -p ~/.android
+        keytool -genkey -v -keystore ~/.android/debug.keystore \
+          -storepass android -alias androiddebugkey -keypass android \
+          -keyalg RSA -keysize 2048 -validity 10000 \
+          -dname "CN=Android Debug,O=Android,C=US"
+      fi
+    - |
+      cd transcript-studio-android
+      chmod +x gradlew
+      ./gradlew assembleRelease
+    - |
+      cd "$CI_PROJECT_DIR"
+      mkdir -p build
+      APK=$(find transcript-studio-android/app/build/outputs/apk/release -name "*.apk" -type f | head -1)
+      if [ -z "$APK" ]; then
+        echo "ERROR: APK not found"
+        find transcript-studio-android/app/build/outputs -type f || true
+        exit 1
+      fi
+      cp "$APK" "build/$APK_NAME"
+      echo "Built: $APK_NAME ($(du -h "build/$APK_NAME" | cut -f1))"
+  artifacts:
+    paths:
+      - build/*.apk
+    expire_in: 1 week
+
+# ─── Deploy: upload artifacts + update manifest + create release ──────────────
+# Uses Mac's existing SSH key (~/.ssh/) to reach EC2 server
+deploy:
+  stage: deploy
+  tags: [shell]
+  needs:
+    - job: prepare
+      artifacts: true
+    - job: build-macos
+      artifacts: true
+      optional: true
+    - job: build-windows
+      artifacts: true
+      optional: true
+    - job: build-android
+      artifacts: true
+      optional: true
+  script:
+    - |
+      SERVER="michelk@3.69.205.209"
+      REMOTE_DIR="/home/michelk/tstudio-releases"
+      ssh $SERVER "mkdir -p $REMOTE_DIR"
+
+      HAS_MACOS=false
+      HAS_WINDOWS_X64=false
+      HAS_ANDROID=false
+
+      if [ -f "build/$DMG_NAME" ]; then
+        scp "build/$DMG_NAME" "$SERVER:$REMOTE_DIR/$DMG_NAME"
+        echo "Uploaded: $DMG_NAME"
+        HAS_MACOS=true
+      fi
+
+      if [ -f "build/$MSI_X64_NAME" ]; then
+        scp "build/$MSI_X64_NAME" "$SERVER:$REMOTE_DIR/$MSI_X64_NAME"
+        echo "Uploaded: $MSI_X64_NAME"
+        HAS_WINDOWS_X64=true
+      fi
+
+      if [ -f "build/$APK_NAME" ]; then
+        scp "build/$APK_NAME" "$SERVER:$REMOTE_DIR/$APK_NAME"
+        echo "Uploaded: $APK_NAME"
+        HAS_ANDROID=true
+      fi
+
+      # Upload website pages
+      if [ -f "scripts/download-page.html" ]; then
+        scp scripts/download-page.html "$SERVER:$REMOTE_DIR/index.html"
+        echo "Updated: download page"
+      fi
+      if [ -f "scripts/features-page.html" ]; then
+        scp scripts/features-page.html "$SERVER:$REMOTE_DIR/features.html"
+        echo "Updated: features page"
+      fi
+
+      # Upload screenshots
+      if [ -d "scripts/screenshots" ]; then
+        ssh $SERVER "mkdir -p $REMOTE_DIR/screenshots"
+        scp scripts/screenshots/*.png "$SERVER:$REMOTE_DIR/screenshots/"
+        echo "Updated: screenshots"
+      fi
+
+      # Update releases.json
+      ssh $SERVER "python3 -c \"
+      import json
+
+      manifest_path = '$REMOTE_DIR/releases.json'
+      try:
+          with open(manifest_path) as f:
+              data = json.load(f)
+      except (FileNotFoundError, json.JSONDecodeError):
+          data = {}
+
+      channel = '$CHANNEL'
+
+      if channel == 'production':
+          data['latest_version'] = '$VERSION'
+          if '$HAS_MACOS' == 'true':
+              data['macos'] = {
+                  'url': '/tstudio/download/$DMG_NAME',
+                  'version': '$VERSION',
+                  'filename': '$DMG_NAME'
+              }
+          if '$HAS_WINDOWS_X64' == 'true':
+              data['windows_x64'] = {
+                  'url': '/tstudio/download/$MSI_X64_NAME',
+                  'version': '$VERSION',
+                  'filename': '$MSI_X64_NAME'
+              }
+              data['windows'] = {
+                  'url': '/tstudio/download/$MSI_X64_NAME',
+                  'version': '$VERSION',
+                  'filename': '$MSI_X64_NAME'
+              }
+          if '$HAS_ANDROID' == 'true':
+              data['android'] = {
+                  'url': '/tstudio/download/$APK_NAME',
+                  'version': '$VERSION',
+                  'filename': '$APK_NAME'
+              }
+      else:
+          data['dev_latest_version'] = '$VERSION'
+          if '$HAS_MACOS' == 'true':
+              data['dev_macos'] = {
+                  'url': '/tstudio/download/$DMG_NAME',
+                  'version': '$VERSION',
+                  'filename': '$DMG_NAME'
+              }
+          if '$HAS_WINDOWS_X64' == 'true':
+              data['dev_windows_x64'] = {
+                  'url': '/tstudio/download/$MSI_X64_NAME',
+                  'version': '$VERSION',
+                  'filename': '$MSI_X64_NAME'
+              }
+          if '$HAS_ANDROID' == 'true':
+              data['dev_android'] = {
+                  'url': '/tstudio/download/$APK_NAME',
+                  'version': '$VERSION',
+                  'filename': '$APK_NAME'
+              }
+
+      with open(manifest_path, 'w') as f:
+          json.dump(data, f, indent=2)
+
+      print('Updated releases.json (' + channel + ')')
+      \""
+
+      echo ""
+      echo "$CHANNEL release $VERSION deployed!"
+      echo "  macOS:    https://n8n.prezent.nl/tstudio/download/$DMG_NAME"
+      echo "  Windows:  https://n8n.prezent.nl/tstudio/download/$MSI_X64_NAME"
+      echo "  Android:  https://n8n.prezent.nl/tstudio/download/$APK_NAME"
+      echo "  Manifest: https://n8n.prezent.nl/tstudio/download/releases.json"
+    - |
+      # Create GitLab Release (only for tag-triggered pipelines)
+      if [ -n "$CI_COMMIT_TAG" ]; then
+        NOTES=$(awk '/^---$/{n++} n==1{if(!/^---$/)print} n==2{exit}' docs/CHANGELOG.md)
+        [ -z "$NOTES" ] && NOTES="Release v$VERSION ($CHANNEL)"
+        echo "$NOTES" > /tmp/release-notes.txt
+
+        python3 << 'PYEOF'
+import json, os, urllib.request
+
+with open("/tmp/release-notes.txt") as f:
+    description = f.read().strip()
+
+tag = os.environ["CI_COMMIT_TAG"]
+version = os.environ["VERSION"]
+channel = os.environ["CHANNEL"]
+dmg = os.environ.get("DMG_NAME", "")
+msi = os.environ.get("MSI_X64_NAME", "")
+apk = os.environ.get("APK_NAME", "")
+api_url = os.environ["CI_API_V4_URL"]
+project_id = os.environ["CI_PROJECT_ID"]
+job_token = os.environ["CI_JOB_TOKEN"]
+
+title = f"TranscriptStudio Dev v{version}" if channel == "dev" else f"TranscriptStudio v{version}"
+
+base = "https://n8n.prezent.nl/tstudio/download"
+links = []
+if dmg:
+    links.append({"name": f"macOS — {dmg}", "url": f"{base}/{dmg}", "link_type": "other"})
+if msi:
+    links.append({"name": f"Windows — {msi}", "url": f"{base}/{msi}", "link_type": "other"})
+if apk:
+    links.append({"name": f"Android — {apk}", "url": f"{base}/{apk}", "link_type": "other"})
+
+data = {
+    "tag_name": tag,
+    "name": title,
+    "description": description,
+    "assets": {"links": links}
+}
+
+req = urllib.request.Request(
+    f"{api_url}/projects/{project_id}/releases",
+    data=json.dumps(data).encode(),
+    headers={"JOB-TOKEN": job_token, "Content-Type": "application/json"},
+    method="POST"
+)
+try:
+    with urllib.request.urlopen(req) as resp:
+        result = json.loads(resp.read())
+        print(f"GitLab Release created: {result.get('name', tag)}")
+except Exception as e:
+    print(f"Release creation failed: {e}")
+    print("Check CI_JOB_TOKEN permissions or add a project access token")
+PYEOF
+      fi

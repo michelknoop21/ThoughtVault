@@ -59,13 +59,10 @@ git commit -m "chore(release): ${NEW_VERSION}"
 git tag "v${NEW_VERSION}"
 git branch "release/${NEW_VERSION}"
 
-# Push everything to remotes
+# Push everything to origin (triggers GitLab CI pipeline)
 git push origin main "release/${NEW_VERSION}" --tags 2>/dev/null \
     || echo "⚠️  Auto-push to origin failed. Run: git push origin main release/${NEW_VERSION} --tags"
 
-git push github main --tags 2>/dev/null \
-    || echo "⚠️  Auto-push to github failed. Run: git push github main --tags"
-
 echo "✅ Version bumped: ${CURRENT} → ${NEW_VERSION}"
 echo "✅ Tag v${NEW_VERSION} + branch release/${NEW_VERSION} created and pushed"
-echo "🚀 GitHub Actions build triggered — check: https://github.com/michelknoop21/transcript-studio-native/actions"
+echo "🚀 GitLab CI pipeline triggered — check: https://gitlab.prezent.nl/ai-coding/transcript-studio-native/-/pipelines"

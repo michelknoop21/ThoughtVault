@@ -5,6 +5,33 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2026-03-20] — CI/CD migratie van GitHub Actions naar GitLab CI
+
+### Added
+- **GitLab CI pipeline** (`.gitlab-ci.yml`): Complete CI/CD pipeline met 5 jobs (prepare, build-macos, build-android, build-windows [disabled], deploy). Alle jobs draaien op Michel's Mac via shell executor. Mac fungeert als sole runner en intermediair naar EC2 server via SSH.
+- **Windows-only GitHub Actions** (`.github/workflows/build-windows.yml`): Windows MSI builds blijven op GitHub Actions (`windows-latest` runner) om de 10x macOS billing multiplier te vermijden. Triggered op `v*`/`dev-v*` tags gepusht naar GitHub.
+- **GitLab Release script** (`scripts/create-gitlab-release.py`): Losstaand Python script voor GitLab Release creatie via API (geextraheerd uit inline YAML heredoc die de YAML parser brak).
+
+### Changed
+- **Post-commit hook** (`.githooks/post-commit`): `git push github main --tags` verwijderd (geen dual-push meer). Monitor URL gewijzigd naar GitLab pipelines.
+- **Deploy scripts** (`scripts/deploy-production.sh`, `scripts/deploy-dev.sh`): `github` remote gewijzigd naar `origin`, comments en URLs gewijzigd naar GitLab.
+- **RELEASE.md** (`docs/RELEASE.md`): Alle GitHub referenties gewijzigd naar GitLab CI.
+
+### Removed
+- **GitHub Actions release workflow** (`.github/workflows/release.yml`): Monolithische workflow vervangen door GitLab CI + Windows-only GitHub Actions.
+
+### Infrastructure
+- **gitlab-runner 18.10.0** geinstalleerd op Mac (Homebrew), geregistreerd als shell executor runner "Michel-Mac" met tags `shell,macos,xcode`.
+- **Runner config** (`~/.gitlab-runner/config.toml`): JAVA_HOME, ANDROID_HOME, PATH environment variables geconfigureerd.
+- **JDK 21** geinstalleerd via Homebrew voor Android builds op Mac.
+- **EC2 security group beperking**: EC2 server (3.69.205.209) kan gitlab.prezent.nl niet bereiken op poort 443. Workaround: Mac fungeert als sole runner, SSHt naar EC2 voor deploys.
+
+### Decisions
+- DEC-055: GitLab CI als primair CI/CD platform met Mac als sole runner
+- DEC-056: GitHub Actions behouden uitsluitend voor Windows MSI builds
+
+---
+
 ## [2026-03-20] — Upload pipeline feedback fix (macOS + Windows)
 
 ### Fixed

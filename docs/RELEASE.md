@@ -156,17 +156,22 @@ Bestand: `.gitlab-ci.yml`
 - Push `dev-v*` tag → automatisch dev build
 - Handmatige pipeline → met optionele CHANNEL variabele (default: dev)
 
-**Runners:**
-- `linux,docker` → EC2 server (`3.69.205.209`) — prepare, build-android, deploy
-- `macos,xcode` → Michel's Mac (shell executor) — build-macos
-- `windows` → nog niet beschikbaar (build-windows overgeslagen)
+**Runner:** Michel's Mac (shell executor, gitlab-runner 18.10.0). Alle jobs draaien op dezelfde machine. Mac bereikt EC2 server via SSH voor deploys (EC2 kan GitLab niet bereiken — security group beperking).
+
+| Job tag | Gebruikt door |
+|---------|--------------|
+| `shell` | prepare, build-android, deploy |
+| `macos,xcode` | build-macos |
+| `windows` | build-windows (disabled, geen runner) |
 
 **Jobs:**
 1. `prepare` — bepaalt versie en channel uit tag of variabele, zet artifact namen via dotenv
 2. `build-macos` — bouwt DMG op Mac runner met channel-specifieke overrides
-3. `build-windows` — bouwt MSI (uitgeschakeld tot Windows runner beschikbaar is)
-4. `build-android` — bouwt APK op Linux Docker runner
-5. `deploy` — uploadt artifacts naar server, update releases.json, maakt GitLab Release
+3. `build-windows` — bouwt MSI (disabled tot een Windows runner beschikbaar is)
+4. `build-android` — bouwt APK met lokale JDK 21 + Android SDK op Mac
+5. `deploy` — uploadt artifacts naar server via SSH, update releases.json, maakt GitLab Release via `scripts/create-gitlab-release.py`
+
+**Windows MSI (apart):** Wordt gebouwd door GitHub Actions (`.github/workflows/build-windows.yml`) op `windows-latest` runner. Triggered op dezelfde `v*`/`dev-v*` tags gepusht naar GitHub remote. Zie DEC-056.
 
 **GitLab Releases:**
 - Release notes worden automatisch uit de eerste entry van `docs/CHANGELOG.md` geëxtraheerd

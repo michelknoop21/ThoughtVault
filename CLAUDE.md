@@ -15,7 +15,12 @@ xcodebuild test -project TranscriptStudio.xcodeproj -scheme TranscriptStudioTest
 # Windows dev
 cd windows && npm run tauri dev
 
-# Release (sync version → build → upload)
+# Release via CI (aanbevolen)
+scripts/deploy-dev.sh             # dev-v* tag → GitLab CI (macOS + Android + deploy)
+scripts/deploy-production.sh      # v* tag → GitLab CI (macOS + Android + deploy)
+# Windows MSI: push tag naar GitHub → GitHub Actions (.github/workflows/build-windows.yml)
+
+# Release lokaal (fallback)
 scripts/release.sh                # volledige pipeline
 scripts/release.sh --no-upload    # alleen build
 scripts/sync-version.sh           # alleen versie sync naar platform configs
@@ -61,6 +66,7 @@ ssh michelk@3.69.205.209 "docker logs n8n_transcript_studio --tail 50"
 - Versioning: elke commit op `main` bumpt automatisch patch via `.githooks/post-commit`
 - Na version bump: `scripts/sync-version.sh` draaien om VERSION naar alle platform configs te syncen
 - Downloads: `https://n8n.prezent.nl/tstudio/download/` — lees docs/RELEASE.md voor infra details
+- **CI/CD**: GitLab CI (`.gitlab-ci.yml`) voor macOS + Android + deploy (self-hosted Mac runner). GitHub Actions alleen voor Windows MSI builds (`.github/workflows/build-windows.yml`). Zie DEC-055, DEC-056.
 - **Multi-instance deployment** — Lees docs/PLAN-MULTI-INSTANCE.md en DEC-033 wanneer relevant
 
 ## Credentials & Environment Variables

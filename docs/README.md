@@ -86,14 +86,15 @@ Repository: [gitlab.prezent.nl/michelk/transcript-studio-native](https://gitlab.
 
 ## Building & Releasing
 
-Release builds are deployed via GitHub Actions. Two deploy scripts handle the full flow:
+Release builds are deployed via GitLab CI (macOS + Android) and GitHub Actions (Windows only). Two deploy scripts handle the full flow:
 
 ```bash
-./scripts/deploy-dev.sh           # Dev build → GitHub Actions → download page (beta section)
-./scripts/deploy-production.sh    # Production build → GitHub Actions → download page
+./scripts/deploy-dev.sh           # Dev build → GitLab CI → download page (beta section)
+./scripts/deploy-production.sh    # Production build → GitLab CI → download page
+# Windows MSI: push tag to GitHub → GitHub Actions (.github/workflows/build-windows.yml)
 ```
 
-Local builds (without GitHub Actions):
+Local builds (fallback):
 ```bash
 ./scripts/release.sh              # Dev build + upload (default)
 ./scripts/release.sh --production # Production build + upload

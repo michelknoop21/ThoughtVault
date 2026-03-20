@@ -6,6 +6,45 @@ _Decisions DEC-029 through DEC-038 archived to [archive/DECISIONS-DEC-029-to-DEC
 
 ---
 
+## DEC-056 — GitHub Actions Behouden Uitsluitend voor Windows MSI Builds
+
+**Date:** 2026-03-20
+**Status:** Accepted
+
+**Context:** Na de migratie naar GitLab CI (DEC-055) moest Windows MSI builds ook ergens draaien. Drie opties: (1) Windows runner registreren op GitLab, (2) Windows builds op GitHub Actions houden, (3) Windows builds lokaal draaien. Een self-hosted Windows runner was niet beschikbaar. GitHub Actions rekent macOS builds 10x de normale prijs (10 minuten per 1 build-minuut), maar Windows builds 1:1. De macOS builds van ~13 minuten kostten dus ~130 Actions-minuten op het free tier — de voornaamste reden dat Actions-minuten uitgeput raakten. Windows builds kosten ~30 minuten per build, wat acceptabel is voor het free tier (2000 min/maand).
+
+**Decision:** GitHub Actions behouden uitsluitend voor Windows MSI builds. Nieuw workflow bestand `.github/workflows/build-windows.yml` vervangt het Windows-gedeelte van het verwijderde `.github/workflows/release.yml`. Triggered op dezelfde `v*`/`dev-v*` tags die naar GitHub gepusht worden. Build uploadt MSI naar EC2 server en update `releases.json` Windows entries via SSH. Vereist `SSH_PRIVATE_KEY` secret in GitHub repository settings.
+
+**Consequences:**
+- GitHub Actions minuten drastisch gereduceerd: ~30 min/release (Windows only) in plaats van ~160+ min/release (alle platforms).
+- Windows builds draaien onafhankelijk van GitLab CI — geen dependency op Mac runner.
+- Tags moeten naar beide remotes gepusht worden: GitLab (macOS+Android+deploy) en GitHub (Windows). Deploy scripts pushen alleen naar origin (GitLab); Windows tag push is handmatig of via apart script.
+- GitLab CI `build-windows` job staat op `when: never` — kan geactiveerd worden als een Windows runner beschikbaar komt.
+- `SSH_PRIVATE_KEY` GitHub secret nodig voor server upload vanuit Windows runner.
+
+---
+
+## DEC-055 — GitLab CI als Primair CI/CD Platform met Mac als Sole Runner
+
+**Date:** 2026-03-20
+**Status:** Accepted
+
+**Context:** GitHub Actions minuten waren uitgeput (billing error). macOS builds op GitHub Actions kosten 10x de normale prijs (10 min per build-minuut), waardoor een 13-minuten macOS build 130 Actions-minuten verbruikte. Met het free tier van 2000 min/maand waren ~15 releases per maand het maximum. GitLab op `gitlab.prezent.nl` (self-hosted) heeft geen usage limiet. Michel's Mac is al het primaire development platform en heeft Xcode, Android SDK, en SSH-toegang tot de EC2 productie-server.
+
+**Decision:** GitLab CI als primair CI/CD platform. Michel's Mac fungeert als sole runner (shell executor, gitlab-runner 18.10.0). Pipeline in `.gitlab-ci.yml` met 5 jobs: `prepare` (versie/channel detectie), `build-macos` (Xcode archive → DMG), `build-android` (Gradle assembleRelease → APK), `build-windows` (disabled, geen runner), `deploy` (scp naar EC2 + releases.json update + GitLab Release). Mac SSHt naar EC2 voor deploys — EC2 kan GitLab niet bereiken (security group blokkeert poort 443 naar gitlab.prezent.nl). Release notes worden automatisch uit `docs/CHANGELOG.md` geextraheerd. GitLab Release creatie via `scripts/create-gitlab-release.py` (API call met `CI_JOB_TOKEN`).
+
+**Consequences:**
+- Onbeperkte CI/CD minuten voor macOS + Android builds (self-hosted runner).
+- Mac moet aan staan en gitlab-runner draaien voor CI builds. Geen builds mogelijk als Mac offline is.
+- EC2 ↔ GitLab security group beperking is geen probleem: Mac doet alles (build + deploy via SSH).
+- `SSH_PRIVATE_KEY` CI variable niet nodig — Mac's eigen SSH key (`~/.ssh/`) wordt gebruikt voor EC2 toegang.
+- Runner environment vereist: Xcode, JDK 21, Android SDK, Python 3, codesign tools. Geconfigureerd via `~/.gitlab-runner/config.toml` environment variabelen.
+- Post-commit hook pusht alleen naar origin (GitLab), niet meer dual-push naar GitHub.
+- `.github/workflows/release.yml` verwijderd — vervangen door `.gitlab-ci.yml`.
+- Bestanden: `.gitlab-ci.yml`, `scripts/create-gitlab-release.py` (nieuw), `.githooks/post-commit` (aangepast), `scripts/deploy-*.sh` (aangepast).
+
+---
+
 ## DEC-054 — Background Uploads with Global ProcessingBar
 
 **Date:** 2026-03-20

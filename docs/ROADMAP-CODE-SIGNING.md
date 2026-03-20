@@ -72,7 +72,7 @@ Signing volgorde:
 7. Submit DMG naar `notarytool --wait`
 8. Staple notarization ticket op DMG
 
-### Stap 4: `.github/workflows/release.yml` — signing in CI
+### Stap 4: CI pipeline — signing in CI (`.gitlab-ci.yml` + `.github/workflows/build-windows.yml`)
 
 **macOS job - nieuwe stappen:**
 1. **Import certificate**: Maak tijdelijke keychain, importeer .p12 uit secret
@@ -111,7 +111,8 @@ Get-AuthenticodeSignature "build\TranscriptStudio_1.0.50_x64.msi"
 |---------|-----------|
 | `scripts/env.sh` | 2 regels: CODESIGN_IDENTITY + APPLE_TEAM_ID defaults |
 | `scripts/build.sh` | Conditionele signing logica macOS sectie (~40 regels) |
-| `.github/workflows/release.yml` | Certificate import + signing + notarization + verificatie stappen (~80 regels) |
+| `.gitlab-ci.yml` | macOS signing: certificate import + signing + notarization + verificatie stappen in build-macos job |
+| `.github/workflows/build-windows.yml` | Windows signing: CodeSignTool stap na Tauri build |
 
 ## Aandachtspunten
 
@@ -126,8 +127,8 @@ Get-AuthenticodeSignature "build\TranscriptStudio_1.0.50_x64.msi"
 2. Genereer Developer ID Application certificaat + export als .p12
 3. Maak app-specific password aan op appleid.apple.com
 4. Koop SSL.com eSigner OV certificaat
-5. Configureer alle GitHub secrets
-6. Wijzig `env.sh`, `build.sh`, `release.yml`
+5. Configureer GitLab CI variables + GitHub secrets
+6. Wijzig `env.sh`, `build.sh`, `.gitlab-ci.yml`, `.github/workflows/build-windows.yml`
 7. Test met dev channel build (`deploy-dev.sh`)
 8. Verifieer: DMG opent zonder Gatekeeper waarschuwing, MSI toont bedrijfsnaam
 9. Productie deploy

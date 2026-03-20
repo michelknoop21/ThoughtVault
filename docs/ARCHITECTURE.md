@@ -1,6 +1,6 @@
 # TranscriptStudio — Architecture
 
-_Last updated: 2026-03-19_
+_Last updated: 2026-03-20_
 
 ---
 
@@ -512,13 +512,16 @@ static/
 
 ### Build & Release Pipeline
 
-Version is managed via the `VERSION` file (auto-bumped on commits to `main` by `.githooks/post-commit`). Two deployment paths:
+Version is managed via the `VERSION` file (auto-bumped on commits to `main` by `.githooks/post-commit`). Two CI systems:
 
-**GitHub Actions (primary):** Triggered by tags (`v*` for production, `dev-v*` for dev). Builds all three platforms in parallel (macOS DMG, Windows MSI, Android APK), uploads to server, updates `releases.json`, and creates a GitHub Release with changelog-based release notes.
+**GitLab CI (primary — `.gitlab-ci.yml`):** Self-hosted shell executor on Michel's Mac (runner "Michel-Mac", tags: `shell,macos,xcode`). Triggered by tags (`v*` for production, `dev-v*` for dev) or manual pipeline. Builds macOS DMG + Android APK, uploads to EC2 server via SSH, updates `releases.json`, and creates a GitLab Release with changelog-based release notes. Mac acts as sole runner and intermediary to EC2 (EC2 cannot reach GitLab due to security group).
+
+**GitHub Actions (Windows only — `.github/workflows/build-windows.yml`):** Windows MSI builds remain on GitHub Actions (`windows-latest` runner) to avoid the 10x macOS billing multiplier. Triggered on `v*`/`dev-v*` tags pushed to GitHub. Uploads MSI to EC2 server and updates `releases.json` Windows entries.
 
 ```bash
-./scripts/deploy-dev.sh         # Create dev-v* tag → GitHub Actions
-./scripts/deploy-production.sh  # Create v* tag → GitHub Actions
+./scripts/deploy-dev.sh         # Create dev-v* tag → GitLab CI (macOS + Android + deploy)
+./scripts/deploy-production.sh  # Create v* tag → GitLab CI (macOS + Android + deploy)
+# Windows MSI: push same tag to GitHub → GitHub Actions
 ```
 
 **Local build (fallback):**

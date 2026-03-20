@@ -46,6 +46,7 @@
 		AA000036 /* ProfilePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000036 /* ProfilePicker.swift */; };
 		AA000037 /* RecordingWidgetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000037 /* RecordingWidgetView.swift */; };
 		AA000038 /* StatusBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000038 /* StatusBadge.swift */; };
+		AA000060 /* ProcessingBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000060 /* ProcessingBar.swift */; };
 		AA000039 /* TranscriptCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000039 /* TranscriptCard.swift */; };
 		AA000040 /* WaveformView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000040 /* WaveformView.swift */; };
 		AA000041 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = FA000041 /* Localizable.strings */; };
@@ -115,6 +116,7 @@
 		FA000036 /* ProfilePicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfilePicker.swift; sourceTree = "<group>"; };
 		FA000037 /* RecordingWidgetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingWidgetView.swift; sourceTree = "<group>"; };
 		FA000038 /* StatusBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusBadge.swift; sourceTree = "<group>"; };
+		FA000060 /* ProcessingBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessingBar.swift; sourceTree = "<group>"; };
 		FA000039 /* TranscriptCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptCard.swift; sourceTree = "<group>"; };
 		FA000040 /* WaveformView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaveformView.swift; sourceTree = "<group>"; };
 		FA000041 /* Localizable.strings */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = Localizable.strings; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
@@ -277,6 +279,7 @@
 				FA000035 /* CallAlertView.swift */,
 				FA000036 /* ProfilePicker.swift */,
 				FA000037 /* RecordingWidgetView.swift */,
+				FA000060 /* ProcessingBar.swift */,
 				FA000038 /* StatusBadge.swift */,
 				FA000039 /* TranscriptCard.swift */,
 				FA000040 /* WaveformView.swift */,
@@ -447,6 +450,7 @@
 				AA000035 /* CallAlertView.swift in Sources */,
 				AA000036 /* ProfilePicker.swift in Sources */,
 				AA000037 /* RecordingWidgetView.swift in Sources */,
+				AA000060 /* ProcessingBar.swift in Sources */,
 				AA000038 /* StatusBadge.swift in Sources */,
 				AA000039 /* TranscriptCard.swift in Sources */,
 				AA000040 /* WaveformView.swift in Sources */,

@@ -420,6 +420,10 @@ struct ContentView: View {
                 .padding(.horizontal, TS.Spacing.md)
                 .padding(.top, TS.Spacing.sm)
 
+            ProcessingBar()
+                .padding(.horizontal, TS.Spacing.md)
+                .padding(.top, TS.Spacing.xs)
+
             tabContent(for: selectedTab)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }

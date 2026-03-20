@@ -473,9 +473,19 @@ final class RecordingViewModel {
     func uploadFile(_ url: URL, profileId: String) async {
         os_log("[RecordingVM] uploadFile: starting for %{public}@", log: log, type: .info, url.lastPathComponent)
 
+        // Create a temporary task so the upload is immediately visible in the task list
+        let tempId = "upload-\(UUID().uuidString)"
+        let pendingTask = TranscriptTask(
+            id: tempId,
+            taskId: tempId,
+            filename: url.lastPathComponent,
+            status: .uploading,
+            progress: 0
+        )
+
         await MainActor.run {
-            recordingState = .uploading
-            uploadProgress = 0
+            addTask(pendingTask)
+            recordingState = .idle
             lastFailedRecording = nil
         }
 
@@ -488,7 +498,7 @@ final class RecordingViewModel {
                     profileId: profileId
                 ) { [weak self] progress in
                     Task { @MainActor in
-                        self?.uploadProgress = progress
+                        self?.updateTask(tempId, status: .uploading, progress: progress)
                     }
                 }
 
@@ -497,28 +507,25 @@ final class RecordingViewModel {
                 os_log("[RecordingVM] uploadFile: success, taskId=%{public}@", log: log, type: .info, task.taskId)
 
                 await MainActor.run {
+                    // Replace temp task with real server task
+                    self.activeTasks.removeAll { $0.id == tempId }
                     self.addTask(task)
-                    recordingState = .idle
-                    uploadProgress = 0
                 }
 
-                // Save local audio path reference
+                // Start SSE stream for server-side processing updates
                 if !task.taskId.isEmpty {
                     await startSSEStream(for: task.taskId)
                 }
 
-                // Persist local path for local audio playback
                 saveLocalAudioPath(url: url, taskId: task.taskId)
                 loadSavedRecordings()
 
             } catch is CancellationError {
                 os_log("[RecordingVM] Upload cancelled by user", log: log, type: .info)
                 await MainActor.run {
-                    self.recordingState = .idle
-                    self.uploadProgress = 0
+                    self.activeTasks.removeAll { $0.id == tempId }
                 }
             } catch let error as APIError {
-                // On auth errors, enqueue to offline queue so the recording is not lost
                 if RecordingViewModel.isAuthError(error) {
                     os_log("[RecordingVM] Auth error during upload — enqueuing to offline queue", log: .default, type: .info)
                     self.offlineQueue.enqueue(.audio(url: url))
@@ -528,31 +535,36 @@ final class RecordingViewModel {
                 }
                 loadSavedRecordings()
                 await MainActor.run {
+                    self.updateTask(tempId, status: .error, errorMessage: error.localizedDescription)
                     self.lastFailedRecording = self.savedRecordings.first { $0.filename == url.lastPathComponent }
-                    self.recordingState = .error(error.localizedDescription)
-                    self.uploadProgress = 0
                 }
                 os_log("[RecordingVM] Upload failed: %{public}@", log: .default, type: .error, error.localizedDescription)
             } catch {
                 os_log("[RecordingVM] Upload failed (non-API): %{public}@", log: .default, type: .error, error.localizedDescription)
                 loadSavedRecordings()
                 await MainActor.run {
+                    self.updateTask(tempId, status: .error, errorMessage: error.localizedDescription)
                     self.lastFailedRecording = self.savedRecordings.first { $0.filename == url.lastPathComponent }
-                    self.recordingState = .error(error.localizedDescription)
-                    self.uploadProgress = 0
                 }
             }
         }
 
-        await uploadTask?.value
-        uploadTask = nil
+        // Don't await — upload runs in background
     }
 
-    func cancelUpload() {
-        uploadTask?.cancel()
-        uploadTask = nil
-        recordingState = .idle
-        uploadProgress = 0
+    func cancelUpload(_ taskId: String? = nil) {
+        if let taskId {
+            activeTasks.removeAll { $0.id == taskId }
+            if taskId.hasPrefix("upload-") {
+                uploadTask?.cancel()
+                uploadTask = nil
+            }
+        } else {
+            // Cancel the current upload task (legacy call without ID)
+            uploadTask?.cancel()
+            uploadTask = nil
+            activeTasks.removeAll { $0.id.hasPrefix("upload-") }
+        }
     }
 
     // MARK: - On-Device Transcription
@@ -905,6 +917,13 @@ final class RecordingViewModel {
         if !activeTasks.contains(where: { $0.taskId == task.taskId }) {
             activeTasks.append(task)
         }
+    }
+
+    func updateTask(_ id: String, status: TaskStatus, progress: Double? = nil, errorMessage: String? = nil) {
+        guard let idx = activeTasks.firstIndex(where: { $0.id == id }) else { return }
+        activeTasks[idx].status = status
+        if let progress { activeTasks[idx].progress = progress }
+        if let errorMessage { activeTasks[idx].errorMessage = errorMessage }
     }
 
     // MARK: - Feature Flags

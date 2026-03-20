@@ -91,7 +91,6 @@ struct RecordingView: View {
                 if recordingVM.isYouTubeEnabled {
                     youtubeCard
                 }
-                uploadProgressView
                 offlineStatusBanner
                 audioMixFallbackBanner
                 errorBanner
@@ -535,38 +534,7 @@ struct RecordingView: View {
         }
     }
 
-    // MARK: Upload progress
-
-    @ViewBuilder
-    private var uploadProgressView: some View {
-        if case .uploading = recordingVM.recordingState {
-            HStack(spacing: TS.Spacing.sm) {
-                ProgressView()
-                    .scaleEffect(0.8)
-                Text("Uploaden... \(Int(recordingVM.uploadProgress * 100))%")
-                    .font(TS.Font.footnoteMedium)
-                    .foregroundStyle(Color.brandSecondary)
-                Spacer()
-                Button {
-                    recordingVM.cancelUpload()
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundStyle(Color.brandSecondary.opacity(0.6))
-                }
-                .buttonStyle(.plain)
-                .help("Upload annuleren")
-            }
-            .padding(TS.Spacing.sm)
-            .background {
-                RoundedRectangle(cornerRadius: TS.Radius.sm, style: .continuous)
-                    .fill(Color.accentBgSecondary)
-                    .overlay {
-                        RoundedRectangle(cornerRadius: TS.Radius.sm, style: .continuous)
-                            .stroke(Color.brandSecondary.opacity(0.25), lineWidth: 1)
-                    }
-            }
-        }
-    }
+    // (uploadProgressView removed — upload progress now shown in ProcessingBar)
 
     // MARK: Offline status banner
 

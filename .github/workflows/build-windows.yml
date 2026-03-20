@@ -1,0 +1,147 @@
+# Windows MSI build only — triggered from GitLab CI pipeline or manually.
+# macOS + Android + deploy run on GitLab CI (self-hosted runner).
+name: Build Windows MSI
+
+on:
+  push:
+    tags:
+      - 'v*'
+      - 'dev-v*'
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: 'Build channel'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - production
+
+permissions:
+  contents: write
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Determine version and channel
+        id: meta
+        shell: bash
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            echo "version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+            echo "channel=production" >> $GITHUB_OUTPUT
+          elif [[ "$GITHUB_REF" == refs/tags/dev-v* ]]; then
+            echo "version=${GITHUB_REF_NAME#dev-v}" >> $GITHUB_OUTPUT
+            echo "channel=dev" >> $GITHUB_OUTPUT
+          else
+            VERSION=$(cat VERSION | tr -d '[:space:]')
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+            echo "channel=${{ inputs.channel || 'dev' }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set artifact names
+        id: names
+        shell: bash
+        run: |
+          VERSION="${{ steps.meta.outputs.version }}"
+          CHANNEL="${{ steps.meta.outputs.channel }}"
+          if [ "$CHANNEL" = "production" ]; then
+            echo "msi_name=TranscriptStudio_${VERSION}_x64.msi" >> $GITHUB_OUTPUT
+            echo "bundle_id=nl.prezent.transcript-studio" >> $GITHUB_OUTPUT
+            echo "product_name=TranscriptStudio" >> $GITHUB_OUTPUT
+          else
+            echo "msi_name=TranscriptStudio-Dev_${VERSION}_x64.msi" >> $GITHUB_OUTPUT
+            echo "bundle_id=nl.prezent.transcript-studio-dev" >> $GITHUB_OUTPUT
+            echo "product_name=TranscriptStudio Dev" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install frontend dependencies
+        working-directory: windows
+        run: npm install
+
+      - name: Build Tauri app
+        working-directory: windows
+        env:
+          TAURI_CONFIG: '{"identifier":"${{ steps.names.outputs.bundle_id }}","productName":"${{ steps.names.outputs.product_name }}"}'
+        run: npm run tauri build
+
+      - name: Copy and upload MSI
+        shell: bash
+        env:
+          MSI_NAME: ${{ steps.names.outputs.msi_name }}
+        run: |
+          mkdir -p build
+          MSI=$(find windows/src-tauri/target/release/bundle -name "*.msi" -type f | head -1)
+          if [ -z "$MSI" ]; then
+            echo "ERROR: MSI not found"
+            exit 1
+          fi
+          cp "$MSI" "build/$MSI_NAME"
+          echo "Built: $MSI_NAME"
+
+      - name: Upload to server
+        shell: bash
+        env:
+          MSI_NAME: ${{ steps.names.outputs.msi_name }}
+          VERSION: ${{ steps.meta.outputs.version }}
+          CHANNEL: ${{ steps.meta.outputs.channel }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H 3.69.205.209 >> ~/.ssh/known_hosts
+
+          SERVER="michelk@3.69.205.209"
+          REMOTE_DIR="/home/michelk/tstudio-releases"
+
+          scp "build/$MSI_NAME" "$SERVER:$REMOTE_DIR/$MSI_NAME"
+          echo "Uploaded: $MSI_NAME"
+
+          # Update releases.json with Windows entry
+          ssh $SERVER "python3 -c \"
+          import json
+
+          manifest_path = '$REMOTE_DIR/releases.json'
+          try:
+              with open(manifest_path) as f:
+                  data = json.load(f)
+          except (FileNotFoundError, json.JSONDecodeError):
+              data = {}
+
+          channel = '$CHANNEL'
+          entry = {
+              'url': '/tstudio/download/$MSI_NAME',
+              'version': '$VERSION',
+              'filename': '$MSI_NAME'
+          }
+
+          if channel == 'production':
+              data['windows_x64'] = entry
+              data['windows'] = entry
+          else:
+              data['dev_windows_x64'] = entry
+
+          with open(manifest_path, 'w') as f:
+              json.dump(data, f, indent=2)
+
+          print('Updated releases.json windows (' + channel + ')')
+          \""
+
+          echo ""
+          echo "Windows $CHANNEL build uploaded!"
+          echo "  MSI: https://n8n.prezent.nl/tstudio/download/$MSI_NAME"

@@ -4,8 +4,13 @@
 //
 // Checks releases.json for available app updates, once per session.
 // Displays a non-blocking banner on the home screen when a newer version exists.
+// Posts a macOS system notification on startup when a newer version is found.
 
 import Foundation
+import UserNotifications
+import OSLog
+
+private let logger = Logger(subsystem: "nl.prezent.TranscriptStudio", category: "UpdateCheck")
 
 @Observable
 final class UpdateCheckService {
@@ -46,8 +51,38 @@ final class UpdateCheckService {
 
             availableVersion = latestVersion
             downloadURL = resolvedURL
+
+            await Self.postSystemNotification(version: latestVersion)
         } catch {
             // Silently ignore — update check is best-effort
+        }
+    }
+
+    private static func postSystemNotification(version: String) async {
+        let center = UNUserNotificationCenter.current()
+        let settings = await center.notificationSettings()
+
+        guard settings.authorizationStatus == .authorized else {
+            logger.debug("Notification permission not granted, skipping update notification")
+            return
+        }
+
+        let content = UNMutableNotificationContent()
+        content.title = "Update beschikbaar"
+        content.body = "Versie \(version) van TranscriptStudio is beschikbaar."
+        content.sound = .default
+
+        let request = UNNotificationRequest(
+            identifier: "update-available-\(version)",
+            content: content,
+            trigger: nil // deliver immediately
+        )
+
+        do {
+            try await center.add(request)
+            logger.info("Posted system notification for update \(version)")
+        } catch {
+            logger.warning("Failed to post update notification: \(error.localizedDescription)")
         }
     }
 

@@ -62,7 +62,7 @@ private struct ProcessingBarItem: View {
             Spacer()
 
             // Progress percentage
-            if isUploading || isProcessing {
+            if isUploading {
                 Text("\(Int(task.progress * 100))%")
                     .font(TS.Font.microBold)
                     .foregroundStyle(statusColor)
@@ -110,10 +110,11 @@ private struct ProcessingBarItem: View {
                 // Progress track
                 if isUploading || isProcessing {
                     GeometryReader { geo in
+                        let normalizedProgress = isUploading ? task.progress : task.status.progress
                         RoundedRectangle(cornerRadius: TS.Radius.xs, style: .continuous)
                             .fill(statusColor.opacity(0.12))
-                            .frame(width: geo.size.width * task.progress)
-                            .animation(.linear(duration: 0.3), value: task.progress)
+                            .frame(width: geo.size.width * normalizedProgress)
+                            .animation(.linear(duration: 0.3), value: normalizedProgress)
                     }
                 }
             }

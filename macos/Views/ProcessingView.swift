@@ -117,9 +117,11 @@ struct ProcessingView: View {
                         .multilineTextAlignment(.center)
                         .animation(TS.Animation.smooth, value: displayTask.status)
 
-                    Text("\(Int(displayTask.status.progress * 100))%")
-                        .font(TS.Font.captionMonospaced)
-                        .foregroundStyle(Color.neonBlue.opacity(0.7))
+                    if displayTask.status == .uploading {
+                        Text("\(Int(displayTask.progress * 100))%")
+                            .font(TS.Font.captionMonospaced)
+                            .foregroundStyle(Color.neonBlue.opacity(0.7))
+                    }
                 }
 
                 // Transcript preview panel

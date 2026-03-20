@@ -18,7 +18,6 @@ struct RecordingView: View {
 
     // MARK: State
 
-    @State private var showReprocessSheet = false
     @State private var selectedReprocessRecording: SavedRecording? = nil
     @State private var savedRecordingsExpanded = false
     @State private var addNoteText = ""
@@ -40,13 +39,8 @@ struct RecordingView: View {
                 idleView
             }
         }
-        .sheet(isPresented: $showReprocessSheet) {
-            ReprocessSheet(recording: selectedReprocessRecording)
-                .environment(recordingVM)
-                .frame(minWidth: 420, idealWidth: 460, minHeight: 340, idealHeight: 380)
-        }
-        .sheet(isPresented: Bindable(recordingVM).showRetrySheet) {
-            ReprocessSheet(recording: nil)
+        .sheet(item: $selectedReprocessRecording) { recording in
+            ReprocessSheet(recording: recording)
                 .environment(recordingVM)
                 .frame(minWidth: 420, idealWidth: 460, minHeight: 340, idealHeight: 380)
         }
@@ -98,6 +92,7 @@ struct RecordingView: View {
                     youtubeCard
                 }
                 uploadProgressView
+                offlineStatusBanner
                 audioMixFallbackBanner
                 errorBanner
                 activeTasksList
@@ -573,6 +568,38 @@ struct RecordingView: View {
         }
     }
 
+    // MARK: Offline status banner
+
+    @ViewBuilder
+    private var offlineStatusBanner: some View {
+        if let message = recordingVM.offlineStatusMessage {
+            HStack(spacing: TS.Spacing.sm) {
+                Image(systemName: "wifi.slash")
+                    .foregroundStyle(Color.brandOrange)
+                Text(message)
+                    .font(TS.Font.footnote)
+                    .foregroundStyle(Color.labelSecondary)
+                Spacer()
+                Button {
+                    recordingVM.offlineStatusMessage = nil
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(Color.brandOrange.opacity(0.6))
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(TS.Spacing.sm)
+            .background {
+                RoundedRectangle(cornerRadius: TS.Radius.sm, style: .continuous)
+                    .fill(Color.brandOrange.opacity(0.08))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: TS.Radius.sm, style: .continuous)
+                            .stroke(Color.brandOrange.opacity(0.25), lineWidth: 1)
+                    }
+            }
+        }
+    }
+
     // MARK: Error banner
 
     @ViewBuilder
@@ -586,6 +613,14 @@ struct RecordingView: View {
                     .foregroundStyle(Color.statusError)
                     .multilineTextAlignment(.leading)
                 Spacer()
+                if let failed = recordingVM.lastFailedRecording {
+                    Button("Opnieuw") {
+                        recordingVM.clearError()
+                        selectedReprocessRecording = failed
+                    }
+                    .font(TS.Font.captionMedium)
+                    .buttonStyle(SecondaryButtonStyle())
+                }
                 Button {
                     recordingVM.clearError()
                 } label: {
@@ -790,7 +825,6 @@ struct RecordingView: View {
     private func savedRecordingRow(_ recording: SavedRecording) -> some View {
         Button {
             selectedReprocessRecording = recording
-            showReprocessSheet = true
         } label: {
             HStack(spacing: TS.Spacing.sm) {
                 Image(systemName: "waveform.circle")
@@ -819,8 +853,7 @@ struct RecordingView: View {
         .contextMenu {
             Button {
                 selectedReprocessRecording = recording
-                showReprocessSheet = true
-            } label: {
+                } label: {
                 Label("Opnieuw verwerken", systemImage: "arrow.clockwise")
             }
 
@@ -1176,40 +1209,28 @@ private struct ReprocessSheet: View {
     @Environment(RecordingViewModel.self) var recordingVM
     @Environment(\.dismiss) private var dismiss
 
-    let recording: SavedRecording?
+    let recording: SavedRecording
 
     @State private var selectedProfile: Profile? = nil
     @State private var useOnDevice = false
     @State private var isProcessing = false
 
-    var isRetryMode: Bool { recording == nil }
-
     var body: some View {
         NavigationStack {
             Form {
                 Section {
-                    if isRetryMode {
-                        Label(
-                            "Mislukte upload opnieuw proberen",
-                            systemImage: "arrow.clockwise.circle.fill"
-                        )
-                        .foregroundStyle(Color.brandOrange)
-                    } else {
-                        Label(
-                            "Opname opnieuw verwerken",
-                            systemImage: "waveform.circle.fill"
-                        )
-                        .foregroundStyle(Color.brandPrimary)
+                    Label(
+                        "Opname opnieuw verwerken",
+                        systemImage: "waveform.circle.fill"
+                    )
+                    .foregroundStyle(Color.brandPrimary)
 
-                        if let rec = recording {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(rec.filename)
-                                    .font(TS.Font.footnoteMedium)
-                                Text(rec.formattedDate)
-                                    .font(TS.Font.caption)
-                                    .foregroundStyle(Color.labelSecondary)
-                            }
-                        }
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(recording.filename)
+                            .font(TS.Font.footnoteMedium)
+                        Text(recording.formattedDate)
+                            .font(TS.Font.caption)
+                            .foregroundStyle(Color.labelSecondary)
                     }
                 }
 
@@ -1246,7 +1267,7 @@ private struct ReprocessSheet: View {
                 }
             }
             .formStyle(.grouped)
-            .navigationTitle(isRetryMode ? "Opnieuw proberen" : "Opnieuw verwerken")
+            .navigationTitle("Opnieuw verwerken")
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
@@ -1255,10 +1276,10 @@ private struct ReprocessSheet: View {
                     Button("Annuleren") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(isRetryMode ? "Probeer opnieuw" : "Start verwerking") {
+                    Button("Start verwerking") {
                         startReprocess()
                     }
-                    .disabled(isProcessing)
+                    .disabled(isProcessing || selectedProfile == nil)
                     .buttonStyle(PrimaryButtonStyle())
                 }
             }
@@ -1286,11 +1307,7 @@ private struct ReprocessSheet: View {
         guard let profile = selectedProfile else { return }
         isProcessing = true
         Task {
-            if isRetryMode {
-                await recordingVM.retryLastFailedUpload()
-            } else if let rec = recording {
-                await recordingVM.reprocessRecording(rec, profileId: profile.id, useOnDevice: useOnDevice)
-            }
+            await recordingVM.reprocessRecording(recording, profileId: profile.id, useOnDevice: useOnDevice)
             await MainActor.run {
                 isProcessing = false
                 dismiss()

@@ -12,7 +12,7 @@ import {
   getRecordingsDir,
   type RecordingFile,
 } from "../../services/tauriCommands";
-import { api } from "../../services/api";
+import { uploadAndTrack } from "../../services/uploadAndTrack";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { useToast } from "../ui/InfoBar";
 
@@ -92,18 +92,12 @@ export function SavedRecordings({
       onReprocess(file.path);
       return;
     }
-    try {
-      await api.uploadRecording(
-        file.path,
-        settings.default_profile_id,
-        settings.default_recording_mode
-      );
-      toast.show("Opname opnieuw ingediend", "success");
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Onbekende fout";
-      console.error("[SavedRecordings] Reprocess failed:", msg, err);
-      toast.show(`Opnieuw verwerken mislukt: ${msg}`, "error");
-    }
+    toast.show("Upload gestart — voortgang zichtbaar in de verwerkingsbalk", "success");
+    await uploadAndTrack(
+      file.path,
+      settings.default_profile_id,
+      settings.default_recording_mode,
+    );
   }
 
   if (!expanded) {

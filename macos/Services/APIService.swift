@@ -259,6 +259,8 @@ actor APIService {
                 message = detail ?? "Geen toegang."
             case 404:
                 message = detail ?? "Niet gevonden."
+            case 413:
+                throw APIError.fileTooLarge
             case 429:
                 message = detail ?? "Te veel verzoeken. Probeer het later opnieuw."
             case 500...:
@@ -284,7 +286,10 @@ actor APIService {
 
     private func extractErrorInfo(from data: Data) -> (message: String?, errorCode: String?) {
         guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-            return (String(data: data, encoding: .utf8), nil)
+            // Non-JSON response (e.g. nginx HTML error page) — don't use as user-facing message
+            let raw = String(data: data, encoding: .utf8)
+            if let raw, raw.contains("<html") { return (nil, nil) }
+            return (raw, nil)
         }
         // Structured error format: error_code + message from backend
         let errorCode = json["error_code"] as? String
@@ -447,6 +452,9 @@ actor APIService {
         writeString("--\(boundary)--\r\n")
         outputStream.close()
 
+        let tempSize = (try? FileManager.default.attributesOfItem(atPath: tempURL.path))?[.size] as? Int64 ?? 0
+        logger.info("[APIService] uploadAudio: temp file size=\(tempSize)")
+
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
@@ -456,8 +464,13 @@ actor APIService {
 
         let delegate = UploadProgressDelegate(onProgress: onProgress)
         onProgress(0.0)
+        logger.info("[APIService] uploadAudio: starting HTTP upload")
         let (data, response) = try await session.upload(for: req, fromFile: tempURL, delegate: delegate)
         onProgress(1.0)
+
+        if let http = response as? HTTPURLResponse {
+            logger.info("[APIService] uploadAudio: response status=\(http.statusCode)")
+        }
 
         return try handleResponse(data: data, response: response)
     }

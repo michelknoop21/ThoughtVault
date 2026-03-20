@@ -28,10 +28,8 @@ final class RecordingViewModel {
     var localGenerationProgress: Double = 0
     var isGeneratingLocally: Bool = false
     var offlineStatusMessage: String?
-    var lastFailedUploadURL: URL?
-    var lastFailedUploadReason: UploadFailureReason?
+    var lastFailedRecording: SavedRecording?
     var savedRecordings: [SavedRecording] = []
-    var showRetrySheet: Bool = false
     var audioMixFallbackOccurred: Bool = false
 
     // YouTube transcription
@@ -272,7 +270,7 @@ final class RecordingViewModel {
             let hasScreenPermission = await ensureScreenCapturePermission()
             guard hasScreenPermission else {
                 await MainActor.run {
-                    recordingState = .error("Schermopname-toegang is vereist voor videocall-opname. Geef toegang in Systeeminstellingen > Privacy en beveiliging > Scherm- en systeemaudio-opname, en herstart daarna de app.")
+                    recordingState = .error("Systeemaudio-toegang is vereist voor videocall-opname. Geef toegang in Systeeminstellingen > Privacy en beveiliging > Systeemaudio-opname, en herstart daarna de app.")
                 }
                 return
             }
@@ -357,6 +355,8 @@ final class RecordingViewModel {
     func stopAndUpload() async {
         guard recordingState == .recording || recordingState == .paused else { return }
 
+        os_log("[RecordingVM] stopAndUpload: state=%{public}@, profile=%{public}@", log: log, type: .info, "\(recordingState)", selectedProfile?.name ?? "nil")
+
         await MainActor.run { recordingState = .stopping }
         await stopLiveTranscription()
 
@@ -401,6 +401,7 @@ final class RecordingViewModel {
 
         // Validate file has actual audio content (16kHz mono 16-bit = ~32KB/sec, minimum 3 seconds)
         let fileSize = (try? FileManager.default.attributesOfItem(atPath: url.path))?[.size] as? Int64 ?? 0
+        os_log("[RecordingVM] stopAndUpload: fileSize=%lld, network=%{public}@", log: log, type: .info, fileSize, networkMonitor.isConnected ? "connected" : "offline")
         if fileSize < 96_000 {
             os_log("[RecordingVM] Recording file too small (%lld bytes), likely too short", log: log, type: .error, fileSize)
             await MainActor.run {
@@ -427,11 +428,14 @@ final class RecordingViewModel {
             let canUseOnDevice = preferOnDeviceTranscription && onDeviceTranscriptionAvailable
 #endif
             if canUseOnDevice {
+                os_log("[RecordingVM] stopAndUpload: path=onDevice", log: log, type: .info)
                 await transcribeOnDeviceThenUpload(url: url, profileId: profile.id)
             } else {
+                os_log("[RecordingVM] stopAndUpload: path=cloud", log: log, type: .info)
                 await uploadFile(url, profileId: profile.id)
             }
         } else {
+            os_log("[RecordingVM] stopAndUpload: path=offline", log: log, type: .info)
             await handleOfflineRecording(url: url)
         }
     }
@@ -467,11 +471,12 @@ final class RecordingViewModel {
     // MARK: - Upload
 
     func uploadFile(_ url: URL, profileId: String) async {
+        os_log("[RecordingVM] uploadFile: starting for %{public}@", log: log, type: .info, url.lastPathComponent)
+
         await MainActor.run {
             recordingState = .uploading
             uploadProgress = 0
-            lastFailedUploadURL = nil
-            lastFailedUploadReason = nil
+            lastFailedRecording = nil
         }
 
         uploadTask = Task {
@@ -488,6 +493,8 @@ final class RecordingViewModel {
                 }
 
                 try Task.checkCancellation()
+
+                os_log("[RecordingVM] uploadFile: success, taskId=%{public}@", log: log, type: .info, task.taskId)
 
                 await MainActor.run {
                     self.addTask(task)
@@ -511,7 +518,6 @@ final class RecordingViewModel {
                     self.uploadProgress = 0
                 }
             } catch let error as APIError {
-                let reason = uploadFailureReason(from: error)
                 // On auth errors, enqueue to offline queue so the recording is not lost
                 if RecordingViewModel.isAuthError(error) {
                     os_log("[RecordingVM] Auth error during upload — enqueuing to offline queue", log: .default, type: .info)
@@ -520,25 +526,21 @@ final class RecordingViewModel {
                         self.offlineStatusMessage = "Upload uitgesteld vanwege een sessiefout. De opname is opgeslagen en wordt automatisch opnieuw geprobeerd."
                     }
                 }
+                loadSavedRecordings()
                 await MainActor.run {
-                    self.lastFailedUploadURL = url
-                    self.lastFailedUploadReason = reason
-                    self.recordingState = .idle
-                    self.showRetrySheet = reason.isRetryable
+                    self.lastFailedRecording = self.savedRecordings.first { $0.filename == url.lastPathComponent }
+                    self.recordingState = .error(error.localizedDescription)
                     self.uploadProgress = 0
                 }
                 os_log("[RecordingVM] Upload failed: %{public}@", log: .default, type: .error, error.localizedDescription)
-                loadSavedRecordings()
             } catch {
                 os_log("[RecordingVM] Upload failed (non-API): %{public}@", log: .default, type: .error, error.localizedDescription)
+                loadSavedRecordings()
                 await MainActor.run {
-                    self.lastFailedUploadURL = url
-                    self.lastFailedUploadReason = .unknown
-                    self.recordingState = .idle
-                    self.showRetrySheet = true
+                    self.lastFailedRecording = self.savedRecordings.first { $0.filename == url.lastPathComponent }
+                    self.recordingState = .error(error.localizedDescription)
                     self.uploadProgress = 0
                 }
-                loadSavedRecordings()
             }
         }
 
@@ -610,14 +612,10 @@ final class RecordingViewModel {
 
         await MainActor.run {
             recordingState = .idle
-            offlineStatusMessage = "Geen verbinding. Opname opgeslagen en wordt geüpload zodra je weer online bent."
+            offlineStatusMessage = "Geen verbinding. Opname opgeslagen en wordt automatisch geüpload zodra je weer online bent."
         }
 
         loadSavedRecordings()
-
-        // Clear message after 5 seconds
-        try? await Task.sleep(nanoseconds: 5_000_000_000)
-        await MainActor.run { offlineStatusMessage = nil }
     }
 
     // MARK: - Queue Processing
@@ -686,24 +684,10 @@ final class RecordingViewModel {
         loadSavedRecordings()
     }
 
-    // MARK: - Retry
-
-    func retryLastFailedUpload() async {
-        guard let url = lastFailedUploadURL,
-              let profile = selectedProfile else { return }
-
-        await MainActor.run {
-            showRetrySheet = false
-            lastFailedUploadURL = nil
-            lastFailedUploadReason = nil
-        }
-
-        await uploadFile(url, profileId: profile.id)
-    }
-
     // MARK: - Reprocess Saved Recording
 
     func reprocessRecording(_ recording: SavedRecording, profileId: String, useOnDevice: Bool) async {
+        os_log("[RecordingVM] reprocessRecording: %{public}@, onDevice=%{public}@", log: log, type: .info, recording.filename, useOnDevice ? "true" : "false")
         let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         let url = docs.appendingPathComponent("Recordings").appendingPathComponent(recording.filename)
 
@@ -907,8 +891,7 @@ final class RecordingViewModel {
     func clearError() {
         guard case .error = recordingState else { return }
         recordingState = .idle
-        lastFailedUploadURL = nil
-        lastFailedUploadReason = nil
+        lastFailedRecording = nil
     }
 
     func removeTask(_ taskId: String) {
@@ -1106,33 +1089,11 @@ final class RecordingViewModel {
 
     // MARK: - Helpers
 
-    private func uploadFailureReason(from error: APIError) -> UploadFailureReason {
-        switch error {
-        case .sessionExpired:
-            return .authExpired
-        case .fileTooLarge:
-            return .fileTooLarge
-        case .httpError(let code, let message, _):
-            if code == 401 { return .authExpired }
-            if code == 413 { return .fileTooLarge }
-            if code == 422, let msg = message { return .validationError(msg) }
-            return .serverError(code)
-        case .networkError:
-            return .networkError
-        default:
-            return .unknown
-        }
-    }
-
 #if os(macOS)
     private func ensureScreenCapturePermission() async -> Bool {
-        await systemAudioCapture.checkPermission()
-        if systemAudioCapture.hasPermission { return true }
-
-        // Triggers the macOS permission flow in System Settings.
-        _ = CGRequestScreenCaptureAccess()
-        try? await Task.sleep(for: .seconds(1))
-
+        // SCShareableContent automatically triggers the system permission prompt
+        // on first use. On macOS 15+ this shows as "System Audio Recording" (not
+        // "Screen Recording") when no .screen output is added to the stream.
         await systemAudioCapture.checkPermission()
         return systemAudioCapture.hasPermission
     }

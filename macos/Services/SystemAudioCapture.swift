@@ -279,7 +279,7 @@ final class SystemAudioCapture: NSObject {
 
     private func startDurationTimer() {
         durationTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated {
+            Task { @MainActor in
                 guard let self, let start = self.startDate else { return }
                 self.duration = Date().timeIntervalSince(start)
             }

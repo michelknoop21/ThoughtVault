@@ -5,6 +5,40 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2026-03-20] — Upload pipeline feedback fix (macOS + Windows)
+
+### Fixed
+- **Upload errors now visible** (`macos/ViewModels/RecordingViewModel.swift`): Both `catch` blocks in `uploadFile()` set `recordingState = .error(...)` instead of `.idle`. Previously, all upload failures were silently swallowed — the user saw no error message, no retry option, and no indication that the upload had failed.
+- **Retry flow simplified** (`RecordingViewModel.swift`, `RecordingView.swift`): Removed fragile `lastFailedUploadURL`/`showRetrySheet`/`retryLastFailedUpload()` mechanism. Replaced with `lastFailedRecording: SavedRecording?` that simply reopens the existing ReprocessSheet with the failed recording. Error banner shows "Opnieuw" button that opens the same reprocess flow as clicking a saved recording — no special retry state needed.
+- **Sheet conflict resolved**: Removed the second `.sheet(isPresented: showRetrySheet)` that could conflict with the ReprocessSheet. Only one sheet modifier remains.
+- **ReprocessSheet "Start verwerking" button fixed** (`RecordingView.swift`): Switched from `.sheet(isPresented: $showReprocessSheet)` to `.sheet(item: $selectedReprocessRecording)`. The `isPresented` pattern evaluated the sheet content closure before the `@State` update propagated, causing `recording` to be nil inside the sheet — the button was silently disabled. With `.sheet(item:)`, SwiftUI guarantees the recording parameter is non-nil. `ReprocessSheet.recording` changed from `SavedRecording?` to `SavedRecording`, eliminating the entire class of nil-recording bugs.
+- **Offline status banner visible** (`RecordingView.swift`): Added `offlineStatusBanner` view that renders `offlineStatusMessage` with wifi.slash icon and dismiss button. Previously, `offlineStatusMessage` was set but never displayed anywhere. Removed the 5-second auto-dismiss timer — message persists until user dismisses it.
+- **Timer crash** (`macos/Services/SystemAudioCapture.swift`): Replaced `MainActor.assumeIsolated` with `Task { @MainActor in }` in the duration Timer callback. The `assumeIsolated` assertion crashed on GCD worker threads (`_dispatch_assert_queue_fail` on Thread 4).
+- **Screen capture permission simplified** (`RecordingViewModel.swift`): Removed `CGRequestScreenCaptureAccess()` call. On macOS 15+, `SCShareableContent` automatically triggers the correct "System Audio Recording" permission prompt (not "Screen Recording"). Error message updated to reference "Systeemaudio-opname" instead of "Scherm- en systeemaudio-opname".
+
+### Changed
+- **Windows SavedRecordings reprocess** (`windows/src/components/recording/SavedRecordings.tsx`): `handleReprocess()` now uses `uploadAndTrack()` instead of fire-and-forget `api.uploadRecording()`. Reprocessed recordings now appear in the ProcessingBar with progress tracking, error messages, and automatic offline queue fallback.
+- **Extracted `uploadAndTrack()` utility** (`windows/src/services/uploadAndTrack.ts`): Core upload+SSE+offline-queue logic extracted from `useGlobalRecordingHandler.ts` into a reusable function. Both the global recording handler and SavedRecordings now share the same upload pipeline.
+- **Diagnostic logging added** (`RecordingViewModel.swift`, `APIService.swift`): `os_log` statements at every critical decision point in the upload flow: `stopAndUpload()` entry/branching, `uploadFile()` entry/success, `reprocessRecording()` entry, API temp file size, HTTP upload start, response status code.
+
+### Removed
+- `lastFailedUploadURL`, `lastFailedUploadReason`, `showRetrySheet` properties from `RecordingViewModel`
+- `retryLastFailedUpload()` method
+- `uploadFailureReason()` helper and `isRetryMode` branch in `ReprocessSheet`
+- Second `.sheet` for retry in `RecordingView`
+- `UploadFailureReason` enum is now unused (kept in `Models.swift` for now)
+
+### Decisions
+- DEC-052: Simplified retry as reprocess, not special state
+- DEC-053: Remove CGRequestScreenCaptureAccess on macOS 15+
+
+### Notes
+- macOS build verified: `xcodebuild ... CODE_SIGNING_ALLOWED=NO` — BUILD SUCCEEDED
+- Windows TypeScript verified: `npx tsc --noEmit` — no errors (only pre-existing test warning)
+- The `UploadFailureReason` enum in `Models.swift` is now dead code — can be cleaned up in a future session.
+
+---
+
 ## [2026-03-19] — Windows audio resampling + upload limit 250 MB
 
 ### Fixed

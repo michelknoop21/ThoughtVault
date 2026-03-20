@@ -248,6 +248,42 @@ Keyring keys: `auth_token` (bestaand), `saved_email`, `saved_password`, `remembe
 
 ---
 
+## DEC-053 — Remove CGRequestScreenCaptureAccess on macOS 15+
+
+**Date:** 2026-03-20
+**Status:** Accepted
+
+**Context:** `ensureScreenCapturePermission()` in `RecordingViewModel.swift` called `CGRequestScreenCaptureAccess()` to trigger the macOS permission dialog for system audio capture. This had two problems: (1) it requested "Screen Recording" permission when the app only needs "System Audio Recording" on macOS 15+ (where `SCStream` without `.screen` output is categorized separately), (2) it may have contributed to a `_dispatch_assert_queue_fail` crash on Thread 4, as the C function's interaction with Swift concurrency's main actor is not guaranteed safe.
+
+**Decision:** Remove `CGRequestScreenCaptureAccess()` entirely. `SCShareableContent.excludingDesktopWindows()` already triggers the correct system permission prompt automatically on first use. On macOS 15+, this shows as "System Audio Recording" (not "Screen Recording") when no `.screen` output is added to the stream — matching the behavior of apps like ChatGPT. Error message updated to reference "Systeemaudio-opname" in System Settings.
+
+**Consequences:**
+- Permission flow is now automatic and shows the correct category in System Settings.
+- No more explicit `CGRequestScreenCaptureAccess()` call — one less AppKit dependency.
+- macOS 14 users still get the permission prompt via `SCShareableContent`; on macOS 15+ the prompt correctly says "System Audio".
+- Files changed: `RecordingViewModel.swift` (simplified `ensureScreenCapturePermission()`), `SystemAudioCapture.swift` (Timer crash fix).
+
+---
+
+## DEC-052 — Simplified Retry as Reprocess, Not Special State
+
+**Date:** 2026-03-20
+**Status:** Accepted
+
+**Context:** The upload retry flow used `lastFailedUploadURL: URL?`, `lastFailedUploadReason: UploadFailureReason?`, `showRetrySheet: Bool`, and `retryLastFailedUpload()` to handle failed uploads. This mechanism was fragile: `lastFailedUploadURL` was nil when the user tried to retry because `uploadFile()` cleared it at the start of each upload attempt. The retry sheet was a separate SwiftUI `.sheet` that could conflict with the ReprocessSheet (SwiftUI cannot show two sheets simultaneously). Additionally, `retryLastFailedUpload()` used the ViewModel's `selectedProfile` instead of the user's choice in the sheet, causing silent returns when `selectedProfile` was nil.
+
+**Decision:** Replace the entire retry mechanism with a simple `lastFailedRecording: SavedRecording?` property. When an upload fails, the ViewModel matches the file URL to its `SavedRecording` entry (by filename). The error banner shows an "Opnieuw" button that opens the standard ReprocessSheet with that recording — the same flow as clicking any saved recording. No special retry mode, no second sheet, no fragile URL state.
+
+**Consequences:**
+- Single code path for both reprocess and retry — ReprocessSheet no longer has an `isRetryMode` branch.
+- Only one `.sheet` modifier in RecordingView — no sheet conflicts.
+- The user always selects a profile in the ReprocessSheet — no silent nil-profile failures.
+- `UploadFailureReason` enum is now dead code (kept for cleanup later).
+- Same pattern applied to Windows: `SavedRecordings.handleReprocess()` now uses the shared `uploadAndTrack()` utility instead of fire-and-forget `api.uploadRecording()`.
+- Files changed: `RecordingViewModel.swift` (removed 5 properties/methods), `RecordingView.swift` (removed retry sheet, simplified ReprocessSheet), `uploadAndTrack.ts` (new), `useGlobalRecordingHandler.ts` (simplified), `SavedRecordings.tsx` (uses uploadAndTrack).
+
+---
+
 ## DEC-047 — YouTube Proxy Support en Bot Detection Resilience
 
 **Date:** 2026-03-17

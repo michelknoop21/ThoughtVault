@@ -6,6 +6,25 @@ _Decisions DEC-029 through DEC-038 archived to [archive/DECISIONS-DEC-029-to-DEC
 
 ---
 
+## DEC-054 — Background Uploads with Global ProcessingBar
+
+**Date:** 2026-03-20
+**Status:** Accepted
+
+**Context:** After a recording stopped, `uploadFile()` kept `recordingState = .uploading` until the upload completed, blocking the entire RecordingView. The user couldn't start a new recording, navigate to other tabs, or use the app at all during uploads — which could take minutes for large files over slow connections. Windows already had background task tracking via `backgroundTasks` in the Zustand store and a `ProcessingBar` component. macOS had no equivalent.
+
+**Decision:** Make `uploadFile()` fire-and-forget: create a temporary `TranscriptTask` (ID prefixed with `upload-`) in `activeTasks`, set `recordingState = .idle` immediately, and run the upload in a background `Task`. Upload progress updates the temp task via `updateTask()`. On success, the temp task is replaced with the real server task and SSE monitoring begins. On failure, the task shows the error message inline. New `ProcessingBar.swift` component is placed in `ContentView.detailView` (above tab content), visible on all tabs. It renders each active task with filename, status, progress bar, percentage, and cancel/dismiss actions.
+
+**Consequences:**
+- User can immediately start a new recording or navigate after stopping — no more blocked UI.
+- Upload progress and errors are visible on every tab via the global ProcessingBar.
+- `uploadProgressView` removed from RecordingView (no longer needed).
+- `cancelUpload()` now accepts an optional task ID to cancel specific uploads.
+- The `uploadProgress` property on RecordingViewModel is no longer used by the upload flow but retained for widget compatibility.
+- Files changed: `RecordingViewModel.swift` (background upload, `updateTask()`), `ProcessingBar.swift` (new), `ContentView.swift` (ProcessingBar placement), `RecordingView.swift` (removed uploadProgressView).
+
+---
+
 ## DEC-039 — Onafhankelijke YouTube Profielselectie (Optie B)
 
 **Date:** 2026-03-15

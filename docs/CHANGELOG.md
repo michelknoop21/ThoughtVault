@@ -16,25 +16,32 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Timer crash** (`macos/Services/SystemAudioCapture.swift`): Replaced `MainActor.assumeIsolated` with `Task { @MainActor in }` in the duration Timer callback. The `assumeIsolated` assertion crashed on GCD worker threads (`_dispatch_assert_queue_fail` on Thread 4).
 - **Screen capture permission simplified** (`RecordingViewModel.swift`): Removed `CGRequestScreenCaptureAccess()` call. On macOS 15+, `SCShareableContent` automatically triggers the correct "System Audio Recording" permission prompt (not "Screen Recording"). Error message updated to reference "Systeemaudio-opname" instead of "Scherm- en systeemaudio-opname".
 
+### Added
+- **Background uploads with global ProcessingBar** (`RecordingViewModel.swift`, `ProcessingBar.swift`, `ContentView.swift`): `uploadFile()` now creates a temporary `TranscriptTask` in `activeTasks` and immediately returns `recordingState` to `.idle`. The user can continue using the app while the upload runs. New `ProcessingBar` component in `ContentView.detailView` shows all active uploads and processing tasks across all tabs — with filename, status, progress percentage, animated progress track, and cancel/dismiss actions. On success, the temp task is replaced with the real server task and SSE takes over. On failure, the task shows the error message inline.
+- **`updateTask()` helper** (`RecordingViewModel.swift`): Updates status, progress, and error message on an existing `activeTasks` entry by ID.
+
 ### Changed
 - **Windows SavedRecordings reprocess** (`windows/src/components/recording/SavedRecordings.tsx`): `handleReprocess()` now uses `uploadAndTrack()` instead of fire-and-forget `api.uploadRecording()`. Reprocessed recordings now appear in the ProcessingBar with progress tracking, error messages, and automatic offline queue fallback.
 - **Extracted `uploadAndTrack()` utility** (`windows/src/services/uploadAndTrack.ts`): Core upload+SSE+offline-queue logic extracted from `useGlobalRecordingHandler.ts` into a reusable function. Both the global recording handler and SavedRecordings now share the same upload pipeline.
-- **Diagnostic logging added** (`RecordingViewModel.swift`, `APIService.swift`): `os_log` statements at every critical decision point in the upload flow: `stopAndUpload()` entry/branching, `uploadFile()` entry/success, `reprocessRecording()` entry, API temp file size, HTTP upload start, response status code.
+- **Diagnostic logging added** (`RecordingViewModel.swift`, `APIService.swift`): `os_log` statements at every critical decision point in the upload flow.
+- **413 error handling** (`APIService.swift`): HTTP 413 now maps to `APIError.fileTooLarge` with Dutch user-facing message instead of showing raw nginx HTML. Non-JSON responses (nginx error pages) are filtered from `extractErrorInfo()`.
+- **Revproxy body size limit** (`revproxy03.prezent.nl`): Increased from 100 MB to 500 MB. Previously, uploads >100 MB were silently rejected with a 413 that was invisible (`.idle` state). Now aligned with n8n_nginx (500M) and backend (500 MB).
 
 ### Removed
 - `lastFailedUploadURL`, `lastFailedUploadReason`, `showRetrySheet` properties from `RecordingViewModel`
-- `retryLastFailedUpload()` method
-- `uploadFailureReason()` helper and `isRetryMode` branch in `ReprocessSheet`
-- Second `.sheet` for retry in `RecordingView`
+- `retryLastFailedUpload()` method, `uploadFailureReason()` helper, `isRetryMode` branch in `ReprocessSheet`
+- `uploadProgressView` from `RecordingView` (replaced by global ProcessingBar)
 - `UploadFailureReason` enum is now unused (kept in `Models.swift` for now)
 
 ### Decisions
 - DEC-052: Simplified retry as reprocess, not special state
 - DEC-053: Remove CGRequestScreenCaptureAccess on macOS 15+
+- DEC-054: Background uploads with global ProcessingBar
 
 ### Notes
 - macOS build verified: `xcodebuild ... CODE_SIGNING_ALLOWED=NO` — BUILD SUCCEEDED
-- Windows TypeScript verified: `npx tsc --noEmit` — no errors (only pre-existing test warning)
+- Windows TypeScript verified: `npx tsc --noEmit` — no errors
+- Revproxy limit was 100 MB (`client_max_body_size 100m`) — confirmed via binary search with curl. Files ≤100 MB passed (422 from backend), 101+ MB got 413 from revproxy.
 - The `UploadFailureReason` enum in `Models.swift` is now dead code — can be cleaned up in a future session.
 
 ---

@@ -62,3 +62,21 @@ ssh michelk@3.69.205.209 "docker logs n8n_transcript_studio --tail 50"
 - Na version bump: `scripts/sync-version.sh` draaien om VERSION naar alle platform configs te syncen
 - Downloads: `https://n8n.prezent.nl/tstudio/download/` — lees docs/RELEASE.md voor infra details
 - **Multi-instance deployment** — Lees docs/PLAN-MULTI-INSTANCE.md en DEC-033 wanneer relevant
+
+## Credentials & Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `JIRA_URL` | Yes | Jira Cloud instance URL |
+| `JIRA_EMAIL` | Yes | Atlassian account email |
+| `JIRA_TOKEN` | Yes | Jira API token |
+| `N8N_API_KEY` | Yes | n8n API key for workflow access |
+| `N8N_URL` | Yes | n8n instance URL |
+| `TELEGRAM_BOT_TOKEN` | Yes | Telegram bot token from BotFather |
+| `CHAT_ALLOWED_USERS` | No | Comma-separated list of allowed Telegram user IDs |
+| `CHAT_MAX_HISTORY` | No | Maximum chat history length |
+| `ZAI_API_KEY` | Yes | ZAI API key |
+| `ZAI_BASE_URL` | Yes | ZAI API base URL |
+| `PRIMARY_PROVIDER` | No | Primary AI provider identifier |
+
+Real values are in `.env` (not committed). See `.env.example` for template.

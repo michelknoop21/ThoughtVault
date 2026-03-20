@@ -192,6 +192,7 @@ macos/
 │   └── Components/
 │       ├── WaveformView.swift          # Animated level meter waveform
 │       ├── TranscriptCard.swift        # List cell: title, date, status badge, tags
+│       ├── ProcessingBar.swift         # Global upload/processing status bar (all tabs)
 │       ├── StatusBadge.swift           # Colour-coded TaskStatus indicator
 │       ├── RecordingWidgetView.swift   # MenuBarExtra + FloatingWidget shared UI
 │       └── CallAlertView.swift         # Calendar call-start overlay
@@ -235,6 +236,10 @@ macos/
 - ViewModels are `@MainActor` classes instantiated in `TranscriptStudioApp.swift`.
 - Services expose mutable state as regular `var` properties; `@Observable` macro instruments them.
 - `RecordingViewModel` orchestrates: `AudioRecorder` → `SystemAudioCapture` → `APIService` → `OfflineQueue` → SSE stream → `TranscriptsViewModel`.
+
+### Background Upload Pipeline (macOS)
+
+Uploads run in the background — `recordingState` returns to `.idle` immediately after recording stops. A temporary `TranscriptTask` (ID prefixed `upload-`) is added to `activeTasks` with `.uploading` status and updated with progress. On success, replaced with the real server task; SSE takes over. On failure, task shows error inline. `ProcessingBar` (`macos/Views/Components/ProcessingBar.swift`) renders `activeTasks` globally in `ContentView.detailView`, visible on all tabs. Same pattern as Windows `backgroundTasks` + `ProcessingBar.tsx`.
 
 ### Audio Pipeline (macOS)
 

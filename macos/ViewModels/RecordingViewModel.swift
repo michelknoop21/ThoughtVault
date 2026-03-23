@@ -329,7 +329,9 @@ final class RecordingViewModel {
         if selectedMode != .systemAudio {
             audioRecorder.pauseRecording()
         }
-        // SystemAudioCapture does not support pause; let it continue running
+        if selectedMode == .systemAudio || selectedMode == .combined {
+            systemAudioCapture.pauseDurationTimer()
+        }
 #else
         audioRecorder.pauseRecording()
 #endif
@@ -344,6 +346,9 @@ final class RecordingViewModel {
 #if os(macOS)
         if selectedMode != .systemAudio {
             audioRecorder.resumeRecording()
+        }
+        if selectedMode == .systemAudio || selectedMode == .combined {
+            systemAudioCapture.resumeDurationTimer()
         }
 #else
         audioRecorder.resumeRecording()

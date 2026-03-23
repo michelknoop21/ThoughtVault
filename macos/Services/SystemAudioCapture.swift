@@ -38,6 +38,8 @@ final class SystemAudioCapture: NSObject {
     private var streamOutput: AudioStreamOutput?
     private var durationTimer: Timer?
     private var startDate: Date?
+    private var pausedAt: Date?
+    private var accumulatedPauseDuration: TimeInterval = 0
     private var capturingMicrophone: Bool = false
     private let sampleHandlerQueue = DispatchQueue(label: "nl.prezent.TranscriptStudio.SystemAudioCapture.samples")
 
@@ -281,15 +283,32 @@ final class SystemAudioCapture: NSObject {
         durationTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 guard let self, let start = self.startDate else { return }
-                self.duration = Date().timeIntervalSince(start)
+                var elapsed = Date().timeIntervalSince(start) - self.accumulatedPauseDuration
+                if let pauseStart = self.pausedAt {
+                    elapsed -= Date().timeIntervalSince(pauseStart)
+                }
+                self.duration = max(0, elapsed)
             }
         }
+    }
+
+    func pauseDurationTimer() {
+        guard pausedAt == nil else { return }
+        pausedAt = Date()
+    }
+
+    func resumeDurationTimer() {
+        guard let pauseStart = pausedAt else { return }
+        accumulatedPauseDuration += Date().timeIntervalSince(pauseStart)
+        pausedAt = nil
     }
 
     // MARK: - Reset
 
     func resetMetrics() {
         self.duration = 0
+        self.pausedAt = nil
+        self.accumulatedPauseDuration = 0
         self.audioLevels = Array(repeating: 0, count: 60)
         self.micAudioLevels = Array(repeating: 0, count: 60)
     }

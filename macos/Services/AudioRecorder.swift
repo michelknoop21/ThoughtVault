@@ -65,6 +65,9 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
     private var meteringTimer: Timer?
     private var durationTimer: Timer?
     private var lastDiagnosticLog: Date = .distantPast
+    private var recordingStartDate: Date?
+    private var pausedAt: Date?
+    private var accumulatedPauseDuration: TimeInterval = 0
 
 #if os(iOS)
     private var backgroundTask: UIBackgroundTaskIdentifier = .invalid
@@ -210,6 +213,9 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
                 self.isRecording = true
                 self.isPaused = false
                 self.duration = 0
+                self.recordingStartDate = Date()
+                self.pausedAt = nil
+                self.accumulatedPauseDuration = 0
                 self.audioLevels = Array(repeating: 0, count: 60)
                 self.errorMessage = nil
                 log.info("[AudioRecorder] Started recording to \(url.lastPathComponent) — 16kHz mono PCM")
@@ -228,12 +234,17 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
         guard isRecording, !isPaused else { return }
         audioRecorder?.pause()
         isPaused = true
+        pausedAt = Date()
     }
 
     func resumeRecording() {
         guard isRecording, isPaused else { return }
         audioRecorder?.record()
         isPaused = false
+        if let pauseStart = pausedAt {
+            accumulatedPauseDuration += Date().timeIntervalSince(pauseStart)
+            pausedAt = nil
+        }
     }
 
     func stopRecording() async -> URL? {
@@ -246,6 +257,9 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
             audioRecorder = nil  // Force dealloc to flush WAV header
             self.isRecording = false
             self.isPaused = false
+            self.recordingStartDate = nil
+            self.pausedAt = nil
+            self.accumulatedPauseDuration = 0
         }
         finalizeTimers()
 
@@ -280,8 +294,8 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
                 self?.updateMetering()
             }
             self.durationTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-                guard let self, let recorder = self.audioRecorder, !self.isPaused else { return }
-                self.duration = recorder.currentTime
+                guard let self, let start = self.recordingStartDate, !self.isPaused else { return }
+                self.duration = Date().timeIntervalSince(start) - self.accumulatedPauseDuration
             }
         }
     }

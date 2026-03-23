@@ -5,6 +5,31 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2026-03-23] — Claude routing voor handleiding-profiel in n8n + WebView CSS fix
+
+### Added
+- **n8n Route Profile node** (workflow `Iq3AAf8Vk8eQ9dcZ`): IF-node na Guardrails1 routeert `handleiding` profiel naar Claude, alle andere profielen naar bestaande Ollama route. Voorheen hallucinineerde Ollama (`ministral-3:8b`) generieke content bij de complexe handleiding-template.
+- **n8n Claude: Genereer Handleiding node**: HTTP Request naar `http://n8n_claude_code:3100/v1/chat/completions` met 300s timeout, `temperature: 0.4`, `max_tokens: 8192`. Gebruikt zelfde proxy als SEO Blog Pipeline en Yinga AI Weekly.
+- **n8n Parse Claude Response node**: Extraheert HTML content uit OpenAI-compatible response format. Zet `response`, `output`, `notule`, `htmlOutput` fields voor compatibiliteit met downstream nodes.
+
+### Changed
+- **Backend webhook payload** (`transcription_service.py:680`, `transcription.py:356,525`, `transcripts.py:317`): `profile_id` toegevoegd aan alle 4 webhook payload locaties (auto-trigger, on-device transcriptie, YouTube captions, regeneratie). N8n kan nu routeren op basis van profiel.
+- **n8n Extract JSON Data node**: Extraheert `profileId` uit payload (`json.profile_id || 'zakelijk'`).
+- **n8n Build Prompts node**: Stuurt `profileId` door naar downstream nodes.
+- **n8n Extract Title node**: Stript `<style>` blocks voor titel-extractie en scant nu ook `<h1>` tags. Voorheen werd CSS content als titel geëxtraheerd (`--surface: #fff;`).
+- **macOS HTMLWebView** (`NotuleResultView.swift:597`): Detecteert `<style>` tags in HTML content en verplaatst ze naar `<head>`. WKWebView past CSS counters, grid layouts en pseudo-elements niet volledig toe vanuit `<style>` in `<body>`.
+- **macOS EditableHTMLWebView** (`EditableHTMLWebView.swift`): Zelfde `<style>` extractie logica voor de bewerkbare notule view.
+- **Shared `extractStyles()` helper** (`NotuleResultView.swift`): Regex-gebaseerde extractie van `<style>` blocks, gebruikt door alle 4 WebView varianten (macOS/iOS × HTMLWebView/EditableHTMLWebView) + export.
+
+### Decisions
+- DEC-057: Claude routing voor handleiding-profiel via n8n IF-node
+
+### Notes
+- Handleiding HTML bevat eigen `<style>` block met CSS custom properties, dark mode, en component classes — skip daardoor de "Convert to HTML" node in n8n.
+- Beide paden (Claude + Ollama) convergeren bij "Cleanup LLM Output" → "Extract Title" → callback.
+
+---
+
 ## [2026-03-20] — CI/CD migratie van GitHub Actions naar GitLab CI
 
 ### Added

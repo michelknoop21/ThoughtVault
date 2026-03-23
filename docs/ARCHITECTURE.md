@@ -1,6 +1,6 @@
 # TranscriptStudio — Architecture
 
-_Last updated: 2026-03-20_
+_Last updated: 2026-03-23_
 
 ---
 
@@ -81,12 +81,35 @@ Client                    Backend                    n8n / Claude
   |<- SSE: converting ------- |                            |
   |<- SSE: transcribing ------ |                           |
   |<- SSE: transcribed ------- |-- Trigger webhook ------> |
-  |                           |                           |-- Claude pipeline
+  |                           |                           |-- Note pipeline
   |<- SSE: processingWebhook  |<-- Note HTML ------------ |
   |<- SSE: completed --------- |                           |
 ```
 
 **Status pipeline:** `pending → uploading → converting → transcribing → transcribed → processingWebhook → completed`
+
+### n8n Notule Generation Flow
+
+**Workflow:** "Notule Generator - Compleet Met Guardrails" (`Iq3AAf8Vk8eQ9dcZ`)
+
+The backend sends a webhook payload to n8n after transcription completes. The payload includes `profile_id` so n8n can route to the correct LLM.
+
+```
+Webhook → Extract JSON Data → Build Prompts → Guardrails1 → Route Profile
+  ├─ handleiding → Claude HTTP Request → Parse Claude Response ─┐
+  └─ overig → Prepare for AI Agent → AI Agent (Ollama) → Guardrails → Convert to HTML ─┘
+                                                                                        ↓
+                                                                              Cleanup LLM Output → Extract Title → HTTP Request (callback)
+```
+
+| Profile | LLM | Output | Notes |
+|---------|-----|--------|-------|
+| `handleiding` | Claude via `http://n8n_claude_code:3100/v1/chat/completions` | HTML with embedded `<style>` block | Skips Convert to HTML; 300s timeout |
+| All others | Ollama (`ministral-3:8b`) via AI Agent node | Markdown → HTML | Markdown converted by Convert to HTML node |
+
+**Webhook payload fields:** `task_id`, `filename`, `transcription`, `profile_id`, `system_prompt`, `notule_prompt`, `output_template`, `requested_by`, `callback_url`, `callback_admin_key`, `is_chunked`, `total_chunks`, `chunks`
+
+**Handleiding HTML rendering:** The handleiding profile generates self-styled HTML with CSS custom properties, dark mode support (`html.dark`), and class-based components (`.doc-header`, `.section`, `.steps`, `.field-list`, `.info-box`). The macOS/iOS `HTMLWebView` detects `<style>` tags in content and extracts them to `<head>` for proper WKWebView rendering (counters, grid, pseudo-elements require `<style>` in `<head>`).
 
 **YouTube captions pipeline (primary):** `transcribed → processingWebhook → completed` (~1 second, no GPU). Three-step priority: (1) anonymous captions via `youtube-transcript-api` (no auth needed), (2) Google API captions via YouTube Data API v3 if `X-Google-Token` header present, (3) yt-dlp + Whisper fallback. Caption track priority: nl manual > nl ASR > en manual > en ASR > any. Response includes `source_type: "youtube_captions"` and `captions_available: true`. See DEC-044, DEC-041.
 

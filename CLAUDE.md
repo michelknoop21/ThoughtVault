@@ -68,21 +68,23 @@ ssh michelk@3.69.205.209 "docker logs n8n_transcript_studio --tail 50"
 - Downloads: `https://n8n.prezent.nl/tstudio/download/` — lees docs/RELEASE.md voor infra details
 - **CI/CD**: GitLab CI (`.gitlab-ci.yml`) voor macOS + Android + deploy (self-hosted Mac runner). GitHub Actions alleen voor Windows MSI builds (`.github/workflows/build-windows.yml`). Zie DEC-055, DEC-056.
 - **Multi-instance deployment** — Lees docs/PLAN-MULTI-INSTANCE.md en DEC-033 wanneer relevant
+- **n8n notule flow**: `handleiding` profiel → Claude proxy (`n8n_claude_code:3100`), overige → Ollama. Backend stuurt `profile_id` mee in webhook payload. Zie docs/ARCHITECTURE.md "n8n Notule Generation Flow" (DEC-057)
+- **HTMLWebView + eigen CSS**: Als notule-HTML een `<style>` block bevat (handleiding-profiel), dan `extractStyles()` gebruiken om CSS naar `<head>` te verplaatsen. WKWebView past counters/grid/pseudo-elements niet toe vanuit `<style>` in `<body>`.
 
 ## Credentials & Environment Variables
 
+Beheerd door Claude Vault (automatisch geïnjecteerd bij sessiestart). Zie `.env.example` voor template.
+
 | Variable | Required | Description |
 |----------|----------|-------------|
+| `N8N_API_KEY` | Yes | n8n API key for workflow access |
+| `N8N_URL` | Yes | n8n instance URL |
 | `JIRA_URL` | Yes | Jira Cloud instance URL |
 | `JIRA_EMAIL` | Yes | Atlassian account email |
 | `JIRA_TOKEN` | Yes | Jira API token |
-| `N8N_API_KEY` | Yes | n8n API key for workflow access |
-| `N8N_URL` | Yes | n8n instance URL |
 | `TELEGRAM_BOT_TOKEN` | Yes | Telegram bot token from BotFather |
 | `CHAT_ALLOWED_USERS` | No | Comma-separated list of allowed Telegram user IDs |
 | `CHAT_MAX_HISTORY` | No | Maximum chat history length |
 | `ZAI_API_KEY` | Yes | ZAI API key |
 | `ZAI_BASE_URL` | Yes | ZAI API base URL |
 | `PRIMARY_PROVIDER` | No | Primary AI provider identifier |
-
-Real values are in `.env` (not committed). See `.env.example` for template.

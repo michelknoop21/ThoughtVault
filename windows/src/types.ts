@@ -119,6 +119,15 @@ export const DEFAULT_PROFILES: Profile[] = [
       "Maak gedetailleerde technische notulen. Noteer alle technische beslissingen, architectuurkeuzes en actiepunten.",
     is_default: false,
   },
+  {
+    id: "handleiding",
+    name: "Handleiding",
+    system_prompt:
+      "Je bent een technisch schrijver die ingesproken walkthroughs omzet naar stapsgewijze eindgebruikershandleidingen.",
+    notule_prompt:
+      "Analyseer deze ingesproken walkthrough en maak er een gestructureerde handleiding van. Benoem schermen, knoppen, menu's en velden. Structureer per functionaliteit met genummerde stappen.",
+    is_default: true,
+  },
 ];
 
 // Authentication

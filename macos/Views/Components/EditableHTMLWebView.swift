@@ -148,6 +148,29 @@ struct EditableHTMLWebView: NSViewRepresentable {
             </script>
             """ : ""
         let darkClass = isDark ? "dark" : ""
+        let hasOwnStyles = html.contains("<style")
+
+        if hasOwnStyles {
+            let (headStyles, bodyContent) = extractStyles(from: html)
+            return """
+            <!DOCTYPE html>
+            <html class="\(darkClass)">
+            <head>
+            <meta charset="utf-8">
+            \(headStyles)
+            <style>
+            body { background: transparent; -webkit-font-smoothing: antialiased; }
+            ::selection { background: rgba(229, 0, 116, 0.18); }
+            \(editingCSS)
+            </style>
+            </head>
+            <body>
+            <div id="content" \(editableAttr)>\(sanitizeHTML(bodyContent))</div>
+            \(changeScript)
+            </body>
+            </html>
+            """
+        }
 
         return """
         <!DOCTYPE html>
@@ -280,6 +303,12 @@ struct EditableHTMLWebView: NSViewRepresentable {
         }
         pre code { background: none; padding: 0; }
         ::selection { background: rgba(229, 0, 116, 0.18); }
+        /* Override inline styles from generated HTML */
+        [style] { color: inherit !important; background-color: transparent !important; }
+        h1, h1[style] { color: var(--heading) !important; }
+        h2, h2[style], h3, h3[style] { color: var(--heading) !important; }
+        em, em[style] { color: var(--text-secondary) !important; }
+        th, th[style] { color: var(--text-secondary) !important; background: var(--surface-elevated) !important; }
         \(editingCSS)
         </style>
         </head>
@@ -419,6 +448,30 @@ struct EditableHTMLWebView: UIViewRepresentable {
             });
             </script>
             """ : ""
+        let hasOwnStyles = html.contains("<style")
+
+        if hasOwnStyles {
+            let (headStyles, bodyContent) = extractStyles(from: html)
+            return """
+            <!DOCTYPE html>
+            <html>
+            <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            \(headStyles)
+            <style>
+            body { background: transparent; -webkit-font-smoothing: antialiased; }
+            ::selection { background: rgba(229, 0, 116, 0.18); }
+            \(editingCSS)
+            </style>
+            </head>
+            <body>
+            <div id="content" \(editableAttr)>\(sanitizeHTML(bodyContent))</div>
+            \(changeScript)
+            </body>
+            </html>
+            """
+        }
 
         return """
         <!DOCTYPE html>
@@ -481,6 +534,11 @@ struct EditableHTMLWebView: UIViewRepresentable {
         pre { background: var(--surface-elevated); padding: 16px; border-radius: 8px; overflow-x: auto; margin: 12px 0; border: 1px solid var(--border); }
         pre code { background: none; padding: 0; }
         ::selection { background: rgba(229, 0, 116, 0.18); }
+        [style] { color: inherit !important; background-color: transparent !important; }
+        h1, h1[style] { color: var(--heading) !important; }
+        h2, h2[style], h3, h3[style] { color: var(--heading) !important; }
+        em, em[style] { color: var(--text-secondary) !important; }
+        th, th[style] { color: var(--text-secondary) !important; background: var(--surface-elevated) !important; }
         \(editingCSS)
         </style>
         </head>

@@ -239,7 +239,18 @@ struct Profile: Identifiable, Codable, Hashable, Sendable {
         isDefault: true
     )
 
-    static let defaults: [Profile] = [.zakelijk, .informeel, .technisch]
+    static let handleiding = Profile(
+        id: "handleiding",
+        name: "Handleiding",
+        description: "Eindgebruikershandleiding op basis van ingesproken schermopnames",
+        icon: "book.fill",
+        systemPrompt: "Je bent een technisch schrijver die ingesproken walkthroughs omzet naar stapsgewijze eindgebruikershandleidingen.",
+        notulePrompt: "Analyseer deze ingesproken walkthrough en maak er een gestructureerde handleiding van. Benoem schermen, knoppen, menu's en velden. Structureer per functionaliteit met genummerde stappen.",
+        template: nil,
+        isDefault: true
+    )
+
+    static let defaults: [Profile] = [.zakelijk, .informeel, .technisch, .handleiding]
 }
 
 // MARK: - TranscriptTask

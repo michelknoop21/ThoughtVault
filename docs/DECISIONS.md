@@ -6,6 +6,24 @@ _Decisions DEC-029 through DEC-038 archived to [archive/DECISIONS-DEC-029-to-DEC
 
 ---
 
+## DEC-057 — Claude Routing voor Handleiding-profiel via n8n IF-node
+
+**Date:** 2026-03-23
+**Status:** Accepted
+
+**Context:** Het Ollama model (`ministral-3:8b`) in de n8n notule-flow kon de complexe handleiding-template niet verwerken — het hallucineerdde generieke content ("Krachtige Data Analyzer") in plaats van de transcriptie te gebruiken. De handleiding-template vereist gestructureerde HTML met CSS classes, genummerde secties, field-lists, en info-boxes. Andere n8n workflows (SEO Blog Pipeline, Yinga AI Weekly) gebruiken al Claude via een lokale proxy op `http://n8n_claude_code:3100/v1/chat/completions`.
+
+**Decision:** Routing-switch in de n8n "Notule Generator" workflow (`Iq3AAf8Vk8eQ9dcZ`) via een IF-node ("Route Profile") die `profile_id === 'handleiding'` naar een Claude HTTP Request node stuurt. Alle andere profielen blijven via de bestaande Ollama AI Agent route gaan. Backend stuurt `profile_id` mee in het webhook payload (4 locaties: `transcription_service.py`, `transcription.py` ×2, `transcripts.py`). De Claude-route skipt de "Convert to HTML" node omdat handleiding-output al HTML is met eigen `<style>` block. macOS/iOS `HTMLWebView` verplaatst `<style>` blocks van `<body>` naar `<head>` via `extractStyles()` helper, omdat WKWebView CSS counters en grid layouts niet toepast vanuit body-styles.
+
+**Consequences:**
+- Handleiding-profiel genereert nu uitgebreide, goed gestructureerde HTML handleidingen via Claude.
+- Alle andere profielen (zakelijk, informeel, etc.) zijn ongewijzigd — dezelfde Ollama route.
+- `profile_id` is nu onderdeel van het webhook payload contract tussen backend en n8n.
+- Claude proxy (`n8n_claude_code:3100`) moet beschikbaar zijn voor handleiding-verwerking; Ollama als fallback is niet geïmplementeerd.
+- macOS/iOS app moet `<style>` blocks uit HTML content extraheren naar `<head>` — dit is generiek en werkt voor elk profiel dat eigen CSS meestuurt.
+
+---
+
 ## DEC-056 — GitHub Actions Behouden Uitsluitend voor Windows MSI Builds
 
 **Date:** 2026-03-20

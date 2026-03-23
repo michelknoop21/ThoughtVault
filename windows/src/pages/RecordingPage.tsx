@@ -31,6 +31,7 @@ import {
   ChatMultiple24Regular,
   Wrench24Regular,
   DocumentText24Regular,
+  Book24Regular,
 } from "@fluentui/react-icons";
 
 function getProfileIcon(name: string): React.ReactNode {
@@ -39,6 +40,7 @@ function getProfileIcon(name: string): React.ReactNode {
   if (lower.includes("zakelijk")) return <Briefcase24Regular style={style} />;
   if (lower.includes("informeel")) return <ChatMultiple24Regular style={style} />;
   if (lower.includes("technisch")) return <Wrench24Regular style={style} />;
+  if (lower.includes("handleiding")) return <Book24Regular style={style} />;
   return <DocumentText24Regular style={style} />;
 }
 

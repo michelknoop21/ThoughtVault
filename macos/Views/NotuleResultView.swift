@@ -519,7 +519,20 @@ struct NotuleResultView: View {
     }
 
     private func styledHTML(_ html: String) -> String {
-        """
+        if html.contains("<style") {
+            let (headStyles, bodyContent) = extractStyles(from: html)
+            return """
+            <!DOCTYPE html>
+            <html>
+            <head>
+            <meta charset="utf-8">
+            \(headStyles)
+            </head>
+            <body>\(bodyContent)</body>
+            </html>
+            """
+        }
+        return """
         <!DOCTYPE html>
         <html>
         <head>
@@ -557,6 +570,11 @@ struct NotuleResultView: View {
         table { border-collapse: collapse; width: 100%; margin: 12pt 0; }
         th, td { border: 1px solid var(--border); padding: 6pt 8pt; text-align: left; }
         th { background: var(--surface-light); font-weight: 600; }
+        [style] { color: inherit !important; background-color: transparent !important; }
+        h1, h1[style] { color: var(--brand) !important; }
+        h2, h2[style], h3, h3[style] { color: var(--text-heading) !important; }
+        em, em[style] { color: var(--text-subtle) !important; }
+        th, th[style] { color: var(--text-heading) !important; background: var(--surface-light) !important; }
         </style>
         </head>
         <body>\(html)</body>
@@ -571,6 +589,24 @@ struct NotuleResultView: View {
         formatter.timeStyle = .short
         return formatter.string(from: date)
     }
+}
+
+// MARK: - Style Extraction Helper
+
+/// Extracts `<style>` blocks from HTML body content so they can be placed in `<head>`.
+/// WKWebView does not fully apply CSS (counters, grid, pseudo-elements) from `<style>` in `<body>`.
+func extractStyles(from html: String) -> (headStyles: String, bodyContent: String) {
+    var headStyles = ""
+    var bodyContent = html
+    let pattern = try! NSRegularExpression(pattern: "<style[^>]*>[\\s\\S]*?</style>", options: .caseInsensitive)
+    let matches = pattern.matches(in: html, range: NSRange(html.startIndex..., in: html))
+    for match in matches.reversed() {
+        if let range = Range(match.range, in: html) {
+            headStyles = String(html[range]) + "\n" + headStyles
+            bodyContent.removeSubrange(range)
+        }
+    }
+    return (headStyles, bodyContent)
 }
 
 // MARK: - HTMLWebView
@@ -589,58 +625,83 @@ struct HTMLWebView: NSViewRepresentable {
 
     func updateNSView(_ webView: WKWebView, context: Context) {
         let darkClass = isDarkMode ? "dark" : ""
-        let styled = """
-        <!DOCTYPE html>
-        <html class="\(darkClass)">
-        <head>
-        <meta charset="utf-8">
-        <style>
-        :root {
-            --text-primary: #1a1a1a;
-            --text-heading: #333;
-            --text-subtle: #555;
-            --brand: #E50074;
-            --border: #e0e0e0;
-            --surface: #f8f8f8;
-            --surface-light: #f5f5f5;
-            --bg-blockquote: #fef6fb;
+        let hasOwnStyles = htmlContent.contains("<style")
+        let styled: String
+
+        if hasOwnStyles {
+            let (headStyles, bodyContent) = extractStyles(from: htmlContent)
+            styled = """
+            <!DOCTYPE html>
+            <html class="\(darkClass)">
+            <head>
+            <meta charset="utf-8">
+            \(headStyles)
+            <style>body { background: transparent; }</style>
+            </head>
+            <body>\(bodyContent)</body>
+            </html>
+            """
+        } else {
+            // Standard notule content — apply default styling
+            styled = """
+            <!DOCTYPE html>
+            <html class="\(darkClass)">
+            <head>
+            <meta charset="utf-8">
+            <style>
+            :root {
+                --text-primary: #1a1a1a;
+                --text-heading: #333;
+                --text-subtle: #555;
+                --brand: #E50074;
+                --border: #e0e0e0;
+                --surface: #f8f8f8;
+                --surface-light: #f5f5f5;
+                --bg-blockquote: #fef6fb;
+            }
+            html.dark {
+                --text-primary: #f0f0f4;
+                --text-heading: #c8d4e8;
+                --text-subtle: #9e9ea8;
+                --brand: #ff3b8a;
+                --border: #38383d;
+                --surface: #222228;
+                --surface-light: #222228;
+                --bg-blockquote: #1f0e18;
+            }
+            * { box-sizing: border-box; margin: 0; padding: 0; }
+            body {
+                font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+                font-size: 14px;
+                line-height: 1.65;
+                color: var(--text-primary);
+                background: transparent;
+                padding: 24px;
+            }
+            h1 { font-size: 24px; font-weight: 700; color: var(--brand); margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid var(--brand); }
+            h2 { font-size: 18px; font-weight: 600; color: var(--text-heading); margin-top: 24px; margin-bottom: 8px; }
+            h3 { font-size: 15px; font-weight: 600; color: var(--text-subtle); margin-top: 16px; margin-bottom: 6px; }
+            p  { margin: 8px 0; }
+            ul, ol { margin: 8px 0 8px 20px; }
+            li { margin: 4px 0; }
+            strong { font-weight: 600; }
+            em { font-style: italic; color: var(--text-subtle); }
+            table { border-collapse: collapse; width: 100%; margin: 12px 0; }
+            th, td { border: 1px solid var(--border); padding: 8px 12px; text-align: left; }
+            th { background: var(--surface); font-weight: 600; }
+            blockquote { border-left: 3px solid var(--brand); margin: 12px 0; padding: 8px 16px; background: var(--bg-blockquote); }
+            /* Override inline styles from generated HTML */
+            [style] { color: inherit !important; background-color: transparent !important; }
+            h1, h1[style] { color: var(--brand) !important; }
+            h2, h2[style], h3, h3[style] { color: var(--text-heading) !important; }
+            em, em[style] { color: var(--text-subtle) !important; }
+            th, th[style] { color: var(--text-heading) !important; background: var(--surface) !important; }
+            </style>
+            </head>
+            <body>\(htmlContent)</body>
+            </html>
+            """
         }
-        html.dark {
-            --text-primary: #f0f0f4;
-            --text-heading: #c8d4e8;
-            --text-subtle: #9e9ea8;
-            --brand: #ff3b8a;
-            --border: #38383d;
-            --surface: #222228;
-            --surface-light: #222228;
-            --bg-blockquote: #1f0e18;
-        }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
-            font-size: 14px;
-            line-height: 1.65;
-            color: var(--text-primary);
-            background: transparent;
-            padding: 24px;
-        }
-        h1 { font-size: 24px; font-weight: 700; color: var(--brand); margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid var(--brand); }
-        h2 { font-size: 18px; font-weight: 600; color: var(--text-heading); margin-top: 24px; margin-bottom: 8px; }
-        h3 { font-size: 15px; font-weight: 600; color: var(--text-subtle); margin-top: 16px; margin-bottom: 6px; }
-        p  { margin: 8px 0; }
-        ul, ol { margin: 8px 0 8px 20px; }
-        li { margin: 4px 0; }
-        strong { font-weight: 600; }
-        em { font-style: italic; color: var(--text-subtle); }
-        table { border-collapse: collapse; width: 100%; margin: 12px 0; }
-        th, td { border: 1px solid var(--border); padding: 8px 12px; text-align: left; }
-        th { background: var(--surface); font-weight: 600; }
-        blockquote { border-left: 3px solid var(--brand); margin: 12px 0; padding: 8px 16px; background: var(--bg-blockquote); }
-        </style>
-        </head>
-        <body>\(htmlContent)</body>
-        </html>
-        """
         webView.loadHTMLString(styled, baseURL: nil)
     }
 }
@@ -660,59 +721,83 @@ struct HTMLWebView: UIViewRepresentable {
 
     func updateUIView(_ webView: WKWebView, context: Context) {
         let darkClass = isDarkMode ? "dark" : ""
-        let styled = """
-        <!DOCTYPE html>
-        <html class="\(darkClass)">
-        <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <style>
-        :root {
-            --text-primary: #1a1a1a;
-            --text-heading: #333;
-            --text-subtle: #555;
-            --brand: #E50074;
-            --border: #e0e0e0;
-            --surface: #f8f8f8;
-            --surface-light: #f5f5f5;
-            --bg-blockquote: #fef6fb;
+        let hasOwnStyles = htmlContent.contains("<style")
+        let styled: String
+
+        if hasOwnStyles {
+            let (headStyles, bodyContent) = extractStyles(from: htmlContent)
+            styled = """
+            <!DOCTYPE html>
+            <html class="\(darkClass)">
+            <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            \(headStyles)
+            <style>body { background: transparent; }</style>
+            </head>
+            <body>\(bodyContent)</body>
+            </html>
+            """
+        } else {
+            styled = """
+            <!DOCTYPE html>
+            <html class="\(darkClass)">
+            <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <style>
+            :root {
+                --text-primary: #1a1a1a;
+                --text-heading: #333;
+                --text-subtle: #555;
+                --brand: #E50074;
+                --border: #e0e0e0;
+                --surface: #f8f8f8;
+                --surface-light: #f5f5f5;
+                --bg-blockquote: #fef6fb;
+            }
+            html.dark {
+                --text-primary: #f0f0f4;
+                --text-heading: #c8d4e8;
+                --text-subtle: #9e9ea8;
+                --brand: #ff3b8a;
+                --border: #38383d;
+                --surface: #222228;
+                --surface-light: #222228;
+                --bg-blockquote: #1f0e18;
+            }
+            * { box-sizing: border-box; margin: 0; padding: 0; }
+            body {
+                font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+                font-size: 14px;
+                line-height: 1.65;
+                color: var(--text-primary);
+                background: transparent;
+                padding: 16px;
+            }
+            h1 { font-size: 22px; font-weight: 700; color: var(--brand); margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid var(--brand); }
+            h2 { font-size: 18px; font-weight: 600; color: var(--text-heading); margin-top: 24px; margin-bottom: 8px; }
+            h3 { font-size: 15px; font-weight: 600; color: var(--text-subtle); margin-top: 16px; margin-bottom: 6px; }
+            p  { margin: 8px 0; }
+            ul, ol { margin: 8px 0 8px 20px; }
+            li { margin: 4px 0; }
+            strong { font-weight: 600; }
+            em { font-style: italic; color: var(--text-subtle); }
+            table { border-collapse: collapse; width: 100%; margin: 12px 0; }
+            th, td { border: 1px solid var(--border); padding: 8px 12px; text-align: left; }
+            th { background: var(--surface); font-weight: 600; }
+            blockquote { border-left: 3px solid var(--brand); margin: 12px 0; padding: 8px 16px; background: var(--bg-blockquote); }
+            [style] { color: inherit !important; background-color: transparent !important; }
+            h1, h1[style] { color: var(--brand) !important; }
+            h2, h2[style], h3, h3[style] { color: var(--text-heading) !important; }
+            em, em[style] { color: var(--text-subtle) !important; }
+            th, th[style] { color: var(--text-heading) !important; background: var(--surface) !important; }
+            </style>
+            </head>
+            <body>\(htmlContent)</body>
+            </html>
+            """
         }
-        html.dark {
-            --text-primary: #f0f0f4;
-            --text-heading: #c8d4e8;
-            --text-subtle: #9e9ea8;
-            --brand: #ff3b8a;
-            --border: #38383d;
-            --surface: #222228;
-            --surface-light: #222228;
-            --bg-blockquote: #1f0e18;
-        }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
-            font-size: 14px;
-            line-height: 1.65;
-            color: var(--text-primary);
-            background: transparent;
-            padding: 16px;
-        }
-        h1 { font-size: 22px; font-weight: 700; color: var(--brand); margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid var(--brand); }
-        h2 { font-size: 18px; font-weight: 600; color: var(--text-heading); margin-top: 24px; margin-bottom: 8px; }
-        h3 { font-size: 15px; font-weight: 600; color: var(--text-subtle); margin-top: 16px; margin-bottom: 6px; }
-        p  { margin: 8px 0; }
-        ul, ol { margin: 8px 0 8px 20px; }
-        li { margin: 4px 0; }
-        strong { font-weight: 600; }
-        em { font-style: italic; color: var(--text-subtle); }
-        table { border-collapse: collapse; width: 100%; margin: 12px 0; }
-        th, td { border: 1px solid var(--border); padding: 8px 12px; text-align: left; }
-        th { background: var(--surface); font-weight: 600; }
-        blockquote { border-left: 3px solid var(--brand); margin: 12px 0; padding: 8px 16px; background: var(--bg-blockquote); }
-        </style>
-        </head>
-        <body>\(htmlContent)</body>
-        </html>
-        """
         webView.loadHTMLString(styled, baseURL: nil)
     }
 }

@@ -69,6 +69,7 @@ export function TranscriptsPage() {
   const [availableTags, setAvailableTags] = useState<string[]>([]);
   const [bulkSelected, setBulkSelected] = useState<Set<string>>(new Set());
   const [bulkMode, setBulkMode] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<Transcript | null>(null);
   const toast = useToast();
   const isLoading = useTranscriptsStore((s) => s.isLoading);
   const editInputRef = useRef<HTMLInputElement>(null);
@@ -221,27 +222,39 @@ export function TranscriptsPage() {
   }
 
   async function handleRegenerate(transcript: Transcript) {
+    const profileId = transcript.profile_name || "zakelijk";
+    console.log("[Regenerate] Starting:", { id: transcript.id, profileId });
     setRegeneratingId(transcript.id);
     try {
-      const { task_id } = await api.regenerateNotule(
-        transcript.id,
-        transcript.profile_name || "zakelijk"
-      );
+      const { task_id } = await api.regenerateNotule(transcript.id, profileId);
+      console.log("[Regenerate] Task created:", task_id);
 
       const sseClient = createSSEClient(api.getStreamUrl(task_id));
       sseClient.connect(
         (update) => {
+          console.log("[Regenerate] SSE update:", update.status);
           if (update.notule_html) {
             updateTranscript(transcript.id, { notule_html: update.notule_html });
           }
+          if (update.extracted_title) {
+            updateTranscript(transcript.id, { title: update.extracted_title });
+          }
         },
-        () => setRegeneratingId(null),
+        (error) => {
+          console.error("[Regenerate] SSE error:", error);
+          setRegeneratingId(null);
+          toast.show("Hertranscriberen mislukt", "error");
+        },
         async () => {
+          console.log("[Regenerate] SSE complete, fetching final result...");
           setRegeneratingId(null);
           setTimeout(async () => {
             try {
               const updated = await api.getTranscript(transcript.id);
-              updateTranscript(transcript.id, { notule_html: updated.notule_html });
+              updateTranscript(transcript.id, {
+                title: updated.title,
+                notule_html: updated.notule_html,
+              });
             } catch {
               // ignore
             }
@@ -249,6 +262,7 @@ export function TranscriptsPage() {
         }
       );
     } catch (err) {
+      console.error("[Regenerate] API error:", err);
       setRegeneratingId(null);
       toast.show("Hertranscriberen mislukt", "error");
     }
@@ -432,8 +446,8 @@ ${DOMPurify.sanitize(transcript.notule_html)}
 
   return (
     <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
-      {/* List panel */}
-      <div className="transcripts-list-panel">
+      {/* List panel — full width when no selection */}
+      <div className={`transcripts-list-panel${!selectedId ? " transcripts-list-full" : ""}`}>
         <div className="transcripts-list-header">
           <div className="flex-row justify-between" style={{ alignItems: "center" }}>
             <h1 className="text-subtitle transcripts-list-title" style={{ margin: 0 }}>Notulen & Transcripties</h1>
@@ -542,8 +556,15 @@ ${DOMPurify.sanitize(transcript.notule_html)}
 
         <div className="flex-1 transcripts-list-scroll">
           {isLoading ? (
-            <div className="transcripts-empty-list">
-              <p className="text-caption text-secondary">Laden...</p>
+            <div style={{ padding: "8px 12px", display: "flex", flexDirection: "column", gap: 8 }}>
+              {[1, 2, 3, 4, 5].map((i) => (
+                <div key={i} className="card card-static" style={{ padding: 12 }}>
+                  <div className="flex-col gap-6">
+                    <div className="skeleton skeleton-line skeleton-line-medium" />
+                    <div className="skeleton skeleton-line skeleton-line-short" />
+                  </div>
+                </div>
+              ))}
             </div>
           ) : loadError ? (
             <div className="transcripts-empty-list">
@@ -642,7 +663,8 @@ ${DOMPurify.sanitize(transcript.notule_html)}
         </div>
       </div>
 
-      {/* Detail panel */}
+      {/* Detail panel — hidden when no selection */}
+      {selectedId && (
       <div className="flex-1 transcripts-detail-panel bg-blobs">
         <div className="bg-blobs-clip">
           <div className="bg-blob bg-blob-blue" style={{ opacity: 0.5 }} />
@@ -850,6 +872,9 @@ ${DOMPurify.sanitize(transcript.notule_html)}
                           ref={editorRef}
                           className="prose notule-editor transcripts-document-body"
                           contentEditable
+                          role="textbox"
+                          aria-label="Notule bewerken"
+                          aria-multiline="true"
                           suppressContentEditableWarning
                           dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(editedHTML) }}
                           onInput={(e) => setEditedHTML((e.target as HTMLDivElement).innerHTML)}
@@ -923,6 +948,7 @@ ${DOMPurify.sanitize(transcript.notule_html)}
           </div>
         )}
       </div>
+      )}
 
       {/* Context menu */}
       {contextMenu && (
@@ -993,13 +1019,40 @@ ${DOMPurify.sanitize(transcript.notule_html)}
           <button
             className="context-menu-item context-menu-item-danger"
             onClick={() => {
-              handleDelete(contextMenu.transcript);
+              setDeleteConfirm(contextMenu.transcript);
               setContextMenu(null);
             }}
           >
             <Delete24Regular className="transcripts-icon-md" />
             Verwijderen
           </button>
+        </div>
+      )}
+
+      {/* Delete confirmation dialog */}
+      {deleteConfirm && (
+        <div className="profile-overlay" onClick={() => setDeleteConfirm(null)}>
+          <div className="card profile-modal-confirm" onClick={(e) => e.stopPropagation()}>
+            <p className="text-body-strong" style={{ marginBottom: 8 }}>Verwijderen?</p>
+            <p className="text-caption" style={{ marginBottom: 4, color: "var(--text-secondary)" }}>
+              "{deleteConfirm.title || "Naamloze opname"}" wordt definitief verwijderd.
+            </p>
+            <p className="text-caption" style={{ marginBottom: 16, color: "var(--text-tertiary)" }}>
+              Dit kan niet ongedaan worden gemaakt.
+            </p>
+            <div className="profile-modal-actions">
+              <button onClick={() => setDeleteConfirm(null)} className="btn btn-secondary btn-sm">
+                Annuleren
+              </button>
+              <button
+                onClick={() => { handleDelete(deleteConfirm); setDeleteConfirm(null); }}
+                className="btn btn-sm"
+                style={{ color: "var(--text-error)", borderColor: "rgba(188,0,22,0.3)" }}
+              >
+                Verwijderen
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -1015,10 +1068,13 @@ ${DOMPurify.sanitize(transcript.notule_html)}
         >
           <div
             className="card"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="tags-dialog-title"
             style={{ width: "100%", maxWidth: "min(360px, calc(100vw - 32px))", padding: 20, background: "var(--surface-primary)", margin: "0 16px" }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12 }}>Tags beheren</h3>
+            <h3 id="tags-dialog-title" style={{ fontSize: 16, fontWeight: 600, marginBottom: 12 }}>Tags beheren</h3>
 
             {/* Current tags */}
             <div className="flex-row gap-6" style={{ flexWrap: "wrap", marginBottom: 12 }}>

@@ -26,7 +26,14 @@ export const useToast = create<ToastStore>()((set) => ({
   toasts: [],
   show: (message, severity = "info") => {
     const id = Date.now().toString(36);
-    set((state) => ({ toasts: [...state.toasts, { id, message, severity }] }));
+    set((state) => {
+      const updated = [...state.toasts, { id, message, severity }];
+      // Keep max 2 visible — dismiss oldest when exceeding
+      if (updated.length > 2) {
+        return { toasts: updated.slice(-2) };
+      }
+      return { toasts: updated };
+    });
     // Auto-dismiss after 4s
     setTimeout(() => {
       set((state) => ({ toasts: state.toasts.filter((t) => t.id !== id) }));

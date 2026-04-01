@@ -183,10 +183,11 @@ function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <>
       <div className="app-shell">
+        <a href="#main-content" className="skip-link">Ga naar hoofdinhoud</a>
         <TitleBar />
         <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
           <Sidebar />
-          <main className="app-main">
+          <main className="app-main" id="main-content">
             <ProcessingBar />
             <OfflineQueueBanner />
             <div className="app-main-content">
@@ -234,8 +235,7 @@ function KeyboardShortcuts() {
 
       // Escape = Close modals (handled by individual components)
 
-      // Ctrl+R = Go to recording page
-      if (ctrl && e.key === "r") { e.preventDefault(); navigate("/recording"); }
+      // Don't intercept Ctrl+R — let the webview handle refresh
     }
 
     window.addEventListener("keydown", handleKeyDown);

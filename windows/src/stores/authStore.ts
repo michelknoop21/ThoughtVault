@@ -108,7 +108,7 @@ export const useAuthStore = create<AuthState>()(
           const token = await invoke<string | null>("load_credential", { key: CREDENTIAL_KEY });
 
           if (token) {
-            // Token found — validate it with a quick API call
+            // Token found — trust it immediately (validate non-blocking later)
             set({ token, isAuthenticated: true });
             try {
               const profiles = await api.getProfiles();
@@ -117,8 +117,10 @@ export const useAuthStore = create<AuthState>()(
                 return;
               }
             } catch {
-              // Token invalid — continue to auto-login attempt below
-              console.log("[Auth] Stored token invalid, attempting auto-login");
+              // Validation failed — token might still work, keep it and
+              // let individual requests handle 401s. Only try auto-login
+              // if remember-me is set, but NEVER downgrade isAuthenticated.
+              console.log("[Auth] Token validation failed, keeping token");
             }
           }
 
@@ -160,18 +162,23 @@ export const useAuthStore = create<AuthState>()(
             return;
           }
 
-          // Step 4: Attempt auto-login
+          // Step 4: Attempt auto-login (only if token was missing or we want a fresh one)
           set({ rememberMe: true });
           try {
             const response = await api.login(savedEmail, savedPassword);
 
             if (response.requires_2fa && response.temp_token) {
               // 2FA required — show 2FA screen directly (credentials stay saved)
-              set({
-                pendingTwoFactor: { tempToken: response.temp_token, email: savedEmail },
-                isAuthenticated: false,
-                token: null,
-              });
+              // Only downgrade auth if we don't already have a working token
+              if (!token) {
+                set({
+                  pendingTwoFactor: { tempToken: response.temp_token, email: savedEmail },
+                  isAuthenticated: false,
+                  token: null,
+                });
+              } else {
+                set({ pendingTwoFactor: { tempToken: response.temp_token, email: savedEmail } });
+              }
               return;
             }
 
@@ -190,20 +197,23 @@ export const useAuthStore = create<AuthState>()(
           } catch (err) {
             if (isNetworkError(err)) {
               // Network error — DON'T clear credentials (transient issue).
-              // If we had an old token, keep it so user can still work.
               console.log("[Auth] Auto-login failed (network) — keeping credentials for next attempt");
               if (token) {
-                // Keep the old token — user stays logged in, requests may
-                // work again once connectivity is restored
                 set({ token, isAuthenticated: true });
               } else {
                 set({ isAuthenticated: false, token: null });
               }
             } else {
               // Auth error (wrong password, account disabled etc.) — clear saved credentials
+              // but PRESERVE existing token if we have one from keyring
               console.log("[Auth] Auto-login failed (auth error) — clearing saved credentials");
               get().clearSavedCredentials();
-              set({ isAuthenticated: false, token: null, rememberMe: false });
+              if (token) {
+                // Keep the keyring token — it was loaded successfully
+                set({ rememberMe: false });
+              } else {
+                set({ isAuthenticated: false, token: null, rememberMe: false });
+              }
             }
           }
         } catch {
@@ -215,8 +225,9 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: "auth-store",
-      // Persist user info + rememberMe checkbox state to localStorage — token goes to keyring
-      partialize: (state) => ({ user: state.user, rememberMe: state.rememberMe }),
+      // Persist user info, auth flag + rememberMe to localStorage — token goes to keyring.
+      // isAuthenticated is persisted so the UI doesn't flash to login during keyring load.
+      partialize: (state) => ({ user: state.user, rememberMe: state.rememberMe, isAuthenticated: state.isAuthenticated }),
       onRehydrateStorage: () => (state) => {
         // After rehydration, load token from keyring (+ auto-login if remember me)
         if (state) {

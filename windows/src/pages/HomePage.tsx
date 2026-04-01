@@ -31,7 +31,7 @@ function getGreeting(name?: string, email?: string): string {
 export function HomePage() {
   const navigate = useNavigate();
   const { setMode, setAutoStart } = useRecordingStore();
-  const { transcripts, setTranscripts, deleteTranscript, isLoading, setIsLoading } = useTranscriptsStore();
+  const { transcripts, setTranscripts, deleteTranscript, setSelectedId, isLoading, setIsLoading } = useTranscriptsStore();
   const calendar = useCalendarStore();
   const user = useAuthStore((s) => s.user);
   const { isUpdateAvailable, latestVersion, downloadUrl } = useUpdateCheck();
@@ -39,6 +39,7 @@ export function HomePage() {
   const updateSettings = useSettingsStore((s) => s.updateSettings);
   const [upcomingEvents, setUpcomingEvents] = useState<CalendarEvent[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<Transcript | null>(null);
 
   useEffect(() => {
     loadRecentTranscripts();
@@ -187,7 +188,19 @@ export function HomePage() {
             <span>{loadError}</span>
             <button className="btn btn-sm" onClick={loadRecentTranscripts}>Opnieuw</button>
           </div>
-        ) : transcripts.length === 0 && !isLoading ? (
+        ) : isLoading ? (
+          <div className="flex-col gap-10">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="card card-static" style={{ padding: 16 }}>
+                <div className="flex-col gap-8">
+                  <div className="skeleton skeleton-line skeleton-line-short" />
+                  <div className="skeleton skeleton-line skeleton-line-long" />
+                  <div className="skeleton skeleton-line skeleton-line-medium" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : transcripts.length === 0 ? (
           <div className="empty-state">
             <p className="empty-state-text">
               Nog geen transcripten. Start een opname om te beginnen.
@@ -199,8 +212,8 @@ export function HomePage() {
               <SessionCard
                 key={transcript.id}
                 transcript={transcript}
-                onClick={() => navigate("/transcripts")}
-                onDelete={handleDeleteTranscript}
+                onClick={() => { setSelectedId(transcript.id); navigate("/transcripts"); }}
+                onDelete={setDeleteConfirm}
               />
             ))}
           </div>
@@ -208,6 +221,33 @@ export function HomePage() {
       </section>
 
     </div>
+
+      {/* Delete confirmation dialog */}
+      {deleteConfirm && (
+        <div className="profile-overlay" onClick={() => setDeleteConfirm(null)}>
+          <div className="card profile-modal-confirm" onClick={(e) => e.stopPropagation()}>
+            <p className="text-body-strong" style={{ marginBottom: 8 }}>Sessie verwijderen?</p>
+            <p className="text-caption" style={{ marginBottom: 4, color: "var(--text-secondary)" }}>
+              "{deleteConfirm.title || "Naamloze opname"}" wordt definitief verwijderd.
+            </p>
+            <p className="text-caption" style={{ marginBottom: 16, color: "var(--text-tertiary)" }}>
+              Dit kan niet ongedaan worden gemaakt.
+            </p>
+            <div className="profile-modal-actions">
+              <button onClick={() => setDeleteConfirm(null)} className="btn btn-secondary btn-sm">
+                Annuleren
+              </button>
+              <button
+                onClick={() => { handleDeleteTranscript(deleteConfirm); setDeleteConfirm(null); }}
+                className="btn btn-sm"
+                style={{ color: "var(--text-error)", borderColor: "rgba(188,0,22,0.3)" }}
+              >
+                Verwijderen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -277,18 +317,25 @@ function SessionCard({
   );
 }
 
+function stripHtml(html: string): string {
+  return html
+    .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function getPreviewText(transcript: Transcript): string {
   if (typeof transcript.notule_html === "string" && transcript.notule_html) {
-    const text = transcript.notule_html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
-    return text.slice(0, 200);
+    return stripHtml(transcript.notule_html).slice(0, 200);
   }
   if (typeof transcript.raw_transcription === "string" && transcript.raw_transcription) {
     return transcript.raw_transcription.slice(0, 200);
   }
   // Listing endpoint returns preview (first 200 chars of result) without full text
   if (typeof transcript.preview === "string" && transcript.preview) {
-    const text = transcript.preview.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
-    return text.slice(0, 200);
+    return stripHtml(transcript.preview).slice(0, 200);
   }
   return "";
 }

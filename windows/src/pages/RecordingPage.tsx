@@ -473,68 +473,70 @@ function IdleState({
         </p>
       </div>
 
-      {/* YouTube transcription card */}
+      {/* YouTube transcription — collapsible */}
       {isYouTubeEnabled && (
-        <div style={{ width: "100%" }}>
-          <p className="section-label" style={{ color: "#E61212" }}>
+        <details className="disclosure" style={{ width: "100%" }}>
+          <summary className="section-label" style={{ color: "#E61212", cursor: "pointer", userSelect: "none" }}>
             YOUTUBE VIDEO
-          </p>
-          <p className="text-caption text-tertiary" style={{ marginTop: -4, marginBottom: 8 }}>
-            Plak een YouTube URL om te transcriberen
-          </p>
-          <div className="card card-static" style={{ padding: 16, borderColor: "rgba(230, 18, 18, 0.12)" }}>
-            <div className="flex-col gap-12">
-              <input
-                type="url"
-                value={youtubeURL}
-                onChange={(e) => onYouTubeURLChange(e.target.value)}
-                placeholder="Plak een YouTube URL..."
-                className="input"
-                style={{ width: "100%" }}
-                disabled={isSubmittingYouTube}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !isSubmittingYouTube) onSubmitYouTube();
-                }}
-              />
+          </summary>
+          <div style={{ marginTop: 8 }}>
+            <p className="text-caption text-tertiary" style={{ marginBottom: 8 }}>
+              Plak een YouTube URL om te transcriberen
+            </p>
+            <div className="card card-static" style={{ padding: 16, borderColor: "rgba(230, 18, 18, 0.12)" }}>
+              <div className="flex-col gap-12">
+                <input
+                  type="url"
+                  value={youtubeURL}
+                  onChange={(e) => onYouTubeURLChange(e.target.value)}
+                  placeholder="Plak een YouTube URL..."
+                  className="input"
+                  style={{ width: "100%" }}
+                  disabled={isSubmittingYouTube}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !isSubmittingYouTube) onSubmitYouTube();
+                  }}
+                />
 
-              {/* YouTube profile selector */}
-              {profiles.length > 0 && (
-                <div>
-                  <p className="section-label" style={{ marginBottom: 6, fontSize: 11 }}>Profiel</p>
-                  <div className="flex-col gap-8">
-                    {profiles.map((profile) => (
-                      <button
-                        key={profile.id}
-                        onClick={() => onYouTubeProfileChange(profile.id)}
-                        className={`profile-chip ${youtubeProfileId === profile.id ? "active" : ""}`}
-                      >
-                        <span className="profile-chip-icon">{getProfileIcon(profile.name)}</span>
-                        <span className="profile-chip-name">{profile.name}</span>
-                      </button>
-                    ))}
+                {/* YouTube profile selector */}
+                {profiles.length > 0 && (
+                  <div>
+                    <p className="section-label" style={{ marginBottom: 6, fontSize: 11 }}>Profiel</p>
+                    <div className="flex-col gap-8">
+                      {profiles.map((profile) => (
+                        <button
+                          key={profile.id}
+                          onClick={() => onYouTubeProfileChange(profile.id)}
+                          className={`profile-chip ${youtubeProfileId === profile.id ? "active" : ""}`}
+                        >
+                          <span className="profile-chip-icon">{getProfileIcon(profile.name)}</span>
+                          <span className="profile-chip-name">{profile.name}</span>
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {youtubeError && (
-                <p style={{ fontSize: 12, color: "var(--fill-danger)", margin: 0 }}>
-                  {youtubeError}
-                </p>
-              )}
-              <button
-                className="btn btn-youtube"
-                onClick={onSubmitYouTube}
-                disabled={isSubmittingYouTube || !youtubeURL.trim()}
-                style={{ alignSelf: "flex-start" }}
-              >
-                {isSubmittingYouTube ? "Bezig..." : "Transcriberen"}
-              </button>
+                {youtubeError && (
+                  <p style={{ fontSize: 12, color: "var(--fill-danger)", margin: 0 }}>
+                    {youtubeError}
+                  </p>
+                )}
+                <button
+                  className="btn btn-youtube"
+                  onClick={onSubmitYouTube}
+                  disabled={isSubmittingYouTube || !youtubeURL.trim()}
+                  style={{ alignSelf: "flex-start" }}
+                >
+                  {isSubmittingYouTube ? "Bezig..." : "Transcriberen"}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        </details>
       )}
 
-      {/* Saved recordings — reprocess uploads the existing file */}
+      {/* Saved recordings — collapsible */}
       <SavedRecordings />
     </div>
   );
@@ -590,7 +592,7 @@ function ActiveState({
         <WaveformVisualizer levelsRef={audioLevelsRef} isActive={!isPaused} />
       </div>
 
-      {/* Mic button — active recording */}
+      {/* Mic button — active recording: toggles pause/resume */}
       <div className="mic-button-container mic-button-container-active">
         {!isPaused && (
           <>
@@ -599,17 +601,17 @@ function ActiveState({
           </>
         )}
         <button
-          onClick={onStop}
+          onClick={isPaused ? onResume : onPause}
           className="mic-button-large"
-          aria-label="Stop opname"
-          title="Stoppen"
+          aria-label={isPaused ? "Hervat opname" : "Pauzeer opname"}
+          title={isPaused ? "Hervatten" : "Pauzeren"}
         >
-          <MicRecord24Regular style={{ fontSize: 28, color: "#fff" }} />
+          {isPaused
+            ? <Play24Regular style={{ fontSize: 28, color: "#fff" }} />
+            : <Pause24Regular style={{ fontSize: 28, color: "#fff" }} />
+          }
         </button>
       </div>
-      <p className="text-caption text-tertiary" style={{ marginTop: -8 }}>
-        {isPaused ? "Klik om te hervatten" : "Klik om te pauzeren"}
-      </p>
 
       {/* Control buttons: PAUZE / NOTITIE / STOP */}
       <div className="recording-controls">

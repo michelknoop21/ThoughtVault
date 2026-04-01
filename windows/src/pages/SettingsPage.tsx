@@ -4,11 +4,7 @@ import {
   DocumentText24Regular,
   Brain24Regular,
   Calendar24Regular,
-  ChatBubblesQuestion24Regular,
   Info24Regular,
-  ChevronRight24Regular,
-  ShieldLock24Regular,
-  Mail24Regular,
   CheckmarkCircle24Regular,
   ErrorCircle24Regular,
   ArrowSync24Regular,
@@ -312,54 +308,6 @@ export function SettingsPage() {
             )}
           </div>
 
-          {/* Feedback */}
-          <div className="settings-group">
-            <p className="settings-group-label">Feedback</p>
-            <div className="settings-row" style={{ cursor: "default" }}>
-              <div className="flex-row gap-10 flex-1">
-                <ChatBubblesQuestion24Regular className="settings-icon" />
-                <div className="flex-1">
-                  <p className="settings-label">Bug melden</p>
-                  <p className="settings-desc">Meld een probleem of suggestie</p>
-                </div>
-                <ChevronRight24Regular className="settings-icon-muted" style={{ fontSize: 14 }} />
-              </div>
-            </div>
-          </div>
-
-          {/* Privacy & Gegevens (GDPR) */}
-          <div className="settings-group">
-            <p className="settings-group-label">Privacy & gegevens</p>
-            <div className="settings-row">
-              <div className="flex-row gap-10 flex-1">
-                <ShieldLock24Regular className="settings-icon" />
-                <div className="flex-1">
-                  <p className="settings-label">Gegevens exporteren (AVG)</p>
-                  <p className="settings-desc">Download al je opnames en transcripties</p>
-                </div>
-                <ChevronRight24Regular className="settings-icon-muted" style={{ fontSize: 14 }} />
-              </div>
-            </div>
-            <div className="settings-row">
-              <div className="flex-row gap-10 flex-1">
-                <Mail24Regular className="settings-icon" style={{ color: "var(--fill-system-critical)" }} />
-                <div className="flex-1">
-                  <p className="settings-label">Account verwijderen</p>
-                  <p className="settings-desc">
-                    Neem contact op met{" "}
-                    <a
-                      href="mailto:support@yinga.nl?subject=Account%20verwijderen%20TranscriptStudio"
-                      style={{ color: "var(--text-accent)", textDecoration: "none" }}
-                    >
-                      support@yinga.nl
-                    </a>
-                    {" "}om je account te laten verwijderen. Verzoeken worden binnen 30 dagen verwerkt conform de AVG.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
           {/* Updates */}
           <div className="settings-group">
             <p className="settings-group-label">Updates</p>
@@ -373,6 +321,8 @@ export function SettingsPage() {
                 <label className="toggle-switch">
                   <input
                     type="checkbox"
+                    role="switch"
+                    aria-checked={settings.check_for_updates}
                     checked={settings.check_for_updates}
                     onChange={(e) => settings.updateSettings({ check_for_updates: e.target.checked })}
                   />

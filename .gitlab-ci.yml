@@ -173,9 +173,15 @@ build-windows:
   before_script:
     - |
       # Ensure Rust/Cargo is in PATH for this session
-      $cargobin = "$env:USERPROFILE\.cargo\bin"
-      if (Test-Path $cargobin) { $env:PATH = "$cargobin;$env:PATH" }
+      # Check multiple possible locations (user install, system install)
+      foreach ($base in @($env:USERPROFILE, "C:\Users\michel")) {
+        $bin = "$base\.cargo\bin"
+        if (Test-Path $bin) { $env:PATH = "$bin;$env:PATH"; break }
+      }
+      # Ensure a default toolchain is set
+      rustup default stable 2>$null
       rustc --version
+      cargo --version
       node --version
     - |
       # Determine version and channel (same logic as prepare job)
@@ -200,7 +206,6 @@ build-windows:
         $PRODUCT_NAME = "TranscriptStudio Dev"
       }
       # Export as env vars for subsequent script blocks
-      "VERSION=$VERSION" | Out-File -Append -FilePath $env:GITHUB_ENV -ErrorAction SilentlyContinue
       $env:W_VERSION = $VERSION
       $env:W_CHANNEL = $CHANNEL
       $env:W_MSI_NAME = $MSI_NAME

@@ -80,14 +80,14 @@ function mapTranscript(raw: unknown): Transcript {
 
   return {
     id: safeString(r.id ?? r.task_id, ""),
-    title: safeString(r.title ?? r.filename, "Naamloze opname"),
+    title: safeString(r.title ?? r.extracted_title ?? r.filename, "Naamloze opname"),
     raw_transcription: rawTranscription,
     notule_html: notuleHtml,
     preview,
     has_notes: hasNotes,
     has_transcription: hasTranscription,
     duration_seconds: Number(r.duration ?? r.duration_seconds ?? 0),
-    profile_name: safeOptionalString(r.profile_name),
+    profile_name: safeOptionalString(r.profile_name, r.profile_id),
     tags: Array.isArray(r.tags) ? r.tags.filter((t): t is string => typeof t === "string") : [],
     created_at: safeString(r.created_at ?? r.date, new Date().toISOString()),
     updated_at: safeString(r.updated_at ?? r.created_at, new Date().toISOString()),

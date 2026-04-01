@@ -8,8 +8,8 @@
 #   - Push dev-v* tag → dev build + deploy
 #   - Manual pipeline → set CHANNEL variable (default: dev)
 #
-# Runner: Michel-Mac (shell executor, tags: shell,macos,xcode)
-# Windows: not yet available (build-windows skipped)
+# Runner macOS: Michel-Mac (shell executor, tags: shell,macos,xcode)
+# Runner Windows: Windows-PC (shell executor, tag: windows)
 
 workflow:
   rules:
@@ -163,8 +163,7 @@ build-macos:
     expire_in: 1 week
 
 # ─── Windows: build MSI ───────────────────────────────────────────────────────
-# Disabled until a Windows runner is registered.
-# To enable: change rules to `- when: on_success` and register a runner with tag "windows"
+# Runs on Michel's Windows PC (shell executor, tag: windows)
 build-windows:
   stage: build
   tags: [windows]
@@ -172,10 +171,20 @@ build-windows:
     - job: prepare
       artifacts: true
   allow_failure: true
-  rules:
-    - when: never
   script:
-    - echo "Windows build — register a Windows runner to enable this job"
+    - |
+      cd windows
+      npm install
+    - |
+      cd windows
+      $env:TAURI_CONFIG = '{"identifier":"' + $env:BUNDLE_ID_WINDOWS + '","productName":"' + $env:TAURI_PRODUCT_NAME + '"}'
+      npx tauri build
+    - |
+      New-Item -ItemType Directory -Force -Path build | Out-Null
+      $msi = Get-ChildItem -Path "windows\src-tauri\target\release\bundle" -Recurse -Filter "*.msi" | Select-Object -First 1
+      if (-not $msi) { Write-Error "MSI not found"; exit 1 }
+      Copy-Item $msi.FullName "build\$env:MSI_X64_NAME"
+      Write-Host "Built: $env:MSI_X64_NAME"
   artifacts:
     paths:
       - build/*.msi

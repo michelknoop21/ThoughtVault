@@ -1,6 +1,6 @@
 # TranscriptStudio — Architecture
 
-_Last updated: 2026-03-23_
+_Last updated: 2026-04-01_
 
 ---
 
@@ -318,7 +318,7 @@ src/
 │   ├── onboarding/         # First-run setup flow
 │   ├── recording/          # RecordingPanel, WaveformVisualizer, SavedRecordings, RecordingWidget
 │   ├── settings/           # Settings tabs (server, LLM, audio, account)
-│   ├── transcripts/        # TranscriptCard, TranscriptList, NotesViewer
+│   ├── transcripts/        # TranscriptsList (unified library), TranscriptDetail (document reader)
 │   └── FeedbackWidget.tsx  # Bug reporting and feedback submission
 ├── services/
 │   ├── api.ts              # All backend REST calls + field mapping boundary (uses Tauri proxy_request)

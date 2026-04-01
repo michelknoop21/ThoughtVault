@@ -5,6 +5,50 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2026-04-01] — Windows TranscriptsPage UX redesign
+
+### Changed
+- **TranscriptsPage** (`windows/src/pages/TranscriptsPage.tsx`): Volledig herschreven van 1233-regel monoliet naar 280-regel orchestratie-laag. Notulen/Transcripties tab-split verwijderd — nu één unified document library.
+- **Nieuwe componenten**:
+  - `windows/src/components/transcripts/TranscriptsList.tsx` — Lijst met date grouping (Vandaag/Gisteren/Deze week/Eerder), dot-indicators (roze=notule, blauw=transcriptie), subtiele tag/profiel badges
+  - `windows/src/components/transcripts/TranscriptDetail.tsx` — Document reader met single toolbar (was 4 chrome-lagen), inline titel editing, notule/transcriptie toggle
+- **Toolbar redesign**: Alle knoppen hebben labels (Bewerken, Regenereer, Titel, Export, Tags). Logische groepering met separators.
+- **CSS** (`globals.css`): Alle `.transcripts-*` klassen vervangen door `.tp-`, `.tl-`, `.td-` prefix. Compactere spacing, dot-indicators i.p.v. grote badges.
+
+### Added
+- **Genereer titel** functie: Sparkle-knop in toolbar extraheert titel uit notule-inhoud (headings, bold tekst, paragrafen). Skipt duplicaten en generieke woorden.
+- **Inline titel bewerken**: Klik op documenttitel om te bewerken, Enter om op te slaan.
+- **Date grouping** in lijst: Items gegroepeerd op dag i.p.v. platte lijst.
+
+### Fixed
+- Titel verscheen 3x (lijst, header, document) — nu alleen in document
+- "Hertranscribeer" hernoemd naar "Regenereer notulen" (correcte functie)
+- Duration "0s" verborgen wanneer geen data beschikbaar
+- Titel wrapping: `word-break: break-word` voorkomt mid-woord afkapping
+- `bg-blobs` decoratie verwijderd — schone achtergrond
+
+### Notes
+- v1.0.110–1.0.111. Geen backend wijzigingen.
+- TypeScript clean, build succesvol.
+
+---
+
+## [2026-04-01] — Fix notule titel-extractie bij regeneratie
+
+### Fixed
+- **Backend titel-extractie** (`app.py:496`, `transcription.py:103`): Bij regeneratie via de queue callback path (payload zonder `"html"` key) werd geen titel uit de HTML geëxtraheerd. N8n stuurt sectiekoppen zoals "Kernargumenten" als titel — de `_is_valid_callback_title` filterde dit correct, maar de fallback `_extract_title_from_html` werd niet aangeroepen in de `app.py` else-tak.
+- **Titellimiet** (`transcription.py:106,120,128`): Verhoogd van 60 naar 80 tekens. Titels als "Notulen Zakelijk Gesprek: AI-Generatie van Website-Styling & Im" werden mid-woord afgekapt.
+
+### Root cause
+N8n's "Extract Title" node pakt de eerste HTML heading als titel. Als de LLM het output template niet volgt en een sectiekop als eerste heading genereert (bijv. "Kernargumenten" i.p.v. een beschrijvende titel), stuurt n8n die door. De backend `_is_valid_callback_title` herkent sectiekoppen correct via `_SECTION_WORDS`, maar de queue callback path in `app.py` miste de fallback naar `_extract_title_from_html`.
+
+### Notes
+- Fix gedeployed en geverifieerd via test-regeneratie. Titel wordt nu correct geëxtraheerd uit `<h4>` subtitel in de notule HTML.
+- E-mail notificatie toont nu ook de juiste titel.
+- Backend repo: commit `7bb3396`.
+
+---
+
 ## [2026-04-01] — Windows MSI build op GitLab CI met self-hosted runner
 
 ### Added

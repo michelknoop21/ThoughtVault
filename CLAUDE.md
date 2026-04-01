@@ -16,9 +16,8 @@ xcodebuild test -project TranscriptStudio.xcodeproj -scheme TranscriptStudioTest
 cd windows && npm run tauri dev
 
 # Release via CI (aanbevolen)
-scripts/deploy-dev.sh             # dev-v* tag → GitLab CI (macOS + Android + deploy)
-scripts/deploy-production.sh      # v* tag → GitLab CI (macOS + Android + deploy)
-# Windows MSI: push tag naar GitHub → GitHub Actions (.github/workflows/build-windows.yml)
+scripts/deploy-dev.sh             # dev-v* tag → GitLab CI (macOS + Android + Windows + deploy)
+scripts/deploy-production.sh      # v* tag → GitLab CI (macOS + Android + Windows + deploy)
 
 # Release lokaal (fallback)
 scripts/release.sh                # volledige pipeline
@@ -70,6 +69,7 @@ ssh michelk@3.69.205.209 "docker logs n8n_transcript_studio --tail 50"
 - **Multi-instance deployment** — Lees docs/PLAN-MULTI-INSTANCE.md en DEC-033 wanneer relevant
 - **n8n notule flow**: `handleiding` profiel → Claude proxy (`n8n_claude_code:3100`), overige → Ollama. Backend stuurt `profile_id` mee in webhook payload. Zie docs/ARCHITECTURE.md "n8n Notule Generation Flow" (DEC-057)
 - **HTMLWebView + eigen CSS**: Als notule-HTML een `<style>` block bevat (handleiding-profiel), dan `extractStyles()` gebruiken om CSS naar `<head>` te verplaatsen. WKWebView past counters/grid/pseudo-elements niet toe vanuit `<style>` in `<body>`.
+- **Notule titels**: Backend extraheert titels via `_extract_title_from_html()` in `transcription.py`. Sectiekoppen (bijv. "Kernargumenten") worden gefilterd via `_SECTION_WORDS`. Titel-extractie gebeurt in twee codepaths: `/callback/notule` route EN `app.py` queue callback — beide moeten in sync blijven.
 
 ## Credentials & Environment Variables
 

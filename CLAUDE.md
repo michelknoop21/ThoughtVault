@@ -66,7 +66,7 @@ ssh michelk@3.69.205.209 "docker logs n8n_transcript_studio --tail 50"
 - Versioning: elke commit op `main` bumpt automatisch patch via `.githooks/post-commit`
 - Na version bump: `scripts/sync-version.sh` draaien om VERSION naar alle platform configs te syncen
 - Downloads: `https://n8n.prezent.nl/tstudio/download/` — lees docs/RELEASE.md voor infra details
-- **CI/CD**: GitLab CI (`.gitlab-ci.yml`) voor macOS + Android + deploy (self-hosted Mac runner). GitHub Actions alleen voor Windows MSI builds (`.github/workflows/build-windows.yml`). Zie DEC-055, DEC-056.
+- **CI/CD**: GitLab CI (`.gitlab-ci.yml`) voor macOS + Android + Windows + deploy. Mac runner (shell executor) voor macOS/Android, self-hosted Windows PC (tag `windows`) voor MSI builds. GitHub Actions als fallback voor Windows. Windows runner draait als SYSTEM — `useLocalToolsDir: true` in tauri.conf.json is vereist. Zie DEC-055, DEC-056, DEC-058.
 - **Multi-instance deployment** — Lees docs/PLAN-MULTI-INSTANCE.md en DEC-033 wanneer relevant
 - **n8n notule flow**: `handleiding` profiel → Claude proxy (`n8n_claude_code:3100`), overige → Ollama. Backend stuurt `profile_id` mee in webhook payload. Zie docs/ARCHITECTURE.md "n8n Notule Generation Flow" (DEC-057)
 - **HTMLWebView + eigen CSS**: Als notule-HTML een `<style>` block bevat (handleiding-profiel), dan `extractStyles()` gebruiken om CSS naar `<head>` te verplaatsen. WKWebView past counters/grid/pseudo-elements niet toe vanuit `<style>` in `<body>`.

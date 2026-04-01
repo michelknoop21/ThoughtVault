@@ -6,6 +6,26 @@ _Decisions DEC-029 through DEC-038 archived to [archive/DECISIONS-DEC-029-to-DEC
 
 ---
 
+## DEC-058 — Windows MSI Build op GitLab CI met Self-Hosted Runner
+
+**Date:** 2026-04-01
+**Status:** Accepted
+
+**Context:** De Windows MSI build draaide op GitHub Actions (`windows-latest` runner) per DEC-056. Dit werkte maar was los gekoppeld van de GitLab CI pipeline. Michel heeft een Windows PC als GitLab Runner geregistreerd (shell executor, tag `windows`), maar de eerste builds faalden omdat de runner als LocalSystem (SYSTEM account) draait. SYSTEM's `$env:USERPROFILE` is `C:\Windows\system32\config\systemprofile` — een restricted pad waar Tauri's WiX tools niet konden draaien (`candle.exe` failed), Rust/Cargo niet gevonden werd, en de SSH key voor uploads ontbrak.
+
+**Decision:** Drie aanpassingen in `.gitlab-ci.yml` en `tauri.conf.json`:
+1. **`useLocalToolsDir: true`** in `tauri.conf.json` — Tauri's officiële config optie die WiX/NSIS tools opslaat in `target/.tauri/` i.p.v. `dirs::cache_dir()`. Gedocumenteerd in Tauri source als oplossing voor exact dit scenario (Windows System user / CI). Verkende alternatieven `TAURI_TOOLS_PATH` (niet bestaand) en `LOCALAPPDATA` override (te breed) werkten niet.
+2. **Fallback paden** voor Rust en SSH naar `C:\Users\michel\` naast `$env:USERPROFILE`.
+3. **Relatieve paden** voor MSI search (`src-tauri\...` i.p.v. `windows\src-tauri\...`) omdat `cd windows` in GitLab's shell executor persistent is tussen script blocks.
+
+**Consequences:**
+- Windows MSI builds draaien nu volledig binnen GitLab CI, naast macOS en Android.
+- GitHub Actions Windows workflow blijft beschikbaar als fallback maar is niet meer primair.
+- Runner vereist Rust, Node.js en npm geïnstalleerd onder `C:\Users\michel` op de Windows PC.
+- `useLocalToolsDir: true` downloadt WiX/NSIS bij elke clean build (~3 sec extra). Bij cached `target/` dir worden tools hergebruikt.
+
+---
+
 ## DEC-057 — Claude Routing voor Handleiding-profiel via n8n IF-node
 
 **Date:** 2026-03-23

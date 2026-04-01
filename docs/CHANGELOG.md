@@ -5,6 +5,28 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2026-04-01] — Windows MSI build op GitLab CI met self-hosted runner
+
+### Added
+- **Windows GitLab CI runner** (`.gitlab-ci.yml:build-windows`): Self-hosted Windows PC als GitLab Runner (shell executor, tag `windows`). Bouwt MSI volledig standalone zonder afhankelijkheid van de Mac runner. v1.0.104–v1.0.109.
+- **SSH key voor Windows runner**: Ed25519 keypair op `C:\Users\michel\.ssh\` voor MSI upload naar EC2 server. Public key geregistreerd op `michelk@3.69.205.209`.
+
+### Changed
+- **Tauri config** (`windows/src-tauri/tauri.conf.json`): `useLocalToolsDir: true` toegevoegd. Slaat WiX/NSIS tools op in `target/.tauri/` i.p.v. het restricted SYSTEM profiel `AppData`. Tauri's eigen oplossing voor CI runners die als LocalSystem draaien.
+- **MSI zoekpad** (`.gitlab-ci.yml:225`): `windows\src-tauri\...` → `src-tauri\...` en build output naar `..\build\`. De `cd windows` in het eerste script block bleef hangen in GitLab's shell executor, waardoor het pad `windows\windows\src-tauri\...` werd.
+- **SSH key fallback** (`.gitlab-ci.yml:233`): Zoekt nu in `$env:USERPROFILE\.ssh\` én `C:\Users\michel\.ssh\` (zelfde patroon als Rust/Cargo lookup). Gebruikt `-i` flag voor expliciete key selectie.
+- **Rust PATH** (`.gitlab-ci.yml:177`): Zoekt Cargo in zowel `$env:USERPROFILE` als `C:\Users\michel` — nodig omdat SYSTEM profiel geen Rust installatie heeft.
+
+### Decisions
+- DEC-058: Windows MSI build op GitLab CI met self-hosted runner
+
+### Notes
+- Runner draait als LocalSystem (SYSTEM account) — `$env:USERPROFILE` is `C:\Windows\system32\config\systemprofile`. Alle paden naar user-specifieke tools (Rust, SSH, WiX) hebben fallback naar `C:\Users\michel`.
+- Eerste succesvolle build: v1.0.109 (TranscriptStudio_1.0.109_x64.msi, 5.4 MB).
+- GitHub Actions Windows build (`.github/workflows/build-windows.yml`) blijft beschikbaar als fallback.
+
+---
+
 ## [2026-03-23] — Claude routing voor handleiding-profiel in n8n + WebView CSS fix
 
 ### Added

@@ -162,16 +162,16 @@ Bestand: `.gitlab-ci.yml`
 |---------|--------------|
 | `shell` | prepare, build-android, deploy |
 | `macos,xcode` | build-macos |
-| `windows` | build-windows (disabled, geen runner) |
+| `windows` | build-windows (self-hosted Windows PC) |
 
 **Jobs:**
 1. `prepare` — bepaalt versie en channel uit tag of variabele, zet artifact namen via dotenv
 2. `build-macos` — bouwt DMG op Mac runner met channel-specifieke overrides
-3. `build-windows` — bouwt MSI (disabled tot een Windows runner beschikbaar is)
+3. `build-windows` — bouwt MSI op self-hosted Windows PC (shell executor, `allow_failure: true`). Gebruikt `useLocalToolsDir: true` in `tauri.conf.json` voor WiX tools (zie DEC-058). Runner draait als LocalSystem — Rust/SSH paden vallen terug naar `C:\Users\michel\`.
 4. `build-android` — bouwt APK met lokale JDK 21 + Android SDK op Mac
 5. `deploy` — uploadt artifacts naar server via SSH, update releases.json, maakt GitLab Release via `scripts/create-gitlab-release.py`
 
-**Windows MSI (apart):** Wordt gebouwd door GitHub Actions (`.github/workflows/build-windows.yml`) op `windows-latest` runner. Triggered op dezelfde `v*`/`dev-v*` tags gepusht naar GitHub remote. Zie DEC-056.
+**Windows MSI (fallback):** GitHub Actions (`.github/workflows/build-windows.yml`) op `windows-latest` runner is beschikbaar als fallback. Primaire Windows build draait nu op GitLab CI. Zie DEC-056, DEC-058.
 
 **GitLab Releases:**
 - Release notes worden automatisch uit de eerste entry van `docs/CHANGELOG.md` geëxtraheerd

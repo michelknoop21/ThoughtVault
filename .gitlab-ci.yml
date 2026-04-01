@@ -171,12 +171,17 @@ build-windows:
     - job: prepare
       artifacts: true
   allow_failure: true
+  before_script:
+    - |
+      # Ensure Rust/Cargo is in PATH for this session
+      $cargobin = "$env:USERPROFILE\.cargo\bin"
+      if (Test-Path $cargobin) { $env:PATH = "$cargobin;$env:PATH" }
+      rustc --version
+      node --version
   script:
     - |
       cd windows
       npm install
-    - |
-      cd windows
       $env:TAURI_CONFIG = '{"identifier":"' + $env:BUNDLE_ID_WINDOWS + '","productName":"' + $env:TAURI_PRODUCT_NAME + '"}'
       npx tauri build
     - |

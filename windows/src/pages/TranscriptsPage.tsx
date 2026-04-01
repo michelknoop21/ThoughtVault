@@ -165,22 +165,43 @@ export function TranscriptsPage() {
   // --- Generate title from notule content ---
   async function handleGenerateTitle(transcript: Transcript) {
     if (!transcript.notule_html) return;
-    // Extract a sensible title from the first heading or first line of the notule
     const tmp = document.createElement("div");
     tmp.innerHTML = transcript.notule_html;
-    const firstHeading = tmp.querySelector("h1, h2, h3");
-    let newTitle = firstHeading?.textContent?.trim();
-    if (!newTitle) {
-      // Use first non-empty text content, truncated
-      const text = tmp.textContent?.trim() || "";
-      newTitle = text.slice(0, 80).replace(/\s+/g, " ");
-      if (text.length > 80) newTitle += "...";
-    }
-    if (newTitle && newTitle !== transcript.title) {
+
+    // Collect candidate titles in priority order
+    const candidates: string[] = [];
+
+    // 1. All headings (h1, h2, h3)
+    tmp.querySelectorAll("h1, h2, h3").forEach((el) => {
+      const text = el.textContent?.trim();
+      if (text && text.length > 3) candidates.push(text);
+    });
+
+    // 2. First bold/strong text (often a meeting title)
+    tmp.querySelectorAll("strong, b").forEach((el) => {
+      const text = el.textContent?.trim();
+      if (text && text.length > 5 && text.length < 120) candidates.push(text);
+    });
+
+    // 3. First non-trivial paragraph
+    tmp.querySelectorAll("p").forEach((el) => {
+      const text = el.textContent?.trim();
+      if (text && text.length > 10 && text.length < 120) {
+        candidates.push(text.length > 80 ? text.slice(0, 77) + "..." : text);
+      }
+    });
+
+    // Pick the first candidate that differs from the current title
+    const currentLower = (transcript.title || "").toLowerCase();
+    const newTitle = candidates.find(
+      (c) => c.toLowerCase() !== currentLower && c.toLowerCase() !== "notulen" && c.toLowerCase() !== "samenvatting"
+    );
+
+    if (newTitle) {
       await handleUpdateTitle(transcript.id, newTitle);
       toast.show("Titel bijgewerkt", "success");
     } else {
-      toast.show("Geen nieuwe titel gevonden", "warning");
+      toast.show("Kon geen betere titel vinden in de notule", "warning");
     }
   }
 

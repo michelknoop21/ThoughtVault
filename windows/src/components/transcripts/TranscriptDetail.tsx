@@ -163,24 +163,29 @@ export function TranscriptDetail({
           <>
             {isEditingNotule ? (
               <>
-                <button className="td-toolbar-btn td-toolbar-btn-accent" onClick={saveNotuleEdit} disabled={isSaving} title="Opslaan">
-                  <Checkmark24Regular style={{ fontSize: 16 }} />
+                <button className="td-toolbar-btn td-toolbar-btn-accent td-toolbar-btn-labeled" onClick={saveNotuleEdit} disabled={isSaving}>
+                  <Checkmark24Regular style={{ fontSize: 15 }} />
                   <span>{isSaving ? "Opslaan..." : "Opslaan"}</span>
                 </button>
-                <button className="td-toolbar-btn" onClick={() => setIsEditingNotule(false)} disabled={isSaving} title="Annuleren">
-                  <Dismiss24Regular style={{ fontSize: 16 }} />
+                <button className="td-toolbar-btn td-toolbar-btn-labeled" onClick={() => setIsEditingNotule(false)} disabled={isSaving}>
+                  <Dismiss24Regular style={{ fontSize: 15 }} />
+                  <span>Annuleren</span>
                 </button>
               </>
             ) : (
               <>
-                <button className="td-toolbar-btn" onClick={startNotuleEdit} disabled={!transcript.notule_html} title="Bewerken">
-                  <Edit24Regular style={{ fontSize: 16 }} />
+                <button className="td-toolbar-btn td-toolbar-btn-labeled" onClick={startNotuleEdit} disabled={!transcript.notule_html} title="Notule bewerken">
+                  <Edit24Regular style={{ fontSize: 15 }} />
+                  <span>Bewerken</span>
                 </button>
-                <button className="td-toolbar-btn" onClick={() => onRegenerate(transcript)} disabled={isRegenerating} title="Regenereer notulen">
-                  <ArrowSync24Regular style={{ fontSize: 16, animation: isRegenerating ? "spin 1s linear infinite" : undefined }} />
+                <div className="td-toolbar-separator" />
+                <button className="td-toolbar-btn td-toolbar-btn-labeled" onClick={() => onRegenerate(transcript)} disabled={isRegenerating} title="Notulen opnieuw genereren met AI">
+                  <ArrowSync24Regular style={{ fontSize: 15, animation: isRegenerating ? "spin 1s linear infinite" : undefined }} />
+                  <span>Regenereer</span>
                 </button>
-                <button className="td-toolbar-btn" onClick={() => onGenerateTitle(transcript)} disabled={!transcript.notule_html} title="Genereer titel">
-                  <Sparkle24Regular style={{ fontSize: 16 }} />
+                <button className="td-toolbar-btn td-toolbar-btn-labeled" onClick={() => onGenerateTitle(transcript)} disabled={!transcript.notule_html} title="Titel genereren uit notule-inhoud">
+                  <Sparkle24Regular style={{ fontSize: 15 }} />
+                  <span>Titel</span>
                 </button>
               </>
             )}
@@ -189,19 +194,23 @@ export function TranscriptDetail({
 
         {detailTab === "transcriptie" && (
           <button
-            className="td-toolbar-btn"
+            className="td-toolbar-btn td-toolbar-btn-labeled"
             onClick={() => transcript.raw_transcription && onCopy(transcript.raw_transcription)}
             disabled={!transcript.raw_transcription}
             title="Kopieer transcriptie"
           >
-            <Copy24Regular style={{ fontSize: 16 }} />
+            <Copy24Regular style={{ fontSize: 15 }} />
+            <span>Kopieer</span>
           </button>
         )}
 
+        <div className="td-toolbar-separator" />
+
         {/* Export dropdown */}
         <div className="td-export-wrap" ref={exportRef}>
-          <button className="td-toolbar-btn" onClick={() => setExportOpen(!exportOpen)} title="Exporteren">
-            <Share24Regular style={{ fontSize: 16 }} />
+          <button className="td-toolbar-btn td-toolbar-btn-labeled" onClick={() => setExportOpen(!exportOpen)} title="Exporteren">
+            <Share24Regular style={{ fontSize: 15 }} />
+            <span>Export</span>
           </button>
           {exportOpen && (
             <div className="td-export-menu">
@@ -233,12 +242,13 @@ export function TranscriptDetail({
           )}
         </div>
 
-        <button className="td-toolbar-btn" onClick={() => onOpenTags(transcript.id)} title="Tags">
-          <Tag24Regular style={{ fontSize: 16 }} />
+        <button className="td-toolbar-btn td-toolbar-btn-labeled" onClick={() => onOpenTags(transcript.id)} title="Tags beheren">
+          <Tag24Regular style={{ fontSize: 15 }} />
+          <span>Tags</span>
         </button>
 
         <button className="td-toolbar-btn td-toolbar-btn-danger" onClick={() => setDeleteConfirm(true)} title="Verwijderen">
-          <Delete24Regular style={{ fontSize: 16 }} />
+          <Delete24Regular style={{ fontSize: 15 }} />
         </button>
       </div>
 
@@ -269,8 +279,12 @@ export function TranscriptDetail({
             )}
             <div className="td-doc-meta">
               <span>{formatDate(transcript.created_at)}</span>
-              <span className="td-meta-sep">&middot;</span>
-              <span>{formatDuration(transcript.duration_seconds)}</span>
+              {transcript.duration_seconds > 0 && (
+                <>
+                  <span className="td-meta-sep">&middot;</span>
+                  <span>{formatDuration(transcript.duration_seconds)}</span>
+                </>
+              )}
               {transcript.profile_name && (
                 <>
                   <span className="td-meta-sep">&middot;</span>

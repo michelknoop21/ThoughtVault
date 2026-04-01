@@ -6,8 +6,6 @@ import {
   CheckboxChecked24Regular,
   CheckboxUnchecked24Regular,
   Delete24Regular,
-  Document24Regular,
-  Mic24Regular,
 } from "@fluentui/react-icons";
 import type { Transcript } from "../../types";
 
@@ -278,19 +276,17 @@ export function TranscriptsList({
                         {t.notule_html ? stripHtml(t.notule_html) : t.raw_transcription?.slice(0, 120)}
                       </p>
                     )}
-                    <div className="tl-item-badges">
-                      {(t.notule_html || t.has_notes) && (
-                        <span className="tl-badge tl-badge-notule"><Document24Regular style={{ fontSize: 11 }} /> Notule</span>
-                      )}
-                      {(t.raw_transcription || t.has_transcription) && (
-                        <span className="tl-badge tl-badge-transcript"><Mic24Regular style={{ fontSize: 11 }} /> Transcriptie</span>
+                    <div className="tl-item-meta-row">
+                      <div className="tl-item-dots">
+                        {(t.notule_html || t.has_notes) && <span className="tl-dot tl-dot-notule" title="Notule" />}
+                        {(t.raw_transcription || t.has_transcription) && <span className="tl-dot tl-dot-transcript" title="Transcriptie" />}
+                      </div>
+                      {t.profile_name && (
+                        <span className="tl-item-profile">{t.profile_name}</span>
                       )}
                       {t.tags.slice(0, 2).map((tag) => (
-                        <span key={tag} className="tl-badge tl-badge-tag">{tag}</span>
+                        <span key={tag} className="tl-item-tag">{tag}</span>
                       ))}
-                      {t.profile_name && (
-                        <span className="tl-badge tl-badge-profile">{t.profile_name}</span>
-                      )}
                     </div>
                   </div>
                   {!bulkMode && (

@@ -172,6 +172,10 @@ build-windows:
   allow_failure: true
   before_script:
     - |
+      # WiX tools must be stored outside the SYSTEM profile (runner runs as LocalSystem)
+      $env:TAURI_TOOLS_PATH = "C:\tauri-tools"
+      New-Item -ItemType Directory -Force -Path $env:TAURI_TOOLS_PATH | Out-Null
+    - |
       # Ensure Rust/Cargo is in PATH for this session
       # Check multiple possible locations (user install, system install)
       foreach ($base in @($env:USERPROFILE, "C:\Users\michel")) {
@@ -228,12 +232,16 @@ build-windows:
       Write-Host "Built: $env:W_MSI_NAME ($([math]::Round($msi.Length / 1MB, 1)) MB)"
     - |
       # Upload MSI to server (if SSH key is available)
-      $sshKey = "$env:USERPROFILE\.ssh\id_rsa"
-      if (Test-Path $sshKey) {
+      # Check multiple locations (runner may run as SYSTEM or as user)
+      $sshKey = $null
+      foreach ($candidate in @("$env:USERPROFILE\.ssh\id_rsa", "C:\Users\michel\.ssh\id_rsa")) {
+        if (Test-Path $candidate) { $sshKey = $candidate; break }
+      }
+      if ($sshKey) {
         $SERVER = "michelk@3.69.205.209"
         $REMOTE_DIR = "/home/michelk/tstudio-releases"
-        scp -o StrictHostKeyChecking=no "build\$env:W_MSI_NAME" "${SERVER}:${REMOTE_DIR}/$env:W_MSI_NAME"
-        Write-Host "Uploaded: $env:W_MSI_NAME"
+        scp -i $sshKey -o StrictHostKeyChecking=no "build\$env:W_MSI_NAME" "${SERVER}:${REMOTE_DIR}/$env:W_MSI_NAME"
+        Write-Host "Uploaded: $env:W_MSI_NAME (key: $sshKey)"
         Write-Host "URL: https://n8n.prezent.nl/tstudio/download/$env:W_MSI_NAME"
       } else {
         Write-Host "No SSH key found — skipping upload. MSI available as artifact."

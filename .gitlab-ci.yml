@@ -172,10 +172,6 @@ build-windows:
   allow_failure: true
   before_script:
     - |
-      # WiX tools must be stored outside the SYSTEM profile (runner runs as LocalSystem)
-      $env:TAURI_TOOLS_PATH = "C:\tauri-tools"
-      New-Item -ItemType Directory -Force -Path $env:TAURI_TOOLS_PATH | Out-Null
-    - |
       # Ensure Rust/Cargo is in PATH for this session
       # Check multiple possible locations (user install, system install)
       foreach ($base in @($env:USERPROFILE, "C:\Users\michel")) {

@@ -221,10 +221,11 @@ build-windows:
       $env:TAURI_CONFIG = '{"identifier":"' + $env:W_BUNDLE_ID + '","productName":"' + $env:W_PRODUCT_NAME + '"}'
       npx tauri build
     - |
-      New-Item -ItemType Directory -Force -Path build | Out-Null
-      $msi = Get-ChildItem -Path "windows\src-tauri\target\release\bundle" -Recurse -Filter "*.msi" | Select-Object -First 1
+      # Still in windows/ after cd above
+      New-Item -ItemType Directory -Force -Path "..\build" | Out-Null
+      $msi = Get-ChildItem -Path "src-tauri\target\release\bundle" -Recurse -Filter "*.msi" | Select-Object -First 1
       if (-not $msi) { Write-Error "MSI not found"; exit 1 }
-      Copy-Item $msi.FullName "build\$env:W_MSI_NAME"
+      Copy-Item $msi.FullName "..\build\$env:W_MSI_NAME"
       Write-Host "Built: $env:W_MSI_NAME ($([math]::Round($msi.Length / 1MB, 1)) MB)"
     - |
       # Upload MSI to server (if SSH key is available)
@@ -236,7 +237,7 @@ build-windows:
       if ($sshKey) {
         $SERVER = "michelk@3.69.205.209"
         $REMOTE_DIR = "/home/michelk/tstudio-releases"
-        scp -i $sshKey -o StrictHostKeyChecking=no "build\$env:W_MSI_NAME" "${SERVER}:${REMOTE_DIR}/$env:W_MSI_NAME"
+        scp -i $sshKey -o StrictHostKeyChecking=no "..\build\$env:W_MSI_NAME" "${SERVER}:${REMOTE_DIR}/$env:W_MSI_NAME"
         Write-Host "Uploaded: $env:W_MSI_NAME (key: $sshKey)"
         Write-Host "URL: https://n8n.prezent.nl/tstudio/download/$env:W_MSI_NAME"
       } else {

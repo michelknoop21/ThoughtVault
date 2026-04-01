@@ -163,13 +163,12 @@ build-macos:
     expire_in: 1 week
 
 # ─── Windows: build MSI ───────────────────────────────────────────────────────
-# Runs on Michel's Windows PC (shell executor, tag: windows)
+# Fully standalone — runs on Michel's Windows PC without needing the Mac runner.
+# Inlines version detection (same logic as prepare job) so it has no dependencies.
 build-windows:
   stage: build
   tags: [windows]
-  needs:
-    - job: prepare
-      artifacts: true
+  needs: []
   allow_failure: true
   before_script:
     - |
@@ -178,18 +177,62 @@ build-windows:
       if (Test-Path $cargobin) { $env:PATH = "$cargobin;$env:PATH" }
       rustc --version
       node --version
+    - |
+      # Determine version and channel (same logic as prepare job)
+      $tag = $env:CI_COMMIT_TAG
+      if ($tag -match '^v(\d.+)') {
+        $VERSION = $Matches[1]
+        $CHANNEL = "production"
+      } elseif ($tag -match '^dev-v(\d.+)') {
+        $VERSION = $Matches[1]
+        $CHANNEL = "dev"
+      } else {
+        $VERSION = (Get-Content VERSION -Raw).Trim()
+        $CHANNEL = if ($env:CHANNEL) { $env:CHANNEL } else { "dev" }
+      }
+      if ($CHANNEL -eq "production") {
+        $MSI_NAME = "TranscriptStudio_${VERSION}_x64.msi"
+        $BUNDLE_ID = "nl.prezent.transcript-studio"
+        $PRODUCT_NAME = "TranscriptStudio"
+      } else {
+        $MSI_NAME = "TranscriptStudio-Dev_${VERSION}_x64.msi"
+        $BUNDLE_ID = "nl.prezent.transcript-studio-dev"
+        $PRODUCT_NAME = "TranscriptStudio Dev"
+      }
+      # Export as env vars for subsequent script blocks
+      "VERSION=$VERSION" | Out-File -Append -FilePath $env:GITHUB_ENV -ErrorAction SilentlyContinue
+      $env:W_VERSION = $VERSION
+      $env:W_CHANNEL = $CHANNEL
+      $env:W_MSI_NAME = $MSI_NAME
+      $env:W_BUNDLE_ID = $BUNDLE_ID
+      $env:W_PRODUCT_NAME = $PRODUCT_NAME
+      Write-Host "Channel: $CHANNEL"
+      Write-Host "Version: $VERSION"
+      Write-Host "MSI: $MSI_NAME"
   script:
     - |
       cd windows
       npm install
-      $env:TAURI_CONFIG = '{"identifier":"' + $env:BUNDLE_ID_WINDOWS + '","productName":"' + $env:TAURI_PRODUCT_NAME + '"}'
+      $env:TAURI_CONFIG = '{"identifier":"' + $env:W_BUNDLE_ID + '","productName":"' + $env:W_PRODUCT_NAME + '"}'
       npx tauri build
     - |
       New-Item -ItemType Directory -Force -Path build | Out-Null
       $msi = Get-ChildItem -Path "windows\src-tauri\target\release\bundle" -Recurse -Filter "*.msi" | Select-Object -First 1
       if (-not $msi) { Write-Error "MSI not found"; exit 1 }
-      Copy-Item $msi.FullName "build\$env:MSI_X64_NAME"
-      Write-Host "Built: $env:MSI_X64_NAME"
+      Copy-Item $msi.FullName "build\$env:W_MSI_NAME"
+      Write-Host "Built: $env:W_MSI_NAME ($([math]::Round($msi.Length / 1MB, 1)) MB)"
+    - |
+      # Upload MSI to server (if SSH key is available)
+      $sshKey = "$env:USERPROFILE\.ssh\id_rsa"
+      if (Test-Path $sshKey) {
+        $SERVER = "michelk@3.69.205.209"
+        $REMOTE_DIR = "/home/michelk/tstudio-releases"
+        scp -o StrictHostKeyChecking=no "build\$env:W_MSI_NAME" "${SERVER}:${REMOTE_DIR}/$env:W_MSI_NAME"
+        Write-Host "Uploaded: $env:W_MSI_NAME"
+        Write-Host "URL: https://n8n.prezent.nl/tstudio/download/$env:W_MSI_NAME"
+      } else {
+        Write-Host "No SSH key found — skipping upload. MSI available as artifact."
+      }
   artifacts:
     paths:
       - build/*.msi

@@ -204,34 +204,43 @@ actor APIService {
 
     // MARK: - Response Handling
 
-    private func perform<T: Decodable>(_ req: URLRequest, retries: Int = 2) async throws -> T {
+    private func perform<T: Decodable>(_ req: URLRequest, retries: Int = 2, retriedAuth: Bool = false) async throws -> T {
         do {
             let (data, response) = try await session.data(for: req)
             return try handleResponse(data: data, response: response)
+        } catch APIError.sessionExpired where !retriedAuth {
+            // Retry 401 once after 2s (transient server issues) — never auto-logout
+            logger.warning("401 on \(req.url?.path ?? "?") — retrying in 2s")
+            try await Task.sleep(nanoseconds: 2_000_000_000)
+            return try await perform(req, retries: retries, retriedAuth: true)
         } catch let apiErr as APIError {
             throw apiErr
         } catch {
-            // Retry transient errors with exponential backoff
+            // Retry transient network errors with exponential backoff
             if retries > 0 {
                 let delay: UInt64 = retries == 2 ? 1_000_000_000 : 2_000_000_000
                 try await Task.sleep(nanoseconds: delay)
-                return try await perform(req, retries: retries - 1)
+                return try await perform(req, retries: retries - 1, retriedAuth: retriedAuth)
             }
             throw APIError.networkError(error)
         }
     }
 
-    private func performVoid(_ req: URLRequest, retries: Int = 2) async throws {
+    private func performVoid(_ req: URLRequest, retries: Int = 2, retriedAuth: Bool = false) async throws {
         do {
             let (data, response) = try await session.data(for: req)
             let _: EmptyResponse = try handleResponse(data: data, response: response)
+        } catch APIError.sessionExpired where !retriedAuth {
+            logger.warning("401 on \(req.url?.path ?? "?") — retrying in 2s")
+            try await Task.sleep(nanoseconds: 2_000_000_000)
+            return try await performVoid(req, retries: retries, retriedAuth: true)
         } catch let apiErr as APIError {
             throw apiErr
         } catch {
             if retries > 0 {
                 let delay: UInt64 = retries == 2 ? 1_000_000_000 : 2_000_000_000
                 try await Task.sleep(nanoseconds: delay)
-                return try await performVoid(req, retries: retries - 1)
+                return try await performVoid(req, retries: retries - 1, retriedAuth: retriedAuth)
             }
             throw APIError.networkError(error)
         }

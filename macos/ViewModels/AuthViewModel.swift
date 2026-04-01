@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import OSLog
 import SwiftUI
@@ -46,6 +47,7 @@ final class AuthViewModel {
     init() {
         checkAuthState()
         startAuthInvalidationObserver()
+        startWakeObserver()
     }
 
     deinit {
@@ -320,6 +322,26 @@ final class AuthViewModel {
 
                 // Log the event but never logout — token stays in Keychain
                 logger.warning("Auth invalidation received — ignoring, user stays authenticated. Token will be retried automatically.")
+            }
+        }
+    }
+
+    // MARK: - Wake Observer
+
+    /// Re-validates the auth token after system wake from sleep.
+    /// If the token is no longer valid, the 401 retry in APIService will handle
+    /// transient issues. We never auto-logout here.
+    private func startWakeObserver() {
+        Task { [weak self] in
+            for await _ in NSWorkspace.shared.notificationCenter.notifications(named: NSWorkspace.didWakeNotification) {
+                guard let self, isAuthenticated else { continue }
+                logger.info("System wake — validating auth token")
+                do {
+                    _ = try await APIService.shared.getProfiles()
+                    logger.info("Token still valid after wake.")
+                } catch {
+                    logger.warning("Token validation failed after wake: \(error.localizedDescription) — user stays authenticated.")
+                }
             }
         }
     }

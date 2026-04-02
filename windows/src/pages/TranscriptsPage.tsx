@@ -163,6 +163,12 @@ export function TranscriptsPage() {
   }
 
   // --- Generate title from notule content ---
+  const SECTION_WORDS = new Set([
+    "besluiten", "kernargumenten", "notulen", "samenvatting",
+    "actiepunten", "agendapunten", "conclusie", "inleiding",
+    "toelichting", "bijlagen", "vervolgstappen",
+  ]);
+
   async function handleGenerateTitle(transcript: Transcript) {
     if (!transcript.notule_html) return;
     const tmp = document.createElement("div");
@@ -171,19 +177,25 @@ export function TranscriptsPage() {
     // Collect candidate titles in priority order
     const candidates: string[] = [];
 
-    // 1. All headings (h1, h2, h3)
-    tmp.querySelectorAll("h1, h2, h3").forEach((el) => {
+    // 1. h4 subtitles (handleiding-profiel puts real title here)
+    tmp.querySelectorAll("h4").forEach((el) => {
       const text = el.textContent?.trim();
-      if (text && text.length > 3) candidates.push(text);
+      if (text && text.length > 5 && text.length < 120) candidates.push(text);
     });
 
-    // 2. First bold/strong text (often a meeting title)
+    // 2. h1 headings only (h2/h3 are section headings)
+    tmp.querySelectorAll("h1").forEach((el) => {
+      const text = el.textContent?.trim();
+      if (text && text.length > 3 && text.length < 120) candidates.push(text);
+    });
+
+    // 3. First bold/strong text (often a meeting title)
     tmp.querySelectorAll("strong, b").forEach((el) => {
       const text = el.textContent?.trim();
       if (text && text.length > 5 && text.length < 120) candidates.push(text);
     });
 
-    // 3. First non-trivial paragraph
+    // 4. First non-trivial paragraph
     tmp.querySelectorAll("p").forEach((el) => {
       const text = el.textContent?.trim();
       if (text && text.length > 10 && text.length < 120) {
@@ -191,10 +203,10 @@ export function TranscriptsPage() {
       }
     });
 
-    // Pick the first candidate that differs from the current title
+    // Pick the first candidate that differs from current title and isn't a section word
     const currentLower = (transcript.title || "").toLowerCase();
     const newTitle = candidates.find(
-      (c) => c.toLowerCase() !== currentLower && c.toLowerCase() !== "notulen" && c.toLowerCase() !== "samenvatting"
+      (c) => c.toLowerCase() !== currentLower && !SECTION_WORDS.has(c.toLowerCase())
     );
 
     if (newTitle) {

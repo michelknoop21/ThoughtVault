@@ -474,6 +474,25 @@ struct RecordingView: View {
                 }
                 .padding(.horizontal, TS.Spacing.xs)
             }
+
+            Toggle(isOn: Bindable(recordingVM).usePremium) {
+                HStack(spacing: TS.Spacing.xs) {
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(Color.brandPrimary)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("Premium model")
+                            .font(TS.Font.footnoteSemibold)
+                            .foregroundStyle(Color.labelPrimary)
+                        Text("Betere kwaliteit, langzamer")
+                            .font(TS.Font.micro)
+                            .foregroundStyle(Color.labelTertiary)
+                    }
+                }
+            }
+            .tint(Color.brandPrimary)
+            .toggleStyle(.switch)
+            .controlSize(.mini)
         }
     }
 

@@ -392,6 +392,7 @@ actor APIService {
     func uploadAudio(
         fileURL: URL,
         profileId: String,
+        usePremium: Bool = false,
         onProgress: @escaping @Sendable (Double) -> Void
     ) async throws -> TranscriptTask {
         // Enforce 250 MB limit (aligned with backend MAX_UPLOAD_SIZE)
@@ -458,6 +459,11 @@ actor APIService {
         writeString("Content-Disposition: form-data; name=\"profile_id\"\r\n\r\n")
         writeString("\(profileId)\r\n")
 
+        // Premium model field
+        writeString("--\(boundary)\r\n")
+        writeString("Content-Disposition: form-data; name=\"use_premium\"\r\n\r\n")
+        writeString("\(usePremium)\r\n")
+
         writeString("--\(boundary)--\r\n")
         outputStream.close()
 
@@ -486,9 +492,9 @@ actor APIService {
 
     // MARK: - Text Transcription Upload
 
-    func uploadTranscriptionText(transcription: String, profileId: String) async throws -> TranscriptTask {
-        let payload: [String: String] = ["transcription": transcription, "profile_id": profileId]
-        let body = try JSONEncoder().encode(payload)
+    func uploadTranscriptionText(transcription: String, profileId: String, usePremium: Bool = false) async throws -> TranscriptTask {
+        let payload: [String: Any] = ["transcription": transcription, "profile_id": profileId, "use_premium": usePremium]
+        let body = try JSONSerialization.data(withJSONObject: payload)
         let req = try request(path: "/transcribe-text", method: "POST", body: body)
         return try await perform(req)
     }
@@ -635,9 +641,13 @@ actor APIService {
 
     // MARK: - Notule Regeneration
 
-    func regenerateNotule(taskId: String, profileId: String) async throws -> TranscriptTask {
-        let payload: [String: String] = ["transcript_id": taskId, "profile_id": profileId]
-        let body = try JSONEncoder().encode(payload)
+    func regenerateNotule(taskId: String, profileId: String, usePremium: Bool = false) async throws -> TranscriptTask {
+        let payload: [String: Any] = [
+            "transcript_id": taskId,
+            "profile_id": profileId,
+            "use_premium": usePremium
+        ]
+        let body = try JSONSerialization.data(withJSONObject: payload)
         let req = try request(path: "/transcripts/\(taskId)/regenerate", method: "POST", body: body)
         return try await perform(req)
     }

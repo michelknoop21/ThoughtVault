@@ -20,6 +20,7 @@ final class RecordingViewModel {
     var recordingState: RecordingState = .idle
     var selectedMode: RecordingMode = .microphone
     var selectedProfile: Profile?
+    var usePremium: Bool = false
     var availableProfiles: [Profile] = []
     var activeTasks: [TranscriptTask] = []
     var uploadProgress: Double = 0
@@ -500,7 +501,8 @@ final class RecordingViewModel {
 
                 let task = try await APIService.shared.uploadAudio(
                     fileURL: url,
-                    profileId: profileId
+                    profileId: profileId,
+                    usePremium: usePremium
                 ) { [weak self] progress in
                     Task { @MainActor in
                         self?.updateTask(tempId, status: .uploading, progress: progress)

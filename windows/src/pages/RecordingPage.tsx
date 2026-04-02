@@ -60,6 +60,8 @@ export function RecordingPage() {
   const updateBackgroundTask = useRecordingStore((s) => s.updateBackgroundTask);
   const removeBackgroundTask = useRecordingStore((s) => s.removeBackgroundTask);
   const setSelectedProfileId = useRecordingStore((s) => s.setSelectedProfileId);
+  const usePremium = useRecordingStore((s) => s.usePremium);
+  const setUsePremium = useRecordingStore((s) => s.setUsePremium);
 
   const settings = useSettingsStore();
   const { addTranscript } = useTranscriptsStore();
@@ -262,6 +264,8 @@ export function RecordingPage() {
             onSetMode={setMode}
             onSetProfile={setSelectedProfileId}
             onStart={handleStartRecording}
+            usePremium={usePremium}
+            onSetPremium={setUsePremium}
             isYouTubeEnabled={isYouTubeEnabled}
             youtubeURL={youtubeURL}
             isSubmittingYouTube={isSubmittingYouTube}
@@ -376,6 +380,7 @@ function MeetingDetectionBanner({ onRecord }: { onRecord: () => void }) {
 
 function IdleState({
   mode, profileId, profiles, onSetMode, onSetProfile, onStart,
+  usePremium, onSetPremium,
   isYouTubeEnabled, youtubeURL, isSubmittingYouTube, youtubeError,
   onYouTubeURLChange, onSubmitYouTube, youtubeProfileId, onYouTubeProfileChange,
 }: {
@@ -385,6 +390,8 @@ function IdleState({
   onSetMode: (m: "microphone" | "combined") => void;
   onSetProfile: (id: string) => void;
   onStart: () => void;
+  usePremium: boolean;
+  onSetPremium: (value: boolean) => void;
   isYouTubeEnabled: boolean;
   youtubeURL: string;
   isSubmittingYouTube: boolean;
@@ -409,25 +416,31 @@ function IdleState({
         </p>
       </div>
 
-      {/* Mode selector — pill capsules matching macOS */}
+      {/* Mode selector — card style matching macOS */}
       <div style={{ width: "100%" }}>
         <p className="section-label">
           Opnamemodus
         </p>
-        <div className="flex-row gap-8">
-          {(["combined", "microphone"] as const).map((m) => {
+        <div className="mode-selector-grid">
+          {(["microphone", "combined"] as const).map((m) => {
             const isActive = mode === m;
+            const isCombined = m === "combined";
             return (
               <button
                 key={m}
                 onClick={() => onSetMode(m)}
-                className={`mode-selector-btn ${isActive ? "active" : ""}`}
+                className={`mode-selector-card ${isActive ? "active" : ""}`}
               >
-                {m === "combined"
-                  ? <VideoChat24Regular style={{ fontSize: 16 }} />
-                  : <MicRecord24Regular style={{ fontSize: 16 }} />
-                }
-                <span>{m === "combined" ? "Videocall" : "Fysieke meeting"}</span>
+                <div className={`mode-selector-icon ${isCombined ? "accent" : "secondary"} ${isActive ? "active" : ""}`}>
+                  {isCombined
+                    ? <VideoChat24Regular style={{ fontSize: 20 }} />
+                    : <MicRecord24Regular style={{ fontSize: 20 }} />
+                  }
+                </div>
+                <div className="mode-selector-text">
+                  <span className="mode-selector-title">{isCombined ? "Videocall" : "Fysieke meeting"}</span>
+                  <span className="mode-selector-subtitle">{isCombined ? "Microfoon + systeemgeluid" : "Alleen microfoon"}</span>
+                </div>
               </button>
             );
           })}
@@ -451,6 +464,21 @@ function IdleState({
             </button>
           ))}
         </div>
+      </div>
+
+      {/* Premium model toggle */}
+      <div style={{ width: "100%" }}>
+        <label className="premium-toggle">
+          <input
+            type="checkbox"
+            checked={usePremium}
+            onChange={(e) => onSetPremium(e.target.checked)}
+          />
+          <div className="premium-toggle-content">
+            <span className="premium-toggle-label">Premium model</span>
+            <span className="premium-toggle-desc">Betere kwaliteit, langzamer</span>
+          </div>
+        </label>
       </div>
 
       {/* Mic button with concentric rings — matches macOS */}

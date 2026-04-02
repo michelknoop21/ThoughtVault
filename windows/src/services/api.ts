@@ -331,11 +331,11 @@ class APIService {
     return mapTranscript(data);
   }
 
-  async regenerateNotule(id: string, profileId: string): Promise<{ task_id: string }> {
+  async regenerateNotule(id: string, profileId: string, usePremium: boolean = false): Promise<{ task_id: string }> {
     return this.request<{ task_id: string }>(
       "POST",
       `/transcripts/${id}/regenerate`,
-      { profile_id: profileId }
+      { profile_id: profileId, use_premium: usePremium }
     );
   }
 
@@ -436,7 +436,8 @@ class APIService {
     profileId: string,
     mode: string,
     onProgress: (fraction: number) => void,
-    signal?: AbortSignal
+    signal?: AbortSignal,
+    usePremium: boolean = false,
   ): Promise<{ task_id: string }> {
     // Use Rust proxy for reliable upload (no browser CORS/network issues)
     console.log(`[API] Upload with progress ${filePath} via Rust proxy`);
@@ -464,6 +465,7 @@ class APIService {
           token: this.token || "",
           profileId,
           mode,
+          usePremium,
         }
       );
 

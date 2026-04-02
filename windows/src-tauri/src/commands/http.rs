@@ -72,8 +72,9 @@ pub async fn proxy_upload(
     token: String,
     profile_id: String,
     mode: String,
+    use_premium: Option<bool>,
 ) -> Result<HttpResponse, String> {
-    do_proxy_upload(file_path, upload_url, token, profile_id, mode).await
+    do_proxy_upload(file_path, upload_url, token, profile_id, mode, use_premium.unwrap_or(false)).await
 }
 
 /// Core upload logic, separated from the Tauri command wrapper for testability.
@@ -83,6 +84,7 @@ pub async fn do_proxy_upload(
     token: String,
     profile_id: String,
     mode: String,
+    use_premium: bool,
 ) -> Result<HttpResponse, String> {
     let path = std::path::Path::new(&file_path);
     if !path.exists() {
@@ -135,7 +137,8 @@ pub async fn do_proxy_upload(
     let form = reqwest::multipart::Form::new()
         .part("file", file_part)
         .text("profile_id", profile_id)
-        .text("mode", mode);
+        .text("mode", mode)
+        .text("use_premium", use_premium.to_string());
 
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(300))
@@ -348,6 +351,7 @@ mod tests {
             "test-token".to_string(),
             "profile-1".to_string(),
             "combined".to_string(),
+            false,
         ).await;
 
         assert!(result.is_err());
@@ -367,6 +371,7 @@ mod tests {
             "test-token".to_string(),
             "profile-1".to_string(),
             "combined".to_string(),
+            false,
         ).await;
 
         assert!(result.is_err());
@@ -388,6 +393,7 @@ mod tests {
             "my-auth-token".to_string(),
             "profile-abc".to_string(),
             "combined".to_string(),
+            false,
         ).await;
 
         assert!(result.is_ok(), "Upload should succeed, got: {:?}", result.err());
@@ -425,6 +431,7 @@ mod tests {
             "token".to_string(),
             "profile".to_string(),
             "microphone".to_string(),
+            false,
         ).await;
 
         // Should return Ok with error status (not Err) — the HTTP response was received
@@ -447,6 +454,7 @@ mod tests {
             "token".to_string(),
             "profile".to_string(),
             "combined".to_string(),
+            false,
         ).await;
 
         assert!(result.is_err());
@@ -469,6 +477,7 @@ mod tests {
             "token".to_string(),
             "p1".to_string(),
             "microphone".to_string(),
+            false,
         ).await;
 
         assert!(result.is_ok());

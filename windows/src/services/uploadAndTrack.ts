@@ -16,6 +16,7 @@ export async function uploadAndTrack(
   filePath: string,
   profileId: string,
   mode: RecordingMode,
+  usePremium: boolean = false,
 ): Promise<void> {
   const store = useRecordingStore.getState();
   const { addBackgroundTask, updateBackgroundTask, removeBackgroundTask } = store;
@@ -39,6 +40,7 @@ export async function uploadAndTrack(
       filePath, profileId, mode,
       (fraction) => updateBackgroundTask(tempId, { progress: Math.round(fraction * 100) }),
       abortController.signal,
+      usePremium,
     );
 
     unregisterAbortController(tempId);

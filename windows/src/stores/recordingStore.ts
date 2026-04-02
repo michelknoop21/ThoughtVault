@@ -40,6 +40,7 @@ interface RecordingState {
 
   // Profile selection — persisted in store so global recording handler can access it
   selectedProfileId: string;
+  usePremium: boolean;
 
   // YouTube transcription
   isYouTubeEnabled: boolean;
@@ -64,6 +65,7 @@ interface RecordingState {
   removeBackgroundTask: (taskId: string) => void;
   cancelBackgroundTask: (taskId: string) => void;
   setSelectedProfileId: (id: string) => void;
+  setUsePremium: (value: boolean) => void;
   setYouTubeEnabled: (enabled: boolean) => void;
   setYouTubeURL: (url: string) => void;
   setSubmittingYouTube: (submitting: boolean) => void;
@@ -85,6 +87,7 @@ export const useRecordingStore = create<RecordingState>()((set) => ({
   pausedAt: null,
   pausedDuration: 0,
   selectedProfileId: "",
+  usePremium: false,
   backgroundTasks: [],
   isYouTubeEnabled: false,
   youtubeURL: "",
@@ -132,6 +135,7 @@ export const useRecordingStore = create<RecordingState>()((set) => ({
     }));
   },
   setSelectedProfileId: (id) => set({ selectedProfileId: id }),
+  setUsePremium: (value) => set({ usePremium: value }),
   setYouTubeEnabled: (enabled) => set({ isYouTubeEnabled: enabled }),
   setYouTubeURL: (url) => set({ youtubeURL: url }),
   setSubmittingYouTube: (submitting) => set({ isSubmittingYouTube: submitting }),

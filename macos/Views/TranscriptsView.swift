@@ -943,6 +943,9 @@ struct TranscriptDetailView: View {
     // MARK: State — errors
 
     @State private var errorMessage: String? = nil
+    #if os(macOS)
+    @State private var printWebView: WKWebView?
+    #endif
 
     // MARK: Init
 
@@ -1003,10 +1006,10 @@ struct TranscriptDetailView: View {
             Button("Annuleren", role: .cancel) {}
         }
         .sheet(isPresented: $showProfileSheet) {
-            ProfileSelectionSheet(mode: profileSheetMode) { profile in
+            ProfileSelectionSheet(mode: profileSheetMode) { profile, usePremium in
                 showProfileSheet = false
                 if profileSheetMode == .regenerate {
-                    Task { await startRegenerate(profileId: profile.id) }
+                    Task { await startRegenerate(profileId: profile.id, usePremium: usePremium) }
                 } else {
                     Task { await startRetranscribe(profileId: profile.id) }
                 }
@@ -1261,7 +1264,13 @@ struct TranscriptDetailView: View {
                 }
             }
 
-            // Edit title
+            // Generate title from notule content
+            detailIconButton(icon: "sparkles", label: "Titel") {
+                Task { await generateTitle() }
+            }
+            .disabled((fullTranscript.notuleHtml ?? "").isEmpty)
+
+            // Edit title manually
             detailIconButton(icon: "character.cursor.ibeam", label: "Titel bewerken") {
                 pendingTitle = fullTranscript.title
                 showTitleEditAlert = true
@@ -1558,6 +1567,66 @@ struct TranscriptDetailView: View {
         }
     }
 
+    private static let sectionWords: Set<String> = [
+        "besluiten", "kernargumenten", "notulen", "samenvatting",
+        "actiepunten", "agendapunten", "conclusie", "inleiding",
+        "toelichting", "bijlagen", "vervolgstappen"
+    ]
+
+    private func generateTitle() async {
+        guard let html = fullTranscript.notuleHtml, !html.isEmpty else { return }
+
+        // Extract text from HTML tags using regex
+        func extractTexts(tag: String) -> [String] {
+            let pattern = "<\(tag)[^>]*>(.*?)</\(tag)>"
+            guard let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive, .dotMatchesLineSeparators]) else { return [] }
+            let range = NSRange(html.startIndex..., in: html)
+            return regex.matches(in: html, range: range).compactMap { match in
+                guard let textRange = Range(match.range(at: 1), in: html) else { return nil }
+                // Strip nested tags
+                let raw = String(html[textRange])
+                let stripped = raw.replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                return stripped.isEmpty ? nil : stripped
+            }
+        }
+
+        var candidates: [String] = []
+
+        // 1. h4 subtitles (handleiding-profiel puts real title here)
+        candidates.append(contentsOf: extractTexts(tag: "h4").filter { $0.count > 5 && $0.count < 120 })
+
+        // 2. h1 headings (skip h2/h3 — those are section headings)
+        candidates.append(contentsOf: extractTexts(tag: "h1").filter { $0.count > 3 && $0.count < 120 })
+
+        // 3. First bold/strong text
+        candidates.append(contentsOf: extractTexts(tag: "strong").filter { $0.count > 5 && $0.count < 120 })
+        candidates.append(contentsOf: extractTexts(tag: "b").filter { $0.count > 5 && $0.count < 120 })
+
+        // 4. First non-trivial paragraph
+        for text in extractTexts(tag: "p") where text.count > 10 && text.count < 120 {
+            candidates.append(text.count > 80 ? String(text.prefix(77)) + "..." : text)
+        }
+
+        // Filter section words and find first candidate different from current title
+        let currentLower = fullTranscript.title.lowercased()
+        let newTitle = candidates.first { candidate in
+            let lower = candidate.lowercased()
+            return lower != currentLower && !Self.sectionWords.contains(lower)
+        }
+
+        if let newTitle {
+            let original = fullTranscript.title
+            fullTranscript.title = newTitle
+            do {
+                try await APIService.shared.updateTranscriptTitle(taskId: fullTranscript.taskId, title: newTitle)
+            } catch {
+                fullTranscript.title = original
+                errorMessage = error.localizedDescription
+            }
+        }
+    }
+
     private func removeTag(_ tag: String) async {
         let original = fullTranscript.tags
         fullTranscript.tags.removeAll { $0 == tag }
@@ -1607,13 +1676,16 @@ struct TranscriptDetailView: View {
         editedHTML = ""
     }
 
-    private func startRegenerate(profileId: String) async {
+    private func startRegenerate(profileId: String, usePremium: Bool = false) async {
         isRegenerating = true
-        regeneratingMessage = "Notule wordt geregenereerd..."
+        regeneratingMessage = usePremium
+            ? "Notule wordt geregenereerd met premium model..."
+            : "Notule wordt geregenereerd..."
         do {
             let task = try await APIService.shared.regenerateNotule(
                 taskId: fullTranscript.taskId,
-                profileId: profileId
+                profileId: profileId,
+                usePremium: usePremium
             )
             // Poll every 4 seconds, max 60 iterations (4 minutes)
             for iteration in 0..<60 {
@@ -1711,6 +1783,7 @@ struct TranscriptDetailView: View {
         printInfo.rightMargin = 54
 
         let webView = WKWebView(frame: NSRect(x: 0, y: 0, width: 595, height: 842))
+        printWebView = webView
         webView.loadHTMLString(styledHTML, baseURL: nil)
 
         Task { @MainActor in
@@ -1719,6 +1792,7 @@ struct TranscriptDetailView: View {
             op.showsPrintPanel = true
             op.showsProgressPanel = true
             op.run()
+            printWebView = nil
         }
         #else
         let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("\(fullTranscript.title).html")
@@ -1856,7 +1930,9 @@ private struct ProfileSelectionSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     let mode: TranscriptDetailView.ProfileSheetMode
-    let onSelect: (Profile) -> Void
+    let onSelect: (Profile, Bool) -> Void
+
+    @State private var usePremium = false
 
     var body: some View {
         NavigationStack {
@@ -1864,7 +1940,7 @@ private struct ProfileSelectionSheet: View {
                 Section {
                     ForEach(recordingVM.availableProfiles) { profile in
                         Button {
-                            onSelect(profile)
+                            onSelect(profile, usePremium)
                         } label: {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(profile.name)
@@ -1882,6 +1958,20 @@ private struct ProfileSelectionSheet: View {
                     }
                 } header: {
                     Text("Kies een profiel")
+                }
+
+                Section {
+                    Toggle(isOn: $usePremium) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Premium model")
+                                .font(TS.Font.bodyMedium)
+                                .foregroundStyle(Color.labelPrimary)
+                            Text("Claude — betere kwaliteit, langzamer")
+                                .font(TS.Font.caption)
+                                .foregroundStyle(Color.labelSecondary)
+                        }
+                    }
+                    .tint(Color.brandPrimary)
                 }
             }
             .navigationTitle(

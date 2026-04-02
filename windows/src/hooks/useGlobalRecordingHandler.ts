@@ -57,9 +57,9 @@ async function handleUpload(
 
   try {
     const store = useRecordingStore.getState();
-    const { mode, selectedProfileId } = store;
+    const { mode, selectedProfileId, usePremium } = store;
     store.reset();
-    await uploadAndTrack(filePath, selectedProfileId, mode);
+    await uploadAndTrack(filePath, selectedProfileId, mode, usePremium);
   } finally {
     isUploadingRef.current = false;
   }

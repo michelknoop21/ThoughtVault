@@ -270,6 +270,7 @@ struct TranscriptTask: Identifiable, Codable, Sendable {
     var tags: [String]
     var profileId: String?
     var createdAt: Date?
+    var username: String?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -284,6 +285,7 @@ struct TranscriptTask: Identifiable, Codable, Sendable {
         case tags
         case profileId = "profile_id"
         case createdAt = "created_at"
+        case username
     }
 
     init(
@@ -298,7 +300,8 @@ struct TranscriptTask: Identifiable, Codable, Sendable {
         progress: Double = 0.0,
         tags: [String] = [],
         profileId: String? = nil,
-        createdAt: Date? = nil
+        createdAt: Date? = nil,
+        username: String? = nil
     ) {
         self.id = id
         self.taskId = taskId
@@ -312,6 +315,7 @@ struct TranscriptTask: Identifiable, Codable, Sendable {
         self.tags = tags
         self.profileId = profileId
         self.createdAt = createdAt
+        self.username = username
     }
 
     init(from decoder: Decoder) throws {
@@ -338,6 +342,7 @@ struct TranscriptTask: Identifiable, Codable, Sendable {
         self.tags = try container.decodeIfPresent([String].self, forKey: .tags) ?? []
         self.profileId = try container.decodeIfPresent(String.self, forKey: .profileId)
         self.createdAt = Self.decodeDateLossy(from: container, key: .createdAt)
+        self.username = try container.decodeIfPresent(String.self, forKey: .username)
     }
 
     private static func decodeDateLossy(from container: KeyedDecodingContainer<CodingKeys>, key: CodingKeys) -> Date? {

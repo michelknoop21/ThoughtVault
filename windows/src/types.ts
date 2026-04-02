@@ -53,6 +53,7 @@ export interface TranscriptTask {
   created_at: string;
   updated_at?: string;
   queue_position?: number;
+  username?: string;
 }
 
 // Completed saved transcript

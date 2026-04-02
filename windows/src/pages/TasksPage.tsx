@@ -7,6 +7,7 @@ import {
   CheckmarkCircle24Regular,
   ErrorCircle24Regular,
   ArrowClockwise24Regular,
+  Person24Regular,
 } from "@fluentui/react-icons";
 import { useTasksStore } from "../stores/tasksStore";
 import { TaskStatusLabels } from "../types";
@@ -206,6 +207,12 @@ function TaskCard({
             <Clock24Regular style={{ fontSize: 12 }} />
             {timeAgo(task.created_at)}
           </span>
+          {task.username && (
+            <span className="flex-row gap-4" style={{ font: "var(--type-caption)", color: "var(--fill-accent-default)" }}>
+              <Person24Regular style={{ fontSize: 12 }} />
+              {task.username}
+            </span>
+          )}
           {task.queue_position != null && task.queue_position > 0 && (
             <span style={{ font: "var(--type-caption)", color: "var(--text-secondary)" }}>
               Positie {task.queue_position} in wachtrij

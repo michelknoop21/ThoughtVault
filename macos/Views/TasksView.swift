@@ -193,10 +193,24 @@ private struct TaskRow: View {
                         .foregroundStyle(Color.labelPrimary)
                         .lineLimit(1)
 
-                    if let createdAt = task.createdAt {
-                        Text(relativeTimeString(from: createdAt))
-                            .font(TS.Font.caption)
-                            .foregroundStyle(Color.labelTertiary)
+                    HStack(spacing: TS.Spacing.xs) {
+                        if let createdAt = task.createdAt {
+                            Text(relativeTimeString(from: createdAt))
+                                .font(TS.Font.caption)
+                                .foregroundStyle(Color.labelTertiary)
+                        }
+                        if let username = task.username, !username.isEmpty {
+                            Text("·")
+                                .font(TS.Font.caption)
+                                .foregroundStyle(Color.labelTertiary)
+                            Image(systemName: "person.fill")
+                                .font(.system(size: 9))
+                                .foregroundStyle(Color.brandSecondary)
+                            Text(username)
+                                .font(TS.Font.caption)
+                                .foregroundStyle(Color.brandSecondary)
+                                .lineLimit(1)
+                        }
                     }
                 }
             }

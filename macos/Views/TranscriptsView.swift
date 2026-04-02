@@ -989,11 +989,15 @@ struct TranscriptDetailView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
-                contentArea
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                VStack(spacing: 0) {
+                    documentHeader
+                    Divider()
+                    contentArea
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
             }
         }
-        .navigationTitle(fullTranscript.title)
+        .navigationTitle("Notulen")
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
@@ -1382,6 +1386,85 @@ struct TranscriptDetailView: View {
     }
 
     // MARK: - Content area
+
+    // MARK: - Document Header
+
+    private var documentHeader: some View {
+        VStack(alignment: .leading, spacing: TS.Spacing.xs) {
+            // Accent line
+            RoundedRectangle(cornerRadius: 2)
+                .fill(
+                    LinearGradient(
+                        colors: [Color.brandPrimary, Color.brandPrimary.opacity(0.4)],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+                .frame(height: 3)
+                .padding(.bottom, TS.Spacing.xs)
+
+            // Editable title
+            Text(fullTranscript.title.isEmpty ? "Naamloze opname" : fullTranscript.title)
+                .font(.system(size: 20, weight: .bold))
+                .foregroundStyle(Color.labelPrimary)
+                .lineLimit(3)
+                .onTapGesture {
+                    pendingTitle = fullTranscript.title
+                    showTitleEditAlert = true
+                }
+
+            // Metadata row
+            HStack(spacing: TS.Spacing.xs) {
+                Text(fullTranscript.date, style: .date)
+                    .font(TS.Font.caption)
+                    .foregroundStyle(Color.labelTertiary)
+
+                if let duration = fullTranscript.duration, duration > 0 {
+                    Text("·")
+                        .foregroundStyle(Color.labelTertiary)
+                    Text(formatDuration(duration))
+                        .font(TS.Font.caption)
+                        .foregroundStyle(Color.labelTertiary)
+                }
+
+                if let profileName = fullTranscript.profileName, !profileName.isEmpty {
+                    Text("·")
+                        .foregroundStyle(Color.labelTertiary)
+                    Text(profileName)
+                        .font(TS.Font.caption)
+                        .foregroundStyle(Color.brandPrimary)
+                }
+            }
+
+            // Tags
+            if !fullTranscript.tags.isEmpty {
+                HStack(spacing: TS.Spacing.xs) {
+                    ForEach(fullTranscript.tags, id: \.self) { tag in
+                        Text(tag)
+                            .font(TS.Font.micro)
+                            .foregroundStyle(Color.brandPrimary)
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 2)
+                            .background(Color.accentBgPrimary)
+                            .clipShape(Capsule())
+                    }
+                }
+                .padding(.top, 2)
+            }
+        }
+        .padding(.horizontal, TS.Spacing.lg)
+        .padding(.vertical, TS.Spacing.md)
+        .background(Color.surfacePrimary)
+    }
+
+    private func formatDuration(_ seconds: Double) -> String {
+        let mins = Int(seconds) / 60
+        let secs = Int(seconds) % 60
+        if mins > 0 {
+            return "\(mins) min \(secs) sec"
+        }
+        return "\(secs) sec"
+    }
 
     @ViewBuilder
     private var contentArea: some View {

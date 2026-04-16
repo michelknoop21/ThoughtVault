@@ -914,6 +914,7 @@ struct TranscriptDetailView: View {
     // MARK: State — title editing
 
     @State private var showTitleEditAlert = false
+    @State private var isEditingTitle = false
     @State private var pendingTitle = ""
 
     // MARK: State — tags
@@ -967,14 +968,11 @@ struct TranscriptDetailView: View {
                 .padding(.horizontal, TS.Spacing.md)
                 .padding(.top, TS.Spacing.sm)
 
-            // Header: tags + action bar + tab bar
-            VStack(spacing: TS.Spacing.sm) {
-                headerBar
-                tabBar
-            }
-            .padding(.top, TS.Spacing.sm)
-            .background(Color.surfacePrimary)
-            .overlay(alignment: .bottom) { Divider() }
+            // Compact toolbar: tabs left, actions right
+            headerBar
+                .padding(.top, TS.Spacing.sm)
+                .background(Color.surfacePrimary)
+                .overlay(alignment: .bottom) { Divider() }
 
             // Content fills remaining space
             if isLoadingDetail {
@@ -1050,12 +1048,12 @@ struct TranscriptDetailView: View {
         }
     }
 
-    // MARK: - Header bar (tags on left, actions on right)
+    // MARK: - Header bar (tabs left, actions right — compact toolbar like Windows)
 
     private var headerBar: some View {
         HStack(alignment: .center, spacing: TS.Spacing.sm) {
-            // Tags on the left
-            tagsSection
+            // Tab toggle (left side)
+            compactTabToggle
 
             Spacer(minLength: TS.Spacing.sm)
 
@@ -1063,6 +1061,46 @@ struct TranscriptDetailView: View {
             actionButtons
         }
         .padding(.horizontal, TS.Spacing.md)
+        .padding(.bottom, TS.Spacing.xs)
+    }
+
+    @ViewBuilder
+    private var compactTabToggle: some View {
+        let hasNotule = !(fullTranscript.notuleHtml ?? "").isEmpty
+        let hasRaw = !(fullTranscript.rawTranscription ?? "").isEmpty
+
+        if hasNotule && hasRaw {
+            HStack(spacing: 0) {
+                compactTabButton(.notule, label: "Notule")
+                compactTabButton(.raw, label: "Transcriptie")
+            }
+            .background(Color.surfaceSecondary)
+            .clipShape(RoundedRectangle(cornerRadius: TS.Radius.xs))
+            .overlay {
+                RoundedRectangle(cornerRadius: TS.Radius.xs)
+                    .stroke(Color.borderPrimary, lineWidth: 1)
+            }
+        }
+    }
+
+    private func compactTabButton(_ tab: DetailTab, label: String) -> some View {
+        let isActive = selectedTab == tab
+        return Button {
+            withAnimation(TS.Animation.quick) { selectedTab = tab }
+        } label: {
+            Text(label)
+                .font(TS.Font.captionSemibold)
+                .foregroundStyle(isActive ? .white : Color.labelSecondary)
+                .padding(.horizontal, TS.Spacing.md)
+                .padding(.vertical, TS.Spacing.xs + 2)
+                .background {
+                    if isActive {
+                        RoundedRectangle(cornerRadius: TS.Radius.xs - 1)
+                            .fill(Color.brandPrimary)
+                    }
+                }
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Progress banners
@@ -1274,12 +1312,6 @@ struct TranscriptDetailView: View {
             }
             .disabled((fullTranscript.notuleHtml ?? "").isEmpty)
 
-            // Edit title manually
-            detailIconButton(icon: "character.cursor.ibeam", label: "Titel bewerken") {
-                pendingTitle = fullTranscript.title
-                showTitleEditAlert = true
-            }
-
             // Export menu
             Menu {
                 Button { shareContent() } label: {
@@ -1329,62 +1361,6 @@ struct TranscriptDetailView: View {
         .accessibilityLabel(label)
     }
 
-    // MARK: - Tab bar
-
-    @Namespace private var detailTabNamespace
-
-    private var tabBar: some View {
-        let hasNotule = !(fullTranscript.notuleHtml ?? "").isEmpty
-        let hasRaw = !(fullTranscript.rawTranscription ?? "").isEmpty
-
-        return Group {
-            if hasNotule || hasRaw {
-                HStack(spacing: 0) {
-                    if hasNotule {
-                        tabBarButton(.notule, icon: "doc.text.fill", label: "Notulen")
-                    }
-                    if hasRaw {
-                        tabBarButton(.raw, icon: "waveform", label: "Transcriptie")
-                    }
-                    Spacer()
-                }
-                .padding(.horizontal, TS.Spacing.md)
-            }
-        }
-    }
-
-    private func tabBarButton(_ tab: DetailTab, icon: String, label: String) -> some View {
-        let isActive = selectedTab == tab
-        return Button {
-            withAnimation(TS.Animation.quick) {
-                selectedTab = tab
-            }
-        } label: {
-            VStack(spacing: 0) {
-                HStack(spacing: TS.Spacing.xs) {
-                    Image(systemName: icon)
-                        .font(.system(size: 12, weight: .medium))
-                    Text(label)
-                        .font(TS.Font.footnoteSemibold)
-                }
-                .foregroundStyle(isActive ? Color.brandPrimary : Color.labelTertiary)
-                .padding(.horizontal, TS.Spacing.md)
-                .padding(.vertical, TS.Spacing.sm)
-
-                ZStack(alignment: .bottom) {
-                    Rectangle().fill(Color.clear).frame(height: 2)
-                    if isActive {
-                        RoundedRectangle(cornerRadius: 1)
-                            .fill(Color.brandPrimary)
-                            .frame(height: 2.5)
-                            .matchedGeometryEffect(id: "detail_tab_indicator", in: detailTabNamespace)
-                    }
-                }
-            }
-        }
-        .buttonStyle(.plain)
-    }
-
     // MARK: - Content area
 
     // MARK: - Document Header
@@ -1403,15 +1379,70 @@ struct TranscriptDetailView: View {
                 .frame(height: 3)
                 .padding(.bottom, TS.Spacing.xs)
 
-            // Editable title
-            Text(fullTranscript.title.isEmpty ? "Naamloze opname" : fullTranscript.title)
-                .font(.system(size: 20, weight: .bold))
-                .foregroundStyle(Color.labelPrimary)
-                .lineLimit(3)
+            // Inline editable title
+            if isEditingTitle {
+                HStack(spacing: TS.Spacing.sm) {
+                    TextField("Titel", text: $pendingTitle, axis: .vertical)
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundStyle(Color.labelPrimary)
+                        .textFieldStyle(.plain)
+                        .lineLimit(1...3)
+                        .onSubmit {
+                            Task { await saveTitle() }
+                            isEditingTitle = false
+                        }
+
+                    Button {
+                        Task { await saveTitle() }
+                        isEditingTitle = false
+                    } label: {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 18))
+                            .foregroundStyle(Color.statusSuccess)
+                    }
+                    .buttonStyle(.plain)
+
+                    Button {
+                        isEditingTitle = false
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 18))
+                            .foregroundStyle(Color.labelTertiary)
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.vertical, 4)
+                .padding(.horizontal, TS.Spacing.sm)
+                .background(
+                    RoundedRectangle(cornerRadius: TS.Radius.xs)
+                        .stroke(Color.brandPrimary, lineWidth: 2)
+                )
+            } else {
+                HStack(alignment: .top, spacing: TS.Spacing.xs) {
+                    Text(fullTranscript.title.isEmpty ? "Naamloze opname" : fullTranscript.title)
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundStyle(Color.labelPrimary)
+                        .lineLimit(3)
+
+                    Image(systemName: "pencil")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(Color.labelTertiary)
+                        .padding(.top, 5)
+                }
                 .onTapGesture {
                     pendingTitle = fullTranscript.title
-                    showTitleEditAlert = true
+                    isEditingTitle = true
                 }
+                #if os(macOS)
+                .onHover { hovering in
+                    if hovering {
+                        NSCursor.iBeam.push()
+                    } else {
+                        NSCursor.pop()
+                    }
+                }
+                #endif
+            }
 
             // Metadata row
             HStack(spacing: TS.Spacing.xs) {
@@ -1472,19 +1503,42 @@ struct TranscriptDetailView: View {
         let hasRaw = !(fullTranscript.rawTranscription ?? "").isEmpty
 
         if !hasNotule && !hasRaw {
-            VStack(spacing: TS.Spacing.sm) {
+            VStack(spacing: TS.Spacing.md) {
                 Spacer()
-                Image(systemName: errorMessage != nil ? "exclamationmark.triangle" : "doc.text")
-                    .font(.system(size: 40))
-                    .foregroundStyle(errorMessage != nil ? Color.statusWarning : Color.labelTertiary)
-                Text(errorMessage != nil ? "Laden mislukt" : "Geen inhoud beschikbaar")
-                    .font(TS.Font.callout)
-                    .foregroundStyle(Color.labelSecondary)
                 if let error = errorMessage {
+                    Image(systemName: "exclamationmark.triangle")
+                        .font(.system(size: 40))
+                        .foregroundStyle(Color.statusWarning)
+                    Text("Laden mislukt")
+                        .font(TS.Font.callout)
+                        .foregroundStyle(Color.labelSecondary)
                     Text(error)
                         .font(TS.Font.caption)
                         .foregroundStyle(Color.labelTertiary)
                         .multilineTextAlignment(.center)
+                } else {
+                    Image(systemName: "doc.text")
+                        .font(.system(size: 40))
+                        .foregroundStyle(Color.labelTertiary)
+                    Text("Geen notulen beschikbaar")
+                        .font(TS.Font.callout)
+                        .foregroundStyle(Color.labelSecondary)
+                    Button {
+                        profileSheetMode = .regenerate
+                        showProfileSheet = true
+                    } label: {
+                        HStack(spacing: TS.Spacing.xs) {
+                            Image(systemName: "sparkles")
+                            Text("Notulen genereren")
+                        }
+                        .font(TS.Font.footnoteSemibold)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, TS.Spacing.lg)
+                        .padding(.vertical, TS.Spacing.sm)
+                        .background(Color.brandPrimary)
+                        .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
                 }
                 Spacer()
             }

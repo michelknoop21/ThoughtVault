@@ -16,6 +16,7 @@ struct LoginView: View {
 
     @Environment(AuthViewModel.self) var authVM
 
+    @AppStorage("rememberUsername") private var rememberUsername: Bool = false
     @State private var email: String = ""
     @State private var password: String = ""
     @State private var twoFactorCode: String = ""
@@ -177,6 +178,17 @@ struct LoginView: View {
                 }
             }
 
+            // Remember username toggle
+            Toggle("Onthoud gebruikersnaam", isOn: $rememberUsername)
+                .toggleStyle(.checkbox)
+                .font(TS.Font.footnote)
+                .foregroundStyle(Color.labelSecondary)
+                .onChange(of: rememberUsername) { _, newValue in
+                    if !newValue {
+                        authVM.userEmail = ""
+                    }
+                }
+
             // Error message
             if let error = authVM.errorMessage {
                 errorBanner(error)
@@ -214,6 +226,11 @@ struct LoginView: View {
         }
         .padding(TS.Spacing.lg)
         .modernCard()
+        .onAppear {
+            if rememberUsername, !authVM.userEmail.isEmpty {
+                email = authVM.userEmail
+            }
+        }
     }
 
     // MARK: - Two-Factor Authentication Card

@@ -39,7 +39,7 @@ enum APIError: LocalizedError {
         case .decodingError(let error):
             return "Fout bij verwerken van serverrespons: \(error.localizedDescription)"
         case .fileTooLarge:
-            return "Het bestand is te groot (maximaal 250 MB). Maak kortere opnames of comprimeer het bestand."
+            return "Het bestand is te groot (maximaal 500 MB). Maak kortere opnames of comprimeer het bestand."
         case .sessionExpired:
             return "Je sessie is verlopen. Log opnieuw in om door te gaan."
         case .networkError:
@@ -395,10 +395,10 @@ actor APIService {
         usePremium: Bool = false,
         onProgress: @escaping @Sendable (Double) -> Void
     ) async throws -> TranscriptTask {
-        // Enforce 250 MB limit (aligned with backend MAX_UPLOAD_SIZE)
+        // Enforce 500 MB limit (aligned with backend MAX_UPLOAD_SIZE)
         let attributes = try FileManager.default.attributesOfItem(atPath: fileURL.path)
         let fileSize = attributes[.size] as? Int ?? 0
-        let maxBytes = 250 * 1024 * 1024
+        let maxBytes = 500 * 1024 * 1024
         if fileSize > maxBytes {
             throw APIError.fileTooLarge
         }

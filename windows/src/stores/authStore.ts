@@ -15,11 +15,13 @@ interface AuthState {
   isAuthenticated: boolean;
   isInitializing: boolean;
   rememberMe: boolean;
+  savedEmail: string;
   pendingTwoFactor: { tempToken: string; email: string } | null;
   setToken: (token: string) => void;
   setUser: (user: User) => void;
   updateUserName: (name: string) => void;
   setRememberMe: (value: boolean) => void;
+  setSavedEmail: (email: string) => void;
   saveCredentials: (email: string, password: string) => Promise<void>;
   clearSavedCredentials: () => Promise<void>;
   clearPendingTwoFactor: () => void;
@@ -52,6 +54,7 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
       isInitializing: true,
       rememberMe: false,
+      savedEmail: "",
       pendingTwoFactor: null,
 
       setToken: (token) => {
@@ -68,6 +71,8 @@ export const useAuthStore = create<AuthState>()(
       })),
 
       setRememberMe: (value) => set({ rememberMe: value }),
+
+      setSavedEmail: (email) => set({ savedEmail: email }),
 
       saveCredentials: async (email, password) => {
         try {
@@ -97,9 +102,11 @@ export const useAuthStore = create<AuthState>()(
 
       logout: () => {
         invoke("delete_credential", { key: CREDENTIAL_KEY }).catch(() => {});
-        // Clear saved credentials on explicit logout
-        get().clearSavedCredentials();
-        set({ token: null, user: null, isAuthenticated: false, rememberMe: false, pendingTwoFactor: null });
+        // Clear password from keyring but keep savedEmail + rememberMe
+        // so the username is pre-filled on the next login screen
+        invoke("delete_credential", { key: SAVED_PASSWORD_KEY }).catch(() => {});
+        invoke("delete_credential", { key: REMEMBER_ME_KEY }).catch(() => {});
+        set({ token: null, user: null, isAuthenticated: false, pendingTwoFactor: null });
       },
 
       loadTokenFromKeyring: async () => {
@@ -227,7 +234,7 @@ export const useAuthStore = create<AuthState>()(
       name: "auth-store",
       // Persist user info, auth flag + rememberMe to localStorage — token goes to keyring.
       // isAuthenticated is persisted so the UI doesn't flash to login during keyring load.
-      partialize: (state) => ({ user: state.user, rememberMe: state.rememberMe, isAuthenticated: state.isAuthenticated }),
+      partialize: (state) => ({ user: state.user, rememberMe: state.rememberMe, savedEmail: state.savedEmail, isAuthenticated: state.isAuthenticated }),
       onRehydrateStorage: () => (state) => {
         // After rehydration, load token from keyring (+ auto-login if remember me)
         if (state) {

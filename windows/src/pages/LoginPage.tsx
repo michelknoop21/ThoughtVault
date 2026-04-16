@@ -23,7 +23,8 @@ export function LoginPage() {
   const navigate = useNavigate();
   const {
     setToken, setUser, isAuthenticated,
-    rememberMe, setRememberMe, saveCredentials,
+    rememberMe, setRememberMe, savedEmail, setSavedEmail,
+    saveCredentials, clearSavedCredentials,
     pendingTwoFactor, clearPendingTwoFactor,
   } = useAuthStore();
 
@@ -53,6 +54,14 @@ export function LoginPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Pre-fill email from remembered value
+  useEffect(() => {
+    if (rememberMe && savedEmail) {
+      setEmail(savedEmail);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const [resetEmail, setResetEmail] = useState("");
   const [resetCode, setResetCode] = useState("");
   const [resetToken, setResetToken] = useState("");
@@ -78,7 +87,10 @@ export function LoginPage() {
           is_active: true,
           created_at: new Date().toISOString(),
         };
-        if (rememberMe) await saveCredentials(email, password);
+        if (rememberMe) {
+          setSavedEmail(email);
+          await saveCredentials(email, password);
+        }
         setToken(response.token);
         setUser(userWithRole);
         navigate("/", { replace: true });
@@ -105,7 +117,10 @@ export function LoginPage() {
         is_active: true,
         created_at: new Date().toISOString(),
       };
-      if (rememberMe) await saveCredentials(email, password);
+      if (rememberMe) {
+        setSavedEmail(email);
+        await saveCredentials(email, password);
+      }
       setToken(response.token);
       setUser(userWithRole);
       navigate("/", { replace: true });
@@ -242,7 +257,13 @@ export function LoginPage() {
                   <input
                     type="checkbox"
                     checked={rememberMe}
-                    onChange={(e) => setRememberMe(e.target.checked)}
+                    onChange={(e) => {
+                      setRememberMe(e.target.checked);
+                      if (!e.target.checked) {
+                        setSavedEmail("");
+                        clearSavedCredentials();
+                      }
+                    }}
                   />
                   Onthoud mij
                 </label>

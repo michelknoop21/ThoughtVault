@@ -1082,7 +1082,10 @@ final class RecordingViewModel {
                     mixData[i] = max(-1.0, min(1.0, (micSample + sysSample) * 0.5))
                 }
 
-                let outputURL = URL(fileURLWithPath: NSTemporaryDirectory())
+                let recordingsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+                    .appendingPathComponent("Recordings")
+                try? FileManager.default.createDirectory(at: recordingsDir, withIntermediateDirectories: true)
+                let outputURL = recordingsDir
                     .appendingPathComponent("combined_\(Int(Date().timeIntervalSince1970)).wav")
                 let outputFile = try AVAudioFile(forWriting: outputURL, settings: format.settings)
                 try outputFile.write(from: mixBuffer)

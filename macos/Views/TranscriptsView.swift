@@ -2124,6 +2124,11 @@ private struct ProfileSelectionSheet: View {
                     Button("Annuleren") { dismiss() }
                 }
             }
+            .task {
+                if recordingVM.availableProfiles.isEmpty {
+                    await recordingVM.reloadProfiles()
+                }
+            }
         }
     }
 }

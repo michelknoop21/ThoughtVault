@@ -415,6 +415,24 @@ export default function App() {
     initMeetingNotifications().catch(() => {});
   }, []);
 
+  // One-time migration of recordings from %APPDATA% (Roaming) to %LOCALAPPDATA% (Local).
+  // Roaming was getting picked up by OneDrive Known Folder Move and roaming profiles,
+  // which locked WAV files mid-upload and caused "field required" 422s on the server.
+  useEffect(() => {
+    if (!("__TAURI_INTERNALS__" in window)) return;
+    (async () => {
+      try {
+        const { migrateRecordingsDir } = await import("./services/tauriCommands");
+        const moved = await migrateRecordingsDir();
+        if (moved > 0) {
+          console.log(`[App] Migrated ${moved} recording(s) to %LOCALAPPDATA%`);
+        }
+      } catch (err) {
+        console.warn("[App] Recording-dir migration failed:", err);
+      }
+    })();
+  }, []);
+
   // Detect system theme preference
   useEffect(() => {
     const mq = window.matchMedia("(prefers-color-scheme: dark)");

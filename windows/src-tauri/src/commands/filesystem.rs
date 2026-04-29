@@ -13,10 +13,18 @@ pub struct RecordingFile {
 }
 
 /// Returns the platform-appropriate recordings directory.
-/// Windows: %APPDATA%\nl.prezent.transcript-studio\Recordings
+///
+/// Windows: %LOCALAPPDATA%\nl.prezent.transcript-studio\Recordings
+///   (NOT %APPDATA%/Roaming — Roaming gets pulled into OneDrive Known Folder
+///    Move and Windows roaming profiles, which lock/sync 100MB+ WAV files
+///    while the upload stream is reading them. That race produces truncated
+///    multipart bodies and "field required" 422s on the server.)
+/// macOS / Linux: same path that data_dir() returned before — local-vs-roaming
+///   distinction only exists on Windows.
 #[tauri::command]
 pub async fn get_recordings_dir() -> Result<String, String> {
-    let base = dirs::data_dir()
+    let base = dirs::data_local_dir()
+        .or_else(|| dirs::data_dir())
         .or_else(|| dirs::home_dir())
         .ok_or("Kan app-data map niet vinden")?;
 
@@ -28,6 +36,80 @@ pub async fn get_recordings_dir() -> Result<String, String> {
         .map_err(|e| format!("Kan opnamemap niet aanmaken: {}", e))?;
 
     Ok(recordings.to_string_lossy().to_string())
+}
+
+/// One-time migration: move recordings from the old %APPDATA% (Roaming) location
+/// to the new %LOCALAPPDATA% (Local) location. Idempotent — safe to call on every
+/// startup; does nothing if the legacy folder is empty or missing.
+///
+/// Returns the number of files moved.
+#[tauri::command]
+pub async fn migrate_recordings_dir() -> Result<u32, String> {
+    // Only Windows has a meaningful Roaming/Local split — on macOS/Linux both
+    // dirs::data_dir() and dirs::data_local_dir() resolve to the same path.
+    #[cfg(not(target_os = "windows"))]
+    {
+        return Ok(0);
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        let old_base = match dirs::data_dir() {
+            Some(p) => p,
+            None => return Ok(0),
+        };
+        let new_base = match dirs::data_local_dir() {
+            Some(p) => p,
+            None => return Ok(0),
+        };
+
+        if old_base == new_base {
+            return Ok(0);
+        }
+
+        let old_dir = old_base.join("nl.prezent.transcript-studio").join("Recordings");
+        let new_dir = new_base.join("nl.prezent.transcript-studio").join("Recordings");
+
+        if !old_dir.exists() {
+            return Ok(0);
+        }
+
+        std::fs::create_dir_all(&new_dir)
+            .map_err(|e| format!("Kan nieuwe opnamemap niet aanmaken: {}", e))?;
+
+        let mut moved = 0u32;
+        for entry in std::fs::read_dir(&old_dir).map_err(|e| e.to_string())?.flatten() {
+            let from = entry.path();
+            if !from.is_file() {
+                continue;
+            }
+            let filename = match from.file_name() {
+                Some(n) => n.to_owned(),
+                None => continue,
+            };
+            let to = new_dir.join(&filename);
+            // Don't overwrite existing files in the new location
+            if to.exists() {
+                continue;
+            }
+            // Try rename first (fast, atomic on same volume); fall back to copy+remove
+            match std::fs::rename(&from, &to) {
+                Ok(()) => moved += 1,
+                Err(_) => {
+                    if std::fs::copy(&from, &to).is_ok() {
+                        let _ = std::fs::remove_file(&from);
+                        moved += 1;
+                    }
+                }
+            }
+        }
+
+        // Best-effort cleanup of the now-empty legacy folder
+        let _ = std::fs::remove_dir(&old_dir);
+
+        eprintln!("[Filesystem] Migrated {} recording(s) from %APPDATA% to %LOCALAPPDATA%", moved);
+        Ok(moved)
+    }
 }
 
 #[tauri::command]

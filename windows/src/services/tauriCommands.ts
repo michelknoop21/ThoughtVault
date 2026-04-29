@@ -107,6 +107,15 @@ export async function getRecordingsDir(): Promise<string> {
   return invoke<string>("get_recordings_dir");
 }
 
+/**
+ * One-time migration of recordings from %APPDATA% (Roaming) to %LOCALAPPDATA% (Local).
+ * Idempotent — call once on app startup. No-op on macOS/Linux.
+ * Returns the number of files moved.
+ */
+export async function migrateRecordingsDir(): Promise<number> {
+  return invoke<number>("migrate_recordings_dir");
+}
+
 export async function concatenateWavFiles(
   inputPaths: string[],
   outputPath: string

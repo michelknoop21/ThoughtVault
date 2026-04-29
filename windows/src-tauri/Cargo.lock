@@ -4984,7 +4984,7 @@ dependencies = [
 
 [[package]]
 name = "transcript-studio"
-version = "1.0.89"
+version = "1.0.118"
 dependencies = [
  "chrono",
  "cpal",

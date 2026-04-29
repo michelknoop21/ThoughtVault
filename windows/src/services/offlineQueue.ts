@@ -5,7 +5,28 @@ import { api } from "./api";
 import { useUploadQueueStore } from "../stores/uploadQueueStore";
 
 const QUEUE_STORE_KEY = "offline-upload-queue";
-const MAX_RETRIES = 50;
+const MAX_RETRIES = 5;
+
+// Backoff after a failed attempt. Index = retry_count of the just-failed attempt.
+// retry_count=0 → first attempt failed → wait BACKOFF_MS[0] before next try.
+const BACKOFF_MS = [
+  30_000,        // 30s
+  2 * 60_000,    // 2m
+  10 * 60_000,   // 10m
+  30 * 60_000,   // 30m
+  60 * 60_000,   // 1h
+];
+
+// 4xx that *can* succeed on retry (transient auth, request timeout, rate limit).
+// Anything else 4xx (422/400/404/...) means the request itself is malformed —
+// retrying won't help, surface immediately instead of grinding through the queue.
+function isRetryable4xx(msg: string): boolean {
+  return /HTTP\s+(401|408|429)\b/.test(msg);
+}
+
+function isClientError4xx(msg: string): boolean {
+  return /HTTP\s+4\d\d\b/.test(msg);
+}
 
 let store: Store | null = null;
 
@@ -43,12 +64,20 @@ export async function removeFromQueue(id: string): Promise<void> {
   await s.save();
 }
 
-export async function incrementRetry(id: string, errorMessage?: string): Promise<void> {
+async function recordFailure(id: string, errorMessage: string): Promise<void> {
   const s = await getStore();
   const existing = (await s.get<QueuedUpload[]>(QUEUE_STORE_KEY)) || [];
-  const updated = existing.map((item) =>
-    item.id === id ? { ...item, retry_count: item.retry_count + 1, last_error: errorMessage } : item
-  );
+  const updated = existing.map((item) => {
+    if (item.id !== id) return item;
+    const failedAttempts = item.retry_count;
+    const backoffMs = BACKOFF_MS[Math.min(failedAttempts, BACKOFF_MS.length - 1)];
+    return {
+      ...item,
+      retry_count: failedAttempts + 1,
+      last_error: errorMessage,
+      next_retry_at: new Date(Date.now() + backoffMs).toISOString(),
+    };
+  });
   await s.set(QUEUE_STORE_KEY, updated);
   await s.save();
 }
@@ -60,8 +89,10 @@ export async function processQueue(): Promise<void> {
   const queueStore = useUploadQueueStore.getState();
   queueStore.setItems(queue);
 
+  const now = Date.now();
+
   for (const item of queue) {
-    // Remove if max retries exceeded — notify user
+    // Drop items that exhausted their retries — surface to user.
     if (item.retry_count >= MAX_RETRIES) {
       const fileName = item.file_name || item.file_path.split(/[\\/]/).pop() || "onbekend bestand";
       queueStore.addPermanentlyFailed({ id: item.id, fileName });
@@ -69,7 +100,7 @@ export async function processQueue(): Promise<void> {
       continue;
     }
 
-    // Remove if file no longer exists on disk
+    // Drop items whose source file has disappeared — nothing to upload.
     try {
       const fileExists = await exists(item.file_path);
       if (!fileExists) {
@@ -78,6 +109,11 @@ export async function processQueue(): Promise<void> {
       }
     } catch {
       // Can't check — try upload anyway
+    }
+
+    // Honour backoff window — skip until next_retry_at has passed.
+    if (item.next_retry_at && new Date(item.next_retry_at).getTime() > now) {
+      continue;
     }
 
     queueStore.startItem(item);
@@ -94,7 +130,16 @@ export async function processQueue(): Promise<void> {
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Upload mislukt";
       queueStore.finishItem();
-      await incrementRetry(item.id, msg);
+
+      // Non-retryable client error (422/400/etc.): retrying won't help. Surface immediately.
+      if (isClientError4xx(msg) && !isRetryable4xx(msg)) {
+        const fileName = item.file_name || item.file_path.split(/[\\/]/).pop() || "onbekend bestand";
+        queueStore.addPermanentlyFailed({ id: item.id, fileName });
+        await removeFromQueue(item.id);
+        continue;
+      }
+
+      await recordFailure(item.id, msg);
     }
   }
 

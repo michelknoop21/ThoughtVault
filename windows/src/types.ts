@@ -280,6 +280,9 @@ export interface QueuedUpload {
   recording_duration_secs?: number;
   file_name?: string;
   last_error?: string;
+  // ISO timestamp; queue worker skips this item until now() >= next_retry_at.
+  // Absent on legacy items — those are treated as immediately ready.
+  next_retry_at?: string;
 }
 
 // 2FA

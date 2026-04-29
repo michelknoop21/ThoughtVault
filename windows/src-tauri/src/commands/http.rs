@@ -91,26 +91,55 @@ pub async fn do_proxy_upload(
         return Err(format!("Bestand niet gevonden: {}", file_path));
     }
 
-    let file = tokio::fs::File::open(&file_path)
+    // Read filesystem metadata size first — this is what reqwest would otherwise
+    // trust blindly via stream_with_length().
+    let metadata_size = tokio::fs::metadata(&file_path)
         .await
-        .map_err(|e| format!("Kan bestand niet openen: {}", e))?;
-
-    let metadata = file
-        .metadata()
-        .await
-        .map_err(|e| format!("Kan bestandsinfo niet lezen: {}", e))?;
-
-    let file_size = metadata.len();
-    if file_size == 0 {
+        .map_err(|e| format!("Kan bestandsinfo niet lezen: {}", e))?
+        .len();
+    if metadata_size == 0 {
         return Err("Opnamebestand is leeg (0 bytes)".to_string());
     }
 
     const MAX_UPLOAD_SIZE: u64 = 500 * 1024 * 1024;
-    if file_size > MAX_UPLOAD_SIZE {
+    if metadata_size > MAX_UPLOAD_SIZE {
         return Err(format!(
             "Het bestand is te groot ({:.0} MB). Maximaal 500 MB toegestaan. Maak kortere opnames.",
-            file_size as f64 / 1_048_576.0
+            metadata_size as f64 / 1_048_576.0
         ));
+    }
+
+    // Pre-flight integrity check: read the file once end-to-end and count actual
+    // bytes. If it differs from metadata.len() the file is being touched by
+    // another process (Defender real-time scan, OneDrive sync placeholder, etc.)
+    // — sending it now would produce a Content-Length-vs-body mismatch which
+    // ends up as "field 'file' required" 422 on the server side.
+    //
+    // We use the *actual* read count for Content-Length below, so even when the
+    // numbers diverge the upload is internally consistent.
+    let actual_size = {
+        use tokio::io::AsyncReadExt;
+        let mut f = tokio::fs::File::open(&file_path)
+            .await
+            .map_err(|e| format!("Kan bestand niet openen: {}", e))?;
+        let mut buf = vec![0u8; 64 * 1024];
+        let mut total: u64 = 0;
+        loop {
+            let n = f.read(&mut buf).await
+                .map_err(|e| format!("Fout bij lezen van bestand: {}", e))?;
+            if n == 0 { break; }
+            total += n as u64;
+        }
+        total
+    };
+
+    if actual_size != metadata_size {
+        eprintln!(
+            "[Upload] WARNING: file size mismatch — metadata says {} bytes but reading produced {} bytes. \
+             Likely cause: antivirus scan, OneDrive/Dropbox sync, or another process touching the file. \
+             Using actual size for Content-Length.",
+            metadata_size, actual_size
+        );
     }
 
     let filename = path
@@ -120,16 +149,21 @@ pub async fn do_proxy_upload(
         .to_string();
 
     eprintln!(
-        "[Upload] {} ({} bytes) → {}",
-        filename, file_size, upload_url
+        "[Upload] {} ({} bytes, metadata={}) → {}",
+        filename, actual_size, metadata_size, upload_url
     );
+
+    // Now open a fresh handle for the actual streaming upload.
+    let file = tokio::fs::File::open(&file_path)
+        .await
+        .map_err(|e| format!("Kan bestand niet openen voor upload: {}", e))?;
 
     // Stream the file in 64 KB chunks instead of loading entirely into memory.
     // A 100 MB WAV file now uses ~64 KB of buffer instead of 100 MB.
     let stream = ReaderStream::with_capacity(file, 64 * 1024);
     let body = reqwest::Body::wrap_stream(stream);
 
-    let file_part = reqwest::multipart::Part::stream_with_length(body, file_size)
+    let file_part = reqwest::multipart::Part::stream_with_length(body, actual_size)
         .file_name(filename)
         .mime_str("audio/wav")
         .map_err(|e| e.to_string())?;

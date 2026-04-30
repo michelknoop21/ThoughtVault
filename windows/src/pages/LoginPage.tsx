@@ -54,13 +54,12 @@ export function LoginPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Pre-fill email from remembered value
+  // Pre-fill email from remembered value (re-runs when zustand rehydrates)
   useEffect(() => {
     if (rememberMe && savedEmail) {
       setEmail(savedEmail);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [rememberMe, savedEmail]);
 
   const [resetEmail, setResetEmail] = useState("");
   const [resetCode, setResetCode] = useState("");

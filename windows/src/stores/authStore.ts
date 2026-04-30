@@ -170,7 +170,7 @@ export const useAuthStore = create<AuthState>()(
           }
 
           // Step 4: Attempt auto-login (only if token was missing or we want a fresh one)
-          set({ rememberMe: true });
+          set({ rememberMe: true, savedEmail });
           try {
             const response = await api.login(savedEmail, savedPassword);
 

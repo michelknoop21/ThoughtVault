@@ -36,16 +36,14 @@ export function useUpdateCheck() {
         // Determine channel from app title
         const isDev = document.title.toLowerCase().includes("dev");
 
-        const versionKey = isDev ? "dev_latest_version" : "latest_version";
         const platformKey = isDev ? "dev_windows_x64" : "windows_x64";
-
-        const remoteVersion = json[versionKey];
+        const platformInfo = json[platformKey];
+        const remoteVersion = platformInfo?.version;
         if (!remoteVersion || typeof remoteVersion !== "string") return;
         if (cancelled) return;
 
         if (isNewer(remoteVersion, currentVersion)) {
           setLatestVersion(remoteVersion);
-          const platformInfo = json[platformKey];
           if (platformInfo?.url) {
             setDownloadUrl(DOWNLOAD_BASE + platformInfo.url);
           }

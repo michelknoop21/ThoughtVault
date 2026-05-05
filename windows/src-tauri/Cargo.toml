@@ -41,8 +41,10 @@ hound = "3.5"
 keyring = "3"
 
 # Utilities
-chrono = { version = "0.4", features = ["serde"] }
-dirs   = "5"
+chrono   = { version = "0.4", features = ["serde"] }
+dirs     = "5"
+tempfile = "3"
+sha2     = "0.10"
 
 
 # Windows 11 native visual effects (Mica, Acrylic)
@@ -53,7 +55,6 @@ default = ["custom-protocol"]
 custom-protocol = ["tauri/custom-protocol"]
 
 [dev-dependencies]
-tempfile = "3"
 
 [target.'cfg(windows)'.dependencies]
 # Windows-specific: nothing extra needed — cpal uses WASAPI by default on Windows

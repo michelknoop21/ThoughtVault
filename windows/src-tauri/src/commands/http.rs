@@ -78,6 +78,24 @@ pub async fn proxy_upload(
 }
 
 /// Core upload logic, separated from the Tauri command wrapper for testability.
+///
+/// The upload is hardened against a class of Windows-only failures (file mutation
+/// by Defender / OneDrive / Search Indexer between read passes, system proxy
+/// MITM, connection-pool reuse, HTTP/2 ALPN race, Nagle stalls). Strategy:
+///
+///   1. Copy the source file to %LOCALAPPDATA%\Temp (auto-deleted on drop).
+///      The copy is a single sweep with a post-check that size is stable.
+///   2. For files ≤ 200 MB: read the temp copy fully into memory and use
+///      `Part::bytes(...)`. No streaming → no race window between Content-Length
+///      and the bytes that actually hit the wire.
+///   3. For larger files: stream from the temp copy. The temp copy itself has
+///      already been integrity-checked, and Temp is outside OneDrive's KFM root.
+///   4. Validate WAV magic before sending — surface corruption as a friendly
+///      client-side error instead of an obscure server-side 422.
+///   5. Reqwest client config: explicit User-Agent, tcp_nodelay, no proxy,
+///      http1_only, fresh connection per upload (no_pool_idle).
+///   6. Send a SHA-256 prefix as `X-Upload-Sha256` so backend logs can correlate
+///      what the client sent against what the server received.
 pub async fn do_proxy_upload(
     file_path: String,
     upload_url: String,
@@ -86,13 +104,14 @@ pub async fn do_proxy_upload(
     mode: String,
     use_premium: bool,
 ) -> Result<HttpResponse, String> {
+    use std::time::Instant;
+    let t_start = Instant::now();
+
     let path = std::path::Path::new(&file_path);
     if !path.exists() {
         return Err(format!("Bestand niet gevonden: {}", file_path));
     }
 
-    // Read filesystem metadata size first — this is what reqwest would otherwise
-    // trust blindly via stream_with_length().
     let metadata_size = tokio::fs::metadata(&file_path)
         .await
         .map_err(|e| format!("Kan bestandsinfo niet lezen: {}", e))?
@@ -109,64 +128,121 @@ pub async fn do_proxy_upload(
         ));
     }
 
-    // Pre-flight integrity check: read the file once end-to-end and count actual
-    // bytes. If it differs from metadata.len() the file is being touched by
-    // another process (Defender real-time scan, OneDrive sync placeholder, etc.)
-    // — sending it now would produce a Content-Length-vs-body mismatch which
-    // ends up as "field 'file' required" 422 on the server side.
-    //
-    // We use the *actual* read count for Content-Length below, so even when the
-    // numbers diverge the upload is internally consistent.
-    let actual_size = {
-        use tokio::io::AsyncReadExt;
-        let mut f = tokio::fs::File::open(&file_path)
-            .await
-            .map_err(|e| format!("Kan bestand niet openen: {}", e))?;
-        let mut buf = vec![0u8; 64 * 1024];
-        let mut total: u64 = 0;
-        loop {
-            let n = f.read(&mut buf).await
-                .map_err(|e| format!("Fout bij lezen van bestand: {}", e))?;
-            if n == 0 { break; }
-            total += n as u64;
-        }
-        total
-    };
-
-    if actual_size != metadata_size {
-        eprintln!(
-            "[Upload] WARNING: file size mismatch — metadata says {} bytes but reading produced {} bytes. \
-             Likely cause: antivirus scan, OneDrive/Dropbox sync, or another process touching the file. \
-             Using actual size for Content-Length.",
-            metadata_size, actual_size
-        );
-    }
-
-    let filename = path
+    let original_filename = path
         .file_name()
         .and_then(|n| n.to_str())
         .unwrap_or("recording.wav")
         .to_string();
 
+    // ─── Step 1: copy to a stable location outside any sync/scan path. ───
+    // tempfile creates+opens the file; we discard the open handle (drop _f)
+    // and keep the TempPath, which auto-deletes on drop at end of function.
+    let temp = tempfile::Builder::new()
+        .prefix("ts-upload-")
+        .suffix(".wav")
+        .tempfile_in(std::env::temp_dir())
+        .map_err(|e| format!("Kan tijdelijk bestand niet aanmaken: {}", e))?;
+    let (_f, temp_path) = temp.into_parts();
+    drop(_f);
+
+    let t_copy = Instant::now();
+    tokio::fs::copy(&file_path, &temp_path)
+        .await
+        .map_err(|e| format!("Kan bestand niet kopiëren naar tijdelijke locatie: {}", e))?;
+    let copy_size = tokio::fs::metadata(&*temp_path)
+        .await
+        .map_err(|e| format!("Kan kopie-info niet lezen: {}", e))?
+        .len();
+    if copy_size != metadata_size {
+        return Err(format!(
+            "Bestandsgrootte gewijzigd tijdens kopiëren ({} → {} bytes). Mogelijk wordt het bestand op dat moment door antivirus of cloud-sync aangeraakt. Probeer het opnieuw.",
+            metadata_size, copy_size
+        ));
+    }
+    let copy_elapsed = t_copy.elapsed();
+
+    // ─── Step 2: in-memory upload for ≤ 200 MB (covers all of Bas's case). ──
+    const IN_MEMORY_LIMIT: u64 = 200 * 1024 * 1024;
+    let in_memory: Option<Vec<u8>> = if copy_size <= IN_MEMORY_LIMIT {
+        let bytes = tokio::fs::read(&*temp_path)
+            .await
+            .map_err(|e| format!("Kan kopie niet inlezen: {}", e))?;
+        if bytes.len() as u64 != copy_size {
+            return Err(format!(
+                "Inlezen leverde {} bytes maar kopie zegt {} bytes. Probeer het opnieuw.",
+                bytes.len(),
+                copy_size
+            ));
+        }
+        Some(bytes)
+    } else {
+        None
+    };
+
+    // ─── Step 3: WAV sanity check on in-memory bytes. ───
+    if let Some(bytes) = &in_memory {
+        if original_filename.to_lowercase().ends_with(".wav")
+            && (bytes.len() < 12 || &bytes[0..4] != b"RIFF" || &bytes[8..12] != b"WAVE")
+        {
+            return Err(
+                "Het opnamebestand lijkt corrupt (geen geldige WAV-header). Maak een nieuwe opname en probeer opnieuw."
+                    .to_string(),
+            );
+        }
+    }
+
+    // ─── Step 4: SHA-256 prefix for client↔server log correlation. ───
+    let sha_prefix = if let Some(bytes) = &in_memory {
+        use sha2::{Digest, Sha256};
+        let h = Sha256::digest(bytes);
+        let hex: String = h.iter().map(|b| format!("{:02x}", b)).collect();
+        hex[..16].to_string()
+    } else {
+        "stream".to_string()
+    };
+
     eprintln!(
-        "[Upload] {} ({} bytes, metadata={}) → {}",
-        filename, actual_size, metadata_size, upload_url
+        "[Upload] {} ({} bytes, sha256={}) → {}  copy_took={:?}  mode={}",
+        original_filename,
+        copy_size,
+        sha_prefix,
+        upload_url,
+        copy_elapsed,
+        if in_memory.is_some() { "memory" } else { "stream" }
     );
 
-    // Now open a fresh handle for the actual streaming upload.
-    let file = tokio::fs::File::open(&file_path)
-        .await
-        .map_err(|e| format!("Kan bestand niet openen voor upload: {}", e))?;
-
-    // Stream the file in 64 KB chunks instead of loading entirely into memory.
-    // A 100 MB WAV file now uses ~64 KB of buffer instead of 100 MB.
-    let stream = ReaderStream::with_capacity(file, 64 * 1024);
-    let body = reqwest::Body::wrap_stream(stream);
-
-    let file_part = reqwest::multipart::Part::stream_with_length(body, actual_size)
-        .file_name(filename)
-        .mime_str("audio/wav")
+    // ─── Step 5: hardened reqwest client. ───
+    let client = reqwest::Client::builder()
+        .user_agent(format!(
+            "TranscriptStudio-Windows/{}",
+            env!("CARGO_PKG_VERSION")
+        ))
+        .tcp_nodelay(true)
+        .pool_max_idle_per_host(0)
+        .http1_only()
+        .no_proxy()
+        .timeout(std::time::Duration::from_secs(600))
+        .build()
         .map_err(|e| e.to_string())?;
+
+    // ─── Step 6: build multipart body. ───
+    let file_part = if let Some(bytes) = in_memory {
+        reqwest::multipart::Part::bytes(bytes)
+            .file_name(original_filename.clone())
+            .mime_str("audio/wav")
+            .map_err(|e| e.to_string())?
+    } else {
+        // > 200 MB: stream from the (already integrity-checked) temp copy.
+        let f = tokio::fs::File::open(&*temp_path)
+            .await
+            .map_err(|e| format!("Kan kopie niet openen voor upload: {}", e))?;
+        let stream = ReaderStream::with_capacity(f, 64 * 1024);
+        let body = reqwest::Body::wrap_stream(stream);
+        reqwest::multipart::Part::stream_with_length(body, copy_size)
+            .file_name(original_filename.clone())
+            .mime_str("audio/wav")
+            .map_err(|e| e.to_string())?
+    };
 
     let form = reqwest::multipart::Form::new()
         .part("file", file_part)
@@ -174,14 +250,12 @@ pub async fn do_proxy_upload(
         .text("mode", mode)
         .text("use_premium", use_premium.to_string());
 
-    let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(300))
-        .build()
-        .map_err(|e| e.to_string())?;
-
+    // ─── Step 7: send. ───
+    let t_send = Instant::now();
     let response = client
         .post(&upload_url)
         .header("X-User-Token", &token)
+        .header("X-Upload-Sha256", &sha_prefix)
         .multipart(form)
         .send()
         .await
@@ -204,7 +278,13 @@ pub async fn do_proxy_upload(
     }
     let body = response.text().await.map_err(|e| e.to_string())?;
 
-    eprintln!("[Upload] Response: {} ({} bytes)", status, body.len());
+    eprintln!(
+        "[Upload] Response: {} ({} bytes)  send_took={:?}  total={:?}",
+        status,
+        body.len(),
+        t_send.elapsed(),
+        t_start.elapsed()
+    );
 
     Ok(HttpResponse {
         status,

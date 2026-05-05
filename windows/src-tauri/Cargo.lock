@@ -4984,7 +4984,7 @@ dependencies = [
 
 [[package]]
 name = "transcript-studio"
-version = "1.0.119"
+version = "1.0.122"
 dependencies = [
  "chrono",
  "cpal",
@@ -4995,6 +4995,7 @@ dependencies = [
  "reqwest 0.12.28",
  "serde",
  "serde_json",
+ "sha2",
  "tauri",
  "tauri-build",
  "tauri-plugin-deep-link",

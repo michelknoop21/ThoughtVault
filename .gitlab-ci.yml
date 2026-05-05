@@ -243,27 +243,32 @@ build-windows:
 
         # Update releases.json (windows entry only — deploy job handles other platforms + latest_version)
         # Encoded as base64 to avoid PowerShell/SSH/Python quoting issues.
-        $pyScript = @"
-import json
-m = '$REMOTE_DIR/releases.json'
-try:
-    with open(m) as f: d = json.load(f)
-except Exception:
-    d = {}
-channel = '$env:W_CHANNEL'
-entry = {
-    'url': '/tstudio/download/$env:W_MSI_NAME',
-    'version': '$env:W_VERSION',
-    'filename': '$env:W_MSI_NAME',
-}
-if channel == 'production':
-    d['windows_x64'] = entry
-    d['windows'] = entry
-else:
-    d['dev_windows_x64'] = entry
-with open(m, 'w') as f: json.dump(d, f, indent=2)
-print('Updated releases.json: windows -> $env:W_VERSION (' + channel + ')')
-"@
+        # Built as an array+join (instead of a `@"..."@` heredoc) so every line
+        # stays at >=8 spaces indent, which keeps the surrounding YAML block
+        # scalar valid. A heredoc body must dedent to column 1, which broke
+        # the `.gitlab-ci.yml` parser.
+        $pyLines = @(
+          "import json",
+          "m = '$REMOTE_DIR/releases.json'",
+          "try:",
+          "    with open(m) as f: d = json.load(f)",
+          "except Exception:",
+          "    d = {}",
+          "channel = '$env:W_CHANNEL'",
+          "entry = {",
+          "    'url': '/tstudio/download/$env:W_MSI_NAME',",
+          "    'version': '$env:W_VERSION',",
+          "    'filename': '$env:W_MSI_NAME',",
+          "}",
+          "if channel == 'production':",
+          "    d['windows_x64'] = entry",
+          "    d['windows'] = entry",
+          "else:",
+          "    d['dev_windows_x64'] = entry",
+          "with open(m, 'w') as f: json.dump(d, f, indent=2)",
+          "print('Updated releases.json: windows -> $env:W_VERSION (' + channel + ')')"
+        )
+        $pyScript = $pyLines -join "`n"
         $encoded = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($pyScript))
         ssh -i $sshKey -o StrictHostKeyChecking=no "$SERVER" "echo $encoded | base64 -d | python3"
       } else {

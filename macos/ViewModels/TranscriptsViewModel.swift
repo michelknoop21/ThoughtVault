@@ -128,40 +128,61 @@ final class TranscriptsViewModel {
 
     // MARK: - Load
 
-    /// Loads all transcripts in a single request (backend returns everything).
+    /// Loads transcripts from the local SwiftData store and, when reachable, merges in
+    /// server-side transcripts. Local records always work offline (no server required).
     func loadTranscripts() async {
         guard !isLoading else { return }
 
         isLoading = true
         errorMessage = nil
 
+        // Local records first — these are always available, even with the server off.
+        let localTranscripts = LocalTranscriptStore.shared.allTranscripts()
+
+        // Best-effort server fetch; never let a server failure hide local history.
+        var serverTranscripts: [Transcript] = []
         do {
             let response = try await APIService.shared.getTranscripts(
                 search: searchQuery.isEmpty ? nil : searchQuery
             )
-            transcripts = response.items
-            logger.info("Loaded \(response.items.count) transcripts")
+            serverTranscripts = response.items
+            logger.info("Loaded \(response.items.count) server transcripts")
         } catch {
-            errorMessage = error.localizedDescription
-            logger.error("Failed to load transcripts: \(error.localizedDescription)")
+            logger.info("Server transcripts unavailable, showing local only: \(error.localizedDescription)")
         }
+
+        // Merge, preferring local records on taskId collisions.
+        let localTaskIds = Set(localTranscripts.map(\.taskId))
+        transcripts = localTranscripts + serverTranscripts.filter { !localTaskIds.contains($0.taskId) }
 
         isLoading = false
     }
 
     // MARK: - Delete
 
-    /// Deletes a transcript by taskId from both the server and the local list.
+    /// Deletes a transcript by id. Local records are removed from the SwiftData store;
+    /// records that also exist server-side are deleted there too (best-effort).
     func deleteTranscript(id: String) async {
         guard let transcript = transcripts.first(where: { $0.id == id }) else { return }
-        do {
-            try await APIService.shared.deleteTranscript(taskId: transcript.taskId)
-            transcripts.removeAll { $0.id == id }
-            logger.info("Deleted transcript \(transcript.taskId)")
-        } catch {
-            errorMessage = error.localizedDescription
-            logger.error("Failed to delete transcript \(transcript.taskId): \(error.localizedDescription)")
+
+        let localRecord = LocalTranscriptStore.shared.record(forTaskId: transcript.taskId)
+        if localRecord != nil {
+            LocalTranscriptStore.shared.delete(taskId: transcript.taskId)
         }
+
+        // Only hit the server for records that did not originate locally.
+        if localRecord == nil {
+            do {
+                try await APIService.shared.deleteTranscript(taskId: transcript.taskId)
+                logger.info("Deleted server transcript \(transcript.taskId)")
+            } catch {
+                errorMessage = error.localizedDescription
+                logger.error("Failed to delete transcript \(transcript.taskId): \(error.localizedDescription)")
+                return
+            }
+        }
+
+        transcripts.removeAll { $0.id == id }
     }
 
     // MARK: - Reload Helpers

@@ -115,6 +115,24 @@ enum TaskStatus: String, Codable, Sendable {
     }
 }
 
+// MARK: - ProcessingMode
+
+/// Where transcription + notule generation happens. `local` runs fully on-device
+/// (no backend server required); `cloud` uses the FastAPI backend + n8n.
+enum ProcessingMode: String, Codable, Sendable, CaseIterable, Identifiable {
+    case local
+    case cloud
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .local: return "Lokaal (geen server)"
+        case .cloud: return "Cloud (server)"
+        }
+    }
+}
+
 // MARK: - NotulenProvider
 
 enum NotulenProvider: String, Codable, Sendable, CaseIterable, Identifiable {
@@ -250,7 +268,31 @@ struct Profile: Identifiable, Codable, Hashable, Sendable {
         isDefault: true
     )
 
-    static let defaults: [Profile] = [.zakelijk, .informeel, .technisch, .handleiding]
+    static let blogSamenvatting = Profile(
+        id: "blog_samenvatting",
+        name: "Blog Samenvatting",
+        description: "Blogklare samenvatting van een ingesproken verhaal",
+        icon: "doc.richtext.fill",
+        systemPrompt: "Je bent een contentschrijver die audio omzet naar een blogklare samenvatting.",
+        notulePrompt: "Maak een blogklare samenvatting van deze opname met een pakkende titel, kernboodschap en heldere alinea's.",
+        template: nil,
+        isDefault: true
+    )
+
+    /// Built-in profiles, enriched with the rich prompts + HTML templates from
+    /// ProfileTemplates.json (falling back to the inline prompts when unavailable).
+    static var defaults: [Profile] {
+        let base: [Profile] = [.zakelijk, .informeel, .technisch, .handleiding, .blogSamenvatting]
+        return base.map { profile in
+            guard let entry = ProfileTemplates.entry(for: profile.id) else { return profile }
+            var enriched = profile
+            enriched.systemPrompt = entry.systemPrompt ?? profile.systemPrompt
+            enriched.notulePrompt = entry.notulePrompt ?? profile.notulePrompt
+            enriched.template = entry.template ?? profile.template
+            if enriched.description == nil { enriched.description = entry.description }
+            return enriched
+        }
+    }
 }
 
 // MARK: - TranscriptTask

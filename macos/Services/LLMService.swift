@@ -50,6 +50,29 @@ protocol LLMService: Sendable {
     ) async throws -> String
 }
 
+// MARK: - Prompt assembly
+
+/// Builds the user message for notule generation. Backend-style profiles embed
+/// `{{TRANSCRIPTION}}` and `{{OUTPUT_TEMPLATE}}` placeholders in the notule prompt;
+/// when present they are substituted in place. Otherwise the transcription and
+/// template are appended (legacy inline profiles).
+func buildNotuleUserContent(
+    notulePrompt: String,
+    transcription: String,
+    outputTemplate: String?
+) -> String {
+    if notulePrompt.contains("{{TRANSCRIPTION}}") {
+        return notulePrompt
+            .replacingOccurrences(of: "{{TRANSCRIPTION}}", with: transcription)
+            .replacingOccurrences(of: "{{OUTPUT_TEMPLATE}}", with: outputTemplate ?? "")
+    }
+    var content = "\(notulePrompt)\n\nTranscriptie:\n\(transcription)"
+    if let template = outputTemplate, !template.isEmpty {
+        content += "\n\nGebruik dit outputformaat:\n\(template)"
+    }
+    return content
+}
+
 // MARK: - LLMServiceFactory
 
 /// Creates the appropriate LLMService implementation based on the selected NotulenProvider.
@@ -65,7 +88,9 @@ class LLMServiceFactory {
         case .ollama:
             let model = UserDefaults.standard.string(forKey: "ollamaModel") ?? "llama3.2"
             let baseURL = UserDefaults.standard.string(forKey: "ollamaURL") ?? "http://localhost:11434"
-            return OpenAICompatibleLLMService(baseURL: baseURL, model: model)
+            // Optional API key enables Ollama Cloud (https://ollama.com).
+            let apiKey = UserDefaults.standard.string(forKey: "ollamaApiKey")
+            return OpenAICompatibleLLMService(baseURL: baseURL, model: model, apiKey: apiKey)
 
         case .lmStudio:
             let model = UserDefaults.standard.string(forKey: "lmStudioModel") ?? "local-model"
@@ -114,23 +139,28 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
 
     private let baseURL: String
     private let model: String
+    /// Optional bearer token. Set for hosted endpoints such as Ollama Cloud.
+    private let apiKey: String?
 
     /// Maximum tokens a typical local model handles comfortably (conservative estimate).
     private static let maxChunkCharacters = 8_000
 
-    init(baseURL: String, model: String) {
+    init(baseURL: String, model: String, apiKey: String? = nil) {
         self.baseURL = baseURL
         self.model = model
+        let trimmed = apiKey?.trimmingCharacters(in: .whitespacesAndNewlines)
+        self.apiKey = (trimmed?.isEmpty == false) ? trimmed : nil
     }
 
     // MARK: - Availability
 
     var isAvailable: Bool {
         get async {
-            guard let url = URL(string: "\(baseURL)/api/tags").map({ $0 }) ??
-                            URL(string: "\(baseURL)/v1/models") else { return false }
+            guard let url = URL(string: "\(baseURL)/v1/models") ??
+                            URL(string: "\(baseURL)/api/tags") else { return false }
             var request = URLRequest(url: url)
             request.timeoutInterval = 5
+            if let apiKey { request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization") }
             do {
                 let (_, response) = try await URLSession.shared.data(for: request)
                 return (response as? HTTPURLResponse)?.statusCode == 200
@@ -138,6 +168,43 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
                 return false
             }
         }
+    }
+
+    // MARK: - Model Discovery
+
+    /// Fetches the available model names from the endpoint. Tries the OpenAI-compatible
+    /// `/v1/models` first (works for Ollama local, Ollama Cloud and LM Studio), then
+    /// falls back to Ollama's native `/api/tags`. Returns an empty array on failure.
+    func fetchModels() async -> [String] {
+        if let models = await fetchModelsOpenAI(), !models.isEmpty { return models }
+        if let models = await fetchModelsOllamaTags(), !models.isEmpty { return models }
+        return []
+    }
+
+    private func fetchModelsOpenAI() async -> [String]? {
+        guard let url = URL(string: "\(baseURL)/v1/models") else { return nil }
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 10
+        if let apiKey { request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization") }
+        guard let (data, response) = try? await URLSession.shared.data(for: request),
+              (response as? HTTPURLResponse)?.statusCode == 200,
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let items = json["data"] as? [[String: Any]]
+        else { return nil }
+        return items.compactMap { $0["id"] as? String }.sorted()
+    }
+
+    private func fetchModelsOllamaTags() async -> [String]? {
+        guard let url = URL(string: "\(baseURL)/api/tags") else { return nil }
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 10
+        if let apiKey { request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization") }
+        guard let (data, response) = try? await URLSession.shared.data(for: request),
+              (response as? HTTPURLResponse)?.statusCode == 200,
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let items = json["models"] as? [[String: Any]]
+        else { return nil }
+        return items.compactMap { $0["name"] as? String }.sorted()
     }
 
     // MARK: - Generate Notulen
@@ -160,10 +227,11 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
         }
 
         // Build the final prompt
-        var userContent = "\(notulePrompt)\n\nTranscriptie:\n\(processedTranscription)"
-        if let template = outputTemplate, !template.isEmpty {
-            userContent += "\n\nGebruik dit outputformaat:\n\(template)"
-        }
+        let userContent = buildNotuleUserContent(
+            notulePrompt: notulePrompt,
+            transcription: processedTranscription,
+            outputTemplate: outputTemplate
+        )
 
         return try await streamChatCompletion(
             systemPrompt: systemPrompt,
@@ -243,6 +311,7 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
         request.httpBody = bodyData
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
+        if let apiKey { request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization") }
         request.timeoutInterval = 300
 
         let (asyncBytes, response) = try await URLSession.shared.bytes(for: request)
@@ -325,10 +394,11 @@ final class AppleFoundationModelService: LLMService, @unchecked Sendable {
             processedTranscription = transcription
         }
 
-        var userContent = "\(notulePrompt)\n\nTranscriptie:\n\(processedTranscription)"
-        if let template = outputTemplate, !template.isEmpty {
-            userContent += "\n\nGebruik dit outputformaat:\n\(template)"
-        }
+        let userContent = buildNotuleUserContent(
+            notulePrompt: notulePrompt,
+            transcription: processedTranscription,
+            outputTemplate: outputTemplate
+        )
 
         let instructions = systemPrompt.isEmpty
             ? "Je bent een professionele notulist die vergaderingen nauwkeurig samenvat in het Nederlands."

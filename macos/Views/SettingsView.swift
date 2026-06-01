@@ -44,6 +44,7 @@ struct SettingsView: View {
     var body: some View {
         Form {
             verbindingSection
+            lokaleVerwerkingSection
             notulenGeneratieSection
             profielenSection
             spraakherkenningSection
@@ -68,6 +69,7 @@ struct SettingsView: View {
                 await loadProfiles()
                 await checkServerConnection()
                 await checkPermissions()
+                if isLocalProcessing { await loadOllamaModels() }
             }
         }
         .confirmationDialog(
@@ -216,6 +218,175 @@ struct SettingsView: View {
                 .font(TS.Font.caption)
                 .foregroundStyle(Color.labelTertiary)
         }
+    }
+
+    // MARK: - Lokale Verwerking (Local Processing)
+
+    @AppStorage("processingMode") private var processingMode: String = ProcessingMode.local.rawValue
+    @AppStorage("localTranscriber") private var localTranscriber: String = LocalTranscriberEngine.whisperKit.rawValue
+    @AppStorage("whisperModel") private var whisperModel: String = LocalTranscriberFactory.defaultWhisperModel
+    @AppStorage("ollamaURL") private var ollamaURL: String = "http://localhost:11434"
+    @AppStorage("ollamaModel") private var ollamaModel: String = "llama3.2"
+    @AppStorage("ollamaApiKey") private var ollamaApiKey: String = ""
+
+    @State private var ollamaTesting: Bool = false
+    @State private var ollamaConnected: Bool? = nil
+    @State private var ollamaModels: [String] = []
+    @State private var ollamaModelsLoading: Bool = false
+
+    private var isLocalProcessing: Bool {
+        (ProcessingMode(rawValue: processingMode) ?? .local) == .local
+    }
+
+    private var lokaleVerwerkingSection: some View {
+        Section {
+            Picker("Verwerking", selection: $processingMode) {
+                Label("Lokaal (geen server)", systemImage: "cpu")
+                    .tag(ProcessingMode.local.rawValue)
+                Label("Cloud (server)", systemImage: "cloud.fill")
+                    .tag(ProcessingMode.cloud.rawValue)
+            }
+            .font(TS.Font.body)
+
+            if isLocalProcessing {
+                // Transcription engine
+                Picker("Transcriptie", selection: $localTranscriber) {
+                    ForEach(LocalTranscriberEngine.allCases) { engine in
+                        Text(engine.displayName).tag(engine.rawValue)
+                    }
+                }
+                .font(TS.Font.body)
+
+                if localTranscriber == LocalTranscriberEngine.whisperKit.rawValue {
+                    LabeledContent("Whisper-model") {
+                        TextField("model", text: $whisperModel)
+                            .textFieldStyle(.plain)
+                            .multilineTextAlignment(.trailing)
+                            .font(TS.Font.bodyMonospaced)
+                    }
+                }
+
+                // Ollama configuration
+                LabeledContent("Ollama URL") {
+                    TextField("http://localhost:11434", text: $ollamaURL)
+                        .textFieldStyle(.plain)
+                        .multilineTextAlignment(.trailing)
+                        .font(TS.Font.bodyMonospaced)
+                        .autocorrectionDisabled()
+                }
+                // Model: dynamic picker when models are loaded, manual entry otherwise.
+                if ollamaModels.isEmpty {
+                    LabeledContent("Ollama model") {
+                        TextField("llama3.2", text: $ollamaModel)
+                            .textFieldStyle(.plain)
+                            .multilineTextAlignment(.trailing)
+                            .font(TS.Font.bodyMonospaced)
+                            .autocorrectionDisabled()
+                    }
+                } else {
+                    Picker("Ollama model", selection: $ollamaModel) {
+                        // Keep the saved value selectable even if it is not in the fetched list.
+                        if !ollamaModels.contains(ollamaModel) && !ollamaModel.isEmpty {
+                            Text(ollamaModel).tag(ollamaModel)
+                        }
+                        ForEach(ollamaModels, id: \.self) { name in
+                            Text(name).tag(name)
+                        }
+                    }
+                    .font(TS.Font.body)
+                }
+
+                HStack(spacing: TS.Spacing.sm) {
+                    Button {
+                        Task { await loadOllamaModels() }
+                    } label: {
+                        if ollamaModelsLoading {
+                            ProgressView().controlSize(.small)
+                        } else {
+                            Label("Modellen laden", systemImage: "arrow.triangle.2.circlepath")
+                                .font(TS.Font.footnoteSemibold)
+                        }
+                    }
+                    .buttonStyle(.bordered)
+                    .disabled(ollamaModelsLoading)
+
+                    if !ollamaModels.isEmpty {
+                        Text("\(ollamaModels.count) beschikbaar")
+                            .font(TS.Font.caption)
+                            .foregroundStyle(Color.labelTertiary)
+                    }
+                }
+
+                LabeledContent("API-sleutel") {
+                    SecureField("leeg = lokaal", text: $ollamaApiKey)
+                        .textFieldStyle(.plain)
+                        .multilineTextAlignment(.trailing)
+                        .font(TS.Font.bodyMonospaced)
+                }
+
+                HStack(spacing: TS.Spacing.sm) {
+                    Button {
+                        Task { await testOllamaConnection() }
+                    } label: {
+                        if ollamaTesting {
+                            ProgressView().controlSize(.small)
+                        } else {
+                            Text("Verbinding testen")
+                                .font(TS.Font.footnoteSemibold)
+                        }
+                    }
+                    .buttonStyle(.bordered)
+                    .disabled(ollamaTesting)
+
+                    if let connected = ollamaConnected {
+                        Label(
+                            connected ? "Verbonden" : "Niet bereikbaar",
+                            systemImage: connected ? "checkmark.circle.fill" : "xmark.circle.fill"
+                        )
+                        .font(TS.Font.footnote)
+                        .foregroundStyle(connected ? Color.statusSuccess : Color.statusError)
+                    }
+                }
+            }
+        } header: {
+            Text("Lokale verwerking")
+        } footer: {
+            Text(isLocalProcessing
+                 ? "Alles draait lokaal: transcriptie via \(localTranscriber == LocalTranscriberEngine.whisperKit.rawValue ? "WhisperKit" : "Apple Spraakherkenning") en notulen via Ollama. Vul een API-sleutel in om Ollama Cloud (https://ollama.com) te gebruiken."
+                 : "De server verzorgt transcriptie en notulen. Zet op 'Lokaal' om zonder server te werken.")
+                .font(TS.Font.caption)
+                .foregroundStyle(Color.labelTertiary)
+        }
+    }
+
+    private func ollamaService() -> OpenAICompatibleLLMService {
+        let key = ollamaApiKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        return OpenAICompatibleLLMService(
+            baseURL: ollamaURL,
+            model: ollamaModel,
+            apiKey: key.isEmpty ? nil : key
+        )
+    }
+
+    private func testOllamaConnection() async {
+        ollamaTesting = true
+        ollamaConnected = nil
+        let available = await ollamaService().isAvailable
+        ollamaConnected = available
+        ollamaTesting = false
+        if available { await loadOllamaModels() }
+    }
+
+    /// Fetches the available model list (local Ollama or Ollama Cloud) for the picker.
+    private func loadOllamaModels() async {
+        ollamaModelsLoading = true
+        let models = await ollamaService().fetchModels()
+        ollamaModels = models
+        // Default the selection to the first model when nothing valid is selected yet.
+        if ollamaModel.isEmpty, let first = models.first {
+            ollamaModel = first
+        }
+        ollamaModelsLoading = false
     }
 
     // MARK: - Notulen Generatie (AI Provider)

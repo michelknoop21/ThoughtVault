@@ -62,6 +62,13 @@
 		AA000056 /* TasksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000056 /* TasksView.swift */; };
 		AA000057 /* UpdateCheckService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000057 /* UpdateCheckService.swift */; };
 		AA000058 /* GoogleAuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000058 /* GoogleAuthService.swift */; };
+		AA000061 /* TranscriptRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000061 /* TranscriptRecord.swift */; };
+		AA000062 /* LocalTranscriptStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000062 /* LocalTranscriptStore.swift */; };
+		AA000063 /* LocalTranscriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000063 /* LocalTranscriber.swift */; };
+		AA000064 /* NotuleTitleExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000064 /* NotuleTitleExtractor.swift */; };
+		AA000065 /* WhisperKit in Frameworks */ = {isa = PBXBuildFile; productRef = SD000001 /* WhisperKit */; };
+		AA000066 /* ProfileTemplates.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000066 /* ProfileTemplates.swift */; };
+		AA000067 /* ProfileTemplates.json in Resources */ = {isa = PBXBuildFile; fileRef = FA000067 /* ProfileTemplates.json */; };
 		AB000001 /* TranscriptStudioTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000001 /* TranscriptStudioTests.swift */; };
 /* End PBXBuildFile section */
 
@@ -135,6 +142,12 @@
 		FA000056 /* TasksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TasksView.swift; sourceTree = "<group>"; };
 		FA000057 /* UpdateCheckService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateCheckService.swift; sourceTree = "<group>"; };
 		FA000058 /* GoogleAuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleAuthService.swift; sourceTree = "<group>"; };
+		FA000061 /* TranscriptRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptRecord.swift; sourceTree = "<group>"; };
+		FA000062 /* LocalTranscriptStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalTranscriptStore.swift; sourceTree = "<group>"; };
+		FA000063 /* LocalTranscriber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalTranscriber.swift; sourceTree = "<group>"; };
+		FA000064 /* NotuleTitleExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotuleTitleExtractor.swift; sourceTree = "<group>"; };
+		FA000066 /* ProfileTemplates.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileTemplates.swift; sourceTree = "<group>"; };
+		FA000067 /* ProfileTemplates.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = ProfileTemplates.json; sourceTree = "<group>"; };
 		FB000001 /* TranscriptStudioTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptStudioTests.swift; sourceTree = "<group>"; };
 		FC000001 /* TranscriptStudio.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TranscriptStudio.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		FC000002 /* TranscriptStudioTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TranscriptStudioTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -145,6 +158,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AA000065 /* WhisperKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -210,6 +224,8 @@
 			isa = PBXGroup;
 			children = (
 				FA000005 /* Models.swift */,
+				FA000061 /* TranscriptRecord.swift */,
+				FA000066 /* ProfileTemplates.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -227,6 +243,9 @@
 				FA000058 /* GoogleAuthService.swift */,
 				FA000013 /* KeychainService.swift */,
 				FA000014 /* LLMService.swift */,
+				FA000062 /* LocalTranscriptStore.swift */,
+				FA000063 /* LocalTranscriber.swift */,
+				FA000064 /* NotuleTitleExtractor.swift */,
 				FA000054 /* MeetingNotificationService.swift */,
 				FA000050 /* MicrosoftGraphService.swift */,
 				FA000015 /* NetworkMonitor.swift */,
@@ -294,6 +313,7 @@
 			children = (
 				FA000041 /* Localizable.strings */,
 				FA000042 /* Localizable.strings */,
+				FA000067 /* ProfileTemplates.json */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -331,6 +351,9 @@
 			dependencies = (
 			);
 			name = TranscriptStudio;
+			packageProductDependencies = (
+				SD000001 /* WhisperKit */,
+			);
 			productName = TranscriptStudio;
 			productReference = FC000001 /* TranscriptStudio.app */;
 			productType = "com.apple.product-type.application";
@@ -381,6 +404,9 @@
 				Base,
 			);
 			mainGroup = GG000000 /* TranscriptStudioApp */;
+			packageReferences = (
+				SP000001 /* XCRemoteSwiftPackageReference "WhisperKit" */,
+			);
 			productRefGroup = GG000090 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -400,6 +426,7 @@
 				AA000042 /* Localizable.strings in Resources */,
 				AA000043 /* PrivacyInfo.xcprivacy in Resources */,
 				AA000044 /* Assets.xcassets in Resources */,
+				AA000067 /* ProfileTemplates.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -415,6 +442,11 @@
 				AA000003 /* Color+Brand.swift in Sources */,
 				AA000004 /* Theme.swift in Sources */,
 				AA000005 /* Models.swift in Sources */,
+				AA000061 /* TranscriptRecord.swift in Sources */,
+				AA000066 /* ProfileTemplates.swift in Sources */,
+				AA000062 /* LocalTranscriptStore.swift in Sources */,
+				AA000063 /* LocalTranscriber.swift in Sources */,
+				AA000064 /* NotuleTitleExtractor.swift in Sources */,
 				AA000006 /* Analytics.swift in Sources */,
 				AA000007 /* APIService.swift in Sources */,
 				AA000008 /* AudioRecorder.swift in Sources */,
@@ -757,6 +789,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		SP000001 /* XCRemoteSwiftPackageReference "WhisperKit" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/argmaxinc/WhisperKit.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.9.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		SD000001 /* WhisperKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = SP000001 /* XCRemoteSwiftPackageReference "WhisperKit" */;
+			productName = WhisperKit;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = PP000001 /* Project object */;
 }

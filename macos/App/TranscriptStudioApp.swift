@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 
 @main
 struct TranscriptStudioApp: App {
@@ -19,6 +20,7 @@ struct TranscriptStudioApp: App {
                 .environment(updateCheckService)
                 .environment(calendarService)
                 .environment(permissionManager)
+                .modelContainer(LocalTranscriptStore.shared.container)
                 .task {
                     await permissionManager.checkAllPermissions()
                     AudioRecorder.cleanupOldRecordings(

@@ -6,6 +6,32 @@ _Decisions DEC-029 through DEC-038 archived to [archive/DECISIONS-DEC-029-to-DEC
 
 ---
 
+## DEC-059 — Hardened Windows Upload Pipeline na Empirische Weerlegging python-multipart Hypothese
+
+**Date:** 2026-05-06
+**Status:** Accepted
+
+**Context:** Bas (Windows-gebruiker) kreeg al sinds versie 1.0.119 sporadisch een 422 `field required` op `POST /tstudio/api/transcribe` bij combined recordings van 91-168 MB. Drie eerdere fixes hebben het niet weggekregen: `cd1c547` (recordings van %APPDATA% naar %LOCALAPPDATA% wegens vermoede OneDrive sync), `93d9f51` (offline-queue retry storms), en `68273fd` (pre-flight integrity check). De integrity check leest het bronbestand één keer end-to-end en stuurt de gemeten `actual_size` naar `reqwest::multipart::Part::stream_with_length()`, maar opent vervolgens een nieuwe handle voor de daadwerkelijke streaming-upload — tussen die twee `tokio::fs::File::open()`-calls kan AV/OneDrive het bestand muteren waardoor de gestreamde bytes niet matchen met de claimde Content-Length, wat python-multipart 0.0.17 in starlette als ontbrekend `file`-veld interpreteert. Tegelijk leefde de hypothese dat python-multipart 0.0.17 zelf een boundary-parsing bug had (versies 0.0.18-0.0.20 hebben relevante fixes). Een reproductie-binary (`/tmp/repro-upload/`) met exact gelijke reqwest 0.12.28 wire format heeft die hypothese empirisch weerlegd: 100 MB random binary multipart upload tegen productie gaf 422 `audio_format_unsupported` (de magic-byte check vóór audio-format-detectie), wat betekent dat het `file`-veld correct werd geëxtraheerd. Backend is dus disculpeerd; bug is client-side op Windows.
+
+**Decision:** `do_proxy_upload()` in `windows/src-tauri/src/commands/http.rs` is herzien om een hele klasse mogelijke oorzaken tegelijk af te sluiten in plaats van één hypothese te chasen. Vijf-staps strategie:
+
+1. **Bron stabiliseren** — bestand wordt eerst gekopieerd naar `std::env::temp_dir()` (op Windows `%LOCALAPPDATA%\Temp`, buiten OneDrive Known Folder Move) via `tempfile::Builder::tempfile_in()`. Post-copy size-verificatie. Auto-cleanup via `TempPath` Drop.
+2. **In-memory upload voor ≤200 MB** — `tokio::fs::read()` + `reqwest::multipart::Part::bytes(...)`. Geen streaming, geen race-window tussen Content-Length en bytes-on-wire. Bas's failures (91-168 MB) vallen volledig binnen deze grens. Pre-9c12582 werkte dit al stabiel; we keren terug naar dat patroon, maar nu vanuit de stabiele temp-kopie.
+3. **WAV-magic-byte validatie** op de in-memory bytes (`RIFF` + `WAVE`) vóór verzending. Surface AV-induced corruption als heldere client-error in plaats van obscuur server-side 422.
+4. **Hardened reqwest client** — explicit `user_agent("TranscriptStudio-Windows/{version}")` (ook traceability in nginx logs), `tcp_nodelay(true)`, `pool_max_idle_per_host(0)`, `http1_only()`, `no_proxy()`, `timeout(600s)`. Sluit Nagle-stalls, HTTP/2 ALPN-race, connection-pool reuse bugs en corporate-proxy MITM uit.
+5. **Diagnostische correlatie** — SHA-256 prefix wordt berekend over de in-memory bytes en meegegeven als `X-Upload-Sha256` header. Backend `_log_validation_error` in `backend/src/insanely_fast_whisper_api/app/app.py` is uitgebreid om dit veld + peer IP te loggen op `[VALIDATION-422]` lines, zodat een eventuele volgende incident-failure ondubbelzinnig client-hash vs server-hash kan vergelijken.
+
+**Consequences:**
+- Files changed: `windows/src-tauri/src/commands/http.rs` (refactor `do_proxy_upload`), `windows/src-tauri/Cargo.toml` (`sha2 = "0.10"` runtime dep, `tempfile` van dev-dep naar runtime dep), `backend/src/insanely_fast_whisper_api/app/app.py:_log_validation_error` (logregel verrijkt).
+- Files >200 MB blijven streamen, nu vanuit de geïntegrity-checkte temp-kopie. Voor uploads >250 MB blijft een resterende streaming-race-mogelijkheid; geen bekende klant raakt die grens.
+- Geheugenfootprint van een upload is nu ~grootte van het bestand (max 200 MB) — bewust geaccepteerd; vorige streaming-architectuur (64 KB buffer) was de bron van de race.
+- Backend-wijziging is harmless voor oudere clients: ontbrekende `X-Upload-Sha256` header logt simpelweg als `sha=''`.
+- Productie release v1.0.123 werd nooit gebouwd door een latente YAML-syntax-bug in `.gitlab-ci.yml` (commit `be88f63`'s PowerShell heredoc-body op kolom 1 dedented het YAML block scalar). Tag v1.0.124 is de eerste werkelijke release met deze hardening.
+- Reproductie-binary `/tmp/repro-upload/` (Rust, reqwest 0.12.28) blijft beschikbaar voor toekomstige Windows-upload-debug; niet ingecheckt.
+- Eerdere `UploadFailureReason` veronderstellingen rond Content-Length-vs-body-divergentie zijn hiermee zowel gemitigeerd als instrumenteerbaar — als de bug terugkomt geeft de gelogde SHA direct uitsluitsel.
+
+---
+
 ## DEC-058 — Windows MSI Build op GitLab CI met Self-Hosted Runner
 
 **Date:** 2026-04-01

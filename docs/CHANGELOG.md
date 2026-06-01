@@ -5,6 +5,38 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2026-05-06] — Windows upload pipeline gehard tegen recurring 422 (v1.0.124)
+
+### Fixed
+- **Bas's hardnekkige `field required` 422 op 90+ MB uploads** — `windows/src-tauri/src/commands/http.rs` `do_proxy_upload()` volledig herzien. De vorige integrity check uit commit `68273fd` versmaalde het race-window maar sloot het niet — een tweede `tokio::fs::File::open()` ná de pre-flight read liet AV/OneDrive nog tussendoor muteren waardoor `Content-Length` en daadwerkelijke body bytes uit elkaar liepen, wat python-multipart 0.0.17 als ontbrekend `file` veld interpreteerde.
+- **Empirische weerlegging python-multipart-hypothese** — een `/tmp/repro-upload/` Rust-binary met identieke reqwest 0.12.28 wire format (zelfde boundary-stijl, lege UA, 100 MB random binary) parseerde foutloos op de productiebackend (gaf 422 `audio_format_unsupported`, niet `field required`). Disculpeert backend volledig; root cause is client-side op Windows.
+- **`.gitlab-ci.yml` YAML-syntax (latente bug uit `be88f63`)** — de `update releases.json`-stap gebruikte een PowerShell `@"..."@` heredoc met body op kolom 1, wat het omringende YAML `- |` block scalar dedented en het bestand onparseerbaar maakte. Pipeline #19651 voor v1.0.123 faalde direct in linting. Vervangen door een array van single-line PowerShell strings die met ``-join "`n"`` worden samengevoegd; elke regel staat nu op ≥8 spaties indent.
+
+### Changed
+- **`do_proxy_upload()` strategie** (`windows/src-tauri/src/commands/http.rs`):
+  1. Bron stabiliseren: `tempfile::Builder::tempfile_in(env::temp_dir())` met TempPath auto-cleanup. Post-copy size-verificatie bij mismatch.
+  2. ≤200 MB: `tokio::fs::read()` + `reqwest::multipart::Part::bytes(...)`. Geen streaming, geen Content-Length-vs-body race. Bas's failures (91-168 MB) vallen volledig binnen deze grens.
+  3. >200 MB: stream van de integrity-checked temp copy.
+  4. WAV magic-byte validatie (`RIFF` + `WAVE`) op in-memory bytes vóór verzending — surface AV-induced corruption als nette client-error.
+  5. Reqwest client config: `user_agent("TranscriptStudio-Windows/{version}")`, `tcp_nodelay(true)`, `pool_max_idle_per_host(0)`, `http1_only()`, `no_proxy()`, timeout 600 s.
+  6. SHA-256 prefix in `[Upload]` log + als `X-Upload-Sha256` request header.
+- **Backend `[VALIDATION-422]` log** (`backend/src/insanely_fast_whisper_api/app/app.py:_log_validation_error`): toont nu ook `sha=` (X-Upload-Sha256 van client) en `client=` (peer IP) zodat we bij een eventuele volgende incident-failure client-side hash en server-side hash kunnen vergelijken om body-corruption ondubbelzinnig vast te stellen.
+
+### Added
+- **`sha2 = "0.10"`** runtime dependency in `windows/src-tauri/Cargo.toml`.
+- **`tempfile = "3"`** verplaatst van `[dev-dependencies]` naar runtime `[dependencies]`.
+
+### Decisions
+- DEC-059: Hardened Windows upload pipeline + empirical disproof of python-multipart hypothesis
+
+### Notes
+- v1.0.123 tag bestaat maar werd nooit gebouwd door de YAML-fout. v1.0.124 is de eerste daadwerkelijke release met de hardening.
+- Backend-wijziging is gedeployd via `rsync ../transcript-studio-backend/.../app.py michelk@3.69.205.209:` + `docker restart n8n_transcript_studio`. Geverifieerd schone start (CUDA actief, queue manager up).
+- Productie pipeline draait via tag `v1.0.124` op GitLab CI (https://gitlab.prezent.nl/ai-coding/transcript-studio-native/-/pipelines).
+- Reproductie-harness blijft in `/tmp/repro-upload/` voor toekomstige debug-sessies; niet in repo.
+
+---
+
 ## [2026-04-01] — Windows TranscriptsPage UX redesign
 
 ### Changed

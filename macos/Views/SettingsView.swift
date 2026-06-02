@@ -44,8 +44,13 @@ struct SettingsView: View {
     var body: some View {
         Form {
             verbindingSection
-            lokaleVerwerkingSection
-            notulenGeneratieSection
+            verwerkingsmodusSection
+            if isLocalProcessing {
+                transcriptieSection
+                lokaleNotulenSection
+            } else {
+                cloudNotulenSection
+            }
             profielenSection
             spraakherkenningSection
             permissiesSection
@@ -70,7 +75,7 @@ struct SettingsView: View {
                 await loadProfiles()
                 await checkServerConnection()
                 await checkPermissions()
-                if isLocalProcessing { await loadOllamaModels() }
+                if isLocalProcessing && activeLocalProvider == .ollama { await loadOllamaModels() }
             }
         }
         .confirmationDialog(
@@ -228,6 +233,8 @@ struct SettingsView: View {
     @AppStorage("whisperModel") private var whisperModel: String = LocalTranscriberFactory.defaultWhisperModel
     @AppStorage("ollamaURL") private var ollamaURL: String = "http://localhost:11434"
     @AppStorage("ollamaModel") private var ollamaModel: String = "llama3.2"
+    @AppStorage("lmStudioURL") private var lmStudioURL: String = "http://localhost:1234"
+    @AppStorage("lmStudioModel") private var lmStudioModel: String = "local-model"
 
     // API key lives in the Keychain, not UserDefaults. Mirrored into @State for editing.
     @State private var ollamaApiKey: String = ""
@@ -252,63 +259,184 @@ struct SettingsView: View {
             && !ollamaURL.lowercased().hasPrefix("https://")
     }
 
-    private var lokaleVerwerkingSection: some View {
+    /// The notule provider actually used when processing locally. `.cloud` is
+    /// meaningless offline (RecordingViewModel maps it to Ollama), so it is
+    /// normalised away here — keeping the UI and the runtime in agreement.
+    private var activeLocalProvider: NotulenProvider {
+        let p = NotulenProvider(rawValue: notulenProvider) ?? .ollama
+        return p == .cloud ? .ollama : p
+    }
+
+    /// Picker binding for the local notule provider. Coerces a stale `.cloud`
+    /// selection (the legacy default) to `.ollama` so the picker never renders blank.
+    private var localNotuleProviderBinding: Binding<String> {
+        Binding(
+            get: { activeLocalProvider.rawValue },
+            set: { notulenProvider = $0 }
+        )
+    }
+
+    private var verwerkingsmodusSection: some View {
         Section {
-            VStack(alignment: .leading, spacing: TS.Spacing.lg) {
+            Picker("Verwerkingsmodus", selection: $processingMode) {
+                Text("Lokaal").tag(ProcessingMode.local.rawValue)
+                Text("Cloud").tag(ProcessingMode.cloud.rawValue)
+            }
+            .pickerStyle(.segmented)
+        } header: {
+            Text("Verwerking")
+        } footer: {
+            Text(isLocalProcessing
+                ? "Transcriptie én notulen draaien volledig op dit apparaat. Geen server of account nodig."
+                : "Audio wordt naar de server geüpload voor transcriptie en notulen.")
+                .font(TS.Font.caption)
+                .foregroundStyle(Color.labelTertiary)
+        }
+    }
 
-                // ── Verwerkingsmodus ──────────────────────────────────────────
-                settingField(
-                    "Verwerkingsmodus",
-                    hint: isLocalProcessing
-                        ? "Alles op dit apparaat. Geen server nodig."
-                        : "Transcriptie en notulen via de server."
-                ) {
-                    Picker("", selection: $processingMode) {
-                        Text("Lokaal").tag(ProcessingMode.local.rawValue)
-                        Text("Cloud").tag(ProcessingMode.cloud.rawValue)
-                    }
-                    .pickerStyle(.segmented)
-                    .labelsHidden()
-                }
+    // MARK: - Transcriptie (Local)
 
-                if isLocalProcessing {
-                    Divider()
-
-                    // ── Transcriptie ─────────────────────────────────────────
-                    settingField(
-                        "Transcriptie-engine",
-                        hint: localTranscriber == LocalTranscriberEngine.whisperKit.rawValue
-                            ? "WhisperKit downloadt het model bij eerste gebruik."
-                            : "Apple Spraakherkenning, geen download."
-                    ) {
-                        Picker("", selection: $localTranscriber) {
-                            ForEach(LocalTranscriberEngine.allCases) { engine in
-                                Text(engine == .whisperKit ? "WhisperKit" : "Apple").tag(engine.rawValue)
-                            }
-                        }
-                        .pickerStyle(.segmented)
-                        .labelsHidden()
-                    }
-
-                    if localTranscriber == LocalTranscriberEngine.whisperKit.rawValue {
-                        settingField("Whisper-model") {
-                            TextField("model", text: $whisperModel)
-                                .textFieldStyle(.roundedBorder)
-                                .font(TS.Font.bodyMonospaced)
-                                .autocorrectionDisabled()
-                        }
-                    }
-
-                    Divider()
-
-                    // ── Ollama (notulen) ─────────────────────────────────────
-                    ollamaConfig
+    private var transcriptieSection: some View {
+        Section {
+            Picker("Engine", selection: $localTranscriber) {
+                ForEach(LocalTranscriberEngine.allCases) { engine in
+                    Text(engine == .whisperKit ? "WhisperKit" : "Apple").tag(engine.rawValue)
                 }
             }
-            .padding(.vertical, TS.Spacing.xs)
+            .pickerStyle(.segmented)
+
+            if localTranscriber == LocalTranscriberEngine.whisperKit.rawValue {
+                LabeledContent("Model") {
+                    TextField("model", text: $whisperModel)
+                        .textFieldStyle(.roundedBorder)
+                        .font(TS.Font.bodyMonospaced)
+                        .autocorrectionDisabled()
+                        .multilineTextAlignment(.trailing)
+                        .frame(maxWidth: 220)
+                }
+            }
         } header: {
-            Text("Lokale verwerking")
+            Text("Transcriptie")
+        } footer: {
+            Text(localTranscriber == LocalTranscriberEngine.whisperKit.rawValue
+                ? "WhisperKit downloadt het gekozen model bij eerste gebruik."
+                : "Apple Spraakherkenning werkt direct, zonder download.")
+                .font(TS.Font.caption)
+                .foregroundStyle(Color.labelTertiary)
         }
+    }
+
+    // MARK: - Notulen (Local provider)
+
+    private var lokaleNotulenSection: some View {
+        Section {
+            Picker("Provider", selection: localNotuleProviderBinding) {
+                Text("Ollama").tag(NotulenProvider.ollama.rawValue)
+                Text("LM Studio").tag(NotulenProvider.lmStudio.rawValue)
+                Text("Apple Intelligence").tag(NotulenProvider.appleIntelligence.rawValue)
+            }
+
+            switch activeLocalProvider {
+            case .ollama:            ollamaConfig
+            case .lmStudio:          lmStudioConfig
+            case .appleIntelligence: appleIntelligenceNote
+            case .cloud:             EmptyView()
+            }
+
+            NavigationLink {
+                ProfilesView()
+            } label: {
+                Label("Eigen profielen beheren", systemImage: "person.text.rectangle")
+                    .font(TS.Font.body)
+            }
+        } header: {
+            Text("Notulen")
+        } footer: {
+            Text(localNotuleDescription)
+                .font(TS.Font.caption)
+                .foregroundStyle(Color.labelTertiary)
+        }
+    }
+
+    private var localNotuleDescription: String {
+        switch activeLocalProvider {
+        case .ollama:
+            return "Notulen worden lokaal gegenereerd via Ollama. Vul een API-sleutel in voor Ollama Cloud."
+        case .lmStudio:
+            return "Notulen worden lokaal gegenereerd via LM Studio."
+        case .appleIntelligence:
+            return "Notulen worden gegenereerd met Apple Intelligence op dit apparaat."
+        case .cloud:
+            return ""
+        }
+    }
+
+    // MARK: - Notulen (Cloud)
+
+    private var cloudNotulenSection: some View {
+        Section {
+            NavigationLink {
+                ProfilesView()
+            } label: {
+                Label("Eigen profielen beheren", systemImage: "person.text.rectangle")
+                    .font(TS.Font.body)
+            }
+        } header: {
+            Text("Notulen")
+        } footer: {
+            Text("Notulen worden via de server gegenereerd (N8N + Claude).")
+                .font(TS.Font.caption)
+                .foregroundStyle(Color.labelTertiary)
+        }
+    }
+
+    // MARK: - LM Studio config
+
+    @ViewBuilder
+    private var lmStudioConfig: some View {
+        settingField(
+            "LM Studio-server",
+            hint: "LM Studio draait standaard op http://localhost:1234."
+        ) {
+            TextField("http://localhost:1234", text: $lmStudioURL)
+                .textFieldStyle(.roundedBorder)
+                .font(TS.Font.bodyMonospaced)
+                .autocorrectionDisabled()
+        }
+
+        settingField("Model") {
+            TextField("local-model", text: $lmStudioModel)
+                .textFieldStyle(.roundedBorder)
+                .font(TS.Font.bodyMonospaced)
+                .autocorrectionDisabled()
+        }
+    }
+
+    // MARK: - Apple Intelligence note
+
+    @ViewBuilder
+    private var appleIntelligenceNote: some View {
+        #if canImport(FoundationModels)
+        if #available(macOS 26, iOS 26, *) {
+            if let reason = AppleFoundationModelService.unavailabilityReason {
+                Label(reason, systemImage: "exclamationmark.triangle.fill")
+                    .font(TS.Font.caption)
+                    .foregroundStyle(Color.statusWarning)
+            } else {
+                Label("Beschikbaar op dit apparaat.", systemImage: "checkmark.circle.fill")
+                    .font(TS.Font.caption)
+                    .foregroundStyle(Color.statusSuccess)
+            }
+        } else {
+            Label("Vereist macOS 26 of nieuwer.", systemImage: "exclamationmark.triangle.fill")
+                .font(TS.Font.caption)
+                .foregroundStyle(Color.statusWarning)
+        }
+        #else
+        Label("Niet beschikbaar in deze build.", systemImage: "exclamationmark.triangle.fill")
+            .font(TS.Font.caption)
+            .foregroundStyle(Color.statusWarning)
+        #endif
     }
 
     @ViewBuilder
@@ -511,47 +639,9 @@ struct SettingsView: View {
 
     // MARK: - Notulen Generatie (AI Provider)
 
-    @AppStorage("notulenProvider") private var notulenProvider: String = NotulenProvider.cloud.rawValue
-
-    private var notulenGeneratieSection: some View {
-        Section {
-            // AI Provider picker
-            Picker("AI-provider", selection: $notulenProvider) {
-                Label("Cloud (Server)", systemImage: "cloud.fill")
-                    .tag(NotulenProvider.cloud.rawValue)
-                Label("Ollama", systemImage: "server.rack")
-                    .tag(NotulenProvider.ollama.rawValue)
-                Label("LM Studio", systemImage: "desktopcomputer")
-                    .tag(NotulenProvider.lmStudio.rawValue)
-                Label("Apple Intelligence", systemImage: "apple.logo")
-                    .tag(NotulenProvider.appleIntelligence.rawValue)
-            }
-            .font(TS.Font.body)
-
-            // Eigen profielen link
-            NavigationLink {
-                ProfilesView()
-            } label: {
-                Label("Eigen profielen beheren", systemImage: "person.text.rectangle")
-                    .font(TS.Font.body)
-            }
-        } header: {
-            Text("Notulen generatie")
-        } footer: {
-            Text(notulenProviderDescription)
-                .font(TS.Font.caption)
-                .foregroundStyle(Color.labelTertiary)
-        }
-    }
-
-    private var notulenProviderDescription: String {
-        switch NotulenProvider(rawValue: notulenProvider) ?? .cloud {
-        case .cloud: return "Notulen worden gegenereerd via de server (N8N + Claude)."
-        case .ollama: return "Notulen worden lokaal gegenereerd via Ollama."
-        case .lmStudio: return "Notulen worden lokaal gegenereerd via LM Studio."
-        case .appleIntelligence: return "Notulen worden gegenereerd met Apple Intelligence op dit apparaat."
-        }
-    }
+    // Source of truth for the local notule provider. Read by RecordingViewModel's
+    // processLocally / regenerateNotuleLocally. Selected in `lokaleNotulenSection`.
+    @AppStorage("notulenProvider") private var notulenProvider: String = NotulenProvider.ollama.rawValue
 
     // MARK: - Spraakherkenning (Transcription)
 

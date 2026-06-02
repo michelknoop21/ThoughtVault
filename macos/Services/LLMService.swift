@@ -387,10 +387,7 @@ final class AppleFoundationModelService: LLMService, @unchecked Sendable {
     // MARK: - Availability
 
     var isAvailable: Bool {
-        get async {
-            // LanguageModelSession is available on all supported OS versions at compile time
-            return true
-        }
+        get async { Self.unavailabilityReason == nil }
     }
 
     // MARK: - Generate Notulen
@@ -402,6 +399,12 @@ final class AppleFoundationModelService: LLMService, @unchecked Sendable {
         outputTemplate: String?,
         onProgress: @Sendable (String) -> Void
     ) async throws -> String {
+
+        // Refuse early with a clear reason rather than letting LanguageModelSession
+        // fail opaquely when Apple Intelligence is off, unsupported, or still loading.
+        if let reason = Self.unavailabilityReason {
+            throw LLMError.generationFailed(reason)
+        }
 
         // Chunk long transcriptions by summarizing them first
         let processedTranscription: String
@@ -485,6 +488,29 @@ final class AppleFoundationModelService: LLMService, @unchecked Sendable {
         }
 
         return chunks.isEmpty ? [text] : chunks
+    }
+}
+
+// MARK: - Apple Intelligence availability
+
+@available(macOS 26, iOS 26, *)
+extension AppleFoundationModelService {
+    /// Single source of truth for whether on-device Apple Intelligence can run.
+    /// `nil` means ready; otherwise a user-facing Dutch reason it cannot.
+    /// Consumed by `isAvailable`, the generation guard, and SettingsView's status note.
+    static var unavailabilityReason: String? {
+        switch SystemLanguageModel.default.availability {
+        case .available:
+            return nil
+        case .unavailable(.appleIntelligenceNotEnabled):
+            return "Schakel Apple Intelligence in via Systeeminstellingen."
+        case .unavailable(.deviceNotEligible):
+            return "Dit apparaat ondersteunt Apple Intelligence niet."
+        case .unavailable(.modelNotReady):
+            return "Apple Intelligence-model wordt nog gedownload. Probeer later opnieuw."
+        case .unavailable:
+            return "Apple Intelligence is momenteel niet beschikbaar."
+        }
     }
 }
 

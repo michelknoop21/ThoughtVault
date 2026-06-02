@@ -217,10 +217,14 @@ struct NotuleResultView: View {
                         Task {
                             var updatedTags = task.tags
                             updatedTags.append(newTagText)
-                            do {
-                                try await APIService.shared.updateTranscriptTags(taskId: task.taskId, tags: updatedTags)
-                            } catch {
-                                exportError = "Tag opslaan mislukt: \(error.localizedDescription)"
+                            if task.taskId.hasPrefix("local-") {
+                                LocalTranscriptStore.shared.updateTags(taskId: task.taskId, tags: updatedTags)
+                            } else {
+                                do {
+                                    try await APIService.shared.updateTranscriptTags(taskId: task.taskId, tags: updatedTags)
+                                } catch {
+                                    exportError = "Tag opslaan mislukt: \(error.localizedDescription)"
+                                }
                             }
                         }
                         newTagText = ""

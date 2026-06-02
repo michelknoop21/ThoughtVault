@@ -77,7 +77,8 @@ struct ContentView: View {
 
     var body: some View {
         Group {
-            if authVM.isAuthenticated {
+            // Local mode needs no server, so it bypasses the login gate entirely.
+            if authVM.isAuthenticated || recordingVM.isLocalMode {
                 authenticatedView
             } else {
                 LoginView()
@@ -85,6 +86,10 @@ struct ContentView: View {
         }
         .task {
             await checkMinimumVersion()
+            // Ensure a profile is available when entering without auth (local mode).
+            if recordingVM.availableProfiles.isEmpty {
+                await recordingVM.reloadProfiles()
+            }
         }
         .onChange(of: selectedTab) { _, _ in
             transcriptsNavPath = NavigationPath()

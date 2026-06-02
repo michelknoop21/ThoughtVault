@@ -82,6 +82,12 @@ final class LocalTranscriptStore {
         persist()
     }
 
+    func updateTitle(taskId: String, title: String) {
+        guard let record = record(forTaskId: taskId) else { return }
+        record.title = title
+        persist()
+    }
+
     /// Updates the generated notule + title for a previously saved (partial) record.
     /// Throwing so callers can surface persistence failures instead of silently
     /// reporting success.

@@ -17,6 +17,10 @@ import UIKit
 
 private let logger = Logger(subsystem: "nl.prezent.TranscriptStudio", category: "TranscriptsView")
 
+/// Locally processed records carry a "local-" task id and live in SwiftData, not
+/// on the server. Edits/deletes for these must use the local store.
+func isLocalTranscript(_ taskId: String) -> Bool { taskId.hasPrefix("local-") }
+
 
 // MARK: - TranscriptsView
 
@@ -709,6 +713,13 @@ struct TranscriptsView: View {
     }
 
     private func deleteTranscript(_ transcript: Transcript) async {
+        if isLocalTranscript(transcript.taskId) {
+            LocalTranscriptStore.shared.delete(taskId: transcript.taskId)
+            withAnimation(TS.Animation.smooth) {
+                transcripts.removeAll { $0.id == transcript.id }
+            }
+            return
+        }
         do {
             try await APIService.shared.deleteTranscript(taskId: transcript.taskId)
             withAnimation(TS.Animation.smooth) {
@@ -727,6 +738,11 @@ struct TranscriptsView: View {
         for id in idsToDelete {
             guard let transcript = transcripts.first(where: { $0.id == id }) else {
                 failCount += 1
+                continue
+            }
+            if isLocalTranscript(transcript.taskId) {
+                LocalTranscriptStore.shared.delete(taskId: transcript.taskId)
+                deletedIds.insert(id)
                 continue
             }
             do {
@@ -1019,6 +1035,15 @@ struct TranscriptDetailView: View {
             .environment(recordingVM)
         }
         .task {
+            // Local records already carry full content (raw + notule) — no server fetch.
+            if isLocalTranscript(transcript.taskId) {
+                fullTranscript = transcript
+                let hasNotule = !(transcript.notuleHtml ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                let hasRaw = !(transcript.rawTranscription ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                if !hasNotule && hasRaw { selectedTab = .raw }
+                isLoadingDetail = false
+                return
+            }
             isLoadingDetail = true
             do {
                 fullTranscript = try await APIService.shared.getTranscript(taskId: transcript.taskId)
@@ -1696,6 +1721,10 @@ struct TranscriptDetailView: View {
         guard !newTitle.isEmpty, newTitle != fullTranscript.title else { return }
         let original = fullTranscript.title
         fullTranscript.title = newTitle
+        if isLocalTranscript(fullTranscript.taskId) {
+            LocalTranscriptStore.shared.updateTitle(taskId: fullTranscript.taskId, title: newTitle)
+            return
+        }
         do {
             try await APIService.shared.updateTranscriptTitle(taskId: fullTranscript.taskId, title: newTitle)
         } catch {
@@ -1755,6 +1784,10 @@ struct TranscriptDetailView: View {
         if let newTitle {
             let original = fullTranscript.title
             fullTranscript.title = newTitle
+            if isLocalTranscript(fullTranscript.taskId) {
+                LocalTranscriptStore.shared.updateTitle(taskId: fullTranscript.taskId, title: newTitle)
+                return
+            }
             do {
                 try await APIService.shared.updateTranscriptTitle(taskId: fullTranscript.taskId, title: newTitle)
             } catch {
@@ -1767,6 +1800,10 @@ struct TranscriptDetailView: View {
     private func removeTag(_ tag: String) async {
         let original = fullTranscript.tags
         fullTranscript.tags.removeAll { $0 == tag }
+        if isLocalTranscript(fullTranscript.taskId) {
+            LocalTranscriptStore.shared.updateTags(taskId: fullTranscript.taskId, tags: fullTranscript.tags)
+            return
+        }
         do {
             try await APIService.shared.updateTranscriptTags(taskId: fullTranscript.taskId, tags: fullTranscript.tags)
         } catch {
@@ -1786,6 +1823,10 @@ struct TranscriptDetailView: View {
         fullTranscript.tags.append(tag)
         newTagText = ""
         showAddTagField = false
+        if isLocalTranscript(fullTranscript.taskId) {
+            LocalTranscriptStore.shared.updateTags(taskId: fullTranscript.taskId, tags: fullTranscript.tags)
+            return
+        }
         do {
             try await APIService.shared.updateTranscriptTags(taskId: fullTranscript.taskId, tags: fullTranscript.tags)
         } catch {
@@ -1802,6 +1843,11 @@ struct TranscriptDetailView: View {
         withAnimation(TS.Animation.smooth) {
             isEditingNotule = false
         }
+        if isLocalTranscript(fullTranscript.taskId) {
+            LocalTranscriptStore.shared.updateNotule(taskId: fullTranscript.taskId, html: html)
+            editedHTML = ""
+            return
+        }
         do {
             try await APIService.shared.updateNotuleHTML(taskId: fullTranscript.taskId, html: html)
             logger.info("Notule saved for \(fullTranscript.taskId)")
@@ -1815,6 +1861,23 @@ struct TranscriptDetailView: View {
 
     private func startRegenerate(profileId: String, usePremium: Bool = false) async {
         isRegenerating = true
+        regeneratingMessage = "Notule wordt lokaal geregenereerd..."
+
+        // Local records regenerate entirely on-device from the stored transcription.
+        if isLocalTranscript(fullTranscript.taskId) {
+            defer { isRegenerating = false; regeneratingMessage = "" }
+            do {
+                let html = try await recordingVM.regenerateNotuleLocally(
+                    taskId: fullTranscript.taskId, profileId: profileId
+                )
+                fullTranscript.notuleHtml = html
+                selectedTab = .notule
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+            return
+        }
+
         regeneratingMessage = usePremium
             ? "Notule wordt geregenereerd met premium model..."
             : "Notule wordt geregenereerd..."

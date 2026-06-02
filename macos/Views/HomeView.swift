@@ -577,12 +577,22 @@ struct HomeView: View {
     private func loadRecentTranscripts() async {
         isLoadingRecent = true
         loadError = nil
+
+        // Local records first — always available without the server.
+        let local = LocalTranscriptStore.shared.allTranscripts()
+
+        var server: [Transcript] = []
         do {
-            let response = try await APIService.shared.getTranscripts()
-            recentTranscripts = Array(response.items.prefix(3))
+            server = try await APIService.shared.getTranscripts().items
         } catch {
-            loadError = error.localizedDescription
+            // Server unavailable is fine in local mode; only surface if nothing local.
+            if local.isEmpty { loadError = error.localizedDescription }
         }
+
+        let localIds = Set(local.map(\.taskId))
+        let merged = (local + server.filter { !localIds.contains($0.taskId) })
+            .sorted { $0.date > $1.date }
+        recentTranscripts = Array(merged.prefix(3))
         isLoadingRecent = false
     }
 }

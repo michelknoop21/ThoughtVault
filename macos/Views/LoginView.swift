@@ -17,6 +17,7 @@ struct LoginView: View {
     @Environment(AuthViewModel.self) var authVM
 
     @AppStorage("rememberUsername") private var rememberUsername: Bool = false
+    @AppStorage("processingMode") private var processingMode: String = ProcessingMode.local.rawValue
     @State private var email: String = ""
     @State private var password: String = ""
     @State private var twoFactorCode: String = ""
@@ -219,6 +220,18 @@ struct LoginView: View {
             if BiometricService.shared.isEnabled {
                 biometricLoginButton
             }
+
+            // Use the app fully locally, without the server (no account needed).
+            Button {
+                processingMode = ProcessingMode.local.rawValue
+            } label: {
+                Text("Lokaal gebruiken (zonder server)")
+                    .font(TS.Font.footnoteSemibold)
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(Color.brandPrimary)
+            .padding(.top, TS.Spacing.xs)
         }
         .onSubmit {
             guard !authVM.isLoading && !email.isEmpty && !password.isEmpty else { return }

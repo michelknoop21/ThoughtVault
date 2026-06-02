@@ -751,6 +751,33 @@ final class RecordingViewModel {
         }
     }
 
+    /// Regenerates the notule for an already-stored local record using its saved
+    /// transcription and the given profile — entirely on-device. Returns the new HTML.
+    func regenerateNotuleLocally(taskId: String, profileId: String) async throws -> String {
+        guard let record = LocalTranscriptStore.shared.record(forTaskId: taskId) else {
+            throw LocalStoreError.recordNotFound
+        }
+        let profile = availableProfiles.first { $0.id == profileId }
+            ?? Profile.defaults.first { $0.id == profileId }
+            ?? selectedProfile
+            ?? .zakelijk
+
+        var provider = NotulenProvider(rawValue: UserDefaults.standard.string(forKey: "notulenProvider") ?? NotulenProvider.ollama.rawValue) ?? .ollama
+        if provider == .cloud { provider = .ollama }
+
+        let service = LLMServiceFactory.service(for: provider, serverURL: "")
+        let html = try await service.generateNotulen(
+            transcription: record.rawTranscription,
+            systemPrompt: profile.systemPrompt ?? "",
+            notulePrompt: profile.notulePrompt ?? "",
+            outputTemplate: profile.template
+        ) { _ in }
+
+        let title = NotuleTitleExtractor.extract(from: html) ?? record.title
+        try LocalTranscriptStore.shared.finalizeNotule(taskId: taskId, html: html, title: title)
+        return html
+    }
+
     /// Builds a fallback title from the transcription's first sentence or the filename.
     private func fallbackTitle(transcription: String, filename: String) -> String {
         let firstSentence = transcription

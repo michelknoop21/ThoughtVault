@@ -526,8 +526,9 @@ struct ContentView: View {
 
     private var keyboardShortcutsOverlay: some View {
         Group {
-            // Tab switching ⌘1-5
-            ForEach(AppTab.allCases) { tab in
+            // Tab switching ⌘1-5 — only for tabs the user can actually see
+            // (prevents e.g. ⌘6 opening Admin in unauthenticated local mode).
+            ForEach(visibleTabs) { tab in
                 Button("") { selectedTab = tab }
                     .keyboardShortcut(tab.keyboardShortcut, modifiers: .command)
                     .opacity(0)

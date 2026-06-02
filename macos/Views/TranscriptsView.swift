@@ -17,8 +17,9 @@ import UIKit
 
 private let logger = Logger(subsystem: "nl.prezent.TranscriptStudio", category: "TranscriptsView")
 
-/// Locally processed records carry a "local-" task id and live in SwiftData, not
-/// on the server. Edits/deletes for these must use the local store.
+/// Locally processed records carry a deterministic "local-<uuid>" task id (minted in
+/// RecordingViewModel.processLocally) and live in SwiftData, not on the server.
+/// Server ids never use this prefix, so the check is unambiguous.
 func isLocalTranscript(_ taskId: String) -> Bool { taskId.hasPrefix("local-") }
 
 
@@ -699,16 +700,21 @@ struct TranscriptsView: View {
         isLoading = true
         loadErrorMessage = nil
 
+        // Local records first — always available without the server.
+        let local = LocalTranscriptStore.shared.allTranscripts()
+
+        var server: [Transcript] = []
         do {
-            let response = try await APIService.shared.getTranscripts()
-            transcripts = response.items
-            lastRefreshDate = Date()
-            let withNotule = response.items.filter { $0.notuleHtml != nil && !$0.notuleHtml!.isEmpty }.count
-            let withRaw = response.items.filter { $0.rawTranscription != nil && !$0.rawTranscription!.isEmpty }.count
-            logger.info("Loaded \(response.items.count) transcripts: \(withNotule) with notule, \(withRaw) with raw")
+            server = try await APIService.shared.getTranscripts().items
         } catch {
-            loadErrorMessage = error.localizedDescription
+            // Server unavailable is fine in local mode; only surface if no local records.
+            if local.isEmpty { loadErrorMessage = error.localizedDescription }
         }
+
+        let localIds = Set(local.map(\.taskId))
+        transcripts = (local + server.filter { !localIds.contains($0.taskId) })
+            .sorted { $0.date > $1.date }
+        lastRefreshDate = Date()
         isLoading = false
     }
 
@@ -1867,10 +1873,11 @@ struct TranscriptDetailView: View {
         if isLocalTranscript(fullTranscript.taskId) {
             defer { isRegenerating = false; regeneratingMessage = "" }
             do {
-                let html = try await recordingVM.regenerateNotuleLocally(
+                let result = try await recordingVM.regenerateNotuleLocally(
                     taskId: fullTranscript.taskId, profileId: profileId
                 )
-                fullTranscript.notuleHtml = html
+                fullTranscript.notuleHtml = result.html
+                fullTranscript.title = result.title
                 selectedTab = .notule
             } catch {
                 errorMessage = error.localizedDescription

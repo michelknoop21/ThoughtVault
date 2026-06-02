@@ -752,8 +752,9 @@ final class RecordingViewModel {
     }
 
     /// Regenerates the notule for an already-stored local record using its saved
-    /// transcription and the given profile — entirely on-device. Returns the new HTML.
-    func regenerateNotuleLocally(taskId: String, profileId: String) async throws -> String {
+    /// transcription and the given profile — entirely on-device. Returns the new
+    /// HTML and title so the open detail view can stay in sync with SwiftData.
+    func regenerateNotuleLocally(taskId: String, profileId: String) async throws -> (html: String, title: String) {
         guard let record = LocalTranscriptStore.shared.record(forTaskId: taskId) else {
             throw LocalStoreError.recordNotFound
         }
@@ -775,7 +776,7 @@ final class RecordingViewModel {
 
         let title = NotuleTitleExtractor.extract(from: html) ?? record.title
         try LocalTranscriptStore.shared.finalizeNotule(taskId: taskId, html: html, title: title)
-        return html
+        return (html, title)
     }
 
     /// Builds a fallback title from the transcription's first sentence or the filename.

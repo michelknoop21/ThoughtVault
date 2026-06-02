@@ -25,6 +25,13 @@ scripts/release.sh --no-upload    # alleen build
 scripts/sync-version.sh           # alleen versie sync naar platform configs
 ```
 
+## Werkprincipes (Karpathy)
+IMPORTANT: werk in dit project volgens deze vier principes — boven snelheid.
+- **Denk eerst.** Benoem aannames expliciet; twijfel = vragen, niet gokken. Meerdere interpretaties → leg ze voor. Simpeler pad bestaat → zeg het.
+- **Simpelste oplossing.** Minimale code die het probleem oplost. Geen speculatieve features, abstracties voor eenmalig gebruik, of "flexibiliteit" die niemand vroeg. 200 regels die 50 kunnen zijn → herschrijf.
+- **Chirurgische wijzigingen.** Raak alleen wat moet. Geen ongevraagde refactors/herformattering van omliggende code; volg bestaande stijl. Eigen rommel (orphan imports/vars) opruimen; bestaande dead code benoemen, niet stilletjes verwijderen. Elke gewijzigde regel traceert naar de opdracht.
+- **Doelgericht + verifieer.** Vertaal taken naar toetsbare doelen ("voeg X toe" → "test/bewijs dat X werkt"). Claim NOOIT "klaar" zonder bewijs-output (BUILD/ARCHIVE SUCCEEDED, test-output, draaiende app). Kun je het niet verifiëren, zeg dat.
+
 ## IMPORTANT: macOS Code Patterns
 - Gebruik `@Observable` — NOOIT `ObservableObject/@Published`
 - `async/await` overal — geen Combine, geen completion handlers

@@ -34,9 +34,9 @@ final class LocalTranscriptStore {
 
     // MARK: - CRUD
 
-    func save(_ record: TranscriptRecord) {
+    func save(_ record: TranscriptRecord) throws {
         context.insert(record)
-        persist()
+        try context.save()
     }
 
     /// All locally stored records, newest first.
@@ -82,6 +82,18 @@ final class LocalTranscriptStore {
         persist()
     }
 
+    /// Updates the generated notule + title for a previously saved (partial) record.
+    /// Throwing so callers can surface persistence failures instead of silently
+    /// reporting success.
+    func finalizeNotule(taskId: String, html: String, title: String) throws {
+        guard let record = record(forTaskId: taskId) else {
+            throw LocalStoreError.recordNotFound
+        }
+        record.notuleHtml = html
+        record.title = title
+        try context.save()
+    }
+
     // MARK: - Private
 
     private func persist() {
@@ -89,6 +101,18 @@ final class LocalTranscriptStore {
             try context.save()
         } catch {
             logger.error("Save failed: \(error.localizedDescription)")
+        }
+    }
+}
+
+// MARK: - LocalStoreError
+
+enum LocalStoreError: LocalizedError {
+    case recordNotFound
+
+    var errorDescription: String? {
+        switch self {
+        case .recordNotFound: return "Het lokale record kon niet worden gevonden."
         }
     }
 }

@@ -62,9 +62,11 @@ func buildNotuleUserContent(
     outputTemplate: String?
 ) -> String {
     if notulePrompt.contains("{{TRANSCRIPTION}}") {
+        // Substitute the trusted template first, then insert the untrusted
+        // transcription last so its content can never trigger a placeholder swap.
         return notulePrompt
-            .replacingOccurrences(of: "{{TRANSCRIPTION}}", with: transcription)
             .replacingOccurrences(of: "{{OUTPUT_TEMPLATE}}", with: outputTemplate ?? "")
+            .replacingOccurrences(of: "{{TRANSCRIPTION}}", with: transcription)
     }
     var content = "\(notulePrompt)\n\nTranscriptie:\n\(transcription)"
     if let template = outputTemplate, !template.isEmpty {
@@ -88,8 +90,8 @@ class LLMServiceFactory {
         case .ollama:
             let model = UserDefaults.standard.string(forKey: "ollamaModel") ?? "llama3.2"
             let baseURL = UserDefaults.standard.string(forKey: "ollamaURL") ?? "http://localhost:11434"
-            // Optional API key enables Ollama Cloud (https://ollama.com).
-            let apiKey = UserDefaults.standard.string(forKey: "ollamaApiKey")
+            // Optional API key (Keychain) enables Ollama Cloud (https://ollama.com).
+            let apiKey = KeychainService.shared.load(for: "ollamaApiKey")
             return OpenAICompatibleLLMService(baseURL: baseURL, model: model, apiKey: apiKey)
 
         case .lmStudio:
@@ -156,18 +158,34 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
 
     var isAvailable: Bool {
         get async {
-            guard let url = URL(string: "\(baseURL)/v1/models") ??
-                            URL(string: "\(baseURL)/api/tags") else { return false }
-            var request = URLRequest(url: url)
-            request.timeoutInterval = 5
-            if let apiKey { request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization") }
-            do {
-                let (_, response) = try await URLSession.shared.data(for: request)
-                return (response as? HTTPURLResponse)?.statusCode == 200
-            } catch {
-                return false
-            }
+            // Try the OpenAI-compatible endpoint first, then fall back to Ollama's
+            // native one. The previous `URL(...) ?? URL(...)` never fell back
+            // because the first string always parses into a valid URL.
+            if await endpointReturns200("/v1/models") { return true }
+            if await endpointReturns200("/api/tags") { return true }
+            return false
         }
+    }
+
+    private func endpointReturns200(_ path: String) async -> Bool {
+        guard let url = URL(string: "\(baseURL)\(path)") else { return false }
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 5
+        applyAuth(to: &request)
+        do {
+            let (_, response) = try await URLSession.shared.data(for: request)
+            return (response as? HTTPURLResponse)?.statusCode == 200
+        } catch {
+            return false
+        }
+    }
+
+    /// Attaches the bearer token only over HTTPS, so a cloud credential is never
+    /// sent in the clear to a plain-HTTP endpoint.
+    private func applyAuth(to request: inout URLRequest) {
+        guard let apiKey,
+              request.url?.scheme?.lowercased() == "https" else { return }
+        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
     }
 
     // MARK: - Model Discovery
@@ -185,7 +203,7 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
         guard let url = URL(string: "\(baseURL)/v1/models") else { return nil }
         var request = URLRequest(url: url)
         request.timeoutInterval = 10
-        if let apiKey { request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization") }
+        applyAuth(to: &request)
         guard let (data, response) = try? await URLSession.shared.data(for: request),
               (response as? HTTPURLResponse)?.statusCode == 200,
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
@@ -198,7 +216,7 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
         guard let url = URL(string: "\(baseURL)/api/tags") else { return nil }
         var request = URLRequest(url: url)
         request.timeoutInterval = 10
-        if let apiKey { request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization") }
+        applyAuth(to: &request)
         guard let (data, response) = try? await URLSession.shared.data(for: request),
               (response as? HTTPURLResponse)?.statusCode == 200,
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
@@ -311,7 +329,7 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
         request.httpBody = bodyData
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
-        if let apiKey { request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization") }
+        applyAuth(to: &request)
         request.timeoutInterval = 300
 
         let (asyncBytes, response) = try await URLSession.shared.bytes(for: request)

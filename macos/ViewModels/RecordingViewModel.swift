@@ -668,29 +668,62 @@ final class RecordingViewModel {
             liveTranscriptText = ""
         }
 
+        // 1. Local transcription
+        let transcription: String
         do {
-            // 1. Local transcription
             let transcriber = LocalTranscriberFactory.make()
-            let transcription = try await transcriber.transcribe(url: url) { [weak self] fraction in
+            transcription = try await transcriber.transcribe(url: url) { [weak self] fraction in
                 Task { @MainActor in
                     self?.updateTask(localId, status: .transcribing,
                                      progress: 0.15 + fraction * 0.35)
                 }
             }
+        } catch {
+            os_log("[RecordingVM] processLocally transcription failed: %{public}@", log: log, type: .error, error.localizedDescription)
+            updateTask(localId, status: .error, errorMessage: error.localizedDescription)
+            return
+        }
 
-            await MainActor.run {
-                setTaskTranscription(localId, transcription)
-                updateTask(localId, status: .generatingLocal, progress: TaskStatus.generatingLocal.progress)
-                isGeneratingLocally = true
-                localGenerationProgress = 0
-            }
+        // 2. Persist a partial record immediately so an expensive transcription is
+        //    never lost if notule generation fails afterwards.
+        let fallback = fallbackTitle(transcription: transcription, filename: url.lastPathComponent)
+        let record = TranscriptRecord(
+            id: localId,
+            taskId: localId,
+            title: fallback,
+            filename: url.lastPathComponent,
+            rawTranscription: transcription,
+            notuleHtml: "",
+            profileId: profile.id,
+            profileName: profile.name,
+            createdAt: Date(),
+            localAudioPath: url.path,
+            source: "local"
+        )
+        do {
+            try LocalTranscriptStore.shared.save(record)
+        } catch {
+            os_log("[RecordingVM] processLocally save failed: %{public}@", log: log, type: .error, error.localizedDescription)
+            updateTask(localId, status: .error, errorMessage: "Opslaan mislukt: \(error.localizedDescription)")
+            return
+        }
 
-            // 2. Local notule generation via the configured provider
-            let providerRaw = UserDefaults.standard.string(forKey: "notulenProvider") ?? NotulenProvider.ollama.rawValue
-            var provider = NotulenProvider(rawValue: providerRaw) ?? .ollama
-            if provider == .cloud { provider = .ollama }   // cloud is meaningless offline
+        setTaskTranscription(localId, transcription)
+        updateTask(localId, status: .generatingLocal, progress: TaskStatus.generatingLocal.progress)
+        isGeneratingLocally = true
+        localGenerationProgress = 0
+        saveLocalAudioPath(url: url, taskId: localId)
+        loadSavedRecordings()
 
+        // 3. Local notule generation via the configured provider.
+        let providerRaw = UserDefaults.standard.string(forKey: "notulenProvider") ?? NotulenProvider.ollama.rawValue
+        var provider = NotulenProvider(rawValue: providerRaw) ?? .ollama
+        if provider == .cloud { provider = .ollama }   // cloud is meaningless offline
+
+        do {
             let service = LLMServiceFactory.service(for: provider, serverURL: "")
+            // Live preview is driven solely by ordered append chunks; the saved
+            // record uses the authoritative return value (no final overwrite race).
             let html = try await service.generateNotulen(
                 transcription: transcription,
                 systemPrompt: profile.systemPrompt ?? "",
@@ -702,41 +735,19 @@ final class RecordingViewModel {
                 }
             }
 
-            // 3. Title + persist locally
-            let title = NotuleTitleExtractor.extract(from: html)
-                ?? fallbackTitle(transcription: transcription, filename: url.lastPathComponent)
+            let title = NotuleTitleExtractor.extract(from: html) ?? fallback
+            try LocalTranscriptStore.shared.finalizeNotule(taskId: localId, html: html, title: title)
 
-            let record = TranscriptRecord(
-                id: localId,
-                taskId: localId,
-                title: title,
-                filename: url.lastPathComponent,
-                rawTranscription: transcription,
-                notuleHtml: html,
-                profileId: profile.id,
-                profileName: profile.name,
-                createdAt: Date(),
-                localAudioPath: url.path,
-                source: "local"
-            )
-            LocalTranscriptStore.shared.save(record)
-
-            await MainActor.run {
-                setTaskNotuleHtml(localId, html)
-                updateTask(localId, status: .completed, progress: 1.0)
-                isGeneratingLocally = false
-                localGenerationProgress = 1.0
-            }
-
-            saveLocalAudioPath(url: url, taskId: localId)
-            loadSavedRecordings()
+            updateTask(localId, status: .completed, progress: 1.0)
+            isGeneratingLocally = false
+            localGenerationProgress = 1.0
 
         } catch {
-            os_log("[RecordingVM] processLocally failed: %{public}@", log: log, type: .error, error.localizedDescription)
-            await MainActor.run {
-                isGeneratingLocally = false
-                updateTask(localId, status: .error, errorMessage: error.localizedDescription)
-            }
+            // Transcription is already saved; only the notule step failed.
+            os_log("[RecordingVM] processLocally notule failed: %{public}@", log: log, type: .error, error.localizedDescription)
+            isGeneratingLocally = false
+            updateTask(localId, status: .error,
+                       errorMessage: "Transcriptie opgeslagen, notule mislukt: \(error.localizedDescription)")
         }
     }
 
@@ -755,11 +766,6 @@ final class RecordingViewModel {
     private func setTaskTranscription(_ id: String, _ text: String) {
         guard let idx = activeTasks.firstIndex(where: { $0.id == id }) else { return }
         activeTasks[idx].rawTranscription = text
-    }
-
-    private func setTaskNotuleHtml(_ id: String, _ html: String) {
-        guard let idx = activeTasks.firstIndex(where: { $0.id == id }) else { return }
-        activeTasks[idx].notuleHtml = html
     }
 
     private func appendTaskNotuleHtml(_ id: String, _ chunk: String) {

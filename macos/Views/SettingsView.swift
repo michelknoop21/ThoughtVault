@@ -65,6 +65,7 @@ struct SettingsView: View {
         .navigationTitle("Instellingen")
         .onAppear {
             serverURLInput = serverURL
+            loadApiKey()
             Task {
                 await loadProfiles()
                 await checkServerConnection()
@@ -227,65 +228,122 @@ struct SettingsView: View {
     @AppStorage("whisperModel") private var whisperModel: String = LocalTranscriberFactory.defaultWhisperModel
     @AppStorage("ollamaURL") private var ollamaURL: String = "http://localhost:11434"
     @AppStorage("ollamaModel") private var ollamaModel: String = "llama3.2"
-    @AppStorage("ollamaApiKey") private var ollamaApiKey: String = ""
+
+    // API key lives in the Keychain, not UserDefaults. Mirrored into @State for editing.
+    @State private var ollamaApiKey: String = ""
+    @State private var revealApiKey: Bool = false
+    @FocusState private var apiKeyFocused: Bool
 
     @State private var ollamaTesting: Bool = false
     @State private var ollamaConnected: Bool? = nil
     @State private var ollamaModels: [String] = []
     @State private var ollamaModelsLoading: Bool = false
 
+    private static let apiKeyKeychainKey = "ollamaApiKey"
+
     private var isLocalProcessing: Bool {
         (ProcessingMode(rawValue: processingMode) ?? .local) == .local
     }
 
+    /// True when a key is set but the endpoint is plain HTTP — the bearer would be
+    /// withheld for safety, so the key won't actually authenticate.
+    private var apiKeyOverHTTPWarning: Bool {
+        !ollamaApiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && !ollamaURL.lowercased().hasPrefix("https://")
+    }
+
     private var lokaleVerwerkingSection: some View {
         Section {
-            Picker("Verwerking", selection: $processingMode) {
-                Label("Lokaal (geen server)", systemImage: "cpu")
-                    .tag(ProcessingMode.local.rawValue)
-                Label("Cloud (server)", systemImage: "cloud.fill")
-                    .tag(ProcessingMode.cloud.rawValue)
+            VStack(alignment: .leading, spacing: TS.Spacing.lg) {
+
+                // ── Verwerkingsmodus ──────────────────────────────────────────
+                settingField(
+                    "Verwerkingsmodus",
+                    hint: isLocalProcessing
+                        ? "Alles op dit apparaat. Geen server nodig."
+                        : "Transcriptie en notulen via de server."
+                ) {
+                    Picker("", selection: $processingMode) {
+                        Text("Lokaal").tag(ProcessingMode.local.rawValue)
+                        Text("Cloud").tag(ProcessingMode.cloud.rawValue)
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                }
+
+                if isLocalProcessing {
+                    Divider()
+
+                    // ── Transcriptie ─────────────────────────────────────────
+                    settingField(
+                        "Transcriptie-engine",
+                        hint: localTranscriber == LocalTranscriberEngine.whisperKit.rawValue
+                            ? "WhisperKit downloadt het model bij eerste gebruik."
+                            : "Apple Spraakherkenning, geen download."
+                    ) {
+                        Picker("", selection: $localTranscriber) {
+                            ForEach(LocalTranscriberEngine.allCases) { engine in
+                                Text(engine == .whisperKit ? "WhisperKit" : "Apple").tag(engine.rawValue)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .labelsHidden()
+                    }
+
+                    if localTranscriber == LocalTranscriberEngine.whisperKit.rawValue {
+                        settingField("Whisper-model") {
+                            TextField("model", text: $whisperModel)
+                                .textFieldStyle(.roundedBorder)
+                                .font(TS.Font.bodyMonospaced)
+                                .autocorrectionDisabled()
+                        }
+                    }
+
+                    Divider()
+
+                    // ── Ollama (notulen) ─────────────────────────────────────
+                    ollamaConfig
+                }
             }
-            .font(TS.Font.body)
+            .padding(.vertical, TS.Spacing.xs)
+        } header: {
+            Text("Lokale verwerking")
+        }
+    }
 
-            if isLocalProcessing {
-                // Transcription engine
-                Picker("Transcriptie", selection: $localTranscriber) {
-                    ForEach(LocalTranscriberEngine.allCases) { engine in
-                        Text(engine.displayName).tag(engine.rawValue)
-                    }
+    @ViewBuilder
+    private var ollamaConfig: some View {
+        // Server URL + Cloud preset
+        settingField(
+            "Ollama-server",
+            hint: "Lokaal draait standaard op http://localhost:11434."
+        ) {
+            HStack(spacing: TS.Spacing.sm) {
+                TextField("http://localhost:11434", text: $ollamaURL)
+                    .textFieldStyle(.roundedBorder)
+                    .font(TS.Font.bodyMonospaced)
+                    .autocorrectionDisabled()
+
+                Button("Cloud") {
+                    ollamaURL = "https://ollama.com"
+                    ollamaConnected = nil
+                    apiKeyFocused = true
                 }
-                .font(TS.Font.body)
+                .buttonStyle(.bordered)
+                .help("Stel in op Ollama Cloud en vul je API-sleutel in")
+            }
+        }
 
-                if localTranscriber == LocalTranscriberEngine.whisperKit.rawValue {
-                    LabeledContent("Whisper-model") {
-                        TextField("model", text: $whisperModel)
-                            .textFieldStyle(.plain)
-                            .multilineTextAlignment(.trailing)
-                            .font(TS.Font.bodyMonospaced)
-                    }
-                }
-
-                // Ollama configuration
-                LabeledContent("Ollama URL") {
-                    TextField("http://localhost:11434", text: $ollamaURL)
-                        .textFieldStyle(.plain)
-                        .multilineTextAlignment(.trailing)
+        // Model: dynamic picker when loaded, manual entry otherwise
+        settingField("Model") {
+            HStack(spacing: TS.Spacing.sm) {
+                if ollamaModels.isEmpty {
+                    TextField("llama3.2", text: $ollamaModel)
+                        .textFieldStyle(.roundedBorder)
                         .font(TS.Font.bodyMonospaced)
                         .autocorrectionDisabled()
-                }
-                // Model: dynamic picker when models are loaded, manual entry otherwise.
-                if ollamaModels.isEmpty {
-                    LabeledContent("Ollama model") {
-                        TextField("llama3.2", text: $ollamaModel)
-                            .textFieldStyle(.plain)
-                            .multilineTextAlignment(.trailing)
-                            .font(TS.Font.bodyMonospaced)
-                            .autocorrectionDisabled()
-                    }
                 } else {
-                    Picker("Ollama model", selection: $ollamaModel) {
-                        // Keep the saved value selectable even if it is not in the fetched list.
+                    Picker("", selection: $ollamaModel) {
                         if !ollamaModels.contains(ollamaModel) && !ollamaModel.isEmpty {
                             Text(ollamaModel).tag(ollamaModel)
                         }
@@ -293,69 +351,131 @@ struct SettingsView: View {
                             Text(name).tag(name)
                         }
                     }
-                    .font(TS.Font.body)
+                    .labelsHidden()
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
 
-                HStack(spacing: TS.Spacing.sm) {
-                    Button {
-                        Task { await loadOllamaModels() }
-                    } label: {
-                        if ollamaModelsLoading {
-                            ProgressView().controlSize(.small)
-                        } else {
-                            Label("Modellen laden", systemImage: "arrow.triangle.2.circlepath")
-                                .font(TS.Font.footnoteSemibold)
-                        }
-                    }
-                    .buttonStyle(.bordered)
-                    .disabled(ollamaModelsLoading)
-
-                    if !ollamaModels.isEmpty {
-                        Text("\(ollamaModels.count) beschikbaar")
-                            .font(TS.Font.caption)
-                            .foregroundStyle(Color.labelTertiary)
+                Button {
+                    Task { await loadOllamaModels() }
+                } label: {
+                    if ollamaModelsLoading {
+                        ProgressView().controlSize(.small)
+                    } else {
+                        Image(systemName: "arrow.triangle.2.circlepath")
                     }
                 }
-
-                LabeledContent("API-sleutel") {
-                    SecureField("leeg = lokaal", text: $ollamaApiKey)
-                        .textFieldStyle(.plain)
-                        .multilineTextAlignment(.trailing)
-                        .font(TS.Font.bodyMonospaced)
-                }
-
-                HStack(spacing: TS.Spacing.sm) {
-                    Button {
-                        Task { await testOllamaConnection() }
-                    } label: {
-                        if ollamaTesting {
-                            ProgressView().controlSize(.small)
-                        } else {
-                            Text("Verbinding testen")
-                                .font(TS.Font.footnoteSemibold)
-                        }
-                    }
-                    .buttonStyle(.bordered)
-                    .disabled(ollamaTesting)
-
-                    if let connected = ollamaConnected {
-                        Label(
-                            connected ? "Verbonden" : "Niet bereikbaar",
-                            systemImage: connected ? "checkmark.circle.fill" : "xmark.circle.fill"
-                        )
-                        .font(TS.Font.footnote)
-                        .foregroundStyle(connected ? Color.statusSuccess : Color.statusError)
-                    }
-                }
+                .buttonStyle(.bordered)
+                .disabled(ollamaModelsLoading)
+                .help("Beschikbare modellen laden")
             }
-        } header: {
-            Text("Lokale verwerking")
-        } footer: {
-            Text(isLocalProcessing
-                 ? "Alles draait lokaal: transcriptie via \(localTranscriber == LocalTranscriberEngine.whisperKit.rawValue ? "WhisperKit" : "Apple Spraakherkenning") en notulen via Ollama. Vul een API-sleutel in om Ollama Cloud (https://ollama.com) te gebruiken."
-                 : "De server verzorgt transcriptie en notulen. Zet op 'Lokaal' om zonder server te werken.")
+        }
+        if !ollamaModels.isEmpty {
+            Text("\(ollamaModels.count) modellen beschikbaar")
                 .font(TS.Font.caption)
                 .foregroundStyle(Color.labelTertiary)
+        }
+
+        // API key (Keychain-backed)
+        settingField("API-sleutel") {
+            HStack(spacing: TS.Spacing.sm) {
+                Group {
+                    if revealApiKey {
+                        TextField("leeg = lokale Ollama", text: $ollamaApiKey)
+                    } else {
+                        SecureField("leeg = lokale Ollama", text: $ollamaApiKey)
+                    }
+                }
+                .textFieldStyle(.roundedBorder)
+                .font(TS.Font.bodyMonospaced)
+                .autocorrectionDisabled()
+                .focused($apiKeyFocused)
+                .onChange(of: ollamaApiKey) { _, newValue in saveApiKey(newValue) }
+
+                Button {
+                    revealApiKey.toggle()
+                } label: {
+                    Image(systemName: revealApiKey ? "eye.slash" : "eye")
+                }
+                .buttonStyle(.bordered)
+                .help(revealApiKey ? "Verberg sleutel" : "Toon sleutel")
+            }
+        }
+
+        HStack(spacing: TS.Spacing.xs) {
+            Image(systemName: "link")
+                .font(TS.Font.caption)
+                .foregroundStyle(Color.labelTertiary)
+            Link("Sleutel ophalen op ollama.com", destination: URL(string: "https://ollama.com/settings/keys")!)
+                .font(TS.Font.caption)
+        }
+
+        if apiKeyOverHTTPWarning {
+            Label("Sleutel wordt alleen over HTTPS verstuurd. Gebruik een https-URL (bijv. de Cloud-knop).",
+                  systemImage: "exclamationmark.triangle.fill")
+                .font(TS.Font.caption)
+                .foregroundStyle(Color.statusWarning)
+        }
+
+        // Connection test
+        HStack(spacing: TS.Spacing.sm) {
+            Button {
+                Task { await testOllamaConnection() }
+            } label: {
+                if ollamaTesting {
+                    ProgressView().controlSize(.small)
+                } else {
+                    Label("Verbinding testen", systemImage: "bolt.horizontal.circle")
+                        .font(TS.Font.footnoteSemibold)
+                }
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(Color.brandPrimary)
+            .disabled(ollamaTesting)
+
+            if let connected = ollamaConnected {
+                Label(
+                    connected ? "Verbonden" : "Niet bereikbaar",
+                    systemImage: connected ? "checkmark.circle.fill" : "xmark.circle.fill"
+                )
+                .font(TS.Font.footnoteSemibold)
+                .foregroundStyle(connected ? Color.statusSuccess : Color.statusError)
+            }
+        }
+        .padding(.top, TS.Spacing.xs)
+    }
+
+    /// A labeled, full-width settings row: caption label, content, optional hint.
+    @ViewBuilder
+    private func settingField(
+        _ title: String,
+        hint: String? = nil,
+        @ViewBuilder content: () -> some View
+    ) -> some View {
+        VStack(alignment: .leading, spacing: TS.Spacing.xs) {
+            Text(title)
+                .font(TS.Font.footnoteSemibold)
+                .foregroundStyle(Color.labelSecondary)
+            content()
+            if let hint {
+                Text(hint)
+                    .font(TS.Font.caption)
+                    .foregroundStyle(Color.labelTertiary)
+            }
+        }
+    }
+
+    // MARK: - API key (Keychain) helpers
+
+    private func loadApiKey() {
+        ollamaApiKey = KeychainService.shared.load(for: Self.apiKeyKeychainKey) ?? ""
+    }
+
+    private func saveApiKey(_ value: String) {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty {
+            KeychainService.shared.delete(for: Self.apiKeyKeychainKey)
+        } else {
+            KeychainService.shared.save(trimmed, for: Self.apiKeyKeychainKey)
         }
     }
 

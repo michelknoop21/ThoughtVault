@@ -10,12 +10,12 @@ import Foundation
 
 enum NotuleTitleExtractor {
 
-    private static let genericTitles: Set<String> = [
+    private static let genericTitles: Set<String> = normalizedSet([
         "notule", "notulen", "vergadering", "meeting", "gespreksverslag",
         "verslag", "samenvatting", "tl;dr", "tldr",
-    ]
+    ])
 
-    private static let sectionWords: Set<String> = [
+    private static let sectionWords: Set<String> = normalizedSet([
         "gespreksverslag", "actiepunten", "samenvatting", "context",
         "conclusie", "agenda", "deelnemers", "besluitenlijst",
         "kernargumenten", "kernpunten", "key takeaways", "takeaways",
@@ -23,7 +23,32 @@ enum NotuleTitleExtractor {
         "introductie", "achtergrond", "discussie", "toelichting",
         "analyse", "resultaten", "aanbevelingen", "bijlagen",
         "thema", "onderwerp", "overzicht", "tl;dr", "tldr",
-    ]
+        // Multi-word headings used by the bundled output templates.
+        "belangrijkste besproken punten", "besproken punten",
+        "technische beslissingen", "afspraken en vervolgstappen",
+        "afspraken", "action items", "actie items", "wat nu",
+        "ideeen inzichten", "ideeen en inzichten", "inhoud",
+        "kernboodschap", "in het kort", "volgende stappen",
+        "blokkades en techniek", "blokkades", "tech debt",
+        "belangrijkste punten", "quotes", "highlights",
+    ])
+
+    /// Normalizes a string for section-word matching: lowercase, fold diacritics,
+    /// strip punctuation, collapse whitespace. So "Ideeën & inzichten:" matches
+    /// "ideeen inzichten".
+    private static func normalize(_ text: String) -> String {
+        let folded = text.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: nil)
+        let stripped = folded.unicodeScalars.map { scalar -> Character in
+            CharacterSet.alphanumerics.contains(scalar) ? Character(scalar) : " "
+        }
+        return String(stripped)
+            .split(separator: " ", omittingEmptySubsequences: true)
+            .joined(separator: " ")
+    }
+
+    private static func normalizedSet(_ items: [String]) -> Set<String> {
+        Set(items.map(normalize))
+    }
 
     /// Returns a descriptive title from the HTML, or nil if none qualifies.
     /// Strategies: descriptive heading (h1-h4) → TL;DR/summary paragraph → first
@@ -71,13 +96,11 @@ enum NotuleTitleExtractor {
     }
 
     private static func isDescriptive(_ text: String) -> Bool {
-        let lower = text.lowercased().trimmingCharacters(in: .whitespaces)
-            .trimmingCharacters(in: CharacterSet(charactersIn: ":"))
-            .trimmingCharacters(in: .whitespaces)
         if text.count < 6 || text.hasPrefix("[") { return false }
-        if genericTitles.contains(lower) || sectionWords.contains(lower) { return false }
-        let words = lower.split(separator: " ").map(String.init)
-        if words.count <= 2 && words.contains(where: { sectionWords.contains($0.trimmingCharacters(in: CharacterSet(charactersIn: ":"))) }) {
+        let key = normalize(text)
+        if genericTitles.contains(key) || sectionWords.contains(key) { return false }
+        let words = key.split(separator: " ").map(String.init)
+        if words.count <= 2 && words.contains(where: { sectionWords.contains($0) }) {
             return false
         }
         return true

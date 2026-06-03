@@ -41,27 +41,7 @@ IMPORTANT: werk in dit project volgens deze vier principes — boven snelheid.
 - Kleuren: `Color.brandPrimary`, `Color.labelPrimary` (Color+Brand.swift)
 
 ## Backend (productie)
-- **Server:** AWS EC2 GPU instance `michelk@3.69.205.209`
-- **Pad op server:** `/home/michelk/n8n/Transcript Studio/`
-- **Lokale repo:** `../transcript-studio-backend/` (zelfde parent directory)
-- **Container:** `n8n_transcript_studio` (Docker, nvidia runtime, bind-mount `.:/app`)
-- **API URL:** `https://n8n.prezent.nl/tstudio/api/` (nginx reverse proxy)
-- **Deployment:** code is bind-mounted, geen rebuild nodig — alleen file sync + restart:
-```bash
-# Sync alle code naar server
-rsync -avz --exclude '__pycache__' --exclude '*.pyc' --exclude 'data/' \
-  ../transcript-studio-backend/ michelk@3.69.205.209:"/home/michelk/n8n/Transcript Studio/"
-
-# Of één bestand
-scp ../transcript-studio-backend/path/to/file.py \
-  michelk@3.69.205.209:"/home/michelk/n8n/Transcript Studio/path/to/file.py"
-
-# Restart container (herlaadt uvicorn met nieuwe code)
-ssh michelk@3.69.205.209 "docker restart n8n_transcript_studio"
-
-# Logs bekijken
-ssh michelk@3.69.205.209 "docker logs n8n_transcript_studio --tail 50"
-```
+FastAPI op AWS EC2 GPU `michelk@3.69.205.209`, container `n8n_transcript_studio` (bind-mount → deploy = file sync + restart, geen rebuild). Lokale repo: `../transcript-studio-backend/`. **Deploy-commando's + server-paden: lees docs/BACKEND.md.**
 
 ## Gotchas
 - `notifications(named:)` gebruiken, NIET `notifications(for:)` in AuthViewModel
@@ -79,19 +59,4 @@ ssh michelk@3.69.205.209 "docker logs n8n_transcript_studio --tail 50"
 - **Notule titels**: Backend extraheert titels via `_extract_title_from_html()` in `transcription.py`. Sectiekoppen (bijv. "Kernargumenten") worden gefilterd via `_SECTION_WORDS`. Titel-extractie gebeurt in twee codepaths: `/callback/notule` route EN `app.py` queue callback — beide moeten in sync blijven.
 
 ## Credentials & Environment Variables
-
-Beheerd door Claude Vault (automatisch geïnjecteerd bij sessiestart). Zie `.env.example` voor template.
-
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `N8N_API_KEY` | Yes | n8n API key for workflow access |
-| `N8N_URL` | Yes | n8n instance URL |
-| `JIRA_URL` | Yes | Jira Cloud instance URL |
-| `JIRA_EMAIL` | Yes | Atlassian account email |
-| `JIRA_TOKEN` | Yes | Jira API token |
-| `TELEGRAM_BOT_TOKEN` | Yes | Telegram bot token from BotFather |
-| `CHAT_ALLOWED_USERS` | No | Comma-separated list of allowed Telegram user IDs |
-| `CHAT_MAX_HISTORY` | No | Maximum chat history length |
-| `ZAI_API_KEY` | Yes | ZAI API key |
-| `ZAI_BASE_URL` | Yes | ZAI API base URL |
-| `PRIMARY_PROVIDER` | No | Primary AI provider identifier |
+Beheerd door Claude Vault (automatisch geïnjecteerd bij sessiestart). Volledige lijst met required/optional: zie `.env.example`.

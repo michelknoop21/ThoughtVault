@@ -5,6 +5,18 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2026-06-02] — CLAUDE.md geoptimaliseerd (97 → 62 regels)
+
+### Changed
+- **`CLAUDE.md`** afgeslankt zodat minder context elke sessie laadt. Backend-deploy bash-recepten (rsync/scp/ssh) verplaatst naar nieuwe `docs/BACKEND.md`; CLAUDE.md houdt alleen de kernfeiten (server, container, bind-mount deploy-model) + pointer. Karpathy-werkprincipes en macOS code-patterns blijven inline (altijd-aan, project-specifiek).
+- **Credentials env-var tabel verwijderd** uit CLAUDE.md — dupliceerde `.env.example` (geverifieerd: alle vars aanwezig). Vervangen door one-line pointer.
+
+### Added
+- **`docs/BACKEND.md`** — server-feiten + deploy-commando's voor de productie-backend.
+
+### Notes
+- CHANGELOG loopt achter: laatste inhoudelijke entry was v1.0.124, huidige versie is v1.0.130. Backfill valt buiten deze optimalisatie.
+
 ## [2026-05-06] — Windows upload pipeline gehard tegen recurring 422 (v1.0.124)
 
 ### Fixed

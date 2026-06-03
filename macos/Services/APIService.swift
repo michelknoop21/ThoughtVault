@@ -29,11 +29,16 @@ enum APIError: LocalizedError {
     case fileTooLarge
     case sessionExpired
     case networkError(Error)
+    case localModeActive
 
     var errorDescription: String? {
         switch self {
         case .invalidResponse:
             return "Ongeldige serverrespons ontvangen."
+        case .localModeActive:
+            // Local mode makes no backend calls. Callers degrade to local data;
+            // this message is a benign fallback and should not surface to the user.
+            return "Lokale modus actief — geen serververbinding nodig."
         case .httpError(let code, let message, _):
             return message ?? "Serverfout (HTTP \(code))."
         case .decodingError(let error):
@@ -180,6 +185,12 @@ actor APIService {
         contentType: String? = "application/json",
         authenticated: Bool = true
     ) throws -> URLRequest {
+        // Safety net: in local mode the app must never reach the AWS backend.
+        // Every request funnels through here, so guarding it guarantees zero calls
+        // even from paths that aren't individually local-mode aware.
+        if ProcessingMode.isLocalMode {
+            throw APIError.localModeActive
+        }
         let base = try validatedBaseURL()
         // Strip leading slash so URL resolves relative to base path (not root)
         let relativePath = path.hasPrefix("/") ? String(path.dropFirst()) : path

@@ -85,10 +85,13 @@ struct ContentView: View {
             }
         }
         .task {
-            await checkMinimumVersion()
-            // Ensure a profile is available when entering without auth (local mode).
-            if recordingVM.availableProfiles.isEmpty {
-                await recordingVM.reloadProfiles()
+            // Local mode is fully offline: skip the backend version check and
+            // server profile reload (built-in defaults are loaded on init).
+            if !ProcessingMode.isLocalMode {
+                await checkMinimumVersion()
+                if recordingVM.availableProfiles.isEmpty {
+                    await recordingVM.reloadProfiles()
+                }
             }
         }
         .onChange(of: selectedTab) { _, _ in
@@ -179,9 +182,12 @@ struct ContentView: View {
     }
 
     private func fetchCalendarIfGranted() async {
-        // Load Microsoft 365 OAuth config and tokens on every app start
-        await calendarService.refreshMicrosoftState()
-        await MicrosoftGraphService.shared.loadTokensFromBackend()
+        // Microsoft 365 calendar relies on the backend; skip it in local mode.
+        // Apple Calendar (EventKit) is local and stays available.
+        if !ProcessingMode.isLocalMode {
+            await calendarService.refreshMicrosoftState()
+            await MicrosoftGraphService.shared.loadTokensFromBackend()
+        }
 
         if calendarService.hasCalendarAccess || calendarService.isMicrosoftConnected {
             await calendarService.fetchUpcomingMeetings()

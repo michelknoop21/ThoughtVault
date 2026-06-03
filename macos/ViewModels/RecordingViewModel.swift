@@ -103,13 +103,8 @@ final class RecordingViewModel {
     @ObservationIgnored
     @AppStorage("preferOnDeviceTranscription") var preferOnDeviceTranscription = false
 
-    @ObservationIgnored
-    @AppStorage("processingMode") var processingModeRaw = ProcessingMode.local.rawValue
-
     /// Whether the app is configured to process everything locally (no server).
-    var isLocalMode: Bool {
-        (ProcessingMode(rawValue: processingModeRaw) ?? .local) == .local
-    }
+    var isLocalMode: Bool { ProcessingMode.isLocalMode }
 
     // MARK: - SSE Clients
 
@@ -183,11 +178,16 @@ final class RecordingViewModel {
 
     private func loadDefaultProfile(savedId: String) async {
         var profiles: [Profile]
-        do {
-            profiles = try await APIService.shared.getProfiles()
-        } catch {
-            os_log("[RecordingVM] Could not load profiles from API, using defaults: %{public}@", log: .default, type: .error, error.localizedDescription)
+        if isLocalMode {
+            // Fully offline: use the built-in profiles, no server call.
             profiles = Profile.defaults
+        } else {
+            do {
+                profiles = try await APIService.shared.getProfiles()
+            } catch {
+                os_log("[RecordingVM] Could not load profiles from API, using defaults: %{public}@", log: .default, type: .error, error.localizedDescription)
+                profiles = Profile.defaults
+            }
         }
 
         if profiles.isEmpty {
@@ -1115,6 +1115,8 @@ final class RecordingViewModel {
     // MARK: - Feature Flags
 
     func checkFeatures() async {
+        // Feature flags come from the backend; skip entirely in local mode.
+        guard !isLocalMode else { return }
         do {
             let features = try await APIService.shared.fetchFeaturesExtended()
             await MainActor.run {

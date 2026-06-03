@@ -131,6 +131,12 @@ enum ProcessingMode: String, Codable, Sendable, CaseIterable, Identifiable {
         case .cloud: return "Cloud (server)"
         }
     }
+
+    /// App-wide source of truth for local mode, readable from any layer
+    /// (views, view models, APIService) via the shared `processingMode` default.
+    static var isLocalMode: Bool {
+        (ProcessingMode(rawValue: UserDefaults.standard.string(forKey: "processingMode") ?? local.rawValue) ?? .local) == .local
+    }
 }
 
 // MARK: - NotulenProvider

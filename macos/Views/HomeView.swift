@@ -582,11 +582,13 @@ struct HomeView: View {
         let local = LocalTranscriptStore.shared.allTranscripts()
 
         var server: [Transcript] = []
-        do {
-            server = try await APIService.shared.getTranscripts().items
-        } catch {
-            // Server unavailable is fine in local mode; only surface if nothing local.
-            if local.isEmpty { loadError = error.localizedDescription }
+        if !ProcessingMode.isLocalMode {
+            do {
+                server = try await APIService.shared.getTranscripts().items
+            } catch {
+                // Server unavailable is fine; only surface if nothing local.
+                if local.isEmpty { loadError = error.localizedDescription }
+            }
         }
 
         let localIds = Set(local.map(\.taskId))

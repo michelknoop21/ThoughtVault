@@ -21,14 +21,63 @@ final class LocalTranscriptStore {
     private var context: ModelContext { container.mainContext }
 
     private init() {
+        // Use an app-specific store URL instead of SwiftData's default
+        // (`Application Support/default.store`). That default store is shared with
+        // every other unsandboxed SwiftData app on the machine, which caused an
+        // incompatible-schema "store not reachable" failure in dev builds.
+        let newURL = Self.storeURL
+        let oldDefaultURL = URL.applicationSupportDirectory.appending(path: "default.store")
+        // Earlier builds saved local history to the default store. Migrate it once,
+        // before the new (empty) store exists.
+        let shouldMigrate = !FileManager.default.fileExists(atPath: newURL.path)
+            && FileManager.default.fileExists(atPath: oldDefaultURL.path)
+
         do {
-            container = try ModelContainer(for: TranscriptRecord.self)
+            let config = ModelConfiguration(url: newURL)
+            container = try ModelContainer(for: TranscriptRecord.self, configurations: config)
         } catch {
             // A failed local store is unrecoverable; fall back to an in-memory store
             // so the app still launches rather than crashing.
             logger.error("Failed to create persistent store, using in-memory: \(error.localizedDescription)")
             let config = ModelConfiguration(isStoredInMemoryOnly: true)
             container = try! ModelContainer(for: TranscriptRecord.self, configurations: config)
+        }
+
+        if shouldMigrate {
+            migrateFromDefaultStore(at: oldDefaultURL)
+        }
+    }
+
+    /// Dedicated on-disk location: `Application Support/TranscriptStudio/Local.store`.
+    private static var storeURL: URL {
+        let base = URL.applicationSupportDirectory.appending(path: "TranscriptStudio", directoryHint: .isDirectory)
+        try? FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
+        return base.appending(path: "Local.store")
+    }
+
+    /// One-time copy of records from the old default store into the new store.
+    /// Opens the old store read-only as `TranscriptRecord`; if it holds a different
+    /// schema (another app's default store), the open throws and migration is skipped.
+    private func migrateFromDefaultStore(at oldURL: URL) {
+        do {
+            let oldConfig = ModelConfiguration(url: oldURL, allowsSave: false)
+            let oldContainer = try ModelContainer(for: TranscriptRecord.self, configurations: oldConfig)
+            let oldRecords = try ModelContext(oldContainer).fetch(FetchDescriptor<TranscriptRecord>())
+            guard !oldRecords.isEmpty else { return }
+
+            for r in oldRecords {
+                context.insert(TranscriptRecord(
+                    id: r.id, taskId: r.taskId, title: r.title, filename: r.filename,
+                    rawTranscription: r.rawTranscription, notuleHtml: r.notuleHtml,
+                    profileId: r.profileId, profileName: r.profileName, tags: r.tags,
+                    createdAt: r.createdAt, localAudioPath: r.localAudioPath, source: r.source
+                ))
+            }
+            try context.save()
+            logger.info("Migrated \(oldRecords.count) record(s) from the previous local store.")
+        } catch {
+            // No compatible local store to migrate (different schema or unreadable). Skip.
+            logger.info("No compatible local store to migrate: \(error.localizedDescription)")
         }
     }
 

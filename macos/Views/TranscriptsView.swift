@@ -704,11 +704,13 @@ struct TranscriptsView: View {
         let local = LocalTranscriptStore.shared.allTranscripts()
 
         var server: [Transcript] = []
-        do {
-            server = try await APIService.shared.getTranscripts().items
-        } catch {
-            // Server unavailable is fine in local mode; only surface if no local records.
-            if local.isEmpty { loadErrorMessage = error.localizedDescription }
+        if !ProcessingMode.isLocalMode {
+            do {
+                server = try await APIService.shared.getTranscripts().items
+            } catch {
+                // Server unavailable is fine; only surface if no local records.
+                if local.isEmpty { loadErrorMessage = error.localizedDescription }
+            }
         }
 
         let localIds = Set(local.map(\.taskId))

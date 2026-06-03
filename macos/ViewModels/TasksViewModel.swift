@@ -27,6 +27,8 @@ final class TasksViewModel {
 
     /// Fetch active tasks from the backend.
     func loadActiveTasks() async {
+        // Local mode tracks active tasks in RecordingViewModel, not the server.
+        guard !ProcessingMode.isLocalMode else { return }
         isLoading = true
         errorMessage = nil
         do {
@@ -71,6 +73,8 @@ final class TasksViewModel {
 
     /// Start auto-refresh polling every 10 seconds.
     func startAutoRefresh() {
+        // No backend polling in local mode.
+        guard !ProcessingMode.isLocalMode else { return }
         stopAutoRefresh()
         refreshTimer = Task {
             while !Task.isCancelled {

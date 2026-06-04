@@ -634,27 +634,37 @@ pub async fn http_sse_stream(
     let mut buffer = String::new();
 
     while let Some(chunk) = stream.next().await {
-        let chunk = chunk.map_err(|e| e.to_string())?;
-        let text = String::from_utf8_lossy(&chunk);
-        buffer.push_str(&text);
+        match chunk {
+            Err(e) => {
+                // Network error mid-stream — signal interrupted so TS layer can reconnect
+                let _ = app.emit(&format!("{}-interrupted", event_name), e.to_string());
+                return Ok(());
+            }
+            Ok(bytes) => {
+                let text = String::from_utf8_lossy(&bytes);
+                buffer.push_str(&text);
 
-        // Process complete SSE lines from buffer
-        while let Some(pos) = buffer.find('\n') {
-            let line = buffer[..pos].trim().to_string();
-            buffer.drain(..=pos);
+                // Process complete SSE lines from buffer
+                while let Some(pos) = buffer.find('\n') {
+                    let line = buffer[..pos].trim().to_string();
+                    buffer.drain(..=pos);
 
-            if line.starts_with("data: ") {
-                let data = &line[6..];
-                if data != "[DONE]" {
-                    let _ = app.emit(&event_name, data);
-                } else {
-                    let _ = app.emit(&format!("{}-done", event_name), "");
-                    return Ok(());
+                    if line.starts_with("data: ") {
+                        let data = &line[6..];
+                        if data != "[DONE]" {
+                            let _ = app.emit(&event_name, data);
+                        } else {
+                            // Clean DONE sentinel — normal completion
+                            let _ = app.emit(&format!("{}-done", event_name), "");
+                            return Ok(());
+                        }
+                    }
                 }
             }
         }
     }
 
-    let _ = app.emit(&format!("{}-done", event_name), "");
+    // Stream exhausted without a [DONE] sentinel — server closed early or network dropped
+    let _ = app.emit(&format!("{}-interrupted", event_name), "");
     Ok(())
 }

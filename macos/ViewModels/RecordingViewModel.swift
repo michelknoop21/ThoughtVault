@@ -844,10 +844,10 @@ final class RecordingViewModel {
 
         for item in queued {
             // Enforce max retry limit
-            if item.retryCount >= 10 {
+            if item.retryCount >= QueuedItem.maxRetries {
                 let filename: String
                 switch item {
-                case .audio(let url, _): filename = url.lastPathComponent
+                case .audio(let url, _, _): filename = url.lastPathComponent
                 case .text: filename = "tekst-transcriptie"
                 }
                 offlineQueue.removeItem(item)
@@ -859,7 +859,7 @@ final class RecordingViewModel {
             }
 
             switch item {
-            case .audio(let url, _):
+            case .audio(let url, _, _):
                 let stateBefore = recordingState
                 await uploadFile(url, profileId: profileId)
                 // Only remove from queue if upload succeeded (state went back to idle without error)
@@ -871,7 +871,7 @@ final class RecordingViewModel {
                 } else {
                     offlineQueue.removeItem(item)
                 }
-            case .text(let transcription, let pid, _):
+            case .text(let transcription, let pid, _, _):
                 do {
                     let task = try await APIService.shared.uploadTranscriptionText(
                         transcription: transcription,

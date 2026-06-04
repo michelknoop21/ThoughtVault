@@ -22,7 +22,7 @@ final class OfflineQueue: @unchecked Sendable {
     var queuedAudioURLs: Set<URL> {
         var urls = Set<URL>()
         for item in items {
-            if case .audio(let url, _) = item {
+            if case .audio(let url, _, _) = item {
                 urls.insert(url)
             }
         }
@@ -67,7 +67,7 @@ final class OfflineQueue: @unchecked Sendable {
         return item
     }
 
-    /// Removes a specific item from the queue by identity (Codable equality).
+    /// Removes a specific item from the queue by stable id.
     func removeItem(_ item: QueuedItem) {
         guard let index = indexOfItem(item) else { return }
         items.remove(at: index)
@@ -92,12 +92,8 @@ final class OfflineQueue: @unchecked Sendable {
     // MARK: - Identity Helpers
 
     private func indexOfItem(_ item: QueuedItem) -> Int? {
-        // Find by encoding and comparing JSON representation
-        guard let targetData = try? JSONEncoder().encode(item) else { return nil }
-        return items.firstIndex { candidate in
-            guard let candidateData = try? JSONEncoder().encode(candidate) else { return false }
-            return candidateData == targetData
-        }
+        // Find by stable id — immune to JSON field order or encoding changes
+        items.firstIndex { $0.id == item.id }
     }
 
     // MARK: - Persistence

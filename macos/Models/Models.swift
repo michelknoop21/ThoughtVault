@@ -599,13 +599,24 @@ struct TwoFAVerifyResponse: Codable, Sendable {
 // MARK: - QueuedItem
 
 enum QueuedItem: Codable, Sendable {
-    case audio(url: URL, retryCount: Int = 0)
-    case text(transcription: String, profileId: String, retryCount: Int = 0)
+    case audio(url: URL, retryCount: Int = 0, id: String = UUID().uuidString)
+    case text(transcription: String, profileId: String, retryCount: Int = 0, id: String = UUID().uuidString)
+
+    /// Shared retry limit — aligned with Windows MAX_RETRIES = 5.
+    static let maxRetries = 5
 
     var retryCount: Int {
         switch self {
-        case .audio(_, let count): return count
-        case .text(_, _, let count): return count
+        case .audio(_, let count, _): return count
+        case .text(_, _, let count, _): return count
+        }
+    }
+
+    /// Stable identity that survives encode/decode round-trips and retries.
+    var id: String {
+        switch self {
+        case .audio(_, _, let id): return id
+        case .text(_, _, _, let id): return id
         }
     }
 
@@ -616,32 +627,35 @@ enum QueuedItem: Codable, Sendable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case type, url, transcription, profileId, retryCount
+        case type, url, transcription, profileId, retryCount, id
     }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let type = try container.decode(ItemType.self, forKey: .type)
         let retryCount = (try? container.decodeIfPresent(Int.self, forKey: .retryCount)) ?? 0
+        // Legacy items without an id gain a stable id from this load onwards
+        let id = (try? container.decodeIfPresent(String.self, forKey: .id)) ?? UUID().uuidString
         switch type {
         case .audio:
             let url = try container.decode(URL.self, forKey: .url)
-            self = .audio(url: url, retryCount: retryCount)
+            self = .audio(url: url, retryCount: retryCount, id: id)
         case .text:
             let transcription = try container.decode(String.self, forKey: .transcription)
             let profileId = try container.decode(String.self, forKey: .profileId)
-            self = .text(transcription: transcription, profileId: profileId, retryCount: retryCount)
+            self = .text(transcription: transcription, profileId: profileId, retryCount: retryCount, id: id)
         }
     }
 
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(retryCount, forKey: .retryCount)
+        try container.encode(id, forKey: .id)
         switch self {
-        case .audio(let url, _):
+        case .audio(let url, _, _):
             try container.encode(ItemType.audio, forKey: .type)
             try container.encode(url, forKey: .url)
-        case .text(let transcription, let profileId, _):
+        case .text(let transcription, let profileId, _, _):
             try container.encode(ItemType.text, forKey: .type)
             try container.encode(transcription, forKey: .transcription)
             try container.encode(profileId, forKey: .profileId)
@@ -649,12 +663,13 @@ enum QueuedItem: Codable, Sendable {
     }
 
     /// Returns a copy of this item with retryCount incremented by one.
+    /// Preserves the item's id so it keeps the same identity after a retry.
     func incrementingRetryCount() -> QueuedItem {
         switch self {
-        case .audio(let url, let count):
-            return .audio(url: url, retryCount: count + 1)
-        case .text(let transcription, let profileId, let count):
-            return .text(transcription: transcription, profileId: profileId, retryCount: count + 1)
+        case .audio(let url, let count, let id):
+            return .audio(url: url, retryCount: count + 1, id: id)
+        case .text(let transcription, let profileId, let count, let id):
+            return .text(transcription: transcription, profileId: profileId, retryCount: count + 1, id: id)
         }
     }
 }

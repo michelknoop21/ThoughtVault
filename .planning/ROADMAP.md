@@ -14,53 +14,69 @@ Starting from v1.0.134, this milestone closes the macOS ↔ Windows asymmetry on
 ## Phase Details
 
 ### Phase 1: Quick Fixes
+
 **Goal**: Gedocumenteerde bugs zijn verholpen en kritieke parity-gaps gedicht voordat de grotere Windows local-first sprint begint
 **Depends on**: Nothing (brownfield — existing codebase v1.0.134)
 **Requirements**: C-01, C-02, C-03, D-01, D-02
 **Success Criteria** (what must be TRUE):
+
   1. Windows-opname die een netwerk-hik overleeft toont voortgang opnieuw (geen onterechte "failed" status)
   2. Windows accepteert geen custom server-URL met `http://` — validatie identiek aan macOS
   3. macOS offline-queue verwijdert/herkent items correct na een Swift-versie-update (id-gebaseerd, geen JSON-vergelijking); retry-limiet is gelijk op beide platforms
   4. macOS gecombineerde opname (mic + systeemgeluid) levert het maximale volume van beide bronnen, niet het gemiddelde
   5. macOS `SystemAudioCapture` timer gebruikt `MainActor.assumeIsolated` — geen Swift 6 concurrency-waarschuwingen tijdens opname
+
 **Plans**: 3 plans (2 waves)
 
 Plans:
+**Wave 1**
+
 - [ ] 01-01-PLAN.md — Windows SSE-reconnect met exponential backoff (`sse.ts` + `http.rs`) [C-01]
 - [ ] 01-02-PLAN.md — Windows HTTPS-afdwinging (`api.ts`) + macOS offline-queue id-identiteit + retry-limiet alignment [C-02, C-03]
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 01-03-PLAN.md — macOS audio-mix fix (element-wise max) + SystemAudioCapture timer-threading fix [D-01, D-02]
 
 ### Phase 2: UX Review
+
 **Goal**: Een gedocumenteerde, geprioriteerde lijst van UX-gaps en inconsistenties op macOS en Windows die Phase 4 aanstuurt
 **Depends on**: Phase 1
 **Requirements**: B-01
 **Success Criteria** (what must be TRUE):
+
   1. Alle kernflows op macOS zijn doorlopen (opname start/stop, transcript-lijst, notule-weergave, instellingen, auth) en bevindingen zijn vastgelegd
   2. Alle kernflows op Windows zijn doorlopen (zelfde set) en bevindingen zijn vastgelegd
   3. Bevindingenlijst is geprioriteerd (P1/P2/P3) en klaar als input voor Phase 4
   4. Inconsistenties tussen macOS en Windows in terminologie, lege/laad/foutstaten en navigatie zijn geidentificeerd
+
 **Plans**: TBD (verwacht 2 plans)
 **UI hint**: yes
 
 Plans:
+
 - [ ] 02-01: UX-review macOS kernflows — bevindingen vastleggen
 - [ ] 02-02: UX-review Windows kernflows — bevindingen vastleggen en crossreferentie prioritering
 
 ### Phase 3: Windows Local-First
+
 **Goal**: Windows draait volledig cloud-onafhankelijk — lokale STT, lokale LLM-notulen, lokale opslag, auth-bypass in local-mode, instellingen-UI en video-call detectie
 **Depends on**: Phase 1
 **Requirements**: A-01, A-02, A-03, A-04, A-05, C-04
 **Success Criteria** (what must be TRUE):
+
   1. Gebruiker kan op Windows een opname transcriberen zonder internet — whisper.cpp verwerkt audio lokaal, resultaat verschijnt in de app
   2. Gebruiker kan op Windows notulen genereren zonder internet — Ollama of LM Studio genereert de notule lokaal
   3. Transcripties worden lokaal opgeslagen op Windows en blijven beschikbaar na herstart zonder backend-sync
   4. In local-mode op Windows is geen login vereist — app start direct en slaat transcripties op zonder cloud-contact
   5. Gebruiker kan in Windows-instellingen de lokale STT-engine en het Whisper-model kiezen en downloaden
   6. Windows detecteert actieve video-calls (Zoom/Teams/Meet) en start opname-suggestie automatisch
+
 **Plans**: TBD (verwacht 5-6 plans)
 **UI hint**: yes
 
 Plans:
+
 - [ ] 03-01: Onderzoek + keuze Windows STT-engine (whisper.cpp Rust-binding vs. alternatief) — spike
 - [ ] 03-02: Whisper.cpp Rust-integratie + model-download-management (Tauri commands)
 - [ ] 03-03: Lokale transcript-opslag Windows (SQLite via Tauri plugin of filesystem-store)
@@ -69,18 +85,22 @@ Plans:
 - [ ] 03-06: Instellingen-UI Windows voor lokale verwerking + video-call auto-detectie Windows
 
 ### Phase 4: UX Fixes
+
 **Goal**: Geprioriteerde UX-bevindingen uit Phase 2 zijn uitgevoerd — beide platforms zijn consistent in navigatie, foutstaten, terminologie en toegankelijkheid
 **Depends on**: Phase 2, Phase 3
 **Requirements**: B-02, B-03, B-04
 **Success Criteria** (what must be TRUE):
+
   1. Alle P1-bevindingen uit de UX-review zijn opgelost op het betreffende platform
   2. Lege/laad/foutstaten gebruiken dezelfde terminologie en visuele patronen op macOS en Windows
   3. Keyboard-navigatie werkt door alle kernflows op Windows; focus-states zijn zichtbaar
   4. Foutmeldingen zijn leesbaar en actionable (geen technische stack-traces zichtbaar voor gebruiker)
+
 **Plans**: TBD (afhankelijk van Phase 2 uitkomst, verwacht 3-5 plans)
 **UI hint**: yes
 
 Plans:
+
 - [ ] 04-01: P1 UX-fixes macOS (uit Phase 2 bevindingenlijst)
 - [ ] 04-02: P1 UX-fixes Windows (uit Phase 2 bevindingenlijst)
 - [ ] 04-03: Consistentie-pass: terminologie, lege/foutstaten, keyboard/focus beide platforms

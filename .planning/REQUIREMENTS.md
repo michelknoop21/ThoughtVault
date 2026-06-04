@@ -86,5 +86,5 @@
 | C-03 | Phase 1 | Complete |
 | C-04 | Phase 3 | Pending |
 | C-05 | — | Done (v1.0.133) |
-| D-01 | Phase 1 | Pending |
-| D-02 | Phase 1 | Pending |
+| D-01 | Phase 1 | Complete |
+| D-02 | Phase 1 | Complete |

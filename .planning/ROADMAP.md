@@ -36,7 +36,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 01-03-PLAN.md — macOS audio-mix fix (element-wise max) + SystemAudioCapture timer-threading fix [D-01, D-02]
+- [x] 01-03-PLAN.md — macOS audio-mix fix (element-wise max) + SystemAudioCapture timer-threading fix [D-01, D-02]
 
 ### Phase 2: UX Review
 
@@ -111,7 +111,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Quick Fixes | 2/3 | In Progress|  |
+| 1. Quick Fixes | 3/3 | Complete   | 2026-06-04 |
 | 2. UX Review | 0/2 | Not started | - |
 | 3. Windows Local-First | 0/6 | Not started | - |
 | 4. UX Fixes | 0/3 | Not started | - |

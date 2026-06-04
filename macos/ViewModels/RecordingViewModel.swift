@@ -1271,8 +1271,9 @@ final class RecordingViewModel {
                 for i in 0..<Int(totalFrames) {
                     let micSample: Float = i < Int(micBuffer.frameLength) ? micData[i] : 0
                     let sysSample: Float = i < Int(sysBuffer.frameLength) ? sysData[i] : 0
-                    // Average mix at equal volume, clamp to [-1, 1]
-                    mixData[i] = max(-1.0, min(1.0, (micSample + sysSample) * 0.5))
+                    // Element-wise magnitude-max: pick the louder source at each sample, preserving its sign
+                    let sample = abs(micSample) >= abs(sysSample) ? micSample : sysSample
+                    mixData[i] = max(-1.0, min(1.0, sample))
                 }
 
                 let recordingsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]

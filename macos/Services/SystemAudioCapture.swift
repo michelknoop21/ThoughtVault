@@ -281,7 +281,8 @@ final class SystemAudioCapture: NSObject {
 
     private func startDurationTimer() {
         durationTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-            Task { @MainActor in
+            // Timer fires on the main run loop, so assumeIsolated is safe here
+            MainActor.assumeIsolated {
                 guard let self, let start = self.startDate else { return }
                 var elapsed = Date().timeIntervalSince(start) - self.accumulatedPauseDuration
                 if let pauseStart = self.pausedAt {

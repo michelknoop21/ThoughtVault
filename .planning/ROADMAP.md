@@ -50,13 +50,17 @@ Plans:
   3. Bevindingenlijst is geprioriteerd (P1/P2/P3) en klaar als input voor Phase 4
   4. Inconsistenties tussen macOS en Windows in terminologie, lege/laad/foutstaten en navigatie zijn geidentificeerd
 
-**Plans**: TBD (verwacht 2 plans)
+**Plans**: 2 plans (2 waves)
 **UI hint**: yes
 
 Plans:
+**Wave 1**
 
-- [ ] 02-01: UX-review macOS kernflows — bevindingen vastleggen
-- [ ] 02-02: UX-review Windows kernflows — bevindingen vastleggen en crossreferentie prioritering
+- [ ] 02-01-PLAN.md — Maak FINDINGS.md (gelockte header D-11..D-16) + live UX-review 5 macOS kernflows [B-01]
+
+**Wave 2** *(blocked on 02-01 — gedeelde FINDINGS.md, sequentiële FND-IDs)*
+
+- [ ] 02-02-PLAN.md — Live UX-review 5 Windows kernflows (CrossOver) + cross-platform parity-pass + finale prioritering [B-01]
 
 ### Phase 3: Windows Local-First
 

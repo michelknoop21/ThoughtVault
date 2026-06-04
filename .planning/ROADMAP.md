@@ -35,7 +35,11 @@ Vier opeenvolgende fasen die persoons-/rolcontext toevoegen aan TranscriptStudio
   3. De gebruiker kan het profiel later openen en bewerken via Settings op beide platforms.
   4. Een app-upgrade op een apparaat met bestaande transcripts laat alle transcripts intact — geen data-wipe, geen crash.
   5. `grep -r "PersonProfile"` toont geen naambotsing met het bestaande `Profile`-type (notule-stijl); collision-warning aanwezig in `Models.swift`.
-**Plans**: TBD
+**Plans**: 4 plans
+  - [ ] 01-00-PLAN.md — Wave 0 RED test scaffolds (MigrationTests + PersonProfileTests)
+  - [ ] 01-01-PLAN.md — macOS data foundation: PersonProfile @Model + VersionedSchema migration + upsert + collision warning
+  - [ ] 01-02-PLAN.md — macOS UI: skippable onboarding step + Settings Profiel editor
+  - [ ] 01-03-PLAN.md — Windows full stack: PersonProfile type + personProfileStore + wizard step + Settings editor
 **UI hint**: yes
 
 ### Phase 2: People Directory
@@ -95,7 +99,7 @@ Vier opeenvolgende fasen die persoons-/rolcontext toevoegen aan TranscriptStudio
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Self-Profile Foundation | 0/? | Not started | - |
+| 1. Self-Profile Foundation | 0/4 | Planned | - |
 | 2. People Directory | 0/? | Not started | - |
 | 3. Context Injection | 0/? | Not started | - |
 | 4. Attribution Mapping | 0/? | Not started | - |

@@ -146,6 +146,28 @@ class APIService {
     return "https://n8n.prezent.nl/tstudio/api";
   }
 
+  /**
+   * Validates the raw base URL and enforces https (mirrors macOS validatedBaseURL()).
+   * Trims whitespace, parses with WHATWG URL (which lowercases the scheme automatically),
+   * rejects anything that is not exactly https:, and returns the normalized href
+   * with exactly one trailing slash stripped so `${base}${path}` composes correctly.
+   */
+  private validatedBaseUrl(): string {
+    const raw = this.baseUrl.trim();
+    let parsed: URL;
+    try {
+      parsed = new URL(raw);
+    } catch {
+      throw new Error("Ongeldige server-URL");
+    }
+    if (parsed.protocol !== "https:") {
+      throw new Error("Server-URL moet https gebruiken");
+    }
+    // Strip one trailing slash so callers can do `${base}${path}` without doubling slashes
+    const href = parsed.href;
+    return href.endsWith("/") ? href.slice(0, -1) : href;
+  }
+
   private get token(): string | null {
     return useAuthStore.getState().token;
   }
@@ -163,7 +185,7 @@ class APIService {
       headers["X-User-Token"] = this.token;
     }
 
-    const requestUrl = `${this.baseUrl}${path}`;
+    const requestUrl = `${this.validatedBaseUrl()}${path}`;
     if (import.meta.env.DEV) console.log(`[API] ${method} ${requestUrl}`);
 
     let response: { status: number; body: string; headers: Record<string, string> };
@@ -344,7 +366,7 @@ class APIService {
   }
 
   getStreamUrl(taskId: string): string {
-    return `${this.baseUrl}/task/${taskId}/stream`;
+    return `${this.validatedBaseUrl()}/task/${taskId}/stream`;
   }
 
   // Features
@@ -383,7 +405,8 @@ class APIService {
     mode: string,
     _signal?: AbortSignal
   ): Promise<{ task_id: string }> {
-    console.log(`[API] Upload ${filePath} via Rust proxy to ${this.baseUrl}/transcribe`);
+    const validatedBase = this.validatedBaseUrl();
+    console.log(`[API] Upload ${filePath} via Rust proxy to ${validatedBase}/transcribe`);
 
     let response: { status: number; body: string; headers: Record<string, string> };
     try {
@@ -391,7 +414,7 @@ class APIService {
         "proxy_upload",
         {
           filePath,
-          uploadUrl: `${this.baseUrl}/transcribe`,
+          uploadUrl: `${validatedBase}/transcribe`,
           token: this.token || "",
           profileId,
           mode,
@@ -461,7 +484,7 @@ class APIService {
         "proxy_upload",
         {
           filePath,
-          uploadUrl: `${this.baseUrl}/transcribe`,
+          uploadUrl: `${this.validatedBaseUrl()}/transcribe`,
           token: this.token || "",
           profileId,
           mode,

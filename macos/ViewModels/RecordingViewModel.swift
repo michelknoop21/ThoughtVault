@@ -735,8 +735,9 @@ final class RecordingViewModel {
                 }
             }
 
-            let title = NotuleTitleExtractor.extract(from: html) ?? fallback
-            try LocalTranscriptStore.shared.finalizeNotule(taskId: localId, html: html, title: title)
+            let datedHtml = Self.injectDate(into: html, date: record.createdAt)
+            let title = NotuleTitleExtractor.extract(from: datedHtml) ?? fallback
+            try LocalTranscriptStore.shared.finalizeNotule(taskId: localId, html: datedHtml, title: title)
 
             updateTask(localId, status: .completed, progress: 1.0)
             isGeneratingLocally = false
@@ -774,9 +775,20 @@ final class RecordingViewModel {
             outputTemplate: profile.template
         ) { _ in }
 
-        let title = NotuleTitleExtractor.extract(from: html) ?? record.title
-        try LocalTranscriptStore.shared.finalizeNotule(taskId: taskId, html: html, title: title)
-        return (html, title)
+        let datedHtml = Self.injectDate(into: html, date: record.createdAt)
+        let title = NotuleTitleExtractor.extract(from: datedHtml) ?? record.title
+        try LocalTranscriptStore.shared.finalizeNotule(taskId: taskId, html: datedHtml, title: title)
+        return (datedHtml, title)
+    }
+
+    /// Replaces the {{DATE}} template placeholder with a localized date. The cloud
+    /// backend fills this server-side; for on-device generation the app does it.
+    private static func injectDate(into html: String, date: Date) -> String {
+        guard html.contains("{{DATE}}") else { return html }
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "nl_NL")
+        formatter.dateFormat = "d MMMM yyyy"
+        return html.replacingOccurrences(of: "{{DATE}}", with: formatter.string(from: date))
     }
 
     /// Builds a fallback title from the transcription's first sentence or the filename.

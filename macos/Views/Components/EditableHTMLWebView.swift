@@ -159,7 +159,7 @@ struct EditableHTMLWebView: NSViewRepresentable {
             <meta charset="utf-8">
             \(headStyles)
             <style>
-            body { background: transparent; -webkit-font-smoothing: antialiased; }
+            body { background: transparent; -webkit-font-smoothing: antialiased; max-width: 820px; margin: 0 auto; padding: 32px 40px; }
             ::selection { background: rgba(229, 0, 116, 0.18); }
             \(editingCSS)
             </style>
@@ -460,7 +460,7 @@ struct EditableHTMLWebView: UIViewRepresentable {
             <meta name="viewport" content="width=device-width, initial-scale=1">
             \(headStyles)
             <style>
-            body { background: transparent; -webkit-font-smoothing: antialiased; }
+            body { background: transparent; -webkit-font-smoothing: antialiased; max-width: 820px; margin: 0 auto; padding: 32px 40px; }
             ::selection { background: rgba(229, 0, 116, 0.18); }
             \(editingCSS)
             </style>

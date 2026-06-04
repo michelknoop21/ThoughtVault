@@ -640,7 +640,7 @@ struct HTMLWebView: NSViewRepresentable {
             <head>
             <meta charset="utf-8">
             \(headStyles)
-            <style>body { background: transparent; }</style>
+            <style>body { background: transparent; max-width: 820px; margin: 0 auto; padding: 32px 40px; }</style>
             </head>
             <body>\(bodyContent)</body>
             </html>
@@ -737,7 +737,7 @@ struct HTMLWebView: UIViewRepresentable {
             <meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1">
             \(headStyles)
-            <style>body { background: transparent; }</style>
+            <style>body { background: transparent; max-width: 820px; margin: 0 auto; padding: 32px 40px; }</style>
             </head>
             <body>\(bodyContent)</body>
             </html>

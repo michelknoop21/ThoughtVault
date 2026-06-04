@@ -45,9 +45,9 @@ Declared values — pulled directly from `TS.Spacing` (Theme.swift). Source: cod
 | xxl | 48pt/px | Hero/major section spacing (macOS: not used in onboarding flow directly) |
 
 Exceptions:
-- Touch target minimum: 44pt for all tappable elements (macOS best practice; all buttons already exceed this via `PrimaryButtonStyle` padding lg + sm+2 vertical)
-- Step indicator dots: 8pt height, 8–24pt width (active), 6pt gap between — matches existing `OnboardingStep` indicator pattern
-- Windows progress dots: 6px height, 6–24px width (active), 6px gap — matches existing `OnboardingWizard` pattern
+- Touch target minimum: 44pt for all tappable elements — inherited from existing `PrimaryButtonStyle` implementation, not a new declaration.
+- Step indicator dots: 8pt height, 8–24pt width (active), 6pt gap between — inherited from existing `OnboardingStep` indicator pattern, not a new declaration.
+- Windows progress dots: 6px height, 6–24px width (active), 6px gap — inherited from existing `OnboardingWizard` pattern, not a new declaration.
 
 ---
 
@@ -59,8 +59,7 @@ Source: `TS.Font` (Theme.swift). Mapped to four semantic roles for this phase.
 |------|------------|-------------|--------|-------------|
 | Display | `TS.Font.largeTitleBold` | ~34pt | Bold (700) | 1.2 |
 | Heading | `TS.Font.title2Bold` | ~22pt | Bold (700) | 1.2 |
-| Body | `TS.Font.callout` | ~16pt | Regular (400) | 1.5 |
-| Label | `TS.Font.bodyMedium` | ~17pt | Medium (500) | 1.4 |
+| Body/Label | `TS.Font.callout` | ~16pt | Regular (400) | 1.5 |
 | Caption | `TS.Font.footnote` / `TS.Font.caption` | ~13pt / ~12pt | Regular (400) | 1.4 |
 
 Windows equivalents (Tailwind class → size):
@@ -69,11 +68,12 @@ Windows equivalents (Tailwind class → size):
 |------|----------|------|--------|
 | Display | `text-3xl font-bold` | 30px | 700 |
 | Heading | `text-xl font-bold` | 20px | 700 |
-| Body | `text-sm` | 13px (matches existing OnboardingWizard inputs/labels) | 400 |
-| Label | `text-sm font-medium` | 13px | 500 |
+| Body/Label | `text-sm` | 13px (matches existing OnboardingWizard inputs/labels) | 400 |
 | Caption | `text-xs` | 11px | 400 |
 
-**Rule:** Do NOT use `TS.Font.body` for step descriptions — use `TS.Font.callout` (matches all existing onboarding steps). Do NOT use more than 2 weights per screen (Regular + Bold for macOS onboarding step; Medium + Regular for settings form).
+**Weights:** Regular (400) and Bold (700) only. No Medium (500). Label emphasis and form field labels use Bold; default body text uses Regular.
+
+**Rule:** Do NOT use `TS.Font.body` for step descriptions — use `TS.Font.callout` (matches all existing onboarding steps). Do NOT use more than 2 weights per screen.
 
 ---
 
@@ -137,7 +137,7 @@ Phase 1 introduces 3 distinct UI surfaces. Each surface must handle all states b
 - Input style: matches existing server URL input in `OnboardingWizard` — `var(--fill-control-default)` background, `var(--radius-sm)` corners, `text-sm`, 7px/10px padding
 
 **States:**
-- Default: all fields empty, "Overslaan" button visible, "Volgende" / "Opslaan" primary CTA active
+- Default: all fields empty, "Overslaan" button visible, "Volgende" primary CTA active
 - Filled: fields populated, same layout
 - Skip: tap "Overslaan" → no `PersonProfile` created → advance to next step (matches agenda step pattern)
 - Error (field validation): not applicable — all fields optional per D-07
@@ -151,12 +151,14 @@ Phase 1 introduces 3 distinct UI surfaces. Each surface must handle all states b
 
 **Layout pattern (macOS):** Matches existing Settings section layout — `Form` with `Section` grouping, `.grouped` style on macOS.
 
+**Focal point:** The "Profiel opslaan" CTA is the primary focal element on this screen. It anchors the bottom of the form and carries the accent color via `PrimaryButtonStyle`.
+
 **Form fields:** Same 5 fields as onboarding step.
 
 **States:**
 - Empty (no profile yet / skipped onboarding): Informational message "Geen profiel ingevuld" + "Profiel aanmaken" CTA
-- Populated: Fields show current values, editable inline, "Opslaan" CTA bottom
-- Saving: "Opslaan" button shows loading indicator (`ProgressView().controlSize(.small)`), disabled
+- Populated: Fields show current values, editable inline, "Profiel opslaan" CTA bottom
+- Saving: "Profiel opslaan" button shows loading indicator (`ProgressView().controlSize(.small)`), disabled
 - Saved confirmation: brief checkmark + "Opgeslagen" label, 2s auto-dismiss (no separate toast component needed)
 
 ### Surface 3: Migration (invisible to user)
@@ -178,7 +180,7 @@ All strings Dutch (NL) via `Localizable.strings` (macOS) / i18n keys (Windows). 
 | Primary CTA (onboarding, skip) | "Overslaan" (plain button, footnote, labelSecondary — matches agenda step pattern) |
 | Settings section label (sidebar) | "Profiel" |
 | Settings section description | "Over jou" (subtitle beneath "Profiel" heading) |
-| Settings primary CTA | "Opslaan" |
+| Settings primary CTA | "Profiel opslaan" |
 | Settings saved confirmation | "Opgeslagen" |
 | Empty state heading (Settings, no profile) | "Geen profiel ingevuld" |
 | Empty state body (Settings, no profile) | "Vul je naam, rol en organisatie in zodat TranscriptStudio actiepunten aan jou kan koppelen." |

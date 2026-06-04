@@ -2,11 +2,11 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: People & Attribution
-status: planning
-last_updated: "2026-06-04T18:52:10.722Z"
+status: ready_to_plan
+last_updated: "2026-06-04"
 last_activity: 2026-06-04
 progress:
-  total_phases: 0
+  total_phases: 4
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -17,23 +17,24 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-06-03)
+See: .planning/PROJECT.md (updated 2026-06-04)
 
-**Core value:** De opname→transcriptie→notulen-flow werkt betrouwbaar en consistent op macOS en Windows — ook zonder cloudverbinding.
-**Current focus:** Phase 02 — ux-review
+**Core value:** Notulen herkennen wie-wie is en wijzen actiepunten betrouwbaar toe aan de juiste persoon op basis van lokaal opgebouwde persoons-/rolcontext — on-device, corrigeerbaar.
+**Current focus:** Phase 1 — Self-Profile Foundation
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-06-04 — Milestone v1.1 started
+Phase: 1 of 4 (Self-Profile Foundation)
+Plan: — of —
+Status: Ready to plan
+Last activity: 2026-06-04 — Roadmap aangemaakt; milestone v1.1 gestart
+
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
 **Velocity:**
-
-- Total plans completed: 3
+- Total plans completed: 0
 - Average duration: —
 - Total execution time: —
 
@@ -41,21 +42,20 @@ Last activity: 2026-06-04 — Milestone v1.1 started
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01 | 3 | - | - |
+| — | — | — | — |
 
 *Updated after each plan completion*
-| Phase 01-quick-fixes P01 | 9m | 2 tasks | 2 files |
 
 ## Accumulated Context
 
 ### Decisions
 
-Decisions are logged in PROJECT.md Key Decisions table.
-Recent decisions affecting current work:
+Decisions zijn gelogd in PROJECT.md Key Decisions table.
+Recente beslissingen die het huidige werk raken:
 
-- Pre-roadmap: `ProcessingMode.isLocalMode` als SSOT voor macOS local-mode — alle backend-calls geblokkeerd via één vangnet-guard in APIService (v1.0.133)
-- Pre-roadmap: Zakelijk-notule profiel: één brand-accent, besluitenlijst/actiepunten met eigenaar+deadline, `{{DATE}}`-injectie on-device (v1.0.134)
-- Windows STT-engine (A-01): nog te kiezen in Phase 3 spike (whisper.cpp Rust-binding is kandidaat; geen WhisperKit op Windows)
+- Day-1: `PersonProfile` met `isSelf: Bool` dekt zowel zelf-profiel als directory-entries in één model — geen apart `SelfProfile`/`DirectoryPerson`-split
+- Day-1: `SchemaMigrationPlan` MOET in Phase 1 landen vóór elk model-change; testen op echt apparaat met bestaande data (niet alleen simulator)
+- Day-1: Nooit de naam `Profile` hergebruiken voor het nieuwe concept — botsing met bestaand `Profile`-type in `Models.swift:219-302`
 
 ### Pending Todos
 
@@ -63,19 +63,18 @@ None yet.
 
 ### Blockers/Concerns
 
-- Phase 3 (Windows Local-First): STT-engine keuze is nog open — spike vereist voordat implementatie kan starten (A-01)
-- Phase 4 plan-count onbekend tot Phase 2 (UX-review) gereed is
+- Phase 3: spike verplicht vóór planning — n8n workflow `Iq3AAf8Vk8eQ9dcZ` node-structuur + vier backend-payload-locaties + regenerate-pad (zie ROADMAP.md Phase 3 spike-taken)
+- Phase 4: spike verplicht vóór planning — echte notule-HTML inspecteren + FND-008 actuele staat bevestigen
 
 ## Deferred Items
 
 | Category | Item | Status | Deferred At |
 |----------|------|--------|-------------|
-| Android | Android local-first parity | Deferred | Milestone scope |
-| Security | Code signing / notarisatie macOS + Windows | Deferred | Aparte roadmap |
-| Backend | Multi-instance schaling | Deferred | Aparte roadmap |
+| Parity & Polish | Phase 2 UX-review (macOS-deel klaar, niet afgerond) | On hold | v1.1 start |
+| Android | Android parity | Deferred | Milestone scope |
 
 ## Session Continuity
 
-Last session: 2026-06-04T11:49:36.170Z
-Stopped at: Phase 2 UI-SPEC approved
-Resume file: .planning/phases/02-ux-review/02-UI-SPEC.md
+Last session: 2026-06-04
+Stopped at: Roadmap aangemaakt; klaar voor `/gsd-plan-phase 1`
+Resume file: None

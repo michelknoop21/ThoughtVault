@@ -549,16 +549,16 @@ export interface PersonProfile {
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Does lightweight migration fire for a fresh install (no V1 store)?**
    - What we know: SwiftData creates a new store with the current schema on first launch. The migration plan only runs if an older schema version is detected.
    - What's unclear: Whether SwiftData assigns V1 or V2 version stamp to a fresh install — relevant if a future V3 needs to migrate from V1 vs V2.
-   - Recommendation: Not blocking for Phase 1. Document the behaviour in a comment in `AppMigrationPlan.swift`.
+   - RESOLVED: Not blocking for Phase 1. Plan 01-01 Task 2 documents the fresh-install behaviour in a comment in `AppMigrationPlan.swift`.
 
 2. **Windows: dedicated `personProfileStore` vs. embedding PersonProfile in `settingsStore`?**
    - What we know: Both patterns are feasible; `settingsStore` already holds `AppSettings`. The decision is marked Claude's Discretion.
-   - Recommendation: Dedicated `personProfileStore.ts` — cleaner separation, mirrors macOS model isolation, avoids growing `settingsStore` with people-domain data needed in Phase 2+.
+   - RESOLVED: Dedicated `personProfileStore.ts` (Plan 01-03 Task 1) — cleaner separation, mirrors macOS model isolation, avoids growing `settingsStore` with people-domain data needed in Phase 2+.
 
 ---
 

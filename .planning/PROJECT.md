@@ -47,15 +47,15 @@ De opname→transcriptie→notulen-flow werkt betrouwbaar en consistent op zowel
 - [ ] Uitvoeren van geprioriteerde UX-fixes uit de review
 
 **C. Cross-platform parity-fixes**
-- [ ] Windows SSE-reconnect met backoff (parity met macOS, geen "failed" bij netwerk-hik)
-- [ ] HTTPS afdwingen op Windows (zoals macOS `validatedBaseURL()`)
-- [ ] Offline-queue gelijktrekken: gedeelde retry-limiet + id-gebaseerde item-identiteit
+- [x] Windows SSE-reconnect met backoff (parity met macOS, geen "failed" bij netwerk-hik) — Validated in Phase 1 (C-01)
+- [x] HTTPS afdwingen op Windows (zoals macOS `validatedBaseURL()`) — Validated in Phase 1 (C-02)
+- [x] Offline-queue gelijktrekken: gedeelde retry-limiet + id-gebaseerde item-identiteit — Validated in Phase 1 (C-03)
 - [ ] Video-call auto-detectie op Windows
 - [ ] macOS local-mode: geen onnodige backend-profiel-load bij init
 
 **D. Bekende bugs**
-- [ ] macOS combined-audio mixing: average → element-wise max (CLAUDE.md-gotcha naleven)
-- [ ] macOS `SystemAudioCapture` timer-threading: `MainActor.assumeIsolated` i.p.v. `Task{}` (DEC-042)
+- [x] macOS combined-audio mixing: average → element-wise max (CLAUDE.md-gotcha naleven) — Validated in Phase 1 (D-01)
+- [x] macOS `SystemAudioCapture` timer-threading: `MainActor.assumeIsolated` i.p.v. `Task{}` (DEC-042) — Validated in Phase 1 (D-02)
 
 ### Out of Scope
 
@@ -112,4 +112,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-03 after initialization*
+*Last updated: 2026-06-04 — Phase 1 (Quick Fixes) complete: C-01/C-02/C-03 + D-01/D-02 shipped*

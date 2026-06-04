@@ -82,8 +82,8 @@
 | B-03 | Phase 4 | Pending |
 | B-04 | Phase 4 | Pending |
 | C-01 | Phase 1 | Complete |
-| C-02 | Phase 1 | Pending |
-| C-03 | Phase 1 | Pending |
+| C-02 | Phase 1 | Complete |
+| C-03 | Phase 1 | Complete |
 | C-04 | Phase 3 | Pending |
 | C-05 | — | Done (v1.0.133) |
 | D-01 | Phase 1 | Pending |

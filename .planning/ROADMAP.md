@@ -32,7 +32,7 @@ Plans:
 **Wave 1**
 
 - [x] 01-01-PLAN.md — Windows SSE-reconnect met exponential backoff (`sse.ts` + `http.rs`) [C-01]
-- [ ] 01-02-PLAN.md — Windows HTTPS-afdwinging (`api.ts`) + macOS offline-queue id-identiteit + retry-limiet alignment [C-02, C-03]
+- [x] 01-02-PLAN.md — Windows HTTPS-afdwinging (`api.ts`) + macOS offline-queue id-identiteit + retry-limiet alignment [C-02, C-03]
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -111,7 +111,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Quick Fixes | 1/3 | In Progress|  |
+| 1. Quick Fixes | 2/3 | In Progress|  |
 | 2. UX Review | 0/2 | Not started | - |
 | 3. Windows Local-First | 0/6 | Not started | - |
 | 4. UX Fixes | 0/3 | Not started | - |

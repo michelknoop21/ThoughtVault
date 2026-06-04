@@ -23,7 +23,7 @@ Phase 2 levert **één gedocumenteerde, geprioriteerde UX-bevindingenlijst** (`F
 ## Implementation Decisions
 
 ### Review-uitvoering — gestructureerde live expert review per flow, per platform
-- **D-01:** **Volledig live.** Beide apps draaien echt en worden doorgeklikt. Windows draait via **CrossOver op de Mac** (echte Windows-binary), zodat de Windows-UI representatief beoordeeld kan worden — niet alleen `tauri dev`.
+- **D-01:** **Volledig live.** Beide apps draaien echt en worden doorgeklikt. Windows draait via **CrossOver op de Mac** met de **CI-gebouwde MSI** (GitLab pipeline via `scripts/deploy-dev.sh` → echte gepackagede Windows-build, gedownload van de download-server), zodat de Windows-UI representatief beoordeeld kan worden — **niet** `tauri dev`. (`tauri dev` is hooguit fallback voor logica-inspectie, niet voor de definitieve visuele/parity-beoordeling.)
 - **D-02:** Loop de 5 kernflows **apart door op macOS én Windows** (10 doorlopen totaal).
 - **D-03:** Per flow drie checks:
   - **Task completion** — kan de gebruiker de taak zonder blokkade afronden?
@@ -131,7 +131,7 @@ Scope:
 - **Voorbeeld-finding (door gebruiker aangeleverd als format-anker):**
   - `FND-001 | P1 | Beide | Opname start/stop | Opnamestatus is onvoldoende expliciet na starten | Visibility of system status | Blokkerend | Hoog | Nee | Gebruiker weet niet zeker of opname actief is | Maak actieve opname persistent zichtbaar met label + indicator + duidelijke stop-actie | screenshot/schermref`
 - De "opnamestatus-duidelijkheid"-bevinding wordt expliciet als waarschijnlijke P1 genoemd — meeneemkandidaat, mits live geverifieerd.
-- Windows draait via **CrossOver** — agents die de review uitvoeren moeten weten dat de echte Windows-build beschikbaar is op de Mac (niet alleen de Tauri dev-server).
+- Windows draait via **CrossOver** met de **CI-gebouwde MSI** — agents die de review uitvoeren bouwen de MSI via de GitLab pipeline (`scripts/deploy-dev.sh`), downloaden hem van de download-server en installeren hem onder CrossOver op de Mac (niet de Tauri dev-server).
 
 </specifics>
 

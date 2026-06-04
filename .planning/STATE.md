@@ -2,9 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: People & Attribution
-status: ready_to_plan
-last_updated: "2026-06-04"
-last_activity: 2026-06-04
+status: planning
+stopped_at: Phase 1 context gathered
+last_updated: "2026-06-04T19:22:31.308Z"
+last_activity: 2026-06-04 — Roadmap aangemaakt; milestone v1.1 gestart
 progress:
   total_phases: 4
   completed_phases: 0
@@ -34,6 +35,7 @@ Progress: [░░░░░░░░░░] 0%
 ## Performance Metrics
 
 **Velocity:**
+
 - Total plans completed: 0
 - Average duration: —
 - Total execution time: —
@@ -75,6 +77,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-04
-Stopped at: Roadmap aangemaakt; klaar voor `/gsd-plan-phase 1`
-Resume file: None
+Last session: 2026-06-04T19:22:31.297Z
+Stopped at: Phase 1 context gathered
+Resume file: .planning/phases/01-self-profile-foundation/01-CONTEXT.md

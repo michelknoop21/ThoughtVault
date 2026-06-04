@@ -55,6 +55,10 @@ export class SSEClient {
       if (this.isStopped) return;
       try {
         const data = normalizeTaskUpdate(JSON.parse(event.payload));
+        // A successful data event proves the stream is healthy again — reset the
+        // backoff budget so a long-lived stream that reconnected once earlier
+        // still gets a full retry allowance on a later drop.
+        this.reconnectAttempts = 0;
         this.onUpdate?.(data);
 
         if (TERMINAL_STATUSES.has(data.status ?? "")) {
@@ -110,6 +114,11 @@ export class SSEClient {
 
   private _reconnect(): void {
     if (this.isStopped) return;
+
+    // Re-entry guard: the `-interrupted` listener and the invoke() catch are two
+    // independent paths that can both call _reconnect() for the same stream.
+    // Without this, each schedules its own timer → zombie parallel streams.
+    if (this.reconnectTimer !== null) return;
 
     if (this.reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
       this.disconnect();

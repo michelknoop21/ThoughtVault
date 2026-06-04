@@ -860,16 +860,46 @@ final class RecordingViewModel {
 
             switch item {
             case .audio(let url, _, _):
-                let stateBefore = recordingState
-                await uploadFile(url, profileId: profileId)
-                // Only remove from queue if upload succeeded (state went back to idle without error)
-                if case .error = recordingState {
-                    os_log("[RecordingVM] Offline queue item upload failed, incrementing retry count", log: .default, type: .error)
+                // Awaitable upload, mirroring the .text branch below. The previous
+                // code called uploadFile(), which spawns a detached Task and returns
+                // before the upload finishes — so the recordingState check always saw
+                // .idle and every queued item was removed regardless of outcome
+                // (failures silently dropped, retry-count branch dead). Calling the
+                // API directly here lets us await the real result.
+                let tempId = "upload-\(UUID().uuidString)"
+                await MainActor.run {
+                    self.addTask(TranscriptTask(
+                        id: tempId,
+                        taskId: tempId,
+                        filename: url.lastPathComponent,
+                        status: .uploading,
+                        progress: 0
+                    ))
+                }
+                do {
+                    let task = try await APIService.shared.uploadAudio(
+                        fileURL: url,
+                        profileId: profileId,
+                        usePremium: usePremium
+                    ) { [weak self] progress in
+                        Task { @MainActor in
+                            self?.updateTask(tempId, status: .uploading, progress: progress)
+                        }
+                    }
+                    await MainActor.run {
+                        self.activeTasks.removeAll { $0.id == tempId }
+                        self.addTask(task)
+                    }
+                    if !task.taskId.isEmpty {
+                        await startSSEStream(for: task.taskId)
+                    }
+                    saveLocalAudioPath(url: url, taskId: task.taskId)
+                    offlineQueue.removeItem(item)
+                } catch {
+                    os_log("[RecordingVM] Offline queue item upload failed, incrementing retry count: %{public}@", log: .default, type: .error, error.localizedDescription)
+                    await MainActor.run { self.activeTasks.removeAll { $0.id == tempId } }
                     let updated = item.incrementingRetryCount()
                     offlineQueue.replaceItem(item, with: updated)
-                    await MainActor.run { recordingState = stateBefore }
-                } else {
-                    offlineQueue.removeItem(item)
                 }
             case .text(let transcription, let pid, _, _):
                 do {

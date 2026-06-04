@@ -7,11 +7,26 @@ type SSECallback = (task: Partial<TranscriptTask>) => void;
 type ErrorCallback = (error: Error) => void;
 type CompleteCallback = () => void;
 
+const TERMINAL_STATUSES = new Set(["completed", "failed", "cancelled", "error"]);
+const MAX_RECONNECT_ATTEMPTS = 5;
+
 export class SSEClient {
   private unlisten: (() => void) | null = null;
   private unlistenDone: (() => void) | null = null;
+  private unlistenInterrupted: (() => void) | null = null;
   private url: string;
   private token: string | null;
+
+  // Reconnect state
+  private reconnectAttempts = 0;
+  private terminalReached = false;
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private isStopped = false;
+
+  // Callbacks stored for reconnect use
+  private onUpdate: SSECallback | null = null;
+  private onError: ErrorCallback | undefined = undefined;
+  private onComplete: CompleteCallback | undefined = undefined;
 
   constructor(url: string, token: string | null) {
     this.url = url;
@@ -23,26 +38,54 @@ export class SSEClient {
     onError?: ErrorCallback,
     onComplete?: CompleteCallback
   ): Promise<void> {
+    this.onUpdate = onUpdate;
+    this.onError = onError;
+    this.onComplete = onComplete;
+    this.isStopped = false;
+    await this._startStream();
+  }
+
+  private async _startStream(): Promise<void> {
+    if (this.isStopped) return;
+
     const eventName = `sse-${Date.now()}`;
 
     // Listen for SSE data events from Tauri backend
     this.unlisten = await listen<string>(eventName, (event) => {
+      if (this.isStopped) return;
       try {
         const data = normalizeTaskUpdate(JSON.parse(event.payload));
-        onUpdate(data);
+        this.onUpdate?.(data);
 
-        if (data.status === "completed" || data.status === "failed" || data.status === "cancelled" || data.status === "error") {
+        if (TERMINAL_STATUSES.has(data.status ?? "")) {
+          this.terminalReached = true;
           this.disconnect();
-          onComplete?.();
+          this.onComplete?.();
         }
       } catch (e) {
         console.error("[SSE] Parse error:", e);
       }
     });
 
+    // Clean DONE sentinel — successful stream completion
     this.unlistenDone = await listen(`${eventName}-done`, () => {
+      if (this.isStopped) return;
+      this.reconnectAttempts = 0;
       this.disconnect();
-      onComplete?.();
+      this.onComplete?.();
+    });
+
+    // Interrupted stream (no [DONE] received) — attempt reconnect unless terminal
+    this.unlistenInterrupted = await listen(`${eventName}-interrupted`, () => {
+      if (this.isStopped) return;
+      if (this.terminalReached) {
+        // Terminal status already seen — treat as clean completion
+        this.disconnect();
+        this.onComplete?.();
+      } else {
+        this._clearListeners();
+        this._reconnect();
+      }
     });
 
     // Start the SSE stream via Tauri IPC — token goes in headers, not URL
@@ -58,16 +101,52 @@ export class SSEClient {
         eventName,
       });
     } catch (e) {
-      this.disconnect();
-      onError?.(new Error(typeof e === "string" ? e : "SSE verbinding mislukt"));
+      if (this.isStopped) return;
+      // Connect-time failure — route through reconnect logic
+      this._clearListeners();
+      this._reconnect();
     }
   }
 
-  disconnect(): void {
+  private _reconnect(): void {
+    if (this.isStopped) return;
+
+    if (this.reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+      this.disconnect();
+      this.onError?.(new Error("SSE verbinding verbroken"));
+      return;
+    }
+
+    this.reconnectAttempts += 1;
+    // Exponential backoff: 2s, 4s, 8s, 16s, 16s — mirrors macOS pow(2, attempt) capped at 16
+    const backoffMs = Math.min(Math.pow(2, this.reconnectAttempts), 16) * 1000;
+    console.warn(`[SSE] Verbinding onderbroken, reconnect poging ${this.reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS} over ${backoffMs / 1000}s`);
+
+    this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = null;
+      this._startStream();
+    }, backoffMs);
+  }
+
+  private _clearListeners(): void {
     this.unlisten?.();
     this.unlisten = null;
     this.unlistenDone?.();
     this.unlistenDone = null;
+    this.unlistenInterrupted?.();
+    this.unlistenInterrupted = null;
+  }
+
+  disconnect(): void {
+    this.isStopped = true;
+
+    // Cancel any pending reconnect timer
+    if (this.reconnectTimer !== null) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+
+    this._clearListeners();
   }
 }
 

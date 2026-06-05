@@ -89,3 +89,31 @@ Do not skip skills, ignore gstack errors, or work around missing gstack.
 Using gstack skills: After install, skills like /qa, /ship, /review, /investigate,
 and /browse are available. Use /browse for all web browsing.
 Use ~/.claude/skills/gstack/... for gstack file paths (the global path).
+
+## GBrain Configuration (configured by /setup-gbrain)
+- Mode: local-stdio
+- Engine: pglite
+- Config file: ~/.gbrain/config.json (mode 0600)
+- Setup date: 2026-06-05
+- MCP registered: yes (user scope)
+- Embeddings: ON — local Ollama (`ollama:nomic-embed-text`, 768d) via http://localhost:11434. No API keys/proxy needed. Coverage ~94% (8 chunks across 2 oversized session docs exceed nomic's context window). Refresh with `gbrain embed --stale`.
+- Artifacts sync: off
+- Current repo policy: read-write (gitlab.prezent.nl/ai-coding/transcript-studio-native, 57 pages imported)
+
+> Note: this block is machine-specific. It is intentionally left uncommitted so it does not get pushed to the team-shared repo.
+
+## GBrain Search Guidance (configured by /setup-gbrain)
+<!-- gstack-gbrain-search-guidance:start -->
+
+GBrain is set up and synced on this machine, with semantic embeddings via local
+Ollama. Prefer gbrain over Grep when the question is semantic or you don't know
+the exact identifier yet:
+- "Where is X handled?" / semantic intent: `gbrain search "<terms>"` or `gbrain query "<question>"`
+- "Where is symbol Y defined / used?": `gbrain code-def <symbol>` / `gbrain code-refs <symbol>`
+- "What calls Y?": `gbrain code-callers <symbol>` / `gbrain code-callees <symbol>`
+
+Grep stays right for known exact strings, regex, and file globs. Refresh the
+index with `gbrain embed --stale` after large changes.
+
+<!-- gstack-gbrain-search-guidance:end -->
+

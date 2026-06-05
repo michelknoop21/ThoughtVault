@@ -85,6 +85,54 @@ final class LocalTranscriptStore {
         }
     }
 
+    // MARK: - PersonProfile
+
+    /// Returns the single isSelf==true PersonProfile, or nil if none has been created.
+    func fetchSelfProfile() -> PersonProfile? {
+        let descriptor = FetchDescriptor<PersonProfile>(
+            predicate: #Predicate { $0.isSelf == true }
+        )
+        return try? context.fetch(descriptor).first
+    }
+
+    /// Creates or updates the single isSelf==true PersonProfile (singleton upsert, D-09).
+    /// Fetch-first-then-insert from the MainActor service preserves the one-record invariant.
+    func upsertSelfProfile(
+        name: String,
+        role: String,
+        organization: String,
+        aliases: [String],
+        meetingTypes: [String],
+        expertiseTags: [String]
+    ) throws {
+        let descriptor = FetchDescriptor<PersonProfile>(
+            predicate: #Predicate { $0.isSelf == true }
+        )
+        if let existing = try? context.fetch(descriptor).first {
+            existing.name = name
+            existing.role = role
+            existing.organization = organization
+            existing.aliases = aliases
+            existing.meetingTypes = meetingTypes
+            existing.expertiseTags = expertiseTags
+            existing.updatedAt = Date()
+            logger.debug("upsertSelfProfile: updated existing isSelf record")
+        } else {
+            context.insert(PersonProfile(
+                name: name,
+                role: role,
+                organization: organization,
+                aliases: aliases,
+                meetingTypes: meetingTypes,
+                expertiseTags: expertiseTags,
+                isSelf: true,
+                isInternal: true
+            ))
+            logger.debug("upsertSelfProfile: created new isSelf record")
+        }
+        try context.save()
+    }
+
     // MARK: - CRUD
 
     func save(_ record: TranscriptRecord) throws {

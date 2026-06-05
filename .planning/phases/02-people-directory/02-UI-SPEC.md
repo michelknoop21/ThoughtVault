@@ -77,13 +77,14 @@ Line heights: body/footnote use system default (~1.4–1.5); titles use system d
 
 | Role | CSS var | Size | Weight | Usage in Phase 2 |
 |------|---------|------|--------|------------------|
+| Caption | `var(--font-caption)` | 12px | 400 | Error text, hint labels, secondary metadata (org, role under name) |
 | Body | `var(--font-body)` | 14px | 400 | Form inputs, person name in list |
-| Footnote | `var(--font-footnote)` | 13px | 400 | Secondary metadata (org, role under name) |
-| Subheadline | `var(--font-subheadline)` | 15px | 600 | Person name as primary label in list row |
+| Subheadline | `var(--font-subheadline)` | 16px | 600 | Person name as primary label in list row |
 | Title3 | `var(--font-title3)` | 20px | 600 | Page title "Mensen" |
-| Caption | `var(--font-caption)` | 12px | 400 | Error text, hint labels |
 
-Active size tier: caption (12px), footnote (13px), body (14px), title3 (20px). Weights: 400 + 600 only. Line height: 1.5 for body/footnote; 1.2 for titles.
+Active size tier: caption (12px), body (14px), subheadline (16px), title3 (20px). Steps: 2px, 2px, 4px — all visually distinct. Weights: 400 + 600 only. Line height: 1.5 for body/caption; 1.2 for titles.
+
+Note: The 13px footnote token is not used in this phase. Secondary metadata (org, role) maps to caption (12px) on Windows. The former 15px subheadline is replaced by 16px to maintain ≥2px separation from body (14px).
 
 ---
 
@@ -95,7 +96,7 @@ Both platforms use the same brand palette, expressed through platform-specific t
 |------|-------------|---------------|-------------|-------|
 | Dominant (60%) | `Color.surfacePrimary` | `var(--surface-primary)` | #FFFFFF | Main background, list background, form background |
 | Secondary (30%) | `Color.surfaceSecondary` | `var(--surface-secondary)` | #F5F5F8 | Person row cards, seed review sheet background, sidebar |
-| Accent (10%) | `Color.brandPrimary` | `var(--brand-primary)` | #E50074 | Primary CTA buttons only (Voeg toe, Opslaan) |
+| Accent (10%) | `Color.brandPrimary` | `var(--brand-primary)` | #E50074 | Primary CTA buttons only (Persoon toevoegen, Wijzigingen opslaan) |
 | Interactive/selection | `Color.brandSecondary` | `var(--brand-secondary)` | #007BC4 | Selected row highlight, focus ring on inputs |
 | Destructive | `Color.statusError` | `var(--status-error)` | #EF4444 | Delete person action + confirmation state only |
 | Label primary | `Color.labelPrimary` | `var(--text-primary)` | #333338 | Person name, form input text |
@@ -103,7 +104,7 @@ Both platforms use the same brand palette, expressed through platform-specific t
 | Label tertiary | `Color.labelTertiary` | `var(--text-tertiary)` | #999AA3 | Empty state secondary copy, metadata hints |
 | Border | `Color.borderPrimary` | `var(--card-border)` | #E0E0E5 | Form field borders, row dividers |
 
-**Accent reserved for:** Primary CTA buttons only — "Voeg toe aan directory", "Opslaan". Never use `brandPrimary` on icon-only controls, row backgrounds, or status indicators in this phase.
+**Accent reserved for:** Primary CTA buttons only — "Persoon toevoegen", "Wijzigingen opslaan". Never use `brandPrimary` on icon-only controls, row backgrounds, or status indicators in this phase.
 
 **Intern/extern/onbekend status indicator:**
 - Intern (`isInternal == true`): `Color.brandAccent` / `var(--brand-accent)` — green #009F3C — small dot or badge
@@ -142,7 +143,9 @@ Components to build in this phase, referencing existing precedents:
 
 ### Directory List
 - macOS: `List` with swipe-to-delete disabled; use trailing action button (trash icon) per row. Confirm delete with `confirmationDialog` (not `Alert`). Tap row to open `PersonEditView` as sheet.
-- Windows: Row with hover-reveal delete icon (Fluent `Delete24Regular`). Click row to open edit panel/modal. Confirm delete with inline "Weet je het zeker?" + "Verwijderen" / "Annuleren".
+  - Trailing edit button: `.accessibilityLabel("Bewerk \(person.name)")`
+  - Trailing delete button: `.accessibilityLabel("Verwijder \(person.name)")`
+- Windows: Row with hover-reveal delete icon (Fluent `Delete24Regular`, `aria-label="Verwijder {naam}"`). Click row to open edit panel/modal. Confirm delete with inline "Weet je het zeker?" + "Verwijderen" / "Annuleren".
 - Search: macOS `searchable()` modifier on list. Windows: `input` field above list with `onChange` filter. Filter on name + aliases + email (case-insensitive).
 
 ### PersonEditView / PersonEditModal
@@ -169,7 +172,7 @@ All strings are Dutch (NL). Keys map to `Localizable.strings` (macOS) / inline N
 | Tab / nav label | "Mensen" | macOS sidebar + Windows nav |
 | View title | "Mensen" | H1 of PeopleDirectoryView / PeoplePage |
 | Primary CTA (add person) | "Persoon toevoegen" | Plus button in toolbar |
-| Primary CTA (save edit) | "Opslaan" | PersonEditView save button |
+| Primary CTA (save edit) | "Wijzigingen opslaan" | PersonEditView save button (verb + noun, not bare "Opslaan") |
 | Primary CTA (seed confirm) | "Voeg {n} personen toe" / "Voeg 1 persoon toe" | Pluralised; n = checked count |
 | Empty state heading | "Nog geen personen toegevoegd" | Directory list when empty |
 | Empty state body | "Voeg collega's en bekende externen toe zodat TranscriptStudio actiepunten aan hen kan koppelen." | Below heading; includes next-step hint |
@@ -207,7 +210,7 @@ Each screen must handle all states listed:
 |-------|---------|--------|
 | Loading | Initial fetch from store | macOS: `ProgressView()` centered; Windows: skeleton rows or spinner |
 | Empty | No `isSelf==false` profiles exist | Empty state illustration-free: heading + body copy + CTA button |
-| Populated | 1+ directory entries | List rows: name (bodyMedium), role + org (footnote, labelSecondary), status dot |
+| Populated | 1+ directory entries | List rows: name (bodyMedium), role + org (footnote/caption, labelSecondary), status dot |
 | Searching | Search field has text | Filtered list; if no matches: "Geen resultaten voor '{query}'" |
 | Error | Store fetch failed | Error message inline, no crash |
 
@@ -267,7 +270,7 @@ Padding: TS.Spacing.md (16pt) horizontal, TS.Spacing.sm (8pt) vertical per row.
       LabeledContent("Expertise / onderwerpen") { TextField }
       LabeledContent("Intern / extern") { Picker }
     }
-    Button("Opslaan") // PrimaryButtonStyle
+    Button("Wijzigingen opslaan") // PrimaryButtonStyle
   }
   .padding(TS.Spacing.lg)
 ```

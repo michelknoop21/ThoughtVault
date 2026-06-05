@@ -43,7 +43,7 @@ created: 2026-06-05
 | 02-graph | graph | 2 | B-03 | — | Graph attendee decode maps `emailAddress.address` into `CalendarEvent.attendees` from fixture JSON | unit | `xcodebuild test ... -only-testing:TranscriptStudioTests/GraphAttendeeDecodeTests` | ❌ W0 | ⬜ pending |
 | 02-dedup | service | 2 | B-03, D-10 | — | Dedup filters known emails + self/account email; falls back to normalized name | unit | `xcodebuild test ... -only-testing:TranscriptStudioTests/PersonDirectoryServiceTests` + `npx vitest run` | ❌ W0 | ⬜ pending |
 | 02-nonet | service | 2 | D-11 / B-(local) | T-data-exfil | `PersonDirectoryService` contains no `URLSession` reference | static grep gate | `! grep -q "URLSession" macos/Services/PersonDirectoryService.swift` | ❌ W0 (plan verify step) | ⬜ pending |
-| 02-win | windows | 4 | B-01, B-04 | — | Windows people store round-trip + tag edit; distinct localStorage key from singleton self store | unit | `cd windows && npx vitest run src/stores/__tests__/peopleDirectoryStore.test.ts` | ❌ W0 | ⬜ pending |
+| 02-win | windows | 2 | B-01, B-04 | — | Windows people store round-trip + tag edit; distinct localStorage key from singleton self store | unit | `cd windows && npx vitest run src/stores/__tests__/peopleDirectoryStore.test.ts` | ❌ W0 | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 

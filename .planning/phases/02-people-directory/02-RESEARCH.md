@@ -393,17 +393,19 @@ export const usePeopleDirectoryStore = create<PeopleDirectoryState>()(
 | A3 | `isInternal: Bool → Bool?` preserves the existing self record's `true` value under lightweight migration. | Runtime State Inventory | If wrong, self-profile internal status resets. Covered by migration test assertion. |
 | A4 | No new external packages required on either platform. | Standard Stack | Low — verified zustand/react-router/vitest present; macOS is platform-SDK only. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Self/account email source for dedup-filter (D-10)**
    - What we know: `MicrosoftGraphService` exposes `accountEmail`; `CalendarService.microsoftAccountEmail`; self profile will have `emails` (possibly empty until user fills it).
    - What's unclear: If the user never enters their own email into the self profile, only the Graph `accountEmail` filters them out. For Apple-only calendar users there may be no account email.
    - Recommendation: Filter on (self-profile emails ∪ Graph account email). Document that Apple-calendar-only users may need to enter their own email once. Planner: small decision, not a blocker.
+   - **RESOLVED:** selfEmail = `accountEmail ∪ microsoftAccountEmail ∪ self-profile emails`. Locked in 02-03 T2 (macOS) and 02-04 T3 / 02-05 T3 (seed self-filter). Apple-calendar-only users with no self-email/account-email are mitigated by per-person confirm.
 
 2. **Where exactly to fire the seed trigger in `stopAndUpload()`**
    - What we know: `stopAndUpload()` branches into local/onDevice/cloud/offline paths and returns early in each.
    - What's unclear: The cleanest single place to invoke the review-sheet after a successful stop regardless of processing path.
    - Recommendation: Capture `activeMeeting` at stop-start, present the review-sheet from the ViewModel/View layer after `recordingState` settles (not inside each upload branch). Decouples seed from processing path.
+   - **RESOLVED:** Capture `activeMeeting` at stop; present the seed sheet from the view layer after `recordingState` settles via `pendingSeedAttendees` (not inside any upload branch). Locked in 02-04 T1 (macOS) / 02-05 T3 (Windows mirror).
 
 ## Environment Availability
 

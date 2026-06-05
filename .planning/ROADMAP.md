@@ -43,7 +43,7 @@ Vier opeenvolgende fasen die persoons-/rolcontext toevoegen aan TranscriptStudio
   - [ ] 01-01-PLAN.md — macOS data foundation: PersonProfile @Model + VersionedSchema migration + upsert + collision warning
   - [ ] 01-02-PLAN.md — macOS UI: skippable onboarding step + Settings Profiel editor
   - [ ] 01-03-PLAN.md — Windows full stack: PersonProfile type + personProfileStore + wizard step + Settings editor
-> ⚠️ **AMENDMENT REQUIRED vóór executie (A-05):** de huidige plannen definiëren `PersonProfile` zonder `expertiseTags: [String]`. Voeg dit veld toe aan 01-00 (test), 01-01 (@Model + VersionedSchema + upsert), 01-02 (Settings/onboarding editor) en 01-03 (Windows type + store + UI) — zodat het in dezelfde migratie landt en Phase 3/4 geen tweede migratie nodig hebben. `meetingTypes` en `aliases` zijn de bestaande `[String]`-precedenten om te volgen.
+> ✅ **AMENDMENT VOLTOOID (A-05, 2026-06-05):** alle vier plannen (01-00 t/m 01-03) bevatten `expertiseTags: [String]` in dezelfde migratie (`meetingTypes`/`aliases` als `[String]`-precedent). Phase 3/4 vergen geen tweede migratie.
 **UI hint**: yes
 
 ### Phase 2: People Directory

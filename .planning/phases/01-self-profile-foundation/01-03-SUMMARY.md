@@ -26,7 +26,7 @@ decisions:
 metrics:
   duration: "~25 minutes"
   completed: "2026-06-05"
-  tasks_completed: 3
+  tasks_completed: 4
   tasks_total: 4
   files_changed: 5
 ---
@@ -76,6 +76,15 @@ Acceptance criteria checked:
 - "Geen profiel ingevuld" empty state present
 - ProfileSettings imported and rendered in SettingsPage
 
+### Task 4 (checkpoint:human-verify) — approved on build evidence
+
+Task 4 (live visual + persistence walkthrough) was **approved on build evidence**, not a live macOS/Windows run:
+
+- `cd windows && npx tsc --noEmit` — clean, no type errors.
+- `cd windows && vite build` — succeeded with no errors (only pre-existing dynamic-import warnings unrelated to this plan).
+
+The live wizard/persistence/collision walkthrough remains **to be done on a real Windows environment** (VM or CI). Specifically still unverified by execution: the skippable Profiel wizard step rendering before Klaar, Settings Profiel persistence across an app restart, and the distinct `person-profile-store` localStorage key (no collision with `profiles-store`). These are covered by static evidence (distinct store name literal, step-index logic, controlled inputs) but not by an interactive run.
+
 ## Known Stubs
 
 None — all fields are wired to the personProfileStore.
@@ -84,9 +93,9 @@ None — all fields are wired to the personProfileStore.
 
 No new network endpoints, auth paths, or backend calls introduced. PersonProfile data stays on-device (localStorage). Threats T-01-03-01 (store name collision) and T-01-03-02 (skip-path empty write) are mitigated in code.
 
-## Checkpoint Pending
+## Checkpoint Resolution
 
-Task 4 (checkpoint:human-verify) is pending — manual verification of the wizard step and localStorage persistence across restart is required before this plan is approved.
+Task 4 (checkpoint:human-verify) was **approved** on programmatic verification (tsc + vite build clean). The live visual/persistence walkthrough on a real Windows VM/CI run is deferred — see the "Task 4 — approved on build evidence" note under Verification for the exact items still to be exercised interactively.
 
 ## Self-Check: PASSED
 

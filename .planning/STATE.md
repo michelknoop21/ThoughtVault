@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: People & Attribution
 status: executing
-stopped_at: Phase 1 UI-SPEC approved
-last_updated: "2026-06-05T09:53:17.276Z"
+stopped_at: Completed 01-03-PLAN.md
+last_updated: "2026-06-05T10:15:27.548Z"
 last_activity: 2026-06-05
 progress:
   total_phases: 4
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-06-04)
 ## Current Position
 
 Phase: 01 (self-profile-foundation) — EXECUTING
-Plan: 3 of 4
+Plan: 4 of 4
 Status: Ready to execute
 Last activity: 2026-06-05
 
@@ -49,6 +49,7 @@ Progress: [█████░░░░░] 50%
 *Updated after each plan completion*
 | Phase 01-self-profile-foundation P00 | 109 | 2 tasks | 2 files |
 | Phase 01 P03 | 25m | 3 tasks | 5 files |
+| Phase 01 P03 | 25m | 4 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -62,6 +63,8 @@ Recente beslissingen die het huidige werk raken:
 - Day-1: Nooit de naam `Profile` hergebruiken voor het nieuwe concept — botsing met bestaand `Profile`-type in `Models.swift:219-302`
 - 2026-06-05: Scope-verrijking — attributie ook op **onderwerp→rol/expertise** (C-05, D-01), `expertiseTags` in datamodel vanaf Phase 1 (A-05), leerlus die profiel verrijkt (D-06), `source`+`confidence` per toewijzing (D-05). Requirements 15→21.
 - 2026-06-05: Spike spreker-identiteit — NIET beschikbaar (`whisper_neuron.py:133-140`, één segment, geen labels/timestamps; macOS lokaal idem). v1.1 niet afhankelijk van diarisatie.
+- [Phase 01]: Windows self-profile uses dedicated personProfileStore (name 'person-profile-store'), distinct from profiles-store/settings-store
+- [Phase 01]: Windows onboarding Profiel step is skippable; no profile written when all fields empty (D-07)
 
 ### Pending Todos
 
@@ -83,6 +86,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-05T09:53:17.267Z
-Stopped at: Phase 1 UI-SPEC approved
+Last session: 2026-06-05T10:15:27.542Z
+Stopped at: Completed 01-03-PLAN.md
 Resume file: None

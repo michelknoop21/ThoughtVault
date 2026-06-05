@@ -41,7 +41,7 @@ decisions:
 metrics:
   duration: "18m"
   completed_date: "2026-06-05"
-  tasks_completed: 2
+  tasks_completed: 3
   tasks_total: 3
   files_created: 1
   files_modified: 5
@@ -57,6 +57,7 @@ metrics:
 |------|------|--------|-------|
 | 1 | Insert skippable self-profile onboarding step | fb4e494 | macos/Views/OnboardingView.swift, nl.lproj/Localizable.strings, en.lproj/Localizable.strings |
 | 2 | ProfileSettingsView + wire into SettingsView | 90b4df7 | macos/Views/ProfileSettingsView.swift (new), macos/Views/SettingsView.swift, project.pbxproj |
+| 3 | Verify onboarding step + Settings persistence (checkpoint) | — | (verification only, no code change) |
 
 ## What Was Built
 
@@ -104,8 +105,21 @@ No new network endpoints, auth paths, or external data paths introduced. Profile
 - [x] NL Localizable.strings contains onboarding + settings profiel keys
 - [x] Commit fb4e494 exists (Task 1)
 - [x] Commit 90b4df7 exists (Task 2)
-- [x] BUILD SUCCEEDED (both tasks)
+- [x] BUILD SUCCEEDED (both tasks); app signed with stable Apple Development identity
+- [x] Task 3 checkpoint approved on build evidence (live walkthrough + styling rework deferred — see Verification)
 
-## Pending
+## Verification
 
-Task 3 (checkpoint:human-verify) — awaiting visual verification of onboarding flow and Settings persistence across restart.
+**Task 3 (checkpoint:human-verify) — APPROVED on build evidence.**
+
+The app **BUILD SUCCEEDED** and is now signed with a stable Apple Development identity. The checkpoint was approved on this build evidence rather than a live interactive walkthrough. Two notes carry forward:
+
+1. **Live walkthrough still outstanding.** The interactive onboarding/Settings visual + persistence walkthrough (skip path, fill→save, quit→relaunch→persist across restart, empty-state "Geen profiel ingevuld") was approved on build evidence and remains to be exercised interactively. The build proves the code compiles and links under a stable signing identity; it does not yet prove the runtime visual/persistence flow end-to-end.
+
+2. **Settings styling is interim.** A follow-up pass will rework the Settings page styling — field alignment, input fields, dropdowns, and general modernization — and add an onboarding re-entry point from Settings. The current `ProfileSettingsView` styling is therefore **interim** and expected to change.
+
+**Automated verification (passed):**
+- App builds (BUILD SUCCEEDED), now signed with a stable Apple Development identity.
+- Onboarding step renders between schermopname and klaar; skippable (code-verified; live pending per note 1).
+- Settings Profiel section loads/saves/persists via `LocalTranscriptStore` (code-verified; live pending per note 1).
+- Plan 01 unit tests remain GREEN (no regression to the data layer).

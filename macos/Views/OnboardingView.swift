@@ -27,13 +27,22 @@ struct OnboardingView: View {
     @State private var screenRecordingPermission: PermissionState = .unknown
     @State private var isAnimatingIn: Bool = false
 
+    // Self-profile step fields
+    @State private var profielNaam: String = ""
+    @State private var profielRol: String = ""
+    @State private var profielOrganisatie: String = ""
+    @State private var profielAliassen: String = ""
+    @State private var profielMeetingTypes: String = ""
+    @State private var profielExpertise: String = ""
+
     enum OnboardingStep: Int, CaseIterable {
         case welcome        = 0
         case microphoon     = 1
         case spraak         = 2
         case agenda         = 3
         case schermopname   = 4
-        case klaar          = 5
+        case profiel        = 5
+        case klaar          = 6
 
         var title: String {
             switch self {
@@ -42,6 +51,7 @@ struct OnboardingView: View {
             case .spraak:        return "Spraakherkenning"
             case .agenda:        return "Agenda"
             case .schermopname:  return "Schermopname"
+            case .profiel:       return "Vertel iets over jezelf"
             case .klaar:         return "Alles klaar!"
             }
         }
@@ -53,6 +63,7 @@ struct OnboardingView: View {
             case .spraak:        return "waveform"
             case .agenda:        return "calendar"
             case .schermopname:  return "rectangle.dashed.badge.record"
+            case .profiel:       return "person.crop.circle"
             case .klaar:         return "checkmark.seal.fill"
             }
         }
@@ -64,6 +75,7 @@ struct OnboardingView: View {
             case .spraak:        return [Color.gradientGreen, Color.brandAccent.opacity(0.4)]
             case .agenda:        return [Color.gradientOrange, Color.brandOrange.opacity(0.4)]
             case .schermopname:  return [Color.gradientBlue, Color.brandPrimary.opacity(0.4)]
+            case .profiel:       return [Color.gradientPurple, Color.brandPrimary.opacity(0.4)]
             case .klaar:         return [Color.brandPrimary.opacity(0.3), Color.gradientPurple]
             }
         }
@@ -77,6 +89,8 @@ struct OnboardingView: View {
                 #else
                 return false
                 #endif
+            case .profiel:
+                return true
             default:
                 return true
             }
@@ -177,6 +191,7 @@ struct OnboardingView: View {
         case .spraak:        spraakStep
         case .agenda:        agendaStep
         case .schermopname:  schermopnameStep
+        case .profiel:       profielStep
         case .klaar:         klaarStep
         }
     }
@@ -460,6 +475,102 @@ struct OnboardingView: View {
         #endif
     }
 
+    // MARK: Profiel Step
+
+    private var profielStep: some View {
+        ScrollView {
+            VStack(spacing: TS.Spacing.xl) {
+                Spacer()
+                    .frame(height: TS.Spacing.lg)
+
+                // Hero icon
+                ZStack {
+                    Circle()
+                        .fill(Color.brandPrimary.opacity(0.10))
+                        .frame(width: 120, height: 120)
+                    Image(systemName: "person.crop.circle")
+                        .font(.system(size: 52, weight: .medium))
+                        .foregroundStyle(Color.brandPrimary)
+                }
+
+                VStack(spacing: TS.Spacing.sm) {
+                    Text("Vertel iets over jezelf")
+                        .font(TS.Font.title2Bold)
+                        .foregroundStyle(Color.labelPrimary)
+                    Text("TranscriptStudio gebruikt jouw profiel om actiepunten straks aan de juiste persoon te koppelen. Je kunt dit altijd later aanpassen.")
+                        .font(TS.Font.callout)
+                        .foregroundStyle(Color.labelSecondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, TS.Spacing.xl)
+                }
+
+                // Form fields
+                VStack(spacing: TS.Spacing.md) {
+                    TextField("Naam", text: $profielNaam)
+                        .textFieldStyle(.plain)
+                        .font(TS.Font.body)
+                        .autocorrectionDisabled()
+                        .padding(TS.Spacing.sm)
+                        .background(Color.surfacePrimary.opacity(0.7))
+                        .clipShape(RoundedRectangle(cornerRadius: TS.Radius.sm))
+
+                    TextField("Rol / Functie", text: $profielRol)
+                        .textFieldStyle(.plain)
+                        .font(TS.Font.body)
+                        .autocorrectionDisabled()
+                        .padding(TS.Spacing.sm)
+                        .background(Color.surfacePrimary.opacity(0.7))
+                        .clipShape(RoundedRectangle(cornerRadius: TS.Radius.sm))
+
+                    TextField("Organisatie", text: $profielOrganisatie)
+                        .textFieldStyle(.plain)
+                        .font(TS.Font.body)
+                        .autocorrectionDisabled()
+                        .padding(TS.Spacing.sm)
+                        .background(Color.surfacePrimary.opacity(0.7))
+                        .clipShape(RoundedRectangle(cornerRadius: TS.Radius.sm))
+
+                    TextField("Hoe noemen collega's jou?", text: $profielAliassen)
+                        .textFieldStyle(.plain)
+                        .font(TS.Font.body)
+                        .autocorrectionDisabled()
+                        .padding(TS.Spacing.sm)
+                        .background(Color.surfacePrimary.opacity(0.7))
+                        .clipShape(RoundedRectangle(cornerRadius: TS.Radius.sm))
+
+                    TextField("Typische vergadertypen", text: $profielMeetingTypes)
+                        .textFieldStyle(.plain)
+                        .font(TS.Font.body)
+                        .autocorrectionDisabled()
+                        .padding(TS.Spacing.sm)
+                        .background(Color.surfacePrimary.opacity(0.7))
+                        .clipShape(RoundedRectangle(cornerRadius: TS.Radius.sm))
+
+                    TextField("Expertise / onderwerpen", text: $profielExpertise)
+                        .textFieldStyle(.plain)
+                        .font(TS.Font.body)
+                        .autocorrectionDisabled()
+                        .padding(TS.Spacing.sm)
+                        .background(Color.surfacePrimary.opacity(0.7))
+                        .clipShape(RoundedRectangle(cornerRadius: TS.Radius.sm))
+                }
+                .padding(.horizontal, TS.Spacing.xl)
+
+                // Skip button (D-07: no record written when skipped)
+                Button("Overslaan") {
+                    advanceStep()
+                }
+                .buttonStyle(.plain)
+                .font(TS.Font.footnote)
+                .foregroundStyle(Color.labelSecondary)
+
+                Spacer()
+                    .frame(height: TS.Spacing.lg)
+            }
+        }
+        .simultaneousGesture(DragGesture().onChanged { _ in }) // prevent TabView from swallowing scroll
+    }
+
     // MARK: Klaar Step
 
     private var klaarStep: some View {
@@ -577,6 +688,28 @@ struct OnboardingView: View {
                 .buttonStyle(PrimaryButtonStyle())
             } else {
                 Button {
+                    if currentStep == .profiel {
+                        // Save profile if any field is non-empty (D-07)
+                        let anyFilled = !profielNaam.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                            || !profielRol.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                            || !profielOrganisatie.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                            || !profielAliassen.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                            || !profielMeetingTypes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                            || !profielExpertise.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                        if anyFilled {
+                            let splitAndTrim: (String) -> [String] = { input in
+                                input.split(separator: ",").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
+                            }
+                            try? LocalTranscriptStore.shared.upsertSelfProfile(
+                                name: profielNaam.trimmingCharacters(in: .whitespacesAndNewlines),
+                                role: profielRol.trimmingCharacters(in: .whitespacesAndNewlines),
+                                organization: profielOrganisatie.trimmingCharacters(in: .whitespacesAndNewlines),
+                                aliases: splitAndTrim(profielAliassen),
+                                meetingTypes: splitAndTrim(profielMeetingTypes),
+                                expertiseTags: splitAndTrim(profielExpertise)
+                            )
+                        }
+                    }
                     advanceStep()
                 } label: {
                     HStack(spacing: TS.Spacing.xs) {

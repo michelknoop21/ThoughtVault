@@ -141,6 +141,29 @@
 "menuBar.openApp"               = "TranscriptStudio openen";
 "menuBar.quit"                  = "Stoppen";
 
+// MARK: - Onboarding Profiel Stap
+"onboarding.profiel.title"                  = "Vertel iets over jezelf";
+"onboarding.profiel.description"            = "TranscriptStudio gebruikt jouw profiel om actiepunten straks aan de juiste persoon te koppelen. Je kunt dit altijd later aanpassen.";
+"onboarding.profiel.skip"                   = "Overslaan";
+"onboarding.profiel.field.naam"             = "Naam";
+"onboarding.profiel.field.rol"              = "Rol / Functie";
+"onboarding.profiel.field.organisatie"      = "Organisatie";
+"onboarding.profiel.field.aliassen"         = "Hoe noemen collega's jou?";
+"onboarding.profiel.field.aliassen.placeholder" = "Michel, Knoop, MK (kommagescheiden)";
+"onboarding.profiel.field.meetingTypes"     = "Typische vergadertypen";
+"onboarding.profiel.field.meetingTypes.placeholder" = "Wekelijks overleg, Klantgesprek (kommagescheiden)";
+"onboarding.profiel.field.expertise"        = "Expertise / onderwerpen";
+"onboarding.profiel.field.expertise.placeholder" = "grafisch ontwerp, marketing, IT (kommagescheiden)";
+
+// MARK: - Instellingen Profiel Sectie
+"settings.selfprofiel.header"               = "Profiel";
+"settings.selfprofiel.subtitle"             = "Over jou";
+"settings.selfprofiel.save"                 = "Profiel opslaan";
+"settings.selfprofiel.saved"                = "Opgeslagen";
+"settings.selfprofiel.empty.heading"        = "Geen profiel ingevuld";
+"settings.selfprofiel.empty.body"           = "Vul je naam, rol en organisatie in zodat TranscriptStudio actiepunten aan jou kan koppelen.";
+"settings.selfprofiel.error.save"           = "Kon profiel niet opslaan. Probeer het opnieuw.";
+
 // MARK: - Toegankelijkheid
 "a11y.waveform"                 = "Audiovisualisatie";
 "a11y.recordButton"             = "Start opname";

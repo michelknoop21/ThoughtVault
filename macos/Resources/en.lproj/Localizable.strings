@@ -135,6 +135,29 @@
 "menuBar.openApp"               = "Open TranscriptStudio";
 "menuBar.quit"                  = "Quit";
 
+// MARK: - Onboarding Profile Step
+"onboarding.profiel.title"                  = "Tell us about yourself";
+"onboarding.profiel.description"            = "TranscriptStudio uses your profile to assign action items to the right person. You can always update this later.";
+"onboarding.profiel.skip"                   = "Skip";
+"onboarding.profiel.field.naam"             = "Name";
+"onboarding.profiel.field.rol"              = "Role / Job Title";
+"onboarding.profiel.field.organisatie"      = "Organisation";
+"onboarding.profiel.field.aliassen"         = "What do colleagues call you?";
+"onboarding.profiel.field.aliassen.placeholder" = "Michel, Knoop, MK (comma-separated)";
+"onboarding.profiel.field.meetingTypes"     = "Typical meeting types";
+"onboarding.profiel.field.meetingTypes.placeholder" = "Weekly standup, Client meeting (comma-separated)";
+"onboarding.profiel.field.expertise"        = "Expertise / topics";
+"onboarding.profiel.field.expertise.placeholder" = "graphic design, marketing, IT (comma-separated)";
+
+// MARK: - Settings Profile Section
+"settings.selfprofiel.header"               = "Profile";
+"settings.selfprofiel.subtitle"             = "About you";
+"settings.selfprofiel.save"                 = "Save profile";
+"settings.selfprofiel.saved"                = "Saved";
+"settings.selfprofiel.empty.heading"        = "No profile filled in";
+"settings.selfprofiel.empty.body"           = "Fill in your name, role and organisation so TranscriptStudio can assign action items to you.";
+"settings.selfprofiel.error.save"           = "Could not save profile. Please try again.";
+
 // MARK: - Accessibility
 "a11y.waveform"                 = "Audio waveform";
 "a11y.recordButton"             = "Start recording";

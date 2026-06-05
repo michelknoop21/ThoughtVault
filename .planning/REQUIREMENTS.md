@@ -77,10 +77,10 @@
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | A-01 | Phase 1 | Pending |
-| A-02 | Phase 1 | Pending |
+| A-02 | Phase 1 | Complete |
 | A-03 | Phase 1 | Pending |
-| A-04 | Phase 1 | Pending |
-| A-05 | Phase 1 | Pending |
+| A-04 | Phase 1 | Complete |
+| A-05 | Phase 1 | Complete |
 | B-01 | Phase 2 | Pending |
 | B-02 | Phase 2 | Pending |
 | B-03 | Phase 2 | Pending |

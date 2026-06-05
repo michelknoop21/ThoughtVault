@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: People & Attribution
-status: verifying
-stopped_at: Phase 2 UI-SPEC approved
-last_updated: "2026-06-05T14:16:27.992Z"
+status: planned
+stopped_at: Phase 2 planned (5 plans, checker passed)
+last_updated: "2026-06-05T16:55:00.000Z"
 last_activity: 2026-06-05
 progress:
   total_phases: 4
   completed_phases: 1
-  total_plans: 4
+  total_plans: 9
   completed_plans: 4
   percent: 25
 ---
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-04)
 
 **Core value:** Notulen herkennen wie-wie is en wijzen actiepunten betrouwbaar toe aan de juiste persoon op basis van lokaal opgebouwde persoons-/rolcontext — on-device, corrigeerbaar.
-**Current focus:** Phase 01 — self-profile-foundation
+**Current focus:** Phase 02 — people-directory (planned, ready to execute)
 
 ## Current Position
 
-Phase: 01 (self-profile-foundation) — EXECUTING
-Plan: 4 of 4
-Status: Phase complete — ready for verification
+Phase: 02 (people-directory) — PLANNED
+Plan: 0 of 5 executed
+Status: 5 plans created, plan-checker PASSED — ready for /gsd-execute-phase 2
 Last activity: 2026-06-05
 
-Progress: [██████████] 100%
+Progress: [█████░░░░░░░░░░░░░░░░] 25% (Phase 1 of 4 complete)
 
 ## Performance Metrics
 

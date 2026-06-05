@@ -72,6 +72,23 @@ export interface Transcript {
   updated_at: string;
 }
 
+// Person profile for self-identification and attribution (Phase 1+)
+// NOTE: This is NOT the same as Profile (notule-style template below).
+// isSelf==true records the installing user; isInternal defaults to true.
+export interface PersonProfile {
+  id: string;
+  name: string;
+  role: string;
+  organization: string;
+  aliases: string[];
+  meetingTypes: string[];
+  expertiseTags: string[];
+  isSelf: boolean;
+  isInternal: boolean;
+  createdAt: string;  // ISO-8601
+  updatedAt: string;  // ISO-8601
+}
+
 // Profile for meeting notes generation
 export interface Profile {
   id: string;

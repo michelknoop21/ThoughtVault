@@ -2,8 +2,9 @@
 // TranscriptStudio
 // nl.prezent.TranscriptStudio
 //
-// Settings interface organized in Dutch-labeled sections covering connection,
-// profiles, transcription preferences, permissions, calendar, account, and feedback.
+// Settings interface. On macOS this is a System Settings-style tabbed layout
+// (toolbar tabs → per-tab grouped Form). On iOS it falls back to a single
+// scrolling Form. All section logic is shared between both layouts.
 
 import SwiftUI
 import AVFoundation
@@ -26,6 +27,7 @@ struct SettingsView: View {
     @AppStorage("preferOnDeviceTranscription") private var preferOnDeviceTranscription: Bool = false
     @AppStorage("biometricLoginEnabled") private var biometricLoginEnabled: Bool = false
     @AppStorage("videoCallDetectionEnabled") private var videoCallDetectionEnabled: Bool = true
+    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding: Bool = false
 
     // MARK: - Local State
 
@@ -42,32 +44,13 @@ struct SettingsView: View {
     @State private var screenRecordingGranted: Bool? = nil
 
     var body: some View {
-        Form {
-            verbindingSection
-            verwerkingsmodusSection
-            if isLocalProcessing {
-                transcriptieSection
-                lokaleNotulenSection
-            } else {
-                cloudNotulenSection
-            }
-            ProfileSettingsView()
-            profielenSection
-            spraakherkenningSection
-            permissiesSection
-            agendaSection
-            accountSection
-            feedbackSection
-            overSection
-            updatesSection
-
+        Group {
             #if os(macOS)
-            Section {
-                YingaFooter()
-            }
+            tabbedSettings
+            #else
+            flatSettings
             #endif
         }
-        .formStyle(.grouped)
         .navigationTitle("Instellingen")
         .onAppear {
             serverURLInput = serverURL
@@ -93,6 +76,118 @@ struct SettingsView: View {
         }
     }
 
+    // MARK: - macOS: Tabbed Layout (System Settings-style)
+
+    #if os(macOS)
+    private var tabbedSettings: some View {
+        TabView {
+            algemeenTab
+                .tabItem { Label("Algemeen", systemImage: "gear") }
+
+            verwerkingTab
+                .tabItem { Label("Verwerking", systemImage: "waveform") }
+
+            profielTab
+                .tabItem { Label("Profiel", systemImage: "person.crop.circle") }
+
+            agendaTab
+                .tabItem { Label("Agenda", systemImage: "calendar") }
+
+            accountTab
+                .tabItem { Label("Account", systemImage: "lock") }
+
+            geavanceerdTab
+                .tabItem { Label("Geavanceerd", systemImage: "slider.horizontal.3") }
+        }
+        .frame(minWidth: 560, minHeight: 520)
+    }
+
+    private var algemeenTab: some View {
+        Form {
+            verbindingSection
+            updatesSection
+            overSection
+        }
+        .formStyle(.grouped)
+    }
+
+    private var verwerkingTab: some View {
+        Form {
+            verwerkingsmodusSection
+            if isLocalProcessing {
+                transcriptieSection
+                lokaleNotulenSection
+            } else {
+                cloudNotulenSection
+            }
+            profielenSection
+            spraakherkenningSection
+        }
+        .formStyle(.grouped)
+    }
+
+    private var profielTab: some View {
+        Form {
+            ProfileSettingsView()
+            onboardingSection
+        }
+        .formStyle(.grouped)
+    }
+
+    private var agendaTab: some View {
+        Form {
+            agendaSection
+        }
+        .formStyle(.grouped)
+    }
+
+    private var accountTab: some View {
+        Form {
+            accountSection
+            feedbackSection
+        }
+        .formStyle(.grouped)
+    }
+
+    private var geavanceerdTab: some View {
+        Form {
+            permissiesSection
+            Section {
+                YingaFooter()
+            }
+        }
+        .formStyle(.grouped)
+    }
+    #endif
+
+    // MARK: - iOS: Flat Layout (single Form)
+
+    #if os(iOS)
+    private var flatSettings: some View {
+        Form {
+            verbindingSection
+            verwerkingsmodusSection
+            if isLocalProcessing {
+                transcriptieSection
+                lokaleNotulenSection
+            } else {
+                cloudNotulenSection
+            }
+            ProfileSettingsView()
+            onboardingSection
+            profielenSection
+            spraakherkenningSection
+            permissiesSection
+            agendaSection
+            accountSection
+            feedbackSection
+            overSection
+            updatesSection
+        }
+        .formStyle(.grouped)
+    }
+    #endif
+
     // MARK: - Verbinding (Connection)
 
     @State private var isCheckingServer: Bool = false
@@ -100,14 +195,10 @@ struct SettingsView: View {
 
     private var verbindingSection: some View {
         Section {
-            VStack(alignment: .leading, spacing: TS.Spacing.sm) {
-                Text("Server URL")
-                    .font(TS.Font.footnoteSemibold)
-                    .foregroundStyle(Color.labelSecondary)
-
-                HStack {
+            SettingFieldRow("Server URL") {
+                HStack(spacing: TS.Spacing.sm) {
                     TextField("https://n8n.prezent.nl/tstudio/api", text: $serverURLInput)
-                        .textFieldStyle(.plain)
+                        .textFieldStyle(.roundedBorder)
                         .font(TS.Font.body)
                         .autocorrectionDisabled()
                         .onChange(of: serverURLInput) { _, _ in
@@ -125,33 +216,7 @@ struct SettingsView: View {
                     }
 
                     Button("Opslaan") {
-                        // Validate URL
-                        let trimmed = serverURLInput.trimmingCharacters(in: .whitespacesAndNewlines)
-                        guard let url = URL(string: trimmed), url.host != nil else {
-                            withAnimation(TS.Animation.quick) {
-                                serverURLError = "Ongeldige URL. Voer een geldige URL in."
-                            }
-                            return
-                        }
-                        guard url.scheme == "https" else {
-                            withAnimation(TS.Animation.quick) {
-                                serverURLError = "Alleen HTTPS-verbindingen zijn toegestaan."
-                            }
-                            return
-                        }
-
-                        serverURLError = nil
-                        serverURL = trimmed
-                        serverURLInput = trimmed
-                        withAnimation(TS.Animation.quick) {
-                            showServerURLSaved = true
-                        }
-                        Task {
-                            try? await Task.sleep(nanoseconds: 2_000_000_000)
-                            withAnimation(TS.Animation.quick) {
-                                showServerURLSaved = false
-                            }
-                        }
+                        saveServerURL()
                     }
                     .buttonStyle(SecondaryButtonStyle())
                     .disabled(serverURLInput == serverURL || serverURLInput.isEmpty)
@@ -164,7 +229,6 @@ struct SettingsView: View {
                         .transition(.opacity)
                 }
             }
-            .padding(.vertical, TS.Spacing.xs)
 
             // Server status
             HStack(spacing: TS.Spacing.sm) {
@@ -190,6 +254,36 @@ struct SettingsView: View {
             Text("De URL van de n8n-server waarop TranscriptStudio draait. Moet beginnen met https://")
                 .font(TS.Font.caption)
                 .foregroundStyle(Color.labelTertiary)
+        }
+    }
+
+    private func saveServerURL() {
+        // Validate URL
+        let trimmed = serverURLInput.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let url = URL(string: trimmed), url.host != nil else {
+            withAnimation(TS.Animation.quick) {
+                serverURLError = "Ongeldige URL. Voer een geldige URL in."
+            }
+            return
+        }
+        guard url.scheme == "https" else {
+            withAnimation(TS.Animation.quick) {
+                serverURLError = "Alleen HTTPS-verbindingen zijn toegestaan."
+            }
+            return
+        }
+
+        serverURLError = nil
+        serverURL = trimmed
+        serverURLInput = trimmed
+        withAnimation(TS.Animation.quick) {
+            showServerURLSaved = true
+        }
+        Task {
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
+            withAnimation(TS.Animation.quick) {
+                showServerURLSaved = false
+            }
         }
     }
 
@@ -307,13 +401,11 @@ struct SettingsView: View {
             .pickerStyle(.segmented)
 
             if localTranscriber == LocalTranscriberEngine.whisperKit.rawValue {
-                LabeledContent("Model") {
+                SettingFieldRow("Model") {
                     TextField("model", text: $whisperModel)
                         .textFieldStyle(.roundedBorder)
                         .font(TS.Font.bodyMonospaced)
                         .autocorrectionDisabled()
-                        .multilineTextAlignment(.trailing)
-                        .frame(maxWidth: 220)
                 }
             }
         } header: {
@@ -395,7 +487,7 @@ struct SettingsView: View {
 
     @ViewBuilder
     private var lmStudioConfig: some View {
-        settingField(
+        SettingFieldRow(
             "LM Studio-server",
             hint: "LM Studio draait standaard op http://localhost:1234."
         ) {
@@ -405,7 +497,7 @@ struct SettingsView: View {
                 .autocorrectionDisabled()
         }
 
-        settingField("Model") {
+        SettingFieldRow("Model") {
             TextField("local-model", text: $lmStudioModel)
                 .textFieldStyle(.roundedBorder)
                 .font(TS.Font.bodyMonospaced)
@@ -443,7 +535,7 @@ struct SettingsView: View {
     @ViewBuilder
     private var ollamaConfig: some View {
         // Server URL + Cloud preset
-        settingField(
+        SettingFieldRow(
             "Ollama-server",
             hint: "Lokaal draait standaard op http://localhost:11434."
         ) {
@@ -464,7 +556,7 @@ struct SettingsView: View {
         }
 
         // Model: dynamic picker when loaded, manual entry otherwise
-        settingField("Model") {
+        SettingFieldRow("Model") {
             HStack(spacing: TS.Spacing.sm) {
                 if ollamaModels.isEmpty {
                     TextField("llama3.2", text: $ollamaModel)
@@ -505,7 +597,7 @@ struct SettingsView: View {
         }
 
         // API key (Keychain-backed)
-        settingField("API-sleutel") {
+        SettingFieldRow("API-sleutel") {
             HStack(spacing: TS.Spacing.sm) {
                 Group {
                     if revealApiKey {
@@ -571,26 +663,6 @@ struct SettingsView: View {
             }
         }
         .padding(.top, TS.Spacing.xs)
-    }
-
-    /// A labeled, full-width settings row: caption label, content, optional hint.
-    @ViewBuilder
-    private func settingField(
-        _ title: String,
-        hint: String? = nil,
-        @ViewBuilder content: () -> some View
-    ) -> some View {
-        VStack(alignment: .leading, spacing: TS.Spacing.xs) {
-            Text(title)
-                .font(TS.Font.footnoteSemibold)
-                .foregroundStyle(Color.labelSecondary)
-            content()
-            if let hint {
-                Text(hint)
-                    .font(TS.Font.caption)
-                    .foregroundStyle(Color.labelTertiary)
-            }
-        }
     }
 
     // MARK: - API key (Keychain) helpers
@@ -678,6 +750,39 @@ struct SettingsView: View {
                     .font(TS.Font.caption)
                     .foregroundStyle(Color.labelTertiary)
             }
+        }
+    }
+
+    // MARK: - Onboarding re-entry
+
+    /// Lets the user re-run the first-run onboarding. Resetting the flag makes
+    /// RootView (TranscriptStudioApp) present OnboardingView again; OnboardingView
+    /// sets the flag back to true on finish/skip. Essential in local-only mode,
+    /// where there is no login window to reach onboarding from.
+    private var onboardingSection: some View {
+        Section {
+            Button {
+                hasCompletedOnboarding = false
+            } label: {
+                HStack(spacing: TS.Spacing.sm) {
+                    Image(systemName: "arrow.counterclockwise.circle")
+                        .foregroundStyle(Color.brandPrimary)
+                    Text("Onboarding opnieuw doorlopen")
+                        .font(TS.Font.bodyMedium)
+                        .foregroundStyle(Color.labelPrimary)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(TS.Font.caption)
+                        .foregroundStyle(Color.labelTertiary)
+                }
+            }
+            .buttonStyle(.plain)
+        } header: {
+            Text("Onboarding")
+        } footer: {
+            Text("Doorloop de welkomststappen en toestemmingen opnieuw, bijvoorbeeld om je profiel of permissies opnieuw in te stellen.")
+                .font(TS.Font.caption)
+                .foregroundStyle(Color.labelTertiary)
         }
     }
 
@@ -1205,6 +1310,44 @@ struct SettingsView: View {
     }
 }
 
+// MARK: - SettingFieldRow
+
+/// Unified settings field row: a leading caption label, the editable control
+/// below it, and an optional explanatory hint. Standardising on a single
+/// label-above layout keeps every input (text fields, composite control groups,
+/// pickers) aligned across all settings sections, regardless of trailing-control
+/// width. Use segmented `Picker`s for true binary toggles instead of this row.
+struct SettingFieldRow<Content: View>: View {
+    private let title: String
+    private let hint: String?
+    private let content: Content
+
+    init(
+        _ title: String,
+        hint: String? = nil,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.title = title
+        self.hint = hint
+        self.content = content()
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: TS.Spacing.xs) {
+            Text(title)
+                .font(TS.Font.footnoteSemibold)
+                .foregroundStyle(Color.labelSecondary)
+            content
+            if let hint {
+                Text(hint)
+                    .font(TS.Font.caption)
+                    .foregroundStyle(Color.labelTertiary)
+            }
+        }
+        .padding(.vertical, TS.Spacing.xs)
+    }
+}
+
 // MARK: - Preview
 
 #Preview {
@@ -1213,5 +1356,5 @@ struct SettingsView: View {
             .environment(AuthViewModel())
             .environment(CalendarService.shared)
     }
-    .frame(width: 500, height: 700)
+    .frame(width: 560, height: 700)
 }

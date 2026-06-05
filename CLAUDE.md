@@ -6,7 +6,10 @@ Backend: FastAPI op `https://n8n.prezent.nl/tstudio/api/` — lees docs/API.md b
 
 ## Commands
 ```bash
-# macOS build (zonder signing)
+# macOS build (lokaal, signed → TCC-rechten blijven behouden over rebuilds)
+xcodebuild -project TranscriptStudio.xcodeproj -scheme TranscriptStudio -configuration Debug -allowProvisioningUpdates build
+
+# macOS build (CI / geen cert beschikbaar → ad-hoc, TCC vraagt elke build opnieuw)
 xcodebuild -project TranscriptStudio.xcodeproj -scheme TranscriptStudio -configuration Debug build CODE_SIGNING_ALLOWED=NO
 
 # Tests
@@ -49,6 +52,7 @@ FastAPI op AWS EC2 GPU `michelk@3.69.205.209`, container `n8n_transcript_studio`
 - Combined recording: `mixAudioFiles()` in RecordingViewModel (element-wise max over PCM)
 - Auth header: macOS → `X-User-Token`, Windows → `Authorization: Bearer` (beide geaccepteerd)
 - Backend `username` veld is het e-mailadres (niet `email`)
+- macOS TCC/rechten: lokaal **signed** bouwen (`-allowProvisioningUpdates`, cert `Apple Development: info@michelknoop.nl`, team `XL9KN38ATX`). Ad-hoc builds (`CODE_SIGNING_ALLOWED=NO`) hebben geen stabiele designated requirement → macOS vraagt rechten elke build opnieuw. Signed = stabiele identity → **mic / spraak / agenda / documenten blijven behouden** (deze TCC-grants zijn op bundle-ID gekeyed in de user-db). **Uitzondering: Screen Recording** (`kTCCServiceScreenCapture`, via ScreenCaptureKit) re-prompt blijft op macOS 26 Tahoe: die grant leeft in de SIP-protected system-db, is pad/cdhash-gevoelig en wordt door macOS bij elke binary-wijziging + periodiek opnieuw gevraagd — ongeacht stabiele signing. Mitigatie: app altijd vanaf **hetzelfde vaste pad** draaien (`~/Downloads/TranscriptStudio.app`), nooit vanuit roterende DerivedData-pad.
 - Versioning: elke commit op `main` bumpt automatisch patch via `.githooks/post-commit`
 - Na version bump: `scripts/sync-version.sh` draaien om VERSION naar alle platform configs te syncen
 - Downloads: `https://n8n.prezent.nl/tstudio/download/` — lees docs/RELEASE.md voor infra details

@@ -152,6 +152,20 @@ export function SettingsPage() {
             <div style={{ padding: "12px 14px" }}>
               <ProfileSettings />
             </div>
+            {/* Onboarding re-entry — in local-only mode there is no login window,
+                so the onboarding flow must be reachable from Settings. */}
+            <div style={{ padding: "0 14px 12px", display: "flex", flexDirection: "column", gap: 6 }}>
+              <button
+                onClick={() => settings.setHasCompletedOnboarding(false)}
+                className="btn btn-secondary btn-sm"
+                style={{ alignSelf: "flex-start" }}
+              >
+                <ArrowSync24Regular style={{ fontSize: 14 }} /> Onboarding opnieuw doorlopen
+              </button>
+              <p className="settings-desc" style={{ margin: 0 }}>
+                Doorloop de welkomststappen opnieuw, bijvoorbeeld om je profiel opnieuw in te stellen.
+              </p>
+            </div>
           </div>
 
           {/* Notulen */}

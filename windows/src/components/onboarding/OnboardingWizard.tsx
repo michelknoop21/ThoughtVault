@@ -4,26 +4,36 @@ import {
   Server24Regular,
   Calendar24Regular,
   Checkmark24Regular,
+  Person24Regular,
   ArrowRight24Regular,
   ArrowLeft24Regular,
 } from "@fluentui/react-icons";
 import { useSettingsStore } from "../../stores/settingsStore";
+import { usePersonProfileStore } from "../../stores/personProfileStore";
 import { MicrosoftGraphService } from "../../services/microsoftGraph";
 import { YingaBar } from "../brand/YingaBar";
 import { YingaFooter } from "../brand/YingaFooter";
 import appLogo from "../../assets/app-logo.png";
 
-type Step = 0 | 1 | 2 | 3 | 4;
+type Step = 0 | 1 | 2 | 3 | 4 | 5;
 
-const STEPS = ["Welkom", "Server", "Microfoon", "Agenda", "Klaar"];
+const STEPS = ["Welkom", "Server", "Microfoon", "Agenda", "Profiel", "Klaar"];
 
 export function OnboardingWizard() {
   const [step, setStep] = useState<Step>(0);
   const [serverUrl, setServerUrl] = useState("https://n8n.prezent.nl/tstudio/api");
   const settings = useSettingsStore();
 
+  // Step 4 (Profiel) local state
+  const [profileName, setProfileName] = useState("");
+  const [profileRole, setProfileRole] = useState("");
+  const [profileOrganization, setProfileOrganization] = useState("");
+  const [profileAliases, setProfileAliases] = useState("");
+  const [profileMeetingTypes, setProfileMeetingTypes] = useState("");
+  const [profileExpertiseTags, setProfileExpertiseTags] = useState("");
+
   function handleNext() {
-    if (step < 4) setStep((s) => (s + 1) as Step);
+    if (step < 5) setStep((s) => (s + 1) as Step);
   }
 
   function handleBack() {
@@ -32,6 +42,30 @@ export function OnboardingWizard() {
 
   function handleComplete() {
     settings.updateSettings({ server_url: serverUrl });
+    // Write profile only if at least one field is non-empty (D-07: skip writes nothing)
+    const hasAnyField =
+      profileName.trim() ||
+      profileRole.trim() ||
+      profileOrganization.trim() ||
+      profileAliases.trim() ||
+      profileMeetingTypes.trim() ||
+      profileExpertiseTags.trim();
+
+    if (hasAnyField) {
+      const splitTrim = (s: string) =>
+        s
+          .split(",")
+          .map((v) => v.trim())
+          .filter(Boolean);
+      usePersonProfileStore.getState().upsertProfile({
+        name: profileName.trim(),
+        role: profileRole.trim(),
+        organization: profileOrganization.trim(),
+        aliases: splitTrim(profileAliases),
+        meetingTypes: splitTrim(profileMeetingTypes),
+        expertiseTags: splitTrim(profileExpertiseTags),
+      });
+    }
     settings.setHasCompletedOnboarding(true);
   }
 
@@ -184,6 +218,53 @@ export function OnboardingWizard() {
 
           {step === 4 && (
             <StepContent
+              icon={<StepIcon icon={<Person24Regular style={{ fontSize: 28 }} />} />}
+              title="Vertel iets over jezelf"
+              description="TranscriptStudio gebruikt jouw profiel om actiepunten straks aan de juiste persoon te koppelen. Je kunt dit altijd later aanpassen."
+            >
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                <ProfileField
+                  label="Naam"
+                  value={profileName}
+                  onChange={setProfileName}
+                  placeholder="Voornaam Achternaam"
+                />
+                <ProfileField
+                  label="Rol / Functie"
+                  value={profileRole}
+                  onChange={setProfileRole}
+                  placeholder="Product Manager"
+                />
+                <ProfileField
+                  label="Organisatie"
+                  value={profileOrganization}
+                  onChange={setProfileOrganization}
+                  placeholder="Bedrijfsnaam"
+                />
+                <ProfileField
+                  label="Hoe noemen collega's jou?"
+                  value={profileAliases}
+                  onChange={setProfileAliases}
+                  placeholder="Michel, Knoop, MK (kommagescheiden)"
+                />
+                <ProfileField
+                  label="Typische vergadertypen"
+                  value={profileMeetingTypes}
+                  onChange={setProfileMeetingTypes}
+                  placeholder="Wekelijks overleg, Klantgesprek (kommagescheiden)"
+                />
+                <ProfileField
+                  label="Expertise / onderwerpen"
+                  value={profileExpertiseTags}
+                  onChange={setProfileExpertiseTags}
+                  placeholder="grafisch ontwerp, marketing, IT (kommagescheiden)"
+                />
+              </div>
+            </StepContent>
+          )}
+
+          {step === 5 && (
+            <StepContent
               icon={
                 <div
                   style={{
@@ -221,13 +302,13 @@ export function OnboardingWizard() {
             <div />
           )}
 
-          {step < 4 ? (
+          {step < 5 ? (
             <button
               onClick={handleNext}
               className="btn btn-accent"
               style={{ padding: "8px 20px", gap: 6 }}
             >
-              {step === 3 ? "Overslaan" : "Volgende"}
+              {step === 3 || step === 4 ? "Overslaan" : "Volgende"}
               <ArrowRight24Regular style={{ fontSize: 16 }} />
             </button>
           ) : (
@@ -247,6 +328,45 @@ export function OnboardingWizard() {
       <div style={{ marginTop: "auto", flexShrink: 0 }}>
         <YingaFooter />
       </div>
+    </div>
+  );
+}
+
+function ProfileField({
+  label,
+  value,
+  onChange,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+}) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+      <label style={{ fontSize: 13, fontWeight: 500, color: "var(--text-secondary)" }}>
+        {label}
+      </label>
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        style={{
+          width: "100%",
+          padding: "7px 10px",
+          background: "var(--fill-control-default)",
+          border: "1px solid var(--stroke-control-secondary)",
+          borderBottom: "1px solid var(--stroke-control-default)",
+          borderRadius: "var(--radius-sm)",
+          color: "var(--text-primary)",
+          fontSize: 13,
+          outline: "none",
+          fontFamily: "inherit",
+          boxSizing: "border-box",
+        }}
+      />
     </div>
   );
 }

@@ -34,13 +34,17 @@ final class LocalTranscriptStore {
 
         do {
             let config = ModelConfiguration(url: newURL)
-            container = try ModelContainer(for: TranscriptRecord.self, configurations: config)
+            container = try ModelContainer(
+                for: TranscriptRecord.self, PersonProfile.self,
+                migrationPlan: AppMigrationPlan.self,
+                configurations: config
+            )
         } catch {
             // A failed local store is unrecoverable; fall back to an in-memory store
             // so the app still launches rather than crashing.
             logger.error("Failed to create persistent store, using in-memory: \(error.localizedDescription)")
             let config = ModelConfiguration(isStoredInMemoryOnly: true)
-            container = try! ModelContainer(for: TranscriptRecord.self, configurations: config)
+            container = try! ModelContainer(for: TranscriptRecord.self, PersonProfile.self, configurations: config)
         }
 
         if shouldMigrate {

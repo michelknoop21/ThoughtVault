@@ -8,6 +8,7 @@ import XCTest
 import SwiftData
 @testable import TranscriptStudio
 
+@MainActor
 final class MigrationTests: XCTestCase {
 
     /// Verifies that an existing TranscriptRecord survives the V1→V2 schema migration

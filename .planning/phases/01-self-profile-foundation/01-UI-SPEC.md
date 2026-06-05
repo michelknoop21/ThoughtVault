@@ -132,9 +132,10 @@ Phase 1 introduces 3 distinct UI surfaces. Each surface must handle all states b
 - Organisatie (TextField)
 - Aanspreekvormen / Aliassen (TextField, comma-separated input — per CONTEXT.md Claude's Discretion: comma-separated chosen over chips to match existing text-field patterns)
 - Typische meeting-types (TextField, comma-separated)
+- Expertise / onderwerpen (TextField, comma-separated — A-05; voedt onderwerp→rol-inferentie in Phase 3/4)
 
 **Form fields (Windows):**
-- Same 5 fields, same comma-separated approach
+- Same 6 fields, same comma-separated approach
 - Input style: matches existing server URL input in `OnboardingWizard` — `var(--fill-control-default)` background, `var(--radius-sm)` corners, `text-sm`, 7px/10px padding
 
 **States:**
@@ -192,6 +193,8 @@ All strings Dutch (NL) via `Localizable.strings` (macOS) / i18n keys (Windows). 
 | Field placeholder — Aliassen | "Michel, Knoop, MK (kommagescheiden)" |
 | Field label — Meeting-types | "Typische vergadertypen" |
 | Field placeholder — Meeting-types | "Wekelijks overleg, Klantgesprek (kommagescheiden)" |
+| Field label — Expertise | "Expertise / onderwerpen" |
+| Field placeholder — Expertise | "grafisch ontwerp, marketing, IT (kommagescheiden)" |
 | Error state (save failure) | "Kon profiel niet opslaan. Probeer het opnieuw." |
 | Destructive actions in this phase | None |
 

@@ -85,6 +85,12 @@ Notulen herkennen wie-wie is en wijzen actiepunten betrouwbaar toe aan de juiste
 | Onboarding = zelf-profilering van de installerende gebruiker | Org-brede herkenning ontstaat emergent doordat elke installatie eigen context opbouwt | — Pending |
 | Persoons-/mensen-data lokaal on-device (geen centrale sync) | Privacy/local-first; werkt ook in local-mode zonder account | — Pending |
 | Attributie = gestructureerde naam→persoon-mapping + bewerkbare toewijzing (niet alleen prompt-injectie) | Betrouwbare, corrigeerbare eigenaar i.p.v. pure LLM-gok | — Pending |
+| Attributie draait óók op **onderwerp→rol/expertise→persoon**, niet alleen naam-matching | Kern van de productvisie: actiepunt over een domein → persoon wiens rol/expertise dat dekt, ook zonder naamsvermelding | — Pending (C-05, D-01) |
+| `expertiseTags: [String]` in `PersonProfile` vanaf Phase 1 | Onderwerp-inferentie vereist per-persoon expertise; versioned-migratie-discipline → nu landen voorkomt 2e migratie | — Pending (A-05) |
+| **Leerlus**: bevestigde toewijzing verrijkt `expertiseTags` van de persoon (deduped, geen ML) | "De app leert mensen kennen" over meetings heen; goedkoop, hoog visie-fit | — Pending (D-06) |
+| `AttributionEntry` draagt `source` + `confidence` (data nu, UI-indicator later) | Onderwerp-inferentie is fuzzy; herkomst/zekerheid moet vastgelegd, visuele indicator is v1.x | — Pending (D-05) |
+| Spreker-diarisatie géén v1.1-dependency | Spike 2026-06-05: pipeline levert geen speaker-labels (`whisper_neuron.py:133-140`, één samengevoegd segment); eigen pyannote-diarisatie buiten scope | — Decided |
+| Org-context emergent via lokale profielen; org-sync/peer-uitwisseling expliciet future | Local-first/privacy; vrijwillige export/QR/AirDrop pas overwegen ná v1.1-validatie | — Pending |
 | Nieuw concept heet `PersonProfile`, nooit hergebruik van `Profile` | `Profile` = notule-stijl; verwarring voorkomen | — Pending |
 | Parity & Polish on hold i.p.v. afgerond | Deze capability eerst; P&P volledig bewaard in `.planning/paused/` | — Pending |
 

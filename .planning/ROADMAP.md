@@ -20,7 +20,7 @@ Vier opeenvolgende fasen die persoons-/rolcontext toevoegen aan TranscriptStudio
 - Integer phases (1, 2, 3, 4): geplande milestone-werk
 - Decimale fasen (bijv. 2.1): urgente tussenvoegingen (gemarkeerd INSERTED)
 
-- [ ] **Phase 1: Self-Profile Foundation** - `PersonProfile`-datamodel + versioned SwiftData-migratie + onboarding-stap + Settings-bewerkscherm (macOS + Windows)
+- [x] **Phase 1: Self-Profile Foundation** - `PersonProfile`-datamodel + versioned SwiftData-migratie + onboarding-stap + Settings-bewerkscherm (macOS + Windows) (completed 2026-06-05)
 - [ ] **Phase 2: People Directory** - Lokale directory-CRUD + agenda-deelnemer-seed (macOS + Windows)
 - [ ] **Phase 3: Context Injection** - `{{PEOPLE_CONTEXT}}`-injectie in lokaal LLM-pad + cloud n8n-pad + regenerate-pad (SPIKE REQUIRED)
 - [ ] **Phase 4: Attribution Mapping** - Post-generatie persoons-detectie + bewerkbare eigenaar-toewijzing in beide viewers (SPIKE REQUIRED)
@@ -41,7 +41,7 @@ Vier opeenvolgende fasen die persoons-/rolcontext toevoegen aan TranscriptStudio
 **Plans**: 4 plans
   - [x] 01-00-PLAN.md — Wave 0 RED test scaffolds (MigrationTests + PersonProfileTests)
   - [x] 01-01-PLAN.md — macOS data foundation: PersonProfile @Model + VersionedSchema migration + upsert + collision warning
-  - [ ] 01-02-PLAN.md — macOS UI: skippable onboarding step + Settings Profiel editor
+  - [x] 01-02-PLAN.md — macOS UI: skippable onboarding step + Settings Profiel editor
   - [x] 01-03-PLAN.md — Windows full stack: PersonProfile type + personProfileStore + wizard step + Settings editor
 > ✅ **AMENDMENT VOLTOOID (A-05, 2026-06-05):** alle vier plannen (01-00 t/m 01-03) bevatten `expertiseTags: [String]` in dezelfde migratie (`meetingTypes`/`aliases` als `[String]`-precedent). Phase 3/4 vergen geen tweede migratie.
 **UI hint**: yes
@@ -109,7 +109,7 @@ Vier opeenvolgende fasen die persoons-/rolcontext toevoegen aan TranscriptStudio
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Self-Profile Foundation | 3/4 | In Progress|  |
+| 1. Self-Profile Foundation | 4/4 | Complete   | 2026-06-05 |
 | 2. People Directory | 0/? | Not started | - |
 | 3. Context Injection | 0/? | Not started | - |
 | 4. Attribution Mapping | 0/? | Not started | - |

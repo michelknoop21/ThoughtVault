@@ -1,10 +1,11 @@
 ---
 phase: 2
 slug: people-directory
-status: draft
+status: approved
 shadcn_initialized: false
 preset: none
 created: 2026-06-05
+reviewed_at: 2026-06-05
 ---
 
 # Phase 2 — UI Design Contract: People Directory

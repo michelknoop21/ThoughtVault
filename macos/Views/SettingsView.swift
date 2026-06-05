@@ -51,6 +51,7 @@ struct SettingsView: View {
             } else {
                 cloudNotulenSection
             }
+            ProfileSettingsView()
             profielenSection
             spraakherkenningSection
             permissiesSection

@@ -66,6 +66,7 @@
 		AA000062 /* LocalTranscriptStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000062 /* LocalTranscriptStore.swift */; };
 		AA000068 /* PersonProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000068 /* PersonProfile.swift */; };
 		AA000069 /* AppMigrationPlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000069 /* AppMigrationPlan.swift */; };
+		AA000070 /* ProfileSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000070 /* ProfileSettingsView.swift */; };
 		AB000002 /* MigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000002 /* MigrationTests.swift */; };
 		AB000003 /* PersonProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000003 /* PersonProfileTests.swift */; };
 		AA000063 /* LocalTranscriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000063 /* LocalTranscriber.swift */; };
@@ -150,6 +151,7 @@
 		FA000062 /* LocalTranscriptStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalTranscriptStore.swift; sourceTree = "<group>"; };
 		FA000068 /* PersonProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonProfile.swift; sourceTree = "<group>"; };
 		FA000069 /* AppMigrationPlan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppMigrationPlan.swift; sourceTree = "<group>"; };
+		FA000070 /* ProfileSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileSettingsView.swift; sourceTree = "<group>"; };
 		FB000002 /* MigrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MigrationTests.swift; sourceTree = "<group>"; };
 		FB000003 /* PersonProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonProfileTests.swift; sourceTree = "<group>"; };
 		FA000063 /* LocalTranscriber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalTranscriber.swift; sourceTree = "<group>"; };
@@ -293,6 +295,7 @@
 				FA000029 /* ProfilesView.swift */,
 				FA000030 /* RecordingView.swift */,
 				FA000031 /* SettingsView.swift */,
+				FA000070 /* ProfileSettingsView.swift */,
 				FA000032 /* TranscriptsView.swift */,
 				FA000056 /* TasksView.swift */,
 				FA000033 /* OnboardingViewiOSStub.swift */,
@@ -457,6 +460,7 @@
 				AA000061 /* TranscriptRecord.swift in Sources */,
 				AA000068 /* PersonProfile.swift in Sources */,
 				AA000069 /* AppMigrationPlan.swift in Sources */,
+				AA000070 /* ProfileSettingsView.swift in Sources */,
 				AA000066 /* ProfileTemplates.swift in Sources */,
 				AA000062 /* LocalTranscriptStore.swift in Sources */,
 				AA000063 /* LocalTranscriber.swift in Sources */,

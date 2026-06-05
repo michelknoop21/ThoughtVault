@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: People & Attribution
 status: verifying
-stopped_at: Completed 01-03-PLAN.md
-last_updated: "2026-06-05T10:47:14.009Z"
+stopped_at: Phase 2 context gathered
+last_updated: "2026-06-05T13:37:59.417Z"
 last_activity: 2026-06-05
 progress:
   total_phases: 4
@@ -87,6 +87,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-05T10:47:09.147Z
-Stopped at: Completed 01-03-PLAN.md
-Resume file: None
+Last session: 2026-06-05T13:37:59.405Z
+Stopped at: Phase 2 context gathered
+Resume file: .planning/phases/02-people-directory/02-CONTEXT.md

@@ -40,7 +40,7 @@ Vier opeenvolgende fasen die persoons-/rolcontext toevoegen aan TranscriptStudio
   6. `PersonProfile` heeft een `expertiseTags: [String]`-veld (en Windows-equivalent) dat los staat van de vrije `rol`-tekst; het veld is opgenomen in het versioned schema zodat latere fasen geen nieuwe migratie nodig hebben.
 **Plans**: 4 plans
   - [x] 01-00-PLAN.md — Wave 0 RED test scaffolds (MigrationTests + PersonProfileTests)
-  - [ ] 01-01-PLAN.md — macOS data foundation: PersonProfile @Model + VersionedSchema migration + upsert + collision warning
+  - [x] 01-01-PLAN.md — macOS data foundation: PersonProfile @Model + VersionedSchema migration + upsert + collision warning
   - [ ] 01-02-PLAN.md — macOS UI: skippable onboarding step + Settings Profiel editor
   - [x] 01-03-PLAN.md — Windows full stack: PersonProfile type + personProfileStore + wizard step + Settings editor
 > ✅ **AMENDMENT VOLTOOID (A-05, 2026-06-05):** alle vier plannen (01-00 t/m 01-03) bevatten `expertiseTags: [String]` in dezelfde migratie (`meetingTypes`/`aliases` als `[String]`-precedent). Phase 3/4 vergen geen tweede migratie.
@@ -109,7 +109,7 @@ Vier opeenvolgende fasen die persoons-/rolcontext toevoegen aan TranscriptStudio
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Self-Profile Foundation | 2/4 | In Progress|  |
+| 1. Self-Profile Foundation | 3/4 | In Progress|  |
 | 2. People Directory | 0/? | Not started | - |
 | 3. Context Injection | 0/? | Not started | - |
 | 4. Attribution Mapping | 0/? | Not started | - |

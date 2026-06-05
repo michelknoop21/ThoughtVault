@@ -56,7 +56,12 @@ Vier opeenvolgende fasen die persoons-/rolcontext toevoegen aan TranscriptStudio
   3. Nieuw toegevoegde personen via agenda-seed krijgen standaard `intern/extern = onbekend`; de gebruiker kan dit corrigeren.
   4. `PersonDirectoryService` bevat geen `URLSession`-referenties — persoonsdata blijft on-device (verifieerbaar via grep).
   5. Directory-entries gebruiken hetzelfde `PersonProfile`-model als het zelf-profiel; `expertiseTags` zijn per persoon bewerkbaar (B-04).
-**Plans**: TBD
+**Plans**: 5 plans
+  - [ ] 02-01-PLAN.md — Wave 0 RED test scaffolds (MigrationTests V2->V3 + PersonDirectoryService + GraphAttendeeDecode + Windows store)
+  - [ ] 02-02-PLAN.md — macOS datamodel: emails + tri-state isInternal + SchemaV3 lightweight migration
+  - [ ] 02-03-PLAN.md — macOS services: Graph attendee plumbing + PersonDirectoryService (no URLSession) + dedup
+  - [ ] 02-04-PLAN.md — macOS UI: Mensen tab + directory/edit views + agenda-seed review sheet (checkpoint)
+  - [ ] 02-05-PLAN.md — Windows full stack: types + collection store + Graph fix + /people page + seed sheet
 **UI hint**: yes
 
 ### Phase 3: Context Injection

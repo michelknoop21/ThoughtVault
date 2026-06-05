@@ -61,15 +61,14 @@ Roles declared for this phase, using existing token names from Theme.swift / glo
 
 | Role | Token | Approx Size | Weight | Usage in Phase 2 |
 |------|-------|-------------|--------|------------------|
-| Body | `TS.Font.body` | ~17pt | regular (400) | Form field input text, person name in list |
-| Body medium | `TS.Font.bodyMedium` | ~17pt | medium (500) | Empty state heading, person name (bold item) |
+| Body | `TS.Font.body` | ~17pt | regular (400) | Form field input text, person name in list (non-primary) |
 | Footnote | `TS.Font.footnote` | ~13pt | regular (400) | Field placeholder hints, secondary metadata (org, role) |
 | Footnote semibold | `TS.Font.footnoteSemibold` | ~13pt | semibold (600) | Section labels, list subheadings |
 | Caption | `TS.Font.caption` | ~12pt | regular (400) | Error messages, status hints, timestamp-style labels |
 | Title 3 semibold | `TS.Font.title3Semibold` | ~20pt | semibold (600) | "Mensen" tab/view title, sheet title |
-| Headline | `TS.Font.headline` | ~17pt | semibold (system) | Directory list section headers (if grouped) |
+| Headline | `TS.Font.headline` | ~17pt | semibold (600) | Directory list section headers (if grouped), empty-state heading, person name as primary label in list row |
 
-Active size tier for this phase: footnote (13pt), body (17pt), title3 (20pt). Max 3 visual sizes in any single view. Weights: regular + semibold only.
+Active size tier for this phase: footnote (13pt), body/headline (17pt), title3 (20pt). Max 3 visual sizes in any single view. Weights: regular (400) + semibold (600) only.
 
 Line heights: body/footnote use system default (~1.4–1.5); titles use system default (~1.2). Do not override — SwiftUI Dynamic Type handles this.
 
@@ -210,7 +209,7 @@ Each screen must handle all states listed:
 |-------|---------|--------|
 | Loading | Initial fetch from store | macOS: `ProgressView()` centered; Windows: skeleton rows or spinner |
 | Empty | No `isSelf==false` profiles exist | Empty state illustration-free: heading + body copy + CTA button |
-| Populated | 1+ directory entries | List rows: name (bodyMedium), role + org (footnote/caption, labelSecondary), status dot |
+| Populated | 1+ directory entries | List rows: name (`TS.Font.headline`, semibold), role + org (footnote/caption, labelSecondary), status dot |
 | Searching | Search field has text | Filtered list; if no matches: "Geen resultaten voor '{query}'" |
 | Error | Store fetch failed | Error message inline, no crash |
 
@@ -247,7 +246,7 @@ NavigationSplitView or plain view in sidebar tab:
 │ [search field]                   │
 ├─────────────────────────────────┤
 │ [Person row]                     │  ← modernCard or plain List row
-│   Name (bodyMedium)              │
+│   Name (headline, semibold)      │
 │   Rol · Organisatie (footnote)   │
 │   ● Intern (caption, green dot)  │
 │   [trailing: edit icon | delete] │

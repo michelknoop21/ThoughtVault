@@ -15,6 +15,7 @@ import { useCalendarStore } from "../stores/calendarStore";
 import { useProfilesStore } from "../stores/profilesStore";
 import { MicrosoftGraphService } from "../services/microsoftGraph";
 import { getVersion } from "@tauri-apps/api/app";
+import { ProfileSettings } from "../components/settings/ProfileSettings";
 
 export function SettingsPage() {
   const [appVersion, setAppVersion] = useState("");
@@ -142,6 +143,14 @@ export function SettingsPage() {
                    "Test verbinding"}
                 </button>
               </div>
+            </div>
+          </div>
+
+          {/* Profiel — self-profile, separate from notule-Profielen (D-08) */}
+          <div className="settings-group">
+            <p className="settings-group-label">Profiel</p>
+            <div style={{ padding: "12px 14px" }}>
+              <ProfileSettings />
             </div>
           </div>
 

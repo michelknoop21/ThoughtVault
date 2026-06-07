@@ -80,9 +80,9 @@ final class PersonDirectoryService {
     // MARK: - Delete
 
     /// Deletes a directory person from the store.
-    func delete(_ person: PersonProfile) {
+    func delete(_ person: PersonProfile) throws {
         context.delete(person)
-        try? context.save()
+        try context.save()
     }
 
     /// Deletes a directory person by ID.

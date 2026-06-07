@@ -84,8 +84,12 @@ struct PeopleDirectoryView: View {
         ) {
             Button("Verwijderen", role: .destructive) {
                 if let person = personToDelete {
-                    service.delete(person)
-                    loadPeople()
+                    do {
+                        try service.delete(person)
+                        loadPeople()
+                    } catch {
+                        loadError = "Verwijderen mislukt: \(error.localizedDescription)"
+                    }
                 }
                 personToDelete = nil
             }

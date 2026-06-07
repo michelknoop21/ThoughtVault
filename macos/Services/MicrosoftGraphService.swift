@@ -307,6 +307,10 @@ actor MicrosoftGraphService {
                 let joinURL = event.onlineMeeting?.joinUrl.flatMap { URL(string: $0) }
                 let platform = detectPlatform(joinURL: joinURL)
 
+                // D-08: map attendee + organizer emails from Graph decode (address key, Pitfall 2)
+                let attendeeEmails = (event.attendees ?? []).compactMap { $0.emailAddress?.address }
+                let organizerEmail = event.organizer?.emailAddress?.address
+
                 return CalendarEvent(
                     id: event.id,
                     title: event.subject ?? "Vergadering",
@@ -314,7 +318,9 @@ actor MicrosoftGraphService {
                     endDate: endDate,
                     meetingURL: joinURL,
                     platform: platform,
-                    calendarTitle: "Microsoft 365"
+                    calendarTitle: "Microsoft 365",
+                    attendees: attendeeEmails,
+                    organizer: organizerEmail
                 )
             }
         } catch {
@@ -442,6 +448,22 @@ private struct GraphEvent: Decodable {
     let start: GraphDateTime?
     let end: GraphDateTime?
     let onlineMeeting: GraphOnlineMeeting?
+    let organizer: GraphRecipient?       // D-08: populated from Graph $select
+    let attendees: [GraphAttendee]?      // D-08: populated from Graph $select
+}
+
+private struct GraphRecipient: Decodable {
+    let emailAddress: GraphEmailAddress?
+}
+
+private struct GraphAttendee: Decodable {
+    let emailAddress: GraphEmailAddress?
+}
+
+/// Graph v1.0 emailAddress object — key is `address` (NOT `email`); see Research Pitfall 2.
+private struct GraphEmailAddress: Decodable {
+    let name: String?
+    let address: String?
 }
 
 private struct GraphDateTime: Decodable {

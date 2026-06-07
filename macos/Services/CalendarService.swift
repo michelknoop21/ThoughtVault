@@ -33,6 +33,11 @@ struct CalendarEvent: Identifiable, Sendable {
     let meetingURL: URL?
     let platform: MeetingPlatform
     let calendarTitle: String
+    /// Email addresses of attendees decoded from Microsoft Graph (D-08).
+    /// Defaulted so all existing CalendarEvent construction sites keep compiling.
+    var attendees: [String] = []
+    /// Organizer email decoded from Microsoft Graph (D-08). Defaulted for same reason.
+    var organizer: String? = nil
 
     /// True if this event starts within the next `minutes` minutes.
     func startsWithin(minutes: Int) -> Bool {

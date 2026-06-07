@@ -32,8 +32,11 @@ export function SeedReviewSheet({ candidates, onClose }: SeedReviewSheetProps) {
     for (const row of rows) {
       if (!row.checked) continue;
       const emailPrefix = row.email.split("@")[0] ?? row.email;
-      // Derive a display name from the email prefix (capitalize first letter)
-      const displayName = emailPrefix.charAt(0).toUpperCase() + emailPrefix.slice(1);
+      // Derive a display name: split on separators and capitalize each word (matches macOS)
+      const displayName = emailPrefix
+        .split(/[._-]/)
+        .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
+        .join(" ");
       const person = createDefaultPerson({
         name: displayName,
         emails: [row.email],

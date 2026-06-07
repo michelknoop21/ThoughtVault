@@ -134,8 +134,10 @@ final class PersonDirectoryService {
         // Self email from the caller (Graph account email / microsoftAccountEmail)
         let selfSet: Set<String> = selfEmail.map { [($0).lowercased()] }.map(Set.init) ?? []
 
+        var seen = Set<String>()
         return attendeeEmails
             .map { $0.lowercased() }
             .filter { !knownEmails.contains($0) && !selfSet.contains($0) }
+            .filter { seen.insert($0).inserted }
     }
 }

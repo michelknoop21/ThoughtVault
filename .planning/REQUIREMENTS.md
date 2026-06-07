@@ -81,10 +81,10 @@
 | A-03 | Phase 1 | Complete |
 | A-04 | Phase 1 | Complete |
 | A-05 | Phase 1 | Complete |
-| B-01 | Phase 2 | Pending |
-| B-02 | Phase 2 | Pending |
-| B-03 | Phase 2 | Pending |
-| B-04 | Phase 2 | Pending |
+| B-01 | Phase 2 | Complete |
+| B-02 | Phase 2 | Complete |
+| B-03 | Phase 2 | Complete |
+| B-04 | Phase 2 | Complete |
 | C-01 | Phase 3 | Pending |
 | C-02 | Phase 3 | Pending |
 | C-03 | Phase 3 | Pending |

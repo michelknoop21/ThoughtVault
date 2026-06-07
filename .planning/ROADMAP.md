@@ -21,7 +21,7 @@ Vier opeenvolgende fasen die persoons-/rolcontext toevoegen aan TranscriptStudio
 - Decimale fasen (bijv. 2.1): urgente tussenvoegingen (gemarkeerd INSERTED)
 
 - [x] **Phase 1: Self-Profile Foundation** - `PersonProfile`-datamodel + versioned SwiftData-migratie + onboarding-stap + Settings-bewerkscherm (macOS + Windows) (completed 2026-06-05)
-- [ ] **Phase 2: People Directory** - Lokale directory-CRUD + agenda-deelnemer-seed (macOS + Windows)
+- [x] **Phase 2: People Directory** - Lokale directory-CRUD + agenda-deelnemer-seed (macOS + Windows) (completed 2026-06-07)
 - [ ] **Phase 3: Context Injection** - `{{PEOPLE_CONTEXT}}`-injectie in lokaal LLM-pad + cloud n8n-pad + regenerate-pad (SPIKE REQUIRED)
 - [ ] **Phase 4: Attribution Mapping** - Post-generatie persoons-detectie + bewerkbare eigenaar-toewijzing in beide viewers (SPIKE REQUIRED)
 
@@ -60,7 +60,7 @@ Vier opeenvolgende fasen die persoons-/rolcontext toevoegen aan TranscriptStudio
   - [x] 02-01-PLAN.md — Wave 0 RED test scaffolds (MigrationTests V2->V3 + PersonDirectoryService + GraphAttendeeDecode + Windows store)
   - [x] 02-02-PLAN.md — macOS datamodel: emails + tri-state isInternal + SchemaV3 lightweight migration
   - [x] 02-03-PLAN.md — macOS services: Graph attendee plumbing + PersonDirectoryService (no URLSession) + dedup
-  - [ ] 02-04-PLAN.md — macOS UI: Mensen tab + directory/edit views + agenda-seed review sheet (checkpoint)
+  - [x] 02-04-PLAN.md — macOS UI: Mensen tab + directory/edit views + agenda-seed review sheet (checkpoint)
   - [x] 02-05-PLAN.md — Windows full stack: types + collection store + Graph fix + /people page + seed sheet
 **UI hint**: yes
 
@@ -115,7 +115,7 @@ Vier opeenvolgende fasen die persoons-/rolcontext toevoegen aan TranscriptStudio
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Self-Profile Foundation | 4/4 | Complete   | 2026-06-05 |
-| 2. People Directory | 4/5 | In Progress|  |
+| 2. People Directory | 5/5 | Complete   | 2026-06-07 |
 | 3. Context Injection | 0/? | Not started | - |
 | 4. Attribution Mapping | 0/? | Not started | - |
 

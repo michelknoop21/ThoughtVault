@@ -162,27 +162,10 @@ struct HomeView: View {
     // MARK: Quick start
 
     private var quickStartSection: some View {
-        VStack(alignment: .leading, spacing: TS.Spacing.sm) {
-            ctaCard
-
-            HStack(spacing: TS.Spacing.sm) {
-                quickStartPill(
-                    mode: .microphone,
-                    color: Color.brandSecondary,
-                    label: "Fysieke meeting",
-                    icon: "person.2.fill"
-                )
-
-                #if os(macOS)
-                quickStartPill(
-                    mode: .combined,
-                    color: Color.brandPrimary,
-                    label: "Videocall",
-                    icon: "video.fill"
-                )
-                #endif
-            }
-        }
+        // One primary start affordance. The mode/profile are chosen on the next
+        // screen (RecordingView), so the previous duplicate pills — which all just
+        // opened the record tab anyway — were removed.
+        ctaCard
     }
 
     private var ctaCard: some View {
@@ -205,7 +188,7 @@ struct HomeView: View {
                     Text("Start nieuwe opname")
                         .font(TS.Font.subheadlineSemibold)
                         .foregroundStyle(.white)
-                    Text("Tik om direct te beginnen met opnemen")
+                    Text("Klik om direct te beginnen met opnemen")
                         .font(TS.Font.caption)
                         .foregroundStyle(Color.white.opacity(0.78))
                 }
@@ -228,33 +211,6 @@ struct HomeView: View {
                         )
                     )
                     .shadow(color: Color.brandPrimary.opacity(0.20), radius: 12, y: 4)
-            }
-        }
-        .buttonStyle(.plain)
-    }
-
-    @ViewBuilder
-    private func quickStartPill(mode: RecordingMode, color: Color, label: String, icon: String? = nil) -> some View {
-        let symbolName = (icon?.isEmpty == false) ? icon! : mode.iconName
-        Button {
-            onStartRecording?(mode)
-        } label: {
-            HStack(spacing: TS.Spacing.xs) {
-                Image(systemName: symbolName)
-                    .font(.system(size: 13, weight: .semibold))
-                Text(label)
-                    .font(TS.Font.footnoteSemibold)
-            }
-            .foregroundStyle(color)
-            .padding(.horizontal, TS.Spacing.md)
-            .padding(.vertical, TS.Spacing.sm)
-            .background {
-                Capsule(style: .continuous)
-                    .fill(color.opacity(0.10))
-                    .overlay {
-                        Capsule(style: .continuous)
-                            .stroke(color.opacity(0.28), lineWidth: 1)
-                    }
             }
         }
         .buttonStyle(.plain)

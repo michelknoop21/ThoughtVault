@@ -414,6 +414,8 @@ struct NotuleResultView: View {
             Divider()
             exportButton(icon: "doc.plaintext", title: "Platte tekst (.txt)", action: exportAsTXT)
             Divider()
+            exportButton(icon: "doc.on.doc", title: "Kopieer tekst", action: copyContent)
+            Divider()
             exportButton(icon: "square.and.arrow.up", title: "Delen...", action: shareContent)
 
             if let error = exportError {
@@ -519,6 +521,25 @@ struct NotuleResultView: View {
         } catch {
             exportError = "Exporteren mislukt: \(error.localizedDescription)"
         }
+        #endif
+    }
+
+    private func copyContent() {
+        showExportMenu = false
+        guard let html = task.notuleHtml else { return }
+        let stripped = html.replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)
+        let decoded = stripped
+            .replacingOccurrences(of: "&amp;", with: "&")
+            .replacingOccurrences(of: "&lt;", with: "<")
+            .replacingOccurrences(of: "&gt;", with: ">")
+            .replacingOccurrences(of: "&nbsp;", with: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        #if os(macOS)
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(decoded, forType: .string)
+        #else
+        UIPasteboard.general.string = decoded
         #endif
     }
 

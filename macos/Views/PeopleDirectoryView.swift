@@ -221,6 +221,15 @@ struct PeopleDirectoryView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
+            // Status tag — text, not colour alone (WCAG 1.4.1); also gives VoiceOver
+            // the intern/extern meaning the colour dot can't convey.
+            Text(statusText(for: person.isInternal))
+                .font(TS.Font.caption)
+                .foregroundStyle(statusColor(for: person.isInternal))
+                .padding(.horizontal, TS.Spacing.sm)
+                .padding(.vertical, 2)
+                .background(Capsule().fill(statusColor(for: person.isInternal).opacity(0.12)))
+
             // Trailing actions
             HStack(spacing: TS.Spacing.xs) {
                 Button {
@@ -258,6 +267,14 @@ struct PeopleDirectoryView: View {
         case true:  return Color.brandAccent   // Intern — green
         case false: return Color.brandSecondary // Extern — blue
         case nil:   return Color.labelTertiary  // Onbekend — gray
+        }
+    }
+
+    private func statusText(for isInternal: Bool?) -> String {
+        switch isInternal {
+        case true:  return "Intern"
+        case false: return "Extern"
+        case nil:   return "Onbekend"
         }
     }
 

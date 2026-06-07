@@ -129,6 +129,7 @@ struct LoginView: View {
                         .textFieldStyle(.plain)
                         .font(TS.Font.body)
                         .autocorrectionDisabled()
+                        .textContentType(.username)
                         #if os(iOS)
                         .textInputAutocapitalization(.never)
                         .keyboardType(.emailAddress)
@@ -158,6 +159,7 @@ struct LoginView: View {
                         }
                         .textFieldStyle(.plain)
                         .font(TS.Font.body)
+                        .textContentType(.password)
 
                         Button {
                             isPasswordVisible.toggle()

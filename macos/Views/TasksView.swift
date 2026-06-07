@@ -298,7 +298,7 @@ private struct TaskRow: View {
             return "\(minutes) \(minutes == 1 ? "minuut" : "minuten") geleden"
         } else if interval < 86400 {
             let hours = Int(interval / 3600)
-            return "\(hours) \(hours == 1 ? "uur" : "uur") geleden"
+            return "\(hours) uur geleden"
         } else {
             let days = Int(interval / 86400)
             return "\(days) \(days == 1 ? "dag" : "dagen") geleden"

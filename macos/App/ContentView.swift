@@ -58,9 +58,9 @@ enum AppTab: String, CaseIterable, Identifiable {
         case .record:      return "2"
         case .tasks:       return "3"
         case .transcripts: return "4"
-        case .people:      return "7"
         case .settings:    return "5"
-        case .admin:       return "6"
+        case .people:      return "6"
+        case .admin:       return "8"
         }
     }
 }

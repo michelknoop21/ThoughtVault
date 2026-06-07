@@ -68,9 +68,26 @@ struct PersonEditView: View {
 
     private var isNewPerson: Bool { person == nil }
 
+    private var canSave: Bool {
+        !isSaving && !naam.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
     // MARK: - Body
 
     var body: some View {
+        NavigationStack {
+            content
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Annuleer") { dismiss() }
+                    }
+                }
+        }
+        .frame(minWidth: 420, minHeight: 480)
+        .onAppear { loadFields() }
+    }
+
+    private var content: some View {
         VStack(alignment: .leading, spacing: TS.Spacing.md) {
             // Title
             Text(isNewPerson ? "Persoon toevoegen" : "Persoon bewerken")
@@ -160,17 +177,13 @@ struct PersonEditView: View {
                         }
                     }
                     .buttonStyle(PrimaryButtonStyle())
-                    .disabled(isSaving)
+                    .disabled(!canSave)
                 }
             }
 
             Spacer()
         }
         .padding(TS.Spacing.lg)
-        .frame(minWidth: 420, minHeight: 480)
-        .onAppear {
-            loadFields()
-        }
     }
 
     // MARK: - Load

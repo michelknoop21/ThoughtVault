@@ -165,6 +165,29 @@ struct ProcessingView: View {
             .padding(.horizontal, TS.Spacing.lg)
             .padding(.bottom, TS.Spacing.xl)
         }
+        // Persistent escape during normal processing — the task keeps running in the
+        // background via activeTasks, so the user is never trapped on a long file.
+        // Hidden while stalled/errored, which surface their own dismiss affordance.
+        .overlay(alignment: .topTrailing) {
+            if !isStalled && displayTask.status != .error && displayTask.status != .completed {
+                Button {
+                    onDismiss()
+                } label: {
+                    HStack(spacing: TS.Spacing.xs) {
+                        Image(systemName: "arrow.down.right.and.arrow.up.left")
+                        Text("Verder op achtergrond")
+                    }
+                    .font(TS.Font.footnoteMedium)
+                    .foregroundStyle(Color.white.opacity(0.85))
+                    .padding(.horizontal, TS.Spacing.md)
+                    .padding(.vertical, TS.Spacing.sm)
+                    .background(Color.white.opacity(0.10), in: Capsule())
+                }
+                .buttonStyle(.plain)
+                .help("Sluit dit scherm; de verwerking gaat door op de achtergrond")
+                .padding(TS.Spacing.lg)
+            }
+        }
         .preferredColorScheme(.dark)
     }
 

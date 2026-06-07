@@ -135,14 +135,25 @@ struct ProfilesView: View {
             ProfileEditSheet(
                 existingProfile: profile,
                 onSave: { updated in
-                    Task {
-                        await deleteProfile(profile)
-                        await createProfile(updated)
-                    }
+                    // No updateProfile API exists, so edit must recreate. Create the
+                    // replacement FIRST and only delete the original once that succeeds —
+                    // otherwise a failure between the two destroys the profile (data loss).
+                    Task { await replaceProfile(original: profile, with: updated) }
                     profileToEdit = nil
                 },
                 onCancel: { profileToEdit = nil }
             )
+        }
+        .alert(
+            "Er ging iets mis",
+            isPresented: Binding(
+                get: { errorMessage != nil },
+                set: { if !$0 { errorMessage = nil } }
+            )
+        ) {
+            Button("Oké", role: .cancel) { errorMessage = nil }
+        } message: {
+            Text(errorMessage ?? "")
         }
     }
 
@@ -238,6 +249,26 @@ struct ProfilesView: View {
             profiles.removeAll { $0.id == profile.id }
         } catch {
             errorMessage = error.localizedDescription
+        }
+    }
+
+    /// Edit = recreate (no update API). Create the replacement first; only remove
+    /// the original after the new one is confirmed created, so a mid-flight failure
+    /// can never leave the user with no profile.
+    private func replaceProfile(original: Profile, with updated: Profile) async {
+        do {
+            let created = try await APIService.shared.createProfile(
+                name: updated.name,
+                systemPrompt: updated.systemPrompt ?? "",
+                notulePrompt: updated.notulePrompt ?? "",
+                template: updated.template
+            )
+            profiles.append(created)
+            // New profile is safely persisted; now retire the old one.
+            try await APIService.shared.deleteProfile(id: original.id)
+            profiles.removeAll { $0.id == original.id }
+        } catch {
+            errorMessage = "Bijwerken mislukt: \(error.localizedDescription). Je oorspronkelijke profiel is behouden."
         }
     }
 }

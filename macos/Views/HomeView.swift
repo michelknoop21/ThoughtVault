@@ -262,26 +262,34 @@ struct HomeView: View {
 
     // MARK: Active processing
 
+    @ViewBuilder
     private var overviewSection: some View {
-        HStack(spacing: TS.Spacing.sm) {
-            overviewStat(
-                title: "Actieve taken",
-                value: "\(recordingVM.activeTasks.filter { $0.status.isActive }.count)",
-                icon: "gearshape.2.fill",
-                color: Color.brandPrimary
-            )
-            overviewStat(
-                title: "Wachtrij",
-                value: "\(recordingVM.offlineQueue.count)",
-                icon: "tray.fill",
-                color: Color.brandSecondary
-            )
-            overviewStat(
-                title: "Recent",
-                value: "\(recentTranscripts.count)",
-                icon: "doc.text",
-                color: Color.brandOrange
-            )
+        let activeCount = recordingVM.activeTasks.filter { $0.status.isActive }.count
+        let queueCount = recordingVM.offlineQueue.count
+        let recentCount = recentTranscripts.count
+        // Hide the stat row entirely on an empty/fresh account — a "0 / 0 / 0"
+        // hero-metric grid reads as broken rather than informative.
+        if activeCount > 0 || queueCount > 0 || recentCount > 0 {
+            HStack(spacing: TS.Spacing.sm) {
+                overviewStat(
+                    title: "Actieve taken",
+                    value: "\(activeCount)",
+                    icon: "gearshape.2.fill",
+                    color: Color.brandPrimary
+                )
+                overviewStat(
+                    title: "Wachtrij",
+                    value: "\(queueCount)",
+                    icon: "tray.fill",
+                    color: Color.brandSecondary
+                )
+                overviewStat(
+                    title: "Recent",
+                    value: "\(recentCount)",
+                    icon: "doc.text",
+                    color: Color.brandOrange
+                )
+            }
         }
     }
 
@@ -293,7 +301,7 @@ struct HomeView: View {
                     .foregroundStyle(color)
                 Text(title)
                     .font(TS.Font.microBold)
-                    .foregroundStyle(Color.labelTertiary)
+                    .foregroundStyle(Color.labelSecondary)
             }
             Text(value)
                 .font(TS.Font.title3Bold)

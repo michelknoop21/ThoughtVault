@@ -202,9 +202,14 @@ export function HomePage() {
           </div>
         ) : transcripts.length === 0 ? (
           <div className="empty-state">
-            <p className="empty-state-text">
-              Nog geen transcripten. Start een opname om te beginnen.
+            <p className="empty-state-title">Nog geen transcripten</p>
+            <p className="empty-state-body">
+              Start je eerste opname. TranscriptStudio maakt daarna automatisch een
+              transcript en helpt je om er een duidelijke notule van te maken.
             </p>
+            <button onClick={() => handleQuickStart("microphone")} className="btn btn-accent">
+              Maak je eerste opname
+            </button>
           </div>
         ) : (
           <div className="flex-col gap-10">

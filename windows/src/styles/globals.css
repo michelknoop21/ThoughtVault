@@ -1742,6 +1742,21 @@
   color: var(--text-tertiary);
 }
 
+.empty-state-title {
+  font-size: var(--font-body);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.empty-state-body {
+  font-size: var(--font-footnote);
+  color: var(--text-secondary);
+  line-height: 1.5;
+  max-width: 38ch;
+  margin: 6px 0 16px;
+}
+
 /* ============================================================
    Skeleton Loading
    ============================================================ */

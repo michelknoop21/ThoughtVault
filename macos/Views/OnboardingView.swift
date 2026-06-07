@@ -18,6 +18,9 @@ import ScreenCaptureKit
 struct OnboardingView: View {
 
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding: Bool = false
+    /// Set when the user finishes onboarding via the first-recording CTA; ContentView
+    /// reads this once to open the recording screen so the first action is one tap away.
+    @AppStorage("pendingFirstRecording") private var pendingFirstRecording: Bool = false
     @Environment(CalendarService.self) private var calendarService
 
     @State private var currentStep: OnboardingStep = .welcome
@@ -587,10 +590,10 @@ struct OnboardingView: View {
             }
 
             VStack(spacing: TS.Spacing.sm) {
-                Text("Alles klaar!")
+                Text("Je bent klaar!")
                     .font(TS.Font.title2Bold)
                     .foregroundStyle(Color.labelPrimary)
-                Text("TranscriptStudio is geconfigureerd en klaar voor gebruik. Begin met je eerste opname.")
+                Text("Je bent klaar om je eerste gesprek vast te leggen. Start een korte testopname of neem direct je volgende meeting op.")
                     .font(TS.Font.callout)
                     .foregroundStyle(Color.labelSecondary)
                     .multilineTextAlignment(.center)
@@ -682,7 +685,8 @@ struct OnboardingView: View {
             Spacer()
 
             if currentStep == .klaar {
-                Button("Starten") {
+                Button("Maak je eerste opname") {
+                    pendingFirstRecording = true
                     hasCompletedOnboarding = true
                 }
                 .buttonStyle(PrimaryButtonStyle())

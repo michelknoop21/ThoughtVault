@@ -558,11 +558,45 @@ struct TranscriptsView: View {
         VStack(spacing: TS.Spacing.md) {
             Image(systemName: "doc.text.magnifyingglass")
                 .font(.system(size: 40))
-                .foregroundStyle(Color.labelTertiary)
-            Text(searchText.isEmpty ? "Geen transcripties" : "Geen resultaten")
-                .font(TS.Font.calloutSemibold)
-                .foregroundStyle(Color.labelSecondary)
-            if !searchText.isEmpty {
+                .foregroundStyle(searchText.isEmpty ? Color.brandPrimary : Color.labelTertiary)
+            if searchText.isEmpty {
+                Text("Nog geen transcripties")
+                    .font(TS.Font.calloutSemibold)
+                    .foregroundStyle(Color.labelPrimary)
+                Text("Zodra je een opname maakt, verschijnt hier de volledige transcriptie. Je kunt die later teruglezen, doorzoeken en gebruiken om je notule te controleren.")
+                    .font(TS.Font.footnote)
+                    .foregroundStyle(Color.labelSecondary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: 360)
+
+                Button {
+                    onStartRecording?()
+                } label: {
+                    HStack(spacing: TS.Spacing.xs) {
+                        Image(systemName: "mic.fill")
+                            .font(.system(size: 12, weight: .semibold))
+                        Text("Start opname")
+                            .font(TS.Font.footnoteSemibold)
+                    }
+                    .foregroundStyle(Color.brandPrimary)
+                    .padding(.horizontal, TS.Spacing.md)
+                    .padding(.vertical, TS.Spacing.sm)
+                    .background {
+                        Capsule(style: .continuous)
+                            .fill(Color.brandPrimary.opacity(0.10))
+                            .overlay {
+                                Capsule(style: .continuous)
+                                    .stroke(Color.brandPrimary.opacity(0.28), lineWidth: 1)
+                            }
+                    }
+                }
+                .buttonStyle(.plain)
+                .padding(.top, TS.Spacing.xs)
+            } else {
+                Text("Geen resultaten")
+                    .font(TS.Font.calloutSemibold)
+                    .foregroundStyle(Color.labelSecondary)
                 Text("Probeer een andere zoekterm")
                     .font(TS.Font.footnote)
                     .foregroundStyle(Color.labelTertiary)

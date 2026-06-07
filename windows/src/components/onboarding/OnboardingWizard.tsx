@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   MicRecord24Regular,
   Server24Regular,
@@ -23,6 +24,7 @@ export function OnboardingWizard() {
   const [step, setStep] = useState<Step>(0);
   const [serverUrl, setServerUrl] = useState("https://n8n.prezent.nl/tstudio/api");
   const settings = useSettingsStore();
+  const navigate = useNavigate();
 
   // Step 4 (Profiel) local state
   const [profileName, setProfileName] = useState("");
@@ -67,6 +69,8 @@ export function OnboardingWizard() {
       });
     }
     settings.setHasCompletedOnboarding(true);
+    // Land on the recording screen so the first action is one tap away.
+    navigate("/recording");
   }
 
   async function handleConnectCalendar() {
@@ -126,7 +130,7 @@ export function OnboardingWizard() {
                 />
               }
               title="Welkom bij Transcript Studio"
-              description="Neem vergaderingen op, genereer automatisch notulen en sla alles overzichtelijk op. Laten we uw setup in orde maken."
+              description="Neem vergaderingen op, genereer automatisch notulen en sla alles overzichtelijk op. Laten we je setup in orde maken."
             />
           )}
 
@@ -134,7 +138,7 @@ export function OnboardingWizard() {
             <StepContent
               icon={<StepIcon icon={<Server24Regular style={{ fontSize: 28 }} />} />}
               title="Server configuratie"
-              description="Voer het adres in van uw TranscriptStudio server."
+              description="Voer het adres in van je TranscriptStudio server."
             >
               <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                 <label style={{ fontSize: 13, fontWeight: 500, color: "var(--text-secondary)" }}>
@@ -167,7 +171,7 @@ export function OnboardingWizard() {
             <StepContent
               icon={<StepIcon icon={<MicRecord24Regular style={{ fontSize: 28 }} />} />}
               title="Microfoon toegang"
-              description="TranscriptStudio heeft toegang nodig tot uw microfoon voor het opnemen van vergaderingen."
+              description="TranscriptStudio heeft toegang nodig tot je microfoon voor het opnemen van vergaderingen."
             >
               <div
                 style={{
@@ -191,8 +195,8 @@ export function OnboardingWizard() {
               title="Agenda integratie"
               description={
                 settings.ms365_client_id
-                  ? "Verbind uw Microsoft 365 agenda om aankomende vergaderingen te zien. Dit is optioneel."
-                  : "Agenda-koppeling is nog niet geconfigureerd door de beheerder. U kunt dit later instellen via Instellingen."
+                  ? "Verbind je Microsoft 365 agenda om aankomende vergaderingen te zien. Dit is optioneel."
+                  : "Agenda-koppeling is nog niet geconfigureerd door de beheerder. Je kunt dit later instellen via Instellingen."
               }
             >
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -281,8 +285,8 @@ export function OnboardingWizard() {
                   <Checkmark24Regular style={{ fontSize: 32, color: "var(--fill-system-success)" }} />
                 </div>
               }
-              title="U bent klaar!"
-              description="TranscriptStudio is geconfigureerd en klaar voor gebruik. Start uw eerste opname."
+              title="Je bent klaar!"
+              description="Je bent klaar om je eerste gesprek vast te leggen. Start een korte testopname of neem direct je volgende meeting op."
             />
           )}
         </div>
@@ -317,7 +321,7 @@ export function OnboardingWizard() {
               className="btn btn-accent"
               style={{ padding: "8px 20px", gap: 6 }}
             >
-              Beginnen
+              Maak je eerste opname
               <ArrowRight24Regular style={{ fontSize: 16 }} />
             </button>
           )}

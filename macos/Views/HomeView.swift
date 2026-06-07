@@ -424,20 +424,46 @@ struct HomeView: View {
                         .fill(Color.statusError.opacity(0.06))
                 }
             } else if recentTranscripts.isEmpty && !isLoadingRecent {
-                HStack(spacing: TS.Spacing.sm) {
-                    Image(systemName: "doc.text.magnifyingglass")
-                        .font(.system(size: 20))
-                        .foregroundStyle(Color.labelTertiary)
-                    VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: TS.Spacing.sm) {
+                    HStack(spacing: TS.Spacing.sm) {
+                        Image(systemName: "doc.text.magnifyingglass")
+                            .font(.system(size: 20))
+                            .foregroundStyle(Color.brandPrimary)
                         Text("Nog geen notulen")
                             .font(TS.Font.footnoteSemibold)
-                            .foregroundStyle(Color.labelSecondary)
-                        Text("Start een opname om te beginnen")
-                            .font(TS.Font.caption)
-                            .foregroundStyle(Color.labelTertiary)
+                            .foregroundStyle(Color.labelPrimary)
+                        Spacer()
                     }
-                    Spacer()
+                    Text("Start je eerste opname en TranscriptStudio zet je gesprek automatisch om in een heldere notule met samenvatting, actiepunten en besluiten.")
+                        .font(TS.Font.caption)
+                        .foregroundStyle(Color.labelSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Button {
+                        onStartRecording?(.microphone)
+                    } label: {
+                        HStack(spacing: TS.Spacing.xs) {
+                            Image(systemName: "mic.fill")
+                                .font(.system(size: 12, weight: .semibold))
+                            Text("Maak je eerste opname")
+                                .font(TS.Font.footnoteSemibold)
+                        }
+                        .foregroundStyle(Color.brandPrimary)
+                        .padding(.horizontal, TS.Spacing.md)
+                        .padding(.vertical, TS.Spacing.sm)
+                        .background {
+                            Capsule(style: .continuous)
+                                .fill(Color.brandPrimary.opacity(0.10))
+                                .overlay {
+                                    Capsule(style: .continuous)
+                                        .stroke(Color.brandPrimary.opacity(0.28), lineWidth: 1)
+                                }
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.top, TS.Spacing.xs)
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(TS.Spacing.md)
                 .modernCard()
             } else {

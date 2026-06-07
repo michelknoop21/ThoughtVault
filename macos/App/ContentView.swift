@@ -73,6 +73,8 @@ struct ContentView: View {
     @Environment(CalendarService.self) private var calendarService
 
     @State private var selectedTab: AppTab = .home
+    /// Set by OnboardingView's first-recording CTA; consumed once to open the recording screen.
+    @AppStorage("pendingFirstRecording") private var pendingFirstRecording = false
     @State private var columnVisibility: NavigationSplitViewVisibility = .automatic
     @State private var sidebarCollapsed = false
     @State private var showForceUpdateAlert = false
@@ -133,6 +135,12 @@ struct ContentView: View {
     private var authenticatedView: some View {
 #if os(macOS)
         macOSView
+            .onAppear {
+                if pendingFirstRecording {
+                    pendingFirstRecording = false
+                    selectedTab = .record
+                }
+            }
             .task { await fetchCalendarIfGranted() }
             .overlay(alignment: .bottomTrailing) {
                 if let meeting = callAlertMeeting {
@@ -522,7 +530,10 @@ struct ContentView: View {
 
         case .transcripts:
             NavigationStack(path: $transcriptsNavPath) {
-                TranscriptsView(transcriptsNavPath: $transcriptsNavPath)
+                TranscriptsView(
+                    transcriptsNavPath: $transcriptsNavPath,
+                    onStartRecording: { selectedTab = .record }
+                )
             }
 #if os(macOS)
             .toolbar(removing: .sidebarToggle)

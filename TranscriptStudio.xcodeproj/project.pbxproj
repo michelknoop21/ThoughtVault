@@ -68,6 +68,9 @@
 		AA000069 /* AppMigrationPlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000069 /* AppMigrationPlan.swift */; };
 		AA000070 /* ProfileSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000070 /* ProfileSettingsView.swift */; };
 		AA000071 /* PersonDirectoryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000071 /* PersonDirectoryService.swift */; };
+		AA000072 /* PeopleDirectoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000072 /* PeopleDirectoryView.swift */; };
+		AA000073 /* PersonEditView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000073 /* PersonEditView.swift */; };
+		AA000074 /* SeedReviewSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000074 /* SeedReviewSheet.swift */; };
 		AB000002 /* MigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000002 /* MigrationTests.swift */; };
 		AB000003 /* PersonProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000003 /* PersonProfileTests.swift */; };
 		AB000004 /* PersonDirectoryServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000004 /* PersonDirectoryServiceTests.swift */; };
@@ -157,6 +160,9 @@
 		FA000069 /* AppMigrationPlan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppMigrationPlan.swift; sourceTree = "<group>"; };
 		FA000070 /* ProfileSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileSettingsView.swift; sourceTree = "<group>"; };
 		FA000071 /* PersonDirectoryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonDirectoryService.swift; sourceTree = "<group>"; };
+		FA000072 /* PeopleDirectoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeopleDirectoryView.swift; sourceTree = "<group>"; };
+		FA000073 /* PersonEditView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonEditView.swift; sourceTree = "<group>"; };
+		FA000074 /* SeedReviewSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeedReviewSheet.swift; sourceTree = "<group>"; };
 		FB000002 /* MigrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MigrationTests.swift; sourceTree = "<group>"; };
 		FB000003 /* PersonProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonProfileTests.swift; sourceTree = "<group>"; };
 		FB000004 /* PersonDirectoryServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonDirectoryServiceTests.swift; sourceTree = "<group>"; };
@@ -305,6 +311,9 @@
 				FA000030 /* RecordingView.swift */,
 				FA000031 /* SettingsView.swift */,
 				FA000070 /* ProfileSettingsView.swift */,
+				FA000072 /* PeopleDirectoryView.swift */,
+				FA000073 /* PersonEditView.swift */,
+				FA000074 /* SeedReviewSheet.swift */,
 				FA000032 /* TranscriptsView.swift */,
 				FA000056 /* TasksView.swift */,
 				FA000033 /* OnboardingViewiOSStub.swift */,
@@ -482,6 +491,9 @@
 				AA000068 /* PersonProfile.swift in Sources */,
 				AA000069 /* AppMigrationPlan.swift in Sources */,
 				AA000070 /* ProfileSettingsView.swift in Sources */,
+				AA000072 /* PeopleDirectoryView.swift in Sources */,
+				AA000073 /* PersonEditView.swift in Sources */,
+				AA000074 /* SeedReviewSheet.swift in Sources */,
 				AA000066 /* ProfileTemplates.swift in Sources */,
 				AA000062 /* LocalTranscriptStore.swift in Sources */,
 				AA000071 /* PersonDirectoryService.swift in Sources */,
@@ -699,7 +711,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 214;
+				CURRENT_PROJECT_VERSION = 215;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = XL9KN38ATX;
 				ENABLE_APP_SANDBOX = YES;
@@ -717,7 +729,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.0.214;
+				MARKETING_VERSION = 1.0.215;
 				PRODUCT_BUNDLE_IDENTIFIER = nl.prezent.TranscriptStudio;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "macosx iphoneos iphonesimulator";
@@ -740,7 +752,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 214;
+				CURRENT_PROJECT_VERSION = 215;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = XL9KN38ATX;
 				ENABLE_APP_SANDBOX = YES;
@@ -758,7 +770,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.0.214;
+				MARKETING_VERSION = 1.0.215;
 				PRODUCT_BUNDLE_IDENTIFIER = nl.prezent.TranscriptStudio;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "macosx iphoneos iphonesimulator";
@@ -775,12 +787,12 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 214;
+				CURRENT_PROJECT_VERSION = 215;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.0.214;
+				MARKETING_VERSION = 1.0.215;
 				PRODUCT_BUNDLE_IDENTIFIER = nl.prezent.TranscriptStudioTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "macosx iphoneos iphonesimulator";
@@ -795,12 +807,12 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 214;
+				CURRENT_PROJECT_VERSION = 215;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.0.214;
+				MARKETING_VERSION = 1.0.215;
 				PRODUCT_BUNDLE_IDENTIFIER = nl.prezent.TranscriptStudioTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "macosx iphoneos iphonesimulator";

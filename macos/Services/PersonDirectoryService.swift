@@ -47,17 +47,17 @@ final class PersonDirectoryService {
     // MARK: - Add
 
     /// Inserts a new directory person and persists immediately.
-    func add(_ person: PersonProfile) {
+    func add(_ person: PersonProfile) throws {
         context.insert(person)
-        try? context.save()
+        try context.save()
     }
 
     // MARK: - Update
 
     /// Updates a directory person by ID. Bumps updatedAt.
-    func update(_ person: PersonProfile) {
+    func update(_ person: PersonProfile) throws {
         person.updatedAt = Date()
-        try? context.save()
+        try context.save()
     }
 
     /// Convenience: update only the name field by ID.

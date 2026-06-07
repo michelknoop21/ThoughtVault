@@ -199,29 +199,34 @@ struct PersonEditView: View {
 
         let service = PersonDirectoryService()
 
-        if let existing = person {
-            // Edit mode — mutate and update
-            existing.name = naam.trimmingCharacters(in: .whitespacesAndNewlines)
-            existing.role = rol.trimmingCharacters(in: .whitespacesAndNewlines)
-            existing.organization = organisatie.trimmingCharacters(in: .whitespacesAndNewlines)
-            existing.aliases = splitAndTrim(aliassen)
-            existing.expertiseTags = splitAndTrim(expertise)
-            existing.isInternal = internalStatus.boolValue
-            service.update(existing)
-            finishSave(person: existing)
-        } else {
-            // New person mode
-            let newPerson = PersonProfile(
-                name: naam.trimmingCharacters(in: .whitespacesAndNewlines),
-                role: rol.trimmingCharacters(in: .whitespacesAndNewlines),
-                organization: organisatie.trimmingCharacters(in: .whitespacesAndNewlines),
-                aliases: splitAndTrim(aliassen),
-                expertiseTags: splitAndTrim(expertise),
-                isSelf: false,
-                isInternal: internalStatus.boolValue
-            )
-            service.add(newPerson)
-            finishSave(person: newPerson)
+        do {
+            if let existing = person {
+                // Edit mode — mutate and update
+                existing.name = naam.trimmingCharacters(in: .whitespacesAndNewlines)
+                existing.role = rol.trimmingCharacters(in: .whitespacesAndNewlines)
+                existing.organization = organisatie.trimmingCharacters(in: .whitespacesAndNewlines)
+                existing.aliases = splitAndTrim(aliassen)
+                existing.expertiseTags = splitAndTrim(expertise)
+                existing.isInternal = internalStatus.boolValue
+                try service.update(existing)
+                finishSave(person: existing)
+            } else {
+                // New person mode
+                let newPerson = PersonProfile(
+                    name: naam.trimmingCharacters(in: .whitespacesAndNewlines),
+                    role: rol.trimmingCharacters(in: .whitespacesAndNewlines),
+                    organization: organisatie.trimmingCharacters(in: .whitespacesAndNewlines),
+                    aliases: splitAndTrim(aliassen),
+                    expertiseTags: splitAndTrim(expertise),
+                    isSelf: false,
+                    isInternal: internalStatus.boolValue
+                )
+                try service.add(newPerson)
+                finishSave(person: newPerson)
+            }
+        } catch {
+            isSaving = false
+            saveError = "Opslaan mislukt: \(error.localizedDescription)"
         }
     }
 

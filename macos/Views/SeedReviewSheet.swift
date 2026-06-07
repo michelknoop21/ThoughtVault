@@ -39,6 +39,7 @@ struct SeedReviewSheet: View {
 
     @State private var rows: [SeedCandidate] = []
     @State private var isSaving: Bool = false
+    @State private var saveError: String? = nil
 
     private var checkedCount: Int { rows.filter(\.isChecked).count }
 
@@ -99,6 +100,13 @@ struct SeedReviewSheet: View {
             .listStyle(.plain)
             .frame(minHeight: 120)
 
+            // Save error feedback
+            if let error = saveError {
+                Text(error)
+                    .font(TS.Font.caption)
+                    .foregroundStyle(Color.statusError)
+            }
+
             // Action buttons
             HStack(spacing: TS.Spacing.sm) {
                 Button("Overslaan") {
@@ -139,10 +147,17 @@ struct SeedReviewSheet: View {
     private func saveSelected() {
         isSaving = true
         let service = PersonDirectoryService()
-        for row in rows where row.isChecked {
-            // seedPerson builds a PersonProfile with isInternal = nil (D-09)
-            let candidate = service.seedPerson(name: row.displayName, email: row.email)
-            service.add(candidate)
+        do {
+            for row in rows where row.isChecked {
+                // seedPerson builds a PersonProfile with isInternal = nil (D-09)
+                let candidate = service.seedPerson(name: row.displayName, email: row.email)
+                try service.add(candidate)
+            }
+        } catch {
+            isSaving = false
+            // Surface save error — sheet stays open so the user can retry or dismiss
+            saveError = "Opslaan mislukt: \(error.localizedDescription)"
+            return
         }
         isSaving = false
         onDismiss()

@@ -27,18 +27,21 @@ export function SeedReviewSheet({ candidates, onClose }: SeedReviewSheetProps) {
     );
   }
 
+  // Derive a display name from an email: split on separators and capitalize each word (matches macOS)
+  function deriveDisplayName(email: string): string {
+    const emailPrefix = email.split("@")[0] ?? email;
+    return emailPrefix
+      .split(/[._-]/)
+      .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
+      .join(" ");
+  }
+
   function handleConfirm() {
     // Add only checked candidates as new directory entries (isInternal:null = onbekend, D-09)
     for (const row of rows) {
       if (!row.checked) continue;
-      const emailPrefix = row.email.split("@")[0] ?? row.email;
-      // Derive a display name: split on separators and capitalize each word (matches macOS)
-      const displayName = emailPrefix
-        .split(/[._-]/)
-        .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
-        .join(" ");
       const person = createDefaultPerson({
-        name: displayName,
+        name: deriveDisplayName(row.email),
         emails: [row.email],
       });
       addPerson(person);
@@ -115,9 +118,7 @@ export function SeedReviewSheet({ candidates, onClose }: SeedReviewSheetProps) {
         {/* Scrollable person list */}
         <div style={{ overflowY: "auto", flex: 1, padding: "0 20px" }}>
           {rows.map((row, index) => {
-            const emailPrefix = row.email.split("@")[0] ?? row.email;
-            const displayName =
-              emailPrefix.charAt(0).toUpperCase() + emailPrefix.slice(1);
+            const displayName = deriveDisplayName(row.email);
 
             return (
               <label

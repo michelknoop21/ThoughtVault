@@ -20,12 +20,14 @@ Build-commando (signed, vast pad): `xcodebuild -project TranscriptStudio.xcodepr
 - [SKIP] Gedeelde `SegmentedTabBar`: 4 visueel verschillende patronen = over-abstractie (Karpathy). Admin-tabbar wordt in Wave 3 native (Picker).
 - [DEFER] Markdown-parity in NotuleResult: vergt gedeeld `NotuleExporter`-bestand → nieuw .swift = pbxproj-edit, doen via Xcode (Wave 7).
 
-## Wave 3 — Admin native rebuild  ⏳ TODO (groot, dedicated pass — AdminView 1983 regels, hoog regressie-risico)
-- [ ] Hand-rolled log-table (AdminView ~995-1162) → SwiftUI `Table` + `TableColumn` (sorteren/selectie/VoiceOver)
-- [ ] Custom tab-bar (matchedGeometryEffect) → `Picker(.segmented)`/SegmentedTabBar uit Wave 2
-- [ ] Stat-card grid de-dashboard-en (hero-metrics weg)
-- [ ] Feedback status-changes: errors tonen (geen `try?`-swallow), undo overwegen
-- [ ] OAuth secrets/YouTube cookies → SecureField + Keychain
+## Wave 3 — Admin native rebuild  ✅ DONE (commit 8c40511)
+- [x] Main tab-bar + log sub-tab → native segmented `Picker` (keyboard + VoiceOver)
+- [x] Stat-card number: off-scale .system(36) → `TS.Font.titleBold`
+- [x] Log table header: uppercase weg → sentence case
+- [x] Feedback archive/restore: errors tonen (was `try?`-swallow). Primaire status-knop deed dit al.
+- [x] `activityLabel`: onbekende action_types humaniseren (geen snake_case-lek)
+- [SKIP] log-table → SwiftUI `Table`: rijen klappen **in-place** uit (stacktraces/payloads); Table zou die nuttige detail-view slopen. Hand-rolled behouden.
+- [SKIP] SecureField/Keychain: OAuth Client IDs zijn publiek (geen secrets); YouTube-cookies zijn multi-line + server-opgeslagen → SecureField/Keychain n.v.t.
 
 ## Wave 4 — Slop-eilanden  ✅ DONE (commits b209bc1, 78404cf)
 - [x] Onboarding: 7 animerende gradients → 1 rustige brand-tint; wizard UIT TabView op macOS (switch op currentStep)

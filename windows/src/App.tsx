@@ -16,6 +16,7 @@ import { AccountPage } from "./pages/AccountPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { AdminPage } from "./pages/AdminPage";
 import { TasksPage } from "./pages/TasksPage";
+import { PeoplePage } from "./pages/PeoplePage";
 import FeedbackWidget from "./components/FeedbackWidget";
 import { ProcessingBar } from "./components/ProcessingBar";
 import { OnboardingWizard } from "./components/onboarding/OnboardingWizard";
@@ -226,6 +227,7 @@ function KeyboardShortcuts() {
       if (ctrl && e.key === "3") { e.preventDefault(); navigate("/transcripts"); }
       if (ctrl && e.key === "4") { e.preventDefault(); navigate("/settings"); }
       if (ctrl && e.key === "5") { e.preventDefault(); navigate("/profiles"); }
+      if (ctrl && e.key === "6") { e.preventDefault(); navigate("/people"); }
 
       // Ctrl+N = New recording
       if (ctrl && e.key === "n") { e.preventDefault(); navigate("/recording"); }
@@ -341,6 +343,7 @@ function ProtectedRoutes() {
         <Route path="/tasks"       element={<TasksPage />} />
         <Route path="/transcripts" element={<TranscriptsPage />} />
         <Route path="/profiles"    element={<ProfilesPage />} />
+        <Route path="/people"      element={<PeoplePage />} />
         <Route path="/account"     element={<AccountPage />} />
         <Route path="/settings"    element={<SettingsPage />} />
         <Route path="/admin"       element={<AdminPage />} />

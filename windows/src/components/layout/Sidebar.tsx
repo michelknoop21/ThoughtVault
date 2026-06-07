@@ -9,6 +9,7 @@ import {
   Person24Regular,
   NotepadPerson24Regular,
   PersonAccounts24Regular,
+  People24Regular,
   SignOut24Regular,
 } from "@fluentui/react-icons";
 import { useAuthStore } from "../../stores/authStore";
@@ -68,6 +69,7 @@ export function Sidebar() {
       <SidebarItem to="/tasks" icon={<TaskListLtr24Regular />} label="Taken" />
       <SidebarItem to="/transcripts" icon={<DocumentText24Regular />} label="Notulen" shortcut="Ctrl+3" />
       <SidebarItem to="/profiles" icon={<NotepadPerson24Regular />} label="Profielen" shortcut="Ctrl+5" />
+      <SidebarItem to="/people" icon={<People24Regular />} label="Mensen" shortcut="Ctrl+6" />
 
       {/* Spacer pushes bottom items down */}
       <div className="flex-1" />

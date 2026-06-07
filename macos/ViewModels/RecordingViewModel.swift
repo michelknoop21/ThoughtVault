@@ -33,6 +33,16 @@ final class RecordingViewModel {
     var savedRecordings: [SavedRecording] = []
     var audioMixFallbackOccurred: Bool = false
 
+    // MARK: - Agenda Seed
+
+    /// The calendar event linked to the current (or most recent) recording.
+    /// Set at recording start sites in ContentView; cleared after attendees are captured.
+    var activeMeeting: CalendarEvent? = nil
+
+    /// Attendee emails captured from activeMeeting when stopAndUpload completes.
+    /// The View layer observes this to trigger SeedReviewSheet after recordingState settles.
+    var pendingSeedAttendees: [String]? = nil
+
     // YouTube transcription
     var isYouTubeEnabled: Bool = false
     var youtubeURL: String = ""
@@ -371,6 +381,12 @@ final class RecordingViewModel {
 
         os_log("[RecordingVM] stopAndUpload: state=%{public}@, profile=%{public}@", log: log, type: .info, "\(recordingState)", selectedProfile?.name ?? "nil")
 
+        // Capture attendees before clearing activeMeeting (D-07 / T-02-06).
+        // Signal is set after recordingState settles to .idle so the View layer
+        // presents the sheet only when the UI is ready (Pitfall 3 avoidance).
+        let capturedAttendees = activeMeeting?.attendees ?? []
+        activeMeeting = nil
+
         await MainActor.run { recordingState = .stopping }
         await stopLiveTranscription()
 
@@ -431,6 +447,14 @@ final class RecordingViewModel {
             return
         }
 
+        // Signal the View layer to present SeedReviewSheet after recordingState settles.
+        // capturedAttendees is non-empty only when the recording was linked to a meeting.
+        if !capturedAttendees.isEmpty {
+            await MainActor.run {
+                pendingSeedAttendees = capturedAttendees
+            }
+        }
+
         // Fully local mode: transcribe + generate notulen on-device, no server needed.
         if isLocalMode {
             os_log("[RecordingVM] stopAndUpload: path=local", log: log, type: .info)
@@ -486,6 +510,7 @@ final class RecordingViewModel {
         await MainActor.run {
             recordingState = .idle
             uploadProgress = 0
+            activeMeeting = nil
         }
     }
 

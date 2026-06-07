@@ -10,6 +10,7 @@ enum AppTab: String, CaseIterable, Identifiable {
     case record
     case tasks
     case transcripts
+    case people
     case settings
     case admin
 
@@ -21,6 +22,7 @@ enum AppTab: String, CaseIterable, Identifiable {
         case .record:      return "Opnemen"
         case .tasks:       return "Taken"
         case .transcripts: return "Notulen"
+        case .people:      return "Mensen"
         case .settings:    return "Instellingen"
         case .admin:       return "Admin"
         }
@@ -32,6 +34,7 @@ enum AppTab: String, CaseIterable, Identifiable {
         case .record:      return "mic"
         case .tasks:       return "list.bullet.clipboard"
         case .transcripts: return "doc.text"
+        case .people:      return "person.2"
         case .settings:    return "gear"
         case .admin:       return "person.badge.key"
         }
@@ -43,6 +46,7 @@ enum AppTab: String, CaseIterable, Identifiable {
         case .record:      return "mic.fill"
         case .tasks:       return "list.bullet.clipboard.fill"
         case .transcripts: return "doc.text.fill"
+        case .people:      return "person.2.fill"
         case .settings:    return "gear"
         case .admin:       return "person.badge.key.fill"
         }
@@ -54,6 +58,7 @@ enum AppTab: String, CaseIterable, Identifiable {
         case .record:      return "2"
         case .tasks:       return "3"
         case .transcripts: return "4"
+        case .people:      return "7"
         case .settings:    return "5"
         case .admin:       return "6"
         }
@@ -74,6 +79,8 @@ struct ContentView: View {
     @State private var callAlertMeeting: CalendarEvent? = nil
     @State private var callAlertDismissed: Set<String> = []
     @State private var transcriptsNavPath = NavigationPath()
+    @State private var seedCandidates: [String] = []
+    @State private var showSeedReviewSheet = false
 
     var body: some View {
         Group {
@@ -132,6 +139,7 @@ struct ContentView: View {
                     CallAlertView(
                         meeting: meeting,
                         onStartRecording: {
+                            recordingVM.activeMeeting = meeting
                             callAlertMeeting = nil
                             let isVideoCall = meeting.id.hasPrefix("videocall-")
                             recordingVM.selectedMode = (meeting.meetingURL != nil || isVideoCall) ? .combined : .microphone
@@ -163,6 +171,9 @@ struct ContentView: View {
             }
             .onReceive(NotificationCenter.default.publisher(for: .meetingRecordRequested)) { _ in
                 // Start recording directly when user taps OS notification action
+                if let meeting = callAlertMeeting {
+                    recordingVM.activeMeeting = meeting
+                }
                 recordingVM.selectedMode = .combined
                 Task { await recordingVM.startRecording() }
                 callAlertMeeting = nil
@@ -235,6 +246,25 @@ struct ContentView: View {
         // Hidden keyboard shortcuts
         .overlay(alignment: .topLeading) {
             keyboardShortcutsOverlay
+        }
+        // Seed review sheet: presented after recording stops when new attendees are found
+        .onChange(of: recordingVM.pendingSeedAttendees) { _, newValue in
+            guard let attendees = newValue, !attendees.isEmpty else { return }
+            let selfEmail = MicrosoftGraphService.shared.accountEmail
+                ?? CalendarService.shared.microsoftAccountEmail
+                ?? LocalTranscriptStore.shared.fetchSelfProfile()?.emails.first
+            let service = PersonDirectoryService()
+            let candidates = service.newSeedCandidates(from: attendees, selfEmail: selfEmail)
+            recordingVM.pendingSeedAttendees = nil
+            guard !candidates.isEmpty else { return }
+            seedCandidates = candidates
+            showSeedReviewSheet = true
+        }
+        .sheet(isPresented: $showSeedReviewSheet) {
+            SeedReviewSheet(candidates: seedCandidates) {
+                showSeedReviewSheet = false
+                seedCandidates = []
+            }
         }
     }
 
@@ -502,6 +532,14 @@ struct ContentView: View {
         case .settings:
             NavigationStack {
                 SettingsView()
+            }
+#if os(macOS)
+            .toolbar(removing: .sidebarToggle)
+#endif
+
+        case .people:
+            NavigationStack {
+                PeopleDirectoryView()
             }
 #if os(macOS)
             .toolbar(removing: .sidebarToggle)

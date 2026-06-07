@@ -32,23 +32,77 @@ final class LocalTranscriptStore {
         let shouldMigrate = !FileManager.default.fileExists(atPath: newURL.path)
             && FileManager.default.fileExists(atPath: oldDefaultURL.path)
 
-        do {
-            let config = ModelConfiguration(url: newURL)
-            container = try ModelContainer(
-                for: TranscriptRecord.self, PersonProfile.self,
-                migrationPlan: AppMigrationPlan.self,
-                configurations: config
-            )
-        } catch {
-            // A failed local store is unrecoverable; fall back to an in-memory store
-            // so the app still launches rather than crashing.
-            logger.error("Failed to create persistent store, using in-memory: \(error.localizedDescription)")
-            let config = ModelConfiguration(isStoredInMemoryOnly: true)
-            container = try! ModelContainer(for: TranscriptRecord.self, PersonProfile.self, configurations: config)
-        }
+        container = Self.makeContainer(at: newURL)
 
         if shouldMigrate {
             migrateFromDefaultStore(at: oldDefaultURL)
+        }
+    }
+
+    /// Opens the on-disk store with implicit lightweight migration, guarded by a
+    /// crash-watchdog.
+    ///
+    /// SwiftData infers lightweight migration for additive/relaxing schema changes
+    /// (new entity, new attribute, `Bool` → `Bool?`), so no explicit
+    /// `SchemaMigrationPlan` is used. A versioned plan whose stages reuse the same
+    /// live model types produces "Duplicate version checksums detected" — an
+    /// uncatchable CoreData `NSException` that aborts the process during migration.
+    ///
+    /// Because that exception cannot be caught in Swift, a watchdog flag is set in
+    /// `UserDefaults` immediately before the open and cleared only on success. If a
+    /// previous launch aborted inside CoreData migration, the flag is still set on the
+    /// next launch, and we move the incompatible store aside so the app starts cleanly
+    /// instead of crash-looping. The set-aside store is preserved (not deleted) for
+    /// manual recovery.
+    private static func makeContainer(at url: URL) -> ModelContainer {
+        let defaults = UserDefaults.standard
+        let watchdogKey = "localStoreOpenInProgress"
+
+        if defaults.bool(forKey: watchdogKey) {
+            logger.error("Previous store open aborted during migration; moving incompatible store aside.")
+            moveStoreAside(at: url)
+            defaults.set(false, forKey: watchdogKey)
+        }
+
+        func openPersistent() -> ModelContainer? {
+            defaults.set(true, forKey: watchdogKey)
+            do {
+                let config = ModelConfiguration(url: url)
+                let created = try ModelContainer(
+                    for: TranscriptRecord.self, PersonProfile.self,
+                    configurations: config
+                )
+                defaults.set(false, forKey: watchdogKey)
+                return created
+            } catch {
+                defaults.set(false, forKey: watchdogKey)
+                logger.error("Persistent store open failed: \(error.localizedDescription)")
+                return nil
+            }
+        }
+
+        if let created = openPersistent() { return created }
+
+        // Swift-level failure: set the bad store aside and retry once on a clean store.
+        moveStoreAside(at: url)
+        if let created = openPersistent() { return created }
+
+        // Last resort so the app still launches; local history is unavailable this session.
+        logger.error("Falling back to in-memory store.")
+        let memConfig = ModelConfiguration(isStoredInMemoryOnly: true)
+        return try! ModelContainer(for: TranscriptRecord.self, PersonProfile.self, configurations: memConfig)
+    }
+
+    /// Renames the store (and its `-wal`/`-shm` sidecars) to a timestamped
+    /// "-incompatible-…" name so a fresh store can be created without destroying data.
+    private static func moveStoreAside(at url: URL) {
+        let fm = FileManager.default
+        let stamp = Int(Date().timeIntervalSince1970)
+        for ext in ["", "-wal", "-shm"] {
+            let src = URL(fileURLWithPath: url.path + ext)
+            guard fm.fileExists(atPath: src.path) else { continue }
+            let dest = URL(fileURLWithPath: url.path + ext + "-incompatible-\(stamp)")
+            try? fm.moveItem(at: src, to: dest)
         }
     }
 

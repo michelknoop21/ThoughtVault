@@ -30,9 +30,13 @@ struct TranscriptsView: View {
     // MARK: Dependencies
 
     @Environment(RecordingViewModel.self) var recordingVM
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// Navigation path — controlled by ContentView to dismiss on tab change.
     @Binding var transcriptsNavPath: NavigationPath
+
+    /// Called when the empty-library CTA is tapped. Parent navigates to the recording screen.
+    var onStartRecording: (() -> Void)?
 
     // MARK: State — list
 
@@ -706,9 +710,9 @@ struct TranscriptsView: View {
                         Task { await loadTranscripts() }
                     } label: {
                         Image(systemName: "arrow.clockwise")
-                            .rotationEffect(.degrees(isLoading ? 360 : 0))
+                            .rotationEffect(.degrees(isLoading && !reduceMotion ? 360 : 0))
                             .animation(
-                                isLoading ? .linear(duration: 1).repeatForever(autoreverses: false) : .default,
+                                (isLoading && !reduceMotion) ? .linear(duration: 1).repeatForever(autoreverses: false) : .default,
                                 value: isLoading
                             )
                     }

@@ -216,7 +216,7 @@ struct RecordingView: View {
         }
         .background {
             RoundedRectangle(cornerRadius: TS.Radius.lg, style: .continuous)
-                .fill(Color.surfacePrimary)
+                .fill(.ultraThinMaterial)
                 .shadow(color: .black.opacity(0.06), radius: 12, y: 4)
         }
         .overlay {
@@ -402,7 +402,7 @@ struct RecordingView: View {
         }
         .background {
             RoundedRectangle(cornerRadius: TS.Radius.lg, style: .continuous)
-                .fill(Color.surfacePrimary)
+                .fill(.ultraThinMaterial)
                 .shadow(color: .black.opacity(0.06), radius: 12, y: 4)
         }
         .overlay {
@@ -969,7 +969,7 @@ struct RecordingView: View {
         .padding(TS.Spacing.md)
         .background {
             RoundedRectangle(cornerRadius: TS.Radius.md, style: .continuous)
-                .fill(Color.surfacePrimary)
+                .fill(.ultraThinMaterial)
         }
         .overlay {
             RoundedRectangle(cornerRadius: TS.Radius.md, style: .continuous)
@@ -1019,7 +1019,7 @@ struct RecordingView: View {
         .padding(TS.Spacing.md)
         .background {
             RoundedRectangle(cornerRadius: TS.Radius.md, style: .continuous)
-                .fill(Color.surfacePrimary)
+                .fill(.ultraThinMaterial)
         }
         .overlay {
             RoundedRectangle(cornerRadius: TS.Radius.md, style: .continuous)
@@ -1074,7 +1074,7 @@ struct RecordingView: View {
         .padding(TS.Spacing.md)
         .background {
             RoundedRectangle(cornerRadius: TS.Radius.md, style: .continuous)
-                .fill(Color.surfacePrimary)
+                .fill(.ultraThinMaterial)
                 .shadow(color: .black.opacity(0.05), radius: 8, y: 2)
         }
         .overlay {

@@ -561,25 +561,30 @@ struct YingaFooter: View {
 }
 
 /// Animated pulsing dot used as a recording indicator.
+/// Honours Reduce Motion: when enabled the expanding ring is dropped and a
+/// static solid dot remains as the recording indicator (WCAG 2.3.3).
 struct PulsingRecordingDot: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isPulsing = false
     var size: CGFloat = 10
 
     var body: some View {
         ZStack {
-            Circle()
-                .fill(Color.statusError.opacity(0.3))
-                .frame(width: size * 2.2, height: size * 2.2)
-                .scaleEffect(isPulsing ? 1.4 : 1.0)
-                .opacity(isPulsing ? 0.0 : 0.6)
-                .animation(
-                    .easeInOut(duration: 1.2).repeatForever(autoreverses: false),
-                    value: isPulsing
-                )
+            if !reduceMotion {
+                Circle()
+                    .fill(Color.statusError.opacity(0.3))
+                    .frame(width: size * 2.2, height: size * 2.2)
+                    .scaleEffect(isPulsing ? 1.4 : 1.0)
+                    .opacity(isPulsing ? 0.0 : 0.6)
+                    .animation(
+                        .easeInOut(duration: 1.2).repeatForever(autoreverses: false),
+                        value: isPulsing
+                    )
+            }
             Circle()
                 .fill(Color.statusError)
                 .frame(width: size, height: size)
         }
-        .onAppear { isPulsing = true }
+        .onAppear { if !reduceMotion { isPulsing = true } }
     }
 }

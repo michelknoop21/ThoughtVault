@@ -19,12 +19,14 @@ struct NotuleResultView: View {
     let onDismiss: () -> Void
 
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @State private var selectedTab: ResultTab = .notule
     @State private var showExportMenu: Bool = false
     @State private var exportError: String? = nil
     @State private var showAddTag: Bool = false
     @State private var newTagText: String = ""
+    @State private var didCelebrate = false
 
     enum ResultTab: String, CaseIterable {
         case notule = "Notulen"
@@ -63,12 +65,20 @@ struct NotuleResultView: View {
                 .overlay(alignment: .top) { Divider() }
             #endif
         }
-        .background(Color.surfacePrimary)
+        .background(Color.surfaceSecondary)
         .onAppear {
             let hasNotule = !(task.notuleHtml ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             let hasRaw = !(task.rawTranscription ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             if !hasNotule && hasRaw {
                 selectedTab = .transcriptie
+            }
+            // Brief one-shot completion flourish on the title (peak-end moment).
+            if reduceMotion {
+                didCelebrate = true
+            } else {
+                withAnimation(.spring(response: 0.5, dampingFraction: 0.6).delay(0.15)) {
+                    didCelebrate = true
+                }
             }
         }
     }
@@ -86,15 +96,24 @@ struct NotuleResultView: View {
                         Text("Terug")
                     }
                     .font(TS.Font.bodyMedium)
-                    .foregroundStyle(Color.brandPrimary)
+                    .foregroundStyle(Color.brandSecondary)
                 }
                 .buttonStyle(.plain)
 
                 Spacer()
 
-                Text(task.status == .completed ? "Notulen klaar" : "Resultaat")
-                    .font(TS.Font.headlineBold)
-                    .foregroundStyle(Color.labelPrimary)
+                HStack(spacing: TS.Spacing.xs) {
+                    if task.status == .completed {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(TS.Font.headline)
+                            .foregroundStyle(Color.statusSuccess)
+                            .scaleEffect(didCelebrate ? 1 : 0.4)
+                            .opacity(didCelebrate ? 1 : 0)
+                    }
+                    Text(task.status == .completed ? "Notulen klaar" : "Resultaat")
+                        .font(TS.Font.headlineBold)
+                        .foregroundStyle(Color.labelPrimary)
+                }
 
                 Spacer()
 
@@ -107,12 +126,12 @@ struct NotuleResultView: View {
                             Text("Tag")
                         }
                         .font(TS.Font.footnoteSemibold)
-                        .foregroundStyle(Color.brandSecondary)
+                        .foregroundStyle(Color.brandPrimary)
                         .padding(.horizontal, TS.Spacing.sm)
                         .padding(.vertical, TS.Spacing.xs)
                         .background {
                             Capsule()
-                                .fill(Color.accentBgSecondary)
+                                .fill(Color.accentBgPrimary)
                         }
                     }
                     .buttonStyle(.plain)
@@ -133,7 +152,7 @@ struct NotuleResultView: View {
                         .padding(.vertical, TS.Spacing.xs)
                         .background {
                             Capsule()
-                                .fill(Color.brandOrange)
+                                .fill(Color.brandPrimary)
                         }
                     }
                     .buttonStyle(.plain)
@@ -161,6 +180,9 @@ struct NotuleResultView: View {
                 if let profileId = task.profileId, !profileId.isEmpty {
                     metaPill(icon: "person.fill", text: profileId.capitalized, color: Color.brandSecondary)
                 }
+                if let words = notuleWordCount {
+                    metaPill(icon: "textformat", text: "\(words) woorden", color: Color.labelSecondary)
+                }
                 if !task.tags.isEmpty {
                     ForEach(task.tags.prefix(3), id: \.self) { tag in
                         metaPill(icon: "tag.fill", text: tag, color: Color.brandOrange)
@@ -171,6 +193,14 @@ struct NotuleResultView: View {
             .padding(.vertical, TS.Spacing.xs)
         }
         .background(Color.surfaceSecondary.opacity(0.65))
+    }
+
+    /// Word count of the generated notule, stripped of HTML, for the meta bar.
+    private var notuleWordCount: Int? {
+        guard let html = task.notuleHtml, !html.isEmpty else { return nil }
+        let text = html.replacingOccurrences(of: "<[^>]+>", with: " ", options: .regularExpression)
+        let words = text.split { $0.isWhitespace || $0.isNewline }.filter { !$0.isEmpty }
+        return words.isEmpty ? nil : words.count
     }
 
     private func metaPill(icon: String, text: String, color: Color) -> some View {
@@ -282,7 +312,7 @@ struct NotuleResultView: View {
         if let html = task.notuleHtml, !html.isEmpty {
             HTMLWebView(htmlContent: html, isDarkMode: colorScheme == .dark)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color.surfacePrimary)
+                .background(.ultraThinMaterial)
                 .clipShape(RoundedRectangle(cornerRadius: TS.Radius.md, style: .continuous))
                 .overlay {
                     RoundedRectangle(cornerRadius: TS.Radius.md, style: .continuous)
@@ -325,7 +355,7 @@ struct NotuleResultView: View {
                         }
                         .padding(TS.Spacing.md)
                     }
-                    .background(Color.surfacePrimary)
+                    .background(.ultraThinMaterial)
                     .clipShape(RoundedRectangle(cornerRadius: TS.Radius.md, style: .continuous))
                     .overlay {
                         RoundedRectangle(cornerRadius: TS.Radius.md, style: .continuous)
@@ -361,7 +391,7 @@ struct NotuleResultView: View {
                 .foregroundStyle(Color.labelTertiary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color.surfacePrimary)
+        .background(.ultraThinMaterial)
         .clipShape(RoundedRectangle(cornerRadius: TS.Radius.md, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: TS.Radius.md, style: .continuous)
@@ -383,8 +413,6 @@ struct NotuleResultView: View {
             exportButton(icon: "doc.fill", title: "PDF", action: exportAsPDF)
             Divider()
             exportButton(icon: "doc.plaintext", title: "Platte tekst (.txt)", action: exportAsTXT)
-            Divider()
-            exportButton(icon: "doc.richtext.fill", title: "Word document (.docx)", action: exportAsDOCX)
             Divider()
             exportButton(icon: "square.and.arrow.up", title: "Delen...", action: shareContent)
 
@@ -492,15 +520,6 @@ struct NotuleResultView: View {
             exportError = "Exporteren mislukt: \(error.localizedDescription)"
         }
         #endif
-    }
-
-    private func exportAsDOCX() {
-        showExportMenu = false
-        exportError = "DOCX-export is nog niet beschikbaar. Gebruik PDF of tekst als alternatief."
-        Task {
-            try? await Task.sleep(nanoseconds: 4_000_000_000)
-            await MainActor.run { exportError = nil }
-        }
     }
 
     private func shareContent() {
@@ -680,6 +699,8 @@ struct HTMLWebView: NSViewRepresentable {
                 line-height: 1.65;
                 color: var(--text-primary);
                 background: transparent;
+                max-width: 820px;
+                margin: 0 auto;
                 padding: 24px;
             }
             h1 { font-size: 24px; font-weight: 700; color: var(--brand); margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid var(--brand); }
@@ -777,6 +798,8 @@ struct HTMLWebView: UIViewRepresentable {
                 line-height: 1.65;
                 color: var(--text-primary);
                 background: transparent;
+                max-width: 820px;
+                margin: 0 auto;
                 padding: 16px;
             }
             h1 { font-size: 22px; font-weight: 700; color: var(--brand); margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid var(--brand); }

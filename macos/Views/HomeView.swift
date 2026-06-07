@@ -303,7 +303,7 @@ struct HomeView: View {
         .padding(TS.Spacing.sm)
         .background {
             RoundedRectangle(cornerRadius: TS.Radius.sm, style: .continuous)
-                .fill(Color.surfacePrimary)
+                .fill(.ultraThinMaterial)
         }
         .overlay {
             RoundedRectangle(cornerRadius: TS.Radius.sm, style: .continuous)
@@ -478,7 +478,7 @@ struct HomeView: View {
                 }
                 .background {
                     RoundedRectangle(cornerRadius: TS.Radius.md, style: .continuous)
-                        .fill(Color.surfacePrimary)
+                        .fill(.ultraThinMaterial)
                 }
                 .overlay {
                     RoundedRectangle(cornerRadius: TS.Radius.md, style: .continuous)

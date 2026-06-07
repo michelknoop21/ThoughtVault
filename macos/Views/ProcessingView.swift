@@ -16,6 +16,7 @@ struct ProcessingView: View {
     let onRetryViaCloud: (() -> Void)?
 
     @Environment(RecordingViewModel.self) var recordingVM
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @State private var navigateToResult: Bool = false
     @State private var showError: Bool = false
@@ -381,6 +382,8 @@ struct ProcessingView: View {
             }
         }
         .onAppear {
+            // Reduce Motion: keep the skeleton bars static, no sweeping shimmer (WCAG 2.3.3).
+            guard !reduceMotion else { return }
             withAnimation(.linear(duration: 1.4).repeatForever(autoreverses: false)) {
                 shimmerPhase = 1.0
             }

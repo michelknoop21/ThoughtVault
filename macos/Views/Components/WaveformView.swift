@@ -45,10 +45,41 @@ private class WaveState {
 struct WaveformView: View {
     let levelProvider: () -> Float
     let isActive: Bool
-    
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var waveState = WaveState()
-    
+
     var body: some View {
+        // Reduce Motion: the continuous 60fps travelling wave is a WCAG 2.3.3
+        // trigger. Replace it with a calm static baseline; the LIVE badge and
+        // timer still communicate that recording is active.
+        if reduceMotion {
+            staticWaveform
+        } else {
+            animatedWaveform
+        }
+    }
+
+    private var staticWaveform: some View {
+        Canvas { context, size in
+            let midY = size.height / 2
+            let gradient = Gradient(stops: gradientStops)
+            let path = Path { p in
+                p.move(to: CGPoint(x: 0, y: midY))
+                p.addLine(to: CGPoint(x: size.width, y: midY))
+            }
+            context.stroke(
+                path,
+                with: .linearGradient(gradient,
+                                      startPoint: .zero,
+                                      endPoint: CGPoint(x: size.width, y: 0)),
+                style: StrokeStyle(lineWidth: 2, lineCap: .round)
+            )
+        }
+        .accessibilityHidden(true)
+    }
+
+    private var animatedWaveform: some View {
         // 3. TimelineView is cross-platform (macOS/iOS) en perfect voor Canvas animaties
         TimelineView(.animation(minimumInterval: 1.0 / 60.0)) { timeline in
             Canvas { context, size in

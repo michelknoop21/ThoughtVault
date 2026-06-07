@@ -94,18 +94,21 @@ struct StatusBadge: View {
 private struct SpinningProgressView: View {
     let color: Color
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isRotating: Bool = false
 
     var body: some View {
+        // Reduce Motion: show the static glyph instead of a perpetual spin (WCAG 2.3.3).
         Image(systemName: "arrow.2.circlepath")
             .font(.system(size: 11, weight: .medium))
             .foregroundStyle(color)
             .rotationEffect(.degrees(isRotating ? 360 : 0))
             .animation(
-                .linear(duration: 1.0).repeatForever(autoreverses: false),
+                reduceMotion ? .default
+                    : .linear(duration: 1.0).repeatForever(autoreverses: false),
                 value: isRotating
             )
-            .onAppear { isRotating = true }
+            .onAppear { if !reduceMotion { isRotating = true } }
     }
 }
 

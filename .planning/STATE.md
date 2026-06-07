@@ -4,7 +4,7 @@ milestone: v1.1
 milestone_name: People & Attribution
 status: verifying
 stopped_at: "Completed 02-03: PersonDirectoryService + Graph attendee plumbing"
-last_updated: "2026-06-07T13:51:54.637Z"
+last_updated: "2026-06-07T14:15:58.335Z"
 last_activity: 2026-06-07
 progress:
   total_phases: 4
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-06-04)
 
 Phase: 02 (people-directory) — EXECUTING
 Plan: 5 of 5
-Status: Phase complete — ready for verification
+Status: Phase 2 executed — 5/5 verified, pending human UAT
 Last activity: 2026-06-07
 
 Progress: [██████████] 100%

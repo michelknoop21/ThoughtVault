@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: People & Attribution
 status: executing
-stopped_at: Phase 2 UI-SPEC approved
-last_updated: "2026-06-07T13:17:54.246Z"
+stopped_at: "Completed 02-03: PersonDirectoryService + Graph attendee plumbing"
+last_updated: "2026-06-07T13:38:11.720Z"
 last_activity: 2026-06-07
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 9
-  completed_plans: 7
+  completed_plans: 8
   percent: 25
 ---
 
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-06-04)
 ## Current Position
 
 Phase: 02 (people-directory) — EXECUTING
-Plan: 4 of 5
+Plan: 5 of 5
 Status: Ready to execute
 Last activity: 2026-06-07
 
-Progress: [████████░░] 78%
+Progress: [█████████░] 89%
 
 ## Performance Metrics
 
@@ -52,6 +52,7 @@ Progress: [████████░░] 78%
 | Phase 01 P03 | 25m | 4 tasks | 5 files |
 | Phase 01 P02 | 18m | 3 tasks | 6 files |
 | Phase 02-people-directory P02 | 6m | 2 tasks | 2 files |
+| Phase 02-people-directory P03 | 25 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -68,6 +69,9 @@ Recente beslissingen die het huidige werk raken:
 - [Phase 01]: Windows self-profile uses dedicated personProfileStore (name 'person-profile-store'), distinct from profiles-store/settings-store
 - [Phase 01]: Windows onboarding Profiel step is skippable; no profile written when all fields empty (D-07)
 - [Phase ?]: Phase 02-02
+- [Phase ?]: CalendarEvent new fields use var+defaults to keep all 5 construction sites compiling (D-08)
+- [Phase ?]: PersonDirectoryService uses injected ModelContainer for testability; production uses LocalTranscriptStore.shared
+- [Phase ?]: Graph emailAddress.address (not .email) confirmed correct; Windows .email is the known bug fixed in 02-05
 
 ### Pending Todos
 
@@ -89,6 +93,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-07T13:17:54.240Z
-Stopped at: Phase 2 UI-SPEC approved
+Last session: 2026-06-07T13:38:11.711Z
+Stopped at: Completed 02-03: PersonDirectoryService + Graph attendee plumbing
 Resume file: None

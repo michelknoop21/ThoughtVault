@@ -58,7 +58,7 @@ Vier opeenvolgende fasen die persoons-/rolcontext toevoegen aan TranscriptStudio
   5. Directory-entries gebruiken hetzelfde `PersonProfile`-model als het zelf-profiel; `expertiseTags` zijn per persoon bewerkbaar (B-04).
 **Plans**: 5 plans
   - [x] 02-01-PLAN.md — Wave 0 RED test scaffolds (MigrationTests V2->V3 + PersonDirectoryService + GraphAttendeeDecode + Windows store)
-  - [ ] 02-02-PLAN.md — macOS datamodel: emails + tri-state isInternal + SchemaV3 lightweight migration
+  - [x] 02-02-PLAN.md — macOS datamodel: emails + tri-state isInternal + SchemaV3 lightweight migration
   - [ ] 02-03-PLAN.md — macOS services: Graph attendee plumbing + PersonDirectoryService (no URLSession) + dedup
   - [ ] 02-04-PLAN.md — macOS UI: Mensen tab + directory/edit views + agenda-seed review sheet (checkpoint)
   - [ ] 02-05-PLAN.md — Windows full stack: types + collection store + Graph fix + /people page + seed sheet
@@ -115,7 +115,7 @@ Vier opeenvolgende fasen die persoons-/rolcontext toevoegen aan TranscriptStudio
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Self-Profile Foundation | 4/4 | Complete   | 2026-06-05 |
-| 2. People Directory | 1/5 | In Progress|  |
+| 2. People Directory | 2/5 | In Progress|  |
 | 3. Context Injection | 0/? | Not started | - |
 | 4. Attribution Mapping | 0/? | Not started | - |
 

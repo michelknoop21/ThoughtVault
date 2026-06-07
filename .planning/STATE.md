@@ -4,13 +4,13 @@ milestone: v1.1
 milestone_name: People & Attribution
 status: executing
 stopped_at: Phase 2 UI-SPEC approved
-last_updated: "2026-06-07T12:42:12.965Z"
+last_updated: "2026-06-07T12:53:37.341Z"
 last_activity: 2026-06-07
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 9
-  completed_plans: 5
+  completed_plans: 6
   percent: 25
 ---
 
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-06-04)
 ## Current Position
 
 Phase: 02 (people-directory) — EXECUTING
-Plan: 2 of 5
+Plan: 3 of 5
 Status: Ready to execute
 Last activity: 2026-06-07
 
-Progress: [██████░░░░] 56%
+Progress: [███████░░░] 67%
 
 ## Performance Metrics
 
@@ -51,6 +51,7 @@ Progress: [██████░░░░] 56%
 | Phase 01 P03 | 25m | 3 tasks | 5 files |
 | Phase 01 P03 | 25m | 4 tasks | 5 files |
 | Phase 01 P02 | 18m | 3 tasks | 6 files |
+| Phase 02-people-directory P02 | 6m | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -66,6 +67,7 @@ Recente beslissingen die het huidige werk raken:
 - 2026-06-05: Spike spreker-identiteit — NIET beschikbaar (`whisper_neuron.py:133-140`, één segment, geen labels/timestamps; macOS lokaal idem). v1.1 niet afhankelijk van diarisatie.
 - [Phase 01]: Windows self-profile uses dedicated personProfileStore (name 'person-profile-store'), distinct from profiles-store/settings-store
 - [Phase 01]: Windows onboarding Profiel step is skippable; no profile written when all fields empty (D-07)
+- [Phase ?]: Phase 02-02
 
 ### Pending Todos
 
@@ -87,6 +89,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-07T12:42:12.960Z
+Last session: 2026-06-07T12:53:37.333Z
 Stopped at: Phase 2 UI-SPEC approved
 Resume file: None

@@ -24,10 +24,13 @@ final class PersonProfile {
     var meetingTypes: [String]
     /// Topic/domain expertise tags used for onderwerp→rol attribution (Phase 3/4).
     var expertiseTags: [String]
+    /// Email addresses used as the primary dedup key for directory entries (D-02).
+    var emails: [String]
     /// True for exactly one record: the installing user's own profile.
     var isSelf: Bool
-    /// True for internal colleagues; false for known externals.
-    var isInternal: Bool
+    /// Tri-state: true = intern, false = extern, nil = onbekend (D-01).
+    /// Non-optional → optional is a relaxing change, lightweight-migration eligible.
+    var isInternal: Bool?
     var createdAt: Date
     var updatedAt: Date
 
@@ -39,8 +42,9 @@ final class PersonProfile {
         aliases: [String] = [],
         meetingTypes: [String] = [],
         expertiseTags: [String] = [],
+        emails: [String] = [],
         isSelf: Bool = false,
-        isInternal: Bool = true,
+        isInternal: Bool? = nil,
         createdAt: Date = Date(),
         updatedAt: Date = Date()
     ) {
@@ -51,6 +55,7 @@ final class PersonProfile {
         self.aliases = aliases
         self.meetingTypes = meetingTypes
         self.expertiseTags = expertiseTags
+        self.emails = emails
         self.isSelf = isSelf
         self.isInternal = isInternal
         self.createdAt = createdAt

@@ -1,0 +1,50 @@
+{
+  "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#users('me')/calendarView",
+  "value": [
+    {
+      "id": "AAMkADk2event123==",
+      "subject": "Kwartaalplanning Q3 2026",
+      "start": {
+        "dateTime": "2026-06-10T10:00:00.0000000",
+        "timeZone": "Europe/Amsterdam"
+      },
+      "end": {
+        "dateTime": "2026-06-10T11:00:00.0000000",
+        "timeZone": "Europe/Amsterdam"
+      },
+      "onlineMeeting": {
+        "joinUrl": "https://teams.microsoft.com/l/meetup-join/19%3Ameeting_abc123"
+      },
+      "organizer": {
+        "emailAddress": {
+          "name": "Jan de Vries",
+          "address": "jan.devries@prezent.nl"
+        }
+      },
+      "attendees": [
+        {
+          "emailAddress": {
+            "name": "Anke Bakker",
+            "address": "anke.bakker@prezent.nl"
+          },
+          "status": {
+            "response": "accepted",
+            "time": "2026-06-05T08:22:00Z"
+          },
+          "type": "required"
+        },
+        {
+          "emailAddress": {
+            "name": "Pieter Jansen",
+            "address": "pieter.jansen@extern.nl"
+          },
+          "status": {
+            "response": "tentativelyAccepted",
+            "time": "2026-06-05T09:10:00Z"
+          },
+          "type": "optional"
+        }
+      ]
+    }
+  ]
+}

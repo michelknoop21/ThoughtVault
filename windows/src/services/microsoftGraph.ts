@@ -182,7 +182,7 @@ export class MicrosoftGraphService {
         platform: detectPlatform((e.onlineMeeting as Record<string, string> | null)?.joinUrl),
         organizer: ((e.organizer as Record<string, Record<string, string>>)?.emailAddress?.name),
         attendees: ((e.attendees as Array<Record<string, Record<string, string>>>)?.map(
-          (a) => a.emailAddress?.email
+          (a) => a.emailAddress?.address  // Graph v1.0 key is "address", not "email" (RESEARCH A2/Pitfall 2)
         ).filter(Boolean)),
       }));
 

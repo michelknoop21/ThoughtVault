@@ -83,8 +83,9 @@ export interface PersonProfile {
   aliases: string[];
   meetingTypes: string[];
   expertiseTags: string[];
+  emails: string[];        // Primary dedup key for directory entries (D-02)
   isSelf: boolean;
-  isInternal: boolean;
+  isInternal: boolean | null;  // null = onbekend, true = intern, false = extern (D-01)
   createdAt: string;  // ISO-8601
   updatedAt: string;  // ISO-8601
 }

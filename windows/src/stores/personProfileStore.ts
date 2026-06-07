@@ -25,7 +25,8 @@ export const usePersonProfileStore = create<PersonProfileState>()(
             : {
                 id: crypto.randomUUID(),
                 isSelf: true,
-                isInternal: true,
+                isInternal: true as boolean | null,  // Self-profile: always intern
+                emails: [] as string[],
                 name: "",
                 role: "",
                 organization: "",

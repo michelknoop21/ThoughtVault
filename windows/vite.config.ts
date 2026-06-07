@@ -8,6 +8,15 @@ export default defineConfig(async () => ({
   plugins: [react()],
   clearScreen: false,
 
+  // Vitest configuration — jsdom with localStorage mock for zustand persist stores
+  test: {
+    environment: "jsdom",
+    globals: true,
+    // setupFiles runs before module imports, ensuring localStorage is available
+    // when the zustand persist middleware captures the storage reference
+    setupFiles: ["./src/test-setup.ts"],
+  },
+
   // Multi-page: main app + floating recording widget
   build: {
     rollupOptions: {

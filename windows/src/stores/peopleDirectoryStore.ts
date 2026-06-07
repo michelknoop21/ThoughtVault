@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { PersonProfile } from "../types";
+import { usePersonProfileStore } from "./personProfileStore";
 
 interface PeopleDirectoryState {
   people: PersonProfile[];  // isSelf: false entries only
@@ -59,6 +60,7 @@ export const usePeopleDirectoryStore = create<PeopleDirectoryState>()(
 
       newSeedCandidates: (attendeeEmails, selfEmail) => {
         const { people } = get();
+        const selfProfile = usePersonProfileStore.getState().profile;
 
         // Collect all known emails (case-insensitive)
         const knownEmails = new Set<string>();
@@ -66,6 +68,10 @@ export const usePeopleDirectoryStore = create<PeopleDirectoryState>()(
           for (const email of person.emails) {
             knownEmails.add(email.toLowerCase());
           }
+        }
+        // Add self-profile emails (D-10 parity with macOS)
+        for (const email of selfProfile?.emails ?? []) {
+          knownEmails.add(email.toLowerCase());
         }
         if (selfEmail) {
           knownEmails.add(selfEmail.toLowerCase());

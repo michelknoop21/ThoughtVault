@@ -154,7 +154,7 @@ export class MicrosoftGraphService {
         "proxy_request",
         {
           request: {
-            url: `${GRAPH_BASE}/me/calendar/calendarView?${params}`,
+            url: `${GRAPH_BASE}/me/calendarView?${params}`,
             method: "GET",
             headers: {
               Authorization: `Bearer ${calendarStore.accessToken}`,

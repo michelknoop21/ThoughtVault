@@ -198,10 +198,9 @@ struct ProcessingView: View {
             // Header
             HStack(spacing: TS.Spacing.xs) {
                 PulsingRecordingDot(size: 6)
-                Text("VOORTGANG")
-                    .font(TS.Font.microBold)
-                    .foregroundStyle(Color.white.opacity(0.6))
-                    .kerning(1.5)
+                Text("Voortgang")
+                    .font(TS.Font.footnoteSemibold)
+                    .foregroundStyle(Color.white.opacity(0.7))
             }
             .padding(.bottom, TS.Spacing.md)
 

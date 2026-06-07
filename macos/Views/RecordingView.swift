@@ -108,10 +108,9 @@ struct RecordingView: View {
         VStack(spacing: 0) {
             // Header
             VStack(alignment: .leading, spacing: TS.Spacing.xs) {
-                Text("NIEUWE OPNAME")
-                    .font(TS.Font.microBold)
-                    .foregroundStyle(Color.brandPrimary)
-                    .kerning(1.5)
+                Text("Nieuwe opname")
+                    .font(TS.Font.title3Semibold)
+                    .foregroundStyle(Color.labelPrimary)
                 Text("Kies bron en profiel, klik daarna om op te nemen")
                     .font(TS.Font.callout)
                     .foregroundStyle(Color.labelSecondary)
@@ -234,10 +233,9 @@ struct RecordingView: View {
                 HStack(spacing: TS.Spacing.sm) {
                     Image(systemName: "play.rectangle.fill")
                         .foregroundStyle(Color.red)
-                    Text("YOUTUBE VIDEO")
-                        .font(TS.Font.microBold)
-                        .foregroundStyle(Color.red)
-                        .kerning(1.5)
+                    Text("YouTube-video")
+                        .font(TS.Font.headline)
+                        .foregroundStyle(Color.labelPrimary)
                 }
                 Text("Plak een YouTube URL om te transcriberen")
                     .font(TS.Font.callout)
@@ -1042,10 +1040,9 @@ struct RecordingView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("LIVE TRANSCRIPTIE")
-                        .font(TS.Font.microBold)
-                        .foregroundStyle(Color.brandPrimary)
-                        .kerning(1.0)
+                    Text("Live transcriptie")
+                        .font(TS.Font.subheadlineSemibold)
+                        .foregroundStyle(Color.labelPrimary)
                     Text("Op apparaat")
                         .font(TS.Font.caption)
                         .foregroundStyle(Color.labelSecondary)

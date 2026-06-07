@@ -71,18 +71,6 @@ struct OnboardingView: View {
             }
         }
 
-        var gradientColors: [Color] {
-            switch self {
-            case .welcome:       return [Color.gradientPurple, Color.gradientBlue]
-            case .microphoon:    return [Color.gradientBlue, Color.brandSecondary.opacity(0.5)]
-            case .spraak:        return [Color.gradientGreen, Color.brandAccent.opacity(0.4)]
-            case .agenda:        return [Color.gradientOrange, Color.brandOrange.opacity(0.4)]
-            case .schermopname:  return [Color.gradientBlue, Color.brandPrimary.opacity(0.4)]
-            case .profiel:       return [Color.gradientPurple, Color.brandPrimary.opacity(0.4)]
-            case .klaar:         return [Color.brandPrimary.opacity(0.3), Color.gradientPurple]
-            }
-        }
-
         /// Whether this step is available on the current platform.
         var isAvailableOnCurrentPlatform: Bool {
             switch self {
@@ -125,14 +113,14 @@ struct OnboardingView: View {
 
     var body: some View {
         ZStack {
-            // Animated gradient background
+            // One calm, static brand-tinted canvas. The per-step icon carries the
+            // identity; a different animated gradient per step read as consumer-cute.
             LinearGradient(
-                colors: currentStep.gradientColors + [Color.white.opacity(0.3)],
+                colors: [Color.surfaceSecondary, Color.brandPrimary.opacity(0.04)],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
             .ignoresSafeArea()
-            .animation(TS.Animation.gentle, value: currentStep)
 
             VStack(spacing: 0) {
                 // Full-width brand bar directly under title bar
@@ -142,16 +130,23 @@ struct OnboardingView: View {
                 stepIndicator
 
                 // Content area
+#if os(macOS)
+                // A linear wizard: render only the current step. A TabView here
+                // rendered a native tab bar and let users swipe/jump past mandatory
+                // permission steps out of order, fighting the Back/Next footer.
+                stepContent(currentStep)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .id(currentStep)
+                    .transition(.opacity)
+                    .animation(TS.Animation.smooth, value: currentStep)
+#else
                 TabView(selection: $currentStep) {
                     ForEach(visibleSteps, id: \.self) { step in
                         stepContent(step)
                             .tag(step)
                     }
                 }
-#if os(iOS)
                 .tabViewStyle(.page(indexDisplayMode: .never))
-#else
-                .tabViewStyle(.automatic)
 #endif
 
                 // Navigation buttons

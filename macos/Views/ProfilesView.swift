@@ -165,10 +165,8 @@ struct ProfilesView: View {
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(color)
             Text(title)
-                .font(TS.Font.footnoteSemibold)
-                .foregroundStyle(Color.labelSecondary)
-                .textCase(.uppercase)
-                .tracking(0.5)
+                .font(TS.Font.headline)
+                .foregroundStyle(Color.labelPrimary)
         }
         .padding(.horizontal, TS.Spacing.xs)
     }

@@ -18,7 +18,7 @@ const CHECK_INTERVAL_MS  = 60 * 1000;      // check every minute
 export function CallAlertOverlay() {
   const navigate = useNavigate();
   const calendar = useCalendarStore();
-  const { setMode, setAutoStart } = useRecordingStore();
+  const { setMode, setAutoStart, setPendingSeedAttendees } = useRecordingStore();
   const [upcomingAlert, setUpcomingAlert] = useState<CalendarEvent | null>(null);
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
 
@@ -68,6 +68,8 @@ export function CallAlertOverlay() {
     const mode = event.join_url ? "combined" : "microphone";
     setMode(mode);
     setAutoStart(true);
+    // Store attendee emails so SeedReviewSheet can filter new people on stop (D-07/D-10)
+    setPendingSeedAttendees(event.attendees?.filter(Boolean) ?? []);
     // Signal that main window should minimize after recording starts
     useRecordingStore.getState().setMinimizeOnAutoStart(true);
     handleDismiss();

@@ -38,6 +38,10 @@ interface RecordingState {
   // Background processing: tasks that are uploading/processing while user can start new recordings
   backgroundTasks: TranscriptTask[];
 
+  // Calendar event attendee emails set when recording starts from a calendar event.
+  // Read and cleared on recording stop to drive SeedReviewSheet (D-07/D-10).
+  pendingSeedAttendees: string[];
+
   // Profile selection — persisted in store so global recording handler can access it
   selectedProfileId: string;
   usePremium: boolean;
@@ -64,6 +68,8 @@ interface RecordingState {
   updateBackgroundTask: (taskId: string, update: Partial<TranscriptTask>) => void;
   removeBackgroundTask: (taskId: string) => void;
   cancelBackgroundTask: (taskId: string) => void;
+  setPendingSeedAttendees: (emails: string[]) => void;
+  clearPendingSeedAttendees: () => void;
   setSelectedProfileId: (id: string) => void;
   setUsePremium: (value: boolean) => void;
   setYouTubeEnabled: (enabled: boolean) => void;
@@ -86,6 +92,7 @@ export const useRecordingStore = create<RecordingState>()((set) => ({
   recordingStartedAt: null,
   pausedAt: null,
   pausedDuration: 0,
+  pendingSeedAttendees: [],
   selectedProfileId: "",
   usePremium: false,
   backgroundTasks: [],
@@ -134,6 +141,8 @@ export const useRecordingStore = create<RecordingState>()((set) => ({
       backgroundTasks: state.backgroundTasks.filter((t) => t.task_id !== taskId),
     }));
   },
+  setPendingSeedAttendees: (emails) => set({ pendingSeedAttendees: emails }),
+  clearPendingSeedAttendees: () => set({ pendingSeedAttendees: [] }),
   setSelectedProfileId: (id) => set({ selectedProfileId: id }),
   setUsePremium: (value) => set({ usePremium: value }),
   setYouTubeEnabled: (enabled) => set({ isYouTubeEnabled: enabled }),
@@ -153,5 +162,6 @@ export const useRecordingStore = create<RecordingState>()((set) => ({
       recordingStartedAt: null,
       pausedAt: null,
       pausedDuration: 0,
+      pendingSeedAttendees: [],
     }),
 }));

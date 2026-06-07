@@ -25,6 +25,9 @@ import { api } from "../services/api";
 import { createSSEClient } from "../services/sse";
 import { WaveformVisualizer } from "../components/recording/WaveformVisualizer";
 import { SavedRecordings } from "../components/recording/SavedRecordings";
+import { SeedReviewSheet } from "./SeedReviewSheet";
+import { usePeopleDirectoryStore } from "../stores/peopleDirectoryStore";
+import { useCalendarStore } from "../stores/calendarStore";
 
 import {
   Briefcase24Regular,
@@ -81,6 +84,10 @@ export function RecordingPage() {
   // Profile selection is stored globally so the global recording handler can access it
   const selectedProfileId = useRecordingStore((s) => s.selectedProfileId);
   const [error, setError] = useState<string | null>(null);
+  const [seedCandidates, setSeedCandidates] = useState<string[]>([]);
+
+  const calendarAccountEmail = useCalendarStore((s) => s.accountEmail);
+  const newSeedCandidates = usePeopleDirectoryStore((s) => s.newSeedCandidates);
 
   const audioLevelsRef = useAudioLevelsRef();
   const filePathRef = useRef<string>("");
@@ -193,6 +200,20 @@ export function RecordingPage() {
       const filePath = result.file_path || filePathRef.current;
       filePathRef.current = filePath;
       closeWidgetWindow().catch((e) => console.error("[Recording] Widget close failed:", e));
+
+      // Read and clear pendingSeedAttendees — show SeedReviewSheet if new people found (D-07)
+      const store = useRecordingStore.getState();
+      const pendingEmails = store.pendingSeedAttendees;
+      store.clearPendingSeedAttendees();
+
+      if (pendingEmails.length > 0) {
+        // Dedup: filter emails already in directory and the calendar account email (self, D-10)
+        const candidates = newSeedCandidates(pendingEmails, calendarAccountEmail ?? undefined);
+        if (candidates.length > 0) {
+          setSeedCandidates(candidates);
+        }
+      }
+
       // Upload is triggered by the recording-stopped event listener, which fires
       // after the WAV file is fully finalized by the recording thread.
     } catch (err) {
@@ -318,6 +339,14 @@ export function RecordingPage() {
         <div className="error-banner" style={{ margin: 16 }}>
           {error}
         </div>
+      )}
+
+      {/* Seed review sheet — shown after recording stops when new attendees found (D-07) */}
+      {seedCandidates.length > 0 && (
+        <SeedReviewSheet
+          candidates={seedCandidates}
+          onClose={() => setSeedCandidates([])}
+        />
       )}
     </div>
   );

@@ -588,6 +588,7 @@ struct SettingsView: View {
                 .buttonStyle(.bordered)
                 .disabled(ollamaModelsLoading)
                 .help("Beschikbare modellen laden")
+                .accessibilityLabel("Beschikbare modellen laden")
             }
         }
         if !ollamaModels.isEmpty {
@@ -619,6 +620,7 @@ struct SettingsView: View {
                 }
                 .buttonStyle(.bordered)
                 .help(revealApiKey ? "Verberg sleutel" : "Toon sleutel")
+                .accessibilityLabel(revealApiKey ? "Sleutel verbergen" : "Sleutel tonen")
             }
         }
 

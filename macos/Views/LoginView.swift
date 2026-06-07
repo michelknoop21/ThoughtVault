@@ -168,6 +168,7 @@ struct LoginView: View {
                                 .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
+                        .accessibilityLabel(isPasswordVisible ? "Wachtwoord verbergen" : "Wachtwoord tonen")
                     }
                     .padding(TS.Spacing.sm + 2)
                     .background(Color.surfacePrimary)

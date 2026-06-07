@@ -938,6 +938,7 @@ struct TranscriptCardMenu: View {
         .menuStyle(.borderlessButton)
         .fixedSize()
         .padding(TS.Spacing.xs)
+        .accessibilityLabel("Meer acties")
         .accessibilityLabel("Meer opties")
         .confirmationDialog(
             "Transcriptie verwijderen?",
@@ -1454,7 +1455,7 @@ struct TranscriptDetailView: View {
             if isEditingTitle {
                 HStack(spacing: TS.Spacing.sm) {
                     TextField("Titel", text: $pendingTitle, axis: .vertical)
-                        .font(.system(size: 20, weight: .bold))
+                        .font(TS.Font.title3Bold)
                         .foregroundStyle(Color.labelPrimary)
                         .textFieldStyle(.plain)
                         .lineLimit(1...3)
@@ -1472,6 +1473,7 @@ struct TranscriptDetailView: View {
                             .foregroundStyle(Color.statusSuccess)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel("Titel opslaan")
 
                     Button {
                         isEditingTitle = false
@@ -1481,6 +1483,7 @@ struct TranscriptDetailView: View {
                             .foregroundStyle(Color.labelTertiary)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel("Bewerken annuleren")
                 }
                 .padding(.vertical, 4)
                 .padding(.horizontal, TS.Spacing.sm)
@@ -1491,7 +1494,7 @@ struct TranscriptDetailView: View {
             } else {
                 HStack(alignment: .top, spacing: TS.Spacing.xs) {
                     Text(fullTranscript.title.isEmpty ? "Naamloze opname" : fullTranscript.title)
-                        .font(.system(size: 20, weight: .bold))
+                        .font(TS.Font.title3Bold)
                         .foregroundStyle(Color.labelPrimary)
                         .lineLimit(3)
 

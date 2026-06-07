@@ -13,7 +13,7 @@ struct PeopleDirectoryView: View {
 
     // MARK: - State
 
-    @State private var service = PersonDirectoryService()
+    private let service = PersonDirectoryService.shared
     @State private var people: [PersonProfile] = []
     @State private var searchText: String = ""
     @State private var isLoading: Bool = true

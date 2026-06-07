@@ -197,7 +197,7 @@ struct PersonEditView: View {
                 .filter { !$0.isEmpty }
         }
 
-        let service = PersonDirectoryService()
+        let service = PersonDirectoryService.shared
 
         do {
             if let existing = person {

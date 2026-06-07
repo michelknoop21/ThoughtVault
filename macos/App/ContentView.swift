@@ -253,8 +253,7 @@ struct ContentView: View {
             let selfEmail = MicrosoftGraphService.shared.accountEmail
                 ?? CalendarService.shared.microsoftAccountEmail
                 ?? LocalTranscriptStore.shared.fetchSelfProfile()?.emails.first
-            let service = PersonDirectoryService()
-            let candidates = service.newSeedCandidates(from: attendees, selfEmail: selfEmail)
+            let candidates = PersonDirectoryService.shared.newSeedCandidates(from: attendees, selfEmail: selfEmail)
             recordingVM.pendingSeedAttendees = nil
             guard !candidates.isEmpty else { return }
             seedCandidates = candidates

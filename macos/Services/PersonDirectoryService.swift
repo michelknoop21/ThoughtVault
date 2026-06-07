@@ -16,6 +16,12 @@ import SwiftData
 @MainActor
 final class PersonDirectoryService {
 
+    // MARK: - Shared instance
+
+    /// Shared singleton backed by LocalTranscriptStore's ModelContainer.
+    /// Views should use this instead of constructing new instances (WR-01).
+    static let shared = PersonDirectoryService()
+
     // MARK: - Container
 
     private let _container: ModelContainer

@@ -146,7 +146,7 @@ struct SeedReviewSheet: View {
 
     private func saveSelected() {
         isSaving = true
-        let service = PersonDirectoryService()
+        let service = PersonDirectoryService.shared
         do {
             for row in rows where row.isChecked {
                 // seedPerson builds a PersonProfile with isInternal = nil (D-09)

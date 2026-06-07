@@ -87,18 +87,16 @@ struct ProcessingView: View {
 
     private var processingContent: some View {
         ZStack {
-            // Background
+            // Background — glass-on-soft-gray, matching the rest of the app
+            // (was a bespoke dark-SaaS gradient that broke brand + the light→dark→light arc).
             LinearGradient(
-                colors: [
-                    Color.backgroundDark,
-                    Color(red: 0.10, green: 0.08, blue: 0.20)
-                ],
+                colors: [Color.surfaceSecondary, Color.surfacePrimary],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
             .ignoresSafeArea()
 
-            // Subtle glow behind ring
+            // Subtle brand glow behind the content
             Circle()
                 .fill(Color.brandPrimary.opacity(0.06))
                 .frame(width: 300, height: 300)
@@ -114,14 +112,14 @@ struct ProcessingView: View {
                 VStack(spacing: TS.Spacing.sm) {
                     Text(processingMessage(for: displayTask.status))
                         .font(TS.Font.title3Semibold)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Color.labelPrimary)
                         .multilineTextAlignment(.center)
                         .animation(TS.Animation.smooth, value: displayTask.status)
 
                     if displayTask.status == .uploading {
                         Text("\(Int(displayTask.progress * 100))%")
                             .font(TS.Font.captionMonospaced)
-                            .foregroundStyle(Color.neonBlue.opacity(0.7))
+                            .foregroundStyle(Color.brandSecondary)
                     }
                 }
 
@@ -135,10 +133,10 @@ struct ProcessingView: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Verwerking lijkt vast te zitten")
                                 .font(TS.Font.footnoteMedium)
-                                .foregroundStyle(.white)
+                                .foregroundStyle(Color.labelPrimary)
                             Text("Laatste update was meer dan 2 minuten geleden")
                                 .font(TS.Font.caption)
-                                .foregroundStyle(Color.white.opacity(0.6))
+                                .foregroundStyle(Color.labelSecondary)
                         }
                         Spacer()
                         Button("Sluiten") {
@@ -178,17 +176,17 @@ struct ProcessingView: View {
                         Text("Verder op achtergrond")
                     }
                     .font(TS.Font.footnoteMedium)
-                    .foregroundStyle(Color.white.opacity(0.85))
+                    .foregroundStyle(Color.labelSecondary)
                     .padding(.horizontal, TS.Spacing.md)
                     .padding(.vertical, TS.Spacing.sm)
-                    .background(Color.white.opacity(0.10), in: Capsule())
+                    .background(Color.surfacePrimary, in: Capsule())
+                    .overlay(Capsule().stroke(Color.borderPrimary, lineWidth: 1))
                 }
                 .buttonStyle(.plain)
                 .help("Sluit dit scherm; de verwerking gaat door op de achtergrond")
                 .padding(TS.Spacing.lg)
             }
         }
-        .preferredColorScheme(.dark)
     }
 
     // MARK: - Progress Step Checklist
@@ -200,7 +198,7 @@ struct ProcessingView: View {
                 PulsingRecordingDot(size: 6)
                 Text("Voortgang")
                     .font(TS.Font.footnoteSemibold)
-                    .foregroundStyle(Color.white.opacity(0.7))
+                    .foregroundStyle(Color.labelSecondary)
             }
             .padding(.bottom, TS.Spacing.md)
 
@@ -230,11 +228,11 @@ struct ProcessingView: View {
             )
         }
         .padding(TS.Spacing.md)
-        .background(Color.white.opacity(0.05))
+        .background(Color.surfacePrimary)
         .clipShape(RoundedRectangle(cornerRadius: TS.Radius.md))
         .overlay {
             RoundedRectangle(cornerRadius: TS.Radius.md)
-                .stroke(Color.white.opacity(0.10), lineWidth: 1)
+                .stroke(Color.borderPrimary, lineWidth: 1)
         }
     }
 
@@ -271,7 +269,7 @@ struct ProcessingView: View {
 
             Text(label)
                 .font(TS.Font.footnoteMedium)
-                .foregroundStyle(state == .pending ? Color.white.opacity(0.4) : Color.white.opacity(0.9))
+                .foregroundStyle(state == .pending ? Color.labelTertiary : Color.labelPrimary)
 
             Spacer()
 
@@ -286,7 +284,7 @@ struct ProcessingView: View {
     private func stepConnector(completed: Bool) -> some View {
         HStack {
             Rectangle()
-                .fill(completed ? Color.statusSuccess.opacity(0.5) : Color.white.opacity(0.10))
+                .fill(completed ? Color.statusSuccess.opacity(0.5) : Color.borderPrimary)
                 .frame(width: 2, height: 16)
                 .padding(.leading, 15) // center under the 32px circle
             Spacer()
@@ -297,7 +295,7 @@ struct ProcessingView: View {
         switch state {
         case .completed: return Color.statusSuccess
         case .active: return Color.brandPrimary
-        case .pending: return Color.white.opacity(0.3)
+        case .pending: return Color.labelTertiary
         }
     }
 
@@ -351,10 +349,10 @@ struct ProcessingView: View {
         VStack(alignment: .leading, spacing: TS.Spacing.sm) {
             HStack {
                 Image(systemName: "text.alignleft")
-                    .foregroundStyle(Color.neonBlue.opacity(0.7))
+                    .foregroundStyle(Color.brandSecondary)
                 Text("Transcriptie")
                     .font(TS.Font.footnoteSemibold)
-                    .foregroundStyle(Color.white.opacity(0.6))
+                    .foregroundStyle(Color.labelSecondary)
                 Spacer()
             }
 
@@ -363,7 +361,7 @@ struct ProcessingView: View {
                 ScrollView {
                     Text(transcription)
                         .font(TS.Font.footnote)
-                        .foregroundStyle(Color.white.opacity(0.85))
+                        .foregroundStyle(Color.labelPrimary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(TS.Spacing.sm)
                 }
@@ -374,11 +372,11 @@ struct ProcessingView: View {
             }
         }
         .padding(TS.Spacing.md)
-        .background(Color.white.opacity(0.05))
+        .background(Color.surfacePrimary)
         .clipShape(RoundedRectangle(cornerRadius: TS.Radius.md))
         .overlay {
             RoundedRectangle(cornerRadius: TS.Radius.md)
-                .stroke(Color.white.opacity(0.10), lineWidth: 1)
+                .stroke(Color.borderPrimary, lineWidth: 1)
         }
     }
 
@@ -391,9 +389,9 @@ struct ProcessingView: View {
                     .fill(
                         LinearGradient(
                             colors: [
-                                Color.white.opacity(0.08),
-                                Color.white.opacity(0.16),
-                                Color.white.opacity(0.08)
+                                Color.labelTertiary.opacity(0.12),
+                                Color.labelTertiary.opacity(0.28),
+                                Color.labelTertiary.opacity(0.12)
                             ],
                             startPoint: UnitPoint(x: shimmerPhase, y: 0),
                             endPoint: UnitPoint(x: shimmerPhase + 1, y: 0)
@@ -422,11 +420,11 @@ struct ProcessingView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Verwerking mislukt")
                         .font(TS.Font.bodyMedium)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Color.labelPrimary)
                     if let errorMessage = displayTask.errorMessage {
                         Text(errorMessage)
                             .font(TS.Font.caption)
-                            .foregroundStyle(Color.white.opacity(0.65))
+                            .foregroundStyle(Color.labelSecondary)
                     }
                 }
             }

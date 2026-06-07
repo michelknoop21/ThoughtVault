@@ -303,7 +303,7 @@ struct TranscriptsView: View {
                 .padding(.vertical, TS.Spacing.xs + 2)
                 .background {
                     Capsule()
-                        .fill(isSelected ? Color.brandPrimary : Color.surfaceSecondary)
+                        .fill(isSelected ? Color.brandSecondary : Color.surfaceSecondary)
                         .overlay {
                             if !isSelected {
                                 Capsule().stroke(Color.borderPrimary, lineWidth: 1)
@@ -632,7 +632,7 @@ struct TranscriptsView: View {
         } label: {
             Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
                 .font(.system(size: 22))
-                .foregroundStyle(isSelected ? Color.brandPrimary : Color.labelTertiary)
+                .foregroundStyle(isSelected ? Color.brandSecondary : Color.labelTertiary)
                 .background(
                     Circle()
                         .fill(Color.surfacePrimary)
@@ -1129,7 +1129,7 @@ struct TranscriptDetailView: View {
                 .background {
                     if isActive {
                         RoundedRectangle(cornerRadius: TS.Radius.xs - 1)
-                            .fill(Color.brandPrimary)
+                            .fill(Color.brandSecondary)
                     }
                 }
         }
@@ -1496,7 +1496,7 @@ struct TranscriptDetailView: View {
                         .foregroundStyle(Color.labelTertiary)
                     Text(profileName)
                         .font(TS.Font.caption)
-                        .foregroundStyle(Color.brandPrimary)
+                        .foregroundStyle(Color.labelSecondary)
                 }
             }
 

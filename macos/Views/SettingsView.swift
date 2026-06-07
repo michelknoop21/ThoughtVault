@@ -1101,8 +1101,8 @@ struct SettingsView: View {
                                 .font(TS.Font.microSemibold)
                                 .padding(.horizontal, TS.Spacing.sm)
                                 .padding(.vertical, TS.Spacing.xs)
-                                .background(Color.brandPrimary.opacity(0.10))
-                                .foregroundStyle(Color.brandPrimary)
+                                .background(Color.surfaceTertiary)
+                                .foregroundStyle(Color.labelSecondary)
                                 .clipShape(RoundedRectangle(cornerRadius: TS.Radius.xs))
                         }
                     }

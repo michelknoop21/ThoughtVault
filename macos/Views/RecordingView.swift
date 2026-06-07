@@ -531,12 +531,12 @@ struct RecordingView: View {
             .contentShape(Rectangle())
             .background {
                 RoundedRectangle(cornerRadius: TS.Radius.sm, style: .continuous)
-                    .fill(isSelected ? Color.accentBgPrimary : Color.surfaceSecondary)
+                    .fill(isSelected ? Color.accentBgSecondary : Color.surfaceSecondary)
             }
             .overlay {
                 RoundedRectangle(cornerRadius: TS.Radius.sm, style: .continuous)
                     .stroke(
-                        isSelected ? Color.brandPrimary.opacity(0.5) : Color.borderPrimary.opacity(0.4),
+                        isSelected ? Color.brandSecondary.opacity(0.5) : Color.borderPrimary.opacity(0.4),
                         lineWidth: isSelected ? 1.5 : 1
                     )
             }

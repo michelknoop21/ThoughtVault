@@ -51,7 +51,7 @@ private struct ProfileChip: View {
             HStack(spacing: TS.Spacing.xs) {
                 // Dot indicator
                 Circle()
-                    .fill(isSelected ? Color.white : Color.brandPrimary.opacity(0.5))
+                    .fill(isSelected ? Color.white : Color.brandSecondary.opacity(0.5))
                     .frame(width: 6, height: 6)
 
                 Text(profile.name)
@@ -63,7 +63,7 @@ private struct ProfileChip: View {
                 if profile.isDefault == true {
                     Image(systemName: "star.fill")
                         .font(.system(size: 9))
-                        .foregroundStyle(isSelected ? Color.white.opacity(0.7) : Color.brandPrimary.opacity(0.5))
+                        .foregroundStyle(isSelected ? Color.white.opacity(0.7) : Color.brandSecondary.opacity(0.5))
                 }
             }
             .padding(.horizontal, TS.Spacing.md)
@@ -73,25 +73,25 @@ private struct ProfileChip: View {
                     Capsule()
                         .fill(
                             LinearGradient(
-                                colors: [Color.brandPrimary, Color.brandPrimary.opacity(0.80)],
+                                colors: [Color.brandSecondary, Color.brandSecondary.opacity(0.80)],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
                         )
                         .shadow(
-                            color: Color.brandPrimary.opacity(0.30),
+                            color: Color.brandSecondary.opacity(0.30),
                             radius: 6,
                             y: 2
                         )
                 } else {
                     Capsule()
                         .fill(isHovered
-                            ? Color.brandPrimary.opacity(0.10)
+                            ? Color.brandSecondary.opacity(0.10)
                             : Color.surfaceSecondary)
                         .overlay {
                             Capsule()
                                 .stroke(
-                                    isHovered ? Color.brandPrimary.opacity(0.30) : Color.borderPrimary,
+                                    isHovered ? Color.brandSecondary.opacity(0.30) : Color.borderPrimary,
                                     lineWidth: 1
                                 )
                         }

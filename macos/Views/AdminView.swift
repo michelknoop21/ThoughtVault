@@ -209,7 +209,7 @@ struct AdminView: View {
                     Text(tab.rawValue)
                         .font(TS.Font.footnoteSemibold)
                 }
-                .foregroundStyle(selectedTab == tab ? Color.brandPrimary : Color.labelSecondary)
+                .foregroundStyle(selectedTab == tab ? Color.brandSecondary : Color.labelSecondary)
                 .padding(.horizontal, TS.Spacing.xs)
 
                 ZStack {
@@ -219,7 +219,7 @@ struct AdminView: View {
 
                     if selectedTab == tab {
                         Rectangle()
-                            .fill(Color.brandPrimary)
+                            .fill(Color.brandSecondary)
                             .frame(height: 2)
                             .matchedGeometryEffect(id: "tab_indicator", in: tabNamespace)
                     }

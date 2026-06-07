@@ -255,16 +255,16 @@ struct NotuleResultView: View {
                             .font(TS.Font.footnoteSemibold)
                     }
                     .frame(maxWidth: .infinity)
-                    .foregroundStyle(selectedTab == tab ? Color.brandPrimary : Color.labelSecondary)
+                    .foregroundStyle(selectedTab == tab ? Color.brandSecondary : Color.labelSecondary)
                     .padding(.vertical, TS.Spacing.sm)
                     .padding(.horizontal, TS.Spacing.md)
                     .background {
                         RoundedRectangle(cornerRadius: TS.Radius.sm, style: .continuous)
-                            .fill(selectedTab == tab ? Color.accentBgPrimary : Color.surfaceSecondary)
+                            .fill(selectedTab == tab ? Color.accentBgSecondary : Color.surfaceSecondary)
                     }
                     .overlay {
                         RoundedRectangle(cornerRadius: TS.Radius.sm, style: .continuous)
-                            .stroke(selectedTab == tab ? Color.brandPrimary.opacity(0.35) : Color.borderPrimary.opacity(0.5), lineWidth: 1)
+                            .stroke(selectedTab == tab ? Color.brandSecondary.opacity(0.35) : Color.borderPrimary.opacity(0.5), lineWidth: 1)
                     }
                 }
                 .buttonStyle(.plain)

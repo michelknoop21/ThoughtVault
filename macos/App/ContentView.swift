@@ -350,9 +350,9 @@ struct ContentView: View {
                             .foregroundStyle(selectedTab == tab ? .white : .primary)
                             .background {
                                 RoundedRectangle(cornerRadius: 7)
-                                    .fill(selectedTab == tab ? Color.brandPrimary : Color.clear)
+                                    .fill(selectedTab == tab ? Color.brandSecondary : Color.clear)
                                     .shadow(
-                                        color: selectedTab == tab ? Color.brandPrimary.opacity(0.3) : .clear,
+                                        color: selectedTab == tab ? Color.brandSecondary.opacity(0.3) : .clear,
                                         radius: 4, y: 2
                                     )
                             }
@@ -581,10 +581,10 @@ struct SidebarNavItem: View {
             HStack(spacing: 8) {
                 Image(systemName: isSelected ? tab.selectedIcon : tab.icon)
                     .frame(width: 16, height: 16)
-                    .foregroundStyle(isSelected ? .white : (isHovered ? Color.brandPrimary : .primary))
+                    .foregroundStyle(isSelected ? .white : (isHovered ? Color.brandSecondary : .primary))
                 Text(tab.title)
                     .font(.system(size: 13, weight: isSelected ? .semibold : .regular))
-                    .foregroundStyle(isSelected ? .white : (isHovered ? Color.brandPrimary : .primary))
+                    .foregroundStyle(isSelected ? .white : (isHovered ? Color.brandSecondary : .primary))
                 Spacer()
             }
             .padding(.horizontal, 10)
@@ -592,10 +592,10 @@ struct SidebarNavItem: View {
             .background {
                 RoundedRectangle(cornerRadius: 7)
                     .fill(isSelected
-                          ? Color.brandPrimary
-                          : (isHovered ? Color.brandPrimary.opacity(0.08) : Color.clear))
+                          ? Color.brandSecondary
+                          : (isHovered ? Color.brandSecondary.opacity(0.08) : Color.clear))
                     .shadow(
-                        color: isSelected ? Color.brandPrimary.opacity(0.3) : .clear,
+                        color: isSelected ? Color.brandSecondary.opacity(0.3) : .clear,
                         radius: 4, y: 2
                     )
             }

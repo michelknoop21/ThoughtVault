@@ -41,8 +41,6 @@ private let logPageSize = 25
 struct AdminView: View {
 
     @Environment(AuthViewModel.self) var authVM
-    @Namespace private var tabNamespace
-
     @State private var selectedTab: AdminTab = .overzicht
     @State private var users: [AdminUser] = []
     @State private var stats: AdminStats? = nil
@@ -181,52 +179,21 @@ struct AdminView: View {
     // MARK: - Tab Bar
 
     private var tabBar: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: TS.Spacing.lg) {
-                ForEach(AdminTab.allCases, id: \.self) { tab in
-                    tabButton(tab)
-                }
+        // Native segmented control: keyboard-traversable + VoiceOver tab semantics,
+        // replacing a hand-rolled matchedGeometryEffect bar.
+        Picker("Sectie", selection: $selectedTab) {
+            ForEach(AdminTab.allCases, id: \.self) { tab in
+                Text(tab.rawValue).tag(tab)
             }
-            .padding(.horizontal, TS.Spacing.md)
-            .padding(.vertical, TS.Spacing.sm)
         }
+        .pickerStyle(.segmented)
+        .labelsHidden()
+        .padding(.horizontal, TS.Spacing.md)
+        .padding(.vertical, TS.Spacing.sm)
         .background(Color.surfaceSecondary)
         .overlay(alignment: .bottom) {
             Divider()
         }
-    }
-
-    private func tabButton(_ tab: AdminTab) -> some View {
-        Button {
-            withAnimation(TS.Animation.smooth) {
-                selectedTab = tab
-            }
-        } label: {
-            VStack(spacing: TS.Spacing.xs) {
-                HStack(spacing: TS.Spacing.xs) {
-                    Image(systemName: tab.icon)
-                        .font(TS.Font.footnote)
-                    Text(tab.rawValue)
-                        .font(TS.Font.footnoteSemibold)
-                }
-                .foregroundStyle(selectedTab == tab ? Color.brandSecondary : Color.labelSecondary)
-                .padding(.horizontal, TS.Spacing.xs)
-
-                ZStack {
-                    Rectangle()
-                        .fill(Color.clear)
-                        .frame(height: 2)
-
-                    if selectedTab == tab {
-                        Rectangle()
-                            .fill(Color.brandSecondary)
-                            .frame(height: 2)
-                            .matchedGeometryEffect(id: "tab_indicator", in: tabNamespace)
-                    }
-                }
-            }
-        }
-        .buttonStyle(.plain)
     }
 
     // MARK: - Tab Content
@@ -324,7 +291,7 @@ struct AdminView: View {
                 .foregroundStyle(color)
 
             Text(value)
-                .font(.system(size: 36, weight: .bold, design: .rounded))
+                .font(TS.Font.titleBold)
                 .foregroundStyle(Color.labelPrimary)
 
             Text(label)
@@ -730,8 +697,12 @@ struct AdminView: View {
             if isArchived {
                 Button {
                     Task {
-                        try? await APIService.shared.updateAdminFeedback(id: item.id, status: "open", response: nil)
-                        _ = await loadFeedback()
+                        do {
+                            try await APIService.shared.updateAdminFeedback(id: item.id, status: "open", response: nil)
+                            _ = await loadFeedback()
+                        } catch {
+                            errorMessage = "Herstellen mislukt: \(error.localizedDescription)"
+                        }
                     }
                 } label: {
                     Label("Herstellen", systemImage: "arrow.uturn.backward")
@@ -739,8 +710,12 @@ struct AdminView: View {
             } else {
                 Button {
                     Task {
-                        try? await APIService.shared.updateAdminFeedback(id: item.id, status: "archived", response: nil)
-                        _ = await loadFeedback()
+                        do {
+                            try await APIService.shared.updateAdminFeedback(id: item.id, status: "archived", response: nil)
+                            _ = await loadFeedback()
+                        } catch {
+                            errorMessage = "Archiveren mislukt: \(error.localizedDescription)"
+                        }
                     }
                 } label: {
                     Label("Archiveren", systemImage: "archivebox")
@@ -805,36 +780,18 @@ struct AdminView: View {
 
     private var logFilterBar: some View {
         VStack(spacing: TS.Spacing.sm) {
-            // Sub-tab toggle
-            HStack(spacing: TS.Spacing.xs) {
-                ForEach(LogSubTab.allCases, id: \.self) { tab in
-                    Button {
-                        withAnimation(TS.Animation.smooth) { logSubTab = tab }
-                    } label: {
-                        HStack(spacing: TS.Spacing.xs) {
-                            Image(systemName: tab == .activity ? "clock.arrow.circlepath" : "exclamationmark.triangle")
-                                .font(TS.Font.micro)
-                            Text(tab.rawValue)
-                                .font(TS.Font.footnoteSemibold)
-                            let count = tab == .activity ? activityLogs.count : errors.count
-                            if count > 0 {
-                                Text("\(count)")
-                                    .font(TS.Font.micro)
-                                    .padding(.horizontal, 5)
-                                    .padding(.vertical, 1)
-                                    .background(Color.surfaceTertiary)
-                                    .clipShape(Capsule())
-                            }
-                        }
-                        .padding(.horizontal, TS.Spacing.md)
-                        .padding(.vertical, TS.Spacing.sm)
-                        .background(logSubTab == tab ? Color.surfacePrimary : Color.clear)
-                        .foregroundStyle(logSubTab == tab ? Color.labelPrimary : Color.labelSecondary)
-                        .clipShape(RoundedRectangle(cornerRadius: TS.Radius.md))
-                        .shadow(color: logSubTab == tab ? .black.opacity(0.05) : .clear, radius: 1, y: 1)
+            // Sub-tab toggle — native segmented control with live counts
+            HStack(spacing: TS.Spacing.sm) {
+                Picker("Logtype", selection: $logSubTab) {
+                    ForEach(LogSubTab.allCases, id: \.self) { tab in
+                        let count = tab == .activity ? activityLogs.count : errors.count
+                        Text(count > 0 ? "\(tab.rawValue) (\(count))" : tab.rawValue).tag(tab)
                     }
-                    .buttonStyle(.plain)
                 }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .frame(maxWidth: 320)
+
                 Spacer()
                 if isLoadingLogs {
                     ProgressView()
@@ -1007,9 +964,8 @@ struct AdminView: View {
                 Text("Foutmelding").frame(maxWidth: .infinity, alignment: .leading)
             }
         }
-        .font(TS.Font.microSemibold)
-        .foregroundStyle(Color.labelTertiary)
-        .textCase(.uppercase)
+        .font(TS.Font.captionSemibold)
+        .foregroundStyle(Color.labelSecondary)
         .padding(.horizontal, TS.Spacing.md)
         .padding(.vertical, TS.Spacing.sm)
         .background(Color.surfaceSecondary)
@@ -1077,7 +1033,10 @@ struct AdminView: View {
             "feedback_submitted": "Feedback", "admin_user_create": "Gebruiker aangemaakt",
             "admin_user_delete": "Gebruiker verwijderd", "admin_password_reset": "Wachtwoord reset",
         ]
-        return labels[type.lowercased()] ?? type
+        if let mapped = labels[type.lowercased()] { return mapped }
+        // Humanise unknown action types instead of leaking the raw snake_case key.
+        let humanised = type.replacingOccurrences(of: "_", with: " ")
+        return humanised.isEmpty ? type : humanised.prefix(1).uppercased() + humanised.dropFirst()
     }
 
     private func activityBadgeColor(_ type: String) -> Color {

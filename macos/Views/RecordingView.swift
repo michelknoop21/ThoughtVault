@@ -136,7 +136,6 @@ struct RecordingView: View {
                                 showProfileLoadError = false
                                 Task {
                                     await recordingVM.reloadProfiles()
-                                    try? await Task.sleep(nanoseconds: 10_000_000_000)
                                     if recordingVM.availableProfiles.isEmpty {
                                         showProfileLoadError = true
                                     }
@@ -160,7 +159,7 @@ struct RecordingView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(TS.Spacing.md)
                         .task {
-                            try? await Task.sleep(nanoseconds: 10_000_000_000)
+                            await recordingVM.reloadProfiles()
                             if recordingVM.availableProfiles.isEmpty {
                                 showProfileLoadError = true
                             }

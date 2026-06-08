@@ -29,6 +29,11 @@ final class PermissionManager {
     var screenRecordingGranted: Bool = false
     var speechRecognitionGranted: Bool = false
 
+    /// True when the permission was explicitly denied (re-prompting is a no-op;
+    /// the user must change it in System Settings).
+    var microphoneDenied: Bool = false
+    var speechRecognitionDenied: Bool = false
+
     /// True when any essential permission is missing.
     var hasMissingPermissions: Bool {
         !microphoneGranted || !screenRecordingGranted
@@ -61,11 +66,13 @@ final class PermissionManager {
         // Microphone
         let audioStatus = AVCaptureDevice.authorizationStatus(for: .audio)
         microphoneGranted = audioStatus == .authorized
+        microphoneDenied = audioStatus == .denied || audioStatus == .restricted
         log.info("Microphone permission: \(audioStatus.rawValue) (granted: \(self.microphoneGranted))")
 
         // Speech recognition
         let speechStatus = SFSpeechRecognizer.authorizationStatus()
         speechRecognitionGranted = speechStatus == .authorized
+        speechRecognitionDenied = speechStatus == .denied || speechStatus == .restricted
         log.info("Speech recognition permission: \(speechStatus.rawValue) (granted: \(self.speechRecognitionGranted))")
 
         // Screen recording (macOS only)

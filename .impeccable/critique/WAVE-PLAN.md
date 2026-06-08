@@ -52,12 +52,14 @@ Build-commando (signed, vast pad): `xcodebuild -project TranscriptStudio.xcodepr
 - [SKIP] 12 technische literals (localhost/n8n/socks URLs, UUID/yt-dlp placeholders, iOS/macOS/llama3.2) → geen en-entry; vallen terug op literal (identiek in beide talen).
 - Runtime-bewijs: built bundle en.lproj → "Opslaan"→Save, "Nieuwe opname"→New recording, "Fout: boom"→Error: boom, "Bewerk Jan"→Edit Jan.
 
-## Wave 7 — Polish  ~PARTIAL (Login textContentType + Tasks dead code al gedaan in Wave 5b)
-- [ ] Sub-44pt close-buttons hit-area (Recording/Transcripts/Tasks)
-- [ ] Login: "Wachtwoord vergeten" (vergt product-keuze: support/reset-flow); "Lokaal gebruiken" terugweg/bevestiging  — [x] textContentType gedaan
-- [ ] AccountView GDPR-export: echte data of hernoemen "Vraag aan"
-- [ ] FloatingWidget: `.error` niet verbergen; bredere status-pill (12-char truncation weg)
-- [ ] PermissionBanner: denied → "Open Systeeminstellingen" i.p.v. no-op; reduced-motion
-- [ ] NotuleResult: hand-rolled toolbar → native `.toolbar`; PDF-export progress; meta-pills cap 4+n
-- [ ] Recording: spacebar pauze; profiel-load 10s `Task.sleep` → echte completion
-- [ ] Tasks: completed uit "actieve" lijst; dode ternary regel 301
+## Wave 7 — Polish  ~PARTIAL
+- [x] **Recording: profiel-load 10s `Task.sleep` → echte completion** (2 sites). `loadDefaultProfile` vult altijd met defaults, dus de sleep was zinloos → `await reloadProfiles()` + directe check. Spinner verdwijnt nu bij echte completion i.p.v. na 10s. (commit)
+- [x] **PermissionBanner: denied → knop-label "Open Systeeminstellingen"** i.p.v. misleidend "Toestaan". `requestMicrophone()`/`requestSpeechRecognition()` openden al Settings bij denied (geen no-op); alleen het label klopte niet. `PermissionManager` exposed nu `microphoneDenied`/`speechRecognitionDenied`. (commit)
+- [DEFER] FloatingWidget `.error` zichtbaar houden: vergt nieuwe dismiss-knop + error-reset in widget (`actionButtons` heeft `default: EmptyView()`); fout wordt al getoond in main window + menubar → lage netto-waarde, matige churn.
+- [DEFER] PermissionBanner reduced-motion: alleen one-shot expand-spring (lage impact, Wave 5 al zo beoordeeld).
+- [DEFER] NotuleResult native `.toolbar`-rewrite: visueel-risicovolle herstructurering; meta-pills cap + PDF-progress = aparte kleine items.
+- [DEFER] Sub-44pt close-buttons hit-area: fiddly per-site, frame-wijzigingen kunnen layout verschuiven; lage impact.
+- [DEFER] Recording spacebar-pauze: bare `.space` shortcut is intrusief (botst met scroll/default-button); vergt zorgvuldig focus-scopen.
+- [DEFER] Tasks completed-filter: `activeTasks` komt 1:1 van `getActiveTasks()` API — client-side filteren kan legitieme data verbergen; backend-gedrag eerst bevestigen. "Dode ternary r.301" = stale (relativeTimeString is in gebruik).
+- [PRODUCT] Login "Wachtwoord vergeten": vergt keuze support-mail vs reset-flow. AccountView GDPR-export: echte data-export bouwen of knop hernoemen "Aanvragen". → Michel beslissen.
+- [NOTE] `macos/Services/FloatingWidgetController.swift` = orphan (niet in pbxproj/build); dup van `FloatingWidgetPanel.swift`. Handmatig opruimen in Xcode wanneer gewenst.

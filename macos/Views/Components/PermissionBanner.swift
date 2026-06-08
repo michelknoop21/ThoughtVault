@@ -56,6 +56,7 @@ struct PermissionBanner: View {
                                 icon: "mic.fill",
                                 title: "Microfoon",
                                 description: "Vereist om vergaderingen op te nemen",
+                                isDenied: permissionManager.microphoneDenied,
                                 action: {
                                     Task { await permissionManager.requestMicrophone() }
                                 }
@@ -80,6 +81,7 @@ struct PermissionBanner: View {
                                 icon: "waveform",
                                 title: "Spraakherkenning",
                                 description: "Optioneel voor on-device transcriptie",
+                                isDenied: permissionManager.speechRecognitionDenied,
                                 action: {
                                     Task { await permissionManager.requestSpeechRecognition() }
                                 }
@@ -112,6 +114,7 @@ struct PermissionBanner: View {
         icon: String,
         title: String,
         description: String,
+        isDenied: Bool = false,
         action: @escaping () -> Void
     ) -> some View {
         HStack(spacing: TS.Spacing.sm) {
@@ -131,7 +134,7 @@ struct PermissionBanner: View {
 
             Spacer()
 
-            Button("Toestaan", action: action)
+            Button(isDenied ? "Open Systeeminstellingen" : "Toestaan", action: action)
                 .buttonStyle(SecondaryButtonStyle())
                 .controlSize(.small)
         }

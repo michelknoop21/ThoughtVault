@@ -22,6 +22,7 @@ struct LoginView: View {
     @State private var password: String = ""
     @State private var twoFactorCode: String = ""
     @State private var isPasswordVisible: Bool = false
+    @State private var showForgotPassword: Bool = false
 
     var body: some View {
         ZStack {
@@ -67,6 +68,9 @@ struct LoginView: View {
             }
         }
         .preferredColorScheme(.light)
+        .sheet(isPresented: $showForgotPassword) {
+            ForgotPasswordView(initialEmail: email)
+        }
     }
 
     // MARK: - Branding Header
@@ -179,6 +183,15 @@ struct LoginView: View {
                         RoundedRectangle(cornerRadius: TS.Radius.sm)
                             .stroke(Color.borderPrimary, lineWidth: 1)
                     }
+
+                    // Forgot password
+                    Button("Wachtwoord vergeten?") {
+                        showForgotPassword = true
+                    }
+                    .buttonStyle(.plain)
+                    .font(TS.Font.footnote)
+                    .foregroundStyle(Color.brandSecondary)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
                 }
             }
 
@@ -379,6 +392,268 @@ struct LoginView: View {
         .overlay {
             RoundedRectangle(cornerRadius: TS.Radius.xs)
                 .stroke(Color.statusError.opacity(0.25), lineWidth: 1)
+        }
+    }
+}
+
+// MARK: - Forgot Password
+
+/// Self-contained 3-step password reset flow (request code → verify → set new
+/// password), backed by the /auth/password-reset/* endpoints. Defined in this
+/// file to avoid an Xcode project edit.
+struct ForgotPasswordView: View {
+
+    let initialEmail: String
+
+    @Environment(\.dismiss) private var dismiss
+
+    private enum Step { case request, verify, complete, done }
+
+    @State private var step: Step = .request
+    @State private var email: String = ""
+    @State private var code: String = ""
+    @State private var newPassword: String = ""
+    @State private var confirmPassword: String = ""
+    @State private var resetToken: String = ""
+    @State private var isLoading: Bool = false
+    @State private var errorMessage: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: TS.Spacing.lg) {
+            header
+
+            switch step {
+            case .request:  requestStep
+            case .verify:   verifyStep
+            case .complete: completeStep
+            case .done:     doneStep
+            }
+
+            if let errorMessage {
+                Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
+                    .font(TS.Font.footnote)
+                    .foregroundStyle(Color.statusError)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .padding(TS.Spacing.xl)
+        .frame(width: 420)
+        .onAppear { email = initialEmail }
+    }
+
+    // MARK: Header
+
+    private var header: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Wachtwoord vergeten")
+                    .font(TS.Font.title3Bold)
+                    .foregroundStyle(Color.labelPrimary)
+                Text(subtitle)
+                    .font(TS.Font.footnote)
+                    .foregroundStyle(Color.labelSecondary)
+            }
+            Spacer()
+            Button {
+                dismiss()
+            } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.system(size: 18))
+                    .foregroundStyle(Color.labelTertiary)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Sluiten")
+        }
+    }
+
+    private var subtitle: LocalizedStringKey {
+        switch step {
+        case .request:  return "Voer je e-mailadres in. We sturen je een verificatiecode."
+        case .verify:   return "Voer de 6-cijferige code in uit je e-mail."
+        case .complete: return "Kies een nieuw wachtwoord."
+        case .done:     return "Je wachtwoord is gewijzigd."
+        }
+    }
+
+    // MARK: Steps
+
+    private var requestStep: some View {
+        VStack(alignment: .leading, spacing: TS.Spacing.md) {
+            fieldLabel("E-mailadres")
+            TextField("naam@bedrijf.nl", text: $email)
+                .textFieldStyle(.plain)
+                .font(TS.Font.body)
+                .autocorrectionDisabled()
+                .textContentType(.username)
+                #if os(iOS)
+                .textInputAutocapitalization(.never)
+                .keyboardType(.emailAddress)
+                #endif
+                .padding(TS.Spacing.sm + 2)
+                .background(fieldBackground)
+
+            primaryButton("Verstuur code", loadingTitle: "Versturen...") {
+                await sendCode()
+            }
+            .disabled(email.isEmpty)
+        }
+    }
+
+    private var verifyStep: some View {
+        VStack(alignment: .leading, spacing: TS.Spacing.md) {
+            Text("Code verstuurd naar \(email) — als er een account bestaat.")
+                .font(TS.Font.footnote)
+                .foregroundStyle(Color.labelSecondary)
+
+            fieldLabel("Verificatiecode")
+            TextField("000000", text: $code)
+                .textFieldStyle(.plain)
+                .font(TS.Font.title3)
+                .monospacedDigit()
+                .padding(TS.Spacing.sm + 2)
+                .background(fieldBackground)
+                .onChange(of: code) { _, newValue in
+                    code = String(newValue.filter(\.isNumber).prefix(6))
+                }
+
+            primaryButton("Verifieer code", loadingTitle: "Verifiëren...") {
+                await verifyCode()
+            }
+            .disabled(code.count != 6)
+
+            Button("Code opnieuw versturen") {
+                Task { await sendCode() }
+            }
+            .buttonStyle(.plain)
+            .font(TS.Font.footnote)
+            .foregroundStyle(Color.brandSecondary)
+        }
+    }
+
+    private var completeStep: some View {
+        VStack(alignment: .leading, spacing: TS.Spacing.md) {
+            fieldLabel("Nieuw wachtwoord")
+            SecureField("Minimaal 8 tekens", text: $newPassword)
+                .textFieldStyle(.plain)
+                .font(TS.Font.body)
+                .textContentType(.newPassword)
+                .padding(TS.Spacing.sm + 2)
+                .background(fieldBackground)
+
+            fieldLabel("Bevestig nieuw wachtwoord")
+            SecureField("Herhaal wachtwoord", text: $confirmPassword)
+                .textFieldStyle(.plain)
+                .font(TS.Font.body)
+                .textContentType(.newPassword)
+                .padding(TS.Spacing.sm + 2)
+                .background(fieldBackground)
+
+            primaryButton("Wachtwoord wijzigen", loadingTitle: "Opslaan...") {
+                await completeReset()
+            }
+            .disabled(newPassword.count < 8 || newPassword != confirmPassword)
+        }
+    }
+
+    private var doneStep: some View {
+        VStack(spacing: TS.Spacing.md) {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 44))
+                .foregroundStyle(Color.statusSuccess)
+            Text("Je kunt nu inloggen met je nieuwe wachtwoord.")
+                .font(TS.Font.footnote)
+                .foregroundStyle(Color.labelSecondary)
+                .multilineTextAlignment(.center)
+            Button {
+                dismiss()
+            } label: {
+                Text("Sluiten").frame(maxWidth: .infinity)
+            }
+            .buttonStyle(PrimaryButtonStyle())
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, TS.Spacing.md)
+    }
+
+    // MARK: Building blocks
+
+    private func fieldLabel(_ text: LocalizedStringKey) -> some View {
+        Text(text)
+            .font(TS.Font.footnoteSemibold)
+            .foregroundStyle(Color.labelSecondary)
+    }
+
+    private var fieldBackground: some View {
+        RoundedRectangle(cornerRadius: TS.Radius.sm)
+            .fill(Color.surfacePrimary)
+            .overlay {
+                RoundedRectangle(cornerRadius: TS.Radius.sm)
+                    .stroke(Color.borderPrimary, lineWidth: 1)
+            }
+    }
+
+    private func primaryButton(_ title: LocalizedStringKey, loadingTitle: LocalizedStringKey, action: @escaping () async -> Void) -> some View {
+        Button {
+            Task { await action() }
+        } label: {
+            Group {
+                if isLoading {
+                    HStack(spacing: TS.Spacing.sm) {
+                        ProgressView().controlSize(.small).tint(.white)
+                        Text(loadingTitle)
+                    }
+                } else {
+                    Text(title)
+                }
+            }
+            .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(PrimaryButtonStyle())
+        .disabled(isLoading)
+    }
+
+    // MARK: Actions
+
+    private func sendCode() async {
+        errorMessage = nil
+        isLoading = true
+        defer { isLoading = false }
+        do {
+            try await APIService.shared.requestPasswordReset(username: email.trimmingCharacters(in: .whitespaces).lowercased())
+            step = .verify
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func verifyCode() async {
+        errorMessage = nil
+        isLoading = true
+        defer { isLoading = false }
+        do {
+            resetToken = try await APIService.shared.verifyPasswordResetCode(
+                username: email.trimmingCharacters(in: .whitespaces).lowercased(),
+                code: code
+            )
+            step = .complete
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func completeReset() async {
+        errorMessage = nil
+        isLoading = true
+        defer { isLoading = false }
+        do {
+            try await APIService.shared.completePasswordReset(
+                username: email.trimmingCharacters(in: .whitespaces).lowercased(),
+                resetToken: resetToken,
+                newPassword: newPassword
+            )
+            step = .done
+        } catch {
+            errorMessage = error.localizedDescription
         }
     }
 }

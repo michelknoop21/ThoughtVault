@@ -61,5 +61,6 @@ Build-commando (signed, vast pad): `xcodebuild -project TranscriptStudio.xcodepr
 - [DEFER] Sub-44pt close-buttons hit-area: fiddly per-site, frame-wijzigingen kunnen layout verschuiven; lage impact.
 - [DEFER] Recording spacebar-pauze: bare `.space` shortcut is intrusief (botst met scroll/default-button); vergt zorgvuldig focus-scopen.
 - [DEFER] Tasks completed-filter: `activeTasks` komt 1:1 van `getActiveTasks()` API — client-side filteren kan legitieme data verbergen; backend-gedrag eerst bevestigen. "Dode ternary r.301" = stale (relativeTimeString is in gebruik).
-- [PRODUCT] Login "Wachtwoord vergeten": vergt keuze support-mail vs reset-flow. AccountView GDPR-export: echte data-export bouwen of knop hernoemen "Aanvragen". → Michel beslissen.
+- [x] **Login "Wachtwoord vergeten"** → echte 3-staps reset-flow (request code → verify → nieuw wachtwoord) op bestaande `/auth/password-reset/*` endpoints. `ForgotPasswordView` in LoginView.swift (geen pbxproj-edit), `APIService` kreeg 3 methoden. Strings in nl/en-catalogus. (commit)
+- [x] **AccountView GDPR-export** → echte export: alle lokaal opgeslagen transcripties + notulen uit `LocalTranscriptStore.allTranscripts()` als JSON (was schijn-stub met 1,5s nep-sleep + alleen email/naam). (commit)
 - [NOTE] `macos/Services/FloatingWidgetController.swift` = orphan (niet in pbxproj/build); dup van `FloatingWidgetPanel.swift`. Handmatig opruimen in Xcode wanneer gewenst.

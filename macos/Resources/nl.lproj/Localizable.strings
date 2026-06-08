@@ -420,3 +420,19 @@
 "Weet je zeker dat je \"%@\" wilt annuleren?" = "Weet je zeker dat je \"%@\" wilt annuleren?";
 "Weet je zeker dat je \"%@\" wilt verwijderen? Dit kan niet ongedaan worden gemaakt." = "Weet je zeker dat je \"%@\" wilt verwijderen? Dit kan niet ongedaan worden gemaakt.";
 "Weet je zeker dat je het profiel '%@' wilt verwijderen?" = "Weet je zeker dat je het profiel '%@' wilt verwijderen?";
+
+// MARK: - Forgot password (Wave 7)
+"Wachtwoord vergeten?" = "Wachtwoord vergeten?";
+"Wachtwoord vergeten" = "Wachtwoord vergeten";
+"Voer je e-mailadres in. We sturen je een verificatiecode." = "Voer je e-mailadres in. We sturen je een verificatiecode.";
+"Voer de 6-cijferige code in uit je e-mail." = "Voer de 6-cijferige code in uit je e-mail.";
+"Kies een nieuw wachtwoord." = "Kies een nieuw wachtwoord.";
+"Je wachtwoord is gewijzigd." = "Je wachtwoord is gewijzigd.";
+"Verstuur code" = "Verstuur code";
+"Versturen..." = "Versturen...";
+"Code verstuurd naar %@ — als er een account bestaat." = "Code verstuurd naar %@ — als er een account bestaat.";
+"Verifieer code" = "Verifieer code";
+"Code opnieuw versturen" = "Code opnieuw versturen";
+"Herhaal wachtwoord" = "Herhaal wachtwoord";
+"Opslaan..." = "Opslaan...";
+"Je kunt nu inloggen met je nieuwe wachtwoord." = "Je kunt nu inloggen met je nieuwe wachtwoord.";

@@ -365,6 +365,40 @@ actor APIService {
         try await performVoid(req)
     }
 
+    // MARK: - Password Reset (forgot password, 3-step, unauthenticated)
+
+    struct PasswordResetVerifyResponse: Codable {
+        let resetToken: String
+        enum CodingKeys: String, CodingKey { case resetToken = "reset_token" }
+    }
+
+    /// Step 1 — request a 6-digit code by email. Always succeeds (server hides
+    /// whether the account exists, to prevent username enumeration).
+    func requestPasswordReset(username: String) async throws {
+        let body = try JSONEncoder().encode(["username": username])
+        let req = try request(path: "/auth/password-reset/request", method: "POST", body: body, authenticated: false)
+        try await performVoid(req)
+    }
+
+    /// Step 2 — verify the code, returns a short-lived reset token.
+    func verifyPasswordResetCode(username: String, code: String) async throws -> String {
+        let body = try JSONEncoder().encode(["username": username, "code": code])
+        let req = try request(path: "/auth/password-reset/verify", method: "POST", body: body, authenticated: false)
+        let resp: PasswordResetVerifyResponse = try await perform(req)
+        return resp.resetToken
+    }
+
+    /// Step 3 — set the new password using the reset token.
+    func completePasswordReset(username: String, resetToken: String, newPassword: String) async throws {
+        let body = try JSONEncoder().encode([
+            "username": username,
+            "reset_token": resetToken,
+            "new_password": newPassword
+        ])
+        let req = try request(path: "/auth/password-reset/complete", method: "POST", body: body, authenticated: false)
+        try await performVoid(req)
+    }
+
     func get2FAStatus() async throws -> TwoFAStatus {
         let req = try request(path: "/auth/2fa/status", method: "GET")
         return try await perform(req)

@@ -696,13 +696,33 @@ struct AccountView: View {
         errorMessage = nil
 
         do {
-            try await Task.sleep(nanoseconds: 1_500_000_000)
+            let isoFormatter = ISO8601DateFormatter()
+            let transcripts = LocalTranscriptStore.shared.allTranscripts()
+
+            // Real export: every locally stored transcript + its generated minutes.
+            let transcriptDicts: [[String: Any]] = transcripts.map { t in
+                var d: [String: Any] = [
+                    "task_id": t.taskId,
+                    "title": t.title,
+                    "date": isoFormatter.string(from: t.date),
+                    "tags": t.tags
+                ]
+                if let raw = t.rawTranscription { d["raw_transcription"] = raw }
+                if let html = t.notuleHtml { d["notule_html"] = html }
+                if let profile = t.profileName { d["profile_name"] = profile }
+                if let duration = t.duration { d["duration_seconds"] = duration }
+                return d
+            }
 
             let exportData: [String: Any] = [
-                "export_date": ISO8601DateFormatter().string(from: Date()),
-                "email": authVM.currentUser?.email ?? authVM.userEmail,
-                "name": authVM.currentUser?.name ?? "",
-                "note": "Neem contact op met support@prezent.nl voor een volledig GDPR data-export inclusief alle transcripties."
+                "export_date": isoFormatter.string(from: Date()),
+                "account": [
+                    "email": authVM.currentUser?.email ?? authVM.userEmail,
+                    "name": authVM.currentUser?.name ?? ""
+                ],
+                "transcript_count": transcripts.count,
+                "transcripts": transcriptDicts,
+                "note": "Bevat alle lokaal opgeslagen transcripties en notulen. Voor eventuele server-side verwerkingsdata: support@prezent.nl."
             ]
 
             if let jsonData = try? JSONSerialization.data(withJSONObject: exportData, options: .prettyPrinted) {

@@ -3,6 +3,8 @@ build/
 builds/
 DerivedData/
 *.xcuserdata
+xcuserdata/
+*.xcuserstate
 *.xcworkspace/xcuserdata/
 *.pbxuser
 *.mode1v3
@@ -37,6 +39,9 @@ windows/.vite/
 .env
 .env.*
 !.env.example
+
+# Operational runbook — contains production host/IP/SSH/paths; keep local only
+docs/BACKEND.md
 
 # IDE
 .idea/

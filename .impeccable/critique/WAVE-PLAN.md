@@ -45,8 +45,12 @@ Build-commando (signed, vast pad): `xcodebuild -project TranscriptStudio.xcodepr
 - [TODO] 137 font-size-literals → TS.Font (groot, visueel-drift-risico; dedicated pass)
 - [TODO] radius/spacing/frame-literals; dark-mode `.black` shadows / inline RGB (dedicated pass)
 
-## Wave 6 — Localisatie  ⏳ TODO (groot, dedicated mechanical pass)
-- [ ] 318 hardcoded `Text("…")` → `Localizable.strings` keys; en.lproj activeren. (mem 26472). Vereist zorgvuldige key-extractie + fallback-check; beste als losse gefocuste sweep ná de copy-veranderende waves (nu klaar).
+## Wave 6 — Localisatie  ✅ DONE (build + runtime-verified)
+- [x] **NL-tekst-als-sleutel** aanpak (SwiftUI `Text("…")` is al een `LocalizedStringKey`): nul code-wijzigingen in 66 Views, en.lproj nu live. nl/en `Localizable.strings` herschreven als volledige catalogus (410 keys: 387 plain + 17 interpolatie + 6 semantische).
+- [x] Interpolatie-keys met correcte specifiers (`Int`→`%lld`, `String`→`%@`) — geverifieerd dat `String(localized:)`/`LocalizedStringKey` exact matchen (bv. `Text("Pagina \(5) van \(10)")` → "Page 5 of 10").
+- [x] 6 `NSLocalizedString("sort.*"/"filter.*")` semantische keys (TranscriptsViewModel) behouden. ~120 dode semantische keys vervangen.
+- [SKIP] 12 technische literals (localhost/n8n/socks URLs, UUID/yt-dlp placeholders, iOS/macOS/llama3.2) → geen en-entry; vallen terug op literal (identiek in beide talen).
+- Runtime-bewijs: built bundle en.lproj → "Opslaan"→Save, "Nieuwe opname"→New recording, "Fout: boom"→Error: boom, "Bewerk Jan"→Edit Jan.
 
 ## Wave 7 — Polish  ~PARTIAL (Login textContentType + Tasks dead code al gedaan in Wave 5b)
 - [ ] Sub-44pt close-buttons hit-area (Recording/Transcripts/Tasks)

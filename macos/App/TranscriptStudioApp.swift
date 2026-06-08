@@ -110,7 +110,7 @@ struct MenuBarContentView: View {
                     .fill(recordingVM.recordingState == .recording ? Color.red : Color.secondary)
                     .frame(width: 8, height: 8)
                 Text(statusText)
-                    .font(.system(size: 13, weight: .medium))
+                    .font(TS.Font.footnoteMedium)
                 Spacer()
             }
             .padding(.horizontal, 12)
@@ -179,7 +179,7 @@ struct MenuBarContentView: View {
             case .error(let message):
                 Text("Fout: \(message)")
                     .foregroundStyle(.red)
-                    .font(.system(size: 12))
+                    .font(TS.Font.caption)
                     .padding(.horizontal, 12)
 
                 Button {
@@ -195,7 +195,7 @@ struct MenuBarContentView: View {
                     .padding(.vertical, 4)
 
                 Text("Aankomende vergaderingen")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(TS.Font.microSemibold)
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, 12)
 
@@ -211,7 +211,7 @@ struct MenuBarContentView: View {
                                 Text(meeting.title)
                                     .lineLimit(1)
                                 Text(meetingTimeText(meeting))
-                                    .font(.system(size: 11))
+                                    .font(TS.Font.micro)
                                     .foregroundStyle(.secondary)
                             }
                         } icon: {

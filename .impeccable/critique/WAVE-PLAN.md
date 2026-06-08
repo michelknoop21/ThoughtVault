@@ -42,7 +42,7 @@ Build-commando (signed, vast pad): `xcodebuild -project TranscriptStudio.xcodepr
 - [x] Login `.textContentType(.username/.password)` (autofill)
 - [ ] **Resterende a11y-labels** (AdminView icon-buttons, overige) — TranscriptsView bleek al grotendeels gelabeld
 - [TODO] Reduced-motion: schadelijke (continue/looping) gevallen AL gegated (shimmer/pulsing dot/waveform); resterende 22 files = one-shot tab/hover-springs (lage impact) — optioneel
-- [TODO] 137 font-size-literals → TS.Font (groot, visueel-drift-risico; dedicated pass)
+- [~] **font-size-sweep gedaan (build-verified):** van 149 `.system(size:)` bleek **124 = `Image`/SF-symbol icon-sizing** (hoort vast → niet in scope van een *font*-token-sweep) en de meeste resterende Text = **monospaced timers/codes** (RecordingView 56pt-timer, 2FA-codes, durations) of **layout-gekoppeld** (avatar-letter in 32pt cirkel, 9pt admin-badges → zouden naar 11 groeien). Alleen **9 nul-drift Text-sites** (vaste grootte raakt exact token-default) geconverteerd → consistentie + Dynamic Type, géén visuele verandering. Rest bewust vast gelaten (zou regressie geven).
 - [TODO] radius/spacing/frame-literals; dark-mode `.black` shadows / inline RGB (dedicated pass)
 
 ## Wave 6 — Localisatie  ✅ DONE (build + runtime-verified)

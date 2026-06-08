@@ -129,7 +129,7 @@ struct RecordingWidgetView: View {
         HStack(spacing: 6) {
             statusIndicator
             Text(stateLabelText)
-                .font(.system(size: 11, weight: .bold))
+                .font(TS.Font.microBold)
                 .foregroundStyle(statusLabelColor)
                 .textCase(.uppercase)
                 .kerning(0.8)
@@ -270,7 +270,7 @@ struct RecordingWidgetView: View {
                 Image(systemName: "stop.fill")
                     .font(.system(size: 10, weight: .bold))
                 Text("Stop")
-                    .font(.system(size: 12, weight: .bold))
+                    .font(TS.Font.captionBold)
             }
             .foregroundStyle(.white)
             .padding(.horizontal, 12)

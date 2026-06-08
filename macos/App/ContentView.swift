@@ -351,7 +351,7 @@ struct ContentView: View {
                     Text("Uitloggen")
                     Spacer()
                 }
-                .font(.system(size: 13))
+                .font(TS.Font.footnote)
                 .foregroundStyle(.secondary)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 7)
@@ -436,10 +436,10 @@ struct ContentView: View {
 
             VStack(alignment: .leading, spacing: 1) {
                 Text(authVM.currentUser?.displayName ?? "Transcript Studio")
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(TS.Font.footnoteSemibold)
                     .lineLimit(1)
                 Text(authVM.currentUser?.email ?? "")
-                    .font(.system(size: 11))
+                    .font(TS.Font.micro)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }

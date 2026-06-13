@@ -686,23 +686,24 @@ struct RecordingView: View {
     }
 
     private func taskRow(_ task: TranscriptTask) -> some View {
+        // One affordance per row: a single status icon + filename + one status line.
         HStack(spacing: TS.Spacing.sm) {
-            // Status icon
             ZStack {
-                if task.status == .error {
+                switch task.status {
+                case .error:
                     Image(systemName: "exclamationmark.circle.fill")
                         .font(.system(size: 18))
                         .foregroundStyle(Color.statusError)
-                } else if task.status == .completed {
+                case .completed:
                     Image(systemName: "checkmark.circle.fill")
                         .font(.system(size: 18))
                         .foregroundStyle(Color.statusSuccess)
-                } else {
-                    ProgressView()
-                        .scaleEffect(0.75)
+                default:
+                    SpinningProgressView(color: Color.brandSecondary, size: 16)
                 }
             }
             .frame(width: 22)
+            .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(task.filename)
@@ -713,7 +714,7 @@ struct RecordingView: View {
                 if task.status == .error, let errMsg = task.errorMessage {
                     Text(errMsg)
                         .font(TS.Font.caption)
-                        .foregroundStyle(Color.statusError)
+                        .foregroundStyle(Color.statusErrorText)
                         .lineLimit(2)
                 } else {
                     Text(task.status.displayName)
@@ -723,14 +724,24 @@ struct RecordingView: View {
             }
 
             Spacer()
-
-            StatusBadge(status: task.status)
         }
         .padding(TS.Spacing.sm)
         .background {
             RoundedRectangle(cornerRadius: TS.Radius.sm, style: .continuous)
                 .fill(Color.surfaceSecondary)
         }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Self.accessibilityLabel(for: task))
+    }
+
+    /// Single, complete VoiceOver announcement for a task row (filename + status,
+    /// or filename + error message), replacing the three separate reads the
+    /// stacked icon/subtitle/badge produced.
+    private static func accessibilityLabel(for task: TranscriptTask) -> String {
+        if task.status == .error, let errMsg = task.errorMessage, !errMsg.isEmpty {
+            return "\(task.filename), fout: \(errMsg)"
+        }
+        return "\(task.filename), \(task.status.displayName)"
     }
 
     // MARK: Saved recordings section

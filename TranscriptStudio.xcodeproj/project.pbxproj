@@ -46,6 +46,7 @@
 		AA000036 /* ProfilePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000036 /* ProfilePicker.swift */; };
 		AA000037 /* RecordingWidgetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000037 /* RecordingWidgetView.swift */; };
 		AA000038 /* StatusBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000038 /* StatusBadge.swift */; };
+		AA0000F1 /* SpinningProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000F1 /* SpinningProgressView.swift */; };
 		AA000060 /* ProcessingBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000060 /* ProcessingBar.swift */; };
 		AA000039 /* TranscriptCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000039 /* TranscriptCard.swift */; };
 		AA000040 /* WaveformView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000040 /* WaveformView.swift */; };
@@ -135,6 +136,7 @@
 		FA000036 /* ProfilePicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfilePicker.swift; sourceTree = "<group>"; };
 		FA000037 /* RecordingWidgetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingWidgetView.swift; sourceTree = "<group>"; };
 		FA000038 /* StatusBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusBadge.swift; sourceTree = "<group>"; };
+		FA0000F1 /* SpinningProgressView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpinningProgressView.swift; sourceTree = "<group>"; };
 		FA000060 /* ProcessingBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessingBar.swift; sourceTree = "<group>"; };
 		FA000039 /* TranscriptCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptCard.swift; sourceTree = "<group>"; };
 		FA000040 /* WaveformView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaveformView.swift; sourceTree = "<group>"; };
@@ -331,6 +333,7 @@
 				FA000037 /* RecordingWidgetView.swift */,
 				FA000060 /* ProcessingBar.swift */,
 				FA000038 /* StatusBadge.swift */,
+				FA0000F1 /* SpinningProgressView.swift */,
 				FA000039 /* TranscriptCard.swift */,
 				FA000040 /* WaveformView.swift */,
 				FA000052 /* PermissionBanner.swift */,
@@ -536,6 +539,7 @@
 				AA000037 /* RecordingWidgetView.swift in Sources */,
 				AA000060 /* ProcessingBar.swift in Sources */,
 				AA000038 /* StatusBadge.swift in Sources */,
+				AA0000F1 /* SpinningProgressView.swift in Sources */,
 				AA000039 /* TranscriptCard.swift in Sources */,
 				AA000040 /* WaveformView.swift in Sources */,
 				AA000051 /* PermissionManager.swift in Sources */,

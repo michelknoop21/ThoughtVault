@@ -18,7 +18,7 @@ struct StatusBadge: View {
             statusIndicator
             Text(status.displayName)
                 .font(TS.Font.microSemibold)
-                .foregroundStyle(foregroundColor)
+                .foregroundStyle(textColor)
                 .lineLimit(1)
         }
         .padding(.horizontal, TS.Spacing.sm)
@@ -53,18 +53,29 @@ struct StatusBadge: View {
 
         default:
             // Active spinning progress for all other states
-            SpinningProgressView(color: foregroundColor)
+            SpinningProgressView(color: iconColor)
         }
     }
 
     // MARK: - Colors
 
-    private var foregroundColor: Color {
+    /// Vivid color for the icon/spinner (graphical object, 3:1 bar).
+    private var iconColor: Color {
         switch status {
         case .completed:          return Color.statusSuccess
         case .error:              return Color.statusError
         case .pending, .queued:   return Color.statusWarning
         default:                  return Color.brandSecondary
+        }
+    }
+
+    /// Darker, AA-passing color for the label text on the tinted background.
+    private var textColor: Color {
+        switch status {
+        case .completed:          return Color.statusSuccessText
+        case .error:              return Color.statusErrorText
+        case .pending, .queued:   return Color.statusWarningText
+        default:                  return Color.statusInfoText
         }
     }
 
@@ -84,31 +95,6 @@ struct StatusBadge: View {
         case .pending, .queued:   return Color.statusWarning.opacity(0.25)
         default:                  return Color.brandSecondary.opacity(0.25)
         }
-    }
-}
-
-// MARK: - SpinningProgressView
-
-/// Lightweight spinning indicator that avoids ProgressView's heavyweight behavior
-/// in small badge contexts.
-private struct SpinningProgressView: View {
-    let color: Color
-
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var isRotating: Bool = false
-
-    var body: some View {
-        // Reduce Motion: show the static glyph instead of a perpetual spin (WCAG 2.3.3).
-        Image(systemName: "arrow.2.circlepath")
-            .font(.system(size: 11, weight: .medium))
-            .foregroundStyle(color)
-            .rotationEffect(.degrees(isRotating ? 360 : 0))
-            .animation(
-                reduceMotion ? .default
-                    : .linear(duration: 1.0).repeatForever(autoreverses: false),
-                value: isRotating
-            )
-            .onAppear { if !reduceMotion { isRotating = true } }
     }
 }
 

@@ -141,15 +141,53 @@ extension Color {
     )
 
     // MARK: Status Colors
+    //
+    // Two tiers per status:
+    //  - the vivid color (`statusX`) for icons/indicators — graphical objects, 3:1 bar;
+    //  - a darker `statusXText` for text on a light tint / dark surface — 4.5:1 bar.
+    // Both are theme-adaptive so contrast holds in dark mode (see PRODUCT.md a11y bar).
 
-    /// Error / danger — red #EF4444
-    static let statusError = Color(red: 0.937, green: 0.267, blue: 0.267)
+    /// Error / danger — vivid, for icons & indicators (#EF4444 light).
+    static let statusError = Color(
+        light: Color(red: 0.937, green: 0.267, blue: 0.267),
+        dark:  Color(red: 0.980, green: 0.450, blue: 0.450)
+    )
 
-    /// Warning — orange #F9A500
-    static let statusWarning = Color(red: 0.976, green: 0.647, blue: 0.0)
+    /// Warning — vivid amber, for icons & indicators (#F9A500 light).
+    static let statusWarning = Color(
+        light: Color(red: 0.976, green: 0.647, blue: 0.0),
+        dark:  Color(red: 1.0,   green: 0.780, blue: 0.300)
+    )
 
-    /// Success — reuses brandAccent green.
-    static let statusSuccess = Color.brandAccent
+    /// Success — vivid green, for icons & indicators (#009F3C light).
+    static let statusSuccess = Color(
+        light: Color(red: 0.0,  green: 0.624, blue: 0.235),
+        dark:  Color(red: 0.300, green: 0.820, blue: 0.500)
+    )
+
+    /// Error text — AA-passing on a light tint / dark surface.
+    static let statusErrorText = Color(
+        light: Color(red: 0.700, green: 0.120, blue: 0.120),
+        dark:  Color(red: 0.980, green: 0.560, blue: 0.560)
+    )
+
+    /// Warning text — dark amber, AA-passing (amber must go deep to read).
+    static let statusWarningText = Color(
+        light: Color(red: 0.500, green: 0.330, blue: 0.0),
+        dark:  Color(red: 1.0,   green: 0.820, blue: 0.420)
+    )
+
+    /// Success text — deep green, AA-passing.
+    static let statusSuccessText = Color(
+        light: Color(red: 0.0,  green: 0.420, blue: 0.180),
+        dark:  Color(red: 0.450, green: 0.850, blue: 0.580)
+    )
+
+    /// Info / in-progress text — dark blue, AA-passing (active badge text).
+    static let statusInfoText = Color(
+        light: Color(red: 0.040, green: 0.360, blue: 0.540),
+        dark:  Color(red: 0.520, green: 0.780, blue: 0.980)
+    )
 
     // MARK: Platform Brand Colors (for calendar integrations)
 

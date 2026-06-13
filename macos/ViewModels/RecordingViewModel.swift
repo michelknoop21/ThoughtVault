@@ -1121,14 +1121,20 @@ final class RecordingViewModel {
 
         // Remove completed / error tasks from active list after a short delay
         if updatedTask.status == .completed || updatedTask.status == .error {
-            let taskId = updatedTask.taskId
-            pendingRemovalTasks[taskId]?.cancel()
-            pendingRemovalTasks[taskId] = Task { @MainActor in
-                try? await Task.sleep(nanoseconds: 3_000_000_000)
-                guard !Task.isCancelled else { return }
-                self.removeTask(taskId)
-                self.pendingRemovalTasks.removeValue(forKey: taskId)
-            }
+            scheduleRemoval(of: updatedTask.taskId)
+        }
+    }
+
+    /// Removes a finished (completed/error) task from the active list after a short
+    /// delay so the user briefly sees the final state. Shared by the SSE path and
+    /// the fully-local processing path.
+    private func scheduleRemoval(of taskId: String) {
+        pendingRemovalTasks[taskId]?.cancel()
+        pendingRemovalTasks[taskId] = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 3_000_000_000)
+            guard !Task.isCancelled else { return }
+            self.removeTask(taskId)
+            self.pendingRemovalTasks.removeValue(forKey: taskId)
         }
     }
 
@@ -1177,6 +1183,12 @@ final class RecordingViewModel {
         activeTasks[idx].status = status
         if let progress { activeTasks[idx].progress = progress }
         if let errorMessage { activeTasks[idx].errorMessage = errorMessage }
+
+        // Local processing reports completion/failure through updateTask (not SSE),
+        // so the auto-removal must be scheduled here too.
+        if status == .completed || status == .error {
+            scheduleRemoval(of: activeTasks[idx].taskId)
+        }
     }
 
     // MARK: - Feature Flags

@@ -43,6 +43,11 @@ final class RecordingViewModel {
     /// The View layer observes this to trigger SeedReviewSheet after recordingState settles.
     var pendingSeedAttendees: [String]? = nil
 
+    /// Directory person IDs manually selected for the current recording. Used for
+    /// ad-hoc meetings with no calendar link so they still get a deelnemerslijst.
+    /// Reset after each recording is dispatched.
+    var selectedParticipantIDs: [String] = []
+
     // YouTube transcription
     var isYouTubeEnabled: Bool = false
     var youtubeURL: String = ""
@@ -387,6 +392,14 @@ final class RecordingViewModel {
         let capturedAttendees = activeMeeting?.attendees ?? []
         activeMeeting = nil
 
+        // Resolve the participant list (self + calendar attendees + manual picks)
+        // before any early return so every dispatch path can carry it (D-B).
+        let participants = PersonDirectoryService.shared.resolveParticipants(
+            attendeeEmails: capturedAttendees,
+            manualIDs: selectedParticipantIDs
+        )
+        selectedParticipantIDs = []
+
         await MainActor.run { recordingState = .stopping }
         await stopLiveTranscription()
 
@@ -458,7 +471,7 @@ final class RecordingViewModel {
         // Fully local mode: transcribe + generate notulen on-device, no server needed.
         if isLocalMode {
             os_log("[RecordingVM] stopAndUpload: path=local", log: log, type: .info)
-            await processLocally(url: url, profileId: profile.id)
+            await processLocally(url: url, profileId: profile.id, participants: participants)
             return
         }
 
@@ -474,10 +487,10 @@ final class RecordingViewModel {
 #endif
             if canUseOnDevice {
                 os_log("[RecordingVM] stopAndUpload: path=onDevice", log: log, type: .info)
-                await transcribeOnDeviceThenUpload(url: url, profileId: profile.id)
+                await transcribeOnDeviceThenUpload(url: url, profileId: profile.id, participants: participants)
             } else {
                 os_log("[RecordingVM] stopAndUpload: path=cloud", log: log, type: .info)
-                await uploadFile(url, profileId: profile.id)
+                await uploadFile(url, profileId: profile.id, participants: participants)
             }
         } else {
             os_log("[RecordingVM] stopAndUpload: path=offline", log: log, type: .info)
@@ -516,7 +529,7 @@ final class RecordingViewModel {
 
     // MARK: - Upload
 
-    func uploadFile(_ url: URL, profileId: String) async {
+    func uploadFile(_ url: URL, profileId: String, participants: [Participant] = []) async {
         os_log("[RecordingVM] uploadFile: starting for %{public}@", log: log, type: .info, url.lastPathComponent)
 
         // Create a temporary task so the upload is immediately visible in the task list
@@ -542,7 +555,8 @@ final class RecordingViewModel {
                 let task = try await APIService.shared.uploadAudio(
                     fileURL: url,
                     profileId: profileId,
-                    usePremium: usePremium
+                    usePremium: usePremium,
+                    participants: participants
                 ) { [weak self] progress in
                     Task { @MainActor in
                         self?.updateTask(tempId, status: .uploading, progress: progress)
@@ -616,7 +630,7 @@ final class RecordingViewModel {
 
     // MARK: - On-Device Transcription
 
-    func transcribeOnDeviceThenUpload(url: URL, profileId: String) async {
+    func transcribeOnDeviceThenUpload(url: URL, profileId: String, participants: [Participant] = []) async {
         await MainActor.run {
             isLiveTranscribing = true
             liveTranscriptText = ""
@@ -644,7 +658,8 @@ final class RecordingViewModel {
             // Upload transcription text to server
             let task = try await APIService.shared.uploadTranscriptionText(
                 transcription: fullTranscription,
-                profileId: profileId
+                profileId: profileId,
+                participants: participants
             )
 
             await MainActor.run {
@@ -668,7 +683,7 @@ final class RecordingViewModel {
 
     /// Transcribes and generates notulen entirely on-device, then stores the result
     /// in the local SwiftData store. No backend server is contacted.
-    func processLocally(url: URL, profileId: String) async {
+    func processLocally(url: URL, profileId: String, participants: [Participant] = []) async {
         let profile = availableProfiles.first { $0.id == profileId }
             ?? Profile.defaults.first { $0.id == profileId }
             ?? selectedProfile
@@ -752,7 +767,7 @@ final class RecordingViewModel {
             let html = try await service.generateNotulen(
                 transcription: transcription,
                 systemPrompt: profile.systemPrompt ?? "",
-                notulePrompt: profile.notulePrompt ?? "",
+                notulePrompt: Self.injectParticipants(into: profile.notulePrompt ?? "", participants: participants),
                 outputTemplate: profile.template
             ) { [weak self] chunk in
                 Task { @MainActor in
@@ -814,6 +829,19 @@ final class RecordingViewModel {
         formatter.locale = Locale(identifier: "nl_NL")
         formatter.dateFormat = "d MMMM yyyy"
         return html.replacingOccurrences(of: "{{DATE}}", with: formatter.string(from: date))
+    }
+
+    /// Injects the DEELNEMERS block into a notule prompt for on-device generation.
+    /// Substitutes a {{PARTICIPANTS}} placeholder when present, otherwise prepends
+    /// the block. Mirrors what the cloud backend does server-side so both paths
+    /// produce an attendee list + name attribution.
+    private static func injectParticipants(into notulePrompt: String, participants: [Participant]) -> String {
+        let block = participants.notulePromptBlock
+        if notulePrompt.contains("{{PARTICIPANTS}}") {
+            return notulePrompt.replacingOccurrences(of: "{{PARTICIPANTS}}", with: block)
+        }
+        guard !block.isEmpty else { return notulePrompt }
+        return block + "\n\n" + notulePrompt
     }
 
     /// Builds a fallback title from the transcription's first sentence or the filename.

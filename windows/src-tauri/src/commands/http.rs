@@ -73,8 +73,9 @@ pub async fn proxy_upload(
     profile_id: String,
     mode: String,
     use_premium: Option<bool>,
+    participants: Option<String>,
 ) -> Result<HttpResponse, String> {
-    do_proxy_upload(file_path, upload_url, token, profile_id, mode, use_premium.unwrap_or(false)).await
+    do_proxy_upload(file_path, upload_url, token, profile_id, mode, use_premium.unwrap_or(false), participants).await
 }
 
 /// Core upload logic, separated from the Tauri command wrapper for testability.
@@ -103,6 +104,7 @@ pub async fn do_proxy_upload(
     profile_id: String,
     mode: String,
     use_premium: bool,
+    participants: Option<String>,
 ) -> Result<HttpResponse, String> {
     use std::time::Instant;
     let t_start = Instant::now();
@@ -244,11 +246,16 @@ pub async fn do_proxy_upload(
             .map_err(|e| e.to_string())?
     };
 
-    let form = reqwest::multipart::Form::new()
+    let mut form = reqwest::multipart::Form::new()
         .part("file", file_part)
         .text("profile_id", profile_id)
         .text("mode", mode)
         .text("use_premium", use_premium.to_string());
+
+    // Participants JSON (optional) — backend folds these into the notule prompt.
+    if let Some(p) = participants.filter(|s| !s.is_empty()) {
+        form = form.text("participants", p);
+    }
 
     // ─── Step 7: send. ───
     let t_send = Instant::now();
@@ -466,6 +473,7 @@ mod tests {
             "profile-1".to_string(),
             "combined".to_string(),
             false,
+            None,
         ).await;
 
         assert!(result.is_err());
@@ -486,6 +494,7 @@ mod tests {
             "profile-1".to_string(),
             "combined".to_string(),
             false,
+            None,
         ).await;
 
         assert!(result.is_err());
@@ -508,6 +517,7 @@ mod tests {
             "profile-abc".to_string(),
             "combined".to_string(),
             false,
+            None,
         ).await;
 
         assert!(result.is_ok(), "Upload should succeed, got: {:?}", result.err());
@@ -546,6 +556,7 @@ mod tests {
             "profile".to_string(),
             "microphone".to_string(),
             false,
+            None,
         ).await;
 
         // Should return Ok with error status (not Err) — the HTTP response was received
@@ -569,6 +580,7 @@ mod tests {
             "profile".to_string(),
             "combined".to_string(),
             false,
+            None,
         ).await;
 
         assert!(result.is_err());
@@ -592,6 +604,7 @@ mod tests {
             "p1".to_string(),
             "microphone".to_string(),
             false,
+            None,
         ).await;
 
         assert!(result.is_ok());

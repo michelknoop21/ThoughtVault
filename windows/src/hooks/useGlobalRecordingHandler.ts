@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { useRecordingStore } from "../stores/recordingStore";
 import { uploadAndTrack } from "../services/uploadAndTrack";
+import { resolveParticipants } from "../services/participants";
 import { closeWidgetWindow } from "./useWidgetWindow";
 
 /**
@@ -58,8 +59,14 @@ async function handleUpload(
   try {
     const store = useRecordingStore.getState();
     const { mode, selectedProfileId, usePremium } = store;
+    // Resolve participants (self + calendar attendees + manual picks) BEFORE
+    // reset() clears the attendee/selection state (D-B).
+    const participants = resolveParticipants(
+      store.pendingSeedAttendees,
+      store.selectedParticipantIds,
+    );
     store.reset();
-    await uploadAndTrack(filePath, selectedProfileId, mode, usePremium);
+    await uploadAndTrack(filePath, selectedProfileId, mode, usePremium, participants);
   } finally {
     isUploadingRef.current = false;
   }

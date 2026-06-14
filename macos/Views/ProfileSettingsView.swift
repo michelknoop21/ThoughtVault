@@ -74,50 +74,44 @@ struct ProfileSettingsView: View {
         VStack(spacing: TS.Spacing.sm) {
             LabeledContent("Naam") {
                 TextField("Naam", text: $naam)
-                    .textFieldStyle(.plain)
+                    .textFieldStyle(.roundedBorder)
                     .font(TS.Font.body)
                     .autocorrectionDisabled()
-                    .multilineTextAlignment(.trailing)
             }
 
             LabeledContent("Rol / Functie") {
                 TextField("Rol / Functie", text: $rol)
-                    .textFieldStyle(.plain)
+                    .textFieldStyle(.roundedBorder)
                     .font(TS.Font.body)
                     .autocorrectionDisabled()
-                    .multilineTextAlignment(.trailing)
             }
 
             LabeledContent("Organisatie") {
                 TextField("Organisatie", text: $organisatie)
-                    .textFieldStyle(.plain)
+                    .textFieldStyle(.roundedBorder)
                     .font(TS.Font.body)
                     .autocorrectionDisabled()
-                    .multilineTextAlignment(.trailing)
             }
 
             LabeledContent("Hoe noemen collega's jou?") {
                 TextField("Michel, Knoop, MK (kommagescheiden)", text: $aliassen)
-                    .textFieldStyle(.plain)
+                    .textFieldStyle(.roundedBorder)
                     .font(TS.Font.body)
                     .autocorrectionDisabled()
-                    .multilineTextAlignment(.trailing)
             }
 
             LabeledContent("Typische vergadertypen") {
                 TextField("Wekelijks overleg, Klantgesprek (kommagescheiden)", text: $meetingTypes)
-                    .textFieldStyle(.plain)
+                    .textFieldStyle(.roundedBorder)
                     .font(TS.Font.body)
                     .autocorrectionDisabled()
-                    .multilineTextAlignment(.trailing)
             }
 
             LabeledContent("Expertise / onderwerpen") {
                 TextField("grafisch ontwerp, marketing, IT (kommagescheiden)", text: $expertise)
-                    .textFieldStyle(.plain)
+                    .textFieldStyle(.roundedBorder)
                     .font(TS.Font.body)
                     .autocorrectionDisabled()
-                    .multilineTextAlignment(.trailing)
             }
         }
     }

@@ -438,6 +438,7 @@ actor APIService {
         fileURL: URL,
         profileId: String,
         usePremium: Bool = false,
+        participants: [Participant] = [],
         onProgress: @escaping @Sendable (Double) -> Void
     ) async throws -> TranscriptTask {
         // Enforce 500 MB limit (aligned with backend MAX_UPLOAD_SIZE)
@@ -509,6 +510,16 @@ actor APIService {
         writeString("Content-Disposition: form-data; name=\"use_premium\"\r\n\r\n")
         writeString("\(usePremium)\r\n")
 
+        // Participants field (optional) — JSON array of {name, role, organization}.
+        // Backend builds the DEELNEMERS block + action-point attribution from this.
+        if !participants.isEmpty,
+           let json = try? JSONEncoder().encode(participants),
+           let jsonString = String(data: json, encoding: .utf8) {
+            writeString("--\(boundary)\r\n")
+            writeString("Content-Disposition: form-data; name=\"participants\"\r\n\r\n")
+            writeString("\(jsonString)\r\n")
+        }
+
         writeString("--\(boundary)--\r\n")
         outputStream.close()
 
@@ -537,8 +548,13 @@ actor APIService {
 
     // MARK: - Text Transcription Upload
 
-    func uploadTranscriptionText(transcription: String, profileId: String, usePremium: Bool = false) async throws -> TranscriptTask {
-        let payload: [String: Any] = ["transcription": transcription, "profile_id": profileId, "use_premium": usePremium]
+    func uploadTranscriptionText(transcription: String, profileId: String, usePremium: Bool = false, participants: [Participant] = []) async throws -> TranscriptTask {
+        var payload: [String: Any] = ["transcription": transcription, "profile_id": profileId, "use_premium": usePremium]
+        if !participants.isEmpty,
+           let data = try? JSONEncoder().encode(participants),
+           let array = try? JSONSerialization.jsonObject(with: data) {
+            payload["participants"] = array
+        }
         let body = try JSONSerialization.data(withJSONObject: payload)
         let req = try request(path: "/transcribe-text", method: "POST", body: body)
         return try await perform(req)

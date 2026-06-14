@@ -24,6 +24,7 @@ struct RecordingView: View {
     @State private var showNoteField = false
     @State private var showCancelConfirm = false
     @State private var showProfileLoadError = false
+    @State private var showParticipantPicker = false
 
     // MARK: Body
 
@@ -168,6 +169,7 @@ struct RecordingView: View {
                 } else {
                     profileSection
                 }
+                participantsSection
             }
             .padding(.horizontal, TS.Spacing.lg)
             .padding(.bottom, TS.Spacing.sm)
@@ -221,6 +223,53 @@ struct RecordingView: View {
             RoundedRectangle(cornerRadius: TS.Radius.lg, style: .continuous)
                 .stroke(Color.borderSecondary, lineWidth: 1)
         }
+        .sheet(isPresented: $showParticipantPicker) {
+            ParticipantPickerSheet(selectedIDs: Bindable(recordingVM).selectedParticipantIDs)
+        }
+    }
+
+    // MARK: Participants section
+
+    private var participantsSection: some View {
+        let count = recordingVM.selectedParticipantIDs.count
+        return Button {
+            showParticipantPicker = true
+        } label: {
+            HStack(spacing: TS.Spacing.sm) {
+                Image(systemName: "person.2.fill")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(Color.brandPrimary)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Deelnemers")
+                        .font(TS.Font.footnoteSemibold)
+                        .foregroundStyle(Color.labelPrimary)
+                    Text(count == 0
+                         ? "Optioneel · agenda-deelnemers worden automatisch toegevoegd"
+                         : "\(count) gekozen")
+                        .font(TS.Font.micro)
+                        .foregroundStyle(Color.labelTertiary)
+                        .lineLimit(1)
+                }
+                Spacer()
+                if count > 0 {
+                    Text("\(count)")
+                        .font(TS.Font.microBold)
+                        .foregroundStyle(Color.brandPrimary)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 2)
+                        .background(Capsule().fill(Color.accentBgPrimary))
+                }
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(Color.labelTertiary)
+            }
+            .padding(TS.Spacing.sm)
+            .background {
+                RoundedRectangle(cornerRadius: TS.Radius.sm, style: .continuous)
+                    .fill(Color.surfaceSecondary)
+            }
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: YouTube card

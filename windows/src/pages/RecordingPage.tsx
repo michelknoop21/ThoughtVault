@@ -8,6 +8,7 @@ import {
   ArrowLeft24Regular,
   ArrowUpload24Regular,
   VideoChat24Regular,
+  People24Regular,
 } from "@fluentui/react-icons";
 import { useRecordingStore } from "../stores/recordingStore";
 import { useSettingsStore } from "../stores/settingsStore";
@@ -26,6 +27,7 @@ import { createSSEClient } from "../services/sse";
 import { WaveformVisualizer } from "../components/recording/WaveformVisualizer";
 import { SavedRecordings } from "../components/recording/SavedRecordings";
 import { SeedReviewSheet } from "./SeedReviewSheet";
+import { ParticipantPicker } from "./ParticipantPicker";
 import { usePeopleDirectoryStore } from "../stores/peopleDirectoryStore";
 import { useCalendarStore } from "../stores/calendarStore";
 
@@ -430,6 +432,9 @@ function IdleState({
   youtubeProfileId: string;
   onYouTubeProfileChange: (id: string) => void;
 }) {
+  const [showParticipants, setShowParticipants] = useState(false);
+  const selectedParticipantIds = useRecordingStore((s) => s.selectedParticipantIds);
+
   return (
     <div className="idle-state">
       {/* Meeting detection banner */}
@@ -493,6 +498,23 @@ function IdleState({
             </button>
           ))}
         </div>
+      </div>
+
+      {/* Participants picker */}
+      <div style={{ width: "100%" }}>
+        <p className="section-label">Deelnemers</p>
+        <button
+          className="profile-chip"
+          style={{ width: "100%", justifyContent: "space-between" }}
+          onClick={() => setShowParticipants(true)}
+        >
+          <span className="profile-chip-name">
+            {selectedParticipantIds.length === 0
+              ? "Optioneel · agenda-deelnemers gaan automatisch mee"
+              : `${selectedParticipantIds.length} gekozen`}
+          </span>
+          <People24Regular style={{ fontSize: 18 }} />
+        </button>
       </div>
 
       {/* Premium model toggle */}
@@ -595,6 +617,10 @@ function IdleState({
 
       {/* Saved recordings — collapsible */}
       <SavedRecordings />
+
+      {showParticipants && (
+        <ParticipantPicker onClose={() => setShowParticipants(false)} />
+      )}
     </div>
   );
 }

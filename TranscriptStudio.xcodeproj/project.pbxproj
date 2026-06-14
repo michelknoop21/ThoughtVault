@@ -72,6 +72,8 @@
 		AA000072 /* PeopleDirectoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000072 /* PeopleDirectoryView.swift */; };
 		AA000073 /* PersonEditView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000073 /* PersonEditView.swift */; };
 		AA000074 /* SeedReviewSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000074 /* SeedReviewSheet.swift */; };
+		AB000201 /* Participant.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000201 /* Participant.swift */; };
+		AB000202 /* ParticipantPickerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000202 /* ParticipantPickerSheet.swift */; };
 		AB000002 /* MigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000002 /* MigrationTests.swift */; };
 		AB000003 /* PersonProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000003 /* PersonProfileTests.swift */; };
 		AB000004 /* PersonDirectoryServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000004 /* PersonDirectoryServiceTests.swift */; };
@@ -165,6 +167,8 @@
 		FA000072 /* PeopleDirectoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeopleDirectoryView.swift; sourceTree = "<group>"; };
 		FA000073 /* PersonEditView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonEditView.swift; sourceTree = "<group>"; };
 		FA000074 /* SeedReviewSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeedReviewSheet.swift; sourceTree = "<group>"; };
+		FB000201 /* Participant.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Participant.swift; sourceTree = "<group>"; };
+		FB000202 /* ParticipantPickerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParticipantPickerSheet.swift; sourceTree = "<group>"; };
 		FB000002 /* MigrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MigrationTests.swift; sourceTree = "<group>"; };
 		FB000003 /* PersonProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonProfileTests.swift; sourceTree = "<group>"; };
 		FB000004 /* PersonDirectoryServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonDirectoryServiceTests.swift; sourceTree = "<group>"; };
@@ -252,6 +256,7 @@
 				FA000005 /* Models.swift */,
 				FA000061 /* TranscriptRecord.swift */,
 				FA000068 /* PersonProfile.swift */,
+				FB000201 /* Participant.swift */,
 				FA000069 /* AppMigrationPlan.swift */,
 				FA000066 /* ProfileTemplates.swift */,
 			);
@@ -315,6 +320,7 @@
 				FA000070 /* ProfileSettingsView.swift */,
 				FA000072 /* PeopleDirectoryView.swift */,
 				FA000073 /* PersonEditView.swift */,
+				FB000202 /* ParticipantPickerSheet.swift */,
 				FA000074 /* SeedReviewSheet.swift */,
 				FA000032 /* TranscriptsView.swift */,
 				FA000056 /* TasksView.swift */,
@@ -497,6 +503,8 @@
 				AA000072 /* PeopleDirectoryView.swift in Sources */,
 				AA000073 /* PersonEditView.swift in Sources */,
 				AA000074 /* SeedReviewSheet.swift in Sources */,
+				AB000201 /* Participant.swift in Sources */,
+				AB000202 /* ParticipantPickerSheet.swift in Sources */,
 				AA000066 /* ProfileTemplates.swift in Sources */,
 				AA000062 /* LocalTranscriptStore.swift in Sources */,
 				AA000071 /* PersonDirectoryService.swift in Sources */,

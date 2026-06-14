@@ -3,6 +3,7 @@ import { useTranscriptsStore } from "../stores/transcriptsStore";
 import { api } from "./api";
 import { createSSEClient } from "./sse";
 import { enqueue } from "./offlineQueue";
+import type { Participant } from "./participants";
 import type { RecordingMode, TranscriptTask } from "../types";
 
 /**
@@ -17,6 +18,7 @@ export async function uploadAndTrack(
   profileId: string,
   mode: RecordingMode,
   usePremium: boolean = false,
+  participants: Participant[] = [],
 ): Promise<void> {
   const store = useRecordingStore.getState();
   const { addBackgroundTask, updateBackgroundTask, removeBackgroundTask } = store;
@@ -41,6 +43,7 @@ export async function uploadAndTrack(
       (fraction) => updateBackgroundTask(tempId, { progress: Math.round(fraction * 100) }),
       abortController.signal,
       usePremium,
+      participants,
     );
 
     unregisterAbortController(tempId);

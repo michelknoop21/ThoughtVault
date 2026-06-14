@@ -461,6 +461,7 @@ class APIService {
     onProgress: (fraction: number) => void,
     signal?: AbortSignal,
     usePremium: boolean = false,
+    participants: Array<{ name: string; role: string; organization: string }> = [],
   ): Promise<{ task_id: string }> {
     // Use Rust proxy for reliable upload (no browser CORS/network issues)
     console.log(`[API] Upload with progress ${filePath} via Rust proxy`);
@@ -489,6 +490,7 @@ class APIService {
           profileId,
           mode,
           usePremium,
+          participants: participants.length ? JSON.stringify(participants) : null,
         }
       );
 

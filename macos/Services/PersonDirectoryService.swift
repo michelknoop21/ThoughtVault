@@ -108,6 +108,69 @@ final class PersonDirectoryService {
         )
     }
 
+    // MARK: - Participant Resolution
+
+    /// Builds the participant list sent to the notule pipeline for one recording:
+    /// the self-profile + calendar attendees (resolved against the directory by
+    /// email, else a name derived from the email) + manually selected directory
+    /// people. Deduplicated by lowercased name; entries without a name are dropped.
+    func resolveParticipants(
+        attendeeEmails: [String],
+        manualIDs: [String],
+        includeSelf: Bool = true
+    ) -> [Participant] {
+        var result: [Participant] = []
+        var seen = Set<String>()
+
+        func appendProfile(_ p: PersonProfile) {
+            appendRaw(name: p.name, role: p.role, organization: p.organization)
+        }
+
+        func appendRaw(name: String, role: String = "", organization: String = "") {
+            let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty, seen.insert(trimmed.lowercased()).inserted else { return }
+            result.append(Participant(name: trimmed, role: role, organization: organization))
+        }
+
+        let directory = directoryPeople()
+
+        // Self first so it heads the attendee list.
+        if includeSelf, let me = LocalTranscriptStore.shared.fetchSelfProfile() {
+            appendProfile(me)
+        }
+
+        // Calendar attendees → directory match by email, else email-derived name.
+        let byEmail = Dictionary(
+            directory.flatMap { person in person.emails.map { ($0.lowercased(), person) } },
+            uniquingKeysWith: { first, _ in first }
+        )
+        for email in attendeeEmails {
+            if let match = byEmail[email.lowercased()] {
+                appendProfile(match)
+            } else {
+                appendRaw(name: PersonDirectoryService.displayName(fromEmail: email))
+            }
+        }
+
+        // Manually selected directory people (ad-hoc meetings).
+        let byID = Dictionary(directory.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        for id in manualIDs {
+            if let person = byID[id] { appendProfile(person) }
+        }
+
+        return result
+    }
+
+    /// Derives a display name from an email local-part (john.doe@x → "John Doe").
+    /// Mirrors SeedReviewSheet's derivation so seeded + sent names stay consistent.
+    static func displayName(fromEmail email: String) -> String {
+        let prefix = email.components(separatedBy: "@").first ?? email
+        return prefix
+            .components(separatedBy: CharacterSet(charactersIn: "._-"))
+            .map { $0.capitalized }
+            .joined(separator: " ")
+    }
+
     // MARK: - Dedup (D-10)
 
     /// Returns the subset of attendeeEmails that are genuinely new:

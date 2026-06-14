@@ -42,6 +42,10 @@ interface RecordingState {
   // Read and cleared on recording stop to drive SeedReviewSheet (D-07/D-10).
   pendingSeedAttendees: string[];
 
+  // Directory person IDs manually selected for the current recording (ad-hoc meetings
+  // with no calendar link). Folded into the participant list on upload (D-B).
+  selectedParticipantIds: string[];
+
   // Profile selection — persisted in store so global recording handler can access it
   selectedProfileId: string;
   usePremium: boolean;
@@ -70,6 +74,7 @@ interface RecordingState {
   cancelBackgroundTask: (taskId: string) => void;
   setPendingSeedAttendees: (emails: string[]) => void;
   clearPendingSeedAttendees: () => void;
+  setSelectedParticipantIds: (ids: string[]) => void;
   setSelectedProfileId: (id: string) => void;
   setUsePremium: (value: boolean) => void;
   setYouTubeEnabled: (enabled: boolean) => void;
@@ -93,6 +98,7 @@ export const useRecordingStore = create<RecordingState>()((set) => ({
   pausedAt: null,
   pausedDuration: 0,
   pendingSeedAttendees: [],
+  selectedParticipantIds: [],
   selectedProfileId: "",
   usePremium: false,
   backgroundTasks: [],
@@ -143,6 +149,7 @@ export const useRecordingStore = create<RecordingState>()((set) => ({
   },
   setPendingSeedAttendees: (emails) => set({ pendingSeedAttendees: emails }),
   clearPendingSeedAttendees: () => set({ pendingSeedAttendees: [] }),
+  setSelectedParticipantIds: (ids) => set({ selectedParticipantIds: ids }),
   setSelectedProfileId: (id) => set({ selectedProfileId: id }),
   setUsePremium: (value) => set({ usePremium: value }),
   setYouTubeEnabled: (enabled) => set({ isYouTubeEnabled: enabled }),
@@ -163,5 +170,6 @@ export const useRecordingStore = create<RecordingState>()((set) => ({
       pausedAt: null,
       pausedDuration: 0,
       pendingSeedAttendees: [],
+      selectedParticipantIds: [],
     }),
 }));

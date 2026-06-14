@@ -27,6 +27,10 @@ final class TranscriptRecord {
     var localAudioPath: String?
     /// "local" for on-device processed records, "cloud" for server-synced records.
     var source: String
+    /// JSON-encoded [Participant] captured at record time, so local notule
+    /// regeneration (other profile) can re-inject the deelnemerslijst. Optional →
+    /// lightweight-migration safe for existing stores.
+    var participantsJSON: String?
 
     init(
         id: String = UUID().uuidString,
@@ -40,7 +44,8 @@ final class TranscriptRecord {
         tags: [String] = [],
         createdAt: Date = Date(),
         localAudioPath: String? = nil,
-        source: String = "local"
+        source: String = "local",
+        participantsJSON: String? = nil
     ) {
         self.id = id
         self.taskId = taskId.isEmpty ? id : taskId
@@ -54,6 +59,20 @@ final class TranscriptRecord {
         self.createdAt = createdAt
         self.localAudioPath = localAudioPath
         self.source = source
+        self.participantsJSON = participantsJSON
+    }
+
+    /// Typed accessor over participantsJSON.
+    var participants: [Participant] {
+        get {
+            guard let data = participantsJSON?.data(using: .utf8) else { return [] }
+            return (try? JSONDecoder().decode([Participant].self, from: data)) ?? []
+        }
+        set {
+            participantsJSON = newValue.isEmpty
+                ? nil
+                : (try? JSONEncoder().encode(newValue)).flatMap { String(data: $0, encoding: .utf8) }
+        }
     }
 
     /// Maps this record to the `Transcript` value type used throughout the UI.

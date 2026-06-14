@@ -740,6 +740,7 @@ final class RecordingViewModel {
             localAudioPath: url.path,
             source: "local"
         )
+        record.participants = participants
         do {
             try LocalTranscriptStore.shared.save(record)
         } catch {
@@ -811,7 +812,7 @@ final class RecordingViewModel {
         let html = try await service.generateNotulen(
             transcription: record.rawTranscription,
             systemPrompt: profile.systemPrompt ?? "",
-            notulePrompt: profile.notulePrompt ?? "",
+            notulePrompt: Self.injectParticipants(into: profile.notulePrompt ?? "", participants: record.participants),
             outputTemplate: profile.template
         ) { _ in }
 

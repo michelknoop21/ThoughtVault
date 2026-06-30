@@ -1,7 +1,9 @@
 import { useEffect, useRef } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { useRecordingStore } from "../stores/recordingStore";
+import { useSettingsStore } from "../stores/settingsStore";
 import { uploadAndTrack } from "../services/uploadAndTrack";
+import { processLocally } from "../services/localPipeline";
 import { resolveParticipants } from "../services/participants";
 import { closeWidgetWindow } from "./useWidgetWindow";
 
@@ -32,7 +34,7 @@ export function useGlobalRecordingHandler() {
         }
 
         const filePath = event.payload.file_path || store.filePath || "";
-        handleUpload(filePath, isUploadingRef);
+        handleUpload(filePath, event.payload.duration_seconds || 0, isUploadingRef);
       }
     ).then((fn) => { unlistenStopped = fn; }).catch(console.error);
 
@@ -51,6 +53,7 @@ export function useGlobalRecordingHandler() {
 
 async function handleUpload(
   filePath: string,
+  durationSeconds: number,
   isUploadingRef: React.RefObject<boolean>,
 ) {
   if (isUploadingRef.current) return;
@@ -66,7 +69,11 @@ async function handleUpload(
       store.selectedParticipantIds,
     );
     store.reset();
-    await uploadAndTrack(filePath, selectedProfileId, mode, usePremium, participants);
+    if (useSettingsStore.getState().processing_mode === "local") {
+      await processLocally(filePath, selectedProfileId, mode, participants, durationSeconds);
+    } else {
+      await uploadAndTrack(filePath, selectedProfileId, mode, usePremium, participants);
+    }
   } finally {
     isUploadingRef.current = false;
   }

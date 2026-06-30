@@ -29,6 +29,11 @@ struct SettingsView: View {
     @AppStorage("videoCallDetectionEnabled") private var videoCallDetectionEnabled: Bool = true
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding: Bool = false
 
+    // Obsidian integration (API key lives in the Keychain, not here).
+    @AppStorage(ObsidianService.enabledKey) private var obsidianEnabled: Bool = false
+    @AppStorage(ObsidianService.baseURLKey) private var obsidianBaseURL: String = ObsidianService.defaultBaseURL
+    @AppStorage(ObsidianService.vaultPathKey) private var obsidianVaultPath: String = "Notulen"
+
     // MARK: - Local State
 
     @State private var profiles: [Profile] = []
@@ -43,6 +48,16 @@ struct SettingsView: View {
     @State private var speechPermissionGranted: Bool? = nil
     @State private var screenRecordingGranted: Bool? = nil
 
+    // Obsidian
+    @State private var obsidianApiKey: String = ""
+    @State private var obsidianTesting: Bool = false
+    @State private var obsidianTestResult: ObsidianTestState? = nil
+
+    enum ObsidianTestState {
+        case success
+        case failure(String)
+    }
+
     var body: some View {
         Group {
             #if os(macOS)
@@ -55,6 +70,7 @@ struct SettingsView: View {
         .onAppear {
             serverURLInput = serverURL
             loadApiKey()
+            obsidianApiKey = KeychainService.shared.load(for: ObsidianService.apiKeyKeychainKey) ?? ""
             Task {
                 await loadProfiles()
                 await checkServerConnection()
@@ -92,6 +108,9 @@ struct SettingsView: View {
 
             agendaTab
                 .tabItem { Label("Agenda", systemImage: "calendar") }
+
+            obsidianTab
+                .tabItem { Label("Obsidian", systemImage: "tray.and.arrow.down") }
 
             accountTab
                 .tabItem { Label("Account", systemImage: "lock") }
@@ -141,6 +160,13 @@ struct SettingsView: View {
         .formStyle(.grouped)
     }
 
+    private var obsidianTab: some View {
+        Form {
+            obsidianSection
+        }
+        .formStyle(.grouped)
+    }
+
     private var accountTab: some View {
         Form {
             accountSection
@@ -179,6 +205,7 @@ struct SettingsView: View {
             spraakherkenningSection
             permissiesSection
             agendaSection
+            obsidianSection
             accountSection
             feedbackSection
             overSection
@@ -285,6 +312,131 @@ struct SettingsView: View {
                 showServerURLSaved = false
             }
         }
+    }
+
+    // MARK: - Obsidian
+
+    @State private var revealObsidianKey: Bool = false
+
+    private var obsidianSection: some View {
+        Section {
+            Toggle(isOn: $obsidianEnabled) {
+                Text("Automatisch exporteren naar Obsidian")
+                    .font(TS.Font.body)
+            }
+            .tint(Color.brandPrimary)
+
+            SettingFieldRow("Base-URL") {
+                TextField(ObsidianService.defaultBaseURL, text: $obsidianBaseURL)
+                    .textFieldStyle(.roundedBorder)
+                    .font(TS.Font.body)
+                    .autocorrectionDisabled()
+                    #if os(iOS)
+                    .textInputAutocapitalization(.never)
+                    .keyboardType(.URL)
+                    #endif
+            }
+
+            SettingFieldRow("Vault-pad") {
+                TextField("Notulen", text: $obsidianVaultPath)
+                    .textFieldStyle(.roundedBorder)
+                    .font(TS.Font.body)
+                    .autocorrectionDisabled()
+                    #if os(iOS)
+                    .textInputAutocapitalization(.never)
+                    #endif
+            }
+
+            SettingFieldRow("API-sleutel") {
+                HStack(spacing: TS.Spacing.sm) {
+                    Group {
+                        if revealObsidianKey {
+                            TextField("Bearer-sleutel uit de plugin", text: $obsidianApiKey)
+                        } else {
+                            SecureField("Bearer-sleutel uit de plugin", text: $obsidianApiKey)
+                        }
+                    }
+                    .textFieldStyle(.roundedBorder)
+                    .font(TS.Font.bodyMonospaced)
+                    .autocorrectionDisabled()
+                    .onChange(of: obsidianApiKey) { _, newValue in saveObsidianKey(newValue) }
+
+                    Button {
+                        revealObsidianKey.toggle()
+                    } label: {
+                        Image(systemName: revealObsidianKey ? "eye.slash" : "eye")
+                    }
+                    .buttonStyle(.bordered)
+                    .help(revealObsidianKey ? "Verberg sleutel" : "Toon sleutel")
+                }
+            }
+
+            HStack(spacing: TS.Spacing.sm) {
+                Button {
+                    Task { await testObsidianConnection() }
+                } label: {
+                    if obsidianTesting {
+                        ProgressView().controlSize(.small)
+                    } else {
+                        Text("Test verbinding")
+                    }
+                }
+                .buttonStyle(SecondaryButtonStyle())
+                .disabled(obsidianTesting)
+
+                if case .success = obsidianTestResult {
+                    HStack(spacing: TS.Spacing.xs) {
+                        Circle().fill(Color.statusSuccess).frame(width: 8, height: 8)
+                        Text("Verbonden")
+                            .font(TS.Font.footnote)
+                            .foregroundStyle(Color.statusSuccess)
+                    }
+                } else if case .failure(let message) = obsidianTestResult {
+                    HStack(spacing: TS.Spacing.xs) {
+                        Circle().fill(Color.statusError).frame(width: 8, height: 8)
+                        Text(message)
+                            .font(TS.Font.footnote)
+                            .foregroundStyle(Color.statusError)
+                            .lineLimit(2)
+                    }
+                }
+                Spacer()
+            }
+        } header: {
+            Text("Obsidian-koppeling")
+        } footer: {
+            Text("Schrijft notulen naar je Obsidian-vault via de Local REST API plugin. "
+                + "De plugin draait op een self-signed HTTPS-poort (standaard 127.0.0.1:27124).")
+                .font(TS.Font.caption)
+                .foregroundStyle(Color.labelTertiary)
+        }
+    }
+
+    private func saveObsidianKey(_ value: String) {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty {
+            KeychainService.shared.delete(for: ObsidianService.apiKeyKeychainKey)
+        } else {
+            KeychainService.shared.save(trimmed, for: ObsidianService.apiKeyKeychainKey)
+        }
+    }
+
+    private func testObsidianConnection() async {
+        obsidianTesting = true
+        obsidianTestResult = nil
+        // Use the just-edited field values directly so the test reflects unsaved input.
+        let service = ObsidianService(
+            baseURL: obsidianBaseURL,
+            vaultPath: obsidianVaultPath,
+            apiKey: obsidianApiKey
+        )
+        switch await service.testConnection() {
+        case .success:
+            obsidianTestResult = .success
+        case .failure(let error):
+            obsidianTestResult = .failure(error.localizedDescription)
+        }
+        obsidianTesting = false
     }
 
     // MARK: - Profielen (Profiles)
@@ -825,7 +977,7 @@ struct SettingsView: View {
                 #endif
             } label: {
                 HStack {
-                    Text("Systeeminstell. openen")
+                    Text("Systeeminstellingen openen")
                         .font(TS.Font.bodyMedium)
                         .foregroundStyle(Color.brandSecondary)
                     Spacer()
@@ -1079,11 +1231,11 @@ struct SettingsView: View {
                     HStack(spacing: TS.Spacing.sm) {
                         ZStack {
                             Circle()
-                                .fill(Color.brandSecondary.opacity(0.12))
+                                .fill(Color.surfaceTertiary)
                                 .frame(width: 40, height: 40)
                             Text(String((user.name ?? user.email).prefix(1)).uppercased())
                                 .font(TS.Font.headlineBold)
-                                .foregroundStyle(Color.brandSecondary)
+                                .foregroundStyle(Color.labelSecondary)
                         }
 
                         VStack(alignment: .leading, spacing: 2) {

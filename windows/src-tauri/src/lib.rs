@@ -1,5 +1,6 @@
 mod audio;
 mod commands;
+mod transcribe;
 
 use commands::audio::SharedRecordingState;
 use std::sync::{Arc, Mutex};
@@ -74,10 +75,16 @@ pub fn run() {
             commands::http::proxy_request,
             commands::http::proxy_upload,
             commands::http::http_sse_stream,
+            commands::http::obsidian_put,
+            commands::http::obsidian_test,
             // System
             commands::system::get_network_status,
             commands::system::detect_meeting_apps,
             commands::system::get_app_version,
+            // Local transcription (whisper.cpp)
+            transcribe::whisper_model_status,
+            transcribe::download_whisper_model,
+            transcribe::transcribe_local,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

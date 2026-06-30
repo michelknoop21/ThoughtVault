@@ -414,6 +414,8 @@ struct NotuleResultView: View {
             Divider()
             exportButton(icon: "doc.plaintext", title: "Platte tekst (.txt)", action: exportAsTXT)
             Divider()
+            exportButton(icon: "tray.and.arrow.down", title: "Exporteer naar Obsidian", action: exportToObsidian)
+            Divider()
             exportButton(icon: "doc.on.doc", title: "Kopieer tekst", action: copyContent)
             Divider()
             exportButton(icon: "square.and.arrow.up", title: "Delen...", action: shareContent)
@@ -522,6 +524,31 @@ struct NotuleResultView: View {
             exportError = "Exporteren mislukt: \(error.localizedDescription)"
         }
         #endif
+    }
+
+    private func exportToObsidian() {
+        Task { @MainActor in
+            do {
+                if let record = LocalTranscriptStore.shared.record(forTaskId: task.taskId)
+                    ?? LocalTranscriptStore.shared.record(forTaskId: task.id) {
+                    try await ObsidianService().export(record)
+                } else if let html = task.notuleHtml, !html.isEmpty {
+                    let title = NotuleTitleExtractor.extract(from: html)
+                        ?? (task.filename as NSString).deletingPathExtension
+                    try await ObsidianService().export(
+                        title: title, html: html, date: task.createdAt ?? Date(),
+                        participants: [], profileName: task.profileId, tags: task.tags
+                    )
+                } else {
+                    exportError = "Geen notule om te exporteren."
+                    return
+                }
+                exportError = nil
+                showExportMenu = false
+            } catch {
+                exportError = "Obsidian: \(error.localizedDescription)"
+            }
+        }
     }
 
     private func copyContent() {

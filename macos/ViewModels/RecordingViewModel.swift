@@ -468,9 +468,15 @@ final class RecordingViewModel {
             }
         }
 
+        await dispatchProcessing(url: url, profile: profile, participants: participants)
+    }
+
+    /// Routes a finished audio file (live recording or imported) through the same
+    /// local / on-device / cloud / offline decision used by stopAndUpload.
+    func dispatchProcessing(url: URL, profile: Profile, participants: [Participant]) async {
         // Fully local mode: transcribe + generate notulen on-device, no server needed.
         if isLocalMode {
-            os_log("[RecordingVM] stopAndUpload: path=local", log: log, type: .info)
+            os_log("[RecordingVM] dispatchProcessing: path=local", log: log, type: .info)
             await processLocally(url: url, profileId: profile.id, participants: participants)
             return
         }
@@ -486,16 +492,56 @@ final class RecordingViewModel {
             let canUseOnDevice = preferOnDeviceTranscription && onDeviceTranscriptionAvailable
 #endif
             if canUseOnDevice {
-                os_log("[RecordingVM] stopAndUpload: path=onDevice", log: log, type: .info)
+                os_log("[RecordingVM] dispatchProcessing: path=onDevice", log: log, type: .info)
                 await transcribeOnDeviceThenUpload(url: url, profileId: profile.id, participants: participants)
             } else {
-                os_log("[RecordingVM] stopAndUpload: path=cloud", log: log, type: .info)
+                os_log("[RecordingVM] dispatchProcessing: path=cloud", log: log, type: .info)
                 await uploadFile(url, profileId: profile.id, participants: participants)
             }
         } else {
-            os_log("[RecordingVM] stopAndUpload: path=offline", log: log, type: .info)
+            os_log("[RecordingVM] dispatchProcessing: path=offline", log: log, type: .info)
             await handleOfflineRecording(url: url)
         }
+    }
+
+    /// Imports an external audio file (iPhone voice memo, dictaphone), copies it into
+    /// the persistent Recordings directory and runs it through the standard pipeline.
+    /// The picked URL is security-scoped (from .fileImporter).
+    func importAudioFile(_ pickedURL: URL) async {
+        let accessed = pickedURL.startAccessingSecurityScopedResource()
+        defer { if accessed { pickedURL.stopAccessingSecurityScopedResource() } }
+
+        guard let profile = selectedProfile else {
+            await MainActor.run {
+                recordingState = .error("Geen profiel geselecteerd. Kies een profiel en probeer opnieuw.")
+            }
+            return
+        }
+
+        // Copy into Recordings/ → stable path for localAudioPath and "Opgeslagen opnames".
+        let recordingsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("Recordings")
+        try? FileManager.default.createDirectory(at: recordingsDir, withIntermediateDirectories: true)
+        let dest = recordingsDir
+            .appendingPathComponent("import_\(Int(Date().timeIntervalSince1970))_\(pickedURL.lastPathComponent)")
+        do {
+            try FileManager.default.copyItem(at: pickedURL, to: dest)
+        } catch {
+            os_log("[RecordingVM] importAudioFile: copy failed: %{public}@", log: log, type: .error, error.localizedDescription)
+            await MainActor.run {
+                recordingState = .error("Kon het audiobestand niet importeren.")
+            }
+            return
+        }
+
+        let participants = PersonDirectoryService.shared.resolveParticipants(
+            attendeeEmails: [],
+            manualIDs: selectedParticipantIDs
+        )
+        selectedParticipantIDs = []
+
+        loadSavedRecordings()
+        await dispatchProcessing(url: dest, profile: profile, participants: participants)
     }
 
     func cancelRecording() async {
@@ -779,6 +825,9 @@ final class RecordingViewModel {
             let datedHtml = Self.injectDate(into: html, date: record.createdAt)
             let title = NotuleTitleExtractor.extract(from: datedHtml) ?? fallback
             try LocalTranscriptStore.shared.finalizeNotule(taskId: localId, html: datedHtml, title: title)
+
+            // Auto-export the finished notule to Obsidian (no-op when disabled).
+            ObsidianService.autoExport(record)
 
             updateTask(localId, status: .completed, progress: 1.0)
             isGeneratingLocally = false
@@ -1151,6 +1200,27 @@ final class RecordingViewModel {
         // Remove completed / error tasks from active list after a short delay
         if updatedTask.status == .completed || updatedTask.status == .error {
             scheduleRemoval(of: updatedTask.taskId)
+        }
+
+        // Auto-export a freshly-completed cloud notule to Obsidian (no-op when
+        // disabled). Cloud notulen embed participants server-side, so none are
+        // passed here.
+        if updatedTask.status == .completed,
+           ObsidianService.isEnabled,
+           let html = updatedTask.notuleHtml, !html.isEmpty {
+            let title = NotuleTitleExtractor.extract(from: html)
+                ?? (updatedTask.filename as NSString).deletingPathExtension
+            let service = ObsidianService()
+            Task.detached {
+                try? await service.export(
+                    title: title,
+                    html: html,
+                    date: updatedTask.createdAt ?? Date(),
+                    participants: [],
+                    profileName: updatedTask.profileId,
+                    tags: updatedTask.tags
+                )
+            }
         }
     }
 

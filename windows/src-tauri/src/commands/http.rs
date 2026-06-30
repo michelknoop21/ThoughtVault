@@ -300,6 +300,98 @@ pub async fn do_proxy_upload(
     })
 }
 
+/// Percent-encode each path segment, preserving the RFC 3986 unreserved set
+/// (`A-Za-z0-9-._~`) and joining segments back together with '/'. Used to build
+/// a safe Obsidian Local REST API path without escaping the separators.
+fn encode_path(p: &str) -> String {
+    fn encode_segment(seg: &str) -> String {
+        let mut out = String::with_capacity(seg.len());
+        for b in seg.bytes() {
+            match b {
+                b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'.' | b'_' | b'~' => {
+                    out.push(b as char)
+                }
+                _ => out.push_str(&format!("%{:02X}", b)),
+            }
+        }
+        out
+    }
+    p.split('/').map(encode_segment).collect::<Vec<_>>().join("/")
+}
+
+/// Write a markdown note into an Obsidian vault via the Local REST API plugin.
+/// The plugin's HTTPS endpoint uses a self-signed certificate, so cert
+/// validation is disabled — this is only ever called against localhost.
+#[tauri::command]
+pub async fn obsidian_put(
+    base_url: String,
+    api_key: String,
+    vault_path: String,
+    filename: String,
+    markdown: String,
+) -> Result<HttpResponse, String> {
+    let client = reqwest::Client::builder()
+        .danger_accept_invalid_certs(true)
+        .timeout(std::time::Duration::from_secs(15))
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    let base = base_url.trim_end_matches('/');
+    let vault = vault_path.trim_matches('/');
+    let encoded_path = encode_path(&format!("{}/{}", vault, filename));
+    let url = format!("{}/vault/{}", base, encoded_path);
+
+    let response = client
+        .put(&url)
+        .header("Authorization", format!("Bearer {}", api_key))
+        .header("Content-Type", "text/markdown")
+        .body(markdown)
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let status = response.status().as_u16();
+    let mut resp_headers = HashMap::new();
+    for (k, v) in response.headers() {
+        if let Ok(val) = v.to_str() {
+            resp_headers.insert(k.to_string(), val.to_string());
+        }
+    }
+    let body = response.text().await.map_err(|e| e.to_string())?;
+
+    Ok(HttpResponse { status, body, headers: resp_headers })
+}
+
+/// Probe the Obsidian Local REST API (GET /) to verify base URL + API key.
+#[tauri::command]
+pub async fn obsidian_test(base_url: String, api_key: String) -> Result<HttpResponse, String> {
+    let client = reqwest::Client::builder()
+        .danger_accept_invalid_certs(true)
+        .timeout(std::time::Duration::from_secs(15))
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    let url = format!("{}/", base_url.trim_end_matches('/'));
+
+    let response = client
+        .get(&url)
+        .header("Authorization", format!("Bearer {}", api_key))
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let status = response.status().as_u16();
+    let mut resp_headers = HashMap::new();
+    for (k, v) in response.headers() {
+        if let Ok(val) = v.to_str() {
+            resp_headers.insert(k.to_string(), val.to_string());
+        }
+    }
+    let body = response.text().await.map_err(|e| e.to_string())?;
+
+    Ok(HttpResponse { status, body, headers: resp_headers })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -612,6 +704,19 @@ mod tests {
         let captured = captured_rx.await.unwrap();
         let raw_str = String::from_utf8_lossy(&captured.raw);
         assert!(raw_str.contains("recording_1234567890.wav"), "Should use original filename");
+    }
+
+    #[test]
+    fn test_encode_path_segments() {
+        // Spaces and reserved characters are percent-encoded.
+        assert_eq!(
+            encode_path("Notulen/2026-06-29 Mijn Notule.md"),
+            "Notulen/2026-06-29%20Mijn%20Notule.md"
+        );
+        // Slashes stay as separators; other reserved chars are encoded per segment.
+        assert_eq!(encode_path("a b/c#d"), "a%20b/c%23d");
+        // The unreserved set is preserved verbatim.
+        assert_eq!(encode_path("A-Z_a.z~0"), "A-Z_a.z~0");
     }
 }
 

@@ -20,6 +20,8 @@
 		AA000011 /* CrashReporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000011 /* CrashReporter.swift */; };
 		AA000012 /* DebugLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000012 /* DebugLogger.swift */; };
 		AA000013 /* KeychainService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000013 /* KeychainService.swift */; };
+		AB000300 /* HTMLToMarkdown.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000300 /* HTMLToMarkdown.swift */; };
+		AB000301 /* ObsidianService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000301 /* ObsidianService.swift */; };
 		AA000014 /* LLMService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000014 /* LLMService.swift */; };
 		AA000015 /* NetworkMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000015 /* NetworkMonitor.swift */; };
 		AA000016 /* OfflineQueue.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000016 /* OfflineQueue.swift */; };
@@ -112,6 +114,8 @@
 		FA000011 /* CrashReporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrashReporter.swift; sourceTree = "<group>"; };
 		FA000012 /* DebugLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugLogger.swift; sourceTree = "<group>"; };
 		FA000013 /* KeychainService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainService.swift; sourceTree = "<group>"; };
+		FB000300 /* HTMLToMarkdown.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HTMLToMarkdown.swift; sourceTree = "<group>"; };
+		FB000301 /* ObsidianService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ObsidianService.swift; sourceTree = "<group>"; };
 		FA000014 /* LLMService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMService.swift; sourceTree = "<group>"; };
 		FA000015 /* NetworkMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkMonitor.swift; sourceTree = "<group>"; };
 		FA000016 /* OfflineQueue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineQueue.swift; sourceTree = "<group>"; };
@@ -246,6 +250,7 @@
 			children = (
 				FA000003 /* Color+Brand.swift */,
 				FA000004 /* Theme.swift */,
+				FB000300 /* HTMLToMarkdown.swift */,
 			);
 			path = Extensions;
 			sourceTree = "<group>";
@@ -280,6 +285,7 @@
 				FA000071 /* PersonDirectoryService.swift */,
 				FA000063 /* LocalTranscriber.swift */,
 				FA000064 /* NotuleTitleExtractor.swift */,
+				FB000301 /* ObsidianService.swift */,
 				FA000054 /* MeetingNotificationService.swift */,
 				FA000050 /* MicrosoftGraphService.swift */,
 				FA000015 /* NetworkMonitor.swift */,
@@ -519,6 +525,8 @@
 				AA000011 /* CrashReporter.swift in Sources */,
 				AA000012 /* DebugLogger.swift in Sources */,
 				AA000013 /* KeychainService.swift in Sources */,
+				AB000300 /* HTMLToMarkdown.swift in Sources */,
+				AB000301 /* ObsidianService.swift in Sources */,
 				AA000014 /* LLMService.swift in Sources */,
 				AA000015 /* NetworkMonitor.swift in Sources */,
 				AA000016 /* OfflineQueue.swift in Sources */,

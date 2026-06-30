@@ -1,7 +1,9 @@
 import { useRecordingStore, registerAbortController, unregisterAbortController } from "../stores/recordingStore";
 import { useTranscriptsStore } from "../stores/transcriptsStore";
+import { useSettingsStore } from "../stores/settingsStore";
 import { api } from "./api";
 import { createSSEClient } from "./sse";
+import { exportToObsidian } from "./obsidian";
 import { enqueue } from "./offlineQueue";
 import type { Participant } from "./participants";
 import type { RecordingMode, TranscriptTask } from "../types";
@@ -63,7 +65,16 @@ export async function uploadAndTrack(
       },
       async () => {
         const transcripts = await api.getTranscripts();
-        if (transcripts[0]) addTranscript(transcripts[0]);
+        if (transcripts[0]) {
+          addTranscript(transcripts[0]);
+          // Auto-export the freshly completed notule to Obsidian (fire-and-forget).
+          const settings = useSettingsStore.getState();
+          if (settings.obsidian_enabled) {
+            exportToObsidian(transcripts[0], settings).catch((e) =>
+              console.warn("Obsidian auto-export mislukt:", e),
+            );
+          }
+        }
         removeBackgroundTask(task_id);
       },
     );

@@ -1,4 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import {
   Globe24Regular,
   DocumentText24Regular,
@@ -8,8 +10,12 @@ import {
   CheckmarkCircle24Regular,
   ErrorCircle24Regular,
   ArrowSync24Regular,
+  Laptop24Regular,
+  Notebook24Regular,
 } from "@fluentui/react-icons";
+import { WHISPER_MODELS } from "../types";
 import { api } from "../services/api";
+import { testObsidian } from "../services/obsidian";
 import { useSettingsStore } from "../stores/settingsStore";
 import { useCalendarStore } from "../stores/calendarStore";
 import { useProfilesStore } from "../stores/profilesStore";
@@ -32,8 +38,47 @@ export function SettingsPage() {
   const [serverError, setServerError] = useState<string | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<"idle" | "testing" | "success" | "error">("idle");
   const [isConnecting, setIsConnecting] = useState(false);
+  const [obsidianTestStatus, setObsidianTestStatus] = useState<"idle" | "testing" | "success" | "error">("idle");
 
   const hasOAuthConfig = Boolean(settings.ms365_client_id && settings.ms365_tenant_id);
+
+  // Local Whisper model state
+  const [modelExists, setModelExists] = useState<boolean | null>(null);
+  const [downloading, setDownloading] = useState(false);
+  const [dlPct, setDlPct] = useState(0);
+
+  const checkModel = useCallback(async () => {
+    try {
+      const s = await invoke<{ exists: boolean }>("whisper_model_status", {
+        modelId: settings.whisper_model,
+      });
+      setModelExists(s.exists);
+    } catch {
+      setModelExists(null);
+    }
+  }, [settings.whisper_model]);
+
+  useEffect(() => {
+    if (settings.processing_mode === "local") checkModel();
+  }, [settings.processing_mode, checkModel]);
+
+  async function handleDownloadModel() {
+    setDownloading(true);
+    setDlPct(0);
+    const unlisten = await listen<{ pct: number }>(
+      "whisper-download-progress",
+      (e) => setDlPct(e.payload.pct ?? 0),
+    );
+    try {
+      await invoke("download_whisper_model", { modelId: settings.whisper_model });
+      await checkModel();
+    } catch (err) {
+      console.error("[Settings] Model download failed:", err);
+    } finally {
+      unlisten();
+      setDownloading(false);
+    }
+  }
 
   function validateUrl(url: string): string | null {
     if (!url.trim()) return "URL mag niet leeg zijn";
@@ -73,6 +118,17 @@ export function SettingsPage() {
       setConnectionStatus("error");
     }
     setTimeout(() => setConnectionStatus("idle"), 3000);
+  }
+
+  async function handleTestObsidian() {
+    setObsidianTestStatus("testing");
+    try {
+      await testObsidian(settings);
+      setObsidianTestStatus("success");
+    } catch {
+      setObsidianTestStatus("error");
+    }
+    setTimeout(() => setObsidianTestStatus("idle"), 3000);
   }
 
   async function handleConnect365() {
@@ -185,6 +241,84 @@ export function SettingsPage() {
             </div>
           </div>
 
+          {/* Verwerking — local vs cloud, mirrors macOS processingMode */}
+          <div className="settings-group">
+            <p className="settings-group-label">Verwerking</p>
+            <div className="settings-row">
+              <div className="flex-row gap-10 flex-1">
+                <Laptop24Regular className="settings-icon" />
+                <div className="flex-1">
+                  <p className="settings-label">Verwerkingsmodus</p>
+                  <p className="settings-desc">
+                    {settings.processing_mode === "local"
+                      ? "Lokaal — transcriptie én notulen draaien volledig op dit apparaat"
+                      : "Cloud — opname wordt naar de server geüpload"}
+                  </p>
+                </div>
+                <select
+                  value={settings.processing_mode}
+                  onChange={(e) => {
+                    const mode = e.target.value as "cloud" | "local";
+                    // Switching to local with the cloud provider still selected
+                    // would fail at notule generation — move it to Ollama.
+                    const patch: Partial<typeof settings> = { processing_mode: mode };
+                    if (mode === "local" && settings.notulen_provider === "cloud") {
+                      patch.notulen_provider = "ollama";
+                    }
+                    settings.updateSettings(patch);
+                  }}
+                  className="select"
+                >
+                  <option value="cloud">Cloud</option>
+                  <option value="local">Lokaal</option>
+                </select>
+              </div>
+            </div>
+
+            {settings.processing_mode === "local" && (
+              <>
+                <div style={{ padding: "0 14px 4px" }}>
+                  <SettingsField label="Transcriptiemodel (Whisper)">
+                    <select
+                      value={settings.whisper_model}
+                      onChange={(e) => settings.updateSettings({ whisper_model: e.target.value })}
+                      className="select"
+                      style={{ width: "100%" }}
+                    >
+                      {WHISPER_MODELS.map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.label} ({m.size})
+                        </option>
+                      ))}
+                    </select>
+                  </SettingsField>
+                </div>
+                <div style={{ padding: "0 14px 12px", display: "flex", flexDirection: "column", gap: 6 }}>
+                  {modelExists ? (
+                    <p className="settings-desc-success" style={{ margin: 0 }}>
+                      <CheckmarkCircle24Regular style={{ fontSize: 14, verticalAlign: "middle" }} /> Model gedownload en klaar voor gebruik
+                    </p>
+                  ) : downloading ? (
+                    <p className="settings-desc" style={{ margin: 0 }}>Downloaden… {dlPct}%</p>
+                  ) : (
+                    <>
+                      <button
+                        onClick={handleDownloadModel}
+                        className="btn btn-accent btn-sm"
+                        style={{ alignSelf: "flex-start" }}
+                      >
+                        Model downloaden
+                      </button>
+                      <p className="settings-desc" style={{ margin: 0 }}>
+                        Het model wordt eenmalig gedownload. Anders gebeurt dit automatisch bij de eerste opname.
+                      </p>
+                    </>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+
           {/* Notulen generatie */}
           <div className="settings-group">
             <p className="settings-group-label">Notulen generatie</p>
@@ -229,13 +363,24 @@ export function SettingsPage() {
                     />
                   </SettingsField>
                 </div>
-                <div style={{ padding: "0 14px 12px" }}>
+                <div style={{ padding: "0 14px 4px" }}>
                   <SettingsField label="Model">
                     <input
                       type="text"
                       value={settings.ollama_model}
                       onChange={(e) => settings.updateSettings({ ollama_model: e.target.value })}
                       placeholder="llama3.2"
+                      className="input"
+                    />
+                  </SettingsField>
+                </div>
+                <div style={{ padding: "0 14px 12px" }}>
+                  <SettingsField label="API-sleutel (alleen voor Ollama Cloud)">
+                    <input
+                      type="password"
+                      value={settings.ollama_api_key}
+                      onChange={(e) => settings.updateSettings({ ollama_api_key: e.target.value })}
+                      placeholder="Leeg laten voor lokale Ollama"
                       className="input"
                     />
                   </SettingsField>
@@ -268,6 +413,76 @@ export function SettingsPage() {
                 </div>
               </>
             )}
+          </div>
+
+          {/* Obsidian */}
+          <div className="settings-group">
+            <p className="settings-group-label">Obsidian-koppeling</p>
+            <div className="settings-row">
+              <div className="flex-row gap-10 flex-1">
+                <Notebook24Regular className="settings-icon" />
+                <div className="flex-1">
+                  <p className="settings-label">Automatisch exporteren naar Obsidian</p>
+                  <p className="settings-desc">Schrijf elke nieuwe notule naar je Obsidian-vault</p>
+                </div>
+                <label className="toggle-switch">
+                  <input
+                    type="checkbox"
+                    role="switch"
+                    aria-checked={settings.obsidian_enabled}
+                    checked={settings.obsidian_enabled}
+                    onChange={(e) => settings.updateSettings({ obsidian_enabled: e.target.checked })}
+                  />
+                  <span className="toggle-slider" />
+                </label>
+              </div>
+            </div>
+            <div style={{ padding: "0 14px 4px" }}>
+              <SettingsField label="Base-URL">
+                <input
+                  type="url"
+                  value={settings.obsidian_base_url}
+                  onChange={(e) => settings.updateSettings({ obsidian_base_url: e.target.value })}
+                  placeholder="https://127.0.0.1:27124"
+                  className="input"
+                />
+              </SettingsField>
+            </div>
+            <div style={{ padding: "0 14px 4px" }}>
+              <SettingsField label="Vault-pad">
+                <input
+                  type="text"
+                  value={settings.obsidian_vault_path}
+                  onChange={(e) => settings.updateSettings({ obsidian_vault_path: e.target.value })}
+                  placeholder="Notulen"
+                  className="input"
+                />
+              </SettingsField>
+            </div>
+            <div style={{ padding: "0 14px 4px" }}>
+              <SettingsField label="API-sleutel">
+                <input
+                  type="password"
+                  value={settings.obsidian_api_key}
+                  onChange={(e) => settings.updateSettings({ obsidian_api_key: e.target.value })}
+                  placeholder="Bearer-sleutel uit de Local REST API plugin"
+                  className="input"
+                />
+              </SettingsField>
+            </div>
+            <div style={{ padding: "0 14px 12px" }}>
+              <button
+                onClick={handleTestObsidian}
+                className="btn btn-secondary btn-sm"
+                disabled={obsidianTestStatus === "testing"}
+                style={{ alignSelf: "flex-start" }}
+              >
+                {obsidianTestStatus === "testing" ? "Testen..." :
+                 obsidianTestStatus === "success" ? <><CheckmarkCircle24Regular style={{ fontSize: 14 }} /> Verbonden</> :
+                 obsidianTestStatus === "error" ? <><ErrorCircle24Regular style={{ fontSize: 14 }} /> Niet bereikbaar</> :
+                 "Test verbinding"}
+              </button>
+            </div>
           </div>
 
           {/* Agenda */}

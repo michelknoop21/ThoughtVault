@@ -16,6 +16,7 @@ import {
   Document24Regular,
   Clipboard24Regular,
   Sparkle24Regular,
+  Notebook24Regular,
 } from "@fluentui/react-icons";
 import DOMPurify from "dompurify";
 import { marked } from "marked";
@@ -36,6 +37,7 @@ interface TranscriptDetailProps {
   onExportTXT: (transcript: Transcript) => void;
   onExportMarkdown: (transcript: Transcript) => void;
   onExportHTML: (transcript: Transcript) => void;
+  onExportObsidian: (transcript: Transcript) => void;
   onOpenTags: (id: string) => void;
   onGenerateTitle: (transcript: Transcript) => void;
 }
@@ -53,6 +55,7 @@ export function TranscriptDetail({
   onExportTXT,
   onExportMarkdown,
   onExportHTML,
+  onExportObsidian,
   onOpenTags,
   onGenerateTitle,
 }: TranscriptDetailProps) {
@@ -224,6 +227,9 @@ export function TranscriptDetail({
                   </button>
                   <button className="td-export-item" onClick={() => { onExportHTML(transcript); setExportOpen(false); }}>
                     <ArrowDownload24Regular style={{ fontSize: 15 }} /> HTML
+                  </button>
+                  <button className="td-export-item" onClick={() => { onExportObsidian(transcript); setExportOpen(false); }}>
+                    <Notebook24Regular style={{ fontSize: 15 }} /> Obsidian
                   </button>
                 </>
               )}

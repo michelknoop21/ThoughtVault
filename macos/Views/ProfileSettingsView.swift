@@ -71,44 +71,46 @@ struct ProfileSettingsView: View {
     // MARK: - Form Fields
 
     private var formFields: some View {
+        // Label-above rows (SettingFieldRow) keep these fields full-width and
+        // aligned with every other Instellingen tab.
         VStack(spacing: TS.Spacing.sm) {
-            LabeledContent("Naam") {
+            SettingFieldRow("Naam") {
                 TextField("Naam", text: $naam)
                     .textFieldStyle(.roundedBorder)
                     .font(TS.Font.body)
                     .autocorrectionDisabled()
             }
 
-            LabeledContent("Rol / Functie") {
+            SettingFieldRow("Rol / Functie") {
                 TextField("Rol / Functie", text: $rol)
                     .textFieldStyle(.roundedBorder)
                     .font(TS.Font.body)
                     .autocorrectionDisabled()
             }
 
-            LabeledContent("Organisatie") {
+            SettingFieldRow("Organisatie") {
                 TextField("Organisatie", text: $organisatie)
                     .textFieldStyle(.roundedBorder)
                     .font(TS.Font.body)
                     .autocorrectionDisabled()
             }
 
-            LabeledContent("Hoe noemen collega's jou?") {
-                TextField("Michel, Knoop, MK (kommagescheiden)", text: $aliassen)
+            SettingFieldRow("Hoe noemen collega's jou?", hint: "Meerdere kommagescheiden") {
+                TextField("Michel, Knoop, MK", text: $aliassen)
                     .textFieldStyle(.roundedBorder)
                     .font(TS.Font.body)
                     .autocorrectionDisabled()
             }
 
-            LabeledContent("Typische vergadertypen") {
-                TextField("Wekelijks overleg, Klantgesprek (kommagescheiden)", text: $meetingTypes)
+            SettingFieldRow("Typische vergadertypen", hint: "Meerdere kommagescheiden") {
+                TextField("Wekelijks overleg, Klantgesprek", text: $meetingTypes)
                     .textFieldStyle(.roundedBorder)
                     .font(TS.Font.body)
                     .autocorrectionDisabled()
             }
 
-            LabeledContent("Expertise / onderwerpen") {
-                TextField("grafisch ontwerp, marketing, IT (kommagescheiden)", text: $expertise)
+            SettingFieldRow("Expertise / onderwerpen", hint: "Meerdere kommagescheiden") {
+                TextField("grafisch ontwerp, marketing, IT", text: $expertise)
                     .textFieldStyle(.roundedBorder)
                     .font(TS.Font.body)
                     .autocorrectionDisabled()

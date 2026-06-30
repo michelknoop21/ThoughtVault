@@ -33,11 +33,17 @@ extension Color {
 extension Color {
 
     // MARK: Yinga Brand (static)
+    //
+    // Two-layer accent system — keep these roles consistent across the app:
+    //  - brandPrimary (magenta): content actions — record, send, submit, primary CTAs.
+    //  - brandSecondary (blue):  navigation & selected state — sidebar, tab selection.
+    // brandAccent (green) and brandOrange are reserved for status/semantic accents
+    // (success, warning), not as general-purpose action colors.
 
-    /// Yinga primary — magenta #E50074
+    /// Yinga primary — magenta #E50074. Content actions / primary CTAs.
     static let brandPrimary = Color(red: 0.898, green: 0.0, blue: 0.455)
 
-    /// Yinga secondary — blue #007BC4
+    /// Yinga secondary — blue #007BC4. Navigation & selected state.
     static let brandSecondary = Color(red: 0.0, green: 0.482, blue: 0.769)
 
     /// Yinga accent — green #009F3C

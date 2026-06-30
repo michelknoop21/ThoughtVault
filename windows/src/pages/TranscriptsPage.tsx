@@ -10,8 +10,15 @@ import {
 } from "@fluentui/react-icons";
 import DOMPurify from "dompurify";
 import { useTranscriptsStore } from "../stores/transcriptsStore";
+import { useLocalTranscriptsStore, isLocalId } from "../stores/localTranscriptsStore";
+import { useSettingsStore } from "../stores/settingsStore";
+import { useProfilesStore } from "../stores/profilesStore";
+import { LLMService } from "../services/llm";
+import { extractTitle } from "../services/titleExtractor";
 import { api } from "../services/api";
 import { createSSEClient } from "../services/sse";
+import { exportToObsidian } from "../services/obsidian";
+import { htmlToMarkdown } from "../utils/htmlToMarkdown";
 import { useToast } from "../components/ui/InfoBar";
 import { clampMenuPosition } from "../utils/menuPosition";
 import { TranscriptsList } from "../components/transcripts/TranscriptsList";
@@ -42,12 +49,18 @@ export function TranscriptsPage() {
   const refreshTranscripts = useCallback(async () => {
     lastLoadRef.current = Date.now();
     setIsLoading(true);
+    // Locally generated transcripts always show, even with no server/login.
+    const local = useLocalTranscriptsStore.getState().items;
     try {
       const data = await api.getTranscripts();
-      setTranscripts(data);
+      setTranscripts([...local, ...data]);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Laden mislukt";
-      toast.show("Documenten laden mislukt: " + msg, "error");
+      setTranscripts(local);
+      // In local mode there is no backend, so a failed fetch is expected.
+      if (useSettingsStore.getState().processing_mode !== "local") {
+        const msg = err instanceof Error ? err.message : "Laden mislukt";
+        toast.show("Documenten laden mislukt: " + msg, "error");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -71,6 +84,8 @@ export function TranscriptsPage() {
   // --- Select & load detail ---
   async function selectAndLoadDetail(id: string) {
     setSelectedId(id);
+    // Local records carry full detail already — nothing to fetch.
+    if (isLocalId(id)) return;
     try {
       const detail = await api.getTranscript(id);
       updateTranscript(id, {
@@ -93,7 +108,11 @@ export function TranscriptsPage() {
   // --- Delete ---
   async function handleDelete(transcript: Transcript) {
     try {
-      await api.deleteTranscript(transcript.id);
+      if (isLocalId(transcript.id)) {
+        useLocalTranscriptsStore.getState().remove(transcript.id);
+      } else {
+        await api.deleteTranscript(transcript.id);
+      }
       deleteTranscript(transcript.id);
       toast.show("Verwijderd", "success");
     } catch (err) {
@@ -103,8 +122,11 @@ export function TranscriptsPage() {
 
   // --- Bulk delete ---
   async function handleBulkDelete(ids: string[]) {
+    const localIds = ids.filter(isLocalId);
+    const serverIds = ids.filter((id) => !isLocalId(id));
     try {
-      await api.bulkDeleteTranscripts(ids);
+      localIds.forEach((id) => useLocalTranscriptsStore.getState().remove(id));
+      if (serverIds.length) await api.bulkDeleteTranscripts(serverIds);
       ids.forEach((id) => deleteTranscript(id));
       toast.show(`${ids.length} items verwijderd`, "success");
     } catch {
@@ -115,6 +137,11 @@ export function TranscriptsPage() {
   // --- Title update ---
   async function handleUpdateTitle(id: string, title: string) {
     try {
+      if (isLocalId(id)) {
+        useLocalTranscriptsStore.getState().update(id, { title });
+        updateTranscript(id, { title });
+        return;
+      }
       const updated = await api.updateTranscript(id, { title });
       updateTranscript(id, { title: updated.title || title });
     } catch {
@@ -125,6 +152,12 @@ export function TranscriptsPage() {
   // --- Notule save ---
   async function handleSaveNotule(id: string, html: string) {
     try {
+      if (isLocalId(id)) {
+        useLocalTranscriptsStore.getState().update(id, { notule_html: html });
+        updateTranscript(id, { notule_html: html });
+        toast.show("Notule opgeslagen", "success");
+        return;
+      }
       await api.updateNotuleHTML(id, html);
       updateTranscript(id, { notule_html: html });
       toast.show("Notule opgeslagen", "success");
@@ -135,6 +168,28 @@ export function TranscriptsPage() {
 
   // --- Regenerate ---
   async function handleRegenerate(transcript: Transcript) {
+    // Local records: re-run the on-device LLM over the stored transcription.
+    if (isLocalId(transcript.id)) {
+      if (!transcript.raw_transcription) {
+        toast.show("Geen transcriptie beschikbaar", "error");
+        return;
+      }
+      setRegeneratingId(transcript.id);
+      try {
+        const profiles = useProfilesStore.getState().profiles;
+        const profile = profiles.find((p) => p.name === transcript.profile_name) ?? profiles[0];
+        const html = await LLMService.generateNotulen(transcript.raw_transcription, profile);
+        const title = extractTitle(html) || transcript.title;
+        useLocalTranscriptsStore.getState().update(transcript.id, { notule_html: html, title });
+        updateTranscript(transcript.id, { notule_html: html, title });
+        toast.show("Notule opnieuw gegenereerd", "success");
+      } catch {
+        toast.show("Regenereren mislukt", "error");
+      } finally {
+        setRegeneratingId(null);
+      }
+      return;
+    }
     const profileId = transcript.profile_name || "zakelijk";
     setRegeneratingId(transcript.id);
     try {
@@ -242,6 +297,16 @@ export function TranscriptsPage() {
     downloadFile(transcript.notule_html, `${transcript.title || "notulen"}.html`, "text/html");
   }
 
+  async function handleExportObsidian(transcript: Transcript) {
+    const settings = useSettingsStore.getState();
+    try {
+      await exportToObsidian(transcript, settings);
+      toast.show("Geëxporteerd naar Obsidian", "success");
+    } catch (err) {
+      toast.show(err instanceof Error ? err.message : "Export naar Obsidian mislukt", "error");
+    }
+  }
+
   const handleCopy = useCallback((text: string) => {
     navigator.clipboard.writeText(text)
       .then(() => toast.show("Gekopieerd", "success"))
@@ -324,6 +389,7 @@ export function TranscriptsPage() {
           onExportTXT={handleExportTXT}
           onExportMarkdown={handleExportMarkdown}
           onExportHTML={handleExportHTML}
+          onExportObsidian={handleExportObsidian}
           onOpenTags={openTagsDialog}
           onGenerateTitle={handleGenerateTitle}
         />
@@ -421,24 +487,6 @@ function downloadFile(content: string, filename: string, mimeType: string) {
   const a = document.createElement("a");
   a.href = url; a.download = filename; a.click();
   URL.revokeObjectURL(url);
-}
-
-function htmlToMarkdown(html: string): string {
-  let md = html;
-  md = md.replace(/<h1[^>]*>(.*?)<\/h1>/gi, "\n# $1\n");
-  md = md.replace(/<h2[^>]*>(.*?)<\/h2>/gi, "\n## $1\n");
-  md = md.replace(/<h3[^>]*>(.*?)<\/h3>/gi, "\n### $1\n");
-  md = md.replace(/<h4[^>]*>(.*?)<\/h4>/gi, "\n#### $1\n");
-  md = md.replace(/<(strong|b)[^>]*>(.*?)<\/\1>/gi, "**$2**");
-  md = md.replace(/<(em|i)[^>]*>(.*?)<\/\1>/gi, "*$2*");
-  md = md.replace(/<li[^>]*>(.*?)<\/li>/gi, "- $1\n");
-  md = md.replace(/<br\s*\/?>/gi, "\n");
-  md = md.replace(/<\/p>/gi, "\n\n");
-  md = md.replace(/<blockquote[^>]*>(.*?)<\/blockquote>/gi, "> $1\n");
-  md = md.replace(/<[^>]+>/g, "");
-  md = md.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&nbsp;/g, " ").replace(/&quot;/g, '"');
-  md = md.replace(/\n{3,}/g, "\n\n");
-  return md.trim();
 }
 
 function formatDate(dateStr: string): string {

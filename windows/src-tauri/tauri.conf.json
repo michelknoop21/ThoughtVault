@@ -25,7 +25,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://n8n.prezent.nl https://graph.microsoft.com https://login.microsoftonline.com; img-src 'self' data:; font-src 'self'; form-action 'self'; frame-ancestors 'none'"
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://n8n.prezent.nl https://graph.microsoft.com https://login.microsoftonline.com http://localhost:* http://127.0.0.1:* https://ollama.com; img-src 'self' data:; font-src 'self'; form-action 'self'; frame-ancestors 'none'"
     }
   },
   "bundle": {

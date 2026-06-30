@@ -59,11 +59,6 @@ struct HomeView: View {
                     activeProcessingSection
 
                     recentTranscriptsSection
-
-                    #if os(macOS)
-                    Spacer(minLength: TS.Spacing.lg)
-                    YingaFooter()
-                    #endif
                 }
                 .padding(.horizontal, TS.Spacing.lg)
                 .padding(.vertical, TS.Spacing.lg)

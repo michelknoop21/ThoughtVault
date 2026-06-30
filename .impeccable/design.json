@@ -1,0 +1,164 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-06-07",
+  "title": "Design System: TranscriptStudio",
+  "extensions": {
+    "colorMeta": {
+      "brand-primary": { "role": "primary", "displayName": "Yinga Magenta", "canonical": "#E50074", "darkValue": "#FF4DA6", "tonalRamp": ["#2E0017", "#5C002E", "#8A0046", "#B8005E", "#E50074", "#F23D96", "#F87DBC", "#FFCBE3"] },
+      "brand-primary-dark": { "role": "primary", "displayName": "Magenta Deep", "canonical": "#B8005E", "tonalRamp": ["#240013", "#480026", "#6C0038", "#90004B", "#B8005E", "#D63E86", "#E87DAE", "#F8CBDF"] },
+      "brand-secondary": { "role": "interactive", "displayName": "Yinga Blue", "canonical": "#007BC4", "darkValue": "#3DA8E0", "tonalRamp": ["#001826", "#00314D", "#004A73", "#00629A", "#007BC4", "#3DA0DA", "#7DC2E9", "#CBE8F7"] },
+      "brand-accent": { "role": "tertiary", "displayName": "Yinga Green", "canonical": "#009F3C", "darkValue": "#34D058", "tonalRamp": ["#00200C", "#004018", "#006024", "#008030", "#009F3C", "#3DC06A", "#7DD89E", "#CBF0D8"] },
+      "brand-orange": { "role": "tertiary", "displayName": "Yinga Orange", "canonical": "#F39200", "tonalRamp": ["#311D00", "#623B00", "#935800", "#C47600", "#F39200", "#F7AD3D", "#FAC97D", "#FDEACB"] },
+      "neon-blue": { "role": "accent", "displayName": "Waveform Neon Blue", "canonical": "#00C2FF", "purpose": "Recording waveform visualization only.", "tonalRamp": ["#002633", "#004D66", "#007399", "#009ACC", "#00C2FF", "#3DD0FF", "#7DDFFF", "#CBF3FF"] },
+      "surface-primary": { "role": "neutral", "displayName": "Surface Primary", "canonical": "#FFFFFF", "darkValue": "#1A1C29" },
+      "surface-secondary": { "role": "neutral", "displayName": "Canvas", "canonical": "#F5F5F7", "darkValue": "#212433" },
+      "surface-tertiary": { "role": "neutral", "displayName": "Recessed Fill", "canonical": "#EBEBF0", "darkValue": "#282A3D" },
+      "text-primary": { "role": "neutral", "displayName": "Soft Ink", "canonical": "#333338", "darkValue": "#F2F2F7" },
+      "text-secondary": { "role": "neutral", "displayName": "Muted Label", "canonical": "#6B6B73", "darkValue": "#9E9EA6" },
+      "text-tertiary": { "role": "neutral", "displayName": "Faint Meta", "canonical": "#99999F", "darkValue": "#6C6C74" },
+      "border-primary": { "role": "neutral", "displayName": "Divider", "canonical": "#E0E0E6", "darkValue": "#383B4D" },
+      "border-secondary": { "role": "neutral", "displayName": "Subtle Divider", "canonical": "#EDEDF0", "darkValue": "#2C2E40" },
+      "status-error": { "role": "status", "displayName": "Error Red", "canonical": "#EF4444", "darkValue": "#FF6B6B" },
+      "status-warning": { "role": "status", "displayName": "Warning Amber", "canonical": "#F9A500", "darkValue": "#FFB340" },
+      "status-success": { "role": "status", "displayName": "Success Green", "canonical": "#009F3C", "darkValue": "#34D058" }
+    },
+    "typographyMeta": {
+      "large-title": { "displayName": "Large Title", "purpose": "Hero / login title, rendered in brand magenta." },
+      "title": { "displayName": "Title", "purpose": "Screen titles. Rounded design." },
+      "title2": { "displayName": "Title 2", "purpose": "Major section titles. Rounded design." },
+      "title3": { "displayName": "Title 3", "purpose": "Minor section titles. Rounded design." },
+      "headline": { "displayName": "Headline", "purpose": "Card headers. Rounded, semibold." },
+      "body": { "displayName": "Body", "purpose": "Primary content. 14px web / Dynamic Type .body on macOS." },
+      "caption": { "displayName": "Caption", "purpose": "Metadata, timestamps, secondary descriptions." },
+      "label": { "displayName": "Micro Label", "purpose": "10px UPPERCASE tracked labels and badge text. The only uppercase context." },
+      "mono": { "displayName": "Mono", "purpose": "Timestamps, codes; the 56px ultra-light recording timer." }
+    },
+    "shadows": [
+      { "name": "card-ambient", "value": "0 3px 8px rgba(0,0,0,0.06)", "purpose": "Resting state of every glass card. Dark: rgba(0,0,0,0.20)." },
+      { "name": "card-hover", "value": "0 6px 16px rgba(0,0,0,0.12)", "purpose": "Card hover, paired with scale(1.02). Dark: rgba(0,0,0,0.30)." },
+      { "name": "brand-action", "value": "0 3px 8px rgba(229,0,116,0.30)", "purpose": "Magenta glow under primary buttons; hover -> 0 4px 12px rgba(229,0,116,0.40)." },
+      { "name": "mic-glow", "value": "0 4px 16px rgba(229,0,116,0.40)", "purpose": "Glow under the 80px recording mic; hover -> 0 6px 20px rgba(229,0,116,0.50)." },
+      { "name": "flyout", "value": "0 8px 32px rgba(0,0,0,0.14)", "purpose": "Context menus and acrylic flyouts." }
+    ],
+    "motion": [
+      { "name": "smooth", "value": "spring(response: 0.3, dampingFraction: 0.7) / cubic-bezier(0.25,0.46,0.45,0.94) 300ms", "purpose": "Default interactions and progress transitions." },
+      { "name": "quick", "value": "easeInOut 150ms / cubic-bezier(0.4,0,0.2,1)", "purpose": "Fast micro-interactions: button press, input focus." },
+      { "name": "gentle", "value": "spring(response: 0.5, dampingFraction: 0.8) / cubic-bezier(0.22,0.61,0.36,1) 500ms", "purpose": "Emphasis transitions, processing-bar fill." },
+      { "name": "hover", "value": "easeInOut 180ms / cubic-bezier(0.4,0,0.2,1)", "purpose": "Card and surface hover (lift + border tint)." }
+    ],
+    "materials": {
+      "glass-card": { "background-light": "rgba(255,255,255,0.72)", "background-dark": "rgba(33,36,51,0.72)", "blur": "20px", "border-light": "rgba(224,224,230,0.60)", "purpose": "Default card surface on both platforms. macOS 26+ uses native .glassEffect; fallback is .ultraThinMaterial / backdrop-filter." },
+      "glass-elevated": { "blur": "30px", "purpose": "Context menus, elevated cards." }
+    },
+    "breakpoints": [
+      { "name": "compact-height", "value": "max-height: 700px / 620px / 560px", "purpose": "Recording view collapses vertical gaps progressively on short windows." }
+    ],
+    "platformParity": "Every primitive (colors, spacing, radii, motion curves) exists identically in macOS Color+Brand.swift / Theme.swift and Windows globals.css. globals.css is annotated 'matches macOS' throughout. Tokens must change on both platforms together."
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The magenta gradient primary action. Used for the dominant CTA on any screen.",
+      "html": "<button class=\"ds-btn-primary\">Start opname</button>",
+      "css": ".ds-btn-primary { font-family: 'SF Pro Rounded','Segoe UI Variable',system-ui,sans-serif; font-size: 14px; font-weight: 600; color: #fff; padding: 10px 24px; border: none; border-radius: 12px; background: linear-gradient(135deg, #E50074, rgba(184,0,94,0.82)); box-shadow: 0 3px 8px rgba(229,0,116,0.30); cursor: pointer; transition: box-shadow 150ms cubic-bezier(0.4,0,0.2,1), transform 150ms cubic-bezier(0.4,0,0.2,1), opacity 150ms; } .ds-btn-primary:hover { box-shadow: 0 4px 12px rgba(229,0,116,0.40); } .ds-btn-primary:active { background: linear-gradient(135deg, #CC0068, rgba(160,0,82,0.90)); transform: scale(0.97); opacity: 0.88; } .ds-btn-primary:focus-visible { outline: 2px solid #E50074; outline-offset: 2px; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Blue-tinted outlined action — the interactive/secondary variant.",
+      "html": "<button class=\"ds-btn-secondary\">Annuleren</button>",
+      "css": ".ds-btn-secondary { font-family: 'SF Pro Rounded','Segoe UI Variable',system-ui,sans-serif; font-size: 14px; font-weight: 500; color: #007BC4; padding: 10px 24px; border: 1px solid rgba(0,123,196,0.35); border-radius: 12px; background: rgba(0,123,196,0.08); cursor: pointer; transition: background 150ms cubic-bezier(0.4,0,0.2,1), transform 150ms; } .ds-btn-secondary:hover { background: rgba(0,123,196,0.12); } .ds-btn-secondary:active { transform: scale(0.97); } .ds-btn-secondary:focus-visible { outline: 2px solid #E50074; outline-offset: 2px; }"
+    },
+    {
+      "name": "Glass Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "The universal glassmorphic container. Translucent fill over the canvas, blur, 1px translucent border, soft ambient shadow, lifts on hover.",
+      "html": "<div class=\"ds-card\"><div class=\"ds-card-title\">Teamoverleg 14 mei</div><div class=\"ds-card-sub\">42 min &middot; 3 sprekers</div></div>",
+      "css": ".ds-card { background: rgba(255,255,255,0.72); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(224,224,230,0.60); border-radius: 16px; box-shadow: 0 3px 8px rgba(0,0,0,0.06); padding: 16px; transition: border-color 180ms cubic-bezier(0.4,0,0.2,1), box-shadow 180ms cubic-bezier(0.4,0,0.2,1), transform 180ms cubic-bezier(0.4,0,0.2,1); } .ds-card:hover { border-color: rgba(0,123,196,0.25); box-shadow: 0 6px 16px rgba(0,0,0,0.12); transform: scale(1.02); } .ds-card-title { font-family: 'SF Pro Rounded',system-ui,sans-serif; font-size: 17px; font-weight: 600; color: #333338; } .ds-card-sub { font-size: 12px; color: #6B6B73; margin-top: 2px; }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Rounded input with subtle border and a blue focus ring.",
+      "html": "<input class=\"ds-input\" placeholder=\"Zoek transcripties\" />",
+      "css": ".ds-input { font-family: 'SF Pro',system-ui,sans-serif; font-size: 14px; color: #333338; padding: 10px 14px; border: 1px solid #E0E0E6; border-radius: 12px; background: #FFFFFF; width: 100%; transition: border-color 150ms cubic-bezier(0.4,0,0.2,1), box-shadow 150ms; } .ds-input::placeholder { color: #99999F; } .ds-input:focus { outline: none; border-color: #007BC4; box-shadow: 0 0 0 3px rgba(0,123,196,0.12); }"
+    },
+    {
+      "name": "Sidebar Item",
+      "kind": "nav",
+      "refersTo": null,
+      "description": "Navigation row. Hover tints blue; active fills solid blue with white text.",
+      "html": "<nav class=\"ds-nav\"><a class=\"ds-nav-item active\">Opnemen</a><a class=\"ds-nav-item\">Transcripties</a><a class=\"ds-nav-item\">Instellingen</a></nav>",
+      "css": ".ds-nav { display: flex; flex-direction: column; gap: 2px; width: 210px; padding: 8px; } .ds-nav-item { display: flex; align-items: center; gap: 8px; padding: 7px 8px; border-radius: 6px; font-family: 'SF Pro',system-ui,sans-serif; font-size: 13px; font-weight: 400; color: #333338; cursor: default; text-decoration: none; transition: background 180ms cubic-bezier(0.4,0,0.2,1), color 180ms; } .ds-nav-item:hover { background: rgba(0,123,196,0.08); color: #007BC4; } .ds-nav-item.active { background: #007BC4; color: #FFFFFF; font-weight: 600; box-shadow: 0 2px 4px rgba(0,123,196,0.30); }"
+    },
+    {
+      "name": "Filter Pill",
+      "kind": "chip",
+      "refersTo": "filter-pill",
+      "description": "Capsule filter toggle. Outlined at rest, solid blue when active.",
+      "html": "<button class=\"ds-pill active\">Alle</button> <button class=\"ds-pill\">Concept</button> <button class=\"ds-pill\">Klaar</button>",
+      "css": ".ds-pill { display: inline-flex; align-items: center; min-height: 32px; padding: 6px 12px; border-radius: 25px; font-family: 'SF Pro',system-ui,sans-serif; font-size: 12px; font-weight: 500; background: transparent; border: 1px solid #E0E0E6; color: #6B6B73; cursor: default; transition: background 150ms, border-color 150ms, color 150ms; } .ds-pill:hover { border-color: #007BC4; color: #007BC4; } .ds-pill.active { background: #007BC4; border-color: #007BC4; color: #FFFFFF; }"
+    },
+    {
+      "name": "Status Badge",
+      "kind": "chip",
+      "refersTo": "status-badge",
+      "description": "Micro uppercase badge in a tinted pill; one per status hue.",
+      "html": "<span class=\"ds-badge accent\">CONCEPT</span> <span class=\"ds-badge success\">KLAAR</span> <span class=\"ds-badge warning\">WACHT</span>",
+      "css": ".ds-badge { display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 6px; font-family: 'SF Pro',system-ui,sans-serif; font-size: 10px; font-weight: 600; letter-spacing: 0.08em; } .ds-badge.accent { background: rgba(229,0,116,0.10); color: #E50074; border: 0.5px solid rgba(229,0,116,0.25); } .ds-badge.success { background: rgba(0,159,60,0.10); color: #009F3C; border: 0.5px solid rgba(0,159,60,0.25); } .ds-badge.warning { background: rgba(249,165,0,0.10); color: #F9A500; border: 0.5px solid rgba(249,165,0,0.25); }"
+    },
+    {
+      "name": "Recording Mic",
+      "kind": "custom",
+      "refersTo": null,
+      "description": "The signature 80px circular magenta-gradient mic button with concentric pulsing rings. The emotional center of the app.",
+      "html": "<div class=\"ds-mic-wrap\"><span class=\"ds-mic-ring r1\"></span><span class=\"ds-mic-ring r2\"></span><button class=\"ds-mic\"><svg width=\"28\" height=\"28\" viewBox=\"0 0 24 24\" fill=\"#fff\"><path d=\"M12 14a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2Z\"/></svg></button></div>",
+      "css": ".ds-mic-wrap { position: relative; display: flex; align-items: center; justify-content: center; width: 180px; height: 180px; } .ds-mic { width: 80px; height: 80px; border-radius: 50%; border: none; background: linear-gradient(135deg, #E50074, #B8005E); box-shadow: 0 4px 16px rgba(229,0,116,0.40); display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 1; transition: box-shadow 150ms cubic-bezier(0.4,0,0.2,1), transform 150ms; } .ds-mic:hover { box-shadow: 0 6px 20px rgba(229,0,116,0.50); } .ds-mic:active { transform: scale(0.95); } .ds-mic-ring { position: absolute; border-radius: 50%; border: 1px solid rgba(229,0,116,0.15); animation: ds-mic-pulse 3.5s ease-in-out infinite; pointer-events: none; } .ds-mic-ring.r1 { width: 120px; height: 120px; } .ds-mic-ring.r2 { width: 150px; height: 150px; animation-delay: 0.8s; } @keyframes ds-mic-pulse { 0% { opacity: 0.4; transform: scale(0.9); } 50% { opacity: 0.15; transform: scale(1.0); } 100% { opacity: 0; transform: scale(1.15); } } @media (prefers-reduced-motion: reduce) { .ds-mic-ring { animation: none; opacity: 0.2; } }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Yinga Studio",
+    "overview": "TranscriptStudio is a branded workspace, not a neutral utility. It is unmistakably Yinga the moment it loads: the four-color spinner, the magenta wordmark, magenta gradients on every primary action. But it earns that brand confidence by sitting inside a calm, Apple-native shell. The single most important fact about this system is that it is one design language rendered twice: the macOS/iOS app and the Windows app carry identical hex values, spacing, radii, and animation curves. The aesthetic is warm-friendly-professional and explicitly rejects the generic dark-mode SaaS dashboard look; depth comes from translucency and soft shadow, never heavy chrome.",
+    "keyCharacteristics": [
+      "Cross-platform parity is law — every token exists identically in Color+Brand.swift/Theme.swift and globals.css.",
+      "Yinga magenta #E50074 leads every primary action, usually as a 135 degree gradient into #B8005E.",
+      "Glass surfaces (backdrop-filter blur 20px, translucent fill) carry the entire card system on both platforms.",
+      "SF Pro Rounded for headings/titles gives the friendly voice; system sans for body keeps it legible.",
+      "8pt spacing grid, continuous-corner radii, spring/ease-out motion — Apple HIG rhythm throughout.",
+      "Full light + dark adaptive palettes, both first-class."
+    ],
+    "rules": [
+      { "name": "The Two-Voice Rule", "body": "Magenta acts, blue navigates. Primary actions and recording are magenta; selection, tabs, links, and focus-within-navigation are blue. Never use magenta for a nav-selection state or blue for a primary CTA.", "section": "colors" },
+      { "name": "The Parity Rule", "body": "No color or token exists on one platform only. Every value lives identically in Color+Brand.swift and globals.css. A new value is added to both or it does not exist.", "section": "colors" },
+      { "name": "The Rounded-Heading Rule", "body": "Anything title-tier and up uses the rounded design (.rounded on macOS, SF Pro Rounded on web). Body and controls use plain system sans.", "section": "typography" },
+      { "name": "The Uppercase-Label-Only Rule", "body": "Uppercase + tracked is reserved for <=2-word labels and badges at the 10px micro size. Never uppercase a sentence or a button.", "section": "typography" },
+      { "name": "The Glass-Default Rule", "body": "Cards, flyouts, badges, and the sidebar are glass over the canvas. Solid opaque panels are the exception. Dark mode deepens shadows, it does not remove the glass.", "section": "elevation" },
+      { "name": "The Lift-On-Hover Rule", "body": "Interactive surfaces respond to hover with a ~1.02 scale + shadow bump + accent border tint on a 180ms ease. Use .card-static only where lift is wrong.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do keep every token identical across Color+Brand.swift/Theme.swift and globals.css — parity is the system.",
+      "Do use magenta #E50074 for actions and the mic, blue #007BC4 for navigation/selection/focus.",
+      "Do render primary buttons and the mic as the 135 degree magenta gradient with the colored glow shadow.",
+      "Do build surfaces as glass over the gray canvas, with 1px translucent borders and soft ambient shadow.",
+      "Do use SF Pro Rounded for titles and headlines; plain system sans for body and controls.",
+      "Do stay on the 8pt spacing grid and the 6/12/16/20/25px radius ladder.",
+      "Do give interactive surfaces a ~1.02 hover lift + shadow + accent-border tint, with a prefers-reduced-motion fallback.",
+      "Do support light and dark equally; both palettes are first-class."
+    ],
+    "donts": [
+      "Don't let this drift into a generic dark-mode SaaS dashboard (neon-on-charcoal, sharp corners, dense grids).",
+      "Don't use a border-left/border-right colored stripe as a card or callout accent (the web hero-CTA left-border is legacy, not a pattern).",
+      "Don't introduce gradient text (background-clip: text); gradients belong on fills and buttons only.",
+      "Don't add flat opaque panels where a glass card belongs, or convey depth with heavy/dark drop shadows.",
+      "Don't set body or button copy in UPPERCASE — uppercase is the 10px tracked label/badge size only.",
+      "Don't swap the action/navigation colors (magenta nav-selection or blue primary CTA).",
+      "Don't add a color, radius, or spacing value to one platform without adding the identical value to the other.",
+      "Don't introduce a third display typeface; the rounded + system-sans pairing is the whole type system."
+    ]
+  }
+}

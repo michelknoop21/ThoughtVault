@@ -34,6 +34,17 @@ export type RecordingMode = "microphone" | "combined";
 // Notulen providers
 export type NotulenProvider = "cloud" | "ollama" | "lm-studio";
 
+// Processing mode: "cloud" = upload to backend, "local" = transcribe + generate
+// fully on-device (Whisper + Ollama/LM Studio). Mirrors the macOS processingMode.
+export type ProcessingMode = "cloud" | "local";
+
+// Available local Whisper models (GGML). Maps 1:1 to ggml-<id>.bin filenames.
+export const WHISPER_MODELS: { id: string; label: string; size: string }[] = [
+  { id: "small", label: "Small — sneller, minder accuraat", size: "~466 MB" },
+  { id: "medium", label: "Medium — aanbevolen", size: "~1,5 GB" },
+  { id: "large-v3", label: "Large v3 — beste kwaliteit, traag op CPU", size: "~3 GB" },
+];
+
 // In-progress recording/processing task
 export interface TranscriptTask {
   task_id: string;
@@ -359,9 +370,12 @@ export interface ProfilesResponse {
 // Settings
 export interface AppSettings {
   server_url: string;
+  processing_mode: ProcessingMode;
+  whisper_model: string;
   notulen_provider: NotulenProvider;
   ollama_url: string;
   ollama_model: string;
+  ollama_api_key: string;  // For Ollama Cloud (https://ollama.com); empty = local
   lm_studio_url: string;
   lm_studio_model: string;
   default_profile_id: string;
@@ -371,13 +385,20 @@ export interface AppSettings {
   dismissed_update_version: string;
   ms365_tenant_id?: string;
   ms365_client_id?: string;
+  obsidian_enabled: boolean;
+  obsidian_base_url: string;
+  obsidian_vault_path: string;
+  obsidian_api_key: string;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
   server_url: "https://n8n.prezent.nl/tstudio/api",
+  processing_mode: "cloud",
+  whisper_model: "medium",
   notulen_provider: "cloud",
   ollama_url: "http://localhost:11434",
   ollama_model: "llama3.2",
+  ollama_api_key: "",
   lm_studio_url: "http://localhost:1234",
   lm_studio_model: "local-model",
   default_profile_id: "zakelijk",
@@ -385,4 +406,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   has_completed_onboarding: false,
   check_for_updates: true,
   dismissed_update_version: "",
+  obsidian_enabled: false,
+  obsidian_base_url: "https://127.0.0.1:27124",
+  obsidian_vault_path: "Notulen",
+  obsidian_api_key: "",
 };

@@ -68,6 +68,10 @@ struct PersonEditView: View {
 
     private var isNewPerson: Bool { person == nil }
 
+    /// Action keeps the same name through the flow: the modal titled
+    /// "Persoon toevoegen" gets a "Persoon toevoegen" button, not "Wijzigingen opslaan".
+    private var saveLabel: String { isNewPerson ? "Persoon toevoegen" : "Wijzigingen opslaan" }
+
     private var canSave: Bool {
         !isSaving && !naam.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
@@ -94,44 +98,45 @@ struct PersonEditView: View {
                 .font(TS.Font.title3Semibold)
                 .foregroundStyle(Color.labelPrimary)
 
-            // Form
+            // Form — label-above rows (SettingFieldRow) so the wide
+            // comma-separated inputs aren't cramped, matching Instellingen.
             Form {
-                LabeledContent("Naam") {
+                SettingFieldRow("Naam") {
                     TextField("Naam", text: $naam)
                         .textFieldStyle(.roundedBorder)
                         .font(TS.Font.body)
                         .autocorrectionDisabled()
                 }
 
-                LabeledContent("Rol / Functie") {
+                SettingFieldRow("Rol / Functie") {
                     TextField("Rol / Functie", text: $rol)
                         .textFieldStyle(.roundedBorder)
                         .font(TS.Font.body)
                         .autocorrectionDisabled()
                 }
 
-                LabeledContent("Organisatie") {
+                SettingFieldRow("Organisatie") {
                     TextField("Organisatie", text: $organisatie)
                         .textFieldStyle(.roundedBorder)
                         .font(TS.Font.body)
                         .autocorrectionDisabled()
                 }
 
-                LabeledContent("Aliassen") {
-                    TextField("Michel, Knoop, MK (kommagescheiden)", text: $aliassen)
+                SettingFieldRow("Aliassen", hint: "Meerdere kommagescheiden") {
+                    TextField("Michel, Knoop, MK", text: $aliassen)
                         .textFieldStyle(.roundedBorder)
                         .font(TS.Font.body)
                         .autocorrectionDisabled()
                 }
 
-                LabeledContent("Expertise / onderwerpen") {
-                    TextField("grafisch ontwerp, marketing, IT (kommagescheiden)", text: $expertise)
+                SettingFieldRow("Expertise / onderwerpen", hint: "Meerdere kommagescheiden") {
+                    TextField("grafisch ontwerp, marketing, IT", text: $expertise)
                         .textFieldStyle(.roundedBorder)
                         .font(TS.Font.body)
                         .autocorrectionDisabled()
                 }
 
-                LabeledContent("Intern / extern") {
+                SettingFieldRow("Intern / extern") {
                     Picker("", selection: $internalStatus) {
                         ForEach(InternalStatus.allCases, id: \.self) { status in
                             Text(status.label).tag(status)
@@ -160,7 +165,7 @@ struct PersonEditView: View {
                             HStack(spacing: TS.Spacing.xs) {
                                 ProgressView()
                                     .controlSize(.small)
-                                Text("Wijzigingen opslaan")
+                                Text(saveLabel)
                             }
                         } else if showSaved {
                             HStack(spacing: TS.Spacing.xs) {
@@ -168,7 +173,7 @@ struct PersonEditView: View {
                                 Text("Opgeslagen")
                             }
                         } else {
-                            Text("Wijzigingen opslaan")
+                            Text(saveLabel)
                         }
                     }
                     .buttonStyle(PrimaryButtonStyle())

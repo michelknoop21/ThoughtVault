@@ -7,6 +7,7 @@
 // saved recordings list, and reprocess/retry sheet.
 
 import SwiftUI
+import UniformTypeIdentifiers
 
 // MARK: - RecordingView
 
@@ -25,13 +26,12 @@ struct RecordingView: View {
     @State private var showCancelConfirm = false
     @State private var showProfileLoadError = false
     @State private var showParticipantPicker = false
+    @State private var showImporter = false
 
     // MARK: Body
 
     var body: some View {
-        ZStack {
-            backgroundBlobs
-
+        Group {
             if recordingVM.recordingState.isRecording ||
                recordingVM.recordingState == .preparing ||
                recordingVM.recordingState == .stopping {
@@ -45,42 +45,6 @@ struct RecordingView: View {
                 .environment(recordingVM)
                 .frame(minWidth: 420, idealWidth: 460, minHeight: 340, idealHeight: 380)
         }
-    }
-
-    // MARK: - Background blobs
-
-    private var backgroundBlobs: some View {
-        GeometryReader { geo in
-            ZStack {
-                Circle()
-                    .fill(
-                        RadialGradient(
-                            colors: [Color.brandPrimary.opacity(0.12), Color.clear],
-                            center: .center,
-                            startRadius: 0,
-                            endRadius: 280
-                        )
-                    )
-                    .frame(width: 560, height: 560)
-                    .offset(x: geo.size.width * 0.5, y: -80)
-                    .blur(radius: 70)
-
-                Circle()
-                    .fill(
-                        RadialGradient(
-                            colors: [Color.neonBlue.opacity(0.08), Color.clear],
-                            center: .center,
-                            startRadius: 0,
-                            endRadius: 200
-                        )
-                    )
-                    .frame(width: 400, height: 400)
-                    .offset(x: -geo.size.width * 0.2, y: geo.size.height * 0.5)
-                    .blur(radius: 55)
-            }
-        }
-        .ignoresSafeArea()
-        .allowsHitTesting(false)
     }
 
     // MARK: - Idle view
@@ -210,6 +174,13 @@ struct RecordingView: View {
                 Text("Klik om op te nemen")
                     .font(TS.Font.footnote)
                 .foregroundStyle(Color.labelTertiary)
+
+                Button {
+                    showImporter = true
+                } label: {
+                    Label("Importeer audiobestand", systemImage: "square.and.arrow.down")
+                }
+                .buttonStyle(SecondaryButtonStyle())
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, TS.Spacing.xl)
@@ -225,6 +196,11 @@ struct RecordingView: View {
         }
         .sheet(isPresented: $showParticipantPicker) {
             ParticipantPickerSheet(selectedIDs: Bindable(recordingVM).selectedParticipantIDs)
+        }
+        .fileImporter(isPresented: $showImporter, allowedContentTypes: [.audio], allowsMultipleSelection: false) { result in
+            if case .success(let urls) = result, let url = urls.first {
+                Task { await recordingVM.importAudioFile(url) }
+            }
         }
     }
 
@@ -796,6 +772,11 @@ struct RecordingView: View {
     // MARK: Saved recordings section
 
     private var savedRecordingsSection: some View {
+        // A short list (≤3) is shown inline — reprocessing is a frequent enough
+        // action that hiding it behind a disclosure adds friction for no payoff.
+        // The collapse/expand affordance only appears once there's more to fold.
+        let isCollapsible = recordingVM.savedRecordings.count > 3
+        let isShown = !isCollapsible || savedRecordingsExpanded
         let recordings = Array(recordingVM.savedRecordings.prefix(
             savedRecordingsExpanded ? 10 : 3
         ))
@@ -803,6 +784,7 @@ struct RecordingView: View {
 
         return VStack(alignment: .leading, spacing: TS.Spacing.xs) {
             Button {
+                guard isCollapsible else { return }
                 withAnimation(TS.Animation.smooth) {
                     savedRecordingsExpanded.toggle()
                 }
@@ -833,19 +815,25 @@ struct RecordingView: View {
                     .buttonStyle(.plain)
                     .help("Toon in Finder")
 
-                    Image(systemName: savedRecordingsExpanded ? "chevron.up" : "chevron.down")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(Color.labelTertiary)
+                    if isCollapsible {
+                        Image(systemName: savedRecordingsExpanded ? "chevron.up" : "chevron.down")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(Color.labelTertiary)
+                    }
                 }
             }
             .buttonStyle(.plain)
 
-            if savedRecordingsExpanded {
+            if isShown {
                 if recordings.isEmpty {
-                    Text("Geen opgeslagen opnames")
-                        .font(TS.Font.footnote)
-                        .foregroundStyle(Color.labelTertiary)
-                        .padding(.vertical, TS.Spacing.sm)
+                    // Only when explicitly expanded; never as inline noise on a
+                    // fresh screen with no recordings yet.
+                    if savedRecordingsExpanded {
+                        Text("Geen opgeslagen opnames")
+                            .font(TS.Font.footnote)
+                            .foregroundStyle(Color.labelTertiary)
+                            .padding(.vertical, TS.Spacing.sm)
+                    }
                 } else {
                     VStack(spacing: TS.Spacing.xs) {
                         ForEach(recordings) { recording in
@@ -1168,7 +1156,9 @@ struct RecordingView: View {
                     controlButton(icon: "play.fill", label: "Hervat", color: Color.labelSecondary) {
                         recordingVM.resumeRecording()
                     }
-                    controlButton(icon: "xmark", label: "Annuleer", color: Color.labelSecondary) {
+                    // Destructive: tinted apart from the neutral "Hervat" so a
+                    // misclick after pausing doesn't read as an equal sibling.
+                    controlButton(icon: "xmark", label: "Annuleer", color: Color.statusError) {
                         showCancelConfirm = true
                     }
                 }

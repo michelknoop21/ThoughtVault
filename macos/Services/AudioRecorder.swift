@@ -371,7 +371,9 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
             includingPropertiesForKeys: [.creationDateKey, .fileSizeKey],
             options: .skipsHiddenFiles
         ) else { return [] }
-        return items.filter { $0.pathExtension.lowercased() == "wav" }
+        // ponytail: vaste extensielijst; uitbreiden als er een nieuw bronformaat opduikt.
+        let audioExts: Set<String> = ["wav", "m4a", "mp3", "aiff", "caf"]
+        return items.filter { audioExts.contains($0.pathExtension.lowercased()) }
     }
 
     /// Deletes recordings older than 7 days, protecting any URLs in the given set.

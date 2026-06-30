@@ -411,7 +411,7 @@ struct ContentView: View {
                     sidebarCollapsed = false
                 }
             } label: {
-                Image(systemName: "sidebar.right")
+                Image(systemName: "sidebar.left")
                     .font(.system(size: 13))
                     .foregroundStyle(.secondary)
                     .frame(width: 32, height: 32)
@@ -424,14 +424,15 @@ struct ContentView: View {
 
     private var userProfileSection: some View {
         HStack(spacing: 10) {
-            // Avatar circle
+            // Avatar circle — neutral so it doesn't read as a selected nav item
+            // (selected state owns brandSecondary).
             ZStack {
                 Circle()
-                    .fill(Color.brandSecondary.opacity(0.2))
+                    .fill(Color.surfaceTertiary)
                     .frame(width: 32, height: 32)
                 Text(authVM.currentUser?.displayFirstName.prefix(1).uppercased() ?? "?")
                     .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(Color.brandSecondary)
+                    .foregroundStyle(Color.labelSecondary)
             }
 
             VStack(alignment: .leading, spacing: 1) {

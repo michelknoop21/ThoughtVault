@@ -131,14 +131,11 @@ struct TranscriptsView: View {
     // MARK: Body
 
     var body: some View {
-        ZStack {
-            backgroundBlobs
-            VStack(spacing: 0) {
-                searchBar
-                filtersRow
-                tagFilterRow
-                mainContent
-            }
+        VStack(spacing: 0) {
+            searchBar
+            filtersRow
+            tagFilterRow
+            mainContent
         }
         .navigationTitle("Notulen")
         .toolbar { toolbarContent }
@@ -181,25 +178,6 @@ struct TranscriptsView: View {
             Task { await loadTranscripts() }
         }
 #endif
-    }
-
-    // MARK: - Background blobs
-
-    private var backgroundBlobs: some View {
-        GeometryReader { geo in
-            ZStack {
-                Circle()
-                    .fill(RadialGradient(
-                        colors: [Color.brandSecondary.opacity(0.08), Color.clear],
-                        center: .center, startRadius: 0, endRadius: 220
-                    ))
-                    .frame(width: 440, height: 440)
-                    .offset(x: geo.size.width * 0.6, y: 60)
-                    .blur(radius: 55)
-            }
-        }
-        .ignoresSafeArea()
-        .allowsHitTesting(false)
     }
 
     // MARK: - Search bar
@@ -899,7 +877,12 @@ struct TranscriptListCard: View {
     private var previewText: String? {
         if let notule = transcript.notuleHtml, !notule.isEmpty {
             return notule
+                // Strip <style>/<script> blocks incl. content — their text isn't between
+                // angle brackets, so plain tag-stripping would leak CSS/JS into the preview.
+                .replacingOccurrences(of: "<(style|script)[^>]*>[\\s\\S]*?</\\1>", with: " ",
+                                      options: [.regularExpression, .caseInsensitive])
                 .replacingOccurrences(of: "<[^>]+>", with: " ", options: .regularExpression)
+                .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
                 .trimmingCharacters(in: .whitespacesAndNewlines)
         }
         return transcript.rawTranscription
@@ -1395,6 +1378,9 @@ struct TranscriptDetailView: View {
                 }
                 Button { exportAsMarkdown() } label: {
                     Label("Markdown", systemImage: "doc.plaintext")
+                }
+                Button { exportToObsidian() } label: {
+                    Label("Exporteer naar Obsidian", systemImage: "tray.and.arrow.down")
                 }
                 Button { exportAsTXT() } label: {
                     Label("Platte tekst", systemImage: "doc.text")
@@ -2099,7 +2085,7 @@ struct TranscriptDetailView: View {
 
     private func exportAsMarkdown() {
         let html = fullTranscript.notuleHtml ?? fullTranscript.rawTranscription ?? ""
-        let md = Self.htmlToMarkdown(html)
+        let md = htmlToMarkdown(html)
 
         #if os(macOS)
         let panel = NSSavePanel()
@@ -2128,31 +2114,27 @@ struct TranscriptDetailView: View {
         #endif
     }
 
-    private static func htmlToMarkdown(_ html: String) -> String {
-        var md = html
-        // Block-level replacements
-        md = md.replacingOccurrences(of: "<h1[^>]*>(.*?)</h1>", with: "\n# $1\n", options: .regularExpression)
-        md = md.replacingOccurrences(of: "<h2[^>]*>(.*?)</h2>", with: "\n## $1\n", options: .regularExpression)
-        md = md.replacingOccurrences(of: "<h3[^>]*>(.*?)</h3>", with: "\n### $1\n", options: .regularExpression)
-        md = md.replacingOccurrences(of: "<h4[^>]*>(.*?)</h4>", with: "\n#### $1\n", options: .regularExpression)
-        md = md.replacingOccurrences(of: "<strong>(.*?)</strong>", with: "**$1**", options: .regularExpression)
-        md = md.replacingOccurrences(of: "<b>(.*?)</b>", with: "**$1**", options: .regularExpression)
-        md = md.replacingOccurrences(of: "<em>(.*?)</em>", with: "*$1*", options: .regularExpression)
-        md = md.replacingOccurrences(of: "<i>(.*?)</i>", with: "*$1*", options: .regularExpression)
-        md = md.replacingOccurrences(of: "<li>(.*?)</li>", with: "- $1", options: .regularExpression)
-        md = md.replacingOccurrences(of: "<br\\s*/?>", with: "\n", options: .regularExpression)
-        md = md.replacingOccurrences(of: "<p[^>]*>(.*?)</p>", with: "\n$1\n", options: .regularExpression)
-        md = md.replacingOccurrences(of: "<blockquote[^>]*>(.*?)</blockquote>", with: "\n> $1\n", options: .regularExpression)
-        // Remove remaining tags
-        md = md.replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)
-        // Decode entities
-        md = md.replacingOccurrences(of: "&amp;", with: "&")
-        md = md.replacingOccurrences(of: "&lt;", with: "<")
-        md = md.replacingOccurrences(of: "&gt;", with: ">")
-        md = md.replacingOccurrences(of: "&nbsp;", with: " ")
-        // Collapse excessive blank lines
-        md = md.replacingOccurrences(of: "\n{3,}", with: "\n\n", options: .regularExpression)
-        return md.trimmingCharacters(in: .whitespacesAndNewlines)
+    private func exportToObsidian() {
+        Task { @MainActor in
+            do {
+                if let record = LocalTranscriptStore.shared.record(forTaskId: fullTranscript.taskId) {
+                    try await ObsidianService().export(record)
+                } else {
+                    let html = fullTranscript.notuleHtml ?? ""
+                    guard !html.isEmpty else {
+                        errorMessage = "Geen notule om te exporteren."
+                        return
+                    }
+                    try await ObsidianService().export(
+                        title: fullTranscript.title, html: html, date: fullTranscript.date,
+                        participants: [], profileName: fullTranscript.profileName, tags: fullTranscript.tags
+                    )
+                }
+                errorMessage = nil
+            } catch {
+                errorMessage = "Obsidian-export mislukt: \(error.localizedDescription)"
+            }
+        }
     }
 
     private func shareContent() {

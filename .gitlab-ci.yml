@@ -15,6 +15,7 @@ workflow:
   rules:
     - if: $CI_COMMIT_TAG =~ /^(dev-)?v\d/
     - if: $CI_PIPELINE_SOURCE == "web"
+    - if: $CI_PIPELINE_SOURCE == "api"
 
 stages:
   - prepare
@@ -331,6 +332,10 @@ build-android:
 deploy:
   stage: deploy
   tags: [shell]
+  # Deploy ONLY on release tags. Prevents non-tag pipelines (web/api build
+  # checks) from uploading artifacts to the production download server.
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^(dev-)?v\d/
   needs:
     - job: prepare
       artifacts: true

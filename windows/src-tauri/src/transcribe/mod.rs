@@ -164,7 +164,7 @@ fn run_whisper(app: AppHandle, model: &PathBuf, wav_path: &str) -> Result<String
         .map_err(|e| format!("Audioconversie mislukt: {}", e))?;
 
     let ctx = WhisperContext::new_with_params(
-        &model.to_string_lossy(),
+        model.as_path(),
         WhisperContextParameters::default(),
     )
     .map_err(|e| format!("Model laden mislukt: {}", e))?;
@@ -188,13 +188,13 @@ fn run_whisper(app: AppHandle, model: &PathBuf, wav_path: &str) -> Result<String
         .full(params, &audio)
         .map_err(|e| format!("Transcriptie mislukt: {}", e))?;
 
-    let num_segments = state
-        .full_n_segments()
-        .map_err(|e| format!("Segmenten lezen mislukt: {}", e))?;
+    let num_segments = state.full_n_segments();
     let mut text = String::new();
     for i in 0..num_segments {
-        if let Ok(segment) = state.full_get_segment_text(i) {
-            text.push_str(&segment);
+        if let Some(segment) = state.get_segment(i) {
+            if let Ok(s) = segment.to_str_lossy() {
+                text.push_str(&s);
+            }
         }
     }
     Ok(text.trim().to_string())

@@ -39,7 +39,8 @@ hound = "3.5"
 
 # Local transcription (whisper.cpp bindings). Builds whisper.cpp from source —
 # requires CMake + a C/C++ toolchain on the build machine. CPU inference by default.
-whisper-rs = "0.14"
+# 0.16+ ships pre-generated bindings (no bindgen/libclang needed).
+whisper-rs = "0.16"
 
 # Credentials
 keyring = "3"

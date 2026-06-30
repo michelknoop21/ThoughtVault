@@ -194,6 +194,33 @@ build-windows:
       cargo --version
       node --version
     - |
+      # whisper-rs-sys needs libclang (bindgen) + CMake (whisper.cpp build).
+      # Prefer toolchains already on the runner (Visual Studio bundles both);
+      # fall back to Chocolatey only when nothing is found.
+      $clang = Get-ChildItem -Path "C:\Program Files\LLVM\bin\libclang.dll","C:\Program Files\Microsoft Visual Studio\*\*\VC\Tools\Llvm\x64\bin\libclang.dll" -ErrorAction SilentlyContinue | Select-Object -First 1
+      if (-not $clang) {
+        Write-Host "libclang not found, installing LLVM via Chocolatey..."
+        choco install llvm -y --no-progress
+        $clang = Get-ChildItem -Path "C:\Program Files\LLVM\bin\libclang.dll" -ErrorAction SilentlyContinue | Select-Object -First 1
+      }
+      if ($clang) {
+        $env:LIBCLANG_PATH = $clang.DirectoryName
+        $env:PATH = "$($clang.DirectoryName);$env:PATH"
+        Write-Host "LIBCLANG_PATH = $env:LIBCLANG_PATH"
+      } else {
+        Write-Error "libclang not available"; exit 1
+      }
+      if (-not (Get-Command cmake -ErrorAction SilentlyContinue)) {
+        $cmake = Get-ChildItem -Path "C:\Program Files\CMake\bin\cmake.exe","C:\Program Files\Microsoft Visual Studio\*\*\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+        if (-not $cmake) {
+          Write-Host "cmake not found, installing via Chocolatey..."
+          choco install cmake -y --no-progress --installargs 'ADD_CMAKE_TO_PATH=System'
+          $cmake = Get-ChildItem -Path "C:\Program Files\CMake\bin\cmake.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+        }
+        if ($cmake) { $env:PATH = "$($cmake.DirectoryName);$env:PATH" }
+      }
+      cmake --version
+    - |
       # Determine version and channel (same logic as prepare job)
       $tag = $env:CI_COMMIT_TAG
       if ($tag -match '^v(\d.+)') {

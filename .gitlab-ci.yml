@@ -265,13 +265,15 @@ build-windows:
       Copy-Item $msi.FullName "..\build\$env:W_MSI_NAME"
       Write-Host "Built: $env:W_MSI_NAME ($([math]::Round($msi.Length / 1MB, 1)) MB)"
     - |
-      # Upload MSI to server (if SSH key is available)
-      # Check multiple locations (runner may run as SYSTEM or as user)
+      # Upload MSI to server — ONLY on release tags. Non-tag pipelines (web/api
+      # build checks) must never publish to the download server or touch
+      # releases.json.
       $sshKey = $null
       foreach ($candidate in @("$env:USERPROFILE\.ssh\id_rsa", "C:\Users\michel\.ssh\id_rsa")) {
         if (Test-Path $candidate) { $sshKey = $candidate; break }
       }
-      if ($sshKey) {
+      if (-not $env:CI_COMMIT_TAG) { Write-Host "No release tag - skipping server upload (build-only check)." }
+      if ($sshKey -and $env:CI_COMMIT_TAG) {
         $SERVER = "michelk@3.69.205.209"
         $REMOTE_DIR = "/home/michelk/tstudio-releases"
         scp -i $sshKey -o StrictHostKeyChecking=no "..\build\$env:W_MSI_NAME" "${SERVER}:${REMOTE_DIR}/$env:W_MSI_NAME"

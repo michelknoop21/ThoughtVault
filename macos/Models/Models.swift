@@ -158,6 +158,23 @@ enum NotulenProvider: String, Codable, Sendable, CaseIterable, Identifiable {
         case .appleIntelligence: return "Apple Intelligence"
         }
     }
+
+    /// Default local-mode provider for the current platform.
+    /// macOS can run Ollama locally, so it stays the default there. iOS/iPadOS cannot run
+    /// Ollama on-device, so it prefers on-device Apple Intelligence when available and
+    /// otherwise falls back to Ollama (which must then point at a remote server URL).
+    static var platformDefault: NotulenProvider {
+        #if os(iOS)
+        #if canImport(FoundationModels)
+        if #available(iOS 26, *), AppleFoundationModelService.unavailabilityReason == nil {
+            return .appleIntelligence
+        }
+        #endif
+        return .ollama
+        #else
+        return .ollama
+        #endif
+    }
 }
 
 // MARK: - RecordingMode

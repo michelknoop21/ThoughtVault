@@ -72,7 +72,11 @@ struct SeedReviewSheet: View {
                         Toggle(isOn: $row.isChecked) {
                             EmptyView()
                         }
+                        #if os(macOS)
                         .toggleStyle(.checkbox)
+                        #else
+                        .toggleStyle(.switch)
+                        #endif
                         .accessibilityLabel(row.displayName)
 
                         VStack(alignment: .leading, spacing: 2) {

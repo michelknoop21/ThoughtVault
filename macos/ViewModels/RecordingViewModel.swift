@@ -803,7 +803,7 @@ final class RecordingViewModel {
         loadSavedRecordings()
 
         // 3. Local notule generation via the configured provider.
-        let providerRaw = UserDefaults.standard.string(forKey: "notulenProvider") ?? NotulenProvider.ollama.rawValue
+        let providerRaw = UserDefaults.standard.string(forKey: "notulenProvider") ?? NotulenProvider.platformDefault.rawValue
         var provider = NotulenProvider(rawValue: providerRaw) ?? .ollama
         if provider == .cloud { provider = .ollama }   // cloud is meaningless offline
 
@@ -854,7 +854,7 @@ final class RecordingViewModel {
             ?? selectedProfile
             ?? .zakelijk
 
-        var provider = NotulenProvider(rawValue: UserDefaults.standard.string(forKey: "notulenProvider") ?? NotulenProvider.ollama.rawValue) ?? .ollama
+        var provider = NotulenProvider(rawValue: UserDefaults.standard.string(forKey: "notulenProvider") ?? NotulenProvider.platformDefault.rawValue) ?? .ollama
         if provider == .cloud { provider = .ollama }
 
         let service = LLMServiceFactory.service(for: provider, serverURL: "")
@@ -1079,7 +1079,10 @@ final class RecordingViewModel {
         let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         let dir = docs.appendingPathComponent("Recordings")
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        #if os(macOS)
         NSWorkspace.shared.open(dir)
+        #endif
+        // ponytail: iOS has no "reveal in Finder"; folder is reachable via Files app share sheet elsewhere.
     }
 
     func deleteSavedRecording(_ recording: SavedRecording) {

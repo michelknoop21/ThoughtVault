@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../services/api";
 import { useAuthStore } from "../stores/authStore";
+import { useSettingsStore } from "../stores/settingsStore";
 import { TitleBar } from "../components/layout/TitleBar";
 import { YingaFooter } from "../components/brand/YingaFooter";
 import appLogo from "../assets/app-logo.png";
@@ -281,6 +282,21 @@ export function LoginPage() {
                   className="btn btn-ghost login-btn-back"
                 >
                   Wachtwoord vergeten?
+                </button>
+
+                {/* Use the app fully locally, without the server (no account needed). */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    useSettingsStore.getState().updateSettings({
+                      processing_mode: "local",
+                      has_completed_onboarding: true,
+                    });
+                    navigate("/", { replace: true });
+                  }}
+                  className="btn btn-ghost login-btn-back"
+                >
+                  Lokaal gebruiken (zonder server)
                 </button>
               </form>
             )}

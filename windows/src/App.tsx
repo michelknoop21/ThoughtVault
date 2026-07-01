@@ -250,6 +250,8 @@ function KeyboardShortcuts() {
 function ProtectedRoutes() {
   const { isAuthenticated, isInitializing } = useAuthStore();
   const { has_completed_onboarding, updateSettings } = useSettingsStore();
+  // Local mode needs no server, so it bypasses the login gate entirely.
+  const isLocalMode = useSettingsStore((s) => s.processing_mode) === "local";
   const setProfiles = useProfilesStore((s) => s.setProfiles);
 
   const addBackgroundTask = useRecordingStore((s) => s.addBackgroundTask);
@@ -322,7 +324,7 @@ function ProtectedRoutes() {
     return null;
   }
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated && !isLocalMode) {
     return <Navigate to="/login" replace />;
   }
 

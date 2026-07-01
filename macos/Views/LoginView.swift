@@ -197,7 +197,9 @@ struct LoginView: View {
 
             // Remember username toggle
             Toggle("Onthoud gebruikersnaam", isOn: $rememberUsername)
+                #if os(macOS)
                 .toggleStyle(.checkbox)
+                #endif
                 .font(TS.Font.footnote)
                 .foregroundStyle(Color.labelSecondary)
                 .onChange(of: rememberUsername) { _, newValue in

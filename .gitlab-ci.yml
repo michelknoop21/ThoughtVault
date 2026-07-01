@@ -171,6 +171,26 @@ build-macos:
       - build/*.dmg
     expire_in: 1 week
 
+# ─── iOS: compile-only parity gate ────────────────────────────────────────────
+# No signing / no IPA — this only proves the unified target still compiles for
+# iOS (mic-only local mode). It exists so an iOS-only compile break is caught in
+# CI instead of surfacing on a device build. Requires the iOS platform runtime on
+# the Mac runner: `xcodebuild -downloadPlatform iOS` (one-time).
+build-ios:
+  stage: build
+  tags: [macos, xcode]
+  needs: []
+  script:
+    - |
+      set -eo pipefail
+      xcodebuild build \
+        -project TranscriptStudio.xcodeproj \
+        -scheme TranscriptStudio \
+        -configuration Debug \
+        -destination "generic/platform=iOS Simulator" \
+        CODE_SIGNING_ALLOWED=NO \
+        2>&1 | tee /tmp/xcodebuild-ios.log | tail -30
+
 # ─── Windows: build MSI ───────────────────────────────────────────────────────
 # Fully standalone — runs on Michel's Windows PC without needing the Mac runner.
 # Inlines version detection (same logic as prepare job) so it has no dependencies.

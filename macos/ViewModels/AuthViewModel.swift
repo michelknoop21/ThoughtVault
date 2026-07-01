@@ -1,4 +1,6 @@
+#if os(macOS)
 import AppKit
+#endif
 import Foundation
 import OSLog
 import SwiftUI
@@ -332,6 +334,9 @@ final class AuthViewModel {
     /// If the token is no longer valid, the 401 retry in APIService will handle
     /// transient issues. We never auto-logout here.
     private func startWakeObserver() {
+        // Wake-reload is a macOS concern (NSWorkspace). iOS has no equivalent need:
+        // the 401 retry in APIService handles token re-validation transparently.
+        #if os(macOS)
         Task { [weak self] in
             for await _ in NSWorkspace.shared.notificationCenter.notifications(named: NSWorkspace.didWakeNotification) {
                 guard let self, isAuthenticated else { continue }
@@ -344,5 +349,6 @@ final class AuthViewModel {
                 }
             }
         }
+        #endif
     }
 }

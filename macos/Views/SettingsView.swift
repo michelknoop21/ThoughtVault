@@ -687,9 +687,14 @@ struct SettingsView: View {
     @ViewBuilder
     private var ollamaConfig: some View {
         // Server URL + Cloud preset
+        #if os(iOS)
+        let ollamaHint = "Ollama draait niet op iPhone/iPad — vul de URL van een remote Ollama-server in."
+        #else
+        let ollamaHint = "Lokaal draait standaard op http://localhost:11434."
+        #endif
         SettingFieldRow(
             "Ollama-server",
-            hint: "Lokaal draait standaard op http://localhost:11434."
+            hint: ollamaHint
         ) {
             HStack(spacing: TS.Spacing.sm) {
                 TextField("http://localhost:11434", text: $ollamaURL)
@@ -868,7 +873,7 @@ struct SettingsView: View {
 
     // Source of truth for the local notule provider. Read by RecordingViewModel's
     // processLocally / regenerateNotuleLocally. Selected in `lokaleNotulenSection`.
-    @AppStorage("notulenProvider") private var notulenProvider: String = NotulenProvider.ollama.rawValue
+    @AppStorage("notulenProvider") private var notulenProvider: String = NotulenProvider.platformDefault.rawValue
 
     // MARK: - Spraakherkenning (Transcription)
 

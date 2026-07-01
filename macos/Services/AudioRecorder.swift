@@ -182,7 +182,7 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
 
 #if os(iOS)
         try configureAudioSession()
-        beginBackgroundTask()
+        await beginBackgroundTask()
 #endif
 
         let url = makeRecordingURL()
@@ -421,21 +421,23 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
     }
 
-    private func beginBackgroundTask() {
-        let task = MainActor.assumeIsolated {
+    // AudioRecorder is a nonisolated class, so these run off the main thread.
+    // UIApplication background-task APIs are main-actor-only — hop explicitly
+    // instead of assuming isolation (assumeIsolated traps off the main thread).
+    private func beginBackgroundTask() async {
+        backgroundTask = await MainActor.run {
             UIApplication.shared.beginBackgroundTask(withName: "AudioRecording") {
                 [weak self] in
                 self?.endBackgroundTask()
             }
         }
-        backgroundTask = task
     }
 
     private func endBackgroundTask() {
         guard backgroundTask != .invalid else { return }
         let task = backgroundTask
         backgroundTask = .invalid
-        MainActor.assumeIsolated {
+        Task { @MainActor in
             UIApplication.shared.endBackgroundTask(task)
         }
     }

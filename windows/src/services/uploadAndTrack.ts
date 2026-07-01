@@ -89,7 +89,9 @@ export async function uploadAndTrack(
 
     const isAuthError = msg.includes("HTTP 401");
     const isClientError = msg.includes("HTTP 4") && !isAuthError;
-    if (!isClientError) {
+    // Never enqueue in local mode — there is no server to drain the queue.
+    const isLocal = useSettingsStore.getState().processing_mode === "local";
+    if (!isClientError && !isLocal) {
       let fileSizeBytes: number | undefined;
       let fileName: string | undefined;
       try {

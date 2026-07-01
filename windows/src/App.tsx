@@ -56,8 +56,21 @@ function OfflineQueueBanner() {
   const queueItems = useUploadQueueStore((s) => s.items);
   const permanentlyFailed = useUploadQueueStore((s) => s.permanentlyFailed);
   const clearPermanentlyFailed = useUploadQueueStore((s) => s.clearPermanentlyFailed);
+  const resetQueueStore = useUploadQueueStore((s) => s.reset);
+  const processingMode = useSettingsStore((s) => s.processing_mode);
+
+  async function handleClearQueue() {
+    try {
+      const { clearQueue } = await import("./services/offlineQueue");
+      await clearQueue();
+    } catch { /* best-effort */ }
+    resetQueueStore();
+    setCount(0);
+  }
 
   useEffect(() => {
+    // The server upload queue only exists in cloud mode.
+    if (processingMode === "local") return;
     let cancelled = false;
 
     async function checkAndProcess() {
@@ -89,7 +102,10 @@ function OfflineQueueBanner() {
     checkAndProcess();
     const interval = setInterval(checkAndProcess, 10000);
     return () => { cancelled = true; clearInterval(interval); };
-  }, []);
+  }, [processingMode]);
+
+  // Never surface the server upload queue in local mode.
+  if (processingMode === "local") return null;
 
   // Use queueItems count if available, otherwise fallback to poll count
   const displayCount = queueItems.length > 0 ? queueItems.length : count;
@@ -158,6 +174,15 @@ function OfflineQueueBanner() {
             `${displayCount} opname${displayCount !== 1 ? "s" : ""} in wachtrij — wordt automatisch verstuurd`
           )}
         </span>
+        {!processing && displayCount > 0 && (
+          <button
+            onClick={handleClearQueue}
+            title="Wachtrij leegmaken"
+            style={{ background: "rgba(255,255,255,0.2)", border: "1px solid rgba(255,255,255,0.3)", color: "#fff", cursor: "pointer", fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 4, flexShrink: 0 }}
+          >
+            Leegmaken
+          </button>
+        )}
       </div>
       {processing && currentItem && (
         <div style={{
@@ -284,6 +309,8 @@ function ProtectedRoutes() {
   useEffect(() => {
     if (!isAuthenticated) return;
     if (recoveryRanRef.current) return;
+    // Local mode has no server-side tasks to recover.
+    if (useSettingsStore.getState().processing_mode === "local") return;
     recoveryRanRef.current = true;
 
     (async () => {

@@ -86,21 +86,29 @@ async function generateWithOpenAICompatible(
     headers["Authorization"] = `Bearer ${apiKey}`;
   }
 
-  const response = await fetch(`${baseUrl}/v1/chat/completions`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({
-      model,
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-      stream: true,
-    }),
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${baseUrl}/v1/chat/completions`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        stream: true,
+      }),
+    });
+  } catch {
+    // A bare "Failed to fetch" hides which server is down — name it.
+    throw new Error(
+      `Kan de notule-generator niet bereiken op ${baseUrl} (model "${model}"). Draait Ollama/LM Studio en klopt de URL in Instellingen?`,
+    );
+  }
 
   if (!response.ok) {
-    throw new Error(`LLM request failed: ${response.status}`);
+    throw new Error(`Notule-generator op ${baseUrl} gaf een fout (HTTP ${response.status}, model "${model}").`);
   }
 
   const reader = response.body?.getReader();

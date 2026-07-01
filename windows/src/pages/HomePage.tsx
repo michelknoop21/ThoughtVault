@@ -12,6 +12,7 @@ import {
 } from "@fluentui/react-icons";
 import { useRecordingStore } from "../stores/recordingStore";
 import { useTranscriptsStore } from "../stores/transcriptsStore";
+import { useLocalTranscriptsStore } from "../stores/localTranscriptsStore";
 import { useCalendarStore } from "../stores/calendarStore";
 import { useAuthStore } from "../stores/authStore";
 import { useSettingsStore } from "../stores/settingsStore";
@@ -53,12 +54,17 @@ export function HomePage() {
   async function loadRecentTranscripts() {
     setIsLoading(true);
     setLoadError(null);
+    // Locally generated transcripts always show, even with no server/login.
+    const local = useLocalTranscriptsStore.getState().items;
     try {
       const data = await api.getTranscripts();
-      setTranscripts(data);
+      setTranscripts([...local, ...data]);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Laden mislukt";
-      setLoadError(msg);
+      setTranscripts(local);
+      // In local mode there is no backend, so a failed fetch is expected.
+      if (useSettingsStore.getState().processing_mode !== "local") {
+        setLoadError(err instanceof Error ? err.message : "Laden mislukt");
+      }
     } finally {
       setIsLoading(false);
     }

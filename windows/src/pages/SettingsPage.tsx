@@ -39,6 +39,7 @@ export function SettingsPage() {
   const [connectionStatus, setConnectionStatus] = useState<"idle" | "testing" | "success" | "error">("idle");
   const [isConnecting, setIsConnecting] = useState(false);
   const [obsidianTestStatus, setObsidianTestStatus] = useState<"idle" | "testing" | "success" | "error">("idle");
+  const [ollamaTestStatus, setOllamaTestStatus] = useState<"idle" | "testing" | "success" | "error">("idle");
 
   const hasOAuthConfig = Boolean(settings.ms365_client_id && settings.ms365_tenant_id);
 
@@ -129,6 +130,20 @@ export function SettingsPage() {
       setObsidianTestStatus("error");
     }
     setTimeout(() => setObsidianTestStatus("idle"), 3000);
+  }
+
+  async function handleTestOllama() {
+    setOllamaTestStatus("testing");
+    try {
+      const res = await invoke<{ status: number }>("ollama_test", {
+        baseUrl: settings.ollama_url,
+        apiKey: settings.ollama_api_key || null,
+      });
+      setOllamaTestStatus(res.status === 200 ? "success" : "error");
+    } catch {
+      setOllamaTestStatus("error");
+    }
+    setTimeout(() => setOllamaTestStatus("idle"), 3000);
   }
 
   async function handleConnect365() {
@@ -374,7 +389,7 @@ export function SettingsPage() {
                     />
                   </SettingsField>
                 </div>
-                <div style={{ padding: "0 14px 12px" }}>
+                <div style={{ padding: "0 14px 4px" }}>
                   <SettingsField label="API-sleutel (alleen voor Ollama Cloud)">
                     <input
                       type="password"
@@ -384,6 +399,19 @@ export function SettingsPage() {
                       className="input"
                     />
                   </SettingsField>
+                </div>
+                <div style={{ padding: "0 14px 12px" }}>
+                  <button
+                    onClick={handleTestOllama}
+                    className="btn btn-secondary btn-sm"
+                    disabled={ollamaTestStatus === "testing"}
+                    style={{ alignSelf: "flex-start" }}
+                  >
+                    {ollamaTestStatus === "testing" ? "Testen..." :
+                     ollamaTestStatus === "success" ? <><CheckmarkCircle24Regular style={{ fontSize: 14 }} /> Verbonden</> :
+                     ollamaTestStatus === "error" ? <><ErrorCircle24Regular style={{ fontSize: 14 }} /> Niet bereikbaar</> :
+                     "Test verbinding"}
+                  </button>
                 </div>
               </>
             )}

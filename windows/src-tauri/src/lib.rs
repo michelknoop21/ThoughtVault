@@ -77,10 +77,12 @@ pub fn run() {
             commands::http::http_sse_stream,
             commands::http::obsidian_put,
             commands::http::obsidian_test,
+            commands::http::ollama_test,
             // System
             commands::system::get_network_status,
             commands::system::detect_meeting_apps,
             commands::system::get_app_version,
+            commands::system::download_and_run_installer,
             // Local transcription (whisper.cpp)
             transcribe::whisper_model_status,
             transcribe::download_whisper_model,

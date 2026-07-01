@@ -496,6 +496,14 @@ struct HomeView: View {
 
     // MARK: Update banner
 
+    private var updateBannerButtonLabel: String {
+        if updateCheck.isDownloading {
+            let pct = Int((updateCheck.downloadProgress * 100).rounded())
+            return pct > 0 ? "\(pct)%" : "Downloaden…"
+        }
+        return "Download"
+    }
+
     private func updateBanner(version: String) -> some View {
         HStack(spacing: TS.Spacing.sm) {
             Image(systemName: "arrow.down.circle.fill")
@@ -513,12 +521,12 @@ struct HomeView: View {
             if let url = updateCheck.downloadURL {
                 Button {
                     #if os(macOS)
-                    NSWorkspace.shared.open(url)
+                    Task { await updateCheck.downloadAndOpen() }
                     #else
                     UIApplication.shared.open(url)
                     #endif
                 } label: {
-                    Text("Download")
+                    Text(updateBannerButtonLabel)
                         .font(TS.Font.captionSemibold)
                         .foregroundStyle(.white)
                         .padding(.horizontal, TS.Spacing.sm)
@@ -529,6 +537,7 @@ struct HomeView: View {
                         }
                 }
                 .buttonStyle(.plain)
+                .disabled(updateCheck.isDownloading)
             }
 
             Button {

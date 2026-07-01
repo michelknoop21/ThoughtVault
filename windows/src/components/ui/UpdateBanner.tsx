@@ -1,3 +1,5 @@
+import { useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import { ArrowDownload24Regular, Dismiss24Regular } from "@fluentui/react-icons";
 
 interface UpdateBannerProps {
@@ -7,6 +9,26 @@ interface UpdateBannerProps {
 }
 
 export function UpdateBanner({ version, downloadUrl, onDismiss }: UpdateBannerProps) {
+  const [installing, setInstalling] = useState(false);
+
+  async function handleUpdate() {
+    if (!downloadUrl) return;
+    setInstalling(true);
+    try {
+      // Download the MSI and hand off to the installer; the app quits itself.
+      await invoke("download_and_run_installer", { url: downloadUrl });
+    } catch {
+      // Fall back to a browser download if the in-app installer fails.
+      try {
+        const { open } = await import("@tauri-apps/plugin-shell");
+        await open(downloadUrl);
+      } catch {
+        window.open(downloadUrl, "_blank");
+      }
+      setInstalling(false);
+    }
+  }
+
   return (
     <div
       className="card flex-row gap-12"
@@ -25,15 +47,8 @@ export function UpdateBanner({ version, downloadUrl, onDismiss }: UpdateBannerPr
       </div>
       {downloadUrl && (
         <button
-          onClick={async (e) => {
-            e.stopPropagation();
-            try {
-              const { open } = await import("@tauri-apps/plugin-shell");
-              await open(downloadUrl);
-            } catch {
-              window.open(downloadUrl, "_blank");
-            }
-          }}
+          onClick={(e) => { e.stopPropagation(); handleUpdate(); }}
+          disabled={installing}
           className="btn btn-sm flex-shrink-0"
           style={{
             background: "rgba(255,255,255,0.2)",
@@ -41,7 +56,7 @@ export function UpdateBanner({ version, downloadUrl, onDismiss }: UpdateBannerPr
             border: "1px solid rgba(255,255,255,0.3)",
           }}
         >
-          Download
+          {installing ? "Bezig..." : "Nu bijwerken"}
         </button>
       )}
       <button

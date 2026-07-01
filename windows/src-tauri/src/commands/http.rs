@@ -392,6 +392,40 @@ pub async fn obsidian_test(base_url: String, api_key: String) -> Result<HttpResp
     Ok(HttpResponse { status, body, headers: resp_headers })
 }
 
+/// Probe a running Ollama/OpenAI-compatible server (GET /api/tags) to verify it
+/// is reachable. Bearer auth only over HTTPS (Ollama Cloud); never leak a token
+/// to a plain http://localhost endpoint. 200 = connected.
+#[tauri::command]
+pub async fn ollama_test(base_url: String, api_key: Option<String>) -> Result<HttpResponse, String> {
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(10))
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    let base = base_url.trim_end_matches('/');
+    let url = format!("{}/api/tags", base);
+
+    let mut req = client.get(&url);
+    if let Some(key) = api_key.filter(|k| !k.is_empty()) {
+        if base.starts_with("https://") {
+            req = req.header("Authorization", format!("Bearer {}", key));
+        }
+    }
+
+    let response = req.send().await.map_err(|e| e.to_string())?;
+
+    let status = response.status().as_u16();
+    let mut resp_headers = HashMap::new();
+    for (k, v) in response.headers() {
+        if let Ok(val) = v.to_str() {
+            resp_headers.insert(k.to_string(), val.to_string());
+        }
+    }
+    let body = response.text().await.map_err(|e| e.to_string())?;
+
+    Ok(HttpResponse { status, body, headers: resp_headers })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

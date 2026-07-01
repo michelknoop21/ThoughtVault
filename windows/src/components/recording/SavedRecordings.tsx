@@ -13,6 +13,7 @@ import {
   type RecordingFile,
 } from "../../services/tauriCommands";
 import { uploadAndTrack } from "../../services/uploadAndTrack";
+import { processLocally } from "../../services/localPipeline";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { useToast } from "../ui/InfoBar";
 
@@ -90,6 +91,18 @@ export function SavedRecordings({
   async function handleReprocess(file: RecordingFile) {
     if (onReprocess) {
       onReprocess(file.path);
+      return;
+    }
+    // Local mode: process fully on-device, mirroring the recording handler.
+    if (settings.processing_mode === "local") {
+      toast.show("Lokale verwerking gestart — voortgang zichtbaar in de verwerkingsbalk", "success");
+      await processLocally(
+        file.path,
+        settings.default_profile_id,
+        settings.default_recording_mode,
+        [],
+        file.duration_seconds ?? 0,
+      );
       return;
     }
     toast.show("Upload gestart — voortgang zichtbaar in de verwerkingsbalk", "success");

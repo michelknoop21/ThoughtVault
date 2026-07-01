@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import type { TranscriptTask } from "../types";
 import { api } from "../services/api";
+import { useSettingsStore } from "./settingsStore";
 
 interface TasksState {
   activeTasks: TranscriptTask[];
@@ -23,6 +24,11 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
   error: null,
 
   loadActiveTasks: async () => {
+    // Local mode has no server-side tasks — never call the backend.
+    if (useSettingsStore.getState().processing_mode === "local") {
+      set({ activeTasks: [], isLoading: false, error: null });
+      return;
+    }
     set({ isLoading: true, error: null });
     try {
       const tasks = await api.getActiveTasks();
@@ -61,6 +67,11 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
 
   startAutoRefresh: () => {
     get().stopAutoRefresh();
+    // No polling in local mode — there are no server tasks to refresh.
+    if (useSettingsStore.getState().processing_mode === "local") {
+      get().loadActiveTasks();
+      return;
+    }
     get().loadActiveTasks();
     refreshInterval = setInterval(() => get().loadActiveTasks(), 10_000);
   },

@@ -64,6 +64,12 @@ export async function removeFromQueue(id: string): Promise<void> {
   await s.save();
 }
 
+export async function clearQueue(): Promise<void> {
+  const s = await getStore();
+  await s.set(QUEUE_STORE_KEY, []);
+  await s.save();
+}
+
 async function recordFailure(id: string, errorMessage: string): Promise<void> {
   const s = await getStore();
   const existing = (await s.get<QueuedUpload[]>(QUEUE_STORE_KEY)) || [];

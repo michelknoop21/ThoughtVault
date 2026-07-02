@@ -148,11 +148,13 @@ struct NotuleResultView: View {
                         }
                         .font(TS.Font.footnoteSemibold)
                         .foregroundStyle(.white)
-                        .padding(.horizontal, TS.Spacing.sm)
-                        .padding(.vertical, TS.Spacing.xs)
+                        .padding(.horizontal, TS.Spacing.sm + 2)
+                        .padding(.vertical, TS.Spacing.xs + 1)
                         .background {
                             Capsule()
-                                .fill(Color.brandPrimary)
+                                .fill(LinearGradient(colors: [Color.brandPrimary, Color.brandSecondary],
+                                                     startPoint: .leading, endPoint: .trailing))
+                                .shadow(color: Color.brandPrimaryDark.opacity(0.45), radius: 8, y: 3)
                         }
                     }
                     .buttonStyle(.plain)
@@ -621,14 +623,14 @@ struct NotuleResultView: View {
         }
         @media (prefers-color-scheme: dark) {
             :root {
-                --text-primary: #f0f0f4;
-                --text-heading: #c8d4e8;
-                --text-subtle: #9e9ea8;
-                --brand: #ff3b8a;
-                --border: #38383d;
-                --surface: #222228;
-                --surface-light: #222228;
-                --bg-blockquote: #1f0e18;
+                --text-primary: #EDEBF6;
+                --text-heading: #D9D3F0;
+                --text-subtle: #B3AECE;
+                --brand: #A87DF7;
+                --border: #342F56;
+                --surface: #1B1E33;
+                --surface-light: #1B1E33;
+                --bg-blockquote: #1D1533;
             }
         }
         body { font-family: -apple-system, Helvetica Neue, Arial, sans-serif; font-size: 12pt; line-height: 1.6; color: var(--text-primary); margin: 0; padding: 20pt; }
@@ -731,14 +733,14 @@ struct HTMLWebView: NSViewRepresentable {
                 --bg-blockquote: #f8f5fe;
             }
             html.dark {
-                --text-primary: #f0f0f4;
-                --text-heading: #c8d4e8;
-                --text-subtle: #9e9ea8;
-                --brand: #ff3b8a;
-                --border: #38383d;
-                --surface: #222228;
-                --surface-light: #222228;
-                --bg-blockquote: #1f0e18;
+                --text-primary: #EDEBF6;
+                --text-heading: #D9D3F0;
+                --text-subtle: #B3AECE;
+                --brand: #A87DF7;
+                --border: #342F56;
+                --surface: #1B1E33;
+                --surface-light: #1B1E33;
+                --bg-blockquote: #1D1533;
             }
             * { box-sizing: border-box; margin: 0; padding: 0; }
             body {
@@ -830,14 +832,14 @@ struct HTMLWebView: UIViewRepresentable {
                 --bg-blockquote: #f8f5fe;
             }
             html.dark {
-                --text-primary: #f0f0f4;
-                --text-heading: #c8d4e8;
-                --text-subtle: #9e9ea8;
-                --brand: #ff3b8a;
-                --border: #38383d;
-                --surface: #222228;
-                --surface-light: #222228;
-                --bg-blockquote: #1f0e18;
+                --text-primary: #EDEBF6;
+                --text-heading: #D9D3F0;
+                --text-subtle: #B3AECE;
+                --brand: #A87DF7;
+                --border: #342F56;
+                --surface: #1B1E33;
+                --surface-light: #1B1E33;
+                --bg-blockquote: #1D1533;
             }
             * { box-sizing: border-box; margin: 0; padding: 0; }
             body {

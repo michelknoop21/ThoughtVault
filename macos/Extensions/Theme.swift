@@ -188,38 +188,27 @@ enum TS {
 struct ModernCardModifier: ViewModifier {
     var isHovered: Bool = false
 
-    @ViewBuilder
-    static func fallbackBackground(isHovered: Bool) -> some View {
-        RoundedRectangle(cornerRadius: TS.Radius.md, style: .continuous)
-            .fill(.ultraThinMaterial)
-            .shadow(
-                color: .black.opacity(isHovered ? 0.12 : 0.06),
-                radius: isHovered ? 16 : 8,
-                y: isHovered ? 6 : 3
-            )
-    }
-
     func body(content: Content) -> some View {
+        // Mockup panel: dark indigo glass, violet hairline, hover lifts the glow.
         content
             .background {
-                #if compiler(>=6.2)
-                if #available(macOS 26.0, iOS 26.0, *) {
-                    RoundedRectangle(cornerRadius: TS.Radius.md, style: .continuous)
-                        .fill(.clear)
-                        .glassEffect(in: .rect(cornerRadius: TS.Radius.md))
-                } else {
-                    ModernCardModifier.fallbackBackground(isHovered: isHovered)
-                }
-                #else
-                ModernCardModifier.fallbackBackground(isHovered: isHovered)
-                #endif
+                RoundedRectangle(cornerRadius: TS.Radius.md, style: .continuous)
+                    .fill(Color.cardDark.opacity(0.62))
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: TS.Radius.md, style: .continuous))
+                    .shadow(
+                        color: isHovered ? Color.brandPrimaryDark.opacity(0.35) : Color.black.opacity(0.30),
+                        radius: isHovered ? 20 : 14,
+                        y: 6
+                    )
             }
             .overlay {
                 RoundedRectangle(cornerRadius: TS.Radius.md, style: .continuous)
-                    .stroke(
+                    .strokeBorder(
                         isHovered
-                            ? Color.brandPrimary.opacity(0.25)
-                            : Color.borderPrimary.opacity(0.6),
+                            ? AnyShapeStyle(Color.brandPrimary.opacity(0.40))
+                            : AnyShapeStyle(LinearGradient(
+                                colors: [Color.brandLavender.opacity(0.16), Color.brandPrimary.opacity(0.08)],
+                                startPoint: .top, endPoint: .bottom)),
                         lineWidth: 1
                     )
             }
@@ -334,6 +323,120 @@ struct BrandFooter: View {
         }
         .frame(maxWidth: .infinity, alignment: .center)
         .padding(.vertical, TS.Spacing.sm)
+    }
+}
+
+// MARK: - Vault Panel (mockup card style)
+
+/// Glass panel from the approved mockup: dark indigo fill, violet hairline,
+/// subtle inner top-highlight. Replaces ad-hoc `.ultraThinMaterial` cards.
+struct VaultPanelModifier: ViewModifier {
+    var radius: CGFloat = 14
+
+    func body(content: Content) -> some View {
+        content
+            .background {
+                RoundedRectangle(cornerRadius: radius, style: .continuous)
+                    .fill(Color.cardDark.opacity(0.62))
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: radius, style: .continuous))
+            }
+            .overlay {
+                RoundedRectangle(cornerRadius: radius, style: .continuous)
+                    .strokeBorder(
+                        LinearGradient(
+                            colors: [Color.brandLavender.opacity(0.16), Color.brandPrimary.opacity(0.08)],
+                            startPoint: .top, endPoint: .bottom
+                        ),
+                        lineWidth: 1
+                    )
+            }
+            .shadow(color: Color.black.opacity(0.30), radius: 14, y: 6)
+    }
+}
+
+extension View {
+    /// Mockup-style dark glass panel.
+    func vaultPanel(radius: CGFloat = 14) -> some View {
+        modifier(VaultPanelModifier(radius: radius))
+    }
+}
+
+/// Section heading with the vertical lavender→indigo accent bar from the mockup.
+struct VaultSectionHeader: View {
+    let title: String
+    var actionTitle: String? = nil
+    var action: (() -> Void)? = nil
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline) {
+            HStack(spacing: 9) {
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(LinearGradient(colors: [Color.brandLavender, Color.brandSecondary],
+                                         startPoint: .top, endPoint: .bottom))
+                    .frame(width: 4, height: 15)
+                Text(title)
+                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color.labelPrimary)
+            }
+            Spacer()
+            if let actionTitle, let action {
+                Button(action: action) {
+                    Text(actionTitle)
+                        .font(TS.Font.captionSemibold)
+                        .foregroundStyle(Color.brandLink)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+}
+
+/// Small status chip (mockup: "Afgerond" / "Notule wordt geschreven…").
+struct VaultChip: View {
+    enum Tone { case ok, busy, neutral, warning }
+    let text: String
+    var tone: Tone = .neutral
+
+    private var color: Color {
+        switch tone {
+        case .ok:      return Color.statusSuccess
+        case .busy:    return Color.brandLink
+        case .warning: return Color.statusWarning
+        case .neutral: return Color.labelSecondary
+        }
+    }
+
+    var body: some View {
+        Text(text)
+            .font(TS.Font.microBold)
+            .foregroundStyle(color)
+            .padding(.horizontal, 9)
+            .padding(.vertical, 3.5)
+            .background(Capsule().fill(color.opacity(0.13)))
+            .overlay(Capsule().strokeBorder(color.opacity(0.30), lineWidth: 1))
+            .lineLimit(1)
+    }
+}
+
+/// Violet gradient icon tile (mockup: document icon in recent-list rows).
+struct VaultIconTile: View {
+    let systemName: String
+    var size: CGFloat = 34
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: size * 0.26, style: .continuous)
+            .fill(LinearGradient(colors: [Color.brandPrimary.opacity(0.22), Color.brandSecondary.opacity(0.12)],
+                                 startPoint: .topLeading, endPoint: .bottomTrailing))
+            .overlay {
+                RoundedRectangle(cornerRadius: size * 0.26, style: .continuous)
+                    .strokeBorder(Color.brandPrimary.opacity(0.22), lineWidth: 1)
+            }
+            .overlay {
+                Image(systemName: systemName)
+                    .font(.system(size: size * 0.44, weight: .medium))
+                    .foregroundStyle(Color.brandLavender)
+            }
+            .frame(width: size, height: size)
     }
 }
 

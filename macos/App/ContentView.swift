@@ -437,7 +437,7 @@ struct ContentView: View {
             }
 
             VStack(alignment: .leading, spacing: 1) {
-                Text(authVM.currentUser?.displayName ?? "Transcript Studio")
+                Text(authVM.currentUser?.displayName ?? "ThoughtVault")
                     .font(TS.Font.footnoteSemibold)
                     .lineLimit(1)
                 Text(authVM.currentUser?.email ?? "")

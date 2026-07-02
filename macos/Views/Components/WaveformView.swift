@@ -10,14 +10,48 @@ import SwiftUI
 
 // Mutable reference type so the 60fps render pass can update the smoothed level
 // without triggering SwiftUI re-renders.
+//
+// Dynamics pipeline (classic meter design):
+//  1. AGC: track a rolling noise floor (snaps down, rises slowly) and rolling
+//     peak (snaps up, decays slowly), then normalize the raw level to that
+//     window so the wave always uses the full 0…1 range — loud rooms and
+//     quiet voices both show clear peaks and valleys.
+//  2. Expansion: ^1.7 curve pushes lows down and lets peaks pop (the recorder's
+//     dB mapping is compressive, this restores visible tone dynamics).
+//  3. Envelope: fast attack / slow release, so peaks hit instantly and fall
+//     away smoothly.
 private class WaveState {
     var smoothedLevel: Double = 0.01
 
+    private var rollingFloor: Double = 0.10
+    private var rollingPeak: Double = 0.55
+
     func update(targetRaw: Float, isActive: Bool) {
-        let target = isActive ? Double(max(0.01, targetRaw)) : 0.01
-        // Spring-like interpolation; slightly faster attack than decay.
+        guard isActive else {
+            smoothedLevel += (0.01 - smoothedLevel) * 0.08
+            return
+        }
+        let raw = Double(max(0, targetRaw))
+
+        // Noise floor: snap down to new minima, drift up slowly otherwise.
+        if raw < rollingFloor { rollingFloor = raw }
+        else { rollingFloor += (raw - rollingFloor) * 0.004 }
+
+        // Peak: snap up to new maxima, decay slowly otherwise.
+        if raw > rollingPeak { rollingPeak = raw }
+        else { rollingPeak += (raw - rollingPeak) * 0.008 }
+
+        // Normalize against the rolling window (keep a minimum span so a
+        // constant signal doesn't explode into full-scale noise).
+        let span = max(rollingPeak - rollingFloor, 0.18)
+        let normalized = min(1.0, max(0.0, (raw - rollingFloor) / span))
+
+        // Expansion for visible tone dynamics.
+        let target = max(0.02, pow(normalized, 1.7))
+
+        // Fast attack, slow release.
         let delta = target - smoothedLevel
-        smoothedLevel += delta * (delta > 0 ? 0.18 : 0.10)
+        smoothedLevel += delta * (delta > 0 ? 0.55 : 0.10)
     }
 }
 

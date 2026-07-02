@@ -801,55 +801,56 @@ struct TranscriptListCard: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: TS.Spacing.sm) {
-            // Title
-            Text(transcript.title)
-                .font(TS.Font.subheadlineSemibold)
-                .foregroundStyle(Color.labelPrimary)
-                .lineLimit(2)
-                .frame(maxWidth: .infinity, alignment: .leading)
+        // Mockup row: icon tile · title/meta/preview · status chip.
+        HStack(alignment: .top, spacing: TS.Spacing.sm + 2) {
+            VaultIconTile(systemName: hasNotule ? "doc.text" : "waveform", size: 38)
+                .padding(.top, 1)
 
-            // Relative date
-            Text(relativeDate)
-                .font(TS.Font.caption)
-                .foregroundStyle(Color.labelTertiary)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(transcript.title)
+                    .font(TS.Font.subheadlineSemibold)
+                    .foregroundStyle(Color.labelPrimary)
+                    .lineLimit(2)
 
-            // Preview text
-            if let preview = previewText, !preview.isEmpty {
-                Text(preview)
-                    .font(TS.Font.footnote)
-                    .foregroundStyle(Color.labelSecondary)
-                    .lineLimit(3)
-                    .padding(.top, 1)
-            }
+                Text(relativeDate)
+                    .font(TS.Font.caption)
+                    .foregroundStyle(Color.labelTertiary)
 
-            // Notule badge or tags
-            HStack(spacing: TS.Spacing.sm) {
-                if hasNotule {
-                    Label("Notule beschikbaar", systemImage: "doc.text.fill")
-                        .font(TS.Font.captionMedium)
-                        .foregroundStyle(Color.brandAccent)
+                if let preview = previewText, !preview.isEmpty {
+                    Text(preview)
+                        .font(TS.Font.footnote)
+                        .foregroundStyle(Color.labelSecondary)
+                        .lineLimit(2)
+                        .padding(.top, 2)
                 }
 
                 if !transcript.tags.isEmpty {
-                    ForEach(transcript.tags.prefix(hasNotule ? 2 : 4), id: \.self) { tag in
-                        Text(tag)
-                            .font(TS.Font.micro)
-                            .foregroundStyle(Color.brandSecondary)
-                            .padding(.horizontal, TS.Spacing.xs)
-                            .padding(.vertical, 3)
-                            .background {
-                                Capsule().fill(Color.accentBgSecondary)
-                            }
+                    HStack(spacing: TS.Spacing.xs) {
+                        ForEach(transcript.tags.prefix(3), id: \.self) { tag in
+                            Text(tag)
+                                .font(TS.Font.micro)
+                                .foregroundStyle(Color.brandLink)
+                                .padding(.horizontal, TS.Spacing.xs + 2)
+                                .padding(.vertical, 3)
+                                .background {
+                                    Capsule().fill(Color.brandSecondary.opacity(0.14))
+                                }
+                        }
+                        if transcript.tags.count > 3 {
+                            Text("+\(transcript.tags.count - 3)")
+                                .font(TS.Font.micro)
+                                .foregroundStyle(Color.labelTertiary)
+                        }
                     }
-                    if transcript.tags.count > (hasNotule ? 2 : 4) {
-                        Text("+\(transcript.tags.count - (hasNotule ? 2 : 4))")
-                            .font(TS.Font.micro)
-                            .foregroundStyle(Color.labelTertiary)
-                    }
+                    .padding(.top, 3)
                 }
             }
-            .padding(.top, TS.Spacing.xs)
+
+            Spacer(minLength: TS.Spacing.sm)
+
+            VaultChip(text: hasNotule ? "Afgerond" : "Transcript",
+                      tone: hasNotule ? .ok : .neutral)
+                .padding(.top, 2)
         }
         .padding(TS.Spacing.md)
         .frame(maxWidth: .infinity, alignment: .leading)

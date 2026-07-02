@@ -230,7 +230,7 @@ struct MenuBarContentView: View {
             Button {
                 NSApplication.shared.activate(ignoringOtherApps: true)
             } label: {
-                Label("Open Transcript Studio", systemImage: "macwindow")
+                Label("Open ThoughtVault", systemImage: "macwindow")
             }
 
             Button("Afsluiten") {

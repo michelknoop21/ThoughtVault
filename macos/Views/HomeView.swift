@@ -383,31 +383,11 @@ struct HomeView: View {
     @ViewBuilder
     private var recentTranscriptsSection: some View {
         VStack(alignment: .leading, spacing: TS.Spacing.sm) {
-            HStack {
-                Label("Recente notulen", systemImage: "doc.text")
-                    .font(TS.Font.footnoteSemibold)
-                    .foregroundStyle(Color.labelSecondary)
-
-                Spacer()
-
-                if isLoadingRecent {
-                    ProgressView()
-                        .scaleEffect(0.7)
-                } else if !recentTranscripts.isEmpty {
-                    Button {
-                        onNavigateToTranscripts?()
-                    } label: {
-                        HStack(spacing: 4) {
-                            Text("Bekijk alles")
-                                .font(TS.Font.footnoteSemibold)
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 10, weight: .semibold))
-                        }
-                        .foregroundStyle(Color.brandPrimary)
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
+            VaultSectionHeader(
+                title: "Recente notulen",
+                actionTitle: recentTranscripts.isEmpty ? nil : "Alles bekijken \u{2192}",
+                action: { onNavigateToTranscripts?() }
+            )
 
             if let error = loadError {
                 HStack(spacing: TS.Spacing.sm) {
@@ -483,14 +463,9 @@ struct HomeView: View {
                         recentTranscriptRow(transcript)
                     }
                 }
-                .background {
-                    RoundedRectangle(cornerRadius: TS.Radius.md, style: .continuous)
-                        .fill(.ultraThinMaterial)
-                }
-                .overlay {
-                    RoundedRectangle(cornerRadius: TS.Radius.md, style: .continuous)
-                        .stroke(Color.borderPrimary.opacity(0.45), lineWidth: 1)
-                }
+                .padding(.horizontal, TS.Spacing.sm)
+                .padding(.vertical, TS.Spacing.xs)
+                .vaultPanel()
             }
         }
     }
@@ -500,10 +475,7 @@ struct HomeView: View {
             onNavigateToTranscripts?()
         } label: {
             HStack(spacing: TS.Spacing.sm) {
-                Image(systemName: transcript.notuleHtml != nil ? "doc.text.fill" : "waveform")
-                    .font(.system(size: 14))
-                    .foregroundStyle(transcript.notuleHtml != nil ? Color.brandAccent : Color.labelTertiary)
-                    .frame(width: 24)
+                VaultIconTile(systemName: transcript.notuleHtml != nil ? "doc.text" : "waveform")
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(transcript.title)
@@ -516,6 +488,9 @@ struct HomeView: View {
                 }
 
                 Spacer()
+
+                VaultChip(text: transcript.notuleHtml != nil ? "Afgerond" : "Transcript",
+                          tone: transcript.notuleHtml != nil ? .ok : .neutral)
 
                 Image(systemName: "chevron.right")
                     .font(.system(size: 11, weight: .medium))

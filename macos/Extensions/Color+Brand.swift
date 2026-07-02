@@ -58,6 +58,9 @@ extension Color {
     /// Light lavender highlight from the logo, used in brand gradients #D890F0
     static let brandLavender = Color(red: 0.847, green: 0.565, blue: 0.941)
 
+    /// Readable violet for links/accent text on dark surfaces #A87DF7 (≥4.5:1)
+    static let brandLink = Color(red: 0.659, green: 0.490, blue: 0.969)
+
     /// Neon glow used in waveform visualizations — violet-blue #8F6BFF
     static let neonBlue = Color(red: 0.561, green: 0.420, blue: 1.0)
 
@@ -100,13 +103,13 @@ extension Color {
     /// Secondary label — medium gray in light, lighter gray in dark mode.
     static let labelSecondary = Color(
         light: Color(red: 0.42,  green: 0.42,  blue: 0.47),
-        dark:  Color(red: 0.663, green: 0.643, blue: 0.769)
+        dark:  Color(red: 0.702, green: 0.682, blue: 0.808)
     )
 
     /// Tertiary label — lighter gray in light, subtle in dark mode.
     static let labelTertiary = Color(
         light: Color(red: 0.60,  green: 0.60,  blue: 0.65),
-        dark:  Color(red: 0.431, green: 0.412, blue: 0.565)
+        dark:  Color(red: 0.553, green: 0.529, blue: 0.698)
     )
 
     // MARK: Adaptive Accent Backgrounds

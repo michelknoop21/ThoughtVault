@@ -191,16 +191,16 @@ struct EditableHTMLWebView: NSViewRepresentable {
             --bg-blockquote: #f8f5fe;
         }
         html.dark {
-            --text-primary: #f0f0f4;
+            --text-primary: #EDEBF6;
             --text-secondary: #9e9ea8;
             --text-tertiary: #6c6c74;
             --heading: #c8d4e8;
-            --brand: #ff3b8a;
+            --brand: #A87DF7;
             --brand-light: #1f0a15;
             --brand-border: rgba(255, 59, 138, 0.20);
-            --border: #38383d;
+            --border: #342F56;
             --surface-elevated: #222228;
-            --bg-blockquote: #1f0e18;
+            --bg-blockquote: #1D1533;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -494,16 +494,16 @@ struct EditableHTMLWebView: UIViewRepresentable {
         }
         @media (prefers-color-scheme: dark) {
             :root {
-                --text-primary: #f0f0f4;
+                --text-primary: #EDEBF6;
                 --text-secondary: #9e9ea8;
                 --text-tertiary: #6c6c74;
                 --heading: #c8d4e8;
-                --brand: #ff3b8a;
+                --brand: #A87DF7;
                 --brand-light: #1f0a15;
                 --brand-border: rgba(255, 59, 138, 0.20);
-                --border: #38383d;
+                --border: #342F56;
                 --surface-elevated: #222228;
-                --bg-blockquote: #1f0e18;
+                --bg-blockquote: #1D1533;
             }
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }

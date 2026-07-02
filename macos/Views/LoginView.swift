@@ -94,9 +94,11 @@ struct LoginView: View {
                 .shadow(color: .black.opacity(0.12), radius: 4, y: 2)
             #endif
 
-            Text("Transcript Studio")
+            (Text("Thought").foregroundStyle(Color.labelPrimary)
+                + Text("Vault").foregroundStyle(
+                    LinearGradient(colors: [Color.brandLavender, Color.brandPrimary, Color.brandSecondary],
+                                   startPoint: .leading, endPoint: .trailing)))
                 .font(TS.Font.largeTitleBold)
-                .foregroundStyle(Color.brandPrimary)
         }
     }
 

@@ -125,12 +125,12 @@ struct HomeView: View {
                 .foregroundStyle(Color.labelTertiary)
 
             (Text(greetingText + ". ").foregroundStyle(Color.labelPrimary)
-                + Text("Klaar om te denken?").foregroundStyle(
+                + Text("Denk hardop.").foregroundStyle(
                     LinearGradient(colors: [Color.brandLavender, Color.brandPrimary, Color.brandSecondary],
                                    startPoint: .leading, endPoint: .trailing)))
                 .font(.system(size: 26, weight: .bold, design: .rounded))
 
-            Text("Alles wat hier wordt opgenomen, blijft op dit apparaat.")
+            Text("Spreek je gedachten of vergadering in. ThoughtVault maakt er notities en notulen van en bewaart ze in je vault — alles lokaal op dit apparaat.")
                 .font(TS.Font.callout)
                 .foregroundStyle(Color.labelSecondary)
         }
@@ -187,7 +187,7 @@ struct HomeView: View {
                     Text("Nieuwe opname")
                         .font(.system(size: 18, weight: .bold, design: .rounded))
                         .foregroundStyle(Color.labelPrimary)
-                    Text("Klik op de knop en ThoughtVault neemt op, transcribeert en notuleert — volledig lokaal.")
+                    Text("Een losse gedachte, gesprek of meeting — ThoughtVault transcribeert lokaal en zet het om in een nette notitie of notule, klaar voor je vault.")
                         .font(TS.Font.caption)
                         .foregroundStyle(Color.labelSecondary)
                         .lineSpacing(2)
@@ -416,12 +416,12 @@ struct HomeView: View {
                         Image(systemName: "doc.text.magnifyingglass")
                             .font(.system(size: 20))
                             .foregroundStyle(Color.brandPrimary)
-                        Text("Nog geen notulen")
+                        Text("Je vault is nog leeg")
                             .font(TS.Font.footnoteSemibold)
                             .foregroundStyle(Color.labelPrimary)
                         Spacer()
                     }
-                    Text("Start je eerste opname en ThoughtVault zet je gesprek automatisch om in een heldere notule met samenvatting, actiepunten en besluiten.")
+                    Text("Alles wat je inspreekt verschijnt hier als notitie of notule, met samenvatting, besluiten en actiepunten. Koppel je Obsidian-vault en je vastgelegde denkwerk wordt context die je AI kan gebruiken.")
                         .font(TS.Font.caption)
                         .foregroundStyle(Color.labelSecondary)
                         .fixedSize(horizontal: false, vertical: true)

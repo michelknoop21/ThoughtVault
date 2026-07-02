@@ -22,7 +22,7 @@
 	<true/>
 	<key>keychain-access-groups</key>
 	<array>
-		<string>$(AppIdentifierPrefix)nl.prezent.TranscriptStudio</string>
+		<string>$(AppIdentifierPrefix)com.buildmind.ThoughtVault</string>
 	</array>
 	<key>com.apple.security.network.local</key>
 	<true/>

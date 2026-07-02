@@ -5,7 +5,7 @@ import OSLog
 import UIKit
 #endif
 
-private let logger = Logger(subsystem: "nl.prezent.TranscriptStudio", category: "MicrosoftGraph")
+private let logger = Logger(subsystem: "com.buildmind.ThoughtVault", category: "MicrosoftGraph")
 
 // MARK: - CalendarProvider
 

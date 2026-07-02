@@ -1,6 +1,6 @@
 // ProcessingView.swift
 // TranscriptStudio
-// nl.prezent.TranscriptStudio
+// com.buildmind.ThoughtVault
 //
 // Full-screen animated processing interface showing circular progress,
 // status messages, live transcript preview, and auto-transition to result view.

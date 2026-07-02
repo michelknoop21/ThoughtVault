@@ -1,6 +1,6 @@
 // SeedReviewSheet.swift
 // TranscriptStudio
-// nl.prezent.TranscriptStudio
+// com.buildmind.ThoughtVault
 //
 // Per-person confirm sheet after recording stops with new calendar attendees.
 // No auto-commit (D-07 / T-02-06): only confirmed (checked) entries are persisted.

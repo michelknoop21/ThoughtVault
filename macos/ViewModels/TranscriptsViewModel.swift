@@ -1,13 +1,13 @@
 // TranscriptsViewModel.swift
 // TranscriptStudio
-// nl.prezent.TranscriptStudio
+// com.buildmind.ThoughtVault
 //
 // Manages the list of saved transcripts with pagination, search, filtering and sorting.
 
 import Foundation
 import OSLog
 
-private let logger = Logger(subsystem: "nl.prezent.TranscriptStudio", category: "TranscriptsViewModel")
+private let logger = Logger(subsystem: "com.buildmind.ThoughtVault", category: "TranscriptsViewModel")
 
 // MARK: - Sort Order
 

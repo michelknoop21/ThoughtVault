@@ -1,6 +1,6 @@
 // TranscriptsView.swift
 // TranscriptStudio
-// nl.prezent.TranscriptStudio
+// com.buildmind.ThoughtVault
 //
 // Full transcript library with search, filters, bulk-delete, tag management,
 // and a complete detail view with inline editing, regeneration, retranscription,
@@ -15,7 +15,7 @@ import AppKit
 import UIKit
 #endif
 
-private let logger = Logger(subsystem: "nl.prezent.TranscriptStudio", category: "TranscriptsView")
+private let logger = Logger(subsystem: "com.buildmind.ThoughtVault", category: "TranscriptsView")
 
 /// Locally processed records carry a deterministic "local-<uuid>" task id (minted in
 /// RecordingViewModel.processLocally) and live in SwiftData, not on the server.

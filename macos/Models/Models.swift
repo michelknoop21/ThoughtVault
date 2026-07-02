@@ -1,6 +1,6 @@
 // Models.swift
 // TranscriptStudio
-// nl.prezent.TranscriptStudio
+// com.buildmind.ThoughtVault
 //
 // Core data models for the TranscriptStudio app.
 

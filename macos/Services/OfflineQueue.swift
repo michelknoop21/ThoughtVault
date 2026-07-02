@@ -1,7 +1,7 @@
 import Foundation
 import OSLog
 
-private let logger = Logger(subsystem: "nl.prezent.TranscriptStudio", category: "OfflineQueue")
+private let logger = Logger(subsystem: "com.buildmind.ThoughtVault", category: "OfflineQueue")
 
 // MARK: - OfflineQueue
 

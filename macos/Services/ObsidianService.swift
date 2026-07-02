@@ -1,6 +1,6 @@
 // ObsidianService.swift
 // TranscriptStudio
-// nl.prezent.TranscriptStudio
+// com.buildmind.ThoughtVault
 //
 // Writes notulen to an Obsidian vault through the Obsidian Local REST API
 // plugin: PUT /vault/{path} with a Bearer key and `text/markdown` body. The
@@ -10,7 +10,7 @@
 import Foundation
 import OSLog
 
-private let logger = Logger(subsystem: "nl.prezent.TranscriptStudio", category: "ObsidianService")
+private let logger = Logger(subsystem: "com.buildmind.ThoughtVault", category: "ObsidianService")
 
 struct ObsidianService: Sendable {
 

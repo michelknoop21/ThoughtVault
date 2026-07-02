@@ -2,7 +2,7 @@ import Foundation
 import EventKit
 import OSLog
 
-private let logger = Logger(subsystem: "nl.prezent.TranscriptStudio", category: "CalendarService")
+private let logger = Logger(subsystem: "com.buildmind.ThoughtVault", category: "CalendarService")
 
 // MARK: - MeetingPlatform
 

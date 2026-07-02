@@ -1,6 +1,6 @@
 // VaultFolderStore.swift
 // TranscriptStudio
-// nl.prezent.TranscriptStudio
+// com.buildmind.ThoughtVault
 //
 // File-based Obsidian vault access. The user picks their vault folder once; we
 // keep a security-scoped bookmark and then both READ a context note (names/terms
@@ -14,7 +14,7 @@
 import Foundation
 import OSLog
 
-private let logger = Logger(subsystem: "nl.prezent.TranscriptStudio", category: "VaultFolderStore")
+private let logger = Logger(subsystem: "com.buildmind.ThoughtVault", category: "VaultFolderStore")
 
 enum VaultFolderStore {
 

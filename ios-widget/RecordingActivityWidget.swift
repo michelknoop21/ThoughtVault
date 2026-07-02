@@ -1,6 +1,6 @@
 // RecordingActivityWidget.swift
 // RecordingActivityWidget
-// nl.prezent.TranscriptStudio
+// com.buildmind.ThoughtVault
 //
 // iOS Live Activity widget for Dynamic Island and lock screen banner.
 // Shows real-time recording status with neon waveform visualization.

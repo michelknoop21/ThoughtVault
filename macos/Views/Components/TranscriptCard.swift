@@ -1,6 +1,6 @@
 // TranscriptCard.swift
 // TranscriptStudio
-// nl.prezent.TranscriptStudio
+// com.buildmind.ThoughtVault
 //
 // Reusable card component for displaying transcript list items
 // with title, date, preview, tags, duration, and completion badge.

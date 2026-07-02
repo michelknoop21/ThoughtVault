@@ -1,6 +1,6 @@
 // AccountView.swift
 // TranscriptStudio
-// nl.prezent.TranscriptStudio
+// com.buildmind.ThoughtVault
 //
 // Account management view with profile editing, password change,
 // 2FA management, GDPR data export, and logout functionality.

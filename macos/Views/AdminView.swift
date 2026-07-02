@@ -1,6 +1,6 @@
 // AdminView.swift
 // TranscriptStudio
-// nl.prezent.TranscriptStudio
+// com.buildmind.ThoughtVault
 //
 // Admin panel with 5 tabs: Overzicht, Gebruikers, Uitnodigingen, Bug Rapporten, Fouten.
 // Visible only when the authenticated user's role is "admin".

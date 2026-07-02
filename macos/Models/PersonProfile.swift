@@ -1,6 +1,6 @@
 // PersonProfile.swift
 // TranscriptStudio
-// nl.prezent.TranscriptStudio
+// com.buildmind.ThoughtVault
 //
 // SwiftData model for people (self-profile + directory) stored on-device.
 // isSelf == true identifies the installing user's own profile (singleton).

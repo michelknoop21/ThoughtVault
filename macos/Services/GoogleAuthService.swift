@@ -3,7 +3,7 @@ import AuthenticationServices
 import OSLog
 import CommonCrypto
 
-private let logger = Logger(subsystem: "nl.prezent.TranscriptStudio", category: "GoogleAuth")
+private let logger = Logger(subsystem: "com.buildmind.ThoughtVault", category: "GoogleAuth")
 
 // MARK: - GoogleAuthService
 

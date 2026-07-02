@@ -1,6 +1,6 @@
 // ProfilesView.swift
 // TranscriptStudio
-// nl.prezent.TranscriptStudio
+// com.buildmind.ThoughtVault
 //
 // Profile management view: list default and custom profiles,
 // create, edit, and delete custom profiles.

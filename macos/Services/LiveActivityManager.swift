@@ -1,6 +1,6 @@
 // LiveActivityManager.swift
 // TranscriptStudio
-// nl.prezent.TranscriptStudio
+// com.buildmind.ThoughtVault
 //
 // Manages the iOS Live Activity that surfaces recording status on the lock screen
 // and in the Dynamic Island. Guards on ActivityKit availability so this file
@@ -12,7 +12,7 @@ import Foundation
 import Observation
 import OSLog
 
-private let log = Logger(subsystem: "nl.prezent.TranscriptStudio", category: "LiveActivity")
+private let log = Logger(subsystem: "com.buildmind.ThoughtVault", category: "LiveActivity")
 
 @available(iOS 16.2, *)
 @Observable

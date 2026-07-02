@@ -1,6 +1,6 @@
 // PermissionManager.swift
 // TranscriptStudio
-// nl.prezent.TranscriptStudio
+// com.buildmind.ThoughtVault
 //
 // Checks all required permissions at app startup and surfaces
 // missing permissions via observable state so the UI can show a banner.
@@ -15,7 +15,7 @@ import ScreenCaptureKit
 import UIKit
 #endif
 
-private let log = Logger(subsystem: "nl.prezent.TranscriptStudio", category: "Permissions")
+private let log = Logger(subsystem: "com.buildmind.ThoughtVault", category: "Permissions")
 
 @MainActor
 @Observable

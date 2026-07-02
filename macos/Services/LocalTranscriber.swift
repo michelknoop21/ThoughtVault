@@ -1,6 +1,6 @@
 // LocalTranscriber.swift
 // TranscriptStudio
-// nl.prezent.TranscriptStudio
+// com.buildmind.ThoughtVault
 //
 // Abstraction over local (offline) speech-to-text engines so the app can transcribe
 // without the backend server. Two implementations:
@@ -11,7 +11,7 @@ import Foundation
 import OSLog
 import SwiftData
 
-private let logger = Logger(subsystem: "nl.prezent.TranscriptStudio", category: "LocalTranscriber")
+private let logger = Logger(subsystem: "com.buildmind.ThoughtVault", category: "LocalTranscriber")
 
 // MARK: - PersonalVocabulary
 

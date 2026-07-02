@@ -1,6 +1,6 @@
 // Theme.swift
 // TranscriptStudio
-// nl.prezent.TranscriptStudio
+// com.buildmind.ThoughtVault
 //
 // Centralized design token system. All spacing, radii, typography,
 // and animations live here under the TS namespace.

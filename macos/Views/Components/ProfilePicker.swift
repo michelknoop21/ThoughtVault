@@ -1,6 +1,6 @@
 // ProfilePicker.swift
 // TranscriptStudio
-// nl.prezent.TranscriptStudio
+// com.buildmind.ThoughtVault
 //
 // Horizontal pill-style profile selector. Each profile is shown as
 // a compact chip; the selected profile is highlighted in brand color.

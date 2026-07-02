@@ -7,7 +7,7 @@ import AppKit
 import ScreenCaptureKit
 #endif
 
-private let log = OSLog(subsystem: "nl.prezent.TranscriptStudio", category: "RecordingVM")
+private let log = OSLog(subsystem: "com.buildmind.ThoughtVault", category: "RecordingVM")
 
 // MARK: - RecordingViewModel
 

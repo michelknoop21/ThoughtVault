@@ -1,6 +1,6 @@
 // PersonDirectoryService.swift
 // TranscriptStudio
-// nl.prezent.TranscriptStudio
+// com.buildmind.ThoughtVault
 //
 // On-device directory CRUD + seed dedup (D-11). Person data stays local; no network calls.
 // Network IO lives in MicrosoftGraphService; this service only touches the ModelContainer.

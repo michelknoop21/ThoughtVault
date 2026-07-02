@@ -1,6 +1,6 @@
 // LocalTranscriptStore.swift
 // TranscriptStudio
-// nl.prezent.TranscriptStudio
+// com.buildmind.ThoughtVault
 //
 // Owns the SwiftData container for locally processed transcripts/notulen and
 // provides simple CRUD so the app can keep a history without the backend server.
@@ -9,7 +9,7 @@ import Foundation
 import SwiftData
 import OSLog
 
-private let logger = Logger(subsystem: "nl.prezent.TranscriptStudio", category: "LocalTranscriptStore")
+private let logger = Logger(subsystem: "com.buildmind.ThoughtVault", category: "LocalTranscriptStore")
 
 @MainActor
 final class LocalTranscriptStore {

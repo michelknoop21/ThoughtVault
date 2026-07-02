@@ -1,6 +1,6 @@
 // RecordingView.swift
 // TranscriptStudio
-// nl.prezent.TranscriptStudio
+// com.buildmind.ThoughtVault
 //
 // Dual-state recording interface: idle setup view and active recording view.
 // Handles microphone/system audio/combined modes, live transcript, task tracking,

@@ -1,6 +1,6 @@
 // ProfileTemplates.swift
 // TranscriptStudio
-// nl.prezent.TranscriptStudio
+// com.buildmind.ThoughtVault
 //
 // Loads the rich built-in profile prompts + HTML/CSS output templates (ported from
 // the backend's profile_templates.py and bundled as ProfileTemplates.json) so locally

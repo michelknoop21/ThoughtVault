@@ -1,7 +1,7 @@
 import Foundation
 import OSLog
 
-private let logger = Logger(subsystem: "nl.prezent.TranscriptStudio", category: "CrashReporter")
+private let logger = Logger(subsystem: "com.buildmind.ThoughtVault", category: "CrashReporter")
 
 // MARK: - CrashReporter
 

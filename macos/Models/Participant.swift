@@ -1,6 +1,6 @@
 // Participant.swift
 // TranscriptStudio
-// nl.prezent.TranscriptStudio
+// com.buildmind.ThoughtVault
 //
 // A meeting participant sent to the notule pipeline so the LLM can render an
 // attendee list and attribute action points by name. Whisper has no diarisation,

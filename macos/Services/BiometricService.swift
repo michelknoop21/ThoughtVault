@@ -4,7 +4,7 @@ import Security
 import OSLog
 import SwiftUI
 
-private let logger = Logger(subsystem: "nl.prezent.TranscriptStudio", category: "BiometricService")
+private let logger = Logger(subsystem: "com.buildmind.ThoughtVault", category: "BiometricService")
 
 // MARK: - Token Wrapper
 
@@ -24,7 +24,7 @@ enum BiometricType {
 final class BiometricService: @unchecked Sendable {
     static let shared = BiometricService()
 
-    private let biometricServiceIdentifier = "nl.prezent.TranscriptStudio.biometric"
+    private let biometricServiceIdentifier = "com.buildmind.ThoughtVault.biometric"
     private let biometricAccountKey = "biometricToken"
 
     @ObservationIgnored

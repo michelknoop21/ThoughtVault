@@ -1,6 +1,6 @@
 // MeetingNotificationService.swift
 // TranscriptStudio
-// nl.prezent.TranscriptStudio
+// com.buildmind.ThoughtVault
 //
 // Schedules macOS Notification Center alerts for upcoming calendar meetings.
 // When the user taps "Start opname", posts a Notification.Name to trigger recording.
@@ -9,7 +9,7 @@ import Foundation
 import UserNotifications
 import OSLog
 
-private let logger = Logger(subsystem: "nl.prezent.TranscriptStudio", category: "MeetingNotifications")
+private let logger = Logger(subsystem: "com.buildmind.ThoughtVault", category: "MeetingNotifications")
 
 extension Notification.Name {
     static let meetingRecordRequested = Notification.Name("meetingRecordRequested")

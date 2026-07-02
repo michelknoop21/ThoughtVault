@@ -1,6 +1,6 @@
 // PermissionBanner.swift
 // TranscriptStudio
-// nl.prezent.TranscriptStudio
+// com.buildmind.ThoughtVault
 //
 // Inline banner shown when essential permissions are missing.
 // Allows the user to grant permissions or open System Settings.

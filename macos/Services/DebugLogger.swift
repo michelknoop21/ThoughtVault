@@ -46,7 +46,7 @@ final class DebugLogger: @unchecked Sendable {
     /// Defaults to `.debug` in DEBUG builds, `.error` in RELEASE builds.
     var minimumLevel: LogLevel
 
-    private let subsystem = "nl.prezent.TranscriptStudio"
+    private let subsystem = "com.buildmind.ThoughtVault"
     private let osLogger: Logger
 
     private init() {
@@ -55,7 +55,7 @@ final class DebugLogger: @unchecked Sendable {
         #else
         self.minimumLevel = .error
         #endif
-        self.osLogger = Logger(subsystem: "nl.prezent.TranscriptStudio", category: "App")
+        self.osLogger = Logger(subsystem: "com.buildmind.ThoughtVault", category: "App")
     }
 
     // MARK: - Logging Methods

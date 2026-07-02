@@ -1,6 +1,6 @@
 // OnboardingView.swift
 // TranscriptStudio
-// nl.prezent.TranscriptStudio
+// com.buildmind.ThoughtVault
 //
 // Multi-step first-run onboarding flow. Guides new users through
 // welcome, permissions setup, and configuration before granting app access.

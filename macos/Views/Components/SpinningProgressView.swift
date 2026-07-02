@@ -1,6 +1,6 @@
 // SpinningProgressView.swift
 // TranscriptStudio
-// nl.prezent.TranscriptStudio
+// com.buildmind.ThoughtVault
 //
 // Lightweight spinning indicator that avoids ProgressView's heavyweight behavior
 // in small inline contexts (status badges, task rows). Shared across views so the

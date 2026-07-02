@@ -1,6 +1,6 @@
 // PersonEditView.swift
 // TranscriptStudio
-// nl.prezent.TranscriptStudio
+// com.buildmind.ThoughtVault
 //
 // Add/edit form for a directory person (isSelf == false).
 // Mirrors ProfileSettingsView field-for-field with LabeledContent rows.

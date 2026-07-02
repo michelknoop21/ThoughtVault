@@ -1,6 +1,6 @@
 // UpdateCheckService.swift
 // TranscriptStudio
-// nl.prezent.TranscriptStudio
+// com.buildmind.ThoughtVault
 //
 // Checks releases.json for available app updates, once per session.
 // Displays a non-blocking banner on the home screen when a newer version exists.
@@ -13,7 +13,7 @@ import OSLog
 import AppKit
 #endif
 
-private let logger = Logger(subsystem: "nl.prezent.TranscriptStudio", category: "UpdateCheck")
+private let logger = Logger(subsystem: "com.buildmind.ThoughtVault", category: "UpdateCheck")
 
 @Observable
 final class UpdateCheckService {

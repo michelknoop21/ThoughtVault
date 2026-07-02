@@ -1,6 +1,6 @@
 // ProcessingBar.swift
 // TranscriptStudio
-// nl.prezent.TranscriptStudio
+// com.buildmind.ThoughtVault
 //
 // Compact global status bar showing active uploads and processing tasks.
 // Displayed at the top of the detail view, visible on all tabs.

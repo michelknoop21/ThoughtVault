@@ -1,6 +1,6 @@
 // TranscriptRecord.swift
 // TranscriptStudio
-// nl.prezent.TranscriptStudio
+// com.buildmind.ThoughtVault
 //
 // SwiftData model for transcripts/notulen that are processed and stored locally,
 // so the history works fully offline without the backend server.

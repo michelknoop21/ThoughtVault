@@ -1,6 +1,6 @@
 // EditableHTMLWebView.swift
 // TranscriptStudio
-// nl.prezent.TranscriptStudio
+// com.buildmind.ThoughtVault
 //
 // A WKWebView wrapper that supports inline editing of HTML content
 // via contentEditable. Provides a JavaScript bridge to extract

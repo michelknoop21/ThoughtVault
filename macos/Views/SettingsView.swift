@@ -1,6 +1,6 @@
 // SettingsView.swift
 // TranscriptStudio
-// nl.prezent.TranscriptStudio
+// com.buildmind.ThoughtVault
 //
 // Settings interface. On macOS this is a System Settings-style tabbed layout
 // (toolbar tabs → per-tab grouped Form). On iOS it falls back to a single

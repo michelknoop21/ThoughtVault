@@ -1,6 +1,6 @@
 // VideoCallDetectionService.swift
 // TranscriptStudio
-// nl.prezent.TranscriptStudio
+// com.buildmind.ThoughtVault
 //
 // Detects active video calls by monitoring camera usage and known video app processes.
 // Posts .videoCallDetected when a call is detected, reusing the existing CalendarEvent
@@ -12,7 +12,7 @@ import AVFoundation
 import AppKit
 import OSLog
 
-private let logger = Logger(subsystem: "nl.prezent.TranscriptStudio", category: "VideoCallDetection")
+private let logger = Logger(subsystem: "com.buildmind.ThoughtVault", category: "VideoCallDetection")
 
 @Observable
 final class VideoCallDetectionService: @unchecked Sendable {

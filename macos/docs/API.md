@@ -48,7 +48,7 @@ Alle authenticated requests gebruiken deze custom header. Dit is **niet** Bearer
 
 ### Token opslag
 
-- **Keychain service:** `nl.prezent.TranscriptStudio`
+- **Keychain service:** `com.buildmind.ThoughtVault`
 - **Key:** `authToken`
 - **Accessibility:** `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`
 - **Biometrisch:** Tweede item `biometricToken` voor Face ID / Touch ID login

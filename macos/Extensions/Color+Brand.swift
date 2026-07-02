@@ -1,6 +1,6 @@
 // Color+Brand.swift
 // TranscriptStudio
-// nl.prezent.TranscriptStudio
+// com.buildmind.ThoughtVault
 //
 // Yinga brand color palette with adaptive light/dark mode support.
 

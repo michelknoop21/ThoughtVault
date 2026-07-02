@@ -9,7 +9,7 @@
     <key>CFBundleExecutable</key>
     <string>$(EXECUTABLE_NAME)</string>
     <key>CFBundleIdentifier</key>
-    <string>nl.prezent.TranscriptStudio.RecordingActivityWidget</string>
+    <string>com.buildmind.ThoughtVault.RecordingActivityWidget</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>

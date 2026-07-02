@@ -1,6 +1,6 @@
 // RecordingWidgetView.swift
 // TranscriptStudio
-// nl.prezent.TranscriptStudio
+// com.buildmind.ThoughtVault
 //
 // Compact floating recording widget panel. Shows current recording state,
 // live waveform, duration timer, and stop/upload action button.

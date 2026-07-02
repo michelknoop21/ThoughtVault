@@ -1,6 +1,6 @@
 // ParticipantPickerSheet.swift
 // TranscriptStudio
-// nl.prezent.TranscriptStudio
+// com.buildmind.ThoughtVault
 //
 // Multi-select picker over the people directory. Lets the user mark who is in an
 // ad-hoc meeting (no calendar link) so the recording still carries a deelnemerslijst

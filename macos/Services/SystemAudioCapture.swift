@@ -4,7 +4,7 @@ import Foundation
 import OSLog
 import ScreenCaptureKit
 
-private let log = OSLog(subsystem: "nl.prezent.TranscriptStudio", category: "SystemAudio")
+private let log = OSLog(subsystem: "com.buildmind.ThoughtVault", category: "SystemAudio")
 
 // MARK: - CaptureResult
 
@@ -41,7 +41,7 @@ final class SystemAudioCapture: NSObject {
     private var pausedAt: Date?
     private var accumulatedPauseDuration: TimeInterval = 0
     private var capturingMicrophone: Bool = false
-    private let sampleHandlerQueue = DispatchQueue(label: "nl.prezent.TranscriptStudio.SystemAudioCapture.samples")
+    private let sampleHandlerQueue = DispatchQueue(label: "com.buildmind.ThoughtVault.SystemAudioCapture.samples")
 
     // MARK: - Init / Deinit
 

@@ -5,7 +5,7 @@ import Foundation
 import OSLog
 import SwiftUI
 
-private let logger = Logger(subsystem: "nl.prezent.TranscriptStudio", category: "AuthViewModel")
+private let logger = Logger(subsystem: "com.buildmind.ThoughtVault", category: "AuthViewModel")
 
 // MARK: - Notification Name
 

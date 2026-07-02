@@ -1,6 +1,6 @@
 // RecordingActivityAttributes.swift
 // TranscriptStudio
-// nl.prezent.TranscriptStudio
+// com.buildmind.ThoughtVault
 //
 // Live Activity data model shared between the main app target and the
 // RecordingActivityWidget extension target. Guards on ActivityKit availability

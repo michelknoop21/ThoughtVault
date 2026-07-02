@@ -1,6 +1,6 @@
 // HomeView.swift
 // TranscriptStudio
-// nl.prezent.TranscriptStudio
+// com.buildmind.ThoughtVault
 //
 // Main home screen with welcome message, quick-start recording buttons,
 // active processing section, and recent transcripts list.

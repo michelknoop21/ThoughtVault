@@ -1,6 +1,6 @@
 // NotuleTitleExtractor.swift
 // TranscriptStudio
-// nl.prezent.TranscriptStudio
+// com.buildmind.ThoughtVault
 //
 // Extracts a descriptive title from generated notule HTML. Swift port of the
 // backend's `_extract_title_from_html` so locally generated notulen get the same

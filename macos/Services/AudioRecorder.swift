@@ -7,7 +7,7 @@ import UIKit
 import AppKit
 #endif
 
-private let log = Logger(subsystem: "nl.prezent.TranscriptStudio", category: "AudioRecorder")
+private let log = Logger(subsystem: "com.buildmind.ThoughtVault", category: "AudioRecorder")
 
 // MARK: - Error
 

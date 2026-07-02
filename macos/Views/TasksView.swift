@@ -1,6 +1,6 @@
 // TasksView.swift
 // TranscriptStudio
-// nl.prezent.TranscriptStudio
+// com.buildmind.ThoughtVault
 //
 // Active backend tasks overview with auto-refresh, cancel, and delete support.
 

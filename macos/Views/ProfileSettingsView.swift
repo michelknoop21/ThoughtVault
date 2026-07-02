@@ -1,6 +1,6 @@
 // ProfileSettingsView.swift
 // TranscriptStudio
-// nl.prezent.TranscriptStudio
+// com.buildmind.ThoughtVault
 //
 // Settings section for viewing and editing the user's self-profile (PersonProfile singleton).
 // Distinct from the notule-Profielen section (D-08).

@@ -1,13 +1,13 @@
 // TasksViewModel.swift
 // TranscriptStudio
-// nl.prezent.TranscriptStudio
+// com.buildmind.ThoughtVault
 //
 // Manages active backend tasks with auto-refresh, cancel, and delete support.
 
 import Foundation
 import OSLog
 
-private let logger = Logger(subsystem: "nl.prezent.TranscriptStudio", category: "TasksViewModel")
+private let logger = Logger(subsystem: "com.buildmind.ThoughtVault", category: "TasksViewModel")
 
 @MainActor
 @Observable

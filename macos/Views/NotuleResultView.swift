@@ -1,6 +1,6 @@
 // NotuleResultView.swift
 // TranscriptStudio
-// nl.prezent.TranscriptStudio
+// com.buildmind.ThoughtVault
 //
 // Displays completed transcription result with HTML notule rendering,
 // export options (PDF, TXT, DOCX, Share), and raw transcription tab.

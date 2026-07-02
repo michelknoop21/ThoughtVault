@@ -4,7 +4,7 @@ import Security
 final class KeychainService: Sendable {
     static let shared = KeychainService()
 
-    private let serviceIdentifier = "nl.prezent.TranscriptStudio"
+    private let serviceIdentifier = "com.buildmind.ThoughtVault"
 
     private init() {}
 

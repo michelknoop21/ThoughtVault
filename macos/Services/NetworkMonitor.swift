@@ -2,7 +2,7 @@ import Foundation
 import Network
 import OSLog
 
-private let logger = Logger(subsystem: "nl.prezent.TranscriptStudio", category: "NetworkMonitor")
+private let logger = Logger(subsystem: "com.buildmind.ThoughtVault", category: "NetworkMonitor")
 
 // MARK: - NetworkMonitor
 
@@ -25,7 +25,7 @@ final class NetworkMonitor: @unchecked Sendable {
     // MARK: - Private
 
     private let monitor: NWPathMonitor
-    private let monitorQueue = DispatchQueue(label: "nl.prezent.TranscriptStudio.NetworkMonitor", qos: .utility)
+    private let monitorQueue = DispatchQueue(label: "com.buildmind.ThoughtVault.NetworkMonitor", qos: .utility)
 
     // MARK: - Init
 

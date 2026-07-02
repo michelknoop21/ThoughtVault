@@ -1,6 +1,6 @@
 // LoginView.swift
 // TranscriptStudio
-// nl.prezent.TranscriptStudio
+// com.buildmind.ThoughtVault
 //
 // Login screen with email/password, biometric login, and two-factor authentication.
 // Forced light mode to maintain consistent brand presentation.

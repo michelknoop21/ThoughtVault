@@ -1,6 +1,6 @@
 // AppMigrationPlan.swift
 // TranscriptStudio
-// nl.prezent.TranscriptStudio
+// com.buildmind.ThoughtVault
 //
 // VersionedSchema definitions and lightweight SchemaMigrationPlan for the
 // local SwiftData store. V1 → V2 adds PersonProfile as a new @Model.

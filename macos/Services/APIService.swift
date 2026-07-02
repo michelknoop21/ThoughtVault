@@ -2,7 +2,7 @@ import Foundation
 import SwiftUI
 import OSLog
 
-private let logger = Logger(subsystem: "nl.prezent.TranscriptStudio", category: "APIService")
+private let logger = Logger(subsystem: "com.buildmind.ThoughtVault", category: "APIService")
 
 // MARK: - URL Validation Error
 

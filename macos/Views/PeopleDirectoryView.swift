@@ -1,6 +1,6 @@
 // PeopleDirectoryView.swift
 // TranscriptStudio
-// nl.prezent.TranscriptStudio
+// com.buildmind.ThoughtVault
 //
 // Searchable directory list for managing people (isSelf == false).
 // B-01 / B-02 — add, edit, delete with tri-state intern/extern status.

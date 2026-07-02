@@ -1,4 +1,4 @@
-# TranscriptStudio — Developer Documentation
+# ThoughtVault — Developer Documentation
 
 Cross-platform audio transcription app with native macOS (Swift 6), Windows (Tauri 2), and Android (Kotlin/Compose) clients, plus a server-rendered web app, all sharing a FastAPI + Whisper backend.
 
@@ -9,8 +9,8 @@ Cross-platform audio transcription app with native macOS (Swift 6), Windows (Tau
 ### macOS App
 - macOS 14 Sonoma or later
 - Xcode 16 or later
-- Configure code signing: open `TranscriptStudio.xcodeproj`, go to Signing & Capabilities, set your own Team identity
-- Required entitlements (already configured in `TranscriptStudio.entitlements`):
+- Configure code signing: open `ThoughtVault.xcodeproj`, go to Signing & Capabilities, set your own Team identity
+- Required entitlements (already configured in `ThoughtVault.entitlements`):
   - `com.apple.security.device.audio-input`
   - `com.apple.security.personal-information.calendars`
   - ScreenCaptureKit (system audio capture)
@@ -37,9 +37,9 @@ This enables automatic patch version bumping on commits to `main`.
 
 ### macOS
 ```bash
-open TranscriptStudio.xcodeproj
+open ThoughtVault.xcodeproj
 # Build & run from Xcode, or via CLI (without code signing):
-xcodebuild -project TranscriptStudio.xcodeproj -scheme TranscriptStudio -configuration Debug build CODE_SIGNING_ALLOWED=NO
+xcodebuild -project ThoughtVault.xcodeproj -scheme ThoughtVault -configuration Debug build CODE_SIGNING_ALLOWED=NO
 ```
 
 ### Windows

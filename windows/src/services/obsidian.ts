@@ -47,7 +47,7 @@ export function buildObsidianNote(transcript: Transcript): { filename: string; m
   if (transcript.profile_name) {
     lines.push(`profile: "${escapeQuotes(transcript.profile_name)}"`);
   }
-  lines.push("source: TranscriptStudio");
+  lines.push("source: ThoughtVault");
   lines.push("---");
 
   const body = htmlToMarkdown(transcript.notule_html ?? "");

@@ -1,5 +1,5 @@
 // SeedReviewSheet.swift
-// TranscriptStudio
+// ThoughtVault
 // com.buildmind.ThoughtVault
 //
 // Per-person confirm sheet after recording stops with new calendar attendees.

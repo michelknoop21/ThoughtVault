@@ -198,7 +198,7 @@ Dit wordt geimplementeerd in `MicrosoftGraphService` op beide platforms.
 
 Drie nieuwe markdown-bestanden in de bestaande docs-directories:
 
-### 2.1 `TranscriptStudioApp/TranscriptStudio/docs/APP.md` (macOS)
+### 2.1 `ThoughtVaultApp/ThoughtVault/docs/APP.md` (macOS)
 
 Inhoud:
 - **Overzicht**: Swift 6, SwiftUI, MVVM, @Observable
@@ -210,7 +210,7 @@ Inhoud:
 - **Permissies**: Onboarding flow (microfoon, spraak, agenda), System Preferences links
 - **Instellingen**: server URL, profiel selectie, on-device transcriptie, permissies, agenda provider
 
-### 2.2 `TranscriptStudioApp/transcript-studio-windows/docs/APP.md` (Windows)
+### 2.2 `ThoughtVaultApp/transcript-studio-windows/docs/APP.md` (Windows)
 
 Inhoud:
 - **Overzicht**: Tauri 2, React/TypeScript, Zustand stores, Fluent UI
@@ -222,7 +222,7 @@ Inhoud:
 - **Instellingen**: profiel selectie, agenda koppeling, opnamemodus
 - **Tauri specifiek**: IPC commands, window management, deep links, system tray
 
-### 2.3 `TranscriptStudioApp/docs/CALENDAR.md` (gedeeld)
+### 2.3 `ThoughtVaultApp/docs/CALENDAR.md` (gedeeld)
 
 Cross-platform kalender-documentatie:
 - **Architectuur**: admin OAuth config, per-user tokens, backend opslag

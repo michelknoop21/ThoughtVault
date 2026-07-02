@@ -516,7 +516,7 @@ export function AccountPage() {
                   <p className="settings-desc">
                     Neem contact op met{" "}
                     <a
-                      href="mailto:support@yinga.nl?subject=Account%20verwijderen%20TranscriptStudio"
+                      href="mailto:support@yinga.nl?subject=Account%20verwijderen%20ThoughtVault"
                       style={{ color: "var(--text-accent)", textDecoration: "none" }}
                     >
                       support@yinga.nl

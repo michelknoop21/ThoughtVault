@@ -1,6 +1,6 @@
 # Project Research Summary
 
-**Project:** TranscriptStudio — People & Attribution (v1.1)
+**Project:** ThoughtVault — People & Attribution (v1.1)
 **Domain:** Cross-platform meeting-notes app; on-device people-context + action-item attribution
 **Researched:** 2026-06-04
 **Confidence:** HIGH

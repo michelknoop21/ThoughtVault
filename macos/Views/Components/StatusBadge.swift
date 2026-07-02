@@ -1,5 +1,5 @@
 // StatusBadge.swift
-// TranscriptStudio
+// ThoughtVault
 // com.buildmind.ThoughtVault
 //
 // Compact colored badge displaying a TranscriptTask's current status

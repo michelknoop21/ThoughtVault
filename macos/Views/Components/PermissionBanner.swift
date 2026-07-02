@@ -1,5 +1,5 @@
 // PermissionBanner.swift
-// TranscriptStudio
+// ThoughtVault
 // com.buildmind.ThoughtVault
 //
 // Inline banner shown when essential permissions are missing.

@@ -1,4 +1,4 @@
-# TranscriptStudio Windows — Backend API Communicatie
+# ThoughtVault Windows — Backend API Communicatie
 
 > Platform-specifieke documentatie voor de Tauri 2 / React / TypeScript Windows app.
 > Zie ook: `../../docs/API.md` voor de volledige backend API referentie.

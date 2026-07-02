@@ -6,7 +6,7 @@
 <domain>
 ## Phase Boundary
 
-Phase 2 levert **één gedocumenteerde, geprioriteerde UX-bevindingenlijst** (`FINDINGS.md`) op die de macOS- en Windows-versies van TranscriptStudio toetst over de vijf kernflows. Het is een **expert UX-review** — geen code-werk, geen user testing. De uitkomst is de directe input voor Phase 4 (UX Fixes).
+Phase 2 levert **één gedocumenteerde, geprioriteerde UX-bevindingenlijst** (`FINDINGS.md`) op die de macOS- en Windows-versies van ThoughtVault toetst over de vijf kernflows. Het is een **expert UX-review** — geen code-werk, geen user testing. De uitkomst is de directe input voor Phase 4 (UX Fixes).
 
 **Kernflows (per platform doorlopen):**
 1. Opname start/stop

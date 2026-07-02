@@ -91,7 +91,7 @@ completed: 2026-06-07
 
 **[Rule 1 - Analysis] MigrationTests cannot run in isolation due to RED test scaffolds from 02-01**
 - **Found during:** Task 2 (verify step)
-- **Issue:** `xcodebuild test -only-testing:TranscriptStudioTests/MigrationTests` triggers compilation of the entire test target, which fails because `PersonDirectoryServiceTests.swift` references `PersonDirectoryService` (not yet created — 02-03's job) and `GraphAttendeeDecodeTests.swift` references `CalendarEvent.attendees` (also 02-03's job). These are intentional RED compile errors planted by 02-01.
+- **Issue:** `xcodebuild test -only-testing:ThoughtVaultTests/MigrationTests` triggers compilation of the entire test target, which fails because `PersonDirectoryServiceTests.swift` references `PersonDirectoryService` (not yet created — 02-03's job) and `GraphAttendeeDecodeTests.swift` references `CalendarEvent.attendees` (also 02-03's job). These are intentional RED compile errors planted by 02-01.
 - **Fix:** Verified that `MigrationTests.swift` itself compiles without errors (confirmed via `xcodebuild` output — no errors on that specific file). Verified main app target builds cleanly (zero errors). The migration test logic is structurally correct; it will run GREEN as soon as 02-03 turns those RED scaffolds green.
 - **Impact:** Not a code defect — the RED scaffolds are by design. MigrationTests will run when the whole test target compiles in 02-03.
 
@@ -102,7 +102,7 @@ completed: 2026-06-07
 
 ## Issues Encountered
 
-- Xcode scheme for running tests is `TranscriptStudio` (not `TranscriptStudioTests`) — documented in 02-01 SUMMARY but plan template still used the wrong scheme name. Used correct scheme.
+- Xcode scheme for running tests is `ThoughtVault` (not `ThoughtVaultTests`) — documented in 02-01 SUMMARY but plan template still used the wrong scheme name. Used correct scheme.
 
 ## Threat Surface Scan
 

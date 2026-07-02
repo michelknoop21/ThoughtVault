@@ -2,7 +2,7 @@ import SwiftUI
 import SwiftData
 
 @main
-struct TranscriptStudioApp: App {
+struct ThoughtVaultApp: App {
     @State private var authVM = AuthViewModel()
     @State private var recordingVM = RecordingViewModel()
     @State private var tasksVM = TasksViewModel()

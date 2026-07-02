@@ -1,4 +1,4 @@
-# TranscriptStudio macOS — Backend API Communicatie
+# ThoughtVault macOS — Backend API Communicatie
 
 > Platform-specifieke documentatie voor de Swift/SwiftUI macOS app.
 > Zie ook: `../../docs/API.md` voor de volledige backend API referentie.

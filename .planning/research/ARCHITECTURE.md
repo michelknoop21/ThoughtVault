@@ -306,7 +306,7 @@ This is a read-only structural extension. No new Graph API call; no new token sc
 | `NotuleResultView` | `NotuleResultView.swift` | Embed `AttributionEditorView` in notule tab |
 | `TranscriptDetailView` | `TranscriptsView.swift` | Embed `AttributionEditorView` in notule tab |
 | `SettingsView` | `SettingsView.swift` | Add "Mijn profiel" + "Mensen" settings sections |
-| `TranscriptStudioApp` | `TranscriptStudioApp.swift` | Inject `PersonDirectoryService` into environment |
+| `ThoughtVaultApp` | `ThoughtVaultApp.swift` | Inject `PersonDirectoryService` into environment |
 
 ### New — Windows
 
@@ -554,5 +554,5 @@ user base stays under 30 people.
 
 ---
 
-*Architecture research for: People & Attribution milestone, TranscriptStudio v1.1*
+*Architecture research for: People & Attribution milestone, ThoughtVault v1.1*
 *Researched: 2026-06-04*

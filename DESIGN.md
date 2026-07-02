@@ -1,5 +1,5 @@
 ---
-name: TranscriptStudio
+name: ThoughtVault
 description: Yinga-branded recording, transcription & notulen studio — native macOS/iOS + Windows, one shared design language.
 colors:
   brand-primary: "#E50074"
@@ -137,13 +137,13 @@ components:
     padding: "2px 10px"
 ---
 
-# Design System: TranscriptStudio
+# Design System: ThoughtVault
 
 ## 1. Overview
 
 **Creative North Star: "The Yinga Studio"**
 
-TranscriptStudio is a branded workspace, not a neutral utility. It is unmistakably Yinga the moment it loads: the four-color spinner, the magenta wordmark, magenta gradients on every primary action. But it earns that brand confidence by sitting inside a calm, Apple-native shell — `SF Pro Rounded` headings, glass surfaces over a soft gray canvas, spring physics on every interaction. The brand is the personality; the platform is the manners.
+ThoughtVault is a branded workspace, not a neutral utility. It is unmistakably Yinga the moment it loads: the four-color spinner, the magenta wordmark, magenta gradients on every primary action. But it earns that brand confidence by sitting inside a calm, Apple-native shell — `SF Pro Rounded` headings, glass surfaces over a soft gray canvas, spring physics on every interaction. The brand is the personality; the platform is the manners.
 
 The single most important fact about this system is that it is **one design language rendered twice**. The macOS/iOS app (SwiftUI, `TS.Spacing`/`TS.Radius`/`TS.Font` tokens, `Color.brandPrimary`) and the Windows app (Tauri, CSS custom properties in `globals.css`, Tailwind) carry **identical** hex values, spacing scale, radii, and animation curves. The Windows CSS is annotated line-by-line as "matches macOS." Any change to a token must land on both platforms or the parity breaks. That discipline is the system.
 

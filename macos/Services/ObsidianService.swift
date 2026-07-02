@@ -1,5 +1,5 @@
 // ObsidianService.swift
-// TranscriptStudio
+// ThoughtVault
 // com.buildmind.ThoughtVault
 //
 // Writes notulen to an Obsidian vault through the Obsidian Local REST API
@@ -237,7 +237,7 @@ struct ObsidianService: Sendable {
         if let profileName, !profileName.isEmpty {
             lines.append("profile: \(yaml(profileName))")
         }
-        lines.append("source: TranscriptStudio")
+        lines.append("source: ThoughtVault")
         lines.append("---")
         lines.append("")
         lines.append("")

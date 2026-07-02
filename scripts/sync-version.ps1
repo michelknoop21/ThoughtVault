@@ -16,7 +16,7 @@ $Patch = $Version.Split('.')[2]
 Write-Host "Syncing version $Version to all platform configs..."
 
 # 1. Xcode project.pbxproj
-$Pbxproj = Join-Path $RootDir "TranscriptStudio.xcodeproj\project.pbxproj"
+$Pbxproj = Join-Path $RootDir "ThoughtVault.xcodeproj\project.pbxproj"
 if (Test-Path $Pbxproj) {
     $content = Get-Content $Pbxproj -Raw
     $content = $content -replace 'MARKETING_VERSION = [^;]*', "MARKETING_VERSION = $Version"

@@ -37,7 +37,7 @@ key-files:
   modified:
     - macos/App/ContentView.swift
     - macos/ViewModels/RecordingViewModel.swift
-    - TranscriptStudio.xcodeproj/project.pbxproj
+    - ThoughtVault.xcodeproj/project.pbxproj
 
 key-decisions:
   - "AppTab.people uses keyboard shortcut '7' (not '6' as UI-SPEC originally drafted) — admin case already binds '6'; plan PLAN.md explicitly resolved this conflict"
@@ -87,7 +87,7 @@ completed: 2026-06-07
 - `/macos/Views/SeedReviewSheet.swift` — new: per-person checkbox confirm, no auto-commit
 - `/macos/App/ContentView.swift` — AppTab.people + activeMeeting wiring + seed sheet trigger
 - `/macos/ViewModels/RecordingViewModel.swift` — activeMeeting + pendingSeedAttendees
-- `/TranscriptStudio.xcodeproj/project.pbxproj` — 3 new view files registered
+- `/ThoughtVault.xcodeproj/project.pbxproj` — 3 new view files registered
 
 ## Decisions Made
 

@@ -20,8 +20,8 @@
 | `windows/src/types.ts` | config | — | itself (modify) | exact |
 | `windows/src/components/onboarding/OnboardingWizard.tsx` | component | request-response | itself (modify) | exact |
 | `windows/src/components/settings/ProfileSettings.tsx` | component | request-response | `windows/src/components/onboarding/OnboardingWizard.tsx` (StepContent pattern) | role-match |
-| `TranscriptStudioTests/PersonProfileTests.swift` | test | CRUD | `TranscriptStudioTests/TranscriptsViewModelTests.swift` | role-match |
-| `TranscriptStudioTests/MigrationTests.swift` | test | CRUD | `TranscriptStudioTests/TranscriptStudioTests.swift` | role-match |
+| `ThoughtVaultTests/PersonProfileTests.swift` | test | CRUD | `ThoughtVaultTests/TranscriptsViewModelTests.swift` | role-match |
+| `ThoughtVaultTests/MigrationTests.swift` | test | CRUD | `ThoughtVaultTests/ThoughtVaultTests.swift` | role-match |
 
 ---
 
@@ -34,8 +34,8 @@
 **Imports pattern** (lines 1-9):
 ```swift
 // TranscriptRecord.swift
-// TranscriptStudio
-// nl.prezent.TranscriptStudio
+// ThoughtVault
+// nl.prezent.ThoughtVault
 //
 // [one-line description of the model's purpose]
 
@@ -66,7 +66,7 @@ final class TranscriptRecord {
 - `@Attribute(.unique)` on `id: String` — line 17
 - `var tags: [String]` stored natively without any attribute annotation — line 25
 - `init` assigns every property explicitly (no shorthand) — lines 31-57
-- File header comment format: `// FileName.swift\n// TranscriptStudio\n// nl.prezent.TranscriptStudio\n//\n// [purpose]`
+- File header comment format: `// FileName.swift\n// ThoughtVault\n// nl.prezent.ThoughtVault\n//\n// [purpose]`
 
 ---
 
@@ -132,7 +132,7 @@ Add a `personProfileNotFound` case to this enum if needed (NL error string).
 
 **Logger pattern** (line 12):
 ```swift
-private let logger = Logger(subsystem: "nl.prezent.TranscriptStudio", category: "LocalTranscriptStore")
+private let logger = Logger(subsystem: "nl.prezent.ThoughtVault", category: "LocalTranscriptStore")
 ```
 
 ---
@@ -410,19 +410,19 @@ if (step < 5) setStep((s) => (s + 1) as Step);
 
 ---
 
-### `TranscriptStudioTests/PersonProfileTests.swift` (test, CRUD) — new file
+### `ThoughtVaultTests/PersonProfileTests.swift` (test, CRUD) — new file
 
-**Analog:** `TranscriptStudioTests/TranscriptsViewModelTests.swift`
+**Analog:** `ThoughtVaultTests/TranscriptsViewModelTests.swift`
 
 **Test file header + framework** (lines 1-8):
 ```swift
 // PersonProfileTests.swift
-// TranscriptStudioTests
-// nl.prezent.TranscriptStudio
+// ThoughtVaultTests
+// nl.prezent.ThoughtVault
 
 import Testing
 import Foundation
-@testable import TranscriptStudio
+@testable import ThoughtVault
 ```
 
 **Suite + @MainActor pattern** (lines 9-15):
@@ -444,17 +444,17 @@ struct PersonProfileTests {
 
 ---
 
-### `TranscriptStudioTests/MigrationTests.swift` (test, CRUD) — new file
+### `ThoughtVaultTests/MigrationTests.swift` (test, CRUD) — new file
 
-**Analog:** `TranscriptStudioTests/TranscriptStudioTests.swift` (simpler XCTest style for one-off model tests)
+**Analog:** `ThoughtVaultTests/ThoughtVaultTests.swift` (simpler XCTest style for one-off model tests)
 
-**File header + framework** (TranscriptStudioTests.swift lines 1-3):
+**File header + framework** (ThoughtVaultTests.swift lines 1-3):
 ```swift
 import XCTest
-@testable import TranscriptStudio
+@testable import ThoughtVault
 ```
 
-Use `XCTestCase` subclass (not Swift Testing `@Suite`) for migration tests that require setup/teardown of temporary store files — XCTest's `setUpWithError`/`tearDownWithError` pair is cleaner for filesystem-based tests. `TranscriptStudioTests.swift` demonstrates both assertion styles; migration tests can use `XCTAssertEqual` / `XCTAssertNotNil`.
+Use `XCTestCase` subclass (not Swift Testing `@Suite`) for migration tests that require setup/teardown of temporary store files — XCTest's `setUpWithError`/`tearDownWithError` pair is cleaner for filesystem-based tests. `ThoughtVaultTests.swift` demonstrates both assertion styles; migration tests can use `XCTAssertEqual` / `XCTAssertNotNil`.
 
 ---
 
@@ -476,7 +476,7 @@ All new SwiftData context operations (`upsertSelfProfile`, `fetchSelfProfile`) g
 **Source:** `macos/Services/LocalTranscriptStore.swift` line 12
 **Apply to:** Any new service-level file
 ```swift
-private let logger = Logger(subsystem: "nl.prezent.TranscriptStudio", category: "LocalTranscriptStore")
+private let logger = Logger(subsystem: "nl.prezent.ThoughtVault", category: "LocalTranscriptStore")
 ```
 
 ### FetchDescriptor predicate
@@ -554,6 +554,6 @@ All files have analogs. No entries.
 
 ## Metadata
 
-**Analog search scope:** `macos/Models/`, `macos/Services/`, `macos/Views/`, `windows/src/stores/`, `windows/src/components/onboarding/`, `windows/src/types.ts`, `TranscriptStudioTests/`
+**Analog search scope:** `macos/Models/`, `macos/Services/`, `macos/Views/`, `windows/src/stores/`, `windows/src/components/onboarding/`, `windows/src/types.ts`, `ThoughtVaultTests/`
 **Files scanned:** 10 source files read in full or targeted sections
 **Pattern extraction date:** 2026-06-04

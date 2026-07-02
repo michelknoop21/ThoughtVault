@@ -1,5 +1,5 @@
 // Participant.swift
-// TranscriptStudio
+// ThoughtVault
 // com.buildmind.ThoughtVault
 //
 // A meeting participant sent to the notule pipeline so the LLM can render an

@@ -1,4 +1,4 @@
-# TranscriptStudio Windows — Architecture
+# ThoughtVault Windows — Architecture
 
 _Last updated: 2026-03-04_
 
@@ -92,7 +92,7 @@ Optional: local LLM generation (Ollama/LM Studio)
 
 | Service | Purpose |
 |---------|---------|
-| TranscriptStudio API (`n8n.prezent.nl`) | Upload, transcription, note generation |
+| ThoughtVault API (`n8n.prezent.nl`) | Upload, transcription, note generation |
 | Microsoft Graph | Calendar access, OAuth PKCE for M365 |
 | Ollama / LM Studio | Local LLM generation (configurable) |
 

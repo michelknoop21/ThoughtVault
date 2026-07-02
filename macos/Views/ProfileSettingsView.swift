@@ -1,5 +1,5 @@
 // ProfileSettingsView.swift
-// TranscriptStudio
+// ThoughtVault
 // com.buildmind.ThoughtVault
 //
 // Settings section for viewing and editing the user's self-profile (PersonProfile singleton).
@@ -61,7 +61,7 @@ struct ProfileSettingsView: View {
             Text("Geen profiel ingevuld")
                 .font(TS.Font.bodyMedium)
                 .foregroundStyle(Color.labelPrimary)
-            Text("Vul je naam, rol en organisatie in zodat TranscriptStudio actiepunten aan jou kan koppelen.")
+            Text("Vul je naam, rol en organisatie in zodat ThoughtVault actiepunten aan jou kan koppelen.")
                 .font(TS.Font.footnote)
                 .foregroundStyle(Color.labelSecondary)
             formFields

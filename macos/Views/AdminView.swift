@@ -1,5 +1,5 @@
 // AdminView.swift
-// TranscriptStudio
+// ThoughtVault
 // com.buildmind.ThoughtVault
 //
 // Admin panel with 5 tabs: Overzicht, Gebruikers, Uitnodigingen, Bug Rapporten, Fouten.

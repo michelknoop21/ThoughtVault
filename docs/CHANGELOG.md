@@ -1,6 +1,6 @@
-# TranscriptStudio — Changelog
+# ThoughtVault — Changelog
 
-All notable changes to the TranscriptStudio project (macOS, Windows, Android clients, web app, and backend) are documented here.
+All notable changes to the ThoughtVault project (macOS, Windows, Android clients, web app, and backend) are documented here.
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
@@ -30,7 +30,7 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   2. ≤200 MB: `tokio::fs::read()` + `reqwest::multipart::Part::bytes(...)`. Geen streaming, geen Content-Length-vs-body race. Bas's failures (91-168 MB) vallen volledig binnen deze grens.
   3. >200 MB: stream van de integrity-checked temp copy.
   4. WAV magic-byte validatie (`RIFF` + `WAVE`) op in-memory bytes vóór verzending — surface AV-induced corruption als nette client-error.
-  5. Reqwest client config: `user_agent("TranscriptStudio-Windows/{version}")`, `tcp_nodelay(true)`, `pool_max_idle_per_host(0)`, `http1_only()`, `no_proxy()`, timeout 600 s.
+  5. Reqwest client config: `user_agent("ThoughtVault-Windows/{version}")`, `tcp_nodelay(true)`, `pool_max_idle_per_host(0)`, `http1_only()`, `no_proxy()`, timeout 600 s.
   6. SHA-256 prefix in `[Upload]` log + als `X-Upload-Sha256` request header.
 - **Backend `[VALIDATION-422]` log** (`backend/src/insanely_fast_whisper_api/app/app.py:_log_validation_error`): toont nu ook `sha=` (X-Upload-Sha256 van client) en `client=` (peer IP) zodat we bij een eventuele volgende incident-failure client-side hash en server-side hash kunnen vergelijken om body-corruption ondubbelzinnig vast te stellen.
 
@@ -110,7 +110,7 @@ N8n's "Extract Title" node pakt de eerste HTML heading als titel. Als de LLM het
 
 ### Notes
 - Runner draait als LocalSystem (SYSTEM account) — `$env:USERPROFILE` is `C:\Windows\system32\config\systemprofile`. Alle paden naar user-specifieke tools (Rust, SSH, WiX) hebben fallback naar `C:\Users\michel`.
-- Eerste succesvolle build: v1.0.109 (TranscriptStudio_1.0.109_x64.msi, 5.4 MB).
+- Eerste succesvolle build: v1.0.109 (ThoughtVault_1.0.109_x64.msi, 5.4 MB).
 - GitHub Actions Windows build (`.github/workflows/build-windows.yml`) blijft beschikbaar als fallback.
 
 ---

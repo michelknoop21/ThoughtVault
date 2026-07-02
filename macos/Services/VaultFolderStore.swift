@@ -1,5 +1,5 @@
 // VaultFolderStore.swift
-// TranscriptStudio
+// ThoughtVault
 // com.buildmind.ThoughtVault
 //
 // File-based Obsidian vault access. The user picks their vault folder once; we
@@ -22,7 +22,7 @@ enum VaultFolderStore {
     static let bookmarkKey = "obsidianVaultBookmark"       // Data (security-scoped)
     static let folderNameKey = "obsidianVaultFolderName"   // String (display only)
     static let contextNoteKey = "obsidianContextNote"      // String, relative path
-    static let defaultContextNote = "TranscriptStudio/Context.md"
+    static let defaultContextNote = "ThoughtVault/Context.md"
 
     /// Subfolder inside the vault to write notulen to; reuses the existing REST vault-path setting.
     static var notesSubfolder: String {

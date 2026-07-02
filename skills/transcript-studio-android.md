@@ -1,6 +1,6 @@
-# TranscriptStudio Android — Implementation Skill
+# ThoughtVault Android — Implementation Skill
 
-Project-specific skill for building the TranscriptStudio Android client. All versions verified against latest stable releases as of March 2026.
+Project-specific skill for building the ThoughtVault Android client. All versions verified against latest stable releases as of March 2026.
 
 ## Verified Tech Stack (March 2026)
 
@@ -381,7 +381,7 @@ val TSTypography = Typography(
 ```kotlin
 // ui/theme/Theme.kt
 @Composable
-fun TranscriptStudioTheme(
+fun ThoughtVaultTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit,
 ) {

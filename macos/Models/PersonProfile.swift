@@ -1,5 +1,5 @@
 // PersonProfile.swift
-// TranscriptStudio
+// ThoughtVault
 // com.buildmind.ThoughtVault
 //
 // SwiftData model for people (self-profile + directory) stored on-device.

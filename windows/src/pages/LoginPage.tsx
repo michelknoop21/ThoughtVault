@@ -205,7 +205,7 @@ export function LoginPage() {
           <div className="text-center" style={{ marginBottom: 32 }}>
             <img
               src={appLogo}
-              alt="TranscriptStudio"
+              alt="ThoughtVault"
               className="login-logo"
             />
             <h1 className="text-accent login-title">Transcript Studio</h1>

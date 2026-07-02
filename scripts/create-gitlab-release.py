@@ -15,7 +15,7 @@ api_url = os.environ["CI_API_V4_URL"]
 project_id = os.environ["CI_PROJECT_ID"]
 job_token = os.environ["CI_JOB_TOKEN"]
 
-title = f"TranscriptStudio Dev v{version}" if channel == "dev" else f"TranscriptStudio v{version}"
+title = f"ThoughtVault Dev v{version}" if channel == "dev" else f"ThoughtVault v{version}"
 
 base = "https://n8n.prezent.nl/tstudio/download"
 links = []

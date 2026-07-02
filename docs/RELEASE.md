@@ -1,4 +1,4 @@
-# TranscriptStudio — Build & Release Pipeline
+# ThoughtVault — Build & Release Pipeline
 
 ## Overzicht
 
@@ -20,11 +20,11 @@ BUILD_CHANNEL (dev | production)
 
 | | Dev (standaard) | Productie (`--production`) |
 |---|---|---|
-| App naam | TranscriptStudio Dev | TranscriptStudio |
-| Bundle ID (macOS) | `nl.prezent.TranscriptStudio.dev` | `nl.prezent.TranscriptStudio` |
+| App naam | ThoughtVault Dev | ThoughtVault |
+| Bundle ID (macOS) | `nl.prezent.ThoughtVault.dev` | `nl.prezent.ThoughtVault` |
 | Bundle ID (Windows) | `nl.prezent.transcript-studio-dev` | `nl.prezent.transcript-studio` |
-| DMG naam | `TranscriptStudio-Dev-{version}.dmg` | `TranscriptStudio-{version}.dmg` |
-| MSI naam | `TranscriptStudio-Dev_{version}_x64.msi` | `TranscriptStudio_{version}_x64.msi` |
+| DMG naam | `ThoughtVault-Dev-{version}.dmg` | `ThoughtVault-{version}.dmg` |
+| MSI naam | `ThoughtVault-Dev_{version}_x64.msi` | `ThoughtVault_{version}_x64.msi` |
 | Side-by-side installeerbaar | Ja (eigen bundle ID + app data) | Ja |
 | releases.json velden | `dev_latest_version`, `dev_macos`, `dev_windows_x64` | `latest_version`, `macos`, `windows_x64` |
 
@@ -84,11 +84,11 @@ Wordt gesourced door alle andere scripts. Leest `BUILD_CHANNEL` (default `dev`) 
 
 | Variabele | Dev waarde | Productie waarde |
 |-----------|-----------|-----------------|
-| `APP_DISPLAY_NAME` | TranscriptStudio Dev | TranscriptStudio |
-| `BUNDLE_ID_MACOS` | nl.prezent.TranscriptStudio.dev | nl.prezent.TranscriptStudio |
+| `APP_DISPLAY_NAME` | ThoughtVault Dev | ThoughtVault |
+| `BUNDLE_ID_MACOS` | nl.prezent.ThoughtVault.dev | nl.prezent.ThoughtVault |
 | `BUNDLE_ID_WINDOWS` | nl.prezent.transcript-studio-dev | nl.prezent.transcript-studio |
-| `DMG_NAME` | TranscriptStudio-Dev-{version}.dmg | TranscriptStudio-{version}.dmg |
-| `MSI_PREFIX` | TranscriptStudio-Dev | TranscriptStudio |
+| `DMG_NAME` | ThoughtVault-Dev-{version}.dmg | ThoughtVault-{version}.dmg |
+| `MSI_PREFIX` | ThoughtVault-Dev | ThoughtVault |
 
 Plus gedeelde variabelen: `VERSION`, `BUILD_DIR`, `SERVER`, `REMOTE_DIR`, `ROOT_DIR`, `SCRIPT_DIR`.
 
@@ -98,7 +98,7 @@ Leest de versie uit `VERSION` en past deze aan in:
 
 | Bestand | Wat wordt aangepast |
 |---------|-------------------|
-| `TranscriptStudio.xcodeproj/project.pbxproj` | `MARKETING_VERSION` (4x) + `CURRENT_PROJECT_VERSION` (patch als integer) |
+| `ThoughtVault.xcodeproj/project.pbxproj` | `MARKETING_VERSION` (4x) + `CURRENT_PROJECT_VERSION` (patch als integer) |
 | `windows/src-tauri/tauri.conf.json` | `"version"` veld |
 | `windows/src-tauri/Cargo.toml` | eerste `version = "..."` onder `[package]` |
 
@@ -183,10 +183,10 @@ Bestand: `.gitlab-ci.yml`
 | URL | Beschrijving |
 |-----|-------------|
 | `https://n8n.prezent.nl/tstudio/download/releases.json` | Manifest met productie + dev versie-info |
-| `https://n8n.prezent.nl/tstudio/download/TranscriptStudio-{version}.dmg` | macOS productie installer |
-| `https://n8n.prezent.nl/tstudio/download/TranscriptStudio-Dev-{version}.dmg` | macOS dev installer |
-| `https://n8n.prezent.nl/tstudio/download/TranscriptStudio_{version}_x64.msi` | Windows productie installer |
-| `https://n8n.prezent.nl/tstudio/download/TranscriptStudio-Dev_{version}_x64.msi` | Windows dev installer |
+| `https://n8n.prezent.nl/tstudio/download/ThoughtVault-{version}.dmg` | macOS productie installer |
+| `https://n8n.prezent.nl/tstudio/download/ThoughtVault-Dev-{version}.dmg` | macOS dev installer |
+| `https://n8n.prezent.nl/tstudio/download/ThoughtVault_{version}_x64.msi` | Windows productie installer |
+| `https://n8n.prezent.nl/tstudio/download/ThoughtVault-Dev_{version}_x64.msi` | Windows dev installer |
 
 ### releases.json formaat
 
@@ -194,25 +194,25 @@ Bestand: `.gitlab-ci.yml`
 {
   "latest_version": "1.0.49",
   "macos": {
-    "url": "/tstudio/download/TranscriptStudio-1.0.49.dmg",
+    "url": "/tstudio/download/ThoughtVault-1.0.49.dmg",
     "version": "1.0.49",
-    "filename": "TranscriptStudio-1.0.49.dmg"
+    "filename": "ThoughtVault-1.0.49.dmg"
   },
   "windows_x64": {
-    "url": "/tstudio/download/TranscriptStudio_1.0.49_x64.msi",
+    "url": "/tstudio/download/ThoughtVault_1.0.49_x64.msi",
     "version": "1.0.49",
-    "filename": "TranscriptStudio_1.0.49_x64.msi"
+    "filename": "ThoughtVault_1.0.49_x64.msi"
   },
   "dev_latest_version": "1.0.50",
   "dev_macos": {
-    "url": "/tstudio/download/TranscriptStudio-Dev-1.0.50.dmg",
+    "url": "/tstudio/download/ThoughtVault-Dev-1.0.50.dmg",
     "version": "1.0.50",
-    "filename": "TranscriptStudio-Dev-1.0.50.dmg"
+    "filename": "ThoughtVault-Dev-1.0.50.dmg"
   },
   "dev_windows_x64": {
-    "url": "/tstudio/download/TranscriptStudio-Dev_1.0.50_x64.msi",
+    "url": "/tstudio/download/ThoughtVault-Dev_1.0.50_x64.msi",
     "version": "1.0.50",
-    "filename": "TranscriptStudio-Dev_1.0.50_x64.msi"
+    "filename": "ThoughtVault-Dev_1.0.50_x64.msi"
   }
 }
 ```

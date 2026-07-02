@@ -10,7 +10,7 @@ import { YingaBar } from "../brand/YingaBar";
 
 export function TitleBar() {
   const [isMaximized, setIsMaximized] = useState(false);
-  const [appName, setAppName] = useState("TranscriptStudio");
+  const [appName, setAppName] = useState("ThoughtVault");
 
   useEffect(() => {
     getName().then(setAppName).catch(() => {});

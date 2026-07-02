@@ -1,5 +1,5 @@
 // FloatingWidgetPanel.swift
-// TranscriptStudio
+// ThoughtVault
 // com.buildmind.ThoughtVault
 //
 // Manages the floating NSPanel overlay that shows recording status on macOS.

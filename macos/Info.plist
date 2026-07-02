@@ -34,15 +34,15 @@
 	<key>LSMinimumSystemVersion</key>
 	<string>14.0</string>
 	<key>NSCalendarsFullAccessUsageDescription</key>
-	<string>TranscriptStudio heeft toegang tot uw agenda nodig om aankomende videovergaderingen te detecteren en u te herinneren aan opnemen.</string>
+	<string>ThoughtVault heeft toegang tot uw agenda nodig om aankomende videovergaderingen te detecteren en u te herinneren aan opnemen.</string>
 	<key>NSFaceIDUsageDescription</key>
-	<string>TranscriptStudio gebruikt Face ID voor snelle en veilige toegang tot uw account.</string>
+	<string>ThoughtVault gebruikt Face ID voor snelle en veilige toegang tot uw account.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>TranscriptStudio heeft toegang tot uw microfoon nodig om vergaderingen op te nemen voor transcriptie.</string>
+	<string>ThoughtVault heeft toegang tot uw microfoon nodig om vergaderingen op te nemen voor transcriptie.</string>
 	<key>NSScreenCaptureUsageDescription</key>
-	<string>TranscriptStudio heeft toestemming voor schermopname nodig om systeemaudio van videovergaderingen vast te leggen.</string>
+	<string>ThoughtVault heeft toestemming voor schermopname nodig om systeemaudio van videovergaderingen vast te leggen.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>TranscriptStudio gebruikt spraakherkenning voor offline transcriptie op uw apparaat.</string>
+	<string>ThoughtVault gebruikt spraakherkenning voor offline transcriptie op uw apparaat.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>audio</string>

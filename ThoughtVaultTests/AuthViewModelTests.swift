@@ -1,10 +1,10 @@
 // AuthViewModelTests.swift
-// TranscriptStudioTests
-// nl.prezent.TranscriptStudio
+// ThoughtVaultTests
+// nl.prezent.ThoughtVault
 
 import Testing
 import Foundation
-@testable import TranscriptStudio
+@testable import ThoughtVault
 
 @Suite("AuthViewModel Tests")
 struct AuthViewModelTests {

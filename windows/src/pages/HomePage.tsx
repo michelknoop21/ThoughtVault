@@ -210,7 +210,7 @@ export function HomePage() {
           <div className="empty-state">
             <p className="empty-state-title">Nog geen transcripten</p>
             <p className="empty-state-body">
-              Start je eerste opname. TranscriptStudio maakt daarna automatisch een
+              Start je eerste opname. ThoughtVault maakt daarna automatisch een
               transcript en helpt je om er een duidelijke notule van te maken.
             </p>
             <button onClick={() => handleQuickStart("microphone")} className="btn btn-accent">

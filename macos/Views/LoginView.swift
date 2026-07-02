@@ -1,5 +1,5 @@
 // LoginView.swift
-// TranscriptStudio
+// ThoughtVault
 // com.buildmind.ThoughtVault
 //
 // Login screen with email/password, biometric login, and two-factor authentication.

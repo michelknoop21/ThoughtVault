@@ -1,5 +1,5 @@
 // TranscriptCard.swift
-// TranscriptStudio
+// ThoughtVault
 // com.buildmind.ThoughtVault
 //
 // Reusable card component for displaying transcript list items

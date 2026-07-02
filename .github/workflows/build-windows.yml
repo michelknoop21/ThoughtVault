@@ -53,13 +53,13 @@ jobs:
           VERSION="${{ steps.meta.outputs.version }}"
           CHANNEL="${{ steps.meta.outputs.channel }}"
           if [ "$CHANNEL" = "production" ]; then
-            echo "msi_name=TranscriptStudio_${VERSION}_x64.msi" >> $GITHUB_OUTPUT
+            echo "msi_name=ThoughtVault_${VERSION}_x64.msi" >> $GITHUB_OUTPUT
             echo "bundle_id=nl.prezent.transcript-studio" >> $GITHUB_OUTPUT
-            echo "product_name=TranscriptStudio" >> $GITHUB_OUTPUT
+            echo "product_name=ThoughtVault" >> $GITHUB_OUTPUT
           else
-            echo "msi_name=TranscriptStudio-Dev_${VERSION}_x64.msi" >> $GITHUB_OUTPUT
+            echo "msi_name=ThoughtVault-Dev_${VERSION}_x64.msi" >> $GITHUB_OUTPUT
             echo "bundle_id=nl.prezent.transcript-studio-dev" >> $GITHUB_OUTPUT
-            echo "product_name=TranscriptStudio Dev" >> $GITHUB_OUTPUT
+            echo "product_name=ThoughtVault Dev" >> $GITHUB_OUTPUT
           fi
 
       - name: Setup Node.js

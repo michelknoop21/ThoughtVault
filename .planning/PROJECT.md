@@ -1,8 +1,8 @@
-# TranscriptStudio — People & Attribution
+# ThoughtVault — People & Attribution
 
 ## What This Is
 
-TranscriptStudio is een cross-platform app (native macOS/iOS in Swift 6/SwiftUI, Windows in Tauri 2/React) die audio opneemt, transcribeert en notulen genereert — via een FastAPI-cloudbackend óf volledig lokaal op het apparaat. Doelgroep: professionals die snel, betrouwbaar en privacy-bewust notulen willen.
+ThoughtVault is een cross-platform app (native macOS/iOS in Swift 6/SwiftUI, Windows in Tauri 2/React) die audio opneemt, transcribeert en notulen genereert — via een FastAPI-cloudbackend óf volledig lokaal op het apparaat. Doelgroep: professionals die snel, betrouwbaar en privacy-bewust notulen willen.
 
 Deze milestone (**"People & Attribution"**, v1.1) voegt **persoons-/rolcontext** toe: de installerende gebruiker stelt zich bij eerste gebruik voor via een kort stappenplan, bouwt lokaal een directory van collega's/bekende externen op, en die context voedt de notule-generatie zodat **actiepunten betrouwbaar aan de juiste persoon worden toegewezen** — met een door de gebruiker corrigeerbare toewijzing. Alles privacy-bewust en on-device.
 

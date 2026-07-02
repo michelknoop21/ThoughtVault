@@ -1,5 +1,5 @@
 // LiveActivityManager.swift
-// TranscriptStudio
+// ThoughtVault
 // com.buildmind.ThoughtVault
 //
 // Manages the iOS Live Activity that surfaces recording status on the lock screen

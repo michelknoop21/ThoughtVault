@@ -5,8 +5,8 @@ subsystem: data
 tags: [swiftdata, migration, personprofile, tdd, green]
 dependency_graph:
   requires:
-    - TranscriptStudioTests/MigrationTests.swift (Plan 00)
-    - TranscriptStudioTests/PersonProfileTests.swift (Plan 00)
+    - ThoughtVaultTests/MigrationTests.swift (Plan 00)
+    - ThoughtVaultTests/PersonProfileTests.swift (Plan 00)
   provides:
     - macos/Models/PersonProfile.swift
     - macos/Models/AppMigrationPlan.swift
@@ -30,7 +30,7 @@ key_files:
   modified:
     - macos/Services/LocalTranscriptStore.swift
     - macos/Models/Models.swift
-    - TranscriptStudioTests/MigrationTests.swift
+    - ThoughtVaultTests/MigrationTests.swift
 decisions:
   - "nonisolated(unsafe) on VersionedSchema static vars: Swift 6 strict concurrency rejects mutable global state; nonisolated(unsafe) is the prescribed workaround for protocol-required var declarations"
   - "@MainActor on MigrationTests class: container.mainContext is MainActor-isolated in SwiftData; the test class needs the same isolation to access it without actor hopping"
@@ -53,7 +53,7 @@ metrics:
 | Task | Name | Commit | Files |
 |------|------|--------|-------|
 | 1 | PersonProfile @Model + Models.swift collision warning | 69442a1 | macos/Models/PersonProfile.swift, macos/Models/Models.swift, project.pbxproj |
-| 2 | VersionedSchema migration plan + wire ModelContainer | ac4377c | macos/Models/AppMigrationPlan.swift, macos/Services/LocalTranscriptStore.swift, TranscriptStudioTests/MigrationTests.swift |
+| 2 | VersionedSchema migration plan + wire ModelContainer | ac4377c | macos/Models/AppMigrationPlan.swift, macos/Services/LocalTranscriptStore.swift, ThoughtVaultTests/MigrationTests.swift |
 | 3 | upsertSelfProfile + fetchSelfProfile singleton service | c0355b5 | macos/Services/LocalTranscriptStore.swift |
 
 ## What Was Built
@@ -90,7 +90,7 @@ metrics:
 - **Found during:** Task 2 — MigrationTests first run
 - **Issue:** `container.mainContext` is `@MainActor`-isolated in SwiftData; the XCTestCase subclass was not annotated, causing "main actor-isolated property 'mainContext' cannot be referenced from a nonisolated context"
 - **Fix:** Added `@MainActor` to `final class MigrationTests: XCTestCase`
-- **Files modified:** TranscriptStudioTests/MigrationTests.swift
+- **Files modified:** ThoughtVaultTests/MigrationTests.swift
 - **Commit:** ac4377c
 
 **3. [Rule 3 - Blocking] AppMigrationPlan.swift created during Task 1**

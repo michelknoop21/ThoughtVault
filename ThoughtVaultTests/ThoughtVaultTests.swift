@@ -1,7 +1,7 @@
 import XCTest
-@testable import TranscriptStudio
+@testable import ThoughtVault
 
-final class TranscriptStudioTests: XCTestCase {
+final class ThoughtVaultTests: XCTestCase {
     func testModelsDecodable() throws {
         // Test that core models decode correctly.
         // The Transcript model uses "date" as the JSON key (via CodingKeys).

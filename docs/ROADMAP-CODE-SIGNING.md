@@ -2,7 +2,7 @@
 
 ## Context
 
-TranscriptStudio wordt gedistribueerd buiten de app stores via directe download. Momenteel zijn macOS builds ad-hoc gesigned en Windows builds unsigned, wat leidt tot:
+ThoughtVault wordt gedistribueerd buiten de app stores via directe download. Momenteel zijn macOS builds ad-hoc gesigned en Windows builds unsigned, wat leidt tot:
 - **macOS**: Gatekeeper waarschuwing "onbekende ontwikkelaar" — gebruikers moeten rechts-klikken → Open
 - **Windows**: SmartScreen blokkeert met "Unknown publisher" melding
 
@@ -94,14 +94,14 @@ Signing is conditioneel — als secrets niet geconfigureerd zijn, wordt unsigned
 
 **macOS (na build):**
 ```bash
-codesign --verify --deep --strict --verbose=2 "build/export/TranscriptStudio.app"
-spctl --assess --type open --context context:primary-signature --verbose "build/TranscriptStudio-1.0.50.dmg"
-xcrun stapler validate "build/TranscriptStudio-1.0.50.dmg"
+codesign --verify --deep --strict --verbose=2 "build/export/ThoughtVault.app"
+spctl --assess --type open --context context:primary-signature --verbose "build/ThoughtVault-1.0.50.dmg"
+xcrun stapler validate "build/ThoughtVault-1.0.50.dmg"
 ```
 
 **Windows (na build):**
 ```powershell
-Get-AuthenticodeSignature "build\TranscriptStudio_1.0.50_x64.msi"
+Get-AuthenticodeSignature "build\ThoughtVault_1.0.50_x64.msi"
 # Status = "Valid", Subject bevat "Prezent Internet B.V."
 ```
 

@@ -91,7 +91,7 @@ versioned migratie.
 - `macos/Services/LocalTranscriptStore.swift` — bezit de `ModelContainer`; hier komt de VersionedSchema + migration plan
 - `macos/Models/TranscriptRecord.swift` — bestaand `@Model`, wordt `SchemaV1`-lid
 - `macos/Models/Models.swift` §221 — bestaand `Profile` (notule-stíjl); collision-warning hier
-- `macos/App/TranscriptStudioApp.swift` — `.modelContainer(...)` injectie + `@AppStorage("hasCompletedOnboarding")` gate
+- `macos/App/ThoughtVaultApp.swift` — `.modelContainer(...)` injectie + `@AppStorage("hasCompletedOnboarding")` gate
 - `macos/Views/OnboardingView.swift` — `OnboardingStep`-enum; nieuwe self-profile case invoegen
 
 ### Windows (Tauri 2 / React / Zustand)
@@ -120,7 +120,7 @@ versioned migratie.
 
 ### Established Patterns
 - macOS: `@Observable` ViewModels (geen ObservableObject/Combine), `actor`/`@MainActor` services, `async/await`.
-- SwiftData: app-specifieke store-URL (`Application Support/TranscriptStudio/Local.store`), in-memory fallback bij faalde store.
+- SwiftData: app-specifieke store-URL (`Application Support/ThoughtVault/Local.store`), in-memory fallback bij faalde store.
 - Onboarding gated via `@AppStorage("hasCompletedOnboarding")` (macOS) / `has_completed_onboarding` in settingsStore (Windows).
 - UI-strings NL via `Localizable.strings` / Windows i18n; code/comments EN.
 

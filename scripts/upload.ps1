@@ -9,8 +9,8 @@ $BuildDir = Join-Path $RootDir "build"
 $Server = "michelk@3.69.205.209"
 $RemoteDir = "/home/michelk/tstudio-releases"
 
-$DmgArtifact = "TranscriptStudio-$Version.dmg"
-$MsiArtifact = "TranscriptStudio_$Version.msi"
+$DmgArtifact = "ThoughtVault-$Version.dmg"
+$MsiArtifact = "ThoughtVault_$Version.msi"
 $DmgPath = Join-Path $BuildDir $DmgArtifact
 $MsiPath = Join-Path $BuildDir $MsiArtifact
 

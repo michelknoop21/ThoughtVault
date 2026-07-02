@@ -1,8 +1,8 @@
-# Haal het TranscriptStudio authToken uit de Windows Credential Manager
+# Haal het ThoughtVault authToken uit de Windows Credential Manager
 # Service: "nl.prezent.transcript-studio"
 # Key: "authToken"
 
-Write-Host "Zoek TranscriptStudio token in Windows Credential Manager..."
+Write-Host "Zoek ThoughtVault token in Windows Credential Manager..."
 
 try {
     # Probeer via VaultCmd ( Credential Manager )

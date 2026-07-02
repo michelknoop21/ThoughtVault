@@ -1,5 +1,5 @@
 // RecordingActivityAttributes.swift
-// TranscriptStudio
+// ThoughtVault
 // com.buildmind.ThoughtVault
 //
 // Live Activity data model shared between the main app target and the

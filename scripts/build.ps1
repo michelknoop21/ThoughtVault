@@ -8,7 +8,7 @@ $BuildDir = Join-Path $RootDir "build"
 
 New-Item -ItemType Directory -Force -Path $BuildDir | Out-Null
 
-Write-Host "Building TranscriptStudio $Version for Windows..."
+Write-Host "Building ThoughtVault $Version for Windows..."
 
 $WindowsDir = Join-Path $RootDir "windows"
 if (-not (Test-Path $WindowsDir)) {
@@ -28,7 +28,7 @@ try {
         exit 1
     }
 
-    $MsiName = "TranscriptStudio_$Version.msi"
+    $MsiName = "ThoughtVault_$Version.msi"
     $MsiDest = Join-Path $BuildDir $MsiName
     Copy-Item $MsiSource.FullName -Destination $MsiDest -Force
 

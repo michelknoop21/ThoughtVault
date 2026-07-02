@@ -1,5 +1,5 @@
 // SettingsView.swift
-// TranscriptStudio
+// ThoughtVault
 // com.buildmind.ThoughtVault
 //
 // Settings interface. On macOS this is a System Settings-style tabbed layout
@@ -282,7 +282,7 @@ struct SettingsView: View {
         } header: {
             Text("Verbinding")
         } footer: {
-            Text("De URL van de n8n-server waarop TranscriptStudio draait. Moet beginnen met https://")
+            Text("De URL van de n8n-server waarop ThoughtVault draait. Moet beginnen met https://")
                 .font(TS.Font.caption)
                 .foregroundStyle(Color.labelTertiary)
         }
@@ -977,7 +977,7 @@ struct SettingsView: View {
     // MARK: - Onboarding re-entry
 
     /// Lets the user re-run the first-run onboarding. Resetting the flag makes
-    /// RootView (TranscriptStudioApp) present OnboardingView again; OnboardingView
+    /// RootView (ThoughtVaultApp) present OnboardingView again; OnboardingView
     /// sets the flag back to true on finish/skip. Essential in local-only mode,
     /// where there is no login window to reach onboarding from.
     private var onboardingSection: some View {
@@ -1169,7 +1169,7 @@ struct SettingsView: View {
         } header: {
             Text("Agenda")
         } footer: {
-            Text("TranscriptStudio detecteert Teams-, Zoom- en Meet-vergaderingen en biedt een snelkoppeling om opnames te starten.")
+            Text("ThoughtVault detecteert Teams-, Zoom- en Meet-vergaderingen en biedt een snelkoppeling om opnames te starten.")
                 .font(TS.Font.caption)
                 .foregroundStyle(Color.labelTertiary)
         }

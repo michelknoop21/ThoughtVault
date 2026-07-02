@@ -1,5 +1,5 @@
 // PermissionManager.swift
-// TranscriptStudio
+// ThoughtVault
 // com.buildmind.ThoughtVault
 //
 // Checks all required permissions at app startup and surfaces

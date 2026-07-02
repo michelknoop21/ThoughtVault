@@ -1,4 +1,4 @@
-# TranscriptStudio — Architectural Decision Records
+# ThoughtVault — Architectural Decision Records
 
 _Append-only log. Each entry records context, decision, and consequences._
 
@@ -18,7 +18,7 @@ _Decisions DEC-029 through DEC-038 archived to [archive/DECISIONS-DEC-029-to-DEC
 1. **Bron stabiliseren** — bestand wordt eerst gekopieerd naar `std::env::temp_dir()` (op Windows `%LOCALAPPDATA%\Temp`, buiten OneDrive Known Folder Move) via `tempfile::Builder::tempfile_in()`. Post-copy size-verificatie. Auto-cleanup via `TempPath` Drop.
 2. **In-memory upload voor ≤200 MB** — `tokio::fs::read()` + `reqwest::multipart::Part::bytes(...)`. Geen streaming, geen race-window tussen Content-Length en bytes-on-wire. Bas's failures (91-168 MB) vallen volledig binnen deze grens. Pre-9c12582 werkte dit al stabiel; we keren terug naar dat patroon, maar nu vanuit de stabiele temp-kopie.
 3. **WAV-magic-byte validatie** op de in-memory bytes (`RIFF` + `WAVE`) vóór verzending. Surface AV-induced corruption als heldere client-error in plaats van obscuur server-side 422.
-4. **Hardened reqwest client** — explicit `user_agent("TranscriptStudio-Windows/{version}")` (ook traceability in nginx logs), `tcp_nodelay(true)`, `pool_max_idle_per_host(0)`, `http1_only()`, `no_proxy()`, `timeout(600s)`. Sluit Nagle-stalls, HTTP/2 ALPN-race, connection-pool reuse bugs en corporate-proxy MITM uit.
+4. **Hardened reqwest client** — explicit `user_agent("ThoughtVault-Windows/{version}")` (ook traceability in nginx logs), `tcp_nodelay(true)`, `pool_max_idle_per_host(0)`, `http1_only()`, `no_proxy()`, `timeout(600s)`. Sluit Nagle-stalls, HTTP/2 ALPN-race, connection-pool reuse bugs en corporate-proxy MITM uit.
 5. **Diagnostische correlatie** — SHA-256 prefix wordt berekend over de in-memory bytes en meegegeven als `X-Upload-Sha256` header. Backend `_log_validation_error` in `backend/src/insanely_fast_whisper_api/app/app.py` is uitgebreid om dit veld + peer IP te loggen op `[VALIDATION-422]` lines, zodat een eventuele volgende incident-failure ondubbelzinnig client-hash vs server-hash kan vergelijken.
 
 **Consequences:**
@@ -150,7 +150,7 @@ _Decisions DEC-029 through DEC-038 archived to [archive/DECISIONS-DEC-029-to-DEC
 **Date:** 2026-03-16
 **Status:** Accepted
 
-**Context:** TranscriptStudio detected only scheduled meetings via calendar integration (EventKit / Microsoft Graph). Ad-hoc video calls — someone calls you on Teams without a calendar invite — were not detected. Users had to manually navigate to the recording tab and start recording, missing the first minutes of unplanned calls. The goal was to show an automatic "Start opname" notification when a video call begins, reusing the existing `CallAlertView` and `MeetingNotificationService` infrastructure.
+**Context:** ThoughtVault detected only scheduled meetings via calendar integration (EventKit / Microsoft Graph). Ad-hoc video calls — someone calls you on Teams without a calendar invite — were not detected. Users had to manually navigate to the recording tab and start recording, missing the first minutes of unplanned calls. The goal was to show an automatic "Start opname" notification when a video call begins, reusing the existing `CallAlertView` and `MeetingNotificationService` infrastructure.
 
 **Decision:** Combine two signals in a new `VideoCallDetectionService` (`macos/Services/VideoCallDetectionService.swift`): (1) KVO observation on `AVCaptureDevice.default(for: .video)?.isInUseByAnotherApplication` — fires when any app activates the camera, (2) `NSWorkspace.shared.runningApplications` matched against a static dictionary of known video app bundle IDs (Teams, Zoom, FaceTime, Slack, Webex, Discord) and browser bundle IDs (Safari, Chrome, Edge, Brave, Arc, Firefox). Both signals must be true to trigger detection. A three-state machine (`idle → detected → cooldown`) with 60-second cooldown prevents re-triggering on brief camera cycles. Synthetic `CalendarEvent` objects (id prefixed with `videocall-`) are posted via `NotificationCenter` and fed into the existing `CallAlertView` and `MeetingNotificationService` paths unchanged. Fallback: when `AVCaptureDevice.default(for: .video)` returns nil (sandbox restriction without camera entitlement), the service degrades to a 10-second poll on running apps, alerting after 30 seconds of continuous video app presence.
 

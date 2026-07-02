@@ -1,4 +1,4 @@
-# TranscriptStudio — Archived Decisions (DEC-029 to DEC-038)
+# ThoughtVault — Archived Decisions (DEC-029 to DEC-038)
 
 _Archived from main DECISIONS.md on 2026-03-18._
 
@@ -62,7 +62,7 @@ _Archived from main DECISIONS.md on 2026-03-18._
 **Date:** 2026-03-13
 **Status:** Accepted
 
-**Context:** TranscriptStudio is currently a single-tenant system — one backend container, one database, one n8n flow. To serve multiple customers, two approaches were evaluated: (1) multi-tenant — adding an organization layer throughout the entire stack (database, auth, API, clients), estimated at 3-4 weeks of development with high security risk from potential data isolation bugs; (2) multi-instance — deploying a separate backend container + database + Redis index per customer using the same Docker image, requiring only deployment tooling with zero application code changes for the basic setup.
+**Context:** ThoughtVault is currently a single-tenant system — one backend container, one database, one n8n flow. To serve multiple customers, two approaches were evaluated: (1) multi-tenant — adding an organization layer throughout the entire stack (database, auth, API, clients), estimated at 3-4 weeks of development with high security risk from potential data isolation bugs; (2) multi-instance — deploying a separate backend container + database + Redis index per customer using the same Docker image, requiring only deployment tooling with zero application code changes for the basic setup.
 
 **Decision:** Adopt multi-instance deployment. Each customer gets their own Docker container, PostgreSQL database, Redis DB index, and Docker volume for file storage. Shared resources: GPU (Whisper model), Ollama LLM, nginx reverse proxy, and a single parameterized n8n flow. A separate `transcript-studio-ops` repository holds tenant configs (.env files with credentials) and management scripts. No fork per customer — all instances run the same Docker image with different environment variables. Customer-specific needs are addressed through three levels: (1) configuration via env vars (90%), (2) feature flags in code (8%), (3) webhooks or custom n8n flows (2%).
 
@@ -102,9 +102,9 @@ _Archived from main DECISIONS.md on 2026-03-18._
 **Date:** 2026-03-13
 **Status:** Accepted
 
-**Context:** De repository had inconsistente directory-namen: `TranscriptStudio/` (CamelCase) voor de macOS source, `transcript-studio-windows/` (kebab-case) voor Windows, en `RecordingActivityWidget/` (CamelCase) voor de iOS widget. Met de toevoeging van `transcript-studio-android/` werd de naamgeving nog onoverzichtelijker. Nieuwe ontwikkelaars en AI-assistenten moesten telkens raden welke conventie gebruikt werd.
+**Context:** De repository had inconsistente directory-namen: `ThoughtVault/` (CamelCase) voor de macOS source, `transcript-studio-windows/` (kebab-case) voor Windows, en `RecordingActivityWidget/` (CamelCase) voor de iOS widget. Met de toevoeging van `transcript-studio-android/` werd de naamgeving nog onoverzichtelijker. Nieuwe ontwikkelaars en AI-assistenten moesten telkens raden welke conventie gebruikt werd.
 
-**Decision:** Hernoem naar consistente lowercase platform namen: `macos/`, `windows/`, `ios-widget/`. Laat `TranscriptStudio.xcodeproj` en `TranscriptStudioTests` ongemoeid — deze zijn gekoppeld aan Xcode schemes, targets en build settings; hernoemen zou disproportioneel risico opleveren voor minimale winst. Gebruik `git mv` om history te behouden.
+**Decision:** Hernoem naar consistente lowercase platform namen: `macos/`, `windows/`, `ios-widget/`. Laat `ThoughtVault.xcodeproj` en `ThoughtVaultTests` ongemoeid — deze zijn gekoppeld aan Xcode schemes, targets en build settings; hernoemen zou disproportioneel risico opleveren voor minimale winst. Gebruik `git mv` om history te behouden.
 
 **Consequences:**
 - Alle build scripts, CI/CD workflows, .gitignore, en documentatie moesten bijgewerkt worden (~20 bestanden).
@@ -119,7 +119,7 @@ _Archived from main DECISIONS.md on 2026-03-18._
 **Date:** 2026-03-14
 **Status:** Accepted
 
-**Context:** YouTube-video's moesten transcribeerbaar worden in TranscriptStudio. Twee architecturale opties: (1) client downloadt audio en uploadt naar backend zoals bij normale opnames, of (2) client stuurt alleen de URL, backend downloadt de audio zelf via `yt-dlp`. Optie 1 zou yt-dlp op elke client vereisen (complexe native dependency op macOS/Windows/Android) en grote downloads over het netwerk twee keer verplaatsen (YouTube → client → server).
+**Context:** YouTube-video's moesten transcribeerbaar worden in ThoughtVault. Twee architecturale opties: (1) client downloadt audio en uploadt naar backend zoals bij normale opnames, of (2) client stuurt alleen de URL, backend downloadt de audio zelf via `yt-dlp`. Optie 1 zou yt-dlp op elke client vereisen (complexe native dependency op macOS/Windows/Android) en grote downloads over het netwerk twee keer verplaatsen (YouTube → client → server).
 
 **Decision:** Backend downloadt YouTube audio via `yt-dlp` subprocess (`POST /transcribe-youtube`). Client stuurt alleen de URL. Nieuwe `downloading` task status toegevoegd aan de pipeline. Feature achter `FEATURE_YOUTUBE_ENABLED` flag zodat het per instance in/uitschakelbaar is. Rate limit 5/uur (strenger dan audio upload) om misbruik te voorkomen. Maximale videoduur configureerbaar via `YOUTUBE_MAX_DURATION_SECONDS` (default 7200s = 2 uur).
 
@@ -137,7 +137,7 @@ _Archived from main DECISIONS.md on 2026-03-18._
 **Date:** 2026-03-14
 **Status:** Accepted
 
-**Context:** Externe systemen (scripts, CI/CD, integraties) moeten de TranscriptStudio API kunnen aanspreken zonder interactieve login. Sessie-tokens zijn ongeschikt: ze verlopen na 7 dagen inactiviteit en vereisen username/password om te verkrijgen. Een API key systeem is nodig dat (1) veilig is bij database-lekken, (2) scope-beperking ondersteunt, en (3) geen nieuwe aanvalsvectoren introduceert voor key-replicatie.
+**Context:** Externe systemen (scripts, CI/CD, integraties) moeten de ThoughtVault API kunnen aanspreken zonder interactieve login. Sessie-tokens zijn ongeschikt: ze verlopen na 7 dagen inactiviteit en vereisen username/password om te verkrijgen. Een API key systeem is nodig dat (1) veilig is bij database-lekken, (2) scope-beperking ondersteunt, en (3) geen nieuwe aanvalsvectoren introduceert voor key-replicatie.
 
 **Decision:**
 - Key formaat: `tskey_` prefix + 32 hex chars (38 chars totaal). Prefix maakt keys herkenbaar in logs en secret scanners.

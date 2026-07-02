@@ -1,10 +1,10 @@
 // TranscriptDecoderTests.swift
-// TranscriptStudioTests
-// nl.prezent.TranscriptStudio
+// ThoughtVaultTests
+// nl.prezent.ThoughtVault
 
 import Testing
 import Foundation
-@testable import TranscriptStudio
+@testable import ThoughtVault
 
 @Suite("Transcript Decoder Tests")
 struct TranscriptDecoderTests {

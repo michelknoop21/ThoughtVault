@@ -1,4 +1,4 @@
-# TranscriptStudio — Gebruikershandleiding
+# ThoughtVault — Gebruikershandleiding
 
 *Versie 1.0 — maart 2026*
 
@@ -6,7 +6,7 @@
 
 ## Inhoudsopgave
 
-1. [Wat is TranscriptStudio?](#1-wat-is-transcriptstudio)
+1. [Wat is ThoughtVault?](#1-wat-is-transcriptstudio)
 2. [Aan de slag](#2-aan-de-slag)
 3. [Het startscherm (Home)](#3-het-startscherm-home)
 4. [Opnemen](#4-opnemen)
@@ -27,9 +27,9 @@
 
 ---
 
-## 1. Wat is TranscriptStudio?
+## 1. Wat is ThoughtVault?
 
-TranscriptStudio is een app waarmee je vergaderingen opneemt, automatisch laat transcriberen en vervolgens gestructureerde notulen laat genereren door AI. Het is bedoeld voor professionals die vergaderingen, overleggen en gesprekken efficiënt willen vastleggen zonder zelf aantekeningen te hoeven maken.
+ThoughtVault is een app waarmee je vergaderingen opneemt, automatisch laat transcriberen en vervolgens gestructureerde notulen laat genereren door AI. Het is bedoeld voor professionals die vergaderingen, overleggen en gesprekken efficiënt willen vastleggen zonder zelf aantekeningen te hoeven maken.
 
 De app begeleidt je van opname tot eindresultaat in drie stappen:
 
@@ -39,7 +39,7 @@ De app begeleidt je van opname tot eindresultaat in drie stappen:
 
 Het eindresultaat is een gestructureerd verslag dat je kunt bewerken, exporteren (als PDF, Markdown of platte tekst) en delen met collega's.
 
-TranscriptStudio is beschikbaar voor macOS en Windows. Een Android-versie is in ontwikkeling.
+ThoughtVault is beschikbaar voor macOS en Windows. Een Android-versie is in ontwikkeling.
 
 ---
 
@@ -60,7 +60,7 @@ Je kunt stappen overslaan en toestemmingen later alsnog verlenen via **Instellin
 
 ### Inloggen
 
-1. Open TranscriptStudio.
+1. Open ThoughtVault.
 2. Voer je **E-mailadres** en **Wachtwoord** in.
 3. Klik op **Inloggen**.
 
@@ -109,7 +109,7 @@ Het startscherm is het eerste wat je ziet na het inloggen. Het bevat:
 
 ### Opnamemodi
 
-TranscriptStudio ondersteunt drie opnamemodi:
+ThoughtVault ondersteunt drie opnamemodi:
 
 | Modus | Beschrijving | Wanneer gebruiken |
 |-------|-------------|-------------------|
@@ -148,13 +148,13 @@ Zodra de opname loopt, verandert het scherm naar de actieve opnameweergave:
 
 ### Menubalk
 
-Tijdens een opname toont TranscriptStudio de status in de macOS-menubalk:
+Tijdens een opname toont ThoughtVault de status in de macOS-menubalk:
 
-- **TranscriptStudio** — geen actieve opname.
+- **ThoughtVault** — geen actieve opname.
 - **Opname bezig** — er loopt een opname.
 - **Uploaden** — een opname wordt geüpload.
 
-Via het menubalkicoon kun je ook **TranscriptStudio openen** of de app **Stoppen**.
+Via het menubalkicoon kun je ook **ThoughtVault openen** of de app **Stoppen**.
 
 ### Opgeslagen opnames
 
@@ -275,7 +275,7 @@ Profielen bepalen de stijl en toon van de gegenereerde notulen. Je kiest een pro
 
 ### Standaardprofielen
 
-TranscriptStudio bevat vier standaardprofielen:
+ThoughtVault bevat vier standaardprofielen:
 
 | Profiel | Beschrijving | Geschikt voor |
 |---------|-------------|---------------|
@@ -324,7 +324,7 @@ Het **Instellingen**-scherm bereik je via de navigatiezijbalk (of met `Cmd+5`). 
 
 ### Verbinding
 
-- **Server URL** — de URL van de TranscriptStudio-server. Moet beginnen met `https://`.
+- **Server URL** — de URL van de ThoughtVault-server. Moet beginnen met `https://`.
 - Klik op **Opslaan** om de URL te bewaren.
 - Onder het veld zie je de verbindingsstatus: **Verbonden** (groen bolletje) of **Niet verbonden** (rood bolletje).
 
@@ -441,7 +441,7 @@ Klik op **Uitloggen** onderaan het accountscherm. Bevestig je keuze in het dialo
 
 Onderaan het accountscherm vind je de optie om je account permanent te verwijderen. Dit verwijdert al je gegevens — inclusief al je notulen, transcripties en accountinformatie — en kan niet ongedaan worden gemaakt.
 
-> **Waarschuwing:** Verwijder je account alleen als je zeker weet dat je TranscriptStudio niet meer wilt gebruiken. Neem eerst een GDPR-export als je je gegevens wilt bewaren.
+> **Waarschuwing:** Verwijder je account alleen als je zeker weet dat je ThoughtVault niet meer wilt gebruiken. Neem eerst een GDPR-export als je je gegevens wilt bewaren.
 
 ---
 
@@ -453,7 +453,7 @@ Het admin panel heeft zes tabbladen:
 
 ### Overzicht
 
-Een dashboard met statistieken over het gebruik van TranscriptStudio:
+Een dashboard met statistieken over het gebruik van ThoughtVault:
 
 - Aantal gebruikers
 - Aantal notulen
@@ -510,12 +510,12 @@ Beheerdersinstellingen voor het platform:
 
 Dit is het volledige proces van begin tot eind:
 
-1. **Open TranscriptStudio** en log in.
+1. **Open ThoughtVault** en log in.
 2. Klik op **Start nieuwe opname** op het startscherm, of ga naar het tabblad **Opnemen** (`Cmd+2`).
 3. Kies het **opnametype**: **Fysieke meeting** of **Videocall**.
 4. Kies een **profiel** dat past bij het type vergadering.
 5. Klik op de **microfoonknop** om de opname te starten.
-6. **Vergader** zoals je normaal zou doen. TranscriptStudio neemt op de achtergrond op. De waveform en timer tonen dat de opname loopt.
+6. **Vergader** zoals je normaal zou doen. ThoughtVault neemt op de achtergrond op. De waveform en timer tonen dat de opname loopt.
 7. Klik op **Stop en upload** als de vergadering is afgelopen.
 8. De opname wordt automatisch geüpload. Volg de voortgang op het tabblad **Taken** (`Cmd+3`).
 9. Wanneer de status **Voltooid** is, ga je naar **Notulen** (`Cmd+4`) om je notulen te bekijken.
@@ -543,7 +543,7 @@ Dit is het volledige proces van begin tot eind:
 
 ## 13. Offline werken
 
-TranscriptStudio werkt ook zonder internetverbinding:
+ThoughtVault werkt ook zonder internetverbinding:
 
 - **Opnemen** — je kunt gewoon opnames maken. Audio wordt lokaal opgeslagen.
 - **Upload wachtrij** — als er geen verbinding is, worden opnames in de offline wachtrij geplaatst. Je ziet een melding: *"Geen internetverbinding"* en *"Uploads worden hervat zodra u online bent."*
@@ -552,17 +552,17 @@ TranscriptStudio werkt ook zonder internetverbinding:
 
 Op het startscherm toont de tegel **Wachtrij** het aantal items dat wacht op upload.
 
-> **Tip:** Houd TranscriptStudio open na je vergadering als je weet dat je internetverbinding instabiel is. Zodra de verbinding hersteld is, worden alle wachtende opnames automatisch verzonden.
+> **Tip:** Houd ThoughtVault open na je vergadering als je weet dat je internetverbinding instabiel is. Zodra de verbinding hersteld is, worden alle wachtende opnames automatisch verzonden.
 
 ---
 
 ## 14. Vergaderdetectie
 
-TranscriptStudio kan automatisch detecteren wanneer je een videocall start en je aanbieden om de opname te starten.
+ThoughtVault kan automatisch detecteren wanneer je een videocall start en je aanbieden om de opname te starten.
 
 ### Hoe het werkt
 
-1. TranscriptStudio controleert je agenda op komende vergaderingen.
+1. ThoughtVault controleert je agenda op komende vergaderingen.
 2. Wanneer een vergadering bijna begint (1 minuut van tevoren), verschijnt een melding: *"Vergadering begint binnenkort"*.
 3. Je kunt kiezen:
    - **Start opname** — de opname begint direct.
@@ -570,7 +570,7 @@ TranscriptStudio kan automatisch detecteren wanneer je een videocall start en je
 
 ### Videocall-detectie
 
-Naast agenda-integratie kan TranscriptStudio ook actieve videocalls detecteren op je computer:
+Naast agenda-integratie kan ThoughtVault ook actieve videocalls detecteren op je computer:
 
 - **Ondersteunde apps:** Microsoft Teams, Zoom, Google Meet.
 - Wanneer een videocall wordt gedetecteerd, verschijnt een macOS-systeemmelding: *"Videogesprek gedetecteerd — [appnaam] is actief"*.
@@ -616,7 +616,7 @@ Je ziet een pulserende rode stip met "LIVE" en een bewegende waveform. In de men
 De opname wordt lokaal opgeslagen. Bij het opnieuw openen van de app vind je de opname terug bij **Opgeslagen opnames** op het opnamescherm, waar je hem opnieuw kunt verwerken.
 
 **Kan ik meerdere opnames tegelijk maken?**
-Nee, TranscriptStudio ondersteunt één actieve opname tegelijk. Stop eerst de huidige opname voordat je een nieuwe start.
+Nee, ThoughtVault ondersteunt één actieve opname tegelijk. Stop eerst de huidige opname voordat je een nieuwe start.
 
 ### Notulen
 
@@ -657,13 +657,13 @@ Ja, alleen beveiligde HTTPS-verbindingen zijn toegestaan.
 ### Machtigingen
 
 **Waarom vraagt de app om microfoontoestemming?**
-TranscriptStudio heeft microfoontoegang nodig om audio op te nemen. Zonder deze toestemming kun je geen opnames maken.
+ThoughtVault heeft microfoontoegang nodig om audio op te nemen. Zonder deze toestemming kun je geen opnames maken.
 
 **Waarom vraagt de app om schermopname-toestemming?**
 Schermopname-toestemming is nodig om systeemgeluid vast te leggen. Dit is vereist voor de modi **Systeemgeluid** en **Gecombineerd** (videocalls).
 
 **Waarom vraagt de app om agenda-toegang?**
-Met agenda-toegang kan TranscriptStudio aankomende vergaderingen tonen en je automatisch herinneren om een opname te starten.
+Met agenda-toegang kan ThoughtVault aankomende vergaderingen tonen en je automatisch herinneren om een opname te starten.
 
 ### Overig
 
@@ -685,12 +685,12 @@ Ja, je kunt met hetzelfde account inloggen op meerdere apparaten. Je notulen wor
 ### Kan niet opnemen
 
 **Oorzaak:** Geen microfoontoegang.
-**Oplossing:** Ga naar **Instellingen** > **Permissies** en controleer of de microfoon op **Verleend** staat. Zo niet, klik op **Systeeminstell. openen** en schakel de microfoontoegang in voor TranscriptStudio.
+**Oplossing:** Ga naar **Instellingen** > **Permissies** en controleer of de microfoon op **Verleend** staat. Zo niet, klik op **Systeeminstell. openen** en schakel de microfoontoegang in voor ThoughtVault.
 
 ### Systeemaudio werkt niet
 
 **Oorzaak:** Geen schermopname-toestemming.
-**Oplossing:** Ga naar **Systeeminstellingen** > **Privacy & Beveiliging** > **Schermopname** en schakel TranscriptStudio in. Herstart de app na het verlenen van de toestemming.
+**Oplossing:** Ga naar **Systeeminstellingen** > **Privacy & Beveiliging** > **Schermopname** en schakel ThoughtVault in. Herstart de app na het verlenen van de toestemming.
 
 ### Upload mislukt
 
@@ -733,7 +733,7 @@ Ja, je kunt met hetzelfde account inloggen op meerdere apparaten. Je notulen wor
 **Oorzaak:** Geen internetverbinding of de app draait niet op de achtergrond.
 **Oplossing:**
 - Controleer je internetverbinding.
-- Houd TranscriptStudio open. De app uploadt wachtende opnames automatisch zodra er verbinding is.
+- Houd ThoughtVault open. De app uploadt wachtende opnames automatisch zodra er verbinding is.
 - Je kunt ook handmatig uploaden via **Opgeslagen opnames**.
 
 ### Zwevend widget verschijnt niet
@@ -778,4 +778,4 @@ Ja, je kunt met hetzelfde account inloggen op meerdere apparaten. Je notulen wor
 
 ---
 
-*TranscriptStudio wordt ontwikkeld door Prezent Internet B.V. en aangedreven door Yinga AI.*
+*ThoughtVault wordt ontwikkeld door Prezent Internet B.V. en aangedreven door Yinga AI.*

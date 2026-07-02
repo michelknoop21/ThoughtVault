@@ -284,7 +284,7 @@ Name normalization (fallback): lowercase + trim + collapse whitespace; compare a
 
 | Category | Items Found | Action Required |
 |----------|-------------|------------------|
-| Stored data | macOS: existing `isSelf==true` `PersonProfile` record(s) persisted under `Application Support/TranscriptStudio/Local.store` (SchemaV2). SchemaV3 migration must preserve it. `TranscriptRecord`s persisted in same store. Windows: `person-profile-store` key in localStorage (single self profile). | Code edit (migration) — lightweight V2→V3 preserves all rows; no data migration of values needed. New `emails` defaults to `[]`, `isInternal` stays its current value (existing self record had `true`). |
+| Stored data | macOS: existing `isSelf==true` `PersonProfile` record(s) persisted under `Application Support/ThoughtVault/Local.store` (SchemaV2). SchemaV3 migration must preserve it. `TranscriptRecord`s persisted in same store. Windows: `person-profile-store` key in localStorage (single self profile). | Code edit (migration) — lightweight V2→V3 preserves all rows; no data migration of values needed. New `emails` defaults to `[]`, `isInternal` stays its current value (existing self record had `true`). |
 | Live service config | None — Microsoft Graph attendee data is fetched live per `getUpcomingEvents()`; nothing stored server-side that references directory. | None — verified: directory is fully local (D-11). |
 | OS-registered state | None — no Task Scheduler/launchd/pm2 entries reference person data. | None — verified by grep (no scheduled-task references to people). |
 | Secrets/env vars | None — directory introduces no new secrets; Graph tokens unchanged (managed by existing `MicrosoftGraphService` / backend token store). | None. |
@@ -423,17 +423,17 @@ export const usePeopleDirectoryStore = create<PeopleDirectoryState>()(
 ### Test Framework
 | Property | Value |
 |----------|-------|
-| Framework | macOS: XCTest (`TranscriptStudioTests`); Windows: vitest ^4.1.0 |
-| Config file | macOS: scheme `TranscriptStudioTests`; Windows: `vite.config.*` (no separate vitest config) |
-| Quick run command | `xcodebuild test -project TranscriptStudio.xcodeproj -scheme TranscriptStudioTests` · Windows: `cd windows && npx vitest run` |
+| Framework | macOS: XCTest (`ThoughtVaultTests`); Windows: vitest ^4.1.0 |
+| Config file | macOS: scheme `ThoughtVaultTests`; Windows: `vite.config.*` (no separate vitest config) |
+| Quick run command | `xcodebuild test -project ThoughtVault.xcodeproj -scheme ThoughtVaultTests` · Windows: `cd windows && npx vitest run` |
 | Full suite command | same as above (both platforms) |
 
 ### Phase Requirements → Test Map
 | Req ID | Behavior | Test Type | Automated Command | File Exists? |
 |--------|----------|-----------|-------------------|-------------|
-| B-01/A-04 | SchemaV3 migration preserves existing self `PersonProfile` + `TranscriptRecord`; `emails==[]`, `isInternal` preserved | unit (in-memory ModelContainer) | `xcodebuild test ... -only-testing:TranscriptStudioTests/MigrationTests` | ⚠️ extend `MigrationTests.swift` (currently only V1→V2 TranscriptRecord) — ❌ Wave 0 |
-| B-01/B-02 | Directory CRUD round-trip (insert→fetch→update→delete) only returns `isSelf==false` | unit | `xcodebuild test ... -only-testing:TranscriptStudioTests/PersonDirectoryServiceTests` | ❌ Wave 0 |
-| B-03 | Graph attendee decode maps `emailAddress.address` into `CalendarEvent.attendees` from fixture JSON | unit | `xcodebuild test ... -only-testing:TranscriptStudioTests/GraphAttendeeDecodeTests` | ❌ Wave 0 |
+| B-01/A-04 | SchemaV3 migration preserves existing self `PersonProfile` + `TranscriptRecord`; `emails==[]`, `isInternal` preserved | unit (in-memory ModelContainer) | `xcodebuild test ... -only-testing:ThoughtVaultTests/MigrationTests` | ⚠️ extend `MigrationTests.swift` (currently only V1→V2 TranscriptRecord) — ❌ Wave 0 |
+| B-01/B-02 | Directory CRUD round-trip (insert→fetch→update→delete) only returns `isSelf==false` | unit | `xcodebuild test ... -only-testing:ThoughtVaultTests/PersonDirectoryServiceTests` | ❌ Wave 0 |
+| B-03 | Graph attendee decode maps `emailAddress.address` into `CalendarEvent.attendees` from fixture JSON | unit | `xcodebuild test ... -only-testing:ThoughtVaultTests/GraphAttendeeDecodeTests` | ❌ Wave 0 |
 | B-03/D-10 | Dedup filters known emails + self/account email; name-fallback | unit | macOS + `npx vitest run` (Windows dedup) | ❌ Wave 0 |
 | D-11 | `PersonDirectoryService` contains no `URLSession` | static grep gate | `! grep -q "URLSession" macos/Services/PersonDirectoryService.swift` | ❌ Wave 0 (add as plan verification step) |
 | B-01/B-04 | Windows store round-trip + tag edit; distinct localStorage key | unit | `npx vitest run` | ❌ Wave 0 |
@@ -444,9 +444,9 @@ export const usePeopleDirectoryStore = create<PeopleDirectoryState>()(
 - **Phase gate:** both suites green + `grep` URLSession gate passes + manual seed smoke on a live M365 machine before `/gsd-verify-work`
 
 ### Wave 0 Gaps
-- [ ] Extend `TranscriptStudioTests/MigrationTests.swift` — add PersonProfile-survival V2→V3 case (covers B-01/A-04)
-- [ ] `TranscriptStudioTests/PersonDirectoryServiceTests.swift` — CRUD + dedup (B-01/B-02/D-10)
-- [ ] `TranscriptStudioTests/GraphAttendeeDecodeTests.swift` + fixture JSON (B-03)
+- [ ] Extend `ThoughtVaultTests/MigrationTests.swift` — add PersonProfile-survival V2→V3 case (covers B-01/A-04)
+- [ ] `ThoughtVaultTests/PersonDirectoryServiceTests.swift` — CRUD + dedup (B-01/B-02/D-10)
+- [ ] `ThoughtVaultTests/GraphAttendeeDecodeTests.swift` + fixture JSON (B-03)
 - [ ] `windows/src/stores/__tests__/peopleDirectoryStore.test.ts` — round-trip + dedup (B-01/B-04/D-10)
 - [ ] URLSession grep gate as an explicit plan verification step (D-11)
 

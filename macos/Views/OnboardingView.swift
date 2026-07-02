@@ -1,5 +1,5 @@
 // OnboardingView.swift
-// TranscriptStudio
+// ThoughtVault
 // com.buildmind.ThoughtVault
 //
 // Multi-step first-run onboarding flow. Guides new users through
@@ -49,7 +49,7 @@ struct OnboardingView: View {
 
         var title: String {
             switch self {
-            case .welcome:       return "Welkom bij TranscriptStudio"
+            case .welcome:       return "Welkom bij ThoughtVault"
             case .microphoon:    return "Microfoontoestemming"
             case .spraak:        return "Spraakherkenning"
             case .agenda:        return "Agenda"
@@ -214,7 +214,7 @@ struct OnboardingView: View {
                 Text("Welkom bij")
                     .font(TS.Font.title2)
                     .foregroundStyle(Color.labelSecondary)
-                Text("TranscriptStudio")
+                Text("ThoughtVault")
                     .font(TS.Font.largeTitleBold)
                     .foregroundStyle(Color.brandPrimary)
             }
@@ -242,7 +242,7 @@ struct OnboardingView: View {
                 Text("Microfoon")
                     .font(TS.Font.title2Bold)
                     .foregroundStyle(Color.labelPrimary)
-                Text("TranscriptStudio heeft toegang tot je microfoon nodig om vergaderingen op te nemen.")
+                Text("ThoughtVault heeft toegang tot je microfoon nodig om vergaderingen op te nemen.")
                     .font(TS.Font.callout)
                     .foregroundStyle(Color.labelSecondary)
                     .multilineTextAlignment(.center)
@@ -286,7 +286,7 @@ struct OnboardingView: View {
                 Text("Spraakherkenning")
                     .font(TS.Font.title2Bold)
                     .foregroundStyle(Color.labelPrimary)
-                Text("Voor on-device transcriptie verwerkt TranscriptStudio je spraak lokaal op dit apparaat. Je audio blijft privé.")
+                Text("Voor on-device transcriptie verwerkt ThoughtVault je spraak lokaal op dit apparaat. Je audio blijft privé.")
                     .font(TS.Font.callout)
                     .foregroundStyle(Color.labelSecondary)
                     .multilineTextAlignment(.center)
@@ -438,7 +438,7 @@ struct OnboardingView: View {
                 Text("Schermopname")
                     .font(TS.Font.title2Bold)
                     .foregroundStyle(Color.labelPrimary)
-                Text("TranscriptStudio heeft schermopname-toestemming nodig om systeemaudio van videovergaderingen op te nemen.")
+                Text("ThoughtVault heeft schermopname-toestemming nodig om systeemaudio van videovergaderingen op te nemen.")
                     .font(TS.Font.callout)
                     .foregroundStyle(Color.labelSecondary)
                     .multilineTextAlignment(.center)
@@ -495,7 +495,7 @@ struct OnboardingView: View {
                     Text("Vertel iets over jezelf")
                         .font(TS.Font.title2Bold)
                         .foregroundStyle(Color.labelPrimary)
-                    Text("TranscriptStudio gebruikt jouw profiel om actiepunten straks aan de juiste persoon te koppelen. Je kunt dit altijd later aanpassen.")
+                    Text("ThoughtVault gebruikt jouw profiel om actiepunten straks aan de juiste persoon te koppelen. Je kunt dit altijd later aanpassen.")
                         .font(TS.Font.callout)
                         .foregroundStyle(Color.labelSecondary)
                         .multilineTextAlignment(.center)

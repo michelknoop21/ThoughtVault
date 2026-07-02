@@ -1,5 +1,5 @@
 // NotuleTitleExtractor.swift
-// TranscriptStudio
+// ThoughtVault
 // com.buildmind.ThoughtVault
 //
 // Extracts a descriptive title from generated notule HTML. Swift port of the

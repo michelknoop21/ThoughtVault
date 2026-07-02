@@ -1,5 +1,5 @@
 // PersonEditView.swift
-// TranscriptStudio
+// ThoughtVault
 // com.buildmind.ThoughtVault
 //
 // Add/edit form for a directory person (isSelf == false).

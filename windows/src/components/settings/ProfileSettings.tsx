@@ -108,7 +108,7 @@ export function ProfileSettings() {
               lineHeight: 1.5,
             }}
           >
-            Vul je naam, rol en organisatie in zodat TranscriptStudio actiepunten aan jou kan koppelen.
+            Vul je naam, rol en organisatie in zodat ThoughtVault actiepunten aan jou kan koppelen.
           </p>
         </div>
       )}

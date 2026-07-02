@@ -533,7 +533,7 @@ function InvitationsTab() {
       )}
 
       <p className="text-caption">
-        Genereer een uitnodigingscode om nieuwe gebruikers toegang te geven tot TranscriptStudio.
+        Genereer een uitnodigingscode om nieuwe gebruikers toegang te geven tot ThoughtVault.
       </p>
     </div>
   );

@@ -1,13 +1,13 @@
 // PersonProfileTests.swift
-// TranscriptStudioTests
-// nl.prezent.TranscriptStudio
+// ThoughtVaultTests
+// nl.prezent.ThoughtVault
 //
 // RED until Plan 01 implements PersonProfile + upsertSelfProfile.
 
 import Testing
 import Foundation
 import SwiftData
-@testable import TranscriptStudio
+@testable import ThoughtVault
 
 // Helper: builds an in-memory ModelContainer with both TranscriptRecord and PersonProfile.
 // Exercises the same fetch-isSelf→insert/edit upsert logic as LocalTranscriptStore.

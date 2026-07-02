@@ -36,7 +36,7 @@ key-files:
   modified:
     - macos/Services/CalendarService.swift
     - macos/Services/MicrosoftGraphService.swift
-    - TranscriptStudio.xcodeproj/project.pbxproj
+    - ThoughtVault.xcodeproj/project.pbxproj
 
 key-decisions:
   - "CalendarEvent new fields use var+defaults (not let) so all 5 existing construction sites keep compiling with zero edits to callers"
@@ -80,7 +80,7 @@ completed: 2026-06-07
 - `/macos/Services/CalendarService.swift` — `attendees: [String] = []` + `organizer: String? = nil` added to CalendarEvent
 - `/macos/Services/MicrosoftGraphService.swift` — GraphEvent extended; GraphRecipient/GraphAttendee/GraphEmailAddress structs added; compactMap maps address key
 - `/macos/Services/PersonDirectoryService.swift` — new file: @MainActor CRUD service, dedup, no network
-- `/TranscriptStudio.xcodeproj/project.pbxproj` — PersonDirectoryService.swift added to project
+- `/ThoughtVault.xcodeproj/project.pbxproj` — PersonDirectoryService.swift added to project
 
 ## Decisions Made
 
@@ -95,7 +95,7 @@ completed: 2026-06-07
 **[Rule 1 - Analysis] xcodebuild test crashes in test host app on macOS 26 Tahoe; pre-existing, not caused by this plan**
 
 - **Found during:** Task 1 + Task 2 verification
-- **Issue:** `xcodebuild test -allowProvisioningUpdates` runs the test host app (`TranscriptStudio.app`), which crashes at startup with `SIGABRT` / `libsystem_c.dylib: abort()` during `LocalTranscriptStore.shared` initialization. The crash backtrace points to `NSLightweightMigrationStage.init(_:)` throwing an ObjC exception that propagates through `NSPersistentStoreCoordinator` and hits a `try!` in `LocalTranscriptStore.swift:37`. This is a macOS 26 Tahoe beta SwiftData framework issue — the lightweight migration stage initialization crashes even for tests that were GREEN on earlier builds (MigrationTests also crashes, confirming it's pre-existing).
+- **Issue:** `xcodebuild test -allowProvisioningUpdates` runs the test host app (`ThoughtVault.app`), which crashes at startup with `SIGABRT` / `libsystem_c.dylib: abort()` during `LocalTranscriptStore.shared` initialization. The crash backtrace points to `NSLightweightMigrationStage.init(_:)` throwing an ObjC exception that propagates through `NSPersistentStoreCoordinator` and hits a `try!` in `LocalTranscriptStore.swift:37`. This is a macOS 26 Tahoe beta SwiftData framework issue — the lightweight migration stage initialization crashes even for tests that were GREEN on earlier builds (MigrationTests also crashes, confirming it's pre-existing).
 - **Impact on this plan:** Tests compiled correctly (`** TEST BUILD SUCCEEDED **`). The static acceptance criteria all pass (grep gates, field presence). The test execution infrastructure failure is unrelated to the code changes in this plan.
 - **Fix:** Out of scope — requires either a macOS Tahoe fix or a workaround in LocalTranscriptStore to avoid `try!` during migration. Deferred to `deferred-items.md`.
 - **Files modified:** None — no code change made for this deviation.

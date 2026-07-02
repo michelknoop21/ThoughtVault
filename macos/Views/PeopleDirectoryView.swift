@@ -1,5 +1,5 @@
 // PeopleDirectoryView.swift
-// TranscriptStudio
+// ThoughtVault
 // com.buildmind.ThoughtVault
 //
 // Searchable directory list for managing people (isSelf == false).
@@ -146,7 +146,7 @@ struct PeopleDirectoryView: View {
                 .font(TS.Font.headline)
                 .foregroundStyle(Color.labelPrimary)
 
-            Text("Voeg collega's en bekende externen toe zodat TranscriptStudio actiepunten aan hen kan koppelen.")
+            Text("Voeg collega's en bekende externen toe zodat ThoughtVault actiepunten aan hen kan koppelen.")
                 .font(TS.Font.footnote)
                 .foregroundStyle(Color.labelSecondary)
                 .multilineTextAlignment(.center)

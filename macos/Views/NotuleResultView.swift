@@ -1,5 +1,5 @@
 // NotuleResultView.swift
-// TranscriptStudio
+// ThoughtVault
 // com.buildmind.ThoughtVault
 //
 // Displays completed transcription result with HTML notule rendering,

@@ -1,10 +1,10 @@
-# TranscriptStudio Windows — Product Requirements
+# ThoughtVault Windows — Product Requirements
 
 _Last updated: 2026-03-04_
 
 ## Overview
 
-TranscriptStudio Windows is a Tauri 2 desktop application for recording meetings, transcribing audio, and generating structured meeting notes. It provides feature parity with the macOS SwiftUI version using web technology (React 19 / TypeScript) wrapped in a native Windows desktop shell.
+ThoughtVault Windows is a Tauri 2 desktop application for recording meetings, transcribing audio, and generating structured meeting notes. It provides feature parity with the macOS SwiftUI version using web technology (React 19 / TypeScript) wrapped in a native Windows desktop shell.
 
 ## Target Users
 
@@ -24,7 +24,7 @@ TranscriptStudio Windows is a Tauri 2 desktop application for recording meetings
 - Audio files stored in `AppData/Recordings` with 7-day retention
 
 ### Cloud Transcription
-- Upload to TranscriptStudio API at `n8n.prezent.nl`
+- Upload to ThoughtVault API at `n8n.prezent.nl`
 - GPU-accelerated Whisper transcription on server
 - SSE streaming for real-time progress updates
 - Status pipeline: pending -> uploading -> converting -> transcribing -> transcribed -> processingWebhook -> completed

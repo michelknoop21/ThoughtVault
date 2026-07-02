@@ -11,7 +11,7 @@ MSI_ARM64_PATH="$BUILD_DIR/$MSI_ARM64_NAME"
 APK_PATH="$BUILD_DIR/$APK_NAME"
 
 # Legacy name (for backwards compatibility detection)
-MSI_LEGACY_ARTIFACT="TranscriptStudio_${VERSION}.msi"
+MSI_LEGACY_ARTIFACT="ThoughtVault_${VERSION}.msi"
 
 mkdir -p "$BUILD_DIR"
 

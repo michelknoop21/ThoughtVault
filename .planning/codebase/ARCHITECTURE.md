@@ -35,7 +35,7 @@
 
 | Component | Responsibility | File |
 |-----------|----------------|------|
-| TranscriptStudioApp | App entry point, environment injection, scene setup | `macos/App/TranscriptStudioApp.swift` |
+| ThoughtVaultApp | App entry point, environment injection, scene setup | `macos/App/ThoughtVaultApp.swift` |
 | RootView / ContentView | Onboarding gate, sidebar navigation (macOS), TabView (iOS) | `macos/App/ContentView.swift` |
 | RecordingViewModel | Recording state machine, upload routing, local processing orchestration | `macos/ViewModels/RecordingViewModel.swift` |
 | AuthViewModel | Auth state, token lifecycle, 2FA | `macos/ViewModels/AuthViewModel.swift` |
@@ -176,7 +176,7 @@
 ## Entry Points
 
 **macOS/iOS App:**
-- Location: `macos/App/TranscriptStudioApp.swift:5` (`@main`)
+- Location: `macos/App/ThoughtVaultApp.swift:5` (`@main`)
 - Triggers: App launch
 - Responsibilities: Creates `AuthViewModel`, `RecordingViewModel`, `TasksViewModel`; injects into environment; configures `LocalTranscriptStore.shared.container` as `.modelContainer`
 
@@ -224,7 +224,7 @@
 
 ## Cross-Cutting Concerns
 
-**Logging:** `OSLog` / `Logger` throughout macOS (`subsystem: "nl.prezent.TranscriptStudio"`); category per file
+**Logging:** `OSLog` / `Logger` throughout macOS (`subsystem: "nl.prezent.ThoughtVault"`); category per file
 **Validation:** Input validation in ViewModels before service calls; API response validation in `APIService`
 **Authentication:** Token in Keychain (`KeychainService`); header is `X-User-Token` on macOS, `Authorization: Bearer` on Windows; 401 triggers `authDidInvalidate` notification
 **Localization:** UI strings in Dutch via `Localizable.strings` (`macos/Resources/nl.lproj/`); code/comments in English

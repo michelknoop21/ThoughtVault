@@ -54,8 +54,8 @@ transcript-studio-native/        # Repo root
 │       └── ui/                  # Compose screens by feature
 ├── ios-widget/                  # iOS Live Activity widget extension
 │   └── RecordingActivityWidget.swift
-├── TranscriptStudioTests/       # XCTest test suite
-├── TranscriptStudio.xcodeproj/  # Xcode project
+├── ThoughtVaultTests/       # XCTest test suite
+├── ThoughtVault.xcodeproj/  # Xcode project
 ├── docs/                        # Architecture, API, decision log, release docs
 │   ├── API.md                   # FastAPI endpoint reference
 │   ├── ARCHITECTURE.md          # High-level system architecture (human docs)
@@ -73,7 +73,7 @@ transcript-studio-native/        # Repo root
 
 **`macos/App/`:**
 - Purpose: App entry point, root navigation shell, menu bar extra
-- Key files: `TranscriptStudioApp.swift` (`@main`), `ContentView.swift` (navigation + auth gate)
+- Key files: `ThoughtVaultApp.swift` (`@main`), `ContentView.swift` (navigation + auth gate)
 
 **`macos/Models/`:**
 - Purpose: All shared value types and enums; no SwiftUI or UIKit imports
@@ -114,7 +114,7 @@ transcript-studio-native/        # Repo root
 ## Key File Locations
 
 **Entry Points:**
-- `macos/App/TranscriptStudioApp.swift` — `@main`, SwiftUI app lifecycle
+- `macos/App/ThoughtVaultApp.swift` — `@main`, SwiftUI app lifecycle
 - `windows/src/main.tsx` — React render root
 - `windows/src-tauri/src/main.rs` — Tauri binary entry point
 - `windows/src-tauri/src/lib.rs` — Tauri builder, plugin registration, IPC handler registration
@@ -133,9 +133,9 @@ transcript-studio-native/        # Repo root
 - `macos/Models/Models.swift` — canonical domain types
 
 **Testing:**
-- `TranscriptStudioTests/AuthViewModelTests.swift`
-- `TranscriptStudioTests/TranscriptsViewModelTests.swift`
-- `TranscriptStudioTests/TranscriptDecoderTests.swift`
+- `ThoughtVaultTests/AuthViewModelTests.swift`
+- `ThoughtVaultTests/TranscriptsViewModelTests.swift`
+- `ThoughtVaultTests/TranscriptDecoderTests.swift`
 - `windows/src/services/__tests__/` — Windows service unit tests
 
 ## Naming Conventions

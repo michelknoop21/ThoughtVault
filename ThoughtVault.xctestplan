@@ -11,18 +11,18 @@
   "defaultOptions" : {
     "performanceAntipatternCheckerEnabled" : true,
     "targetForVariableExpansion" : {
-      "containerPath" : "container:TranscriptStudio.xcodeproj",
+      "containerPath" : "container:ThoughtVault.xcodeproj",
       "identifier" : "TT000001",
-      "name" : "TranscriptStudio"
+      "name" : "ThoughtVault"
     }
   },
   "testTargets" : [
     {
       "parallelizable" : true,
       "target" : {
-        "containerPath" : "container:TranscriptStudio.xcodeproj",
+        "containerPath" : "container:ThoughtVault.xcodeproj",
         "identifier" : "TT000002",
-        "name" : "TranscriptStudioTests"
+        "name" : "ThoughtVaultTests"
       }
     }
   ],

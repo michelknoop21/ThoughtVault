@@ -2,7 +2,7 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Completely redesign the Windows TranscriptStudio app (Tauri 2 + React/TypeScript) to visually match the macOS native app — same warmth, rounded corners, glassmorphism, gradient backgrounds, animations, and Yinga brand feel.
+**Goal:** Completely redesign the Windows ThoughtVault app (Tauri 2 + React/TypeScript) to visually match the macOS native app — same warmth, rounded corners, glassmorphism, gradient backgrounds, animations, and Yinga brand feel.
 
 **Architecture:** Replace the current Fluent 2 design system (flat, 4px radius, gray surfaces) with the macOS app's design language: generous rounded corners (12-25px), glassmorphic cards with backdrop-blur, animated gradient blob backgrounds, spring-like animations, and the full Yinga color palette. This is a CSS-first redesign — component structure stays mostly the same, but every visual property changes.
 

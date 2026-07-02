@@ -18,7 +18,7 @@ This research covers only the four NEW feature categories (A–D) of the People 
 
 Apps like HubSpot, Mailchimp, Lovable, and Arcade ask 2–4 strategic questions at first run — role, company, primary goal — then route the user into a tailored experience. The pattern is called "progressive profiling": collect the minimum upfront, prompt completion later. Duolingo's onboarding is the extreme example: defer account creation until after first value delivery.
 
-For meeting-notes tools specifically, self-profiling serves a different purpose than segmentation: it provides the LLM with a stable "perspective anchor" — who is the person generating notes, so pronouns, first-person references, and action-item self-assignments can be resolved correctly. No competing tool ships this concept explicitly (most assume shared/team accounts). TranscriptStudio's single-user-per-install model makes this a genuine differentiator.
+For meeting-notes tools specifically, self-profiling serves a different purpose than segmentation: it provides the LLM with a stable "perspective anchor" — who is the person generating notes, so pronouns, first-person references, and action-item self-assignments can be resolved correctly. No competing tool ships this concept explicitly (most assume shared/team accounts). ThoughtVault's single-user-per-install model makes this a genuine differentiator.
 
 ### Table Stakes
 
@@ -66,7 +66,7 @@ User opens app for first time. After existing permissions onboarding (microphone
 
 Notion's People Directory and Fellow's attendee model both maintain a workspace-level contact list. Fireflies and Otter sync meeting participants to CRM (Salesforce, HubSpot) — treating every new attendee email as a potential contact record. The key insight from competitive analysis: **email domain is the universal internal/external signal** — tools like Otter, Jiminny, and Practifi all define "internal" as "same email domain as the installer's organization." Multi-domain orgs are the edge case.
 
-For TranscriptStudio, the directory is purely local. Calendar attendees (Microsoft Graph `attendees`/`organizer`) are already fetched but discarded — this is the free seed source.
+For ThoughtVault, the directory is purely local. Calendar attendees (Microsoft Graph `attendees`/`organizer`) are already fetched but discarded — this is the free seed source.
 
 ### Table Stakes
 
@@ -115,7 +115,7 @@ Directory accessed from Settings > Contacten. List view: name, role/org, intern/
 
 The Gladia pipeline guide describes the canonical pattern: inject a bounded participant list into the LLM prompt so name resolution happens against known people rather than via hallucination. The schema they recommend includes `owner_speaker_id` (mapped to a named participant) and a `confidence` score for surfacing uncertain attributions. AssemblyAI's summarization guide confirms: meeting context (participant names, roles) in the system prompt yields significantly more accurate action-item attribution than prompt-less extraction.
 
-Fireflies' approach is CRM-side: push attributed action items to Salesforce/HubSpot contacts. TranscriptStudio's approach must be prompt-side (no CRM), making the injected people-context the only signal.
+Fireflies' approach is CRM-side: push attributed action items to Salesforce/HubSpot contacts. ThoughtVault's approach must be prompt-side (no CRM), making the injected people-context the only signal.
 
 ### Table Stakes
 
@@ -167,7 +167,7 @@ This is the least standardized of the four areas — no mainstream meeting-notes
 - **AFFiNE**: action items styled `[ACTIE:eigenaar=@Jane]` are clickable Kanban cards; owner is editable.
 - **Fellow**: action items have an "assign to" dropdown populated from meeting attendees.
 
-The pattern that fits TranscriptStudio: **parse structured action-item blocks from the notule HTML/markdown, render each with a tappable owner chip, open a people-picker populated from the directory, save the override**.
+The pattern that fits ThoughtVault: **parse structured action-item blocks from the notule HTML/markdown, render each with a tappable owner chip, open a people-picker populated from the directory, save the override**.
 
 Key UX principle from all tools: **the initial LLM attribution is a suggestion, not a commitment**. Showing a confidence indicator (greyed chip vs. solid chip) reduces user anxiety about wrong auto-assignments.
 
@@ -298,7 +298,7 @@ D. Owner Assignment UI
 
 ## Competitor Feature Comparison
 
-| Feature | Fireflies.ai | Otter.ai | Fellow.app | TranscriptStudio approach |
+| Feature | Fireflies.ai | Otter.ai | Fellow.app | ThoughtVault approach |
 |---------|--------------|----------|------------|---------------------------|
 | Action item owner attribution | Auto from transcript + CRM push | Auto from transcript | Manual in shared agenda | Auto (LLM) + manual correction inline |
 | Owner correction | In CRM / task tool (external) | In Otter UI (comment) | In agenda | Inline owner chip, local only |
@@ -325,5 +325,5 @@ D. Owner Assignment UI
 
 ---
 
-*Feature research for: People & Attribution milestone — TranscriptStudio v1.1*
+*Feature research for: People & Attribution milestone — ThoughtVault v1.1*
 *Researched: 2026-06-04*

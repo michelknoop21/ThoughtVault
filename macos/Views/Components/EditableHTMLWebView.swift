@@ -1,5 +1,5 @@
 // EditableHTMLWebView.swift
-// TranscriptStudio
+// ThoughtVault
 // com.buildmind.ThoughtVault
 //
 // A WKWebView wrapper that supports inline editing of HTML content

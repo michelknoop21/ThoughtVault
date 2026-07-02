@@ -1,5 +1,5 @@
 /* Localizable.strings — Nederlands (primaire taal)
-   TranscriptStudio
+   ThoughtVault
    com.buildmind.ThoughtVault
    AUTO-GENERATED catalog (Wave 6). Key = Dutch source text (LocalizedStringKey).
 */
@@ -74,7 +74,7 @@
 "Controleer op updates" = "Controleer op updates";
 "Cookies (optioneel)" = "Cookies (optioneel)";
 "De opname bevat alleen microfoongeluid. Systeemaudio is niet meegenomen." = "De opname bevat alleen microfoongeluid. Systeemaudio is niet meegenomen.";
-"De URL van de n8n-server waarop TranscriptStudio draait. Moet beginnen met https://" = "De URL van de n8n-server waarop TranscriptStudio draait. Moet beginnen met https://";
+"De URL van de n8n-server waarop ThoughtVault draait. Moet beginnen met https://" = "De URL van de n8n-server waarop ThoughtVault draait. Moet beginnen met https://";
 "De verwerking is mogelijk nog niet voltooid." = "De verwerking is mogelijk nog niet voltooid.";
 "Delen..." = "Delen...";
 "DETAIL" = "DETAIL";
@@ -290,7 +290,7 @@
 "Standaard" = "Standaard";
 "Standaard profiel" = "Standaard profiel";
 "Standaard profielen kunnen niet worden bewerkt of verwijderd." = "Standaard profielen kunnen niet worden bewerkt of verwijderd.";
-"Start je eerste opname en TranscriptStudio zet je gesprek automatisch om in een heldere notule met samenvatting, actiepunten en besluiten." = "Start je eerste opname en TranscriptStudio zet je gesprek automatisch om in een heldere notule met samenvatting, actiepunten en besluiten.";
+"Start je eerste opname en ThoughtVault zet je gesprek automatisch om in een heldere notule met samenvatting, actiepunten en besluiten." = "Start je eerste opname en ThoughtVault zet je gesprek automatisch om in een heldere notule met samenvatting, actiepunten en besluiten.";
 "Start nieuwe opname" = "Start nieuwe opname";
 "Start opname" = "Start opname";
 "Start verwerking" = "Start verwerking";
@@ -330,11 +330,11 @@
 "Transcriptie" = "Transcriptie";
 "Transcriptie op apparaat" = "Transcriptie op apparaat";
 "Transcriptiemethode" = "Transcriptiemethode";
-"TranscriptStudio" = "TranscriptStudio";
-"TranscriptStudio detecteert Teams-, Zoom- en Meet-vergaderingen en biedt een snelkoppeling om opnames te starten." = "TranscriptStudio detecteert Teams-, Zoom- en Meet-vergaderingen en biedt een snelkoppeling om opnames te starten.";
-"TranscriptStudio gebruikt jouw profiel om actiepunten straks aan de juiste persoon te koppelen. Je kunt dit altijd later aanpassen." = "TranscriptStudio gebruikt jouw profiel om actiepunten straks aan de juiste persoon te koppelen. Je kunt dit altijd later aanpassen.";
-"TranscriptStudio heeft schermopname-toestemming nodig om systeemaudio van videovergaderingen op te nemen." = "TranscriptStudio heeft schermopname-toestemming nodig om systeemaudio van videovergaderingen op te nemen.";
-"TranscriptStudio heeft toegang tot je microfoon nodig om vergaderingen op te nemen." = "TranscriptStudio heeft toegang tot je microfoon nodig om vergaderingen op te nemen.";
+"ThoughtVault" = "ThoughtVault";
+"ThoughtVault detecteert Teams-, Zoom- en Meet-vergaderingen en biedt een snelkoppeling om opnames te starten." = "ThoughtVault detecteert Teams-, Zoom- en Meet-vergaderingen en biedt een snelkoppeling om opnames te starten.";
+"ThoughtVault gebruikt jouw profiel om actiepunten straks aan de juiste persoon te koppelen. Je kunt dit altijd later aanpassen." = "ThoughtVault gebruikt jouw profiel om actiepunten straks aan de juiste persoon te koppelen. Je kunt dit altijd later aanpassen.";
+"ThoughtVault heeft schermopname-toestemming nodig om systeemaudio van videovergaderingen op te nemen." = "ThoughtVault heeft schermopname-toestemming nodig om systeemaudio van videovergaderingen op te nemen.";
+"ThoughtVault heeft toegang tot je microfoon nodig om vergaderingen op te nemen." = "ThoughtVault heeft toegang tot je microfoon nodig om vergaderingen op te nemen.";
 "Twee-factor authenticatie" = "Twee-factor authenticatie";
 "Twee-factor verificatie" = "Twee-factor verificatie";
 "Type" = "Type";
@@ -372,14 +372,14 @@
 "Verwerkingsmodus" = "Verwerkingsmodus";
 "Verwerkingsoverzicht" = "Verwerkingsoverzicht";
 "Verwijderen" = "Verwijderen";
-"Voeg collega's en bekende externen toe zodat TranscriptStudio actiepunten aan hen kan koppelen." = "Voeg collega's en bekende externen toe zodat TranscriptStudio actiepunten aan hen kan koppelen.";
+"Voeg collega's en bekende externen toe zodat ThoughtVault actiepunten aan hen kan koppelen." = "Voeg collega's en bekende externen toe zodat ThoughtVault actiepunten aan hen kan koppelen.";
 "Voer de 6-cijferige code in uit je authenticator-app." = "Voer de 6-cijferige code in uit je authenticator-app.";
 "Voer je e-mailadres en wachtwoord in om door te gaan." = "Voer je e-mailadres en wachtwoord in om door te gaan.";
 "Volledige naam" = "Volledige naam";
 "Voltooid" = "Voltooid";
-"Voor on-device transcriptie verwerkt TranscriptStudio je spraak lokaal op dit apparaat. Je audio blijft privé." = "Voor on-device transcriptie verwerkt TranscriptStudio je spraak lokaal op dit apparaat. Je audio blijft privé.";
+"Voor on-device transcriptie verwerkt ThoughtVault je spraak lokaal op dit apparaat. Je audio blijft privé." = "Voor on-device transcriptie verwerkt ThoughtVault je spraak lokaal op dit apparaat. Je audio blijft privé.";
 "Voortgang" = "Voortgang";
-"Vul je naam, rol en organisatie in zodat TranscriptStudio actiepunten aan jou kan koppelen." = "Vul je naam, rol en organisatie in zodat TranscriptStudio actiepunten aan jou kan koppelen.";
+"Vul je naam, rol en organisatie in zodat ThoughtVault actiepunten aan jou kan koppelen." = "Vul je naam, rol en organisatie in zodat ThoughtVault actiepunten aan jou kan koppelen.";
 "Waarschuwing sluiten" = "Waarschuwing sluiten";
 "Wachtwoord" = "Wachtwoord";
 "Wachtwoord ter bevestiging" = "Wachtwoord ter bevestiging";

@@ -18,22 +18,22 @@ Testing is split across two platforms with different frameworks:
 
 **Primary runner:** Swift Testing (`import Testing`)
 **Legacy tests:** XCTest (`import XCTest`) — one file still uses XCTest assertions
-**Config:** Xcode scheme `TranscriptStudio.xcscheme`, test target `TranscriptStudioTests`
+**Config:** Xcode scheme `ThoughtVault.xcscheme`, test target `ThoughtVaultTests`
 
 **Run commands:**
 ```bash
 # All tests
-xcodebuild test -project TranscriptStudio.xcodeproj -scheme TranscriptStudioTests
+xcodebuild test -project ThoughtVault.xcodeproj -scheme ThoughtVaultTests
 
 # (No watch mode available outside Xcode)
 ```
 
 ### Test File Organization
 
-**Location:** `TranscriptStudioTests/` at repo root (separate from source)
+**Location:** `ThoughtVaultTests/` at repo root (separate from source)
 
 **Files:**
-- `TranscriptStudioTests.swift` — XCTest-style, core model decoding (legacy)
+- `ThoughtVaultTests.swift` — XCTest-style, core model decoding (legacy)
 - `AuthViewModelTests.swift` — Swift Testing, `@Suite`-based
 - `TranscriptDecoderTests.swift` — Swift Testing, JSON decode/encode coverage
 - `TranscriptsViewModelTests.swift` — Swift Testing, ViewModel behavior
@@ -45,7 +45,7 @@ xcodebuild test -project TranscriptStudio.xcodeproj -scheme TranscriptStudioTest
 ```swift
 import Testing
 import Foundation
-@testable import TranscriptStudio
+@testable import ThoughtVault
 
 @Suite("AuthViewModel Tests")
 struct AuthViewModelTests {
@@ -321,7 +321,7 @@ beforeEach(() => {
 
 | Type | macOS | Windows |
 |------|-------|---------|
-| Unit (models/logic) | Yes — `TranscriptDecoderTests`, `TranscriptStudioTests` | Partial — service layer only |
+| Unit (models/logic) | Yes — `TranscriptDecoderTests`, `ThoughtVaultTests` | Partial — service layer only |
 | ViewModel | Yes — `AuthViewModelTests`, `TranscriptsViewModelTests` | No |
 | Service/API | No | Yes — `api.upload.test.ts` |
 | Queue/retry | No | Yes — `offlineQueue.test.ts` |

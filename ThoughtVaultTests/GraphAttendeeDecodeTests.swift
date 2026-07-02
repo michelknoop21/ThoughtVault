@@ -1,6 +1,6 @@
 // GraphAttendeeDecodeTests.swift
-// TranscriptStudioTests
-// nl.prezent.TranscriptStudio
+// ThoughtVaultTests
+// nl.prezent.ThoughtVault
 //
 // RED until Plan 02-02 adds CalendarEvent.attendees + maps emailAddress.address in decode.
 // The assertion against CalendarEvent.attendees below will not compile against the current
@@ -11,7 +11,7 @@
 
 import XCTest
 import Foundation
-@testable import TranscriptStudio
+@testable import ThoughtVault
 
 // MARK: - Local Decodable structs mirroring the Graph calendarView response
 // These mirror the shape MicrosoftGraphService will adopt in Plan 02-02/02-03.

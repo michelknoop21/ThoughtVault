@@ -31,7 +31,7 @@ key_files:
     - macos/Views/SettingsView.swift
     - macos/Resources/nl.lproj/Localizable.strings
     - macos/Resources/en.lproj/Localizable.strings
-    - TranscriptStudio.xcodeproj/project.pbxproj
+    - ThoughtVault.xcodeproj/project.pbxproj
 decisions:
   - "profielStep wrapped in ScrollView: 6 TextFields exceed onboarding window height; ScrollView prevents clipping while preserving VStack structure"
   - "simultaneousGesture(DragGesture) on profielStep ScrollView: prevents TabView from consuming scroll gestures on macOS"

@@ -17,7 +17,7 @@ PATCH=$(echo "$VERSION" | cut -d. -f3)
 echo "Syncing version $VERSION to all platform configs..."
 
 # 1. Xcode project.pbxproj — MARKETING_VERSION (all occurrences)
-PBXPROJ="$ROOT_DIR/TranscriptStudio.xcodeproj/project.pbxproj"
+PBXPROJ="$ROOT_DIR/ThoughtVault.xcodeproj/project.pbxproj"
 if [ -f "$PBXPROJ" ]; then
     sed -i '' "s/MARKETING_VERSION = [^;]*/MARKETING_VERSION = $VERSION/" "$PBXPROJ"
     sed -i '' "s/CURRENT_PROJECT_VERSION = [^;]*/CURRENT_PROJECT_VERSION = $PATCH/" "$PBXPROJ"

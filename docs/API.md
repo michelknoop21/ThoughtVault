@@ -1,4 +1,4 @@
-# TranscriptStudio Backend API — Volledige Referentie
+# ThoughtVault Backend API — Volledige Referentie
 
 > Gedeelde documentatie voor alle platforms (macOS, Windows, Web).
 > Backend: FastAPI op `https://n8n.prezent.nl/tstudio/api/`

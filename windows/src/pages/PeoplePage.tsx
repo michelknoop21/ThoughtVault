@@ -109,7 +109,7 @@ export function PeoplePage() {
                 Nog geen personen toegevoegd
               </p>
               <p style={{ font: "var(--type-body)", color: "var(--text-secondary)", margin: 0, maxWidth: 420 }}>
-                Voeg collega's en bekende externen toe zodat TranscriptStudio actiepunten aan hen kan koppelen.
+                Voeg collega's en bekende externen toe zodat ThoughtVault actiepunten aan hen kan koppelen.
               </p>
               <button className="btn btn-primary" onClick={handleAddPerson}>
                 Persoon toevoegen

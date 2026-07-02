@@ -1,12 +1,12 @@
 // MigrationTests.swift
-// TranscriptStudioTests
-// nl.prezent.TranscriptStudio
+// ThoughtVaultTests
+// nl.prezent.ThoughtVault
 //
 // RED until Plan 01 creates PersonProfile + AppMigrationPlan.
 
 import XCTest
 import SwiftData
-@testable import TranscriptStudio
+@testable import ThoughtVault
 
 @MainActor
 final class MigrationTests: XCTestCase {

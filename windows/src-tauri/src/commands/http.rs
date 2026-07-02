@@ -216,7 +216,7 @@ pub async fn do_proxy_upload(
     // ─── Step 5: hardened reqwest client. ───
     let client = reqwest::Client::builder()
         .user_agent(format!(
-            "TranscriptStudio-Windows/{}",
+            "ThoughtVault-Windows/{}",
             env!("CARGO_PKG_VERSION")
         ))
         .tcp_nodelay(true)

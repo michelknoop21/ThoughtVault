@@ -1,6 +1,6 @@
 #!/bin/bash
 cd "$(dirname "$0")/.."
-echo "=== TranscriptStudio: Full Release ==="
+echo "=== ThoughtVault: Full Release ==="
 echo ""
 ./scripts/release.sh
 echo ""

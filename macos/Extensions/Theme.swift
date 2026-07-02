@@ -1,5 +1,5 @@
 // Theme.swift
-// TranscriptStudio
+// ThoughtVault
 // com.buildmind.ThoughtVault
 //
 // Centralized design token system. All spacing, radii, typography,
@@ -9,7 +9,7 @@ import SwiftUI
 
 // MARK: - TS Namespace
 
-/// Top-level namespace for all TranscriptStudio design tokens.
+/// Top-level namespace for all ThoughtVault design tokens.
 enum TS {
 
     // MARK: - Spacing (8px base grid)

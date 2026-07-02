@@ -4,7 +4,7 @@
 
 ## APIs & External Services
 
-**TranscriptStudio Backend (primary):**
+**ThoughtVault Backend (primary):**
 - FastAPI on AWS EC2 GPU — `https://n8n.prezent.nl/tstudio/api/`
 - All audio upload, transcript storage, notule generation, profiles, admin
 - macOS client: `macos/Services/APIService.swift` (actor, URLSession, `X-User-Token` header)
@@ -68,7 +68,7 @@
 - SwiftData (macOS/iOS) — local transcript and notule storage
   - Model: `macos/Models/TranscriptRecord.swift` (`@Model`)
   - Store management: `macos/Services/LocalTranscriptStore.swift`
-  - Container setup: `macos/App/TranscriptStudioApp.swift`
+  - Container setup: `macos/App/ThoughtVaultApp.swift`
 - Room 2.8 (Android) — local SQLite ORM
   - Schema directory: `transcript-studio-android/app/schemas/`
 
@@ -84,7 +84,7 @@
 - None — transcripts fetched from backend on demand; local SwiftData acts as cache
 
 **Credentials / Secrets:**
-- macOS: Keychain via `macos/Services/KeychainService.swift` (service `nl.prezent.TranscriptStudio`); keys: `authToken`, `googleRefreshToken`, `ollamaApiKey`
+- macOS: Keychain via `macos/Services/KeychainService.swift` (service `nl.prezent.ThoughtVault`); keys: `authToken`, `googleRefreshToken`, `ollamaApiKey`
 - Windows: OS keyring via Rust `keyring 3` crate; Tauri `invoke("get_credential")` / `invoke("set_credential")`
 - Android: Google Tink 1.15 for encrypted storage + `androidx.biometric` for biometric auth
 
@@ -119,7 +119,7 @@
 - Backend collects errors at `/admin/errors` endpoint
 
 **Logs:**
-- macOS: `OSLog` throughout, subsystem `nl.prezent.TranscriptStudio`, per-file categories
+- macOS: `OSLog` throughout, subsystem `nl.prezent.ThoughtVault`, per-file categories
 - macOS: `macos/Services/DebugLogger.swift` — supplementary debug log wrapper
 - Windows: `console.*` via browser devtools / Tauri log plugin
 - Android: standard `android.util.Log` / Logcat

@@ -1,6 +1,6 @@
 // PersonDirectoryServiceTests.swift
-// TranscriptStudioTests
-// nl.prezent.TranscriptStudio
+// ThoughtVaultTests
+// nl.prezent.ThoughtVault
 //
 // RED until Plan 02-02 ships PersonDirectoryService + PersonProfile.emails.
 // PersonDirectoryService does not exist yet → compile failure is the intended
@@ -8,7 +8,7 @@
 
 import XCTest
 import SwiftData
-@testable import TranscriptStudio
+@testable import ThoughtVault
 
 /// Helper: builds an in-memory ModelContainer for directory tests.
 /// Mirrors makeInMemoryContainer() from PersonProfileTests.swift.

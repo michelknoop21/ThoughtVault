@@ -1,5 +1,5 @@
 // ProcessingBar.swift
-// TranscriptStudio
+// ThoughtVault
 // com.buildmind.ThoughtVault
 //
 // Compact global status bar showing active uploads and processing tasks.

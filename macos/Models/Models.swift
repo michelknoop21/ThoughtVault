@@ -1,8 +1,8 @@
 // Models.swift
-// TranscriptStudio
+// ThoughtVault
 // com.buildmind.ThoughtVault
 //
-// Core data models for the TranscriptStudio app.
+// Core data models for the ThoughtVault app.
 
 import Foundation
 import OSLog

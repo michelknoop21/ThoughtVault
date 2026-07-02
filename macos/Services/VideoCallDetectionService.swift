@@ -1,5 +1,5 @@
 // VideoCallDetectionService.swift
-// TranscriptStudio
+// ThoughtVault
 // com.buildmind.ThoughtVault
 //
 // Detects active video calls by monitoring camera usage and known video app processes.

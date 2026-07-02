@@ -100,8 +100,8 @@ Top-level `// MARK: - TypeName` precedes each type declaration in a file.
 All Swift files start with a 3-line comment header:
 ```swift
 // FileName.swift
-// TranscriptStudio
-// nl.prezent.TranscriptStudio
+// ThoughtVault
+// nl.prezent.ThoughtVault
 ```
 
 Longer files include a 4th line: `//` followed by a one-line description.
@@ -137,7 +137,7 @@ enum APIError: LocalizedError {
 
 **Pattern:** module-level private logger per file:
 ```swift
-private let logger = Logger(subsystem: "nl.prezent.TranscriptStudio", category: "AuthViewModel")
+private let logger = Logger(subsystem: "nl.prezent.ThoughtVault", category: "AuthViewModel")
 ```
 - `logger.info(...)` — normal operations
 - `logger.warning(...)` — non-fatal failures

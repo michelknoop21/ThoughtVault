@@ -29,13 +29,13 @@ tech-stack:
 
 key-files:
   created:
-    - TranscriptStudioTests/MigrationTests.swift (extended)
-    - TranscriptStudioTests/PersonDirectoryServiceTests.swift
-    - TranscriptStudioTests/GraphAttendeeDecodeTests.swift
-    - TranscriptStudioTests/Fixtures/GraphCalendarViewResponse.json
+    - ThoughtVaultTests/MigrationTests.swift (extended)
+    - ThoughtVaultTests/PersonDirectoryServiceTests.swift
+    - ThoughtVaultTests/GraphAttendeeDecodeTests.swift
+    - ThoughtVaultTests/Fixtures/GraphCalendarViewResponse.json
     - windows/src/stores/__tests__/peopleDirectoryStore.test.ts
   modified:
-    - TranscriptStudio.xcodeproj/project.pbxproj (new test files + Fixtures group + Resources phase)
+    - ThoughtVault.xcodeproj/project.pbxproj (new test files + Fixtures group + Resources phase)
 
 key-decisions:
   - "Fixture JSON stored on-disk AND loaded via #file fallback so tests work in CI without a Resources phase being configured in Xcode yet"
@@ -78,12 +78,12 @@ completed: 2026-06-07
 3. **Task 3: Windows vitest scaffold** - `d99ae41` (test)
 
 ## Files Created/Modified
-- `/TranscriptStudioTests/MigrationTests.swift` - Extended with testPersonProfileSurvivesV2ToV3Migration
-- `/TranscriptStudioTests/PersonDirectoryServiceTests.swift` - CRUD round-trip + dedup RED tests
-- `/TranscriptStudioTests/GraphAttendeeDecodeTests.swift` - Graph address key decode RED test
-- `/TranscriptStudioTests/Fixtures/GraphCalendarViewResponse.json` - Minimal calendarView fixture (1 event, 2 attendees, Dutch names)
+- `/ThoughtVaultTests/MigrationTests.swift` - Extended with testPersonProfileSurvivesV2ToV3Migration
+- `/ThoughtVaultTests/PersonDirectoryServiceTests.swift` - CRUD round-trip + dedup RED tests
+- `/ThoughtVaultTests/GraphAttendeeDecodeTests.swift` - Graph address key decode RED test
+- `/ThoughtVaultTests/Fixtures/GraphCalendarViewResponse.json` - Minimal calendarView fixture (1 event, 2 attendees, Dutch names)
 - `/windows/src/stores/__tests__/peopleDirectoryStore.test.ts` - 4 vitest RED tests
-- `/TranscriptStudio.xcodeproj/project.pbxproj` - Added 3 test files, Fixtures group, Resources build phase
+- `/ThoughtVault.xcodeproj/project.pbxproj` - Added 3 test files, Fixtures group, Resources build phase
 
 ## Decisions Made
 - Used inline `#file` fallback path in `GraphAttendeeDecodeTests` so the fixture loads even in CI where the Resources phase may not yet be evaluated (belt-and-suspenders alongside the bundle resource approach)
@@ -95,7 +95,7 @@ completed: 2026-06-07
 None — plan executed exactly as written. All three test artifacts are RED against the current codebase, as required.
 
 ## Issues Encountered
-- Build scheme is `TranscriptStudio` (not `TranscriptStudioTests`) — discovered on first build attempt; using `-only-testing:TranscriptStudioTests/...` with the main scheme works correctly.
+- Build scheme is `ThoughtVault` (not `ThoughtVaultTests`) — discovered on first build attempt; using `-only-testing:ThoughtVaultTests/...` with the main scheme works correctly.
 
 ## Threat Surface Scan
 

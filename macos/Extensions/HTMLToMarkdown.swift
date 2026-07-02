@@ -1,5 +1,5 @@
 // HTMLToMarkdown.swift
-// TranscriptStudio
+// ThoughtVault
 // com.buildmind.ThoughtVault
 //
 // Lightweight HTML→Markdown conversion shared by the file exports and the

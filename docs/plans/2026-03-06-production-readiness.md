@@ -15,7 +15,7 @@
 ### Task 1: Fix force unwraps in MicrosoftGraphService
 
 **Files:**
-- Modify: `TranscriptStudio/Services/MicrosoftGraphService.swift:110,170,220,237`
+- Modify: `ThoughtVault/Services/MicrosoftGraphService.swift:110,170,220,237`
 
 **Step 1: Replace force unwrap on line 110**
 
@@ -70,7 +70,7 @@ guard var components = URLComponents(string: "\(graphBase)/me/calendarView") els
 
 **Step 5: Build to verify**
 
-Run: `xcodebuild -project TranscriptStudio.xcodeproj -scheme TranscriptStudio -configuration Debug build CODE_SIGNING_ALLOWED=NO 2>&1 | tail -5`
+Run: `xcodebuild -project ThoughtVault.xcodeproj -scheme ThoughtVault -configuration Debug build CODE_SIGNING_ALLOWED=NO 2>&1 | tail -5`
 Expected: BUILD SUCCEEDED
 
 **Step 6: Commit**
@@ -83,7 +83,7 @@ fix: replace force unwraps with safe URL construction in MicrosoftGraphService
 ### Task 2: Add confirmation dialog for swipe-delete and context menu delete
 
 **Files:**
-- Modify: `TranscriptStudio/Views/TranscriptsView.swift`
+- Modify: `ThoughtVault/Views/TranscriptsView.swift`
 
 **Step 1: Add state variable for single-delete confirmation**
 
@@ -162,7 +162,7 @@ Find the `.confirmationDialog` for bulk delete (around line 160) and add a secon
 
 **Step 5: Build to verify**
 
-Run: `xcodebuild -project TranscriptStudio.xcodeproj -scheme TranscriptStudio -configuration Debug build CODE_SIGNING_ALLOWED=NO 2>&1 | tail -5`
+Run: `xcodebuild -project ThoughtVault.xcodeproj -scheme ThoughtVault -configuration Debug build CODE_SIGNING_ALLOWED=NO 2>&1 | tail -5`
 Expected: BUILD SUCCEEDED
 
 **Step 6: Commit**
@@ -175,7 +175,7 @@ fix: add confirmation dialog for swipe-delete and context menu delete
 ### Task 3: Add confirmation dialog for cancel recording
 
 **Files:**
-- Modify: `TranscriptStudio/Views/RecordingView.swift`
+- Modify: `ThoughtVault/Views/RecordingView.swift`
 
 **Step 1: Add state for cancel confirmation**
 
@@ -219,7 +219,7 @@ At the end of the `activeRecordingView` computed property (after the ScrollView 
 
 **Step 4: Build to verify**
 
-Run: `xcodebuild -project TranscriptStudio.xcodeproj -scheme TranscriptStudio -configuration Debug build CODE_SIGNING_ALLOWED=NO 2>&1 | tail -5`
+Run: `xcodebuild -project ThoughtVault.xcodeproj -scheme ThoughtVault -configuration Debug build CODE_SIGNING_ALLOWED=NO 2>&1 | tail -5`
 
 **Step 5: Commit**
 ```
@@ -231,7 +231,7 @@ fix: add confirmation dialog before canceling active recording
 ### Task 4: Add Privacy Manifest
 
 **Files:**
-- Create: `TranscriptStudio/PrivacyInfo.xcprivacy`
+- Create: `ThoughtVault/PrivacyInfo.xcprivacy`
 
 **Step 1: Create the privacy manifest file**
 
@@ -271,7 +271,7 @@ fix: add confirmation dialog before canceling active recording
 
 **Step 2: Add file to Xcode project**
 
-Add `PrivacyInfo.xcprivacy` to the TranscriptStudio target in the project navigator. The file must be included in the app bundle's resources.
+Add `PrivacyInfo.xcprivacy` to the ThoughtVault target in the project navigator. The file must be included in the app bundle's resources.
 
 **Step 3: Commit**
 ```
@@ -283,7 +283,7 @@ feat: add Privacy Manifest (PrivacyInfo.xcprivacy) for App Store compliance
 ### Task 5: Add local network entitlement
 
 **Files:**
-- Modify: `TranscriptStudio/TranscriptStudio.entitlements`
+- Modify: `ThoughtVault/ThoughtVault.entitlements`
 
 **Step 1: Add the entitlement**
 
@@ -303,7 +303,7 @@ feat: add local network entitlement for on-device LLM (Ollama/LM Studio)
 ### Task 6: Hide retranscription stub button
 
 **Files:**
-- Modify: `TranscriptStudio/Views/TranscriptsView.swift`
+- Modify: `ThoughtVault/Views/TranscriptsView.swift`
 
 **Step 1: Find the retranscribe button in the detail view toolbar**
 
@@ -320,7 +320,7 @@ However, the `startRetranscribe` function still exists and shows an error messag
 ### Task 7: Surface delete errors in HomeView
 
 **Files:**
-- Modify: `TranscriptStudio/Views/HomeView.swift`
+- Modify: `ThoughtVault/Views/HomeView.swift`
 
 **Step 1: Add delete error state**
 
@@ -368,7 +368,7 @@ fix: surface delete errors to user in HomeView
 ### Task 8: Sanitize HTML in EditableHTMLWebView
 
 **Files:**
-- Modify: `TranscriptStudio/Views/Components/EditableHTMLWebView.swift:161`
+- Modify: `ThoughtVault/Views/Components/EditableHTMLWebView.swift:161`
 
 **Step 1: Add HTML sanitization helper**
 
@@ -427,7 +427,7 @@ fix: sanitize HTML content in EditableHTMLWebView to prevent XSS
 ### Task 9: Validate OAuth state parameter
 
 **Files:**
-- Modify: `TranscriptStudio/Services/MicrosoftGraphService.swift`
+- Modify: `ThoughtVault/Services/MicrosoftGraphService.swift`
 
 **Step 1: Store the state parameter**
 
@@ -495,7 +495,7 @@ fix: validate OAuth state parameter to prevent CSRF attacks
 ### Task 10: Add error banner dismissal in TranscriptsView
 
 **Files:**
-- Modify: `TranscriptStudio/Views/TranscriptsView.swift`
+- Modify: `ThoughtVault/Views/TranscriptsView.swift`
 
 **Step 1: Add dismiss button to the load error banner (line 482-506)**
 
@@ -550,7 +550,7 @@ fix: add dismiss button to error banner in TranscriptsView
 ### Task 11: Add ProcessingView timeout detection
 
 **Files:**
-- Modify: `TranscriptStudio/Views/ProcessingView.swift`
+- Modify: `ThoughtVault/Views/ProcessingView.swift`
 
 **Step 1: Add timeout state**
 
@@ -640,7 +640,7 @@ feat: add timeout detection for stalled processing in ProcessingView
 ### Task 12: Surface offline queue persistence errors
 
 **Files:**
-- Modify: `TranscriptStudio/Services/OfflineQueue.swift`
+- Modify: `ThoughtVault/Services/OfflineQueue.swift`
 
 **Step 1: Add error state**
 
@@ -710,7 +710,7 @@ fix: track and report offline queue persistence errors
 ### Task 13: Log errors with CrashReporter in silent catch blocks
 
 **Files:**
-- Modify: `TranscriptStudio/Services/MicrosoftGraphService.swift:207,297`
+- Modify: `ThoughtVault/Services/MicrosoftGraphService.swift:207,297`
 
 **Step 1: Add CrashReporter to token save (line 207)**
 
@@ -770,7 +770,7 @@ fix: log silent API failures with CrashReporter in MicrosoftGraphService
 **Step 1: Run full build**
 
 ```bash
-xcodebuild -project TranscriptStudio.xcodeproj -scheme TranscriptStudio -configuration Debug build CODE_SIGNING_ALLOWED=NO 2>&1 | tail -5
+xcodebuild -project ThoughtVault.xcodeproj -scheme ThoughtVault -configuration Debug build CODE_SIGNING_ALLOWED=NO 2>&1 | tail -5
 ```
 Expected: BUILD SUCCEEDED
 
@@ -790,7 +790,7 @@ chore: production readiness phase 1-3 complete
 | 2 | TranscriptsView.swift | fix | Swipe/context delete confirmation |
 | 3 | RecordingView.swift | fix | Cancel recording confirmation |
 | 4 | PrivacyInfo.xcprivacy | feat | Privacy Manifest for App Store |
-| 5 | TranscriptStudio.entitlements | feat | Local network for Ollama/LM Studio |
+| 5 | ThoughtVault.entitlements | feat | Local network for Ollama/LM Studio |
 | 7 | HomeView.swift | fix | Surface delete errors |
 | 8 | EditableHTMLWebView.swift | fix | HTML sanitization (XSS) |
 | 9 | MicrosoftGraphService.swift | fix | OAuth state validation |

@@ -74,8 +74,8 @@
 - Recommendations: Add HTTPS validation in `api.ts` getter, same as macOS `validatedBaseURL()`.
 
 **`temporary-exception.audio-unit-host` entitlement may block notarization:**
-- Risk: `docs/ROADMAP-CODE-SIGNING.md:119` notes this entitlement can cause Apple notarization rejection. It is currently present in `macos/TranscriptStudio.entitlements` (referenced in the roadmap).
-- Files: `macos/TranscriptStudio.entitlements`, `docs/ROADMAP-CODE-SIGNING.md:119`
+- Risk: `docs/ROADMAP-CODE-SIGNING.md:119` notes this entitlement can cause Apple notarization rejection. It is currently present in `macos/ThoughtVault.entitlements` (referenced in the roadmap).
+- Files: `macos/ThoughtVault.entitlements`, `docs/ROADMAP-CODE-SIGNING.md:119`
 - Current mitigation: Builds are ad-hoc signed; notarization not yet attempted.
 - Recommendations: Audit whether the entitlement is still needed before attempting notarization.
 

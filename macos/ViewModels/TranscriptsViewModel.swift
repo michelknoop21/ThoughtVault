@@ -1,5 +1,5 @@
 // TranscriptsViewModel.swift
-// TranscriptStudio
+// ThoughtVault
 // com.buildmind.ThoughtVault
 //
 // Manages the list of saved transcripts with pagination, search, filtering and sorting.

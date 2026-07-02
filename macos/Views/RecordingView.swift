@@ -1,5 +1,5 @@
 // RecordingView.swift
-// TranscriptStudio
+// ThoughtVault
 // com.buildmind.ThoughtVault
 //
 // Dual-state recording interface: idle setup view and active recording view.

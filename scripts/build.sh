@@ -13,21 +13,21 @@ echo "Building $APP_DISPLAY_NAME $VERSION ($BUILD_CHANNEL) for $OS..."
 
 if [ "$OS" = "Darwin" ]; then
     # macOS: xcodebuild archive → export .app → create DMG
-    ARCHIVE_PATH="$BUILD_DIR/TranscriptStudio.xcarchive"
+    ARCHIVE_PATH="$BUILD_DIR/ThoughtVault.xcarchive"
     DMG_PATH="$BUILD_DIR/$DMG_NAME"
     EXPORT_DIR="$BUILD_DIR/export"
 
     # Determine app name from bundle — xcodebuild uses PRODUCT_NAME for the .app filename
     if [ "$BUILD_CHANNEL" = "production" ]; then
-        APP_NAME="TranscriptStudio"
+        APP_NAME="ThoughtVault"
     else
-        APP_NAME="TranscriptStudio Dev"
+        APP_NAME="ThoughtVault Dev"
     fi
 
     echo "Step 1/4: Archiving..."
     xcodebuild archive \
-        -project "$ROOT_DIR/TranscriptStudio.xcodeproj" \
-        -scheme TranscriptStudio \
+        -project "$ROOT_DIR/ThoughtVault.xcodeproj" \
+        -scheme ThoughtVault \
         -configuration Release \
         -destination "platform=macOS,arch=arm64" \
         -archivePath "$ARCHIVE_PATH" \

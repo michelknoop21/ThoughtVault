@@ -1,5 +1,5 @@
 // ProcessingView.swift
-// TranscriptStudio
+// ThoughtVault
 // com.buildmind.ThoughtVault
 //
 // Full-screen animated processing interface showing circular progress,

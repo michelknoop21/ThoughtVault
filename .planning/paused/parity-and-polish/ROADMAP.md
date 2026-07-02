@@ -1,4 +1,4 @@
-# Roadmap: TranscriptStudio — Parity & Polish
+# Roadmap: ThoughtVault — Parity & Polish
 
 ## Overview
 

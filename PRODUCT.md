@@ -12,9 +12,9 @@ They are not power users of transcription tooling. They expect it to behave like
 
 ## Product Purpose
 
-TranscriptStudio records or ingests audio, transcribes it, and generates structured Dutch meeting notes (notulen) using configurable profiles. It runs natively on macOS/iOS (SwiftUI) and Windows (Tauri) against a shared FastAPI backend, with a local-first fallback path for transcription and summarisation.
+ThoughtVault records or ingests audio, transcribes it, and generates structured Dutch meeting notes (notulen) using configurable profiles. It runs natively on macOS/iOS (SwiftUI) and Windows (Tauri) against a shared FastAPI backend, with a local-first fallback path for transcription and summarisation.
 
-It exists because the gap between "the meeting happened" and "the notes are written" is where accountability leaks. Generic transcription tools stop at a raw transcript; TranscriptStudio carries the workflow all the way to a finished, profile-shaped notule. Success looks like: a user finishes a meeting, presses one button, and minutes later has notes good enough to send with only minor edits — on whichever platform they happen to be using, with the same experience and quality on each.
+It exists because the gap between "the meeting happened" and "the notes are written" is where accountability leaks. Generic transcription tools stop at a raw transcript; ThoughtVault carries the workflow all the way to a finished, profile-shaped notule. Success looks like: a user finishes a meeting, presses one button, and minutes later has notes good enough to send with only minor edits — on whichever platform they happen to be using, with the same experience and quality on each.
 
 ## Brand Personality
 
@@ -22,7 +22,7 @@ Yinga: **warm, confident, professional.** Three words: approachable, branded, de
 
 ## Anti-references
 
-- **Generic dark SaaS dashboard** — neon-on-charcoal, dense data grids, sharp corners, the Linear/Vercel-clone aesthetic. TranscriptStudio is light-first, glass-on-soft-gray, rounded.
+- **Generic dark SaaS dashboard** — neon-on-charcoal, dense data grids, sharp corners, the Linear/Vercel-clone aesthetic. ThoughtVault is light-first, glass-on-soft-gray, rounded.
 - **Cluttered enterprise tool** — dense toolbars, tiny fonts, flat corporate blue, feature-soup screens (old Teams/SharePoint admin energy). One clear task per screen instead.
 - **Toy / consumer-cute app** — mascots, playful illustrations, gamified confetti. Too casual for notes people are accountable for; stay professional.
 - **Faceless, unbranded utility** — a neutral grey tool with no identity. It must stay unmistakably Yinga; the brand is the personality, not decoration.

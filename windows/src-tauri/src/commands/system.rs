@@ -112,7 +112,7 @@ pub async fn download_and_run_installer(
         .rsplit('/')
         .next()
         .filter(|s| !s.is_empty())
-        .unwrap_or("TranscriptStudio-update.msi");
+        .unwrap_or("ThoughtVault-update.msi");
     let dest = std::env::temp_dir().join(filename);
     tokio::fs::write(&dest, &bytes)
         .await

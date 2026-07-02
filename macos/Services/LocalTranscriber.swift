@@ -1,5 +1,5 @@
 // LocalTranscriber.swift
-// TranscriptStudio
+// ThoughtVault
 // com.buildmind.ThoughtVault
 //
 // Abstraction over local (offline) speech-to-text engines so the app can transcribe

@@ -39,9 +39,9 @@
 
 | New/Modified File | Role | Closest Analog | Match Quality |
 |-------------------|------|----------------|---------------|
-| `TranscriptStudioTests/MigrationTests.swift` (modify) | test | self (`testTranscriptRecordSurvivesV1ToV2Migration`) | exact |
-| `TranscriptStudioTests/PersonDirectoryServiceTests.swift` (NEW) | test | `PersonProfileTests.swift` (in-mem container + upsert mirror) | exact (mirror) |
-| `TranscriptStudioTests/GraphAttendeeDecodeTests.swift` (NEW) | test | `PersonProfileTests.swift` (XCTest/in-mem pattern) | role match |
+| `ThoughtVaultTests/MigrationTests.swift` (modify) | test | self (`testTranscriptRecordSurvivesV1ToV2Migration`) | exact |
+| `ThoughtVaultTests/PersonDirectoryServiceTests.swift` (NEW) | test | `PersonProfileTests.swift` (in-mem container + upsert mirror) | exact (mirror) |
+| `ThoughtVaultTests/GraphAttendeeDecodeTests.swift` (NEW) | test | `PersonProfileTests.swift` (XCTest/in-mem pattern) | role match |
 | `windows/src/stores/__tests__/peopleDirectoryStore.test.ts` (NEW) | test | `windows/src/services/__tests__/*.test.ts` (vitest) | role match |
 
 ---
@@ -368,7 +368,7 @@ Text inputs use `className="input"` (SettingsPage lines 120, 228+). Save to `use
 
 ---
 
-### `TranscriptStudioTests/MigrationTests.swift` (test) — MODIFY
+### `ThoughtVaultTests/MigrationTests.swift` (test) — MODIFY
 
 **Analog:** self. Existing `testTranscriptRecordSurvivesV1ToV2Migration` (the only case) seeds a `TranscriptRecord` through the real `AppMigrationPlan` in-memory container and asserts survival. **Add a PersonProfile V2→V3 survival case** (research Pitfall 1 / Wave 0): seed an `isSelf==true` PersonProfile + a TranscriptRecord, run through `AppMigrationPlan`, assert both survive, `emails == []`, and `isInternal` preserved (non-nil).
 
@@ -381,7 +381,7 @@ let container = try ModelContainer(for: TranscriptRecord.self, PersonProfile.sel
 
 ---
 
-### `TranscriptStudioTests/PersonDirectoryServiceTests.swift` + `GraphAttendeeDecodeTests.swift` (test) — NEW
+### `ThoughtVaultTests/PersonDirectoryServiceTests.swift` + `GraphAttendeeDecodeTests.swift` (test) — NEW
 
 **Analog:** `PersonProfileTests.swift` — copy `makeInMemoryContainer()` helper (lines 14-22) and the upsert-mirror approach (test operates on an arbitrary `ModelContext`). CRUD round-trip asserting only `isSelf==false` returned (B-02); dedup unit (D-10); decode test feeds fixture Graph JSON through the new `GraphEvent` decode and asserts `attendees` map `emailAddress.address` (B-03, A2).
 
@@ -455,6 +455,6 @@ let splitAndTrim: (String) -> [String] = { $0.split(separator: ",").map { $0.tri
 
 ## Metadata
 
-**Analog search scope:** `macos/{Models,Services,Views,ViewModels,App}`, `windows/src/{types.ts,stores,services,pages,App.tsx}`, `TranscriptStudioTests/`
+**Analog search scope:** `macos/{Models,Services,Views,ViewModels,App}`, `windows/src/{types.ts,stores,services,pages,App.tsx}`, `ThoughtVaultTests/`
 **Files scanned (read in full or targeted):** PersonProfile.swift, AppMigrationPlan.swift, LocalTranscriptStore.swift, ProfileSettingsView.swift, CalendarService.swift (:1-60), MicrosoftGraphService.swift (:255-454), ContentView.swift (:1-220), RecordingViewModel.swift (:369-428), MigrationTests.swift, PersonProfileTests.swift (:1-40), personProfileStore.ts, types.ts (grep), microsoftGraph.ts (:170-195 + grep), App.tsx (grep), SettingsPage.tsx (grep)
 **Pattern extraction date:** 2026-06-05

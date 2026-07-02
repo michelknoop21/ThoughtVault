@@ -1,8 +1,8 @@
-# TranscriptStudio — Parity & Polish
+# ThoughtVault — Parity & Polish
 
 ## What This Is
 
-TranscriptStudio is een cross-platform app (native macOS/iOS in Swift 6/SwiftUI, Windows in Tauri 2/React) die audio opneemt, transcribeert en notulen genereert. Gebruikers nemen vergaderingen/gesprekken op (microfoon + systeemgeluid), waarna transcriptie en notulen-generatie volgen — via een FastAPI-cloudbackend óf volledig lokaal op het apparaat. Doelgroep: professionals die snel, betrouwbaar en privacy-bewust notulen willen.
+ThoughtVault is een cross-platform app (native macOS/iOS in Swift 6/SwiftUI, Windows in Tauri 2/React) die audio opneemt, transcribeert en notulen genereert. Gebruikers nemen vergaderingen/gesprekken op (microfoon + systeemgeluid), waarna transcriptie en notulen-generatie volgen — via een FastAPI-cloudbackend óf volledig lokaal op het apparaat. Doelgroep: professionals die snel, betrouwbaar en privacy-bewust notulen willen.
 
 Deze milestone ("Parity & Polish") richt zich op twee dingen: (1) beide desktop-platforms volledig cloud-onafhankelijk kunnen laten draaien, en (2) een UX-review-gedreven gelijktrekking van UI/UX-gaps en bekende bugs tussen macOS en Windows.
 

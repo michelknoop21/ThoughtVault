@@ -1,4 +1,4 @@
-# TranscriptStudio
+# ThoughtVault
 
 ## Stack
 Native macOS/iOS (Swift 6, SwiftUI, `@Observable`) + Windows (Tauri 2, React/TypeScript).
@@ -7,13 +7,13 @@ Backend: FastAPI op `https://n8n.prezent.nl/tstudio/api/` — lees docs/API.md b
 ## Commands
 ```bash
 # macOS build (lokaal, signed → TCC-rechten blijven behouden over rebuilds)
-xcodebuild -project TranscriptStudio.xcodeproj -scheme TranscriptStudio -configuration Debug -allowProvisioningUpdates build
+xcodebuild -project ThoughtVault.xcodeproj -scheme ThoughtVault -configuration Debug -allowProvisioningUpdates build
 
 # macOS build (CI / geen cert beschikbaar → ad-hoc, TCC vraagt elke build opnieuw)
-xcodebuild -project TranscriptStudio.xcodeproj -scheme TranscriptStudio -configuration Debug build CODE_SIGNING_ALLOWED=NO
+xcodebuild -project ThoughtVault.xcodeproj -scheme ThoughtVault -configuration Debug build CODE_SIGNING_ALLOWED=NO
 
 # Tests
-xcodebuild test -project TranscriptStudio.xcodeproj -scheme TranscriptStudioTests
+xcodebuild test -project ThoughtVault.xcodeproj -scheme ThoughtVaultTests
 
 # Windows dev
 cd windows && npm run tauri dev
@@ -52,8 +52,8 @@ FastAPI op AWS EC2 GPU `michelk@3.69.205.209`, container `n8n_transcript_studio`
 - Combined recording: `mixAudioFiles()` in RecordingViewModel (element-wise max over PCM)
 - Auth header: macOS → `X-User-Token`, Windows → `Authorization: Bearer` (beide geaccepteerd)
 - Backend `username` veld is het e-mailadres (niet `email`)
-- macOS TCC/rechten: lokaal **signed** bouwen (`-allowProvisioningUpdates`, cert `Apple Development: info@michelknoop.nl`, team `XL9KN38ATX`). Ad-hoc builds (`CODE_SIGNING_ALLOWED=NO`) hebben geen stabiele designated requirement → macOS vraagt rechten elke build opnieuw. Signed = stabiele identity → **mic / spraak / agenda / documenten blijven behouden** (deze TCC-grants zijn op bundle-ID gekeyed in de user-db). **Uitzondering: Screen Recording** (`kTCCServiceScreenCapture`, via ScreenCaptureKit) re-prompt blijft op macOS 26 Tahoe: die grant leeft in de SIP-protected system-db, is pad/cdhash-gevoelig en wordt door macOS bij elke binary-wijziging + periodiek opnieuw gevraagd — ongeacht stabiele signing. Mitigatie: app altijd vanaf **hetzelfde vaste pad** draaien (`/Applications/TranscriptStudio.app`), nooit vanuit roterende DerivedData-pad en nooit meerdere kopieën tegelijk (elke kopie/rebuild = andere cdhash → TCC ziet "andere app").
-- **SwiftData store-divergentie (notulen "ineens kwijt")**: de app is **gesandboxed** (`com.apple.security.app-sandbox`). `URL.applicationSupportDirectory` (zie `LocalTranscriptStore.storeURL`) wijst dan naar de container `~/Library/Containers/nl.prezent.TranscriptStudio/Data/Library/Application Support/TranscriptStudio/Local.store`. Een **niet-gesandboxde** build schrijft naar `~/Library/Application Support/TranscriptStudio/Local.store` — een andere store. Wissel je tussen sandboxed/non-sandboxed builds, dan lijken notulen verdwenen (app leest de verkeerde store; een sandboxed app kán de non-sandbox map niet eens lezen). **Altijd gesandboxed bouwen/draaien.** Herstel = store-bestand handmatig naar de container kopiëren (app eerst afsluiten i.v.m. open WAL).
+- macOS TCC/rechten: lokaal **signed** bouwen (`-allowProvisioningUpdates`, cert `Apple Development: info@michelknoop.nl`, team `XL9KN38ATX`). Ad-hoc builds (`CODE_SIGNING_ALLOWED=NO`) hebben geen stabiele designated requirement → macOS vraagt rechten elke build opnieuw. Signed = stabiele identity → **mic / spraak / agenda / documenten blijven behouden** (deze TCC-grants zijn op bundle-ID gekeyed in de user-db). **Uitzondering: Screen Recording** (`kTCCServiceScreenCapture`, via ScreenCaptureKit) re-prompt blijft op macOS 26 Tahoe: die grant leeft in de SIP-protected system-db, is pad/cdhash-gevoelig en wordt door macOS bij elke binary-wijziging + periodiek opnieuw gevraagd — ongeacht stabiele signing. Mitigatie: app altijd vanaf **hetzelfde vaste pad** draaien (`/Applications/ThoughtVault.app`), nooit vanuit roterende DerivedData-pad en nooit meerdere kopieën tegelijk (elke kopie/rebuild = andere cdhash → TCC ziet "andere app").
+- **SwiftData store-divergentie (notulen "ineens kwijt")**: de app is **gesandboxed** (`com.apple.security.app-sandbox`). `URL.applicationSupportDirectory` (zie `LocalTranscriptStore.storeURL`) wijst dan naar de container `~/Library/Containers/nl.prezent.ThoughtVault/Data/Library/Application Support/ThoughtVault/Local.store`. Een **niet-gesandboxde** build schrijft naar `~/Library/Application Support/ThoughtVault/Local.store` — een andere store. Wissel je tussen sandboxed/non-sandboxed builds, dan lijken notulen verdwenen (app leest de verkeerde store; een sandboxed app kán de non-sandbox map niet eens lezen). **Altijd gesandboxed bouwen/draaien.** Herstel = store-bestand handmatig naar de container kopiëren (app eerst afsluiten i.v.m. open WAL).
 - Versioning: elke commit op `main` bumpt automatisch patch via `.githooks/post-commit`
 - Na version bump: `scripts/sync-version.sh` draaien om VERSION naar alle platform configs te syncen
 - Downloads: `https://n8n.prezent.nl/tstudio/download/` — lees docs/RELEASE.md voor infra details

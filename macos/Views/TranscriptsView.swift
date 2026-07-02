@@ -1,5 +1,5 @@
 // TranscriptsView.swift
-// TranscriptStudio
+// ThoughtVault
 // com.buildmind.ThoughtVault
 //
 // Full transcript library with search, filters, bulk-delete, tag management,

@@ -1,4 +1,4 @@
-# TranscriptStudio — Production Optimization Plan
+# ThoughtVault — Production Optimization Plan
 
 **Created:** 2026-03-07
 **Version:** 1.0.22
@@ -120,7 +120,7 @@ let file_bytes = tokio::fs::read(&file_path).await?;
 
 ### 1.6 macOS: Fix Force Unwraps on Audio Buffer Data
 
-**File:** `TranscriptStudio/ViewModels/RecordingViewModel.swift:861-863`
+**File:** `ThoughtVault/ViewModels/RecordingViewModel.swift:861-863`
 
 **Current:**
 ```swift
@@ -143,7 +143,7 @@ guard let micData = micBuffer.floatChannelData?[0],
 
 ### 1.7 macOS: Fix Force Unwraps on Calendar Dates
 
-**File:** `TranscriptStudio/Views/TranscriptsView.swift:90,93`
+**File:** `ThoughtVault/Views/TranscriptsView.swift:90,93`
 
 **Current:**
 ```swift
@@ -162,7 +162,7 @@ guard let monthAgo = calendar.date(byAdding: .month, value: -1, to: now) else { 
 
 ### 1.8 macOS: Fix Force Unwrap in Model ID Init
 
-**File:** `TranscriptStudio/Models/Models.swift:258`
+**File:** `ThoughtVault/Models/Models.swift:258`
 
 **Current:**
 ```swift
@@ -178,7 +178,7 @@ self.id = decodedId.flatMap { $0.isEmpty ? nil : $0 } ?? (decodedTaskId.isEmpty 
 
 ### 1.9 macOS: SSE HTTPS Validation
 
-**File:** `TranscriptStudio/Services/APIService.swift:790`
+**File:** `ThoughtVault/Services/APIService.swift:790`
 
 **Change:** Add URL scheme check in SSEClient before starting stream:
 ```swift
@@ -226,7 +226,7 @@ guard url.scheme?.lowercased() == "https" else {
 
 ### 2.1 macOS: Fix nonisolated(unsafe) Concurrent Access
 
-**File:** `TranscriptStudio/ViewModels/RecordingViewModel.swift:105-115`
+**File:** `ThoughtVault/ViewModels/RecordingViewModel.swift:105-115`
 
 **Current:** 4 properties marked `nonisolated(unsafe)` accessed from multiple actors.
 
@@ -240,7 +240,7 @@ guard url.scheme?.lowercased() == "https" else {
 
 ### 2.2 macOS: Replace try? with Proper Error Logging
 
-**File:** `TranscriptStudio/ViewModels/AuthViewModel.swift:99,102,145,209`
+**File:** `ThoughtVault/ViewModels/AuthViewModel.swift:99,102,145,209`
 
 **Change:** Replace `try?` with do-catch that logs the error:
 ```swift
@@ -255,13 +255,13 @@ do {
 
 ### 2.3 macOS: Fix Upload Progress Thread Safety
 
-**File:** `TranscriptStudio/ViewModels/RecordingViewModel.swift:465-468`
+**File:** `ThoughtVault/ViewModels/RecordingViewModel.swift:465-468`
 
 **Current:** Progress callback creates `Task { @MainActor in }` — this is actually correct for Swift concurrency. Verify the closure is `@Sendable` to suppress warnings.
 
 ### 2.4 macOS: Biometric Token Expiry
 
-**File:** `TranscriptStudio/Services/BiometricService.swift:73-99`
+**File:** `ThoughtVault/Services/BiometricService.swift:73-99`
 
 **Change:** Store expiry timestamp alongside token. Check before returning:
 ```swift
@@ -330,7 +330,7 @@ if (!/^\d{6}$/.test(code)) {
 
 ### 2.9 macOS: SSE Reconnection Notification
 
-**File:** `TranscriptStudio/Services/APIService.swift:859-861`
+**File:** `ThoughtVault/Services/APIService.swift:859-861`
 
 **Change:** After max reconnect attempts, post a notification:
 ```swift
@@ -340,7 +340,7 @@ Handle in RecordingViewModel to show user feedback.
 
 ### 2.10 macOS: Task Removal Race Condition
 
-**File:** `TranscriptStudio/ViewModels/RecordingViewModel.swift:789-795`
+**File:** `ThoughtVault/ViewModels/RecordingViewModel.swift:789-795`
 
 **Change:** Ensure `pendingRemovalTasks` mutation happens on MainActor:
 ```swift
@@ -414,7 +414,7 @@ Check expiry before each request in api.ts.
 
 ### 3.2 macOS: Add VoiceOver Labels
 
-**File:** `TranscriptStudio/Views/RecordingView.swift`
+**File:** `ThoughtVault/Views/RecordingView.swift`
 
 **Lines:** ~413 (close warning), ~527-531 (recording mode buttons), ~882-911 (control buttons)
 
@@ -427,7 +427,7 @@ Button { ... }
 
 ### 3.3 macOS: Dynamic Type Support
 
-**File:** `TranscriptStudio/Extensions/Theme.swift`
+**File:** `ThoughtVault/Extensions/Theme.swift`
 
 **Change:** Use `.scaledFont` or `@ScaledMetric` for custom font sizes:
 ```swift
@@ -452,7 +452,7 @@ const testConnection = async () => {
 
 ### 3.5 macOS: URL Validation in Settings
 
-**File:** `TranscriptStudio/Views/SettingsView.swift:95-125`
+**File:** `ThoughtVault/Views/SettingsView.swift:95-125`
 
 **Change:** Validate URL scheme (HTTPS) and format before saving.
 
@@ -462,14 +462,14 @@ const testConnection = async () => {
 
 **Change:** Add proper meta tags, replace vite.svg with app icon:
 ```html
-<meta name="description" content="TranscriptStudio - Vergaderopnames en notulen">
+<meta name="description" content="ThoughtVault - Vergaderopnames en notulen">
 <meta name="theme-color" content="#E50074">
 <link rel="icon" href="/icon.png" type="image/png">
 ```
 
 ### 3.7 macOS: Profile Loading Timeout
 
-**File:** `TranscriptStudio/Views/RecordingView.swift:122-134`
+**File:** `ThoughtVault/Views/RecordingView.swift:122-134`
 
 **Change:** Add timeout and retry button:
 ```swift
@@ -498,7 +498,7 @@ const testConnection = async () => {
 
 ### 3.10 macOS: Offline Queue Error Exposure
 
-**File:** `TranscriptStudio/Services/OfflineQueue.swift:105-115`
+**File:** `ThoughtVault/Services/OfflineQueue.swift:105-115`
 
 **Change:** Expose `lastPersistError` to the UI or retry failed persists.
 
@@ -544,7 +544,7 @@ if (import.meta.env.DEV) {
 
 ### 4.4 macOS: Extract AdminView Subsections
 
-**File:** `TranscriptStudio/Views/AdminView.swift`
+**File:** `ThoughtVault/Views/AdminView.swift`
 
 **Change:** Split 1000+ line view into:
 - `AdminOverviewSection.swift`
@@ -554,7 +554,7 @@ if (import.meta.env.DEV) {
 
 ### 4.5 macOS: Cache Validated Base URL
 
-**File:** `TranscriptStudio/Services/APIService.swift:145-155`
+**File:** `ThoughtVault/Services/APIService.swift:145-155`
 
 **Change:** Cache the URL result instead of re-parsing on every request:
 ```swift
@@ -573,7 +573,7 @@ private func validatedBaseURL() throws -> URL {
 
 ### 4.6 macOS: Live Transcription Race Guard
 
-**File:** `TranscriptStudio/ViewModels/RecordingViewModel.swift:696-724`
+**File:** `ThoughtVault/ViewModels/RecordingViewModel.swift:696-724`
 
 **Change:** Add flag to prevent concurrent starts:
 ```swift
@@ -628,11 +628,11 @@ defer { isStartingLiveTranscription = false }
 
 ### 5.7 macOS: Improve Offline Status Persistence
 
-**File:** `TranscriptStudio/ViewModels/RecordingViewModel.swift:559-572` — Keep message visible until queue processes.
+**File:** `ThoughtVault/ViewModels/RecordingViewModel.swift:559-572` — Keep message visible until queue processes.
 
 ### 5.8 macOS: Add Decoding Error Context to Logs
 
-**File:** `TranscriptStudio/Services/APIService.swift:436-450` — Log actual decoding errors.
+**File:** `ThoughtVault/Services/APIService.swift:436-450` — Log actual decoding errors.
 
 ### 5.9 macOS: Cache Transcript List
 
@@ -640,7 +640,7 @@ defer { isStartingLiveTranscription = false }
 
 ### 5.10 macOS: Multipart Encoding Cleanup
 
-**File:** `TranscriptStudio/Services/APIService.swift:355-366` — Replace force unwraps with safe Data extension:
+**File:** `ThoughtVault/Services/APIService.swift:355-366` — Replace force unwraps with safe Data extension:
 ```swift
 extension Data {
     mutating func appendUTF8(_ string: String) {

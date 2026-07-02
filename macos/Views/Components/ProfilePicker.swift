@@ -1,5 +1,5 @@
 // ProfilePicker.swift
-// TranscriptStudio
+// ThoughtVault
 // com.buildmind.ThoughtVault
 //
 // Horizontal pill-style profile selector. Each profile is shown as

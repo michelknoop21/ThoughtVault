@@ -39,7 +39,7 @@ S4661 Execute safe disk cleanup without data loss — remove unused Docker artif
 S4662 Identify and categorize additional home directory and application cache cleanup opportunities with safety assessment and cost/benefit analysis (May 6 at 5:04 PM)
 S7503 Implement dynamic cloud model loading for Ollama Cloud integration in SettingsView (May 6 at 5:05 PM)
 ### Jun 1, 2026
-25081 3:52p ⚖️ TranscriptStudio macOS app: Hybrid local-first architecture with optional cloud fallback
+25081 3:52p ⚖️ ThoughtVault macOS app: Hybrid local-first architecture with optional cloud fallback
 25082 3:53p 🟣 SwiftData TranscriptRecord model for local storage
 25083 " 🟣 LocalTranscriptStore singleton for SwiftData CRUD operations
 **25084** 3:54p ✅ **Inject LocalTranscriptStore into SwiftUI environment**

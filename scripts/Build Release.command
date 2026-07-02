@@ -1,6 +1,6 @@
 #!/bin/bash
 cd "$(dirname "$0")/.."
-echo "=== TranscriptStudio: Build Release ==="
+echo "=== ThoughtVault: Build Release ==="
 echo ""
 ./scripts/sync-version.sh
 echo ""

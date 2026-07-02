@@ -16,9 +16,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "TT000001"
-               BuildableName = "TranscriptStudio.app"
-               BlueprintName = "TranscriptStudio"
-               ReferencedContainer = "container:TranscriptStudio.xcodeproj">
+               BuildableName = "ThoughtVault.app"
+               BlueprintName = "ThoughtVault"
+               ReferencedContainer = "container:ThoughtVault.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -30,7 +30,7 @@
       shouldUseLaunchSchemeArgsEnv = "YES">
       <TestPlans>
          <TestPlanReference
-            reference = "container:TranscriptStudio.xctestplan"
+            reference = "container:ThoughtVault.xctestplan"
             default = "YES">
          </TestPlanReference>
       </TestPlans>
@@ -41,9 +41,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "TT000002"
-               BuildableName = "TranscriptStudioTests.xctest"
-               BlueprintName = "TranscriptStudioTests"
-               ReferencedContainer = "container:TranscriptStudio.xcodeproj">
+               BuildableName = "ThoughtVaultTests.xctest"
+               BlueprintName = "ThoughtVaultTests"
+               ReferencedContainer = "container:ThoughtVault.xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>
@@ -63,9 +63,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "TT000001"
-            BuildableName = "TranscriptStudio.app"
-            BlueprintName = "TranscriptStudio"
-            ReferencedContainer = "container:TranscriptStudio.xcodeproj">
+            BuildableName = "ThoughtVault.app"
+            BlueprintName = "ThoughtVault"
+            ReferencedContainer = "container:ThoughtVault.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -80,9 +80,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "TT000001"
-            BuildableName = "TranscriptStudio.app"
-            BlueprintName = "TranscriptStudio"
-            ReferencedContainer = "container:TranscriptStudio.xcodeproj">
+            BuildableName = "ThoughtVault.app"
+            BlueprintName = "ThoughtVault"
+            ReferencedContainer = "container:ThoughtVault.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

@@ -1,5 +1,5 @@
 // PersonDirectoryService.swift
-// TranscriptStudio
+// ThoughtVault
 // com.buildmind.ThoughtVault
 //
 // On-device directory CRUD + seed dedup (D-11). Person data stays local; no network calls.

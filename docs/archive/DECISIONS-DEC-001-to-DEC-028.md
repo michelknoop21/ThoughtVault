@@ -1,4 +1,4 @@
-# TranscriptStudio — Archived Decision Records (DEC-001 to DEC-028)
+# ThoughtVault — Archived Decision Records (DEC-001 to DEC-028)
 
 _Archived from DECISIONS.md on 2026-03-17. These early decisions remain valid unless marked as superseded._
 
@@ -98,7 +98,7 @@ _Archived from DECISIONS.md on 2026-03-17. These early decisions remain valid un
 
 **Context:** Capturing system audio (the remote participant's audio in a call) on macOS requires a mechanism beyond standard AVFoundation microphone input. Several approaches were evaluated: CoreAudio virtual tap (requires SIP disable on some macOS versions), third-party virtual audio drivers (install burden), and ScreenCaptureKit.
 
-**Decision:** Use `ScreenCaptureKit` (available macOS 13+) for system audio capture in `SystemAudioCapture`. The entitlement `com.apple.security.screen-capture` is declared in `TranscriptStudio.entitlements`.
+**Decision:** Use `ScreenCaptureKit` (available macOS 13+) for system audio capture in `SystemAudioCapture`. The entitlement `com.apple.security.screen-capture` is declared in `ThoughtVault.entitlements`.
 
 **Consequences:**
 - ScreenCaptureKit is the only sandboxed, App Store-compatible API for system audio capture on macOS.

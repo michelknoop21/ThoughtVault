@@ -1,6 +1,6 @@
 #!/bin/bash
 cd "$(dirname "$0")/.."
-echo "=== TranscriptStudio: Build (no upload) ==="
+echo "=== ThoughtVault: Build (no upload) ==="
 echo ""
 ./scripts/release.sh --no-upload
 echo ""

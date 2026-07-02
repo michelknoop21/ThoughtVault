@@ -17,7 +17,7 @@ done
 source "$SCRIPT_DIR/env.sh"
 
 CHANNEL_LABEL=$(echo "$BUILD_CHANNEL" | awk '{print toupper(substr($0,1,1)) tolower(substr($0,2))}')
-echo "=== TranscriptStudio $CHANNEL_LABEL Release Pipeline v$VERSION ==="
+echo "=== ThoughtVault $CHANNEL_LABEL Release Pipeline v$VERSION ==="
 if [ "$BUILD_CHANNEL" = "dev" ]; then
     echo "    Channel: DEV (use --production for production builds)"
 fi

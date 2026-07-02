@@ -1,4 +1,4 @@
-# TranscriptStudio — Product Requirements Document
+# ThoughtVault — Product Requirements Document
 
 _Last updated: 2026-03-19_
 
@@ -6,7 +6,7 @@ _Last updated: 2026-03-19_
 
 ## 1. Product Overview
 
-TranscriptStudio is a cross-platform desktop application for recording meetings, transcribing audio, and generating structured meeting notes. It targets business professionals who need automated meeting documentation with the option to keep sensitive content entirely on-device.
+ThoughtVault is a cross-platform desktop application for recording meetings, transcribing audio, and generating structured meeting notes. It targets business professionals who need automated meeting documentation with the option to keep sensitive content entirely on-device.
 
 The product consists of four client surfaces sharing a common backend:
 
@@ -168,7 +168,7 @@ The product consists of four client surfaces sharing a common backend:
 | Windows minimum | Windows 11 (ARM64 or x64) |
 | Swift version | Swift 6 (strict concurrency) |
 | Xcode minimum | Xcode 16 |
-| Bundle ID (macOS/iOS) | `nl.prezent.TranscriptStudio` |
+| Bundle ID (macOS/iOS) | `nl.prezent.ThoughtVault` |
 | Architecture pattern | MVVM with `@Observable` (no Combine) |
 | Concurrency | `@MainActor` for ViewModels; `actor` for APIService |
 | Audio format | 16 kHz, mono, 16-bit PCM WAV |

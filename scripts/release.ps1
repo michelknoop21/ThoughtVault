@@ -8,7 +8,7 @@ $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $RootDir = Split-Path -Parent $ScriptDir
 $Version = (Get-Content (Join-Path $RootDir "VERSION") -Raw).Trim()
 
-Write-Host "=== TranscriptStudio Release Pipeline v$Version ==="
+Write-Host "=== ThoughtVault Release Pipeline v$Version ==="
 Write-Host ""
 
 # Step 1: Sync version

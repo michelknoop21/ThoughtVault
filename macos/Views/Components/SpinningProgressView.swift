@@ -1,5 +1,5 @@
 // SpinningProgressView.swift
-// TranscriptStudio
+// ThoughtVault
 // com.buildmind.ThoughtVault
 //
 // Lightweight spinning indicator that avoids ProgressView's heavyweight behavior

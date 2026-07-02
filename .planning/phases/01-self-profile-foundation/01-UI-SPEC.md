@@ -176,7 +176,7 @@ All strings Dutch (NL) via `Localizable.strings` (macOS) / i18n keys (Windows). 
 | Element | Copy |
 |---------|------|
 | Onboarding step title | "Vertel iets over jezelf" |
-| Onboarding step description | "TranscriptStudio gebruikt jouw profiel om actiepunten straks aan de juiste persoon te koppelen. Je kunt dit altijd later aanpassen." |
+| Onboarding step description | "ThoughtVault gebruikt jouw profiel om actiepunten straks aan de juiste persoon te koppelen. Je kunt dit altijd later aanpassen." |
 | Onboarding hero icon | `person.crop.circle` (SF Symbol) / `Person24Regular` (Fluent) |
 | Primary CTA (onboarding, fields filled) | "Volgende" (matches existing nav pattern) |
 | Primary CTA (onboarding, skip) | "Overslaan" (plain button, footnote, labelSecondary — matches agenda step pattern) |
@@ -185,7 +185,7 @@ All strings Dutch (NL) via `Localizable.strings` (macOS) / i18n keys (Windows). 
 | Settings primary CTA | "Profiel opslaan" |
 | Settings saved confirmation | "Opgeslagen" |
 | Empty state heading (Settings, no profile) | "Geen profiel ingevuld" |
-| Empty state body (Settings, no profile) | "Vul je naam, rol en organisatie in zodat TranscriptStudio actiepunten aan jou kan koppelen." |
+| Empty state body (Settings, no profile) | "Vul je naam, rol en organisatie in zodat ThoughtVault actiepunten aan jou kan koppelen." |
 | Field label — Naam | "Naam" |
 | Field label — Rol | "Rol / Functie" |
 | Field label — Organisatie | "Organisatie" |

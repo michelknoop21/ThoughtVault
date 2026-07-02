@@ -1,5 +1,5 @@
 // RecordingWidgetView.swift
-// TranscriptStudio
+// ThoughtVault
 // com.buildmind.ThoughtVault
 //
 // Compact floating recording widget panel. Shows current recording state,

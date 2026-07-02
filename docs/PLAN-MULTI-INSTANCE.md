@@ -1,4 +1,4 @@
-# TranscriptStudio — Multi-Instance Deployment Plan
+# ThoughtVault — Multi-Instance Deployment Plan
 
 **Status:** Plan (nog niet geïmplementeerd)
 **Datum:** 2026-03-13
@@ -228,7 +228,7 @@ FEATURE_SSO_ENABLED=false
 FEATURE_CUSTOM_LLM_ENDPOINT=      # Leeg = gebruik gedeelde Ollama
 
 # === Branding (optioneel, voor toekomstig gebruik) ===
-TENANT_APP_NAME="TranscriptStudio"
+TENANT_APP_NAME="ThoughtVault"
 TENANT_ACCENT_COLOR="#007AFF"
 ```
 

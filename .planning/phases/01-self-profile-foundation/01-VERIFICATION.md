@@ -133,7 +133,7 @@ No `TBD`, `FIXME`, or `XXX` markers found in phase-modified files. No stub retur
 
 ### 1. macOS Onboarding Self-Profile Step
 
-**Test:** Reset onboarding (`defaults delete nl.prezent.TranscriptStudio hasCompletedOnboarding`), relaunch, step through. Confirm "Vertel iets over jezelf" appears after Schermopname, before Klaar. Confirm "Overslaan" advances to Klaar with no PersonProfile record written. Then reset again, fill fields, tap Volgende, complete onboarding, open Settings → Profiel tab — confirm values appear.
+**Test:** Reset onboarding (`defaults delete nl.prezent.ThoughtVault hasCompletedOnboarding`), relaunch, step through. Confirm "Vertel iets over jezelf" appears after Schermopname, before Klaar. Confirm "Overslaan" advances to Klaar with no PersonProfile record written. Then reset again, fill fields, tap Volgende, complete onboarding, open Settings → Profiel tab — confirm values appear.
 **Expected:** Step visible; skip writes no record; fill persists in Settings (A-01, A-03 macOS)
 **Why human:** UI step ordering and SwiftData write/read across onboarding completion cannot be verified by static analysis
 

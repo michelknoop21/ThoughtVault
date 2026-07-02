@@ -1,5 +1,5 @@
 // LocalTranscriptStore.swift
-// TranscriptStudio
+// ThoughtVault
 // com.buildmind.ThoughtVault
 //
 // Owns the SwiftData container for locally processed transcripts/notulen and
@@ -106,9 +106,9 @@ final class LocalTranscriptStore {
         }
     }
 
-    /// Dedicated on-disk location: `Application Support/TranscriptStudio/Local.store`.
+    /// Dedicated on-disk location: `Application Support/ThoughtVault/Local.store`.
     private static var storeURL: URL {
-        let base = URL.applicationSupportDirectory.appending(path: "TranscriptStudio", directoryHint: .isDirectory)
+        let base = URL.applicationSupportDirectory.appending(path: "ThoughtVault", directoryHint: .isDirectory)
         try? FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
         return base.appending(path: "Local.store")
     }

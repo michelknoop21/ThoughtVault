@@ -1,9 +1,9 @@
-# TranscriptStudio
+# ThoughtVault
 
 Cross-platform desktop app voor vergaderopnames, transcriptie en automatische notulengeneratie. Native macOS client (Swift 6 / SwiftUI) en Windows client (Tauri 2 / React) met een gedeelde FastAPI + Whisper backend.
 
 **Versie:** Zie `VERSION` bestand (auto-bumped)
-**Bundle ID:** `nl.prezent.TranscriptStudio`
+**Bundle ID:** `nl.prezent.ThoughtVault`
 **Repository:** [gitlab.prezent.nl/michelk/transcript-studio-native](https://gitlab.prezent.nl/michelk/transcript-studio-native)
 **Backend:** `https://n8n.prezent.nl/tstudio/api/`
 
@@ -30,7 +30,7 @@ Cross-platform desktop app voor vergaderopnames, transcriptie en automatische no
 
 ## Wat doet het
 
-TranscriptStudio neemt vergaderingen op, transcribeert de audio via GPU-versnelde Whisper, en genereert gestructureerde notulen via een LLM-pipeline. Gebruikers starten een opname in een klik, en ontvangen notulen in HTML-formaat die exporteerbaar zijn naar DOCX, PDF, Markdown en plain text.
+ThoughtVault neemt vergaderingen op, transcribeert de audio via GPU-versnelde Whisper, en genereert gestructureerde notulen via een LLM-pipeline. Gebruikers starten een opname in een klik, en ontvangen notulen in HTML-formaat die exporteerbaar zijn naar DOCX, PDF, Markdown en plain text.
 
 Kernfunctionaliteit:
 - **Opnemen** — microfoon, systeemaudio, of gecombineerd (beide tegelijk)
@@ -59,7 +59,7 @@ Kernfunctionaliteit:
 ### macOS app
 - macOS 14 Sonoma of nieuwer
 - Xcode 16 of nieuwer
-- Code signing: open `TranscriptStudio.xcodeproj` → Signing & Capabilities → stel je Team in
+- Code signing: open `ThoughtVault.xcodeproj` → Signing & Capabilities → stel je Team in
 
 ### Windows app
 - Node.js 20+
@@ -80,17 +80,17 @@ Kernfunctionaliteit:
 
 ```bash
 # Open in Xcode
-open TranscriptStudio.xcodeproj
+open ThoughtVault.xcodeproj
 
 # Of bouw via CLI (zonder code signing)
-xcodebuild -project TranscriptStudio.xcodeproj \
-  -scheme TranscriptStudio \
+xcodebuild -project ThoughtVault.xcodeproj \
+  -scheme ThoughtVault \
   -configuration Debug \
   build CODE_SIGNING_ALLOWED=NO
 
 # Met code signing (vereist provisioning profile)
-xcodebuild -project TranscriptStudio.xcodeproj \
-  -scheme TranscriptStudio \
+xcodebuild -project ThoughtVault.xcodeproj \
+  -scheme ThoughtVault \
   build
 ```
 
@@ -132,8 +132,8 @@ Zie [docs/RELEASE.md](docs/RELEASE.md) voor de complete pipeline documentatie.
 
 ```bash
 # macOS
-xcodebuild -project TranscriptStudio.xcodeproj \
-  -scheme TranscriptStudio \
+xcodebuild -project ThoughtVault.xcodeproj \
+  -scheme ThoughtVault \
   -configuration Release \
   -destination "platform=macOS,arch=arm64" \
   build
@@ -155,8 +155,8 @@ cd transcript-studio-android
 
 ```bash
 xcodebuild test \
-  -project TranscriptStudio.xcodeproj \
-  -scheme TranscriptStudioTests
+  -project ThoughtVault.xcodeproj \
+  -scheme ThoughtVaultTests
 ```
 
 ### Windows
@@ -184,11 +184,11 @@ Beide clients hebben **geen** `.env` bestanden of environment variabelen nodig. 
 ## Projectstructuur
 
 ```
-TranscriptStudioApp/
+ThoughtVaultApp/
 │
 ├── macos/                             # macOS/iOS app (Swift 6, SwiftUI)
 │   ├── App/                           # Entry point, ContentView, AppDelegate
-│   │   ├── TranscriptStudioApp.swift  #   Window config (1100x750, min 900x600)
+│   │   ├── ThoughtVaultApp.swift  #   Window config (1100x750, min 900x600)
 │   │   ├── ContentView.swift          #   Root view, collapsible sidebar + TabView (Home, Opnemen, Taken, Notulen, Instellingen, Admin)
 │   │   └── AppDelegate.swift          #   MenuBarExtra, FloatingWidgetController
 │   ├── Models/                        # Codable data modellen
@@ -236,7 +236,7 @@ TranscriptStudioApp/
 │   └── Resources/
 │       ├── nl.lproj/Localizable.strings  # Nederlands (primair)
 │       ├── en.lproj/Localizable.strings  # Engels (fallback)
-│       └── TranscriptStudio.entitlements # Sandbox, audio, calendar, ScreenCaptureKit
+│       └── ThoughtVault.entitlements # Sandbox, audio, calendar, ScreenCaptureKit
 │
 ├── windows/                           # Windows app (Tauri 2, React 19)
 │   ├── src/                           # React frontend
@@ -464,4 +464,4 @@ Gedetailleerde documentatie staat in [`docs/`](docs/):
 
 ---
 
-*Prezent Internet B.V. — TranscriptStudio*
+*Prezent Internet B.V. — ThoughtVault*

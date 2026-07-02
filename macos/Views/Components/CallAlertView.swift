@@ -1,5 +1,5 @@
 // CallAlertView.swift
-// TranscriptStudio
+// ThoughtVault
 // com.buildmind.ThoughtVault
 //
 // Overlay alert displayed when an upcoming calendar meeting is detected.

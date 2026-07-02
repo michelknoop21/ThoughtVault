@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		AA000001 /* TranscriptStudioApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000001 /* TranscriptStudioApp.swift */; };
+		AA000001 /* ThoughtVaultApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000001 /* ThoughtVaultApp.swift */; };
 		AA000002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000002 /* ContentView.swift */; };
 		AA000003 /* Color+Brand.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000003 /* Color+Brand.swift */; };
 		AA000004 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000004 /* Theme.swift */; };
@@ -87,7 +87,7 @@
 		AA000065 /* WhisperKit in Frameworks */ = {isa = PBXBuildFile; productRef = SD000001 /* WhisperKit */; };
 		AA000066 /* ProfileTemplates.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000066 /* ProfileTemplates.swift */; };
 		AA000067 /* ProfileTemplates.json in Resources */ = {isa = PBXBuildFile; fileRef = FA000067 /* ProfileTemplates.json */; };
-		AB000001 /* TranscriptStudioTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000001 /* TranscriptStudioTests.swift */; };
+		AB000001 /* ThoughtVaultTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000001 /* ThoughtVaultTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -96,13 +96,13 @@
 			containerPortal = PP000001 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = TT000001;
-			remoteInfo = TranscriptStudio;
+			remoteInfo = ThoughtVault;
 		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		C96A32F62F65A4C4001691E3 /* TranscriptStudio.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = TranscriptStudio.xctestplan; sourceTree = "<group>"; };
-		FA000001 /* TranscriptStudioApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptStudioApp.swift; sourceTree = "<group>"; };
+		C96A32F62F65A4C4001691E3 /* ThoughtVault.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = ThoughtVault.xctestplan; sourceTree = "<group>"; };
+		FA000001 /* ThoughtVaultApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThoughtVaultApp.swift; sourceTree = "<group>"; };
 		FA000002 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		FA000003 /* Color+Brand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Color+Brand.swift"; sourceTree = "<group>"; };
 		FA000004 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
@@ -152,9 +152,9 @@
 		FA000042 /* Localizable.strings */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = Localizable.strings; path = nl.lproj/Localizable.strings; sourceTree = "<group>"; };
 		FA000043 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		FA000044 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		FA000045 /* TranscriptStudio.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TranscriptStudio.entitlements; sourceTree = "<group>"; };
+		FA000045 /* ThoughtVault.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ThoughtVault.entitlements; sourceTree = "<group>"; };
 		FA000046 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		FA000047 /* TranscriptStudio-iOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "TranscriptStudio-iOS.entitlements"; sourceTree = "<group>"; };
+		FA000047 /* ThoughtVault-iOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "ThoughtVault-iOS.entitlements"; sourceTree = "<group>"; };
 		FA000050 /* MicrosoftGraphService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MicrosoftGraphService.swift; sourceTree = "<group>"; };
 		FA000051 /* PermissionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionManager.swift; sourceTree = "<group>"; };
 		FA000052 /* PermissionBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionBanner.swift; sourceTree = "<group>"; };
@@ -184,9 +184,9 @@
 		FA000064 /* NotuleTitleExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotuleTitleExtractor.swift; sourceTree = "<group>"; };
 		FA000066 /* ProfileTemplates.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileTemplates.swift; sourceTree = "<group>"; };
 		FA000067 /* ProfileTemplates.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = ProfileTemplates.json; sourceTree = "<group>"; };
-		FB000001 /* TranscriptStudioTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptStudioTests.swift; sourceTree = "<group>"; };
-		FC000001 /* TranscriptStudio.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TranscriptStudio.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		FC000002 /* TranscriptStudioTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TranscriptStudioTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		FB000001 /* ThoughtVaultTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThoughtVaultTests.swift; sourceTree = "<group>"; };
+		FC000001 /* ThoughtVault.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ThoughtVault.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		FC000002 /* ThoughtVaultTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ThoughtVaultTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -208,15 +208,15 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		GG000000 /* TranscriptStudioApp */ = {
+		GG000000 /* ThoughtVaultApp */ = {
 			isa = PBXGroup;
 			children = (
-				C96A32F62F65A4C4001691E3 /* TranscriptStudio.xctestplan */,
+				C96A32F62F65A4C4001691E3 /* ThoughtVault.xctestplan */,
 				GG000001 /* macos */,
-				GG000099 /* TranscriptStudioTests */,
+				GG000099 /* ThoughtVaultTests */,
 				GG000090 /* Products */,
 			);
-			name = TranscriptStudioApp;
+			name = ThoughtVaultApp;
 			sourceTree = "<group>";
 		};
 		GG000001 /* macos */ = {
@@ -231,8 +231,8 @@
 				GG000070 /* Resources */,
 				FA000046 /* Assets.xcassets */,
 				FA000044 /* Info.plist */,
-				FA000045 /* TranscriptStudio.entitlements */,
-				FA000047 /* TranscriptStudio-iOS.entitlements */,
+				FA000045 /* ThoughtVault.entitlements */,
+				FA000047 /* ThoughtVault-iOS.entitlements */,
 				FA000043 /* PrivacyInfo.xcprivacy */,
 			);
 			path = macos;
@@ -241,7 +241,7 @@
 		GG000010 /* App */ = {
 			isa = PBXGroup;
 			children = (
-				FA000001 /* TranscriptStudioApp.swift */,
+				FA000001 /* ThoughtVaultApp.swift */,
 				FA000002 /* ContentView.swift */,
 			);
 			path = App;
@@ -370,23 +370,23 @@
 		GG000090 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				FC000001 /* TranscriptStudio.app */,
-				FC000002 /* TranscriptStudioTests.xctest */,
+				FC000001 /* ThoughtVault.app */,
+				FC000002 /* ThoughtVaultTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
 		};
-		GG000099 /* TranscriptStudioTests */ = {
+		GG000099 /* ThoughtVaultTests */ = {
 			isa = PBXGroup;
 			children = (
-				FB000001 /* TranscriptStudioTests.swift */,
+				FB000001 /* ThoughtVaultTests.swift */,
 				FB000002 /* MigrationTests.swift */,
 				FB000003 /* PersonProfileTests.swift */,
 				FB000004 /* PersonDirectoryServiceTests.swift */,
 				FB000005 /* GraphAttendeeDecodeTests.swift */,
 				GG000100 /* Fixtures */,
 			);
-			path = TranscriptStudioTests;
+			path = ThoughtVaultTests;
 			sourceTree = "<group>";
 		};
 		GG000100 /* Fixtures */ = {
@@ -400,9 +400,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		TT000001 /* TranscriptStudio */ = {
+		TT000001 /* ThoughtVault */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = XC000010 /* Build configuration list for PBXNativeTarget "TranscriptStudio" */;
+			buildConfigurationList = XC000010 /* Build configuration list for PBXNativeTarget "ThoughtVault" */;
 			buildPhases = (
 				BP000001 /* Sources */,
 				BP000002 /* Resources */,
@@ -412,17 +412,17 @@
 			);
 			dependencies = (
 			);
-			name = TranscriptStudio;
+			name = ThoughtVault;
 			packageProductDependencies = (
 				SD000001 /* WhisperKit */,
 			);
-			productName = TranscriptStudio;
-			productReference = FC000001 /* TranscriptStudio.app */;
+			productName = ThoughtVault;
+			productReference = FC000001 /* ThoughtVault.app */;
 			productType = "com.apple.product-type.application";
 		};
-		TT000002 /* TranscriptStudioTests */ = {
+		TT000002 /* ThoughtVaultTests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = XC000020 /* Build configuration list for PBXNativeTarget "TranscriptStudioTests" */;
+			buildConfigurationList = XC000020 /* Build configuration list for PBXNativeTarget "ThoughtVaultTests" */;
 			buildPhases = (
 				BP000011 /* Sources */,
 				BP000012 /* Frameworks */,
@@ -433,9 +433,9 @@
 			dependencies = (
 				TD000001 /* PBXTargetDependency */,
 			);
-			name = TranscriptStudioTests;
-			productName = TranscriptStudioTests;
-			productReference = FC000002 /* TranscriptStudioTests.xctest */;
+			name = ThoughtVaultTests;
+			productName = ThoughtVaultTests;
+			productReference = FC000002 /* ThoughtVaultTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
 /* End PBXNativeTarget section */
@@ -457,7 +457,7 @@
 					};
 				};
 			};
-			buildConfigurationList = XC000001 /* Build configuration list for PBXProject "TranscriptStudio" */;
+			buildConfigurationList = XC000001 /* Build configuration list for PBXProject "ThoughtVault" */;
 			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -466,7 +466,7 @@
 				nl,
 				Base,
 			);
-			mainGroup = GG000000 /* TranscriptStudioApp */;
+			mainGroup = GG000000 /* ThoughtVaultApp */;
 			packageReferences = (
 				SP000001 /* XCRemoteSwiftPackageReference "WhisperKit" */,
 			);
@@ -474,8 +474,8 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				TT000001 /* TranscriptStudio */,
-				TT000002 /* TranscriptStudioTests */,
+				TT000001 /* ThoughtVault */,
+				TT000002 /* ThoughtVaultTests */,
 			);
 		};
 /* End PBXProject section */
@@ -500,7 +500,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				AA000001 /* TranscriptStudioApp.swift in Sources */,
+				AA000001 /* ThoughtVaultApp.swift in Sources */,
 				AA000002 /* ContentView.swift in Sources */,
 				AA000003 /* Color+Brand.swift in Sources */,
 				AA000004 /* Theme.swift in Sources */,
@@ -576,7 +576,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				AB000001 /* TranscriptStudioTests.swift in Sources */,
+				AB000001 /* ThoughtVaultTests.swift in Sources */,
 				AB000002 /* MigrationTests.swift in Sources */,
 				AB000003 /* PersonProfileTests.swift in Sources */,
 				AB000004 /* PersonDirectoryServiceTests.swift in Sources */,
@@ -597,7 +597,7 @@
 /* Begin PBXTargetDependency section */
 		TD000001 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = TT000001 /* TranscriptStudio */;
+			target = TT000001 /* ThoughtVault */;
 			targetProxy = C97D23FC2F597ACE00F5A1D8 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -729,9 +729,9 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = "macos/TranscriptStudio-iOS.entitlements";
-				"CODE_SIGN_ENTITLEMENTS[sdk=iphonesimulator*]" = "macos/TranscriptStudio-iOS.entitlements";
-				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = macos/TranscriptStudio.entitlements;
+				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = "macos/ThoughtVault-iOS.entitlements";
+				"CODE_SIGN_ENTITLEMENTS[sdk=iphonesimulator*]" = "macos/ThoughtVault-iOS.entitlements";
+				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = macos/ThoughtVault.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
@@ -770,9 +770,9 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = "macos/TranscriptStudio-iOS.entitlements";
-				"CODE_SIGN_ENTITLEMENTS[sdk=iphonesimulator*]" = "macos/TranscriptStudio-iOS.entitlements";
-				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = macos/TranscriptStudio.entitlements;
+				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = "macos/ThoughtVault-iOS.entitlements";
+				"CODE_SIGN_ENTITLEMENTS[sdk=iphonesimulator*]" = "macos/ThoughtVault-iOS.entitlements";
+				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = macos/ThoughtVault.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
@@ -822,7 +822,7 @@
 				SUPPORTED_PLATFORMS = "macosx iphoneos iphonesimulator";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 6.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/TranscriptStudio.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/TranscriptStudio";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/ThoughtVault.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/ThoughtVault";
 			};
 			name = Debug;
 		};
@@ -842,14 +842,14 @@
 				SUPPORTED_PLATFORMS = "macosx iphoneos iphonesimulator";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 6.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/TranscriptStudio.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/TranscriptStudio";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/ThoughtVault.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/ThoughtVault";
 			};
 			name = Release;
 		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		XC000001 /* Build configuration list for PBXProject "TranscriptStudio" */ = {
+		XC000001 /* Build configuration list for PBXProject "ThoughtVault" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				XC000002 /* Debug */,
@@ -858,7 +858,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		XC000010 /* Build configuration list for PBXNativeTarget "TranscriptStudio" */ = {
+		XC000010 /* Build configuration list for PBXNativeTarget "ThoughtVault" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				XC000011 /* Debug */,
@@ -867,7 +867,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		XC000020 /* Build configuration list for PBXNativeTarget "TranscriptStudioTests" */ = {
+		XC000020 /* Build configuration list for PBXNativeTarget "ThoughtVaultTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				XC000021 /* Debug */,

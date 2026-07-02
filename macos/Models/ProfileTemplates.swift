@@ -1,5 +1,5 @@
 // ProfileTemplates.swift
-// TranscriptStudio
+// ThoughtVault
 // com.buildmind.ThoughtVault
 //
 // Loads the rich built-in profile prompts + HTML/CSS output templates (ported from

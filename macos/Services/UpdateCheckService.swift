@@ -1,5 +1,5 @@
 // UpdateCheckService.swift
-// TranscriptStudio
+// ThoughtVault
 // com.buildmind.ThoughtVault
 //
 // Checks releases.json for available app updates, once per session.
@@ -116,7 +116,7 @@ final class UpdateCheckService {
 
         let content = UNMutableNotificationContent()
         content.title = "Update beschikbaar"
-        content.body = "Versie \(version) van TranscriptStudio is beschikbaar."
+        content.body = "Versie \(version) van ThoughtVault is beschikbaar."
         content.sound = .default
 
         let request = UNNotificationRequest(

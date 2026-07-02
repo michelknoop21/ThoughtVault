@@ -18,8 +18,8 @@ SwiftData's implicit lightweight migration only handles additive optional fields
 
 **How to avoid:**
 Before adding a single field to `TranscriptRecord`:
-1. Define `enum TranscriptStudioSchemaV1: VersionedSchema` wrapping the current model.
-2. Define `TranscriptStudioSchemaV2` with the new fields (all optional or with defaults).
+1. Define `enum ThoughtVaultSchemaV1: VersionedSchema` wrapping the current model.
+2. Define `ThoughtVaultSchemaV2` with the new fields (all optional or with defaults).
 3. Implement `SchemaMigrationPlan` with a `.lightweight` stage from V1→V2.
 4. Pass `migrationPlan: TranscriptStoreMigrationPlan.self` to `ModelContainer`.
 5. Wrap the in-memory fallback in `do/catch` (see CONCERNS.md — `try!` crash risk).
@@ -357,5 +357,5 @@ The "emergent org-wide recognition" framing sounds like it implies sharing. User
 
 ---
 
-*Pitfalls research for: People-context + action-point attribution — TranscriptStudio "People & Attribution" milestone*
+*Pitfalls research for: People-context + action-point attribution — ThoughtVault "People & Attribution" milestone*
 *Researched: 2026-06-04*

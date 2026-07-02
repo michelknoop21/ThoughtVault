@@ -2,7 +2,7 @@
 
 ## Overview
 
-Vier opeenvolgende fasen die persoons-/rolcontext toevoegen aan TranscriptStudio: eerst het datamodel + zelf-profilering, dan de mensen-directory met agenda-seed, daarna context-injectie in de notule-generatie (lokaal + cloud), en tot slot detectie + bewerkbare toewijzing van actiepunt-eigenaars. Elke fase is een harde afhankelijkheid voor de volgende. Cross-platform (macOS Swift 6 + Windows Tauri 2), privacy-bewust on-device.
+Vier opeenvolgende fasen die persoons-/rolcontext toevoegen aan ThoughtVault: eerst het datamodel + zelf-profilering, dan de mensen-directory met agenda-seed, daarna context-injectie in de notule-generatie (lokaal + cloud), en tot slot detectie + bewerkbare toewijzing van actiepunt-eigenaars. Elke fase is een harde afhankelijkheid voor de volgende. Cross-platform (macOS Swift 6 + Windows Tauri 2), privacy-bewust on-device.
 
 **Kern-mechanisme (v1.1-verrijking):** attributie draait niet alleen op naam-matching maar ook op **onderwerp→rol/expertise→persoon-inferentie** — een actiepunt over een domein gaat naar de persoon wiens rol/expertise dat dekt, óók zonder naamsvermelding. Dit vergt `expertiseTags` in het datamodel vanaf Phase 1, en een **leerlus** waarin bevestigde toewijzingen het persoonsprofiel verrijken. Spreker-diarisatie is bewust géén dependency (spike 2026-06-05: niet beschikbaar in pipeline).
 

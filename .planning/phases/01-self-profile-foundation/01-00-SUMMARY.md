@@ -6,8 +6,8 @@ tags: [tdd, red-tests, swiftdata, migration, personprofile]
 dependency_graph:
   requires: []
   provides:
-    - TranscriptStudioTests/MigrationTests.swift
-    - TranscriptStudioTests/PersonProfileTests.swift
+    - ThoughtVaultTests/MigrationTests.swift
+    - ThoughtVaultTests/PersonProfileTests.swift
   affects:
     - Plan 01-01 (must implement PersonProfile + AppMigrationPlan to make these GREEN)
 tech_stack:
@@ -17,8 +17,8 @@ tech_stack:
     - Swift Testing @Suite/@Test/@MainActor with #expect assertions
 key_files:
   created:
-    - TranscriptStudioTests/MigrationTests.swift
-    - TranscriptStudioTests/PersonProfileTests.swift
+    - ThoughtVaultTests/MigrationTests.swift
+    - ThoughtVaultTests/PersonProfileTests.swift
   modified: []
 decisions:
   - "Used XCTest for MigrationTests (store setup/teardown) per PATTERNS.md recommendation"
@@ -42,12 +42,12 @@ metrics:
 
 | Task | Name | Commit | Files |
 |------|------|--------|-------|
-| 1 | RED migration test — TranscriptRecord survives V1→V2 | 9a93c1b | TranscriptStudioTests/MigrationTests.swift |
-| 2 | RED PersonProfile upsert tests — create / update / skip | 598fc3f | TranscriptStudioTests/PersonProfileTests.swift |
+| 1 | RED migration test — TranscriptRecord survives V1→V2 | 9a93c1b | ThoughtVaultTests/MigrationTests.swift |
+| 2 | RED PersonProfile upsert tests — create / update / skip | 598fc3f | ThoughtVaultTests/PersonProfileTests.swift |
 
 ## What Was Built
 
-Two test files in `TranscriptStudioTests/` that lock the contract for Plan 01's data layer before any production code exists:
+Two test files in `ThoughtVaultTests/` that lock the contract for Plan 01's data layer before any production code exists:
 
 **MigrationTests.swift** — `XCTestCase` subclass `MigrationTests` with one test `testTranscriptRecordSurvivesV1ToV2Migration`. Builds an in-memory `ModelContainer` referencing `AppMigrationPlan` and `PersonProfile`, seeds a `TranscriptRecord`, saves, fetches back, and asserts `id` survival and `count == 1`. References `AppMigrationPlan.self` (not yet built) → compile fails until Plan 01 lands.
 
@@ -63,10 +63,10 @@ A private `upsertSelfProfile(in:)` helper mirrors `LocalTranscriptStore.upsertSe
 Both test files build-fail (cannot find type `PersonProfile`, `AppMigrationPlan`) until Plan 01 implements them. Verified with negated grep:
 
 ```
-! xcodebuild test ... -only-testing:TranscriptStudioTests/MigrationTests ... | grep -q "TEST SUCCEEDED"
+! xcodebuild test ... -only-testing:ThoughtVaultTests/MigrationTests ... | grep -q "TEST SUCCEEDED"
 → RED CONFIRMED
 
-! xcodebuild test ... -only-testing:TranscriptStudioTests/PersonProfileTests ... | grep -q "TEST SUCCEEDED"
+! xcodebuild test ... -only-testing:ThoughtVaultTests/PersonProfileTests ... | grep -q "TEST SUCCEEDED"
 → RED CONFIRMED
 ```
 
@@ -86,8 +86,8 @@ No new network endpoints, auth paths, file access patterns, or schema changes at
 
 ## Self-Check: PASSED
 
-- [x] `TranscriptStudioTests/MigrationTests.swift` exists
-- [x] `TranscriptStudioTests/PersonProfileTests.swift` exists
+- [x] `ThoughtVaultTests/MigrationTests.swift` exists
+- [x] `ThoughtVaultTests/PersonProfileTests.swift` exists
 - [x] Commit 9a93c1b exists (`test(01-00): add RED MigrationTests`)
 - [x] Commit 598fc3f exists (`test(01-00): add RED PersonProfileTests`)
 - [x] Both files reference `PersonProfile` and `AppMigrationPlan` (grep confirmed)

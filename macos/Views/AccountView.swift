@@ -1,5 +1,5 @@
 // AccountView.swift
-// TranscriptStudio
+// ThoughtVault
 // com.buildmind.ThoughtVault
 //
 // Account management view with profile editing, password change,
@@ -534,7 +534,7 @@ struct AccountView: View {
 
     private var dangerZoneSection: some View {
         Section {
-            Link(destination: URL(string: "mailto:support@prezent.nl?subject=GDPR%20Account%20Verwijdering%20TranscriptStudio")!) {
+            Link(destination: URL(string: "mailto:support@prezent.nl?subject=GDPR%20Account%20Verwijdering%20ThoughtVault")!) {
                 HStack {
                     Label("Account verwijderen via support", systemImage: "envelope.fill")
                         .foregroundStyle(Color.statusError)

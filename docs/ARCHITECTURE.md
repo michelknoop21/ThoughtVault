@@ -1,4 +1,4 @@
-# TranscriptStudio — Architecture
+# ThoughtVault — Architecture
 
 _Last updated: 2026-04-01_
 
@@ -6,7 +6,7 @@ _Last updated: 2026-04-01_
 
 ## Overview
 
-TranscriptStudio is a cross-platform meeting transcription system consisting of:
+ThoughtVault is a cross-platform meeting transcription system consisting of:
 
 - **macOS client** — Swift 6+ / SwiftUI native app (`/macos/`)
 - **Windows client** — Tauri 2.10 / React 19 / TypeScript desktop app (`/windows/`)
@@ -167,7 +167,7 @@ The entire backend pipeline is designed to handle files up to 500 MB without mod
 ```
 macos/
 ├── App/
-│   ├── TranscriptStudioApp.swift       # App entry point, window configuration (1100×750, min 900×600)
+│   ├── ThoughtVaultApp.swift       # App entry point, window configuration (1100×750, min 900×600)
 │   ├── ContentView.swift               # Root view, NavigationSplitView + TabView (Home, Opnemen, Taken, Notulen, Instellingen, Admin)
 │   └── AppDelegate.swift               # MenuBarExtra, FloatingWidgetController
 │
@@ -227,7 +227,7 @@ macos/
 └── Resources/
     ├── nl.lproj/Localizable.strings   # Primary Dutch strings
     ├── en.lproj/Localizable.strings   # English fallback strings
-    └── TranscriptStudio.entitlements  # Sandbox, audio-input, calendars, ScreenCaptureKit
+    └── ThoughtVault.entitlements  # Sandbox, audio-input, calendars, ScreenCaptureKit
 ```
 
 ### Services Layer (15+ services)
@@ -256,7 +256,7 @@ macos/
 ### State Management
 
 - `@Observable` throughout — no Combine, no `@Published`.
-- ViewModels are `@MainActor` classes instantiated in `TranscriptStudioApp.swift`.
+- ViewModels are `@MainActor` classes instantiated in `ThoughtVaultApp.swift`.
 - Services expose mutable state as regular `var` properties; `@Observable` macro instruments them.
 - `RecordingViewModel` orchestrates: `AudioRecorder` → `SystemAudioCapture` → `APIService` → `OfflineQueue` → SSE stream → `TranscriptsViewModel`.
 
@@ -288,7 +288,7 @@ AVFoundation (mic)          ScreenCaptureKit (system)
 | Surface | Description |
 |---------|-------------|
 | Main window | `NavigationSplitView` (collapsible sidebar + detail), default 1100×750, minimum 900×600. Sidebar collapses to 52px icon column with expand button; Shift+Cmd+S toggle. |
-| MenuBarExtra | `MenuBarExtra("TranscriptStudio", systemImage:)` — recording controls, live duration, task progress |
+| MenuBarExtra | `MenuBarExtra("ThoughtVault", systemImage:)` — recording controls, live duration, task progress |
 | FloatingWidgetPanel | `NSPanel` overlay (non-activating, always on top) shown during active recording |
 | iOS Live Activity | `RecordingActivityWidget` target — Dynamic Island + lock screen progress via ActivityKit |
 
@@ -351,7 +351,7 @@ src/
 - `AppData/Recordings` — audio files (7-day cleanup)
 
 **External integrations:**
-- TranscriptStudio API at `n8n.prezent.nl` (configurable endpoint)
+- ThoughtVault API at `n8n.prezent.nl` (configurable endpoint)
 - Microsoft Graph — M365 calendar access + OAuth PKCE for meeting detection. All Microsoft API calls (token exchange, user profile, calendar events) route through Tauri `proxy_request` command to bypass browser CORS restrictions (see DEC-027)
 - Ollama / LM Studio — local LLM generation (configurable HTTP endpoint)
 
@@ -371,7 +371,7 @@ src/
 
 ```
 transcript-studio-android/app/src/main/java/nl/prezent/transcriptstudio/
-├── TranscriptStudioApp.kt              # @HiltAndroidApp entry point
+├── ThoughtVaultApp.kt              # @HiltAndroidApp entry point
 ├── MainActivity.kt                     # Single activity, edge-to-edge, Compose host
 │
 ├── data/

@@ -138,7 +138,7 @@ export function OnboardingWizard() {
             <StepContent
               icon={<StepIcon icon={<Server24Regular style={{ fontSize: 28 }} />} />}
               title="Server configuratie"
-              description="Voer het adres in van je TranscriptStudio server."
+              description="Voer het adres in van je ThoughtVault server."
             >
               <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                 <label style={{ fontSize: 13, fontWeight: 500, color: "var(--text-secondary)" }}>
@@ -171,7 +171,7 @@ export function OnboardingWizard() {
             <StepContent
               icon={<StepIcon icon={<MicRecord24Regular style={{ fontSize: 28 }} />} />}
               title="Microfoon toegang"
-              description="TranscriptStudio heeft toegang nodig tot je microfoon voor het opnemen van vergaderingen."
+              description="ThoughtVault heeft toegang nodig tot je microfoon voor het opnemen van vergaderingen."
             >
               <div
                 style={{
@@ -224,7 +224,7 @@ export function OnboardingWizard() {
             <StepContent
               icon={<StepIcon icon={<Person24Regular style={{ fontSize: 28 }} />} />}
               title="Vertel iets over jezelf"
-              description="TranscriptStudio gebruikt jouw profiel om actiepunten straks aan de juiste persoon te koppelen. Je kunt dit altijd later aanpassen."
+              description="ThoughtVault gebruikt jouw profiel om actiepunten straks aan de juiste persoon te koppelen. Je kunt dit altijd later aanpassen."
             >
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 <ProfileField

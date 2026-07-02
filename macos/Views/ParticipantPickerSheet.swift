@@ -1,5 +1,5 @@
 // ParticipantPickerSheet.swift
-// TranscriptStudio
+// ThoughtVault
 // com.buildmind.ThoughtVault
 //
 // Multi-select picker over the people directory. Lets the user mark who is in an

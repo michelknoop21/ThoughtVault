@@ -1,4 +1,4 @@
-# STATUS — TranscriptStudio
+# STATUS — ThoughtVault
 
 _Laatste update: 2026-05-06_
 

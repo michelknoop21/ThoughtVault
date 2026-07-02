@@ -1,5 +1,5 @@
 // ProfilesView.swift
-// TranscriptStudio
+// ThoughtVault
 // com.buildmind.ThoughtVault
 //
 // Profile management view: list default and custom profiles,

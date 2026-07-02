@@ -1,6 +1,6 @@
 #!/bin/bash
 cd "$(dirname "$0")/.."
-echo "=== TranscriptStudio: Sync Version ==="
+echo "=== ThoughtVault: Sync Version ==="
 echo ""
 ./scripts/sync-version.sh
 echo ""

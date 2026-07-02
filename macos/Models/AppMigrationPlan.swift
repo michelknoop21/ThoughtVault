@@ -1,5 +1,5 @@
 // AppMigrationPlan.swift
-// TranscriptStudio
+// ThoughtVault
 // com.buildmind.ThoughtVault
 //
 // VersionedSchema definitions and lightweight SchemaMigrationPlan for the

@@ -175,7 +175,7 @@ All strings are Dutch (NL). Keys map to `Localizable.strings` (macOS) / inline N
 | Primary CTA (save edit) | "Wijzigingen opslaan" | PersonEditView save button (verb + noun, not bare "Opslaan") |
 | Primary CTA (seed confirm) | "Voeg {n} personen toe" / "Voeg 1 persoon toe" | Pluralised; n = checked count |
 | Empty state heading | "Nog geen personen toegevoegd" | Directory list when empty |
-| Empty state body | "Voeg collega's en bekende externen toe zodat TranscriptStudio actiepunten aan hen kan koppelen." | Below heading; includes next-step hint |
+| Empty state body | "Voeg collega's en bekende externen toe zodat ThoughtVault actiepunten aan hen kan koppelen." | Below heading; includes next-step hint |
 | Empty state CTA | "Persoon toevoegen" | Same verb as toolbar CTA |
 | Seed sheet title | "Nieuwe deelnemers gevonden" | Title of SeedReviewSheet |
 | Seed sheet subtitle | "{n} deelnemers uit je agenda staan nog niet in je directory." | Subtitle with count |

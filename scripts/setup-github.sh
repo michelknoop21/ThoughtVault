@@ -4,7 +4,7 @@ set -e
 
 REPO_NAME="transcript-studio-native"
 
-echo "=== GitHub Setup voor TranscriptStudio ==="
+echo "=== GitHub Setup voor ThoughtVault ==="
 echo ""
 
 # Check if gh CLI is installed

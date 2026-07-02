@@ -1,5 +1,5 @@
 // TranscriptRecord.swift
-// TranscriptStudio
+// ThoughtVault
 // com.buildmind.ThoughtVault
 //
 // SwiftData model for transcripts/notulen that are processed and stored locally,

@@ -1,4 +1,4 @@
-# TranscriptStudio — GitLab CI/CD Pipeline
+# ThoughtVault — GitLab CI/CD Pipeline
 #
 # All jobs run on Michel's Mac (shell executor).
 # Mac reaches GitLab for jobs AND EC2 server via SSH for deploys.
@@ -39,21 +39,21 @@ prepare:
       fi
 
       if [ "$CHANNEL" = "production" ]; then
-        DMG_NAME="TranscriptStudio-${VERSION}.dmg"
-        MSI_X64_NAME="TranscriptStudio_${VERSION}_x64.msi"
-        APK_NAME="TranscriptStudio-${VERSION}.apk"
-        APP_DISPLAY_NAME="TranscriptStudio"
-        BUNDLE_ID_MACOS="nl.prezent.TranscriptStudio"
+        DMG_NAME="ThoughtVault-${VERSION}.dmg"
+        MSI_X64_NAME="ThoughtVault_${VERSION}_x64.msi"
+        APK_NAME="ThoughtVault-${VERSION}.apk"
+        APP_DISPLAY_NAME="ThoughtVault"
+        BUNDLE_ID_MACOS="nl.prezent.ThoughtVault"
         BUNDLE_ID_WINDOWS="nl.prezent.transcript-studio"
-        TAURI_PRODUCT_NAME="TranscriptStudio"
+        TAURI_PRODUCT_NAME="ThoughtVault"
       else
-        DMG_NAME="TranscriptStudio-Dev-${VERSION}.dmg"
-        MSI_X64_NAME="TranscriptStudio-Dev_${VERSION}_x64.msi"
-        APK_NAME="TranscriptStudio-Dev-${VERSION}.apk"
-        APP_DISPLAY_NAME="TranscriptStudio Dev"
-        BUNDLE_ID_MACOS="nl.prezent.TranscriptStudio.dev"
+        DMG_NAME="ThoughtVault-Dev-${VERSION}.dmg"
+        MSI_X64_NAME="ThoughtVault-Dev_${VERSION}_x64.msi"
+        APK_NAME="ThoughtVault-Dev-${VERSION}.apk"
+        APP_DISPLAY_NAME="ThoughtVault Dev"
+        BUNDLE_ID_MACOS="nl.prezent.ThoughtVault.dev"
         BUNDLE_ID_WINDOWS="nl.prezent.transcript-studio-dev"
-        TAURI_PRODUCT_NAME="TranscriptStudio Dev"
+        TAURI_PRODUCT_NAME="ThoughtVault Dev"
       fi
 
       {
@@ -85,11 +85,11 @@ build-macos:
     - |
       set -eo pipefail
       xcodebuild archive \
-        -project TranscriptStudio.xcodeproj \
-        -scheme TranscriptStudio \
+        -project ThoughtVault.xcodeproj \
+        -scheme ThoughtVault \
         -configuration Release \
         -destination "generic/platform=macOS" \
-        -archivePath build/TranscriptStudio.xcarchive \
+        -archivePath build/ThoughtVault.xcarchive \
         CODE_SIGNING_ALLOWED=NO \
         SKIP_INSTALL=NO \
         PRODUCT_BUNDLE_IDENTIFIER="$BUNDLE_ID_MACOS" \
@@ -105,13 +105,13 @@ build-macos:
       # channel display name in the export step below instead.
     - |
       mkdir -p build/export
-      APP_PATH=$(find build/TranscriptStudio.xcarchive/Products -name "*.app" -type d | head -1)
+      APP_PATH=$(find build/ThoughtVault.xcarchive/Products -name "*.app" -type d | head -1)
       if [ -z "$APP_PATH" ]; then
         echo "ERROR: .app not found in archive"
-        find build/TranscriptStudio.xcarchive/Products -type d
+        find build/ThoughtVault.xcarchive/Products -type d
         exit 1
       fi
-      # Rename to the channel display name (e.g. "TranscriptStudio Dev.app").
+      # Rename to the channel display name (e.g. "ThoughtVault Dev.app").
       # Previously achieved via a PRODUCT_NAME override, which now collides with
       # SwiftPM resource bundles, so we rename the product here instead.
       cp -R "$APP_PATH" "build/export/${APP_DISPLAY_NAME}.app"
@@ -184,8 +184,8 @@ build-ios:
     - |
       set -eo pipefail
       xcodebuild build \
-        -project TranscriptStudio.xcodeproj \
-        -scheme TranscriptStudio \
+        -project ThoughtVault.xcodeproj \
+        -scheme ThoughtVault \
         -configuration Debug \
         -destination "generic/platform=iOS Simulator" \
         CODE_SIGNING_ALLOWED=NO \
@@ -226,13 +226,13 @@ build-windows:
         $CHANNEL = if ($env:CHANNEL) { $env:CHANNEL } else { "dev" }
       }
       if ($CHANNEL -eq "production") {
-        $MSI_NAME = "TranscriptStudio_${VERSION}_x64.msi"
+        $MSI_NAME = "ThoughtVault_${VERSION}_x64.msi"
         $BUNDLE_ID = "nl.prezent.transcript-studio"
-        $PRODUCT_NAME = "TranscriptStudio"
+        $PRODUCT_NAME = "ThoughtVault"
       } else {
-        $MSI_NAME = "TranscriptStudio-Dev_${VERSION}_x64.msi"
+        $MSI_NAME = "ThoughtVault-Dev_${VERSION}_x64.msi"
         $BUNDLE_ID = "nl.prezent.transcript-studio-dev"
-        $PRODUCT_NAME = "TranscriptStudio Dev"
+        $PRODUCT_NAME = "ThoughtVault Dev"
       }
       # Export as env vars for subsequent script blocks
       $env:W_VERSION = $VERSION

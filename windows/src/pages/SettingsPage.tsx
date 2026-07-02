@@ -605,7 +605,7 @@ export function SettingsPage() {
               <div className="flex-row gap-10 flex-1">
                 <Info24Regular className="settings-icon-muted" />
                 <div className="flex-1">
-                  <p className="settings-label">TranscriptStudio</p>
+                  <p className="settings-label">ThoughtVault</p>
                   <p className="settings-desc">Versie {appVersion || "..."} — Windows (Tauri 2)</p>
                 </div>
               </div>

@@ -1,5 +1,5 @@
 // HomeView.swift
-// TranscriptStudio
+// ThoughtVault
 // com.buildmind.ThoughtVault
 //
 // Main home screen with welcome message, quick-start recording buttons,
@@ -393,7 +393,7 @@ struct HomeView: View {
                             .foregroundStyle(Color.labelPrimary)
                         Spacer()
                     }
-                    Text("Start je eerste opname en TranscriptStudio zet je gesprek automatisch om in een heldere notule met samenvatting, actiepunten en besluiten.")
+                    Text("Start je eerste opname en ThoughtVault zet je gesprek automatisch om in een heldere notule met samenvatting, actiepunten en besluiten.")
                         .font(TS.Font.caption)
                         .foregroundStyle(Color.labelSecondary)
                         .fixedSize(horizontal: false, vertical: true)

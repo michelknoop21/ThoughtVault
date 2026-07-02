@@ -64,7 +64,7 @@
 - Google Tink 1.15 - Cryptography
 
 **Testing:**
-- Xcode XCTest - macOS unit tests (`TranscriptStudioTests/`)
+- Xcode XCTest - macOS unit tests (`ThoughtVaultTests/`)
 - Vitest 4.1 - Windows frontend tests (`windows/package.json`)
 
 **Build/Dev:**
@@ -111,7 +111,7 @@
 
 **macOS:**
 - Server URL stored in `UserDefaults` key `"serverURL"`, default `https://n8n.prezent.nl/tstudio/api`
-- Auth token in Keychain via `KeychainService` (service `nl.prezent.TranscriptStudio`)
+- Auth token in Keychain via `KeychainService` (service `nl.prezent.ThoughtVault`)
 - Design tokens: `macos/Extensions/Theme.swift` (`TS.Spacing`, `TS.Font`, `TS.Radius`)
 - Brand colours: `macos/Extensions/Color+Brand.swift`
 - UI strings via `macos/Resources/Localizable.strings` (Dutch)
@@ -125,7 +125,7 @@
 **Build:**
 - Version source of truth: `VERSION` file (root), currently `1.0.130`
 - Version sync script: `scripts/sync-version.sh` propagates to `Cargo.toml`, `tauri.conf.json`, Android `build.gradle.kts`
-- Xcode project: `TranscriptStudio.xcodeproj/`
+- Xcode project: `ThoughtVault.xcodeproj/`
 
 ## Platform Requirements
 

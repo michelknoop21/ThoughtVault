@@ -577,29 +577,29 @@ Step 2.6: SKIPPED (no new external dependencies — all required capabilities al
 | Property | Value |
 |----------|-------|
 | Framework | XCTest (macOS) |
-| Config file | `TranscriptStudio.xcodeproj` scheme `TranscriptStudioTests` |
-| Quick run command | `xcodebuild test -project TranscriptStudio.xcodeproj -scheme TranscriptStudioTests -only-testing:TranscriptStudioTests/LocalTranscriptStoreTests CODE_SIGNING_ALLOWED=NO` |
-| Full suite command | `xcodebuild test -project TranscriptStudio.xcodeproj -scheme TranscriptStudioTests CODE_SIGNING_ALLOWED=NO` |
+| Config file | `ThoughtVault.xcodeproj` scheme `ThoughtVaultTests` |
+| Quick run command | `xcodebuild test -project ThoughtVault.xcodeproj -scheme ThoughtVaultTests -only-testing:ThoughtVaultTests/LocalTranscriptStoreTests CODE_SIGNING_ALLOWED=NO` |
+| Full suite command | `xcodebuild test -project ThoughtVault.xcodeproj -scheme ThoughtVaultTests CODE_SIGNING_ALLOWED=NO` |
 
 ### Phase Requirements → Test Map
 
 | Req ID | Behavior | Test Type | Automated Command | File Exists? |
 |--------|----------|-----------|-------------------|-------------|
-| A-04 | Existing `TranscriptRecord` data survives migration to V2 schema | unit (in-memory container) | `xcodebuild test ... -only-testing:TranscriptStudioTests/MigrationTests` | ❌ Wave 0 |
-| A-02 | `upsertSelfProfile` creates record on empty store | unit | `xcodebuild test ... -only-testing:TranscriptStudioTests/PersonProfileTests` | ❌ Wave 0 |
+| A-04 | Existing `TranscriptRecord` data survives migration to V2 schema | unit (in-memory container) | `xcodebuild test ... -only-testing:ThoughtVaultTests/MigrationTests` | ❌ Wave 0 |
+| A-02 | `upsertSelfProfile` creates record on empty store | unit | `xcodebuild test ... -only-testing:ThoughtVaultTests/PersonProfileTests` | ❌ Wave 0 |
 | A-02 | `upsertSelfProfile` updates in-place when isSelf record exists | unit | same | ❌ Wave 0 |
 | A-02 | Skipping onboarding creates no PersonProfile record | unit | same | ❌ Wave 0 |
 | A-03 | Settings upsert called from ProfileSettingsView saves correctly | integration (manual) | manual — UI interaction | manual |
 | A-01 | Onboarding step appears between schermopname and klaar | manual | `xcodebuild build CODE_SIGNING_ALLOWED=NO` + visual inspection | manual |
 
 ### Sampling Rate
-- **Per task commit:** `xcodebuild test -scheme TranscriptStudioTests -only-testing:TranscriptStudioTests/PersonProfileTests CODE_SIGNING_ALLOWED=NO`
+- **Per task commit:** `xcodebuild test -scheme ThoughtVaultTests -only-testing:ThoughtVaultTests/PersonProfileTests CODE_SIGNING_ALLOWED=NO`
 - **Per wave merge:** Full suite
 - **Phase gate:** Full suite green before `/gsd-verify-work`
 
 ### Wave 0 Gaps
-- [ ] `TranscriptStudioTests/MigrationTests.swift` — covers A-04 (migration preserves data). Uses in-memory V1 container with pre-seeded TranscriptRecord, then opens with V2 migration plan.
-- [ ] `TranscriptStudioTests/PersonProfileTests.swift` — covers A-02 upsert logic (create + update paths, skip = no record).
+- [ ] `ThoughtVaultTests/MigrationTests.swift` — covers A-04 (migration preserves data). Uses in-memory V1 container with pre-seeded TranscriptRecord, then opens with V2 migration plan.
+- [ ] `ThoughtVaultTests/PersonProfileTests.swift` — covers A-02 upsert logic (create + update paths, skip = no record).
 - [ ] No framework install needed — XCTest already configured.
 
 ---

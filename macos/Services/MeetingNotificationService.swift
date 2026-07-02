@@ -1,5 +1,5 @@
 // MeetingNotificationService.swift
-// TranscriptStudio
+// ThoughtVault
 // com.buildmind.ThoughtVault
 //
 // Schedules macOS Notification Center alerts for upcoming calendar meetings.

@@ -9,6 +9,7 @@
 import SwiftUI
 import AVFoundation
 import Speech
+import UniformTypeIdentifiers
 #if os(macOS)
 import ScreenCaptureKit
 #endif
@@ -33,6 +34,7 @@ struct SettingsView: View {
     @AppStorage(ObsidianService.enabledKey) private var obsidianEnabled: Bool = false
     @AppStorage(ObsidianService.baseURLKey) private var obsidianBaseURL: String = ObsidianService.defaultBaseURL
     @AppStorage(ObsidianService.vaultPathKey) private var obsidianVaultPath: String = "Notulen"
+    @AppStorage(VaultFolderStore.contextNoteKey) private var obsidianContextNote: String = VaultFolderStore.defaultContextNote
 
     // MARK: - Local State
 
@@ -52,6 +54,8 @@ struct SettingsView: View {
     @State private var obsidianApiKey: String = ""
     @State private var obsidianTesting: Bool = false
     @State private var obsidianTestResult: ObsidianTestState? = nil
+    @State private var showVaultFolderPicker: Bool = false
+    @State private var vaultFolderName: String = VaultFolderStore.folderName
 
     enum ObsidianTestState {
         case success
@@ -326,6 +330,40 @@ struct SettingsView: View {
             }
             .tint(Color.brandPrimary)
 
+            // Folder connection — the cross-platform path (works on iOS too).
+            SettingFieldRow("Vault-map") {
+                HStack(spacing: TS.Spacing.sm) {
+                    Text(vaultFolderName.isEmpty ? "Geen map gekozen" : vaultFolderName)
+                        .font(TS.Font.body)
+                        .foregroundStyle(vaultFolderName.isEmpty ? Color.labelTertiary : Color.labelPrimary)
+                        .lineLimit(1)
+                    Spacer()
+                    Button(vaultFolderName.isEmpty ? "Kies map…" : "Wijzig…") {
+                        showVaultFolderPicker = true
+                    }
+                    .buttonStyle(SecondaryButtonStyle())
+                    if !vaultFolderName.isEmpty {
+                        Button {
+                            VaultFolderStore.clear()
+                            vaultFolderName = ""
+                        } label: { Image(systemName: "xmark.circle.fill") }
+                        .buttonStyle(.borderless)
+                        .foregroundStyle(Color.labelTertiary)
+                        .help("Map-koppeling verwijderen")
+                    }
+                }
+            }
+
+            SettingFieldRow("Context-note") {
+                TextField(VaultFolderStore.defaultContextNote, text: $obsidianContextNote)
+                    .textFieldStyle(.roundedBorder)
+                    .font(TS.Font.body)
+                    .autocorrectionDisabled()
+                    #if os(iOS)
+                    .textInputAutocapitalization(.never)
+                    #endif
+            }
+
             SettingFieldRow("Base-URL") {
                 TextField(ObsidianService.defaultBaseURL, text: $obsidianBaseURL)
                     .textFieldStyle(.roundedBorder)
@@ -405,10 +443,26 @@ struct SettingsView: View {
         } header: {
             Text("Obsidian-koppeling")
         } footer: {
-            Text("Schrijft notulen naar je Obsidian-vault via de Local REST API plugin. "
-                + "De plugin draait op een self-signed HTTPS-poort (standaard 127.0.0.1:27124).")
+            Text("Kies je vault-map om notulen als bestand op te slaan én de context-note te lezen "
+                + "(namen/termen zoals \"Yinga\") — werkt op Mac én iPhone. "
+                + "De Base-URL/API-sleutel eronder zijn de desktop-fallback via de Local REST API plugin, "
+                + "alleen gebruikt als er geen vault-map is gekozen.")
                 .font(TS.Font.caption)
                 .foregroundStyle(Color.labelTertiary)
+        }
+        .fileImporter(
+            isPresented: $showVaultFolderPicker,
+            allowedContentTypes: [.folder],
+            allowsMultipleSelection: false
+        ) { result in
+            if case .success(let urls) = result, let url = urls.first {
+                do {
+                    try VaultFolderStore.setFolder(url)
+                    vaultFolderName = VaultFolderStore.folderName
+                } catch {
+                    obsidianTestResult = .failure("Map-koppeling mislukt: \(error.localizedDescription)")
+                }
+            }
         }
     }
 

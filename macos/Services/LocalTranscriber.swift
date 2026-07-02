@@ -44,6 +44,11 @@ enum PersonalVocabulary {
             }
         }
 
+        // Terms maintained in the linked Obsidian vault's context note.
+        if let note = VaultFolderStore.readContextNote() {
+            raw += VaultFolderStore.parseTerms(fromNote: note)
+        }
+
         var seen = Set<String>()
         return raw
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }

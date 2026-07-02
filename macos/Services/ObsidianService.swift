@@ -158,6 +158,21 @@ struct ObsidianService: Sendable {
         let participants = record.participants
         let profileName = record.profileName
         let tags = record.tags
+
+        // Prefer the file-based vault folder when configured — it is the only path
+        // that works on iOS and needs no REST plugin running.
+        if VaultFolderStore.isConfigured {
+            let filename = Self.fileName(title: title, date: date)
+            let markdown = Self.frontmatter(
+                title: title, date: date, participants: participants,
+                profileName: profileName, tags: tags
+            ) + htmlToMarkdown(html) + "\n"
+            if !VaultFolderStore.writeNote(filename: filename, markdown: markdown) {
+                logger.error("Auto-export naar Obsidian-map mislukt")
+            }
+            return
+        }
+
         let service = ObsidianService()
         Task.detached {
             do {

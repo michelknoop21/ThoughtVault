@@ -22,6 +22,7 @@
 		AA000013 /* KeychainService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000013 /* KeychainService.swift */; };
 		AB000300 /* HTMLToMarkdown.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000300 /* HTMLToMarkdown.swift */; };
 		AB000301 /* ObsidianService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000301 /* ObsidianService.swift */; };
+		AB000401 /* VaultFolderStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000401 /* VaultFolderStore.swift */; };
 		AA000014 /* LLMService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000014 /* LLMService.swift */; };
 		AA000015 /* NetworkMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000015 /* NetworkMonitor.swift */; };
 		AA000016 /* OfflineQueue.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000016 /* OfflineQueue.swift */; };
@@ -116,6 +117,7 @@
 		FA000013 /* KeychainService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainService.swift; sourceTree = "<group>"; };
 		FB000300 /* HTMLToMarkdown.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HTMLToMarkdown.swift; sourceTree = "<group>"; };
 		FB000301 /* ObsidianService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ObsidianService.swift; sourceTree = "<group>"; };
+		FB000401 /* VaultFolderStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VaultFolderStore.swift; sourceTree = "<group>"; };
 		FA000014 /* LLMService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMService.swift; sourceTree = "<group>"; };
 		FA000015 /* NetworkMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkMonitor.swift; sourceTree = "<group>"; };
 		FA000016 /* OfflineQueue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineQueue.swift; sourceTree = "<group>"; };
@@ -286,6 +288,7 @@
 				FA000063 /* LocalTranscriber.swift */,
 				FA000064 /* NotuleTitleExtractor.swift */,
 				FB000301 /* ObsidianService.swift */,
+				FB000401 /* VaultFolderStore.swift */,
 				FA000054 /* MeetingNotificationService.swift */,
 				FA000050 /* MicrosoftGraphService.swift */,
 				FA000015 /* NetworkMonitor.swift */,
@@ -527,6 +530,7 @@
 				AA000013 /* KeychainService.swift in Sources */,
 				AB000300 /* HTMLToMarkdown.swift in Sources */,
 				AB000301 /* ObsidianService.swift in Sources */,
+				AB000401 /* VaultFolderStore.swift in Sources */,
 				AA000014 /* LLMService.swift in Sources */,
 				AA000015 /* NetworkMonitor.swift in Sources */,
 				AA000016 /* OfflineQueue.swift in Sources */,

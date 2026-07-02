@@ -73,7 +73,9 @@ final class OnDeviceTranscriber {
     /// Requests speech recognition authorization from the user.
     func requestPermission() async {
         await withCheckedContinuation { continuation in
-            SFSpeechRecognizer.requestAuthorization { status in
+            // TCC invokes this on a background queue; @Sendable prevents
+            // MainActor inference which would trap under Swift 6 (SIGTRAP).
+            SFSpeechRecognizer.requestAuthorization { @Sendable status in
                 switch status {
                 case .authorized:
                     logger.info("OnDeviceTranscriber: speech recognition authorized")

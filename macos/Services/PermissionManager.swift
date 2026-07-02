@@ -107,7 +107,9 @@ final class PermissionManager {
         let status = SFSpeechRecognizer.authorizationStatus()
         if status == .notDetermined {
             await withCheckedContinuation { continuation in
-                SFSpeechRecognizer.requestAuthorization { newStatus in
+                // TCC invokes this on a background queue; @Sendable prevents
+                // MainActor inference which would trap under Swift 6 (SIGTRAP).
+                SFSpeechRecognizer.requestAuthorization { @Sendable newStatus in
                     Task { @MainActor in
                         self.speechRecognitionGranted = newStatus == .authorized
                     }

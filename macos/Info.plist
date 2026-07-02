@@ -32,11 +32,6 @@
 	<string>14.0</string>
 
 	<!-- Supported platforms -->
-	<key>CFBundleSupportedPlatforms</key>
-	<array>
-		<string>MacOSX</string>
-		<string>iPhoneOS</string>
-	</array>
 
 	<!-- iOS launch screen (required for iOS) -->
 	<key>UILaunchScreen</key>
@@ -61,6 +56,15 @@
 		<string>audio</string>
 	</array>
 
+	<!-- iOS orientations (all four required for iPad multitasking) -->
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+
 	<!-- Privacy usage descriptions (Dutch — primary language) -->
 	<key>NSMicrophoneUsageDescription</key>
 	<string>TranscriptStudio heeft toegang tot uw microfoon nodig om vergaderingen op te nemen voor transcriptie.</string>
@@ -76,5 +80,9 @@
 
 	<key>NSFaceIDUsageDescription</key>
 	<string>TranscriptStudio gebruikt Face ID voor snelle en veilige toegang tot uw account.</string>
+
+	<!-- Only standard HTTPS encryption — exempt, avoids the compliance question per TestFlight build -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 </dict>
 </plist>

@@ -382,7 +382,25 @@ import FoundationModels
 @available(macOS 26, iOS 26, *)
 final class AppleFoundationModelService: LLMService, @unchecked Sendable {
 
-    private static let maxChunkCharacters = 12_000
+    // The on-device model has a 4,096-token context window shared by instructions,
+    // prompt AND output (~3-4 chars/token). Keep every request's variable part small.
+    private static let maxChunkCharacters = 6_000
+    private static let maxFinalTranscriptCharacters = 5_000
+
+    /// Compact output skeleton used instead of the profile's full HTML template —
+    /// the real templates (4-10k chars) alone would overflow the context window.
+    private static let compactTemplate = """
+    <h1>[Titel]</h1>
+    <p><em>[Datum] — [Deelnemers]</em></p>
+    <h2>Samenvatting</h2>
+    <p>...</p>
+    <h2>Besproken punten</h2>
+    <ul><li>...</li></ul>
+    <h2>Besluiten</h2>
+    <ul><li>...</li></ul>
+    <h2>Actiepunten</h2>
+    <ul><li>[Wie]: [Wat]</li></ul>
+    """
 
     // MARK: - Availability
 
@@ -406,19 +424,20 @@ final class AppleFoundationModelService: LLMService, @unchecked Sendable {
             throw LLMError.generationFailed(reason)
         }
 
-        // Chunk long transcriptions by summarizing them first
-        let processedTranscription: String
-        if transcription.count > Self.maxChunkCharacters {
-            logger.info("AppleFoundationModelService: transcription is long (\(transcription.count) chars), chunking")
-            processedTranscription = try await summarizeInChunks(transcription)
-        } else {
-            processedTranscription = transcription
+        // Compress long transcriptions until they fit the final request.
+        // ponytail: max 3 reduce-passes; genoeg voor uren transcript (6000^n groei).
+        var processedTranscription = transcription
+        var passes = 0
+        while processedTranscription.count > Self.maxFinalTranscriptCharacters, passes < 3 {
+            logger.info("AppleFoundationModelService: transcript \(processedTranscription.count) chars, reduce pass \(passes + 1)")
+            processedTranscription = try await summarizeInChunks(processedTranscription)
+            passes += 1
         }
 
         let userContent = buildNotuleUserContent(
             notulePrompt: notulePrompt,
             transcription: processedTranscription,
-            outputTemplate: outputTemplate
+            outputTemplate: Self.compactTemplate
         )
 
         let instructions = systemPrompt.isEmpty

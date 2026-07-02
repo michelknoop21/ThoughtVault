@@ -478,6 +478,7 @@ struct SettingsView: View {
     @AppStorage("processingMode") private var processingMode: String = ProcessingMode.local.rawValue
     @AppStorage("localTranscriber") private var localTranscriber: String = LocalTranscriberEngine.whisperKit.rawValue
     @AppStorage("whisperModel") private var whisperModel: String = LocalTranscriberFactory.defaultWhisperModel
+    @AppStorage(PersonalVocabulary.defaultsKey) private var personalVocabulary: String = ""
     @AppStorage("ollamaURL") private var ollamaURL: String = "http://localhost:11434"
     @AppStorage("ollamaModel") private var ollamaModel: String = "llama3.2"
     @AppStorage("lmStudioURL") private var lmStudioURL: String = "http://localhost:1234"
@@ -560,12 +561,19 @@ struct SettingsView: View {
                         .autocorrectionDisabled()
                 }
             }
+
+            SettingFieldRow("Eigen termen") {
+                TextField("Yinga, Django, …", text: $personalVocabulary, axis: .vertical)
+                    .textFieldStyle(.roundedBorder)
+                    .autocorrectionDisabled()
+            }
         } header: {
             Text("Transcriptie")
         } footer: {
-            Text(localTranscriber == LocalTranscriberEngine.whisperKit.rawValue
-                ? "WhisperKit downloadt het gekozen model bij eerste gebruik."
-                : "Apple Spraakherkenning werkt direct, zonder download.")
+            Text((localTranscriber == LocalTranscriberEngine.whisperKit.rawValue
+                ? "WhisperKit downloadt het gekozen model bij eerste gebruik. "
+                : "Apple Spraakherkenning werkt direct, zonder download. ")
+                + "Eigen termen (komma-gescheiden) en personen uit de app sturen de herkenning van namen zoals \"Yinga\".")
                 .font(TS.Font.caption)
                 .foregroundStyle(Color.labelTertiary)
         }

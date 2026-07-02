@@ -9,8 +9,57 @@
 
 import Foundation
 import OSLog
+import SwiftData
 
 private let logger = Logger(subsystem: "nl.prezent.TranscriptStudio", category: "LocalTranscriber")
+
+// MARK: - PersonalVocabulary
+
+/// Collects the user's known names and terms (own profile, people directory and the
+/// free-text "Persoonlijke context" setting) so speech engines can be biased toward
+/// the correct spellings (e.g. "Yinga" instead of "Jenga").
+enum PersonalVocabulary {
+
+    /// UserDefaults key for the free-text terms in Settings ("Yinga, Django, ...").
+    static let defaultsKey = "personalVocabulary"
+
+    // ponytail: cap terms to protect Whisper's 224-token prompt budget and
+    // Apple Intelligence's 4k context window.
+    private static let maxTerms = 30
+
+    /// Distinct terms: custom terms + names/organizations of everyone in the
+    /// on-device directory (incl. the self-profile). MainActor because the
+    /// people directory lives in SwiftData's mainContext.
+    @MainActor
+    static func terms() -> [String] {
+        var raw: [String] = []
+        let custom = UserDefaults.standard.string(forKey: defaultsKey) ?? ""
+        raw += custom.components(separatedBy: CharacterSet(charactersIn: ",\n"))
+
+        let context = LocalTranscriptStore.shared.container.mainContext
+        if let people = try? context.fetch(FetchDescriptor<PersonProfile>()) {
+            for p in people {
+                raw.append(p.name)
+                raw.append(p.organization)
+            }
+        }
+
+        var seen = Set<String>()
+        return raw
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty && seen.insert($0.lowercased()).inserted }
+            .prefix(maxTerms)
+            .map { $0 }
+    }
+
+    /// Short correction instruction appended to the notule prompt; empty when no terms.
+    @MainActor
+    static func promptInstruction() -> String {
+        let all = terms()
+        guard !all.isEmpty else { return "" }
+        return "\n\nCorrecte spelling van namen en termen: \(all.joined(separator: ", ")). Corrigeer afwijkende spellingen hiervan in de transcriptie stilzwijgend."
+    }
+}
 
 // MARK: - Engine selection
 
@@ -119,10 +168,19 @@ final class WhisperKitTranscriber: LocalTranscriber, @unchecked Sendable {
 
             onProgress(0.4)
 
-            let options = DecodingOptions(
+            var options = DecodingOptions(
                 task: .transcribe,
                 language: "nl"
             )
+
+            // Bias recognition toward known names/terms via Whisper's initial prompt.
+            let vocab = await MainActor.run { PersonalVocabulary.terms() }
+            if !vocab.isEmpty, let tokenizer = pipe.tokenizer {
+                let prompt = "Namen en termen: \(vocab.joined(separator: ", "))."
+                options.promptTokens = tokenizer.encode(text: " " + prompt)
+                    .filter { $0 < tokenizer.specialTokens.specialTokenBegin }
+                options.usePrefillPrompt = true
+            }
 
             let results: [TranscriptionResult] = try await pipe.transcribe(audioPath: url.path, decodeOptions: options)
             onProgress(1.0)

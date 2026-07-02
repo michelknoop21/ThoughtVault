@@ -814,7 +814,8 @@ final class RecordingViewModel {
             let html = try await service.generateNotulen(
                 transcription: transcription,
                 systemPrompt: profile.systemPrompt ?? "",
-                notulePrompt: Self.injectParticipants(into: profile.notulePrompt ?? "", participants: participants),
+                notulePrompt: Self.injectParticipants(into: profile.notulePrompt ?? "", participants: participants)
+                    + PersonalVocabulary.promptInstruction(),
                 outputTemplate: profile.template
             ) { [weak self] chunk in
                 Task { @MainActor in
@@ -861,7 +862,8 @@ final class RecordingViewModel {
         let html = try await service.generateNotulen(
             transcription: record.rawTranscription,
             systemPrompt: profile.systemPrompt ?? "",
-            notulePrompt: Self.injectParticipants(into: profile.notulePrompt ?? "", participants: record.participants),
+            notulePrompt: Self.injectParticipants(into: profile.notulePrompt ?? "", participants: record.participants)
+                + PersonalVocabulary.promptInstruction(),
             outputTemplate: profile.template
         ) { _ in }
 

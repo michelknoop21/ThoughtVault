@@ -32,6 +32,7 @@ class FloatingWidgetController {
 
         let hostingView = NSHostingView(
             rootView: RecordingWidgetView()
+                .preferredColorScheme(.dark)   // brand is dark-only; panel floats outside the app window
                 .environment(recordingVM)
         )
         hostingView.layer?.backgroundColor = .clear

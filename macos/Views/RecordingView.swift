@@ -144,29 +144,32 @@ struct RecordingView: View {
                     Task { await recordingVM.startRecording() }
                 } label: {
                     ZStack {
-                        ForEach(0..<3) { i in
-                            Circle()
-                                .fill(Color.brandPrimary.opacity(0.07 - Double(i) * 0.02))
-                                .frame(
-                                    width: CGFloat(80 + i * 28),
-                                    height: CGFloat(80 + i * 28)
-                                )
-                        }
+                        Circle()
+                            .stroke(Color.brandPrimary.opacity(0.25), lineWidth: 1)
+                            .frame(width: 108, height: 108)
+                        Circle()
+                            .stroke(Color.brandPrimary.opacity(0.14), lineWidth: 1)
+                            .frame(width: 128, height: 128)
                         Circle()
                             .fill(
-                                LinearGradient(
-                                    colors: [Color.brandPrimary, Color.brandPrimaryDark],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
+                                RadialGradient(
+                                    colors: [Color(red: 0.76, green: 0.53, blue: 1.0),
+                                             Color.brandPrimary,
+                                             Color.brandPrimaryDark],
+                                    center: .init(x: 0.32, y: 0.28),
+                                    startRadius: 4, endRadius: 72
                                 )
                             )
-                            .frame(width: 80, height: 80)
-                            .shadow(color: Color.brandPrimary.opacity(0.40), radius: 20, y: 6)
+                            .frame(width: 84, height: 84)
+                            .shadow(color: Color.brandPrimary.opacity(0.55), radius: 24)
+                            .shadow(color: Color.brandPrimaryDark.opacity(0.45), radius: 10, y: 6)
 
                         Image(systemName: "mic.fill")
                             .font(.system(size: 28, weight: .semibold))
                             .foregroundStyle(.white)
+                            .shadow(color: Color.brandPrimaryDark.opacity(0.6), radius: 4, y: 2)
                     }
+                    .frame(width: 132, height: 132)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Start opname")

@@ -14,6 +14,8 @@ struct ThoughtVaultApp: App {
     var body: some Scene {
         WindowGroup {
             RootView()
+                // ThoughtVault is a dark-first brand; the design system ships dark-only.
+                .preferredColorScheme(.dark)
                 .environment(authVM)
                 .environment(recordingVM)
                 .environment(tasksVM)
@@ -42,6 +44,7 @@ struct ThoughtVaultApp: App {
 #if os(macOS)
         Settings {
             SettingsView()
+                .preferredColorScheme(.dark)
                 .environment(authVM)
                 .environment(recordingVM)
                 .environment(tasksVM)

@@ -63,30 +63,30 @@ extension Color {
 
     // MARK: Dark backgrounds (static, optimized for Dynamic Island)
 
-    /// Very dark background #0B0C15
-    static let backgroundDark = Color(red: 0.043, green: 0.047, blue: 0.082)
+    /// Canvas — deep indigo-black #0B0D16
+    static let backgroundDark = Color(red: 0.043, green: 0.051, blue: 0.086)
 
-    /// Dark card background #1A1C29
-    static let cardDark = Color(red: 0.102, green: 0.110, blue: 0.161)
+    /// Panel — dark indigo #141628
+    static let cardDark = Color(red: 0.078, green: 0.086, blue: 0.157)
 
     // MARK: Adaptive Surface Colors
 
     /// Primary surface — white in light, very dark blue-gray in dark mode.
     static let surfacePrimary = Color(
         light: Color(red: 1.0,   green: 1.0,   blue: 1.0),
-        dark:  Color(red: 0.10,  green: 0.11,  blue: 0.16)
+        dark:  Color(red: 0.078, green: 0.086, blue: 0.157)
     )
 
     /// Secondary surface — light gray in light, dark in dark mode.
     static let surfaceSecondary = Color(
         light: Color(red: 0.96,  green: 0.96,  blue: 0.97),
-        dark:  Color(red: 0.13,  green: 0.14,  blue: 0.20)
+        dark:  Color(red: 0.106, green: 0.118, blue: 0.200)
     )
 
     /// Tertiary surface — slightly darker in light, deepest in dark mode.
     static let surfaceTertiary = Color(
         light: Color(red: 0.92,  green: 0.92,  blue: 0.94),
-        dark:  Color(red: 0.16,  green: 0.17,  blue: 0.24)
+        dark:  Color(red: 0.137, green: 0.153, blue: 0.255)
     )
 
     // MARK: Adaptive Label Colors
@@ -94,19 +94,19 @@ extension Color {
     /// Primary label — near black in light, near white in dark mode.
     static let labelPrimary = Color(
         light: Color(red: 0.20,  green: 0.20,  blue: 0.23),
-        dark:  Color(red: 0.95,  green: 0.95,  blue: 0.97)
+        dark:  Color(red: 0.929, green: 0.922, blue: 0.965)
     )
 
     /// Secondary label — medium gray in light, lighter gray in dark mode.
     static let labelSecondary = Color(
         light: Color(red: 0.42,  green: 0.42,  blue: 0.47),
-        dark:  Color(red: 0.62,  green: 0.62,  blue: 0.68)
+        dark:  Color(red: 0.663, green: 0.643, blue: 0.769)
     )
 
     /// Tertiary label — lighter gray in light, subtle in dark mode.
     static let labelTertiary = Color(
         light: Color(red: 0.60,  green: 0.60,  blue: 0.65),
-        dark:  Color(red: 0.42,  green: 0.42,  blue: 0.48)
+        dark:  Color(red: 0.431, green: 0.412, blue: 0.565)
     )
 
     // MARK: Adaptive Accent Backgrounds
@@ -114,13 +114,13 @@ extension Color {
     /// Subtle magenta tint background.
     static let accentBgPrimary = Color(
         light: Color(red: 1.0,  green: 0.90,  blue: 0.95),
-        dark:  Color(red: 0.25, green: 0.05,  blue: 0.15)
+        dark:  Color(red: 0.165, green: 0.090, blue: 0.310)
     )
 
     /// Subtle blue tint background.
     static let accentBgSecondary = Color(
         light: Color(red: 0.88, green: 0.94,  blue: 1.0),
-        dark:  Color(red: 0.05, green: 0.15,  blue: 0.28)
+        dark:  Color(red: 0.100, green: 0.100, blue: 0.310)
     )
 
     /// Subtle green tint background.
@@ -140,13 +140,13 @@ extension Color {
     /// Primary border — subtle gray dividers.
     static let borderPrimary = Color(
         light: Color(red: 0.88, green: 0.88, blue: 0.90),
-        dark:  Color(red: 0.22, green: 0.23, blue: 0.30)
+        dark:  Color(red: 0.204, green: 0.188, blue: 0.337)
     )
 
     /// Secondary border — even subtler.
     static let borderSecondary = Color(
         light: Color(red: 0.93, green: 0.93, blue: 0.95),
-        dark:  Color(red: 0.17, green: 0.18, blue: 0.25)
+        dark:  Color(red: 0.153, green: 0.141, blue: 0.267)
     )
 
     // MARK: Status Colors

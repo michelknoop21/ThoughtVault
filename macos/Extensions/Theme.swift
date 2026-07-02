@@ -317,6 +317,11 @@ struct BrandFooter: View {
                 .font(TS.Font.caption)
                 .foregroundStyle(Color.labelTertiary)
 
+            Image("BuildMindMark")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(height: 15)
+
             Text("BuildMind")
                 .font(.system(size: 13, weight: .semibold, design: .rounded))
                 .foregroundStyle(

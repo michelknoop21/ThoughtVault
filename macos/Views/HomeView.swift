@@ -86,7 +86,7 @@ struct HomeView: View {
                 Circle()
                     .fill(
                         RadialGradient(
-                            colors: [Color.brandPrimary.opacity(0.08), Color.clear],
+                            colors: [Color.brandPrimary.opacity(0.16), Color.clear],
                             center: .center,
                             startRadius: 0,
                             endRadius: 300
@@ -99,7 +99,7 @@ struct HomeView: View {
                 Circle()
                     .fill(
                         RadialGradient(
-                            colors: [Color.brandSecondary.opacity(0.05), Color.clear],
+                            colors: [Color.brandSecondary.opacity(0.12), Color.clear],
                             center: .center,
                             startRadius: 0,
                             endRadius: 220
@@ -118,16 +118,31 @@ struct HomeView: View {
 
     private var headerSection: some View {
         VStack(alignment: .leading, spacing: TS.Spacing.xs) {
-            Text(greetingText)
-                .font(TS.Font.title2Semibold)
-                .foregroundStyle(Color.labelPrimary)
+            Text(dateKicker)
+                .font(TS.Font.microBold)
+                .kerning(1.2)
+                .textCase(.uppercase)
+                .foregroundStyle(Color.labelTertiary)
 
-            Text("Wat wil je vandaag transcriberen?")
+            (Text(greetingText + ". ").foregroundStyle(Color.labelPrimary)
+                + Text("Klaar om te denken?").foregroundStyle(
+                    LinearGradient(colors: [Color.brandLavender, Color.brandPrimary, Color.brandSecondary],
+                                   startPoint: .leading, endPoint: .trailing)))
+                .font(.system(size: 26, weight: .bold, design: .rounded))
+
+            Text("Alles wat hier wordt opgenomen, blijft op dit apparaat.")
                 .font(TS.Font.callout)
                 .foregroundStyle(Color.labelSecondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.top, TS.Spacing.sm)
+    }
+
+    private var dateKicker: String {
+        let df = DateFormatter()
+        df.locale = Locale(identifier: "nl_NL")
+        df.dateFormat = "EEEE d MMMM"
+        return df.string(from: Date())
     }
 
     private var greetingText: String {
@@ -167,48 +182,81 @@ struct HomeView: View {
         Button {
             onStartRecording?(.microphone)
         } label: {
-            HStack(spacing: TS.Spacing.md) {
-                ZStack {
-                    ForEach(0..<3) { i in
-                        Circle()
-                            .stroke(Color.white.opacity(0.25 - Double(i) * 0.07), lineWidth: 1.5)
-                            .frame(width: CGFloat(44 + i * 18), height: CGFloat(44 + i * 18))
-                    }
-                    Image(systemName: "mic.fill")
-                        .font(.system(size: 22, weight: .semibold))
-                        .foregroundStyle(.white)
-                }
-
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Start nieuwe opname")
-                        .font(TS.Font.subheadlineSemibold)
-                        .foregroundStyle(.white)
-                    Text("Klik om direct te beginnen met opnemen")
+            HStack(spacing: TS.Spacing.lg) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Nieuwe opname")
+                        .font(.system(size: 18, weight: .bold, design: .rounded))
+                        .foregroundStyle(Color.labelPrimary)
+                    Text("Klik op de knop en ThoughtVault neemt op, transcribeert en notuleert — volledig lokaal.")
                         .font(TS.Font.caption)
-                        .foregroundStyle(Color.white.opacity(0.78))
+                        .foregroundStyle(Color.labelSecondary)
+                        .lineSpacing(2)
+                        .multilineTextAlignment(.leading)
                 }
 
-                Spacer()
+                Spacer(minLength: TS.Spacing.md)
 
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(Color.white.opacity(0.70))
+                recordOrb
             }
             .padding(.horizontal, TS.Spacing.lg)
-            .padding(.vertical, TS.Spacing.md)
+            .padding(.vertical, TS.Spacing.lg)
             .background {
-                RoundedRectangle(cornerRadius: TS.Radius.md, style: .continuous)
+                // Dark panel with a violet mesh glow, per the approved mockup.
+                RoundedRectangle(cornerRadius: TS.Radius.lg, style: .continuous)
                     .fill(
                         LinearGradient(
-                            colors: [Color.brandPrimary, Color.brandPrimaryDark],
+                            colors: [Color(red: 0.118, green: 0.102, blue: 0.227),
+                                     Color(red: 0.078, green: 0.078, blue: 0.157)],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
                     )
-                    .shadow(color: Color.brandPrimary.opacity(0.20), radius: 12, y: 4)
+                    .overlay {
+                        RadialGradient(
+                            colors: [Color.brandPrimary.opacity(0.22), .clear],
+                            center: .init(x: 0.88, y: -0.2),
+                            startRadius: 0, endRadius: 340
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: TS.Radius.lg, style: .continuous))
+                    }
+                    .overlay {
+                        RoundedRectangle(cornerRadius: TS.Radius.lg, style: .continuous)
+                            .strokeBorder(Color.brandPrimary.opacity(0.22), lineWidth: 1)
+                    }
+                    .shadow(color: Color.brandPrimaryDark.opacity(0.30), radius: 22, y: 10)
             }
         }
         .buttonStyle(.plain)
+    }
+
+    /// Glowing violet record orb — the visual heart of the app.
+    private var recordOrb: some View {
+        ZStack {
+            Circle()
+                .stroke(Color.brandPrimary.opacity(0.25), lineWidth: 1)
+                .frame(width: 108, height: 108)
+            Circle()
+                .stroke(Color.brandPrimary.opacity(0.14), lineWidth: 1)
+                .frame(width: 126, height: 126)
+            Circle()
+                .fill(
+                    RadialGradient(
+                        colors: [Color(red: 0.76, green: 0.53, blue: 1.0),
+                                 Color.brandPrimary,
+                                 Color.brandPrimaryDark],
+                        center: .init(x: 0.32, y: 0.28),
+                        startRadius: 4, endRadius: 74
+                    )
+                )
+                .frame(width: 84, height: 84)
+                .shadow(color: Color.brandPrimary.opacity(0.55), radius: 24)
+                .shadow(color: Color.brandPrimaryDark.opacity(0.45), radius: 10, y: 6)
+            Image(systemName: "mic.fill")
+                .font(.system(size: 30, weight: .semibold))
+                .foregroundStyle(.white)
+                .shadow(color: Color.brandPrimaryDark.opacity(0.6), radius: 4, y: 2)
+        }
+        .frame(width: 130, height: 130)
     }
 
     // MARK: Active processing

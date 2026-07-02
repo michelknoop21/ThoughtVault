@@ -240,6 +240,7 @@ struct ContentView: View {
                 )
         } detail: {
             detailView
+                .background(Color.backgroundDark)
         }
         .navigationSplitViewStyle(.balanced)
         // Force sidebar always visible — collapse is handled by our custom UI
@@ -304,9 +305,9 @@ struct ContentView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                     .shadow(color: .black.opacity(0.15), radius: 3, y: 1)
 
-                Text("Transcript Studio")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(Color.labelPrimary)
+                (Text("Thought").foregroundStyle(Color.labelPrimary)
+                    + Text("Vault").foregroundStyle(Color.brandPrimary))
+                    .font(.system(size: 14.5, weight: .bold, design: .rounded))
 
                 Spacer()
             }
@@ -639,13 +640,22 @@ struct SidebarNavItem: View {
             .padding(.horizontal, 10)
             .padding(.vertical, 7)
             .background {
-                RoundedRectangle(cornerRadius: 7)
+                // Mockup: glowing violet pill with hairline + inner highlight.
+                RoundedRectangle(cornerRadius: 9, style: .continuous)
                     .fill(isSelected
-                          ? Color.brandSecondary
-                          : (isHovered ? Color.brandSecondary.opacity(0.08) : Color.clear))
+                          ? AnyShapeStyle(LinearGradient(
+                                colors: [Color.brandPrimary.opacity(0.32), Color.brandSecondary.opacity(0.12)],
+                                startPoint: .leading, endPoint: .trailing))
+                          : AnyShapeStyle(isHovered ? Color.brandPrimary.opacity(0.08) : Color.clear))
+                    .overlay {
+                        if isSelected {
+                            RoundedRectangle(cornerRadius: 9, style: .continuous)
+                                .strokeBorder(Color.brandPrimary.opacity(0.35), lineWidth: 1)
+                        }
+                    }
                     .shadow(
-                        color: isSelected ? Color.brandSecondary.opacity(0.3) : .clear,
-                        radius: 4, y: 2
+                        color: isSelected ? Color.brandPrimaryDark.opacity(0.35) : .clear,
+                        radius: 8, y: 3
                     )
             }
         }

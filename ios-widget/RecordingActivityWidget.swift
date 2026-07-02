@@ -138,8 +138,8 @@ struct LockScreenRecordingView: View {
         .background(
             LinearGradient(
                 colors: [
-                    Color(red: 0.04, green: 0.06, blue: 0.14),
-                    Color(red: 0.07, green: 0.09, blue: 0.20)
+                    Color(red: 0.043, green: 0.051, blue: 0.086),
+                    Color(red: 0.078, green: 0.086, blue: 0.157)
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
@@ -157,16 +157,16 @@ struct LockScreenRecordingView: View {
 struct NeonWaveformBars: View {
     let levels: [Float]
 
-    /// Vibrant neon colors from the reference image: neon blue → deep purple → magenta
+    /// ThoughtVault brand ramp: lavender → violet → indigo (from the logo gradient)
     private let neonColors: [Color] = [
-        Color(red: 0.0, green: 0.8, blue: 1.0), // neon blue
-        Color(red: 0.1, green: 0.6, blue: 1.0),
-        Color(red: 0.3, green: 0.4, blue: 1.0),
-        Color(red: 0.5, green: 0.2, blue: 1.0), // deep purple
-        Color(red: 0.7, green: 0.1, blue: 1.0),
-        Color(red: 0.8, green: 0.0, blue: 1.0), // magenta
-        Color(red: 0.9, green: 0.0, blue: 0.8),
-        Color(red: 1.0, green: 0.0, blue: 0.6)  // hot pink
+        Color(red: 0.847, green: 0.565, blue: 0.941), // lavender #D890F0
+        Color(red: 0.780, green: 0.490, blue: 0.941),
+        Color(red: 0.710, green: 0.420, blue: 0.941),
+        Color(red: 0.630, green: 0.350, blue: 0.941),
+        Color(red: 0.565, green: 0.282, blue: 0.941), // violet #9048F0
+        Color(red: 0.500, green: 0.282, blue: 0.941),
+        Color(red: 0.440, green: 0.282, blue: 0.941),
+        Color(red: 0.376, green: 0.282, blue: 0.941)  // indigo #6048F0
     ]
 
     var body: some View {
@@ -233,7 +233,7 @@ struct MiniWaveformBars: View {
         HStack(alignment: .center, spacing: 2.5) {
             ForEach(0..<4, id: \.self) { index in
                 let level = CGFloat(sampledLevels[index])
-                let color = index < 2 ? Color(red: 0.0, green: 0.8, blue: 1.0) : Color(red: 0.8, green: 0.0, blue: 1.0)
+                let color = index < 2 ? Color(red: 0.847, green: 0.565, blue: 0.941) : Color(red: 0.376, green: 0.282, blue: 0.941)
                 
                 Capsule()
                     .fill(

@@ -2,7 +2,7 @@
 // ThoughtVault
 // com.buildmind.ThoughtVault
 //
-// Yinga brand color palette with adaptive light/dark mode support.
+// ThoughtVault brand color palette with adaptive light/dark mode support.
 
 import SwiftUI
 
@@ -32,31 +32,34 @@ extension Color {
 
 extension Color {
 
-    // MARK: Yinga Brand (static)
+    // MARK: ThoughtVault Brand (static)
     //
-    // Two-layer accent system — keep these roles consistent across the app:
-    //  - brandPrimary (magenta): content actions — record, send, submit, primary CTAs.
-    //  - brandSecondary (blue):  navigation & selected state — sidebar, tab selection.
-    // brandAccent (green) and brandOrange are reserved for status/semantic accents
-    // (success, warning), not as general-purpose action colors.
+    // Palette sampled from the ThoughtVault logo (lavender → violet → indigo on
+    // dark indigo). Two-layer accent system — keep these roles consistent:
+    //  - brandPrimary (violet): content actions — record, send, submit, primary CTAs.
+    //  - brandSecondary (indigo): navigation & selected state — sidebar, tab selection.
+    // brandAccent (green) and brandOrange stay semantic (success, warning) only.
 
-    /// Yinga primary — magenta #E50074. Content actions / primary CTAs.
-    static let brandPrimary = Color(red: 0.898, green: 0.0, blue: 0.455)
+    /// ThoughtVault primary — violet #9048F0. Content actions / primary CTAs.
+    static let brandPrimary = Color(red: 0.565, green: 0.282, blue: 0.941)
 
-    /// Yinga secondary — blue #007BC4. Navigation & selected state.
-    static let brandSecondary = Color(red: 0.0, green: 0.482, blue: 0.769)
+    /// ThoughtVault secondary — indigo #6048F0. Navigation & selected state.
+    static let brandSecondary = Color(red: 0.376, green: 0.282, blue: 0.941)
 
-    /// Yinga accent — green #009F3C
+    /// Semantic accent — green #009F3C (success)
     static let brandAccent = Color(red: 0.0, green: 0.624, blue: 0.235)
 
-    /// Yinga orange #F39200
+    /// Semantic accent — orange #F39200 (warning)
     static let brandOrange = Color(red: 0.953, green: 0.573, blue: 0.0)
 
-    /// Darker magenta variant for hero gradients (HomeView hero card)
-    static let brandPrimaryDark = Color(red: 0.72, green: 0.0, blue: 0.38)
+    /// Darker violet variant for hero gradients (HomeView hero card) #7830D8
+    static let brandPrimaryDark = Color(red: 0.471, green: 0.188, blue: 0.847)
 
-    /// Neon blue used in waveform visualizations #00C2FF
-    static let neonBlue = Color(red: 0.0, green: 0.761, blue: 1.0)
+    /// Light lavender highlight from the logo, used in brand gradients #D890F0
+    static let brandLavender = Color(red: 0.847, green: 0.565, blue: 0.941)
+
+    /// Neon glow used in waveform visualizations — violet-blue #8F6BFF
+    static let neonBlue = Color(red: 0.561, green: 0.420, blue: 1.0)
 
     // MARK: Dark backgrounds (static, optimized for Dynamic Island)
 

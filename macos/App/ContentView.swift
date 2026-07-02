@@ -278,7 +278,7 @@ struct ContentView: View {
     private var sidebarView: some View {
         VStack(spacing: 0) {
             // Brand stripe at very top
-            YingaBar()
+            BrandBar()
 
             if sidebarCollapsed {
                 // Collapsed: icon-only sidebar
@@ -336,7 +336,7 @@ struct ContentView: View {
 
             Spacer()
 
-            YingaFooter()
+            BrandFooter()
 
             Divider()
                 .padding(.vertical, 8)

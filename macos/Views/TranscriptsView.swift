@@ -1995,7 +1995,7 @@ struct TranscriptDetailView: View {
         <html><head><meta charset="utf-8">
         <style>
         body { font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif; font-size: 11.5pt; line-height: 1.65; color: #2c2c30; margin: 0; padding: 28pt 36pt; }
-        h1 { font-size: 18pt; font-weight: 700; color: #E50074; margin-bottom: 14pt; padding-bottom: 8pt; border-bottom: 1.5pt solid rgba(229,0,116,0.15); }
+        h1 { font-size: 18pt; font-weight: 700; color: #7830D8; margin-bottom: 14pt; padding-bottom: 8pt; border-bottom: 1.5pt solid rgba(120,48,216,0.15); }
         h2 { font-size: 14pt; font-weight: 650; margin-top: 20pt; margin-bottom: 8pt; }
         h3 { font-size: 12pt; font-weight: 600; color: #555; margin-top: 16pt; margin-bottom: 6pt; }
         p { margin: 7pt 0; }
@@ -2005,7 +2005,7 @@ struct TranscriptDetailView: View {
         table { border-collapse: collapse; width: 100%; margin: 14pt 0; }
         th, td { border: 1px solid #e0e0e0; padding: 7pt 10pt; text-align: left; font-size: 10.5pt; }
         th { background: #f8f8fa; font-weight: 600; font-size: 9.5pt; text-transform: uppercase; letter-spacing: 0.4pt; color: #666; }
-        blockquote { border-left: 2.5pt solid #E50074; margin: 12pt 0; padding: 8pt 16pt; background: #fef6fb; }
+        blockquote { border-left: 2.5pt solid #7830D8; margin: 12pt 0; padding: 8pt 16pt; background: #f8f5fe; }
         </style>
         </head><body>\(html)</body></html>
         """

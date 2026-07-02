@@ -183,7 +183,7 @@ struct SettingsView: View {
         Form {
             permissiesSection
             Section {
-                YingaFooter()
+                BrandFooter()
             }
         }
         .formStyle(.grouped)

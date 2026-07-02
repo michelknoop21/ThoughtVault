@@ -124,7 +124,7 @@ struct OnboardingView: View {
 
             VStack(spacing: 0) {
                 // Full-width brand bar directly under title bar
-                YingaBar()
+                BrandBar()
 
                 // Step indicator
                 stepIndicator
@@ -724,7 +724,7 @@ struct OnboardingView: View {
         .background(Color.white.opacity(0.3))
         .overlay(alignment: .bottom) {
             #if os(macOS)
-            YingaFooter()
+            BrandFooter()
                 .padding(.bottom, TS.Spacing.xs)
             #endif
         }

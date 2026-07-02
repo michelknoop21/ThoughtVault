@@ -183,12 +183,12 @@ struct EditableHTMLWebView: NSViewRepresentable {
             --text-secondary: #555560;
             --text-tertiary: #8e8e93;
             --heading: #1a2744;
-            --brand: #E50074;
+            --brand: #7830D8;
             --brand-light: #fef2f8;
             --brand-border: rgba(229, 0, 116, 0.15);
             --border: #d8dce3;
             --surface-elevated: #f8f8fa;
-            --bg-blockquote: #fef6fb;
+            --bg-blockquote: #f8f5fe;
         }
         html.dark {
             --text-primary: #f0f0f4;
@@ -485,12 +485,12 @@ struct EditableHTMLWebView: UIViewRepresentable {
             --text-secondary: #555560;
             --text-tertiary: #8e8e93;
             --heading: #1a2744;
-            --brand: #E50074;
+            --brand: #7830D8;
             --brand-light: #fef2f8;
             --brand-border: rgba(229, 0, 116, 0.15);
             --border: #d8dce3;
             --surface-elevated: #f8f8fa;
-            --bg-blockquote: #fef6fb;
+            --bg-blockquote: #f8f5fe;
         }
         @media (prefers-color-scheme: dark) {
             :root {

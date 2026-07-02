@@ -38,8 +38,8 @@ struct LoginView: View {
             .ignoresSafeArea()
 
             VStack(spacing: 0) {
-                // Yinga brand bar full width under window title bar
-                YingaBar(height: 4)
+                // Brand bar full width under window title bar
+                BrandBar(height: 4)
 
                 Spacer()
 
@@ -100,10 +100,10 @@ struct LoginView: View {
         }
     }
 
-    // MARK: - Yinga Footer
+    // MARK: - Brand Footer
 
     private var yingaFooter: some View {
-        YingaFooter()
+        BrandFooter()
     }
 
     // MARK: - Login Card

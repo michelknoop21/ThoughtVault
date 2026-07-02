@@ -60,7 +60,7 @@ struct NotuleResultView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             #if os(macOS)
-            YingaFooter()
+            BrandFooter()
                 .background(Color.surfacePrimary)
                 .overlay(alignment: .top) { Divider() }
             #endif
@@ -613,11 +613,11 @@ struct NotuleResultView: View {
             --text-primary: #1a1a1a;
             --text-heading: #333;
             --text-subtle: #555;
-            --brand: #E50074;
+            --brand: #7830D8;
             --border: #e0e0e0;
             --surface: #f8f8f8;
             --surface-light: #f5f5f5;
-            --bg-blockquote: #fef6fb;
+            --bg-blockquote: #f8f5fe;
         }
         @media (prefers-color-scheme: dark) {
             :root {
@@ -724,11 +724,11 @@ struct HTMLWebView: NSViewRepresentable {
                 --text-primary: #1a1a1a;
                 --text-heading: #333;
                 --text-subtle: #555;
-                --brand: #E50074;
+                --brand: #7830D8;
                 --border: #e0e0e0;
                 --surface: #f8f8f8;
                 --surface-light: #f5f5f5;
-                --bg-blockquote: #fef6fb;
+                --bg-blockquote: #f8f5fe;
             }
             html.dark {
                 --text-primary: #f0f0f4;
@@ -823,11 +823,11 @@ struct HTMLWebView: UIViewRepresentable {
                 --text-primary: #1a1a1a;
                 --text-heading: #333;
                 --text-subtle: #555;
-                --brand: #E50074;
+                --brand: #7830D8;
                 --border: #e0e0e0;
                 --surface: #f8f8f8;
                 --surface-light: #f5f5f5;
-                --bg-blockquote: #fef6fb;
+                --bg-blockquote: #f8f5fe;
             }
             html.dark {
                 --text-primary: #f0f0f4;

@@ -6,7 +6,7 @@ import {
   SquareMultiple20Regular,
 } from "@fluentui/react-icons";
 import { useState, useEffect } from "react";
-import { YingaBar } from "../brand/YingaBar";
+import { BrandBar } from "../brand/BrandBar";
 
 export function TitleBar() {
   const [isMaximized, setIsMaximized] = useState(false);
@@ -118,8 +118,8 @@ export function TitleBar() {
         </div>
       </div>
 
-      {/* Yinga brand bar — 4 equal color segments below title bar */}
-      <YingaBar />
+      {/* ThoughtVault brand bar below the title bar */}
+      <BrandBar />
     </div>
   );
 }

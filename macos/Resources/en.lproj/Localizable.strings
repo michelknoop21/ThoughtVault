@@ -62,7 +62,7 @@
 "Bijv. Brainstorm, Standup, Klantgesprek" = "E.g. Brainstorm, Standup, Client call";
 "Bijv: Maak een beknopte samenvatting met actiepunten en besluiten. Gebruik een informele toon." = "E.g.: Create a concise summary with action items and decisions. Use an informal tone.";
 "Citaat" = "Quote";
-"Claude — betere kwaliteit, langzamer" = "Claude — better quality, slower";
+"Claude: betere kwaliteit, langzamer" = "Claude: better quality, slower";
 "Client ID" = "Client ID";
 "Client ID (macOS)" = "Client ID (macOS)";
 "Client ID (Windows)" = "Client ID (Windows)";
@@ -193,7 +193,7 @@
 "Naam (optioneel)" = "Name (optional)";
 "Naam niet ingesteld" = "Name not set";
 "naam@bedrijf.nl" = "name@company.com";
-"Neem vergaderingen op, transcribeer ze automatisch en genereer professionele notulen — in seconden." = "Record meetings, transcribe them automatically and generate professional minutes — in seconds.";
+"Neem vergaderingen op, transcribeer ze automatisch en genereer in seconden professionele notulen." = "Record meetings, transcribe them automatically and generate professional minutes in seconds.";
 "Negeer" = "Ignore";
 "Niet beschikbaar in deze build." = "Not available in this build.";
 "Niet verbonden" = "Not connected";
@@ -316,8 +316,8 @@
 "Titel" = "Title";
 "Titel bewerken" = "Edit title";
 "Titel opslaan" = "Save title";
-"Toegang geweigerd — je kunt nog steeds de cloud-transcriptie gebruiken." = "Access denied — you can still use cloud transcription.";
-"Toegang geweigerd — open Systeeminstellingen om dit te wijzigen." = "Access denied — open System Settings to change this.";
+"Toegang geweigerd. Je kunt nog steeds de cloud-transcriptie gebruiken." = "Access denied. You can still use cloud transcription.";
+"Toegang geweigerd. Open Systeeminstellingen om dit te wijzigen." = "Access denied. Open System Settings to change this.";
 "Toegang verlenen" = "Grant access";
 "Toestaan" = "Allow";
 "Toestemming verlenen" = "Grant permission";
@@ -430,7 +430,7 @@
 "Je wachtwoord is gewijzigd." = "Your password has been changed.";
 "Verstuur code" = "Send code";
 "Versturen..." = "Sending…";
-"Code verstuurd naar %@ — als er een account bestaat." = "Code sent to %@ — if an account exists.";
+"Code verstuurd naar %@, als er een account bestaat." = "Code sent to %@, if an account exists.";
 "Verifieer code" = "Verify code";
 "Code opnieuw versturen" = "Resend code";
 "Herhaal wachtwoord" = "Repeat password";

@@ -31,13 +31,17 @@ struct RecordingView: View {
     // MARK: Body
 
     var body: some View {
-        Group {
-            if recordingVM.recordingState.isRecording ||
-               recordingVM.recordingState == .preparing ||
-               recordingVM.recordingState == .stopping {
-                activeRecordingView
-            } else {
-                idleView
+        GeometryReader { geo in
+            // Width-tier responsive layout mirroring HomeView: compact below 640pt.
+            let isCompact = geo.size.width < 640
+            Group {
+                if recordingVM.recordingState.isRecording ||
+                   recordingVM.recordingState == .preparing ||
+                   recordingVM.recordingState == .stopping {
+                    activeRecordingView(isCompact: isCompact)
+                } else {
+                    idleView(isCompact: isCompact)
+                }
             }
         }
         .sheet(item: $selectedReprocessRecording) { recording in
@@ -49,7 +53,7 @@ struct RecordingView: View {
 
     // MARK: - Idle view
 
-    private var idleView: some View {
+    private func idleView(isCompact: Bool) -> some View {
         ScrollView {
             VStack(spacing: TS.Spacing.lg) {
                 newRecordingCard
@@ -62,8 +66,11 @@ struct RecordingView: View {
                 activeTasksList
                 savedRecordingsSection
             }
-            .padding(.horizontal, TS.Spacing.md)
+            .padding(.horizontal, isCompact ? TS.Spacing.md : TS.Spacing.lg)
             .padding(.vertical, TS.Spacing.lg)
+            // Capped, centered column on wide windows.
+            .frame(maxWidth: 860)
+            .frame(maxWidth: .infinity)
         }
     }
 
@@ -442,7 +449,10 @@ struct RecordingView: View {
                 .font(TS.Font.footnoteSemibold)
                 .foregroundStyle(Color.labelSecondary)
 
-            HStack(spacing: TS.Spacing.sm) {
+            // Adaptive grid: side-by-side on regular widths, wraps to a single
+            // column when the window gets too narrow for two full cards.
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: TS.Spacing.sm)],
+                      spacing: TS.Spacing.sm) {
                 recordingTypeOption(
                     icon: "person.2.fill",
                     title: "Fysieke meeting",
@@ -906,7 +916,7 @@ struct RecordingView: View {
 
     // MARK: - Active recording view
 
-    private var activeRecordingView: some View {
+    private func activeRecordingView(isCompact: Bool) -> some View {
         ScrollView {
             VStack(spacing: TS.Spacing.lg) {
                 HStack {
@@ -915,7 +925,7 @@ struct RecordingView: View {
                             .font(TS.Font.microBold)
                             .foregroundStyle(Color.labelTertiary)
                             .kerning(1.2)
-                        timerDisplay
+                        timerDisplay(isCompact: isCompact)
                     }
                     Spacer()
                     liveIndicator
@@ -931,8 +941,12 @@ struct RecordingView: View {
                 liveTranscriptPanel
                 recordingControls
             }
-            .padding(.horizontal, TS.Spacing.lg)
+            .padding(.horizontal, isCompact ? TS.Spacing.md : TS.Spacing.lg)
             .padding(.vertical, TS.Spacing.lg)
+            // Capped, centered column on wide windows; the waveform keeps the
+            // full width of this column.
+            .frame(maxWidth: 860)
+            .frame(maxWidth: .infinity)
         }
         .confirmationDialog(
             "Opname annuleren?",
@@ -972,9 +986,11 @@ struct RecordingView: View {
 
     // MARK: Timer display
 
-    private var timerDisplay: some View {
+    private func timerDisplay(isCompact: Bool) -> some View {
+        // Smaller timer on compact widths so an hour-long timestamp still fits
+        // next to the LIVE pill at ~380pt.
         Text(formattedDuration)
-            .font(.system(size: 56, weight: .light, design: .monospaced))
+            .font(.system(size: isCompact ? 42 : 56, weight: .light, design: .monospaced))
             .foregroundStyle(Color.labelPrimary)
             .monospacedDigit()
     }
@@ -1026,13 +1042,25 @@ struct RecordingView: View {
     }
 
     private var sessionContextCard: some View {
-        HStack(spacing: TS.Spacing.sm) {
-            contextPill(icon: recordingVM.selectedMode.iconName, text: recordingVM.selectedMode.displayName)
-            contextPill(icon: "person.fill", text: recordingVM.selectedProfile?.name ?? "Geen profiel")
-            if recordingVM.offlineQueue.count > 0 {
-                contextPill(icon: "tray.fill", text: "\(recordingVM.offlineQueue.count) in wachtrij")
+        // Pills sit in one row when there's room; on narrow widths they stack
+        // vertically instead of truncating their labels.
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: TS.Spacing.sm) {
+                contextPills
             }
-            Spacer(minLength: 0)
+            VStack(alignment: .leading, spacing: TS.Spacing.xs) {
+                contextPills
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    @ViewBuilder
+    private var contextPills: some View {
+        contextPill(icon: recordingVM.selectedMode.iconName, text: recordingVM.selectedMode.displayName)
+        contextPill(icon: "person.fill", text: recordingVM.selectedProfile?.name ?? "Geen profiel")
+        if recordingVM.offlineQueue.count > 0 {
+            contextPill(icon: "tray.fill", text: "\(recordingVM.offlineQueue.count) in wachtrij")
         }
     }
 

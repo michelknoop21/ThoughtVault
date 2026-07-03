@@ -38,30 +38,39 @@ struct HomeView: View {
     // MARK: Body
 
     var body: some View {
-        ZStack {
-            backgroundBlobs
-            ScrollView {
-                VStack(spacing: TS.Spacing.xl) {
-                    #if os(macOS)
-                    if checkForUpdates,
-                       let version = updateCheck.availableVersion,
-                       dismissedUpdateVersion != version {
-                        updateBanner(version: version)
+        GeometryReader { geo in
+            // Width-tier responsive layout: compact stacks the hero and lets
+            // the stat grid wrap; wide windows get a capped, centered column.
+            let isCompact = geo.size.width < 640
+            ZStack {
+                backgroundBlobs
+                ScrollView {
+                    VStack(spacing: isCompact ? TS.Spacing.lg : TS.Spacing.xl) {
+                        #if os(macOS)
+                        if checkForUpdates,
+                           let version = updateCheck.availableVersion,
+                           dismissedUpdateVersion != version {
+                            updateBanner(version: version)
+                        }
+                        #endif
+
+                        headerSection(isCompact: isCompact)
+
+                        HomeHeroCard(isCompact: isCompact) {
+                            onStartRecording?(.microphone)
+                        }
+
+                        overviewSection
+
+                        activeProcessingSection
+
+                        recentTranscriptsSection
                     }
-                    #endif
-
-                    headerSection
-
-                    quickStartSection
-
-                    overviewSection
-
-                    activeProcessingSection
-
-                    recentTranscriptsSection
+                    .padding(.horizontal, isCompact ? TS.Spacing.md : TS.Spacing.lg)
+                    .padding(.vertical, TS.Spacing.lg)
+                    .frame(maxWidth: 860)
+                    .frame(maxWidth: .infinity)
                 }
-                .padding(.horizontal, TS.Spacing.lg)
-                .padding(.vertical, TS.Spacing.lg)
             }
         }
         .navigationTitle("")
@@ -116,7 +125,7 @@ struct HomeView: View {
 
     // MARK: Header
 
-    private var headerSection: some View {
+    private func headerSection(isCompact: Bool) -> some View {
         VStack(alignment: .leading, spacing: TS.Spacing.xs) {
             Text(dateKicker)
                 .font(TS.Font.microBold)
@@ -128,9 +137,9 @@ struct HomeView: View {
                 + Text("Denk hardop.").foregroundStyle(
                     LinearGradient(colors: [Color.brandLavender, Color.brandPrimary, Color.brandSecondary],
                                    startPoint: .leading, endPoint: .trailing)))
-                .font(.system(size: 26, weight: .bold, design: .rounded))
+                .font(.system(size: isCompact ? 23 : 28, weight: .bold, design: .rounded))
 
-            Text("Spreek je gedachten of vergadering in. ThoughtVault maakt er notities en notulen van en bewaart ze in je vault — alles lokaal op dit apparaat.")
+            Text("Spreek je gedachten of vergadering in. ThoughtVault maakt er notities en notulen van en bewaart ze in je vault. Alles blijft lokaal op dit apparaat.")
                 .font(TS.Font.callout)
                 .foregroundStyle(Color.labelSecondary)
         }
@@ -169,96 +178,6 @@ struct HomeView: View {
         return firstName.isEmpty ? greeting : "\(greeting), \(firstName)"
     }
 
-    // MARK: Quick start
-
-    private var quickStartSection: some View {
-        // One primary start affordance. The mode/profile are chosen on the next
-        // screen (RecordingView), so the previous duplicate pills — which all just
-        // opened the record tab anyway — were removed.
-        ctaCard
-    }
-
-    private var ctaCard: some View {
-        Button {
-            onStartRecording?(.microphone)
-        } label: {
-            HStack(spacing: TS.Spacing.lg) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Nieuwe opname")
-                        .font(.system(size: 18, weight: .bold, design: .rounded))
-                        .foregroundStyle(Color.labelPrimary)
-                    Text("Een losse gedachte, gesprek of meeting — ThoughtVault transcribeert lokaal en zet het om in een nette notitie of notule, klaar voor je vault.")
-                        .font(TS.Font.caption)
-                        .foregroundStyle(Color.labelSecondary)
-                        .lineSpacing(2)
-                        .multilineTextAlignment(.leading)
-                }
-
-                Spacer(minLength: TS.Spacing.md)
-
-                recordOrb
-            }
-            .padding(.horizontal, TS.Spacing.lg)
-            .padding(.vertical, TS.Spacing.lg)
-            .background {
-                // Dark panel with a violet mesh glow, per the approved mockup.
-                RoundedRectangle(cornerRadius: TS.Radius.lg, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [Color(red: 0.118, green: 0.102, blue: 0.227),
-                                     Color(red: 0.078, green: 0.078, blue: 0.157)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .overlay {
-                        RadialGradient(
-                            colors: [Color.brandPrimary.opacity(0.22), .clear],
-                            center: .init(x: 0.88, y: -0.2),
-                            startRadius: 0, endRadius: 340
-                        )
-                        .clipShape(RoundedRectangle(cornerRadius: TS.Radius.lg, style: .continuous))
-                    }
-                    .overlay {
-                        RoundedRectangle(cornerRadius: TS.Radius.lg, style: .continuous)
-                            .strokeBorder(Color.brandPrimary.opacity(0.22), lineWidth: 1)
-                    }
-                    .shadow(color: Color.brandPrimaryDark.opacity(0.30), radius: 22, y: 10)
-            }
-        }
-        .buttonStyle(.plain)
-    }
-
-    /// Glowing violet record orb — the visual heart of the app.
-    private var recordOrb: some View {
-        ZStack {
-            Circle()
-                .stroke(Color.brandPrimary.opacity(0.25), lineWidth: 1)
-                .frame(width: 108, height: 108)
-            Circle()
-                .stroke(Color.brandPrimary.opacity(0.14), lineWidth: 1)
-                .frame(width: 126, height: 126)
-            Circle()
-                .fill(
-                    RadialGradient(
-                        colors: [Color(red: 0.76, green: 0.53, blue: 1.0),
-                                 Color.brandPrimary,
-                                 Color.brandPrimaryDark],
-                        center: .init(x: 0.32, y: 0.28),
-                        startRadius: 4, endRadius: 74
-                    )
-                )
-                .frame(width: 84, height: 84)
-                .shadow(color: Color.brandPrimary.opacity(0.55), radius: 24)
-                .shadow(color: Color.brandPrimaryDark.opacity(0.45), radius: 10, y: 6)
-            Image(systemName: "mic.fill")
-                .font(.system(size: 30, weight: .semibold))
-                .foregroundStyle(.white)
-                .shadow(color: Color.brandPrimaryDark.opacity(0.6), radius: 4, y: 2)
-        }
-        .frame(width: 130, height: 130)
-    }
-
     // MARK: Active processing
 
     @ViewBuilder
@@ -269,7 +188,9 @@ struct HomeView: View {
         // Hide the stat row entirely on an empty/fresh account — a "0 / 0 / 0"
         // hero-metric grid reads as broken rather than informative.
         if activeCount > 0 || queueCount > 0 || recentCount > 0 {
-            HStack(spacing: TS.Spacing.sm) {
+            // Adaptive grid: 3-up on wide windows, wraps to 2/1 columns when narrow.
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: TS.Spacing.sm)],
+                      spacing: TS.Spacing.sm) {
                 overviewStat(
                     title: "Actieve taken",
                     value: "\(activeCount)",

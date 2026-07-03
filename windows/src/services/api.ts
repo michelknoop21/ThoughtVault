@@ -243,7 +243,7 @@ class APIService {
       // Fallback: Dutch error messages by status code
       let errorMessage: string;
       switch (response.status) {
-        case 401: errorMessage = "Sessie probleem — wordt automatisch opgelost. (HTTP 401)"; break;
+        case 401: errorMessage = "Sessieprobleem, wordt automatisch opgelost. (HTTP 401)"; break;
         case 403: errorMessage = serverMessage || "Geen toegang tot deze functie."; break;
         case 404: errorMessage = serverMessage || "Niet gevonden."; break;
         case 409: errorMessage = serverMessage || "Conflict: de gegevens zijn gewijzigd."; break;

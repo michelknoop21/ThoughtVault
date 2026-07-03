@@ -1,13 +1,14 @@
 ---
 name: ThoughtVault
-description: Yinga-branded recording, transcription & notulen studio — native macOS/iOS + Windows, one shared design language.
+description: ThoughtVault recording, transcription & notulen studio. Native macOS/iOS + Windows, one shared design language.
 colors:
-  brand-primary: "#E50074"
-  brand-primary-dark: "#B8005E"
-  brand-secondary: "#007BC4"
+  brand-primary: "#9048F0"
+  brand-primary-dark: "#7830D8"
+  brand-secondary: "#6048F0"
+  brand-lavender: "#D890F0"
   brand-accent: "#009F3C"
   brand-orange: "#F39200"
-  neon-blue: "#00C2FF"
+  neon-blue: "#8F6BFF"
   surface-primary: "#FFFFFF"
   surface-secondary: "#F5F5F7"
   surface-tertiary: "#EBEBF0"
@@ -141,17 +142,17 @@ components:
 
 ## 1. Overview
 
-**Creative North Star: "The Yinga Studio"**
+**Creative North Star: "The Thought Vault"**
 
-ThoughtVault is a branded workspace, not a neutral utility. It is unmistakably Yinga the moment it loads: the four-color spinner, the magenta wordmark, magenta gradients on every primary action. But it earns that brand confidence by sitting inside a calm, Apple-native shell — `SF Pro Rounded` headings, glass surfaces over a soft gray canvas, spring physics on every interaction. The brand is the personality; the platform is the manners.
+ThoughtVault is a branded workspace, not a neutral utility. It is unmistakably ThoughtVault the moment it loads: the lavender-to-indigo gradient bar, the glowing violet record orb, violet gradients on every primary action. But it earns that brand confidence by sitting inside a calm, Apple-native shell: `SF Pro Rounded` headings, glass surfaces, spring physics on every interaction. The brand is the personality; the platform is the manners.
 
 The single most important fact about this system is that it is **one design language rendered twice**. The macOS/iOS app (SwiftUI, `TS.Spacing`/`TS.Radius`/`TS.Font` tokens, `Color.brandPrimary`) and the Windows app (Tauri, CSS custom properties in `globals.css`, Tailwind) carry **identical** hex values, spacing scale, radii, and animation curves. The Windows CSS is annotated line-by-line as "matches macOS." Any change to a token must land on both platforms or the parity breaks. That discipline is the system.
 
-The aesthetic is warm-friendly-professional: rounded display type and 12-20px radii keep it approachable, glassmorphic cards keep it modern, and the restrained gray-on-white surface palette keeps the magenta loud where it matters. It explicitly rejects the generic "dark-mode SaaS dashboard" look (neon-on-charcoal, sharp corners, dense data grids) and the flat-corporate-blue enterprise tool. Depth comes from translucency and soft shadow, never from heavy chrome.
+The aesthetic is warm-friendly-professional: rounded display type and 12-20px radii keep it approachable, glassmorphic cards keep it modern, and the restrained surface palette keeps the violet loud where it matters. It explicitly rejects the generic "dark-mode SaaS dashboard" look (neon-on-charcoal, sharp corners, dense data grids) and the flat-corporate-blue enterprise tool. Depth comes from translucency and soft shadow, never from heavy chrome.
 
 **Key Characteristics:**
 - **Cross-platform parity is law** — every token exists identically in `Color+Brand.swift`/`Theme.swift` and `globals.css`.
-- **Yinga magenta `#E50074` leads** every primary action, usually as a 135° gradient into `#B8005E`.
+- **ThoughtVault violet `#9048F0` leads** every primary action, usually as a 135° gradient into `#7830D8`.
 - **Glass surfaces** (`backdrop-filter: blur(20px)`, translucent fill) carry the entire card system on both platforms.
 - **`SF Pro Rounded`** for headings/titles gives the friendly voice; system sans for body keeps it legible.
 - **8pt spacing grid**, continuous-corner radii, spring/ease-out motion — Apple HIG rhythm throughout.
@@ -159,19 +160,20 @@ The aesthetic is warm-friendly-professional: rounded display type and 12-20px ra
 
 ## 2. Colors
 
-A four-color Yinga brand palette riding on a near-neutral gray surface system, with magenta as the dominant action color and blue as the interactive/navigation color.
+A violet-family brand palette (sampled from the logo: lavender, violet, indigo) riding on a near-neutral surface system, with violet as the dominant action color and indigo as the interactive/navigation color.
 
 ### Primary
-- **Yinga Magenta** (`#E50074`): The brand's voice and the app's primary action color. Every primary button, the recording mic, active accents, focus rings, and the wordmark. Almost always rendered as a 135° gradient `#E50074 → #B8005E` with a colored drop shadow.
-- **Magenta Deep** (`#B8005E`): The gradient terminus and pressed/active state for magenta surfaces. (The macOS hero gradient uses a slightly deeper `rgb(0.72,0,0.38)` variant — treat `#B8005E` as canonical.)
+- **ThoughtVault Violet** (`#9048F0`): The brand's voice and the app's primary action color. Every primary button, the record orb, active accents and focus rings. Often rendered as a 135° gradient `#9048F0 → #7830D8` with a colored drop shadow.
+- **Violet Deep** (`#7830D8`): The gradient terminus and pressed/active state for violet surfaces.
+- **Lavender** (`#D890F0`): The light end of the brand gradient (brand bar, waveform, gradient headlines).
 
 ### Secondary
-- **Yinga Blue** (`#007BC4`): The *interactive* color — navigation selection, active sidebar items, tabs, links, input focus rings, filter pills. Magenta acts; blue navigates. Keeping these two roles separate is deliberate.
+- **Indigo** (`#6048F0`): The *interactive* color: navigation selection, active sidebar items, tabs, links, input focus rings, filter pills. Violet acts; indigo navigates. Keeping these two roles separate is deliberate.
 
 ### Tertiary
-- **Yinga Green** (`#009F3C`): Brand accent and doubles as `status-success`. Success badges, completed steps.
-- **Yinga Orange** (`#F39200`): Fourth brand color, used in the spinner and accent tints; `status-warning` is a near-sibling `#F9A500`.
-- **Neon Blue** (`#00C2FF`): Reserved exclusively for the recording waveform visualization.
+- **Green** (`#009F3C`): Semantic accent, doubles as `status-success`. Success badges, completed steps.
+- **Orange** (`#F39200`): Semantic accent for warnings and accent tints; `status-warning` is a near-sibling `#F9A500`.
+- **Neon Violet** (`#8F6BFF`): Reserved exclusively for the recording waveform glow.
 
 ### Neutral
 - **Surface Primary** (`#FFFFFF` light / `#1A1C29` dark): Cards, sidebar, inputs, the raised plane.
@@ -186,7 +188,7 @@ A four-color Yinga brand palette riding on a near-neutral gray surface system, w
 - **Error** (`#EF4444`), **Warning** (`#F9A500`), **Success** (`#009F3C` = brand green). Status colors shift in dark mode (error → `#FF6B6B`, success → `#34D058`) for contrast.
 
 ### Named Rules
-**The Two-Voice Rule.** Magenta acts, blue navigates. Primary actions and recording are magenta; selection, tabs, links, and focus-within-navigation are blue. Never use magenta for a nav-selection state or blue for a primary CTA.
+**The Two-Voice Rule.** Violet acts, indigo navigates. Primary actions and recording are violet; selection, tabs, links, and focus-within-navigation are indigo. Never use violet for a nav-selection state or indigo for a primary CTA.
 
 **The Parity Rule.** No color exists on one platform only. Every value here lives identically in `Color+Brand.swift` and `globals.css`. A new color is added to both or it does not exist.
 
@@ -199,7 +201,7 @@ A four-color Yinga brand palette riding on a near-neutral gray surface system, w
 **Character:** The rounded display family is the friendly half of the brand: titles feel soft and human, never corporate. Body falls back to the crisp platform system sans for maximum legibility at small sizes. The contrast is rounded-warm headings over neutral-sharp body.
 
 ### Hierarchy
-- **Large Title** (700, 34px, ~1.1): Hero / login title, rendered in brand magenta.
+- **Large Title** (700, 34px, ~1.1): Hero / login title, rendered in the brand gradient.
 - **Title** (600, 28px): Screen titles.
 - **Title2 / Title3** (600, 22px / 20px): Major and minor section titles; rounded design.
 - **Headline** (600, 17px, rounded): Card headers.
@@ -219,8 +221,8 @@ A **glass-and-soft-shadow** system. Surfaces are not flat: the entire card vocab
 
 ### Shadow Vocabulary
 - **Card ambient** (`box-shadow: 0 3px 8px rgba(0,0,0,0.06)`): Resting state of every card.
-- **Card hover** (`box-shadow: 0 6px 16px rgba(0,0,0,0.12)`): Paired with `transform: scale(1.02)` and a magenta/blue border tint on hover.
-- **Brand action shadow** (`0 3px 8px rgba(229,0,116,0.30)` → `0 4px 12px ...0.40` hover): The colored glow under magenta buttons and the mic.
+- **Card hover** (`box-shadow: 0 6px 16px rgba(0,0,0,0.12)`): Paired with `transform: scale(1.02)` and a violet/indigo border tint on hover.
+- **Brand action shadow** (`0 3px 8px rgba(144,72,240,0.30)` → `0 4px 12px ...0.40` hover): The colored glow under violet buttons and the record orb.
 
 ### Named Rules
 **The Glass-Default Rule.** Cards, flyouts, badges, and the sidebar are glass over the canvas. Solid opaque panels are the exception, not the default. Dark mode deepens shadows (`rgba(0,0,0,0.20)`), it does not remove the glass.
@@ -231,38 +233,38 @@ A **glass-and-soft-shadow** system. Surfaces are not flat: the entire card vocab
 
 ### Buttons
 - **Shape:** 12px radius (`rounded.sm`), continuous corners on macOS.
-- **Primary (`.btn-accent` / `PrimaryButtonStyle`):** 135° gradient `#E50074 → #B8005E`, white text, weight 600, magenta glow shadow, `10px 24px` padding (`lg` horizontal + `sm+2` vertical on macOS).
+- **Primary (`.btn-accent` / `PrimaryButtonStyle`):** 135° gradient `#9048F0 → #7830D8`, white text, weight 600, violet glow shadow, `10px 24px` padding (`lg` horizontal + `sm+2` vertical on macOS).
 - **Hover / Active:** Hover deepens the shadow; active scales to 0.97 with reduced opacity and a deeper gradient. 150ms quick ease.
-- **Secondary (`.btn-secondary` / `SecondaryButtonStyle`):** Blue-tinted translucent fill (`rgba(0,123,196,0.08)`), blue text, 1px blue border — the outlined interactive variant.
-- **Ghost (`.btn-ghost`):** Transparent, secondary-text color, fills with the blue subtle tint on hover.
+- **Secondary (`.btn-secondary` / `SecondaryButtonStyle`):** Violet-tinted translucent fill (`rgba(144,72,240,0.08)`), violet text, 1px violet border: the outlined variant.
+- **Ghost (`.btn-ghost`):** Transparent, secondary-text color, fills with the indigo subtle tint on hover.
 - **Destructive:** Same as primary but red (`status-error`) gradient and glow.
 
 ### Filter Pills & Tag Chips
-- **Filter pill:** Capsule (`rounded.xl`, 25px), transparent with 1px border at rest; active fills solid blue with white text. Hover shifts border + text to blue.
-- **Quick-start pill:** Magenta-outlined capsule (1.5px magenta border, faint magenta wash) for hero entry points.
-- **Tag chip:** Small capsule, blue-tinted background + blue text; "add" variant uses a dashed border.
+- **Filter pill:** Capsule (`rounded.xl`, 25px), transparent with 1px border at rest; active fills solid indigo with white text. Hover shifts border + text to indigo.
+- **Quick-start pill:** Violet-outlined capsule (1.5px violet border, faint violet wash) for hero entry points.
+- **Tag chip:** Small capsule, indigo-tinted background + indigo text; "add" variant uses a dashed border.
 
 ### Cards / Containers
 - **Corner Style:** 16px (`rounded.md`); elevated/large variants use 20px (`rounded.lg`).
 - **Background:** Glass — `rgba(255,255,255,0.72)` + `blur(20px)` (dark: `rgba(33,36,51,0.72)`).
-- **Border:** 1px translucent (`--card-border`), shifts to a blue/magenta tint on hover.
+- **Border:** 1px translucent (`--card-border`), shifts to a violet tint on hover.
 - **Shadow:** Card-ambient at rest, card-hover on hover (see Elevation).
 - **Padding:** 16px (`md`) internal default.
 
 ### Inputs / Fields
 - **Style:** Solid surface fill, 1px border-primary, 12px radius, `10px 14px` padding.
-- **Focus:** Border shifts to blue + a 3px `rgba(0,123,196,0.12)` ring. Placeholders use text-tertiary.
+- **Focus:** Border shifts to indigo + a 3px `rgba(96,72,240,0.12)` ring. Placeholders use text-tertiary.
 
 ### Navigation (Sidebar)
 - **Style:** 210px (web) collapsible sidebar; on macOS a custom 52px-icon ↔ full sidebar toggled with `Shift+Cmd+S`. Items are footnote-size, 6px radius, default weight.
-- **States:** Hover → blue subtle tint + blue text; **active → solid blue fill, white text, weight 600, soft blue shadow.**
+- **States:** Hover → indigo subtle tint + indigo text; **active → solid indigo fill, white text, weight 600, soft indigo shadow.**
 
 ### Status Badges
-- Micro (10px) uppercase label in a 6px-radius tinted pill: accent (magenta), success (green), warning (orange), neutral (gray). Each uses a 10%-opacity fill + a 0.5px tint border in its own hue.
+- Micro (10px) uppercase label in a 6px-radius tinted pill: accent (violet), success (green), warning (orange), neutral (gray). Each uses a 10%-opacity fill + a 0.5px tint border in its own hue.
 
 ### Signature Components
-- **The Recording Mic:** An 80px circular magenta-gradient button with up to three concentric pulsing rings (`mic-pulse`, 3.5s). The emotional center of the app.
-- **The Yinga Bar / Logo:** A four-quarter color spinner + magenta wordmark, hand-traced as native SwiftUI `Path`s from the official SVG (and CSS on Windows). Appears in the "Developed by Yinga" footer.
+- **The Record Orb:** A glowing violet radial-gradient orb with concentric rings and an ambient Siri-waveform. The emotional center of the app (hero on Home, mic button while recording).
+- **The Brand Bar:** The logo's lavender → violet → indigo gradient as a slim horizontal bar (`BrandBar` on both platforms). The footer reads "Developed by BuildMind" (`BrandFooter`).
 - **The 56px Timer:** Ultra-light (weight 100) tabular-nums monospace recording clock — the one deliberately oversized type moment.
 - **The Live Badge:** A pulsing red dot (`live-pulse` 1.2s) + uppercase "LIVE" label; pauses to amber when recording is paused.
 
@@ -270,8 +272,8 @@ A **glass-and-soft-shadow** system. Surfaces are not flat: the entire card vocab
 
 ### Do:
 - **Do** keep every token identical across `Color+Brand.swift`/`Theme.swift` and `globals.css` — parity is the system (The Parity Rule).
-- **Do** use magenta `#E50074` for actions and the mic, blue `#007BC4` for navigation/selection/focus (The Two-Voice Rule).
-- **Do** render primary buttons and the mic as the 135° magenta gradient with the colored glow shadow.
+- **Do** use violet `#9048F0` for actions and the record orb, indigo `#6048F0` for navigation/selection/focus (The Two-Voice Rule).
+- **Do** render primary buttons and the record orb with the violet gradient and colored glow shadow.
 - **Do** build surfaces as glass over the gray canvas, with 1px translucent borders and soft ambient shadow (The Glass-Default Rule).
 - **Do** use `SF Pro Rounded` for titles and headlines; plain system sans for body and controls (The Rounded-Heading Rule).
 - **Do** stay on the 8pt spacing grid (`TS.Spacing` / `--space-*`) and the 6/12/16/20/25px radius ladder.
@@ -280,10 +282,10 @@ A **glass-and-soft-shadow** system. Surfaces are not flat: the entire card vocab
 
 ### Don't:
 - **Don't** let this drift into a generic dark-mode SaaS dashboard (neon-on-charcoal, sharp corners, dense grids) — that's the explicit anti-reference.
-- **Don't** use a `border-left`/`border-right` colored stripe as a card or callout accent. (The macOS hero-CTA card on web still carries a 3px magenta left-border — treat it as legacy, not a pattern to repeat.)
+- **Don't** use a `border-left`/`border-right` colored stripe as a card or callout accent. (A colored left-border on a card is legacy, not a pattern to repeat.)
 - **Don't** introduce gradient *text* (`background-clip: text`); gradients belong on fills and buttons only.
 - **Don't** add flat opaque panels where a glass card belongs, or convey depth with heavy/dark drop shadows.
 - **Don't** set body or button copy in UPPERCASE — uppercase is the 10px tracked label/badge size only (The Uppercase-Label-Only Rule).
-- **Don't** swap the action/navigation colors (magenta nav-selection or blue primary CTA).
+- **Don't** swap the action/navigation colors (violet nav-selection or indigo primary CTA).
 - **Don't** add a color, radius, or spacing value to one platform without adding the identical value to the other.
 - **Don't** introduce a third display typeface; the rounded + system-sans pairing is the whole type system.

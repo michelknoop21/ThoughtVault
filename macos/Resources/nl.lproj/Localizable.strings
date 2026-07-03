@@ -62,7 +62,7 @@
 "Bijv. Brainstorm, Standup, Klantgesprek" = "Bijv. Brainstorm, Standup, Klantgesprek";
 "Bijv: Maak een beknopte samenvatting met actiepunten en besluiten. Gebruik een informele toon." = "Bijv: Maak een beknopte samenvatting met actiepunten en besluiten. Gebruik een informele toon.";
 "Citaat" = "Citaat";
-"Claude — betere kwaliteit, langzamer" = "Claude — betere kwaliteit, langzamer";
+"Claude: betere kwaliteit, langzamer" = "Claude: betere kwaliteit, langzamer";
 "Client ID" = "Client ID";
 "Client ID (macOS)" = "Client ID (macOS)";
 "Client ID (Windows)" = "Client ID (Windows)";
@@ -193,7 +193,7 @@
 "Naam (optioneel)" = "Naam (optioneel)";
 "Naam niet ingesteld" = "Naam niet ingesteld";
 "naam@bedrijf.nl" = "naam@bedrijf.nl";
-"Neem vergaderingen op, transcribeer ze automatisch en genereer professionele notulen — in seconden." = "Neem vergaderingen op, transcribeer ze automatisch en genereer professionele notulen — in seconden.";
+"Neem vergaderingen op, transcribeer ze automatisch en genereer in seconden professionele notulen." = "Neem vergaderingen op, transcribeer ze automatisch en genereer in seconden professionele notulen.";
 "Negeer" = "Negeer";
 "Niet beschikbaar in deze build." = "Niet beschikbaar in deze build.";
 "Niet verbonden" = "Niet verbonden";
@@ -316,8 +316,8 @@
 "Titel" = "Titel";
 "Titel bewerken" = "Titel bewerken";
 "Titel opslaan" = "Titel opslaan";
-"Toegang geweigerd — je kunt nog steeds de cloud-transcriptie gebruiken." = "Toegang geweigerd — je kunt nog steeds de cloud-transcriptie gebruiken.";
-"Toegang geweigerd — open Systeeminstellingen om dit te wijzigen." = "Toegang geweigerd — open Systeeminstellingen om dit te wijzigen.";
+"Toegang geweigerd. Je kunt nog steeds de cloud-transcriptie gebruiken." = "Toegang geweigerd. Je kunt nog steeds de cloud-transcriptie gebruiken.";
+"Toegang geweigerd. Open Systeeminstellingen om dit te wijzigen." = "Toegang geweigerd. Open Systeeminstellingen om dit te wijzigen.";
 "Toegang verlenen" = "Toegang verlenen";
 "Toestaan" = "Toestaan";
 "Toestemming verlenen" = "Toestemming verlenen";
@@ -430,7 +430,7 @@
 "Je wachtwoord is gewijzigd." = "Je wachtwoord is gewijzigd.";
 "Verstuur code" = "Verstuur code";
 "Versturen..." = "Versturen...";
-"Code verstuurd naar %@ — als er een account bestaat." = "Code verstuurd naar %@ — als er een account bestaat.";
+"Code verstuurd naar %@, als er een account bestaat." = "Code verstuurd naar %@, als er een account bestaat.";
 "Verifieer code" = "Verifieer code";
 "Code opnieuw versturen" = "Code opnieuw versturen";
 "Herhaal wachtwoord" = "Herhaal wachtwoord";

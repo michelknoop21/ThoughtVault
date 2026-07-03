@@ -3,7 +3,7 @@
 // com.buildmind.ThoughtVault
 //
 // Searchable directory list for managing people (isSelf == false).
-// B-01 / B-02 — add, edit, delete with tri-state intern/extern status.
+// B-01 / B-02: add, edit, delete with tri-state intern/extern status.
 
 import SwiftUI
 
@@ -39,15 +39,20 @@ struct PeopleDirectoryView: View {
     // MARK: - Body
 
     var body: some View {
-        Group {
-            if isLoading {
-                loadingView
-            } else if let error = loadError {
-                errorView(message: error)
-            } else if people.isEmpty {
-                emptyStateView
-            } else {
-                directoryListView
+        GeometryReader { geo in
+            // Width-tier responsive layout: compact stacks the person row so the
+            // status tag drops under the name instead of overflowing trailing.
+            let isCompact = geo.size.width < 640
+            Group {
+                if isLoading {
+                    loadingView
+                } else if let error = loadError {
+                    errorView(message: error)
+                } else if people.isEmpty {
+                    emptyStateView
+                } else {
+                    directoryListView(isCompact: isCompact)
+                }
             }
         }
         .searchable(text: $searchText, prompt: "Zoeken...")
@@ -165,13 +170,15 @@ struct PeopleDirectoryView: View {
 
     // MARK: - Directory List
 
-    private var directoryListView: some View {
+    private func directoryListView(isCompact: Bool) -> some View {
+        // List cannot host a centered max-width column; only the compact
+        // stacking and padding steps of the responsive pattern apply here.
         List {
             if !searchText.isEmpty && filteredPeople.isEmpty {
                 noSearchResultsView
             } else {
                 ForEach(filteredPeople) { person in
-                    personRow(person)
+                    personRow(person, isCompact: isCompact)
                 }
             }
         }
@@ -193,80 +200,110 @@ struct PeopleDirectoryView: View {
 
     // MARK: - Person Row
 
-    private func personRow(_ person: PersonProfile) -> some View {
-        HStack(spacing: TS.Spacing.sm) {
-            // Status dot
-            Circle()
-                .fill(statusColor(for: person.isInternal))
-                .frame(width: 8, height: 8)
-                .padding(.top, 2)
-                .accessibilityHidden(true)
+    private func personRow(_ person: PersonProfile, isCompact: Bool) -> some View {
+        Group {
+            if isCompact {
+                // Narrow width: dot + name + actions on top, status tag below.
+                VStack(alignment: .leading, spacing: TS.Spacing.xs) {
+                    HStack(spacing: TS.Spacing.sm) {
+                        statusDot(for: person)
+                        nameSection(for: person)
+                        actionButtons(for: person)
+                    }
 
-            // Name + role/organisation
-            VStack(alignment: .leading, spacing: 2) {
-                Text(person.name.isEmpty ? "Naamloos" : person.name)
-                    .font(TS.Font.headline)
-                    .foregroundStyle(Color.labelPrimary)
-                    .lineLimit(1)
-
-                let subtitle = [person.role, person.organization]
-                    .filter { !$0.isEmpty }
-                    .joined(separator: " · ")
-                if !subtitle.isEmpty {
-                    Text(subtitle)
-                        .font(TS.Font.footnote)
-                        .foregroundStyle(Color.labelSecondary)
-                        .lineLimit(1)
+                    statusTag(for: person)
+                        .padding(.leading, 8 + TS.Spacing.sm)
                 }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-
-            // Status tag — text, not colour alone (WCAG 1.4.1); also gives VoiceOver
-            // the intern/extern meaning the colour dot can't convey.
-            Text(statusText(for: person.isInternal))
-                .font(TS.Font.caption)
-                .foregroundStyle(statusColor(for: person.isInternal))
-                .padding(.horizontal, TS.Spacing.sm)
-                .padding(.vertical, 2)
-                .background(Capsule().fill(statusColor(for: person.isInternal).opacity(0.12)))
-
-            // Trailing actions
-            HStack(spacing: TS.Spacing.xs) {
-                Button {
-                    personToEdit = person
-                } label: {
-                    Image(systemName: "pencil")
-                        .frame(width: 28, height: 28)
+            } else {
+                HStack(spacing: TS.Spacing.sm) {
+                    statusDot(for: person)
+                    nameSection(for: person)
+                    statusTag(for: person)
+                    actionButtons(for: person)
                 }
-                .buttonStyle(.plain)
-                .foregroundStyle(Color.labelSecondary)
-                .accessibilityLabel("Bewerk \(person.name)")
-                .help("Bewerk \(person.name)")
-
-                Button {
-                    personToDelete = person
-                    showDeleteConfirmation = true
-                } label: {
-                    Image(systemName: "trash")
-                        .frame(width: 28, height: 28)
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(Color.statusError)
-                .accessibilityLabel("Verwijder \(person.name)")
-                .help("Verwijder \(person.name)")
             }
         }
-        .padding(.horizontal, TS.Spacing.md)
+        .padding(.horizontal, isCompact ? TS.Spacing.md : TS.Spacing.lg)
         .padding(.vertical, TS.Spacing.sm)
+    }
+
+    // MARK: - Person Row Sections
+
+    private func statusDot(for person: PersonProfile) -> some View {
+        Circle()
+            .fill(statusColor(for: person.isInternal))
+            .frame(width: 8, height: 8)
+            .padding(.top, 2)
+            .accessibilityHidden(true)
+    }
+
+    private func nameSection(for person: PersonProfile) -> some View {
+        // Name + role/organisation
+        VStack(alignment: .leading, spacing: 2) {
+            Text(person.name.isEmpty ? "Naamloos" : person.name)
+                .font(TS.Font.headline)
+                .foregroundStyle(Color.labelPrimary)
+                .lineLimit(1)
+
+            let subtitle = [person.role, person.organization]
+                .filter { !$0.isEmpty }
+                .joined(separator: " · ")
+            if !subtitle.isEmpty {
+                Text(subtitle)
+                    .font(TS.Font.footnote)
+                    .foregroundStyle(Color.labelSecondary)
+                    .lineLimit(1)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func statusTag(for person: PersonProfile) -> some View {
+        // Status tag: text, not colour alone (WCAG 1.4.1); also gives VoiceOver
+        // the intern/extern meaning the colour dot can't convey.
+        Text(statusText(for: person.isInternal))
+            .font(TS.Font.caption)
+            .foregroundStyle(statusColor(for: person.isInternal))
+            .padding(.horizontal, TS.Spacing.sm)
+            .padding(.vertical, 2)
+            .background(Capsule().fill(statusColor(for: person.isInternal).opacity(0.12)))
+    }
+
+    private func actionButtons(for person: PersonProfile) -> some View {
+        // Trailing actions
+        HStack(spacing: TS.Spacing.xs) {
+            Button {
+                personToEdit = person
+            } label: {
+                Image(systemName: "pencil")
+                    .frame(width: 28, height: 28)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(Color.labelSecondary)
+            .accessibilityLabel("Bewerk \(person.name)")
+            .help("Bewerk \(person.name)")
+
+            Button {
+                personToDelete = person
+                showDeleteConfirmation = true
+            } label: {
+                Image(systemName: "trash")
+                    .frame(width: 28, height: 28)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(Color.statusError)
+            .accessibilityLabel("Verwijder \(person.name)")
+            .help("Verwijder \(person.name)")
+        }
     }
 
     // MARK: - Status Color
 
     private func statusColor(for isInternal: Bool?) -> Color {
         switch isInternal {
-        case true:  return Color.brandAccent   // Intern — green
-        case false: return Color.brandSecondary // Extern — blue
-        case nil:   return Color.labelTertiary  // Onbekend — gray
+        case true:  return Color.brandAccent   // Intern: green
+        case false: return Color.brandSecondary // Extern: blue
+        case nil:   return Color.labelTertiary  // Onbekend: gray
         }
     }
 

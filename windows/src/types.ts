@@ -40,9 +40,9 @@ export type ProcessingMode = "cloud" | "local";
 
 // Available local Whisper models (GGML). Maps 1:1 to ggml-<id>.bin filenames.
 export const WHISPER_MODELS: { id: string; label: string; size: string }[] = [
-  { id: "small", label: "Small — sneller, minder accuraat", size: "~466 MB" },
-  { id: "medium", label: "Medium — aanbevolen", size: "~1,5 GB" },
-  { id: "large-v3", label: "Large v3 — beste kwaliteit, traag op CPU", size: "~3 GB" },
+  { id: "small", label: "Small: sneller, minder accuraat", size: "~466 MB" },
+  { id: "medium", label: "Medium: aanbevolen", size: "~1,5 GB" },
+  { id: "large-v3", label: "Large v3: beste kwaliteit, traag op CPU", size: "~3 GB" },
 ];
 
 // In-progress recording/processing task

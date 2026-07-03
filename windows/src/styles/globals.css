@@ -7,13 +7,14 @@
    ============================================================ */
 
 :root {
-  /* Brand — Yinga */
-  --brand-primary: #E50074;
-  --brand-primary-dark: #B8005E;
-  --brand-secondary: #007BC4;
+  /* Brand: ThoughtVault (lavender / violet / indigo, matches macOS Color+Brand.swift) */
+  --brand-primary: #9048F0;
+  --brand-primary-dark: #7830D8;
+  --brand-secondary: #6048F0;
+  --brand-lavender: #D890F0;
   --brand-accent: #009F3C;
   --brand-orange: #F39200;
-  --brand-neon-blue: #00C2FF;
+  --brand-neon-blue: #8F6BFF;
 
   /* Surface colors — matches macOS Color+Brand.swift */
   --surface-primary: #FFFFFF;
@@ -25,7 +26,7 @@
   --text-secondary: #6B6B73;
   --text-tertiary: #99999F;
   --text-disabled: #BBBBC1;
-  --text-accent: #E50074;
+  --text-accent: #9048F0;
   --text-error: #EF4444;
   --text-success: #009F3C;
 
@@ -43,29 +44,29 @@
   --card-bg: rgba(255, 255, 255, 0.72);
   --card-bg-hover: rgba(255, 255, 255, 0.85);
   --card-border: rgba(224, 224, 230, 0.60);
-  --card-border-hover: rgba(0, 123, 196, 0.25);
+  --card-border-hover: rgba(96, 72, 240, 0.25);
   --card-shadow: 0 3px 8px rgba(0, 0, 0, 0.06);
   --card-shadow-hover: 0 6px 16px rgba(0, 0, 0, 0.12);
   --card-blur: 20px;
 
   /* Interactive colors — blue for navigation/selection states */
   --interactive-bg: var(--brand-secondary);
-  --interactive-bg-subtle: rgba(0, 123, 196, 0.08);
-  --interactive-bg-hover: rgba(0, 123, 196, 0.12);
-  --interactive-border: rgba(0, 123, 196, 0.35);
+  --interactive-bg-subtle: rgba(96, 72, 240, 0.08);
+  --interactive-bg-hover: rgba(96, 72, 240, 0.12);
+  --interactive-border: rgba(96, 72, 240, 0.35);
   --interactive-text: var(--brand-secondary);
 
   /* Fill colors for interactive elements */
   --fill-control: rgba(255, 255, 255, 0.70);
   --fill-control-hover: rgba(255, 255, 255, 0.85);
   --fill-control-pressed: rgba(255, 255, 255, 0.55);
-  --fill-accent: #E50074;
-  --fill-accent-secondary: rgba(229, 0, 116, 0.90);
-  --fill-accent-tertiary: rgba(229, 0, 116, 0.80);
+  --fill-accent: var(--brand-primary);
+  --fill-accent-secondary: rgba(144, 72, 240, 0.90);
+  --fill-accent-tertiary: rgba(144, 72, 240, 0.80);
 
   /* Button primary gradient */
-  --btn-primary-gradient: linear-gradient(135deg, #E50074, rgba(184, 0, 94, 0.82));
-  --btn-primary-shadow: 0 3px 8px rgba(229, 0, 116, 0.30);
+  --btn-primary-gradient: linear-gradient(135deg, var(--brand-primary), rgba(184, 0, 94, 0.82));
+  --btn-primary-shadow: 0 3px 8px rgba(144, 72, 240, 0.30);
 
   /* Status colors — matches macOS */
   --status-error: #EF4444;
@@ -158,8 +159,8 @@
   --text-success: #34D058;
 
   /* Accent backgrounds (dark tints) */
-  --accent-bg-primary: rgba(229, 0, 116, 0.15);
-  --accent-bg-secondary: rgba(0, 123, 196, 0.18);
+  --accent-bg-primary: rgba(144, 72, 240, 0.15);
+  --accent-bg-secondary: rgba(96, 72, 240, 0.18);
   --accent-bg-accent: rgba(0, 159, 60, 0.15);
   --accent-bg-orange: rgba(243, 146, 0, 0.12);
 
@@ -273,12 +274,12 @@
 .btn-accent:hover {
   background: var(--btn-primary-gradient);
   color: #FFFFFF;
-  box-shadow: 0 4px 12px rgba(229, 0, 116, 0.40);
+  box-shadow: 0 4px 12px rgba(144, 72, 240, 0.40);
 }
 
 .btn-accent:active {
   background: linear-gradient(135deg, #CC0068, rgba(160, 0, 82, 0.90));
-  box-shadow: 0 1px 4px rgba(229, 0, 116, 0.20);
+  box-shadow: 0 1px 4px rgba(144, 72, 240, 0.20);
   transform: scale(0.97);
   opacity: 1;
 }
@@ -353,7 +354,7 @@
 .input:focus, .select:focus {
   outline: none;
   border-color: var(--interactive-bg);
-  box-shadow: 0 0 0 3px rgba(0, 123, 196, 0.12);
+  box-shadow: 0 0 0 3px rgba(96, 72, 240, 0.12);
 }
 
 .input::placeholder {
@@ -400,7 +401,7 @@
   background: var(--interactive-bg);
   color: #FFFFFF;
   font-weight: 600;
-  box-shadow: 0 2px 4px rgba(0, 123, 196, 0.30);
+  box-shadow: 0 2px 4px rgba(96, 72, 240, 0.30);
 }
 
 .sidebar-item.active .sidebar-item-icon {
@@ -428,8 +429,8 @@
   pointer-events: none;
   z-index: 0;
   background:
-    radial-gradient(ellipse at 10% 0%, rgba(229, 0, 116, 0.04), transparent 50%),
-    radial-gradient(ellipse at 90% 100%, rgba(0, 123, 196, 0.03), transparent 50%);
+    radial-gradient(ellipse at 10% 0%, rgba(144, 72, 240, 0.04), transparent 50%),
+    radial-gradient(ellipse at 90% 100%, rgba(96, 72, 240, 0.03), transparent 50%);
 }
 
 /* Keep classes for backwards compat but render nothing */
@@ -542,12 +543,12 @@
 .hero-cta-ring {
   position: absolute;
   border-radius: 50%;
-  border: 1px solid rgba(229, 0, 116, 0.12);
+  border: 1px solid rgba(144, 72, 240, 0.12);
 }
 
 .hero-cta-ring-1 { width: 54px; height: 54px; opacity: 0.3; }
 .hero-cta-ring-2 { width: 42px; height: 42px; opacity: 0.5; }
-.hero-cta-ring-3 { width: 30px; height: 30px; opacity: 0.7; background: rgba(229, 0, 116, 0.06); }
+.hero-cta-ring-3 { width: 30px; height: 30px; opacity: 0.7; background: rgba(144, 72, 240, 0.06); }
 
 .hero-cta-mic { font-size: 22px; color: var(--brand-primary); z-index: 1; }
 
@@ -585,7 +586,7 @@
   padding: 10px 20px;
   border-radius: var(--radius-xl);
   border: 1.5px solid var(--brand-primary);
-  background: rgba(229, 0, 116, 0.04);
+  background: rgba(144, 72, 240, 0.04);
   color: var(--brand-primary);
   font-family: var(--font-family);
   font-size: var(--font-body);
@@ -595,8 +596,8 @@
 }
 
 .quick-start-pill:hover {
-  background: rgba(229, 0, 116, 0.08);
-  box-shadow: 0 2px 8px rgba(229, 0, 116, 0.12);
+  background: rgba(144, 72, 240, 0.08);
+  box-shadow: 0 2px 8px rgba(144, 72, 240, 0.12);
 }
 
 /* ============================================================
@@ -634,14 +635,14 @@
   width: 80px;
   height: 80px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #E50074, #B8005E);
+  background: linear-gradient(135deg, var(--brand-primary), #B8005E);
   border: none;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   color: #FFFFFF;
-  box-shadow: 0 4px 16px rgba(229, 0, 116, 0.40);
+  box-shadow: 0 4px 16px rgba(144, 72, 240, 0.40);
   transition: box-shadow var(--duration-quick) var(--ease-quick), transform var(--duration-quick) var(--ease-quick);
   z-index: 1;
   position: relative;
@@ -653,7 +654,7 @@
 }
 
 .mic-button-large:hover {
-  box-shadow: 0 6px 20px rgba(229, 0, 116, 0.50);
+  box-shadow: 0 6px 20px rgba(144, 72, 240, 0.50);
 }
 
 .mic-button-large:active {
@@ -681,7 +682,7 @@
 .mic-pulse-ring {
   position: absolute;
   border-radius: 50%;
-  border: 1px solid rgba(229, 0, 116, 0.15);
+  border: 1px solid rgba(144, 72, 240, 0.15);
   animation: mic-pulse 3.5s ease-in-out infinite;
   pointer-events: none;
 }
@@ -829,9 +830,9 @@
 }
 
 .mode-selector-card.active {
-  border-color: rgba(229, 0, 116, 0.45);
-  background: rgba(229, 0, 116, 0.06);
-  box-shadow: 0 2px 10px rgba(229, 0, 116, 0.12);
+  border-color: rgba(144, 72, 240, 0.45);
+  background: rgba(144, 72, 240, 0.06);
+  box-shadow: 0 2px 10px rgba(144, 72, 240, 0.12);
 }
 
 .mode-selector-icon {
@@ -845,22 +846,22 @@
 }
 
 .mode-selector-icon.accent {
-  background: rgba(229, 0, 116, 0.10);
-  color: #E50074;
+  background: rgba(144, 72, 240, 0.10);
+  color: var(--brand-primary);
 }
 
 .mode-selector-icon.secondary {
-  background: rgba(0, 123, 196, 0.10);
-  color: #007BC4;
+  background: rgba(96, 72, 240, 0.10);
+  color: var(--brand-secondary);
 }
 
 .mode-selector-icon.accent.active {
-  background: #E50074;
+  background: var(--brand-primary);
   color: #fff;
 }
 
 .mode-selector-icon.secondary.active {
-  background: #007BC4;
+  background: var(--brand-secondary);
   color: #fff;
 }
 
@@ -901,7 +902,7 @@
 }
 
 .premium-toggle input[type="checkbox"] {
-  accent-color: #E50074;
+  accent-color: var(--brand-primary);
   width: 16px;
   height: 16px;
   cursor: default;
@@ -997,9 +998,9 @@
   border-radius: var(--radius-xs);
   font-size: var(--font-micro);
   font-weight: 600;
-  background: rgba(229, 0, 116, 0.10);
+  background: rgba(144, 72, 240, 0.10);
   color: var(--brand-primary);
-  border: 0.5px solid rgba(229, 0, 116, 0.25);
+  border: 0.5px solid rgba(144, 72, 240, 0.25);
 }
 
 .status-badge-success {
@@ -1147,7 +1148,7 @@
 .profile-chip.active {
   border-color: var(--interactive-bg);
   background: var(--interactive-bg-subtle);
-  box-shadow: 0 2px 8px rgba(0, 123, 196, 0.15);
+  box-shadow: 0 2px 8px rgba(96, 72, 240, 0.15);
 }
 
 /* ============================================================
@@ -1594,7 +1595,7 @@
 }
 
 .avatar-accent {
-  background: linear-gradient(135deg, var(--brand-secondary), rgba(0, 123, 196, 0.75));
+  background: linear-gradient(135deg, var(--brand-secondary), rgba(96, 72, 240, 0.75));
 }
 
 .avatar-sm {
@@ -2271,7 +2272,7 @@
 
 .search-box:focus-within {
   border-color: var(--interactive-bg);
-  box-shadow: 0 0 0 3px rgba(0, 123, 196, 0.12);
+  box-shadow: 0 0 0 3px rgba(96, 72, 240, 0.12);
 }
 
 /* ============================================================
@@ -2337,7 +2338,7 @@
 }
 .tl-search:focus-within {
   border-color: var(--interactive-bg);
-  box-shadow: 0 0 0 2px rgba(0, 123, 196, 0.10);
+  box-shadow: 0 0 0 2px rgba(96, 72, 240, 0.10);
 }
 .tl-search input {
   flex: 1;
@@ -3023,7 +3024,7 @@
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--brand-secondary), rgba(0, 123, 196, 0.75));
+  background: linear-gradient(135deg, var(--brand-secondary), rgba(96, 72, 240, 0.75));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3479,29 +3480,19 @@
 }
 
 /* ============================================================
-   Yinga Brand Bar — 4-color horizontal bar below title bar
+   ThoughtVault Brand Bar: gradient bar below title bar
    ============================================================ */
 
 .brand-bar {
-  display: flex;
   flex-shrink: 0;
+  background: linear-gradient(90deg, #D890F0 0%, #9048F0 50%, #6048F0 100%);
 }
-
-.brand-bar > div {
-  flex: 1;
-  height: inherit;
-}
-
-.brand-bar-magenta { background: #E50074; }
-.brand-bar-blue    { background: #007BC4; }
-.brand-bar-green   { background: #009F3C; }
-.brand-bar-orange  { background: #F39200; }
 
 /* ============================================================
-   Yinga Footer — "Developed by [logo]" branding
+   Brand Footer: "Developed by BuildMind"
    ============================================================ */
 
-.yinga-footer {
+.brand-footer {
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -3510,13 +3501,13 @@
   padding: 16px 24px;
 }
 
-.yinga-footer-text {
+.brand-footer-text {
   font-size: var(--font-caption);
   color: var(--text-tertiary);
   font-weight: 400;
 }
 
-.yinga-footer-compact {
+.brand-footer-compact {
   padding: 6px 16px;
   gap: 6px;
   border-top: 1px solid var(--border-secondary);
@@ -3526,11 +3517,23 @@
   height: 32px;
 }
 
-.yinga-footer-text-compact {
+.brand-footer-text-compact {
   font-size: var(--font-micro);
   color: var(--text-tertiary);
   font-weight: 400;
 }
+
+.brand-footer-wordmark,
+.brand-footer-wordmark-compact {
+  font-weight: 600;
+  background: linear-gradient(90deg, #9048F0, #6048F0);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.brand-footer-wordmark { font-size: 15px; }
+.brand-footer-wordmark-compact { font-size: var(--font-caption); }
 
 /* ============================================================
    Responsive: Recording Page & Feedback Widget
@@ -3725,8 +3728,7 @@
     border-color: Highlight;
   }
 
-  .brand-bar,
-  .brand-bar > div {
+  .brand-bar {
     forced-color-adjust: none;
   }
 }

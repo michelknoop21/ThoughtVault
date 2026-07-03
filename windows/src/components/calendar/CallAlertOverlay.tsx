@@ -104,12 +104,12 @@ export function CallAlertOverlay() {
                 className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
                 style={{
                   background: isVideoCall
-                    ? "rgba(229, 0, 116, 0.10)"
+                    ? "rgba(144, 72, 240, 0.10)"
                     : "rgba(0, 120, 212, 0.10)",
                 }}
               >
                 {isVideoCall
-                  ? <VideoChat24Regular style={{ color: "#E50074", fontSize: 20 }} />
+                  ? <VideoChat24Regular style={{ color: "#9048F0", fontSize: 20 }} />
                   : <Calendar24Regular style={{ color: "#0078D4", fontSize: 20 }} />
                 }
               </div>

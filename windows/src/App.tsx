@@ -4,7 +4,7 @@ import { listen } from "@tauri-apps/api/event";
 import { TitleBar } from "./components/layout/TitleBar";
 import { Sidebar } from "./components/layout/Sidebar";
 import { CallAlertOverlay } from "./components/calendar/CallAlertOverlay";
-import { YingaFooter } from "./components/brand/YingaFooter";
+import { BrandFooter } from "./components/brand/BrandFooter";
 import { ErrorBoundary } from "./components/ui/ErrorBoundary";
 import { InfoBarHost } from "./components/ui/InfoBar";
 import { LoginPage } from "./pages/LoginPage";
@@ -163,7 +163,7 @@ function OfflineQueueBanner() {
             <>
               Uploaden: {fileName && <span>{fileName}</span>}
               {fileSize ? ` (${formatBytes(fileSize)})` : ""}
-              {" — "}
+              {" · "}
               {progress}%
               {uploadSpeed > 0 && ` (${formatBytes(uploadSpeed)}/s)`}
               {displayCount > 1 && ` [${currentIndex}/${displayCount}]`}
@@ -171,7 +171,7 @@ function OfflineQueueBanner() {
           ) : processing ? (
             `${displayCount} opname${displayCount !== 1 ? "s" : ""} worden verstuurd...`
           ) : (
-            `${displayCount} opname${displayCount !== 1 ? "s" : ""} in wachtrij — wordt automatisch verstuurd`
+            `${displayCount} opname${displayCount !== 1 ? "s" : ""} in wachtrij, wordt automatisch verstuurd`
           )}
         </span>
         {!processing && displayCount > 0 && (
@@ -219,7 +219,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
             <div className="app-main-content">
               {children}
             </div>
-            <YingaFooter compact />
+            <BrandFooter compact />
           </main>
         </div>
       </div>

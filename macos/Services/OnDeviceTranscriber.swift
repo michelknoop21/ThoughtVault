@@ -115,7 +115,7 @@ final class OnDeviceTranscriber {
             let request = SFSpeechURLRecognitionRequest(url: url)
             request.shouldReportPartialResults = false
             request.requiresOnDeviceRecognition = recognizer.supportsOnDeviceRecognition
-            // Bias recognition toward known names/terms (e.g. "Yinga", people directory).
+            // Bias recognition toward known names/terms (custom vocabulary, people directory).
             request.contextualStrings = PersonalVocabulary.terms()
 
             recognitionTask = recognizer.recognitionTask(with: request) { result, error in
@@ -158,7 +158,7 @@ final class OnDeviceTranscriber {
         let request = SFSpeechAudioBufferRecognitionRequest()
         request.shouldReportPartialResults = true
         request.requiresOnDeviceRecognition = recognizer.supportsOnDeviceRecognition
-        // Bias recognition toward known names/terms (e.g. "Yinga", people directory).
+        // Bias recognition toward known names/terms (custom vocabulary, people directory).
         request.contextualStrings = PersonalVocabulary.terms()
 
         let inputNode = engine.inputNode

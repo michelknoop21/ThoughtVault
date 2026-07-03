@@ -148,8 +148,9 @@ actor APIService {
     // MARK: - Configuration Helpers
 
     private func serverURL() -> String {
-        // Read from UserDefaults (AppStorage key "serverURL")
-        return UserDefaults.standard.string(forKey: "serverURL") ?? "https://n8n.prezent.nl/tstudio/api"
+        // Fixed base URL: the server is not user-configurable (the Settings
+        // field was removed; the n8n connection no longer depends on it).
+        return "https://n8n.prezent.nl/tstudio/api"
     }
 
     private func authToken() -> String? {

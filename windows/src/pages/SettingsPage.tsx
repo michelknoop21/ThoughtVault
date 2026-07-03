@@ -266,8 +266,8 @@ export function SettingsPage() {
                   <p className="settings-label">Verwerkingsmodus</p>
                   <p className="settings-desc">
                     {settings.processing_mode === "local"
-                      ? "Lokaal — transcriptie én notulen draaien volledig op dit apparaat"
-                      : "Cloud — opname wordt naar de server geüpload"}
+                      ? "Lokaal: transcriptie én notulen draaien volledig op dit apparaat"
+                      : "Cloud: opname wordt naar de server geüpload"}
                   </p>
                 </div>
                 <select
@@ -524,7 +524,7 @@ export function SettingsPage() {
                     <div className="flex-1">
                       <p className="settings-label">Microsoft 365</p>
                       <p className="settings-desc-success">
-                        Verbonden — {calendar.accountEmail}
+                        Verbonden: {calendar.accountEmail}
                       </p>
                     </div>
                   </div>
@@ -606,7 +606,7 @@ export function SettingsPage() {
                 <Info24Regular className="settings-icon-muted" />
                 <div className="flex-1">
                   <p className="settings-label">ThoughtVault</p>
-                  <p className="settings-desc">Versie {appVersion || "..."} — Windows (Tauri 2)</p>
+                  <p className="settings-desc">Versie {appVersion || "..."} · Windows (Tauri 2)</p>
                 </div>
               </div>
             </div>

@@ -95,7 +95,7 @@ export function SavedRecordings({
     }
     // Local mode: process fully on-device, mirroring the recording handler.
     if (settings.processing_mode === "local") {
-      toast.show("Lokale verwerking gestart — voortgang zichtbaar in de verwerkingsbalk", "success");
+      toast.show("Lokale verwerking gestart, voortgang zichtbaar in de verwerkingsbalk", "success");
       await processLocally(
         file.path,
         settings.default_profile_id,
@@ -105,7 +105,7 @@ export function SavedRecordings({
       );
       return;
     }
-    toast.show("Upload gestart — voortgang zichtbaar in de verwerkingsbalk", "success");
+    toast.show("Upload gestart, voortgang zichtbaar in de verwerkingsbalk", "success");
     await uploadAndTrack(
       file.path,
       settings.default_profile_id,

@@ -170,9 +170,14 @@ struct AdminView: View {
     // MARK: - Admin Content
 
     private var adminContent: some View {
-        VStack(spacing: 0) {
-            tabBar
-            tabContent
+        GeometryReader { geo in
+            // Width-tier responsive layout (matches HomeView): compact tightens
+            // padding and stacks secondary row content vertically.
+            let isCompact = geo.size.width < 640
+            VStack(spacing: 0) {
+                tabBar
+                tabContent(isCompact: isCompact)
+            }
         }
     }
 
@@ -199,7 +204,7 @@ struct AdminView: View {
     // MARK: - Tab Content
 
     @ViewBuilder
-    private var tabContent: some View {
+    private func tabContent(isCompact: Bool) -> some View {
         if isLoading {
             Spacer()
             ProgressView("Gegevens laden...")
@@ -225,24 +230,24 @@ struct AdminView: View {
         } else {
             switch selectedTab {
             case .overzicht:
-                overzichtTab
+                overzichtTab(isCompact: isCompact)
             case .gebruikers:
-                gebruikersTab
+                gebruikersTab(isCompact: isCompact)
             case .uitnodigingen:
-                uitnodigingenTab
+                uitnodigingenTab(isCompact: isCompact)
             case .feedback:
-                feedbackTab
+                feedbackTab(isCompact: isCompact)
             case .fouten:
-                foutenTab
+                foutenTab(isCompact: isCompact)
             case .instellingen:
-                instellingenTab
+                instellingenTab(isCompact: isCompact)
             }
         }
     }
 
     // MARK: - Overzicht Tab
 
-    private var overzichtTab: some View {
+    private func overzichtTab(isCompact: Bool) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: TS.Spacing.md) {
                 Text("Systeem statistieken")
@@ -250,8 +255,9 @@ struct AdminView: View {
                     .foregroundStyle(Color.labelSecondary)
                     .padding(.horizontal, TS.Spacing.xs)
 
+                // Adaptive grid: wraps from 4-up to 2/1 columns when narrow.
                 LazyVGrid(
-                    columns: [GridItem(.flexible()), GridItem(.flexible())],
+                    columns: [GridItem(.adaptive(minimum: 160), spacing: TS.Spacing.md)],
                     spacing: TS.Spacing.md
                 ) {
                     statCard(
@@ -280,7 +286,10 @@ struct AdminView: View {
                     )
                 }
             }
-            .padding(TS.Spacing.md)
+            .padding(.horizontal, isCompact ? TS.Spacing.md : TS.Spacing.lg)
+            .padding(.vertical, TS.Spacing.md)
+            .frame(maxWidth: 860)
+            .frame(maxWidth: .infinity)
         }
     }
 
@@ -312,7 +321,7 @@ struct AdminView: View {
 
     // MARK: - Gebruikers Tab
 
-    private var gebruikersTab: some View {
+    private func gebruikersTab(isCompact: Bool) -> some View {
         VStack(spacing: 0) {
             // Header with create button
             HStack {
@@ -328,22 +337,25 @@ struct AdminView: View {
                 }
                 .buttonStyle(PrimaryButtonStyle())
             }
-            .padding(TS.Spacing.md)
+            .padding(.horizontal, isCompact ? TS.Spacing.md : TS.Spacing.lg)
+            .padding(.vertical, TS.Spacing.md)
 
             // Search bar
-            searchBar
+            searchBar(isCompact: isCompact)
 
             // User list
             List {
                 ForEach(filteredUsers) { user in
-                    userRow(user)
+                    userRow(user, isCompact: isCompact)
                 }
             }
             .listStyle(.inset)
         }
+        .frame(maxWidth: 860)
+        .frame(maxWidth: .infinity)
     }
 
-    private var searchBar: some View {
+    private func searchBar(isCompact: Bool) -> some View {
         HStack {
             Image(systemName: "magnifyingglass")
                 .foregroundStyle(Color.labelTertiary)
@@ -367,11 +379,11 @@ struct AdminView: View {
             RoundedRectangle(cornerRadius: TS.Radius.sm)
                 .stroke(Color.borderPrimary, lineWidth: 1)
         }
-        .padding(.horizontal, TS.Spacing.md)
+        .padding(.horizontal, isCompact ? TS.Spacing.md : TS.Spacing.lg)
         .padding(.bottom, TS.Spacing.sm)
     }
 
-    private func userRow(_ user: AdminUser) -> some View {
+    private func userRow(_ user: AdminUser, isCompact: Bool) -> some View {
         HStack(spacing: TS.Spacing.md) {
             // Avatar
             ZStack {
@@ -383,25 +395,33 @@ struct AdminView: View {
                     .foregroundStyle(Color.labelSecondary)
             }
 
-            // Info
+            // Info: role chip stacks below the name on compact widths
             VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: TS.Spacing.sm) {
+                if isCompact {
                     Text(user.name ?? user.email)
                         .font(TS.Font.bodyMedium)
                         .foregroundStyle(Color.labelPrimary)
+                        .lineLimit(1)
+                    if user.name != nil {
+                        Text(user.email)
+                            .font(TS.Font.footnote)
+                            .foregroundStyle(Color.labelTertiary)
+                            .lineLimit(1)
+                    }
+                    roleChip(user)
+                } else {
+                    HStack(spacing: TS.Spacing.sm) {
+                        Text(user.name ?? user.email)
+                            .font(TS.Font.bodyMedium)
+                            .foregroundStyle(Color.labelPrimary)
 
-                    Text(user.role.capitalized)
-                        .font(TS.Font.microSemibold)
-                        .foregroundStyle(Color.labelSecondary)
-                        .padding(.horizontal, TS.Spacing.sm)
-                        .padding(.vertical, 3)
-                        .background(Color.surfaceTertiary)
-                        .clipShape(Capsule())
-                }
-                if user.name != nil {
-                    Text(user.email)
-                        .font(TS.Font.footnote)
-                        .foregroundStyle(Color.labelTertiary)
+                        roleChip(user)
+                    }
+                    if user.name != nil {
+                        Text(user.email)
+                            .font(TS.Font.footnote)
+                            .foregroundStyle(Color.labelTertiary)
+                    }
                 }
             }
 
@@ -449,9 +469,19 @@ struct AdminView: View {
         .padding(.vertical, TS.Spacing.xs)
     }
 
+    private func roleChip(_ user: AdminUser) -> some View {
+        Text(user.role.capitalized)
+            .font(TS.Font.microSemibold)
+            .foregroundStyle(Color.labelSecondary)
+            .padding(.horizontal, TS.Spacing.sm)
+            .padding(.vertical, 3)
+            .background(Color.surfaceTertiary)
+            .clipShape(Capsule())
+    }
+
     // MARK: - Uitnodigingen Tab
 
-    private var uitnodigingenTab: some View {
+    private func uitnodigingenTab(isCompact: Bool) -> some View {
         VStack(spacing: 0) {
             // Header with create button
             HStack {
@@ -465,7 +495,8 @@ struct AdminView: View {
                 }
                 .buttonStyle(PrimaryButtonStyle())
             }
-            .padding(TS.Spacing.md)
+            .padding(.horizontal, isCompact ? TS.Spacing.md : TS.Spacing.lg)
+            .padding(.vertical, TS.Spacing.md)
 
             if invitations.isEmpty {
                 Spacer()
@@ -481,16 +512,18 @@ struct AdminView: View {
             } else {
                 List {
                     ForEach(invitations) { invitation in
-                        invitationRow(invitation)
+                        invitationRow(invitation, isCompact: isCompact)
                     }
                 }
                 .listStyle(.inset)
             }
         }
+        .frame(maxWidth: 860)
+        .frame(maxWidth: .infinity)
     }
 
-    private func invitationRow(_ invitation: AdminInvitation) -> some View {
-        HStack(spacing: TS.Spacing.sm) {
+    private func invitationRow(_ invitation: AdminInvitation, isCompact: Bool) -> some View {
+        HStack(alignment: isCompact ? .top : .center, spacing: TS.Spacing.sm) {
             // Icon
             ZStack {
                 Circle()
@@ -518,6 +551,11 @@ struct AdminView: View {
                             .foregroundStyle(Color.labelTertiary)
                     }
                 }
+                // Status chip stacks below the code on compact widths
+                if isCompact {
+                    invitationStatusChip(invitation)
+                        .padding(.top, 2)
+                }
             }
 
             Spacer()
@@ -538,43 +576,49 @@ struct AdminView: View {
             .buttonStyle(.plain)
             .accessibilityLabel("Code kopiëren")
 
-            // Status
-            let isExpired = {
-                guard let exp = invitation.expiresAt else { return false }
-                let iso = ISO8601DateFormatter()
-                iso.formatOptions = [.withInternetDateTime]
-                guard let date = iso.date(from: exp) else { return false }
-                return date < Date()
-            }()
-            let remaining = invitation.usesRemaining ?? 1
-
-            if remaining == 0 {
-                Text("Opgebruikt")
-                    .font(TS.Font.microSemibold)
-                    .padding(.horizontal, TS.Spacing.sm)
-                    .padding(.vertical, TS.Spacing.xs)
-                    .background(Color.statusSuccess.opacity(0.12))
-                    .foregroundStyle(Color.statusSuccess)
-                    .clipShape(Capsule())
-            } else if isExpired {
-                Text("Verlopen")
-                    .font(TS.Font.microSemibold)
-                    .padding(.horizontal, TS.Spacing.sm)
-                    .padding(.vertical, TS.Spacing.xs)
-                    .background(Color.statusError.opacity(0.12))
-                    .foregroundStyle(Color.statusError)
-                    .clipShape(Capsule())
-            } else {
-                Text("Actief")
-                    .font(TS.Font.microSemibold)
-                    .padding(.horizontal, TS.Spacing.sm)
-                    .padding(.vertical, TS.Spacing.xs)
-                    .background(Color.brandOrange.opacity(0.12))
-                    .foregroundStyle(Color.brandOrange)
-                    .clipShape(Capsule())
+            if !isCompact {
+                invitationStatusChip(invitation)
             }
         }
         .padding(.vertical, TS.Spacing.xs)
+    }
+
+    @ViewBuilder
+    private func invitationStatusChip(_ invitation: AdminInvitation) -> some View {
+        let isExpired = {
+            guard let exp = invitation.expiresAt else { return false }
+            let iso = ISO8601DateFormatter()
+            iso.formatOptions = [.withInternetDateTime]
+            guard let date = iso.date(from: exp) else { return false }
+            return date < Date()
+        }()
+        let remaining = invitation.usesRemaining ?? 1
+
+        if remaining == 0 {
+            Text("Opgebruikt")
+                .font(TS.Font.microSemibold)
+                .padding(.horizontal, TS.Spacing.sm)
+                .padding(.vertical, TS.Spacing.xs)
+                .background(Color.statusSuccess.opacity(0.12))
+                .foregroundStyle(Color.statusSuccess)
+                .clipShape(Capsule())
+        } else if isExpired {
+            Text("Verlopen")
+                .font(TS.Font.microSemibold)
+                .padding(.horizontal, TS.Spacing.sm)
+                .padding(.vertical, TS.Spacing.xs)
+                .background(Color.statusError.opacity(0.12))
+                .foregroundStyle(Color.statusError)
+                .clipShape(Capsule())
+        } else {
+            Text("Actief")
+                .font(TS.Font.microSemibold)
+                .padding(.horizontal, TS.Spacing.sm)
+                .padding(.vertical, TS.Spacing.xs)
+                .background(Color.brandOrange.opacity(0.12))
+                .foregroundStyle(Color.brandOrange)
+                .clipShape(Capsule())
+        }
     }
 
     // MARK: - Feedback Tab
@@ -583,7 +627,7 @@ struct AdminView: View {
         showArchivedFeedback ? feedbackItems : feedbackItems.filter { $0.status != "archived" }
     }
 
-    private var feedbackTab: some View {
+    private func feedbackTab(isCompact: Bool) -> some View {
         ScrollView {
             VStack(spacing: 0) {
                 // Filter toggle
@@ -597,7 +641,7 @@ struct AdminView: View {
                         .controlSize(.mini)
                         .font(TS.Font.caption)
                 }
-                .padding(.horizontal, TS.Spacing.md)
+                .padding(.horizontal, isCompact ? TS.Spacing.md : TS.Spacing.lg)
                 .padding(.vertical, TS.Spacing.sm)
 
                 if filteredFeedbackItems.isEmpty {
@@ -617,9 +661,12 @@ struct AdminView: View {
                             feedbackCard(item)
                         }
                     }
-                    .padding(TS.Spacing.md)
+                    .padding(.horizontal, isCompact ? TS.Spacing.md : TS.Spacing.lg)
+                    .padding(.vertical, TS.Spacing.md)
                 }
             }
+            .frame(maxWidth: 860)
+            .frame(maxWidth: .infinity)
         }
     }
 
@@ -763,10 +810,10 @@ struct AdminView: View {
 
     // MARK: - Logging Tab (Activity + Errors)
 
-    private var foutenTab: some View {
+    private func foutenTab(isCompact: Bool) -> some View {
         VStack(spacing: 0) {
-            logFilterBar
-            logContent
+            logFilterBar(isCompact: isCompact)
+            logContent(isCompact: isCompact)
         }
         .onChange(of: logSubTab) { _, _ in
             logPage = 1
@@ -778,9 +825,9 @@ struct AdminView: View {
         .onChange(of: logTypeFilter) { _, _ in Task { await reloadLogs() } }
     }
 
-    private var logFilterBar: some View {
+    private func logFilterBar(isCompact: Bool) -> some View {
         VStack(spacing: TS.Spacing.sm) {
-            // Sub-tab toggle — native segmented control with live counts
+            // Sub-tab toggle: native segmented control with live counts
             HStack(spacing: TS.Spacing.sm) {
                 Picker("Logtype", selection: $logSubTab) {
                     ForEach(LogSubTab.allCases, id: \.self) { tab in
@@ -802,84 +849,107 @@ struct AdminView: View {
             .padding(.vertical, TS.Spacing.xs)
             .background(Color.surfaceSecondary)
 
-            // Filter row
-            HStack(spacing: TS.Spacing.sm) {
-                // Search field
-                HStack(spacing: TS.Spacing.xs) {
-                    Image(systemName: "magnifyingglass")
-                        .font(TS.Font.micro)
-                        .foregroundStyle(Color.labelTertiary)
-                    TextField(logSubTab == .activity ? "Zoek op gebruiker, actie..." : "Zoek op foutmelding, endpoint...", text: $logSearch)
-                        .font(TS.Font.footnote)
-                        .textFieldStyle(.plain)
-                        .onSubmit { Task { await reloadLogs() } }
-                    if !logSearch.isEmpty {
-                        Button {
-                            logSearch = ""
-                            Task { await reloadLogs() }
-                        } label: {
-                            Image(systemName: "xmark.circle.fill")
-                                .font(TS.Font.micro)
-                                .foregroundStyle(Color.labelTertiary)
+            // Filter row: controls wrap onto two rows on compact widths
+            Group {
+                if isCompact {
+                    VStack(alignment: .leading, spacing: TS.Spacing.sm) {
+                        logSearchField
+                        HStack(spacing: TS.Spacing.sm) {
+                            logFilterPickers
+                            Spacer()
+                            clearFiltersButton
                         }
-                        .buttonStyle(.plain)
                     }
-                }
-                .padding(.horizontal, TS.Spacing.sm)
-                .padding(.vertical, 5)
-                .background(Color.surfaceSecondary)
-                .clipShape(RoundedRectangle(cornerRadius: TS.Radius.sm))
-                .frame(maxWidth: 260)
-
-                if logSubTab == .errors {
-                    // Severity filter
-                    Picker("", selection: $logSeverityFilter) {
-                        Text("Alle niveaus").tag("")
-                        Text("Error").tag("error")
-                        Text("Warning").tag("warning")
-                        Text("Info").tag("info")
-                    }
-                    .pickerStyle(.menu)
-                    .frame(width: 120)
                 } else {
-                    // Action type filter
-                    Picker("", selection: $logTypeFilter) {
-                        Text("Alle acties").tag("")
-                        Text("Login").tag("login")
-                        Text("Upload").tag("upload_complete")
-                        Text("Transcriptie").tag("transcription_complete")
-                        Text("Notule").tag("note_create")
+                    HStack(spacing: TS.Spacing.sm) {
+                        logSearchField
+                            .frame(maxWidth: 260)
+                        logFilterPickers
+                        Spacer()
+                        clearFiltersButton
                     }
-                    .pickerStyle(.menu)
-                    .frame(width: 120)
-                }
-
-                // User filter
-                if !users.isEmpty {
-                    Picker("", selection: $logUserFilter) {
-                        Text("Alle gebruikers").tag("")
-                        ForEach(users) { user in
-                            Text(user.name ?? user.email).tag(user.id)
-                        }
-                    }
-                    .pickerStyle(.menu)
-                    .frame(width: 140)
-                }
-
-                Spacer()
-
-                if hasLogFilters {
-                    Button("Wis filters") {
-                        clearLogFilters()
-                        Task { await reloadLogs() }
-                    }
-                    .font(TS.Font.caption)
-                    .foregroundStyle(Color.labelSecondary)
-                    .buttonStyle(.plain)
                 }
             }
             .padding(.horizontal, TS.Spacing.md)
             .padding(.vertical, TS.Spacing.xs)
+        }
+    }
+
+    private var logSearchField: some View {
+        HStack(spacing: TS.Spacing.xs) {
+            Image(systemName: "magnifyingglass")
+                .font(TS.Font.micro)
+                .foregroundStyle(Color.labelTertiary)
+            TextField(logSubTab == .activity ? "Zoek op gebruiker, actie..." : "Zoek op foutmelding, endpoint...", text: $logSearch)
+                .font(TS.Font.footnote)
+                .textFieldStyle(.plain)
+                .onSubmit { Task { await reloadLogs() } }
+            if !logSearch.isEmpty {
+                Button {
+                    logSearch = ""
+                    Task { await reloadLogs() }
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(TS.Font.micro)
+                        .foregroundStyle(Color.labelTertiary)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, TS.Spacing.sm)
+        .padding(.vertical, 5)
+        .background(Color.surfaceSecondary)
+        .clipShape(RoundedRectangle(cornerRadius: TS.Radius.sm))
+    }
+
+    @ViewBuilder
+    private var logFilterPickers: some View {
+        if logSubTab == .errors {
+            // Severity filter
+            Picker("", selection: $logSeverityFilter) {
+                Text("Alle niveaus").tag("")
+                Text("Error").tag("error")
+                Text("Warning").tag("warning")
+                Text("Info").tag("info")
+            }
+            .pickerStyle(.menu)
+            .frame(width: 120)
+        } else {
+            // Action type filter
+            Picker("", selection: $logTypeFilter) {
+                Text("Alle acties").tag("")
+                Text("Login").tag("login")
+                Text("Upload").tag("upload_complete")
+                Text("Transcriptie").tag("transcription_complete")
+                Text("Notule").tag("note_create")
+            }
+            .pickerStyle(.menu)
+            .frame(width: 120)
+        }
+
+        // User filter
+        if !users.isEmpty {
+            Picker("", selection: $logUserFilter) {
+                Text("Alle gebruikers").tag("")
+                ForEach(users) { user in
+                    Text(user.name ?? user.email).tag(user.id)
+                }
+            }
+            .pickerStyle(.menu)
+            .frame(width: 140)
+        }
+    }
+
+    @ViewBuilder
+    private var clearFiltersButton: some View {
+        if hasLogFilters {
+            Button("Wis filters") {
+                clearLogFilters()
+                Task { await reloadLogs() }
+            }
+            .font(TS.Font.caption)
+            .foregroundStyle(Color.labelSecondary)
+            .buttonStyle(.plain)
         }
     }
 
@@ -896,7 +966,7 @@ struct AdminView: View {
     }
 
     @ViewBuilder
-    private var logContent: some View {
+    private func logContent(isCompact: Bool) -> some View {
         let currentData: [Any] = logSubTab == .activity ? activityLogs as [Any] : errors as [Any]
         let totalItems = currentData.count
         let totalPages = max(1, Int(ceil(Double(totalItems) / Double(logPageSize))))
@@ -921,30 +991,36 @@ struct AdminView: View {
             .padding(.top, TS.Spacing.xxl)
         } else {
             ScrollView {
-                LazyVStack(spacing: 0) {
-                    // Table header
-                    logTableHeader
-
-                    // Rows
-                    if logSubTab == .activity {
-                        let pageItems = Array(activityLogs[startIdx..<endIdx])
-                        ForEach(Array(pageItems.enumerated()), id: \.offset) { idx, entry in
-                            let globalIdx = startIdx + idx
-                            activityRow(entry, index: globalIdx)
+                VStack(spacing: 0) {
+                    LazyVStack(spacing: 0) {
+                        // Table header (columns only exist on wide layouts)
+                        if !isCompact {
+                            logTableHeader
                         }
-                    } else {
-                        let pageItems = Array(errors[startIdx..<endIdx])
-                        ForEach(Array(pageItems.enumerated()), id: \.offset) { idx, entry in
-                            let globalIdx = startIdx + idx
-                            errorRow(entry, index: globalIdx)
+
+                        // Rows
+                        if logSubTab == .activity {
+                            let pageItems = Array(activityLogs[startIdx..<endIdx])
+                            ForEach(Array(pageItems.enumerated()), id: \.offset) { idx, entry in
+                                let globalIdx = startIdx + idx
+                                activityRow(entry, index: globalIdx, isCompact: isCompact)
+                            }
+                        } else {
+                            let pageItems = Array(errors[startIdx..<endIdx])
+                            ForEach(Array(pageItems.enumerated()), id: \.offset) { idx, entry in
+                                let globalIdx = startIdx + idx
+                                errorRow(entry, index: globalIdx, isCompact: isCompact)
+                            }
                         }
                     }
-                }
 
-                // Pagination
-                if totalPages > 1 {
-                    logPagination(page: safePage, totalPages: totalPages, totalItems: totalItems, startIdx: startIdx, endIdx: endIdx)
+                    // Pagination
+                    if totalPages > 1 {
+                        logPagination(page: safePage, totalPages: totalPages, totalItems: totalItems, startIdx: startIdx, endIdx: endIdx)
+                    }
                 }
+                .frame(maxWidth: 1100)
+                .frame(maxWidth: .infinity)
             }
         }
     }
@@ -971,7 +1047,7 @@ struct AdminView: View {
         .background(Color.surfaceSecondary)
     }
 
-    private func activityRow(_ entry: AdminActivity, index: Int) -> some View {
+    private func activityRow(_ entry: AdminActivity, index: Int, isCompact: Bool) -> some View {
         let isExpanded = expandedLogRow == index
         return VStack(spacing: 0) {
             Button {
@@ -979,23 +1055,47 @@ struct AdminView: View {
                     expandedLogRow = isExpanded ? nil : index
                 }
             } label: {
-                HStack(spacing: 0) {
-                    Text(logTimestamp(entry.createdAt))
-                        .font(TS.Font.captionMonospaced)
-                        .foregroundStyle(Color.labelTertiary)
-                        .frame(width: 130, alignment: .leading)
-                    Text(entry.username ?? "Systeem")
-                        .font(TS.Font.footnoteSemibold)
-                        .foregroundStyle(Color.labelPrimary)
-                        .frame(width: 140, alignment: .leading)
-                        .lineLimit(1)
-                    activityBadge(entry.actionType)
-                        .frame(width: 130, alignment: .leading)
-                    Text(entry.endpoint ?? "-")
-                        .font(TS.Font.captionMonospaced)
-                        .foregroundStyle(Color.labelSecondary)
-                        .lineLimit(1)
+                Group {
+                    if isCompact {
+                        // Compact: stacked card-style row instead of table columns
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack(spacing: TS.Spacing.sm) {
+                                Text(logTimestamp(entry.createdAt))
+                                    .font(TS.Font.captionMonospaced)
+                                    .foregroundStyle(Color.labelTertiary)
+                                Spacer()
+                                activityBadge(entry.actionType)
+                            }
+                            Text(entry.username ?? "Systeem")
+                                .font(TS.Font.footnoteSemibold)
+                                .foregroundStyle(Color.labelPrimary)
+                                .lineLimit(1)
+                            Text(entry.endpoint ?? "-")
+                                .font(TS.Font.captionMonospaced)
+                                .foregroundStyle(Color.labelSecondary)
+                                .lineLimit(1)
+                        }
                         .frame(maxWidth: .infinity, alignment: .leading)
+                    } else {
+                        HStack(spacing: 0) {
+                            Text(logTimestamp(entry.createdAt))
+                                .font(TS.Font.captionMonospaced)
+                                .foregroundStyle(Color.labelTertiary)
+                                .frame(width: 130, alignment: .leading)
+                            Text(entry.username ?? "Systeem")
+                                .font(TS.Font.footnoteSemibold)
+                                .foregroundStyle(Color.labelPrimary)
+                                .frame(width: 140, alignment: .leading)
+                                .lineLimit(1)
+                            activityBadge(entry.actionType)
+                                .frame(width: 130, alignment: .leading)
+                            Text(entry.endpoint ?? "-")
+                                .font(TS.Font.captionMonospaced)
+                                .foregroundStyle(Color.labelSecondary)
+                                .lineLimit(1)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                    }
                 }
                 .padding(.horizontal, TS.Spacing.md)
                 .padding(.vertical, TS.Spacing.sm)
@@ -1062,7 +1162,7 @@ struct AdminView: View {
         .background(Color.surfaceTertiary)
     }
 
-    private func errorRow(_ entry: AdminError, index: Int) -> some View {
+    private func errorRow(_ entry: AdminError, index: Int, isCompact: Bool) -> some View {
         let isExpanded = expandedLogRow == index
         let sevColor = errorSeverityColor(entry)
         return VStack(spacing: 0) {
@@ -1071,34 +1171,68 @@ struct AdminView: View {
                     expandedLogRow = isExpanded ? nil : index
                 }
             } label: {
-                HStack(spacing: 0) {
-                    Text(logTimestamp(entry.createdAt))
-                        .font(TS.Font.captionMonospaced)
-                        .foregroundStyle(Color.labelTertiary)
-                        .frame(width: 130, alignment: .leading)
-                    Text((entry.severity ?? "error").uppercased())
-                        .font(.system(size: 9, weight: .bold, design: .default))
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(sevColor.opacity(0.15))
-                        .foregroundStyle(sevColor)
-                        .clipShape(RoundedRectangle(cornerRadius: 3))
-                        .frame(width: 80, alignment: .leading)
-                    Text(entry.errorType ?? "Unknown")
-                        .font(TS.Font.caption)
-                        .foregroundStyle(Color.labelSecondary)
-                        .lineLimit(1)
-                        .frame(width: 120, alignment: .leading)
-                    Text(entry.endpoint ?? "-")
-                        .font(TS.Font.captionMonospaced)
-                        .foregroundStyle(Color.labelSecondary)
-                        .lineLimit(1)
-                        .frame(width: 180, alignment: .leading)
-                    Text(entry.errorMessage ?? "Onbekende fout")
-                        .font(TS.Font.caption)
-                        .foregroundStyle(Color.labelPrimary)
-                        .lineLimit(2)
+                Group {
+                    if isCompact {
+                        // Compact: stacked card-style row instead of table columns
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack(spacing: TS.Spacing.sm) {
+                                Text((entry.severity ?? "error").uppercased())
+                                    .font(.system(size: 9, weight: .bold, design: .default))
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background(sevColor.opacity(0.15))
+                                    .foregroundStyle(sevColor)
+                                    .clipShape(RoundedRectangle(cornerRadius: 3))
+                                Text(entry.errorType ?? "Unknown")
+                                    .font(TS.Font.caption)
+                                    .foregroundStyle(Color.labelSecondary)
+                                    .lineLimit(1)
+                                Spacer()
+                                Text(logTimestamp(entry.createdAt))
+                                    .font(TS.Font.captionMonospaced)
+                                    .foregroundStyle(Color.labelTertiary)
+                            }
+                            Text(entry.errorMessage ?? "Onbekende fout")
+                                .font(TS.Font.caption)
+                                .foregroundStyle(Color.labelPrimary)
+                                .lineLimit(3)
+                            Text(entry.endpoint ?? "-")
+                                .font(TS.Font.captionMonospaced)
+                                .foregroundStyle(Color.labelSecondary)
+                                .lineLimit(1)
+                        }
                         .frame(maxWidth: .infinity, alignment: .leading)
+                    } else {
+                        HStack(spacing: 0) {
+                            Text(logTimestamp(entry.createdAt))
+                                .font(TS.Font.captionMonospaced)
+                                .foregroundStyle(Color.labelTertiary)
+                                .frame(width: 130, alignment: .leading)
+                            Text((entry.severity ?? "error").uppercased())
+                                .font(.system(size: 9, weight: .bold, design: .default))
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(sevColor.opacity(0.15))
+                                .foregroundStyle(sevColor)
+                                .clipShape(RoundedRectangle(cornerRadius: 3))
+                                .frame(width: 80, alignment: .leading)
+                            Text(entry.errorType ?? "Unknown")
+                                .font(TS.Font.caption)
+                                .foregroundStyle(Color.labelSecondary)
+                                .lineLimit(1)
+                                .frame(width: 120, alignment: .leading)
+                            Text(entry.endpoint ?? "-")
+                                .font(TS.Font.captionMonospaced)
+                                .foregroundStyle(Color.labelSecondary)
+                                .lineLimit(1)
+                                .frame(width: 180, alignment: .leading)
+                            Text(entry.errorMessage ?? "Onbekende fout")
+                                .font(TS.Font.caption)
+                                .foregroundStyle(Color.labelPrimary)
+                                .lineLimit(2)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                    }
                 }
                 .padding(.horizontal, TS.Spacing.md)
                 .padding(.vertical, TS.Spacing.sm)
@@ -1186,7 +1320,7 @@ struct AdminView: View {
 
     private func logPagination(page: Int, totalPages: Int, totalItems: Int, startIdx: Int, endIdx: Int) -> some View {
         HStack {
-            Text("\(startIdx + 1)–\(endIdx) van \(totalItems)")
+            Text("\(startIdx + 1) tot \(endIdx) van \(totalItems)")
                 .font(TS.Font.caption)
                 .foregroundStyle(Color.labelTertiary)
             Spacer()
@@ -1270,7 +1404,7 @@ struct AdminView: View {
 
     // MARK: - Instellingen Tab
 
-    private var instellingenTab: some View {
+    private func instellingenTab(isCompact: Bool) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: TS.Spacing.lg) {
                 // Microsoft 365 OAuth section
@@ -1472,7 +1606,10 @@ struct AdminView: View {
                 .padding(TS.Spacing.md)
                 .modernCard()
             }
-            .padding(TS.Spacing.md)
+            .padding(.horizontal, isCompact ? TS.Spacing.md : TS.Spacing.lg)
+            .padding(.vertical, TS.Spacing.md)
+            .frame(maxWidth: 860)
+            .frame(maxWidth: .infinity)
         }
         .task {
             await loadAdminSettings()

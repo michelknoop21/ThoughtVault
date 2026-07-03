@@ -219,7 +219,7 @@ struct OnboardingView: View {
                     .foregroundStyle(Color.brandPrimary)
             }
 
-            Text("Neem vergaderingen op, transcribeer ze automatisch en genereer professionele notulen — in seconden.")
+            Text("Neem vergaderingen op, transcribeer ze automatisch en genereer in seconden professionele notulen.")
                 .font(TS.Font.callout)
                 .foregroundStyle(Color.labelSecondary)
                 .multilineTextAlignment(.center)
@@ -258,7 +258,7 @@ struct OnboardingView: View {
                 .buttonStyle(PrimaryButtonStyle())
             } else if micPermission == .denied {
                 VStack(spacing: TS.Spacing.sm) {
-                    Text("Toegang geweigerd — open Systeeminstellingen om dit te wijzigen.")
+                    Text("Toegang geweigerd. Open Systeeminstellingen om dit te wijzigen.")
                         .font(TS.Font.caption)
                         .foregroundStyle(Color.statusError)
                         .multilineTextAlignment(.center)
@@ -302,7 +302,7 @@ struct OnboardingView: View {
                 .buttonStyle(PrimaryButtonStyle())
             } else if speechPermission == .denied {
                 VStack(spacing: TS.Spacing.sm) {
-                    Text("Toegang geweigerd — je kunt nog steeds de cloud-transcriptie gebruiken.")
+                    Text("Toegang geweigerd. Je kunt nog steeds de cloud-transcriptie gebruiken.")
                         .font(TS.Font.caption)
                         .foregroundStyle(Color.labelSecondary)
                         .multilineTextAlignment(.center)
@@ -454,7 +454,7 @@ struct OnboardingView: View {
                 .buttonStyle(PrimaryButtonStyle())
             } else if screenRecordingPermission == .denied {
                 VStack(spacing: TS.Spacing.sm) {
-                    Text("Toegang geweigerd — open Systeeminstellingen om dit te wijzigen.")
+                    Text("Toegang geweigerd. Open Systeeminstellingen om dit te wijzigen.")
                         .font(TS.Font.caption)
                         .foregroundStyle(Color.statusError)
                         .multilineTextAlignment(.center)

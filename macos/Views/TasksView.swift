@@ -22,20 +22,25 @@ struct TasksView: View {
     // MARK: Body
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Error banner
-            if let error = tasksVM.errorMessage {
-                errorBanner(error)
-            }
+        GeometryReader { geo in
+            // Width-tier responsive layout: compact stacks task rows vertically,
+            // wide windows get a capped, centered column.
+            let isCompact = geo.size.width < 640
+            VStack(spacing: 0) {
+                // Error banner
+                if let error = tasksVM.errorMessage {
+                    errorBanner(error, isCompact: isCompact)
+                }
 
-            if tasksVM.isLoading && tasksVM.activeTasks.isEmpty {
-                // First load
-                ProgressView("Taken laden...")
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if tasksVM.activeTasks.isEmpty {
-                emptyState
-            } else {
-                taskList
+                if tasksVM.isLoading && tasksVM.activeTasks.isEmpty {
+                    // First load
+                    ProgressView("Taken laden...")
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if tasksVM.activeTasks.isEmpty {
+                    emptyState
+                } else {
+                    taskList(isCompact: isCompact)
+                }
             }
         }
         .navigationTitle("Taken")
@@ -125,7 +130,7 @@ struct TasksView: View {
 
     // MARK: - Error Banner
 
-    private func errorBanner(_ message: String) -> some View {
+    private func errorBanner(_ message: String, isCompact: Bool) -> some View {
         HStack(spacing: TS.Spacing.sm) {
             Image(systemName: "exclamationmark.triangle.fill")
                 .foregroundStyle(Color.statusError)
@@ -145,25 +150,30 @@ struct TasksView: View {
         .padding(TS.Spacing.sm)
         .background(Color.statusError.opacity(0.10))
         .clipShape(RoundedRectangle(cornerRadius: TS.Radius.xs))
-        .padding(.horizontal, TS.Spacing.md)
+        .padding(.horizontal, isCompact ? TS.Spacing.md : TS.Spacing.lg)
         .padding(.top, TS.Spacing.sm)
+        .frame(maxWidth: 860)
+        .frame(maxWidth: .infinity)
     }
 
     // MARK: - Task List
 
-    private var taskList: some View {
+    private func taskList(isCompact: Bool) -> some View {
         ScrollView {
             LazyVStack(spacing: TS.Spacing.sm) {
                 ForEach(tasksVM.activeTasks) { task in
                     TaskRow(
                         task: task,
+                        isCompact: isCompact,
                         onCancel: { taskToCancel = task },
                         onDelete: { taskToDelete = task }
                     )
                 }
             }
-            .padding(.horizontal, TS.Spacing.md)
+            .padding(.horizontal, isCompact ? TS.Spacing.md : TS.Spacing.lg)
             .padding(.vertical, TS.Spacing.sm)
+            .frame(maxWidth: 860)
+            .frame(maxWidth: .infinity)
         }
     }
 }
@@ -173,85 +183,56 @@ struct TasksView: View {
 private struct TaskRow: View {
 
     let task: TranscriptTask
+    let isCompact: Bool
     let onCancel: () -> Void
     let onDelete: () -> Void
 
     @State private var isHovered = false
 
     var body: some View {
-        HStack(spacing: TS.Spacing.md) {
-            // Left: status icon + filename
-            HStack(spacing: TS.Spacing.sm) {
-                Image(systemName: statusIconName)
-                    .font(.system(size: 16))
-                    .foregroundStyle(statusIconColor)
-                    .frame(width: 24, height: 24)
+        Group {
+            if isCompact {
+                // Narrow width: identity + actions on top, status + progress below.
+                VStack(alignment: .leading, spacing: TS.Spacing.sm) {
+                    HStack(spacing: TS.Spacing.md) {
+                        identitySection
+                        Spacer()
+                        actionButtons
+                    }
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(task.filename.isEmpty ? "Naamloze opname" : task.filename)
-                        .font(TS.Font.footnoteSemibold)
-                        .foregroundStyle(Color.labelPrimary)
-                        .lineLimit(1)
+                    HStack(spacing: TS.Spacing.sm) {
+                        StatusBadge(status: task.status)
 
-                    HStack(spacing: TS.Spacing.xs) {
-                        if let createdAt = task.createdAt {
-                            Text(relativeTimeString(from: createdAt))
-                                .font(TS.Font.caption)
-                                .foregroundStyle(Color.labelTertiary)
+                        if showsProgress {
+                            ProgressView(value: task.status.progress)
+                                .progressViewStyle(.linear)
+                                .tint(Color.brandSecondary)
+                                .frame(maxWidth: 160)
                         }
-                        if let username = task.username, !username.isEmpty {
-                            Text("·")
-                                .font(TS.Font.caption)
-                                .foregroundStyle(Color.labelTertiary)
-                            Image(systemName: "person.fill")
-                                .font(.system(size: 9))
-                                .foregroundStyle(Color.brandSecondary)
-                            Text(username)
-                                .font(TS.Font.caption)
-                                .foregroundStyle(Color.brandSecondary)
-                                .lineLimit(1)
-                        }
+
+                        Spacer()
                     }
                 }
-            }
+            } else {
+                HStack(spacing: TS.Spacing.md) {
+                    identitySection
 
-            Spacer()
+                    Spacer()
 
-            // Center: status badge + progress
-            VStack(alignment: .trailing, spacing: 4) {
-                StatusBadge(status: task.status)
+                    // Center: status badge + progress
+                    VStack(alignment: .trailing, spacing: 4) {
+                        StatusBadge(status: task.status)
 
-                if task.status.isActive && task.status != .pending && task.status != .queued {
-                    ProgressView(value: task.status.progress)
-                        .progressViewStyle(.linear)
-                        .tint(Color.brandSecondary)
-                        .frame(width: 100)
-                }
-            }
-
-            // Right: action buttons
-            HStack(spacing: TS.Spacing.xs) {
-                if task.status.isActive {
-                    Button {
-                        onCancel()
-                    } label: {
-                        Image(systemName: "xmark.circle")
-                            .font(.system(size: 14))
-                            .foregroundStyle(Color.statusWarning)
+                        if showsProgress {
+                            ProgressView(value: task.status.progress)
+                                .progressViewStyle(.linear)
+                                .tint(Color.brandSecondary)
+                                .frame(width: 100)
+                        }
                     }
-                    .buttonStyle(.plain)
-                    .help("Annuleren")
-                }
 
-                Button {
-                    onDelete()
-                } label: {
-                    Image(systemName: "trash")
-                        .font(.system(size: 14))
-                        .foregroundStyle(Color.statusError)
+                    actionButtons
                 }
-                .buttonStyle(.plain)
-                .help("Verwijderen")
             }
         }
         .padding(TS.Spacing.md)
@@ -263,7 +244,76 @@ private struct TaskRow: View {
         }
     }
 
+    // MARK: - Sections
+
+    /// Status icon + filename + metadata (shared between compact and regular layouts).
+    private var identitySection: some View {
+        HStack(spacing: TS.Spacing.sm) {
+            Image(systemName: statusIconName)
+                .font(.system(size: 16))
+                .foregroundStyle(statusIconColor)
+                .frame(width: 24, height: 24)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(task.filename.isEmpty ? "Naamloze opname" : task.filename)
+                    .font(TS.Font.footnoteSemibold)
+                    .foregroundStyle(Color.labelPrimary)
+                    .lineLimit(1)
+
+                HStack(spacing: TS.Spacing.xs) {
+                    if let createdAt = task.createdAt {
+                        Text(relativeTimeString(from: createdAt))
+                            .font(TS.Font.caption)
+                            .foregroundStyle(Color.labelTertiary)
+                    }
+                    if let username = task.username, !username.isEmpty {
+                        Text("·")
+                            .font(TS.Font.caption)
+                            .foregroundStyle(Color.labelTertiary)
+                        Image(systemName: "person.fill")
+                            .font(.system(size: 9))
+                            .foregroundStyle(Color.brandSecondary)
+                        Text(username)
+                            .font(TS.Font.caption)
+                            .foregroundStyle(Color.brandSecondary)
+                            .lineLimit(1)
+                    }
+                }
+            }
+        }
+    }
+
+    private var actionButtons: some View {
+        HStack(spacing: TS.Spacing.xs) {
+            if task.status.isActive {
+                Button {
+                    onCancel()
+                } label: {
+                    Image(systemName: "xmark.circle")
+                        .font(.system(size: 14))
+                        .foregroundStyle(Color.statusWarning)
+                }
+                .buttonStyle(.plain)
+                .help("Annuleren")
+            }
+
+            Button {
+                onDelete()
+            } label: {
+                Image(systemName: "trash")
+                    .font(.system(size: 14))
+                    .foregroundStyle(Color.statusError)
+            }
+            .buttonStyle(.plain)
+            .help("Verwijderen")
+        }
+    }
+
     // MARK: - Helpers
+
+    private var showsProgress: Bool {
+        task.status.isActive && task.status != .pending && task.status != .queued
+    }
 
     private var statusIconName: String {
         switch task.status {

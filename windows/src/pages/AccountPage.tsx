@@ -308,7 +308,7 @@ export function AccountPage() {
                     {twoFAStatus === null
                       ? "Status laden..."
                       : twoFAStatus.enabled
-                      ? `Actief — ${twoFAStatus.backup_codes_remaining ?? "?"} backup codes resterend`
+                      ? `Actief: ${twoFAStatus.backup_codes_remaining ?? "?"} backup codes resterend`
                       : "Niet geactiveerd"}
                   </p>
                 </div>
@@ -516,10 +516,10 @@ export function AccountPage() {
                   <p className="settings-desc">
                     Neem contact op met{" "}
                     <a
-                      href="mailto:support@yinga.nl?subject=Account%20verwijderen%20ThoughtVault"
+                      href="mailto:support@prezent.nl?subject=Account%20verwijderen%20ThoughtVault"
                       style={{ color: "var(--text-accent)", textDecoration: "none" }}
                     >
-                      support@yinga.nl
+                      support@prezent.nl
                     </a>
                     {" "}om je account te laten verwijderen. Verzoeken worden binnen 30 dagen verwerkt conform de AVG.
                   </p>

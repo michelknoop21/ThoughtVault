@@ -23,7 +23,6 @@ struct SettingsView: View {
 
     // MARK: - AppStorage
 
-    @AppStorage("serverURL") private var serverURL: String = "https://n8n.prezent.nl/tstudio/api"
     @AppStorage("defaultProfile") private var defaultProfile: String = ""
     @AppStorage("preferOnDeviceTranscription") private var preferOnDeviceTranscription: Bool = false
     @AppStorage("biometricLoginEnabled") private var biometricLoginEnabled: Bool = false
@@ -40,9 +39,6 @@ struct SettingsView: View {
 
     @State private var profiles: [Profile] = []
     @State private var isLoadingProfiles: Bool = false
-    @State private var serverURLInput: String = ""
-    @State private var showServerURLSaved: Bool = false
-    @State private var serverURLError: String? = nil
     @State private var showLogoutConfirm: Bool = false
     @State private var showBugReportSheet: Bool = false
     @State private var biometricError: String? = nil
@@ -62,17 +58,26 @@ struct SettingsView: View {
         case failure(String)
     }
 
+    /// Width-tier responsive flag: below 640pt composite field rows stack
+    /// vertically instead of squeezing in a single HStack.
+    @State private var isCompact: Bool = false
+
     var body: some View {
-        Group {
-            #if os(macOS)
-            tabbedSettings
-            #else
-            flatSettings
-            #endif
+        GeometryReader { geo in
+            Group {
+                #if os(macOS)
+                tabbedSettings
+                #else
+                flatSettings
+                #endif
+            }
+            .onAppear { isCompact = geo.size.width < 640 }
+            .onChange(of: geo.size.width) { _, width in
+                isCompact = width < 640
+            }
         }
         .navigationTitle("Instellingen")
         .onAppear {
-            serverURLInput = serverURL
             loadApiKey()
             obsidianApiKey = KeychainService.shared.load(for: ObsidianService.apiKeyKeychainKey) ?? ""
             Task {
@@ -94,6 +99,17 @@ struct SettingsView: View {
         } message: {
             Text("Weet je zeker dat je wilt uitloggen?")
         }
+    }
+
+    // MARK: - Form container
+
+    /// Grouped Form rendered as a capped, centered column on wide windows,
+    /// mirroring the responsive scroll-column pattern used on HomeView.
+    private func cappedForm<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        Form { content() }
+            .formStyle(.grouped)
+            .frame(maxWidth: 860)
+            .frame(maxWidth: .infinity)
     }
 
     // MARK: - macOS: Tabbed Layout (System Settings-style)
@@ -122,20 +138,19 @@ struct SettingsView: View {
             geavanceerdTab
                 .tabItem { Label("Geavanceerd", systemImage: "slider.horizontal.3") }
         }
-        .frame(minWidth: 560, minHeight: 520)
+        .frame(minWidth: 360, minHeight: 520)
     }
 
     private var algemeenTab: some View {
-        Form {
+        cappedForm {
             verbindingSection
             updatesSection
             overSection
         }
-        .formStyle(.grouped)
     }
 
     private var verwerkingTab: some View {
-        Form {
+        cappedForm {
             verwerkingsmodusSection
             if isLocalProcessing {
                 transcriptieSection
@@ -146,47 +161,41 @@ struct SettingsView: View {
             profielenSection
             spraakherkenningSection
         }
-        .formStyle(.grouped)
     }
 
     private var profielTab: some View {
-        Form {
+        cappedForm {
             ProfileSettingsView()
             onboardingSection
         }
-        .formStyle(.grouped)
     }
 
     private var agendaTab: some View {
-        Form {
+        cappedForm {
             agendaSection
         }
-        .formStyle(.grouped)
     }
 
     private var obsidianTab: some View {
-        Form {
+        cappedForm {
             obsidianSection
         }
-        .formStyle(.grouped)
     }
 
     private var accountTab: some View {
-        Form {
+        cappedForm {
             accountSection
             feedbackSection
         }
-        .formStyle(.grouped)
     }
 
     private var geavanceerdTab: some View {
-        Form {
+        cappedForm {
             permissiesSection
             Section {
                 BrandFooter()
             }
         }
-        .formStyle(.grouped)
     }
     #endif
 
@@ -194,7 +203,7 @@ struct SettingsView: View {
 
     #if os(iOS)
     private var flatSettings: some View {
-        Form {
+        cappedForm {
             verbindingSection
             verwerkingsmodusSection
             if isLocalProcessing {
@@ -215,7 +224,6 @@ struct SettingsView: View {
             overSection
             updatesSection
         }
-        .formStyle(.grouped)
     }
     #endif
 
@@ -226,41 +234,6 @@ struct SettingsView: View {
 
     private var verbindingSection: some View {
         Section {
-            SettingFieldRow("Server URL") {
-                HStack(spacing: TS.Spacing.sm) {
-                    TextField("https://n8n.prezent.nl/tstudio/api", text: $serverURLInput)
-                        .textFieldStyle(.roundedBorder)
-                        .font(TS.Font.body)
-                        .autocorrectionDisabled()
-                        .onChange(of: serverURLInput) { _, _ in
-                            serverURLError = nil
-                        }
-                        #if os(iOS)
-                        .textInputAutocapitalization(.never)
-                        .keyboardType(.URL)
-                        #endif
-
-                    if showServerURLSaved {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(Color.statusSuccess)
-                            .transition(.scale.combined(with: .opacity))
-                    }
-
-                    Button("Opslaan") {
-                        saveServerURL()
-                    }
-                    .buttonStyle(SecondaryButtonStyle())
-                    .disabled(serverURLInput == serverURL || serverURLInput.isEmpty)
-                }
-
-                if let error = serverURLError {
-                    Text(error)
-                        .font(TS.Font.caption)
-                        .foregroundStyle(Color.statusError)
-                        .transition(.opacity)
-                }
-            }
-
             // Server status
             HStack(spacing: TS.Spacing.sm) {
                 if isCheckingServer {
@@ -282,39 +255,9 @@ struct SettingsView: View {
         } header: {
             Text("Verbinding")
         } footer: {
-            Text("De URL van de n8n-server waarop ThoughtVault draait. Moet beginnen met https://")
+            Text("Status van de verbinding met de ThoughtVault-server.")
                 .font(TS.Font.caption)
                 .foregroundStyle(Color.labelTertiary)
-        }
-    }
-
-    private func saveServerURL() {
-        // Validate URL
-        let trimmed = serverURLInput.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let url = URL(string: trimmed), url.host != nil else {
-            withAnimation(TS.Animation.quick) {
-                serverURLError = "Ongeldige URL. Voer een geldige URL in."
-            }
-            return
-        }
-        guard url.scheme == "https" else {
-            withAnimation(TS.Animation.quick) {
-                serverURLError = "Alleen HTTPS-verbindingen zijn toegestaan."
-            }
-            return
-        }
-
-        serverURLError = nil
-        serverURL = trimmed
-        serverURLInput = trimmed
-        withAnimation(TS.Animation.quick) {
-            showServerURLSaved = true
-        }
-        Task {
-            try? await Task.sleep(nanoseconds: 2_000_000_000)
-            withAnimation(TS.Animation.quick) {
-                showServerURLSaved = false
-            }
         }
     }
 
@@ -331,25 +274,21 @@ struct SettingsView: View {
             .tint(Color.brandPrimary)
 
             // Folder connection — the cross-platform path (works on iOS too).
+            // Compact stacks the folder name above the buttons.
             SettingFieldRow("Vault-map") {
-                HStack(spacing: TS.Spacing.sm) {
-                    Text(vaultFolderName.isEmpty ? "Geen map gekozen" : vaultFolderName)
-                        .font(TS.Font.body)
-                        .foregroundStyle(vaultFolderName.isEmpty ? Color.labelTertiary : Color.labelPrimary)
-                        .lineLimit(1)
-                    Spacer()
-                    Button(vaultFolderName.isEmpty ? "Kies map…" : "Wijzig…") {
-                        showVaultFolderPicker = true
+                if isCompact {
+                    VStack(alignment: .leading, spacing: TS.Spacing.sm) {
+                        vaultFolderLabel
+                        HStack(spacing: TS.Spacing.sm) {
+                            vaultFolderButtons
+                            Spacer()
+                        }
                     }
-                    .buttonStyle(SecondaryButtonStyle())
-                    if !vaultFolderName.isEmpty {
-                        Button {
-                            VaultFolderStore.clear()
-                            vaultFolderName = ""
-                        } label: { Image(systemName: "xmark.circle.fill") }
-                        .buttonStyle(.borderless)
-                        .foregroundStyle(Color.labelTertiary)
-                        .help("Map-koppeling verwijderen")
+                } else {
+                    HStack(spacing: TS.Spacing.sm) {
+                        vaultFolderLabel
+                        Spacer()
+                        vaultFolderButtons
                     }
                 }
             }
@@ -409,42 +348,24 @@ struct SettingsView: View {
                 }
             }
 
-            HStack(spacing: TS.Spacing.sm) {
-                Button {
-                    Task { await testObsidianConnection() }
-                } label: {
-                    if obsidianTesting {
-                        ProgressView().controlSize(.small)
-                    } else {
-                        Text("Test verbinding")
-                    }
+            // Compact stacks the test result below the button.
+            if isCompact {
+                VStack(alignment: .leading, spacing: TS.Spacing.xs) {
+                    obsidianTestButton
+                    obsidianTestStatus
                 }
-                .buttonStyle(SecondaryButtonStyle())
-                .disabled(obsidianTesting)
-
-                if case .success = obsidianTestResult {
-                    HStack(spacing: TS.Spacing.xs) {
-                        Circle().fill(Color.statusSuccess).frame(width: 8, height: 8)
-                        Text("Verbonden")
-                            .font(TS.Font.footnote)
-                            .foregroundStyle(Color.statusSuccess)
-                    }
-                } else if case .failure(let message) = obsidianTestResult {
-                    HStack(spacing: TS.Spacing.xs) {
-                        Circle().fill(Color.statusError).frame(width: 8, height: 8)
-                        Text(message)
-                            .font(TS.Font.footnote)
-                            .foregroundStyle(Color.statusError)
-                            .lineLimit(2)
-                    }
+            } else {
+                HStack(spacing: TS.Spacing.sm) {
+                    obsidianTestButton
+                    obsidianTestStatus
+                    Spacer()
                 }
-                Spacer()
             }
         } header: {
             Text("Obsidian-koppeling")
         } footer: {
             Text("Kies je vault-map om notulen als bestand op te slaan én de context-note te lezen "
-                + "(namen/termen zoals \"Yinga\") — werkt op Mac én iPhone. "
+                + "(namen/termen zoals \"Michel\"). Dit werkt op Mac én iPhone. "
                 + "De Base-URL/API-sleutel eronder zijn de desktop-fallback via de Local REST API plugin, "
                 + "alleen gebruikt als er geen vault-map is gekozen.")
                 .font(TS.Font.caption)
@@ -462,6 +383,64 @@ struct SettingsView: View {
                 } catch {
                     obsidianTestResult = .failure("Map-koppeling mislukt: \(error.localizedDescription)")
                 }
+            }
+        }
+    }
+
+    private var vaultFolderLabel: some View {
+        Text(vaultFolderName.isEmpty ? "Geen map gekozen" : vaultFolderName)
+            .font(TS.Font.body)
+            .foregroundStyle(vaultFolderName.isEmpty ? Color.labelTertiary : Color.labelPrimary)
+            .lineLimit(1)
+    }
+
+    @ViewBuilder
+    private var vaultFolderButtons: some View {
+        Button(vaultFolderName.isEmpty ? "Kies map…" : "Wijzig…") {
+            showVaultFolderPicker = true
+        }
+        .buttonStyle(SecondaryButtonStyle())
+        if !vaultFolderName.isEmpty {
+            Button {
+                VaultFolderStore.clear()
+                vaultFolderName = ""
+            } label: { Image(systemName: "xmark.circle.fill") }
+            .buttonStyle(.borderless)
+            .foregroundStyle(Color.labelTertiary)
+            .help("Map-koppeling verwijderen")
+        }
+    }
+
+    private var obsidianTestButton: some View {
+        Button {
+            Task { await testObsidianConnection() }
+        } label: {
+            if obsidianTesting {
+                ProgressView().controlSize(.small)
+            } else {
+                Text("Test verbinding")
+            }
+        }
+        .buttonStyle(SecondaryButtonStyle())
+        .disabled(obsidianTesting)
+    }
+
+    @ViewBuilder
+    private var obsidianTestStatus: some View {
+        if case .success = obsidianTestResult {
+            HStack(spacing: TS.Spacing.xs) {
+                Circle().fill(Color.statusSuccess).frame(width: 8, height: 8)
+                Text("Verbonden")
+                    .font(TS.Font.footnote)
+                    .foregroundStyle(Color.statusSuccess)
+            }
+        } else if case .failure(let message) = obsidianTestResult {
+            HStack(spacing: TS.Spacing.xs) {
+                Circle().fill(Color.statusError).frame(width: 8, height: 8)
+                Text(message)
+                    .font(TS.Font.footnote)
+                    .foregroundStyle(Color.statusError)
+                    .lineLimit(2)
             }
         }
     }
@@ -617,7 +596,7 @@ struct SettingsView: View {
             }
 
             SettingFieldRow("Eigen termen") {
-                TextField("Yinga, Django, …", text: $personalVocabulary, axis: .vertical)
+                TextField("Michel, Django, …", text: $personalVocabulary, axis: .vertical)
                     .textFieldStyle(.roundedBorder)
                     .autocorrectionDisabled()
             }
@@ -627,7 +606,7 @@ struct SettingsView: View {
             Text((localTranscriber == LocalTranscriberEngine.whisperKit.rawValue
                 ? "WhisperKit downloadt het gekozen model bij eerste gebruik. "
                 : "Apple Spraakherkenning werkt direct, zonder download. ")
-                + "Eigen termen (komma-gescheiden) en personen uit de app sturen de herkenning van namen zoals \"Yinga\".")
+                + "Eigen termen (komma-gescheiden) en personen uit de app sturen de herkenning van namen zoals \"Michel\".")
                 .font(TS.Font.caption)
                 .foregroundStyle(Color.labelTertiary)
         }
@@ -750,27 +729,25 @@ struct SettingsView: View {
     private var ollamaConfig: some View {
         // Server URL + Cloud preset
         #if os(iOS)
-        let ollamaHint = "Ollama draait niet op iPhone/iPad — vul de URL van een remote Ollama-server in."
+        let ollamaHint = "Ollama draait niet op iPhone/iPad. Vul de URL van een remote Ollama-server in."
         #else
         let ollamaHint = "Lokaal draait standaard op http://localhost:11434."
         #endif
+        // Compact stacks the URL field above the Cloud preset button.
         SettingFieldRow(
             "Ollama-server",
             hint: ollamaHint
         ) {
-            HStack(spacing: TS.Spacing.sm) {
-                TextField("http://localhost:11434", text: $ollamaURL)
-                    .textFieldStyle(.roundedBorder)
-                    .font(TS.Font.bodyMonospaced)
-                    .autocorrectionDisabled()
-
-                Button("Cloud") {
-                    ollamaURL = "https://ollama.com"
-                    ollamaConnected = nil
-                    apiKeyFocused = true
+            if isCompact {
+                VStack(alignment: .leading, spacing: TS.Spacing.sm) {
+                    ollamaURLField
+                    ollamaCloudButton
                 }
-                .buttonStyle(.bordered)
-                .help("Stel in op Ollama Cloud en vul je API-sleutel in")
+            } else {
+                HStack(spacing: TS.Spacing.sm) {
+                    ollamaURLField
+                    ollamaCloudButton
+                }
             }
         }
 
@@ -884,6 +861,23 @@ struct SettingsView: View {
             }
         }
         .padding(.top, TS.Spacing.xs)
+    }
+
+    private var ollamaURLField: some View {
+        TextField("http://localhost:11434", text: $ollamaURL)
+            .textFieldStyle(.roundedBorder)
+            .font(TS.Font.bodyMonospaced)
+            .autocorrectionDisabled()
+    }
+
+    private var ollamaCloudButton: some View {
+        Button("Cloud") {
+            ollamaURL = "https://ollama.com"
+            ollamaConnected = nil
+            apiKeyFocused = true
+        }
+        .buttonStyle(.bordered)
+        .help("Stel in op Ollama Cloud en vul je API-sleutel in")
     }
 
     // MARK: - API key (Keychain) helpers
@@ -1184,8 +1178,8 @@ struct SettingsView: View {
                     Text("Apple Agenda")
                         .font(TS.Font.body)
                     Text(calendarService.hasCalendarAccess
-                        ? "Verbonden — vergaderingen worden gedetecteerd"
-                        : "Geen toegang — vergaderingen worden niet gedetecteerd")
+                        ? "Verbonden, vergaderingen worden gedetecteerd"
+                        : "Geen toegang, vergaderingen worden niet gedetecteerd")
                         .font(TS.Font.caption)
                         .foregroundStyle(calendarService.hasCalendarAccess
                             ? Color.statusSuccess

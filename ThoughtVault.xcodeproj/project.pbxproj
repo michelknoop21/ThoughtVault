@@ -53,6 +53,7 @@
 		AA000060 /* ProcessingBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000060 /* ProcessingBar.swift */; };
 		AA000039 /* TranscriptCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000039 /* TranscriptCard.swift */; };
 		AA000040 /* WaveformView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000040 /* WaveformView.swift */; };
+		AA000075 /* HomeHeroCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000075 /* HomeHeroCard.swift */; };
 		AA000041 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = FA000041 /* Localizable.strings */; };
 		AA000042 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = FA000042 /* Localizable.strings */; };
 		AA000043 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = FA000043 /* PrivacyInfo.xcprivacy */; };
@@ -148,6 +149,7 @@
 		FA000060 /* ProcessingBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessingBar.swift; sourceTree = "<group>"; };
 		FA000039 /* TranscriptCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptCard.swift; sourceTree = "<group>"; };
 		FA000040 /* WaveformView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaveformView.swift; sourceTree = "<group>"; };
+		FA000075 /* HomeHeroCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeHeroCard.swift; sourceTree = "<group>"; };
 		FA000041 /* Localizable.strings */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = Localizable.strings; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
 		FA000042 /* Localizable.strings */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = Localizable.strings; path = nl.lproj/Localizable.strings; sourceTree = "<group>"; };
 		FA000043 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
@@ -351,6 +353,7 @@
 				FA0000F1 /* SpinningProgressView.swift */,
 				FA000039 /* TranscriptCard.swift */,
 				FA000040 /* WaveformView.swift */,
+				FA000075 /* HomeHeroCard.swift */,
 				FA000052 /* PermissionBanner.swift */,
 				FA000053 /* EditableHTMLWebView.swift */,
 			);
@@ -562,6 +565,7 @@
 				AA0000F1 /* SpinningProgressView.swift in Sources */,
 				AA000039 /* TranscriptCard.swift in Sources */,
 				AA000040 /* WaveformView.swift in Sources */,
+				AA000075 /* HomeHeroCard.swift in Sources */,
 				AA000051 /* PermissionManager.swift in Sources */,
 				AA000052 /* PermissionBanner.swift in Sources */,
 				AA000053 /* EditableHTMLWebView.swift in Sources */,

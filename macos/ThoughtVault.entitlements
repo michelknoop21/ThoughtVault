@@ -12,11 +12,7 @@
 	<true/>
 	<key>com.apple.security.files.bookmarks.app-scope</key>
 	<true/>
-	<key>com.apple.security.screen-capture</key>
-	<true/>
 	<key>com.apple.security.personal-information.calendars</key>
-	<true/>
-	<key>com.apple.security.personal-information.speech-recognition</key>
 	<true/>
 	<key>com.apple.security.temporary-exception.audio-unit-host</key>
 	<true/>
@@ -24,7 +20,5 @@
 	<array>
 		<string>$(AppIdentifierPrefix)com.buildmind.ThoughtVault</string>
 	</array>
-	<key>com.apple.security.network.local</key>
-	<true/>
 </dict>
 </plist>

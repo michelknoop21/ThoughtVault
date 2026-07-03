@@ -299,7 +299,7 @@ struct AccountView: View {
         guard let status = twoFAStatus else { return "Status laden..." }
         if status.enabled {
             if let remaining = status.backupCodesRemaining {
-                return "Actief — \(remaining) backup codes resterend"
+                return "Actief: \(remaining) backup codes resterend"
             }
             return "Actief"
         }

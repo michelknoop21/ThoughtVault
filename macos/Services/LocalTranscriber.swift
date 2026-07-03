@@ -17,10 +17,10 @@ private let logger = Logger(subsystem: "com.buildmind.ThoughtVault", category: "
 
 /// Collects the user's known names and terms (own profile, people directory and the
 /// free-text "Persoonlijke context" setting) so speech engines can be biased toward
-/// the correct spellings (e.g. "Yinga" instead of "Jenga").
+/// the correct spellings (e.g. "Michel" instead of "Migel").
 enum PersonalVocabulary {
 
-    /// UserDefaults key for the free-text terms in Settings ("Yinga, Django, ...").
+    /// UserDefaults key for the free-text terms in Settings ("Michel, Django, ...").
     static let defaultsKey = "personalVocabulary"
 
     // ponytail: cap terms to protect Whisper's 224-token prompt budget and

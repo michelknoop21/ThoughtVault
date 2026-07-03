@@ -19,7 +19,7 @@ export function htmlToMarkdown(html: string): string {
   // 2. Badge/meta chips → inline so they stay on the same line as their item.
   //    Other </span> become a space so adjacent inline spans (e.g. the Datum/Type
   //    meta) don't glue together.
-  md = md.replace(/<span[^>]*class="[^"]*badge[^"]*"[^>]*>([\s\S]*?)<\/span>/gi, " — $1");
+  md = md.replace(/<span[^>]*class="[^"]*badge[^"]*"[^>]*>([\s\S]*?)<\/span>/gi, " · $1");
   md = md.replace(/<\/span>/gi, " ");
 
   // 3. Headings.

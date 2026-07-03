@@ -305,7 +305,7 @@ export function RecordingPage() {
             <div className="mic-button-container mic-button-container-active" style={{ marginInline: "auto", marginBottom: 16 }}>
               <div className="mic-pulse-ring mic-pulse-ring-1" />
               <div className="mic-pulse-ring mic-pulse-ring-2" />
-              <div className="mic-button-large mic-preparing" style={{ background: "rgba(229, 0, 116, 0.08)", boxShadow: "none" }}>
+              <div className="mic-button-large mic-preparing" style={{ background: "rgba(144, 72, 240, 0.08)", boxShadow: "none" }}>
                 <MicRecord24Regular className="text-accent" style={{ fontSize: 28 }} />
               </div>
             </div>
@@ -328,7 +328,7 @@ export function RecordingPage() {
             <div className="mic-button-container mic-button-container-active" style={{ marginInline: "auto", marginBottom: 16 }}>
               <div className="mic-pulse-ring mic-pulse-ring-1" />
               <div className="mic-pulse-ring mic-pulse-ring-2" />
-              <div className="mic-button-large mic-preparing" style={{ background: "rgba(229, 0, 116, 0.08)", boxShadow: "none" }}>
+              <div className="mic-button-large mic-preparing" style={{ background: "rgba(144, 72, 240, 0.08)", boxShadow: "none" }}>
                 <ArrowUpload24Regular className="text-accent" style={{ fontSize: 28 }} />
               </div>
             </div>

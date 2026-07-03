@@ -12,8 +12,8 @@ import {
 import { useSettingsStore } from "../../stores/settingsStore";
 import { usePersonProfileStore } from "../../stores/personProfileStore";
 import { MicrosoftGraphService } from "../../services/microsoftGraph";
-import { YingaBar } from "../brand/YingaBar";
-import { YingaFooter } from "../brand/YingaFooter";
+import { BrandBar } from "../brand/BrandBar";
+import { BrandFooter } from "../brand/BrandFooter";
 import appLogo from "../../assets/app-logo.png";
 
 type Step = 0 | 1 | 2 | 3 | 4 | 5;
@@ -92,7 +92,7 @@ export function OnboardingWizard() {
         background: "var(--bg-solid-tertiary)",
       }}
     >
-      <YingaBar />
+      <BrandBar />
       <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", minHeight: 0, overflowY: "auto" }}>
       <div style={{ width: "100%", maxWidth: 440, padding: 32 }}>
         {/* Progress dots */}
@@ -330,7 +330,7 @@ export function OnboardingWizard() {
       </div>
       </div>
       <div style={{ marginTop: "auto", flexShrink: 0 }}>
-        <YingaFooter />
+        <BrandFooter />
       </div>
     </div>
   );
@@ -381,7 +381,7 @@ function StepIcon({ icon }: { icon: React.ReactNode }) {
       style={{
         width: 64,
         height: 64,
-        background: "rgba(229, 0, 116, 0.08)",
+        background: "rgba(144, 72, 240, 0.08)",
         borderRadius: 16,
         display: "flex",
         alignItems: "center",

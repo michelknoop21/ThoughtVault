@@ -889,7 +889,7 @@ struct HTMLWebView: UIViewRepresentable {
             taskId: "preview-task",
             status: .completed,
             rawTranscription: "Dit is de ruwe transcriptie van de vergadering.",
-            notuleHtml: "<h1>Vergadernotulen</h1><h2>Actiepunten</h2><ul><li>Item 1 — <strong>Michel</strong> — 15 maart</li><li>Item 2 — <strong>Team</strong> — einde sprint</li></ul><p>Volgende vergadering: <em>woensdag 12 maart 10:00</em></p>",
+            notuleHtml: "<h1>Vergadernotulen</h1><h2>Actiepunten</h2><ul><li>Item 1: <strong>Michel</strong>, 15 maart</li><li>Item 2: <strong>Team</strong>, einde sprint</li></ul><p>Volgende vergadering: <em>woensdag 12 maart 10:00</em></p>",
             profileId: "zakelijk"
         ),
         onDismiss: {}

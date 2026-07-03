@@ -256,7 +256,7 @@ private struct AlertPrimaryButtonStyle: ButtonStyle {
 #Preview {
     let sampleEvent = CalendarEvent(
         id: "preview-event",
-        title: "Weekly Design Review — Sprint 24",
+        title: "Weekly Design Review: Sprint 24",
         date: Date().addingTimeInterval(300),
         endDate: Date().addingTimeInterval(3900),
         meetingURL: URL(string: "https://teams.microsoft.com/join/meeting"),

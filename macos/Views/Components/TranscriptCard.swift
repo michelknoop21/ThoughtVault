@@ -206,7 +206,7 @@ struct TranscriptCard: View {
             TranscriptCard(
                 transcript: Transcript(
                     id: "1",
-                    title: "Weeklymeeting Design & Engineering — Sprint Review",
+                    title: "Weeklymeeting Design & Engineering: Sprint Review",
                     rawTranscription: "Vandaag bespraken we de voortgang van sprint 24. Michel presenteerde de nieuwe transcriptie-feature.",
                     notuleHtml: "<h1>Notulen</h1>",
                     tags: ["sprint", "design", "engineering"],

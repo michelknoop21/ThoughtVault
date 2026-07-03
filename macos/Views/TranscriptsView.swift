@@ -32,13 +32,13 @@ struct TranscriptsView: View {
     @Environment(RecordingViewModel.self) var recordingVM
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    /// Navigation path — controlled by ContentView to dismiss on tab change.
+    /// Navigation path, controlled by ContentView to dismiss on tab change.
     @Binding var transcriptsNavPath: NavigationPath
 
     /// Called when the empty-library CTA is tapped. Parent navigates to the recording screen.
     var onStartRecording: (() -> Void)?
 
-    // MARK: State — list
+    // MARK: State - list
 
     @State private var transcripts: [Transcript] = []
     @State private var isLoading = false
@@ -49,7 +49,7 @@ struct TranscriptsView: View {
     @State private var selectedDateFilter: DateFilter = .all
     @State private var selectedTags: Set<String> = []
 
-    // MARK: State — selection / bulk
+    // MARK: State - selection / bulk
 
     @State private var isSelecting = false
     @State private var selectedIds: Set<String> = []
@@ -57,7 +57,7 @@ struct TranscriptsView: View {
     @State private var transcriptToDelete: Transcript? = nil
     @State private var showSingleDeleteConfirm = false
 
-    // MARK: State — auto-refresh debounce
+    // MARK: State - auto-refresh debounce
 
     @State private var lastRefreshDate: Date = .distantPast
 
@@ -131,11 +131,18 @@ struct TranscriptsView: View {
     // MARK: Body
 
     var body: some View {
-        VStack(spacing: 0) {
-            searchBar
-            filtersRow
-            tagFilterRow
-            mainContent
+        GeometryReader { geo in
+            // Width-tier responsive layout: compact tightens padding and stacks
+            // card metadata; wide windows get a capped, centered column.
+            let isCompact = geo.size.width < 640
+            VStack(spacing: 0) {
+                searchBar(isCompact: isCompact)
+                filtersRow(isCompact: isCompact)
+                tagFilterRow(isCompact: isCompact)
+                mainContent(isCompact: isCompact)
+            }
+            .frame(maxWidth: 860)
+            .frame(maxWidth: .infinity)
         }
         .navigationTitle("Notulen")
         .toolbar { toolbarContent }
@@ -182,7 +189,7 @@ struct TranscriptsView: View {
 
     // MARK: - Search bar
 
-    private var searchBar: some View {
+    private func searchBar(isCompact: Bool) -> some View {
         HStack(spacing: TS.Spacing.sm) {
             Image(systemName: "magnifyingglass")
                 .foregroundStyle(Color.labelTertiary)
@@ -220,14 +227,14 @@ struct TranscriptsView: View {
                         .stroke(Color.borderPrimary, lineWidth: 1)
                 }
         }
-        .padding(.horizontal, TS.Spacing.md)
+        .padding(.horizontal, isCompact ? TS.Spacing.md : TS.Spacing.lg)
         .padding(.top, TS.Spacing.sm)
         .padding(.bottom, TS.Spacing.xs)
     }
 
     // MARK: - Filters row
 
-    private var filtersRow: some View {
+    private func filtersRow(isCompact: Bool) -> some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: TS.Spacing.xs) {
                 // Sort menu
@@ -266,7 +273,7 @@ struct TranscriptsView: View {
                     dateFilterChip(filter)
                 }
             }
-            .padding(.horizontal, TS.Spacing.md)
+            .padding(.horizontal, isCompact ? TS.Spacing.md : TS.Spacing.lg)
             .padding(.vertical, TS.Spacing.xs)
         }
     }
@@ -299,7 +306,7 @@ struct TranscriptsView: View {
     // MARK: - Tag filter row
 
     @ViewBuilder
-    private var tagFilterRow: some View {
+    private func tagFilterRow(isCompact: Bool) -> some View {
         if !availableTags.isEmpty {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: TS.Spacing.xs) {
@@ -307,7 +314,7 @@ struct TranscriptsView: View {
                         tagFilterChip(tag)
                     }
                 }
-                .padding(.horizontal, TS.Spacing.md)
+                .padding(.horizontal, isCompact ? TS.Spacing.md : TS.Spacing.lg)
                 .padding(.bottom, TS.Spacing.xs)
             }
         }
@@ -351,8 +358,10 @@ struct TranscriptsView: View {
 
     // MARK: - Main content
 
-    private var mainContent: some View {
-        List {
+    private func mainContent(isCompact: Bool) -> some View {
+        // Compact windows keep tight md insets; regular windows breathe with lg.
+        let hPad = isCompact ? TS.Spacing.md : TS.Spacing.lg
+        return List {
             Section {
                 offlineQueueBanner
                 errorBanner
@@ -360,7 +369,7 @@ struct TranscriptsView: View {
                 errorTasksSection
             }
             .listRowSeparator(.hidden)
-            .listRowInsets(EdgeInsets(top: 0, leading: TS.Spacing.md, bottom: 0, trailing: TS.Spacing.md))
+            .listRowInsets(EdgeInsets(top: 0, leading: hPad, bottom: 0, trailing: hPad))
             .listRowBackground(Color.clear)
 
             if isLoading && transcripts.isEmpty {
@@ -374,9 +383,9 @@ struct TranscriptsView: View {
                     .listRowBackground(Color.clear)
             } else {
                 ForEach(filteredTranscripts) { transcript in
-                    transcriptCardRow(transcript)
+                    transcriptCardRow(transcript, isCompact: isCompact)
                         .listRowSeparator(.hidden)
-                        .listRowInsets(EdgeInsets(top: TS.Spacing.sm / 2, leading: TS.Spacing.md, bottom: TS.Spacing.sm / 2, trailing: TS.Spacing.md))
+                        .listRowInsets(EdgeInsets(top: TS.Spacing.sm / 2, leading: hPad, bottom: TS.Spacing.sm / 2, trailing: hPad))
                         .listRowBackground(Color.clear)
                 }
             }
@@ -590,12 +599,12 @@ struct TranscriptsView: View {
 
     // MARK: - Card row
 
-    private func transcriptCardRow(_ transcript: Transcript) -> some View {
+    private func transcriptCardRow(_ transcript: Transcript, isCompact: Bool) -> some View {
         ZStack(alignment: .topTrailing) {
             Button {
                 transcriptsNavPath.append(transcript)
             } label: {
-                TranscriptListCard(transcript: transcript)
+                TranscriptListCard(transcript: transcript, isCompact: isCompact)
                     .contentShape(RoundedRectangle(cornerRadius: TS.Radius.md, style: .continuous))
             }
             .buttonStyle(.plain)
@@ -716,7 +725,7 @@ struct TranscriptsView: View {
         isLoading = true
         loadErrorMessage = nil
 
-        // Local records first — always available without the server.
+        // Local records first: always available without the server.
         let local = LocalTranscriptStore.shared.allTranscripts()
 
         var server: [Transcript] = []
@@ -794,6 +803,8 @@ struct TranscriptsView: View {
 struct TranscriptListCard: View {
 
     let transcript: Transcript
+    /// Compact width: the status chip stacks under the metadata instead of trailing.
+    var isCompact: Bool = false
     @State private var isHovered = false
 
     var hasNotule: Bool {
@@ -844,13 +855,23 @@ struct TranscriptListCard: View {
                     }
                     .padding(.top, 3)
                 }
+
+                // Compact: status chip stacks under the metadata to free up
+                // horizontal room for the title.
+                if isCompact {
+                    VaultChip(text: hasNotule ? "Afgerond" : "Transcript",
+                              tone: hasNotule ? .ok : .neutral)
+                        .padding(.top, 4)
+                }
             }
 
             Spacer(minLength: TS.Spacing.sm)
 
-            VaultChip(text: hasNotule ? "Afgerond" : "Transcript",
-                      tone: hasNotule ? .ok : .neutral)
-                .padding(.top, 2)
+            if !isCompact {
+                VaultChip(text: hasNotule ? "Afgerond" : "Transcript",
+                          tone: hasNotule ? .ok : .neutral)
+                    .padding(.top, 2)
+            }
         }
         .padding(TS.Spacing.md)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -878,7 +899,7 @@ struct TranscriptListCard: View {
     private var previewText: String? {
         if let notule = transcript.notuleHtml, !notule.isEmpty {
             return notule
-                // Strip <style>/<script> blocks incl. content — their text isn't between
+                // Strip <style>/<script> blocks incl. content: their text isn't between
                 // angle brackets, so plain tag-stripping would leak CSS/JS into the preview.
                 .replacingOccurrences(of: "<(style|script)[^>]*>[\\s\\S]*?</\\1>", with: " ",
                                       options: [.regularExpression, .caseInsensitive])
@@ -902,7 +923,7 @@ struct TranscriptCardMenu: View {
     var body: some View {
         Menu {
             Button {
-                // NavigationLink handles open — this is a contextual shortcut
+                // NavigationLink handles open; this is a contextual shortcut
             } label: {
                 Label("Openen", systemImage: "arrow.up.right.square")
             }
@@ -951,25 +972,25 @@ struct TranscriptDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
 
-    // MARK: State — document
+    // MARK: State - document
 
     @State private var fullTranscript: Transcript
     @State private var selectedTab: DetailTab = .notule
 
     enum DetailTab { case notule, raw }
 
-    // MARK: State — title editing
+    // MARK: State - title editing
 
     @State private var showTitleEditAlert = false
     @State private var isEditingTitle = false
     @State private var pendingTitle = ""
 
-    // MARK: State — tags
+    // MARK: State - tags
 
     @State private var showAddTagField = false
     @State private var newTagText = ""
 
-    // MARK: State — regeneration
+    // MARK: State - regeneration
 
     @State private var isRegenerating = false
     @State private var regeneratingMessage = ""
@@ -978,17 +999,17 @@ struct TranscriptDetailView: View {
 
     enum ProfileSheetMode { case regenerate, retranscribe }
 
-    // MARK: State — retranscription
+    // MARK: State - retranscription
 
     @State private var isRetranscribing = false
     @State private var retranscribeMessage = ""
 
-    // MARK: State — editing notulen
+    // MARK: State - editing notulen
 
     @State private var isEditingNotule = false
     @State private var editedHTML = ""
 
-    // MARK: State — errors
+    // MARK: State - errors
 
     @State private var errorMessage: String? = nil
     #if os(macOS)
@@ -1002,43 +1023,48 @@ struct TranscriptDetailView: View {
         self._fullTranscript = State(initialValue: transcript)
     }
 
-    // MARK: State — loading
+    // MARK: State - loading
 
     @State private var isLoadingDetail = true
 
     // MARK: Body
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Progress / error banners
-            progressBanners
-                .padding(.horizontal, TS.Spacing.md)
-                .padding(.top, TS.Spacing.sm)
+        GeometryReader { geo in
+            // Width-tier responsive layout: compact stacks the toolbar rows
+            // and tightens padding.
+            let isCompact = geo.size.width < 640
+            VStack(spacing: 0) {
+                // Progress / error banners
+                progressBanners
+                    .padding(.horizontal, TS.Spacing.md)
+                    .padding(.top, TS.Spacing.sm)
 
-            // Compact toolbar: tabs left, actions right
-            headerBar
-                .padding(.top, TS.Spacing.sm)
-                .background(Color.surfacePrimary)
-                .overlay(alignment: .bottom) { Divider() }
+                // Compact toolbar: tabs left, actions right
+                headerBar(isCompact: isCompact)
+                    .padding(.top, TS.Spacing.sm)
+                    .background(Color.surfacePrimary)
+                    .overlay(alignment: .bottom) { Divider() }
 
-            // Content fills remaining space
-            if isLoadingDetail {
-                VStack(spacing: TS.Spacing.sm) {
-                    Spacer()
-                    ProgressView()
-                        .scaleEffect(0.9)
-                    Text("Laden...")
-                        .font(TS.Font.footnote)
-                        .foregroundStyle(Color.labelTertiary)
-                    Spacer()
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                VStack(spacing: 0) {
-                    documentHeader
-                    Divider()
-                    contentArea
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                // Content fills remaining space
+                if isLoadingDetail {
+                    VStack(spacing: TS.Spacing.sm) {
+                        Spacer()
+                        ProgressView()
+                            .scaleEffect(0.9)
+                        Text("Laden...")
+                            .font(TS.Font.footnote)
+                            .foregroundStyle(Color.labelTertiary)
+                        Spacer()
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    VStack(spacing: 0) {
+                        documentHeader(isCompact: isCompact)
+                        Divider()
+                        contentArea
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    }
                 }
             }
         }
@@ -1066,7 +1092,7 @@ struct TranscriptDetailView: View {
             .environment(recordingVM)
         }
         .task {
-            // Local records already carry full content (raw + notule) — no server fetch.
+            // Local records already carry full content (raw + notule), no server fetch.
             if isLocalTranscript(transcript.taskId) {
                 fullTranscript = transcript
                 let hasNotule = !(transcript.notuleHtml ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -1104,17 +1130,29 @@ struct TranscriptDetailView: View {
         }
     }
 
-    // MARK: - Header bar (tabs left, actions right — compact toolbar like Windows)
+    // MARK: - Header bar (tabs left, actions right; compact toolbar like Windows)
 
-    private var headerBar: some View {
-        HStack(alignment: .center, spacing: TS.Spacing.sm) {
-            // Tab toggle (left side)
-            compactTabToggle
+    private func headerBar(isCompact: Bool) -> some View {
+        Group {
+            if isCompact {
+                // Narrow window: tabs and actions stack vertically so neither
+                // row gets squeezed.
+                VStack(alignment: .leading, spacing: TS.Spacing.xs) {
+                    compactTabToggle
+                    actionButtons
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                HStack(alignment: .center, spacing: TS.Spacing.sm) {
+                    // Tab toggle (left side)
+                    compactTabToggle
 
-            Spacer(minLength: TS.Spacing.sm)
+                    Spacer(minLength: TS.Spacing.sm)
 
-            // Action buttons on the right
-            actionButtons
+                    // Action buttons on the right
+                    actionButtons
+                }
+            }
         }
         .padding(.horizontal, TS.Spacing.md)
         .padding(.bottom, TS.Spacing.xs)
@@ -1318,7 +1356,7 @@ struct TranscriptDetailView: View {
 
     private var actionButtons: some View {
         HStack(spacing: TS.Spacing.xs) {
-            // Regenerate (AI action — prominent)
+            // Regenerate (AI action, prominent)
             if isRegenerating {
                 HStack(spacing: TS.Spacing.xs) {
                     ProgressView().scaleEffect(0.65).tint(Color.brandPrimary)
@@ -1424,7 +1462,7 @@ struct TranscriptDetailView: View {
 
     // MARK: - Document Header
 
-    private var documentHeader: some View {
+    private func documentHeader(isCompact: Bool) -> some View {
         VStack(alignment: .leading, spacing: TS.Spacing.xs) {
             // Accent line
             RoundedRectangle(cornerRadius: 2)
@@ -1544,7 +1582,7 @@ struct TranscriptDetailView: View {
                 .padding(.top, 2)
             }
         }
-        .padding(.horizontal, TS.Spacing.lg)
+        .padding(.horizontal, isCompact ? TS.Spacing.md : TS.Spacing.lg)
         .padding(.vertical, TS.Spacing.md)
         .background(Color.surfacePrimary)
     }
@@ -1722,6 +1760,9 @@ struct TranscriptDetailView: View {
                 }
                 .padding(.horizontal, TS.Spacing.lg)
                 .padding(.vertical, TS.Spacing.lg)
+                // Centered reading column on wide windows.
+                .frame(maxWidth: 860)
+                .frame(maxWidth: .infinity)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
@@ -1743,7 +1784,7 @@ struct TranscriptDetailView: View {
 
     @ToolbarContentBuilder
     private var detailToolbar: some ToolbarContent {
-        // Intentionally empty — all actions are in the header bar.
+        // Intentionally empty: all actions are in the header bar.
         // NavigationStack provides the back button automatically.
         ToolbarItem(placement: .primaryAction) {
             EmptyView()
@@ -1798,7 +1839,7 @@ struct TranscriptDetailView: View {
         // 1. h4 subtitles (handleiding-profiel puts real title here)
         candidates.append(contentsOf: extractTexts(tag: "h4").filter { $0.count > 5 && $0.count < 120 })
 
-        // 2. h1 headings (skip h2/h3 — those are section headings)
+        // 2. h1 headings (skip h2/h3, those are section headings)
         candidates.append(contentsOf: extractTexts(tag: "h1").filter { $0.count > 3 && $0.count < 120 })
 
         // 3. First bold/strong text
@@ -1962,7 +2003,7 @@ struct TranscriptDetailView: View {
             return
         }
 
-        // Retranscription requires RecordingViewModel.retranscribe() — planned for v1.1
+        // Retranscription requires RecordingViewModel.retranscribe(), planned for v1.1
         retranscribeMessage = ""
         errorMessage = "Hertranscriptie is nog niet beschikbaar"
 
@@ -2199,7 +2240,7 @@ private struct ProfileSelectionSheet: View {
                             Text("Premium model")
                                 .font(TS.Font.bodyMedium)
                                 .foregroundStyle(Color.labelPrimary)
-                            Text("Claude — betere kwaliteit, langzamer")
+                            Text("Claude: betere kwaliteit, langzamer")
                                 .font(TS.Font.caption)
                                 .foregroundStyle(Color.labelSecondary)
                         }

@@ -63,7 +63,7 @@ struct LoginView: View {
                 Spacer()
 
                 // Footer
-                yingaFooter
+                brandFooter
                     .padding(.bottom, TS.Spacing.sm)
             }
         }
@@ -104,7 +104,7 @@ struct LoginView: View {
 
     // MARK: - Brand Footer
 
-    private var yingaFooter: some View {
+    private var brandFooter: some View {
         BrandFooter()
     }
 
@@ -505,7 +505,7 @@ struct ForgotPasswordView: View {
 
     private var verifyStep: some View {
         VStack(alignment: .leading, spacing: TS.Spacing.md) {
-            Text("Code verstuurd naar \(email) — als er een account bestaat.")
+            Text("Code verstuurd naar \(email), als er een account bestaat.")
                 .font(TS.Font.footnote)
                 .foregroundStyle(Color.labelSecondary)
 

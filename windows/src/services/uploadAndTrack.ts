@@ -60,7 +60,7 @@ export async function uploadAndTrack(
         console.error("[SSE] Error:", err);
         updateBackgroundTask(task_id, {
           status: "failed",
-          error_message: "Verbinding met de server verloren. De verwerking gaat door op de achtergrond — bekijk de status in Opnames.",
+          error_message: "Verbinding met de server verloren. De verwerking gaat door op de achtergrond; bekijk de status in Opnames.",
         });
       },
       async () => {

@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { api } from "../services/api";
 import { useAuthStore } from "../stores/authStore";
 import { TitleBar } from "../components/layout/TitleBar";
-import { YingaFooter } from "../components/brand/YingaFooter";
+import { BrandFooter } from "../components/brand/BrandFooter";
 import appLogo from "../assets/app-logo.png";
 
 function extractMessage(err: unknown): string {
@@ -196,7 +196,7 @@ export function LoginPage() {
 
   return (
     <div className="app-shell">
-      {/* Title bar with window controls and YingaBar */}
+      {/* Title bar with window controls and BrandBar */}
       <TitleBar />
 
       <div className="login-container">
@@ -446,7 +446,7 @@ export function LoginPage() {
 
         </div>
       </div>
-      <YingaFooter />
+      <BrandFooter />
     </div>
   );
 }

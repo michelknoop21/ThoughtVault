@@ -37,7 +37,7 @@ body {
   mask-image: linear-gradient(#fff 0 0);
   box-shadow:
     0 3px 8px rgba(0, 0, 0, 0.12),
-    0 0 12px rgba(229, 0, 116, 0.08);
+    0 0 12px rgba(144, 72, 240, 0.08);
   transition: box-shadow 300ms ease, border-color 300ms ease;
 }
 
@@ -76,7 +76,7 @@ body {
 }
 
 .widget-badge.recording {
-  background: rgba(229, 0, 116, 0.14);
+  background: rgba(144, 72, 240, 0.14);
 }
 .widget-badge.paused {
   background: rgba(255, 179, 71, 0.14);
@@ -93,7 +93,7 @@ body {
 }
 
 .widget-badge-dot.recording {
-  background: #E50074;
+  background: #9048F0;
   animation: widget-pulse 1.2s ease-in-out infinite;
 }
 .widget-badge-dot.paused {
@@ -113,7 +113,7 @@ body {
   line-height: 1;
 }
 
-.widget-badge.recording .widget-badge-label { color: #E50074; }
+.widget-badge.recording .widget-badge-label { color: #9048F0; }
 .widget-badge.paused .widget-badge-label { color: #FFB347; }
 .widget-badge.stopping .widget-badge-label { color: rgba(255, 255, 255, 0.5); }
 

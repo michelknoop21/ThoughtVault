@@ -1424,7 +1424,6 @@ private struct ReprocessSheet: View {
     let recording: SavedRecording
 
     @State private var selectedProfile: Profile? = nil
-    @State private var useOnDevice = false
     @State private var isProcessing = false
 
     var body: some View {
@@ -1465,18 +1464,6 @@ private struct ReprocessSheet: View {
                     }
                 }
 
-                Section("Transcriptiemethode") {
-                    Toggle(isOn: $useOnDevice) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Op apparaat (Whisper)")
-                                .font(TS.Font.bodyMedium)
-                            Text("Transcribeer lokaal zonder internetverbinding")
-                                .font(TS.Font.caption)
-                                .foregroundStyle(Color.labelSecondary)
-                        }
-                    }
-                    .tint(Color.brandPrimary)
-                }
             }
             .formStyle(.grouped)
             .navigationTitle("Opnieuw verwerken")
@@ -1519,7 +1506,7 @@ private struct ReprocessSheet: View {
         guard let profile = selectedProfile else { return }
         isProcessing = true
         Task {
-            await recordingVM.reprocessRecording(recording, profileId: profile.id, useOnDevice: useOnDevice)
+            await recordingVM.reprocessRecording(recording, profileId: profile.id, useOnDevice: true)
             await MainActor.run {
                 isProcessing = false
                 dismiss()

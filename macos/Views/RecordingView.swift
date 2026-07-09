@@ -27,6 +27,7 @@ struct RecordingView: View {
     @State private var showProfileLoadError = false
     @State private var showParticipantPicker = false
     @State private var showImporter = false
+    @State private var showYouTubeSection = false
 
     // MARK: Body
 
@@ -51,49 +52,81 @@ struct RecordingView: View {
         }
     }
 
-    // MARK: - Idle view
+    // MARK: - Idle view (split layout)
 
     private func idleView(isCompact: Bool) -> some View {
         ScrollView {
             VStack(spacing: TS.Spacing.lg) {
-                newRecordingCard
-                if recordingVM.isYouTubeEnabled {
-                    youtubeCard
-                }
+                // Banners float above the layout as inline alerts
                 offlineStatusBanner
                 audioMixFallbackBanner
                 errorBanner
-                activeTasksList
-                savedRecordingsSection
+
+                if isCompact {
+                    // Narrow window: stack vertically — config first, then record center
+                    VStack(spacing: TS.Spacing.lg) {
+                        configSidebar
+                        recordCenter
+                    }
+                } else {
+                    // Wide window: side-by-side split layout
+                    HStack(alignment: .top, spacing: TS.Spacing.lg) {
+                        configSidebar
+                            .frame(width: 280)
+                        recordCenter
+                    }
+                }
+
+                unifiedBottomBar
             }
             .padding(.horizontal, isCompact ? TS.Spacing.md : TS.Spacing.lg)
             .padding(.vertical, TS.Spacing.lg)
-            // Capped, centered column on wide windows.
             .frame(maxWidth: 860)
             .frame(maxWidth: .infinity)
         }
+        .sheet(isPresented: $showParticipantPicker) {
+            ParticipantPickerSheet(selectedIDs: Bindable(recordingVM).selectedParticipantIDs)
+        }
+        .fileImporter(isPresented: $showImporter, allowedContentTypes: [.audio], allowsMultipleSelection: false) { result in
+            if case .success(let urls) = result, let url = urls.first {
+                Task { await recordingVM.importAudioFile(url) }
+            }
+        }
     }
 
-    // MARK: New recording card (combined mode selector + profiles + mic button)
+    // MARK: Config sidebar
 
-    private var newRecordingCard: some View {
-        VStack(spacing: 0) {
-            // Header
-            VStack(alignment: .leading, spacing: TS.Spacing.xs) {
-                Text("Nieuwe opname")
-                    .font(TS.Font.title3Semibold)
-                    .foregroundStyle(Color.labelPrimary)
-                Text("Kies bron en profiel, klik daarna om op te nemen")
-                    .font(TS.Font.callout)
-                    .foregroundStyle(Color.labelSecondary)
+    private var configSidebar: some View {
+        VStack(alignment: .leading, spacing: TS.Spacing.lg) {
+            // Section: Bron
+            configGroup(title: "Bron") {
+                VStack(spacing: TS.Spacing.xs) {
+                    recordingTypeOption(
+                        icon: "person.2.fill",
+                        title: "Fysieke meeting",
+                        subtitle: "Alleen microfoon",
+                        color: Color.brandSecondary,
+                        isSelected: recordingVM.selectedMode == .microphone,
+                        isVertical: true,
+                        action: { withAnimation(TS.Animation.smooth) { recordingVM.selectedMode = .microphone } }
+                    )
+
+                    #if os(macOS)
+                    recordingTypeOption(
+                        icon: "video.fill",
+                        title: "Videocall",
+                        subtitle: "Microfoon + systeemgeluid",
+                        color: Color.brandPrimary,
+                        isSelected: recordingVM.selectedMode == .combined,
+                        isVertical: true,
+                        action: { withAnimation(TS.Animation.smooth) { recordingVM.selectedMode = .combined } }
+                    )
+                    #endif
+                }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, TS.Spacing.lg)
-            .padding(.top, TS.Spacing.lg)
-            .padding(.bottom, TS.Spacing.md)
 
-            VStack(spacing: TS.Spacing.md) {
-                recordingTypeSection
+            // Section: Profiel
+            configGroup(title: "Profiel") {
                 if recordingVM.availableProfiles.isEmpty {
                     if showProfileLoadError {
                         VStack(spacing: TS.Spacing.sm) {
@@ -119,7 +152,6 @@ struct RecordingView: View {
                             .buttonStyle(SecondaryButtonStyle())
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(TS.Spacing.md)
                     } else {
                         HStack(spacing: TS.Spacing.sm) {
                             ProgressView()
@@ -129,7 +161,6 @@ struct RecordingView: View {
                                 .foregroundStyle(Color.labelTertiary)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(TS.Spacing.md)
                         .task {
                             await recordingVM.reloadProfiles()
                             if recordingVM.availableProfiles.isEmpty {
@@ -138,80 +169,529 @@ struct RecordingView: View {
                         }
                     }
                 } else {
-                    profileSection
+                    VStack(spacing: TS.Spacing.xs) {
+                        ForEach(recordingVM.availableProfiles) { profile in
+                            profileSidebarChip(profile)
+                        }
+                    }
+
+                    if let description = recordingVM.selectedProfile?.description, !description.isEmpty {
+                        HStack(spacing: TS.Spacing.xs) {
+                            Image(systemName: profileIcon(for: recordingVM.selectedProfile?.id ?? ""))
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(Color.brandPrimary)
+                            Text(description)
+                                .font(TS.Font.caption)
+                                .foregroundStyle(Color.labelTertiary)
+                                .lineLimit(2)
+                        }
+                        .padding(.horizontal, TS.Spacing.xs)
+                    }
+
+                    Toggle(isOn: Bindable(recordingVM).usePremium) {
+                        HStack(spacing: TS.Spacing.xs) {
+                            Image(systemName: "sparkles")
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundStyle(Color.brandPrimary)
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text("Premium model")
+                                    .font(TS.Font.footnoteSemibold)
+                                    .foregroundStyle(Color.labelPrimary)
+                                Text("Betere kwaliteit, langzamer")
+                                    .font(TS.Font.micro)
+                                    .foregroundStyle(Color.labelTertiary)
+                            }
+                        }
+                    }
+                    .tint(Color.brandPrimary)
+                    .toggleStyle(.switch)
+                    .controlSize(.mini)
                 }
+            }
+
+            // Section: Deelnemers
+            configGroup(title: "Deelnemers") {
                 participantsSection
             }
-            .padding(.horizontal, TS.Spacing.lg)
-            .padding(.bottom, TS.Spacing.sm)
 
-            // Mic button
-            VStack(spacing: TS.Spacing.md) {
-                Button {
-                    Task { await recordingVM.startRecording() }
-                } label: {
-                    ZStack {
-                        Circle()
-                            .stroke(Color.brandPrimary.opacity(0.25), lineWidth: 1)
-                            .frame(width: 108, height: 108)
-                        Circle()
-                            .stroke(Color.brandPrimary.opacity(0.14), lineWidth: 1)
-                            .frame(width: 128, height: 128)
-                        Circle()
-                            .fill(
-                                RadialGradient(
-                                    colors: [Color(red: 0.76, green: 0.53, blue: 1.0),
-                                             Color.brandPrimary,
-                                             Color.brandPrimaryDark],
-                                    center: .init(x: 0.32, y: 0.28),
-                                    startRadius: 4, endRadius: 72
-                                )
-                            )
-                            .frame(width: 84, height: 84)
-                            .shadow(color: Color.brandPrimary.opacity(0.55), radius: 24)
-                            .shadow(color: Color.brandPrimaryDark.opacity(0.45), radius: 10, y: 6)
-
-                        Image(systemName: "mic.fill")
-                            .font(.system(size: 28, weight: .semibold))
-                            .foregroundStyle(.white)
-                            .shadow(color: Color.brandPrimaryDark.opacity(0.6), radius: 4, y: 2)
-                    }
-                    .frame(width: 132, height: 132)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Start opname")
-
-                Text("Klik om op te nemen")
-                    .font(TS.Font.footnote)
-                .foregroundStyle(Color.labelTertiary)
-
+            // Section: Importeren
+            configGroup(title: "Importeren") {
                 Button {
                     showImporter = true
                 } label: {
-                    Label("Importeer audiobestand", systemImage: "square.and.arrow.down")
+                    HStack(spacing: TS.Spacing.sm) {
+                        Image(systemName: "square.and.arrow.down")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(Color.brandPrimary)
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text("Audiobestand")
+                                .font(TS.Font.footnoteSemibold)
+                                .foregroundStyle(Color.labelPrimary)
+                            Text("WAV, MP3, M4A — tot 500 MB")
+                                .font(TS.Font.micro)
+                                .foregroundStyle(Color.labelTertiary)
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(Color.labelTertiary)
+                    }
+                    .padding(TS.Spacing.sm)
+                    .background {
+                        RoundedRectangle(cornerRadius: TS.Radius.sm, style: .continuous)
+                            .fill(Color.surfaceSecondary)
+                    }
                 }
-                .buttonStyle(SecondaryButtonStyle())
+                .buttonStyle(.plain)
             }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, TS.Spacing.xl)
         }
+        .padding(TS.Spacing.lg)
+        .vaultPanel(radius: TS.Radius.lg)
+    }
+
+    // MARK: Config group container
+
+    private func configGroup<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: TS.Spacing.sm) {
+            Text(title)
+                .font(.system(size: 11, weight: .bold))
+                .kerning(1.0)
+                .foregroundStyle(Color.labelTertiary)
+                .textCase(.uppercase)
+            content()
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    // MARK: Profile sidebar chip (full-width, vertical list)
+
+    private func profileSidebarChip(_ profile: Profile) -> some View {
+        let isSelected = recordingVM.selectedProfile?.id == profile.id
+        return Button {
+            withAnimation(TS.Animation.smooth) {
+                recordingVM.selectedProfile = profile
+            }
+        } label: {
+            HStack(spacing: TS.Spacing.sm) {
+                Circle()
+                    .fill(isSelected ? Color.white : Color.brandSecondary.opacity(0.5))
+                    .frame(width: 6, height: 6)
+
+                Text(profile.name)
+                    .font(TS.Font.footnoteSemibold)
+                    .foregroundStyle(isSelected ? Color.white : Color.labelPrimary)
+                    .lineLimit(1)
+
+                if profile.isDefault == true {
+                    Image(systemName: "star.fill")
+                        .font(.system(size: 9))
+                        .foregroundStyle(isSelected ? Color.white.opacity(0.7) : Color.brandSecondary.opacity(0.5))
+                }
+
+                Spacer()
+            }
+            .padding(.horizontal, TS.Spacing.md)
+            .padding(.vertical, TS.Spacing.sm + 2)
+            .background {
+                if isSelected {
+                    Capsule()
+                        .fill(
+                            LinearGradient(
+                                colors: [Color.brandSecondary, Color.brandSecondary.opacity(0.80)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .shadow(color: Color.brandSecondary.opacity(0.30), radius: 6, y: 2)
+                } else {
+                    Capsule()
+                        .fill(Color.surfaceSecondary)
+                        .overlay {
+                            Capsule()
+                                .stroke(Color.borderPrimary, lineWidth: 1)
+                        }
+                }
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: Record center
+
+    private var recordCenter: some View {
+        VStack(spacing: TS.Spacing.lg) {
+            // Status label
+            Text("KLAAR OM OP TE NEMEN")
+                .font(.system(size: 10, weight: .bold))
+                .kerning(1.5)
+                .foregroundStyle(Color.labelTertiary)
+
+            // Mic button
+            Button {
+                Task { await recordingVM.startRecording() }
+            } label: {
+                ZStack {
+                    Circle()
+                        .stroke(Color.brandPrimary.opacity(0.25), lineWidth: 1)
+                        .frame(width: 108, height: 108)
+                    Circle()
+                        .stroke(Color.brandPrimary.opacity(0.14), lineWidth: 1)
+                        .frame(width: 128, height: 128)
+                    Circle()
+                        .fill(
+                            RadialGradient(
+                                colors: [Color(red: 0.76, green: 0.53, blue: 1.0),
+                                         Color.brandPrimary,
+                                         Color.brandPrimaryDark],
+                                center: .init(x: 0.32, y: 0.28),
+                                startRadius: 4, endRadius: 72
+                            )
+                        )
+                        .frame(width: 84, height: 84)
+                        .shadow(color: Color.brandPrimary.opacity(0.55), radius: 24)
+                        .shadow(color: Color.brandPrimaryDark.opacity(0.45), radius: 10, y: 6)
+
+                    Image(systemName: "mic.fill")
+                        .font(.system(size: 28, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .shadow(color: Color.brandPrimaryDark.opacity(0.6), radius: 4, y: 2)
+                }
+                .frame(width: 132, height: 132)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Start opname")
+
+            // Context summary
+            HStack(spacing: TS.Spacing.xs) {
+                Image(systemName: recordingVM.selectedMode.iconName)
+                    .font(.system(size: 11, weight: .semibold))
+                Text(recordingVM.selectedMode.displayName)
+                Text("·")
+                Text(recordingVM.selectedProfile?.name ?? "Geen profiel")
+                if recordingVM.usePremium {
+                    Text("·")
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 10, weight: .medium))
+                    Text("Premium")
+                }
+            }
+            .font(TS.Font.caption)
+            .foregroundStyle(Color.labelSecondary)
+
+            // Secondary actions
+            HStack(spacing: TS.Spacing.lg) {
+                Button {
+                    showImporter = true
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "square.and.arrow.down")
+                            .font(.system(size: 12, weight: .medium))
+                        Text("Importeer bestand")
+                            .font(TS.Font.footnote)
+                    }
+                    .foregroundStyle(Color.labelTertiary)
+                }
+                .buttonStyle(.plain)
+
+                if recordingVM.isYouTubeEnabled {
+                    Button {
+                        showYouTubeSection.toggle()
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "play.rectangle.fill")
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundStyle(Color.red)
+                            Text("YouTube-video")
+                                .font(TS.Font.footnote)
+                        }
+                        .foregroundStyle(showYouTubeSection ? Color.brandLink : Color.labelTertiary)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+
+            // YouTube section (expandable inline)
+            if showYouTubeSection && recordingVM.isYouTubeEnabled {
+                youtubeInlineSection
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+        .padding(TS.Spacing.xl)
+        .frame(maxWidth: .infinity)
+        .vaultPanel(radius: TS.Radius.lg)
+    }
+
+    // MARK: YouTube inline section
+
+    @ViewBuilder
+    private var youtubeInlineSection: some View {
+        VStack(alignment: .leading, spacing: TS.Spacing.sm) {
+            // Google account connection status
+            if recordingVM.isGoogleConnected {
+                HStack(spacing: TS.Spacing.sm) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(Color.statusSuccess)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Google verbonden")
+                            .font(TS.Font.footnoteSemibold)
+                            .foregroundStyle(Color.labelPrimary)
+                        if let email = recordingVM.googleUserEmail {
+                            Text(email)
+                                .font(TS.Font.caption)
+                                .foregroundStyle(Color.labelSecondary)
+                        }
+                    }
+                    Spacer()
+                    Button("Ontkoppel") {
+                        Task { await recordingVM.disconnectGoogle() }
+                    }
+                    .font(TS.Font.caption)
+                    .foregroundStyle(Color.labelSecondary)
+                }
+                .padding(TS.Spacing.sm)
+                .background {
+                    RoundedRectangle(cornerRadius: TS.Radius.sm, style: .continuous)
+                        .fill(Color.statusSuccess.opacity(0.08))
+                }
+            } else {
+                Button {
+                    Task { await recordingVM.connectGoogle() }
+                } label: {
+                    HStack(spacing: TS.Spacing.sm) {
+                        Image(systemName: "person.badge.key.fill")
+                            .foregroundStyle(Color.brandPrimary)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Verbind Google Account")
+                                .font(TS.Font.footnoteSemibold)
+                                .foregroundStyle(Color.labelPrimary)
+                            Text("Nodig voor YouTube transcriptie")
+                                .font(TS.Font.caption)
+                                .foregroundStyle(Color.labelSecondary)
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(Color.labelTertiary)
+                    }
+                    .padding(TS.Spacing.sm)
+                    .background {
+                        RoundedRectangle(cornerRadius: TS.Radius.sm, style: .continuous)
+                            .fill(Color.surfaceSecondary)
+                    }
+                }
+                .buttonStyle(.plain)
+
+                if let error = recordingVM.googleAuthError {
+                    Text(error)
+                        .font(TS.Font.caption)
+                        .foregroundStyle(Color.brandOrange)
+                }
+            }
+
+            // URL input
+            TextField("Plak een YouTube URL...", text: Binding(
+                get: { recordingVM.youtubeURL },
+                set: { recordingVM.youtubeURL = $0 }
+            ))
+            .textFieldStyle(.plain)
+            .font(TS.Font.body)
+            .padding(.horizontal, TS.Spacing.sm + 2)
+            .padding(.vertical, TS.Spacing.sm + 2)
+            .background {
+                RoundedRectangle(cornerRadius: TS.Radius.sm, style: .continuous)
+                    .fill(Color.surfaceSecondary)
+            }
+            .overlay {
+                RoundedRectangle(cornerRadius: TS.Radius.sm, style: .continuous)
+                    .stroke(Color.borderPrimary.opacity(0.5), lineWidth: 1)
+            }
+
+            if let error = recordingVM.youtubeError {
+                HStack(spacing: TS.Spacing.xs) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundStyle(Color.brandOrange)
+                    Text(error)
+                        .font(TS.Font.caption)
+                        .foregroundStyle(Color.labelSecondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            if recordingVM.captionsNotAvailable {
+                HStack(spacing: TS.Spacing.xs) {
+                    Image(systemName: "info.circle.fill")
+                        .foregroundStyle(Color.brandOrange)
+                    Text("Geen ondertiteling beschikbaar. Video wordt gedownload en getranscribeerd via Whisper (dit kan enkele minuten duren).")
+                        .font(TS.Font.caption)
+                        .foregroundStyle(Color.labelSecondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            Button {
+                Task { await recordingVM.submitYouTubeURL() }
+            } label: {
+                HStack(spacing: TS.Spacing.sm) {
+                    if recordingVM.isSubmittingYouTube {
+                        ProgressView()
+                            .scaleEffect(0.7)
+                            .tint(.white)
+                    }
+                    Text(recordingVM.isSubmittingYouTube ? "Bezig..." : "Transcriberen")
+                        .font(TS.Font.bodySemibold)
+                }
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, TS.Spacing.sm + 2)
+                .background {
+                    RoundedRectangle(cornerRadius: TS.Radius.sm, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [Color.brandPrimary, Color.brandPrimary.opacity(0.85)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .shadow(color: Color.brandPrimary.opacity(0.30), radius: 8, y: 3)
+                }
+            }
+            .buttonStyle(.plain)
+            .disabled(
+                recordingVM.youtubeURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                || recordingVM.isSubmittingYouTube
+            )
+            .opacity(
+                recordingVM.youtubeURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                || recordingVM.isSubmittingYouTube ? 0.5 : 1.0
+            )
+        }
+        .padding(TS.Spacing.md)
         .background {
-            RoundedRectangle(cornerRadius: TS.Radius.lg, style: .continuous)
-                .fill(.ultraThinMaterial)
-                .shadow(color: .black.opacity(0.06), radius: 12, y: 4)
+            RoundedRectangle(cornerRadius: TS.Radius.md, style: .continuous)
+                .fill(Color.surfaceSecondary.opacity(0.5))
         }
-        .overlay {
-            RoundedRectangle(cornerRadius: TS.Radius.lg, style: .continuous)
-                .stroke(Color.borderSecondary, lineWidth: 1)
+    }
+
+    // MARK: Unified bottom bar (processing + saved recordings side by side)
+
+    private var unifiedBottomBar: some View {
+        HStack(alignment: .top, spacing: TS.Spacing.md) {
+            // Processing panel
+            if !recordingVM.activeTasks.isEmpty {
+                VStack(alignment: .leading, spacing: TS.Spacing.sm) {
+                    HStack {
+                        Image(systemName: "gearshape.fill")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(Color.labelSecondary)
+                        Text("Verwerking")
+                            .font(TS.Font.footnoteSemibold)
+                            .foregroundStyle(Color.labelSecondary)
+                        Spacer()
+                        Text("\(recordingVM.activeTasks.count)")
+                            .font(TS.Font.microBold)
+                            .foregroundStyle(Color.brandPrimary)
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 2)
+                            .background(Capsule().fill(Color.accentBgPrimary))
+                    }
+
+                    VStack(spacing: TS.Spacing.xs) {
+                        ForEach(recordingVM.activeTasks) { task in
+                            taskRow(task)
+                        }
+                    }
+                }
+                .padding(TS.Spacing.md)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .vaultPanel(radius: TS.Radius.md)
+            }
+
+            // Saved recordings panel
+            savedRecordingsPanel
         }
-        .sheet(isPresented: $showParticipantPicker) {
-            ParticipantPickerSheet(selectedIDs: Bindable(recordingVM).selectedParticipantIDs)
-        }
-        .fileImporter(isPresented: $showImporter, allowedContentTypes: [.audio], allowsMultipleSelection: false) { result in
-            if case .success(let urls) = result, let url = urls.first {
-                Task { await recordingVM.importAudioFile(url) }
+    }
+
+    // MARK: Saved recordings panel
+
+    private var savedRecordingsPanel: some View {
+        let isCollapsible = recordingVM.savedRecordings.count > 3
+        let isShown = !isCollapsible || savedRecordingsExpanded
+        let recordings = Array(recordingVM.savedRecordings.prefix(
+            savedRecordingsExpanded ? 10 : 3
+        ))
+        let extraCount = recordingVM.savedRecordings.count - 10
+
+        return VStack(alignment: .leading, spacing: TS.Spacing.sm) {
+            HStack {
+                Image(systemName: "waveform.circle.fill")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Color.labelSecondary)
+                Text("Opgeslagen opnames")
+                    .font(TS.Font.footnoteSemibold)
+                    .foregroundStyle(Color.labelSecondary)
+
+                if !recordingVM.savedRecordings.isEmpty {
+                    Text("\(recordingVM.savedRecordings.count)")
+                        .font(TS.Font.microBold)
+                        .foregroundStyle(Color.brandPrimary)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 2)
+                        .background(Capsule().fill(Color.accentBgPrimary))
+                }
+
+                Spacer()
+
+                Button {
+                    recordingVM.openRecordingsFolder()
+                } label: {
+                    Image(systemName: "folder")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(Color.labelTertiary)
+                }
+                .buttonStyle(.plain)
+                .help("Toon in Finder")
+
+                if isCollapsible {
+                    Button {
+                        withAnimation(TS.Animation.smooth) {
+                            savedRecordingsExpanded.toggle()
+                        }
+                    } label: {
+                        Image(systemName: savedRecordingsExpanded ? "chevron.up" : "chevron.down")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(Color.labelTertiary)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+
+            if isShown {
+                if recordings.isEmpty {
+                    if savedRecordingsExpanded {
+                        Text("Geen opgeslagen opnames")
+                            .font(TS.Font.footnote)
+                            .foregroundStyle(Color.labelTertiary)
+                            .padding(.vertical, TS.Spacing.sm)
+                    }
+                } else {
+                    VStack(spacing: TS.Spacing.xs) {
+                        ForEach(recordings) { recording in
+                            savedRecordingRow(recording)
+                        }
+
+                        if extraCount > 0 {
+                            Text("En \(extraCount) meer...")
+                                .font(TS.Font.caption)
+                                .foregroundStyle(Color.labelTertiary)
+                                .padding(.vertical, TS.Spacing.xs)
+                        }
+                    }
+                }
             }
         }
+        .padding(TS.Spacing.md)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .vaultPanel(radius: TS.Radius.md)
     }
 
     // MARK: Participants section
@@ -258,322 +738,91 @@ struct RecordingView: View {
         .buttonStyle(.plain)
     }
 
-    // MARK: YouTube card
+    // MARK: YouTube card (removed — now inline in record center as youtubeInlineSection)
 
-    private var youtubeCard: some View {
-        VStack(spacing: 0) {
-            // Header
-            VStack(alignment: .leading, spacing: TS.Spacing.xs) {
+    private func recordingTypeOption(icon: String, title: String, subtitle: String, color: Color, isSelected: Bool, isVertical: Bool = false, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            if isVertical {
+                // Sidebar-style: horizontal layout, icon left, text right
                 HStack(spacing: TS.Spacing.sm) {
-                    Image(systemName: "play.rectangle.fill")
-                        .foregroundStyle(Color.red)
-                    Text("YouTube-video")
-                        .font(TS.Font.headline)
-                        .foregroundStyle(Color.labelPrimary)
-                }
-                Text("Plak een YouTube URL om te transcriberen")
-                    .font(TS.Font.callout)
-                    .foregroundStyle(Color.labelSecondary)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, TS.Spacing.lg)
-            .padding(.top, TS.Spacing.lg)
-            .padding(.bottom, TS.Spacing.md)
+                    ZStack {
+                        Circle()
+                            .fill(isSelected ? color : color.opacity(0.10))
+                            .frame(width: 32, height: 32)
+                        Image(systemName: icon)
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundStyle(isSelected ? .white : color)
+                    }
 
-            // Google Account Connection
-            VStack(spacing: TS.Spacing.sm) {
-                if recordingVM.isGoogleConnected {
-                    // Connected state
-                    HStack {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(Color.statusSuccess)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Google verbonden")
-                                .font(TS.Font.footnoteSemibold)
-                                .foregroundStyle(Color.labelPrimary)
-                            if let email = recordingVM.googleUserEmail {
-                                Text(email)
-                                    .font(TS.Font.caption)
-                                    .foregroundStyle(Color.labelSecondary)
-                            }
-                        }
-                        Spacer()
-                        Button("Ontkoppel") {
-                            Task { await recordingVM.disconnectGoogle() }
-                        }
-                        .font(TS.Font.caption)
-                        .foregroundStyle(Color.labelSecondary)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(title)
+                            .font(TS.Font.footnoteSemibold)
+                            .foregroundStyle(Color.labelPrimary)
+                        Text(subtitle)
+                            .font(TS.Font.micro)
+                            .foregroundStyle(Color.labelTertiary)
+                            .lineLimit(1)
                     }
-                    .padding(TS.Spacing.sm)
-                    .background {
-                        RoundedRectangle(cornerRadius: TS.Radius.sm, style: .continuous)
-                            .fill(Color.statusSuccess.opacity(0.08))
-                    }
-                } else {
-                    // Not connected — show connect button
-                    Button {
-                        Task { await recordingVM.connectGoogle() }
-                    } label: {
-                        HStack(spacing: TS.Spacing.sm) {
-                            Image(systemName: "person.badge.key.fill")
-                                .foregroundStyle(Color.brandPrimary)
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Verbind Google Account")
-                                    .font(TS.Font.footnoteSemibold)
-                                    .foregroundStyle(Color.labelPrimary)
-                                Text("Nodig voor YouTube transcriptie")
-                                    .font(TS.Font.caption)
-                                    .foregroundStyle(Color.labelSecondary)
-                            }
-                            Spacer()
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 12, weight: .semibold))
-                                .foregroundStyle(Color.labelTertiary)
-                        }
-                        .padding(TS.Spacing.sm)
-                        .background {
-                            RoundedRectangle(cornerRadius: TS.Radius.sm, style: .continuous)
-                                .fill(Color.surfaceSecondary)
-                        }
-                    }
-                    .buttonStyle(.plain)
 
-                    if let error = recordingVM.googleAuthError {
-                        Text(error)
-                            .font(TS.Font.caption)
-                            .foregroundStyle(Color.brandOrange)
+                    Spacer()
+
+                    if isSelected {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(color)
                     }
                 }
-            }
-            .padding(.horizontal, TS.Spacing.lg)
-            .padding(.bottom, TS.Spacing.sm)
-
-            VStack(spacing: TS.Spacing.md) {
-                TextField("Plak een YouTube URL...", text: Binding(
-                    get: { recordingVM.youtubeURL },
-                    set: { recordingVM.youtubeURL = $0 }
-                ))
-                .textFieldStyle(.plain)
-                .font(TS.Font.body)
-                .padding(.horizontal, TS.Spacing.sm + 2)
-                .padding(.vertical, TS.Spacing.sm + 2)
+                .padding(.vertical, TS.Spacing.sm)
+                .padding(.horizontal, TS.Spacing.sm)
+                .contentShape(Rectangle())
                 .background {
                     RoundedRectangle(cornerRadius: TS.Radius.sm, style: .continuous)
-                        .fill(Color.surfaceSecondary)
+                        .fill(isSelected ? Color.accentBgSecondary : Color.surfaceSecondary)
                 }
                 .overlay {
                     RoundedRectangle(cornerRadius: TS.Radius.sm, style: .continuous)
-                        .stroke(Color.borderPrimary.opacity(0.5), lineWidth: 1)
+                        .stroke(
+                            isSelected ? Color.brandSecondary.opacity(0.5) : Color.borderPrimary.opacity(0.4),
+                            lineWidth: isSelected ? 1.5 : 1
+                        )
                 }
-
-                if let error = recordingVM.youtubeError {
-                    HStack(spacing: TS.Spacing.xs) {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .foregroundStyle(Color.brandOrange)
-                        Text(error)
-                            .font(TS.Font.caption)
-                            .foregroundStyle(Color.labelSecondary)
+            } else {
+                // Original card-style: centered icon above text
+                VStack(spacing: TS.Spacing.sm) {
+                    ZStack {
+                        Circle()
+                            .fill(isSelected ? color : color.opacity(0.10))
+                            .frame(width: 40, height: 40)
+                        Image(systemName: icon)
+                            .font(.system(size: 17, weight: .medium))
+                            .foregroundStyle(isSelected ? .white : color)
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                }
 
-                if recordingVM.captionsNotAvailable {
-                    HStack(spacing: TS.Spacing.xs) {
-                        Image(systemName: "info.circle.fill")
-                            .foregroundStyle(Color.brandOrange)
-                        Text("Geen ondertiteling beschikbaar. Video wordt gedownload en getranscribeerd via Whisper (dit kan enkele minuten duren).")
-                            .font(TS.Font.caption)
-                            .foregroundStyle(Color.labelSecondary)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                }
-
-                Button {
-                    Task { await recordingVM.submitYouTubeURL() }
-                } label: {
-                    HStack(spacing: TS.Spacing.sm) {
-                        if recordingVM.isSubmittingYouTube {
-                            ProgressView()
-                                .scaleEffect(0.7)
-                                .tint(.white)
-                        }
-                        Text(recordingVM.isSubmittingYouTube ? "Bezig..." : "Transcriberen")
-                            .font(TS.Font.bodySemibold)
-                    }
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, TS.Spacing.sm + 2)
-                    .background {
-                        RoundedRectangle(cornerRadius: TS.Radius.sm, style: .continuous)
-                            .fill(
-                                LinearGradient(
-                                    colors: [Color.brandPrimary, Color.brandPrimary.opacity(0.85)],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                            .shadow(
-                                color: Color.brandPrimary.opacity(0.30),
-                                radius: 8,
-                                y: 3
-                            )
-                    }
-                }
-                .buttonStyle(.plain)
-                .disabled(
-                    recordingVM.youtubeURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                    || recordingVM.isSubmittingYouTube
-                )
-                .opacity(
-                    recordingVM.youtubeURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                    || recordingVM.isSubmittingYouTube ? 0.5 : 1.0
-                )
-            }
-            .padding(.horizontal, TS.Spacing.lg)
-            .padding(.bottom, TS.Spacing.lg)
-        }
-        .background {
-            RoundedRectangle(cornerRadius: TS.Radius.lg, style: .continuous)
-                .fill(.ultraThinMaterial)
-                .shadow(color: .black.opacity(0.06), radius: 12, y: 4)
-        }
-        .overlay {
-            RoundedRectangle(cornerRadius: TS.Radius.lg, style: .continuous)
-                .stroke(Color.brandPrimary.opacity(0.12), lineWidth: 1)
-        }
-    }
-
-    private var recordingTypeSection: some View {
-        VStack(alignment: .leading, spacing: TS.Spacing.sm) {
-            Text("Opnametype")
-                .font(TS.Font.footnoteSemibold)
-                .foregroundStyle(Color.labelSecondary)
-
-            // Adaptive grid: side-by-side on regular widths, wraps to a single
-            // column when the window gets too narrow for two full cards.
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: TS.Spacing.sm)],
-                      spacing: TS.Spacing.sm) {
-                recordingTypeOption(
-                    icon: "person.2.fill",
-                    title: "Fysieke meeting",
-                    subtitle: "Alleen microfoon",
-                    color: Color.brandSecondary,
-                    isSelected: recordingVM.selectedMode == .microphone,
-                    action: { withAnimation(TS.Animation.smooth) { recordingVM.selectedMode = .microphone } }
-                )
-
-                #if os(macOS)
-                recordingTypeOption(
-                    icon: "video.fill",
-                    title: "Videocall",
-                    subtitle: "Microfoon + systeemgeluid",
-                    color: Color.brandPrimary,
-                    isSelected: recordingVM.selectedMode == .combined,
-                    action: { withAnimation(TS.Animation.smooth) { recordingVM.selectedMode = .combined } }
-                )
-                #endif
-            }
-        }
-    }
-
-    private var profileSection: some View {
-        VStack(alignment: .leading, spacing: TS.Spacing.sm) {
-            HStack(spacing: TS.Spacing.xs) {
-                Text("Profiel")
-                    .font(TS.Font.footnoteSemibold)
-                    .foregroundStyle(Color.labelSecondary)
-                if let selectedProfile = recordingVM.selectedProfile {
-                    Text(selectedProfile.name)
-                        .font(TS.Font.microBold)
-                        .foregroundStyle(Color.brandPrimary)
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 2)
-                        .background(Capsule().fill(Color.accentBgPrimary))
-                }
-            }
-
-            ProfilePicker(
-                profiles: recordingVM.availableProfiles,
-                selectedProfile: selectedProfileBinding
-            )
-
-            if let description = recordingVM.selectedProfile?.description, !description.isEmpty {
-                HStack(spacing: TS.Spacing.xs) {
-                    Image(systemName: profileIcon(for: recordingVM.selectedProfile?.id ?? ""))
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(Color.brandPrimary)
-                    Text(description)
-                        .font(TS.Font.caption)
-                        .foregroundStyle(Color.labelTertiary)
-                        .lineLimit(2)
-                }
-                .padding(.horizontal, TS.Spacing.xs)
-            }
-
-            Toggle(isOn: Bindable(recordingVM).usePremium) {
-                HStack(spacing: TS.Spacing.xs) {
-                    Image(systemName: "sparkles")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(Color.brandPrimary)
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text("Premium model")
+                    VStack(spacing: 2) {
+                        Text(title)
                             .font(TS.Font.footnoteSemibold)
                             .foregroundStyle(Color.labelPrimary)
-                        Text("Betere kwaliteit, langzamer")
-                            .font(TS.Font.micro)
+                        Text(subtitle)
+                            .font(TS.Font.caption)
                             .foregroundStyle(Color.labelTertiary)
                     }
+                    .multilineTextAlignment(.center)
                 }
-            }
-            .tint(Color.brandPrimary)
-            .toggleStyle(.switch)
-            .controlSize(.mini)
-        }
-    }
-
-    private var selectedProfileBinding: Binding<Profile?> {
-        Binding(
-            get: { recordingVM.selectedProfile },
-            set: { recordingVM.selectedProfile = $0 }
-        )
-    }
-
-    private func recordingTypeOption(icon: String, title: String, subtitle: String, color: Color, isSelected: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            VStack(spacing: TS.Spacing.sm) {
-                ZStack {
-                    Circle()
-                        .fill(isSelected ? color : color.opacity(0.10))
-                        .frame(width: 40, height: 40)
-                    Image(systemName: icon)
-                        .font(.system(size: 17, weight: .medium))
-                        .foregroundStyle(isSelected ? .white : color)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, TS.Spacing.md)
+                .padding(.horizontal, TS.Spacing.sm)
+                .contentShape(Rectangle())
+                .background {
+                    RoundedRectangle(cornerRadius: TS.Radius.sm, style: .continuous)
+                        .fill(isSelected ? Color.accentBgSecondary : Color.surfaceSecondary)
                 }
-
-                VStack(spacing: 2) {
-                    Text(title)
-                        .font(TS.Font.footnoteSemibold)
-                        .foregroundStyle(Color.labelPrimary)
-                    Text(subtitle)
-                        .font(TS.Font.caption)
-                        .foregroundStyle(Color.labelTertiary)
+                .overlay {
+                    RoundedRectangle(cornerRadius: TS.Radius.sm, style: .continuous)
+                        .stroke(
+                            isSelected ? Color.brandSecondary.opacity(0.5) : Color.borderPrimary.opacity(0.4),
+                            lineWidth: isSelected ? 1.5 : 1
+                        )
                 }
-                .multilineTextAlignment(.center)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, TS.Spacing.md)
-            .padding(.horizontal, TS.Spacing.sm)
-            .contentShape(Rectangle())
-            .background {
-                RoundedRectangle(cornerRadius: TS.Radius.sm, style: .continuous)
-                    .fill(isSelected ? Color.accentBgSecondary : Color.surfaceSecondary)
-            }
-            .overlay {
-                RoundedRectangle(cornerRadius: TS.Radius.sm, style: .continuous)
-                    .stroke(
-                        isSelected ? Color.brandSecondary.opacity(0.5) : Color.borderPrimary.opacity(0.4),
-                        lineWidth: isSelected ? 1.5 : 1
-                    )
             }
         }
         .buttonStyle(.plain)
@@ -703,25 +952,7 @@ struct RecordingView: View {
         }
     }
 
-    // MARK: Active tasks list
-
-    @ViewBuilder
-    private var activeTasksList: some View {
-        let tasks = recordingVM.activeTasks
-        if !tasks.isEmpty {
-            VStack(alignment: .leading, spacing: TS.Spacing.sm) {
-                Text("Verwerkingsoverzicht")
-                    .font(TS.Font.footnoteSemibold)
-                    .foregroundStyle(Color.labelSecondary)
-
-                VStack(spacing: TS.Spacing.xs) {
-                    ForEach(tasks) { task in
-                        taskRow(task)
-                    }
-                }
-            }
-        }
-    }
+    // MARK: Active tasks list (removed — now part of unifiedBottomBar)
 
     private func taskRow(_ task: TranscriptTask) -> some View {
         // One affordance per row: a single status icon + filename + one status line.
@@ -782,90 +1013,7 @@ struct RecordingView: View {
         return "\(task.filename), \(task.status.displayName)"
     }
 
-    // MARK: Saved recordings section
-
-    private var savedRecordingsSection: some View {
-        // A short list (≤3) is shown inline — reprocessing is a frequent enough
-        // action that hiding it behind a disclosure adds friction for no payoff.
-        // The collapse/expand affordance only appears once there's more to fold.
-        let isCollapsible = recordingVM.savedRecordings.count > 3
-        let isShown = !isCollapsible || savedRecordingsExpanded
-        let recordings = Array(recordingVM.savedRecordings.prefix(
-            savedRecordingsExpanded ? 10 : 3
-        ))
-        let extraCount = recordingVM.savedRecordings.count - 10
-
-        return VStack(alignment: .leading, spacing: TS.Spacing.xs) {
-            Button {
-                guard isCollapsible else { return }
-                withAnimation(TS.Animation.smooth) {
-                    savedRecordingsExpanded.toggle()
-                }
-            } label: {
-                HStack {
-                    Text("Opgeslagen opnames")
-                        .font(TS.Font.footnoteSemibold)
-                        .foregroundStyle(Color.labelSecondary)
-
-                    if !recordingVM.savedRecordings.isEmpty {
-                        Text("\(recordingVM.savedRecordings.count)")
-                            .font(TS.Font.microBold)
-                            .foregroundStyle(Color.brandPrimary)
-                            .padding(.horizontal, 7)
-                            .padding(.vertical, 2)
-                            .background(Capsule().fill(Color.accentBgPrimary))
-                    }
-
-                    Spacer()
-
-                    Button {
-                        recordingVM.openRecordingsFolder()
-                    } label: {
-                        Image(systemName: "folder")
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(Color.labelTertiary)
-                    }
-                    .buttonStyle(.plain)
-                    .help("Toon in Finder")
-
-                    if isCollapsible {
-                        Image(systemName: savedRecordingsExpanded ? "chevron.up" : "chevron.down")
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(Color.labelTertiary)
-                    }
-                }
-            }
-            .buttonStyle(.plain)
-
-            if isShown {
-                if recordings.isEmpty {
-                    // Only when explicitly expanded; never as inline noise on a
-                    // fresh screen with no recordings yet.
-                    if savedRecordingsExpanded {
-                        Text("Geen opgeslagen opnames")
-                            .font(TS.Font.footnote)
-                            .foregroundStyle(Color.labelTertiary)
-                            .padding(.vertical, TS.Spacing.sm)
-                    }
-                } else {
-                    VStack(spacing: TS.Spacing.xs) {
-                        ForEach(recordings) { recording in
-                            savedRecordingRow(recording)
-                        }
-
-                        if extraCount > 0 {
-                            Text("En \(extraCount) meer...")
-                                .font(TS.Font.caption)
-                                .foregroundStyle(Color.labelTertiary)
-                                .padding(.vertical, TS.Spacing.xs)
-                        }
-                    }
-                }
-            }
-        }
-        .padding(TS.Spacing.sm)
-        .modernCard()
-    }
+    // MARK: Saved recordings section (removed — now part of unifiedBottomBar as savedRecordingsPanel)
 
     private func savedRecordingRow(_ recording: SavedRecording) -> some View {
         Button {

@@ -13,6 +13,7 @@ struct TasksView: View {
     // MARK: Dependencies
 
     @Environment(TasksViewModel.self) private var tasksVM
+    @Environment(RecordingViewModel.self) private var recordingVM
 
     // MARK: State
 
@@ -32,14 +33,20 @@ struct TasksView: View {
                     errorBanner(error, isCompact: isCompact)
                 }
 
-                if tasksVM.isLoading && tasksVM.activeTasks.isEmpty {
+                // In local mode, tasks come from recordingVM (no server).
+                // In cloud mode, merge both sources.
+                let allTasks = ProcessingMode.isLocalMode
+                    ? recordingVM.activeTasks
+                    : (tasksVM.activeTasks + recordingVM.activeTasks.filter { $0.taskId.hasPrefix("local-") })
+
+                if tasksVM.isLoading && allTasks.isEmpty {
                     // First load
                     ProgressView("Taken laden...")
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if tasksVM.activeTasks.isEmpty {
+                } else if allTasks.isEmpty {
                     emptyState
                 } else {
-                    taskList(isCompact: isCompact)
+                    taskList(tasks: allTasks, isCompact: isCompact)
                 }
             }
         }
@@ -47,7 +54,11 @@ struct TasksView: View {
         .toolbar {
             ToolbarItem(placement: .automatic) {
                 Button {
-                    Task { await tasksVM.loadActiveTasks() }
+                    if ProcessingMode.isLocalMode {
+                        // No server to refresh in local mode; tasks update live.
+                    } else {
+                        Task { await tasksVM.loadActiveTasks() }
+                    }
                 } label: {
                     Image(systemName: "arrow.clockwise")
                 }
@@ -56,7 +67,9 @@ struct TasksView: View {
             }
         }
         .task {
-            tasksVM.startAutoRefresh()
+            if !ProcessingMode.isLocalMode {
+                tasksVM.startAutoRefresh()
+            }
         }
         .onDisappear {
             tasksVM.stopAutoRefresh()
@@ -71,7 +84,11 @@ struct TasksView: View {
         ) {
             Button("Annuleer taak", role: .destructive) {
                 if let task = taskToCancel {
-                    Task { await tasksVM.cancelTask(task.taskId) }
+                    if task.taskId.hasPrefix("local-") {
+                        recordingVM.cancelLocalProcessing(task.taskId)
+                    } else {
+                        Task { await tasksVM.cancelTask(task.taskId) }
+                    }
                 }
                 taskToCancel = nil
             }
@@ -93,7 +110,11 @@ struct TasksView: View {
         ) {
             Button("Verwijderen", role: .destructive) {
                 if let task = taskToDelete {
-                    Task { await tasksVM.deleteTask(task.taskId) }
+                    if task.taskId.hasPrefix("local-") {
+                        recordingVM.removeTask(task.taskId)
+                    } else {
+                        Task { await tasksVM.deleteTask(task.taskId) }
+                    }
                 }
                 taskToDelete = nil
             }
@@ -119,7 +140,7 @@ struct TasksView: View {
                 .font(TS.Font.title3Semibold)
                 .foregroundStyle(Color.labelPrimary)
 
-            Text("Wanneer je een opname uploadt, verschijnt de voortgang hier.")
+            Text("Wanneer je een opname start of een audiobestand importeert, verschijnt de voortgang hier.")
                 .font(TS.Font.callout)
                 .foregroundStyle(Color.labelSecondary)
                 .multilineTextAlignment(.center)
@@ -158,10 +179,10 @@ struct TasksView: View {
 
     // MARK: - Task List
 
-    private func taskList(isCompact: Bool) -> some View {
+    private func taskList(tasks: [TranscriptTask], isCompact: Bool) -> some View {
         ScrollView {
             LazyVStack(spacing: TS.Spacing.sm) {
-                ForEach(tasksVM.activeTasks) { task in
+                ForEach(tasks) { task in
                     TaskRow(
                         task: task,
                         isCompact: isCompact,
@@ -204,7 +225,7 @@ private struct TaskRow: View {
                         StatusBadge(status: task.status)
 
                         if showsProgress {
-                            ProgressView(value: task.status.progress)
+                            ProgressView(value: progressValue)
                                 .progressViewStyle(.linear)
                                 .tint(Color.brandSecondary)
                                 .frame(maxWidth: 160)
@@ -224,7 +245,7 @@ private struct TaskRow: View {
                         StatusBadge(status: task.status)
 
                         if showsProgress {
-                            ProgressView(value: task.status.progress)
+                            ProgressView(value: progressValue)
                                 .progressViewStyle(.linear)
                                 .tint(Color.brandSecondary)
                                 .frame(width: 100)
@@ -315,6 +336,16 @@ private struct TaskRow: View {
         task.status.isActive && task.status != .pending && task.status != .queued
     }
 
+    private var isLocalProcessing: Bool {
+        task.status == .transcribing || task.status == .generatingLocal
+    }
+
+    private var progressValue: Double {
+        // Local processing tasks update task.progress live; use that instead of
+        // the static enum value so the progress bar reflects real progress.
+        isLocalProcessing ? task.progress : task.status.progress
+    }
+
     private var statusIconName: String {
         switch task.status {
         case .completed:                    return "checkmark.circle.fill"
@@ -363,4 +394,5 @@ private struct TaskRow: View {
         TasksView()
     }
     .environment(TasksViewModel())
+    .environment(RecordingViewModel())
 }

@@ -533,13 +533,14 @@ struct NotuleResultView: View {
             do {
                 if let record = LocalTranscriptStore.shared.record(forTaskId: task.taskId)
                     ?? LocalTranscriptStore.shared.record(forTaskId: task.id) {
-                    try await ObsidianService().export(record)
+                    try await ObsidianService.tryExport(record)
                 } else if let html = task.notuleHtml, !html.isEmpty {
                     let title = NotuleTitleExtractor.extract(from: html)
                         ?? (task.filename as NSString).deletingPathExtension
-                    try await ObsidianService().export(
+                    try await ObsidianService.tryExport(
                         title: title, html: html, date: task.createdAt ?? Date(),
-                        participants: [], profileName: task.profileId, tags: task.tags
+                        participants: [], profileName: task.profileId, profileId: task.profileId,
+                        tags: task.tags
                     )
                 } else {
                     exportError = "Geen notule om te exporteren."

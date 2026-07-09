@@ -2160,16 +2160,17 @@ struct TranscriptDetailView: View {
         Task { @MainActor in
             do {
                 if let record = LocalTranscriptStore.shared.record(forTaskId: fullTranscript.taskId) {
-                    try await ObsidianService().export(record)
+                    try await ObsidianService.tryExport(record)
                 } else {
                     let html = fullTranscript.notuleHtml ?? ""
                     guard !html.isEmpty else {
                         errorMessage = "Geen notule om te exporteren."
                         return
                     }
-                    try await ObsidianService().export(
+                    try await ObsidianService.tryExport(
                         title: fullTranscript.title, html: html, date: fullTranscript.date,
-                        participants: [], profileName: fullTranscript.profileName, tags: fullTranscript.tags
+                        participants: [], profileName: fullTranscript.profileName,
+                        tags: fullTranscript.tags
                     )
                 }
                 errorMessage = nil

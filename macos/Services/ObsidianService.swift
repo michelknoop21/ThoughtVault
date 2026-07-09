@@ -101,10 +101,26 @@ struct ObsidianService: Sendable {
         let date = record.createdAt
         let participants = record.participants
         let profileName = record.profileName
+        let profileId = record.profileId
         let tags = record.tags
         try await export(
             title: title, html: html, date: date,
-            participants: participants, profileName: profileName, tags: tags
+            participants: participants, profileName: profileName, profileId: profileId, tags: tags
+        )
+    }
+
+    /// Static convenience for manual export from a local record. Prefers the
+    /// file-based vault folder, falls back to REST. Throws on failure.
+    @MainActor
+    static func tryExport(_ record: TranscriptRecord) async throws {
+        try await tryExport(
+            title: record.title,
+            html: record.notuleHtml,
+            date: record.createdAt,
+            participants: record.participants,
+            profileName: record.profileName,
+            profileId: record.profileId,
+            tags: record.tags
         )
     }
 
@@ -114,6 +130,7 @@ struct ObsidianService: Sendable {
         date: Date,
         participants: [Participant],
         profileName: String?,
+        profileId: String? = nil,
         tags: [String]
     ) async throws {
         guard !apiKey.isEmpty, !vaultPath.isEmpty else { throw ObsidianError.missingConfig }
@@ -130,7 +147,7 @@ struct ObsidianService: Sendable {
 
         let body = Self.frontmatter(
             title: title, date: date, participants: participants,
-            profileName: profileName, tags: tags
+            profileName: profileName, profileId: profileId, tags: tags
         ) + htmlToMarkdown(html) + "\n"
 
         var req = URLRequest(url: url)
@@ -152,23 +169,40 @@ struct ObsidianService: Sendable {
     @MainActor
     static func autoExport(_ record: TranscriptRecord) {
         guard isEnabled else { return }
-        let title = record.title
-        let html = record.notuleHtml
-        let date = record.createdAt
-        let participants = record.participants
-        let profileName = record.profileName
-        let tags = record.tags
+        tryExportDetached(
+            title: record.title,
+            html: record.notuleHtml,
+            date: record.createdAt,
+            participants: record.participants,
+            profileName: record.profileName,
+            profileId: record.profileId,
+            tags: record.tags
+        )
+    }
 
+    /// Shared auto-export entry point used by both local and cloud notulen.
+    /// Prefers the file-based vault folder (the only path that works on iOS),
+    /// falls back to the REST API (desktop only). Runs on a detached task and
+    /// logs failures silently.
+    static func tryExportDetached(
+        title: String,
+        html: String,
+        date: Date,
+        participants: [Participant],
+        profileName: String?,
+        profileId: String? = nil,
+        tags: [String]
+    ) {
         // Prefer the file-based vault folder when configured — it is the only path
         // that works on iOS and needs no REST plugin running.
         if VaultFolderStore.isConfigured {
             let filename = Self.fileName(title: title, date: date)
             let markdown = Self.frontmatter(
                 title: title, date: date, participants: participants,
-                profileName: profileName, tags: tags
+                profileName: profileName, profileId: profileId, tags: tags
             ) + htmlToMarkdown(html) + "\n"
             if !VaultFolderStore.writeNote(filename: filename, markdown: markdown) {
-                logger.error("Auto-export naar Obsidian-map mislukt")
+                logger.error("Export naar Obsidian-map mislukt")
             }
             return
         }
@@ -178,12 +212,45 @@ struct ObsidianService: Sendable {
             do {
                 try await service.export(
                     title: title, html: html, date: date,
-                    participants: participants, profileName: profileName, tags: tags
+                    participants: participants, profileName: profileName, profileId: profileId, tags: tags
                 )
             } catch {
-                logger.error("Auto-export naar Obsidian mislukt: \(error.localizedDescription)")
+                logger.error("Export naar Obsidian mislukt: \(error.localizedDescription)")
             }
         }
+    }
+
+    /// Synchronous export used by manual export buttons. Prefers the file-based
+    /// vault folder (iOS-capable), falls back to the REST API. Throws on failure
+    /// so the caller can surface an error to the user.
+    @MainActor
+    static func tryExport(
+        title: String,
+        html: String,
+        date: Date,
+        participants: [Participant],
+        profileName: String?,
+        profileId: String? = nil,
+        tags: [String]
+    ) async throws {
+        // Prefer the file-based vault folder when configured.
+        if VaultFolderStore.isConfigured {
+            let filename = Self.fileName(title: title, date: date)
+            let markdown = Self.frontmatter(
+                title: title, date: date, participants: participants,
+                profileName: profileName, profileId: profileId, tags: tags
+            ) + htmlToMarkdown(html) + "\n"
+            guard VaultFolderStore.writeNote(filename: filename, markdown: markdown) else {
+                throw ObsidianError.badStatus(0, "Kon niet naar de vault-map schrijven")
+            }
+            return
+        }
+
+        // Fall back to the REST API (desktop only).
+        try await ObsidianService().export(
+            title: title, html: html, date: date,
+            participants: participants, profileName: profileName, profileId: profileId, tags: tags
+        )
     }
 
     // MARK: - Builders
@@ -212,6 +279,7 @@ struct ObsidianService: Sendable {
         date: Date,
         participants: [Participant],
         profileName: String?,
+        profileId: String? = nil,
         tags: [String]
     ) -> String {
         let df = DateFormatter()
@@ -221,8 +289,13 @@ struct ObsidianService: Sendable {
             "\"" + s.replacingOccurrences(of: "\"", with: "\\\"") + "\""
         }
 
+        // The "notitie" profile produces notes, not meeting minutes.
+        let noteType = profileId == "notitie" ? "notitie" : "notulen"
+        // For notes, tags start with the type; for notulen they start with "notule".
+        let baseTag = profileId == "notitie" ? "notitie" : "notule"
+
         var lines = ["---"]
-        lines.append("type: notulen")
+        lines.append("type: \(noteType)")
         lines.append("title: \(yaml(title))")
         lines.append("date: \(df.string(from: date))")
         if !participants.isEmpty {
@@ -232,7 +305,7 @@ struct ObsidianService: Sendable {
                 lines.append("  - " + (role.isEmpty ? p.name : "\(p.name) (\(role))"))
             }
         }
-        let allTags = (["notule"] + tags).map { $0.replacingOccurrences(of: ",", with: " ") }
+        let allTags = ([baseTag] + tags).map { $0.replacingOccurrences(of: ",", with: " ") }
         lines.append("tags: [\(allTags.joined(separator: ", "))]")
         if let profileName, !profileName.isEmpty {
             lines.append("profile: \(yaml(profileName))")

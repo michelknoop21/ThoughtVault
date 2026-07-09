@@ -145,6 +145,8 @@ final class RecordingViewModel {
     private var pendingRemovalTasks: [String: Task<Void, Never>] = [:]
     @ObservationIgnored
     private var uploadTask: Task<Void, Never>?
+    @ObservationIgnored
+    private var localProcessingTasks: [String: Task<Void, Never>] = [:]
     private var isProcessingQueue = false
     private var networkMonitor = NetworkMonitor.shared
 
@@ -174,6 +176,7 @@ final class RecordingViewModel {
     deinit {
         liveTranscriptionTask?.cancel()
         for task in pendingRemovalTasks.values { task.cancel() }
+        for task in localProcessingTasks.values { task.cancel() }
 #if os(macOS)
         if let sleepObserver {
             NSWorkspace.shared.notificationCenter.removeObserver(sleepObserver)
@@ -729,6 +732,7 @@ final class RecordingViewModel {
 
     /// Transcribes and generates notulen entirely on-device, then stores the result
     /// in the local SwiftData store. No backend server is contacted.
+    /// Runs on a detached Task so the MainActor stays responsive and the user can cancel.
     func processLocally(url: URL, profileId: String, participants: [Participant] = []) async {
         let profile = availableProfiles.first { $0.id == profileId }
             ?? Profile.defaults.first { $0.id == profileId }
@@ -754,21 +758,42 @@ final class RecordingViewModel {
             liveTranscriptText = ""
         }
 
+        // Run on a detached Task so the MainActor stays responsive. The task
+        // reference is stored for cancellation.
+        localProcessingTasks[localId] = Task.detached(priority: .userInitiated) { [weak self] in
+            await self?.processLocallyWorker(url: url, localId: localId, profile: profile, participants: participants)
+        }
+    }
+
+    /// Worker that does the actual transcription + notule generation. Runs off the
+    /// MainActor on a detached Task. All @MainActor state updates go through Task hops.
+    private func processLocallyWorker(url: URL, localId: String, profile: Profile, participants: [Participant]) async {
         // 1. Local transcription
         let transcription: String
         do {
+            try Task.checkCancellation()
             let transcriber = LocalTranscriberFactory.make()
             transcription = try await transcriber.transcribe(url: url) { [weak self] fraction in
                 Task { @MainActor in
-                    self?.updateTask(localId, status: .transcribing,
+                    guard let self else { return }
+                    guard !Task.isCancelled else { return }
+                    self.updateTask(localId, status: .transcribing,
                                      progress: 0.15 + fraction * 0.35)
                 }
             }
+            try Task.checkCancellation()
+        } catch is CancellationError {
+            await MainActor.run { self.cancelLocalTaskCleanup(localId) }
+            return
         } catch {
             os_log("[RecordingVM] processLocally transcription failed: %{public}@", log: log, type: .error, error.localizedDescription)
-            updateTask(localId, status: .error, errorMessage: error.localizedDescription)
+            await MainActor.run { self.updateTask(localId, status: .error, errorMessage: error.localizedDescription) }
+            self.localProcessingTasks.removeValue(forKey: localId)
             return
         }
+
+        try? await Task.sleep(for: .milliseconds(100))
+        try? Task.checkCancellation()
 
         // 2. Persist a partial record immediately so an expensive transcription is
         //    never lost if notule generation fails afterwards.
@@ -791,16 +816,19 @@ final class RecordingViewModel {
             try LocalTranscriptStore.shared.save(record)
         } catch {
             os_log("[RecordingVM] processLocally save failed: %{public}@", log: log, type: .error, error.localizedDescription)
-            updateTask(localId, status: .error, errorMessage: "Opslaan mislukt: \(error.localizedDescription)")
+            await MainActor.run { self.updateTask(localId, status: .error, errorMessage: "Opslaan mislukt: \(error.localizedDescription)") }
+            self.localProcessingTasks.removeValue(forKey: localId)
             return
         }
 
-        setTaskTranscription(localId, transcription)
-        updateTask(localId, status: .generatingLocal, progress: TaskStatus.generatingLocal.progress)
-        isGeneratingLocally = true
-        localGenerationProgress = 0
-        saveLocalAudioPath(url: url, taskId: localId)
-        loadSavedRecordings()
+        await MainActor.run {
+            self.setTaskTranscription(localId, transcription)
+            self.updateTask(localId, status: .generatingLocal, progress: TaskStatus.generatingLocal.progress)
+            self.isGeneratingLocally = true
+            self.localGenerationProgress = 0
+            self.saveLocalAudioPath(url: url, taskId: localId)
+            self.loadSavedRecordings()
+        }
 
         // 3. Local notule generation via the configured provider.
         let providerRaw = UserDefaults.standard.string(forKey: "notulenProvider") ?? NotulenProvider.platformDefault.rawValue
@@ -808,9 +836,8 @@ final class RecordingViewModel {
         if provider == .cloud { provider = .ollama }   // cloud is meaningless offline
 
         do {
+            try Task.checkCancellation()
             let service = LLMServiceFactory.service(for: provider, serverURL: "")
-            // Live preview is driven solely by ordered append chunks; the saved
-            // record uses the authoritative return value (no final overwrite race).
             let html = try await service.generateNotulen(
                 transcription: transcription,
                 systemPrompt: profile.systemPrompt ?? "",
@@ -819,28 +846,53 @@ final class RecordingViewModel {
                 outputTemplate: profile.template
             ) { [weak self] chunk in
                 Task { @MainActor in
-                    self?.appendTaskNotuleHtml(localId, chunk)
+                    guard let self else { return }
+                    guard !Task.isCancelled else { return }
+                    self.appendTaskNotuleHtml(localId, chunk)
                 }
             }
+            try Task.checkCancellation()
 
             let datedHtml = Self.injectDate(into: html, date: record.createdAt)
             let title = NotuleTitleExtractor.extract(from: datedHtml) ?? fallback
             try LocalTranscriptStore.shared.finalizeNotule(taskId: localId, html: datedHtml, title: title)
 
             // Auto-export the finished notule to Obsidian (no-op when disabled).
-            ObsidianService.autoExport(record)
+            await MainActor.run {
+                let record = LocalTranscriptStore.shared.record(forTaskId: localId)
+                if let record { ObsidianService.autoExport(record) }
+            }
 
-            updateTask(localId, status: .completed, progress: 1.0)
-            isGeneratingLocally = false
-            localGenerationProgress = 1.0
+            await MainActor.run {
+                self.updateTask(localId, status: .completed, progress: 1.0)
+                self.isGeneratingLocally = false
+                self.localGenerationProgress = 1.0
+            }
 
+        } catch is CancellationError {
+            await MainActor.run { self.cancelLocalTaskCleanup(localId) }
+            return
         } catch {
-            // Transcription is already saved; only the notule step failed.
-            os_log("[RecordingVM] processLocally notule failed: %{public}@", log: log, type: .error, error.localizedDescription)
-            isGeneratingLocally = false
-            updateTask(localId, status: .error,
-                       errorMessage: "Transcriptie opgeslagen, notule mislukt: \(error.localizedDescription)")
+            await MainActor.run {
+                self.isGeneratingLocally = false
+                self.updateTask(localId, status: .error,
+                           errorMessage: "Transcriptie opgeslagen, notule mislukt: \(error.localizedDescription)")
+            }
         }
+        self.localProcessingTasks.removeValue(forKey: localId)
+    }
+
+    /// Cancels an in-progress local processing task (transcription or notule generation).
+    func cancelLocalProcessing(_ taskId: String) {
+        localProcessingTasks[taskId]?.cancel()
+        localProcessingTasks.removeValue(forKey: taskId)
+        cancelLocalTaskCleanup(taskId)
+    }
+
+    /// Marks a cancelled task as error and cleans up.
+    private func cancelLocalTaskCleanup(_ taskId: String) {
+        updateTask(taskId, status: .error, errorMessage: "Geannuleerd door gebruiker.")
+        isGeneratingLocally = false
     }
 
     /// Regenerates the notule for an already-stored local record using its saved
@@ -910,11 +962,13 @@ final class RecordingViewModel {
 
     private func setTaskTranscription(_ id: String, _ text: String) {
         guard let idx = activeTasks.firstIndex(where: { $0.id == id }) else { return }
+        guard activeTasks[idx].status.isActive else { return }
         activeTasks[idx].rawTranscription = text
     }
 
     private func appendTaskNotuleHtml(_ id: String, _ chunk: String) {
         guard let idx = activeTasks.firstIndex(where: { $0.id == id }) else { return }
+        guard activeTasks[idx].status.isActive else { return }
         activeTasks[idx].notuleHtml = (activeTasks[idx].notuleHtml ?? "") + chunk
     }
 
@@ -1215,17 +1269,15 @@ final class RecordingViewModel {
            let html = updatedTask.notuleHtml, !html.isEmpty {
             let title = NotuleTitleExtractor.extract(from: html)
                 ?? (updatedTask.filename as NSString).deletingPathExtension
-            let service = ObsidianService()
-            Task.detached {
-                try? await service.export(
-                    title: title,
-                    html: html,
-                    date: updatedTask.createdAt ?? Date(),
-                    participants: [],
-                    profileName: updatedTask.profileId,
-                    tags: updatedTask.tags
-                )
-            }
+            ObsidianService.tryExportDetached(
+                title: title,
+                html: html,
+                date: updatedTask.createdAt ?? Date(),
+                participants: [],
+                profileName: updatedTask.profileId,
+                profileId: updatedTask.profileId,
+                tags: updatedTask.tags
+            )
         }
     }
 
@@ -1284,6 +1336,9 @@ final class RecordingViewModel {
 
     func updateTask(_ id: String, status: TaskStatus, progress: Double? = nil, errorMessage: String? = nil) {
         guard let idx = activeTasks.firstIndex(where: { $0.id == id }) else { return }
+        if !activeTasks[idx].status.isActive, activeTasks[idx].status != status {
+            return
+        }
         activeTasks[idx].status = status
         if let progress { activeTasks[idx].progress = progress }
         if let errorMessage { activeTasks[idx].errorMessage = errorMessage }

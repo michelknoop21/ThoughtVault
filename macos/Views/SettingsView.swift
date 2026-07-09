@@ -85,6 +85,7 @@ struct SettingsView: View {
                 await checkServerConnection()
                 await checkPermissions()
                 if isLocalProcessing && activeLocalProvider == .ollama { await loadOllamaModels() }
+                if isLocalProcessing && localTranscriber == LocalTranscriberEngine.whisperKit.rawValue { await loadWhisperModels() }
             }
         }
         .confirmationDialog(
@@ -143,7 +144,10 @@ struct SettingsView: View {
 
     private var algemeenTab: some View {
         cappedForm {
-            verbindingSection
+            // Hide "Verbinding" section in local mode — no server to connect to.
+            if !isLocalProcessing {
+                verbindingSection
+            }
             updatesSection
             overSection
         }
@@ -303,15 +307,14 @@ struct SettingsView: View {
                     #endif
             }
 
+            // REST API fields are desktop-only — iOS cannot reach a desktop's
+            // localhost. Hidden on iOS to avoid confusion.
+            #if os(macOS)
             SettingFieldRow("Base-URL") {
                 TextField(ObsidianService.defaultBaseURL, text: $obsidianBaseURL)
                     .textFieldStyle(.roundedBorder)
                     .font(TS.Font.body)
                     .autocorrectionDisabled()
-                    #if os(iOS)
-                    .textInputAutocapitalization(.never)
-                    .keyboardType(.URL)
-                    #endif
             }
 
             SettingFieldRow("Vault-pad") {
@@ -319,9 +322,6 @@ struct SettingsView: View {
                     .textFieldStyle(.roundedBorder)
                     .font(TS.Font.body)
                     .autocorrectionDisabled()
-                    #if os(iOS)
-                    .textInputAutocapitalization(.never)
-                    #endif
             }
 
             SettingFieldRow("API-sleutel") {
@@ -361,15 +361,24 @@ struct SettingsView: View {
                     Spacer()
                 }
             }
+            #endif
         } header: {
             Text("Obsidian-koppeling")
         } footer: {
+            #if os(iOS)
+            Text("Kies je Obsidian-vault-map (bijv. via iCloud Drive) om notulen automatisch "
+                + "als Markdown-bestanden op te slaan én de context-note te lezen "
+                + "(namen/termen zoals \"Michel\"). Werkt volledig offline op iPhone.")
+                .font(TS.Font.caption)
+                .foregroundStyle(Color.labelTertiary)
+            #else
             Text("Kies je vault-map om notulen als bestand op te slaan én de context-note te lezen "
                 + "(namen/termen zoals \"Michel\"). Dit werkt op Mac én iPhone. "
                 + "De Base-URL/API-sleutel eronder zijn de desktop-fallback via de Local REST API plugin, "
                 + "alleen gebruikt als er geen vault-map is gekozen.")
                 .font(TS.Font.caption)
                 .foregroundStyle(Color.labelTertiary)
+            #endif
         }
         .fileImporter(
             isPresented: $showVaultFolderPicker,
@@ -517,6 +526,10 @@ struct SettingsView: View {
     @AppStorage("lmStudioURL") private var lmStudioURL: String = "http://localhost:1234"
     @AppStorage("lmStudioModel") private var lmStudioModel: String = "local-model"
 
+    // WhisperKit model discovery
+    @State private var whisperModels: [String] = []
+    @State private var whisperModelsLoading: Bool = false
+
     // API key lives in the Keychain, not UserDefaults. Mirrored into @State for editing.
     @State private var ollamaApiKey: String = ""
     @State private var revealApiKey: Bool = false
@@ -588,10 +601,44 @@ struct SettingsView: View {
 
             if localTranscriber == LocalTranscriberEngine.whisperKit.rawValue {
                 SettingFieldRow("Model") {
-                    TextField("model", text: $whisperModel)
-                        .textFieldStyle(.roundedBorder)
-                        .font(TS.Font.bodyMonospaced)
-                        .autocorrectionDisabled()
+                    HStack(spacing: TS.Spacing.sm) {
+                        if whisperModels.isEmpty {
+                            TextField("model", text: $whisperModel)
+                                .textFieldStyle(.roundedBorder)
+                                .font(TS.Font.bodyMonospaced)
+                                .autocorrectionDisabled()
+                        } else {
+                            Picker("", selection: $whisperModel) {
+                                if !whisperModels.contains(whisperModel) && !whisperModel.isEmpty {
+                                    Text(whisperModel).tag(whisperModel)
+                                }
+                                ForEach(whisperModels, id: \.self) { name in
+                                    Text(name).tag(name)
+                                }
+                            }
+                            .labelsHidden()
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+
+                        Button {
+                            Task { await loadWhisperModels() }
+                        } label: {
+                            if whisperModelsLoading {
+                                ProgressView().controlSize(.small)
+                            } else {
+                                Image(systemName: "arrow.triangle.2.circlepath")
+                            }
+                        }
+                        .buttonStyle(.bordered)
+                        .disabled(whisperModelsLoading)
+                        .help("Beschikbare modellen laden")
+                        .accessibilityLabel("Beschikbare modellen laden")
+                    }
+                }
+                if !whisperModels.isEmpty {
+                    Text("\(whisperModels.count) modellen beschikbaar")
+                        .font(TS.Font.caption)
+                        .foregroundStyle(Color.labelTertiary)
                 }
             }
 
@@ -604,7 +651,7 @@ struct SettingsView: View {
             Text("Transcriptie")
         } footer: {
             Text((localTranscriber == LocalTranscriberEngine.whisperKit.rawValue
-                ? "WhisperKit downloadt het gekozen model bij eerste gebruik. "
+                ? "WhisperKit downloadt het gekozen model bij eerste gebruik. Klik het refresh-icoon om alle beschikbare modellen te laden. "
                 : "Apple Spraakherkenning werkt direct, zonder download. ")
                 + "Eigen termen (komma-gescheiden) en personen uit de app sturen de herkenning van namen zoals \"Michel\".")
                 .font(TS.Font.caption)
@@ -1476,18 +1523,41 @@ struct SettingsView: View {
     private func loadProfiles() async {
         isLoadingProfiles = true
         defer { isLoadingProfiles = false }
-        profiles = (try? await APIService.shared.getProfiles()) ?? []
+        if isLocalProcessing {
+            profiles = Profile.defaults
+            return
+        }
+        profiles = (try? await APIService.shared.getProfiles()) ?? Profile.defaults
     }
 
     private func checkServerConnection() async {
         isCheckingServer = true
         defer { isCheckingServer = false }
+        // Skip server check entirely in local mode — no server to connect to.
+        guard !isLocalProcessing else {
+            serverConnected = nil
+            return
+        }
         do {
             _ = try await APIService.shared.checkMinimumVersion()
             serverConnected = true
         } catch {
             serverConnected = false
         }
+    }
+
+    /// Fetches the available WhisperKit models for the dropdown picker.
+    private func loadWhisperModels() async {
+        whisperModelsLoading = true
+        defer { whisperModelsLoading = false }
+        if let models = await WhisperKitModelDiscovery.fetchRecommendedModels() {
+            whisperModels = models
+            // Default the selection to the first model when nothing valid is selected yet.
+            if whisperModel.isEmpty, let first = models.first {
+                whisperModel = first
+            }
+        }
+        // If fetch fails, the text field fallback remains visible (whisperModels stays empty).
     }
 
     private func checkPermissions() async {

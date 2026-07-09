@@ -305,10 +305,21 @@ struct Profile: Identifiable, Codable, Hashable, Sendable {
         isDefault: true
     )
 
+    static let notitie = Profile(
+        id: "notitie",
+        name: "Notitie",
+        description: "Korte gedachten en ideeën → Obsidian-notitie",
+        icon: "note.text",
+        systemPrompt: "Je bent een assistent die gesproken notities opschont tot leesbare tekst. Behoud de toon en inhoud, verwijder alleen vulwoorden en herhalingen. Maak géén samenvatting, structuur of notulen — gewoon schone, leesbare tekst.",
+        notulePrompt: "Schonk deze gesproken tekst op tot een leesbare notitie. Behoud de originele betekenis, toon en alle details. Verwijder alleen vulwoorden (uh, eh, nou), herhalingen en aarzelingen. Maak géén samenvatting, géén structuur, géén notulen — gewoon schone tekst die direct in Obsidian kan worden opgeslagen.",
+        template: nil,
+        isDefault: true
+    )
+
     /// Built-in profiles, enriched with the rich prompts + HTML templates from
     /// ProfileTemplates.json (falling back to the inline prompts when unavailable).
     static var defaults: [Profile] {
-        let base: [Profile] = [.zakelijk, .informeel, .technisch, .handleiding, .blogSamenvatting]
+        let base: [Profile] = [.zakelijk, .informeel, .technisch, .handleiding, .blogSamenvatting, .notitie]
         return base.map { profile in
             guard let entry = ProfileTemplates.entry(for: profile.id) else { return profile }
             var enriched = profile

@@ -34,6 +34,7 @@ private struct ProcessingBarItem: View {
     private var isFailed: Bool { task.status == .error }
     private var isCompleted: Bool { task.status == .completed }
     private var isProcessing: Bool { !isUploading && !isFailed && !isCompleted }
+    private var isLocalProcessing: Bool { task.status == .transcribing || task.status == .generatingLocal }
 
     var body: some View {
         HStack(spacing: TS.Spacing.sm) {
@@ -61,9 +62,11 @@ private struct ProcessingBarItem: View {
 
             Spacer()
 
-            // Progress percentage
-            if isUploading {
-                Text("\(Int(task.progress * 100))%")
+            // Progress percentage — show actual task.progress for local processing,
+            // not the static enum value.
+            if isUploading || isLocalProcessing {
+                let pct = Int((isUploading ? task.progress : task.progress) * 100)
+                Text("\(pct)%")
                     .font(TS.Font.microBold)
                     .foregroundStyle(statusColor)
                     .monospacedDigit()
@@ -98,6 +101,16 @@ private struct ProcessingBarItem: View {
                 }
                 .buttonStyle(.plain)
                 .help("Upload annuleren")
+            } else if isLocalProcessing {
+                Button {
+                    recordingVM.cancelLocalProcessing(task.taskId)
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 14))
+                        .foregroundStyle(Color.labelTertiary)
+                }
+                .buttonStyle(.plain)
+                .help("Lokale verwerking annuleren")
             }
         }
         .padding(.horizontal, TS.Spacing.sm)
@@ -107,10 +120,10 @@ private struct ProcessingBarItem: View {
                 RoundedRectangle(cornerRadius: TS.Radius.xs, style: .continuous)
                     .fill(statusColor.opacity(0.06))
 
-                // Progress track
+                // Progress track — use actual task.progress for local processing
                 if isUploading || isProcessing {
                     GeometryReader { geo in
-                        let normalizedProgress = isUploading ? task.progress : task.status.progress
+                        let normalizedProgress = isUploading ? task.progress : (isLocalProcessing ? task.progress : task.status.progress)
                         RoundedRectangle(cornerRadius: TS.Radius.xs, style: .continuous)
                             .fill(statusColor.opacity(0.12))
                             .frame(width: geo.size.width * normalizedProgress)

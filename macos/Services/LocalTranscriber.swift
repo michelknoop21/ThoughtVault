@@ -8,6 +8,7 @@
 //   - AppleSpeechTranscriber: Apple's SFSpeechRecognizer (zero-dependency fallback)
 
 import Foundation
+import AVFoundation
 import OSLog
 import SwiftData
 
@@ -63,6 +64,117 @@ enum PersonalVocabulary {
         let all = terms()
         guard !all.isEmpty else { return "" }
         return "\n\nCorrecte spelling van namen en termen: \(all.joined(separator: ", ")). Corrigeer afwijkende spellingen hiervan in de transcriptie stilzwijgend."
+    }
+}
+
+// MARK: - Audio Pre-conversion
+
+/// Converts any audio file to 16kHz mono 16-bit PCM WAV — the format WhisperKit
+/// handles most reliably. Imported files (m4a, mp3, 44.1kHz stereo) can otherwise
+/// cause WhisperKit to silently hang during inference.
+enum AudioPreConverter {
+
+    static func convertToWav16k(_ url: URL) async throws -> URL {
+        // ponytail: if already 16kHz mono WAV, skip conversion
+        if isAlreadyWav16kMono(url) { return url }
+
+        let outputURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("preconv_\(UUID().uuidString).wav")
+
+        let sourceFile = try AVAudioFile(forReading: url)
+        let sourceFormat = sourceFile.processingFormat
+
+        // On-disk format: 16kHz mono Int16 PCM WAV (what WhisperKit expects).
+        // AVAudioFile(forWriting:settings:) with Int16 settings still exposes a
+        // **Float32 non-interleaved** processingFormat — the file handles Int16
+        // encoding internally on write. So the in-memory buffer must be Float32,
+        // NOT Int16, otherwise AVAudioFile.write(from:) triggers a CoreAudio
+        // CAAssertRtn → EXC_BREAKPOINT crash. This is the idiomatic AVAudioFile
+        // pattern: always process in Float32, let the file handle disk encoding.
+        let diskSettings: [String: Any] = [
+            AVFormatIDKey: Int(kAudioFormatLinearPCM),
+            AVSampleRateKey: 16_000.0,
+            AVNumberOfChannelsKey: 1,
+            AVLinearPCMBitDepthKey: 16,
+            AVLinearPCMIsFloatKey: false,
+            AVLinearPCMIsBigEndianKey: false,
+            AVLinearPCMIsNonInterleaved: false
+        ]
+
+        let outputFile = try AVAudioFile(forWriting: outputURL, settings: diskSettings)
+        // processingFormat is Float32 non-interleaved 16kHz mono — use this for buffers.
+        let targetFormat = outputFile.processingFormat
+
+        guard let converter = AVAudioConverter(from: sourceFormat, to: targetFormat) else {
+            throw LocalTranscriberError.transcriptionFailed("Audio-conversie niet mogelijk voor dit formaat.")
+        }
+
+        let inputChunkSize = AVAudioFrameCount(max(4096, Int(sourceFormat.sampleRate)))
+        let estimatedOutputChunkSize = AVAudioFrameCount(
+            Double(inputChunkSize) * (targetFormat.sampleRate / sourceFormat.sampleRate) + 1024
+        )
+        guard let inputBuffer = AVAudioPCMBuffer(pcmFormat: sourceFormat, frameCapacity: inputChunkSize),
+              let outputBuffer = AVAudioPCMBuffer(pcmFormat: targetFormat, frameCapacity: estimatedOutputChunkSize) else {
+            throw LocalTranscriberError.transcriptionFailed("Kon audio-buffer niet aanmaken.")
+        }
+
+        var reachedEndOfStream = false
+        while !reachedEndOfStream {
+            try sourceFile.read(into: inputBuffer, frameCount: inputChunkSize)
+
+            nonisolated(unsafe) let capturedInputBuffer = inputBuffer
+            var didProvideInput = false
+            while true {
+                outputBuffer.frameLength = 0
+                var conversionError: NSError?
+                let status = converter.convert(to: outputBuffer, error: &conversionError) { _, outStatus in
+                    if didProvideInput || capturedInputBuffer.frameLength == 0 {
+                        outStatus.pointee = .noDataNow
+                        return nil
+                    }
+
+                    didProvideInput = true
+                    outStatus.pointee = .haveData
+                    return capturedInputBuffer
+                }
+
+                if status == .error || conversionError != nil {
+                    throw LocalTranscriberError.transcriptionFailed(
+                        "Audio-conversie mislukt: \(conversionError?.localizedDescription ?? "onbekend")"
+                    )
+                }
+
+                if outputBuffer.frameLength > 0 {
+                    try outputFile.write(from: outputBuffer)
+                }
+
+                if status == .endOfStream {
+                    reachedEndOfStream = true
+                    break
+                }
+
+                if status == .inputRanDry || status == .haveData {
+                    break
+                }
+            }
+
+            if inputBuffer.frameLength == 0 {
+                reachedEndOfStream = true
+            }
+        }
+
+        logger.info("Pre-converted \(url.lastPathComponent) → 16kHz mono WAV")
+        return outputURL
+    }
+
+    /// Quick check: is this file already 16kHz mono WAV?
+    private static func isAlreadyWav16kMono(_ url: URL) -> Bool {
+        guard url.pathExtension.lowercased() == "wav" else { return false }
+        guard let sourceFile = try? AVAudioFile(forReading: url) else { return false }
+        let format = sourceFile.processingFormat
+        return format.sampleRate == 16_000
+            && format.channelCount == 1
+            && format.commonFormat == .pcmFormatFloat32
     }
 }
 
@@ -165,13 +277,25 @@ final class WhisperKitTranscriber: LocalTranscriber, @unchecked Sendable {
 
     func transcribe(url: URL, onProgress: @Sendable @escaping (Double) -> Void) async throws -> String {
         do {
-            onProgress(0.05)
+            onProgress(0.02)
+
+            // Pre-convert to 16kHz mono WAV — imported files (m4a/mp3/44.1kHz) can
+            // otherwise silently hang WhisperKit during inference.
+            let wavURL: URL
+            do {
+                wavURL = try await AudioPreConverter.convertToWav16k(url)
+            } catch {
+                // If conversion fails, try the original file — WhisperKit may still handle it.
+                logger.warning("Pre-conversion failed (\(error.localizedDescription)), trying original file")
+                wavURL = url
+            }
+            onProgress(0.06)
 
             // Loads (and downloads on first use) the requested model variant.
             let config = WhisperKitConfig(model: model)
             let pipe = try await WhisperKit(config)
 
-            onProgress(0.4)
+            onProgress(0.15)
 
             var options = DecodingOptions(
                 task: .transcribe,
@@ -187,13 +311,16 @@ final class WhisperKitTranscriber: LocalTranscriber, @unchecked Sendable {
                 options.usePrefillPrompt = true
             }
 
-            let results: [TranscriptionResult] = try await pipe.transcribe(audioPath: url.path, decodeOptions: options)
-            onProgress(1.0)
+            onProgress(0.20)
+
+            let results: [TranscriptionResult] = try await pipe.transcribe(audioPath: wavURL.path, decodeOptions: options)
+            onProgress(0.95)
 
             let text = results.map(\.text).joined(separator: " ")
                 .trimmingCharacters(in: .whitespacesAndNewlines)
 
             guard !text.isEmpty else { throw LocalTranscriberError.emptyResult }
+            onProgress(1.0)
             logger.info("WhisperKit transcription complete — \(text.count) characters")
             return text
         } catch let error as LocalTranscriberError {
@@ -202,6 +329,30 @@ final class WhisperKitTranscriber: LocalTranscriber, @unchecked Sendable {
             logger.error("WhisperKit failed: \(error.localizedDescription)")
             throw LocalTranscriberError.transcriptionFailed(error.localizedDescription)
         }
+    }
+}
+
+// MARK: - WhisperKit Model Discovery
+
+/// Fetches the list of available WhisperKit models for the dropdown in Settings.
+/// Uses WhisperKit's recommendedModels API which reads the bundled device config.
+enum WhisperKitModelDiscovery {
+
+    /// Fetches recommended models from WhisperKit's registry. Returns nil on failure
+    /// (offline, API not available) — the UI then shows the manual text field as fallback.
+    static func fetchRecommendedModels() async -> [String]? {
+        #if canImport(WhisperKit)
+        // WhisperKit.recommendedModels() is synchronous (reads the bundled config).
+        // It returns ModelSupport with a `default` model and a `supported` list.
+        let support = WhisperKit.recommendedModels()
+        var models = support.supported
+        if !support.default.isEmpty && !models.contains(support.default) {
+            models.insert(support.default, at: 0)
+        }
+        return models.isEmpty ? nil : models
+        #else
+        return nil
+        #endif
     }
 }
 #endif

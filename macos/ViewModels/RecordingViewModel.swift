@@ -76,26 +76,21 @@ final class RecordingViewModel {
 #endif
         case .combined:
 #if os(macOS)
-            let sys = systemAudioCapture.audioLevels
-            let mic = audioRecorder.audioLevels
-            let count = min(mic.count, sys.count)
-            var merged = [Float](repeating: 0, count: count)
-            for i in 0..<count {
-                merged[i] = max(mic[i], sys[i])
-            }
-            return merged
+            // Histories can differ in length (mic: 40 envelope samples,
+            // system: 60 raw) — align on the newest samples.
+            let sys = Array(systemAudioCapture.audioLevels.suffix(audioRecorder.audioLevels.count))
+            let mic = Array(audioRecorder.audioLevels.suffix(sys.count))
+            return zip(mic, sys).map(max)
 #else
             return audioRecorder.audioLevels
 #endif
         }
     }
 
-    /// Spectrum snapshot (5 bands + normalized centroid) for the pitch-responsive
-    /// waveform. Only the mic recorder taps the FFT engine; system-audio modes
-    /// have no live spectrum so bands stay flat (waveform falls back to level).
-    func spectrumSnapshot() -> (bands: [Float], centroid: Float) {
-        audioRecorder.spectrumSnapshot()
-    }
+#if DEBUG
+    /// Envelope pipeline diagnostics for the DEBUG waveform overlay.
+    var meterDebugText: String { audioRecorder.meterDebugText }
+#endif
 
     /// Duration from the primary active recorder.
     var duration: TimeInterval {

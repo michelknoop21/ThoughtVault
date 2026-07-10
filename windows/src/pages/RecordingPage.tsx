@@ -14,7 +14,7 @@ import { useRecordingStore } from "../stores/recordingStore";
 import { useSettingsStore } from "../stores/settingsStore";
 import { useTranscriptsStore } from "../stores/transcriptsStore";
 import { useProfilesStore } from "../stores/profilesStore";
-import { useAudioLevelsRef, useAudioSpectrumRef } from "../hooks/useAudioLevel";
+import { useAudioLevelsRef } from "../hooks/useAudioLevel";
 import { openWidgetWindow, closeWidgetWindow } from "../hooks/useWidgetWindow";
 import {
   startRecording,
@@ -634,7 +634,6 @@ function ActiveState({
   onPause: () => void;
   onResume: () => void;
 }) {
-  const audioSpectrumRef = useAudioSpectrumRef();
   const recordingStartedAt = useRecordingStore((s) => s.recordingStartedAt);
   const pausedAt = useRecordingStore((s) => s.pausedAt);
   const pausedDuration = useRecordingStore((s) => s.pausedDuration);
@@ -673,7 +672,7 @@ function ActiveState({
 
       {/* Waveform */}
       <div className="card card-static waveform-card">
-        <WaveformVisualizer levelsRef={audioLevelsRef} isActive={!isPaused} spectrumRef={audioSpectrumRef} />
+        <WaveformVisualizer levelsRef={audioLevelsRef} isActive={!isPaused} />
       </div>
 
       {/* Mic button — active recording: toggles pause/resume */}

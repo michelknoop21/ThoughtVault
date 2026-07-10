@@ -1,0 +1,48 @@
+{
+  "comment": "Shared input sequences for the cross-platform audio envelope. Steps are {dtMs, db, repeat}. Assertions live in both test suites (Swift + Rust) against spec thresholds, not golden floats.",
+  "scenarios": {
+    "silence": [
+      { "dtMs": 33, "db": -100, "repeat": 60 }
+    ],
+    "noiseFloor": [
+      { "dtMs": 33, "db": -60, "repeat": 60 }
+    ],
+    "speechSoft": [
+      { "dtMs": 33, "db": -100, "repeat": 30 },
+      { "dtMs": 33, "db": -35, "repeat": 30 }
+    ],
+    "speechLoud": [
+      { "dtMs": 33, "db": -100, "repeat": 30 },
+      { "dtMs": 33, "db": -18, "repeat": 30 }
+    ],
+    "loud": [
+      { "dtMs": 33, "db": -100, "repeat": 30 },
+      { "dtMs": 33, "db": -8, "repeat": 30 }
+    ],
+    "attackSilence": [
+      { "dtMs": 33, "db": -100, "repeat": 30 }
+    ],
+    "attackSpeechEarly": [
+      { "dtMs": 33, "db": -20, "repeat": 2 }
+    ],
+    "attackSpeechSteady": [
+      { "dtMs": 33, "db": -20, "repeat": 30 }
+    ],
+    "releaseSilence": [
+      { "dtMs": 33, "db": -100, "repeat": 17 }
+    ],
+    "dtFine": [
+      { "dtMs": 10, "db": -100, "repeat": 99 },
+      { "dtMs": 10, "db": -25, "repeat": 60 }
+    ],
+    "dtCoarse": [
+      { "dtMs": 33, "db": -100, "repeat": 30 },
+      { "dtMs": 33, "db": -25, "repeat": 18 }
+    ],
+    "extremes": [
+      { "dtMs": 33, "db": 0, "repeat": 10 },
+      { "dtMs": 33, "db": -200, "repeat": 10 },
+      { "dtMs": 33, "db": 0, "repeat": 10 }
+    ]
+  }
+}

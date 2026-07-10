@@ -203,7 +203,11 @@ final class OnDeviceTranscriber {
         let inputNode = engine.inputNode
         let recordingFormat = inputNode.outputFormat(forBus: 0)
 
-        inputNode.installTap(onBus: 0, bufferSize: 1024, format: recordingFormat) { buffer, _ in
+        // The tap fires on AVAudioEngine's realtime queue, not MainActor. Mark the
+        // closure @Sendable so it doesn't inherit this @MainActor class's isolation
+        // (which would trap under Swift 6 strict concurrency). Appending to the
+        // request is thread-safe.
+        inputNode.installTap(onBus: 0, bufferSize: 1024, format: recordingFormat) { @Sendable buffer, _ in
             request.append(buffer)
         }
 

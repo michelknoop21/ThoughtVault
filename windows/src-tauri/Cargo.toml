@@ -36,7 +36,6 @@ futures-util = "0.3"
 # Audio recording
 cpal  = "0.15"
 hound = "3.5"
-rustfft = "6"
 
 # Local transcription (whisper.cpp bindings). Builds whisper.cpp from source —
 # requires CMake + a C/C++ toolchain on the build machine. CPU inference by default.

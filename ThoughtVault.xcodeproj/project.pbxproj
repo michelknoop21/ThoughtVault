@@ -82,10 +82,12 @@
 		AB000003 /* PersonProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000003 /* PersonProfileTests.swift */; };
 		AB000004 /* PersonDirectoryServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000004 /* PersonDirectoryServiceTests.swift */; };
 		AB000005 /* GraphAttendeeDecodeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000005 /* GraphAttendeeDecodeTests.swift */; };
+		AB000007 /* AudioEnvelopeProcessorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000007 /* AudioEnvelopeProcessorTests.swift */; };
 		AB000006 /* GraphCalendarViewResponse.json in Resources */ = {isa = PBXBuildFile; fileRef = FB000006 /* GraphCalendarViewResponse.json */; };
 		AA000063 /* LocalTranscriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000063 /* LocalTranscriber.swift */; };
 		AA000090 /* AudioChunker.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000090 /* AudioChunker.swift */; };
-		AA000091 /* AudioSpectrumAnalyzer.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000091 /* AudioSpectrumAnalyzer.swift */; };
+		AA000091 /* AudioEnvelopeProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000091 /* AudioEnvelopeProcessor.swift */; };
+		AA0000M1 /* WaveformShader.metal in Sources */ = {isa = PBXBuildFile; fileRef = FA0000M1 /* WaveformShader.metal */; };
 		AA000064 /* NotuleTitleExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000064 /* NotuleTitleExtractor.swift */; };
 		AA000065 /* WhisperKit in Frameworks */ = {isa = PBXBuildFile; productRef = SD000001 /* WhisperKit */; };
 		AA000066 /* ProfileTemplates.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000066 /* ProfileTemplates.swift */; };
@@ -183,10 +185,12 @@
 		FB000003 /* PersonProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonProfileTests.swift; sourceTree = "<group>"; };
 		FB000004 /* PersonDirectoryServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonDirectoryServiceTests.swift; sourceTree = "<group>"; };
 		FB000005 /* GraphAttendeeDecodeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GraphAttendeeDecodeTests.swift; sourceTree = "<group>"; };
+		FB000007 /* AudioEnvelopeProcessorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioEnvelopeProcessorTests.swift; sourceTree = "<group>"; };
 		FB000006 /* GraphCalendarViewResponse.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = GraphCalendarViewResponse.json; sourceTree = "<group>"; };
 		FA000063 /* LocalTranscriber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalTranscriber.swift; sourceTree = "<group>"; };
 		FA000090 /* AudioChunker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioChunker.swift; sourceTree = "<group>"; };
-		FA000091 /* AudioSpectrumAnalyzer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioSpectrumAnalyzer.swift; sourceTree = "<group>"; };
+		FA000091 /* AudioEnvelopeProcessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioEnvelopeProcessor.swift; sourceTree = "<group>"; };
+		FA0000M1 /* WaveformShader.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = WaveformShader.metal; sourceTree = "<group>"; };
 		FA000064 /* NotuleTitleExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotuleTitleExtractor.swift; sourceTree = "<group>"; };
 		FA000066 /* ProfileTemplates.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileTemplates.swift; sourceTree = "<group>"; };
 		FA000067 /* ProfileTemplates.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = ProfileTemplates.json; sourceTree = "<group>"; };
@@ -225,6 +229,14 @@
 			name = ThoughtVaultApp;
 			sourceTree = "<group>";
 		};
+		GG0000M0 /* Shaders */ = {
+			isa = PBXGroup;
+			children = (
+				FA0000M1 /* WaveformShader.metal */,
+			);
+			path = Shaders;
+			sourceTree = "<group>";
+		};
 		GG000001 /* macos */ = {
 			isa = PBXGroup;
 			children = (
@@ -232,6 +244,7 @@
 				GG000020 /* Extensions */,
 				GG000030 /* Models */,
 				GG000040 /* Services */,
+				GG0000M0 /* Shaders */,
 				GG000050 /* ViewModels */,
 				GG000060 /* Views */,
 				GG000070 /* Resources */,
@@ -293,7 +306,7 @@
 				FA000071 /* PersonDirectoryService.swift */,
 				FA000063 /* LocalTranscriber.swift */,
 				FA000090 /* AudioChunker.swift */,
-				FA000091 /* AudioSpectrumAnalyzer.swift */,
+				FA000091 /* AudioEnvelopeProcessor.swift */,
 				FA000064 /* NotuleTitleExtractor.swift */,
 				FB000301 /* ObsidianService.swift */,
 				FB000401 /* VaultFolderStore.swift */,
@@ -393,6 +406,7 @@
 				FB000003 /* PersonProfileTests.swift */,
 				FB000004 /* PersonDirectoryServiceTests.swift */,
 				FB000005 /* GraphAttendeeDecodeTests.swift */,
+				FB000007 /* AudioEnvelopeProcessorTests.swift */,
 				GG000100 /* Fixtures */,
 			);
 			path = ThoughtVaultTests;
@@ -528,7 +542,8 @@
 				AA000071 /* PersonDirectoryService.swift in Sources */,
 				AA000063 /* LocalTranscriber.swift in Sources */,
 				AA000090 /* AudioChunker.swift in Sources */,
-				AA000091 /* AudioSpectrumAnalyzer.swift in Sources */,
+				AA000091 /* AudioEnvelopeProcessor.swift in Sources */,
+				AA0000M1 /* WaveformShader.metal in Sources */,
 				AA000064 /* NotuleTitleExtractor.swift in Sources */,
 				AA000006 /* Analytics.swift in Sources */,
 				AA000007 /* APIService.swift in Sources */,
@@ -593,6 +608,7 @@
 				AB000003 /* PersonProfileTests.swift in Sources */,
 				AB000004 /* PersonDirectoryServiceTests.swift in Sources */,
 				AB000005 /* GraphAttendeeDecodeTests.swift in Sources */,
+				AB000007 /* AudioEnvelopeProcessorTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

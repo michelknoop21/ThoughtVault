@@ -77,7 +77,7 @@ struct RecordingView: View {
                     }
                 }
 
-                unifiedBottomBar
+                unifiedBottomBar(isCompact: isCompact)
             }
             .padding(.horizontal, isCompact ? TS.Spacing.md : TS.Spacing.lg)
             .padding(.vertical, TS.Spacing.lg)
@@ -574,40 +574,51 @@ struct RecordingView: View {
 
     // MARK: Unified bottom bar (processing + saved recordings side by side)
 
-    private var unifiedBottomBar: some View {
-        HStack(alignment: .top, spacing: TS.Spacing.md) {
-            // Processing panel
-            if !recordingVM.activeTasks.isEmpty {
-                VStack(alignment: .leading, spacing: TS.Spacing.sm) {
-                    HStack {
-                        Image(systemName: "gearshape.fill")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(Color.labelSecondary)
-                        Text("Verwerking")
-                            .font(TS.Font.footnoteSemibold)
-                            .foregroundStyle(Color.labelSecondary)
-                        Spacer()
-                        Text("\(recordingVM.activeTasks.count)")
-                            .font(TS.Font.microBold)
-                            .foregroundStyle(Color.brandPrimary)
-                            .padding(.horizontal, 7)
-                            .padding(.vertical, 2)
-                            .background(Capsule().fill(Color.accentBgPrimary))
-                    }
+    private func unifiedBottomBar(isCompact: Bool) -> some View {
+        Group {
+            if isCompact {
+                VStack(spacing: TS.Spacing.md) {
+                    verwerkingPanel
+                    savedRecordingsPanel
+                }
+            } else {
+                HStack(alignment: .top, spacing: TS.Spacing.md) {
+                    verwerkingPanel
+                    savedRecordingsPanel
+                }
+            }
+        }
+    }
 
-                    VStack(spacing: TS.Spacing.xs) {
-                        ForEach(recordingVM.activeTasks) { task in
-                            taskRow(task)
-                        }
+    // Processing panel
+    @ViewBuilder private var verwerkingPanel: some View {
+        if !recordingVM.activeTasks.isEmpty {
+            VStack(alignment: .leading, spacing: TS.Spacing.sm) {
+                HStack {
+                    Image(systemName: "gearshape.fill")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Color.labelSecondary)
+                    Text("Verwerking")
+                        .font(TS.Font.footnoteSemibold)
+                        .foregroundStyle(Color.labelSecondary)
+                    Spacer()
+                    Text("\(recordingVM.activeTasks.count)")
+                        .font(TS.Font.microBold)
+                        .foregroundStyle(Color.brandPrimary)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 2)
+                        .background(Capsule().fill(Color.accentBgPrimary))
+                }
+
+                VStack(spacing: TS.Spacing.xs) {
+                    ForEach(recordingVM.activeTasks) { task in
+                        taskRow(task)
                     }
                 }
-                .padding(TS.Spacing.md)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .vaultPanel(radius: TS.Radius.md)
             }
-
-            // Saved recordings panel
-            savedRecordingsPanel
+            .padding(TS.Spacing.md)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .vaultPanel(radius: TS.Radius.md)
         }
     }
 
@@ -1160,20 +1171,19 @@ struct RecordingView: View {
     private var waveformDisplay: some View {
         VStack(spacing: TS.Spacing.sm) {
             WaveformView(
-                  levelProvider: {
-                      let levels = recordingVM.audioLevels
-                      if let last = levels.last { return last }
-                      // Fallback to RMS if no last sample available
-                      let count = Float(levels.count)
-                      guard count > 0 else { return 0 }
-                      let sumSquares = levels.reduce(0) { $0 + $1 * $1 }
-                      return sqrt(sumSquares / count)
-                  },
-                  isActive: recordingVM.recordingState == .recording,
-                  spectrumProvider: { recordingVM.spectrumSnapshot() }
+                  levelsProvider: { recordingVM.audioLevels },
+                  isActive: recordingVM.recordingState == .recording
             )
             .frame(height: 160)
             .frame(maxWidth: .infinity)
+#if DEBUG
+            .overlay(alignment: .topLeading) {
+                Text(recordingVM.meterDebugText)
+                    .font(.system(size: 9, design: .monospaced))
+                    .foregroundStyle(Color.labelTertiary)
+                    .padding(4)
+            }
+#endif
 
             Text(recordingVM.recordingState == .paused ? "Opname is gepauzeerd" : "Live audioniveau")
                 .font(TS.Font.caption)

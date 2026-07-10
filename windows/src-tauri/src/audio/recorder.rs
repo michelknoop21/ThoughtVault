@@ -2,8 +2,9 @@ use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::Sample;
 use hound::{SampleFormat as HoundSampleFormat, WavSpec, WavWriter};
 use std::sync::{Arc, Mutex};
-use std::sync::atomic::{AtomicBool, AtomicUsize, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use tokio::sync::mpsc;
+use super::envelope::{EnvelopeConfig, EnvelopeProcessor};
 use super::types::{AudioDevice, RecordingCommand, RecordingEvent, RecordingMode};
 
 const TARGET_SAMPLE_RATE: u32 = 16000;
@@ -51,10 +52,53 @@ impl StreamingResampler {
     }
 }
 
-/// Emit audio level events ~60 times per second
-/// Will be calculated dynamically based on actual sample rate
-fn level_emit_interval(sample_rate: u32) -> usize {
-    (sample_rate / 60) as usize
+/// Per-stream level meter: accumulates ~30 ms of mono samples, then runs
+/// RMS → dBFS → shared envelope and returns the 0..1 scalar to emit (~30 Hz).
+/// Owned by the audio callback closure — no shared state needed.
+struct LevelMeter {
+    sum_sq: f64,
+    count: usize,
+    window: usize,
+    last_emit: std::time::Instant,
+    processor: EnvelopeProcessor,
+    last_log: std::time::Instant,
+}
+
+impl LevelMeter {
+    fn new(sample_rate: u32) -> Self {
+        let now = std::time::Instant::now();
+        Self {
+            sum_sq: 0.0,
+            count: 0,
+            window: ((sample_rate as f64 / EnvelopeConfig::PUBLISH_RATE_HZ) as usize).max(1),
+            last_emit: now,
+            processor: EnvelopeProcessor::new(),
+            last_log: now,
+        }
+    }
+
+    fn push(&mut self, sample: f32) -> Option<f32> {
+        self.sum_sq += (sample * sample) as f64;
+        self.count += 1;
+        if self.count < self.window {
+            return None;
+        }
+        let rms = (self.sum_sq / self.count as f64).sqrt() as f32;
+        let db = 20.0 * rms.max(1e-7).log10();
+        let now = std::time::Instant::now();
+        let dt = now.duration_since(self.last_emit).as_secs_f64();
+        self.last_emit = now;
+        self.sum_sq = 0.0;
+        self.count = 0;
+        let level = self.processor.process(db, dt);
+        // Dev diagnostics every ~5 s (same fields as the macOS DEBUG overlay).
+        if cfg!(debug_assertions) && now.duration_since(self.last_log).as_secs_f64() >= 5.0 {
+            self.last_log = now;
+            eprintln!("[Audio] Envelope — db={:.1} floor={:.1} out={:.3} dt={:.0}ms",
+                db, self.processor.noise_floor_db(), level, dt * 1000.0);
+        }
+        Some(level)
+    }
 }
 
 pub fn get_devices() -> Vec<AudioDevice> {
@@ -251,7 +295,6 @@ fn recording_thread_body(
             match try_build_loopback_stream(
                 &host, &loopback_path,
                 Arc::clone(&loopback_writer), Arc::clone(&is_paused),
-                event_tx.clone(),
             ) {
                 Ok(stream) => {
                     eprintln!("[Audio] Loopback stream gestart voor systeemaudio opname");
@@ -446,34 +489,6 @@ fn mix_wav_files(mic_path: &str, loopback_path: &str) -> Result<(), String> {
 
 /// Build an input stream for devices that output i16 samples (most Windows devices).
 /// Performs stereo-to-mono downmix when channels > 1, then resamples to TARGET_SAMPLE_RATE.
-/// Spawns a worker thread that owns the FFT analyzer. The audio callback forwards
-/// sample batches via a bounded channel (`try_send` — a full channel drops the batch
-/// rather than blocking the callback). The worker emits AudioSpectrum at ~60 Hz and
-/// exits when the sender is dropped (stream stop → `recv()` returns Err).
-fn spawn_spectrum_worker(
-    sample_rate: f32,
-    event_tx: mpsc::UnboundedSender<RecordingEvent>,
-) -> std::sync::mpsc::SyncSender<Vec<f32>> {
-    let (tx, rx) = std::sync::mpsc::sync_channel::<Vec<f32>>(8);
-    std::thread::spawn(move || {
-        let mut analyzer = crate::audio::spectrum::SpectrumAnalyzer::new(sample_rate);
-        let emit_every = ((sample_rate / 60.0) as usize).max(1);
-        let mut since_emit: usize = 0;
-        while let Ok(batch) = rx.recv() {
-            for s in batch {
-                analyzer.push(s);
-                since_emit += 1;
-                if since_emit >= emit_every {
-                    since_emit = 0;
-                    let (bands, centroid) = analyzer.latest();
-                    let _ = event_tx.send(RecordingEvent::AudioSpectrum { bands, centroid });
-                }
-            }
-        }
-    });
-    tx
-}
-
 fn build_input_stream_i16(
     device: &cpal::Device,
     config: &cpal::StreamConfig,
@@ -490,23 +505,14 @@ fn build_input_stream_i16(
     let samples_written_clone = Arc::clone(&samples_written);
     let resampler_clone = Arc::clone(&resampler);
 
-    // Shared state for audio level tracking across callbacks
-    let level_counter = Arc::new(AtomicUsize::new(0));
-    let level_sum_sq = Arc::new(Mutex::new(0.0f32));
-    let level_counter_clone = Arc::clone(&level_counter);
-    let level_sum_sq_clone = Arc::clone(&level_sum_sq);
-
-    // FFT runs off-callback on a worker thread; the callback only forwards batches.
-    let spectrum_tx = spawn_spectrum_worker(sample_rate as f32, event_tx.clone());
+    // Envelope meter (RMS → dBFS → shared envelope) owned by the callback
+    let mut meter = LevelMeter::new(sample_rate);
 
     // Log first callback
     let first_callback = Arc::new(AtomicBool::new(true));
     let first_callback_clone = Arc::clone(&first_callback);
 
     eprintln!("[Audio] Building i16 input stream ({} channels)...", channels);
-
-    // Calculate emit interval based on actual device sample rate (pre-resample)
-    let emit_interval = level_emit_interval(sample_rate);
 
     let stream = device.build_input_stream(
         config,
@@ -527,7 +533,6 @@ fn build_input_stream_i16(
 
                     // Step 1: Downmix to mono
                     let mut mono_chunk: Vec<i16> = Vec::with_capacity(frame_count);
-                    let mut spectrum_batch: Vec<f32> = Vec::with_capacity(frame_count);
                     for frame_idx in 0..frame_count {
                         let base = frame_idx * ch;
                         let mut sum: i32 = 0;
@@ -537,29 +542,11 @@ fn build_input_stream_i16(
                         let mono_sample = (sum / channels as i32) as i16;
                         mono_chunk.push(mono_sample);
 
-                        // Calculate audio level on pre-resample samples
-                        let normalized = mono_sample.to_float_sample();
-                        spectrum_batch.push(normalized);
-                        if let Ok(mut sum_sq) = level_sum_sq_clone.lock() {
-                            *sum_sq += normalized * normalized;
-                        }
-                        let level_count = level_counter_clone.fetch_add(1, Ordering::Relaxed) + 1;
-
-                        if level_count >= emit_interval {
-                            let rms = if let Ok(sum_sq) = level_sum_sq_clone.lock() {
-                                (*sum_sq / level_count as f32).sqrt()
-                            } else {
-                                0.0
-                            };
-                            let _ = event_tx_clone.send(RecordingEvent::AudioLevel(rms));
-                            level_counter_clone.store(0, Ordering::Relaxed);
-                            if let Ok(mut sum_sq) = level_sum_sq_clone.lock() {
-                                *sum_sq = 0.0;
-                            }
+                        // Envelope on pre-resample samples, emitted at ~30 Hz
+                        if let Some(level) = meter.push(mono_sample.to_float_sample()) {
+                            let _ = event_tx_clone.send(RecordingEvent::AudioLevel(level));
                         }
                     }
-                    // Hand the batch to the FFT worker; drop it if the worker is behind.
-                    let _ = spectrum_tx.try_send(spectrum_batch);
 
                     // Step 2: Resample chunk from device rate to 16 kHz
                     let resampled = if let Ok(mut r) = resampler_clone.lock() {
@@ -613,23 +600,14 @@ fn build_input_stream_f32(
     let samples_written_clone = Arc::clone(&samples_written);
     let resampler_clone = Arc::clone(&resampler);
 
-    // Shared state for audio level tracking across callbacks
-    let level_counter = Arc::new(AtomicUsize::new(0));
-    let level_sum_sq = Arc::new(Mutex::new(0.0f32));
-    let level_counter_clone = Arc::clone(&level_counter);
-    let level_sum_sq_clone = Arc::clone(&level_sum_sq);
-
-    // FFT runs off-callback on a worker thread; the callback only forwards batches.
-    let spectrum_tx = spawn_spectrum_worker(sample_rate as f32, event_tx.clone());
+    // Envelope meter (RMS → dBFS → shared envelope) owned by the callback
+    let mut meter = LevelMeter::new(sample_rate);
 
     // Log first callback
     let first_callback = Arc::new(AtomicBool::new(true));
     let first_callback_clone = Arc::clone(&first_callback);
 
     eprintln!("[Audio] Building f32 input stream ({} channels)...", channels);
-
-    // Calculate emit interval based on actual device sample rate (pre-resample)
-    let emit_interval = level_emit_interval(sample_rate);
 
     let stream = device.build_input_stream(
         config,
@@ -650,7 +628,6 @@ fn build_input_stream_f32(
 
                     // Step 1: Downmix to mono and convert f32 → i16
                     let mut mono_chunk: Vec<i16> = Vec::with_capacity(frame_count);
-                    let mut spectrum_batch: Vec<f32> = Vec::with_capacity(frame_count);
                     for frame_idx in 0..frame_count {
                         let base = frame_idx * ch;
                         let mut sum: f32 = 0.0;
@@ -661,28 +638,11 @@ fn build_input_stream_f32(
                         let s16 = (mono_sample.clamp(-1.0, 1.0) * i16::MAX as f32) as i16;
                         mono_chunk.push(s16);
 
-                        // Calculate audio level on pre-resample samples
-                        spectrum_batch.push(mono_sample);
-                        if let Ok(mut sum_sq) = level_sum_sq_clone.lock() {
-                            *sum_sq += mono_sample * mono_sample;
-                        }
-                        let level_count = level_counter_clone.fetch_add(1, Ordering::Relaxed) + 1;
-
-                        if level_count >= emit_interval {
-                            let rms = if let Ok(sum_sq) = level_sum_sq_clone.lock() {
-                                (*sum_sq / level_count as f32).sqrt()
-                            } else {
-                                0.0
-                            };
-                            let _ = event_tx_clone.send(RecordingEvent::AudioLevel(rms));
-                            level_counter_clone.store(0, Ordering::Relaxed);
-                            if let Ok(mut sum_sq) = level_sum_sq_clone.lock() {
-                                *sum_sq = 0.0;
-                            }
+                        // Envelope on pre-resample samples, emitted at ~30 Hz
+                        if let Some(level) = meter.push(mono_sample) {
+                            let _ = event_tx_clone.send(RecordingEvent::AudioLevel(level));
                         }
                     }
-                    // Hand the batch to the FFT worker; drop it if the worker is behind.
-                    let _ = spectrum_tx.try_send(spectrum_batch);
 
                     // Step 2: Resample chunk from device rate to 16 kHz
                     let resampled = if let Ok(mut r) = resampler_clone.lock() {
@@ -727,7 +687,6 @@ fn try_build_loopback_stream(
     loopback_path: &str,
     writer: Arc<Mutex<Option<WavWriter<std::io::BufWriter<std::fs::File>>>>>,
     is_paused: Arc<AtomicBool>,
-    event_tx: mpsc::UnboundedSender<RecordingEvent>,
 ) -> Result<cpal::Stream, String> {
     use cpal::traits::HostTrait;
 
@@ -808,21 +767,11 @@ fn try_build_loopback_stream(
     match sample_format {
         cpal::SampleFormat::I16 => {
             let writer_clone = Arc::clone(&writer);
-            let event_tx_clone = event_tx.clone();
             let resampler_clone = Arc::clone(&loopback_resampler);
-
-            // Audio level tracking for loopback stream
-            let level_counter = Arc::new(AtomicUsize::new(0));
-            let level_sum_sq = Arc::new(Mutex::new(0.0f32));
-            let level_counter_clone = Arc::clone(&level_counter);
-            let level_sum_sq_clone = Arc::clone(&level_sum_sq);
 
             // Log first callback once
             let first_callback = Arc::new(AtomicBool::new(true));
             let first_callback_clone = Arc::clone(&first_callback);
-
-            // Calculate emit interval based on actual device sample rate
-            let emit_interval = level_emit_interval(loopback_rate);
 
             let stream = output_device.build_input_stream(
                 &config,
@@ -840,7 +789,8 @@ fn try_build_loopback_stream(
                             let ch = loopback_channels as usize;
                             let frame_count = data.len() / ch;
 
-                            // Step 1: Downmix to mono
+                            // Step 1: Downmix to mono (loopback is written only;
+                            // the waveform envelope is driven by the mic stream).
                             let mut mono_chunk: Vec<i16> = Vec::with_capacity(frame_count);
                             for frame_idx in 0..frame_count {
                                 let base = frame_idx * ch;
@@ -848,28 +798,7 @@ fn try_build_loopback_stream(
                                 for c in 0..ch {
                                     sum += data[base + c] as i32;
                                 }
-                                let mono_sample = (sum / loopback_channels as i32) as i16;
-                                mono_chunk.push(mono_sample);
-
-                                // Calculate audio level on pre-resample samples
-                                let normalized = mono_sample.to_float_sample();
-                                if let Ok(mut sum_sq) = level_sum_sq_clone.lock() {
-                                    *sum_sq += normalized * normalized;
-                                }
-                                let count = level_counter_clone.fetch_add(1, Ordering::Relaxed) + 1;
-
-                                if count >= emit_interval {
-                                    let rms = if let Ok(sum_sq) = level_sum_sq_clone.lock() {
-                                        (*sum_sq / count as f32).sqrt()
-                                    } else {
-                                        0.0
-                                    };
-                                    let _ = event_tx_clone.send(RecordingEvent::AudioLevel(rms));
-                                    level_counter_clone.store(0, Ordering::Relaxed);
-                                    if let Ok(mut sum_sq) = level_sum_sq_clone.lock() {
-                                        *sum_sq = 0.0;
-                                    }
-                                }
+                                mono_chunk.push((sum / loopback_channels as i32) as i16);
                             }
 
                             // Step 2: Resample chunk from device rate to 16 kHz
@@ -894,21 +823,11 @@ fn try_build_loopback_stream(
         }
         cpal::SampleFormat::F32 => {
             let writer_clone = Arc::clone(&writer);
-            let event_tx_clone = event_tx.clone();
             let resampler_clone = Arc::clone(&loopback_resampler);
-
-            // Audio level tracking for loopback stream
-            let level_counter = Arc::new(AtomicUsize::new(0));
-            let level_sum_sq = Arc::new(Mutex::new(0.0f32));
-            let level_counter_clone = Arc::clone(&level_counter);
-            let level_sum_sq_clone = Arc::clone(&level_sum_sq);
 
             // Log first callback once
             let first_callback = Arc::new(AtomicBool::new(true));
             let first_callback_clone = Arc::clone(&first_callback);
-
-            // Calculate emit interval based on actual device sample rate
-            let emit_interval = level_emit_interval(loopback_rate);
 
             let stream = output_device.build_input_stream(
                 &config,
@@ -927,6 +846,8 @@ fn try_build_loopback_stream(
                             let frame_count = data.len() / ch;
 
                             // Step 1: Downmix to mono and convert f32 → i16
+                            // (loopback is written only; the waveform envelope
+                            // is driven by the mic stream).
                             let mut mono_chunk: Vec<i16> = Vec::with_capacity(frame_count);
                             for frame_idx in 0..frame_count {
                                 let base = frame_idx * ch;
@@ -935,27 +856,7 @@ fn try_build_loopback_stream(
                                     sum += data[base + c];
                                 }
                                 let mono_sample = sum / loopback_channels as f32;
-                                let s16 = (mono_sample.clamp(-1.0, 1.0) * i16::MAX as f32) as i16;
-                                mono_chunk.push(s16);
-
-                                // Calculate audio level on pre-resample samples
-                                if let Ok(mut sum_sq) = level_sum_sq_clone.lock() {
-                                    *sum_sq += mono_sample * mono_sample;
-                                }
-                                let count = level_counter_clone.fetch_add(1, Ordering::Relaxed) + 1;
-
-                                if count >= emit_interval {
-                                    let rms = if let Ok(sum_sq) = level_sum_sq_clone.lock() {
-                                        (*sum_sq / count as f32).sqrt()
-                                    } else {
-                                        0.0
-                                    };
-                                    let _ = event_tx_clone.send(RecordingEvent::AudioLevel(rms));
-                                    level_counter_clone.store(0, Ordering::Relaxed);
-                                    if let Ok(mut sum_sq) = level_sum_sq_clone.lock() {
-                                        *sum_sq = 0.0;
-                                    }
-                                }
+                                mono_chunk.push((mono_sample.clamp(-1.0, 1.0) * i16::MAX as f32) as i16);
                             }
 
                             // Step 2: Resample chunk from device rate to 16 kHz

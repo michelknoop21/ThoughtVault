@@ -73,12 +73,6 @@ pub async fn start_recording(
                 RecordingEvent::AudioLevel(level) => {
                     let _ = app_clone.emit("audio-level", level);
                 }
-                RecordingEvent::AudioSpectrum { bands, centroid } => {
-                    let _ = app_clone.emit("audio-spectrum", serde_json::json!({
-                        "bands": bands,
-                        "centroid": centroid,
-                    }));
-                }
                 RecordingEvent::Stopped { file_path, duration_seconds } => {
                     let _ = app_clone.emit("recording-stopped", serde_json::json!({
                         "file_path": file_path,

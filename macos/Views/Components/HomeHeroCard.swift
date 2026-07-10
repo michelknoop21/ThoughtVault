@@ -70,7 +70,7 @@ struct HomeHeroCard: View {
     /// from it.
     private var orbOnWave: some View {
         ZStack {
-            WaveformView(levelProvider: Self.idleLevel, isActive: !reduceMotion)
+            WaveformView(levelsProvider: Self.idleLevels, isActive: !reduceMotion)
                 .frame(width: isCompact ? nil : 280, height: 96)
                 .frame(maxWidth: isCompact ? .infinity : 280)
                 .opacity(0.9)
@@ -81,13 +81,17 @@ struct HomeHeroCard: View {
         .frame(height: 130)
     }
 
-    /// Synthetic idle "breath" for the waveform — two incommensurate sines so
-    /// the motion never visibly loops. WaveformView's AGC normalizes the range.
-    private static func idleLevel() -> Float {
-        let t = Date.timeIntervalSinceReferenceDate
-        let breath = 0.45 + 0.35 * sin(t * 0.8) * sin(t * 0.13)
-        let flutter = 0.08 * sin(t * 2.7)
-        return Float(max(0.05, breath + flutter))
+    /// Synthetic idle "breath" history for the waveform — two incommensurate
+    /// sines sampled backwards in time so the wave scrolls without ever
+    /// visibly looping.
+    private static func idleLevels() -> [Float] {
+        let now = Date.timeIntervalSinceReferenceDate
+        return (0..<AudioEnvelopeConfig.historyLength).map { i in
+            let t = now - Double(AudioEnvelopeConfig.historyLength - 1 - i) / AudioEnvelopeConfig.publishRateHz
+            let breath = 0.30 + 0.22 * sin(t * 0.8) * sin(t * 0.13)
+            let flutter = 0.06 * sin(t * 2.7)
+            return Float(max(0.04, breath + flutter))
+        }
     }
 
     /// Glowing violet record orb — breathes gently unless Reduce Motion is on.

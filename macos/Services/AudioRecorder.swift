@@ -49,7 +49,11 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
     var isRecording: Bool = false
     var isPaused: Bool = false
     var duration: TimeInterval = 0
-    var audioLevels: [Float] = Array(repeating: 0, count: 60)
+    var audioLevels: [Float] = Array(repeating: 0, count: AudioEnvelopeConfig.historyLength)
+#if DEBUG
+    /// Live pipeline diagnostics for the DEBUG waveform overlay.
+    var meterDebugText: String = ""
+#endif
     var currentRecordingURL: URL? = nil
     var errorMessage: String? = nil
     var hasPermission: Bool = false
@@ -62,8 +66,9 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
     // MARK: - Private
 
     private var audioRecorder: AVAudioRecorder?
-    /// Parallel FFT tap for pitch-responsive waveform (runs only while recording).
-    private let spectrumAnalyzer = AudioSpectrumAnalyzer()
+    /// Shared cross-platform amplitude envelope (dBFS → 0..1 scalar).
+    private var envelope = AudioEnvelopeProcessor()
+    private var lastMeterDate: Date?
     private var meteringTimer: Timer?
     private var durationTimer: Timer?
     private var lastDiagnosticLog: Date = .distantPast
@@ -218,7 +223,9 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
                 self.recordingStartDate = Date()
                 self.pausedAt = nil
                 self.accumulatedPauseDuration = 0
-                self.audioLevels = Array(repeating: 0, count: 60)
+                self.audioLevels = Array(repeating: 0, count: AudioEnvelopeConfig.historyLength)
+                self.envelope.reset()
+                self.lastMeterDate = nil
                 self.errorMessage = nil
                 log.info("[AudioRecorder] Started recording to \(url.lastPathComponent) — 16kHz mono PCM")
             } catch let error as AudioRecorderError {
@@ -230,18 +237,11 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
         }
 
         startTimers()
-        spectrumAnalyzer.start()
-    }
-
-    /// Thread-safe snapshot of the current spectrum (5 bands + normalized centroid).
-    func spectrumSnapshot() -> (bands: [Float], centroid: Float) {
-        spectrumAnalyzer.snapshot()
     }
 
     func pauseRecording() {
         guard isRecording, !isPaused else { return }
         audioRecorder?.pause()
-        spectrumAnalyzer.stop()
         isPaused = true
         pausedAt = Date()
     }
@@ -249,7 +249,7 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
     func resumeRecording() {
         guard isRecording, isPaused else { return }
         audioRecorder?.record()
-        spectrumAnalyzer.start()
+        lastMeterDate = nil  // don't count paused time as envelope dt
         isPaused = false
         if let pauseStart = pausedAt {
             accumulatedPauseDuration += Date().timeIntervalSince(pauseStart)
@@ -272,7 +272,6 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
             self.accumulatedPauseDuration = 0
         }
         finalizeTimers()
-        spectrumAnalyzer.stop()
 
 #if os(iOS)
         endBackgroundTask()
@@ -301,7 +300,7 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
     private func startTimers() {
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
-            self.meteringTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / 60.0, repeats: true) { [weak self] _ in
+            self.meteringTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / AudioEnvelopeConfig.publishRateHz, repeats: true) { [weak self] _ in
                 self?.updateMetering()
             }
             self.durationTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
@@ -326,21 +325,25 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
         guard let recorder = audioRecorder, isRecording, !isPaused else { return }
         recorder.updateMeters()
 
+        // averagePower is already a dBFS mean-power measurement — deliberate
+        // deviation from raw-PCM RMS so the recording path and combined mode
+        // stay untouched (no second capture graph). Pipeline parity with
+        // Windows is guaranteed at the envelope level via the shared fixture.
         let db = recorder.averagePower(forChannel: 0)
-        let db60Floor: Float = -60.0
-        let normalized: Float
-        if db <= db60Floor {
-            normalized = 0
-        } else {
-            normalized = pow((db - db60Floor) / 60.0, 0.6)
-        }
-        let level = max(0, min(1, normalized))
+        let now = Date()
+        let dt = lastMeterDate.map { now.timeIntervalSince($0) } ?? 1.0 / AudioEnvelopeConfig.publishRateHz
+        lastMeterDate = now
+        let level = envelope.process(db: db, dt: dt)
+
+#if DEBUG
+        meterDebugText = String(format: "db %.1f  floor %.1f  gate %.2f  target %.2f  out %.3f  dt %.0fms",
+                                db, envelope.noiseFloorDb, envelope.lastGate, envelope.lastTarget, level, dt * 1000)
+#endif
 
         // Diagnostic logging every 5 seconds
-        let now = Date()
         if now.timeIntervalSince(lastDiagnosticLog) >= 5.0 {
             lastDiagnosticLog = now
-            log.info("[AudioRecorder] Metering — dB=\(db, format: .fixed(precision: 1)), normalized=\(level, format: .fixed(precision: 3)), duration=\(self.duration, format: .fixed(precision: 1))s")
+            log.info("[AudioRecorder] Metering — dB=\(db, format: .fixed(precision: 1)), floor=\(self.envelope.noiseFloorDb, format: .fixed(precision: 1)), level=\(level, format: .fixed(precision: 3)), duration=\(self.duration, format: .fixed(precision: 1))s")
         }
 
         var levels = self.audioLevels
@@ -354,7 +357,9 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
     func resetMetrics() {
         Task { @MainActor in
             self.duration = 0
-            self.audioLevels = Array(repeating: 0, count: 60)
+            self.audioLevels = Array(repeating: 0, count: AudioEnvelopeConfig.historyLength)
+            self.envelope.reset()
+            self.lastMeterDate = nil
         }
     }
 
@@ -467,7 +472,6 @@ extension AudioRecorder: AVAudioRecorderDelegate {
                 self.errorMessage = AudioRecorderError.failedToStart.errorDescription
             }
             finalizeTimers()
-            spectrumAnalyzer.stop()
             onSilentFailure?(.failedToStart)
         }
     }
@@ -479,7 +483,6 @@ extension AudioRecorder: AVAudioRecorderDelegate {
             self.errorMessage = error?.localizedDescription ?? AudioRecorderError.failedToStart.errorDescription
         }
         finalizeTimers()
-        spectrumAnalyzer.stop()
         onSilentFailure?(.failedToStart)
     }
 }

@@ -1,59 +1,37 @@
 import { useEffect, useRef } from "react";
-import type { AudioSpectrum } from "../../hooks/useAudioLevel";
 
 interface WaveformVisualizerProps {
-  /** Ref to audio level values in range 0.0-1.0 (newest last) */
+  /** Ref to processed envelope levels in range 0.0-1.0 (newest last, max 40) */
   levelsRef: React.RefObject<number[]>;
-  /** When false, waves animate at minimal idle amplitude */
+  /** When false, the waveform collapses to a calm baseline */
   isActive: boolean;
   /** Container height in px (default: 120) */
   height?: number;
-  /** Optional spectrum ref for pitch response (bands + centroid) */
-  spectrumRef?: React.RefObject<AudioSpectrum>;
 }
 
-// ── Optimized Wave Configurations (8 waves) ─────────────────────────
-interface WaveConfig {
-  frequency: number;
-  speed: number;
-  amplitudeScale: number;
-  phaseOffset: number;
-  lineWidth: number;
-  glowWidth: number;
-  glowOpacity: number;
-  historyOffset: number;
-}
-
-const WAVES: WaveConfig[] = [
-  { frequency: 1.5, speed: 6.0, amplitudeScale: 1.0,  phaseOffset: 0.0, lineWidth: 2.0, glowWidth: 8.0, glowOpacity: 0.4,  historyOffset: 0 },
-  { frequency: 1.8, speed: 5.2, amplitudeScale: 0.85, phaseOffset: 0.7, lineWidth: 1.5, glowWidth: 6.0, glowOpacity: 0.3,  historyOffset: 1 },
-  { frequency: 1.2, speed: 7.5, amplitudeScale: 0.75, phaseOffset: 1.5, lineWidth: 1.2, glowWidth: 5.0, glowOpacity: 0.25, historyOffset: 2 },
-  { frequency: 2.0, speed: 4.8, amplitudeScale: 0.65, phaseOffset: 2.1, lineWidth: 1.0, glowWidth: 4.0, glowOpacity: 0.2,  historyOffset: 3 },
-  { frequency: 2.4, speed: 3.8, amplitudeScale: 0.55, phaseOffset: 2.8, lineWidth: 1.0, glowWidth: 4.0, glowOpacity: 0.2,  historyOffset: 4 },
-  { frequency: 0.9, speed: 8.0, amplitudeScale: 0.45, phaseOffset: 3.3, lineWidth: 1.0, glowWidth: 3.0, glowOpacity: 0.15, historyOffset: 5 },
-  { frequency: 1.6, speed: 5.5, amplitudeScale: 0.35, phaseOffset: 3.9, lineWidth: 0.8, glowWidth: 3.0, glowOpacity: 0.15, historyOffset: 6 },
-  { frequency: 2.8, speed: 3.5, amplitudeScale: 0.25, phaseOffset: 4.5, lineWidth: 0.8, glowWidth: 2.0, glowOpacity: 0.1,  historyOffset: 7 },
-];
+const HISTORY_LENGTH = 40;
 
 // ── Color gradient (blue → violet → magenta → cyan) ────────────────
 const GRADIENT_STOPS = [
-  { pos: 0.00, color: "rgb(20, 61, 179)" },
-  { pos: 0.30, color: "rgb(79, 61, 255)" },
+  { pos: 0.0, color: "rgb(20, 61, 179)" },
+  { pos: 0.3, color: "rgb(79, 61, 255)" },
   { pos: 0.55, color: "rgb(161, 20, 199)" },
   { pos: 0.95, color: "rgb(41, 161, 255)" },
 ];
 
-const IDLE_AMPLITUDE = 0.01;
-
+/**
+ * Scrolling history waveform: renders the last 40 processed envelope levels
+ * as a smooth mirrored shape around the vertical center. The incoming values
+ * are final (RMS → dBFS → envelope in Rust) — no smoothing, no artificial
+ * motion; silence renders as a thin calm baseline.
+ */
 export function WaveformVisualizer({
   levelsRef,
   isActive,
   height = 120,
-  spectrumRef,
 }: WaveformVisualizerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animFrameRef = useRef<number>(0);
-  const smoothedRef = useRef(new Float32Array(WAVES.length).fill(IDLE_AMPLITUDE));
   const isActiveRef = useRef(isActive);
 
   isActiveRef.current = isActive;
@@ -82,125 +60,58 @@ export function WaveformVisualizer({
     const observer = new ResizeObserver(resize);
     if (canvas.parentElement) observer.observe(canvas.parentElement);
 
-    const draw = (time: number) => {
-      const t = time / 1000;
-      const levels = levelsRef.current;
-      const active = isActiveRef.current;
-      const smoothed = smoothedRef.current;
-
-      // Spectrum for pitch response (bands → per-wave gain, centroid → frequency).
-      const spectrum = spectrumRef?.current;
-      const bands = spectrum?.bands ?? [];
-      const centroid = spectrum?.centroid ?? 0.5;
-      // Low centroid = slower/broader waves, high = tighter/faster.
-      const freqScale = 0.5 + centroid * 2.0;
-
-      // ── Update per-wave audio levels ──
-      for (let i = 0; i < WAVES.length; i++) {
-        const cfg = WAVES[i];
-        let target = IDLE_AMPLITUDE;
-
-        if (active && levels && levels.length > 0) {
-          const end = Math.max(0, levels.length - cfg.historyOffset);
-          if (end > 0) {
-            const count = Math.min(end, 4);
-            const start = end - count;
-            let sum = 0;
-            for (let j = start; j < end; j++) sum += levels[j];
-            const peak = Math.max(...levels.slice(start, end));
-            const avg = sum / count;
-            // Emphasize peaks for dynamic response
-            target = Math.max(peak * 0.8 + avg * 0.2, IDLE_AMPLITUDE);
-
-            // Gate by this wave's frequency band when spectral data is present
-            // (8 waves mapped onto 5 bands).
-            if (bands.length > 0) {
-              const band = bands[Math.floor((i * bands.length) / WAVES.length)] ?? 0;
-              target *= 0.35 + 1.3 * band;
-              target = Math.max(target, IDLE_AMPLITUDE);
-            }
-          }
-        }
-
-        const delta = target - smoothed[i];
-        // Faster attack, slower release
-        smoothed[i] += delta * (delta > 0 ? 0.2 : 0.05);
-      }
-
-      // ── Canvas ──
+    const draw = () => {
       const dpr = window.devicePixelRatio || 1;
       const w = canvas.width / dpr;
       const h = height;
-      
       ctx.clearRect(0, 0, w, h);
 
-      const midX = w / 2;
       const midY = h / 2;
-      const padding = Math.min(Math.max(4, midY * 0.15), 16);
-      const maxAmp = midY - padding;
+      const maxAmp = midY - Math.min(Math.max(3, midY * 0.12), 12);
 
-      if (maxAmp <= 1) {
-        animFrameRef.current = requestAnimationFrame(draw);
-        return;
+      // Pad to a fixed length so the wave scrolls left as history fills.
+      const raw = levelsRef.current ?? [];
+      const active = isActiveRef.current;
+      const levels: number[] = new Array(HISTORY_LENGTH).fill(0);
+      const src = raw.slice(-HISTORY_LENGTH);
+      for (let i = 0; i < src.length; i++) {
+        levels[HISTORY_LENGTH - src.length + i] = active ? src[i] : 0;
       }
 
-      // ── Animated Gradient ──
-      const gradientOffset = Math.sin(t * 0.5) * 0.1;
-      const gradient = ctx.createLinearGradient(0, 0, w, 0);
-      for (const stop of GRADIENT_STOPS) {
-        const loc = Math.max(0, Math.min(1, stop.pos + gradientOffset));
-        gradient.addColorStop(loc, stop.color);
-      }
+      if (maxAmp > 1 && w > 0) {
+        const stepX = w / (HISTORY_LENGTH - 1);
+        // Baseline of 1px so silence reads as a thin calm line.
+        const amps = levels.map((v) => Math.max(1, Math.min(1, Math.max(0, v)) * maxAmp));
 
-      ctx.globalCompositeOperation = "lighter";
-      ctx.strokeStyle = gradient;
-      ctx.lineCap = "round";
-      ctx.lineJoin = "round";
-
-      // Draw back to front
-      for (let i = WAVES.length - 1; i >= 0; i--) {
-        const cfg = WAVES[i];
-        const wavePhase = -(t * cfg.speed) + cfg.phaseOffset;
-        // Organic micro-movement
-        const wobble = 0.88 + 0.12 * Math.sin(t * 3.0 + i * 1.7);
-        const level = Math.max(0.01, smoothed[i] * cfg.amplitudeScale * wobble);
+        const gradient = ctx.createLinearGradient(0, 0, w, 0);
+        for (const stop of GRADIENT_STOPS) gradient.addColorStop(stop.pos, stop.color);
 
         ctx.beginPath();
-        const step = 2; // Optimization: skip pixels for performance
-        
-        for (let x = 0; x <= w; x += step) {
-          const normalized = (x - midX) / midX;
-          // Gaussian envelope for soft edges
-          const envelope = Math.exp(-Math.pow(normalized * 2.5, 2));
-          
-          const y = midY + envelope * maxAmp * level * Math.sin(2 * Math.PI * (x / w) * cfg.frequency * freqScale + wavePhase);
-          
-          if (x === 0) ctx.moveTo(x, y);
-          else ctx.lineTo(x, y);
-        }
+        smoothLine(ctx, amps.map((a, i) => [i * stepX, midY - a] as [number, number]), true);
+        smoothLine(
+          ctx,
+          amps.map((a, i) => [i * stepX, midY + a] as [number, number]).reverse(),
+          false
+        );
+        ctx.closePath();
 
-        const opacity = i === 0 ? 0.9 : Math.min(0.8, 0.3 + (1.0 - i / WAVES.length) * 0.5);
+        ctx.fillStyle = gradient;
+        ctx.globalAlpha = 0.35;
+        ctx.fill();
 
-        // Glow pass (thick line, low opacity)
-        ctx.lineWidth = cfg.glowWidth;
-        ctx.globalAlpha = cfg.glowOpacity;
-        ctx.stroke();
-
-        // Core pass (thin line, high opacity)
-        ctx.lineWidth = cfg.lineWidth;
-        ctx.globalAlpha = opacity;
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = gradient;
+        ctx.lineWidth = 1.5;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
         ctx.stroke();
       }
 
-      // Reset for next frame
-      ctx.globalAlpha = 1.0;
-      ctx.globalCompositeOperation = "source-over";
-      
       animFrameRef.current = requestAnimationFrame(draw);
     };
 
     animFrameRef.current = requestAnimationFrame(draw);
-    
+
     return () => {
       cancelAnimationFrame(animFrameRef.current);
       animFrameRef.current = 0;
@@ -209,9 +120,24 @@ export function WaveformVisualizer({
   }, [height]);
 
   return (
-    <canvas
-      ref={canvasRef}
-      style={{ display: "block", width: "100%", height }}
-    />
+    <canvas ref={canvasRef} style={{ display: "block", width: "100%", height }} />
   );
+}
+
+/** Adds a smooth polyline (quad curves via midpoints) to the current path. */
+function smoothLine(
+  ctx: CanvasRenderingContext2D,
+  points: [number, number][],
+  moveToFirst: boolean
+) {
+  if (points.length === 0) return;
+  if (moveToFirst) ctx.moveTo(points[0][0], points[0][1]);
+  else ctx.lineTo(points[0][0], points[0][1]);
+  for (let i = 1; i < points.length - 1; i++) {
+    const midX = (points[i][0] + points[i + 1][0]) / 2;
+    const midY = (points[i][1] + points[i + 1][1]) / 2;
+    ctx.quadraticCurveTo(points[i][0], points[i][1], midX, midY);
+  }
+  const last = points[points.length - 1];
+  ctx.lineTo(last[0], last[1]);
 }

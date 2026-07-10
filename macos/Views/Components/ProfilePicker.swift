@@ -103,6 +103,8 @@ private struct ProfileChip: View {
         }
         .buttonStyle(.plain)
         .onHover { isHovered = $0 }
+        .accessibilityLabel(profile.isDefault == true ? "\(profile.name), standaardprofiel" : profile.name)
+        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
     }
 }
 

@@ -82,6 +82,7 @@ private struct ProcessingBarItem: View {
                         .foregroundStyle(Color.statusSuccess)
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Verwijder afgeronde taak")
             } else if isFailed {
                 Button {
                     recordingVM.removeTask(task.taskId)
@@ -91,6 +92,7 @@ private struct ProcessingBarItem: View {
                         .foregroundStyle(Color.statusError.opacity(0.6))
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Verwijder mislukte taak")
             } else if isUploading {
                 Button {
                     recordingVM.cancelUpload(task.id)
@@ -101,6 +103,7 @@ private struct ProcessingBarItem: View {
                 }
                 .buttonStyle(.plain)
                 .help("Upload annuleren")
+                .accessibilityLabel("Upload annuleren")
             } else if isLocalProcessing {
                 Button {
                     recordingVM.cancelLocalProcessing(task.taskId)
@@ -111,6 +114,7 @@ private struct ProcessingBarItem: View {
                 }
                 .buttonStyle(.plain)
                 .help("Lokale verwerking annuleren")
+                .accessibilityLabel("Lokale verwerking annuleren")
             }
         }
         .padding(.horizontal, TS.Spacing.sm)

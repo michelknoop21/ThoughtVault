@@ -29,6 +29,8 @@ struct StatusBadge: View {
             RoundedRectangle(cornerRadius: TS.Radius.xs)
                 .stroke(borderColor, lineWidth: 0.5)
         }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Status: \(status.displayName)")
     }
 
     // MARK: - Status Indicator

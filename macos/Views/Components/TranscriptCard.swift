@@ -37,6 +37,10 @@ struct TranscriptCard: View {
         .contextMenu {
             contextMenuItems
         }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(transcript.title)
+        .accessibilityHint("Voltooide notule. Dubbeltik om te openen.")
+        .accessibilityAddTraits(.isButton)
     }
 
     // MARK: - Card Content

@@ -468,3 +468,63 @@ struct PulsingRecordingDot: View {
         .onAppear { if !reduceMotion { isPulsing = true } }
     }
 }
+
+// MARK: - Shared state components
+
+/// Consistent empty state built on Apple's `ContentUnavailableView`, styled with
+/// the brand accent. Replaces the ad-hoc empty states scattered across views.
+struct EmptyStateView: View {
+    let icon: String
+    let title: String
+    var message: String? = nil
+    var actionTitle: String? = nil
+    var action: (() -> Void)? = nil
+
+    var body: some View {
+        ContentUnavailableView {
+            Label(title, systemImage: icon)
+                .foregroundStyle(Color.labelPrimary)
+        } description: {
+            if let message {
+                Text(message)
+                    .foregroundStyle(Color.labelSecondary)
+            }
+        } actions: {
+            if let actionTitle, let action {
+                Button(actionTitle, action: action)
+                    .buttonStyle(PrimaryButtonStyle())
+            }
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(message.map { "\(title). \($0)" } ?? title)
+    }
+}
+
+/// Redacted placeholder shimmer for loading states. Apply to a laid-out
+/// placeholder view: `PlaceholderRow().loadingSkeleton(isLoading)`.
+private struct LoadingSkeletonModifier: ViewModifier {
+    let isLoading: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var shimmer = false
+
+    func body(content: Content) -> some View {
+        content
+            .redacted(reason: isLoading ? .placeholder : [])
+            .opacity(isLoading && !reduceMotion ? (shimmer ? 0.55 : 1.0) : 1.0)
+            .animation(
+                isLoading && !reduceMotion
+                    ? .easeInOut(duration: 0.9).repeatForever(autoreverses: true)
+                    : .default,
+                value: shimmer
+            )
+            .onAppear { if isLoading && !reduceMotion { shimmer = true } }
+            .accessibilityHidden(isLoading)
+    }
+}
+
+extension View {
+    /// Redacted shimmer while `isLoading`; restores normally when false.
+    func loadingSkeleton(_ isLoading: Bool) -> some View {
+        modifier(LoadingSkeletonModifier(isLoading: isLoading))
+    }
+}

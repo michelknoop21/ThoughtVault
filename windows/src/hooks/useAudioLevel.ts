@@ -27,6 +27,33 @@ export function useAudioLevel(): number {
   return level;
 }
 
+export interface AudioSpectrum {
+  /** Per-band magnitudes 0.0-1.0 (low → high frequency) */
+  bands: number[];
+  /** Spectral centroid normalized 0.0-1.0 (0 = low pitch, 1 = high pitch) */
+  centroid: number;
+}
+
+/**
+ * Returns a mutable ref to the latest spectrum snapshot (5 bands + centroid),
+ * emitted by the Rust backend during recording. Ref-based to avoid re-renders.
+ * The WaveformVisualizer reads it in its animation loop for pitch response.
+ */
+export function useAudioSpectrumRef(): React.MutableRefObject<AudioSpectrum> {
+  const specRef = useRef<AudioSpectrum>({ bands: [], centroid: 0.5 });
+
+  useEffect(() => {
+    const unlisten = listen<AudioSpectrum>("audio-spectrum", (event) => {
+      specRef.current = event.payload;
+    });
+    return () => {
+      unlisten.then((fn) => fn());
+    };
+  }, []);
+
+  return specRef;
+}
+
 /**
  * Returns a mutable ref to a rolling history of audio levels normalized to 0.0-1.0.
  * Uses a ref instead of state to avoid triggering React re-renders at ~60Hz.

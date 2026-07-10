@@ -4,6 +4,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { stopRecording, pauseRecording, resumeRecording } from "../../services/tauriCommands";
 import { WaveformVisualizer } from "./WaveformVisualizer";
 import { createAudioLevelNormalizer } from "../../services/audioLevel";
+import { useAudioSpectrumRef } from "../../hooks/useAudioLevel";
 import {
   Stop24Regular,
   Pause24Regular,
@@ -16,6 +17,7 @@ export function RecordingWidget() {
   const [elapsed, setElapsed] = useState(0);
   const [state, setState] = useState<WidgetState>("recording");
   const levelsBufferRef = useRef<number[]>([]);
+  const spectrumRef = useAudioSpectrumRef();
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startedAtRef = useRef<number>(Date.now());
   const pausedDurationRef = useRef<number>(0);
@@ -126,7 +128,7 @@ export function RecordingWidget() {
 
         {/* Waveform */}
         <div className="widget-waveform">
-          <WaveformVisualizer levelsRef={levelsBufferRef} isActive={!isPaused && !isStopping} height={32} />
+          <WaveformVisualizer levelsRef={levelsBufferRef} isActive={!isPaused && !isStopping} height={32} spectrumRef={spectrumRef} />
         </div>
 
         {/* Timer */}

@@ -42,6 +42,8 @@ pub enum RecordingCommand {
 pub enum RecordingEvent {
     /// Audio level update 0.0–1.0 at ~60Hz
     AudioLevel(f32),
+    /// Spectrum snapshot: per-band magnitudes (0..1) + normalized centroid (0..1)
+    AudioSpectrum { bands: Vec<f32>, centroid: f32 },
     /// Recording stopped, file path and duration
     Stopped { file_path: String, duration_seconds: f64 },
     /// Error occurred

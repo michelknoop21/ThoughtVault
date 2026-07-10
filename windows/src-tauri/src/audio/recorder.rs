@@ -468,6 +468,10 @@ fn build_input_stream_i16(
     let level_counter_clone = Arc::clone(&level_counter);
     let level_sum_sq_clone = Arc::clone(&level_sum_sq);
 
+    // Parallel FFT analyzer for the pitch-responsive waveform.
+    let spectrum = Arc::new(Mutex::new(crate::audio::spectrum::SpectrumAnalyzer::new(sample_rate as f32)));
+    let spectrum_clone = Arc::clone(&spectrum);
+
     // Log first callback
     let first_callback = Arc::new(AtomicBool::new(true));
     let first_callback_clone = Arc::clone(&first_callback);
@@ -510,6 +514,9 @@ fn build_input_stream_i16(
                         if let Ok(mut sum_sq) = level_sum_sq_clone.lock() {
                             *sum_sq += normalized * normalized;
                         }
+                        if let Ok(mut sp) = spectrum_clone.lock() {
+                            sp.push(normalized);
+                        }
                         let level_count = level_counter_clone.fetch_add(1, Ordering::Relaxed) + 1;
 
                         if level_count >= emit_interval {
@@ -519,6 +526,10 @@ fn build_input_stream_i16(
                                 0.0
                             };
                             let _ = event_tx_clone.send(RecordingEvent::AudioLevel(rms));
+                            if let Ok(sp) = spectrum_clone.lock() {
+                                let (bands, centroid) = sp.latest();
+                                let _ = event_tx_clone.send(RecordingEvent::AudioSpectrum { bands, centroid });
+                            }
                             level_counter_clone.store(0, Ordering::Relaxed);
                             if let Ok(mut sum_sq) = level_sum_sq_clone.lock() {
                                 *sum_sq = 0.0;
@@ -584,6 +595,10 @@ fn build_input_stream_f32(
     let level_counter_clone = Arc::clone(&level_counter);
     let level_sum_sq_clone = Arc::clone(&level_sum_sq);
 
+    // Parallel FFT analyzer for the pitch-responsive waveform.
+    let spectrum = Arc::new(Mutex::new(crate::audio::spectrum::SpectrumAnalyzer::new(sample_rate as f32)));
+    let spectrum_clone = Arc::clone(&spectrum);
+
     // Log first callback
     let first_callback = Arc::new(AtomicBool::new(true));
     let first_callback_clone = Arc::clone(&first_callback);
@@ -626,6 +641,9 @@ fn build_input_stream_f32(
                         if let Ok(mut sum_sq) = level_sum_sq_clone.lock() {
                             *sum_sq += mono_sample * mono_sample;
                         }
+                        if let Ok(mut sp) = spectrum_clone.lock() {
+                            sp.push(mono_sample);
+                        }
                         let level_count = level_counter_clone.fetch_add(1, Ordering::Relaxed) + 1;
 
                         if level_count >= emit_interval {
@@ -635,6 +653,10 @@ fn build_input_stream_f32(
                                 0.0
                             };
                             let _ = event_tx_clone.send(RecordingEvent::AudioLevel(rms));
+                            if let Ok(sp) = spectrum_clone.lock() {
+                                let (bands, centroid) = sp.latest();
+                                let _ = event_tx_clone.send(RecordingEvent::AudioSpectrum { bands, centroid });
+                            }
                             level_counter_clone.store(0, Ordering::Relaxed);
                             if let Ok(mut sum_sq) = level_sum_sq_clone.lock() {
                                 *sum_sq = 0.0;

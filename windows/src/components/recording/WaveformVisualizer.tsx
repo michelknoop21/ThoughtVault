@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import type { AudioSpectrum } from "../../hooks/useAudioLevel";
 
 interface WaveformVisualizerProps {
   /** Ref to audio level values in range 0.0-1.0 (newest last) */
@@ -7,6 +8,8 @@ interface WaveformVisualizerProps {
   isActive: boolean;
   /** Container height in px (default: 120) */
   height?: number;
+  /** Optional spectrum ref for pitch response (bands + centroid) */
+  spectrumRef?: React.RefObject<AudioSpectrum>;
 }
 
 // ── Optimized Wave Configurations (8 waves) ─────────────────────────
@@ -46,6 +49,7 @@ export function WaveformVisualizer({
   levelsRef,
   isActive,
   height = 120,
+  spectrumRef,
 }: WaveformVisualizerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animFrameRef = useRef<number>(0);
@@ -84,6 +88,13 @@ export function WaveformVisualizer({
       const active = isActiveRef.current;
       const smoothed = smoothedRef.current;
 
+      // Spectrum for pitch response (bands → per-wave gain, centroid → frequency).
+      const spectrum = spectrumRef?.current;
+      const bands = spectrum?.bands ?? [];
+      const centroid = spectrum?.centroid ?? 0.5;
+      // Low centroid = slower/broader waves, high = tighter/faster.
+      const freqScale = 0.5 + centroid * 2.0;
+
       // ── Update per-wave audio levels ──
       for (let i = 0; i < WAVES.length; i++) {
         const cfg = WAVES[i];
@@ -100,6 +111,14 @@ export function WaveformVisualizer({
             const avg = sum / count;
             // Emphasize peaks for dynamic response
             target = Math.max(peak * 0.8 + avg * 0.2, IDLE_AMPLITUDE);
+
+            // Gate by this wave's frequency band when spectral data is present
+            // (8 waves mapped onto 5 bands).
+            if (bands.length > 0) {
+              const band = bands[Math.floor((i * bands.length) / WAVES.length)] ?? 0;
+              target *= 0.35 + 1.3 * band;
+              target = Math.max(target, IDLE_AMPLITUDE);
+            }
           }
         }
 
@@ -154,7 +173,7 @@ export function WaveformVisualizer({
           // Gaussian envelope for soft edges
           const envelope = Math.exp(-Math.pow(normalized * 2.5, 2));
           
-          const y = midY + envelope * maxAmp * level * Math.sin(2 * Math.PI * (x / w) * cfg.frequency + wavePhase);
+          const y = midY + envelope * maxAmp * level * Math.sin(2 * Math.PI * (x / w) * cfg.frequency * freqScale + wavePhase);
           
           if (x === 0) ctx.moveTo(x, y);
           else ctx.lineTo(x, y);

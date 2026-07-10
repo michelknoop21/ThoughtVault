@@ -1,6 +1,6 @@
 [package]
 name = "transcript-studio"
-version = "1.0.245"
+version = "1.0.248"
 description = "ThoughtVault - Meeting recorder and transcription app"
 authors = ["Prezent Internet B.V."]
 edition = "2021"
@@ -46,7 +46,7 @@ keyring = "3"
 
 # Utilities
 chrono   = { version = "0.4", features = ["serde"] }
-dirs     = "5"
+dirs     = "6"
 tempfile = "3"
 sha2     = "0.10"
 

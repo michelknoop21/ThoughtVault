@@ -172,30 +172,44 @@ fn run_whisper(app: AppHandle, model: &PathBuf, wav_path: &str) -> Result<String
         .create_state()
         .map_err(|e| format!("Whisper-state mislukt: {}", e))?;
 
-    let mut params = FullParams::new(SamplingStrategy::Greedy { best_of: 1 });
-    params.set_language(Some("nl"));
-    params.set_print_special(false);
-    params.set_print_progress(false);
-    params.set_print_realtime(false);
-    params.set_print_timestamps(false);
+    // Process in ~10-minute windows so peak memory stays bounded on long files
+    // (a 1h recording is ~230 MB as f32). whisper.cpp already windows at 30s
+    // internally, so this only caps how much we hand it at once. Text is joined.
+    const CHUNK_SAMPLES: usize = 10 * 60 * 16000; // 10 min @ 16 kHz
+    let total_chunks = audio.len().div_ceil(CHUNK_SAMPLES).max(1);
 
-    let app_progress = app.clone();
-    params.set_progress_callback_safe(move |progress: i32| {
-        let _ = app_progress.emit("transcribe-progress", progress);
-    });
-
-    state
-        .full(params, &audio)
-        .map_err(|e| format!("Transcriptie mislukt: {}", e))?;
-
-    let num_segments = state
-        .full_n_segments()
-        .map_err(|e| format!("Segmenten lezen mislukt: {}", e))?;
     let mut text = String::new();
-    for i in 0..num_segments {
-        if let Ok(segment) = state.full_get_segment_text(i) {
-            text.push_str(&segment);
+    for (chunk_index, window) in audio.chunks(CHUNK_SAMPLES).enumerate() {
+        let mut params = FullParams::new(SamplingStrategy::Greedy { best_of: 1 });
+        params.set_language(Some("nl"));
+        params.set_print_special(false);
+        params.set_print_progress(false);
+        params.set_print_realtime(false);
+        params.set_print_timestamps(false);
+
+        // Map this chunk's 0-100 progress onto its slice of the overall bar.
+        let app_progress = app.clone();
+        let base = (chunk_index * 100 / total_chunks) as i32;
+        let span = (100 / total_chunks) as i32;
+        params.set_progress_callback_safe(move |progress: i32| {
+            let overall = base + progress * span / 100;
+            let _ = app_progress.emit("transcribe-progress", overall.min(100));
+        });
+
+        state
+            .full(params, window)
+            .map_err(|e| format!("Transcriptie mislukt: {}", e))?;
+
+        let num_segments = state
+            .full_n_segments()
+            .map_err(|e| format!("Segmenten lezen mislukt: {}", e))?;
+        for i in 0..num_segments {
+            if let Ok(segment) = state.full_get_segment_text(i) {
+                text.push_str(&segment);
+            }
         }
     }
+
+    let _ = app.emit("transcribe-progress", 100);
     Ok(text.trim().to_string())
 }

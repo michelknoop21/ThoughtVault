@@ -146,22 +146,16 @@ fn run_whisper(app: AppHandle, model: &PathBuf, wav_path: &str) -> Result<String
     };
 
     // Read the recorded WAV (recorder always writes 16 kHz mono i16).
-    let reader = hound::WavReader::open(wav_path)
+    let mut reader = hound::WavReader::open(wav_path)
         .map_err(|e| format!("Kan opname niet lezen: {}", e))?;
     let spec = reader.spec();
-    let samples: Vec<i16> = reader
-        .into_samples::<i16>()
-        .collect::<Result<Vec<_>, _>>()
-        .map_err(|e| format!("Kan audio niet decoderen: {}", e))?;
     if spec.sample_rate != 16000 {
         return Err(format!(
             "Opname is {}Hz, verwacht 16kHz",
             spec.sample_rate
         ));
     }
-    let mut audio = vec![0.0f32; samples.len()];
-    convert_integer_to_float_audio(&samples, &mut audio)
-        .map_err(|e| format!("Audioconversie mislukt: {}", e))?;
+    let total_samples = reader.len() as usize;
 
     let ctx = WhisperContext::new_with_params(
         &model.to_string_lossy(),
@@ -172,14 +166,30 @@ fn run_whisper(app: AppHandle, model: &PathBuf, wav_path: &str) -> Result<String
         .create_state()
         .map_err(|e| format!("Whisper-state mislukt: {}", e))?;
 
-    // Process in ~10-minute windows so peak memory stays bounded on long files
-    // (a 1h recording is ~230 MB as f32). whisper.cpp already windows at 30s
-    // internally, so this only caps how much we hand it at once. Text is joined.
+    // Stream-decode in ~10-minute windows so peak memory stays bounded on long
+    // files: only one window (~58 MB) is materialized at a time instead of the
+    // whole file (a 1h recording would be ~345 MB across the i16 + f32 buffers).
+    // whisper.cpp already windows at 30s internally; text is joined.
     const CHUNK_SAMPLES: usize = 10 * 60 * 16000; // 10 min @ 16 kHz
-    let total_chunks = audio.len().div_ceil(CHUNK_SAMPLES).max(1);
+    let total_chunks = total_samples.div_ceil(CHUNK_SAMPLES).max(1);
 
+    let mut samples_iter = reader.samples::<i16>();
     let mut text = String::new();
-    for (chunk_index, window) in audio.chunks(CHUNK_SAMPLES).enumerate() {
+    let mut int_buf: Vec<i16> = Vec::with_capacity(CHUNK_SAMPLES);
+    let mut float_buf: Vec<f32> = vec![0.0; CHUNK_SAMPLES];
+
+    for chunk_index in 0..total_chunks {
+        int_buf.clear();
+        for sample in samples_iter.by_ref().take(CHUNK_SAMPLES) {
+            int_buf.push(sample.map_err(|e| format!("Kan audio niet decoderen: {}", e))?);
+        }
+        if int_buf.is_empty() {
+            break;
+        }
+        float_buf.resize(int_buf.len(), 0.0);
+        convert_integer_to_float_audio(&int_buf, &mut float_buf)
+            .map_err(|e| format!("Audioconversie mislukt: {}", e))?;
+
         let mut params = FullParams::new(SamplingStrategy::Greedy { best_of: 1 });
         params.set_language(Some("nl"));
         params.set_print_special(false);
@@ -197,7 +207,7 @@ fn run_whisper(app: AppHandle, model: &PathBuf, wav_path: &str) -> Result<String
         });
 
         state
-            .full(params, window)
+            .full(params, &float_buf)
             .map_err(|e| format!("Transcriptie mislukt: {}", e))?;
 
         let num_segments = state

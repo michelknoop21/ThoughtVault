@@ -25,6 +25,10 @@ final class AudioSpectrumAnalyzer: @unchecked Sendable {
     private(set) var centroid: Float = 0.5
 
     private let lock = NSLock()
+    /// Guarded by `lock`. False when the tap isn't running, so `snapshot()` can
+    /// return empty bands and let the waveform fall back to level-only (avoids
+    /// damping the wave in modes where the mic analyzer never starts).
+    private var isRunning = false
 
     private var engine: AVAudioEngine?
 
@@ -64,6 +68,7 @@ final class AudioSpectrumAnalyzer: @unchecked Sendable {
             engine.prepare()
             try engine.start()
             self.engine = engine
+            lock.withLock { isRunning = true }
             log.info("[Spectrum] started")
         } catch {
             log.warning("[Spectrum] engine start failed: \(error.localizedDescription)")
@@ -76,6 +81,7 @@ final class AudioSpectrumAnalyzer: @unchecked Sendable {
         engine?.stop()
         engine = nil
         lock.withLock {
+            isRunning = false
             bands = Array(repeating: 0, count: Self.bandCount)
             centroid = 0.5
         }
@@ -83,8 +89,10 @@ final class AudioSpectrumAnalyzer: @unchecked Sendable {
 
     // MARK: - Snapshot (thread-safe read for the render loop)
 
+    /// Empty bands when the tap isn't running, so the waveform falls back to
+    /// level-only instead of being damped by all-zero band gains.
     func snapshot() -> (bands: [Float], centroid: Float) {
-        lock.withLock { (bands, centroid) }
+        lock.withLock { isRunning ? (bands, centroid) : ([], centroid) }
     }
 
     // MARK: - FFT

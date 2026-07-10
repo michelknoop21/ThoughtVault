@@ -241,6 +241,7 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
     func pauseRecording() {
         guard isRecording, !isPaused else { return }
         audioRecorder?.pause()
+        spectrumAnalyzer.stop()
         isPaused = true
         pausedAt = Date()
     }
@@ -248,6 +249,7 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
     func resumeRecording() {
         guard isRecording, isPaused else { return }
         audioRecorder?.record()
+        spectrumAnalyzer.start()
         isPaused = false
         if let pauseStart = pausedAt {
             accumulatedPauseDuration += Date().timeIntervalSince(pauseStart)

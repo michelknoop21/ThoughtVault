@@ -110,7 +110,14 @@ final class OnDeviceTranscriber {
         isTranscribing = true
         logger.info("OnDeviceTranscriber: starting file transcription for \(url.lastPathComponent)")
 
-        defer { isTranscribing = false }
+        // Runs on MainActor when the function exits (normal return or thrown
+        // timeout). Cancelling the recognition task here stops the orphaned
+        // SFSpeechRecognitionTask left running when the watchdog fires.
+        defer {
+            recognitionTask?.cancel()
+            recognitionTask = nil
+            isTranscribing = false
+        }
 
         let vocabulary = PersonalVocabulary.terms()
 

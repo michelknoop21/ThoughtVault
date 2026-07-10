@@ -26,6 +26,17 @@ enum AudioChunker {
     /// Converts and splits in a single streaming pass (no full-file buffering).
     /// Caller is responsible for deleting the returned temp files.
     static func chunk(url: URL, chunkDuration: TimeInterval) async throws -> [URL] {
+        var createdURLs: [URL] = []
+        do {
+            return try chunkThrowing(url: url, chunkDuration: chunkDuration, created: &createdURLs)
+        } catch {
+            // Clean up partial chunks so a mid-stream failure doesn't leak temp files.
+            createdURLs.forEach { try? FileManager.default.removeItem(at: $0) }
+            throw error
+        }
+    }
+
+    private static func chunkThrowing(url: URL, chunkDuration: TimeInterval, created: inout [URL]) throws -> [URL] {
         let sourceFile = try AVAudioFile(forReading: url)
         let sourceFormat = sourceFile.processingFormat
 
@@ -43,15 +54,14 @@ enum AudioChunker {
         // Float32 processingFormat for Int16 disk settings — see AudioPreConverter).
         let framesPerChunk = AVAudioFramePosition(chunkDuration * 16_000.0)
 
-        var chunkURLs: [URL] = []
         var outputFile: AVAudioFile?
         var framesInCurrentChunk: AVAudioFramePosition = 0
 
         func openNewChunk() throws -> AVAudioFile {
             let chunkURL = FileManager.default.temporaryDirectory
-                .appendingPathComponent("chunk_\(chunkURLs.count)_\(UUID().uuidString).wav")
+                .appendingPathComponent("chunk_\(created.count)_\(UUID().uuidString).wav")
             let file = try AVAudioFile(forWriting: chunkURL, settings: diskSettings)
-            chunkURLs.append(chunkURL)
+            created.append(chunkURL)
             framesInCurrentChunk = 0
             return file
         }
@@ -121,7 +131,8 @@ enum AudioChunker {
             }
         }
 
-        logger.info("Chunked \(url.lastPathComponent) into \(chunkURLs.count) chunk(s) of ≤\(Int(chunkDuration))s")
-        return chunkURLs
+        let count = created.count
+        logger.info("Chunked \(url.lastPathComponent) into \(count) chunk(s) of ≤\(Int(chunkDuration))s")
+        return created
     }
 }

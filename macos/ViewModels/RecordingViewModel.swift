@@ -90,6 +90,13 @@ final class RecordingViewModel {
         }
     }
 
+    /// Spectrum snapshot (5 bands + normalized centroid) for the pitch-responsive
+    /// waveform. Only the mic recorder taps the FFT engine; system-audio modes
+    /// have no live spectrum so bands stay flat (waveform falls back to level).
+    func spectrumSnapshot() -> (bands: [Float], centroid: Float) {
+        audioRecorder.spectrumSnapshot()
+    }
+
     /// Duration from the primary active recorder.
     var duration: TimeInterval {
 #if os(macOS)

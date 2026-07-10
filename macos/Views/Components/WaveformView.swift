@@ -64,6 +64,9 @@ private let brandGradient = Gradient(colors: [
 struct WaveformView: View {
     let levelProvider: () -> Float
     let isActive: Bool
+    /// Optional spectrum source: per-wave band amplitudes + normalized centroid.
+    /// When nil (idle hero, no live recording) the wave falls back to level-only.
+    var spectrumProvider: (() -> (bands: [Float], centroid: Float))? = nil
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var waveState = WaveState()
@@ -111,6 +114,14 @@ struct WaveformView: View {
                 waveState.update(targetRaw: levelProvider(), isActive: isActive)
                 let level = CGFloat(waveState.smoothedLevel)
 
+                // Spectral data drives pitch response: per-wave band amplitude and
+                // a centroid that modulates the travelling-wave frequency (low voice
+                // = broad slow wave, high tone = tight fast wave).
+                let spectrum = spectrumProvider?()
+                let bands = spectrum?.bands ?? []
+                let centroid = spectrum.map { Double($0.centroid) } ?? 0.5
+                let effectiveFrequency = frequency * (0.5 + centroid * 2.0)
+
                 let midX = size.width / 2
                 let midY = size.height / 2
                 let maxAmplitude = midY - min(max(4, midY * 0.12), 14)
@@ -125,7 +136,10 @@ struct WaveformView: View {
                 // Back-to-front so the primary wave draws on top.
                 for i in stride(from: numberOfWaves - 1, through: 0, by: -1) {
                     let progress = 1.0 - CGFloat(i) / CGFloat(numberOfWaves)
-                    let normedAmplitude = (1.5 * progress - 0.4) * level
+                    // Per-wave amplitude: overall level gated by this wave's band
+                    // energy when spectral data is available.
+                    let bandGain: CGFloat = i < bands.count ? CGFloat(0.35 + 1.3 * bands[i]) : 1.0
+                    let normedAmplitude = (1.5 * progress - 0.4) * level * bandGain
                     // Slight per-wave phase offset keeps layers distinct but coherent.
                     let wavePhase = phase + Double(i) * 0.35
 
@@ -136,7 +150,7 @@ struct WaveformView: View {
                             // Parabolic envelope: 1 at center, 0 at the edges —
                             // the organic diamond silhouette that reads as "Siri".
                             let envelope = -(normalized * normalized) + 1.0
-                            let angle = 2 * CGFloat.pi * (x / size.width) * CGFloat(frequency) + CGFloat(wavePhase)
+                            let angle = 2 * CGFloat.pi * (x / size.width) * CGFloat(effectiveFrequency) + CGFloat(wavePhase)
                             let y = envelope * maxAmplitude * normedAmplitude * sin(angle) + midY
                             if first { p.move(to: CGPoint(x: x, y: y)); first = false }
                             else { p.addLine(to: CGPoint(x: x, y: y)) }

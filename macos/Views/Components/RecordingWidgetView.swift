@@ -40,7 +40,8 @@ struct RecordingWidgetView: View {
                     let sumSquares = levels.reduce(0) { $0 + $1 * $1 }
                     return sqrt(sumSquares / count)
                 },
-                isActive: isRecording
+                isActive: isRecording,
+                spectrumProvider: { recordingVM.spectrumSnapshot() }
             )
             .frame(width: 120, height: 32)
             .opacity(isPaused ? 0.4 : 1.0)

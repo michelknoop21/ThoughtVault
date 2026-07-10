@@ -1169,7 +1169,8 @@ struct RecordingView: View {
                       let sumSquares = levels.reduce(0) { $0 + $1 * $1 }
                       return sqrt(sumSquares / count)
                   },
-                  isActive: recordingVM.recordingState == .recording
+                  isActive: recordingVM.recordingState == .recording,
+                  spectrumProvider: { recordingVM.spectrumSnapshot() }
             )
             .frame(height: 160)
             .frame(maxWidth: .infinity)

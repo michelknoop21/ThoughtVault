@@ -62,6 +62,8 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
     // MARK: - Private
 
     private var audioRecorder: AVAudioRecorder?
+    /// Parallel FFT tap for pitch-responsive waveform (runs only while recording).
+    private let spectrumAnalyzer = AudioSpectrumAnalyzer()
     private var meteringTimer: Timer?
     private var durationTimer: Timer?
     private var lastDiagnosticLog: Date = .distantPast
@@ -228,6 +230,12 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
         }
 
         startTimers()
+        spectrumAnalyzer.start()
+    }
+
+    /// Thread-safe snapshot of the current spectrum (5 bands + normalized centroid).
+    func spectrumSnapshot() -> (bands: [Float], centroid: Float) {
+        spectrumAnalyzer.snapshot()
     }
 
     func pauseRecording() {
@@ -262,6 +270,7 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
             self.accumulatedPauseDuration = 0
         }
         finalizeTimers()
+        spectrumAnalyzer.stop()
 
 #if os(iOS)
         endBackgroundTask()
@@ -456,6 +465,7 @@ extension AudioRecorder: AVAudioRecorderDelegate {
                 self.errorMessage = AudioRecorderError.failedToStart.errorDescription
             }
             finalizeTimers()
+            spectrumAnalyzer.stop()
             onSilentFailure?(.failedToStart)
         }
     }
@@ -467,6 +477,7 @@ extension AudioRecorder: AVAudioRecorderDelegate {
             self.errorMessage = error?.localizedDescription ?? AudioRecorderError.failedToStart.errorDescription
         }
         finalizeTimers()
+        spectrumAnalyzer.stop()
         onSilentFailure?(.failedToStart)
     }
 }

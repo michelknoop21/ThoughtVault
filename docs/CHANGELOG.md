@@ -5,6 +5,31 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2026-07-10] — Grote-bestanden-transcriptie, live waveform-pipeline, neon Metal-soundwave (v1.0.249)
+
+### Fixed
+- **Grote bestanden transcriberen niet op iOS/macOS** — root cause: WhisperKit kreeg het hele bestand in één keer + de watchdog kapte lange runs af. `macos/Services/AudioChunker.swift` splitst nu op sample-exacte chunkgrenzen; `LocalTranscriber.swift` verwerkt per chunk en stuurt een expliciete `.endOfStream`-flush zodat de laatste (partiële) chunk niet zoek raakt. Watchdog-timeout verruimd/afhankelijk gemaakt van bestandsduur (`d4fadc6`, `3048981`).
+- **Sample-drift tussen chunks** — chunkgrens rekende in tijd i.p.v. samples waardoor bij lange opnames cumulatieve drift ontstond. Nu sample-exact.
+- **Crash bij start opname** — `OnDeviceTranscriber.swift` (crashlog bij record-start). Opgelost samen met de waveform-herbouw (`12:55`-sessie).
+- **Windows whisper-decodering** — gesegmenteerde decode i.p.v. één blok + dependency-opschoning (`cad4441`).
+- **Windows FFT off-callback** — spectrum-analyse verplaatst van de audio-callback naar een workerthread zodat de callback niet blokkeert (`windows/src-tauri/src/audio/spectrum.rs`, `3048981`).
+
+### Added
+- **Cross-platform live mic-envelope** — nieuwe `macos/Services/AudioEnvelopeProcessor.swift` + `windows/src-tauri/src/audio/envelope.rs` (+ `types.rs`, `commands/audio.rs`, `windows/src/hooks/useAudioLevel.ts`) voor gedeelde live-visualisatie-input. Gedekt door `ThoughtVaultTests/AudioEnvelopeProcessorTests.swift` en `tests/fixtures/envelope-fixture.json`.
+- **Pitch-responsieve waveform via FFT** — `macos/Services/AudioSpectrumAnalyzer.swift` en Windows Rust-spectrum; waveform reageert op toonhoogte i.p.v. alleen amplitude (`b29d091`, `2fe447d`).
+- **Neon soundwave als Metal-shader** — `macos/Shaders/WaveformShader.metal` + herschreven `WaveformView.swift`, een directe port van een aangeleverde WebGL/GLSL-referentie (`23deb80`).
+- **Gedeelde `EmptyStateView` + loading-skeleton** en accessibility-labels op kerncomponenten (`6891576`).
+- **`scripts/testflight.sh`** — iOS + macOS TestFlight-upload via App Store Connect API-key (`fb2fb80`).
+
+### Changed
+- **Opnamepagina 2-koloms layout** gefixt op mobiel/smalle breedte (`RecordingView.swift`, `WaveformView.swift`).
+- **Waveform-demping, watchdog-leak, temp-cleanup en echte streaming-decode** als code-review follow-up (`6cff81a`).
+- Versie gebumpt naar **v1.0.249**.
+
+### Notes
+- Dag bestond uit ~12 deel-sessies; volledige commit-trace in `docs/sessions/2026-07-10.md`.
+- CHANGELOG-gap tussen v1.0.130 (2026-06-02) en v1.0.249 is niet retroactief bijgewerkt — buiten scope van deze sessie.
+
 ## [2026-06-02] — CLAUDE.md geoptimaliseerd (97 → 62 regels)
 
 ### Changed

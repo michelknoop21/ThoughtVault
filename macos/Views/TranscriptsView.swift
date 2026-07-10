@@ -1092,6 +1092,12 @@ struct TranscriptDetailView: View {
             .environment(recordingVM)
         }
         .task {
+            // Ensure profiles are available for the regeneration sheet before
+            // the user taps "Regenereer" (avoids an empty profile list).
+            if recordingVM.availableProfiles.isEmpty {
+                await recordingVM.reloadProfiles()
+            }
+
             // Local records already carry full content (raw + notule), no server fetch.
             if isLocalTranscript(transcript.taskId) {
                 fullTranscript = transcript
@@ -2209,11 +2215,17 @@ private struct ProfileSelectionSheet: View {
 
     @State private var usePremium = false
 
+    private var displayProfiles: [Profile] {
+        recordingVM.availableProfiles.isEmpty
+            ? Profile.defaults
+            : recordingVM.availableProfiles
+    }
+
     var body: some View {
         NavigationStack {
             List {
                 Section {
-                    ForEach(recordingVM.availableProfiles) { profile in
+                    ForEach(displayProfiles) { profile in
                         Button {
                             onSelect(profile, usePremium)
                         } label: {

@@ -446,6 +446,34 @@ fn mix_wav_files(mic_path: &str, loopback_path: &str) -> Result<(), String> {
 
 /// Build an input stream for devices that output i16 samples (most Windows devices).
 /// Performs stereo-to-mono downmix when channels > 1, then resamples to TARGET_SAMPLE_RATE.
+/// Spawns a worker thread that owns the FFT analyzer. The audio callback forwards
+/// sample batches via a bounded channel (`try_send` — a full channel drops the batch
+/// rather than blocking the callback). The worker emits AudioSpectrum at ~60 Hz and
+/// exits when the sender is dropped (stream stop → `recv()` returns Err).
+fn spawn_spectrum_worker(
+    sample_rate: f32,
+    event_tx: mpsc::UnboundedSender<RecordingEvent>,
+) -> std::sync::mpsc::SyncSender<Vec<f32>> {
+    let (tx, rx) = std::sync::mpsc::sync_channel::<Vec<f32>>(8);
+    std::thread::spawn(move || {
+        let mut analyzer = crate::audio::spectrum::SpectrumAnalyzer::new(sample_rate);
+        let emit_every = ((sample_rate / 60.0) as usize).max(1);
+        let mut since_emit: usize = 0;
+        while let Ok(batch) = rx.recv() {
+            for s in batch {
+                analyzer.push(s);
+                since_emit += 1;
+                if since_emit >= emit_every {
+                    since_emit = 0;
+                    let (bands, centroid) = analyzer.latest();
+                    let _ = event_tx.send(RecordingEvent::AudioSpectrum { bands, centroid });
+                }
+            }
+        }
+    });
+    tx
+}
+
 fn build_input_stream_i16(
     device: &cpal::Device,
     config: &cpal::StreamConfig,
@@ -468,9 +496,8 @@ fn build_input_stream_i16(
     let level_counter_clone = Arc::clone(&level_counter);
     let level_sum_sq_clone = Arc::clone(&level_sum_sq);
 
-    // Parallel FFT analyzer for the pitch-responsive waveform.
-    let spectrum = Arc::new(Mutex::new(crate::audio::spectrum::SpectrumAnalyzer::new(sample_rate as f32)));
-    let spectrum_clone = Arc::clone(&spectrum);
+    // FFT runs off-callback on a worker thread; the callback only forwards batches.
+    let spectrum_tx = spawn_spectrum_worker(sample_rate as f32, event_tx.clone());
 
     // Log first callback
     let first_callback = Arc::new(AtomicBool::new(true));
@@ -500,6 +527,7 @@ fn build_input_stream_i16(
 
                     // Step 1: Downmix to mono
                     let mut mono_chunk: Vec<i16> = Vec::with_capacity(frame_count);
+                    let mut spectrum_batch: Vec<f32> = Vec::with_capacity(frame_count);
                     for frame_idx in 0..frame_count {
                         let base = frame_idx * ch;
                         let mut sum: i32 = 0;
@@ -511,11 +539,9 @@ fn build_input_stream_i16(
 
                         // Calculate audio level on pre-resample samples
                         let normalized = mono_sample.to_float_sample();
+                        spectrum_batch.push(normalized);
                         if let Ok(mut sum_sq) = level_sum_sq_clone.lock() {
                             *sum_sq += normalized * normalized;
-                        }
-                        if let Ok(mut sp) = spectrum_clone.lock() {
-                            sp.push(normalized);
                         }
                         let level_count = level_counter_clone.fetch_add(1, Ordering::Relaxed) + 1;
 
@@ -526,16 +552,14 @@ fn build_input_stream_i16(
                                 0.0
                             };
                             let _ = event_tx_clone.send(RecordingEvent::AudioLevel(rms));
-                            if let Ok(sp) = spectrum_clone.lock() {
-                                let (bands, centroid) = sp.latest();
-                                let _ = event_tx_clone.send(RecordingEvent::AudioSpectrum { bands, centroid });
-                            }
                             level_counter_clone.store(0, Ordering::Relaxed);
                             if let Ok(mut sum_sq) = level_sum_sq_clone.lock() {
                                 *sum_sq = 0.0;
                             }
                         }
                     }
+                    // Hand the batch to the FFT worker; drop it if the worker is behind.
+                    let _ = spectrum_tx.try_send(spectrum_batch);
 
                     // Step 2: Resample chunk from device rate to 16 kHz
                     let resampled = if let Ok(mut r) = resampler_clone.lock() {
@@ -595,9 +619,8 @@ fn build_input_stream_f32(
     let level_counter_clone = Arc::clone(&level_counter);
     let level_sum_sq_clone = Arc::clone(&level_sum_sq);
 
-    // Parallel FFT analyzer for the pitch-responsive waveform.
-    let spectrum = Arc::new(Mutex::new(crate::audio::spectrum::SpectrumAnalyzer::new(sample_rate as f32)));
-    let spectrum_clone = Arc::clone(&spectrum);
+    // FFT runs off-callback on a worker thread; the callback only forwards batches.
+    let spectrum_tx = spawn_spectrum_worker(sample_rate as f32, event_tx.clone());
 
     // Log first callback
     let first_callback = Arc::new(AtomicBool::new(true));
@@ -627,6 +650,7 @@ fn build_input_stream_f32(
 
                     // Step 1: Downmix to mono and convert f32 → i16
                     let mut mono_chunk: Vec<i16> = Vec::with_capacity(frame_count);
+                    let mut spectrum_batch: Vec<f32> = Vec::with_capacity(frame_count);
                     for frame_idx in 0..frame_count {
                         let base = frame_idx * ch;
                         let mut sum: f32 = 0.0;
@@ -638,11 +662,9 @@ fn build_input_stream_f32(
                         mono_chunk.push(s16);
 
                         // Calculate audio level on pre-resample samples
+                        spectrum_batch.push(mono_sample);
                         if let Ok(mut sum_sq) = level_sum_sq_clone.lock() {
                             *sum_sq += mono_sample * mono_sample;
-                        }
-                        if let Ok(mut sp) = spectrum_clone.lock() {
-                            sp.push(mono_sample);
                         }
                         let level_count = level_counter_clone.fetch_add(1, Ordering::Relaxed) + 1;
 
@@ -653,16 +675,14 @@ fn build_input_stream_f32(
                                 0.0
                             };
                             let _ = event_tx_clone.send(RecordingEvent::AudioLevel(rms));
-                            if let Ok(sp) = spectrum_clone.lock() {
-                                let (bands, centroid) = sp.latest();
-                                let _ = event_tx_clone.send(RecordingEvent::AudioSpectrum { bands, centroid });
-                            }
                             level_counter_clone.store(0, Ordering::Relaxed);
                             if let Ok(mut sum_sq) = level_sum_sq_clone.lock() {
                                 *sum_sq = 0.0;
                             }
                         }
                     }
+                    // Hand the batch to the FFT worker; drop it if the worker is behind.
+                    let _ = spectrum_tx.try_send(spectrum_batch);
 
                     // Step 2: Resample chunk from device rate to 16 kHz
                     let resampled = if let Ok(mut r) = resampler_clone.lock() {

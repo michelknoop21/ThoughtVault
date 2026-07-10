@@ -26,6 +26,18 @@ else
     echo "  Skipped: project.pbxproj (not found)"
 fi
 
+# 1b. macOS Info.plist — CFBundleShortVersionString + CFBundleVersion
+INFO_PLIST="$ROOT_DIR/macos/Info.plist"
+if [ -f "$INFO_PLIST" ]; then
+    sed -i '' "s/<string>$VERSION_PATCH<\/string>/$VERSION<\/string>/" "$INFO_PLIST" 2>/dev/null || true
+    # More robust: replace the specific keys
+    sed -i '' "/CFBundleShortVersionString/{n;s/<string>[^<]*<\/string>/<string>$VERSION<\/string>/}" "$INFO_PLIST"
+    sed -i '' "/CFBundleVersion/{n;s/<string>[^<]*<\/string>/<string>$PATCH<\/string>/}" "$INFO_PLIST"
+    echo "  Updated: macos/Info.plist (CFBundleShortVersionString=$VERSION, CFBundleVersion=$PATCH)"
+else
+    echo "  Skipped: macos/Info.plist (not found)"
+fi
+
 # 2. Tauri tauri.conf.json
 TAURI_CONF="$ROOT_DIR/windows/src-tauri/tauri.conf.json"
 if [ -f "$TAURI_CONF" ]; then

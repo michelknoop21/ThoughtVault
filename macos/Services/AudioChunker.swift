@@ -69,6 +69,19 @@ enum AudioChunker {
         outputFile = try openNewChunk()
         let targetFormat = outputFile!.processingFormat
 
+        // Writes frames [start, start+count) of a Float32 non-interleaved buffer.
+        func writeSlice(from buffer: AVAudioPCMBuffer, start: AVAudioFrameCount, count: AVAudioFrameCount, to file: AVAudioFile) throws {
+            guard let slice = AVAudioPCMBuffer(pcmFormat: buffer.format, frameCapacity: count),
+                  let src = buffer.floatChannelData, let dst = slice.floatChannelData else {
+                throw LocalTranscriberError.transcriptionFailed("Kon audio-slice-buffer niet aanmaken.")
+            }
+            for ch in 0..<Int(buffer.format.channelCount) {
+                memcpy(dst[ch], src[ch] + Int(start), Int(count) * MemoryLayout<Float>.size)
+            }
+            slice.frameLength = count
+            try file.write(from: slice)
+        }
+
         guard let converter = AVAudioConverter(from: sourceFormat, to: targetFormat) else {
             throw LocalTranscriberError.transcriptionFailed("Audio-conversie niet mogelijk voor dit formaat.")
         }
@@ -92,7 +105,12 @@ enum AudioChunker {
                 outputBuffer.frameLength = 0
                 var conversionError: NSError?
                 let status = converter.convert(to: outputBuffer, error: &conversionError) { _, outStatus in
-                    if didProvideInput || capturedInputBuffer.frameLength == 0 {
+                    if capturedInputBuffer.frameLength == 0 {
+                        // Source exhausted: flush the converter's resampler tail.
+                        outStatus.pointee = .endOfStream
+                        return nil
+                    }
+                    if didProvideInput {
                         outStatus.pointee = .noDataNow
                         return nil
                     }
@@ -108,13 +126,18 @@ enum AudioChunker {
                 }
 
                 if outputBuffer.frameLength > 0 {
-                    // ponytail: chunk boundary at buffer granularity (~64ms drift max),
-                    // sample-exact splitting not needed for speech.
-                    if framesInCurrentChunk >= framesPerChunk {
-                        outputFile = try openNewChunk()
+                    // Split at the exact sample boundary so no chunk exceeds framesPerChunk.
+                    var offset: AVAudioFrameCount = 0
+                    while offset < outputBuffer.frameLength {
+                        if framesInCurrentChunk >= framesPerChunk {
+                            outputFile = try openNewChunk()
+                        }
+                        let remainingInChunk = AVAudioFrameCount(framesPerChunk - framesInCurrentChunk)
+                        let toWrite = min(outputBuffer.frameLength - offset, remainingInChunk)
+                        try writeSlice(from: outputBuffer, start: offset, count: toWrite, to: outputFile!)
+                        offset += toWrite
+                        framesInCurrentChunk += AVAudioFramePosition(toWrite)
                     }
-                    try outputFile!.write(from: outputBuffer)
-                    framesInCurrentChunk += AVAudioFramePosition(outputBuffer.frameLength)
                 }
 
                 if status == .endOfStream {

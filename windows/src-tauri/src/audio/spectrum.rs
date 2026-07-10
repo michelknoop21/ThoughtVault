@@ -18,6 +18,8 @@ pub struct SpectrumAnalyzer {
     fft: Arc<dyn Fft<f32>>,
     window: Vec<f32>,
     buf: Vec<f32>,
+    fft_buf: Vec<Complex<f32>>,
+    scratch: Vec<Complex<f32>>,
     sample_rate: f32,
     latest_bands: [f32; BAND_COUNT],
     latest_centroid: f32,
@@ -33,10 +35,13 @@ impl SpectrumAnalyzer {
                 x.sin().powi(2)
             })
             .collect();
+        let scratch = vec![Complex::new(0.0, 0.0); fft.get_inplace_scratch_len()];
         Self {
             fft,
             window,
             buf: Vec::with_capacity(FFT_SIZE),
+            fft_buf: vec![Complex::new(0.0, 0.0); FFT_SIZE],
+            scratch,
             sample_rate,
             latest_bands: [0.0; BAND_COUNT],
             latest_centroid: 0.5,
@@ -56,10 +61,11 @@ impl SpectrumAnalyzer {
     }
 
     fn compute(&mut self) {
-        let mut data: Vec<Complex<f32>> = (0..FFT_SIZE)
-            .map(|i| Complex::new(self.buf[i] * self.window[i], 0.0))
-            .collect();
-        self.fft.process(&mut data);
+        for i in 0..FFT_SIZE {
+            self.fft_buf[i] = Complex::new(self.buf[i] * self.window[i], 0.0);
+        }
+        self.fft.process_with_scratch(&mut self.fft_buf, &mut self.scratch);
+        let data = &self.fft_buf;
 
         let half = FFT_SIZE / 2;
         let nyquist = self.sample_rate / 2.0;

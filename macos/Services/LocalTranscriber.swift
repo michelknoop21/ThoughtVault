@@ -128,7 +128,12 @@ enum AudioPreConverter {
                 outputBuffer.frameLength = 0
                 var conversionError: NSError?
                 let status = converter.convert(to: outputBuffer, error: &conversionError) { _, outStatus in
-                    if didProvideInput || capturedInputBuffer.frameLength == 0 {
+                    if capturedInputBuffer.frameLength == 0 {
+                        // Source exhausted: flush the converter's resampler tail.
+                        outStatus.pointee = .endOfStream
+                        return nil
+                    }
+                    if didProvideInput {
                         outStatus.pointee = .noDataNow
                         return nil
                     }

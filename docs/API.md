@@ -250,7 +250,7 @@ Upload audiobestand voor transcriptie. **Rate limit: 10/uur.**
 ```
 Content-Type: multipart/form-data
 Velden:
-  - file: audio/wav bestand (max 500 MB, backend; 250 MB client-side check)
+  - file: audio/wav bestand (max 500 MB, backend en client-side check)
   - profile_id: "default" of custom profile ID
   - mode: "microphone" | "combined" (optioneel)
 ```

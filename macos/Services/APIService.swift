@@ -131,6 +131,9 @@ actor APIService {
     static let shared = APIService()
 
     private let session: URLSession
+    /// Dedicated session for large audio uploads: a multi-hundred-MB file on a
+    /// slow uplink easily exceeds the default 600s resource timeout.
+    private let uploadSession: URLSession
     private let decoder: JSONDecoder
 
     private var cachedBaseURL: URL?
@@ -141,6 +144,11 @@ actor APIService {
         config.timeoutIntervalForRequest = 30
         config.timeoutIntervalForResource = 600
         self.session = URLSession(configuration: config)
+
+        let uploadConfig = URLSessionConfiguration.default
+        uploadConfig.timeoutIntervalForRequest = 60
+        uploadConfig.timeoutIntervalForResource = 3600
+        self.uploadSession = URLSession(configuration: uploadConfig)
 
         self.decoder = JSONDecoder()
     }
@@ -537,7 +545,7 @@ actor APIService {
         let delegate = UploadProgressDelegate(onProgress: onProgress)
         onProgress(0.0)
         logger.info("[APIService] uploadAudio: starting HTTP upload")
-        let (data, response) = try await session.upload(for: req, fromFile: tempURL, delegate: delegate)
+        let (data, response) = try await uploadSession.upload(for: req, fromFile: tempURL, delegate: delegate)
         onProgress(1.0)
 
         if let http = response as? HTTPURLResponse {

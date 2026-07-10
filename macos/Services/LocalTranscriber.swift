@@ -251,9 +251,28 @@ enum LocalTranscriberFactory {
 /// Wraps the existing `OnDeviceTranscriber` (SFSpeechRecognizer, Dutch locale).
 struct AppleSpeechTranscriber: LocalTranscriber {
 
+    /// SFSpeechRecognizer reliably handles ~1 minute per request; longer files
+    /// are split into chunks and transcribed sequentially.
+    private static let maxSingleRequestDuration: TimeInterval = 55
+
     func transcribe(url: URL, onProgress: @Sendable @escaping (Double) -> Void) async throws -> String {
         onProgress(0.05)
-        let text = try await OnDeviceTranscriber.shared.transcribe(url: url)
+
+        let text: String
+        if let duration = AudioChunker.duration(of: url), duration > Self.maxSingleRequestDuration {
+            let chunks = try await AudioChunker.chunk(url: url, chunkDuration: Self.maxSingleRequestDuration)
+            defer { chunks.forEach { try? FileManager.default.removeItem(at: $0) } }
+            var parts: [String] = []
+            for (index, chunkURL) in chunks.enumerated() {
+                let part = try await OnDeviceTranscriber.shared.transcribe(url: chunkURL)
+                parts.append(part)
+                onProgress(0.05 + 0.9 * (Double(index + 1) / Double(chunks.count)))
+            }
+            text = parts.joined(separator: " ")
+        } else {
+            text = try await OnDeviceTranscriber.shared.transcribe(url: url)
+        }
+
         onProgress(1.0)
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { throw LocalTranscriberError.emptyResult }
@@ -301,6 +320,9 @@ final class WhisperKitTranscriber: LocalTranscriber, @unchecked Sendable {
                 task: .transcribe,
                 language: "nl"
             )
+            // VAD chunking: splits long audio into speech-bounded windows so large
+            // files transcribe instead of hanging (WhisperKit handles this internally).
+            options.chunkingStrategy = .vad
 
             // Bias recognition toward known names/terms via Whisper's initial prompt.
             let vocab = await MainActor.run { PersonalVocabulary.terms() }
@@ -313,7 +335,39 @@ final class WhisperKitTranscriber: LocalTranscriber, @unchecked Sendable {
 
             onProgress(0.20)
 
-            let results: [TranscriptionResult] = try await pipe.transcribe(audioPath: wavURL.path, decodeOptions: options)
+            // Memory guardrail: WhisperKit loads the full file as a Float array
+            // (~230 MB/hour). For very long recordings, split into 10-min chunks
+            // and transcribe sequentially to keep peak memory bounded (iOS jetsam).
+            let chunkThreshold: TimeInterval = 60 * 60
+            let chunkLength: TimeInterval = 10 * 60
+
+            var results: [TranscriptionResult] = []
+            if let duration = AudioChunker.duration(of: wavURL), duration > chunkThreshold {
+                let chunks = try await AudioChunker.chunk(url: wavURL, chunkDuration: chunkLength)
+                defer { chunks.forEach { try? FileManager.default.removeItem(at: $0) } }
+                for (index, chunkURL) in chunks.enumerated() {
+                    let base = 0.20 + 0.75 * (Double(index) / Double(chunks.count))
+                    let span = 0.75 / Double(chunks.count)
+                    let chunkResults = try await pipe.transcribe(
+                        audioPath: chunkURL.path,
+                        decodeOptions: options,
+                        callback: { [progress = pipe.progress] _ in
+                            onProgress(min(0.95, base + span * progress.fractionCompleted))
+                            return nil
+                        }
+                    )
+                    results.append(contentsOf: chunkResults)
+                }
+            } else {
+                results = try await pipe.transcribe(
+                    audioPath: wavURL.path,
+                    decodeOptions: options,
+                    callback: { [progress = pipe.progress] _ in
+                        onProgress(min(0.95, 0.20 + 0.75 * progress.fractionCompleted))
+                        return nil
+                    }
+                )
+            }
             onProgress(0.95)
 
             let text = results.map(\.text).joined(separator: " ")

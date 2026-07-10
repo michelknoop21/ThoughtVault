@@ -1,6 +1,7 @@
 import Foundation
 import Speech
 import OSLog
+import os
 #if os(iOS)
 import UIKit
 #endif
@@ -111,17 +112,36 @@ final class OnDeviceTranscriber {
 
         defer { isTranscribing = false }
 
+        let vocabulary = PersonalVocabulary.terms()
+
+        // Watchdog: SFSpeechRecognizer can hang indefinitely on files it cannot
+        // handle (never calls back). A timeout Task races the recognition callback
+        // via a single-resume guard, so the caller always gets a result or error.
+        let didResume = OSAllocatedUnfairLock(initialState: false)
+        let watchdog = OSAllocatedUnfairLock<Task<Void, Never>?>(initialState: nil)
+
         return try await withCheckedThrowingContinuation { continuation in
+            let resumeOnce: @Sendable (Result<String, Error>) -> Void = { result in
+                let first = didResume.withLock { resumed -> Bool in
+                    if resumed { return false }
+                    resumed = true
+                    return true
+                }
+                guard first else { return }
+                watchdog.withLock { $0?.cancel() }
+                continuation.resume(with: result)
+            }
+
             let request = SFSpeechURLRecognitionRequest(url: url)
             request.shouldReportPartialResults = false
             request.requiresOnDeviceRecognition = recognizer.supportsOnDeviceRecognition
             // Bias recognition toward known names/terms (custom vocabulary, people directory).
-            request.contextualStrings = PersonalVocabulary.terms()
+            request.contextualStrings = vocabulary
 
             recognitionTask = recognizer.recognitionTask(with: request) { result, error in
                 if let error = error {
                     logger.error("OnDeviceTranscriber: transcription error — \(error.localizedDescription)")
-                    continuation.resume(throwing: TranscriberError.recognitionFailed(error.localizedDescription))
+                    resumeOnce(.failure(TranscriberError.recognitionFailed(error.localizedDescription)))
                     return
                 }
 
@@ -129,10 +149,22 @@ final class OnDeviceTranscriber {
                     let text = result.bestTranscription.formattedString
                     logger.info("OnDeviceTranscriber: transcription complete — \(text.count) characters")
                     if text.isEmpty {
-                        continuation.resume(throwing: TranscriberError.emptyResult)
+                        resumeOnce(.failure(TranscriberError.emptyResult))
                     } else {
-                        continuation.resume(returning: text)
+                        resumeOnce(.success(text))
                     }
+                }
+            }
+
+            // ponytail: on timeout we resume with an error; the orphaned SFSpeech
+            // task's later callback hits the single-resume guard and is ignored.
+            watchdog.withLock {
+                $0 = Task {
+                    try? await Task.sleep(for: .seconds(180))
+                    guard !Task.isCancelled else { return }
+                    resumeOnce(.failure(TranscriberError.recognitionFailed(
+                        "Time-out: spraakherkenning reageerde niet binnen 3 minuten."
+                    )))
                 }
             }
         }

@@ -32,7 +32,8 @@ struct RecordingWidgetView: View {
             // Waveform — wider for better visual feedback
             WaveformView(
                 levelsProvider: { recordingVM.audioLevels },
-                isActive: isRecording
+                isActive: isRecording,
+                maxFPS: 60
             )
             .frame(width: 120, height: 32)
             .opacity(isPaused ? 0.4 : 1.0)

@@ -70,7 +70,8 @@ struct HomeHeroCard: View {
     /// from it.
     private var orbOnWave: some View {
         ZStack {
-            WaveformView(levelsProvider: Self.idleLevels, isActive: !reduceMotion)
+            // ponytail: 30fps cap; the idle breathing wave does not need 120fps ProMotion
+            WaveformView(levelsProvider: Self.idleLevels, isActive: !reduceMotion, maxFPS: 30)
                 .frame(width: isCompact ? nil : 280, height: 96)
                 .frame(maxWidth: isCompact ? .infinity : 280)
                 .opacity(0.9)

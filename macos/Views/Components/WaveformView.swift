@@ -17,8 +17,12 @@ struct WaveformView: View {
     /// Provider of the processed level history (0..1, newest last).
     let levelsProvider: () -> [Float]
     let isActive: Bool
+    /// Caps the shader framerate. nil = display refresh rate. Decorative
+    /// (idle) waves should cap this: 120fps on ProMotion drains the battery.
+    var maxFPS: Double? = nil
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.scenePhase) private var scenePhase
 
     private static let idleLevel: Float = 0.0
 
@@ -52,7 +56,14 @@ struct WaveformView: View {
     private var animatedWaveform: some View {
         GeometryReader { geo in
             let size = geo.size
-            TimelineView(.animation) { timeline in
+            // Freeze the shader when the app is not frontmost; per-pixel glow
+            // at display refresh rate is the app's biggest energy consumer.
+            TimelineView(.animation(
+                minimumInterval: maxFPS.map { 1.0 / $0 },
+                // Also freeze when inactive: the wave is a flat line at level 0,
+                // so animating it only burns GPU.
+                paused: scenePhase != .active || !isActive
+            )) { timeline in
                 let time = timeline.date.timeIntervalSinceReferenceDate
                 let level = currentLevel(at: time)
                 RoundedRectangle(cornerRadius: 12, style: .continuous)

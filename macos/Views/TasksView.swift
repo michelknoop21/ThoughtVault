@@ -14,6 +14,7 @@ struct TasksView: View {
 
     @Environment(TasksViewModel.self) private var tasksVM
     @Environment(RecordingViewModel.self) private var recordingVM
+    @Environment(\.scenePhase) private var scenePhase
 
     // MARK: State
 
@@ -73,6 +74,15 @@ struct TasksView: View {
         }
         .onDisappear {
             tasksVM.stopAutoRefresh()
+        }
+        // Pause the 10s network poll while the app is backgrounded; the radio
+        // wakeups drain the battery without the user seeing any update.
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active {
+                if !ProcessingMode.isLocalMode { tasksVM.startAutoRefresh() }
+            } else {
+                tasksVM.stopAutoRefresh()
+            }
         }
         // Cancel confirmation
         .alert(

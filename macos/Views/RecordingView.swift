@@ -1172,7 +1172,8 @@ struct RecordingView: View {
         VStack(spacing: TS.Spacing.sm) {
             WaveformView(
                   levelsProvider: { recordingVM.audioLevels },
-                  isActive: recordingVM.recordingState == .recording
+                  isActive: recordingVM.recordingState == .recording,
+                  maxFPS: 60
             )
             .frame(height: 160)
             .frame(maxWidth: .infinity)

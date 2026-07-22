@@ -881,13 +881,51 @@ final class RecordingViewModel {
             await MainActor.run { self.cancelLocalTaskCleanup(localId) }
             return
         } catch {
+            os_log("[RecordingVM] Local notule generation failed: %{public}@", log: log, type: .error, error.localizedDescription)
+
+            // Cloud fallback: the transcription is already saved locally, so let
+            // the backend generate the notule (it also triggers the Obsidian
+            // export via the normal SSE completion path). Skipped in local mode:
+            // the API layer refuses server calls there anyway.
+            if !ProcessingMode.isLocalMode {
+                do {
+                    let cloudTask = try await APIService.shared.uploadTranscriptionText(
+                        transcription: transcription,
+                        profileId: profile.id,
+                        participants: participants
+                    )
+                    await MainActor.run {
+                        self.isGeneratingLocally = false
+                        self.removeTask(localId)
+                        self.addTask(cloudTask)
+                        self.localProcessingTasks.removeValue(forKey: localId)
+                    }
+                    await self.startSSEStream(for: cloudTask.taskId)
+                    return
+                } catch {
+                    os_log("[RecordingVM] Cloud fallback also failed: %{public}@", log: log, type: .error, error.localizedDescription)
+                }
+            }
+
+            let reason = Self.friendlyNotuleFailureReason(error)
             await MainActor.run {
                 self.isGeneratingLocally = false
                 self.updateTask(localId, status: .error,
-                           errorMessage: "Transcriptie opgeslagen, notule mislukt: \(error.localizedDescription)")
+                           errorMessage: "Transcriptie opgeslagen, notule mislukt: \(reason)")
             }
         }
-        self.localProcessingTasks.removeValue(forKey: localId)
+        await MainActor.run { self.localProcessingTasks.removeValue(forKey: localId) }
+    }
+
+    /// Turns cryptic connection errors into a message the user can act on.
+    /// The classic case: no Apple Intelligence available, provider falls back
+    /// to Ollama on localhost, which does not exist on an iPhone.
+    private static func friendlyNotuleFailureReason(_ error: Error) -> String {
+        let urlError = error as? URLError
+        if urlError?.code == .cannotConnectToHost || urlError?.code == .cannotFindHost {
+            return "geen lokale AI bereikbaar. Stel een AI-provider in bij Instellingen, of schakel de cloud-modus in."
+        }
+        return error.localizedDescription
     }
 
     /// Cancels an in-progress local processing task (transcription or notule generation).

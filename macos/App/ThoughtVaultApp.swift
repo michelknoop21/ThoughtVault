@@ -11,6 +11,12 @@ struct ThoughtVaultApp: App {
     let permissionManager = PermissionManager.shared
     let debugLogger = DebugLogger.shared
 
+    init() {
+        // Before any view reads UserDefaults: adopt iCloud-synced provider
+        // settings (Ollama Cloud URL/model/provider from the Mac).
+        SettingsSyncService.shared.start()
+    }
+
     var body: some Scene {
         WindowGroup {
             RootView()

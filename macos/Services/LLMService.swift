@@ -331,9 +331,10 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
         applyAuth(to: &request)
-        // Idle timer (resets on every received byte): a stalled local LLM that
-        // stops sending tokens fails after 90s instead of hanging for minutes.
-        request.timeoutInterval = 90
+        // Idle timer (resets on every received byte). Generous on purpose: a
+        // local model that cold-loads can take minutes before the first token,
+        // and a premature timeout kills the whole notule generation.
+        request.timeoutInterval = 300
 
         let (asyncBytes, response) = try await URLSession.shared.bytes(for: request)
 

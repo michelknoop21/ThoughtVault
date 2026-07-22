@@ -52,6 +52,7 @@
 		CAFE0003 /* PersonFormFields.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAFE0013 /* PersonFormFields.swift */; };
 		CAFE0002 /* TagSuggestionList.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAFE0012 /* TagSuggestionList.swift */; };
 		CAFE0001 /* SuggestingTextField.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAFE0011 /* SuggestingTextField.swift */; };
+		CAFE0004 /* SettingsSyncService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAFE0014 /* SettingsSyncService.swift */; };
 		AA0000F1 /* SpinningProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000F1 /* SpinningProgressView.swift */; };
 		AA000060 /* ProcessingBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000060 /* ProcessingBar.swift */; };
 		AA000039 /* TranscriptCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000039 /* TranscriptCard.swift */; };
@@ -156,6 +157,7 @@
 		CAFE0013 /* PersonFormFields.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonFormFields.swift; sourceTree = "<group>"; };
 		CAFE0012 /* TagSuggestionList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TagSuggestionList.swift; sourceTree = "<group>"; };
 		CAFE0011 /* SuggestingTextField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SuggestingTextField.swift; sourceTree = "<group>"; };
+		CAFE0014 /* SettingsSyncService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsSyncService.swift; sourceTree = "<group>"; };
 		FA0000F1 /* SpinningProgressView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpinningProgressView.swift; sourceTree = "<group>"; };
 		FA000060 /* ProcessingBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessingBar.swift; sourceTree = "<group>"; };
 		FA000039 /* TranscriptCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptCard.swift; sourceTree = "<group>"; };
@@ -314,6 +316,7 @@
 				FA000071 /* PersonDirectoryService.swift */,
 				FA000063 /* LocalTranscriber.swift */,
 				FA000090 /* AudioChunker.swift */,
+				CAFE0014 /* SettingsSyncService.swift */,
 				FA000091 /* AudioEnvelopeProcessor.swift */,
 				FA000064 /* NotuleTitleExtractor.swift */,
 				FB000301 /* ObsidianService.swift */,
@@ -600,6 +603,7 @@
 				CAFE0003 /* PersonFormFields.swift in Sources */,
 				CAFE0002 /* TagSuggestionList.swift in Sources */,
 				CAFE0001 /* SuggestingTextField.swift in Sources */,
+				CAFE0004 /* SettingsSyncService.swift in Sources */,
 				AA0000F1 /* SpinningProgressView.swift in Sources */,
 				AA000039 /* TranscriptCard.swift in Sources */,
 				AA000040 /* WaveformView.swift in Sources */,

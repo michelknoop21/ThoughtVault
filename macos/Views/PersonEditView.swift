@@ -3,43 +3,10 @@
 // com.buildmind.ThoughtVault
 //
 // Add/edit form for a directory person (isSelf == false).
-// Mirrors ProfileSettingsView field-for-field with LabeledContent rows.
-// Adds tri-state isInternal Picker (D-01) and comma-separated expertiseTags (D-06).
+// Form fields live in the shared PersonFormFields component (also used by
+// ProfileSettingsView), including the tri-state isInternal Picker (D-01).
 
 import SwiftUI
-
-// MARK: - InternalStatus
-
-/// Maps the tri-state Bool? to a stable Picker-friendly enum.
-private enum InternalStatus: Int, CaseIterable {
-    case intern   = 1
-    case extern_  = 0    // rawValue 0 = false
-    case onbekend = 2    // rawValue 2 = nil
-
-    var label: String {
-        switch self {
-        case .intern:   return "Intern"
-        case .extern_:  return "Extern"
-        case .onbekend: return "Onbekend"
-        }
-    }
-
-    var boolValue: Bool? {
-        switch self {
-        case .intern:   return true
-        case .extern_:  return false
-        case .onbekend: return nil
-        }
-    }
-
-    static func from(_ value: Bool?) -> InternalStatus {
-        switch value {
-        case true:  return .intern
-        case false: return .extern_
-        case nil:   return .onbekend
-        }
-    }
-}
 
 // MARK: - PersonEditView
 
@@ -101,51 +68,14 @@ struct PersonEditView: View {
             // Form — label-above rows (SettingFieldRow) so the wide
             // comma-separated inputs aren't cramped, matching Instellingen.
             Form {
-                SettingFieldRow("Naam") {
-                    TextField("Naam", text: $naam)
-                        .textFieldStyle(.roundedBorder)
-                        .font(TS.Font.body)
-                        .autocorrectionDisabled()
-                }
-
-                SettingFieldRow("Rol / Functie") {
-                    TextField("Rol / Functie", text: $rol)
-                        .textFieldStyle(.roundedBorder)
-                        .font(TS.Font.body)
-                        .autocorrectionDisabled()
-                }
-
-                SettingFieldRow("Organisatie") {
-                    TextField("Organisatie", text: $organisatie)
-                        .textFieldStyle(.roundedBorder)
-                        .font(TS.Font.body)
-                        .autocorrectionDisabled()
-                }
-
-                SettingFieldRow("Aliassen", hint: "Meerdere kommagescheiden") {
-                    TextField("Michel, Knoop, MK", text: $aliassen)
-                        .textFieldStyle(.roundedBorder)
-                        .font(TS.Font.body)
-                        .autocorrectionDisabled()
-                }
-
-                SettingFieldRow("Expertise / onderwerpen", hint: "Meerdere kommagescheiden") {
-                    TextField("grafisch ontwerp, marketing, IT", text: $expertise)
-                        .textFieldStyle(.roundedBorder)
-                        .font(TS.Font.body)
-                        .autocorrectionDisabled()
-                }
-
-                SettingFieldRow("Intern / extern") {
-                    Picker("", selection: $internalStatus) {
-                        ForEach(InternalStatus.allCases, id: \.self) { status in
-                            Text(status.label).tag(status)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    .labelsHidden()
-                    .frame(maxWidth: 220)
-                }
+                PersonFormFields(
+                    naam: $naam,
+                    rol: $rol,
+                    organisatie: $organisatie,
+                    aliassen: $aliassen,
+                    expertise: $expertise,
+                    internalStatus: $internalStatus
+                )
             }
             .formStyle(.grouped)
 
@@ -205,9 +135,10 @@ struct PersonEditView: View {
         saveError = nil
 
         let splitAndTrim: (String) -> [String] = { input in
-            input.split(separator: ",")
+            var seen = Set<String>()
+            return input.split(separator: ",")
                 .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-                .filter { !$0.isEmpty }
+                .filter { !$0.isEmpty && seen.insert($0.lowercased()).inserted }
         }
 
         let service = PersonDirectoryService.shared

@@ -147,7 +147,7 @@ struct TranscriptsView: View {
         .navigationTitle("Notulen")
         .toolbar { toolbarContent }
         .navigationDestination(for: Transcript.self) { transcript in
-            TranscriptDetailView(transcript: transcript)
+            TranscriptDetailView(transcript: transcript, availableTags: availableTags)
         }
         .confirmationDialog(
             "Geselecteerde transcripties verwijderen?",
@@ -965,6 +965,8 @@ struct TranscriptDetailView: View {
     // MARK: Input
 
     let transcript: Transcript
+    /// All tags across transcripts, used as suggestions when adding a tag.
+    var availableTags: [String] = []
 
     // MARK: Dependencies
 
@@ -1018,8 +1020,9 @@ struct TranscriptDetailView: View {
 
     // MARK: Init
 
-    init(transcript: Transcript) {
+    init(transcript: Transcript, availableTags: [String] = []) {
         self.transcript = transcript
+        self.availableTags = availableTags
         self._fullTranscript = State(initialValue: transcript)
     }
 
@@ -1276,6 +1279,16 @@ struct TranscriptDetailView: View {
 
     // MARK: - Tags section
 
+    /// Existing tags matching the typed prefix, excluding already assigned ones.
+    private var tagSuggestions: [String] {
+        let q = newTagText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return availableTags
+            .filter { !fullTranscript.tags.contains($0) }
+            .filter { q.isEmpty || $0.lowercased().hasPrefix(q) }
+            .prefix(6)
+            .map { $0 }
+    }
+
     private var tagsSection: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: TS.Spacing.xs) {
@@ -1335,6 +1348,25 @@ struct TranscriptDetailView: View {
                     .background {
                         Capsule().fill(Color.surfaceSecondary)
                             .overlay { Capsule().stroke(Color.brandPrimary.opacity(0.3), lineWidth: 1) }
+                    }
+
+                    // Existing tags as one-tap suggestion chips
+                    ForEach(tagSuggestions, id: \.self) { tag in
+                        Button {
+                            newTagText = tag
+                            Task { await confirmAddTag() }
+                        } label: {
+                            Text(tag)
+                                .font(TS.Font.captionMedium)
+                                .foregroundStyle(Color.labelSecondary)
+                                .padding(.horizontal, TS.Spacing.sm)
+                                .padding(.vertical, 4)
+                                .background {
+                                    Capsule().stroke(Color.borderPrimary, style: StrokeStyle(lineWidth: 1, dash: [3]))
+                                }
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Bestaande tag \(tag) toevoegen")
                     }
                 } else {
                     Button {

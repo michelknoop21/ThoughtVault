@@ -74,47 +74,15 @@ struct ProfileSettingsView: View {
         // Label-above rows (SettingFieldRow) keep these fields full-width and
         // aligned with every other Instellingen tab.
         VStack(spacing: TS.Spacing.sm) {
-            SettingFieldRow("Naam") {
-                TextField("Naam", text: $naam)
-                    .textFieldStyle(.roundedBorder)
-                    .font(TS.Font.body)
-                    .autocorrectionDisabled()
-            }
-
-            SettingFieldRow("Rol / Functie") {
-                TextField("Rol / Functie", text: $rol)
-                    .textFieldStyle(.roundedBorder)
-                    .font(TS.Font.body)
-                    .autocorrectionDisabled()
-            }
-
-            SettingFieldRow("Organisatie") {
-                TextField("Organisatie", text: $organisatie)
-                    .textFieldStyle(.roundedBorder)
-                    .font(TS.Font.body)
-                    .autocorrectionDisabled()
-            }
-
-            SettingFieldRow("Hoe noemen collega's jou?", hint: "Meerdere kommagescheiden") {
-                TextField("Michel, Knoop, MK", text: $aliassen)
-                    .textFieldStyle(.roundedBorder)
-                    .font(TS.Font.body)
-                    .autocorrectionDisabled()
-            }
-
-            SettingFieldRow("Typische vergadertypen", hint: "Meerdere kommagescheiden") {
-                TextField("Wekelijks overleg, Klantgesprek", text: $meetingTypes)
-                    .textFieldStyle(.roundedBorder)
-                    .font(TS.Font.body)
-                    .autocorrectionDisabled()
-            }
-
-            SettingFieldRow("Expertise / onderwerpen", hint: "Meerdere kommagescheiden") {
-                TextField("grafisch ontwerp, marketing, IT", text: $expertise)
-                    .textFieldStyle(.roundedBorder)
-                    .font(TS.Font.body)
-                    .autocorrectionDisabled()
-            }
+            PersonFormFields(
+                naam: $naam,
+                rol: $rol,
+                organisatie: $organisatie,
+                aliassen: $aliassen,
+                expertise: $expertise,
+                aliasLabel: "Hoe noemen collega's jou?",
+                meetingTypes: $meetingTypes
+            )
         }
     }
 
@@ -172,9 +140,10 @@ struct ProfileSettingsView: View {
         saveError = nil
 
         let splitAndTrim: (String) -> [String] = { input in
-            input.split(separator: ",")
+            var seen = Set<String>()
+            return input.split(separator: ",")
                 .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-                .filter { !$0.isEmpty }
+                .filter { !$0.isEmpty && seen.insert($0.lowercased()).inserted }
         }
 
         do {

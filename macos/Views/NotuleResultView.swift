@@ -26,6 +26,7 @@ struct NotuleResultView: View {
     @State private var exportError: String? = nil
     @State private var showAddTag: Bool = false
     @State private var newTagText: String = ""
+    @State private var existingTags: [String] = []
     @State private var didCelebrate = false
 
     enum ResultTab: String, CaseIterable {
@@ -220,6 +221,29 @@ struct NotuleResultView: View {
 
     // MARK: - Add Tag Popover
 
+    /// Trims and deduplicates before saving so "werk" and "werk " never
+    /// become two tags.
+    private func addTag(_ raw: String) {
+        let tag = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !tag.isEmpty else { return }
+        newTagText = ""
+        showAddTag = false
+        guard !task.tags.contains(tag) else { return }
+        Task {
+            var updatedTags = task.tags
+            updatedTags.append(tag)
+            if task.taskId.hasPrefix("local-") {
+                LocalTranscriptStore.shared.updateTags(taskId: task.taskId, tags: updatedTags)
+            } else {
+                do {
+                    try await APIService.shared.updateTranscriptTags(taskId: task.taskId, tags: updatedTags)
+                } catch {
+                    exportError = "Tag opslaan mislukt: \(error.localizedDescription)"
+                }
+            }
+        }
+    }
+
     private var addTagPopover: some View {
         VStack(spacing: TS.Spacing.sm) {
             Text("Tag toevoegen")
@@ -236,6 +260,14 @@ struct NotuleResultView: View {
                     RoundedRectangle(cornerRadius: TS.Radius.xs)
                         .stroke(Color.borderPrimary, lineWidth: 1)
                 }
+                .onSubmit { addTag(newTagText) }
+
+            TagSuggestionList(
+                allTags: existingTags,
+                currentTags: task.tags,
+                query: newTagText,
+                onSelect: { addTag($0) }
+            )
 
             HStack {
                 Button("Annuleer") {
@@ -245,27 +277,14 @@ struct NotuleResultView: View {
                 .buttonStyle(SecondaryButtonStyle())
 
                 Button("Toevoegen") {
-                    if !newTagText.isEmpty {
-                        Task {
-                            var updatedTags = task.tags
-                            updatedTags.append(newTagText)
-                            if task.taskId.hasPrefix("local-") {
-                                LocalTranscriptStore.shared.updateTags(taskId: task.taskId, tags: updatedTags)
-                            } else {
-                                do {
-                                    try await APIService.shared.updateTranscriptTags(taskId: task.taskId, tags: updatedTags)
-                                } catch {
-                                    exportError = "Tag opslaan mislukt: \(error.localizedDescription)"
-                                }
-                            }
-                        }
-                        newTagText = ""
-                        showAddTag = false
-                    }
+                    addTag(newTagText)
                 }
                 .buttonStyle(PrimaryButtonStyle())
-                .disabled(newTagText.isEmpty)
+                .disabled(newTagText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
+        }
+        .onAppear {
+            existingTags = Array(Set(LocalTranscriptStore.shared.allTranscripts().flatMap { $0.tags })).sorted()
         }
         .padding(TS.Spacing.md)
         .frame(width: 260)

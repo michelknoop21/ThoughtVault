@@ -49,6 +49,9 @@
 		AA000036 /* ProfilePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000036 /* ProfilePicker.swift */; };
 		AA000037 /* RecordingWidgetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000037 /* RecordingWidgetView.swift */; };
 		AA000038 /* StatusBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000038 /* StatusBadge.swift */; };
+		CAFE0003 /* PersonFormFields.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAFE0013 /* PersonFormFields.swift */; };
+		CAFE0002 /* TagSuggestionList.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAFE0012 /* TagSuggestionList.swift */; };
+		CAFE0001 /* SuggestingTextField.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAFE0011 /* SuggestingTextField.swift */; };
 		AA0000F1 /* SpinningProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000F1 /* SpinningProgressView.swift */; };
 		AA000060 /* ProcessingBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000060 /* ProcessingBar.swift */; };
 		AA000039 /* TranscriptCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000039 /* TranscriptCard.swift */; };
@@ -83,6 +86,7 @@
 		AB000004 /* PersonDirectoryServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000004 /* PersonDirectoryServiceTests.swift */; };
 		AB000005 /* GraphAttendeeDecodeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000005 /* GraphAttendeeDecodeTests.swift */; };
 		AB000007 /* AudioEnvelopeProcessorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000007 /* AudioEnvelopeProcessorTests.swift */; };
+		AB000008 /* LLMChunkingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000008 /* LLMChunkingTests.swift */; };
 		AB000006 /* GraphCalendarViewResponse.json in Resources */ = {isa = PBXBuildFile; fileRef = FB000006 /* GraphCalendarViewResponse.json */; };
 		AA000063 /* LocalTranscriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000063 /* LocalTranscriber.swift */; };
 		AA000090 /* AudioChunker.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000090 /* AudioChunker.swift */; };
@@ -149,6 +153,9 @@
 		FA000036 /* ProfilePicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfilePicker.swift; sourceTree = "<group>"; };
 		FA000037 /* RecordingWidgetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingWidgetView.swift; sourceTree = "<group>"; };
 		FA000038 /* StatusBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusBadge.swift; sourceTree = "<group>"; };
+		CAFE0013 /* PersonFormFields.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonFormFields.swift; sourceTree = "<group>"; };
+		CAFE0012 /* TagSuggestionList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TagSuggestionList.swift; sourceTree = "<group>"; };
+		CAFE0011 /* SuggestingTextField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SuggestingTextField.swift; sourceTree = "<group>"; };
 		FA0000F1 /* SpinningProgressView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpinningProgressView.swift; sourceTree = "<group>"; };
 		FA000060 /* ProcessingBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessingBar.swift; sourceTree = "<group>"; };
 		FA000039 /* TranscriptCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptCard.swift; sourceTree = "<group>"; };
@@ -186,6 +193,7 @@
 		FB000004 /* PersonDirectoryServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonDirectoryServiceTests.swift; sourceTree = "<group>"; };
 		FB000005 /* GraphAttendeeDecodeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GraphAttendeeDecodeTests.swift; sourceTree = "<group>"; };
 		FB000007 /* AudioEnvelopeProcessorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioEnvelopeProcessorTests.swift; sourceTree = "<group>"; };
+		FB000008 /* LLMChunkingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMChunkingTests.swift; sourceTree = "<group>"; };
 		FB000006 /* GraphCalendarViewResponse.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = GraphCalendarViewResponse.json; sourceTree = "<group>"; };
 		FA000063 /* LocalTranscriber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalTranscriber.swift; sourceTree = "<group>"; };
 		FA000090 /* AudioChunker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioChunker.swift; sourceTree = "<group>"; };
@@ -369,6 +377,9 @@
 				FA000037 /* RecordingWidgetView.swift */,
 				FA000060 /* ProcessingBar.swift */,
 				FA000038 /* StatusBadge.swift */,
+				CAFE0013 /* PersonFormFields.swift */,
+				CAFE0012 /* TagSuggestionList.swift */,
+				CAFE0011 /* SuggestingTextField.swift */,
 				FA0000F1 /* SpinningProgressView.swift */,
 				FA000039 /* TranscriptCard.swift */,
 				FA000040 /* WaveformView.swift */,
@@ -407,6 +418,7 @@
 				FB000004 /* PersonDirectoryServiceTests.swift */,
 				FB000005 /* GraphAttendeeDecodeTests.swift */,
 				FB000007 /* AudioEnvelopeProcessorTests.swift */,
+				FB000008 /* LLMChunkingTests.swift */,
 				GG000100 /* Fixtures */,
 			);
 			path = ThoughtVaultTests;
@@ -585,6 +597,9 @@
 				AA000037 /* RecordingWidgetView.swift in Sources */,
 				AA000060 /* ProcessingBar.swift in Sources */,
 				AA000038 /* StatusBadge.swift in Sources */,
+				CAFE0003 /* PersonFormFields.swift in Sources */,
+				CAFE0002 /* TagSuggestionList.swift in Sources */,
+				CAFE0001 /* SuggestingTextField.swift in Sources */,
 				AA0000F1 /* SpinningProgressView.swift in Sources */,
 				AA000039 /* TranscriptCard.swift in Sources */,
 				AA000040 /* WaveformView.swift in Sources */,
@@ -609,6 +624,7 @@
 				AB000004 /* PersonDirectoryServiceTests.swift in Sources */,
 				AB000005 /* GraphAttendeeDecodeTests.swift in Sources */,
 				AB000007 /* AudioEnvelopeProcessorTests.swift in Sources */,
+				AB000008 /* LLMChunkingTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

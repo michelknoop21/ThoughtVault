@@ -299,6 +299,38 @@ final class WhisperKitTranscriber: LocalTranscriber, @unchecked Sendable {
         self.model = model
     }
 
+    /// Best-effort check whether the WhisperKit model is already on disk
+    /// (default HubApi download location). Only used to pick an init timeout.
+    private static func isModelCached(_ model: String) -> Bool {
+        let base = URL.documentsDirectory
+            .appendingPathComponent("huggingface/models/argmaxinc/whisperkit-coreml")
+        guard let entries = try? FileManager.default.contentsOfDirectory(atPath: base.path) else {
+            return false
+        }
+        return entries.contains { $0.contains(model) }
+    }
+
+    private struct UncheckedSendableBox<T>: @unchecked Sendable { let value: T }
+
+    /// Runs `operation` with a hard timeout. On expiry the group is cancelled
+    /// and a clear error is thrown instead of hanging forever.
+    private static func withTimeout<T: Sendable>(
+        seconds: TimeInterval,
+        errorMessage: String,
+        operation: @escaping @Sendable () async throws -> T
+    ) async throws -> T {
+        try await withThrowingTaskGroup(of: T.self) { group in
+            group.addTask { try await operation() }
+            group.addTask {
+                try await Task.sleep(for: .seconds(seconds))
+                throw LocalTranscriberError.transcriptionFailed(errorMessage)
+            }
+            let result = try await group.next()!
+            group.cancelAll()
+            return result
+        }
+    }
+
     func transcribe(url: URL, onProgress: @Sendable @escaping (Double) -> Void) async throws -> String {
         do {
             onProgress(0.02)
@@ -316,8 +348,18 @@ final class WhisperKitTranscriber: LocalTranscriber, @unchecked Sendable {
             onProgress(0.06)
 
             // Loads (and downloads on first use) the requested model variant.
-            let config = WhisperKitConfig(model: model)
-            let pipe = try await WhisperKit(config)
+            // A stalled download would otherwise hang this await forever, so cap
+            // it: generous when the model still needs downloading (626 MB),
+            // short when it is already cached locally.
+            let modelName = model
+            let initTimeout: TimeInterval = Self.isModelCached(modelName) ? 60 : 300
+            let pipe = try await Self.withTimeout(
+                seconds: initTimeout,
+                errorMessage: "Model laden duurde te lang (\(Int(initTimeout))s). Controleer je internetverbinding en probeer opnieuw."
+            ) {
+                // WhisperKit isn't Sendable; box it to cross the task-group boundary.
+                UncheckedSendableBox(value: try await WhisperKit(WhisperKitConfig(model: modelName)))
+            }.value
 
             onProgress(0.15)
 

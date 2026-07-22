@@ -145,6 +145,8 @@ final class RecordingViewModel {
     private var liveTranscriptionTask: Task<Void, Never>?
     @ObservationIgnored
     private var pendingRemovalTasks: [String: Task<Void, Never>] = [:]
+    /// Status-polling tasks that take over when an SSE stream permanently fails.
+    private var pollingFallbackTasks: [String: Task<Void, Never>] = [:]
     @ObservationIgnored
     private var uploadTask: Task<Void, Never>?
     @ObservationIgnored
@@ -789,8 +791,10 @@ final class RecordingViewModel {
             return
         } catch {
             os_log("[RecordingVM] processLocally transcription failed: %{public}@", log: log, type: .error, error.localizedDescription)
-            await MainActor.run { self.updateTask(localId, status: .error, errorMessage: error.localizedDescription) }
-            self.localProcessingTasks.removeValue(forKey: localId)
+            await MainActor.run {
+                self.updateTask(localId, status: .error, errorMessage: error.localizedDescription)
+                self.localProcessingTasks.removeValue(forKey: localId)
+            }
             return
         }
 
@@ -818,8 +822,10 @@ final class RecordingViewModel {
             try LocalTranscriptStore.shared.save(record)
         } catch {
             os_log("[RecordingVM] processLocally save failed: %{public}@", log: log, type: .error, error.localizedDescription)
-            await MainActor.run { self.updateTask(localId, status: .error, errorMessage: "Opslaan mislukt: \(error.localizedDescription)") }
-            self.localProcessingTasks.removeValue(forKey: localId)
+            await MainActor.run {
+                self.updateTask(localId, status: .error, errorMessage: "Opslaan mislukt: \(error.localizedDescription)")
+                self.localProcessingTasks.removeValue(forKey: localId)
+            }
             return
         }
 
@@ -1236,6 +1242,9 @@ final class RecordingViewModel {
                     os_log("[RecordingVM] SSE error for task %{public}@: %{public}@", log: .default, type: .error, taskId, error.localizedDescription)
                     Task { @MainActor in
                         self.sseClients.removeValue(forKey: taskId)
+                        // SSE gave up (max reconnects) — fall back to polling so
+                        // the task never stays "processing" forever.
+                        self.startPollingFallback(taskId: taskId)
                     }
                 }
             }
@@ -1245,6 +1254,32 @@ final class RecordingViewModel {
 
         } catch {
             os_log("[RecordingVM] Could not start SSE stream for task %{public}@: %{public}@", log: .default, type: .error, taskId, error.localizedDescription)
+        }
+    }
+
+    /// Polls task status every 15s after SSE has permanently failed, feeding
+    /// results through the normal SSE event path. Stops on a terminal state or
+    /// after 40 attempts (~10 min), marking the task as failed so it never
+    /// hangs in "processing".
+    private func startPollingFallback(taskId: String) {
+        guard pollingFallbackTasks[taskId] == nil else { return }
+        pollingFallbackTasks[taskId] = Task { @MainActor in
+            defer { pollingFallbackTasks.removeValue(forKey: taskId) }
+            for _ in 0..<40 {
+                try? await Task.sleep(for: .seconds(15))
+                guard !Task.isCancelled else { return }
+                if let task = try? await APIService.shared.getTaskStatus(taskId: taskId) {
+                    handleSSEEvent(task)
+                    if task.status == .completed || task.status == .error { return }
+                }
+            }
+            // Give up: surface a failed state instead of an eternal spinner.
+            if let index = activeTasks.firstIndex(where: { $0.taskId == taskId }) {
+                var task = activeTasks[index]
+                task.status = .error
+                task.errorMessage = "Verbinding met de server verloren. Controleer later of de notule alsnog is aangemaakt."
+                handleSSEEvent(task)
+            }
         }
     }
 
@@ -1471,37 +1506,18 @@ final class RecordingViewModel {
                     return micURL
                 }
 
-                let micFrameCount = AVAudioFrameCount(micFile.length)
-                let sysFrameCount = AVAudioFrameCount(sysFile.length)
-                let totalFrames = max(micFrameCount, sysFrameCount)
+                let totalFrames = max(micFile.length, sysFile.length)
 
+                // Stream in 10s chunks with reusable buffers: loading both files
+                // whole costs hundreds of MB per hour and risks an OOM kill.
+                let chunkFrames: AVAudioFrameCount = 16_000 * 10
                 guard totalFrames > 0,
-                      let micBuffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: micFrameCount),
-                      let sysBuffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: sysFrameCount),
-                      let mixBuffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: totalFrames)
+                      let micBuffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: chunkFrames),
+                      let sysBuffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: chunkFrames),
+                      let mixBuffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: chunkFrames)
                 else {
                     os_log("[RecordingVM] Could not allocate mix buffers, using mic only", log: .default, type: .error)
                     return micURL
-                }
-
-                try micFile.read(into: micBuffer)
-                try sysFile.read(into: sysBuffer)
-
-                mixBuffer.frameLength = totalFrames
-
-                guard let micData = micBuffer.floatChannelData?[0],
-                      let sysData = sysBuffer.floatChannelData?[0],
-                      let mixData = mixBuffer.floatChannelData?[0] else {
-                    os_log("[RecordingVM] Audio mixing failed: nil channel data, using mic only", log: .default, type: .error)
-                    return micURL
-                }
-
-                for i in 0..<Int(totalFrames) {
-                    let micSample: Float = i < Int(micBuffer.frameLength) ? micData[i] : 0
-                    let sysSample: Float = i < Int(sysBuffer.frameLength) ? sysData[i] : 0
-                    // Element-wise magnitude-max: pick the louder source at each sample, preserving its sign
-                    let sample = abs(micSample) >= abs(sysSample) ? micSample : sysSample
-                    mixData[i] = max(-1.0, min(1.0, sample))
                 }
 
                 let recordingsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
@@ -1510,7 +1526,39 @@ final class RecordingViewModel {
                 let outputURL = recordingsDir
                     .appendingPathComponent("combined_\(Int(Date().timeIntervalSince1970)).wav")
                 let outputFile = try AVAudioFile(forWriting: outputURL, settings: format.settings)
-                try outputFile.write(from: mixBuffer)
+
+                var framesWritten: AVAudioFramePosition = 0
+                while framesWritten < totalFrames {
+                    let remaining = AVAudioFrameCount(min(AVAudioFramePosition(chunkFrames), totalFrames - framesWritten))
+
+                    micBuffer.frameLength = 0
+                    if micFile.framePosition < micFile.length {
+                        try micFile.read(into: micBuffer, frameCount: remaining)
+                    }
+                    sysBuffer.frameLength = 0
+                    if sysFile.framePosition < sysFile.length {
+                        try sysFile.read(into: sysBuffer, frameCount: remaining)
+                    }
+
+                    guard let micData = micBuffer.floatChannelData?[0],
+                          let sysData = sysBuffer.floatChannelData?[0],
+                          let mixData = mixBuffer.floatChannelData?[0] else {
+                        os_log("[RecordingVM] Audio mixing failed: nil channel data, using mic only", log: .default, type: .error)
+                        return micURL
+                    }
+
+                    mixBuffer.frameLength = remaining
+                    for i in 0..<Int(remaining) {
+                        let micSample: Float = i < Int(micBuffer.frameLength) ? micData[i] : 0
+                        let sysSample: Float = i < Int(sysBuffer.frameLength) ? sysData[i] : 0
+                        // Element-wise magnitude-max: pick the louder source at each sample, preserving its sign
+                        let sample = abs(micSample) >= abs(sysSample) ? micSample : sysSample
+                        mixData[i] = max(-1.0, min(1.0, sample))
+                    }
+
+                    try outputFile.write(from: mixBuffer)
+                    framesWritten += AVAudioFramePosition(remaining)
+                }
 
                 return outputURL
 

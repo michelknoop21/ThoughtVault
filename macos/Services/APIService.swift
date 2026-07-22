@@ -464,12 +464,55 @@ actor APIService {
         }
 
         let boundary = "Boundary-\(UUID().uuidString)"
-        let filename = fileURL.lastPathComponent
 
-        // Build multipart body by streaming audio in chunks to a temp file
+        // Build multipart body off the actor: the streaming copy of a
+        // multi-hundred-MB file would otherwise block every other API call.
+        let tempURL = try await Task.detached(priority: .userInitiated) {
+            try Self.buildMultipartBody(
+                fileURL: fileURL,
+                boundary: boundary,
+                profileId: profileId,
+                usePremium: usePremium,
+                participants: participants
+            )
+        }.value
+        defer { try? FileManager.default.removeItem(at: tempURL) }
+
+        let tempSize = (try? FileManager.default.attributesOfItem(atPath: tempURL.path))?[.size] as? Int64 ?? 0
+        logger.info("[APIService] uploadAudio: temp file size=\(tempSize)")
+
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        if let token = authToken() {
+            req.setValue(token, forHTTPHeaderField: "X-User-Token")
+        }
+
+        let delegate = UploadProgressDelegate(onProgress: onProgress)
+        onProgress(0.0)
+        logger.info("[APIService] uploadAudio: starting HTTP upload")
+        let (data, response) = try await uploadSession.upload(for: req, fromFile: tempURL, delegate: delegate)
+        onProgress(1.0)
+
+        if let http = response as? HTTPURLResponse {
+            logger.info("[APIService] uploadAudio: response status=\(http.statusCode)")
+        }
+
+        return try handleResponse(data: data, response: response)
+    }
+
+    /// Streams the multipart form body to a temp file. Nonisolated so the
+    /// large file copy runs off the APIService actor.
+    private nonisolated static func buildMultipartBody(
+        fileURL: URL,
+        boundary: String,
+        profileId: String,
+        usePremium: Bool,
+        participants: [Participant]
+    ) throws -> URL {
+        let filename = fileURL.lastPathComponent
         let tempURL = URL(fileURLWithPath: NSTemporaryDirectory())
             .appendingPathComponent("upload_\(UUID().uuidString).tmp")
-        defer { try? FileManager.default.removeItem(at: tempURL) }
 
         guard let outputStream = OutputStream(url: tempURL, append: false) else {
             throw APIError.invalidResponse
@@ -530,29 +573,7 @@ actor APIService {
         }
 
         writeString("--\(boundary)--\r\n")
-        outputStream.close()
-
-        let tempSize = (try? FileManager.default.attributesOfItem(atPath: tempURL.path))?[.size] as? Int64 ?? 0
-        logger.info("[APIService] uploadAudio: temp file size=\(tempSize)")
-
-        var req = URLRequest(url: url)
-        req.httpMethod = "POST"
-        req.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
-        if let token = authToken() {
-            req.setValue(token, forHTTPHeaderField: "X-User-Token")
-        }
-
-        let delegate = UploadProgressDelegate(onProgress: onProgress)
-        onProgress(0.0)
-        logger.info("[APIService] uploadAudio: starting HTTP upload")
-        let (data, response) = try await uploadSession.upload(for: req, fromFile: tempURL, delegate: delegate)
-        onProgress(1.0)
-
-        if let http = response as? HTTPURLResponse {
-            logger.info("[APIService] uploadAudio: response status=\(http.statusCode)")
-        }
-
-        return try handleResponse(data: data, response: response)
+        return tempURL
     }
 
     // MARK: - Text Transcription Upload
@@ -1089,6 +1110,11 @@ final class SSEClient: @unchecked Sendable {
     private let maxReconnectAttempts = 5
     private var isStopped = false
     private var buffer = ""
+    private var lastEventDate = Date()
+    private var watchdogTask: Task<Void, Never>?
+    /// A server that keeps the connection alive without sending events would
+    /// otherwise leave the task "processing" forever.
+    private let stallInterval: TimeInterval = 120
 
     var onEvent: ((SSEEvent) -> Void)?
 
@@ -1101,12 +1127,32 @@ final class SSEClient: @unchecked Sendable {
         isStopped = false
         reconnectAttempts = 0
         startStream()
+        startWatchdog()
     }
 
     func disconnect() {
         isStopped = true
+        watchdogTask?.cancel()
+        watchdogTask = nil
         dataTask?.cancel()
         dataTask = nil
+    }
+
+    /// Cancels a stalled connection so the existing reconnect path takes over.
+    private func startWatchdog() {
+        watchdogTask?.cancel()
+        lastEventDate = Date()
+        watchdogTask = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(30))
+                guard let self, !self.isStopped else { return }
+                if Date().timeIntervalSince(self.lastEventDate) > self.stallInterval {
+                    logger.warning("SSE: No events for \(Int(self.stallInterval))s — cancelling stalled connection")
+                    self.lastEventDate = Date()
+                    self.dataTask?.cancel()
+                }
+            }
+        }
     }
 
     private func startStream() {
@@ -1128,6 +1174,7 @@ final class SSEClient: @unchecked Sendable {
     }
 
     fileprivate func handleData(_ data: Data) {
+        lastEventDate = Date()
         guard let text = String(data: data, encoding: .utf8) else { return }
         buffer += text
 

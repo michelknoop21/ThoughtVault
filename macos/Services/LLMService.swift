@@ -265,6 +265,7 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
         var summaries: [String] = []
 
         for (index, chunk) in chunks.enumerated() {
+            try Task.checkCancellation()
             logger.info("OpenAICompatibleLLMService: summarizing chunk \(index + 1)/\(chunks.count)")
             let summary = try await streamChatCompletion(
                 systemPrompt: "Je bent een assistent die transcripties samenvat. Bewaar alle belangrijke informatie, namen, besluiten en actiepunten.",
@@ -296,7 +297,7 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
             chunks.append(current)
         }
 
-        return chunks.isEmpty ? [text] : chunks
+        return hardSplitOversizedChunks(chunks.isEmpty ? [text] : chunks, maxChars: maxChars)
     }
 
     // MARK: - SSE Streaming
@@ -330,7 +331,9 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
         applyAuth(to: &request)
-        request.timeoutInterval = 300
+        // Idle timer (resets on every received byte): a stalled local LLM that
+        // stops sending tokens fails after 90s instead of hanging for minutes.
+        request.timeoutInterval = 90
 
         let (asyncBytes, response) = try await URLSession.shared.bytes(for: request)
 
@@ -474,6 +477,7 @@ final class AppleFoundationModelService: LLMService, @unchecked Sendable {
         let summaryInstructions = "Je bent een assistent die transcripties samenvat. Bewaar alle belangrijke informatie, namen, besluiten en actiepunten."
 
         for (index, chunk) in chunks.enumerated() {
+            try Task.checkCancellation()
             logger.info("AppleFoundationModelService: summarizing chunk \(index + 1)/\(chunks.count)")
             let session = LanguageModelSession(instructions: summaryInstructions)
             let response = try await session.respond(
@@ -506,8 +510,24 @@ final class AppleFoundationModelService: LLMService, @unchecked Sendable {
             chunks.append(current)
         }
 
-        return chunks.isEmpty ? [text] : chunks
+        return hardSplitOversizedChunks(chunks.isEmpty ? [text] : chunks, maxChars: maxChars)
     }
+}
+
+/// Transcriptions without ". " separators produce one giant chunk that overflows
+/// the model's context window (hang or empty output). Hard-split any chunk that
+/// still exceeds maxChars.
+func hardSplitOversizedChunks(_ chunks: [String], maxChars: Int) -> [String] {
+    var result: [String] = []
+    for chunk in chunks {
+        var remainder = Substring(chunk)
+        while remainder.count > maxChars {
+            result.append(String(remainder.prefix(maxChars)))
+            remainder = remainder.dropFirst(maxChars)
+        }
+        if !remainder.isEmpty { result.append(String(remainder)) }
+    }
+    return result
 }
 
 // MARK: - Apple Intelligence availability

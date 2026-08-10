@@ -49,10 +49,15 @@ private struct ProcessingBarItem: View {
                     .lineLimit(1)
 
                 if isFailed, let msg = task.errorMessage {
+                    // Technical failures ("Lezen mislukt op frame 84224320 van ...")
+                    // do not fit on one line; give them room and a tooltip.
                     Text(msg)
                         .font(TS.Font.micro)
                         .foregroundStyle(Color.statusError)
-                        .lineLimit(1)
+                        .lineLimit(4)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .textSelection(.enabled)
+                        .help(msg)
                 } else {
                     Text(task.status.displayName)
                         .font(TS.Font.micro)

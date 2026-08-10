@@ -794,6 +794,10 @@ final class RecordingViewModel {
             await MainActor.run {
                 self.updateTask(localId, status: .error, errorMessage: error.localizedDescription)
                 self.localProcessingTasks.removeValue(forKey: localId)
+                // The recording itself is safe in Documents/Recordings — offer it
+                // under "Opgeslagen opnames" so the user has a retry route.
+                self.loadSavedRecordings()
+                self.lastFailedRecording = self.savedRecordings.first { $0.filename == url.lastPathComponent }
             }
             return
         }
@@ -1418,9 +1422,11 @@ final class RecordingViewModel {
         if let progress { activeTasks[idx].progress = progress }
         if let errorMessage { activeTasks[idx].errorMessage = errorMessage }
 
-        // Local processing reports completion/failure through updateTask (not SSE),
-        // so the auto-removal must be scheduled here too.
-        if status == .completed || status == .error {
+        // Local processing reports completion through updateTask (not SSE), so the
+        // auto-removal must be scheduled here too. Failures are deliberately left
+        // standing until the user dismisses them — a 3s window is not enough to
+        // read (let alone act on) an error.
+        if status == .completed {
             scheduleRemoval(of: activeTasks[idx].taskId)
         }
     }
@@ -1540,7 +1546,7 @@ final class RecordingViewModel {
                     channels: 1,
                     interleaved: false
                 ) else {
-                    os_log("[RecordingVM] Could not create mix format, using mic only", log: .default, type: .error)
+                    os_log("[RecordingVM] Could not create mix format, using mic only", log: log, type: .error)
                     return micURL
                 }
 
@@ -1554,7 +1560,7 @@ final class RecordingViewModel {
                       let sysBuffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: chunkFrames),
                       let mixBuffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: chunkFrames)
                 else {
-                    os_log("[RecordingVM] Could not allocate mix buffers, using mic only", log: .default, type: .error)
+                    os_log("[RecordingVM] Could not allocate mix buffers, using mic only", log: log, type: .error)
                     return micURL
                 }
 
@@ -1563,7 +1569,20 @@ final class RecordingViewModel {
                 try? FileManager.default.createDirectory(at: recordingsDir, withIntermediateDirectories: true)
                 let outputURL = recordingsDir
                     .appendingPathComponent("combined_\(Int(Date().timeIntervalSince1970)).wav")
-                let outputFile = try AVAudioFile(forWriting: outputURL, settings: format.settings)
+                // Write 16kHz mono Int16 PCM — the same on-disk format as every other
+                // writer in the app (AudioRecorder, AudioChunker, AudioPreConverter).
+                // `format` above stays Float32 for the mixing buffers; AVAudioFile
+                // encodes to Int16 on write.
+                let diskSettings: [String: Any] = [
+                    AVFormatIDKey: Int(kAudioFormatLinearPCM),
+                    AVSampleRateKey: 16_000.0,
+                    AVNumberOfChannelsKey: 1,
+                    AVLinearPCMBitDepthKey: 16,
+                    AVLinearPCMIsFloatKey: false,
+                    AVLinearPCMIsBigEndianKey: false,
+                    AVLinearPCMIsNonInterleaved: false
+                ]
+                let outputFile = try AVAudioFile(forWriting: outputURL, settings: diskSettings)
 
                 var framesWritten: AVAudioFramePosition = 0
                 while framesWritten < totalFrames {
@@ -1581,7 +1600,7 @@ final class RecordingViewModel {
                     guard let micData = micBuffer.floatChannelData?[0],
                           let sysData = sysBuffer.floatChannelData?[0],
                           let mixData = mixBuffer.floatChannelData?[0] else {
-                        os_log("[RecordingVM] Audio mixing failed: nil channel data, using mic only", log: .default, type: .error)
+                        os_log("[RecordingVM] Audio mixing failed: nil channel data, using mic only", log: log, type: .error)
                         return micURL
                     }
 
@@ -1598,10 +1617,18 @@ final class RecordingViewModel {
                     framesWritten += AVAudioFramePosition(remaining)
                 }
 
+                let attrs = try? FileManager.default.attributesOfItem(atPath: outputURL.path)
+                let outSize = (attrs?[.size] as? Int64) ?? 0
+                os_log("[RecordingVM] Audio mix OK — mic %.1fs (%lld frames), system %.1fs (%lld frames) → %lld frames, %lld bytes Int16 at %{public}@",
+                       log: log, type: .info,
+                       Double(micFile.length) / micFile.processingFormat.sampleRate, micFile.length,
+                       Double(sysFile.length) / sysFile.processingFormat.sampleRate, sysFile.length,
+                       framesWritten, outSize, outputURL.path)
+
                 return outputURL
 
             } catch {
-                os_log("[RecordingVM] Audio mix failed: %{public}@, using mic only", log: .default, type: .error, error.localizedDescription)
+                os_log("[RecordingVM] Audio mix failed: %{public}@, using mic only", log: log, type: .error, error.localizedDescription)
                 return micURL
             }
         }.value

@@ -120,7 +120,24 @@ enum AudioPreConverter {
 
         var reachedEndOfStream = false
         while !reachedEndOfStream {
-            try sourceFile.read(into: inputBuffer, frameCount: inputChunkSize)
+            // AVAudioFile.read throws a bare `nilError` (Foundation._GenericObjCError 0)
+            // when framePosition already sits at EOF, so never issue that one extra
+            // read: clamp to what is left and let an empty buffer drive the
+            // converter's end-of-stream flush below.
+            let framePosition = sourceFile.framePosition
+            let framesRemaining = sourceFile.length - framePosition
+            if framesRemaining > 0 {
+                let framesToRead = AVAudioFrameCount(min(AVAudioFramePosition(inputChunkSize), framesRemaining))
+                do {
+                    try sourceFile.read(into: inputBuffer, frameCount: framesToRead)
+                } catch {
+                    throw LocalTranscriberError.transcriptionFailed(
+                        "Lezen mislukt op frame \(framePosition) van \(sourceFile.length): \(error.localizedDescription)"
+                    )
+                }
+            } else {
+                inputBuffer.frameLength = 0
+            }
 
             nonisolated(unsafe) let capturedInputBuffer = inputBuffer
             var didProvideInput = false
@@ -172,14 +189,17 @@ enum AudioPreConverter {
         return outputURL
     }
 
-    /// Quick check: is this file already 16kHz mono WAV?
+    /// Quick check: is this file already 16kHz mono 16-bit WAV?
+    /// Must inspect `fileFormat` (what is on disk), not `processingFormat` — the
+    /// latter is always Float32 regardless of the encoding, which made this check
+    /// a tautology that let float32 WAVs through unconverted.
     private static func isAlreadyWav16kMono(_ url: URL) -> Bool {
         guard url.pathExtension.lowercased() == "wav" else { return false }
         guard let sourceFile = try? AVAudioFile(forReading: url) else { return false }
-        let format = sourceFile.processingFormat
+        let format = sourceFile.fileFormat
         return format.sampleRate == 16_000
             && format.channelCount == 1
-            && format.commonFormat == .pcmFormatFloat32
+            && format.commonFormat == .pcmFormatInt16
     }
 }
 
@@ -344,6 +364,11 @@ final class WhisperKitTranscriber: LocalTranscriber, @unchecked Sendable {
                 // If conversion fails, try the original file — WhisperKit may still handle it.
                 logger.warning("Pre-conversion failed (\(error.localizedDescription)), trying original file")
                 wavURL = url
+            }
+            // The converted copy is a temp file of ~170 MB per recorded hour;
+            // drop it once this transcription is done (success or failure).
+            defer {
+                if wavURL != url { try? FileManager.default.removeItem(at: wavURL) }
             }
             onProgress(0.06)
 

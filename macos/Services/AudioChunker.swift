@@ -37,7 +37,14 @@ enum AudioChunker {
     }
 
     private static func chunkThrowing(url: URL, chunkDuration: TimeInterval, created: inout [URL]) throws -> [URL] {
-        let sourceFile = try AVAudioFile(forReading: url)
+        let sourceFile: AVAudioFile
+        do {
+            sourceFile = try AVAudioFile(forReading: url)
+        } catch {
+            throw LocalTranscriberError.transcriptionFailed(
+                "Kon bronbestand niet openen (\(url.lastPathComponent)): \(error.localizedDescription)"
+            )
+        }
         let sourceFormat = sourceFile.processingFormat
 
         let diskSettings: [String: Any] = [
@@ -58,9 +65,17 @@ enum AudioChunker {
         var framesInCurrentChunk: AVAudioFramePosition = 0
 
         func openNewChunk() throws -> AVAudioFile {
+            let index = created.count
             let chunkURL = FileManager.default.temporaryDirectory
-                .appendingPathComponent("chunk_\(created.count)_\(UUID().uuidString).wav")
-            let file = try AVAudioFile(forWriting: chunkURL, settings: diskSettings)
+                .appendingPathComponent("chunk_\(index)_\(UUID().uuidString).wav")
+            let file: AVAudioFile
+            do {
+                file = try AVAudioFile(forWriting: chunkURL, settings: diskSettings)
+            } catch {
+                throw LocalTranscriberError.transcriptionFailed(
+                    "Kon deelbestand \(index) niet aanmaken (frame \(sourceFile.framePosition)): \(error.localizedDescription)"
+                )
+            }
             created.append(chunkURL)
             framesInCurrentChunk = 0
             return file
@@ -79,7 +94,13 @@ enum AudioChunker {
                 memcpy(dst[ch], src[ch] + Int(start), Int(count) * MemoryLayout<Float>.size)
             }
             slice.frameLength = count
-            try file.write(from: slice)
+            do {
+                try file.write(from: slice)
+            } catch {
+                throw LocalTranscriberError.transcriptionFailed(
+                    "Schrijven naar deelbestand \(created.count - 1) mislukt (frame \(sourceFile.framePosition), \(count) frames): \(error.localizedDescription)"
+                )
+            }
         }
 
         guard let converter = AVAudioConverter(from: sourceFormat, to: targetFormat) else {
@@ -97,7 +118,24 @@ enum AudioChunker {
 
         var reachedEndOfStream = false
         while !reachedEndOfStream {
-            try sourceFile.read(into: inputBuffer, frameCount: inputChunkSize)
+            // AVAudioFile.read throws a bare `nilError` (Foundation._GenericObjCError 0)
+            // when framePosition already sits at EOF, so never issue that one extra
+            // read: clamp to what is left and let an empty buffer drive the
+            // converter's end-of-stream flush below.
+            let framePosition = sourceFile.framePosition
+            let framesRemaining = sourceFile.length - framePosition
+            if framesRemaining > 0 {
+                let framesToRead = AVAudioFrameCount(min(AVAudioFramePosition(inputChunkSize), framesRemaining))
+                do {
+                    try sourceFile.read(into: inputBuffer, frameCount: framesToRead)
+                } catch {
+                    throw LocalTranscriberError.transcriptionFailed(
+                        "Lezen mislukt op frame \(framePosition) van \(sourceFile.length) (deelbestand \(created.count - 1)): \(error.localizedDescription)"
+                    )
+                }
+            } else {
+                inputBuffer.frameLength = 0
+            }
 
             nonisolated(unsafe) let capturedInputBuffer = inputBuffer
             var didProvideInput = false

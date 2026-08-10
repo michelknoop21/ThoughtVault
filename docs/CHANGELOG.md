@@ -5,6 +5,27 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2026-08-10] — Lange lokale opnames mislukten stil (v1.0.251)
+
+### Fixed
+- **Lange opnames (>60 min) faalden stil in lokale modus, videocall én fysieke meeting** — root cause: `AVAudioFile.read(into:frameCount:)` gooit een kale `nilError` (`Foundation._GenericObjCError` 0) zodra `framePosition` al op EOF staat, en de streaming-lus deed altijd precies één lees-actie te veel. `macos/Services/AudioChunker.swift` klemt de leesactie nu op wat er resteert en laat een lege buffer de end-of-stream-flush aansturen. Reproduceerbaar bewezen op het 87-minutenbestand van 10 augustus: eerst een throw op frame 84.224.320 bij chunk 8, daarna 9 chunks met `delta=0`.
+  Het defect was **niet** duur- of formaat-afhankelijk: dezelfde throw trad op bij een bestand van 2,7 seconden. Het bleef verborgen omdat `AudioChunker` pas boven 60 minuten wordt aangeroepen (WhisperKit) en alle eerdere geslaagde lokale opnames korter waren. Hiermee vervalt de conclusie van [2026-07-10]: de sample-exacte chunkgrenzen en de `.endOfStream`-flush waren nodig maar niet voldoende — het chunk-pad had tot nu toe nog nooit één keer volledig gedraaid.
+- **`AudioPreConverter` gooide bij élke conversie aan het einde** — identieke lus, hetzelfde defect (`LocalTranscriber.swift`). De fout werd gemaskeerd door de fallback in `WhisperKitTranscriber` die bij een mislukte pre-conversie stilzwijgend het originele bestand doorgaf. Geïmporteerde m4a/mp3/44.1kHz-bestanden gingen daardoor ongeconverteerd naar WhisperKit.
+- **`isAlreadyWav16kMono()` was een tautologie** — de check las `sourceFile.processingFormat`, dat per definitie altijd Float32 is ongeacht wat er op schijf staat. Daardoor reduceerde de check tot "is dit een 16 kHz mono .wav" en werd de pre-conversie altijd overgeslagen. Leest nu `fileFormat` en eist `pcmFormatInt16`.
+- **`mixAudioFiles()` schreef float32** — `RecordingViewModel.swift` gebruikte `format.settings` van een Float32-formaat als schrijfinstellingen, waardoor `.combined`-opnames 321 MB werden in plaats van 168 MB, met een WAV-header met `fmt`-tag 3 zonder `cbSize`/`fact`. Schrijft nu 16 kHz mono Int16, gelijk aan `AudioRecorder`, `AudioChunker` en `AudioPreConverter` — en daarmee weer conform `ARCHITECTURE.md`. De mixbuffers blijven Float32; alleen de schrijfinstellingen wijzigen.
+- **Mislukte taken verdwenen na 3 seconden** — `updateTask` plande auto-opruiming voor zowel `.completed` als `.error`. Fouten blijven nu staan tot de gebruiker ze wegklikt (raakt zowel het lokale als het cloud-pad).
+- **Voorgeconverteerd tijdelijk bestand bleef achter** — `WhisperKitTranscriber` verwijderde de `preconv_*.wav` nooit (~170 MB per opgenomen uur). Nu opgeruimd via `defer`, ook bij een fout. Viel pas op nu de pre-conversie daadwerkelijk draait.
+
+### Added
+- **Foutcontext op de vier rauwe `try`-calls in `AudioChunker`** — openen, deelbestand aanmaken, schrijven en lezen benoemen nu welke call faalde, bij welke chunk-index en op welke frame-positie, via `LocalTranscriberError.transcriptionFailed`. Daarmee landt de fout ook in de juiste `catch` in `LocalTranscriber` in plaats van als `Foundation._GenericObjCError fout 0`.
+- **Succes-logging in `mixAudioFiles()`** — duur en frames van beide bronnen, geschreven frames, bytes en uitvoerpad, op de `RecordingVM`-categorie. De mixer logde voorheen alleen bij falen, en dan nog naar `log: .default`; de overige mix-logregels zijn ook naar `RecordingVM` verplaatst.
+- **`lastFailedRecording` in het lokale verwerkingspad** — bij een mislukte lokale transcriptie verschijnt de opname nu onder "Opgeslagen opnames" met een retry-route via `reprocessRecording`, net als het cloud-pad al deed.
+
+### Changed
+- **`ProcessingBar` foutregel** — van `.lineLimit(1)` naar 4 regels met `fixedSize`, selecteerbare tekst en tooltip; een technische fout past niet op één regel.
+
+---
+
 ## [2026-07-10] — Grote-bestanden-transcriptie, live waveform-pipeline, neon Metal-soundwave (v1.0.249)
 
 ### Fixed

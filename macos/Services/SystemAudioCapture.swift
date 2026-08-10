@@ -23,8 +23,8 @@ final class SystemAudioCapture: NSObject {
 
     var isCapturing: Bool = false
     var duration: TimeInterval = 0
-    var audioLevels: [Float] = Array(repeating: 0, count: 60)
-    var micAudioLevels: [Float] = Array(repeating: 0, count: 60)
+    var audioLevels: [Float] = Array(repeating: 0, count: AudioEnvelopeConfig.historyLength)
+    var micAudioLevels: [Float] = Array(repeating: 0, count: AudioEnvelopeConfig.historyLength)
     var hasPermission: Bool = false
     var errorMessage: String? = nil
     var currentOutputURL: URL? = nil
@@ -207,8 +207,8 @@ final class SystemAudioCapture: NSObject {
         self.capturingMicrophone = includeMicrophone
         self.isCapturing = true
         self.duration = 0
-        self.audioLevels = Array(repeating: 0, count: 60)
-        self.micAudioLevels = Array(repeating: 0, count: 60)
+        self.audioLevels = Array(repeating: 0, count: AudioEnvelopeConfig.historyLength)
+        self.micAudioLevels = Array(repeating: 0, count: AudioEnvelopeConfig.historyLength)
         self.errorMessage = nil
 
         startDurationTimer()
@@ -310,8 +310,8 @@ final class SystemAudioCapture: NSObject {
         self.duration = 0
         self.pausedAt = nil
         self.accumulatedPauseDuration = 0
-        self.audioLevels = Array(repeating: 0, count: 60)
-        self.micAudioLevels = Array(repeating: 0, count: 60)
+        self.audioLevels = Array(repeating: 0, count: AudioEnvelopeConfig.historyLength)
+        self.micAudioLevels = Array(repeating: 0, count: AudioEnvelopeConfig.historyLength)
     }
 
     // MARK: - File URL
@@ -358,6 +358,13 @@ private final class AudioStreamOutput: NSObject, SCStreamOutput, SCStreamDelegat
     private var lastDiagnosticLog: Date = .distantPast
     private(set) var systemSampleCount: UInt64 = 0
     private(set) var screenSampleCount: UInt64 = 0
+
+    /// SCStream delivers buffers at ~50-100 Hz. Publishing every buffer would put
+    /// the system-audio history on a different time axis than the microphone
+    /// envelope (30 Hz), which combined mode zips element-wise. Throttling here
+    /// keeps both histories on the same axis.
+    private let levelPublishInterval = 1.0 / AudioEnvelopeConfig.publishRateHz
+    private var lastLevelPublish: [String: Date] = [:]
 
     func stream(
         _ stream: SCStream,
@@ -453,9 +460,14 @@ private final class AudioStreamOutput: NSObject, SCStreamOutput, SCStreamDelegat
 
                 let incomingFrames = UInt64(pcmBuffer.frameLength)
 
-                // Calculate RMS level for waveform visualization
+                // Calculate RMS level for waveform visualization, published at
+                // AudioEnvelopeConfig.publishRateHz (see levelPublishInterval).
                 let level = calculateLevel(from: pcmBuffer)
-                levelHandler(level)
+                let publishNow = Date()
+                if publishNow.timeIntervalSince(lastLevelPublish[streamLabel] ?? .distantPast) >= levelPublishInterval {
+                    lastLevelPublish[streamLabel] = publishNow
+                    levelHandler(level)
+                }
 
                 let fileFormat = audioFile.processingFormat
                 var framesWritten: UInt64 = 0

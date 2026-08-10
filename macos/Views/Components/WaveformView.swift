@@ -2,16 +2,36 @@
 // ThoughtVault
 // com.buildmind.ThoughtVault
 //
-// Neon soundwave rendered by a Metal fragment shader (WaveformShader.metal),
-// a 1:1 port of the WebGL reference: 9 mirrored layers, per-pixel additive
-// glow, blue->cyan->purple->pink palette on near-black. The shader's wave
-// amplitude is scaled by the real mic envelope (AudioEnvelopeProcessor, 30 Hz);
-// the view interpolates between the last two samples at display refresh rate so
-// motion stays continuous.
+// SiriWave-style neon soundwave rendered by a Metal fragment shader
+// (WaveformShader.metal): seven braided strands plus a core line, scrolling the
+// full envelope history from right (new) to left (old) over 3 seconds. The
+// history comes from AudioEnvelopeProcessor (30 Hz); the view interpolates the
+// last two samples at display refresh rate for the live level and integrates
+// the phase clock, because a shader is stateless.
+//
+// The shader returns its own alpha, so the background stays transparent and the
+// waveform drops into whatever surface hosts it.
 
 import SwiftUI
 
-private let surfaceColor = Color(red: 0.01, green: 0.005, blue: 0.02) // near-black
+/// Phase accumulator for the shader. A reference type in `@State` so ticking it
+/// from inside the `TimelineView` body does not invalidate the view — the
+/// timeline already re-renders every frame.
+private final class WavePhaseClock {
+    var phase: Double = 0
+    var lastTick: Date?
+
+    /// Integrates `phaseTime += dt * (2.2 + live * 5.5)`: calm when silent,
+    /// energetic during loud speech. `dt` is capped at 64 ms so a paused or
+    /// backgrounded timeline never causes a jump on resume.
+    func advance(to date: Date, live: Float) -> Double {
+        let dt = lastTick.map { min(0.064, max(0, date.timeIntervalSince($0))) } ?? 0
+        lastTick = date
+        phase += dt * (2.2 + Double(live) * 5.5)
+        if phase > 1_000_000 { phase -= 1_000_000 }
+        return phase
+    }
+}
 
 struct WaveformView: View {
     /// Provider of the processed level history (0..1, newest last).
@@ -23,6 +43,8 @@ struct WaveformView: View {
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.scenePhase) private var scenePhase
+
+    @State private var clock = WavePhaseClock()
 
     private static let idleLevel: Float = 0.0
 
@@ -38,9 +60,6 @@ struct WaveformView: View {
 
     private var staticWaveform: some View {
         Canvas { context, size in
-            let rect = Path(roundedRect: CGRect(origin: .zero, size: size),
-                            cornerRadius: 12, style: .continuous)
-            context.fill(rect, with: .color(surfaceColor))
             let midY = size.height / 2
             var line = Path()
             line.move(to: CGPoint(x: 0, y: midY))
@@ -56,6 +75,9 @@ struct WaveformView: View {
     private var animatedWaveform: some View {
         GeometryReader { geo in
             let size = geo.size
+            // Seven strands become a blur on small surfaces (the 120x32 widget,
+            // the mini variants) — draw only the outer pairs there.
+            let strandCount: Float = size.height >= 64 ? 7 : 3
             // Freeze the shader when the app is not frontmost; per-pixel glow
             // at display refresh rate is the app's biggest energy consumer.
             TimelineView(.animation(
@@ -64,15 +86,20 @@ struct WaveformView: View {
                 // so animating it only burns GPU.
                 paused: scenePhase != .active || !isActive
             )) { timeline in
-                let time = timeline.date.timeIntervalSinceReferenceDate
-                let level = currentLevel(at: time)
+                let levels = currentLevels()
+                let level = currentLevel(levels, at: timeline.date.timeIntervalSinceReferenceDate)
+                let phase = clock.advance(to: timeline.date, live: level)
+                // Opaque fill purely so the rounded rect rasterizes; the shader
+                // replaces every channel including alpha.
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(surfaceColor)
+                    .fill(Color.black)
                     .colorEffect(
                         ShaderLibrary.neonWaveform(
                             .float2(Float(size.width), Float(size.height)),
-                            .float(Float(time.truncatingRemainder(dividingBy: 3600))),
-                            .float(level)
+                            .float(Float(phase)),
+                            .floatArray(levels),
+                            .float(level),
+                            .float(strandCount)
                         )
                     )
             }
@@ -82,12 +109,20 @@ struct WaveformView: View {
 
     // MARK: Level
 
+    /// Full envelope history for the shader, padded to a fixed length so the
+    /// wave scrolls in from the right while the buffer is still filling.
+    private func currentLevels() -> [Float] {
+        let target = AudioEnvelopeConfig.historyLength
+        guard isActive else { return Array(repeating: Self.idleLevel, count: target) }
+        let levels = levelsProvider()
+        if levels.count >= target { return Array(levels.suffix(target)) }
+        return Array(repeating: Self.idleLevel, count: target - levels.count) + levels
+    }
+
     /// Display-refresh interpolation between the last two 30 Hz envelope
     /// samples; the envelope processor already applies attack/release.
-    private func currentLevel(at time: TimeInterval) -> Float {
-        guard isActive else { return Self.idleLevel }
-        let levels = levelsProvider()
-        guard let last = levels.last else { return Self.idleLevel }
+    private func currentLevel(_ levels: [Float], at time: TimeInterval) -> Float {
+        guard isActive, let last = levels.last else { return Self.idleLevel }
         let previous = levels.count >= 2 ? levels[levels.count - 2] : last
         let slot = 1.0 / AudioEnvelopeConfig.publishRateHz
         let progress = Float((time.truncatingRemainder(dividingBy: slot)) / slot)

@@ -23,7 +23,8 @@ struct AudioEnvelopeConfig {
     static let attackMs: Double = 35
     static let releaseMs: Double = 220
     static let silenceThreshold: Float = 0.015
-    static let historyLength = 40
+    /// 90 samples @ 30 Hz = 3.0 s of scrolling history in the waveform.
+    static let historyLength = 90
     /// Window (ms) of dB samples used for the noise-floor percentile.
     static let floorHistoryMs: Double = 2000
     /// dB above the floor that counts as clear speech (freezes upward floor drift).

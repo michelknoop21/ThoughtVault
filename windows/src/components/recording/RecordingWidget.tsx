@@ -3,6 +3,7 @@ import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { stopRecording, pauseRecording, resumeRecording } from "../../services/tauriCommands";
 import { WaveformVisualizer } from "./WaveformVisualizer";
+import { useAudioLevelsRef } from "../../hooks/useAudioLevel";
 import {
   Stop24Regular,
   Pause24Regular,
@@ -14,7 +15,7 @@ type WidgetState = "recording" | "paused" | "stopping";
 export function RecordingWidget() {
   const [elapsed, setElapsed] = useState(0);
   const [state, setState] = useState<WidgetState>("recording");
-  const levelsBufferRef = useRef<number[]>([]);
+  const levelsBufferRef = useAudioLevelsRef();
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startedAtRef = useRef<number>(Date.now());
   const pausedDurationRef = useRef<number>(0);
@@ -43,12 +44,6 @@ export function RecordingWidget() {
       setElapsed(calcElapsed());
     }, 1000);
 
-    const unlistenLevel = listen<number>("audio-level", (event) => {
-      const buf = levelsBufferRef.current;
-      buf.push(Math.max(0, Math.min(1, event.payload)));
-      if (buf.length > 40) buf.shift();
-    });
-
     const unlistenStopped = listen("recording-stopped", () => {
       if (timerRef.current) clearInterval(timerRef.current);
       getCurrentWindow().close();
@@ -57,7 +52,6 @@ export function RecordingWidget() {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
       unlistenSync.then((fn) => fn());
-      unlistenLevel.then((fn) => fn());
       unlistenStopped.then((fn) => fn());
     };
   }, []);

@@ -110,15 +110,13 @@ final class LiveActivityManager {
         guard !levels.isEmpty else { return Array(repeating: 0.0, count: 8) }
         if levels.count == 8 { return levels }
 
+        // Proportional split so the last samples are never dropped, whatever
+        // AudioEnvelopeConfig.historyLength happens to be.
         var result = [Float](repeating: 0.0, count: 8)
-        let chunkSize = max(1, levels.count / 8)
-
         for i in 0..<8 {
-            let start = i * chunkSize
-            let end = min(start + chunkSize, levels.count)
-            if start < levels.count {
-                result[i] = levels[start..<end].max() ?? 0.0
-            }
+            let start = i * levels.count / 8
+            let end = max(start + 1, (i + 1) * levels.count / 8)
+            result[i] = levels[start..<min(end, levels.count)].max() ?? 0.0
         }
         return result
     }

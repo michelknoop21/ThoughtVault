@@ -29,13 +29,21 @@ struct RecordingWidgetView: View {
             // Status indicator + state label
             statusBadge
 
-            // Waveform — wider for better visual feedback
+            // Waveform — wider for better visual feedback. The shader is
+            // additive and transparent, so it needs a dark strip of its own:
+            // this pill floats over arbitrary desktop content and the neon
+            // would wash out against a light .ultraThinMaterial.
             WaveformView(
                 levelsProvider: { recordingVM.audioLevels },
                 isActive: isRecording,
                 maxFPS: 60
             )
             .frame(width: 120, height: 32)
+            .background {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(Color(red: 0.03, green: 0.02, blue: 0.06).opacity(0.92))
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
             .opacity(isPaused ? 0.4 : 1.0)
 
             // Duration — prominent monospaced timer

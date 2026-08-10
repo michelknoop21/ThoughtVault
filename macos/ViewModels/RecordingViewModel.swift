@@ -76,8 +76,9 @@ final class RecordingViewModel {
 #endif
         case .combined:
 #if os(macOS)
-            // Histories can differ in length (mic: 40 envelope samples,
-            // system: 60 raw) — align on the newest samples.
+            // Both sources publish at AudioEnvelopeConfig.publishRateHz into a
+            // history of the same length, but align on the newest samples anyway
+            // in case one side has not filled up yet.
             let sys = Array(systemAudioCapture.audioLevels.suffix(audioRecorder.audioLevels.count))
             let mic = Array(audioRecorder.audioLevels.suffix(sys.count))
             return zip(mic, sys).map(max)

@@ -872,7 +872,7 @@ final class RecordingViewModel {
             }
             try Task.checkCancellation()
 
-            let datedHtml = Self.injectDate(into: html, date: record.createdAt)
+            let datedHtml = Self.injectDate(into: Self.stripCodeFences(html), date: record.createdAt)
             let title = NotuleTitleExtractor.extract(from: datedHtml) ?? fallback
             try LocalTranscriptStore.shared.finalizeNotule(taskId: localId, html: datedHtml, title: title)
 
@@ -976,10 +976,21 @@ final class RecordingViewModel {
             outputTemplate: profile.template
         ) { _ in }
 
-        let datedHtml = Self.injectDate(into: html, date: record.createdAt)
+        let datedHtml = Self.injectDate(into: Self.stripCodeFences(html), date: record.createdAt)
         let title = NotuleTitleExtractor.extract(from: datedHtml) ?? record.title
         try LocalTranscriptStore.shared.finalizeNotule(taskId: taskId, html: datedHtml, title: title)
         return (datedHtml, title)
+    }
+
+    /// Removes the markdown code fences some models wrap around their HTML output.
+    /// The cloud backend strips these server-side; on-device generation needs the
+    /// same guard because the prompt discourages fences but cannot prevent them.
+    private static func stripCodeFences(_ html: String) -> String {
+        var text = html.trimmingCharacters(in: .whitespacesAndNewlines)
+        text = text.replacingOccurrences(of: "^```(?:html)?\\s*\\n?", with: "", options: .regularExpression)
+        text = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        text = text.replacingOccurrences(of: "\\n?```\\s*$", with: "", options: .regularExpression)
+        return text.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     /// Replaces the {{DATE}} template placeholder with a localized date. The cloud

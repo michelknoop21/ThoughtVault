@@ -146,6 +146,20 @@ async function generateWithOpenAICompatible(
   return fullText;
 }
 
+/**
+ * Removes the markdown code fences some models wrap around their HTML output.
+ * The cloud backend strips these server-side; local generation needs the same
+ * guard because the prompt discourages fences but cannot prevent them.
+ */
+function stripCodeFences(html: string): string {
+  return html
+    .trim()
+    .replace(/^```(?:html)?\s*\n?/, "")
+    .trim()
+    .replace(/\n?```\s*$/, "")
+    .trim();
+}
+
 export class LLMService {
   static async generateNotulen(
     transcription: string,
@@ -163,7 +177,7 @@ export class LLMService {
     );
 
     if (config.provider === "ollama") {
-      return generateWithOpenAICompatible(
+      const html = await generateWithOpenAICompatible(
         config.ollamaUrl,
         config.ollamaModel,
         enriched.system_prompt ?? "",
@@ -171,10 +185,11 @@ export class LLMService {
         config.ollamaApiKey,
         onProgress
       );
+      return stripCodeFences(html);
     }
 
     if (config.provider === "lm-studio") {
-      return generateWithOpenAICompatible(
+      const html = await generateWithOpenAICompatible(
         config.lmStudioUrl,
         config.lmStudioModel,
         enriched.system_prompt ?? "",
@@ -182,6 +197,7 @@ export class LLMService {
         "",
         onProgress
       );
+      return stripCodeFences(html);
     }
 
     throw new Error("Cloud provider moet via de server worden verwerkt");

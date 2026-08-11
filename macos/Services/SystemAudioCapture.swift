@@ -464,8 +464,18 @@ private final class AudioStreamOutput: NSObject, SCStreamOutput, SCStreamDelegat
                 // AudioEnvelopeConfig.publishRateHz (see levelPublishInterval).
                 let level = calculateLevel(from: pcmBuffer)
                 let publishNow = Date()
-                if publishNow.timeIntervalSince(lastLevelPublish[streamLabel] ?? .distantPast) >= levelPublishInterval {
-                    lastLevelPublish[streamLabel] = publishNow
+                let previousPublish = lastLevelPublish[streamLabel] ?? .distantPast
+                if publishNow.timeIntervalSince(previousPublish) >= levelPublishInterval {
+                    // Advance the deadline by exactly one interval instead of
+                    // resetting it to now: buffers arrive every ~10-20 ms, so
+                    // resetting would quantise the rate up to the next whole
+                    // buffer (~25 Hz) and the system history would then span
+                    // more wall clock than the mic's 30 Hz history. The lower
+                    // bound keeps a stalled stream from bursting on resume.
+                    lastLevelPublish[streamLabel] = max(
+                        previousPublish.addingTimeInterval(levelPublishInterval),
+                        publishNow.addingTimeInterval(-levelPublishInterval)
+                    )
                     levelHandler(level)
                 }
 

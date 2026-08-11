@@ -269,6 +269,29 @@ enum LocalTranscriberFactory {
             return AppleSpeechTranscriber()
         }
     }
+
+    /// A bare WAV/CAF header is a few hundred bytes; below this there is no audio.
+    private static let minimumAudioBytes: Int64 = 1024
+
+    /// Rejects a missing, empty or truncated recording before it reaches
+    /// AVFoundation. Without this the user gets a raw OSStatus — a 0-byte or
+    /// header-less file surfaces as `kAudioFileUnsupportedFileTypeError`
+    /// ('typ?', 1954115647), which says nothing about what went wrong.
+    static func validateAudioFile(at url: URL) throws {
+        let fm = FileManager.default
+        guard fm.fileExists(atPath: url.path) else {
+            throw LocalTranscriberError.transcriptionFailed(
+                "Het audiobestand '\(url.lastPathComponent)' is niet meer aanwezig.")
+        }
+        guard let size = (try? fm.attributesOfItem(atPath: url.path))?[.size] as? Int64 else {
+            throw LocalTranscriberError.transcriptionFailed(
+                "De grootte van '\(url.lastPathComponent)' kon niet worden bepaald.")
+        }
+        guard size > minimumAudioBytes else {
+            throw LocalTranscriberError.transcriptionFailed(
+                "Het audiobestand '\(url.lastPathComponent)' is leeg of onvolledig (\(size) bytes).")
+        }
+    }
 }
 
 // MARK: - AppleSpeechTranscriber

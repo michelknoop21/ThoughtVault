@@ -8,7 +8,7 @@ interface WaveformVisualizerProps {
   isActive: boolean;
   /** Container height in px (default: 120) */
   height?: number;
-  /** Number of strands to draw (default: 7 above 64px, 3 below) */
+  /** Number of strands to draw (default: 7 above 64px, 4 below) */
   strands?: number;
 }
 
@@ -76,7 +76,9 @@ export function WaveformVisualizer({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animFrameRef = useRef<number>(0);
   const isActiveRef = useRef(isActive);
-  const strandCount = strands ?? (height >= 64 ? 7 : 3);
+  // Must stay even below the threshold: STRANDS is ordered in mirror pairs and
+  // an odd count leaves one carrier without its phase-offset twin.
+  const strandCount = strands ?? (height >= 64 ? 7 : 4);
 
   isActiveRef.current = isActive;
 

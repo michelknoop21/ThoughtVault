@@ -78,7 +78,11 @@ final class RecordingViewModel {
 #if os(macOS)
             // Both sources publish at AudioEnvelopeConfig.publishRateHz into a
             // history of the same length, but align on the newest samples anyway
-            // in case one side has not filled up yet.
+            // in case one side has not filled up yet. Note the scales still
+            // differ: mic levels come from AudioEnvelopeProcessor (tracked noise
+            // floor, gate, attack/release) while system levels are raw
+            // (SystemAudioCapture.calculateLevel: fixed -60 dB floor, pow 0.6),
+            // so system audio dominates the max at moderate levels.
             let sys = Array(systemAudioCapture.audioLevels.suffix(audioRecorder.audioLevels.count))
             let mic = Array(audioRecorder.audioLevels.suffix(sys.count))
             return zip(mic, sys).map(max)
@@ -694,6 +698,7 @@ final class RecordingViewModel {
         do {
             var fullTranscription = ""
 
+            try LocalTranscriberFactory.validateAudioFile(at: url)
             let result = try await onDeviceTranscriber.transcribe(url: url)
             await MainActor.run {
                 self.liveTranscriptText = result
@@ -777,6 +782,7 @@ final class RecordingViewModel {
         let transcription: String
         do {
             try Task.checkCancellation()
+            try LocalTranscriberFactory.validateAudioFile(at: url)
             let transcriber = LocalTranscriberFactory.make()
             transcription = try await transcriber.transcribe(url: url) { [weak self] fraction in
                 Task { @MainActor in

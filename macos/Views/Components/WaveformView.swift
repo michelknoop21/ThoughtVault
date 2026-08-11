@@ -76,8 +76,11 @@ struct WaveformView: View {
         GeometryReader { geo in
             let size = geo.size
             // Seven strands become a blur on small surfaces (the 120x32 widget,
-            // the mini variants) — draw only the outer pairs there.
-            let strandCount: Float = size.height >= 64 ? 7 : 3
+            // the mini variants) — draw only the two outer mirror pairs there.
+            // Must stay even: the strand table is ordered in pairs and an odd
+            // count leaves one carrier without its phase-offset twin, which
+            // reads as a lopsided braid.
+            let strandCount: Float = size.height >= 64 ? 7 : 4
             // Freeze the shader when the app is not frontmost; per-pixel glow
             // at display refresh rate is the app's biggest energy consumer.
             TimelineView(.animation(

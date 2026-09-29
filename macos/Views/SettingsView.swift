@@ -21,8 +21,8 @@ struct SettingsView: View {
 
     // MARK: - AppStorage
 
-    @AppStorage("defaultProfile") private var defaultProfile: String = ""
-    @AppStorage("preferOnDeviceTranscription") private var preferOnDeviceTranscription: Bool = false
+    @AppStorage("defaultProfile") var defaultProfile: String = ""
+    @AppStorage("preferOnDeviceTranscription") var preferOnDeviceTranscription: Bool = false
     @AppStorage("biometricLoginEnabled") private var biometricLoginEnabled: Bool = false
     @AppStorage("videoCallDetectionEnabled") private var videoCallDetectionEnabled: Bool = true
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding: Bool = false
@@ -35,7 +35,7 @@ struct SettingsView: View {
 
     // MARK: - Local State
 
-    @State private var profiles: [Profile] = []
+    @State var profiles: [Profile] = []
     @State private var isLoadingProfiles: Bool = false
     @State private var showLogoutConfirm: Bool = false
     @State private var showBugReportSheet: Bool = false
@@ -66,7 +66,7 @@ struct SettingsView: View {
                 #if os(macOS)
                 tabbedSettings
                 #else
-                flatSettings
+                iosSettings
                 #endif
             }
             .onAppear { isCompact = geo.size.width < 640 }
@@ -201,40 +201,12 @@ struct SettingsView: View {
     }
     #endif
 
-    // MARK: - iOS: Flat Layout (single Form)
-
-    #if os(iOS)
-    private var flatSettings: some View {
-        cappedForm {
-            verbindingSection
-            verwerkingsmodusSection
-            if isLocalProcessing {
-                transcriptieSection
-                lokaleNotulenSection
-            } else {
-                cloudNotulenSection
-            }
-            ProfileSettingsView()
-            onboardingSection
-            profielenSection
-            spraakherkenningSection
-            permissiesSection
-            agendaSection
-            obsidianSection
-            accountSection
-            feedbackSection
-            overSection
-            updatesSection
-        }
-    }
-    #endif
-
     // MARK: - Verbinding (Connection)
 
     @State private var isCheckingServer: Bool = false
     @State private var serverConnected: Bool? = nil
 
-    private var verbindingSection: some View {
+    var verbindingSection: some View {
         Section {
             // Server status
             HStack(spacing: TS.Spacing.sm) {
@@ -267,7 +239,7 @@ struct SettingsView: View {
 
     @State private var revealObsidianKey: Bool = false
 
-    private var obsidianSection: some View {
+    var obsidianSection: some View {
         Section {
             Toggle(isOn: $obsidianEnabled) {
                 Text("Automatisch exporteren naar Obsidian")
@@ -481,7 +453,7 @@ struct SettingsView: View {
 
     // MARK: - Profielen (Profiles)
 
-    private var profielenSection: some View {
+    var profielenSection: some View {
         Section {
             if isLoadingProfiles {
                 HStack {
@@ -540,7 +512,7 @@ struct SettingsView: View {
 
     private static let apiKeyKeychainKey = "ollamaApiKey"
 
-    private var isLocalProcessing: Bool {
+    var isLocalProcessing: Bool {
         (ProcessingMode(rawValue: processingMode) ?? .local) == .local
     }
 
@@ -568,7 +540,7 @@ struct SettingsView: View {
         )
     }
 
-    private var verwerkingsmodusSection: some View {
+    var verwerkingsmodusSection: some View {
         Section {
             Picker("Verwerkingsmodus", selection: $processingMode) {
                 Text("Lokaal").tag(ProcessingMode.local.rawValue)
@@ -588,7 +560,7 @@ struct SettingsView: View {
 
     // MARK: - Transcriptie (Local)
 
-    private var transcriptieSection: some View {
+    var transcriptieSection: some View {
         Section {
             Picker("Engine", selection: $localTranscriber) {
                 ForEach(LocalTranscriberEngine.allCases) { engine in
@@ -659,7 +631,7 @@ struct SettingsView: View {
 
     // MARK: - Notulen (Local provider)
 
-    private var lokaleNotulenSection: some View {
+    var lokaleNotulenSection: some View {
         Section {
             Picker("Provider", selection: localNotuleProviderBinding) {
                 Text("Ollama").tag(NotulenProvider.ollama.rawValue)
@@ -704,7 +676,7 @@ struct SettingsView: View {
 
     // MARK: - Notulen (Cloud)
 
-    private var cloudNotulenSection: some View {
+    var cloudNotulenSection: some View {
         Section {
             NavigationLink {
                 ProfilesView()
@@ -1019,7 +991,7 @@ struct SettingsView: View {
     /// RootView (ThoughtVaultApp) present OnboardingView again; OnboardingView
     /// sets the flag back to true on finish/skip. Essential in local-only mode,
     /// where there is no login window to reach onboarding from.
-    private var onboardingSection: some View {
+    var onboardingSection: some View {
         Section {
             Button {
                 hasCompletedOnboarding = false
@@ -1048,7 +1020,7 @@ struct SettingsView: View {
 
     // MARK: - Permissies (Permissions)
 
-    private var permissiesSection: some View {
+    var permissiesSection: some View {
         Section {
             permissionRow(
                 icon: "mic.fill",
@@ -1140,7 +1112,7 @@ struct SettingsView: View {
 
     // MARK: - Agenda (Calendar)
 
-    private var agendaSection: some View {
+    var agendaSection: some View {
         Section {
             // Provider picker (only show when Microsoft is configured)
             if calendarService.isMicrosoftConfigured {
@@ -1329,7 +1301,7 @@ struct SettingsView: View {
 
     // MARK: - Account
 
-    private var accountSection: some View {
+    var accountSection: some View {
         Section {
             NavigationLink {
                 AccountView()
@@ -1441,7 +1413,7 @@ struct SettingsView: View {
 
     // MARK: - Feedback
 
-    private var feedbackSection: some View {
+    var feedbackSection: some View {
         Section {
             Button {
                 showBugReportSheet = true
@@ -1464,7 +1436,7 @@ struct SettingsView: View {
 
     // MARK: - Over (About)
 
-    private var overSection: some View {
+    var overSection: some View {
         Section {
             HStack {
                 Text("Versie")
@@ -1500,7 +1472,7 @@ struct SettingsView: View {
 
     @AppStorage("checkForUpdates") private var checkForUpdates = true
 
-    private var updatesSection: some View {
+    var updatesSection: some View {
         Section {
             Toggle(isOn: $checkForUpdates) {
                 VStack(alignment: .leading, spacing: 2) {

@@ -43,22 +43,22 @@ struct TranscriptsView: View {
 
     // MARK: State - list
 
-    @State private var transcripts: [Transcript] = []
-    @State private var isLoading = false
-    @State private var loadErrorMessage: String? = nil
-    @State private var searchText = ""
+    @State var transcripts: [Transcript] = []
+    @State var isLoading = false
+    @State var loadErrorMessage: String? = nil
+    @State var searchText = ""
     @State private var searchDebounceTask: Task<Void, Never>? = nil
-    @State private var sortNewest = true
-    @State private var selectedDateFilter: DateFilter = .all
-    @State private var selectedTags: Set<String> = []
+    @State var sortNewest = true
+    @State var selectedDateFilter: DateFilter = .all
+    @State var selectedTags: Set<String> = []
 
     // MARK: State - selection / bulk
 
-    @State private var isSelecting = false
-    @State private var selectedIds: Set<String> = []
-    @State private var showBulkDeleteConfirm = false
-    @State private var transcriptToDelete: Transcript? = nil
-    @State private var showSingleDeleteConfirm = false
+    @State var isSelecting = false
+    @State var selectedIds: Set<String> = []
+    @State var showBulkDeleteConfirm = false
+    @State var transcriptToDelete: Transcript? = nil
+    @State var showSingleDeleteConfirm = false
 
     // MARK: State - auto-refresh debounce
 
@@ -76,11 +76,11 @@ struct TranscriptsView: View {
 
     // MARK: Computed
 
-    private var availableTags: [String] {
+    var availableTags: [String] {
         Array(Set(transcripts.flatMap { $0.tags })).sorted()
     }
 
-    private var filteredTranscripts: [Transcript] {
+    var filteredTranscripts: [Transcript] {
         var result = transcripts
 
         // Search
@@ -119,21 +119,25 @@ struct TranscriptsView: View {
         return result
     }
 
-    private var pendingOfflineCount: Int {
+    var pendingOfflineCount: Int {
         recordingVM.offlineQueue.count
     }
 
-    private var activeTasks: [TranscriptTask] {
+    var activeTasks: [TranscriptTask] {
         recordingVM.activeTasks.filter { $0.status.isActive }
     }
 
-    private var errorTasks: [TranscriptTask] {
+    var errorTasks: [TranscriptTask] {
         recordingVM.activeTasks.filter { $0.status == .error }
     }
 
     // MARK: Body
 
     var body: some View {
+        Group {
+#if os(iOS)
+        iosList
+#else
         GeometryReader { geo in
             // Width-tier responsive layout: compact tightens padding and stacks
             // card metadata; wide windows get a capped, centered column.
@@ -147,8 +151,10 @@ struct TranscriptsView: View {
             .frame(maxWidth: 860)
             .frame(maxWidth: .infinity)
         }
-        .navigationTitle("Notulen")
         .toolbar { toolbarContent }
+#endif
+        }
+        .navigationTitle("Notulen")
         .navigationDestination(for: Transcript.self) { transcript in
             TranscriptDetailView(transcript: transcript, availableTags: availableTags)
         }
@@ -725,7 +731,7 @@ struct TranscriptsView: View {
 
     // MARK: - Helpers
 
-    private func loadTranscripts() async {
+    func loadTranscripts() async {
         isLoading = true
         loadErrorMessage = nil
 
@@ -749,7 +755,7 @@ struct TranscriptsView: View {
         isLoading = false
     }
 
-    private func deleteTranscript(_ transcript: Transcript) async {
+    func deleteTranscript(_ transcript: Transcript) async {
         if isLocalTranscript(transcript.taskId) {
             do {
                 try LocalTranscriptStore.shared.delete(taskId: transcript.taskId)
@@ -988,16 +994,16 @@ struct TranscriptDetailView: View {
 
     // MARK: State - document
 
-    @State private var fullTranscript: Transcript
-    @State private var selectedTab: DetailTab = .notule
+    @State var fullTranscript: Transcript
+    @State var selectedTab: DetailTab = .notule
 
     enum DetailTab { case notule, raw }
 
     // MARK: State - title editing
 
     @State private var showTitleEditAlert = false
-    @State private var isEditingTitle = false
-    @State private var pendingTitle = ""
+    @State var isEditingTitle = false
+    @State var pendingTitle = ""
 
     // MARK: State - tags
 
@@ -1006,10 +1012,10 @@ struct TranscriptDetailView: View {
 
     // MARK: State - regeneration
 
-    @State private var isRegenerating = false
+    @State var isRegenerating = false
     @State private var regeneratingMessage = ""
-    @State private var showProfileSheet = false
-    @State private var profileSheetMode: ProfileSheetMode = .regenerate
+    @State var showProfileSheet = false
+    @State var profileSheetMode: ProfileSheetMode = .regenerate
 
     enum ProfileSheetMode { case regenerate, retranscribe }
 
@@ -1020,12 +1026,12 @@ struct TranscriptDetailView: View {
 
     // MARK: State - editing notulen
 
-    @State private var isEditingNotule = false
-    @State private var editedHTML = ""
+    @State var isEditingNotule = false
+    @State var editedHTML = ""
 
     // MARK: State - errors
 
-    @State private var errorMessage: String? = nil
+    @State var errorMessage: String? = nil
     #if os(macOS)
     @State private var printWebView: WKWebView?
     #endif
@@ -1040,11 +1046,15 @@ struct TranscriptDetailView: View {
 
     // MARK: State - loading
 
-    @State private var isLoadingDetail = true
+    @State var isLoadingDetail = true
 
     // MARK: Body
 
     var body: some View {
+        Group {
+#if os(iOS)
+        iosDetail
+#else
         GeometryReader { geo in
             // Width-tier responsive layout: compact stacks the toolbar rows
             // and tightens padding.
@@ -1084,10 +1094,9 @@ struct TranscriptDetailView: View {
             }
         }
         .navigationTitle("Notulen")
-        #if os(iOS)
-        .navigationBarTitleDisplayMode(.inline)
-        #endif
         .toolbar { detailToolbar }
+#endif
+        }
         .alert("Titel bewerken", isPresented: $showTitleEditAlert) {
             TextField("Titel", text: $pendingTitle)
             Button("Opslaan") {
@@ -1221,7 +1230,7 @@ struct TranscriptDetailView: View {
     // MARK: - Progress banners
 
     @ViewBuilder
-    private var progressBanners: some View {
+    var progressBanners: some View {
         if isRegenerating {
             progressBanner(
                 message: regeneratingMessage.isEmpty
@@ -1645,7 +1654,7 @@ struct TranscriptDetailView: View {
     }
 
     @ViewBuilder
-    private var contentArea: some View {
+    var contentArea: some View {
         let hasNotule = !(fullTranscript.notuleHtml ?? "").isEmpty
         let hasRaw = !(fullTranscript.rawTranscription ?? "").isEmpty
 
@@ -1856,7 +1865,7 @@ struct TranscriptDetailView: View {
 
     // MARK: - Actions
 
-    private func saveTitle() async {
+    func saveTitle() async {
         let newTitle = pendingTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !newTitle.isEmpty else { return }
         if newTitle == fullTranscript.title { isEditingTitle = false; return }
@@ -1881,7 +1890,7 @@ struct TranscriptDetailView: View {
         "toelichting", "bijlagen", "vervolgstappen"
     ]
 
-    private func generateTitle() async {
+    func generateTitle() async {
         guard let html = fullTranscript.notuleHtml, !html.isEmpty else { return }
 
         // Extract text from HTML tags using regex
@@ -2072,7 +2081,7 @@ struct TranscriptDetailView: View {
         retranscribeMessage = ""
     }
 
-    private func copyContent() {
+    func copyContent() {
         let content: String
         if selectedTab == .notule, let html = fullTranscript.notuleHtml {
             content = html
@@ -2090,7 +2099,7 @@ struct TranscriptDetailView: View {
         #endif
     }
 
-    private func exportAsPDF() {
+    func exportAsPDF() {
         guard let html = fullTranscript.notuleHtml ?? fullTranscript.rawTranscription else { return }
 
         let styledHTML = """
@@ -2149,7 +2158,7 @@ struct TranscriptDetailView: View {
         #endif
     }
 
-    private func exportAsTXT() {
+    func exportAsTXT() {
         let html = fullTranscript.notuleHtml ?? fullTranscript.rawTranscription ?? ""
         let stripped = html
             .replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)
@@ -2186,7 +2195,7 @@ struct TranscriptDetailView: View {
         #endif
     }
 
-    private func exportAsMarkdown() {
+    func exportAsMarkdown() {
         let html = fullTranscript.notuleHtml ?? fullTranscript.rawTranscription ?? ""
         let md = htmlToMarkdown(html)
 
@@ -2217,7 +2226,7 @@ struct TranscriptDetailView: View {
         #endif
     }
 
-    private func exportToObsidian() {
+    func exportToObsidian() {
         Task { @MainActor in
             do {
                 if let record = LocalTranscriptStore.shared.record(forTaskId: fullTranscript.taskId) {
@@ -2241,7 +2250,7 @@ struct TranscriptDetailView: View {
         }
     }
 
-    private func shareContent() {
+    func shareContent() {
         let text = fullTranscript.rawTranscription
             ?? (fullTranscript.notuleHtml ?? "")
                 .replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)

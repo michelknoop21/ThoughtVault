@@ -479,6 +479,13 @@ struct TranscriptTask: Identifiable, Codable, Sendable {
     }
 }
 
+extension TranscriptTask {
+    /// Local processing updates `progress` live; other states use the status step.
+    var displayProgress: Double {
+        status == .transcribing || status == .generatingLocal ? progress : status.progress
+    }
+}
+
 // MARK: - Transcript
 
 struct Transcript: Identifiable, Codable, Hashable, Sendable {

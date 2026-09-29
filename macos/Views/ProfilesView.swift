@@ -11,20 +11,24 @@ import SwiftUI
 
 struct ProfilesView: View {
 
-    @Environment(RecordingViewModel.self) private var recordingVM
+    @Environment(RecordingViewModel.self) var recordingVM
 
-    @State private var profiles: [Profile] = []
-    @State private var isLoading: Bool = false
-    @State private var errorMessage: String? = nil
-    @State private var showCreateSheet: Bool = false
-    @State private var profileToEdit: Profile? = nil
-    @State private var profileToDelete: Profile? = nil
-    @State private var showDeleteConfirm: Bool = false
+    @State var profiles: [Profile] = []
+    @State var isLoading: Bool = false
+    @State var errorMessage: String? = nil
+    @State var showCreateSheet: Bool = false
+    @State var profileToEdit: Profile? = nil
+    @State var profileToDelete: Profile? = nil
+    @State var showDeleteConfirm: Bool = false
 
     var defaultProfiles: [Profile] { profiles.filter { $0.isDefault == true } }
     var customProfiles: [Profile] { profiles.filter { $0.isDefault != true } }
 
     var body: some View {
+        Group {
+#if os(iOS)
+        iosBody
+#else
         ScrollView {
             VStack(spacing: TS.Spacing.lg) {
                 // Default profiles section
@@ -93,7 +97,6 @@ struct ProfilesView: View {
             .padding(TS.Spacing.lg)
         }
         .background(Color.surfaceSecondary.opacity(0.5))
-        .navigationTitle("Profielen")
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button {
@@ -103,6 +106,9 @@ struct ProfilesView: View {
                 }
             }
         }
+#endif
+        }
+        .navigationTitle("Profielen")
         .task { await loadProfiles() }
         .overlay {
             if isLoading {

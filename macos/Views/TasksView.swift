@@ -12,18 +12,22 @@ struct TasksView: View {
 
     // MARK: Dependencies
 
-    @Environment(TasksViewModel.self) private var tasksVM
-    @Environment(RecordingViewModel.self) private var recordingVM
+    @Environment(TasksViewModel.self) var tasksVM
+    @Environment(RecordingViewModel.self) var recordingVM
     @Environment(\.scenePhase) private var scenePhase
 
     // MARK: State
 
-    @State private var taskToCancel: TranscriptTask? = nil
-    @State private var taskToDelete: TranscriptTask? = nil
+    @State var taskToCancel: TranscriptTask? = nil
+    @State var taskToDelete: TranscriptTask? = nil
 
     // MARK: Body
 
     var body: some View {
+        Group {
+#if os(iOS)
+        iosBody
+#else
         GeometryReader { geo in
             // Width-tier responsive layout: compact stacks task rows vertically,
             // wide windows get a capped, centered column.
@@ -50,6 +54,8 @@ struct TasksView: View {
                     taskList(tasks: allTasks, isCompact: isCompact)
                 }
             }
+        }
+#endif
         }
         .navigationTitle("Taken")
         .toolbar {
@@ -346,15 +352,7 @@ private struct TaskRow: View {
         task.status.isActive && task.status != .pending && task.status != .queued
     }
 
-    private var isLocalProcessing: Bool {
-        task.status == .transcribing || task.status == .generatingLocal
-    }
-
-    private var progressValue: Double {
-        // Local processing tasks update task.progress live; use that instead of
-        // the static enum value so the progress bar reflects real progress.
-        isLocalProcessing ? task.progress : task.status.progress
-    }
+    private var progressValue: Double { task.displayProgress }
 
     private var statusIconName: String {
         switch task.status {

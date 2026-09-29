@@ -15,16 +15,16 @@ import EventKit
 
 struct OnboardingView: View {
 
-    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding: Bool = false
+    @AppStorage("hasCompletedOnboarding") var hasCompletedOnboarding: Bool = false
     /// Set when the user finishes onboarding via the first-recording CTA; ContentView
     /// reads this once to open the recording screen so the first action is one tap away.
-    @AppStorage("pendingFirstRecording") private var pendingFirstRecording: Bool = false
+    @AppStorage("pendingFirstRecording") var pendingFirstRecording: Bool = false
     @Environment(CalendarService.self) private var calendarService
 
-    @State private var currentStep: OnboardingStep = .welcome
-    @State private var micPermission: PermissionState = .unknown
-    @State private var speechPermission: PermissionState = .unknown
-    @State private var calendarPermission: PermissionState = .unknown
+    @State var currentStep: OnboardingStep = .welcome
+    @State var micPermission: PermissionState = .unknown
+    @State var speechPermission: PermissionState = .unknown
+    @State var calendarPermission: PermissionState = .unknown
     @State private var systemAudioPermission: PermissionState = .unknown
     @State private var isAnimatingIn: Bool = false
 
@@ -87,7 +87,7 @@ struct OnboardingView: View {
     }
 
     /// Steps visible on the current platform (excludes macOS-only steps on iOS).
-    private var visibleSteps: [OnboardingStep] {
+    var visibleSteps: [OnboardingStep] {
         OnboardingStep.allCases.filter { $0.isAvailableOnCurrentPlatform }
     }
 
@@ -110,6 +110,13 @@ struct OnboardingView: View {
     }
 
     var body: some View {
+#if os(iOS)
+        iosBody
+            .onAppear {
+                if IOSDebug.open == "onboarding-mic" { currentStep = .microphoon }
+                Task { await checkExistingPermissions() }
+            }
+#else
         ZStack {
             // One calm, static brand-tinted canvas. The per-step icon carries the
             // identity; a different animated gradient per step read as consumer-cute.
@@ -160,6 +167,7 @@ struct OnboardingView: View {
             }
             Task { await checkExistingPermissions() }
         }
+#endif
     }
 
     // MARK: - Step Indicator
@@ -320,7 +328,7 @@ struct OnboardingView: View {
 
     @State private var connectingMicrosoft = false
 
-    private var agendaStep: some View {
+    var agendaStep: some View {
         VStack(spacing: TS.Spacing.xl) {
             Spacer()
 
@@ -461,7 +469,7 @@ struct OnboardingView: View {
 
     // MARK: Profiel Step
 
-    private var profielStep: some View {
+    var profielStep: some View {
         ScrollView {
             VStack(spacing: TS.Spacing.xl) {
                 Spacer()
@@ -557,7 +565,7 @@ struct OnboardingView: View {
 
     // MARK: Klaar Step
 
-    private var klaarStep: some View {
+    var klaarStep: some View {
         VStack(spacing: TS.Spacing.xl) {
             Spacer()
 
@@ -673,28 +681,7 @@ struct OnboardingView: View {
                 .buttonStyle(PrimaryButtonStyle())
             } else {
                 Button {
-                    if currentStep == .profiel {
-                        // Save profile if any field is non-empty (D-07)
-                        let anyFilled = !profielNaam.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                            || !profielRol.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                            || !profielOrganisatie.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                            || !profielAliassen.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                            || !profielMeetingTypes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                            || !profielExpertise.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                        if anyFilled {
-                            let splitAndTrim: (String) -> [String] = { input in
-                                input.split(separator: ",").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
-                            }
-                            try? LocalTranscriptStore.shared.upsertSelfProfile(
-                                name: profielNaam.trimmingCharacters(in: .whitespacesAndNewlines),
-                                role: profielRol.trimmingCharacters(in: .whitespacesAndNewlines),
-                                organization: profielOrganisatie.trimmingCharacters(in: .whitespacesAndNewlines),
-                                aliases: splitAndTrim(profielAliassen),
-                                meetingTypes: splitAndTrim(profielMeetingTypes),
-                                expertiseTags: splitAndTrim(profielExpertise)
-                            )
-                        }
-                    }
+                    if currentStep == .profiel { saveProfileIfFilled() }
                     advanceStep()
                 } label: {
                     HStack(spacing: TS.Spacing.xs) {
@@ -716,9 +703,32 @@ struct OnboardingView: View {
         }
     }
 
+    /// Saves the "Over jou" profile when any field is filled in (D-07).
+    func saveProfileIfFilled() {
+        let anyFilled = !profielNaam.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            || !profielRol.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            || !profielOrganisatie.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            || !profielAliassen.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            || !profielMeetingTypes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            || !profielExpertise.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        if anyFilled {
+            let splitAndTrim: (String) -> [String] = { input in
+                input.split(separator: ",").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
+            }
+            try? LocalTranscriptStore.shared.upsertSelfProfile(
+                name: profielNaam.trimmingCharacters(in: .whitespacesAndNewlines),
+                role: profielRol.trimmingCharacters(in: .whitespacesAndNewlines),
+                organization: profielOrganisatie.trimmingCharacters(in: .whitespacesAndNewlines),
+                aliases: splitAndTrim(profielAliassen),
+                meetingTypes: splitAndTrim(profielMeetingTypes),
+                expertiseTags: splitAndTrim(profielExpertise)
+            )
+        }
+    }
+
     // MARK: - Permission Requests
 
-    private func checkExistingPermissions() async {
+    func checkExistingPermissions() async {
         let audioStatus = AVCaptureDevice.authorizationStatus(for: .audio)
         micPermission = audioStatus == .authorized ? .granted : audioStatus == .denied ? .denied : .unknown
 
@@ -750,14 +760,14 @@ struct OnboardingView: View {
         }
     }
 
-    private func requestMicPermission() async {
+    func requestMicPermission() async {
         let granted = await AVCaptureDevice.requestAccess(for: .audio)
         await MainActor.run {
             micPermission = granted ? .granted : .denied
         }
     }
 
-    private func requestSpeechPermission() async {
+    func requestSpeechPermission() async {
         let status = await withCheckedContinuation { continuation in
             // TCC invokes this on a background queue; @Sendable prevents
             // MainActor inference which would trap under Swift 6 (SIGTRAP).
@@ -788,7 +798,7 @@ struct OnboardingView: View {
     }
     #endif
 
-    private func openSystemSettings() {
+    func openSystemSettings() {
         #if os(macOS)
         NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security")!)
         #else
@@ -796,7 +806,7 @@ struct OnboardingView: View {
         #endif
     }
 
-    private func advanceStep() {
+    func advanceStep() {
         withAnimation(TS.Animation.smooth) {
             let steps = visibleSteps
             if let currentIndex = steps.firstIndex(of: currentStep),
@@ -806,7 +816,7 @@ struct OnboardingView: View {
         }
     }
 
-    private func goBackStep() {
+    func goBackStep() {
         withAnimation(TS.Animation.smooth) {
             let steps = visibleSteps
             if let currentIndex = steps.firstIndex(of: currentStep),

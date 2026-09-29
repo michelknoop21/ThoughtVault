@@ -55,6 +55,10 @@ final class MeetingNotificationService: NSObject, UNUserNotificationCenterDelega
     }
 
     func requestPermission() async {
+        #if DEBUG
+        // Simulator screenshots cannot dismiss the system prompt.
+        if UserDefaults.standard.bool(forKey: "TVDebugNoNotify") { return }
+        #endif
         do {
             let granted = try await center.requestAuthorization(options: [.alert, .sound, .badge])
             logger.info("Notification permission granted: \(granted)")

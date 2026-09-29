@@ -22,6 +22,22 @@ enum HomeRecentFilter: String, CaseIterable, Identifiable {
     }
 }
 
+extension HomeView {
+    /// First words of the notule (or transcript) as plain text.
+    static func preview(_ transcript: Transcript) -> String {
+        let source = transcript.notuleHtml ?? transcript.rawTranscription ?? ""
+        let text = source
+            .replacingOccurrences(of: "<style[^>]*>[\\s\\S]*?</style>", with: " ", options: .regularExpression)
+            .replacingOccurrences(of: "<h[1-6][^>]*>[\\s\\S]*?</h[1-6]>", with: " ", options: .regularExpression)
+            .replacingOccurrences(of: "<[^>]+>", with: " ", options: .regularExpression)
+            .replacingOccurrences(of: "&nbsp;", with: " ")
+            .replacingOccurrences(of: "&amp;", with: "&")
+            .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespaces)
+        return String(text.prefix(160))
+    }
+}
+
 #if os(macOS)
 extension HomeView {
 
@@ -178,20 +194,6 @@ extension HomeView {
             parts.append("\(max(1, Int((seconds / 60).rounded()))) min")
         }
         return parts.joined(separator: " \u{00B7} ")
-    }
-
-    /// First words of the notule (or transcript) as plain text.
-    static func preview(_ transcript: Transcript) -> String {
-        let source = transcript.notuleHtml ?? transcript.rawTranscription ?? ""
-        let text = source
-            .replacingOccurrences(of: "<style[^>]*>[\\s\\S]*?</style>", with: " ", options: .regularExpression)
-            .replacingOccurrences(of: "<h[1-6][^>]*>[\\s\\S]*?</h[1-6]>", with: " ", options: .regularExpression)
-            .replacingOccurrences(of: "<[^>]+>", with: " ", options: .regularExpression)
-            .replacingOccurrences(of: "&nbsp;", with: " ")
-            .replacingOccurrences(of: "&amp;", with: "&")
-            .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
-            .trimmingCharacters(in: .whitespaces)
-        return String(text.prefix(160))
     }
 
     // MARK: In progress

@@ -10,10 +10,21 @@
 		AB0000S5 /* QuickNoteStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000S5 /* QuickNoteStoreTests.swift */; };
 		AA0000S4 /* QuickNoteStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000S4 /* QuickNoteStore.swift */; };
 		AA0000H1 /* HomeView+Studio.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000H1 /* HomeView+Studio.swift */; };
+		AA0000J2 /* OnboardingView+iOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000J2 /* OnboardingView+iOS.swift */; };
+		AA0000J1 /* AccountView+iOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000J1 /* AccountView+iOS.swift */; };
+		AA0000I9 /* ProfilesView+iOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000I9 /* ProfilesView+iOS.swift */; };
+		AA0000I8 /* SettingsView+iOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000I8 /* SettingsView+iOS.swift */; };
+		AA0000I7 /* TranscriptDetail+iOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000I7 /* TranscriptDetail+iOS.swift */; };
+		AA0000I6 /* TranscriptsView+iOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000I6 /* TranscriptsView+iOS.swift */; };
+		AA0000I5 /* TasksView+iOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000I5 /* TasksView+iOS.swift */; };
+		AA0000I4 /* RecordingView+iOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000I4 /* RecordingView+iOS.swift */; };
+		AA0000I3 /* IOSProcessingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000I3 /* IOSProcessingView.swift */; };
+		AA0000I2 /* HomeView+iOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000I2 /* HomeView+iOS.swift */; };
 		AA0000H2 /* HomeView+Card.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000H2 /* HomeView+Card.swift */; };
 		AA0000H3 /* HomeView+Panels.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000H3 /* HomeView+Panels.swift */; };
 		AA0000H4 /* HomeView+Side.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000H4 /* HomeView+Side.swift */; };
 		AA0000H5 /* HomeDecor.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000H5 /* HomeDecor.swift */; };
+		AA0000I1 /* IOSTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000I1 /* IOSTheme.swift */; };
 		AA0000S3 /* MainSidebar.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000S3 /* MainSidebar.swift */; };
 		AA0000S2 /* RecordingView+Inspector.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000S2 /* RecordingView+Inspector.swift */; };
 		AA0000S1 /* RecordingView+Studio.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000S1 /* RecordingView+Studio.swift */; };
@@ -67,7 +78,6 @@
 		AA000060 /* ProcessingBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000060 /* ProcessingBar.swift */; };
 		AA000039 /* TranscriptCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000039 /* TranscriptCard.swift */; };
 		AA000040 /* WaveformView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000040 /* WaveformView.swift */; };
-		AA000075 /* HomeHeroCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000075 /* HomeHeroCard.swift */; };
 		AA000041 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = FA000041 /* Localizable.strings */; };
 		AA000042 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = FA000042 /* Localizable.strings */; };
 		AA000043 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = FA000043 /* PrivacyInfo.xcprivacy */; };
@@ -123,10 +133,21 @@
 		FB0000S5 /* QuickNoteStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickNoteStoreTests.swift; sourceTree = "<group>"; };
 		FA0000S4 /* QuickNoteStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickNoteStore.swift; sourceTree = "<group>"; };
 		FA0000H1 /* HomeView+Studio.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "HomeView+Studio.swift"; sourceTree = "<group>"; };
+		FA0000J2 /* OnboardingView+iOS.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "OnboardingView+iOS.swift"; sourceTree = "<group>"; };
+		FA0000J1 /* AccountView+iOS.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AccountView+iOS.swift"; sourceTree = "<group>"; };
+		FA0000I9 /* ProfilesView+iOS.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ProfilesView+iOS.swift"; sourceTree = "<group>"; };
+		FA0000I8 /* SettingsView+iOS.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SettingsView+iOS.swift"; sourceTree = "<group>"; };
+		FA0000I7 /* TranscriptDetail+iOS.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TranscriptDetail+iOS.swift"; sourceTree = "<group>"; };
+		FA0000I6 /* TranscriptsView+iOS.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TranscriptsView+iOS.swift"; sourceTree = "<group>"; };
+		FA0000I5 /* TasksView+iOS.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TasksView+iOS.swift"; sourceTree = "<group>"; };
+		FA0000I4 /* RecordingView+iOS.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RecordingView+iOS.swift"; sourceTree = "<group>"; };
+		FA0000I3 /* IOSProcessingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IOSProcessingView.swift; sourceTree = "<group>"; };
+		FA0000I2 /* HomeView+iOS.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "HomeView+iOS.swift"; sourceTree = "<group>"; };
 		FA0000H2 /* HomeView+Card.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "HomeView+Card.swift"; sourceTree = "<group>"; };
 		FA0000H3 /* HomeView+Panels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "HomeView+Panels.swift"; sourceTree = "<group>"; };
 		FA0000H4 /* HomeView+Side.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "HomeView+Side.swift"; sourceTree = "<group>"; };
 		FA0000H5 /* HomeDecor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "HomeDecor.swift"; sourceTree = "<group>"; };
+		FA0000I1 /* IOSTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IOSTheme.swift; sourceTree = "<group>"; };
 		FA0000S3 /* MainSidebar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MainSidebar.swift"; sourceTree = "<group>"; };
 		FA0000S2 /* RecordingView+Inspector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RecordingView+Inspector.swift"; sourceTree = "<group>"; };
 		FA0000S1 /* RecordingView+Studio.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RecordingView+Studio.swift"; sourceTree = "<group>"; };
@@ -181,7 +202,6 @@
 		FA000060 /* ProcessingBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessingBar.swift; sourceTree = "<group>"; };
 		FA000039 /* TranscriptCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptCard.swift; sourceTree = "<group>"; };
 		FA000040 /* WaveformView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaveformView.swift; sourceTree = "<group>"; };
-		FA000075 /* HomeHeroCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeHeroCard.swift; sourceTree = "<group>"; };
 		FA000041 /* Localizable.strings */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = Localizable.strings; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
 		FA000042 /* Localizable.strings */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = Localizable.strings; path = nl.lproj/Localizable.strings; sourceTree = "<group>"; };
 		FA000043 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
@@ -362,6 +382,16 @@
 				FA000023 /* AdminView.swift */,
 				FA000024 /* HomeView.swift */,
 				FA0000H1 /* HomeView+Studio.swift */,
+				FA0000J2 /* OnboardingView+iOS.swift */,
+				FA0000J1 /* AccountView+iOS.swift */,
+				FA0000I9 /* ProfilesView+iOS.swift */,
+				FA0000I8 /* SettingsView+iOS.swift */,
+				FA0000I7 /* TranscriptDetail+iOS.swift */,
+				FA0000I6 /* TranscriptsView+iOS.swift */,
+				FA0000I5 /* TasksView+iOS.swift */,
+				FA0000I4 /* RecordingView+iOS.swift */,
+				FA0000I3 /* IOSProcessingView.swift */,
+				FA0000I2 /* HomeView+iOS.swift */,
 				FA0000H2 /* HomeView+Card.swift */,
 				FA0000H3 /* HomeView+Panels.swift */,
 				FA0000H4 /* HomeView+Side.swift */,
@@ -404,7 +434,7 @@
 				FA000040 /* WaveformView.swift */,
 				FA0000S3 /* MainSidebar.swift */,
 				FA0000H5 /* HomeDecor.swift */,
-				FA000075 /* HomeHeroCard.swift */,
+				FA0000I1 /* IOSTheme.swift */,
 				FA000052 /* PermissionBanner.swift */,
 				FA000053 /* EditableHTMLWebView.swift */,
 			);
@@ -612,10 +642,21 @@
 				AA0000S4 /* QuickNoteStore.swift in Sources */,
 				AA0000S3 /* MainSidebar.swift in Sources */,
 				AA0000H1 /* HomeView+Studio.swift in Sources */,
+				AA0000J2 /* OnboardingView+iOS.swift in Sources */,
+				AA0000J1 /* AccountView+iOS.swift in Sources */,
+				AA0000I9 /* ProfilesView+iOS.swift in Sources */,
+				AA0000I8 /* SettingsView+iOS.swift in Sources */,
+				AA0000I7 /* TranscriptDetail+iOS.swift in Sources */,
+				AA0000I6 /* TranscriptsView+iOS.swift in Sources */,
+				AA0000I5 /* TasksView+iOS.swift in Sources */,
+				AA0000I4 /* RecordingView+iOS.swift in Sources */,
+				AA0000I3 /* IOSProcessingView.swift in Sources */,
+				AA0000I2 /* HomeView+iOS.swift in Sources */,
 				AA0000H2 /* HomeView+Card.swift in Sources */,
 				AA0000H3 /* HomeView+Panels.swift in Sources */,
 				AA0000H4 /* HomeView+Side.swift in Sources */,
 				AA0000H5 /* HomeDecor.swift in Sources */,
+				AA0000I1 /* IOSTheme.swift in Sources */,
 				AA0000S2 /* RecordingView+Inspector.swift in Sources */,
 				AA0000S1 /* RecordingView+Studio.swift in Sources */,
 				AA000031 /* SettingsView.swift in Sources */,
@@ -634,7 +675,6 @@
 				AA0000F1 /* SpinningProgressView.swift in Sources */,
 				AA000039 /* TranscriptCard.swift in Sources */,
 				AA000040 /* WaveformView.swift in Sources */,
-				AA000075 /* HomeHeroCard.swift in Sources */,
 				AA000051 /* PermissionManager.swift in Sources */,
 				AA000052 /* PermissionBanner.swift in Sources */,
 				AA000053 /* EditableHTMLWebView.swift in Sources */,

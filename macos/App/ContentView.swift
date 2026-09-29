@@ -204,7 +204,25 @@ struct ContentView: View {
             }
 #else
         iOSView
+            .onAppear {
+                if pendingFirstRecording {
+                    pendingFirstRecording = false
+                    selectedTab = .record
+                }
+            }
             .task { await fetchCalendarIfGranted() }
+            .task {
+                if let tab = IOSDebug.string("TVDebugTab").flatMap(AppTab.init(rawValue:)) { selectedTab = tab }
+                if IOSDebug.open == "transcript", let first = LocalTranscriptStore.shared.allTranscripts().first {
+                    openTranscript(first)
+                }
+                if IOSDebug.open == "record" { await recordingVM.startRecording() }
+                if IOSDebug.open == "task" || IOSDebug.open == "processing" {
+                    await recordingVM.startRecording()
+                    try? await Task.sleep(for: .seconds(4))
+                    await recordingVM.stopAndUpload()
+                }
+            }
 #endif
     }
 
@@ -293,17 +311,6 @@ struct ContentView: View {
         )
     }
 
-    /// Opens a transcript from the sidebar's recent list in the Notulen tab.
-    private func openTranscript(_ transcript: Transcript) {
-        if selectedTab == .transcripts {
-            transcriptsNavPath = NavigationPath()
-            transcriptsNavPath.append(transcript)
-        } else {
-            pendingTranscript = transcript
-            selectedTab = .transcripts
-        }
-    }
-
     private var detailView: some View {
         VStack(spacing: 0) {
             PermissionBanner()
@@ -320,11 +327,26 @@ struct ContentView: View {
     }
 #endif
 
+    /// Opens a transcript from a recent list in the Notulen tab.
+    private func openTranscript(_ transcript: Transcript) {
+        if selectedTab == .transcripts {
+            transcriptsNavPath = NavigationPath()
+            transcriptsNavPath.append(transcript)
+        } else {
+            pendingTranscript = transcript
+            selectedTab = .transcripts
+        }
+    }
+
     // MARK: - iOS View
+
+    /// The approved iOS NorthStar has five tabs; Mensen and Admin live in
+    /// Instellingen (SettingsView).
+    private static let iOSTabs: [AppTab] = [.home, .record, .transcripts, .tasks, .settings]
 
     private var iOSView: some View {
         TabView(selection: $selectedTab) {
-            ForEach(visibleTabs) { tab in
+            ForEach(Self.iOSTabs) { tab in
                 tabContent(for: tab)
                     .tabItem {
                         Label(tab.title, systemImage: tab.icon)
@@ -332,6 +354,7 @@ struct ContentView: View {
                     .tag(tab)
             }
         }
+        .tint(Color(red: 0.72, green: 0.50, blue: 1.0))
     }
 
     // MARK: - Tab Content
@@ -351,7 +374,8 @@ struct ContentView: View {
                         homeSearch = query
                         selectedTab = .transcripts
                     },
-                    onOpenSettings: { selectedTab = .settings }
+                    onOpenSettings: { selectedTab = .settings },
+                    onStartMeeting: startMeetingFromHome
                 )
             }
 #if os(macOS)
@@ -424,11 +448,17 @@ struct ContentView: View {
     }
 
     private func openTranscriptFromHome(_ transcript: Transcript) {
-#if os(macOS)
         openTranscript(transcript)
-#else
-        selectedTab = .transcripts
-#endif
+    }
+
+    /// "Start opname" on a meeting in today's agenda (iOS Home): same start as
+    /// the macOS call alert, microphone only on iOS.
+    private func startMeetingFromHome(_ meeting: CalendarEvent) {
+        guard recordingVM.recordingState == .idle else { return }
+        recordingVM.activeMeeting = meeting
+        recordingVM.selectedMode = .microphone
+        selectedTab = .record
+        Task { await recordingVM.startRecording() }
     }
 
     // MARK: - Visible Tabs

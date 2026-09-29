@@ -10,9 +10,8 @@
 // are scaled, slightly phase-shifted copies (ribbon look). Colour runs magenta
 // → violet → lavender → cool blue along x.
 //
-// The history comes from AudioEnvelopeProcessor (30 Hz, 3 s). Travel speed is
-// constant; loudness raises it by at most 25 %. Mirrors
-// windows/src/components/recording/WaveformVisualizer.tsx.
+// The history comes from AudioEnvelopeProcessor (30 Hz, 3 s), which already
+// applies attack/release. The Canvas only maps that stable level to geometry.
 
 import SwiftUI
 
@@ -35,45 +34,64 @@ private final class WavePhaseClock {
     }
 }
 
-/// Tuning values; keep in sync with the Windows visualizer.
+/// macOS Studio waveform tuning; the compact widget uses the same geometry.
 enum WaveConfig {
-    static let heightFrac: Double = 0.38
-    static let knee: Double = 2.2
+    static let heightFrac: Double = 0.40
+    static let knee: Double = 1.9
     static let taperPow: Double = 1.1
-    static let carrierCycles: Double = 2.3
+    static let carrierCycles: Double = 3.0
     static let travelHz: Double = 0.3
     static let energyBoost: Double = 0.25
-    static let breath: Double = 0.012
+    static let breath: Double = 0.004
     static let glow: CGFloat = 16
     static let driftCenter: Double = 0.04
     static let driftWidth: Double = 0.2
 
     struct Belly { let c, w, delayMs, f, amp: Double }
     static let bellies: [Belly] = [
-        Belly(c: 0.32, w: 0.14, delayMs: 0, f: 0.037, amp: 1.0),
-        Belly(c: 0.52, w: 0.13, delayMs: 90, f: 0.053, amp: 0.8),
-        Belly(c: 0.73, w: 0.13, delayMs: 180, f: 0.071, amp: 0.6),
+        Belly(c: 0.31, w: 0.16, delayMs: 0, f: 0.037, amp: 1.0),
+        Belly(c: 0.53, w: 0.15, delayMs: 70, f: 0.053, amp: 0.95),
+        Belly(c: 0.73, w: 0.15, delayMs: 140, f: 0.071, amp: 0.78),
     ]
 
     static let gradient = Gradient(stops: [
-        .init(color: Color(red: 1.00, green: 0.31, blue: 0.82), location: 0),
-        .init(color: Color(red: 0.75, green: 0.31, blue: 1.00), location: 0.30),
-        .init(color: Color(red: 0.92, green: 0.78, blue: 1.00), location: 0.50),
-        .init(color: Color(red: 0.67, green: 0.35, blue: 1.00), location: 0.72),
-        .init(color: Color(red: 0.35, green: 0.55, blue: 1.00), location: 1),
+        .init(color: Color(red: 0.94, green: 0.25, blue: 0.77).opacity(0), location: 0),
+        .init(color: Color(red: 0.94, green: 0.25, blue: 0.77).opacity(0.7), location: 0.08),
+        .init(color: Color(red: 0.96, green: 0.30, blue: 0.88), location: 0.25),
+        .init(color: Color(red: 0.72, green: 0.39, blue: 0.98), location: 0.51),
+        .init(color: Color(red: 0.57, green: 0.40, blue: 1.00), location: 0.77),
+        .init(color: Color(red: 0.36, green: 0.53, blue: 1.00).opacity(0.7), location: 0.92),
+        .init(color: Color(red: 0.36, green: 0.53, blue: 1.00).opacity(0), location: 1),
+    ])
+    static let mainGradient = Gradient(stops: [
+        .init(color: Color(red: 0.96, green: 0.34, blue: 0.84).opacity(0), location: 0),
+        .init(color: Color(red: 0.96, green: 0.34, blue: 0.84).opacity(0.7), location: 0.08),
+        .init(color: Color(red: 1.00, green: 0.43, blue: 0.91), location: 0.27),
+        .init(color: Color(red: 1.00, green: 0.77, blue: 1.00), location: 0.36),
+        .init(color: Color(red: 0.75, green: 0.44, blue: 1.00), location: 0.47),
+        .init(color: Color(red: 0.89, green: 0.70, blue: 1.00), location: 0.64),
+        .init(color: Color(red: 0.53, green: 0.47, blue: 1.00), location: 0.79),
+        .init(color: Color(red: 0.36, green: 0.53, blue: 1.00).opacity(0), location: 1),
     ])
 
-    struct Line { let width, alpha, k, phase: Double; let main: Bool }
+    struct Line { let width, alpha, k, phase, offset: Double; let main: Bool }
 
-    /// Deterministic per-line parameters; the last line is the main curve.
-    static func lines(count: Int) -> [Line] {
-        func hash(_ n: Double) -> Double { let x = sin(n * 127.1 + 311.7) * 43758.5453; return x - floor(x) }
-        return (0..<count).map { j in
-            let jd = Double(j)
-            if j == count - 1 { return Line(width: 2.4, alpha: 1, k: 1, phase: 0, main: true) }
-            return Line(width: 0.7 + 0.8 * hash(jd), alpha: 0.35 + 0.4 * hash(jd + 7),
-                        k: 0.3 + 0.7 * (jd / Double(max(1, count - 2))), phase: (hash(jd + 3) - 0.5) * 0.9, main: false)
-        }
+    static let desktopLines: [Line] = [
+        Line(width: 0.7, alpha: 0.44, k: 0.76, phase: -0.90, offset: -1.0, main: false),
+        Line(width: 0.9, alpha: 0.68, k: 0.88, phase: -0.51, offset: -0.65, main: false),
+        Line(width: 1.1, alpha: 0.80, k: 0.96, phase: -0.23, offset: -0.31, main: false),
+        Line(width: 1.1, alpha: 0.80, k: 0.96, phase: 0.24, offset: 0.31, main: false),
+        Line(width: 0.9, alpha: 0.68, k: 0.88, phase: 0.54, offset: 0.65, main: false),
+        Line(width: 0.7, alpha: 0.44, k: 0.76, phase: 0.94, offset: 1.0, main: false),
+        Line(width: 2.2, alpha: 1, k: 1, phase: 0, offset: 0, main: true),
+    ]
+    static let widgetLines: [Line] = [desktopLines[1], desktopLines[2], desktopLines[4], desktopLines[6]]
+
+    /// Display gain is deliberately below one at the loudest input, leaving
+    /// room for strand spread and glow without clipping the 32-point widget.
+    static func visualEnergy(_ level: Float) -> Double {
+        let x = Double(min(1, max(0, level)))
+        return 0.72 * x * x * x
     }
 }
 
@@ -91,8 +109,7 @@ struct WaveformView: View {
 
     var body: some View {
         GeometryReader { geo in
-            // A dozen threads blur together on small surfaces (the 120x32 widget).
-            let lineCount = geo.size.height >= 64 ? 12 : 4
+            let lines = geo.size.height >= 64 ? WaveConfig.desktopLines : WaveConfig.widgetLines
             TimelineView(.animation(
                 minimumInterval: maxFPS.map { 1.0 / $0 },
                 paused: scenePhase != .active || !isActive
@@ -102,7 +119,7 @@ struct WaveformView: View {
                 let _ = reduceMotion ? () : clock.advance(to: timeline.date, level: level)
                 Canvas { context, size in
                     Self.draw(in: &context, size: size, levels: levels, clock: clock,
-                              lines: WaveConfig.lines(count: lineCount), frozen: reduceMotion)
+                              lines: lines, frozen: reduceMotion)
                 }
             }
         }
@@ -131,8 +148,9 @@ struct WaveformView: View {
         let w = size.width, h = size.height
         guard w > 0, h > 0 else { return }
         let tau = 2 * Double.pi
-        let cy = h / 2, maxH = h * WaveConfig.heightFrac
-        let level = Double(levels.last ?? 0)
+        let compact = h < 64
+        let cy = h / 2, maxH = h * WaveConfig.heightFrac * (compact ? 0.7 : 1)
+        let level = WaveConfig.visualEnergy(levels.last ?? 0)
         // Reduce Motion: shape frozen, only the height follows the level.
         let td = frozen ? 0 : clock.drift, tr = frozen ? 0 : clock.travel, time = frozen ? 0 : clock.time
 
@@ -140,7 +158,7 @@ struct WaveformView: View {
             let di = Double(i)
             return (b.c + WaveConfig.driftCenter * sin(tau * b.f * td + di * 2.1),
                     b.w * (1 + WaveConfig.driftWidth * sin(tau * b.f * 0.83 * td + di * 1.3)),
-                    b.amp * (frozen ? level : envelope(levels, delayMs: b.delayMs)))
+                    b.amp * (frozen ? level : WaveConfig.visualEnergy(Float(envelope(levels, delayMs: b.delayMs)))))
         }
 
         let step: CGFloat = 2
@@ -148,34 +166,45 @@ struct WaveformView: View {
         let quiet = 0.55 + 0.45 * min(1, level * 2)
         let shading = GraphicsContext.Shading.linearGradient(
             WaveConfig.gradient, startPoint: .zero, endPoint: CGPoint(x: w, y: 0))
+        let mainShading = GraphicsContext.Shading.linearGradient(
+            WaveConfig.mainGradient, startPoint: .zero, endPoint: CGPoint(x: w, y: 0))
 
         var ctx = context
-        ctx.blendMode = .plusLighter
+        ctx.blendMode = .normal
         for (j, line) in lines.enumerated() {
             var path = Path()
             for p in 0..<n {
                 let x = Double(p) / Double(n - 1)
                 let taper = pow(max(0, sin(Double.pi * x)), WaveConfig.taperPow)
                 var s = 0.0
+                var spread = 0.0
                 for (i, b) in bellies.enumerated() {
                     let z = (x - b.c) / b.w
-                    let k = line.main ? 1 : line.k * (1 + 0.25 * sin(tau * 0.05 * td + Double(j + i)))
-                    s += b.amp * k * exp(-0.5 * z * z)
-                        * sin(tau * WaveConfig.carrierCycles * (x - b.c) - tr + line.phase * (1 + Double(i) * 0.4))
+                    let belly = exp(-0.5 * z * z)
+                    let localGain = line.main ? 1 : 1 + 0.18 * sin(Double((j + 1) * (i + 2)) * 1.3)
+                    s += b.amp * line.k * localGain * belly
+                        * sin(tau * WaveConfig.carrierCycles * (x - b.c) - tr + line.phase * (1 + Double(i) * 0.7))
+                    spread += b.amp * belly * (i == 1 ? -0.8 : 1)
                 }
                 let y = tanh(s * WaveConfig.knee) * maxH * taper
+                    + maxH * level * line.offset * 0.40 * spread * taper
                     + h * WaveConfig.breath * sin(tau * 1.3 * x + time * 0.9 + Double(j) * 0.3) * taper
                 let pt = CGPoint(x: CGFloat(p) * step, y: cy - y)
                 if p == 0 { path.move(to: pt) } else { path.addLine(to: pt) }
             }
+            if line.main || (j >= 1 && j <= 4) {
+                var glow = ctx
+                let glowGain = 0.1 + 0.9 * min(1, level / 0.3)
+                glow.opacity = (line.main ? 0.75 : (j == 2 || j == 3 ? 0.32 : 0.20)) * glowGain
+                glow.blendMode = .plusLighter
+                glow.addFilter(.blur(radius: compact ? 3 : (line.main ? WaveConfig.glow : 7)))
+                glow.stroke(path, with: line.main ? mainShading : shading,
+                            style: StrokeStyle(lineWidth: compact ? 5 : (line.main ? 20 : 8), lineCap: .round, lineJoin: .round))
+            }
             var lc = ctx
             lc.opacity = line.main ? 1 : line.alpha * quiet
-            if line.main {
-                lc.addFilter(.shadow(color: Color(red: 0.93, green: 0.4, blue: 1).opacity(0.95), radius: WaveConfig.glow * 0.7))
-            } else if j % 3 == 0 {
-                lc.addFilter(.shadow(color: Color(red: 0.75, green: 0.31, blue: 1).opacity(0.7), radius: 4))
-            }
-            lc.stroke(path, with: shading, style: StrokeStyle(lineWidth: line.width, lineCap: .round, lineJoin: .round))
+            lc.stroke(path, with: line.main ? mainShading : shading,
+                      style: StrokeStyle(lineWidth: line.width * (compact ? 0.72 : 1), lineCap: .round, lineJoin: .round))
         }
     }
 }

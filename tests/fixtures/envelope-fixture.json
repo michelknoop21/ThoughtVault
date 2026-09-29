@@ -1,6 +1,17 @@
 {
   "comment": "Shared input sequences for the cross-platform audio envelope. Steps are {dtMs, db, repeat}. Assertions live in both test suites (Swift + Rust) against spec thresholds, not golden floats.",
   "scenarios": {
+    "northstarTimeline": [
+      { "dtMs": 33.333333, "db": -100, "repeat": 30 },
+      { "dtMs": 33.333333, "db": -35, "repeat": 45 },
+      { "dtMs": 33.333333, "db": -25, "repeat": 15 },
+      { "dtMs": 33.333333, "db": -20, "repeat": 15 },
+      { "dtMs": 33.333333, "db": -28, "repeat": 15 },
+      { "dtMs": 33.333333, "db": -22, "repeat": 15 },
+      { "dtMs": 33.333333, "db": -25, "repeat": 15 },
+      { "dtMs": 33.333333, "db": -8, "repeat": 21 },
+      { "dtMs": 33.333333, "db": -100, "repeat": 39 }
+    ],
     "silence": [
       { "dtMs": 33, "db": -100, "repeat": 60 }
     ],

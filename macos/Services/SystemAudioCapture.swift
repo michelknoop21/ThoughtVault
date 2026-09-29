@@ -36,6 +36,9 @@ final class SystemAudioCapture {
     var errorMessage: String?
     var currentOutputURL: URL?
     var currentMicURL: URL?
+#if DEBUG
+    var meterDebugText = ""
+#endif
 
     private var tapID = AudioObjectID(kAudioObjectUnknown)
     private var aggregateID = AudioObjectID(kAudioObjectUnknown)
@@ -45,6 +48,8 @@ final class SystemAudioCapture {
     private var startDate: Date?
     private var pausedAt: Date?
     private var accumulatedPauseDuration: TimeInterval = 0
+    private var envelope = AudioEnvelopeProcessor()
+    private var lastMeterDate: Date?
     private let ioQueue = DispatchQueue(label: "com.buildmind.ThoughtVault.SystemAudioCapture.io")
 
     @discardableResult
@@ -87,9 +92,18 @@ final class SystemAudioCapture {
             guard let inputFormat = AVAudioFormat(streamDescription: &format) else {
                 throw SystemAudioCaptureError.coreAudio("tapformaat", -1)
             }
-            let writer = TapAudioWriter(file: file, inputFormat: inputFormat) { [weak self] level in
+            let writer = TapAudioWriter(file: file, inputFormat: inputFormat) { [weak self] db in
                 Task { @MainActor [weak self] in
-                    guard let self else { return }
+                    guard let self, self.isCapturing else { return }
+                    let now = Date()
+                    let dt = self.lastMeterDate.map { now.timeIntervalSince($0) } ?? 1 / AudioEnvelopeConfig.publishRateHz
+                    self.lastMeterDate = now
+                    let level = self.envelope.process(db: db, dt: dt)
+#if DEBUG
+                    self.meterDebugText = String(format: "system db %.1f  floor %.1f  gate %.2f  target %.2f  out %.3f  dt %.0fms",
+                                                 db, self.envelope.noiseFloorDb, self.envelope.lastGate,
+                                                 self.envelope.lastTarget, level, dt * 1000)
+#endif
                     self.audioLevels.removeFirst()
                     self.audioLevels.append(level)
                 }
@@ -111,6 +125,8 @@ final class SystemAudioCapture {
         isCapturing = true
         duration = 0
         audioLevels = Array(repeating: 0, count: AudioEnvelopeConfig.historyLength)
+        envelope.reset()
+        lastMeterDate = nil
         startDate = Date()
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated {
@@ -165,6 +181,8 @@ final class SystemAudioCapture {
         pausedAt = nil
         accumulatedPauseDuration = 0
         audioLevels = Array(repeating: 0, count: AudioEnvelopeConfig.historyLength)
+        envelope.reset()
+        lastMeterDate = nil
         micAudioLevels = Array(repeating: 0, count: AudioEnvelopeConfig.historyLength)
     }
 
@@ -233,7 +251,7 @@ private final class TapAudioWriter: @unchecked Sendable {
                 var sum: Float = 0
                 for index in 0..<Int(frames) { sum += samples[index] * samples[index] }
                 let db = 20 * log10(max(sqrt(sum / Float(frames)), 1e-10))
-                levelHandler(db <= -60 ? 0 : min(1, pow((db + 60) / 60, 0.6)))
+                levelHandler(db)
             }
         }
         do {

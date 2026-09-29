@@ -1,3 +1,5 @@
+import AppKit
+import SwiftUI
 import XCTest
 @testable import ThoughtVault
 
@@ -112,5 +114,75 @@ final class AudioEnvelopeProcessorTests: XCTestCase {
         // Also survive literal NaN/Inf inputs
         XCTAssertTrue(p.process(db: .nan, dt: 0.033).isFinite)
         XCTAssertTrue(p.process(db: .infinity, dt: 0.033).isFinite)
+    }
+
+    /// The seven-second NorthStar calibration fixture. Export six frames only
+    /// when requested by a local debug run; normal CI keeps the numeric check.
+    @MainActor
+    func testNorthstarTimeline() {
+        var processor = AudioEnvelopeProcessor()
+        let levels = run("northstarTimeline", processor: &processor)
+        XCTAssertEqual(levels.count, 210)
+        XCTAssertLessThan(WaveConfig.visualEnergy(levels[24]), 0.05)
+        XCTAssertGreaterThan(WaveConfig.visualEnergy(levels[60]), 0.10)
+        XCTAssertLessThan(WaveConfig.visualEnergy(levels[60]), 0.25)
+        XCTAssertGreaterThan(WaveConfig.visualEnergy(levels[120]), 0.30)
+        XCTAssertLessThan(WaveConfig.visualEnergy(levels[120]), 0.50)
+        XCTAssertGreaterThan(WaveConfig.visualEnergy(levels[165]), 0.55)
+        XCTAssertLessThan(WaveConfig.visualEnergy(levels[165]), 0.75)
+        XCTAssertGreaterThan(WaveConfig.visualEnergy(levels[32]), 0.05, "soft speech must appear within 100 ms")
+        XCTAssertGreaterThan(WaveConfig.visualEnergy(levels[176]), 0.03, "release must not drop abruptly")
+        XCTAssertLessThan(WaveConfig.visualEnergy(levels[176]), 0.15)
+        XCTAssertLessThan(WaveConfig.visualEnergy(levels[188]), 0.05, "release should reach near-rest within 600 ms")
+        let moments: [(String, Int)] = [
+            ("silence", 24), ("soft", 60), ("normal", 120),
+            ("loud", 165), ("release200", 176), ("release600", 188)
+        ]
+        for (name, frame) in moments {
+            let value = levels[frame]
+            print("WAVE_FIXTURE \(name) envelope=\(value) visual=\(WaveConfig.visualEnergy(value))")
+            // xcodebuild does not forward arbitrary shell variables to XCTest.
+            // Touch the marker for a local export; normal CI stays numeric-only.
+            guard FileManager.default.fileExists(atPath: "/tmp/thoughtvault-wave-export-snapshots") else { continue }
+            let directory = "/tmp/thoughtvault-wave-shots"
+            let history = Array(levels.prefix(frame + 1).suffix(AudioEnvelopeConfig.historyLength))
+            let view = ZStack {
+                Color(red: 0.015, green: 0.012, blue: 0.045)
+                WaveformView(levelsProvider: { history }, isActive: true, maxFPS: 60)
+                    .frame(width: 1916, height: 280)
+                    .position(x: 1916 / 2, y: 821 * 0.483)
+            }
+            .frame(width: 1916, height: 821)
+            let renderer = ImageRenderer(content: view)
+            renderer.scale = 1
+            guard let cgImage = renderer.cgImage,
+                  let png = NSBitmapImageRep(cgImage: cgImage).representation(using: .png, properties: [:]) else {
+                XCTFail("Could not render \(name) snapshot")
+                continue
+            }
+            do {
+                try FileManager.default.createDirectory(atPath: directory, withIntermediateDirectories: true)
+                try png.write(to: URL(fileURLWithPath: directory).appendingPathComponent("\(name).png"))
+            } catch {
+                XCTFail("Could not export \(name): \(error)")
+            }
+            if name == "loud" {
+                let widget = WaveformView(levelsProvider: { history }, isActive: true, maxFPS: 60)
+                    .frame(width: 120, height: 32)
+                    .background(Color(red: 0.03, green: 0.02, blue: 0.06))
+                let widgetRenderer = ImageRenderer(content: widget)
+                widgetRenderer.scale = 4
+                if let image = widgetRenderer.cgImage,
+                   let data = NSBitmapImageRep(cgImage: image).representation(using: .png, properties: [:]) {
+                    do {
+                        try data.write(to: URL(fileURLWithPath: directory).appendingPathComponent("widget-loud.png"))
+                    } catch {
+                        XCTFail("Could not export widget: \(error)")
+                    }
+                } else {
+                    XCTFail("Could not render widget snapshot")
+                }
+            }
+        }
     }
 }

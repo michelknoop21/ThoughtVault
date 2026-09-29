@@ -78,13 +78,8 @@ final class RecordingViewModel {
 #endif
         case .combined:
 #if os(macOS)
-            // Both sources publish at AudioEnvelopeConfig.publishRateHz into a
-            // history of the same length, but align on the newest samples anyway
-            // in case one side has not filled up yet. Note the scales still
-            // differ: mic levels come from AudioEnvelopeProcessor (tracked noise
-            // floor, gate, attack/release) while system levels are raw
-            // (SystemAudioCapture.calculateLevel: fixed -60 dB floor, pow 0.6),
-            // so system audio dominates the max at moderate levels.
+            // Both sources use AudioEnvelopeProcessor at 30 Hz. Align their
+            // newest samples in case one history has not filled up yet.
             let sys = Array(systemAudioCapture.audioLevels.suffix(audioRecorder.audioLevels.count))
             let mic = Array(audioRecorder.audioLevels.suffix(sys.count))
             return zip(mic, sys).map(max)
@@ -96,7 +91,17 @@ final class RecordingViewModel {
 
 #if DEBUG
     /// Envelope pipeline diagnostics for the DEBUG waveform overlay.
-    var meterDebugText: String { audioRecorder.meterDebugText }
+    var meterDebugText: String {
+#if os(macOS)
+        switch selectedMode {
+        case .microphone: audioRecorder.meterDebugText
+        case .systemAudio: systemAudioCapture.meterDebugText
+        case .combined: audioRecorder.meterDebugText + " | " + systemAudioCapture.meterDebugText
+        }
+#else
+        audioRecorder.meterDebugText
+#endif
+    }
 #endif
 
     /// Duration from the primary active recorder.
@@ -179,7 +184,7 @@ final class RecordingViewModel {
 
         // Load profiles from API (restore saved selection if available)
         Task {
-            await loadDefaultProfile(savedId: UserDefaults.standard.string(forKey: "lastSelectedProfileId") ?? "")
+            await loadDefaultProfile(savedId: UserDefaults.standard.string(forKey: "defaultProfile") ?? "")
             await checkFeatures()
         }
     }
@@ -202,7 +207,7 @@ final class RecordingViewModel {
 
     /// Reload profiles from API. Call after login to fetch user-specific profiles.
     func reloadProfiles() async {
-        await loadDefaultProfile(savedId: UserDefaults.standard.string(forKey: "lastSelectedProfileId") ?? "")
+        await loadDefaultProfile(savedId: UserDefaults.standard.string(forKey: "defaultProfile") ?? "")
     }
 
     private func loadDefaultProfile(savedId: String) async {

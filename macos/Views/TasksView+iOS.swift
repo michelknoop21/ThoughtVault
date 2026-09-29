@@ -119,7 +119,9 @@ private struct IOSTasksScreen: View {
                 Text(emptyTitle)
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(IOSColor.text)
-                Text("Wanneer je een opname start of een audiobestand importeert, verschijnt de voortgang hier.")
+                Text(filter == .done
+                     ? "Afgeronde verwerkingen staan direct in Notulen."
+                     : "Wanneer je een opname start of een audiobestand importeert, verschijnt de voortgang hier.")
                     .font(.system(size: 13))
                     .foregroundStyle(IOSColor.text2)
                     .multilineTextAlignment(.center)

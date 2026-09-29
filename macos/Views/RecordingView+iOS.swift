@@ -328,20 +328,24 @@ extension RecordingView {
                     .disabled(recordingVM.availableProfiles.isEmpty)
                 }
             }
+            // Same setting as "Transcriptie op apparaat": it also runs the live
+            // transcript, so the cell is labelled by what it really switches.
+            if OnDeviceTranscriber.shared.isAvailable() {
             cellDivider
-            settingCell(icon: "doc.plaintext", label: "Live transcriptie") {
+            settingCell(icon: "doc.plaintext", label: "Op apparaat") {
                 HStack(spacing: 4) {
                     Text(preferOnDeviceTranscription ? "Aan" : "Uit")
                         .font(.system(size: 13))
                         .foregroundStyle(preferOnDeviceTranscription ? IOSColor.ready : IOSColor.text2)
                     Spacer(minLength: 0)
-                    Toggle("Live transcriptie", isOn: $preferOnDeviceTranscription)
+                    Toggle("Transcriptie op apparaat", isOn: $preferOnDeviceTranscription)
                         .labelsHidden()
                         .tint(IOSColor.violet)
                         .scaleEffect(0.7, anchor: .trailing)
                         .frame(width: 36)
                         .disabled(isLive)
                 }
+            }
             }
         }
         .padding(.vertical, 12)

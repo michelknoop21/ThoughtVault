@@ -17,6 +17,9 @@ struct IOSProcessingView: View {
     @Environment(TasksViewModel.self) private var tasksVM
     @Environment(\.dismiss) private var dismiss
     @State private var confirmCancel = false
+    /// Failed tasks leave the list after a few seconds; remember the last
+    /// status so the screen does not then claim success.
+    @State private var lastStatus: TaskStatus?
 
     private var allTasks: [TranscriptTask] {
         if ProcessingMode.isLocalMode { return recordingVM.activeTasks }
@@ -34,6 +37,9 @@ struct IOSProcessingView: View {
                 if let task {
                     currentCard(task)
                         .padding(.top, 20)
+                } else if lastStatus == .error {
+                    failedCard
+                        .padding(.top, 20)
                 } else {
                     finishedCard
                         .padding(.top, 20)
@@ -46,6 +52,9 @@ struct IOSProcessingView: View {
         .scrollIndicators(.hidden)
         .iosScreen()
         .navigationBarTitleDisplayMode(.inline)
+        .onChange(of: task?.status, initial: true) { _, status in
+            if let status { lastStatus = status }
+        }
         .confirmationDialog("Verwerking annuleren?", isPresented: $confirmCancel, titleVisibility: .visible) {
             Button("Annuleer verwerking", role: .destructive) { cancel() }
             Button("Terug", role: .cancel) {}
@@ -135,6 +144,21 @@ struct IOSProcessingView: View {
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundStyle(IOSColor.ready)
             Text("Deze opname wordt niet meer verwerkt. Het resultaat staat in Notulen.")
+                .font(.system(size: 14))
+                .foregroundStyle(IOSColor.text2)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(18)
+        .iosCard()
+    }
+
+    private var failedCard: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label("Verwerking mislukt", systemImage: "exclamationmark.triangle.fill")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(IOSColor.danger)
+            Text("De opname staat bij Opgeslagen opnames op het Opnemen-scherm; daar kun je hem opnieuw verwerken.")
                 .font(.system(size: 14))
                 .foregroundStyle(IOSColor.text2)
                 .fixedSize(horizontal: false, vertical: true)

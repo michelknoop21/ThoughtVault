@@ -64,7 +64,7 @@ FastAPI op AWS EC2 GPU `michelk@3.69.205.209`, container `n8n_transcript_studio`
 - **Notule titels**: Backend extraheert titels via `_extract_title_from_html()` in `transcription.py`. Sectiekoppen (bijv. "Kernargumenten") worden gefilterd via `_SECTION_WORDS`. Titel-extractie gebeurt in twee codepaths: `/callback/notule` route EN `app.py` queue callback — beide moeten in sync blijven.
 
 ## Credentials & Environment Variables
-Beheerd door Claude Vault (automatisch geïnjecteerd bij sessiestart). Volledige lijst met required/optional: zie `.env.example`.
+Beheerd door Claude Vault: vrijgave via `/grant NAAM`, gebruik via `vault-exec` (zie globale instructies). Vereiste variabelen: zie `.env.example`.
 
 ## gstack (REQUIRED — global install)
 
@@ -89,18 +89,6 @@ Do not skip skills, ignore gstack errors, or work around missing gstack.
 Using gstack skills: After install, skills like /qa, /ship, /review, /investigate,
 and /browse are available. Use /browse for all web browsing.
 Use ~/.claude/skills/gstack/... for gstack file paths (the global path).
-
-## GBrain Configuration (configured by /setup-gbrain)
-- Mode: local-stdio
-- Engine: pglite
-- Config file: ~/.gbrain/config.json (mode 0600)
-- Setup date: 2026-06-05
-- MCP registered: yes (user scope)
-- Embeddings: ON — local Ollama (`ollama:nomic-embed-text`, 768d) via http://localhost:11434. No API keys/proxy needed. Coverage ~94% (8 chunks across 2 oversized session docs exceed nomic's context window). Refresh with `gbrain embed --stale`.
-- Artifacts sync: off
-- Current repo policy: read-write (gitlab.prezent.nl/ai-coding/transcript-studio-native, 57 pages imported)
-
-> Note: this block is machine-specific. It is intentionally left uncommitted so it does not get pushed to the team-shared repo.
 
 ## GBrain Search Guidance (configured by /setup-gbrain)
 <!-- gstack-gbrain-search-guidance:start -->

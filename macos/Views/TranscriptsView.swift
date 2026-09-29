@@ -1789,6 +1789,21 @@ struct TranscriptDetailView: View {
                         .buttonStyle(.plain)
                     }
 
+                    if let note = QuickNoteStore.note(forTranscriptId: fullTranscript.taskId) {
+                        VStack(alignment: .leading, spacing: TS.Spacing.xs) {
+                            Label("Notitie tijdens opname", systemImage: "square.and.pencil")
+                                .font(TS.Font.captionSemibold)
+                                .foregroundStyle(Color.labelTertiary)
+                            Text(note)
+                                .font(TS.Font.body)
+                                .foregroundStyle(Color.labelPrimary)
+                                .textSelection(.enabled)
+                        }
+                        .padding(TS.Spacing.sm)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(RoundedRectangle(cornerRadius: TS.Radius.sm, style: .continuous).fill(Color.surfaceSecondary))
+                    }
+
                     Text(raw)
                         .font(.system(size: 14.5, weight: .regular))
                         .foregroundStyle(Color.labelPrimary)

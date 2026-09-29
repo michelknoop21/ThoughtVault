@@ -47,6 +47,9 @@ final class RecordingViewModel {
     /// ad-hoc meetings with no calendar link so they still get a deelnemerslijst.
     /// Reset after each recording is dispatched.
     var selectedParticipantIDs: [String] = []
+    /// "Snelle notitie" typed during the current recording; kept across pause/resume
+    /// and stored with the audio file on stop (QuickNoteStore).
+    var quickNote: String = ""
 
     // YouTube transcription
     var isYouTubeEnabled: Bool = false
@@ -454,6 +457,9 @@ final class RecordingViewModel {
             return
         }
 
+        QuickNoteStore.save(quickNote, audioFilename: url.lastPathComponent)
+        quickNote = ""
+
         // Validate file has actual audio content (16kHz mono 16-bit = ~32KB/sec, minimum 3 seconds)
         let fileSize = (try? FileManager.default.attributesOfItem(atPath: url.path))?[.size] as? Int64 ?? 0
         os_log("[RecordingVM] stopAndUpload: fileSize=%lld, network=%{public}@", log: log, type: .info, fileSize, networkMonitor.isConnected ? "connected" : "offline")
@@ -582,6 +588,7 @@ final class RecordingViewModel {
             recordingState = .idle
             uploadProgress = 0
             activeMeeting = nil
+            quickNote = ""
         }
     }
 
@@ -721,6 +728,7 @@ final class RecordingViewModel {
                 participants: participants
             )
 
+            saveLocalAudioPath(url: url, taskId: task.taskId)   // links the quick note
             await MainActor.run {
                 self.addTask(task)
                 recordingState = .idle
@@ -860,7 +868,8 @@ final class RecordingViewModel {
             let html = try await service.generateNotulen(
                 transcription: transcription,
                 systemPrompt: profile.systemPrompt ?? "",
-                notulePrompt: Self.injectParticipants(into: profile.notulePrompt ?? "", participants: participants)
+                notulePrompt: QuickNoteStore.promptBlock(QuickNoteStore.note(audioFilename: url.lastPathComponent))
+                    + Self.injectParticipants(into: profile.notulePrompt ?? "", participants: participants)
                     + PersonalVocabulary.promptInstruction(),
                 outputTemplate: profile.template
             ) { [weak self] chunk in
@@ -905,6 +914,7 @@ final class RecordingViewModel {
                         profileId: profile.id,
                         participants: participants
                     )
+                    self.saveLocalAudioPath(url: url, taskId: cloudTask.taskId)   // links the quick note
                     await MainActor.run {
                         self.isGeneratingLocally = false
                         self.removeTask(localId)
@@ -971,7 +981,8 @@ final class RecordingViewModel {
         let html = try await service.generateNotulen(
             transcription: record.rawTranscription,
             systemPrompt: profile.systemPrompt ?? "",
-            notulePrompt: Self.injectParticipants(into: profile.notulePrompt ?? "", participants: record.participants)
+            notulePrompt: QuickNoteStore.promptBlock(QuickNoteStore.note(forTranscriptId: taskId))
+                + Self.injectParticipants(into: profile.notulePrompt ?? "", participants: record.participants)
                 + PersonalVocabulary.promptInstruction(),
             outputTemplate: profile.template
         ) { _ in }

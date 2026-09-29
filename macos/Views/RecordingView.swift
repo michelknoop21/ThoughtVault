@@ -19,19 +19,41 @@ struct RecordingView: View {
 
     // MARK: State
 
-    @State private var selectedReprocessRecording: SavedRecording? = nil
+    @State var selectedReprocessRecording: SavedRecording? = nil
     @State private var savedRecordingsExpanded = false
-    @State private var addNoteText = ""
-    @State private var showNoteField = false
-    @State private var showCancelConfirm = false
-    @State private var showProfileLoadError = false
-    @State private var showParticipantPicker = false
-    @State private var showImporter = false
-    @State private var showYouTubeSection = false
+    // Internal (not private): shared with the macOS studio in RecordingView+Studio.swift.
+    @State var showNoteField = false
+    @State var showCancelConfirm = false
+    @State var showProfileLoadError = false
+    @State var showParticipantPicker = false
+    @State var showImporter = false
+    @State var showYouTubeSection = false
+    @State var showSavedRecordings = false
+    @AppStorage("preferOnDeviceTranscription") var preferOnDeviceTranscription = false
 
     // MARK: Body
 
     var body: some View {
+        Group {
+#if os(macOS)
+            studioView
+#else
+            legacyBody
+                .sheet(item: $selectedReprocessRecording) { recording in
+                    reprocessSheet(for: recording)
+                }
+#endif
+        }
+    }
+
+    func reprocessSheet(for recording: SavedRecording) -> some View {
+        ReprocessSheet(recording: recording)
+            .environment(recordingVM)
+            .frame(minWidth: 420, idealWidth: 460, minHeight: 340, idealHeight: 380)
+    }
+
+    /// Pre-NorthStar layout, still used on iOS.
+    private var legacyBody: some View {
         GeometryReader { geo in
             // Width-tier responsive layout mirroring HomeView: compact below 640pt.
             let isCompact = geo.size.width < 640
@@ -44,11 +66,6 @@ struct RecordingView: View {
                     idleView(isCompact: isCompact)
                 }
             }
-        }
-        .sheet(item: $selectedReprocessRecording) { recording in
-            ReprocessSheet(recording: recording)
-                .environment(recordingVM)
-                .frame(minWidth: 420, idealWidth: 460, minHeight: 340, idealHeight: 380)
         }
     }
 
@@ -424,7 +441,7 @@ struct RecordingView: View {
     // MARK: YouTube inline section
 
     @ViewBuilder
-    private var youtubeInlineSection: some View {
+    var youtubeInlineSection: some View {
         VStack(alignment: .leading, spacing: TS.Spacing.sm) {
             // Google account connection status
             if recordingVM.isGoogleConnected {
@@ -574,7 +591,7 @@ struct RecordingView: View {
 
     // MARK: Unified bottom bar (processing + saved recordings side by side)
 
-    private func unifiedBottomBar(isCompact: Bool) -> some View {
+    func unifiedBottomBar(isCompact: Bool) -> some View {
         Group {
             if isCompact {
                 VStack(spacing: TS.Spacing.md) {
@@ -853,7 +870,7 @@ struct RecordingView: View {
     // MARK: Offline status banner
 
     @ViewBuilder
-    private var offlineStatusBanner: some View {
+    var offlineStatusBanner: some View {
         if let message = recordingVM.offlineStatusMessage {
             HStack(spacing: TS.Spacing.sm) {
                 Image(systemName: "wifi.slash")
@@ -885,7 +902,7 @@ struct RecordingView: View {
     // MARK: Error banner
 
     @ViewBuilder
-    private var errorBanner: some View {
+    var errorBanner: some View {
         if case .error(let message) = recordingVM.recordingState {
             HStack(spacing: TS.Spacing.sm) {
                 Image(systemName: "exclamationmark.circle.fill")
@@ -927,7 +944,7 @@ struct RecordingView: View {
     // MARK: Audio mix fallback banner
 
     @ViewBuilder
-    private var audioMixFallbackBanner: some View {
+    var audioMixFallbackBanner: some View {
         if recordingVM.audioMixFallbackOccurred {
             HStack(spacing: TS.Spacing.sm) {
                 Image(systemName: "exclamationmark.triangle.fill")
@@ -1154,7 +1171,7 @@ struct RecordingView: View {
             .monospacedDigit()
     }
 
-    private var formattedDuration: String {
+    var formattedDuration: String {
         let total = Int(recordingVM.duration)
         let hours = total / 3600
         let minutes = (total % 3600) / 60
@@ -1238,12 +1255,12 @@ struct RecordingView: View {
         .background(Capsule().fill(Color.surfaceSecondary))
     }
 
-    private var noteFieldCard: some View {
+    var noteFieldCard: some View {
         VStack(alignment: .leading, spacing: TS.Spacing.xs) {
             Text("Snelle notitie")
                 .font(TS.Font.footnoteSemibold)
                 .foregroundStyle(Color.labelSecondary)
-            TextField("Bijv. actiepunt of context...", text: $addNoteText, axis: .vertical)
+            TextField("Bijv. actiepunt of context...", text: Bindable(recordingVM).quickNote, axis: .vertical)
                 .textFieldStyle(.plain)
                 .lineLimit(2...4)
                 .padding(TS.Spacing.sm)

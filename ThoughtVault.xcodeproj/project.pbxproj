@@ -7,6 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		AB0000S5 /* QuickNoteStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000S5 /* QuickNoteStoreTests.swift */; };
+		AA0000S4 /* QuickNoteStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000S4 /* QuickNoteStore.swift */; };
+		AA0000S3 /* MainSidebar.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000S3 /* MainSidebar.swift */; };
+		AA0000S2 /* RecordingView+Inspector.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000S2 /* RecordingView+Inspector.swift */; };
+		AA0000S1 /* RecordingView+Studio.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000S1 /* RecordingView+Studio.swift */; };
 		AA000001 /* ThoughtVaultApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000001 /* ThoughtVaultApp.swift */; };
 		AA000002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000002 /* ContentView.swift */; };
 		AA000003 /* Color+Brand.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000003 /* Color+Brand.swift */; };
@@ -92,7 +97,6 @@
 		AA000063 /* LocalTranscriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000063 /* LocalTranscriber.swift */; };
 		AA000090 /* AudioChunker.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000090 /* AudioChunker.swift */; };
 		AA000091 /* AudioEnvelopeProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000091 /* AudioEnvelopeProcessor.swift */; };
-		AA0000M1 /* WaveformShader.metal in Sources */ = {isa = PBXBuildFile; fileRef = FA0000M1 /* WaveformShader.metal */; };
 		AA000064 /* NotuleTitleExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000064 /* NotuleTitleExtractor.swift */; };
 		AA000065 /* WhisperKit in Frameworks */ = {isa = PBXBuildFile; productRef = SD000001 /* WhisperKit */; };
 		AA000066 /* ProfileTemplates.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000066 /* ProfileTemplates.swift */; };
@@ -111,6 +115,11 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		FB0000S5 /* QuickNoteStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickNoteStoreTests.swift; sourceTree = "<group>"; };
+		FA0000S4 /* QuickNoteStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickNoteStore.swift; sourceTree = "<group>"; };
+		FA0000S3 /* MainSidebar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MainSidebar.swift"; sourceTree = "<group>"; };
+		FA0000S2 /* RecordingView+Inspector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RecordingView+Inspector.swift"; sourceTree = "<group>"; };
+		FA0000S1 /* RecordingView+Studio.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RecordingView+Studio.swift"; sourceTree = "<group>"; };
 		C96A32F62F65A4C4001691E3 /* ThoughtVault.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = ThoughtVault.xctestplan; sourceTree = "<group>"; };
 		FA000001 /* ThoughtVaultApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThoughtVaultApp.swift; sourceTree = "<group>"; };
 		FA000002 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -200,7 +209,6 @@
 		FA000063 /* LocalTranscriber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalTranscriber.swift; sourceTree = "<group>"; };
 		FA000090 /* AudioChunker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioChunker.swift; sourceTree = "<group>"; };
 		FA000091 /* AudioEnvelopeProcessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioEnvelopeProcessor.swift; sourceTree = "<group>"; };
-		FA0000M1 /* WaveformShader.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = WaveformShader.metal; sourceTree = "<group>"; };
 		FA000064 /* NotuleTitleExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotuleTitleExtractor.swift; sourceTree = "<group>"; };
 		FA000066 /* ProfileTemplates.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileTemplates.swift; sourceTree = "<group>"; };
 		FA000067 /* ProfileTemplates.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = ProfileTemplates.json; sourceTree = "<group>"; };
@@ -239,14 +247,6 @@
 			name = ThoughtVaultApp;
 			sourceTree = "<group>";
 		};
-		GG0000M0 /* Shaders */ = {
-			isa = PBXGroup;
-			children = (
-				FA0000M1 /* WaveformShader.metal */,
-			);
-			path = Shaders;
-			sourceTree = "<group>";
-		};
 		GG000001 /* macos */ = {
 			isa = PBXGroup;
 			children = (
@@ -254,7 +254,6 @@
 				GG000020 /* Extensions */,
 				GG000030 /* Models */,
 				GG000040 /* Services */,
-				GG0000M0 /* Shaders */,
 				GG000050 /* ViewModels */,
 				GG000060 /* Views */,
 				GG000070 /* Resources */,
@@ -305,6 +304,7 @@
 				FA000006 /* Analytics.swift */,
 				FA000007 /* APIService.swift */,
 				FA000008 /* AudioRecorder.swift */,
+				FA0000S4 /* QuickNoteStore.swift */,
 				FA000009 /* BiometricService.swift */,
 				FA000010 /* CalendarService.swift */,
 				FA000011 /* CrashReporter.swift */,
@@ -357,6 +357,8 @@
 				FA000028 /* ProcessingView.swift */,
 				FA000029 /* ProfilesView.swift */,
 				FA000030 /* RecordingView.swift */,
+				FA0000S2 /* RecordingView+Inspector.swift */,
+				FA0000S1 /* RecordingView+Studio.swift */,
 				FA000031 /* SettingsView.swift */,
 				FA000070 /* ProfileSettingsView.swift */,
 				FA000072 /* PeopleDirectoryView.swift */,
@@ -386,6 +388,7 @@
 				FA0000F1 /* SpinningProgressView.swift */,
 				FA000039 /* TranscriptCard.swift */,
 				FA000040 /* WaveformView.swift */,
+				FA0000S3 /* MainSidebar.swift */,
 				FA000075 /* HomeHeroCard.swift */,
 				FA000052 /* PermissionBanner.swift */,
 				FA000053 /* EditableHTMLWebView.swift */,
@@ -416,6 +419,7 @@
 			isa = PBXGroup;
 			children = (
 				FB000001 /* ThoughtVaultTests.swift */,
+				FB0000S5 /* QuickNoteStoreTests.swift */,
 				FB000002 /* MigrationTests.swift */,
 				FB000003 /* PersonProfileTests.swift */,
 				FB000004 /* PersonDirectoryServiceTests.swift */,
@@ -558,7 +562,6 @@
 				AA000063 /* LocalTranscriber.swift in Sources */,
 				AA000090 /* AudioChunker.swift in Sources */,
 				AA000091 /* AudioEnvelopeProcessor.swift in Sources */,
-				AA0000M1 /* WaveformShader.metal in Sources */,
 				AA000064 /* NotuleTitleExtractor.swift in Sources */,
 				AA000006 /* Analytics.swift in Sources */,
 				AA000007 /* APIService.swift in Sources */,
@@ -591,6 +594,10 @@
 				AA000028 /* ProcessingView.swift in Sources */,
 				AA000029 /* ProfilesView.swift in Sources */,
 				AA000030 /* RecordingView.swift in Sources */,
+				AA0000S4 /* QuickNoteStore.swift in Sources */,
+				AA0000S3 /* MainSidebar.swift in Sources */,
+				AA0000S2 /* RecordingView+Inspector.swift in Sources */,
+				AA0000S1 /* RecordingView+Studio.swift in Sources */,
 				AA000031 /* SettingsView.swift in Sources */,
 				AA000032 /* TranscriptsView.swift in Sources */,
 				AA000033 /* OnboardingViewiOSStub.swift in Sources */,
@@ -623,6 +630,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				AB000001 /* ThoughtVaultTests.swift in Sources */,
+				AB0000S5 /* QuickNoteStoreTests.swift in Sources */,
 				AB000002 /* MigrationTests.swift in Sources */,
 				AB000003 /* PersonProfileTests.swift in Sources */,
 				AB000004 /* PersonDirectoryServiceTests.swift in Sources */,

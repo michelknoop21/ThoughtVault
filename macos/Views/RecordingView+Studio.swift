@@ -35,8 +35,8 @@ enum StudioColor {
     static let levelOff = Color(red: 0.227, green: 0.247, blue: 0.384)
 }
 
-/// The NorthStar has no window title; the traffic lights stay.
-private struct HiddenWindowTitle: ViewModifier {
+/// The NorthStar has no window title; the traffic lights stay. Also used by Home.
+struct HiddenWindowTitle: ViewModifier {
     func body(content: Content) -> some View {
         if #available(macOS 15.0, *) {
             content.toolbar(removing: .title)

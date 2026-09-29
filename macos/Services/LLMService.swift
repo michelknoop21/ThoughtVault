@@ -61,18 +61,26 @@ func buildNotuleUserContent(
     transcription: String,
     outputTemplate: String?
 ) -> String {
+    let template = (outputTemplate ?? "").replacingOccurrences(
+        of: "<style\\b[^>]*>[\\s\\S]*?</style>", with: "",
+        options: [.regularExpression, .caseInsensitive]
+    )
+    let contentRules = """
+
+    Laatste inhoudsregels: volg de gekozen template en laat lege secties weg. Verzin geen feiten, besluiten, eigenaren of termijnen. Schrijf eenvoudige HTML zonder CSS, style-blok of code fences.
+    """
     if notulePrompt.contains("{{TRANSCRIPTION}}") {
         // Substitute the trusted template first, then insert the untrusted
         // transcription last so its content can never trigger a placeholder swap.
         return notulePrompt
-            .replacingOccurrences(of: "{{OUTPUT_TEMPLATE}}", with: outputTemplate ?? "")
-            .replacingOccurrences(of: "{{TRANSCRIPTION}}", with: transcription)
+            .replacingOccurrences(of: "{{OUTPUT_TEMPLATE}}", with: template)
+            .replacingOccurrences(of: "{{TRANSCRIPTION}}", with: transcription) + contentRules
     }
     var content = "\(notulePrompt)\n\nTranscriptie:\n\(transcription)"
-    if let template = outputTemplate, !template.isEmpty {
+    if !template.isEmpty {
         content += "\n\nGebruik dit outputformaat:\n\(template)"
     }
-    return content
+    return content + contentRules
 }
 
 // MARK: - LLMServiceFactory
@@ -391,19 +399,11 @@ final class AppleFoundationModelService: LLMService, @unchecked Sendable {
     private static let maxChunkCharacters = 6_000
     private static let maxFinalTranscriptCharacters = 5_000
 
-    /// Compact output skeleton used instead of the profile's full HTML template —
+    /// Compact format guidance instead of the profile's full HTML template —
     /// the real templates (4-10k chars) alone would overflow the context window.
     private static let compactTemplate = """
-    <h1>[Titel]</h1>
-    <p><em>[Datum] — [Deelnemers]</em></p>
-    <h2>Samenvatting</h2>
-    <p>...</p>
-    <h2>Besproken punten</h2>
-    <ul><li>...</li></ul>
-    <h2>Besluiten</h2>
-    <ul><li>...</li></ul>
-    <h2>Actiepunten</h2>
-    <ul><li>[Wie]: [Wat]</li></ul>
+    Gebruik h1 voor een specifieke titel, h2 voor de secties en p/ul/li voor de inhoud.
+    Laat secties weg wanneer de transcriptie er geen concrete inhoud voor bevat.
     """
 
     // MARK: - Availability

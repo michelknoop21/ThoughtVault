@@ -55,6 +55,7 @@ export interface TranscriptTask {
   notule_html?: string;
   error_message?: string;
   filename?: string;
+  local_audio_path?: string;
   extracted_title?: string;
   profile_id?: string;
   source_type?: string;
@@ -121,44 +122,18 @@ export interface Profile {
   limit?: number;            // For profile list endpoint
 }
 
-export const DEFAULT_PROFILES: Profile[] = [
-  {
-    id: "zakelijk",
-    name: "Zakelijk",
-    system_prompt:
-      "Je bent een professionele notulist. Genereer gestructureerde vergadernotulen in het Nederlands. Gebruik geen analyse of redenering. Geef direct het eindresultaat.",
-    notule_prompt:
-      "Maak gestructureerde notulen van deze vergadering. Gebruik kopjes voor: Aanwezigen, Agendapunten, Besluiten, Actiepunten.",
-    is_default: true,
-  },
-  {
-    id: "informeel",
-    name: "Informeel",
-    system_prompt:
-      "Je bent een notulist voor informele vergaderingen. Schrijf in een toegankelijke stijl in het Nederlands.",
-    notule_prompt:
-      "Maak een beknopte samenvatting van dit gesprek. Noteer de belangrijkste punten en afspraken.",
-    is_default: false,
-  },
-  {
-    id: "technisch",
-    name: "Technisch",
-    system_prompt:
-      "Je bent een technische notulist. Noteer technische details nauwkeurig in het Nederlands.",
-    notule_prompt:
-      "Maak gedetailleerde technische notulen. Noteer alle technische beslissingen, architectuurkeuzes en actiepunten.",
-    is_default: false,
-  },
-  {
-    id: "handleiding",
-    name: "Handleiding",
-    system_prompt:
-      "Je bent een technisch schrijver die ingesproken walkthroughs omzet naar stapsgewijze eindgebruikershandleidingen.",
-    notule_prompt:
-      "Analyseer deze ingesproken walkthrough en maak er een gestructureerde handleiding van. Benoem schermen, knoppen, menu's en velden. Structureer per functionaliteit met genummerde stappen.",
-    is_default: true,
-  },
-];
+import profileTemplates from "./data/profileTemplates.json";
+
+export const DEFAULT_PROFILES: Profile[] = profileTemplates.map((entry) => ({
+  id: entry.id,
+  name: entry.name,
+  description: entry.description,
+  icon: entry.emoji,
+  system_prompt: entry.systemPrompt,
+  notule_prompt: entry.notulePrompt,
+  output_template: entry.template,
+  is_default: true,
+}));
 
 // Authentication
 export interface User {
@@ -401,7 +376,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   ollama_api_key: "",
   lm_studio_url: "http://localhost:1234",
   lm_studio_model: "local-model",
-  default_profile_id: "zakelijk",
+  default_profile_id: "standaard",
   default_recording_mode: "combined",
   has_completed_onboarding: false,
   check_for_updates: true,

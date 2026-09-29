@@ -10,9 +10,7 @@ import SwiftUI
 import AVFoundation
 import Speech
 import UniformTypeIdentifiers
-#if os(macOS)
-import ScreenCaptureKit
-#endif
+
 
 // MARK: - SettingsView
 
@@ -44,7 +42,7 @@ struct SettingsView: View {
     @State private var biometricError: String? = nil
     @State private var micPermissionGranted: Bool? = nil
     @State private var speechPermissionGranted: Bool? = nil
-    @State private var screenRecordingGranted: Bool? = nil
+    @State private var systemAudioGranted: Bool? = nil
 
     // Obsidian
     @State private var obsidianApiKey: String = ""
@@ -1069,9 +1067,10 @@ struct SettingsView: View {
             #if os(macOS)
             permissionRow(
                 icon: "rectangle.dashed",
-                title: "Schermopname",
-                description: "Vereist voor systeemgeluidsopname",
-                status: screenRecordingGranted
+                title: "Systeemaudio",
+                description: "Geluid van videocalls; wordt bij de eerste opname gevraagd",
+                status: systemAudioGranted,
+                negativeLabel: "Controleer toegang"
             )
             #endif
 
@@ -1100,7 +1099,7 @@ struct SettingsView: View {
         }
     }
 
-    private func permissionRow(icon: String, title: String, description: String, status: Bool? = nil) -> some View {
+    private func permissionRow(icon: String, title: String, description: String, status: Bool? = nil, negativeLabel: String = "Geweigerd") -> some View {
         HStack(spacing: TS.Spacing.sm) {
             Image(systemName: icon)
                 .font(.system(size: 16))
@@ -1129,7 +1128,7 @@ struct SettingsView: View {
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundStyle(Color.statusSuccess)
                 case .some(false):
-                    Text("Geweigerd")
+                    Text(negativeLabel)
                         .font(TS.Font.footnote)
                         .foregroundStyle(Color.statusError)
                     Image(systemName: "xmark.circle.fill")
@@ -1524,10 +1523,11 @@ struct SettingsView: View {
         isLoadingProfiles = true
         defer { isLoadingProfiles = false }
         if isLocalProcessing {
-            profiles = Profile.defaults
+            profiles = LocalProfileStore.choices()
             return
         }
-        profiles = (try? await APIService.shared.getProfiles()) ?? Profile.defaults
+        let remote = (try? await APIService.shared.getProfiles()) ?? []
+        profiles = Profile.currentChoices(remote)
     }
 
     private func checkServerConnection() async {
@@ -1569,14 +1569,8 @@ struct SettingsView: View {
         let speechStatus = SFSpeechRecognizer.authorizationStatus()
         speechPermissionGranted = speechStatus == .authorized
 
-        // Screen recording (macOS only)
         #if os(macOS)
-        do {
-            _ = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: false)
-            screenRecordingGranted = true
-        } catch {
-            screenRecordingGranted = false
-        }
+        systemAudioGranted = PermissionManager.shared.systemAudioGranted
         #endif
     }
 

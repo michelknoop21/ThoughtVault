@@ -15,7 +15,7 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.0.254</string>
+	<string>1.0.255</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -28,21 +28,21 @@
 		</dict>
 	</array>
 	<key>CFBundleVersion</key>
-	<string>254</string>
+	<string>255</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.productivity</string>
 	<key>LSMinimumSystemVersion</key>
-	<string>14.0</string>
+	<string>14.2</string>
+	<key>NSAudioCaptureUsageDescription</key>
+	<string>ThoughtVault neemt het geluid van videocalls op voor transcriptie en notulen.</string>
 	<key>NSCalendarsFullAccessUsageDescription</key>
 	<string>ThoughtVault heeft toegang tot uw agenda nodig om aankomende videovergaderingen te detecteren en u te herinneren aan opnemen.</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>ThoughtVault gebruikt Face ID voor snelle en veilige toegang tot uw account.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>ThoughtVault heeft toegang tot uw microfoon nodig om vergaderingen op te nemen voor transcriptie.</string>
-	<key>NSScreenCaptureUsageDescription</key>
-	<string>ThoughtVault heeft toestemming voor schermopname nodig om systeemaudio van videovergaderingen vast te leggen.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>ThoughtVault gebruikt spraakherkenning voor offline transcriptie op uw apparaat.</string>
 	<key>UIBackgroundModes</key>

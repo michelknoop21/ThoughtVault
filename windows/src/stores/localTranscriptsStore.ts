@@ -1,38 +1,76 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { Store } from "@tauri-apps/plugin-store";
 import type { Transcript } from "../types";
 
-// Persisted store of transcripts generated fully on-device (local mode). The
-// macOS app uses SwiftData for this; on Windows we persist to localStorage.
-// ponytail: localStorage (~5-10MB quota). Fine for a personal note archive;
-// move to tauri-plugin-store (JSON file, no quota) if users hit the ceiling.
-
 const LOCAL_PREFIX = "local-";
+const LEGACY_KEY = "local-transcripts-store";
+const STORE_FILE = "local-transcripts.json";
 
 export function isLocalId(id: string): boolean {
   return id.startsWith(LOCAL_PREFIX);
 }
 
 export function newLocalId(): string {
-  return `${LOCAL_PREFIX}${Date.now()}`;
+  return `${LOCAL_PREFIX}${crypto.randomUUID()}`;
 }
 
 interface LocalTranscriptsState {
   items: Transcript[];
-  add: (t: Transcript) => void;
-  update: (id: string, patch: Partial<Transcript>) => void;
-  remove: (id: string) => void;
+  hydrate: () => Promise<void>;
+  add: (t: Transcript) => Promise<void>;
+  update: (id: string, patch: Partial<Transcript>) => Promise<void>;
+  remove: (id: string) => Promise<void>;
 }
 
-export const useLocalTranscriptsStore = create<LocalTranscriptsState>()(
-  persist(
-    (set) => ({
-      items: [],
-      add: (t) => set((s) => ({ items: [t, ...s.items.filter((x) => x.id !== t.id)] })),
-      update: (id, patch) =>
-        set((s) => ({ items: s.items.map((t) => (t.id === id ? { ...t, ...patch } : t)) })),
-      remove: (id) => set((s) => ({ items: s.items.filter((t) => t.id !== id) })),
-    }),
-    { name: "local-transcripts-store" }
-  )
-);
+let diskStore: Store | null = null;
+let loadPromise: Promise<void> | null = null;
+let writeQueue: Promise<void> = Promise.resolve();
+
+export const useLocalTranscriptsStore = create<LocalTranscriptsState>()((set, get) => {
+  async function hydrate() {
+    if (diskStore) return;
+    if (!loadPromise) {
+      loadPromise = (async () => {
+        const store = await Store.load(STORE_FILE, { defaults: { items: [] }, autoSave: false });
+        let items = await store.get<Transcript[]>("items") ?? [];
+        const legacy = localStorage.getItem(LEGACY_KEY);
+        if (legacy) {
+          const oldItems = (JSON.parse(legacy) as { state?: { items?: Transcript[] } }).state?.items ?? [];
+          if (oldItems.length > 0) {
+            const ids = new Set(items.map((item) => item.id));
+            items = [...items, ...oldItems.filter((item) => !ids.has(item.id))];
+            await store.set("items", items);
+            await store.save();
+          }
+          localStorage.removeItem(LEGACY_KEY);
+        }
+        diskStore = store;
+        set({ items });
+      })().catch((error) => {
+        loadPromise = null;
+        throw error;
+      });
+    }
+    await loadPromise;
+  }
+
+  function persist(change: (items: Transcript[]) => Transcript[]): Promise<void> {
+    const operation = writeQueue.then(async () => {
+      await hydrate();
+      const items = change(get().items);
+      await diskStore!.set("items", items);
+      await diskStore!.save();
+      set({ items });
+    });
+    writeQueue = operation.catch(() => {});
+    return operation;
+  }
+
+  return {
+    items: [],
+    hydrate,
+    add: (t) => persist((items) => [t, ...items.filter((item) => item.id !== t.id)]),
+    update: (id, patch) => persist((items) => items.map((item) => item.id === id ? { ...item, ...patch } : item)),
+    remove: (id) => persist((items) => items.filter((item) => item.id !== id)),
+  };
+});

@@ -13,12 +13,14 @@ import {
   SignOut24Regular,
 } from "@fluentui/react-icons";
 import { useAuthStore } from "../../stores/authStore";
+import { useSettingsStore } from "../../stores/settingsStore";
 import { api } from "../../services/api";
 import appLogo from "../../assets/app-logo.png";
 
 export function Sidebar() {
-  const { user, logout } = useAuthStore();
+  const { user, logout, isAuthenticated } = useAuthStore();
   const isAdmin = user?.role === "admin";
+  const processingMode = useSettingsStore((state) => state.processing_mode);
 
   // Display name: full name > email prefix > email
   const userDisplayName = (() => {
@@ -30,7 +32,7 @@ export function Sidebar() {
   const userInitial = userDisplayName ? userDisplayName[0].toUpperCase() : null;
 
   async function handleLogout() {
-    await api.logout();
+    if (isAuthenticated) await api.logout();
     logout();
   }
 
@@ -40,10 +42,10 @@ export function Sidebar() {
       <div className="sidebar-logo-section">
         <img
           src={appLogo}
-          alt="Transcript Studio"
+          alt="ThoughtVault"
           className="sidebar-logo"
         />
-        <span className="sidebar-app-name">Transcript Studio</span>
+        <span className="sidebar-app-name">ThoughtVault</span>
       </div>
 
       {/* User profile */}
@@ -68,7 +70,7 @@ export function Sidebar() {
       <SidebarItem to="/recording" icon={<MicRecord24Regular />} label="Opnemen" shortcut="Ctrl+2" />
       <SidebarItem to="/tasks" icon={<TaskListLtr24Regular />} label="Taken" />
       <SidebarItem to="/transcripts" icon={<DocumentText24Regular />} label="Notulen" shortcut="Ctrl+3" />
-      <SidebarItem to="/profiles" icon={<NotepadPerson24Regular />} label="Profielen" shortcut="Ctrl+5" />
+      {(isAuthenticated || processingMode === "local") && <SidebarItem to="/profiles" icon={<NotepadPerson24Regular />} label="Profielen" shortcut="Ctrl+5" />}
       <SidebarItem to="/people" icon={<People24Regular />} label="Mensen" shortcut="Ctrl+6" />
 
       {/* Spacer pushes bottom items down */}
@@ -77,7 +79,7 @@ export function Sidebar() {
       <hr className="sidebar-divider" />
 
       {/* Bottom items */}
-      <SidebarItem to="/account" icon={<PersonAccounts24Regular />} label="Account" />
+      <SidebarItem to={isAuthenticated ? "/account" : "/login"} icon={<PersonAccounts24Regular />} label={isAuthenticated ? "Account" : "Inloggen"} />
       <SidebarItem to="/settings" icon={<Settings24Regular />} label="Instellingen" shortcut="Ctrl+4" />
       {isAdmin && (
         <SidebarItem to="/admin" icon={<ShieldPersonRegular />} label="Beheer" />
@@ -86,7 +88,7 @@ export function Sidebar() {
       <hr className="sidebar-divider" />
 
       {/* Logout button */}
-      <button
+      {isAuthenticated && <button
         onClick={handleLogout}
         className="sidebar-item"
         style={{ border: "none", width: "100%", textAlign: "left", cursor: "default", fontFamily: "inherit" }}
@@ -94,7 +96,7 @@ export function Sidebar() {
       >
         <span className="sidebar-item-icon"><SignOut24Regular /></span>
         <span className="sidebar-item-label">Uitloggen</span>
-      </button>
+      </button>}
     </nav>
   );
 }

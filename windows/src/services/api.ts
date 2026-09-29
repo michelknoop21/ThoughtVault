@@ -545,18 +545,27 @@ class APIService {
   }
 
   async createProfile(profile: Omit<Profile, "id">): Promise<Profile> {
-    const response = await this.request<{ success: boolean; profile: Profile } | { id: string } & Partial<Profile>>(
-      "POST",
-      "/profiles/me",
-      profile
-    );
-    // Handle both { success, profile } and { id, ...profile } formats
-    if ("profile" in response && response.profile) return response.profile;
-    return response as Profile;
+    const payload = {
+      name: profile.name,
+      description: profile.description || profile.name,
+      icon: profile.icon || "📝",
+      systemPrompt: profile.system_prompt || "",
+      notulePrompt: profile.notule_prompt || "",
+      outputTemplate: profile.output_template || profile.notule_template || "",
+    };
+    const response = await this.request<{ success: boolean; profile: Profile }>("POST", "/profiles/me", payload);
+    return response.profile;
   }
 
   async updateProfile(id: string, updates: Partial<Profile>): Promise<Profile> {
-    await this.request<{ success: boolean }>("PUT", `/profiles/me/${id}`, updates);
+    await this.request<{ success: boolean }>("PUT", `/profiles/me/${id}`, {
+      name: updates.name,
+      description: updates.description,
+      icon: updates.icon,
+      systemPrompt: updates.system_prompt,
+      notulePrompt: updates.notule_prompt,
+      outputTemplate: updates.output_template || updates.notule_template,
+    });
     return { id, ...updates } as Profile;
   }
 

@@ -19,6 +19,7 @@ import {
   Notebook24Regular,
 } from "@fluentui/react-icons";
 import DOMPurify from "dompurify";
+import { prepareNotuleHtml } from "../../services/notulePresentation";
 import { marked } from "marked";
 import type { Transcript } from "../../types";
 
@@ -100,15 +101,19 @@ export function TranscriptDetail({
   }
 
   async function saveTitleEdit() {
-    if (editTitle.trim() && editTitle !== transcript.title) {
-      await onUpdateTitle(transcript.id, editTitle.trim());
+    try {
+      if (editTitle.trim() && editTitle !== transcript.title) {
+        await onUpdateTitle(transcript.id, editTitle.trim());
+      }
+      setIsEditingTitle(false);
+    } catch {
+      // Keep the entered title visible so it can be retried.
     }
-    setIsEditingTitle(false);
   }
 
   // Notule editing
   function startNotuleEdit() {
-    setEditedHTML(transcript.notule_html || "");
+    setEditedHTML(prepareNotuleHtml(transcript.notule_html || "", transcript.title));
     setIsEditingNotule(true);
   }
 
@@ -118,6 +123,8 @@ export function TranscriptDetail({
     try {
       await onSaveNotule(transcript.id, editedHTML);
       setIsEditingNotule(false);
+    } catch {
+      // Keep the draft in the editor; the parent shows the save error.
     } finally {
       setIsSaving(false);
     }
@@ -125,9 +132,12 @@ export function TranscriptDetail({
 
   const sanitizedNotule = transcript.notule_html
     ? DOMPurify.sanitize(
-        transcript.notule_html.startsWith("<")
-          ? transcript.notule_html
-          : (marked(transcript.notule_html) as string)
+        prepareNotuleHtml(
+          transcript.notule_html.startsWith("<")
+            ? transcript.notule_html
+            : (marked(transcript.notule_html) as string),
+          transcript.title,
+        )
       )
     : "";
 
@@ -239,7 +249,7 @@ export function TranscriptDetail({
               {transcript.notule_html && (
                 <>
                   <div className="td-export-divider" />
-                  <button className="td-export-item" onClick={() => { onCopy(stripHtml(transcript.notule_html!)); setExportOpen(false); }}>
+                  <button className="td-export-item" onClick={() => { onCopy(stripHtml(prepareNotuleHtml(transcript.notule_html!, transcript.title))); setExportOpen(false); }}>
                     <Copy24Regular style={{ fontSize: 15 }} /> Kopieer tekst
                   </button>
                 </>

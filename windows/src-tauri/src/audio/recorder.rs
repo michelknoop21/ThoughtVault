@@ -13,13 +13,13 @@ const BITS_PER_SAMPLE: u16 = 16;
 
 /// Streaming resampler that downsamples audio in chunks across callbacks.
 /// Uses linear interpolation — sufficient quality for 48→16 kHz speech.
-struct StreamingResampler {
+pub(crate) struct StreamingResampler {
     ratio: f64,           // from_rate / to_rate (e.g. 3.0 for 48→16)
     fractional_pos: f64,  // carried over between callbacks
 }
 
 impl StreamingResampler {
-    fn new(from_rate: u32, to_rate: u32) -> Self {
+    pub(crate) fn new(from_rate: u32, to_rate: u32) -> Self {
         Self {
             ratio: from_rate as f64 / to_rate as f64,
             fractional_pos: 0.0,
@@ -32,7 +32,7 @@ impl StreamingResampler {
     }
 
     /// Resample a chunk of mono i16 samples. Returns resampled samples.
-    fn process_i16(&mut self, input: &[i16]) -> Vec<i16> {
+    pub(crate) fn process_i16(&mut self, input: &[i16]) -> Vec<i16> {
         if !self.is_active() { return input.to_vec(); }
         let mut output = Vec::new();
         while self.fractional_pos < input.len() as f64 {

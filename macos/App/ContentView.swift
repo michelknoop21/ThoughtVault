@@ -84,6 +84,8 @@ struct ContentView: View {
     @State private var seedCandidates: [String] = []
     @State private var showSeedReviewSheet = false
     @State private var pendingTranscript: Transcript? = nil
+    /// Query from the Home search field, handed to Notulen once.
+    @State private var homeSearch = ""
 
     var body: some View {
         Group {
@@ -104,7 +106,8 @@ struct ContentView: View {
                 }
             }
         }
-        .onChange(of: selectedTab) { _, _ in
+        .onChange(of: selectedTab) { _, newTab in
+            if newTab != .transcripts { homeSearch = "" }
             transcriptsNavPath = NavigationPath()
             if let transcript = pendingTranscript {
                 transcriptsNavPath.append(transcript)
@@ -339,12 +342,16 @@ struct ContentView: View {
         case .home:
             NavigationStack {
                 HomeView(
-                    onStartRecording: { _ in
-                        selectedTab = .record
-                    },
+                    onStartRecording: startRecordingFromHome,
                     onNavigateToTranscripts: {
                         selectedTab = .transcripts
-                    }
+                    },
+                    onOpenTranscript: openTranscriptFromHome,
+                    onSearch: { query in
+                        homeSearch = query
+                        selectedTab = .transcripts
+                    },
+                    onOpenSettings: { selectedTab = .settings }
                 )
             }
 #if os(macOS)
@@ -371,7 +378,8 @@ struct ContentView: View {
             NavigationStack(path: $transcriptsNavPath) {
                 TranscriptsView(
                     transcriptsNavPath: $transcriptsNavPath,
-                    onStartRecording: { selectedTab = .record }
+                    onStartRecording: { selectedTab = .record },
+                    initialSearch: homeSearch
                 )
             }
 #if os(macOS)
@@ -402,6 +410,25 @@ struct ContentView: View {
             .toolbar(removing: .sidebarToggle)
 #endif
         }
+    }
+
+    /// Home's record controls start right away on macOS (approved Home
+    /// NorthStar); iOS keeps navigating to the recording screen.
+    private func startRecordingFromHome(_ mode: RecordingMode) {
+        selectedTab = .record
+#if os(macOS)
+        guard recordingVM.recordingState == .idle else { return }
+        recordingVM.selectedMode = mode
+        Task { await recordingVM.startRecording() }
+#endif
+    }
+
+    private func openTranscriptFromHome(_ transcript: Transcript) {
+#if os(macOS)
+        openTranscript(transcript)
+#else
+        selectedTab = .transcripts
+#endif
     }
 
     // MARK: - Visible Tabs

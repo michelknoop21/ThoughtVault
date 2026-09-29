@@ -3,7 +3,9 @@
 // com.buildmind.ThoughtVault
 //
 // Main home screen with welcome message, quick-start recording buttons,
-// active processing section, and recent transcripts list.
+// active processing section, and recent transcripts list. macOS renders the
+// approved Home NorthStar (HomeView+Studio.swift, HomeView+Panels.swift);
+// iOS keeps the legacy layout below.
 
 import SwiftUI
 
@@ -26,18 +28,46 @@ struct HomeView: View {
     /// Called when "Bekijk alles" is tapped to navigate to the Notulen tab.
     var onNavigateToTranscripts: (() -> Void)?
 
+    /// Opens one transcript in the Notulen tab.
+    var onOpenTranscript: ((Transcript) -> Void)?
+
+    /// Opens the Notulen tab filtered on the query.
+    var onSearch: ((String) -> Void)?
+
+    /// Opens the settings tab (account menu).
+    var onOpenSettings: (() -> Void)?
+
     // MARK: State
 
-    @AppStorage("checkForUpdates") private var checkForUpdates = true
-    @AppStorage("dismissedUpdateVersion") private var dismissedUpdateVersion = ""
+    @AppStorage("checkForUpdates") var checkForUpdates = true
+    @AppStorage("dismissedUpdateVersion") var dismissedUpdateVersion = ""
 
-    @State private var recentTranscripts: [Transcript] = []
-    @State private var isLoadingRecent = false
-    @State private var loadError: String? = nil
+    // Internal (not private): shared with the macOS layout in HomeView+Studio/+Panels.
+    @State var recentTranscripts: [Transcript] = []
+    @State var isLoadingRecent = false
+    @State var loadError: String? = nil
+    @State var recentFilter: HomeRecentFilter = .all
+    @State var searchQuery = ""
 
     // MARK: Body
 
     var body: some View {
+        Group {
+#if os(macOS)
+            homeStudio
+#else
+            legacyBody
+#endif
+        }
+        .task { await loadRecentTranscripts() }
+        #if os(macOS)
+        .task {
+            if checkForUpdates { await updateCheck.checkForUpdate() }
+        }
+        #endif
+    }
+
+    private var legacyBody: some View {
         GeometryReader { geo in
             // Width-tier responsive layout: compact stacks the hero and lets
             // the stat grid wrap; wide windows get a capped, centered column.
@@ -76,12 +106,6 @@ struct HomeView: View {
         .navigationTitle("")
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
-        #endif
-        .task { await loadRecentTranscripts() }
-        #if os(macOS)
-        .task {
-            if checkForUpdates { await updateCheck.checkForUpdate() }
-        }
         #endif
     }
 
@@ -147,7 +171,7 @@ struct HomeView: View {
         .padding(.top, TS.Spacing.sm)
     }
 
-    private var dateKicker: String {
+    var dateKicker: String {
         let df = DateFormatter()
         df.locale = Locale(identifier: "nl_NL")
         df.dateFormat = "EEEE d MMMM"
@@ -155,27 +179,26 @@ struct HomeView: View {
     }
 
     private var greetingText: String {
-        let hour = Calendar.current.component(.hour, from: Date())
-        let firstName: String = {
-            if let name = authVM.currentUser?.name,
-               let first = name.split(separator: " ").first, !first.isEmpty {
-                return String(first)
-            }
-            if let email = authVM.currentUser?.email,
-               let local = email.split(separator: "@").first, !local.isEmpty {
-                return String(local)
-            }
-            return ""
-        }()
-        let greeting: String
-        if hour < 12 {
-            greeting = "Goedemorgen"
-        } else if hour < 18 {
-            greeting = "Goedemiddag"
-        } else {
-            greeting = "Goedenavond"
+        firstName.isEmpty ? greeting : "\(greeting), \(firstName)"
+    }
+
+    var firstName: String {
+        if let name = authVM.currentUser?.name,
+           let first = name.split(separator: " ").first, !first.isEmpty {
+            return String(first)
         }
-        return firstName.isEmpty ? greeting : "\(greeting), \(firstName)"
+        if let email = authVM.currentUser?.email,
+           let local = email.split(separator: "@").first, !local.isEmpty {
+            return String(local)
+        }
+        return ""
+    }
+
+    var greeting: String {
+        let hour = Calendar.current.component(.hour, from: Date())
+        if hour < 12 { return "Goedemorgen" }
+        if hour < 18 { return "Goedemiddag" }
+        return "Goedenavond"
     }
 
     // MARK: Active processing
@@ -257,7 +280,7 @@ struct HomeView: View {
         }
     }
 
-    private func activeTaskRow(_ task: TranscriptTask) -> some View {
+    func activeTaskRow(_ task: TranscriptTask) -> some View {
         HStack(spacing: TS.Spacing.sm) {
             ZStack {
                 Circle()
@@ -448,7 +471,7 @@ struct HomeView: View {
         return "Download"
     }
 
-    private func updateBanner(version: String) -> some View {
+    func updateBanner(version: String) -> some View {
         HStack(spacing: TS.Spacing.sm) {
             Image(systemName: "arrow.down.circle.fill")
                 .font(.system(size: 18, weight: .semibold))
@@ -512,10 +535,15 @@ struct HomeView: View {
 
     // MARK: - Helpers
 
-    private func loadRecentTranscripts() async {
+    func loadRecentTranscripts() async {
         isLoadingRecent = true
         loadError = nil
+        // macOS filters the list (Alle / Opnames / Notulen), so it loads more.
+        #if os(macOS)
+        let result = await RecentTranscripts.load(limit: 30)
+        #else
         let result = await RecentTranscripts.load(limit: 3)
+        #endif
         recentTranscripts = result.items
         loadError = result.error
         isLoadingRecent = false

@@ -1,600 +1,261 @@
 #if os(macOS)
 @preconcurrency import AVFoundation
+import CoreAudio
 import Foundation
 import OSLog
-import ScreenCaptureKit
 
 private let log = OSLog(subsystem: "com.buildmind.ThoughtVault", category: "SystemAudio")
-
-// MARK: - CaptureResult
 
 struct CaptureResult {
     let systemAudioURL: URL?
     let microphoneURL: URL?
 }
 
-// MARK: - SystemAudioCapture
+enum SystemAudioCaptureError: LocalizedError {
+    case noOutputDevice
+    case coreAudio(String, OSStatus)
+
+    var errorDescription: String? {
+        switch self {
+        case .noOutputDevice:
+            return "Geen audio-uitvoer beschikbaar. Kies een uitvoerapparaat en probeer opnieuw."
+        case .coreAudio(let operation, let status):
+            return "Systeemaudio kon niet worden gestart (\(operation), code \(status)). Controleer Systeemaudio in Systeeminstellingen > Privacy en beveiliging."
+        }
+    }
+}
 
 @Observable
 @MainActor
-final class SystemAudioCapture: NSObject {
-
-    // MARK: - Observable State
-
-    var isCapturing: Bool = false
+final class SystemAudioCapture {
+    var isCapturing = false
     var duration: TimeInterval = 0
-    var audioLevels: [Float] = Array(repeating: 0, count: AudioEnvelopeConfig.historyLength)
-    var micAudioLevels: [Float] = Array(repeating: 0, count: AudioEnvelopeConfig.historyLength)
-    var hasPermission: Bool = false
-    var errorMessage: String? = nil
-    var currentOutputURL: URL? = nil
-    var currentMicURL: URL? = nil
+    var audioLevels = Array(repeating: Float(0), count: AudioEnvelopeConfig.historyLength)
+    var micAudioLevels = Array(repeating: Float(0), count: AudioEnvelopeConfig.historyLength)
+    var hasPermission = false
+    var errorMessage: String?
+    var currentOutputURL: URL?
+    var currentMicURL: URL?
 
-    // MARK: - Private
-
-    private var stream: SCStream?
-    private var audioFile: AVAudioFile?
-    private var micAudioFile: AVAudioFile?
-    private var streamOutput: AudioStreamOutput?
-    private var durationTimer: Timer?
+    private var tapID = AudioObjectID(kAudioObjectUnknown)
+    private var aggregateID = AudioObjectID(kAudioObjectUnknown)
+    private var ioProcID: AudioDeviceIOProcID?
+    private var writer: TapAudioWriter?
+    private var timer: Timer?
     private var startDate: Date?
     private var pausedAt: Date?
     private var accumulatedPauseDuration: TimeInterval = 0
-    private var capturingMicrophone: Bool = false
-    private let sampleHandlerQueue = DispatchQueue(label: "com.buildmind.ThoughtVault.SystemAudioCapture.samples")
-
-    // MARK: - Init / Deinit
-
-    override init() {
-        super.init()
-    }
-
-    // MARK: - Permission
-
-    func checkPermission() async {
-        do {
-            _ = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: false)
-            self.hasPermission = true
-        } catch {
-            self.hasPermission = false
-        }
-    }
-
-    // MARK: - Capture Lifecycle
+    private let ioQueue = DispatchQueue(label: "com.buildmind.ThoughtVault.SystemAudioCapture.io")
 
     @discardableResult
     func startCapture(includeMicrophone: Bool = false) async throws -> URL {
-        // Verify permission
-        let shareableContent: SCShareableContent
+        let outputUID = try Self.defaultOutputUID()
+        let outputURL = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("system_audio_\(UUID().uuidString).wav")
+        guard let fileFormat = AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: 16_000,
+                                             channels: 1, interleaved: false) else {
+            throw SystemAudioCaptureError.coreAudio("audioformaat", -1)
+        }
+        let file = try AVAudioFile(forWriting: outputURL, settings: fileFormat.settings)
+        let description = CATapDescription(monoGlobalTapButExcludeProcesses: [])
+        description.name = "ThoughtVault Systeemaudio"
+        description.isPrivate = true
+        description.muteBehavior = .unmuted
+        description.deviceUID = outputUID
+
         do {
-            shareableContent = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: false)
-            self.hasPermission = true
+            try Self.check(AudioHardwareCreateProcessTap(description, &tapID), "tap")
+            let tapUID = try Self.tapUID(for: tapID)
+            let aggregate: [String: Any] = [
+                kAudioAggregateDeviceNameKey: "ThoughtVault Audio Capture",
+                kAudioAggregateDeviceUIDKey: "nl.prezent.ThoughtVault.tap.\(UUID().uuidString)",
+                kAudioAggregateDeviceIsPrivateKey: true,
+                kAudioAggregateDeviceIsStackedKey: false,
+                kAudioAggregateDeviceMainSubDeviceKey: outputUID,
+                kAudioAggregateDeviceSubDeviceListKey: [[kAudioSubDeviceUIDKey: outputUID]],
+                kAudioAggregateDeviceTapListKey: [[kAudioSubTapUIDKey: tapUID,
+                                                   kAudioSubTapDriftCompensationKey: true]],
+            ]
+            try Self.check(AudioHardwareCreateAggregateDevice(aggregate as CFDictionary, &aggregateID), "aggregate device")
+
+            var format = AudioStreamBasicDescription()
+            var size = UInt32(MemoryLayout<AudioStreamBasicDescription>.size)
+            var address = AudioObjectPropertyAddress(mSelector: kAudioTapPropertyFormat,
+                                                     mScope: kAudioObjectPropertyScopeGlobal,
+                                                     mElement: kAudioObjectPropertyElementMain)
+            try Self.check(AudioObjectGetPropertyData(tapID, &address, 0, nil, &size, &format), "tapformaat")
+            guard let inputFormat = AVAudioFormat(streamDescription: &format) else {
+                throw SystemAudioCaptureError.coreAudio("tapformaat", -1)
+            }
+            let writer = TapAudioWriter(file: file, inputFormat: inputFormat) { [weak self] level in
+                Task { @MainActor [weak self] in
+                    guard let self else { return }
+                    self.audioLevels.removeFirst()
+                    self.audioLevels.append(level)
+                }
+            }
+            self.writer = writer
+            try Self.check(AudioDeviceCreateIOProcIDWithBlock(&ioProcID, aggregateID, ioQueue) {
+                _, input, _, _, _ in writer.consume(input)
+            }, "audiocallback")
+            try Self.check(AudioDeviceStart(aggregateID, ioProcID), "opname")
         } catch {
-            self.hasPermission = false
-            self.errorMessage = "Systeemaudio-machtiging is vereist voor opname."
+            tearDown()
+            errorMessage = error.localizedDescription
             throw error
         }
 
-        // Prepare output files
-        let outputURL = makeOutputURL(prefix: "system_audio")
-        let micURL = includeMicrophone ? makeOutputURL(prefix: "mic_audio") : nil
-
-        // Build stream configuration — audio capture with minimal video workload.
-        let config = SCStreamConfiguration()
-        config.capturesAudio = true
-        config.sampleRate = 16_000
-        config.channelCount = 1
-        config.excludesCurrentProcessAudio = false
-        if #available(macOS 15.0, *) {
-            config.captureMicrophone = includeMicrophone
-        } else {
-            // macOS 14: SCStream requires .screen output, so minimize video workload.
-            config.width = 2
-            config.height = 2
-            config.minimumFrameInterval = CMTime(value: 1, timescale: 1)
-            config.queueDepth = 5
-        }
-
-        // Use first available display as capture target
-        guard let display = shareableContent.displays.first else {
-            let msg = "Geen beschikbaar scherm gevonden voor systeemaudio-opname."
-            self.errorMessage = msg
-            throw NSError(domain: "SystemAudioCapture", code: 1,
-                          userInfo: [NSLocalizedDescriptionKey: msg])
-        }
-
-        let filter = SCContentFilter(display: display, excludingWindows: [])
-
-        // Set up audio format: 16kHz mono float32 PCM
-        guard let audioFormat = AVAudioFormat(
-            commonFormat: .pcmFormatFloat32,
-            sampleRate: 16_000,
-            channels: 1,
-            interleaved: false
-        ) else {
-            throw NSError(domain: "SystemAudioCapture", code: 2,
-                          userInfo: [NSLocalizedDescriptionKey: "Kon audioformaat niet aanmaken."])
-        }
-
-        // Open output AVAudioFile for system audio
-        let file: AVAudioFile
-        do {
-            file = try AVAudioFile(forWriting: outputURL, settings: audioFormat.settings)
-        } catch {
-            self.errorMessage = "Kon audiobestand niet aanmaken: \(error.localizedDescription)"
-            throw error
-        }
-        self.audioFile = file
-
-        // Open output AVAudioFile for microphone (if requested)
-        var micFile: AVAudioFile? = nil
-        if let micURL {
-            do {
-                micFile = try AVAudioFile(forWriting: micURL, settings: audioFormat.settings)
-            } catch {
-                self.errorMessage = "Kon microfoonbestand niet aanmaken: \(error.localizedDescription)"
-                throw error
+        hasPermission = true
+        currentOutputURL = outputURL
+        currentMicURL = nil // Combined mode records the microphone with AudioRecorder.
+        isCapturing = true
+        duration = 0
+        audioLevels = Array(repeating: 0, count: AudioEnvelopeConfig.historyLength)
+        startDate = Date()
+        timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self, let startDate = self.startDate else { return }
+                let pause = self.pausedAt.map { Date().timeIntervalSince($0) } ?? 0
+                self.duration = max(0, Date().timeIntervalSince(startDate) - self.accumulatedPauseDuration - pause)
             }
         }
-        self.micAudioFile = micFile
-
-        // Set up stream output handler
-        let output = AudioStreamOutput(
-            systemAudioFile: file,
-            microphoneAudioFile: micFile,
-            systemLevelHandler: { [weak self] level in
-                Task { @MainActor in
-                    guard let self else { return }
-                    var levels = self.audioLevels
-                    levels.removeFirst()
-                    levels.append(level)
-                    self.audioLevels = levels
-                }
-            },
-            micLevelHandler: includeMicrophone ? { [weak self] level in
-                Task { @MainActor in
-                    guard let self else { return }
-                    var levels = self.micAudioLevels
-                    levels.removeFirst()
-                    levels.append(level)
-                    self.micAudioLevels = levels
-                }
-            } : nil,
-            errorHandler: { [weak self] error in
-                Task { @MainActor in
-                    guard let self else { return }
-                    self.errorMessage = "Stream fout: \(error.localizedDescription)"
-                }
-            }
-        )
-        self.streamOutput = output
-
-        // Create and start stream — pass delegate for error reporting
-        let captureStream = SCStream(filter: filter, configuration: config, delegate: output)
-        try captureStream.addStreamOutput(
-            output,
-            type: .audio,
-            sampleHandlerQueue: sampleHandlerQueue
-        )
-        if #unavailable(macOS 15.0) {
-            // macOS 14: SCStream requires at least one .screen output to function.
-            // On macOS 15+ we omit this so the app is categorized as "System Audio Only"
-            // instead of "Screen and System Audio Recording" in System Settings.
-            try captureStream.addStreamOutput(
-                output,
-                type: .screen,
-                sampleHandlerQueue: sampleHandlerQueue
-            )
-        }
-        if includeMicrophone {
-            if #available(macOS 15.0, *) {
-                try captureStream.addStreamOutput(
-                    output,
-                    type: .microphone,
-                    sampleHandlerQueue: sampleHandlerQueue
-                )
-            }
-        }
-        try await captureStream.startCapture()
-
-        self.stream = captureStream
-
-        let now = Date()
-        self.startDate = now
-
-        self.currentOutputURL = outputURL
-        self.currentMicURL = micURL
-        self.capturingMicrophone = includeMicrophone
-        self.isCapturing = true
-        self.duration = 0
-        self.audioLevels = Array(repeating: 0, count: AudioEnvelopeConfig.historyLength)
-        self.micAudioLevels = Array(repeating: 0, count: AudioEnvelopeConfig.historyLength)
-        self.errorMessage = nil
-
-        startDurationTimer()
-
         return outputURL
     }
 
     func stopCapture() async -> CaptureResult {
-        guard isCapturing, let captureStream = stream else {
-            return CaptureResult(systemAudioURL: currentOutputURL, microphoneURL: currentMicURL)
+        guard isCapturing else { return CaptureResult(systemAudioURL: currentOutputURL, microphoneURL: nil) }
+        if let writer {
+            os_log("[SystemAudio] Captured %llu frames, wrote %llu frames", log: log,
+                   writer.framesReceived, writer.framesWritten)
         }
-
-        // 1. Stop the stream — no new samples will be delivered
-        do {
-            try await captureStream.stopCapture()
-        } catch {
-            os_log("[SystemAudio] Failed to stop capture stream: %{public}@", log: log, error.localizedDescription)
-        }
-
-        // 2. Remove stream reference
-        stream = nil
-
-        // 3. Log capture summary before releasing output handler
-        if let output = streamOutput {
-            os_log("[SystemAudio] Capture summary — system samples: %llu, screen samples: %llu, system frames received: %llu, written: %llu",
-                   log: log, output.systemSampleCount, output.screenSampleCount,
-                   output.systemFramesReceived, output.systemFramesWritten)
-        }
-
-        // 4. Remove output handler (stops writing)
-        streamOutput = nil
-
-        // 4. Flush any enqueued sample writes before releasing AVAudioFile references
-        sampleHandlerQueue.sync {}
-
-        // 5. Flush audio files by releasing references —
-        //    no concurrent writer exists at this point
-        audioFile = nil
-        micAudioFile = nil
-
-        durationTimer?.invalidate()
-        durationTimer = nil
-
-        // Converters are released with streamOutput (AudioStreamOutput owns them)
-
-        let result = CaptureResult(systemAudioURL: currentOutputURL, microphoneURL: currentMicURL)
-
-        // Log final file sizes for diagnostics
-        let fm = FileManager.default
-        if let sysURL = result.systemAudioURL,
-           let attrs = try? fm.attributesOfItem(atPath: sysURL.path),
-           let size = attrs[.size] as? Int64 {
-            os_log("[SystemAudio] System audio file size: %lld bytes at %{public}@", log: log, size, sysURL.lastPathComponent)
-        }
-        if let micURL = result.microphoneURL,
-           let attrs = try? fm.attributesOfItem(atPath: micURL.path),
-           let size = attrs[.size] as? Int64 {
-            os_log("[SystemAudio] Mic audio file size: %lld bytes at %{public}@", log: log, size, micURL.lastPathComponent)
-        }
-
-        self.isCapturing = false
-        self.capturingMicrophone = false
-
+        tearDown()
+        timer?.invalidate()
+        timer = nil
+        isCapturing = false
         resetMetrics()
-
-        return result
+        return CaptureResult(systemAudioURL: currentOutputURL, microphoneURL: nil)
     }
 
-    // MARK: - Duration Timer
-
-    private func startDurationTimer() {
-        durationTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-            // Timer fires on the main run loop, so assumeIsolated is safe here
-            MainActor.assumeIsolated {
-                guard let self, let start = self.startDate else { return }
-                var elapsed = Date().timeIntervalSince(start) - self.accumulatedPauseDuration
-                if let pauseStart = self.pausedAt {
-                    elapsed -= Date().timeIntervalSince(pauseStart)
-                }
-                self.duration = max(0, elapsed)
-            }
+    private func tearDown() {
+        if aggregateID != kAudioObjectUnknown, let ioProcID {
+            AudioDeviceStop(aggregateID, ioProcID)
+            AudioDeviceDestroyIOProcID(aggregateID, ioProcID)
+        }
+        ioProcID = nil
+        ioQueue.sync {}
+        writer = nil
+        if aggregateID != kAudioObjectUnknown {
+            AudioHardwareDestroyAggregateDevice(aggregateID)
+            aggregateID = kAudioObjectUnknown
+        }
+        if tapID != kAudioObjectUnknown {
+            AudioHardwareDestroyProcessTap(tapID)
+            tapID = kAudioObjectUnknown
         }
     }
 
-    func pauseDurationTimer() {
-        guard pausedAt == nil else { return }
-        pausedAt = Date()
-    }
-
+    func pauseDurationTimer() { if pausedAt == nil { pausedAt = Date() } }
     func resumeDurationTimer() {
-        guard let pauseStart = pausedAt else { return }
-        accumulatedPauseDuration += Date().timeIntervalSince(pauseStart)
-        pausedAt = nil
-    }
-
-    // MARK: - Reset
-
-    func resetMetrics() {
-        self.duration = 0
+        guard let pausedAt else { return }
+        accumulatedPauseDuration += Date().timeIntervalSince(pausedAt)
         self.pausedAt = nil
-        self.accumulatedPauseDuration = 0
-        self.audioLevels = Array(repeating: 0, count: AudioEnvelopeConfig.historyLength)
-        self.micAudioLevels = Array(repeating: 0, count: AudioEnvelopeConfig.historyLength)
+    }
+    func resetMetrics() {
+        duration = 0
+        pausedAt = nil
+        accumulatedPauseDuration = 0
+        audioLevels = Array(repeating: 0, count: AudioEnvelopeConfig.historyLength)
+        micAudioLevels = Array(repeating: 0, count: AudioEnvelopeConfig.historyLength)
     }
 
-    // MARK: - File URL
+    private static func check(_ status: OSStatus, _ operation: String) throws {
+        guard status == noErr else { throw SystemAudioCaptureError.coreAudio(operation, status) }
+    }
 
-    private func makeOutputURL(prefix: String) -> URL {
-        let timestamp = Int(Date().timeIntervalSince1970)
-        return URL(fileURLWithPath: NSTemporaryDirectory())
-            .appendingPathComponent("\(prefix)_\(timestamp).wav")
+    private static func tapUID(for tapID: AudioObjectID) throws -> String {
+        var address = AudioObjectPropertyAddress(mSelector: kAudioTapPropertyUID,
+                                                 mScope: kAudioObjectPropertyScopeGlobal,
+                                                 mElement: kAudioObjectPropertyElementMain)
+        var uid: CFString = "" as CFString
+        var size = UInt32(MemoryLayout<CFString>.size)
+        try check(withUnsafeMutablePointer(to: &uid) {
+            AudioObjectGetPropertyData(tapID, &address, 0, nil, &size, $0)
+        }, "tap-ID")
+        return uid as String
+    }
+
+    private static func defaultOutputUID() throws -> String {
+        var outputID = AudioObjectID(kAudioObjectUnknown)
+        var size = UInt32(MemoryLayout<AudioObjectID>.size)
+        var address = AudioObjectPropertyAddress(mSelector: kAudioHardwarePropertyDefaultOutputDevice,
+                                                 mScope: kAudioObjectPropertyScopeGlobal,
+                                                 mElement: kAudioObjectPropertyElementMain)
+        try check(AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject), &address,
+                                             0, nil, &size, &outputID), "audio-uitvoer")
+        guard outputID != kAudioObjectUnknown else { throw SystemAudioCaptureError.noOutputDevice }
+        address.mSelector = kAudioDevicePropertyDeviceUID
+        var uid: CFString = "" as CFString
+        size = UInt32(MemoryLayout<CFString>.size)
+        try check(withUnsafeMutablePointer(to: &uid) {
+            AudioObjectGetPropertyData(outputID, &address, 0, nil, &size, $0)
+        }, "audio-uitvoer")
+        return uid as String
     }
 }
 
-// MARK: - AudioStreamOutput
+private final class TapAudioWriter: @unchecked Sendable {
+    private let file: AVAudioFile
+    private let inputFormat: AVAudioFormat
+    private let converter: AVAudioConverter?
+    private let levelHandler: @Sendable (Float) -> Void
+    private var lastLevel = Date.distantPast
+    private(set) var framesReceived: UInt64 = 0
+    private(set) var framesWritten: UInt64 = 0
 
-private final class AudioStreamOutput: NSObject, SCStreamOutput, SCStreamDelegate {
-
-    private let systemAudioFile: AVAudioFile
-    private let microphoneAudioFile: AVAudioFile?
-    private let systemLevelHandler: (Float) -> Void
-    private let micLevelHandler: ((Float) -> Void)?
-    private let errorHandler: (Error) -> Void
-
-    init(
-        systemAudioFile: AVAudioFile,
-        microphoneAudioFile: AVAudioFile?,
-        systemLevelHandler: @escaping (Float) -> Void,
-        micLevelHandler: ((Float) -> Void)?,
-        errorHandler: @escaping (Error) -> Void
-    ) {
-        self.systemAudioFile = systemAudioFile
-        self.microphoneAudioFile = microphoneAudioFile
-        self.systemLevelHandler = systemLevelHandler
-        self.micLevelHandler = micLevelHandler
-        self.errorHandler = errorHandler
+    init(file: AVAudioFile, inputFormat: AVAudioFormat, levelHandler: @escaping @Sendable (Float) -> Void) {
+        self.file = file
+        self.inputFormat = inputFormat
+        self.converter = AVAudioConverter(from: inputFormat, to: file.processingFormat)
+        self.levelHandler = levelHandler
     }
 
-    // MARK: - SCStreamOutput
-
-    private var hasLoggedAudioFormat = false
-    private var hasLoggedMicFormat = false
-    private(set) var systemFramesReceived: UInt64 = 0
-    private(set) var systemFramesWritten: UInt64 = 0
-    private var micFramesReceived: UInt64 = 0
-    private var micFramesWritten: UInt64 = 0
-    private var lastDiagnosticLog: Date = .distantPast
-    private(set) var systemSampleCount: UInt64 = 0
-    private(set) var screenSampleCount: UInt64 = 0
-
-    /// SCStream delivers buffers at ~50-100 Hz. Publishing every buffer would put
-    /// the system-audio history on a different time axis than the microphone
-    /// envelope (30 Hz), which combined mode zips element-wise. Throttling here
-    /// keeps both histories on the same axis.
-    private let levelPublishInterval = 1.0 / AudioEnvelopeConfig.publishRateHz
-    private var lastLevelPublish: [String: Date] = [:]
-
-    func stream(
-        _ stream: SCStream,
-        didOutputSampleBuffer sampleBuffer: CMSampleBuffer,
-        of outputType: SCStreamOutputType
-    ) {
-        guard sampleBuffer.isValid else {
-            os_log("[SystemAudio] Received invalid sample buffer (type=%d)", log: log, outputType.rawValue)
-            return
-        }
-
-        if outputType == .screen {
-            screenSampleCount += 1
-            return
-        }
-
-        if outputType == .audio {
-            systemSampleCount += 1
-            if !hasLoggedAudioFormat {
-                hasLoggedAudioFormat = true
-                if let desc = sampleBuffer.formatDescription?.audioStreamBasicDescription {
-                    os_log("[SystemAudio] System audio format: %.0f Hz, %d ch, flags=0x%X, bitsPerChannel=%d",
-                           log: log, desc.mSampleRate, desc.mChannelsPerFrame, desc.mFormatFlags, desc.mBitsPerChannel)
-                } else {
-                    os_log("[SystemAudio] First system audio sample received but NO format description available", log: log)
-                }
+    func consume(_ buffers: UnsafePointer<AudioBufferList>) {
+        guard buffers.pointee.mNumberBuffers > 0 else { return }
+        let bytesPerFrame = max(inputFormat.streamDescription.pointee.mBytesPerFrame, 1)
+        let frames = buffers.pointee.mBuffers.mDataByteSize / bytesPerFrame
+        guard frames > 0,
+              let pcm = AVAudioPCMBuffer(pcmFormat: inputFormat, bufferListNoCopy: buffers) else { return }
+        pcm.frameLength = AVAudioFrameCount(frames)
+        framesReceived += UInt64(frames)
+        if Date().timeIntervalSince(lastLevel) >= 1 / AudioEnvelopeConfig.publishRateHz {
+            lastLevel = Date()
+            if let samples = pcm.floatChannelData?[0] {
+                var sum: Float = 0
+                for index in 0..<Int(frames) { sum += samples[index] * samples[index] }
+                let db = 20 * log10(max(sqrt(sum / Float(frames)), 1e-10))
+                levelHandler(db <= -60 ? 0 : min(1, pow((db + 60) / 60, 0.6)))
             }
-            writeSamples(from: sampleBuffer, to: systemAudioFile, levelHandler: systemLevelHandler, streamLabel: "system")
-            return
         }
-
-        if #available(macOS 15.0, *), outputType == .microphone {
-            guard let micFile = microphoneAudioFile else { return }
-            if !hasLoggedMicFormat, let desc = sampleBuffer.formatDescription?.audioStreamBasicDescription {
-                hasLoggedMicFormat = true
-                os_log("[SystemAudio] Microphone format: %.0f Hz, %d ch, flags=0x%X",
-                       log: log, desc.mSampleRate, desc.mChannelsPerFrame, desc.mFormatFlags)
-            }
-            writeSamples(from: sampleBuffer, to: micFile, levelHandler: micLevelHandler ?? { _ in }, streamLabel: "mic")
-            return
-        }
-    }
-
-    // MARK: - SCStreamDelegate
-
-    func stream(_ stream: SCStream, didStopWithError error: Error) {
-        errorHandler(error)
-    }
-
-    // MARK: - Sample Writing
-
-    /// Lazily created converters for resampling audio from ScreenCaptureKit's native format
-    /// (often 48 kHz stereo) to the output file's format (16 kHz mono).
-    /// Keyed by the audio file's hash to support separate converters for system and mic streams.
-    private var converters: [ObjectIdentifier: AVAudioConverter] = [:]
-    private var converterFormats: [ObjectIdentifier: AVAudioFormat] = [:]
-
-    private func writeSamples(
-        from sampleBuffer: CMSampleBuffer,
-        to audioFile: AVAudioFile,
-        levelHandler: (Float) -> Void,
-        streamLabel: String
-    ) {
         do {
-            try sampleBuffer.withAudioBufferList { audioBufferList, blockBuffer in
-                guard let description = sampleBuffer.formatDescription?.audioStreamBasicDescription
-                else {
-                    os_log("[SystemAudio] No audio format description in sample buffer (%{public}@)", log: log, streamLabel)
-                    return
-                }
-
-                // ScreenCaptureKit may deliver interleaved or non-interleaved float32.
-                let isInterleaved = description.mFormatFlags & kAudioFormatFlagIsNonInterleaved == 0
-
-                guard let sourceFormat = AVAudioFormat(
-                    commonFormat: .pcmFormatFloat32,
-                    sampleRate: description.mSampleRate,
-                    channels: description.mChannelsPerFrame,
-                    interleaved: isInterleaved
-                ) else {
-                    os_log("[SystemAudio] Could not create AVAudioFormat: %.0f Hz, %d ch, interleaved=%d (%{public}@)",
-                           log: log, description.mSampleRate, description.mChannelsPerFrame, isInterleaved ? 1 : 0, streamLabel)
-                    return
-                }
-
-                guard let pcmBuffer = AVAudioPCMBuffer(
-                    pcmFormat: sourceFormat,
-                    bufferListNoCopy: audioBufferList.unsafePointer
-                ) else {
-                    os_log("[SystemAudio] Could not create PCM buffer from audio buffer list (%{public}@)", log: log, streamLabel)
-                    return
-                }
-
-                let incomingFrames = UInt64(pcmBuffer.frameLength)
-
-                // Calculate RMS level for waveform visualization, published at
-                // AudioEnvelopeConfig.publishRateHz (see levelPublishInterval).
-                let level = calculateLevel(from: pcmBuffer)
-                let publishNow = Date()
-                let previousPublish = lastLevelPublish[streamLabel] ?? .distantPast
-                if publishNow.timeIntervalSince(previousPublish) >= levelPublishInterval {
-                    // Advance the deadline by exactly one interval instead of
-                    // resetting it to now: buffers arrive every ~10-20 ms, so
-                    // resetting would quantise the rate up to the next whole
-                    // buffer (~25 Hz) and the system history would then span
-                    // more wall clock than the mic's 30 Hz history. The lower
-                    // bound keeps a stalled stream from bursting on resume.
-                    lastLevelPublish[streamLabel] = max(
-                        previousPublish.addingTimeInterval(levelPublishInterval),
-                        publishNow.addingTimeInterval(-levelPublishInterval)
-                    )
-                    levelHandler(level)
-                }
-
-                let fileFormat = audioFile.processingFormat
-                var framesWritten: UInt64 = 0
-
-                // If source format matches file format, write directly
-                if sourceFormat.sampleRate == fileFormat.sampleRate
-                    && sourceFormat.channelCount == fileFormat.channelCount {
-                    try audioFile.write(from: pcmBuffer)
-                    framesWritten = incomingFrames
-                } else {
-                    // Resample: ScreenCaptureKit often delivers 48 kHz stereo even when
-                    // we requested 16 kHz mono. Convert to match the output file.
-                    let fileKey = ObjectIdentifier(audioFile)
-                    if converters[fileKey] == nil || converterFormats[fileKey] != sourceFormat {
-                        converters[fileKey] = AVAudioConverter(from: sourceFormat, to: fileFormat)
-                        converterFormats[fileKey] = sourceFormat
-                    }
-                    guard let conv = converters[fileKey] else {
-                        os_log("[SystemAudio] Could not create audio converter (%{public}@)", log: log, streamLabel)
-                        return
-                    }
-
-                    let ratio = fileFormat.sampleRate / sourceFormat.sampleRate
-                    let outputFrames = AVAudioFrameCount(Double(pcmBuffer.frameLength) * ratio)
-                    guard let outputBuffer = AVAudioPCMBuffer(
-                        pcmFormat: fileFormat, frameCapacity: outputFrames
-                    ) else {
-                        os_log("[SystemAudio] Could not create output buffer (%{public}@)", log: log, streamLabel)
-                        return
-                    }
-
-                    nonisolated(unsafe) var inputConsumed = false
-                    var error: NSError?
-                    conv.convert(to: outputBuffer, error: &error) { _, outStatus in
-                        if inputConsumed {
-                            outStatus.pointee = .endOfStream
-                            return nil
-                        }
-                        inputConsumed = true
-                        outStatus.pointee = .haveData
-                        return pcmBuffer
-                    }
-                    if let error {
-                        os_log("[SystemAudio] Converter error (%{public}@): %{public}@", log: log, streamLabel, error.localizedDescription)
-                        return
-                    }
-
-                    if outputBuffer.frameLength > 0 {
-                        try audioFile.write(from: outputBuffer)
-                        framesWritten = UInt64(outputBuffer.frameLength)
-                    }
-                }
-
-                // Update diagnostic counters
-                if streamLabel == "system" {
-                    systemFramesReceived += incomingFrames
-                    systemFramesWritten += framesWritten
-                } else {
-                    micFramesReceived += incomingFrames
-                    micFramesWritten += framesWritten
-                }
-
-                // Log diagnostics every 5 seconds
-                let now = Date()
-                if now.timeIntervalSince(lastDiagnosticLog) >= 5.0 {
-                    lastDiagnosticLog = now
-                    os_log("[SystemAudio] Diagnostics — system: %llu received / %llu written, mic: %llu received / %llu written, level=%.3f (%{public}@)",
-                           log: log,
-                           systemFramesReceived, systemFramesWritten,
-                           micFramesReceived, micFramesWritten,
-                           level, streamLabel)
-                }
+            guard let converter else { return }
+            let capacity = AVAudioFrameCount(ceil(Double(frames) * file.processingFormat.sampleRate / inputFormat.sampleRate) + 32)
+            guard let converted = AVAudioPCMBuffer(pcmFormat: file.processingFormat, frameCapacity: capacity) else { return }
+            nonisolated(unsafe) var consumed = false
+            var conversionError: NSError?
+            converter.convert(to: converted, error: &conversionError) { _, status in
+                if consumed { status.pointee = .noDataNow; return nil }
+                consumed = true
+                status.pointee = .haveData
+                return pcm
+            }
+            if let conversionError { throw conversionError }
+            if converted.frameLength > 0 {
+                try file.write(from: converted)
+                framesWritten += UInt64(converted.frameLength)
             }
         } catch {
-            os_log("[SystemAudio] Write error (%{public}@): %{public}@", log: log, streamLabel, error.localizedDescription)
+            os_log("[SystemAudio] Audio write failed: %{public}@", log: log, error.localizedDescription)
         }
-    }
-
-    // MARK: - Level Calculation
-
-    private func calculateLevel(from buffer: AVAudioPCMBuffer) -> Float {
-        let frameCount = Int(buffer.frameLength)
-        guard frameCount > 0 else { return 0 }
-
-        let channels = Int(buffer.format.channelCount)
-        let isInterleaved = buffer.format.isInterleaved
-
-        var sumOfSquares: Float = 0
-
-        if isInterleaved {
-            // Interleaved: samples are packed [L, R, L, R, ...] in a single buffer
-            guard let data = buffer.audioBufferList.pointee.mBuffers.mData else { return 0 }
-            let samples = data.assumingMemoryBound(to: Float.self)
-            let stride = max(channels, 1)
-            for i in Swift.stride(from: 0, to: frameCount * stride, by: stride) {
-                let sample = samples[i]
-                sumOfSquares += sample * sample
-            }
-        } else {
-            // Non-interleaved: separate buffer per channel
-            guard let channelData = buffer.floatChannelData else { return 0 }
-            let samples = channelData[0]
-            for i in 0..<frameCount {
-                let sample = samples[i]
-                sumOfSquares += sample * sample
-            }
-        }
-
-        let rms = sqrt(sumOfSquares / Float(frameCount))
-
-        // Convert RMS to dB with -60dB floor
-        let db = 20 * log10(max(rms, 1e-10))
-        let db60Floor: Float = -60.0
-        if db <= db60Floor { return 0 }
-        let normalized = pow((db - db60Floor) / 60.0, 0.6)
-        return max(0, min(1, normalized))
     }
 }
-
 #endif

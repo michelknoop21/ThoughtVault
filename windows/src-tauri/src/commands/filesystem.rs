@@ -2,6 +2,15 @@ use chrono::Utc;
 use hound::WavReader;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
+use crate::audio::recorder::StreamingResampler;
+use symphonia::core::audio::SampleBuffer;
+use symphonia::core::codecs::DecoderOptions;
+use symphonia::core::errors::Error as AudioError;
+use symphonia::core::formats::FormatOptions;
+use symphonia::core::io::MediaSourceStream;
+use symphonia::core::meta::MetadataOptions;
+use symphonia::core::probe::Hint;
+use symphonia::default::{get_codecs, get_probe};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RecordingFile {
@@ -10,6 +19,136 @@ pub struct RecordingFile {
     pub size_bytes: u64,
     pub created_at: i64,
     pub duration_seconds: Option<f64>,
+}
+
+/// Copy a chosen audio file into the existing recordings folder as the WAV
+/// format already accepted by local Whisper and the saved-recordings view.
+#[tauri::command]
+pub async fn import_audio(source_path: String) -> Result<String, String> {
+    let destination_dir = get_recordings_dir().await?;
+    tokio::task::spawn_blocking(move || {
+        convert_audio(Path::new(&source_path), Path::new(&destination_dir))
+    })
+    .await
+    .map_err(|e| format!("Audio-import afgebroken: {e}"))?
+}
+
+fn convert_audio(source: &Path, destination_dir: &Path) -> Result<String, String> {
+    if !source.is_file() {
+        return Err("Audiobestand niet gevonden".to_string());
+    }
+    let extension = source.extension().and_then(|s| s.to_str()).unwrap_or("").to_lowercase();
+    if !["wav", "mp3", "m4a", "mp4", "aac", "flac", "ogg"].contains(&extension.as_str()) {
+        return Err("Niet-ondersteund audioformaat".to_string());
+    }
+
+    let file = std::fs::File::open(source).map_err(|e| format!("Kan audio niet openen: {e}"))?;
+    let media = MediaSourceStream::new(Box::new(file), Default::default());
+    let mut hint = Hint::new();
+    hint.with_extension(&extension);
+    let probed = get_probe()
+        .format(&hint, media, &FormatOptions::default(), &MetadataOptions::default())
+        .map_err(|e| format!("Kan audioformaat niet lezen: {e}"))?;
+    let mut format = probed.format;
+    let track = format.default_track().ok_or("Geen audiospoor gevonden")?;
+    let track_id = track.id;
+    let params = track.codec_params.clone();
+    let mut decoder = get_codecs()
+        .make(&params, &DecoderOptions::default())
+        .map_err(|e| format!("Audioformaat niet ondersteund: {e}"))?;
+    let mut resampler: Option<StreamingResampler> = None;
+
+    let temp = tempfile::Builder::new()
+        .prefix("import_")
+        .suffix(".wav")
+        .tempfile_in(destination_dir)
+        .map_err(|e| format!("Kan audiobestand niet bewaren: {e}"))?
+        .into_temp_path();
+    let spec = hound::WavSpec {
+        channels: 1,
+        sample_rate: 16_000,
+        bits_per_sample: 16,
+        sample_format: hound::SampleFormat::Int,
+    };
+    let mut writer = hound::WavWriter::create(&temp, spec)
+        .map_err(|e| format!("Kan WAV niet aanmaken: {e}"))?;
+    let mut written = 0usize;
+
+    loop {
+        let packet = match format.next_packet() {
+            Ok(packet) => packet,
+            Err(AudioError::IoError(e)) if e.kind() == std::io::ErrorKind::UnexpectedEof => break,
+            Err(e) => return Err(format!("Kan audio niet lezen: {e}")),
+        };
+        if packet.track_id() != track_id { continue; }
+        let decoded = match decoder.decode(&packet) {
+            Ok(decoded) => decoded,
+            Err(AudioError::DecodeError(_)) => continue,
+            Err(e) => return Err(format!("Kan audio niet decoderen: {e}")),
+        };
+        let channels = decoded.spec().channels.count();
+        if channels == 0 { return Err("Geen audiokanalen gevonden".to_string()); }
+        let resampler = resampler.get_or_insert_with(|| StreamingResampler::new(decoded.spec().rate, 16_000));
+        let mut samples = SampleBuffer::<f32>::new(decoded.capacity() as u64, *decoded.spec());
+        samples.copy_interleaved_ref(decoded);
+        let mono: Vec<i16> = samples.samples().chunks_exact(channels).map(|frame| {
+            let average = frame.iter().sum::<f32>() / channels as f32;
+            (average.clamp(-1.0, 1.0) * i16::MAX as f32).round() as i16
+        }).collect();
+        for sample in resampler.process_i16(&mono) {
+            writer.write_sample(sample).map_err(|e| format!("Kan WAV niet schrijven: {e}"))?;
+            written += 1;
+        }
+    }
+
+    if written == 0 { return Err("Audiobestand bevat geen geluid".to_string()); }
+    writer.finalize().map_err(|e| format!("Kan WAV niet afsluiten: {e}"))?;
+    temp.keep().map(|path| path.to_string_lossy().to_string())
+        .map_err(|e| format!("Kan audiobestand niet bewaren: {e}"))
+}
+
+#[cfg(test)]
+mod import_tests {
+    use super::*;
+
+    #[test]
+    fn imported_stereo_wav_is_ready_for_local_whisper() {
+        let dir = tempfile::tempdir().unwrap();
+        let source = dir.path().join("meeting.wav");
+        let spec = hound::WavSpec {
+            channels: 2,
+            sample_rate: 48_000,
+            bits_per_sample: 16,
+            sample_format: hound::SampleFormat::Int,
+        };
+        let mut writer = hound::WavWriter::create(&source, spec).unwrap();
+        for _ in 0..48_000 {
+            writer.write_sample(8_000i16).unwrap();
+            writer.write_sample(4_000i16).unwrap();
+        }
+        writer.finalize().unwrap();
+
+        let imported = convert_audio(&source, dir.path()).unwrap();
+        let reader = hound::WavReader::open(imported).unwrap();
+        assert_eq!(reader.spec().channels, 1);
+        assert_eq!(reader.spec().sample_rate, 16_000);
+        assert_eq!(reader.len(), 16_000);
+    }
+
+    #[test]
+    fn imports_common_compressed_audio() {
+        let dir = tempfile::tempdir().unwrap();
+        for fixture in ["short.mp3", "short.m4a"] {
+            let source = Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("testdata")
+                .join(fixture);
+            let imported = convert_audio(&source, dir.path()).unwrap();
+            let reader = hound::WavReader::open(imported).unwrap();
+            assert_eq!(reader.spec().channels, 1);
+            assert_eq!(reader.spec().sample_rate, 16_000);
+            assert!(reader.len() > 3_000);
+        }
+    }
 }
 
 /// Returns the platform-appropriate recordings directory.

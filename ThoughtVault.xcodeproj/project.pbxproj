@@ -9,6 +9,11 @@
 /* Begin PBXBuildFile section */
 		AB0000S5 /* QuickNoteStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000S5 /* QuickNoteStoreTests.swift */; };
 		AA0000S4 /* QuickNoteStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000S4 /* QuickNoteStore.swift */; };
+		AA0000H1 /* HomeView+Studio.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000H1 /* HomeView+Studio.swift */; };
+		AA0000H2 /* HomeView+Card.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000H2 /* HomeView+Card.swift */; };
+		AA0000H3 /* HomeView+Panels.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000H3 /* HomeView+Panels.swift */; };
+		AA0000H4 /* HomeView+Side.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000H4 /* HomeView+Side.swift */; };
+		AA0000H5 /* HomeDecor.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000H5 /* HomeDecor.swift */; };
 		AA0000S3 /* MainSidebar.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000S3 /* MainSidebar.swift */; };
 		AA0000S2 /* RecordingView+Inspector.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000S2 /* RecordingView+Inspector.swift */; };
 		AA0000S1 /* RecordingView+Studio.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000S1 /* RecordingView+Studio.swift */; };
@@ -117,6 +122,11 @@
 /* Begin PBXFileReference section */
 		FB0000S5 /* QuickNoteStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickNoteStoreTests.swift; sourceTree = "<group>"; };
 		FA0000S4 /* QuickNoteStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickNoteStore.swift; sourceTree = "<group>"; };
+		FA0000H1 /* HomeView+Studio.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "HomeView+Studio.swift"; sourceTree = "<group>"; };
+		FA0000H2 /* HomeView+Card.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "HomeView+Card.swift"; sourceTree = "<group>"; };
+		FA0000H3 /* HomeView+Panels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "HomeView+Panels.swift"; sourceTree = "<group>"; };
+		FA0000H4 /* HomeView+Side.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "HomeView+Side.swift"; sourceTree = "<group>"; };
+		FA0000H5 /* HomeDecor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "HomeDecor.swift"; sourceTree = "<group>"; };
 		FA0000S3 /* MainSidebar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MainSidebar.swift"; sourceTree = "<group>"; };
 		FA0000S2 /* RecordingView+Inspector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RecordingView+Inspector.swift"; sourceTree = "<group>"; };
 		FA0000S1 /* RecordingView+Studio.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RecordingView+Studio.swift"; sourceTree = "<group>"; };
@@ -351,6 +361,10 @@
 				FA000022 /* AccountView.swift */,
 				FA000023 /* AdminView.swift */,
 				FA000024 /* HomeView.swift */,
+				FA0000H1 /* HomeView+Studio.swift */,
+				FA0000H2 /* HomeView+Card.swift */,
+				FA0000H3 /* HomeView+Panels.swift */,
+				FA0000H4 /* HomeView+Side.swift */,
 				FA000025 /* LoginView.swift */,
 				FA000026 /* NotuleResultView.swift */,
 				FA000027 /* OnboardingView.swift */,
@@ -389,6 +403,7 @@
 				FA000039 /* TranscriptCard.swift */,
 				FA000040 /* WaveformView.swift */,
 				FA0000S3 /* MainSidebar.swift */,
+				FA0000H5 /* HomeDecor.swift */,
 				FA000075 /* HomeHeroCard.swift */,
 				FA000052 /* PermissionBanner.swift */,
 				FA000053 /* EditableHTMLWebView.swift */,
@@ -596,6 +611,11 @@
 				AA000030 /* RecordingView.swift in Sources */,
 				AA0000S4 /* QuickNoteStore.swift in Sources */,
 				AA0000S3 /* MainSidebar.swift in Sources */,
+				AA0000H1 /* HomeView+Studio.swift in Sources */,
+				AA0000H2 /* HomeView+Card.swift in Sources */,
+				AA0000H3 /* HomeView+Panels.swift in Sources */,
+				AA0000H4 /* HomeView+Side.swift in Sources */,
+				AA0000H5 /* HomeDecor.swift in Sources */,
 				AA0000S2 /* RecordingView+Inspector.swift in Sources */,
 				AA0000S1 /* RecordingView+Studio.swift in Sources */,
 				AA000031 /* SettingsView.swift in Sources */,
@@ -791,7 +811,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 254;
+				CURRENT_PROJECT_VERSION = 255;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = XL9KN38ATX;
 				ENABLE_APP_SANDBOX = YES;
@@ -808,8 +828,8 @@
 					"@executable_path/../Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.0.254;
+				MACOSX_DEPLOYMENT_TARGET = 14.2;
+				MARKETING_VERSION = 1.0.255;
 				PRODUCT_BUNDLE_IDENTIFIER = com.buildmind.ThoughtVault;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "macosx iphoneos iphonesimulator";
@@ -832,7 +852,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 254;
+				CURRENT_PROJECT_VERSION = 255;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = XL9KN38ATX;
 				ENABLE_APP_SANDBOX = YES;
@@ -849,8 +869,8 @@
 					"@executable_path/../Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.0.254;
+				MACOSX_DEPLOYMENT_TARGET = 14.2;
+				MARKETING_VERSION = 1.0.255;
 				PRODUCT_BUNDLE_IDENTIFIER = com.buildmind.ThoughtVault;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "macosx iphoneos iphonesimulator";
@@ -867,12 +887,12 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 254;
+				CURRENT_PROJECT_VERSION = 255;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.0.254;
+				MACOSX_DEPLOYMENT_TARGET = 14.2;
+				MARKETING_VERSION = 1.0.255;
 				PRODUCT_BUNDLE_IDENTIFIER = com.buildmind.ThoughtVaultTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "macosx iphoneos iphonesimulator";
@@ -887,12 +907,12 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 254;
+				CURRENT_PROJECT_VERSION = 255;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.0.254;
+				MACOSX_DEPLOYMENT_TARGET = 14.2;
+				MARKETING_VERSION = 1.0.255;
 				PRODUCT_BUNDLE_IDENTIFIER = com.buildmind.ThoughtVaultTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "macosx iphoneos iphonesimulator";

@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { TitleBar } from "./components/layout/TitleBar";
@@ -22,9 +22,10 @@ import { ProcessingBar } from "./components/ProcessingBar";
 import { OnboardingWizard } from "./components/onboarding/OnboardingWizard";
 import { useAuthStore } from "./stores/authStore";
 import { useSettingsStore } from "./stores/settingsStore";
-import { useProfilesStore } from "./stores/profilesStore";
+import { currentProfileChoices, useProfilesStore } from "./stores/profilesStore";
 import { useRecordingStore } from "./stores/recordingStore";
 import { useTranscriptsStore } from "./stores/transcriptsStore";
+import { useLocalTranscriptsStore } from "./stores/localTranscriptsStore";
 import { MicrosoftGraphService } from "./services/microsoftGraph";
 import { api } from "./services/api";
 import { createSSEClient } from "./services/sse";
@@ -34,6 +35,7 @@ import { useUploadQueueStore } from "./stores/uploadQueueStore";
 import { useGlobalRecordingHandler } from "./hooks/useGlobalRecordingHandler";
 import { useToast } from "./components/ui/InfoBar";
 import type { Profile } from "./types";
+import { canOpenRoute, shouldBlockForLocalNotes } from "./services/routeAccess";
 
 initCrashReporter();
 
@@ -274,8 +276,10 @@ function KeyboardShortcuts() {
 
 function ProtectedRoutes() {
   const { isAuthenticated, isInitializing } = useAuthStore();
-  const { has_completed_onboarding, updateSettings } = useSettingsStore();
+  const { has_completed_onboarding, processing_mode, updateSettings } = useSettingsStore();
+  const location = useLocation();
   const setProfiles = useProfilesStore((s) => s.setProfiles);
+  const showLocalProfiles = useProfilesStore((s) => s.showLocalProfiles);
 
   const addBackgroundTask = useRecordingStore((s) => s.addBackgroundTask);
   const updateBackgroundTask = useRecordingStore((s) => s.updateBackgroundTask);
@@ -285,10 +289,16 @@ function ProtectedRoutes() {
   // Validate token on app start — show toast if invalid, never auto-logout
   const tokenValidatedRef = useRef(false);
   useEffect(() => {
+    if (processing_mode === "local") {
+      tokenValidatedRef.current = false;
+      showLocalProfiles();
+      return;
+    }
     if (!isAuthenticated || tokenValidatedRef.current) return;
+    let cancelled = false;
     tokenValidatedRef.current = true;
     api.getProfiles().then((profiles: Profile[]) => {
-      if (profiles.length > 0) setProfiles(profiles);
+      if (!cancelled) setProfiles(currentProfileChoices(profiles));
     }).catch(() => {
       // Token may be invalid — show non-disruptive message
       useToast.getState().show("Sessie mogelijk verlopen. Log opnieuw in als er problemen zijn.", "warning");
@@ -299,7 +309,8 @@ function ProtectedRoutes() {
         ms365_tenant_id: settings.ms365_tenant_id || undefined,
       });
     }).catch(() => { /* ignore - settings will remain as-is */ });
-  }, [isAuthenticated, setProfiles, updateSettings]);
+    return () => { cancelled = true; };
+  }, [isAuthenticated, processing_mode, setProfiles, showLocalProfiles, updateSettings]);
 
   // Global recording stop/error handler — always active, survives page navigation
   useGlobalRecordingHandler();
@@ -345,15 +356,15 @@ function ProtectedRoutes() {
     })();
   }, [isAuthenticated]);
 
-  if (isInitializing) {
+  if (isInitializing && processing_mode !== "local") {
     return null;
   }
 
-  if (!isAuthenticated) {
+  if (!canOpenRoute(location.pathname, processing_mode, isAuthenticated)) {
     return <Navigate to="/login" replace />;
   }
 
-  if (!has_completed_onboarding) {
+  if (!has_completed_onboarding && processing_mode !== "local") {
     return (
       <div className="app-shell">
         <OnboardingWizard />
@@ -414,10 +425,30 @@ function UpdateRequiredOverlay({ currentVersion, minimumVersion }: { currentVers
 
 export default function App() {
   const [updateRequired, setUpdateRequired] = useState<{ current: string; minimum: string } | null>(null);
+  const processingMode = useSettingsStore((s) => s.processing_mode);
+  const [localReady, setLocalReady] = useState(false);
+  const [localLoadError, setLocalLoadError] = useState<string | null>(null);
+
+  async function loadLocalNotes() {
+    try {
+      await useLocalTranscriptsStore.getState().hydrate();
+      setLocalReady(true);
+      setLocalLoadError(null);
+    } catch (error) {
+      setLocalLoadError(error instanceof Error ? error.message : "Lokale notulen laden mislukt");
+    }
+  }
+
+  useEffect(() => { void loadLocalNotes(); }, []);
 
   // Force update check on launch (skip in browser dev mode)
   useEffect(() => {
+    if (processingMode === "local") {
+      setUpdateRequired(null);
+      return;
+    }
     if (!("__TAURI_INTERNALS__" in window)) return;
+    let cancelled = false;
     (async () => {
       try {
         const { getAppVersion } = await import("./services/tauriCommands");
@@ -431,14 +462,15 @@ export default function App() {
         const min = parse(versionInfo.minimum_version);
         const isOutdated = cur[0] < min[0] || (cur[0] === min[0] && cur[1] < min[1]) || (cur[0] === min[0] && cur[1] === min[1] && cur[2] < min[2]);
 
-        if (isOutdated) {
+        if (isOutdated && !cancelled) {
           setUpdateRequired({ current: currentVersion, minimum: versionInfo.minimum_version });
         }
       } catch {
         // Version check failed — allow app to continue
       }
     })();
-  }, []);
+    return () => { cancelled = true; };
+  }, [processingMode]);
 
   useEffect(() => {
     if (!("__TAURI_INTERNALS__" in window)) return;
@@ -497,6 +529,15 @@ export default function App() {
 
   if (updateRequired) {
     return <UpdateRequiredOverlay currentVersion={updateRequired.current} minimumVersion={updateRequired.minimum} />;
+  }
+
+  if (shouldBlockForLocalNotes(processingMode, localReady)) {
+    return localLoadError ? (
+      <div className="empty-state">
+        <p>Lokale notulen konden niet worden geladen: {localLoadError}</p>
+        <button className="btn btn-accent" onClick={() => void loadLocalNotes()}>Opnieuw proberen</button>
+      </div>
+    ) : null;
   }
 
   return (

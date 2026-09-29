@@ -9,10 +9,10 @@ import AVFoundation
 import Foundation
 import OSLog
 import Speech
-#if os(macOS)
-import ScreenCaptureKit
-#elseif os(iOS)
+#if os(iOS)
 import UIKit
+#elseif os(macOS)
+import AppKit
 #endif
 
 private let log = Logger(subsystem: "com.buildmind.ThoughtVault", category: "Permissions")
@@ -26,7 +26,7 @@ final class PermissionManager {
     // MARK: - Observable State
 
     var microphoneGranted: Bool = false
-    var screenRecordingGranted: Bool = false
+    var systemAudioGranted: Bool? = nil
     var speechRecognitionGranted: Bool = false
 
     /// True when the permission was explicitly denied (re-prompting is a no-op;
@@ -36,14 +36,14 @@ final class PermissionManager {
 
     /// True when any essential permission is missing.
     var hasMissingPermissions: Bool {
-        !microphoneGranted || !screenRecordingGranted
+        !microphoneGranted || systemAudioGranted == false
     }
 
     /// Human-readable list of missing permissions for the banner.
     var missingPermissionNames: [String] {
         var names: [String] = []
         if !microphoneGranted { names.append("Microfoon") }
-        if !screenRecordingGranted { names.append("Schermopname") }
+        if systemAudioGranted == false { names.append("Systeemaudio") }
         if !speechRecognitionGranted { names.append("Spraakherkenning") }
         return names
     }
@@ -74,13 +74,6 @@ final class PermissionManager {
         speechRecognitionGranted = speechStatus == .authorized
         speechRecognitionDenied = speechStatus == .denied || speechStatus == .restricted
         log.info("Speech recognition permission: \(speechStatus.rawValue) (granted: \(self.speechRecognitionGranted))")
-
-        // Screen recording (macOS only)
-        #if os(macOS)
-        await checkScreenRecording()
-        #else
-        screenRecordingGranted = true // Not applicable on iOS
-        #endif
 
         if hasMissingPermissions {
             log.warning("Missing permissions: \(self.missingPermissionNames.joined(separator: ", "))")
@@ -124,26 +117,13 @@ final class PermissionManager {
     }
 
     #if os(macOS)
-    func requestScreenRecording() async {
-        // CGRequestScreenCaptureAccess opens System Settings for the user
-        CGRequestScreenCaptureAccess()
-
-        // Poll briefly — the user needs time to toggle the switch
-        for _ in 0..<5 {
-            try? await Task.sleep(for: .seconds(1))
-            await checkScreenRecording()
-            if screenRecordingGranted { break }
+    func recordSystemAudioResult(_ error: Error?) {
+        // Core Audio prompts at AudioDeviceStart. Other setup failures do not
+        // establish a denial, so keep the pre-attempt state neutral.
+        if error == nil { systemAudioGranted = true }
+        else if case SystemAudioCaptureError.coreAudio("opname", _) = error! {
+            systemAudioGranted = false
         }
-    }
-
-    private func checkScreenRecording() async {
-        do {
-            _ = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: false)
-            screenRecordingGranted = true
-        } catch {
-            screenRecordingGranted = false
-        }
-        log.info("Screen recording permission: \(self.screenRecordingGranted)")
     }
     #endif
 
@@ -161,9 +141,9 @@ final class PermissionManager {
         #endif
     }
 
-    func openScreenRecordingSettings() {
+    func openSystemAudioSettings() {
         #if os(macOS)
-        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture") {
+        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_AudioCapture") {
             NSWorkspace.shared.open(url)
         }
         #endif

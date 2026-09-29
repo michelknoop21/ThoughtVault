@@ -93,9 +93,10 @@ struct MainSidebar: View {
             }
             .padding(.top, 30)
 
+            // Home lists recent notulen itself (Home NorthStar has no Recent here).
             ViewThatFits(in: .vertical) {
                 ForEach([5, 4, 3, 2, 1, 0], id: \.self) { count in
-                    recentSection(Array(recent.prefix(count)))
+                    recentSection(selectedTab == .home ? [] : Array(recent.prefix(count)))
                 }
             }
             .frame(maxHeight: .infinity, alignment: .top)

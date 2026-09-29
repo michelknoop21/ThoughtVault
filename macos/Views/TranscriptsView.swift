@@ -38,6 +38,9 @@ struct TranscriptsView: View {
     /// Called when the empty-library CTA is tapped. Parent navigates to the recording screen.
     var onStartRecording: (() -> Void)?
 
+    /// Query handed over from the Home search field.
+    var initialSearch: String = ""
+
     // MARK: State - list
 
     @State private var transcripts: [Transcript] = []
@@ -179,6 +182,7 @@ struct TranscriptsView: View {
             Text("Deze transcriptie wordt permanent verwijderd.")
         }
         .task { await loadTranscripts() }
+        .onAppear { if !initialSearch.isEmpty { searchText = initialSearch } }
 #if os(macOS)
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             guard Date().timeIntervalSince(lastRefreshDate) >= 10 else { return }
@@ -747,9 +751,13 @@ struct TranscriptsView: View {
 
     private func deleteTranscript(_ transcript: Transcript) async {
         if isLocalTranscript(transcript.taskId) {
-            LocalTranscriptStore.shared.delete(taskId: transcript.taskId)
-            withAnimation(TS.Animation.smooth) {
-                transcripts.removeAll { $0.id == transcript.id }
+            do {
+                try LocalTranscriptStore.shared.delete(taskId: transcript.taskId)
+                withAnimation(TS.Animation.smooth) {
+                    transcripts.removeAll { $0.id == transcript.id }
+                }
+            } catch {
+                loadErrorMessage = error.localizedDescription
             }
             return
         }
@@ -774,8 +782,12 @@ struct TranscriptsView: View {
                 continue
             }
             if isLocalTranscript(transcript.taskId) {
-                LocalTranscriptStore.shared.delete(taskId: transcript.taskId)
-                deletedIds.insert(id)
+                do {
+                    try LocalTranscriptStore.shared.delete(taskId: transcript.taskId)
+                    deletedIds.insert(id)
+                } catch {
+                    failCount += 1
+                }
                 continue
             }
             do {
@@ -1430,7 +1442,7 @@ struct TranscriptDetailView: View {
             // Edit notule
             if !isEditingNotule, let html = fullTranscript.notuleHtml, !html.isEmpty {
                 detailIconButton(icon: "pencil", label: "Bewerken") {
-                    editedHTML = html
+                    editedHTML = prepareNotuleContent(html)
                     withAnimation(TS.Animation.smooth) {
                         isEditingNotule = true
                         selectedTab = .notule
@@ -1524,12 +1536,10 @@ struct TranscriptDetailView: View {
                         .lineLimit(1...3)
                         .onSubmit {
                             Task { await saveTitle() }
-                            isEditingTitle = false
                         }
 
                     Button {
                         Task { await saveTitle() }
-                        isEditingTitle = false
                     } label: {
                         Image(systemName: "checkmark.circle.fill")
                             .font(.system(size: 18))
@@ -1848,15 +1858,17 @@ struct TranscriptDetailView: View {
 
     private func saveTitle() async {
         let newTitle = pendingTitle.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !newTitle.isEmpty, newTitle != fullTranscript.title else { return }
+        guard !newTitle.isEmpty else { return }
+        if newTitle == fullTranscript.title { isEditingTitle = false; return }
         let original = fullTranscript.title
         fullTranscript.title = newTitle
-        if isLocalTranscript(fullTranscript.taskId) {
-            LocalTranscriptStore.shared.updateTitle(taskId: fullTranscript.taskId, title: newTitle)
-            return
-        }
         do {
-            try await APIService.shared.updateTranscriptTitle(taskId: fullTranscript.taskId, title: newTitle)
+            if isLocalTranscript(fullTranscript.taskId) {
+                try LocalTranscriptStore.shared.updateTitle(taskId: fullTranscript.taskId, title: newTitle)
+            } else {
+                try await APIService.shared.updateTranscriptTitle(taskId: fullTranscript.taskId, title: newTitle)
+            }
+            isEditingTitle = false
         } catch {
             fullTranscript.title = original
             errorMessage = error.localizedDescription
@@ -1914,12 +1926,12 @@ struct TranscriptDetailView: View {
         if let newTitle {
             let original = fullTranscript.title
             fullTranscript.title = newTitle
-            if isLocalTranscript(fullTranscript.taskId) {
-                LocalTranscriptStore.shared.updateTitle(taskId: fullTranscript.taskId, title: newTitle)
-                return
-            }
             do {
-                try await APIService.shared.updateTranscriptTitle(taskId: fullTranscript.taskId, title: newTitle)
+                if isLocalTranscript(fullTranscript.taskId) {
+                    try LocalTranscriptStore.shared.updateTitle(taskId: fullTranscript.taskId, title: newTitle)
+                } else {
+                    try await APIService.shared.updateTranscriptTitle(taskId: fullTranscript.taskId, title: newTitle)
+                }
             } catch {
                 fullTranscript.title = original
                 errorMessage = error.localizedDescription
@@ -1930,12 +1942,12 @@ struct TranscriptDetailView: View {
     private func removeTag(_ tag: String) async {
         let original = fullTranscript.tags
         fullTranscript.tags.removeAll { $0 == tag }
-        if isLocalTranscript(fullTranscript.taskId) {
-            LocalTranscriptStore.shared.updateTags(taskId: fullTranscript.taskId, tags: fullTranscript.tags)
-            return
-        }
         do {
-            try await APIService.shared.updateTranscriptTags(taskId: fullTranscript.taskId, tags: fullTranscript.tags)
+            if isLocalTranscript(fullTranscript.taskId) {
+                try LocalTranscriptStore.shared.updateTags(taskId: fullTranscript.taskId, tags: fullTranscript.tags)
+            } else {
+                try await APIService.shared.updateTranscriptTags(taskId: fullTranscript.taskId, tags: fullTranscript.tags)
+            }
         } catch {
             fullTranscript.tags = original
             errorMessage = error.localizedDescription
@@ -1951,14 +1963,14 @@ struct TranscriptDetailView: View {
         }
         let original = fullTranscript.tags
         fullTranscript.tags.append(tag)
-        newTagText = ""
-        showAddTagField = false
-        if isLocalTranscript(fullTranscript.taskId) {
-            LocalTranscriptStore.shared.updateTags(taskId: fullTranscript.taskId, tags: fullTranscript.tags)
-            return
-        }
         do {
-            try await APIService.shared.updateTranscriptTags(taskId: fullTranscript.taskId, tags: fullTranscript.tags)
+            if isLocalTranscript(fullTranscript.taskId) {
+                try LocalTranscriptStore.shared.updateTags(taskId: fullTranscript.taskId, tags: fullTranscript.tags)
+            } else {
+                try await APIService.shared.updateTranscriptTags(taskId: fullTranscript.taskId, tags: fullTranscript.tags)
+            }
+            newTagText = ""
+            showAddTagField = false
         } catch {
             fullTranscript.tags = original
             errorMessage = error.localizedDescription
@@ -1966,27 +1978,23 @@ struct TranscriptDetailView: View {
     }
 
     private func saveNotuleEdits() async {
-        let html = editedHTML.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !html.isEmpty else { return }
-        let original = fullTranscript.notuleHtml
-        fullTranscript.notuleHtml = html
-        withAnimation(TS.Animation.smooth) {
-            isEditingNotule = false
-        }
-        if isLocalTranscript(fullTranscript.taskId) {
-            LocalTranscriptStore.shared.updateNotule(taskId: fullTranscript.taskId, html: html)
-            editedHTML = ""
-            return
-        }
+        let editedBody = editedHTML.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !editedBody.isEmpty else { return }
+        let html = restoreNotuleMarkup(original: fullTranscript.notuleHtml ?? "", editedBody: editedBody)
         do {
-            try await APIService.shared.updateNotuleHTML(taskId: fullTranscript.taskId, html: html)
+            if isLocalTranscript(fullTranscript.taskId) {
+                try LocalTranscriptStore.shared.updateNotule(taskId: fullTranscript.taskId, html: html)
+            } else {
+                try await APIService.shared.updateNotuleHTML(taskId: fullTranscript.taskId, html: html)
+            }
+            fullTranscript.notuleHtml = html
+            editedHTML = ""
+            withAnimation(TS.Animation.smooth) { isEditingNotule = false }
             logger.info("Notule saved for \(fullTranscript.taskId)")
         } catch {
-            fullTranscript.notuleHtml = original
             errorMessage = "Opslaan mislukt: \(error.localizedDescription)"
             logger.error("Save notule failed: \(error)")
         }
-        editedHTML = ""
     }
 
     private func startRegenerate(profileId: String, usePremium: Bool = false) async {

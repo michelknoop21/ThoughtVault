@@ -20,6 +20,7 @@
     "shell:allow-open",
     "notification:default",
     "store:default",
+    "dialog:allow-open",
     "deep-link:default",
     "deep-link:allow-get-current",
     "fs:default",

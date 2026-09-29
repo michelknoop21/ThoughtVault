@@ -4,7 +4,6 @@ import OSLog
 import SwiftUI
 #if os(macOS)
 import AppKit
-import ScreenCaptureKit
 #endif
 
 private let log = OSLog(subsystem: "com.buildmind.ThoughtVault", category: "RecordingVM")
@@ -210,10 +209,11 @@ final class RecordingViewModel {
         var profiles: [Profile]
         if isLocalMode {
             // Fully offline: use the built-in profiles, no server call.
-            profiles = Profile.defaults
+            profiles = LocalProfileStore.choices()
         } else {
             do {
-                profiles = try await APIService.shared.getProfiles()
+                let remote = try await APIService.shared.getProfiles()
+                profiles = Profile.currentChoices(remote)
             } catch {
                 os_log("[RecordingVM] Could not load profiles from API, using defaults: %{public}@", log: .default, type: .error, error.localizedDescription)
                 profiles = Profile.defaults
@@ -295,26 +295,14 @@ final class RecordingViewModel {
             audioMixFallbackOccurred = false
         }
 
-        // Request permissions
-        await audioRecorder.requestPermission()
-        guard audioRecorder.hasPermission else {
-            await MainActor.run {
+        // Only microphone/combined capture needs the microphone permission.
+        if selectedMode != .systemAudio {
+            await audioRecorder.requestPermission()
+            guard audioRecorder.hasPermission else {
                 recordingState = .error("Microfoontoestemming geweigerd. Geef toegang via Instellingen.")
-            }
-            return
-        }
-
-#if os(macOS)
-        if selectedMode == .systemAudio || selectedMode == .combined {
-            let hasScreenPermission = await ensureScreenCapturePermission()
-            guard hasScreenPermission else {
-                await MainActor.run {
-                    recordingState = .error("Systeemaudio-toegang is vereist voor videocall-opname. Geef toegang in Systeeminstellingen > Privacy en beveiliging > Systeemaudio-opname, en herstart daarna de app.")
-                }
                 return
             }
         }
-#endif
 
         do {
             switch selectedMode {
@@ -324,16 +312,17 @@ final class RecordingViewModel {
             case .systemAudio:
 #if os(macOS)
                 try await systemAudioCapture.startCapture()
+                PermissionManager.shared.recordSystemAudioResult(nil)
 #else
                 try await audioRecorder.startRecording()
 #endif
 
             case .combined:
 #if os(macOS)
-                // Capture system audio via ScreenCaptureKit and microphone via AVAudioRecorder.
-                // This avoids relying on SCStream microphone output, which is not reliable
-                // across all macOS versions/configurations.
+                // Capture system audio via Core Audio and microphone via AVAudioRecorder.
+                // The existing microphone pipeline remains separate.
                 _ = try await systemAudioCapture.startCapture(includeMicrophone: false)
+                PermissionManager.shared.recordSystemAudioResult(nil)
                 try await audioRecorder.startRecording()
 #else
                 try await audioRecorder.startRecording()
@@ -352,6 +341,7 @@ final class RecordingViewModel {
         } catch {
 #if os(macOS)
             if selectedMode == .systemAudio || selectedMode == .combined {
+                PermissionManager.shared.recordSystemAudioResult(error)
                 _ = await systemAudioCapture.stopCapture()
             }
 #endif
@@ -502,7 +492,7 @@ final class RecordingViewModel {
         // Decide upload path
         if networkMonitor.isConnected {
 #if os(macOS)
-            // ScreenCaptureKit produces float32 PCM that SFSpeechRecognizer cannot reliably
+            // Core Audio produces float32 PCM that SFSpeechRecognizer cannot reliably
             // process. For systemAudio and combined modes, always use cloud transcription.
             let canUseOnDevice = preferOnDeviceTranscription && onDeviceTranscriptionAvailable
                 && selectedMode == .microphone
@@ -755,7 +745,7 @@ final class RecordingViewModel {
         let profile = availableProfiles.first { $0.id == profileId }
             ?? Profile.defaults.first { $0.id == profileId }
             ?? selectedProfile
-            ?? .zakelijk
+            ?? Profile.defaults[0]
 
         let localId = "local-\(UUID().uuidString)"
         let task = TranscriptTask(
@@ -799,6 +789,9 @@ final class RecordingViewModel {
                     self.updateTask(localId, status: .transcribing,
                                      progress: 0.15 + fraction * 0.35)
                 }
+            }
+            guard Self.hasUsableTranscription(transcription) else {
+                throw LLMError.generationFailed("Geen bruikbare spraak herkend. Controleer de opname en probeer opnieuw.")
             }
             try Task.checkCancellation()
         } catch is CancellationError {
@@ -882,6 +875,9 @@ final class RecordingViewModel {
             try Task.checkCancellation()
 
             let datedHtml = Self.injectDate(into: Self.stripCodeFences(html), date: record.createdAt)
+            guard Self.hasUsableNotule(datedHtml) else {
+                throw LLMError.generationFailed("De notule bevat geen bruikbare inhoud. Controleer de transcriptie en probeer opnieuw.")
+            }
             let title = NotuleTitleExtractor.extract(from: datedHtml) ?? fallback
             try LocalTranscriptStore.shared.finalizeNotule(taskId: localId, html: datedHtml, title: title)
 
@@ -972,7 +968,7 @@ final class RecordingViewModel {
         let profile = availableProfiles.first { $0.id == profileId }
             ?? Profile.defaults.first { $0.id == profileId }
             ?? selectedProfile
-            ?? .zakelijk
+            ?? Profile.defaults[0]
 
         var provider = NotulenProvider(rawValue: UserDefaults.standard.string(forKey: "notulenProvider") ?? NotulenProvider.platformDefault.rawValue) ?? .ollama
         if provider == .cloud { provider = .ollama }
@@ -988,6 +984,9 @@ final class RecordingViewModel {
         ) { _ in }
 
         let datedHtml = Self.injectDate(into: Self.stripCodeFences(html), date: record.createdAt)
+        guard Self.hasUsableNotule(datedHtml) else {
+            throw LLMError.generationFailed("De notule bevat geen bruikbare inhoud. Controleer de transcriptie en probeer opnieuw.")
+        }
         let title = NotuleTitleExtractor.extract(from: datedHtml) ?? record.title
         try LocalTranscriptStore.shared.finalizeNotule(taskId: taskId, html: datedHtml, title: title)
         return (datedHtml, title)
@@ -996,6 +995,26 @@ final class RecordingViewModel {
     /// Removes the markdown code fences some models wrap around their HTML output.
     /// The cloud backend strips these server-side; on-device generation needs the
     /// same guard because the prompt discourages fences but cannot prevent them.
+    nonisolated static func hasUsableTranscription(_ text: String) -> Bool {
+        let spoken = text.replacingOccurrences(
+            of: "\\b(ruis|stilte|onverstaanbaar|muziek|applaus|gelach)\\b",
+            with: "", options: [.regularExpression, .caseInsensitive]
+        )
+        return spoken.unicodeScalars.filter { CharacterSet.alphanumerics.contains($0) }.count >= 10
+            && text.trimmingCharacters(in: .whitespacesAndNewlines)
+                .range(of: "^(geen transcriptie|transcriptie ontbreekt|onvoldoende transcriptie)[.!\\s]*$", options: [.regularExpression, .caseInsensitive]) == nil
+    }
+
+    nonisolated static func hasUsableNotule(_ html: String) -> Bool {
+        let visible = html
+            .replacingOccurrences(of: "<(style|script|template)\\b[^>]*>[\\s\\S]*?</\\1>", with: "", options: [.regularExpression, .caseInsensitive])
+            .replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard visible.unicodeScalars.filter({ CharacterSet.alphanumerics.contains($0) }).count >= 20 else { return false }
+        guard visible.range(of: "\\[[^\\]]+\\]", options: .regularExpression) == nil else { return false }
+        return visible.range(of: "geen transcriptie|transcriptie ontbreekt|onvoldoende transcriptie", options: [.regularExpression, .caseInsensitive]) == nil
+    }
+
     private static func stripCodeFences(_ html: String) -> String {
         var text = html.trimmingCharacters(in: .whitespacesAndNewlines)
         text = text.replacingOccurrences(of: "^```(?:html)?\\s*\\n?", with: "", options: .regularExpression)
@@ -1244,7 +1263,7 @@ final class RecordingViewModel {
     func startLiveTranscriptionIfEnabled() async {
         guard onDeviceTranscriptionAvailable, preferOnDeviceTranscription else { return }
 #if os(macOS)
-        // ScreenCaptureKit holds exclusive microphone access in systemAudio/combined mode.
+        // System audio capture runs alongside microphone capture in combined mode.
         // Starting a second AVAudioEngine tap would conflict and produce no audio.
         guard selectedMode == .microphone else { return }
 #endif
@@ -1683,12 +1702,5 @@ final class RecordingViewModel {
     // MARK: - Helpers
 
 #if os(macOS)
-    private func ensureScreenCapturePermission() async -> Bool {
-        // SCShareableContent automatically triggers the system permission prompt
-        // on first use. On macOS 15+ this shows as "System Audio Recording" (not
-        // "Screen Recording") when no .screen output is added to the stream.
-        await systemAudioCapture.checkPermission()
-        return systemAudioCapture.hasPermission
-    }
 #endif
 }

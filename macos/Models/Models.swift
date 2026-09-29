@@ -316,19 +316,59 @@ struct Profile: Identifiable, Codable, Hashable, Sendable {
         isDefault: true
     )
 
-    /// Built-in profiles, enriched with the rich prompts + HTML templates from
-    /// ProfileTemplates.json (falling back to the inline prompts when unavailable).
+    /// Only current built-ins appear for new recordings. The static legacy
+    /// definitions above remain available when reading old document IDs.
     static var defaults: [Profile] {
-        let base: [Profile] = [.zakelijk, .informeel, .technisch, .handleiding, .blogSamenvatting, .notitie]
-        return base.map { profile in
-            guard let entry = ProfileTemplates.entry(for: profile.id) else { return profile }
-            var enriched = profile
-            enriched.systemPrompt = entry.systemPrompt ?? profile.systemPrompt
-            enriched.notulePrompt = entry.notulePrompt ?? profile.notulePrompt
-            enriched.template = entry.template ?? profile.template
-            if enriched.description == nil { enriched.description = entry.description }
-            return enriched
+        ProfileTemplates.entries.map { entry in
+            Profile(id: entry.id, name: entry.name, description: entry.description,
+                    icon: entry.icon, systemPrompt: entry.systemPrompt,
+                    notulePrompt: entry.notulePrompt, template: entry.template,
+                    isDefault: true)
         }
+    }
+
+    var sectionNames: [String] {
+        guard let template, template.contains("[Brongebonden inhoud]") else { return [] }
+        return template.components(separatedBy: "<h2>").dropFirst().compactMap { part in
+            guard let name = part.components(separatedBy: "</h2>").first, !name.isEmpty else { return nil }
+            return name.replacingOccurrences(of: "&lt;", with: "<")
+                .replacingOccurrences(of: "&gt;", with: ">")
+                .replacingOccurrences(of: "&amp;", with: "&")
+        }
+    }
+
+    static func currentChoices(_ remote: [Profile]) -> [Profile] {
+        let legacyIds: Set<String> = ["zakelijk", "informeel", "technisch", "handleiding", "blog_samenvatting", "notitie"]
+        let currentIds = Set(defaults.map(\.id))
+        return defaults + remote.filter {
+            $0.isDefault != true && !legacyIds.contains($0.id) && !currentIds.contains($0.id)
+        }
+    }
+
+}
+
+enum LocalProfileStore {
+    private static let key = "localNotuleProfiles"
+
+    static func load(defaults: UserDefaults = .standard) -> [Profile] {
+        guard let data = defaults.data(forKey: key) else { return [] }
+        return (try? JSONDecoder().decode([Profile].self, from: data)) ?? []
+    }
+
+    static func choices(defaults: UserDefaults = .standard) -> [Profile] {
+        Profile.defaults + load(defaults: defaults)
+    }
+
+    static func save(_ profile: Profile, defaults: UserDefaults = .standard) throws {
+        var profiles = load(defaults: defaults)
+        profiles.removeAll { $0.id == profile.id }
+        profiles.append(profile)
+        defaults.set(try JSONEncoder().encode(profiles), forKey: key)
+    }
+
+    static func delete(id: String, defaults: UserDefaults = .standard) throws {
+        let profiles = load(defaults: defaults).filter { $0.id != id }
+        defaults.set(try JSONEncoder().encode(profiles), forKey: key)
     }
 }
 

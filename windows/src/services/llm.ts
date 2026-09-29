@@ -50,7 +50,7 @@ function buildUserContent(
   outputTemplate: string | undefined,
   participants: string[]
 ): string {
-  const template = outputTemplate ?? "";
+  const template = (outputTemplate ?? "").replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, "");
   let content: string;
   if (notulePrompt.includes("{{TRANSCRIPTION}}")) {
     // Substitute template first, transcription last (transcription may itself
@@ -68,7 +68,7 @@ function buildUserContent(
   if (names && !notulePrompt.includes("{{PARTICIPANTS}}")) {
     content += `\n\nDeelnemers aan dit gesprek: ${names}`;
   }
-  return content;
+  return content + `\n\nLaatste inhoudsregels: volg de gekozen template en laat lege secties weg. Verzin geen feiten, besluiten, eigenaren of termijnen. Schrijf eenvoudige HTML zonder CSS, style-blok of code fences.`;
 }
 
 async function generateWithOpenAICompatible(

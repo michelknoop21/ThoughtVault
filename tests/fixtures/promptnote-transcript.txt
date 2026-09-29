@@ -1,0 +1,1 @@
+Maak, eh, een korte prompt waarmee een AI mijn ruwe projectnotities herschrijft voor collega's. Bewaar de technische feiten, benoem onzekerheden en houd het in het Nederlands. Voeg geen besluiten of deadlines toe die ik niet heb genoemd.

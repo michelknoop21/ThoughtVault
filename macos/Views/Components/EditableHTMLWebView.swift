@@ -9,10 +9,35 @@
 import SwiftUI
 import WebKit
 
+func prepareNotuleContent(_ html: String) -> String {
+    let (styles, body) = extractStyles(from: html)
+    var content = body
+    if styles.isEmpty {
+        content = content.replacingOccurrences(
+            of: "\\sstyle\\s*=\\s*(\"[^\"]*\"|'[^']*')", with: "",
+            options: [.regularExpression, .caseInsensitive]
+        )
+    }
+    content = content.replacingOccurrences(
+        of: "<h1\\b[^>]*>[\\s\\S]*?</h1>", with: "",
+        options: [.regularExpression, .caseInsensitive]
+    )
+    return content
+}
+
+func restoreNotuleMarkup(original: String, editedBody: String) -> String {
+    let (styles, body) = extractStyles(from: original)
+    let title = body.range(of: "<h1\\b[^>]*>[\\s\\S]*?</h1>", options: [.regularExpression, .caseInsensitive])
+        .map { String(body[$0]) } ?? ""
+    return styles + title + editedBody
+}
+
 // MARK: - EditableHTMLWebView
 
 #if os(macOS)
 struct EditableHTMLWebView: NSViewRepresentable {
+
+    static func preparedContent(_ html: String) -> String { prepareNotuleContent(html) }
 
     let htmlContent: String
     @Binding var editedHTML: String
@@ -130,6 +155,7 @@ struct EditableHTMLWebView: NSViewRepresentable {
     // MARK: - Styled HTML Template
 
     private static func styledHTML(_ html: String, editable: Bool, isDark: Bool) -> String {
+        let (documentStyles, _) = extractStyles(from: html)
         let editableAttr = editable ? "contenteditable=\"true\"" : ""
         let editingCSS = editable ? """
             #content { outline: none; min-height: 200px; cursor: text; }
@@ -148,30 +174,6 @@ struct EditableHTMLWebView: NSViewRepresentable {
             </script>
             """ : ""
         let darkClass = isDark ? "dark" : ""
-        let hasOwnStyles = html.contains("<style")
-
-        if hasOwnStyles {
-            let (headStyles, bodyContent) = extractStyles(from: html)
-            return """
-            <!DOCTYPE html>
-            <html class="\(darkClass)">
-            <head>
-            <meta charset="utf-8">
-            \(headStyles)
-            <style>
-            body { background: transparent; -webkit-font-smoothing: antialiased; max-width: 820px; margin: 0 auto; padding: 32px 40px; }
-            ::selection { background: rgba(229, 0, 116, 0.18); }
-            \(editingCSS)
-            </style>
-            </head>
-            <body>
-            <div id="content" \(editableAttr)>\(sanitizeHTML(bodyContent))</div>
-            \(changeScript)
-            </body>
-            </html>
-            """
-        }
-
         return """
         <!DOCTYPE html>
         <html class="\(darkClass)">
@@ -234,6 +236,9 @@ struct EditableHTMLWebView: NSViewRepresentable {
             margin-bottom: 8px;
             letter-spacing: -0.1px;
         }
+        .section-title { border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+        .decision { border-left: 3px solid var(--brand); background: var(--bg-blockquote); padding: 10px 14px; border-radius: 0 8px 8px 0; }
+        .doc-header { margin-bottom: 12px; }
         h3 {
             font-size: 14.5px;
             font-weight: 700;
@@ -311,9 +316,10 @@ struct EditableHTMLWebView: NSViewRepresentable {
         th, th[style] { color: var(--text-secondary) !important; background: var(--surface-elevated) !important; }
         \(editingCSS)
         </style>
+        \(documentStyles)
         </head>
         <body>
-        <div id="content" \(editableAttr)>\(sanitizeHTML(html))</div>
+        <div id="content" \(editableAttr)>\(sanitizeHTML(preparedContent(html)))</div>
         \(changeScript)
         </body>
         </html>
@@ -636,4 +642,3 @@ struct FormattingToolbar: View {
         .buttonStyle(.plain)
     }
 }
-

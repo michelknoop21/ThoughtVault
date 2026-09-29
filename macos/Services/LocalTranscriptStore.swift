@@ -219,28 +219,31 @@ final class LocalTranscriptStore {
         return try? context.fetch(descriptor).first
     }
 
-    func delete(taskId: String) {
-        guard let record = record(forTaskId: taskId) else { return }
+    func delete(taskId: String) throws {
+        guard let record = record(forTaskId: taskId) else { throw LocalStoreError.recordNotFound }
         context.delete(record)
-        persist()
+        do { try context.save() } catch { context.rollback(); throw error }
     }
 
-    func updateTags(taskId: String, tags: [String]) {
-        guard let record = record(forTaskId: taskId) else { return }
+    func updateTags(taskId: String, tags: [String]) throws {
+        guard let record = record(forTaskId: taskId) else { throw LocalStoreError.recordNotFound }
+        let original = record.tags
         record.tags = tags
-        persist()
+        do { try context.save() } catch { record.tags = original; throw error }
     }
 
-    func updateNotule(taskId: String, html: String) {
-        guard let record = record(forTaskId: taskId) else { return }
+    func updateNotule(taskId: String, html: String) throws {
+        guard let record = record(forTaskId: taskId) else { throw LocalStoreError.recordNotFound }
+        let original = record.notuleHtml
         record.notuleHtml = html
-        persist()
+        do { try context.save() } catch { record.notuleHtml = original; throw error }
     }
 
-    func updateTitle(taskId: String, title: String) {
-        guard let record = record(forTaskId: taskId) else { return }
+    func updateTitle(taskId: String, title: String) throws {
+        guard let record = record(forTaskId: taskId) else { throw LocalStoreError.recordNotFound }
+        let original = record.title
         record.title = title
-        persist()
+        do { try context.save() } catch { record.title = original; throw error }
     }
 
     /// Updates the generated notule + title for a previously saved (partial) record.
@@ -255,15 +258,6 @@ final class LocalTranscriptStore {
         try context.save()
     }
 
-    // MARK: - Private
-
-    private func persist() {
-        do {
-            try context.save()
-        } catch {
-            logger.error("Save failed: \(error.localizedDescription)")
-        }
-    }
 }
 
 // MARK: - LocalStoreError

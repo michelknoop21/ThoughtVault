@@ -233,7 +233,11 @@ struct NotuleResultView: View {
             var updatedTags = task.tags
             updatedTags.append(tag)
             if task.taskId.hasPrefix("local-") {
-                LocalTranscriptStore.shared.updateTags(taskId: task.taskId, tags: updatedTags)
+                do {
+                    try LocalTranscriptStore.shared.updateTags(taskId: task.taskId, tags: updatedTags)
+                } catch {
+                    exportError = "Tag opslaan mislukt: \(error.localizedDescription)"
+                }
             } else {
                 do {
                     try await APIService.shared.updateTranscriptTags(taskId: task.taskId, tags: updatedTags)
@@ -576,7 +580,7 @@ struct NotuleResultView: View {
     private func copyContent() {
         showExportMenu = false
         guard let html = task.notuleHtml else { return }
-        let stripped = html.replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)
+        let stripped = prepareNotuleContent(html).replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)
         let decoded = stripped
             .replacingOccurrences(of: "&amp;", with: "&")
             .replacingOccurrences(of: "&lt;", with: "<")
@@ -612,19 +616,10 @@ struct NotuleResultView: View {
     }
 
     private func styledHTML(_ html: String) -> String {
-        if html.contains("<style") {
-            let (headStyles, bodyContent) = extractStyles(from: html)
-            return """
-            <!DOCTYPE html>
-            <html>
-            <head>
-            <meta charset="utf-8">
-            \(headStyles)
-            </head>
-            <body>\(bodyContent)</body>
-            </html>
-            """
-        }
+        let title = (NotuleTitleExtractor.extract(from: html) ?? task.filename)
+            .replacingOccurrences(of: "&", with: "&amp;")
+            .replacingOccurrences(of: "<", with: "&lt;")
+            .replacingOccurrences(of: ">", with: "&gt;")
         return """
         <!DOCTYPE html>
         <html>
@@ -670,7 +665,7 @@ struct NotuleResultView: View {
         th, th[style] { color: var(--text-heading) !important; background: var(--surface-light) !important; }
         </style>
         </head>
-        <body>\(html)</body>
+        <body><h1>\(title)</h1>\(prepareNotuleContent(html))</body>
         </html>
         """
     }

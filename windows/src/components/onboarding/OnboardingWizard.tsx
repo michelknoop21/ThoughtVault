@@ -118,7 +118,7 @@ export function OnboardingWizard() {
               icon={
                 <img
                   src={appLogo}
-                  alt="Transcript Studio"
+                  alt="ThoughtVault"
                   style={{
                     width: 64,
                     height: 64,
@@ -129,7 +129,7 @@ export function OnboardingWizard() {
                   }}
                 />
               }
-              title="Welkom bij Transcript Studio"
+              title="Welkom bij ThoughtVault"
               description="Neem vergaderingen op, genereer automatisch notulen en sla alles overzichtelijk op. Laten we je setup in orde maken."
             />
           )}

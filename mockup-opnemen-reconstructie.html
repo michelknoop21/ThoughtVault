@@ -1,0 +1,414 @@
+<!doctype html>
+<!-- PROTOTYPE: reconstructie van het referentiebeeld voor het Opnemen-scherm. Standalone, voorbeelddata, geen productintegratie. -->
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ThoughtVault Opnemen</title>
+<style>
+:root{--bg:#0B1126;--side:#0B1125;--insp:#0E1728;--surf:#11182B;--surf2:#1C2338;--line:rgba(120,130,190,.22);--line2:rgba(120,130,190,.14);
+ --fg:#FFFFFF;--fg2:#C9CCE0;--fg3:#8E93B3;--violet:#AF50FD;--toggle:#9F49FD;--sel:#5A2DB4;--green:#3AEA58;--greenText:#41A458;--red:#FF3D6E;--lvl:0;
+ --ease:cubic-bezier(.2,.8,.2,1)}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:#05070F;color:var(--fg);font:14px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:2px solid #B794FF;outline-offset:2px}
+.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex:none}
+
+/* AppWindow */
+.win{position:relative;width:100vw;height:100vh;display:grid;grid-template-columns:238px minmax(0,1fr) 310px;overflow:hidden;background:var(--bg)}
+
+/* Sidebar */
+.side{position:relative;background:var(--side);border-right:1px solid rgba(60,58,120,.55)}
+.lights{position:absolute;left:26px;top:24px;display:flex;gap:10px}
+.lights i{width:12px;height:12px;border-radius:50%;background:#FF5F57}.lights i:nth-child(2){background:#FEBC2E}.lights i:nth-child(3){background:#28C840}
+.brand{position:absolute;left:28px;top:72px;height:30px;display:flex;align-items:center;gap:13px;font-size:19px;font-weight:600;letter-spacing:-.01em}
+.brand svg{width:30px;height:30px}
+.pnav{position:absolute;left:15px;right:13px;top:132px;display:flex;flex-direction:column;gap:2px}
+.pnav button svg{width:24px;height:24px;stroke-width:1.8}
+.pnav button{height:45px;display:flex;align-items:center;gap:18px;padding:0 0 0 16px;border:1px solid transparent;border-radius:9px;background:none;color:#E6E7F2;font-size:15px;text-align:left}
+.pnav button:hover{background:rgba(255,255,255,.04)}
+.pnav button[aria-current=page]{background:linear-gradient(90deg,#6B3BC9,#4E279E);border-color:rgba(190,150,255,.28);color:#fff;box-shadow:0 0 22px -6px rgba(140,80,240,.55)}
+.sep{position:absolute;left:30px;right:25px;top:496px;height:1px;background:rgba(120,130,190,.16)}
+.rlabel{position:absolute;left:30px;top:515px;font-size:13px;color:#D6D8E8}
+.recent{position:absolute;left:28px;right:10px;top:543px;display:flex;flex-direction:column;gap:12px}
+.recent button{display:flex;align-items:center;gap:12px;border:0;background:none;padding:0;text-align:left;height:40px}
+.recent .ri{width:32px;height:32px;border-radius:8px;background:#212540;display:grid;place-items:center;color:#E6E7F2}
+.recent .ri svg{width:18px;height:18px}
+.recent b{display:block;font-weight:400;font-size:14px;color:#EDEEF6}
+.recent small{display:block;font-size:12.5px;color:#A5A9C4;margin-top:2px}
+.settings{position:absolute;left:31px;top:833px;display:flex;align-items:center;gap:18px;border:0;background:none;font-size:15px;color:#E6E7F2;padding:0}
+
+/* RecordingWorkspace */
+.ws{position:relative;overflow:hidden;background:
+  radial-gradient(ellipse 55% 38% at 55% 2%,rgba(108,58,220,.38),transparent 70%),
+  radial-gradient(ellipse 34% 50% at 6% 42%,rgba(40,60,210,.38),transparent 70%),
+  radial-gradient(ellipse 40% 30% at 95% 70%,rgba(40,50,170,.20),transparent 70%),
+  radial-gradient(ellipse 45% 25% at 50% 50%,rgba(110,40,200,calc(.10 + var(--lvl)*.18)),transparent 70%),
+  linear-gradient(#0B1128,#090E22)}
+.pill{position:absolute;top:45px;height:46px;display:flex;align-items:center;border-radius:23px;background:rgba(18,24,48,.72);border:1px solid rgba(130,140,200,.24);backdrop-filter:blur(18px)}
+.status{left:45px;padding:0 20px 0 20px;gap:13px;font-size:14px;font-weight:600;letter-spacing:0}
+.status i{width:12px;height:12px;border-radius:50%;background:var(--green);box-shadow:0 0 10px rgba(58,234,88,.55)}
+.s-pause .status i{background:#FFC74D;box-shadow:none}.s-idle .status i{background:#8E93B3;box-shadow:none}
+.lang{right:32px;border-radius:12px;padding:0 16px 0 0;background:rgba(22,24,52,.72);font-size:14px}
+.lang .ic{width:46px;height:100%;display:grid;place-items:center;border-right:1px solid rgba(130,140,200,.24);margin-right:13px}
+.lang .chev{width:18px;height:18px;margin-left:12px}
+.timer{position:absolute;left:28px;right:0;top:166px;text-align:center;font:300 85px/1 -apple-system,"SF Pro Display",sans-serif;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.listen{position:absolute;left:28px;right:0;top:282px;display:flex;flex-direction:column;align-items:center;gap:9px;font-size:14px;color:#AEB2CC}
+.lb{display:flex;align-items:center;gap:3px;height:14px}
+.lb i{width:3px;border-radius:2px;background:#9A5BF7}
+.wave{position:absolute;left:0;right:0;top:285px;height:280px;pointer-events:none}
+.wave canvas{display:block;width:100%;height:100%}
+
+/* RecordingTransport */
+.transport{position:absolute;left:28px;right:0;top:580px;display:flex;justify-content:center;align-items:flex-start;gap:0}
+.tc{width:164px;display:flex;flex-direction:column;align-items:center;font-size:15px;color:#F2F3FA}
+.tb{border-radius:50%;display:grid;place-items:center;transition:transform .12s,background .15s}
+.tb:active{transform:scale(.95)}
+.tb.sec{width:74px;height:74px;margin-top:13px;background:rgba(34,39,66,.85);border:1.5px solid rgba(160,170,220,.32);color:#fff}
+.tb.sec:hover{background:rgba(46,52,86,.95)}
+.tb.sec.sm{width:70px;height:70px;margin-top:15px}
+.tb.stop{width:100px;height:100px;background:radial-gradient(circle at 50% 50%,#8A2350,#6A1B45 62%,#7B2050);border:2.5px solid #FF6F8E;box-shadow:0 0 18px rgba(255,61,110,.65),inset 0 0 14px rgba(255,90,130,.45)}
+.tb.stop:hover{box-shadow:0 0 26px rgba(255,61,110,.8),inset 0 0 14px rgba(255,90,130,.5)}
+.tb.stop i{width:29px;height:29px;border-radius:5px;background:#FFA2B6}
+.tb.rec{width:100px;height:100px;background:radial-gradient(circle,#6B3BC9,#4E279E);border:2.5px solid #B98CFF;box-shadow:0 0 18px rgba(160,90,250,.6)}
+.tb.rec i{width:30px;height:30px;border-radius:50%;background:#fff}
+.tc span{margin-top:9px}
+.tc.main span{margin-top:11px}
+.tb svg{width:31px;height:31px}
+.tb svg.fill{fill:#fff;stroke:none}
+.tb[disabled]{opacity:.4;cursor:default}
+
+/* RecordingControlBar */
+.cbar{position:absolute;left:45px;right:38px;top:753px;height:90px;border-radius:16px;background:rgba(15,21,42,.72);border:1px solid rgba(120,130,190,.2);backdrop-filter:blur(18px);display:flex;align-items:center;padding:0 19px;gap:24px}
+.cg{height:52px;display:flex;align-items:center;gap:0;border-radius:12px;background:rgba(18,24,48,.9);border:1px solid rgba(120,130,190,.2);padding:0 18px 0 0;text-align:left}
+.cg.mic{width:269px}.cg.prof{width:249px}
+.cg:hover{background:rgba(26,32,60,.95)}
+.circ{width:48px;height:48px;border-radius:50%;background:#1F2542;display:grid;place-items:center;margin:0 18px 0 1px;flex:none;color:#fff}
+.cg .txt{flex:1;min-width:0}
+.cg small,.fb small{display:block;font-size:13px;color:#A5A9C4}
+.cg b,.fb b{display:block;font-weight:400;font-size:14.5px;color:#fff;margin-top:2px;white-space:nowrap}
+.cg .chev{width:18px;height:18px;color:#D8DAEA}
+.fb{display:flex;align-items:center;flex:1;min-width:0}
+.fb .circ{margin-right:18px}
+.fb b{color:var(--greenText)}
+.switch{margin-left:auto;appearance:none;width:47px;height:28px;border-radius:14px;background:#343A5A;position:relative;margin-right:0;cursor:pointer;transition:background .2s}
+.switch:after{content:"";position:absolute;left:3px;top:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:transform .2s var(--ease)}
+.switch:checked{background:var(--toggle)}.switch:checked:after{transform:translateX(19px)}
+
+/* RecordingInspector */
+.insp{position:relative;background:var(--insp);border-left:1px solid rgba(80,90,150,.55);padding:0 26px 0 23px}
+.insp h2{position:absolute;left:23px;margin:0;font-size:18px;font-weight:600;letter-spacing:-.005em}
+.idcard{position:absolute;left:23px;right:26px;top:83px;height:87px;border-radius:12px;background:#111829;border:1px solid rgba(90,100,150,.45);display:flex;align-items:center;gap:16px;padding:0 16px}
+.avatar{width:57px;height:57px;border-radius:50%;border:1.5px solid rgba(200,205,235,.5);display:grid;place-items:center;flex:none}
+.avatar svg{width:26px;height:26px}
+.idcard b{display:block;font-size:15px;font-weight:600}.idcard small{display:block;font-size:14px;color:#AEB2CC;margin-top:3px}
+.meta{position:absolute;left:23px;right:26px;top:188px;display:flex;flex-direction:column}
+.mrow{height:43px;display:flex;align-items:center;gap:16px;font-size:14px;color:#C9CCE0;border:0;background:none;padding:0 0 0 7px;text-align:left}
+.mrow svg{width:20px;height:20px;color:#D8DAEA}
+.plus{margin-left:auto;width:28px;height:28px;border-radius:50%;background:#1A2036;border:1.5px solid rgba(220,225,245,.55);display:grid;place-items:center}
+.plus svg{width:14px;height:14px;stroke-width:2.4;color:#fff}
+.panel{position:absolute;left:23px;right:26px;top:350px;height:208px;border-radius:12px;background:#10182A;border:1px solid rgba(90,100,150,.45);padding:0 14px 0 18px}
+.panel h3{margin:0;height:51px;display:flex;align-items:center;gap:12px;font-size:16px;font-weight:600}
+.panel h3 svg{width:20px;height:20px}
+.irow{height:36px;display:flex;align-items:center;gap:16px;font-size:14px;color:#C9CCE0}
+.irow i{width:10px;height:10px;border-radius:50%;background:var(--violet)}
+.irow span:last-child{margin-left:auto;color:#E8E9F4;font-variant-numeric:tabular-nums}
+.lvbars{margin-left:auto;display:flex;align-items:flex-end;gap:3px;height:16px}
+.lvbars i{width:4px;border-radius:1px;background:#3A3F62}
+.lvbars i.on{background:#9A4EF0}
+.qa{position:absolute;left:23px;right:26px;top:628px;display:flex;flex-direction:column;gap:11px}
+.qa button{height:48px;display:flex;align-items:center;gap:16px;border-radius:10px;background:#1B2236;border:1px solid rgba(90,100,150,.45);padding:0 12px 0 16px;font-size:15px;color:#fff;text-align:left;transition:background .15s}
+.qa button:hover{background:#232B45}
+.qa button.flash{background:#2E2656}
+.qa kbd{margin-left:auto;width:24px;height:24px;border-radius:5px;background:#242846;display:grid;place-items:center;font:500 13px -apple-system,sans-serif;color:#C9CCE0}
+
+.review{position:fixed;left:50%;bottom:10px;transform:translateX(-50%);z-index:9;display:flex;gap:8px;align-items:center;padding:4px 8px;border-radius:8px;background:#000c;font-size:12px;color:#ccc}
+.review select{background:#222;border:0;color:#ddd;border-radius:5px}
+.review[hidden]{display:none}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="win s-idle" id="win">
+  <!-- Sidebar -->
+  <aside class="side">
+    <div class="lights" aria-hidden="true"><i></i><i></i><i></i></div>
+    <div class="brand"><svg viewBox="0 0 30 30" aria-hidden="true"><defs><linearGradient id="bm" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#C77DFF"/><stop offset="1" stop-color="#7B3FF2"/></linearGradient></defs>
+      <g fill="url(#bm)"><rect x="1" y="11" width="3" height="8" rx="1.5"/><rect x="7" y="6" width="3" height="18" rx="1.5"/><rect x="13" y="1" width="3" height="28" rx="1.5"/><rect x="19" y="6" width="3" height="18" rx="1.5"/><rect x="25" y="11" width="3" height="8" rx="1.5"/></g></svg>ThoughtVault</div>
+    <nav class="pnav" id="pnav" aria-label="Hoofdnavigatie"></nav>
+    <div class="sep"></div>
+    <div class="rlabel">Recent</div>
+    <nav class="recent" id="recent" aria-label="Recent"></nav>
+    <button class="settings" id="settings"></button>
+  </aside>
+
+  <!-- RecordingWorkspace -->
+  <main class="ws">
+    <div class="pill status" role="status"><i></i><span id="st">KLAAR OM OP TE NEMEN</span></div>
+    <button class="pill lang" aria-label="Spreektaal kiezen"><span class="ic" id="langic"></span>Spreektaal: Nederlands<span id="langchev"></span></button>
+    <div class="timer" id="timer">00:00</div>
+    <div class="wave"><canvas id="wave" role="img" aria-label="Live audioniveau"></canvas></div>
+    <div class="listen" aria-hidden="true"><div class="lb" id="lb"></div><span id="listentxt">Klaar</span></div>
+    <div class="transport" role="group" aria-label="Opnamebediening">
+      <div class="tc"><button class="tb sec" id="b-pause" aria-label="Pauzeer opname"></button><span id="l-pause">Pauzeer</span></div>
+      <div class="tc main"><button class="tb stop" id="b-main" aria-label="Stop en verwerk"><i></i></button><span id="l-main">Stop en verwerk</span></div>
+      <div class="tc"><button class="tb sec sm" id="b-mark" aria-label="Markeer"></button><span>Markeer</span></div>
+    </div>
+    <div class="cbar">
+      <button class="cg mic"><span class="circ" data-ic="mic"></span><span class="txt"><small>Microfoon</small><b>MacBook Pro (intern)</b></span><span data-ic="chev"></span></button>
+      <button class="cg prof"><span class="circ" data-ic="wave"></span><span class="txt"><small>Opnameprofiel</small><b>Standaard</b></span><span data-ic="chev"></span></button>
+      <label class="fb"><span class="circ" data-ic="gear"></span><span><small>Realtime feedback</small><b id="fbtxt">Aan</b></span><input type="checkbox" class="switch" id="fb" role="switch" checked aria-label="Realtime feedback"></label>
+    </div>
+  </main>
+
+  <!-- RecordingInspector -->
+  <aside class="insp" aria-label="Huidige opname">
+    <h2 style="top:44px">Huidige opname</h2>
+    <div class="idcard"><span class="avatar" data-ic="user"></span><span><b>Team overleg</b><small id="save">Automatisch opslaan...</small></span></div>
+    <div class="meta">
+      <div class="mrow"><span data-ic="tag"></span>Geen tags<button class="plus" aria-label="Tag toevoegen" data-ic="plus"></button></div>
+      <div class="mrow"><span data-ic="users"></span>Geen personen<button class="plus" aria-label="Persoon toevoegen" data-ic="plus"></button></div>
+      <div class="mrow"><span data-ic="doc"></span>Wordt na verwerking aangevuld</div>
+    </div>
+    <section class="panel"><h3><span data-ic="wave"></span>Live inzichten</h3>
+      <div class="irow"><i></i><span>Spreektijd</span><span id="i-speak">00:00</span></div>
+      <div class="irow"><i></i><span>Geluidsniveau</span><span class="lvbars" id="i-lvl"></span></div>
+      <div class="irow"><i></i><span>Stiltes</span><span id="i-sil">0</span></div>
+      <div class="irow"><i></i><span>Markeringen</span><span id="i-mark">0</span></div>
+    </section>
+    <h2 style="top:588px">Snelle acties</h2>
+    <div class="qa">
+      <button data-q="m"><span data-ic="flag"></span>Markering toevoegen<kbd>M</kbd></button>
+      <button data-q="t"><span data-ic="tag"></span>Tag toevoegen<kbd>T</kbd></button>
+      <button data-q="n"><span data-ic="note"></span>Notitie maken<kbd>N</kbd></button>
+      <button data-q="d"><span data-ic="share"></span>Delen na verwerking<kbd>D</kbd></button>
+    </div>
+  </aside>
+</div>
+<div class="review" id="review">review · bron <select id="src"><option value="sim">simulatie</option><option value="fixture">fixture</option><option value="mic">live microfoon</option></select></div>
+<script>
+'use strict';
+const CONFIG={
+  env:{analysisWindowMs:30,publishHz:30,initialFloorDb:-60,minFloorDb:-75,maxFloorDb:-35,gateStartOffsetDb:3,gateEndOffsetDb:9,
+       visMinFloorDb:-55,visMinOffsetDb:6,visMaxDb:-8,exponent:0.65,attackMs:35,releaseMs:220,silenceThreshold:0.015,
+       historyLength:90,floorHistoryMs:2000,speechOffsetDb:12,floorFallTcMs:500,floorRiseTcMs:2000},
+  wave:{heightFrac:.38,knee:2.2,taperPow:1.1,carrierCycles:2.3,travelHz:.3,energyBoost:.25,breath:.012,lines:12,glow:16,
+    bellies:[{c:.32,w:.14,delay:0,f:.037},{c:.52,w:.13,delay:90,f:.053},{c:.73,w:.13,delay:180,f:.071}],
+    drift:{center:.04,width:.2},
+    // kleur langs x: magenta links, violet/lavendel midden, koel blauw rechts
+    stops:[[0,[255,80,210]],[.3,[190,80,255]],[.5,[235,200,255]],[.72,[170,90,255]],[1,[90,140,255]]]},
+  fixture:{sr:48000,noiseDb:-68,segments:[
+    {t0:1.0,t1:2.5,type:'steady',db:-40},{t0:2.5,t1:5.0,type:'syll',db:-22,hz:4},{t0:5.0,t1:5.6,type:'steady',db:-10}],length:7.1}
+};
+/* ============ envelope: 1-op-1 port van AudioEnvelopeProcessor.swift ============ */
+class EnvelopeProcessor{
+  constructor(){this.reset()}
+  reset(){this.floorDb=CONFIG.env.initialFloorDb;this.smoothed=0;this.hist=[];this.histMs=0;this.lastDb=-120;this.gate=0}
+  static a(dtMs,tc){return 1-Math.exp(-dtMs/tc)}
+  process(rawDb,dt){
+    const C=CONFIG.env;
+    const db=Math.min(0,Math.max(-120,Number.isFinite(rawDb)?rawDb:-120));
+    const dtMs=Math.max(1,Math.min(250,dt*1000));
+    this.hist.push({db,dtMs});this.histMs+=dtMs;
+    while(this.histMs-this.hist[0].dtMs>C.floorHistoryMs&&this.hist.length>1)this.histMs-=this.hist.shift().dtMs;
+    const sorted=this.hist.map(h=>h.db).sort((x,y)=>x-y);
+    const cand=sorted[Math.floor(sorted.length/5)];
+    const isSpeech=db>this.floorDb+C.speechOffsetDb;
+    if(cand<this.floorDb)this.floorDb+=(cand-this.floorDb)*EnvelopeProcessor.a(dtMs,C.floorFallTcMs);
+    else if(!isSpeech)this.floorDb+=(cand-this.floorDb)*EnvelopeProcessor.a(dtMs,C.floorRiseTcMs);
+    this.floorDb=Math.min(C.maxFloorDb,Math.max(C.minFloorDb,this.floorDb));
+    const ss=(e0,e1,x)=>{const t=Math.min(1,Math.max(0,(x-e0)/(e1-e0)));return t*t*(3-2*t)};
+    this.gate=ss(this.floorDb+C.gateStartOffsetDb,this.floorDb+C.gateEndOffsetDb,db);
+    const visMin=Math.max(this.floorDb+C.visMinOffsetDb,C.visMinFloorDb);
+    const norm=Math.min(1,Math.max(0,(db-visMin)/(C.visMaxDb-visMin)));
+    const target=Math.pow(norm,C.exponent)*this.gate;
+    const tc=target>this.smoothed?C.attackMs:C.releaseMs;
+    this.smoothed+=(target-this.smoothed)*EnvelopeProcessor.a(dtMs,tc);
+    this.lastDb=db;
+    return this.smoothed<C.silenceThreshold?0:this.smoothed;
+  }
+}
+
+/* ============ audiobronnen ============ */
+const Audio_={ctx:null,an:null,buf:null,stream:null,src:null,t0:0,simT:0,
+  async start(kind){
+    this.kind=kind;this.simT=0;
+    if(kind==='sim')return;
+    this.ctx=new (window.AudioContext||window.webkitAudioContext)();
+    this.an=this.ctx.createAnalyser();this.an.fftSize=2048;this.buf=new Float32Array(2048);
+    if(kind==='mic'){
+      this.stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
+      this.src=this.ctx.createMediaStreamSource(this.stream);this.src.connect(this.an); // niet naar destination: geen feedback
+    }else{
+      const b=makeFixture(this.ctx);const s=this.ctx.createBufferSource();s.buffer=b;s.connect(this.an);
+      const mute=this.ctx.createGain();mute.gain.value=0;this.an.connect(mute).connect(this.ctx.destination);
+      s.start();this.src=s;
+    }
+    await this.ctx.resume();
+  },
+  pause(){if(this.ctx)this.ctx.suspend()},
+  resume(){if(this.ctx)this.ctx.resume()},
+  stop(){
+    if(this.stream){this.stream.getTracks().forEach(t=>t.stop());this.stream=null} // microfoon vrijgeven
+    if(this.ctx){this.ctx.close();this.ctx=null}
+    this.an=null;this.src=null;
+  },
+  position(){return this.kind==='sim'?this.simT:(this.ctx?this.ctx.currentTime:0)},
+  dbNow(dt){
+    if(this.kind==='sim'){this.simT+=dt;return simDb(this.simT)}
+    if(!this.an)return -120;
+    this.an.getFloatTimeDomainData(this.buf);
+    const n=Math.round(this.ctx.sampleRate*CONFIG.env.analysisWindowMs/1000);
+    let s=0;for(let i=this.buf.length-n;i<this.buf.length;i++)s+=this.buf[i]*this.buf[i];
+    const rms=Math.sqrt(s/n);return rms>0?20*Math.log10(rms):-120;
+  }
+};
+function simDb(t){ // expliciet gesimuleerd: zinnen met pauzes
+  const phrase=Math.sin(2*Math.PI*t/6.5)>-0.15;
+  const syl=Math.abs(Math.sin(Math.PI*3.6*t));
+  return phrase?-34+14*Math.pow(syl,.7)+2*Math.sin(t*7.1):-68+Math.sin(t*13)*1.5;
+}
+function makeFixture(ctx){ // deterministisch: geen Math.random
+  const F=CONFIG.fixture,sr=ctx.sampleRate,n=Math.round(F.length*sr);
+  const b=ctx.createBuffer(1,n,sr),d=b.getChannelData(0);
+  const nz=Math.pow(10,F.noiseDb/20)*Math.sqrt(3);
+  let seed=1;const rnd=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296*2-1};
+  const H=8,unit=1/Math.sqrt(Array.from({length:H},(_,k)=>1/((k+1)*(k+1))/2).reduce((a,b)=>a+b,0));
+  for(let i=0;i<n;i++){
+    const t=i/sr;let v=rnd()*nz;
+    for(const s of F.segments){
+      if(t<s.t0||t>=s.t1)continue;
+      const edge=Math.min(1,(t-s.t0)/0.01,(s.t1-t)/0.01);
+      let env=1;if(s.type==='syll')env=Math.pow(Math.max(0,Math.sin(2*Math.PI*s.hz*(t-s.t0))),.6)*1.25;
+      const amp=Math.pow(10,s.db/20)*unit*env*edge;
+      const f0=130+6*Math.sin(2*Math.PI*.7*t);let x=0;
+      for(let k=1;k<=H;k++)x+=Math.sin(2*Math.PI*f0*k*t)/k;
+      v+=amp*x;
+    }
+    d[i]=Math.max(-1,Math.min(1,v));
+  }
+  return b;
+}
+
+
+
+const $=id=>document.getElementById(id);
+const I={home:'<path d="M3 11l9-8 9 8v10h-6v-6H9v6H3z"/>',mic:'<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/>',
+ doc:'<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h6"/>',tasks:'<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 15l3-3 2 2 4-5"/>',
+ cube:'<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5L12 12l8-4.5M12 12v9"/>',users:'<circle cx="9" cy="8" r="3.2"/><path d="M3 20a6 6 0 0112 0"/><path d="M16 5a3 3 0 010 6M21 20a6 6 0 00-4-5.6"/>',
+ search:'<circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/>',gear:'<circle cx="12" cy="12" r="3"/><path d="M12 2.5l2 2.6 3.2-.6.6 3.2 2.7 1.8-1.5 2.9 1.5 2.9-2.7 1.8-.6 3.2-3.2-.6-2 2.6-2-2.6-3.2.6-.6-3.2-2.7-1.8 1.5-2.9-1.5-2.9 2.7-1.8.6-3.2 3.2.6z"/>',
+ user:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/>',tag:'<path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8" r="1.3"/>',plus:'<path d="M12 5v14M5 12h14"/>',
+ flag:'<path d="M5 21V4M5 4h12l-2.5 4.5L17 13H5"/>',note:'<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 9h8M8 13h5M13 20l7-7"/>',
+ share:'<circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M8.2 10.8l7.6-3.6M8.2 13.2l7.6 3.6"/>',
+ wave:'<path d="M3 12h1M7 8v8M11 5v14M15 8v8M19 11v2"/>',chev:'<path d="M6 9l6 6 6-6"/>',
+ lang:'<path d="M3 12s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6z"/><circle cx="12" cy="12" r="2.5"/><path d="M12 3v2M12 19v2"/>',
+ pause:'<rect x="6.5" y="5" width="4" height="14" rx="1.2"/><rect x="13.5" y="5" width="4" height="14" rx="1.2"/>',play:'<path d="M8 5v14l11-7z"/>',
+ r1:'<circle cx="12" cy="9" r="3"/><path d="M6 19a6 6 0 0112 0"/>',r2:'<rect x="5" y="5" width="14" height="14" rx="3"/><path d="M9 12h6M12 9v6"/>',r3:'<rect x="5" y="5" width="14" height="14" rx="3"/><rect x="9" y="9" width="6" height="6"/>'};
+const ic=(k,c='i')=>`<svg class="${c}" viewBox="0 0 24 24" aria-hidden="true">${I[k]}</svg>`;
+document.querySelectorAll('[data-ic]').forEach(e=>e.insertAdjacentHTML('afterbegin',ic(e.dataset.ic,e.dataset.ic==='chev'?'i chev':'i')));
+$('langic').innerHTML=ic('lang');$('langchev').innerHTML=ic('chev','i chev');
+$('pnav').innerHTML=[['Home','home'],['Opnemen','mic'],['Notulen','doc'],['Taken','tasks'],['Kennis','cube'],['Mensen','users'],['Zoeken','search']]
+  .map(([l,k])=>`<button ${l==='Opnemen'?'aria-current="page"':''}>${ic(k)}${l}</button>`).join('');
+$('recent').innerHTML=[['Team overleg','Vandaag 14:07','r1'],['Product strategie','Vandaag 10:21','r2'],['1-op-1 Nikki','Gisteren 16:34','r3'],['Ideeën app v3','23 sep 09:12','r2'],['AfA hackathon','22 sep 14:03','r3']]
+  .map(r=>`<button><span class="ri">${ic(r[2])}</span><span><b>${r[0]}</b><small>${r[1]}</small></span></button>`).join('');
+$('settings').innerHTML=ic('gear')+'Instellingen';
+$('b-mark').innerHTML=ic('flag');
+$('lb').innerHTML='<i></i>'.repeat(9);$('i-lvl').innerHTML='<i></i>'.repeat(9);
+
+/* ---------- opname-state ---------- */
+const R={phase:'idle',elapsed:0,proc:new EnvelopeProcessor(),hist:new Array(CONFIG.env.historyLength).fill(0),level:0,db:-120,drift:0,travel:0,time:0,last:performance.now(),
+  speak:0,sil:0,silRun:0,spoke:false,marks:0};
+setInterval(()=>{
+  const now=performance.now(),dt=(now-R.last)/1000;R.last=now;let lvl=0;
+  if(R.phase==='recording'){R.elapsed+=dt;R.db=Audio_.dbNow(dt);lvl=R.proc.process(R.db,dt);
+    // Live inzichten (nieuw): spreektijd = tijd met level > 0; stilte = >1,5 s zonder level na spraak
+    if(lvl>0){R.speak+=dt;R.spoke=true;R.silRun=0}else{R.silRun+=dt;if(R.spoke&&R.silRun>=1.5){R.sil++;R.spoke=false}}}
+  else if(R.phase==='idle'){R.db=-120;R.proc.reset()}
+  R.level=lvl;R.hist.push(lvl);R.hist.shift();
+},1000/CONFIG.env.publishHz);
+
+/* ---------- AudioWaveStage ---------- */
+const TAU=Math.PI*2,RM=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const hsh=n=>{const x=Math.sin(n*127.1+311.7)*43758.5453;return x-Math.floor(x)};
+const N=CONFIG.wave.lines;
+const LINES=Array.from({length:N},(_,j)=>j===N-1?{px:2.4,a:1,k:1,main:true}:{px:.7+.8*hsh(j),a:.35+.4*hsh(j+7),k:.3+.7*(j/(N-2)),ph:(hsh(j+3)-.5)*.9});
+function envAt(ms){const H=R.hist,f=H.length-1-ms/(1000/CONFIG.env.publishHz),i0=Math.max(0,Math.floor(f)),i1=Math.min(H.length-1,i0+1),u=f-Math.floor(f);return H[i0]*(1-u)+H[i1]*u}
+function drawWave(cv){
+  const dpr=devicePixelRatio||1,W=cv.clientWidth,H=cv.clientHeight;if(!W||!H)return;
+  if(cv.width!==Math.round(W*dpr)||cv.height!==Math.round(H*dpr)){cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr)}
+  const g=cv.getContext('2d');g.setTransform(dpr,0,0,dpr,0,0);g.clearRect(0,0,W,H);
+  const C=CONFIG.wave,cy=H/2,maxH=H*C.heightFrac,lvl=R.level,td=RM?0:R.drift,tr=RM?0:R.travel;
+  const bl=C.bellies.map((b,i)=>({c:b.c+C.drift.center*Math.sin(TAU*b.f*td+i*2.1),w:b.w*(1+C.drift.width*Math.sin(TAU*b.f*.83*td+i*1.3)),
+    amp:[1,.8,.6][i]*(RM?lvl:envAt(b.delay))}));
+  const step=2,n=Math.floor(W/step)+1;
+  // hoofdcurve; steunlijnen zijn geschaalde, licht verschoven kopieën (lint-effect zoals referentie)
+  const ys=LINES.map(()=>new Float32Array(n));
+  for(let p=0;p<n;p++){
+    const x=p/(n-1),taper=Math.pow(Math.max(0,Math.sin(Math.PI*x)),C.taperPow);
+    for(let j=0;j<N;j++){const L=LINES[j];let s=0;
+      for(let i=0;i<3;i++){const b=bl[i],z=(x-b.c)/b.w;
+        const k=L.main?1:L.k*(1+.25*Math.sin(TAU*.05*td+j+i));
+        s+=b.amp*k*Math.exp(-.5*z*z)*Math.sin(TAU*C.carrierCycles*(x-b.c)-tr+(L.ph||0)*(1+i*.4))}
+      ys[j][p]=Math.tanh(s*C.knee)*maxH*taper+H*C.breath*Math.sin(TAU*1.3*x+(RM?0:R.time*.9)+j*.3)*taper}
+  }
+  g.globalCompositeOperation='lighter';
+  const quiet=.55+.45*Math.min(1,lvl*2);
+  for(let j=0;j<N;j++){
+    const L=LINES[j],a=L.main?1:L.a*quiet,gr=g.createLinearGradient(0,0,W,0);
+    for(const [o,c] of C.stops)gr.addColorStop(o,`rgba(${c[0]},${c[1]},${c[2]},${a*(o===0||o===1?.85:1)})`);
+    g.beginPath();for(let p=0;p<n;p++){const X=p*step,Y=cy-ys[j][p];p?g.lineTo(X,Y):g.moveTo(X,Y)}
+    g.lineWidth=L.px;g.strokeStyle=gr;
+    g.shadowColor=L.main?'rgba(230,120,255,.9)':'rgba(170,80,255,.6)';g.shadowBlur=L.main?C.glow:(j%3===0?6:0);
+    g.stroke();
+  }
+  g.shadowBlur=0;g.globalCompositeOperation='source-over';
+}
+
+/* ---------- gedrag ---------- */
+const fmt=s=>String(Math.floor(s/60)).padStart(2,'0')+':'+String(Math.floor(s%60)).padStart(2,'0');
+function setState(){
+  const w=$('win'),p=R.phase;
+  w.className='win s-'+(p==='recording'?'rec':p==='paused'?'pause':'idle');
+  $('st').textContent=p==='recording'?'OPNAME ACTIEF':p==='paused'?'OPNAME GEPAUZEERD':'KLAAR OM OP TE NEMEN';
+  $('listentxt').textContent=p==='recording'?'Ik luister...':p==='paused'?'Gepauzeerd':'Klaar';
+  $('b-pause').innerHTML=ic(p==='paused'?'play':'pause','i fill');$('b-pause').setAttribute('aria-label',p==='paused'?'Hervat opname':'Pauzeer opname');
+  $('l-pause').textContent=p==='paused'?'Hervat':'Pauzeer';
+  $('b-pause').disabled=$('b-mark').disabled=p==='idle';
+  const m=$('b-main');m.className='tb '+(p==='idle'?'rec':'stop');m.setAttribute('aria-label',p==='idle'?'Start opname':'Stop en verwerk');
+  $('l-main').textContent=p==='idle'?'Start opname':p==='paused'?'Verstuur opname':'Stop en verwerk';
+}
+async function start(){R.elapsed=R.speak=R.sil=R.silRun=R.marks=0;R.spoke=false;R.proc.reset();R.hist.fill(0);
+  try{await Audio_.start($('src').value)}catch(e){Audio_.stop();$('listentxt').textContent='Microfoon niet beschikbaar';return}
+  R.last=performance.now();R.phase='recording';setState()}
+function togglePause(){if(R.phase==='recording'){Audio_.pause();R.phase='paused'}else if(R.phase==='paused'){Audio_.resume();R.last=performance.now();R.phase='recording'}setState()}
+function stop(){Audio_.stop();R.phase='idle';setState()}
+function mark(){if(R.phase==='idle')return;R.marks++;flash('m')}
+function flash(k){const b=document.querySelector(`[data-q="${k}"]`);b.classList.add('flash');setTimeout(()=>b.classList.remove('flash'),220)}
+$('b-main').onclick=()=>R.phase==='idle'?start():stop();
+$('b-pause').onclick=togglePause;$('b-mark').onclick=mark;
+document.querySelectorAll('[data-q]').forEach(b=>b.onclick=()=>b.dataset.q==='m'?mark():flash(b.dataset.q));
+$('fb').onchange=()=>{$('fbtxt').textContent=$('fb').checked?'Aan':'Uit'};
+document.addEventListener('keydown',e=>{if(e.metaKey||e.ctrlKey||e.target.matches('input,select'))return;
+  const k=e.key.toLowerCase();if(k==='m')mark();else if('tnd'.includes(k)&&k.length===1)flash(k);else if(e.code==='Space'){e.preventDefault();R.phase==='idle'?start():togglePause()}});
+$('src').onchange=()=>{if(R.phase!=='idle')stop()};
+
+let lastT=performance.now();
+function frame(now){
+  const dt=Math.min(.1,(now-lastT)/1000);lastT=now;R.time+=dt;
+  if(R.phase!=='paused'){R.drift+=dt;R.travel+=dt*TAU*CONFIG.wave.travelHz*(1+CONFIG.wave.energyBoost*R.level)}
+  document.documentElement.style.setProperty('--lvl',R.level.toFixed(3));
+  drawWave($('wave'));
+  $('timer').textContent=fmt(R.elapsed);$('i-speak').textContent=fmt(R.speak);$('i-sil').textContent=R.sil;$('i-mark').textContent=R.marks;
+  [...$('lb').children].forEach((b,k)=>{const v=envAt(k*40);b.style.height=(3+11*v*(1-k/12))+'px';b.style.opacity=1-k*.07});
+  const on=Math.round(R.level*9*1.3);[...$('i-lvl').children].forEach((b,k)=>{b.style.height=(6+k*1.2)+'px';b.classList.toggle('on',k<on)});
+  requestAnimationFrame(frame);
+}
+/* #clean=1&state=rec|pause|idle&t=200&src=sim */
+const P=new URLSearchParams(location.hash.slice(1));
+if(P.get('clean'))$('review').hidden=true;if(P.get('src'))$('src').value=P.get('src');
+setState();requestAnimationFrame(frame);
+(async()=>{const s=P.get('state')||'rec';if(s!=='idle'){await start();if(P.get('t')){R.elapsed=+P.get('t');R.speak=+P.get('t')*.8;R.sil=2}if(s==='pause')setTimeout(togglePause,1500)}})();
+</script>
+</body>
+</html>

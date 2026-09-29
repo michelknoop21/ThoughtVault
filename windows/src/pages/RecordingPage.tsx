@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { open } from "@tauri-apps/plugin-dialog";
 import {
   MicRecord24Regular,
   Stop24Regular,
@@ -21,7 +22,10 @@ import {
   stopRecording,
   pauseRecording,
   resumeRecording,
+  importAudio,
 } from "../services/tauriCommands";
+import { processLocally } from "../services/localPipeline";
+import { uploadAndTrack } from "../services/uploadAndTrack";
 import { api } from "../services/api";
 import { createSSEClient } from "../services/sse";
 import { WaveformVisualizer } from "../components/recording/WaveformVisualizer";
@@ -86,6 +90,7 @@ export function RecordingPage() {
   // Profile selection is stored globally so the global recording handler can access it
   const selectedProfileId = useRecordingStore((s) => s.selectedProfileId);
   const [error, setError] = useState<string | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
   const [seedCandidates, setSeedCandidates] = useState<string[]>([]);
 
   const calendarAccountEmail = useCalendarStore((s) => s.accountEmail);
@@ -94,12 +99,13 @@ export function RecordingPage() {
   const audioLevelsRef = useAudioLevelsRef();
   const filePathRef = useRef<string>("");
 
-  // Initialize selectedProfileId from settings default if not yet set
+  // A persisted legacy profile ID is still valid for old documents, but not
+  // for a new recording. Choose the current default when options change.
   useEffect(() => {
-    if (!selectedProfileId && settings.default_profile_id) {
-      setSelectedProfileId(settings.default_profile_id);
-    }
-  }, [settings.default_profile_id]);
+    if (profiles.length === 0 || profiles.some((profile) => profile.id === selectedProfileId)) return;
+    const fallback = profiles.find((profile) => profile.id === settings.default_profile_id) ?? profiles[0];
+    setSelectedProfileId(fallback.id);
+  }, [profiles, selectedProfileId, settings.default_profile_id, setSelectedProfileId]);
 
   useEffect(() => {
     if (autoStart && phase === "idle") {
@@ -110,10 +116,14 @@ export function RecordingPage() {
 
   // Check feature flags on mount
   useEffect(() => {
+    if (settings.processing_mode === "local") {
+      setYouTubeEnabled(false);
+      return;
+    }
     api.fetchFeatures()
       .then((features) => setYouTubeEnabled(features.youtube_transcription ?? false))
       .catch(() => setYouTubeEnabled(false));
-  }, []);
+  }, [settings.processing_mode]);
 
   // Initialize YouTube profile ID from default when profiles load
   useEffect(() => {
@@ -191,6 +201,28 @@ export function RecordingPage() {
       console.error("[Recording] Start failed:", err);
       setError(err instanceof Error ? err.message : "Opname starten mislukt");
       setPhase("idle");
+    }
+  }
+
+  async function handleImportAudio() {
+    setError(null);
+    try {
+      const source = await open({
+        multiple: false,
+        filters: [{ name: "Audio", extensions: ["wav", "mp3", "m4a", "mp4", "aac", "flac", "ogg"] }],
+      });
+      if (!source || typeof source !== "string") return;
+      setIsImporting(true);
+      const filePath = await importAudio(source);
+      if (settings.processing_mode === "local") {
+        void processLocally(filePath, selectedProfileId || settings.default_profile_id, "microphone");
+      } else {
+        void uploadAndTrack(filePath, selectedProfileId || settings.default_profile_id, "microphone");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setIsImporting(false);
     }
   }
 
@@ -287,6 +319,8 @@ export function RecordingPage() {
             onSetMode={setMode}
             onSetProfile={setSelectedProfileId}
             onStart={handleStartRecording}
+            onImport={handleImportAudio}
+            isImporting={isImporting}
             usePremium={usePremium}
             onSetPremium={setUsePremium}
             isYouTubeEnabled={isYouTubeEnabled}
@@ -410,7 +444,7 @@ function MeetingDetectionBanner({ onRecord }: { onRecord: () => void }) {
 }
 
 function IdleState({
-  mode, profileId, profiles, onSetMode, onSetProfile, onStart,
+  mode, profileId, profiles, onSetMode, onSetProfile, onStart, onImport, isImporting,
   usePremium, onSetPremium,
   isYouTubeEnabled, youtubeURL, isSubmittingYouTube, youtubeError,
   onYouTubeURLChange, onSubmitYouTube, youtubeProfileId, onYouTubeProfileChange,
@@ -421,6 +455,8 @@ function IdleState({
   onSetMode: (m: "microphone" | "combined") => void;
   onSetProfile: (id: string) => void;
   onStart: () => void;
+  onImport: () => void;
+  isImporting: boolean;
   usePremium: boolean;
   onSetPremium: (value: boolean) => void;
   isYouTubeEnabled: boolean;
@@ -615,6 +651,11 @@ function IdleState({
         </details>
       )}
 
+      <button className="btn btn-secondary" onClick={onImport} disabled={isImporting}>
+        <ArrowUpload24Regular style={{ fontSize: 16 }} />
+        {isImporting ? "Audio importeren..." : "Audiobestand importeren"}
+      </button>
+
       {/* Saved recordings — collapsible */}
       <SavedRecordings />
 
@@ -696,7 +737,7 @@ function ActiveState({
         </button>
       </div>
 
-      {/* Control buttons: PAUZE / NOTITIE / STOP */}
+      {/* Control buttons: PAUZE / STOP */}
       <div className="recording-controls">
         <button
           onClick={isPaused ? onResume : onPause}
@@ -710,18 +751,6 @@ function ActiveState({
           <span className="recording-control-label">
             {isPaused ? "HERVAT" : "PAUZE"}
           </span>
-        </button>
-        <button
-          className="recording-control-btn"
-          title="Notitie"
-          style={{ opacity: 0.5, cursor: "default" }}
-          disabled
-        >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" style={{ color: "var(--text-primary)" }}>
-            <path d="M4 4h10l6 6v10a2 2 0 01-2 2H4a2 2 0 01-2-2V6a2 2 0 012-2z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
-            <path d="M14 4v6h6M8 14h8M8 18h5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-          <span className="recording-control-label">NOTITIE</span>
         </button>
         <button
           onClick={onStop}

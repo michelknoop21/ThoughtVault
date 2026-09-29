@@ -30,6 +30,7 @@ struct RecordingView: View {
     @State var showYouTubeSection = false
     @State var showSavedRecordings = false
     @AppStorage("preferOnDeviceTranscription") var preferOnDeviceTranscription = false
+    @State private var showAllProfiles = false
 
     // MARK: Body
 
@@ -187,8 +188,16 @@ struct RecordingView: View {
                     }
                 } else {
                     VStack(spacing: TS.Spacing.xs) {
-                        ForEach(recordingVM.availableProfiles) { profile in
+                        ForEach(showAllProfiles ? recordingVM.availableProfiles : Array(recordingVM.availableProfiles.filter { $0.id == (recordingVM.selectedProfile?.id ?? recordingVM.availableProfiles.first?.id) })) { profile in
                             profileSidebarChip(profile)
+                        }
+                        if recordingVM.availableProfiles.count > 1 {
+                            Button(showAllProfiles ? "Minder profielen" : "Andere profielen") {
+                                withAnimation(TS.Animation.smooth) { showAllProfiles.toggle() }
+                            }
+                            .font(TS.Font.captionMedium)
+                            .buttonStyle(.plain)
+                            .foregroundStyle(Color.brandPrimary)
                         }
                     }
 

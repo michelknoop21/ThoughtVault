@@ -12,7 +12,7 @@ import {
 } from "@fluentui/react-icons";
 import { useRecordingStore } from "../stores/recordingStore";
 import { useTranscriptsStore } from "../stores/transcriptsStore";
-import { useLocalTranscriptsStore } from "../stores/localTranscriptsStore";
+import { useLocalTranscriptsStore, isLocalId } from "../stores/localTranscriptsStore";
 import { useCalendarStore } from "../stores/calendarStore";
 import { useAuthStore } from "../stores/authStore";
 import { useSettingsStore } from "../stores/settingsStore";
@@ -57,6 +57,10 @@ export function HomePage() {
     // Locally generated transcripts always show, even with no server/login.
     const local = useLocalTranscriptsStore.getState().items;
     try {
+      if (useSettingsStore.getState().processing_mode === "local") {
+        setTranscripts(local);
+        return;
+      }
       const data = await api.getTranscripts();
       setTranscripts([...local, ...data]);
     } catch (err) {
@@ -90,10 +94,15 @@ export function HomePage() {
 
   async function handleDeleteTranscript(transcript: Transcript) {
     try {
-      await api.deleteTranscript(transcript.id);
+      if (isLocalId(transcript.id)) {
+        await useLocalTranscriptsStore.getState().remove(transcript.id);
+      } else {
+        await api.deleteTranscript(transcript.id);
+      }
       deleteTranscript(transcript.id);
     } catch (err) {
       console.error("Delete failed:", err);
+      setLoadError(err instanceof Error ? err.message : "Verwijderen mislukt");
     }
   }
 
@@ -136,7 +145,7 @@ export function HomePage() {
           </div>
           <div className="hero-cta-text">
             <span className="hero-cta-title">Start nieuwe opname</span>
-            <span className="hero-cta-subtitle">Tik om direct te beginnen met opnemen</span>
+            <span className="hero-cta-subtitle">Ga naar Opnemen en start daar de opname</span>
           </div>
           <ChevronRight24Regular className="hero-cta-chevron" />
         </button>

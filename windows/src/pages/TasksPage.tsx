@@ -10,6 +10,9 @@ import {
   Person24Regular,
 } from "@fluentui/react-icons";
 import { useTasksStore } from "../stores/tasksStore";
+import { useRecordingStore } from "../stores/recordingStore";
+import { useSettingsStore } from "../stores/settingsStore";
+import { processLocally } from "../services/localPipeline";
 import { TaskStatusLabels } from "../types";
 import type { TranscriptTask, TaskStatus } from "../types";
 
@@ -123,10 +126,14 @@ function TaskCard({
   task,
   onCancel,
   onDelete,
+  onRetry,
+  isLocal,
 }: {
   task: TranscriptTask;
   onCancel: (taskId: string) => void;
   onDelete: (taskId: string) => void;
+  onRetry: (task: TranscriptTask) => void;
+  isLocal: boolean;
 }) {
   const colors = getStatusColors(task.status);
   const active = isActiveStatus(task.status);
@@ -225,7 +232,12 @@ function TaskCard({
           )}
         </div>
         <div className="flex-row gap-4">
-          {active && (
+          {task.status === "failed" && task.local_audio_path && (
+            <button className="btn btn-sm" onClick={() => onRetry(task)}>
+              <ArrowSync24Regular style={{ fontSize: 14 }} /> Opnieuw verwerken
+            </button>
+          )}
+          {active && !isLocal && (
             <button
               className="btn btn-sm"
               onClick={() => onCancel(task.task_id)}
@@ -236,7 +248,7 @@ function TaskCard({
               Annuleren
             </button>
           )}
-          <button
+          {(!active || !isLocal) && <button
             className="btn btn-sm"
             onClick={() => onDelete(task.task_id)}
             title="Verwijderen"
@@ -244,7 +256,7 @@ function TaskCard({
           >
             <Delete24Regular style={{ fontSize: 14 }} />
             Verwijderen
-          </button>
+          </button>}
         </div>
       </div>
     </div>
@@ -255,6 +267,10 @@ function TaskCard({
 
 export function TasksPage() {
   const { activeTasks, isLoading, error, loadActiveTasks, cancelTask, deleteTask, startAutoRefresh, stopAutoRefresh } = useTasksStore();
+  const isLocal = useSettingsStore((s) => s.processing_mode === "local");
+  const localTasks = useRecordingStore((s) => s.backgroundTasks);
+  const removeLocalTask = useRecordingStore((s) => s.removeBackgroundTask);
+  const visibleTasks = isLocal ? localTasks : activeTasks;
 
   const [confirmAction, setConfirmAction] = useState<{
     type: "cancel" | "delete";
@@ -277,12 +293,22 @@ export function TasksPage() {
   }
 
   function handleDelete(taskId: string) {
-    const task = activeTasks.find((t) => t.task_id === taskId);
+    if (isLocal) {
+      removeLocalTask(taskId);
+      return;
+    }
+    const task = visibleTasks.find((t) => t.task_id === taskId);
     setConfirmAction({
       type: "delete",
       taskId,
       title: task?.extracted_title || task?.filename || "deze taak",
     });
+  }
+
+  function handleRetry(task: TranscriptTask) {
+    if (!task.local_audio_path) return;
+    removeLocalTask(task.task_id);
+    void processLocally(task.local_audio_path, task.profile_id || "standaard", task.mode, [], task.duration_seconds ?? 0, task.task_id);
   }
 
   async function executeConfirmAction() {
@@ -335,7 +361,7 @@ export function TasksPage() {
         )}
 
         {/* Content */}
-        {isLoading && activeTasks.length === 0 ? (
+        {!isLocal && isLoading && visibleTasks.length === 0 ? (
           <div className="empty-state">
             <ArrowClockwise24Regular
               style={{
@@ -346,7 +372,7 @@ export function TasksPage() {
             />
             <p className="empty-state-text" style={{ marginTop: 12 }}>Taken laden...</p>
           </div>
-        ) : activeTasks.length === 0 ? (
+        ) : visibleTasks.length === 0 ? (
           <div className="empty-state">
             <CheckmarkCircle24Regular
               style={{ fontSize: 40, color: "var(--text-secondary)", opacity: 0.5 }}
@@ -361,12 +387,14 @@ export function TasksPage() {
         ) : (
           <section>
             <div className="flex-col gap-10">
-              {activeTasks.map((task) => (
+              {visibleTasks.map((task) => (
                 <TaskCard
                   key={task.task_id}
                   task={task}
                   onCancel={handleCancel}
                   onDelete={handleDelete}
+                  onRetry={handleRetry}
+                  isLocal={isLocal}
                 />
               ))}
             </div>

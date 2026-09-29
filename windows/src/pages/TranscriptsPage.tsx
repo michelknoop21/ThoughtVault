@@ -14,6 +14,8 @@ import { useLocalTranscriptsStore, isLocalId } from "../stores/localTranscriptsS
 import { useSettingsStore } from "../stores/settingsStore";
 import { useProfilesStore } from "../stores/profilesStore";
 import { LLMService } from "../services/llm";
+import { prepareNotuleHtml } from "../services/notulePresentation";
+import { hasUsableNotule, hasUsableTranscription } from "../services/notuleValidation";
 import { extractTitle } from "../services/titleExtractor";
 import { api } from "../services/api";
 import { createSSEClient } from "../services/sse";
@@ -52,6 +54,10 @@ export function TranscriptsPage() {
     // Locally generated transcripts always show, even with no server/login.
     const local = useLocalTranscriptsStore.getState().items;
     try {
+      if (useSettingsStore.getState().processing_mode === "local") {
+        setTranscripts(local);
+        return;
+      }
       const data = await api.getTranscripts();
       setTranscripts([...local, ...data]);
     } catch (err) {
@@ -109,7 +115,7 @@ export function TranscriptsPage() {
   async function handleDelete(transcript: Transcript) {
     try {
       if (isLocalId(transcript.id)) {
-        useLocalTranscriptsStore.getState().remove(transcript.id);
+        await useLocalTranscriptsStore.getState().remove(transcript.id);
       } else {
         await api.deleteTranscript(transcript.id);
       }
@@ -125,7 +131,7 @@ export function TranscriptsPage() {
     const localIds = ids.filter(isLocalId);
     const serverIds = ids.filter((id) => !isLocalId(id));
     try {
-      localIds.forEach((id) => useLocalTranscriptsStore.getState().remove(id));
+      for (const id of localIds) await useLocalTranscriptsStore.getState().remove(id);
       if (serverIds.length) await api.bulkDeleteTranscripts(serverIds);
       ids.forEach((id) => deleteTranscript(id));
       toast.show(`${ids.length} items verwijderd`, "success");
@@ -138,7 +144,7 @@ export function TranscriptsPage() {
   async function handleUpdateTitle(id: string, title: string) {
     try {
       if (isLocalId(id)) {
-        useLocalTranscriptsStore.getState().update(id, { title });
+        await useLocalTranscriptsStore.getState().update(id, { title });
         updateTranscript(id, { title });
         return;
       }
@@ -146,6 +152,7 @@ export function TranscriptsPage() {
       updateTranscript(id, { title: updated.title || title });
     } catch {
       toast.show("Titel opslaan mislukt", "error");
+      throw new Error("Titel opslaan mislukt");
     }
   }
 
@@ -153,7 +160,7 @@ export function TranscriptsPage() {
   async function handleSaveNotule(id: string, html: string) {
     try {
       if (isLocalId(id)) {
-        useLocalTranscriptsStore.getState().update(id, { notule_html: html });
+        await useLocalTranscriptsStore.getState().update(id, { notule_html: html });
         updateTranscript(id, { notule_html: html });
         toast.show("Notule opgeslagen", "success");
         return;
@@ -163,6 +170,7 @@ export function TranscriptsPage() {
       toast.show("Notule opgeslagen", "success");
     } catch {
       toast.show("Opslaan mislukt", "error");
+      throw new Error("Opslaan mislukt");
     }
   }
 
@@ -170,17 +178,19 @@ export function TranscriptsPage() {
   async function handleRegenerate(transcript: Transcript) {
     // Local records: re-run the on-device LLM over the stored transcription.
     if (isLocalId(transcript.id)) {
-      if (!transcript.raw_transcription) {
-        toast.show("Geen transcriptie beschikbaar", "error");
+      const transcription = transcript.raw_transcription ?? "";
+      if (!hasUsableTranscription(transcription)) {
+        toast.show("Geen bruikbare transcriptie beschikbaar", "error");
         return;
       }
       setRegeneratingId(transcript.id);
       try {
         const profiles = useProfilesStore.getState().profiles;
         const profile = profiles.find((p) => p.name === transcript.profile_name) ?? profiles[0];
-        const html = await LLMService.generateNotulen(transcript.raw_transcription, profile);
+        const html = await LLMService.generateNotulen(transcription, profile);
+        if (!hasUsableNotule(html)) throw new Error("Geen bruikbare notule gegenereerd");
         const title = extractTitle(html) || transcript.title;
-        useLocalTranscriptsStore.getState().update(transcript.id, { notule_html: html, title });
+        await useLocalTranscriptsStore.getState().update(transcript.id, { notule_html: html, title });
         updateTranscript(transcript.id, { notule_html: html, title });
         toast.show("Notule opnieuw gegenereerd", "success");
       } catch {
@@ -277,24 +287,28 @@ export function TranscriptsPage() {
     if (!transcript.notule_html) return;
     const printWindow = window.open("", "_blank");
     if (!printWindow) return;
-    printWindow.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${transcript.title || "Notulen"}</title><style>body{font-family:'Segoe UI Variable','Segoe UI',system-ui,sans-serif;font-size:12pt;line-height:1.6;color:#1a1a1a;padding:20pt}h1{font-size:18pt;font-weight:700;color:#9048F0;margin-bottom:12pt}h2{font-size:14pt;font-weight:600;margin-top:16pt}h3{font-size:12pt;font-weight:600;margin-top:12pt}p{margin:6pt 0}ul,ol{margin:6pt 0;padding-left:20pt}li{margin:3pt 0}table{border-collapse:collapse;width:100%;margin:12pt 0}th,td{border:1px solid #ddd;padding:6pt 8pt;text-align:left}th{background:#f5f5f5;font-weight:600}</style></head><body><h1>${transcript.title || "Notulen"}</h1><p style="color:#666;font-size:10pt">${formatDate(transcript.created_at)} &middot; ${formatDuration(transcript.duration_seconds)}</p>${DOMPurify.sanitize(transcript.notule_html)}</body></html>`);
+    printWindow.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${transcript.title || "Notulen"}</title><style>body{font-family:'Segoe UI Variable','Segoe UI',system-ui,sans-serif;font-size:12pt;line-height:1.6;color:#1a1a1a;padding:20pt}h1{font-size:18pt;font-weight:700;color:#9048F0;margin-bottom:12pt}h2{font-size:14pt;font-weight:600;margin-top:16pt}h3{font-size:12pt;font-weight:600;margin-top:12pt}p{margin:6pt 0}ul,ol{margin:6pt 0;padding-left:20pt}li{margin:3pt 0}table{border-collapse:collapse;width:100%;margin:12pt 0}th,td{border:1px solid #ddd;padding:6pt 8pt;text-align:left}th{background:#f5f5f5;font-weight:600}</style></head><body><h1>${transcript.title || "Notulen"}</h1><p style="color:#666;font-size:10pt">${formatDate(transcript.created_at)} &middot; ${formatDuration(transcript.duration_seconds)}</p>${DOMPurify.sanitize(prepareNotuleHtml(transcript.notule_html, transcript.title))}</body></html>`);
     printWindow.document.close();
     setTimeout(() => printWindow.print(), 250);
   }
 
   function handleExportTXT(transcript: Transcript) {
-    const content = transcript.notule_html ? stripHtml(transcript.notule_html) : transcript.raw_transcription;
+    const content = transcript.notule_html
+      ? stripHtml(prepareNotuleHtml(transcript.notule_html, transcript.title))
+      : transcript.raw_transcription;
     if (content) downloadFile(content, `${transcript.title || "notulen"}.txt`, "text/plain");
   }
 
   function handleExportMarkdown(transcript: Transcript) {
     if (!transcript.notule_html) return;
-    downloadFile(htmlToMarkdown(transcript.notule_html), `${transcript.title || "notulen"}.md`, "text/markdown");
+    downloadFile(htmlToMarkdown(prepareNotuleHtml(transcript.notule_html, transcript.title)), `${transcript.title || "notulen"}.md`, "text/markdown");
   }
 
   function handleExportHTML(transcript: Transcript) {
     if (!transcript.notule_html) return;
-    downloadFile(transcript.notule_html, `${transcript.title || "notulen"}.html`, "text/html");
+    const title = document.createElement("h1");
+    title.textContent = transcript.title || "Notulen";
+    downloadFile(title.outerHTML + prepareNotuleHtml(transcript.notule_html, transcript.title), `${transcript.title || "notulen"}.html`, "text/html");
   }
 
   async function handleExportObsidian(transcript: Transcript) {
@@ -317,6 +331,10 @@ export function TranscriptsPage() {
   async function openTagsDialog(transcriptId: string) {
     setTagsDialogId(transcriptId);
     setNewTagInput("");
+    if (isLocalId(transcriptId)) {
+      setAvailableTags(Array.from(new Set(transcripts.flatMap((t) => t.tags))));
+      return;
+    }
     try {
       setAvailableTags(await api.getAllTags());
     } catch {
@@ -328,9 +346,13 @@ export function TranscriptsPage() {
     const trimmed = tag.trim();
     if (!trimmed) return;
     try {
-      await api.updateTranscriptTags(transcriptId, [trimmed], []);
       const t = transcripts.find((t) => t.id === transcriptId);
       if (t && !t.tags.includes(trimmed)) {
+        if (isLocalId(transcriptId)) {
+          await useLocalTranscriptsStore.getState().update(transcriptId, { tags: [...t.tags, trimmed] });
+        } else {
+          await api.updateTranscriptTags(transcriptId, [trimmed], []);
+        }
         updateTranscript(transcriptId, { tags: [...t.tags, trimmed] });
       }
       setNewTagInput("");
@@ -341,9 +363,16 @@ export function TranscriptsPage() {
 
   async function handleRemoveTag(transcriptId: string, tag: string) {
     try {
-      await api.updateTranscriptTags(transcriptId, [], [tag]);
       const t = transcripts.find((t) => t.id === transcriptId);
-      if (t) updateTranscript(transcriptId, { tags: t.tags.filter((x) => x !== tag) });
+      if (t) {
+        const tags = t.tags.filter((x) => x !== tag);
+        if (isLocalId(transcriptId)) {
+          await useLocalTranscriptsStore.getState().update(transcriptId, { tags });
+        } else {
+          await api.updateTranscriptTags(transcriptId, [], [tag]);
+        }
+        updateTranscript(transcriptId, { tags });
+      }
     } catch {
       toast.show("Tag verwijderen mislukt", "error");
     }

@@ -18,6 +18,7 @@ pub fn run() {
         .plugin(tauri_plugin_single_instance::init(|_app, _args, _cwd| {}))
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             let main_window = app.get_webview_window("main").unwrap();
 
@@ -69,6 +70,7 @@ pub fn run() {
             commands::filesystem::delete_recording,
             commands::filesystem::cleanup_old_recordings,
             commands::filesystem::get_recordings_dir,
+            commands::filesystem::import_audio,
             commands::filesystem::migrate_recordings_dir,
             commands::filesystem::concatenate_wav_files,
             // HTTP

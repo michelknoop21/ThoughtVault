@@ -9,9 +9,7 @@ import SwiftUI
 import Speech
 import AVFoundation
 import EventKit
-#if os(macOS)
-import ScreenCaptureKit
-#endif
+
 
 // MARK: - OnboardingView
 
@@ -27,7 +25,7 @@ struct OnboardingView: View {
     @State private var micPermission: PermissionState = .unknown
     @State private var speechPermission: PermissionState = .unknown
     @State private var calendarPermission: PermissionState = .unknown
-    @State private var screenRecordingPermission: PermissionState = .unknown
+    @State private var systemAudioPermission: PermissionState = .unknown
     @State private var isAnimatingIn: Bool = false
 
     // Self-profile step fields
@@ -43,7 +41,7 @@ struct OnboardingView: View {
         case microphoon     = 1
         case spraak         = 2
         case agenda         = 3
-        case schermopname   = 4
+        case systeemaudio   = 4
         case profiel        = 5
         case klaar          = 6
 
@@ -53,7 +51,7 @@ struct OnboardingView: View {
             case .microphoon:    return "Microfoontoestemming"
             case .spraak:        return "Spraakherkenning"
             case .agenda:        return "Agenda"
-            case .schermopname:  return "Schermopname"
+            case .systeemaudio:  return "Systeemaudio"
             case .profiel:       return "Vertel iets over jezelf"
             case .klaar:         return "Alles klaar!"
             }
@@ -65,7 +63,7 @@ struct OnboardingView: View {
             case .microphoon:    return "mic.fill"
             case .spraak:        return "waveform"
             case .agenda:        return "calendar"
-            case .schermopname:  return "rectangle.dashed.badge.record"
+            case .systeemaudio:  return "waveform"
             case .profiel:       return "person.crop.circle"
             case .klaar:         return "checkmark.seal.fill"
             }
@@ -74,7 +72,7 @@ struct OnboardingView: View {
         /// Whether this step is available on the current platform.
         var isAvailableOnCurrentPlatform: Bool {
             switch self {
-            case .schermopname:
+            case .systeemaudio:
                 #if os(macOS)
                 return true
                 #else
@@ -188,7 +186,7 @@ struct OnboardingView: View {
         case .microphoon:    microphoonStep
         case .spraak:        spraakStep
         case .agenda:        agendaStep
-        case .schermopname:  schermopnameStep
+        case .systeemaudio:  systeemaudioStep
         case .profiel:       profielStep
         case .klaar:         klaarStep
         }
@@ -425,48 +423,36 @@ struct OnboardingView: View {
         }
     }
 
-    // MARK: Schermopname Step (macOS only)
+    // MARK: Systeemaudio Step (macOS only)
 
-    private var schermopnameStep: some View {
+    private var systeemaudioStep: some View {
         #if os(macOS)
         VStack(spacing: TS.Spacing.xl) {
             Spacer()
 
-            permissionIcon(systemName: "rectangle.dashed.badge.record", permission: screenRecordingPermission)
+            permissionIcon(systemName: "waveform", permission: systemAudioPermission)
 
             VStack(spacing: TS.Spacing.sm) {
-                Text("Schermopname")
+                Text("Systeemaudio")
                     .font(TS.Font.title2Bold)
                     .foregroundStyle(Color.labelPrimary)
-                Text("ThoughtVault heeft schermopname-toestemming nodig om systeemaudio van videovergaderingen op te nemen.")
+                Text("ThoughtVault heeft toestemming nodig om systeemaudio van videovergaderingen op te nemen.")
                     .font(TS.Font.callout)
                     .foregroundStyle(Color.labelSecondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, TS.Spacing.xl)
             }
 
-            permissionStatusRow(permission: screenRecordingPermission, label: "Schermopname toegang")
+            permissionStatusRow(permission: systemAudioPermission, label: "Systeemaudio toegang", negativeLabel: "Controleer toegang")
 
-            if screenRecordingPermission == .unknown {
-                Button("Toestemming verlenen") {
-                    Task { await requestScreenRecordingPermission() }
-                }
-                .buttonStyle(PrimaryButtonStyle())
-            } else if screenRecordingPermission == .denied {
-                VStack(spacing: TS.Spacing.sm) {
-                    Text("Toegang geweigerd. Open Systeeminstellingen om dit te wijzigen.")
-                        .font(TS.Font.caption)
-                        .foregroundStyle(Color.statusError)
-                        .multilineTextAlignment(.center)
-                    Button("Systeeminstellingen openen") {
-                        openSystemSettings()
-                    }
+            if systemAudioPermission == .unknown {
+                Text("Toestemming wordt gevraagd wanneer je voor het eerst systeemaudio opneemt.")
+                    .font(TS.Font.caption)
+                    .foregroundStyle(Color.labelSecondary)
+            } else if systemAudioPermission == .denied {
+                Button("Systeeminstellingen openen") { PermissionManager.shared.openSystemAudioSettings() }
                     .buttonStyle(SecondaryButtonStyle())
-                }
             }
-
-            Spacer()
-            Spacer()
         }
         #else
         EmptyView()
@@ -601,7 +587,7 @@ struct OnboardingView: View {
                 summaryRow(icon: "waveform", label: "Spraakherkenning", permission: speechPermission)
                 summaryRow(icon: "calendar", label: "Agenda", permission: calendarPermission)
                 #if os(macOS)
-                summaryRow(icon: "rectangle.dashed.badge.record", label: "Schermopname", permission: screenRecordingPermission)
+                summaryRow(icon: "waveform", label: "Systeemaudio", permission: systemAudioPermission)
                 #endif
             }
             .padding(TS.Spacing.md)
@@ -626,7 +612,7 @@ struct OnboardingView: View {
         }
     }
 
-    private func permissionStatusRow(permission: PermissionState, label: String) -> some View {
+    private func permissionStatusRow(permission: PermissionState, label: String, negativeLabel: String = "Geweigerd") -> some View {
         HStack(spacing: TS.Spacing.sm) {
             Image(systemName: permission.icon)
                 .foregroundStyle(permission.color)
@@ -634,7 +620,7 @@ struct OnboardingView: View {
                 .font(TS.Font.bodyMedium)
                 .foregroundStyle(Color.labelPrimary)
             Spacer()
-            Text(permission == .granted ? "Verleend" : permission == .denied ? "Geweigerd" : "Niet gevraagd")
+            Text(permission == .granted ? "Verleend" : permission == .denied ? negativeLabel : "Niet gevraagd")
                 .font(TS.Font.footnote)
                 .foregroundStyle(permission.color)
         }
@@ -743,7 +729,7 @@ struct OnboardingView: View {
         calendarPermission = calStatus
 
         #if os(macOS)
-        await checkScreenRecordingPermission()
+        await checkSystemAudioPermission()
         #endif
     }
 
@@ -793,30 +779,12 @@ struct OnboardingView: View {
     }
 
     #if os(macOS)
-    private func checkScreenRecordingPermission() async {
-        do {
-            _ = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: false)
-            await MainActor.run {
-                screenRecordingPermission = .granted
-            }
-        } catch {
-            // If the call fails, permission has not been granted.
-            // We cannot distinguish "not yet asked" from "denied" via ScreenCaptureKit,
-            // so we keep .unknown until the user explicitly requests.
-            await MainActor.run {
-                if screenRecordingPermission != .unknown {
-                    screenRecordingPermission = .denied
-                }
-            }
+    private func checkSystemAudioPermission() async {
+        switch PermissionManager.shared.systemAudioGranted {
+        case true: systemAudioPermission = .granted
+        case false: systemAudioPermission = .denied
+        case nil: systemAudioPermission = .unknown
         }
-    }
-
-    private func requestScreenRecordingPermission() async {
-        // CGRequestScreenCaptureAccess opens System Settings for the user to grant permission.
-        CGRequestScreenCaptureAccess()
-        // Re-check after a brief delay to allow the user to grant permission.
-        try? await Task.sleep(for: .seconds(1))
-        await checkScreenRecordingPermission()
     }
     #endif
 

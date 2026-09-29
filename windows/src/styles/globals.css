@@ -2810,6 +2810,12 @@
 .td-doc-body {
   padding: 16px 24px 24px;
 }
+.td-doc-body .doc-header { margin-bottom: 12px; }
+.td-doc-body .kicker { color: var(--brand-primary); font-size: 11px; font-weight: 700; }
+.td-doc-body section, .td-doc-body .section { margin-bottom: 24px; }
+.td-doc-body .section-title { border-bottom: 1px solid var(--border-secondary); padding-bottom: 8px; }
+.td-doc-body .decision { border-left: 3px solid var(--brand-primary); background: var(--surface-secondary); padding: 10px 14px; }
+.td-doc-body .list { padding-left: 20px; }
 .td-doc-editing {
   outline: 2px solid var(--brand-primary);
   outline-offset: -2px;

@@ -107,6 +107,10 @@ export async function getRecordingsDir(): Promise<string> {
   return invoke<string>("get_recordings_dir");
 }
 
+export async function importAudio(sourcePath: string): Promise<string> {
+  return invoke<string>("import_audio", { sourcePath });
+}
+
 /**
  * One-time migration of recordings from %APPDATA% (Roaming) to %LOCALAPPDATA% (Local).
  * Idempotent — call once on app startup. No-op on macOS/Linux.

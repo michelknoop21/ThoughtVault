@@ -36,15 +36,18 @@ final class WhisperModelStore {
         URL.documentsDirectory.appendingPathComponent("huggingface/models/argmaxinc/whisperkit-coreml")
     }
 
+    /// Model folder for a variant name; nil unless it is a plain folder name.
     nonisolated static func folder(for variant: String) -> URL {
-        modelsFolder.appendingPathComponent(variant)
+        let safe = variant.isEmpty || variant.contains("/") || variant.contains("..") ? "invalid-variant" : variant
+        return modelsFolder.appendingPathComponent(safe)
     }
 
     /// Exact folder match: "large-v3-v20240930" must not match its "_626MB" sibling.
     nonisolated static func isInstalled(_ variant: String) -> Bool {
+        // A killed download can leave a partial folder; require every part WhisperKit loads.
         let folder = folder(for: variant)
-        let contents = (try? FileManager.default.contentsOfDirectory(atPath: folder.path)) ?? []
-        return contents.contains { $0.hasSuffix(".mlmodelc") }
+        let needed = ["AudioEncoder.mlmodelc", "TextDecoder.mlmodelc", "MelSpectrogram.mlmodelc", "config.json"]
+        return needed.allSatisfy { FileManager.default.fileExists(atPath: folder.appendingPathComponent($0).path) }
     }
 
     /// Size on disk of an installed model, in bytes.

@@ -172,6 +172,9 @@ enum NotulenProvider: String, Codable, Sendable, CaseIterable, Identifiable {
         }
     }
 
+    /// Provider name for error messages.
+    var studioNameForErrors: String { self == .anthropic ? "Claude" : displayName }
+
     /// True when a hosted provider has an API key stored.
     var hasAPIKey: Bool {
         guard let key = apiKeyKeychainKey else { return false }

@@ -108,6 +108,7 @@ class LLMServiceFactory {
             return OpenAICompatibleLLMService(baseURL: baseURL, model: model)
 
         case .openAI:
+            guard provider.hasAPIKey else { return MissingAPIKeyLLMService(providerName: provider.studioNameForErrors) }
             let model = UserDefaults.standard.string(forKey: "openAIModel") ?? OpenAICompatibleLLMService.openAIDefaultModel
             // Large hosted context: chunk only truly huge transcripts.
             return OpenAICompatibleLLMService(baseURL: OpenAICompatibleLLMService.openAIBaseURL, model: model,
@@ -115,6 +116,7 @@ class LLMServiceFactory {
                                               maxChunkCharacters: 400_000)
 
         case .anthropic:
+            guard provider.hasAPIKey else { return MissingAPIKeyLLMService(providerName: provider.studioNameForErrors) }
             let model = UserDefaults.standard.string(forKey: "anthropicModel") ?? AnthropicLLMService.defaultModel
             return AnthropicLLMService(model: model, apiKey: KeychainService.shared.load(for: "anthropicApiKey"))
 
@@ -131,6 +133,25 @@ class LLMServiceFactory {
             return CloudLLMServiceStub()
             #endif
         }
+    }
+}
+
+// MARK: - MissingAPIKeyLLMService
+
+/// A hosted provider is selected (or synced from another device) but no key is
+/// stored on this device yet.
+private struct MissingAPIKeyLLMService: LLMService {
+    let providerName: String
+    var isAvailable: Bool { false }
+
+    func generateNotulen(
+        transcription: String,
+        systemPrompt: String,
+        notulePrompt: String,
+        outputTemplate: String?,
+        onProgress: @Sendable (String) -> Void
+    ) async throws -> String {
+        throw LLMError.generationFailed("Geen API-sleutel voor \(providerName) op dit apparaat. Vul die in bij Instellingen > Verwerking.")
     }
 }
 

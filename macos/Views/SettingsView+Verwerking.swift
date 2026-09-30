@@ -12,8 +12,8 @@ import SwiftUI
 extension SettingsView {
 
     func verwerkingPage(_ layout: SettingsLayout) -> some View {
-        let specs = SystemSpecs.current()
-        let advice = ProcessingAdvisor.transcription(for: specs)
+        let specs = SystemSpecs.cached
+        let advice = ProcessingAdvisor.cachedTranscription
         return ScrollView(.vertical) {
             HStack(alignment: .top, spacing: layout.gap) {
                 VStack(alignment: .leading, spacing: 18) {
@@ -396,7 +396,7 @@ extension SettingsView {
             case .ollama:                      ollamaConfig
             case .lmStudio:                    lmStudioConfig
             case .appleIntelligence:           appleIntelligenceNote
-            case .openAI, .anthropic:          HostedProviderConfig(provider: activeLocalProvider)
+            case .openAI, .anthropic:          HostedProviderConfig(provider: activeLocalProvider).id(activeLocalProvider)
             case .cloud:                       EmptyView()
             }
         }

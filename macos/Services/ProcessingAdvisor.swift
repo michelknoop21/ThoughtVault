@@ -21,6 +21,9 @@ struct SystemSpecs {
     let totalStorage: Int64?
     let osVersion: String
 
+    /// Read once per launch; hardware does not change while the app runs.
+    static let cached = current()
+
     static func current() -> SystemSpecs {
         let home = URL.homeDirectory
         let values = try? home.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey, .volumeTotalCapacityKey])
@@ -64,6 +67,8 @@ enum ProcessingAdvisor {
 
     /// WhisperKit's own per-chip default, unless this Mac has under 16 GB
     /// memory: then the compact 626 MB version of the same model.
+    static let cachedTranscription = transcription(for: .cached)
+
     static func transcription(for specs: SystemSpecs) -> TranscriptionAdvice {
         var variant = compactModel
         #if canImport(WhisperKit)

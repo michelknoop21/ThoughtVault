@@ -16,6 +16,7 @@ struct HostedProviderConfig: View {
     @State private var connected: Bool?
     @State private var models: [String] = []
     @State private var loaded = false
+    @State private var saveTask: Task<Void, Never>?
     @AppStorage("openAIModel") private var openAIModel = OpenAICompatibleLLMService.openAIDefaultModel
     @AppStorage("anthropicModel") private var anthropicModel = AnthropicLLMService.defaultModel
 
@@ -42,7 +43,8 @@ struct HostedProviderConfig: View {
                     .textFieldStyle(.roundedBorder)
                     .font(TS.Font.bodyMonospaced)
                     .autocorrectionDisabled()
-                    .onChange(of: apiKey) { _, value in save(value) }
+                    .onChange(of: apiKey) { _, value in scheduleSave(value) }
+                    .onSubmit { commit(apiKey) }
 
                     Button { reveal.toggle() } label: { Image(systemName: reveal ? "eye.slash" : "eye") }
                         .buttonStyle(.bordered)
@@ -118,8 +120,22 @@ struct HostedProviderConfig: View {
         }
     }
 
-    private func save(_ value: String) {
+    /// Waits for a pause in typing so partial keys never reach the Keychain
+    /// (and through it iCloud). Return in the field commits immediately.
+    private func scheduleSave(_ value: String) {
+        saveTask?.cancel()
+        saveTask = Task {
+            try? await Task.sleep(for: .seconds(1))
+            guard !Task.isCancelled else { return }
+            commit(value)
+        }
+    }
+
+    private func commit(_ value: String) {
+        saveTask?.cancel()
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Loading the stored key into the field must not rewrite it.
+        guard trimmed != (KeychainService.shared.load(for: keychainKey) ?? "") else { return }
         if trimmed.isEmpty {
             KeychainService.shared.delete(for: keychainKey)
         } else {

@@ -620,7 +620,7 @@ struct SettingsView: View {
             case .ollama:            ollamaConfig
             case .lmStudio:          lmStudioConfig
             case .appleIntelligence: appleIntelligenceNote
-            case .openAI, .anthropic: HostedProviderConfig(provider: activeLocalProvider)
+            case .openAI, .anthropic: HostedProviderConfig(provider: activeLocalProvider).id(activeLocalProvider)
             case .cloud:             EmptyView()
             }
 

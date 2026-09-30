@@ -60,11 +60,25 @@ struct SettingsView: View {
     /// vertically instead of squeezing in a single HStack.
     @State private var isCompact: Bool = false
 
+    #if os(macOS)
+    // Verwerking studio layout (SettingsView+Studio / +Verwerking).
+    @State var settingsTab: SettingsTab = {
+        #if DEBUG
+        if let raw = UserDefaults.standard.string(forKey: "TVDebugSettingsTab"), let tab = SettingsTab(rawValue: raw) { return tab }
+        #endif
+        return .verwerking
+    }()
+    @State var showManualModel: Bool = false
+    @State var showSetupDetails: Bool = false
+    @State var showTranscriptionHelp: Bool = false
+    @State var showNotuleHelp: Bool = false
+    #endif
+
     var body: some View {
         GeometryReader { geo in
             Group {
                 #if os(macOS)
-                tabbedSettings
+                settingsStudio
                 #else
                 iosSettings
                 #endif
@@ -114,33 +128,7 @@ struct SettingsView: View {
     // MARK: - macOS: Tabbed Layout (System Settings-style)
 
     #if os(macOS)
-    private var tabbedSettings: some View {
-        TabView {
-            algemeenTab
-                .tabItem { Label("Algemeen", systemImage: "gear") }
-
-            verwerkingTab
-                .tabItem { Label("Verwerking", systemImage: "waveform") }
-
-            profielTab
-                .tabItem { Label("Profiel", systemImage: "person.crop.circle") }
-
-            agendaTab
-                .tabItem { Label("Agenda", systemImage: "calendar") }
-
-            obsidianTab
-                .tabItem { Label("Obsidian", systemImage: "tray.and.arrow.down") }
-
-            accountTab
-                .tabItem { Label("Account", systemImage: "lock") }
-
-            geavanceerdTab
-                .tabItem { Label("Geavanceerd", systemImage: "slider.horizontal.3") }
-        }
-        .frame(minWidth: 360, minHeight: 520)
-    }
-
-    private var algemeenTab: some View {
+    var algemeenTab: some View {
         cappedForm {
             // Hide "Verbinding" section in local mode — no server to connect to.
             if !isLocalProcessing {
@@ -151,47 +139,34 @@ struct SettingsView: View {
         }
     }
 
-    private var verwerkingTab: some View {
+    var profielTab: some View {
         cappedForm {
-            verwerkingsmodusSection
-            if isLocalProcessing {
-                transcriptieSection
-                lokaleNotulenSection
-            } else {
-                cloudNotulenSection
-            }
             profielenSection
-            spraakherkenningSection
-        }
-    }
-
-    private var profielTab: some View {
-        cappedForm {
             ProfileSettingsView()
             onboardingSection
         }
     }
 
-    private var agendaTab: some View {
+    var agendaTab: some View {
         cappedForm {
             agendaSection
         }
     }
 
-    private var obsidianTab: some View {
+    var obsidianTab: some View {
         cappedForm {
             obsidianSection
         }
     }
 
-    private var accountTab: some View {
+    var accountTab: some View {
         cappedForm {
             accountSection
             feedbackSection
         }
     }
 
-    private var geavanceerdTab: some View {
+    var geavanceerdTab: some View {
         cappedForm {
             permissiesSection
             Section {
@@ -487,30 +462,30 @@ struct SettingsView: View {
 
     // MARK: - Lokale Verwerking (Local Processing)
 
-    @AppStorage("processingMode") private var processingMode: String = ProcessingMode.local.rawValue
-    @AppStorage("localTranscriber") private var localTranscriber: String = LocalTranscriberEngine.whisperKit.rawValue
-    @AppStorage("whisperModel") private var whisperModel: String = LocalTranscriberFactory.defaultWhisperModel
-    @AppStorage(PersonalVocabulary.defaultsKey) private var personalVocabulary: String = ""
-    @AppStorage("ollamaURL") private var ollamaURL: String = "http://localhost:11434"
-    @AppStorage("ollamaModel") private var ollamaModel: String = "llama3.2"
-    @AppStorage("lmStudioURL") private var lmStudioURL: String = "http://localhost:1234"
-    @AppStorage("lmStudioModel") private var lmStudioModel: String = "local-model"
+    @AppStorage("processingMode") var processingMode: String = ProcessingMode.local.rawValue
+    @AppStorage("localTranscriber") var localTranscriber: String = LocalTranscriberEngine.whisperKit.rawValue
+    @AppStorage("whisperModel") var whisperModel: String = LocalTranscriberFactory.defaultWhisperModel
+    @AppStorage(PersonalVocabulary.defaultsKey) var personalVocabulary: String = ""
+    @AppStorage("ollamaURL") var ollamaURL: String = "http://localhost:11434"
+    @AppStorage("ollamaModel") var ollamaModel: String = "llama3.2"
+    @AppStorage("lmStudioURL") var lmStudioURL: String = "http://localhost:1234"
+    @AppStorage("lmStudioModel") var lmStudioModel: String = "local-model"
 
     // WhisperKit model discovery
-    @State private var whisperModels: [String] = []
-    @State private var whisperModelsLoading: Bool = false
+    @State var whisperModels: [String] = []
+    @State var whisperModelsLoading: Bool = false
 
     // API key lives in the Keychain, not UserDefaults. Mirrored into @State for editing.
-    @State private var ollamaApiKey: String = ""
-    @State private var revealApiKey: Bool = false
+    @State var ollamaApiKey: String = ""
+    @State var revealApiKey: Bool = false
     @FocusState private var apiKeyFocused: Bool
 
-    @State private var ollamaTesting: Bool = false
-    @State private var ollamaConnected: Bool? = nil
-    @State private var ollamaModels: [String] = []
-    @State private var ollamaModelsLoading: Bool = false
+    @State var ollamaTesting: Bool = false
+    @State var ollamaConnected: Bool? = nil
+    @State var ollamaModels: [String] = []
+    @State var ollamaModelsLoading: Bool = false
 
-    private static let apiKeyKeychainKey = "ollamaApiKey"
+    static let apiKeyKeychainKey = "ollamaApiKey"
 
     var isLocalProcessing: Bool {
         (ProcessingMode(rawValue: processingMode) ?? .local) == .local
@@ -518,7 +493,7 @@ struct SettingsView: View {
 
     /// True when a key is set but the endpoint is plain HTTP — the bearer would be
     /// withheld for safety, so the key won't actually authenticate.
-    private var apiKeyOverHTTPWarning: Bool {
+    var apiKeyOverHTTPWarning: Bool {
         !ollamaApiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             && !ollamaURL.lowercased().hasPrefix("https://")
     }
@@ -526,14 +501,14 @@ struct SettingsView: View {
     /// The notule provider actually used when processing locally. `.cloud` is
     /// meaningless offline (RecordingViewModel maps it to Ollama), so it is
     /// normalised away here — keeping the UI and the runtime in agreement.
-    private var activeLocalProvider: NotulenProvider {
+    var activeLocalProvider: NotulenProvider {
         let p = NotulenProvider(rawValue: notulenProvider) ?? .ollama
         return p == .cloud ? .ollama : p
     }
 
     /// Picker binding for the local notule provider. Coerces a stale `.cloud`
     /// selection (the legacy default) to `.ollama` so the picker never renders blank.
-    private var localNotuleProviderBinding: Binding<String> {
+    var localNotuleProviderBinding: Binding<String> {
         Binding(
             get: { activeLocalProvider.rawValue },
             set: { notulenProvider = $0 }
@@ -637,12 +612,15 @@ struct SettingsView: View {
                 Text("Ollama").tag(NotulenProvider.ollama.rawValue)
                 Text("LM Studio").tag(NotulenProvider.lmStudio.rawValue)
                 Text("Apple Intelligence").tag(NotulenProvider.appleIntelligence.rawValue)
+                Text("ChatGPT").tag(NotulenProvider.openAI.rawValue)
+                Text("Claude").tag(NotulenProvider.anthropic.rawValue)
             }
 
             switch activeLocalProvider {
             case .ollama:            ollamaConfig
             case .lmStudio:          lmStudioConfig
             case .appleIntelligence: appleIntelligenceNote
+            case .openAI, .anthropic: HostedProviderConfig(provider: activeLocalProvider)
             case .cloud:             EmptyView()
             }
 
@@ -661,7 +639,7 @@ struct SettingsView: View {
         }
     }
 
-    private var localNotuleDescription: String {
+    var localNotuleDescription: String {
         switch activeLocalProvider {
         case .ollama:
             return "Notulen worden lokaal gegenereerd via Ollama. Vul een API-sleutel in voor Ollama Cloud."
@@ -669,6 +647,10 @@ struct SettingsView: View {
             return "Notulen worden lokaal gegenereerd via LM Studio."
         case .appleIntelligence:
             return "Notulen worden gegenereerd met Apple Intelligence op dit apparaat."
+        case .openAI:
+            return "Het transcript wordt naar OpenAI gestuurd. De kosten lopen via je eigen API-account."
+        case .anthropic:
+            return "Het transcript wordt naar Anthropic gestuurd. De kosten lopen via je eigen API-account."
         case .cloud:
             return ""
         }
@@ -696,7 +678,7 @@ struct SettingsView: View {
     // MARK: - LM Studio config
 
     @ViewBuilder
-    private var lmStudioConfig: some View {
+    var lmStudioConfig: some View {
         SettingFieldRow(
             "LM Studio-server",
             hint: "LM Studio draait standaard op http://localhost:1234."
@@ -718,7 +700,7 @@ struct SettingsView: View {
     // MARK: - Apple Intelligence note
 
     @ViewBuilder
-    private var appleIntelligenceNote: some View {
+    var appleIntelligenceNote: some View {
         #if canImport(FoundationModels)
         if #available(macOS 26, iOS 26, *) {
             if let reason = AppleFoundationModelService.unavailabilityReason {
@@ -743,7 +725,7 @@ struct SettingsView: View {
     }
 
     @ViewBuilder
-    private var ollamaConfig: some View {
+    var ollamaConfig: some View {
         // Server URL + Cloud preset
         #if os(iOS)
         let ollamaHint = "Ollama draait niet op iPhone/iPad. Vul de URL van een remote Ollama-server in."
@@ -880,14 +862,14 @@ struct SettingsView: View {
         .padding(.top, TS.Spacing.xs)
     }
 
-    private var ollamaURLField: some View {
+    var ollamaURLField: some View {
         TextField("http://localhost:11434", text: $ollamaURL)
             .textFieldStyle(.roundedBorder)
             .font(TS.Font.bodyMonospaced)
             .autocorrectionDisabled()
     }
 
-    private var ollamaCloudButton: some View {
+    var ollamaCloudButton: some View {
         Button("Cloud") {
             ollamaURL = "https://ollama.com"
             ollamaConnected = nil
@@ -899,11 +881,11 @@ struct SettingsView: View {
 
     // MARK: - API key (Keychain) helpers
 
-    private func loadApiKey() {
+    func loadApiKey() {
         ollamaApiKey = KeychainService.shared.load(for: Self.apiKeyKeychainKey) ?? ""
     }
 
-    private func saveApiKey(_ value: String) {
+    func saveApiKey(_ value: String) {
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmed.isEmpty {
             KeychainService.shared.delete(for: Self.apiKeyKeychainKey)
@@ -912,7 +894,7 @@ struct SettingsView: View {
         }
     }
 
-    private func ollamaService() -> OpenAICompatibleLLMService {
+    func ollamaService() -> OpenAICompatibleLLMService {
         let key = ollamaApiKey.trimmingCharacters(in: .whitespacesAndNewlines)
         return OpenAICompatibleLLMService(
             baseURL: ollamaURL,
@@ -921,7 +903,7 @@ struct SettingsView: View {
         )
     }
 
-    private func testOllamaConnection() async {
+    func testOllamaConnection() async {
         ollamaTesting = true
         ollamaConnected = nil
         let available = await ollamaService().isAvailable
@@ -931,7 +913,7 @@ struct SettingsView: View {
     }
 
     /// Fetches the available model list (local Ollama or Ollama Cloud) for the picker.
-    private func loadOllamaModels() async {
+    func loadOllamaModels() async {
         ollamaModelsLoading = true
         let models = await ollamaService().fetchModels()
         ollamaModels = models
@@ -946,11 +928,11 @@ struct SettingsView: View {
 
     // Source of truth for the local notule provider. Read by RecordingViewModel's
     // processLocally / regenerateNotuleLocally. Selected in `lokaleNotulenSection`.
-    @AppStorage("notulenProvider") private var notulenProvider: String = NotulenProvider.platformDefault.rawValue
+    @AppStorage("notulenProvider") var notulenProvider: String = NotulenProvider.platformDefault.rawValue
 
     // MARK: - Spraakherkenning (Transcription)
 
-    private var spraakherkenningSection: some View {
+    var spraakherkenningSection: some View {
         Section {
             if OnDeviceTranscriber.shared.isAvailable() {
                 Toggle(isOn: $preferOnDeviceTranscription) {
@@ -1519,7 +1501,7 @@ struct SettingsView: View {
     }
 
     /// Fetches the available WhisperKit models for the dropdown picker.
-    private func loadWhisperModels() async {
+    func loadWhisperModels() async {
         whisperModelsLoading = true
         defer { whisperModelsLoading = false }
         if let models = await WhisperKitModelDiscovery.fetchRecommendedModels() {

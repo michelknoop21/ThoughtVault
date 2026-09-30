@@ -107,6 +107,17 @@ class LLMServiceFactory {
             let baseURL = UserDefaults.standard.string(forKey: "lmStudioURL") ?? "http://localhost:1234"
             return OpenAICompatibleLLMService(baseURL: baseURL, model: model)
 
+        case .openAI:
+            let model = UserDefaults.standard.string(forKey: "openAIModel") ?? OpenAICompatibleLLMService.openAIDefaultModel
+            // Large hosted context: chunk only truly huge transcripts.
+            return OpenAICompatibleLLMService(baseURL: OpenAICompatibleLLMService.openAIBaseURL, model: model,
+                                              apiKey: KeychainService.shared.load(for: "openAIApiKey"),
+                                              maxChunkCharacters: 400_000)
+
+        case .anthropic:
+            let model = UserDefaults.standard.string(forKey: "anthropicModel") ?? AnthropicLLMService.defaultModel
+            return AnthropicLLMService(model: model, apiKey: KeychainService.shared.load(for: "anthropicApiKey"))
+
         case .appleIntelligence:
             #if canImport(FoundationModels)
             if #available(macOS 26, iOS 26, *) {
@@ -152,12 +163,17 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
     /// Optional bearer token. Set for hosted endpoints such as Ollama Cloud.
     private let apiKey: String?
 
-    /// Maximum tokens a typical local model handles comfortably (conservative estimate).
-    private static let maxChunkCharacters = 8_000
+    static let openAIBaseURL = "https://api.openai.com"
+    static let openAIDefaultModel = "gpt-5.6-terra"
 
-    init(baseURL: String, model: String, apiKey: String? = nil) {
+    /// Transcript size above which it is summarized in chunks first. The default
+    /// is what a typical local model handles comfortably (conservative estimate).
+    private let maxChunkCharacters: Int
+
+    init(baseURL: String, model: String, apiKey: String? = nil, maxChunkCharacters: Int = 8_000) {
         self.baseURL = baseURL
         self.model = model
+        self.maxChunkCharacters = maxChunkCharacters
         let trimmed = apiKey?.trimmingCharacters(in: .whitespacesAndNewlines)
         self.apiKey = (trimmed?.isEmpty == false) ? trimmed : nil
     }
@@ -245,7 +261,7 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
 
         // If the transcription is long, summarize it in chunks first
         let processedTranscription: String
-        if transcription.count > Self.maxChunkCharacters {
+        if transcription.count > maxChunkCharacters {
             logger.info("OpenAICompatibleLLMService: transcription is long (\(transcription.count) chars), chunking first")
             processedTranscription = try await summarizeInChunks(transcription)
         } else {
@@ -269,7 +285,7 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
     // MARK: - Chunked Summarization
 
     private func summarizeInChunks(_ text: String) async throws -> String {
-        let chunks = splitIntoChunks(text, maxChars: Self.maxChunkCharacters)
+        let chunks = splitIntoChunks(text, maxChars: maxChunkCharacters)
         var summaries: [String] = []
 
         for (index, chunk) in chunks.enumerated() {
@@ -384,136 +400,7 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
     }
 }
 
-// MARK: - AppleFoundationModelService
-
-#if canImport(FoundationModels)
-import FoundationModels
-
-/// LLM service implementation using Apple's on-device Foundation Models framework.
-/// Requires macOS 26+ or iOS 26+.
-@available(macOS 26, iOS 26, *)
-final class AppleFoundationModelService: LLMService, @unchecked Sendable {
-
-    // The on-device model has a 4,096-token context window shared by instructions,
-    // prompt AND output (~3-4 chars/token). Keep every request's variable part small.
-    private static let maxChunkCharacters = 6_000
-    private static let maxFinalTranscriptCharacters = 5_000
-
-    /// Compact format guidance instead of the profile's full HTML template —
-    /// the real templates (4-10k chars) alone would overflow the context window.
-    private static let compactTemplate = """
-    Gebruik h1 voor een specifieke titel, h2 voor de secties en p/ul/li voor de inhoud.
-    Laat secties weg wanneer de transcriptie er geen concrete inhoud voor bevat.
-    """
-
-    // MARK: - Availability
-
-    var isAvailable: Bool {
-        get async { Self.unavailabilityReason == nil }
-    }
-
-    // MARK: - Generate Notulen
-
-    func generateNotulen(
-        transcription: String,
-        systemPrompt: String,
-        notulePrompt: String,
-        outputTemplate: String?,
-        onProgress: @Sendable (String) -> Void
-    ) async throws -> String {
-
-        // Refuse early with a clear reason rather than letting LanguageModelSession
-        // fail opaquely when Apple Intelligence is off, unsupported, or still loading.
-        if let reason = Self.unavailabilityReason {
-            throw LLMError.generationFailed(reason)
-        }
-
-        // Compress long transcriptions until they fit the final request.
-        // ponytail: max 3 reduce-passes; genoeg voor uren transcript (6000^n groei).
-        var processedTranscription = transcription
-        var passes = 0
-        while processedTranscription.count > Self.maxFinalTranscriptCharacters, passes < 3 {
-            logger.info("AppleFoundationModelService: transcript \(processedTranscription.count) chars, reduce pass \(passes + 1)")
-            processedTranscription = try await summarizeInChunks(processedTranscription)
-            passes += 1
-        }
-
-        let userContent = buildNotuleUserContent(
-            notulePrompt: notulePrompt,
-            transcription: processedTranscription,
-            outputTemplate: Self.compactTemplate
-        )
-
-        let instructions = systemPrompt.isEmpty
-            ? "Je bent een professionele notulist die vergaderingen nauwkeurig samenvat in het Nederlands."
-            : systemPrompt
-
-        let session = LanguageModelSession(instructions: instructions)
-        var fullText = ""
-        var lastReportedLength = 0
-
-        // Stream the response token by token; onProgress receives each new chunk
-        for try await snapshot in session.streamResponse(to: userContent) {
-            fullText = snapshot.content
-            let newChunk = String(fullText.dropFirst(lastReportedLength))
-            if !newChunk.isEmpty {
-                onProgress(newChunk)
-                lastReportedLength = fullText.count
-            }
-        }
-
-        if fullText.isEmpty {
-            throw LLMError.emptyResponse
-        }
-
-        return fullText
-    }
-
-    // MARK: - Chunked Summarization
-
-    private func summarizeInChunks(_ text: String) async throws -> String {
-        let chunks = splitIntoChunks(text, maxChars: Self.maxChunkCharacters)
-        var summaries: [String] = []
-
-        let summaryInstructions = "Je bent een assistent die transcripties samenvat. Bewaar alle belangrijke informatie, namen, besluiten en actiepunten."
-
-        for (index, chunk) in chunks.enumerated() {
-            try Task.checkCancellation()
-            logger.info("AppleFoundationModelService: summarizing chunk \(index + 1)/\(chunks.count)")
-            let session = LanguageModelSession(instructions: summaryInstructions)
-            let response = try await session.respond(
-                to: "Vat dit deel van de transcriptie samen:\n\n\(chunk)"
-            )
-            summaries.append(response.content)
-        }
-
-        return summaries.joined(separator: "\n\n")
-    }
-
-    // MARK: - Helpers
-
-    private func splitIntoChunks(_ text: String, maxChars: Int) -> [String] {
-        var chunks: [String] = []
-        var current = ""
-        let sentences = text.components(separatedBy: ". ")
-
-        for sentence in sentences {
-            let candidate = current.isEmpty ? sentence : current + ". " + sentence
-            if candidate.count > maxChars && !current.isEmpty {
-                chunks.append(current)
-                current = sentence
-            } else {
-                current = candidate
-            }
-        }
-
-        if !current.isEmpty {
-            chunks.append(current)
-        }
-
-        return hardSplitOversizedChunks(chunks.isEmpty ? [text] : chunks, maxChars: maxChars)
-    }
-}
+// MARK: - Chunk helpers
 
 /// Transcriptions without ". " separators produce one giant chunk that overflows
 /// the model's context window (hang or empty output). Hard-split any chunk that
@@ -530,28 +417,3 @@ func hardSplitOversizedChunks(_ chunks: [String], maxChars: Int) -> [String] {
     }
     return result
 }
-
-// MARK: - Apple Intelligence availability
-
-@available(macOS 26, iOS 26, *)
-extension AppleFoundationModelService {
-    /// Single source of truth for whether on-device Apple Intelligence can run.
-    /// `nil` means ready; otherwise a user-facing Dutch reason it cannot.
-    /// Consumed by `isAvailable`, the generation guard, and SettingsView's status note.
-    static var unavailabilityReason: String? {
-        switch SystemLanguageModel.default.availability {
-        case .available:
-            return nil
-        case .unavailable(.appleIntelligenceNotEnabled):
-            return "Schakel Apple Intelligence in via Systeeminstellingen."
-        case .unavailable(.deviceNotEligible):
-            return "Dit apparaat ondersteunt Apple Intelligence niet."
-        case .unavailable(.modelNotReady):
-            return "Apple Intelligence-model wordt nog gedownload. Probeer later opnieuw."
-        case .unavailable:
-            return "Apple Intelligence is momenteel niet beschikbaar."
-        }
-    }
-}
-
-#endif

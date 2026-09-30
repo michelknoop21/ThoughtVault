@@ -45,6 +45,10 @@
 		AB000301 /* ObsidianService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000301 /* ObsidianService.swift */; };
 		AB000401 /* VaultFolderStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000401 /* VaultFolderStore.swift */; };
 		AA000014 /* LLMService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000014 /* LLMService.swift */; };
+		AA0000K4 /* ProcessingAdvisor.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000K4 /* ProcessingAdvisor.swift */; };
+		AA0000K3 /* WhisperModelStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000K3 /* WhisperModelStore.swift */; };
+		AA0000K2 /* AppleFoundationModelService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000K2 /* AppleFoundationModelService.swift */; };
+		AA0000K1 /* AnthropicLLMService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000K1 /* AnthropicLLMService.swift */; };
 		AA000015 /* NetworkMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000015 /* NetworkMonitor.swift */; };
 		AA000016 /* OfflineQueue.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000016 /* OfflineQueue.swift */; };
 		AA000017 /* OnDeviceTranscriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000017 /* OnDeviceTranscriber.swift */; };
@@ -63,6 +67,10 @@
 		AA000029 /* ProfilesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000029 /* ProfilesView.swift */; };
 		AA000030 /* RecordingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000030 /* RecordingView.swift */; };
 		AA000031 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000031 /* SettingsView.swift */; };
+		AA0000K8 /* SettingsView+VerwerkingSide.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000K8 /* SettingsView+VerwerkingSide.swift */; };
+		AA0000K7 /* SettingsView+Verwerking.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000K7 /* SettingsView+Verwerking.swift */; };
+		AA0000K6 /* SettingsView+Studio.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000K6 /* SettingsView+Studio.swift */; };
+		AA0000K5 /* HostedProviderConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000K5 /* HostedProviderConfig.swift */; };
 		AA000032 /* TranscriptsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000032 /* TranscriptsView.swift */; };
 		AA000033 /* OnboardingViewiOSStub.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000033 /* OnboardingViewiOSStub.swift */; };
 		AA000034 /* FloatingWidgetPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000034 /* FloatingWidgetPanel.swift */; };
@@ -169,6 +177,10 @@
 		FB000301 /* ObsidianService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ObsidianService.swift; sourceTree = "<group>"; };
 		FB000401 /* VaultFolderStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VaultFolderStore.swift; sourceTree = "<group>"; };
 		FA000014 /* LLMService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMService.swift; sourceTree = "<group>"; };
+		FA0000K4 /* ProcessingAdvisor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessingAdvisor.swift; sourceTree = "<group>"; };
+		FA0000K3 /* WhisperModelStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhisperModelStore.swift; sourceTree = "<group>"; };
+		FA0000K2 /* AppleFoundationModelService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleFoundationModelService.swift; sourceTree = "<group>"; };
+		FA0000K1 /* AnthropicLLMService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnthropicLLMService.swift; sourceTree = "<group>"; };
 		FA000015 /* NetworkMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkMonitor.swift; sourceTree = "<group>"; };
 		FA000016 /* OfflineQueue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineQueue.swift; sourceTree = "<group>"; };
 		FA000017 /* OnDeviceTranscriber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnDeviceTranscriber.swift; sourceTree = "<group>"; };
@@ -187,6 +199,10 @@
 		FA000029 /* ProfilesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfilesView.swift; sourceTree = "<group>"; };
 		FA000030 /* RecordingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingView.swift; sourceTree = "<group>"; };
 		FA000031 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		FA0000K8 /* SettingsView+VerwerkingSide.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SettingsView+VerwerkingSide.swift"; sourceTree = "<group>"; };
+		FA0000K7 /* SettingsView+Verwerking.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SettingsView+Verwerking.swift"; sourceTree = "<group>"; };
+		FA0000K6 /* SettingsView+Studio.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SettingsView+Studio.swift"; sourceTree = "<group>"; };
+		FA0000K5 /* HostedProviderConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostedProviderConfig.swift; sourceTree = "<group>"; };
 		FA000032 /* TranscriptsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptsView.swift; sourceTree = "<group>"; };
 		FA000033 /* OnboardingViewiOSStub.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingViewiOSStub.swift; sourceTree = "<group>"; };
 		FA000034 /* FloatingWidgetPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloatingWidgetPanel.swift; sourceTree = "<group>"; };
@@ -342,6 +358,10 @@
 				FA000058 /* GoogleAuthService.swift */,
 				FA000013 /* KeychainService.swift */,
 				FA000014 /* LLMService.swift */,
+				FA0000K4 /* ProcessingAdvisor.swift */,
+				FA0000K3 /* WhisperModelStore.swift */,
+				FA0000K2 /* AppleFoundationModelService.swift */,
+				FA0000K1 /* AnthropicLLMService.swift */,
 				FA000062 /* LocalTranscriptStore.swift */,
 				FA000071 /* PersonDirectoryService.swift */,
 				FA000063 /* LocalTranscriber.swift */,
@@ -404,6 +424,10 @@
 				FA0000S2 /* RecordingView+Inspector.swift */,
 				FA0000S1 /* RecordingView+Studio.swift */,
 				FA000031 /* SettingsView.swift */,
+				FA0000K8 /* SettingsView+VerwerkingSide.swift */,
+				FA0000K7 /* SettingsView+Verwerking.swift */,
+				FA0000K6 /* SettingsView+Studio.swift */,
+				FA0000K5 /* HostedProviderConfig.swift */,
 				FA000070 /* ProfileSettingsView.swift */,
 				FA000072 /* PeopleDirectoryView.swift */,
 				FA000073 /* PersonEditView.swift */,
@@ -621,6 +645,10 @@
 				AB000301 /* ObsidianService.swift in Sources */,
 				AB000401 /* VaultFolderStore.swift in Sources */,
 				AA000014 /* LLMService.swift in Sources */,
+				AA0000K4 /* ProcessingAdvisor.swift in Sources */,
+				AA0000K3 /* WhisperModelStore.swift in Sources */,
+				AA0000K2 /* AppleFoundationModelService.swift in Sources */,
+				AA0000K1 /* AnthropicLLMService.swift in Sources */,
 				AA000015 /* NetworkMonitor.swift in Sources */,
 				AA000016 /* OfflineQueue.swift in Sources */,
 				AA000017 /* OnDeviceTranscriber.swift in Sources */,
@@ -660,6 +688,10 @@
 				AA0000S2 /* RecordingView+Inspector.swift in Sources */,
 				AA0000S1 /* RecordingView+Studio.swift in Sources */,
 				AA000031 /* SettingsView.swift in Sources */,
+				AA0000K8 /* SettingsView+VerwerkingSide.swift in Sources */,
+				AA0000K7 /* SettingsView+Verwerking.swift in Sources */,
+				AA0000K6 /* SettingsView+Studio.swift in Sources */,
+				AA0000K5 /* HostedProviderConfig.swift in Sources */,
 				AA000032 /* TranscriptsView.swift in Sources */,
 				AA000033 /* OnboardingViewiOSStub.swift in Sources */,
 				AA000034 /* FloatingWidgetPanel.swift in Sources */,

@@ -194,6 +194,12 @@ struct ContentView: View {
                 Task { await recordingVM.startRecording() }
                 callAlertMeeting = nil
             }
+            #if DEBUG
+            // Screenshot hook: open a tab without keystrokes (`-TVDebugTab settings`).
+            .task {
+                if let raw = UserDefaults.standard.string(forKey: "TVDebugTab"), let tab = AppTab(rawValue: raw) { selectedTab = tab }
+            }
+            #endif
             .onReceive(NotificationCenter.default.publisher(for: .videoCallDetected)) { notification in
                 guard let event = notification.userInfo?["event"] as? CalendarEvent else { return }
                 guard !callAlertDismissed.contains(event.id) else { return }

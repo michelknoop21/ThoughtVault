@@ -146,6 +146,8 @@ enum NotulenProvider: String, Codable, Sendable, CaseIterable, Identifiable {
     case ollama         // Local Ollama instance
     case lmStudio       // Local LM Studio instance
     case appleIntelligence  // Apple Intelligence (macOS 26+ / iOS 26+)
+    case openAI         // Hosted, user's own API key
+    case anthropic      // Hosted, user's own API key
 
     var id: String { rawValue }
 
@@ -156,7 +158,24 @@ enum NotulenProvider: String, Codable, Sendable, CaseIterable, Identifiable {
         case .ollama:            return "Ollama (lokaal)"
         case .lmStudio:          return "LM Studio (lokaal)"
         case .appleIntelligence: return "Apple Intelligence"
+        case .openAI:            return "ChatGPT"
+        case .anthropic:         return "Claude"
         }
+    }
+
+    /// Keychain key of the user's own API key for hosted providers; nil for the rest.
+    var apiKeyKeychainKey: String? {
+        switch self {
+        case .openAI:    return "openAIApiKey"
+        case .anthropic: return "anthropicApiKey"
+        default:         return nil
+        }
+    }
+
+    /// True when a hosted provider has an API key stored.
+    var hasAPIKey: Bool {
+        guard let key = apiKeyKeychainKey else { return false }
+        return !(KeychainService.shared.load(for: key) ?? "").isEmpty
     }
 
     /// Default local-mode provider for the current platform.

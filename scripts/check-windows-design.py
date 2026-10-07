@@ -8,7 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 def check(root):
-    proof = json.loads((root / 'docs/design/windows/verification.json').read_text())
+    proof = json.loads((root / 'docs/design/windows/verification.json').read_text(encoding='utf-8'))
     if proof.get('status') != 'reviewed':
         raise ValueError('Windows visual review is missing; do not publish this release')
     required = {'windows/src/pages/HomePage.tsx', 'windows/src/pages/RecordingPage.tsx',

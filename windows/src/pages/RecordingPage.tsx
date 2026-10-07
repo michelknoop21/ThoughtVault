@@ -700,7 +700,7 @@ function ActiveState({
 
       {/* Waveform */}
       <div className="card card-static waveform-card">
-        <WaveformVisualizer levelsRef={audioLevelsRef} isActive={!isPaused} />
+        <WaveformVisualizer levelsRef={audioLevelsRef} isActive={!isPaused} height={240} />
       </div>
 
       {/* Mic button — active recording: toggles pause/resume */}

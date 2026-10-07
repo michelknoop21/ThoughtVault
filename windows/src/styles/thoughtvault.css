@@ -77,6 +77,19 @@
 .thoughtvault-recording .active-state { max-width: 1000px; margin: auto; padding: 65px 35px 40px; }
 .thoughtvault-recording .active-state .recording-timer { font-size: 85px; font-weight: 300; }
 .thoughtvault-recording .active-state .waveform-card { background: transparent; border: 0; box-shadow: none; width: 100%; padding: 0; }
-.thoughtvault-recording .active-state .waveform-card canvas { height: 240px !important; }
 @media (max-width:1000px) { .thoughtvault-recording .idle-state { grid-template-columns: minmax(0,1fr) 270px; } .thoughtvault-record-workspace { padding-inline: 20px; } }
 @media (max-width:780px) { .thoughtvault-recording .idle-state { display: flex; flex-direction: column; } .thoughtvault-record-workspace { min-height: 500px; } .thoughtvault-record-inspector { border-left: 0; border-top: 1px solid #303858; } }
+
+.thoughtvault-home-side { padding-top: 24px; }
+@media (min-width:1440px) {
+  .thoughtvault-home-content { display: grid; grid-template-columns: minmax(0,1fr) 295px; column-gap: 23px; }
+  .thoughtvault-home-toolbar { grid-column: 1 / -1; }
+  .thoughtvault-welcome { grid-column: 1; grid-row: 2; }
+  .thoughtvault-new-recording { grid-column: 1; grid-row: 3; }
+  .thoughtvault-home-recent { grid-column: 1; grid-row: 4; padding-top: 31px; }
+  .thoughtvault-home-side { grid-column: 2; grid-row: 2 / 5; padding-top: 21px; }
+  .thoughtvault-home-side section { padding: 22px 20px; margin-bottom: 20px; background: #15182b; border: 1px solid #33314c; border-radius: 14px; }
+  .thoughtvault-quick-capture { flex-direction: column; align-items: stretch; }
+  .thoughtvault-quick-capture h2 { margin: 0 0 8px; }
+  .thoughtvault-home .thoughtvault-tagline { display: none; }
+}

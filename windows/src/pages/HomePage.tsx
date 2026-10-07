@@ -148,12 +148,7 @@ export function HomePage() {
         </div>
         <aside className="thoughtvault-record-tip"><MicRecord24Regular /><h3>Alleen audio opnemen</h3><p>Kies je opnamebron en profiel. Je start de opname op het volgende scherm.</p><hr /><strong>Tip</strong><p>Spreek natuurlijk. Je kunt op elk moment pauzeren.</p></aside>
       </section>
-      <section className="thoughtvault-quick-capture" aria-label="Snel vastleggen">
-        <h2>Snel vastleggen</h2>
-        <button className="btn btn-secondary" onClick={() => handleQuickStart("microphone")}><MicRecord24Regular />Alleen audio opnemen</button>
-        <button className="btn btn-secondary" onClick={() => handleQuickStart("combined")}><VideoChat24Regular />Gesprek opnemen</button>
-      </section>
-
+      <aside className="thoughtvault-home-side">
       {/* Upcoming meetings */}
       {upcomingEvents.length > 0 && (
         <section>
@@ -184,8 +179,16 @@ export function HomePage() {
         </section>
       )}
 
+      <section className="thoughtvault-quick-capture" aria-label="Snel vastleggen">
+        <h2>Snel vastleggen</h2>
+        <button className="btn btn-secondary" onClick={() => handleQuickStart("microphone")}><MicRecord24Regular />Alleen audio opnemen</button>
+        <button className="btn btn-secondary" onClick={() => handleQuickStart("combined")}><VideoChat24Regular />Gesprek opnemen</button>
+      </section>
+
+      </aside>
+
       {/* Recent sessions */}
-      <section style={{ flex: 1, minHeight: 0 }} className="flex-col">
+      <section style={{ flex: 1, minHeight: 0 }} className="flex-col thoughtvault-home-recent">
         <div className="flex-row justify-between" style={{ alignItems: "center" }}>
           <p className="section-label" style={{ margin: 0 }}>Recente notities</p>
           {isLoading && <span className="text-caption" style={{ color: "var(--fill-accent-default)" }}>Laden...</span>}

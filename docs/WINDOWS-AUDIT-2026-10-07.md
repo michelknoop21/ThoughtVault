@@ -92,7 +92,7 @@ Uitvoering in `/tmp/thoughtvault-brand-windows`, gebaseerd op de daadwerkelijk g
 
 | Bevinding | Herstel | Bewijs / resterende controle |
 | --- | --- | --- |
-| Ontbrekende MSVCP140.dll | Rust/CMake configuratie voor statische CRT; CI controleert PE-afhankelijkheden. Optionele officiële runtime-installer voor bestaande installaties. | Eerste private CI-kandidaat: PE toont geen losse VC++ runtime; upgrade, twee starts en behoud van opgeslagen notulen geslaagd. Laatste bronref wordt opnieuw gebouwd. |
+| Ontbrekende MSVCP140.dll | Rust/CMake configuratie voor statische CRT; CI controleert PE-afhankelijkheden. Optionele officiële runtime-installer voor bestaande installaties. | Eerste private CI-kandidaat: PE toont geen losse VC++ runtime; upgrade, twee starts en behoud van opgeslagen notulen geslaagd. Definitieve Windows-bron bf331ae: dezelfde gates geslaagd. |
 | Letterlijke b-tags | Gedeelde veilige tekstnormalisatie bij transcriptie en legacy-inlezen. | Regressietest; overige tekst blijft inert, geen HTML-uitvoering. |
 | Decimale duur | Eén formatter met gehele seconden en bescherming tegen ongeldige waarden. | Regressietest. |
 | Engelse providerfouten | Nederlandse herstelmeldingen voor authenticatie, limiet en verbinding; transcript behouden. | Tests, inclusief hergebruik van bestaande transcriptie bij opnieuw proberen. |
@@ -108,7 +108,7 @@ Uitvoering in `/tmp/thoughtvault-brand-windows`, gebaseerd op de daadwerkelijk g
 | Interne importnaam | Oorspronkelijke bestandsnaam doorgeven; onderscheidende opnametitels. | Pipelinebron en frontendbuild; native herimport nog controleren. |
 | Herstelbanner weg | Mislukte/onafgeronde taakmetadata persistent; onderbroken werk wordt na herstart herstelbaar. | Regressietest met herladen store; transcriptinhoud niet in extra herstelmetadata opgeslagen. |
 | Witte niveau-indicator | Donkere metertrack en paarse actieve waarde. | WebView2 bij stilte/pauze nog controleren. |
-| MCP 502 | Lokale server zonder ThoughtVault-account op Windows én macOS. Oude accountbackend niet hersteld. | macOS transporttest geslaagd; Windows native transport nog bouwen/testen. |
+| MCP 502 | Lokale server zonder ThoughtVault-account op Windows én macOS. Oude accountbackend niet hersteld. | macOS HTTP/SDK en signed-app-host tests geslaagd; Windows native build en 22 tests geslaagd. Live Windows-clientcontrole blijft open. |
 
 Geslaagde lokale controles: 58 Windows frontendtests in 23 bestanden, TypeScript/Vite productiebuild, ondertekende macOS Debugbuild, 7 macOS AIConnectionTests. `python3 scripts/test-local-mcp.py` compileert de daadwerkelijke macOS-servercode met synthetische handlers en controleert initialize, 7 read-tools, aanroep, weigering van opname zonder recht, onbekende tool, verkeerde sleutel, Origin, Host, Transfer-Encoding, dubbele headers en ongeldige argumenten. Ook de geïnstalleerde MCP SDK heeft initialize, list_tools, call_tool en de weigering van opname zonder recht succesvol doorlopen. Dit bewijst geen live Claude/ChatGPT-sessie of verwerking van privégegevens.
 
@@ -119,3 +119,7 @@ Geen designregels onderdrukt. De historische landing.css hookbevinding valt buit
 Eerste native controle: [CI 37679470529](https://github.com/michelknoop21/ThoughtVault/actions/runs/37679470529), bron `f8b04d4`, 20 native tests geslaagd en installatiebewijs in het private artifact. Laatste broncode bevat aanvullende MCP-requestbinding/protocolcontroles en duidelijke foutstatus bij mislukte intrekking. macOS MCP-opslag bewaart alleen eenvoudige opmaak en tabelstructuur, zonder uitvoerbare HTML of externe resources; regressietest geslaagd.
 
 macOS: aanvullende test `testLocalMCPInsideSignedAppHost` slaagt: listener en HTTP-aanroep werken vanuit het ondertekende app-testproces met synthetische handler; opname zonder recht wordt geweigerd. Er wordt geen MCP-sleutel opgeslagen door deze test. Latere zichtbare kandidaatcontrole is geblokkeerd: de bedieningstool meldt expliciet dat de Mac vergrendeld is en automatisch ontgrendelen niet lukt; handmatig ontgrendelen vereist.
+
+Definitieve Windows-kandidaat: [CI 37683601634](https://github.com/michelknoop21/ThoughtVault/actions/runs/37683601634), bron `bf331ae4707ea392a96988bd361b1a0cd1ebbf38`, 58 frontendtests en 22 native tests geslaagd. PE-runtimecontrole, MSI-upgrade, twee starts en behoud van opgeslagen notulen geslaagd. Installer `ThoughtVault_1.0.261_x64.msi`, SHA-256 `757f9862f8716292193113bbb6581aedb5ea9cd76ca7650b44bf998db393cf19`. Latere wijzigingen betreffen alleen macOS en documentatie; Windows-bron is identiek aan deze kandidaat. Geen openbare publicatie uitgevoerd.
+
+macOS export past veilige opmaak ook toe op eerder opgeslagen HTML. Alle 7 AIConnectionTests slagen na deze wijziging; codesign-verificatie van de gebouwde Debug-app slaagt. Dit bewijst nog geen zichtbare pairing, fysieke opname of installatie bij de gebruiker.

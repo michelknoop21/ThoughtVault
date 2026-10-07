@@ -304,7 +304,8 @@ final class AIConnectionViewModel {
             return ["id": record.taskId, "revision": try Self.revision(Self.snapshot(record))]
         }
         if tool == "export_minutes" {
-            let html = record.notuleHtml
+            let savedStyle = record.minutesStyleJSON.flatMap { $0.data(using: .utf8) }.flatMap { try? JSONDecoder().decode(MinutesStyle.self, from: $0) }
+            let html = try (savedStyle ?? MinutesStyle()).apply(to: record.notuleHtml)
             switch args["format"] as? String {
             case "pdf", "html":
                 let style = record.minutesStyleJSON.flatMap { $0.data(using: .utf8) }.flatMap { try? JSONSerialization.jsonObject(with: $0) }

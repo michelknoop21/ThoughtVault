@@ -5,12 +5,22 @@
 // use from the official whisper.cpp model repo into the app data dir.
 
 use std::path::PathBuf;
+use std::sync::Mutex;
+use tokio::sync::watch;
+
+#[derive(Default)]
+pub struct ModelDownloadControl {
+    active: Mutex<Option<(String, watch::Sender<bool>)>>,
+}
 use tauri::{AppHandle, Emitter, Manager};
 
 /// Maps a short model id (as stored in settings) to its GGML filename.
 /// Mirrors the model picker in the Windows Settings UI.
-fn model_filename(model_id: &str) -> String {
-    format!("ggml-{}.bin", model_id)
+fn model_filename(model_id: &str) -> Result<String, String> {
+    if !matches!(model_id, "small" | "medium" | "large-v3") {
+        return Err("Onbekend transcriptiemodel".to_string());
+    }
+    Ok(format!("ggml-{}.bin", model_id))
 }
 
 fn models_dir(app: &AppHandle) -> Result<PathBuf, String> {
@@ -24,7 +34,7 @@ fn models_dir(app: &AppHandle) -> Result<PathBuf, String> {
 }
 
 fn model_path(app: &AppHandle, model_id: &str) -> Result<PathBuf, String> {
-    Ok(models_dir(app)?.join(model_filename(model_id)))
+    Ok(models_dir(app)?.join(model_filename(model_id)?))
 }
 
 #[derive(serde::Serialize)]
@@ -55,69 +65,101 @@ pub async fn whisper_model_status(
 /// Downloads the GGML model with progress events on `whisper-download-progress`.
 /// No-op (returns immediately) if the model already exists.
 #[tauri::command]
-pub async fn download_whisper_model(app: AppHandle, model_id: String) -> Result<String, String> {
+pub async fn download_whisper_model(
+    app: AppHandle,
+    model_id: String,
+    control: tauri::State<'_, ModelDownloadControl>,
+) -> Result<String, String> {
     use futures_util::StreamExt;
     use tokio::io::AsyncWriteExt;
-
     let dest = model_path(&app, &model_id)?;
-    if let Ok(m) = std::fs::metadata(&dest) {
-        if m.is_file() && m.len() > 0 {
-            return Ok(dest.to_string_lossy().to_string());
-        }
+    if dest.metadata().map(|m| m.is_file() && m.len() > 0).unwrap_or(false) {
+        return Ok(dest.to_string_lossy().to_string());
     }
-
-    let url = format!(
-        "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/{}",
-        model_filename(&model_id)
-    );
-
-    let resp = reqwest::get(&url)
-        .await
-        .map_err(|e| format!("Download mislukt: {}", e))?;
-    if !resp.status().is_success() {
-        return Err(format!("Download mislukt: HTTP {}", resp.status()));
+    let (cancel, mut cancelled) = watch::channel(false);
+    {
+        let mut active = control.active.lock().map_err(|e| e.to_string())?;
+        if active.is_some() { return Err("Er wordt al een transcriptiemodel gedownload".to_string()); }
+        *active = Some((model_id.clone(), cancel));
     }
-    let total = resp.content_length().unwrap_or(0);
-
-    // Stream to a temp file so a half-finished download never looks complete.
     let tmp = dest.with_extension("bin.part");
-    let mut file = tokio::fs::File::create(&tmp)
-        .await
-        .map_err(|e| format!("Kan bestand niet aanmaken: {}", e))?;
-
-    let mut downloaded: u64 = 0;
-    let mut last_emit: u64 = 0;
-    let mut stream = resp.bytes_stream();
-    while let Some(chunk) = stream.next().await {
-        let chunk = chunk.map_err(|e| format!("Downloadfout: {}", e))?;
-        file.write_all(&chunk)
-            .await
-            .map_err(|e| format!("Schrijffout: {}", e))?;
-        downloaded += chunk.len() as u64;
-        // Throttle events to ~every 2 MB to avoid flooding the UI thread.
-        if downloaded - last_emit >= 2_000_000 || downloaded == total {
-            last_emit = downloaded;
-            let pct = if total > 0 {
-                (downloaded as f64 / total as f64 * 100.0).round() as u32
-            } else {
-                0
+    let result = async {
+        let url = format!("https://huggingface.co/ggerganov/whisper.cpp/resolve/main/{}", model_filename(&model_id)?);
+        let client = reqwest::Client::builder().timeout(std::time::Duration::from_secs(3600)).build().map_err(|e| e.to_string())?;
+        let resp = tokio::select! {
+            _ = cancelled.changed() => return Err("Download geannuleerd".to_string()),
+            result = client.get(url).send() => result.map_err(|e| format!("Download mislukt: {e}"))?,
+        };
+        if !resp.status().is_success() { return Err(format!("Download mislukt: HTTP {}", resp.status())); }
+        let total = resp.content_length().unwrap_or(0);
+        let mut file = tokio::fs::File::create(&tmp).await.map_err(|e| e.to_string())?;
+        let mut downloaded: u64 = 0;
+        let mut last_emit: u64 = 0;
+        let mut stream = resp.bytes_stream();
+        loop {
+            let chunk = tokio::select! {
+                _ = cancelled.changed() => return Err("Download geannuleerd".to_string()),
+                chunk = stream.next() => chunk,
             };
-            let _ = app.emit(
-                "whisper-download-progress",
-                serde_json::json!({
-                    "model": model_id,
-                    "downloaded": downloaded,
-                    "total": total,
-                    "pct": pct,
-                }),
-            );
+            let Some(chunk) = chunk else { break; };
+            let chunk = chunk.map_err(|e| format!("Downloadfout: {e}"))?;
+            file.write_all(&chunk).await.map_err(|e| e.to_string())?;
+            downloaded += chunk.len() as u64;
+            if downloaded - last_emit >= 2_000_000 || downloaded == total {
+                last_emit = downloaded;
+                let pct = if total > 0 { (downloaded as f64 / total as f64 * 100.0).round().min(100.0) as u32 } else { 0 };
+                let _ = app.emit("whisper-download-progress", serde_json::json!({ "model": model_id, "downloaded": downloaded, "total": total, "pct": pct }));
+            }
         }
-    }
-    file.flush().await.map_err(|e| e.to_string())?;
-    drop(file);
+        if downloaded == 0 || (total > 0 && downloaded != total) { return Err("Het model is niet volledig gedownload. Probeer opnieuw.".to_string()); }
+        if *cancelled.borrow() { return Err("Download geannuleerd".to_string()); }
+        file.flush().await.map_err(|e| e.to_string())?;
+        drop(file);
+        tokio::fs::rename(&tmp, &dest).await.map_err(|e| e.to_string())?;
+        Ok(dest.to_string_lossy().to_string())
+    }.await;
+    if result.is_err() { let _ = tokio::fs::remove_file(&tmp).await; }
+    *control.active.lock().map_err(|e| e.to_string())? = None;
+    let _ = app.emit("whisper-download-finished", serde_json::json!({ "model": model_id, "error": result.as_ref().err() }));
+    result
+}
 
-    std::fs::rename(&tmp, &dest).map_err(|e| format!("Kan model niet plaatsen: {}", e))?;
-    Ok(dest.to_string_lossy().to_string())
+#[tauri::command]
+pub fn whisper_download_status(control: tauri::State<'_, ModelDownloadControl>) -> Result<Option<String>, String> {
+    Ok(control.active.lock().map_err(|e| e.to_string())?.as_ref().map(|(model, _)| model.clone()))
+}
+
+#[tauri::command]
+pub async fn cancel_whisper_download(control: tauri::State<'_, ModelDownloadControl>) -> Result<(), String> {
+    if let Some((_, cancel)) = control.active.lock().map_err(|e| e.to_string())?.as_ref() {
+        let _ = cancel.send(true);
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn remove_whisper_model(app: AppHandle, model_id: String, control: tauri::State<'_, ModelDownloadControl>) -> Result<(), String> {
+    let path = model_path(&app, &model_id)?;
+    if control.active.lock().map_err(|e| e.to_string())?.is_some() { return Err("Wacht tot de download klaar is".to_string()); }
+    match tokio::fs::remove_file(path).await {
+        Ok(()) => Ok(()),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        Err(e) => Err(e.to_string()),
+    }
+}
+
+#[tauri::command]
+pub async fn show_whisper_model(app: AppHandle, model_id: String) -> Result<(), String> {
+    let path = model_path(&app, &model_id)?;
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("explorer.exe").arg(format!("/select,{}", path.display())).spawn().map_err(|e| e.to_string())?;
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        std::process::Command::new("open").arg("-R").arg(path).spawn().map_err(|e| e.to_string())?;
+    }
+    Ok(())
 }
 
 /// Transcribes a recorded WAV fully on-device. Emits coarse progress (0-100) on
@@ -158,7 +200,7 @@ fn run_whisper(app: AppHandle, model: &PathBuf, wav_path: &str) -> Result<String
     let total_samples = reader.len() as usize;
 
     let ctx = WhisperContext::new_with_params(
-        &model.to_string_lossy(),
+        model,
         WhisperContextParameters::default(),
     )
     .map_err(|e| format!("Model laden mislukt: {}", e))?;
@@ -210,13 +252,8 @@ fn run_whisper(app: AppHandle, model: &PathBuf, wav_path: &str) -> Result<String
             .full(params, &float_buf)
             .map_err(|e| format!("Transcriptie mislukt: {}", e))?;
 
-        let num_segments = state
-            .full_n_segments()
-            .map_err(|e| format!("Segmenten lezen mislukt: {}", e))?;
-        for i in 0..num_segments {
-            if let Ok(segment) = state.full_get_segment_text(i) {
-                text.push_str(&segment);
-            }
+        for segment in state.as_iter() {
+            text.push_str(segment.to_str().map_err(|e| format!("Segment lezen mislukt: {e}"))?);
         }
     }
 

@@ -12,6 +12,7 @@ pub fn run() {
 
     tauri::Builder::default()
         .manage(recording_state)
+        .manage(transcribe::ModelDownloadControl::default())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_store::Builder::default().build())
@@ -39,7 +40,7 @@ pub fn run() {
             let app_handle2 = app.handle().clone();
             app.listen("deep-link://new-url", move |event| {
                 let payload = event.payload().to_string();
-                eprintln!("[DeepLink] OAuth callback: {}", payload);
+                eprintln!("[DeepLink] OAuth callback ontvangen");
 
                 if let Some(window) = app_handle2.get_webview_window("main") {
                     let _ = window.emit("oauth-callback", payload);
@@ -78,16 +79,23 @@ pub fn run() {
             commands::http::proxy_upload,
             commands::http::http_sse_stream,
             commands::http::obsidian_put,
+            commands::http::obsidian_get,
             commands::http::obsidian_test,
             commands::http::ollama_test,
             // System
             commands::system::get_network_status,
             commands::system::detect_meeting_apps,
             commands::system::get_app_version,
+            commands::system::get_system_specs,
+            commands::system::open_microphone_settings,
             commands::system::download_and_run_installer,
             // Local transcription (whisper.cpp)
             transcribe::whisper_model_status,
             transcribe::download_whisper_model,
+            transcribe::cancel_whisper_download,
+            transcribe::whisper_download_status,
+            transcribe::remove_whisper_model,
+            transcribe::show_whisper_model,
             transcribe::transcribe_local,
         ])
         .run(tauri::generate_context!())

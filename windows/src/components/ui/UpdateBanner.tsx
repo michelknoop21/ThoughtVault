@@ -3,8 +3,8 @@ import type { Update } from "@tauri-apps/plugin-updater";
 import { ArrowDownload24Regular, Dismiss24Regular } from "@fluentui/react-icons";
 import { useRecordingStore } from "../../stores/recordingStore";
 
-export function updateIsBusy(state: Pick<ReturnType<typeof useRecordingStore.getState>, "phase" | "backgroundTasks" | "isSubmittingYouTube">): boolean {
-  return state.phase !== "idle" || state.isSubmittingYouTube ||
+export function updateIsBusy(state: Pick<ReturnType<typeof useRecordingStore.getState>, "phase" | "backgroundTasks" | "isSubmittingYouTube" | "regenerationCount">): boolean {
+  return state.phase !== "idle" || state.isSubmittingYouTube || state.regenerationCount > 0 ||
     state.backgroundTasks.some((task) => !["completed", "failed", "cancelled"].includes(task.status));
 }
 

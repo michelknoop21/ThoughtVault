@@ -31,6 +31,7 @@ export async function processLocally(
   retryTaskId?: string,
 ): Promise<void> {
   const rec = useRecordingStore.getState();
+  if (rec.updateInstalling) throw Error("De app wordt bijgewerkt. Probeer na de herstart opnieuw.");
   const { addBackgroundTask, updateBackgroundTask, removeBackgroundTask } = rec;
   const settings = useSettingsStore.getState();
   const profile =

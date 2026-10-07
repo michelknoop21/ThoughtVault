@@ -79,7 +79,7 @@
   "windows/src/components/transcripts/__tests__/TranscriptDetail.save.test.tsx": "1a604ed264fb6e8e6c06a4d58a4f1123c66be85a5eef990b927d762cb4cdd187",
   "windows/src/components/ui/ErrorBoundary.tsx": "bf1e064d34f1715619e66b3802e833492c04f3a4e2a77ac8010f4381a28e44a9",
   "windows/src/components/ui/InfoBar.tsx": "9eb8f9eed2a0092a4b3ad2bd477303272918f58a244320780ae12a0d83ee6b94",
-  "windows/src/components/ui/UpdateBanner.tsx": "59a2addcca3941966e6e9a42bdfbb46099a50185c4370477cfaa2e881869ab02",
+  "windows/src/components/ui/UpdateBanner.tsx": "336a57fa36bfebe796e26c88fb07210762c13e1f66f9191e278ecdf5031b2b17",
   "windows/src/data/profileTemplates.json": "450ed79c6266ef2972a7e9db2602dd459acd76c3217eecd529d43d13bb18813d",
   "windows/src/hooks/useAudioLevel.ts": "dac1f9cb8b0d2c24b549f19320093b67bf68c8ed412f8411d232d6340f837b44",
   "windows/src/hooks/useGlobalRecordingHandler.ts": "130eef54f704c69b9d39bc8f125b892ddbde798fbca3d61bdcc1b32b93330324",
@@ -99,7 +99,7 @@
   "windows/src/pages/SeedReviewSheet.tsx": "2e2e15af6968353025ebbd676644aa11eeb83afc14834d3dce5e99da4a194fa4",
   "windows/src/pages/SettingsPage.tsx": "11ad88dab4e151e59832acde42fcdaace4e46768e41649bdf1b17fa3ba8f21c1",
   "windows/src/pages/TasksPage.tsx": "389dac3cf65fb15beaee482f73f471886ddf2c8915ade6c31a1bf29e7d562eb0",
-  "windows/src/pages/TranscriptsPage.tsx": "ef9c607388f7d3418485918d20f480df61a70701b04eb13dd54190904ba2a858",
+  "windows/src/pages/TranscriptsPage.tsx": "ce38e036ce1b2e515c177427319bf326ac551ab482ad0e3662da6a9df762eef1",
   "windows/src/pages/__tests__/LoginPage.local.test.tsx": "ea2b91a007a739d04c297f2b9f0a8ec9df1a45228f19f374ba21722c49db7bb9",
   "windows/src/pages/__tests__/TasksPage.local.test.tsx": "4f935992fcc3b5a88ab2c68a2edf777ea11fa357bfa772751da0c6f0e7a30725",
   "windows/src/pages/__tests__/TranscriptsPage.localTags.test.tsx": "53815aa05485a693c977ae7cefc915b3157979eb77fd2b14e5b7c03fbe6bdb61",
@@ -113,7 +113,7 @@
   "windows/src/services/api.ts": "d3a709dbf16067a68c0fab815a6917b5d4fa999d6bab7a1495fdc742bc682e26",
   "windows/src/services/crashReporter.ts": "667ad35f40f4ee77cf7c53a0e511872ff5f6d71942982da91d7c499f73f500f2",
   "windows/src/services/llm.ts": "4d51bba79e31e94bcb498ff170f39cecc521d83795c05690d971e8612fdecccc",
-  "windows/src/services/localPipeline.ts": "a7b8089752058400255fe19063cbcee2d1d8ac3eeca82683142672675aceb7cd",
+  "windows/src/services/localPipeline.ts": "212e0df9522d3a42b0cf4b8924513a343ecae44cba55e57d9183a5841c82b848",
   "windows/src/services/meetingNotifications.ts": "84646cdeb324d6652cc09033d1ed13fb2e5f35d0febedda41ef16868578854c5",
   "windows/src/services/microsoftGraph.ts": "029801fe4b93c18ca1729c59c0c6e26754496b6c2f3d01c04b717a1af6887b38",
   "windows/src/services/notulePresentation.ts": "dca5cf19cfb94e91b602bf7d27d1bbcf4eac260976e12044e052e7ecabd733f4",
@@ -137,7 +137,7 @@
   "windows/src/stores/peopleDirectoryStore.ts": "6a3033326a573deb795e42dd381f1d0cf0db83eedff9a08a54be731cf43ede1c",
   "windows/src/stores/personProfileStore.ts": "a5f9f62b394dfc4975e188cbe671a5d9f76217bfbea21b0d5f2bdb537e353b55",
   "windows/src/stores/profilesStore.ts": "82d6ce7ddb9115e3623b56983660b32e1ef9e718d10e8dea7f56f9d9a4c690fe",
-  "windows/src/stores/recordingStore.ts": "53bfb0f08ea8dbb1c665b678b54283f2398113b9aa16f18f639d5df374f1eb9b",
+  "windows/src/stores/recordingStore.ts": "9d105be56a8d164ff0a1e5f441ca4e0ffdfc5646b2ca091ac800a36c3db967c5",
   "windows/src/stores/settingsStore.ts": "db6e2a13af956a24f07fa96339831375fac8ea79ff45f2b9a9fb83cfdf8b5ec3",
   "windows/src/stores/tasksStore.ts": "cf5f00a3c137813446932738be611ffb384bed6182788acf8a945a7625637140",
   "windows/src/stores/transcriptsStore.ts": "04d70f9c3eba6b8c62add71fbc017ec4404b156635c12a739533b17bb2cccf08",
@@ -157,5 +157,5 @@
   "windows/tsconfig.node.json": "9e2abb169ea87b7190613a1d4da57ca608463a453bd4231fa3aeee5e308370dd",
   "windows/vite.config.ts": "056b23582e001eb7845e5da6ff23454e5df657aa21543c1c892b707151423e2e",
   "windows/widget.html": "c4083bd12d7ab2126b6293d38759bd13e55eb6735fb851fb9d78ddef94ee12a1",
-  "windows/src/services/__tests__/updates.test.ts": "75a04d105c36cd2fe369ec02bf964518ea58db6e7d272c16ffd1a09d6371063d"
+  "windows/src/services/__tests__/updates.test.ts": "593bee3f13781697412b0a8fc686313e874a989be7baa2ad2e29c114618bb42e"
 }

@@ -1,3 +1,4 @@
+import { useRecordingStore } from "../stores/recordingStore";
 import { useEffect, useState, useRef, useCallback } from "react";
 import {
   ArrowDownload24Regular,
@@ -184,6 +185,8 @@ export function TranscriptsPage() {
         toast.show("Geen bruikbare transcriptie beschikbaar", "error");
         return;
       }
+      if (useRecordingStore.getState().updateInstalling) { toast.show("De app wordt bijgewerkt", "error"); return; }
+      useRecordingStore.setState((state) => ({ regenerationCount: state.regenerationCount + 1 }));
       setRegeneratingId(transcript.id);
       try {
         const profiles = useProfilesStore.getState().profiles;
@@ -197,6 +200,7 @@ export function TranscriptsPage() {
       } catch {
         toast.show("Regenereren mislukt", "error");
       } finally {
+        useRecordingStore.setState((state) => ({ regenerationCount: state.regenerationCount - 1 }));
         setRegeneratingId(null);
       }
       return;

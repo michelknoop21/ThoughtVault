@@ -23,6 +23,7 @@ type RecordingPhase =
 interface RecordingState {
   phase: RecordingPhase;
   updateInstalling: boolean;
+  regenerationCount: number;
   mode: RecordingMode;
   currentTask: TranscriptTask | null;
   audioLevel: number; // 0-100
@@ -89,6 +90,7 @@ interface RecordingState {
 export const useRecordingStore = create<RecordingState>()((set) => ({
   phase: "idle",
   updateInstalling: false,
+  regenerationCount: 0,
   mode: "combined",
   currentTask: null,
   audioLevel: 0,

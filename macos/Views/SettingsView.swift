@@ -888,6 +888,8 @@ struct SettingsView: View {
 
     func saveApiKey(_ value: String) {
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Loading the stored key into the field must not rewrite it (save() is delete + add).
+        guard trimmed != (KeychainService.shared.load(for: Self.apiKeyKeychainKey) ?? "") else { return }
         if trimmed.isEmpty {
             KeychainService.shared.delete(for: Self.apiKeyKeychainKey)
         } else {

@@ -20,6 +20,7 @@ import { hasUsableNotule, hasUsableTranscription } from "../services/notuleValid
 import { extractTitle } from "../services/titleExtractor";
 import { api } from "../services/api";
 import { createSSEClient } from "../services/sse";
+import { persistNotesSection } from "../services/uploadAndTrack";
 import { exportToObsidian, importFromObsidian, acknowledgeObsidianImport } from "../services/obsidian";
 import { htmlToMarkdown } from "../utils/htmlToMarkdown";
 import { useToast } from "../components/ui/InfoBar";
@@ -264,6 +265,8 @@ export function TranscriptsPage() {
           setTimeout(async () => {
             try {
               const updated = await api.getTranscript(transcript.id);
+              // The server wiped the Notities section when it regenerated.
+              if (updated.notule_html) updated.notule_html = await persistNotesSection(transcript.task_id ?? transcript.id, updated.notule_html);
               updateTranscript(transcript.id, { title: updated.title, notule_html: updated.notule_html });
               const settings = useSettingsStore.getState();
               if (settings.obsidian_enabled && updated.notule_html) {

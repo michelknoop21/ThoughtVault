@@ -5,9 +5,19 @@ import { api } from "./api";
 import { createSSEClient } from "./sse";
 import { exportToObsidian } from "./obsidian";
 import { enqueue } from "./offlineQueue";
-import { linkQuickNote } from "./quickNotes";
+import { linkQuickNote, getTranscriptQuickNote, ensureNotesSection } from "./quickNotes";
 import type { Participant } from "./participants";
 import type { RecordingMode, TranscriptTask } from "../types";
+
+/**
+ * The server never sees the quick note: a finished cloud notule gets its Notities section
+ * on the client and is written back. Returns the html to show; a failed write-back is not fatal.
+ */
+export async function persistNotesSection(taskId: string, html: string): Promise<string> {
+  const fixed = ensureNotesSection(html, getTranscriptQuickNote(taskId));
+  if (fixed !== html) await api.updateNotuleHTML(taskId, fixed).catch((e) => console.warn("Notities-sectie terugschrijven mislukt:", e));
+  return fixed;
+}
 
 /**
  * Upload a recording file to the server with progress tracking, SSE monitoring,
@@ -71,6 +81,7 @@ export async function uploadAndTrack(
         const completed = transcripts.find(transcript => transcript.task_id === task_id || transcript.id === task_id);
         if (!completed) throw new Error("Het resultaat is nog niet beschikbaar. Vernieuw Opnames om het op te halen.");
         {
+          if (completed.notule_html) completed.notule_html = await persistNotesSection(task_id, completed.notule_html);
           addTranscript(completed);
           // Auto-export the freshly completed notule to Obsidian (fire-and-forget).
           const settings = useSettingsStore.getState();

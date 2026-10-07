@@ -2073,7 +2073,9 @@ struct TranscriptDetailView: View {
 
                 if updated.status == .completed {
                     let completed = try await APIService.shared.getTranscript(taskId: fullTranscript.taskId)
-                    if let html = updated.notuleHtml ?? completed.notuleHtml {
+                    if let serverHtml = updated.notuleHtml ?? completed.notuleHtml {
+                        let html = await recordingVM.addNotesSectionToCloudNotule(
+                            taskId: fullTranscript.taskId, html: serverHtml, force: true)
                         fullTranscript.notuleHtml = html
                         fullTranscript.title = completed.title
                         selectedTab = .notule

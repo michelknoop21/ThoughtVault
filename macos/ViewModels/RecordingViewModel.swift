@@ -165,6 +165,7 @@ final class RecordingViewModel {
 
     @ObservationIgnored
     private var isStartingLiveTranscription = false
+    private var notesSectionWritten: Set<String> = []
     @ObservationIgnored
     private var liveTranscriptionTask: Task<Void, Never>?
     @ObservationIgnored
@@ -1449,22 +1450,39 @@ final class RecordingViewModel {
         // Auto-export a freshly-completed cloud notule to Obsidian (no-op when
         // disabled). Cloud notulen embed participants server-side, so none are
         // passed here.
-        if updatedTask.status == .completed,
-           ObsidianService.isEnabled,
-           let html = updatedTask.notuleHtml, !html.isEmpty {
-            let title = NotuleTitleExtractor.extract(from: html)
-                ?? (updatedTask.filename as NSString).deletingPathExtension
-            ObsidianService.tryExportDetached(
-                title: title,
-                html: html,
-                date: updatedTask.createdAt ?? Date(),
-                participants: [],
-                profileName: updatedTask.profileId,
-                profileId: updatedTask.profileId,
-                tags: updatedTask.tags,
-                noteID: updatedTask.taskId
-            )
+        if updatedTask.status == .completed, let html = updatedTask.notuleHtml, !html.isEmpty {
+            Task { @MainActor in
+                let html = await self.addNotesSectionToCloudNotule(taskId: updatedTask.taskId, html: html)
+                guard ObsidianService.isEnabled else { return }
+                let title = NotuleTitleExtractor.extract(from: html)
+                    ?? (updatedTask.filename as NSString).deletingPathExtension
+                ObsidianService.tryExportDetached(
+                    title: title,
+                    html: html,
+                    date: updatedTask.createdAt ?? Date(),
+                    participants: [],
+                    profileName: updatedTask.profileId,
+                    profileId: updatedTask.profileId,
+                    tags: updatedTask.tags,
+                    noteID: updatedTask.taskId
+                )
+            }
         }
+    }
+
+    /// The server never sees the quick note: a finished cloud notule gets its Notities section
+    /// on the client and is written back. Once per task, so repeated completion events stay quiet; a regenerate forces it because the server wiped the section.
+    func addNotesSectionToCloudNotule(taskId: String, html: String, force: Bool = false) async -> String {
+        let fixed = QuickNoteStore.ensureNotesSection(html, note: QuickNoteStore.note(forTranscriptId: taskId))
+        guard fixed != html, force || notesSectionWritten.insert(taskId).inserted else { return fixed }
+        do {
+            try await APIService.shared.updateNotuleHTML(taskId: taskId, html: fixed)
+            if let index = activeTasks.firstIndex(where: { $0.taskId == taskId }) { activeTasks[index].notuleHtml = fixed }
+        } catch {
+            notesSectionWritten.remove(taskId)
+            os_log("[RecordingVM] Notities-sectie terugschrijven mislukt voor %{public}@: %{public}@", log: .default, type: .error, taskId, error.localizedDescription)
+        }
+        return fixed
     }
 
     /// Removes a finished (completed/error) task from the active list after a short

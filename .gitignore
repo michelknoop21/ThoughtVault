@@ -49,3 +49,8 @@ docs/BACKEND.md
 *.swp
 *.swo
 *~
+
+# Tooling
+.codegraph/
+.serena/
+__pycache__/

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   Home24Regular,
   MicRecord24Regular,
@@ -11,10 +11,19 @@ import {
   NotepadPerson24Regular,
   People24Regular,
 } from "@fluentui/react-icons";
+import { useLocalTranscriptsStore } from "../../stores/localTranscriptsStore";
+import { useTranscriptsStore } from "../../stores/transcriptsStore";
 import appLogo from "../../assets/app-logo.png";
 
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const local = useLocalTranscriptsStore(s => s.items);
+  const remote = useTranscriptsStore(s => s.transcripts);
+  const select = useTranscriptsStore(s => s.setSelectedId);
+  const recent = [...new Map([...remote, ...local].map(t => [t.id, t])).values()]
+    .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at)).slice(0, 5);
   return (
     <nav className={`sidebar${collapsed ? " collapsed" : ""}`} aria-label="Hoofdnavigatie" data-theme="dark">
       <button type="button" className="sidebar-toggle" aria-label={collapsed ? "Zijbalk uitklappen" : "Zijbalk inklappen"} aria-expanded={!collapsed} onClick={() => setCollapsed(!collapsed)}>{collapsed ? <ChevronRight24Regular /> : <ChevronLeft24Regular />}</button>
@@ -38,6 +47,13 @@ export function Sidebar() {
       <SidebarItem to="/profiles" icon={<NotepadPerson24Regular />} label="Profielen" shortcut="Ctrl+5" />
       <SidebarItem to="/people" icon={<People24Regular />} label="Mensen" shortcut="Ctrl+6" />
 
+      {!collapsed && location.pathname !== "/" && recent.length > 0 && <section className="sidebar-recent" aria-label="Recente notulen">
+        <h2>Recent</h2>
+        {recent.map(t => <button key={t.id} onClick={() => { select(t.id); navigate("/transcripts"); }} title={t.title}>
+          <span className="sidebar-recent-icon"><DocumentText24Regular /></span>
+          <span>{t.title || "Naamloze opname"}</span>
+        </button>)}
+      </section>}
       {/* Spacer pushes bottom items down */}
       <div className="flex-1" />
 

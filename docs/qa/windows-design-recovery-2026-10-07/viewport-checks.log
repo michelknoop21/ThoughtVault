@@ -1,0 +1,140 @@
+[viewport] Viewport set to 1024x768
+
+[goto] Navigated to http://localhost:1431/parity-review.html?route=/&sample=1 (200)
+
+[wait] Element .sidebar-item.active appeared
+
+[js] {"route":"/","overflow":false,"nav":7,"width":1024,"main":true}
+
+[screenshot] Screenshot saved: /tmp/tv-review-home-1024.png
+
+[viewport] Viewport set to 1024x768
+
+[goto] Navigated to http://localhost:1431/parity-review.html?route=/recording&sample=1 (200)
+
+[wait] Element .sidebar-item.active appeared
+
+[js] {"route":"/recording","overflow":false,"nav":7,"width":1024,"main":true}
+
+[screenshot] Screenshot saved: /tmp/tv-review-recording-1024.png
+
+[viewport] Viewport set to 1024x768
+
+[goto] Navigated to http://localhost:1431/parity-review.html?route=/tasks&sample=1 (200)
+
+[wait] Element .sidebar-item.active appeared
+
+[js] {"route":"/tasks","overflow":false,"nav":7,"width":1024,"main":true}
+
+[screenshot] Screenshot saved: /tmp/tv-review-tasks-1024.png
+
+[viewport] Viewport set to 1024x768
+
+[goto] Navigated to http://localhost:1431/parity-review.html?route=/transcripts&sample=1 (200)
+
+[wait] Element .sidebar-item.active appeared
+
+[js] {"route":"/transcripts","overflow":false,"nav":7,"width":1024,"main":true}
+
+[screenshot] Screenshot saved: /tmp/tv-review-transcripts-1024.png
+
+[viewport] Viewport set to 1024x768
+
+[goto] Navigated to http://localhost:1431/parity-review.html?route=/profiles&sample=1 (200)
+
+[wait] Element .sidebar-item.active appeared
+
+[js] {"route":"/profiles","overflow":false,"nav":7,"width":1024,"main":true}
+
+[screenshot] Screenshot saved: /tmp/tv-review-profiles-1024.png
+
+[viewport] Viewport set to 1024x768
+
+[goto] Navigated to http://localhost:1431/parity-review.html?route=/people&sample=1 (200)
+
+[wait] Element .sidebar-item.active appeared
+
+[js] {"route":"/people","overflow":false,"nav":7,"width":1024,"main":true}
+
+[screenshot] Screenshot saved: /tmp/tv-review-people-1024.png
+
+[viewport] Viewport set to 1024x768
+
+[goto] Navigated to http://localhost:1431/parity-review.html?route=/settings&sample=1 (200)
+
+[wait] Element .sidebar-item.active appeared
+
+[js] {"route":"/settings","overflow":false,"nav":7,"width":1024,"main":true}
+
+[screenshot] Screenshot saved: /tmp/tv-review-settings-1024.png
+
+[viewport] Viewport set to 1440x900
+
+[goto] Navigated to http://localhost:1431/parity-review.html?route=/&sample=1 (200)
+
+[wait] Element .sidebar-item.active appeared
+
+[js] {"route":"/","overflow":false,"nav":7,"width":1440,"main":true}
+
+[screenshot] Screenshot saved: /tmp/tv-review-home-1440.png
+
+[viewport] Viewport set to 1440x900
+
+[goto] Navigated to http://localhost:1431/parity-review.html?route=/recording&sample=1 (200)
+
+[wait] Element .sidebar-item.active appeared
+
+[js] {"route":"/recording","overflow":false,"nav":7,"width":1440,"main":true}
+
+[screenshot] Screenshot saved: /tmp/tv-review-recording-1440.png
+
+[viewport] Viewport set to 1440x900
+
+[goto] Navigated to http://localhost:1431/parity-review.html?route=/tasks&sample=1 (200)
+
+[wait] Element .sidebar-item.active appeared
+
+[js] {"route":"/tasks","overflow":false,"nav":7,"width":1440,"main":true}
+
+[screenshot] Screenshot saved: /tmp/tv-review-tasks-1440.png
+
+[viewport] Viewport set to 1440x900
+
+[goto] Navigated to http://localhost:1431/parity-review.html?route=/transcripts&sample=1 (200)
+
+[wait] Element .sidebar-item.active appeared
+
+[js] {"route":"/transcripts","overflow":false,"nav":7,"width":1440,"main":true}
+
+[screenshot] Screenshot saved: /tmp/tv-review-transcripts-1440.png
+
+[viewport] Viewport set to 1440x900
+
+[goto] Navigated to http://localhost:1431/parity-review.html?route=/profiles&sample=1 (200)
+
+[wait] Element .sidebar-item.active appeared
+
+[js] {"route":"/profiles","overflow":false,"nav":7,"width":1440,"main":true}
+
+[screenshot] Screenshot saved: /tmp/tv-review-profiles-1440.png
+
+[viewport] Viewport set to 1440x900
+
+[goto] Navigated to http://localhost:1431/parity-review.html?route=/people&sample=1 (200)
+
+[wait] Element .sidebar-item.active appeared
+
+[js] {"route":"/people","overflow":false,"nav":7,"width":1440,"main":true}
+
+[screenshot] Screenshot saved: /tmp/tv-review-people-1440.png
+
+[viewport] Viewport set to 1440x900
+
+[goto] Navigated to http://localhost:1431/parity-review.html?route=/settings&sample=1 (200)
+
+[wait] Element .sidebar-item.active appeared
+
+[js] {"route":"/settings","overflow":false,"nav":7,"width":1440,"main":true}
+
+[screenshot] Screenshot saved: /tmp/tv-review-settings-1440.png
+

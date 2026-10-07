@@ -399,7 +399,7 @@ export function TranscriptsPage() {
   const selected = transcripts.find((t) => t.id === selectedId);
 
   return (
-    <div className="tp-root">
+    <div className={`tp-root desktop-notulen${selectedId && selected ? " has-detail" : ""}`}>
       <TranscriptsList
         transcripts={transcripts}
         selectedId={selectedId}
@@ -432,11 +432,6 @@ export function TranscriptsPage() {
           onOpenTags={openTagsDialog}
           onGenerateTitle={handleGenerateTitle}
         />
-      ) : !selectedId ? (
-        <div className="td-empty-panel">
-          <Document24Regular style={{ fontSize: 48, color: "var(--text-tertiary)", opacity: 0.3 }} />
-          <p className="text-caption text-secondary">Selecteer een document</p>
-        </div>
       ) : null}
 
       {/* Context menu */}

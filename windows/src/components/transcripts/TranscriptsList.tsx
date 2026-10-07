@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import {
+  DocumentText24Regular,
   Search24Regular,
   ArrowSync24Regular,
   MoreHorizontal24Regular,
@@ -112,6 +113,7 @@ export function TranscriptsList({
   onContextMenu,
   onBulkDelete,
 }: TranscriptsListProps) {
+  const [newestFirst, setNewestFirst] = useState(true);
   const [timeFilter, setTimeFilter] = useState<TimeFilter>("alles");
   const [bulkMode, setBulkMode] = useState(false);
   const [bulkSelected, setBulkSelected] = useState<Set<string>>(new Set());
@@ -137,7 +139,9 @@ export function TranscriptsList({
   });
 
   const allTags = Array.from(new Set(transcripts.flatMap((t) => t.tags)));
-  const groups = groupByDate(filtered);
+  const ordered = [...filtered].sort((a,b) => (Date.parse(b.created_at) - Date.parse(a.created_at)) * (newestFirst ? 1 : -1));
+  const groups = groupByDate(ordered);
+  if (!newestFirst) groups.reverse();
 
   const toggleBulk = useCallback((id: string) => {
     setBulkSelected((prev) => {
@@ -152,7 +156,7 @@ export function TranscriptsList({
       {/* Header */}
       <div className="tl-header">
         <div className="tl-header-row">
-          <h1 className="tl-title">Documenten</h1>
+          <h1 className="tl-title">Notulen</h1>
           <div className="tl-header-actions">
             <button className="icon-btn icon-btn-sm" onClick={onRefresh} disabled={isLoading} title="Vernieuwen">
               <ArrowSync24Regular style={{ fontSize: 15, animation: isLoading ? "spin 1s linear infinite" : undefined }} />
@@ -180,6 +184,7 @@ export function TranscriptsList({
         </div>
 
         <div className="tl-filters">
+          <select className="tl-sort" aria-label="Sortering" value={newestFirst ? "newest" : "oldest"} onChange={e => setNewestFirst(e.target.value === "newest")}><option value="newest">Nieuwste eerst</option><option value="oldest">Oudste eerst</option></select>
           {TIME_FILTERS.map((f) => (
             <button
               key={f.key}
@@ -244,7 +249,7 @@ export function TranscriptsList({
         ) : filtered.length === 0 ? (
           <div className="tl-empty">
             <p className="text-caption text-secondary">
-              {searchQuery ? "Geen resultaten" : "Geen documenten"}
+              {searchQuery ? "Geen resultaten" : "Nog geen notulen"}
             </p>
           </div>
         ) : (
@@ -255,6 +260,9 @@ export function TranscriptsList({
                 <div
                   key={t.id}
                   className={`tl-item${selectedId === t.id ? " active" : ""}`}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); bulkMode ? toggleBulk(t.id) : onSelect(t.id); } }}
                   onClick={() => bulkMode ? toggleBulk(t.id) : onSelect(t.id)}
                   onContextMenu={(e) => onContextMenu(e, t)}
                 >
@@ -266,6 +274,7 @@ export function TranscriptsList({
                       }
                     </span>
                   )}
+                  <span className="tl-document-icon" aria-hidden="true"><DocumentText24Regular /></span>
                   <div className="tl-item-content">
                     <div className="tl-item-top">
                       <span className="tl-item-title">{t.title || "Naamloze opname"}</span>

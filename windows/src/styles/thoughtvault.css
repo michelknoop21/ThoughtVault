@@ -1,12 +1,12 @@
 /* Current macOS ThoughtVault composition. Keep Windows title-bar controls native. */
 .app-shell { --sidebar-width: 238px; background: #141628; }
 .sidebar { background: #0b1125; color: #edeaf6; padding: 22px 15px 12px; border-color: #272444; }
-.sidebar-logo-section { padding: 8px 13px 27px; gap: 13px; }
+.sidebar-logo-section { padding: 8px 13px 30px; gap: 13px; }
 .sidebar-logo { width: 30px; height: 30px; object-fit: contain; }
 .sidebar-app-name { color: #fff; font-size: 19px; font-weight: 650; }
 .sidebar-divider { display: none; }
-.sidebar-item { min-height: 46px; padding: 10px 16px; margin-bottom: 5px; gap: 16px; color: #e1ddeb; font-size: 15px; border-radius: 9px; }
-.sidebar-item.active { background: linear-gradient(110deg,#7134ce,#5025a0); border: 1px solid #9361df; box-shadow: 0 0 17px #743bd640; }
+.sidebar-item { min-height: 45px; padding: 10px 16px; margin: 1px 0; gap: 18px; color: #e6e7f2; font-size: 15px; border-radius: 9px; }
+.sidebar-item.active { background: linear-gradient(110deg,#6b3bca,#4f269e); border: 1px solid #bf96ff47; box-shadow: 0 0 17px #743bd640; }
 .sidebar-item:hover { color: #fff; background-color: #292141; }
 .sidebar-item-shortcut { display: none; }
 
@@ -151,3 +151,69 @@
 .restored-model-settings{padding:18px 20px}
 .system-specs>div{display:flex;justify-content:space-between;gap:16px;margin:12px 0;font-size:13px}
 .northstar-settings .settings-tabs button{display:flex;align-items:center;gap:8px}
+
+/* Mac navigation geometry and shared list surfaces. */
+.sidebar { position:relative; }
+.sidebar-toggle { position:absolute;right:5px;top:2px;padding:3px;width:24px;height:24px;z-index:2; }
+.sidebar-toggle svg { width:16px;height:16px; }
+.sidebar.collapsed { width:52px;min-width:52px;padding:22px 5px 12px; }
+.sidebar.collapsed .sidebar-logo-section { padding:14px 6px 20px; }
+.sidebar.collapsed .sidebar-logo { width:30px;height:30px; }
+.sidebar.collapsed .sidebar-item { margin:1px 0;padding:8px; }
+.sidebar-recent { margin-top:30px;border-top:1px solid #ffffff29;padding-top:20px;overflow:hidden; }
+.sidebar-recent h2 { font-size:13px;font-weight:400;color:#c9ccdf;margin:0 0 10px 12px; }
+.sidebar-recent button { display:flex;gap:10px;align-items:center;width:100%;border:0;background:none;color:#dce0ef;text-align:left;padding:6px 10px;cursor:pointer;border-radius:8px; }
+.sidebar-recent button:hover { background:#ffffff0a; }
+.sidebar-recent button>span:last-child { overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px; }
+.sidebar-recent-icon { display:grid;place-items:center;background:#212540;border-radius:7px;width:32px;height:32px;flex-shrink:0; }
+.sidebar-recent-icon svg { width:17px;height:17px; }
+.app-shell .card:hover { transform:none;box-shadow:none; }
+.desktop-page .page-header { display:flex;align-items:center;justify-content:space-between;min-height:62px;padding:16px 24px;border-bottom:1px solid #242939; }
+.desktop-page .page-title-sm { font-size:20px; }
+.desktop-page .page-content { max-width:908px;padding:24px;gap:24px; }
+.desktop-page .page-content-narrow { max-width:none; }
+.desktop-page .settings-group-label { color:#eef0f8;font-size:16px;letter-spacing:0;text-transform:none;font-weight:600; }
+.desktop-profiles .profile-list { display:flex;flex-direction:column;gap:10px; }
+.desktop-profiles .profile-card { padding:16px;border:1px solid #343950;border-radius:12px;background:#151a2d; }
+.desktop-profiles .profile-card-icon { width:44px;height:44px;border-radius:10px;display:grid;place-items:center;background:#7943e226; }
+.desktop-profiles .profile-card-name-row { margin-bottom:6px; }
+.desktop-profiles .profile-empty { border:1px dashed #343950;border-radius:12px;padding:32px;text-align:center; }
+.desktop-people .settings-row { padding:16px;border-bottom:1px solid #343950; }
+.desktop-people .settings-row:last-child { border-bottom:0; }
+.desktop-tasks .empty-state { min-height:360px;justify-content:center; }
+.desktop-tasks .card { border-radius:12px; }
+.desktop-notulen { width:100%;min-height:0; }
+.desktop-notulen:not(.has-detail) { max-width:860px;margin-inline:auto; }
+.desktop-notulen.has-detail>.tl-panel { display:none; }
+.desktop-notulen .tl-header { padding:18px 24px 8px;gap:12px;border:0;background:transparent; }
+.desktop-notulen .tl-panel { background:transparent; }
+.desktop-notulen .tl-title { font-size:20px; }
+.desktop-notulen .tl-search { min-height:42px;border:1px solid #343950;border-radius:8px;padding:8px 12px; }
+.desktop-notulen .tl-filters { padding:4px 0; }
+.desktop-notulen .tl-filter-pill { font-size:12px;padding:6px 12px;border-radius:99px; }
+.desktop-notulen .tl-scroll { padding:8px 24px 24px; }
+.desktop-notulen .tl-item { min-height:104px;padding:16px;gap:14px;background:#151a2d;border:1px solid #343950;border-radius:12px;margin-bottom:10px; }
+.desktop-notulen .tl-item:hover { background:#1b2136; }
+.desktop-notulen .tl-item-title { font-size:15px; }
+.desktop-notulen .tl-item-preview { font-size:13px;margin-top:6px; }
+.desktop-notulen .tl-document-icon { width:42px;height:42px;display:grid;place-items:center;flex-shrink:0;background:#7943e226;color:#b89eff;border-radius:10px; }
+.desktop-notulen .td-panel { width:100%;min-width:0; }
+@media(max-height:780px) { .sidebar-recent button:nth-of-type(n+4) { display:none; } }
+@media(max-height:650px) { .sidebar-recent { display:none; } }
+
+.thoughtvault-record-controls .icon-btn { padding:0; }
+.thoughtvault-record-controls .icon-btn svg { flex-shrink:0; }
+.desktop-people .settings-row { display:flex;align-items:center;gap:12px;min-height:86px; }
+.desktop-people .settings-row:focus-within .person-row-delete,.desktop-people .settings-row:hover .person-row-delete { opacity:1!important; }
+.desktop-people .settings-row>.flex-1 { min-width:0; }
+.desktop-people .settings-row>.flex-1 p { overflow-wrap:anywhere; }
+
+.desktop-profiles .settings-group { padding:0;background:transparent;border:0;box-shadow:none; }
+.desktop-page { --type-body:400 14px/1.5 var(--font-family);--type-caption:400 12px/1.5 var(--font-family); }
+.desktop-tasks .text-blue-600 { color:#83b4ff; }
+.desktop-tasks .text-amber-600 { color:#e7bb6b; }
+.desktop-tasks .text-red-600 { color:#ff9191; }
+.desktop-tasks .text-green-600 { color:#85d6ad; }
+
+.desktop-notulen .tl-sort { min-height:32px;border:1px solid #343950;border-radius:99px;background:#151a2d;color:#b8bdd6;padding:5px 10px;font:inherit;font-size:12px; }
+.desktop-notulen .tl-item-profile,.desktop-notulen .tl-item-tag,.desktop-notulen .tl-item-time,.desktop-notulen .tl-group-label { font-size:12px; }

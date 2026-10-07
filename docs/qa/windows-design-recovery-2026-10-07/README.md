@@ -1,7 +1,25 @@
-# Windows design recovery
+# Windows desktop design recovery, 2026-10-07
 
-Cause: active local/cloud-AI worktree was based on `8676b02`, preceding the desktop parity commits `d9396d3` and `262c98a` in main. The 1.0.258 source had a new Home/recording stylesheet, but lacked the approved shared NorthStar style layer and replaced tabbed settings with a long stacked legacy form.
+Reference: current macOS MainSidebar.swift, RecordingView+Studio.swift,
+RecordingView+Inspector.swift, HomeView, TranscriptsView, ProfilesView,
+PeopleDirectoryView and TasksView. Existing approved Windows NorthStar CSS reused.
 
-Restored the shared style layer from `6758310`, tab navigation and two-column processing settings. Preserved local storage, provider selection, cloud credentials, AI connections, profile, calendar and Obsidian controls. Restored the original real hardware command for the PC panel and collapsible navigation. No account/admin navigation restored.
+| Screen | Change | Evidence |
+| --- | --- | --- |
+| Navigation | Mac geometry, collapse, recent local notes, new vault artwork | All captures; recent navigation test |
+| Home | Existing restored composition, visible settings icon | home captures |
+| Recording | Workspace, timer, waveform, bottom source/profile bar, fixed inspector, phase-correct transport | recording captures; idle/live/paused regression |
+| Notes | Centered 860px card list; full detail after selection; sort/date/tag filters, menu and bulk actions kept | transcripts captures; detail capture |
+| Tasks | Shared card and status surfaces; existing retry/actions retained | tasks captures; existing local retry test |
+| Profiles | Full-width cards and section headers; create/edit/default actions retained | profiles captures |
+| People | Aligned searchable directory rows, keyboard edit, delete confirmation retained | people captures |
+| Settings | Six approved tabs, processing side panels, current local/cloud providers retained | settings captures |
 
-Checks: TypeScript/Vite build and 48 Vitest tests passed. Added a regression check requiring the settings navigation, hardware panel and new cloud/AI controls together. Browser component review used real app components at 1440x900 and 1024x768; no horizontal page overflow and calendar controls remained reachable. Browser screenshots have no native hardware bridge, so hardware unavailable messages in these captures are expected. Native build/install evidence is recorded separately by the Windows workflow.
+All seven routes checked at 1024x768 and 1440x900 without document horizontal overflow.
+Screenshots render actual React components in a temporary browser harness.
+Content prefixed Voorbeeld is review sample data, not user data.
+Native recording, credentials, Windows hardware detection and provider requests cannot
+be proved by this browser harness. MSI installation/launch/data preservation is a
+separate Windows CI check. The attempted current Mac UI capture timed out; Mac layout
+comparison uses the current SwiftUI source and existing approved visual references.
+No claim of pixel-identical native rendering or real-device audio verification.

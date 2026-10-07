@@ -80,14 +80,17 @@ pub async fn local_mcp_start(
                                 let (key,value)=line.split_once(':').ok_or(())?;
                                 if headers.insert(key.to_ascii_lowercase(),value.trim().to_string()).is_some() {return Err(())}
                             }
-                            if first!="POST /mcp HTTP/1.1" || headers.get("authorization")!=Some(&format!("Bearer {token}")) || headers.contains_key("origin") || headers.contains_key("transfer-encoding") || !headers.get("host").is_some_and(|h| ["127.0.0.1:11219","localhost:11219"].contains(&h.as_str())) {return Ok((403,json!({"error":"Geen lokale MCP-toegang."})))}
+                            if headers.get("authorization")!=Some(&format!("Bearer {token}")) || headers.contains_key("origin") || headers.contains_key("transfer-encoding") || !headers.get("host").is_some_and(|h| ["127.0.0.1:11219","localhost:11219"].contains(&h.as_str())) {return Ok((403,json!({"error":"Geen lokale MCP-toegang."})))}
+                            if first!="POST /mcp HTTP/1.1" {return Ok((405,json!({"error":"Gebruik POST /mcp."})))}
+                            if headers.get("mcp-protocol-version").is_some_and(|v|v!="2025-06-18") {return Err(())}
                             let length=headers.get("content-length").and_then(|s|s.parse::<usize>().ok()).ok_or(())?; if length>2_000_000 {return Err(())}
                             while bytes.len()<header_end+length {let n=stream.read(&mut chunk).await.map_err(|_|())?; if n==0{return Err(())}; bytes.extend_from_slice(&chunk[..n]);}
                             let request: Value=serde_json::from_slice(&bytes[header_end..header_end+length]).map_err(|_|())?;
+                            if request["jsonrpc"]!="2.0" || !request["method"].is_string() {return Err(())}
                             let id=request.get("id").cloned().unwrap_or(Value::Null);
                             if id.is_null() {return Ok((202,Value::Null))}
                             let response=match request["method"].as_str().unwrap_or("") {
-                                "initialize"=>json!({"protocolVersion":"2025-03-26","capabilities":{"tools":{"listChanged":false}},"serverInfo":{"name":"ThoughtVault Windows","version":"1.0"},"instructions":"Local app only. Read revisions before writes. Never retry uncertain recording results."}),
+                                "initialize"=>json!({"protocolVersion":"2025-06-18","capabilities":{"tools":{"listChanged":false}},"serverInfo":{"name":"ThoughtVault Windows","version":"1.0"},"instructions":"Local app only. Read revisions before writes. Never retry uncertain recording results."}),
                                 "ping"=>json!({}),
                                 "tools/list"=>json!({"tools":tools().into_iter().filter(|t|scopes.contains(&t["scope"].as_str().unwrap().to_owned())).map(|mut t|{t.as_object_mut().unwrap().remove("scope");t}).collect::<Vec<_>>()}),
                                 "tools/call"=>{
@@ -97,6 +100,7 @@ pub async fn local_mcp_start(
                                     else if name=="list_devices" {json!({"content":[{"type":"text","text":"Only this local Windows app is available."}],"structuredContent":{"devices":[{"id":"local","platform":"Windows","online":true}]}})}
                                     else {
                                         let args=request["params"].get("arguments").cloned().unwrap_or(json!({}));
+                                        if !args.is_object() {return Err(())}
                                         let command_id=SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos().to_string();
                                         let (send,receive)=oneshot::channel(); pending.lock().unwrap().insert(command_id.clone(),send);
                                         app.emit("local-mcp-command",json!({"id":command_id,"device_id":"local","scope":required,"expires_at":SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs()+25,"tool":name,"arguments":args})).map_err(|_|())?;
@@ -137,8 +141,28 @@ pub fn local_mcp_reply(state: State<'_, LocalMcp>, id: String, result: Value) {
     }
 }
 #[tauri::command]
-pub fn local_mcp_allowed(state: State<'_, LocalMcp>, token: String, tool: String) -> bool {
+pub fn local_mcp_allowed(
+    state: State<'_, LocalMcp>,
+    token: String,
+    tool: String,
+    id: String,
+) -> bool {
     state.0.lock().unwrap().as_ref().is_some_and(|s| {
-        s.token == token && scope(&tool).is_some_and(|required| s.scopes.contains(&required))
+        s.token == token
+            && s.pending.lock().unwrap().contains_key(&id)
+            && scope(&tool).is_some_and(|required| s.scopes.contains(&required))
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn catalog_permissions_do_not_trust_caller_scope() {
+        assert_eq!(tools().len(), 15);
+        assert_eq!(scope("get_transcript").as_deref(), Some("read"));
+        assert_eq!(scope("save_minutes").as_deref(), Some("write"));
+        assert_eq!(scope("start_recording").as_deref(), Some("record"));
+        assert_eq!(scope("unknown"), None);
+    }
 }

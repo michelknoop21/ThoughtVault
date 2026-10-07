@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Exercise the actual macOS HTTP transport with synthetic handlers only."""
-import json, os, secrets, subprocess, tempfile, time, urllib.request, urllib.error
+import json, os, secrets, socket, subprocess, tempfile, urllib.request, urllib.error
 from pathlib import Path
 root = Path(__file__).resolve().parents[1]
 source = (root / 'macos/ViewModels/AIConnectionViewModel.swift').read_text()
@@ -8,7 +8,7 @@ server = source[source.index('#if os(macOS)\n@preconcurrency import Network'):]
 scope = source[source.index('    static func requiredScope'):source.index('    private func allowed')]
 stub = 'import Foundation\nenum AIConnectionError: LocalizedError { case message(String); var errorDescription: String? { if case let .message(s) = self { return s }; return nil } }\n@MainActor final class AIConnectionViewModel {\n' + scope + '}\n'
 harness = '''
-Task { @MainActor in
+_ = Task { @MainActor in
     let server = try LocalMCPServer(token: ProcessInfo.processInfo.environment["MCP_TEST_TOKEN"]!, scopes: ["read"], handler: { tool, args in ["synthetic": true, "tool": tool] }, onStatus: { print($0); fflush(stdout) })
     server.start()
     try await Task.sleep(for: .seconds(60))
@@ -40,6 +40,17 @@ with tempfile.TemporaryDirectory(prefix='thoughtvault-mcp-test-') as folder:
         assert call('initialize', headers={'Authorization': 'Bearer wrong'})[0] == 403
         assert call('initialize', headers={'Origin': 'https://evil.example'})[0] == 403
         assert call('initialize', headers={'Host': 'evil.example'})[0] == 403
-        print('PASS: initialize, 7 read tools, tool execution, denied recording/unknown/token/origin/host')
+        assert call('initialize', headers={'Transfer-Encoding': 'chunked'})[0] == 403
+        assert call('initialize', headers={'MCP-Protocol-Version': 'invalid'})[0] == 400
+        assert call('initialize')[1]['result']['protocolVersion'] == '2025-06-18'
+        request = urllib.request.Request('http://127.0.0.1:11218/mcp', headers={'Authorization': 'Bearer ' + token})
+        try: urllib.request.urlopen(request, timeout=5); raise AssertionError('GET accepted')
+        except urllib.error.HTTPError as error: assert error.code == 405
+        assert call('tools/call', {'name': 'get_app_state', 'arguments': []})[1]['result']['isError']
+        with socket.create_connection(('127.0.0.1', 11218), timeout=5) as connection:
+            request = f'POST /mcp HTTP/1.1\r\nHost: localhost:11218\r\nAuthorization: Bearer {token}\r\nContent-Length: 0\r\nContent-Length: 1\r\n\r\n'
+            connection.sendall(request.encode())
+            assert connection.recv(4096).startswith(b'HTTP/1.1 400')
+        print('PASS: initialize, 7 read tools, tool execution, denied recording/unknown/token/origin/host/transfer/duplicate headers/invalid arguments')
     finally:
         child.terminate(); child.wait(timeout=5)

@@ -127,3 +127,13 @@ it("keeps table columns and escaped pipes in Markdown exports", () => {
   expect(result).toContain("| --- | --- |");
   expect(result).toContain("| Start \\| stop | José |");
 });
+
+it("persists revocation before deleting a key, even when key deletion fails", async () => {
+  mocks.invoke.mockImplementation(async (name: string) => { if (name === "delete_credential") throw Error("keyring unavailable"); });
+  useAIConnection.setState({ connection });
+  await expect(disconnectAIConnection()).rejects.toThrow("keyring unavailable");
+  expect(useAIConnection.getState().connection).toBeNull();
+  expect(mocks.invoke.mock.calls.map(([name]) => name)).toEqual(["local_mcp_stop", "store_credential", "delete_credential"]);
+  expect(mocks.invoke.mock.calls[1][1]).toEqual({ key: "local_mcp_connection", value: "null" });
+  mocks.invoke.mockResolvedValue(undefined);
+});

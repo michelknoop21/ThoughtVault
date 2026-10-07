@@ -84,3 +84,34 @@ Lokale Ollama en Obsidian-server ontbreken in de test-VM. Ollama Cloud is inmidd
 Server bevat 15 tools: `list_devices`, `get_app_state`, `list_transcripts`, `get_transcript`, `save_minutes`, `update_transcript`, `list_profiles`, `get_profile`, `save_profile`, `open_view`, `start_recording`, `pause_recording`, `resume_recording`, `stop_recording`, `export_minutes`.
 
 App moet gekoppeld en geopend zijn; rechten zijn afzonderlijk. Schrijven gebruikt revisies om verouderde wijzigingen af te wijzen. Ingebouwde profielen worden bij aanpassen naar een eigen profiel gekopieerd. PDF-downloads verlopen na vijf minuten. Geen tools gevonden voor algemene bestands-/shelltoegang, verwijdering, personenbeheer of wijzigen van AI-credentials. Dit beschrijft de huidige onderzochte broncode, geen garantie dat productie dezelfde versie draait.
+
+
+## Herstelkandidaat 1.0.261 — 7 oktober
+
+Uitvoering in `/tmp/thoughtvault-brand-windows`, gebaseerd op de daadwerkelijk geteste Windows 1.0.260. De bovenstaande audit beschrijft de oude release; onderstaande status beschrijft de nieuwe broncode. Geen nieuwe openbare release gepubliceerd.
+
+| Bevinding | Herstel | Bewijs / resterende controle |
+| --- | --- | --- |
+| Ontbrekende MSVCP140.dll | Rust/CMake configuratie voor statische CRT; CI controleert PE-afhankelijkheden. Optionele officiële runtime-installer voor bestaande installaties. | Native Windows CI en installatiecontrole vereist; Mac kan dit niet bewijzen. |
+| Letterlijke b-tags | Gedeelde veilige tekstnormalisatie bij transcriptie en legacy-inlezen. | Regressietest; overige tekst blijft inert, geen HTML-uitvoering. |
+| Decimale duur | Eén formatter met gehele seconden en bescherming tegen ongeldige waarden. | Regressietest. |
+| Engelse providerfouten | Nederlandse herstelmeldingen voor authenticatie, limiet en verbinding; transcript behouden. | Tests, inclusief hergebruik van bestaande transcriptie bij opnieuw proberen. |
+| Verkeerd logo | Goedgekeurde kluis-bron vastgelegd en macOS assets opnieuw gegenereerd. Windows-bronassets bleken al gelijk aan de goedgekeurde variant. Build invalidatie toegevoegd. | Geen claim dat een nieuwe Windows-installer al het juiste icoon toont; artifact/runtimecontrole blijft nodig. |
+| Witte bronoptie | Donker kleurenschema en expliciete selectopties. | WebView2-popup opnieuw controleren in Windows. |
+| Onboarding/footer | Meer dialoogbreedte en extra scrollruimte onderin; breedte-animatie verwijderd. | Native onboarding op kleine vensterhoogte nog controleren. |
+| Home afgesneden | Werkelijke Home containers krijgen width/min-width/box-sizing. | Frontend fixture: documentbreedte 1200 bij 1200×800; opnamekaart rechterrand 1174. Bij 900×600: documentbreedte 900, kaart rechterrand 874. |
+| Widget over inhoud | Alleen bij geminimaliseerd hoofdvenster openen, sluiten bij terugkeer; geen focus stelen. | Native minimaliseren en pauze/resume nog controleren. |
+| Verschillende pagina-assen | Gedeelde linkeras en maximum leesbreedte; thema vanuit app-shell. | Frontend fixture Home/Instellingen/Profielen bekeken; geen volledige native screenshotdekking. |
+| Transcript leesbaarheid | 75ch leesbreedte, 16px tekst, grotere toolbar-knoppen en wrap. | Broncontrole; lange native transcriptie opnieuw bekijken. |
+| Dubbele merkfooter | Innerlijke settingsfooter verwijderd. | Broncontrole; shellfooter blijft één keer aanwezig. |
+| Profielacties/iconen | Eén Nieuw profiel-actie; Fluent lijnicoon. | Frontend fixture en bestaande ontwerptests. |
+| Interne importnaam | Oorspronkelijke bestandsnaam doorgeven; onderscheidende opnametitels. | Pipelinebron en frontendbuild; native herimport nog controleren. |
+| Herstelbanner weg | Mislukte/onafgeronde taakmetadata persistent; onderbroken werk wordt na herstart herstelbaar. | Regressietest met herladen store; transcriptinhoud niet in extra herstelmetadata opgeslagen. |
+| Witte niveau-indicator | Donkere metertrack en paarse actieve waarde. | WebView2 bij stilte/pauze nog controleren. |
+| MCP 502 | Lokale server zonder ThoughtVault-account op Windows én macOS. Oude accountbackend niet hersteld. | macOS transporttest geslaagd; Windows native transport nog bouwen/testen. |
+
+Geslaagde lokale controles: 58 Windows frontendtests in 23 bestanden, TypeScript/Vite productiebuild, ondertekende macOS Debugbuild, 5 macOS AIConnectionTests. `python3 scripts/test-local-mcp.py` compileert de daadwerkelijke macOS-servercode met synthetische handlers en controleert initialize, 7 read-tools, aanroep, weigering van opname zonder recht, onbekende tool, verkeerde sleutel, Origin, Host, Transfer-Encoding, dubbele headers en ongeldige argumenten. Dit bewijst geen live Claude/ChatGPT-sessie of verwerking van privégegevens.
+
+Parallels bleek om circa 22:07 gepauzeerd en is hervat. De guest reageert nog steeds niet op onze clicks/toetsen; native menuacties werken wel. Parallels CLI guest-exec is in deze editie niet beschikbaar (Pro/Business vereist). Geen oorzaak als ThoughtVault-defect aangemerkt. Cloud-notule-inhoud/export en native kandidaat-hercontrole blijven open.
+
+Geen designregels onderdrukt. De historische landing.css hookbevinding valt buiten deze Windows/macOS audit; geen attributie als nieuwe regressie.

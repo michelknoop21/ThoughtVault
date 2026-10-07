@@ -377,10 +377,12 @@ final class LocalMCPServer {
                     guard headers[key] == nil else { self.finish(connection, id: id, status: 400, object: [:]); return }
                     headers[key] = line[line.index(after: colon)...].trimmingCharacters(in: .whitespaces)
                 }
-                guard self.running, lines.first == "POST /mcp HTTP/1.1", headers["authorization"] == "Bearer \(self.token)",
+                guard self.running, headers["authorization"] == "Bearer \(self.token)",
                       ["127.0.0.1:11218", "localhost:11218"].contains(headers["host"] ?? ""), headers["origin"] == nil, headers["transfer-encoding"] == nil else {
                     self.finish(connection, id: id, status: 403, object: ["error": "Geen lokale MCP-toegang."]); return
                 }
+                guard lines.first == "POST /mcp HTTP/1.1" else { self.finish(connection, id: id, status: 405, object: [:]); return }
+                guard headers["mcp-protocol-version"] == nil || headers["mcp-protocol-version"] == "2025-06-18" else { self.finish(connection, id: id, status: 400, object: [:]); return }
                 guard let length = Int(headers["content-length"] ?? ""), (0...2_000_000).contains(length) else { self.finish(connection, id: id, status: 400, object: [:]); return }
                 let needed = range.upperBound + length
                 if bytes.count < needed {
@@ -394,16 +396,18 @@ final class LocalMCPServer {
         }
     }
     private func process(_ request: [String: Any]) async -> (Int, [String: Any]?) {
+        guard request["jsonrpc"] as? String == "2.0", request["method"] is String else { return (400, ["error": "Ongeldige aanvraag."]) }
         guard let id = request["id"] else { return (202, nil) }
         let result: [String: Any]
         switch request["method"] as? String {
-        case "initialize": result = ["protocolVersion": "2025-03-26", "capabilities": ["tools": ["listChanged": false]], "serverInfo": ["name": "ThoughtVault Mac", "version": "1.0"], "instructions": "Local app only. Read revisions before writes. Never retry uncertain recording results."]
+        case "initialize": result = ["protocolVersion": "2025-06-18", "capabilities": ["tools": ["listChanged": false]], "serverInfo": ["name": "ThoughtVault Mac", "version": "1.0"], "instructions": "Local app only. Read revisions before writes. Never retry uncertain recording results."]
         case "ping": result = [:]
         case "tools/list": result = ["tools": Self.tools.filter { scopes.contains($0["scope"] as? String ?? "") }.map { tool in var tool = tool; tool.removeValue(forKey: "scope"); return tool }]
         case "tools/call":
             let params = request["params"] as? [String: Any] ?? [:]
             let name = params["name"] as? String ?? ""
             do {
+                guard params["arguments"] == nil || params["arguments"] is [String: Any] else { throw AIConnectionError.message("Ongeldige toolargumenten.") }
                 guard running, Self.tools.contains(where: { $0["name"] as? String == name }), scopes.contains(AIConnectionViewModel.requiredScope(name)) else { throw AIConnectionError.message("Tool niet toegestaan.") }
                 let value = name == "list_devices" ? ["devices": [["id": "local", "platform": "macOS", "online": true]]] : try await handler(name, params["arguments"] as? [String: Any] ?? [:])
                 result = ["content": [["type": "text", "text": String(decoding: try JSONSerialization.data(withJSONObject: value), as: UTF8.self)]], "structuredContent": value, "isError": false]

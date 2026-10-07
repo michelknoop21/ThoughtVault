@@ -122,7 +122,7 @@ export function useAICommands() {
       let result: Record<string, unknown>;
       try {
         if (disposed || !current || !commandAllowed(command, current) ||
-          !await invoke<boolean>("local_mcp_allowed", { token: current.credential, tool: command.tool })) throw Error("Lokale MCP-toegang ingetrokken.");
+          !await invoke<boolean>("local_mcp_allowed", { token: current.credential, tool: command.tool, id: command.id })) throw Error("Lokale MCP-toegang ingetrokken.");
         result = await executeAICommand(command, path => navigateRef.current(path));
       } catch (error) { result = { error: error instanceof Error ? error.message : String(error) }; }
       await invoke("local_mcp_reply", { id: command.id, result });

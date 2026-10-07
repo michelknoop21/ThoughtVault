@@ -154,3 +154,44 @@ final class RestartTaskTests: XCTestCase {
         XCTAssertFalse(vm.canRestartTask(task))
     }
 }
+
+final class LiveTranscriptionPolicyTests: XCTestCase {
+    func testMicrophoneAndCombinedModesSupportLiveTranscription() {
+        XCTAssertTrue(LiveTranscriptionPolicy.supports(mode: .microphone))
+        XCTAssertTrue(LiveTranscriptionPolicy.supports(mode: .combined))
+    }
+
+    #if os(macOS)
+    func testSystemAudioOnlyHasNoMicrophoneToListenTo() {
+        XCTAssertFalse(LiveTranscriptionPolicy.supports(mode: .systemAudio))
+    }
+
+    func testSystemAudioBranchOfTheStatusText() {
+        let unsupported = "Opname loopt (geen live tekst bij alleen systeemgeluid)"
+        XCTAssertEqual(LiveTranscriptionPolicy.statusText(preferred: true, available: true, mode: .systemAudio, error: nil), unsupported)
+        // An unsupported mode wins over a stale error, and "uit" / "niet beschikbaar" win over the mode.
+        XCTAssertEqual(LiveTranscriptionPolicy.statusText(preferred: true, available: true, mode: .systemAudio, error: "oud"), unsupported)
+        XCTAssertEqual(LiveTranscriptionPolicy.statusText(preferred: false, available: true, mode: .systemAudio, error: nil), "Opname loopt (live tekst staat uit)")
+    }
+    #endif
+
+    func testBenignRecognitionEndsAreNotErrors() {
+        for code in [203, 216, 301, 1110] {
+            XCTAssertTrue(OnDeviceTranscriber.isBenignLiveError(NSError(domain: "kAFAssistantErrorDomain", code: code)), "code \(code)")
+        }
+        XCTAssertFalse(OnDeviceTranscriber.isBenignLiveError(NSError(domain: "kAFAssistantErrorDomain", code: 1101)))
+        XCTAssertFalse(OnDeviceTranscriber.isBenignLiveError(NSError(domain: "kAFAssistantErrorDomain", code: 1107)))
+    }
+
+    func testStatusExplainsWhyThereIsNoLiveText() {
+        func status(_ preferred: Bool = true, _ available: Bool = true, _ mode: RecordingMode = .combined, _ error: String? = nil) -> String? {
+            LiveTranscriptionPolicy.statusText(preferred: preferred, available: available, mode: mode, error: error)
+        }
+        XCTAssertEqual(status(false), "Opname loopt (live tekst staat uit)")
+        XCTAssertEqual(status(true, false), "Opname loopt (live tekst niet beschikbaar)")
+        XCTAssertEqual(status(true, true, .combined, "Toestemming geweigerd"), "Live tekst gestopt: Toestemming geweigerd")
+        // Running (or starting): no status, the screen shows "Ik luister..." and then the text.
+        XCTAssertNil(status(true, true, .combined, nil))
+        XCTAssertNil(status(true, true, .microphone, nil))
+    }
+}

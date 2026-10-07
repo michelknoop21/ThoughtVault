@@ -296,7 +296,7 @@ final class OnDeviceTranscriber {
                 onError?(error.localizedDescription)
                 return
             }
-            restart(source, session: session, stream: stream, onText: onText, onError: onError)
+            restart(source, session: session, stream: stream, pause: true, onText: onText, onError: onError)
             return
         }
 
@@ -309,13 +309,13 @@ final class OnDeviceTranscriber {
 #if DEBUG
             liveFinalCount += 1
 #endif
-            restart(source, session: session, stream: stream, onText: onText, onError: onError)
+            restart(source, session: session, stream: stream, pause: false, onText: onText, onError: onError)
         }
     }
 
     /// Apple ended the request (silence or final result): keep the text so far and listen again.
     private func restart(
-        _ source: LiveSource, session: Int, stream: LiveStream,
+        _ source: LiveSource, session: Int, stream: LiveStream, pause: Bool,
         onText: @MainActor @Sendable @escaping (LiveSource, String) -> Void,
         onError: (@MainActor @Sendable (String) -> Void)?
     ) {
@@ -324,8 +324,9 @@ final class OnDeviceTranscriber {
         stream.committed = stream.shown
         liveStreams[source] = stream
         Task { @MainActor [weak self] in
-            // A pause avoids a tight loop when the recognizer ends immediately.
-            try? await Task.sleep(for: .seconds(1))
+            // After a final result listen again at once (speech may be ongoing); after an error
+            // wait briefly so a recognizer that ends immediately cannot spin.
+            if pause { try? await Task.sleep(for: .seconds(1)) }
             self?.beginRecognition(source, session: session, onText: onText, onError: onError)
         }
     }

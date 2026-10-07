@@ -896,7 +896,9 @@ final class RecordingViewModel {
             }
             try Task.checkCancellation()
 
-            let datedHtml = Self.injectDate(into: Self.stripCodeFences(html), date: record.createdAt)
+            let datedHtml = Self.injectDate(
+                into: QuickNoteStore.ensureNotesSection(Self.stripCodeFences(html), note: QuickNoteStore.note(audioFilename: url.lastPathComponent)),
+                date: record.createdAt)
             guard Self.hasUsableNotule(datedHtml) else {
                 throw LLMError.generationFailed("De notule bevat geen bruikbare inhoud. Controleer de transcriptie en probeer opnieuw.")
             }
@@ -1013,7 +1015,9 @@ final class RecordingViewModel {
                 Task { @MainActor in self?.updateTask(regenerationId, status: .generatingLocal, progress: 0.85) }
             }
 
-            let datedHtml = Self.injectDate(into: Self.stripCodeFences(html), date: record.createdAt)
+            let datedHtml = Self.injectDate(
+                into: QuickNoteStore.ensureNotesSection(Self.stripCodeFences(html), note: QuickNoteStore.note(forTranscriptId: taskId)),
+                date: record.createdAt)
             guard Self.hasUsableNotule(datedHtml) else {
                 throw LLMError.generationFailed("De notule bevat geen bruikbare inhoud. Controleer de transcriptie en probeer opnieuw.")
             }

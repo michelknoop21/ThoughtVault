@@ -28,10 +28,34 @@ enum QuickNoteStore {
         return note(audioFilename: URL(fileURLWithPath: path).lastPathComponent, defaults: defaults)
     }
 
-    /// Prompt block for on-device notule generation: the note is context from
-    /// the user, not part of the spoken transcript.
+    /// Prompt block for on-device notule generation: the note is context from the user,
+    /// not part of the spoken transcript, and ends up rewritten as the last section.
     static func promptBlock(_ note: String?) -> String {
         guard let note, !note.isEmpty else { return "" }
-        return "NOTITIE VAN DE GEBRUIKER TIJDENS DE OPNAME (context, geen onderdeel van de transcriptie):\n\(note)\n\n"
+        return """
+        NOTITIE VAN DE GEBRUIKER TIJDENS DE OPNAME (context, geen onderdeel van de transcriptie):
+        \(note)
+
+        Sluit de notule af met een sectie <h2>Notities</h2>. Herschrijf de notitie daarin grammaticaal en stilistisch beter dan het origineel. Gebruik de rest van de notule als context (namen, termen, verwijzingen). Behoud elk punt uit de notitie en voeg niets nieuws toe.
+
+
+        """
+    }
+
+    /// Guarantees the notule ends with a "Notities" section when the user typed a note:
+    /// a section the model wrote stays as is, otherwise the raw note is appended.
+    static func ensureNotesSection(_ html: String, note: String?) -> String {
+        guard let note = note?.trimmingCharacters(in: .whitespacesAndNewlines), !note.isEmpty else { return html }
+        if html.range(of: "<h2[^>]*>\\s*Notities\\s*</h2>", options: [.regularExpression, .caseInsensitive]) != nil { return html }
+        let escaped = note
+            .replacingOccurrences(of: "&", with: "&amp;")
+            .replacingOccurrences(of: "<", with: "&lt;")
+            .replacingOccurrences(of: ">", with: "&gt;")
+            .replacingOccurrences(of: "\n", with: "<br>")
+        let section = "<h2>Notities</h2><p>\(escaped)</p>"
+        if let body = html.range(of: "</body>", options: [.backwards, .caseInsensitive]) {
+            return html.replacingCharacters(in: body, with: section + "</body>")
+        }
+        return html + section
     }
 }

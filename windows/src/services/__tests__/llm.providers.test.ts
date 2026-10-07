@@ -68,4 +68,13 @@ it("passes quick notes as separate user context while preserving the transcript"
   expect(content).toContain("context, geen onderdeel van de transcriptie");
   expect(content).toContain("Let op het budget.");
   expect(content).toContain("De planning is goedgekeurd.");
+  expect(content).toContain("<h2>Notities</h2>");
+});
+
+it("appends the raw note as a Notities section when the model left it out", async () => {
+  useSettingsStore.setState({ notulen_provider: "openai" });
+  loadCredential.mockResolvedValue("openai-secret");
+  invoke.mockResolvedValue({ status: 200, body: JSON.stringify({ choices: [{ message: { content: "<p>Besluit</p>" } }] }) });
+  const html = await LLMService.generateNotulen("Akkoord.", profile, undefined, [], "Let op het budget.");
+  expect(html).toBe("<p>Besluit</p><h2>Notities</h2><p>Let op het budget.</p>");
 });

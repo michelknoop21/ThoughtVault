@@ -15,6 +15,8 @@ try {
     if ($LASTEXITCODE -ne 0) { throw "npm ci mislukt" }
     npx vitest run
     if ($LASTEXITCODE -ne 0) { throw "Frontendtests mislukt" }
+    npm run build
+    if ($LASTEXITCODE -ne 0) { throw "Frontendbuild mislukt" }
     cargo test --release --manifest-path src-tauri/Cargo.toml --lib
     if ($LASTEXITCODE -ne 0) { throw "Native tests mislukt" }
     $env:TAURI_CONFIG = '{"identifier":"nl.prezent.transcript-studio","productName":"ThoughtVault","bundle":{"targets":["msi"]}}'

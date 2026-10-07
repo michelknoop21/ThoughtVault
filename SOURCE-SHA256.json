@@ -3,7 +3,7 @@
   "data/minutesStyle.schema.json": "85b71fc0efc3a10a3aceba5f856c273406b704bba21ee09a25cf648e7a100b1d",
   "data/profileBlueprints.json": "15bff28f18f2d1967b3488233de5157bccc3bd8e50d2cf7be7603d8e198b8de5",
   "docs/WINDOWS-LOKAAL.md": "5a2340745688ed7166133d6f87201a4f2ba9feb0f8eccb9e99c59cb815343092",
-  "scripts/build-windows-local.ps1": "5e03da171b5e0c1ef7ff3972d85f7abd77cd29aac1a90ced3aaec711d9275262",
+  "scripts/build-windows-local.ps1": "824e5679476177a5f2cc43c1e051a87effb9605ed36452d02c2a28aafa4c8974",
   "windows/.gitignore": "81fa4a6dc49da481112d2957e4bcb19e524d620f2680a158d0991669c88d206b",
   "windows/.npmrc": "2668ecedb19e9949b6e3e5da36d7b9135c9fd611dc769ca62a4db95b84a96d58",
   "windows/docs/API.md": "49f7947715d81ea442b13057f10e770a99cee84b7dc2fd21d726b3f9be392284",

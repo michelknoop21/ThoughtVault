@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /d-
+Disallow: /download.js
+Disallow: /healthz
+Sitemap: https://thoughtvault.yinga.ai/sitemap.xml

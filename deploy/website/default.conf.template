@@ -1,0 +1,40 @@
+server {
+    listen 80;
+    server_name thoughtvault.yinga.ai;
+    root /usr/share/nginx/html;
+    server_tokens off;
+    # Do not persist capability URLs in access logs.
+    access_log off;
+    add_header X-Content-Type-Options nosniff always;
+    add_header Referrer-Policy no-referrer always;
+    location = /healthz { return 200 'ok'; }
+    location = /d-${DOWNLOAD_TOKEN} { return 404; }
+    location = /d-${DOWNLOAD_TOKEN}/ {
+        root /usr/share/nginx/private;
+        rewrite ^ /index.html break;
+        add_header X-Robots-Tag 'noindex, nofollow, noarchive, nosnippet' always;
+        add_header Cache-Control 'private, no-store' always;
+        add_header Referrer-Policy no-referrer always;
+        add_header X-Content-Type-Options nosniff always;
+    }
+    location = /download.js {
+        alias /usr/share/nginx/private/download.js;
+        add_header X-Robots-Tag 'noindex, nofollow' always;
+    }
+    location = /d-${DOWNLOAD_TOKEN}/releases.json {
+        alias /srv/releases/releases.json;
+        add_header X-Robots-Tag 'noindex, nofollow, noarchive, nosnippet' always;
+        add_header Cache-Control 'private, no-store' always;
+        add_header Referrer-Policy no-referrer always;
+        add_header X-Content-Type-Options nosniff always;
+    }
+    location /d-${DOWNLOAD_TOKEN}/ {
+        alias /srv/releases/;
+        autoindex off;
+        add_header X-Robots-Tag 'noindex, nofollow, noarchive, nosnippet' always;
+        add_header Cache-Control 'private, no-store' always;
+        add_header Referrer-Policy no-referrer always;
+        add_header X-Content-Type-Options nosniff always;
+    }
+    location / { try_files $uri $uri/ =404; }
+}

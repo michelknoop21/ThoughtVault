@@ -1,0 +1,383 @@
+Viewport set to 360x800
+{
+  "passed": true,
+  "viewport": [
+    360,
+    800
+  ],
+  "benefits": 16,
+  "checks": "actual logos and app captures, no em dash, four motion scenes, keyboard, profiles, processing, all features, FAQ, image dialog, navigation, overflow"
+}
+{
+  "cssViewport": [
+    360,
+    800
+  ],
+  "dpr": 1,
+  "visualViewportScale": 1,
+  "textScale": "default browser setting",
+  "safeArea": "no display cutout in desktop browser",
+  "page": {
+    "viewport": 800,
+    "content": 7486,
+    "width": 360
+  },
+  "fixedChrome": {
+    "x": 14,
+    "y": 15,
+    "width": 332,
+    "height": 88,
+    "visibleHeight": 88
+  },
+  "landmarks": {
+    "heading": {
+      "x": 16,
+      "y": 195,
+      "width": 328,
+      "height": 100,
+      "visibleHeight": 100
+    },
+    "primaryAction": {
+      "x": 16,
+      "y": 429,
+      "width": 190,
+      "height": 55,
+      "visibleHeight": 55
+    },
+    "firstVisual": {
+      "x": 16,
+      "y": 619,
+      "width": 328,
+      "height": 562,
+      "visibleHeight": 181
+    }
+  },
+  "overflow": [
+    {
+      "tag": "DIV",
+      "class": "orbital-line orbit-one",
+      "rect": {
+        "x": -25,
+        "y": 654,
+        "width": 410,
+        "height": 390,
+        "visibleHeight": 146
+      }
+    },
+    {
+      "tag": "DIV",
+      "class": "orbital-line orbit-two",
+      "rect": {
+        "x": -13,
+        "y": 686,
+        "width": 387,
+        "height": 327,
+        "visibleHeight": 114
+      }
+    }
+  ],
+  "scrollOwners": [],
+  "realAppCaptureCount": 2
+}
+Viewport set to 768x1024
+{
+  "passed": true,
+  "viewport": [
+    768,
+    1024
+  ],
+  "benefits": 16,
+  "checks": "actual logos and app captures, no em dash, four motion scenes, keyboard, profiles, processing, all features, FAQ, image dialog, navigation, overflow"
+}
+{
+  "cssViewport": [
+    768,
+    1024
+  ],
+  "dpr": 1,
+  "visualViewportScale": 1,
+  "textScale": "default browser setting",
+  "safeArea": "no display cutout in desktop browser",
+  "page": {
+    "viewport": 1024,
+    "content": 7630,
+    "width": 768
+  },
+  "fixedChrome": {
+    "x": 20,
+    "y": 22,
+    "width": 728,
+    "height": 110,
+    "visibleHeight": 110
+  },
+  "landmarks": {
+    "heading": {
+      "x": 32,
+      "y": 212,
+      "width": 650,
+      "height": 147,
+      "visibleHeight": 147
+    },
+    "primaryAction": {
+      "x": 32,
+      "y": 474,
+      "width": 209,
+      "height": 56,
+      "visibleHeight": 56
+    },
+    "firstVisual": {
+      "x": 64,
+      "y": 630,
+      "width": 640,
+      "height": 582,
+      "visibleHeight": 394
+    }
+  },
+  "overflow": [],
+  "scrollOwners": [],
+  "realAppCaptureCount": 2
+}
+Viewport set to 1024x768
+{
+  "passed": true,
+  "viewport": [
+    1024,
+    768
+  ],
+  "benefits": 16,
+  "checks": "actual logos and app captures, no em dash, four motion scenes, keyboard, profiles, processing, all features, FAQ, image dialog, navigation, overflow"
+}
+{
+  "cssViewport": [
+    1024,
+    768
+  ],
+  "dpr": 1,
+  "visualViewportScale": 1,
+  "textScale": "default browser setting",
+  "safeArea": "no display cutout in desktop browser",
+  "page": {
+    "viewport": 768,
+    "content": 5686,
+    "width": 1024
+  },
+  "fixedChrome": {
+    "x": 32,
+    "y": 22,
+    "width": 960,
+    "height": 110,
+    "visibleHeight": 110
+  },
+  "landmarks": {
+    "heading": {
+      "x": 32,
+      "y": 287,
+      "width": 439,
+      "height": 126,
+      "visibleHeight": 126
+    },
+    "primaryAction": {
+      "x": 32,
+      "y": 558,
+      "width": 209,
+      "height": 56,
+      "visibleHeight": 56
+    },
+    "firstVisual": {
+      "x": 506,
+      "y": 178,
+      "width": 486,
+      "height": 572,
+      "visibleHeight": 572
+    }
+  },
+  "overflow": [
+    {
+      "tag": "DIV",
+      "class": "orbital-line orbit-two",
+      "rect": {
+        "x": 471,
+        "y": 226,
+        "width": 557,
+        "height": 427,
+        "visibleHeight": 427
+      }
+    }
+  ],
+  "scrollOwners": [],
+  "realAppCaptureCount": 2
+}
+Viewport set to 1280x800
+{
+  "passed": true,
+  "viewport": [
+    1280,
+    800
+  ],
+  "benefits": 16,
+  "checks": "actual logos and app captures, no em dash, four motion scenes, keyboard, profiles, processing, all features, FAQ, image dialog, navigation, overflow"
+}
+{
+  "cssViewport": [
+    1280,
+    800
+  ],
+  "dpr": 1,
+  "visualViewportScale": 1,
+  "textScale": "default browser setting",
+  "safeArea": "no display cutout in desktop browser",
+  "page": {
+    "viewport": 800,
+    "content": 6227,
+    "width": 1280
+  },
+  "fixedChrome": {
+    "x": 95,
+    "y": 22,
+    "width": 1090,
+    "height": 110,
+    "visibleHeight": 110
+  },
+  "landmarks": {
+    "heading": {
+      "x": 48,
+      "y": 281,
+      "width": 533,
+      "height": 142,
+      "visibleHeight": 142
+    },
+    "primaryAction": {
+      "x": 48,
+      "y": 573,
+      "width": 209,
+      "height": 56,
+      "visibleHeight": 56
+    },
+    "firstVisual": {
+      "x": 646,
+      "y": 176,
+      "width": 586,
+      "height": 583,
+      "visibleHeight": 583
+    }
+  },
+  "overflow": [],
+  "scrollOwners": [],
+  "realAppCaptureCount": 2
+}
+Viewport set to 1440x900
+{
+  "passed": true,
+  "viewport": [
+    1440,
+    900
+  ],
+  "benefits": 16,
+  "checks": "actual logos and app captures, no em dash, four motion scenes, keyboard, profiles, processing, all features, FAQ, image dialog, navigation, overflow"
+}
+{
+  "cssViewport": [
+    1440,
+    900
+  ],
+  "dpr": 1,
+  "visualViewportScale": 1,
+  "textScale": "default browser setting",
+  "safeArea": "no display cutout in desktop browser",
+  "page": {
+    "viewport": 900,
+    "content": 6315,
+    "width": 1440
+  },
+  "fixedChrome": {
+    "x": 175,
+    "y": 22,
+    "width": 1090,
+    "height": 110,
+    "visibleHeight": 110
+  },
+  "landmarks": {
+    "heading": {
+      "x": 80,
+      "y": 271,
+      "width": 579,
+      "height": 160,
+      "visibleHeight": 160
+    },
+    "primaryAction": {
+      "x": 80,
+      "y": 581,
+      "width": 209,
+      "height": 56,
+      "visibleHeight": 56
+    },
+    "firstVisual": {
+      "x": 724,
+      "y": 176,
+      "width": 636,
+      "height": 583,
+      "visibleHeight": 583
+    }
+  },
+  "overflow": [],
+  "scrollOwners": [],
+  "realAppCaptureCount": 2
+}
+Viewport set to 1920x1080
+{
+  "passed": true,
+  "viewport": [
+    1920,
+    1080
+  ],
+  "benefits": 16,
+  "checks": "actual logos and app captures, no em dash, four motion scenes, keyboard, profiles, processing, all features, FAQ, image dialog, navigation, overflow"
+}
+{
+  "cssViewport": [
+    1920,
+    1080
+  ],
+  "dpr": 1,
+  "visualViewportScale": 1,
+  "textScale": "default browser setting",
+  "safeArea": "no display cutout in desktop browser",
+  "page": {
+    "viewport": 1080,
+    "content": 6318,
+    "width": 1920
+  },
+  "fixedChrome": {
+    "x": 415,
+    "y": 22,
+    "width": 1090,
+    "height": 110,
+    "visibleHeight": 110
+  },
+  "landmarks": {
+    "heading": {
+      "x": 280,
+      "y": 295,
+      "width": 602,
+      "height": 175,
+      "visibleHeight": 175
+    },
+    "primaryAction": {
+      "x": 280,
+      "y": 620,
+      "width": 209,
+      "height": 56,
+      "visibleHeight": 56
+    },
+    "firstVisual": {
+      "x": 977,
+      "y": 189,
+      "width": 663,
+      "height": 618,
+      "visibleHeight": 618
+    }
+  },
+  "overflow": [],
+  "scrollOwners": [],
+  "realAppCaptureCount": 2
+}

@@ -89,6 +89,18 @@ private struct ProcessingBarItem: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel("Verwijder afgeronde taak")
             } else if isFailed {
+                if recordingVM.canRestartTask(task) {
+                    Button {
+                        recordingVM.restartTask(task)
+                    } label: {
+                        Image(systemName: "arrow.clockwise.circle.fill")
+                            .font(.system(size: 14))
+                            .foregroundStyle(Color.brandPrimary)
+                    }
+                    .buttonStyle(.plain)
+                    .help("Opnieuw starten")
+                    .accessibilityLabel("Taak opnieuw starten")
+                }
                 Button {
                     recordingVM.removeTask(task.taskId)
                 } label: {

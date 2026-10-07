@@ -204,7 +204,8 @@ struct TasksView: View {
                         task: task,
                         isCompact: isCompact,
                         onCancel: { taskToCancel = task },
-                        onDelete: { taskToDelete = task }
+                        onDelete: { taskToDelete = task },
+                        onRestart: recordingVM.canRestartTask(task) ? { recordingVM.restartTask(task) } : nil
                     )
                 }
             }
@@ -224,6 +225,7 @@ private struct TaskRow: View {
     let isCompact: Bool
     let onCancel: () -> Void
     let onDelete: () -> Void
+    var onRestart: (() -> Void)? = nil
 
     @State private var isHovered = false
 
@@ -333,6 +335,18 @@ private struct TaskRow: View {
                 }
                 .buttonStyle(.plain)
                 .help("Annuleren")
+            }
+
+            if let onRestart {
+                Button {
+                    onRestart()
+                } label: {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.system(size: 14))
+                        .foregroundStyle(Color.brandPrimary)
+                }
+                .buttonStyle(.plain)
+                .help("Opnieuw starten")
             }
 
             Button {

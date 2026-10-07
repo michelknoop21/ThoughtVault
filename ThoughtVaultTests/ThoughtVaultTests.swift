@@ -122,3 +122,35 @@ final class SystemAudioPermissionTests: XCTestCase {
         manager.systemAudioGranted = nil
     }
 }
+
+@MainActor
+final class RestartTaskTests: XCTestCase {
+    private func failedTask(audioPath: String?) -> TranscriptTask {
+        TranscriptTask(id: "local-restart-test", taskId: "local-restart-test", filename: "x.wav",
+                       status: .error, localAudioPath: audioPath, progress: 0, profileId: nil, createdAt: Date())
+    }
+
+    func testFailedTaskWithAudioOnDiskCanRestart() throws {
+        let vm = RecordingViewModel()
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("restart-\(UUID().uuidString).wav")
+        try Data([0]).write(to: url)
+        defer { try? FileManager.default.removeItem(at: url) }
+        XCTAssertTrue(vm.canRestartTask(failedTask(audioPath: url.path)))
+    }
+
+    func testFailedTaskWithoutRecordOrAudioCannotRestart() {
+        let vm = RecordingViewModel()
+        XCTAssertFalse(vm.canRestartTask(failedTask(audioPath: nil)))
+        XCTAssertFalse(vm.canRestartTask(failedTask(audioPath: "/nonexistent/x.wav")))
+    }
+
+    func testOnlyFailedTasksCanRestart() throws {
+        let vm = RecordingViewModel()
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("restart-\(UUID().uuidString).wav")
+        try Data([0]).write(to: url)
+        defer { try? FileManager.default.removeItem(at: url) }
+        var task = failedTask(audioPath: url.path)
+        task.status = .completed
+        XCTAssertFalse(vm.canRestartTask(task))
+    }
+}

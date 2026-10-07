@@ -236,6 +236,8 @@
 "Opnametype" = "Recording type";
 "Opnieuw" = "Retry";
 "Opnieuw proberen" = "Try again";
+"Opnieuw starten" = "Restart";
+"Taak opnieuw starten" = "Restart task";
 "Opnieuw verwerken" = "Reprocess";
 "Opslaan" = "Save";
 "Optioneel. Laat leeg voor de standaard opmaak." = "Optional. Leave empty for the default formatting.";

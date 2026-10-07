@@ -44,10 +44,13 @@ final class AudioEnvelopeProcessorTests: XCTestCase {
 
     func testWaveformKeepsConversationalLevelsVisible() {
         XCTAssertEqual(WaveConfig.visualEnergy(0), 0)
-        XCTAssertGreaterThan(WaveConfig.visualEnergy(0.3), 0.12)
-        XCTAssertGreaterThan(WaveConfig.visualEnergy(0.5), 0.25)
+        XCTAssertGreaterThan(WaveConfig.visualEnergy(0.3), 0.26)
+        XCTAssertGreaterThan(WaveConfig.visualEnergy(0.5), 0.44)
         XCTAssertGreaterThan(WaveConfig.visualEnergy(0.8) - WaveConfig.visualEnergy(0.5), 0.20)
-        XCTAssertLessThanOrEqual(WaveConfig.visualEnergy(1), 0.72)
+        XCTAssertLessThanOrEqual(WaveConfig.visualEnergy(1), 0.9)
+        XCTAssertEqual(WaveConfig.visualEnergy(.nan), 0)
+        XCTAssertEqual(WaveConfig.visualEnergy(-1), 0)
+        XCTAssertEqual(WaveConfig.visualEnergy(2), 0.9)
     }
 
     /// Opt-in hardware test: plays actual output audio through the system tap.
@@ -182,16 +185,16 @@ final class AudioEnvelopeProcessorTests: XCTestCase {
         let levels = run("northstarTimeline", processor: &processor)
         XCTAssertEqual(levels.count, 210)
         XCTAssertLessThan(WaveConfig.visualEnergy(levels[24]), 0.05)
-        XCTAssertGreaterThan(WaveConfig.visualEnergy(levels[60]), 0.25)
-        XCTAssertLessThan(WaveConfig.visualEnergy(levels[60]), 0.40)
-        XCTAssertGreaterThan(WaveConfig.visualEnergy(levels[120]), 0.45)
-        XCTAssertLessThan(WaveConfig.visualEnergy(levels[120]), 0.65)
-        XCTAssertGreaterThan(WaveConfig.visualEnergy(levels[165]), 0.55)
-        XCTAssertLessThan(WaveConfig.visualEnergy(levels[165]), 0.75)
-        XCTAssertGreaterThan(WaveConfig.visualEnergy(levels[32]), 0.05, "soft speech must appear within 100 ms")
-        XCTAssertGreaterThan(WaveConfig.visualEnergy(levels[176]), 0.03, "release must not drop abruptly")
-        XCTAssertLessThan(WaveConfig.visualEnergy(levels[176]), 0.25)
-        XCTAssertLessThan(WaveConfig.visualEnergy(levels[188]), 0.05, "release should reach near-rest within 600 ms")
+        XCTAssertGreaterThan(WaveConfig.visualEnergy(levels[60]), 0.50)
+        XCTAssertLessThan(WaveConfig.visualEnergy(levels[60]), 0.60)
+        XCTAssertGreaterThan(WaveConfig.visualEnergy(levels[120]), 0.65)
+        XCTAssertLessThan(WaveConfig.visualEnergy(levels[120]), 0.75)
+        XCTAssertGreaterThan(WaveConfig.visualEnergy(levels[165]), 0.85)
+        XCTAssertLessThan(WaveConfig.visualEnergy(levels[165]), 0.91)
+        XCTAssertGreaterThan(WaveConfig.visualEnergy(levels[32]), 0.45, "soft speech must appear within 100 ms")
+        XCTAssertGreaterThan(WaveConfig.visualEnergy(levels[176]), 0.30, "release must not drop abruptly")
+        XCTAssertLessThan(WaveConfig.visualEnergy(levels[176]), 0.40)
+        XCTAssertLessThan(WaveConfig.visualEnergy(levels[188]), 0.07, "release should reach near-rest within 600 ms")
         let moments: [(String, Int)] = [
             ("silence", 24), ("soft", 60), ("normal", 120),
             ("loud", 165), ("release200", 176), ("release600", 188)

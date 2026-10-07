@@ -16,7 +16,8 @@ it("plots real amplitude, flat silence, bounded compact waves and no movement wh
   vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} });
   vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => { draw = callback; return 1; });
   vi.stubGlobal("cancelAnimationFrame", () => {});
-  vi.stubGlobal("matchMedia", () => ({ matches: false }));
+  const motion = { matches: false };
+  vi.stubGlobal("matchMedia", () => motion);
   vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({
     setTransform() {}, clearRect() { paths = []; },
     createLinearGradient() { return { addColorStop() {} }; }, save() {}, restore() {},
@@ -32,10 +33,24 @@ it("plots real amplitude, flat silence, bounded compact waves and no movement wh
   levelsRef.current.fill(.1); draw(performance.now() + 33); const soft = extent();
   levelsRef.current.fill(.9); draw(performance.now() + 66);
   expect(extent()).toBeGreaterThan(soft * 5);
+  motion.matches = true;
+  levelsRef.current.fill(.3); draw(performance.now() + 70);
+  const speech = extent();
+  expect(speech).toBeGreaterThan(18); // Previously ~10 px: normal speech was attenuated twice.
+  draw(performance.now() + 74);
+  expect(extent()).toBe(speech); // Reduced motion freezes travel, not audio responsiveness.
+  levelsRef.current.fill(.8); draw(performance.now() + 78);
+  expect(extent()).toBeGreaterThan(speech * 2);
+  // The first speech sample must be visible without waiting for history to fill.
+  motion.matches = false;
+  levelsRef.current = [0.5]; draw(performance.now() + 82);
+  expect(extent()).toBeGreaterThan(10);
   await act(async () => root.render(<WaveformVisualizer levelsRef={levelsRef} isActive={false} height={240} />));
   draw(performance.now() + 99); expect(extent()).toBe(0);
   await act(async () => root.render(<WaveformVisualizer levelsRef={levelsRef} isActive height={40} />));
   draw(performance.now() + 132);
   expect(paths.flatMap(path => path.points).every(([x,y]) => x >= 0 && x <= 600 && y >= 0 && y <= 40)).toBe(true);
+  levelsRef.current = new Array(90).fill(1); draw(performance.now() + 165);
+  expect(paths.flatMap(path => path.points).every(([,y]) => y >= 0 && y <= 40)).toBe(true);
   await act(async () => root.unmount());
 });

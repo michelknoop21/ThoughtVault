@@ -24,7 +24,9 @@ const BELLIES = [
   { c: .53, w: .15, delay: 70, f: .053, amp: .95 },
   { c: .73, w: .15, delay: 140, f: .071, amp: .78 },
 ];
-const visualEnergy = (level: number) => .72 * Math.pow(Math.max(0, Math.min(1, level || 0)), 1.35);
+// The native envelope already gates noise and shapes the response. Preserve
+// its dynamics instead of attenuating quiet speech a second time.
+const visualEnergy = (level: number) => .9 * Math.max(0, Math.min(1, Number.isFinite(level) ? level : 0));
 
 export function WaveformVisualizer({ levelsRef, isActive, height = 240, strands }: WaveformVisualizerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -65,7 +67,7 @@ export function WaveformVisualizer({ levelsRef, isActive, height = 240, strands 
       const level = visualEnergy(live);
       if (!reduced.matches && activeRef.current && !document.hidden) {
         time += dt;
-        travel += dt * TAU * .3 * (1 + .25 * live);
+        travel += dt * TAU * .3 * (1 + 1.8 * level / .9);
       }
       const drift = reduced.matches ? 0 : time, phase = reduced.matches ? 0 : travel;
       const sample = (delay: number) => {

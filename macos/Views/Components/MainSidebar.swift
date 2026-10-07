@@ -58,16 +58,17 @@ struct MainSidebar: View {
     private var expandedContent: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 13) {
-                Image(systemName: "waveform")
-                    .font(.system(size: 26, weight: .semibold))
-                    .foregroundStyle(LinearGradient(colors: [Color(red: 0.78, green: 0.49, blue: 1), Color(red: 0.48, green: 0.25, blue: 0.95)],
-                                                    startPoint: .top, endPoint: .bottom))
+                Image("AppLogo")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 40, height: 48)
+                    .accessibilityHidden(true)
                 Text("ThoughtVault")
                     .font(.system(size: 19, weight: .semibold))
                     .foregroundStyle(.white)
                 Spacer(minLength: 0)
             }
-            .frame(height: 30)
+            .frame(height: 48)
             .padding(.leading, 13)
             .padding(.trailing, 6)
             .padding(.top, 30)
@@ -179,10 +180,11 @@ struct MainSidebar: View {
 
     private var collapsedContent: some View {
         VStack(spacing: 4) {
-            Image(systemName: "waveform")
-                .font(.system(size: 20, weight: .semibold))
-                .foregroundStyle(Color(red: 0.7, green: 0.45, blue: 1))
-                .frame(height: 30)
+            Image("AppLogo")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 32, height: 38)
+                .accessibilityLabel("ThoughtVault")
                 .padding(.top, 30)
                 .padding(.bottom, 18)
             ForEach(visibleTabs) { tab in

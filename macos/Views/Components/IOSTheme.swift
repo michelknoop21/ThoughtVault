@@ -255,10 +255,10 @@ struct IOSBrandBar: View {
 
     var body: some View {
         HStack(spacing: 11) {
-            Image(systemName: "waveform")
-                .font(.system(size: 20, weight: .semibold))
-                .foregroundStyle(LinearGradient(colors: [Color(red: 0.84, green: 0.45, blue: 1), Color(red: 0.52, green: 0.28, blue: 0.96)],
-                                                startPoint: .top, endPoint: .bottom))
+            Image("AppLogo")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 32, height: 38)
                 .accessibilityHidden(true)
             Text("ThoughtVault")
                 .font(.system(size: 15.5, weight: .semibold))

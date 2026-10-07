@@ -8,7 +8,6 @@ import json
 import os
 from pathlib import Path
 import re
-import shutil
 import tempfile
 from datetime import datetime, timezone
 import xml.etree.ElementTree as ET

@@ -21,20 +21,11 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
+            #[cfg(debug_assertions)]
             let main_window = app.get_webview_window("main").unwrap();
 
-            // Apply Windows 11 Mica effect to main window
-            #[cfg(target_os = "windows")]
-            {
-                use window_vibrancy::apply_mica;
-                if let Err(e) = apply_mica(&main_window, Some(true)) {
-                    eprintln!("[Window] Mica effect niet beschikbaar: {}", e);
-                }
-            }
-
-            // No vibrancy effect on the recording-widget — it uses CSS background
-            // with transparent: true on the window, so acrylic would fill the
-            // entire rectangular window behind the pill shape.
+            // Keep the main WebView opaque for crisp text on Windows.
+            // The separate recording widget retains its transparent window.
 
             // Handle deep-link OAuth callbacks (Microsoft 365)
             let app_handle2 = app.handle().clone();

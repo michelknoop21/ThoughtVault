@@ -20,6 +20,7 @@ on:
 
 permissions:
   contents: write
+  actions: read
 
 env:
   NODE_VERSION: '20'
@@ -109,6 +110,18 @@ jobs:
           cp "$MSI.sig" "build/$MSI_NAME.sig"
           echo "Built: $MSI_NAME"
 
+      - name: Verify installed app and upgrade from 1.0.255
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh run download 37610419654 --repo michelknoop21/ThoughtVault --name ThoughtVault-Windows-x64 --dir build/previous
+          if ($LASTEXITCODE -ne 0) { throw "Previous installer download failed" }
+          $Previous = Get-ChildItem build/previous -Recurse -Filter ThoughtVault_1.0.255_x64.msi | Select-Object -First 1
+          if (-not $Previous) { throw "Previous installer missing" }
+          powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify-windows-installer.ps1 -Installer "build/${{ steps.names.outputs.msi_name }}" -PreviousInstaller $Previous.FullName
+          if ($LASTEXITCODE -ne 0) { throw "Installation verification failed" }
+
       - name: Upload to server
         shell: bash
         env:
@@ -132,4 +145,6 @@ jobs:
           path: |
             build/*.msi
             build/*.sig
+            build/*.log
+            build/INSTALL-VERIFICATION.txt
           retention-days: 30

@@ -102,3 +102,5 @@ notulen. Hiervoor is uitsluitend de sleutel van die gekozen provider nodig.
 Voor releasebuilds moet `TAURI_SIGNING_PRIVATE_KEY` in de CI-secret store staan.
 Deze releasesleutel is afzonderlijk van de AI-providersleutels. Bewaar een beveiligde
 backup: een andere releasesleutel kan bestaande installaties niet bijwerken.
+
+Vanaf 1.0.257 heet het geïnstalleerde programma `ThoughtVault.exe`. De bestaande app-identiteit en lokale opslag blijven behouden. Het hoofdvenster is ondoorzichtig; de opnamewidget blijft transparant.

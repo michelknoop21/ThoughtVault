@@ -1,6 +1,6 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import { webcrypto } from "node:crypto";
-import { commandAllowed, disconnectAIConnection, loadAIConnection, useAIConnection, type AICommand, type DeviceConnection } from "../aiConnections";
+import { commandAllowed, disconnectAIConnection, useAIConnection, type AICommand, type DeviceConnection } from "../aiConnections";
 import { executeAICommand } from "../../hooks/useAICommands";
 import { htmlToMarkdown } from "../../utils/htmlToMarkdown";
 import { contentRevision, minutesDocument, validateDocumentStyle } from "../documentStyle";
@@ -40,27 +40,13 @@ it("checks device, deadline and actual tool permission independently of the supp
   expect(commandAllowed(command, { ...connection, scopes: [] })).toBe(false);
 });
 
-it("keeps permissions revoked after an offline disconnect and app restart", async () => {
-  let credential = JSON.stringify({ ...connection, scopes: ["read", "write", "record"] });
-  mocks.invoke.mockImplementation(async (command: string, args?: { value: string }) => {
-    if (command === "store_credential") { credential = args!.value; return; }
-    if (command === "load_credential") return credential;
-    if (command === "proxy_request") {
-      expect(JSON.parse(credential).scopes).toEqual([]);
-      throw Error("offline");
-    }
-  });
-  try {
-    useAIConnection.setState({ connection: JSON.parse(credential) });
-    await disconnectAIConnection();
-    expect(useAIConnection.getState().status).toContain("Ontkoppelen niet bevestigd");
-    useAIConnection.setState({ connection: null });
-    await loadAIConnection();
-    expect(useAIConnection.getState().connection?.scopes).toEqual([]);
-    expect(commandAllowed(command, useAIConnection.getState().connection!)).toBe(false);
-  } finally {
-    mocks.invoke.mockReset().mockResolvedValue("C:\\recording.wav");
-  }
+it("disconnects locally without contacting the removed account backend", async () => {
+  mocks.invoke.mockResolvedValue(undefined);
+  useAIConnection.setState({ connection: { ...connection, scopes: ["read", "write", "record"] } });
+  await disconnectAIConnection();
+  expect(useAIConnection.getState().connection).toBeNull();
+  expect(mocks.invoke).toHaveBeenCalledWith("local_mcp_stop");
+  expect(mocks.invoke.mock.calls.some(([name]) => name === "proxy_request")).toBe(false);
 });
 
 it("validates styling and removes scripts, CSS and remote resources while preserving tables", () => {

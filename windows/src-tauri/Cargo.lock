@@ -5114,7 +5114,7 @@ dependencies = [
 
 [[package]]
 name = "thoughtvault"
-version = "1.0.257"
+version = "1.0.261"
 dependencies = [
  "chrono",
  "cpal",

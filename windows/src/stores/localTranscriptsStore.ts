@@ -1,3 +1,4 @@
+import { transcriptText } from "../services/transcriptText";
 import { create } from "zustand";
 import { Store } from "@tauri-apps/plugin-store";
 import type { Transcript } from "../types";
@@ -46,7 +47,7 @@ export const useLocalTranscriptsStore = create<LocalTranscriptsState>()((set, ge
           localStorage.removeItem(LEGACY_KEY);
         }
         diskStore = store;
-        set({ items });
+        set({ items: items.map(item => ({ ...item, raw_transcription: item.raw_transcription ? transcriptText(item.raw_transcription) : item.raw_transcription })) });
       })().catch((error) => {
         loadPromise = null;
         throw error;
@@ -61,7 +62,7 @@ export const useLocalTranscriptsStore = create<LocalTranscriptsState>()((set, ge
       const items = await change(get().items);
       await diskStore!.set("items", items);
       await diskStore!.save();
-      set({ items });
+      set({ items: items.map(item => ({ ...item, raw_transcription: item.raw_transcription ? transcriptText(item.raw_transcription) : item.raw_transcription })) });
     });
     writeQueue = operation.catch(() => {});
     return operation;

@@ -1,95 +1,49 @@
 import { invoke } from "@tauri-apps/api/core";
-import { open } from "@tauri-apps/plugin-shell";
 import { create } from "zustand";
 import { loadCredential, storeCredential, deleteCredential } from "./tauriCommands";
 
-const BASE = "https://n8n.prezent.nl/tstudio/api";
-const KEY = "mcp_device";
+const KEY = "local_mcp_connection";
 export type AIScope = "read" | "write" | "record";
 export interface DeviceConnection { device_id: string; credential: string; scopes: AIScope[]; user_id: string; }
-export interface AICommand {
-  id: string; device_id: string; scope: AIScope; expires_at: number;
-  tool: string; arguments: Record<string, unknown>;
-}
-export const useAIConnection = create<{
-  connection: DeviceConnection | null; status: string; busy: boolean;
-}>(() => ({ connection: null, status: "Niet gekoppeld", busy: false }));
-
-export async function relayRequest<T>(path: string, method = "GET", body?: unknown, credential?: string): Promise<T> {
-  const response = await invoke<{ status: number; body: string }>("proxy_request", { request: {
-    url: BASE + path, method, headers: { "Content-Type": "application/json", ...(credential ? { Authorization: `Bearer ${credential}` } : {}) },
-    body: body === undefined ? null : JSON.stringify(body),
-  } });
-  const data = JSON.parse(response.body);
-  if (response.status < 200 || response.status >= 300) throw Error(data.detail ?? "AI-koppeling niet bereikbaar. Probeer opnieuw.");
-  return data;
-}
-
+export interface AICommand { id: string; device_id: string; scope: AIScope; expires_at: number; tool: string; arguments: Record<string, unknown>; }
+export const useAIConnection = create<{ connection: DeviceConnection | null; status: string; busy: boolean }>(() => ({ connection: null, status: "Lokale MCP uitgeschakeld", busy: false }));
 export async function loadAIConnection() {
   const raw = await loadCredential(KEY);
-  const connection: DeviceConnection | null = raw ? JSON.parse(raw) : null;
-  useAIConnection.setState({ connection, status: connection ? "Verbinding maken…" : "Niet gekoppeld" });
+  if (!raw) return;
+  const connection: DeviceConnection | null = JSON.parse(raw);
+  if (!connection) return;
+  await invoke("local_mcp_start", { token: connection.credential, scopes: connection.scopes });
+  useAIConnection.setState({ connection, status: "Lokale MCP actief op http://127.0.0.1:11219/mcp" });
 }
-
-let pairingGeneration = 0;
 export async function pairAIConnection(scopes: AIScope[]) {
-  const generation = ++pairingGeneration;
-  useAIConnection.setState({ busy: true, status: "Voltooi de koppeling in je browser" });
+  useAIConnection.setState({ busy: true });
   try {
-    const pending = await relayRequest<{ ticket: string; secret: string; verification_uri: string }>("/ai/devices/pair", "POST", { name: "ThoughtVault Windows", platform: "Windows", scopes });
-    // Browser URL comes from the trusted relay; never open arbitrary command URLs.
-    if (!pending.verification_uri.startsWith(BASE + "/ai/devices/verify?")) throw Error("Ongeldige koppel-URL.");
-    await open(pending.verification_uri);
-    const deadline = Date.now() + 300_000;
-    while (generation === pairingGeneration && Date.now() < deadline) {
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      const ready = await relayRequest<DeviceConnection & { pending?: boolean }>("/ai/devices/pair-status", "POST", { ticket: pending.ticket, secret: pending.secret });
-      if (!ready.pending) {
-        await storeCredential(KEY, JSON.stringify(ready));
-        if (await loadCredential(KEY) !== JSON.stringify(ready)) throw Error("Koppelgegevens opslaan mislukt.");
-        useAIConnection.setState({ connection: ready, status: "Verbinding maken…" });
-        return;
-      }
-    }
-    throw Error("Koppelaanvraag verlopen. Probeer opnieuw.");
-  } catch (error) {
-    useAIConnection.setState({ status: error instanceof Error ? error.message : String(error) });
-  } finally { useAIConnection.setState({ busy: false }); }
+    const credential = Array.from(crypto.getRandomValues(new Uint8Array(32)), value => value.toString(16).padStart(2, "0")).join("");
+    const connection: DeviceConnection = { device_id: "local", user_id: "local", scopes, credential };
+    await storeCredential(KEY, JSON.stringify(connection));
+    await invoke("local_mcp_start", { token: credential, scopes });
+    useAIConnection.setState({ connection, status: "Lokale MCP actief op http://127.0.0.1:11219/mcp" });
+  } catch (error) { useAIConnection.setState({ status: String(error) }); }
+  finally { useAIConnection.setState({ busy: false }); }
 }
-
 export async function updateAIPermissions(scopes: AIScope[]) {
   const connection = useAIConnection.getState().connection;
   if (!connection) return;
-  useAIConnection.setState({ busy: true });
+  // Revoke in the UI immediately; native admission is checked before every action.
+  useAIConnection.setState({ connection: { ...connection, scopes: [] }, busy: true });
   try {
-    // Narrow local permission checks immediately, before the outgoing request.
-    const reduced = connection.scopes.filter((scope) => scopes.includes(scope));
-    useAIConnection.setState({ connection: { ...connection, scopes: reduced } });
-    await storeCredential(KEY, JSON.stringify({ ...connection, scopes: reduced }));
-    await relayRequest(`/ai/devices/${connection.device_id}`, "PUT", { scopes }, connection.credential);
+    await invoke("local_mcp_stop");
     const updated = { ...connection, scopes };
     await storeCredential(KEY, JSON.stringify(updated));
+    await invoke("local_mcp_start", { token: connection.credential, scopes });
     useAIConnection.setState({ connection: updated });
-  } catch (error) {
-    useAIConnection.setState({ status: `Rechten wijzigen niet bevestigd. Probeer opnieuw. ${String(error)}` });
-    throw error;
   } finally { useAIConnection.setState({ busy: false }); }
 }
-
 export async function disconnectAIConnection() {
-  const connection = useAIConnection.getState().connection;
-  if (!connection) return;
-  useAIConnection.setState({ busy: true, connection: { ...connection, scopes: [] } });
-  try {
-    await storeCredential(KEY, JSON.stringify({ ...connection, scopes: [] }));
-    await relayRequest(`/ai/devices/${connection.device_id}`, "DELETE", undefined, connection.credential);
-    await deleteCredential(KEY);
-    useAIConnection.setState({ connection: null, status: "Niet gekoppeld" });
-  } catch (error) {
-    useAIConnection.setState({ status: `Ontkoppelen niet bevestigd. Probeer opnieuw. ${String(error)}` });
-  } finally { useAIConnection.setState({ busy: false }); }
+  useAIConnection.setState({ connection: null, busy: true });
+  try { await invoke("local_mcp_stop"); await storeCredential(KEY, "null"); await deleteCredential(KEY); useAIConnection.setState({ status: "Lokale MCP uitgeschakeld" }); }
+  finally { useAIConnection.setState({ busy: false }); }
 }
-
 export function commandAllowed(command: AICommand, connection: DeviceConnection): boolean {
   const scope: AIScope = ["start_recording", "pause_recording", "resume_recording", "stop_recording"].includes(command.tool)
     ? "record" : ["save_minutes", "update_transcript", "save_profile", "open_view"].includes(command.tool) ? "write" : "read";

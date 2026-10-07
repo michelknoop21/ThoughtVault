@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAIConnection, relayRequest, loadAIConnection, commandAllowed, type AICommand } from "../services/aiConnections";
+import { useAIConnection, loadAIConnection, commandAllowed, type AICommand } from "../services/aiConnections";
 import { useLocalTranscriptsStore } from "../stores/localTranscriptsStore";
 import { useTranscriptsStore } from "../stores/transcriptsStore";
 import { useProfilesStore } from "../stores/profilesStore";
@@ -8,7 +8,8 @@ import { useRecordingStore } from "../stores/recordingStore";
 import { recordingAction } from "../services/recordingActions";
 import { contentRevision, minutesDocument, validateDocumentStyle, type DocumentStyle } from "../services/documentStyle";
 import { htmlToMarkdown } from "../utils/htmlToMarkdown";
-import { Store } from "@tauri-apps/plugin-store";
+import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 
 export async function executeAICommand(command: AICommand, navigate: (path: string) => void): Promise<Record<string, unknown>> {
   const args = command.arguments;
@@ -112,45 +113,24 @@ export function useAICommands() {
   const navigate = useNavigate();
   const navigateRef = useRef(navigate);
   navigateRef.current = navigate;
-  const deviceId = useAIConnection((state) => state.connection?.device_id);
-  useEffect(() => { void loadAIConnection().catch(() => useAIConnection.setState({ status: "Koppelgegevens laden mislukt. Probeer opnieuw." })); }, []);
   useEffect(() => {
-    if (!deviceId) return;
-    let stopped = false;
-    async function run() {
-      const receipts = await Store.load("ai-command-receipts.json", { defaults: { ids: [] }, autoSave: false });
-      while (!stopped) {
-        const connection = useAIConnection.getState().connection;
-        if (!connection || connection.device_id !== deviceId) return;
-        try {
-          const { command } = await relayRequest<{ command: AICommand | null }>(`/ai/devices/${deviceId}/commands`, "GET", undefined, connection.credential);
-          if (stopped) return;
-          useAIConnection.setState({ status: "Verbonden" });
-          if (!command) continue;
-          const current = useAIConnection.getState().connection;
-          if (!current || !commandAllowed(command, current)) continue;
-          const ids = await receipts.get<string[]>("ids") ?? [];
-          let result: Record<string, unknown>;
-          if (ids.includes(command.id)) result = { error: "Resultaat onzeker; opdracht is eerder ontvangen en wordt niet herhaald." };
-          else {
-            // Persist receipt BEFORE executing. A crash cannot cause re-execution.
-            await receipts.set("ids", [...ids.slice(-999), command.id]);
-            await receipts.save();
-            await relayRequest(`/ai/devices/${deviceId}/commands/${command.id}/validate`, "GET", undefined, connection.credential);
-            const latest = useAIConnection.getState().connection;
-            if (stopped || !latest || !commandAllowed(command, latest)) continue;
-            try { result = await executeAICommand(command, (path) => navigateRef.current(path)); }
-            catch (error) { result = { error: error instanceof Error ? error.message : String(error) }; }
-          }
-          // Result delivery is attempted once; failure never repeats the action.
-          await relayRequest(`/ai/devices/${deviceId}/commands/${command.id}`, "POST", { result }, connection.credential);
-        } catch (error) {
-          useAIConnection.setState({ status: `Verbinding onderbroken. Controleer je internetverbinding. ${String(error)}` });
-          await new Promise((resolve) => setTimeout(resolve, 5000));
-        }
-      }
-    }
-    void run().catch(() => useAIConnection.setState({ status: "Opdrachtregistratie laden mislukt; bediening geblokkeerd." }));
-    return () => { stopped = true; };
-  }, [deviceId]);
+    let disposed = false;
+    let unlisten: (() => void) | undefined;
+    // Listen before starting the endpoint, so the first request cannot be lost.
+    void listen<AICommand>("local-mcp-command", async ({ payload: command }) => {
+      const current = useAIConnection.getState().connection;
+      let result: Record<string, unknown>;
+      try {
+        if (disposed || !current || !commandAllowed(command, current) ||
+          !await invoke<boolean>("local_mcp_allowed", { token: current.credential, tool: command.tool })) throw Error("Lokale MCP-toegang ingetrokken.");
+        result = await executeAICommand(command, path => navigateRef.current(path));
+      } catch (error) { result = { error: error instanceof Error ? error.message : String(error) }; }
+      await invoke("local_mcp_reply", { id: command.id, result });
+    }).then(async fn => {
+      if (disposed) { fn(); return; }
+      unlisten = fn;
+      await loadAIConnection().catch(() => useAIConnection.setState({ status: "Lokale MCP kon niet starten. Controleer of de poort vrij is." }));
+    });
+    return () => { disposed = true; unlisten?.(); };
+  }, []);
 }

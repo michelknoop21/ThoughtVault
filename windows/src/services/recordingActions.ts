@@ -1,6 +1,6 @@
 import * as audio from "./tauriCommands";
 import { useRecordingStore } from "../stores/recordingStore";
-import { openWidgetWindow, closeWidgetWindow } from "../hooks/useWidgetWindow";
+import { closeWidgetWindow } from "../hooks/useWidgetWindow";
 import { emit } from "@tauri-apps/api/event";
 
 let changing = false;
@@ -23,7 +23,6 @@ export async function recordingAction(action: RecordingAction): Promise<audio.Re
       store.setFilePath(path);
       store.startTimer();
       store.setPhase("recording");
-      await openWidgetWindow().catch(() => {});
       return path;
     }
     if (action === "pause") {

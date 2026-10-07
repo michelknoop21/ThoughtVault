@@ -217,3 +217,11 @@
 
 .desktop-notulen .tl-sort { min-height:32px;border:1px solid #343950;border-radius:99px;background:#151a2d;color:#b8bdd6;padding:5px 10px;font:inherit;font-size:12px; }
 .desktop-notulen .tl-item-profile,.desktop-notulen .tl-item-tag,.desktop-notulen .tl-item-time,.desktop-notulen .tl-group-label { font-size:12px; }
+
+/* Shared audit layout: keep related content on the same axis. */
+.desktop-page .page-content{margin-inline:0;max-width:1100px}
+.desktop-page .page-header{max-width:1100px}
+
+.thoughtvault-home-content, .thoughtvault-new-recording { width: 100%; min-width: 0; box-sizing: border-box; }
+
+.app-shell { color: #edeaf6; }

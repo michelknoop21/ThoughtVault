@@ -1,3 +1,4 @@
+import { formatDuration, transcriptText } from "../../services/transcriptText";
 import { useState, useRef, useEffect } from "react";
 import {
   ArrowLeft24Regular,
@@ -206,10 +207,15 @@ export function TranscriptDetail({
           </>
         )}
 
+        {detailTab === "transcriptie" && !hasNotule && (
+          <button className="td-toolbar-btn td-toolbar-btn-labeled" onClick={() => onRegenerate(transcript)} disabled={isRegenerating}>
+            <ArrowSync24Regular /> Maak notule
+          </button>
+        )}
         {detailTab === "transcriptie" && (
           <button
             className="td-toolbar-btn td-toolbar-btn-labeled"
-            onClick={() => transcript.raw_transcription && onCopy(transcript.raw_transcription)}
+            onClick={() => transcript.raw_transcription && onCopy(transcriptText(transcript.raw_transcription))}
             disabled={!transcript.raw_transcription}
             title="Kopieer transcriptie"
           >
@@ -353,7 +359,7 @@ export function TranscriptDetail({
           ) : (
             transcript.raw_transcription ? (
               <div className="td-doc-body td-transcription">
-                {transcript.raw_transcription}
+                {transcriptText(transcript.raw_transcription)}
               </div>
             ) : (
               <div className="td-empty-content">
@@ -398,11 +404,7 @@ function formatDate(dateStr: string): string {
     + " om " + d.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" });
 }
 
-function formatDuration(seconds: number): string {
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return m > 0 ? `${m}m ${s}s` : `${s}s`;
-}
+
 
 function stripHtml(html: string): string {
   const tmp = document.createElement("div");

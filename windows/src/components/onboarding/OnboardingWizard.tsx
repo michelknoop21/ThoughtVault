@@ -81,7 +81,7 @@ export function OnboardingWizard() {
     >
       <BrandBar />
       <div style={{ flex: 1, display: "flex", alignItems: "flex-start", justifyContent: "center", minHeight: 0, overflowY: "auto" }}>
-      <div style={{ width: "100%", maxWidth: 440, padding: 32, margin: "auto 0" }}>
+      <div style={{ width: "100%", maxWidth: 760, padding: "32px 32px 64px", margin: "auto 0" }}>
         {/* Progress dots */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginBottom: 32 }}>
           {STEPS.map((_, i) => (
@@ -92,7 +92,7 @@ export function OnboardingWizard() {
                 borderRadius: 3,
                 background: i <= step ? "var(--fill-accent-default)" : "var(--stroke-divider)",
                 width: i === step ? 24 : 6,
-                transition: "width 200ms ease, background 200ms ease",
+                transition: "background 200ms ease",
               }}
             />
           ))}

@@ -1,3 +1,4 @@
+import { formatDuration, transcriptText, processingError } from "../services/transcriptText";
 import { useRecordingStore } from "../stores/recordingStore";
 import { useEffect, useState, useRef, useCallback } from "react";
 import {
@@ -197,8 +198,8 @@ export function TranscriptsPage() {
         await useLocalTranscriptsStore.getState().update(transcript.id, { notule_html: html, title });
         updateTranscript(transcript.id, { notule_html: html, title });
         toast.show("Notule opnieuw gegenereerd", "success");
-      } catch {
-        toast.show("Regenereren mislukt", "error");
+      } catch (error) {
+        toast.show(processingError(error), "error");
       } finally {
         useRecordingStore.setState((state) => ({ regenerationCount: state.regenerationCount - 1 }));
         setRegeneratingId(null);
@@ -302,7 +303,7 @@ export function TranscriptsPage() {
   function handleExportTXT(transcript: Transcript) {
     const content = transcript.notule_html
       ? stripHtml(prepareNotuleHtml(transcript.notule_html, transcript.title))
-      : transcript.raw_transcription;
+      : transcriptText(transcript.raw_transcription || "");
     if (content) downloadFile(content, `${transcript.title || "notulen"}.txt`, "text/plain");
   }
 
@@ -529,11 +530,7 @@ function formatDate(dateStr: string): string {
     + " om " + d.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" });
 }
 
-function formatDuration(seconds: number): string {
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return m > 0 ? `${m}m ${s}s` : `${s}s`;
-}
+
 
 function stripHtml(html: string): string {
   const tmp = document.createElement("div");

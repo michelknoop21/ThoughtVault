@@ -1,0 +1,144 @@
+//! Optional MCP on loopback only. No account, relay, payload persistence or CORS.
+use serde_json::{json, Value};
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex},
+    time::{SystemTime, UNIX_EPOCH},
+};
+use tauri::{Emitter, State};
+use tokio::{
+    io::{AsyncReadExt, AsyncWriteExt},
+    net::TcpListener,
+    sync::{oneshot, Semaphore},
+};
+
+#[derive(Default)]
+pub struct LocalMcp(pub Mutex<Option<Server>>);
+pub struct Server {
+    token: String,
+    scopes: Vec<String>,
+    stop: oneshot::Sender<()>,
+    pending: Arc<Mutex<HashMap<String, oneshot::Sender<Value>>>>,
+}
+fn tools() -> Vec<Value> {
+    serde_json::from_str(include_str!("../../src/services/mcpTools.json")).unwrap()
+}
+fn scope(name: &str) -> Option<String> {
+    tools()
+        .iter()
+        .find(|t| t["name"] == name)
+        .and_then(|t| t["scope"].as_str().map(str::to_owned))
+}
+#[tauri::command]
+pub async fn local_mcp_start(
+    app: tauri::AppHandle,
+    state: State<'_, LocalMcp>,
+    token: String,
+    scopes: Vec<String>,
+) -> Result<String, String> {
+    if token.len() != 64
+        || !token.bytes().all(|b| b.is_ascii_hexdigit())
+        || scopes
+            .iter()
+            .any(|s| !["read", "write", "record"].contains(&s.as_str()))
+    {
+        return Err("Ongeldige MCP-instelling.".into());
+    }
+    local_mcp_stop(state.clone());
+    let listener = TcpListener::bind("127.0.0.1:11219")
+        .await
+        .map_err(|_| "Lokale MCP-poort is bezet.".to_string())?;
+    let (stop, mut stopped) = oneshot::channel();
+    let pending = Arc::new(Mutex::new(HashMap::new()));
+    *state.0.lock().unwrap() = Some(Server {
+        token: token.clone(),
+        scopes: scopes.clone(),
+        stop,
+        pending: pending.clone(),
+    });
+    let capacity = Arc::new(Semaphore::new(8));
+    tauri::async_runtime::spawn(async move {
+        loop {
+            tokio::select! {
+                _ = &mut stopped => break,
+                accepted = listener.accept() => {
+                    let Ok((mut stream,_))=accepted else { continue };
+                    let Ok(permit)=capacity.clone().try_acquire_owned() else { continue };
+                    let app=app.clone(); let token=token.clone(); let scopes=scopes.clone(); let pending=pending.clone();
+                    tauri::async_runtime::spawn(async move {
+                        let _permit=permit;
+                        let result=tokio::time::timeout(std::time::Duration::from_secs(35), async {
+                            let mut bytes=Vec::new(); let mut chunk=[0;4096];
+                            let header_end=loop {
+                                let n=stream.read(&mut chunk).await.map_err(|_| ())?; if n==0 {return Err(())}; bytes.extend_from_slice(&chunk[..n]);
+                                if let Some(pos)=bytes.windows(4).position(|x| x==b"\r\n\r\n") {break pos+4}; if bytes.len()>16384 {return Err(())}
+                            };
+                            let header=std::str::from_utf8(&bytes[..header_end]).map_err(|_| ())?;
+                            let mut lines=header.split("\r\n"); let first=lines.next().ok_or(())?;
+                            let mut headers = HashMap::new();
+                            for line in lines.filter(|l| !l.is_empty()) {
+                                let (key,value)=line.split_once(':').ok_or(())?;
+                                if headers.insert(key.to_ascii_lowercase(),value.trim().to_string()).is_some() {return Err(())}
+                            }
+                            if first!="POST /mcp HTTP/1.1" || headers.get("authorization")!=Some(&format!("Bearer {token}")) || headers.contains_key("origin") || headers.contains_key("transfer-encoding") || !headers.get("host").is_some_and(|h| ["127.0.0.1:11219","localhost:11219"].contains(&h.as_str())) {return Ok((403,json!({"error":"Geen lokale MCP-toegang."})))}
+                            let length=headers.get("content-length").and_then(|s|s.parse::<usize>().ok()).ok_or(())?; if length>2_000_000 {return Err(())}
+                            while bytes.len()<header_end+length {let n=stream.read(&mut chunk).await.map_err(|_|())?; if n==0{return Err(())}; bytes.extend_from_slice(&chunk[..n]);}
+                            let request: Value=serde_json::from_slice(&bytes[header_end..header_end+length]).map_err(|_|())?;
+                            let id=request.get("id").cloned().unwrap_or(Value::Null);
+                            if id.is_null() {return Ok((202,Value::Null))}
+                            let response=match request["method"].as_str().unwrap_or("") {
+                                "initialize"=>json!({"protocolVersion":"2025-03-26","capabilities":{"tools":{"listChanged":false}},"serverInfo":{"name":"ThoughtVault Windows","version":"1.0"},"instructions":"Local app only. Read revisions before writes. Never retry uncertain recording results."}),
+                                "ping"=>json!({}),
+                                "tools/list"=>json!({"tools":tools().into_iter().filter(|t|scopes.contains(&t["scope"].as_str().unwrap().to_owned())).map(|mut t|{t.as_object_mut().unwrap().remove("scope");t}).collect::<Vec<_>>()}),
+                                "tools/call"=>{
+                                    let name=request["params"]["name"].as_str().unwrap_or("");
+                                    let required=scope(name);
+                                    if !required.as_ref().is_some_and(|s|scopes.contains(s)) {json!({"isError":true,"content":[{"type":"text","text":"Tool niet toegestaan."}]})}
+                                    else if name=="list_devices" {json!({"content":[{"type":"text","text":"Only this local Windows app is available."}],"structuredContent":{"devices":[{"id":"local","platform":"Windows","online":true}]}})}
+                                    else {
+                                        let args=request["params"].get("arguments").cloned().unwrap_or(json!({}));
+                                        let command_id=SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos().to_string();
+                                        let (send,receive)=oneshot::channel(); pending.lock().unwrap().insert(command_id.clone(),send);
+                                        app.emit("local-mcp-command",json!({"id":command_id,"device_id":"local","scope":required,"expires_at":SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs()+25,"tool":name,"arguments":args})).map_err(|_|())?;
+                                        let reply=tokio::time::timeout(std::time::Duration::from_secs(25),receive).await;
+                                        pending.lock().unwrap().remove(&command_id);
+                                        let value=match reply {Ok(Ok(v))=>v,_=>json!({"error":"Resultaat onzeker; herhaal opname- of schrijfopdrachten niet automatisch."})};
+                                        json!({"isError":value.get("error").is_some(),"content":[{"type":"text","text":value.to_string()}],"structuredContent":value})
+                                    }
+                                },
+                                _=>return Ok((200,json!({"jsonrpc":"2.0","id":id,"error":{"code":-32601,"message":"Onbekende methode"}}))),
+                            };
+                            Ok((200,json!({"jsonrpc":"2.0","id":id,"result":response})))
+                        }).await;
+                        let (status,body)=match result {Ok(Ok(v))=>v,_=>(400,json!({"error":"Ongeldige of verlopen aanvraag."}))};
+                        let body=if body.is_null(){String::new()}else{body.to_string()};
+                        let response=format!("HTTP/1.1 {status} OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",body.len());
+                        let _=stream.write_all(response.as_bytes()).await;
+                    });
+                }
+            }
+        }
+    });
+    Ok("http://127.0.0.1:11219/mcp".into())
+}
+#[tauri::command]
+pub fn local_mcp_stop(state: State<'_, LocalMcp>) {
+    if let Some(server) = state.0.lock().unwrap().take() {
+        let _ = server.stop.send(());
+        server.pending.lock().unwrap().clear();
+    }
+}
+#[tauri::command]
+pub fn local_mcp_reply(state: State<'_, LocalMcp>, id: String, result: Value) {
+    if let Some(server) = state.0.lock().unwrap().as_ref() {
+        if let Some(sender) = server.pending.lock().unwrap().remove(&id) {
+            let _ = sender.send(result);
+        }
+    }
+}
+#[tauri::command]
+pub fn local_mcp_allowed(state: State<'_, LocalMcp>, token: String, tool: String) -> bool {
+    state.0.lock().unwrap().as_ref().is_some_and(|s| {
+        s.token == token && scope(&tool).is_some_and(|required| s.scopes.contains(&required))
+    })
+}

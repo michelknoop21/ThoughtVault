@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import {
-  Add24Regular,
+  DocumentText24Regular,
   Edit24Regular,
   Delete24Regular,
   Copy24Regular,
@@ -224,10 +224,6 @@ export function ProfilesPage() {
           <div className="settings-group">
             <div className="profile-section-header">
               <p className="settings-group-label" style={{ margin: 0 }}>Mijn profielen</p>
-              <button onClick={openCreate} className="btn btn-accent btn-sm">
-                <Add24Regular style={{ fontSize: 14 }} />
-                Nieuw profiel
-              </button>
             </div>
             <div className="profile-list">
               {myProfiles.length === 0 ? (
@@ -474,7 +470,7 @@ function ProfileCard({
   return (
     <div className="card-static profile-card">
       {/* Icon */}
-      <span className="profile-card-icon">{profile.icon || "📄"}</span>
+      <span className="profile-card-icon"><DocumentText24Regular aria-hidden="true" /></span>
 
       {/* Name + description */}
       <div className="profile-card-info">

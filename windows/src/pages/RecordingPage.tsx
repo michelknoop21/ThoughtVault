@@ -189,7 +189,7 @@ export function RecordingPage() {
       setIsImporting(true);
       const filePath = await importAudio(source);
       if (settings.processing_mode === "local") {
-        void processLocally(filePath, selectedProfileId || settings.default_profile_id, "microphone");
+        void processLocally(filePath, selectedProfileId || settings.default_profile_id, "microphone", [], 0, undefined, source.split(/[\\/]/).pop());
       } else {
         void uploadAndTrack(filePath, selectedProfileId || settings.default_profile_id, "microphone");
       }

@@ -1,3 +1,4 @@
+mod local_mcp;
 mod audio;
 mod commands;
 mod transcribe;
@@ -12,6 +13,7 @@ pub fn run() {
 
     tauri::Builder::default()
         .manage(recording_state)
+        .manage(local_mcp::LocalMcp::default())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_store::Builder::default().build())
@@ -47,6 +49,10 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            local_mcp::local_mcp_start,
+            local_mcp::local_mcp_stop,
+            local_mcp::local_mcp_reply,
+            local_mcp::local_mcp_allowed,
             // Audio
             commands::audio::get_audio_devices,
             commands::audio::start_recording,

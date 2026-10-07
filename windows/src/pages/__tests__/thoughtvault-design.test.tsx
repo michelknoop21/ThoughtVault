@@ -23,7 +23,7 @@ describe("current ThoughtVault interface", () => {
     expect(root.textContent).toContain("Jouw pc");
     expect(root.textContent).toContain("Ollama Cloud");
     expect(root.textContent).toContain("Cloudprovider");
-    expect(root.textContent).toContain("Claude en ChatGPT");
+    expect(root.textContent).toContain("Lokale MCP");
     expect(root.textContent).not.toContain("Onboarding opnieuw doorlopen");
   });
 

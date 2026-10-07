@@ -103,6 +103,9 @@ jobs:
           TAURI_CONFIG: '{"identifier":"${{ steps.names.outputs.bundle_id }}","productName":"${{ steps.names.outputs.product_name }}","plugins":{"updater":{"endpoints":["https://thoughtvault.yinga.ai/releases/windows/${{ steps.names.outputs.feed }}.json"]}}}'
         run: npm run tauri build
 
+      - name: Verify self-contained C++ runtime
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify-windows-runtime.ps1 -Executable windows/src-tauri/target/release/ThoughtVault.exe
+
       - name: Copy and upload MSI
         shell: bash
         env:

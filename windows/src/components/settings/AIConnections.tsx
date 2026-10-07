@@ -3,7 +3,7 @@ import { PlugConnected24Regular } from "@fluentui/react-icons";
 import { useAIConnection, pairAIConnection, updateAIPermissions, disconnectAIConnection, type AIScope } from "../../services/aiConnections";
 
 const rights: { scope: AIScope; label: string; description: string }[] = [
-  { scope: "read", label: "Transcripts en notulen lezen", description: "Claude en ChatGPT kunnen inhoud ophalen en uitvoer downloaden." },
+  { scope: "read", label: "Transcripts en notulen lezen", description: "MCP-clients kunnen inhoud ophalen en uitvoer downloaden." },
   { scope: "write", label: "Notulen en sjablonen wijzigen", description: "Wijzigingen opslaan en schermen openen in deze app." },
   { scope: "record", label: "Opnames bedienen", description: "Eenmalig toestaan: starten, pauzeren, hervatten en stoppen. De opname blijft zichtbaar." },
 ];
@@ -22,7 +22,7 @@ export function AIConnections() {
     <div className="settings-row flex-row gap-10">
       <PlugConnected24Regular className="settings-icon" />
       <div className="flex-1">
-        <p className="settings-label">Claude en ChatGPT</p>
+        <p className="settings-label">Lokale MCP</p>
         <p className="settings-desc" role="status" style={{ overflowWrap: "anywhere" }}>{status}</p>
       </div>
     </div>
@@ -34,12 +34,13 @@ export function AIConnections() {
       </label>
     </div>)}
     <div className="flex-col gap-10" style={{ padding: "12px 14px" }}>
-      <p className="settings-desc">Optioneel. Je inhoud blijft op dit apparaat en wordt alleen op verzoek opgehaald. Houd de app geopend voor AI-bediening.</p>
+      <p className="settings-desc">Optioneel. Je inhoud blijft op dit apparaat en wordt alleen op verzoek opgehaald. Alleen bereikbaar op deze pc, zonder account. Gebruik een MCP-client met lokale HTTP-ondersteuning en houd ThoughtVault geopend.</p>
       <button className="btn btn-secondary btn-sm" style={{ alignSelf: "flex-start" }} disabled={busy || !connection && scopes.length === 0}
         onClick={() => void (connection ? disconnectAIConnection() : pairAIConnection(scopes))}>
-        {busy ? "Even wachten…" : connection ? "Ontkoppelen" : "Apparaat koppelen via browser"}
+        {busy ? "Even wachten…" : connection ? "Ontkoppelen" : "Lokale MCP inschakelen"}
       </button>
-      {connection && <p className="settings-desc" style={{ overflowWrap: "anywhere" }}>MCP-server: https://n8n.prezent.nl/tstudio/api/mcp</p>}
+      {connection && <button className="btn btn-secondary btn-sm" onClick={() => void navigator.clipboard.writeText(JSON.stringify({ url: "http://127.0.0.1:11219/mcp", headers: { Authorization: `Bearer ${connection.credential}` } }, null, 2))}>Kopieer MCP-configuratie</button>}
+      {connection && <p className="settings-desc" style={{ overflowWrap: "anywhere" }}>MCP-server: http://127.0.0.1:11219/mcp</p>}
     </div>
   </section>;
 }

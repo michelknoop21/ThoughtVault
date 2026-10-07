@@ -35,7 +35,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
   const dismissed = useSettingsStore((s) => s.dismissed_update_version);
   return (
     <>
-      <div className="app-shell">
+      <div className="app-shell" data-theme="dark">
         <a href="#main-content" className="skip-link">Ga naar hoofdinhoud</a>
         <TitleBar />
         <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
@@ -107,7 +107,7 @@ function ProtectedRoutes() {
   useAICommands();
 
   if (!canOpenRoute(location.pathname, "local", false)) return <Navigate to="/" replace />;
-  if (!has_completed_onboarding) return <div className="app-shell"><OnboardingWizard /></div>;
+  if (!has_completed_onboarding) return <div className="app-shell" data-theme="dark"><OnboardingWizard /></div>;
 
   return (
     <AppShell>

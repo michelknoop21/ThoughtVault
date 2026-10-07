@@ -4000,3 +4000,19 @@ button:focus-visible,select:focus-visible,textarea:focus-visible,input:focus-vis
 .profile-empty{padding:12px 14px;background:#182032;border:1px solid #384052;border-radius:10px}
 .profile-empty p{margin:0;font-size:13px;font-weight:600;color:#eef0f8}
 .profile-empty span{display:block;margin-top:4px;font-size:12px;line-height:1.5;color:#b8bdd6}
+
+/* Audit: constrain content to the available viewport, with a shared left axis. */
+.northstar-home,.northstar-settings{width:100%;box-sizing:border-box;min-width:0;max-width:1440px;align-self:flex-start}
+.home-columns,.home-record-card,.processing-columns{width:100%;min-width:0;box-sizing:border-box}
+.home-columns>* ,.home-record-card>*{min-width:0}
+.home-idle-levels>span{white-space:normal}
+.desktop-page .page-content{margin:0;width:100%;box-sizing:border-box;max-width:1100px}
+.desktop-page .page-header{width:100%;box-sizing:border-box;max-width:1100px}
+.td-transcription{max-width:75ch;margin-inline:auto;font-size:16px;line-height:1.75;overflow-wrap:anywhere}
+.td-toolbar{flex-wrap:wrap}
+.td-toolbar-btn{min-width:36px;min-height:36px}
+select,.studio-controlbar select{color-scheme:dark}
+select option{background:#151b2d;color:#eef0f8}
+.studio-live-panel meter{-webkit-appearance:none;appearance:none;border:1px solid #414965;border-radius:6px;overflow:hidden;background:#20273b}
+.studio-live-panel meter::-webkit-meter-bar{background:#20273b;border:0}
+.studio-live-panel meter::-webkit-meter-optimum-value{background:#b58aff}

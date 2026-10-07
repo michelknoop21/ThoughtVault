@@ -12,7 +12,7 @@ struct AIConnectionsView: View {
     var body: some View {
         Section {
             VStack(alignment: .leading, spacing: TS.Spacing.xs) {
-                Text("Claude en ChatGPT")
+                Text("Lokale MCP")
                 Text(model.status).font(.caption).foregroundStyle(.secondary)
             }
             ForEach(rights, id: \.0) { scope, title, explanation in
@@ -32,16 +32,20 @@ struct AIConnectionsView: View {
                     }
                 }.disabled(model.busy)
             }
-            Button(model.connection == nil ? "Apparaat koppelen via browser" : "Ontkoppelen") {
+            Button(model.connection == nil ? "Lokale MCP inschakelen" : "Ontkoppelen") {
                 Task {
                     if model.connection == nil { await model.pair(scopes: selected) }
                     else { await model.disconnect() }
                 }
             }.disabled(model.busy || model.connection == nil && selected.isEmpty)
+            if model.connection != nil {
+                Text("http://127.0.0.1:11218/mcp").font(.caption).textSelection(.enabled)
+                Button("Kopieer MCP-configuratie") { model.copyConfiguration() }
+            }
         } header: {
             Text("AI-koppelingen")
         } footer: {
-            Text("Optioneel. Je inhoud blijft op dit apparaat en wordt alleen op verzoek opgehaald. Houd de app geopend voor AI-bediening.")
+            Text("Optioneel. Je inhoud blijft op dit apparaat en wordt alleen op verzoek opgehaald. Alleen bereikbaar op deze Mac, zonder account. Gebruik een MCP-client met lokale HTTP-ondersteuning en houd ThoughtVault geopend.")
         }
     }
 }

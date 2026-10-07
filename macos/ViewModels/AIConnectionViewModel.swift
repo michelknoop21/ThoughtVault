@@ -1,4 +1,5 @@
 import Foundation
+import Security
 import CryptoKit
 import SwiftUI
 import AVFoundation
@@ -60,8 +61,7 @@ extension Notification.Name {
 @MainActor @Observable
 final class AIConnectionViewModel {
     static let shared = AIConnectionViewModel()
-    static let base = "https://n8n.prezent.nl/tstudio/api"
-    private static let key = "mcpDeviceConnection"
+    private static let key = "localMcpConnection"
     struct Connection: Codable {
         var device_id: String
         var credential: String
@@ -69,109 +69,97 @@ final class AIConnectionViewModel {
         var scopes: [String]
     }
     private(set) var connection: Connection?
-    var status: String = "Niet gekoppeld"
+    var status: String = "Lokale MCP uitgeschakeld"
     var busy = false
-    private var pollTask: Task<Void, Never>?
     private weak var recordingVM: RecordingViewModel?
-    private let session = URLSession(configuration: .ephemeral)
+    #if os(macOS)
+    @ObservationIgnored private var localServer: LocalMCPServer?
+    #endif
 
     func start(recordingVM: RecordingViewModel) {
         self.recordingVM = recordingVM
-        guard pollTask == nil else { return }
-        if let raw = KeychainService.shared.load(for: Self.key), let data = raw.data(using: .utf8) {
-            connection = try? JSONDecoder().decode(Connection.self, from: data)
+        guard connection == nil else { return }
+        if let raw = KeychainService.shared.load(for: Self.key), let data = raw.data(using: .utf8),
+           let saved = try? JSONDecoder().decode(Connection.self, from: data) {
+            connection = saved
+            startLocalServer()
         }
-        if connection != nil { beginPolling() }
-    }
-
-    private func request(_ path: String, method: String = "GET", body: [String: Any]? = nil, credential: String? = nil) async throws -> [String: Any] {
-        var request = URLRequest(url: URL(string: Self.base + path)!)
-        request.httpMethod = method
-        request.timeoutInterval = 30
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        if let credential { request.setValue("Bearer \(credential)", forHTTPHeaderField: "Authorization") }
-        if let body { request.httpBody = try JSONSerialization.data(withJSONObject: body) }
-        let (data, response) = try await session.data(for: request)
-        let result = try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
-        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
-            throw AIConnectionError.message(result["detail"] as? String ?? "AI-koppeling niet bereikbaar. Probeer opnieuw.")
-        }
-        return result
     }
 
     private func store(_ value: Connection) throws {
         let raw = String(decoding: try JSONEncoder().encode(value), as: UTF8.self)
         KeychainService.shared.save(raw, for: Self.key)
         guard KeychainService.shared.load(for: Self.key) == raw else {
-            throw AIConnectionError.message("Koppelgegevens opslaan in de sleutelhanger mislukt.")
+            throw AIConnectionError.message("MCP-sleutel opslaan in de sleutelhanger mislukt.")
         }
         connection = value
+    }
+
+    private func startLocalServer() {
+        #if os(macOS)
+        localServer?.stop()
+        guard let current = connection, !current.scopes.isEmpty else { return }
+        do {
+            let server = try LocalMCPServer(token: current.credential, scopes: current.scopes, handler: { [weak self] tool, arguments in
+                guard let self, self.connection != nil else { throw AIConnectionError.message("Lokale MCP uitgeschakeld.") }
+                return try await self.execute(["id": UUID().uuidString, "device_id": "local", "scope": Self.requiredScope(tool),
+                    "expires_at": Date().timeIntervalSince1970 + 25, "tool": tool, "arguments": arguments])
+            }, onStatus: { [weak self] status in self?.status = status })
+            localServer = server
+            server.start()
+        } catch { status = "Lokale MCP kon niet starten: \(error.localizedDescription)" }
+        #else
+        status = "Lokale MCP is beschikbaar in de desktopapp."
+        #endif
     }
 
     func pair(scopes: [String]) async {
         busy = true
         defer { busy = false }
         do {
-            #if os(macOS)
-            let deviceName = Host.current().localizedName ?? "ThoughtVault Mac"
-            let platform = "macOS"
-            #else
-            let deviceName = UIDevice.current.name
-            let platform = "iOS"
-            #endif
-            let pending = try await request("/ai/devices/pair", method: "POST", body: [
-                "name": deviceName, "platform": platform, "scopes": scopes,
-            ])
-            guard let uri = pending["verification_uri"] as? String, uri.hasPrefix(Self.base + "/ai/devices/verify?"),
-                  let url = URL(string: uri), let ticket = pending["ticket"], let secret = pending["secret"] else {
-                throw AIConnectionError.message("Ongeldige koppelaanvraag.")
+            var bytes = [UInt8](repeating: 0, count: 32)
+            guard SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes) == errSecSuccess else {
+                throw AIConnectionError.message("Veilige MCP-sleutel maken mislukt.")
             }
-            #if os(macOS)
-            NSWorkspace.shared.open(url)
-            #endif
-            status = "Voltooi de koppeling in je browser"
-            let deadline = Date().addingTimeInterval(300)
-            while Date() < deadline {
-                try await Task.sleep(for: .seconds(2))
-                let ready = try await request("/ai/devices/pair-status", method: "POST", body: ["ticket": ticket, "secret": secret])
-                if ready["pending"] as? Bool == true { continue }
-                let value = try JSONDecoder().decode(Connection.self, from: JSONSerialization.data(withJSONObject: ready))
-                try store(value)
-                beginPolling()
-                return
-            }
-            throw AIConnectionError.message("Koppelaanvraag verlopen. Probeer opnieuw.")
-        } catch { status = "Koppelen niet gelukt. Probeer opnieuw. \(error.localizedDescription)" }
+            try store(Connection(device_id: "local", credential: bytes.map { String(format: "%02x", $0) }.joined(), user_id: "local", scopes: scopes))
+            startLocalServer()
+        } catch { status = error.localizedDescription }
     }
 
     func updatePermissions(_ scopes: [String]) async {
         guard var current = connection else { return }
-        busy = true
-        defer { busy = false }
-        do {
-            var reduced = current
-            reduced.scopes = current.scopes.filter { scopes.contains($0) }
-            // Persist reduced rights first, so a restart cannot restore revoked rights.
-            try store(reduced)
-            _ = try await request("/ai/devices/\(current.device_id)", method: "PUT", body: ["scopes": scopes], credential: current.credential)
-            current.scopes = scopes
-            try store(current)
-        } catch { status = "Rechten wijzigen niet bevestigd. Probeer opnieuw. \(error.localizedDescription)" }
+        #if os(macOS)
+        localServer?.stop()
+        #endif
+        connection?.scopes = []
+        current.scopes = scopes
+        do { try store(current); startLocalServer() }
+        catch { status = error.localizedDescription }
     }
 
     func disconnect() async {
-        guard var current = connection else { return }
-        busy = true
-        defer { busy = false }
+        var revoked = connection
+        revoked?.scopes = []
+        connection = nil
+        #if os(macOS)
+        localServer?.stop(); localServer = nil
+        #endif
         do {
-            current.scopes = []
-            try store(current)
-            _ = try await request("/ai/devices/\(current.device_id)", method: "DELETE", credential: current.credential)
-            pollTask?.cancel(); pollTask = nil
-            KeychainService.shared.delete(for: Self.key)
+            if let revoked { try store(revoked) }
             connection = nil
-            status = "Niet gekoppeld"
-        } catch { status = "Ontkoppelen niet bevestigd. Probeer opnieuw. \(error.localizedDescription)" }
+            KeychainService.shared.delete(for: Self.key)
+            status = "Lokale MCP uitgeschakeld"
+        } catch { connection = nil; status = "MCP is gestopt, maar uitschakelen opslaan mislukt. Controleer de sleutelhanger vóór herstart." }
+    }
+
+    func copyConfiguration() {
+        #if os(macOS)
+        guard let current = connection,
+              let data = try? JSONSerialization.data(withJSONObject: ["url": "http://127.0.0.1:11218/mcp", "headers": ["Authorization": "Bearer \(current.credential)"]], options: .prettyPrinted),
+              let text = String(data: data, encoding: .utf8) else { return }
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
+        #endif
     }
 
     static func requiredScope(_ tool: String) -> String {
@@ -186,50 +174,6 @@ final class AIConnectionViewModel {
               command["device_id"] as? String == current.device_id,
               command["scope"] as? String == Self.requiredScope(tool),
               current.scopes.contains(Self.requiredScope(tool)), expires > Date().timeIntervalSince1970 else { return false }
-        return true
-    }
-
-    private func beginPolling() {
-        guard pollTask == nil else { return }
-        status = "Verbinding maken…"
-        pollTask = Task { [weak self] in
-            guard let self else { return }
-            while !Task.isCancelled, let current = connection {
-                do {
-                    let reply = try await request("/ai/devices/\(current.device_id)/commands", credential: current.credential)
-                    try Task.checkCancellation()
-                    status = "Verbonden"
-                    guard let command = reply["command"] as? [String: Any], allowed(command),
-                          let id = command["id"] as? String else { continue }
-                    var result: [String: Any]
-                    if try !receipt(id) { result = ["error": "Resultaat onzeker; opdracht wordt niet herhaald."] }
-                    else {
-                        _ = try await request("/ai/devices/\(current.device_id)/commands/\(id)/validate", credential: current.credential)
-                        guard allowed(command) else { continue }
-                        do { result = try await execute(command) }
-                        catch { result = ["error": error.localizedDescription] }
-                    }
-                    _ = try await request("/ai/devices/\(current.device_id)/commands/\(id)", method: "POST", body: ["result": result], credential: current.credential)
-                } catch is CancellationError { return }
-                catch {
-                    status = "Verbinding onderbroken. Controleer je internetverbinding. \(error.localizedDescription)"
-                    try? await Task.sleep(for: .seconds(5))
-                }
-            }
-        }
-    }
-
-    private func receipt(_ id: String) throws -> Bool {
-        let folder = URL.applicationSupportDirectory.appending(path: "ThoughtVault")
-        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-        let url = folder.appending(path: "ai-command-receipts.json")
-        var ids: [String] = []
-        if FileManager.default.fileExists(atPath: url.path) {
-            ids = try JSONDecoder().decode([String].self, from: Data(contentsOf: url))
-        }
-        guard !ids.contains(id) else { return false }
-        ids = Array(ids.suffix(999)) + [id]
-        try JSONEncoder().encode(ids).write(to: url, options: .atomic)
         return true
     }
 
@@ -360,3 +304,124 @@ final class AIConnectionViewModel {
         throw AIConnectionError.message("Onbekende opdracht.")
     }
 }
+
+#if os(macOS)
+@preconcurrency import Network
+
+/// Loopback-only JSON MCP. Token and payloads never leave the local machine.
+@MainActor
+final class LocalMCPServer {
+    private let listener: NWListener
+    private let token: String
+    private let scopes: [String]
+    private let handler: @MainActor (String, [String: Any]) async throws -> [String: Any]
+    private let onStatus: @MainActor (String) -> Void
+    private var connections: [UUID: NWConnection] = [:]
+    private var running = false
+    private static let tools: [[String: Any]] = (try! JSONSerialization.jsonObject(with: Data(catalog.utf8))) as! [[String: Any]]
+
+    init(token: String, scopes: [String], handler: @escaping @MainActor (String, [String: Any]) async throws -> [String: Any], onStatus: @escaping @MainActor (String) -> Void) throws {
+        guard token.count == 64, scopes.allSatisfy({ ["read", "write", "record"].contains($0) }) else { throw AIConnectionError.message("Ongeldige MCP-instelling.") }
+        self.token = token; self.scopes = scopes; self.handler = handler; self.onStatus = onStatus
+        let parameters = NWParameters.tcp
+        parameters.requiredLocalEndpoint = .hostPort(host: "127.0.0.1", port: 11218)
+        listener = try NWListener(using: parameters)
+    }
+    func start() {
+        running = true
+        listener.stateUpdateHandler = { [weak self] state in
+            Task { @MainActor in
+                switch state {
+                case .ready: self?.onStatus("Lokale MCP actief op http://127.0.0.1:11218/mcp")
+                case .failed: self?.onStatus("Lokale MCP kon niet starten. Controleer of de poort vrij is."); self?.stop()
+                default: break
+                }
+            }
+        }
+        listener.newConnectionHandler = { [weak self] connection in
+            Task { @MainActor in self?.accept(connection) }
+        }
+        listener.start(queue: .main)
+    }
+    func stop() {
+        running = false; listener.cancel()
+        for connection in connections.values { connection.cancel() }
+        connections.removeAll()
+    }
+    private func accept(_ connection: NWConnection) {
+        guard running, connections.count < 8 else { connection.cancel(); return }
+        let id = UUID(); connections[id] = connection
+        connection.start(queue: .main)
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(35))
+            self?.connections.removeValue(forKey: id)?.cancel()
+        }
+        receive(connection, id: id, bytes: Data())
+    }
+    private func receive(_ connection: NWConnection, id: UUID, bytes: Data) {
+        connection.receive(minimumIncompleteLength: 1, maximumLength: 4096) { [weak self] data, _, complete, error in
+            Task { @MainActor in
+                guard let self, self.connections[id] != nil else { return }
+                var bytes = bytes; if let data { bytes.append(data) }
+                guard error == nil, bytes.count <= 2_020_000 else { self.finish(connection, id: id, status: 400, object: ["error": "Ongeldige aanvraag."]); return }
+                guard let range = bytes.range(of: Data("\r\n\r\n".utf8)) else {
+                    if complete || bytes.count > 16_384 { self.finish(connection, id: id, status: 400, object: ["error": "Ongeldige header."]) }
+                    else { self.receive(connection, id: id, bytes: bytes) }; return
+                }
+                guard let header = String(data: bytes[..<range.upperBound], encoding: .utf8) else { self.finish(connection, id: id, status: 400, object: [:]); return }
+                let lines = header.components(separatedBy: "\r\n")
+                var headers: [String: String] = [:]
+                for line in lines.dropFirst() where !line.isEmpty {
+                    guard let colon = line.firstIndex(of: ":") else { self.finish(connection, id: id, status: 400, object: [:]); return }
+                    let key = line[..<colon].lowercased()
+                    guard headers[key] == nil else { self.finish(connection, id: id, status: 400, object: [:]); return }
+                    headers[key] = line[line.index(after: colon)...].trimmingCharacters(in: .whitespaces)
+                }
+                guard self.running, lines.first == "POST /mcp HTTP/1.1", headers["authorization"] == "Bearer \(self.token)",
+                      ["127.0.0.1:11218", "localhost:11218"].contains(headers["host"] ?? ""), headers["origin"] == nil, headers["transfer-encoding"] == nil else {
+                    self.finish(connection, id: id, status: 403, object: ["error": "Geen lokale MCP-toegang."]); return
+                }
+                guard let length = Int(headers["content-length"] ?? ""), (0...2_000_000).contains(length) else { self.finish(connection, id: id, status: 400, object: [:]); return }
+                let needed = range.upperBound + length
+                if bytes.count < needed {
+                    if complete { self.finish(connection, id: id, status: 400, object: [:]) }
+                    else { self.receive(connection, id: id, bytes: bytes) }; return
+                }
+                guard let request = try? JSONSerialization.jsonObject(with: bytes[range.upperBound..<needed]) as? [String: Any] else { self.finish(connection, id: id, status: 400, object: [:]); return }
+                let result = await self.process(request)
+                self.finish(connection, id: id, status: result.0, object: result.1)
+            }
+        }
+    }
+    private func process(_ request: [String: Any]) async -> (Int, [String: Any]?) {
+        guard let id = request["id"] else { return (202, nil) }
+        let result: [String: Any]
+        switch request["method"] as? String {
+        case "initialize": result = ["protocolVersion": "2025-03-26", "capabilities": ["tools": ["listChanged": false]], "serverInfo": ["name": "ThoughtVault Mac", "version": "1.0"], "instructions": "Local app only. Read revisions before writes. Never retry uncertain recording results."]
+        case "ping": result = [:]
+        case "tools/list": result = ["tools": Self.tools.filter { scopes.contains($0["scope"] as? String ?? "") }.map { tool in var tool = tool; tool.removeValue(forKey: "scope"); return tool }]
+        case "tools/call":
+            let params = request["params"] as? [String: Any] ?? [:]
+            let name = params["name"] as? String ?? ""
+            do {
+                guard running, Self.tools.contains(where: { $0["name"] as? String == name }), scopes.contains(AIConnectionViewModel.requiredScope(name)) else { throw AIConnectionError.message("Tool niet toegestaan.") }
+                let value = name == "list_devices" ? ["devices": [["id": "local", "platform": "macOS", "online": true]]] : try await handler(name, params["arguments"] as? [String: Any] ?? [:])
+                result = ["content": [["type": "text", "text": String(decoding: try JSONSerialization.data(withJSONObject: value), as: UTF8.self)]], "structuredContent": value, "isError": false]
+            } catch { result = ["content": [["type": "text", "text": error.localizedDescription]], "isError": true] }
+        default: return (200, ["jsonrpc": "2.0", "id": id, "error": ["code": -32601, "message": "Onbekende methode"]])
+        }
+        return (200, ["jsonrpc": "2.0", "id": id, "result": result])
+    }
+    private func finish(_ connection: NWConnection, id: UUID, status: Int, object: [String: Any]?) {
+        guard connections.removeValue(forKey: id) != nil else { return }
+        let body = object.flatMap { try? JSONSerialization.data(withJSONObject: $0) } ?? Data()
+        var response = Data("HTTP/1.1 \(status) OK\r\nContent-Type: application/json\r\nContent-Length: \(body.count)\r\nConnection: close\r\n\r\n".utf8)
+        response.append(body)
+        connection.send(content: response, completion: .contentProcessed { _ in connection.cancel() })
+    }
+
+    private static let catalog = #"""
+[{"name": "list_devices", "description": "Read the availability of this local app.", "inputSchema": {"type": "object", "properties": {}, "required": [], "additionalProperties": false}, "annotations": {"readOnlyHint": true, "destructiveHint": false, "openWorldHint": false}, "scope": "read"}, {"name": "get_app_state", "description": "Read recording phase and background processing tasks.", "inputSchema": {"type": "object", "properties": {}, "required": [], "additionalProperties": false}, "annotations": {"readOnlyHint": true, "destructiveHint": false, "openWorldHint": false}, "scope": "read"}, {"name": "list_transcripts", "description": "Search local transcripts. Returns metadata, no transcript text.", "inputSchema": {"type": "object", "properties": {"query": {"type": "string"}, "offset": {"type": "integer"}, "limit": {"type": "integer"}}, "required": [], "additionalProperties": false}, "annotations": {"readOnlyHint": true, "destructiveHint": false, "openWorldHint": false}, "scope": "read"}, {"name": "get_transcript", "description": "Read a text chunk plus a content revision for subsequent writes.", "inputSchema": {"type": "object", "properties": {"transcript_id": {"type": "string"}, "offset": {"type": "integer"}, "limit": {"type": "integer"}}, "required": ["transcript_id"], "additionalProperties": false}, "annotations": {"readOnlyHint": true, "destructiveHint": false, "openWorldHint": false}, "scope": "read"}, {"name": "save_minutes", "description": "Attach generated minutes to the original transcript; reject stale revisions.", "inputSchema": {"type": "object", "properties": {"transcript_id": {"type": "string"}, "revision": {"type": "string"}, "html": {"type": "string"}, "style": {"type": "object"}}, "required": ["transcript_id", "revision", "html"], "additionalProperties": false}, "annotations": {"readOnlyHint": false, "destructiveHint": false, "openWorldHint": false}, "scope": "write"}, {"name": "update_transcript", "description": "Update title and tags only if the read revision is still current.", "inputSchema": {"type": "object", "properties": {"transcript_id": {"type": "string"}, "revision": {"type": "string"}, "title": {"type": "string"}, "tags": {"type": "array", "items": {"type": "string"}}}, "required": ["transcript_id", "revision", "title", "tags"], "additionalProperties": false}, "annotations": {"readOnlyHint": false, "destructiveHint": false, "openWorldHint": false}, "scope": "write"}, {"name": "list_profiles", "description": "List the device's current recording profiles.", "inputSchema": {"type": "object", "properties": {}, "required": [], "additionalProperties": false}, "annotations": {"readOnlyHint": true, "destructiveHint": false, "openWorldHint": false}, "scope": "read"}, {"name": "get_profile", "description": "Read profile prompts, output template and revision.", "inputSchema": {"type": "object", "properties": {"profile_id": {"type": "string"}}, "required": ["profile_id"], "additionalProperties": false}, "annotations": {"readOnlyHint": true, "destructiveHint": false, "openWorldHint": false}, "scope": "read"}, {"name": "save_profile", "description": "Save a profile; built-in profiles are copied to a custom profile.", "inputSchema": {"type": "object", "properties": {"profile_id": {"type": "string"}, "revision": {"type": "string"}, "name": {"type": "string"}, "system_prompt": {"type": "string"}, "notule_prompt": {"type": "string"}, "output_template": {"type": "string"}, "style": {"type": "object"}}, "required": ["profile_id", "revision", "name", "system_prompt", "notule_prompt", "output_template"], "additionalProperties": false}, "annotations": {"readOnlyHint": false, "destructiveHint": false, "openWorldHint": false}, "scope": "write"}, {"name": "open_view", "description": "Open a screen in this local app.", "inputSchema": {"type": "object", "properties": {"view": {"type": "string", "enum": ["recording", "transcripts", "transcript", "profiles", "settings"]}, "transcript_id": {"type": "string"}}, "required": ["view"], "additionalProperties": false}, "annotations": {"readOnlyHint": false, "destructiveHint": false, "openWorldHint": false}, "scope": "write"}, {"name": "start_recording", "description": "Start recording using the selected profile/audio mode and visible indicator.", "inputSchema": {"type": "object", "properties": {"profile_id": {"type": "string"}, "mode": {"type": "string", "enum": ["microphone", "system", "combined"]}}, "required": ["profile_id", "mode"], "additionalProperties": false}, "annotations": {"readOnlyHint": false, "destructiveHint": false, "openWorldHint": false}, "scope": "record"}, {"name": "pause_recording", "description": "Pause an active recording.", "inputSchema": {"type": "object", "properties": {}, "required": [], "additionalProperties": false}, "annotations": {"readOnlyHint": false, "destructiveHint": false, "openWorldHint": false}, "scope": "record"}, {"name": "resume_recording", "description": "Resume a paused recording.", "inputSchema": {"type": "object", "properties": {}, "required": [], "additionalProperties": false}, "annotations": {"readOnlyHint": false, "destructiveHint": false, "openWorldHint": false}, "scope": "record"}, {"name": "stop_recording", "description": "Stop once and start the app's existing processing flow.", "inputSchema": {"type": "object", "properties": {}, "required": [], "additionalProperties": false}, "annotations": {"readOnlyHint": false, "destructiveHint": false, "openWorldHint": false}, "scope": "record"}, {"name": "export_minutes", "description": "Export HTML, Markdown or text. PDF returns print-ready HTML and document styling for the client to render.", "inputSchema": {"type": "object", "properties": {"transcript_id": {"type": "string"}, "format": {"type": "string", "enum": ["html", "markdown", "txt", "pdf"]}}, "required": ["transcript_id", "format"], "additionalProperties": false}, "annotations": {"readOnlyHint": true, "destructiveHint": false, "openWorldHint": false}, "scope": "read"}]
+"""#
+}
+#endif

@@ -5,7 +5,8 @@ import { useSettingsStore } from "../stores/settingsStore";
 import { uploadAndTrack } from "../services/uploadAndTrack";
 import { processLocally } from "../services/localPipeline";
 import { resolveParticipants } from "../services/participants";
-import { closeWidgetWindow } from "./useWidgetWindow";
+import { getCurrentWindow } from "@tauri-apps/api/window";
+import { openWidgetWindow, closeWidgetWindow } from "./useWidgetWindow";
 import { recordingAction, type RecordingAction } from "../services/recordingActions";
 
 /**
@@ -24,6 +25,15 @@ export function useGlobalRecordingHandler() {
     let unlistenError: (() => void) | undefined;
     let unlistenControl: (() => void) | undefined;
     let disposed = false;
+    let unlistenFocus: (() => void) | undefined;
+    const mainWindow = getCurrentWindow();
+    mainWindow.onFocusChanged(async ({ payload: focused }) => {
+      const phase = useRecordingStore.getState().phase;
+      if (focused) await closeWidgetWindow().catch(() => {});
+      else if (["recording", "paused"].includes(phase) && await mainWindow.isMinimized()) {
+        await openWidgetWindow().catch(() => {});
+      }
+    }).then(fn => { if (disposed) fn(); else unlistenFocus = fn; });
     listen<RecordingAction>("widget-recording-action", (event) => {
       if (["pause", "resume", "stop"].includes(event.payload)) {
         void recordingAction(event.payload).catch(() => {});
@@ -55,6 +65,7 @@ export function useGlobalRecordingHandler() {
     return () => {
       disposed = true;
       unlistenControl?.();
+      unlistenFocus?.();
       unlistenStopped?.();
       unlistenError?.();
     };

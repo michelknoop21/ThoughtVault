@@ -1,3 +1,4 @@
+import { transcriptText, processingError } from "./transcriptText";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useRecordingStore } from "../stores/recordingStore";
@@ -29,6 +30,7 @@ export async function processLocally(
   participants: Participant[] = [],
   durationSeconds: number = 0,
   retryTaskId?: string,
+  originalFilename?: string,
 ): Promise<void> {
   const rec = useRecordingStore.getState();
   if (rec.updateInstalling) throw Error("De app wordt bijgewerkt. Probeer na de herstart opnieuw.");
@@ -46,11 +48,12 @@ export async function processLocally(
     task_id: taskId,
     status: "transcribing",
     progress: 5,
+    duration_seconds: durationSeconds,
     mode,
     created_at: new Date().toISOString(),
     profile_id: profileId,
     local_audio_path: filePath,
-    filename: filePath.split(/[\\/]/).pop(),
+    filename: originalFilename || filePath.split(/[\\/]/).pop(),
   };
   addBackgroundTask(task);
 
@@ -83,10 +86,10 @@ export async function processLocally(
         updateBackgroundTask(taskId, { progress: Math.round(10 + frac * 40) });
       });
       try {
-        transcription = await invoke<string>("transcribe_local", {
+        transcription = transcriptText(await invoke<string>("transcribe_local", {
           filePath,
           modelId: model,
-        });
+        }));
       } finally {
         unlistenTr();
       }
@@ -100,7 +103,7 @@ export async function processLocally(
       const now = new Date().toISOString();
       const record: Transcript = {
         id: taskId,
-        title: "Transcriptie",
+        title: originalFilename ? originalFilename.replace(/\.[^.]+$/, "") : `Opname ${new Date().toLocaleString("nl-NL")}`,
         raw_transcription: transcription,
         notule_html: "",
         duration_seconds: durationSeconds,
@@ -150,7 +153,7 @@ export async function processLocally(
     updateBackgroundTask(taskId, { status: "completed", progress: 100 });
     setTimeout(() => removeBackgroundTask(taskId), 1500);
   } catch (err) {
-    const msg = err instanceof Error ? err.message : typeof err === "string" ? err : "Verwerking mislukt";
+    const msg = processingError(err);
     console.error("[LocalPipeline] Failed:", msg);
     updateBackgroundTask(taskId, { status: "failed", error_message: msg });
   }

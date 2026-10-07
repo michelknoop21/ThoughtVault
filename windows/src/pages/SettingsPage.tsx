@@ -18,7 +18,6 @@ import { useSettingsStore } from "../stores/settingsStore";
 import { useProfilesStore } from "../stores/profilesStore";
 import { getVersion } from "@tauri-apps/api/app";
 import { LocalModelSetup } from "../components/settings/LocalModelSetup";
-import { BrandFooter } from "../components/brand/BrandFooter";
 import { ProfileSettings } from "../components/settings/ProfileSettings";
 import { AIConnections } from "../components/settings/AIConnections";
 
@@ -187,7 +186,7 @@ export function SettingsPage() {
             </div>
           </div>
 </div>}
-    <BrandFooter />
+
   </div>;
 }
 

@@ -44,5 +44,5 @@ it("preserves the saved transcription when the cloud key is rejected", async () 
   await processLocally("C:\\recording.wav", "standaard", "microphone", [], 12, partial.id);
   expect(useLocalTranscriptsStore.getState().items[0].raw_transcription).toBe(partial.raw_transcription);
   expect(update).not.toHaveBeenCalled();
-  expect(useRecordingStore.getState().backgroundTasks[0]).toMatchObject({ status: "failed", error_message: "API-sleutel ongeldig (401)" });
+  expect(useRecordingStore.getState().backgroundTasks[0]).toMatchObject({ status: "failed", error_message: expect.stringContaining("De AI-sleutel is ongeldig") });
 });

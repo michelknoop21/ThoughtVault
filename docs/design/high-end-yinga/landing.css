@@ -56,3 +56,16 @@ h1,h2,h3{text-wrap:balance}
  .download-row>div{min-width:0}
  .download-row .end{flex-shrink:0}
 }
+
+/* Approved mobile hero: the original mark leads, the full demo stays below. */
+.mobile-hero-art{display:none}
+@media(max-width:767px){
+ .hero-copy{padding-bottom:0}
+ .hero-copy>p{margin:20px 0 0}
+ .mobile-hero-art{display:flex;position:relative;isolation:isolate;flex-direction:column;align-items:center;margin:24px 0 20px}
+ .mobile-hero-art:before{content:'';position:absolute;inset:-20px 0;background:radial-gradient(ellipse at 60% 55%,#6037c42b,transparent 65%);z-index:-1;pointer-events:none}
+ .mobile-hero-art img{width:190px;height:208px;object-fit:contain;transform:translateX(18px)}
+ .hero-wave{width:220px;height:36px;margin-top:12px;color:var(--lilac);opacity:.7;stroke-width:2}
+ .hero .primary{background:#d9b9fb}
+ .hero-copy .access-note{max-width:32ch;margin-top:12px}
+}

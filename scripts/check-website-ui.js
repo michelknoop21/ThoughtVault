@@ -9,6 +9,14 @@ return (async () => {
   assert($('.hero-copy .access-note').textContent.includes('tarieven'), 'Access and pricing missing from opening');
   assert($('.hero-copy .primary').hash === '#notulen', 'Primary action must lead to result');
   assert($('.motion-demo').parentElement === $(mobile ? '#notulen' : '.hero-grid'), 'Demo is in the wrong responsive location');
+  if (mobile) {
+    const art=$('.mobile-hero-art').getBoundingClientRect();
+    const copy=$('.hero-copy>p').getBoundingClientRect();
+    const actions=$('.hero .actions').getBoundingClientRect();
+    assert(art.height>=220 && art.top>=copy.bottom && art.bottom<=actions.top, 'Mobile hero mark missing or overlapping copy/actions');
+  } else {
+    assert(getComputedStyle($('.mobile-hero-art')).display==='none', 'Mobile hero art duplicated on desktop');
+  }
   const requests = [...document.querySelectorAll('.download-row')];
   assert(requests.length === 2 && requests.every(a => a.protocol === 'mailto:' && a.textContent.includes('per e-mail')), 'Platform requests must explain email destination');
   assert($('.email-help').textContent.includes('Je verstuurt'), 'Email handoff needs explicit instructions');

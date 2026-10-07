@@ -28,6 +28,10 @@ final class RecordingViewModel {
     var activeTasks: [TranscriptTask] = []
     var uploadProgress: Double = 0
     var liveTranscriptText: String = ""
+    /// Live text of the system audio; the screen shows whichever source spoke last.
+    var liveSystemText: String = ""
+    private var liveLastSource: LiveSource = .microphone
+    var liveDisplayText: String { liveLastSource == .system ? liveSystemText : liveTranscriptText }
     var isLiveTranscribing: Bool = false
     /// Why live recognition stopped or never started; shown instead of "Ik luister...".
     var liveTranscriptionError: String?
@@ -99,11 +103,13 @@ final class RecordingViewModel {
     /// Envelope pipeline diagnostics for the DEBUG waveform overlay.
     var meterDebugText: String {
 #if os(macOS)
+        let meters: String
         switch selectedMode {
-        case .microphone: audioRecorder.meterDebugText
-        case .systemAudio: systemAudioCapture.meterDebugText
-        case .combined: audioRecorder.meterDebugText + " | " + systemAudioCapture.meterDebugText
+        case .microphone: meters = audioRecorder.meterDebugText
+        case .systemAudio: meters = systemAudioCapture.meterDebugText
+        case .combined: meters = audioRecorder.meterDebugText + " | " + systemAudioCapture.meterDebugText
         }
+        return meters + "\n" + onDeviceTranscriber.liveDebugText
 #else
         audioRecorder.meterDebugText
 #endif
@@ -702,6 +708,7 @@ final class RecordingViewModel {
         await MainActor.run {
             isLiveTranscribing = true
             liveTranscriptText = ""
+                liveSystemText = ""
             recordingState = .uploading
         }
 
@@ -736,6 +743,7 @@ final class RecordingViewModel {
                 self.addTask(task)
                 recordingState = .idle
                 liveTranscriptText = ""
+                liveSystemText = ""
             }
 
             await startSSEStream(for: task.taskId)
@@ -777,6 +785,7 @@ final class RecordingViewModel {
             recordingState = .idle
             isLiveTranscribing = false
             liveTranscriptText = ""
+                liveSystemText = ""
         }
 
         // Run on a detached Task so the MainActor stays responsive. The task
@@ -1287,8 +1296,8 @@ final class RecordingViewModel {
     // MARK: - Live Transcription
 
     func startLiveTranscriptionIfEnabled() async {
-        guard onDeviceTranscriptionAvailable, preferOnDeviceTranscription,
-              LiveTranscriptionPolicy.supports(mode: selectedMode) else { return }
+        guard onDeviceTranscriptionAvailable, preferOnDeviceTranscription else { return }
+        let sources = LiveTranscriptionPolicy.sources(for: selectedMode)
 
         // Prevent concurrent starts (e.g. rapid pause/resume)
         guard !isStartingLiveTranscription else { return }
@@ -1303,11 +1312,18 @@ final class RecordingViewModel {
         liveTranscriptionTask = Task { @MainActor [weak self] in
             guard let self else { return }
             do {
+#if os(macOS)
+                if sources.contains(.system) {
+                    let transcriber = self.onDeviceTranscriber
+                    self.systemAudioCapture.setLiveHandler { transcriber.feedSystemAudio($0) }
+                }
+#endif
                 try await self.onDeviceTranscriber.startLiveTranscription(
-                    onPartialResult: { [weak self] partial in
-                        Task { @MainActor in
-                            self?.liveTranscriptText = partial
-                        }
+                    sources: sources,
+                    onText: { [weak self] source, text in
+                        guard let self else { return }
+                        self.liveLastSource = source
+                        if source == .system { self.liveSystemText = text } else { self.liveTranscriptText = text }
                     },
                     onError: { [weak self] message in self?.liveTranscriptionError = message }
                 )
@@ -1327,7 +1343,7 @@ final class RecordingViewModel {
     var liveTranscriptionStatusText: String? {
         LiveTranscriptionPolicy.statusText(preferred: preferOnDeviceTranscription,
                                            available: onDeviceTranscriptionAvailable,
-                                           mode: selectedMode, error: liveTranscriptionError)
+                                           error: liveTranscriptionError)
     }
 
     func stopLiveTranscription() async {

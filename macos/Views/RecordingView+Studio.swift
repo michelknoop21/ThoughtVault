@@ -174,14 +174,14 @@ extension RecordingView {
 
     /// True when the line explains why there is no live text, rather than showing it.
     private var listenIsStatus: Bool {
-        recordingVM.recordingState == .recording && recordingVM.liveTranscriptText.isEmpty
+        recordingVM.recordingState == .recording && recordingVM.liveDisplayText.isEmpty
             && recordingVM.liveTranscriptionStatusText != nil
     }
 
     private var listenText: String {
         switch recordingVM.recordingState {
         case .recording:
-            let text = recordingVM.liveTranscriptText
+            let text = recordingVM.liveDisplayText
             return text.isEmpty ? (recordingVM.liveTranscriptionStatusText ?? "Ik luister...") : text
         case .paused: return "Opname is gepauzeerd"
         case .preparing, .stopping: return "Even geduld..."

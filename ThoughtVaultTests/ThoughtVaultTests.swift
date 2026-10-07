@@ -156,24 +156,19 @@ final class RestartTaskTests: XCTestCase {
 }
 
 final class LiveTranscriptionPolicyTests: XCTestCase {
-    func testMicrophoneAndCombinedModesSupportLiveTranscription() {
-        XCTAssertTrue(LiveTranscriptionPolicy.supports(mode: .microphone))
-        XCTAssertTrue(LiveTranscriptionPolicy.supports(mode: .combined))
-    }
-
     #if os(macOS)
-    func testSystemAudioOnlyHasNoMicrophoneToListenTo() {
-        XCTAssertFalse(LiveTranscriptionPolicy.supports(mode: .systemAudio))
-    }
-
-    func testSystemAudioBranchOfTheStatusText() {
-        let unsupported = "Opname loopt (geen live tekst bij alleen systeemgeluid)"
-        XCTAssertEqual(LiveTranscriptionPolicy.statusText(preferred: true, available: true, mode: .systemAudio, error: nil), unsupported)
-        // An unsupported mode wins over a stale error, and "uit" / "niet beschikbaar" win over the mode.
-        XCTAssertEqual(LiveTranscriptionPolicy.statusText(preferred: true, available: true, mode: .systemAudio, error: "oud"), unsupported)
-        XCTAssertEqual(LiveTranscriptionPolicy.statusText(preferred: false, available: true, mode: .systemAudio, error: nil), "Opname loopt (live tekst staat uit)")
+    func testEveryModeListensToItsOwnSources() {
+        XCTAssertEqual(LiveTranscriptionPolicy.sources(for: .microphone), [.microphone])
+        XCTAssertEqual(LiveTranscriptionPolicy.sources(for: .systemAudio), [.system])
+        XCTAssertEqual(LiveTranscriptionPolicy.sources(for: .combined), [.microphone, .system])
     }
     #endif
+
+    func testLiveTextOfRestartedRequestsIsAppended() {
+        XCTAssertEqual(OnDeviceTranscriber.joinLive("", "hallo"), "hallo")
+        XCTAssertEqual(OnDeviceTranscriber.joinLive("hallo", "wereld"), "hallo wereld")
+        XCTAssertEqual(OnDeviceTranscriber.joinLive("hallo", ""), "hallo")
+    }
 
     func testBenignRecognitionEndsAreNotErrors() {
         for code in [203, 216, 301, 1110] {
@@ -184,14 +179,13 @@ final class LiveTranscriptionPolicyTests: XCTestCase {
     }
 
     func testStatusExplainsWhyThereIsNoLiveText() {
-        func status(_ preferred: Bool = true, _ available: Bool = true, _ mode: RecordingMode = .combined, _ error: String? = nil) -> String? {
-            LiveTranscriptionPolicy.statusText(preferred: preferred, available: available, mode: mode, error: error)
+        func status(_ preferred: Bool = true, _ available: Bool = true, _ error: String? = nil) -> String? {
+            LiveTranscriptionPolicy.statusText(preferred: preferred, available: available, error: error)
         }
         XCTAssertEqual(status(false), "Opname loopt (live tekst staat uit)")
         XCTAssertEqual(status(true, false), "Opname loopt (live tekst niet beschikbaar)")
-        XCTAssertEqual(status(true, true, .combined, "Toestemming geweigerd"), "Live tekst gestopt: Toestemming geweigerd")
+        XCTAssertEqual(status(true, true, "Toestemming geweigerd"), "Live tekst gestopt: Toestemming geweigerd")
         // Running (or starting): no status, the screen shows "Ik luister..." and then the text.
-        XCTAssertNil(status(true, true, .combined, nil))
-        XCTAssertNil(status(true, true, .microphone, nil))
+        XCTAssertNil(status(true, true, nil))
     }
 }

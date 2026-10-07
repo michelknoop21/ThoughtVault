@@ -3,6 +3,7 @@
 import CoreAudio
 import Foundation
 import OSLog
+import os
 
 private let log = OSLog(subsystem: "com.buildmind.ThoughtVault", category: "SystemAudio")
 
@@ -139,6 +140,11 @@ final class SystemAudioCapture {
         return outputURL
     }
 
+    /// Receives every converted 16 kHz mono buffer (for live recognition); nil stops delivery.
+    func setLiveHandler(_ handler: (@Sendable (AVAudioPCMBuffer) -> Void)?) {
+        writer?.setLiveHandler(handler)
+    }
+
     func stopCapture() async -> CaptureResult {
         guard isCapturing else { return CaptureResult(systemAudioURL: currentOutputURL, microphoneURL: nil) }
         if let writer {
@@ -227,6 +233,7 @@ private final class TapAudioWriter: @unchecked Sendable {
     private let inputFormat: AVAudioFormat
     private let converter: AVAudioConverter?
     private let levelHandler: @Sendable (Float) -> Void
+    private let liveHandler = OSAllocatedUnfairLock<(@Sendable (AVAudioPCMBuffer) -> Void)?>(initialState: nil)
     private var lastLevel = Date.distantPast
     private(set) var framesReceived: UInt64 = 0
     private(set) var framesWritten: UInt64 = 0
@@ -236,6 +243,10 @@ private final class TapAudioWriter: @unchecked Sendable {
         self.inputFormat = inputFormat
         self.converter = AVAudioConverter(from: inputFormat, to: file.processingFormat)
         self.levelHandler = levelHandler
+    }
+
+    func setLiveHandler(_ handler: (@Sendable (AVAudioPCMBuffer) -> Void)?) {
+        liveHandler.withLock { $0 = handler }
     }
 
     func consume(_ buffers: UnsafePointer<AudioBufferList>) {
@@ -271,6 +282,7 @@ private final class TapAudioWriter: @unchecked Sendable {
             if converted.frameLength > 0 {
                 try file.write(from: converted)
                 framesWritten += UInt64(converted.frameLength)
+                liveHandler.withLock { $0 }?(converted)
             }
         } catch {
             os_log("[SystemAudio] Audio write failed: %{public}@", log: log, error.localizedDescription)

@@ -26,11 +26,22 @@ final class OnDeviceTranscriber {
     private let speechRecognizer: SFSpeechRecognizer?
     /// File transcription and live recognition each own their task: stopping one must never cancel the other.
     private var recognitionTask: SFSpeechRecognitionTask?
-    private var liveRecognitionTask: SFSpeechRecognitionTask?
     /// Bumped on every start and stop; callbacks of a replaced session compare and drop their results.
     private var liveSession = 0
     private var audioEngine: AVAudioEngine?
-    private var liveRequest: SFSpeechAudioBufferRecognitionRequest?
+    /// Per source: the current request lives in a box so audio threads keep appending while the request is replaced.
+    nonisolated private let micBox = LiveRequestBox()
+    nonisolated private let systemBox = LiveRequestBox()
+    private var liveStreams: [LiveSource: LiveStream] = [:]
+#if DEBUG
+    private(set) var liveInputFormat = "-"
+    private(set) var lastLiveError = "-"
+    private(set) var liveFinalCount = 0
+    /// Live recognition diagnostics for the DEBUG overlay of the recording screen.
+    var liveDebugText: String {
+        "live ondevice \(speechRecognizer?.supportsOnDeviceRecognition ?? false) fmt \(liveInputFormat) mic# \(liveStreams[.microphone]?.partials ?? 0) sys# \(liveStreams[.system]?.partials ?? 0) final \(liveFinalCount) err \(lastLiveError)"
+    }
+#endif
 
     // MARK: - Init
 
@@ -183,74 +194,144 @@ final class OnDeviceTranscriber {
 
     // MARK: - Live Transcription
 
-    /// Starts live transcription from the microphone during active recording.
-    /// Calls `onPartialResult` with each intermediate result as speech is recognized.
+    /// Starts live transcription of the given sources during an active recording: the microphone
+    /// through its own audio engine, system audio through buffers passed to `feedSystemAudio`.
+    /// Each source recognizes on its own and restarts when Apple ends the request (silence, final).
+    /// `onText` receives the full text of that source so far.
     func startLiveTranscription(
-        onPartialResult: @Sendable @escaping (String) -> Void,
+        sources: Set<LiveSource>,
+        onText: @MainActor @Sendable @escaping (LiveSource, String) -> Void,
         onError: (@MainActor @Sendable (String) -> Void)? = nil
     ) async throws {
         guard let recognizer = speechRecognizer, recognizer.isAvailable else {
             throw TranscriberError.recognizerUnavailable
         }
 
+        if SFSpeechRecognizer.authorizationStatus() == .notDetermined {
+            await requestPermission()
+        }
         guard SFSpeechRecognizer.authorizationStatus() == .authorized else {
             throw TranscriberError.permissionDenied
         }
 
         // Stop any existing session first
         stopLiveTranscription()
+        liveSession += 1
+        let session = liveSession
 
-        let engine = AVAudioEngine()
+        if sources.contains(.microphone) {
+            let engine = AVAudioEngine()
+            let inputNode = engine.inputNode
+            let recordingFormat = inputNode.outputFormat(forBus: 0)
+            let box = micBox
+            // The tap fires on AVAudioEngine's realtime queue, not MainActor. Mark the
+            // closure @Sendable so it doesn't inherit this @MainActor class's isolation
+            // (which would trap under Swift 6 strict concurrency).
+            inputNode.installTap(onBus: 0, bufferSize: 1024, format: recordingFormat) { @Sendable buffer, _ in
+                box.append(buffer)
+            }
+            engine.prepare()
+            try engine.start()
+            audioEngine = engine
+#if DEBUG
+            liveInputFormat = "\(Int(recordingFormat.sampleRate))Hz/\(recordingFormat.channelCount)ch"
+#endif
+        }
+
+        for source in sources {
+            liveStreams[source] = LiveStream()
+            beginRecognition(source, session: session, onText: onText, onError: onError)
+        }
+        logger.info("OnDeviceTranscriber: live transcription started (\(sources.count) source(s))")
+    }
+
+    /// Called from the system-audio capture queue with 16 kHz mono buffers.
+    nonisolated func feedSystemAudio(_ buffer: AVAudioPCMBuffer) {
+        systemBox.append(buffer)
+    }
+
+    private func beginRecognition(
+        _ source: LiveSource,
+        session: Int,
+        onText: @MainActor @Sendable @escaping (LiveSource, String) -> Void,
+        onError: (@MainActor @Sendable (String) -> Void)?
+    ) {
+        guard liveSession == session, let recognizer = speechRecognizer, var stream = liveStreams[source] else { return }
         let request = SFSpeechAudioBufferRecognitionRequest()
         request.shouldReportPartialResults = true
         request.requiresOnDeviceRecognition = recognizer.supportsOnDeviceRecognition
         // Bias recognition toward known names/terms (custom vocabulary, people directory).
         request.contextualStrings = PersonalVocabulary.terms()
 
-        let inputNode = engine.inputNode
-        let recordingFormat = inputNode.outputFormat(forBus: 0)
-
-        // The tap fires on AVAudioEngine's realtime queue, not MainActor. Mark the
-        // closure @Sendable so it doesn't inherit this @MainActor class's isolation
-        // (which would trap under Swift 6 strict concurrency). Appending to the
-        // request is thread-safe.
-        inputNode.installTap(onBus: 0, bufferSize: 1024, format: recordingFormat) { @Sendable buffer, _ in
-            request.append(buffer)
+        stream.generation += 1
+        let generation = stream.generation
+        stream.task?.cancel()
+        (source == .microphone ? micBox : systemBox).replace(with: request)
+        stream.task = recognizer.recognitionTask(with: request) { [weak self] result, error in
+            let text = result?.bestTranscription.formattedString
+            let isFinal = result?.isFinal ?? false
+            let nsError = error as NSError?
+            Task { @MainActor [weak self] in
+                self?.handle(source, session: session, generation: generation, text: text,
+                             isFinal: isFinal, error: nsError, onText: onText, onError: onError)
+            }
         }
+        liveStreams[source] = stream
+    }
 
-        engine.prepare()
-        try engine.start()
+    private func handle(
+        _ source: LiveSource, session: Int, generation: Int, text: String?, isFinal: Bool, error: NSError?,
+        onText: @MainActor @Sendable @escaping (LiveSource, String) -> Void,
+        onError: (@MainActor @Sendable (String) -> Void)?
+    ) {
+        guard liveSession == session, var stream = liveStreams[source], stream.generation == generation else { return }
 
-        self.audioEngine = engine
-        self.liveRequest = request
-
-        liveSession += 1
-        let session = liveSession
-        logger.info("OnDeviceTranscriber: live transcription started")
-
-        liveRecognitionTask = recognizer.recognitionTask(with: request) { [weak self] result, error in
-            guard self != nil else { return }
-
-            if let error = error {
-                let nsError = error as NSError
-                guard !Self.isBenignLiveError(nsError) else { return }
+        if let error {
+            logger.debug("OnDeviceTranscriber: live \(String(describing: source)) ended — \(error.domain) \(error.code)")
+#if DEBUG
+            lastLiveError = "\(error.domain) \(error.code)"
+#endif
+            guard Self.isBenignLiveError(error) else {
                 logger.error("OnDeviceTranscriber: live recognition error — \(error.localizedDescription)")
-                let message = error.localizedDescription
-                Task { @MainActor [weak self] in
-                    guard self?.liveSession == session else { return }
-                    onError?(message)
-                }
+                onError?(error.localizedDescription)
                 return
             }
-
-            if let result = result {
-                let text = result.bestTranscription.formattedString
-                Task { @MainActor [weak self] in
-                    guard self?.liveSession == session else { return }
-                    onPartialResult(text)
-                }
-            }
+            restart(source, session: session, stream: stream, onText: onText, onError: onError)
+            return
         }
+
+        guard let text else { return }
+        stream.partials += 1
+        stream.shown = Self.joinLive(stream.committed, text)
+        liveStreams[source] = stream
+        onText(source, stream.shown)
+        if isFinal {
+#if DEBUG
+            liveFinalCount += 1
+#endif
+            restart(source, session: session, stream: stream, onText: onText, onError: onError)
+        }
+    }
+
+    /// Apple ended the request (silence or final result): keep the text so far and listen again.
+    private func restart(
+        _ source: LiveSource, session: Int, stream: LiveStream,
+        onText: @MainActor @Sendable @escaping (LiveSource, String) -> Void,
+        onError: (@MainActor @Sendable (String) -> Void)?
+    ) {
+        var stream = stream
+        stream.generation += 1 // drops late callbacks of the ended task
+        stream.committed = stream.shown
+        liveStreams[source] = stream
+        Task { @MainActor [weak self] in
+            // A pause avoids a tight loop when the recognizer ends immediately.
+            try? await Task.sleep(for: .seconds(1))
+            self?.beginRecognition(source, session: session, onText: onText, onError: onError)
+        }
+    }
+
+    nonisolated static func joinLive(_ committed: String, _ partial: String) -> String {
+        committed.isEmpty ? partial : partial.isEmpty ? committed : committed + " " + partial
     }
 
     /// Terminal results that are not failures: cancellation (301, 216) and "no speech
@@ -265,14 +346,44 @@ final class OnDeviceTranscriber {
         audioEngine?.stop()
         audioEngine = nil
 
-        liveRequest?.endAudio()
-        liveRequest = nil
-
-        liveRecognitionTask?.cancel()
-        liveRecognitionTask = nil
+        micBox.replace(with: nil)
+        systemBox.replace(with: nil)
+        for stream in liveStreams.values { stream.task?.cancel() }
+        liveStreams = [:]
         liveSession += 1
 
         logger.info("OnDeviceTranscriber: live transcription stopped")
+    }
+}
+
+// MARK: - Live helpers
+
+enum LiveSource: Hashable, Sendable { case microphone, system }
+
+private struct LiveStream {
+    var task: SFSpeechRecognitionTask?
+    var generation = 0
+    /// Text of earlier requests; each restart starts a new request, so it is prefixed to new partials.
+    var committed = ""
+    var shown = ""
+    var partials = 0
+}
+
+/// Thread-safe slot for the current recognition request: audio threads append, the main actor swaps.
+final class LiveRequestBox: @unchecked Sendable {
+    private let lock = OSAllocatedUnfairLock<SFSpeechAudioBufferRecognitionRequest?>(uncheckedState: nil)
+
+    func append(_ buffer: AVAudioPCMBuffer) {
+        lock.withLockUnchecked { $0?.append(buffer) }
+    }
+
+    /// Replaces the request and ends the previous one.
+    func replace(with request: SFSpeechAudioBufferRecognitionRequest?) {
+        let old = lock.withLockUnchecked { slot -> SFSpeechAudioBufferRecognitionRequest? in
+            defer { slot = request }
+            return slot
+        }
+        old?.endAudio()
     }
 }
 
@@ -281,23 +392,25 @@ final class OnDeviceTranscriber {
 /// When live recognition may run and what the recording screen says when it does not.
 enum LiveTranscriptionPolicy {
 
-    /// Live recognition taps the microphone with its own AVAudioEngine next to the
-    /// AVAudioRecorder, in microphone and combined mode alike. System-audio-only
-    /// recordings have no microphone to listen to.
-    static func supports(mode: RecordingMode) -> Bool {
+    /// Which sources feed live recognition: the microphone through its own AVAudioEngine next to
+    /// the AVAudioRecorder, system audio through the capture's converted buffers.
+    static func sources(for mode: RecordingMode) -> Set<LiveSource> {
         #if os(macOS)
-        return mode != .systemAudio
+        switch mode {
+        case .microphone: return [.microphone]
+        case .systemAudio: return [.system]
+        case .combined: return [.microphone, .system]
+        }
         #else
-        return true
+        return [.microphone]
         #endif
     }
 
     /// Why no live text appears, or nil when live recognition is (or is about to be)
     /// running and "Ik luister..." is the honest answer.
-    static func statusText(preferred: Bool, available: Bool, mode: RecordingMode, error: String?) -> String? {
+    static func statusText(preferred: Bool, available: Bool, error: String?) -> String? {
         guard preferred else { return "Opname loopt (live tekst staat uit)" }
         guard available else { return "Opname loopt (live tekst niet beschikbaar)" }
-        guard supports(mode: mode) else { return "Opname loopt (geen live tekst bij alleen systeemgeluid)" }
         if let error { return "Live tekst gestopt: \(error)" }
         return nil
     }

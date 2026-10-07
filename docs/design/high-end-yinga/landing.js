@@ -80,4 +80,3 @@ const syncHeader=()=>header.classList.toggle('compact',window.scrollY>40);
 window.addEventListener('scroll',syncHeader,{passive:true});syncHeader();
 const dialog=$('#image-dialog');
 $$('[data-image]').forEach(button=>button.addEventListener('click',()=>{$('#expanded-image').src=button.dataset.image;$('#expanded-image').alt=button.dataset.imageTitle;$('#image-title').textContent=button.dataset.imageTitle;dialog.showModal();}));dialog.querySelector('button').addEventListener('click',()=>dialog.close());
-if(!reducedMotion.matches){document.documentElement.classList.add('js');const observer=new IntersectionObserver(entries=>entries.forEach(entry=>{if(entry.isIntersecting){entry.target.classList.add('visible');observer.unobserve(entry.target);}}),{threshold:.08});$$('.reveal').forEach(element=>observer.observe(element));}

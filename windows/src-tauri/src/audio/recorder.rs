@@ -294,7 +294,7 @@ fn recording_thread_body(
         {
             match try_build_loopback_stream(
                 &host, &loopback_path,
-                Arc::clone(&loopback_writer), Arc::clone(&is_paused),
+                Arc::clone(&loopback_writer), Arc::clone(&is_paused), event_tx.clone(),
             ) {
                 Ok(stream) => {
                     eprintln!("[Audio] Loopback stream gestart voor systeemaudio opname");
@@ -687,6 +687,7 @@ fn try_build_loopback_stream(
     loopback_path: &str,
     writer: Arc<Mutex<Option<WavWriter<std::io::BufWriter<std::fs::File>>>>>,
     is_paused: Arc<AtomicBool>,
+    event_tx: mpsc::UnboundedSender<RecordingEvent>,
 ) -> Result<cpal::Stream, String> {
     use cpal::traits::HostTrait;
 
@@ -768,6 +769,8 @@ fn try_build_loopback_stream(
         cpal::SampleFormat::I16 => {
             let writer_clone = Arc::clone(&writer);
             let resampler_clone = Arc::clone(&loopback_resampler);
+            let mut meter = LevelMeter::new(loopback_rate);
+            let levels_tx = event_tx.clone();
 
             // Log first callback once
             let first_callback = Arc::new(AtomicBool::new(true));
@@ -789,8 +792,7 @@ fn try_build_loopback_stream(
                             let ch = loopback_channels as usize;
                             let frame_count = data.len() / ch;
 
-                            // Step 1: Downmix to mono (loopback is written only;
-                            // the waveform envelope is driven by the mic stream).
+                            // Downmix, meter system audio, then resample for storage.
                             let mut mono_chunk: Vec<i16> = Vec::with_capacity(frame_count);
                             for frame_idx in 0..frame_count {
                                 let base = frame_idx * ch;
@@ -798,7 +800,11 @@ fn try_build_loopback_stream(
                                 for c in 0..ch {
                                     sum += data[base + c] as i32;
                                 }
-                                mono_chunk.push((sum / loopback_channels as i32) as i16);
+                                let mono = (sum / loopback_channels as i32) as i16;
+                                mono_chunk.push(mono);
+                                if let Some(level) = meter.push(mono.to_float_sample()) {
+                                    let _ = levels_tx.send(RecordingEvent::SystemAudioLevel(level));
+                                }
                             }
 
                             // Step 2: Resample chunk from device rate to 16 kHz
@@ -824,6 +830,8 @@ fn try_build_loopback_stream(
         cpal::SampleFormat::F32 => {
             let writer_clone = Arc::clone(&writer);
             let resampler_clone = Arc::clone(&loopback_resampler);
+            let mut meter = LevelMeter::new(loopback_rate);
+            let levels_tx = event_tx.clone();
 
             // Log first callback once
             let first_callback = Arc::new(AtomicBool::new(true));
@@ -846,8 +854,6 @@ fn try_build_loopback_stream(
                             let frame_count = data.len() / ch;
 
                             // Step 1: Downmix to mono and convert f32 → i16
-                            // (loopback is written only; the waveform envelope
-                            // is driven by the mic stream).
                             let mut mono_chunk: Vec<i16> = Vec::with_capacity(frame_count);
                             for frame_idx in 0..frame_count {
                                 let base = frame_idx * ch;
@@ -857,6 +863,9 @@ fn try_build_loopback_stream(
                                 }
                                 let mono_sample = sum / loopback_channels as f32;
                                 mono_chunk.push((mono_sample.clamp(-1.0, 1.0) * i16::MAX as f32) as i16);
+                                if let Some(level) = meter.push(mono_sample) {
+                                    let _ = levels_tx.send(RecordingEvent::SystemAudioLevel(level));
+                                }
                             }
 
                             // Step 2: Resample chunk from device rate to 16 kHz

@@ -68,19 +68,30 @@ pub async fn start_recording(
     let app_clone = app.clone();
 
     tokio::spawn(async move {
-        while let Some(event) = event_rx.recv().await {
-            match event {
-                RecordingEvent::AudioLevel(level) => {
+        let now = std::time::Instant::now();
+        let mut mic = (0.0, now);
+        let mut system = (0.0, now);
+        let mut ticker = tokio::time::interval(std::time::Duration::from_millis(33));
+        loop {
+            tokio::select! {
+                _ = ticker.tick() => {
+                    let level = combined_level(mic, system, std::time::Instant::now());
                     let _ = app_clone.emit("audio-level", level);
                 }
-                RecordingEvent::Stopped { file_path, duration_seconds } => {
-                    let _ = app_clone.emit("recording-stopped", serde_json::json!({
-                        "file_path": file_path,
-                        "duration_seconds": duration_seconds
-                    }));
-                }
-                RecordingEvent::Error(e) => {
-                    let _ = app_clone.emit("recording-error", e);
+                event = event_rx.recv() => match event {
+                    Some(RecordingEvent::AudioLevel(level)) => mic = (level, std::time::Instant::now()),
+                    Some(RecordingEvent::SystemAudioLevel(level)) => system = (level, std::time::Instant::now()),
+                    Some(RecordingEvent::Stopped { file_path, duration_seconds }) => {
+                        let _ = app_clone.emit("audio-level", 0.0_f32);
+                        let _ = app_clone.emit("recording-stopped", serde_json::json!({ "file_path": file_path, "duration_seconds": duration_seconds }));
+                        break;
+                    }
+                    Some(RecordingEvent::Error(error)) => {
+                        let _ = app_clone.emit("audio-level", 0.0_f32);
+                        let _ = app_clone.emit("recording-error", error);
+                        break;
+                    }
+                    None => break,
                 }
             }
         }
@@ -190,4 +201,24 @@ fn get_wav_duration(file_path: &str) -> Option<f64> {
     let spec = reader.spec();
     let num_samples = reader.len();
     Some(num_samples as f64 / spec.sample_rate as f64)
+}
+
+#[cfg(test)]
+mod level_tests {
+    use super::*;
+    #[test]
+    fn system_audio_drives_meter_with_a_silent_microphone_and_expires() {
+        let now = std::time::Instant::now();
+        assert_eq!(combined_level((0.0, now), (0.8, now), now), 0.8);
+        assert_eq!(combined_level((0.9, now), (0.2, now), now), 0.9);
+        assert_eq!(combined_level((0.0, now), (0.8, now), now + std::time::Duration::from_millis(200)), 0.0);
+    }
+}
+
+// Publish one combined envelope at 30 Hz; alternating source events must not
+// make a silent microphone suppress system audio. Expire stalled/paused streams.
+fn combined_level(mic: (f32, std::time::Instant), system: (f32, std::time::Instant), now: std::time::Instant) -> f32 {
+    [mic, system].into_iter().map(|(level, updated)| {
+        if now.duration_since(updated).as_millis() <= 150 && level.is_finite() { level.clamp(0.0, 1.0) } else { 0.0 }
+    }).fold(0.0, f32::max)
 }

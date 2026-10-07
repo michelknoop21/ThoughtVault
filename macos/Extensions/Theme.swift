@@ -297,7 +297,7 @@ struct BrandBar: View {
     }
 }
 
-/// "Developed by BuildMind" footer for consistent branding across the app.
+/// "Developed by Yinga" footer for consistent branding across the app.
 /// On macOS shown in all views; on iOS only on LoginView.
 struct BrandFooter: View {
     var body: some View {
@@ -306,12 +306,7 @@ struct BrandFooter: View {
                 .font(TS.Font.caption)
                 .foregroundStyle(Color.labelTertiary)
 
-            Image("BuildMindMark")
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .frame(height: 15)
-
-            Text("BuildMind")
+            Text("Yinga")
                 .font(.system(size: 13, weight: .semibold, design: .rounded))
                 .foregroundStyle(
                     LinearGradient(

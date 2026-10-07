@@ -90,14 +90,7 @@ struct ContentView: View {
     @State private var homeSearch = ""
 
     var body: some View {
-        Group {
-            // Local mode needs no server, so it bypasses the login gate entirely.
-            if authVM.isAuthenticated || recordingVM.isLocalMode {
-                authenticatedView
-            } else {
-                LoginView()
-            }
-        }
+        authenticatedView
         .task {
             // Local mode is fully offline: skip the backend version check and
             // server profile reload (built-in defaults are loaded on init).

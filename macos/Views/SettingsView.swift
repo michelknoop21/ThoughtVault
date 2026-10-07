@@ -1299,7 +1299,11 @@ struct SettingsView: View {
     var accountSection: some View {
         Section {
             NavigationLink {
-                AccountView()
+                if authVM.isAuthenticated {
+                    AccountView()
+                } else {
+                    LoginView()
+                }
             } label: {
                 if let user = authVM.currentUser {
                     HStack(spacing: TS.Spacing.sm) {

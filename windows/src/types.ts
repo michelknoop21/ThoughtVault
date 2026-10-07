@@ -370,9 +370,9 @@ export interface AppSettings {
 
 export const DEFAULT_SETTINGS: AppSettings = {
   server_url: "https://n8n.prezent.nl/tstudio/api",
-  processing_mode: "cloud",
+  processing_mode: "local",
   whisper_model: "medium",
-  notulen_provider: "cloud",
+  notulen_provider: "ollama",
   ollama_url: "http://localhost:11434",
   ollama_model: "llama3.2",
   lm_studio_url: "http://localhost:1234",

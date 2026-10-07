@@ -1,5 +1,8 @@
 # ThoughtVault
 
+Windows lokaal bouwen/testen vanuit de Mac: lees `docs/WINDOWS-BUILD-WORKFLOW.md`
+voor de bewezen Windows-pc/RDP-werkwijze, toolchain, MSI-installatie en iconencontrole.
+
 ## Stack
 Native macOS/iOS (Swift 6, SwiftUI, `@Observable`) + Windows (Tauri 2, React/TypeScript).
 Backend: FastAPI op `https://n8n.prezent.nl/tstudio/api/` — lees docs/API.md bij API-werk.
@@ -104,4 +107,3 @@ Grep stays right for known exact strings, regex, and file globs. Refresh the
 index with `gbrain embed --stale` after large changes.
 
 <!-- gstack-gbrain-search-guidance:end -->
-

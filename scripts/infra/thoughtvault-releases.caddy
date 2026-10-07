@@ -1,0 +1,13 @@
+# Merge this handler into the website's thoughtvault.yinga.ai site block.
+# The app release pipeline owns only /releases/*, never the website pages.
+thoughtvault.yinga.ai {
+    handle_path /releases/* {
+        rewrite * /tstudio/download{uri}
+        reverse_proxy 172.17.0.1:5678 {
+            header_up Host n8n.prezent.nl
+        }
+    }
+    handle {
+        reverse_proxy thoughtvault-website:80
+    }
+}

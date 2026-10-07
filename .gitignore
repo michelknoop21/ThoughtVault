@@ -1,0 +1,51 @@
+# Xcode
+build/
+builds/
+DerivedData/
+*.xcuserdata
+xcuserdata/
+*.xcuserstate
+*.xcworkspace/xcuserdata/
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+*.xccheckout
+*.moved-aside
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Swift Package Manager
+.build/
+Packages/
+Package.resolved
+.swiftpm/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Tauri / Node
+windows/node_modules/
+windows/dist/
+windows/src-tauri/target/
+windows/.vite/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Operational runbook — contains production host/IP/SSH/paths; keep local only
+docs/BACKEND.md
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~

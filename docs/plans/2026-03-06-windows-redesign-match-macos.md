@@ -1,0 +1,2129 @@
+> Historische documentatie. Actuele desktoparchitectuur en builds: [project-README](/README.md), [releaseproces](/docs/RELEASE.md). Dit document is geen deploy-instructie.
+
+# Windows App Redesign — Match macOS Visual Language
+
+> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
+
+**Goal:** Completely redesign the Windows ThoughtVault app (Tauri 2 + React/TypeScript) to visually match the macOS native app — same warmth, rounded corners, glassmorphism, gradient backgrounds, animations, and Yinga brand feel.
+
+**Architecture:** Replace the current Fluent 2 design system (flat, 4px radius, gray surfaces) with the macOS app's design language: generous rounded corners (12-25px), glassmorphic cards with backdrop-blur, animated gradient blob backgrounds, spring-like animations, and the full Yinga color palette. This is a CSS-first redesign — component structure stays mostly the same, but every visual property changes.
+
+**Tech Stack:** React 19, TypeScript, Tailwind CSS, CSS custom properties, Tauri 2
+
+---
+
+## Key Design Differences (macOS vs Current Windows)
+
+| Property | macOS (target) | Windows (current) |
+|----------|---------------|-------------------|
+| Border radius | 6-25px (generous) | 4-8px (Fluent flat) |
+| Cards | Glassmorphism, thick material, hover scale 1.02 | Flat white/gray, minimal shadow |
+| Backgrounds | Animated gradient blobs (magenta + blue) with 70-80px blur | Solid gray (#F3F3F3) |
+| Buttons primary | Gradient magenta→dark with glow shadow | Flat gradient, standard shadow |
+| Sidebar nav | Selected=white-on-magenta with shadow, hover=magenta tint | Underline/highlight style |
+| Typography | San Francisco Rounded (friendly) | Segoe UI Variable (neutral) |
+| Animations | Spring-based, 0.15-0.3s | Linear/ease, 100-300ms |
+| Surfaces light | #FFFFFF / #F5F5F7 / #EBEBF0 | #F3F3F3 / #EBEBEB / #F9F9F9 |
+| Surfaces dark | #1A1C29 / #212433 / #282A3D | #202020 / #1C1C1C / #282828 |
+| Labels light | #333338 / #6B6B73 / #99999F | rgba(0,0,0,0.90/0.63/0.45) |
+| Labels dark | #F2F2F7 / #9E9EA6 / #6C6C74 | rgba(255,255,255,0.90/0.60/0.44) |
+
+---
+
+## Task 1: Replace CSS Design Tokens
+
+**Files:**
+- Rewrite: `thoughtvault-windows/src/styles/globals.css` (lines 1-120, the `:root` and `[data-theme="dark"]` blocks)
+
+**Step 1: Replace all CSS custom properties with macOS-matching values**
+
+Replace the entire `:root` and dark mode token blocks. The key changes:
+- Surface colors → match macOS Color+Brand.swift values exactly
+- Label colors → match macOS adaptive label colors
+- Border radius → macOS TS.Radius values (6/12/16/20/25px)
+- Spacing → macOS TS.Spacing values (4/8/16/24/32/48px)
+- Shadows → softer, more layered (macOS style)
+- Animations → spring-like cubic-bezier curves
+
+```css
+:root {
+  /* Brand — Yinga (unchanged) */
+  --brand-primary: #E50074;
+  --brand-primary-dark: #B8005E;
+  --brand-secondary: #007BC4;
+  --brand-accent: #009F3C;
+  --brand-orange: #F39200;
+  --brand-neon-blue: #00C2FF;
+
+  /* Surface colors — matches macOS Color+Brand.swift */
+  --surface-primary: #FFFFFF;
+  --surface-secondary: #F5F5F7;
+  --surface-tertiary: #EBEBF0;
+
+  /* Label colors — matches macOS adaptive labels */
+  --text-primary: #333338;
+  --text-secondary: #6B6B73;
+  --text-tertiary: #99999F;
+  --text-disabled: #BBBBC1;
+  --text-accent: #E50074;
+  --text-error: #EF4444;
+  --text-success: #009F3C;
+
+  /* Accent backgrounds (tinted, subtle) */
+  --accent-bg-primary: #FFE6F2;    /* light magenta tint */
+  --accent-bg-secondary: #E0F0FF;  /* light blue tint */
+  --accent-bg-accent: #E0F8E8;     /* light green tint */
+  --accent-bg-orange: #FFF2E0;     /* light orange tint */
+
+  /* Borders — matches macOS borderPrimary/borderSecondary */
+  --border-primary: #E0E0E6;
+  --border-secondary: #EDEDF0;
+
+  /* Card glassmorphism */
+  --card-bg: rgba(255, 255, 255, 0.72);
+  --card-bg-hover: rgba(255, 255, 255, 0.85);
+  --card-border: rgba(224, 224, 230, 0.60);
+  --card-border-hover: rgba(229, 0, 116, 0.25);
+  --card-shadow: 0 3px 8px rgba(0, 0, 0, 0.06);
+  --card-shadow-hover: 0 6px 16px rgba(0, 0, 0, 0.12);
+  --card-blur: 20px;
+
+  /* Fill colors for interactive elements */
+  --fill-control: rgba(255, 255, 255, 0.70);
+  --fill-control-hover: rgba(255, 255, 255, 0.85);
+  --fill-control-pressed: rgba(255, 255, 255, 0.55);
+  --fill-accent: #E50074;
+  --fill-accent-secondary: rgba(229, 0, 116, 0.90);
+  --fill-accent-tertiary: rgba(229, 0, 116, 0.80);
+
+  /* Button primary gradient */
+  --btn-primary-gradient: linear-gradient(135deg, #E50074, rgba(184, 0, 94, 0.82));
+  --btn-primary-shadow: 0 3px 8px rgba(229, 0, 116, 0.30);
+
+  /* Status colors — matches macOS */
+  --status-error: #EF4444;
+  --status-warning: #F9A500;
+  --status-success: #009F3C;
+
+  /* Spacing — matches macOS TS.Spacing (8pt grid) */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-xxl: 48px;
+
+  /* Border radius — matches macOS TS.Radius */
+  --radius-xs: 6px;
+  --radius-sm: 12px;
+  --radius-md: 16px;
+  --radius-lg: 20px;
+  --radius-xl: 25px;
+
+  /* Typography — rounded font stack for friendly feel */
+  --font-family: 'SF Pro Rounded', 'SF Pro', 'Segoe UI Variable', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-mono: 'SF Mono', 'Cascadia Code', 'Segoe UI Mono', monospace;
+
+  --font-micro: 10px;
+  --font-caption: 12px;
+  --font-footnote: 13px;
+  --font-callout: 16px;
+  --font-body: 14px;
+  --font-subheadline: 15px;
+  --font-headline: 17px;
+  --font-title3: 20px;
+  --font-title2: 22px;
+  --font-title: 28px;
+  --font-large-title: 34px;
+
+  /* Animation — spring-like curves matching macOS TS.Animation */
+  --ease-smooth: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --ease-quick: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-gentle: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-hover: cubic-bezier(0.4, 0, 0.2, 1);
+  --duration-quick: 150ms;
+  --duration-smooth: 300ms;
+  --duration-hover: 180ms;
+  --duration-gentle: 500ms;
+
+  /* Sidebar */
+  --sidebar-bg: var(--surface-primary);
+  --sidebar-width: 210px;
+
+  /* App background */
+  --app-bg: var(--surface-secondary);
+
+  /* Stroke / dividers (legacy compat) */
+  --stroke-divider: var(--border-primary);
+  --stroke-card: var(--card-border);
+  --stroke-control-secondary: var(--border-primary);
+  --stroke-focus: var(--brand-primary);
+
+  /* Legacy fill mappings */
+  --fill-control-default: var(--fill-control);
+  --fill-control-secondary: var(--fill-control-hover);
+  --fill-control-tertiary: var(--fill-control-pressed);
+  --fill-accent-default: var(--fill-accent);
+  --fill-system-critical: var(--status-error);
+  --fill-system-success: var(--status-success);
+  --fill-system-caution: var(--status-warning);
+  --fill-system-attention: var(--brand-secondary);
+
+  /* Legacy bg mappings */
+  --bg-solid-base: var(--surface-primary);
+  --bg-solid-secondary: var(--surface-secondary);
+  --bg-solid-tertiary: var(--surface-tertiary);
+}
+
+[data-theme="dark"] {
+  /* Surface colors — matches macOS dark mode */
+  --surface-primary: #1A1C29;
+  --surface-secondary: #212433;
+  --surface-tertiary: #282A3D;
+
+  /* Label colors — macOS dark adaptive */
+  --text-primary: #F2F2F7;
+  --text-secondary: #9E9EA6;
+  --text-tertiary: #6C6C74;
+  --text-disabled: #4A4A52;
+  --text-accent: #FF4DA6;
+  --text-error: #FF6B6B;
+  --text-success: #34D058;
+
+  /* Accent backgrounds (dark tints) */
+  --accent-bg-primary: rgba(229, 0, 116, 0.15);
+  --accent-bg-secondary: rgba(0, 123, 196, 0.18);
+  --accent-bg-accent: rgba(0, 159, 60, 0.15);
+  --accent-bg-orange: rgba(243, 146, 0, 0.12);
+
+  /* Borders — macOS dark */
+  --border-primary: #383B4D;
+  --border-secondary: #2C2E40;
+
+  /* Card glassmorphism dark */
+  --card-bg: rgba(33, 36, 51, 0.72);
+  --card-bg-hover: rgba(40, 42, 61, 0.85);
+  --card-border: rgba(56, 59, 77, 0.60);
+  --card-border-hover: rgba(229, 0, 116, 0.30);
+  --card-shadow: 0 3px 8px rgba(0, 0, 0, 0.20);
+  --card-shadow-hover: 0 6px 16px rgba(0, 0, 0, 0.30);
+
+  /* Fill dark */
+  --fill-control: rgba(255, 255, 255, 0.06);
+  --fill-control-hover: rgba(255, 255, 255, 0.10);
+  --fill-control-pressed: rgba(255, 255, 255, 0.04);
+  --fill-accent: #FF4DA6;
+  --fill-accent-secondary: rgba(255, 77, 166, 0.90);
+
+  /* Dark mode status */
+  --status-error: #FF6B6B;
+  --status-warning: #FFB340;
+  --status-success: #34D058;
+}
+```
+
+**Step 2: Replace the component CSS blocks — cards, buttons, inputs, sidebar**
+
+Replace the card, button, input, sidebar, and animation classes with macOS-matching styles. Key changes:
+
+```css
+/* ============================================================
+   Cards — glassmorphism matching macOS ModernCardModifier
+   ============================================================ */
+
+.card {
+  background: var(--card-bg);
+  backdrop-filter: blur(var(--card-blur));
+  -webkit-backdrop-filter: blur(var(--card-blur));
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--card-shadow);
+  transition: all var(--duration-hover) var(--ease-hover);
+}
+
+.card:hover {
+  background: var(--card-bg-hover);
+  border-color: var(--card-border-hover);
+  box-shadow: var(--card-shadow-hover);
+  transform: scale(1.02);
+}
+
+.card-static {
+  /* No hover transform for inline cards */
+}
+.card-static:hover {
+  transform: none;
+}
+
+.card-elevated {
+  background: var(--card-bg-hover);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+/* ============================================================
+   Buttons — matches macOS PrimaryButtonStyle / SecondaryButtonStyle
+   ============================================================ */
+
+.btn {
+  font-family: var(--font-family);
+  font-size: var(--font-body);
+  font-weight: 500;
+  padding: 10px 24px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-primary);
+  background: var(--fill-control);
+  color: var(--text-primary);
+  cursor: default;
+  transition: all var(--duration-quick) var(--ease-quick);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  line-height: 1;
+}
+
+.btn:hover {
+  background: var(--fill-control-hover);
+}
+
+.btn:active {
+  transform: scale(0.97);
+  opacity: 0.88;
+}
+
+.btn-accent {
+  background: var(--btn-primary-gradient);
+  color: #FFFFFF;
+  border: none;
+  font-weight: 600;
+  box-shadow: var(--btn-primary-shadow);
+}
+
+.btn-accent:hover {
+  box-shadow: 0 4px 12px rgba(229, 0, 116, 0.40);
+}
+
+.btn-accent:active {
+  transform: scale(0.97);
+  opacity: 0.88;
+}
+
+.btn-secondary {
+  background: rgba(229, 0, 116, 0.08);
+  color: var(--text-accent);
+  border: 1px solid rgba(229, 0, 116, 0.35);
+  font-weight: 500;
+}
+
+.btn-secondary:hover {
+  background: rgba(229, 0, 116, 0.12);
+}
+
+.btn-secondary:active {
+  transform: scale(0.97);
+}
+
+.btn-ghost {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+}
+
+.btn-ghost:hover {
+  background: rgba(229, 0, 116, 0.08);
+  color: var(--text-accent);
+}
+
+/* ============================================================
+   Inputs — macOS-style rounded with subtle borders
+   ============================================================ */
+
+.input, .select {
+  font-family: var(--font-family);
+  font-size: var(--font-body);
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-primary);
+  background: var(--surface-primary);
+  color: var(--text-primary);
+  transition: border-color var(--duration-quick) var(--ease-quick);
+  width: 100%;
+}
+
+.input:focus, .select:focus {
+  outline: none;
+  border-color: var(--brand-primary);
+  box-shadow: 0 0 0 3px rgba(229, 0, 116, 0.12);
+}
+
+.input::placeholder {
+  color: var(--text-tertiary);
+}
+
+/* ============================================================
+   Sidebar — matches macOS NavigationSplitView sidebar
+   ============================================================ */
+
+.sidebar {
+  width: var(--sidebar-width);
+  min-width: var(--sidebar-width);
+  background: var(--surface-primary);
+  border-right: 1px solid var(--border-secondary);
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-sm);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 7px var(--space-sm);
+  border-radius: var(--radius-xs);
+  font-size: var(--font-footnote);
+  font-weight: 400;
+  color: var(--text-primary);
+  cursor: default;
+  transition: all var(--duration-hover) var(--ease-hover);
+  text-decoration: none;
+  position: relative;
+}
+
+.sidebar-item:hover {
+  background: rgba(229, 0, 116, 0.08);
+  color: var(--brand-primary);
+}
+
+.sidebar-item.active {
+  background: var(--brand-primary);
+  color: #FFFFFF;
+  font-weight: 600;
+  box-shadow: 0 2px 4px rgba(229, 0, 116, 0.30);
+}
+
+.sidebar-item.active .sidebar-item-icon {
+  color: #FFFFFF;
+}
+
+.sidebar-item.active .sidebar-item-shortcut {
+  color: rgba(255, 255, 255, 0.60);
+}
+```
+
+**Step 3: Add animated gradient blob backgrounds**
+
+Add CSS for the animated background blobs used in HomeView, RecordingView, and TranscriptsView:
+
+```css
+/* ============================================================
+   Animated Background Blobs — matches macOS gradient circles
+   ============================================================ */
+
+.bg-blobs {
+  position: relative;
+  overflow: hidden;
+}
+
+.bg-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  pointer-events: none;
+  animation: blob-float 20s ease-in-out infinite;
+}
+
+.bg-blob-magenta {
+  background: radial-gradient(circle, rgba(229, 0, 116, 0.20), transparent 70%);
+  width: 600px;
+  height: 600px;
+  top: -200px;
+  left: -100px;
+}
+
+.bg-blob-blue {
+  background: radial-gradient(circle, rgba(0, 123, 196, 0.08), transparent 70%);
+  width: 440px;
+  height: 440px;
+  bottom: -100px;
+  right: -80px;
+  animation-delay: -10s;
+}
+
+.bg-blob-neon {
+  background: radial-gradient(circle, rgba(0, 194, 255, 0.10), transparent 70%);
+  width: 400px;
+  height: 400px;
+  bottom: -80px;
+  left: -60px;
+  animation-delay: -7s;
+}
+
+@keyframes blob-float {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(20px, -15px) scale(1.05); }
+  50% { transform: translate(-10px, 10px) scale(0.95); }
+  75% { transform: translate(15px, 5px) scale(1.02); }
+}
+```
+
+**Step 4: Update page layout and section styles**
+
+```css
+/* ============================================================
+   Page Layouts — macOS-matching spacing and structure
+   ============================================================ */
+
+.page-scroll {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
+}
+
+.page-content {
+  padding: var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
+  max-width: 800px;
+}
+
+.page-content-narrow {
+  max-width: 600px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.page-header {
+  padding: var(--space-md) var(--space-lg) 0;
+}
+
+.page-title-sm {
+  font-size: var(--font-title3);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.section-label {
+  font-size: var(--font-micro);
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: var(--space-sm);
+}
+
+/* ============================================================
+   Hero CTA Card — matches macOS gradient hero
+   ============================================================ */
+
+.hero-cta-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-lg) var(--space-md);
+  background: linear-gradient(135deg, #E50074, #B8005E);
+  border-radius: var(--radius-md);
+  border: none;
+  cursor: default;
+  color: #FFFFFF;
+  text-align: left;
+  width: 100%;
+  font-family: var(--font-family);
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(229, 0, 116, 0.20);
+  transition: all var(--duration-hover) var(--ease-hover);
+  min-height: 100px;
+}
+
+.hero-cta-card:hover {
+  box-shadow: 0 6px 24px rgba(229, 0, 116, 0.30);
+  transform: scale(1.01);
+}
+
+.hero-cta-card:active {
+  transform: scale(0.98);
+  opacity: 0.92;
+}
+
+/* Ripple rings inside hero card */
+.hero-cta-rings {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 54px;
+  height: 54px;
+  flex-shrink: 0;
+}
+
+.hero-cta-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.hero-cta-ring-1 { width: 54px; height: 54px; opacity: 0.3; }
+.hero-cta-ring-2 { width: 42px; height: 42px; opacity: 0.5; }
+.hero-cta-ring-3 { width: 30px; height: 30px; opacity: 0.7; background: rgba(255, 255, 255, 0.10); }
+
+.hero-cta-mic { font-size: 22px; color: #FFFFFF; z-index: 1; }
+
+.hero-cta-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hero-cta-title {
+  font-size: var(--font-callout);
+  font-weight: 600;
+}
+
+.hero-cta-subtitle {
+  font-size: var(--font-caption);
+  opacity: 0.80;
+}
+
+.hero-cta-chevron {
+  font-size: 20px;
+  opacity: 0.70;
+  flex-shrink: 0;
+}
+
+/* ============================================================
+   Quick Start Pills — matches macOS capsule buttons
+   ============================================================ */
+
+.quick-start-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border-primary);
+  background: transparent;
+  color: var(--text-primary);
+  font-family: var(--font-family);
+  font-size: var(--font-footnote);
+  font-weight: 500;
+  cursor: default;
+  transition: all var(--duration-hover) var(--ease-hover);
+}
+
+.quick-start-pill:hover {
+  border-color: var(--brand-primary);
+  color: var(--brand-primary);
+  background: rgba(229, 0, 116, 0.06);
+}
+
+/* ============================================================
+   Session Card — matches macOS TranscriptCard
+   ============================================================ */
+
+.session-card {
+  background: var(--card-bg);
+  backdrop-filter: blur(var(--card-blur));
+  -webkit-backdrop-filter: blur(var(--card-blur));
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  cursor: default;
+  transition: all var(--duration-hover) var(--ease-hover);
+  box-shadow: var(--card-shadow);
+}
+
+.session-card:hover {
+  border-color: var(--card-border-hover);
+  box-shadow: var(--card-shadow-hover);
+  transform: scale(1.02);
+}
+
+.session-card.active {
+  border-color: var(--brand-primary);
+  background: var(--card-bg-hover);
+}
+
+/* ============================================================
+   Mic Button — matches macOS large gradient mic button
+   ============================================================ */
+
+.mic-button-large {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #E50074, #B8005E);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: default;
+  box-shadow: 0 4px 16px rgba(229, 0, 116, 0.40);
+  transition: all var(--duration-quick) var(--ease-quick);
+  z-index: 1;
+  position: relative;
+}
+
+.mic-button-large:hover {
+  box-shadow: 0 6px 20px rgba(229, 0, 116, 0.50);
+}
+
+.mic-button-large:active {
+  transform: scale(0.95);
+}
+
+.mic-pulse-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid rgba(229, 0, 116, 0.15);
+  animation: mic-pulse 2s ease-in-out infinite;
+}
+
+.mic-pulse-ring-1 { width: 120px; height: 120px; animation-delay: 0s; }
+.mic-pulse-ring-2 { width: 150px; height: 150px; animation-delay: 0.5s; }
+.mic-pulse-ring-3 { width: 180px; height: 180px; animation-delay: 1s; }
+
+@keyframes mic-pulse {
+  0% { opacity: 0.6; transform: scale(0.9); }
+  50% { opacity: 0.2; transform: scale(1.0); }
+  100% { opacity: 0; transform: scale(1.15); }
+}
+
+/* ============================================================
+   Recording Controls
+   ============================================================ */
+
+.recording-controls {
+  display: flex;
+  gap: var(--space-lg);
+  justify-content: center;
+}
+
+.recording-control-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 20px;
+  border-radius: var(--radius-sm);
+  background: var(--card-bg);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--card-border);
+  color: var(--text-primary);
+  cursor: default;
+  font-family: var(--font-family);
+  transition: all var(--duration-quick) var(--ease-quick);
+}
+
+.recording-control-btn:hover {
+  background: var(--card-bg-hover);
+  border-color: var(--card-border-hover);
+}
+
+.recording-control-btn.stop {
+  color: var(--status-error);
+  border-color: rgba(239, 68, 68, 0.30);
+}
+
+.recording-control-btn.stop:hover {
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.recording-control-label {
+  font-size: var(--font-micro);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* ============================================================
+   Live Badge
+   ============================================================ */
+
+.live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-caption);
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--status-error);
+  animation: live-pulse 1.2s ease-in-out infinite;
+}
+
+.live-dot.paused {
+  background: var(--status-warning);
+  animation: none;
+}
+
+@keyframes live-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* ============================================================
+   Status Badges — matches macOS StatusBadge
+   ============================================================ */
+
+.status-badge-accent {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: var(--radius-xs);
+  font-size: var(--font-micro);
+  font-weight: 600;
+  background: rgba(229, 0, 116, 0.10);
+  color: var(--brand-primary);
+  border: 0.5px solid rgba(229, 0, 116, 0.25);
+}
+
+.status-badge-success {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: var(--radius-xs);
+  font-size: var(--font-micro);
+  font-weight: 600;
+  background: rgba(0, 159, 60, 0.10);
+  color: var(--status-success);
+  border: 0.5px solid rgba(0, 159, 60, 0.25);
+}
+
+.status-badge-warning {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: var(--radius-xs);
+  font-size: var(--font-micro);
+  font-weight: 600;
+  background: rgba(249, 165, 0, 0.10);
+  color: var(--status-warning);
+  border: 0.5px solid rgba(249, 165, 0, 0.25);
+}
+
+.status-badge-neutral {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: var(--radius-xs);
+  font-size: var(--font-micro);
+  font-weight: 600;
+  background: var(--surface-tertiary);
+  color: var(--text-secondary);
+}
+
+/* ============================================================
+   Tab Bar — matches macOS tab style
+   ============================================================ */
+
+.tab-bar {
+  display: flex;
+  gap: 2px;
+  padding: 0 var(--space-lg);
+  border-bottom: 1px solid var(--border-secondary);
+}
+
+.tab-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;
+  font-family: var(--font-family);
+  font-size: var(--font-footnote);
+  font-weight: 400;
+  color: var(--text-secondary);
+  background: none;
+  border: none;
+  cursor: default;
+  position: relative;
+  transition: color var(--duration-quick) var(--ease-quick);
+}
+
+.tab-item:hover {
+  color: var(--text-primary);
+}
+
+.tab-item.active {
+  color: var(--brand-primary);
+  font-weight: 600;
+}
+
+.tab-item.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 8px;
+  right: 8px;
+  height: 2px;
+  background: var(--brand-primary);
+  border-radius: 1px;
+}
+
+/* ============================================================
+   Filter Pills — capsule shape matching macOS
+   ============================================================ */
+
+.filter-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: var(--radius-xl);
+  font-family: var(--font-family);
+  font-size: var(--font-caption);
+  font-weight: 500;
+  background: transparent;
+  border: 1px solid var(--border-primary);
+  color: var(--text-secondary);
+  cursor: default;
+  transition: all var(--duration-quick) var(--ease-quick);
+}
+
+.filter-pill:hover {
+  border-color: var(--brand-primary);
+  color: var(--brand-primary);
+}
+
+.filter-pill.active {
+  background: var(--brand-primary);
+  color: #FFFFFF;
+  border-color: var(--brand-primary);
+}
+
+/* ============================================================
+   Profile Chip — matches macOS profile selection cards
+   ============================================================ */
+
+.profile-chip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--card-bg);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--card-border);
+  cursor: default;
+  font-family: var(--font-family);
+  font-size: var(--font-footnote);
+  color: var(--text-primary);
+  transition: all var(--duration-hover) var(--ease-hover);
+}
+
+.profile-chip:hover {
+  border-color: var(--card-border-hover);
+  box-shadow: var(--card-shadow-hover);
+}
+
+.profile-chip.active {
+  border-color: var(--brand-primary);
+  background: rgba(229, 0, 116, 0.06);
+  box-shadow: 0 2px 8px rgba(229, 0, 116, 0.15);
+}
+
+/* ============================================================
+   Processing View — matches macOS dark processing screen
+   ============================================================ */
+
+.processing-view {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-lg);
+  text-align: center;
+}
+
+.circular-progress {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.progress-track {
+  fill: none;
+  stroke: var(--border-primary);
+  stroke-width: 4;
+}
+
+.progress-fill {
+  fill: none;
+  stroke: var(--brand-primary);
+  stroke-width: 4;
+  stroke-linecap: round;
+  transform: rotate(-90deg);
+  transform-origin: center;
+  transition: stroke-dashoffset var(--duration-smooth) var(--ease-smooth);
+}
+
+.progress-text {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-primary);
+}
+
+.processing-step {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 6px 0;
+  font-size: var(--font-footnote);
+  color: var(--text-tertiary);
+}
+
+.processing-step.active {
+  color: var(--brand-primary);
+  font-weight: 500;
+}
+
+.processing-step.completed {
+  color: var(--status-success);
+}
+
+.step-icon {
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ============================================================
+   Settings — matches macOS Form grouped style
+   ============================================================ */
+
+.settings-group {
+  background: var(--card-bg);
+  backdrop-filter: blur(var(--card-blur));
+  -webkit-backdrop-filter: blur(var(--card-blur));
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.settings-group-label {
+  font-size: var(--font-caption);
+  font-weight: 600;
+  color: var(--text-secondary);
+  padding: var(--space-md) 14px var(--space-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.settings-row {
+  padding: 10px 14px;
+  transition: background var(--duration-quick) var(--ease-quick);
+}
+
+.settings-row:hover {
+  background: rgba(229, 0, 116, 0.04);
+}
+
+.settings-label {
+  font-size: var(--font-body);
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.settings-desc {
+  font-size: var(--font-caption);
+  color: var(--text-tertiary);
+  margin-top: 1px;
+}
+
+.settings-desc-success {
+  font-size: var(--font-caption);
+  color: var(--status-success);
+  margin-top: 1px;
+}
+
+.settings-icon {
+  font-size: 20px;
+  color: var(--brand-primary);
+  flex-shrink: 0;
+}
+
+.settings-icon-muted {
+  font-size: 20px;
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+/* ============================================================
+   Context Menu — acrylic flyout
+   ============================================================ */
+
+.context-menu {
+  position: fixed;
+  z-index: 100;
+  min-width: 180px;
+  padding: 4px;
+  background: var(--card-bg-hover);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.14);
+}
+
+.context-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 12px;
+  border-radius: var(--radius-xs);
+  font-family: var(--font-family);
+  font-size: var(--font-footnote);
+  color: var(--text-primary);
+  background: none;
+  border: none;
+  width: 100%;
+  cursor: default;
+  transition: background var(--duration-quick) var(--ease-quick);
+}
+
+.context-menu-item:hover {
+  background: rgba(229, 0, 116, 0.08);
+}
+
+.context-menu-item-danger {
+  color: var(--status-error);
+}
+
+.context-menu-item-danger:hover {
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.context-menu-divider {
+  height: 1px;
+  margin: 4px 8px;
+  background: var(--border-secondary);
+}
+
+/* ============================================================
+   Error Banner
+   ============================================================ */
+
+.error-banner {
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.20);
+  color: var(--text-primary);
+  font-size: var(--font-footnote);
+}
+
+/* ============================================================
+   Login Page — matches macOS forced light mode with gradient bg
+   ============================================================ */
+
+.login-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #EEF2FF, #F0F4FF, #ECF0F8);
+  padding: var(--space-xl);
+}
+
+.login-content {
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.login-logo {
+  width: 64px;
+  height: 64px;
+  border-radius: 14px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  margin: 0 auto var(--space-sm);
+}
+
+.login-title {
+  font-size: var(--font-large-title);
+  font-weight: 700;
+  color: var(--brand-primary);
+}
+
+.login-card {
+  padding: var(--space-lg);
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.login-btn {
+  width: 100%;
+  justify-content: center;
+}
+
+.login-btn-back {
+  width: 100%;
+  justify-content: center;
+  color: var(--text-secondary);
+}
+
+.login-footer {
+  display: flex;
+  justify-content: center;
+}
+
+/* ============================================================
+   Form Fields
+   ============================================================ */
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.form-label {
+  font-size: var(--font-footnote);
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.form-label-sm {
+  font-size: var(--font-caption);
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+/* ============================================================
+   Avatars
+   ============================================================ */
+
+.avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-footnote);
+  font-weight: 600;
+  color: #FFFFFF;
+  flex-shrink: 0;
+}
+
+.avatar-accent {
+  background: var(--brand-primary);
+}
+
+.avatar-sm {
+  width: 28px;
+  height: 28px;
+  font-size: var(--font-micro);
+}
+
+/* ============================================================
+   Utility classes
+   ============================================================ */
+
+.flex-row { display: flex; align-items: center; }
+.flex-col { display: flex; flex-direction: column; }
+.flex-1 { flex: 1; min-width: 0; }
+.flex-shrink-0 { flex-shrink: 0; }
+.gap-4 { gap: 4px; }
+.gap-6 { gap: 6px; }
+.gap-8 { gap: 8px; }
+.gap-10 { gap: 10px; }
+.gap-12 { gap: 12px; }
+.gap-16 { gap: 16px; }
+.gap-20 { gap: 20px; }
+.items-start { align-items: flex-start; }
+.justify-between { justify-content: space-between; }
+.text-center { text-align: center; }
+.truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.text-subtitle { font-size: var(--font-title3); font-weight: 600; color: var(--text-primary); }
+.text-body { font-size: var(--font-body); color: var(--text-primary); }
+.text-body-strong { font-size: var(--font-body); font-weight: 600; color: var(--text-primary); }
+.text-caption { font-size: var(--font-caption); color: var(--text-secondary); }
+.text-accent { color: var(--text-accent); }
+.text-secondary { color: var(--text-secondary); }
+.text-tertiary { color: var(--text-tertiary); }
+.text-primary { color: var(--text-primary); }
+
+/* ============================================================
+   Icon Buttons
+   ============================================================ */
+
+.icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-xs);
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: default;
+  transition: all var(--duration-quick) var(--ease-quick);
+}
+
+.icon-btn:hover {
+  background: rgba(229, 0, 116, 0.08);
+  color: var(--brand-primary);
+}
+
+.icon-btn-sm {
+  width: 28px;
+  height: 28px;
+}
+
+.icon-btn-danger:hover {
+  background: rgba(239, 68, 68, 0.08);
+  color: var(--status-error);
+}
+
+/* ============================================================
+   Tag Chips
+   ============================================================ */
+
+.tag-chip {
+  display: inline-flex;
+  padding: 2px 8px;
+  border-radius: var(--radius-xl);
+  font-size: var(--font-micro);
+  font-weight: 500;
+  background: var(--accent-bg-secondary);
+  color: var(--brand-secondary);
+}
+
+.tag-chip-pill {
+  display: inline-flex;
+  padding: 3px 10px;
+  border-radius: var(--radius-xl);
+  font-size: var(--font-caption);
+  font-weight: 500;
+  background: var(--accent-bg-secondary);
+  color: var(--brand-secondary);
+}
+
+.tag-chip-add {
+  display: inline-flex;
+  padding: 3px 10px;
+  border-radius: var(--radius-xl);
+  font-size: var(--font-caption);
+  font-weight: 500;
+  background: none;
+  border: 1px dashed var(--border-primary);
+  color: var(--text-tertiary);
+  cursor: default;
+  font-family: var(--font-family);
+}
+
+.tag-chip-add:hover {
+  border-color: var(--brand-primary);
+  color: var(--brand-primary);
+}
+
+/* ============================================================
+   Empty State
+   ============================================================ */
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-xxl) var(--space-lg);
+  text-align: center;
+}
+
+.empty-state-text {
+  font-size: var(--font-footnote);
+  color: var(--text-tertiary);
+}
+
+/* ============================================================
+   Scrollbar (thin, brand-colored)
+   ============================================================ */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-primary);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-tertiary);
+}
+
+/* ============================================================
+   Focus State — brand-colored ring
+   ============================================================ */
+
+:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
+}
+
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ============================================================
+   Reduced Motion
+   ============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ============================================================
+   Prose — notule HTML rendering
+   ============================================================ */
+
+.prose {
+  font-size: var(--font-body);
+  line-height: 1.65;
+  color: var(--text-primary);
+}
+
+.prose h1 { font-size: var(--font-title2); font-weight: 700; margin: 20px 0 8px; color: var(--text-accent); }
+.prose h2 { font-size: var(--font-title3); font-weight: 600; margin: 16px 0 6px; }
+.prose h3 { font-size: var(--font-callout); font-weight: 600; margin: 12px 0 4px; }
+.prose p { margin: 6px 0; }
+.prose ul, .prose ol { margin: 6px 0; padding-left: 20px; }
+.prose li { margin: 3px 0; }
+.prose table { border-collapse: collapse; width: 100%; margin: 12px 0; }
+.prose th, .prose td { border: 1px solid var(--border-primary); padding: 6px 10px; text-align: left; }
+.prose th { background: var(--surface-tertiary); font-weight: 600; }
+.prose blockquote { border-left: 3px solid var(--brand-primary); padding-left: 14px; color: var(--text-secondary); margin: 8px 0; }
+
+.notule-editor {
+  outline: 2px solid var(--brand-primary);
+  border-radius: var(--radius-sm);
+  padding: var(--space-md);
+  min-height: 200px;
+}
+
+/* ============================================================
+   App Shell
+   ============================================================ */
+
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: var(--app-bg);
+  overflow: hidden;
+}
+
+/* ============================================================
+   Sidebar extras
+   ============================================================ */
+
+.sidebar-logo-section {
+  display: flex;
+  padding: var(--space-sm) 0;
+}
+
+.sidebar-logo {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+}
+
+.sidebar-developed-by {
+  font-size: var(--font-micro);
+  color: var(--text-tertiary);
+  font-weight: 500;
+}
+
+.sidebar-user-section {
+  padding: var(--space-xs) var(--space-sm);
+}
+
+.sidebar-user-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.sidebar-role-badge {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--brand-primary);
+  background: rgba(229, 0, 116, 0.10);
+  padding: 1px 6px;
+  border-radius: var(--radius-xs);
+  display: inline-flex;
+  align-self: flex-start;
+}
+
+.sidebar-divider {
+  border: none;
+  height: 1px;
+  background: var(--border-secondary);
+  margin: var(--space-xs) 0;
+}
+
+.sidebar-item-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+  display: flex;
+}
+
+.sidebar-item-label {
+  font-size: var(--font-footnote);
+}
+
+.sidebar-item-shortcut {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  margin-left: auto;
+}
+
+/* ============================================================
+   Win controls (title bar)
+   ============================================================ */
+
+.win-control:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.win-control-close:hover {
+  background: rgba(232, 17, 35, 0.9);
+  color: #FFFFFF;
+}
+
+/* ============================================================
+   Search Box
+   ============================================================ */
+
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-primary);
+  background: var(--surface-primary);
+}
+
+.search-box input {
+  flex: 1;
+  border: none;
+  background: none;
+  outline: none;
+  font-family: var(--font-family);
+  font-size: var(--font-body);
+  color: var(--text-primary);
+}
+
+.search-box input::placeholder {
+  color: var(--text-tertiary);
+}
+
+.search-box:focus-within {
+  border-color: var(--brand-primary);
+  box-shadow: 0 0 0 3px rgba(229, 0, 116, 0.12);
+}
+
+/* ============================================================
+   Transcripts Panel Layout
+   ============================================================ */
+
+.transcripts-list-panel {
+  width: 320px;
+  border-right: 1px solid var(--border-secondary);
+  background: var(--surface-primary);
+}
+
+.transcripts-list-header {
+  padding: var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.transcripts-list-title { margin: 0; }
+.transcripts-search-margin { margin-top: var(--space-xs); }
+.transcripts-filter-wrap { flex-wrap: wrap; }
+.transcripts-main-tab-bar { padding: 0 var(--space-md); }
+.transcripts-tags-bar { padding: var(--space-xs) var(--space-md); flex-wrap: wrap; }
+
+.transcripts-list-scroll {
+  overflow-y: auto;
+  padding: var(--space-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.transcripts-empty-list {
+  padding: var(--space-xl);
+  text-align: center;
+}
+
+.transcripts-detail-panel {
+  overflow: hidden;
+  background: var(--surface-secondary);
+}
+
+.transcripts-detail-topbar {
+  padding: var(--space-sm) var(--space-md);
+  border-bottom: 1px solid var(--border-secondary);
+}
+
+.transcripts-detail-header {
+  padding: var(--space-md) var(--space-lg);
+}
+
+.transcripts-detail-title {
+  font-size: var(--font-title3);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.transcripts-detail-meta {
+  margin-top: 2px;
+}
+
+.transcripts-detail-tags {
+  margin-top: var(--space-sm);
+  flex-wrap: wrap;
+}
+
+.transcripts-tab-bar { padding: 0 var(--space-lg); }
+
+.transcripts-action-bar {
+  padding: var(--space-sm) var(--space-lg);
+}
+
+.transcripts-content-scroll {
+  overflow-y: auto;
+  padding: var(--space-md) var(--space-lg) var(--space-xl);
+}
+
+.transcripts-empty-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-xxl);
+}
+
+.transcripts-empty-icon-large {
+  font-size: 48px;
+  color: var(--text-tertiary);
+  opacity: 0.5;
+}
+
+.transcripts-empty-content-text {
+  font-size: var(--font-footnote);
+}
+
+.transcripts-generate-btn {
+  margin-top: var(--space-sm);
+}
+
+.transcripts-transcription-card {
+  padding: var(--space-md);
+}
+
+.transcripts-transcription-title {
+  margin-bottom: var(--space-sm);
+}
+
+.transcripts-transcription-body {
+  font-size: var(--font-body);
+  line-height: 1.7;
+  color: var(--text-primary);
+  white-space: pre-wrap;
+}
+
+.transcripts-edit-input {
+  font-size: var(--font-body);
+  font-weight: 600;
+  width: 100%;
+  background: none;
+  border: none;
+  border-bottom: 2px solid var(--brand-primary);
+  padding: 2px 0;
+  outline: none;
+  color: var(--text-primary);
+  font-family: var(--font-family);
+}
+
+.transcripts-item-title { margin-bottom: 2px; }
+.transcripts-item-meta { margin-top: 1px; }
+.transcripts-badges-row { margin-top: var(--space-xs); flex-wrap: wrap; }
+.transcripts-icon-sm { font-size: 14px; }
+.transcripts-icon-md { font-size: 16px; }
+.transcripts-icon-lg { font-size: 20px; }
+.transcripts-regenerate-label { cursor: default; }
+.transcripts-empty-detail { align-items: center; justify-content: center; }
+.transcripts-empty-icon { font-size: 40px; color: var(--text-tertiary); opacity: 0.4; margin-bottom: var(--space-sm); }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+.transcripts-spin { animation: spin 1s linear infinite; }
+
+/* ============================================================
+   Session Card extras
+   ============================================================ */
+
+.session-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-sm);
+}
+
+.session-card-title {
+  font-size: var(--font-body);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.session-card-preview {
+  font-size: var(--font-caption);
+  color: var(--text-tertiary);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.session-card-meta {
+  margin-top: var(--space-sm);
+  font-size: var(--font-caption);
+  color: var(--text-tertiary);
+}
+
+/* ============================================================
+   Admin page extras
+   ============================================================ */
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.stat-card {
+  background: var(--card-bg);
+  backdrop-filter: blur(var(--card-blur));
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.stat-card-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+
+.stat-icon-accent { background: var(--accent-bg-primary); color: var(--brand-primary); }
+.stat-icon-success { background: var(--accent-bg-accent); color: var(--brand-accent); }
+.stat-icon-caution { background: var(--accent-bg-orange); color: var(--brand-orange); }
+.stat-icon-critical { background: rgba(239, 68, 68, 0.10); color: var(--status-error); }
+
+.stat-card-value {
+  font-size: var(--font-title3);
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.stat-card-label {
+  font-size: var(--font-caption);
+  color: var(--text-secondary);
+}
+
+/* User management */
+.user-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #E50074, #B8005E);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #FFFFFF;
+  font-weight: 600;
+  font-size: var(--font-footnote);
+  flex-shrink: 0;
+}
+
+.role-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 8px;
+  border-radius: var(--radius-xl);
+}
+
+.role-badge-admin { background: var(--accent-bg-primary); color: var(--brand-primary); }
+.role-badge-user { background: var(--surface-tertiary); color: var(--text-secondary); }
+
+.invite-code {
+  font-family: var(--font-mono);
+  font-size: var(--font-callout);
+  padding: 8px;
+  background: var(--surface-tertiary);
+  border-radius: var(--radius-xs);
+  letter-spacing: 0.1em;
+}
+
+/* Feedback cards */
+.feedback-card { padding: var(--space-md); }
+.feedback-description { font-size: var(--font-footnote); color: var(--text-secondary); margin: var(--space-sm) 0; }
+.feedback-response { font-size: var(--font-caption); color: var(--text-tertiary); font-style: italic; margin: var(--space-xs) 0; }
+.feedback-date { font-size: var(--font-caption); color: var(--text-tertiary); }
+
+.category-bug { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: var(--radius-xs); background: rgba(239, 68, 68, 0.10); color: var(--status-error); }
+.category-feature { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: var(--radius-xs); background: var(--accent-bg-secondary); color: var(--brand-secondary); }
+.category-general { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: var(--radius-xs); background: var(--surface-tertiary); color: var(--text-secondary); }
+
+.status-badge-new { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: var(--radius-xs); background: var(--accent-bg-primary); color: var(--brand-primary); }
+.status-badge-in-progress { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: var(--radius-xs); background: var(--accent-bg-orange); color: var(--brand-orange); }
+.status-badge-resolved { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: var(--radius-xs); background: var(--accent-bg-accent); color: var(--brand-accent); }
+.status-badge-closed { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: var(--radius-xs); background: var(--surface-tertiary); color: var(--text-tertiary); }
+
+/* Error/health cards */
+.error-card { padding: var(--space-md); border-left: 3px solid var(--status-error); }
+.error-type-badge { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: var(--radius-xs); background: rgba(239, 68, 68, 0.10); color: var(--status-error); text-transform: uppercase; }
+.error-endpoint { font-size: var(--font-caption); font-family: var(--font-mono); color: var(--text-secondary); margin: 4px 0; }
+.error-timestamp { font-size: var(--font-micro); color: var(--text-tertiary); }
+.error-message { font-size: var(--font-footnote); color: var(--text-primary); margin-top: var(--space-xs); }
+.error-reporter { font-size: var(--font-caption); color: var(--text-tertiary); margin-top: var(--space-xs); }
+
+.health-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+/* ============================================================
+   Btn amber (export) — uses brand orange
+   ============================================================ */
+
+.btn-amber {
+  background: rgba(243, 146, 0, 0.10);
+  color: var(--brand-orange);
+  border: 1px solid rgba(243, 146, 0, 0.30);
+  font-weight: 500;
+}
+
+.btn-amber:hover {
+  background: rgba(243, 146, 0, 0.16);
+}
+
+.btn-sm {
+  padding: 5px 10px;
+  font-size: var(--font-caption);
+}
+
+/* ============================================================
+   Error banner inline
+   ============================================================ */
+
+.error-banner-inline {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  background: rgba(239, 68, 68, 0.08);
+  color: var(--text-primary);
+  font-size: var(--font-footnote);
+}
+
+/* ============================================================
+   Waveform card override
+   ============================================================ */
+
+.widget-pulse {
+  animation: widget-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes widget-pulse {
+  0%, 100% { transform: scale(1); opacity: 0.6; }
+  50% { transform: scale(1.08); opacity: 1; }
+}
+```
+
+**Step 5: Commit**
+
+```bash
+git add thoughtvault-windows/src/styles/globals.css
+git commit -m "feat: redesign Windows CSS to match macOS visual language"
+```
+
+---
+
+## Task 2: Update Tailwind Config to Match macOS Tokens
+
+**Files:**
+- Modify: `thoughtvault-windows/tailwind.config.ts`
+
+**Step 1: Update border radius and color tokens**
+
+```typescript
+import type { Config } from "tailwindcss";
+
+export default {
+  content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
+  theme: {
+    extend: {
+      colors: {
+        accent: {
+          DEFAULT: "#E50074",
+          hover: "rgba(229,0,116,0.90)",
+          pressed: "rgba(229,0,116,0.80)",
+          light: "rgba(229,0,116,0.08)",
+        },
+        text: {
+          primary: "var(--text-primary)",
+          secondary: "var(--text-secondary)",
+          tertiary: "var(--text-tertiary)",
+          disabled: "var(--text-disabled)",
+          error: "var(--text-error)",
+          success: "var(--text-success)",
+        },
+        surface: {
+          DEFAULT: "var(--surface-primary)",
+          secondary: "var(--surface-secondary)",
+          tertiary: "var(--surface-tertiary)",
+          card: "var(--card-bg)",
+          elevated: "var(--card-bg-hover)",
+        },
+        fill: {
+          control: "var(--fill-control)",
+          "control-hover": "var(--fill-control-hover)",
+        },
+        stroke: {
+          divider: "var(--border-primary)",
+          card: "var(--card-border)",
+        },
+        danger: "var(--status-error)",
+        success: "var(--status-success)",
+        warning: "var(--status-warning)",
+      },
+      fontFamily: {
+        sans: [
+          "SF Pro Rounded",
+          "SF Pro",
+          "Segoe UI Variable",
+          "Segoe UI",
+          "-apple-system",
+          "system-ui",
+          "sans-serif",
+        ],
+      },
+      borderRadius: {
+        xs: "6px",
+        sm: "12px",
+        DEFAULT: "12px",
+        md: "16px",
+        lg: "20px",
+        xl: "25px",
+      },
+    },
+  },
+  plugins: [],
+} satisfies Config;
+```
+
+**Step 2: Commit**
+
+```bash
+git add thoughtvault-windows/tailwind.config.ts
+git commit -m "feat: update Tailwind config with macOS-matching tokens"
+```
+
+---
+
+## Task 3: Add Animated Background Blobs to Pages
+
+**Files:**
+- Modify: `thoughtvault-windows/src/pages/HomePage.tsx`
+- Modify: `thoughtvault-windows/src/pages/RecordingPage.tsx`
+- Modify: `thoughtvault-windows/src/pages/TranscriptsPage.tsx`
+
+**Step 1: Add blob backgrounds to HomePage**
+
+Wrap the page content with blob containers. In `HomePage.tsx`, change the outer div:
+
+```tsx
+// Before:
+<div className="page-scroll">
+<div className="page-content">
+
+// After:
+<div className="page-scroll bg-blobs">
+  <div className="bg-blob bg-blob-magenta" />
+  <div className="bg-blob bg-blob-blue" />
+  <div className="page-content" style={{ position: "relative", zIndex: 1 }}>
+```
+
+**Step 2: Add blob backgrounds to RecordingPage**
+
+In `RecordingPage.tsx`, change the outer div:
+
+```tsx
+// Before:
+<div className="page-scroll">
+
+// After:
+<div className="page-scroll bg-blobs">
+  <div className="bg-blob bg-blob-magenta" style={{ top: "-150px", right: "-100px", left: "auto" }} />
+  <div className="bg-blob bg-blob-neon" />
+```
+
+Add `style={{ position: "relative", zIndex: 1 }}` to the page-header and body content divs.
+
+**Step 3: Add blob to TranscriptsPage detail panel**
+
+In `TranscriptsPage.tsx`, add a subtle blue blob to the detail panel background:
+
+```tsx
+// In the detail panel div, add:
+<div className="bg-blob bg-blob-blue" style={{ opacity: 0.5 }} />
+```
+
+**Step 4: Commit**
+
+```bash
+git add thoughtvault-windows/src/pages/HomePage.tsx thoughtvault-windows/src/pages/RecordingPage.tsx thoughtvault-windows/src/pages/TranscriptsPage.tsx
+git commit -m "feat: add animated gradient blob backgrounds to main pages"
+```
+
+---
+
+## Task 4: Update AppShell Background
+
+**Files:**
+- Modify: `thoughtvault-windows/src/App.tsx`
+
+**Step 1: Change main content background from solid to surface-secondary**
+
+In `AppShell`, the main area currently uses `var(--bg-solid-secondary)`. Change to use the new token:
+
+```tsx
+<main
+  style={{
+    flex: 1,
+    display: "flex",
+    flexDirection: "column",
+    overflow: "hidden",
+    background: "var(--surface-secondary)",
+  }}
+>
+```
+
+This is already mapped correctly via the CSS token changes in Task 1.
+
+**Step 2: Commit**
+
+```bash
+git add thoughtvault-windows/src/App.tsx
+git commit -m "feat: update AppShell background to macOS surface colors"
+```
+
+---
+
+## Task 5: Verify Build and Visual Review
+
+**Step 1: Run Tailwind/Vite build to check for CSS errors**
+
+```bash
+cd thoughtvault-windows && npx vite build
+```
+
+Expected: Build succeeds with no CSS errors.
+
+**Step 2: Visual spot-check (if dev environment available)**
+
+```bash
+cd thoughtvault-windows && npm run tauri dev
+```
+
+Check each page:
+- Login: Gradient blue background, rounded card, magenta title
+- Home: Blob backgrounds visible, hero CTA has gradient, cards have glassmorphism hover
+- Recording: Blob backgrounds, rounded mic button, mode pills are rounded capsules
+- Transcripts: Split panel with glassmorphic cards, blue blob in detail panel
+- Settings: Grouped cards with backdrop-blur, rounded corners
+- Admin: Stat cards with colored icon backgrounds, tab bar with pink underline
+
+**Step 3: Commit all remaining changes**
+
+```bash
+git add -A
+git commit -m "feat: complete Windows redesign matching macOS visual language"
+```
+
+---
+
+## Summary of Visual Changes
+
+| Element | Before (Fluent 2) | After (macOS-matching) |
+|---------|-------------------|----------------------|
+| Card radius | 8px | 16px |
+| Card background | solid white/gray | glassmorphic (blur + translucent) |
+| Card hover | shadow change only | scale 1.02 + magenta border glow |
+| Button radius | 4px | 12px |
+| Button primary | flat gradient | gradient + magenta glow shadow |
+| Input radius | 4px | 12px |
+| Sidebar nav selected | subtle highlight | solid magenta bg, white text, shadow |
+| Sidebar nav hover | subtle fill | magenta tint bg, magenta text |
+| Page backgrounds | solid gray #F3F3F3 | surface #F5F5F7 + animated blobs |
+| Status badges | flat colored | bordered with 0.5px tinted border |
+| Filter pills | flat rectangles | pill-shaped capsules (25px radius) |
+| Typography | Segoe UI only | SF Pro Rounded → Segoe UI fallback |
+| Animations | 100ms linear | 150-300ms spring-like cubic-bezier |
+| Dark surfaces | #202020 flat | #1A1C29 blue-tinted |
+| Focus ring | Windows double-ring | Single magenta ring |
+| Spacing base | mixed 4px/12px | 8px grid (4/8/16/24/32/48) |

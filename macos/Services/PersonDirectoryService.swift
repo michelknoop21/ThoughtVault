@@ -1,0 +1,206 @@
+// PersonDirectoryService.swift
+// ThoughtVault
+// com.buildmind.ThoughtVault
+//
+// On-device directory CRUD + seed dedup (D-11). Person data stays local; no network calls.
+// Network IO lives in MicrosoftGraphService; this service only touches the ModelContainer.
+
+import Foundation
+import SwiftData
+
+// MARK: - PersonDirectoryService
+
+/// @MainActor service providing CRUD over the on-device people directory.
+/// Directory entries are PersonProfiles with isSelf == false.
+/// Contains no network calls (D-11, success criterion 4, grep-gated).
+@MainActor
+final class PersonDirectoryService {
+
+    // MARK: - Shared instance
+
+    /// Shared singleton backed by LocalTranscriptStore's ModelContainer.
+    /// Views should use this instead of constructing new instances (WR-01).
+    static let shared = PersonDirectoryService()
+
+    // MARK: - Container
+
+    private let _container: ModelContainer
+
+    /// Production init: uses the shared LocalTranscriptStore container.
+    init() {
+        self._container = LocalTranscriptStore.shared.container
+    }
+
+    /// Test init: accepts an injected container so tests can use in-memory stores.
+    init(container: ModelContainer) {
+        self._container = container
+    }
+
+    private var context: ModelContext { _container.mainContext }
+
+    // MARK: - Directory Fetch
+
+    /// Returns all directory entries (isSelf == false), sorted by name.
+    /// The self-profile (isSelf == true) is never included (Pitfall 5 / D-05).
+    func directoryPeople() -> [PersonProfile] {
+        let descriptor = FetchDescriptor<PersonProfile>(
+            predicate: #Predicate { $0.isSelf == false },
+            sortBy: [SortDescriptor(\.name)]
+        )
+        return (try? context.fetch(descriptor)) ?? []
+    }
+
+    // MARK: - Add
+
+    /// Inserts a new directory person and persists immediately.
+    func add(_ person: PersonProfile) throws {
+        context.insert(person)
+        try context.save()
+    }
+
+    // MARK: - Update
+
+    /// Updates a directory person by ID. Bumps updatedAt.
+    func update(_ person: PersonProfile) throws {
+        person.updatedAt = Date()
+        try context.save()
+    }
+
+    /// Convenience: update only the name field by ID.
+    func updatePerson(id: String, name: String) throws {
+        let descriptor = FetchDescriptor<PersonProfile>(
+            predicate: #Predicate { $0.id == id }
+        )
+        guard let person = try context.fetch(descriptor).first else { return }
+        person.name = name
+        person.updatedAt = Date()
+        try context.save()
+    }
+
+    // MARK: - Delete
+
+    /// Deletes a directory person from the store.
+    func delete(_ person: PersonProfile) throws {
+        context.delete(person)
+        try context.save()
+    }
+
+    /// Deletes a directory person by ID.
+    func deletePerson(id: String) throws {
+        let descriptor = FetchDescriptor<PersonProfile>(
+            predicate: #Predicate { $0.id == id }
+        )
+        guard let person = try context.fetch(descriptor).first else { return }
+        context.delete(person)
+        try context.save()
+    }
+
+    // MARK: - Seed Factory
+
+    /// Builds a seed PersonProfile candidate. Does NOT auto-persist — the review
+    /// sheet (plan 02-04) decides what to commit (D-07).
+    func seedPerson(name: String, email: String?) -> PersonProfile {
+        PersonProfile(
+            name: name,
+            emails: [email].compactMap { $0 },
+            isSelf: false,
+            isInternal: nil  // D-09: seeded entries are onbekend (nil)
+        )
+    }
+
+    // MARK: - Participant Resolution
+
+    /// Builds the participant list sent to the notule pipeline for one recording:
+    /// the self-profile + calendar attendees (resolved against the directory by
+    /// email, else a name derived from the email) + manually selected directory
+    /// people. Deduplicated by lowercased name; entries without a name are dropped.
+    func resolveParticipants(
+        attendeeEmails: [String],
+        manualIDs: [String],
+        includeSelf: Bool = true
+    ) -> [Participant] {
+        var result: [Participant] = []
+        var seen = Set<String>()
+
+        func appendProfile(_ p: PersonProfile) {
+            appendRaw(name: p.name, role: p.role, organization: p.organization)
+        }
+
+        func appendRaw(name: String, role: String = "", organization: String = "") {
+            let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty, seen.insert(trimmed.lowercased()).inserted else { return }
+            result.append(Participant(name: trimmed, role: role, organization: organization))
+        }
+
+        let directory = directoryPeople()
+
+        // Self first so it heads the attendee list.
+        if includeSelf, let me = LocalTranscriptStore.shared.fetchSelfProfile() {
+            appendProfile(me)
+        }
+
+        // Calendar attendees → directory match by email, else email-derived name.
+        let byEmail = Dictionary(
+            directory.flatMap { person in person.emails.map { ($0.lowercased(), person) } },
+            uniquingKeysWith: { first, _ in first }
+        )
+        for email in attendeeEmails {
+            if let match = byEmail[email.lowercased()] {
+                appendProfile(match)
+            } else {
+                appendRaw(name: PersonDirectoryService.displayName(fromEmail: email))
+            }
+        }
+
+        // Manually selected directory people (ad-hoc meetings).
+        let byID = Dictionary(directory.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        for id in manualIDs {
+            if let person = byID[id] { appendProfile(person) }
+        }
+
+        return result
+    }
+
+    /// Derives a display name from an email local-part (john.doe@x → "John Doe").
+    /// Mirrors SeedReviewSheet's derivation so seeded + sent names stay consistent.
+    static func displayName(fromEmail email: String) -> String {
+        let prefix = email.components(separatedBy: "@").first ?? email
+        return prefix
+            .components(separatedBy: CharacterSet(charactersIn: "._-"))
+            .map { $0.capitalized }
+            .joined(separator: " ")
+    }
+
+    // MARK: - Dedup (D-10)
+
+    /// Returns the subset of attendeeEmails that are genuinely new:
+    /// not already in the directory (email match, case-insensitive),
+    /// not in the self-profile emails,
+    /// not equal to selfEmail.
+    ///
+    /// Caller resolves selfEmail from:
+    ///   MicrosoftGraphService.shared.accountEmail ∪ CalendarService.microsoftAccountEmail ∪ self-profile emails
+    /// (Open Item 3 resolved in plan 02-04).
+    func newSeedCandidates(from attendeeEmails: [String], selfEmail: String?) -> [String] {
+        // Build the known-email set from the directory
+        let directoryEmails = Set(
+            directoryPeople().flatMap { $0.emails }.map { $0.lowercased() }
+        )
+
+        // Add self-profile emails (the user's own email(s))
+        let selfProfileEmails = Set(
+            (LocalTranscriptStore.shared.fetchSelfProfile()?.emails ?? []).map { $0.lowercased() }
+        )
+
+        let knownEmails = directoryEmails.union(selfProfileEmails)
+
+        // Self email from the caller (Graph account email / microsoftAccountEmail)
+        let selfSet: Set<String> = selfEmail.map { [($0).lowercased()] }.map(Set.init) ?? []
+
+        var seen = Set<String>()
+        return attendeeEmails
+            .map { $0.lowercased() }
+            .filter { !knownEmails.contains($0) && !selfSet.contains($0) }
+            .filter { seen.insert($0).inserted }
+    }
+}

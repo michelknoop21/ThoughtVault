@@ -2,6 +2,8 @@
 param([string]$Channel = "production", [string]$KeyPath = "")
 $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $PSScriptRoot
+python (Join-Path $Root "scripts/check-windows-design.py")
+if ($LASTEXITCODE -ne 0) { throw "Windows visual release review failed" }
 $Version = (Get-Content (Join-Path $Root VERSION) -Raw).Trim()
 $Prefix = if ($Channel -eq "production") { "ThoughtVault" } else { "ThoughtVault-Dev" }
 $Server = "michelk@3.69.205.209"

@@ -1,0 +1,423 @@
+# ThoughtVault — Architectural Decision Records
+
+_Append-only log. Each entry records context, decision, and consequences._
+
+_Decisions DEC-029 through DEC-038 archived to [archive/DECISIONS-DEC-029-to-DEC-038.md](archive/DECISIONS-DEC-029-to-DEC-038.md)._
+
+---
+
+## DEC-059 — Hardened Windows Upload Pipeline na Empirische Weerlegging python-multipart Hypothese
+
+**Date:** 2026-05-06
+**Status:** Accepted
+
+**Context:** Bas (Windows-gebruiker) kreeg al sinds versie 1.0.119 sporadisch een 422 `field required` op `POST /tstudio/api/transcribe` bij combined recordings van 91-168 MB. Drie eerdere fixes hebben het niet weggekregen: `cd1c547` (recordings van %APPDATA% naar %LOCALAPPDATA% wegens vermoede OneDrive sync), `93d9f51` (offline-queue retry storms), en `68273fd` (pre-flight integrity check). De integrity check leest het bronbestand één keer end-to-end en stuurt de gemeten `actual_size` naar `reqwest::multipart::Part::stream_with_length()`, maar opent vervolgens een nieuwe handle voor de daadwerkelijke streaming-upload — tussen die twee `tokio::fs::File::open()`-calls kan AV/OneDrive het bestand muteren waardoor de gestreamde bytes niet matchen met de claimde Content-Length, wat python-multipart 0.0.17 in starlette als ontbrekend `file`-veld interpreteert. Tegelijk leefde de hypothese dat python-multipart 0.0.17 zelf een boundary-parsing bug had (versies 0.0.18-0.0.20 hebben relevante fixes). Een reproductie-binary (`/tmp/repro-upload/`) met exact gelijke reqwest 0.12.28 wire format heeft die hypothese empirisch weerlegd: 100 MB random binary multipart upload tegen productie gaf 422 `audio_format_unsupported` (de magic-byte check vóór audio-format-detectie), wat betekent dat het `file`-veld correct werd geëxtraheerd. Backend is dus disculpeerd; bug is client-side op Windows.
+
+**Decision:** `do_proxy_upload()` in `windows/src-tauri/src/commands/http.rs` is herzien om een hele klasse mogelijke oorzaken tegelijk af te sluiten in plaats van één hypothese te chasen. Vijf-staps strategie:
+
+1. **Bron stabiliseren** — bestand wordt eerst gekopieerd naar `std::env::temp_dir()` (op Windows `%LOCALAPPDATA%\Temp`, buiten OneDrive Known Folder Move) via `tempfile::Builder::tempfile_in()`. Post-copy size-verificatie. Auto-cleanup via `TempPath` Drop.
+2. **In-memory upload voor ≤200 MB** — `tokio::fs::read()` + `reqwest::multipart::Part::bytes(...)`. Geen streaming, geen race-window tussen Content-Length en bytes-on-wire. Bas's failures (91-168 MB) vallen volledig binnen deze grens. Pre-9c12582 werkte dit al stabiel; we keren terug naar dat patroon, maar nu vanuit de stabiele temp-kopie.
+3. **WAV-magic-byte validatie** op de in-memory bytes (`RIFF` + `WAVE`) vóór verzending. Surface AV-induced corruption als heldere client-error in plaats van obscuur server-side 422.
+4. **Hardened reqwest client** — explicit `user_agent("ThoughtVault-Windows/{version}")` (ook traceability in nginx logs), `tcp_nodelay(true)`, `pool_max_idle_per_host(0)`, `http1_only()`, `no_proxy()`, `timeout(600s)`. Sluit Nagle-stalls, HTTP/2 ALPN-race, connection-pool reuse bugs en corporate-proxy MITM uit.
+5. **Diagnostische correlatie** — SHA-256 prefix wordt berekend over de in-memory bytes en meegegeven als `X-Upload-Sha256` header. Backend `_log_validation_error` in `backend/src/insanely_fast_whisper_api/app/app.py` is uitgebreid om dit veld + peer IP te loggen op `[VALIDATION-422]` lines, zodat een eventuele volgende incident-failure ondubbelzinnig client-hash vs server-hash kan vergelijken.
+
+**Consequences:**
+- Files changed: `windows/src-tauri/src/commands/http.rs` (refactor `do_proxy_upload`), `windows/src-tauri/Cargo.toml` (`sha2 = "0.10"` runtime dep, `tempfile` van dev-dep naar runtime dep), `backend/src/insanely_fast_whisper_api/app/app.py:_log_validation_error` (logregel verrijkt).
+- Files >200 MB blijven streamen, nu vanuit de geïntegrity-checkte temp-kopie. Voor uploads >250 MB blijft een resterende streaming-race-mogelijkheid; geen bekende klant raakt die grens.
+- Geheugenfootprint van een upload is nu ~grootte van het bestand (max 200 MB) — bewust geaccepteerd; vorige streaming-architectuur (64 KB buffer) was de bron van de race.
+- Backend-wijziging is harmless voor oudere clients: ontbrekende `X-Upload-Sha256` header logt simpelweg als `sha=''`.
+- Productie release v1.0.123 werd nooit gebouwd door een latente YAML-syntax-bug in `.gitlab-ci.yml` (commit `be88f63`'s PowerShell heredoc-body op kolom 1 dedented het YAML block scalar). Tag v1.0.124 is de eerste werkelijke release met deze hardening.
+- Reproductie-binary `/tmp/repro-upload/` (Rust, reqwest 0.12.28) blijft beschikbaar voor toekomstige Windows-upload-debug; niet ingecheckt.
+- Eerdere `UploadFailureReason` veronderstellingen rond Content-Length-vs-body-divergentie zijn hiermee zowel gemitigeerd als instrumenteerbaar — als de bug terugkomt geeft de gelogde SHA direct uitsluitsel.
+
+---
+
+## DEC-058 — Windows MSI Build op GitLab CI met Self-Hosted Runner
+
+**Date:** 2026-04-01
+**Status:** Accepted
+
+**Context:** De Windows MSI build draaide op GitHub Actions (`windows-latest` runner) per DEC-056. Dit werkte maar was los gekoppeld van de GitLab CI pipeline. Michel heeft een Windows PC als GitLab Runner geregistreerd (shell executor, tag `windows`), maar de eerste builds faalden omdat de runner als LocalSystem (SYSTEM account) draait. SYSTEM's `$env:USERPROFILE` is `C:\Windows\system32\config\systemprofile` — een restricted pad waar Tauri's WiX tools niet konden draaien (`candle.exe` failed), Rust/Cargo niet gevonden werd, en de SSH key voor uploads ontbrak.
+
+**Decision:** Drie aanpassingen in `.gitlab-ci.yml` en `tauri.conf.json`:
+1. **`useLocalToolsDir: true`** in `tauri.conf.json` — Tauri's officiële config optie die WiX/NSIS tools opslaat in `target/.tauri/` i.p.v. `dirs::cache_dir()`. Gedocumenteerd in Tauri source als oplossing voor exact dit scenario (Windows System user / CI). Verkende alternatieven `TAURI_TOOLS_PATH` (niet bestaand) en `LOCALAPPDATA` override (te breed) werkten niet.
+2. **Fallback paden** voor Rust en SSH naar `C:\Users\michel\` naast `$env:USERPROFILE`.
+3. **Relatieve paden** voor MSI search (`src-tauri\...` i.p.v. `windows\src-tauri\...`) omdat `cd windows` in GitLab's shell executor persistent is tussen script blocks.
+
+**Consequences:**
+- Windows MSI builds draaien nu volledig binnen GitLab CI, naast macOS en Android.
+- GitHub Actions Windows workflow blijft beschikbaar als fallback maar is niet meer primair.
+- Runner vereist Rust, Node.js en npm geïnstalleerd onder `C:\Users\michel` op de Windows PC.
+- `useLocalToolsDir: true` downloadt WiX/NSIS bij elke clean build (~3 sec extra). Bij cached `target/` dir worden tools hergebruikt.
+
+---
+
+## DEC-057 — Claude Routing voor Handleiding-profiel via n8n IF-node
+
+**Date:** 2026-03-23
+**Status:** Accepted
+
+**Context:** Het Ollama model (`ministral-3:8b`) in de n8n notule-flow kon de complexe handleiding-template niet verwerken — het hallucineerdde generieke content ("Krachtige Data Analyzer") in plaats van de transcriptie te gebruiken. De handleiding-template vereist gestructureerde HTML met CSS classes, genummerde secties, field-lists, en info-boxes. Andere n8n workflows (SEO Blog Pipeline, Yinga AI Weekly) gebruiken al Claude via een lokale proxy op `http://n8n_claude_code:3100/v1/chat/completions`.
+
+**Decision:** Routing-switch in de n8n "Notule Generator" workflow (`Iq3AAf8Vk8eQ9dcZ`) via een IF-node ("Route Profile") die `profile_id === 'handleiding'` naar een Claude HTTP Request node stuurt. Alle andere profielen blijven via de bestaande Ollama AI Agent route gaan. Backend stuurt `profile_id` mee in het webhook payload (4 locaties: `transcription_service.py`, `transcription.py` ×2, `transcripts.py`). De Claude-route skipt de "Convert to HTML" node omdat handleiding-output al HTML is met eigen `<style>` block. macOS/iOS `HTMLWebView` verplaatst `<style>` blocks van `<body>` naar `<head>` via `extractStyles()` helper, omdat WKWebView CSS counters en grid layouts niet toepast vanuit body-styles.
+
+**Consequences:**
+- Handleiding-profiel genereert nu uitgebreide, goed gestructureerde HTML handleidingen via Claude.
+- Alle andere profielen (zakelijk, informeel, etc.) zijn ongewijzigd — dezelfde Ollama route.
+- `profile_id` is nu onderdeel van het webhook payload contract tussen backend en n8n.
+- Claude proxy (`n8n_claude_code:3100`) moet beschikbaar zijn voor handleiding-verwerking; Ollama als fallback is niet geïmplementeerd.
+- macOS/iOS app moet `<style>` blocks uit HTML content extraheren naar `<head>` — dit is generiek en werkt voor elk profiel dat eigen CSS meestuurt.
+
+---
+
+## DEC-056 — GitHub Actions Behouden Uitsluitend voor Windows MSI Builds
+
+**Date:** 2026-03-20
+**Status:** Accepted
+
+**Context:** Na de migratie naar GitLab CI (DEC-055) moest Windows MSI builds ook ergens draaien. Drie opties: (1) Windows runner registreren op GitLab, (2) Windows builds op GitHub Actions houden, (3) Windows builds lokaal draaien. Een self-hosted Windows runner was niet beschikbaar. GitHub Actions rekent macOS builds 10x de normale prijs (10 minuten per 1 build-minuut), maar Windows builds 1:1. De macOS builds van ~13 minuten kostten dus ~130 Actions-minuten op het free tier — de voornaamste reden dat Actions-minuten uitgeput raakten. Windows builds kosten ~30 minuten per build, wat acceptabel is voor het free tier (2000 min/maand).
+
+**Decision:** GitHub Actions behouden uitsluitend voor Windows MSI builds. Nieuw workflow bestand `.github/workflows/build-windows.yml` vervangt het Windows-gedeelte van het verwijderde `.github/workflows/release.yml`. Triggered op dezelfde `v*`/`dev-v*` tags die naar GitHub gepusht worden. Build uploadt MSI naar EC2 server en update `releases.json` Windows entries via SSH. Vereist `SSH_PRIVATE_KEY` secret in GitHub repository settings.
+
+**Consequences:**
+- GitHub Actions minuten drastisch gereduceerd: ~30 min/release (Windows only) in plaats van ~160+ min/release (alle platforms).
+- Windows builds draaien onafhankelijk van GitLab CI — geen dependency op Mac runner.
+- Tags moeten naar beide remotes gepusht worden: GitLab (macOS+Android+deploy) en GitHub (Windows). Deploy scripts pushen alleen naar origin (GitLab); Windows tag push is handmatig of via apart script.
+- GitLab CI `build-windows` job staat op `when: never` — kan geactiveerd worden als een Windows runner beschikbaar komt.
+- `SSH_PRIVATE_KEY` GitHub secret nodig voor server upload vanuit Windows runner.
+
+---
+
+## DEC-055 — GitLab CI als Primair CI/CD Platform met Mac als Sole Runner
+
+**Date:** 2026-03-20
+**Status:** Accepted
+
+**Context:** GitHub Actions minuten waren uitgeput (billing error). macOS builds op GitHub Actions kosten 10x de normale prijs (10 min per build-minuut), waardoor een 13-minuten macOS build 130 Actions-minuten verbruikte. Met het free tier van 2000 min/maand waren ~15 releases per maand het maximum. GitLab op `gitlab.prezent.nl` (self-hosted) heeft geen usage limiet. Michel's Mac is al het primaire development platform en heeft Xcode, Android SDK, en SSH-toegang tot de EC2 productie-server.
+
+**Decision:** GitLab CI als primair CI/CD platform. Michel's Mac fungeert als sole runner (shell executor, gitlab-runner 18.10.0). Pipeline in `.gitlab-ci.yml` met 5 jobs: `prepare` (versie/channel detectie), `build-macos` (Xcode archive → DMG), `build-android` (Gradle assembleRelease → APK), `build-windows` (disabled, geen runner), `deploy` (scp naar EC2 + releases.json update + GitLab Release). Mac SSHt naar EC2 voor deploys — EC2 kan GitLab niet bereiken (security group blokkeert poort 443 naar gitlab.prezent.nl). Release notes worden automatisch uit `docs/CHANGELOG.md` geextraheerd. GitLab Release creatie via `scripts/create-gitlab-release.py` (API call met `CI_JOB_TOKEN`).
+
+**Consequences:**
+- Onbeperkte CI/CD minuten voor macOS + Android builds (self-hosted runner).
+- Mac moet aan staan en gitlab-runner draaien voor CI builds. Geen builds mogelijk als Mac offline is.
+- EC2 ↔ GitLab security group beperking is geen probleem: Mac doet alles (build + deploy via SSH).
+- `SSH_PRIVATE_KEY` CI variable niet nodig — Mac's eigen SSH key (`~/.ssh/`) wordt gebruikt voor EC2 toegang.
+- Runner environment vereist: Xcode, JDK 21, Android SDK, Python 3, codesign tools. Geconfigureerd via `~/.gitlab-runner/config.toml` environment variabelen.
+- Post-commit hook pusht alleen naar origin (GitLab), niet meer dual-push naar GitHub.
+- `.github/workflows/release.yml` verwijderd — vervangen door `.gitlab-ci.yml`.
+- Bestanden: `.gitlab-ci.yml`, `scripts/create-gitlab-release.py` (nieuw), `.githooks/post-commit` (aangepast), `scripts/deploy-*.sh` (aangepast).
+
+---
+
+## DEC-054 — Background Uploads with Global ProcessingBar
+
+**Date:** 2026-03-20
+**Status:** Accepted
+
+**Context:** After a recording stopped, `uploadFile()` kept `recordingState = .uploading` until the upload completed, blocking the entire RecordingView. The user couldn't start a new recording, navigate to other tabs, or use the app at all during uploads — which could take minutes for large files over slow connections. Windows already had background task tracking via `backgroundTasks` in the Zustand store and a `ProcessingBar` component. macOS had no equivalent.
+
+**Decision:** Make `uploadFile()` fire-and-forget: create a temporary `TranscriptTask` (ID prefixed with `upload-`) in `activeTasks`, set `recordingState = .idle` immediately, and run the upload in a background `Task`. Upload progress updates the temp task via `updateTask()`. On success, the temp task is replaced with the real server task and SSE monitoring begins. On failure, the task shows the error message inline. New `ProcessingBar.swift` component is placed in `ContentView.detailView` (above tab content), visible on all tabs. It renders each active task with filename, status, progress bar, percentage, and cancel/dismiss actions.
+
+**Consequences:**
+- User can immediately start a new recording or navigate after stopping — no more blocked UI.
+- Upload progress and errors are visible on every tab via the global ProcessingBar.
+- `uploadProgressView` removed from RecordingView (no longer needed).
+- `cancelUpload()` now accepts an optional task ID to cancel specific uploads.
+- The `uploadProgress` property on RecordingViewModel is no longer used by the upload flow but retained for widget compatibility.
+- Files changed: `RecordingViewModel.swift` (background upload, `updateTask()`), `ProcessingBar.swift` (new), `ContentView.swift` (ProcessingBar placement), `RecordingView.swift` (removed uploadProgressView).
+
+---
+
+## DEC-039 — Onafhankelijke YouTube Profielselectie (Optie B)
+
+**Date:** 2026-03-15
+**Status:** Superseded (2026-03-16) — teruggedraaid naar gedeeld profiel. Separate YouTube profielselectie bleek onnodige complexiteit; gebruikers verwachten hetzelfde profiel voor alle transcriptie-methodes.
+
+**Context:** De YouTube transcriptie card en de opname card deelden dezelfde profielselectie (`selectedProfile` op macOS, `selectedProfileId` op Windows). Dit leidde tot verwarring: als een gebruiker profiel "Technisch" selecteerde voor een YouTube transcriptie, veranderde ook het profiel voor de volgende opname — en vice versa. De twee cards hebben fundamenteel verschillende use cases (live opname vs. URL-gebaseerde transcriptie) en moeten onafhankelijk configureerbaar zijn.
+
+**Decision:** Optie B gekozen: elke card krijgt een eigen profiel-state. macOS: `youtubeSelectedProfile: Profile?` in `RecordingViewModel.swift`, met eigen `youtubeProfileSection` view en `youtubeProfileBinding` in `RecordingView.swift`. Windows: `youtubeProfileId: string` in `recordingStore.ts`, met eigen `profile-chip` buttons in `RecordingPage.tsx`. Beide worden geïnitialiseerd vanuit het default profiel als fallback. `submitYouTubeURL()` gebruikt het YouTube-specifieke profiel.
+
+**Consequences:**
+- Gebruikers kunnen een ander profiel kiezen voor YouTube transcriptie dan voor opname, zonder wederzijdse interferentie.
+- Beide profiel-states worden onafhankelijk geïnitialiseerd vanuit het default profiel — geen extra configuratie nodig.
+- De YouTube card toont een rood accent-badge met de geselecteerde profielnaam, visueel onderscheidend van de opnamekaart.
+- Android heeft nog geen YouTube feature — wanneer die wordt toegevoegd, moet dezelfde onafhankelijke state-aanpak gevolgd worden.
+
+---
+
+## DEC-040 — Video Call Detection via KVO Camera + Running App Matching
+
+**Date:** 2026-03-16
+**Status:** Accepted
+
+**Context:** ThoughtVault detected only scheduled meetings via calendar integration (EventKit / Microsoft Graph). Ad-hoc video calls — someone calls you on Teams without a calendar invite — were not detected. Users had to manually navigate to the recording tab and start recording, missing the first minutes of unplanned calls. The goal was to show an automatic "Start opname" notification when a video call begins, reusing the existing `CallAlertView` and `MeetingNotificationService` infrastructure.
+
+**Decision:** Combine two signals in a new `VideoCallDetectionService` (`macos/Services/VideoCallDetectionService.swift`): (1) KVO observation on `AVCaptureDevice.default(for: .video)?.isInUseByAnotherApplication` — fires when any app activates the camera, (2) `NSWorkspace.shared.runningApplications` matched against a static dictionary of known video app bundle IDs (Teams, Zoom, FaceTime, Slack, Webex, Discord) and browser bundle IDs (Safari, Chrome, Edge, Brave, Arc, Firefox). Both signals must be true to trigger detection. A three-state machine (`idle → detected → cooldown`) with 60-second cooldown prevents re-triggering on brief camera cycles. Synthetic `CalendarEvent` objects (id prefixed with `videocall-`) are posted via `NotificationCenter` and fed into the existing `CallAlertView` and `MeetingNotificationService` paths unchanged. Fallback: when `AVCaptureDevice.default(for: .video)` returns nil (sandbox restriction without camera entitlement), the service degrades to a 10-second poll on running apps, alerting after 30 seconds of continuous video app presence.
+
+**Consequences:**
+- Both `isInUseByAnotherApplication` and `NSWorkspace.shared.runningApplications` are available in sandboxed macOS apps without additional entitlements — no camera stream access needed.
+- Browser-based video calls (Google Meet, Teams web) trigger detection via camera + browser match, but can false-positive on non-video WebRTC sites. Acceptable: dismiss in 1 click.
+- Audio-only calls are not detected (no camera activation). Calendar integration handles scheduled audio calls.
+- Calendar dedup prevents duplicate alerts when a scheduled meeting coincides with a detected video call.
+- Toggle via `@AppStorage("videoCallDetectionEnabled")` in Settings → Agenda section (default: on).
+- No changes to `CallAlertView`, `MeetingNotificationService`, or `CalendarEvent` struct — full infrastructure reuse.
+- Windows and Android do not yet have this feature; when added, similar process-monitoring APIs exist (`WTSEnumerateProcesses` on Windows, `ActivityManager` on Android).
+
+---
+
+## DEC-041 — YouTube Hybride Aanpak: Captions API + yt-dlp Fallback
+
+**Date:** 2026-03-16
+**Status:** Accepted
+
+**Context:** YouTube transcription used yt-dlp to download audio and run it through Whisper. This was fragile (yt-dlp breaks on YouTube changes, bot detection), slow (~15 min: download + GPU transcription), GPU-intensive, and technically in conflict with YouTube's ToS. Most YouTube videos already have captions (manual or auto-generated) that can be retrieved in ~1 second via the YouTube Data API v3, requiring no GPU at all.
+
+**Decision:** Implement a hybrid approach in `backend/services/youtube_service.py` and `backend/routes/transcription.py`. When the client sends an `X-Google-Token` header with the YouTube request, the backend first tries the YouTube Data API v3 (`captions.list` + `captions.download`) to fetch existing captions. Caption track priority: `nl standard > nl ASR > en standard > en ASR > any standard > any ASR`. If captions are found, the text is fed directly into the notule pipeline (same path as `/transcribe-text`: `split_into_chunks()` → `qm.enqueue()`) with `source_type: "youtube_captions"`. If no captions are available, the existing yt-dlp + Whisper path is used as fallback with `source_type: "youtube"`. Google OAuth (PKCE) is required — implemented in `macos/Services/GoogleAuthService.swift` following the `MicrosoftGraphService` pattern. The `/features` endpoint exposes `google_oauth_configured` and `google_oauth_client_id_macos` for client discovery.
+
+**Consequences:**
+- Caption retrieval completes in ~1 second vs ~15 minutes for yt-dlp + Whisper. Zero GPU usage for captioned videos.
+- YouTube Data API quota: 250 units/video (`captions.list` 50 + `captions.download` 200). Default 10,000 units/day = ~40 videos/day.
+- Google OAuth scope `youtube.force-ssl` is required for `captions.download`. Users must connect their Google account in the YouTube card UI.
+- Backward compatible: without `X-Google-Token`, the endpoint falls back to the existing yt-dlp path unchanged.
+- Admin configures Google OAuth Client IDs via Admin > Instellingen (same pattern as MS365 OAuth).
+- Windows and Android will follow later — backend is ready (accepts `google_oauth_client_id_windows` setting).
+- Refresh tokens stored in macOS Keychain via `KeychainService` (key: `googleRefreshToken`). Access tokens are in-memory (1 hour validity).
+
+---
+
+## DEC-042 — DispatchQueue.main.async voor KVO Callbacks in @Observable Classes
+
+**Date:** 2026-03-16
+**Status:** Accepted
+
+**Context:** `VideoCallDetectionService` is een `@Observable` class (niet `@MainActor`) die KVO gebruikt op `AVCaptureDevice.isInUseByAnotherApplication`. KVO callbacks worden geleverd op willekeurige dispatch queues — in de praktijk `com.apple.root.default-qos` (concurrent background queue). Het oorspronkelijke patroon `Task { @MainActor in self.handleCameraActive() }` crashte met `_dispatch_assert_queue_fail` omdat het capturen van `self` (een `@Observable` object geobserveerd door SwiftUI) op de background thread de observation tracking triggerde op de verkeerde queue. Hetzelfde risico bestond in `SystemAudioCapture` waar `Timer.scheduledTimer` callbacks in `Task { @MainActor in }` werden gewrapped terwijl ze al op de main run loop draaien.
+
+**Decision:** Twee patronen vastgelegd voor thread-hopping naar MainActor vanuit callbacks:
+1. **KVO/NotificationCenter callbacks** (onbekende thread): gebruik `DispatchQueue.main.async { [weak self] in ... }` — delay `guard let self` tot we op de main queue zijn, voorkom `@Observable` property access op background threads.
+2. **Timer callbacks** (main run loop): gebruik `MainActor.assumeIsolated { ... }` — zero-overhead assertie dat we al op de main thread zijn, vermijd onnodige task scheduling.
+
+Vermijd `Task { @MainActor in }` in beide gevallen: het scheduled een nieuwe cooperative task op de MainActor executor, wat subtiel verschilt van de GCD main queue en de dispatch assertion kan triggeren bij `@Observable` observation tracking.
+
+**Consequences:**
+- KVO callbacks capturen `self` niet meer op background threads — elimineert de `_dispatch_assert_queue_fail` crash.
+- `DispatchQueue.main.async` is synchrone dispatch naar de main queue, betrouwbaarder dan `Task { @MainActor in }` voor bridging tussen GCD en Swift concurrency.
+- `MainActor.assumeIsolated` in timer callbacks is zero-overhead (geen scheduling, geen context switch) en documenteert de threading verwachting.
+- Bestaande `@MainActor` methoden (`handleCameraActive`, `handleCameraInactive`, `enterCooldown`) hoeven niet gewijzigd te worden — ze worden nu correct aangeroepen vanuit de main queue/actor context.
+- Dit patroon moet gevolgd worden bij toekomstige KVO observers en system callbacks in `@Observable` classes.
+
+---
+
+## DEC-043 — macOS 15 Audio-Only ScreenCaptureKit Categorisatie
+
+**Date:** 2026-03-16
+**Status:** Accepted
+
+**Context:** `SystemAudioCapture` gebruikt ScreenCaptureKit (SCStream) voor systeemaudio-opname. Op macOS 14 vereist SCStream minstens één `.screen` output om te functioneren, zelfs als je alleen audio wilt opvangen. Daarom werd altijd een minimale video config meegegeven (`width=2, height=2, framerate=1fps`) om overhead te beperken. Het gevolg: macOS toont de app in Systeeminstellingen als "Scherm- en systeemaudio-opname" — misleidend voor een app die alleen audio opneemt. macOS 15 introduceert `SCStreamConfiguration.captureMicrophone` en maakt het mogelijk om alleen audio te streamen zonder `.screen` output.
+
+**Decision:** Gebruik `#unavailable(macOS 15.0)` om de `.screen` output en bijbehorende video config (`width`, `height`, `minimumFrameInterval`, `queueDepth`) alleen op macOS 14 in te stellen. Op macOS 15+ wordt geen `.screen` output toegevoegd aan de stream. De error message is aangepast van "Schermopnamemachtiging" naar "Systeemaudio-machtiging" om de nieuwe categorisatie te reflecteren.
+
+**Consequences:**
+- macOS 15+ toont de app als "Systeemaudio" in Systeeminstellingen — accurate categorisatie.
+- Geen onnodige video frames verwerkt op macOS 15+, vermindert CPU/GPU overhead.
+- macOS 14 blijft correct functioneren met de minimale video fallback.
+
+---
+
+## DEC-044 — YouTube Anonieme Captions als Primaire Fast-Path
+
+**Date:** 2026-03-16
+**Status:** Accepted (supersedes priority logic of DEC-041)
+
+**Context:** YouTube captions fast-path (DEC-041) vereiste een Google OAuth token via `X-Google-Token` header. Dit maakte de feature onbruikbaar zonder Google OAuth configuratie — admin moest een Google Cloud Console project opzetten, OAuth Client IDs configureren, en gebruikers moesten hun Google account koppelen. De `youtube-transcript-api` Python library haalt captions op via dezelfde interne YouTube endpoint die de YouTube website gebruikt, zonder enige authenticatie. Dit maakt de feature direct bruikbaar voor alle gebruikers.
+
+**Decision:** Nieuwe functie `fetch_captions_anonymous()` in `backend/services/youtube_service.py` als primaire captions bron. Gebruikt `youtube-transcript-api` library (v1.2.4) met `YouTubeTranscriptApi().list(video_id)` + `find_manually_created_transcript()` / `find_generated_transcript()`. Taal-prioriteit identiek aan DEC-041: nl manual → nl auto → en manual → en auto → any. Metadata via bestaande `get_youtube_metadata()` (yt-dlp `--dump-json`). Endpoint `transcribe_youtube()` in `backend/routes/transcription.py` gewijzigd naar 3-staps prioriteit: (1) anoniem via `fetch_captions_anonymous()`, (2) Google API via `fetch_youtube_captions()` als `X-Google-Token` aanwezig, (3) yt-dlp + Whisper fallback. Feature flag default gewijzigd naar `True` — YouTube transcriptie nu standaard ingeschakeld.
+
+**Consequences:**
+- YouTube captions werken direct voor alle gebruikers zonder Google OAuth setup. Zero configuratie vereist.
+- Google OAuth path (DEC-041) blijft intact als secundaire bron — nuttig wanneer `youtube-transcript-api` geblokkeerd wordt door YouTube (IP-based rate limiting, bot detection).
+- `youtube-transcript-api` is afhankelijk van YouTube's interne API — kan breken bij YouTube-wijzigingen (zelfde risico als yt-dlp). Library wordt actief onderhouden.
+- Feature flag default `True` betekent dat nieuwe installaties YouTube transcriptie direct beschikbaar hebben.
+- Clients hoeven niet aangepast — UI was al gebouwd en gated op feature flag. Geen `X-Google-Token` header nodig voor de primaire path.
+
+---
+
+## DEC-045 — Transcript Pagination Removed in Favor of Single-Request Loading
+
+**Date:** 2026-03-16
+**Status:** Accepted
+
+**Context:** Both macOS and Windows clients used client-side pagination to fetch transcripts (`?page=N&limit=100`), looping until all pages were loaded. The backend returns all transcripts for the authenticated user, and the typical transcript count per user (tens to low hundreds) makes pagination overhead unnecessary. The pagination loop added complexity to `TranscriptsViewModel` (macOS), `TranscriptsView` (macOS), `api.ts` (Windows), and required tracking `page`, `hasMore`, and `pageSize` state. The `TranscriptsResponse` model carried `total`, `page`, and `limit` fields that were only used for pagination control.
+
+**Decision:** Remove client-side pagination from all transcript loading paths. `APIService.getTranscripts()` (macOS) and `api.getTranscripts()` (Windows) now make a single request without `page`/`limit`/`sort_by` query parameters. The backend returns all matching transcripts in one response. `TranscriptsResponse` model simplified to `{ items: [Transcript] }` only. Client-side sorting and filtering handles display order. `HomeView` takes the first 3 items from the full response for "recent transcripts" instead of requesting `limit: 3`.
+
+**Consequences:**
+- Simpler code: removed ~80 lines of pagination loop logic across macOS ViewModel, View, and Windows service.
+- Single network request instead of N sequential requests — faster total load time for typical user transcript counts.
+- `TranscriptsResponse` model no longer carries `total`, `page`, `limit` — breaking change for any code relying on those fields.
+- All sorting and filtering now happens client-side — acceptable given current data volumes.
+- Not suitable if transcript counts grow to thousands per user — would need server-side pagination reintroduction.
+
+---
+
+## DEC-046 — Admin Panel: Enhanced Logging Tab and YouTube Configuration
+
+**Date:** 2026-03-16
+**Status:** Accepted
+
+**Context:** The admin panel's Logging tab (Fouten) only showed error logs in a basic table. Activity logs were not surfaced in the UI despite being available via `GET /admin/activity`. Additionally, YouTube configuration (max duration, yt-dlp cookies, extractor args) and Google OAuth Client IDs could only be set via environment variables or direct database manipulation, not through the admin UI.
+
+**Decision:** (1) Redesign the Logging tab as a dual-subtab interface with "Activiteit" (activity logs) and "Fouten" (error logs), including filter bars for severity, user, action type, and search. Expandable rows show full log details. Both macOS (`AdminView.swift`) and Windows (`AdminPage.tsx`) implementations. `APIService.getAdminErrors()` and `getAdminActivity()` now accept filter parameters (`severity`, `userId`, `search`, `startDate`, `endDate`, `actionType`). (2) Add YouTube configuration section to Admin > Instellingen: max duration (minutes), yt-dlp cookies content (textarea), extractor args. Add Google OAuth Client ID fields (macOS + Windows). Both platforms send these new fields via `updateAdminSettings()`.
+
+**Consequences:**
+- Admins can browse and filter both activity and error logs from the UI without SSH access.
+- YouTube yt-dlp configuration manageable through the admin panel — no need to restart the container for cookies or extractor arg changes.
+- Google OAuth Client IDs configurable per-platform through the admin UI.
+- Backend `GET /admin/settings` and `POST /admin/settings` now include `youtube_max_duration_minutes`, `youtube_cookies_content`, `youtube_extractor_args` fields.
+
+---
+
+## DEC-048 — Never Auto-Logout After Authentication
+
+**Date:** 2026-03-17
+**Status:** Accepted
+
+**Context:** User Bas had completed a meeting recording. After the meeting, he found himself logged out — a 401 response from the backend had triggered automatic logout (`useAuthStore.getState().logout()` on Windows, `self.logout()` via `.authDidInvalidate` observer on macOS). Upon re-login, the yellow offline queue banner showed "1 opname worden verstuurd..." without any progress. Worse: the 401 during upload was classified as a client error in `RecordingPage.tsx:285` (`msg.includes("HTTP 4")`), preventing the recording from being enqueued for retry — the recording was permanently lost. The backend already uses 365-day token expiry, making transient 401s from server restarts or brief outages the most likely cause.
+
+**Decision:** Remove all automatic logout behavior on both platforms. Specifically: (1) **Windows `api.ts`**: remove `logout()` call on 401; instead retry the request once after 2 seconds, then throw error without touching auth state. (2) **macOS `AuthViewModel.swift`**: change `.authDidInvalidate` observer from calling `self.logout()` to log-only. (3) **Windows `RecordingPage.tsx`**: exclude 401 from client error classification so recordings always get enqueued for retry. (4) **Windows `offlineQueue.ts`**: increase max retries from 3 to 50 and add file existence check. (5) **macOS `RecordingViewModel.swift`**: on `APIError.sessionExpired` during upload, enqueue to `OfflineQueue` before showing retry sheet. (6) Both platforms validate token at startup with non-disruptive UI feedback — never redirect to login on failure.
+
+**Consequences:**
+- Users are never logged out unless they explicitly choose to log out. Token stays in keyring/Keychain.
+- Recordings are never lost due to auth errors — they are always enqueued for retry.
+- 401 errors during API calls show a non-disruptive error message instead of destroying the session.
+- The 50-retry limit (with 10-second intervals in `processQueue`) means the queue will retry for ~8 minutes before giving up — covering typical server restart windows.
+- Token validation at startup provides a soft signal ("Sessie mogelijk verlopen") via toast/log without forcing action.
+- DEC-013 (Client-Side Logout Only) is effectively superseded — logout is now exclusively user-initiated.
+
+---
+
+## DEC-049 — Gestructureerde Error Codes Across All Layers
+
+**Date:** 2026-03-18
+**Status:** Accepted
+
+**Context:** Upload failures toonden onduidelijke foutmeldingen aan gebruikers. Backend retourneerde raw Python exception strings in 500 errors (bijv. `"Internal Server Error"` of stack trace fragmenten). macOS `APIError.httpError` had slechts 2 argumenten (statusCode, message) zonder gestructureerde error codes. Windows `api.ts` toonde HTTP statuscodes direct aan gebruikers. Er was geen standaard error response format — elke route gebruikte een eigen `HTTPException` met ad-hoc detail strings. Het resultaat: gebruikers zagen technische berichten in het Engels en konden niet begrijpen wat er mis ging of wat ze moesten doen.
+
+**Decision:** Drie-laags aanpak:
+
+1. **Backend — gestructureerd error module** (`errors.py`): Centraal `raise_api_error(status_code, error_code, detail)` vervangt alle directe `HTTPException` calls. Standaard JSON response: `{"error_code": "auth_required", "message": "Inloggen is vereist.", "detail": "..."}`. 11 error codes gedefinieerd met vaste Nederlandse `message` per code. `validate_audio_extension()` controleert bestandsextensie tegen allowlist. `api_error_response()` voor non-exception contexts (rate limiting middleware). 500 errors loggen de echte exception maar retourneren alleen `"Er is een serverfout opgetreden."` naar de client.
+
+2. **macOS client**: `APIError.httpError` uitgebreid naar 3 argumenten `(statusCode, message, errorCode)`. Nieuwe `extractErrorInfo()` parseert eerst `error_code` + `message` uit JSON response, dan fallback naar `detail` string, dan HTTP status. `UploadFailureReason` krijgt `.networkError` case. Alle failure reason descriptions worden actionable Nederlands (bijv. "Het bestand is groter dan 120 MB. Probeer een kortere opname.").
+
+3. **Windows client**: `api.ts` `request()` en upload methods parsen `error_code` van JSON responses en gebruiken de backend `message` direct als user-facing tekst. Fallback naar status-code-based Nederlandse berichten. Rust `http.rs` doet 120 MB client-side check en categoriseert netwerk errors (timeout, connection refused, generic). `uploadQueueStore` krijgt `permanentlyFailed` array voor items die 50 retries overschrijden.
+
+**Consequences:**
+- Alle error responses van de backend hebben nu een consistent JSON format met `error_code`, `message`, en `detail`.
+- Clients kunnen error handling branchen op `error_code` (machine-readable) in plaats van string matching op `message` (fragiel).
+- Nederlandse user-facing messages zijn gedefinieerd op de backend — clients hoeven ze niet te vertalen.
+- 500 errors lekken geen interne server details meer naar clients (security verbetering).
+- File size limiet consistent op 120 MB across all layers (was 200 MB in sommige paden).
+- Client-side file size validatie voorkomt onnodige uploads van te grote bestanden.
+- macOS retry limiet (10) is lager dan Windows (50) — macOS offline queue is nieuwer en conservatiever.
+- Permanently failed items op Windows krijgen een zichtbare banner met bestandsnaam — gebruiker kan actie ondernemen.
+
+---
+
+## DEC-050 — Auto-login via OS Keyring Credentials ("Onthoud mij")
+
+**Date:** 2026-03-18
+**Status:** Accepted
+
+**Context:** Gebruikers moesten bij elke herstart van de Windows app opnieuw inloggen, zelfs met een token dat 365 dagen geldig is (DEC-048). Tokens verlopen uiteindelijk wel, en er was geen mechanisme om automatisch opnieuw te authenticeren. Dit leidde tot frustratie, vooral bij gebruikers die dagelijks met de app werken. De macOS app heeft al biometrische login via Keychain; de Windows app had geen equivalent.
+
+**Decision:** "Onthoud mij" checkbox op de login pagina (`LoginPage.tsx`) die email + wachtwoord opslaat in Windows Credential Manager via de bestaande Tauri `store_credential`/`load_credential`/`delete_credential` commands. Bij app start probeert `loadTokenFromKeyring()` in `authStore.ts` automatisch in te loggen als de remember-me vlag is ingesteld:
+
+1. Bestaand token laden en valideren met `getProfiles()` (snelle check)
+2. Als token ongeldig/afwezig EN `remember_me` == `"true"` in keyring → saved email + password laden → `api.login()` aanroepen
+3. Bij 2FA-accounts: login submitten, `pendingTwoFactor` state instellen → LoginPage toont alleen het 2FA code-invoerveld
+4. Bij netwerk-errors: credentials NIET wissen (transient probleem), oud token behouden zodat gebruiker kan doorwerken
+5. Bij auth-errors (wachtwoord gewijzigd, account uitgeschakeld): credentials wissen, login pagina tonen
+6. Bij expliciete logout: alle saved credentials wissen
+
+Keyring keys: `auth_token` (bestaand), `saved_email`, `saved_password`, `remember_me`.
+
+**Consequences:**
+- Gebruikers met "Onthoud mij" worden automatisch ingelogd bij herstart — geen login pagina flash.
+- 2FA-gebruikers zien alleen het code-invoerveld, niet het volledige login formulier.
+- Wachtwoorden worden opgeslagen in de OS credential manager, niet in localStorage of platte tekst.
+- Netwerk-uitval tijdens auto-login leidt niet tot credential verlies — volgende keer wordt opnieuw geprobeerd.
+- Expliciet uitloggen wist altijd alle opgeslagen credentials — gebruiker moet opnieuw "Onthoud mij" aanvinken.
+- Geen Rust-wijzigingen nodig — alle keyring operaties gebruiken bestaande Tauri commands.
+- Bouwt voort op DEC-048 (never auto-logout): auto-login is een aanvulling op de strategie om gebruikers altijd ingelogd te houden.
+
+---
+
+## DEC-051 — Real-Time Streaming Resampler for Windows Audio
+
+**Date:** 2026-03-19
+**Status:** Accepted
+
+**Context:** Windows audio devices (WASAPI) typically operate at 48 kHz — when cpal requests 16 kHz, the rate is clamped to the device minimum (usually 44.1 or 48 kHz). The result: a 1.5 hour meeting produced a 489 MB WAV file (48000 × 2 bytes × 5400 seconds = 518 MB theoretical). Combined with the 120 MB upload limit, users could not upload recordings longer than ~20 minutes. The existing `resample()` function in `recorder.rs` was only used in `mix_wav_files()` post-recording — it could not address the file size problem because the WAV was already written at device rate.
+
+**Decision:** Add a `StreamingResampler` struct to `recorder.rs` that performs linear interpolation downsampling within the audio callback itself. Key design: `fractional_pos: f64` is carried across callback invocations, ensuring no samples are lost or duplicated at chunk boundaries. The resampler is injected into all four stream builders (mic i16, mic f32, loopback i16, loopback f32) as an `Arc<Mutex<StreamingResampler>>`. The WAV spec is set to `TARGET_SAMPLE_RATE` (16000 Hz) regardless of device rate. Audio level calculation runs on pre-resample samples for accurate visualization. Simultaneously, the upload limit was raised from 120 MB to 250 MB across backend (`config.py`), Windows (`http.rs`), and macOS (`APIService.swift`, `Models.swift`) to accommodate recordings up to ~2 hours 10 minutes at 16 kHz.
+
+**Consequences:**
+- File size reduced 3x for 48 kHz devices: 1.5 hour recording drops from ~500 MB to ~165 MB.
+- No post-processing CPU spike: resampling is distributed across real-time callbacks.
+- The existing `mix_wav_files()` resampling becomes a no-op (both WAVs already 16 kHz) but remains as safety net.
+- 250 MB limit supports recordings up to ~2h10m at 16 kHz mono 16-bit — sufficient for typical meetings.
+- Linear interpolation is sufficient quality for speech (Whisper's native input is 16 kHz).
+- Files changed: `recorder.rs` (StreamingResampler + all 4 stream builders), `http.rs`, `APIService.swift`, `Models.swift`, `config.py`, `API.md`.
+
+---
+
+## DEC-053 — Remove CGRequestScreenCaptureAccess on macOS 15+
+
+**Date:** 2026-03-20
+**Status:** Accepted
+
+**Context:** `ensureScreenCapturePermission()` in `RecordingViewModel.swift` called `CGRequestScreenCaptureAccess()` to trigger the macOS permission dialog for system audio capture. This had two problems: (1) it requested "Screen Recording" permission when the app only needs "System Audio Recording" on macOS 15+ (where `SCStream` without `.screen` output is categorized separately), (2) it may have contributed to a `_dispatch_assert_queue_fail` crash on Thread 4, as the C function's interaction with Swift concurrency's main actor is not guaranteed safe.
+
+**Decision:** Remove `CGRequestScreenCaptureAccess()` entirely. `SCShareableContent.excludingDesktopWindows()` already triggers the correct system permission prompt automatically on first use. On macOS 15+, this shows as "System Audio Recording" (not "Screen Recording") when no `.screen` output is added to the stream — matching the behavior of apps like ChatGPT. Error message updated to reference "Systeemaudio-opname" in System Settings.
+
+**Consequences:**
+- Permission flow is now automatic and shows the correct category in System Settings.
+- No more explicit `CGRequestScreenCaptureAccess()` call — one less AppKit dependency.
+- macOS 14 users still get the permission prompt via `SCShareableContent`; on macOS 15+ the prompt correctly says "System Audio".
+- Files changed: `RecordingViewModel.swift` (simplified `ensureScreenCapturePermission()`), `SystemAudioCapture.swift` (Timer crash fix).
+
+---
+
+## DEC-052 — Simplified Retry as Reprocess, Not Special State
+
+**Date:** 2026-03-20
+**Status:** Accepted
+
+**Context:** The upload retry flow used `lastFailedUploadURL: URL?`, `lastFailedUploadReason: UploadFailureReason?`, `showRetrySheet: Bool`, and `retryLastFailedUpload()` to handle failed uploads. This mechanism was fragile: `lastFailedUploadURL` was nil when the user tried to retry because `uploadFile()` cleared it at the start of each upload attempt. The retry sheet was a separate SwiftUI `.sheet` that could conflict with the ReprocessSheet (SwiftUI cannot show two sheets simultaneously). Additionally, `retryLastFailedUpload()` used the ViewModel's `selectedProfile` instead of the user's choice in the sheet, causing silent returns when `selectedProfile` was nil.
+
+**Decision:** Replace the entire retry mechanism with a simple `lastFailedRecording: SavedRecording?` property. When an upload fails, the ViewModel matches the file URL to its `SavedRecording` entry (by filename). The error banner shows an "Opnieuw" button that opens the standard ReprocessSheet with that recording — the same flow as clicking any saved recording. No special retry mode, no second sheet, no fragile URL state.
+
+**Consequences:**
+- Single code path for both reprocess and retry — ReprocessSheet no longer has an `isRetryMode` branch.
+- Only one `.sheet` modifier in RecordingView — no sheet conflicts.
+- The user always selects a profile in the ReprocessSheet — no silent nil-profile failures.
+- `UploadFailureReason` enum is now dead code (kept for cleanup later).
+- Same pattern applied to Windows: `SavedRecordings.handleReprocess()` now uses the shared `uploadAndTrack()` utility instead of fire-and-forget `api.uploadRecording()`.
+- Files changed: `RecordingViewModel.swift` (removed 5 properties/methods), `RecordingView.swift` (removed retry sheet, simplified ReprocessSheet), `uploadAndTrack.ts` (new), `useGlobalRecordingHandler.ts` (simplified), `SavedRecordings.tsx` (uses uploadAndTrack).
+
+---
+
+## DEC-047 — YouTube Proxy Support en Bot Detection Resilience
+
+**Date:** 2026-03-17
+**Status:** Accepted
+
+**Context:** YouTube blokkeert requests vanaf AWS server IP-adressen met bot-detectie ("Sign in to confirm you're not a bot"). Dit treft zowel `yt-dlp` (audio download + metadata) als `youtube-transcript-api` (anonieme captions). Browser cookies (DEC-038) en EJS challenge solving helpen soms, maar AWS datacenter IP-ranges worden steeds agressiever geblokkeerd. De anonieme captions flow (DEC-044) was ook afhankelijk van yt-dlp voor metadata (titel, duur) via `--dump-json`, waardoor een yt-dlp blokkade de hele captions pipeline uitschakelde.
+
+**Decision:** Drie wijzigingen: (1) **Proxy support**: nieuw `youtube_proxy` admin setting (SOCKS5/HTTP URL) dat wordt doorgegeven aan zowel yt-dlp (`--proxy` argument) als `youtube-transcript-api` (via `proxies` parameter). Configureerbaar via Admin > Instellingen op macOS (`AdminView.swift`) en Windows (`AdminPage.tsx`). (2) **oEmbed metadata fallback**: wanneer yt-dlp `--dump-json` faalt door bot-detectie, wordt metadata opgehaald via de oEmbed API (`https://noembed.com/embed?url=...`) — geeft titel en duur zonder authenticatie. (3) **Decoupled captions**: `fetch_captions_anonymous()` is losgekoppeld van de yt-dlp metadata dependency — gebruikt oEmbed als fallback, zodat captions nog steeds werken wanneer yt-dlp geblokkeerd is.
+
+**Consequences:**
+- YouTube transcriptie werkt weer vanaf AWS IPs wanneer een proxy geconfigureerd is die niet geblokkeerd wordt door YouTube.
+- Anonieme captions (DEC-044) zijn nu onafhankelijk van yt-dlp — als yt-dlp geblokkeerd is maar captions beschikbaar zijn, werkt de fast-path nog steeds via oEmbed metadata.
+- Proxy is optioneel — zonder configuratie gedraagt het systeem zich als voorheen (direct, zonder proxy).
+- Admin hoeft niet meer SSH-toegang tot de server te gebruiken om een proxy in te stellen — volledig via de UI.
+- oEmbed API biedt beperktere metadata dan yt-dlp (geen upload datum, geen exacte seconden) maar voldoende voor de transcriptie workflow (titel + geschatte duur).

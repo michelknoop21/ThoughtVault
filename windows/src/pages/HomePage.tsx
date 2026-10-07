@@ -7,8 +7,9 @@ import {
   Clock24Regular,
   MoreHorizontal24Regular,
   Delete24Regular,
-  People24Regular,
-  ChevronRight24Regular,
+  Settings24Regular,
+  Search24Regular,
+  Person24Regular,
 } from "@fluentui/react-icons";
 import { useRecordingStore } from "../stores/recordingStore";
 import { useTranscriptsStore } from "../stores/transcriptsStore";
@@ -35,6 +36,9 @@ export function HomePage() {
   const user = useAuthStore((s) => s.user);
   const [upcomingEvents, setUpcomingEvents] = useState<CalendarEvent[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState<"all" | "recordings" | "notes">("all");
+  const visibleTranscripts = transcripts.filter(t => filter === "all" || (filter === "notes" ? !!(t.notule_html || t.has_notes) : !(t.notule_html || t.has_notes)));
   const [deleteConfirm, setDeleteConfirm] = useState<Transcript | null>(null);
 
   useEffect(() => {
@@ -102,48 +106,52 @@ export function HomePage() {
   }
 
   return (
-    <div className="page-scroll bg-blobs">
-    <div className="bg-blobs-clip">
-      <div className="bg-blob bg-blob-magenta" />
-      <div className="bg-blob bg-blob-blue" />
-    </div>
-    <div className="page-content" style={{ position: "relative", zIndex: 1 }}>
-
-      {/* Greeting */}
-      <section>
-        <h2 className="text-subtitle">{getGreeting(user?.name, user?.email)}</h2>
-        <p className="text-caption" style={{ marginTop: 4 }}>
-          Wat wil je vandaag transcriberen?
-        </p>
-      </section>
-
-      {/* Hero CTA — start recording */}
-      <section>
-        <p className="section-label">Snel starten</p>
-        <button onClick={() => handleQuickStart("microphone")} className="hero-cta-card">
-          <div className="hero-cta-rings">
-            <div className="hero-cta-ring hero-cta-ring-1" />
-            <div className="hero-cta-ring hero-cta-ring-2" />
-            <div className="hero-cta-ring hero-cta-ring-3" />
-            <MicRecord24Regular className="hero-cta-mic" />
-          </div>
-          <div className="hero-cta-text">
-            <span className="hero-cta-title">Start nieuwe opname</span>
-            <span className="hero-cta-subtitle">Ga naar Opnemen en start daar de opname</span>
-          </div>
-          <ChevronRight24Regular className="hero-cta-chevron" />
-        </button>
-
-        <div className="flex-row gap-10" style={{ marginTop: 10 }}>
-          <button onClick={() => handleQuickStart("microphone")} className="quick-start-pill">
-            <People24Regular style={{ fontSize: 14 }} />
-            Fysieke meeting
-          </button>
-          <button onClick={() => handleQuickStart("combined")} className="quick-start-pill">
-            <VideoChat24Regular style={{ fontSize: 14 }} />
-            Videocall
-          </button>
+    <div className="page-scroll thoughtvault-home" data-theme="dark">
+    <div className="thoughtvault-home-content">
+      <div className="thoughtvault-home-toolbar">
+        <form className="thoughtvault-search" onSubmit={(e) => { e.preventDefault(); useTranscriptsStore.getState().setSearchQuery(search.trim()); navigate("/transcripts"); }}>
+          <Search24Regular />
+          <input aria-label="Zoek in je notulen" placeholder="Zoek in je notulen…" value={search} onChange={e => setSearch(e.target.value)} />
+        </form>
+        <button className="thoughtvault-account" aria-label="Instellingen" onClick={() => navigate("/settings")}><Person24Regular /></button>
+      </div>
+      <header className="thoughtvault-welcome">
+        <svg className="thoughtvault-landscape" viewBox="0 0 480 190" aria-hidden="true">
+          <defs>
+            <linearGradient id="ridge" x2="0" y2="1"><stop stopColor="#3b2e7a" /><stop offset="1" stopColor="#141628" stopOpacity="0" /></linearGradient>
+            <linearGradient id="moon" x2="0" y2="1"><stop stopColor="#eee6ff" /><stop offset="1" stopColor="#baa8f2" /></linearGradient>
+            <linearGradient id="front" x2="0" y2="1"><stop stopColor="#261f54" /><stop offset="1" stopColor="#141628" stopOpacity="0" /></linearGradient>
+          </defs>
+          <path d="M0 160 C60 140 120 120 170 95 C215 72 265 22 292 18 C325 20 360 60 400 62 C430 64 460 55 480 58 L480 190 L0 190Z" fill="url(#ridge)" />
+          <circle cx="168" cy="105" r="25" fill="url(#moon)" />
+          <path d="M0 178 C55 160 110 128 150 122 C190 116 220 128 250 140 C320 168 420 160 480 165 L480 190 L0 190Z" fill="url(#front)" />
+          <path d="M92 178 C130 170 190 162 186 150 C182 140 130 146 128 136 C126 128 160 126 178 124" fill="none" stroke="#bd6df9" strokeWidth="2" />
+        </svg>
+        <div className="thoughtvault-welcome-copy">
+          <p className="section-label">{new Date().toLocaleDateString("nl-NL", { weekday: "long", day: "numeric", month: "long" })}</p>
+          <h1>{getGreeting(user?.name, user?.email)}.</h1>
+          <p>“Goede ideeën beginnen vaak met een gesprek.”</p>
         </div>
+        <div className="thoughtvault-tagline"><strong>Spreek. Denk. Bewaar.</strong><p>ThoughtVault zet je gesprekken om in heldere notities, taken en inzichten.</p></div>
+      </header>
+      <section className="thoughtvault-new-recording" aria-label="Nieuwe opname">
+        <div>
+          <p className="section-label">Nieuwe opname</p>
+          <h2>Begin een nieuwe opname</h2>
+          <p>Spreek je gedachten, vergadering of idee. ThoughtVault maakt er automatisch notities, samenvattingen en taken van.</p>
+          <div className="thoughtvault-record-controls">
+            <button className="btn btn-secondary icon-btn" aria-label="Opname-instellingen" onClick={() => navigate("/settings")}><Settings24Regular /></button>
+            <button className="thoughtvault-record-orb" aria-label="Nieuwe opname voorbereiden" onClick={() => handleQuickStart("microphone")}><MicRecord24Regular /></button>
+            <div className="thoughtvault-idle-wave" aria-hidden="true">{Array.from({length: 57}, (_, i) => <i key={i} style={{ height: Math.max(4, Math.pow(Math.sin(Math.PI * i / 56), 1.4) * (0.25 + 0.75 * Math.abs(Math.sin(i * 1.73) * Math.cos(i * 0.61 + 0.4))) * 65) }} />)}</div>
+          </div>
+          <p className="thoughtvault-ready">Klaar om op te nemen</p>
+        </div>
+        <aside className="thoughtvault-record-tip"><MicRecord24Regular /><h3>Alleen audio opnemen</h3><p>Kies je opnamebron en profiel. Je start de opname op het volgende scherm.</p><hr /><strong>Tip</strong><p>Spreek natuurlijk. Je kunt op elk moment pauzeren.</p></aside>
+      </section>
+      <section className="thoughtvault-quick-capture" aria-label="Snel vastleggen">
+        <h2>Snel vastleggen</h2>
+        <button className="btn btn-secondary" onClick={() => handleQuickStart("microphone")}><MicRecord24Regular />Alleen audio opnemen</button>
+        <button className="btn btn-secondary" onClick={() => handleQuickStart("combined")}><VideoChat24Regular />Gesprek opnemen</button>
       </section>
 
       {/* Upcoming meetings */}
@@ -179,8 +187,11 @@ export function HomePage() {
       {/* Recent sessions */}
       <section style={{ flex: 1, minHeight: 0 }} className="flex-col">
         <div className="flex-row justify-between" style={{ alignItems: "center" }}>
-          <p className="section-label" style={{ margin: 0 }}>Recente sessies</p>
+          <p className="section-label" style={{ margin: 0 }}>Recente notities</p>
           {isLoading && <span className="text-caption" style={{ color: "var(--fill-accent-default)" }}>Laden...</span>}
+        </div>
+        <div className="thoughtvault-recent-filters" role="group" aria-label="Notities filteren">
+          {([["all", "Alle"], ["recordings", "Opnames"], ["notes", "Notulen"]] as const).map(([value, label]) => <button key={value} className="btn btn-ghost btn-sm" aria-pressed={filter === value} onClick={() => setFilter(value)}>{label}</button>)}
         </div>
         {loadError ? (
           <div className="error-banner-inline">
@@ -199,7 +210,7 @@ export function HomePage() {
               </div>
             ))}
           </div>
-        ) : transcripts.length === 0 ? (
+        ) : visibleTranscripts.length === 0 ? (
           <div className="empty-state">
             <p className="empty-state-title">Nog geen transcripten</p>
             <p className="empty-state-body">
@@ -212,7 +223,7 @@ export function HomePage() {
           </div>
         ) : (
           <div className="flex-col gap-10">
-            {transcripts.map((transcript) => (
+            {visibleTranscripts.map((transcript) => (
               <SessionCard
                 key={transcript.id}
                 transcript={transcript}

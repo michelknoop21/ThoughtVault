@@ -1,0 +1,30 @@
+{
+  "configurations" : [
+    {
+      "id" : "FBEDAF5B-F7F3-4905-880D-D360C8E25487",
+      "name" : "Test Scheme Action",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "performanceAntipatternCheckerEnabled" : true,
+    "targetForVariableExpansion" : {
+      "containerPath" : "container:ThoughtVault.xcodeproj",
+      "identifier" : "TT000001",
+      "name" : "ThoughtVault"
+    }
+  },
+  "testTargets" : [
+    {
+      "parallelizable" : true,
+      "target" : {
+        "containerPath" : "container:ThoughtVault.xcodeproj",
+        "identifier" : "TT000002",
+        "name" : "ThoughtVaultTests"
+      }
+    }
+  ],
+  "version" : 1
+}

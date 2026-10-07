@@ -1,5 +1,5 @@
-# Windows MSI build only — triggered from GitLab CI pipeline or manually.
-# macOS + Android + deploy run on GitLab CI (self-hosted runner).
+# ThoughtVault Windows MSI build and publication on GitHub Actions.
+# Gitea is the source repository; dispatch an explicit verified GitHub source ref.
 name: Build Windows MSI
 
 on:
@@ -9,6 +9,11 @@ on:
       - 'dev-v*'
   workflow_dispatch:
     inputs:
+      publish:
+        description: 'Publish after all release checks (false builds a private candidate only)'
+        required: true
+        default: true
+        type: boolean
       channel:
         description: 'Build channel'
         required: true
@@ -77,6 +82,9 @@ jobs:
         working-directory: windows
         run: npm ci
 
+      - name: Verify ThoughtVault project identity
+        run: python scripts/test-project-identity.py
+
       - name: Verify frontend and native code
         working-directory: windows
         run: |
@@ -110,19 +118,24 @@ jobs:
           cp "$MSI.sig" "build/$MSI_NAME.sig"
           echo "Built: $MSI_NAME"
 
-      - name: Verify installed app and upgrade from 1.0.255
+      - name: Verify installed app and upgrade
+        if: steps.meta.outputs.channel == 'production'
         shell: pwsh
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
-          gh run download 37610419654 --repo michelknoop21/ThoughtVault --name ThoughtVault-Windows-x64 --dir build/previous
-          if ($LASTEXITCODE -ne 0) { throw "Previous installer download failed" }
-          $Previous = Get-ChildItem build/previous -Recurse -Filter ThoughtVault_1.0.255_x64.msi | Select-Object -First 1
-          if (-not $Previous) { throw "Previous installer missing" }
-          powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify-windows-installer.ps1 -Installer "build/${{ steps.names.outputs.msi_name }}" -PreviousInstaller $Previous.FullName
+          $Feed = Invoke-RestMethod 'https://thoughtvault.yinga.ai/releases/windows/stable.json'
+          $Url = [Uri]$Feed.platforms.'windows-x86_64'.url
+          if ($Url.Scheme -ne 'https' -or $Url.Host -ne 'thoughtvault.yinga.ai') { throw "Unexpected previous installer URL" }
+          New-Item -ItemType Directory -Force build/previous | Out-Null
+          Invoke-WebRequest $Url.AbsoluteUri -OutFile build/previous/ThoughtVault.msi
+          powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify-windows-installer.ps1 -Installer "build/${{ steps.names.outputs.msi_name }}" -PreviousInstaller "build/previous/ThoughtVault.msi"
           if ($LASTEXITCODE -ne 0) { throw "Installation verification failed" }
 
+      - name: Require reviewed ThoughtVault presentation
+        if: github.event_name != 'workflow_dispatch' || inputs.publish
+        run: python scripts/check-windows-design.py
+
       - name: Upload to server
+        if: github.event_name != 'workflow_dispatch' || inputs.publish
         shell: bash
         env:
           MSI_NAME: ${{ steps.names.outputs.msi_name }}

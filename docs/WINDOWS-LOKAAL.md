@@ -104,3 +104,23 @@ Deze releasesleutel is afzonderlijk van de AI-providersleutels. Bewaar een bevei
 backup: een andere releasesleutel kan bestaande installaties niet bijwerken.
 
 Vanaf 1.0.257 heet het geïnstalleerde programma `ThoughtVault.exe`. De bestaande app-identiteit en lokale opslag blijven behouden. Het hoofdvenster is ondoorzichtig; de opnamewidget blijft transparant.
+
+## Release 1.0.257 — 7 oktober 2026
+
+Gebouwd op Windows via run https://github.com/michelknoop21/ThoughtVault/actions/runs/37617125089
+(source `ce1f322712765ac75819efdf1fc0e7bb088ed6aa`). 46 frontendtests en 19 native tests geslaagd.
+De MSI is over 1.0.255 geïnstalleerd; `ThoughtVault.exe` startte tweemaal en het
+opgeslagen notulenbestand bleef byte voor byte behouden. ProductName en
+FileDescription zijn ThoughtVault, ProductVersion is 1.0.257. De oude executable
+is bij de upgrade verwijderd. Deze controle bewijst geen microfoonopname of
+visuele scherpte op een fysieke gebruikers-pc.
+
+Publicatie door CI en HTTPS-download gecontroleerd:
+https://thoughtvault.yinga.ai/releases/ThoughtVault_1.0.257_x64.msi
+SHA-256: `148f34b36bf4270101921218ceeec2eb6471f0a0c817e7cb5b12cc2697e54f94`.
+De publieke MSI en updater-signature komen overeen met het CI-artifact.
+De updatefeed meldt 1.0.257. Lokale bewijsbestanden staan onder
+`build/windows-local/1.0.257/` (MSI, signature, installatielogs, CI-log en metadata).
+Een volledige update via de app en opname/export op de fysieke Windows-pc moeten
+nog worden getest. Oudere installaties zonder de nieuwe updater vereisen deze
+MSI eenmalig handmatig.

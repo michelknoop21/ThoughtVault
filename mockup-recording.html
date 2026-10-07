@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ThoughtVault — Opnemen Redesign Mockup</title>
+<style>
+  /* Brand palette — exact matches from Color+Brand.swift */
+  :root {
+    --brand-primary: #9048F0;
+    --brand-primary-dark: #7830D8;
+    --brand-secondary: #6048F0;
+    --brand-lavender: #D890F0;
+    --brand-orange: #F39200;
+    --brand-accent: #009F3C;
+    --brand-link: #A87DF7;
+    --neon-blue: #8F6BFF;
+
+    /* Spacing (8px grid) */
+    --xs: 4px;
+    --sm: 8px;
+    --md: 16px;
+    --lg: 24px;
+    --xl: 32px;
+    --xxl: 48px;
+
+    /* Radius */
+    --r-xs: 6px;
+    --r-sm: 12px;
+    --r-md: 16px;
+    --r-lg: 20px;
+
+    /* Dark mode surfaces */
+    --bg: #0B0D16;
+    --surface-primary: #141628;
+    --surface-secondary: #1B1E33;
+    --surface-tertiary: #232740;
+    --border: rgba(255,255,255,0.06);
+    --border-strong: rgba(255,255,255,0.12);
+
+    /* Labels */
+    --label-primary: #EDECF6;
+    --label-secondary: #B3AECE;
+    --label-tertiary: #6E6A8C;
+
+    /* Semantic */
+    --status-error: #FF3B30;
+    --status-success: #009F3C;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--label-primary);
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+    padding: var(--xl) var(--lg);
+  }
+
+  .container {
+    max-width: 860px;
+    margin: 0 auto;
+  }
+
+  /* === LAYOUT VARIANTS === */
+
+  .variant-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--label-tertiary);
+    padding: var(--md) var(--md) var(--xs);
+    border-bottom: 1px solid var(--border);
+    margin-bottom: var(--xl);
+    margin-top: var(--xxl);
+  }
+
+  .variant-label:first-child { margin-top: 0; }
+
+  .variant-label .sub {
+    font-size: 13px;
+    font-weight: 400;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--label-secondary);
+    margin-left: var(--sm);
+  }
+
+  /* ========================================
+     VARIANT A: UNIFIED STUDIO LAYOUT
+     Een enkel samenhangend "opname-studio" paneel
+     ======================================== */
+
+  .studio {
+    background: var(--surface-primary);
+    border-radius: var(--r-lg);
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+
+  .studio-header {
+    padding: var(--lg) var(--lg) var(--md);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .studio-header h2 {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--label-primary);
+    letter-spacing: -0.3px;
+  }
+
+  .studio-header p {
+    font-size: 14px;
+    color: var(--label-secondary);
+    margin-top: 2px;
+  }
+
+  .studio-body {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: var(--border);
+  }
+
+  .studio-section {
+    background: var(--surface-primary);
+    padding: var(--lg);
+  }
+
+  /* Opnametype selector — inline segmented */
+  .seg-control {
+    display: flex;
+    gap: var(--xs);
+    background: var(--surface-secondary);
+    border-radius: var(--r-sm);
+    padding: 3px;
+    margin-bottom: var(--md);
+  }
+
+  .seg {
+    flex: 1;
+    padding: 10px var(--md);
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sm);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--label-secondary);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .seg.active {
+    background: var(--brand-primary);
+    color: white;
+    box-shadow: 0 2px 8px rgba(144, 72, 240, 0.4);
+  }
+
+  .seg:not(.active):hover {
+    color: var(--label-primary);
+    background: var(--surface-tertiary);
+  }
+
+  .seg-icon { font-size: 15px; }
+
+  /* Profiel picker */
+  .field-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--label-secondary);
+    margin-bottom: var(--sm);
+    display: flex;
+    align-items: center;
+    gap: var(--xs);
+  }
+
+  .field-badge {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--brand-primary);
+    background: rgba(144, 72, 240, 0.12);
+    padding: 2px 7px;
+    border-radius: 99px;
+  }
+
+  .profile-row {
+    display: flex;
+    gap: var(--xs);
+    flex-wrap: wrap;
+    margin-bottom: var(--sm);
+  }
+
+  .profile-chip {
+    padding: 8px 14px;
+    border-radius: var(--r-sm);
+    background: var(--surface-secondary);
+    border: 1px solid var(--border);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--label-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+  }
+
+  .profile-chip.selected {
+    background: rgba(144, 72, 240, 0.12);
+    border-color: rgba(144, 72, 240, 0.4);
+    color: var(--brand-link);
+  }
+
+  .profile-chip:not(.selected):hover {
+    background: var(--surface-tertiary);
+    color: var(--label-primary);
+  }
+
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    gap: var(--sm);
+    padding: var(--sm) var(--md);
+    background: var(--surface-secondary);
+    border-radius: var(--r-sm);
+    margin-top: var(--sm);
+  }
+
+  .toggle-row .sparkles { color: var(--brand-primary); }
+
+  .toggle-row .label-stack { flex: 1; }
+  .toggle-row .label-stack .t { font-size: 13px; font-weight: 600; color: var(--label-primary); }
+  .toggle-row .label-stack .s { font-size: 11px; color: var(--label-tertiary); }
+
+  .toggle {
+    width: 36px;
+    height: 22px;
+    background: var(--surface-tertiary);
+    border-radius: 99px;
+    position: relative;
+    cursor: pointer;
+  }
+
+  .toggle.on { background: var(--brand-primary); }
+
+  .toggle::after {
+    content: '';
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: white;
+    top: 2px;
+    left: 2px;
+    transition: 0.2s;
+  }
+
+  .toggle.on::after { left: 16px; }
+
+  /* Participants button */
+  .row-button {
+    display: flex;
+    align-items: center;
+    gap: var(--sm);
+    padding: var(--sm) var(--md);
+    background: var(--surface-secondary);
+    border-radius: var(--r-sm);
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: var(--sm);
+  }
+
+  .row-button:hover { background: var(--surface-tertiary); }
+
+  .row-button .icon { color: var(--brand-primary); font-size: 13px; }
+  .row-button .label-stack { flex: 1; }
+  .row-button .label-stack .t { font-size: 13px; font-weight: 600; color: var(--label-primary); }
+  .row-button .label-stack .s { font-size: 11px; color: var(--label-tertiary); }
+  .row-button .chevron { color: var(--label-tertiary); font-size: 12px; }
+
+  .row-button .count-badge {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--brand-primary);
+    background: rgba(144, 72, 240, 0.12);
+    padding: 2px 7px;
+    border-radius: 99px;
+  }
+
+  /* Mic button area */
+  .studio-action {
+    padding: var(--xl) var(--lg) var(--xl);
+    text-align: center;
+    border-top: 1px solid var(--border);
+    background: var(--surface-primary);
+  }
+
+  .mic-btn {
+    width: 108px;
+    height: 108px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 32% 28%, #C28BF7, var(--brand-primary), var(--brand-primary-dark));
+    box-shadow: 0 0 24px rgba(144, 72, 240, 0.55), 0 6px 10px rgba(120, 48, 216, 0.45);
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    position: relative;
+    transition: transform 0.2s;
+  }
+
+  .mic-btn:hover { transform: scale(1.03); }
+
+  .mic-btn::before {
+    content: '';
+    position: absolute;
+    inset: -12px;
+    border-radius: 50%;
+    border: 1px solid rgba(144, 72, 240, 0.14);
+  }
+
+  .mic-btn::after {
+    content: '';
+    position: absolute;
+    inset: -24px;
+    border-radius: 50%;
+    border: 1px solid rgba(144, 72, 240, 0.25);
+  }
+
+  .mic-btn .icon {
+    color: white;
+    font-size: 28px;
+    text-shadow: 0 2px 4px rgba(120, 48, 216, 0.6);
+  }
+
+  .mic-hint {
+    font-size: 13px;
+    color: var(--label-tertiary);
+    margin-top: var(--md);
+  }
+
+  .import-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--brand-link);
+    margin-top: var(--sm);
+    cursor: pointer;
+  }
+
+  /* Below-studio: unified bottom bar */
+  .bottom-bar {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--md);
+    margin-top: var(--lg);
+  }
+
+  .bottom-card {
+    background: var(--surface-primary);
+    border-radius: var(--r-md);
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+
+  .bottom-card-header {
+    padding: var(--md) var(--md) var(--sm);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .bottom-card-header h3 {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--label-secondary);
+    display: flex;
+    align-items: center;
+    gap: var(--sm);
+  }
+
+  .bottom-card-header .count {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--brand-primary);
+    background: rgba(144, 72, 240, 0.12);
+    padding: 2px 7px;
+    border-radius: 99px;
+  }
+
+  .bottom-card-header .action {
+    font-size: 11px;
+    color: var(--label-tertiary);
+    cursor: pointer;
+  }
+
+  .bottom-card-list {
+    padding: 0 var(--md) var(--md);
+  }
+
+  .task-item {
+    display: flex;
+    align-items: center;
+    gap: var(--sm);
+    padding: var(--sm) 0;
+    border-top: 1px solid var(--border);
+  }
+
+  .task-item:first-child { border-top: none; }
+
+  .task-icon {
+    width: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .task-icon .spinner {
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(96, 72, 240, 0.2);
+    border-top-color: var(--brand-secondary);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  .task-icon .done { color: var(--status-success); }
+  .task-icon .err { color: var(--status-error); }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .task-info { flex: 1; min-width: 0; }
+  .task-info .name { font-size: 13px; font-weight: 500; color: var(--label-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .task-info .status { font-size: 12px; color: var(--label-secondary); }
+  .task-info .status.active { color: var(--brand-primary); }
+  .task-info .status.err { color: var(--status-error); }
+
+  .saved-item {
+    display: flex;
+    align-items: center;
+    gap: var(--sm);
+    padding: var(--sm) 0;
+    border-top: 1px solid var(--border);
+    cursor: pointer;
+  }
+
+  .saved-item:first-child { border-top: none; }
+  .saved-item:hover { background: rgba(255,255,255,0.02); }
+
+  .saved-icon { color: var(--brand-secondary); font-size: 18px; }
+  .saved-info { flex: 1; min-width: 0; }
+  .saved-info .name { font-size: 12px; font-weight: 500; color: var(--label-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .saved-info .meta { font-size: 10px; color: var(--label-tertiary); }
+  .saved-action { color: var(--brand-primary); font-size: 12px; }
+
+  /* YouTube inline — not a separate card but a secondary action below mic */
+  .secondary-actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--lg);
+    margin-top: var(--md);
+  }
+
+  .secondary-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--label-tertiary);
+    cursor: pointer;
+    transition: color 0.2s;
+  }
+
+  .secondary-action:hover { color: var(--label-secondary); }
+
+  .secondary-action.active { color: var(--brand-link); }
+
+  /* ========================================
+     VARIANT B: SINGLE-PAGE FLOW
+     Eén doorlopend paneel met visuele hiërarchie
+     ======================================== */
+
+  .flow-panel {
+    background: var(--surface-primary);
+    border-radius: var(--r-lg);
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+
+  .flow-hero {
+    padding: var(--xl) var(--xl) var(--lg);
+    text-align: center;
+    background: radial-gradient(ellipse at 50% 0%, rgba(144,72,240,0.08), transparent 60%);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .flow-hero h2 {
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    color: var(--label-primary);
+  }
+
+  .flow-hero p {
+    font-size: 14px;
+    color: var(--label-secondary);
+    margin-top: var(--xs);
+  }
+
+  .flow-config {
+    padding: var(--lg) var(--xl);
+    display: flex;
+    flex-direction: column;
+    gap: var(--md);
+  }
+
+  .flow-config-row {
+    display: flex;
+    align-items: center;
+    gap: var(--md);
+  }
+
+  .flow-config-row .label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--label-secondary);
+    min-width: 80px;
+  }
+
+  .flow-config-row .control { flex: 1; }
+
+  .flow-cta {
+    padding: var(--xl);
+    text-align: center;
+    border-top: 1px solid var(--border);
+  }
+
+  .flow-extra {
+    padding: var(--md) var(--xl) var(--lg);
+    display: flex;
+    justify-content: center;
+  }
+
+  /* ========================================
+     VARIANT C: SIDEBAR + MAIN
+     Configuratie links, opname centraal
+     ======================================== */
+
+  .split-layout {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: var(--lg);
+  }
+
+  .config-sidebar {
+    background: var(--surface-primary);
+    border-radius: var(--r-lg);
+    border: 1px solid var(--border);
+    padding: var(--lg);
+    display: flex;
+    flex-direction: column;
+    gap: var(--lg);
+  }
+
+  .config-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sm);
+  }
+
+  .config-group-title {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--label-tertiary);
+  }
+
+  .record-center {
+    background: var(--surface-primary);
+    border-radius: var(--r-lg);
+    border: 1px solid var(--border);
+    padding: var(--xl);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 400px;
+    text-align: center;
+    position: relative;
+  }
+
+  .record-center .label-top {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    color: var(--label-tertiary);
+    margin-bottom: var(--md);
+  }
+
+  .record-center .subtitle {
+    font-size: 14px;
+    color: var(--label-secondary);
+    margin-top: var(--lg);
+    max-width: 300px;
+  }
+
+  /* Status banners — inline, subtle */
+  .banner {
+    display: flex;
+    align-items: center;
+    gap: var(--sm);
+    padding: var(--sm) var(--md);
+    border-radius: var(--r-sm);
+    font-size: 13px;
+    margin-bottom: var(--md);
+  }
+
+  .banner.warn { background: rgba(243, 146, 0, 0.08); border: 1px solid rgba(243, 146, 0, 0.25); color: var(--brand-orange); }
+  .banner.error { background: rgba(255, 59, 48, 0.08); border: 1px solid rgba(255, 59, 48, 0.25); color: var(--status-error); }
+  .banner .dismiss { margin-left: auto; cursor: pointer; opacity: 0.6; }
+
+  /* YouTube expandable section */
+  .youtube-section {
+    margin-top: var(--lg);
+    background: var(--surface-primary);
+    border-radius: var(--r-md);
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+
+  .youtube-header {
+    display: flex;
+    align-items: center;
+    gap: var(--sm);
+    padding: var(--md) var(--lg);
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .youtube-header:hover { background: var(--surface-secondary); }
+
+  .youtube-header .yt-icon { color: #FF0000; font-size: 16px; }
+  .youtube-header .yt-title { font-size: 14px; font-weight: 600; color: var(--label-primary); flex: 1; }
+  .youtube-header .yt-sub { font-size: 12px; color: var(--label-secondary); }
+  .youtube-header .chev { color: var(--label-tertiary); transition: transform 0.2s; }
+
+  .youtube-body {
+    padding: 0 var(--lg) var(--lg);
+    display: none;
+  }
+
+  .youtube-section.open .youtube-body { display: block; }
+  .youtube-section.open .chev { transform: rotate(90deg); }
+
+  .yt-input {
+    width: 100%;
+    padding: 10px 12px;
+    background: var(--surface-secondary);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--r-sm);
+    color: var(--label-primary);
+    font-size: 14px;
+    margin-bottom: var(--sm);
+  }
+
+  .yt-input::placeholder { color: var(--label-tertiary); }
+
+  .yt-submit {
+    width: 100%;
+    padding: 10px;
+    background: linear-gradient(135deg, var(--brand-primary), rgba(144, 72, 240, 0.85));
+    border: none;
+    border-radius: var(--r-sm);
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 3px 8px rgba(144, 72, 240, 0.3);
+  }
+
+  .yt-connect {
+    display: flex;
+    align-items: center;
+    gap: var(--sm);
+    padding: var(--sm) var(--md);
+    background: var(--surface-secondary);
+    border-radius: var(--r-sm);
+    margin-bottom: var(--md);
+    cursor: pointer;
+  }
+
+  .yt-connect .icon { color: var(--brand-primary); }
+  .yt-connect .label-stack { flex: 1; }
+  .yt-connect .label-stack .t { font-size: 13px; font-weight: 600; color: var(--label-primary); }
+  .yt-connect .label-stack .s { font-size: 11px; color: var(--label-secondary); }
+
+  /* Responsive */
+  @media (max-width: 680px) {
+    .studio-body { grid-template-columns: 1fr; }
+    .bottom-bar { grid-template-columns: 1fr; }
+    .split-layout { grid-template-columns: 1fr; }
+    .flow-config-row { flex-direction: column; align-items: flex-start; gap: var(--xs); }
+    .flow-config-row .label { min-width: auto; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+<!-- ============================================================
+     VARIANT A: UNIFIED STUDIO
+     Configuratie boven in twee kolommen, mic-knop centraal onderaan,
+     YouTube als subtiele secondary action, takenlijst + opgeslagen
+     opnames in een samengevoegde bottom bar. Geen losse kaarten
+     meer — alles zit in één visueel geheel.
+     ============================================================ -->
+<div class="variant-label">Variant A — Unified Studio <span class="sub">Eén paneel, configuratie + actie + resultaat in één geheel</span></div>
+
+<div class="studio">
+  <!-- Header -->
+  <div class="studio-header">
+    <div>
+      <h2>Nieuwe opname</h2>
+      <p>Kies bron en profiel, klik daarna om op te nemen</p>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--label-tertiary);">
+      <span style="width:8px;height:8px;border-radius:50%;background:var(--brand-accent);box-shadow:0 0 6px var(--brand-accent);"></span>
+      Lokale modus actief
+    </div>
+  </div>
+
+  <!-- Two-column config -->
+  <div class="studio-body">
+    <!-- Left: source + profile -->
+    <div class="studio-section">
+      <!-- Opnametype as segmented control instead of card grid -->
+      <div class="field-label">Opnametype</div>
+      <div class="seg-control">
+        <div class="seg active">
+          <span class="seg-icon">👥</span>
+          Fysieke meeting
+        </div>
+        <div class="seg">
+          <span class="seg-icon">📹</span>
+          Videocall
+        </div>
+      </div>
+
+      <!-- Profile picker as inline chips -->
+      <div class="field-label">
+        Profiel
+        <span class="field-badge">Zakelijk</span>
+      </div>
+      <div class="profile-row">
+        <div class="profile-chip selected">💼 Zakelijk</div>
+        <div class="profile-chip">💬 Informeel</div>
+        <div class="profile-chip">🔧 Technisch</div>
+        <div class="profile-chip">👤 Standaard</div>
+      </div>
+
+      <!-- Premium toggle inline -->
+      <div class="toggle-row">
+        <span class="sparkles">✨</span>
+        <div class="label-stack">
+          <div class="t">Premium model</div>
+          <div class="s">Betere kwaliteit, langzamer</div>
+        </div>
+        <div class="toggle on"></div>
+      </div>
+    </div>
+
+    <!-- Right: participants + import -->
+    <div class="studio-section">
+      <div class="field-label">Deelnemers</div>
+      <div class="row-button">
+        <span class="icon">👥</span>
+        <div class="label-stack">
+          <div class="t">Deelnemers</div>
+          <div class="s">Optioneel · agenda-deelnemers worden automatisch toegevoegd</div>
+        </div>
+        <div class="chevron">›</div>
+      </div>
+
+      <div class="field-label" style="margin-top:20px;">Bestand</div>
+      <div class="row-button">
+        <span class="icon">⬇️</span>
+        <div class="label-stack">
+          <div class="t">Importeer audiobestand</div>
+          <div class="s">WAV, MP3, M4A — tot 500 MB</div>
+        </div>
+        <div class="chevron">›</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Central action area -->
+  <div class="studio-action">
+    <button class="mic-btn">
+      <span class="icon">🎙️</span>
+    </button>
+    <div class="mic-hint">Klik om op te nemen</div>
+
+    <!-- YouTube as secondary action, not a separate card -->
+    <div class="secondary-actions">
+      <div class="secondary-action">⬇️ Importeer bestand</div>
+      <div class="secondary-action">▶️ YouTube-video</div>
+    </div>
+  </div>
+</div>
+
+<!-- YouTube expandable (only visible when clicked) -->
+<div class="youtube-section" style="margin-top:16px;">
+  <div class="youtube-header" onclick="this.parentElement.classList.toggle('open')">
+    <span class="yt-icon">▶️</span>
+    <span class="yt-title">YouTube-video transcriberen</span>
+    <span class="yt-sub">Plak een URL</span>
+    <span class="chev">›</span>
+  </div>
+  <div class="youtube-body">
+    <div class="yt-connect">
+      <span class="icon">🔑</span>
+      <div class="label-stack">
+        <div class="t">Verbind Google Account</div>
+        <div class="s">Nodig voor YouTube transcriptie</div>
+      </div>
+      <span style="color:var(--label-tertiary);">›</span>
+    </div>
+    <input class="yt-input" placeholder="Plak een YouTube URL...">
+    <button class="yt-submit">Transcriberen</button>
+  </div>
+</div>
+
+<!-- Merged bottom bar: processing + saved recordings -->
+<div class="bottom-bar">
+  <div class="bottom-card">
+    <div class="bottom-card-header">
+      <h3>⚙️ Verwerking</h3>
+      <span class="count">2</span>
+    </div>
+    <div class="bottom-card-list">
+      <div class="task-item">
+        <div class="task-icon"><div class="spinner"></div></div>
+        <div class="task-info">
+          <div class="name">recording_1749001234.wav</div>
+          <div class="status active">Transcriberen...</div>
+        </div>
+      </div>
+      <div class="task-item">
+        <div class="task-icon"><div class="spinner"></div></div>
+        <div class="task-info">
+          <div class="name">recording_1749001100.wav</div>
+          <div class="status active">Converteren...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom-card">
+    <div class="bottom-card-header">
+      <h3>📁 Opgeslagen opnames</h3>
+      <span class="count">5</span>
+      <span class="action" style="margin-left:auto;">📂</span>
+    </div>
+    <div class="bottom-card-list">
+      <div class="saved-item">
+        <span class="saved-icon">〰️</span>
+        <div class="saved-info">
+          <div class="name">recording_1749000500.wav</div>
+          <div class="meta">2 jul 2026 · 12.3 MB</div>
+        </div>
+        <span class="saved-action">↻</span>
+      </div>
+      <div class="saved-item">
+        <span class="saved-icon">〰️</span>
+        <div class="saved-info">
+          <div class="name">recording_1748999800.wav</div>
+          <div class="meta">2 jul 2026 · 8.7 MB</div>
+        </div>
+        <span class="saved-action">↻</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     VARIANT B: SINGLE FLOW
+     Eén verticale flow: hero → config rows → mic → secondary actions.
+     Minder visuele lading, meer focus op de actie.
+     ============================================================ -->
+<div class="variant-label">Variant B — Single Flow <span class="sub">Verticale flow, minder visuele lading, focus op de actie</span></div>
+
+<div class="flow-panel">
+  <div class="flow-hero">
+    <h2>Opnemen</h2>
+    <p>Kies je instellingen en klik om te starten</p>
+  </div>
+
+  <div class="flow-config">
+    <!-- Opnametype as full-width segmented -->
+    <div class="flow-config-row">
+      <div class="label">Bron</div>
+      <div class="control">
+        <div class="seg-control" style="margin-bottom:0;">
+          <div class="seg active"><span class="seg-icon">👥</span> Fysieke meeting</div>
+          <div class="seg"><span class="seg-icon">📹</span> Videocall</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Profiel -->
+    <div class="flow-config-row">
+      <div class="label">Profiel</div>
+      <div class="control">
+        <div class="profile-row" style="margin-bottom:0;">
+          <div class="profile-chip selected">💼 Zakelijk</div>
+          <div class="profile-chip">💬 Informeel</div>
+          <div class="profile-chip">🔧 Technisch</div>
+          <div class="profile-chip">👤 Standaard</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Deelnemers -->
+    <div class="flow-config-row">
+      <div class="label">Deelnemers</div>
+      <div class="control">
+        <div class="row-button" style="margin-top:0;">
+          <span class="icon">👥</span>
+          <div class="label-stack">
+            <div class="t">3 gekozen</div>
+            <div class="s">Agenda-deelnemers worden automatisch toegevoegd</div>
+          </div>
+          <div class="chevron">›</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Premium toggle -->
+    <div class="flow-config-row">
+      <div class="label">Kwaliteit</div>
+      <div class="control">
+        <div class="toggle-row" style="margin-top:0;">
+          <span class="sparkles">✨</span>
+          <div class="label-stack">
+            <div class="t">Premium model</div>
+            <div class="s">Betere kwaliteit, langzamer</div>
+          </div>
+          <div class="toggle on"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Central CTA -->
+  <div class="flow-cta">
+    <button class="mic-btn">
+      <span class="icon">🎙️</span>
+    </button>
+    <div class="mic-hint">Klik om op te nemen</div>
+  </div>
+
+  <!-- Secondary actions as subtle links -->
+  <div class="flow-extra">
+    <div class="secondary-actions">
+      <div class="secondary-action">⬇️ Importeer bestand</div>
+      <div class="secondary-action">▶️ YouTube-video</div>
+    </div>
+  </div>
+</div>
+
+<!-- Status banner inline onderaan -->
+<div class="banner warn">
+  <span>⚠️</span>
+  <span>Systeemaudio kon niet worden samengevoegd — opname bevat alleen microfoon</span>
+  <span class="dismiss">✕</span>
+</div>
+
+<!-- ============================================================
+     VARIANT C: SPLIT LAYOUT
+     Configuratie in zijbalk, opname-knop centraal.
+     Meer "app" gevoel — zijbaken blijft staan, main area verandert.
+     ============================================================ -->
+<div class="variant-label">Variant C — Split Layout <span class="sub">Configuratie links als instellingen, opname-centrum rechts</span></div>
+
+<div class="split-layout">
+  <!-- Config sidebar -->
+  <div class="config-sidebar">
+    <div class="config-group">
+      <div class="config-group-title">Bron</div>
+      <div class="seg-control" style="margin-bottom:0;flex-direction:column;">
+        <div class="seg active" style="justify-content:flex-start;">
+          <span class="seg-icon">👥</span> Fysieke meeting
+        </div>
+        <div class="seg" style="justify-content:flex-start;">
+          <span class="seg-icon">📹</span> Videocall
+        </div>
+      </div>
+    </div>
+
+    <div class="config-group">
+      <div class="config-group-title">Profiel</div>
+      <div class="profile-row" style="margin-bottom:0;flex-direction:column;">
+        <div class="profile-chip selected" style="width:100%;">💼 Zakelijk</div>
+        <div class="profile-chip" style="width:100%;">💬 Informeel</div>
+        <div class="profile-chip" style="width:100%;">🔧 Technisch</div>
+      </div>
+      <div class="toggle-row" style="margin-top:12px;">
+        <span class="sparkles">✨</span>
+        <div class="label-stack">
+          <div class="t">Premium</div>
+          <div class="s">Betere kwaliteit</div>
+        </div>
+        <div class="toggle on"></div>
+      </div>
+    </div>
+
+    <div class="config-group">
+      <div class="config-group-title">Deelnemers</div>
+      <div class="row-button" style="margin-top:0;">
+        <span class="icon">👥</span>
+        <div class="label-stack">
+          <div class="t">3 gekozen</div>
+          <div class="s">Optioneel</div>
+        </div>
+        <div class="chevron">›</div>
+      </div>
+    </div>
+
+    <div class="config-group">
+      <div class="config-group-title">Importeren</div>
+      <div class="row-button" style="margin-top:0;">
+        <span class="icon">⬇️</span>
+        <div class="label-stack">
+          <div class="t">Audiobestand</div>
+          <div class="s">WAV, MP3, M4A</div>
+        </div>
+        <div class="chevron">›</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Record center -->
+  <div class="record-center">
+    <div class="label-top">KLAAR OM OP TE NEMEN</div>
+    <button class="mic-btn" style="width:128px;height:128px;">
+      <span class="icon" style="font-size:36px;">🎙️</span>
+    </button>
+    <div class="subtitle">Fysieke meeting · Zakelijk · Premium aan</div>
+    <div style="margin-top:24px;display:flex;gap:16px;">
+      <div class="secondary-action">⬇️ Importeer bestand</div>
+      <div class="secondary-action">▶️ YouTube</div>
+    </div>
+  </div>
+</div>
+
+</div>
+</body>
+</html>

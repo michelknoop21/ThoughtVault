@@ -261,7 +261,7 @@ export function RecordingPage() {
   const canGoBack = phase === "idle";
 
   return (
-    <div className="page-scroll bg-blobs">
+    <div className="page-scroll bg-blobs thoughtvault-recording" data-theme="dark">
       <div className="bg-blobs-clip">
         <div className="bg-blob bg-blob-magenta" style={{ top: "-150px", right: "-100px", left: "auto" }} />
         <div className="bg-blob bg-blob-neon" />
@@ -452,6 +452,33 @@ function IdleState({
 
   return (
     <div className="idle-state">
+      <div className="thoughtvault-record-workspace">
+        <span className="thoughtvault-record-status">Nieuwe opname</span>
+        <div className="recording-timer">00:00</div>
+        <p className="thoughtvault-listening">Klaar om je gedachten vast te leggen</p>
+        <div className="thoughtvault-record-idle-line" aria-hidden="true" />
+      {/* Mic button with concentric rings — matches macOS */}
+      <div className="flex-col gap-12" style={{ alignItems: "center" }}>
+        <div className="mic-button-container mic-button-container-idle">
+          <div className="mic-pulse-ring mic-pulse-ring-1" />
+          <div className="mic-pulse-ring mic-pulse-ring-2" />
+          <div className="mic-pulse-ring mic-pulse-ring-3" />
+          <button
+            onClick={onStart}
+            className="mic-button-large"
+            aria-label="Start opname"
+            title="Opname starten"
+          >
+            <MicRecord24Regular style={{ fontSize: 28, color: "#fff" }} />
+          </button>
+        </div>
+        <p className="text-caption text-tertiary">
+          Klik om op te nemen
+        </p>
+      </div>
+
+      </div>
+      <aside className="thoughtvault-record-inspector" aria-label="Opname-instellingen">
       {/* Meeting detection banner */}
       <MeetingDetectionBanner onRecord={() => { onSetMode("combined"); onStart(); }} />
 
@@ -547,26 +574,6 @@ function IdleState({
         </label>
       </div>
 
-      {/* Mic button with concentric rings — matches macOS */}
-      <div className="flex-col gap-12" style={{ alignItems: "center" }}>
-        <div className="mic-button-container mic-button-container-idle">
-          <div className="mic-pulse-ring mic-pulse-ring-1" />
-          <div className="mic-pulse-ring mic-pulse-ring-2" />
-          <div className="mic-pulse-ring mic-pulse-ring-3" />
-          <button
-            onClick={onStart}
-            className="mic-button-large"
-            aria-label="Start opname"
-            title="Opname starten"
-          >
-            <MicRecord24Regular style={{ fontSize: 28, color: "#fff" }} />
-          </button>
-        </div>
-        <p className="text-caption text-tertiary">
-          Klik om op te nemen
-        </p>
-      </div>
-
       {/* YouTube transcription — collapsible */}
       {isYouTubeEnabled && (
         <details className="disclosure" style={{ width: "100%" }}>
@@ -638,6 +645,7 @@ function IdleState({
       {/* Saved recordings — collapsible */}
       <SavedRecordings />
 
+      </aside>
       {showParticipants && (
         <ParticipantPicker onClose={() => setShowParticipants(false)} />
       )}

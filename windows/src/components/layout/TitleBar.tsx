@@ -44,7 +44,7 @@ export function TitleBar() {
   return (
     <div style={{ flexShrink: 0 }}>
       {/* 32px drag region with window controls */}
-      <div
+      <div data-theme="dark"
         data-tauri-drag-region
         style={{
           height: 32,

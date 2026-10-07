@@ -12,7 +12,7 @@ import appLogo from "../../assets/app-logo.png";
 
 export function Sidebar() {
   return (
-    <nav className="sidebar">
+    <nav className="sidebar" aria-label="Hoofdnavigatie" data-theme="dark">
       {/* Logo + app title */}
       <div className="sidebar-logo-section">
         <img

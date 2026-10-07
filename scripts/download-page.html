@@ -1,0 +1,2273 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ThoughtVault — Jij vergadert, wij maken de notulen</title>
+    <meta name="description" content="Upload je vergaderopname en ontvang professionele notulen binnen minuten. AI-powered transcriptie en notulering voor macOS, Windows en Android.">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/tstudio/static/favicon-32x32.png">
+    <link rel="apple-touch-icon" href="/tstudio/static/apple-touch-icon.png">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+
+    <style>
+    /* ========================================
+       Layer order
+       ======================================== */
+    @layer reset, base, layout, components, utilities;
+
+    /* ========================================
+       Reset
+       ======================================== */
+    @layer reset {
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        ul, ol { list-style: none; }
+        img { display: block; max-width: 100%; height: auto; }
+        a { color: inherit; text-decoration: none; }
+        button { font: inherit; cursor: pointer; border: none; background: none; }
+    }
+
+    /* ========================================
+       Base — variables & defaults
+       ======================================== */
+    @layer base {
+        :root {
+            --font-display: 'Syne', system-ui, sans-serif;
+            --font-body: 'Outfit', system-ui, sans-serif;
+
+            /* Brand — fixed across themes */
+            --brand-pink: #E50074;
+            --brand-blue: #007BC4;
+            --brand-green: #009F3C;
+            --brand-orange: #F39200;
+
+            /* Light theme (default) */
+            --bg: #FAFAF8;
+            --bg-surface: #FFFFFF;
+            --text: #1A1A1A;
+            --text-secondary: #5A5A5A;
+            --text-muted: #8A8A8A;
+            --border: #E8E8E4;
+
+            /* Spacing scale */
+            --sp-4: 4px;
+            --sp-8: 8px;
+            --sp-12: 12px;
+            --sp-16: 16px;
+            --sp-24: 24px;
+            --sp-32: 32px;
+            --sp-48: 48px;
+            --sp-64: 64px;
+            --sp-96: 96px;
+            --sp-128: 128px;
+
+            /* Transitions */
+            --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+            --dur: 200ms;
+            --dur-slow: 350ms;
+
+            /* Radius */
+            --r-sm: 6px;
+            --r-md: 8px;
+            --r-lg: 12px;
+            --r-xl: 16px;
+        }
+
+        [data-theme="dark"] {
+            --bg: #0D1117;
+            --bg-surface: #161B22;
+            --text: #E6EDF3;
+            --text-secondary: #8B949E;
+            --text-muted: #6E7681;
+            --border: #30363D;
+        }
+
+        html {
+            scroll-behavior: smooth;
+            scroll-padding-top: 80px;
+        }
+
+        body {
+            font-family: var(--font-body);
+            font-weight: 400;
+            font-size: clamp(1rem, 0.95rem + 0.25vw, 1.125rem);
+            line-height: 1.6;
+            color: var(--text);
+            background: var(--bg);
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            overflow-x: hidden;
+        }
+
+        h1, h2, h3, h4, h5, h6 {
+            font-family: var(--font-display);
+            font-weight: 700;
+            letter-spacing: -0.015em;
+            text-wrap: balance;
+            line-height: 1.15;
+        }
+
+        p {
+            text-wrap: pretty;
+        }
+    }
+
+    /* ========================================
+       Layout
+       ======================================== */
+    @layer layout {
+        .container {
+            max-width: 1200px;
+            margin-inline: auto;
+            padding-inline: var(--sp-24);
+        }
+
+        .section {
+            padding-block: var(--sp-96);
+
+            @media (min-width: 1024px) {
+                padding-block: var(--sp-128);
+            }
+        }
+    }
+
+    /* ========================================
+       Components
+       ======================================== */
+    @layer components {
+
+        /* --- Skip link --- */
+        .skip-link {
+            position: absolute;
+            top: -100%;
+            left: var(--sp-16);
+            z-index: 300;
+            padding: var(--sp-12) var(--sp-24);
+            background: var(--brand-pink);
+            color: #fff;
+            font-weight: 500;
+            border-radius: var(--r-md);
+
+            &:focus {
+                top: var(--sp-16);
+            }
+        }
+
+        /* --- Yingabar --- */
+        .yingabar {
+            display: flex;
+            height: 4px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 200;
+
+            & span {
+                flex: 1;
+            }
+            & span:nth-child(1) { background: var(--brand-pink); }
+            & span:nth-child(2) { background: var(--brand-blue); }
+            & span:nth-child(3) { background: var(--brand-green); }
+            & span:nth-child(4) { background: var(--brand-orange); }
+        }
+
+        .yingabar--footer {
+            position: relative;
+            height: 3px;
+        }
+
+        /* --- Header --- */
+        .header {
+            position: sticky;
+            top: 4px;
+            z-index: 100;
+            background: color-mix(in srgb, var(--bg) 85%, transparent);
+            backdrop-filter: blur(16px) saturate(1.2);
+            -webkit-backdrop-filter: blur(16px) saturate(1.2);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .header-inner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 64px;
+            gap: var(--sp-24);
+        }
+
+        .header-logo img {
+            height: 32px;
+            width: auto;
+        }
+
+        .header-nav {
+            display: none;
+            gap: var(--sp-32);
+
+            @media (min-width: 768px) {
+                display: flex;
+            }
+        }
+
+        .header-nav a {
+            font-size: 0.9375rem;
+            font-weight: 400;
+            color: var(--text-secondary);
+            transition: color var(--dur) var(--ease);
+            padding-block: var(--sp-8);
+
+            &:hover { color: var(--text); }
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: var(--sp-12);
+        }
+
+        .theme-toggle {
+            width: 44px;
+            height: 44px;
+            display: grid;
+            place-items: center;
+            border-radius: var(--r-md);
+            color: var(--text-secondary);
+            transition: color var(--dur) var(--ease), background var(--dur) var(--ease);
+
+            &:hover { color: var(--text); background: color-mix(in srgb, var(--text) 6%, transparent); }
+            &:focus-visible { outline: 2px solid var(--brand-pink); outline-offset: 2px; }
+
+            & svg { width: 20px; height: 20px; }
+            & .icon-sun { display: none; }
+            & .icon-moon { display: block; }
+        }
+
+        [data-theme="dark"] .theme-toggle {
+            & .icon-sun { display: block; }
+            & .icon-moon { display: none; }
+        }
+
+        .btn-login {
+            display: none;
+            font-size: 0.875rem;
+            font-weight: 500;
+            padding: var(--sp-8) var(--sp-24);
+            border-radius: var(--r-md);
+            border: 1px solid var(--border);
+            color: var(--text);
+            transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease);
+            min-height: 44px;
+            align-items: center;
+
+            @media (min-width: 768px) {
+                display: inline-flex;
+            }
+
+            &:hover { border-color: var(--text-muted); background: color-mix(in srgb, var(--text) 3%, transparent); }
+            &:focus-visible { outline: 2px solid var(--brand-pink); outline-offset: 2px; }
+        }
+
+        /* --- Mobile menu toggle --- */
+        .mobile-toggle {
+            width: 44px;
+            height: 44px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            border-radius: var(--r-md);
+
+            @media (min-width: 768px) {
+                display: none;
+            }
+
+            &:focus-visible { outline: 2px solid var(--brand-pink); outline-offset: 2px; }
+
+            & span {
+                display: block;
+                width: 20px;
+                height: 2px;
+                background: var(--text);
+                border-radius: 1px;
+                transition: transform var(--dur-slow) var(--ease), opacity var(--dur) var(--ease);
+                transform-origin: center;
+            }
+
+            &[aria-expanded="true"] span:nth-child(1) {
+                transform: translateY(7px) rotate(45deg);
+            }
+            &[aria-expanded="true"] span:nth-child(2) {
+                opacity: 0;
+            }
+            &[aria-expanded="true"] span:nth-child(3) {
+                transform: translateY(-7px) rotate(-45deg);
+            }
+        }
+
+        /* --- Mobile nav --- */
+        .mobile-nav {
+            display: none;
+            position: fixed;
+            top: 68px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 99;
+            background: var(--bg);
+            padding: var(--sp-32) var(--sp-24);
+            flex-direction: column;
+            gap: var(--sp-8);
+
+            &.is-open {
+                display: flex;
+            }
+
+            & a {
+                display: flex;
+                align-items: center;
+                padding: var(--sp-16);
+                font-size: 1.125rem;
+                font-weight: 500;
+                border-radius: var(--r-md);
+                min-height: 48px;
+                transition: background var(--dur) var(--ease);
+
+                &:hover { background: color-mix(in srgb, var(--text) 5%, transparent); }
+            }
+
+            & .mobile-nav-login {
+                margin-top: auto;
+                justify-content: center;
+                background: var(--brand-pink);
+                color: #fff;
+                font-weight: 600;
+
+                &:hover { background: color-mix(in srgb, var(--brand-pink) 85%, #000); }
+            }
+        }
+
+        /* --- Eyebrow --- */
+        .eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--sp-12);
+            font-size: 0.8125rem;
+            font-weight: 500;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: var(--brand-pink);
+            margin-bottom: var(--sp-16);
+
+            &::before {
+                content: '';
+                display: block;
+                width: 24px;
+                height: 2px;
+                background: var(--brand-pink);
+                border-radius: 1px;
+            }
+        }
+
+        .eyebrow--blue { color: var(--brand-blue); &::before { background: var(--brand-blue); } }
+        .eyebrow--green { color: var(--brand-green); &::before { background: var(--brand-green); } }
+        .eyebrow--orange { color: var(--brand-orange); &::before { background: var(--brand-orange); } }
+
+        /* --- Section heading --- */
+        .section-title {
+            font-size: clamp(1.75rem, 1.4rem + 1.75vw, 2.75rem);
+            margin-bottom: var(--sp-16);
+        }
+
+        .section-subtitle {
+            font-size: clamp(1rem, 0.95rem + 0.25vw, 1.125rem);
+            color: var(--text-secondary);
+            max-width: 60ch;
+            line-height: 1.65;
+        }
+
+        .section-header {
+            margin-bottom: var(--sp-64);
+        }
+
+        /* --- Buttons --- */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--sp-8);
+            font-weight: 500;
+            font-size: 0.9375rem;
+            padding: var(--sp-12) var(--sp-32);
+            border-radius: var(--r-md);
+            min-height: 48px;
+            transition: transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease), background var(--dur) var(--ease);
+
+            &:focus-visible { outline: 2px solid var(--brand-pink); outline-offset: 2px; }
+            &:active { transform: scale(0.98); }
+        }
+
+        .btn--primary {
+            background: var(--brand-pink);
+            color: #fff;
+
+            &:hover {
+                background: color-mix(in srgb, var(--brand-pink) 88%, #000);
+                box-shadow: 0 4px 16px color-mix(in srgb, var(--brand-pink) 30%, transparent);
+            }
+        }
+
+        .btn--outline {
+            border: 1px solid var(--border);
+            color: var(--text);
+
+            &:hover {
+                border-color: var(--text-muted);
+                background: color-mix(in srgb, var(--text) 4%, transparent);
+            }
+        }
+
+        .btn--white {
+            background: #fff;
+            color: var(--brand-pink);
+            font-weight: 600;
+
+            &:hover {
+                background: #f5f5f5;
+                box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+            }
+        }
+
+        .btn--ghost-white {
+            border: 1px solid rgba(255,255,255,0.4);
+            color: #fff;
+
+            &:hover {
+                background: rgba(255,255,255,0.1);
+                border-color: rgba(255,255,255,0.7);
+            }
+        }
+
+        .btn--download {
+            padding: var(--sp-16) var(--sp-32);
+            font-size: 1rem;
+            font-weight: 600;
+            gap: var(--sp-12);
+            min-height: 52px;
+        }
+
+        .btn-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--sp-16);
+        }
+
+        /* ========================================
+           Hero
+           ======================================== */
+        .hero {
+            padding-top: clamp(64px, 8vw, 120px);
+            padding-bottom: var(--sp-96);
+        }
+
+        .hero-grid {
+            display: grid;
+            gap: var(--sp-64);
+            align-items: center;
+
+            @media (min-width: 1024px) {
+                grid-template-columns: 1fr 1fr;
+                gap: var(--sp-96);
+            }
+        }
+
+        .hero-title {
+            font-size: clamp(2rem, 1.5rem + 2.5vw, 3.25rem);
+            margin-bottom: var(--sp-24);
+            line-height: 1.1;
+
+            & .highlight { color: var(--brand-pink); }
+        }
+
+        .hero-subtitle {
+            font-size: clamp(1rem, 0.95rem + 0.25vw, 1.125rem);
+            color: var(--text-secondary);
+            max-width: 52ch;
+            line-height: 1.7;
+            margin-bottom: var(--sp-32);
+        }
+
+        /* --- Demo window --- */
+        .demo-window {
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: var(--r-lg);
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 8px 32px rgba(0,0,0,0.06);
+
+            [data-theme="dark"] & {
+                box-shadow: 0 1px 3px rgba(0,0,0,0.2), 0 8px 32px rgba(0,0,0,0.3);
+            }
+        }
+
+        .demo-titlebar {
+            display: flex;
+            align-items: center;
+            gap: var(--sp-8);
+            padding: var(--sp-12) var(--sp-16);
+            border-bottom: 1px solid var(--border);
+            background: color-mix(in srgb, var(--bg-surface) 60%, var(--bg));
+        }
+
+        .demo-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .demo-dot:nth-child(1) { background: #FF605C; }
+        .demo-dot:nth-child(2) { background: #FFBD44; }
+        .demo-dot:nth-child(3) { background: #00CA4E; }
+
+        .demo-content {
+            position: relative;
+            height: 280px;
+            overflow: hidden;
+
+            @media (min-width: 640px) {
+                height: 320px;
+            }
+        }
+
+        .demo-stage {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: var(--sp-32);
+            opacity: 0;
+            transform: translateY(8px);
+            transition: opacity 400ms var(--ease), transform 400ms var(--ease);
+            pointer-events: none;
+
+            &.is-active {
+                opacity: 1;
+                transform: translateY(0);
+                pointer-events: auto;
+            }
+        }
+
+        /* Upload stage */
+        .demo-upload-zone {
+            width: 80%;
+            max-width: 260px;
+            border: 2px dashed var(--border);
+            border-radius: var(--r-lg);
+            padding: var(--sp-24);
+            text-align: center;
+            transition: border-color 600ms var(--ease);
+        }
+
+        .demo-upload-zone.is-active {
+            border-color: var(--brand-pink);
+        }
+
+        .demo-upload-icon {
+            width: 40px;
+            height: 40px;
+            margin: 0 auto var(--sp-12);
+            color: var(--text-muted);
+        }
+
+        .demo-upload-file {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--sp-8);
+            background: color-mix(in srgb, var(--brand-pink) 8%, transparent);
+            color: var(--brand-pink);
+            font-size: 0.8125rem;
+            font-weight: 500;
+            padding: var(--sp-4) var(--sp-12);
+            border-radius: var(--r-sm);
+            margin-top: var(--sp-8);
+            opacity: 0;
+            transform: translateY(4px);
+            transition: opacity 300ms var(--ease), transform 300ms var(--ease);
+        }
+
+        .demo-upload-file.is-visible { opacity: 1; transform: translateY(0); }
+
+        /* Processing stage */
+        .demo-waveform {
+            display: flex;
+            align-items: end;
+            gap: 3px;
+            height: 80px;
+            margin-bottom: var(--sp-24);
+            position: relative;
+        }
+
+        .demo-wave-bar {
+            flex: 1;
+            max-width: 6px;
+            background: color-mix(in srgb, var(--brand-blue) 25%, transparent);
+            border-radius: 2px;
+            min-height: 8px;
+            transition: height 200ms ease;
+        }
+
+        .demo-scanner {
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: var(--brand-blue);
+            border-radius: 1px;
+            opacity: 0;
+            box-shadow: 0 0 8px color-mix(in srgb, var(--brand-blue) 40%, transparent);
+        }
+
+        .demo-processing-text {
+            display: flex;
+            align-items: center;
+            gap: var(--sp-8);
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        .demo-spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid var(--border);
+            border-top-color: var(--brand-blue);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Transcript stage */
+        .demo-transcript-lines {
+            width: 85%;
+            max-width: 320px;
+            display: flex;
+            flex-direction: column;
+            gap: var(--sp-8);
+        }
+
+        .demo-transcript-line {
+            display: flex;
+            gap: var(--sp-12);
+            font-size: 0.8125rem;
+            opacity: 0;
+            transform: translateX(-4px);
+            transition: opacity 300ms var(--ease), transform 300ms var(--ease);
+
+            &.is-visible { opacity: 1; transform: translateX(0); }
+        }
+
+        .demo-transcript-speaker {
+            font-weight: 600;
+            color: var(--brand-blue);
+            white-space: nowrap;
+            min-width: 52px;
+        }
+
+        .demo-transcript-text {
+            color: var(--text-secondary);
+            overflow: hidden;
+        }
+
+        .demo-transcript-cursor {
+            display: inline-block;
+            width: 2px;
+            height: 1em;
+            background: var(--brand-pink);
+            margin-left: 1px;
+            animation: blink 0.6s step-end infinite;
+            vertical-align: text-bottom;
+        }
+
+        @keyframes blink { 50% { opacity: 0; } }
+
+        /* Notes stage */
+        .demo-notes {
+            width: 85%;
+            max-width: 320px;
+        }
+
+        .demo-notes-title {
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: 0.9375rem;
+            margin-bottom: var(--sp-16);
+            opacity: 0;
+            transition: opacity 300ms var(--ease);
+
+            &.is-visible { opacity: 1; }
+        }
+
+        .demo-note-item {
+            display: flex;
+            align-items: start;
+            gap: var(--sp-12);
+            padding: var(--sp-8) 0;
+            font-size: 0.8125rem;
+            color: var(--text-secondary);
+            opacity: 0;
+            transform: translateX(-8px);
+            transition: opacity 300ms var(--ease), transform 300ms var(--ease);
+
+            &.is-visible { opacity: 1; transform: translateX(0); }
+        }
+
+        .demo-note-check {
+            width: 18px;
+            height: 18px;
+            flex-shrink: 0;
+            color: var(--brand-green);
+            opacity: 0;
+            transform: scale(0.5);
+            transition: opacity 200ms var(--ease), transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
+
+            &.is-visible { opacity: 1; transform: scale(1); }
+        }
+
+        /* Demo dots */
+        .demo-dots {
+            display: flex;
+            justify-content: center;
+            gap: var(--sp-8);
+            padding: var(--sp-16);
+        }
+
+        .demo-dot-indicator {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--border);
+            transition: background var(--dur) var(--ease), transform var(--dur) var(--ease);
+
+            &.is-active {
+                background: var(--brand-pink);
+                transform: scale(1.3);
+            }
+        }
+
+        /* ========================================
+           Problem / Solution
+           ======================================== */
+        .problem-section {
+            background: var(--bg-surface);
+        }
+
+        .comparison-grid {
+            display: grid;
+            gap: var(--sp-24);
+
+            @media (min-width: 768px) {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        .comparison-card {
+            padding: var(--sp-32);
+            border-radius: var(--r-lg);
+            background: var(--bg);
+            border-left: 3px solid transparent;
+        }
+
+        .comparison-card--without {
+            border-left-color: #DC2626;
+        }
+
+        .comparison-card--with {
+            border-left-color: var(--brand-green);
+        }
+
+        .comparison-card h3 {
+            font-size: 1.125rem;
+            margin-bottom: var(--sp-24);
+        }
+
+        .comparison-list {
+            display: flex;
+            flex-direction: column;
+            gap: var(--sp-16);
+        }
+
+        .comparison-list li {
+            display: flex;
+            align-items: start;
+            gap: var(--sp-12);
+            font-size: 0.9375rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        .comparison-icon {
+            flex-shrink: 0;
+            width: 20px;
+            height: 20px;
+            margin-top: 2px;
+        }
+
+        .comparison-icon--x { color: #DC2626; }
+        .comparison-icon--check { color: var(--brand-green); }
+
+        /* ========================================
+           How It Works
+           ======================================== */
+        .steps-grid {
+            display: grid;
+            gap: var(--sp-48);
+
+            @media (min-width: 768px) {
+                grid-template-columns: repeat(3, 1fr);
+                gap: var(--sp-32);
+            }
+        }
+
+        .step {
+            position: relative;
+        }
+
+        .step-number {
+            font-family: var(--font-display);
+            font-weight: 800;
+            font-size: clamp(2.5rem, 2rem + 2.5vw, 4rem);
+            color: color-mix(in srgb, var(--text) 8%, transparent);
+            line-height: 1;
+            margin-bottom: var(--sp-16);
+
+            [data-theme="dark"] & {
+                color: color-mix(in srgb, var(--text) 12%, transparent);
+            }
+        }
+
+        .step h3 {
+            font-size: 1.125rem;
+            margin-bottom: var(--sp-12);
+        }
+
+        .step p {
+            font-size: 0.9375rem;
+            color: var(--text-secondary);
+            line-height: 1.65;
+        }
+
+        /* ========================================
+           Features
+           ======================================== */
+        .features-grid {
+            display: grid;
+            gap: 1px;
+            background: var(--border);
+            border: 1px solid var(--border);
+            border-radius: var(--r-lg);
+            overflow: hidden;
+
+            @media (min-width: 640px) {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            @media (min-width: 1024px) {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        .feature-card {
+            background: var(--bg-surface);
+            padding: var(--sp-32);
+            border-left: 3px solid transparent;
+            transition: background var(--dur) var(--ease);
+
+            &:hover {
+                background: color-mix(in srgb, var(--bg-surface) 80%, var(--bg));
+            }
+        }
+
+        .feature-card--pink { border-left-color: var(--brand-pink); }
+        .feature-card--blue { border-left-color: var(--brand-blue); }
+        .feature-card--green { border-left-color: var(--brand-green); }
+        .feature-card--orange { border-left-color: var(--brand-orange); }
+
+        .feature-icon {
+            width: 36px;
+            height: 36px;
+            margin-bottom: var(--sp-16);
+        }
+
+        .feature-card h3 {
+            font-family: var(--font-body);
+            font-weight: 600;
+            font-size: 1rem;
+            margin-bottom: var(--sp-8);
+        }
+
+        .feature-card p {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        /* ========================================
+           Use Cases
+           ======================================== */
+        .usecases-grid {
+            display: grid;
+            gap: var(--sp-24);
+
+            @media (min-width: 640px) {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            @media (min-width: 1024px) {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        .usecase-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: var(--r-lg);
+            padding: var(--sp-32);
+            transition: transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+
+            &:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 8px 24px color-mix(in srgb, var(--text) 6%, transparent);
+            }
+        }
+
+        .usecase-icon {
+            width: 40px;
+            height: 40px;
+            margin-bottom: var(--sp-16);
+        }
+
+        .usecase-card h3 {
+            font-family: var(--font-body);
+            font-weight: 600;
+            font-size: 1rem;
+            margin-bottom: var(--sp-8);
+        }
+
+        .usecase-card p {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        /* ========================================
+           Download section
+           ======================================== */
+        .download-section {
+            background: var(--bg-surface);
+        }
+
+        .version-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--sp-8);
+            font-size: 0.8125rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            padding: var(--sp-4) var(--sp-16);
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            margin-top: var(--sp-16);
+
+            & .version-dot {
+                width: 6px;
+                height: 6px;
+                border-radius: 50%;
+                background: var(--brand-green);
+            }
+        }
+
+        .version-badge--orange .version-dot {
+            background: var(--brand-orange);
+        }
+
+        .download-cards {
+            display: grid;
+            gap: var(--sp-24);
+            margin-top: var(--sp-48);
+
+            @media (min-width: 640px) {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            @media (min-width: 960px) {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        .download-card {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: var(--r-lg);
+            padding: var(--sp-32);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            gap: var(--sp-16);
+            position: relative;
+            transition: border-color var(--dur) var(--ease);
+        }
+
+        .download-card--recommended {
+            border-color: var(--brand-pink);
+            box-shadow: 0 0 0 1px var(--brand-pink);
+        }
+
+        .download-recommended-badge {
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #fff;
+            background: var(--brand-pink);
+            padding: var(--sp-4) var(--sp-16);
+            border-radius: 999px;
+            white-space: nowrap;
+        }
+
+        .download-os-icon {
+            width: 48px;
+            height: 48px;
+            color: var(--text);
+        }
+
+        .download-card h3 {
+            font-family: var(--font-body);
+            font-weight: 600;
+            font-size: 1.25rem;
+        }
+
+        .download-card .download-info {
+            font-size: 0.8125rem;
+            color: var(--text-muted);
+        }
+
+        .download-card .btn { width: 100%; }
+
+        .download-alt-link {
+            font-size: 0.8125rem;
+            color: var(--text-muted);
+            text-decoration: underline;
+            text-underline-offset: 2px;
+            transition: color var(--dur) var(--ease);
+            padding: var(--sp-4);
+
+            &:hover { color: var(--text-secondary); }
+        }
+
+        /* ========================================
+           System Requirements
+           ======================================== */
+        .sysreq-grid {
+            display: grid;
+            gap: var(--sp-32);
+            margin-top: var(--sp-48);
+
+            @media (min-width: 960px) {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        .sysreq-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: var(--r-lg);
+            padding: var(--sp-32);
+        }
+
+        .sysreq-card h3 {
+            font-family: var(--font-body);
+            font-weight: 600;
+            font-size: 1rem;
+            margin-bottom: var(--sp-24);
+            display: flex;
+            align-items: center;
+            gap: var(--sp-8);
+        }
+
+        .sysreq-list {
+            display: flex;
+            flex-direction: column;
+            gap: var(--sp-12);
+        }
+
+        .sysreq-list li {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: start;
+            gap: var(--sp-8);
+            line-height: 1.5;
+
+            &::before {
+                content: '';
+                display: block;
+                width: 4px;
+                height: 4px;
+                border-radius: 50%;
+                background: var(--text-muted);
+                flex-shrink: 0;
+                margin-top: 8px;
+            }
+        }
+
+        .install-note {
+            margin-top: var(--sp-32);
+            padding: var(--sp-24);
+            border-left: 3px solid var(--brand-blue);
+            background: color-mix(in srgb, var(--brand-blue) 4%, var(--bg-surface));
+            border-radius: 0 var(--r-md) var(--r-md) 0;
+        }
+
+        .install-note h4 {
+            font-family: var(--font-body);
+            font-weight: 600;
+            font-size: 0.875rem;
+            margin-bottom: var(--sp-8);
+        }
+
+        .install-note p {
+            font-size: 0.8125rem;
+            color: var(--text-secondary);
+            line-height: 1.65;
+        }
+
+        /* ========================================
+           Beta section
+           ======================================== */
+        .beta-section {
+            display: none;
+        }
+
+        .beta-section.is-visible {
+            display: block;
+        }
+
+        .beta-badge {
+            display: inline-block;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #fff;
+            background: var(--brand-orange);
+            padding: 2px var(--sp-12);
+            border-radius: 999px;
+            vertical-align: middle;
+            margin-left: var(--sp-8);
+        }
+
+        .beta-description {
+            font-size: 0.9375rem;
+            color: var(--text-secondary);
+            max-width: 60ch;
+            line-height: 1.65;
+            margin-bottom: var(--sp-32);
+        }
+
+        /* ========================================
+           CTA section
+           ======================================== */
+        .cta-section {
+            background: var(--brand-pink);
+            color: #fff;
+            text-align: center;
+            padding-block: var(--sp-96);
+        }
+
+        .cta-section .section-title {
+            color: #fff;
+        }
+
+        .cta-section .section-subtitle {
+            color: rgba(255,255,255,0.8);
+            margin-inline: auto;
+            margin-bottom: var(--sp-32);
+        }
+
+        .cta-section .btn-group {
+            justify-content: center;
+        }
+
+        /* ========================================
+           Footer
+           ======================================== */
+        .footer {
+            padding: var(--sp-32);
+            text-align: center;
+        }
+
+        .footer-credits {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--sp-8);
+            font-size: 0.8125rem;
+            color: var(--text-muted);
+        }
+
+        .footer-credits img {
+            height: 20px;
+            width: auto;
+            display: inline-block;
+
+            [data-theme="dark"] & {
+                filter: invert(1) brightness(2);
+            }
+        }
+
+        /* ========================================
+           Scroll animations
+           ======================================== */
+        .reveal {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.6s var(--ease), transform 0.6s var(--ease);
+        }
+
+        .reveal.is-revealed {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* ========================================
+       Utilities
+       ======================================== */
+    @layer utilities {
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+            .reveal { opacity: 1; transform: none; }
+            .demo-stage { transition-duration: 0.01ms; }
+        }
+
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            border: 0;
+        }
+    }
+    </style>
+</head>
+<body>
+
+    <!-- Yingabar -->
+    <div class="yingabar" aria-hidden="true">
+        <span></span><span></span><span></span><span></span>
+    </div>
+
+    <!-- Skip link -->
+    <a href="#main" class="skip-link">Ga naar inhoud</a>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="container header-inner">
+            <a href="/tstudio/download/" class="header-logo" aria-label="ThoughtVault startpagina">
+                <img src="/tstudio/static/Transcriptstudio.png" alt="ThoughtVault" width="144" height="36">
+            </a>
+
+            <nav class="header-nav" aria-label="Hoofdnavigatie">
+                <a href="#features">Features</a>
+                <a href="#hoe-werkt-het">Hoe werkt het</a>
+                <a href="#download">Download</a>
+                <a href="#use-cases">Use cases</a>
+            </nav>
+
+            <div class="header-actions">
+                <button class="theme-toggle" id="themeToggle" aria-label="Wissel thema">
+                    <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></svg>
+                    <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="4.22" x2="19.78" y2="5.64"/></svg>
+                </button>
+                <a href="/tstudio/login" class="btn-login">Inloggen</a>
+                <button class="mobile-toggle" id="mobileToggle" aria-label="Menu openen" aria-expanded="false" aria-controls="mobileNav">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Mobile nav -->
+    <nav class="mobile-nav" id="mobileNav" aria-label="Mobiel menu">
+        <a href="#features" class="mobile-nav-link">Features</a>
+        <a href="#hoe-werkt-het" class="mobile-nav-link">Hoe werkt het</a>
+        <a href="#download" class="mobile-nav-link">Download</a>
+        <a href="#use-cases" class="mobile-nav-link">Use cases</a>
+        <a href="/tstudio/login" class="mobile-nav-login">Inloggen</a>
+    </nav>
+
+    <main id="main">
+
+        <!-- ============ HERO ============ -->
+        <section class="hero section">
+            <div class="container">
+                <div class="hero-grid">
+                    <div class="hero-content">
+                        <p class="eyebrow">AI-powered notulering</p>
+                        <h1 class="hero-title">Jij vergadert. Wij maken de <span class="highlight">notulen</span>.</h1>
+                        <p class="hero-subtitle">Iedereen kent het: de vergadering is voorbij, en dan begint het echte werk pas. Terugluisteren, uittypen, structureren. ThoughtVault neemt dat hele stuk over. Upload je opname, en je hebt professionele notulen binnen minuten.</p>
+                        <div class="btn-group">
+                            <a href="#download" class="btn btn--primary btn--download">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                Download
+                            </a>
+                            <a href="mailto:info@yinga.nl?subject=Demo%20Transcript%20Studio" class="btn btn--outline">Demo aanvragen</a>
+                        </div>
+                    </div>
+
+                    <div class="demo-window" id="demoWindow" aria-label="Demonstratie van het transcriptieproces">
+                        <div class="demo-titlebar" aria-hidden="true">
+                            <div class="demo-dot"></div>
+                            <div class="demo-dot"></div>
+                            <div class="demo-dot"></div>
+                        </div>
+                        <div class="demo-content">
+                            <!-- Stage 1: Upload -->
+                            <div class="demo-stage is-active" data-stage="0">
+                                <div class="demo-upload-zone" id="demoUploadZone">
+                                    <svg class="demo-upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                                    <p style="font-size:0.8125rem;color:var(--text-muted)">Sleep je audiobestand hierheen</p>
+                                    <div class="demo-upload-file" id="demoUploadFile">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+                                        vergadering-q4.mp3
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Stage 2: Processing -->
+                            <div class="demo-stage" data-stage="1">
+                                <div class="demo-waveform" id="demoWaveform"></div>
+                                <div class="demo-processing-text">
+                                    <div class="demo-spinner"></div>
+                                    Transcriberen...
+                                </div>
+                            </div>
+
+                            <!-- Stage 3: Transcript -->
+                            <div class="demo-stage" data-stage="2">
+                                <div class="demo-transcript-lines" id="demoTranscript">
+                                    <div class="demo-transcript-line" data-delay="0">
+                                        <span class="demo-transcript-speaker">Jan:</span>
+                                        <span class="demo-transcript-text"></span>
+                                    </div>
+                                    <div class="demo-transcript-line" data-delay="600">
+                                        <span class="demo-transcript-speaker">Maria:</span>
+                                        <span class="demo-transcript-text"></span>
+                                    </div>
+                                    <div class="demo-transcript-line" data-delay="1400">
+                                        <span class="demo-transcript-speaker">Jan:</span>
+                                        <span class="demo-transcript-text"></span>
+                                    </div>
+                                    <div class="demo-transcript-line" data-delay="2200">
+                                        <span class="demo-transcript-speaker">Pieter:</span>
+                                        <span class="demo-transcript-text"></span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Stage 4: Notes -->
+                            <div class="demo-stage" data-stage="3">
+                                <div class="demo-notes">
+                                    <div class="demo-notes-title" id="demoNotesTitle">Notulen Q4 Planning</div>
+                                    <div id="demoNoteItems">
+                                        <div class="demo-note-item" data-delay="300">
+                                            <svg class="demo-note-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                            <span>Budget Q4 goedgekeurd door management</span>
+                                        </div>
+                                        <div class="demo-note-item" data-delay="600">
+                                            <svg class="demo-note-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                            <span>Deadline productlancering: 15 december</span>
+                                        </div>
+                                        <div class="demo-note-item" data-delay="900">
+                                            <svg class="demo-note-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                            <span>Maria neemt contact op met leverancier</span>
+                                        </div>
+                                        <div class="demo-note-item" data-delay="1200">
+                                            <svg class="demo-note-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                            <span>Volgende meeting: vrijdag 10:00</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="demo-dots" aria-hidden="true">
+                            <div class="demo-dot-indicator is-active" data-dot="0"></div>
+                            <div class="demo-dot-indicator" data-dot="1"></div>
+                            <div class="demo-dot-indicator" data-dot="2"></div>
+                            <div class="demo-dot-indicator" data-dot="3"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============ PROBLEM / SOLUTION ============ -->
+        <section class="section problem-section">
+            <div class="container">
+                <div class="section-header reveal">
+                    <p class="eyebrow">Het probleem</p>
+                    <h2 class="section-title">Twee uur uitwerken voor een uur vergaderen</h2>
+                    <p class="section-subtitle">De meeste professionals besteden meer tijd aan het uitwerken van notulen dan aan de vergadering zelf. Dat is niet efficient, dat is gewoon zonde.</p>
+                </div>
+                <div class="comparison-grid">
+                    <div class="comparison-card comparison-card--without reveal">
+                        <h3>Zonder ThoughtVault</h3>
+                        <ul class="comparison-list">
+                            <li>
+                                <svg class="comparison-icon comparison-icon--x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                Urenlang terugluisteren en uittypen
+                            </li>
+                            <li>
+                                <svg class="comparison-icon comparison-icon--x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                Cruciale details die je toch mist
+                            </li>
+                            <li>
+                                <svg class="comparison-icon comparison-icon--x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                Elke keer een andere opmaak
+                            </li>
+                            <li>
+                                <svg class="comparison-icon comparison-icon--x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                Een agenda die al vol zit
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="comparison-card comparison-card--with reveal">
+                        <h3>Met ThoughtVault</h3>
+                        <ul class="comparison-list">
+                            <li>
+                                <svg class="comparison-icon comparison-icon--check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                Klaar binnen een paar minuten
+                            </li>
+                            <li>
+                                <svg class="comparison-icon comparison-icon--check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                Elk detail wordt opgepikt
+                            </li>
+                            <li>
+                                <svg class="comparison-icon comparison-icon--check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                Altijd dezelfde professionele kwaliteit
+                            </li>
+                            <li>
+                                <svg class="comparison-icon comparison-icon--check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                Tijd over voor werk dat ertoe doet
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============ HOW IT WORKS ============ -->
+        <section class="section" id="hoe-werkt-het">
+            <div class="container">
+                <div class="section-header reveal">
+                    <p class="eyebrow eyebrow--blue">Hoe het werkt</p>
+                    <h2 class="section-title">Zo simpel dat het bijna oneerlijk voelt</h2>
+                    <p class="section-subtitle">Geen handleiding nodig. Geen cursus. Je uploadt een bestand, en een paar minuten later heb je notulen.</p>
+                </div>
+                <div class="steps-grid">
+                    <div class="step reveal">
+                        <div class="step-number">01</div>
+                        <h3>Upload je opname</h3>
+                        <p>Sleep je audiobestand in de app of neem direct op. MP3, WAV, M4A — alles werkt.</p>
+                    </div>
+                    <div class="step reveal">
+                        <div class="step-number">02</div>
+                        <h3>AI gaat aan de slag</h3>
+                        <p>Whisper transcribeert je audio, een taalmodel pikt de kern eruit en structureert alles tot echte notulen.</p>
+                    </div>
+                    <div class="step reveal">
+                        <div class="step-number">03</div>
+                        <h3>Klaar. Delen maar.</h3>
+                        <p>Bekijk het resultaat, pas de stijl aan als je wilt, en exporteer als PDF of HTML. Verstuur het naar je team.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============ FEATURES ============ -->
+        <section class="section" id="features">
+            <div class="container">
+                <div class="section-header reveal">
+                    <p class="eyebrow eyebrow--green">Features</p>
+                    <h2 class="section-title">Gebouwd voor teams die het serieus menen</h2>
+                    <p class="section-subtitle">Geen speelgoed, maar een volwassen tool die meedraait in je dagelijkse workflow.</p>
+                </div>
+                <div class="features-grid reveal">
+                    <div class="feature-card feature-card--pink">
+                        <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="var(--brand-pink)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+                        <h3>AI Transcriptie</h3>
+                        <p>Whisper-powered spraakherkenning die echt verstaat wat er gezegd wordt. Nederlands, Engels en 99+ andere talen.</p>
+                    </div>
+                    <div class="feature-card feature-card--blue">
+                        <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="var(--brand-blue)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+                        <h3>Jouw stijl, jouw notulen</h3>
+                        <p>Besluitenlijst, actiepunten, uitgebreide notulen — kies een profiel of maak je eigen format.</p>
+                    </div>
+                    <div class="feature-card feature-card--green">
+                        <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="var(--brand-green)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+                        <h3>Batch Verwerking</h3>
+                        <p>Vier vergaderingen op een dag gehad? Upload ze allemaal tegelijk en laat de AI doorwerken terwijl jij naar huis gaat.</p>
+                    </div>
+                    <div class="feature-card feature-card--orange">
+                        <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="var(--brand-orange)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                        <h3>Export zoals jij wilt</h3>
+                        <p>PDF voor de directie, HTML voor het intranet. Exporteer in het formaat dat bij je workflow past.</p>
+                    </div>
+                    <div class="feature-card feature-card--pink">
+                        <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="var(--brand-pink)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                        <h3>Teamtoegang</h3>
+                        <p>Geef je hele team toegang. Beheer wie wat mag via het admin panel, inclusief invite codes.</p>
+                    </div>
+                    <div class="feature-card feature-card--blue">
+                        <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="var(--brand-blue)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                        <h3>Tweefactorauthenticatie</h3>
+                        <p>Vergaderinhoud is gevoelig. Daarom zit 2FA er standaard in, niet als afterthought.</p>
+                    </div>
+                    <div class="feature-card feature-card--green">
+                        <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="var(--brand-green)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                        <h3>Alles terug te vinden</h3>
+                        <p>Elke notule wordt bewaard. Zoek op datum, titel of inhoud, en download alles in bulk als het moet.</p>
+                    </div>
+                    <div class="feature-card feature-card--orange">
+                        <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="var(--brand-orange)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></svg>
+                        <h3>Licht of donker</h3>
+                        <p>Vroege ochtend of late avond — de app past zich aan. Of je kiest zelf, natuurlijk.</p>
+                    </div>
+                    <div class="feature-card feature-card--green">
+                        <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="var(--brand-green)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></svg>
+                        <h3>Lokale AI-verwerking</h3>
+                        <p>Liever niks de deur uit? Verwerk alles lokaal via Apple Intelligence, Ollama of LM Studio. Nul data naar de cloud.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============ USE CASES ============ -->
+        <section class="section" id="use-cases" style="background:var(--bg-surface);">
+            <div class="container">
+                <div class="section-header reveal">
+                    <p class="eyebrow eyebrow--orange">Use cases</p>
+                    <h2 class="section-title">Van boardroom tot brainstorm</h2>
+                    <p class="section-subtitle">Elke vergadering is anders. De notulen die eruit komen, zijn dat ook.</p>
+                </div>
+                <div class="usecases-grid">
+                    <div class="usecase-card reveal">
+                        <svg class="usecase-icon" viewBox="0 0 24 24" fill="none" stroke="var(--brand-pink)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+                        <h3>Management Meetings</h3>
+                        <p>Strategische besluiten en actiepunten netjes vastgelegd, terwijl jij je volle aandacht bij het gesprek houdt.</p>
+                    </div>
+                    <div class="usecase-card reveal">
+                        <svg class="usecase-icon" viewBox="0 0 24 24" fill="none" stroke="var(--brand-blue)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                        <h3>HR Interviews</h3>
+                        <p>Oogcontact met de kandidaat in plaats van je neus in een notitieblok. De uitwerking komt vanzelf.</p>
+                    </div>
+                    <div class="usecase-card reveal">
+                        <svg class="usecase-icon" viewBox="0 0 24 24" fill="none" stroke="var(--brand-green)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                        <h3>Sales Calls</h3>
+                        <p>Die ene opmerking van de klant die je anders was vergeten? Die staat er nu gewoon in.</p>
+                    </div>
+                    <div class="usecase-card reveal">
+                        <svg class="usecase-icon" viewBox="0 0 24 24" fill="none" stroke="var(--brand-pink)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
+                        <h3>Project Besprekingen</h3>
+                        <p>Iedereen op dezelfde pagina na de meeting. Letterlijk, want de notulen staan er al.</p>
+                    </div>
+                    <div class="usecase-card reveal">
+                        <svg class="usecase-icon" viewBox="0 0 24 24" fill="none" stroke="var(--brand-blue)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                        <h3>Workshops &amp; Trainingen</h3>
+                        <p>Een dag vol kennis, automatisch samengevat. Deel het met iedereen die er niet bij kon zijn.</p>
+                    </div>
+                    <div class="usecase-card reveal">
+                        <svg class="usecase-icon" viewBox="0 0 24 24" fill="none" stroke="var(--brand-green)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 1 1 7.072 0l-.548.547A3.374 3.374 0 0 0 12 18.469c-.874 0-1.712.347-2.328.964l-.26.26-.073.074"/></svg>
+                        <h3>Brainstormsessies</h3>
+                        <p>De beste ideeen komen als niemand hoeft te notuleren. Laat de creativiteit stromen.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============ DOWNLOAD ============ -->
+        <section class="section download-section" id="download">
+            <div class="container">
+                <div class="section-header reveal">
+                    <p class="eyebrow">Download</p>
+                    <h2 class="section-title">Probeer het zelf</h2>
+                    <p class="section-subtitle">Native apps voor macOS, Windows en Android. Installeren en aan de slag — meer is het niet.</p>
+                    <div class="version-badge" id="versionBadge">
+                        <span class="version-dot"></span>
+                        <span id="versionText">Versie laden...</span>
+                    </div>
+                </div>
+
+                <div class="download-cards" id="downloadCards">
+                    <!-- macOS card -->
+                    <div class="download-card" id="macCard" data-os="mac">
+                        <div class="download-recommended-badge" style="display:none" id="macBadge">Aanbevolen voor jou</div>
+                        <svg class="download-os-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+                        <h3>macOS</h3>
+                        <p class="download-info" id="macInfo">DMG installer</p>
+                        <a href="#" class="btn btn--primary btn--download" id="macDownload" style="pointer-events:none;opacity:0.5">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            Download voor macOS
+                        </a>
+                    </div>
+
+                    <!-- Windows card -->
+                    <div class="download-card" id="winCard" data-os="win">
+                        <div class="download-recommended-badge" style="display:none" id="winBadge">Aanbevolen voor jou</div>
+                        <svg class="download-os-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.9-1.801"/></svg>
+                        <h3>Windows</h3>
+                        <p class="download-info" id="winInfo">MSI installer</p>
+                        <a href="#" class="btn btn--outline btn--download" id="winDownload" style="pointer-events:none;opacity:0.5">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            Download voor Windows
+                        </a>
+                        <a href="#" class="download-alt-link" id="winAltLink" style="display:none"></a>
+                    </div>
+
+                    <!-- Android card -->
+                    <div class="download-card" id="androidCard" data-os="android" style="display:none">
+                        <div class="download-recommended-badge" style="display:none" id="androidBadge">Aanbevolen voor jou</div>
+                        <svg class="download-os-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18c0 .55.45 1 1 1h1v3.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V19h2v3.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V19h1c.55 0 1-.45 1-1V7H6v11zM3.5 7C2.67 7 2 7.67 2 8.5v7c0 .83.67 1.5 1.5 1.5S5 16.33 5 15.5v-7C5 7.67 4.33 7 3.5 7zm17 0c-.83 0-1.5.67-1.5 1.5v7c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5v-7c0-.83-.67-1.5-1.5-1.5zm-4.97-5.84l1.3-1.3c.2-.2.2-.51 0-.71-.2-.2-.51-.2-.71 0l-1.48 1.48C13.85.55 12.95.25 12 .25s-1.85.3-2.64.88L7.88.65c-.2-.2-.51-.2-.71 0-.2.2-.2.51 0 .71l1.3 1.3C7.17 3.65 6.25 5.23 6.25 7h11.5c0-1.77-.92-3.35-2.22-4.34zM10 5H9V4h1v1zm5 0h-1V4h1v1z"/></svg>
+                        <h3>Android</h3>
+                        <p class="download-info" id="androidInfo">APK installer</p>
+                        <a href="#" class="btn btn--outline btn--download" id="androidDownload" style="pointer-events:none;opacity:0.5">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            Download voor Android
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============ SYSTEM REQUIREMENTS ============ -->
+        <section class="section">
+            <div class="container">
+                <h2 class="section-title reveal" style="margin-bottom:0">Systeemvereisten</h2>
+                <div class="sysreq-grid">
+                    <div class="sysreq-card reveal">
+                        <h3>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+                            macOS
+                        </h3>
+                        <ul class="sysreq-list">
+                            <li>macOS 14 Sonoma of nieuwer</li>
+                            <li>Apple Silicon of Intel processor</li>
+                            <li>4 GB RAM (8 GB aanbevolen)</li>
+                            <li>100 MB vrije schijfruimte</li>
+                            <li>Internetverbinding voor cloud-transcriptie</li>
+                        </ul>
+                    </div>
+                    <div class="sysreq-card reveal">
+                        <h3>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.9-1.801"/></svg>
+                            Windows
+                        </h3>
+                        <ul class="sysreq-list">
+                            <li>Windows 11 of nieuwer</li>
+                            <li>64-bit processor (x64 of ARM64)</li>
+                            <li>4 GB RAM (8 GB aanbevolen)</li>
+                            <li>200 MB vrije schijfruimte</li>
+                            <li>Internetverbinding voor cloud-transcriptie</li>
+                        </ul>
+                    </div>
+                    <div class="sysreq-card reveal" id="androidSysreq" style="display:none">
+                        <h3>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18c0 .55.45 1 1 1h1v3.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V19h2v3.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V19h1c.55 0 1-.45 1-1V7H6v11zM3.5 7C2.67 7 2 7.67 2 8.5v7c0 .83.67 1.5 1.5 1.5S5 16.33 5 15.5v-7C5 7.67 4.33 7 3.5 7zm17 0c-.83 0-1.5.67-1.5 1.5v7c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5v-7c0-.83-.67-1.5-1.5-1.5zm-4.97-5.84l1.3-1.3c.2-.2.2-.51 0-.71-.2-.2-.51-.2-.71 0l-1.48 1.48C13.85.55 12.95.25 12 .25s-1.85.3-2.64.88L7.88.65c-.2-.2-.51-.2-.71 0-.2.2-.2.51 0 .71l1.3 1.3C7.17 3.65 6.25 5.23 6.25 7h11.5c0-1.77-.92-3.35-2.22-4.34zM10 5H9V4h1v1zm5 0h-1V4h1v1z"/></svg>
+                            Android
+                        </h3>
+                        <ul class="sysreq-list">
+                            <li>Android 9 (Pie) of nieuwer</li>
+                            <li>ARM64 of x86_64 processor</li>
+                            <li>2 GB RAM</li>
+                            <li>50 MB vrije opslagruimte</li>
+                            <li>Internetverbinding voor cloud-transcriptie</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="install-note reveal">
+                    <h4>Installatie-instructies</h4>
+                    <p><strong>macOS:</strong> Open het DMG-bestand, sleep ThoughtVault naar de map Programma's. Bij de eerste keer openen: klik rechts op de app en kies "Open".</p>
+                    <p style="margin-top:var(--sp-8)"><strong>Windows:</strong> Voer het MSI-bestand uit en volg de installatie-wizard. De app wordt geinstalleerd in C:\Program Files\ThoughtVault.</p>
+                    <p id="androidInstallNote" style="margin-top:var(--sp-8);display:none"><strong>Android:</strong> Download het APK-bestand en open het. Sta "Installatie uit onbekende bronnen" toe wanneer gevraagd.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============ BETA / DEV ============ -->
+        <section class="section beta-section" id="betaSection" style="background:var(--bg-surface);">
+            <div class="container">
+                <div class="section-header reveal">
+                    <h2 class="section-title">Ontwikkelversie <span class="beta-badge">Beta</span></h2>
+                    <p class="beta-description">Benieuwd wat eraan komt? De ontwikkelversie draait naast de stabiele versie, zodat je nieuwe features kunt uitproberen zonder risico.</p>
+                    <div class="version-badge version-badge--orange" id="devVersionBadge">
+                        <span class="version-dot"></span>
+                        <span id="devVersionText">Versie laden...</span>
+                    </div>
+                </div>
+
+                <div class="download-cards" id="devDownloadCards">
+                    <div class="download-card" id="devMacCard" style="display:none">
+                        <svg class="download-os-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+                        <h3>macOS (Beta)</h3>
+                        <p class="download-info" id="devMacInfo">DMG installer</p>
+                        <a href="#" class="btn btn--outline btn--download" id="devMacDownload">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            Download Beta voor macOS
+                        </a>
+                    </div>
+                    <div class="download-card" id="devWinCard" style="display:none">
+                        <svg class="download-os-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.9-1.801"/></svg>
+                        <h3>Windows (Beta)</h3>
+                        <p class="download-info" id="devWinInfo">MSI installer</p>
+                        <a href="#" class="btn btn--outline btn--download" id="devWinDownload">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            Download Beta voor Windows
+                        </a>
+                    </div>
+                    <div class="download-card" id="devAndroidCard" style="display:none">
+                        <svg class="download-os-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18c0 .55.45 1 1 1h1v3.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V19h2v3.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V19h1c.55 0 1-.45 1-1V7H6v11zM3.5 7C2.67 7 2 7.67 2 8.5v7c0 .83.67 1.5 1.5 1.5S5 16.33 5 15.5v-7C5 7.67 4.33 7 3.5 7zm17 0c-.83 0-1.5.67-1.5 1.5v7c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5v-7c0-.83-.67-1.5-1.5-1.5zm-4.97-5.84l1.3-1.3c.2-.2.2-.51 0-.71-.2-.2-.51-.2-.71 0l-1.48 1.48C13.85.55 12.95.25 12 .25s-1.85.3-2.64.88L7.88.65c-.2-.2-.51-.2-.71 0-.2.2-.2.51 0 .71l1.3 1.3C7.17 3.65 6.25 5.23 6.25 7h11.5c0-1.77-.92-3.35-2.22-4.34zM10 5H9V4h1v1zm5 0h-1V4h1v1z"/></svg>
+                        <h3>Android (Beta)</h3>
+                        <p class="download-info" id="devAndroidInfo">APK installer</p>
+                        <a href="#" class="btn btn--outline btn--download" id="devAndroidDownload">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            Download Beta voor Android
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============ CTA ============ -->
+        <section class="cta-section">
+            <div class="container reveal">
+                <h2 class="section-title">Nooit meer notulen uitwerken</h2>
+                <p class="section-subtitle">Download de app, upload je eerste opname, en ervaar het verschil. Binnen vijf minuten snap je waarom je dit eerder had moeten hebben.</p>
+                <div class="btn-group">
+                    <a href="#download" class="btn btn--white btn--download">Download</a>
+                    <a href="/tstudio/login" class="btn btn--ghost-white">Inloggen</a>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="yingabar yingabar--footer" aria-hidden="true">
+            <span></span><span></span><span></span><span></span>
+        </div>
+        <div class="footer-credits" style="margin-top:var(--sp-24)">
+            <span>Design door</span>
+            <a href="https://www.yinga.nl" target="_blank" rel="noopener noreferrer" aria-label="Yinga website">
+                <img src="https://www.yinga.nl/wp-content/uploads/2023/03/logo.svg" alt="Yinga" height="20">
+            </a>
+        </div>
+    </footer>
+
+    <script>
+    (function() {
+        'use strict';
+
+        /* ========================================
+           Theme toggle
+           ======================================== */
+        const html = document.documentElement;
+        const themeToggle = document.getElementById('themeToggle');
+        const THEME_KEY = 'ts-theme';
+
+        function getPreferredTheme() {
+            const saved = localStorage.getItem(THEME_KEY);
+            if (saved) return saved;
+            return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+
+        function setTheme(theme) {
+            html.setAttribute('data-theme', theme);
+            localStorage.setItem(THEME_KEY, theme);
+        }
+
+        setTheme(getPreferredTheme());
+
+        themeToggle.addEventListener('click', () => {
+            const current = html.getAttribute('data-theme');
+            setTheme(current === 'dark' ? 'light' : 'dark');
+        });
+
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+            if (!localStorage.getItem(THEME_KEY)) {
+                setTheme(e.matches ? 'dark' : 'light');
+            }
+        });
+
+        /* ========================================
+           Mobile menu
+           ======================================== */
+        const mobileToggle = document.getElementById('mobileToggle');
+        const mobileNav = document.getElementById('mobileNav');
+        let menuOpen = false;
+
+        function openMenu() {
+            menuOpen = true;
+            mobileToggle.setAttribute('aria-expanded', 'true');
+            mobileToggle.setAttribute('aria-label', 'Menu sluiten');
+            mobileNav.classList.add('is-open');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeMenu() {
+            menuOpen = false;
+            mobileToggle.setAttribute('aria-expanded', 'false');
+            mobileToggle.setAttribute('aria-label', 'Menu openen');
+            mobileNav.classList.remove('is-open');
+            document.body.style.overflow = '';
+        }
+
+        mobileToggle.addEventListener('click', () => {
+            menuOpen ? closeMenu() : openMenu();
+        });
+
+        mobileNav.querySelectorAll('a').forEach(link => {
+            link.addEventListener('click', closeMenu);
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && menuOpen) closeMenu();
+        });
+
+        document.addEventListener('click', (e) => {
+            if (menuOpen && !mobileNav.contains(e.target) && !mobileToggle.contains(e.target)) {
+                closeMenu();
+            }
+        });
+
+        /* ========================================
+           Demo animation
+           ======================================== */
+        const demoWindow = document.getElementById('demoWindow');
+        const stages = demoWindow.querySelectorAll('.demo-stage');
+        const dots = demoWindow.querySelectorAll('.demo-dot-indicator');
+        const stageDurations = [3000, 4000, 3500, 3000];
+        let currentStage = 0;
+        let demoTimer = null;
+        let demoRunning = false;
+        const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        // Transcript typing data
+        const transcriptTexts = [
+            'Goed, laten we beginnen met de Q4 planning...',
+            'Ik heb de budgetcijfers hier, zal ik die doorlopen?',
+            'Ja graag, en dan de deadline voor de productlancering.',
+            'Die staat gepland voor 15 december, klopt dat nog?'
+        ];
+
+        // Build waveform bars
+        const waveformEl = document.getElementById('demoWaveform');
+        const barCount = 32;
+        for (let i = 0; i < barCount; i++) {
+            const bar = document.createElement('div');
+            bar.className = 'demo-wave-bar';
+            bar.style.height = '8px';
+            waveformEl.appendChild(bar);
+        }
+        const scanner = document.createElement('div');
+        scanner.className = 'demo-scanner';
+        waveformEl.appendChild(scanner);
+        const waveBars = waveformEl.querySelectorAll('.demo-wave-bar');
+
+        function resetAllStages() {
+            // Reset upload
+            const uploadZone = document.getElementById('demoUploadZone');
+            const uploadFile = document.getElementById('demoUploadFile');
+            uploadZone.classList.remove('is-active');
+            uploadFile.classList.remove('is-visible');
+
+            // Reset waveform
+            waveBars.forEach(b => b.style.height = '8px');
+            scanner.style.opacity = '0';
+            scanner.style.left = '0';
+
+            // Reset transcript
+            const transcriptLines = document.querySelectorAll('.demo-transcript-line');
+            transcriptLines.forEach(line => {
+                line.classList.remove('is-visible');
+                line.querySelector('.demo-transcript-text').textContent = '';
+            });
+
+            // Reset notes
+            const notesTitle = document.getElementById('demoNotesTitle');
+            notesTitle.classList.remove('is-visible');
+            document.querySelectorAll('.demo-note-item').forEach(item => {
+                item.classList.remove('is-visible');
+                item.querySelector('.demo-note-check').classList.remove('is-visible');
+            });
+        }
+
+        function activateStage(index) {
+            stages.forEach((s, i) => {
+                s.classList.toggle('is-active', i === index);
+            });
+            dots.forEach((d, i) => {
+                d.classList.toggle('is-active', i === index);
+            });
+            currentStage = index;
+
+            if (prefersReducedMotion) return;
+
+            // Stage-specific animations
+            if (index === 0) animateUpload();
+            if (index === 1) animateProcessing();
+            if (index === 2) animateTranscript();
+            if (index === 3) animateNotes();
+        }
+
+        function animateUpload() {
+            const uploadZone = document.getElementById('demoUploadZone');
+            const uploadFile = document.getElementById('demoUploadFile');
+            setTimeout(() => uploadZone.classList.add('is-active'), 400);
+            setTimeout(() => uploadFile.classList.add('is-visible'), 1000);
+        }
+
+        let waveAnimFrame = null;
+        function animateProcessing() {
+            scanner.style.opacity = '1';
+            scanner.style.left = '0';
+            scanner.style.transition = 'left 3.5s linear';
+            requestAnimationFrame(() => {
+                scanner.style.left = '100%';
+            });
+
+            let frame = 0;
+            function animateWave() {
+                waveBars.forEach((bar, i) => {
+                    const h = 8 + Math.abs(Math.sin((frame + i * 8) * 0.08)) * 60;
+                    bar.style.height = h + 'px';
+                });
+                frame++;
+                waveAnimFrame = requestAnimationFrame(animateWave);
+            }
+            animateWave();
+
+            // Clean up on stage change
+            setTimeout(() => {
+                if (waveAnimFrame) cancelAnimationFrame(waveAnimFrame);
+            }, stageDurations[1] - 100);
+        }
+
+        function animateTranscript() {
+            const lines = document.querySelectorAll('.demo-transcript-line');
+            lines.forEach((line, i) => {
+                const delay = parseInt(line.dataset.delay) || 0;
+                const textEl = line.querySelector('.demo-transcript-text');
+                const fullText = transcriptTexts[i] || '';
+
+                setTimeout(() => {
+                    line.classList.add('is-visible');
+                    typeText(textEl, fullText, 25);
+                }, delay);
+            });
+        }
+
+        function typeText(el, text, speed) {
+            let idx = 0;
+            const cursor = document.createElement('span');
+            cursor.className = 'demo-transcript-cursor';
+            el.textContent = '';
+            el.appendChild(cursor);
+
+            function tick() {
+                if (idx < text.length) {
+                    el.insertBefore(document.createTextNode(text[idx]), cursor);
+                    idx++;
+                    setTimeout(tick, speed + Math.random() * 20);
+                } else {
+                    setTimeout(() => { if (cursor.parentNode) cursor.remove(); }, 600);
+                }
+            }
+            tick();
+        }
+
+        function animateNotes() {
+            const title = document.getElementById('demoNotesTitle');
+            setTimeout(() => title.classList.add('is-visible'), 200);
+
+            document.querySelectorAll('.demo-note-item').forEach(item => {
+                const delay = parseInt(item.dataset.delay) || 0;
+                setTimeout(() => {
+                    item.classList.add('is-visible');
+                    setTimeout(() => {
+                        item.querySelector('.demo-note-check').classList.add('is-visible');
+                    }, 200);
+                }, delay);
+            });
+        }
+
+        function nextStage() {
+            resetAllStages();
+            const next = (currentStage + 1) % 4;
+            activateStage(next);
+            demoTimer = setTimeout(nextStage, stageDurations[next]);
+        }
+
+        function startDemo() {
+            if (demoRunning) return;
+            demoRunning = true;
+            resetAllStages();
+            activateStage(0);
+            demoTimer = setTimeout(nextStage, stageDurations[0]);
+        }
+
+        function stopDemo() {
+            demoRunning = false;
+            clearTimeout(demoTimer);
+            if (waveAnimFrame) cancelAnimationFrame(waveAnimFrame);
+        }
+
+        // IntersectionObserver for demo
+        const demoObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    startDemo();
+                } else {
+                    stopDemo();
+                }
+            });
+        }, { threshold: 0.3 });
+
+        demoObserver.observe(demoWindow);
+
+        // Pause on tab hidden
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                stopDemo();
+            } else {
+                // Re-check if demo is in view
+                const rect = demoWindow.getBoundingClientRect();
+                const inView = rect.top < window.innerHeight && rect.bottom > 0;
+                if (inView) startDemo();
+            }
+        });
+
+        /* ========================================
+           Scroll reveal
+           ======================================== */
+        if (!prefersReducedMotion) {
+            const revealObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('is-revealed');
+                        revealObserver.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+            document.querySelectorAll('.reveal').forEach(el => {
+                revealObserver.observe(el);
+            });
+        } else {
+            document.querySelectorAll('.reveal').forEach(el => el.classList.add('is-revealed'));
+        }
+
+        /* ========================================
+           Release data + OS detection
+           ======================================== */
+        async function loadReleases() {
+            try {
+                const res = await fetch('/tstudio/download/releases.json');
+                if (!res.ok) throw new Error('Failed to fetch releases');
+                const data = await res.json();
+
+                // Stable version
+                const version = data.latest_version;
+                document.getElementById('versionText').textContent = 'Versie ' + version;
+
+                // macOS stable
+                if (data.macos) {
+                    const macDl = document.getElementById('macDownload');
+                    macDl.href = data.macos.url;
+                    macDl.style.pointerEvents = '';
+                    macDl.style.opacity = '';
+                    document.getElementById('macInfo').textContent = data.macos.filename;
+                }
+
+                // Windows stable
+                const winArch = await detectWindowsArch();
+                const winData = (winArch === 'arm64' && data.windows_arm64) ? data.windows_arm64 : data.windows_x64;
+                if (winData) {
+                    const winDl = document.getElementById('winDownload');
+                    winDl.href = winData.url;
+                    winDl.style.pointerEvents = '';
+                    winDl.style.opacity = '';
+                    document.getElementById('winInfo').textContent = winData.filename;
+                }
+
+                // Alt arch link for Windows
+                if (winArch === 'arm64' && data.windows_x64) {
+                    showAltLink(data.windows_x64, 'x64');
+                } else if (winArch !== 'arm64' && data.windows_arm64) {
+                    showAltLink(data.windows_arm64, 'ARM64');
+                }
+
+                // Android stable
+                if (data.android) {
+                    const androidCard = document.getElementById('androidCard');
+                    androidCard.style.display = '';
+                    const androidDl = document.getElementById('androidDownload');
+                    androidDl.href = data.android.url;
+                    androidDl.style.pointerEvents = '';
+                    androidDl.style.opacity = '';
+                    document.getElementById('androidInfo').textContent = data.android.filename;
+                    document.getElementById('androidSysreq').style.display = '';
+                    document.getElementById('androidInstallNote').style.display = '';
+                }
+
+                // Dev/Beta
+                if (data.dev_latest_version && (data.dev_macos || data.dev_windows_x64 || data.dev_android)) {
+                    const betaSection = document.getElementById('betaSection');
+                    betaSection.classList.add('is-visible');
+                    document.getElementById('devVersionText').textContent = 'Versie ' + data.dev_latest_version;
+
+                    if (data.dev_macos) {
+                        const card = document.getElementById('devMacCard');
+                        card.style.display = '';
+                        document.getElementById('devMacDownload').href = data.dev_macos.url;
+                        document.getElementById('devMacInfo').textContent = data.dev_macos.filename;
+                    }
+
+                    if (data.dev_windows_x64) {
+                        const card = document.getElementById('devWinCard');
+                        card.style.display = '';
+                        document.getElementById('devWinDownload').href = data.dev_windows_x64.url;
+                        document.getElementById('devWinInfo').textContent = data.dev_windows_x64.filename;
+                    }
+
+                    if (data.dev_android) {
+                        const card = document.getElementById('devAndroidCard');
+                        card.style.display = '';
+                        document.getElementById('devAndroidDownload').href = data.dev_android.url;
+                        document.getElementById('devAndroidInfo').textContent = data.dev_android.filename;
+                    }
+                }
+
+                // OS detection for recommended badge
+                detectOS();
+
+            } catch (err) {
+                console.warn('Could not load release info:', err);
+                document.getElementById('versionText').textContent = 'Versie niet beschikbaar';
+            }
+        }
+
+        async function detectWindowsArch() {
+            try {
+                if (navigator.userAgentData && navigator.userAgentData.getHighEntropyValues) {
+                    const uaData = await navigator.userAgentData.getHighEntropyValues(['architecture']);
+                    if (uaData.architecture === 'arm') return 'arm64';
+                }
+            } catch (e) { /* fallback */ }
+
+            const ua = navigator.userAgent;
+            if (/ARM64|Aarch64/i.test(ua)) return 'arm64';
+            return 'x64';
+        }
+
+        function showAltLink(data, archLabel) {
+            const link = document.getElementById('winAltLink');
+            link.href = data.url;
+            link.textContent = 'Download ook beschikbaar voor ' + archLabel;
+            link.style.display = '';
+        }
+
+        function detectOS() {
+            const ua = navigator.userAgent;
+            const isMac = /Macintosh|Mac OS X/i.test(ua);
+            const isWin = /Windows/i.test(ua);
+            const isAndroid = /Android/i.test(ua);
+
+            if (isAndroid) {
+                const androidCard = document.getElementById('androidCard');
+                if (androidCard.style.display !== 'none') {
+                    document.getElementById('androidBadge').style.display = '';
+                    androidCard.classList.add('download-card--recommended');
+                    // Reorder: Android first
+                    const cards = document.getElementById('downloadCards');
+                    cards.insertBefore(androidCard, cards.firstChild);
+                    // Make Android button primary
+                    document.getElementById('androidDownload').classList.remove('btn--outline');
+                    document.getElementById('androidDownload').classList.add('btn--primary');
+                    document.getElementById('macDownload').classList.remove('btn--primary');
+                    document.getElementById('macDownload').classList.add('btn--outline');
+                }
+            } else if (isMac) {
+                document.getElementById('macBadge').style.display = '';
+                document.getElementById('macCard').classList.add('download-card--recommended');
+            } else if (isWin) {
+                document.getElementById('winBadge').style.display = '';
+                document.getElementById('winCard').classList.add('download-card--recommended');
+                // Reorder: Windows first
+                const cards = document.getElementById('downloadCards');
+                const winCard = document.getElementById('winCard');
+                cards.insertBefore(winCard, cards.firstChild);
+                // Make Windows button primary
+                document.getElementById('winDownload').classList.remove('btn--outline');
+                document.getElementById('winDownload').classList.add('btn--primary');
+                document.getElementById('macDownload').classList.remove('btn--primary');
+                document.getElementById('macDownload').classList.add('btn--outline');
+            }
+        }
+
+        loadReleases();
+
+        /* ========================================
+           Smooth scroll for hash links
+           ======================================== */
+        document.querySelectorAll('a[href^="#"]').forEach(link => {
+            link.addEventListener('click', (e) => {
+                const target = document.querySelector(link.getAttribute('href'));
+                if (target) {
+                    e.preventDefault();
+                    target.scrollIntoView({ behavior: 'smooth' });
+                    // Update URL without scroll jump
+                    history.pushState(null, '', link.getAttribute('href'));
+                }
+            });
+        });
+
+    })();
+    </script>
+
+</body>
+</html>

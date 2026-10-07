@@ -2,6 +2,7 @@ import { useSettingsStore } from "../stores/settingsStore";
 import { enrichProfile } from "./profileTemplates";
 import { loadCredential } from "./tauriCommands";
 import { invoke } from "@tauri-apps/api/core";
+import { DEFAULT_SETTINGS } from "../types";
 import type { Profile, NotulenProvider } from "../types";
 
 interface LLMConfig {
@@ -30,7 +31,7 @@ function getConfig(): LLMConfig {
     ollamaModel: settings.ollama_model || "llama3.2",
     lmStudioUrl: settings.lm_studio_url || "http://localhost:1234",
     lmStudioModel: settings.lm_studio_model || "local-model",
-    openAIModel: settings.openai_model || "gpt-5-mini",
+    openAIModel: settings.openai_model || DEFAULT_SETTINGS.openai_model,
     anthropicModel: settings.anthropic_model || "claude-sonnet-5-5",
   };
 }

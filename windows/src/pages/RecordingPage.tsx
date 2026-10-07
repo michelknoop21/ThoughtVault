@@ -309,6 +309,9 @@ export function RecordingPage() {
       useRecordingStore.getState().reset();
       await closeWidgetWindow();
     } catch (err) {
+      // The phase is already idle: drop the session and widget so the UI matches.
+      useRecordingStore.getState().reset();
+      closeWidgetWindow().catch((e) => console.error("[Recording] Widget close failed:", e));
       setError(err instanceof Error ? err.message : "Stoppen mislukt");
     }
   }

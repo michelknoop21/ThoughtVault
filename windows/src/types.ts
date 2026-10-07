@@ -377,7 +377,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   ollama_model: "llama3.2",
   lm_studio_url: "http://localhost:1234",
   lm_studio_model: "local-model",
-  openai_model: "gpt-5-mini",
+  openai_model: "gpt-5.6-terra",
   anthropic_model: "claude-sonnet-5-5",
   default_profile_id: "standaard",
   default_recording_mode: "combined",

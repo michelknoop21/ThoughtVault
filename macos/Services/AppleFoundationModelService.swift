@@ -70,6 +70,7 @@ final class AppleFoundationModelService: LLMService, @unchecked Sendable {
 
         // The character budget is an estimate; when the model still reports a
         // context overflow, compress once more and retry within the same pass cap.
+        var emitted = false
         while true {
             let userContent = buildNotuleUserContent(
                 notulePrompt: notulePrompt,
@@ -77,10 +78,11 @@ final class AppleFoundationModelService: LLMService, @unchecked Sendable {
                 outputTemplate: Self.compactTemplate
             )
             do {
-                return try await streamNotule(instructions: instructions, prompt: userContent, onProgress: onProgress)
+                return try await streamNotule(instructions: instructions, prompt: userContent, emitted: &emitted, onProgress: onProgress)
             } catch {
                 guard let overflow = Self.contextOverflow(error) else { throw error }
-                guard passes < 3 else {
+                // onProgress is delta-based: once text went out, a retry would repeat it.
+                guard passes < 3, !emitted else {
                     let detail = overflow.tokens.map { " (\($0) van \(overflow.limit ?? Self.contextTokens) tokens)" } ?? ""
                     throw LLMError.generationFailed("Transcriptie te lang voor Apple Intelligence\(detail). Kies een andere notuleaanbieder.")
                 }
@@ -94,6 +96,7 @@ final class AppleFoundationModelService: LLMService, @unchecked Sendable {
     private func streamNotule(
         instructions: String,
         prompt: String,
+        emitted: inout Bool,
         onProgress: @Sendable (String) -> Void
     ) async throws -> String {
         let session = LanguageModelSession(instructions: instructions)
@@ -106,6 +109,7 @@ final class AppleFoundationModelService: LLMService, @unchecked Sendable {
             let newChunk = String(fullText.dropFirst(lastReportedLength))
             if !newChunk.isEmpty {
                 onProgress(newChunk)
+                emitted = true
                 lastReportedLength = fullText.count
             }
         }

@@ -34,7 +34,7 @@ export function WaveformVisualizer({ levelsRef, isActive, height = 240, strands 
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext("2d");
     if (!canvas || !ctx) return;
-    let width = 0, frame = 0, last = performance.now(), time = 0, travel = 0;
+    let width = 0, frame = 0, last = performance.now(), time = 0, travel = 0, idleDrawn = false;
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
     const compact = height < 64;
     const lines = compact ? [LINES[1], LINES[2], LINES[4], LINES[6]] : LINES;
@@ -45,11 +45,18 @@ export function WaveformVisualizer({ levelsRef, isActive, height = 240, strands 
       canvas.width = Math.round(width * dpr);
       canvas.height = Math.round(height * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      idleDrawn = false;
     };
     const observer = new ResizeObserver(resize);
     if (canvas.parentElement) observer.observe(canvas.parentElement);
     resize();
     const draw = (now: number) => {
+      // Hidden window, or an inactive wave that is already on screen: nothing changes.
+      if (document.hidden || (!activeRef.current && idleDrawn)) {
+        last = now;
+        frame = requestAnimationFrame(draw);
+        return;
+      }
       const dt = Math.max(0, Math.min(.064, (now - last) / 1000));
       last = now;
       const raw = activeRef.current ? levelsRef.current.slice(-HISTORY_SIZE) : [];
@@ -111,6 +118,7 @@ export function WaveformVisualizer({ levelsRef, isActive, height = 240, strands 
         ctx.stroke(path);
       });
       ctx.globalAlpha = 1;
+      idleDrawn = !activeRef.current;
       frame = requestAnimationFrame(draw);
     };
     frame = requestAnimationFrame(draw);

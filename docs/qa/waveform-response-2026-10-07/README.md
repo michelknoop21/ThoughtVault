@@ -14,6 +14,6 @@ Validation:
 - Real SwiftUI Canvas snapshots exported and visually reviewed: `soft.png`, `normal.png`, `loud.png`, `widget-loud.png`. The compact full-scale rendering remains inside its 32-point surface.
 - Geometry test covers flat silence, visible normal speech, immediate first-sample feedback, reduced motion, inactive baseline and full-scale compact bounds.
 - Standalone Rust test of the actual combined-level helper passes (system audio with silent microphone, microphone maximum, stale-source expiry).
-- Windows candidate CI: https://github.com/michelknoop21/ThoughtVault/actions/runs/37654178569 (source `703e4ffa84338679433120077d0c21f5b499b790`, `publish=false`). Result pending at initial write.
+- Windows candidate CI: https://github.com/michelknoop21/ThoughtVault/actions/runs/37654178569 (source `703e4ffa84338679433120077d0c21f5b499b790`, `publish=false`). Succeeded: frontend/native checks, MSI build and install/upgrade/startup smoke checks pass. Server publication was skipped.
 
-Live microphone/WASAPI capture responsiveness has not been re-tested on hardware. The installed app and published updater feed are unchanged by this candidate build.
+Live microphone/WASAPI capture responsiveness has not been re-tested on hardware. The local installed app and published updater feed are unchanged by this candidate build. CI artifacts are retained under `build/windows-waveform-candidate-20261007/` (ignored).

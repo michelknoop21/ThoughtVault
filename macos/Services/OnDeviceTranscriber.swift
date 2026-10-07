@@ -24,7 +24,11 @@ final class OnDeviceTranscriber {
     // MARK: - Private
 
     private let speechRecognizer: SFSpeechRecognizer?
+    /// File transcription and live recognition each own their task: stopping one must never cancel the other.
     private var recognitionTask: SFSpeechRecognitionTask?
+    private var liveRecognitionTask: SFSpeechRecognitionTask?
+    /// Bumped on every start and stop; callbacks of a replaced session compare and drop their results.
+    private var liveSession = 0
     private var audioEngine: AVAudioEngine?
     private var liveRequest: SFSpeechAudioBufferRecognitionRequest?
 
@@ -181,7 +185,10 @@ final class OnDeviceTranscriber {
 
     /// Starts live transcription from the microphone during active recording.
     /// Calls `onPartialResult` with each intermediate result as speech is recognized.
-    func startLiveTranscription(onPartialResult: @Sendable @escaping (String) -> Void) async throws {
+    func startLiveTranscription(
+        onPartialResult: @Sendable @escaping (String) -> Void,
+        onError: (@MainActor @Sendable (String) -> Void)? = nil
+    ) async throws {
         guard let recognizer = speechRecognizer, recognizer.isAvailable else {
             throw TranscriberError.recognizerUnavailable
         }
@@ -217,27 +224,39 @@ final class OnDeviceTranscriber {
         self.audioEngine = engine
         self.liveRequest = request
 
-        isTranscribing = true
+        liveSession += 1
+        let session = liveSession
         logger.info("OnDeviceTranscriber: live transcription started")
 
-        recognitionTask = recognizer.recognitionTask(with: request) { [weak self] result, error in
+        liveRecognitionTask = recognizer.recognitionTask(with: request) { [weak self] result, error in
             guard self != nil else { return }
 
             if let error = error {
                 let nsError = error as NSError
-                if nsError.code != 301 {
-                    logger.error("OnDeviceTranscriber: live recognition error — \(error.localizedDescription)")
+                guard !Self.isBenignLiveError(nsError) else { return }
+                logger.error("OnDeviceTranscriber: live recognition error — \(error.localizedDescription)")
+                let message = error.localizedDescription
+                Task { @MainActor [weak self] in
+                    guard self?.liveSession == session else { return }
+                    onError?(message)
                 }
                 return
             }
 
             if let result = result {
                 let text = result.bestTranscription.formattedString
-                Task { @MainActor in
+                Task { @MainActor [weak self] in
+                    guard self?.liveSession == session else { return }
                     onPartialResult(text)
                 }
             }
         }
+    }
+
+    /// Terminal results that are not failures: cancellation (301, 216) and "no speech
+    /// detected" (1110, 203), e.g. a silent start. They must not show up as errors.
+    nonisolated static func isBenignLiveError(_ error: NSError) -> Bool {
+        [203, 216, 301, 1110].contains(error.code)
     }
 
     /// Stops the active live transcription session and cleans up resources.
@@ -249,11 +268,38 @@ final class OnDeviceTranscriber {
         liveRequest?.endAudio()
         liveRequest = nil
 
-        recognitionTask?.cancel()
-        recognitionTask = nil
+        liveRecognitionTask?.cancel()
+        liveRecognitionTask = nil
+        liveSession += 1
 
-        isTranscribing = false
         logger.info("OnDeviceTranscriber: live transcription stopped")
+    }
+}
+
+// MARK: - LiveTranscriptionPolicy
+
+/// When live recognition may run and what the recording screen says when it does not.
+enum LiveTranscriptionPolicy {
+
+    /// Live recognition taps the microphone with its own AVAudioEngine next to the
+    /// AVAudioRecorder, in microphone and combined mode alike. System-audio-only
+    /// recordings have no microphone to listen to.
+    static func supports(mode: RecordingMode) -> Bool {
+        #if os(macOS)
+        return mode != .systemAudio
+        #else
+        return true
+        #endif
+    }
+
+    /// Why no live text appears, or nil when live recognition is (or is about to be)
+    /// running and "Ik luister..." is the honest answer.
+    static func statusText(preferred: Bool, available: Bool, mode: RecordingMode, error: String?) -> String? {
+        guard preferred else { return "Opname loopt (live tekst staat uit)" }
+        guard available else { return "Opname loopt (live tekst niet beschikbaar)" }
+        guard supports(mode: mode) else { return "Opname loopt (geen live tekst bij alleen systeemgeluid)" }
+        if let error { return "Live tekst gestopt: \(error)" }
+        return nil
     }
 }
 

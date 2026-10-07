@@ -23,3 +23,6 @@ be proved by this browser harness. MSI installation/launch/data preservation is 
 separate Windows CI check. The attempted current Mac UI capture timed out; Mac layout
 comparison uses the current SwiftUI source and existing approved visual references.
 No claim of pixel-identical native rendering or real-device audio verification.
+
+Validation: frontend production build and all 51 Vitest tests passed.
+Keyboard regression covers note activation versus the nested More options button.

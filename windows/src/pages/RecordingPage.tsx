@@ -268,7 +268,7 @@ export function RecordingPage() {
   const duration = `${Math.floor(elapsed / 60).toString().padStart(2, "0")}:${(elapsed % 60).toString().padStart(2, "0")}`;
   const profileName = profiles.find(p => p.id === selectedProfileId)?.name ?? "Geen profiel";
   const status = phase === "recording" ? "OPNAME ACTIEF" : phase === "paused" ? "OPNAME GEPAUZEERD"
-    : phase === "preparing" ? "OPNAME STARTEN" : phase === "stopping" ? "OPNAME STOPPEN" : "KLAAR OM OP TE NEMEN";
+    : phase === "uploading" ? "OPNAME VERWERKEN" : phase === "preparing" ? "OPNAME STARTEN" : phase === "stopping" ? "OPNAME STOPPEN" : "KLAAR OM OP TE NEMEN";
 
   return <div className="recording-studio">
     <section className="studio-workspace" aria-label="Opnamestudio">

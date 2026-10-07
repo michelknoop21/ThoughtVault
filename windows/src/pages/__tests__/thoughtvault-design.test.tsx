@@ -8,6 +8,7 @@ import { useRecordingStore } from "../../stores/recordingStore";
 import { useLocalTranscriptsStore } from "../../stores/localTranscriptsStore";
 import { HomePage } from "../HomePage";
 import { SettingsPage } from "../SettingsPage";
+import { TranscriptsList } from "../../components/transcripts/TranscriptsList";
 import { Sidebar } from "../../components/layout/Sidebar";
 
 vi.mock("../../hooks/useAudioLevel", () => ({useAudioLevel: () => 0, useAudioLevelsRef: () => ({current:[]})}));
@@ -55,6 +56,21 @@ describe("current ThoughtVault interface", () => {
       await act(async () => { mounted.unmount(); });
     }
     useLocalTranscriptsStore.setState({items:saved});
+  });
+
+  it("opens a note by keyboard without opening it when its menu receives Enter", async () => {
+    const container = document.createElement("div");
+    const mounted = createRoot(container);
+    const select = vi.fn();
+    const noop = () => {};
+    await act(async () => { mounted.render(<TranscriptsList transcripts={[{id:"local-review",title:"Bestaande notule",duration_seconds:120,tags:[],created_at:new Date().toISOString(),updated_at:new Date().toISOString()}]} selectedId={null} searchQuery="" selectedTags={[]} isLoading={false} onSelect={select} onSearchChange={noop} onTagToggle={noop} onRefresh={noop} onContextMenu={noop} onBulkDelete={noop} />); });
+    const row = container.querySelector('.tl-item')!;
+    await act(async () => { row.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true})); });
+    expect(select).toHaveBeenCalledWith("local-review");
+    select.mockClear();
+    await act(async () => { row.querySelector('button')!.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true})); });
+    expect(select).not.toHaveBeenCalled();
+    await act(async () => { mounted.unmount(); });
   });
 
   it("renders the current Home composition and keeps its actions reachable", () => {

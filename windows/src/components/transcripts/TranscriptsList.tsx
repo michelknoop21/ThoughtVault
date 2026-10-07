@@ -262,7 +262,7 @@ export function TranscriptsList({
                   className={`tl-item${selectedId === t.id ? " active" : ""}`}
                   role="button"
                   tabIndex={0}
-                  onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); bulkMode ? toggleBulk(t.id) : onSelect(t.id); } }}
+                  onKeyDown={e => { if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); bulkMode ? toggleBulk(t.id) : onSelect(t.id); } }}
                   onClick={() => bulkMode ? toggleBulk(t.id) : onSelect(t.id)}
                   onContextMenu={(e) => onContextMenu(e, t)}
                 >

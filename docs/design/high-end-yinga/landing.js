@@ -46,7 +46,7 @@ const profiles={
  idea:{title:'Een idee om verder te brengen.',intro:'Begin klein met een pilot en werk het idee samen uit. De eerste concepten maken het concreet.',items:['Het idee: volgende maand een pilot starten.','Uitwerken: planning en eerste concepten.','Volgende stap: samen bespreken op vrijdag.']}
 };
 function chooseProfile(key){const profile=profiles[key];$('#profile-title').textContent=profile.title;$('#profile-intro').textContent=profile.intro;$('#profile-output').innerHTML=profile.items.map(item=>`<div>${icon('check')}<span>${item}</span></div>`).join('');$$('[data-profile]').forEach(button=>button.setAttribute('aria-pressed',button.dataset.profile===key));animate($('.result-paper'));}
-$$('[data-profile]').forEach(button=>button.addEventListener('click',()=>chooseProfile(button.dataset.profile)));chooseProfile('idea');
+$$('[data-profile]').forEach(button=>button.addEventListener('click',()=>chooseProfile(button.dataset.profile)));chooseProfile('meeting');
 const modes={local:['Dicht bij je eigen gegevens.','Met lokale transcriptie én lokale AI blijft de verwerking op je eigen computer.'],cloud:['Laat de cloud voor je werken.','Audio en transcript worden naar de gekozen server of provider gestuurd. Je volgt de voortgang in de app.']};
 $$('[data-mode]').forEach(button=>button.addEventListener('click',()=>{const [title,copy]=modes[button.dataset.mode];$('#mode-copy').innerHTML=`<h3>${title}</h3><p>${copy}</p>`;$$('[data-mode]').forEach(other=>other.setAttribute('aria-pressed',other===button));animate($('#mode-copy'));}));
 
@@ -69,8 +69,15 @@ reducedMotion.addEventListener('change',()=>{userPaused=true;elapsed=0;showStep(
 const toggle=$('.menu-toggle'),menu=$('#mobile-menu');
 function setMenu(open){toggle.setAttribute('aria-expanded',String(open));toggle.setAttribute('aria-label',open?'Menu sluiten':'Menu openen');menu.classList.toggle('open',open);menu.inert=!open;document.body.style.overflow=open?'hidden':'';}
 toggle.addEventListener('click',()=>setMenu(toggle.getAttribute('aria-expanded')!=='true'));menu.querySelectorAll('a').forEach(link=>link.addEventListener('click',()=>setMenu(false)));$('.nav-shell .brand').addEventListener('click',()=>setMenu(false));
-document.addEventListener('keydown',event=>{if(event.key==='Escape')setMenu(false);if(event.key==='Tab'&&toggle.getAttribute('aria-expanded')==='true'){const links=[toggle,...menu.querySelectorAll('a')],first=links[0],last=links.at(-1);if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus();}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}}});
+document.addEventListener('keydown',event=>{if(event.key==='Escape'&&toggle.getAttribute('aria-expanded')==='true'){setMenu(false);toggle.focus();}if(event.key==='Tab'&&toggle.getAttribute('aria-expanded')==='true'){const links=[toggle,...menu.querySelectorAll('a')],first=links[0],last=links.at(-1);if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus();}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}}});
 matchMedia('(min-width:768px)').addEventListener('change',event=>{if(event.matches)setMenu(false);});
+// Keep the interactive result ahead of the process explanation on smaller screens.
+const mobileLayout=matchMedia('(max-width:767px)');
+const placeDemo=()=>{(mobileLayout.matches?$('#notulen'):$('.hero-grid')).append(demo);};
+mobileLayout.addEventListener('change',placeDemo);placeDemo();
+const header=$('.nav-shell');
+const syncHeader=()=>header.classList.toggle('compact',window.scrollY>40);
+window.addEventListener('scroll',syncHeader,{passive:true});syncHeader();
 const dialog=$('#image-dialog');
 $$('[data-image]').forEach(button=>button.addEventListener('click',()=>{$('#expanded-image').src=button.dataset.image;$('#expanded-image').alt=button.dataset.imageTitle;$('#image-title').textContent=button.dataset.imageTitle;dialog.showModal();}));dialog.querySelector('button').addEventListener('click',()=>dialog.close());
 if(!reducedMotion.matches){document.documentElement.classList.add('js');const observer=new IntersectionObserver(entries=>entries.forEach(entry=>{if(entry.isIntersecting){entry.target.classList.add('visible');observer.unobserve(entry.target);}}),{threshold:.08});$$('.reveal').forEach(element=>observer.observe(element));}

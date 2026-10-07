@@ -26,3 +26,16 @@ No claim of pixel-identical native rendering or real-device audio verification.
 
 Validation: frontend production build and all 51 Vitest tests passed.
 Keyboard regression covers note activation versus the nested More options button.
+
+## Published Windows verification
+
+- Version: 1.0.259. Application source: a93ee6ce270bf3abb24c475072cd58f7c8464d7f.
+- GitHub Actions run: https://github.com/michelknoop21/ThoughtVault/actions/runs/37650954043, success.
+- Windows: 51 frontend tests, 19 Rust tests, release MSI build passed.
+- MSI upgrade, renamed executable, two app starts and saved-note preservation passed.
+- Live updater and private download listing report Windows 1.0.259.
+- Live installer returned HTTP 200 with noindex, nofollow, noarchive, nosnippet.
+- Downloaded live MSI equals retained CI artifact, SHA256:
+  3f853b665ff39d4075a00650a32dd04ee64aebca341b4cfe934775f661c1ea15.
+- Live updater signature equals retained CI signature.
+- This confirms build, installation and publication; it does not establish real-device recording or cloud-provider operation.

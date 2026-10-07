@@ -36,7 +36,7 @@ export function AIConnections() {
     <div className="flex-col gap-10" style={{ padding: "12px 14px" }}>
       <p className="settings-desc">Optioneel. Je inhoud blijft op dit apparaat en wordt alleen op verzoek opgehaald. Alleen bereikbaar op deze pc, zonder account. Gebruik een MCP-client met lokale HTTP-ondersteuning en houd ThoughtVault geopend.</p>
       <button className="btn btn-secondary btn-sm" style={{ alignSelf: "flex-start" }} disabled={busy || !connection && scopes.length === 0}
-        onClick={() => void (connection ? disconnectAIConnection() : pairAIConnection(scopes))}>
+        onClick={() => void (connection ? disconnectAIConnection() : pairAIConnection(scopes)).catch(() => {})}>
         {busy ? "Even wachten…" : connection ? "Ontkoppelen" : "Lokale MCP inschakelen"}
       </button>
       {connection && <button className="btn btn-secondary btn-sm" onClick={() => void navigator.clipboard.writeText(JSON.stringify({ url: "http://127.0.0.1:11219/mcp", headers: { Authorization: `Bearer ${connection.credential}` } }, null, 2))}>Kopieer MCP-configuratie</button>}

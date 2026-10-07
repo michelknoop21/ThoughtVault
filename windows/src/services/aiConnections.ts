@@ -36,12 +36,16 @@ export async function updateAIPermissions(scopes: AIScope[]) {
     const updated = { ...connection, scopes };
     await storeCredential(KEY, JSON.stringify(updated));
     await invoke("local_mcp_start", { token: connection.credential, scopes });
-    useAIConnection.setState({ connection: updated });
+    useAIConnection.setState({ connection: updated, status: "Lokale MCP actief op http://127.0.0.1:11219/mcp" });
+  } catch (error) {
+    useAIConnection.setState({ status: "MCP is gestopt. Rechten opslaan of opnieuw starten is mislukt; controleer de sleutelopslag en poort vóór herstart." });
+    throw error;
   } finally { useAIConnection.setState({ busy: false }); }
 }
 export async function disconnectAIConnection() {
   useAIConnection.setState({ connection: null, busy: true });
   try { await invoke("local_mcp_stop"); await storeCredential(KEY, "null"); await deleteCredential(KEY); useAIConnection.setState({ status: "Lokale MCP uitgeschakeld" }); }
+  catch (error) { useAIConnection.setState({ status: "MCP is gestopt, maar uitschakelen opslaan is mislukt. Controleer de sleutelopslag vóór herstart." }); throw error; }
   finally { useAIConnection.setState({ busy: false }); }
 }
 export function commandAllowed(command: AICommand, connection: DeviceConnection): boolean {

@@ -92,7 +92,7 @@ Uitvoering in `/tmp/thoughtvault-brand-windows`, gebaseerd op de daadwerkelijk g
 
 | Bevinding | Herstel | Bewijs / resterende controle |
 | --- | --- | --- |
-| Ontbrekende MSVCP140.dll | Rust/CMake configuratie voor statische CRT; CI controleert PE-afhankelijkheden. Optionele officiële runtime-installer voor bestaande installaties. | Native Windows CI en installatiecontrole vereist; Mac kan dit niet bewijzen. |
+| Ontbrekende MSVCP140.dll | Rust/CMake configuratie voor statische CRT; CI controleert PE-afhankelijkheden. Optionele officiële runtime-installer voor bestaande installaties. | Eerste private CI-kandidaat: PE toont geen losse VC++ runtime; upgrade, twee starts en behoud van opgeslagen notulen geslaagd. Laatste bronref wordt opnieuw gebouwd. |
 | Letterlijke b-tags | Gedeelde veilige tekstnormalisatie bij transcriptie en legacy-inlezen. | Regressietest; overige tekst blijft inert, geen HTML-uitvoering. |
 | Decimale duur | Eén formatter met gehele seconden en bescherming tegen ongeldige waarden. | Regressietest. |
 | Engelse providerfouten | Nederlandse herstelmeldingen voor authenticatie, limiet en verbinding; transcript behouden. | Tests, inclusief hergebruik van bestaande transcriptie bij opnieuw proberen. |
@@ -110,8 +110,10 @@ Uitvoering in `/tmp/thoughtvault-brand-windows`, gebaseerd op de daadwerkelijk g
 | Witte niveau-indicator | Donkere metertrack en paarse actieve waarde. | WebView2 bij stilte/pauze nog controleren. |
 | MCP 502 | Lokale server zonder ThoughtVault-account op Windows én macOS. Oude accountbackend niet hersteld. | macOS transporttest geslaagd; Windows native transport nog bouwen/testen. |
 
-Geslaagde lokale controles: 58 Windows frontendtests in 23 bestanden, TypeScript/Vite productiebuild, ondertekende macOS Debugbuild, 5 macOS AIConnectionTests. `python3 scripts/test-local-mcp.py` compileert de daadwerkelijke macOS-servercode met synthetische handlers en controleert initialize, 7 read-tools, aanroep, weigering van opname zonder recht, onbekende tool, verkeerde sleutel, Origin, Host, Transfer-Encoding, dubbele headers en ongeldige argumenten. Ook de geïnstalleerde MCP SDK heeft initialize, list_tools, call_tool en de weigering van opname zonder recht succesvol doorlopen. Dit bewijst geen live Claude/ChatGPT-sessie of verwerking van privégegevens.
+Geslaagde lokale controles: 58 Windows frontendtests in 23 bestanden, TypeScript/Vite productiebuild, ondertekende macOS Debugbuild, 6 macOS AIConnectionTests. `python3 scripts/test-local-mcp.py` compileert de daadwerkelijke macOS-servercode met synthetische handlers en controleert initialize, 7 read-tools, aanroep, weigering van opname zonder recht, onbekende tool, verkeerde sleutel, Origin, Host, Transfer-Encoding, dubbele headers en ongeldige argumenten. Ook de geïnstalleerde MCP SDK heeft initialize, list_tools, call_tool en de weigering van opname zonder recht succesvol doorlopen. Dit bewijst geen live Claude/ChatGPT-sessie of verwerking van privégegevens.
 
 Parallels bleek om circa 22:07 gepauzeerd en is hervat. De guest reageert nog steeds niet op onze clicks/toetsen; native menuacties werken wel. Parallels CLI guest-exec is in deze editie niet beschikbaar (Pro/Business vereist). Geen oorzaak als ThoughtVault-defect aangemerkt. Cloud-notule-inhoud/export en native kandidaat-hercontrole blijven open.
 
 Geen designregels onderdrukt. De historische landing.css hookbevinding valt buiten deze Windows/macOS audit; geen attributie als nieuwe regressie.
+
+Eerste native controle: [CI 37679470529](https://github.com/michelknoop21/ThoughtVault/actions/runs/37679470529), bron `f8b04d4`, 20 native tests geslaagd en installatiebewijs in het private artifact. Laatste broncode bevat aanvullende MCP-requestbinding/protocolcontroles en duidelijke foutstatus bij mislukte intrekking. macOS MCP-opslag bewaart alleen eenvoudige opmaak en tabelstructuur, zonder uitvoerbare HTML of externe resources; regressietest geslaagd.

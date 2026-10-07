@@ -9,4 +9,6 @@ Basis: officiële 1.0.260 (`3eb688b`), audit van 7 oktober. Werkmap: `/tmp/thoug
 5. MCP: oorzaak 502 bevestigd: oude accountbackend bewust verwijderd. Michel kiest lokale MCP zonder account, ook op macOS. Loopback + willekeurige keyring-sleutel; expliciete lees/schrijf/opnamerechten; bestaande toolhandlers en revisiecontroles hergebruiken. Lokale HTTP-clients ondersteunen; ChatGPT-web kan deze loopback-URL niet rechtstreeks bereiken.
 6. Controle: regressietests voor tekst/duur/fouten/herstart/herimport; bestaande frontendtests + productiebuild; Windows native build/installer via expliciete bronref; VM runtimecontrole. Niet bewezen punten blijven expliciet open.
 
-Geen openbare release onderdeel van deze nieuwe fixopdracht; bouw en test eerst de concrete kandidaat.
+Nog niet gepubliceerd: eerst de concrete kandidaat bouwen en toetsen. De runtime-audit op de Parallels-guest blijft geblokkeerd door ontbrekende reactie op input.
+
+Uitgevoerd: alle hierboven genoemde broncorrecties, 58 frontendtests en productiebuild, macOS signed build en 6 AIConnectionTests, MCP HTTP- en SDK-controle met synthetische handlers. Eerste Windows MSI heeft de runtime- en installatiegates doorlopen; de definitieve bronref wordt apart gebouwd.

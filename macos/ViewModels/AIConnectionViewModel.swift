@@ -42,9 +42,24 @@ struct MinutesStyle: Codable, Hashable, Sendable {
     }
 
     func apply(to html: String) throws -> String {
-        // The model owns all styling. Discard previous styles before applying it.
-        let body = html.replacingOccurrences(of: "<style\\b[^>]*>[\\s\\S]*?</style>", with: "", options: [.caseInsensitive, .regularExpression])
-        return "<style>\(try css())\(try css(selector: "#content"))</style>" + body
+        // MCP accepts formatted text, never executable markup or remote resources.
+        let body = html.replacingOccurrences(of: #"<(script|style|iframe|object)\b[^>]*>[\s\S]*?</\1\s*>"#, with: "", options: [.caseInsensitive, .regularExpression])
+        let allowed: Set<String> = ["p", "h1", "h2", "h3", "h4", "h5", "h6", "strong", "em", "b", "i", "u", "ul", "ol", "li", "table", "thead", "tbody", "tfoot", "tr", "td", "th", "br", "hr", "blockquote", "code", "pre", "div", "span"]
+        let tags = try NSRegularExpression(pattern: "<[^>]*>")
+        let name = try NSRegularExpression(pattern: #"^<\s*(/?)\s*([A-Za-z][A-Za-z0-9]*)\b"#)
+        var clean = body
+        for match in tags.matches(in: body, range: NSRange(body.startIndex..., in: body)).reversed() {
+            guard let range = Range(match.range, in: clean) else { continue }
+            let tag = String(clean[range])
+            var replacement = ""
+            if let parsed = name.firstMatch(in: tag, range: NSRange(tag.startIndex..., in: tag)),
+               let nameRange = Range(parsed.range(at: 2), in: tag), let closingRange = Range(parsed.range(at: 1), in: tag) {
+                let tagName = tag[nameRange].lowercased()
+                if allowed.contains(tagName) { replacement = "<\(tag[closingRange])\(tagName)>" }
+            }
+            clean.replaceSubrange(range, with: replacement)
+        }
+        return "<style>\(try css())\(try css(selector: "#content"))</style>" + clean
     }
 }
 

@@ -21,6 +21,13 @@ final class AIConnectionTests: XCTestCase {
         XCTAssertTrue(html.contains("<table>"))
     }
 
+    func testMCPHTMLKeepsTextAndTablesWithoutExecutableMarkupOrResources() throws {
+        let html = try MinutesStyle().apply(to: "<SCRIPT>steal()</SCRIPT><img src=file:///secret onerror=steal()><iframe src=https://example.invalid>remote</iframe><p onclick=steal() style='background:url(https://example.invalid)'>José</p><table><tr><td colspan=2>Besluit</td></tr></table>")
+        XCTAssertTrue(html.contains("<p>José</p>"))
+        XCTAssertTrue(html.contains("<table><tr><td>Besluit</td></tr></table>"))
+        for forbidden in ["SCRIPT", "steal()", "<img", "<iframe", "onclick", "onerror", "file:", "https:"] { XCTAssertFalse(html.contains(forbidden)) }
+    }
+
     func testProfileStylingSurvivesReload() throws {
         let defaults = UserDefaults(suiteName: "AIConnectionTests")!
         defer { defaults.removePersistentDomain(forName: "AIConnectionTests") }

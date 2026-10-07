@@ -133,6 +133,7 @@ it("persists revocation before deleting a key, even when key deletion fails", as
   useAIConnection.setState({ connection });
   await expect(disconnectAIConnection()).rejects.toThrow("keyring unavailable");
   expect(useAIConnection.getState().connection).toBeNull();
+  expect(useAIConnection.getState().status).toContain("uitschakelen opslaan is mislukt");
   expect(mocks.invoke.mock.calls.map(([name]) => name)).toEqual(["local_mcp_stop", "store_credential", "delete_credential"]);
   expect(mocks.invoke.mock.calls[1][1]).toEqual({ key: "local_mcp_connection", value: "null" });
   mocks.invoke.mockResolvedValue(undefined);

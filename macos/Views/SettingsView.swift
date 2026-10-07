@@ -481,7 +481,7 @@ struct SettingsView: View {
     @FocusState private var apiKeyFocused: Bool
 
     @State var ollamaTesting: Bool = false
-    @State var ollamaConnected: Bool? = nil
+    @State var ollamaStatus: OpenAICompatibleLLMService.ConnectionStatus? = nil
     @State var ollamaModels: [String] = []
     @State var ollamaModelsLoading: Bool = false
 
@@ -850,13 +850,14 @@ struct SettingsView: View {
             .tint(Color.brandPrimary)
             .disabled(ollamaTesting)
 
-            if let connected = ollamaConnected {
+            if let status = ollamaStatus {
+                let ready = status == .ready
                 Label(
-                    connected ? "Verbonden" : "Niet bereikbaar",
-                    systemImage: connected ? "checkmark.circle.fill" : "xmark.circle.fill"
+                    Self.ollamaStatusText(status),
+                    systemImage: ready ? "checkmark.circle.fill" : "xmark.circle.fill"
                 )
                 .font(TS.Font.footnoteSemibold)
-                .foregroundStyle(connected ? Color.statusSuccess : Color.statusError)
+                .foregroundStyle(ready ? Color.statusSuccess : Color.statusError)
             }
         }
         .padding(.top, TS.Spacing.xs)
@@ -872,7 +873,7 @@ struct SettingsView: View {
     var ollamaCloudButton: some View {
         Button("Cloud") {
             ollamaURL = "https://ollama.com"
-            ollamaConnected = nil
+            ollamaStatus = nil
             apiKeyFocused = true
         }
         .buttonStyle(.bordered)
@@ -905,11 +906,21 @@ struct SettingsView: View {
 
     func testOllamaConnection() async {
         ollamaTesting = true
-        ollamaConnected = nil
-        let available = await ollamaService().isAvailable
-        ollamaConnected = available
+        ollamaStatus = nil
+        let status = await ollamaService().checkConnection()
+        ollamaStatus = status
         ollamaTesting = false
-        if available { await loadOllamaModels() }
+        // The model list is public on Ollama Cloud, so load it even when the key is missing.
+        if status != .unreachable { await loadOllamaModels() }
+    }
+
+    static func ollamaStatusText(_ status: OpenAICompatibleLLMService.ConnectionStatus) -> String {
+        switch status {
+        case .ready: return "Verbonden"
+        case .unreachable: return "Niet bereikbaar"
+        case .keyMissing: return "Bereikbaar, maar deze server vraagt een API-sleutel"
+        case .keyRejected: return "API-sleutel geweigerd door de server"
+        }
     }
 
     /// Fetches the available model list (local Ollama or Ollama Cloud) for the picker.

@@ -203,13 +203,47 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
 
     var isAvailable: Bool {
         get async {
-            // Try the OpenAI-compatible endpoint first, then fall back to Ollama's
-            // native one. The previous `URL(...) ?? URL(...)` never fell back
-            // because the first string always parses into a valid URL.
-            if await endpointReturns200("/v1/models") { return true }
-            if await endpointReturns200("/api/tags") { return true }
-            return false
+            await checkConnection() == .ready
         }
+    }
+
+    enum ConnectionStatus: Equatable {
+        case ready
+        case unreachable
+        /// HTTPS server requires a key and none is configured.
+        case keyMissing
+        /// HTTPS server answered 401/403 to the configured key.
+        case keyRejected
+    }
+
+    /// Reachability alone is not enough: Ollama Cloud lists models without a key but
+    /// answers 401 on chat. HTTPS endpoints are therefore also probed on a protected
+    /// endpoint, so a missing or wrong key shows up here instead of during generation.
+    func checkConnection() async -> ConnectionStatus {
+        // Try the OpenAI-compatible endpoint first, then fall back to Ollama's
+        // native one. The previous `URL(...) ?? URL(...)` never fell back
+        // because the first string always parses into a valid URL.
+        var reachable = await endpointReturns200("/v1/models")
+        if !reachable { reachable = await endpointReturns200("/api/tags") }
+        guard reachable else { return .unreachable }
+        guard URL(string: baseURL)?.scheme?.lowercased() == "https" else { return .ready }
+        guard let status = await protectedEndpointStatus() else { return .unreachable }
+        guard status == 401 || status == 403 else { return .ready }
+        return apiKey == nil ? .keyMissing : .keyRejected
+    }
+
+    /// POSTs an empty body to chat completions: an authenticated caller gets a
+    /// validation error (4xx other than 401/403), an unauthenticated one 401. No tokens are spent.
+    private func protectedEndpointStatus() async -> Int? {
+        guard let url = URL(string: "\(baseURL)/v1/chat/completions") else { return nil }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.timeoutInterval = 8
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = Data("{}".utf8)
+        applyAuth(to: &request)
+        guard let (_, response) = try? await URLSession.shared.data(for: request) else { return nil }
+        return (response as? HTTPURLResponse)?.statusCode
     }
 
     private func endpointReturns200(_ path: String) async -> Bool {

@@ -47,10 +47,10 @@ extension OnboardingView {
 
     private var header: some View {
         HStack(alignment: .center) {
-            Image(systemName: "waveform")
-                .font(.system(size: 22, weight: .semibold))
-                .foregroundStyle(LinearGradient(colors: [Color(red: 0.84, green: 0.45, blue: 1), Color(red: 0.52, green: 0.28, blue: 0.96)],
-                                                startPoint: .top, endPoint: .bottom))
+            Image("AppLogo")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 32, height: 38)
                 .accessibilityHidden(true)
             Text("ThoughtVault")
                 .font(.system(size: 16, weight: .semibold))

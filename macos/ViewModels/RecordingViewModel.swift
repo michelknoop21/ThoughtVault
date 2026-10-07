@@ -17,7 +17,11 @@ final class RecordingViewModel {
     // MARK: - Published State
 
     var recordingState: RecordingState = .idle
+#if os(macOS)
+    var selectedMode: RecordingMode = .combined
+#else
     var selectedMode: RecordingMode = .microphone
+#endif
     var selectedProfile: Profile?
     var usePremium: Bool = false
     var availableProfiles: [Profile] = []
@@ -970,6 +974,11 @@ final class RecordingViewModel {
         guard let record = LocalTranscriptStore.shared.record(forTaskId: taskId) else {
             throw LocalStoreError.recordNotFound
         }
+        let regenerationId = "local-regen-\(taskId)"
+        removeTask(regenerationId)
+        addTask(TranscriptTask(id: regenerationId, taskId: regenerationId,
+                               filename: record.title, status: .generatingLocal,
+                               progress: 0.65, profileId: profileId, createdAt: Date()))
         let profile = availableProfiles.first { $0.id == profileId }
             ?? Profile.defaults.first { $0.id == profileId }
             ?? selectedProfile
@@ -979,22 +988,30 @@ final class RecordingViewModel {
         if provider == .cloud { provider = .ollama }
 
         let service = LLMServiceFactory.service(for: provider, serverURL: "")
-        let html = try await service.generateNotulen(
-            transcription: record.rawTranscription,
-            systemPrompt: profile.systemPrompt ?? "",
-            notulePrompt: QuickNoteStore.promptBlock(QuickNoteStore.note(forTranscriptId: taskId))
-                + Self.injectParticipants(into: profile.notulePrompt ?? "", participants: record.participants)
-                + PersonalVocabulary.promptInstruction(),
-            outputTemplate: profile.template
-        ) { _ in }
+        do {
+            let html = try await service.generateNotulen(
+                transcription: record.rawTranscription,
+                systemPrompt: profile.systemPrompt ?? "",
+                notulePrompt: QuickNoteStore.promptBlock(QuickNoteStore.note(forTranscriptId: taskId))
+                    + Self.injectParticipants(into: profile.notulePrompt ?? "", participants: record.participants)
+                    + PersonalVocabulary.promptInstruction(),
+                outputTemplate: profile.template
+            ) { [weak self] _ in
+                Task { @MainActor in self?.updateTask(regenerationId, status: .generatingLocal, progress: 0.85) }
+            }
 
-        let datedHtml = Self.injectDate(into: Self.stripCodeFences(html), date: record.createdAt)
-        guard Self.hasUsableNotule(datedHtml) else {
-            throw LLMError.generationFailed("De notule bevat geen bruikbare inhoud. Controleer de transcriptie en probeer opnieuw.")
+            let datedHtml = Self.injectDate(into: Self.stripCodeFences(html), date: record.createdAt)
+            guard Self.hasUsableNotule(datedHtml) else {
+                throw LLMError.generationFailed("De notule bevat geen bruikbare inhoud. Controleer de transcriptie en probeer opnieuw.")
+            }
+            let title = NotuleTitleExtractor.extract(from: datedHtml) ?? record.title
+            try LocalTranscriptStore.shared.finalizeNotule(taskId: taskId, html: datedHtml, title: title)
+            updateTask(regenerationId, status: .completed, progress: 1)
+            return (datedHtml, title)
+        } catch {
+            updateTask(regenerationId, status: .error, errorMessage: error.localizedDescription)
+            throw error
         }
-        let title = NotuleTitleExtractor.extract(from: datedHtml) ?? record.title
-        try LocalTranscriptStore.shared.finalizeNotule(taskId: taskId, html: datedHtml, title: title)
-        return (datedHtml, title)
     }
 
     /// Removes the markdown code fences some models wrap around their HTML output.
@@ -1408,7 +1425,8 @@ final class RecordingViewModel {
                 participants: [],
                 profileName: updatedTask.profileId,
                 profileId: updatedTask.profileId,
-                tags: updatedTask.tags
+                tags: updatedTask.tags,
+                noteID: updatedTask.taskId
             )
         }
     }

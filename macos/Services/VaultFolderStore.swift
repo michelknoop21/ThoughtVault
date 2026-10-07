@@ -13,6 +13,7 @@
 
 import Foundation
 import OSLog
+import CryptoKit
 
 private let logger = Logger(subsystem: "com.buildmind.ThoughtVault", category: "VaultFolderStore")
 
@@ -131,6 +132,23 @@ enum VaultFolderStore {
 
     // MARK: - Write note
 
+    private static func syncKey(_ filename: String) -> String { "obsidianSync-\(filename)" }
+
+    private static func digest(_ markdown: String) -> String {
+        SHA256.hash(data: Data(markdown.utf8)).map { String(format: "%02x", $0) }.joined()
+    }
+
+    static func readNote(filename: String) -> String? {
+        withFolder { root in
+            let dir = notesSubfolder.isEmpty ? root : root.appendingPathComponent(notesSubfolder, isDirectory: true)
+            return try? String(contentsOf: dir.appendingPathComponent(filename), encoding: .utf8)
+        } ?? nil
+    }
+
+    static func acknowledgeImport(filename: String, markdown: String) {
+        UserDefaults.standard.set(digest(markdown), forKey: syncKey(filename))
+    }
+
     /// Writes Markdown into `{notesSubfolder}/{filename}` inside the vault, creating
     /// the subfolder if needed. Returns true on success.
     @discardableResult
@@ -139,7 +157,14 @@ enum VaultFolderStore {
             let dir = notesSubfolder.isEmpty ? root : root.appendingPathComponent(notesSubfolder, isDirectory: true)
             try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
             let fileURL = dir.appendingPathComponent(filename)
+            if let existing = try? String(contentsOf: fileURL, encoding: .utf8), existing != markdown {
+                guard UserDefaults.standard.string(forKey: syncKey(filename)) == digest(existing) else {
+                    logger.warning("Obsidian-notule is extern gewijzigd: \(filename)")
+                    return false
+                }
+            }
             try markdown.write(to: fileURL, atomically: true, encoding: .utf8)
+            acknowledgeImport(filename: filename, markdown: markdown)
             return true
         }
         return result ?? false

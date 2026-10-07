@@ -1028,6 +1028,7 @@ struct TranscriptDetailView: View {
 
     @State var isEditingNotule = false
     @State var editedHTML = ""
+    @State private var pendingObsidianImport: (filename: String, markdown: String, html: String)?
 
     // MARK: State - errors
 
@@ -1103,6 +1104,15 @@ struct TranscriptDetailView: View {
                 Task { await saveTitle() }
             }
             Button("Annuleren", role: .cancel) {}
+        }
+        .alert("Obsidian-versie ophalen?", isPresented: Binding(
+            get: { pendingObsidianImport != nil },
+            set: { if !$0 { pendingObsidianImport = nil } }
+        )) {
+            Button("Vervang notule") { Task { await applyObsidianImport() } }
+            Button("Annuleren", role: .cancel) { pendingObsidianImport = nil }
+        } message: {
+            Text("De versie uit Obsidian vervangt de huidige notule in ThoughtVault.")
         }
         .sheet(isPresented: $showProfileSheet) {
             ProfileSelectionSheet(mode: profileSheetMode) { profile, usePremium in
@@ -1479,6 +1489,9 @@ struct TranscriptDetailView: View {
                 }
                 Button { exportToObsidian() } label: {
                     Label("Exporteer naar Obsidian", systemImage: "tray.and.arrow.down")
+                }
+                Button { importFromObsidian() } label: {
+                    Label("Haal op uit Obsidian", systemImage: "tray.and.arrow.up")
                 }
                 Button { exportAsTXT() } label: {
                     Label("Platte tekst", systemImage: "doc.text")
@@ -2000,6 +2013,16 @@ struct TranscriptDetailView: View {
             editedHTML = ""
             withAnimation(TS.Animation.smooth) { isEditingNotule = false }
             logger.info("Notule saved for \(fullTranscript.taskId)")
+            if ObsidianService.isEnabled {
+                do {
+                    try await ObsidianService.tryExport(
+                        title: fullTranscript.title, html: html, date: fullTranscript.date,
+                        participants: [], profileName: fullTranscript.profileName,
+                        tags: fullTranscript.tags, noteID: fullTranscript.taskId)
+                } catch {
+                    errorMessage = "Notule opgeslagen, maar Obsidian-sync mislukt: \(error.localizedDescription)"
+                }
+            }
         } catch {
             errorMessage = "Opslaan mislukt: \(error.localizedDescription)"
             logger.error("Save notule failed: \(error)")
@@ -2020,6 +2043,9 @@ struct TranscriptDetailView: View {
                 fullTranscript.notuleHtml = result.html
                 fullTranscript.title = result.title
                 selectedTab = .notule
+                if let record = LocalTranscriptStore.shared.record(forTaskId: fullTranscript.taskId) {
+                    ObsidianService.autoExport(record)
+                }
             } catch {
                 errorMessage = error.localizedDescription
             }
@@ -2035,17 +2061,30 @@ struct TranscriptDetailView: View {
                 profileId: profileId,
                 usePremium: usePremium
             )
+            recordingVM.addTask(task)
             // Poll every 4 seconds, max 60 iterations (4 minutes)
             for iteration in 0..<60 {
                 try await Task.sleep(nanoseconds: 4_000_000_000)
                 let updated = try await APIService.shared.getTaskStatus(taskId: task.taskId)
                 let progress = Int((updated.status.progress) * 100)
                 regeneratingMessage = "\(updated.status.displayName)... \(progress)%"
+                recordingVM.updateTask(task.id, status: updated.status, progress: updated.progress,
+                                       errorMessage: updated.errorMessage)
 
                 if updated.status == .completed {
-                    if let html = updated.notuleHtml {
+                    let completed = try await APIService.shared.getTranscript(taskId: fullTranscript.taskId)
+                    if let html = updated.notuleHtml ?? completed.notuleHtml {
                         fullTranscript.notuleHtml = html
+                        fullTranscript.title = completed.title
                         selectedTab = .notule
+                        if ObsidianService.isEnabled {
+                            ObsidianService.tryExportDetached(
+                                title: completed.title, html: html, date: completed.date,
+                                participants: [], profileName: completed.profileName,
+                                tags: completed.tags, noteID: completed.taskId)
+                        }
+                    } else {
+                        errorMessage = "De taak is voltooid, maar de notule ontbreekt. Vernieuw het document."
                     }
                     break
                 } else if updated.status == .error {
@@ -2240,13 +2279,43 @@ struct TranscriptDetailView: View {
                     try await ObsidianService.tryExport(
                         title: fullTranscript.title, html: html, date: fullTranscript.date,
                         participants: [], profileName: fullTranscript.profileName,
-                        tags: fullTranscript.tags
+                        tags: fullTranscript.tags, noteID: fullTranscript.taskId
                     )
                 }
                 errorMessage = nil
             } catch {
                 errorMessage = "Obsidian-export mislukt: \(error.localizedDescription)"
             }
+        }
+    }
+
+    func importFromObsidian() {
+        Task { @MainActor in
+            do {
+                let note = try await ObsidianService.readNote(
+                    title: fullTranscript.title, date: fullTranscript.date, noteID: fullTranscript.taskId)
+                if note.html != fullTranscript.notuleHtml { pendingObsidianImport = note }
+            } catch {
+                errorMessage = "Obsidian ophalen mislukt: \(error.localizedDescription)"
+            }
+        }
+    }
+
+    private func applyObsidianImport() async {
+        guard let note = pendingObsidianImport else { return }
+        pendingObsidianImport = nil
+        do {
+            if isLocalTranscript(fullTranscript.taskId) {
+                try LocalTranscriptStore.shared.updateNotule(taskId: fullTranscript.taskId, html: note.html)
+            } else {
+                try await APIService.shared.updateNotuleHTML(taskId: fullTranscript.taskId, html: note.html)
+            }
+            fullTranscript.notuleHtml = note.html
+            ObsidianService.acknowledgeImport(filename: note.filename, markdown: note.markdown)
+            selectedTab = .notule
+            errorMessage = nil
+        } catch {
+            errorMessage = "Obsidian-versie opslaan mislukt: \(error.localizedDescription)"
         }
     }
 

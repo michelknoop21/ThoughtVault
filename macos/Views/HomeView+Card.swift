@@ -76,7 +76,7 @@ extension HomeView {
             .help("Instellingen")
             .accessibilityLabel("Instellingen")
 
-            Button { onStartRecording?(.microphone) } label: {
+            Button { onStartRecording?(.combined) } label: {
                 HomeMicButton()
             }
             .buttonStyle(StudioPressStyle())

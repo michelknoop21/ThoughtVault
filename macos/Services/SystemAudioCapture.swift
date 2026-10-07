@@ -109,8 +109,9 @@ final class SystemAudioCapture {
                 }
             }
             self.writer = writer
+            // Core Audio invokes this on ioQueue, not the enclosing MainActor.
             try Self.check(AudioDeviceCreateIOProcIDWithBlock(&ioProcID, aggregateID, ioQueue) {
-                _, input, _, _, _ in writer.consume(input)
+                @Sendable _, input, _, _, _ in writer.consume(input)
             }, "audiocallback")
             try Self.check(AudioDeviceStart(aggregateID, ioProcID), "opname")
         } catch {

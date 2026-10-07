@@ -130,7 +130,7 @@ extension HomeView {
                 .font(.system(size: 13))
                 .foregroundStyle(HomeColor.text2)
                 .fixedSize(horizontal: false, vertical: true)
-            Button { onStartRecording?(.microphone) } label: {
+            Button { onStartRecording?(.combined) } label: {
                 Label("Maak je eerste opname", systemImage: "mic.fill")
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(HomeColor.lavender)

@@ -429,6 +429,8 @@ struct TranscriptTask: Identifiable, Codable, Sendable {
         case username
     }
 
+    private enum ResultCodingKey: String, CodingKey { case result }
+
     init(
         id: String = UUID().uuidString,
         taskId: String = "",
@@ -477,6 +479,7 @@ struct TranscriptTask: Identifiable, Codable, Sendable {
 
         self.rawTranscription = try container.decodeIfPresent(String.self, forKey: .rawTranscription)
         self.notuleHtml = try container.decodeIfPresent(String.self, forKey: .notuleHtml)
+            ?? decoder.container(keyedBy: ResultCodingKey.self).decodeIfPresent(String.self, forKey: .result)
         self.errorMessage = try container.decodeIfPresent(String.self, forKey: .errorMessage)
         self.localAudioPath = try container.decodeIfPresent(String.self, forKey: .localAudioPath)
         self.progress = try container.decodeIfPresent(Double.self, forKey: .progress) ?? 0.0

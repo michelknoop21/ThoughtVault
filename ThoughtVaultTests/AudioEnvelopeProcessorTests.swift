@@ -1,4 +1,5 @@
 import AppKit
+import AVFoundation
 import SwiftUI
 import XCTest
 @testable import ThoughtVault
@@ -39,6 +40,63 @@ final class AudioEnvelopeProcessorTests: XCTestCase {
             }
         }
         return out
+    }
+
+    func testWaveformKeepsConversationalLevelsVisible() {
+        XCTAssertEqual(WaveConfig.visualEnergy(0), 0)
+        XCTAssertGreaterThan(WaveConfig.visualEnergy(0.3), 0.12)
+        XCTAssertGreaterThan(WaveConfig.visualEnergy(0.5), 0.25)
+        XCTAssertGreaterThan(WaveConfig.visualEnergy(0.8) - WaveConfig.visualEnergy(0.5), 0.20)
+        XCTAssertLessThanOrEqual(WaveConfig.visualEnergy(1), 0.72)
+    }
+
+    /// Opt-in hardware test: plays actual output audio through the system tap.
+    /// Generate audio with tests/fixtures/generate-system-audio.py first.
+    /// Enable with /tmp/thoughtvault-system-audio-test/enabled; no microphone,
+    /// transcription, or provider calls are involved.
+    @MainActor
+    func testLiveSystemAudioDrivesWaveform() async throws {
+        let root = URL(fileURLWithPath: "/tmp/thoughtvault-system-audio-test")
+        guard FileManager.default.fileExists(atPath: root.appendingPathComponent("enabled").path) else {
+            throw XCTSkip("Live system-audio test requires explicit local opt-in")
+        }
+        let player = try AVAudioPlayer(data: Data(contentsOf: root.appendingPathComponent("levels.wav")))
+        let capture = SystemAudioCapture()
+        let url = try await capture.startCapture()
+        defer {
+            player.stop()
+            try? FileManager.default.removeItem(at: url)
+        }
+        XCTAssertTrue(player.play())
+        var samples: [(time: Double, level: Float)] = []
+        do {
+            while player.isPlaying {
+                samples.append((player.currentTime, capture.audioLevels.last ?? 0))
+                try await Task.sleep(for: .milliseconds(33))
+            }
+        } catch {
+            _ = await capture.stopCapture()
+            throw error
+        }
+        _ = await capture.stopCapture()
+        func average(_ start: Double, _ end: Double) -> Double {
+            let values = samples.filter { $0.time >= start && $0.time < end }.map { Double($0.level) }
+            XCTAssertFalse(values.isEmpty)
+            return values.reduce(0, +) / Double(max(1, values.count))
+        }
+        let silence = average(1, 2.5), quiet = average(5, 6.5)
+        let normal = average(9, 10.5), loud = average(13, 14.5), released = average(17, 18.5)
+        let report = "SYSTEM_AUDIO silence=\(silence) quiet=\(quiet) normal=\(normal) loud=\(loud) released=\(released) samples=\(samples.count)"
+        print(report)
+        let attachment = XCTAttachment(string: report)
+        attachment.lifetime = .keepAlways
+        add(attachment)
+        XCTAssertLessThan(silence, 0.03)
+        XCTAssertGreaterThan(quiet, 0.15, "Real system-audio callbacks must contain the quiet tone")
+        XCTAssertGreaterThan(normal - quiet, 0.08)
+        XCTAssertGreaterThan(loud - normal, 0.08)
+        XCTAssertLessThan(released, 0.03)
+        XCTAssertGreaterThan(WaveConfig.visualEnergy(Float(loud)) - WaveConfig.visualEnergy(Float(quiet)), 0.20)
     }
 
     // 1. 2 s of silence → output 0
@@ -124,15 +182,15 @@ final class AudioEnvelopeProcessorTests: XCTestCase {
         let levels = run("northstarTimeline", processor: &processor)
         XCTAssertEqual(levels.count, 210)
         XCTAssertLessThan(WaveConfig.visualEnergy(levels[24]), 0.05)
-        XCTAssertGreaterThan(WaveConfig.visualEnergy(levels[60]), 0.10)
-        XCTAssertLessThan(WaveConfig.visualEnergy(levels[60]), 0.25)
-        XCTAssertGreaterThan(WaveConfig.visualEnergy(levels[120]), 0.30)
-        XCTAssertLessThan(WaveConfig.visualEnergy(levels[120]), 0.50)
+        XCTAssertGreaterThan(WaveConfig.visualEnergy(levels[60]), 0.25)
+        XCTAssertLessThan(WaveConfig.visualEnergy(levels[60]), 0.40)
+        XCTAssertGreaterThan(WaveConfig.visualEnergy(levels[120]), 0.45)
+        XCTAssertLessThan(WaveConfig.visualEnergy(levels[120]), 0.65)
         XCTAssertGreaterThan(WaveConfig.visualEnergy(levels[165]), 0.55)
         XCTAssertLessThan(WaveConfig.visualEnergy(levels[165]), 0.75)
         XCTAssertGreaterThan(WaveConfig.visualEnergy(levels[32]), 0.05, "soft speech must appear within 100 ms")
         XCTAssertGreaterThan(WaveConfig.visualEnergy(levels[176]), 0.03, "release must not drop abruptly")
-        XCTAssertLessThan(WaveConfig.visualEnergy(levels[176]), 0.15)
+        XCTAssertLessThan(WaveConfig.visualEnergy(levels[176]), 0.25)
         XCTAssertLessThan(WaveConfig.visualEnergy(levels[188]), 0.05, "release should reach near-rest within 600 ms")
         let moments: [(String, Int)] = [
             ("silence", 24), ("soft", 60), ("normal", 120),
@@ -144,7 +202,8 @@ final class AudioEnvelopeProcessorTests: XCTestCase {
             // xcodebuild does not forward arbitrary shell variables to XCTest.
             // Touch the marker for a local export; normal CI stays numeric-only.
             guard FileManager.default.fileExists(atPath: "/tmp/thoughtvault-wave-export-snapshots") else { continue }
-            let directory = "/tmp/thoughtvault-wave-shots"
+            let directory = FileManager.default.temporaryDirectory
+                .appendingPathComponent("thoughtvault-wave-shots").path
             let history = Array(levels.prefix(frame + 1).suffix(AudioEnvelopeConfig.historyLength))
             let view = ZStack {
                 Color(red: 0.015, green: 0.012, blue: 0.045)

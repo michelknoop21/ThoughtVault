@@ -69,3 +69,40 @@ func htmlToMarkdown(_ html: String) -> String {
     md = regex("\n{3,}", "\n\n", md)
     return md.trimmingCharacters(in: .whitespacesAndNewlines)
 }
+
+/// Render the simple Markdown written to Obsidian back into editable notule HTML.
+/// Escaping happens before formatting so external HTML cannot execute in WKWebView.
+func markdownToNotuleHTML(_ markdown: String) -> String {
+    let content = markdown.replacingOccurrences(of: "(?s)^---\\r?\\n.*?\\r?\\n---\\r?\\n", with: "", options: .regularExpression)
+    var output: [String] = []
+    var inList = false
+    for raw in content.components(separatedBy: .newlines) {
+        let line = raw.trimmingCharacters(in: .whitespaces)
+        if line.isEmpty {
+            if inList { output.append("</ul>"); inList = false }
+            continue
+        }
+        var safe = line.replacingOccurrences(of: "&", with: "&amp;")
+            .replacingOccurrences(of: "<", with: "&lt;")
+            .replacingOccurrences(of: ">", with: "&gt;")
+            .replacingOccurrences(of: "\"", with: "&quot;")
+        safe = safe.replacingOccurrences(of: "\\*\\*(.+?)\\*\\*", with: "<strong>$1</strong>", options: .regularExpression)
+        safe = safe.replacingOccurrences(of: "(?<!\\*)\\*([^*]+)\\*(?!\\*)", with: "<em>$1</em>", options: .regularExpression)
+        if safe.hasPrefix("- ") || safe.hasPrefix("* ") {
+            if !inList { output.append("<ul>"); inList = true }
+            output.append("<li>\(safe.dropFirst(2))</li>")
+        } else {
+            if inList { output.append("</ul>"); inList = false }
+            let headingLevel = safe.prefix { $0 == "#" }.count
+            if (1...4).contains(headingLevel), safe.dropFirst(headingLevel).hasPrefix(" ") {
+                output.append("<h\(headingLevel)>\(safe.dropFirst(headingLevel + 1))</h\(headingLevel)>")
+            } else if safe.hasPrefix("&gt; ") {
+                output.append("<blockquote>\(safe.dropFirst(5))</blockquote>")
+            } else {
+                output.append("<p>\(safe)</p>")
+            }
+        }
+    }
+    if inList { output.append("</ul>") }
+    return output.joined(separator: "\n")
+}

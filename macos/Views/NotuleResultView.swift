@@ -563,7 +563,7 @@ struct NotuleResultView: View {
                     try await ObsidianService.tryExport(
                         title: title, html: html, date: task.createdAt ?? Date(),
                         participants: [], profileName: task.profileId, profileId: task.profileId,
-                        tags: task.tags
+                        tags: task.tags, noteID: task.taskId
                     )
                 } else {
                     exportError = "Geen notule om te exporteren."

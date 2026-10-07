@@ -14,6 +14,28 @@ final class ThoughtVaultTests: XCTestCase {
         XCTAssertEqual(transcript.title, "Test vergadering")
     }
 
+    func testRegeneratedTaskReadsBackendResult() throws {
+        let data = Data("""
+        {"task_id":"regen-42","status":"completed","result":"<h1>Nieuwe notule</h1>"}
+        """.utf8)
+        let task = try JSONDecoder().decode(TranscriptTask.self, from: data)
+        XCTAssertEqual(task.notuleHtml, "<h1>Nieuwe notule</h1>")
+    }
+
+    func testObsidianFilenameStaysStableWhenTitleChanges() {
+        let date = Date(timeIntervalSince1970: 1_790_760_000)
+        XCTAssertEqual(
+            ObsidianService.fileName(title: "Eerste titel", date: date, noteID: "local-123"),
+            ObsidianService.fileName(title: "Gewijzigde titel", date: date, noteID: "local-123")
+        )
+    }
+
+    func testObsidianMarkdownCanBeReadInApp() {
+        let html = markdownToNotuleHTML("# Besluit\n\n- Planning akkoord")
+        XCTAssertTrue(html.contains("<h1>Besluit</h1>"))
+        XCTAssertTrue(html.contains("<li>Planning akkoord</li>"))
+    }
+
     func testTaskStatusProgress() {
         XCTAssertEqual(TaskStatus.pending.progress, 0.0)
         XCTAssertEqual(TaskStatus.completed.progress, 1.0)

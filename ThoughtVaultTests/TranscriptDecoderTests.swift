@@ -121,6 +121,7 @@ struct TranscriptDecoderTests {
 
     // MARK: - TranscriptTask Decoding
 
+
     @Test("Decode TranscriptTask from API response")
     func decodeTranscriptTaskFromAPI() throws {
         let json = """

@@ -154,7 +154,7 @@ private struct IOSTasksScreen: View {
 
     @ViewBuilder
     private func menu(_ task: TranscriptTask) -> some View {
-        if task.status.isActive {
+        if task.status.isActive && !task.taskId.hasPrefix("local-regen-") {
             Button("Annuleren", systemImage: "xmark.circle") { onCancel(task) }
         }
         Button("Verwijderen", systemImage: "trash", role: .destructive) { onDelete(task) }

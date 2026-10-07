@@ -40,9 +40,10 @@ struct TasksView: View {
 
                 // In local mode, tasks come from recordingVM (no server).
                 // In cloud mode, merge both sources.
+                let fetchedIDs = Set(tasksVM.activeTasks.map(\.taskId))
                 let allTasks = ProcessingMode.isLocalMode
                     ? recordingVM.activeTasks
-                    : (tasksVM.activeTasks + recordingVM.activeTasks.filter { $0.taskId.hasPrefix("local-") })
+                    : (tasksVM.activeTasks + recordingVM.activeTasks.filter { !fetchedIDs.contains($0.taskId) })
 
                 if tasksVM.isLoading && allTasks.isEmpty {
                     // First load
@@ -322,7 +323,7 @@ private struct TaskRow: View {
 
     private var actionButtons: some View {
         HStack(spacing: TS.Spacing.xs) {
-            if task.status.isActive {
+            if task.status.isActive && !task.taskId.hasPrefix("local-regen-") {
                 Button {
                     onCancel()
                 } label: {

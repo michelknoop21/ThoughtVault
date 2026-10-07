@@ -29,6 +29,49 @@ fn scope(name: &str) -> Option<String> {
         .find(|t| t["name"] == name)
         .and_then(|t| t["scope"].as_str().map(str::to_owned))
 }
+fn request_length(header: &str, token: &str) -> Result<usize, u16> {
+    if header.len() > 16384 {
+        return Err(400);
+    }
+    let mut lines = header.split("\r\n");
+    let first = lines.next().ok_or(400u16)?;
+    let mut headers = HashMap::new();
+    for line in lines.filter(|line| !line.is_empty()) {
+        let (key, value) = line.split_once(':').ok_or(400u16)?;
+        if headers
+            .insert(key.to_ascii_lowercase(), value.trim().to_string())
+            .is_some()
+        {
+            return Err(400);
+        }
+    }
+    if headers.get("authorization") != Some(&format!("Bearer {token}"))
+        || headers.contains_key("origin")
+        || headers.contains_key("transfer-encoding")
+        || !headers
+            .get("host")
+            .is_some_and(|host| ["127.0.0.1:11219", "localhost:11219"].contains(&host.as_str()))
+    {
+        return Err(403);
+    }
+    if first != "POST /mcp HTTP/1.1" {
+        return Err(405);
+    }
+    if headers
+        .get("mcp-protocol-version")
+        .is_some_and(|version| version != "2025-06-18")
+    {
+        return Err(400);
+    }
+    let length = headers
+        .get("content-length")
+        .and_then(|value| value.parse::<usize>().ok())
+        .ok_or(400u16)?;
+    if length > 2_000_000 {
+        return Err(400);
+    }
+    Ok(length)
+}
 #[tauri::command]
 pub async fn local_mcp_start(
     app: tauri::AppHandle,
@@ -74,16 +117,10 @@ pub async fn local_mcp_start(
                                 if let Some(pos)=bytes.windows(4).position(|x| x==b"\r\n\r\n") {break pos+4}; if bytes.len()>16384 {return Err(())}
                             };
                             let header=std::str::from_utf8(&bytes[..header_end]).map_err(|_| ())?;
-                            let mut lines=header.split("\r\n"); let first=lines.next().ok_or(())?;
-                            let mut headers = HashMap::new();
-                            for line in lines.filter(|l| !l.is_empty()) {
-                                let (key,value)=line.split_once(':').ok_or(())?;
-                                if headers.insert(key.to_ascii_lowercase(),value.trim().to_string()).is_some() {return Err(())}
-                            }
-                            if headers.get("authorization")!=Some(&format!("Bearer {token}")) || headers.contains_key("origin") || headers.contains_key("transfer-encoding") || !headers.get("host").is_some_and(|h| ["127.0.0.1:11219","localhost:11219"].contains(&h.as_str())) {return Ok((403,json!({"error":"Geen lokale MCP-toegang."})))}
-                            if first!="POST /mcp HTTP/1.1" {return Ok((405,json!({"error":"Gebruik POST /mcp."})))}
-                            if headers.get("mcp-protocol-version").is_some_and(|v|v!="2025-06-18") {return Err(())}
-                            let length=headers.get("content-length").and_then(|s|s.parse::<usize>().ok()).ok_or(())?; if length>2_000_000 {return Err(())}
+                            let length=match request_length(header, &token) {
+                                Ok(length)=>length,
+                                Err(status)=>return Ok((status,json!({"error":"Ongeldige lokale MCP-aanvraag."}))),
+                            };
                             while bytes.len()<header_end+length {let n=stream.read(&mut chunk).await.map_err(|_|())?; if n==0{return Err(())}; bytes.extend_from_slice(&chunk[..n]);}
                             let request: Value=serde_json::from_slice(&bytes[header_end..header_end+length]).map_err(|_|())?;
                             if request["jsonrpc"]!="2.0" || !request["method"].is_string() {return Err(())}
@@ -157,6 +194,52 @@ pub fn local_mcp_allowed(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn reject_unsafe_http_headers() {
+        let valid = "POST /mcp HTTP/1.1\r\nHost: localhost:11219\r\nAuthorization: Bearer synthetic\r\nContent-Length: 2\r\n\r\n";
+        assert_eq!(request_length(valid, "synthetic"), Ok(2));
+        for extra in [
+            "Origin: https://example.invalid",
+            "Transfer-Encoding: chunked",
+        ] {
+            assert_eq!(
+                request_length(
+                    &valid.replace("\r\n\r\n", &format!("\r\n{extra}\r\n\r\n")),
+                    "synthetic"
+                ),
+                Err(403)
+            );
+        }
+        assert_eq!(request_length(valid, "wrong"), Err(403));
+        assert_eq!(
+            request_length(
+                &valid.replace("localhost:11219", "example.invalid"),
+                "synthetic"
+            ),
+            Err(403)
+        );
+        assert_eq!(
+            request_length(&valid.replace("POST", "GET"), "synthetic"),
+            Err(405)
+        );
+        assert_eq!(
+            request_length(
+                &valid.replace("Content-Length: 2", "Content-Length: 2000001"),
+                "synthetic"
+            ),
+            Err(400)
+        );
+        assert_eq!(
+            request_length(
+                &valid.replace(
+                    "Content-Length: 2",
+                    "Content-Length: 2\r\nContent-Length: 2"
+                ),
+                "synthetic"
+            ),
+            Err(400)
+        );
+    }
     #[test]
     fn catalog_permissions_do_not_trust_caller_scope() {
         assert_eq!(tools().len(), 15);

@@ -46,6 +46,39 @@ final class AIConnectionTests: XCTestCase {
         XCTAssertTrue(markdown.contains("| Start \\| stop | José |"))
     }
 
+    #if os(macOS)
+    @MainActor func testLocalMCPInsideSignedAppHost() async throws {
+        var ready = false
+        let token = UUID().uuidString.replacingOccurrences(of: "-", with: "") + UUID().uuidString.replacingOccurrences(of: "-", with: "")
+        let server = try LocalMCPServer(token: token, scopes: ["read"], handler: { _, _ in ["synthetic": true] }, onStatus: { ready = $0.contains("actief") })
+        server.start()
+        defer { server.stop() }
+        for _ in 0..<50 {
+            if ready { break }
+            try await Task.sleep(for: .milliseconds(100))
+        }
+        XCTAssertTrue(ready)
+        guard ready else { return }
+        func call(_ method: String, _ params: [String: Any] = [:]) async throws -> [String: Any] {
+            var request = URLRequest(url: URL(string: "http://127.0.0.1:11218/mcp")!)
+            request.httpMethod = "POST"
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.httpBody = try JSONSerialization.data(withJSONObject: ["jsonrpc": "2.0", "id": 1, "method": method, "params": params])
+            let (data, response) = try await URLSession.shared.data(for: request)
+            XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 200)
+            return try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        }
+        let initialized = try await call("initialize")
+        XCTAssertEqual((initialized["result"] as? [String: Any])?["protocolVersion"] as? String, "2025-06-18")
+        let result = try await call("tools/call", ["name": "get_app_state", "arguments": [:]])
+        let content = (result["result"] as? [String: Any])?["structuredContent"] as? [String: Any]
+        XCTAssertEqual(content?["synthetic"] as? Bool, true)
+        let denied = try await call("tools/call", ["name": "start_recording", "arguments": [:]])
+        XCTAssertEqual((denied["result"] as? [String: Any])?["isError"] as? Bool, true)
+    }
+    #endif
+
     @MainActor func testRevisionDetectsManualEditsAndScopeCannotBeDowngraded() throws {
         let original: [String: Any] = ["title": "Meeting", "tags": ["work"], "minutes": "<p>Besluit</p>"]
         let revision = try AIConnectionViewModel.revision(original)

@@ -11,4 +11,4 @@ Basis: officiële 1.0.260 (`3eb688b`), audit van 7 oktober. Werkmap: `/tmp/thoug
 
 Nog niet gepubliceerd: eerst de concrete kandidaat bouwen en toetsen. De runtime-audit op de Parallels-guest blijft geblokkeerd door ontbrekende reactie op input.
 
-Uitgevoerd: alle hierboven genoemde broncorrecties, 58 frontendtests en productiebuild, macOS signed build en 6 AIConnectionTests, MCP HTTP- en SDK-controle met synthetische handlers. Eerste Windows MSI heeft de runtime- en installatiegates doorlopen; de definitieve bronref wordt apart gebouwd.
+Uitgevoerd: alle hierboven genoemde broncorrecties, 58 frontendtests en productiebuild, macOS signed build en 7 AIConnectionTests, MCP HTTP- en SDK-controle met synthetische handlers. Eerste Windows MSI heeft de runtime- en installatiegates doorlopen; de definitieve bronref wordt apart gebouwd.

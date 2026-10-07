@@ -101,7 +101,7 @@ final class AIConnectionViewModel {
         }
     }
 
-    private func store(_ value: Connection) throws {
+    private func store(_ value: Connection?) throws {
         let raw = String(decoding: try JSONEncoder().encode(value), as: UTF8.self)
         KeychainService.shared.save(raw, for: Self.key)
         guard KeychainService.shared.load(for: Self.key) == raw else {
@@ -113,7 +113,7 @@ final class AIConnectionViewModel {
     private func startLocalServer() {
         #if os(macOS)
         localServer?.stop()
-        guard let current = connection, !current.scopes.isEmpty else { return }
+        guard let current = connection else { return }
         do {
             let server = try LocalMCPServer(token: current.credential, scopes: current.scopes, handler: { [weak self] tool, arguments in
                 guard let self, self.connection != nil else { throw AIConnectionError.message("Lokale MCP uitgeschakeld.") }
@@ -153,14 +153,12 @@ final class AIConnectionViewModel {
     }
 
     func disconnect() async {
-        var revoked = connection
-        revoked?.scopes = []
         connection = nil
         #if os(macOS)
         localServer?.stop(); localServer = nil
         #endif
         do {
-            if let revoked { try store(revoked) }
+            try store(nil)
             connection = nil
             KeychainService.shared.delete(for: Self.key)
             status = "Lokale MCP uitgeschakeld"

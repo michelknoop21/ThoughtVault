@@ -1,0 +1,124 @@
+{
+  "commonRules": "Verzin geen feiten, aanwezigen, citaten, besluiten, acties, eigenaren of termijnen. Een besluit vereist expliciete overeenstemming; een idee of voorstel blijft een idee of voorstel. Neem concrete vervolgacties op, ook als eigenaar of deadline ontbreekt; schrijf dan 'Nog te bepalen' bij het ontbrekende veld. Corrigeer spraakherkenningsfouten alleen bij ondubbelzinnige context. Gebruik uitsluitend informatie uit de transcriptie en meegegeven deelnemers. Schrijf Nederlands en geef alleen eenvoudige HTML zonder CSS of code fences, met precies één h1-titel. Laat lege secties weg.",
+  "profiles": [
+    {
+      "id": "standaard",
+      "name": "Standaard",
+      "icon": "doc.text",
+      "description": "Evenwichtige notulen met onderwerpen, besluiten en vervolgwerk",
+      "goal": "Maak een helder verslag van het gesprek.",
+      "sections": [
+        "Kern",
+        "Besproken onderwerpen",
+        "Besluiten",
+        "Acties",
+        "Open vragen"
+      ],
+      "focus": "Behoud de belangrijkste context en alle concrete vervolgacties.",
+      "detail": "Middel: korte alinea's per onderwerp.",
+      "style": "Neutraal en helder.",
+      "emoji": "📝"
+    },
+    {
+      "id": "executive",
+      "name": "Executive",
+      "icon": "chart.bar",
+      "description": "Compacte beslisnotitie voor leidinggevenden",
+      "goal": "Maak een beslisnotitie die in één minuut te scannen is.",
+      "sections": [
+        "Kernuitkomst",
+        "Besluiten",
+        "Risico's en open punten",
+        "Vervolg"
+      ],
+      "focus": "Prioriteer uitkomsten, expliciete besluiten, risico's en toegewezen werk. Laat procesdetails weg tenzij nodig voor begrip.",
+      "detail": "Zeer compact: hoogstens enkele zinnen per sectie.",
+      "style": "Direct en zakelijk.",
+      "emoji": "📊"
+    },
+    {
+      "id": "projectoverleg",
+      "name": "Projectoverleg",
+      "icon": "hammer",
+      "description": "Voortgang, blokkades en opvolging per werkstroom",
+      "goal": "Leg projectvoortgang en vervolgwerk per werkstroom vast.",
+      "sections": [
+        "Voortgang per onderwerp",
+        "Besluiten",
+        "Blokkades",
+        "Acties",
+        "Open punten"
+      ],
+      "focus": "Neem status, afhankelijkheden, risico's, expliciete besluiten en alle concrete acties op.",
+      "detail": "Concreet en iets uitgebreider waar technische of planningscontext nodig is.",
+      "style": "Praktisch en precies.",
+      "emoji": "🛠️"
+    },
+    {
+      "id": "klantgesprek",
+      "name": "Klantgesprek",
+      "icon": "person.2",
+      "description": "Klantbehoefte, afspraken en terugkoppeling",
+      "goal": "Vat de klantvraag en gemaakte afspraken samen.",
+      "sections": [
+        "Klantbehoefte",
+        "Besproken opties",
+        "Afspraken",
+        "Vervolgacties",
+        "Open vragen"
+      ],
+      "focus": "Scheid uitspraken van de klant, voorgestelde oplossingen en expliciete toezeggingen. Verlies bezwaren niet.",
+      "detail": "Middel: genoeg context om het gesprek op te volgen.",
+      "style": "Respectvol, concreet en klantgericht.",
+      "emoji": "🤝"
+    },
+    {
+      "id": "een_op_een",
+      "name": "1-op-1",
+      "icon": "person.2.circle",
+      "description": "Persoonlijk gesprek met aandacht voor context en opvolging",
+      "goal": "Maak een zorgvuldige samenvatting van een één-op-één gesprek.",
+      "sections": [
+        "Besproken",
+        "Inzichten",
+        "Afspraken",
+        "Vervolg",
+        "Open vragen"
+      ],
+      "focus": "Behoud nuance, zorgen, feedback en concrete toezeggingen. Forceer geen formele besluitenlijst.",
+      "detail": "Beknopt maar met voldoende nuance.",
+      "style": "Warm, discreet en feitelijk.",
+      "emoji": "💬"
+    },
+    {
+      "id": "brainstorm",
+      "name": "Brainstorm",
+      "icon": "lightbulb",
+      "description": "Ideeën, afwegingen en kansen zonder schijnbesluiten",
+      "goal": "Orden de ideeën uit een brainstorm zonder ze als besluiten te presenteren.",
+      "sections": [
+        "Vraagstuk",
+        "Ideeën",
+        "Kansrijke richtingen",
+        "Te onderzoeken",
+        "Afgesproken vervolgstappen"
+      ],
+      "focus": "Behoud verschillende ideeën en argumenten; markeer onzekerheid en alleen expliciet afgesproken vervolg.",
+      "detail": "Ruimte voor varianten, kort per idee.",
+      "style": "Open en helder, zonder managementtaal.",
+      "emoji": "💡"
+    },
+    {
+      "id": "promptnotitie",
+      "name": "Promptnotitie",
+      "icon": "text.quote",
+      "description": "Zet gesproken of geïmporteerde tekst om in een kopieerbare prompt",
+      "goal": "Herschrijf de bron tot één compacte prompt voor een AI-assistent.",
+      "sections": [],
+      "focus": "Behoud bedoeling, taak, context, beperkingen en gewenste output van de spreker. Voeg geen nieuwe doelen of eisen toe.",
+      "detail": "Zo kort mogelijk zonder betekenisverlies.",
+      "style": "Directe instructie in de tweede persoon; geen vergadernotulen.",
+      "emoji": "📋"
+    }
+  ]
+}

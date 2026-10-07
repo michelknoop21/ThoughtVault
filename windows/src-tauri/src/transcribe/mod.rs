@@ -1,0 +1,228 @@
+// Local speech-to-text via whisper-rs (whisper.cpp bindings).
+//
+// Mirrors the macOS app's WhisperKitTranscriber: a recorded 16 kHz mono WAV is
+// transcribed fully on-device, no server. GGML models are downloaded on first
+// use from the official whisper.cpp model repo into the app data dir.
+
+use std::path::PathBuf;
+use tauri::{AppHandle, Emitter, Manager};
+
+/// Maps a short model id (as stored in settings) to its GGML filename.
+/// Mirrors the model picker in the Windows Settings UI.
+fn model_filename(model_id: &str) -> String {
+    format!("ggml-{}.bin", model_id)
+}
+
+fn models_dir(app: &AppHandle) -> Result<PathBuf, String> {
+    let dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|e| format!("Kan app-data map niet bepalen: {}", e))?
+        .join("whisper-models");
+    std::fs::create_dir_all(&dir).map_err(|e| format!("Kan modelmap niet aanmaken: {}", e))?;
+    Ok(dir)
+}
+
+fn model_path(app: &AppHandle, model_id: &str) -> Result<PathBuf, String> {
+    if !["tiny", "base", "small", "medium", "large-v3", "large-v3-turbo"].contains(&model_id) {
+        return Err("Onbekend Whisper-model".to_string());
+    }
+    Ok(models_dir(app)?.join(model_filename(model_id)))
+}
+
+#[derive(serde::Serialize)]
+pub struct WhisperModelStatus {
+    pub exists: bool,
+    pub path: String,
+    pub size_bytes: u64,
+}
+
+/// Whether the chosen model is already downloaded, and where it lives.
+#[tauri::command]
+pub async fn whisper_model_status(
+    app: AppHandle,
+    model_id: String,
+) -> Result<WhisperModelStatus, String> {
+    let path = model_path(&app, &model_id)?;
+    let (exists, size_bytes) = match std::fs::metadata(&path) {
+        Ok(m) => (m.is_file() && m.len() > 0, m.len()),
+        Err(_) => (false, 0),
+    };
+    Ok(WhisperModelStatus {
+        exists,
+        path: path.to_string_lossy().to_string(),
+        size_bytes,
+    })
+}
+
+/// Downloads the GGML model with progress events on `whisper-download-progress`.
+/// No-op (returns immediately) if the model already exists.
+#[tauri::command]
+pub async fn download_whisper_model(app: AppHandle, model_id: String) -> Result<String, String> {
+    use futures_util::StreamExt;
+    use tokio::io::AsyncWriteExt;
+
+    let dest = model_path(&app, &model_id)?;
+    if let Ok(m) = std::fs::metadata(&dest) {
+        if m.is_file() && m.len() > 0 {
+            return Ok(dest.to_string_lossy().to_string());
+        }
+    }
+
+    let url = format!(
+        "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/{}",
+        model_filename(&model_id)
+    );
+
+    let resp = reqwest::get(&url)
+        .await
+        .map_err(|e| format!("Download mislukt: {}", e))?;
+    if !resp.status().is_success() {
+        return Err(format!("Download mislukt: HTTP {}", resp.status()));
+    }
+    let total = resp.content_length().unwrap_or(0);
+
+    // Stream to a temp file so a half-finished download never looks complete.
+    let tmp = dest.with_extension("bin.part");
+    let mut file = tokio::fs::File::create(&tmp)
+        .await
+        .map_err(|e| format!("Kan bestand niet aanmaken: {}", e))?;
+
+    let mut downloaded: u64 = 0;
+    let mut last_emit: u64 = 0;
+    let mut stream = resp.bytes_stream();
+    while let Some(chunk) = stream.next().await {
+        let chunk = chunk.map_err(|e| format!("Downloadfout: {}", e))?;
+        file.write_all(&chunk)
+            .await
+            .map_err(|e| format!("Schrijffout: {}", e))?;
+        downloaded += chunk.len() as u64;
+        // Throttle events to ~every 2 MB to avoid flooding the UI thread.
+        if downloaded - last_emit >= 2_000_000 || downloaded == total {
+            last_emit = downloaded;
+            let pct = if total > 0 {
+                (downloaded as f64 / total as f64 * 100.0).round() as u32
+            } else {
+                0
+            };
+            let _ = app.emit(
+                "whisper-download-progress",
+                serde_json::json!({
+                    "model": model_id,
+                    "downloaded": downloaded,
+                    "total": total,
+                    "pct": pct,
+                }),
+            );
+        }
+    }
+    file.flush().await.map_err(|e| e.to_string())?;
+    drop(file);
+
+    std::fs::rename(&tmp, &dest).map_err(|e| format!("Kan model niet plaatsen: {}", e))?;
+    Ok(dest.to_string_lossy().to_string())
+}
+
+/// Transcribes a recorded WAV fully on-device. Emits coarse progress (0-100) on
+/// `transcribe-progress`. Returns the transcribed text (Dutch).
+#[tauri::command]
+pub async fn transcribe_local(
+    app: AppHandle,
+    file_path: String,
+    model_id: String,
+) -> Result<String, String> {
+    let model = model_path(&app, &model_id)?;
+    if !model.is_file() {
+        return Err("Model nog niet gedownload".to_string());
+    }
+
+    // whisper inference is blocking + CPU-heavy: keep it off the async runtime.
+    tokio::task::spawn_blocking(move || run_whisper(app, &model, &file_path))
+        .await
+        .map_err(|e| format!("Transcriptie-thread mislukt: {}", e))?
+}
+
+fn run_whisper(app: AppHandle, model: &PathBuf, wav_path: &str) -> Result<String, String> {
+    use whisper_rs::{
+        convert_integer_to_float_audio, FullParams, SamplingStrategy, WhisperContext,
+        WhisperContextParameters,
+    };
+
+    // Read the recorded WAV (recorder always writes 16 kHz mono i16).
+    let mut reader = hound::WavReader::open(wav_path)
+        .map_err(|e| format!("Kan opname niet lezen: {}", e))?;
+    let spec = reader.spec();
+    if spec.sample_rate != 16000 {
+        return Err(format!(
+            "Opname is {}Hz, verwacht 16kHz",
+            spec.sample_rate
+        ));
+    }
+    let total_samples = reader.len() as usize;
+
+    let ctx = WhisperContext::new_with_params(
+        &model.to_string_lossy(),
+        WhisperContextParameters::default(),
+    )
+    .map_err(|e| format!("Model laden mislukt: {}", e))?;
+    let mut state = ctx
+        .create_state()
+        .map_err(|e| format!("Whisper-state mislukt: {}", e))?;
+
+    // Stream-decode in ~10-minute windows so peak memory stays bounded on long
+    // files: only one window (~58 MB) is materialized at a time instead of the
+    // whole file (a 1h recording would be ~345 MB across the i16 + f32 buffers).
+    // whisper.cpp already windows at 30s internally; text is joined.
+    const CHUNK_SAMPLES: usize = 10 * 60 * 16000; // 10 min @ 16 kHz
+    let total_chunks = total_samples.div_ceil(CHUNK_SAMPLES).max(1);
+
+    let mut samples_iter = reader.samples::<i16>();
+    let mut text = String::new();
+    let mut int_buf: Vec<i16> = Vec::with_capacity(CHUNK_SAMPLES);
+    let mut float_buf: Vec<f32> = vec![0.0; CHUNK_SAMPLES];
+
+    for chunk_index in 0..total_chunks {
+        int_buf.clear();
+        for sample in samples_iter.by_ref().take(CHUNK_SAMPLES) {
+            int_buf.push(sample.map_err(|e| format!("Kan audio niet decoderen: {}", e))?);
+        }
+        if int_buf.is_empty() {
+            break;
+        }
+        float_buf.resize(int_buf.len(), 0.0);
+        convert_integer_to_float_audio(&int_buf, &mut float_buf)
+            .map_err(|e| format!("Audioconversie mislukt: {}", e))?;
+
+        let mut params = FullParams::new(SamplingStrategy::Greedy { best_of: 1 });
+        params.set_language(Some("nl"));
+        params.set_print_special(false);
+        params.set_print_progress(false);
+        params.set_print_realtime(false);
+        params.set_print_timestamps(false);
+
+        // Map this chunk's 0-100 progress onto its slice of the overall bar.
+        let app_progress = app.clone();
+        let base = (chunk_index * 100 / total_chunks) as i32;
+        let span = (100 / total_chunks) as i32;
+        params.set_progress_callback_safe(move |progress: i32| {
+            let overall = base + progress * span / 100;
+            let _ = app_progress.emit("transcribe-progress", overall.min(100));
+        });
+
+        state
+            .full(params, &float_buf)
+            .map_err(|e| format!("Transcriptie mislukt: {}", e))?;
+
+        let num_segments = state
+            .full_n_segments()
+            .map_err(|e| format!("Segmenten lezen mislukt: {}", e))?;
+        for i in 0..num_segments {
+            if let Ok(segment) = state.full_get_segment_text(i) {
+                text.push_str(&segment);
+            }
+        }
+    }
+
+    let _ = app.emit("transcribe-progress", 100);
+    Ok(text.trim().to_string())
+}

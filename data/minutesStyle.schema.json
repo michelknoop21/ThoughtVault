@@ -1,0 +1,69 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "font": {
+      "default": "Arial",
+      "enum": [
+        "Arial",
+        "Georgia",
+        "Verdana",
+        "Times New Roman"
+      ],
+      "title": "Font",
+      "type": "string"
+    },
+    "size": {
+      "default": 11,
+      "maximum": 32,
+      "minimum": 8,
+      "title": "Size",
+      "type": "number"
+    },
+    "text_color": {
+      "default": "#222222",
+      "pattern": "^#[0-9a-fA-F]{6}$",
+      "title": "Text Color",
+      "type": "string"
+    },
+    "accent_color": {
+      "default": "#3454d1",
+      "pattern": "^#[0-9a-fA-F]{6}$",
+      "title": "Accent Color",
+      "type": "string"
+    },
+    "line_height": {
+      "default": 1.5,
+      "maximum": 2.5,
+      "minimum": 1,
+      "title": "Line Height",
+      "type": "number"
+    },
+    "margin_mm": {
+      "default": 20,
+      "maximum": 40,
+      "minimum": 5,
+      "title": "Margin Mm",
+      "type": "number"
+    },
+    "paper": {
+      "default": "A4",
+      "enum": [
+        "A4",
+        "Letter"
+      ],
+      "title": "Paper",
+      "type": "string"
+    },
+    "orientation": {
+      "default": "portrait",
+      "enum": [
+        "portrait",
+        "landscape"
+      ],
+      "title": "Orientation",
+      "type": "string"
+    }
+  },
+  "title": "DocumentStyle",
+  "type": "object"
+}

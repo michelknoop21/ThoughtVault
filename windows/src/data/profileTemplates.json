@@ -1,0 +1,72 @@
+[
+  {
+    "id": "standaard",
+    "name": "Standaard",
+    "description": "Evenwichtige notulen met onderwerpen, besluiten en vervolgwerk",
+    "icon": "doc.text",
+    "emoji": "📝",
+    "systemPrompt": "Verzin geen feiten, aanwezigen, citaten, besluiten, acties, eigenaren of termijnen. Een besluit vereist expliciete overeenstemming; een idee of voorstel blijft een idee of voorstel. Neem concrete vervolgacties op, ook als eigenaar of deadline ontbreekt; schrijf dan 'Nog te bepalen' bij het ontbrekende veld. Corrigeer spraakherkenningsfouten alleen bij ondubbelzinnige context. Gebruik uitsluitend informatie uit de transcriptie en meegegeven deelnemers. Schrijf Nederlands en geef alleen eenvoudige HTML zonder CSS of code fences, met precies één h1-titel. Laat lege secties weg.",
+    "notulePrompt": "Maak een helder verslag van het gesprek. Inhoudsfocus: Behoud de belangrijkste context en alle concrete vervolgacties. Detailniveau: Middel: korte alinea's per onderwerp. Stijl: Neutraal en helder. Gebruik deze secties in deze volgorde wanneer ze inhoud hebben: Kern, Besproken onderwerpen, Besluiten, Acties, Open vragen. Laat secties zonder inhoud weg.\n\nVormvoorbeeld:\n{{OUTPUT_TEMPLATE}}\n\nTranscriptie:\n{{TRANSCRIPTION}}",
+    "template": "<h1>[Beschrijvende titel]</h1>\n<section><h2>Kern</h2><p>[Alleen brongebonden inhoud]</p></section>\n<section><h2>Besproken onderwerpen</h2><p>[Alleen brongebonden inhoud]</p></section>\n<section><h2>Besluiten</h2><p>[Alleen brongebonden inhoud]</p></section>\n<section><h2>Acties</h2><p>[Alleen brongebonden inhoud]</p></section>\n<section><h2>Open vragen</h2><p>[Alleen brongebonden inhoud]</p></section>"
+  },
+  {
+    "id": "executive",
+    "name": "Executive",
+    "description": "Compacte beslisnotitie voor leidinggevenden",
+    "icon": "chart.bar",
+    "emoji": "📊",
+    "systemPrompt": "Verzin geen feiten, aanwezigen, citaten, besluiten, acties, eigenaren of termijnen. Een besluit vereist expliciete overeenstemming; een idee of voorstel blijft een idee of voorstel. Neem concrete vervolgacties op, ook als eigenaar of deadline ontbreekt; schrijf dan 'Nog te bepalen' bij het ontbrekende veld. Corrigeer spraakherkenningsfouten alleen bij ondubbelzinnige context. Gebruik uitsluitend informatie uit de transcriptie en meegegeven deelnemers. Schrijf Nederlands en geef alleen eenvoudige HTML zonder CSS of code fences, met precies één h1-titel. Laat lege secties weg.",
+    "notulePrompt": "Maak een beslisnotitie die in één minuut te scannen is. Inhoudsfocus: Prioriteer uitkomsten, expliciete besluiten, risico's en toegewezen werk. Laat procesdetails weg tenzij nodig voor begrip. Detailniveau: Zeer compact: hoogstens enkele zinnen per sectie. Stijl: Direct en zakelijk. Gebruik deze secties in deze volgorde wanneer ze inhoud hebben: Kernuitkomst, Besluiten, Risico's en open punten, Vervolg. Laat secties zonder inhoud weg.\n\nVormvoorbeeld:\n{{OUTPUT_TEMPLATE}}\n\nTranscriptie:\n{{TRANSCRIPTION}}",
+    "template": "<h1>[Beschrijvende titel]</h1>\n<section><h2>Kernuitkomst</h2><p>[Alleen brongebonden inhoud]</p></section>\n<section><h2>Besluiten</h2><p>[Alleen brongebonden inhoud]</p></section>\n<section><h2>Risico's en open punten</h2><p>[Alleen brongebonden inhoud]</p></section>\n<section><h2>Vervolg</h2><p>[Alleen brongebonden inhoud]</p></section>"
+  },
+  {
+    "id": "projectoverleg",
+    "name": "Projectoverleg",
+    "description": "Voortgang, blokkades en opvolging per werkstroom",
+    "icon": "hammer",
+    "emoji": "🛠️",
+    "systemPrompt": "Verzin geen feiten, aanwezigen, citaten, besluiten, acties, eigenaren of termijnen. Een besluit vereist expliciete overeenstemming; een idee of voorstel blijft een idee of voorstel. Neem concrete vervolgacties op, ook als eigenaar of deadline ontbreekt; schrijf dan 'Nog te bepalen' bij het ontbrekende veld. Corrigeer spraakherkenningsfouten alleen bij ondubbelzinnige context. Gebruik uitsluitend informatie uit de transcriptie en meegegeven deelnemers. Schrijf Nederlands en geef alleen eenvoudige HTML zonder CSS of code fences, met precies één h1-titel. Laat lege secties weg.",
+    "notulePrompt": "Leg projectvoortgang en vervolgwerk per werkstroom vast. Inhoudsfocus: Neem status, afhankelijkheden, risico's, expliciete besluiten en alle concrete acties op. Detailniveau: Concreet en iets uitgebreider waar technische of planningscontext nodig is. Stijl: Praktisch en precies. Gebruik deze secties in deze volgorde wanneer ze inhoud hebben: Voortgang per onderwerp, Besluiten, Blokkades, Acties, Open punten. Laat secties zonder inhoud weg.\n\nVormvoorbeeld:\n{{OUTPUT_TEMPLATE}}\n\nTranscriptie:\n{{TRANSCRIPTION}}",
+    "template": "<h1>[Beschrijvende titel]</h1>\n<section><h2>Voortgang per onderwerp</h2><p>[Alleen brongebonden inhoud]</p></section>\n<section><h2>Besluiten</h2><p>[Alleen brongebonden inhoud]</p></section>\n<section><h2>Blokkades</h2><p>[Alleen brongebonden inhoud]</p></section>\n<section><h2>Acties</h2><p>[Alleen brongebonden inhoud]</p></section>\n<section><h2>Open punten</h2><p>[Alleen brongebonden inhoud]</p></section>"
+  },
+  {
+    "id": "klantgesprek",
+    "name": "Klantgesprek",
+    "description": "Klantbehoefte, afspraken en terugkoppeling",
+    "icon": "person.2",
+    "emoji": "🤝",
+    "systemPrompt": "Verzin geen feiten, aanwezigen, citaten, besluiten, acties, eigenaren of termijnen. Een besluit vereist expliciete overeenstemming; een idee of voorstel blijft een idee of voorstel. Neem concrete vervolgacties op, ook als eigenaar of deadline ontbreekt; schrijf dan 'Nog te bepalen' bij het ontbrekende veld. Corrigeer spraakherkenningsfouten alleen bij ondubbelzinnige context. Gebruik uitsluitend informatie uit de transcriptie en meegegeven deelnemers. Schrijf Nederlands en geef alleen eenvoudige HTML zonder CSS of code fences, met precies één h1-titel. Laat lege secties weg.",
+    "notulePrompt": "Vat de klantvraag en gemaakte afspraken samen. Inhoudsfocus: Scheid uitspraken van de klant, voorgestelde oplossingen en expliciete toezeggingen. Verlies bezwaren niet. Detailniveau: Middel: genoeg context om het gesprek op te volgen. Stijl: Respectvol, concreet en klantgericht. Gebruik deze secties in deze volgorde wanneer ze inhoud hebben: Klantbehoefte, Besproken opties, Afspraken, Vervolgacties, Open vragen. Laat secties zonder inhoud weg.\n\nVormvoorbeeld:\n{{OUTPUT_TEMPLATE}}\n\nTranscriptie:\n{{TRANSCRIPTION}}",
+    "template": "<h1>[Beschrijvende titel]</h1>\n<section><h2>Klantbehoefte</h2><p>[Alleen brongebonden inhoud]</p></section>\n<section><h2>Besproken opties</h2><p>[Alleen brongebonden inhoud]</p></section>\n<section><h2>Afspraken</h2><p>[Alleen brongebonden inhoud]</p></section>\n<section><h2>Vervolgacties</h2><p>[Alleen brongebonden inhoud]</p></section>\n<section><h2>Open vragen</h2><p>[Alleen brongebonden inhoud]</p></section>"
+  },
+  {
+    "id": "een_op_een",
+    "name": "1-op-1",
+    "description": "Persoonlijk gesprek met aandacht voor context en opvolging",
+    "icon": "person.2.circle",
+    "emoji": "💬",
+    "systemPrompt": "Verzin geen feiten, aanwezigen, citaten, besluiten, acties, eigenaren of termijnen. Een besluit vereist expliciete overeenstemming; een idee of voorstel blijft een idee of voorstel. Neem concrete vervolgacties op, ook als eigenaar of deadline ontbreekt; schrijf dan 'Nog te bepalen' bij het ontbrekende veld. Corrigeer spraakherkenningsfouten alleen bij ondubbelzinnige context. Gebruik uitsluitend informatie uit de transcriptie en meegegeven deelnemers. Schrijf Nederlands en geef alleen eenvoudige HTML zonder CSS of code fences, met precies één h1-titel. Laat lege secties weg.",
+    "notulePrompt": "Maak een zorgvuldige samenvatting van een één-op-één gesprek. Inhoudsfocus: Behoud nuance, zorgen, feedback en concrete toezeggingen. Forceer geen formele besluitenlijst. Detailniveau: Beknopt maar met voldoende nuance. Stijl: Warm, discreet en feitelijk. Gebruik deze secties in deze volgorde wanneer ze inhoud hebben: Besproken, Inzichten, Afspraken, Vervolg, Open vragen. Laat secties zonder inhoud weg.\n\nVormvoorbeeld:\n{{OUTPUT_TEMPLATE}}\n\nTranscriptie:\n{{TRANSCRIPTION}}",
+    "template": "<h1>[Beschrijvende titel]</h1>\n<section><h2>Besproken</h2><p>[Alleen brongebonden inhoud]</p></section>\n<section><h2>Inzichten</h2><p>[Alleen brongebonden inhoud]</p></section>\n<section><h2>Afspraken</h2><p>[Alleen brongebonden inhoud]</p></section>\n<section><h2>Vervolg</h2><p>[Alleen brongebonden inhoud]</p></section>\n<section><h2>Open vragen</h2><p>[Alleen brongebonden inhoud]</p></section>"
+  },
+  {
+    "id": "brainstorm",
+    "name": "Brainstorm",
+    "description": "Ideeën, afwegingen en kansen zonder schijnbesluiten",
+    "icon": "lightbulb",
+    "emoji": "💡",
+    "systemPrompt": "Verzin geen feiten, aanwezigen, citaten, besluiten, acties, eigenaren of termijnen. Een besluit vereist expliciete overeenstemming; een idee of voorstel blijft een idee of voorstel. Neem concrete vervolgacties op, ook als eigenaar of deadline ontbreekt; schrijf dan 'Nog te bepalen' bij het ontbrekende veld. Corrigeer spraakherkenningsfouten alleen bij ondubbelzinnige context. Gebruik uitsluitend informatie uit de transcriptie en meegegeven deelnemers. Schrijf Nederlands en geef alleen eenvoudige HTML zonder CSS of code fences, met precies één h1-titel. Laat lege secties weg.",
+    "notulePrompt": "Orden de ideeën uit een brainstorm zonder ze als besluiten te presenteren. Inhoudsfocus: Behoud verschillende ideeën en argumenten; markeer onzekerheid en alleen expliciet afgesproken vervolg. Detailniveau: Ruimte voor varianten, kort per idee. Stijl: Open en helder, zonder managementtaal. Gebruik deze secties in deze volgorde wanneer ze inhoud hebben: Vraagstuk, Ideeën, Kansrijke richtingen, Te onderzoeken, Afgesproken vervolgstappen. Laat secties zonder inhoud weg.\n\nVormvoorbeeld:\n{{OUTPUT_TEMPLATE}}\n\nTranscriptie:\n{{TRANSCRIPTION}}",
+    "template": "<h1>[Beschrijvende titel]</h1>\n<section><h2>Vraagstuk</h2><p>[Alleen brongebonden inhoud]</p></section>\n<section><h2>Ideeën</h2><p>[Alleen brongebonden inhoud]</p></section>\n<section><h2>Kansrijke richtingen</h2><p>[Alleen brongebonden inhoud]</p></section>\n<section><h2>Te onderzoeken</h2><p>[Alleen brongebonden inhoud]</p></section>\n<section><h2>Afgesproken vervolgstappen</h2><p>[Alleen brongebonden inhoud]</p></section>"
+  },
+  {
+    "id": "promptnotitie",
+    "name": "Promptnotitie",
+    "description": "Zet gesproken of geïmporteerde tekst om in een kopieerbare prompt",
+    "icon": "text.quote",
+    "emoji": "📋",
+    "systemPrompt": "Verzin geen feiten, aanwezigen, citaten, besluiten, acties, eigenaren of termijnen. Een besluit vereist expliciete overeenstemming; een idee of voorstel blijft een idee of voorstel. Neem concrete vervolgacties op, ook als eigenaar of deadline ontbreekt; schrijf dan 'Nog te bepalen' bij het ontbrekende veld. Corrigeer spraakherkenningsfouten alleen bij ondubbelzinnige context. Gebruik uitsluitend informatie uit de transcriptie en meegegeven deelnemers. Schrijf Nederlands en geef alleen eenvoudige HTML zonder CSS of code fences, met precies één h1-titel. Laat lege secties weg.",
+    "notulePrompt": "Herschrijf de bron tot één compacte prompt voor een AI-assistent. Inhoudsfocus: Behoud bedoeling, taak, context, beperkingen en gewenste output van de spreker. Voeg geen nieuwe doelen of eisen toe. Detailniveau: Zo kort mogelijk zonder betekenisverlies. Stijl: Directe instructie in de tweede persoon; geen vergadernotulen. Geef alleen de prompt als doorlopende, kopieerbare tekst; geen vergadersecties. Verander de bedoeling niet. Laat secties zonder inhoud weg.\n\nVormvoorbeeld:\n{{OUTPUT_TEMPLATE}}\n\nTranscriptie:\n{{TRANSCRIPTION}}",
+    "template": "<h1>Prompt</h1>\n<p>[Kopieerbare prompttekst]</p>"
+  }
+]

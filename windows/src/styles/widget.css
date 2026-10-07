@@ -1,0 +1,223 @@
+/* Widget window — floating always-on-top recording pill (matches macOS RecordingWidgetView) */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #widget-root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  background: transparent;
+}
+
+body {
+  font-family: "Segoe UI Variable", "Segoe UI", -apple-system, system-ui, sans-serif;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.95);
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+/* ---- Pill shell ---- */
+.widget-pill {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  background: rgba(18, 18, 18, 0.88);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 28px;
+  overflow: hidden;
+  /* Force-clip backdrop-filter to the border-radius shape */
+  -webkit-mask-image: linear-gradient(#fff 0 0);
+  mask-image: linear-gradient(#fff 0 0);
+  box-shadow:
+    0 3px 8px rgba(0, 0, 0, 0.12),
+    0 0 12px rgba(144, 72, 240, 0.08);
+  transition: box-shadow 300ms ease, border-color 300ms ease;
+}
+
+.widget-pill.paused {
+  border-color: rgba(255, 179, 71, 0.35);
+  box-shadow:
+    0 3px 8px rgba(0, 0, 0, 0.12),
+    0 0 12px rgba(255, 179, 71, 0.06);
+}
+
+.widget-pill.stopping {
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12);
+}
+
+/* ---- Drag region (entire left section) ---- */
+.widget-drag-region {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+  padding: 0 6px 0 12px;
+  height: 100%;
+  cursor: grab;
+}
+
+/* ---- Status badge ---- */
+.widget-badge {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 20px;
+  flex-shrink: 0;
+}
+
+.widget-badge.recording {
+  background: rgba(144, 72, 240, 0.14);
+}
+.widget-badge.paused {
+  background: rgba(255, 179, 71, 0.14);
+}
+.widget-badge.stopping {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.widget-badge-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.widget-badge-dot.recording {
+  background: #9048F0;
+  animation: widget-pulse 1.2s ease-in-out infinite;
+}
+.widget-badge-dot.paused {
+  background: #FFB347;
+  animation: none;
+}
+.widget-badge-dot.stopping {
+  background: rgba(255, 255, 255, 0.4);
+  animation: widget-pulse 1.2s ease-in-out infinite;
+}
+
+.widget-badge-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  line-height: 1;
+}
+
+.widget-badge.recording .widget-badge-label { color: #9048F0; }
+.widget-badge.paused .widget-badge-label { color: #FFB347; }
+.widget-badge.stopping .widget-badge-label { color: rgba(255, 255, 255, 0.5); }
+
+/* ---- Waveform ---- */
+.widget-waveform {
+  flex: 1;
+  min-width: 60px;
+  max-width: 140px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+}
+
+/* ---- Timer ---- */
+.widget-timer {
+  font-size: 14px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: rgba(255, 255, 255, 0.92);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  min-width: 42px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* ---- Divider ---- */
+.widget-divider {
+  width: 1px;
+  height: 20px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 1px;
+  flex-shrink: 0;
+  margin: 0 4px;
+}
+
+/* ---- Action buttons ---- */
+.widget-actions {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 10px 0 4px;
+  flex-shrink: 0;
+}
+
+.widget-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.80);
+  border-radius: 50%;
+  cursor: default;
+  transition: background 80ms ease, color 80ms ease;
+  width: 30px;
+  height: 30px;
+}
+
+.widget-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 1);
+}
+.widget-btn:active {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.widget-btn-stop {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border: none;
+  background: rgba(220, 38, 38, 0.85);
+  color: #fff;
+  border-radius: 20px;
+  cursor: default;
+  transition: background 80ms ease, box-shadow 150ms ease;
+  padding: 5px 11px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  line-height: 1;
+  box-shadow: 0 2px 6px rgba(220, 38, 38, 0.30);
+}
+
+.widget-btn-stop:hover {
+  background: rgba(220, 38, 38, 1);
+  box-shadow: 0 2px 10px rgba(220, 38, 38, 0.45);
+}
+.widget-btn-stop:active {
+  background: rgba(185, 28, 28, 1);
+}
+.widget-btn-stop:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ---- Animations ---- */
+@keyframes widget-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.5; transform: scale(0.8); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .widget-badge-dot { animation: none; }
+}

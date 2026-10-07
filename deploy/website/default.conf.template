@@ -7,6 +7,8 @@ server {
     access_log off;
     add_header X-Content-Type-Options nosniff always;
     add_header Referrer-Policy no-referrer always;
+    gzip on;
+    gzip_types text/css application/javascript image/svg+xml;
     location = /healthz { return 200 'ok'; }
     location = /d-${DOWNLOAD_TOKEN} { return 404; }
     location = /d-${DOWNLOAD_TOKEN}/ {
@@ -35,6 +37,11 @@ server {
         add_header Cache-Control 'private, no-store' always;
         add_header Referrer-Policy no-referrer always;
         add_header X-Content-Type-Options nosniff always;
+    }
+    location /assets/ {
+        add_header Cache-Control 'public, max-age=604800' always;
+        add_header X-Content-Type-Options nosniff always;
+        add_header Referrer-Policy no-referrer always;
     }
     location / { try_files $uri $uri/ =404; }
 }

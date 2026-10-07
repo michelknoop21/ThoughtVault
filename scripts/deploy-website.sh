@@ -12,7 +12,7 @@ cp "$ROOT_DIR/deploy/website/compose.yaml" "$SITE_STAGE/compose.yaml"
 for file in index.html landing.css landing.js; do
     cp "$ROOT_DIR/docs/design/high-end-yinga/$file" "$SITE_STAGE/docs/design/high-end-yinga/"
 done
-for file in thoughtvault-mark.png yinga-logo.svg macos-recording.png macos-processing.png; do
+for file in thoughtvault-mark.png yinga-logo.svg macos-recording.png macos-processing.png favicon.png apple-touch-icon.png; do
     cp "$ROOT_DIR/docs/design/high-end-yinga/assets/$file" "$SITE_STAGE/docs/design/high-end-yinga/assets/"
 done
 cat > "$SITE_STAGE/.dockerignore" <<'IGNORE'

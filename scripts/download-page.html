@@ -1294,7 +1294,7 @@
     <!-- Header -->
     <header class="header">
         <div class="container header-inner">
-            <a href="/tstudio/download/" class="header-logo" aria-label="ThoughtVault startpagina">
+            <a href="https://thoughtvault.yinga.ai/d-05921304471ce66e62d0a2b7f324c2354dfb1d895d23a895bba7f86110e2472e/" class="header-logo" aria-label="ThoughtVault startpagina">
                 <img src="/tstudio/static/Transcriptstudio.png" alt="ThoughtVault" width="144" height="36">
             </a>
 
@@ -2106,7 +2106,7 @@
            ======================================== */
         async function loadReleases() {
             try {
-                const res = await fetch('/tstudio/download/releases.json');
+                const res = await fetch('https://thoughtvault.yinga.ai/d-05921304471ce66e62d0a2b7f324c2354dfb1d895d23a895bba7f86110e2472e/releases.json');
                 if (!res.ok) throw new Error('Failed to fetch releases');
                 const data = await res.json();
 

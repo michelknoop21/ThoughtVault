@@ -1,6 +1,6 @@
 [package]
 name = "thoughtvault"
-version = "1.0.258"
+version = "1.0.259"
 description = "ThoughtVault - Meeting recorder and transcription app"
 authors = ["Yinga"]
 edition = "2021"

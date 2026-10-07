@@ -6,7 +6,6 @@ Start bij de [README](../README.md) en [projectinstructies](../CLAUDE.md).
 - [Releaseproces](RELEASE.md)
 - [Automatische updates en websitecontract](AUTOMATISCHE-UPDATES.md)
 - [Windows-bewijs en beperkingen](WINDOWS-LOKAAL.md)
-- [Visuele Windows-releasecontrole](design/windows/README.md)
 
 Gitea is de bronrepository. Windows-builds draaien via GitHub Actions in
 `michelknoop21/ThoughtVault`; niet via een andere GitLab-app of handmatige RDP.

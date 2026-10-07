@@ -19,9 +19,9 @@ bash scripts/deploy-production.sh <github-ref>
 Deze scripts dispatchen alleen de ThoughtVault-workflow. Ze voegen geen remote toe,
 pushen geen broncode of tags en gebruiken geen GitLab.
 
-Publicatie vereist een geslaagde visuele releasecontrole:
-`python3 scripts/check-windows-design.py`. Ontbrekend bewijs blokkeert ook
-handmatige uploads. Zie [de controle](design/windows/README.md).
+Controleer de gebruikte broncommit en de installer-versie. Normale build-, test-
+en installatiecontroles blijven onderdeel van de workflow. Een visuele beoordeling
+is geen standaard publicatievoorwaarde.
 
 ## Mac
 
@@ -38,7 +38,7 @@ bestaande Apple Development identity; publiceer die build niet als distributie.
 
 ## Website en updates
 
-Releases verschijnen onder `https://thoughtvault.yinga.ai/releases/`.
+Releases verschijnen uitsluitend op de downloadspagina uit `docs/AUTOMATISCHE-UPDATES.md`.
 De pipeline beheert artifacts, `releases.json` en platformfeeds. Websitepagina's
 worden door het websiteproject beheerd. Bewaar de `/releases/*`-route bij deploys.
 Zie [AUTOMATISCHE-UPDATES.md](AUTOMATISCHE-UPDATES.md).

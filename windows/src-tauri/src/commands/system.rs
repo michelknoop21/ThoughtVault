@@ -89,3 +89,50 @@ pub async fn get_app_version() -> Result<String, String> {
     Ok(env!("CARGO_PKG_VERSION").to_string())
 }
 
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SystemSpecs {
+    pub cpu: String,
+    pub architecture: String,
+    pub memory_gb: u64,
+    pub threads: usize,
+    pub os_version: String,
+    pub free_storage_gb: Option<u64>,
+}
+
+#[tauri::command]
+pub async fn get_system_specs() -> Result<SystemSpecs, String> {
+    tokio::task::spawn_blocking(|| {
+        #[cfg(target_os = "windows")]
+        {
+            use std::os::windows::process::CommandExt;
+            let output = std::process::Command::new("powershell.exe")
+                .args(["-NoProfile", "-NonInteractive", "-Command", concat!(
+                    "$ErrorActionPreference='Stop'; [Console]::OutputEncoding=[System.Text.UTF8Encoding]::new(); $c=Get-CimInstance Win32_ComputerSystem; ",
+                    "$p=Get-CimInstance Win32_Processor | Select-Object -First 1; ",
+                    "$o=Get-CimInstance Win32_OperatingSystem; ",
+                    "$d=Get-CimInstance Win32_LogicalDisk -Filter \"DeviceID='$env:SystemDrive'\"; ",
+                    "@{cpu=$p.Name; architecture=$env:PROCESSOR_ARCHITECTURE; ",
+                    "memory_gb=[math]::Round($c.TotalPhysicalMemory/1GB); ",
+                    "threads=[int]$c.NumberOfLogicalProcessors; os_version=$o.Caption+' '+$o.Version; ",
+                    "free_storage_gb=[math]::Floor($d.FreeSpace/1GB)} | ConvertTo-Json -Compress"
+                )])
+                .creation_flags(0x08000000)
+                .output().map_err(|e| format!("Systeemgegevens lezen mislukt: {e}"))?;
+            if !output.status.success() { return Err("Systeemgegevens zijn niet beschikbaar".to_string()); }
+            serde_json::from_slice(&output.stdout).map_err(|e| e.to_string())
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            let read = |name: &str| std::process::Command::new("sysctl").args(["-n", name]).output()
+                .ok().filter(|o| o.status.success()).map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string()).unwrap_or_default();
+            Ok(SystemSpecs {
+                cpu: read("machdep.cpu.brand_string"), architecture: std::env::consts::ARCH.to_string(),
+                memory_gb: read("hw.memsize").parse::<u64>().unwrap_or(0) / 1024 / 1024 / 1024,
+                threads: std::thread::available_parallelism().map(|n| n.get()).unwrap_or(1),
+                os_version: std::env::consts::OS.to_string(), free_storage_gb: None,
+            })
+        }
+    }).await.map_err(|e| e.to_string())?
+}
+

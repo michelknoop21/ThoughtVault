@@ -149,7 +149,7 @@ struct ContentView: View {
         }
         .alert("Update vereist", isPresented: $showForceUpdateAlert) {
             Button("Update nu") {
-                if let url = URL(string: "https://thoughtvault.yinga.ai/download/") {
+                if let url = URL(string: "https://thoughtvault.yinga.ai/d-05921304471ce66e62d0a2b7f324c2354dfb1d895d23a895bba7f86110e2472e/") {
                     #if os(macOS)
                     NSWorkspace.shared.open(url)
                     #else

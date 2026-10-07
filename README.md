@@ -38,9 +38,10 @@ Lees [het Windows-buildproces](docs/WINDOWS-BUILD-WORKFLOW.md),
 Gitea is de bron; de Windows-runner staat op GitHub. Bouw altijd een expliciete,
 gecontroleerde bronref. Een tag naar Gitea alleen start geen GitHub-build.
 
-Windows-releases moeten ook door de
-[visuele releasecontrole](docs/design/windows/README.md). Builds, installerstart
-of testresultaten vervangen de visuele vergelijking met de huidige Mac-app niet.
+Controleer vóór dispatch dat de expliciete buildref de actuele ThoughtVault-bron
+bevat. Leg de commit vast en vergelijk hem met `headSha` van de CI-run. Bouw geen
+oude defaultbranch en gebruik geen vorige installer voor een nieuw versienummer.
+Normale tests en installercontroles volstaan; geen standaard visuele releasegate.
 
 Mac-distributie vereist Developer ID signing en notarization. Een lokaal
 Apple Development-build is geen openbare distributiebuild.

@@ -173,15 +173,10 @@ export default function App() {
     return () => { void unlisten.then((stop) => stop()); };
   }, []);
 
-  // Detect system theme preference
+  // The desktop shell uses ThoughtVault's studio palette, independently of
+  // Windows' system theme. Pages and overlays inherit the same design tokens.
   useEffect(() => {
-    const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    document.documentElement.dataset.theme = mq.matches ? "dark" : "light";
-    const handler = (e: MediaQueryListEvent) => {
-      document.documentElement.dataset.theme = e.matches ? "dark" : "light";
-    };
-    mq.addEventListener("change", handler);
-    return () => mq.removeEventListener("change", handler);
+    document.documentElement.dataset.theme = "dark";
   }, []);
 
   if (shouldBlockForLocalNotes(processingMode, localReady)) {

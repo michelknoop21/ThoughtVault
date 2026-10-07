@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { NavLink } from "react-router-dom";
 import {
   Home24Regular,
@@ -5,14 +6,18 @@ import {
   TaskListLtr24Regular,
   DocumentText24Regular,
   Settings24Regular,
+  ChevronLeft24Regular,
+  ChevronRight24Regular,
   NotepadPerson24Regular,
   People24Regular,
 } from "@fluentui/react-icons";
 import appLogo from "../../assets/app-logo.png";
 
 export function Sidebar() {
+  const [collapsed, setCollapsed] = useState(false);
   return (
-    <nav className="sidebar" aria-label="Hoofdnavigatie" data-theme="dark">
+    <nav className={`sidebar${collapsed ? " collapsed" : ""}`} aria-label="Hoofdnavigatie" data-theme="dark">
+      <button type="button" className="sidebar-toggle" aria-label={collapsed ? "Zijbalk uitklappen" : "Zijbalk inklappen"} aria-expanded={!collapsed} onClick={() => setCollapsed(!collapsed)}>{collapsed ? <ChevronRight24Regular /> : <ChevronLeft24Regular />}</button>
       {/* Logo + app title */}
       <div className="sidebar-logo-section">
         <img

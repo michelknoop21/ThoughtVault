@@ -109,12 +109,43 @@ index with `gbrain embed --stale` after large changes.
 <!-- gstack-gbrain-search-guidance:end -->
 
 
-## Windows visual release gate
+## ThoughtVault Windows: juiste bron bouwen
 
-Windows moet de **huidige** ThoughtVault-presentatie dragen; de verouderde
-Windows-indeling is geen visuele referentie. Naam/logo, een succesvolle build en een MSI-starttest
-bewijzen geen visuele overeenkomst. Bij een wijziging aan Mac- of Windows-opmaak:
-lees `docs/design/windows/README.md`, vergelijk de echte schermen en actualiseer
-het beoordeelde bewijs. `scripts/check-windows-design.py` moet slagen voordat een
-Windows-installer openbaar wordt gemaakt. Zet reviewstatus/hashes nooit op groen
-zonder de daadwerkelijke visuele controle. Behoud alle bestaande functies/data.
+- `origin` op Gitea is de ThoughtVault-bronrepository. GitHub Actions in
+  `michelknoop21/ThoughtVault` is alleen de Windows-builddienst.
+- Bouw de actuele ThoughtVault-wijzigingen uit deze checkout. Gebruik geen oude
+  GitHub-defaultbranch, oud werkpad of eerder MSI-bestand als vervanging.
+- Zet de bedoelde bron op een expliciete GitHub-buildref vóór dispatch. Controleer
+  dat die ref dezelfde appcode, assets/logo, packagebestanden en VERSION bevat.
+  Gebruik geen oudere ref alleen omdat daar een buildworkflow beschikbaar is.
+- Leg de gebruikte commit vast en vergelijk die met `headSha` van de CI-run.
+  `SOURCE-SHA256.json`, indien aanwezig bij een geïsoleerde bronkopie, beschrijft
+  de gekopieerde bronbestanden. Een Gitea-push start niet vanzelf GitHub Actions.
+- Behoud lokale wijzigingen, actuele ThoughtVault-opmaak, naam/logo, lokale/cloud
+  AI, opslag-ID's en updaterconfiguratie. Vervang geen schermen door oudere
+  implementaties om een buildfout op te lossen.
+- `bash scripts/deploy-dev.sh <github-ref>` en `deploy-production.sh <github-ref>`
+  starten alleen die expliciete ThoughtVault-ref; ze pushen geen andere repository.
+- Normale build-, test- en installatiecontroles volstaan. Een visuele beoordeling
+  is geen standaard releasevoorwaarde. Claim alleen werkelijk uitgevoerde checks.
+- Lees `docs/WINDOWS-BUILD-WORKFLOW.md` voor de bewezen route, artifactnamen,
+  publicatie en upgrademogelijkheden. Publiceer nooit een vorige artifact onder
+  een nieuwe versienaam.
+
+## Downloads: vaste publicatieplek
+
+- De enige downloadspagina is `https://thoughtvault.yinga.ai/d-05921304471ce66e62d0a2b7f324c2354dfb1d895d23a895bba7f86110e2472e/`.
+- Installers, `releases.json` en alle downloadlinks gebruiken dit pad. Maak geen
+  extra downloadpagina of openbare installerroute onder `/download/`,
+  `/downloads/`, `/releases/` of `/tstudio/download/` op thoughtvault.yinga.ai.
+- Uitzondering: de bestaande updaterfeeds blijven bereikbaar onder
+  `/releases/windows/stable.json`, `/releases/windows/dev.json`,
+  `/releases/macos/stable.xml` en `/releases/macos/dev.xml`. Hun artifactlinks
+  verwijzen naar het vaste downloadpad. Andere oude downloadroutes geven 404.
+- Gebruik `scripts/publish-release.py` via de bestaande uploadscripts. Bewaar
+  handtekeningen, controlesommen en versies; verander geen reeds gepubliceerd
+  installerbestand. De opslagdirectory blijft `/home/michelk/tstudio-releases`.
+- Behoud bij website-deployments de routes uit
+  `scripts/infra/thoughtvault-releases.caddy`. De websitepagina wordt door het
+  websiteproject beheerd; de app-release uploadt alleen artifacts en metadata.
+- Zie `docs/AUTOMATISCHE-UPDATES.md` voor het volledige download-/updatecontract.

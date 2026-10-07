@@ -4,12 +4,13 @@ import {
   MicRecord24Regular,
   VideoChat24Regular,
   CalendarLtr24Regular,
-  Clock24Regular,
   MoreHorizontal24Regular,
   Delete24Regular,
   Settings24Regular,
   Search24Regular,
   Person24Regular,
+  DocumentText24Regular,
+  ChevronRight24Regular,
 } from "@fluentui/react-icons";
 import { useRecordingStore } from "../stores/recordingStore";
 import { useTranscriptsStore } from "../stores/transcriptsStore";
@@ -150,9 +151,9 @@ export function HomePage() {
       </section>
       <aside className="thoughtvault-home-side">
       {/* Upcoming meetings */}
-      {upcomingEvents.length > 0 && (
-        <section>
-          <p className="section-label">Aankomende vergaderingen</p>
+        <section className="thoughtvault-agenda" aria-label="Vandaag">
+          <h2>Vandaag</h2>
+          {upcomingEvents.length === 0 && <div className="thoughtvault-agenda-empty"><p>{calendar.isConnected ? "Geen aankomende vergaderingen." : "Koppel je agenda om je meetings hier te zien."}</p>{!calendar.isConnected && <button className="btn btn-secondary" onClick={() => navigate("/settings")}>Agenda koppelen</button>}</div>}
           <div className="flex-col gap-8">
             {upcomingEvents.map((event) => (
               <div key={event.id} className="card session-card flex-row gap-12">
@@ -177,7 +178,6 @@ export function HomePage() {
             ))}
           </div>
         </section>
-      )}
 
       <section className="thoughtvault-quick-capture" aria-label="Snel vastleggen">
         <h2>Snel vastleggen</h2>
@@ -185,12 +185,13 @@ export function HomePage() {
         <button className="btn btn-secondary" onClick={() => handleQuickStart("combined")}><VideoChat24Regular />Gesprek opnemen</button>
       </section>
 
+      <section className="thoughtvault-brand-note"><strong>Laat gedachten groeien tot kennis.</strong><p>Eén gesprek kan meerdere inzichten, taken en plannen opleveren.</p></section>
       </aside>
 
-      {/* Recent sessions */}
+      {/* Recent notes */}
       <section style={{ flex: 1, minHeight: 0 }} className="flex-col thoughtvault-home-recent">
         <div className="flex-row justify-between" style={{ alignItems: "center" }}>
-          <p className="section-label" style={{ margin: 0 }}>Recente notities</p>
+          <h2>Recente notities</h2>
           {isLoading && <span className="text-caption" style={{ color: "var(--fill-accent-default)" }}>Laden...</span>}
         </div>
         <div className="thoughtvault-recent-filters" role="group" aria-label="Notities filteren">
@@ -225,7 +226,7 @@ export function HomePage() {
             </button>
           </div>
         ) : (
-          <div className="flex-col gap-10">
+          <div className="thoughtvault-notes-list">
             {visibleTranscripts.map((transcript) => (
               <SessionCard
                 key={transcript.id}
@@ -282,54 +283,21 @@ function SessionCard({
   const [menuOpen, setMenuOpen] = useState(false);
 
   const previewText = getPreviewText(transcript);
-  const isComplete = !!transcript.notule_html || !!transcript.raw_transcription || transcript.has_notes || transcript.has_transcription;
+  const hasNotes = !!(transcript.notule_html || transcript.has_notes);
 
   return (
-    <div className="card session-card" onClick={onClick}>
-      {/* Header row */}
-      <div className="session-card-header">
-        <div className="flex-row gap-8">
-          <span className="status-badge-accent">Sessie</span>
-          <span className="text-caption">{formatDate(transcript.created_at)}</span>
-        </div>
-        <div style={{ position: "relative" }}>
-          <button
-            onClick={(e) => { e.stopPropagation(); setMenuOpen(!menuOpen); }}
-            className="icon-btn icon-btn-sm"
-          >
-            <MoreHorizontal24Regular style={{ fontSize: 16 }} />
-          </button>
-          {menuOpen && (
-            <div
-              className="context-menu"
-              style={{ position: "absolute", right: 0, top: "100%" }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button
-                onClick={() => { setMenuOpen(false); onDelete(transcript); }}
-                className="context-menu-item context-menu-item-danger"
-              >
-                <Delete24Regular style={{ fontSize: 14 }} />
-                Verwijderen
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Title */}
-      <p className="session-card-title truncate">{transcript.title || "Naamloze opname"}</p>
-
-      {/* Preview */}
-      {previewText && <p className="session-card-preview">{previewText}</p>}
-
-      {/* Bottom row */}
-      <div className="session-card-meta flex-row gap-8">
-        <span className="flex-row gap-4">
-          <Clock24Regular style={{ fontSize: 12 }} />
-          {formatTimeAgo(transcript.created_at)}
+    <div className="thoughtvault-note-row">
+      <button className="thoughtvault-note-open" onClick={onClick}>
+        <span className={`thoughtvault-note-icon${hasNotes ? "" : " thoughtvault-note-audio"}`}><DocumentText24Regular /></span>
+        <span className="thoughtvault-note-copy">
+          <span className="thoughtvault-note-title">{transcript.title || "Naamloze opname"}</span>
+          <span className="thoughtvault-note-summary"><time dateTime={transcript.created_at}>{formatDate(transcript.created_at)}</time>{previewText && <span>{previewText}</span>}</span>
         </span>
-        {isComplete && <span className="status-badge-success">Voltooid</span>}
+        <ChevronRight24Regular className="thoughtvault-note-chevron" />
+      </button>
+      <div className="thoughtvault-note-menu">
+        <button onClick={() => setMenuOpen(!menuOpen)} className="icon-btn icon-btn-sm" aria-label={`Acties voor ${transcript.title || "Naamloze opname"}`} aria-expanded={menuOpen}><MoreHorizontal24Regular /></button>
+        {menuOpen && <div className="context-menu" style={{ position: "absolute", right: 0, top: "100%" }}><button onClick={() => { setMenuOpen(false); onDelete(transcript); }} className="context-menu-item context-menu-item-danger"><Delete24Regular />Verwijderen</button></div>}
       </div>
     </div>
   );
@@ -356,23 +324,6 @@ function getPreviewText(transcript: Transcript): string {
     return stripHtml(transcript.preview).slice(0, 200);
   }
   return "";
-}
-
-function formatTimeAgo(dateStr: string): string {
-  const now = new Date();
-  const date = new Date(dateStr);
-  const diffMs = now.getTime() - date.getTime();
-  const diffMin = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-
-  if (diffMin < 1) return "Zojuist";
-  if (diffMin < 60) return `${diffMin} min geleden`;
-  if (diffHours < 24) return `${diffHours} uur geleden`;
-  if (diffDays === 1) return "Gisteren";
-  if (diffDays < 7) return `${diffDays} dagen geleden`;
-  if (diffDays < 30) return `${Math.floor(diffDays / 7)} weken geleden`;
-  return formatDate(dateStr);
 }
 
 function formatEventTime(start: string, end: string): string {

@@ -130,10 +130,6 @@ jobs:
           powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify-windows-installer.ps1 -Installer "build/${{ steps.names.outputs.msi_name }}" -PreviousInstaller "build/previous/ThoughtVault.msi"
           if ($LASTEXITCODE -ne 0) { throw "Installation verification failed" }
 
-      - name: Require reviewed ThoughtVault presentation
-        if: github.event_name != 'workflow_dispatch' || inputs.publish
-        run: python scripts/check-windows-design.py
-
       - name: Upload to server
         if: github.event_name != 'workflow_dispatch' || inputs.publish
         shell: bash

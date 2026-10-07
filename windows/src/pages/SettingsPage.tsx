@@ -1,3 +1,4 @@
+import { invoke } from "@tauri-apps/api/core";
 import { useState, useEffect } from "react";
 import {
   DocumentText24Regular,
@@ -6,6 +7,9 @@ import {
   ErrorCircle24Regular,
   ArrowSync24Regular,
   Notebook24Regular,
+  Settings24Regular,
+  Options24Regular,
+  Calendar24Regular,
 } from "@fluentui/react-icons";
 import { useCalendarStore } from "../stores/calendarStore";
 import { MicrosoftGraphService } from "../services/microsoftGraph";
@@ -19,6 +23,7 @@ import { ProfileSettings } from "../components/settings/ProfileSettings";
 import { AIConnections } from "../components/settings/AIConnections";
 
 export function SettingsPage() {
+  const [tab, setTab] = useState("Verwerking");
   const [appVersion, setAppVersion] = useState("");
 
   useEffect(() => {
@@ -42,18 +47,12 @@ export function SettingsPage() {
     setTimeout(() => setObsidianTestStatus("idle"), 3000);
   }
 
-  return (
-    <div className="page-scroll">
-      {/* Page header */}
-      <div className="page-header">
-        <h1 className="page-title-sm">Instellingen</h1>
-      </div>
-
-      {/* Scrollable settings groups */}
-      <div className="page-content">
-        <div className="page-content-narrow">
-
-          {/* Profiel — self-profile, separate from notule-Profielen (D-08) */}
+  return <div className="page-scroll northstar-settings" data-theme="dark">
+    <h1>Instellingen</h1>
+    <nav className="settings-tabs" aria-label="Instellingen">
+      {[["Algemeen", <Settings24Regular />], ["Verwerking", <Options24Regular />], ["Notulen", <DocumentText24Regular />], ["Agenda", <Calendar24Regular />], ["Obsidian", <Notebook24Regular />], ["Geavanceerd", <Settings24Regular />]].map(([name, icon]) => <button key={String(name)} aria-current={tab === name ? "page" : undefined} className={tab === name ? "active" : ""} onClick={() => setTab(String(name))}>{icon}{name}</button>)}
+    </nav>
+    {tab === "Algemeen" && <div className="settings-other">          {/* Profiel — self-profile, separate from notule-Profielen (D-08) */}
           <div className="settings-group">
             <p className="settings-group-label">Profiel</p>
             <div style={{ padding: "12px 14px" }}>
@@ -75,7 +74,8 @@ export function SettingsPage() {
             </div>
           </div>
 
-          {/* Notulen */}
+</div>}
+    {tab === "Notulen" && <div className="settings-other">          {/* Notulen */}
           <div className="settings-group">
             <p className="settings-group-label">Notulen</p>
             <div className="settings-row">
@@ -92,14 +92,9 @@ export function SettingsPage() {
             </div>
           </div>
 
-          <div className="settings-group">
-            <p className="settings-group-label">Verwerking</p>
-            <div style={{ padding: "12px 14px" }}><LocalModelSetup /></div>
-          </div>
-
-          {/* Obsidian */}
-          <AIConnections />
-          <div className="settings-group">
+</div>}
+    {tab === "Verwerking" && <><header className="settings-section-header"><h2>Verwerking</h2><p>Lokale transcriptie, met jouw keuze voor lokale of cloud-AI.</p></header><div className="processing-columns"><div><section className="settings-group"><h3 className="settings-group-label">Transcriptie en notulen</h3><div className="restored-model-settings"><LocalModelSetup /></div></section><AIConnections /></div><ProcessingSide /></div></>}
+    {tab === "Obsidian" && <div className="settings-other">          <div className="settings-group">
             <p className="settings-group-label">Obsidian-koppeling</p>
             <div className="settings-row">
               <div className="flex-row gap-10 flex-1">
@@ -168,7 +163,8 @@ export function SettingsPage() {
             </div>
           </div>
 
-          <div className="settings-group" style={{ padding: 14 }}>
+</div>}
+    {tab === "Agenda" && <div className="settings-other">          <div className="settings-group" style={{ padding: 14 }}>
             <p className="settings-group-label">Agenda en updates</p>
             <label>Microsoft client-ID<input className="input" value={settings.ms365_client_id ?? ""} onChange={(e) => settings.updateSettings({ ms365_client_id: e.target.value })} /></label>
             <label>Microsoft tenant-ID<input className="input" value={settings.ms365_tenant_id ?? ""} onChange={(e) => settings.updateSettings({ ms365_tenant_id: e.target.value })} /></label>
@@ -176,9 +172,8 @@ export function SettingsPage() {
             <p role="status">{calendarStatus || calendar.accountEmail}</p>
             <label><input type="checkbox" checked={settings.check_for_updates} onChange={(e) => settings.updateSettings({ check_for_updates: e.target.checked })} /> Controleer op updates</label>
           </div>
-          <BrandFooter />
-
-          {/* Over */}
+</div>}
+    {tab === "Geavanceerd" && <div className="settings-other">          {/* Over */}
           <div className="settings-group">
             <p className="settings-group-label">Over</p>
             <div className="settings-row">
@@ -191,11 +186,22 @@ export function SettingsPage() {
               </div>
             </div>
           </div>
+</div>}
+    <BrandFooter />
+  </div>;
+}
 
-        </div>
-      </div>
-    </div>
-  );
+interface SystemSpecs { cpu: string; architecture: string; memory_gb: number; threads: number; os_version: string; free_storage_gb: number | null; }
+function ProcessingSide() {
+  const [specs, setSpecs] = useState<SystemSpecs | null>(null);
+  const [error, setError] = useState("");
+  useEffect(() => { let active = true; invoke<SystemSpecs>("get_system_specs").then(value => { if(active) setSpecs(value); }).catch(() => { if(active) setError("Systeemgegevens niet beschikbaar."); }); return () => { active = false; }; }, []);
+  const medium = Boolean(specs && specs.memory_gb >= 16 && specs.threads >= 8);
+  return <aside className="processing-side" aria-label="Jouw pc en modeladvies">
+    <section className="northstar-card"><h3>Jouw pc</h3>{specs ? <dl className="system-specs">{[["Processor", specs.cpu], ["Architectuur", specs.architecture], ["Geheugen", `${specs.memory_gb} GB`], ["Processorkernen", specs.threads], ["Windows", specs.os_version], ...(specs.free_storage_gb === null ? [] : [["Opslag vrij", `${specs.free_storage_gb} GB`]])].map(([label,value]) => <div key={String(label)}><dt>{label}</dt><dd>{value}</dd></div>)}</dl> : <p role="status">{error || "Systeemgegevens laden…"}</p>}</section>
+    <section className="northstar-card"><h3>Aanbevolen model</h3><h4>{medium ? "Whisper Medium" : "Whisper Small"}</h4><p>{medium ? "Voldoende geheugen en processorkernen voor Medium." : "Small vraagt minder geheugen en is een veilige start."} Je kiest het model zelf bij transcriptie.</p></section>
+    <section className="northstar-card"><h3>Jouw gegevens</h3><p>Opnames, transcriptie en opslag blijven op deze pc. Kies je cloud-AI voor notulen, dan wordt de transcriptie naar die provider gestuurd.</p></section>
+  </aside>;
 }
 
 function SettingsField({ label, children }: { label: string; children: React.ReactNode }) {

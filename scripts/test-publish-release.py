@@ -25,7 +25,7 @@ class PublicationTest(unittest.TestCase):
             feed=json.loads((root/"windows/stable.json").read_text())
             self.assertEqual(manifest["latest_version"],"1.0.255")
             self.assertEqual(feed["platforms"]["windows-x86_64"]["url"],publisher.BASE+artifact.name)
-            self.assertEqual(manifest["windows_x64"]["url"],"/tstudio/download/"+artifact.name)
+            self.assertEqual(manifest["windows_x64"]["url"],publisher.BASE+artifact.name)
             artifact.write_bytes(b"changed")
             with self.assertRaises(ValueError): publisher.publish(root,stage,"1.0.256","production")
             self.assertEqual((root/artifact.name).read_bytes(),b"installer")

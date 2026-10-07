@@ -81,15 +81,73 @@
 @media (max-width:780px) { .thoughtvault-recording .idle-state { display: flex; flex-direction: column; } .thoughtvault-record-workspace { min-height: 500px; } .thoughtvault-record-inspector { border-left: 0; border-top: 1px solid #303858; } }
 
 .thoughtvault-home-side { padding-top: 24px; }
-@media (min-width:1440px) {
-  .thoughtvault-home-content { display: grid; grid-template-columns: minmax(0,1fr) 295px; column-gap: 23px; }
+
+/* One studio surface for every route, including menus, dialogs and settings. */
+.app-main { background: linear-gradient(#141828,#0f1322); }
+.app-shell .page-scroll:not(.thoughtvault-recording) { background: transparent; }
+.app-shell .bg-blobs-clip { display: none; }
+.app-shell .brand-footer { background: #0f1322; border-color: #242939; }
+.app-shell .card { box-shadow: none; }
+.app-shell .page-header { border-color: #242939; }
+.thoughtvault-home { container-type: inline-size; }
+.thoughtvault-home-content { max-width: none; padding: 17px 20px 32px; }
+.thoughtvault-home h2 { font-size: 22px; }
+.thoughtvault-welcome { height: 200px; min-height: 200px; padding-top: 42px; align-items: start; }
+.thoughtvault-welcome-copy .section-label { margin-bottom: 0; font-size: 11.5px; }
+.thoughtvault-welcome-copy::after { content: ''; display: block; width: 43px; height: 1px; background: #5c6185; margin-top: 22px; }
+.thoughtvault-new-recording { min-height: 301px; background: linear-gradient(#161a30,#13182a); border-color: #403d7360; }
+.thoughtvault-record-controls { min-height: 132px; margin-top: 5px; }
+.thoughtvault-record-controls .icon-btn { width: 46px; height: 46px; }
+.thoughtvault-record-tip { background: #171f31; border-color: #29334a; }
+.thoughtvault-home-side { display: grid; gap: 19px; }
+.thoughtvault-home-side section { padding: 22px 20px; margin: 0; background: #0c111d; border: 1px solid #1f2438; border-radius: 12px; }
+.thoughtvault-home-side h2 { font-size: 19px; margin-bottom: 16px; }
+.thoughtvault-quick-capture { flex-direction: column; align-items: stretch; }
+.thoughtvault-quick-capture .btn { height: 46px; justify-content: start; font-size: 14px; gap: 20px; }
+.thoughtvault-quick-capture .btn svg { color: #ab85ff; }
+.thoughtvault-agenda-empty { color: #b8bdd6; font-size: 13.5px; line-height: 1.6; }
+.thoughtvault-agenda-empty .btn { margin-top: 14px; }
+.thoughtvault-brand-note { color: #b8bdd6; font-size: 14px; line-height: 1.8; }
+.thoughtvault-brand-note strong { color: #b88cff; font-size: 15px; }
+.thoughtvault-brand-note p { margin-top: 10px; }
+.thoughtvault-home-recent { padding-top: 30px; }
+.thoughtvault-notes-list { border: 1px solid #24293d; border-radius: 12px; background: #0e1321; }
+.thoughtvault-note-row { display: flex; align-items: center; min-height: 82px; margin: 0 8px; border-bottom: 1px solid #212638; }
+.thoughtvault-note-row:last-child { border-bottom: 0; }
+.thoughtvault-note-open { display: flex; align-items: center; gap: 20px; flex: 1; min-width: 0; text-align: left; background: transparent; border: 0; color: #edf0f7; cursor: pointer; padding: 12px 0; }
+.thoughtvault-note-open:hover { background: #1b2033; }
+.thoughtvault-note-icon { display: grid; place-items: center; width: 50px; height: 50px; flex-shrink: 0; border-radius: 10px; background: #28203f; border: 1px solid #443265; color: #bf85ff; }
+.thoughtvault-note-icon svg { font-size: 26px; }
+.thoughtvault-note-audio { color: #78adff; background: #1b2a44; border-color: #30436a; }
+.thoughtvault-note-copy { min-width: 0; flex: 1; }
+.thoughtvault-note-title { display: block; font-size: 14px; font-weight: 600; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.thoughtvault-note-summary { display: flex; gap: 18px; margin-top: 8px; color: #949cb8; font-size: 12px; }
+.thoughtvault-note-summary time { flex-shrink: 0; }
+.thoughtvault-note-summary > span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.thoughtvault-note-chevron { flex-shrink: 0; width: 18px; color: #929cb8; }
+.thoughtvault-note-menu { position: relative; margin-left: 8px; }
+@container (min-width: 1180px) {
+  .thoughtvault-home-content { display: grid; grid-template-columns: minmax(0,1fr) 295px; column-gap: 23px; padding-left: 23px; padding-right: 11px; }
   .thoughtvault-home-toolbar { grid-column: 1 / -1; }
   .thoughtvault-welcome { grid-column: 1; grid-row: 2; }
   .thoughtvault-new-recording { grid-column: 1; grid-row: 3; }
-  .thoughtvault-home-recent { grid-column: 1; grid-row: 4; padding-top: 31px; }
-  .thoughtvault-home-side { grid-column: 2; grid-row: 2 / 5; padding-top: 21px; }
-  .thoughtvault-home-side section { padding: 22px 20px; margin-bottom: 20px; background: #15182b; border: 1px solid #33314c; border-radius: 14px; }
-  .thoughtvault-quick-capture { flex-direction: column; align-items: stretch; }
-  .thoughtvault-quick-capture h2 { margin: 0 0 8px; }
-  .thoughtvault-home .thoughtvault-tagline { display: none; }
+  .thoughtvault-home-recent { grid-column: 1; grid-row: 4; }
+  .thoughtvault-home-side { grid-column: 2; grid-row: 2 / 5; align-content: start; padding-top: 21px; }
+  .thoughtvault-agenda { min-height: 400px; }
 }
+@container (max-width: 1179px) {
+  .thoughtvault-home-content { display: block; }
+  .thoughtvault-home-side { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .thoughtvault-brand-note { display: none; }
+}
+@container (max-width: 779px) {
+  .thoughtvault-new-recording { grid-template-columns: 1fr; padding: 24px; }
+  .thoughtvault-record-tip { display: block; }
+  .thoughtvault-home-side { grid-template-columns: 1fr; }
+  .thoughtvault-tagline { display: none; }
+}
+
+/* Restored settings use the approved desktop cards and responsive columns. */
+.restored-model-settings{padding:18px 20px}
+.system-specs>div{display:flex;justify-content:space-between;gap:16px;margin:12px 0;font-size:13px}
+.northstar-settings .settings-tabs button{display:flex;align-items:center;gap:8px}

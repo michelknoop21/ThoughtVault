@@ -51,10 +51,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-windows-local.
 De script voert frontend- en native tests uit en bouwt de MSI. De installer, handleiding en SHA256 staan in
 `build/windows-local/`. Deze route uploadt of publiceert niets.
 
-Alternatief: start handmatig een GitLab-pipeline met `LOCAL_WINDOWS_ONLY=1`.
-Alleen de lokale Windows-build draait; download het artifact van `build-windows-local`.
+Voor de bewezen GitHub Actions-route en publicatie: zie `docs/WINDOWS-BUILD-WORKFLOW.md`. Gebruik uitsluitend een expliciete buildref met de actuele ThoughtVault-bron; controleer de CI-commit zoals beschreven in CLAUDE.md.
 
-## Vereiste praktijkcontrole vóór delen
+## Aanvullende praktijkcontrole op Windows
 
 Installeer op een echte Windows-pc, maak een opname met microfoon én systeemaudio, genereer notulen,
 exporteer en herstart de app. Herhaal de verwerking met internet uitgeschakeld nadat de modellen zijn gedownload.
@@ -81,7 +80,7 @@ De nieuwe migratie bewaart provider-, model-, onboarding-, update-, agenda- en O
 De x64-MSI voor 1.0.255 bevat de huidige Windows-wijzigingen, inclusief lokale en cloud-AI, AI-verbindingen, documentvormgeving en de opname-widget. De JavaScript- en Rust-versies van Tauri zijn gelijkgetrokken. API-sleutels gebruiken nu daadwerkelijk Windows Credential Manager; het ontwikkelhulpprogramma `read_token` wordt niet meegeleverd.
 
 - Op een Windows x64-runner: 45 frontendtests en 19 native tests geslaagd, inclusief audio-import en opnieuw uitlezen van credentials.
-- MSI gebouwd, stil geïnstalleerd met exitcode 0 en de geïnstalleerde `transcript-studio.exe` gestart. De app bleef draaien tijdens de startcontrole. Het installatielog bevestigt dat alleen de app wordt meegeleverd.
+- MSI gebouwd, stil geïnstalleerd met exitcode 0 en de destijds geïnstalleerde executable gestart. De app bleef draaien tijdens de startcontrole. Het installatielog bevestigt dat alleen de app wordt meegeleverd.
 - Installer, handleiding, checksum, bronbestanden-hashes en build-/installatielogs staan in `build/windows-local/`. [Geslaagde Windows-build](https://github.com/michelknoop21/ThoughtVault/actions/runs/37610419654).
 - Microfoon- en systeemaudio-opname, volledig offline verwerken en upgrade met bestaande gebruikersgegevens moeten nog op een Windows-pc worden gecontroleerd. De geslaagde build en startcontrole bewijzen die praktijkflows niet.
 
@@ -124,3 +123,20 @@ De updatefeed meldt 1.0.257. Lokale bewijsbestanden staan onder
 Een volledige update via de app en opname/export op de fysieke Windows-pc moeten
 nog worden getest. Oudere installaties zonder de nieuwe updater vereisen deze
 MSI eenmalig handmatig.
+
+## Release 1.0.258 — 7 oktober 2026
+
+De actuele ThoughtVault-indeling voor Home en Opnemen, naam en het aangeleverde
+logo zijn gebouwd via [Windows CI](https://github.com/michelknoop21/ThoughtVault/actions/runs/37632773318),
+commit `7c8d46d21765268e959a2ca2252f8fc152ae1e0b`.
+47 frontendtests en 19 native tests geslaagd. Upgrade vanaf 1.0.257,
+ProductName/FileDescription ThoughtVault, versie 1.0.258, twee starts en
+bytegewijs behoud van het opgeslagen notulenbestand gecontroleerd.
+
+Gepubliceerd: https://thoughtvault.yinga.ai/releases/ThoughtVault_1.0.258_x64.msi
+SHA-256: `82b0989e2b6bb3be3e3d6d9ea28ab5dc1f52bf7553d21e83d73d858a42e9d1e5`.
+Publieke MSI en updater-signature komen overeen met het CI-artifact;
+`windows/stable.json` meldt 1.0.258. Bewijs staat in `build/windows-local/1.0.258/`.
+Geen nieuwe visuele controle of fysieke opnamecontrole uitgevoerd. Een visuele
+beoordeling is geen standaard releasevoorwaarde; de broninstructies staan in
+AGENTS.md, CLAUDE.md en WINDOWS-BUILD-WORKFLOW.md.

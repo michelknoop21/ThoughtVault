@@ -12,7 +12,8 @@ import tempfile
 from datetime import datetime, timezone
 import xml.etree.ElementTree as ET
 
-BASE = "https://thoughtvault.yinga.ai/releases/"
+DOWNLOAD_PATH = "/d-05921304471ce66e62d0a2b7f324c2354dfb1d895d23a895bba7f86110e2472e/"
+BASE = "https://thoughtvault.yinga.ai" + DOWNLOAD_PATH
 SPARKLE = "http://www.andymatuschak.org/xml-namespaces/sparkle"
 ET.register_namespace("sparkle", SPARKLE)
 
@@ -74,7 +75,7 @@ def publish(directory, staging, version, channel):
         for platform, artifact, metadata in entries:
             atomic_write(directory / artifact.name, artifact.read_bytes())
             entry = {"version": version, "filename": artifact.name,
-                     "url": "/tstudio/download/" + artifact.name,
+                     "url": BASE + artifact.name,
                      "download_url": BASE + artifact.name,
                      "sha256": hashlib.sha256(artifact.read_bytes()).hexdigest()}
             data[key_prefix + platform] = entry

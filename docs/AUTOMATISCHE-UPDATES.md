@@ -1,20 +1,18 @@
 # Downloads en updates
 
-De website beheert de pagina `/download/`; app-releases schrijven uitsluitend
-bestanden en metadata naar `/releases/`. De bestaande serverdirectory is
-`/home/michelk/tstudio-releases`. Het domein gebruikt HTTPS via de bestaande Caddy.
-De route staat in `scripts/infra/thoughtvault-releases.caddy`; neem het
-`handle_path /releases/*`-blok is opgenomen naast de proxy naar
-`thoughtvault-website:80`. Behoud dit blok bij website-deployments. Maak geen tweede
-Caddy-site met dezelfde host.
+De enige downloadspagina is `https://thoughtvault.yinga.ai/d-05921304471ce66e62d0a2b7f324c2354dfb1d895d23a895bba7f86110e2472e/`.
+Installers en `releases.json` worden alleen via dit pad aangeboden. De bestaande
+serverdirectory blijft `/home/michelk/tstudio-releases`.
+
+De route in `scripts/infra/thoughtvault-releases.caddy` laat onder `/releases/`
+alleen de vier updaterfeeds door. Andere oude release-/downloadpaden geven 404.
+Behoud deze feedroutes naast de websiteproxy bij deployments.
 
 ## Contract voor de downloadspagina
 
-Lees `https://thoughtvault.yinga.ai/releases/releases.json`. Gebruik per platform
-`windows_x64`, `windows_arm64` (alleen als beschikbaar) of `macos`, met velden
-`version`, `filename`, `download_url` en `sha256`. Bestaande `url`-velden blijven
-relatief aan `https://n8n.prezent.nl` voor oudere apps. Toon alleen platforms
-waarvan daadwerkelijk een installer beschikbaar is; versieverschillen zijn mogelijk.
+Lees `releases.json` relatief aan de downloadspagina. Per platform staan
+`version`, `filename`, `download_url` en `sha256` in de metadata. Beide URL-velden
+verwijzen naar het downloadpad. Toon alleen beschikbare installers.
 
 Windows leest `/releases/windows/stable.json` via Tauri; macOS leest
 `/releases/macos/stable.xml` via Sparkle. Development gebruikt `dev.json` en

@@ -172,11 +172,17 @@ extension RecordingView {
         }
     }
 
+    /// True when the line explains why there is no live text, rather than showing it.
+    private var listenIsStatus: Bool {
+        recordingVM.recordingState == .recording && recordingVM.liveTranscriptText.isEmpty
+            && recordingVM.liveTranscriptionStatusText != nil
+    }
+
     private var listenText: String {
         switch recordingVM.recordingState {
         case .recording:
             let text = recordingVM.liveTranscriptText
-            return text.isEmpty ? "Ik luister..." : text
+            return text.isEmpty ? (recordingVM.liveTranscriptionStatusText ?? "Ik luister...") : text
         case .paused: return "Opname is gepauzeerd"
         case .preparing, .stopping: return "Even geduld..."
         default: return "Klaar"
@@ -332,7 +338,8 @@ extension RecordingView {
             }
             Text(listenText)
                 .font(.system(size: 14))
-                .foregroundStyle(Color(red: 0.682, green: 0.698, blue: 0.800))
+                // A status line ("live tekst staat uit") must not read like transcript text.
+                .foregroundStyle(listenIsStatus ? StudioColor.text3.opacity(0.8) : Color(red: 0.682, green: 0.698, blue: 0.800))
                 .lineLimit(1)
                 .truncationMode(.head)
         }

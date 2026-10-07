@@ -29,6 +29,8 @@ final class RecordingViewModel {
     var uploadProgress: Double = 0
     var liveTranscriptText: String = ""
     var isLiveTranscribing: Bool = false
+    /// Why live recognition stopped or never started; shown instead of "Ik luister...".
+    var liveTranscriptionError: String?
     var localGenerationProgress: Double = 0
     var isGeneratingLocally: Bool = false
     var offlineStatusMessage: String?
@@ -376,6 +378,8 @@ final class RecordingViewModel {
         recordingState = .paused
         liveTranscriptionTask?.cancel()
         liveTranscriptionTask = nil
+        // Pausing must also release the mic: the engine lives in the transcriber.
+        onDeviceTranscriber.stopLiveTranscription()
         isLiveTranscribing = false
     }
 
@@ -1283,12 +1287,8 @@ final class RecordingViewModel {
     // MARK: - Live Transcription
 
     func startLiveTranscriptionIfEnabled() async {
-        guard onDeviceTranscriptionAvailable, preferOnDeviceTranscription else { return }
-#if os(macOS)
-        // System audio capture runs alongside microphone capture in combined mode.
-        // Starting a second AVAudioEngine tap would conflict and produce no audio.
-        guard selectedMode == .microphone else { return }
-#endif
+        guard onDeviceTranscriptionAvailable, preferOnDeviceTranscription,
+              LiveTranscriptionPolicy.supports(mode: selectedMode) else { return }
 
         // Prevent concurrent starts (e.g. rapid pause/resume)
         guard !isStartingLiveTranscription else { return }
@@ -1303,23 +1303,39 @@ final class RecordingViewModel {
         liveTranscriptionTask = Task { @MainActor [weak self] in
             guard let self else { return }
             do {
-                try await self.onDeviceTranscriber.startLiveTranscription { [weak self] partial in
-                    Task { @MainActor in
-                        self?.liveTranscriptText = partial
-                    }
-                }
+                try await self.onDeviceTranscriber.startLiveTranscription(
+                    onPartialResult: { [weak self] partial in
+                        Task { @MainActor in
+                            self?.liveTranscriptText = partial
+                        }
+                    },
+                    onError: { [weak self] message in self?.liveTranscriptionError = message }
+                )
+                // Only a session that actually started clears the previous failure.
+                self.liveTranscriptionError = nil
             } catch {
-                // Live transcription is best-effort; do not surface errors to the user
+                // Best-effort: the recording continues, but the screen says why there is no live text.
                 os_log("[RecordingVM] Live transcription ended: %{public}@", log: .default, type: .info, error.localizedDescription)
+                self.liveTranscriptionError = error.localizedDescription
             }
 
             self.isLiveTranscribing = false
         }
     }
 
+    /// Status line for the recording screen when no live text is coming; nil while live recognition runs.
+    var liveTranscriptionStatusText: String? {
+        LiveTranscriptionPolicy.statusText(preferred: preferOnDeviceTranscription,
+                                           available: onDeviceTranscriptionAvailable,
+                                           mode: selectedMode, error: liveTranscriptionError)
+    }
+
     func stopLiveTranscription() async {
         liveTranscriptionTask?.cancel()
         liveTranscriptionTask = nil
+        // The start task returns once recognition is running; the engine and mic tap
+        // live in the transcriber and must be stopped there, or the mic stays open.
+        onDeviceTranscriber.stopLiveTranscription()
         await MainActor.run {
             isLiveTranscribing = false
         }

@@ -37,7 +37,7 @@ if docker image inspect thoughtvault-website:local >/dev/null 2>&1; then
 fi
 docker compose build --pull
 docker compose up -d --wait
-# Change only this site's existing virtual host. Preserve all other host blocks.
+# Add this site's virtual host only when it is missing. Preserve all other host blocks.
 python3 - <<'PY'
 from pathlib import Path
 from datetime import datetime
@@ -45,19 +45,9 @@ p=Path('/home/michelk/yinga/caddy/Caddyfile')
 s=p.read_text()
 marker='thoughtvault.yinga.ai {'
 block='thoughtvault.yinga.ai {\n    reverse_proxy thoughtvault-website:80\n}\n'
-if marker in s:
-    start=s.index(marker)
-    depth=0
-    for i in range(s.index('{',start),len(s)):
-        depth += (s[i]=='{') - (s[i]=='}')
-        if depth==0:
-            end=i+1
-            break
-    else:
-        raise RuntimeError('Unbalanced Caddyfile')
-    updated=s[:start]+block.rstrip()+s[end:]
-else:
-    updated=s+'\n'+block
+# An existing host block is left untouched: it also carries the updater feed routes
+# from scripts/infra/thoughtvault-releases.caddy.
+updated=s if marker in s else s+'\n'+block
 if updated!=s:
     backup=p.with_name('Caddyfile.thoughtvault-'+datetime.now().strftime('%Y%m%d%H%M%S'))
     backup.write_text(s)

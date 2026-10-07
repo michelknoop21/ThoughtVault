@@ -8,6 +8,8 @@ server {
     add_header X-Content-Type-Options nosniff always;
     add_header Referrer-Policy no-referrer always;
     gzip on;
+    gzip_proxied any;
+    gzip_vary on;
     gzip_types text/css application/javascript image/svg+xml;
     location = /healthz { return 200 'ok'; }
     location = /d-${DOWNLOAD_TOKEN} { return 404; }

@@ -45,5 +45,10 @@ server {
         add_header X-Content-Type-Options nosniff always;
         add_header Referrer-Policy no-referrer always;
     }
-    location / { try_files $uri $uri/ =404; }
+    location / {
+        add_header Cache-Control 'no-cache' always;
+        add_header X-Content-Type-Options nosniff always;
+        add_header Referrer-Policy no-referrer always;
+        try_files $uri $uri/ =404;
+    }
 }

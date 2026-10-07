@@ -29,3 +29,30 @@
 .nav-shell .brand{position:relative;padding-left:64px;min-height:44px}.nav-shell .brand img,.nav-shell.compact .brand img{position:absolute;left:0;top:50%;transform:translateY(-50%);width:54px;height:60px;padding:0;background:none;border-radius:0;box-shadow:none}
 .hero-mark{position:relative;width:176px;height:192px;flex-shrink:0;isolation:isolate}.hero-mark:before{content:'';position:absolute;inset:-40px -90px;background:radial-gradient(ellipse,#683fa024,transparent 65%);z-index:-1;pointer-events:none}.hero-mark img{width:100%;height:100%;object-fit:contain}.scene-audio .scene-label{margin:0 0 12px}.scene-audio .audio-wave{height:58px;margin-top:7px}.scene-audio .spoken-fragment{font-size:1.125rem;margin-top:5px}.scene-audio .source-pair{margin-top:17px}.scene-audio .hero-mark{transform:translateY(-4px)}
 @media(max-width:767px){.nav-shell .brand{padding-left:58px}.nav-shell .brand img,.nav-shell.compact .brand img{width:48px;height:56px}.hero-mark{width:146px;height:160px}.scene-audio .scene-label{font-size:0.875rem}.scene-audio .spoken-fragment{font-size:1rem}.scene-audio .audio-wave{height:50px}}
+
+/* Content determines each demo's height, including enlarged text on mobile. */
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+h1,h2,h3{text-wrap:balance}
+.motion-canvas{display:grid;height:auto;min-height:430px;margin:16px 0}
+.chapter-scene{position:relative;inset:auto;grid-area:1/1;padding:16px 0;visibility:hidden}
+.chapter-scene.is-active{visibility:visible}
+.demo-top{gap:16px;min-height:44px}
+.demo-controls button{width:44px;height:44px}
+.action-heading{margin-bottom:24px}
+.action-heading h2{font-size:1.5rem}
+.scene-foot{text-align:center;max-width:32ch;line-height:1.5}
+.vault-file{background:none;box-shadow:none;border-radius:0;padding:12px 0}
+@media(max-width:767px){
+ .nav-shell{top:max(10px,env(safe-area-inset-top))}
+ .nav-shell.compact{top:max(8px,env(safe-area-inset-top))}
+ .paper-section .motion-demo{width:calc(100% - 32px);margin:32px auto 0;padding:20px 16px}
+ .motion-canvas{min-height:380px;margin:16px 0}
+ .demo-top{font-size:.8125rem;letter-spacing:0}
+ .action-heading{gap:12px}
+ .scene-actions .action-heading h2{font-size:1.25rem}
+ .hero .actions{align-items:flex-start;flex-direction:column;gap:8px}
+ .hero-copy>p{line-height:1.65}
+ .vault-bridge p{line-height:1.65}
+ .download-row>div{min-width:0}
+ .download-row .end{flex-shrink:0}
+}

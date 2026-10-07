@@ -24,6 +24,18 @@ return (async () => {
     assert($('#profile-title').textContent.startsWith(title), 'Profile output did not update');
     assert($(`[data-profile="${profile}"]`).getAttribute('aria-pressed') === 'true', 'Profile state missing');
   }
+  for (const button of document.querySelectorAll('[data-step-button]')) {
+    button.click(); await new Promise(resolve => setTimeout(resolve, 900));
+    const scene=$('.chapter-scene.is-active').getBoundingClientRect();
+    const canvas=$('.motion-canvas').getBoundingClientRect();
+    assert(scene.top >= $('.demo-top').getBoundingClientRect().bottom, 'Demo overlaps its controls');
+    assert(scene.bottom <= canvas.bottom + 1, 'Demo content exceeds canvas');
+    assert(canvas.bottom <= $('.demo-timeline').getBoundingClientRect().top, 'Demo overlaps step navigation');
+    for (const child of $('.chapter-scene.is-active').children) {
+      const rect=child.getBoundingClientRect();
+      assert(rect.top >= scene.top - 1 && rect.bottom <= scene.bottom + 1, 'Demo text escapes scene');
+    }
+  }
   window.scrollTo({top: 300, behavior: 'instant'}); await wait();
   assert($('.nav-shell').classList.contains('compact'), 'Header did not compact');
   const headerHeight = $('.nav-shell').getBoundingClientRect().height;

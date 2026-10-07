@@ -37,7 +37,7 @@ Uitschakelen stopt de server en slaat intrekking op vóór het verwijderen van d
 
 - Windows: frontendtests en productiebuild; native compile, PE-runtime en installer via private CI-kandidaat.
 - macOS: ondertekende Debugbuild en AIConnectionTests.
-- `python3 scripts/test-local-mcp.py`: daadwerkelijke macOS HTTP-server met synthetische handlers; protocol, toolcatalogus, rechten en ongeldige aanvragen. Geen privétranscript of opname nodig.
+- `python3 scripts/test-local-mcp.py`: daadwerkelijke macOS HTTP-server met synthetische handlers; protocol, toolcatalogus, rechten en ongeldige aanvragen. Als de MCP SDK aanwezig is, ook initialize/list_tools/call_tool via die client. Geen privétranscript of opname nodig.
 
 Een transporttest is geen bewijs van een live Claude/ChatGPT-sessie. Native Windows-VM-audio, popupstijl en macOS sandbox/gebruikerskeyring moeten afzonderlijk in de geïnstalleerde app worden gecontroleerd.
 

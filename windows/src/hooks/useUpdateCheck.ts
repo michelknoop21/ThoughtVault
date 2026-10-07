@@ -6,7 +6,7 @@ export function useUpdateCheck() {
   const [update, setUpdate] = useState<Update | null>(null);
   const enabled = useSettingsStore((s) => s.check_for_updates);
   useEffect(() => {
-    if (!enabled || !("__TAURI_INTERNALS__" in window)) return;
+    if (!enabled || !("__TAURI_INTERNALS__" in window)) { setUpdate(null); return; }
     let cancelled = false;
     let current: Update | null = null;
     let checking = false;

@@ -1,6 +1,6 @@
 {
   "data/minutesStyle.schema.json": "85b71fc0efc3a10a3aceba5f856c273406b704bba21ee09a25cf648e7a100b1d",
-  "docs/WINDOWS-LOKAAL.md": "b9b27001cc0d12b8dd882fd01a64312c8c0a9998d80df1a74ad2ec8e9c76223d",
+  "docs/WINDOWS-LOKAAL.md": "77c7da22e5da00836c9da9a9f47caee94e8f76bf859423dc56276432b765d632",
   "scripts/build-windows-local.ps1": "12c125452130a08ffa6b911284acffe43ccd96dcd3b361f30334a461190a5b61",
   "scripts/publish-release.py": "5a2349a3ea6c34fd641705a7e3d6489e2cf9a313fd3e95bc6e8faff904b1efd6",
   "windows/src-tauri/examples/read_token.rs": "91fd75a51cb4b3dd85ee73a75b54b048f4f53bec6173ae268aa48b177e72018e",
@@ -84,7 +84,7 @@
   "windows/src/hooks/useAudioLevel.ts": "dac1f9cb8b0d2c24b549f19320093b67bf68c8ed412f8411d232d6340f837b44",
   "windows/src/hooks/useGlobalRecordingHandler.ts": "130eef54f704c69b9d39bc8f125b892ddbde798fbca3d61bdcc1b32b93330324",
   "windows/src/hooks/useOAuthCallback.ts": "835e94ccbcb805481187d5290c2db37b96342797885a6b282b1ffd684de969d6",
-  "windows/src/hooks/useUpdateCheck.ts": "56fa37c48f2dc40f60b874e624dd1ff5fd9d4ccaf7b5a5bea3bfe6ca5551450f",
+  "windows/src/hooks/useUpdateCheck.ts": "70b3a5bd364e0039ca7377a63aab31a63aebda94893b4bf99066b684f57f8694",
   "windows/src/hooks/useWidgetWindow.ts": "c0c09ab370cb19fdd555328c436e93f7f1c152c390d38deaf4111e1d19060157",
   "windows/src/main.tsx": "ec690790ec5be5134693c2cb654b728e16b428b437e9eee93e11b0a1b256761a",
   "windows/src/pages/AccountPage.tsx": "66dfacb7dd1514a5f7b43c90ce7fb9ee15fefa0843fda0dca083aada912df517",
@@ -156,5 +156,6 @@
   "windows/tsconfig.json": "8358554ffab41859cedfe36fc1d8244918a95b423baf98a1f2af9d508979cd7b",
   "windows/tsconfig.node.json": "9e2abb169ea87b7190613a1d4da57ca608463a453bd4231fa3aeee5e308370dd",
   "windows/vite.config.ts": "056b23582e001eb7845e5da6ff23454e5df657aa21543c1c892b707151423e2e",
-  "windows/widget.html": "c4083bd12d7ab2126b6293d38759bd13e55eb6735fb851fb9d78ddef94ee12a1"
+  "windows/widget.html": "c4083bd12d7ab2126b6293d38759bd13e55eb6735fb851fb9d78ddef94ee12a1",
+  "windows/src/services/__tests__/updates.test.ts": "75a04d105c36cd2fe369ec02bf964518ea58db6e7d272c16ffd1a09d6371063d"
 }

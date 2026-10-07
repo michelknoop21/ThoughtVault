@@ -84,3 +84,21 @@ De x64-MSI voor 1.0.255 bevat de huidige Windows-wijzigingen, inclusief lokale e
 - MSI gebouwd, stil geïnstalleerd met exitcode 0 en de geïnstalleerde `transcript-studio.exe` gestart. De app bleef draaien tijdens de startcontrole. Het installatielog bevestigt dat alleen de app wordt meegeleverd.
 - Installer, handleiding, checksum, bronbestanden-hashes en build-/installatielogs staan in `build/windows-local/`. [Geslaagde Windows-build](https://github.com/michelknoop21/ThoughtVault/actions/runs/37610419654).
 - Microfoon- en systeemaudio-opname, volledig offline verwerken en upgrade met bestaande gebruikersgegevens moeten nog op een Windows-pc worden gecontroleerd. De geslaagde build en startcontrole bewijzen die praktijkflows niet.
+
+## Updates vanaf 1.0.256
+
+De app controleert bij starten en vervolgens iedere zes uur op updates als
+**Controleren op updates** aanstaat. Je krijgt een melding en kiest **Nu bijwerken**.
+De app controleert de updatehandtekening, toont downloadvoortgang en laat Windows
+de MSI installeren. Een Windows/UAC-bevestiging kan nodig zijn. Tijdens opnemen
+of verwerken is bijwerken uitgeschakeld; ook na downloaden wordt dit gecontroleerd.
+Bij een fout blijven opnames en notulen bewaard en kun je opnieuw proberen.
+
+De installer staat op `https://thoughtvault.yinga.ai/releases/` en de website
+leest de actuele downloadlink uit `/releases/releases.json`. Audio en transcriptie
+blijven lokaal. Een cloudprovider ontvangt de transcriptie voor het maken van
+notulen. Hiervoor is uitsluitend de sleutel van die gekozen provider nodig.
+
+Voor releasebuilds moet `TAURI_SIGNING_PRIVATE_KEY` in de CI-secret store staan.
+Deze releasesleutel is afzonderlijk van de AI-providersleutels. Bewaar een beveiligde
+backup: een andere releasesleutel kan bestaande installaties niet bijwerken.

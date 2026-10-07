@@ -17,6 +17,7 @@ jobs:
         with:
           workspaces: windows/src-tauri
           cache-on-failure: true
+          key: installer-complete
       - name: Build and test installer
         shell: pwsh
         env:

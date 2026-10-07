@@ -181,12 +181,6 @@ extension HomeView {
 
     private func mainColumn(_ layout: HomeLayout) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            if checkForUpdates,
-               let version = updateCheck.availableVersion,
-               dismissedUpdateVersion != version {
-                updateBanner(version: version)
-                    .padding(.top, 12)
-            }
             header(layout)
                 .padding(.top, 10)
             recordingCard(layout)

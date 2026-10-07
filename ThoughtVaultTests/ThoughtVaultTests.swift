@@ -189,3 +189,17 @@ final class LiveTranscriptionPolicyTests: XCTestCase {
         XCTAssertNil(status(true, true, nil))
     }
 }
+
+@MainActor
+final class UpdateInstallationTests: XCTestCase {
+    func testRecordingCannotStartDuringUpdateInstallation() async {
+        let vm = RecordingViewModel()
+        XCTAssertFalse(vm.updateIsBusy)
+        vm.recordingState = .paused
+        XCTAssertTrue(vm.updateIsBusy)
+        vm.recordingState = .idle
+        vm.updateInstalling = true
+        await vm.startRecording()
+        XCTAssertEqual(vm.recordingState, .idle)
+    }
+}

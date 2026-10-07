@@ -17,6 +17,14 @@ final class RecordingViewModel {
     // MARK: - Published State
 
     var recordingState: RecordingState = .idle
+    var updateInstalling = false
+    private var pendingRegenerations = 0
+    var updateIsBusy: Bool {
+        switch recordingState {
+        case .idle, .error: return activeTasks.contains { $0.status.isActive } || isProcessingQueue || !localProcessingTasks.isEmpty || pendingRegenerations > 0
+        default: return true
+        }
+    }
 #if os(macOS)
     var selectedMode: RecordingMode = .combined
 #else
@@ -306,7 +314,7 @@ final class RecordingViewModel {
     // MARK: - Recording Lifecycle
 
     func startRecording() async {
-        guard recordingState == .idle else { return }
+        guard recordingState == .idle, !updateInstalling else { return }
 
         await MainActor.run {
             recordingState = .preparing
@@ -536,6 +544,7 @@ final class RecordingViewModel {
     /// the persistent Recordings directory and runs it through the standard pipeline.
     /// The picked URL is security-scoped (from .fileImporter).
     func importAudioFile(_ pickedURL: URL) async {
+        guard !updateInstalling else { return }
         let accessed = pickedURL.startAccessingSecurityScopedResource()
         defer { if accessed { pickedURL.stopAccessingSecurityScopedResource() } }
 
@@ -764,6 +773,7 @@ final class RecordingViewModel {
     /// in the local SwiftData store. No backend server is contacted.
     /// Runs on a detached Task so the MainActor stays responsive and the user can cancel.
     func processLocally(url: URL, profileId: String, participants: [Participant] = []) async {
+        guard !updateInstalling else { return }
         let profile = availableProfiles.first { $0.id == profileId }
             ?? Profile.defaults.first { $0.id == profileId }
             ?? selectedProfile
@@ -987,6 +997,9 @@ final class RecordingViewModel {
     /// transcription and the given profile — entirely on-device. Returns the new
     /// HTML and title so the open detail view can stay in sync with SwiftData.
     func regenerateNotuleLocally(taskId: String, profileId: String) async throws -> (html: String, title: String) {
+        guard !updateInstalling else { throw LLMError.generationFailed("De app wordt bijgewerkt. Probeer na de herstart opnieuw.") }
+        pendingRegenerations += 1
+        defer { pendingRegenerations -= 1 }
         guard let record = LocalTranscriptStore.shared.record(forTaskId: taskId) else {
             throw LocalStoreError.recordNotFound
         }

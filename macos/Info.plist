@@ -45,6 +45,18 @@
 	<string>ThoughtVault heeft toegang tot uw microfoon nodig om vergaderingen op te nemen voor transcriptie.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>ThoughtVault gebruikt spraakherkenning voor offline transcriptie op uw apparaat.</string>
+	<key>SUAllowsAutomaticUpdates</key>
+	<false/>
+	<key>SUAutomaticallyUpdate</key>
+	<false/>
+	<key>SUEnableAutomaticChecks</key>
+	<false/>
+	<key>SUEnableInstallerLauncherService</key>
+	<true/>
+	<key>SUFeedURL</key>
+	<string>https://thoughtvault.yinga.ai/releases/macos/stable.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>fAPg+PEqUefako2ABiyGKlORAq0g+dx3oYC8U6S6IFc=</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>audio</string>

@@ -68,6 +68,8 @@ enum AppTab: String, CaseIterable, Identifiable {
 // MARK: - ContentView
 
 struct ContentView: View {
+    @Environment(UpdateCheckService.self) private var updateCheck
+    @AppStorage("dismissedUpdateVersion") private var dismissedUpdateVersion = ""
     @Environment(AuthViewModel.self) private var authVM
     @Environment(RecordingViewModel.self) private var recordingVM
     @Environment(CalendarService.self) private var calendarService
@@ -124,7 +126,7 @@ struct ContentView: View {
         }
         .alert("Update vereist", isPresented: $showForceUpdateAlert) {
             Button("Update nu") {
-                if let url = URL(string: "https://transcriptstudio.app/download") {
+                if let url = URL(string: "https://thoughtvault.yinga.ai/d-05921304471ce66e62d0a2b7f324c2354dfb1d895d23a895bba7f86110e2472e/") {
                     #if os(macOS)
                     NSWorkspace.shared.open(url)
                     #else
@@ -143,6 +145,11 @@ struct ContentView: View {
     private var authenticatedView: some View {
 #if os(macOS)
         macOSView
+            .safeAreaInset(edge: .top) {
+                if let version = updateCheck.availableVersion, dismissedUpdateVersion != version {
+                    AppUpdateBanner(version: version).padding(.horizontal)
+                }
+            }
             .onAppear {
                 if pendingFirstRecording {
                     pendingFirstRecording = false

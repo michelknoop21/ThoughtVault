@@ -127,6 +127,7 @@
 		AA000066 /* ProfileTemplates.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000066 /* ProfileTemplates.swift */; };
 		AA000067 /* ProfileTemplates.json in Resources */ = {isa = PBXBuildFile; fileRef = FA000067 /* ProfileTemplates.json */; };
 		AB000001 /* ThoughtVaultTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000001 /* ThoughtVaultTests.swift */; };
+		AAUP0001 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = SDUP0001 /* Sparkle */; platformFilter = macos; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -273,6 +274,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				AA000065 /* WhisperKit in Frameworks */,
+				AAUP0001 /* Sparkle in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -532,6 +534,7 @@
 			name = ThoughtVault;
 			packageProductDependencies = (
 				SD000001 /* WhisperKit */,
+				SDUP0001 /* Sparkle */,
 			);
 			productName = ThoughtVault;
 			productReference = FC000001 /* ThoughtVault.app */;
@@ -586,6 +589,7 @@
 			mainGroup = GG000000 /* ThoughtVaultApp */;
 			packageReferences = (
 				SP000001 /* XCRemoteSwiftPackageReference "WhisperKit" */,
+				SPUP0001 /* Sparkle */,
 			);
 			productRefGroup = GG000090 /* Products */;
 			projectDirPath = "";
@@ -1043,6 +1047,7 @@
 				version = 0.18.0;
 			};
 		};
+		SPUP0001 /* Sparkle */ = {isa = XCRemoteSwiftPackageReference; repositoryURL = "https://github.com/sparkle-project/Sparkle"; requirement = {kind = exactVersion; version = 2.10.0; }; };
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -1051,6 +1056,7 @@
 			package = SP000001 /* XCRemoteSwiftPackageReference "WhisperKit" */;
 			productName = WhisperKit;
 		};
+		SDUP0001 /* Sparkle */ = {isa = XCSwiftPackageProductDependency; package = SPUP0001 /* Sparkle */; productName = Sparkle; };
 /* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = PP000001 /* Project object */;

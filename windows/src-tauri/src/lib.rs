@@ -19,6 +19,7 @@ pub fn run() {
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
             let main_window = app.get_webview_window("main").unwrap();
 
@@ -84,7 +85,6 @@ pub fn run() {
             commands::system::get_network_status,
             commands::system::detect_meeting_apps,
             commands::system::get_app_version,
-            commands::system::download_and_run_installer,
             // Local transcription (whisper.cpp)
             transcribe::whisper_model_status,
             transcribe::download_whisper_model,

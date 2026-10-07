@@ -26,6 +26,7 @@ try {
     if (-not $msi) { throw "MSI niet gevonden" }
     New-Item -ItemType Directory -Force "$root/build/windows-local" | Out-Null
     Copy-Item $msi.FullName "$root/build/windows-local/ThoughtVault_${version}_x64.msi"
+    Copy-Item "$($msi.FullName).sig" "$root/build/windows-local/ThoughtVault_${version}_x64.msi.sig"
     Copy-Item "$root/docs/WINDOWS-LOKAAL.md" "$root/build/windows-local/LEESMIJ.md"
     Get-FileHash "$root/build/windows-local/ThoughtVault_${version}_x64.msi" -Algorithm SHA256 |
         Format-List | Out-File "$root/build/windows-local/SHA256.txt"

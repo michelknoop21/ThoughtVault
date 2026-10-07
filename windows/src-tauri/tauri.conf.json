@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "ThoughtVault",
-  "version": "1.0.255",
+  "version": "1.0.256",
   "identifier": "nl.prezent.transcript-studio",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -46,7 +46,8 @@
       "webviewInstallMode": {
         "type": "embedBootstrapper"
       }
-    }
+    },
+    "createUpdaterArtifacts": true
   },
   "plugins": {
     "shell": {
@@ -57,6 +58,15 @@
         "schemes": [
           "transcript-studio"
         ]
+      }
+    },
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDRGNDlGMUEwQjQxQ0YyNkEKUldScThoeTBvUEZKVDh4TDMzeUV1VEU0amh5MFVJV3pnalU2QlEwY3pSd0cxRElzcXlGWDJoUGUK",
+      "endpoints": [
+        "https://thoughtvault.yinga.ai/releases/windows/stable.json"
+      ],
+      "windows": {
+        "installMode": "passive"
       }
     }
   }

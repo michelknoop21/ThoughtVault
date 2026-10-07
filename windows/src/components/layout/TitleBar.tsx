@@ -1,3 +1,4 @@
+import appLogo from "../../assets/app-logo.png";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { getName } from "@tauri-apps/api/app";
 import {
@@ -56,6 +57,7 @@ export function TitleBar() {
       >
         {/* Drag area — covers everything except window controls */}
         <div data-tauri-drag-region style={{ flex: 1, paddingLeft: 12, display: "flex", alignItems: "center" }}>
+          <img src={appLogo} alt="" width={20} height={20} style={{ objectFit: "contain", marginRight: 8 }} />
           <span style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 500 }}>
             {appName}
           </span>

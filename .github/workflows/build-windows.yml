@@ -1,52 +1,135 @@
-name: Windows installer verification
+# Windows MSI build only — triggered from GitLab CI pipeline or manually.
+# macOS + Android + deploy run on GitLab CI (self-hosted runner).
+name: Build Windows MSI
+
 on:
+  push:
+    tags:
+      - 'v*'
+      - 'dev-v*'
   workflow_dispatch:
+    inputs:
+      channel:
+        description: 'Build channel'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - production
+
 permissions:
-  contents: read
+  contents: write
+
+env:
+  NODE_VERSION: '20'
+
 jobs:
-  build:
+  build-windows:
     runs-on: windows-latest
-    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+
+      - name: Determine version and channel
+        id: meta
+        shell: bash
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            echo "version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+            echo "channel=production" >> $GITHUB_OUTPUT
+          elif [[ "$GITHUB_REF" == refs/tags/dev-v* ]]; then
+            echo "version=${GITHUB_REF_NAME#dev-v}" >> $GITHUB_OUTPUT
+            echo "channel=dev" >> $GITHUB_OUTPUT
+          else
+            VERSION=$(cat VERSION | tr -d '[:space:]')
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+            echo "channel=${{ inputs.channel || 'dev' }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set artifact names
+        id: names
+        shell: bash
+        run: |
+          VERSION="${{ steps.meta.outputs.version }}"
+          CHANNEL="${{ steps.meta.outputs.channel }}"
+          if [ "$CHANNEL" = "production" ]; then
+            echo "msi_name=ThoughtVault_${VERSION}_x64.msi" >> $GITHUB_OUTPUT
+            echo "bundle_id=nl.prezent.transcript-studio" >> $GITHUB_OUTPUT
+            echo "product_name=ThoughtVault" >> $GITHUB_OUTPUT
+            echo "feed=stable" >> $GITHUB_OUTPUT
+          else
+            echo "msi_name=ThoughtVault-Dev_${VERSION}_x64.msi" >> $GITHUB_OUTPUT
+            echo "bundle_id=nl.prezent.transcript-studio-dev" >> $GITHUB_OUTPUT
+            echo "product_name=ThoughtVault Dev" >> $GITHUB_OUTPUT
+            echo "feed=dev" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: 20
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: windows/src-tauri
-          cache-on-failure: true
-          key: installer-complete
-      - name: Build and test installer
-        shell: pwsh
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install frontend dependencies
+        working-directory: windows
+        run: npm ci
+
+      - name: Verify frontend and native code
+        working-directory: windows
+        run: |
+          npx vitest run
+          if ($LASTEXITCODE -ne 0) { throw "Frontend tests failed" }
+          npm run build
+          if ($LASTEXITCODE -ne 0) { throw "Frontend build failed" }
+          cargo test --release --manifest-path src-tauri/Cargo.toml --lib
+          if ($LASTEXITCODE -ne 0) { throw "Native tests failed" }
+
+      - name: Build Tauri app
+        working-directory: windows
         env:
-          LIBCLANG_PATH: C:/Program Files/LLVM/bin
-        run: ./scripts/build-windows-local.ps1
-      - name: Verify installation and launch
-        shell: pwsh
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          TAURI_CONFIG: '{"identifier":"${{ steps.names.outputs.bundle_id }}","productName":"${{ steps.names.outputs.product_name }}","plugins":{"updater":{"endpoints":["https://thoughtvault.yinga.ai/releases/windows/${{ steps.names.outputs.feed }}.json"]}}}'
+        run: npm run tauri build
+
+      - name: Copy and upload MSI
+        shell: bash
+        env:
+          MSI_NAME: ${{ steps.names.outputs.msi_name }}
         run: |
-          $msi = (Get-ChildItem build/windows-local/*.msi).FullName
-          $log = "$pwd/build/windows-local/install.log"
-          $install = Start-Process msiexec -ArgumentList "/i `"$msi`" /qn /norestart /l*v `"$log`"" -Wait -PassThru
-          if ($install.ExitCode -notin @(0, 3010)) { throw "Installer failed: $($install.ExitCode)" }
-          $exe = Get-Item "$env:ProgramFiles/ThoughtVault/transcript-studio.exe"
-          if (-not $exe) { throw "Installed executable not found" }
-          $app = Start-Process $exe.FullName -PassThru
-          Start-Sleep -Seconds 10
-          if ($app.HasExited) { throw "Application exited: $($app.ExitCode)" }
-          Stop-Process -Id $app.Id
-          "MSI installed successfully; application stayed running for 10 seconds." | Out-File build/windows-local/INSTALL-VERIFICATION.txt
-      - name: Source evidence
-        if: always()
-        shell: pwsh
+          mkdir -p build
+          MSI=$(find windows/src-tauri/target/release/bundle -name "*.msi" -type f | head -1)
+          if [ -z "$MSI" ]; then
+            echo "ERROR: MSI not found"
+            exit 1
+          fi
+          cp "$MSI" "build/$MSI_NAME"
+          cp "$MSI.sig" "build/$MSI_NAME.sig"
+          echo "Built: $MSI_NAME"
+
+      - name: Upload to server
+        shell: bash
+        env:
+          MSI_NAME: ${{ steps.names.outputs.msi_name }}
+          VERSION: ${{ steps.meta.outputs.version }}
+          CHANNEL: ${{ steps.meta.outputs.channel }}
         run: |
-          New-Item -ItemType Directory -Force build/windows-local | Out-Null
-          Copy-Item SOURCE-SHA256.json build/windows-local/
-          git rev-parse HEAD | Out-File build/windows-local/SOURCE-COMMIT.txt
-      - uses: actions/upload-artifact@v4
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H 3.69.205.209 >> ~/.ssh/known_hosts
+
+          powershell -NoProfile -ExecutionPolicy Bypass -File scripts/upload.ps1 -Channel "$CHANNEL" -KeyPath "$USERPROFILE/.ssh/id_rsa"
+          if [ "$?" -ne 0 ]; then exit 1; fi
+
+      - name: Retain installer and signature
         if: always()
+        uses: actions/upload-artifact@v4
         with:
-          name: ThoughtVault-Windows-x64
-          path: build/windows-local/
+          name: thoughtvault-windows-${{ steps.meta.outputs.version }}
+          path: |
+            build/*.msi
+            build/*.sig
           retention-days: 30

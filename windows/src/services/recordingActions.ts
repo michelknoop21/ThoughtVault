@@ -10,6 +10,7 @@ export type RecordingAction = "start" | "pause" | "resume" | "stop";
 export async function recordingAction(action: RecordingAction): Promise<audio.RecordingResult | string | void> {
   if (changing) throw Error("Een opnameactie is nog bezig.");
   const store = useRecordingStore.getState();
+  if (store.updateInstalling) throw Error("De app wordt bijgewerkt. Wacht tot de herstart.");
   const phase = store.phase;
   const allowed = action === "start" ? phase === "idle" : action === "pause" ? phase === "recording" :
     action === "resume" ? phase === "paused" : phase === "recording" || phase === "paused";

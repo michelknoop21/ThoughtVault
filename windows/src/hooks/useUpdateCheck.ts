@@ -1,60 +1,38 @@
 import { useEffect, useState } from "react";
+import { check, type Update } from "@tauri-apps/plugin-updater";
 import { useSettingsStore } from "../stores/settingsStore";
 
-const RELEASES_URL = "https://n8n.prezent.nl/tstudio/download/releases.json";
-const DOWNLOAD_BASE = "https://n8n.prezent.nl";
-
-function isNewer(remote: string, local: string): boolean {
-  const r = remote.split(".").map(Number);
-  const l = local.split(".").map(Number);
-  if (r.length < 3 || l.length < 3) return false;
-  if (r[0] !== l[0]) return r[0] > l[0];
-  if (r[1] !== l[1]) return r[1] > l[1];
-  return r[2] > l[2];
-}
-
 export function useUpdateCheck() {
-  const [latestVersion, setLatestVersion] = useState<string | null>(null);
-  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
-  const checkForUpdates = useSettingsStore((s) => s.check_for_updates);
-
+  const [update, setUpdate] = useState<Update | null>(null);
+  const enabled = useSettingsStore((s) => s.check_for_updates);
   useEffect(() => {
-    if (!checkForUpdates) return;
-    if (!("__TAURI_INTERNALS__" in window)) return;
-
+    if (!enabled || !("__TAURI_INTERNALS__" in window)) return;
     let cancelled = false;
-
-    (async () => {
+    let current: Update | null = null;
+    let checking = false;
+    async function refresh() {
+      if (checking) return;
+      checking = true;
       try {
-        const { getVersion } = await import("@tauri-apps/api/app");
-        const currentVersion = await getVersion();
-
-        const res = await fetch(RELEASES_URL);
-        if (!res.ok) return;
-        const json = await res.json();
-
-        // Determine channel from app title
-        const isDev = document.title.toLowerCase().includes("dev");
-
-        const platformKey = isDev ? "dev_windows_x64" : "windows_x64";
-        const platformInfo = json[platformKey];
-        const remoteVersion = platformInfo?.version;
-        if (!remoteVersion || typeof remoteVersion !== "string") return;
-        if (cancelled) return;
-
-        if (isNewer(remoteVersion, currentVersion)) {
-          setLatestVersion(remoteVersion);
-          if (platformInfo?.url) {
-            setDownloadUrl(DOWNLOAD_BASE + platformInfo.url);
+        const next = await check({ timeout: 15000 });
+        if (cancelled) { await next?.close(); return; }
+        // Keep the resource while the banner may be downloading/installing it.
+        if (current) { await next?.close(); return; }
+        current = next;
+        setUpdate(next);
+        if (next && localStorage.getItem("notifiedUpdateVersion") !== next.version) {
+          const { isPermissionGranted, sendNotification } = await import("@tauri-apps/plugin-notification");
+          if (await isPermissionGranted()) {
+            sendNotification({ title: "Update beschikbaar", body: `Versie ${next.version} van ThoughtVault is beschikbaar.` });
+            localStorage.setItem("notifiedUpdateVersion", next.version);
           }
         }
-      } catch {
-        // Silently ignore — update check is best-effort
-      }
-    })();
-
-    return () => { cancelled = true; };
-  }, [checkForUpdates]);
-
-  return { isUpdateAvailable: latestVersion !== null, latestVersion, downloadUrl };
+      } catch { /* Offline checks are best-effort; install errors are shown in the banner. */ }
+      finally { checking = false; }
+    }
+    void refresh();
+    const timer = window.setInterval(() => void refresh(), 6 * 60 * 60 * 1000);
+    return () => { cancelled = true; window.clearInterval(timer); void current?.close(); };
+  }, [enabled]);
+  return { update };
 }

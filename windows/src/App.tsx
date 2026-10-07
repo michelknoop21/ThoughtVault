@@ -1,3 +1,5 @@
+import { useUpdateCheck } from "./hooks/useUpdateCheck";
+import { UpdateBanner } from "./components/ui/UpdateBanner";
 import { listen } from "@tauri-apps/api/event";
 import { MicrosoftGraphService } from "./services/microsoftGraph";
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
@@ -29,6 +31,8 @@ import { canOpenRoute, shouldBlockForLocalNotes } from "./services/routeAccess";
 initCrashReporter();
 
 function AppShell({ children }: { children: React.ReactNode }) {
+  const { update } = useUpdateCheck();
+  const dismissed = useSettingsStore((s) => s.dismissed_update_version);
   return (
     <>
       <div className="app-shell">
@@ -38,6 +42,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
           <Sidebar />
           <main className="app-main" id="main-content">
             <ProcessingBar />
+            {update && dismissed !== update.version && <UpdateBanner update={update} onDismiss={() => void useSettingsStore.getState().updateSettings({ dismissed_update_version: update.version })} />}
             <div className="app-main-content">
               {children}
             </div>

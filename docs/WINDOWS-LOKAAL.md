@@ -75,3 +75,12 @@ De Mac-versie is met Apple Development-identiteit en sandbox gebouwd en opnieuw 
 - Volledig offline gebruik met uitgeschakelde netwerkverbinding en de Windows-installer/opnameflow zijn nog niet op echte Windows-hardware gecontroleerd.
 
 De nieuwe migratie bewaart provider-, model-, onboarding-, update-, agenda- en Obsidian-instellingen. Waar versie 1 een adres door een standaardadres verving, wordt een eerdere iCloud-configuratie gebruikt als die beschikbaar is. Reeds gewiste instellingen zonder eerdere kopie zijn niet reconstrueerbaar; bestaande Mac-Keychain-items worden niet door de migratie verwijderd.
+
+## Windows-buildcontrole — 7 oktober 2026
+
+De x64-MSI voor 1.0.255 bevat de huidige Windows-wijzigingen, inclusief lokale en cloud-AI, AI-verbindingen, documentvormgeving en de opname-widget. De JavaScript- en Rust-versies van Tauri zijn gelijkgetrokken. API-sleutels gebruiken nu daadwerkelijk Windows Credential Manager; het ontwikkelhulpprogramma `read_token` wordt niet meegeleverd.
+
+- Op een Windows x64-runner: 45 frontendtests en 19 native tests geslaagd, inclusief audio-import en opnieuw uitlezen van credentials.
+- MSI gebouwd, stil geïnstalleerd met exitcode 0 en de geïnstalleerde `transcript-studio.exe` gestart. De app bleef draaien tijdens de startcontrole. Het installatielog bevestigt dat alleen de app wordt meegeleverd.
+- Installer, handleiding, checksum, bronbestanden-hashes en build-/installatielogs staan in `build/windows-local/`. [Geslaagde Windows-build](https://github.com/michelknoop21/ThoughtVault/actions/runs/37610419654).
+- Microfoon- en systeemaudio-opname, volledig offline verwerken en upgrade met bestaande gebruikersgegevens moeten nog op een Windows-pc worden gecontroleerd. De geslaagde build en startcontrole bewijzen die praktijkflows niet.

@@ -23,6 +23,15 @@ export interface MeetingApp {
   is_running: boolean;
 }
 
+export interface SystemSpecs {
+  cpu: string;
+  architecture: string;
+  memory_gb: number;
+  threads: number;
+  os_version: string;
+  free_storage_gb: number | null;
+}
+
 export interface RecordingFile {
   path: string;
   filename: string;

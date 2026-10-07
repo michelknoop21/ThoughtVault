@@ -31,3 +31,25 @@ it("keeps an edited notule open when saving fails", async () => {
   expect(container.querySelector<HTMLDivElement>('[aria-label="Notule bewerken"]')?.textContent).toBe("Mijn concept blijft bewaard");
   await act(async () => { root.unmount(); });
 });
+
+it("allows regeneration from a saved transcript without a notule", async () => {
+  const regenerate = vi.fn();
+  const noop = vi.fn();
+  const container = document.createElement("div");
+  const root = createRoot(container);
+  const transcript = {
+    id: "local-partial", title: "Transcriptie", raw_transcription: "Besproken acties.",
+    duration_seconds: 10, tags: [], created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+  };
+  await act(async () => {
+    root.render(<TranscriptDetail transcript={transcript} regeneratingId={null} onBack={noop}
+      onRegenerate={regenerate} onDelete={noop} onUpdateTitle={async () => {}} onSaveNotule={async () => {}}
+      onCopy={noop} onExportPDF={noop} onExportTXT={noop} onExportMarkdown={noop}
+      onExportHTML={noop} onExportObsidian={noop} onImportObsidian={noop} onOpenTags={noop} onGenerateTitle={noop} />);
+  });
+  const button = container.querySelector<HTMLButtonElement>('[title="Notulen opnieuw genereren met AI"]');
+  expect(button).not.toBeNull();
+  await act(async () => { button!.click(); });
+  expect(regenerate).toHaveBeenCalledWith(transcript);
+  await act(async () => { root.unmount(); });
+});

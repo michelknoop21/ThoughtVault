@@ -5,6 +5,7 @@ import { api } from "./api";
 import { createSSEClient } from "./sse";
 import { exportToObsidian } from "./obsidian";
 import { enqueue } from "./offlineQueue";
+import { linkQuickNote } from "./quickNotes";
 import type { Participant } from "./participants";
 import type { RecordingMode, TranscriptTask } from "../types";
 
@@ -26,7 +27,7 @@ export async function uploadAndTrack(
   const { addBackgroundTask, updateBackgroundTask, removeBackgroundTask } = store;
   const { addTranscript } = useTranscriptsStore.getState();
 
-  const tempId = `pending-${Date.now()}`;
+  const tempId = `pending-${crypto.randomUUID()}`;
   const bgTask: TranscriptTask = {
     task_id: tempId,
     status: "uploading",
@@ -49,6 +50,7 @@ export async function uploadAndTrack(
     );
 
     unregisterAbortController(tempId);
+    linkQuickNote(task_id, filePath);
     updateBackgroundTask(tempId, { task_id, status: "uploading", progress: 10 });
 
     const sseClient = createSSEClient(api.getStreamUrl(task_id));
@@ -64,18 +66,24 @@ export async function uploadAndTrack(
         });
       },
       async () => {
+        try {
         const transcripts = await api.getTranscripts();
-        if (transcripts[0]) {
-          addTranscript(transcripts[0]);
+        const completed = transcripts.find(transcript => transcript.task_id === task_id || transcript.id === task_id);
+        if (!completed) throw new Error("Het resultaat is nog niet beschikbaar. Vernieuw Opnames om het op te halen.");
+        {
+          addTranscript(completed);
           // Auto-export the freshly completed notule to Obsidian (fire-and-forget).
           const settings = useSettingsStore.getState();
           if (settings.obsidian_enabled) {
-            exportToObsidian(transcripts[0], settings).catch((e) =>
+            exportToObsidian(completed, settings).catch((e) =>
               console.warn("Obsidian auto-export mislukt:", e),
             );
           }
         }
         removeBackgroundTask(task_id);
+        } catch (err) {
+          updateBackgroundTask(task_id, { status: "failed", error_message: err instanceof Error ? err.message : String(err) });
+        }
       },
     );
   } catch (err) {

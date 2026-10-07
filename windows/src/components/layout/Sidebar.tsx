@@ -1,4 +1,5 @@
 import { NavLink } from "react-router-dom";
+import { useState, useEffect } from "react";
 import {
   Home24Regular,
   MicRecord24Regular,
@@ -18,6 +19,16 @@ import { api } from "../../services/api";
 import appLogo from "../../assets/app-logo.png";
 
 export function Sidebar() {
+  const [collapsed, setCollapsed] = useState(false);
+  useEffect(() => {
+    const toggle = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "s") {
+        e.preventDefault(); setCollapsed(value => !value);
+      }
+    };
+    window.addEventListener("keydown", toggle);
+    return () => window.removeEventListener("keydown", toggle);
+  }, []);
   const { user, logout, isAuthenticated } = useAuthStore();
   const isAdmin = user?.role === "admin";
   const processingMode = useSettingsStore((state) => state.processing_mode);
@@ -37,7 +48,8 @@ export function Sidebar() {
   }
 
   return (
-    <nav className="sidebar">
+    <nav className={`sidebar${collapsed ? " collapsed" : ""}`} aria-label="Hoofdnavigatie">
+      <button className="sidebar-toggle" aria-label={collapsed ? "Navigatie uitklappen" : "Navigatie inklappen"} aria-expanded={!collapsed} onClick={() => setCollapsed(!collapsed)} title="Navigatie in-/uitklappen (Ctrl+Shift+S)">☰</button>
       {/* Logo + app title */}
       <div className="sidebar-logo-section">
         <img

@@ -495,15 +495,9 @@ export default function App() {
     })();
   }, []);
 
-  // Detect system theme preference
+  // The approved desktop design uses the same night palette on every platform.
   useEffect(() => {
-    const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    document.documentElement.dataset.theme = mq.matches ? "dark" : "light";
-    const handler = (e: MediaQueryListEvent) => {
-      document.documentElement.dataset.theme = e.matches ? "dark" : "light";
-    };
-    mq.addEventListener("change", handler);
-    return () => mq.removeEventListener("change", handler);
+    document.documentElement.dataset.theme = "dark";
   }, []);
 
   // Handle Microsoft 365 OAuth deep-link callbacks

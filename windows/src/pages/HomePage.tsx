@@ -9,7 +9,13 @@ import {
   Delete24Regular,
   People24Regular,
   ChevronRight24Regular,
+  Search24Regular,
+  Settings24Regular,
+  DocumentText24Regular,
 } from "@fluentui/react-icons";
+import { invoke } from "@tauri-apps/api/core";
+import { getAudioDevices } from "../services/tauriCommands";
+import homeMountains from "../assets/home-mountains.svg";
 import { useRecordingStore } from "../stores/recordingStore";
 import { useTranscriptsStore } from "../stores/transcriptsStore";
 import { useLocalTranscriptsStore, isLocalId } from "../stores/localTranscriptsStore";
@@ -83,6 +89,7 @@ export function HomePage() {
 
   function handleQuickStart(mode: "microphone" | "combined") {
     setMode(mode);
+    setAutoStart(true);
     navigate("/recording");
   }
 
@@ -106,170 +113,54 @@ export function HomePage() {
     }
   }
 
-  return (
-    <div className="page-scroll bg-blobs">
-    <div className="bg-blobs-clip">
-      <div className="bg-blob bg-blob-magenta" />
-      <div className="bg-blob bg-blob-blue" />
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState("Alle");
+  const [micAvailable, setMicAvailable] = useState<boolean | null>(null);
+  const [micError, setMicError] = useState("");
+  const activeTasks = useRecordingStore(s => s.backgroundTasks);
+  useEffect(() => { getAudioDevices().then(devices => setMicAvailable(devices.some(d => d.is_input))).catch(() => setMicAvailable(null)); }, []);
+  const visible = transcripts.filter(t => filter === "Alle" || (filter === "Notulen" ? Boolean(t.notule_html || t.has_notes) : !t.notule_html && !t.has_notes)).slice(0, 10);
+
+  return <div className="page-scroll northstar-home">
+    <div className="home-topbar"><form onSubmit={e => { e.preventDefault(); useTranscriptsStore.getState().setSearchQuery(query); navigate("/transcripts"); }}>
+      <Search24Regular /><input aria-label="Zoek in je notulen" placeholder="Zoek in je notulen…" value={query} onChange={e => setQuery(e.target.value)} /></form>
+      <button className="home-account" aria-label="Account" onClick={() => navigate(user ? "/account" : "/settings")}>{user?.name?.slice(0, 1).toUpperCase() || <People24Regular />}</button>
     </div>
-    <div className="page-content" style={{ position: "relative", zIndex: 1 }}>
-
-      {/* Update banner */}
-      {isUpdateAvailable && latestVersion && dismissedVersion !== latestVersion && (
-        <section>
-          <UpdateBanner
-            version={latestVersion}
-            downloadUrl={downloadUrl}
-            onDismiss={() => updateSettings({ dismissed_update_version: latestVersion })}
-          />
-        </section>
-      )}
-
-      {/* Greeting */}
-      <section>
-        <h2 className="text-subtitle">{getGreeting(user?.name, user?.email)}</h2>
-        <p className="text-caption" style={{ marginTop: 4 }}>
-          Wat wil je vandaag transcriberen?
-        </p>
+    {isUpdateAvailable && latestVersion && dismissedVersion !== latestVersion && <UpdateBanner version={latestVersion} downloadUrl={downloadUrl} onDismiss={() => updateSettings({ dismissed_update_version: latestVersion })} />}
+    <div className="home-columns"><div className="home-main">
+      <header className="home-greeting"><p className="home-kicker">{new Date().toLocaleDateString("nl-NL", { weekday: "long", day: "numeric", month: "long" })}</p>
+        <h1>{getGreeting(user?.name, user?.email)}</h1><p>Goede ideeën beginnen vaak met een gesprek.</p>
+        <img src={homeMountains} alt="" aria-hidden="true" /><div className="home-tagline"><strong>Spreek. Denk. Bewaar.</strong><span>ThoughtVault zet je gesprekken om in heldere notities, taken en inzichten.</span></div>
+      </header>
+      <section className="home-record-card"><div><p className="home-kicker">NIEUWE OPNAME</p><h2>Begin een nieuwe opname</h2>
+        <p>Spreek je gedachten, vergadering of idee. ThoughtVault maakt er automatisch notities, samenvattingen en taken van.</p>
+        <div className="home-record-controls"><button className="btn btn-secondary icon-btn" aria-label="Instellingen" onClick={() => navigate("/settings")}><Settings24Regular /></button>
+          <button className="home-mic-button" aria-label="Opname starten" onClick={() => handleQuickStart("combined")}><MicRecord24Regular /></button>
+          <div className="home-idle-levels"><div aria-hidden="true">{Array.from({ length: 55 }, (_, i) => <i key={i} style={{ height: Math.max(4, Math.pow(Math.sin(Math.PI * i / 54), 1.4) * (.25 + .75 * Math.abs(Math.sin(i * 1.73) * Math.cos(i * .61 + .4))) * 65) }} />)}</div>
+            <span><i className="home-ready-dot" />{micAvailable === false ? "Geen microfoon gevonden" : "Klaar om op te nemen"}</span></div><span className="home-zero">0:00</span>
+        </div></div>
+        <aside className="home-mic-panel"><strong>{micAvailable === true ? "Microfoon gevonden" : micAvailable === false ? "Geen microfoon gevonden" : "Microfoontoegang"}</strong>
+          <p>Windows controleert toegang wanneer je de opname start.</p>
+          <button className="btn btn-secondary" onClick={() => invoke("open_microphone_settings").catch(() => setMicError("Open Windows-instellingen → Privacy en beveiliging → Microfoon."))}>Toegang beheren <ChevronRight24Regular /></button>
+          {micError && <p role="alert">{micError}</p>}<hr /><strong className="home-tip">Tip</strong><p>Spreek natuurlijk. Je kunt op elk moment pauzeren.</p>
+        </aside>
       </section>
-
-      {/* Hero CTA — start recording */}
-      <section>
-        <p className="section-label">Snel starten</p>
-        <button onClick={() => handleQuickStart("microphone")} className="hero-cta-card">
-          <div className="hero-cta-rings">
-            <div className="hero-cta-ring hero-cta-ring-1" />
-            <div className="hero-cta-ring hero-cta-ring-2" />
-            <div className="hero-cta-ring hero-cta-ring-3" />
-            <MicRecord24Regular className="hero-cta-mic" />
-          </div>
-          <div className="hero-cta-text">
-            <span className="hero-cta-title">Start nieuwe opname</span>
-            <span className="hero-cta-subtitle">Ga naar Opnemen en start daar de opname</span>
-          </div>
-          <ChevronRight24Regular className="hero-cta-chevron" />
-        </button>
-
-        <div className="flex-row gap-10" style={{ marginTop: 10 }}>
-          <button onClick={() => handleQuickStart("microphone")} className="quick-start-pill">
-            <People24Regular style={{ fontSize: 14 }} />
-            Fysieke meeting
-          </button>
-          <button onClick={() => handleQuickStart("combined")} className="quick-start-pill">
-            <VideoChat24Regular style={{ fontSize: 14 }} />
-            Videocall
-          </button>
-        </div>
+      <section className="home-recents"><header><h2>Recente notities</h2><div role="group" aria-label="Filter recente notities">{["Alle", "Opnames", "Notulen"].map(value => <button key={value} aria-pressed={filter === value} className={filter === value ? "active" : ""} onClick={() => setFilter(value)}>{value}</button>)}</div></header>
+        {loadError && <div className="error-banner-inline"><span>{loadError}</span><button className="btn btn-sm" onClick={loadRecentTranscripts}>Opnieuw</button></div>}
+        {isLoading && !transcripts.length ? <p>Laden…</p> : !transcripts.length ? <div className="home-empty"><h3>Je vault is nog leeg</h3><p>Alles wat je inspreekt verschijnt hier als notitie of notule.</p><button className="studio-link" onClick={() => handleQuickStart("combined")}>Maak je eerste opname</button></div>
+          : <div className="home-recent-list">{visible.map(transcript => <SessionCard key={transcript.id} transcript={transcript} onClick={() => { setSelectedId(transcript.id); navigate("/transcripts"); }} onDelete={setDeleteConfirm} />)}{!visible.length && <p className="home-empty">Geen {filter.toLowerCase()} in deze lijst.</p>}</div>}
       </section>
-
-      {/* Upcoming meetings */}
-      {upcomingEvents.length > 0 && (
-        <section>
-          <p className="section-label">Aankomende vergaderingen</p>
-          <div className="flex-col gap-8">
-            {upcomingEvents.map((event) => (
-              <div key={event.id} className="card session-card flex-row gap-12">
-                <CalendarLtr24Regular style={{ fontSize: 18, color: "var(--fill-accent-default)", flexShrink: 0 }} />
-                <div className="flex-1" style={{ minWidth: 0 }}>
-                  <p className="truncate" style={{ fontSize: 13, fontWeight: 500, color: "var(--text-primary)" }}>{event.title}</p>
-                  <p className="text-caption" style={{ marginTop: 1 }}>
-                    {formatEventTime(event.start, event.end)}
-                  </p>
-                </div>
-                {event.join_url && (
-                  <button
-                    onClick={() => handleRecordMeeting(event)}
-                    className="btn btn-accent flex-shrink-0"
-                    style={{ padding: "4px 10px", fontSize: 12 }}
-                  >
-                    <MicRecord24Regular style={{ fontSize: 13 }} />
-                    Direct opnemen
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Recent sessions */}
-      <section style={{ flex: 1, minHeight: 0 }} className="flex-col">
-        <div className="flex-row justify-between" style={{ alignItems: "center" }}>
-          <p className="section-label" style={{ margin: 0 }}>Recente sessies</p>
-          {isLoading && <span className="text-caption" style={{ color: "var(--fill-accent-default)" }}>Laden...</span>}
-        </div>
-        {loadError ? (
-          <div className="error-banner-inline">
-            <span>{loadError}</span>
-            <button className="btn btn-sm" onClick={loadRecentTranscripts}>Opnieuw</button>
-          </div>
-        ) : isLoading ? (
-          <div className="flex-col gap-10">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="card card-static" style={{ padding: 16 }}>
-                <div className="flex-col gap-8">
-                  <div className="skeleton skeleton-line skeleton-line-short" />
-                  <div className="skeleton skeleton-line skeleton-line-long" />
-                  <div className="skeleton skeleton-line skeleton-line-medium" />
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : transcripts.length === 0 ? (
-          <div className="empty-state">
-            <p className="empty-state-title">Nog geen transcripten</p>
-            <p className="empty-state-body">
-              Start je eerste opname. ThoughtVault maakt daarna automatisch een
-              transcript en helpt je om er een duidelijke notule van te maken.
-            </p>
-            <button onClick={() => handleQuickStart("microphone")} className="btn btn-accent">
-              Maak je eerste opname
-            </button>
-          </div>
-        ) : (
-          <div className="flex-col gap-10">
-            {transcripts.map((transcript) => (
-              <SessionCard
-                key={transcript.id}
-                transcript={transcript}
-                onClick={() => { setSelectedId(transcript.id); navigate("/transcripts"); }}
-                onDelete={setDeleteConfirm}
-              />
-            ))}
-          </div>
-        )}
-      </section>
-
-    </div>
-
-      {/* Delete confirmation dialog */}
-      {deleteConfirm && (
-        <div className="profile-overlay" onClick={() => setDeleteConfirm(null)}>
-          <div className="card profile-modal-confirm" onClick={(e) => e.stopPropagation()}>
-            <p className="text-body-strong" style={{ marginBottom: 8 }}>Sessie verwijderen?</p>
-            <p className="text-caption" style={{ marginBottom: 4, color: "var(--text-secondary)" }}>
-              "{deleteConfirm.title || "Naamloze opname"}" wordt definitief verwijderd.
-            </p>
-            <p className="text-caption" style={{ marginBottom: 16, color: "var(--text-tertiary)" }}>
-              Dit kan niet ongedaan worden gemaakt.
-            </p>
-            <div className="profile-modal-actions">
-              <button onClick={() => setDeleteConfirm(null)} className="btn btn-secondary btn-sm">
-                Annuleren
-              </button>
-              <button
-                onClick={() => { handleDeleteTranscript(deleteConfirm); setDeleteConfirm(null); }}
-                className="btn btn-sm"
-                style={{ color: "var(--text-error)", borderColor: "rgba(188,0,22,0.3)" }}
-              >
-                Verwijderen
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+      {activeTasks.length > 0 && <section className="northstar-card"><h3>Bezig met verwerken</h3>{activeTasks.map(task => <button className="home-task-row" key={task.task_id} onClick={() => navigate("/tasks")}><span>{task.extracted_title || task.filename || "Opname"}<small>{task.error_message || task.message || task.status}</small></span><span>{task.progress}%</span></button>)}</section>}
+    </div><aside className="home-side">
+      <section className="northstar-card"><h2>Vandaag</h2>{upcomingEvents.length ? upcomingEvents.map(event => <div className="home-calendar-row" key={event.id}><CalendarLtr24Regular /><div><strong>{event.title}</strong><p>{formatEventTime(event.start, event.end)}</p><button className="studio-link" onClick={() => handleRecordMeeting(event)}>Direct opnemen</button></div></div>) : <><p>{calendar.isConnected ? "Geen aankomende vergaderingen." : "Koppel je agenda om je vergaderingen hier te zien."}</p><button className="studio-link" onClick={() => navigate("/settings")}>Agenda instellen</button></>}</section>
+      <section className="northstar-card"><h2>Snel vastleggen</h2><button className="home-quick-action" onClick={() => handleQuickStart("microphone")}><People24Regular />Fysieke meeting</button><button className="home-quick-action" onClick={() => handleQuickStart("combined")}><VideoChat24Regular />Videocall</button><button className="home-quick-action" onClick={() => navigate("/recording")}><DocumentText24Regular />Audiobestand importeren</button></section>
+      <section className="northstar-card home-brand-note"><strong>Laat gedachten groeien tot kennis.</strong><p>Eén gesprek kan meerdere inzichten, taken en plannen opleveren.</p></section>
+    </aside></div>
+    {deleteConfirm && <div className="profile-overlay" onClick={() => setDeleteConfirm(null)}><div className="card profile-modal-confirm" onClick={e => e.stopPropagation()}>
+      <h3>Sessie verwijderen?</h3><p>“{deleteConfirm.title}” wordt definitief verwijderd. Dit kan niet ongedaan worden gemaakt.</p>
+      <div className="profile-modal-actions"><button className="btn btn-secondary" onClick={() => setDeleteConfirm(null)}>Annuleren</button><button className="btn btn-secondary text-error" onClick={() => { void handleDeleteTranscript(deleteConfirm); setDeleteConfirm(null); }}>Verwijderen</button></div>
+    </div></div>}
+  </div>;
 }
 
 function SessionCard({

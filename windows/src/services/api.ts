@@ -80,6 +80,7 @@ function mapTranscript(raw: unknown): Transcript {
 
   return {
     id: safeString(r.id ?? r.task_id, ""),
+    task_id: safeOptionalString(r.task_id),
     title: safeString(r.title ?? r.extracted_title ?? r.filename, "Naamloze opname"),
     raw_transcription: rawTranscription,
     notule_html: notuleHtml,

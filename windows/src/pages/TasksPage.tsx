@@ -270,7 +270,9 @@ export function TasksPage() {
   const isLocal = useSettingsStore((s) => s.processing_mode === "local");
   const localTasks = useRecordingStore((s) => s.backgroundTasks);
   const removeLocalTask = useRecordingStore((s) => s.removeBackgroundTask);
-  const visibleTasks = isLocal ? localTasks : activeTasks;
+  const visibleTasks = [...localTasks, ...(isLocal ? [] : activeTasks.filter(
+    (task) => !localTasks.some((local) => local.task_id === task.task_id),
+  ))];
 
   const [confirmAction, setConfirmAction] = useState<{
     type: "cancel" | "delete";
@@ -293,7 +295,7 @@ export function TasksPage() {
   }
 
   function handleDelete(taskId: string) {
-    if (isLocal) {
+    if (localTasks.some((task) => task.task_id === taskId)) {
       removeLocalTask(taskId);
       return;
     }
@@ -394,7 +396,7 @@ export function TasksPage() {
                   onCancel={handleCancel}
                   onDelete={handleDelete}
                   onRetry={handleRetry}
-                  isLocal={isLocal}
+                  isLocal={localTasks.some((local) => local.task_id === task.task_id)}
                 />
               ))}
             </div>

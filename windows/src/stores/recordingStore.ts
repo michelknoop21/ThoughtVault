@@ -27,6 +27,8 @@ interface RecordingState {
   audioLevel: number; // 0-100
   elapsedSeconds: number;
   filePath: string | null;
+  quickNote: string;
+  setQuickNote: (note: string) => void;
   autoStart: boolean;
   minimizeOnAutoStart: boolean;
 
@@ -92,6 +94,8 @@ export const useRecordingStore = create<RecordingState>()((set) => ({
   audioLevel: 0,
   elapsedSeconds: 0,
   filePath: null,
+  quickNote: "",
+  setQuickNote: (quickNote) => set({ quickNote }),
   autoStart: false,
   minimizeOnAutoStart: false,
   recordingStartedAt: null,
@@ -164,6 +168,7 @@ export const useRecordingStore = create<RecordingState>()((set) => ({
       audioLevel: 0,
       elapsedSeconds: 0,
       filePath: null,
+      quickNote: "",
       autoStart: false,
       minimizeOnAutoStart: false,
       recordingStartedAt: null,

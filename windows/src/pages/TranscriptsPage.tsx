@@ -13,13 +13,14 @@ import { useTranscriptsStore } from "../stores/transcriptsStore";
 import { useLocalTranscriptsStore, isLocalId } from "../stores/localTranscriptsStore";
 import { useSettingsStore } from "../stores/settingsStore";
 import { useProfilesStore } from "../stores/profilesStore";
+import { useRecordingStore } from "../stores/recordingStore";
 import { LLMService } from "../services/llm";
 import { prepareNotuleHtml } from "../services/notulePresentation";
 import { hasUsableNotule, hasUsableTranscription } from "../services/notuleValidation";
 import { extractTitle } from "../services/titleExtractor";
 import { api } from "../services/api";
 import { createSSEClient } from "../services/sse";
-import { exportToObsidian } from "../services/obsidian";
+import { exportToObsidian, importFromObsidian, acknowledgeObsidianImport } from "../services/obsidian";
 import { htmlToMarkdown } from "../utils/htmlToMarkdown";
 import { useToast } from "../components/ui/InfoBar";
 import { clampMenuPosition } from "../utils/menuPosition";
@@ -41,6 +42,8 @@ export function TranscriptsPage() {
   } = useTranscriptsStore();
   const [contextMenu, setContextMenu] = useState<ContextMenu | null>(null);
   const [regeneratingId, setRegeneratingId] = useState<string | null>(null);
+  const [regenerateTarget, setRegenerateTarget] = useState<Transcript | null>(null);
+  const [regenerateProfileId, setRegenerateProfileId] = useState("");
   const [tagsDialogId, setTagsDialogId] = useState<string | null>(null);
   const [newTagInput, setNewTagInput] = useState("");
   const [availableTags, setAvailableTags] = useState<string[]>([]);
@@ -157,17 +160,29 @@ export function TranscriptsPage() {
   }
 
   // --- Notule save ---
-  async function handleSaveNotule(id: string, html: string) {
+  async function handleSaveNotule(id: string, html: string, syncObsidian = true) {
     try {
       if (isLocalId(id)) {
         await useLocalTranscriptsStore.getState().update(id, { notule_html: html });
         updateTranscript(id, { notule_html: html });
         toast.show("Notule opgeslagen", "success");
+        const settings = useSettingsStore.getState();
+        if (syncObsidian && settings.obsidian_enabled) {
+          const saved = useTranscriptsStore.getState().transcripts.find((item) => item.id === id);
+          if (saved) void exportToObsidian(saved, settings).catch((error) =>
+            toast.show(error instanceof Error ? error.message : "Obsidian-sync mislukt", "error"));
+        }
         return;
       }
       await api.updateNotuleHTML(id, html);
       updateTranscript(id, { notule_html: html });
       toast.show("Notule opgeslagen", "success");
+      const settings = useSettingsStore.getState();
+      if (syncObsidian && settings.obsidian_enabled) {
+        const saved = useTranscriptsStore.getState().transcripts.find((item) => item.id === id);
+        if (saved) void exportToObsidian(saved, settings).catch((error) =>
+          toast.show(error instanceof Error ? error.message : "Obsidian-sync mislukt", "error"));
+      }
     } catch {
       toast.show("Opslaan mislukt", "error");
       throw new Error("Opslaan mislukt");
@@ -175,53 +190,93 @@ export function TranscriptsPage() {
   }
 
   // --- Regenerate ---
-  async function handleRegenerate(transcript: Transcript) {
+  function requestRegenerate(transcript: Transcript) {
+    const profiles = useProfilesStore.getState().profiles;
+    const current = profiles.find((p) => p.name === transcript.profile_name || p.id === transcript.profile_name);
+    setRegenerateProfileId(current?.id ?? profiles[0]?.id ?? "");
+    setRegenerateTarget(transcript);
+  }
+
+  async function handleRegenerate(transcript: Transcript, profileId: string) {
+    if (regeneratingId === transcript.id) return;
+    const profile = useProfilesStore.getState().profiles.find((p) => p.id === profileId);
+    if (!profile) { toast.show("Kies een notulentemplate", "error"); return; }
+    setRegenerateTarget(null);
+    const tasks = useRecordingStore.getState();
+    const taskId = `regen-${transcript.id}`;
+    tasks.removeBackgroundTask(taskId);
+    tasks.addBackgroundTask({ task_id: taskId, status: "generating", progress: 10,
+      mode: "microphone", profile_id: profileId, extracted_title: transcript.title,
+      created_at: new Date().toISOString(), message: `Notulen met ${profile.name}` });
     // Local records: re-run the on-device LLM over the stored transcription.
     if (isLocalId(transcript.id)) {
       const transcription = transcript.raw_transcription ?? "";
       if (!hasUsableTranscription(transcription)) {
+        tasks.updateBackgroundTask(taskId, { status: "failed", error_message: "Geen bruikbare transcriptie beschikbaar" });
         toast.show("Geen bruikbare transcriptie beschikbaar", "error");
         return;
       }
       setRegeneratingId(transcript.id);
       try {
-        const profiles = useProfilesStore.getState().profiles;
-        const profile = profiles.find((p) => p.name === transcript.profile_name) ?? profiles[0];
-        const html = await LLMService.generateNotulen(transcription, profile);
+        const html = await LLMService.generateNotulen(transcription, profile,
+          () => tasks.updateBackgroundTask(taskId, { progress: 60 }), [], transcript.quick_note);
         if (!hasUsableNotule(html)) throw new Error("Geen bruikbare notule gegenereerd");
         const title = extractTitle(html) || transcript.title;
-        await useLocalTranscriptsStore.getState().update(transcript.id, { notule_html: html, title });
-        updateTranscript(transcript.id, { notule_html: html, title });
+        await useLocalTranscriptsStore.getState().update(transcript.id, { notule_html: html, title, profile_name: profile.name });
+        updateTranscript(transcript.id, { notule_html: html, title, profile_name: profile.name });
+        tasks.updateBackgroundTask(taskId, { status: "completed", progress: 100 });
+        const settings = useSettingsStore.getState();
+        if (settings.obsidian_enabled) {
+          const saved = useLocalTranscriptsStore.getState().items.find((item) => item.id === transcript.id);
+          if (saved) void exportToObsidian(saved, settings).catch((error) =>
+            toast.show(error instanceof Error ? error.message : "Obsidian-sync mislukt", "error"));
+        }
         toast.show("Notule opnieuw gegenereerd", "success");
-      } catch {
+      } catch (error) {
+        tasks.updateBackgroundTask(taskId, { status: "failed", error_message: error instanceof Error ? error.message : "Regenereren mislukt" });
         toast.show("Regenereren mislukt", "error");
       } finally {
         setRegeneratingId(null);
       }
       return;
     }
-    const profileId = transcript.profile_name || "zakelijk";
     setRegeneratingId(transcript.id);
     try {
       const { task_id } = await api.regenerateNotule(transcript.id, profileId);
       const sseClient = createSSEClient(api.getStreamUrl(task_id));
+      let finalStatus: string | undefined;
       sseClient.connect(
         (update) => {
+          finalStatus = update.status;
+          tasks.updateBackgroundTask(taskId, { status: update.status, progress: update.progress });
           if (update.notule_html) updateTranscript(transcript.id, { notule_html: update.notule_html });
           if (update.extracted_title) updateTranscript(transcript.id, { title: update.extracted_title });
         },
-        () => { setRegeneratingId(null); toast.show("Regenereren mislukt", "error"); },
+        () => { tasks.updateBackgroundTask(taskId, { status: "failed", error_message: "Verbinding met server verloren" }); setRegeneratingId(null); toast.show("Regenereren mislukt", "error"); },
         async () => {
+          if (finalStatus === "failed" || finalStatus === "cancelled" || finalStatus === "error") {
+            setRegeneratingId(null);
+            toast.show("Regenereren mislukt", "error");
+            return;
+          }
+          tasks.updateBackgroundTask(taskId, { status: "completed", progress: 100 });
           setRegeneratingId(null);
           setTimeout(async () => {
             try {
               const updated = await api.getTranscript(transcript.id);
               updateTranscript(transcript.id, { title: updated.title, notule_html: updated.notule_html });
-            } catch { /* ignore */ }
+              const settings = useSettingsStore.getState();
+              if (settings.obsidian_enabled && updated.notule_html) {
+                await exportToObsidian(updated, settings);
+              }
+            } catch (error) {
+              toast.show(error instanceof Error ? error.message : "Notule ophalen mislukt", "error");
+            }
           }, 8000);
         }
       );
-    } catch {
+    } catch (error) {
+      tasks.updateBackgroundTask(taskId, { status: "failed", error_message: error instanceof Error ? error.message : "Regenereren mislukt" });
       setRegeneratingId(null);
       toast.show("Regenereren mislukt", "error");
     }
@@ -321,6 +376,24 @@ export function TranscriptsPage() {
     }
   }
 
+  async function handleImportObsidian(transcript: Transcript) {
+    const settings = useSettingsStore.getState();
+    try {
+      const { html, markdown } = await importFromObsidian(transcript, settings);
+      if (html === transcript.notule_html) {
+        acknowledgeObsidianImport(transcript, markdown, html);
+        toast.show("Obsidian-versie is bijgewerkt", "success");
+        return;
+      }
+      if (!window.confirm("De versie uit Obsidian vervangt de huidige notule in ThoughtVault. Doorgaan?")) return;
+      await handleSaveNotule(transcript.id, html, false);
+      acknowledgeObsidianImport(transcript, markdown, html);
+      toast.show("Wijzigingen uit Obsidian opgehaald", "success");
+    } catch (error) {
+      toast.show(error instanceof Error ? error.message : "Obsidian ophalen mislukt", "error");
+    }
+  }
+
   const handleCopy = useCallback((text: string) => {
     navigator.clipboard.writeText(text)
       .then(() => toast.show("Gekopieerd", "success"))
@@ -409,7 +482,7 @@ export function TranscriptsPage() {
           transcript={selected}
           regeneratingId={regeneratingId}
           onBack={() => { setSelectedId(null); }}
-          onRegenerate={handleRegenerate}
+          onRegenerate={requestRegenerate}
           onDelete={handleDelete}
           onUpdateTitle={handleUpdateTitle}
           onSaveNotule={handleSaveNotule}
@@ -419,6 +492,7 @@ export function TranscriptsPage() {
           onExportMarkdown={handleExportMarkdown}
           onExportHTML={handleExportHTML}
           onExportObsidian={handleExportObsidian}
+          onImportObsidian={handleImportObsidian}
           onOpenTags={openTagsDialog}
           onGenerateTitle={handleGenerateTitle}
         />
@@ -445,7 +519,7 @@ export function TranscriptsPage() {
           <button className="context-menu-item" onClick={() => { openTagsDialog(contextMenu.transcript.id); setContextMenu(null); }}>
             <Tag24Regular style={{ fontSize: 16 }} /> Tags
           </button>
-          <button className="context-menu-item" onClick={() => { handleRegenerate(contextMenu.transcript); setContextMenu(null); }}>
+          <button className="context-menu-item" onClick={() => { requestRegenerate(contextMenu.transcript); setContextMenu(null); }}>
             <ArrowSync24Regular style={{ fontSize: 16 }} /> Regenereer notulen
           </button>
           <div className="context-menu-divider" />
@@ -454,6 +528,22 @@ export function TranscriptsPage() {
           </button>
         </div>
       )}
+
+      {regenerateTarget && <div className="td-overlay" onClick={() => setRegenerateTarget(null)}>
+        <div className="td-tags-dialog" onClick={(e) => e.stopPropagation()}>
+          <h3 className="td-tags-title">Notulen regenereren</h3>
+          <p className="text-caption">Kies het template voor de nieuwe notulen.</p>
+          <select className="select" value={regenerateProfileId}
+            onChange={(e) => setRegenerateProfileId(e.target.value)}>
+            {useProfilesStore.getState().profiles.map((profile) =>
+              <option key={profile.id} value={profile.id}>{profile.name}</option>)}
+          </select>
+          <div className="flex-row gap-8" style={{ justifyContent: "flex-end", marginTop: 16 }}>
+            <button className="btn" onClick={() => setRegenerateTarget(null)}>Annuleren</button>
+            <button className="btn btn-accent" onClick={() => void handleRegenerate(regenerateTarget, regenerateProfileId)}>Regenereren</button>
+          </div>
+        </div>
+      </div>}
 
       {/* Tags dialog */}
       {tagsDialogId && (

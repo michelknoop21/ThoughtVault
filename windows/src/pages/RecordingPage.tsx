@@ -6,7 +6,7 @@ import {
   Stop24Regular,
   Pause24Regular,
   Play24Regular,
-  ArrowLeft24Regular,
+  Edit24Regular,
   ArrowUpload24Regular,
   VideoChat24Regular,
   People24Regular,
@@ -15,7 +15,7 @@ import { useRecordingStore } from "../stores/recordingStore";
 import { useSettingsStore } from "../stores/settingsStore";
 import { useTranscriptsStore } from "../stores/transcriptsStore";
 import { useProfilesStore } from "../stores/profilesStore";
-import { useAudioLevelsRef } from "../hooks/useAudioLevel";
+import { useAudioLevelsRef, useAudioLevel } from "../hooks/useAudioLevel";
 import { openWidgetWindow, closeWidgetWindow } from "../hooks/useWidgetWindow";
 import {
   startRecording,
@@ -33,25 +33,10 @@ import { SavedRecordings } from "../components/recording/SavedRecordings";
 import { SeedReviewSheet } from "./SeedReviewSheet";
 import { ParticipantPicker } from "./ParticipantPicker";
 import { usePeopleDirectoryStore } from "../stores/peopleDirectoryStore";
+import { saveQuickNote } from "../services/quickNotes";
 import { useCalendarStore } from "../stores/calendarStore";
 
-import {
-  Briefcase24Regular,
-  ChatMultiple24Regular,
-  Wrench24Regular,
-  DocumentText24Regular,
-  Book24Regular,
-} from "@fluentui/react-icons";
-
-function getProfileIcon(name: string): React.ReactNode {
-  const lower = name.toLowerCase();
-  const style = { fontSize: 14 };
-  if (lower.includes("zakelijk")) return <Briefcase24Regular style={style} />;
-  if (lower.includes("informeel")) return <ChatMultiple24Regular style={style} />;
-  if (lower.includes("technisch")) return <Wrench24Regular style={style} />;
-  if (lower.includes("handleiding")) return <Book24Regular style={style} />;
-  return <DocumentText24Regular style={style} />;
-}
+import { DocumentText24Regular } from "@fluentui/react-icons";
 
 export function RecordingPage() {
   const navigate = useNavigate();
@@ -165,9 +150,15 @@ export function RecordingPage() {
           updateBackgroundTask(task.task_id, { status: "failed", error_message: "Verbinding verloren" });
         },
         async () => {
-          const transcripts = await api.getTranscripts();
-          if (transcripts[0]) addTranscript(transcripts[0]);
-          removeBackgroundTask(task.task_id);
+          try {
+            const transcripts = await api.getTranscripts();
+            const result = transcripts.find(item => item.task_id === task.task_id || item.id === task.task_id);
+            if (!result) throw new Error("Het resultaat is nog niet beschikbaar. Vernieuw Opnames.");
+            addTranscript(result);
+            removeBackgroundTask(task.task_id);
+          } catch (err) {
+            updateBackgroundTask(task.task_id, { status: "failed", error_message: err instanceof Error ? err.message : String(err) });
+          }
         }
       );
     } catch (err) {
@@ -178,16 +169,18 @@ export function RecordingPage() {
     }
   }
 
-  async function handleStartRecording() {
+  async function handleStartRecording(recordingMode = mode) {
+    setMode(recordingMode);
     setPhase("preparing");
     setError(null);
 
     try {
       const outputDir = await getRecordingsDir();
-      const filePath = await startRecording(null, mode, outputDir);
+      const filePath = await startRecording(null, recordingMode, outputDir);
       filePathRef.current = filePath;
       setFilePath(filePath);
       setPhase("recording");
+      audioLevelsRef.current = [];
       startTimer();
       openWidgetWindow().catch((e) => console.error("[Recording] Widget open failed:", e));
       // Minimize main window if recording was auto-started from calendar alert
@@ -199,7 +192,7 @@ export function RecordingPage() {
       }
     } catch (err) {
       console.error("[Recording] Start failed:", err);
-      setError(err instanceof Error ? err.message : "Opname starten mislukt");
+      setError(err instanceof Error ? err.message : String(err));
       setPhase("idle");
     }
   }
@@ -227,6 +220,7 @@ export function RecordingPage() {
   }
 
   async function handleStopRecording() {
+    const pendingEmails = [...useRecordingStore.getState().pendingSeedAttendees];
     setPhase("stopping");
 
     try {
@@ -235,10 +229,8 @@ export function RecordingPage() {
       filePathRef.current = filePath;
       closeWidgetWindow().catch((e) => console.error("[Recording] Widget close failed:", e));
 
-      // Read and clear pendingSeedAttendees — show SeedReviewSheet if new people found (D-07)
-      const store = useRecordingStore.getState();
-      const pendingEmails = store.pendingSeedAttendees;
-      store.clearPendingSeedAttendees();
+      // The global handler resolves participants before resetting the store.
+      // Use our snapshot for the directory prompt without clearing its inputs.
 
       if (pendingEmails.length > 0) {
         // Dedup: filter emails already in directory and the calendar account email (self, D-10)
@@ -263,8 +255,7 @@ export function RecordingPage() {
       setPhase("paused");
       pauseTimer();
     } catch (error) {
-      console.error("[Recording] Pause failed:", error);
-      setPhase("idle");
+      setError(error instanceof Error ? error.message : "Pauzeren mislukt");
     }
   }
 
@@ -274,118 +265,128 @@ export function RecordingPage() {
       setPhase("recording");
       resumeTimer();
     } catch (error) {
-      console.error("[Recording] Resume failed:", error);
-      setPhase("idle");
+      setError(error instanceof Error ? error.message : "Hervatten mislukt");
     }
   }
 
-  const canGoBack = phase === "idle";
+  const quickNote = useRecordingStore(s => s.quickNote);
+  const setQuickNote = useRecordingStore(s => s.setQuickNote);
+  const selectedParticipantIds = useRecordingStore(s => s.selectedParticipantIds);
+  const recordingStartedAt = useRecordingStore(s => s.recordingStartedAt);
+  const pausedAt = useRecordingStore(s => s.pausedAt);
+  const pausedDuration = useRecordingStore(s => s.pausedDuration);
+  const level = useAudioLevel();
+  const [elapsed, setElapsed] = useState(0);
+  const [panel, setPanel] = useState<"note" | "saved" | "youtube" | "people" | null>(null);
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    if (panel && panel !== "people") dialogRef.current?.showModal();
+  }, [panel]);
+  const isLive = phase === "recording" || phase === "paused";
+  const isBusy = phase === "preparing" || phase === "stopping" || phase === "uploading";
+  useEffect(() => {
+    const tick = () => setElapsed(recordingStartedAt
+      ? Math.max(0, Math.floor(((pausedAt ?? Date.now()) - recordingStartedAt - pausedDuration) / 1000)) : 0);
+    tick();
+    if (phase === "recording") {
+      const id = setInterval(tick, 1000);
+      return () => clearInterval(id);
+    }
+  }, [phase, recordingStartedAt, pausedAt, pausedDuration]);
+  const duration = `${Math.floor(elapsed / 60).toString().padStart(2, "0")}:${(elapsed % 60).toString().padStart(2, "0")}`;
+  const profileName = profiles.find(p => p.id === selectedProfileId)?.name ?? "Geen profiel";
+  const status = phase === "recording" ? "OPNAME ACTIEF" : phase === "paused" ? "OPNAME GEPAUZEERD"
+    : phase === "preparing" ? "OPNAME STARTEN" : phase === "stopping" ? "OPNAME STOPPEN" : "KLAAR OM OP TE NEMEN";
 
-  return (
-    <div className="page-scroll bg-blobs">
-      <div className="bg-blobs-clip">
-        <div className="bg-blob bg-blob-magenta" style={{ top: "-150px", right: "-100px", left: "auto" }} />
-        <div className="bg-blob bg-blob-neon" />
+  async function handleKeepRecording() {
+    if (!window.confirm("Stoppen zonder te verwerken? De opname blijft beschikbaar bij Opgeslagen opnames.")) return;
+    // The global stopped handler deliberately ignores idle, keeping the WAV for
+    // manual processing later. It must not upload a recording the user cancelled.
+    setPhase("idle");
+    try {
+      await stopRecording();
+      saveQuickNote(filePathRef.current || useRecordingStore.getState().filePath || "", quickNote);
+      useRecordingStore.getState().reset();
+      await closeWidgetWindow();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Stoppen mislukt");
+    }
+  }
+
+  return <div className="recording-studio">
+    <section className="studio-workspace" aria-label="Opnamestudio">
+      <header className="studio-topline">
+        <span className={`studio-status ${phase}`} role="status"><i />{status}</span>
+        <span className="studio-language">Spreektaal: Nederlands</span>
+      </header>
+      {error && <div className="error-banner" role="alert">{error}</div>}
+      {!isLive && !isBusy && <MeetingDetectionBanner onRecord={() => {
+        setMode("combined"); void handleStartRecording("combined");
+      }} />}
+      <div className="studio-timer" aria-label={`Opnameduur ${duration}`}>{duration}</div>
+      <div className="studio-listening"><span className="studio-mini-bars" aria-hidden="true">
+        {Array.from({ length: 9 }, (_, i) => <i key={i} style={{ height: 3 + (phase === "recording" ? level / 100 * (14 - i) : 0) }} />)}
+      </span><span>{phase === "recording" ? "Ik luister…" : phase === "paused" ? "Opname is gepauzeerd" : isBusy ? "Even geduld…" : "Klaar"}</span></div>
+      <div className="studio-wave"><WaveformVisualizer levelsRef={audioLevelsRef} isActive={phase === "recording"} height={240} /></div>
+      <div className="studio-transport">
+        {isLive ? <>
+          <div><button className="studio-round" onClick={phase === "paused" ? handleResume : handlePause}
+            aria-label={phase === "paused" ? "Hervat opname" : "Pauzeer opname"}>{phase === "paused" ? <Play24Regular /> : <Pause24Regular />}</button>
+            <span>{phase === "paused" ? "Hervat" : "Pauzeer"}</span></div>
+          <div><button className="studio-round studio-stop" onClick={handleStopRecording} aria-label="Stop en verwerk"><Stop24Regular /></button><span>Stop en verwerk</span></div>
+          <div><button className="studio-round" onClick={() => setPanel("note")} aria-label="Notitie maken"><Edit24Regular /></button><span>Notitie</span></div>
+        </> : <div><button className="studio-round studio-record" onClick={() => void handleStartRecording()} disabled={isBusy} aria-label="Start opname"><MicRecord24Regular /></button>
+          <span>{isBusy ? "Even geduld…" : "Start opname"}</span></div>}
       </div>
-      {/* Header */}
-      <div className="page-header flex-row gap-12">
-        <button
-          onClick={() => canGoBack && navigate("/")}
-          disabled={!canGoBack}
-          className="btn btn-ghost icon-btn"
-          aria-label="Terug naar startpagina"
-          title="Terug"
-        >
-          <ArrowLeft24Regular />
-        </button>
-        <div className="flex-row gap-8">
-          {mode === "combined"
-            ? <VideoChat24Regular className="text-accent" />
-            : <MicRecord24Regular className="text-accent" />
-          }
-          <h1 className="page-title-sm" style={{ fontSize: 16 }}>
-            {mode === "combined" ? "Videocall opnemen" : "Vergadering opnemen"}
-          </h1>
-        </div>
+      <div className="studio-controlbar">
+        <label><VideoChat24Regular /><span><small>Bron</small><select aria-label="Bron" value={mode} disabled={isLive || isBusy} onChange={e => setMode(e.target.value as "combined" | "microphone")}>
+          <option value="combined">Gecombineerd</option><option value="microphone">Microfoon</option>
+        </select></span></label>
+        <label><DocumentText24Regular /><span><small>Opnameprofiel</small><select aria-label="Opnameprofiel" value={selectedProfileId} onChange={e => setSelectedProfileId(e.target.value)}>
+          {profiles.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+        </select></span></label>
+        <div className="studio-transcription"><small>Transcriptie</small><span>{settings.processing_mode === "local" ? "Whisper op deze pc" : "ThoughtVault Cloud"}</span>
+          <button className="studio-link" disabled={isLive || isBusy} onClick={() => navigate("/settings")}>Instellen</button></div>
       </div>
-
-      {/* Body */}
-      <div className="text-center recording-body">
-        {phase === "idle" && (
-          <IdleState
-            mode={mode}
-            profileId={selectedProfileId}
-            profiles={profiles}
-            onSetMode={setMode}
-            onSetProfile={setSelectedProfileId}
-            onStart={handleStartRecording}
-            onImport={handleImportAudio}
-            isImporting={isImporting}
-            usePremium={usePremium}
-            onSetPremium={setUsePremium}
-            isYouTubeEnabled={isYouTubeEnabled}
-            youtubeURL={youtubeURL}
-            isSubmittingYouTube={isSubmittingYouTube}
-            youtubeError={youtubeError}
-            onYouTubeURLChange={setYouTubeURL}
-            onSubmitYouTube={handleSubmitYouTube}
-            youtubeProfileId={youtubeProfileId}
-            onYouTubeProfileChange={setYouTubeProfileId}
-          />
-        )}
-
-        {phase === "preparing" && (
-          <div className="text-center">
-            <div className="mic-button-container mic-button-container-active" style={{ marginInline: "auto", marginBottom: 16 }}>
-              <div className="mic-pulse-ring mic-pulse-ring-1" />
-              <div className="mic-pulse-ring mic-pulse-ring-2" />
-              <div className="mic-button-large mic-preparing" style={{ background: "rgba(144, 72, 240, 0.08)", boxShadow: "none" }}>
-                <MicRecord24Regular className="text-accent" style={{ fontSize: 28 }} />
-              </div>
-            </div>
-            <p className="text-secondary">Microfoon initialiseren...</p>
-          </div>
-        )}
-
-        {(phase === "recording" || phase === "paused") && (
-          <ActiveState
-            audioLevelsRef={audioLevelsRef}
-            isPaused={phase === "paused"}
-            onStop={handleStopRecording}
-            onPause={handlePause}
-            onResume={handleResume}
-          />
-        )}
-
-        {phase === "stopping" && (
-          <div className="text-center">
-            <div className="mic-button-container mic-button-container-active" style={{ marginInline: "auto", marginBottom: 16 }}>
-              <div className="mic-pulse-ring mic-pulse-ring-1" />
-              <div className="mic-pulse-ring mic-pulse-ring-2" />
-              <div className="mic-button-large mic-preparing" style={{ background: "rgba(144, 72, 240, 0.08)", boxShadow: "none" }}>
-                <ArrowUpload24Regular className="text-accent" style={{ fontSize: 28 }} />
-              </div>
-            </div>
-            <p className="text-secondary">Opname afronden...</p>
-          </div>
-        )}
+    </section>
+    <aside className="studio-inspector">
+      <h2>Huidige opname</h2>
+      <div className="studio-identity"><MicRecord24Regular /><div><strong>Nieuwe opname</strong><span>Titel na verwerking</span></div></div>
+      <p className="studio-meta">Tags na verwerking</p>
+      <button className="studio-meta studio-people" onClick={() => setPanel("people")}><People24Regular />{selectedParticipantIds.length ? `${selectedParticipantIds.length} personen` : "Geen personen"}<span>＋</span></button>
+      <p className="studio-meta">Wordt na verwerking aangevuld</p>
+      <section className="studio-live-panel"><h3>Live opname</h3>
+        <dl><div><dt>Duur</dt><dd>{duration}</dd></div><div><dt>Geluidsniveau</dt><dd><meter min={0} max={100} value={phase === "recording" ? level : 0} aria-label="Geluidsniveau" /></dd></div>
+          <div><dt>Bron</dt><dd>{mode === "combined" ? "Gecombineerd" : "Microfoon"}</dd></div><div><dt>Profiel</dt><dd>{profileName}</dd></div></dl>
+      </section>
+      <h2>Snelle acties</h2>
+      <div className="studio-actions">
+        {isLive ? <><button onClick={() => setPanel("note")}><Edit24Regular />Notitie maken{quickNote.trim() && <span>●</span>}</button>
+          <button onClick={() => setPanel("people")}><People24Regular />Deelnemers kiezen</button>
+          {phase === "paused" && <button onClick={handleKeepRecording}><DocumentText24Regular />Bewaar zonder verwerken</button>}</>
+          : <><button onClick={handleImportAudio} disabled={isImporting || isBusy}><ArrowUpload24Regular />{isImporting ? "Importeren…" : "Audiobestand importeren"}</button>
+            {isYouTubeEnabled && <button onClick={() => setPanel("youtube")} disabled={isBusy}><Play24Regular />YouTube-video</button>}
+            <button onClick={() => setPanel("saved")}><DocumentText24Regular />Opgeslagen opnames</button></>}
       </div>
-
-      {error && (
-        <div className="error-banner" style={{ margin: 16 }}>
-          {error}
-        </div>
-      )}
-
-      {/* Seed review sheet — shown after recording stops when new attendees found (D-07) */}
-      {seedCandidates.length > 0 && (
-        <SeedReviewSheet
-          candidates={seedCandidates}
-          onClose={() => setSeedCandidates([])}
-        />
-      )}
-    </div>
-  );
+      {settings.processing_mode === "cloud" && <label className="studio-premium"><input type="checkbox" checked={usePremium} onChange={e => setUsePremium(e.target.checked)} />Premium model</label>}
+      <p className="studio-hint">{mode === "combined" ? "Microfoon en systeemgeluid worden opgenomen." : "Alleen je microfoon wordt opgenomen."} Transcriptie gebeurt na afloop.</p>
+    </aside>
+    {panel === "people" && <ParticipantPicker onClose={() => setPanel(null)} />}
+    {panel && panel !== "people" && <dialog ref={dialogRef} className="studio-dialog" aria-label={panel === "note" ? "Snelle notitie" : panel === "saved" ? "Opgeslagen opnames" : "YouTube-video"} onCancel={() => setPanel(null)}>
+      <header><h2>{panel === "note" ? "Snelle notitie" : panel === "saved" ? "Opgeslagen opnames" : "YouTube-video"}</h2><button className="btn btn-secondary" onClick={() => setPanel(null)}>Sluiten</button></header>
+      {panel === "note" && <><p>Context voor je notulen; dit wordt apart van het gesproken transcript bewaard.</p>
+        <textarea autoFocus rows={7} className="input" aria-label="Snelle notitie" value={quickNote} onChange={e => setQuickNote(e.target.value)} />
+        <p className="text-caption">Wordt bij het stoppen met deze opname opgeslagen.</p></>}
+      {panel === "saved" && <SavedRecordings initiallyExpanded />}
+      {panel === "youtube" && <form onSubmit={e => { e.preventDefault(); void handleSubmitYouTube(); }}>
+        <label>Video-URL<input className="input" type="url" value={youtubeURL} onChange={e => setYouTubeURL(e.target.value)} required placeholder="https://www.youtube.com/watch?v=…" /></label>
+        <label>Template<select className="select" value={youtubeProfileId} onChange={e => setYouTubeProfileId(e.target.value)}>{profiles.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
+        {youtubeError && <p role="alert" className="text-error">{youtubeError}</p>}
+        <button className="btn btn-accent" disabled={isSubmittingYouTube}>{isSubmittingYouTube ? "Versturen…" : "Verwerken"}</button>
+      </form>}
+    </dialog>}
+    {seedCandidates.length > 0 && <SeedReviewSheet candidates={seedCandidates} onClose={() => setSeedCandidates([])} />}
+  </div>;
 }
 
 function MeetingDetectionBanner({ onRecord }: { onRecord: () => void }) {
@@ -443,327 +444,6 @@ function MeetingDetectionBanner({ onRecord }: { onRecord: () => void }) {
   );
 }
 
-function IdleState({
-  mode, profileId, profiles, onSetMode, onSetProfile, onStart, onImport, isImporting,
-  usePremium, onSetPremium,
-  isYouTubeEnabled, youtubeURL, isSubmittingYouTube, youtubeError,
-  onYouTubeURLChange, onSubmitYouTube, youtubeProfileId, onYouTubeProfileChange,
-}: {
-  mode: string;
-  profileId: string;
-  profiles: import("../types").Profile[];
-  onSetMode: (m: "microphone" | "combined") => void;
-  onSetProfile: (id: string) => void;
-  onStart: () => void;
-  onImport: () => void;
-  isImporting: boolean;
-  usePremium: boolean;
-  onSetPremium: (value: boolean) => void;
-  isYouTubeEnabled: boolean;
-  youtubeURL: string;
-  isSubmittingYouTube: boolean;
-  youtubeError: string | null;
-  onYouTubeURLChange: (url: string) => void;
-  onSubmitYouTube: () => void;
-  youtubeProfileId: string;
-  onYouTubeProfileChange: (id: string) => void;
-}) {
-  const [showParticipants, setShowParticipants] = useState(false);
-  const selectedParticipantIds = useRecordingStore((s) => s.selectedParticipantIds);
-
-  return (
-    <div className="idle-state">
-      {/* Meeting detection banner */}
-      <MeetingDetectionBanner onRecord={() => { onSetMode("combined"); onStart(); }} />
-
-      {/* Section header */}
-      <div className="text-center">
-        <p className="section-label text-accent" style={{ marginBottom: 4 }}>
-          NIEUWE OPNAME
-        </p>
-        <p className="text-caption text-tertiary">
-          Kies bron en profiel, klik daarna om op te nemen
-        </p>
-      </div>
-
-      {/* Mode selector — card style matching macOS */}
-      <div style={{ width: "100%" }}>
-        <p className="section-label">
-          Opnamemodus
-        </p>
-        <div className="mode-selector-grid">
-          {(["microphone", "combined"] as const).map((m) => {
-            const isActive = mode === m;
-            const isCombined = m === "combined";
-            return (
-              <button
-                key={m}
-                onClick={() => onSetMode(m)}
-                className={`mode-selector-card ${isActive ? "active" : ""}`}
-              >
-                <div className={`mode-selector-icon ${isCombined ? "accent" : "secondary"} ${isActive ? "active" : ""}`}>
-                  {isCombined
-                    ? <VideoChat24Regular style={{ fontSize: 20 }} />
-                    : <MicRecord24Regular style={{ fontSize: 20 }} />
-                  }
-                </div>
-                <div className="mode-selector-text">
-                  <span className="mode-selector-title">{isCombined ? "Videocall" : "Fysieke meeting"}</span>
-                  <span className="mode-selector-subtitle">{isCombined ? "Microfoon + systeemgeluid" : "Alleen microfoon"}</span>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Profile selector as cards with emoji icons */}
-      <div style={{ width: "100%" }}>
-        <p className="section-label">
-          Profiel
-        </p>
-        <div className="flex-col gap-8">
-          {profiles.map((profile) => (
-            <button
-              key={profile.id}
-              onClick={() => onSetProfile(profile.id)}
-              className={`profile-chip ${profileId === profile.id ? "active" : ""}`}
-            >
-              <span className="profile-chip-icon">{getProfileIcon(profile.name)}</span>
-              <span className="profile-chip-name">{profile.name}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Participants picker */}
-      <div style={{ width: "100%" }}>
-        <p className="section-label">Deelnemers</p>
-        <button
-          className="profile-chip"
-          style={{ width: "100%", justifyContent: "space-between" }}
-          onClick={() => setShowParticipants(true)}
-        >
-          <span className="profile-chip-name">
-            {selectedParticipantIds.length === 0
-              ? "Optioneel · agenda-deelnemers gaan automatisch mee"
-              : `${selectedParticipantIds.length} gekozen`}
-          </span>
-          <People24Regular style={{ fontSize: 18 }} />
-        </button>
-      </div>
-
-      {/* Premium model toggle */}
-      <div style={{ width: "100%" }}>
-        <label className="premium-toggle">
-          <input
-            type="checkbox"
-            checked={usePremium}
-            onChange={(e) => onSetPremium(e.target.checked)}
-          />
-          <div className="premium-toggle-content">
-            <span className="premium-toggle-label">Premium model</span>
-            <span className="premium-toggle-desc">Betere kwaliteit, langzamer</span>
-          </div>
-        </label>
-      </div>
-
-      {/* Mic button with concentric rings — matches macOS */}
-      <div className="flex-col gap-12" style={{ alignItems: "center" }}>
-        <div className="mic-button-container mic-button-container-idle">
-          <div className="mic-pulse-ring mic-pulse-ring-1" />
-          <div className="mic-pulse-ring mic-pulse-ring-2" />
-          <div className="mic-pulse-ring mic-pulse-ring-3" />
-          <button
-            onClick={onStart}
-            className="mic-button-large"
-            aria-label="Start opname"
-            title="Opname starten"
-          >
-            <MicRecord24Regular style={{ fontSize: 28, color: "#fff" }} />
-          </button>
-        </div>
-        <p className="text-caption text-tertiary">
-          Klik om op te nemen
-        </p>
-      </div>
-
-      {/* YouTube transcription — collapsible */}
-      {isYouTubeEnabled && (
-        <details className="disclosure" style={{ width: "100%" }}>
-          <summary className="section-label" style={{ color: "#E61212", cursor: "pointer", userSelect: "none" }}>
-            YOUTUBE VIDEO
-          </summary>
-          <div style={{ marginTop: 8 }}>
-            <p className="text-caption text-tertiary" style={{ marginBottom: 8 }}>
-              Plak een YouTube URL om te transcriberen
-            </p>
-            <div className="card card-static" style={{ padding: 16, borderColor: "rgba(230, 18, 18, 0.12)" }}>
-              <div className="flex-col gap-12">
-                <input
-                  type="url"
-                  value={youtubeURL}
-                  onChange={(e) => onYouTubeURLChange(e.target.value)}
-                  placeholder="Plak een YouTube URL..."
-                  className="input"
-                  style={{ width: "100%" }}
-                  disabled={isSubmittingYouTube}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !isSubmittingYouTube) onSubmitYouTube();
-                  }}
-                />
-
-                {/* YouTube profile selector */}
-                {profiles.length > 0 && (
-                  <div>
-                    <p className="section-label" style={{ marginBottom: 6, fontSize: 11 }}>Profiel</p>
-                    <div className="flex-col gap-8">
-                      {profiles.map((profile) => (
-                        <button
-                          key={profile.id}
-                          onClick={() => onYouTubeProfileChange(profile.id)}
-                          className={`profile-chip ${youtubeProfileId === profile.id ? "active" : ""}`}
-                        >
-                          <span className="profile-chip-icon">{getProfileIcon(profile.name)}</span>
-                          <span className="profile-chip-name">{profile.name}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {youtubeError && (
-                  <p style={{ fontSize: 12, color: "var(--fill-danger)", margin: 0 }}>
-                    {youtubeError}
-                  </p>
-                )}
-                <button
-                  className="btn btn-youtube"
-                  onClick={onSubmitYouTube}
-                  disabled={isSubmittingYouTube || !youtubeURL.trim()}
-                  style={{ alignSelf: "flex-start" }}
-                >
-                  {isSubmittingYouTube ? "Bezig..." : "Transcriberen"}
-                </button>
-              </div>
-            </div>
-          </div>
-        </details>
-      )}
-
-      <button className="btn btn-secondary" onClick={onImport} disabled={isImporting}>
-        <ArrowUpload24Regular style={{ fontSize: 16 }} />
-        {isImporting ? "Audio importeren..." : "Audiobestand importeren"}
-      </button>
-
-      {/* Saved recordings — collapsible */}
-      <SavedRecordings />
-
-      {showParticipants && (
-        <ParticipantPicker onClose={() => setShowParticipants(false)} />
-      )}
-    </div>
-  );
-}
-
-function ActiveState({
-  audioLevelsRef, isPaused, onStop, onPause, onResume,
-}: {
-  audioLevelsRef: React.RefObject<number[]>;
-  isPaused: boolean;
-  onStop: () => void;
-  onPause: () => void;
-  onResume: () => void;
-}) {
-  const recordingStartedAt = useRecordingStore((s) => s.recordingStartedAt);
-  const pausedAt = useRecordingStore((s) => s.pausedAt);
-  const pausedDuration = useRecordingStore((s) => s.pausedDuration);
-  const [elapsed, setElapsed] = useState(0);
-
-  useEffect(() => {
-    function calcElapsed() {
-      if (!recordingStartedAt) return 0;
-      const now = Date.now();
-      const totalPaused = pausedDuration + (pausedAt ? now - pausedAt : 0);
-      return Math.floor((now - recordingStartedAt - totalPaused) / 1000);
-    }
-    setElapsed(calcElapsed());
-    if (!isPaused) {
-      const id = setInterval(() => setElapsed(calcElapsed()), 1000);
-      return () => clearInterval(id);
-    }
-  }, [isPaused, recordingStartedAt, pausedAt, pausedDuration]);
-
-  const minutes = Math.floor(elapsed / 60).toString().padStart(2, "0");
-  const seconds = (elapsed % 60).toString().padStart(2, "0");
-
-  return (
-    <div className="active-state">
-      {/* Timer — matches macOS 56pt thin monospaced */}
-      <div className="text-center">
-        <div className="recording-timer">
-          {minutes}:{seconds}
-        </div>
-        {/* LIVE badge */}
-        <div className="live-badge">
-          <span className={`live-dot ${isPaused ? "paused" : ""}`} />
-          {isPaused ? "GEPAUZEERD" : "LIVE"}
-        </div>
-      </div>
-
-      {/* Waveform */}
-      <div className="card card-static waveform-card">
-        <WaveformVisualizer levelsRef={audioLevelsRef} isActive={!isPaused} />
-      </div>
-
-      {/* Mic button — active recording: toggles pause/resume */}
-      <div className="mic-button-container mic-button-container-active">
-        {!isPaused && (
-          <>
-            <div className="mic-pulse-ring mic-pulse-ring-1" />
-            <div className="mic-pulse-ring mic-pulse-ring-2" />
-          </>
-        )}
-        <button
-          onClick={isPaused ? onResume : onPause}
-          className="mic-button-large"
-          aria-label={isPaused ? "Hervat opname" : "Pauzeer opname"}
-          title={isPaused ? "Hervatten" : "Pauzeren"}
-        >
-          {isPaused
-            ? <Play24Regular style={{ fontSize: 28, color: "#fff" }} />
-            : <Pause24Regular style={{ fontSize: 28, color: "#fff" }} />
-          }
-        </button>
-      </div>
-
-      {/* Control buttons: PAUZE / STOP */}
-      <div className="recording-controls">
-        <button
-          onClick={isPaused ? onResume : onPause}
-          className="recording-control-btn"
-          title={isPaused ? "Hervatten" : "Pauzeren"}
-        >
-          {isPaused
-            ? <Play24Regular style={{ fontSize: 24 }} />
-            : <Pause24Regular style={{ fontSize: 24 }} />
-          }
-          <span className="recording-control-label">
-            {isPaused ? "HERVAT" : "PAUZE"}
-          </span>
-        </button>
-        <button
-          onClick={onStop}
-          className="recording-control-btn stop"
-          title="Stoppen"
-        >
-          <Stop24Regular style={{ fontSize: 24 }} />
-          <span className="recording-control-label">STOP</span>
-        </button>
-      </div>
-    </div>
-  );
-}
 
 async function getRecordingsDir(): Promise<string> {
   const { invoke } = await import("@tauri-apps/api/core");

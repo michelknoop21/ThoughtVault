@@ -6,7 +6,9 @@ import { useLocalTranscriptsStore, newLocalId } from "../stores/localTranscripts
 import { useSettingsStore } from "../stores/settingsStore";
 import { useProfilesStore } from "../stores/profilesStore";
 import { LLMService } from "./llm";
+import { exportToObsidian } from "./obsidian";
 import { extractTitle } from "./titleExtractor";
+import { getQuickNote } from "./quickNotes";
 import { hasUsableNotule, hasUsableTranscription } from "./notuleValidation";
 import type { Participant } from "./participants";
 import type { RecordingMode, Transcript, TranscriptTask } from "../types";
@@ -18,8 +20,8 @@ interface WhisperModelStatus {
 }
 
 /**
- * Fully on-device processing: Whisper transcription + Ollama/LM Studio notule
- * generation, persisted locally. The local-mode counterpart of uploadAndTrack,
+ * Local Whisper transcription + the selected LLM (local or hosted API),
+ * persisted locally. The local-transcription counterpart of uploadAndTrack,
  * mirroring the macOS RecordingViewModel.processLocally pipeline.
  */
 export async function processLocally(
@@ -101,6 +103,7 @@ export async function processLocally(
         id: taskId,
         title: "Transcriptie",
         raw_transcription: transcription,
+        quick_note: getQuickNote(filePath),
         notule_html: "",
         duration_seconds: durationSeconds,
         profile_name: profile?.name,
@@ -128,6 +131,7 @@ export async function processLocally(
         updateBackgroundTask(taskId, { progress: pct });
       },
       names,
+      getQuickNote(filePath),
     );
 
     if (!hasUsableNotule(html)) {
@@ -144,6 +148,12 @@ export async function processLocally(
     await useLocalTranscriptsStore.getState().update(taskId, finished);
 
     useTranscriptsStore.getState().updateTranscript(taskId, finished);
+
+    if (settings.obsidian_enabled) {
+      const saved = useLocalTranscriptsStore.getState().items.find((item) => item.id === taskId);
+      if (saved) void exportToObsidian(saved, settings).catch((error) =>
+        console.warn("Obsidian auto-export mislukt:", error instanceof Error ? error.message : String(error)));
+    }
 
     updateBackgroundTask(taskId, { status: "completed", progress: 100 });
     setTimeout(() => removeBackgroundTask(taskId), 1500);

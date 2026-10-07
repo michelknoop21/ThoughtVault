@@ -1,14 +1,17 @@
 import { useSettingsStore } from "../stores/settingsStore";
 import { enrichProfile } from "./profileTemplates";
+import { loadCredential } from "./tauriCommands";
+import { invoke } from "@tauri-apps/api/core";
 import type { Profile, NotulenProvider } from "../types";
 
 interface LLMConfig {
   provider: NotulenProvider;
   ollamaUrl: string;
   ollamaModel: string;
-  ollamaApiKey: string;
   lmStudioUrl: string;
   lmStudioModel: string;
+  openAIModel: string;
+  anthropicModel: string;
 }
 
 type ProgressCallback = (chunk: string) => void;
@@ -25,9 +28,10 @@ function getConfig(): LLMConfig {
     provider,
     ollamaUrl: settings.ollama_url || "http://localhost:11434",
     ollamaModel: settings.ollama_model || "llama3.2",
-    ollamaApiKey: settings.ollama_api_key || "",
     lmStudioUrl: settings.lm_studio_url || "http://localhost:1234",
     lmStudioModel: settings.lm_studio_model || "local-model",
+    openAIModel: settings.openai_model || "gpt-5-mini",
+    anthropicModel: settings.anthropic_model || "claude-sonnet-5-5",
   };
 }
 
@@ -146,6 +150,38 @@ async function generateWithOpenAICompatible(
   return fullText;
 }
 
+async function generateWithHostedAPI(
+  provider: "openai" | "anthropic",
+  model: string,
+  systemPrompt: string,
+  userPrompt: string,
+  apiKey: string,
+  onProgress?: ProgressCallback,
+): Promise<string> {
+  const openAI = provider === "openai";
+  const url = openAI ? "https://api.openai.com/v1/chat/completions" : "https://api.anthropic.com/v1/messages";
+  const body = openAI
+    ? { model, messages: [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }] }
+    : { model, max_tokens: 16000, system: systemPrompt, messages: [{ role: "user", content: userPrompt }] };
+  const response = await invoke<{ status: number; body: string }>("proxy_request", {
+    request: {
+      url, method: "POST", timeout_seconds: 300,
+      headers: openAI
+        ? { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` }
+        : { "Content-Type": "application/json", "anthropic-version": "2023-06-01", "x-api-key": apiKey },
+      body: JSON.stringify(body),
+    },
+  });
+  if (response.status === 401) throw new Error(`${openAI ? "OpenAI" : "Anthropic"} API-sleutel geweigerd.`);
+  if (response.status === 429) throw new Error(`${openAI ? "OpenAI" : "Anthropic"} API-limiet bereikt. Probeer later opnieuw.`);
+  if (response.status >= 400) throw new Error(`${openAI ? "OpenAI" : "Anthropic"} gaf HTTP ${response.status}.`);
+  const result = JSON.parse(response.body);
+  const text = openAI ? result.choices?.[0]?.message?.content : result.content?.filter((part: { type: string }) => part.type === "text").map((part: { text: string }) => part.text).join("");
+  if (typeof text !== "string" || !text.trim()) throw new Error("De aanbieder gaf een leeg antwoord.");
+  onProgress?.(text);
+  return text;
+}
+
 /**
  * Removes the markdown code fences some models wrap around their HTML output.
  * The cloud backend strips these server-side; local generation needs the same
@@ -165,11 +201,14 @@ export class LLMService {
     transcription: string,
     profile: Profile,
     onProgress?: ProgressCallback,
-    participants: string[] = []
+    participants: string[] = [],
+    quickNote: string = "",
   ): Promise<string> {
     const config = getConfig();
     const enriched = enrichProfile(profile);
-    const userPrompt = buildUserContent(
+    const userPrompt = (quickNote.trim()
+      ? `NOTITIE VAN DE GEBRUIKER TIJDENS DE OPNAME (context, geen onderdeel van de transcriptie):\n${quickNote.trim()}\n\n`
+      : "") + buildUserContent(
       enriched.notule_prompt ?? "",
       transcription,
       enriched.output_template ?? enriched.notule_template,
@@ -177,12 +216,13 @@ export class LLMService {
     );
 
     if (config.provider === "ollama") {
+      const apiKey = config.ollamaUrl.startsWith("https://") ? await loadCredential("ollama_api_key") : null;
       const html = await generateWithOpenAICompatible(
         config.ollamaUrl,
         config.ollamaModel,
         enriched.system_prompt ?? "",
         userPrompt,
-        config.ollamaApiKey,
+        apiKey ?? "",
         onProgress
       );
       return stripCodeFences(html);
@@ -198,6 +238,16 @@ export class LLMService {
         onProgress
       );
       return stripCodeFences(html);
+    }
+
+    if (config.provider === "openai" || config.provider === "anthropic") {
+      const provider = config.provider;
+      const key = await loadCredential(`${provider}_api_key`);
+      if (!key) throw new Error(`Vul je ${provider === "openai" ? "OpenAI" : "Anthropic"} API-sleutel in bij Instellingen.`);
+      return stripCodeFences(await generateWithHostedAPI(
+        provider, provider === "openai" ? config.openAIModel : config.anthropicModel,
+        enriched.system_prompt ?? "", userPrompt, key, onProgress,
+      ));
     }
 
     throw new Error("Cloud provider moet via de server worden verwerkt");

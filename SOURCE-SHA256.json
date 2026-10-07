@@ -33,7 +33,6 @@
   "windows/src-tauri/src/audio/mod.rs": "b8dfc375d5e9fbf1583b4753c005639836e7e9188e08b02072346ee52fba15ba",
   "windows/src-tauri/src/audio/recorder.rs": "83a49f0ce9e0061872a50062197d6a7a229a610984fde70f3ed6c9d4422ad533",
   "windows/src-tauri/src/audio/types.rs": "4b902993e13ceb17f37a93310ddb767280ae7aac0d238f3a9938c652dba0d315",
-  "windows/src-tauri/src/bin/read_token.rs": "91fd75a51cb4b3dd85ee73a75b54b048f4f53bec6173ae268aa48b177e72018e",
   "windows/src-tauri/src/commands/audio.rs": "a30c729bde0f160f2266cafbd32ccd60622f9e201a95338e4dbbfd4a5881d756",
   "windows/src-tauri/src/commands/auth.rs": "4130bb34a911eae76585b4d3bdc488012bacad17bf3504f9433684417ec972be",
   "windows/src-tauri/src/commands/filesystem.rs": "da76e3f638b7d15462f0d883215b26f6cfdfd5b5971758ae18fcf9def0398991",
@@ -154,5 +153,6 @@
   "windows/tsconfig.node.json": "9e2abb169ea87b7190613a1d4da57ca608463a453bd4231fa3aeee5e308370dd",
   "windows/vite.config.ts": "056b23582e001eb7845e5da6ff23454e5df657aa21543c1c892b707151423e2e",
   "windows/widget.html": "c4083bd12d7ab2126b6293d38759bd13e55eb6735fb851fb9d78ddef94ee12a1",
-  "tests/fixtures/envelope-fixture.json": "67315cd09fd3770843afa91109894d6b143dfd62cf803e9192bf1d50912fa200"
+  "tests/fixtures/envelope-fixture.json": "67315cd09fd3770843afa91109894d6b143dfd62cf803e9192bf1d50912fa200",
+  "windows/src-tauri/examples/read_token.rs": "91fd75a51cb4b3dd85ee73a75b54b048f4f53bec6173ae268aa48b177e72018e"
 }

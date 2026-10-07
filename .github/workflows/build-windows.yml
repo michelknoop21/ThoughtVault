@@ -30,7 +30,7 @@ jobs:
           $log = "$pwd/build/windows-local/install.log"
           $install = Start-Process msiexec -ArgumentList "/i `"$msi`" /qn /norestart /l*v `"$log`"" -Wait -PassThru
           if ($install.ExitCode -notin @(0, 3010)) { throw "Installer failed: $($install.ExitCode)" }
-          $exe = Get-ChildItem "$env:ProgramFiles/ThoughtVault" -Filter *.exe -Recurse | Select-Object -First 1
+          $exe = Get-Item "$env:ProgramFiles/ThoughtVault/transcript-studio.exe"
           if (-not $exe) { throw "Installed executable not found" }
           $app = Start-Process $exe.FullName -PassThru
           Start-Sleep -Seconds 10

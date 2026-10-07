@@ -278,7 +278,7 @@ struct ObsidianService: Sendable {
                 title: title, date: date, participants: participants,
                 profileName: profileName, profileId: profileId, tags: tags, noteID: noteID
             ) + htmlToMarkdown(html) + "\n"
-            if !VaultFolderStore.writeNote(filename: filename, markdown: markdown) {
+            if VaultFolderStore.writeNote(filename: filename, markdown: markdown) != .written {
                 logger.error("Export naar Obsidian-map mislukt")
             }
             return
@@ -319,8 +319,10 @@ struct ObsidianService: Sendable {
                 title: title, date: date, participants: participants,
                 profileName: profileName, profileId: profileId, tags: tags, noteID: noteID
             ) + htmlToMarkdown(html) + "\n"
-            guard VaultFolderStore.writeNote(filename: filename, markdown: markdown) else {
-                throw ObsidianError.externallyChanged
+            switch VaultFolderStore.writeNote(filename: filename, markdown: markdown) {
+            case .written: break
+            case .externallyChanged: throw ObsidianError.externallyChanged
+            case .failed: throw ObsidianError.badStatus(0, "Kon niet naar de vault-map schrijven")
             }
             return
         }

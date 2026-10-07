@@ -150,23 +150,27 @@ enum VaultFolderStore {
     }
 
     /// Writes Markdown into `{notesSubfolder}/{filename}` inside the vault, creating
-    /// the subfolder if needed. Returns true on success.
+    /// the subfolder if needed. `.externallyChanged` means the note was edited in
+    /// Obsidian since the last sync and was left untouched; `.failed` is an I/O or
+    /// access error.
+    enum WriteOutcome { case written, externallyChanged, failed }
+
     @discardableResult
-    static func writeNote(filename: String, markdown: String) -> Bool {
-        let result: Bool? = withFolder { root in
+    static func writeNote(filename: String, markdown: String) -> WriteOutcome {
+        let result: WriteOutcome? = withFolder { root in
             let dir = notesSubfolder.isEmpty ? root : root.appendingPathComponent(notesSubfolder, isDirectory: true)
             try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
             let fileURL = dir.appendingPathComponent(filename)
             if let existing = try? String(contentsOf: fileURL, encoding: .utf8), existing != markdown {
                 guard UserDefaults.standard.string(forKey: syncKey(filename)) == digest(existing) else {
                     logger.warning("Obsidian-notule is extern gewijzigd: \(filename)")
-                    return false
+                    return .externallyChanged
                 }
             }
             try markdown.write(to: fileURL, atomically: true, encoding: .utf8)
             acknowledgeImport(filename: filename, markdown: markdown)
-            return true
+            return .written
         }
-        return result ?? false
+        return result ?? .failed
     }
 }

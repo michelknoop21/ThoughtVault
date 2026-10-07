@@ -153,5 +153,6 @@
   "windows/tsconfig.json": "8358554ffab41859cedfe36fc1d8244918a95b423baf98a1f2af9d508979cd7b",
   "windows/tsconfig.node.json": "9e2abb169ea87b7190613a1d4da57ca608463a453bd4231fa3aeee5e308370dd",
   "windows/vite.config.ts": "056b23582e001eb7845e5da6ff23454e5df657aa21543c1c892b707151423e2e",
-  "windows/widget.html": "c4083bd12d7ab2126b6293d38759bd13e55eb6735fb851fb9d78ddef94ee12a1"
+  "windows/widget.html": "c4083bd12d7ab2126b6293d38759bd13e55eb6735fb851fb9d78ddef94ee12a1",
+  "tests/fixtures/envelope-fixture.json": "67315cd09fd3770843afa91109894d6b143dfd62cf803e9192bf1d50912fa200"
 }

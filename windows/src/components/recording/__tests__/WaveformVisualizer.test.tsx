@@ -33,6 +33,12 @@ it("plots real amplitude, flat silence, bounded compact waves and no movement wh
   levelsRef.current.fill(.1); draw(performance.now() + 33); const soft = extent();
   levelsRef.current.fill(.9); draw(performance.now() + 66);
   expect(extent()).toBeGreaterThan(soft * 5);
+  const steady = paths.at(-1)!.points.map(point => point[1]);
+  draw(performance.now() + 120);
+  expect(paths.at(-1)!.points.map(point => point[1])).not.toEqual(steady); // Crests travel even at constant volume.
+  const main = paths.at(-1)!.points;
+  expect(Math.abs(main[0][1] - 120)).toBeLessThan(.15);
+  expect(Math.abs(main.at(-1)![1] - 120)).toBeLessThan(.15);
   motion.matches = true;
   levelsRef.current.fill(.3); draw(performance.now() + 70);
   const speech = extent();

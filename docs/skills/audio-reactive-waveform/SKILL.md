@@ -28,6 +28,8 @@ For the formulas and a demonstrated macOS/Windows case, read [references/spectru
 
 Use deterministic PCM fixtures with equal-power tones across band gaps and boundaries at supported sample rates. Include speech-like multi-tone input, quiet/loud levels, non-finite input and silence. Verify streamed rolling buffers at the actual publication cadence, not only a full stationary FFT buffer. Test meaningful renderer invariants such as retained height for audible volume, distinct low/high paths, compact bounds and stationary Reduce Motion peaks.
 
+For animated exports, preserve one continuous phase clock across frames. Recreating a stateful view for every image can reset travel while still showing volume changes. Verify travelling crests at constant input before presenting a video as motion evidence.
+
 Separate evidence explicitly: DSP fixture results, native tests/build, installed-app visual checks, and real hardware-to-screen timing. An audio-free screen recording cannot prove audiovisual latency. Passing tests cannot prove that the user likes the movement.
 
 For requested screenshots, capture the installed app and widget through the available computer-use tool. Verify recording state before any interaction. Never stop, restart, update or launch another app copy during a live meeting. If the host is locked, request unlocking; do not bypass the lock or label simulated images as native screenshots. Use a safe test source when needed, avoiding private speech or accidental cloud processing. Crop to the relevant waveform region with the screenshot tool when supported; otherwise omit captures containing private notes or transcripts. If only a controlled preview is available, label it as a preview with simulated input.

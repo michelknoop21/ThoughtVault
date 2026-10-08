@@ -1,24 +1,12 @@
-// WaveformView.swift
-// ThoughtVault
-// com.buildmind.ThoughtVault
-//
-// Light-thread waveform (approved Opnemen NorthStar). A bundle of thin lines
-// drawn on a Canvas: every line is a sum of three gaussian bellies whose centre
-// and width drift slowly, each belly reading the envelope history at its own
-// delay (0 / 70 / 140 ms) so syllables show up as shifting peaks instead of the
-// whole bundle pumping. The main line is brighter and glows; the support lines
-// are scaled, slightly phase-shifted copies (ribbon look). Colour runs magenta
-// → violet → lavender → cool blue along x.
-//
-// The history comes from AudioEnvelopeProcessor (30 Hz, 3 s), which already
-// applies attack/release. The Canvas only maps that stable level to geometry.
+// ThoughtVault light-thread styling with the SiriWave Classic curve.
+// Adapted from kopiro/siriwave (MIT); see docs/licenses/siriwave-MIT.txt.
+// AudioEnvelopeProcessor supplies real loudness and frequency bands.
 
 import SwiftUI
 
-/// Drift/travel accumulator. A reference type in `@State` so ticking it from
+/// Continuous travel accumulator. A reference type in `@State` so ticking it from
 /// inside the `TimelineView` body does not invalidate the view.
-private final class WavePhaseClock {
-    var drift: Double = 0
+final class WavePhaseClock {
     var travel: Double = 0
     var lastTick: Date?
 
@@ -26,29 +14,30 @@ private final class WavePhaseClock {
     func advance(to date: Date, level: Float) {
         let dt = lastTick.map { min(0.064, max(0, date.timeIntervalSince($0))) } ?? 0
         lastTick = date
-        drift += dt
         travel += dt * 2 * .pi * WaveConfig.travelHz * (1 + WaveConfig.energyBoost * Double(level))
-        if travel > 1_000_000 { travel -= 1_000_000 }
     }
 }
 
 /// macOS Studio waveform tuning; the compact widget uses the same geometry.
 enum WaveConfig {
     static let heightFrac: Double = 0.40
-    static let taperPow: Double = 1.1
-    static let carrierCycles: Double = 3.0
-    static let travelHz: Double = 0.3
-    static let energyBoost: Double = 1.8
-    static let glow: CGFloat = 16
-    static let driftCenter: Double = 0.04
-    static let driftWidth: Double = 0.2
+    static let travelHz: Double = 0.65
+    static let energyBoost: Double = 0.8
+    static let glow: CGFloat = 10
 
-    struct Belly { let c, w, delayMs, f, amp: Double }
-    static let bellies: [Belly] = [
-        Belly(c: 0.31, w: 0.16, delayMs: 0, f: 0.037, amp: 1.0),
-        Belly(c: 0.53, w: 0.15, delayMs: 70, f: 0.053, amp: 0.95),
-        Belly(c: 0.73, w: 0.15, delayMs: 140, f: 0.071, amp: 0.78),
-    ]
+    /// SiriWave Classic: graph domain -2...2, fourth-power attenuation.
+    /// Keep height bounded; spectra shape support strands, never gate loudness.
+    static func displacement(x: Double, amplitude: Double, gain: Double,
+                             travel: Double, index: Int, frequency: Double,
+                             line: Line, frozen: Bool) -> Double {
+        let graphX = 4 * x - 2
+        let attenuation = pow(4 / (4 + pow(graphX, 4)), 4)
+        let strandGain = line.main ? 1 : 0.25 + 0.75 * gain
+        let speed = line.main ? 1 : 0.82 + Double(index) * 0.065
+        let phase = frozen ? 0 : travel * speed
+        return attenuation * amplitude * line.k * strandGain
+            * sin(frequency * graphX - phase + line.phase)
+    }
 
     static let gradient = Gradient(stops: [
         .init(color: Color(red: 0.94, green: 0.25, blue: 0.77).opacity(0), location: 0),
@@ -70,16 +59,16 @@ enum WaveConfig {
         .init(color: Color(red: 0.36, green: 0.53, blue: 1.00).opacity(0), location: 1),
     ])
 
-    struct Line { let width, alpha, k, phase, offset: Double; let main: Bool }
+    struct Line { let width, alpha, k, phase: Double; let main: Bool }
 
     static let desktopLines: [Line] = [
-        Line(width: 0.7, alpha: 0.44, k: 0.76, phase: -0.90, offset: -1.0, main: false),
-        Line(width: 0.9, alpha: 0.68, k: 0.88, phase: -0.51, offset: -0.65, main: false),
-        Line(width: 1.1, alpha: 0.80, k: 0.96, phase: -0.23, offset: -0.31, main: false),
-        Line(width: 1.1, alpha: 0.80, k: 0.96, phase: 0.24, offset: 0.31, main: false),
-        Line(width: 0.9, alpha: 0.68, k: 0.88, phase: 0.54, offset: 0.65, main: false),
-        Line(width: 0.7, alpha: 0.44, k: 0.76, phase: 0.94, offset: 1.0, main: false),
-        Line(width: 2.2, alpha: 1, k: 1, phase: 0, offset: 0, main: true),
+        Line(width: 0.7, alpha: 0.44, k: 0.76, phase: -0.90, main: false),
+        Line(width: 0.9, alpha: 0.68, k: 0.88, phase: -0.51, main: false),
+        Line(width: 1.1, alpha: 0.80, k: 0.96, phase: -0.23, main: false),
+        Line(width: 1.1, alpha: 0.80, k: 0.96, phase: 0.24, main: false),
+        Line(width: 0.9, alpha: 0.68, k: 0.88, phase: 0.54, main: false),
+        Line(width: 0.7, alpha: 0.44, k: 0.76, phase: 0.94, main: false),
+        Line(width: 2.2, alpha: 1, k: 1, phase: 0, main: true),
     ]
     static let widgetLines: [Line] = [desktopLines[1], desktopLines[2], desktopLines[4], desktopLines[6]]
 
@@ -118,10 +107,10 @@ struct WaveformView: View {
                 let _ = reduceMotion ? () : clock.advance(to: timeline.date, level: level)
                 // Capture values, not the mutable clock reference: Canvas must
                 // receive a different input on every animation tick.
-                let drift = clock.drift, travel = clock.travel
+                let travel = clock.travel
                 Canvas { context, size in
                     Self.draw(in: &context, size: size, levels: levels, bands: bands,
-                              drift: drift, travel: travel,
+                              travel: travel,
                               lines: lines, frozen: reduceMotion)
                 }
             }
@@ -148,29 +137,16 @@ struct WaveformView: View {
     }
 
     private static func draw(in context: inout GraphicsContext, size: CGSize, levels: [Float], bands: [Float],
-                             drift: Double, travel: Double,
+                             travel: Double,
                              lines: [WaveConfig.Line], frozen: Bool) {
         let w = size.width, h = size.height
         guard w > 0, h > 0 else { return }
-        let tau = 2 * Double.pi
         let compact = h < 64
-        let cy = h / 2, maxH = h * WaveConfig.heightFrac * (compact ? 0.7 : 1)
+        let cy = h / 2, maxH = h * WaveConfig.heightFrac
         let level = WaveConfig.visualEnergy(levels.last ?? 0)
         let peakBand = bands.max() ?? 0
-        let bandWeight = bands.reduce(0, +)
-        let bandPosition = bandWeight > 0 ? bands.enumerated().reduce(0.0) { $0 + Double($1.element) * Double($1.offset) } / Double(bandWeight) : 3
-        // Reduce Motion: shape frozen, only the height follows the level.
-        let td = frozen ? 0 : drift, tr = frozen ? 0 : travel
-
-        let bellies = WaveConfig.bellies.enumerated().map { i, b -> (c: Double, w: Double, amp: Double) in
-            let di = Double(i)
-            return (b.c + WaveConfig.driftCenter * sin(tau * b.f * td + di * 2.1),
-                    b.w * (1 + WaveConfig.driftWidth * sin(tau * b.f * 0.83 * td + di * 1.3)),
-                    b.amp * (frozen ? level : WaveConfig.visualEnergy(Float(envelope(levels, delayMs: b.delayMs)))))
-        }
-
         let step: CGFloat = compact ? 0.5 : 2
-        let n = Int(w / step) + 1
+        let n = max(2, Int(ceil(w / step)) + 1)
         let quiet = 0.55 + 0.45 * min(1, level * 2)
         let shading = GraphicsContext.Shading.linearGradient(
             WaveConfig.gradient, startPoint: .zero, endPoint: CGPoint(x: w, y: 0))
@@ -183,31 +159,16 @@ struct WaveformView: View {
             let bandIndex = min(bands.count - 1, j * bands.count / max(1, lines.count - 1))
             let bandEnd = min(bands.count, max(bandIndex + 1, (j + 1) * bands.count / max(1, lines.count - 1)))
             let gain = line.main || bands.isEmpty ? 1 : peakBand > 0 ? Double((bands[bandIndex..<bandEnd].max() ?? 0) / peakBand) : 0
-            let cycles = frozen || bands.isEmpty ? WaveConfig.carrierCycles : line.main ? WaveConfig.carrierCycles + (bandPosition - 3) * 0.25 : 2 + Double(max(0, bandIndex)) * 0.35
+            let frequency = frozen ? 3.4 : line.main ? 3.4 : 2.8 + Double(max(0, bandIndex)) * 0.22
+            let delayed = frozen ? level : WaveConfig.visualEnergy(Float(envelope(levels, delayMs: Double(j) * 25)))
+            let amplitude = level == 0 ? 0 : line.main ? level : 0.65 * level + 0.35 * delayed
             var path = Path()
             for p in 0..<n {
                 let x = Double(p) / Double(n - 1)
-                let taper = pow(max(0, sin(Double.pi * x)), WaveConfig.taperPow)
-                var s = 0.0
-                var spread = 0.0
-                var weight = 0.0
-                for (i, b) in bellies.enumerated() {
-                    let z = (x - b.c) / b.w
-                    let belly = exp(-0.5 * z * z)
-                    weight += belly
-                    let localGain = line.main ? 1 : 1 + 0.18 * sin(Double((j + 1) * (i + 2)) * 1.3)
-                    // A shared carrier origin prevents overlapping lobes from
-                    // cancelling speech peaks as their centres drift.
-                    // Preserve loudness and delayed syllables while bands shape each strand.
-                    let amplitude = b.amp * gain
-                    s += amplitude * line.k * localGain * belly
-                        * sin(tau * cycles * x - tr + Double(i) * 0.35 + line.phase * (1 + Double(i) * 0.7))
-                    spread += amplitude * belly * (i == 1 ? -0.8 : 1)
-                }
-                // Normalize overlap without flattening loud peaks with tanh.
-                let y = s / max(1, weight) * maxH * taper
-                    + maxH * level * line.offset * 0.40 * spread * taper
-                let pt = CGPoint(x: CGFloat(p) * step, y: cy - y)
+                let y = WaveConfig.displacement(x: x, amplitude: amplitude, gain: gain,
+                                              travel: travel, index: j, frequency: frequency,
+                                              line: line, frozen: frozen)
+                let pt = CGPoint(x: x * w, y: cy - y * maxH)
                 if p == 0 { path.move(to: pt) } else { path.addLine(to: pt) }
             }
             if line.main || (j >= 1 && j <= 4) {

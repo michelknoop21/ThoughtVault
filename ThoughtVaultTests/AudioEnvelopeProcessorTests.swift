@@ -10,6 +10,33 @@ import os
 /// spec thresholds, not golden floats — no cross-language float matching.
 final class AudioEnvelopeProcessorTests: XCTestCase {
 
+    func testSiriWaveTravelsAtConstantVolumeAndBoundsEveryStrand() {
+        let xValues = (0...120).map { Double($0) / 120 }
+        for (index, line) in WaveConfig.desktopLines.enumerated() {
+            func shape(_ phase: Double, level: Double = 0.8, frozen: Bool = false) -> [Double] {
+                xValues.map { WaveConfig.displacement(x: $0, amplitude: level, gain: 1,
+                    travel: phase, index: index, frequency: 3.4, line: line, frozen: frozen) }
+            }
+            XCTAssertNotEqual(shape(0), shape(1), "Constant audio still needs travelling crests")
+            XCTAssertEqual(shape(0, frozen: true), shape(1, frozen: true))
+            XCTAssertTrue(shape(2).allSatisfy { abs($0) <= 0.8 })
+            XCTAssertTrue(shape(2, level: 0).allSatisfy { $0 == 0 })
+            XCTAssertLessThan(abs(shape(2).first!), 0.002)
+            XCTAssertLessThan(abs(shape(2).last!), 0.002)
+        }
+    }
+
+    func testSiriWaveClockIsRefreshRateIndependent() {
+        let start = Date(timeIntervalSinceReferenceDate: 1_000)
+        func phase(fps: Int) -> Double {
+            let clock = WavePhaseClock()
+            for frame in 0...fps { clock.advance(to: start.addingTimeInterval(Double(frame) / Double(fps)), level: 0.5) }
+            return clock.travel
+        }
+        XCTAssertEqual(phase(fps: 30), phase(fps: 60), accuracy: 0.000001)
+        XCTAssertGreaterThan(phase(fps: 30), 5)
+    }
+
     func testEqualPowerBetweenProbeFrequenciesRemainsVisibleAtDeviceSampleRates() {
         for rate in [16_000.0, 44_100.0, 48_000.0] {
             for frequency in [125.0, 250, 350, 500, 700, 1000, 1400, 2000, 2800, 4000, 6000] {

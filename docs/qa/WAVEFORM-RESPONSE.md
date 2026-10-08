@@ -52,3 +52,14 @@ Deze getallen meten de DSP-fixture, niet de complete hardware-naar-schermvertrag
 - [MathWorks: vermogen en RMS](https://www.mathworks.com/help/signal/ug/measure-the-power-of-a-signal.html)
 - [Apple Accelerate: DiscreteFourierTransform](https://developer.apple.com/documentation/accelerate/vdsp/discretefouriertransform)
 - [Bestaande Symphonia FFT](https://docs.rs/symphonia-core/0.5.5/symphonia_core/dsp/fft/struct.Fft.html)
+
+
+## SiriWave styling, 8 oktober 2026
+
+De renderer op macOS en Windows gebruikt nu de Classic-curve van [kopiro/siriwave](https://github.com/kopiro/siriwave/blob/744cb00235b7900733efff25dc73b4d1ab77c92d/src/classic-curve.ts), commit `744cb00235b7900733efff25dc73b4d1ab77c92d`. De MIT-licentie staat in `docs/licenses/siriwave-MIT.txt` en wordt ook in beide appbundels meegenomen. Er is geen JavaScript-library of nieuwe opname-engine toegevoegd. SwiftUI Canvas en Windows Canvas behouden hun bestaande kleuren, dunne lijnen en clipping.
+
+Voor genormaliseerde positie x gebruiken beide platformen u = 4x - 2 en de SiriWave-attenuatie (4 / (4 + u^4))^4. Een doorlopende, op verstreken tijd gebaseerde fase verplaatst de golf, ook bij constant volume. De hoofdgolf volgt de gekalibreerde RMS-envelope. Steunlijnen hebben verschillende fasesnelheden en worden gewogen door hun echte frequentiebanden en kort vertraagde envelope. Stilte en pauze leveren een vlakke lijn; Reduce Motion bevriest de beweging maar behoudt volumefeedback. Deze gestileerde beweging is geen exacte weergave van de PCM-periode of toonhoogte.
+
+De nieuwe preview `docs/qa/assets/siriwave-soundwave.mp4` bevat twaalf seconden synthetische zachte, normale en harde audio, gevolgd door stilte. De preview gebruikt dezelfde curve en audiodiagnostiek als de app. Een gedeelde klok wordt eenmaal per geëxporteerd frame vooruitgezet, zodat de fase niet opnieuw begint. Alleen de preview-klok, donkere kleurkeuze en AppKit-drag-overlay worden voor headless export aangepast. De video is geen opname van de geïnstalleerde app en bewijst geen hardwarelatency.
+
+Verificatie: 76 Windows-front-endtests slagen en de productie-front-endbuild slaagt. De signed native macOS Release-build slaagt en `codesign --verify --deep --strict` slaagt. De macOS-audioregressiesuite telt 21 geslaagde tests, 2 expliciet overgeslagen hardwaretests en 0 fouten. De nieuwe regressies controleren beweging bij constant volume, 30/60 Hz fasepariteit, vlakke stilte, Reduce Motion en begrensde curvehoogte. Beide gebouwde appbundels bevatten de SiriWave MIT-licentie. De aanpassing is nog niet geïnstalleerd of gepubliceerd; er is geen nieuwe Windows-MSI/native runtimecontrole uitgevoerd.

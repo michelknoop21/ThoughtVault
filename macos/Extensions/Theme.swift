@@ -228,6 +228,7 @@ extension View {
 
 /// Primary button — gradient fill with brand shadow.
 struct PrimaryButtonStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var isEnabled
     var isDestructive: Bool = false
 
     func makeBody(configuration: Configuration) -> some View {
@@ -256,7 +257,7 @@ struct PrimaryButtonStyle: ButtonStyle {
                     )
             }
             .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
-            .opacity(configuration.isPressed ? 0.88 : 1.0)
+            .opacity(isEnabled ? (configuration.isPressed ? 0.88 : 1.0) : 0.45)
             .animation(TS.Animation.quick, value: configuration.isPressed)
     }
 }

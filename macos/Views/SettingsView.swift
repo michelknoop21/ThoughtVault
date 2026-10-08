@@ -101,9 +101,11 @@ struct SettingsView: View {
                 Text("Beschrijving").font(TS.Font.bodyMedium)
                 TextEditor(text: $feedbackDescription)
                     .font(TS.Font.body).frame(height: 140)
+                    .scrollIndicators(.never)
                     .accessibilityLabel("Beschrijving")
                 HStack {
-                    Button("Annuleer") { showBugReportSheet = false }.keyboardShortcut(.cancelAction)
+                    Button("Annuleer") { showBugReportSheet = false }
+                        .buttonStyle(SecondaryButtonStyle()).keyboardShortcut(.cancelAction)
                     Spacer()
                     Button("Kopieer feedback") {
                         NSPasteboard.general.clearContents()

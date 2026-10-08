@@ -94,6 +94,7 @@ struct PersonEditView: View {
                 HStack {
                     #if os(macOS)
                     Button("Annuleer") { dismiss() }
+                        .buttonStyle(SecondaryButtonStyle())
                         .keyboardShortcut(.cancelAction)
                     Spacer()
                     #endif

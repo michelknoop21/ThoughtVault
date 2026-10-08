@@ -171,6 +171,30 @@ final class AudioEnvelopeProcessorTests: XCTestCase {
         XCTAssertEqual(WaveConfig.visualEnergy(2), 0.9)
     }
 
+    @MainActor
+    func testMicrophonePCMIsPublishedWithoutLongWriterDelay() async throws {
+        guard FileManager.default.fileExists(atPath: "/tmp/thoughtvault-system-audio-test/enabled") else {
+            throw XCTSkip("Microphone timing test requires explicit local opt-in")
+        }
+        let recorder = AudioRecorder()
+        recorder.hasPermission = true
+        try await recorder.startRecording()
+        let url = try XCTUnwrap(recorder.currentRecordingURL)
+        defer { try? FileManager.default.removeItem(at: url) }
+        let start = Date()
+        var delays: [Double] = []
+        for _ in 0..<90 {
+            try await Task.sleep(for: .milliseconds(33))
+            let elapsed = Date().timeIntervalSince(start)
+            let size = (try FileManager.default.attributesOfItem(atPath: url.path)[.size] as? NSNumber)?.doubleValue ?? 0
+            if elapsed > 1 { delays.append(max(0, elapsed - size / 32_000)) }
+        }
+        _ = try await recorder.stopRecording()
+        let maximumDelay = delays.max() ?? 10
+        print("MIC_PCM maximumDelaySeconds=\(maximumDelay)")
+        XCTAssertLessThan(maximumDelay, 0.25, "Microphone frequency bands must follow live sound, not delayed writer flushes")
+    }
+
     /// Opt-in hardware test: plays actual output audio through the system tap.
     /// Generate audio with tests/fixtures/generate-system-audio.py first.
     /// Enable with /tmp/thoughtvault-system-audio-test/enabled; no microphone,

@@ -99,6 +99,10 @@ Source-cleanup regression covers complete readable output, frame-count mismatch,
 - Native rechecks: idle recording studio/inspector, all seven settings tab headers and primary content, participant empty state, person form and feedback dialog on both platforms. Windows 265 additionally rechecked Tasks, Notulen list/detail, tags and regeneration profile choice at the regular window size. Both person forms show all six fields and actions without scrolling.
 - Native Windows 264 was additionally checked at its 652x600 client minimum: Tasks, Notulen list/detail, regeneration profile sheet, and full person form. Those unchanged layouts are not misrepresented as fresh 265 screenshots.
 
+### Release verification
+
+The source and this review were fast-forwarded to the authoritative Gitea main branch after final CI success. Windows stable 1.0.265 was published through the existing signed-artifact uploader. An external HTTPS check confirms stable version 1.0.265 and HTTP 200 for the 8,871,936-byte MSI; its SHA256 matches the installer verified above. The previous release manifest and Windows feed are preserved on the release server under rollback-before-265. Mac 265 is installed locally but has not been publicly distributed.
+
 ### Remaining verification boundaries
 
 The fixed callback and audio logic have regression and real hardware evidence; a complete new videomeeting with the final app, live transcript enabled, background widget and note-save interaction has not yet been repeated. No destructive native operations or private transcript screenshots are included.

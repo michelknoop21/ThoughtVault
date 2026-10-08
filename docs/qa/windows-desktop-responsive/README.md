@@ -1,8 +1,8 @@
 # Windows desktop responsiveness
 
-Source starts at bf331ae (latest unreleased audit fixes, based on released 1.0.260).
-The released Windows baseline and these changes were reconciled into a branch
-based on Gitea main. Website and unrelated platform sources remain intact.
+Source is based on current Gitea main. The released Windows distribution settings
+and the presentation fixes were ported without importing unrelated app changes.
+Website and unrelated platform sources remain intact.
 The responsive presentation is applied to the current main implementation.
 Obsidian conflict handling, credential storage and recording quick notes are retained.
 
@@ -53,3 +53,26 @@ available computer control did not reliably execute, and Parallels CLI guest
 commands require a Pro/Business license on this host. Do not claim interactive
 Parallels validation. The exact candidate is built and installation/upgrade tested
 on Windows through the existing GitHub workflow; record its final result below.
+
+## macOS navigation and sheet review
+
+The local navigation matches `AppTab` in macOS ContentView: Home, Opnemen,
+Taken, Notulen, Mensen, Instellingen. Ctrl+1 through Ctrl+6 follows that order.
+Profiles are managed within Settings > Notulen. Legacy /profiles links redirect
+to that tab. Existing recording profile selection remains available.
+
+`python3 docs/qa/windows-desktop-responsive/check-settings.py` checks all seven
+settings tabs at 640x560, 900x560 and 1200x800, plus six onboarding steps.
+The 21 tab/viewport checks and six steps passed without clipped controls.
+
+Browser sheet review at 640x560 covers person editing, participant selection,
+profile creation, quick notes during a simulated recording, attendee review,
+tags, regeneration and note deletion. Open sheets kept focus inside, fit within
+the viewport and closed with Escape. Profile creation also restored focus to
+its opening button. Sheet contents use the existing app components, not mockups.
+The common sheet behavior also applies to task confirmations and profile deletion.
+
+Recording stop, Obsidian replacement and model deletion now use native Windows
+confirmation dialogs. Native file/folder pickers and the separate floating recorder
+keep their existing platform implementations. Interactive OS dialog, floating-window
+and audio-device checks in Parallels remain unverified.

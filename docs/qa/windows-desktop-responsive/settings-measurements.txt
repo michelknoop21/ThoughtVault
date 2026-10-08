@@ -1,0 +1,28 @@
+Algemeen {"width":640,"clipped":0}
+Verwerking {"width":640,"clipped":0}
+Notulen {"width":640,"clipped":0}
+Agenda {"width":640,"clipped":0}
+Obsidian {"width":640,"clipped":0}
+Account {"width":640,"clipped":0}
+Geavanceerd {"width":640,"clipped":0}
+Algemeen {"width":900,"clipped":0}
+Verwerking {"width":900,"clipped":0}
+Notulen {"width":900,"clipped":0}
+Agenda {"width":900,"clipped":0}
+Obsidian {"width":900,"clipped":0}
+Account {"width":900,"clipped":0}
+Geavanceerd {"width":900,"clipped":0}
+Algemeen {"width":1200,"clipped":0}
+Verwerking {"width":1200,"clipped":0}
+Notulen {"width":1200,"clipped":0}
+Agenda {"width":1200,"clipped":0}
+Obsidian {"width":1200,"clipped":0}
+Account {"width":1200,"clipped":0}
+Geavanceerd {"width":1200,"clipped":0}
+onboarding 0 {"width":640,"clipped":0}
+onboarding 1 {"width":640,"clipped":0}
+onboarding 2 {"width":640,"clipped":0}
+onboarding 3 {"width":640,"clipped":0}
+onboarding 4 {"width":640,"clipped":0}
+onboarding 5 {"width":640,"clipped":0}
+PASS: 21 settings tab/viewport combinations and 6 onboarding steps

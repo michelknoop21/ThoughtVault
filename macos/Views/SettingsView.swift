@@ -125,7 +125,7 @@ struct SettingsView: View {
                 await loadProfiles()
                 await checkServerConnection()
                 await checkPermissions()
-                if isLocalProcessing && activeLocalProvider == .ollama { await loadOllamaModels() }
+
                 if isLocalProcessing && localTranscriber == LocalTranscriberEngine.whisperKit.rawValue { await loadWhisperModels() }
             }
         }
@@ -784,12 +784,16 @@ struct SettingsView: View {
             if isCompact {
                 VStack(alignment: .leading, spacing: TS.Spacing.sm) {
                     ollamaURLField
+                    #if os(iOS)
                     ollamaCloudButton
+                    #endif
                 }
             } else {
                 HStack(spacing: TS.Spacing.sm) {
                     ollamaURLField
+                    #if os(iOS)
                     ollamaCloudButton
+                    #endif
                 }
             }
         }
@@ -829,6 +833,10 @@ struct SettingsView: View {
                 .help("Beschikbare modellen laden")
                 .accessibilityLabel("Beschikbare modellen laden")
             }
+        }
+        if !ollamaModelsLoading && ollamaModels.isEmpty {
+            Text("Geen modellen opgehaald. Controleer het adres en de verbinding.")
+                .font(TS.Font.caption).foregroundStyle(Color.labelSecondary)
         }
         if !ollamaModels.isEmpty {
             Text("\(ollamaModels.count) modellen beschikbaar")
@@ -973,6 +981,7 @@ struct SettingsView: View {
     func loadOllamaModels() async {
         ollamaModelsLoading = true
         let models = await ollamaService().fetchModels()
+        guard !Task.isCancelled else { return }
         ollamaModels = models
         // Default the selection to the first model when nothing valid is selected yet.
         if ollamaModel.isEmpty, let first = models.first {

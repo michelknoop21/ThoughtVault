@@ -16,6 +16,7 @@ struct CloudProviderConfig: View {
     @State private var testing = false
     @State private var connected: Bool?
     @State private var models: [String] = []
+    @State private var loadingModels = false
     @State private var saveTask: Task<Void, Never>?
 
     private var isOllamaCloud: Bool { provider == .ollamaCloud }
@@ -27,7 +28,11 @@ struct CloudProviderConfig: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: TS.Spacing.sm) {
-            if !isOllamaCloud { endpointFields }
+            if isOllamaCloud {
+                SettingFieldRow("Ollama URL") {
+                    Text(baseURL).font(TS.Font.bodyMonospaced).textSelection(.enabled)
+                }
+            } else { endpointFields }
 
             if isOllamaCloud || current != nil {
                 SettingFieldRow("API-sleutel") {
@@ -58,15 +63,19 @@ struct CloudProviderConfig: View {
                             .frame(maxWidth: .infinity, alignment: .leading)
                         }
                         Button { Task { await test() } } label: {
-                            if testing { ProgressView().controlSize(.small) } else { Image(systemName: "arrow.triangle.2.circlepath") }
+                            if testing || loadingModels { ProgressView().controlSize(.small) } else { Image(systemName: "arrow.triangle.2.circlepath") }
                         }
                         .buttonStyle(.bordered)
-                        .disabled(testing || !hasKey || !isHTTPS)
+                        .disabled(testing || loadingModels || (!hasKey && !isOllamaCloud) || !isHTTPS)
                         .help("Beschikbare modellen laden")
                         .accessibilityLabel("Beschikbare modellen laden")
                     }
                 }
 
+                if loadingModels || models.isEmpty {
+                    Text(loadingModels ? "Modellen ophalen…" : "Geen modellen opgehaald. Controleer het adres en de verbinding.")
+                        .font(TS.Font.caption).foregroundStyle(Color.labelSecondary)
+                }
                 HStack(spacing: TS.Spacing.sm) {
                     Circle().fill(status.color).frame(width: 8, height: 8).accessibilityHidden(true)
                     Text(status.text)
@@ -75,7 +84,13 @@ struct CloudProviderConfig: View {
                 }
             }
         }
-        .onAppear { apiKey = KeychainService.shared.load(for: keychainKey) ?? "" }
+        .task(id: baseURL) {
+            apiKey = KeychainService.shared.load(for: keychainKey) ?? ""
+            models = []
+            try? await Task.sleep(for: .milliseconds(350))
+            guard !Task.isCancelled, isHTTPS else { return }
+            await loadModels()
+        }
         .onChange(of: keychainKey) { old, new in
             // Store what was typed for the previous endpoint before showing the next key.
             commit(apiKey, for: old)
@@ -179,9 +194,18 @@ struct CloudProviderConfig: View {
         defer { testing = false }
         commit(apiKey, for: keychainKey)
         let service = OpenAICompatibleLLMService(baseURL: baseURL, model: modelBinding.wrappedValue, apiKey: apiKey)
-        let list = await service.fetchModels()
+        await loadModels()
         // Listing models can succeed without a valid key, so also probe a protected endpoint.
         connected = await service.checkConnection() == .ready
-        models = list
     }
+    private func loadModels() async {
+        loadingModels = true
+        let service = OpenAICompatibleLLMService(baseURL: baseURL, model: modelBinding.wrappedValue, apiKey: apiKey)
+        let list = await service.fetchModels()
+        guard !Task.isCancelled else { return }
+        loadingModels = false
+        models = list
+        if modelBinding.wrappedValue.isEmpty, let first = list.first { modelBinding.wrappedValue = first }
+    }
+
 }

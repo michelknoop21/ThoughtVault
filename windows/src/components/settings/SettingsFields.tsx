@@ -12,7 +12,7 @@ export function SettingsField({ label, children }: { label: string; children: Re
 }
 
 
-export function CredentialField({ credentialKey, label, children }: { credentialKey: string; label: string; children?: ReactNode }) {
+export function CredentialField({ credentialKey, label, children, onCredentialChange }: { credentialKey: string; label: string; children?: ReactNode; onCredentialChange?: () => void }) {
   const [draft, setDraft] = useState("");
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
@@ -29,6 +29,7 @@ export function CredentialField({ credentialKey, label, children }: { credential
       setDraft("");
       setSaved(true);
       setError("");
+      onCredentialChange?.();
     } catch {
       setError("Opslaan in Windows Credential Manager mislukt");
     }
@@ -40,6 +41,7 @@ export function CredentialField({ credentialKey, label, children }: { credential
       setDraft("");
       setSaved(false);
       setError("");
+      onCredentialChange?.();
     } catch {
       setError("Verwijderen uit Windows Credential Manager mislukt");
     }

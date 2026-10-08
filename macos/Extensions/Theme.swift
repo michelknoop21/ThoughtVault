@@ -307,15 +307,12 @@ struct BrandFooter: View {
                 .font(TS.Font.caption)
                 .foregroundStyle(Color.labelTertiary)
 
-            Text("Yinga")
-                .font(.system(size: 13, weight: .semibold, design: .rounded))
-                .foregroundStyle(
-                    LinearGradient(
-                        colors: [Color.brandPrimary, Color.brandSecondary],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                )
+            Image("YingaLogo")
+                .renderingMode(.original)
+                .resizable()
+                .scaledToFit()
+                .frame(width: 42, height: 18)
+                .accessibilityLabel("Yinga")
         }
         .frame(maxWidth: .infinity, alignment: .center)
         .padding(.vertical, TS.Spacing.sm)

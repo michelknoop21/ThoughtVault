@@ -95,39 +95,40 @@ extension SettingsView {
     }
 
     private var studioTabBar: some View {
-        ScrollView(.horizontal) {
+        ViewThatFits(in: .horizontal) {
             HStack(spacing: 2) {
-                ForEach(SettingsTab.allCases) { tab in
-                    let selected = settingsTab == tab
-                    Button {
-                        settingsTab = tab
-                    } label: {
-                        HStack(spacing: 8) {
-                            Image(systemName: tab.icon).font(.system(size: 14))
-                            Text(tab.title).font(.system(size: 13.5, weight: selected ? .semibold : .regular))
-                        }
-                        .foregroundStyle(selected ? Color.white : HomeColor.text2)
-                        .padding(.horizontal, 16)
-                        .frame(height: 40)
-                        .background(
-                            RoundedRectangle(cornerRadius: 9, style: .continuous)
-                                .fill(selected ? HomeColor.violet.opacity(0.62) : .clear)
-                        )
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityAddTraits(selected ? .isSelected : [])
-                }
+                ForEach(SettingsTab.allCases) { studioTabButton($0) }
             }
-            .padding(1)
+            .fixedSize(horizontal: true, vertical: false)
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 130), spacing: 2)], spacing: 2) {
+                ForEach(SettingsTab.allCases) { studioTabButton($0).frame(maxWidth: .infinity) }
+            }
         }
-        .scrollIndicators(.never)
-        .padding(2)
-        .frame(height: 44)
+        .padding(3)
         .frame(maxWidth: 840, alignment: .leading)
         .background(RoundedRectangle(cornerRadius: 11, style: .continuous).fill(HomeColor.side))
         .overlay(RoundedRectangle(cornerRadius: 11, style: .continuous).strokeBorder(HomeColor.sideBorder, lineWidth: 1))
     }
+
+    private func studioTabButton(_ tab: SettingsTab) -> some View {
+        let selected = settingsTab == tab
+        return Button { settingsTab = tab } label: {
+            HStack(spacing: 8) {
+                Image(systemName: tab.icon).font(.system(size: 14)).frame(width: 16)
+                Text(tab.title).font(.system(size: 13.5, weight: .semibold))
+            }
+            .foregroundStyle(selected ? Color.white : HomeColor.text2)
+            .padding(.horizontal, 12)
+            .frame(height: 40)
+            .frame(maxWidth: .infinity)
+            .background(RoundedRectangle(cornerRadius: 9, style: .continuous)
+                .fill(selected ? HomeColor.violet.opacity(0.62) : .clear))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(selected ? .isSelected : [])
+    }
+
 }
 
 // MARK: - Building blocks
@@ -151,7 +152,7 @@ extension NotulenProvider {
         switch self {
         case .openAI, .anthropic, .ollamaCloud: return "Eigen API-sleutel"
         case .openAICompatible:   return "Eigen HTTPS-adres"
-        case .ollama:             return "Eigen Ollama-server"
+        case .ollama:             return "Lokaal of cloud"
         case .lmStudio:           return "Lokale server"
         case .appleIntelligence:  return "Op dit apparaat"
         case .cloud:              return "Via de ThoughtVault-server"
@@ -172,7 +173,7 @@ extension NotulenProvider {
     }
 
     /// Providers offered as tiles, in display order.
-    static let studioChoices: [NotulenProvider] = [.openAI, .anthropic, .ollamaCloud, .openAICompatible, .ollama, .lmStudio, .appleIntelligence]
+    static let studioChoices: [NotulenProvider] = [.openAI, .anthropic, .ollama, .openAICompatible, .lmStudio, .appleIntelligence]
 }
 
 extension View {

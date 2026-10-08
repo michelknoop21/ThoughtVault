@@ -11,6 +11,7 @@ import {
 import { transcriptionAdvice } from "../../services/processingAdvice";
 import type { SystemSpecs } from "../../services/tauriCommands";
 import { loadCredential } from "../../services/tauriCommands";
+import { fetchOllamaModels, OLLAMA_LOCAL_URL, OLLAMA_CLOUD_URL } from "../../services/ollamaModels";
 import { WHISPER_MODELS } from "../../types";
 import { useRecordingStore } from "../../stores/recordingStore";
 import { useSettingsStore } from "../../stores/settingsStore";
@@ -27,6 +28,29 @@ export function ProcessingTab() {
   const isTranscribing = useRecordingStore(s => s.backgroundTasks.some(task => task.status === "transcribing" || task.status === "downloading"));
   const [ollamaTestStatus, setOllamaTestStatus] = useState<"idle" | "testing" | "success" | "error">("idle");
 
+
+  const [ollamaModels, setOllamaModels] = useState<string[]>([]);
+  const [ollamaModelsLoading, setOllamaModelsLoading] = useState(false);
+  const [ollamaModelsError, setOllamaModelsError] = useState("");
+  const [modelsRefresh, setModelsRefresh] = useState(0);
+  const ollamaCloud = settings.ollama_url.replace(/\/+$/, "") === OLLAMA_CLOUD_URL;
+  useEffect(() => {
+    if (settings.processing_mode !== "local" || settings.notulen_provider !== "ollama") return;
+    let active = true;
+    setOllamaModels([]);
+    setOllamaModelsError("");
+    setOllamaModelsLoading(true);
+    const timer = setTimeout(() => {
+      void fetchOllamaModels(settings.ollama_url).then(models => {
+        if (!active) return;
+        setOllamaModels(models);
+        const current = useSettingsStore.getState();
+        if (!current.ollama_model) current.updateSettings({ ollama_model: models[0] });
+      }).catch(error => { if (active) setOllamaModelsError(String(error instanceof Error ? error.message : error)); })
+        .finally(() => { if (active) setOllamaModelsLoading(false); });
+    }, 350);
+    return () => { active = false; clearTimeout(timer); };
+  }, [settings.processing_mode, settings.notulen_provider, settings.ollama_url, modelsRefresh]);
 
   // Local Whisper model state
   const [modelExists, setModelExists] = useState<boolean | null>(null);
@@ -191,7 +215,7 @@ export function ProcessingTab() {
             <header className="card-head"><span className="card-icon"><DocumentText24Regular /></span><div><h3>Notulen generatie</h3><p>Maak gestructureerde notulen van het transcript.</p></div></header>
             <div className="provider-tiles">{([
               ["openai", "OpenAI", "Eigen API-sleutel"], ["anthropic", "Claude", "Eigen Anthropic API-sleutel"],
-              ["ollama", "Ollama", "Lokale of eigen server"], ["lm-studio", "LM Studio", "Lokale of eigen server"],
+              ["ollama", "Ollama", "Lokaal of cloud"], ["lm-studio", "LM Studio", "Lokale of eigen server"],
             ] as const).map(([id, name, subtitle]) => <button key={id} className={settings.notulen_provider === id ? "selected" : ""}
               aria-pressed={settings.notulen_provider === id} disabled={settings.processing_mode === "cloud"}
               onClick={() => settings.updateSettings({ notulen_provider: id })}><strong>{name}</strong><span>{subtitle}</span></button>)}
@@ -201,6 +225,10 @@ export function ProcessingTab() {
 
             {settings.processing_mode === "local" && settings.notulen_provider === "ollama" && (
               <>
+                <div className="mode-pills" role="group" aria-label="Ollama locatie" style={{ margin: "0 20px 12px" }}>
+                  <button aria-pressed={!ollamaCloud} className={!ollamaCloud ? "selected" : ""} onClick={() => settings.updateSettings({ ollama_url: OLLAMA_LOCAL_URL, ollama_model: "" })}>Lokaal</button>
+                  <button aria-pressed={ollamaCloud} className={ollamaCloud ? "selected" : ""} onClick={() => settings.updateSettings({ ollama_url: OLLAMA_CLOUD_URL, ollama_model: "" })}>Cloud</button>
+                </div>
                 <div style={{ padding: "0 20px 4px" }}>
                   <SettingsField label="Ollama URL">
                     <input
@@ -213,17 +241,16 @@ export function ProcessingTab() {
                 </div>
                 <div style={{ padding: "0 20px 4px" }}>
                   <SettingsField label="Model">
-                    <input
-                      type="text"
-                      value={settings.ollama_model}
-                      onChange={(e) => settings.updateSettings({ ollama_model: e.target.value })}
-                      placeholder="llama3.2"
-                      className="input"
-                    />
+                    {ollamaModels.length ? <select className="input" aria-label="Ollama model" value={settings.ollama_model} onChange={e => settings.updateSettings({ ollama_model: e.target.value })}>
+                      {settings.ollama_model && !ollamaModels.includes(settings.ollama_model) && <option value={settings.ollama_model}>{settings.ollama_model}</option>}
+                      {ollamaModels.map(model => <option key={model} value={model}>{model}</option>)}
+                    </select> : <input aria-label="Ollama model" type="text" value={settings.ollama_model} onChange={e => settings.updateSettings({ ollama_model: e.target.value })} placeholder="Modelnaam" className="input" />}
+                    <p className="settings-desc" role="status">{ollamaModelsLoading ? "Modellen ophalen…" : ollamaModelsError || `${ollamaModels.length} modellen beschikbaar`}</p>
+                    <button className="btn btn-secondary btn-sm" disabled={ollamaModelsLoading} onClick={() => setModelsRefresh(n => n + 1)}>Modellen vernieuwen</button>
                   </SettingsField>
                 </div>
                 <div style={{ padding: "0 20px 14px" }}>
-                  <CredentialField credentialKey="ollama_api_key" label="API-sleutel (alleen Ollama Cloud)">
+                  <CredentialField credentialKey="ollama_api_key" label="API-sleutel (alleen Ollama Cloud)" onCredentialChange={() => setModelsRefresh(n => n + 1)}>
                   <button
                     onClick={handleTestOllama}
                     className="btn btn-secondary btn-sm"

@@ -362,9 +362,9 @@ extension SettingsView {
                 // Seven tiles do not fit one row; the grid wraps them.
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 12, alignment: .top)], spacing: 12) {
                     ForEach(NotulenProvider.studioChoices) { provider in
-                        StudioChoiceTile(selected: activeLocalProvider == provider, icon: provider.studioIcon,
+                        StudioChoiceTile(selected: (activeLocalProvider == provider || (provider == .ollama && activeLocalProvider == .ollamaCloud)), icon: provider.studioIcon,
                                          title: provider.studioName, subtitle: provider.studioSubtitle, vertical: true) {
-                            notulenProvider = provider.rawValue
+                            if !(provider == .ollama && activeLocalProvider == .ollamaCloud) { notulenProvider = provider.rawValue }
                         }
                     }
                 }
@@ -393,8 +393,22 @@ extension SettingsView {
     /// Configuration of the selected provider, reusing the existing forms.
     private var providerPanel: some View {
         VStack(alignment: .leading, spacing: 10) {
+            if activeLocalProvider == .ollama || activeLocalProvider == .ollamaCloud {
+                Picker("Ollama", selection: $notulenProvider) {
+                    Text("Lokaal").tag(NotulenProvider.ollama.rawValue)
+                    Text("Cloud").tag(NotulenProvider.ollamaCloud.rawValue)
+                }
+                .pickerStyle(.segmented)
+            }
             switch activeLocalProvider {
-            case .ollama:                      ollamaConfig
+            case .ollama:
+                VStack(alignment: .leading, spacing: 10) { ollamaConfig }
+                    .task(id: ollamaURL) {
+                        ollamaModels = []
+                        try? await Task.sleep(for: .milliseconds(350))
+                        guard !Task.isCancelled else { return }
+                        await loadOllamaModels()
+                    }
             case .lmStudio:                    lmStudioConfig
             case .appleIntelligence:           appleIntelligenceNote
             case .openAI, .anthropic:          HostedProviderConfig(provider: activeLocalProvider).id(activeLocalProvider)

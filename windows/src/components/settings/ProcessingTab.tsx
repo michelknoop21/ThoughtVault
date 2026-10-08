@@ -223,9 +223,9 @@ export function ProcessingTab() {
 
             {settings.processing_mode === "local" && settings.notulen_provider === "ollama" && (
               <>
-                <div className="mode-pills" role="group" aria-label="Ollama locatie" style={{ margin: "0 20px 12px" }}>
-                  <button aria-pressed={!ollamaCloud} className={!ollamaCloud ? "selected" : ""} onClick={() => settings.updateSettings({ ollama_url: OLLAMA_LOCAL_URL, ollama_model: "" })}>Lokaal</button>
-                  <button aria-pressed={ollamaCloud} className={ollamaCloud ? "selected" : ""} onClick={() => settings.updateSettings({ ollama_url: OLLAMA_CLOUD_URL, ollama_model: "" })}>Cloud</button>
+                <div className="action-row" role="group" aria-label="Ollama locatie" style={{ margin: "0 20px 12px" }}>
+                  <button aria-pressed={!ollamaCloud} className={`btn btn-sm ${!ollamaCloud ? "btn-accent" : "btn-secondary"}`} onClick={() => settings.updateSettings({ ollama_url: OLLAMA_LOCAL_URL, ollama_model: "" })}>Lokaal</button>
+                  <button aria-pressed={ollamaCloud} className={`btn btn-sm ${ollamaCloud ? "btn-accent" : "btn-secondary"}`} onClick={() => settings.updateSettings({ ollama_url: OLLAMA_CLOUD_URL, ollama_model: "" })}>Cloud</button>
                 </div>
                 <div style={{ padding: "0 20px 4px" }}>
                   <SettingsField label="Ollama URL">

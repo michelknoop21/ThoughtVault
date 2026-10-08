@@ -120,6 +120,13 @@ struct SettingsView: View {
         #endif
         .onAppear {
             loadApiKey()
+            #if os(macOS)
+            let ollamaEndpoint = URL(string: ollamaURL.trimmingCharacters(in: .whitespacesAndNewlines))
+            if activeLocalProvider == .ollama, ollamaEndpoint?.scheme?.lowercased() == "https", ollamaEndpoint?.host?.lowercased() == "ollama.com" {
+                UserDefaults.standard.set(ollamaModel, forKey: "ollamaCloudModel")
+                notulenProvider = NotulenProvider.ollamaCloud.rawValue
+            }
+            #endif
             obsidianApiKey = KeychainService.shared.load(for: ObsidianService.apiKeyKeychainKey) ?? ""
             Task {
                 await loadProfiles()

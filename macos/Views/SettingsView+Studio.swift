@@ -100,7 +100,7 @@ extension SettingsView {
                 ForEach(SettingsTab.allCases) { studioTabButton($0) }
             }
             .fixedSize(horizontal: true, vertical: false)
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 130), spacing: 2)], spacing: 2) {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 2)], spacing: 2) {
                 ForEach(SettingsTab.allCases) { studioTabButton($0).frame(maxWidth: .infinity) }
             }
         }

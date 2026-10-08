@@ -238,7 +238,7 @@
 .thoughtvault-record-tip { display: block; background: transparent; padding: 10px 0 0; margin-top: 12px; border: 0; border-top: 1px solid #30384c; border-radius: 0; }
 .thoughtvault-record-tip summary { color: #c7b0eb; font-size: 13px; cursor: pointer; }
 .thoughtvault-record-tip p { margin-top: 8px; font-size: 13px; }
-.thoughtvault-home-side { padding: 0; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; align-content: start; }
+.thoughtvault-home-side { grid-row: 5; padding: 0; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; align-content: start; }
 .thoughtvault-home-side section { padding: 16px; min-width: 0; }
 .thoughtvault-home-side h2 { font-size: 16px; margin-bottom: 10px; }
 .thoughtvault-agenda { min-height: 0; }
@@ -247,7 +247,7 @@
 .thoughtvault-brand-note { color: #b8bdd6; font-size: 13px; padding: 12px 0; border-top: 1px solid #24293d; grid-column: 1 / -1; }
 .thoughtvault-brand-note strong { font-size: 13px; }
 .thoughtvault-brand-note p { margin-top: 2px; }
-.thoughtvault-home-recent { padding-top: 0; }
+.thoughtvault-home-recent { grid-row: 4; padding-top: 0; }
 .thoughtvault-home-recent h2 { font-size: 18px; }
 .thoughtvault-recent-filters { margin: 10px 0; }
 .thoughtvault-note-row { min-height: 64px; }

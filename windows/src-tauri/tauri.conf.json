@@ -16,7 +16,7 @@
         "title": "ThoughtVault",
         "width": 1200,
         "height": 800,
-        "minWidth": 900,
+        "minWidth": 640,
         "minHeight": 600,
         "decorations": true,
         "theme": "Dark",

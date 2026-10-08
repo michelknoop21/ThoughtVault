@@ -25,10 +25,10 @@ measure = '''JSON.stringify((() => {
  return {viewport:[innerWidth,innerHeight,devicePixelRatio],overflow:0,clippedControls:0,navBottom:nav.bottom,homeHeight:home?.height,recordingControlsBottom:bar?.bottom};
 })())'''
 try:
-    for size in ['900x560','900x600','1200x800','1280x800','1440x900','1920x1080']:
+    for size in ['640x560','720x560','900x560','900x600','1200x800','1280x800','1440x900','1920x1080']:
         for route in ['/','/recording','/tasks','/transcripts','/profiles','/people','/settings']:
             output = call([['tab',str(tab)],['viewport',size],['goto',url+'?size='+size+'#'+route],['snapshot','-i'],['js',measure]])
             print(route,output.split('[js] ')[-1].strip())
-    print('PASS: 42 route/viewport combinations, including native-caption height allowance.')
+    print('PASS: 56 route/viewport combinations, including native-caption height allowance.')
 finally:
     call([['closetab',str(tab)]])

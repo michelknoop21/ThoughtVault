@@ -1,6 +1,8 @@
+import { transcriptText } from "../services/transcriptText";
 import { create } from "zustand";
 import { Store } from "@tauri-apps/plugin-store";
 import type { Transcript } from "../types";
+import { contentRevision } from "../services/documentStyle";
 
 const LOCAL_PREFIX = "local-";
 const LEGACY_KEY = "local-transcripts-store";
@@ -18,7 +20,7 @@ interface LocalTranscriptsState {
   items: Transcript[];
   hydrate: () => Promise<void>;
   add: (t: Transcript) => Promise<void>;
-  update: (id: string, patch: Partial<Transcript>) => Promise<void>;
+  update: (id: string, patch: Partial<Transcript>, revision?: string) => Promise<void>;
   remove: (id: string) => Promise<void>;
 }
 
@@ -45,7 +47,7 @@ export const useLocalTranscriptsStore = create<LocalTranscriptsState>()((set, ge
           localStorage.removeItem(LEGACY_KEY);
         }
         diskStore = store;
-        set({ items });
+        set({ items: items.map(item => ({ ...item, raw_transcription: item.raw_transcription ? transcriptText(item.raw_transcription) : item.raw_transcription })) });
       })().catch((error) => {
         loadPromise = null;
         throw error;
@@ -54,13 +56,13 @@ export const useLocalTranscriptsStore = create<LocalTranscriptsState>()((set, ge
     await loadPromise;
   }
 
-  function persist(change: (items: Transcript[]) => Transcript[]): Promise<void> {
+  function persist(change: (items: Transcript[]) => Transcript[] | Promise<Transcript[]>): Promise<void> {
     const operation = writeQueue.then(async () => {
       await hydrate();
-      const items = change(get().items);
+      const items = await change(get().items);
       await diskStore!.set("items", items);
       await diskStore!.save();
-      set({ items });
+      set({ items: items.map(item => ({ ...item, raw_transcription: item.raw_transcription ? transcriptText(item.raw_transcription) : item.raw_transcription })) });
     });
     writeQueue = operation.catch(() => {});
     return operation;
@@ -70,7 +72,12 @@ export const useLocalTranscriptsStore = create<LocalTranscriptsState>()((set, ge
     items: [],
     hydrate,
     add: (t) => persist((items) => [t, ...items.filter((item) => item.id !== t.id)]),
-    update: (id, patch) => persist((items) => items.map((item) => item.id === id ? { ...item, ...patch } : item)),
+    update: (id, patch, revision) => persist(async (items) => {
+      const item = items.find((item) => item.id === id);
+      if (!item) throw Error("Transcript niet gevonden.");
+      if (revision && await contentRevision(item) !== revision) throw Error("Transcript is gewijzigd. Lees het opnieuw voordat je opslaat.");
+      return items.map((item) => item.id === id ? { ...item, ...patch } : item);
+    }),
     remove: (id) => persist((items) => items.filter((item) => item.id !== id)),
   };
 });

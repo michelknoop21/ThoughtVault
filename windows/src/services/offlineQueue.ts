@@ -2,7 +2,6 @@ import { Store } from "@tauri-apps/plugin-store";
 import { exists } from "@tauri-apps/plugin-fs";
 import type { QueuedUpload } from "../types";
 import { api } from "./api";
-import { linkQuickNote } from "./quickNotes";
 import { useUploadQueueStore } from "../stores/uploadQueueStore";
 
 const QUEUE_STORE_KEY = "offline-upload-queue";
@@ -126,13 +125,12 @@ export async function processQueue(): Promise<void> {
     queueStore.startItem(item);
 
     try {
-      const { task_id } = await api.uploadRecordingWithProgress(
+      await api.uploadRecordingWithProgress(
         item.file_path,
         item.profile_id,
         item.mode,
         (fraction) => queueStore.updateProgress(fraction),
       );
-      linkQuickNote(task_id, item.file_path);
       queueStore.finishItem();
       await removeFromQueue(item.id);
     } catch (err) {

@@ -103,7 +103,7 @@ function ProcessingBarItem({ task }: { task: TranscriptTask }) {
             <button className="processing-bar-action" onClick={() => {
               if (task.local_audio_path) {
                 removeBackgroundTask(task.task_id);
-                void processLocally(task.local_audio_path, task.profile_id || "standaard", task.mode, [], task.duration_seconds ?? 0, task.task_id);
+                void processLocally(task.local_audio_path, task.profile_id || "standaard", task.mode, [], task.duration_seconds ?? 0, task.task_id, task.filename);
               } else {
                 navigate("/recording");
               }

@@ -80,7 +80,6 @@ function mapTranscript(raw: unknown): Transcript {
 
   return {
     id: safeString(r.id ?? r.task_id, ""),
-    task_id: safeOptionalString(r.task_id),
     title: safeString(r.title ?? r.extracted_title ?? r.filename, "Naamloze opname"),
     raw_transcription: rawTranscription,
     notule_html: notuleHtml,
@@ -132,41 +131,8 @@ class APIService {
     this.cache.set(key, { data, ts: Date.now() });
   }
 
-  private get baseUrl(): string {
-    const stored = localStorage.getItem("settings-store");
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        // Zustand persist wraps state under .state key
-        const url = parsed?.state?.server_url ?? parsed?.server_url;
-        if (url) return url;
-      } catch {
-        // fall through
-      }
-    }
-    return "https://n8n.prezent.nl/tstudio/api";
-  }
-
-  /**
-   * Validates the raw base URL and enforces https (mirrors macOS validatedBaseURL()).
-   * Trims whitespace, parses with WHATWG URL (which lowercases the scheme automatically),
-   * rejects anything that is not exactly https:, and returns the normalized href
-   * with exactly one trailing slash stripped so `${base}${path}` composes correctly.
-   */
   private validatedBaseUrl(): string {
-    const raw = this.baseUrl.trim();
-    let parsed: URL;
-    try {
-      parsed = new URL(raw);
-    } catch {
-      throw new Error("Ongeldige server-URL");
-    }
-    if (parsed.protocol !== "https:") {
-      throw new Error("Server-URL moet https gebruiken");
-    }
-    // Strip one trailing slash so callers can do `${base}${path}` without doubling slashes
-    const href = parsed.href;
-    return href.endsWith("/") ? href.slice(0, -1) : href;
+    throw new Error("Deze desktopapp werkt uitsluitend lokaal; serververzoeken zijn uitgeschakeld.");
   }
 
   private get token(): string | null {

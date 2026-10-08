@@ -1,3 +1,4 @@
+import { persist } from "zustand/middleware";
 import { create } from "zustand";
 import type { RecordingMode, TranscriptTask } from "../types";
 
@@ -22,13 +23,13 @@ type RecordingPhase =
 
 interface RecordingState {
   phase: RecordingPhase;
+  updateInstalling: boolean;
+  regenerationCount: number;
   mode: RecordingMode;
   currentTask: TranscriptTask | null;
   audioLevel: number; // 0-100
   elapsedSeconds: number;
   filePath: string | null;
-  quickNote: string;
-  setQuickNote: (note: string) => void;
   autoStart: boolean;
   minimizeOnAutoStart: boolean;
 
@@ -87,15 +88,15 @@ interface RecordingState {
   reset: () => void;
 }
 
-export const useRecordingStore = create<RecordingState>()((set) => ({
+export const useRecordingStore = create<RecordingState>()(persist((set) => ({
   phase: "idle",
+  updateInstalling: false,
+  regenerationCount: 0,
   mode: "combined",
   currentTask: null,
   audioLevel: 0,
   elapsedSeconds: 0,
   filePath: null,
-  quickNote: "",
-  setQuickNote: (quickNote) => set({ quickNote }),
   autoStart: false,
   minimizeOnAutoStart: false,
   recordingStartedAt: null,
@@ -130,7 +131,7 @@ export const useRecordingStore = create<RecordingState>()((set) => ({
         state.pausedDuration + (state.pausedAt ? Date.now() - state.pausedAt : 0),
     })),
   addBackgroundTask: (task) =>
-    set((state) => ({ backgroundTasks: [...state.backgroundTasks, task] })),
+    set((state) => ({ backgroundTasks: [...state.backgroundTasks.filter(t => t.task_id !== task.task_id), task] })),
   updateBackgroundTask: (taskId, update) =>
     set((state) => ({
       backgroundTasks: state.backgroundTasks.map((t) =>
@@ -168,7 +169,6 @@ export const useRecordingStore = create<RecordingState>()((set) => ({
       audioLevel: 0,
       elapsedSeconds: 0,
       filePath: null,
-      quickNote: "",
       autoStart: false,
       minimizeOnAutoStart: false,
       recordingStartedAt: null,
@@ -177,4 +177,8 @@ export const useRecordingStore = create<RecordingState>()((set) => ({
       pendingSeedAttendees: [],
       selectedParticipantIds: [],
     }),
+}), {
+  name: "processing-recovery",
+  partialize: (state) => ({ backgroundTasks: state.backgroundTasks.filter(task => task.status !== "completed").map(({ raw_transcription: _text, notule_html: _html, ...task }) => task) }),
+  merge: (saved, current) => ({ ...current, backgroundTasks: ((saved as { backgroundTasks?: TranscriptTask[] })?.backgroundTasks ?? []).map(task => task.status === "failed" ? task : { ...task, status: "failed" as const, error_message: "Verwerking is onderbroken door het sluiten van de app. Je opgeslagen transcriptie blijft bewaard; probeer opnieuw." }) }),
 }));

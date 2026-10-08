@@ -6,7 +6,6 @@ import {
   Stop24Regular,
   Pause24Regular,
   Play24Regular,
-  Edit24Regular,
   ArrowUpload24Regular,
   VideoChat24Regular,
   People24Regular,
@@ -16,12 +15,8 @@ import { useSettingsStore } from "../stores/settingsStore";
 import { useTranscriptsStore } from "../stores/transcriptsStore";
 import { useProfilesStore } from "../stores/profilesStore";
 import { useAudioLevelsRef, useAudioLevel } from "../hooks/useAudioLevel";
-import { openWidgetWindow, closeWidgetWindow } from "../hooks/useWidgetWindow";
+import { recordingAction } from "../services/recordingActions";
 import {
-  startRecording,
-  stopRecording,
-  pauseRecording,
-  resumeRecording,
   importAudio,
 } from "../services/tauriCommands";
 import { processLocally } from "../services/localPipeline";
@@ -33,10 +28,11 @@ import { SavedRecordings } from "../components/recording/SavedRecordings";
 import { SeedReviewSheet } from "./SeedReviewSheet";
 import { ParticipantPicker } from "./ParticipantPicker";
 import { usePeopleDirectoryStore } from "../stores/peopleDirectoryStore";
-import { saveQuickNote } from "../services/quickNotes";
 import { useCalendarStore } from "../stores/calendarStore";
 
-import { DocumentText24Regular } from "@fluentui/react-icons";
+import {
+  DocumentText24Regular,
+} from "@fluentui/react-icons";
 
 export function RecordingPage() {
   const navigate = useNavigate();
@@ -47,9 +43,6 @@ export function RecordingPage() {
   const setPhase = useRecordingStore((s) => s.setPhase);
   const setFilePath = useRecordingStore((s) => s.setFilePath);
   const setAutoStart = useRecordingStore((s) => s.setAutoStart);
-  const startTimer = useRecordingStore((s) => s.startTimer);
-  const pauseTimer = useRecordingStore((s) => s.pauseTimer);
-  const resumeTimer = useRecordingStore((s) => s.resumeTimer);
   const addBackgroundTask = useRecordingStore((s) => s.addBackgroundTask);
   const updateBackgroundTask = useRecordingStore((s) => s.updateBackgroundTask);
   const removeBackgroundTask = useRecordingStore((s) => s.removeBackgroundTask);
@@ -150,15 +143,9 @@ export function RecordingPage() {
           updateBackgroundTask(task.task_id, { status: "failed", error_message: "Verbinding verloren" });
         },
         async () => {
-          try {
-            const transcripts = await api.getTranscripts();
-            const result = transcripts.find(item => item.task_id === task.task_id || item.id === task.task_id);
-            if (!result) throw new Error("Het resultaat is nog niet beschikbaar. Vernieuw Opnames.");
-            addTranscript(result);
-            removeBackgroundTask(task.task_id);
-          } catch (err) {
-            updateBackgroundTask(task.task_id, { status: "failed", error_message: err instanceof Error ? err.message : String(err) });
-          }
+          const transcripts = await api.getTranscripts();
+          if (transcripts[0]) addTranscript(transcripts[0]);
+          removeBackgroundTask(task.task_id);
         }
       );
     } catch (err) {
@@ -169,20 +156,14 @@ export function RecordingPage() {
     }
   }
 
-  async function handleStartRecording(recordingMode = mode) {
-    setMode(recordingMode);
-    setPhase("preparing");
+  async function handleStartRecording() {
     setError(null);
 
     try {
-      const outputDir = await getRecordingsDir();
-      const filePath = await startRecording(null, recordingMode, outputDir);
+      const filePath = await recordingAction("start") as string;
       filePathRef.current = filePath;
       setFilePath(filePath);
-      setPhase("recording");
-      audioLevelsRef.current = [];
-      startTimer();
-      openWidgetWindow().catch((e) => console.error("[Recording] Widget open failed:", e));
+
       // Minimize main window if recording was auto-started from calendar alert
       if (useRecordingStore.getState().minimizeOnAutoStart) {
         useRecordingStore.getState().setMinimizeOnAutoStart(false);
@@ -192,7 +173,7 @@ export function RecordingPage() {
       }
     } catch (err) {
       console.error("[Recording] Start failed:", err);
-      setError(err instanceof Error ? err.message : String(err));
+      setError(err instanceof Error ? err.message : "Opname starten mislukt");
       setPhase("idle");
     }
   }
@@ -208,7 +189,7 @@ export function RecordingPage() {
       setIsImporting(true);
       const filePath = await importAudio(source);
       if (settings.processing_mode === "local") {
-        void processLocally(filePath, selectedProfileId || settings.default_profile_id, "microphone");
+        void processLocally(filePath, selectedProfileId || settings.default_profile_id, "microphone", [], 0, undefined, source.split(/[\\/]/).pop());
       } else {
         void uploadAndTrack(filePath, selectedProfileId || settings.default_profile_id, "microphone");
       }
@@ -220,17 +201,15 @@ export function RecordingPage() {
   }
 
   async function handleStopRecording() {
-    const pendingEmails = [...useRecordingStore.getState().pendingSeedAttendees];
-    setPhase("stopping");
-
     try {
-      const result = await stopRecording();
+      const result = await recordingAction("stop") as { file_path: string };
       const filePath = result.file_path || filePathRef.current;
       filePathRef.current = filePath;
-      closeWidgetWindow().catch((e) => console.error("[Recording] Widget close failed:", e));
 
-      // The global handler resolves participants before resetting the store.
-      // Use our snapshot for the directory prompt without clearing its inputs.
+      // Read and clear pendingSeedAttendees — show SeedReviewSheet if new people found (D-07)
+      const store = useRecordingStore.getState();
+      const pendingEmails = store.pendingSeedAttendees;
+      store.clearPendingSeedAttendees();
 
       if (pendingEmails.length > 0) {
         // Dedup: filter emails already in directory and the calendar account email (self, D-10)
@@ -245,39 +224,32 @@ export function RecordingPage() {
     } catch (err) {
       console.error("[Recording] Stop failed:", err);
       setError(err instanceof Error ? err.message : "Stoppen mislukt");
-      setPhase("idle");
     }
   }
 
   async function handlePause() {
     try {
-      await pauseRecording();
-      setPhase("paused");
-      pauseTimer();
+      await recordingAction("pause");
     } catch (error) {
-      setError(error instanceof Error ? error.message : "Pauzeren mislukt");
+      setError(String(error));
     }
   }
 
   async function handleResume() {
     try {
-      await resumeRecording();
-      setPhase("recording");
-      resumeTimer();
+      await recordingAction("resume");
     } catch (error) {
-      setError(error instanceof Error ? error.message : "Hervatten mislukt");
+      setError(String(error));
     }
   }
 
-  const quickNote = useRecordingStore(s => s.quickNote);
-  const setQuickNote = useRecordingStore(s => s.setQuickNote);
   const selectedParticipantIds = useRecordingStore(s => s.selectedParticipantIds);
   const recordingStartedAt = useRecordingStore(s => s.recordingStartedAt);
   const pausedAt = useRecordingStore(s => s.pausedAt);
   const pausedDuration = useRecordingStore(s => s.pausedDuration);
   const level = useAudioLevel();
   const [elapsed, setElapsed] = useState(0);
-  const [panel, setPanel] = useState<"note" | "saved" | "youtube" | "people" | null>(null);
+  const [panel, setPanel] = useState<"saved" | "youtube" | "people" | null>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     if (panel && panel !== "people") dialogRef.current?.showModal();
@@ -296,25 +268,7 @@ export function RecordingPage() {
   const duration = `${Math.floor(elapsed / 60).toString().padStart(2, "0")}:${(elapsed % 60).toString().padStart(2, "0")}`;
   const profileName = profiles.find(p => p.id === selectedProfileId)?.name ?? "Geen profiel";
   const status = phase === "recording" ? "OPNAME ACTIEF" : phase === "paused" ? "OPNAME GEPAUZEERD"
-    : phase === "preparing" ? "OPNAME STARTEN" : phase === "stopping" ? "OPNAME STOPPEN" : "KLAAR OM OP TE NEMEN";
-
-  async function handleKeepRecording() {
-    if (!window.confirm("Stoppen zonder te verwerken? De opname blijft beschikbaar bij Opgeslagen opnames.")) return;
-    // The global stopped handler deliberately ignores idle, keeping the WAV for
-    // manual processing later. It must not upload a recording the user cancelled.
-    setPhase("idle");
-    try {
-      await stopRecording();
-      saveQuickNote(filePathRef.current || useRecordingStore.getState().filePath || "", quickNote);
-      useRecordingStore.getState().reset();
-      await closeWidgetWindow();
-    } catch (err) {
-      // The phase is already idle: drop the session and widget so the UI matches.
-      useRecordingStore.getState().reset();
-      closeWidgetWindow().catch((e) => console.error("[Recording] Widget close failed:", e));
-      setError(err instanceof Error ? err.message : "Stoppen mislukt");
-    }
-  }
+    : phase === "uploading" ? "OPNAME VERWERKEN" : phase === "preparing" ? "OPNAME STARTEN" : phase === "stopping" ? "OPNAME STOPPEN" : "KLAAR OM OP TE NEMEN";
 
   return <div className="recording-studio">
     <section className="studio-workspace" aria-label="Opnamestudio">
@@ -324,7 +278,7 @@ export function RecordingPage() {
       </header>
       {error && <div className="error-banner" role="alert">{error}</div>}
       {!isLive && !isBusy && <MeetingDetectionBanner onRecord={() => {
-        setMode("combined"); void handleStartRecording("combined");
+        setMode("combined"); void handleStartRecording();
       }} />}
       <div className="studio-timer" aria-label={`Opnameduur ${duration}`}>{duration}</div>
       <div className="studio-listening"><span className="studio-mini-bars" aria-hidden="true">
@@ -337,7 +291,6 @@ export function RecordingPage() {
             aria-label={phase === "paused" ? "Hervat opname" : "Pauzeer opname"}>{phase === "paused" ? <Play24Regular /> : <Pause24Regular />}</button>
             <span>{phase === "paused" ? "Hervat" : "Pauzeer"}</span></div>
           <div><button className="studio-round studio-stop" onClick={handleStopRecording} aria-label="Stop en verwerk"><Stop24Regular /></button><span>Stop en verwerk</span></div>
-          <div><button className="studio-round" onClick={() => setPanel("note")} aria-label="Notitie maken"><Edit24Regular /></button><span>Notitie</span></div>
         </> : <div><button className="studio-round studio-record" onClick={() => void handleStartRecording()} disabled={isBusy} aria-label="Start opname"><MicRecord24Regular /></button>
           <span>{isBusy ? "Even geduld…" : "Start opname"}</span></div>}
       </div>
@@ -348,11 +301,12 @@ export function RecordingPage() {
         <label><DocumentText24Regular /><span><small>Opnameprofiel</small><select aria-label="Opnameprofiel" value={selectedProfileId} onChange={e => setSelectedProfileId(e.target.value)}>
           {profiles.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
         </select></span></label>
-        <div className="studio-transcription"><small>Transcriptie</small><span>{settings.processing_mode === "local" ? "Whisper op deze pc" : "ThoughtVault Cloud"}</span>
+        <div className="studio-transcription"><small>Transcriptie</small><span>{settings.processing_mode === "local" ? "Whisper op deze pc" : "Jouw cloudprovider"}</span>
           <button className="studio-link" disabled={isLive || isBusy} onClick={() => navigate("/settings")}>Instellen</button></div>
       </div>
     </section>
     <aside className="studio-inspector">
+      <section>
       <h2>Huidige opname</h2>
       <div className="studio-identity"><MicRecord24Regular /><div><strong>Nieuwe opname</strong><span>Titel na verwerking</span></div></div>
       <p className="studio-meta">Tags na verwerking</p>
@@ -362,25 +316,23 @@ export function RecordingPage() {
         <dl><div><dt>Duur</dt><dd>{duration}</dd></div><div><dt>Geluidsniveau</dt><dd><meter min={0} max={100} value={phase === "recording" ? level : 0} aria-label="Geluidsniveau" /></dd></div>
           <div><dt>Bron</dt><dd>{mode === "combined" ? "Gecombineerd" : "Microfoon"}</dd></div><div><dt>Profiel</dt><dd>{profileName}</dd></div></dl>
       </section>
+      </section>
+      <section>
       <h2>Snelle acties</h2>
       <div className="studio-actions">
-        {isLive ? <><button onClick={() => setPanel("note")}><Edit24Regular />Notitie maken{quickNote.trim() && <span>●</span>}</button>
-          <button onClick={() => setPanel("people")}><People24Regular />Deelnemers kiezen</button>
-          {phase === "paused" && <button onClick={handleKeepRecording}><DocumentText24Regular />Bewaar zonder verwerken</button>}</>
-          : <><button onClick={handleImportAudio} disabled={isImporting || isBusy}><ArrowUpload24Regular />{isImporting ? "Importeren…" : "Audiobestand importeren"}</button>
-            {isYouTubeEnabled && <button onClick={() => setPanel("youtube")} disabled={isBusy}><Play24Regular />YouTube-video</button>}
-            <button onClick={() => setPanel("saved")}><DocumentText24Regular />Opgeslagen opnames</button></>}
+        <button onClick={() => setPanel("people")}><People24Regular />Deelnemers kiezen</button>
+        <button onClick={handleImportAudio} disabled={isImporting || isBusy || isLive}><ArrowUpload24Regular />{isImporting ? "Importeren…" : "Audiobestand importeren"}</button>
+        {isYouTubeEnabled && <button onClick={() => setPanel("youtube")} disabled={isBusy || isLive}><Play24Regular />YouTube-video</button>}
+        <button onClick={() => setPanel("saved")}><DocumentText24Regular />Opgeslagen opnames</button>
       </div>
       {settings.processing_mode === "cloud" && <label className="studio-premium"><input type="checkbox" checked={usePremium} onChange={e => setUsePremium(e.target.checked)} />Premium model</label>}
       <p className="studio-hint">{mode === "combined" ? "Microfoon en systeemgeluid worden opgenomen." : "Alleen je microfoon wordt opgenomen."} Transcriptie gebeurt na afloop.</p>
+      </section>
     </aside>
     {panel === "people" && <ParticipantPicker onClose={() => setPanel(null)} />}
-    {panel && panel !== "people" && <dialog ref={dialogRef} className="studio-dialog" aria-label={panel === "note" ? "Snelle notitie" : panel === "saved" ? "Opgeslagen opnames" : "YouTube-video"} onCancel={() => setPanel(null)}>
-      <header><h2>{panel === "note" ? "Snelle notitie" : panel === "saved" ? "Opgeslagen opnames" : "YouTube-video"}</h2><button className="btn btn-secondary" onClick={() => setPanel(null)}>Sluiten</button></header>
-      {panel === "note" && <><p>Context voor je notulen; dit wordt apart van het gesproken transcript bewaard.</p>
-        <textarea autoFocus rows={7} className="input" aria-label="Snelle notitie" value={quickNote} onChange={e => setQuickNote(e.target.value)} />
-        <p className="text-caption">Wordt bij het stoppen met deze opname opgeslagen.</p></>}
-      {panel === "saved" && <SavedRecordings initiallyExpanded />}
+    {panel && panel !== "people" && <dialog ref={dialogRef} className="studio-dialog" aria-label={panel === "saved" ? "Opgeslagen opnames" : "YouTube-video"} onCancel={() => setPanel(null)}>
+      <header><h2>{panel === "saved" ? "Opgeslagen opnames" : "YouTube-video"}</h2><button className="btn btn-secondary" onClick={() => setPanel(null)}>Sluiten</button></header>
+      {panel === "saved" && <SavedRecordings />}
       {panel === "youtube" && <form onSubmit={e => { e.preventDefault(); void handleSubmitYouTube(); }}>
         <label>Video-URL<input className="input" type="url" value={youtubeURL} onChange={e => setYouTubeURL(e.target.value)} required placeholder="https://www.youtube.com/watch?v=…" /></label>
         <label>Template<select className="select" value={youtubeProfileId} onChange={e => setYouTubeProfileId(e.target.value)}>{profiles.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
@@ -445,10 +397,4 @@ function MeetingDetectionBanner({ onRecord }: { onRecord: () => void }) {
       </button>
     </div>
   );
-}
-
-
-async function getRecordingsDir(): Promise<string> {
-  const { invoke } = await import("@tauri-apps/api/core");
-  return invoke<string>("get_recordings_dir");
 }

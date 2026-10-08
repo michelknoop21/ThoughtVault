@@ -1,0 +1,383 @@
+[
+  {
+    "name": "list_devices",
+    "description": "Read the availability of this local app.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "scope": "read"
+  },
+  {
+    "name": "get_app_state",
+    "description": "Read recording phase and background processing tasks.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "scope": "read"
+  },
+  {
+    "name": "list_transcripts",
+    "description": "Search local transcripts. Returns metadata, no transcript text.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string"
+        },
+        "offset": {
+          "type": "integer"
+        },
+        "limit": {
+          "type": "integer"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "scope": "read"
+  },
+  {
+    "name": "get_transcript",
+    "description": "Read a text chunk plus a content revision for subsequent writes.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "transcript_id": {
+          "type": "string"
+        },
+        "offset": {
+          "type": "integer"
+        },
+        "limit": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "transcript_id"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "scope": "read"
+  },
+  {
+    "name": "save_minutes",
+    "description": "Attach generated minutes to the original transcript; reject stale revisions.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "transcript_id": {
+          "type": "string"
+        },
+        "revision": {
+          "type": "string"
+        },
+        "html": {
+          "type": "string"
+        },
+        "style": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "transcript_id",
+        "revision",
+        "html"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "scope": "write"
+  },
+  {
+    "name": "update_transcript",
+    "description": "Update title and tags only if the read revision is still current.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "transcript_id": {
+          "type": "string"
+        },
+        "revision": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "transcript_id",
+        "revision",
+        "title",
+        "tags"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "scope": "write"
+  },
+  {
+    "name": "list_profiles",
+    "description": "List the device's current recording profiles.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "scope": "read"
+  },
+  {
+    "name": "get_profile",
+    "description": "Read profile prompts, output template and revision.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "profile_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "profile_id"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "scope": "read"
+  },
+  {
+    "name": "save_profile",
+    "description": "Save a profile; built-in profiles are copied to a custom profile.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "profile_id": {
+          "type": "string"
+        },
+        "revision": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "system_prompt": {
+          "type": "string"
+        },
+        "notule_prompt": {
+          "type": "string"
+        },
+        "output_template": {
+          "type": "string"
+        },
+        "style": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "profile_id",
+        "revision",
+        "name",
+        "system_prompt",
+        "notule_prompt",
+        "output_template"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "scope": "write"
+  },
+  {
+    "name": "open_view",
+    "description": "Open a screen in this local app.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "view": {
+          "type": "string",
+          "enum": [
+            "recording",
+            "transcripts",
+            "transcript",
+            "profiles",
+            "settings"
+          ]
+        },
+        "transcript_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "view"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "scope": "write"
+  },
+  {
+    "name": "start_recording",
+    "description": "Start recording using the selected profile/audio mode and visible indicator.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "profile_id": {
+          "type": "string"
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "microphone",
+            "combined"
+          ]
+        }
+      },
+      "required": [
+        "profile_id",
+        "mode"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "scope": "record"
+  },
+  {
+    "name": "pause_recording",
+    "description": "Pause an active recording.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "scope": "record"
+  },
+  {
+    "name": "resume_recording",
+    "description": "Resume a paused recording.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "scope": "record"
+  },
+  {
+    "name": "stop_recording",
+    "description": "Stop once and start the app's existing processing flow.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "scope": "record"
+  },
+  {
+    "name": "export_minutes",
+    "description": "Export HTML, Markdown or text. PDF returns print-ready HTML and document styling for the client to render.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "transcript_id": {
+          "type": "string"
+        },
+        "format": {
+          "type": "string",
+          "enum": [
+            "html",
+            "markdown",
+            "txt",
+            "pdf"
+          ]
+        }
+      },
+      "required": [
+        "transcript_id",
+        "format"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "scope": "read"
+  }
+]

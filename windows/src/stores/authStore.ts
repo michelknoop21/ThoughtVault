@@ -53,7 +53,7 @@ export const useAuthStore = create<AuthState>()(
       token: null,
       user: null,
       isAuthenticated: false,
-      isInitializing: true,
+      isInitializing: false,
       rememberMe: false,
       savedEmail: "",
       pendingTwoFactor: null,
@@ -240,12 +240,8 @@ export const useAuthStore = create<AuthState>()(
       // Persist user info, auth flag + rememberMe to localStorage — token goes to keyring.
       // isAuthenticated is persisted so the UI doesn't flash to login during keyring load.
       partialize: (state) => ({ user: state.user, rememberMe: state.rememberMe, savedEmail: state.savedEmail, isAuthenticated: state.isAuthenticated }),
-      onRehydrateStorage: () => (state) => {
-        // After rehydration, load token from keyring (+ auto-login if remember me)
-        if (state) {
-          state.loadTokenFromKeyring();
-        }
-      },
+      // This desktop app has no account. Never restore or validate old credentials.
+      merge: (_saved, current) => current,
     }
   )
 );

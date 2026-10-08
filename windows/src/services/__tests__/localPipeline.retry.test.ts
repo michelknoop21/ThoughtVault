@@ -36,3 +36,13 @@ it("finishes the existing partial document on retry without retranscribing", asy
   expect(useRecordingStore.getState().backgroundTasks).toHaveLength(1);
   expect(useRecordingStore.getState().backgroundTasks[0].task_id).toBe(partial.id);
 });
+
+it("preserves the saved transcription when the cloud key is rejected", async () => {
+  const update = vi.fn().mockResolvedValue(undefined);
+  useLocalTranscriptsStore.setState({ items: [partial], update });
+  vi.spyOn(LLMService, "generateNotulen").mockRejectedValue(new Error("API-sleutel ongeldig (401)"));
+  await processLocally("C:\\recording.wav", "standaard", "microphone", [], 12, partial.id);
+  expect(useLocalTranscriptsStore.getState().items[0].raw_transcription).toBe(partial.raw_transcription);
+  expect(update).not.toHaveBeenCalled();
+  expect(useRecordingStore.getState().backgroundTasks[0]).toMatchObject({ status: "failed", error_message: expect.stringContaining("De AI-sleutel is ongeldig") });
+});

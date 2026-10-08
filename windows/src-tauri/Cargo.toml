@@ -1,17 +1,17 @@
 [package]
-name = "transcript-studio"
-version = "1.0.260"
+name = "thoughtvault"
+version = "1.0.262"
 description = "ThoughtVault - Meeting recorder and transcription app"
-authors = ["Prezent Internet B.V."]
+authors = ["Yinga"]
 edition = "2021"
-default-run = "transcript-studio"
+default-run = "thoughtvault"
 
 [lib]
-name = "transcript_studio_lib"
+name = "thoughtvault_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [[bin]]
-name = "transcript-studio"
+name = "thoughtvault"
 path = "src/main.rs"
 
 [build-dependencies]
@@ -26,6 +26,7 @@ tauri-plugin-store          = "2"
 tauri-plugin-single-instance = { version = "2", features = ["deep-link"] }
 tauri-plugin-fs            = "2"
 tauri-plugin-dialog        = "2"
+tauri-plugin-updater       = "~2.10.0"
 
 serde       = { version = "1", features = ["derive"] }
 serde_json  = "1"
@@ -41,11 +42,10 @@ symphonia = { version = "0.5", features = ["all"] }
 
 # Local transcription (whisper.cpp bindings). Builds whisper.cpp from source —
 # requires CMake + a C/C++ toolchain on the build machine. CPU inference by default.
-# 0.16 uses bindgen 0.72, which supports LLVM 22 on current Windows build hosts.
-whisper-rs = "0.16"
+whisper-rs = "0.14"
 
 # Credentials
-keyring = { version = "3", features = ["windows-native", "apple-native"] }
+keyring = "3"
 
 # Utilities
 chrono   = { version = "0.4", features = ["serde"] }
@@ -64,4 +64,5 @@ custom-protocol = ["tauri/custom-protocol"]
 [dev-dependencies]
 
 [target.'cfg(windows)'.dependencies]
+keyring = { version = "3", features = ["windows-native"] }
 # Windows-specific: nothing extra needed — cpal uses WASAPI by default on Windows

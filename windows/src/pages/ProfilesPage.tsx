@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import {
-  Add24Regular,
+  DocumentText24Regular,
   Edit24Regular,
   Delete24Regular,
   Copy24Regular,
@@ -124,6 +124,7 @@ export function ProfilesPage() {
         ? `<h1>[Titel]</h1>\n${sectionList.map((name) => `<section><h2>${escapeHtml(name)}</h2><p>[Brongebonden inhoud]</p></section>`).join("\n")}`
         : undefined;
       const profile: Profile = {
+        document_style: editingProfile?.document_style,
         id: editingProfile?.id ?? crypto.randomUUID(),
         name: form.name.trim(),
         description: form.description || undefined,
@@ -194,9 +195,10 @@ export function ProfilesPage() {
   }
 
   return (
-    <div className="page-scroll">
+    <div className="page-scroll desktop-page desktop-profiles">
       <div className="page-header">
         <h1 className="page-title-sm">Profielen</h1>
+        <button onClick={openCreate} className="btn btn-accent btn-sm">Nieuw profiel</button>
       </div>
 
       <div className="page-content">
@@ -222,10 +224,6 @@ export function ProfilesPage() {
           <div className="settings-group">
             <div className="profile-section-header">
               <p className="settings-group-label" style={{ margin: 0 }}>Mijn profielen</p>
-              <button onClick={openCreate} className="btn btn-accent btn-sm">
-                <Add24Regular style={{ fontSize: 14 }} />
-                Nieuw profiel
-              </button>
             </div>
             <div className="profile-list">
               {myProfiles.length === 0 ? (
@@ -472,7 +470,7 @@ function ProfileCard({
   return (
     <div className="card-static profile-card">
       {/* Icon */}
-      <span className="profile-card-icon">{profile.icon || "📄"}</span>
+      <span className="profile-card-icon"><DocumentText24Regular aria-hidden="true" /></span>
 
       {/* Name + description */}
       <div className="profile-card-info">

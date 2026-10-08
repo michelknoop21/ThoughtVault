@@ -35,7 +35,10 @@ export const useProfilesStore = create<ProfilesState>()(
       showLocalProfiles: () => set((state) => ({ profiles: currentProfileChoices(state.localProfiles) })),
       saveLocalProfile: (profile) => set((state) => {
         const localProfiles = [...state.localProfiles.filter((p) => p.id !== profile.id), profile];
-        return { localProfiles, profiles: currentProfileChoices(localProfiles) };
+        const profiles = currentProfileChoices(localProfiles);
+        // Fail before publishing state when browser storage is unavailable/full.
+        localStorage.setItem("profiles-store", JSON.stringify({ state: { ...state, localProfiles, profiles }, version: 0 }));
+        return { localProfiles, profiles };
       }),
       deleteLocalProfile: (id) => set((state) => {
         const localProfiles = state.localProfiles.filter((p) => p.id !== id);

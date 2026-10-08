@@ -1,3 +1,4 @@
+import { formatDuration, transcriptText } from "../../services/transcriptText";
 import { useState, useRef, useEffect } from "react";
 import {
   ArrowLeft24Regular,
@@ -20,9 +21,9 @@ import {
 } from "@fluentui/react-icons";
 import DOMPurify from "dompurify";
 import { prepareNotuleHtml } from "../../services/notulePresentation";
+import { documentCSS } from "../../services/documentStyle";
 import { marked } from "marked";
 import type { Transcript } from "../../types";
-import { getTranscriptQuickNote } from "../../services/quickNotes";
 
 type DetailTab = "notule" | "transcriptie";
 
@@ -40,7 +41,6 @@ interface TranscriptDetailProps {
   onExportMarkdown: (transcript: Transcript) => void;
   onExportHTML: (transcript: Transcript) => void;
   onExportObsidian: (transcript: Transcript) => void;
-  onImportObsidian: (transcript: Transcript) => void;
   onOpenTags: (id: string) => void;
   onGenerateTitle: (transcript: Transcript) => void;
 }
@@ -59,7 +59,6 @@ export function TranscriptDetail({
   onExportMarkdown,
   onExportHTML,
   onExportObsidian,
-  onImportObsidian,
   onOpenTags,
   onGenerateTitle,
 }: TranscriptDetailProps) {
@@ -79,7 +78,6 @@ export function TranscriptDetail({
   const hasTranscription = !!(transcript.raw_transcription || transcript.has_transcription);
   const hasBothTabs = hasNotule && hasTranscription;
   const isRegenerating = regeneratingId === transcript.id;
-  const quickNote = transcript.quick_note || getTranscriptQuickNote(transcript.task_id ?? transcript.id);
 
   // Auto-select tab based on available content
   useEffect(() => {
@@ -209,22 +207,21 @@ export function TranscriptDetail({
           </>
         )}
 
-        {detailTab === "transcriptie" && (
-          <>
-          <button className="td-toolbar-btn td-toolbar-btn-labeled" onClick={() => onRegenerate(transcript)} disabled={isRegenerating || !hasTranscription} title="Notulen opnieuw genereren met AI">
-            <ArrowSync24Regular style={{ fontSize: 15, animation: isRegenerating ? "spin 1s linear infinite" : undefined }} />
-            <span>Regenereer</span>
+        {detailTab === "transcriptie" && !hasNotule && (
+          <button className="td-toolbar-btn td-toolbar-btn-labeled" onClick={() => onRegenerate(transcript)} disabled={isRegenerating}>
+            <ArrowSync24Regular /> Maak notule
           </button>
+        )}
+        {detailTab === "transcriptie" && (
           <button
             className="td-toolbar-btn td-toolbar-btn-labeled"
-            onClick={() => transcript.raw_transcription && onCopy(transcript.raw_transcription)}
+            onClick={() => transcript.raw_transcription && onCopy(transcriptText(transcript.raw_transcription))}
             disabled={!transcript.raw_transcription}
             title="Kopieer transcriptie"
           >
             <Copy24Regular style={{ fontSize: 15 }} />
             <span>Kopieer</span>
           </button>
-          </>
         )}
 
         <div className="td-toolbar-separator" />
@@ -249,10 +246,7 @@ export function TranscriptDetail({
                     <ArrowDownload24Regular style={{ fontSize: 15 }} /> HTML
                   </button>
                   <button className="td-export-item" onClick={() => { onExportObsidian(transcript); setExportOpen(false); }}>
-                    <Notebook24Regular style={{ fontSize: 15 }} /> Naar Obsidian
-                  </button>
-                  <button className="td-export-item" onClick={() => { onImportObsidian(transcript); setExportOpen(false); }}>
-                    <Notebook24Regular style={{ fontSize: 15 }} /> Uit Obsidian
+                    <Notebook24Regular style={{ fontSize: 15 }} /> Obsidian
                   </button>
                 </>
               )}
@@ -331,7 +325,6 @@ export function TranscriptDetail({
           </div>
 
           <div className="td-doc-divider" />
-          {quickNote && <details className="td-quick-note"><summary>Snelle notitie bij deze opname</summary><p style={{ whiteSpace: "pre-wrap" }}>{quickNote}</p></details>}
 
           {/* Content */}
           {detailTab === "notule" ? (
@@ -349,10 +342,10 @@ export function TranscriptDetail({
                   onInput={(e) => setEditedHTML((e.target as HTMLDivElement).innerHTML)}
                 />
               ) : (
-                <div
-                  className="prose td-doc-body"
-                  dangerouslySetInnerHTML={{ __html: sanitizedNotule }}
-                />
+                <>
+                  {transcript.document_style && <style>{documentCSS(transcript.document_style, ".td-doc-body")}</style>}
+                  <div className="prose td-doc-body" dangerouslySetInnerHTML={{ __html: sanitizedNotule }} />
+                </>
               )
             ) : (
               <div className="td-empty-content">
@@ -366,7 +359,7 @@ export function TranscriptDetail({
           ) : (
             transcript.raw_transcription ? (
               <div className="td-doc-body td-transcription">
-                {transcript.raw_transcription}
+                {transcriptText(transcript.raw_transcription)}
               </div>
             ) : (
               <div className="td-empty-content">
@@ -411,11 +404,7 @@ function formatDate(dateStr: string): string {
     + " om " + d.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" });
 }
 
-function formatDuration(seconds: number): string {
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return m > 0 ? `${m}m ${s}s` : `${s}s`;
-}
+
 
 function stripHtml(html: string): string {
   const tmp = document.createElement("div");

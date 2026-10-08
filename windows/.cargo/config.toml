@@ -1,0 +1,7 @@
+# Ship the runtime inside the binary: a clean PC must not require MSVCP140.dll.
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+crt-static"]
+[target.aarch64-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+crt-static"]
+[env]
+CMAKE_MSVC_RUNTIME_LIBRARY = "MultiThreaded"

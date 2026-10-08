@@ -1,3 +1,4 @@
+mod local_mcp;
 mod audio;
 mod commands;
 mod transcribe;
@@ -12,7 +13,7 @@ pub fn run() {
 
     tauri::Builder::default()
         .manage(recording_state)
-        .manage(transcribe::ModelDownloadControl::default())
+        .manage(local_mcp::LocalMcp::default())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_store::Builder::default().build())
@@ -20,27 +21,19 @@ pub fn run() {
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
+            #[cfg(debug_assertions)]
             let main_window = app.get_webview_window("main").unwrap();
 
-            // Apply Windows 11 Mica effect to main window
-            #[cfg(target_os = "windows")]
-            {
-                use window_vibrancy::apply_mica;
-                if let Err(e) = apply_mica(&main_window, Some(true)) {
-                    eprintln!("[Window] Mica effect niet beschikbaar: {}", e);
-                }
-            }
-
-            // No vibrancy effect on the recording-widget — it uses CSS background
-            // with transparent: true on the window, so acrylic would fill the
-            // entire rectangular window behind the pill shape.
+            // Keep the main WebView opaque for crisp text on Windows.
+            // The separate recording widget retains its transparent window.
 
             // Handle deep-link OAuth callbacks (Microsoft 365)
             let app_handle2 = app.handle().clone();
             app.listen("deep-link://new-url", move |event| {
                 let payload = event.payload().to_string();
-                eprintln!("[DeepLink] OAuth callback ontvangen");
+                eprintln!("[DeepLink] OAuth callback: {}", payload);
 
                 if let Some(window) = app_handle2.get_webview_window("main") {
                     let _ = window.emit("oauth-callback", payload);
@@ -56,6 +49,10 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            local_mcp::local_mcp_start,
+            local_mcp::local_mcp_stop,
+            local_mcp::local_mcp_reply,
+            local_mcp::local_mcp_allowed,
             // Audio
             commands::audio::get_audio_devices,
             commands::audio::start_recording,
@@ -79,7 +76,6 @@ pub fn run() {
             commands::http::proxy_upload,
             commands::http::http_sse_stream,
             commands::http::obsidian_put,
-            commands::http::obsidian_get,
             commands::http::obsidian_test,
             commands::http::ollama_test,
             // System
@@ -87,15 +83,9 @@ pub fn run() {
             commands::system::detect_meeting_apps,
             commands::system::get_app_version,
             commands::system::get_system_specs,
-            commands::system::open_microphone_settings,
-            commands::system::download_and_run_installer,
             // Local transcription (whisper.cpp)
             transcribe::whisper_model_status,
             transcribe::download_whisper_model,
-            transcribe::cancel_whisper_download,
-            transcribe::whisper_download_status,
-            transcribe::remove_whisper_model,
-            transcribe::show_whisper_model,
             transcribe::transcribe_local,
         ])
         .run(tauri::generate_context!())

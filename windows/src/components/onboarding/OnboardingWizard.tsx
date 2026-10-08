@@ -2,8 +2,6 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   MicRecord24Regular,
-  Server24Regular,
-  Calendar24Regular,
   Checkmark24Regular,
   Person24Regular,
   ArrowRight24Regular,
@@ -11,18 +9,17 @@ import {
 } from "@fluentui/react-icons";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { usePersonProfileStore } from "../../stores/personProfileStore";
-import { MicrosoftGraphService } from "../../services/microsoftGraph";
+import { LocalModelSetup } from "../settings/LocalModelSetup";
 import { BrandBar } from "../brand/BrandBar";
 import { BrandFooter } from "../brand/BrandFooter";
 import appLogo from "../../assets/app-logo.png";
 
-type Step = 0 | 1 | 2 | 3 | 4 | 5;
+type Step = 0 | 1 | 2 | 3 | 4;
 
-const STEPS = ["Welkom", "Server", "Microfoon", "Agenda", "Profiel", "Klaar"];
+const STEPS = ["Welkom", "Lokale modellen", "Microfoon", "Profiel", "Klaar"];
 
 export function OnboardingWizard() {
   const [step, setStep] = useState<Step>(0);
-  const [serverUrl, setServerUrl] = useState("https://n8n.prezent.nl/tstudio/api");
   const settings = useSettingsStore();
   const navigate = useNavigate();
 
@@ -35,7 +32,7 @@ export function OnboardingWizard() {
   const [profileExpertiseTags, setProfileExpertiseTags] = useState("");
 
   function handleNext() {
-    if (step < 5) setStep((s) => (s + 1) as Step);
+    if (step < 4) setStep((s) => (s + 1) as Step);
   }
 
   function handleBack() {
@@ -43,7 +40,6 @@ export function OnboardingWizard() {
   }
 
   function handleComplete() {
-    settings.updateSettings({ server_url: serverUrl });
     // Write profile only if at least one field is non-empty (D-07: skip writes nothing)
     const hasAnyField =
       profileName.trim() ||
@@ -73,15 +69,6 @@ export function OnboardingWizard() {
     navigate("/recording");
   }
 
-  async function handleConnectCalendar() {
-    try {
-      await MicrosoftGraphService.initiateAuth();
-      handleNext();
-    } catch {
-      handleNext(); // Skip on error
-    }
-  }
-
   return (
     <div
       style={{
@@ -93,8 +80,8 @@ export function OnboardingWizard() {
       }}
     >
       <BrandBar />
-      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", minHeight: 0, overflowY: "auto" }}>
-      <div style={{ width: "100%", maxWidth: 440, padding: 32 }}>
+      <div style={{ flex: 1, display: "flex", alignItems: "flex-start", justifyContent: "center", minHeight: 0, overflowY: "auto" }}>
+      <div style={{ width: "100%", maxWidth: 760, padding: "32px 32px 64px", margin: "auto 0" }}>
         {/* Progress dots */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginBottom: 32 }}>
           {STEPS.map((_, i) => (
@@ -105,7 +92,7 @@ export function OnboardingWizard() {
                 borderRadius: 3,
                 background: i <= step ? "var(--fill-accent-default)" : "var(--stroke-divider)",
                 width: i === step ? 24 : 6,
-                transition: "width 200ms ease, background 200ms ease",
+                transition: "background 200ms ease",
               }}
             />
           ))}
@@ -135,35 +122,8 @@ export function OnboardingWizard() {
           )}
 
           {step === 1 && (
-            <StepContent
-              icon={<StepIcon icon={<Server24Regular style={{ fontSize: 28 }} />} />}
-              title="Server configuratie"
-              description="Voer het adres in van je ThoughtVault server."
-            >
-              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                <label style={{ fontSize: 13, fontWeight: 500, color: "var(--text-secondary)" }}>
-                  Server URL
-                </label>
-                <input
-                  type="url"
-                  value={serverUrl}
-                  onChange={(e) => setServerUrl(e.target.value)}
-                  placeholder="https://n8n.prezent.nl/tstudio/api"
-                  style={{
-                    width: "100%",
-                    padding: "7px 10px",
-                    background: "var(--fill-control-default)",
-                    border: "1px solid var(--stroke-control-secondary)",
-                    borderBottom: "1px solid var(--stroke-control-default)",
-                    borderRadius: "var(--radius-sm)",
-                    color: "var(--text-primary)",
-                    fontSize: 13,
-                    outline: "none",
-                    fontFamily: "inherit",
-                    boxSizing: "border-box",
-                  }}
-                />
-              </div>
+            <StepContent title="Lokale modellen" description="Richt transcriptie en notulen in op je eigen pc.">
+              <LocalModelSetup />
             </StepContent>
           )}
 
@@ -190,37 +150,6 @@ export function OnboardingWizard() {
           )}
 
           {step === 3 && (
-            <StepContent
-              icon={<StepIcon icon={<Calendar24Regular style={{ fontSize: 28 }} />} />}
-              title="Agenda integratie"
-              description={
-                settings.ms365_client_id
-                  ? "Verbind je Microsoft 365 agenda om aankomende vergaderingen te zien. Dit is optioneel."
-                  : "Agenda-koppeling is nog niet geconfigureerd door de beheerder. Je kunt dit later instellen via Instellingen."
-              }
-            >
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {settings.ms365_client_id ? (
-                  <button
-                    onClick={handleConnectCalendar}
-                    className="btn btn-accent"
-                    style={{ width: "100%", padding: "9px 16px", fontSize: 14 }}
-                  >
-                    Verbinden met Microsoft 365
-                  </button>
-                ) : null}
-                <button
-                  onClick={handleNext}
-                  className="btn btn-ghost"
-                  style={{ width: "100%", fontSize: 13 }}
-                >
-                  {settings.ms365_client_id ? "Overslaan" : "Volgende"}
-                </button>
-              </div>
-            </StepContent>
-          )}
-
-          {step === 4 && (
             <StepContent
               icon={<StepIcon icon={<Person24Regular style={{ fontSize: 28 }} />} />}
               title="Vertel iets over jezelf"
@@ -267,7 +196,7 @@ export function OnboardingWizard() {
             </StepContent>
           )}
 
-          {step === 5 && (
+          {step === 4 && (
             <StepContent
               icon={
                 <div
@@ -286,7 +215,7 @@ export function OnboardingWizard() {
                 </div>
               }
               title="Je bent klaar!"
-              description="Je bent klaar om je eerste gesprek vast te leggen. Start een korte testopname of neem direct je volgende meeting op."
+              description="Start een korte testopname. Als je modellen nog ontbreken, kun je die later via Instellingen installeren."
             />
           )}
         </div>
@@ -306,13 +235,13 @@ export function OnboardingWizard() {
             <div />
           )}
 
-          {step < 5 ? (
+          {step < 4 ? (
             <button
               onClick={handleNext}
               className="btn btn-accent"
               style={{ padding: "8px 20px", gap: 6 }}
             >
-              {step === 3 || step === 4 ? "Overslaan" : "Volgende"}
+              {step === 1 || step === 3 ? "Overslaan" : "Volgende"}
               <ArrowRight24Regular style={{ fontSize: 16 }} />
             </button>
           ) : (
@@ -401,7 +330,7 @@ function StepContent({
   description,
   children,
 }: {
-  icon: React.ReactNode;
+  icon?: React.ReactNode;
   title: string;
   description: string;
   children?: React.ReactNode;

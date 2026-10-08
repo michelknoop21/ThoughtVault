@@ -270,9 +270,7 @@ export function TasksPage() {
   const isLocal = useSettingsStore((s) => s.processing_mode === "local");
   const localTasks = useRecordingStore((s) => s.backgroundTasks);
   const removeLocalTask = useRecordingStore((s) => s.removeBackgroundTask);
-  const visibleTasks = [...localTasks, ...(isLocal ? [] : activeTasks.filter(
-    (task) => !localTasks.some((local) => local.task_id === task.task_id),
-  ))];
+  const visibleTasks = isLocal ? localTasks : activeTasks;
 
   const [confirmAction, setConfirmAction] = useState<{
     type: "cancel" | "delete";
@@ -295,7 +293,7 @@ export function TasksPage() {
   }
 
   function handleDelete(taskId: string) {
-    if (localTasks.some((task) => task.task_id === taskId)) {
+    if (isLocal) {
       removeLocalTask(taskId);
       return;
     }
@@ -310,7 +308,7 @@ export function TasksPage() {
   function handleRetry(task: TranscriptTask) {
     if (!task.local_audio_path) return;
     removeLocalTask(task.task_id);
-    void processLocally(task.local_audio_path, task.profile_id || "standaard", task.mode, [], task.duration_seconds ?? 0, task.task_id);
+    void processLocally(task.local_audio_path, task.profile_id || "standaard", task.mode, [], task.duration_seconds ?? 0, task.task_id, task.filename);
   }
 
   async function executeConfirmAction() {
@@ -324,7 +322,7 @@ export function TasksPage() {
   }
 
   return (
-    <div className="page-scroll">
+    <div className="page-scroll desktop-page desktop-tasks">
       <div className="page-content">
         {/* Header */}
         <section>
@@ -396,7 +394,7 @@ export function TasksPage() {
                   onCancel={handleCancel}
                   onDelete={handleDelete}
                   onRetry={handleRetry}
-                  isLocal={localTasks.some((local) => local.task_id === task.task_id)}
+                  isLocal={isLocal}
                 />
               ))}
             </div>

@@ -32,7 +32,7 @@ export const TaskStatusLabels: Record<TaskStatus, string> = {
 export type RecordingMode = "microphone" | "combined";
 
 // Notulen providers
-export type NotulenProvider = "cloud" | "ollama" | "lm-studio" | "openai" | "anthropic";
+export type NotulenProvider = "cloud" | "ollama" | "lm-studio" | "ollama-cloud" | "openai-compatible";
 
 // Processing mode: "cloud" = upload to backend, "local" = transcribe + generate
 // fully on-device (Whisper + Ollama/LM Studio). Mirrors the macOS processingMode.
@@ -70,13 +70,12 @@ export interface TranscriptTask {
 
 // Completed saved transcript
 export interface Transcript {
+  document_style?: import("./services/documentStyle").DocumentStyle;
   id: string;
-  task_id?: string;
   title: string;
   raw_transcription?: string;
   notule_html?: string;
   preview?: string;
-  quick_note?: string;
   has_notes?: boolean;
   has_transcription?: boolean;
   duration_seconds: number;
@@ -106,6 +105,7 @@ export interface PersonProfile {
 
 // Profile for meeting notes generation
 export interface Profile {
+  document_style?: import("./services/documentStyle").DocumentStyle;
   id: string;
   name: string;
   description?: string;
@@ -345,17 +345,20 @@ export interface ProfilesResponse {
 }
 
 // Settings
+export interface CloudAIConfiguration { id: string; name: string; base_url: string; model: string; }
 export interface AppSettings {
+  cloud_providers: CloudAIConfiguration[];
+  selected_cloud_provider: string;
+  ollama_cloud_model: string;
   server_url: string;
   processing_mode: ProcessingMode;
   whisper_model: string;
   notulen_provider: NotulenProvider;
   ollama_url: string;
   ollama_model: string;
+  ollama_api_key: string;  // For Ollama Cloud (https://ollama.com); empty = local
   lm_studio_url: string;
   lm_studio_model: string;
-  openai_model: string;
-  anthropic_model: string;
   default_profile_id: string;
   default_recording_mode: RecordingMode;
   has_completed_onboarding: boolean;
@@ -366,25 +369,29 @@ export interface AppSettings {
   obsidian_enabled: boolean;
   obsidian_base_url: string;
   obsidian_vault_path: string;
+  obsidian_api_key: string;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
+  cloud_providers: [],
+  selected_cloud_provider: "",
+  ollama_cloud_model: "",
   server_url: "https://n8n.prezent.nl/tstudio/api",
   processing_mode: "local",
   whisper_model: "medium",
   notulen_provider: "ollama",
   ollama_url: "http://localhost:11434",
   ollama_model: "llama3.2",
+  ollama_api_key: "",
   lm_studio_url: "http://localhost:1234",
   lm_studio_model: "local-model",
-  openai_model: "gpt-5.6-terra",
-  anthropic_model: "claude-sonnet-5-5",
   default_profile_id: "standaard",
   default_recording_mode: "combined",
   has_completed_onboarding: false,
-  check_for_updates: true,
+  check_for_updates: false,
   dismissed_update_version: "",
   obsidian_enabled: false,
   obsidian_base_url: "https://127.0.0.1:27124",
   obsidian_vault_path: "Notulen",
+  obsidian_api_key: "",
 };

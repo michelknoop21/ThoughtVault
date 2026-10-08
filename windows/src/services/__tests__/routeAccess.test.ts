@@ -12,6 +12,9 @@ describe("route access without an account", () => {
     for (const route of ["/account", "/admin"]) {
       expect(canOpenRoute(route, "local", false)).toBe(false);
     }
+    for (const route of ["/account", "/admin", "/login"]) {
+      expect(canOpenRoute(route, "local", true)).toBe(false);
+    }
     expect(canOpenRoute("/recording", "cloud", false)).toBe(false);
     expect(canOpenRoute("/recording", "cloud", true)).toBe(true);
   });

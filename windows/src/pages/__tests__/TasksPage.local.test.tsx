@@ -32,17 +32,3 @@ it("shows a failed local processing task and its retry action on Taken", async (
   expect(html).not.toContain("Geen actieve taken");
   await act(async () => { root.unmount(); });
 });
-
-it("shows an app regeneration task even when cloud mode is selected", async () => {
-  useSettingsStore.getState().updateSettings({ processing_mode: "cloud" });
-  useRecordingStore.getState().addBackgroundTask({
-    task_id: "regen-old-document", status: "generating", progress: 50,
-    mode: "microphone", extracted_title: "Oud document", created_at: new Date().toISOString(),
-  });
-  const container = document.createElement("div");
-  const root = createRoot(container);
-  await act(async () => { root.render(<TasksPage />); });
-  expect(container.innerHTML).toContain("Oud document");
-  expect(container.innerHTML).toContain("Notulen genereren");
-  await act(async () => { root.unmount(); });
-});

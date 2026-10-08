@@ -1,55 +1,43 @@
-import { NavLink } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import { BrandFooter } from "../brand/BrandFooter";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   Home24Regular,
   MicRecord24Regular,
   TaskListLtr24Regular,
   DocumentText24Regular,
   Settings24Regular,
-  ShieldPersonRegular,
-  Person24Regular,
+  ChevronLeft24Regular,
+  ChevronRight24Regular,
   NotepadPerson24Regular,
-  PersonAccounts24Regular,
   People24Regular,
-  SignOut24Regular,
 } from "@fluentui/react-icons";
-import { useAuthStore } from "../../stores/authStore";
-import { useSettingsStore } from "../../stores/settingsStore";
-import { api } from "../../services/api";
+import { useLocalTranscriptsStore } from "../../stores/localTranscriptsStore";
+import { useTranscriptsStore } from "../../stores/transcriptsStore";
 import appLogo from "../../assets/app-logo.png";
 
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   useEffect(() => {
-    const toggle = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "s") {
-        e.preventDefault(); setCollapsed(value => !value);
+    const toggle = (event: KeyboardEvent) => {
+      if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === "s") {
+        event.preventDefault();
+        setCollapsed(value => !value);
       }
     };
     window.addEventListener("keydown", toggle);
     return () => window.removeEventListener("keydown", toggle);
   }, []);
-  const { user, logout, isAuthenticated } = useAuthStore();
-  const isAdmin = user?.role === "admin";
-  const processingMode = useSettingsStore((state) => state.processing_mode);
-
-  // Display name: full name > email prefix > email
-  const userDisplayName = (() => {
-    if (user?.name && user.name.trim()) return user.name.trim();
-    if (user?.email) return user.email.split("@")[0];
-    return "Gebruiker";
-  })();
-
-  const userInitial = userDisplayName ? userDisplayName[0].toUpperCase() : null;
-
-  async function handleLogout() {
-    if (isAuthenticated) await api.logout();
-    logout();
-  }
-
+  const location = useLocation();
+  const navigate = useNavigate();
+  const local = useLocalTranscriptsStore(s => s.items);
+  const remote = useTranscriptsStore(s => s.transcripts);
+  const select = useTranscriptsStore(s => s.setSelectedId);
+  const recent = [...new Map([...remote, ...local].map(t => [t.id, t])).values()]
+    .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at)).slice(0, 5);
   return (
-    <nav className={`sidebar${collapsed ? " collapsed" : ""}`} aria-label="Hoofdnavigatie">
-      <button className="sidebar-toggle" aria-label={collapsed ? "Navigatie uitklappen" : "Navigatie inklappen"} aria-expanded={!collapsed} onClick={() => setCollapsed(!collapsed)} title="Navigatie in-/uitklappen (Ctrl+Shift+S)">☰</button>
+    <nav className={`sidebar${collapsed ? " collapsed" : ""}`} aria-label="Hoofdnavigatie" data-theme="dark">
+      <button type="button" className="sidebar-toggle" aria-label={collapsed ? "Zijbalk uitklappen" : "Zijbalk inklappen"} aria-expanded={!collapsed} onClick={() => setCollapsed(!collapsed)}>{collapsed ? <ChevronRight24Regular /> : <ChevronLeft24Regular />}</button>
       {/* Logo + app title */}
       <div className="sidebar-logo-section">
         <img
@@ -60,21 +48,6 @@ export function Sidebar() {
         <span className="sidebar-app-name">ThoughtVault</span>
       </div>
 
-      {/* User profile */}
-      {user && (
-        <div className="sidebar-user-section">
-          <div className="avatar avatar-sm avatar-accent">
-            {userInitial ?? <Person24Regular style={{ fontSize: 14 }} />}
-          </div>
-          <div className="sidebar-user-info">
-            <span className="sidebar-user-name">{userDisplayName}</span>
-            {isAdmin && (
-              <span className="sidebar-role-badge">Admin</span>
-            )}
-          </div>
-        </div>
-      )}
-
       <hr className="sidebar-divider" />
 
       {/* Main navigation */}
@@ -82,33 +55,24 @@ export function Sidebar() {
       <SidebarItem to="/recording" icon={<MicRecord24Regular />} label="Opnemen" shortcut="Ctrl+2" />
       <SidebarItem to="/tasks" icon={<TaskListLtr24Regular />} label="Taken" />
       <SidebarItem to="/transcripts" icon={<DocumentText24Regular />} label="Notulen" shortcut="Ctrl+3" />
-      {(isAuthenticated || processingMode === "local") && <SidebarItem to="/profiles" icon={<NotepadPerson24Regular />} label="Profielen" shortcut="Ctrl+5" />}
+      <SidebarItem to="/profiles" icon={<NotepadPerson24Regular />} label="Profielen" shortcut="Ctrl+5" />
       <SidebarItem to="/people" icon={<People24Regular />} label="Mensen" shortcut="Ctrl+6" />
 
+      {!collapsed && location.pathname !== "/" && recent.length > 0 && <section className="sidebar-recent" aria-label="Recente notulen">
+        <h2>Recent</h2>
+        {recent.map(t => <button key={t.id} onClick={() => { select(t.id); navigate("/transcripts"); }} title={t.title}>
+          <span className="sidebar-recent-icon"><DocumentText24Regular /></span>
+          <span>{t.title || "Naamloze opname"}</span>
+        </button>)}
+      </section>}
       {/* Spacer pushes bottom items down */}
       <div className="flex-1" />
 
       <hr className="sidebar-divider" />
 
       {/* Bottom items */}
-      <SidebarItem to={isAuthenticated ? "/account" : "/login"} icon={<PersonAccounts24Regular />} label={isAuthenticated ? "Account" : "Inloggen"} />
       <SidebarItem to="/settings" icon={<Settings24Regular />} label="Instellingen" shortcut="Ctrl+4" />
-      {isAdmin && (
-        <SidebarItem to="/admin" icon={<ShieldPersonRegular />} label="Beheer" />
-      )}
-
-      <hr className="sidebar-divider" />
-
-      {/* Logout button */}
-      {isAuthenticated && <button
-        onClick={handleLogout}
-        className="sidebar-item"
-        style={{ border: "none", width: "100%", textAlign: "left", cursor: "default", fontFamily: "inherit" }}
-        title="Uitloggen"
-      >
-        <span className="sidebar-item-icon"><SignOut24Regular /></span>
-        <span className="sidebar-item-label">Uitloggen</span>
-      </button>}
+      {!collapsed && <BrandFooter compact />}
     </nav>
   );
 }

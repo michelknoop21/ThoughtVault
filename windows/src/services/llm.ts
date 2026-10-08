@@ -1,40 +1,37 @@
-import { useSettingsStore } from "../stores/settingsStore";
-import { enrichProfile } from "./profileTemplates";
-import { loadCredential } from "./tauriCommands";
-import { quickNotePrompt, ensureNotesSection } from "./quickNotes";
+import { isLocalEndpoint, useSettingsStore } from "../stores/settingsStore";
+import { loadCredential, storeCredential } from "./tauriCommands";
 import { invoke } from "@tauri-apps/api/core";
-import { DEFAULT_SETTINGS } from "../types";
-import type { Profile, NotulenProvider } from "../types";
-
-interface LLMConfig {
-  provider: NotulenProvider;
-  ollamaUrl: string;
-  ollamaModel: string;
-  lmStudioUrl: string;
-  lmStudioModel: string;
-  openAIModel: string;
-  anthropicModel: string;
-}
+import { listen } from "@tauri-apps/api/event";
+import { enrichProfile } from "./profileTemplates";
+import type { Profile } from "../types";
 
 type ProgressCallback = (chunk: string) => void;
-
-function getConfig(): LLMConfig {
+export function aiEndpoint(baseUrl: string, path: string): string {
+  const base = baseUrl.replace(/\/+$/, "");
+  return base + (base.endsWith("/v1") && path.startsWith("/v1/") ? path.slice(3) : path);
+}
+export function validateAIEndpoint(baseUrl: string): void {
+  const url = new URL(baseUrl);
+  if (url.username || url.password || (url.protocol !== "https:" && !isLocalEndpoint(baseUrl))) throw new Error("Gebruik HTTPS voor cloud-AI of localhost voor lokale AI.");
+}
+export async function getAIConfig() {
   const settings = useSettingsStore.getState();
-  // In local mode the cloud provider is unreachable, so a leftover "cloud"
-  // selection would transcribe locally and then throw. Coerce to Ollama.
-  let provider = settings.notulen_provider || "cloud";
-  if (settings.processing_mode === "local" && provider === "cloud") {
-    provider = "ollama";
+  const provider = settings.notulen_provider;
+  if (provider === "openai-compatible") {
+    const config = settings.cloud_providers.find((item) => item.id === settings.selected_cloud_provider);
+    if (!config) throw new Error("Selecteer een opgeslagen cloudprovider in Instellingen.");
+    if (new URL(config.base_url).protocol !== "https:") throw new Error("Cloudproviders vereisen een HTTPS-adres.");
+    return { baseUrl: config.base_url, model: config.model, apiKey: await loadCredential(`cloudAI-${config.id}`) ?? "" };
   }
-  return {
-    provider,
-    ollamaUrl: settings.ollama_url || "http://localhost:11434",
-    ollamaModel: settings.ollama_model || "llama3.2",
-    lmStudioUrl: settings.lm_studio_url || "http://localhost:1234",
-    lmStudioModel: settings.lm_studio_model || "local-model",
-    openAIModel: settings.openai_model || DEFAULT_SETTINGS.openai_model,
-    anthropicModel: settings.anthropic_model || "claude-sonnet-5-5",
-  };
+  if (provider === "lm-studio") return { baseUrl: settings.lm_studio_url, model: settings.lm_studio_model, apiKey: "" };
+  // Move legacy persisted keys to the existing OS credential store before using them.
+  if (settings.ollama_api_key) {
+    await storeCredential("ollamaApiKey", settings.ollama_api_key);
+    useSettingsStore.getState().updateSettings({ ollama_api_key: "" });
+  }
+  return { baseUrl: provider === "ollama-cloud" ? "https://ollama.com" : settings.ollama_url,
+    model: provider === "ollama-cloud" ? settings.ollama_cloud_model : settings.ollama_model,
+    apiKey: await loadCredential("ollamaApiKey") ?? "" };
 }
 
 function todayNL(): string {
@@ -85,103 +82,29 @@ async function generateWithOpenAICompatible(
   apiKey: string,
   onProgress?: ProgressCallback
 ): Promise<string> {
+  validateAIEndpoint(baseUrl);
+  if (!model.trim()) throw new Error("Kies een notulemodel in Instellingen.");
   const headers: Record<string, string> = { "Content-Type": "application/json" };
-  // Bearer only over HTTPS (e.g. Ollama Cloud). Never leak a token to a plain
-  // http://localhost endpoint.
-  if (apiKey && baseUrl.startsWith("https://")) {
-    headers["Authorization"] = `Bearer ${apiKey}`;
-  }
-
-  let response: Response;
-  try {
-    response = await fetch(`${baseUrl}/v1/chat/completions`, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        stream: true,
-      }),
-    });
-  } catch {
-    // A bare "Failed to fetch" hides which server is down — name it.
-    throw new Error(
-      `Kan de notule-generator niet bereiken op ${baseUrl} (model "${model}"). Draait Ollama/LM Studio en klopt de URL in Instellingen?`,
-    );
-  }
-
-  if (!response.ok) {
-    throw new Error(`Notule-generator op ${baseUrl} gaf een fout (HTTP ${response.status}, model "${model}").`);
-  }
-
-  const reader = response.body?.getReader();
-  if (!reader) throw new Error("No response body");
-
-  const decoder = new TextDecoder();
+  if (apiKey && new URL(baseUrl).protocol === "https:") headers.Authorization = `Bearer ${apiKey}`;
+  const eventName = `ai-stream-${crypto.randomUUID()}`;
   let fullText = "";
-  let buffer = "";
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split("\n");
-    buffer = lines.pop() ?? ""; // keep incomplete trailing line for next chunk
-
-    for (const line of lines) {
-      if (!line.startsWith("data: ")) continue;
-      const data = line.slice(6).trim();
-      if (data === "[DONE]") continue;
-      try {
-        const parsed = JSON.parse(data);
-        const delta = parsed.choices?.[0]?.delta?.content || "";
-        if (delta) {
-          fullText += delta;
-          onProgress?.(delta);
-        }
-      } catch {
-        // ignore parse errors on partial frames
-      }
-    }
-  }
-
-  return fullText;
-}
-
-async function generateWithHostedAPI(
-  provider: "openai" | "anthropic",
-  model: string,
-  systemPrompt: string,
-  userPrompt: string,
-  apiKey: string,
-  onProgress?: ProgressCallback,
-): Promise<string> {
-  const openAI = provider === "openai";
-  const url = openAI ? "https://api.openai.com/v1/chat/completions" : "https://api.anthropic.com/v1/messages";
-  const body = openAI
-    ? { model, messages: [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }] }
-    : { model, max_tokens: 16000, system: systemPrompt, messages: [{ role: "user", content: userPrompt }] };
-  const response = await invoke<{ status: number; body: string }>("proxy_request", {
-    request: {
-      url, method: "POST", timeout_seconds: 300,
-      headers: openAI
-        ? { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` }
-        : { "Content-Type": "application/json", "anthropic-version": "2023-06-01", "x-api-key": apiKey },
-      body: JSON.stringify(body),
-    },
+  let interrupted = false;
+  const unlisten = await listen<string>(eventName, ({ payload }) => {
+    try {
+      const parsed = JSON.parse(payload);
+      const delta = parsed.choices?.[0]?.delta?.content ?? "";
+      fullText += delta;
+      if (delta) onProgress?.(delta);
+    } catch { /* Ignore non-JSON SSE frames. */ }
   });
-  if (response.status === 401) throw new Error(`${openAI ? "OpenAI" : "Anthropic"} API-sleutel geweigerd.`);
-  if (response.status === 429) throw new Error(`${openAI ? "OpenAI" : "Anthropic"} API-limiet bereikt. Probeer later opnieuw.`);
-  if (response.status >= 400) throw new Error(`${openAI ? "OpenAI" : "Anthropic"} gaf HTTP ${response.status}.`);
-  const result = JSON.parse(response.body);
-  const text = openAI ? result.choices?.[0]?.message?.content : result.content?.filter((part: { type: string }) => part.type === "text").map((part: { text: string }) => part.text).join("");
-  if (typeof text !== "string" || !text.trim()) throw new Error("De aanbieder gaf een leeg antwoord.");
-  onProgress?.(text);
-  return text;
+  const stop = await listen(`${eventName}-interrupted`, () => { interrupted = true; });
+  try {
+    await invoke("http_sse_stream", { url: aiEndpoint(baseUrl, "/v1/chat/completions"), headers, eventName,
+      body: JSON.stringify({ model, stream: true, messages: [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }] }) });
+    if (interrupted) throw new Error("AI-verbinding onderbroken. Transcriptie blijft bewaard; probeer opnieuw.");
+    if (!fullText.trim()) throw new Error("De AI-provider gaf een leeg antwoord.");
+    return fullText;
+  } finally { unlisten(); stop(); }
 }
 
 /**
@@ -203,53 +126,22 @@ export class LLMService {
     transcription: string,
     profile: Profile,
     onProgress?: ProgressCallback,
-    participants: string[] = [],
-    quickNote: string = "",
+    participants: string[] = []
   ): Promise<string> {
-    const config = getConfig();
+    const config = await getAIConfig();
     const enriched = enrichProfile(profile);
-    const userPrompt = quickNotePrompt(quickNote) + buildUserContent(
+    const userPrompt = buildUserContent(
       enriched.notule_prompt ?? "",
       transcription,
       enriched.output_template ?? enriched.notule_template,
       participants
     );
 
-    if (config.provider === "ollama") {
-      const apiKey = config.ollamaUrl.startsWith("https://") ? await loadCredential("ollama_api_key") : null;
-      const html = await generateWithOpenAICompatible(
-        config.ollamaUrl,
-        config.ollamaModel,
-        enriched.system_prompt ?? "",
-        userPrompt,
-        apiKey ?? "",
-        onProgress
-      );
-      return ensureNotesSection(stripCodeFences(html), quickNote);
-    }
-
-    if (config.provider === "lm-studio") {
-      const html = await generateWithOpenAICompatible(
-        config.lmStudioUrl,
-        config.lmStudioModel,
-        enriched.system_prompt ?? "",
-        userPrompt,
-        "",
-        onProgress
-      );
-      return ensureNotesSection(stripCodeFences(html), quickNote);
-    }
-
-    if (config.provider === "openai" || config.provider === "anthropic") {
-      const provider = config.provider;
-      const key = await loadCredential(`${provider}_api_key`);
-      if (!key) throw new Error(`Vul je ${provider === "openai" ? "OpenAI" : "Anthropic"} API-sleutel in bij Instellingen.`);
-      return ensureNotesSection(stripCodeFences(await generateWithHostedAPI(
-        provider, provider === "openai" ? config.openAIModel : config.anthropicModel,
-        enriched.system_prompt ?? "", userPrompt, key, onProgress,
-      )), quickNote);
-    }
-
-    throw new Error("Cloud provider moet via de server worden verwerkt");
+    const html = await generateWithOpenAICompatible(config.baseUrl, config.model, enriched.system_prompt ?? "", userPrompt, config.apiKey, onProgress);
+    return stripCodeFences(html);
   }
+}
+
+export async function testAIConnection(baseUrl: string, model: string, apiKey: string): Promise<void> {
+  await generateWithOpenAICompatible(baseUrl, model, "Antwoord alleen OK.", "Dit is een verbindingstest. Antwoord alleen OK.", apiKey);
 }

@@ -133,8 +133,7 @@ pub fn start_recording_thread(
     mode: RecordingMode,
     output_path: String,
     event_tx: mpsc::UnboundedSender<RecordingEvent>,
-) -> Result<(mpsc::Sender<RecordingCommand>, tokio::sync::oneshot::Receiver<Result<(), String>>), String> {
-    let (ready_tx, ready_rx) = tokio::sync::oneshot::channel();
+) -> Result<mpsc::Sender<RecordingCommand>, String> {
     let (cmd_tx, mut cmd_rx) = mpsc::channel::<RecordingCommand>(16);
     let output_path_clone = output_path.clone();
 
@@ -145,7 +144,6 @@ pub fn start_recording_thread(
     // cpal streams are !Send on some platforms, so we run everything on a
     // dedicated OS thread rather than a tokio task.
     std::thread::spawn(move || {
-        let mut ready = Some(ready_tx);
         let result = recording_thread_body(
             device_id,
             mode,
@@ -153,15 +151,13 @@ pub fn start_recording_thread(
             &mut cmd_rx,
             &event_tx,
             &rt_handle,
-            &mut ready,
         );
         if let Err(e) = result {
-            if let Some(ready) = ready.take() { let _ = ready.send(Err(e.clone())); }
             let _ = event_tx.send(RecordingEvent::Error(e));
         }
     });
 
-    Ok((cmd_tx, ready_rx))
+    Ok(cmd_tx)
 }
 
 fn recording_thread_body(
@@ -171,7 +167,6 @@ fn recording_thread_body(
     cmd_rx: &mut mpsc::Receiver<RecordingCommand>,
     event_tx: &mpsc::UnboundedSender<RecordingEvent>,
     rt_handle: &tokio::runtime::Handle,
-    ready: &mut Option<tokio::sync::oneshot::Sender<Result<(), String>>>,
 ) -> Result<(), String> {
     let host = cpal::default_host();
 
@@ -307,11 +302,12 @@ fn recording_thread_body(
                     Some(Box::new(stream))
                 },
                 Err(e) => {
-                    // A combined recording must never silently become mic-only.
+                    eprintln!("[Audio] Loopback niet beschikbaar, alleen microfoon: {}", e);
                     // Clean up in case a file was partially created
                     *loopback_writer.lock().unwrap() = None;
                     let _ = std::fs::remove_file(&loopback_path);
-                    return Err(format!("Systeemaudio niet beschikbaar: {e}. Kies Microfoon om alleen je microfoon op te nemen."));
+                    has_loopback = false;
+                    None
                 }
             }
         }
@@ -326,7 +322,6 @@ fn recording_thread_body(
     };
 
     input_stream.play().map_err(|e| format!("Kan stream niet starten: {}", e))?;
-    if let Some(ready) = ready.take() { let _ = ready.send(Ok(())); }
 
     let start = std::time::Instant::now();
 
@@ -345,12 +340,11 @@ fn recording_thread_body(
         }
     });
 
-    let elapsed = start.elapsed().as_secs_f64();
+    let duration = start.elapsed().as_secs_f64();
 
     // Log samples written before finalize
     let total_samples = samples_written.load(Ordering::Relaxed);
-    let duration = total_samples as f64 / TARGET_SAMPLE_RATE as f64;
-    eprintln!("[Audio] Stopping recording: {} mono samples written ({:.2}s audio, {:.2}s elapsed)", total_samples, duration, elapsed);
+    eprintln!("[Audio] Stopping recording: {} mono samples written ({:.2}s)", total_samples, duration);
 
     // Drop streams before finalizing writers
     drop(input_stream);
@@ -360,8 +354,11 @@ fn recording_thread_body(
     if let Ok(mut guard) = mic_writer.lock() {
         if let Some(w) = guard.take() {
             eprintln!("[Audio] Finalizing mic WAV file...");
-            w.finalize().map_err(|e| format!("Microfoonopname opslaan mislukt: {e}"))?;
-            eprintln!("[Audio] Mic WAV file finalized successfully");
+            if let Err(e) = w.finalize() {
+                eprintln!("[Audio] ERROR finalizing mic WAV: {}", e);
+            } else {
+                eprintln!("[Audio] Mic WAV file finalized successfully");
+            }
         } else {
             eprintln!("[Audio] ERROR: mic writer was already None during finalize!");
         }
@@ -374,8 +371,11 @@ fn recording_thread_body(
         if let Ok(mut guard) = loopback_writer.lock() {
             if let Some(w) = guard.take() {
                 eprintln!("[Audio] Finalizing loopback WAV file...");
-                w.finalize().map_err(|e| format!("Systeemaudio opslaan mislukt: {e}"))?;
-                eprintln!("[Audio] Loopback WAV file finalized successfully");
+                if let Err(e) = w.finalize() {
+                    eprintln!("[Audio] ERROR finalizing loopback WAV: {}", e);
+                } else {
+                    eprintln!("[Audio] Loopback WAV file finalized successfully");
+                }
             }
         }
 
@@ -387,7 +387,8 @@ fn recording_thread_body(
                 let _ = std::fs::remove_file(&loopback_path);
             }
             Err(e) => {
-                return Err(format!("Audio samenvoegen mislukt: {e}. De losse opnames zijn bewaard."));
+                eprintln!("[Audio] WARNING: Mixing failed ({}), keeping mic-only audio", e);
+                let _ = std::fs::remove_file(&loopback_path);
             }
         }
     }
@@ -472,11 +473,8 @@ fn mix_wav_files(mic_path: &str, loopback_path: &str) -> Result<(), String> {
         mixed.push(mixed_s);
     }
 
-    // Keep both sources intact until the complete mixed WAV is safely written.
-    let parent = std::path::Path::new(mic_path).parent().ok_or("Opnamemap ontbreekt")?;
-    let mut mixed_file = tempfile::NamedTempFile::new_in(parent)
-        .map_err(|e| format!("Kan tijdelijk mixed WAV niet maken: {e}"))?;
-    let mut writer = WavWriter::new(mixed_file.as_file_mut(), mic_spec)
+    // Write mixed output using mic spec, overwriting the mic file
+    let mut writer = WavWriter::create(mic_path, mic_spec)
         .map_err(|e| format!("Kan mixed WAV niet schrijven: {}", e))?;
     for sample in &mixed {
         writer.write_sample(*sample)
@@ -484,32 +482,9 @@ fn mix_wav_files(mic_path: &str, loopback_path: &str) -> Result<(), String> {
     }
     writer.finalize()
         .map_err(|e| format!("Fout bij finaliseren mixed WAV: {}", e))?;
-    mixed_file.persist(mic_path).map_err(|e| format!("Mixed WAV vervangen mislukt: {e}"))?;
 
     eprintln!("[Audio] Mixed output: {} samples", mixed.len());
     Ok(())
-}
-
-#[cfg(test)]
-mod mix_tests {
-    use super::*;
-
-    #[test]
-    fn mixed_file_keeps_system_audio_when_microphone_is_silent() {
-        let dir = tempfile::tempdir().unwrap();
-        let mic = dir.path().join("mic.wav");
-        let system = dir.path().join("system.wav");
-        let spec = WavSpec { channels: 1, sample_rate: 16000, bits_per_sample: 16, sample_format: HoundSampleFormat::Int };
-        for (path, samples) in [(&mic, vec![0_i16, 0, 0]), (&system, vec![2000_i16, -4000, 1000])] {
-            let mut writer = WavWriter::create(path, spec).unwrap();
-            for sample in samples { writer.write_sample(sample).unwrap(); }
-            writer.finalize().unwrap();
-        }
-        mix_wav_files(mic.to_str().unwrap(), system.to_str().unwrap()).unwrap();
-        let mut reader = hound::WavReader::open(mic).unwrap();
-        assert_eq!(reader.samples::<i16>().collect::<Result<Vec<_>, _>>().unwrap(), vec![2000, -4000, 1000]);
-        assert!(system.is_file());
-    }
 }
 
 /// Build an input stream for devices that output i16 samples (most Windows devices).

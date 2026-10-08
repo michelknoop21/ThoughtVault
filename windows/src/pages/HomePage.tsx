@@ -4,18 +4,14 @@ import {
   MicRecord24Regular,
   VideoChat24Regular,
   CalendarLtr24Regular,
-  Clock24Regular,
   MoreHorizontal24Regular,
   Delete24Regular,
-  People24Regular,
-  ChevronRight24Regular,
-  Search24Regular,
   Settings24Regular,
+  Search24Regular,
+  Person24Regular,
   DocumentText24Regular,
+  ChevronRight24Regular,
 } from "@fluentui/react-icons";
-import { invoke } from "@tauri-apps/api/core";
-import { getAudioDevices } from "../services/tauriCommands";
-import homeMountains from "../assets/home-mountains.svg";
 import { useRecordingStore } from "../stores/recordingStore";
 import { useTranscriptsStore } from "../stores/transcriptsStore";
 import { useLocalTranscriptsStore, isLocalId } from "../stores/localTranscriptsStore";
@@ -24,8 +20,6 @@ import { useAuthStore } from "../stores/authStore";
 import { useSettingsStore } from "../stores/settingsStore";
 import { api } from "../services/api";
 import { MicrosoftGraphService } from "../services/microsoftGraph";
-import { useUpdateCheck } from "../hooks/useUpdateCheck";
-import { UpdateBanner } from "../components/ui/UpdateBanner";
 import type { CalendarEvent, Transcript } from "../types";
 
 function getGreeting(name?: string, email?: string): string {
@@ -41,11 +35,11 @@ export function HomePage() {
   const { transcripts, setTranscripts, deleteTranscript, setSelectedId, isLoading, setIsLoading } = useTranscriptsStore();
   const calendar = useCalendarStore();
   const user = useAuthStore((s) => s.user);
-  const { isUpdateAvailable, latestVersion, downloadUrl } = useUpdateCheck();
-  const dismissedVersion = useSettingsStore((s) => s.dismissed_update_version);
-  const updateSettings = useSettingsStore((s) => s.updateSettings);
   const [upcomingEvents, setUpcomingEvents] = useState<CalendarEvent[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState<"all" | "recordings" | "notes">("all");
+  const visibleTranscripts = transcripts.filter(t => filter === "all" || (filter === "notes" ? !!(t.notule_html || t.has_notes) : !(t.notule_html || t.has_notes)));
   const [deleteConfirm, setDeleteConfirm] = useState<Transcript | null>(null);
 
   useEffect(() => {
@@ -89,7 +83,6 @@ export function HomePage() {
 
   function handleQuickStart(mode: "microphone" | "combined") {
     setMode(mode);
-    setAutoStart(true);
     navigate("/recording");
   }
 
@@ -113,54 +106,169 @@ export function HomePage() {
     }
   }
 
-  const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState("Alle");
-  const [micAvailable, setMicAvailable] = useState<boolean | null>(null);
-  const [micError, setMicError] = useState("");
-  const activeTasks = useRecordingStore(s => s.backgroundTasks);
-  useEffect(() => { getAudioDevices().then(devices => setMicAvailable(devices.some(d => d.is_input))).catch(() => setMicAvailable(null)); }, []);
-  const visible = transcripts.filter(t => filter === "Alle" || (filter === "Notulen" ? Boolean(t.notule_html || t.has_notes) : !t.notule_html && !t.has_notes)).slice(0, 10);
-
-  return <div className="page-scroll northstar-home">
-    <div className="home-topbar"><form onSubmit={e => { e.preventDefault(); useTranscriptsStore.getState().setSearchQuery(query); navigate("/transcripts"); }}>
-      <Search24Regular /><input aria-label="Zoek in je notulen" placeholder="Zoek in je notulen…" value={query} onChange={e => setQuery(e.target.value)} /></form>
-      <button className="home-account" aria-label="Account" onClick={() => navigate(user ? "/account" : "/settings")}>{user?.name?.slice(0, 1).toUpperCase() || <People24Regular />}</button>
-    </div>
-    {isUpdateAvailable && latestVersion && dismissedVersion !== latestVersion && <UpdateBanner version={latestVersion} downloadUrl={downloadUrl} onDismiss={() => updateSettings({ dismissed_update_version: latestVersion })} />}
-    <div className="home-columns"><div className="home-main">
-      <header className="home-greeting"><p className="home-kicker">{new Date().toLocaleDateString("nl-NL", { weekday: "long", day: "numeric", month: "long" })}</p>
-        <h1>{getGreeting(user?.name, user?.email)}</h1><p>Goede ideeën beginnen vaak met een gesprek.</p>
-        <img src={homeMountains} alt="" aria-hidden="true" /><div className="home-tagline"><strong>Spreek. Denk. Bewaar.</strong><span>ThoughtVault zet je gesprekken om in heldere notities, taken en inzichten.</span></div>
+  return (
+    <div className="page-scroll thoughtvault-home" data-theme="dark">
+    <div className="thoughtvault-home-content">
+      <div className="thoughtvault-home-toolbar">
+        <form className="thoughtvault-search" onSubmit={(e) => { e.preventDefault(); useTranscriptsStore.getState().setSearchQuery(search.trim()); navigate("/transcripts"); }}>
+          <Search24Regular />
+          <input aria-label="Zoek in je notulen" placeholder="Zoek in je notulen…" value={search} onChange={e => setSearch(e.target.value)} />
+        </form>
+        <button className="thoughtvault-account" aria-label="Instellingen" onClick={() => navigate("/settings")}><Person24Regular /></button>
+      </div>
+      <header className="thoughtvault-welcome">
+        <svg className="thoughtvault-landscape" viewBox="0 0 480 190" aria-hidden="true">
+          <defs>
+            <linearGradient id="ridge" x2="0" y2="1"><stop stopColor="#3b2e7a" /><stop offset="1" stopColor="#141628" stopOpacity="0" /></linearGradient>
+            <linearGradient id="moon" x2="0" y2="1"><stop stopColor="#eee6ff" /><stop offset="1" stopColor="#baa8f2" /></linearGradient>
+            <linearGradient id="front" x2="0" y2="1"><stop stopColor="#261f54" /><stop offset="1" stopColor="#141628" stopOpacity="0" /></linearGradient>
+          </defs>
+          <path d="M0 160 C60 140 120 120 170 95 C215 72 265 22 292 18 C325 20 360 60 400 62 C430 64 460 55 480 58 L480 190 L0 190Z" fill="url(#ridge)" />
+          <circle cx="168" cy="105" r="25" fill="url(#moon)" />
+          <path d="M0 178 C55 160 110 128 150 122 C190 116 220 128 250 140 C320 168 420 160 480 165 L480 190 L0 190Z" fill="url(#front)" />
+          <path d="M92 178 C130 170 190 162 186 150 C182 140 130 146 128 136 C126 128 160 126 178 124" fill="none" stroke="#bd6df9" strokeWidth="2" />
+        </svg>
+        <div className="thoughtvault-welcome-copy">
+          <p className="section-label">{new Date().toLocaleDateString("nl-NL", { weekday: "long", day: "numeric", month: "long" })}</p>
+          <h1>{getGreeting(user?.name, user?.email)}.</h1>
+          <p>“Goede ideeën beginnen vaak met een gesprek.”</p>
+        </div>
+        <div className="thoughtvault-tagline"><strong>Spreek. Denk. Bewaar.</strong><p>ThoughtVault zet je gesprekken om in heldere notities, taken en inzichten.</p></div>
       </header>
-      <section className="home-record-card"><div><p className="home-kicker">NIEUWE OPNAME</p><h2>Begin een nieuwe opname</h2>
-        <p>Spreek je gedachten, vergadering of idee. ThoughtVault maakt er automatisch notities, samenvattingen en taken van.</p>
-        <div className="home-record-controls"><button className="btn btn-secondary icon-btn" aria-label="Instellingen" onClick={() => navigate("/settings")}><Settings24Regular /></button>
-          <button className="home-mic-button" aria-label="Opname starten" onClick={() => handleQuickStart("combined")}><MicRecord24Regular /></button>
-          <div className="home-idle-levels"><div aria-hidden="true">{Array.from({ length: 55 }, (_, i) => <i key={i} style={{ height: Math.max(4, Math.pow(Math.sin(Math.PI * i / 54), 1.4) * (.25 + .75 * Math.abs(Math.sin(i * 1.73) * Math.cos(i * .61 + .4))) * 65) }} />)}</div>
-            <span><i className="home-ready-dot" />{micAvailable === false ? "Geen microfoon gevonden" : "Klaar om op te nemen"}</span></div><span className="home-zero">0:00</span>
-        </div></div>
-        <aside className="home-mic-panel"><strong>{micAvailable === true ? "Microfoon gevonden" : micAvailable === false ? "Geen microfoon gevonden" : "Microfoontoegang"}</strong>
-          <p>Windows controleert toegang wanneer je de opname start.</p>
-          <button className="btn btn-secondary" onClick={() => invoke("open_microphone_settings").catch(() => setMicError("Open Windows-instellingen → Privacy en beveiliging → Microfoon."))}>Toegang beheren <ChevronRight24Regular /></button>
-          {micError && <p role="alert">{micError}</p>}<hr /><strong className="home-tip">Tip</strong><p>Spreek natuurlijk. Je kunt op elk moment pauzeren.</p>
-        </aside>
+      <section className="thoughtvault-new-recording" aria-label="Nieuwe opname">
+        <div>
+          <p className="section-label">Nieuwe opname</p>
+          <h2>Begin een nieuwe opname</h2>
+          <p>Leg je gedachten of een gesprek vast. Krijg automatisch notities, samenvattingen en taken.</p>
+          <div className="thoughtvault-record-controls">
+            <button className="btn btn-secondary icon-btn" aria-label="Opname-instellingen" onClick={() => navigate("/settings")}><Settings24Regular /></button>
+            <button className="thoughtvault-record-orb" aria-label="Nieuwe opname voorbereiden" onClick={() => handleQuickStart("microphone")}><MicRecord24Regular /><span>Nieuwe opname</span></button>
+            <div className="thoughtvault-idle-wave" aria-hidden="true">{Array.from({length: 57}, (_, i) => <i key={i} style={{ height: Math.max(4, Math.pow(Math.sin(Math.PI * i / 56), 1.4) * (0.25 + 0.75 * Math.abs(Math.sin(i * 1.73) * Math.cos(i * 0.61 + 0.4))) * 65) }} />)}</div>
+          </div>
+          <p className="thoughtvault-ready">Klaar om op te nemen</p>
+        </div>
+        <details className="thoughtvault-record-tip"><summary>Zo werkt opnemen</summary><p>Kies je opnamebron en profiel. Je start de opname op het volgende scherm.</p><p>Spreek natuurlijk. Je kunt op elk moment pauzeren.</p></details>
       </section>
-      <section className="home-recents"><header><h2>Recente notities</h2><div role="group" aria-label="Filter recente notities">{["Alle", "Opnames", "Notulen"].map(value => <button key={value} aria-pressed={filter === value} className={filter === value ? "active" : ""} onClick={() => setFilter(value)}>{value}</button>)}</div></header>
-        {loadError && <div className="error-banner-inline"><span>{loadError}</span><button className="btn btn-sm" onClick={loadRecentTranscripts}>Opnieuw</button></div>}
-        {isLoading && !transcripts.length ? <p>Laden…</p> : !transcripts.length ? <div className="home-empty"><h3>Je vault is nog leeg</h3><p>Alles wat je inspreekt verschijnt hier als notitie of notule.</p><button className="studio-link" onClick={() => handleQuickStart("combined")}>Maak je eerste opname</button></div>
-          : <div className="home-recent-list">{visible.map(transcript => <SessionCard key={transcript.id} transcript={transcript} onClick={() => { setSelectedId(transcript.id); navigate("/transcripts"); }} onDelete={setDeleteConfirm} />)}{!visible.length && <p className="home-empty">Geen {filter.toLowerCase()} in deze lijst.</p>}</div>}
+      <aside className="thoughtvault-home-side">
+      {/* Upcoming meetings */}
+        <section className="thoughtvault-agenda" aria-label="Vandaag">
+          <h2>Vandaag</h2>
+          {upcomingEvents.length === 0 && <div className="thoughtvault-agenda-empty"><p>{calendar.isConnected ? "Geen aankomende vergaderingen." : "Koppel je agenda om je meetings hier te zien."}</p>{!calendar.isConnected && <button className="btn btn-secondary" onClick={() => navigate("/settings")}>Agenda koppelen</button>}</div>}
+          <div className="flex-col gap-8">
+            {upcomingEvents.map((event) => (
+              <div key={event.id} className="card session-card flex-row gap-12">
+                <CalendarLtr24Regular style={{ fontSize: 18, color: "var(--fill-accent-default)", flexShrink: 0 }} />
+                <div className="flex-1" style={{ minWidth: 0 }}>
+                  <p className="truncate" style={{ fontSize: 13, fontWeight: 500, color: "var(--text-primary)" }}>{event.title}</p>
+                  <p className="text-caption" style={{ marginTop: 1 }}>
+                    {formatEventTime(event.start, event.end)}
+                  </p>
+                </div>
+                {event.join_url && (
+                  <button
+                    onClick={() => handleRecordMeeting(event)}
+                    className="btn btn-accent flex-shrink-0"
+                    style={{ padding: "4px 10px", fontSize: 12 }}
+                  >
+                    <MicRecord24Regular style={{ fontSize: 13 }} />
+                    Direct opnemen
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
+
+      <section className="thoughtvault-quick-capture" aria-label="Snel vastleggen">
+        <h2>Snel vastleggen</h2>
+        <button className="btn btn-secondary" onClick={() => handleQuickStart("microphone")}><MicRecord24Regular />Alleen audio opnemen</button>
+        <button className="btn btn-secondary" onClick={() => handleQuickStart("combined")}><VideoChat24Regular />Gesprek opnemen</button>
       </section>
-      {activeTasks.length > 0 && <section className="northstar-card"><h3>Bezig met verwerken</h3>{activeTasks.map(task => <button className="home-task-row" key={task.task_id} onClick={() => navigate("/tasks")}><span>{task.extracted_title || task.filename || "Opname"}<small>{task.error_message || task.message || task.status}</small></span><span>{task.progress}%</span></button>)}</section>}
-    </div><aside className="home-side">
-      <section className="northstar-card"><h2>Vandaag</h2>{upcomingEvents.length ? upcomingEvents.map(event => <div className="home-calendar-row" key={event.id}><CalendarLtr24Regular /><div><strong>{event.title}</strong><p>{formatEventTime(event.start, event.end)}</p><button className="studio-link" onClick={() => handleRecordMeeting(event)}>Direct opnemen</button></div></div>) : <><p>{calendar.isConnected ? "Geen aankomende vergaderingen." : "Koppel je agenda om je vergaderingen hier te zien."}</p><button className="studio-link" onClick={() => navigate("/settings")}>Agenda instellen</button></>}</section>
-      <section className="northstar-card"><h2>Snel vastleggen</h2><button className="home-quick-action" onClick={() => handleQuickStart("microphone")}><People24Regular />Fysieke meeting</button><button className="home-quick-action" onClick={() => handleQuickStart("combined")}><VideoChat24Regular />Videocall</button><button className="home-quick-action" onClick={() => navigate("/recording")}><DocumentText24Regular />Audiobestand importeren</button></section>
-      <section className="northstar-card home-brand-note"><strong>Laat gedachten groeien tot kennis.</strong><p>Eén gesprek kan meerdere inzichten, taken en plannen opleveren.</p></section>
-    </aside></div>
-    {deleteConfirm && <div className="profile-overlay" onClick={() => setDeleteConfirm(null)}><div className="card profile-modal-confirm" onClick={e => e.stopPropagation()}>
-      <h3>Sessie verwijderen?</h3><p>“{deleteConfirm.title}” wordt definitief verwijderd. Dit kan niet ongedaan worden gemaakt.</p>
-      <div className="profile-modal-actions"><button className="btn btn-secondary" onClick={() => setDeleteConfirm(null)}>Annuleren</button><button className="btn btn-secondary text-error" onClick={() => { void handleDeleteTranscript(deleteConfirm); setDeleteConfirm(null); }}>Verwijderen</button></div>
-    </div></div>}
-  </div>;
+
+      </aside>
+
+      {/* Recent notes */}
+      <section style={{ flex: 1, minHeight: 0 }} className="flex-col thoughtvault-home-recent">
+        <div className="flex-row justify-between" style={{ alignItems: "center" }}>
+          <h2>Recente notities</h2>
+          {isLoading && <span className="text-caption" style={{ color: "var(--fill-accent-default)" }}>Laden...</span>}
+        </div>
+        <div className="thoughtvault-recent-filters" role="group" aria-label="Notities filteren">
+          {([["all", "Alle"], ["recordings", "Opnames"], ["notes", "Notulen"]] as const).map(([value, label]) => <button key={value} className="btn btn-ghost btn-sm" aria-pressed={filter === value} onClick={() => setFilter(value)}>{label}</button>)}
+        </div>
+        {loadError ? (
+          <div className="error-banner-inline">
+            <span>{loadError}</span>
+            <button className="btn btn-sm" onClick={loadRecentTranscripts}>Opnieuw</button>
+          </div>
+        ) : isLoading ? (
+          <div className="flex-col gap-10">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="card card-static" style={{ padding: 16 }}>
+                <div className="flex-col gap-8">
+                  <div className="skeleton skeleton-line skeleton-line-short" />
+                  <div className="skeleton skeleton-line skeleton-line-long" />
+                  <div className="skeleton skeleton-line skeleton-line-medium" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : visibleTranscripts.length === 0 ? (
+          <div className="empty-state">
+            <p className="empty-state-title">Nog geen transcripten</p>
+            <p className="empty-state-body">
+              Start je eerste opname. ThoughtVault maakt daarna automatisch een
+              transcript en helpt je om er een duidelijke notule van te maken.
+            </p>
+            <button onClick={() => handleQuickStart("microphone")} className="btn btn-accent">
+              Maak je eerste opname
+            </button>
+          </div>
+        ) : (
+          <div className="thoughtvault-notes-list">
+            {visibleTranscripts.map((transcript) => (
+              <SessionCard
+                key={transcript.id}
+                transcript={transcript}
+                onClick={() => { setSelectedId(transcript.id); navigate("/transcripts"); }}
+                onDelete={setDeleteConfirm}
+              />
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="thoughtvault-brand-note"><strong>Laat gedachten groeien tot kennis.</strong><p>Eén gesprek kan meerdere inzichten, taken en plannen opleveren.</p></section>
+    </div>
+
+      {/* Delete confirmation dialog */}
+      {deleteConfirm && (
+        <div className="profile-overlay" onClick={() => setDeleteConfirm(null)}>
+          <div className="card profile-modal-confirm" onClick={(e) => e.stopPropagation()}>
+            <p className="text-body-strong" style={{ marginBottom: 8 }}>Sessie verwijderen?</p>
+            <p className="text-caption" style={{ marginBottom: 4, color: "var(--text-secondary)" }}>
+              "{deleteConfirm.title || "Naamloze opname"}" wordt definitief verwijderd.
+            </p>
+            <p className="text-caption" style={{ marginBottom: 16, color: "var(--text-tertiary)" }}>
+              Dit kan niet ongedaan worden gemaakt.
+            </p>
+            <div className="profile-modal-actions">
+              <button onClick={() => setDeleteConfirm(null)} className="btn btn-secondary btn-sm">
+                Annuleren
+              </button>
+              <button
+                onClick={() => { handleDeleteTranscript(deleteConfirm); setDeleteConfirm(null); }}
+                className="btn btn-sm"
+                style={{ color: "var(--text-error)", borderColor: "rgba(188,0,22,0.3)" }}
+              >
+                Verwijderen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 function SessionCard({
@@ -175,54 +283,21 @@ function SessionCard({
   const [menuOpen, setMenuOpen] = useState(false);
 
   const previewText = getPreviewText(transcript);
-  const isComplete = !!transcript.notule_html || !!transcript.raw_transcription || transcript.has_notes || transcript.has_transcription;
+  const hasNotes = !!(transcript.notule_html || transcript.has_notes);
 
   return (
-    <div className="card session-card" onClick={onClick}>
-      {/* Header row */}
-      <div className="session-card-header">
-        <div className="flex-row gap-8">
-          <span className="status-badge-accent">Sessie</span>
-          <span className="text-caption">{formatDate(transcript.created_at)}</span>
-        </div>
-        <div style={{ position: "relative" }}>
-          <button
-            onClick={(e) => { e.stopPropagation(); setMenuOpen(!menuOpen); }}
-            className="icon-btn icon-btn-sm"
-          >
-            <MoreHorizontal24Regular style={{ fontSize: 16 }} />
-          </button>
-          {menuOpen && (
-            <div
-              className="context-menu"
-              style={{ position: "absolute", right: 0, top: "100%" }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button
-                onClick={() => { setMenuOpen(false); onDelete(transcript); }}
-                className="context-menu-item context-menu-item-danger"
-              >
-                <Delete24Regular style={{ fontSize: 14 }} />
-                Verwijderen
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Title */}
-      <p className="session-card-title truncate">{transcript.title || "Naamloze opname"}</p>
-
-      {/* Preview */}
-      {previewText && <p className="session-card-preview">{previewText}</p>}
-
-      {/* Bottom row */}
-      <div className="session-card-meta flex-row gap-8">
-        <span className="flex-row gap-4">
-          <Clock24Regular style={{ fontSize: 12 }} />
-          {formatTimeAgo(transcript.created_at)}
+    <div className="thoughtvault-note-row">
+      <button className="thoughtvault-note-open" onClick={onClick}>
+        <span className={`thoughtvault-note-icon${hasNotes ? "" : " thoughtvault-note-audio"}`}><DocumentText24Regular /></span>
+        <span className="thoughtvault-note-copy">
+          <span className="thoughtvault-note-title">{transcript.title || "Naamloze opname"}</span>
+          <span className="thoughtvault-note-summary"><time dateTime={transcript.created_at}>{formatDate(transcript.created_at)}</time>{previewText && <span>{previewText}</span>}</span>
         </span>
-        {isComplete && <span className="status-badge-success">Voltooid</span>}
+        <ChevronRight24Regular className="thoughtvault-note-chevron" />
+      </button>
+      <div className="thoughtvault-note-menu">
+        <button onClick={() => setMenuOpen(!menuOpen)} className="icon-btn icon-btn-sm" aria-label={`Acties voor ${transcript.title || "Naamloze opname"}`} aria-expanded={menuOpen}><MoreHorizontal24Regular /></button>
+        {menuOpen && <div className="context-menu" style={{ position: "absolute", right: 0, top: "100%" }}><button onClick={() => { setMenuOpen(false); onDelete(transcript); }} className="context-menu-item context-menu-item-danger"><Delete24Regular />Verwijderen</button></div>}
       </div>
     </div>
   );
@@ -249,23 +324,6 @@ function getPreviewText(transcript: Transcript): string {
     return stripHtml(transcript.preview).slice(0, 200);
   }
   return "";
-}
-
-function formatTimeAgo(dateStr: string): string {
-  const now = new Date();
-  const date = new Date(dateStr);
-  const diffMs = now.getTime() - date.getTime();
-  const diffMin = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-
-  if (diffMin < 1) return "Zojuist";
-  if (diffMin < 60) return `${diffMin} min geleden`;
-  if (diffHours < 24) return `${diffHours} uur geleden`;
-  if (diffDays === 1) return "Gisteren";
-  if (diffDays < 7) return `${diffDays} dagen geleden`;
-  if (diffDays < 30) return `${Math.floor(diffDays / 7)} weken geleden`;
-  return formatDate(dateStr);
 }
 
 function formatEventTime(start: string, end: string): string {

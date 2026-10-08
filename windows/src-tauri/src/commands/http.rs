@@ -11,7 +11,6 @@ pub struct HttpRequest {
     pub method: String,
     pub headers: Option<HashMap<String, String>>,
     pub body: Option<String>,
-    pub timeout_seconds: Option<u64>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -21,11 +20,28 @@ pub struct HttpResponse {
     pub headers: HashMap<String, String>,
 }
 
+fn require_loopback(value: &str) -> Result<(), String> {
+    let url = reqwest::Url::parse(value).map_err(|_| "Ongeldige lokale URL".to_string())?;
+    if !matches!(url.scheme(), "http" | "https")
+        || !matches!(url.host_str(), Some("localhost" | "127.0.0.1" | "[::1]" | "::1"))
+        || !url.username().is_empty() || url.password().is_some()
+    {
+        return Err("Gebruik een localhost-URL; externe servers zijn uitgeschakeld".to_string());
+    }
+    Ok(())
+}
+
 /// Generic HTTP proxy — bypasses WebView CORS restrictions.
 #[tauri::command]
 pub async fn proxy_request(request: HttpRequest) -> Result<HttpResponse, String> {
+    let url = reqwest::Url::parse(&request.url).map_err(|e| e.to_string())?;
+    if url.scheme() != "https" { require_loopback(&request.url)?; }
+    if url.scheme() != "https" && request.headers.as_ref().is_some_and(|headers| headers.keys().any(|key| key.eq_ignore_ascii_case("authorization"))) {
+        return Err("API-sleutels worden uitsluitend via HTTPS verstuurd".to_string());
+    }
     let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(request.timeout_seconds.unwrap_or(30).min(300)))
+        .redirect(reqwest::redirect::Policy::none())
+        .timeout(std::time::Duration::from_secs(30))
         .build()
         .map_err(|e| e.to_string())?;
 
@@ -216,6 +232,7 @@ pub async fn do_proxy_upload(
 
     // ─── Step 5: hardened reqwest client. ───
     let client = reqwest::Client::builder()
+        .redirect(reqwest::redirect::Policy::none())
         .user_agent(format!(
             "ThoughtVault-Windows/{}",
             env!("CARGO_PKG_VERSION")
@@ -320,22 +337,6 @@ fn encode_path(p: &str) -> String {
     p.split('/').map(encode_segment).collect::<Vec<_>>().join("/")
 }
 
-fn obsidian_base_url(base_url: &str) -> Result<reqwest::Url, String> {
-    let url = reqwest::Url::parse(base_url.trim_end_matches('/'))
-        .map_err(|_| "Ongeldige Obsidian URL".to_string())?;
-    let local = match url.host_str() {
-        Some("localhost") => true,
-        Some(host) => host.parse::<std::net::IpAddr>().is_ok_and(|ip| ip.is_loopback()),
-        None => false,
-    };
-    if !local || !matches!(url.scheme(), "http" | "https") || !url.username().is_empty()
-        || url.password().is_some() || url.query().is_some() || url.fragment().is_some()
-    {
-        return Err("Obsidian Local REST API moet op localhost draaien".to_string());
-    }
-    Ok(url)
-}
-
 /// Write a markdown note into an Obsidian vault via the Local REST API plugin.
 /// The plugin's HTTPS endpoint uses a self-signed certificate, so cert
 /// validation is disabled — this is only ever called against localhost.
@@ -347,17 +348,19 @@ pub async fn obsidian_put(
     filename: String,
     markdown: String,
 ) -> Result<HttpResponse, String> {
-    let base = obsidian_base_url(&base_url)?;
+    let local = require_loopback(&base_url).is_ok();
+    if !local && !base_url.starts_with("https://") { return Err("Gebruik HTTPS voor Obsidian".into()); }
     let client = reqwest::Client::builder()
-        .danger_accept_invalid_certs(true)
         .redirect(reqwest::redirect::Policy::none())
+        .danger_accept_invalid_certs(local)
         .timeout(std::time::Duration::from_secs(15))
         .build()
         .map_err(|e| e.to_string())?;
 
+    let base = base_url.trim_end_matches('/');
     let vault = vault_path.trim_matches('/');
     let encoded_path = encode_path(&format!("{}/{}", vault, filename));
-    let url = format!("{}/vault/{}", base.as_str().trim_end_matches('/'), encoded_path);
+    let url = format!("{}/vault/{}", base, encoded_path);
 
     let response = client
         .put(&url)
@@ -380,43 +383,19 @@ pub async fn obsidian_put(
     Ok(HttpResponse { status, body, headers: resp_headers })
 }
 
-/// Read a note from the same local vault endpoint used by obsidian_put.
-#[tauri::command]
-pub async fn obsidian_get(
-    base_url: String,
-    api_key: String,
-    vault_path: String,
-    filename: String,
-) -> Result<HttpResponse, String> {
-    let base = obsidian_base_url(&base_url)?;
-    let client = reqwest::Client::builder()
-        .danger_accept_invalid_certs(true)
-        .redirect(reqwest::redirect::Policy::none())
-        .timeout(std::time::Duration::from_secs(15))
-        .build()
-        .map_err(|e| e.to_string())?;
-    let vault = vault_path.trim_matches('/');
-    let url = format!("{}/vault/{}", base.as_str().trim_end_matches('/'), encode_path(&format!("{}/{}", vault, filename)));
-    let response = client.get(&url)
-        .header("Authorization", format!("Bearer {}", api_key))
-        .send().await.map_err(|e| e.to_string())?;
-    let status = response.status().as_u16();
-    let body = response.text().await.map_err(|e| e.to_string())?;
-    Ok(HttpResponse { status, body, headers: HashMap::new() })
-}
-
 /// Probe the Obsidian Local REST API (GET /) to verify base URL + API key.
 #[tauri::command]
 pub async fn obsidian_test(base_url: String, api_key: String) -> Result<HttpResponse, String> {
-    let base = obsidian_base_url(&base_url)?;
+    let local = require_loopback(&base_url).is_ok();
+    if !local && !base_url.starts_with("https://") { return Err("Gebruik HTTPS voor Obsidian".into()); }
     let client = reqwest::Client::builder()
-        .danger_accept_invalid_certs(true)
         .redirect(reqwest::redirect::Policy::none())
+        .danger_accept_invalid_certs(local)
         .timeout(std::time::Duration::from_secs(15))
         .build()
         .map_err(|e| e.to_string())?;
 
-    let url = format!("{}/", base.as_str().trim_end_matches('/'));
+    let url = format!("{}/", base_url.trim_end_matches('/'));
 
     let response = client
         .get(&url)
@@ -442,7 +421,10 @@ pub async fn obsidian_test(base_url: String, api_key: String) -> Result<HttpResp
 /// to a plain http://localhost endpoint. 200 = connected.
 #[tauri::command]
 pub async fn ollama_test(base_url: String, api_key: Option<String>) -> Result<HttpResponse, String> {
+    let local = require_loopback(&base_url).is_ok();
+    if !local && !base_url.starts_with("https://") { return Err("Gebruik HTTPS voor Obsidian".into()); }
     let client = reqwest::Client::builder()
+        .redirect(reqwest::redirect::Policy::none())
         .timeout(std::time::Duration::from_secs(10))
         .build()
         .map_err(|e| e.to_string())?;
@@ -474,6 +456,16 @@ pub async fn ollama_test(base_url: String, api_key: Option<String>) -> Result<Ht
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn local_requests_reject_remote_and_credentialed_urls() {
+        for url in ["http://localhost:11434/v1/models", "https://127.0.0.1:27124", "http://[::1]:1234"] {
+            assert!(require_loopback(url).is_ok(), "{url}");
+        }
+        for url in ["https://ollama.com", "http://localhost.evil.test", "http://user:secret@localhost:11434", "file:///tmp/data", "not a URL"] {
+            assert!(require_loopback(url).is_err(), "{url}");
+        }
+    }
     use tokio::net::TcpListener;
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
@@ -807,16 +799,21 @@ pub async fn http_sse_stream(
     url: String,
     headers: Option<HashMap<String, String>>,
     event_name: String,
+    body: Option<String>,
 ) -> Result<(), String> {
     let client = reqwest::Client::builder()
+        .redirect(reqwest::redirect::Policy::none())
         .timeout(std::time::Duration::from_secs(300))
         .build()
         .map_err(|e| e.to_string())?;
 
-    let mut req = client.get(&url);
+    let parsed = reqwest::Url::parse(&url).map_err(|e| e.to_string())?;
+    if parsed.scheme() != "https" { require_loopback(&url)?; }
+    let mut req = if let Some(body) = body { client.post(&url).body(body) } else { client.get(&url) };
 
     if let Some(hdrs) = headers {
         for (key, value) in &hdrs {
+            if key.eq_ignore_ascii_case("authorization") && parsed.scheme() != "https" { return Err("API-sleutels worden uitsluitend via HTTPS verstuurd".into()); }
             req = req.header(key.as_str(), value.as_str());
         }
     }
@@ -828,7 +825,7 @@ pub async fn http_sse_stream(
     }
 
     let mut stream = response.bytes_stream();
-    let mut buffer = String::new();
+    let mut buffer = Vec::new();
 
     while let Some(chunk) = stream.next().await {
         match chunk {
@@ -838,12 +835,11 @@ pub async fn http_sse_stream(
                 return Ok(());
             }
             Ok(bytes) => {
-                let text = String::from_utf8_lossy(&bytes);
-                buffer.push_str(&text);
+                buffer.extend_from_slice(&bytes);
 
                 // Process complete SSE lines from buffer
-                while let Some(pos) = buffer.find('\n') {
-                    let line = buffer[..pos].trim().to_string();
+                while let Some(pos) = buffer.iter().position(|byte| *byte == b'\n') {
+                    let line = String::from_utf8_lossy(&buffer[..pos]).trim().to_string();
                     buffer.drain(..=pos);
 
                     if line.starts_with("data: ") {

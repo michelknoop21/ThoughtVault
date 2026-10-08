@@ -1,5 +1,5 @@
-# Windows MSI build only — triggered from GitLab CI pipeline or manually.
-# macOS + Android + deploy run on GitLab CI (self-hosted runner).
+# ThoughtVault Windows MSI build and publication on GitHub Actions.
+# Gitea is the source repository; dispatch an explicit verified GitHub source ref.
 name: Build Windows MSI
 
 on:
@@ -9,6 +9,11 @@ on:
       - 'dev-v*'
   workflow_dispatch:
     inputs:
+      publish:
+        description: 'Publish after all release checks (false builds a private candidate only)'
+        required: true
+        default: true
+        type: boolean
       channel:
         description: 'Build channel'
         required: true
@@ -20,6 +25,7 @@ on:
 
 permissions:
   contents: write
+  actions: read
 
 env:
   NODE_VERSION: '20'
@@ -56,10 +62,12 @@ jobs:
             echo "msi_name=ThoughtVault_${VERSION}_x64.msi" >> $GITHUB_OUTPUT
             echo "bundle_id=nl.prezent.transcript-studio" >> $GITHUB_OUTPUT
             echo "product_name=ThoughtVault" >> $GITHUB_OUTPUT
+            echo "feed=stable" >> $GITHUB_OUTPUT
           else
             echo "msi_name=ThoughtVault-Dev_${VERSION}_x64.msi" >> $GITHUB_OUTPUT
             echo "bundle_id=nl.prezent.transcript-studio-dev" >> $GITHUB_OUTPUT
             echo "product_name=ThoughtVault Dev" >> $GITHUB_OUTPUT
+            echo "feed=dev" >> $GITHUB_OUTPUT
           fi
 
       - name: Setup Node.js
@@ -72,13 +80,31 @@ jobs:
 
       - name: Install frontend dependencies
         working-directory: windows
-        run: npm install
+        run: npm ci
+
+      - name: Verify ThoughtVault project identity
+        run: python scripts/test-project-identity.py
+
+      - name: Verify frontend and native code
+        working-directory: windows
+        run: |
+          npx vitest run
+          if ($LASTEXITCODE -ne 0) { throw "Frontend tests failed" }
+          npm run build
+          if ($LASTEXITCODE -ne 0) { throw "Frontend build failed" }
+          cargo test --release --manifest-path src-tauri/Cargo.toml --lib
+          if ($LASTEXITCODE -ne 0) { throw "Native tests failed" }
 
       - name: Build Tauri app
         working-directory: windows
         env:
-          TAURI_CONFIG: '{"identifier":"${{ steps.names.outputs.bundle_id }}","productName":"${{ steps.names.outputs.product_name }}"}'
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          TAURI_CONFIG: '{"identifier":"${{ steps.names.outputs.bundle_id }}","productName":"${{ steps.names.outputs.product_name }}","plugins":{"updater":{"endpoints":["https://thoughtvault.yinga.ai/releases/windows/${{ steps.names.outputs.feed }}.json"]}}}'
         run: npm run tauri build
+
+      - name: Verify self-contained C++ runtime
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify-windows-runtime.ps1 -Executable windows/src-tauri/target/release/ThoughtVault.exe
 
       - name: Copy and upload MSI
         shell: bash
@@ -92,9 +118,23 @@ jobs:
             exit 1
           fi
           cp "$MSI" "build/$MSI_NAME"
+          cp "$MSI.sig" "build/$MSI_NAME.sig"
           echo "Built: $MSI_NAME"
 
+      - name: Verify installed app and upgrade
+        if: steps.meta.outputs.channel == 'production'
+        shell: pwsh
+        run: |
+          $Feed = Invoke-RestMethod 'https://thoughtvault.yinga.ai/releases/windows/stable.json'
+          $Url = [Uri]$Feed.platforms.'windows-x86_64'.url
+          if ($Url.Scheme -ne 'https' -or $Url.Host -ne 'thoughtvault.yinga.ai') { throw "Unexpected previous installer URL" }
+          New-Item -ItemType Directory -Force build/previous | Out-Null
+          Invoke-WebRequest $Url.AbsoluteUri -OutFile build/previous/ThoughtVault.msi
+          powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify-windows-installer.ps1 -Installer "build/${{ steps.names.outputs.msi_name }}" -PreviousInstaller "build/previous/ThoughtVault.msi"
+          if ($LASTEXITCODE -ne 0) { throw "Installation verification failed" }
+
       - name: Upload to server
+        if: github.event_name != 'workflow_dispatch' || inputs.publish
         shell: bash
         env:
           MSI_NAME: ${{ steps.names.outputs.msi_name }}
@@ -106,42 +146,17 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H 3.69.205.209 >> ~/.ssh/known_hosts
 
-          SERVER="michelk@3.69.205.209"
-          REMOTE_DIR="/home/michelk/tstudio-releases"
+          powershell -NoProfile -ExecutionPolicy Bypass -File scripts/upload.ps1 -Channel "$CHANNEL" -KeyPath "$USERPROFILE/.ssh/id_rsa"
+          if [ "$?" -ne 0 ]; then exit 1; fi
 
-          scp "build/$MSI_NAME" "$SERVER:$REMOTE_DIR/$MSI_NAME"
-          echo "Uploaded: $MSI_NAME"
-
-          # Update releases.json with Windows entry
-          ssh $SERVER "python3 -c \"
-          import json
-
-          manifest_path = '$REMOTE_DIR/releases.json'
-          try:
-              with open(manifest_path) as f:
-                  data = json.load(f)
-          except (FileNotFoundError, json.JSONDecodeError):
-              data = {}
-
-          channel = '$CHANNEL'
-          entry = {
-              'url': '/tstudio/download/$MSI_NAME',
-              'version': '$VERSION',
-              'filename': '$MSI_NAME'
-          }
-
-          if channel == 'production':
-              data['windows_x64'] = entry
-              data['windows'] = entry
-          else:
-              data['dev_windows_x64'] = entry
-
-          with open(manifest_path, 'w') as f:
-              json.dump(data, f, indent=2)
-
-          print('Updated releases.json windows (' + channel + ')')
-          \""
-
-          echo ""
-          echo "Windows $CHANNEL build uploaded!"
-          echo "  MSI: https://n8n.prezent.nl/tstudio/download/$MSI_NAME"
+      - name: Retain installer and signature
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: thoughtvault-windows-${{ steps.meta.outputs.version }}
+          path: |
+            build/*.msi
+            build/*.sig
+            build/*.log
+            build/INSTALL-VERIFICATION.txt
+          retention-days: 30

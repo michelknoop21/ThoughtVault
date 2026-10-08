@@ -11,7 +11,6 @@ export async function openWidgetWindow(): Promise<void> {
   const existing = await WebviewWindow.getByLabel("recording-widget");
   if (existing) {
     await existing.show();
-    await existing.setFocus();
     return;
   }
 
@@ -58,7 +57,6 @@ export async function openWidgetWindow(): Promise<void> {
     widget.once("tauri://created", async () => {
       try {
         await widget.show();
-        await widget.setFocus();
         // Send the recording start timestamp so the widget timer stays in sync
         const { useRecordingStore } = await import("../stores/recordingStore");
         const { recordingStartedAt, pausedDuration } = useRecordingStore.getState();

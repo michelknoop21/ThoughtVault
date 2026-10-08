@@ -39,6 +39,16 @@ export function htmlToMarkdown(html: string): string {
   md = md.replace(/<blockquote[^>]*>([\s\S]*?)<\/blockquote>/gi, "\n> $1\n");
 
   // 6. Block containers → newline so adjacent sections don't run together.
+  md = md.replace(/<table\b[^>]*>([\s\S]*?)<\/table>/gi, (_table, body: string) => {
+    const rows = [...body.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi)].map((row) =>
+      [...row[1].matchAll(/<t[hd]\b[^>]*>([\s\S]*?)<\/t[hd]>/gi)].map((cell) =>
+        cell[1].replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim().replace(/\|/g, "\\|")));
+    if (!rows.length) return "";
+    const columns = Math.max(...rows.map((row) => row.length));
+    const render = (row: string[]) => `| ${Array.from({ length: columns }, (_, index) => row[index] ?? "").join(" | ")} |`;
+    const header = /<th\b/i.test(body) ? rows.shift()! : Array<string>(columns).fill("");
+    return `\n${render(header)}\n${render(Array<string>(columns).fill("---"))}\n${rows.map(render).join("\n")}\n`;
+  });
   md = md.replace(/<\/?(?:div|section|ul|ol|table|thead|tbody|tr)[^>]*>/gi, "\n");
 
   // 7. Strip any remaining tags.

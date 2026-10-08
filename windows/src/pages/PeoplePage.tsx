@@ -65,7 +65,7 @@ export function PeoplePage() {
   }
 
   return (
-    <div className="page-scroll">
+    <div className="page-scroll desktop-page desktop-people">
       {/* Page header */}
       <div className="page-header">
         <h1 className="page-title-sm">Mensen</h1>
@@ -138,6 +138,10 @@ export function PeoplePage() {
                   <div
                     key={person.id}
                     className="settings-row"
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Bewerk ${person.name}`}
+                    onKeyDown={e => { if(e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); if(!isConfirming) handleEditPerson(person); } }}
                     style={{ cursor: isConfirming ? "default" : "pointer", userSelect: "none" }}
                     onClick={() => !isConfirming && handleEditPerson(person)}
                   >

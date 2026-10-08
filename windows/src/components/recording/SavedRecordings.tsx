@@ -41,14 +41,12 @@ function formatDate(timestamp: number): string {
 
 export function SavedRecordings({
   onReprocess,
-  initiallyExpanded = false,
 }: {
   onReprocess?: (filePath: string) => void;
-  initiallyExpanded?: boolean;
 }) {
   const [recordings, setRecordings] = useState<RecordingFile[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [expanded, setExpanded] = useState(initiallyExpanded);
+  const [expanded, setExpanded] = useState(false);
   const settings = useSettingsStore();
   const toast = useToast();
 

@@ -914,7 +914,7 @@ final class RecordingViewModel {
                 throw LLMError.generationFailed("De notule bevat geen bruikbare inhoud. Controleer de transcriptie en probeer opnieuw.")
             }
             let title = NotuleTitleExtractor.extract(from: datedHtml) ?? fallback
-            try LocalTranscriptStore.shared.finalizeNotule(taskId: localId, html: datedHtml, title: title, style: profile.minutesStyle)
+            try LocalTranscriptStore.shared.finalizeNotule(taskId: localId, html: datedHtml, title: title)
 
             // Auto-export the finished notule to Obsidian (no-op when disabled).
             await MainActor.run {
@@ -1036,7 +1036,7 @@ final class RecordingViewModel {
                 throw LLMError.generationFailed("De notule bevat geen bruikbare inhoud. Controleer de transcriptie en probeer opnieuw.")
             }
             let title = NotuleTitleExtractor.extract(from: datedHtml) ?? record.title
-            try LocalTranscriptStore.shared.finalizeNotule(taskId: taskId, html: datedHtml, title: title, style: profile.minutesStyle)
+            try LocalTranscriptStore.shared.finalizeNotule(taskId: taskId, html: datedHtml, title: title)
             updateTask(regenerationId, status: .completed, progress: 1)
             return (datedHtml, title)
         } catch {

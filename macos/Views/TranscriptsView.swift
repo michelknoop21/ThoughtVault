@@ -188,9 +188,6 @@ struct TranscriptsView: View {
             Text("Deze transcriptie wordt permanent verwijderd.")
         }
         .task { await loadTranscripts() }
-        .onReceive(NotificationCenter.default.publisher(for: .aiTranscriptChanged)) { _ in
-            Task { await loadTranscripts() }
-        }
         .onAppear { if !initialSearch.isEmpty { searchText = initialSearch } }
 #if os(macOS)
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in

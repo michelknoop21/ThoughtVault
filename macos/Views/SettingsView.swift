@@ -159,10 +159,6 @@ struct SettingsView: View {
         }
     }
 
-    var koppelingenTab: some View {
-        cappedForm { AIConnectionsView() }
-    }
-
     var accountTab: some View {
         cappedForm {
             accountSection

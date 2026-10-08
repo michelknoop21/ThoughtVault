@@ -3901,6 +3901,8 @@
 .studio-live-panel dt{color:#c9cce0}
 .studio-live-panel dd{margin:0;max-width:130px;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .studio-live-panel meter{width:70px;height:12px;accent-color:#9a4eef}
+.studio-live-panel meter::-webkit-meter-bar{height:5px;background:#343b59;border:0;border-radius:3px;box-shadow:none}
+.studio-live-panel meter::-webkit-meter-optimum-value{background:#ad69ed;border-radius:3px}
 .studio-actions{display:flex;flex-direction:column;gap:11px}
 .studio-actions button{display:flex;align-items:center;gap:14px;width:100%;padding:14px;font:inherit;font-size:13px;color:white;background:#1b2236;border:1px solid #595f9773;border-radius:10px;text-align:left}
 .studio-actions button span{margin-left:auto;color:#ba8cff}

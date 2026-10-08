@@ -333,5 +333,39 @@ dialog.desktop-dialog > [role="dialog"] > :first-child, dialog.desktop-dialog > 
 .northstar-settings .choice-cards button { display: flex; flex-direction: column; justify-content: flex-start; }
 .northstar-settings .btn-accent { box-shadow: 0 2px 5px rgba(0,0,0,.22); }
 .sidebar .brand-footer { min-height: 36px; height: auto; gap: 6px; padding: 6px 0 0; }
-.brand-footer-logo { display: block; width: 72px; height: 31px; object-fit: contain; flex-shrink: 0; }
+.brand-footer-logo { display: block; width: 42px; height: 18px; object-fit: contain; flex-shrink: 0; }
 .brand-footer-text-compact { font-size: 11px; line-height: 1.3; }
+
+/* Reclaim vertical space without shrinking text or pointer targets. */
+.northstar-settings .settings-tabs { margin-bottom: 20px; }
+.northstar-settings .settings-section-header h2,
+.northstar-settings .settings-other h2 { font-size: 22px; }
+.northstar-settings .settings-section-header p { margin-bottom: 16px; }
+.northstar-settings .northstar-card { padding-block: 16px; }
+.northstar-settings .setup-choices { margin-top: 12px; gap: 12px; }
+.northstar-settings .setup-choices > div { padding: 12px; gap: 10px; }
+.northstar-settings .card-head { padding-block: 16px 12px; gap: 12px; }
+.northstar-settings .card-icon { width: 32px; height: 32px; border-radius: 8px; }
+.northstar-settings .card-icon svg { font-size: 18px; }
+.northstar-settings .card-head h3 { font-size: 16px; }
+.northstar-settings .provider-tiles button { min-height: 88px; padding-block: 12px; }
+@container (max-width: 650px) {
+  .northstar-settings .setup-choices { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
+  .northstar-settings .setup-choices > div { gap: 8px; }
+  .northstar-settings .setup-choices svg { font-size: 20px; }
+}
+@media (max-width: 760px) {
+  .thoughtvault-new-recording { padding: 14px 16px; }
+  .thoughtvault-new-recording > div { grid-template-columns: minmax(0,1fr); }
+  .thoughtvault-record-controls { grid-column: 1; grid-row: auto; flex-direction: row-reverse; justify-content: flex-end; margin-top: 6px; }
+  .thoughtvault-new-recording > div > p:not(.section-label):not(.thoughtvault-ready) { margin-block: 6px; }
+  .thoughtvault-home .thoughtvault-ready { margin-top: 6px; }
+}
+@media (max-width: 760px) and (max-height: 680px) {
+  .thoughtvault-welcome-copy > p:last-child,
+  .thoughtvault-new-recording .section-label { display: none; }
+}
+@media (max-width: 1000px) and (max-height: 680px) {
+  .thoughtvault-home-content { gap: 10px; }
+  .thoughtvault-welcome { padding-block: 6px; }
+}

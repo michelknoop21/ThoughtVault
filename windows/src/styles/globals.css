@@ -284,6 +284,13 @@
   opacity: 1;
 }
 
+.btn:disabled {
+  opacity: 0.45;
+  box-shadow: none;
+  transform: none;
+  pointer-events: none;
+}
+
 .btn-youtube {
   background: linear-gradient(135deg, #E61212, #B80000);
   color: #FFFFFF;

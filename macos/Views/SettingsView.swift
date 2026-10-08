@@ -150,6 +150,7 @@ struct SettingsView: View {
     private func cappedForm<Content: View>(@ViewBuilder content: () -> Content) -> some View {
         Form { content() }
             .formStyle(.grouped)
+            .scrollIndicators(.never)
             .frame(maxWidth: 860)
             .frame(maxWidth: .infinity)
     }

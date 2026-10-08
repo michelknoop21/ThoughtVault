@@ -19,7 +19,7 @@ export function GeneralTab() {
                 <ArrowSync24Regular className="settings-icon" />
                 <div className="flex-1">
                   <p className="settings-label">Controleer op updates</p>
-                  <p className="settings-desc">Toon een melding op de homepage als er een nieuwe versie beschikbaar is</p>
+                  <p className="settings-desc">Toon een melding als er een nieuwe versie beschikbaar is</p>
                 </div>
                 <label className="toggle-switch">
                   <input
@@ -43,7 +43,7 @@ export function GeneralTab() {
                 <Info24Regular className="settings-icon-muted" />
                 <div className="flex-1">
                   <p className="settings-label">ThoughtVault</p>
-                  <p className="settings-desc">Versie {appVersion || "..."} · Windows (Tauri 2)</p>
+                  <p className="settings-desc">Versie {appVersion || "..."} · Windows</p>
                 </div>
               </div>
             </div>

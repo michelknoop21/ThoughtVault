@@ -1,3 +1,4 @@
+import { DesktopDialog } from "../ui/DesktopDialog";
 import { useState, useRef, useEffect } from "react";
 import {
   ArrowLeft24Regular,
@@ -380,7 +381,7 @@ export function TranscriptDetail({
 
       {/* Delete confirm */}
       {deleteConfirm && (
-        <div className="td-overlay" onClick={() => setDeleteConfirm(false)}>
+        <DesktopDialog className="td-overlay" label="Notule verwijderen" onClose={() => setDeleteConfirm(false)}>
           <div className="td-confirm" onClick={(e) => e.stopPropagation()}>
             <p className="td-confirm-title">Verwijderen?</p>
             <p className="td-confirm-text">
@@ -397,7 +398,7 @@ export function TranscriptDetail({
               </button>
             </div>
           </div>
-        </div>
+        </DesktopDialog>
       )}
     </div>
   );

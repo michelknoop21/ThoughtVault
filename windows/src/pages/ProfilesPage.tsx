@@ -1,3 +1,4 @@
+import { DesktopDialog } from "../components/ui/DesktopDialog";
 import { useState, useEffect } from "react";
 import {
   Add24Regular,
@@ -52,7 +53,7 @@ const emptyForm = {
   sections: "",
 };
 
-export function ProfilesPage() {
+export function ProfilesPage({ embedded = false }: { embedded?: boolean }) {
   const { profiles, addProfile, updateProfile, setProfiles, showLocalProfiles } = useProfilesStore();
   const toast = useToast();
   const processingMode = useSettingsStore((state) => state.processing_mode);
@@ -194,10 +195,8 @@ export function ProfilesPage() {
   }
 
   return (
-    <div className="page-scroll desktop-page desktop-profiles">
-      <div className="page-header">
-        <h1 className="page-title-sm">Profielen</h1>
-      </div>
+    <div className={embedded ? "desktop-profiles embedded-profiles" : "page-scroll desktop-page desktop-profiles"}>
+      {!embedded && <div className="page-header"><h1 className="page-title-sm">Profielen</h1></div>}
 
       <div className="page-content">
         <div className="page-content-narrow">
@@ -282,7 +281,7 @@ export function ProfilesPage() {
 
       {/* Create/Edit Modal */}
       {showModal && (
-        <ModalOverlay onClose={() => setShowModal(false)}>
+        <ModalOverlay label={editingProfile ? "Profiel bewerken" : "Nieuw profiel"} onClose={() => setShowModal(false)}>
           <div className="card profile-modal">
             <p className="text-body-strong profile-modal-title">
               {editingProfile ? "Profiel bewerken" : "Nieuw profiel"}
@@ -421,7 +420,7 @@ export function ProfilesPage() {
 
       {/* Delete confirmation */}
       {deleteConfirm && (
-        <ModalOverlay onClose={() => setDeleteConfirm(null)}>
+        <ModalOverlay label="Profiel verwijderen" onClose={() => setDeleteConfirm(null)}>
           <div className="card profile-modal-confirm">
             <p className="text-body-strong" style={{ marginBottom: 8 }}>Profiel verwijderen?</p>
             <p className="text-caption" style={{ marginBottom: 16 }}>
@@ -531,16 +530,6 @@ function ProfileCard({
   );
 }
 
-// Simple modal overlay
-function ModalOverlay({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
-  return (
-    <div
-      className="profile-overlay"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      {children}
-    </div>
-  );
+function ModalOverlay({ children, label, onClose }: { children: React.ReactNode; label: string; onClose: () => void }) {
+  return <DesktopDialog label={label} onClose={onClose}>{children}</DesktopDialog>;
 }

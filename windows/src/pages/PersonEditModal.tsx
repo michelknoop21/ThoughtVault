@@ -1,3 +1,4 @@
+import { DesktopDialog } from "../components/ui/DesktopDialog";
 import { useState, useEffect, useRef } from "react";
 import { Dismiss24Regular, Checkmark24Regular } from "@fluentui/react-icons";
 import { usePeopleDirectoryStore } from "../stores/peopleDirectoryStore";
@@ -96,19 +97,7 @@ export function PersonEditModal({ person, isNew, onClose }: PersonEditModalProps
 
   return (
     /* Overlay backdrop */
-    <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 1000,
-        background: "rgba(0,0,0,0.45)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: 24,
-      }}
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
-    >
+    <DesktopDialog label={isNew ? "Persoon toevoegen" : "Persoon bewerken"} onClose={onClose}>
       {/* Modal panel */}
       <div
         style={{
@@ -308,6 +297,6 @@ export function PersonEditModal({ person, isNew, onClose }: PersonEditModalProps
           </button>
         </div>
       </div>
-    </div>
+    </DesktopDialog>
   );
 }

@@ -12,7 +12,6 @@ import { LoginPage } from "./pages/LoginPage";
 import { HomePage } from "./pages/HomePage";
 import { RecordingPage } from "./pages/RecordingPage";
 import { TranscriptsPage } from "./pages/TranscriptsPage";
-import { ProfilesPage } from "./pages/ProfilesPage";
 import { AccountPage } from "./pages/AccountPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { AdminPage } from "./pages/AdminPage";
@@ -252,13 +251,13 @@ function KeyboardShortcuts() {
 
       const ctrl = e.ctrlKey || e.metaKey;
 
-      // Ctrl+1..5 = Navigate tabs
+      // Ctrl+1..6 mirrors the macOS navigation order
       if (ctrl && e.key === "1") { e.preventDefault(); navigate("/"); }
       if (ctrl && e.key === "2") { e.preventDefault(); navigate("/recording"); }
-      if (ctrl && e.key === "3") { e.preventDefault(); navigate("/transcripts"); }
-      if (ctrl && e.key === "4") { e.preventDefault(); navigate("/settings"); }
-      if (ctrl && e.key === "5") { e.preventDefault(); navigate("/profiles"); }
-      if (ctrl && e.key === "6") { e.preventDefault(); navigate("/people"); }
+      if (ctrl && e.key === "3") { e.preventDefault(); navigate("/tasks"); }
+      if (ctrl && e.key === "4") { e.preventDefault(); navigate("/transcripts"); }
+      if (ctrl && e.key === "5") { e.preventDefault(); navigate("/people"); }
+      if (ctrl && e.key === "6") { e.preventDefault(); navigate("/settings"); }
 
       // Ctrl+N = New recording
       if (ctrl && e.key === "n") { e.preventDefault(); navigate("/recording"); }
@@ -384,7 +383,7 @@ function ProtectedRoutes() {
         <Route path="/recording"   element={<RecordingPage />} />
         <Route path="/tasks"       element={<TasksPage />} />
         <Route path="/transcripts" element={<TranscriptsPage />} />
-        <Route path="/profiles"    element={<ProfilesPage />} />
+        <Route path="/profiles"    element={<Navigate to="/settings?tab=notulen" replace />} />
         <Route path="/people"      element={<PeoplePage />} />
         <Route path="/account"     element={<AccountPage />} />
         <Route path="/settings"    element={<SettingsPage />} />

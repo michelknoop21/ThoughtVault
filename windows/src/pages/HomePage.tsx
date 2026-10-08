@@ -1,3 +1,4 @@
+import { DesktopDialog } from "../components/ui/DesktopDialog";
 import { invoke } from "@tauri-apps/api/core";
 import { getAudioDevices } from "../services/tauriCommands";
 import { useEffect, useState } from "react";
@@ -251,7 +252,7 @@ export function HomePage() {
 
       {/* Delete confirmation dialog */}
       {deleteConfirm && (
-        <div className="profile-overlay" onClick={() => setDeleteConfirm(null)}>
+        <DesktopDialog label="Sessie verwijderen" onClose={() => setDeleteConfirm(null)}>
           <div className="card profile-modal-confirm" onClick={(e) => e.stopPropagation()}>
             <p className="text-body-strong" style={{ marginBottom: 8 }}>Sessie verwijderen?</p>
             <p className="text-caption" style={{ marginBottom: 4, color: "var(--text-secondary)" }}>
@@ -273,7 +274,7 @@ export function HomePage() {
               </button>
             </div>
           </div>
-        </div>
+        </DesktopDialog>
       )}
     </div>
   );

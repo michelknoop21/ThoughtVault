@@ -1,3 +1,4 @@
+import { ask } from "@tauri-apps/plugin-dialog";
 import { useState, useEffect, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
@@ -172,7 +173,7 @@ export function ProcessingTab() {
                     {modelLibrary.find(item => item.id === model.id)?.exists ? <>
                       <button className="btn btn-secondary btn-sm" onClick={() => invoke("show_whisper_model", { modelId: model.id }).catch(err => setModelError(String(err)))}>Toon bestand</button>
                       <button className="btn btn-secondary btn-sm" disabled={downloading || isTranscribing || model.id === settings.whisper_model} onClick={async () => {
-                        if (!confirm(`Gedownload model ${model.label} verwijderen? Je kunt het later opnieuw downloaden.`)) return;
+                        if (!await ask(`Gedownload model ${model.label} verwijderen? Je kunt het later opnieuw downloaden.`, { title: "Model verwijderen", kind: "warning", okLabel: "Verwijderen", cancelLabel: "Annuleren" })) return;
                         try { await invoke("remove_whisper_model", { modelId: model.id }); await checkModel(); }
                         catch (err) { setModelError(String(err)); }
                       }}>Verwijderen</button>

@@ -1,11 +1,10 @@
-import { useNavigate } from "react-router-dom";
+import { ProfilesPage } from "../../pages/ProfilesPage";
 import { DocumentText24Regular } from "@fluentui/react-icons";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { useProfilesStore } from "../../stores/profilesStore";
 import { CardHead } from "./SettingsFields";
 
 export function NotulenTab() {
-  const navigate = useNavigate();
   const settings = useSettingsStore();
   const profiles = useProfilesStore((s) => s.profiles);
   return <div className="settings-other"><header className="settings-section-header"><div><h2>Notulen</h2><p>Kies de standaardstijl voor je notulen.</p></div></header>
@@ -28,7 +27,7 @@ export function NotulenTab() {
           <label className="form-label-sm">Standaard notulentemplate</label>
           <select className="select" value={settings.default_profile_id} onChange={e => settings.updateSettings({ default_profile_id: e.target.value })}>{profiles.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select>
         </div>
-        <button className="studio-link" onClick={() => navigate("/profiles")}>Profielen beheren →</button>
+        <details className="settings-profile-manager"><summary>Profielen beheren</summary><ProfilesPage embedded /></details>
       </div>
     </div>
   </div>;

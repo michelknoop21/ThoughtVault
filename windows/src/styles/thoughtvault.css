@@ -305,3 +305,17 @@
 .desktop-update-banner { flex-wrap: wrap; flex-shrink: 0; }
 
 .studio-controlbar { position: sticky; bottom: 0; }
+
+/* Profile management belongs to Settings > Notulen, as on macOS. */
+.settings-profile-manager { margin-top: 16px; }
+.settings-profile-manager > summary { cursor: pointer; font-size: 14px; font-weight: 600; padding: 8px 0; }
+.embedded-profiles .page-content { padding: 16px 0 0; }
+.embedded-profiles .page-content-narrow { max-width: none; }
+
+/* Centered sheets use the native dialog focus and Escape behavior. */
+dialog.desktop-dialog { inset: 0; margin: 0; width: 100vw; height: 100dvh; max-width: none; max-height: none; padding: 16px; border: 0; background: transparent; color: var(--text-primary); }
+dialog.desktop-dialog[open] { display: flex; align-items: center; justify-content: center; }
+dialog.desktop-dialog::backdrop { background: #060a16aa; }
+dialog.desktop-dialog > * { max-height: calc(100dvh - 32px); min-width: 0; }
+dialog.desktop-dialog > [role="dialog"] > :first-child, dialog.desktop-dialog > [role="dialog"] > :last-child { flex-shrink: 0; }
+.desktop-dialog .profile-modal-actions { position: sticky; bottom: -20px; background: var(--surface-primary); padding: 12px 0; }

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { open } from "@tauri-apps/plugin-dialog";
+import { open, ask } from "@tauri-apps/plugin-dialog";
 import {
   MicRecord24Regular,
   Stop24Regular,
@@ -299,7 +299,7 @@ export function RecordingPage() {
     : phase === "preparing" ? "OPNAME STARTEN" : phase === "stopping" ? "OPNAME STOPPEN" : "KLAAR OM OP TE NEMEN";
 
   async function handleKeepRecording() {
-    if (!window.confirm("Stoppen zonder te verwerken? De opname blijft beschikbaar bij Opgeslagen opnames.")) return;
+    if (!await ask("Stoppen zonder te verwerken? De opname blijft beschikbaar bij Opgeslagen opnames.", { title: "Opname stoppen", kind: "warning", okLabel: "Stoppen", cancelLabel: "Annuleren" })) return;
     // The global stopped handler deliberately ignores idle, keeping the WAV for
     // manual processing later. It must not upload a recording the user cancelled.
     setPhase("idle");

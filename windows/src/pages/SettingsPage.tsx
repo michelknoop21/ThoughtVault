@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Settings24Regular, Options24Regular, DocumentText24Regular, Calendar24Regular, Notebook24Regular, Person24Regular } from "@fluentui/react-icons";
 import { GeneralTab } from "../components/settings/GeneralTab";
 import { ProcessingTab } from "../components/settings/ProcessingTab";
@@ -19,7 +20,8 @@ const TABS = [
 ];
 
 export function SettingsPage() {
-  const [tab, setTab] = useState("Verwerking");
+  const [params] = useSearchParams();
+  const [tab, setTab] = useState(params.get("tab") === "notulen" ? "Notulen" : "Verwerking");
 
   return <div className="page-scroll northstar-settings">
     <h1>Instellingen</h1>

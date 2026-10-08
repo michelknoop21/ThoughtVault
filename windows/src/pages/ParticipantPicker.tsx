@@ -1,3 +1,4 @@
+import { DesktopDialog } from "../components/ui/DesktopDialog";
 import { usePeopleDirectoryStore } from "../stores/peopleDirectoryStore";
 import { useRecordingStore } from "../stores/recordingStore";
 
@@ -26,19 +27,7 @@ export function ParticipantPicker({ onClose }: ParticipantPickerProps) {
   }
 
   return (
-    <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 1100,
-        background: "rgba(0,0,0,0.45)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: 24,
-      }}
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
-    >
+    <DesktopDialog label="Deelnemers kiezen" onClose={onClose}>
       <div
         style={{
           background: "var(--surface-primary)",
@@ -121,6 +110,6 @@ export function ParticipantPicker({ onClose }: ParticipantPickerProps) {
           </button>
         </div>
       </div>
-    </div>
+    </DesktopDialog>
   );
 }

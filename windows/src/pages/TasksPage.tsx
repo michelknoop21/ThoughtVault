@@ -1,3 +1,4 @@
+import { DesktopDialog } from "../components/ui/DesktopDialog";
 import { useEffect, useState } from "react";
 import {
   ArrowSync24Regular,
@@ -80,17 +81,7 @@ function ConfirmDialog({
   onCancel: () => void;
 }) {
   return (
-    <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 1000,
-        display: "grid",
-        placeItems: "center",
-        background: "rgba(0,0,0,0.4)",
-      }}
-      onClick={onCancel}
-    >
+    <DesktopDialog label={title} onClose={onCancel}>
       <div
         className="card"
         style={{
@@ -116,7 +107,7 @@ function ConfirmDialog({
           </button>
         </div>
       </div>
-    </div>
+    </DesktopDialog>
   );
 }
 

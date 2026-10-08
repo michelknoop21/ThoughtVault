@@ -9,7 +9,6 @@ import {
   Settings24Regular,
   ChevronLeft24Regular,
   ChevronRight24Regular,
-  NotepadPerson24Regular,
   People24Regular,
 } from "@fluentui/react-icons";
 import { useLocalTranscriptsStore } from "../../stores/localTranscriptsStore";
@@ -53,10 +52,9 @@ export function Sidebar() {
       {/* Main navigation */}
       <SidebarItem to="/" icon={<Home24Regular />} label="Home" shortcut="Ctrl+1" />
       <SidebarItem to="/recording" icon={<MicRecord24Regular />} label="Opnemen" shortcut="Ctrl+2" />
-      <SidebarItem to="/tasks" icon={<TaskListLtr24Regular />} label="Taken" />
-      <SidebarItem to="/transcripts" icon={<DocumentText24Regular />} label="Notulen" shortcut="Ctrl+3" />
-      <SidebarItem to="/profiles" icon={<NotepadPerson24Regular />} label="Profielen" shortcut="Ctrl+5" />
-      <SidebarItem to="/people" icon={<People24Regular />} label="Mensen" shortcut="Ctrl+6" />
+      <SidebarItem to="/tasks" icon={<TaskListLtr24Regular />} label="Taken" shortcut="Ctrl+3" />
+      <SidebarItem to="/transcripts" icon={<DocumentText24Regular />} label="Notulen" shortcut="Ctrl+4" />
+      <SidebarItem to="/people" icon={<People24Regular />} label="Mensen" shortcut="Ctrl+5" />
 
       {!collapsed && location.pathname !== "/" && recent.length > 0 && <section className="sidebar-recent" aria-label="Recente notulen">
         <h2>Recent</h2>
@@ -71,7 +69,7 @@ export function Sidebar() {
       <hr className="sidebar-divider" />
 
       {/* Bottom items */}
-      <SidebarItem to="/settings" icon={<Settings24Regular />} label="Instellingen" shortcut="Ctrl+4" />
+      <SidebarItem to="/settings" icon={<Settings24Regular />} label="Instellingen" shortcut="Ctrl+6" />
       {!collapsed && <BrandFooter compact />}
     </nav>
   );

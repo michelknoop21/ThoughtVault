@@ -1,3 +1,5 @@
+import { ask } from "@tauri-apps/plugin-dialog";
+import { DesktopDialog } from "../components/ui/DesktopDialog";
 import { useEffect, useState, useRef, useCallback } from "react";
 import {
   ArrowDownload24Regular,
@@ -388,7 +390,7 @@ export function TranscriptsPage() {
         toast.show("Obsidian-versie is bijgewerkt", "success");
         return;
       }
-      if (!window.confirm("De versie uit Obsidian vervangt de huidige notule in ThoughtVault. Doorgaan?")) return;
+      if (!await ask("De versie uit Obsidian vervangt de huidige notule in ThoughtVault. Doorgaan?", { title: "Notule vervangen", kind: "warning", okLabel: "Vervangen", cancelLabel: "Annuleren" })) return;
       await handleSaveNotule(transcript.id, html, false);
       acknowledgeObsidianImport(transcript, markdown, html);
       toast.show("Wijzigingen uit Obsidian opgehaald", "success");
@@ -532,7 +534,7 @@ export function TranscriptsPage() {
         </div>
       )}
 
-      {regenerateTarget && <div className="td-overlay" onClick={() => setRegenerateTarget(null)}>
+      {regenerateTarget && <DesktopDialog className="td-overlay" label="Notule opnieuw genereren" onClose={() => setRegenerateTarget(null)}>
         <div className="td-tags-dialog" onClick={(e) => e.stopPropagation()}>
           <h3 className="td-tags-title">Notulen regenereren</h3>
           <p className="text-caption">Kies het template voor de nieuwe notulen.</p>
@@ -546,11 +548,11 @@ export function TranscriptsPage() {
             <button className="btn btn-accent" onClick={() => void handleRegenerate(regenerateTarget, regenerateProfileId)}>Regenereren</button>
           </div>
         </div>
-      </div>}
+      </DesktopDialog>}
 
       {/* Tags dialog */}
       {tagsDialogId && (
-        <div className="td-overlay" onClick={() => setTagsDialogId(null)}>
+        <DesktopDialog className="td-overlay" label="Tags beheren" onClose={() => setTagsDialogId(null)}>
           <div className="td-tags-dialog" onClick={(e) => e.stopPropagation()}>
             <h3 className="td-tags-title">Tags beheren</h3>
             <div className="td-tags-current">
@@ -595,7 +597,7 @@ export function TranscriptsPage() {
               <button className="btn btn-secondary btn-sm" onClick={() => setTagsDialogId(null)}>Sluiten</button>
             </div>
           </div>
-        </div>
+        </DesktopDialog>
       )}
     </div>
   );

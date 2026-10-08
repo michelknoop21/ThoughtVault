@@ -58,6 +58,21 @@ describe("current ThoughtVault interface", () => {
     useLocalTranscriptsStore.setState({items:saved});
   });
 
+  it("toggles the sidebar with the desktop shortcut and restores all navigation", async () => {
+    const container = document.createElement("div");
+    const mounted = createRoot(container);
+    await act(async () => { mounted.render(<MemoryRouter><Sidebar /></MemoryRouter>); });
+    await act(async () => { window.dispatchEvent(new KeyboardEvent("keydown", {key:"s",ctrlKey:true,shiftKey:true})); });
+    expect(container.querySelector(".sidebar.collapsed")).not.toBeNull();
+    expect(container.querySelector(".sidebar-toggle")?.getAttribute("aria-expanded")).toBe("false");
+    await act(async () => { window.dispatchEvent(new KeyboardEvent("keydown", {key:"s",ctrlKey:true})); });
+    expect(container.querySelector(".sidebar.collapsed")).not.toBeNull();
+    await act(async () => { window.dispatchEvent(new KeyboardEvent("keydown", {key:"s",ctrlKey:true,shiftKey:true})); });
+    expect(container.querySelector(".sidebar.collapsed")).toBeNull();
+    expect(container.querySelectorAll(".sidebar a")).toHaveLength(7);
+    await act(async () => { mounted.unmount(); });
+  });
+
   it("opens a note by keyboard without opening it when its menu receives Enter", async () => {
     const container = document.createElement("div");
     const mounted = createRoot(container);

@@ -126,27 +126,6 @@
 .thoughtvault-note-summary > span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .thoughtvault-note-chevron { flex-shrink: 0; width: 18px; color: #929cb8; }
 .thoughtvault-note-menu { position: relative; margin-left: 8px; }
-@container (min-width: 1180px) {
-  .thoughtvault-home-content { display: grid; grid-template-columns: minmax(0,1fr) 295px; column-gap: 23px; padding-left: 23px; padding-right: 11px; }
-  .thoughtvault-home-toolbar { grid-column: 1 / -1; }
-  .thoughtvault-welcome { grid-column: 1; grid-row: 2; }
-  .thoughtvault-new-recording { grid-column: 1; grid-row: 3; }
-  .thoughtvault-home-recent { grid-column: 1; grid-row: 4; }
-  .thoughtvault-home-side { grid-column: 2; grid-row: 2 / 5; align-content: start; padding-top: 21px; }
-  .thoughtvault-agenda { min-height: 400px; }
-}
-@container (max-width: 1179px) {
-  .thoughtvault-home-content { display: block; }
-  .thoughtvault-home-side { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); }
-  .thoughtvault-brand-note { display: none; }
-}
-@container (max-width: 779px) {
-  .thoughtvault-new-recording { grid-template-columns: 1fr; padding: 24px; }
-  .thoughtvault-record-tip { display: block; }
-  .thoughtvault-home-side { grid-template-columns: 1fr; }
-  .thoughtvault-tagline { display: none; }
-}
-
 /* Restored settings use the approved desktop cards and responsive columns. */
 .restored-model-settings{padding:18px 20px}
 .system-specs>div{display:flex;justify-content:space-between;gap:16px;margin:12px 0;font-size:13px}
@@ -198,8 +177,6 @@
 .desktop-notulen .tl-item-preview { font-size:13px;margin-top:6px; }
 .desktop-notulen .tl-document-icon { width:42px;height:42px;display:grid;place-items:center;flex-shrink:0;background:#7943e226;color:#b89eff;border-radius:10px; }
 .desktop-notulen .td-panel { width:100%;min-width:0; }
-@media(max-height:780px) { .sidebar-recent button:nth-of-type(n+4) { display:none; } }
-@media(max-height:650px) { .sidebar-recent { display:none; } }
 
 .thoughtvault-record-controls .icon-btn { padding:0; }
 .thoughtvault-record-controls .icon-btn svg { flex-shrink:0; }
@@ -225,3 +202,100 @@
 .thoughtvault-home-content, .thoughtvault-new-recording { width: 100%; min-width: 0; box-sizing: border-box; }
 
 .app-shell { color: #edeaf6; }
+
+/* Desktop layout: viewport chrome stays fixed, each workspace owns its scroll. */
+.app-shell { --sidebar-width: 208px; border-radius: 0; font: 14px/1.5 var(--font-family); }
+.app-main-content { min-width: 0; }
+.app-shell .sidebar { --sidebar-width: inherit; padding: 12px 10px 8px; flex-shrink: 0; }
+.sidebar-logo-section { padding: 18px 8px 22px; gap: 10px; }
+.sidebar-app-name { font-size: 17px; }
+.sidebar-item { min-height: 38px; padding: 8px 12px; gap: 12px; font-size: 14px; flex-shrink: 0; }
+.sidebar-item.active { background: #503489; border-color: #8865be; box-shadow: none; }
+.sidebar-recent { margin-top: 22px; overflow-y: auto; min-height: 0; flex: 1; }
+.sidebar .brand-footer { flex-shrink: 0; border: 0; background: transparent; padding: 8px 0 0; }
+.thoughtvault-home-content { display: grid; grid-template-columns: minmax(0,1fr); gap: 18px; padding: 20px 24px; }
+.thoughtvault-home-toolbar { gap: 12px; }
+.thoughtvault-search { min-width: 0; padding: 8px 12px; gap: 10px; }
+.thoughtvault-search input { min-width: 0; }
+.thoughtvault-search svg, .thoughtvault-account { flex-shrink: 0; }
+.thoughtvault-welcome { height: auto; min-height: 0; padding: 10px 0; align-items: center; }
+.thoughtvault-welcome h1 { font-size: 28px; margin: 4px 0; letter-spacing: -.5px; }
+.thoughtvault-welcome-copy > p:last-child { font-size: 14px; }
+.thoughtvault-welcome-copy::after { content: none; }
+.thoughtvault-landscape { height: 110px; width: 280px; opacity: .4; }
+.thoughtvault-tagline { display: none; }
+.thoughtvault-new-recording { min-height: 0; display: block; padding: 18px 20px; border-radius: 10px; }
+.thoughtvault-new-recording > div { display: grid; grid-template-columns: minmax(0,1fr) auto; column-gap: 24px; align-items: center; }
+.thoughtvault-new-recording .section-label { grid-column: 1; font-size: 12px; letter-spacing: .8px; }
+.thoughtvault-new-recording h2 { grid-column: 1; font-size: 20px; margin: 4px 0; }
+.thoughtvault-new-recording > div > p:not(.section-label):not(.thoughtvault-ready) { grid-column: 1; font-size: 14px; }
+.thoughtvault-record-controls { grid-column: 2; grid-row: 1 / 5; flex-direction: column-reverse; min-height: 0; margin: 0; gap: 8px; }
+.thoughtvault-record-orb { width: auto; height: 42px; padding: 0 16px; gap: 8px; display: flex; border-radius: 8px; background: #7946ce; border-color: #a880e5; box-shadow: none; font: inherit; font-weight: 600; }
+.thoughtvault-record-orb svg { font-size: 22px; }
+.thoughtvault-record-controls .icon-btn { height: 32px; width: 32px; }
+.thoughtvault-idle-wave { display: none; }
+.thoughtvault-home .thoughtvault-ready { grid-column: 1; margin-top: 10px; }
+.thoughtvault-record-tip { display: block; background: transparent; padding: 10px 0 0; margin-top: 12px; border: 0; border-top: 1px solid #30384c; border-radius: 0; }
+.thoughtvault-record-tip summary { color: #c7b0eb; font-size: 13px; cursor: pointer; }
+.thoughtvault-record-tip p { margin-top: 8px; font-size: 13px; }
+.thoughtvault-home-side { padding: 0; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; align-content: start; }
+.thoughtvault-home-side section { padding: 16px; min-width: 0; }
+.thoughtvault-home-side h2 { font-size: 16px; margin-bottom: 10px; }
+.thoughtvault-agenda { min-height: 0; }
+.thoughtvault-quick-capture { gap: 8px; }
+.thoughtvault-quick-capture .btn { height: auto; min-height: 36px; font-size: 13px; padding: 8px 10px; gap: 10px; white-space: normal; }
+.thoughtvault-brand-note { color: #b8bdd6; font-size: 13px; padding: 12px 0; border-top: 1px solid #24293d; grid-column: 1 / -1; }
+.thoughtvault-brand-note strong { font-size: 13px; }
+.thoughtvault-brand-note p { margin-top: 2px; }
+.thoughtvault-home-recent { padding-top: 0; }
+.thoughtvault-home-recent h2 { font-size: 18px; }
+.thoughtvault-recent-filters { margin: 10px 0; }
+.thoughtvault-note-row { min-height: 64px; }
+.thoughtvault-note-open { gap: 12px; }
+.thoughtvault-note-icon { width: 36px; height: 36px; border-radius: 8px; }
+.thoughtvault-note-summary { margin-top: 4px; }
+.recording-studio { grid-auto-rows: max-content; align-content: start; flex: 1; min-height: 0; grid-template-columns: minmax(0,1fr) 270px; align-items: start; }
+.studio-workspace { min-height: 0; padding: 20px 24px; }
+.studio-timer { margin: 24px 0 12px; }
+.studio-wave { width: 100%; height: clamp(80px,20vh,180px); flex-shrink: 0; }
+.studio-wave canvas { max-height: 100%; }
+.studio-transport { margin: 0 0 20px; }
+.studio-controlbar { flex-wrap: wrap; border-radius: 10px; padding: 10px; gap: 10px; }
+.studio-controlbar > label { flex: 1 1 150px; }
+.studio-controlbar > label > svg { flex-shrink: 0; }
+.studio-transcription { flex: 1 1 150px; }
+.studio-inspector { overflow: visible; padding: 20px 16px; min-width: 0; }
+.studio-topline { flex-wrap: wrap; gap: 8px; }
+.studio-status, .studio-language { font-size: 12px; padding: 8px 10px; }
+.studio-round { box-shadow: none; }
+.studio-live-panel { margin: 16px 0 20px; }
+.studio-actions button { padding: 10px; }
+.desktop-page .page-header { flex-wrap: wrap; gap: 12px; }
+.desktop-page .page-content { width: 100%; min-width: 0; }
+.settings-tabs { flex-wrap: wrap; width: auto; overflow: visible; }
+.settings-tabs button { padding: 10px 12px; }
+@container (min-width: 980px) {
+  .thoughtvault-home-content { grid-template-columns: minmax(0,1fr) 270px; column-gap: 20px; }
+  .thoughtvault-home-toolbar { grid-column: 1 / -1; }
+  .thoughtvault-welcome, .thoughtvault-new-recording, .thoughtvault-home-recent { grid-column: 1; }
+  .thoughtvault-home-side { grid-column: 2; grid-row: 2 / 5; grid-template-columns: minmax(0,1fr); }
+}
+@container (max-width: 800px) {
+  .recording-studio { grid-template-columns: minmax(0,1fr); }
+  .studio-inspector { border-left: 0; border-top: 1px solid #303858; }
+  .studio-workspace { min-height: 0; }
+}
+@media (max-width: 1000px) {
+  .app-shell { --sidebar-width: 184px; }
+  .sidebar-app-name { font-size: 15px; }
+  .thoughtvault-home-content { padding: 16px; gap: 14px; }
+}
+@media (max-height: 680px) {
+  .studio-workspace { min-height: 0; padding: 16px 20px; }
+  .studio-timer { margin: 12px 0 8px; }
+  .studio-wave { height: 80px; }
+}
+
+@container (max-width: 800px) {
+  .studio-inspector { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 20px; }
+}

@@ -7,7 +7,6 @@ import { useEffect, useState } from "react";
 import { TitleBar } from "./components/layout/TitleBar";
 import { Sidebar } from "./components/layout/Sidebar";
 import { CallAlertOverlay } from "./components/calendar/CallAlertOverlay";
-import { BrandFooter } from "./components/brand/BrandFooter";
 import { ErrorBoundary } from "./components/ui/ErrorBoundary";
 import { InfoBarHost } from "./components/ui/InfoBar";
 import { HomePage } from "./pages/HomePage";
@@ -46,7 +45,6 @@ function AppShell({ children }: { children: React.ReactNode }) {
             <div className="app-main-content">
               {children}
             </div>
-            <BrandFooter compact />
           </main>
         </div>
       </div>

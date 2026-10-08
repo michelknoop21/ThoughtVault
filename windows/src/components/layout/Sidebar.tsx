@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { BrandFooter } from "../brand/BrandFooter";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   Home24Regular,
@@ -17,6 +18,16 @@ import appLogo from "../../assets/app-logo.png";
 
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
+  useEffect(() => {
+    const toggle = (event: KeyboardEvent) => {
+      if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === "s") {
+        event.preventDefault();
+        setCollapsed(value => !value);
+      }
+    };
+    window.addEventListener("keydown", toggle);
+    return () => window.removeEventListener("keydown", toggle);
+  }, []);
   const location = useLocation();
   const navigate = useNavigate();
   const local = useLocalTranscriptsStore(s => s.items);
@@ -61,6 +72,7 @@ export function Sidebar() {
 
       {/* Bottom items */}
       <SidebarItem to="/settings" icon={<Settings24Regular />} label="Instellingen" shortcut="Ctrl+4" />
+      {!collapsed && <BrandFooter compact />}
     </nav>
   );
 }

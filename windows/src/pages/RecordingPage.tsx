@@ -306,6 +306,7 @@ export function RecordingPage() {
       </div>
     </section>
     <aside className="studio-inspector">
+      <section>
       <h2>Huidige opname</h2>
       <div className="studio-identity"><MicRecord24Regular /><div><strong>Nieuwe opname</strong><span>Titel na verwerking</span></div></div>
       <p className="studio-meta">Tags na verwerking</p>
@@ -315,6 +316,8 @@ export function RecordingPage() {
         <dl><div><dt>Duur</dt><dd>{duration}</dd></div><div><dt>Geluidsniveau</dt><dd><meter min={0} max={100} value={phase === "recording" ? level : 0} aria-label="Geluidsniveau" /></dd></div>
           <div><dt>Bron</dt><dd>{mode === "combined" ? "Gecombineerd" : "Microfoon"}</dd></div><div><dt>Profiel</dt><dd>{profileName}</dd></div></dl>
       </section>
+      </section>
+      <section>
       <h2>Snelle acties</h2>
       <div className="studio-actions">
         <button onClick={() => setPanel("people")}><People24Regular />Deelnemers kiezen</button>
@@ -324,6 +327,7 @@ export function RecordingPage() {
       </div>
       {settings.processing_mode === "cloud" && <label className="studio-premium"><input type="checkbox" checked={usePremium} onChange={e => setUsePremium(e.target.checked)} />Premium model</label>}
       <p className="studio-hint">{mode === "combined" ? "Microfoon en systeemgeluid worden opgenomen." : "Alleen je microfoon wordt opgenomen."} Transcriptie gebeurt na afloop.</p>
+      </section>
     </aside>
     {panel === "people" && <ParticipantPicker onClose={() => setPanel(null)} />}
     {panel && panel !== "people" && <dialog ref={dialogRef} className="studio-dialog" aria-label={panel === "saved" ? "Opgeslagen opnames" : "YouTube-video"} onCancel={() => setPanel(null)}>

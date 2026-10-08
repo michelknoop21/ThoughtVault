@@ -1,6 +1,6 @@
 import { DesktopDialog } from "../components/ui/DesktopDialog";
 import { useState, useEffect, useRef } from "react";
-import { Dismiss24Regular, Checkmark24Regular } from "@fluentui/react-icons";
+import { Dismiss24Regular, Checkmark24Regular } from "../components/ui/StudioIcons";
 import { usePeopleDirectoryStore } from "../stores/peopleDirectoryStore";
 import type { PersonProfile } from "../types";
 

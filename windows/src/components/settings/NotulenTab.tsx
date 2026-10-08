@@ -1,5 +1,5 @@
 import { ProfilesPage } from "../../pages/ProfilesPage";
-import { DocumentText24Regular } from "@fluentui/react-icons";
+import { DocumentText24Regular } from "../ui/StudioIcons";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { useProfilesStore } from "../../stores/profilesStore";
 import { CardHead } from "./SettingsFields";

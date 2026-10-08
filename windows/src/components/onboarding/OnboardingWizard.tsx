@@ -8,7 +8,7 @@ import {
   Person24Regular,
   ArrowRight24Regular,
   ArrowLeft24Regular,
-} from "@fluentui/react-icons";
+} from "../ui/StudioIcons";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { usePersonProfileStore } from "../../stores/personProfileStore";
 import { MicrosoftGraphService } from "../../services/microsoftGraph";

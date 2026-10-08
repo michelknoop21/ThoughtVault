@@ -14,7 +14,7 @@ import {
   Person24Regular,
   DocumentText24Regular,
   ChevronRight24Regular,
-} from "@fluentui/react-icons";
+} from "../components/ui/StudioIcons";
 import { useRecordingStore } from "../stores/recordingStore";
 import { useTranscriptsStore } from "../stores/transcriptsStore";
 import { useLocalTranscriptsStore, isLocalId } from "../stores/localTranscriptsStore";

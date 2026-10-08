@@ -9,7 +9,7 @@ import {
   Document24Regular,
   Dismiss24Regular,
   Add24Regular,
-} from "@fluentui/react-icons";
+} from "../components/ui/StudioIcons";
 import DOMPurify from "dompurify";
 import { useTranscriptsStore } from "../stores/transcriptsStore";
 import { useLocalTranscriptsStore, isLocalId } from "../stores/localTranscriptsStore";

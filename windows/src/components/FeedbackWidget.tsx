@@ -4,7 +4,7 @@ import {
   Dismiss16Regular,
   Send20Regular,
   ArrowSync16Regular,
-} from "@fluentui/react-icons";
+} from "./ui/StudioIcons";
 import { api } from "../services/api";
 import { useToast } from "./ui/InfoBar";
 import type { FeedbackSubmission, UserFeedback } from "../types";

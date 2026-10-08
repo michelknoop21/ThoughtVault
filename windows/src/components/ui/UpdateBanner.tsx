@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { Update } from "@tauri-apps/plugin-updater";
 import { useRecordingStore } from "../../stores/recordingStore";
-import { ArrowDownload24Regular, Dismiss24Regular } from "@fluentui/react-icons";
+import { ArrowDownload24Regular, Dismiss24Regular } from "./StudioIcons";
 
 interface UpdateBannerProps {
   version: string;

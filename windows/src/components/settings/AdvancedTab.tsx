@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Globe24Regular, CheckmarkCircle24Regular, ErrorCircle24Regular } from "@fluentui/react-icons";
+import { Globe24Regular, CheckmarkCircle24Regular, ErrorCircle24Regular } from "../ui/StudioIcons";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { api } from "../../services/api";
 import { CardHead } from "./SettingsFields";

@@ -8,7 +8,7 @@ import {
   Globe24Regular,
   LockClosed24Regular,
   Star24Regular,
-} from "@fluentui/react-icons";
+} from "../components/ui/StudioIcons";
 import { currentProfileChoices, useProfilesStore } from "../stores/profilesStore";
 import { api } from "../services/api";
 import { saveProfileForMode, deleteProfileForMode } from "../services/profileActions";

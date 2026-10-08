@@ -7,7 +7,7 @@ import {
   CheckmarkCircle24Regular,
   ErrorCircle24Regular,
   Laptop24Regular,
-} from "@fluentui/react-icons";
+} from "../ui/StudioIcons";
 import { transcriptionAdvice } from "../../services/processingAdvice";
 import type { SystemSpecs } from "../../services/tauriCommands";
 import { loadCredential } from "../../services/tauriCommands";
@@ -128,7 +128,7 @@ export function ProcessingTab() {
 
             {settings.processing_mode === "local" && (
               <>
-                <div style={{ padding: "0 14px 4px" }}>
+                <div style={{ padding: "0 20px 4px" }}>
                   <SettingsField label="Transcriptiemodel (Whisper)">
                     <select
                       aria-label="Transcriptiemodel" disabled={downloading} value={settings.whisper_model}
@@ -144,11 +144,11 @@ export function ProcessingTab() {
                     </select>
                   </SettingsField>
                 </div>
-                <div style={{ padding: "0 14px 12px", display: "flex", flexDirection: "column", gap: 6 }}>
+                <div style={{ padding: "0 20px 12px", display: "flex", flexDirection: "column", gap: 6 }}>
                   {downloading ? (
                     <><p className="settings-desc" style={{ margin: 0 }}>Downloaden… {dlPct}%</p>
                       <progress value={dlPct} max={100} aria-label="Modeldownload" />
-                      <button className="btn btn-secondary btn-sm" onClick={() => invoke("cancel_whisper_download").catch(err => setModelError(String(err)))}>Annuleren</button></>
+                      <button className="btn btn-secondary btn-sm" style={{ alignSelf: "flex-start" }} onClick={() => invoke("cancel_whisper_download").catch(err => setModelError(String(err)))}>Annuleren</button></>
                   ) : modelExists ? (
                     <p className="settings-desc-success" style={{ margin: 0 }}>
                       <CheckmarkCircle24Regular style={{ fontSize: 14, verticalAlign: "middle" }} /> Model gedownload en klaar voor gebruik
@@ -201,7 +201,7 @@ export function ProcessingTab() {
 
             {settings.processing_mode === "local" && settings.notulen_provider === "ollama" && (
               <>
-                <div style={{ padding: "0 14px 4px" }}>
+                <div style={{ padding: "0 20px 4px" }}>
                   <SettingsField label="Ollama URL">
                     <input
                       type="url"
@@ -211,7 +211,7 @@ export function ProcessingTab() {
                     />
                   </SettingsField>
                 </div>
-                <div style={{ padding: "0 14px 4px" }}>
+                <div style={{ padding: "0 20px 4px" }}>
                   <SettingsField label="Model">
                     <input
                       type="text"
@@ -222,7 +222,7 @@ export function ProcessingTab() {
                     />
                   </SettingsField>
                 </div>
-                <div style={{ padding: "0 14px 14px" }}>
+                <div style={{ padding: "0 20px 14px" }}>
                   <CredentialField credentialKey="ollama_api_key" label="API-sleutel (alleen Ollama Cloud)">
                   <button
                     onClick={handleTestOllama}
@@ -242,7 +242,7 @@ export function ProcessingTab() {
 
             {settings.processing_mode === "local" && settings.notulen_provider === "lm-studio" && (
               <>
-                <div style={{ padding: "0 14px 4px" }}>
+                <div style={{ padding: "0 20px 4px" }}>
                   <SettingsField label="LM Studio URL">
                     <input
                       type="url"
@@ -252,7 +252,7 @@ export function ProcessingTab() {
                     />
                   </SettingsField>
                 </div>
-                <div style={{ padding: "0 14px 12px" }}>
+                <div style={{ padding: "0 20px 12px" }}>
                   <SettingsField label="Model">
                     <input
                       type="text"
@@ -268,7 +268,7 @@ export function ProcessingTab() {
 
             {settings.processing_mode === "local" &&
               (settings.notulen_provider === "openai" || settings.notulen_provider === "anthropic") && (
-              <div style={{ padding: "0 14px 12px" }}>
+              <div style={{ padding: "0 20px 12px" }}>
                 <p className="settings-desc">Dit gebruikt je eigen API-sleutel met aparte API-kosten. Je ChatGPT- of Claude-abonnement wordt hiervoor niet gebruikt.</p>
                 <SettingsField label="Model">
                   <input className="input" type="text"

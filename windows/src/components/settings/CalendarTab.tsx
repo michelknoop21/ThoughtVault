@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Calendar24Regular } from "@fluentui/react-icons";
+import { Calendar24Regular } from "../ui/StudioIcons";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { CardHead } from "./SettingsFields";
 import { useCalendarStore } from "../../stores/calendarStore";

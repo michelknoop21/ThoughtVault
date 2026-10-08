@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Delete24Regular, PersonAdd24Regular } from "@fluentui/react-icons";
+import { Delete24Regular, PersonAdd24Regular } from "../components/ui/StudioIcons";
 import { usePeopleDirectoryStore } from "../stores/peopleDirectoryStore";
 import type { PersonProfile } from "../types";
 import { PersonEditModal } from "./PersonEditModal";

@@ -1,4 +1,4 @@
-import { ArrowSync24Regular, Person24Regular } from "@fluentui/react-icons";
+import { ArrowSync24Regular, Person24Regular } from "../ui/StudioIcons";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { ProfileSettings } from "./ProfileSettings";
 import { CardHead } from "./SettingsFields";

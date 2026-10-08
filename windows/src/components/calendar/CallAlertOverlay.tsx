@@ -5,7 +5,7 @@ import {
   MicRecord24Regular,
   Dismiss24Regular,
   Calendar24Regular,
-} from "@fluentui/react-icons";
+} from "../ui/StudioIcons";
 import { useCalendarStore } from "../../stores/calendarStore";
 import { useRecordingStore } from "../../stores/recordingStore";
 import { MicrosoftGraphService } from "../../services/microsoftGraph";

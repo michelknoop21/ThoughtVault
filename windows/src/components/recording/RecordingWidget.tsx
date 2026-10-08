@@ -8,7 +8,7 @@ import {
   Stop24Regular,
   Pause24Regular,
   Play24Regular,
-} from "@fluentui/react-icons";
+} from "../ui/StudioIcons";
 
 type WidgetState = "recording" | "paused" | "stopping";
 

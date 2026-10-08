@@ -10,7 +10,7 @@ import {
   ArrowUpload24Regular,
   VideoChat24Regular,
   People24Regular,
-} from "@fluentui/react-icons";
+} from "../components/ui/StudioIcons";
 import { useRecordingStore } from "../stores/recordingStore";
 import { useSettingsStore } from "../stores/settingsStore";
 import { useTranscriptsStore } from "../stores/transcriptsStore";
@@ -36,7 +36,7 @@ import { usePeopleDirectoryStore } from "../stores/peopleDirectoryStore";
 import { saveQuickNote } from "../services/quickNotes";
 import { useCalendarStore } from "../stores/calendarStore";
 
-import { DocumentText24Regular } from "@fluentui/react-icons";
+import { DocumentText24Regular } from "../components/ui/StudioIcons";
 
 export function RecordingPage() {
   const navigate = useNavigate();

@@ -10,7 +10,7 @@ import {
   ChevronLeft24Regular,
   ChevronRight24Regular,
   People24Regular,
-} from "@fluentui/react-icons";
+} from "../ui/StudioIcons";
 import { useLocalTranscriptsStore } from "../../stores/localTranscriptsStore";
 import { useTranscriptsStore } from "../../stores/transcriptsStore";
 import appLogo from "../../assets/app-logo.png";

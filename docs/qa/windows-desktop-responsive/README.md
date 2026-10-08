@@ -76,3 +76,14 @@ Recording stop, Obsidian replacement and model deletion now use native Windows
 confirmation dialogs. Native file/folder pickers and the separate floating recorder
 keep their existing platform implementations. Interactive OS dialog, floating-window
 and audio-device checks in Parallels remain unverified.
+
+### Icon and alignment polish
+Windows uses shared authored vector symbols following the macOS symbol vocabulary
+and regular stroke treatment. These are cross-platform vectors, not exported SF
+Symbols fonts. The footer embeds the actual transparent Yinga SVG used by the site.
+Processing fields and choice cards share a 20px content inset; download cancellation
+keeps its natural action width. Credential actions measure 32px high at identical
+y coordinates, and all provider headings share their top baseline at 1200px.
+The final polish passes 65 frontend tests, production build, 56 route/viewport
+combinations, 21 settings combinations, and 6 onboarding steps. Screenshots use
+synthetic fixture data. Interactive Parallels and real audio remain unverified.

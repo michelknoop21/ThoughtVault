@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ArrowSync24Regular, Info24Regular } from "@fluentui/react-icons";
+import { ArrowSync24Regular, Info24Regular } from "../ui/StudioIcons";
 import { getVersion } from "@tauri-apps/api/app";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { CardHead } from "./SettingsFields";

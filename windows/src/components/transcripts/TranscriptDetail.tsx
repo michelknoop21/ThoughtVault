@@ -18,7 +18,7 @@ import {
   Clipboard24Regular,
   Sparkle24Regular,
   Notebook24Regular,
-} from "@fluentui/react-icons";
+} from "../ui/StudioIcons";
 import DOMPurify from "dompurify";
 import { prepareNotuleHtml } from "../../services/notulePresentation";
 import { marked } from "marked";

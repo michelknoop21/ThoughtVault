@@ -9,7 +9,7 @@ import {
   ErrorCircle24Regular,
   ArrowClockwise24Regular,
   Person24Regular,
-} from "@fluentui/react-icons";
+} from "../components/ui/StudioIcons";
 import { useTasksStore } from "../stores/tasksStore";
 import { useRecordingStore } from "../stores/recordingStore";
 import { useSettingsStore } from "../stores/settingsStore";

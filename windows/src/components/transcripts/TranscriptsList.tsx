@@ -6,7 +6,7 @@ import {
   CheckboxChecked24Regular,
   CheckboxUnchecked24Regular,
   Delete24Regular,
-} from "@fluentui/react-icons";
+} from "../ui/StudioIcons";
 import type { Transcript } from "../../types";
 
 type TimeFilter = "alles" | "vandaag" | "week" | "maand";

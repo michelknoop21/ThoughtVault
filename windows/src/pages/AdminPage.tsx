@@ -19,7 +19,7 @@ import {
   ChevronLeft24Regular,
   ChevronRight24Regular,
   Dismiss24Regular,
-} from "@fluentui/react-icons";
+} from "../components/ui/StudioIcons";
 import { api } from "../services/api";
 import { useAuthStore } from "../stores/authStore";
 import { useToast } from "../components/ui/InfoBar";

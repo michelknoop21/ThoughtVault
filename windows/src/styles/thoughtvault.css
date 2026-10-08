@@ -319,3 +319,19 @@ dialog.desktop-dialog::backdrop { background: #060a16aa; }
 dialog.desktop-dialog > * { max-height: calc(100dvh - 32px); min-width: 0; }
 dialog.desktop-dialog > [role="dialog"] > :first-child, dialog.desktop-dialog > [role="dialog"] > :last-child { flex-shrink: 0; }
 .desktop-dialog .profile-modal-actions { position: sticky; bottom: -20px; background: var(--surface-primary); padding: 12px 0; }
+
+/* Desktop polish: one icon baseline and predictable action geometry. */
+.studio-icon { flex-shrink: 0; vertical-align: middle; }
+.btn > .studio-icon, .sidebar-item > .studio-icon, .settings-tabs .studio-icon { display: block; }
+.btn { min-height: 36px; justify-content: center; line-height: 1.25; }
+.btn-sm { min-height: 32px; }
+.action-row { gap: 8px; align-items: center; }
+.action-row .btn { align-self: center; }
+.northstar-settings .settings-tabs button { min-height: 40px; }
+.northstar-settings .provider-tiles button { display: flex; flex-direction: column; justify-content: flex-start; align-items: flex-start; min-height: 100px; }
+.northstar-settings .provider-tiles button strong { margin: 0 0 6px; }
+.northstar-settings .choice-cards button { display: flex; flex-direction: column; justify-content: flex-start; }
+.northstar-settings .btn-accent { box-shadow: 0 2px 5px rgba(0,0,0,.22); }
+.sidebar .brand-footer { min-height: 36px; height: auto; gap: 6px; padding: 6px 0 0; }
+.brand-footer-logo { display: block; width: 72px; height: 31px; object-fit: contain; flex-shrink: 0; }
+.brand-footer-text-compact { font-size: 11px; line-height: 1.3; }

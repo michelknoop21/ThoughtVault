@@ -4,7 +4,7 @@ import {
   ArrowSync24Regular,
   BinRecycle24Regular,
   Folder24Regular,
-} from "@fluentui/react-icons";
+} from "../ui/StudioIcons";
 import {
   listRecordings,
   deleteRecording,

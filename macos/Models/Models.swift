@@ -139,6 +139,35 @@ enum ProcessingMode: String, Codable, Sendable, CaseIterable, Identifiable {
     }
 }
 
+// MARK: - CloudAIConfiguration
+
+/// A user-defined OpenAI-compatible endpoint. The API key lives in the Keychain.
+struct CloudAIConfiguration: Codable, Identifiable, Equatable {
+    static let selectedKey = "selectedCloudAIConfiguration"
+
+    var id: String = UUID().uuidString
+    var name: String = "Nieuwe aanbieder"
+    var baseURL: String = "https://"
+    var model: String = ""
+    var keychainKey: String { Self.keychainKey(for: id) }
+
+    static func keychainKey(for id: String) -> String { "cloudAI-" + id }
+
+    static func load(defaults: UserDefaults = .standard) -> [Self] {
+        guard let data = defaults.data(forKey: "cloudAIConfigurations") else { return [] }
+        return (try? JSONDecoder().decode([Self].self, from: data)) ?? []
+    }
+
+    static func save(_ configurations: [Self], defaults: UserDefaults = .standard) {
+        if let data = try? JSONEncoder().encode(configurations) { defaults.set(data, forKey: "cloudAIConfigurations") }
+    }
+
+    static func selected(defaults: UserDefaults = .standard) -> Self? {
+        let id = defaults.string(forKey: selectedKey)
+        return load(defaults: defaults).first { $0.id == id }
+    }
+}
+
 // MARK: - NotulenProvider
 
 enum NotulenProvider: String, Codable, Sendable, CaseIterable, Identifiable {
@@ -148,6 +177,8 @@ enum NotulenProvider: String, Codable, Sendable, CaseIterable, Identifiable {
     case appleIntelligence  // Apple Intelligence (macOS 26+ / iOS 26+)
     case openAI         // Hosted, user's own API key
     case anthropic      // Hosted, user's own API key
+    case ollamaCloud    // Hosted Ollama (https://ollama.com), user's own API key
+    case openAICompatible  // Any HTTPS endpoint with the OpenAI chat API
 
     var id: String { rawValue }
 
@@ -160,6 +191,8 @@ enum NotulenProvider: String, Codable, Sendable, CaseIterable, Identifiable {
         case .appleIntelligence: return "Apple Intelligence"
         case .openAI:            return "ChatGPT"
         case .anthropic:         return "Claude"
+        case .ollamaCloud:       return "Ollama Cloud"
+        case .openAICompatible:  return "OpenAI-compatibel"
         }
     }
 
@@ -168,6 +201,10 @@ enum NotulenProvider: String, Codable, Sendable, CaseIterable, Identifiable {
         switch self {
         case .openAI:    return "openAIApiKey"
         case .anthropic: return "anthropicApiKey"
+        case .ollamaCloud: return "ollamaApiKey"
+        case .openAICompatible:
+            let id = UserDefaults.standard.string(forKey: CloudAIConfiguration.selectedKey) ?? ""
+            return id.isEmpty ? nil : CloudAIConfiguration.keychainKey(for: id)
         default:         return nil
         }
     }

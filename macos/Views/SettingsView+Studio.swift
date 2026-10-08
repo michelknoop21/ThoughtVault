@@ -138,6 +138,8 @@ extension NotulenProvider {
         switch self {
         case .openAI:            return "ChatGPT"
         case .anthropic:         return "Claude"
+        case .ollamaCloud:       return "Ollama Cloud"
+        case .openAICompatible:  return "OpenAI-compatibel"
         case .ollama:            return "Ollama"
         case .lmStudio:          return "LM Studio"
         case .appleIntelligence: return "Apple Intelligence"
@@ -147,8 +149,9 @@ extension NotulenProvider {
 
     var studioSubtitle: String {
         switch self {
-        case .openAI, .anthropic: return "Eigen API-sleutel"
-        case .ollama:             return "Lokaal of Ollama Cloud"
+        case .openAI, .anthropic, .ollamaCloud: return "Eigen API-sleutel"
+        case .openAICompatible:   return "Eigen HTTPS-adres"
+        case .ollama:             return "Eigen Ollama-server"
         case .lmStudio:           return "Lokale server"
         case .appleIntelligence:  return "Op dit apparaat"
         case .cloud:              return "Via de ThoughtVault-server"
@@ -159,6 +162,8 @@ extension NotulenProvider {
         switch self {
         case .openAI:            return "bubble.left.and.text.bubble.right"
         case .anthropic:         return "asterisk"
+        case .ollamaCloud:       return "cloud"
+        case .openAICompatible:  return "network"
         case .ollama:            return "shippingbox"
         case .lmStudio:          return "server.rack"
         case .appleIntelligence: return "apple.intelligence"
@@ -167,7 +172,7 @@ extension NotulenProvider {
     }
 
     /// Providers offered as tiles, in display order.
-    static let studioChoices: [NotulenProvider] = [.openAI, .anthropic, .ollama, .lmStudio, .appleIntelligence]
+    static let studioChoices: [NotulenProvider] = [.openAI, .anthropic, .ollamaCloud, .openAICompatible, .ollama, .lmStudio, .appleIntelligence]
 }
 
 extension View {

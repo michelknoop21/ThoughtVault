@@ -73,6 +73,7 @@
 		AA0000K7 /* SettingsView+Verwerking.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000K7 /* SettingsView+Verwerking.swift */; };
 		AA0000K6 /* SettingsView+Studio.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000K6 /* SettingsView+Studio.swift */; };
 		AA0000K5 /* HostedProviderConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000K5 /* HostedProviderConfig.swift */; };
+		AA0000CP1 /* CloudProviderConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000CP1 /* CloudProviderConfig.swift */; };
 		AA000032 /* TranscriptsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000032 /* TranscriptsView.swift */; };
 		AA000033 /* OnboardingViewiOSStub.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000033 /* OnboardingViewiOSStub.swift */; };
 		AA000034 /* FloatingWidgetPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000034 /* FloatingWidgetPanel.swift */; };
@@ -208,6 +209,7 @@
 		FA0000K7 /* SettingsView+Verwerking.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SettingsView+Verwerking.swift"; sourceTree = "<group>"; };
 		FA0000K6 /* SettingsView+Studio.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SettingsView+Studio.swift"; sourceTree = "<group>"; };
 		FA0000K5 /* HostedProviderConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostedProviderConfig.swift; sourceTree = "<group>"; };
+		FA0000CP1 /* CloudProviderConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudProviderConfig.swift; sourceTree = "<group>"; };
 		FA000032 /* TranscriptsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptsView.swift; sourceTree = "<group>"; };
 		FA000033 /* OnboardingViewiOSStub.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingViewiOSStub.swift; sourceTree = "<group>"; };
 		FA000034 /* FloatingWidgetPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloatingWidgetPanel.swift; sourceTree = "<group>"; };
@@ -435,6 +437,7 @@
 				FA0000K7 /* SettingsView+Verwerking.swift */,
 				FA0000K6 /* SettingsView+Studio.swift */,
 				FA0000K5 /* HostedProviderConfig.swift */,
+				FA0000CP1 /* CloudProviderConfig.swift */,
 				FA000070 /* ProfileSettingsView.swift */,
 				FA000072 /* PeopleDirectoryView.swift */,
 				FA000073 /* PersonEditView.swift */,
@@ -703,6 +706,7 @@
 				AA0000K7 /* SettingsView+Verwerking.swift in Sources */,
 				AA0000K6 /* SettingsView+Studio.swift in Sources */,
 				AA0000K5 /* HostedProviderConfig.swift in Sources */,
+				AA0000CP1 /* CloudProviderConfig.swift in Sources */,
 				AA000032 /* TranscriptsView.swift in Sources */,
 				AA000033 /* OnboardingViewiOSStub.swift in Sources */,
 				AA000034 /* FloatingWidgetPanel.swift in Sources */,

@@ -614,6 +614,8 @@ struct SettingsView: View {
                 Text("Apple Intelligence").tag(NotulenProvider.appleIntelligence.rawValue)
                 Text("ChatGPT").tag(NotulenProvider.openAI.rawValue)
                 Text("Claude").tag(NotulenProvider.anthropic.rawValue)
+                Text("Ollama Cloud").tag(NotulenProvider.ollamaCloud.rawValue)
+                Text("OpenAI-compatibel").tag(NotulenProvider.openAICompatible.rawValue)
             }
 
             switch activeLocalProvider {
@@ -621,6 +623,7 @@ struct SettingsView: View {
             case .lmStudio:          lmStudioConfig
             case .appleIntelligence: appleIntelligenceNote
             case .openAI, .anthropic: HostedProviderConfig(provider: activeLocalProvider).id(activeLocalProvider)
+            case .ollamaCloud, .openAICompatible: CloudProviderConfig(provider: activeLocalProvider).id(activeLocalProvider)
             case .cloud:             EmptyView()
             }
 
@@ -651,6 +654,10 @@ struct SettingsView: View {
             return "Het transcript wordt naar OpenAI gestuurd. De kosten lopen via je eigen API-account."
         case .anthropic:
             return "Het transcript wordt naar Anthropic gestuurd. De kosten lopen via je eigen API-account."
+        case .ollamaCloud:
+            return "Het transcript wordt naar Ollama Cloud gestuurd. De kosten lopen via je eigen account."
+        case .openAICompatible:
+            return "Het transcript wordt naar het HTTPS-adres van je eigen aanbieder gestuurd."
         case .cloud:
             return ""
         }

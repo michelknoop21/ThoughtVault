@@ -356,10 +356,11 @@ extension SettingsView {
         VStack(alignment: .leading, spacing: 18) {
             cardHeader(icon: "doc.text", title: "Notulen", subtitle: "Maak gestructureerde notulen van het transcript.",
                        helpShown: $showNotuleHelp,
-                       help: "Het transcript gaat naar de aanbieder die je kiest en die schrijft de notulen. Ollama, LM Studio en Apple Intelligence draaien lokaal. ChatGPT en Claude gebruiken je eigen API-sleutel en API-account.")
+                       help: "Het transcript gaat naar de aanbieder die je kiest en die schrijft de notulen. Ollama, LM Studio en Apple Intelligence draaien lokaal. ChatGPT, Claude, Ollama Cloud en een OpenAI-compatibele aanbieder gebruiken je eigen API-sleutel en account.")
 
             if isLocalProcessing {
-                HStack(alignment: .top, spacing: 12) {
+                // Seven tiles do not fit one row; the grid wraps them.
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 12, alignment: .top)], spacing: 12) {
                     ForEach(NotulenProvider.studioChoices) { provider in
                         StudioChoiceTile(selected: activeLocalProvider == provider, icon: provider.studioIcon,
                                          title: provider.studioName, subtitle: provider.studioSubtitle, vertical: true) {
@@ -397,6 +398,7 @@ extension SettingsView {
             case .lmStudio:                    lmStudioConfig
             case .appleIntelligence:           appleIntelligenceNote
             case .openAI, .anthropic:          HostedProviderConfig(provider: activeLocalProvider).id(activeLocalProvider)
+            case .ollamaCloud, .openAICompatible: CloudProviderConfig(provider: activeLocalProvider).id(activeLocalProvider)
             case .cloud:                       EmptyView()
             }
         }

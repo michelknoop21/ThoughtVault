@@ -203,3 +203,26 @@ final class UpdateInstallationTests: XCTestCase {
         XCTAssertEqual(vm.recordingState, .idle)
     }
 }
+
+@MainActor
+final class CloudProviderTests: XCTestCase {
+    func testCloudConfigurationsSurviveReloadAndSelection() {
+        let defaults = UserDefaults(suiteName: "CloudProviderTests")!
+        defer { defaults.removePersistentDomain(forName: "CloudProviderTests") }
+        let first = CloudAIConfiguration(name: "Eerste", baseURL: "https://first.example/v1", model: "one")
+        let second = CloudAIConfiguration(name: "Tweede", baseURL: "https://second.example", model: "two")
+        CloudAIConfiguration.save([first, second], defaults: defaults)
+        XCTAssertEqual(CloudAIConfiguration.load(defaults: defaults), [first, second])
+        XCTAssertNil(CloudAIConfiguration.selected(defaults: defaults))
+        defaults.set(second.id, forKey: CloudAIConfiguration.selectedKey)
+        XCTAssertEqual(CloudAIConfiguration.selected(defaults: defaults), second)
+        XCTAssertNotEqual(first.keychainKey, second.keychainKey)
+    }
+
+    func testAllFourHostedProvidersAreOffered() {
+        let choices = NotulenProvider.studioChoices
+        for provider in [NotulenProvider.openAI, .anthropic, .ollamaCloud, .openAICompatible] {
+            XCTAssertTrue(choices.contains(provider), provider.rawValue)
+        }
+    }
+}

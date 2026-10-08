@@ -208,33 +208,31 @@ mod tests {
 
 pub struct SpectrumProcessor {
     pub bands: [f32; 7],
-    fft: Option<std::sync::Arc<dyn rustfft::Fft<f32>>>,
-    buffer: Vec<rustfft::num_complex::Complex<f32>>,
-    scratch: Vec<rustfft::num_complex::Complex<f32>>,
+    fft: Option<symphonia::core::dsp::fft::Fft>,
+    buffer: Vec<symphonia::core::dsp::complex::Complex>,
     window: Vec<f32>,
     window_power: f32,
 }
 
 impl SpectrumProcessor {
     pub fn new() -> Self {
-        Self { bands: [0.0; 7], fft: None, buffer: Vec::new(), scratch: Vec::new(), window: Vec::new(), window_power: 0.0 }
+        Self { bands: [0.0; 7], fft: None, buffer: Vec::new(), window: Vec::new(), window_power: 0.0 }
     }
 
     pub fn process(&mut self, samples: &[f32], sample_rate: f64, dt: f64) -> [f32; 7] {
         if samples.len() < 2 || !sample_rate.is_finite() || sample_rate <= 0.0 { return self.bands; }
         let count = 1 << (usize::BITS - 1 - samples.len().min(4096).leading_zeros());
         if self.buffer.len() != count {
-            let fft = rustfft::FftPlanner::new().plan_fft_forward(count);
-            self.scratch = vec![rustfft::num_complex::Complex::default(); fft.get_inplace_scratch_len()];
-            self.buffer = vec![rustfft::num_complex::Complex::default(); count];
+            let fft = symphonia::core::dsp::fft::Fft::new(count);
+            self.buffer = vec![symphonia::core::dsp::complex::Complex::default(); count];
             self.window = (0..count).map(|i| (0.5 - 0.5 * (std::f64::consts::TAU * i as f64 / count as f64).cos()) as f32).collect();
             self.window_power = self.window.iter().map(|x| x * x).sum();
             self.fft = Some(fft);
         }
         for (i, value) in samples[samples.len() - count..].iter().enumerate() {
-            self.buffer[i] = rustfft::num_complex::Complex::new(if value.is_finite() { *value * self.window[i] } else { 0.0 }, 0.0);
+            self.buffer[i] = symphonia::core::dsp::complex::Complex::new(if value.is_finite() { *value * self.window[i] } else { 0.0 }, 0.0);
         }
-        self.fft.as_ref().unwrap().process_with_scratch(&mut self.buffer, &mut self.scratch);
+        self.fft.as_ref().unwrap().fft_inplace(&mut self.buffer);
         // Integrate every FFT bin: isolated Goertzel probes miss speech between their centres.
         let edges = [80.0, 177.0, 354.0, 707.0, 1414.0, 2828.0, 5657.0, f64::INFINITY];
         let mut power = [0.0_f32; 7];
@@ -242,7 +240,7 @@ impl SpectrumProcessor {
             let frequency = k as f64 * sample_rate / count as f64;
             if let Some(index) = (0..7).find(|i| frequency >= edges[*i] && frequency < edges[*i + 1]) {
                 let mirror = if k == count / 2 { 1.0 } else { 2.0 };
-                power[index] += mirror * self.buffer[k].norm_sqr() / (count as f32 * self.window_power);
+                power[index] += mirror * (self.buffer[k].re * self.buffer[k].re + self.buffer[k].im * self.buffer[k].im) / (count as f32 * self.window_power);
             }
         }
         for (index, power) in power.iter().enumerate() {

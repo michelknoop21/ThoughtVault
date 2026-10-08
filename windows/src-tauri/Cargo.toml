@@ -38,7 +38,6 @@ futures-util = "0.3"
 # Audio recording
 cpal  = "0.15"
 hound = "3.5"
-rustfft = "6.4"
 symphonia = { version = "0.5", features = ["all"] }
 
 # Local transcription (whisper.cpp bindings). Builds whisper.cpp from source —

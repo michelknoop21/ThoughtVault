@@ -26,7 +26,7 @@ alpha = 1 - exp(-dt / tau)
 smoothed += alpha * (target - smoothed)
 ```
 
-m[k] is 2 voor gespiegeld real-input spectrum en 1 op Nyquist. De vensterenergiecorrectie bewaart het juiste vermogen. tau is 25 ms bij stijging en 140 ms bij daling. FFT-plan, Hann-venster en Windows-scratchbuffer worden hergebruikt. macOS gebruikt Accelerate; Windows gebruikt RustFFT, zodat geen eigen FFT-implementatie of tweede capturebron nodig is.
+m[k] is 2 voor gespiegeld real-input spectrum en 1 op Nyquist. De vensterenergiecorrectie bewaart het juiste vermogen. tau is 25 ms bij stijging en 140 ms bij daling. FFT-plan, Hann-venster en Windows-buffers worden hergebruikt. macOS gebruikt Accelerate; Windows hergebruikt de FFT van de bestaande Symphonia-audiodecoder. Er is geen nieuwe appdependency, eigen FFT-implementatie of tweede capturebron nodig.
 
 ## Visualisatie
 
@@ -51,4 +51,4 @@ Deze getallen meten de DSP-fixture, niet de complete hardware-naar-schermvertrag
 - [MathWorks: bandvermogen door integratie van PSD](https://www.mathworks.com/help/signal/ref/bandpower.html)
 - [MathWorks: vermogen en RMS](https://www.mathworks.com/help/signal/ug/measure-the-power-of-a-signal.html)
 - [Apple Accelerate: DiscreteFourierTransform](https://developer.apple.com/documentation/accelerate/vdsp/discretefouriertransform)
-- [RustFFT: herbruikbare FFT-plannen](https://docs.rs/rustfft/latest/rustfft/struct.FftPlanner.html)
+- [Bestaande Symphonia FFT](https://docs.rs/symphonia-core/0.5.5/symphonia_core/dsp/fft/struct.Fft.html)

@@ -100,13 +100,14 @@ export function PersonEditModal({ person, isNew, onClose }: PersonEditModalProps
     <DesktopDialog label={isNew ? "Persoon toevoegen" : "Persoon bewerken"} onClose={onClose}>
       {/* Modal panel */}
       <div
+        className="person-editor"
         style={{
           background: "var(--surface-primary)",
           borderRadius: "var(--radius-md)",
           border: "1px solid var(--stroke-card)",
           width: "100%",
-          maxWidth: 480,
-          maxHeight: "90vh",
+          maxWidth: 520,
+          maxHeight: "calc(100dvh - 32px)",
           display: "flex",
           flexDirection: "column",
           overflow: "hidden",
@@ -121,7 +122,7 @@ export function PersonEditModal({ person, isNew, onClose }: PersonEditModalProps
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            padding: "16px 20px",
+            padding: "12px 20px",
             borderBottom: "1px solid var(--stroke-divider)",
           }}
         >
@@ -145,7 +146,7 @@ export function PersonEditModal({ person, isNew, onClose }: PersonEditModalProps
         </div>
 
         {/* Scrollable form body */}
-        <div style={{ overflowY: "auto", padding: "20px", display: "flex", flexDirection: "column", gap: 16 }}>
+        <div className="person-editor-fields">
 
           {/* Naam */}
           <div className="flex-col gap-4">
@@ -158,6 +159,7 @@ export function PersonEditModal({ person, isNew, onClose }: PersonEditModalProps
               ref={firstInputRef}
               type="text"
               className="input"
+              aria-label="Naam"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Volledige naam"
@@ -175,6 +177,7 @@ export function PersonEditModal({ person, isNew, onClose }: PersonEditModalProps
             <input
               type="text"
               className="input"
+              aria-label="Rol / Functie"
               value={role}
               onChange={(e) => setRole(e.target.value)}
               placeholder="Bijv. Projectmanager"
@@ -192,6 +195,7 @@ export function PersonEditModal({ person, isNew, onClose }: PersonEditModalProps
             <input
               type="text"
               className="input"
+              aria-label="Organisatie"
               value={organization}
               onChange={(e) => setOrganization(e.target.value)}
               placeholder="Bijv. Prezent BV"
@@ -209,6 +213,7 @@ export function PersonEditModal({ person, isNew, onClose }: PersonEditModalProps
             <input
               type="text"
               className="input"
+              aria-label="Aliassen"
               value={aliasesText}
               onChange={(e) => setAliasesText(e.target.value)}
               placeholder="Michel, Knoop, MK (kommagescheiden)"
@@ -226,6 +231,7 @@ export function PersonEditModal({ person, isNew, onClose }: PersonEditModalProps
             <input
               type="text"
               className="input"
+              aria-label="Expertise / onderwerpen"
               value={expertiseText}
               onChange={(e) => setExpertiseText(e.target.value)}
               placeholder="grafisch ontwerp, marketing, IT (kommagescheiden)"
@@ -242,6 +248,7 @@ export function PersonEditModal({ person, isNew, onClose }: PersonEditModalProps
             </label>
             <select
               className="input"
+              aria-label="Intern / extern"
               value={isInternalValue}
               onChange={(e) => setIsInternalValue(e.target.value as "true" | "false" | "null")}
               disabled={isSaving || savedOk}
@@ -256,7 +263,7 @@ export function PersonEditModal({ person, isNew, onClose }: PersonEditModalProps
         {/* Modal footer */}
         <div
           style={{
-            padding: "16px 20px",
+            padding: "12px 20px",
             borderTop: "1px solid var(--stroke-divider)",
             display: "flex",
             flexDirection: "column",
@@ -281,7 +288,7 @@ export function PersonEditModal({ person, isNew, onClose }: PersonEditModalProps
           <button
             className="btn btn-primary"
             onClick={handleSave}
-            disabled={isSaving || savedOk}
+            disabled={isSaving || savedOk || !name.trim()}
             style={{ width: "100%", justifyContent: "center", gap: 8 }}
           >
             {savedOk ? (
@@ -292,7 +299,7 @@ export function PersonEditModal({ person, isNew, onClose }: PersonEditModalProps
             ) : isSaving ? (
               "Opslaan..."
             ) : (
-              "Wijzigingen opslaan"
+              isNew ? "Persoon toevoegen" : "Wijzigingen opslaan"
             )}
           </button>
         </div>

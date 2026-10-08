@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { DesktopDialog } from "./ui/DesktopDialog";
 import {
-  ChatBubblesQuestion24Regular,
+  Bug24Regular,
   Dismiss16Regular,
   Send20Regular,
   ArrowSync16Regular,
@@ -53,8 +54,6 @@ export default function FeedbackWidget() {
   const [feedbackList, setFeedbackList] = useState<UserFeedback[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
 
-  const panelRef = useRef<HTMLDivElement>(null);
-  const buttonRef = useRef<HTMLButtonElement>(null);
   const toast = useToast();
 
   // Load unread count on mount
@@ -90,25 +89,6 @@ export default function FeedbackWidget() {
     }
   }, []);
 
-  // Close on outside click
-  useEffect(() => {
-    if (!open) return;
-
-    function handleClick(e: MouseEvent) {
-      if (
-        panelRef.current &&
-        !panelRef.current.contains(e.target as Node) &&
-        buttonRef.current &&
-        !buttonRef.current.contains(e.target as Node)
-      ) {
-        setOpen(false);
-      }
-    }
-
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [open]);
-
   const handleSubmit = async () => {
     if (!title.trim() || !description.trim()) {
       toast.show("Vul titel en beschrijving in.", "warning");
@@ -137,33 +117,14 @@ export default function FeedbackWidget() {
 
   return (
     <>
-      {/* Floating button */}
       <button
-        ref={buttonRef}
-        onClick={() => setOpen((prev) => !prev)}
-        className="feedback-fab"
-        style={{
-          position: "fixed",
-          right: 20,
-          bottom: 20,
-          zIndex: 1000,
-          width: 48,
-          height: 48,
-          borderRadius: "50%",
-          background: "var(--btn-primary-gradient)",
-          border: "none",
-          color: "#fff",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          cursor: "default",
-          boxShadow: "var(--btn-primary-shadow)",
-          transition: "transform 150ms var(--ease-smooth), box-shadow 150ms var(--ease-smooth)",
-        }}
+        onClick={() => setOpen(true)}
+        className="btn btn-secondary feedback-trigger"
         aria-label="Feedback openen"
         title="Feedback"
       >
-        <ChatBubblesQuestion24Regular />
+        <Bug24Regular />
+        Probleem melden of suggestie
         {unreadCount > 0 && (
           <span
             style={{
@@ -191,16 +152,12 @@ export default function FeedbackWidget() {
 
       {/* Panel */}
       {open && (
+        <DesktopDialog label="Feedback" onClose={() => setOpen(false)}>
         <div
-          ref={panelRef}
           className="feedback-panel"
           style={{
-            position: "fixed",
-            right: 20,
-            bottom: 78,
-            zIndex: 1001,
             width: Math.min(360, window.innerWidth - 40),
-            maxHeight: "calc(100vh - 110px)",
+            maxHeight: "calc(100dvh - 32px)",
             background: "var(--card-bg)",
             backdropFilter: `blur(var(--card-blur))`,
             border: "1px solid var(--card-border)",
@@ -470,6 +427,7 @@ export default function FeedbackWidget() {
             )}
           </div>
         </div>
+        </DesktopDialog>
       )}
 
     </>

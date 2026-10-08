@@ -10,6 +10,8 @@ import {
   ArrowUpload24Regular,
   VideoChat24Regular,
   People24Regular,
+  Person24Regular,
+  Tag24Regular,
 } from "../components/ui/StudioIcons";
 import { useRecordingStore } from "../stores/recordingStore";
 import { useSettingsStore } from "../stores/settingsStore";
@@ -338,7 +340,7 @@ export function RecordingPage() {
             <span>{phase === "paused" ? "Hervat" : "Pauzeer"}</span></div>
           <div><button className="studio-round studio-stop" onClick={handleStopRecording} aria-label="Stop en verwerk"><Stop24Regular /></button><span>Stop en verwerk</span></div>
           <div><button className="studio-round" onClick={() => setPanel("note")} aria-label="Notitie maken"><Edit24Regular /></button><span>Notitie</span></div>
-        </> : <div><button className="studio-round studio-record" onClick={() => void handleStartRecording()} disabled={isBusy} aria-label="Start opname"><MicRecord24Regular /></button>
+        </> : <div><button className="studio-round studio-record" onClick={() => void handleStartRecording()} disabled={isBusy} aria-label="Start opname"><span className="studio-record-dot" aria-hidden="true" /></button>
           <span>{isBusy ? "Even geduld…" : "Start opname"}</span></div>}
       </div>
       <div className="studio-controlbar">
@@ -355,10 +357,10 @@ export function RecordingPage() {
     <aside className="studio-inspector">
       <section>
       <h2>Huidige opname</h2>
-      <div className="studio-identity"><MicRecord24Regular /><div><strong>Nieuwe opname</strong><span>Titel na verwerking</span></div></div>
-      <p className="studio-meta">Tags na verwerking</p>
+      <div className="studio-identity"><Person24Regular /><div><strong>Nieuwe opname</strong><span>Titel na verwerking</span></div></div>
+      <p className="studio-meta"><Tag24Regular />Tags na verwerking</p>
       <button className="studio-meta studio-people" onClick={() => setPanel("people")}><People24Regular />{selectedParticipantIds.length ? `${selectedParticipantIds.length} personen` : "Geen personen"}<span>＋</span></button>
-      <p className="studio-meta">Wordt na verwerking aangevuld</p>
+      <p className="studio-meta"><DocumentText24Regular />Wordt na verwerking aangevuld</p>
       <section className="studio-live-panel"><h3>Live opname</h3>
         <dl><div><dt>Duur</dt><dd>{duration}</dd></div><div><dt>Geluidsniveau</dt><dd><meter min={0} max={100} value={phase === "recording" ? level : 0} aria-label="Geluidsniveau" /></dd></div>
           <div><dt>Bron</dt><dd>{mode === "combined" ? "Gecombineerd" : "Microfoon"}</dd></div><div><dt>Profiel</dt><dd>{profileName}</dd></div></dl>

@@ -267,7 +267,7 @@
 .studio-inspector { overflow: visible; padding: 20px 16px; min-width: 0; }
 .studio-topline { flex-wrap: wrap; gap: 8px; }
 .studio-status, .studio-language { font-size: 12px; padding: 8px 10px; }
-.studio-round { box-shadow: none; }
+.studio-round { display: inline-flex; align-items: center; justify-content: center; padding: 0; box-shadow: none; }
 .studio-live-panel { margin: 16px 0 20px; }
 .studio-actions button { padding: 10px; }
 .desktop-page .page-header { flex-wrap: wrap; gap: 12px; }
@@ -369,3 +369,39 @@ dialog.desktop-dialog > [role="dialog"] > :first-child, dialog.desktop-dialog > 
   .thoughtvault-home-content { gap: 10px; }
   .thoughtvault-welcome { padding-block: 6px; }
 }
+
+/* Feedback lives in Settings and never covers another page's controls. */
+.feedback-trigger { position: relative; white-space: normal; text-align: left; }
+
+/* Same idle transport and inspector symbol composition as macOS. */
+.studio-record-dot { width: 30px; height: 30px; border-radius: 50%; background: white; }
+.studio-record { background: radial-gradient(#6b3bc9,#4f269e); }
+.studio-identity > svg { width: 48px; height: 48px; padding: 10px; border: 1px solid #c7cceb80; border-radius: 50%; flex-shrink: 0; }
+.studio-meta { display: flex; align-items: center; gap: 16px; }
+.studio-meta > svg { width: 18px; height: 18px; flex-shrink: 0; }
+
+/* Fill a regular desktop window, keep stacked compact panes content-sized. */
+@container (min-width: 801px) {
+  .recording-studio { height: 100%; grid-auto-rows: minmax(min-content,1fr); align-content: stretch; align-items: stretch; }
+  .studio-workspace { min-height: 0; }
+  .studio-wave { flex: 1; min-height: 80px; height: auto; }
+  .studio-inspector { overflow-y: auto; }
+}
+
+.desktop-people .page-content:has(.people-empty) { flex: 1; display: flex; flex-direction: column; max-width: none; }
+.desktop-people .page-content-narrow:has(.people-empty) { flex: 1; display: flex; flex-direction: column; }
+.people-empty { flex: 1; justify-content: center; min-height: 260px; }
+.people-empty-icon { width: 56px; height: 56px; color: #9293b7; margin-bottom: 8px; }
+
+/* A complete six-field sheet fits at the supported 600px client height. */
+.person-editor-fields { overflow-y: auto; min-height: 0; padding: 12px 20px; display: flex; flex-direction: column; gap: 8px; }
+.person-editor-fields .input { min-height: 32px; padding-block: 5px; }
+/* WebView scrollbars use the quiet desktop appearance, with usable hit areas. */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track, ::-webkit-scrollbar-corner { background: transparent; }
+::-webkit-scrollbar-thumb { background: #747d9e80; border: 2px solid transparent; background-clip: padding-box; border-radius: 8px; min-height: 32px; }
+::-webkit-scrollbar-thumb:hover { background-color: #9ba4c5; }
+::-webkit-scrollbar-button { display: none; }
+@media (forced-colors: active) { ::-webkit-scrollbar-thumb { background-color: ButtonText; } }
+
+.person-editor-fields > .flex-col { gap: 2px; }

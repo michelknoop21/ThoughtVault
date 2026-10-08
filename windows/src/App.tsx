@@ -17,7 +17,6 @@ import { SettingsPage } from "./pages/SettingsPage";
 import { AdminPage } from "./pages/AdminPage";
 import { TasksPage } from "./pages/TasksPage";
 import { PeoplePage } from "./pages/PeoplePage";
-import FeedbackWidget from "./components/FeedbackWidget";
 import { ProcessingBar } from "./components/ProcessingBar";
 import { OnboardingWizard } from "./components/onboarding/OnboardingWizard";
 import { useAuthStore } from "./stores/authStore";
@@ -228,7 +227,6 @@ function AppShell({ children }: { children: React.ReactNode }) {
           </main>
         </div>
       </div>
-      <FeedbackWidget />
       <CallAlertOverlay />
     </>
   );

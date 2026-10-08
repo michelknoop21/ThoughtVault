@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Delete24Regular, PersonAdd24Regular } from "../components/ui/StudioIcons";
+import { Delete24Regular, PersonAdd24Regular, People24Regular } from "../components/ui/StudioIcons";
 import { usePeopleDirectoryStore } from "../stores/peopleDirectoryStore";
 import type { PersonProfile } from "../types";
 import { PersonEditModal } from "./PersonEditModal";
@@ -96,6 +96,7 @@ export function PeoplePage() {
           {/* Empty state — no people at all */}
           {people.length === 0 && (
             <div
+              className="people-empty"
               style={{
                 display: "flex",
                 flexDirection: "column",
@@ -105,6 +106,7 @@ export function PeoplePage() {
                 textAlign: "center",
               }}
             >
+              <People24Regular className="people-empty-icon" />
               <p style={{ font: "var(--type-subtitle)", color: "var(--text-primary)", margin: 0 }}>
                 Nog geen personen toegevoegd
               </p>

@@ -50,6 +50,7 @@ it("plots real amplitude, flat silence, bounded compact waves and no movement wh
   bandsRef.current = [0,0,0,0,0,0,.8]; draw(performance.now() + 80);
   expect(paths.map(path => path.points.map(point => point[1]))).not.toEqual(lowPaths);
   expect(extent()).toBeGreaterThan(35);
+  expect(paths.at(-1)!.points.map(point => point[1])).toEqual(lowPaths.at(-1)); // Reduced Motion keeps peak positions fixed.
   levelsRef.current.fill(0); draw(performance.now() + 80);
   expect(extent()).toBe(0); // A stale spectrum cannot keep silence moving.
   bandsRef.current = [];

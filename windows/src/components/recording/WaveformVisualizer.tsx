@@ -100,7 +100,7 @@ export function WaveformVisualizer({ levelsRef, bandsRef, isActive, height = 240
         const bandIndex = Math.min(bands.length - 1, Math.floor(j * bands.length / Math.max(1, selected.length - 1)));
         const bandEnd = Math.min(bands.length, Math.max(bandIndex + 1, Math.floor((j + 1) * bands.length / Math.max(1, selected.length - 1))));
         const gain = line.main || !bands.length ? 1 : peakBand > 0 ? Math.max(...bands.slice(bandIndex, bandEnd)) / peakBand : 0;
-        const cycles = !bands.length ? 3 : line.main ? 3 + (bandPosition - 3) * .25 : 2 + Math.max(0, bandIndex) * .35;
+        const cycles = reduced.matches || !bands.length ? 3 : line.main ? 3 + (bandPosition - 3) * .25 : 2 + Math.max(0, bandIndex) * .35;
         const path = new Path2D();
         for (let p = 0; p <= steps; p++) {
           const x = p / steps, taper = Math.pow(Math.max(0, Math.sin(Math.PI * x)), 1.1);

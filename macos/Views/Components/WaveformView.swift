@@ -183,7 +183,7 @@ struct WaveformView: View {
             let bandIndex = min(bands.count - 1, j * bands.count / max(1, lines.count - 1))
             let bandEnd = min(bands.count, max(bandIndex + 1, (j + 1) * bands.count / max(1, lines.count - 1)))
             let gain = line.main || bands.isEmpty ? 1 : peakBand > 0 ? Double((bands[bandIndex..<bandEnd].max() ?? 0) / peakBand) : 0
-            let cycles = bands.isEmpty ? WaveConfig.carrierCycles : line.main ? WaveConfig.carrierCycles + (bandPosition - 3) * 0.25 : 2 + Double(max(0, bandIndex)) * 0.35
+            let cycles = frozen || bands.isEmpty ? WaveConfig.carrierCycles : line.main ? WaveConfig.carrierCycles + (bandPosition - 3) * 0.25 : 2 + Double(max(0, bandIndex)) * 0.35
             var path = Path()
             for p in 0..<n {
                 let x = Double(p) / Double(n - 1)

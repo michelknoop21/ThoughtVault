@@ -26,6 +26,16 @@ final class AudioEnvelopeProcessorTests: XCTestCase {
         XCTAssertTrue(high.process(samples: [.nan, .infinity], sampleRate: 16_000, dt: 1 / 30).allSatisfy { $0.isFinite })
     }
 
+    @MainActor
+    func testWidgetFitsPausedHourLongRecordingWithoutCompressingControls() {
+        let model = RecordingViewModel()
+        model.recordingState = .paused
+        model.audioRecorder.duration = 35_999
+        let view = NSHostingView(rootView: RecordingWidgetView().preferredColorScheme(.dark).environment(model))
+        XCTAssertLessThanOrEqual(view.fittingSize.width, 470)
+        XCTAssertLessThanOrEqual(view.fittingSize.height, 60)
+    }
+
     func testCaptureTimelinePreservesSilenceAndExcludesExplicitPause() {
         var timeline = AudioCaptureTimeline(sampleRate: 16_000, start: 100)
         XCTAssertEqual(timeline.framePosition(at: 101), 16_000)

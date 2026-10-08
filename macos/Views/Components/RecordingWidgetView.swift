@@ -270,11 +270,11 @@ struct RecordingWidgetView: View {
             .background(
                 Capsule()
                     .fill(Color.statusError)
-                    .shadow(color: Color.statusError.opacity(0.35), radius: 6, y: 2)
+
             )
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("Stop opname en upload")
+        .accessibilityLabel("Stop opname en verwerk")
     }
 
     private var uploadIndicator: some View {

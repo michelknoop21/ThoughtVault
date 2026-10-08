@@ -20,14 +20,12 @@ import SwiftUI
 private final class WavePhaseClock {
     var drift: Double = 0
     var travel: Double = 0
-    var time: Double = 0
     var lastTick: Date?
 
     /// `dt` is capped at 64 ms so a paused or backgrounded timeline never jumps.
     func advance(to date: Date, level: Float) {
         let dt = lastTick.map { min(0.064, max(0, date.timeIntervalSince($0))) } ?? 0
         lastTick = date
-        time += dt
         drift += dt
         travel += dt * 2 * .pi * WaveConfig.travelHz * (1 + WaveConfig.energyBoost * Double(level))
         if travel > 1_000_000 { travel -= 1_000_000 }
@@ -40,8 +38,7 @@ enum WaveConfig {
     static let taperPow: Double = 1.1
     static let carrierCycles: Double = 3.0
     static let travelHz: Double = 0.3
-    static let energyBoost: Double = 0.25
-    static let breath: Double = 0.004
+    static let energyBoost: Double = 1.8
     static let glow: CGFloat = 16
     static let driftCenter: Double = 0.04
     static let driftWidth: Double = 0.2
@@ -86,12 +83,11 @@ enum WaveConfig {
     ]
     static let widgetLines: [Line] = [desktopLines[1], desktopLines[2], desktopLines[4], desktopLines[6]]
 
-    /// Display gain is deliberately below one at the loudest input, leaving
-    /// room for strand spread and glow without clipping the 32-point widget.
-    /// The envelope already gates noise; cubing it again hides normal speech.
+    /// The native envelope already gates noise and shapes the response. Keep
+    /// quiet speech visible, with headroom for strand spread in compact views.
     static func visualEnergy(_ level: Float) -> Double {
-        let x = Double(min(1, max(0, level)))
-        return 0.72 * pow(x, 1.35)
+        let x = Double(min(1, max(0, level.isFinite ? level : 0)))
+        return 0.9 * x
     }
 }
 
@@ -119,10 +115,10 @@ struct WaveformView: View {
                 let _ = reduceMotion ? () : clock.advance(to: timeline.date, level: level)
                 // Capture values, not the mutable clock reference: Canvas must
                 // receive a different input on every animation tick.
-                let drift = clock.drift, travel = clock.travel, time = clock.time
+                let drift = clock.drift, travel = clock.travel
                 Canvas { context, size in
                     Self.draw(in: &context, size: size, levels: levels,
-                              drift: drift, travel: travel, time: time,
+                              drift: drift, travel: travel,
                               lines: lines, frozen: reduceMotion)
                 }
             }
@@ -148,7 +144,7 @@ struct WaveformView: View {
     }
 
     private static func draw(in context: inout GraphicsContext, size: CGSize, levels: [Float],
-                             drift: Double, travel: Double, time: Double,
+                             drift: Double, travel: Double,
                              lines: [WaveConfig.Line], frozen: Bool) {
         let w = size.width, h = size.height
         guard w > 0, h > 0 else { return }
@@ -157,7 +153,7 @@ struct WaveformView: View {
         let cy = h / 2, maxH = h * WaveConfig.heightFrac * (compact ? 0.7 : 1)
         let level = WaveConfig.visualEnergy(levels.last ?? 0)
         // Reduce Motion: shape frozen, only the height follows the level.
-        let td = frozen ? 0 : drift, tr = frozen ? 0 : travel, animationTime = frozen ? 0 : time
+        let td = frozen ? 0 : drift, tr = frozen ? 0 : travel
 
         let bellies = WaveConfig.bellies.enumerated().map { i, b -> (c: Double, w: Double, amp: Double) in
             let di = Double(i)
@@ -198,7 +194,6 @@ struct WaveformView: View {
                 // Normalize overlap without flattening loud peaks with tanh.
                 let y = s / max(1, weight) * maxH * taper
                     + maxH * level * line.offset * 0.40 * spread * taper
-                    + h * WaveConfig.breath * sin(tau * 1.3 * x + animationTime * 0.9 + Double(j) * 0.3) * taper
                 let pt = CGPoint(x: CGFloat(p) * step, y: cy - y)
                 if p == 0 { path.move(to: pt) } else { path.addLine(to: pt) }
             }

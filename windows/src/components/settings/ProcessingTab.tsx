@@ -44,8 +44,6 @@ export function ProcessingTab() {
       void fetchOllamaModels(settings.ollama_url).then(models => {
         if (!active) return;
         setOllamaModels(models);
-        const current = useSettingsStore.getState();
-        if (!current.ollama_model) current.updateSettings({ ollama_model: models[0] });
       }).catch(error => { if (active) setOllamaModelsError(String(error instanceof Error ? error.message : error)); })
         .finally(() => { if (active) setOllamaModelsLoading(false); });
     }, 350);
@@ -242,6 +240,7 @@ export function ProcessingTab() {
                 <div style={{ padding: "0 20px 4px" }}>
                   <SettingsField label="Model">
                     {ollamaModels.length ? <select className="input" aria-label="Ollama model" value={settings.ollama_model} onChange={e => settings.updateSettings({ ollama_model: e.target.value })}>
+                      <option value="" disabled>Kies een model</option>
                       {settings.ollama_model && !ollamaModels.includes(settings.ollama_model) && <option value={settings.ollama_model}>{settings.ollama_model}</option>}
                       {ollamaModels.map(model => <option key={model} value={model}>{model}</option>)}
                     </select> : <input aria-label="Ollama model" type="text" value={settings.ollama_model} onChange={e => settings.updateSettings({ ollama_model: e.target.value })} placeholder="Modelnaam" className="input" />}

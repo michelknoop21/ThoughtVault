@@ -815,8 +815,8 @@ struct SettingsView: View {
                         .autocorrectionDisabled()
                 } else {
                     Picker("", selection: $ollamaModel) {
-                        if !ollamaModels.contains(ollamaModel) && !ollamaModel.isEmpty {
-                            Text(ollamaModel).tag(ollamaModel)
+                        if !ollamaModels.contains(ollamaModel) {
+                            Text(ollamaModel.isEmpty ? "Kies een model" : ollamaModel).tag(ollamaModel)
                         }
                         ForEach(ollamaModels, id: \.self) { name in
                             Text(name).tag(name)
@@ -990,10 +990,6 @@ struct SettingsView: View {
         let models = await ollamaService().fetchModels()
         guard !Task.isCancelled else { return }
         ollamaModels = models
-        // Default the selection to the first model when nothing valid is selected yet.
-        if ollamaModel.isEmpty, let first = models.first {
-            ollamaModel = first
-        }
         ollamaModelsLoading = false
     }
 

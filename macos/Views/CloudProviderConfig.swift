@@ -205,7 +205,6 @@ struct CloudProviderConfig: View {
         guard !Task.isCancelled else { return }
         loadingModels = false
         models = list
-        if modelBinding.wrappedValue.isEmpty, let first = list.first { modelBinding.wrappedValue = first }
     }
 
 }

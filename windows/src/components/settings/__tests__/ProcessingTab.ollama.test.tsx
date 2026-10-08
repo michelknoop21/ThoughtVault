@@ -25,7 +25,10 @@ it("prefills each Ollama location, loads its models and ignores a stale response
   await act(async () => { cloud.click(); });
   expect(useSettingsStore.getState().ollama_url).toBe("https://ollama.com");
   await act(async () => { await vi.advanceTimersByTimeAsync(350); });
-  expect(host.querySelector<HTMLSelectElement>('[aria-label="Ollama model"]')?.value).toBe("gpt-oss:120b");
+  const model = host.querySelector<HTMLSelectElement>('[aria-label="Ollama model"]')!;
+  expect(model.value).toBe("");
+  expect(model.textContent).toContain("gpt-oss:120b");
+  await act(async () => { model.value = "gpt-oss:120b"; model.dispatchEvent(new Event("change", { bubbles: true })); });
   await act(async () => { finishLocal(["stale-local-model"]); });
   expect(host.textContent).not.toContain("stale-local-model");
   expect(useSettingsStore.getState().ollama_model).toBe("gpt-oss:120b");

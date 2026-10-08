@@ -261,6 +261,7 @@ enum RecordingState: Equatable, Sendable {
 // `PersonProfile` (@Model, PersonProfile.swift) is the new type for people/self-profile.
 // `Profile` here is the notule-style template (zakelijk, informeel, etc.) — keep separate.
 struct Profile: Identifiable, Codable, Hashable, Sendable {
+    var minutesStyle: MinutesStyle? = nil
     var id: String
     var name: String
     var description: String?

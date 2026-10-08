@@ -609,6 +609,7 @@ struct ProfileEditSheet: View {
                             return "<section><h2>\(safe)</h2><p>[Brongebonden inhoud]</p></section>"
                         }.joined(separator: "\n")
                         let profile = Profile(
+                            minutesStyle: existingProfile?.minutesStyle,
                             id: existingProfile?.id ?? UUID().uuidString,
                             name: name.trimmingCharacters(in: .whitespaces),
                             systemPrompt: customSys.isEmpty ? selectedStijl.systemPrompt : customSys,

@@ -48,6 +48,27 @@ func htmlToMarkdown(_ html: String) -> String {
     md = regex("(?is)<blockquote[^>]*>(.*?)</blockquote>", "\n> $1\n", md)
 
     // 6. Block containers → newline so adjacent sections don't run together.
+    let tableRegex = try! NSRegularExpression(pattern: "(?is)<table\\b[^>]*>(.*?)</table>")
+    let rowRegex = try! NSRegularExpression(pattern: "(?is)<tr\\b[^>]*>(.*?)</tr>")
+    let cellRegex = try! NSRegularExpression(pattern: "(?is)<t[hd]\\b[^>]*>(.*?)</t[hd]>")
+    let tables = tableRegex.matches(in: md, range: NSRange(md.startIndex..., in: md))
+    for table in tables.reversed() {
+        let body = (md as NSString).substring(with: table.range(at: 1))
+        var rows = rowRegex.matches(in: body, range: NSRange(body.startIndex..., in: body)).map { row in
+            let content = (body as NSString).substring(with: row.range(at: 1))
+            return cellRegex.matches(in: content, range: NSRange(content.startIndex..., in: content)).map { cell in
+                regex("\\s+", " ", regex("<[^>]+>", "", (content as NSString).substring(with: cell.range(at: 1))))
+                    .trimmingCharacters(in: .whitespacesAndNewlines).replacingOccurrences(of: "|", with: "\\|")
+            }
+        }
+        let count = rows.map(\.count).max() ?? 0
+        guard count > 0 else { continue }
+        func render(_ row: [String]) -> String { "| " + (0..<count).map { $0 < row.count ? row[$0] : "" }.joined(separator: " | ") + " |" }
+        let header = body.range(of: "<th\\b", options: [.regularExpression, .caseInsensitive]) != nil
+            ? rows.removeFirst() : Array(repeating: "", count: count)
+        let replacement = "\n" + render(header) + "\n" + render(Array(repeating: "---", count: count)) + "\n" + rows.map(render).joined(separator: "\n") + "\n"
+        if let range = Range(table.range, in: md) { md.replaceSubrange(range, with: replacement) }
+    }
     md = regex("(?i)<(/?)(div|section|ul|ol|table|thead|tbody|tr)[^>]*>", "\n", md)
 
     // 7. Strip any remaining tags.

@@ -100,6 +100,9 @@
 		AA000055 /* TasksViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000055 /* TasksViewModel.swift */; };
 		AA000056 /* TasksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000056 /* TasksView.swift */; };
 		AA000057 /* UpdateCheckService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000057 /* UpdateCheckService.swift */; };
+		MCPB0001 /* AIConnectionViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = MCPF0001 /* AIConnectionViewModel.swift */; };
+		MCPB0002 /* AIConnectionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = MCPF0002 /* AIConnectionsView.swift */; };
+		MCPB0003 /* AIConnectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = MCPF0003 /* AIConnectionTests.swift */; };
 		AA000058 /* GoogleAuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000058 /* GoogleAuthService.swift */; };
 		AA000061 /* TranscriptRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000061 /* TranscriptRecord.swift */; };
 		AA000062 /* LocalTranscriptStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000062 /* LocalTranscriptStore.swift */; };
@@ -238,6 +241,9 @@
 		FA000055 /* TasksViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TasksViewModel.swift; sourceTree = "<group>"; };
 		FA000056 /* TasksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TasksView.swift; sourceTree = "<group>"; };
 		FA000057 /* UpdateCheckService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateCheckService.swift; sourceTree = "<group>"; };
+		MCPF0001 /* AIConnectionViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIConnectionViewModel.swift; sourceTree = "<group>"; };
+		MCPF0002 /* AIConnectionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIConnectionsView.swift; sourceTree = "<group>"; };
+		MCPF0003 /* AIConnectionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIConnectionTests.swift; sourceTree = "<group>"; };
 		FA000058 /* GoogleAuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleAuthService.swift; sourceTree = "<group>"; };
 		FA000061 /* TranscriptRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptRecord.swift; sourceTree = "<group>"; };
 		FA000062 /* LocalTranscriptStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalTranscriptStore.swift; sourceTree = "<group>"; };
@@ -395,6 +401,7 @@
 			children = (
 				FA000019 /* AuthViewModel.swift */,
 				FA000020 /* RecordingViewModel.swift */,
+				MCPF0001 /* AIConnectionViewModel.swift */,
 				FA9E5A01 /* RecordingViewModel+Restart.swift */,
 				FA000055 /* TasksViewModel.swift */,
 				FA000021 /* TranscriptsViewModel.swift */,
@@ -431,6 +438,7 @@
 				FA0000S2 /* RecordingView+Inspector.swift */,
 				FA0000S1 /* RecordingView+Studio.swift */,
 				FA000031 /* SettingsView.swift */,
+				MCPF0002 /* AIConnectionsView.swift */,
 				FA0000K8 /* SettingsView+VerwerkingSide.swift */,
 				FA0000K7 /* SettingsView+Verwerking.swift */,
 				FA0000K6 /* SettingsView+Studio.swift */,
@@ -495,6 +503,7 @@
 			isa = PBXGroup;
 			children = (
 				FB000001 /* ThoughtVaultTests.swift */,
+				MCPF0003 /* AIConnectionTests.swift */,
 				FB0000S5 /* QuickNoteStoreTests.swift */,
 				FB9E5A02 /* VaultFolderStoreTests.swift */,
 				FB000002 /* MigrationTests.swift */,
@@ -723,6 +732,8 @@
 				AA000053 /* EditableHTMLWebView.swift in Sources */,
 				AA000054 /* MeetingNotificationService.swift in Sources */,
 				AA000057 /* UpdateCheckService.swift in Sources */,
+				MCPB0002 /* AIConnectionsView.swift in Sources */,
+				MCPB0001 /* AIConnectionViewModel.swift in Sources */,
 				AA000058 /* GoogleAuthService.swift in Sources */,
 				AA000056 /* TasksView.swift in Sources */,
 			);
@@ -733,6 +744,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				AB000001 /* ThoughtVaultTests.swift in Sources */,
+				MCPB0003 /* AIConnectionTests.swift in Sources */,
 				AB0000S5 /* QuickNoteStoreTests.swift in Sources */,
 				AB9E5A02 /* VaultFolderStoreTests.swift in Sources */,
 				AB000002 /* MigrationTests.swift in Sources */,

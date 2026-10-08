@@ -31,6 +31,7 @@ final class TranscriptRecord {
     /// regeneration (other profile) can re-inject the deelnemerslijst. Optional →
     /// lightweight-migration safe for existing stores.
     var participantsJSON: String?
+    var minutesStyleJSON: String?
 
     init(
         id: String = UUID().uuidString,

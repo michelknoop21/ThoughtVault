@@ -86,6 +86,7 @@ struct ContentView: View {
     @State private var seedCandidates: [String] = []
     @State private var showSeedReviewSheet = false
     @State private var pendingTranscript: Transcript? = nil
+    @State private var showAIProfiles = false
     /// Query from the Home search field, handed to Notulen once.
     @State private var homeSearch = ""
 
@@ -108,6 +109,23 @@ struct ContentView: View {
                 transcriptsNavPath.append(transcript)
                 pendingTranscript = nil
             }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .aiOpenView)) { notification in
+            let view = notification.userInfo?["view"] as? String
+            if view == "transcript", let taskId = notification.userInfo?["transcript_id"] as? String,
+               let record = LocalTranscriptStore.shared.record(forTaskId: taskId) {
+                openTranscript(record.asTranscript)
+                return
+            }
+            switch view {
+            case "recording": selectedTab = .record
+            case "transcripts", "transcript": selectedTab = .transcripts
+            case "profiles": showAIProfiles = true
+            default: selectedTab = .settings
+            }
+        }
+        .sheet(isPresented: $showAIProfiles) {
+            ProfilesView().environment(recordingVM)
         }
         .onChange(of: authVM.isAuthenticated) { _, isAuth in
             if isAuth {

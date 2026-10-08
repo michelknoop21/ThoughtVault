@@ -44,6 +44,7 @@ struct ThoughtVaultApp: App {
                     updateCheckService.installationStateChanged = { recordingVM.updateInstalling = $0 }
                     updateCheckService.isBusy = { recordingVM.updateIsBusy }
                     #endif
+                    AIConnectionViewModel.shared.start(recordingVM: recordingVM)
                     await permissionManager.checkAllPermissions()
                     AudioRecorder.cleanupOldRecordings(
                         protecting: recordingVM.offlineQueue.queuedAudioURLs

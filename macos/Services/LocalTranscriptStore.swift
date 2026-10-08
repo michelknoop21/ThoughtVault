@@ -189,6 +189,31 @@ final class LocalTranscriptStore {
 
     // MARK: - CRUD
 
+    /// MainActor comparison and persistence are one operation, with no suspension.
+    func applyAIEdit(taskId: String, revision: String, html: String?, title: String?, tags: [String]?, style: MinutesStyle?) throws {
+        guard let record = record(forTaskId: taskId) else { throw LocalStoreError.recordNotFound }
+        guard try AIConnectionViewModel.revision(AIConnectionViewModel.snapshot(record)) == revision else {
+            throw AIConnectionError.message("Transcript is gewijzigd. Lees het opnieuw voordat je opslaat.")
+        }
+        if let title, title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || title.count > 300 {
+            throw AIConnectionError.message("Ongeldige titel.")
+        }
+        if let tags, tags.count > 50 || tags.contains(where: { $0.count > 100 }) { throw AIConnectionError.message("Ongeldige tags.") }
+        let original = (record.notuleHtml, record.title, record.tags, record.minutesStyleJSON)
+        do {
+            let existingStyle = record.minutesStyleJSON.flatMap { $0.data(using: .utf8) }.flatMap { try? JSONDecoder().decode(MinutesStyle.self, from: $0) }
+            let appliedStyle = html == nil ? style : style ?? existingStyle ?? MinutesStyle()
+            if let html { record.notuleHtml = try appliedStyle?.apply(to: html) ?? html }
+            if let title { record.title = title }
+            if let tags { record.tags = tags }
+            if let appliedStyle { record.minutesStyleJSON = String(decoding: try JSONEncoder().encode(appliedStyle), as: UTF8.self) }
+            try context.save()
+        } catch {
+            (record.notuleHtml, record.title, record.tags, record.minutesStyleJSON) = original
+            throw error
+        }
+    }
+
     func save(_ record: TranscriptRecord) throws {
         context.insert(record)
         try context.save()
@@ -249,13 +274,20 @@ final class LocalTranscriptStore {
     /// Updates the generated notule + title for a previously saved (partial) record.
     /// Throwing so callers can surface persistence failures instead of silently
     /// reporting success.
-    func finalizeNotule(taskId: String, html: String, title: String) throws {
+    func finalizeNotule(taskId: String, html: String, title: String, style: MinutesStyle? = nil) throws {
         guard let record = record(forTaskId: taskId) else {
             throw LocalStoreError.recordNotFound
         }
-        record.notuleHtml = html
-        record.title = title
-        try context.save()
+        let original = (record.notuleHtml, record.title, record.minutesStyleJSON)
+        do {
+            record.notuleHtml = try style?.apply(to: html) ?? html
+            record.title = title
+            if let style { record.minutesStyleJSON = String(decoding: try JSONEncoder().encode(style), as: UTF8.self) }
+            try context.save()
+        } catch {
+            (record.notuleHtml, record.title, record.minutesStyleJSON) = original
+            throw error
+        }
     }
 
 }

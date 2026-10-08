@@ -77,3 +77,30 @@ The microphone source of this completed meeting was first archived with unchange
 The signed test build succeeded. Targeted native XCTest execution passed quick-note tests plus rate-limit error and combined/source-list regressions. These source changes are not yet installed in the canonical application. Meeting monitoring was paused after Michel confirmed completion.
 
 Source-cleanup regression covers complete readable output, frame-count mismatch, malformed audio, and refusal to delete the combined file itself. Automatic source deletion is a source change, not yet installed in the canonical application.
+
+## Post-meeting fixes and native recheck, version 1.0.265
+
+- macOS system-audio live callback uses immutable handler ownership. The former callback recursion is covered by 20,000 appends on a 512 KiB thread stack. Live transcript accumulation and source selection tests pass.
+- Both platforms now derive seven independent frequency bands from PCM. Quiet/loud envelope calibration remains shared; no additional capture engine or waveform dependency was introduced. The widget continues animating when its nonactivating panel is in the background. Main waveform drawing is clipped to its reserved bounds.
+- System capture preserves silent callback gaps on the recording timeline and excludes explicit pauses. The level watchdog returns to silence instead of leaving a stale level.
+- The widget has a fixed contrast surface and enough width for paused recordings approaching ten hours; controls do not compress.
+- Notes persist during recording/pause, with an explicit save action. Complete mixed audio is validated before removing the redundant microphone source. Incomplete or malformed mixes retain their source.
+- Known hosted Ollama GPT-OSS models use a bounded 64,000-character input chunk instead of 8,000. Other endpoints and models retain the smaller limit. HTTP 429 has a specific provider-limit message.
+- The latest completed meeting now has both a preserved transcript and a nonempty generated notule in the local database, linked to audio. This is a later read-only verification, not a claim that this session regenerated it or that provider limits cannot recur.
+- macOS local Account no longer offers the removed login flow; its feedback button now opens a working local-copy form. Windows local feedback similarly avoids the old account API.
+- Native Cancel buttons align with the primary actions. Disabled buttons visibly dim on both platforms. The macOS grouped settings form and feedback editor follow the existing hidden-indicator pattern; Windows uses narrow neutral scrollbars.
+- Windows local Advanced now presents recording access and the existing Windows microphone-settings action. The account-server form remains available only for cloud processing. Provider selection remains in Processing. Native Windows meter colors match the app instead of the white system default.
+
+### Evidence
+
+- macOS final signed Release build succeeds. Full native XCTest: 65 passed, 0 failed, 2 hardware opt-in skips. The separately enabled real system-audio test passes, including quiet/normal/loud levels, silence release, and recorded wall-time agreement within 250 ms. The real microphone writer test passes its less-than-250-ms publication lag bound.
+- Windows TypeScript/Vite build and 70 frontend tests pass. Local native audio Rust suite: 20 passed. Final Windows CI run 37790404576 at source a53156e passed 70 frontend tests, 21 native Rust tests and the MSI upgrade/two-start/note-preservation checks.
+- The final Windows 265 MSI was installed through Royal TSX, Dalf38 VPN, with SHA256 validation, installer exit 0 and unchanged notes-file hash. MSI SHA256: ec092a14540f447fccf64603ce5ecffba69363f8eb359d2995438ef3f0d39d2c. The final native recheck confirms local Advanced permissions content, visibly dimmed disabled feedback action and neutral audio meter. The app remains idle after verification. Actual macOS 265 is installed at /Applications/ThoughtVault.app with the existing bundle identity and sandbox. Rollback apps remain available.
+- Native rechecks: idle recording studio/inspector, all seven settings tab headers and primary content, participant empty state, person form and feedback dialog on both platforms. Windows 265 additionally rechecked Tasks, Notulen list/detail, tags and regeneration profile choice at the regular window size. Both person forms show all six fields and actions without scrolling.
+- Native Windows 264 was additionally checked at its 652x600 client minimum: Tasks, Notulen list/detail, regeneration profile sheet, and full person form. Those unchanged layouts are not misrepresented as fresh 265 screenshots.
+
+### Remaining verification boundaries
+
+The fixed callback and audio logic have regression and real hardware evidence; a complete new videomeeting with the final app, live transcript enabled, background widget and note-save interaction has not yet been repeated. No destructive native operations or private transcript screenshots are included.
+
+The local Mac build uses Apple Development signing. Public Mac distribution is blocked by the absent Developer ID Application identity and notarization setup. The uploader rejects non-notarized DMGs. No weaker signing or unsigned public Mac update was substituted.

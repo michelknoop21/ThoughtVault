@@ -8,6 +8,7 @@ import {
   Globe24Regular,
   LockClosed24Regular,
   Star24Regular,
+  ProfileIcons,
 } from "../components/ui/StudioIcons";
 import { currentProfileChoices, useProfilesStore } from "../stores/profilesStore";
 import { api } from "../services/api";
@@ -17,6 +18,7 @@ import { useRecordingStore } from "../stores/recordingStore";
 import { useToast } from "../components/ui/InfoBar";
 import type { Profile } from "../types";
 import { DEFAULT_PROFILES } from "../types";
+import profileTemplates from "../data/profileTemplates.json";
 
 const STIJLEN = [
   {
@@ -468,10 +470,12 @@ function ProfileCard({
   onSetDefault?: () => void;
   onCopy?: () => void;
 }) {
+  const template = profileTemplates.find((entry) => entry.id === profile.id);
+  const Icon = template ? ProfileIcons[template.icon] : undefined;
   return (
     <div className="card-static profile-card">
       {/* Icon */}
-      <span className="profile-card-icon">{profile.icon || "📄"}</span>
+      <span className="profile-card-icon">{Icon ? <Icon /> : profile.icon || "📄"}</span>
 
       {/* Name + description */}
       <div className="profile-card-info">

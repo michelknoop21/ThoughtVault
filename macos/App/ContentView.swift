@@ -275,6 +275,7 @@ struct ContentView: View {
                 .background(Color.backgroundDark)
         }
         .navigationSplitViewStyle(.balanced)
+        .id(selectedTab)
         // Force sidebar always visible — collapse is handled by our custom UI
         .onAppear {
             columnVisibility = .automatic

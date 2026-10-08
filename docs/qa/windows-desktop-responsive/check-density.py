@@ -32,5 +32,17 @@ try:
    output=run([['tab',tab],['goto',url+'?density=1#'+route],['snapshot','-i'],['screenshot',capture],['js',measure]])
    data=json.loads(output.split('[js]')[-1].strip());data['screenshot']=capture
    print(route,json.dumps(data),flush=True)
- print('PASS: 36 route/viewport/scale density measurements')
+ for size in ['640x560','900x560','1200x800']:
+  run([['tab',tab],['viewport',size],['goto',url+'#/recording'],['snapshot','-i'],['js',"[...document.querySelectorAll('.studio-inspector button')].at(-1).click()"],['snapshot','-i']])
+  output=run([['tab',tab],['js',"""JSON.stringify((()=>{
+const dialog=document.querySelector('.studio-dialog'),list=dialog?.querySelector('.card-static > div:last-child');
+if(!list)throw Error('Missing saved recording list');
+list.replaceChildren(...Array.from({length:12},(_,i)=>{const row=document.createElement('div');row.textContent='Fictieve opname '+i;row.style.height='70px';return row;}));
+if(dialog.scrollHeight>dialog.clientHeight+1)throw Error('Nested dialog scrollbar');
+if(list.scrollHeight<=list.clientHeight)throw Error('List cannot scroll');
+const close=dialog.querySelector('header button').getBoundingClientRect();
+if(close.top<0||close.bottom>innerHeight)throw Error('Close action clipped');
+return {viewport:[innerWidth,innerHeight],listHeight:list.clientHeight,content:list.scrollHeight};})())"""]])
+  print('saved recordings',size,output.split('[js]')[-1].strip(),flush=True)
+ print('PASS: 36 route/viewport/scale density measurements and 3 single-owner recording dialogs')
 finally:run([['closetab',tab]])

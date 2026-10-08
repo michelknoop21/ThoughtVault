@@ -56,6 +56,11 @@ const shapes = {
   bug: <><ellipse cx="12" cy="14" rx="5" ry="7"/><path d="M9 8V5h6v3M3 9l4 2m10 0 4-2M2 14h5m10 0h5M3 20l4-3m10 0 4 3M12 7v14"/></>,
   share: <><path d="M12 15V3m-4 4 4-4 4 4M5 11H3v10h18V11h-2"/></>,
   signOut: <><path d="M10 3H3v18h7m0-9h11m-4-4 4 4-4 4"/></>,
+  chart: <><rect x="3" y="12" width="4" height="9" rx="1"/><rect x="10" y="7" width="4" height="14" rx="1"/><rect x="17" y="3" width="4" height="18" rx="1"/></>,
+  hammer: <path d="m3 19 8-8-2-2 3-3h4l5 5-3 3-3-3-2 2-8 8zM12 6l2-3 3 1"/>,
+  peopleCircle: <><circle cx="12" cy="12" r="10"/><circle cx="9" cy="9" r="2"/><circle cx="16" cy="10" r="2"/><path d="M5 17v-1a4 4 0 0 1 8 0v1m0-3a4 4 0 0 1 6 3"/></>,
+  bulb: <><path d="M8 16c0-3-3-3-3-7a7 7 0 0 1 14 0c0 4-3 4-3 7M8 17h8m-7 3h6m-5 2h4"/></>,
+  quote: <><path d="M4 4h16M4 17h16M4 21h12M4 13V8h5v5H4m11 0V8h5v5h-5"/></>,
 };
 function symbol(name: keyof typeof shapes, sfSymbol: string) {
   return function StudioIcon(props: IconProps) {
@@ -133,3 +138,12 @@ export const Warning24Regular = symbol("warning", "warning");
 export const WaveformIcon = symbol("wave", "waveform");
 export const VaultIcon = symbol("tray", "tray.and.arrow.down");
 export const AdvancedIcon = symbol("sliders", "slider.horizontal.3");
+export const ProfileIcons: Record<string, ReturnType<typeof symbol>> = {
+  "doc.text": DocumentText24Regular,
+  "chart.bar": symbol("chart", "chart.bar"),
+  hammer: symbol("hammer", "hammer"),
+  "person.2": People24Regular,
+  "person.2.circle": symbol("peopleCircle", "person.2.circle"),
+  lightbulb: symbol("bulb", "lightbulb"),
+  "text.quote": symbol("quote", "text.quote"),
+};

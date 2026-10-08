@@ -27,13 +27,13 @@ Reference: signed macOS Release build of the same c373a8c baseline, with the per
 
 | Surface | macOS native reference | Windows native recheck |
 |---|---|---|
-| Home | Seen with real existing notes and agenda | Pending candidate |
-| Recording idle / inspector | Seen | Pending candidate |
+| Home | Seen with real existing notes and agenda | Native 264, regular window, existing notes preserved |
+| Recording idle / inspector | Seen | Native 264, full-height workspace and centered controls |
 | Tasks empty state | Seen | Pending candidate |
 | Notulen list / detail | Seen | Pending candidate |
 | People empty / add person | Seen; corrected form verified | Pending candidate |
 | Settings, all seven tabs | Current native 263 reviewed | Pending candidate |
-| Participants / saved recordings | Current native 263 reviewed, list expanded | Pending candidate |
+| Participants / saved recordings | Current native 263 reviewed, list expanded | Native 264: saved list has one scroll owner and fixed Close; participant search/empty-state correction awaits next candidate |
 | Regenerate / retranscription profile sheet | Collapsed Mac layout fixed and regenerate sheet natively verified | Pending candidate |
 | Tags | Previous native reference reviewed | Pending candidate |
 | Feedback modal | Account location confirmed; existing Mac button has no presented sheet | Pending candidate |
@@ -56,6 +56,12 @@ The widget now uses a fixed dark surface rather than translucent material, reada
 
 The crash left both PCM payloads on disk but unfinished WAV sizes. Local recovery copies received finalized RIFF/data lengths, with payload hashes unchanged. afinfo validates approximately 133.8 s of microphone audio and 66.9 s of system audio. The duration discrepancy remains an open functional issue; this is not complete meeting-capture proof. Private recovery files are outside the repository.
 
-Native app test-host execution and installation are deferred until Michel ends the meeting. Independent frequency-band motion and native widget contrast/motion recheck remain pending. Windows candidate 264 CI completed successfully, but final native installation/recheck is still pending.
+Native macOS test-host execution and installation are deferred until Michel ends the meeting. Independent frequency-band motion and native widget contrast/motion recheck remain pending. Windows candidate 264 CI completed successfully and was installed through Royal TSX; the existing notes file hash was unchanged. Further changed surfaces need a new candidate recheck.
 
 Release build-for-testing with ENABLE_TESTABILITY=YES succeeded without launching the test host. Standalone optimized callback regression (20,000 iterations on 512 KiB stack), seven-height geometry assertions, and widget Rec/Stop text contrast assertions passed. The new XCTest cases are compiled but not executed during the meeting.
+
+## Quick notes during a recording
+
+The existing macOS quick-note popover had no save action, and persisted its text only at recording stop. Both platforms now save edits during recording/pause and provide a visible Bewaar notitie action. The existing final-audio mapping and notule processing remain unchanged. Explicitly clearing a draft removes only that recording's note; an empty processing retry preserves previously saved text. Windows retains the edited text and reports a storage failure so it can be retried.
+
+The signed macOS test build succeeded without launching an app. An isolated Foundation check against the actual QuickNoteStore source passed draft replacement, clearing isolation, retry preservation, transcript mapping and HTML escaping. Windows TypeScript/Vite build and participant search/hidden-selection regression passed. These quick-note changes are source fixes, not installed in the running macOS meeting app.

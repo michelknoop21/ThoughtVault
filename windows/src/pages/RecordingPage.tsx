@@ -35,7 +35,7 @@ import { SavedRecordings } from "../components/recording/SavedRecordings";
 import { SeedReviewSheet } from "./SeedReviewSheet";
 import { ParticipantPicker } from "./ParticipantPicker";
 import { usePeopleDirectoryStore } from "../stores/peopleDirectoryStore";
-import { saveQuickNote } from "../services/quickNotes";
+import { saveQuickNote, saveQuickNoteDraft } from "../services/quickNotes";
 import { useCalendarStore } from "../stores/calendarStore";
 
 import { DocumentText24Regular } from "../components/ui/StudioIcons";
@@ -384,8 +384,17 @@ export function RecordingPage() {
     {panel && panel !== "people" && <dialog ref={dialogRef} className="studio-dialog" aria-label={panel === "note" ? "Snelle notitie" : panel === "saved" ? "Opgeslagen opnames" : "YouTube-video"} onCancel={() => setPanel(null)}>
       <header><h2>{panel === "note" ? "Snelle notitie" : panel === "saved" ? "Opgeslagen opnames" : "YouTube-video"}</h2><button className="btn btn-secondary" onClick={() => setPanel(null)}>Sluiten</button></header>
       {panel === "note" && <><p>Context voor je notulen; dit wordt apart van het gesproken transcript bewaard.</p>
-        <textarea autoFocus rows={7} className="input" aria-label="Snelle notitie" value={quickNote} onChange={e => setQuickNote(e.target.value)} />
-        <p className="text-caption">Wordt bij het stoppen met deze opname opgeslagen.</p></>}
+        <textarea autoFocus rows={7} className="input" aria-label="Snelle notitie" value={quickNote} onChange={e => {
+          try { setQuickNote(e.target.value); }
+          catch { setError("De notitie kon niet lokaal worden bewaard. De tekst blijft in het veld staan; probeer opnieuw te bewaren."); }
+        }} />
+        <p>Wordt lokaal bewaard en meegenomen in de notulen.</p>
+        <button className="btn btn-accent" disabled={!quickNote.trim()} onClick={() => {
+          try {
+            saveQuickNoteDraft(useRecordingStore.getState().filePath ?? "", quickNote);
+            setPanel(null);
+          } catch { setError("De notitie kon niet lokaal worden bewaard. Probeer opnieuw."); }
+        }}>Bewaar notitie</button></>}
       {panel === "saved" && <SavedRecordings initiallyExpanded />}
       {panel === "youtube" && <form onSubmit={e => { e.preventDefault(); void handleSubmitYouTube(); }}>
         <label>Video-URL<input className="input" type="url" value={youtubeURL} onChange={e => setYouTubeURL(e.target.value)} required placeholder="https://www.youtube.com/watch?v=…" /></label>

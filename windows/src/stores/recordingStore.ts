@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import type { RecordingMode, TranscriptTask } from "../types";
+import { saveQuickNoteDraft } from "../services/quickNotes";
 
 // AbortController registry — lives outside Zustand (not serializable)
 const abortControllers = new Map<string, AbortController>();
@@ -87,7 +88,7 @@ interface RecordingState {
   reset: () => void;
 }
 
-export const useRecordingStore = create<RecordingState>()((set) => ({
+export const useRecordingStore = create<RecordingState>()((set, get) => ({
   phase: "idle",
   mode: "combined",
   currentTask: null,
@@ -95,7 +96,11 @@ export const useRecordingStore = create<RecordingState>()((set) => ({
   elapsedSeconds: 0,
   filePath: null,
   quickNote: "",
-  setQuickNote: (quickNote) => set({ quickNote }),
+  setQuickNote: (quickNote) => {
+    const { phase, filePath } = get();
+    set({ quickNote });
+    if ((phase === "recording" || phase === "paused") && filePath) saveQuickNoteDraft(filePath, quickNote);
+  },
   autoStart: false,
   minimizeOnAutoStart: false,
   recordingStartedAt: null,

@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { DesktopDialog } from "../components/ui/DesktopDialog";
+import { People24Regular } from "../components/ui/StudioIcons";
 import { usePeopleDirectoryStore } from "../stores/peopleDirectoryStore";
 import { useRecordingStore } from "../stores/recordingStore";
 
@@ -16,6 +18,11 @@ export function ParticipantPicker({ onClose }: ParticipantPickerProps) {
   const people = usePeopleDirectoryStore((s) => s.people);
   const selectedIds = useRecordingStore((s) => s.selectedParticipantIds);
   const setSelectedIds = useRecordingStore((s) => s.setSelectedParticipantIds);
+  const [search, setSearch] = useState("");
+  const query = search.toLowerCase();
+  const filteredPeople = people.filter(person => person.name.toLowerCase().includes(query)
+    || person.organization.toLowerCase().includes(query)
+    || person.aliases.some(alias => alias.toLowerCase().includes(query)));
 
   const selected = new Set(selectedIds);
 
@@ -36,6 +43,7 @@ export function ParticipantPicker({ onClose }: ParticipantPickerProps) {
           width: "100%",
           maxWidth: 440,
           maxHeight: "85vh",
+          minHeight: "min(480px, 85vh)",
           display: "flex",
           flexDirection: "column",
           overflow: "hidden",
@@ -51,15 +59,19 @@ export function ParticipantPicker({ onClose }: ParticipantPickerProps) {
           <p style={{ font: "var(--type-body)", color: "var(--text-secondary)", margin: 0 }}>
             Selecteer wie aanwezig is. Deze namen komen in de notule en acties kunnen aan hen worden gekoppeld.
           </p>
+          {people.length > 0 && <input className="input" type="search" aria-label="Deelnemers zoeken" placeholder="Zoeken..."
+            value={search} onChange={event => setSearch(event.target.value)} style={{ marginTop: 12 }} />}
         </div>
 
-        <div style={{ overflowY: "auto", flex: 1, padding: "0 20px" }}>
+        <div style={{ overflowY: "auto", flex: 1, minHeight: 0, padding: "0 20px", display: people.length ? "block" : "flex", alignItems: "center", justifyContent: "center" }}>
           {people.length === 0 ? (
-            <p style={{ font: "var(--type-body)", color: "var(--text-secondary)", margin: "16px 0" }}>
-              Nog geen personen in de directory. Voeg eerst mensen toe via Mensen.
-            </p>
+            <div style={{ textAlign: "center", display: "grid", justifyItems: "center", gap: 16, padding: "24px 0" }}>
+              <People24Regular style={{ fontSize: 40, color: "var(--text-tertiary)" }} />
+              <p style={{ font: "var(--type-body)", fontWeight: 600, color: "var(--text-primary)", margin: 0 }}>Nog geen personen in de directory</p>
+              <p style={{ font: "var(--type-body)", color: "var(--text-secondary)", margin: 0 }}>Voeg eerst mensen toe via Mensen.</p>
+            </div>
           ) : (
-            people.map((person) => {
+            <>{filteredPeople.length === 0 && <p>Geen resultaten voor '{search}'</p>}{filteredPeople.map((person) => {
               const isOn = selected.has(person.id);
               const subtitle = [person.role, person.organization].filter(Boolean).join(" · ");
               return (
@@ -93,7 +105,7 @@ export function ParticipantPicker({ onClose }: ParticipantPickerProps) {
                   </div>
                 </label>
               );
-            })
+            })}</>
           )}
         </div>
 

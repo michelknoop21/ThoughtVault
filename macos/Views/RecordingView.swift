@@ -581,6 +581,16 @@ struct RecordingView: View {
                     RoundedRectangle(cornerRadius: TS.Radius.sm, style: .continuous)
                         .fill(Color.surfaceSecondary)
                 }
+            Text("Wordt lokaal bewaard en meegenomen in de notulen.")
+                .font(TS.Font.caption)
+                .foregroundStyle(Color.labelSecondary)
+            Button("Bewaar notitie") {
+                recordingVM.saveQuickNoteDraft()
+                showNoteField = false
+            }
+            .buttonStyle(PrimaryButtonStyle())
+            .disabled(recordingVM.quickNote.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            .frame(maxWidth: .infinity, alignment: .trailing)
         }
         .padding(TS.Spacing.md)
         .background {

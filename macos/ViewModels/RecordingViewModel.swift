@@ -65,8 +65,21 @@ final class RecordingViewModel {
     /// Reset after each recording is dispatched.
     var selectedParticipantIDs: [String] = []
     /// "Snelle notitie" typed during the current recording; kept across pause/resume
-    /// and stored with the audio file on stop (QuickNoteStore).
-    var quickNote: String = ""
+    /// and saved while editing, then linked to the final audio file on stop.
+    var quickNote: String = "" {
+        didSet { saveQuickNoteDraft() }
+    }
+
+    func saveQuickNoteDraft() {
+        guard recordingState == .recording || recordingState == .paused else { return }
+        let url: URL?
+        #if os(macOS)
+        url = selectedMode == .systemAudio ? systemAudioCapture.currentOutputURL : audioRecorder.currentRecordingURL
+        #else
+        url = audioRecorder.currentRecordingURL
+        #endif
+        if let url { QuickNoteStore.saveDraft(quickNote, audioFilename: url.lastPathComponent) }
+    }
 
     // YouTube transcription
     var isYouTubeEnabled: Bool = false

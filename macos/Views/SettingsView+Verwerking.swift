@@ -390,11 +390,27 @@ extension SettingsView {
         .studioCard()
     }
 
+    private var ollamaLocation: Binding<String> {
+        Binding(
+            get: {
+                let legacyCloud = ollamaURL.trimmingCharacters(in: .whitespacesAndNewlines).trimmingCharacters(in: CharacterSet(charactersIn: "/")) == OpenAICompatibleLLMService.ollamaCloudBaseURL
+                return (activeLocalProvider == .ollamaCloud || legacyCloud) ? NotulenProvider.ollamaCloud.rawValue : NotulenProvider.ollama.rawValue
+            },
+            set: { value in
+                if value == NotulenProvider.ollama.rawValue {
+                    ollamaURL = "http://localhost:11434"
+                    ollamaModel = ""
+                }
+                notulenProvider = value
+            }
+        )
+    }
+
     /// Configuration of the selected provider, reusing the existing forms.
     private var providerPanel: some View {
         VStack(alignment: .leading, spacing: 10) {
             if activeLocalProvider == .ollama || activeLocalProvider == .ollamaCloud {
-                Picker("Ollama", selection: $notulenProvider) {
+                Picker("Ollama", selection: ollamaLocation) {
                     Text("Lokaal").tag(NotulenProvider.ollama.rawValue)
                     Text("Cloud").tag(NotulenProvider.ollamaCloud.rawValue)
                 }

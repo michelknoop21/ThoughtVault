@@ -392,6 +392,14 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
         return items.filter { audioExts.contains($0.pathExtension.lowercased()) }
     }
 
+    /// Keep source audio recoverable, but show a combined session only once.
+    static func primaryRecordingURLs(from urls: [URL], defaults: UserDefaults = .standard) -> [URL] {
+        urls.filter { url in
+            guard let combinedPath = defaults.string(forKey: "combinedAudio_\(url.lastPathComponent)") else { return true }
+            return !FileManager.default.fileExists(atPath: combinedPath)
+        }
+    }
+
     /// Deletes recordings older than 7 days, protecting any URLs in the given set.
     static func cleanupOldRecordings(protecting protectedURLs: Set<URL>) {
         let cutoff = Date().addingTimeInterval(-cleanupAge)

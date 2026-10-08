@@ -16,6 +16,9 @@ enum LLMError: LocalizedError {
         case .providerUnavailable:
             return "De AI-provider is niet beschikbaar."
         case .serverError(let code):
+            if code == 429 {
+                return "De AI-provider heeft een gebruikslimiet bereikt (429). Probeer later opnieuw of controleer je limiet bij de provider."
+            }
             return "Serverfout: statuscode \(code)."
         case .generationFailed(let message):
             return "Generatie mislukt: \(message)"

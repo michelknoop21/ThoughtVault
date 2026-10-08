@@ -10,6 +10,26 @@ import os
 /// spec thresholds, not golden floats — no cross-language float matching.
 final class AudioEnvelopeProcessorTests: XCTestCase {
 
+    func testCombinedRecordingHidesOnlyItsSourceAndRestoresItWhenMixIsMissing() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let suite = "CombinedRecordingTests-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer {
+            try? FileManager.default.removeItem(at: directory)
+            defaults.removePersistentDomain(forName: suite)
+        }
+        let mic = directory.appendingPathComponent("recording_1.wav")
+        let combined = directory.appendingPathComponent("combined_2.wav")
+        let other = directory.appendingPathComponent("recording_3.wav")
+        for url in [mic, combined, other] { try Data([1]).write(to: url) }
+        defaults.set(combined.path, forKey: "combinedAudio_\(mic.lastPathComponent)")
+        XCTAssertEqual(AudioRecorder.primaryRecordingURLs(from: [mic, combined, other], defaults: defaults), [combined, other])
+        XCTAssertTrue(FileManager.default.fileExists(atPath: mic.path))
+        try FileManager.default.removeItem(at: combined)
+        XCTAssertEqual(AudioRecorder.primaryRecordingURLs(from: [mic, other], defaults: defaults), [mic, other])
+    }
+
     func testStudioWaveformStaysBetweenTranscriptAndTransport() {
         for height: CGFloat in [480, 560, 600, 719, 720, 880, 1100] {
             let layout = StudioLayout(w: 640, h: height)

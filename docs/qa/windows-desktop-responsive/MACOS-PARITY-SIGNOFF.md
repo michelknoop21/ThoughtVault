@@ -65,3 +65,13 @@ Release build-for-testing with ENABLE_TESTABILITY=YES succeeded without launchin
 The existing macOS quick-note popover had no save action, and persisted its text only at recording stop. Both platforms now save edits during recording/pause and provide a visible Bewaar notitie action. The existing final-audio mapping and notule processing remain unchanged. Explicitly clearing a draft removes only that recording's note; an empty processing retry preserves previously saved text. Windows retains the edited text and reports a storage failure so it can be retried.
 
 The signed macOS test build succeeded without launching an app. An isolated Foundation check against the actual QuickNoteStore source passed draft replacement, clearing isolation, retry preservation, transcript mapping and HTML escaping. Windows TypeScript/Vite build and participant search/hidden-selection regression passed. These quick-note changes are source fixes, not installed in the running macOS meeting app.
+
+## Completed meeting: generation limit and duplicate sources
+
+The meeting ended with 3,589.698 seconds of combined audio. The saved transcript is linked to that combined file; the local database contains its transcription and no finalized notule. Generation logged HTTP 429 from the configured Ollama Cloud endpoint. The provider usage limit cannot be removed by an app change; the error now explains the limit and later retry. No successful regeneration is claimed.
+
+New combined recordings register their microphone-to-combined mapping. The saved-recordings UI omits only a source with an existing registered combined file. The microphone payload stays on disk, and becomes visible again if the combined file is missing. Enumeration for cleanup and direct transcript audio links remain unchanged.
+
+The microphone source of this completed meeting was reversibly moved into Recordings/Sources only after confirming it had no independent database/task audio references. Its SHA256 is unchanged. The combined file and transcript links remain in place. No audio or transcript content is committed.
+
+The signed test build succeeded. Targeted native XCTest execution passed quick-note tests plus rate-limit error and combined/source-list regressions. These source changes are not yet installed in the canonical application. Meeting monitoring was paused after Michel confirmed completion.

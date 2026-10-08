@@ -3,6 +3,12 @@ import XCTest
 
 final class LLMChunkingTests: XCTestCase {
 
+    func testRateLimitFailureExplainsRetryAndKeepsOtherServerErrors() {
+        XCTAssertTrue(LLMError.serverError(429).localizedDescription.contains("gebruikslimiet"))
+        XCTAssertTrue(LLMError.serverError(429).localizedDescription.contains("later opnieuw"))
+        XCTAssertEqual(LLMError.serverError(500).localizedDescription, "Serverfout: statuscode 500.")
+    }
+
     func testHardSplitCapsChunksWithoutSentenceBreaks() {
         // Whisper output without ". " separators: one 50k-char blob.
         let blob = String(repeating: "a", count: 50_000)

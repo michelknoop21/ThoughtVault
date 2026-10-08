@@ -469,6 +469,8 @@ final class RecordingViewModel {
                 let mixed = await mixAudioFiles(micURL: mic, systemURL: sys)
                 if mixed == mic {
                     audioMixFallbackOccurred = true
+                } else {
+                    UserDefaults.standard.set(mixed.path, forKey: "combinedAudio_\(mic.lastPathComponent)")
                 }
                 finalURL = mixed
             } else {
@@ -1271,7 +1273,7 @@ final class RecordingViewModel {
     // MARK: - Saved Recordings
 
     func loadSavedRecordings() {
-        let urls = AudioRecorder.savedRecordingURLs()
+        let urls = AudioRecorder.primaryRecordingURLs(from: AudioRecorder.savedRecordingURLs())
         let fm = FileManager.default
         var recordings: [SavedRecording] = []
 

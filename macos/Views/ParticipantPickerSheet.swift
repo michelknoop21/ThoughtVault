@@ -129,7 +129,7 @@ struct ParticipantPickerSheet: View {
             Text("Nog geen personen in de directory")
                 .font(TS.Font.headline)
                 .foregroundStyle(Color.labelPrimary)
-            Text("Voeg eerst mensen toe via Instellingen → Mensen.")
+            Text("Voeg eerst mensen toe via Mensen.")
                 .font(TS.Font.footnote)
                 .foregroundStyle(Color.labelSecondary)
                 .multilineTextAlignment(.center)

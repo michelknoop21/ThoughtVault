@@ -13,6 +13,8 @@ Reference: signed macOS Release build of the same c373a8c baseline, with the per
 - Match the people empty-state icon and center the empty-state content.
 - Fit the complete person form without scrolling on both platforms. macOS uses the existing shared fields outside the grouped Form, removing the duplicate labels and unnecessary scroll container. Windows keeps all six fields, name validation, save/error handling and a fallback scroll owner for shorter unsupported viewports.
 - Use narrow neutral WebView scrollbars; keep native Mac scrollbars, keyboard navigation and high-contrast fallback.
+- Give the macOS profile-selection sheet an explicit content size. Previously its List collapsed to zero height; native recheck now shows all seven profiles, premium choice and Cancel. This shared sheet also serves retranscription.
+- Correct the participant empty-state direction to the actual Mensen sidebar entry.
 
 ## Verification
 
@@ -30,12 +32,16 @@ Reference: signed macOS Release build of the same c373a8c baseline, with the per
 | Tasks empty state | Seen | Pending candidate |
 | Notulen list / detail | Seen | Pending candidate |
 | People empty / add person | Seen; corrected form verified | Pending candidate |
-| Settings, all seven tabs | Previous reference and current sources checked; current native recheck pending | Pending candidate |
-| Participants, saved recordings, tags, regenerate | Native previous build reviewed; source semantics retained | Pending candidate |
-| Feedback modal | Same Settings location as macOS | Pending candidate |
+| Settings, all seven tabs | Current native 263 reviewed | Pending candidate |
+| Participants / saved recordings | Current native 263 reviewed, list expanded | Pending candidate |
+| Regenerate / retranscription profile sheet | Collapsed Mac layout fixed and regenerate sheet natively verified | Pending candidate |
+| Tags | Previous native reference reviewed | Pending candidate |
+| Feedback modal | Account location confirmed; existing Mac button has no presented sheet | Pending candidate |
 
 ## Boundaries
 
 Platform-specific capture/transcription engines remain genuine: Windows Whisper/Windows capture, macOS WhisperKit/Apple Speech/Apple permissions. No fake Apple Intelligence capability on Windows. The existing local Windows application does not gain a ThoughtVault login merely to copy an older Mac account screen.
 
 No private notes, API keys or native screenshots are committed. This file is a review record, not a full signoff until the pending native candidate checks are complete. Real live meeting capture, provider connectivity and destructive actions require separate functional evidence.
+
+The existing macOS feedback button only sets showBugReportSheet; no sheet is attached. No feedback was submitted. This functional gap is separate from the visual placement correction on Windows and remains open.

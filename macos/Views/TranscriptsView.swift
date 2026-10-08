@@ -2415,6 +2415,9 @@ private struct ProfileSelectionSheet: View {
                 }
             }
         }
+        #if os(macOS)
+        .frame(width: 520, height: 560)
+        #endif
     }
 }
 

@@ -205,7 +205,8 @@ extension RecordingView {
                 WaveformView(
                     levelsProvider: { recordingVM.audioLevels },
                     isActive: recordingVM.recordingState == .recording,
-                    maxFPS: 60
+                    maxFPS: 60,
+                    bandsProvider: { recordingVM.frequencyBands }
                 )
                 .frame(width: w, height: m.waveHeight)
                 .position(x: w / 2, y: m.waveY)

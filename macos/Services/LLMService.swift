@@ -208,12 +208,16 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
 
     /// Transcript size above which it is summarized in chunks first. The default
     /// is what a typical local model handles comfortably (conservative estimate).
-    private let maxChunkCharacters: Int
+    let maxChunkCharacters: Int
 
-    init(baseURL: String, model: String, apiKey: String? = nil, maxChunkCharacters: Int = 8_000) {
+    init(baseURL: String, model: String, apiKey: String? = nil, maxChunkCharacters: Int? = nil) {
         self.baseURL = baseURL
         self.model = model
-        self.maxChunkCharacters = maxChunkCharacters
+        // Hosted gpt-oss has 128K context; leave ample room for the profile and output.
+        let hostedGPTOSS = URL(string: baseURL)?.scheme == "https"
+            && URL(string: baseURL)?.host?.lowercased() == "ollama.com"
+            && ["gpt-oss:120b", "gpt-oss:120b-cloud", "gpt-oss:20b", "gpt-oss:20b-cloud"].contains(model)
+        self.maxChunkCharacters = maxChunkCharacters ?? (hostedGPTOSS ? 64_000 : 8_000)
         let trimmed = apiKey?.trimmingCharacters(in: .whitespacesAndNewlines)
         self.apiKey = (trimmed?.isEmpty == false) ? trimmed : nil
     }

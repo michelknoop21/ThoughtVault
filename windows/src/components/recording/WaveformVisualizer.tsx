@@ -3,6 +3,7 @@ import { HISTORY_SIZE } from "../../hooks/useAudioLevel";
 
 interface WaveformVisualizerProps {
   levelsRef: React.RefObject<number[]>;
+  bandsRef?: React.RefObject<number[]>;
   isActive: boolean;
   height?: number;
   strands?: number;
@@ -28,7 +29,7 @@ const BELLIES = [
 // its dynamics instead of attenuating quiet speech a second time.
 const visualEnergy = (level: number) => .9 * Math.max(0, Math.min(1, Number.isFinite(level) ? level : 0));
 
-export function WaveformVisualizer({ levelsRef, isActive, height = 240, strands }: WaveformVisualizerProps) {
+export function WaveformVisualizer({ levelsRef, bandsRef, isActive, height = 240, strands }: WaveformVisualizerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const activeRef = useRef(isActive);
   activeRef.current = isActive;
@@ -64,6 +65,7 @@ export function WaveformVisualizer({ levelsRef, isActive, height = 240, strands 
       const raw = activeRef.current ? levelsRef.current.slice(-HISTORY_SIZE) : [];
       const history = [...new Array(Math.max(0, HISTORY_SIZE - raw.length)).fill(0), ...raw];
       const live = history[history.length - 1] ?? 0;
+      const bands = activeRef.current ? bandsRef?.current ?? [] : [];
       const level = visualEnergy(live);
       if (!reduced.matches && activeRef.current && !document.hidden) {
         time += dt;
@@ -92,6 +94,7 @@ export function WaveformVisualizer({ levelsRef, isActive, height = 240, strands 
       const cy = height / 2, maxH = height * .4 * (compact ? .7 : 1);
       const steps = Math.max(1, Math.ceil(width / (compact ? .5 : 2)));
       selected.forEach((line, j) => {
+        const band = bands.length ? visualEnergy(line.main ? Math.max(...bands) : bands[Math.min(bands.length - 1, Math.floor(j * bands.length / selected.length))]) : undefined;
         const path = new Path2D();
         for (let p = 0; p <= steps; p++) {
           const x = p / steps, taper = Math.pow(Math.max(0, Math.sin(Math.PI * x)), 1.1);
@@ -100,8 +103,9 @@ export function WaveformVisualizer({ levelsRef, isActive, height = 240, strands 
             const belly = Math.exp(-.5 * Math.pow((x - b.c) / b.w, 2));
             const gain = line.main ? 1 : 1 + .18 * Math.sin((j + 1) * (i + 2) * 1.3);
             weight += belly;
-            sum += b.amp * line.k * gain * belly * Math.sin(TAU * 3 * x - phase + i * .35 + line.phase * (1 + i * .7));
-            spread += b.amp * belly * (i === 1 ? -.8 : 1);
+            const amplitude = band === undefined ? b.amp : band * BELLIES[i].amp;
+            sum += amplitude * line.k * gain * belly * Math.sin(TAU * 3 * x - phase + i * .35 + line.phase * (1 + i * .7));
+            spread += amplitude * belly * (i === 1 ? -.8 : 1);
           });
           const y = cy - (sum / Math.max(1, weight) * maxH * taper + maxH * level * line.offset * .4 * spread * taper);
           if (!p) path.moveTo(x * width, y); else path.lineTo(x * width, y);
@@ -125,6 +129,6 @@ export function WaveformVisualizer({ levelsRef, isActive, height = 240, strands 
     };
     frame = requestAnimationFrame(draw);
     return () => { cancelAnimationFrame(frame); observer.disconnect(); };
-  }, [height, strands, levelsRef]);
+  }, [height, strands, levelsRef, bandsRef]);
   return <canvas ref={canvasRef} aria-hidden="true" style={{ display: "block", width: "100%", height }} />;
 }

@@ -4,7 +4,7 @@ use hound::{SampleFormat as HoundSampleFormat, WavSpec, WavWriter};
 use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use tokio::sync::mpsc;
-use super::envelope::{EnvelopeConfig, EnvelopeProcessor};
+use super::envelope::{EnvelopeConfig, EnvelopeProcessor, SpectrumProcessor};
 use super::types::{AudioDevice, RecordingCommand, RecordingEvent, RecordingMode};
 
 const TARGET_SAMPLE_RATE: u32 = 16000;
@@ -56,6 +56,9 @@ impl StreamingResampler {
 /// RMS → dBFS → shared envelope and returns the 0..1 scalar to emit (~30 Hz).
 /// Owned by the audio callback closure — no shared state needed.
 struct LevelMeter {
+    samples: std::collections::VecDeque<f32>,
+    sample_rate: u32,
+    spectrum: SpectrumProcessor,
     sum_sq: f64,
     count: usize,
     window: usize,
@@ -68,6 +71,9 @@ impl LevelMeter {
     fn new(sample_rate: u32) -> Self {
         let now = std::time::Instant::now();
         Self {
+            samples: std::collections::VecDeque::new(),
+            sample_rate,
+            spectrum: SpectrumProcessor::new(),
             sum_sq: 0.0,
             count: 0,
             window: ((sample_rate as f64 / EnvelopeConfig::PUBLISH_RATE_HZ) as usize).max(1),
@@ -77,7 +83,9 @@ impl LevelMeter {
         }
     }
 
-    fn push(&mut self, sample: f32) -> Option<f32> {
+    fn push(&mut self, sample: f32) -> Option<(f32, [f32; 7])> {
+        self.samples.push_back(sample);
+        if self.samples.len() > (self.sample_rate as f64 * 0.064) as usize { self.samples.pop_front(); }
         self.sum_sq += (sample * sample) as f64;
         self.count += 1;
         if self.count < self.window {
@@ -97,7 +105,9 @@ impl LevelMeter {
             eprintln!("[Audio] Envelope — db={:.1} floor={:.1} out={:.3} dt={:.0}ms",
                 db, self.processor.noise_floor_db(), level, dt * 1000.0);
         }
-        Some(level)
+        let mut bands = self.spectrum.process(self.samples.make_contiguous(), self.sample_rate as f64, dt);
+        if level == 0.0 { bands.fill(0.0); }
+        Some((level, bands))
     }
 }
 
@@ -568,8 +578,9 @@ fn build_input_stream_i16(
                         mono_chunk.push(mono_sample);
 
                         // Envelope on pre-resample samples, emitted at ~30 Hz
-                        if let Some(level) = meter.push(mono_sample.to_float_sample()) {
+                        if let Some((level, bands)) = meter.push(mono_sample.to_float_sample()) {
                             let _ = event_tx_clone.send(RecordingEvent::AudioLevel(level));
+                            let _ = event_tx_clone.send(RecordingEvent::AudioSpectrum(bands));
                         }
                     }
 
@@ -664,8 +675,9 @@ fn build_input_stream_f32(
                         mono_chunk.push(s16);
 
                         // Envelope on pre-resample samples, emitted at ~30 Hz
-                        if let Some(level) = meter.push(mono_sample) {
+                        if let Some((level, bands)) = meter.push(mono_sample) {
                             let _ = event_tx_clone.send(RecordingEvent::AudioLevel(level));
+                            let _ = event_tx_clone.send(RecordingEvent::AudioSpectrum(bands));
                         }
                     }
 
@@ -827,8 +839,9 @@ fn try_build_loopback_stream(
                                 }
                                 let mono = (sum / loopback_channels as i32) as i16;
                                 mono_chunk.push(mono);
-                                if let Some(level) = meter.push(mono.to_float_sample()) {
+                                if let Some((level, bands)) = meter.push(mono.to_float_sample()) {
                                     let _ = levels_tx.send(RecordingEvent::SystemAudioLevel(level));
+                                    let _ = levels_tx.send(RecordingEvent::SystemAudioSpectrum(bands));
                                 }
                             }
 
@@ -888,8 +901,9 @@ fn try_build_loopback_stream(
                                 }
                                 let mono_sample = sum / loopback_channels as f32;
                                 mono_chunk.push((mono_sample.clamp(-1.0, 1.0) * i16::MAX as f32) as i16);
-                                if let Some(level) = meter.push(mono_sample) {
+                                if let Some((level, bands)) = meter.push(mono_sample) {
                                     let _ = levels_tx.send(RecordingEvent::SystemAudioLevel(level));
+                                    let _ = levels_tx.send(RecordingEvent::SystemAudioSpectrum(bands));
                                 }
                             }
 

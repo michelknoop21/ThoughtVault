@@ -94,6 +94,18 @@ final class RecordingViewModel {
 
     // MARK: - Audio Properties (computed, @Observable-compatible)
 
+    var frequencyBands: [Float] {
+        #if os(macOS)
+        switch selectedMode {
+        case .microphone: return audioRecorder.frequencyBands
+        case .systemAudio: return systemAudioCapture.frequencyBands
+        case .combined: return zip(audioRecorder.frequencyBands, systemAudioCapture.frequencyBands).map(max)
+        }
+        #else
+        return audioRecorder.frequencyBands
+        #endif
+    }
+
     /// Combined audio levels from the active recorder(s). In combined mode the
     /// levels from both audioRecorder and systemAudioCapture are merged using
     /// element-wise max so the waveform reflects both audio sources.

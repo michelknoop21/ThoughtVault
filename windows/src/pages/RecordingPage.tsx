@@ -17,7 +17,7 @@ import { useRecordingStore } from "../stores/recordingStore";
 import { useSettingsStore } from "../stores/settingsStore";
 import { useTranscriptsStore } from "../stores/transcriptsStore";
 import { useProfilesStore } from "../stores/profilesStore";
-import { useAudioLevelsRef, useAudioLevel } from "../hooks/useAudioLevel";
+import { useAudioLevelsRef, useAudioLevel, useAudioBandsRef } from "../hooks/useAudioLevel";
 import { openWidgetWindow, closeWidgetWindow } from "../hooks/useWidgetWindow";
 import {
   startRecording,
@@ -84,6 +84,7 @@ export function RecordingPage() {
   const newSeedCandidates = usePeopleDirectoryStore((s) => s.newSeedCandidates);
 
   const audioLevelsRef = useAudioLevelsRef();
+  const audioBandsRef = useAudioBandsRef();
   const filePathRef = useRef<string>("");
 
   // A persisted legacy profile ID is still valid for old documents, but not
@@ -332,7 +333,7 @@ export function RecordingPage() {
       <div className="studio-listening"><span className="studio-mini-bars" aria-hidden="true">
         {Array.from({ length: 9 }, (_, i) => <i key={i} style={{ height: 3 + (phase === "recording" ? level / 100 * (14 - i) : 0) }} />)}
       </span><span>{phase === "recording" ? "Ik luister…" : phase === "paused" ? "Opname is gepauzeerd" : isBusy ? "Even geduld…" : "Klaar"}</span></div>
-      <div className="studio-wave"><WaveformVisualizer levelsRef={audioLevelsRef} isActive={phase === "recording"} height={240} /></div>
+      <div className="studio-wave"><WaveformVisualizer levelsRef={audioLevelsRef} bandsRef={audioBandsRef} isActive={phase === "recording"} height={240} /></div>
       <div className="studio-transport">
         {isLive ? <>
           <div><button className="studio-round" onClick={phase === "paused" ? handleResume : handlePause}

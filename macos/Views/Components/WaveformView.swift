@@ -97,6 +97,8 @@ struct WaveformView: View {
     let isActive: Bool
     /// Caps the frame rate. nil = display refresh rate.
     var maxFPS: Double? = nil
+    var bandsProvider: (() -> [Float])? = nil
+    var animatesInBackground = false
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.scenePhase) private var scenePhase
@@ -108,16 +110,17 @@ struct WaveformView: View {
             let lines = geo.size.height >= 64 ? WaveConfig.desktopLines : WaveConfig.widgetLines
             TimelineView(.animation(
                 minimumInterval: maxFPS.map { 1.0 / $0 },
-                paused: scenePhase != .active || !isActive
+                paused: (!animatesInBackground && scenePhase != .active) || !isActive
             )) { timeline in
                 let levels = currentLevels()
                 let level = levels.last ?? 0
+                let bands = isActive ? bandsProvider?() ?? [] : []
                 let _ = reduceMotion ? () : clock.advance(to: timeline.date, level: level)
                 // Capture values, not the mutable clock reference: Canvas must
                 // receive a different input on every animation tick.
                 let drift = clock.drift, travel = clock.travel
                 Canvas { context, size in
-                    Self.draw(in: &context, size: size, levels: levels,
+                    Self.draw(in: &context, size: size, levels: levels, bands: bands,
                               drift: drift, travel: travel,
                               lines: lines, frozen: reduceMotion)
                 }
@@ -144,7 +147,7 @@ struct WaveformView: View {
         return Double(h[i0]) * (1 - u) + Double(h[i1]) * u
     }
 
-    private static func draw(in context: inout GraphicsContext, size: CGSize, levels: [Float],
+    private static func draw(in context: inout GraphicsContext, size: CGSize, levels: [Float], bands: [Float],
                              drift: Double, travel: Double,
                              lines: [WaveConfig.Line], frozen: Bool) {
         let w = size.width, h = size.height
@@ -174,6 +177,7 @@ struct WaveformView: View {
         var ctx = context
         ctx.blendMode = .normal
         for (j, line) in lines.enumerated() {
+            let band = bands.isEmpty ? nil : WaveConfig.visualEnergy(line.main ? (bands.max() ?? 0) : bands[min(bands.count - 1, j * bands.count / lines.count)])
             var path = Path()
             for p in 0..<n {
                 let x = Double(p) / Double(n - 1)
@@ -188,9 +192,10 @@ struct WaveformView: View {
                     let localGain = line.main ? 1 : 1 + 0.18 * sin(Double((j + 1) * (i + 2)) * 1.3)
                     // A shared carrier origin prevents overlapping lobes from
                     // cancelling speech peaks as their centres drift.
-                    s += b.amp * line.k * localGain * belly
+                    let amplitude = band.map { $0 * WaveConfig.bellies[i].amp } ?? b.amp
+                    s += amplitude * line.k * localGain * belly
                         * sin(tau * WaveConfig.carrierCycles * x - tr + Double(i) * 0.35 + line.phase * (1 + Double(i) * 0.7))
-                    spread += b.amp * belly * (i == 1 ? -0.8 : 1)
+                    spread += amplitude * belly * (i == 1 ? -0.8 : 1)
                 }
                 // Normalize overlap without flattening loud peaks with tanh.
                 let y = s / max(1, weight) * maxH * taper

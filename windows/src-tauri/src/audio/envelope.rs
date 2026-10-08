@@ -205,3 +205,53 @@ mod tests {
         assert!(p.process(f32::INFINITY, 0.033).is_finite());
     }
 }
+
+pub struct SpectrumProcessor {
+    pub bands: [f32; 7],
+}
+
+impl SpectrumProcessor {
+    pub fn new() -> Self { Self { bands: [0.0; 7] } }
+
+    pub fn process(&mut self, samples: &[f32], sample_rate: f64, dt: f64) -> [f32; 7] {
+        if samples.is_empty() || sample_rate <= 0.0 { return self.bands; }
+        let tau = std::f64::consts::TAU;
+        for (index, frequency) in [125.0, 250.0, 500.0, 1000.0, 2000.0, 4000.0, 6000.0].iter().enumerate() {
+            let mut power = 0.0_f64;
+            for factor in [0.85, 1.0, 1.15] {
+                if frequency * factor >= sample_rate / 2.0 { continue; }
+                let coefficient = 2.0 * (tau * frequency * factor / sample_rate).cos();
+                let (mut previous, mut before_previous) = (0.0, 0.0);
+                for (i, value) in samples.iter().enumerate() {
+                    let window = 0.5 - 0.5 * (tau * i as f64 / (samples.len() - 1).max(1) as f64).cos();
+                    let sample = if value.is_finite() { *value as f64 } else { 0.0 };
+                    let next = sample * window + coefficient * previous - before_previous;
+                    before_previous = previous;
+                    previous = next;
+                }
+                power = power.max(previous * previous + before_previous * before_previous - coefficient * previous * before_previous);
+            }
+            let amplitude = 4.0 * power.max(0.0).sqrt() / samples.len() as f64;
+            let db = 20.0 * amplitude.max(1e-10).log10();
+            let target = ((db + 60.0) / 48.0).clamp(0.0, 1.0).powf(0.8) as f32;
+            let response = if target > self.bands[index] { 0.025 } else { 0.14 };
+            self.bands[index] += (target - self.bands[index]) * (1.0 - (-dt.clamp(0.0, 0.25) / response).exp()) as f32;
+        }
+        self.bands
+    }
+}
+
+#[cfg(test)]
+mod spectrum_tests {
+    use super::SpectrumProcessor;
+    #[test]
+    fn tones_drive_independent_bands_and_silence_settles() {
+        let tone = |frequency: f64| (0..1024).map(|i| (0.1 * (std::f64::consts::TAU * frequency * i as f64 / 16000.0).sin()) as f32).collect::<Vec<_>>();
+        let (mut low, mut high) = (SpectrumProcessor::new(), SpectrumProcessor::new());
+        for _ in 0..15 { low.process(&tone(250.0), 16000.0, 1.0 / 30.0); high.process(&tone(4000.0), 16000.0, 1.0 / 30.0); }
+        assert!(low.bands[1] > low.bands[5] + 0.3);
+        assert!(high.bands[5] > high.bands[1] + 0.3);
+        for _ in 0..60 { high.process(&[0.0; 1024], 16000.0, 1.0 / 30.0); }
+        assert!(high.bands.iter().all(|x| *x < 0.001));
+    }
+}

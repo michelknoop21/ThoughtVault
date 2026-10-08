@@ -6,6 +6,7 @@ import {
   Send20Regular,
   ArrowSync16Regular,
 } from "./ui/StudioIcons";
+import { useSettingsStore } from "../stores/settingsStore";
 import { api } from "../services/api";
 import { useToast } from "./ui/InfoBar";
 import type { FeedbackSubmission, UserFeedback } from "../types";
@@ -40,6 +41,7 @@ function formatDate(iso: string): string {
 }
 
 export default function FeedbackWidget() {
+  const isLocal = useSettingsStore(s => s.processing_mode) === "local";
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<Tab>("new");
   const [unreadCount, setUnreadCount] = useState(0);
@@ -58,15 +60,15 @@ export default function FeedbackWidget() {
 
   // Load unread count on mount
   useEffect(() => {
-    api.getUnreadFeedbackCount().then(setUnreadCount);
-  }, []);
+    if (!isLocal) api.getUnreadFeedbackCount().then(setUnreadCount);
+  }, [isLocal]);
 
   // Load history when tab switches to history
   useEffect(() => {
-    if (tab === "history" && open) {
+    if (!isLocal && tab === "history" && open) {
       loadHistory();
     }
-  }, [tab, open]);
+  }, [tab, open, isLocal]);
 
   const loadHistory = useCallback(async () => {
     setLoadingHistory(true);
@@ -97,6 +99,12 @@ export default function FeedbackWidget() {
 
     setSubmitting(true);
     try {
+      if (isLocal) {
+        await navigator.clipboard.writeText(`ThoughtVault feedback\n${title.trim()}\n\n${description.trim()}`);
+        toast.show("Feedback gekopieerd. Deel je melding met Yinga.", "success");
+        setOpen(false);
+        return;
+      }
       await api.submitFeedback({ category, title: title.trim(), description: description.trim() });
       toast.show("Feedback verstuurd!", "success");
       setTitle("");
@@ -220,7 +228,7 @@ export default function FeedbackWidget() {
               flexShrink: 0,
             }}
           >
-            {(["new", "history"] as Tab[]).map((t) => (
+            {((isLocal ? ["new"] : ["new", "history"]) as Tab[]).map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
@@ -313,7 +321,7 @@ export default function FeedbackWidget() {
                   }}
                 >
                   <Send20Regular />
-                  {submitting ? "Versturen..." : "Versturen"}
+                  {isLocal ? "Kopieer feedback" : submitting ? "Versturen..." : "Versturen"}
                 </button>
               </div>
             ) : (

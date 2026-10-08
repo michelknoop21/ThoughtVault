@@ -112,3 +112,61 @@ struct AudioEnvelopeProcessor {
         return t * t * (3 - 2 * t)
     }
 }
+
+/// Seven logarithmic frequency bands, measured from actual mono PCM with Goertzel bins.
+struct AudioSpectrumProcessor {
+    static let frequencies: [Double] = [125, 250, 500, 1000, 2000, 4000, 6000]
+    private(set) var bands = Array(repeating: Float(0), count: frequencies.count)
+
+    mutating func process(samples: [Float], sampleRate: Double, dt: Double) -> [Float] {
+        guard !samples.isEmpty, sampleRate > 0 else { return bands }
+        let count = samples.count
+        for (index, frequency) in Self.frequencies.enumerated() {
+            var power: Double = 0
+            for factor in [0.85, 1.0, 1.15] where frequency * factor < sampleRate / 2 {
+                let coefficient = 2 * cos(2 * .pi * frequency * factor / sampleRate)
+                var previous = 0.0, beforePrevious = 0.0
+                for (i, value) in samples.enumerated() {
+                    let window = 0.5 - 0.5 * cos(2 * .pi * Double(i) / Double(max(1, count - 1)))
+                    let sample = value.isFinite ? Double(value) : 0
+                    let next = sample * window + coefficient * previous - beforePrevious
+                    beforePrevious = previous
+                    previous = next
+                }
+                power = max(power, previous * previous + beforePrevious * beforePrevious - coefficient * previous * beforePrevious)
+            }
+            let amplitude = 4 * sqrt(max(0, power)) / Double(count)
+            let db = 20 * log10(max(amplitude, 1e-10))
+            let target = Float(pow(min(1, max(0, (db + 60) / 48)), 0.8))
+            let response = target > bands[index] ? 0.025 : 0.14
+            bands[index] += (target - bands[index]) * Float(1 - exp(-max(0, min(0.25, dt)) / response))
+        }
+        return bands
+    }
+}
+
+/// Host-time positioning keeps silent device gaps in the saved audio timeline.
+struct AudioCaptureTimeline {
+    let sampleRate: Double
+    private var origin: Double
+    private var pausedAt: Double?
+
+    init(sampleRate: Double, start: Double) {
+        self.sampleRate = sampleRate
+        origin = start
+    }
+
+    var isPaused: Bool { pausedAt != nil }
+
+    mutating func setPaused(_ paused: Bool, at time: Double) {
+        if paused, pausedAt == nil { pausedAt = time }
+        if !paused, let start = pausedAt {
+            origin += max(0, time - start)
+            pausedAt = nil
+        }
+    }
+
+    func framePosition(at time: Double) -> Int64 {
+        Int64(max(0, (pausedAt ?? time) - origin) * sampleRate)
+    }
+}

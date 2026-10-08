@@ -10,6 +10,34 @@ import os
 /// spec thresholds, not golden floats — no cross-language float matching.
 final class AudioEnvelopeProcessorTests: XCTestCase {
 
+    func testFrequencyBandsDistinguishLowAndHighTonesAndSettleToSilence() {
+        func tone(_ frequency: Double) -> [Float] {
+            (0..<1024).map { Float(0.1 * sin(2 * .pi * frequency * Double($0) / 16_000)) }
+        }
+        var low = AudioSpectrumProcessor(), high = AudioSpectrumProcessor()
+        for _ in 0..<15 {
+            _ = low.process(samples: tone(250), sampleRate: 16_000, dt: 1 / 30)
+            _ = high.process(samples: tone(4000), sampleRate: 16_000, dt: 1 / 30)
+        }
+        XCTAssertGreaterThan(low.bands[1], low.bands[5] + 0.3)
+        XCTAssertGreaterThan(high.bands[5], high.bands[1] + 0.3)
+        for _ in 0..<60 { _ = high.process(samples: Array(repeating: 0, count: 1024), sampleRate: 16_000, dt: 1 / 30) }
+        XCTAssertLessThan(high.bands.max() ?? 1, 0.001)
+        XCTAssertTrue(high.process(samples: [.nan, .infinity], sampleRate: 16_000, dt: 1 / 30).allSatisfy { $0.isFinite })
+    }
+
+    func testCaptureTimelinePreservesSilenceAndExcludesExplicitPause() {
+        var timeline = AudioCaptureTimeline(sampleRate: 16_000, start: 100)
+        XCTAssertEqual(timeline.framePosition(at: 101), 16_000)
+        XCTAssertEqual(timeline.framePosition(at: 110), 160_000)
+        timeline.setPaused(true, at: 110)
+        XCTAssertEqual(timeline.framePosition(at: 120), 160_000)
+        timeline.setPaused(false, at: 120)
+        XCTAssertEqual(timeline.framePosition(at: 125), 240_000)
+        timeline.setPaused(false, at: 125)
+        XCTAssertEqual(timeline.framePosition(at: 126), 256_000)
+    }
+
     func testMicrophoneIsRemovedOnlyAfterAReadableCompleteMix() throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -150,6 +178,8 @@ final class AudioEnvelopeProcessorTests: XCTestCase {
             player.stop()
             try? FileManager.default.removeItem(at: url)
         }
+        let captureStart = Date()
+        try await Task.sleep(for: .seconds(2))
         XCTAssertTrue(player.play())
         var samples: [(time: Double, level: Float)] = []
         do {
@@ -162,6 +192,10 @@ final class AudioEnvelopeProcessorTests: XCTestCase {
             throw error
         }
         _ = await capture.stopCapture()
+        let saved = try AVAudioFile(forReading: url)
+        let savedSeconds = Double(saved.length) / saved.processingFormat.sampleRate
+        XCTAssertEqual(savedSeconds, Date().timeIntervalSince(captureStart), accuracy: 0.25,
+                       "Silent device gaps must remain in the recorded timeline")
         func average(_ start: Double, _ end: Double) -> Double {
             let values = samples.filter { $0.time >= start && $0.time < end }.map { Double($0.level) }
             XCTAssertFalse(values.isEmpty)

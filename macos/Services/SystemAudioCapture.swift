@@ -32,6 +32,7 @@ final class SystemAudioCapture {
     var isCapturing = false
     var duration: TimeInterval = 0
     var audioLevels = Array(repeating: Float(0), count: AudioEnvelopeConfig.historyLength)
+    var frequencyBands = Array(repeating: Float(0), count: AudioSpectrumProcessor.frequencies.count)
     var micAudioLevels = Array(repeating: Float(0), count: AudioEnvelopeConfig.historyLength)
     var hasPermission = false
     var errorMessage: String?
@@ -93,7 +94,7 @@ final class SystemAudioCapture {
             guard let inputFormat = AVAudioFormat(streamDescription: &format) else {
                 throw SystemAudioCaptureError.coreAudio("tapformaat", -1)
             }
-            let writer = TapAudioWriter(file: file, inputFormat: inputFormat) { [weak self] db in
+            let writer = TapAudioWriter(file: file, inputFormat: inputFormat) { [weak self] db, bands in
                 Task { @MainActor [weak self] in
                     guard let self, self.isCapturing else { return }
                     let now = Date()
@@ -107,12 +108,16 @@ final class SystemAudioCapture {
 #endif
                     self.audioLevels.removeFirst()
                     self.audioLevels.append(level)
+                    self.frequencyBands = bands.map { $0 * self.envelope.lastGate }
                 }
             }
             self.writer = writer
             // Core Audio invokes this on ioQueue, not the enclosing MainActor.
             try Self.check(AudioDeviceCreateIOProcIDWithBlock(&ioProcID, aggregateID, ioQueue) {
-                @Sendable _, input, _, _, _ in writer.consume(input)
+                @Sendable now, input, inputTime, _, _ in
+                let timestamp = inputTime.pointee
+                let hostTime = timestamp.mFlags.contains(.hostTimeValid) ? timestamp.mHostTime : now.pointee.mHostTime
+                writer.consume(input, hostTime: hostTime)
             }, "audiocallback")
             try Self.check(AudioDeviceStart(aggregateID, ioProcID), "opname")
         } catch {
@@ -127,14 +132,21 @@ final class SystemAudioCapture {
         isCapturing = true
         duration = 0
         audioLevels = Array(repeating: 0, count: AudioEnvelopeConfig.historyLength)
+        frequencyBands = Array(repeating: 0, count: AudioSpectrumProcessor.frequencies.count)
         envelope.reset()
         lastMeterDate = nil
         startDate = Date()
-        timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+        timer = Timer.scheduledTimer(withTimeInterval: 1 / AudioEnvelopeConfig.publishRateHz, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated {
                 guard let self, let startDate = self.startDate else { return }
                 let pause = self.pausedAt.map { Date().timeIntervalSince($0) } ?? 0
                 self.duration = max(0, Date().timeIntervalSince(startDate) - self.accumulatedPauseDuration - pause)
+                if let lastMeterDate = self.lastMeterDate, Date().timeIntervalSince(lastMeterDate) > 0.15 {
+                    let level = self.envelope.process(db: -120, dt: 1 / AudioEnvelopeConfig.publishRateHz)
+                    self.audioLevels.removeFirst()
+                    self.audioLevels.append(level)
+                    self.frequencyBands = self.frequencyBands.map { $0 * 0.79 }
+                }
             }
         }
         return outputURL
@@ -147,10 +159,6 @@ final class SystemAudioCapture {
 
     func stopCapture() async -> CaptureResult {
         guard isCapturing else { return CaptureResult(systemAudioURL: currentOutputURL, microphoneURL: nil) }
-        if let writer {
-            os_log("[SystemAudio] Captured %llu frames, wrote %llu frames", log: log,
-                   writer.framesReceived, writer.framesWritten)
-        }
         tearDown()
         timer?.invalidate()
         timer = nil
@@ -165,7 +173,13 @@ final class SystemAudioCapture {
             AudioDeviceDestroyIOProcID(aggregateID, ioProcID)
         }
         ioProcID = nil
-        ioQueue.sync {}
+        ioQueue.sync {
+            writer?.finishTimeline()
+            if let writer {
+                os_log("[SystemAudio] Captured %llu frames, wrote %llu frames", log: log,
+                       writer.framesReceived, writer.framesWritten)
+            }
+        }
         writer = nil
         if aggregateID != kAudioObjectUnknown {
             AudioHardwareDestroyAggregateDevice(aggregateID)
@@ -177,17 +191,22 @@ final class SystemAudioCapture {
         }
     }
 
-    func pauseDurationTimer() { if pausedAt == nil { pausedAt = Date() } }
+    func pauseDurationTimer() {
+        if pausedAt == nil { pausedAt = Date() }
+        ioQueue.sync { writer?.setPaused(true) }
+    }
     func resumeDurationTimer() {
         guard let pausedAt else { return }
         accumulatedPauseDuration += Date().timeIntervalSince(pausedAt)
         self.pausedAt = nil
+        ioQueue.sync { writer?.setPaused(false) }
     }
     func resetMetrics() {
         duration = 0
         pausedAt = nil
         accumulatedPauseDuration = 0
         audioLevels = Array(repeating: 0, count: AudioEnvelopeConfig.historyLength)
+        frequencyBands = Array(repeating: 0, count: AudioSpectrumProcessor.frequencies.count)
         envelope.reset()
         lastMeterDate = nil
         micAudioLevels = Array(repeating: 0, count: AudioEnvelopeConfig.historyLength)
@@ -248,24 +267,30 @@ private final class TapAudioWriter: @unchecked Sendable {
     private let file: AVAudioFile
     private let inputFormat: AVAudioFormat
     private let converter: AVAudioConverter?
-    private let levelHandler: @Sendable (Float) -> Void
+    private let levelHandler: @Sendable (Float, [Float]) -> Void
+    private var spectrum = AudioSpectrumProcessor()
+    private var spectralSamples: [Float] = []
+    private var timeline: AudioCaptureTimeline
     private let liveHandler = SystemAudioLiveHandler()
     private var lastLevel = Date.distantPast
     private(set) var framesReceived: UInt64 = 0
     private(set) var framesWritten: UInt64 = 0
 
-    init(file: AVAudioFile, inputFormat: AVAudioFormat, levelHandler: @escaping @Sendable (Float) -> Void) {
+    init(file: AVAudioFile, inputFormat: AVAudioFormat, levelHandler: @escaping @Sendable (Float, [Float]) -> Void) {
         self.file = file
         self.inputFormat = inputFormat
         self.converter = AVAudioConverter(from: inputFormat, to: file.processingFormat)
         self.levelHandler = levelHandler
+        timeline = AudioCaptureTimeline(sampleRate: file.processingFormat.sampleRate,
+                                        start: AVAudioTime.seconds(forHostTime: mach_absolute_time()))
     }
 
     func setLiveHandler(_ handler: (@Sendable (AVAudioPCMBuffer) -> Void)?) {
         liveHandler.set(handler)
     }
 
-    func consume(_ buffers: UnsafePointer<AudioBufferList>) {
+    func consume(_ buffers: UnsafePointer<AudioBufferList>, hostTime: UInt64) {
+        guard !timeline.isPaused else { return }
         guard buffers.pointee.mNumberBuffers > 0 else { return }
         let bytesPerFrame = max(inputFormat.streamDescription.pointee.mBytesPerFrame, 1)
         let frames = buffers.pointee.mBuffers.mDataByteSize / bytesPerFrame
@@ -273,18 +298,13 @@ private final class TapAudioWriter: @unchecked Sendable {
               let pcm = AVAudioPCMBuffer(pcmFormat: inputFormat, bufferListNoCopy: buffers) else { return }
         pcm.frameLength = AVAudioFrameCount(frames)
         framesReceived += UInt64(frames)
-        if Date().timeIntervalSince(lastLevel) >= 1 / AudioEnvelopeConfig.publishRateHz {
-            lastLevel = Date()
-            if let samples = pcm.floatChannelData?[0] {
-                var sum: Float = 0
-                for index in 0..<Int(frames) { sum += samples[index] * samples[index] }
-                let db = 20 * log10(max(sqrt(sum / Float(frames)), 1e-10))
-                levelHandler(db)
-            }
-        }
         do {
             guard let converter else { return }
             let capacity = AVAudioFrameCount(ceil(Double(frames) * file.processingFormat.sampleRate / inputFormat.sampleRate) + 32)
+            let target = timeline.framePosition(at: AVAudioTime.seconds(forHostTime: hostTime))
+            if target > Int64(framesWritten) + Int64(capacity) {
+                try writeSilence(until: target)
+            }
             guard let converted = AVAudioPCMBuffer(pcmFormat: file.processingFormat, frameCapacity: capacity) else { return }
             nonisolated(unsafe) var consumed = false
             var conversionError: NSError?
@@ -298,10 +318,46 @@ private final class TapAudioWriter: @unchecked Sendable {
             if converted.frameLength > 0 {
                 try file.write(from: converted)
                 framesWritten += UInt64(converted.frameLength)
+                if let samples = converted.floatChannelData?[0] {
+                    spectralSamples.append(contentsOf: UnsafeBufferPointer(start: samples, count: Int(converted.frameLength)))
+                    if spectralSamples.count > 1024 { spectralSamples.removeFirst(spectralSamples.count - 1024) }
+                    let now = Date()
+                    let dt = now.timeIntervalSince(lastLevel)
+                    if dt >= 1 / AudioEnvelopeConfig.publishRateHz {
+                        lastLevel = now
+                        let sum = spectralSamples.reduce(Float(0)) { $0 + $1 * $1 }
+                        let db = 20 * log10(max(sqrt(sum / Float(spectralSamples.count)), 1e-10))
+                        let bands = spectrum.process(samples: spectralSamples, sampleRate: file.processingFormat.sampleRate, dt: dt)
+                        levelHandler(db, bands)
+                    }
+                }
                 liveHandler.append(converted)
             }
         } catch {
             os_log("[SystemAudio] Audio write failed: %{public}@", log: log, error.localizedDescription)
+        }
+    }
+
+    func setPaused(_ paused: Bool) {
+        timeline.setPaused(paused, at: AVAudioTime.seconds(forHostTime: mach_absolute_time()))
+    }
+
+    func finishTimeline() {
+        do {
+            try writeSilence(until: timeline.framePosition(at: AVAudioTime.seconds(forHostTime: mach_absolute_time())))
+        } catch {
+            os_log("[SystemAudio] Final timeline write failed: %{public}@", log: log, error.localizedDescription)
+        }
+    }
+
+    private func writeSilence(until target: Int64) throws {
+        guard target > Int64(framesWritten),
+              let silence = AVAudioPCMBuffer(pcmFormat: file.processingFormat, frameCapacity: 16_000) else { return }
+        if let data = silence.floatChannelData?[0] { data.initialize(repeating: 0, count: 16_000) }
+        while Int64(framesWritten) < target {
+            silence.frameLength = AVAudioFrameCount(min(16_000, target - Int64(framesWritten)))
+            try file.write(from: silence)
+            framesWritten += UInt64(silence.frameLength)
         }
     }
 }

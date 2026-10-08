@@ -43,6 +43,8 @@ pub enum RecordingEvent {
     /// Processed audio envelope scalar 0.0–1.0 at ~30Hz
     AudioLevel(f32),
     SystemAudioLevel(f32),
+    AudioSpectrum([f32; 7]),
+    SystemAudioSpectrum([f32; 7]),
     /// Recording stopped, file path and duration
     Stopped { file_path: String, duration_seconds: f64 },
     /// Error occurred

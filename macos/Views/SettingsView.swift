@@ -39,6 +39,8 @@ struct SettingsView: View {
     @State private var isLoadingProfiles: Bool = false
     @State private var showLogoutConfirm: Bool = false
     @State private var showBugReportSheet: Bool = false
+    @State private var feedbackTitle = ""
+    @State private var feedbackDescription = ""
     @State private var biometricError: String? = nil
     @State private var micPermissionGranted: Bool? = nil
     @State private var speechPermissionGranted: Bool? = nil
@@ -89,6 +91,31 @@ struct SettingsView: View {
             }
         }
         .navigationTitle("Instellingen")
+        #if os(macOS)
+        .sheet(isPresented: $showBugReportSheet) {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Feedback").font(TS.Font.title3Semibold)
+                Text("Kopieer je melding om deze met Yinga te delen.")
+                    .font(TS.Font.body).foregroundStyle(Color.labelSecondary)
+                TextField("Titel", text: $feedbackTitle).textFieldStyle(.roundedBorder)
+                Text("Beschrijving").font(TS.Font.bodyMedium)
+                TextEditor(text: $feedbackDescription)
+                    .font(TS.Font.body).frame(height: 140)
+                    .accessibilityLabel("Beschrijving")
+                HStack {
+                    Button("Annuleer") { showBugReportSheet = false }.keyboardShortcut(.cancelAction)
+                    Spacer()
+                    Button("Kopieer feedback") {
+                        NSPasteboard.general.clearContents()
+                        NSPasteboard.general.setString("ThoughtVault feedback\n\(feedbackTitle.trimmingCharacters(in: .whitespacesAndNewlines))\n\n\(feedbackDescription.trimmingCharacters(in: .whitespacesAndNewlines))", forType: .string)
+                        showBugReportSheet = false
+                    }
+                    .buttonStyle(PrimaryButtonStyle())
+                    .disabled(feedbackTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || feedbackDescription.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }.padding(24).frame(width: 440)
+        }
+        #endif
         .onAppear {
             loadApiKey()
             obsidianApiKey = KeychainService.shared.load(for: ObsidianService.apiKeyKeychainKey) ?? ""
@@ -161,7 +188,14 @@ struct SettingsView: View {
 
     var accountTab: some View {
         cappedForm {
-            accountSection
+            if isLocalProcessing {
+                Section("Lokale app") {
+                    Text("Deze app werkt lokaal zonder ThoughtVault-login.")
+                    Text("Je profiel stel je in bij Notulen.").foregroundStyle(Color.labelSecondary)
+                }
+            } else {
+                accountSection
+            }
             feedbackSection
         }
     }

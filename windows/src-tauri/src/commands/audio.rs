@@ -77,19 +77,27 @@ pub async fn start_recording(
             let now = std::time::Instant::now();
             let mut mic = (0.0, now);
             let mut system = (0.0, now);
+            let mut mic_bands = ([0.0_f32; 7], now);
+            let mut system_bands = ([0.0_f32; 7], now);
             let mut ticker = tokio::time::interval(std::time::Duration::from_millis(33));
             loop {
                 tokio::select! {
                     _ = ticker.tick() => {
                         let level = combined_level(mic, system, std::time::Instant::now());
                         let _ = app_clone.emit("audio-level", level);
+                        let now = std::time::Instant::now();
+                        let bands: [f32; 7] = std::array::from_fn(|index| combined_level((mic_bands.0[index], mic_bands.1), (system_bands.0[index], system_bands.1), now));
+                        let _ = app_clone.emit("audio-spectrum", bands);
                     }
                     event = event_rx.recv() => match event {
                         Some(RecordingEvent::AudioLevel(level)) => mic = (level, std::time::Instant::now()),
                         Some(RecordingEvent::SystemAudioLevel(level)) => system = (level, std::time::Instant::now()),
+                        Some(RecordingEvent::AudioSpectrum(bands)) => mic_bands = (bands, std::time::Instant::now()),
+                        Some(RecordingEvent::SystemAudioSpectrum(bands)) => system_bands = (bands, std::time::Instant::now()),
                         Some(RecordingEvent::Stopped { file_path, duration_seconds }) => {
                             let _ = done_tx.send(Ok(RecordingResult { file_path: file_path.clone(), duration_seconds }));
                             let _ = app_clone.emit("audio-level", 0.0_f32);
+                            let _ = app_clone.emit("audio-spectrum", [0.0_f32; 7]);
                             let _ = app_clone.emit("recording-stopped", serde_json::json!({ "file_path": file_path, "duration_seconds": duration_seconds }));
                             break;
                         }
@@ -99,6 +107,7 @@ pub async fn start_recording(
                                 if state.file_path.as_ref() == Some(&session_path) { *state = RecordingState::default(); }
                             }
                             let _ = app_clone.emit("audio-level", 0.0_f32);
+                            let _ = app_clone.emit("audio-spectrum", [0.0_f32; 7]);
                             let _ = app_clone.emit("recording-error", error);
                             break;
                         }

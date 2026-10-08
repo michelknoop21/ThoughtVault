@@ -36,7 +36,9 @@ struct RecordingWidgetView: View {
             WaveformView(
                 levelsProvider: { recordingVM.audioLevels },
                 isActive: isRecording,
-                maxFPS: 60
+                maxFPS: 30,
+                bandsProvider: { recordingVM.frequencyBands },
+                animatesInBackground: true
             )
             .frame(width: 120, height: 32)
             .background {
@@ -359,4 +361,3 @@ private class WindowDragNSView: NSView {
         .background(Color.backgroundDark)
         .preferredColorScheme(.dark)
 }
-

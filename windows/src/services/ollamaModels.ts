@@ -12,7 +12,7 @@ export async function fetchOllamaModels(baseURL: string): Promise<string[]> {
   const url = new URL(baseURL);
   if (!["http:", "https:"].includes(url.protocol)) throw new Error("Vul een HTTP- of HTTPS-adres in.");
   const base = baseURL.trim().replace(/\/+$/, "").replace(/\/v1$/, "");
-  const key = url.protocol === "https:" ? await loadCredential("ollama_api_key") : null;
+  const key = isOllamaCloudURL(baseURL) ? await loadCredential("ollama_api_key") : null;
   for (const path of ["/v1/models", "/api/tags"]) {
     try {
       const response = await invoke<{ status: number; body: string }>("proxy_request", {

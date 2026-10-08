@@ -88,7 +88,7 @@ struct CloudProviderConfig: View {
             apiKey = KeychainService.shared.load(for: keychainKey) ?? ""
             models = []
             try? await Task.sleep(for: .milliseconds(350))
-            guard !Task.isCancelled, isHTTPS else { return }
+            guard !Task.isCancelled, isOllamaCloud, isHTTPS else { return }
             await loadModels()
         }
         .onChange(of: keychainKey) { old, new in

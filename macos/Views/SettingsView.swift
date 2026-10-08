@@ -985,9 +985,10 @@ struct SettingsView: View {
     }
 
     /// Fetches the available model list (local Ollama or Ollama Cloud) for the picker.
-    func loadOllamaModels() async {
+    func loadOllamaModels(includeCredential: Bool = true) async {
         ollamaModelsLoading = true
-        let models = await ollamaService().fetchModels()
+        let service = includeCredential ? ollamaService() : OpenAICompatibleLLMService(baseURL: ollamaURL, model: ollamaModel)
+        let models = await service.fetchModels()
         guard !Task.isCancelled else { return }
         ollamaModels = models
         ollamaModelsLoading = false

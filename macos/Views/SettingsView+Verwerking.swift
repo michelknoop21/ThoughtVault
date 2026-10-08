@@ -424,7 +424,8 @@ extension SettingsView {
                         ollamaModels = []
                         try? await Task.sleep(for: .milliseconds(350))
                         guard !Task.isCancelled else { return }
-                        await loadOllamaModels()
+                        let url = URL(string: ollamaURL.trimmingCharacters(in: .whitespacesAndNewlines))
+                        await loadOllamaModels(includeCredential: url?.scheme?.lowercased() == "https" && url?.host?.lowercased() == "ollama.com")
                     }
             case .lmStudio:                    lmStudioConfig
             case .appleIntelligence:           appleIntelligenceNote

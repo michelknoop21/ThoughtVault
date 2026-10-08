@@ -32,3 +32,10 @@ it("recognizes existing cloud /v1 URLs and discovers their models at the origina
   await fetchOllamaModels("https://ollama.com/v1/");
   expect(invoke).toHaveBeenCalledWith("proxy_request", { request: expect.objectContaining({ url: "https://ollama.com/v1/models" }) });
 });
+
+it("does not send the saved cloud key to another HTTPS host during automatic discovery", async () => {
+  vi.mocked(invoke).mockResolvedValueOnce({ status: 200, body: '{"data":[{"id":"local-model"}]}' });
+  await fetchOllamaModels("https://ollama.com.attacker.invalid");
+  expect(loadCredential).not.toHaveBeenCalled();
+  expect(invoke).toHaveBeenCalledWith("proxy_request", { request: expect.objectContaining({ headers: {} }) });
+});

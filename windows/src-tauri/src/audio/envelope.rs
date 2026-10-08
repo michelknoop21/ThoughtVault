@@ -208,34 +208,49 @@ mod tests {
 
 pub struct SpectrumProcessor {
     pub bands: [f32; 7],
+    fft: Option<std::sync::Arc<dyn rustfft::Fft<f32>>>,
+    buffer: Vec<rustfft::num_complex::Complex<f32>>,
+    scratch: Vec<rustfft::num_complex::Complex<f32>>,
+    window: Vec<f32>,
+    window_power: f32,
 }
 
 impl SpectrumProcessor {
-    pub fn new() -> Self { Self { bands: [0.0; 7] } }
+    pub fn new() -> Self {
+        Self { bands: [0.0; 7], fft: None, buffer: Vec::new(), scratch: Vec::new(), window: Vec::new(), window_power: 0.0 }
+    }
 
     pub fn process(&mut self, samples: &[f32], sample_rate: f64, dt: f64) -> [f32; 7] {
-        if samples.is_empty() || sample_rate <= 0.0 { return self.bands; }
-        let tau = std::f64::consts::TAU;
-        for (index, frequency) in [125.0, 250.0, 500.0, 1000.0, 2000.0, 4000.0, 6000.0].iter().enumerate() {
-            let mut power = 0.0_f64;
-            for factor in [0.85, 1.0, 1.15] {
-                if frequency * factor >= sample_rate / 2.0 { continue; }
-                let coefficient = 2.0 * (tau * frequency * factor / sample_rate).cos();
-                let (mut previous, mut before_previous) = (0.0, 0.0);
-                for (i, value) in samples.iter().enumerate() {
-                    let window = 0.5 - 0.5 * (tau * i as f64 / (samples.len() - 1).max(1) as f64).cos();
-                    let sample = if value.is_finite() { *value as f64 } else { 0.0 };
-                    let next = sample * window + coefficient * previous - before_previous;
-                    before_previous = previous;
-                    previous = next;
-                }
-                power = power.max(previous * previous + before_previous * before_previous - coefficient * previous * before_previous);
+        if samples.len() < 2 || !sample_rate.is_finite() || sample_rate <= 0.0 { return self.bands; }
+        let count = 1 << (usize::BITS - 1 - samples.len().min(4096).leading_zeros());
+        if self.buffer.len() != count {
+            let fft = rustfft::FftPlanner::new().plan_fft_forward(count);
+            self.scratch = vec![rustfft::num_complex::Complex::default(); fft.get_inplace_scratch_len()];
+            self.buffer = vec![rustfft::num_complex::Complex::default(); count];
+            self.window = (0..count).map(|i| (0.5 - 0.5 * (std::f64::consts::TAU * i as f64 / count as f64).cos()) as f32).collect();
+            self.window_power = self.window.iter().map(|x| x * x).sum();
+            self.fft = Some(fft);
+        }
+        for (i, value) in samples[samples.len() - count..].iter().enumerate() {
+            self.buffer[i] = rustfft::num_complex::Complex::new(if value.is_finite() { *value * self.window[i] } else { 0.0 }, 0.0);
+        }
+        self.fft.as_ref().unwrap().process_with_scratch(&mut self.buffer, &mut self.scratch);
+        // Integrate every FFT bin: isolated Goertzel probes miss speech between their centres.
+        let edges = [80.0, 177.0, 354.0, 707.0, 1414.0, 2828.0, 5657.0, f64::INFINITY];
+        let mut power = [0.0_f32; 7];
+        for k in 1..=count / 2 {
+            let frequency = k as f64 * sample_rate / count as f64;
+            if let Some(index) = (0..7).find(|i| frequency >= edges[*i] && frequency < edges[*i + 1]) {
+                let mirror = if k == count / 2 { 1.0 } else { 2.0 };
+                power[index] += mirror * self.buffer[k].norm_sqr() / (count as f32 * self.window_power);
             }
-            let amplitude = 4.0 * power.max(0.0).sqrt() / samples.len() as f64;
-            let db = 20.0 * amplitude.max(1e-10).log10();
-            let target = ((db + 60.0) / 48.0).clamp(0.0, 1.0).powf(0.8) as f32;
+        }
+        for (index, power) in power.iter().enumerate() {
+            let db = 10.0 * power.max(1e-20).log10();
+            let target = ((db + 60.0) / 48.0).clamp(0.0, 1.0).powf(0.8);
             let response = if target > self.bands[index] { 0.025 } else { 0.14 };
-            self.bands[index] += (target - self.bands[index]) * (1.0 - (-dt.clamp(0.0, 0.25) / response).exp()) as f32;
+            let elapsed = if dt.is_finite() { dt.clamp(0.0, 0.25) } else { 0.0 };
+            self.bands[index] += (target - self.bands[index]) * (1.0 - (-elapsed / response).exp()) as f32;
         }
         self.bands
     }
@@ -244,6 +259,37 @@ impl SpectrumProcessor {
 #[cfg(test)]
 mod spectrum_tests {
     use super::SpectrumProcessor;
+    #[test]
+    fn equal_power_between_probe_frequencies_remains_visible_at_device_sample_rates() {
+        for rate in [16000.0, 44100.0, 48000.0] {
+            for frequency in [125.0, 250.0, 350.0, 500.0, 700.0, 1000.0, 1400.0, 2000.0, 2800.0, 4000.0, 6000.0] {
+                let samples = (0..(rate * 0.064) as usize).map(|i| (0.1 * (std::f64::consts::TAU * frequency * i as f64 / rate).sin()) as f32).collect::<Vec<_>>();
+                let mut spectrum = SpectrumProcessor::new();
+                for _ in 0..15 { spectrum.process(&samples, rate, 1.0 / 30.0); }
+                let peak = spectrum.bands.iter().copied().fold(0.0_f32, f32::max);
+                assert!(peak > 0.68 && peak < 0.87, "{frequency}Hz at {rate}Hz was {peak}");
+            }
+        }
+    }
+
+    #[test]
+    fn speech_onset_reaches_ninety_percent_in_100ms_and_silence_settles_in_500ms() {
+        let mut spectrum = SpectrumProcessor::new();
+        let mut samples = vec![0.0_f32; 1024];
+        let mut tick = 0;
+        for _ in 0..3 {
+            for _ in 0..533 { samples.push((0.1 * (std::f64::consts::TAU * 1200.0 * tick as f64 / 16000.0).sin()) as f32); tick += 1; }
+            samples.drain(..samples.len() - 1024);
+            spectrum.process(&samples, 16000.0, 1.0 / 30.0);
+        }
+        assert!(spectrum.bands[3] > 0.72, "onset {}", spectrum.bands[3]);
+        for _ in 0..15 {
+            samples.extend([0.0; 533]); samples.drain(..533);
+            spectrum.process(&samples, 16000.0, 1.0 / 30.0);
+        }
+        assert!(spectrum.bands.iter().all(|x| *x < 0.04), "release {:?}", spectrum.bands);
+    }
+
     #[test]
     fn tones_drive_independent_bands_and_silence_settles() {
         let tone = |frequency: f64| (0..1024).map(|i| (0.1 * (std::f64::consts::TAU * frequency * i as f64 / 16000.0).sin()) as f32).collect::<Vec<_>>();

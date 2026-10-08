@@ -67,6 +67,9 @@ export function WaveformVisualizer({ levelsRef, bandsRef, isActive, height = 240
       const live = history[history.length - 1] ?? 0;
       const bands = activeRef.current ? bandsRef?.current ?? [] : [];
       const level = visualEnergy(live);
+      const peakBand = Math.max(0, ...bands);
+      const bandWeight = bands.reduce((sum, value) => sum + value, 0);
+      const bandPosition = bandWeight > 0 ? bands.reduce((sum, value, index) => sum + value * index, 0) / bandWeight : 3;
       if (!reduced.matches && activeRef.current && !document.hidden) {
         time += dt;
         travel += dt * TAU * .3 * (1 + 1.8 * level / .9);
@@ -94,17 +97,21 @@ export function WaveformVisualizer({ levelsRef, bandsRef, isActive, height = 240
       const cy = height / 2, maxH = height * .4 * (compact ? .7 : 1);
       const steps = Math.max(1, Math.ceil(width / (compact ? .5 : 2)));
       selected.forEach((line, j) => {
-        const band = bands.length ? visualEnergy(line.main ? Math.max(...bands) : bands[Math.min(bands.length - 1, Math.floor(j * bands.length / selected.length))]) : undefined;
+        const bandIndex = Math.min(bands.length - 1, Math.floor(j * bands.length / Math.max(1, selected.length - 1)));
+        const bandEnd = Math.min(bands.length, Math.max(bandIndex + 1, Math.floor((j + 1) * bands.length / Math.max(1, selected.length - 1))));
+        const gain = line.main || !bands.length ? 1 : peakBand > 0 ? Math.max(...bands.slice(bandIndex, bandEnd)) / peakBand : 0;
+        const cycles = !bands.length ? 3 : line.main ? 3 + (bandPosition - 3) * .25 : 2 + Math.max(0, bandIndex) * .35;
         const path = new Path2D();
         for (let p = 0; p <= steps; p++) {
           const x = p / steps, taper = Math.pow(Math.max(0, Math.sin(Math.PI * x)), 1.1);
           let sum = 0, spread = 0, weight = 0;
           bellies.forEach((b, i) => {
             const belly = Math.exp(-.5 * Math.pow((x - b.c) / b.w, 2));
-            const gain = line.main ? 1 : 1 + .18 * Math.sin((j + 1) * (i + 2) * 1.3);
+            const localGain = line.main ? 1 : 1 + .18 * Math.sin((j + 1) * (i + 2) * 1.3);
             weight += belly;
-            const amplitude = band === undefined ? b.amp : band * BELLIES[i].amp;
-            sum += amplitude * line.k * gain * belly * Math.sin(TAU * 3 * x - phase + i * .35 + line.phase * (1 + i * .7));
+            // Loudness and syllable timing survive even when energy moves between bands.
+            const amplitude = b.amp * gain;
+            sum += amplitude * line.k * localGain * belly * Math.sin(TAU * cycles * x - phase + i * .35 + line.phase * (1 + i * .7));
             spread += amplitude * belly * (i === 1 ? -.8 : 1);
           });
           const y = cy - (sum / Math.max(1, weight) * maxH * taper + maxH * level * line.offset * .4 * spread * taper);

@@ -10,6 +10,40 @@ import os
 /// spec thresholds, not golden floats — no cross-language float matching.
 final class AudioEnvelopeProcessorTests: XCTestCase {
 
+    func testEqualPowerBetweenProbeFrequenciesRemainsVisibleAtDeviceSampleRates() {
+        for rate in [16_000.0, 44_100.0, 48_000.0] {
+            for frequency in [125.0, 250, 350, 500, 700, 1000, 1400, 2000, 2800, 4000, 6000] {
+                let samples = (0..<Int(rate * 0.064)).map { Float(0.1 * sin(2 * .pi * frequency * Double($0) / rate)) }
+                var spectrum = AudioSpectrumProcessor()
+                for _ in 0..<15 { _ = spectrum.process(samples: samples, sampleRate: rate, dt: 1 / 30) }
+                let peak = spectrum.bands.max() ?? 0
+                XCTAssertGreaterThan(peak, 0.68, "\(frequency)Hz at \(rate)Hz")
+                XCTAssertLessThan(peak, 0.87, "\(frequency)Hz at \(rate)Hz")
+            }
+        }
+    }
+
+    func testSpectrumSpeechOnsetWithin100msAndSilenceWithin500ms() {
+        var spectrum = AudioSpectrumProcessor()
+        var samples = Array(repeating: Float(0), count: 1024)
+        var tick = 0
+        for _ in 0..<3 {
+            for _ in 0..<533 {
+                samples.append(Float(0.1 * sin(2 * .pi * 1200 * Double(tick) / 16_000)))
+                tick += 1
+            }
+            samples.removeFirst(samples.count - 1024)
+            _ = spectrum.process(samples: samples, sampleRate: 16_000, dt: 1 / 30)
+        }
+        XCTAssertGreaterThan(spectrum.bands[3], 0.72)
+        for _ in 0..<15 {
+            samples.append(contentsOf: Array(repeating: 0, count: 533))
+            samples.removeFirst(533)
+            _ = spectrum.process(samples: samples, sampleRate: 16_000, dt: 1 / 30)
+        }
+        XCTAssertLessThan(spectrum.bands.max() ?? 1, 0.04)
+    }
+
     func testFrequencyBandsDistinguishLowAndHighTonesAndSettleToSilence() {
         func tone(_ frequency: Double) -> [Float] {
             (0..<1024).map { Float(0.1 * sin(2 * .pi * frequency * Double($0) / 16_000)) }

@@ -156,6 +156,9 @@ struct WaveformView: View {
         let compact = h < 64
         let cy = h / 2, maxH = h * WaveConfig.heightFrac * (compact ? 0.7 : 1)
         let level = WaveConfig.visualEnergy(levels.last ?? 0)
+        let peakBand = bands.max() ?? 0
+        let bandWeight = bands.reduce(0, +)
+        let bandPosition = bandWeight > 0 ? bands.enumerated().reduce(0.0) { $0 + Double($1.element) * Double($1.offset) } / Double(bandWeight) : 3
         // Reduce Motion: shape frozen, only the height follows the level.
         let td = frozen ? 0 : drift, tr = frozen ? 0 : travel
 
@@ -177,7 +180,10 @@ struct WaveformView: View {
         var ctx = context
         ctx.blendMode = .normal
         for (j, line) in lines.enumerated() {
-            let band = bands.isEmpty ? nil : WaveConfig.visualEnergy(line.main ? (bands.max() ?? 0) : bands[min(bands.count - 1, j * bands.count / lines.count)])
+            let bandIndex = min(bands.count - 1, j * bands.count / max(1, lines.count - 1))
+            let bandEnd = min(bands.count, max(bandIndex + 1, (j + 1) * bands.count / max(1, lines.count - 1)))
+            let gain = line.main || bands.isEmpty ? 1 : peakBand > 0 ? Double((bands[bandIndex..<bandEnd].max() ?? 0) / peakBand) : 0
+            let cycles = bands.isEmpty ? WaveConfig.carrierCycles : line.main ? WaveConfig.carrierCycles + (bandPosition - 3) * 0.25 : 2 + Double(max(0, bandIndex)) * 0.35
             var path = Path()
             for p in 0..<n {
                 let x = Double(p) / Double(n - 1)
@@ -192,9 +198,10 @@ struct WaveformView: View {
                     let localGain = line.main ? 1 : 1 + 0.18 * sin(Double((j + 1) * (i + 2)) * 1.3)
                     // A shared carrier origin prevents overlapping lobes from
                     // cancelling speech peaks as their centres drift.
-                    let amplitude = band.map { $0 * WaveConfig.bellies[i].amp } ?? b.amp
+                    // Preserve loudness and delayed syllables while bands shape each strand.
+                    let amplitude = b.amp * gain
                     s += amplitude * line.k * localGain * belly
-                        * sin(tau * WaveConfig.carrierCycles * x - tr + Double(i) * 0.35 + line.phase * (1 + Double(i) * 0.7))
+                        * sin(tau * cycles * x - tr + Double(i) * 0.35 + line.phase * (1 + Double(i) * 0.7))
                     spread += amplitude * belly * (i == 1 ? -0.8 : 1)
                 }
                 // Normalize overlap without flattening loud peaks with tanh.

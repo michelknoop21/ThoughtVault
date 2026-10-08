@@ -228,12 +228,28 @@ final class SystemAudioCapture {
     }
 }
 
+final class SystemAudioLiveHandler: Sendable {
+    // Returning an inout closure directly accumulates Swift reabstraction thunks on each read.
+    private struct Handler: Sendable { let append: @Sendable (AVAudioPCMBuffer) -> Void }
+    private let slot = OSAllocatedUnfairLock<Handler?>(initialState: nil)
+
+    func set(_ handler: (@Sendable (AVAudioPCMBuffer) -> Void)?) {
+        let value = handler.map { Handler(append: $0) }
+        slot.withLock { $0 = value }
+    }
+
+    func append(_ buffer: AVAudioPCMBuffer) {
+        let handler = slot.withLock { $0 }
+        handler?.append(buffer)
+    }
+}
+
 private final class TapAudioWriter: @unchecked Sendable {
     private let file: AVAudioFile
     private let inputFormat: AVAudioFormat
     private let converter: AVAudioConverter?
     private let levelHandler: @Sendable (Float) -> Void
-    private let liveHandler = OSAllocatedUnfairLock<(@Sendable (AVAudioPCMBuffer) -> Void)?>(initialState: nil)
+    private let liveHandler = SystemAudioLiveHandler()
     private var lastLevel = Date.distantPast
     private(set) var framesReceived: UInt64 = 0
     private(set) var framesWritten: UInt64 = 0
@@ -246,7 +262,7 @@ private final class TapAudioWriter: @unchecked Sendable {
     }
 
     func setLiveHandler(_ handler: (@Sendable (AVAudioPCMBuffer) -> Void)?) {
-        liveHandler.withLock { $0 = handler }
+        liveHandler.set(handler)
     }
 
     func consume(_ buffers: UnsafePointer<AudioBufferList>) {
@@ -282,7 +298,7 @@ private final class TapAudioWriter: @unchecked Sendable {
             if converted.frameLength > 0 {
                 try file.write(from: converted)
                 framesWritten += UInt64(converted.frameLength)
-                liveHandler.withLock { $0 }?(converted)
+                liveHandler.append(converted)
             }
         } catch {
             os_log("[SystemAudio] Audio write failed: %{public}@", log: log, error.localizedDescription)

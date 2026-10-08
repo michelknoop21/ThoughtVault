@@ -2,12 +2,45 @@ import AppKit
 import AVFoundation
 import SwiftUI
 import XCTest
+import os
 @testable import ThoughtVault
 
 /// Acceptance tests for the shared audio envelope, driven by the same fixture
 /// as the Rust suite (tests/fixtures/envelope-fixture.json). Assertions are
 /// spec thresholds, not golden floats — no cross-language float matching.
 final class AudioEnvelopeProcessorTests: XCTestCase {
+
+    func testStudioWaveformStaysBetweenTranscriptAndTransport() {
+        for height: CGFloat in [480, 560, 600, 719, 720, 880, 1100] {
+            let layout = StudioLayout(w: 640, h: height)
+            XCTAssertGreaterThanOrEqual(layout.waveHeight, 0)
+            XCTAssertGreaterThanOrEqual(layout.waveY - layout.waveHeight / 2, layout.listenY + 40)
+            if layout.waveHeight > 0 {
+                XCTAssertLessThanOrEqual(layout.waveY + layout.waveHeight / 2, layout.transportY - 85)
+            }
+        }
+    }
+
+    func testSystemAudioHandlerDoesNotAccumulateCallbackRecursion() {
+        let handler = SystemAudioLiveHandler()
+        let calls = OSAllocatedUnfairLock(initialState: 0)
+        let completed = DispatchSemaphore(value: 0)
+        handler.set { _ in calls.withLock { $0 += 1 } }
+        let thread = Thread { @Sendable in
+            let format = AVAudioFormat(standardFormatWithSampleRate: 16_000, channels: 1)!
+            let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 32)!
+            for _ in 0..<20_000 { handler.append(buffer) }
+            handler.set(nil)
+            handler.append(buffer)
+            handler.set { _ in calls.withLock { $0 += 2 } }
+            handler.append(buffer)
+            completed.signal()
+        }
+        thread.stackSize = 512 * 1024
+        thread.start()
+        XCTAssertEqual(completed.wait(timeout: .now() + 20), .success)
+        XCTAssertEqual(calls.withLock { $0 }, 20_002)
+    }
 
     private struct Step: Decodable {
         let dtMs: Double

@@ -123,6 +123,7 @@ struct WaveformView: View {
                 }
             }
         }
+        .clipped()
         .accessibilityHidden(true)
     }
 

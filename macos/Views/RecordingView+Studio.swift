@@ -66,8 +66,10 @@ struct StudioLayout {
     var transportY: CGFloat { lowHeight ? h - 190 : h - 235 }
     var barBottom: CGFloat { lowHeight ? 20 : 37 }
     var transportItemWidth: CGFloat { min(164, (w - 2 * inset) / 3) }
-    var waveY: CGFloat { lowHeight ? (listenY + 20 + transportY - 65) / 2 : h * 0.483 }
-    var waveHeight: CGFloat { lowHeight ? max(60, transportY - 65 - listenY + 20) : 280 }
+    var waveTop: CGFloat { listenY + 40 }
+    var waveBottom: CGFloat { max(waveTop, transportY - 85) }
+    var waveY: CGFloat { (waveTop + waveBottom) / 2 }
+    var waveHeight: CGFloat { min(280, waveBottom - waveTop) }
 }
 
 /// Pressed-state scale for the round transport controls.

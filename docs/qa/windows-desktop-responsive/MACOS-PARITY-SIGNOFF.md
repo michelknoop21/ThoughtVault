@@ -45,3 +45,17 @@ Platform-specific capture/transcription engines remain genuine: Windows Whisper/
 No private notes, API keys or native screenshots are committed. This file is a review record, not a full signoff until the pending native candidate checks are complete. Real live meeting capture, provider connectivity and destructive actions require separate functional evidence.
 
 The existing macOS feedback button only sets showBugReportSheet; no sheet is attached. No feedback was submitted. This functional gap is separate from the visual placement correction on Windows and remains open.
+
+## Live meeting interruption and pending correction
+
+The canonical macOS 1.0.264 app crashed at 13:36:09 CEST during combined recording with live transcription. The triggered Core Audio thread exhausted its 544 KiB stack; its repeating frames were closure-reabstraction thunks in the optional system-audio live handler. A standalone optimized Swift 6 check reproduces SIGBUS on a 512 KiB thread with 20,000 handler reads. Storing an immutable handler value instead of returning the inout closure removes the accumulated thunks; the same check against the actual corrected source completes all 20,000 callbacks. The capture/write/error handling and live recognition request remain unchanged. A small-stack XCTest also covers clearing and replacing the handler.
+
+The main recording waveform previously reserved a frame overlapping the live-text and transport regions, particularly at the 720 pt layout breakpoint. The corrected frame is confined between these regions; the shared Canvas is clipped so its blur cannot draw outside. A geometry regression covers seven window heights across that breakpoint.
+
+The widget now uses a fixed dark surface rather than translucent material, readable brand-link status text, a larger existing caption token, brighter drag affordance, and dark Stop text against the existing bright red button. These source changes have not been installed during the ongoing meeting.
+
+The crash left both PCM payloads on disk but unfinished WAV sizes. Local recovery copies received finalized RIFF/data lengths, with payload hashes unchanged. afinfo validates approximately 133.8 s of microphone audio and 66.9 s of system audio. The duration discrepancy remains an open functional issue; this is not complete meeting-capture proof. Private recovery files are outside the repository.
+
+Native app test-host execution and installation are deferred until Michel ends the meeting. Independent frequency-band motion and native widget contrast/motion recheck remain pending. Windows candidate 264 CI completed successfully, but final native installation/recheck is still pending.
+
+Release build-for-testing with ENABLE_TESTABILITY=YES succeeded without launching the test host. Standalone optimized callback regression (20,000 iterations on 512 KiB stack), seven-height geometry assertions, and widget Rec/Stop text contrast assertions passed. The new XCTest cases are compiled but not executed during the meeting.

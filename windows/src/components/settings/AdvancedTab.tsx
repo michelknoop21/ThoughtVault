@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import { Globe24Regular, CheckmarkCircle24Regular, ErrorCircle24Regular } from "../ui/StudioIcons";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { api } from "../../services/api";
@@ -49,6 +50,17 @@ export function AdvancedTab() {
       setConnectionStatus("error");
     }
     setTimeout(() => setConnectionStatus("idle"), 3000);
+  }
+  if (settings.processing_mode === "local") {
+    return <div className="settings-other">
+      <header className="settings-section-header"><div><h2>Geavanceerd</h2><p>Opnametoegang op deze pc.</p></div></header>
+      <div className="settings-group">
+        <CardHead icon={<Globe24Regular />} title="Permissies" subtitle="Windows beheert de toegang tot je microfoon." />
+        <div className="settings-row"><div><p className="settings-label">Microfoon en systeemaudio</p><p className="settings-desc">ThoughtVault controleert de microfoon bij het starten. Gecombineerd neemt ook het geluid van je videocall op.</p></div></div>
+        <div className="settings-row"><button className="btn btn-secondary" onClick={() => invoke("open_microphone_settings").catch(() => setServerError("Open Windows-instellingen → Privacy en beveiliging → Microfoon."))}>Systeeminstellingen openen</button></div>
+        {serverError && <p className="settings-desc" role="alert">{serverError}</p>}
+      </div>
+    </div>;
   }
   return <div className="settings-other"><header className="settings-section-header"><div><h2>Geavanceerd</h2><p>Serververbinding voor ThoughtVault Cloud.</p></div></header>          {/* Verbinding */}
           <div className="settings-group">

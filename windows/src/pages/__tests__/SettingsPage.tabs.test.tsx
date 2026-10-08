@@ -15,6 +15,8 @@ vi.mock("../../services/tauriCommands", () => ({
 }));
 
 import { SettingsPage } from "../SettingsPage";
+import { useSettingsStore } from "../../stores/settingsStore";
+import { invoke } from "@tauri-apps/api/core";
 
 // One heading per tab; guards the per-tab split against dropped or miswired tabs.
 const TABS: [string, string][] = [
@@ -24,10 +26,11 @@ const TABS: [string, string][] = [
   ["Agenda", "Microsoft 365"],
   ["Obsidian", "Obsidian-koppeling"],
   ["Account", "Probleem melden of suggestie"],
-  ["Geavanceerd", "Server URL"],
+  ["Geavanceerd", "Systeeminstellingen openen"],
 ];
 
 it("renders every settings tab with its own content", async () => {
+  useSettingsStore.setState({ processing_mode: "local" });
   const container = document.createElement("div");
   document.body.appendChild(container);
   const root = createRoot(container);
@@ -49,6 +52,18 @@ it("renders every settings tab with its own content", async () => {
       await act(async () => { dialog.dispatchEvent(new Event("cancel", { bubbles: true, cancelable: true })); });
       expect(container.querySelector('dialog')).toBeNull();
       expect(document.activeElement).toBe(trigger);
+    }
+    if (name === "Geavanceerd") {
+      expect(container.textContent).not.toContain("Server URL");
+      const open = [...container.querySelectorAll<HTMLButtonElement>("button")].find(b => b.textContent === "Systeeminstellingen openen")!;
+      await act(async () => { open.click(); });
+      expect(invoke).toHaveBeenCalledWith("open_microphone_settings");
+      vi.mocked(invoke).mockRejectedValueOnce(new Error("unavailable"));
+      await act(async () => { open.click(); });
+      expect(container.querySelector('[role="alert"]')?.textContent).toContain("Privacy en beveiliging");
+      await act(async () => { useSettingsStore.setState({ processing_mode: "cloud" }); });
+      expect(container.textContent).toContain("Server URL");
+      await act(async () => { useSettingsStore.setState({ processing_mode: "local" }); });
     }
   }
   await act(async () => { root.unmount(); });

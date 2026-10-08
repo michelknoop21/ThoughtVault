@@ -10,6 +10,33 @@ import os
 /// spec thresholds, not golden floats — no cross-language float matching.
 final class AudioEnvelopeProcessorTests: XCTestCase {
 
+    func testMicrophoneIsRemovedOnlyAfterAReadableCompleteMix() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let source = directory.appendingPathComponent("recording.wav")
+        let combined = directory.appendingPathComponent("combined.wav")
+        try Data([1, 2, 3]).write(to: source)
+        let format = try XCTUnwrap(AVAudioFormat(standardFormatWithSampleRate: 16_000, channels: 1))
+        let buffer = try XCTUnwrap(AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 320))
+        buffer.frameLength = 320
+        for i in 0..<320 { buffer.floatChannelData![0][i] = i % 2 == 0 ? 0.25 : -0.25 }
+        do {
+            let writer = try AVAudioFile(forWriting: combined, settings: format.settings)
+            try writer.write(from: buffer)
+        }
+        XCTAssertFalse(try AudioRecorder.removeSourceIfMixIsComplete(sourceURL: source, combinedURL: combined, expectedFrames: 321))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: source.path))
+        XCTAssertFalse(try AudioRecorder.removeSourceIfMixIsComplete(sourceURL: combined, combinedURL: combined, expectedFrames: 320))
+        XCTAssertTrue(try AudioRecorder.removeSourceIfMixIsComplete(sourceURL: source, combinedURL: combined, expectedFrames: 320))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: source.path))
+        XCTAssertEqual(try AVAudioFile(forReading: combined).length, 320)
+        try Data([1, 2, 3]).write(to: source)
+        try Data([1, 2, 3]).write(to: combined)
+        XCTAssertFalse(try AudioRecorder.removeSourceIfMixIsComplete(sourceURL: source, combinedURL: combined, expectedFrames: 320))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: source.path))
+    }
+
     func testCombinedRecordingHidesOnlyItsSourceAndRestoresItWhenMixIsMissing() throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)

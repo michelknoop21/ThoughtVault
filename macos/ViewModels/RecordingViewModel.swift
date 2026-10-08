@@ -1735,39 +1735,51 @@ final class RecordingViewModel {
                     AVLinearPCMIsBigEndianKey: false,
                     AVLinearPCMIsNonInterleaved: false
                 ]
-                let outputFile = try AVAudioFile(forWriting: outputURL, settings: diskSettings)
-
                 var framesWritten: AVAudioFramePosition = 0
-                while framesWritten < totalFrames {
-                    let remaining = AVAudioFrameCount(min(AVAudioFramePosition(chunkFrames), totalFrames - framesWritten))
+                do {
+                    let outputFile = try AVAudioFile(forWriting: outputURL, settings: diskSettings)
 
-                    micBuffer.frameLength = 0
-                    if micFile.framePosition < micFile.length {
-                        try micFile.read(into: micBuffer, frameCount: remaining)
-                    }
-                    sysBuffer.frameLength = 0
-                    if sysFile.framePosition < sysFile.length {
-                        try sysFile.read(into: sysBuffer, frameCount: remaining)
-                    }
+                    while framesWritten < totalFrames {
+                        let remaining = AVAudioFrameCount(min(AVAudioFramePosition(chunkFrames), totalFrames - framesWritten))
 
-                    guard let micData = micBuffer.floatChannelData?[0],
-                          let sysData = sysBuffer.floatChannelData?[0],
-                          let mixData = mixBuffer.floatChannelData?[0] else {
-                        os_log("[RecordingVM] Audio mixing failed: nil channel data, using mic only", log: log, type: .error)
+                        micBuffer.frameLength = 0
+                        if micFile.framePosition < micFile.length {
+                            try micFile.read(into: micBuffer, frameCount: remaining)
+                        }
+                        sysBuffer.frameLength = 0
+                        if sysFile.framePosition < sysFile.length {
+                            try sysFile.read(into: sysBuffer, frameCount: remaining)
+                        }
+
+                        guard let micData = micBuffer.floatChannelData?[0],
+                              let sysData = sysBuffer.floatChannelData?[0],
+                              let mixData = mixBuffer.floatChannelData?[0] else {
+                            os_log("[RecordingVM] Audio mixing failed: nil channel data, using mic only", log: log, type: .error)
+                            return micURL
+                        }
+
+                        mixBuffer.frameLength = remaining
+                        for i in 0..<Int(remaining) {
+                            let micSample: Float = i < Int(micBuffer.frameLength) ? micData[i] : 0
+                            let sysSample: Float = i < Int(sysBuffer.frameLength) ? sysData[i] : 0
+                            // Element-wise magnitude-max: pick the louder source at each sample, preserving its sign
+                            let sample = abs(micSample) >= abs(sysSample) ? micSample : sysSample
+                            mixData[i] = max(-1.0, min(1.0, sample))
+                        }
+
+                        try outputFile.write(from: mixBuffer)
+                        framesWritten += AVAudioFramePosition(remaining)
+                    }
+                }
+
+                // Reopen the finalized file before removing the redundant source.
+                do {
+                    guard try AudioRecorder.removeSourceIfMixIsComplete(sourceURL: micURL, combinedURL: outputURL, expectedFrames: totalFrames) else {
+                        os_log("[RecordingVM] Finalized mix is incomplete, using mic only", log: log, type: .error)
                         return micURL
                     }
-
-                    mixBuffer.frameLength = remaining
-                    for i in 0..<Int(remaining) {
-                        let micSample: Float = i < Int(micBuffer.frameLength) ? micData[i] : 0
-                        let sysSample: Float = i < Int(sysBuffer.frameLength) ? sysData[i] : 0
-                        // Element-wise magnitude-max: pick the louder source at each sample, preserving its sign
-                        let sample = abs(micSample) >= abs(sysSample) ? micSample : sysSample
-                        mixData[i] = max(-1.0, min(1.0, sample))
-                    }
-
-                    try outputFile.write(from: mixBuffer)
-                    framesWritten += AVAudioFramePosition(remaining)
+                } catch {
+                    os_log("[RecordingVM] Source cleanup skipped: %{public}@", log: log, type: .error, error.localizedDescription)
                 }
 
                 let attrs = try? FileManager.default.attributesOfItem(atPath: outputURL.path)

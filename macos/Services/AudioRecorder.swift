@@ -400,6 +400,28 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
         }
     }
 
+    static func removeSourceIfMixIsComplete(sourceURL: URL, combinedURL: URL, expectedFrames: AVAudioFramePosition) throws -> Bool {
+        guard sourceURL.standardizedFileURL != combinedURL.standardizedFileURL, expectedFrames > 0 else { return false }
+        do {
+            let mixed = try AVAudioFile(forReading: combinedURL)
+            guard mixed.length == expectedFrames,
+                  mixed.processingFormat.sampleRate == 16_000,
+                  mixed.processingFormat.channelCount == 1,
+                  let buffer = AVAudioPCMBuffer(pcmFormat: mixed.processingFormat, frameCapacity: 16_000 * 10)
+            else { return false }
+            var readFrames: AVAudioFramePosition = 0
+            while readFrames < expectedFrames {
+                try mixed.read(into: buffer, frameCount: AVAudioFrameCount(min(160_000, expectedFrames - readFrames)))
+                guard buffer.frameLength > 0 else { return false }
+                readFrames += AVAudioFramePosition(buffer.frameLength)
+            }
+        } catch {
+            return false
+        }
+        try FileManager.default.removeItem(at: sourceURL)
+        return true
+    }
+
     /// Deletes recordings older than 7 days, protecting any URLs in the given set.
     static func cleanupOldRecordings(protecting protectedURLs: Set<URL>) {
         let cutoff = Date().addingTimeInterval(-cleanupAge)

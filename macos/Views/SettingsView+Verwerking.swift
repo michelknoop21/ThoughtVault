@@ -393,7 +393,8 @@ extension SettingsView {
     private var ollamaLocation: Binding<String> {
         Binding(
             get: {
-                let legacyCloud = ollamaURL.trimmingCharacters(in: .whitespacesAndNewlines).trimmingCharacters(in: CharacterSet(charactersIn: "/")) == OpenAICompatibleLLMService.ollamaCloudBaseURL
+                let url = URL(string: ollamaURL.trimmingCharacters(in: .whitespacesAndNewlines))
+                let legacyCloud = url?.scheme?.lowercased() == "https" && url?.host?.lowercased() == "ollama.com"
                 return (activeLocalProvider == .ollamaCloud || legacyCloud) ? NotulenProvider.ollamaCloud.rawValue : NotulenProvider.ollama.rawValue
             },
             set: { value in

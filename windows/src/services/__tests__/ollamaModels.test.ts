@@ -3,7 +3,7 @@ vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
 vi.mock("../tauriCommands", () => ({ loadCredential: vi.fn(async () => "private-test-key") }));
 import { invoke } from "@tauri-apps/api/core";
 import { loadCredential } from "../tauriCommands";
-import { fetchOllamaModels } from "../ollamaModels";
+import { fetchOllamaModels, isOllamaCloudURL } from "../ollamaModels";
 beforeEach(() => vi.clearAllMocks());
 it("discovers local models, deduplicates and never sends the cloud key over HTTP", async () => {
   vi.mocked(invoke).mockResolvedValueOnce({ status: 200, body: JSON.stringify({ data: [{ id: "z" }, { id: "a" }, { id: "a" }, { id: 7 }] }) });
@@ -22,4 +22,13 @@ it("reports malformed or unavailable lists and rejects unsupported URLs", async 
   vi.clearAllMocks();
   await expect(fetchOllamaModels("file:///private/file")).rejects.toThrow("HTTP");
   expect(invoke).not.toHaveBeenCalled();
+});
+
+it("recognizes existing cloud /v1 URLs and discovers their models at the original endpoint", async () => {
+  expect(isOllamaCloudURL("https://ollama.com/v1/")).toBe(true);
+  expect(isOllamaCloudURL("https://ollama.com.attacker.invalid")).toBe(false);
+  expect(isOllamaCloudURL("invalid")).toBe(false);
+  vi.mocked(invoke).mockResolvedValueOnce({ status: 200, body: '{"data":[{"id":"gpt-oss:120b"}]}' });
+  await fetchOllamaModels("https://ollama.com/v1/");
+  expect(invoke).toHaveBeenCalledWith("proxy_request", { request: expect.objectContaining({ url: "https://ollama.com/v1/models" }) });
 });

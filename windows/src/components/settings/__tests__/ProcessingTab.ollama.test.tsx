@@ -5,7 +5,7 @@ vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn(async () => null) }));
 vi.mock("@tauri-apps/api/event", () => ({ listen: vi.fn(async () => () => {}) }));
 vi.mock("../../../services/tauriCommands", () => ({ loadCredential: vi.fn(async () => null) }));
 vi.mock("../../../services/ollamaModels", () => ({
-  OLLAMA_LOCAL_URL: "http://localhost:11434", OLLAMA_CLOUD_URL: "https://ollama.com", fetchOllamaModels: vi.fn(),
+  OLLAMA_LOCAL_URL: "http://localhost:11434", OLLAMA_CLOUD_URL: "https://ollama.com", fetchOllamaModels: vi.fn(), isOllamaCloudURL: (url: string) => url === "https://ollama.com",
 }));
 import { ProcessingTab } from "../ProcessingTab";
 import { fetchOllamaModels } from "../../../services/ollamaModels";

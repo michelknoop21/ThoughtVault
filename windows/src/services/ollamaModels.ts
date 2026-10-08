@@ -4,10 +4,14 @@ import { loadCredential } from "./tauriCommands";
 export const OLLAMA_LOCAL_URL = "http://localhost:11434";
 export const OLLAMA_CLOUD_URL = "https://ollama.com";
 
+export function isOllamaCloudURL(baseURL: string): boolean {
+  try { return new URL(baseURL).origin === OLLAMA_CLOUD_URL; } catch { return false; }
+}
+
 export async function fetchOllamaModels(baseURL: string): Promise<string[]> {
   const url = new URL(baseURL);
   if (!["http:", "https:"].includes(url.protocol)) throw new Error("Vul een HTTP- of HTTPS-adres in.");
-  const base = baseURL.trim().replace(/\/+$/, "");
+  const base = baseURL.trim().replace(/\/+$/, "").replace(/\/v1$/, "");
   const key = url.protocol === "https:" ? await loadCredential("ollama_api_key") : null;
   for (const path of ["/v1/models", "/api/tags"]) {
     try {

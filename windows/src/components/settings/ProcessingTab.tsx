@@ -11,7 +11,7 @@ import {
 import { transcriptionAdvice } from "../../services/processingAdvice";
 import type { SystemSpecs } from "../../services/tauriCommands";
 import { loadCredential } from "../../services/tauriCommands";
-import { fetchOllamaModels, OLLAMA_LOCAL_URL, OLLAMA_CLOUD_URL } from "../../services/ollamaModels";
+import { fetchOllamaModels, isOllamaCloudURL, OLLAMA_LOCAL_URL, OLLAMA_CLOUD_URL } from "../../services/ollamaModels";
 import { WHISPER_MODELS } from "../../types";
 import { useRecordingStore } from "../../stores/recordingStore";
 import { useSettingsStore } from "../../stores/settingsStore";
@@ -33,7 +33,7 @@ export function ProcessingTab() {
   const [ollamaModelsLoading, setOllamaModelsLoading] = useState(false);
   const [ollamaModelsError, setOllamaModelsError] = useState("");
   const [modelsRefresh, setModelsRefresh] = useState(0);
-  const ollamaCloud = settings.ollama_url.replace(/\/+$/, "") === OLLAMA_CLOUD_URL;
+  const ollamaCloud = isOllamaCloudURL(settings.ollama_url);
   useEffect(() => {
     if (settings.processing_mode !== "local" || settings.notulen_provider !== "ollama") return;
     let active = true;

@@ -1,37 +1,39 @@
 import { useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import type { Update } from "@tauri-apps/plugin-updater";
+import { useRecordingStore } from "../../stores/recordingStore";
 import { ArrowDownload24Regular, Dismiss24Regular } from "@fluentui/react-icons";
 
 interface UpdateBannerProps {
   version: string;
   downloadUrl: string | null;
   onDismiss: () => void;
+  nativeUpdate?: Update | null;
 }
 
-export function UpdateBanner({ version, downloadUrl, onDismiss }: UpdateBannerProps) {
+export function UpdateBanner({ version, downloadUrl, onDismiss, nativeUpdate }: UpdateBannerProps) {
   const [installing, setInstalling] = useState(false);
+  const [error, setError] = useState("");
+  const busy = useRecordingStore(s => s.phase !== "idle" || s.backgroundTasks.some(t => !["completed", "failed"].includes(t.status)));
 
   async function handleUpdate() {
-    if (!downloadUrl) return;
     setInstalling(true);
+    setError("");
     try {
-      // Download the MSI and hand off to the installer; the app quits itself.
-      await invoke("download_and_run_installer", { url: downloadUrl });
-    } catch {
-      // Fall back to a browser download if the in-app installer fails.
-      try {
+      if (nativeUpdate) await nativeUpdate.downloadAndInstall();
+      else if (downloadUrl) {
         const { open } = await import("@tauri-apps/plugin-shell");
         await open(downloadUrl);
-      } catch {
-        window.open(downloadUrl, "_blank");
       }
+    } catch {
+      setError("Bijwerken mislukt. Probeer opnieuw.");
+    } finally {
       setInstalling(false);
     }
   }
 
   return (
     <div
-      className="card flex-row gap-12"
+      className="card flex-row gap-12 desktop-update-banner"
       style={{
         padding: "10px 14px",
         alignItems: "center",
@@ -45,10 +47,11 @@ export function UpdateBanner({ version, downloadUrl, onDismiss }: UpdateBannerPr
           Versie {version} is beschikbaar
         </p>
       </div>
-      {downloadUrl && (
+      {error && <p role="alert">{error}</p>}
+      {(downloadUrl || nativeUpdate) && (
         <button
           onClick={(e) => { e.stopPropagation(); handleUpdate(); }}
-          disabled={installing}
+          disabled={installing || busy}
           className="btn btn-sm flex-shrink-0"
           style={{
             background: "rgba(255,255,255,0.2)",

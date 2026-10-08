@@ -194,7 +194,7 @@ export function ProfilesPage() {
   }
 
   return (
-    <div className="page-scroll">
+    <div className="page-scroll desktop-page desktop-profiles">
       <div className="page-header">
         <h1 className="page-title-sm">Profielen</h1>
       </div>

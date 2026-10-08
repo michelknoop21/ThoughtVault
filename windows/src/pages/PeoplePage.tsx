@@ -65,7 +65,7 @@ export function PeoplePage() {
   }
 
   return (
-    <div className="page-scroll">
+    <div className="page-scroll desktop-page desktop-people">
       {/* Page header */}
       <div className="page-header">
         <h1 className="page-title-sm">Mensen</h1>

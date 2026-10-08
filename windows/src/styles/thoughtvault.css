@@ -1,0 +1,307 @@
+/* Current macOS ThoughtVault composition. Keep Windows title-bar controls native. */
+.app-shell { --sidebar-width: 238px; background: #141628; }
+.sidebar { background: #0b1125; color: #edeaf6; padding: 22px 15px 12px; border-color: #272444; }
+.sidebar-logo-section { padding: 8px 13px 30px; gap: 13px; }
+.sidebar-logo { width: 30px; height: 30px; object-fit: contain; }
+.sidebar-app-name { color: #fff; font-size: 19px; font-weight: 650; }
+.sidebar-divider { display: none; }
+.sidebar-item { min-height: 45px; padding: 10px 16px; margin: 1px 0; gap: 18px; color: #e6e7f2; font-size: 15px; border-radius: 9px; }
+.sidebar-item.active { background: linear-gradient(110deg,#6b3bca,#4f269e); border: 1px solid #bf96ff47; box-shadow: 0 0 17px #743bd640; }
+.sidebar-item:hover { color: #fff; background-color: #292141; }
+.sidebar-item-shortcut { display: none; }
+
+.thoughtvault-home { color: #edeaf6; background: linear-gradient(#161829,#101426); }
+.thoughtvault-home-content { max-width: 1400px; margin: auto; padding: 18px 24px 32px; }
+.thoughtvault-home h2 { font-size: 22px; font-weight: 650; }
+.thoughtvault-home .section-label { color: #9293c7; letter-spacing: 1.7px; }
+.thoughtvault-home-toolbar { display: flex; align-items: center; gap: 24px; }
+.thoughtvault-search { display: flex; align-items: center; gap: 14px; background: #1a1e33; border: 1px solid #363858; padding: 12px 18px; border-radius: 10px; flex: 1; color: #b3aece; }
+.thoughtvault-search input { background: transparent; color: #edeaf6; border: 0; outline: 0; width: 100%; font: inherit; }
+.thoughtvault-search:focus-within { outline: 2px solid #a87df7; }
+.thoughtvault-search input::placeholder { color: #9293b7; }
+.thoughtvault-account { border: 1px solid #4c4c85; border-radius: 50%; width: 40px; height: 40px; background: #272a4c; color: #c7b8ff; display: grid; place-items: center; cursor: pointer; }
+.thoughtvault-welcome { position: relative; min-height: 206px; display: flex; align-items: center; padding: 22px 17px; overflow: hidden; }
+.thoughtvault-welcome-copy { z-index: 1; }
+.thoughtvault-welcome h1 { font-size: clamp(30px,3.2vw,41px); font-weight: 700; margin: 9px 0 5px; letter-spacing: -1px; }
+.thoughtvault-welcome-copy > p:last-child { color: #b3aece; font-size: 18px; }
+.thoughtvault-landscape { position: absolute; width: 480px; height: 190px; right: 0; top: 3px; pointer-events: none; }
+.thoughtvault-tagline { position: relative; z-index: 1; margin-left: auto; width: 182px; color: #b3aece; font-size: 12.5px; line-height: 1.6; align-self: end; padding-bottom: 20px; }
+.thoughtvault-tagline strong { color: #bcb0ed; font-size: 14px; }
+.thoughtvault-tagline p { margin-top: 8px; }
+.thoughtvault-new-recording { display: grid; grid-template-columns: minmax(0,1fr) 238px; gap: 32px; padding: 32px 20px 25px 38px; border: 1px solid #363452; border-radius: 14px; background: linear-gradient(#191b30,#14172a); }
+.thoughtvault-new-recording h2 { margin: 9px 0 8px; }
+.thoughtvault-new-recording p { line-height: 1.6; color: #b3aece; font-size: 15px; }
+.thoughtvault-record-controls { display: flex; align-items: center; gap: 22px; margin-top: 28px; }
+.thoughtvault-record-controls .btn { background: #1c213b; border-color: #363858; color: #edeaf6; flex-shrink: 0; }
+.thoughtvault-record-orb { width: 89px; height: 89px; flex-shrink: 0; display: grid; place-items: center; border: 1px solid #ad80ed; border-radius: 50%; background: radial-gradient(circle at 40% 30%,#b885ff,#8047ed); box-shadow: 0 0 0 11px #693fad20, 0 0 0 12px #6748b570, 0 0 26px #8c54ff70; color: #fff; cursor: pointer; }
+.thoughtvault-record-orb svg { font-size: 34px; }
+.thoughtvault-idle-wave { display: flex; align-items: center; justify-content: center; gap: 2px; height: 65px; flex: 1; min-width: 0; overflow: hidden; }
+.thoughtvault-idle-wave i { width: 2px; background: #bc89ff; border-radius: 1px; flex-shrink: 0; opacity: .7; }
+.thoughtvault-home .thoughtvault-ready { font-size: 12px; margin-top: 17px; }
+.thoughtvault-ready::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #5cce8f; margin-right: 8px; }
+.thoughtvault-record-tip { background: #192333; padding: 18px; border: 1px solid #30384c; border-radius: 12px; }
+.thoughtvault-record-tip > svg { color: #b38bed; font-size: 24px; }
+.thoughtvault-record-tip h3 { font-size: 14px; margin: 8px 0; }
+.thoughtvault-record-tip p { font-size: 12.5px; }
+.thoughtvault-record-tip hr { border: 0; border-top: 1px solid #30384c; margin: 20px 0; }
+.thoughtvault-quick-capture { display: flex; flex-wrap: wrap; gap: 12px; padding: 24px 0 32px; align-items: center; }
+.thoughtvault-quick-capture h2 { margin-right: auto; }
+.thoughtvault-home .btn-secondary { color: #ddd3ef; background: #20233c; border-color: #393651; }
+.thoughtvault-home .text-caption { color: #b3aece; }
+.thoughtvault-recent-filters { display: flex; gap: 8px; margin: 16px 0; }
+.thoughtvault-recent-filters .btn { color: #b3aece; }
+.thoughtvault-recent-filters [aria-pressed=true] { background: #29213e; color: #c8a8ff; }
+.thoughtvault-home .session-card { background: #191b30; color: #edeaf6; border-color: #363452; border-left-width: 1px; }
+.thoughtvault-home .session-card-title { color: #edeaf6; }
+.thoughtvault-home .session-card-preview { color: #b3aece; }
+.thoughtvault-home .empty-state-title { color: #edeaf6; }
+.thoughtvault-home .empty-state-body { color: #b3aece; }
+@media (max-width:1200px) { .thoughtvault-tagline { display: none; } .thoughtvault-landscape { opacity: .6; width: 360px; } }
+@media (max-width:1000px) { .thoughtvault-new-recording { grid-template-columns: 1fr; padding: 24px; } .thoughtvault-record-tip { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 20px; } .thoughtvault-record-tip hr { display: none; } .thoughtvault-record-tip > svg { display: none; } .thoughtvault-record-tip h3 { margin: 0; } }
+@media (max-width:780px) { .app-shell { --sidebar-width: 180px; } .sidebar { padding-inline: 8px; } .sidebar-app-name { font-size: 15px; } .sidebar-item { gap: 10px; padding-inline: 10px; } .thoughtvault-home-content { padding-inline: 16px; } .thoughtvault-welcome-copy > p:last-child { font-size: 15px; } .thoughtvault-landscape { opacity: .25; } .thoughtvault-quick-capture h2 { width: 100%; } }
+.thoughtvault-recording { background: linear-gradient(#0b1128,#090e22); color: #edeaf6; }
+.thoughtvault-recording > .bg-blobs-clip { display: none; }
+.thoughtvault-recording .page-header { border-color: #303858; padding: 18px 30px; }
+.thoughtvault-recording .recording-body { padding: 0; width: 100%; max-width: none; }
+.thoughtvault-recording .idle-state { display: grid; grid-template-columns: minmax(0,1fr) 309px; width: 100%; max-width: none; gap: 0; align-items: stretch; }
+.thoughtvault-record-workspace { min-height: 650px; display: flex; flex-direction: column; align-items: center; padding: 45px 30px 32px; }
+.thoughtvault-record-status { align-self: start; border: 1px solid #444763; border-radius: 24px; padding: 10px 20px; color: #b8a8df; font-size: 13px; background: #121830; }
+.thoughtvault-record-workspace .recording-timer { margin-top: 80px; font-size: clamp(58px,7vw,85px); font-weight: 300; color: #edeaf6; font-variant-numeric: tabular-nums; }
+.thoughtvault-listening { font-size: 16px; color: #c9cce0; margin-top: 12px; }
+.thoughtvault-record-idle-line { width: 100%; height: 120px; position: relative; margin: 20px 0; }
+.thoughtvault-record-idle-line::after { content: ''; position: absolute; top: 50%; left: 0; right: 0; height: 1px; background: linear-gradient(90deg,transparent,#9061f5,transparent); box-shadow: 0 0 8px #9958e9; }
+.thoughtvault-record-inspector { background: #0e1728; border-left: 1px solid #303858; padding: 26px 20px; display: flex; flex-direction: column; gap: 24px; text-align: left; min-width: 0; }
+.thoughtvault-record-inspector > .text-center { text-align: left; }
+.thoughtvault-record-inspector .mode-selector-grid { grid-template-columns: 1fr; }
+.thoughtvault-record-inspector .section-label { color: #aaa9c4; }
+.thoughtvault-recording .active-state { max-width: 1000px; margin: auto; padding: 65px 35px 40px; }
+.thoughtvault-recording .active-state .recording-timer { font-size: 85px; font-weight: 300; }
+.thoughtvault-recording .active-state .waveform-card { background: transparent; border: 0; box-shadow: none; width: 100%; padding: 0; }
+@media (max-width:1000px) { .thoughtvault-recording .idle-state { grid-template-columns: minmax(0,1fr) 270px; } .thoughtvault-record-workspace { padding-inline: 20px; } }
+@media (max-width:780px) { .thoughtvault-recording .idle-state { display: flex; flex-direction: column; } .thoughtvault-record-workspace { min-height: 500px; } .thoughtvault-record-inspector { border-left: 0; border-top: 1px solid #303858; } }
+
+.thoughtvault-home-side { padding-top: 24px; }
+
+/* One studio surface for every route, including menus, dialogs and settings. */
+.app-main { background: linear-gradient(#141828,#0f1322); }
+.app-shell .page-scroll:not(.thoughtvault-recording) { background: transparent; }
+.app-shell .bg-blobs-clip { display: none; }
+.app-shell .brand-footer { background: #0f1322; border-color: #242939; }
+.app-shell .card { box-shadow: none; }
+.app-shell .page-header { border-color: #242939; }
+.thoughtvault-home { container-type: inline-size; }
+.thoughtvault-home-content { max-width: none; padding: 17px 20px 32px; }
+.thoughtvault-home h2 { font-size: 22px; }
+.thoughtvault-welcome { height: 200px; min-height: 200px; padding-top: 42px; align-items: start; }
+.thoughtvault-welcome-copy .section-label { margin-bottom: 0; font-size: 11.5px; }
+.thoughtvault-welcome-copy::after { content: ''; display: block; width: 43px; height: 1px; background: #5c6185; margin-top: 22px; }
+.thoughtvault-new-recording { min-height: 301px; background: linear-gradient(#161a30,#13182a); border-color: #403d7360; }
+.thoughtvault-record-controls { min-height: 132px; margin-top: 5px; }
+.thoughtvault-record-controls .icon-btn { width: 46px; height: 46px; }
+.thoughtvault-record-tip { background: #171f31; border-color: #29334a; }
+.thoughtvault-home-side { display: grid; gap: 19px; }
+.thoughtvault-home-side section { padding: 22px 20px; margin: 0; background: #0c111d; border: 1px solid #1f2438; border-radius: 12px; }
+.thoughtvault-home-side h2 { font-size: 19px; margin-bottom: 16px; }
+.thoughtvault-quick-capture { flex-direction: column; align-items: stretch; }
+.thoughtvault-quick-capture .btn { height: 46px; justify-content: start; font-size: 14px; gap: 20px; }
+.thoughtvault-quick-capture .btn svg { color: #ab85ff; }
+.thoughtvault-agenda-empty { color: #b8bdd6; font-size: 13.5px; line-height: 1.6; }
+.thoughtvault-agenda-empty .btn { margin-top: 14px; }
+.thoughtvault-brand-note { color: #b8bdd6; font-size: 14px; line-height: 1.8; }
+.thoughtvault-brand-note strong { color: #b88cff; font-size: 15px; }
+.thoughtvault-brand-note p { margin-top: 10px; }
+.thoughtvault-home-recent { padding-top: 30px; }
+.thoughtvault-notes-list { border: 1px solid #24293d; border-radius: 12px; background: #0e1321; }
+.thoughtvault-note-row { display: flex; align-items: center; min-height: 82px; margin: 0 8px; border-bottom: 1px solid #212638; }
+.thoughtvault-note-row:last-child { border-bottom: 0; }
+.thoughtvault-note-open { display: flex; align-items: center; gap: 20px; flex: 1; min-width: 0; text-align: left; background: transparent; border: 0; color: #edf0f7; cursor: pointer; padding: 12px 0; }
+.thoughtvault-note-open:hover { background: #1b2033; }
+.thoughtvault-note-icon { display: grid; place-items: center; width: 50px; height: 50px; flex-shrink: 0; border-radius: 10px; background: #28203f; border: 1px solid #443265; color: #bf85ff; }
+.thoughtvault-note-icon svg { font-size: 26px; }
+.thoughtvault-note-audio { color: #78adff; background: #1b2a44; border-color: #30436a; }
+.thoughtvault-note-copy { min-width: 0; flex: 1; }
+.thoughtvault-note-title { display: block; font-size: 14px; font-weight: 600; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.thoughtvault-note-summary { display: flex; gap: 18px; margin-top: 8px; color: #949cb8; font-size: 12px; }
+.thoughtvault-note-summary time { flex-shrink: 0; }
+.thoughtvault-note-summary > span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.thoughtvault-note-chevron { flex-shrink: 0; width: 18px; color: #929cb8; }
+.thoughtvault-note-menu { position: relative; margin-left: 8px; }
+/* Restored settings use the approved desktop cards and responsive columns. */
+.restored-model-settings{padding:18px 20px}
+.system-specs>div{display:flex;justify-content:space-between;gap:16px;margin:12px 0;font-size:13px}
+.northstar-settings .settings-tabs button{display:flex;align-items:center;gap:8px}
+
+/* Mac navigation geometry and shared list surfaces. */
+.sidebar { position:relative; }
+.sidebar-toggle { position:absolute;right:5px;top:2px;padding:3px;width:24px;height:24px;z-index:2; }
+.sidebar-toggle svg { width:16px;height:16px; }
+.sidebar.collapsed { width:52px;min-width:52px;padding:22px 5px 12px; }
+.sidebar.collapsed .sidebar-logo-section { padding:14px 6px 20px; }
+.sidebar.collapsed .sidebar-logo { width:30px;height:30px; }
+.sidebar.collapsed .sidebar-item { margin:1px 0;padding:8px; }
+.sidebar-recent { margin-top:30px;border-top:1px solid #ffffff29;padding-top:20px;overflow:hidden; }
+.sidebar-recent h2 { font-size:13px;font-weight:400;color:#c9ccdf;margin:0 0 10px 12px; }
+.sidebar-recent button { display:flex;gap:10px;align-items:center;width:100%;border:0;background:none;color:#dce0ef;text-align:left;padding:6px 10px;cursor:pointer;border-radius:8px; }
+.sidebar-recent button:hover { background:#ffffff0a; }
+.sidebar-recent button>span:last-child { overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px; }
+.sidebar-recent-icon { display:grid;place-items:center;background:#212540;border-radius:7px;width:32px;height:32px;flex-shrink:0; }
+.sidebar-recent-icon svg { width:17px;height:17px; }
+.app-shell .card:hover { transform:none;box-shadow:none; }
+.desktop-page .page-header { display:flex;align-items:center;justify-content:space-between;min-height:62px;padding:16px 24px;border-bottom:1px solid #242939; }
+.desktop-page .page-title-sm { font-size:20px; }
+.desktop-page .page-content { max-width:908px;padding:24px;gap:24px; }
+.desktop-page .page-content-narrow { max-width:none; }
+.desktop-page .settings-group-label { color:#eef0f8;font-size:16px;letter-spacing:0;text-transform:none;font-weight:600; }
+.desktop-profiles .profile-list { display:flex;flex-direction:column;gap:10px; }
+.desktop-profiles .profile-card { padding:16px;border:1px solid #343950;border-radius:12px;background:#151a2d; }
+.desktop-profiles .profile-card-icon { width:44px;height:44px;border-radius:10px;display:grid;place-items:center;background:#7943e226; }
+.desktop-profiles .profile-card-name-row { margin-bottom:6px; }
+.desktop-profiles .profile-empty { border:1px dashed #343950;border-radius:12px;padding:32px;text-align:center; }
+.desktop-people .settings-row { padding:16px;border-bottom:1px solid #343950; }
+.desktop-people .settings-row:last-child { border-bottom:0; }
+.desktop-tasks .empty-state { min-height:360px;justify-content:center; }
+.desktop-tasks .card { border-radius:12px; }
+.desktop-notulen { width:100%;min-height:0; }
+.desktop-notulen:not(.has-detail) { max-width:860px;margin-inline:auto; }
+.desktop-notulen.has-detail>.tl-panel { display:none; }
+.desktop-notulen .tl-header { padding:18px 24px 8px;gap:12px;border:0;background:transparent; }
+.desktop-notulen .tl-panel { background:transparent; }
+.desktop-notulen .tl-title { font-size:20px; }
+.desktop-notulen .tl-search { min-height:42px;border:1px solid #343950;border-radius:8px;padding:8px 12px; }
+.desktop-notulen .tl-filters { padding:4px 0; }
+.desktop-notulen .tl-filter-pill { font-size:12px;padding:6px 12px;border-radius:99px; }
+.desktop-notulen .tl-scroll { padding:8px 24px 24px; }
+.desktop-notulen .tl-item { min-height:104px;padding:16px;gap:14px;background:#151a2d;border:1px solid #343950;border-radius:12px;margin-bottom:10px; }
+.desktop-notulen .tl-item:hover { background:#1b2136; }
+.desktop-notulen .tl-item-title { font-size:15px; }
+.desktop-notulen .tl-item-preview { font-size:13px;margin-top:6px; }
+.desktop-notulen .tl-document-icon { width:42px;height:42px;display:grid;place-items:center;flex-shrink:0;background:#7943e226;color:#b89eff;border-radius:10px; }
+.desktop-notulen .td-panel { width:100%;min-width:0; }
+
+.thoughtvault-record-controls .icon-btn { padding:0; }
+.thoughtvault-record-controls .icon-btn svg { flex-shrink:0; }
+.desktop-people .settings-row { display:flex;align-items:center;gap:12px;min-height:86px; }
+.desktop-people .settings-row:focus-within .person-row-delete,.desktop-people .settings-row:hover .person-row-delete { opacity:1!important; }
+.desktop-people .settings-row>.flex-1 { min-width:0; }
+.desktop-people .settings-row>.flex-1 p { overflow-wrap:anywhere; }
+
+.desktop-profiles .settings-group { padding:0;background:transparent;border:0;box-shadow:none; }
+.desktop-page { --type-body:400 14px/1.5 var(--font-family);--type-caption:400 12px/1.5 var(--font-family); }
+.desktop-tasks .text-blue-600 { color:#83b4ff; }
+.desktop-tasks .text-amber-600 { color:#e7bb6b; }
+.desktop-tasks .text-red-600 { color:#ff9191; }
+.desktop-tasks .text-green-600 { color:#85d6ad; }
+
+.desktop-notulen .tl-sort { min-height:32px;border:1px solid #343950;border-radius:99px;background:#151a2d;color:#b8bdd6;padding:5px 10px;font:inherit;font-size:12px; }
+.desktop-notulen .tl-item-profile,.desktop-notulen .tl-item-tag,.desktop-notulen .tl-item-time,.desktop-notulen .tl-group-label { font-size:12px; }
+
+/* Shared audit layout: keep related content on the same axis. */
+.desktop-page .page-content{margin-inline:0;max-width:1100px}
+.desktop-page .page-header{max-width:1100px}
+
+.thoughtvault-home-content, .thoughtvault-new-recording { width: 100%; min-width: 0; box-sizing: border-box; }
+
+.app-shell { color: #edeaf6; }
+
+/* Desktop layout: viewport chrome stays fixed, each workspace owns its scroll. */
+.app-shell { --sidebar-width: 208px; border-radius: 0; font: 14px/1.5 var(--font-family); }
+.app-main-content { min-width: 0; }
+.app-shell .sidebar { --sidebar-width: inherit; padding: 12px 10px 8px; flex-shrink: 0; }
+.sidebar-logo-section { padding: 18px 8px 22px; gap: 10px; }
+.sidebar-app-name { font-size: 17px; }
+.sidebar-item { min-height: 38px; padding: 8px 12px; gap: 12px; font-size: 14px; flex-shrink: 0; }
+.sidebar-item.active { background: #503489; border-color: #8865be; box-shadow: none; }
+.sidebar-recent { margin-top: 22px; overflow-y: auto; min-height: 0; flex: 1; }
+.sidebar .brand-footer { flex-shrink: 0; border: 0; background: transparent; padding: 8px 0 0; }
+.thoughtvault-home-content { display: grid; grid-template-columns: minmax(0,1fr); gap: 18px; padding: 20px 24px; }
+.thoughtvault-home-toolbar { gap: 12px; }
+.thoughtvault-search { min-width: 0; padding: 8px 12px; gap: 10px; }
+.thoughtvault-search input { min-width: 0; }
+.thoughtvault-search svg, .thoughtvault-account { flex-shrink: 0; }
+.thoughtvault-welcome { height: auto; min-height: 0; padding: 10px 0; align-items: center; }
+.thoughtvault-welcome h1 { font-size: 28px; margin: 4px 0; letter-spacing: -.5px; }
+.thoughtvault-welcome-copy > p:last-child { font-size: 14px; }
+.thoughtvault-welcome-copy::after { content: none; }
+.thoughtvault-landscape { height: 110px; width: 280px; opacity: .4; }
+.thoughtvault-tagline { display: none; }
+.thoughtvault-new-recording { min-height: 0; display: block; padding: 18px 20px; border-radius: 10px; }
+.thoughtvault-new-recording > div { display: grid; grid-template-columns: minmax(0,1fr) auto; column-gap: 24px; align-items: center; }
+.thoughtvault-new-recording .section-label { grid-column: 1; font-size: 12px; letter-spacing: .8px; }
+.thoughtvault-new-recording h2 { grid-column: 1; font-size: 20px; margin: 4px 0; }
+.thoughtvault-new-recording > div > p:not(.section-label):not(.thoughtvault-ready) { grid-column: 1; font-size: 14px; }
+.thoughtvault-record-controls { grid-column: 2; grid-row: 1 / 5; flex-direction: column-reverse; min-height: 0; margin: 0; gap: 8px; }
+.thoughtvault-record-orb { width: auto; height: 42px; padding: 0 16px; gap: 8px; display: flex; border-radius: 8px; background: #7946ce; border-color: #a880e5; box-shadow: none; font: inherit; font-weight: 600; }
+.thoughtvault-record-orb svg { font-size: 22px; }
+.thoughtvault-record-controls .icon-btn { height: 32px; width: 32px; }
+.thoughtvault-idle-wave { display: none; }
+.thoughtvault-home .thoughtvault-ready { grid-column: 1; margin-top: 10px; }
+.thoughtvault-record-tip { display: block; background: transparent; padding: 10px 0 0; margin-top: 12px; border: 0; border-top: 1px solid #30384c; border-radius: 0; }
+.thoughtvault-record-tip summary { color: #c7b0eb; font-size: 13px; cursor: pointer; }
+.thoughtvault-record-tip p { margin-top: 8px; font-size: 13px; }
+.thoughtvault-home-side { grid-row: 5; padding: 0; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; align-content: start; }
+.thoughtvault-home-side section { padding: 16px; min-width: 0; }
+.thoughtvault-home-side h2 { font-size: 16px; margin-bottom: 10px; }
+.thoughtvault-agenda { min-height: 0; }
+.thoughtvault-quick-capture { gap: 8px; }
+.thoughtvault-quick-capture .btn { height: auto; min-height: 36px; font-size: 13px; padding: 8px 10px; gap: 10px; white-space: normal; }
+.thoughtvault-brand-note { color: #b8bdd6; font-size: 13px; padding: 12px 0; border-top: 1px solid #24293d; grid-column: 1 / -1; }
+.thoughtvault-brand-note strong { font-size: 13px; }
+.thoughtvault-brand-note p { margin-top: 2px; }
+.thoughtvault-home-recent { grid-row: 4; padding-top: 0; }
+.thoughtvault-home-recent h2 { font-size: 18px; }
+.thoughtvault-recent-filters { margin: 10px 0; }
+.thoughtvault-note-row { min-height: 64px; }
+.thoughtvault-note-open { gap: 12px; }
+.thoughtvault-note-icon { width: 36px; height: 36px; border-radius: 8px; }
+.thoughtvault-note-summary { margin-top: 4px; }
+.recording-studio { grid-auto-rows: max-content; align-content: start; flex: 1; min-height: 0; grid-template-columns: minmax(0,1fr) 270px; align-items: start; }
+.studio-workspace { min-height: 0; padding: 20px 24px; }
+.studio-timer { margin: 24px 0 12px; }
+.studio-wave { width: 100%; height: clamp(80px,20vh,180px); flex-shrink: 0; }
+.studio-wave canvas { max-height: 100%; }
+.studio-transport { margin: 0 0 20px; }
+.studio-controlbar { flex-wrap: wrap; border-radius: 10px; padding: 10px; gap: 10px; }
+.studio-controlbar > label { flex: 1 1 150px; }
+.studio-controlbar > label > svg { flex-shrink: 0; }
+.studio-transcription { flex: 1 1 150px; }
+.studio-inspector { overflow: visible; padding: 20px 16px; min-width: 0; }
+.studio-topline { flex-wrap: wrap; gap: 8px; }
+.studio-status, .studio-language { font-size: 12px; padding: 8px 10px; }
+.studio-round { box-shadow: none; }
+.studio-live-panel { margin: 16px 0 20px; }
+.studio-actions button { padding: 10px; }
+.desktop-page .page-header { flex-wrap: wrap; gap: 12px; }
+.desktop-page .page-content { width: 100%; min-width: 0; }
+.settings-tabs { flex-wrap: wrap; width: auto; overflow: visible; }
+.settings-tabs button { padding: 10px 12px; }
+@container (min-width: 980px) {
+  .thoughtvault-home-content { grid-template-columns: minmax(0,1fr) 270px; column-gap: 20px; }
+  .thoughtvault-home-toolbar { grid-column: 1 / -1; }
+  .thoughtvault-welcome, .thoughtvault-new-recording, .thoughtvault-home-recent { grid-column: 1; }
+  .thoughtvault-home-side { grid-column: 2; grid-row: 2 / 5; grid-template-columns: minmax(0,1fr); }
+}
+@container (max-width: 800px) {
+  .recording-studio { grid-template-columns: minmax(0,1fr); }
+  .studio-inspector { border-left: 0; border-top: 1px solid #303858; }
+  .studio-workspace { min-height: 0; }
+}
+@media (max-width: 1000px) {
+  .app-shell { --sidebar-width: 184px; }
+  .sidebar-app-name { font-size: 15px; }
+  .thoughtvault-home-content { padding: 16px; gap: 14px; }
+}
+@media (max-height: 680px) {
+  .studio-workspace { min-height: 0; padding: 16px 20px; }
+  .studio-timer { margin: 12px 0 8px; }
+  .studio-wave { height: 80px; }
+}
+
+@container (max-width: 800px) {
+  .studio-inspector { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 20px; }
+}
+.desktop-notulen .td-toolbar { flex-wrap: wrap; }
+.thoughtvault-processing { grid-column: 1 / -1; }
+
+.desktop-update-banner { flex-wrap: wrap; flex-shrink: 0; }
+
+.studio-controlbar { position: sticky; bottom: 0; }

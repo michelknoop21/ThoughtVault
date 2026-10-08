@@ -1,10 +1,11 @@
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
+import { useUpdateCheck } from "./hooks/useUpdateCheck";
+import { UpdateBanner } from "./components/ui/UpdateBanner";
 import { TitleBar } from "./components/layout/TitleBar";
 import { Sidebar } from "./components/layout/Sidebar";
 import { CallAlertOverlay } from "./components/calendar/CallAlertOverlay";
-import { BrandFooter } from "./components/brand/BrandFooter";
 import { ErrorBoundary } from "./components/ui/ErrorBoundary";
 import { InfoBarHost } from "./components/ui/InfoBar";
 import { LoginPage } from "./pages/LoginPage";
@@ -208,6 +209,9 @@ function OfflineQueueBanner() {
 }
 
 function AppShell({ children }: { children: React.ReactNode }) {
+  const {isUpdateAvailable, latestVersion, downloadUrl, nativeUpdate} = useUpdateCheck();
+  const dismissed = useSettingsStore(s => s.dismissed_update_version);
+  const updateSettings = useSettingsStore(s => s.updateSettings);
   return (
     <>
       <div className="app-shell">
@@ -218,10 +222,10 @@ function AppShell({ children }: { children: React.ReactNode }) {
           <main className="app-main" id="main-content">
             <ProcessingBar />
             <OfflineQueueBanner />
+            {isUpdateAvailable && latestVersion && dismissed !== latestVersion && <UpdateBanner nativeUpdate={nativeUpdate} version={latestVersion} downloadUrl={downloadUrl} onDismiss={() => updateSettings({dismissed_update_version:latestVersion})} />}
             <div className="app-main-content">
               {children}
             </div>
-            <BrandFooter compact />
           </main>
         </div>
       </div>

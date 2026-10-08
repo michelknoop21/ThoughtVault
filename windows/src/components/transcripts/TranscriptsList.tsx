@@ -255,6 +255,14 @@ export function TranscriptsList({
                 <div
                   key={t.id}
                   className={`tl-item${selectedId === t.id ? " active" : ""}`}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={t.title || "Naamloze opname"}
+                  onKeyDown={(event) => {
+                    if (event.target !== event.currentTarget || !["Enter", " "].includes(event.key)) return;
+                    event.preventDefault();
+                    bulkMode ? toggleBulk(t.id) : onSelect(t.id);
+                  }}
                   onClick={() => bulkMode ? toggleBulk(t.id) : onSelect(t.id)}
                   onContextMenu={(e) => onContextMenu(e, t)}
                 >

@@ -465,7 +465,7 @@ export function TranscriptsPage() {
   const selected = transcripts.find((t) => t.id === selectedId);
 
   return (
-    <div className="tp-root">
+    <div className={`tp-root desktop-notulen${selectedId ? " has-detail" : ""}`}>
       <TranscriptsList
         transcripts={transcripts}
         selectedId={selectedId}

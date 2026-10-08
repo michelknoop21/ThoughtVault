@@ -1,8 +1,9 @@
+import type { Update } from "@tauri-apps/plugin-updater";
 import { useEffect, useState } from "react";
 import { useSettingsStore } from "../stores/settingsStore";
 
-const RELEASES_URL = "https://n8n.prezent.nl/tstudio/download/releases.json";
-const DOWNLOAD_BASE = "https://n8n.prezent.nl";
+const RELEASES_URL = "https://thoughtvault.yinga.ai/d-05921304471ce66e62d0a2b7f324c2354dfb1d895d23a895bba7f86110e2472e/releases.json";
+const DOWNLOAD_BASE = "https://thoughtvault.yinga.ai";
 
 function isNewer(remote: string, local: string): boolean {
   const r = remote.split(".").map(Number);
@@ -14,6 +15,7 @@ function isNewer(remote: string, local: string): boolean {
 }
 
 export function useUpdateCheck() {
+  const [nativeUpdate, setNativeUpdate] = useState<Update | null>(null);
   const [latestVersion, setLatestVersion] = useState<string | null>(null);
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
   const checkForUpdates = useSettingsStore((s) => s.check_for_updates);
@@ -23,18 +25,30 @@ export function useUpdateCheck() {
     if (!("__TAURI_INTERNALS__" in window)) return;
 
     let cancelled = false;
+    let allocated: Update | null = null;
 
     (async () => {
       try {
-        const { getVersion } = await import("@tauri-apps/api/app");
+        const { getVersion, getName } = await import("@tauri-apps/api/app");
         const currentVersion = await getVersion();
+        const appName = await getName();
 
+        try {
+          const {check} = await import("@tauri-apps/plugin-updater");
+          const candidate = await check();
+          allocated = candidate;
+          if (cancelled) { await candidate?.close(); return; }
+          if (candidate?.version) {
+            setNativeUpdate(candidate);
+            setLatestVersion(candidate.version);
+          }
+        } catch { /* The existing manifest check remains a fallback. */ }
         const res = await fetch(RELEASES_URL);
         if (!res.ok) return;
         const json = await res.json();
 
         // Determine channel from app title
-        const isDev = document.title.toLowerCase().includes("dev");
+        const isDev = appName.toLowerCase().includes("dev");
 
         const platformKey = isDev ? "dev_windows_x64" : "windows_x64";
         const platformInfo = json[platformKey];
@@ -45,7 +59,8 @@ export function useUpdateCheck() {
         if (isNewer(remoteVersion, currentVersion)) {
           setLatestVersion(remoteVersion);
           if (platformInfo?.url) {
-            setDownloadUrl(DOWNLOAD_BASE + platformInfo.url);
+            const url = new URL(platformInfo.url, DOWNLOAD_BASE);
+            if (url.origin === DOWNLOAD_BASE && url.pathname.startsWith("/d-05921304471ce66e62d0a2b7f324c2354dfb1d895d23a895bba7f86110e2472e/")) setDownloadUrl(url.href);
           }
         }
       } catch {
@@ -53,8 +68,8 @@ export function useUpdateCheck() {
       }
     })();
 
-    return () => { cancelled = true; };
+    return () => { cancelled = true; void allocated?.close().catch(() => {}); };
   }, [checkForUpdates]);
 
-  return { isUpdateAvailable: latestVersion !== null, latestVersion, downloadUrl };
+  return { isUpdateAvailable: latestVersion !== null, latestVersion, downloadUrl, nativeUpdate };
 }

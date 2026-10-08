@@ -324,7 +324,7 @@ export function TasksPage() {
   }
 
   return (
-    <div className="page-scroll">
+    <div className="page-scroll desktop-page desktop-tasks">
       <div className="page-content">
         {/* Header */}
         <section>

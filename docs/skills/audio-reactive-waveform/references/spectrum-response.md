@@ -66,3 +66,12 @@ Locate these paths in the user's actual ThoughtVault checkout; verify their curr
 - `docs/qa/windows-desktop-responsive/MACOS-PARITY-SIGNOFF.md`: build, installed-app and release evidence, tracked separately from DSP results.
 
 The old Goertzel implementation is a negative control, not a fallback to restore. The 99 ms value is from a deterministic 30 Hz DSP fixture; it is not a promised end-to-end device latency.
+
+
+## Subsequent findings: SiriWave and installation, 2026-10-09
+
+ThoughtVault 1.0.268 adds SiriWave Classic geometry to the existing SwiftUI Canvas and Windows Canvas renderers. Main window and widget share geometry within each platform. Continuous phase, scalar snapshots for native redraw and a single export clock resolve the distinction between vertical level changes and actual travelling crests. The practical geometry and regression cases are in [siriwave-motion.md](siriwave-motion.md).
+
+The signed macOS Release build and strict codesign verification succeeded. Its audio regression suite recorded 21 passing tests, 2 explicitly skipped hardware tests and no failures. Windows CI recorded 76 passing frontend tests and 23 passing native Rust tests, built the MSI and checked upgrade plus two starts with preserved saved notes. Both actual desktop apps were installed as 1.0.268. macOS retained 16 saved recordings; the Windows saved-notes file hash stayed unchanged after installation and start. The Windows installer returned 0 and its running process confirmed 1.0.268 with Responding=True. macOS's actual sandbox identity was com.buildmind.ThoughtVault, demonstrating why older documented bundle IDs must not be assumed during data backup.
+
+These checks prove builds, installation and startup, not real microphone response during a new meeting. The published updater/download feed was not updated in that installation task. Re-check current release evidence in `docs/qa/WAVEFORM-RESPONSE.md` rather than treating these counts or versions as current for future work.

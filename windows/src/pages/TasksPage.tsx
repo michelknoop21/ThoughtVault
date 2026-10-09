@@ -5,10 +5,10 @@ import {
   Delete24Regular,
   DismissCircle24Regular,
   Clock24Regular,
-  CheckmarkCircle24Regular,
   ErrorCircle24Regular,
   ArrowClockwise24Regular,
   Person24Regular,
+  TaskListLtr24Regular,
 } from "../components/ui/StudioIcons";
 import { useTasksStore } from "../stores/tasksStore";
 import { useRecordingStore } from "../stores/recordingStore";
@@ -316,16 +316,8 @@ export function TasksPage() {
 
   return (
     <div className="page-scroll desktop-page desktop-tasks">
-      <div className="page-content">
-        {/* Header */}
-        <section>
-          <div className="flex-row justify-between" style={{ alignItems: "center" }}>
-            <div>
-              <h2 className="text-subtitle" style={{ margin: 0 }}>Taken</h2>
-              <p className="text-caption" style={{ marginTop: 4 }}>
-                Overzicht van actieve en recente verwerkingstaken
-              </p>
-            </div>
+      <header className="page-header tasks-toolbar">
+              <h2 className="page-title-sm">Taken</h2>
             <button
               className="icon-btn"
               onClick={() => loadActiveTasks()}
@@ -339,9 +331,8 @@ export function TasksPage() {
                 }}
               />
             </button>
-          </div>
-        </section>
-
+      </header>
+      <div className="page-content">
         {/* Error banner */}
         {error && (
           <div className="error-banner-inline">
@@ -367,14 +358,14 @@ export function TasksPage() {
           </div>
         ) : visibleTasks.length === 0 ? (
           <div className="empty-state">
-            <CheckmarkCircle24Regular
-              style={{ fontSize: 40, color: "var(--text-secondary)", opacity: 0.5 }}
+            <TaskListLtr24Regular
+              style={{ width: 56, height: 56, color: "#9293b7" }}
             />
-            <p className="empty-state-text" style={{ marginTop: 12 }}>
+            <p className="empty-state-title" style={{ marginTop: 12 }}>
               Geen actieve taken
             </p>
             <p className="text-caption" style={{ marginTop: 4 }}>
-              Start een opname om verwerkingstaken te zien
+              Wanneer je een opname start of een audiobestand importeert, verschijnt de voortgang hier.
             </p>
           </div>
         ) : (

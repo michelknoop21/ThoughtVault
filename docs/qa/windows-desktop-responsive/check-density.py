@@ -20,7 +20,21 @@ const owners=[...main.querySelectorAll('*')].filter(e=>e.clientHeight&&e.scrollH
 const headings=[...main.querySelectorAll('h1,h2,h3')].filter(e=>e.getClientRects().length).map(e=>({text:e.textContent,...box(e)}));
 const firstData=main.querySelector('.thoughtvault-note-row,.tl-item,.person-row,.settings-group,.task-card,.studio-workspace');
 const tabs=main.querySelector('.settings-tabs'),bar=main.querySelector('.studio-controlbar');
-if(location.hash==='#/'&&firstData&&box(firstData).y+box(firstData).h>innerHeight+2)throw Error('First useful Home note not fully visible: '+box(firstData).y);
+const sidebar=document.querySelector('.sidebar');
+if(Math.abs(box(sidebar).w-238)>1)throw Error('Sidebar differs from macOS 238pt');
+if(bar){
+ const workspace=main.querySelector('.studio-workspace'),wr=box(workspace),br=box(bar),inspector=main.querySelector('.studio-inspector');
+ const bottom=wr.h<720?20:37;
+ if(Math.abs(wr.y+wr.h-br.y-br.h-bottom)>1)throw Error('Studio bar displaced from native bottom inset');
+ if(br.h!==90)throw Error('Studio bar differs from macOS 90pt');
+ if(box(inspector).x>wr.x&&Math.abs(box(inspector).w-309)>1)throw Error('Inspector differs from macOS 309pt');
+ const wave=box(main.querySelector('.studio-wave')),transport=box(main.querySelector('.studio-transport'));
+ if(wave.y+wave.h>transport.y+1)throw Error('Waveform overlaps transport');
+}
+// Native Home keeps a 200pt greeting and 301pt recording card; notes scroll below them.
+const greeting=main.querySelector('.thoughtvault-welcome'),record=main.querySelector('.thoughtvault-new-recording');
+if(greeting&&box(greeting).h!==200)throw Error('Home greeting lost native density');
+if(record&&box(record).h<301)throw Error('Home recording card too short');
 return {logical:[innerWidth,innerHeight],dpr:devicePixelRatio,zoom:visualViewport.scale,raster:[innerWidth*devicePixelRatio,innerHeight*devicePixelRatio],safeArea:'0; browser fixture',textSize:getComputedStyle(main).fontSize,logo:lr,scrollOwners:owners,headings,firstData:firstData?box(firstData):null,fixedControlHeight:bar?box(bar).h:0,settingsTabsHeight:tabs?box(tabs).h:0};})())"""
 try:
  for size,scale in [('640x560','1'),('900x560','1'),('1280x800','1'),('1440x900','1'),('1920x1080','1'),('1440x900','2')]:

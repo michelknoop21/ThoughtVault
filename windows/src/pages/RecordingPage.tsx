@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, type CSSProperties } from "react";
 import { useNavigate } from "react-router-dom";
 import { open, ask } from "@tauri-apps/plugin-dialog";
 import {
@@ -12,6 +12,7 @@ import {
   People24Regular,
   Person24Regular,
   Tag24Regular,
+  WaveformIcon,
 } from "../components/ui/StudioIcons";
 import { useRecordingStore } from "../stores/recordingStore";
 import { useSettingsStore } from "../stores/settingsStore";
@@ -40,7 +41,24 @@ import { useCalendarStore } from "../stores/calendarStore";
 
 import { DocumentText24Regular } from "../components/ui/StudioIcons";
 
+import { studioLayout } from "../components/recording/studioLayout";
+
 export function RecordingPage() {
+  const workspaceRef = useRef<HTMLElement>(null);
+  const [workspaceSize, setWorkspaceSize] = useState({ width: 0, height: 0 });
+  useEffect(() => {
+    const element = workspaceRef.current;
+    if (!element) return;
+    const observer = new ResizeObserver(([entry]) => {
+      const { width, height } = entry.contentRect;
+      setWorkspaceSize({ width, height });
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+  const geometry = studioLayout(workspaceSize.width, workspaceSize.height);
+  const workspaceStyle = Object.fromEntries(Object.entries(geometry).map(([key, value]) =>
+    [`--${key.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`)}`, `${value}px`])) as CSSProperties;
   const navigate = useNavigate();
   const mode = useRecordingStore((s) => s.mode);
   const phase = useRecordingStore((s) => s.phase);
@@ -320,20 +338,20 @@ export function RecordingPage() {
   }
 
   return <div className="recording-studio">
-    <section className="studio-workspace" aria-label="Opnamestudio">
+    <section ref={workspaceRef} className="studio-workspace" style={workspaceStyle} aria-label="Opnamestudio">
       <header className="studio-topline">
         <span className={`studio-status ${phase}`} role="status"><i />{status}</span>
         <span className="studio-language">Spreektaal: Nederlands</span>
       </header>
-      {error && <div className="error-banner" role="alert">{error}</div>}
+      <div className="studio-notices">{error && <div className="error-banner" role="alert">{error}</div>}
       {!isLive && !isBusy && <MeetingDetectionBanner onRecord={() => {
         setMode("combined"); void handleStartRecording("combined");
-      }} />}
+      }} />}</div>
       <div className="studio-timer" aria-label={`Opnameduur ${duration}`}>{duration}</div>
       <div className="studio-listening"><span className="studio-mini-bars" aria-hidden="true">
         {Array.from({ length: 9 }, (_, i) => <i key={i} style={{ height: 3 + (phase === "recording" ? level / 100 * (14 - i) : 0) }} />)}
       </span><span>{phase === "recording" ? "Ik luister…" : phase === "paused" ? "Opname is gepauzeerd" : isBusy ? "Even geduld…" : "Klaar"}</span></div>
-      <div className="studio-wave"><WaveformVisualizer levelsRef={audioLevelsRef} bandsRef={audioBandsRef} isActive={phase === "recording"} height={240} /></div>
+      <div className="studio-wave"><WaveformVisualizer levelsRef={audioLevelsRef} bandsRef={audioBandsRef} isActive={phase === "recording"} height={geometry.waveHeight} /></div>
       <div className="studio-transport">
         {isLive ? <>
           <div><button className="studio-round" onClick={phase === "paused" ? handleResume : handlePause}
@@ -362,7 +380,7 @@ export function RecordingPage() {
       <p className="studio-meta"><Tag24Regular />Tags na verwerking</p>
       <button className="studio-meta studio-people" onClick={() => setPanel("people")}><People24Regular />{selectedParticipantIds.length ? `${selectedParticipantIds.length} personen` : "Geen personen"}<span>＋</span></button>
       <p className="studio-meta"><DocumentText24Regular />Wordt na verwerking aangevuld</p>
-      <section className="studio-live-panel"><h3>Live opname</h3>
+      <section className="studio-live-panel"><h3><WaveformIcon />Live opname</h3>
         <dl><div><dt>Duur</dt><dd>{duration}</dd></div><div><dt>Geluidsniveau</dt><dd><meter min={0} max={100} value={phase === "recording" ? level : 0} aria-label="Geluidsniveau" /></dd></div>
           <div><dt>Bron</dt><dd>{mode === "combined" ? "Gecombineerd" : "Microfoon"}</dd></div><div><dt>Profiel</dt><dd>{profileName}</dd></div></dl>
       </section>

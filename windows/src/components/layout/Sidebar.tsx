@@ -60,7 +60,7 @@ export function Sidebar() {
         <h2>Recent</h2>
         {recent.map(t => <button key={t.id} onClick={() => { select(t.id); navigate("/transcripts"); }} title={t.title}>
           <span className="sidebar-recent-icon"><DocumentText24Regular /></span>
-          <span>{t.title || "Naamloze opname"}</span>
+          <span>{t.title || "Naamloze opname"}<small>{new Date(t.created_at).toLocaleString("nl-NL", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</small></span>
         </button>)}
       </section>}
       {/* Spacer pushes bottom items down */}

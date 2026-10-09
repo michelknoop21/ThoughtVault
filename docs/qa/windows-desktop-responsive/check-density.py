@@ -3,7 +3,7 @@ import json, subprocess, re
 from pathlib import Path
 root=Path(__file__).resolve().parents[3]
 browse=str(Path.home()/'.claude/skills/gstack/browse/dist/browse')
-url='http://localhost:1442/desktop-review.html'
+url='http://127.0.0.1:1442/desktop-review.html'
 def run(commands):
  p=subprocess.run([browse,'chain'],input=json.dumps(commands),cwd=root/'windows',text=True,capture_output=True,check=True)
  assert 'ERROR:' not in p.stdout,p.stdout

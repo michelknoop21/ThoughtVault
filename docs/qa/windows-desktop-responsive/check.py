@@ -4,7 +4,7 @@ import json, os, subprocess
 from pathlib import Path
 root = Path(__file__).resolve().parents[3]
 browse = Path.home()/'.claude/skills/gstack/browse/dist/browse'
-url = 'http://localhost:1442/desktop-review.html'
+url = 'http://127.0.0.1:1442/desktop-review.html'
 def call(commands):
     result = subprocess.run([str(browse), 'chain'], input=json.dumps(commands), text=True, capture_output=True, cwd=root/'windows', check=True)
     if 'ERROR:' in result.stdout:

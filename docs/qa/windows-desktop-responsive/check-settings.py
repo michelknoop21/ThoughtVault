@@ -2,7 +2,7 @@ import subprocess,json,re
 from pathlib import Path
 root=Path(__file__).resolve().parents[3]
 b=str(Path.home()/'.claude/skills/gstack/browse/dist/browse')
-p=subprocess.run([b,'newtab','http://localhost:1442/desktop-review.html','--json'],cwd=root/'windows',text=True,capture_output=True,check=True)
+p=subprocess.run([b,'newtab','http://127.0.0.1:1442/desktop-review.html','--json'],cwd=root/'windows',text=True,capture_output=True,check=True)
 tab=str(json.loads(p.stdout)['tabId'])
 def call(cmds):
  p=subprocess.run([b,'chain'],input=json.dumps([['tab',tab]]+cmds),text=True,capture_output=True,check=True,cwd=root/'windows')
@@ -14,10 +14,10 @@ def click(label):
 measure="JSON.stringify((()=>{const bad=[...document.querySelectorAll('main input,main button,main select,main textarea')].filter(e=>e.getClientRects().length).filter(e=>e.getBoundingClientRect().right>innerWidth+2);if(bad.length)throw Error('Clipped controls');return {width:innerWidth,clipped:0};})())"
 try:
     for size in ['640x560','900x560','1200x800']:
-     call([['viewport',size],['goto','http://localhost:1442/desktop-review.html?qa=settings#/settings'],['snapshot','-i']])
+     call([['viewport',size],['goto','http://127.0.0.1:1442/desktop-review.html?qa=settings#/settings'],['snapshot','-i']])
      for name in ['Algemeen','Verwerking','Notulen','Agenda','Obsidian','Account','Geavanceerd']:
       click(name);print(name,call([['js',measure]]).split('[js]')[-1].strip())
-    call([['viewport','640x560'],['goto','http://localhost:1442/desktop-review.html?qa=onboarding#/onboarding'],['snapshot','-i']])
+    call([['viewport','640x560'],['goto','http://127.0.0.1:1442/desktop-review.html?qa=onboarding#/onboarding'],['snapshot','-i']])
     for step in range(6):
      print('onboarding',step,call([['js',measure]]).split('[js]')[-1].strip())
      if step<5:click('Overslaan' if step==4 else 'Volgende')

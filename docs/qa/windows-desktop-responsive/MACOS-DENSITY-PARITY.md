@@ -34,3 +34,20 @@ Negative control: injecting the former 208px sidebar and sticky bottom control b
 makes the measured parity checks reject both. The restored measurements pass again
 after removing those rules. macOS was recording during the final candidate work,
 so it was left running and not updated or navigated after detecting active capture.
+
+## Built artifact and remaining installed review
+
+Windows CI run [37906510311](https://github.com/michelknoop21/ThoughtVault/actions/runs/37906510311)
+passed for source e2500e631d531a85a08b0d51a7632f1ebaa8767a, version 1.0.269.
+This includes native verification, MSI packaging, self-contained C++ runtime,
+installation/upgrade, two starts and preservation of saved notes on the CI host.
+Publication was disabled. MSI SHA256:
+`8468f79244a76cbd6f2a5d858ffa2f4c016172b213592e272b8bb196d841456e`.
+
+The real Windows PC was still on 1.0.268 before installation. Its existing notes
+were backed up locally without reading their contents and the idle app was closed
+normally. Before the candidate transfer, computer use failed repeatedly with
+ScreenCaptureKit error -3811, including after resetting the connection. The
+1.0.269 installation and full Royal TSX visual review are therefore pending,
+not passed. No live recording or provider call was initiated for this review.
+The floating widget was checked in the fixture, not during a native recording.

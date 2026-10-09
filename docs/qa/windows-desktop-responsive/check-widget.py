@@ -2,7 +2,7 @@
 import json, subprocess, re
 from pathlib import Path
 browse=str(Path.home()/'.claude/skills/gstack/browse/dist/browse')
-url='http://localhost:1442/desktop-review.html?scenario=widget'
+url='http://127.0.0.1:1442/desktop-review.html?scenario=widget'
 tab=str(json.loads(subprocess.check_output([browse,'newtab',url,'--json'],text=True))['tabId'])
 def run(commands):
  output=subprocess.check_output([browse,'chain'],input=json.dumps(commands),text=True)

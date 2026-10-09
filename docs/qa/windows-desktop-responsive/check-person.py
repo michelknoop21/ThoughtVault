@@ -3,7 +3,7 @@ import json, subprocess
 from pathlib import Path
 root = Path(__file__).resolve().parents[3]
 browse = str(Path.home()/'.claude/skills/gstack/browse/dist/browse')
-url = 'http://localhost:1442/desktop-review.html#/people'
+url = 'http://127.0.0.1:1442/desktop-review.html#/people'
 tab = str(json.loads(subprocess.run([browse, 'newtab', url, '--json'], text=True, capture_output=True, check=True).stdout)['tabId'])
 def call(commands):
     result = subprocess.run([browse, 'chain'], input=json.dumps([['tab', tab]] + commands), text=True, capture_output=True, check=True)

@@ -3,7 +3,7 @@
 Status: goedgekeurd en geïmplementeerd in de desktopbron op 2026-10-09.
 Native installatie en een nieuwe opname met echte AI-provider blijven apart te verifiëren.
 
-## Bestaande basis
+## Basis vóór deze implementatie
 
 macOS heeft PersonalVocabulary in macos/Services/LocalTranscriber.swift. Deze
 verzamelt vrije contexttermen, namen en organisaties uit het personenregister en
@@ -120,3 +120,5 @@ De UI-fixture controleerde de geselecteerde variant, opslaan in de notule en beh
 van het ruwe transcript. Componenttests controleren dat een opslagfout het formulier
 behoudt en de regel niet leert. Dit vervangt de native acceptatie met echte opname,
 AI-provider en Obsidian-vault niet.
+
+Build- en acceptatiebewijs: [1.0.270](qa/personal-corrections-1.0.270.md).

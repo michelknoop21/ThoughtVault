@@ -368,6 +368,28 @@
   color: var(--text-tertiary);
 }
 
+/* WebView2 cannot use a transparent field background for its native popup. */
+select option, select optgroup {
+  background-color: var(--surface-primary);
+  color: var(--text-primary);
+}
+
+select option:checked {
+  background-color: Highlight;
+  color: HighlightText;
+}
+
+@media (forced-colors: active) {
+  select option, select optgroup {
+    background-color: Canvas;
+    color: CanvasText;
+  }
+  select option:checked {
+    background-color: Highlight;
+    color: HighlightText;
+  }
+}
+
 /* ============================================================
    Sidebar — matches macOS NavigationSplitView sidebar
    ============================================================ */

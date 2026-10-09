@@ -164,6 +164,7 @@
 .desktop-notulen { width:100%;min-height:0; }
 .desktop-notulen:not(.has-detail) { max-width: none; margin-inline: 0; }
 .desktop-notulen > .tl-panel-full { max-width: 860px; margin-inline: auto; }
+.desktop-notulen > .td-empty-panel { display: none; }
 .desktop-notulen.has-detail>.tl-panel { display:none; }
 .desktop-notulen .tl-header { padding:18px 24px 8px;gap:12px;border:0;background:transparent; }
 .desktop-notulen .tl-panel { background:transparent; }

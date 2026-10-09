@@ -328,6 +328,10 @@ export function ProfilesPage({ embedded = false }: { embedded?: boolean }) {
                       className="card-static"
                       style={{
                         flex: 1,
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        justifyContent: "flex-start",
                         padding: "10px 8px",
                         textAlign: "center",
                         cursor: "pointer",
@@ -336,7 +340,7 @@ export function ProfilesPage({ embedded = false }: { embedded?: boolean }) {
                         borderRadius: 8,
                       }}
                     >
-                      <p style={{ margin: 0, fontWeight: 600, fontSize: 13, color: form.stijl === stijl.id ? "var(--fill-accent)" : "var(--text-primary)" }}>
+                      <p style={{ margin: 0, fontWeight: 600, fontSize: 13, color: form.stijl === stijl.id ? "var(--interactive-text)" : "var(--text-primary)" }}>
                         {stijl.label}
                       </p>
                       <p className="text-caption" style={{ margin: "4px 0 0", color: "var(--text-tertiary)" }}>

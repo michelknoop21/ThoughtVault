@@ -265,3 +265,20 @@ fn run_whisper(app: AppHandle, model: &PathBuf, wav_path: &str, vocabulary: &str
     let _ = app.emit("transcribe-progress", 100);
     Ok(text.trim().to_string())
 }
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    #[ignore = "Requires THOUGHTVAULT_TEST_WHISPER_MODEL; exercised by Windows CI"]
+    fn whisper_inference_cpu_smoke() {
+        use whisper_rs::{FullParams, SamplingStrategy, WhisperContext, WhisperContextParameters};
+        let model = std::env::var("THOUGHTVAULT_TEST_WHISPER_MODEL").expect("test model required");
+        let ctx = WhisperContext::new_with_params(model, WhisperContextParameters::default()).unwrap();
+        let mut state = ctx.create_state().unwrap();
+        let mut params = FullParams::new(SamplingStrategy::Greedy { best_of: 1 });
+        params.set_language(Some("nl"));
+        params.set_print_realtime(false);
+        params.set_print_progress(false);
+        state.full(params, &vec![0.0; 16_000]).unwrap();
+    }
+}

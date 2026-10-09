@@ -94,15 +94,8 @@ pub async fn start_recording(
                         Some(RecordingEvent::SystemAudioLevel(level)) => system = (level, std::time::Instant::now()),
                         Some(RecordingEvent::AudioSpectrum(bands)) => mic_bands = (bands, std::time::Instant::now()),
                         Some(RecordingEvent::SystemAudioSpectrum(bands)) => system_bands = (bands, std::time::Instant::now()),
-                        Some(RecordingEvent::Stopped { file_path, duration_seconds }) => {
-                            let _ = done_tx.send(Ok(RecordingResult { file_path: file_path.clone(), duration_seconds }));
-                            let _ = app_clone.emit("audio-level", 0.0_f32);
-                            let _ = app_clone.emit("audio-spectrum", [0.0_f32; 7]);
-                            let _ = app_clone.emit("recording-stopped", serde_json::json!({ "file_path": file_path, "duration_seconds": duration_seconds }));
-                            break;
-                        }
+                        Some(RecordingEvent::Stopped { .. }) => break,
                         Some(RecordingEvent::Error(error)) => {
-                            let _ = done_tx.send(Err(error.clone()));
                             if let Ok(mut state) = shared_state.lock() {
                                 if state.file_path.as_ref() == Some(&session_path) { *state = RecordingState::default(); }
                             }
@@ -122,6 +115,7 @@ pub async fn start_recording(
             recording_mode,
             file_path.clone(),
             event_tx,
+            done_tx,
         )?;
 
         guard.cmd_tx = Some(cmd_tx);
@@ -138,6 +132,7 @@ pub async fn start_recording(
 
 #[tauri::command]
 pub async fn stop_recording(
+    app: AppHandle,
     state: tauri::State<'_, SharedRecordingState>,
 ) -> Result<RecordingResult, String> {
     let (cmd_tx, completion, file_path) = {
@@ -147,6 +142,7 @@ pub async fn stop_recording(
         guard.is_paused = false;
         (guard.cmd_tx.take(), guard.completion.take(), guard.file_path.clone())
     };
+    let _ = app.emit("recording-stopping", ());
     // Every exit below must clear the session, otherwise a failed stop leaves
     // is_recording=true with no completion and blocks all later recordings.
     let result: Result<RecordingResult, String> = async {
@@ -160,11 +156,19 @@ pub async fn stop_recording(
     }.await;
     let mut guard = state.lock().map_err(|e| e.to_string())?;
     if guard.file_path == file_path { *guard = RecordingState::default(); }
+    drop(guard);
+    let _ = app.emit("audio-level", 0.0_f32);
+    let _ = app.emit("audio-spectrum", [0.0_f32; 7]);
+    match &result {
+        Ok(recording) => { let _ = app.emit("recording-stopped", recording); }
+        Err(error) => { let _ = app.emit("recording-error", error); }
+    }
     result
 }
 
 #[tauri::command]
 pub async fn pause_recording(
+    app: AppHandle,
     state: tauri::State<'_, SharedRecordingState>,
 ) -> Result<(), String> {
     let mut guard = state.lock().map_err(|e| e.to_string())?;
@@ -187,12 +191,15 @@ pub async fn pause_recording(
 
     // Update shared state to reflect paused status
     guard.is_paused = true;
+    drop(guard);
+    let _ = app.emit("recording-paused", ());
 
     Ok(())
 }
 
 #[tauri::command]
 pub async fn resume_recording(
+    app: AppHandle,
     state: tauri::State<'_, SharedRecordingState>,
 ) -> Result<(), String> {
     let mut guard = state.lock().map_err(|e| e.to_string())?;
@@ -215,6 +222,8 @@ pub async fn resume_recording(
 
     // Update shared state to reflect recording status
     guard.is_paused = false;
+    drop(guard);
+    let _ = app.emit("recording-resumed", ());
 
     Ok(())
 }

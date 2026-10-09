@@ -68,8 +68,6 @@ export function RecordingPage() {
   const setFilePath = useRecordingStore((s) => s.setFilePath);
   const setAutoStart = useRecordingStore((s) => s.setAutoStart);
   const startTimer = useRecordingStore((s) => s.startTimer);
-  const pauseTimer = useRecordingStore((s) => s.pauseTimer);
-  const resumeTimer = useRecordingStore((s) => s.resumeTimer);
   const addBackgroundTask = useRecordingStore((s) => s.addBackgroundTask);
   const updateBackgroundTask = useRecordingStore((s) => s.updateBackgroundTask);
   const removeBackgroundTask = useRecordingStore((s) => s.removeBackgroundTask);
@@ -265,7 +263,7 @@ export function RecordingPage() {
       // after the WAV file is fully finalized by the recording thread.
     } catch (err) {
       console.error("[Recording] Stop failed:", err);
-      setError(err instanceof Error ? err.message : "Stoppen mislukt");
+      setError(err instanceof Error ? err.message : typeof err === "string" ? err : "Stoppen mislukt");
       setPhase("idle");
     }
   }
@@ -273,8 +271,6 @@ export function RecordingPage() {
   async function handlePause() {
     try {
       await pauseRecording();
-      setPhase("paused");
-      pauseTimer();
     } catch (error) {
       setError(error instanceof Error ? error.message : "Pauzeren mislukt");
     }
@@ -283,8 +279,6 @@ export function RecordingPage() {
   async function handleResume() {
     try {
       await resumeRecording();
-      setPhase("recording");
-      resumeTimer();
     } catch (error) {
       setError(error instanceof Error ? error.message : "Hervatten mislukt");
     }
@@ -321,19 +315,18 @@ export function RecordingPage() {
 
   async function handleKeepRecording() {
     if (!await ask("Stoppen zonder te verwerken? De opname blijft beschikbaar bij Opgeslagen opnames.", { title: "Opname stoppen", kind: "warning", okLabel: "Stoppen", cancelLabel: "Annuleren" })) return;
-    // The global stopped handler deliberately ignores idle, keeping the WAV for
-    // manual processing later. It must not upload a recording the user cancelled.
-    setPhase("idle");
+    // Keep the session busy until its WAV is finalized, without starting processing.
+    useRecordingStore.setState({ phase: "stopping", processOnStop: false });
     try {
       await stopRecording();
       saveQuickNote(filePathRef.current || useRecordingStore.getState().filePath || "", quickNote);
       useRecordingStore.getState().reset();
       await closeWidgetWindow();
     } catch (err) {
-      // The phase is already idle: drop the session and widget so the UI matches.
+      // The native stop command has finished with an error; retain the saved draft.
       useRecordingStore.getState().reset();
       closeWidgetWindow().catch((e) => console.error("[Recording] Widget close failed:", e));
-      setError(err instanceof Error ? err.message : "Stoppen mislukt");
+      setError(err instanceof Error ? err.message : typeof err === "string" ? err : "Stoppen mislukt");
     }
   }
 

@@ -61,8 +61,8 @@ export async function openWidgetWindow(): Promise<void> {
         await widget.setFocus();
         // Send the recording start timestamp so the widget timer stays in sync
         const { useRecordingStore } = await import("../stores/recordingStore");
-        const { recordingStartedAt, pausedDuration } = useRecordingStore.getState();
-        await emit("widget-sync-timer", { recordingStartedAt, pausedDuration });
+        const { phase, recordingStartedAt, pausedAt, pausedDuration } = useRecordingStore.getState();
+        await emit("widget-sync-timer", { phase, recordingStartedAt, pausedAt, pausedDuration });
       } catch (e) {
         console.error("[Widget] Show after create failed:", e);
       }

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { listen } from "@tauri-apps/api/event";
+import { emit, listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { stopRecording, pauseRecording, resumeRecording } from "../../services/tauriCommands";
 import { WaveformVisualizer } from "./WaveformVisualizer";
@@ -30,16 +30,20 @@ export function RecordingWidget() {
     }
 
     // Receive synced start time from main window
-    const unlistenSync = listen<{ recordingStartedAt: number | null; pausedDuration: number }>(
+    const unlistenSync = listen<{ phase: string; recordingStartedAt: number | null; pausedAt: number | null; pausedDuration: number }>(
       "widget-sync-timer",
       (event) => {
         if (event.payload.recordingStartedAt) {
           startedAtRef.current = event.payload.recordingStartedAt;
           pausedDurationRef.current = event.payload.pausedDuration ?? 0;
+          pausedAtRef.current = event.payload.pausedAt;
+          setState(event.payload.phase === "paused" ? "paused" : event.payload.phase === "stopping" ? "stopping" : "recording");
           setElapsed(calcElapsed());
         }
       }
     );
+
+    unlistenSync.then(() => emit("widget-ready")).catch(console.error);
 
     timerRef.current = setInterval(() => {
       setElapsed(calcElapsed());
@@ -58,7 +62,6 @@ export function RecordingWidget() {
   }, []);
 
   async function handleStop() {
-    if (timerRef.current) clearInterval(timerRef.current);
     setState("stopping");
     try {
       await stopRecording();
@@ -72,22 +75,8 @@ export function RecordingWidget() {
     try {
       if (state === "paused") {
         await resumeRecording();
-        // Accumulate paused duration
-        if (pausedAtRef.current) {
-          pausedDurationRef.current += Date.now() - pausedAtRef.current;
-          pausedAtRef.current = null;
-        }
-        timerRef.current = setInterval(() => {
-          const now = Date.now();
-          const totalPaused = pausedDurationRef.current;
-          setElapsed(Math.floor((now - startedAtRef.current - totalPaused) / 1000));
-        }, 1000);
-        setState("recording");
       } else {
         await pauseRecording();
-        pausedAtRef.current = Date.now();
-        if (timerRef.current) clearInterval(timerRef.current);
-        setState("paused");
       }
     } catch (e) {
       console.error("[Widget] Pause/resume failed:", e);

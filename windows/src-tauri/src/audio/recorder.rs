@@ -5,7 +5,7 @@ use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use tokio::sync::mpsc;
 use super::envelope::{EnvelopeConfig, EnvelopeProcessor, SpectrumProcessor};
-use super::types::{AudioDevice, RecordingCommand, RecordingEvent, RecordingMode};
+use super::types::{AudioDevice, RecordingCommand, RecordingEvent, RecordingMode, RecordingResult};
 
 const TARGET_SAMPLE_RATE: u32 = 16000;
 const CHANNELS: u16 = 1;
@@ -143,6 +143,7 @@ pub fn start_recording_thread(
     mode: RecordingMode,
     output_path: String,
     event_tx: mpsc::UnboundedSender<RecordingEvent>,
+    done_tx: tokio::sync::oneshot::Sender<Result<RecordingResult, String>>,
 ) -> Result<(mpsc::Sender<RecordingCommand>, tokio::sync::oneshot::Receiver<Result<(), String>>), String> {
     let (ready_tx, ready_rx) = tokio::sync::oneshot::channel();
     let (cmd_tx, mut cmd_rx) = mpsc::channel::<RecordingCommand>(16);
@@ -165,6 +166,7 @@ pub fn start_recording_thread(
             &rt_handle,
             &mut ready,
         );
+        let _ = done_tx.send(result.clone());
         if let Err(e) = result {
             if let Some(ready) = ready.take() { let _ = ready.send(Err(e.clone())); }
             let _ = event_tx.send(RecordingEvent::Error(e));
@@ -182,7 +184,7 @@ fn recording_thread_body(
     event_tx: &mpsc::UnboundedSender<RecordingEvent>,
     rt_handle: &tokio::runtime::Handle,
     ready: &mut Option<tokio::sync::oneshot::Sender<Result<(), String>>>,
-) -> Result<(), String> {
+) -> Result<RecordingResult, String> {
     let host = cpal::default_host();
 
     // Select input device
@@ -410,7 +412,7 @@ fn recording_thread_body(
 
     eprintln!("[Audio] Recording stopped, file: {}", output_path);
 
-    Ok(())
+    Ok(RecordingResult { file_path: output_path, duration_seconds: duration })
 }
 
 /// Resample audio using linear interpolation.
@@ -503,6 +505,19 @@ fn mix_wav_files(mic_path: &str, loopback_path: &str) -> Result<(), String> {
 #[cfg(test)]
 mod mix_tests {
     use super::*;
+
+    #[tokio::test]
+    async fn completion_does_not_depend_on_draining_visual_events() {
+        let (events, _unread_events) = mpsc::unbounded_channel();
+        let (done, result) = tokio::sync::oneshot::channel();
+        let (_commands, ready) = start_recording_thread(
+            Some("ThoughtVault QA missing device".into()), RecordingMode::Microphone,
+            "unused-qa-recording.wav".into(), events, done,
+        ).unwrap();
+        assert!(ready.await.unwrap().is_err());
+        let result = tokio::time::timeout(std::time::Duration::from_secs(5), result).await.unwrap().unwrap();
+        assert!(result.unwrap_err().contains("niet gevonden"));
+    }
 
     #[test]
     fn mixed_file_keeps_system_audio_when_microphone_is_silent() {

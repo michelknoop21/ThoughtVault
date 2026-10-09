@@ -29,6 +29,7 @@ interface RecordingState {
   elapsedSeconds: number;
   filePath: string | null;
   quickNote: string;
+  processOnStop: boolean;
   setQuickNote: (note: string) => void;
   autoStart: boolean;
   minimizeOnAutoStart: boolean;
@@ -96,6 +97,7 @@ export const useRecordingStore = create<RecordingState>()((set, get) => ({
   elapsedSeconds: 0,
   filePath: null,
   quickNote: "",
+  processOnStop: true,
   setQuickNote: (quickNote) => {
     const { phase, filePath } = get();
     set({ quickNote });
@@ -174,6 +176,7 @@ export const useRecordingStore = create<RecordingState>()((set, get) => ({
       elapsedSeconds: 0,
       filePath: null,
       quickNote: "",
+      processOnStop: true,
       autoStart: false,
       minimizeOnAutoStart: false,
       recordingStartedAt: null,

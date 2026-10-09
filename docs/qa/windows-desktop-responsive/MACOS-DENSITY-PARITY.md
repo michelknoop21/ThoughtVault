@@ -15,6 +15,7 @@ and provider traffic. They do not establish installed WebView or microphone beha
 | Settings | 40 tabs, adaptive 150 columns, 20 card padding; 342 side column at 1100 |
 | Lists | Content centered with maximum width 860 |
 | Tasks | Compact 52 toolbar and centered empty state |
+| Floating widget | 470 x 60; 120 x 32 waveform, 15 timer, 32 pause button; scaled monitor origin in logical coordinates |
 | Person sheet | All six fields and actions visible at supported minimum size |
 
 Regression checks: studioLayout.test.ts asserts native landmarks and waveform bounds
@@ -24,7 +25,7 @@ An old sticky bar or 240 sidebar fails these checks. Home notes intentionally sc
 below the native greeting and recording card, rather than compressing both to bring
 the first note above the fold.
 
-Validation: frontend build and 78 tests; browser matrices for 56 route/window sizes,
+Validation: frontend build and 79 tests; browser matrices for 56 route/window sizes,
 36 density/DPR measurements, 21 settings tab sizes, 6 onboarding steps and 3 person
 sheet sizes. Native installed candidate review is recorded separately after CI.
 No saved recordings, notes, people or provider configuration are replaced.

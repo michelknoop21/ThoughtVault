@@ -107,6 +107,7 @@ export function RecordingWidget() {
     <div className={`widget-pill ${isPaused ? "paused" : ""} ${isStopping ? "stopping" : ""}`}>
       {/* Drag region — entire pill is draggable except buttons */}
       <div className="widget-drag-region" data-tauri-drag-region>
+        <span className="widget-drag-handle" aria-hidden="true">{Array.from({ length: 6 }, (_, i) => <i key={i} />)}</span>
         {/* Status badge */}
         <div className={`widget-badge ${state}`}>
           <span className={`widget-badge-dot ${state}`} />

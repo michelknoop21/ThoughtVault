@@ -1,3 +1,4 @@
+import { RecordingWidget } from "./components/recording/RecordingWidget";
 import { OnboardingWizard } from "./components/onboarding/OnboardingWizard";
 import { SeedReviewSheet } from "./pages/SeedReviewSheet";
 import { usePeopleDirectoryStore } from "./stores/peopleDirectoryStore";
@@ -28,4 +29,6 @@ useLocalTranscriptsStore.setState({items:Array.from({length:8}, (_, i) => ({id:`
 usePeopleDirectoryStore.setState({people: [usePeopleDirectoryStore.getState().createDefaultPerson({name:"Voorbeeld persoon",role:"Projectleider",organization:"Voorbeeldteam"})]});
 if (new URLSearchParams(location.search).get("scenario") === "recording") useRecordingStore.setState({phase:"recording",recordingStartedAt:Date.now()});
 const pages = {"/onboarding":<OnboardingWizard/>,"/seed-review":<SeedReviewSheet candidates={["voorbeeld@example.test"]} onClose={() => history.back()}/>,"/":<HomePage/>,"/recording":<RecordingPage/>,"/tasks":<TasksPage/>,"/transcripts":<TranscriptsPage/>,"/profiles":<ProfilesPage/>,"/people":<PeoplePage/>,"/settings":<SettingsPage/>};
-ReactDOM.createRoot(document.getElementById("root")!).render(<HashRouter><div className="app-shell" data-theme="dark"><TitleBar/><div style={{flex:1,display:"flex",minHeight:0}}><Sidebar/><main className="app-main"><div className="app-main-content"><Routes>{Object.entries(pages).map(([path,element]) => <Route key={path} path={path} element={element}/>)}</Routes></div></main></div></div></HashRouter>);
+if (new URLSearchParams(location.search).get("scenario") === "widget") {
+ void import("./styles/widget.css").then(() => { const root = document.getElementById("root")!; root.id = "widget-root"; ReactDOM.createRoot(root).render(<RecordingWidget/>); });
+} else ReactDOM.createRoot(document.getElementById("root")!).render(<HashRouter><div className="app-shell" data-theme="dark"><TitleBar/><div style={{flex:1,display:"flex",minHeight:0}}><Sidebar/><main className="app-main"><div className="app-main-content"><Routes>{Object.entries(pages).map(([path,element]) => <Route key={path} path={path} element={element}/>)}</Routes></div></main></div></div></HashRouter>);

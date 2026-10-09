@@ -35,7 +35,7 @@ makes the measured parity checks reject both. The restored measurements pass aga
 after removing those rules. macOS was recording during the final candidate work,
 so it was left running and not updated or navigated after detecting active capture.
 
-## Built artifact and remaining installed review
+## Built artifact and installed review
 
 Windows CI run [37906510311](https://github.com/michelknoop21/ThoughtVault/actions/runs/37906510311)
 passed for source e2500e631d531a85a08b0d51a7632f1ebaa8767a, version 1.0.269.
@@ -44,10 +44,25 @@ installation/upgrade, two starts and preservation of saved notes on the CI host.
 Publication was disabled. MSI SHA256:
 `8468f79244a76cbd6f2a5d858ffa2f4c016172b213592e272b8bb196d841456e`.
 
-The real Windows PC was still on 1.0.268 before installation. Its existing notes
-were backed up locally without reading their contents and the idle app was closed
-normally. Before the candidate transfer, computer use failed repeatedly with
-ScreenCaptureKit error -3811, including after resetting the connection. The
-1.0.269 installation and full Royal TSX visual review are therefore pending,
-not passed. No live recording or provider call was initiated for this review.
-The floating widget was checked in the fixture, not during a native recording.
+The Royal TSX Dalf38 VPN review resumed on 2026-10-09 after the capture failure.
+The existing 1.0.268 installation was upgraded to 1.0.269 with installer exit 0.
+The executable and Settings > General both reported 1.0.269. Existing notes were
+backed up locally without reading their contents; SHA256 stayed identical after
+installation, navigation, normal exit and the second start. The second process
+reported Responding: True. No capture or provider request was initiated.
+
+Native coverage at a 1200 x 800 client area: Home, idle recording, Tasks, Notulen
+list and existing detail, People, and all seven settings tabs. Longer Processing
+and Notulen settings were scrolled to inspect their bottom actions. The six-field
+Person sheet fitted without scrolling and was cancelled without saving. The Yinga
+footer credit remained compact. At 880 x 600, recording and Home were also viewed
+with the sidebar collapsed; the Person sheet still fitted with all fields/actions.
+The maximized People screen and expanded/collapsed sidebar were reviewed too.
+
+This is visual acceptance for the inspected states against the macOS geometry
+reference, not a blanket pixel-perfect signoff. Narrow native recording selects
+ellipsize their selected values, while the inspector retains the full source and
+profile labels. macOS was left untouched because an earlier observation found
+active capture. Active recording, native floating widget, provider calls and every
+possible modal state remain outside this installed review. The floating widget
+was checked in the fixture and geometry tests, not during a native recording.

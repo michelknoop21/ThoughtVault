@@ -6,6 +6,8 @@ import Foundation
   let source = "<style>.Django{}</style><!-- Django --><p title=\"Django > x\">Django</p><a href=\"/Django\">Django</a><pre><code>Django</code></pre><script>Django</script><p>Jengo</p>"
   assert(PersonalCorrections.html(source, entries:[rule],profileId:nil) == source.replacingOccurrences(of:">Django</p>",with:">Yinga</p>").replacingOccurrences(of:">Jengo</p>",with:">Yinga</p>"))
   let scoped = PersonalCorrection(id:"profile",canonical:"Yinga",variants:["Django"],scope:"meeting")
+  assert(PersonalCorrections.active([rule,scoped],profileId:nil) == [rule])
+  assert(PersonalCorrections.active([rule,scoped],profileId:"meeting") == [rule,scoped])
   assert(PersonalCorrections.text("Django",entries:[scoped],profileId:"tech") == "Django")
   assert(PersonalCorrections.text("Django",entries:[scoped],profileId:"meeting") == "Yinga")
   let multi = PersonalCorrection(canonical:"Ján de Vries",variants:["Jan de Vries","Jan"])

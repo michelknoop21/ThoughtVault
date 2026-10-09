@@ -32,10 +32,10 @@ enum PersonalVocabulary {
     /// on-device directory (incl. the self-profile). MainActor because the
     /// people directory lives in SwiftData's mainContext.
     @MainActor
-    static func terms() -> [String] {
+    static func terms(profileId: String? = nil) -> [String] {
         var raw: [String] = []
         let custom = UserDefaults.standard.string(forKey: defaultsKey) ?? ""
-        raw += (try? PersonalCorrections.load())?.filter { $0.enabled }.map { $0.canonical } ?? []
+        raw += PersonalCorrections.active((try? PersonalCorrections.load()) ?? [], profileId: profileId).map { $0.canonical }
         raw += custom.components(separatedBy: CharacterSet(charactersIn: ",\n"))
 
         let context = LocalTranscriptStore.shared.container.mainContext
@@ -241,7 +241,7 @@ enum LocalTranscriberError: LocalizedError {
 protocol LocalTranscriber: Sendable {
     /// Transcribes an audio file fully locally and returns the text.
     /// - Parameter onProgress: coarse 0.0...1.0 progress (model download / transcription).
-    func transcribe(url: URL, onProgress: @Sendable @escaping (Double) -> Void) async throws -> String
+    func transcribe(url: URL, profileId: String?, onProgress: @Sendable @escaping (Double) -> Void) async throws -> String
 }
 
 // MARK: - Factory
@@ -304,7 +304,7 @@ struct AppleSpeechTranscriber: LocalTranscriber {
     /// are split into chunks and transcribed sequentially.
     private static let maxSingleRequestDuration: TimeInterval = 55
 
-    func transcribe(url: URL, onProgress: @Sendable @escaping (Double) -> Void) async throws -> String {
+    func transcribe(url: URL, profileId: String?, onProgress: @Sendable @escaping (Double) -> Void) async throws -> String {
         onProgress(0.05)
 
         let text: String
@@ -313,13 +313,13 @@ struct AppleSpeechTranscriber: LocalTranscriber {
             defer { chunks.forEach { try? FileManager.default.removeItem(at: $0) } }
             var parts: [String] = []
             for (index, chunkURL) in chunks.enumerated() {
-                let part = try await OnDeviceTranscriber.shared.transcribe(url: chunkURL)
+                let part = try await OnDeviceTranscriber.shared.transcribe(url: chunkURL, profileId: profileId)
                 parts.append(part)
                 onProgress(0.05 + 0.9 * (Double(index + 1) / Double(chunks.count)))
             }
             text = parts.joined(separator: " ")
         } else {
-            text = try await OnDeviceTranscriber.shared.transcribe(url: url)
+            text = try await OnDeviceTranscriber.shared.transcribe(url: url, profileId: profileId)
         }
 
         onProgress(1.0)
@@ -375,7 +375,7 @@ final class WhisperKitTranscriber: LocalTranscriber, @unchecked Sendable {
         }
     }
 
-    func transcribe(url: URL, onProgress: @Sendable @escaping (Double) -> Void) async throws -> String {
+    func transcribe(url: URL, profileId: String?, onProgress: @Sendable @escaping (Double) -> Void) async throws -> String {
         do {
             onProgress(0.02)
 
@@ -421,7 +421,7 @@ final class WhisperKitTranscriber: LocalTranscriber, @unchecked Sendable {
             options.chunkingStrategy = .vad
 
             // Bias recognition toward known names/terms via Whisper's initial prompt.
-            let vocab = await MainActor.run { PersonalVocabulary.terms() }
+            let vocab = await MainActor.run { PersonalVocabulary.terms(profileId: profileId) }
             if !vocab.isEmpty, let tokenizer = pipe.tokenizer {
                 let prompt = "Namen en termen: \(vocab.joined(separator: ", "))."
                 options.promptTokens = tokenizer.encode(text: " " + prompt)

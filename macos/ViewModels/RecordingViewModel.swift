@@ -753,7 +753,7 @@ final class RecordingViewModel {
             var fullTranscription = ""
 
             try LocalTranscriberFactory.validateAudioFile(at: url)
-            let result = try await onDeviceTranscriber.transcribe(url: url)
+            let result = try await onDeviceTranscriber.transcribe(url: url, profileId: profileId)
             await MainActor.run {
                 self.liveTranscriptText = result
                 fullTranscription = result
@@ -842,7 +842,7 @@ final class RecordingViewModel {
             try Task.checkCancellation()
             try LocalTranscriberFactory.validateAudioFile(at: url)
             let transcriber = LocalTranscriberFactory.make()
-            transcription = try await transcriber.transcribe(url: url) { [weak self] fraction in
+            transcription = try await transcriber.transcribe(url: url, profileId: profile.id) { [weak self] fraction in
                 Task { @MainActor in
                     guard let self else { return }
                     guard !Task.isCancelled else { return }

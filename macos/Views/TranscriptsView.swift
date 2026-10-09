@@ -2008,8 +2008,9 @@ struct TranscriptDetailView: View {
     }
 
     private var correctionProfileId: String? {
-        LocalTranscriptStore.shared.record(forTaskId: fullTranscript.taskId)?.profileId
-            ?? recordingVM.availableProfiles.first { $0.name == fullTranscript.profileName }?.id
+        let localId = LocalTranscriptStore.shared.record(forTaskId: fullTranscript.taskId)?.profileId
+        return localId.flatMap { $0.isEmpty ? nil : $0 }
+            ?? recordingVM.availableProfiles.first { $0.name == fullTranscript.profileName || $0.id == fullTranscript.profileName }?.id
     }
     private func openWordCorrection() {
         let entry = PersonalCorrection(scope: correctionProfileId)

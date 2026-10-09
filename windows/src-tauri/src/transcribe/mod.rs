@@ -177,7 +177,8 @@ pub async fn transcribe_local(
     }
 
     let vocabulary = vocabulary.unwrap_or_default();
-    if vocabulary.len() > 4096 || vocabulary.contains('\0') { return Err("Ongeldige woordenlijst".into()); }
+    // Thirty validated names of up to 120 characters also fit in UTF-8.
+    if vocabulary.len() > 16_384 || vocabulary.contains('\0') { return Err("Ongeldige woordenlijst".into()); }
     // whisper inference is blocking + CPU-heavy: keep it off the async runtime.
     tokio::task::spawn_blocking(move || run_whisper(app, &model, &file_path, &vocabulary))
         .await

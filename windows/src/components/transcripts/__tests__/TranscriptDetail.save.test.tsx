@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { expect, it, vi } from "vitest";
 const dictionary = vi.hoisted(()=>({entries:[],hydrate:vi.fn(async()=>{}),save:vi.fn(async()=>{})}));
 vi.mock("../../../stores/personalCorrectionsStore",()=>({usePersonalCorrectionsStore:{getState:()=>dictionary}}));
+import { DEFAULT_PROFILES } from "../../../types";
 import { TranscriptDetail } from "../TranscriptDetail";
 
 it("keeps an edited notule open when saving fails", async () => {
@@ -61,13 +62,14 @@ it("retains the selected-word correction after a failed note save and learns onl
   dictionary.save.mockClear();
   const container = document.createElement("div");document.body.append(container);
   const root = createRoot(container); const noop=vi.fn();
-  const note={id:"local-word",title:"Overleg",raw_transcription:"Jengo",notule_html:"<p>Jengo</p>",duration_seconds:10,tags:[],created_at:new Date().toISOString(),updated_at:new Date().toISOString()};
+  const note={id:"local-word",title:"Overleg",profile_name:DEFAULT_PROFILES[0].name,raw_transcription:"Jengo",notule_html:"<p>Jengo</p>",duration_seconds:10,tags:[],created_at:new Date().toISOString(),updated_at:new Date().toISOString()};
   await act(async()=>{root.render(<TranscriptDetail transcript={note} regeneratingId={null} onBack={noop} onRegenerate={noop} onDelete={noop} onUpdateTitle={async()=>{}} onSaveNotule={save} onCopy={noop} onExportPDF={noop} onExportTXT={noop} onExportMarkdown={noop} onExportHTML={noop} onExportObsidian={noop} onImportObsidian={noop} onOpenTags={noop} onGenerateTitle={noop}/>);});
   const node=container.querySelector(".td-doc-body p")!.firstChild!;
   const range=document.createRange();range.selectNodeContents(node);window.getSelection()!.removeAllRanges();window.getSelection()!.addRange(range);
   await act(async()=>{[...container.querySelectorAll("button")].find(b=>b.textContent==="Woord corrigeren")!.click();});
   const inputs=container.querySelectorAll<HTMLInputElement>(".correction-dialog input.input");
   expect(inputs[1].value).toBe("Jengo");
+  expect(container.querySelector<HTMLSelectElement>(".correction-dialog select")!.value).toBe(DEFAULT_PROFILES[0].id);
   await act(async()=>{
     Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,"value")!.set!.call(inputs[0],"Yinga");
     inputs[0].dispatchEvent(new Event("input",{bubbles:true}));

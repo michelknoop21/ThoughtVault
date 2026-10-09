@@ -1,4 +1,5 @@
 import { correctHTML, validateCorrections, upsertCorrection, type PersonalCorrection } from "../../services/personalCorrections";
+import { useProfilesStore } from "../../stores/profilesStore";
 import { usePersonalCorrectionsStore } from "../../stores/personalCorrectionsStore";
 import { CorrectionFields, newCorrection } from "../settings/PersonalCorrections";
 import { DesktopDialog } from "../ui/DesktopDialog";
@@ -144,7 +145,8 @@ export function TranscriptDetail({
   function openCorrection() {
     const selection = window.getSelection();
     const selected = selection?.anchorNode?.parentElement?.closest(".td-doc-body") ? selection.toString().trim() : "";
-    setCorrection({...newCorrection(transcript.profile_id ?? null), variants:[selected]});
+    const profileId = transcript.profile_id || useProfilesStore.getState().profiles.find(p => p.name === transcript.profile_name || p.id === transcript.profile_name)?.id;
+    setCorrection({...newCorrection(profileId ?? null), variants:[selected]});
     setRememberCorrection(true); setCorrectionError("");
   }
   async function saveCorrection() {

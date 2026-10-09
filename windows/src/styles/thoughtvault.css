@@ -465,3 +465,14 @@ dialog.desktop-dialog > [role="dialog"] > :first-child, dialog.desktop-dialog > 
 .desktop-notulen.has-detail > .tl-header-row { display: none; }
 
 .studio-transport > div:last-child .studio-round:not(.studio-record) { width: 70px; height: 70px; margin-top: 15px; }
+
+.personal-corrections { margin-bottom: 20px; padding: 20px; }
+.personal-corrections h3, .correction-dialog h3 { font-size: 18px; font-weight: 600; margin: 0 0 10px; }
+.personal-corrections > p { font-size: 14px; line-height: 1.5; color: var(--text-secondary); margin-bottom: 12px; }
+.correction-fields { display: grid; gap: 12px; margin-top: 16px; }
+.correction-fields label { display: grid; gap: 6px; font-size: 14px; }
+.correction-fields .input { width: 100%; }
+.correction-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 12px 0; border-bottom: 1px solid #303858; }
+.correction-row span { flex: 1; min-width: 150px; font-size: 13px; }
+.correction-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.correction-dialog { width: min(520px, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow-y: auto; padding: 24px; background: var(--bg-card, #101725); border: 1px solid #303858; border-radius: 16px; box-shadow: 0 20px 60px #0005; }

@@ -21,6 +21,8 @@ extension SettingsView {
                     quickSetupCard(advice)
                     transcriptionCard(advice)
                     notuleCard
+                    PersonalCorrectionsView(profiles: profiles)
+                        .padding(20).background(Color.surfaceSecondary).clipShape(RoundedRectangle(cornerRadius: 16))
                     if !layout.twoColumn {
                         verwerkingSide(specs, advice)
                     }
@@ -289,7 +291,7 @@ extension SettingsView {
         HStack(alignment: .top, spacing: 16) {
             Text("Eigen termen").font(.system(size: 14)).foregroundStyle(HomeColor.text2).frame(width: 96, alignment: .leading)
             VStack(alignment: .leading, spacing: 4) {
-                TextField("Michel, Django, …", text: $personalVocabulary, axis: .vertical)
+                TextField("Michel, Yinga, …", text: $personalVocabulary, axis: .vertical)
                     .textFieldStyle(.roundedBorder)
                     .autocorrectionDisabled()
                 Text("Komma-gescheiden. Deze termen en de personen uit de app sturen de herkenning van namen.")

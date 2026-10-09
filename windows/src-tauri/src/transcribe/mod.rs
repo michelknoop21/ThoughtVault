@@ -169,19 +169,22 @@ pub async fn transcribe_local(
     app: AppHandle,
     file_path: String,
     model_id: String,
+    vocabulary: Option<String>,
 ) -> Result<String, String> {
     let model = model_path(&app, &model_id)?;
     if !model.is_file() {
         return Err("Model nog niet gedownload".to_string());
     }
 
+    let vocabulary = vocabulary.unwrap_or_default();
+    if vocabulary.len() > 4096 || vocabulary.contains('\0') { return Err("Ongeldige woordenlijst".into()); }
     // whisper inference is blocking + CPU-heavy: keep it off the async runtime.
-    tokio::task::spawn_blocking(move || run_whisper(app, &model, &file_path))
+    tokio::task::spawn_blocking(move || run_whisper(app, &model, &file_path, &vocabulary))
         .await
         .map_err(|e| format!("Transcriptie-thread mislukt: {}", e))?
 }
 
-fn run_whisper(app: AppHandle, model: &PathBuf, wav_path: &str) -> Result<String, String> {
+fn run_whisper(app: AppHandle, model: &PathBuf, wav_path: &str, vocabulary: &str) -> Result<String, String> {
     use whisper_rs::{
         convert_integer_to_float_audio, FullParams, SamplingStrategy, WhisperContext,
         WhisperContextParameters,
@@ -234,6 +237,7 @@ fn run_whisper(app: AppHandle, model: &PathBuf, wav_path: &str) -> Result<String
 
         let mut params = FullParams::new(SamplingStrategy::Greedy { best_of: 1 });
         params.set_language(Some("nl"));
+        if !vocabulary.is_empty() { params.set_initial_prompt(vocabulary); }
         params.set_print_special(false);
         params.set_print_progress(false);
         params.set_print_realtime(false);

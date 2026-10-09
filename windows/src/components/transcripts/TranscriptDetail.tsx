@@ -1,3 +1,6 @@
+import { correctHTML, validateCorrections, upsertCorrection, type PersonalCorrection } from "../../services/personalCorrections";
+import { usePersonalCorrectionsStore } from "../../stores/personalCorrectionsStore";
+import { CorrectionFields, newCorrection } from "../settings/PersonalCorrections";
 import { DesktopDialog } from "../ui/DesktopDialog";
 import { useState, useRef, useEffect } from "react";
 import {
@@ -70,6 +73,9 @@ export function TranscriptDetail({
   const [isEditingNotule, setIsEditingNotule] = useState(false);
   const [editedHTML, setEditedHTML] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [correction, setCorrection] = useState<PersonalCorrection | null>(null);
+  const [rememberCorrection, setRememberCorrection] = useState(true);
+  const [correctionError, setCorrectionError] = useState("");
   const [exportOpen, setExportOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const titleInputRef = useRef<HTMLInputElement>(null);
@@ -135,6 +141,32 @@ export function TranscriptDetail({
     }
   }
 
+  function openCorrection() {
+    const selection = window.getSelection();
+    const selected = selection?.anchorNode?.parentElement?.closest(".td-doc-body") ? selection.toString().trim() : "";
+    setCorrection({...newCorrection(transcript.profile_id ?? null), variants:[selected]});
+    setRememberCorrection(true); setCorrectionError("");
+  }
+  async function saveCorrection() {
+    if (!correction) return;
+    setIsSaving(true); setCorrectionError("");
+    try {
+      const entry = {...correction, canonical:correction.canonical.trim(), variants:correction.variants.map(v=>v.trim())};
+      const store = usePersonalCorrectionsStore.getState();
+      await store.hydrate();
+      validateCorrections({version:1,entries:rememberCorrection ? upsertCorrection(store.entries,entry) : [entry]});
+      const html = correctHTML(isEditingNotule ? editedHTML : transcript.notule_html || "", [entry], entry.scope ?? undefined);
+      await onSaveNotule(transcript.id,html);
+      if (isEditingNotule) setEditedHTML(html);
+      if (rememberCorrection) {
+        try { await store.save(entry); }
+        catch(e) { setCorrectionError("Notule opgeslagen, maar de correctie is niet onthouden: " + String(e)); return; }
+      }
+      setCorrection(null);
+    } catch(e) { setCorrectionError(e instanceof Error ? e.message : String(e)); }
+    finally { setIsSaving(false); }
+  }
+
   const sanitizedNotule = transcript.notule_html
     ? DOMPurify.sanitize(
         prepareNotuleHtml(
@@ -181,6 +213,7 @@ export function TranscriptDetail({
           <>
             {isEditingNotule ? (
               <>
+                <button className="td-toolbar-btn td-toolbar-btn-labeled" onMouseDown={e => e.preventDefault()} onClick={openCorrection}>Woord corrigeren</button>
                 <button className="td-toolbar-btn td-toolbar-btn-accent td-toolbar-btn-labeled" onClick={saveNotuleEdit} disabled={isSaving}>
                   <Checkmark24Regular style={{ fontSize: 15 }} />
                   <span>{isSaving ? "Opslaan..." : "Opslaan"}</span>
@@ -192,6 +225,7 @@ export function TranscriptDetail({
               </>
             ) : (
               <>
+                <button className="td-toolbar-btn td-toolbar-btn-labeled" onMouseDown={e => e.preventDefault()} onClick={openCorrection} disabled={!transcript.notule_html}>Woord corrigeren</button>
                 <button className="td-toolbar-btn td-toolbar-btn-labeled" onClick={startNotuleEdit} disabled={!transcript.notule_html} title="Notule bewerken">
                   <Edit24Regular style={{ fontSize: 15 }} />
                   <span>Bewerken</span>
@@ -380,6 +414,14 @@ export function TranscriptDetail({
       </div>
 
       {/* Delete confirm */}
+      {correction && <DesktopDialog label="Woord corrigeren" onClose={() => { if(!isSaving)setCorrection(null); }}>
+        <div className="card-static correction-dialog"><h3>Woord corrigeren</h3><div className="correction-fields">
+          <CorrectionFields entry={correction} onChange={setCorrection} />
+          <label><span><input type="checkbox" checked={rememberCorrection} onChange={e => setRememberCorrection(e.target.checked)} /> Onthouden voor volgende opnames</span></label>
+          {correctionError && <p role="alert">{correctionError}</p>}
+          <div className="correction-actions"><button className="btn btn-secondary btn-sm" disabled={isSaving} onClick={() => setCorrection(null)}>Annuleren</button><button className="btn btn-accent btn-sm" disabled={isSaving} onClick={() => void saveCorrection()}>Corrigeren</button></div>
+        </div></div>
+      </DesktopDialog>}
       {deleteConfirm && (
         <DesktopDialog className="td-overlay" label="Notule verwijderen" onClose={() => setDeleteConfirm(false)}>
           <div className="td-confirm" onClick={(e) => e.stopPropagation()}>

@@ -6,16 +6,23 @@ import { createSSEClient } from "./sse";
 import { exportToObsidian } from "./obsidian";
 import { enqueue } from "./offlineQueue";
 import { linkQuickNote, getTranscriptQuickNote, ensureNotesSection } from "./quickNotes";
+import { usePersonalCorrectionsStore } from "../stores/personalCorrectionsStore";
+import { correctHTML } from "./personalCorrections";
 import type { Participant } from "./participants";
 import type { RecordingMode, TranscriptTask } from "../types";
 
 /**
  * The server never sees the quick note: a finished cloud notule gets its Notities section
- * on the client and is written back. Returns the html to show; a failed write-back is not fatal.
+ * on the client and is written back. Correction write failures must reach the caller.
  */
-export async function persistNotesSection(taskId: string, html: string): Promise<string> {
-  const fixed = ensureNotesSection(html, getTranscriptQuickNote(taskId));
-  if (fixed !== html) await api.updateNotuleHTML(taskId, fixed).catch((e) => console.warn("Notities-sectie terugschrijven mislukt:", e));
+export async function persistNotesSection(taskId: string, html: string, profileId?: string): Promise<string> {
+  await usePersonalCorrectionsStore.getState().hydrate();
+  const withNotes = ensureNotesSection(html, getTranscriptQuickNote(taskId));
+  const fixed = correctHTML(withNotes, usePersonalCorrectionsStore.getState().entries, profileId);
+  if (fixed !== html) await api.updateNotuleHTML(taskId, fixed).catch((e) => {
+    if (fixed !== withNotes) throw e;
+    console.warn("Notities-sectie terugschrijven mislukt:", e);
+  });
   return fixed;
 }
 
@@ -81,7 +88,7 @@ export async function uploadAndTrack(
         const completed = transcripts.find(transcript => transcript.task_id === task_id || transcript.id === task_id);
         if (!completed) throw new Error("Het resultaat is nog niet beschikbaar. Vernieuw Opnames om het op te halen.");
         {
-          if (completed.notule_html) completed.notule_html = await persistNotesSection(task_id, completed.notule_html);
+          if (completed.notule_html) completed.notule_html = await persistNotesSection(task_id, completed.notule_html, profileId);
           addTranscript(completed);
           // Auto-export the freshly completed notule to Obsidian (fire-and-forget).
           const settings = useSettingsStore.getState();

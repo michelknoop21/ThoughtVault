@@ -1028,6 +1028,7 @@ struct TranscriptDetailView: View {
 
     @State var isEditingNotule = false
     @State var editedHTML = ""
+    @State private var wordCorrection: PersonalCorrection?
     @State private var pendingObsidianImport: (filename: String, markdown: String, html: String)?
 
     // MARK: State - errors
@@ -1113,6 +1114,9 @@ struct TranscriptDetailView: View {
             Button("Annuleren", role: .cancel) { pendingObsidianImport = nil }
         } message: {
             Text("De versie uit Obsidian vervangt de huidige notule in ThoughtVault.")
+        }
+        .sheet(item: $wordCorrection) { entry in
+            WordCorrectionSheet(entry: entry, profiles: recordingVM.availableProfiles, apply: applyWordCorrection)
         }
         .sheet(isPresented: $showProfileSheet) {
             ProfileSelectionSheet(mode: profileSheetMode) { profile, usePremium in
@@ -1467,6 +1471,10 @@ struct TranscriptDetailView: View {
                         selectedTab = .notule
                     }
                 }
+            }
+
+            if selectedTab == .notule, fullTranscript.notuleHtml != nil {
+                detailIconButton(icon: "textformat.abc", label: "Woord corrigeren") { openWordCorrection() }
             }
 
             // Generate title from notule content
@@ -1999,6 +2007,51 @@ struct TranscriptDetailView: View {
         }
     }
 
+    private var correctionProfileId: String? {
+        LocalTranscriptStore.shared.record(forTaskId: fullTranscript.taskId)?.profileId
+            ?? recordingVM.availableProfiles.first { $0.name == fullTranscript.profileName }?.id
+    }
+    private func openWordCorrection() {
+        let entry = PersonalCorrection(scope: correctionProfileId)
+        #if os(macOS)
+        if let webView = editableWebViewRef {
+            Task { @MainActor in
+                var selectedEntry = entry
+                if let selected = try? await webView.evaluateJavaScript("window.getSelection().toString()") as? String {
+                    selectedEntry.variants = [selected.trimmingCharacters(in: .whitespacesAndNewlines)]
+                }
+                wordCorrection = selectedEntry
+            }
+            return
+        }
+        #endif
+        wordCorrection = entry
+    }
+    private func applyWordCorrection(_ draft: PersonalCorrection, remember: Bool) async throws {
+        var entry = draft
+        entry.canonical = entry.canonical.trimmingCharacters(in: .whitespacesAndNewlines)
+        entry.variants = entry.variants.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+        let entries = try PersonalCorrections.load()
+        try PersonalCorrections.validate(CorrectionDocument(entries: remember ? PersonalCorrections.upsert(entries, entry: entry) : [entry]))
+        let original = isEditingNotule ? restoreNotuleMarkup(original: fullTranscript.notuleHtml ?? "", editedBody: editedHTML) : fullTranscript.notuleHtml ?? ""
+        let html = PersonalCorrections.html(original, entries: [entry], profileId: entry.scope)
+        if isLocalTranscript(fullTranscript.taskId) {
+            try LocalTranscriptStore.shared.updateNotule(taskId: fullTranscript.taskId, html: html)
+        } else {
+            try await APIService.shared.updateNotuleHTML(taskId: fullTranscript.taskId, html: html)
+        }
+        fullTranscript.notuleHtml = html
+        if isEditingNotule { editedHTML = prepareNotuleContent(html); isEditingNotule = false }
+        if remember {
+            do { try PersonalCorrections.save(PersonalCorrections.upsert(entries, entry: entry)) }
+            catch { throw NSError(domain: "PersonalCorrections", code: 2, userInfo: [NSLocalizedDescriptionKey: "Notule opgeslagen, maar de correctie is niet onthouden: " + error.localizedDescription]) }
+        }
+        if ObsidianService.isEnabled {
+            do { try await ObsidianService.tryExport(title: fullTranscript.title, html: html, date: fullTranscript.date, participants: [], profileName: fullTranscript.profileName, tags: fullTranscript.tags, noteID: fullTranscript.taskId) }
+            catch { errorMessage = "Notule opgeslagen, maar Obsidian-sync mislukt: " + error.localizedDescription }
+        }
+    }
+
     private func saveNotuleEdits() async {
         let editedBody = editedHTML.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !editedBody.isEmpty else { return }
@@ -2074,10 +2127,11 @@ struct TranscriptDetailView: View {
                 if updated.status == .completed {
                     let completed = try await APIService.shared.getTranscript(taskId: fullTranscript.taskId)
                     if let serverHtml = updated.notuleHtml ?? completed.notuleHtml {
-                        let html = await recordingVM.addNotesSectionToCloudNotule(
-                            taskId: fullTranscript.taskId, html: serverHtml, force: true)
+                        let html = try await recordingVM.addNotesSectionToCloudNotule(
+                            taskId: fullTranscript.taskId, html: serverHtml, profileId: profileId, force: true)
                         fullTranscript.notuleHtml = html
                         fullTranscript.title = completed.title
+                        fullTranscript.profileName = recordingVM.availableProfiles.first { $0.id == profileId }?.name ?? completed.profileName
                         selectedTab = .notule
                         if ObsidianService.isEnabled {
                             ObsidianService.tryExportDetached(

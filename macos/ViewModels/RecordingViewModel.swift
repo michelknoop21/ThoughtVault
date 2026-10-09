@@ -918,12 +918,14 @@ final class RecordingViewModel {
         do {
             try Task.checkCancellation()
             let service = LLMServiceFactory.service(for: provider, serverURL: "")
+            let corrections = try PersonalCorrections.load()
             let html = try await service.generateNotulen(
-                transcription: transcription,
+                transcription: PersonalCorrections.text(transcription, entries: corrections, profileId: profile.id),
                 systemPrompt: profile.systemPrompt ?? "",
                 notulePrompt: QuickNoteStore.promptBlock(QuickNoteStore.note(audioFilename: url.lastPathComponent))
                     + Self.injectParticipants(into: profile.notulePrompt ?? "", participants: participants)
-                    + PersonalVocabulary.promptInstruction(),
+                    + PersonalVocabulary.promptInstruction()
+                    + PersonalCorrections.prompt(corrections, profileId: profile.id),
                 outputTemplate: profile.template
             ) { [weak self] chunk in
                 Task { @MainActor in
@@ -934,9 +936,9 @@ final class RecordingViewModel {
             }
             try Task.checkCancellation()
 
-            let datedHtml = Self.injectDate(
+            let datedHtml = PersonalCorrections.html(Self.injectDate(
                 into: QuickNoteStore.ensureNotesSection(Self.stripCodeFences(html), note: QuickNoteStore.note(audioFilename: url.lastPathComponent)),
-                date: record.createdAt)
+                date: record.createdAt), entries: corrections, profileId: profile.id)
             guard Self.hasUsableNotule(datedHtml) else {
                 throw LLMError.generationFailed("De notule bevat geen bruikbare inhoud. Controleer de transcriptie en probeer opnieuw.")
             }
@@ -1045,25 +1047,27 @@ final class RecordingViewModel {
 
         let service = LLMServiceFactory.service(for: provider, serverURL: "")
         do {
+            let corrections = try PersonalCorrections.load()
             let html = try await service.generateNotulen(
-                transcription: record.rawTranscription,
+                transcription: PersonalCorrections.text(record.rawTranscription, entries: corrections, profileId: profile.id),
                 systemPrompt: profile.systemPrompt ?? "",
                 notulePrompt: QuickNoteStore.promptBlock(QuickNoteStore.note(forTranscriptId: taskId))
                     + Self.injectParticipants(into: profile.notulePrompt ?? "", participants: record.participants)
-                    + PersonalVocabulary.promptInstruction(),
+                    + PersonalVocabulary.promptInstruction()
+                    + PersonalCorrections.prompt(corrections, profileId: profile.id),
                 outputTemplate: profile.template
             ) { [weak self] _ in
                 Task { @MainActor in self?.updateTask(regenerationId, status: .generatingLocal, progress: 0.85) }
             }
 
-            let datedHtml = Self.injectDate(
+            let datedHtml = PersonalCorrections.html(Self.injectDate(
                 into: QuickNoteStore.ensureNotesSection(Self.stripCodeFences(html), note: QuickNoteStore.note(forTranscriptId: taskId)),
-                date: record.createdAt)
+                date: record.createdAt), entries: corrections, profileId: profile.id)
             guard Self.hasUsableNotule(datedHtml) else {
                 throw LLMError.generationFailed("De notule bevat geen bruikbare inhoud. Controleer de transcriptie en probeer opnieuw.")
             }
             let title = NotuleTitleExtractor.extract(from: datedHtml) ?? record.title
-            try LocalTranscriptStore.shared.finalizeNotule(taskId: taskId, html: datedHtml, title: title)
+            try LocalTranscriptStore.shared.finalizeNotule(taskId: taskId, html: datedHtml, title: title, profileId: profile.id, profileName: profile.name)
             updateTask(regenerationId, status: .completed, progress: 1)
             return (datedHtml, title)
         } catch {
@@ -1492,13 +1496,15 @@ final class RecordingViewModel {
         // passed here.
         if updatedTask.status == .completed, let html = updatedTask.notuleHtml, !html.isEmpty {
             Task { @MainActor in
-                let html = await self.addNotesSectionToCloudNotule(taskId: updatedTask.taskId, html: html)
+                let correctedHTML: String
+                do { correctedHTML = try await self.addNotesSectionToCloudNotule(taskId: updatedTask.taskId, html: html, profileId: updatedTask.profileId) }
+                catch { self.updateTask(updatedTask.id, status: .error, errorMessage: "Woordenlijst toepassen mislukt: " + error.localizedDescription); return }
                 guard ObsidianService.isEnabled else { return }
-                let title = NotuleTitleExtractor.extract(from: html)
+                let title = NotuleTitleExtractor.extract(from: correctedHTML)
                     ?? (updatedTask.filename as NSString).deletingPathExtension
                 ObsidianService.tryExportDetached(
                     title: title,
-                    html: html,
+                    html: correctedHTML,
                     date: updatedTask.createdAt ?? Date(),
                     participants: [],
                     profileName: updatedTask.profileId,
@@ -1512,14 +1518,17 @@ final class RecordingViewModel {
 
     /// The server never sees the quick note: a finished cloud notule gets its Notities section
     /// on the client and is written back. Once per task, so repeated completion events stay quiet; a regenerate forces it because the server wiped the section.
-    func addNotesSectionToCloudNotule(taskId: String, html: String, force: Bool = false) async -> String {
-        let fixed = QuickNoteStore.ensureNotesSection(html, note: QuickNoteStore.note(forTranscriptId: taskId))
+    func addNotesSectionToCloudNotule(taskId: String, html: String, profileId: String? = nil, force: Bool = false) async throws -> String {
+        let entries = try PersonalCorrections.load()
+        let withNotes = QuickNoteStore.ensureNotesSection(html, note: QuickNoteStore.note(forTranscriptId: taskId))
+        let fixed = PersonalCorrections.html(withNotes, entries: entries, profileId: profileId)
         guard fixed != html, force || notesSectionWritten.insert(taskId).inserted else { return fixed }
         do {
             try await APIService.shared.updateNotuleHTML(taskId: taskId, html: fixed)
             if let index = activeTasks.firstIndex(where: { $0.taskId == taskId }) { activeTasks[index].notuleHtml = fixed }
         } catch {
             notesSectionWritten.remove(taskId)
+            if fixed != withNotes { throw error }
             os_log("[RecordingVM] Notities-sectie terugschrijven mislukt voor %{public}@: %{public}@", log: .default, type: .error, taskId, error.localizedDescription)
         }
         return fixed

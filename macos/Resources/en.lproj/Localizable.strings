@@ -438,3 +438,17 @@
 "Herhaal wachtwoord" = "Repeat password";
 "Opslaan..." = "Saving…";
 "Je kunt nu inloggen met je nieuwe wachtwoord." = "You can now sign in with your new password.";
+
+// Personal corrections
+"Correcte term" = "Correct term";
+"Bijvoorbeeld Yinga" = "For example Yinga";
+"Verkeerde spellingen (komma-gescheiden)" = "Incorrect spellings (comma separated)";
+"Bijvoorbeeld Jengo, Django" = "For example Jengo, Django";
+"Toepassen op" = "Apply to";
+"Alle opnames" = "All recordings";
+"Iedere passende vermelding wordt vervangen. Kies een opnameprofiel als de variant ook een andere betekenis heeft." = "Every matching mention is replaced. Choose a recording profile if the variant also has another meaning.";
+"Woorden en namen" = "Words and names";
+"Corrigeer een naam één keer en onthoud de juiste spelling voor volgende notulen. Deze lijst blijft op dit apparaat." = "Correct a name once and remember its spelling for future minutes. This list stays on this device.";
+"Woord toevoegen" = "Add word";
+"Woord corrigeren" = "Correct word";
+"Onthouden voor volgende opnames" = "Remember for future recordings";

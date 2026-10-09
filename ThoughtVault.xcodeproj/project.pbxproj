@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		AA00PC02 /* PersonalCorrectionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA00PC02 /* PersonalCorrectionsView.swift */; };
+		AA00PC01 /* PersonalCorrections.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA00PC01 /* PersonalCorrections.swift */; };
 		AASIRI01 /* siriwave-MIT.txt in Resources */ = {isa = PBXBuildFile; fileRef = FASIRI01 /* siriwave-MIT.txt */; };
 		AB0000S5 /* QuickNoteStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000S5 /* QuickNoteStoreTests.swift */; };
 		AB9E5A02 /* VaultFolderStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB9E5A02 /* VaultFolderStoreTests.swift */; };
@@ -143,6 +145,8 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		FA00PC02 /* PersonalCorrectionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "../Views/PersonalCorrectionsView.swift"; sourceTree = "<group>"; };
+		FA00PC01 /* PersonalCorrections.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonalCorrections.swift; sourceTree = "<group>"; };
 		FASIRI01 /* siriwave-MIT.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "siriwave-MIT.txt"; sourceTree = "<group>"; };
 		FB0000S5 /* QuickNoteStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickNoteStoreTests.swift; sourceTree = "<group>"; };
 		FB9E5A02 /* VaultFolderStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VaultFolderStoreTests.swift; sourceTree = "<group>"; };
@@ -375,6 +379,8 @@
 				FA000062 /* LocalTranscriptStore.swift */,
 				FA000071 /* PersonDirectoryService.swift */,
 				FA000063 /* LocalTranscriber.swift */,
+				FA00PC02 /* PersonalCorrectionsView.swift */,
+				FA00PC01 /* PersonalCorrections.swift */,
 				FA000090 /* AudioChunker.swift */,
 				CAFE0014 /* SettingsSyncService.swift */,
 				FA000091 /* AudioEnvelopeProcessor.swift */,
@@ -646,6 +652,8 @@
 				AA000062 /* LocalTranscriptStore.swift in Sources */,
 				AA000071 /* PersonDirectoryService.swift in Sources */,
 				AA000063 /* LocalTranscriber.swift in Sources */,
+				AA00PC02 /* PersonalCorrectionsView.swift in Sources */,
+				AA00PC01 /* PersonalCorrections.swift in Sources */,
 				AA000090 /* AudioChunker.swift in Sources */,
 				AA000091 /* AudioEnvelopeProcessor.swift in Sources */,
 				AA000064 /* NotuleTitleExtractor.swift in Sources */,
@@ -903,7 +911,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 269;
+				CURRENT_PROJECT_VERSION = 270;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = XL9KN38ATX;
 				ENABLE_APP_SANDBOX = YES;
@@ -921,7 +929,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.2;
-				MARKETING_VERSION = 1.0.269;
+				MARKETING_VERSION = 1.0.270;
 				PRODUCT_BUNDLE_IDENTIFIER = com.buildmind.ThoughtVault;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "macosx iphoneos iphonesimulator";
@@ -944,7 +952,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 269;
+				CURRENT_PROJECT_VERSION = 270;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = XL9KN38ATX;
 				ENABLE_APP_SANDBOX = YES;
@@ -962,7 +970,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.2;
-				MARKETING_VERSION = 1.0.269;
+				MARKETING_VERSION = 1.0.270;
 				PRODUCT_BUNDLE_IDENTIFIER = com.buildmind.ThoughtVault;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "macosx iphoneos iphonesimulator";
@@ -979,12 +987,12 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 269;
+				CURRENT_PROJECT_VERSION = 270;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.2;
-				MARKETING_VERSION = 1.0.269;
+				MARKETING_VERSION = 1.0.270;
 				PRODUCT_BUNDLE_IDENTIFIER = com.buildmind.ThoughtVaultTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "macosx iphoneos iphonesimulator";
@@ -999,12 +1007,12 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 269;
+				CURRENT_PROJECT_VERSION = 270;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.2;
-				MARKETING_VERSION = 1.0.269;
+				MARKETING_VERSION = 1.0.270;
 				PRODUCT_BUNDLE_IDENTIFIER = com.buildmind.ThoughtVaultTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "macosx iphoneos iphonesimulator";

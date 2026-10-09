@@ -2,8 +2,10 @@ import { beforeEach, expect, it, vi } from "vitest";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { LLMService } from "../llm";
 
+const corrections = vi.hoisted(() => ({entries:[] as import("../personalCorrections").PersonalCorrection[]}));
 const { loadCredential } = vi.hoisted(() => ({ loadCredential: vi.fn() }));
 const { invoke } = vi.hoisted(() => ({ invoke: vi.fn() }));
+vi.mock("../../stores/personalCorrectionsStore", () => ({ usePersonalCorrectionsStore: { getState: () => ({hydrate:async () => {},entries:corrections.entries}) } }));
 vi.mock("../tauriCommands", () => ({ loadCredential }));
 vi.mock("@tauri-apps/api/core", () => ({ invoke }));
 
@@ -17,6 +19,7 @@ const profile = {
 
 beforeEach(() => {
   vi.resetAllMocks();
+  corrections.entries = [];
   useSettingsStore.setState({ processing_mode: "local", notulen_provider: "ollama" });
 });
 
@@ -77,4 +80,18 @@ it("appends the raw note as a Notities section when the model left it out", asyn
   invoke.mockResolvedValue({ status: 200, body: JSON.stringify({ choices: [{ message: { content: "<p>Besluit</p>" } }] }) });
   const html = await LLMService.generateNotulen("Akkoord.", profile, undefined, [], "Let op het budget.");
   expect(html).toBe("<p>Besluit</p><h2>Notities</h2><p>Let op het budget.</p>");
+});
+
+it("corrects derived provider input and returned HTML without changing the raw transcript", async () => {
+  corrections.entries = [{id:"brand",canonical:"Yinga",variants:["Jengo","Django"],scope:"custom",enabled:true}];
+  useSettingsStore.setState({notulen_provider:"openai"});
+  loadCredential.mockResolvedValue("test-key");
+  invoke.mockResolvedValue({status:200,body:JSON.stringify({choices:[{message:{content:'<p title="Django">Django</p><code>Django</code>'}}]})});
+  const raw = "Jengo bespreekt de planning.";
+  const html = await LLMService.generateNotulen(raw,profile);
+  const messages = JSON.parse(invoke.mock.calls[0][1].request.body).messages;
+  expect(messages[1].content).toContain("Jengo, Django -> Yinga");
+  expect(messages[1].content).toContain("Yinga bespreekt de planning.");
+  expect(html).toBe('<p title="Django">Yinga</p><code>Django</code>');
+  expect(raw).toBe("Jengo bespreekt de planning.");
 });

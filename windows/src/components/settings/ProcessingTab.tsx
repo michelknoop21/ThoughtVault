@@ -17,6 +17,8 @@ import { useRecordingStore } from "../../stores/recordingStore";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { SettingsField, CredentialField } from "./SettingsFields";
 
+import { PersonalCorrections } from "./PersonalCorrections";
+
 export function ProcessingTab() {
   const [specs, setSpecs] = useState<SystemSpecs | null>(null);
   const [specError, setSpecError] = useState("");
@@ -309,7 +311,7 @@ export function ProcessingTab() {
           </div>
 
 
-    </div><aside className="processing-side">
+    <PersonalCorrections /></div><aside className="processing-side">
       <section className="northstar-card"><h3>Jouw pc</h3>{specs ? <dl className="system-specs"><div><dt>Processor</dt><dd>{specs.cpu || "Onbekend"}</dd></div><div><dt>Architectuur</dt><dd>{specs.architecture}</dd></div><div><dt>Geheugen</dt><dd>{specs.memory_gb} GB</dd></div><div><dt>Processorkernen</dt><dd>{specs.threads} threads</dd></div>{specs.free_storage_gb !== null && <div><dt>Opslag vrij</dt><dd>{specs.free_storage_gb} GB</dd></div>}<div><dt>Systeem</dt><dd>{specs.os_version}</dd></div></dl> : <p>{specError || "Systeemgegevens ophalen…"}</p>}</section>
       <section className="northstar-card"><h3>Aanbevolen model</h3><h4>{advice.name}</h4><p>{advice.reason}</p><p>✓ Lokale transcriptie · Nederlands</p><p>{WHISPER_MODELS.find(m => m.id === advice.model)?.size} · CPU-verwerking</p>
         <button className="btn btn-secondary" disabled={downloading} onClick={() => settings.updateSettings({ processing_mode: "local", whisper_model: advice.model })}>Gebruik dit model</button><p>Downloadstatus en modelkeuze staan bij Transcriptie.</p>

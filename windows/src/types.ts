@@ -70,6 +70,7 @@ export interface TranscriptTask {
 
 // Completed saved transcript
 export interface Transcript {
+  profile_id?: string;
   id: string;
   task_id?: string;
   title: string;

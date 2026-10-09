@@ -1,6 +1,7 @@
 mod audio;
 mod commands;
 mod transcribe;
+mod personal_corrections;
 
 use commands::audio::SharedRecordingState;
 use std::sync::{Arc, Mutex};
@@ -98,6 +99,8 @@ pub fn run() {
             transcribe::remove_whisper_model,
             transcribe::show_whisper_model,
             transcribe::transcribe_local,
+            personal_corrections::load_personal_corrections,
+            personal_corrections::save_personal_corrections,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

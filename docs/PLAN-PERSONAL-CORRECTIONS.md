@@ -1,7 +1,7 @@
 # Een keer corrigeren, daarna onthouden
 
-Status: implementatievoorstel, nog niet ingebouwd. Gebaseerd op broncontrole op
-2026-10-09. Geldt voor de desktopapps macOS en Windows.
+Status: goedgekeurd en geïmplementeerd in de desktopbron op 2026-10-09.
+Native installatie en een nieuwe opname met echte AI-provider blijven apart te verifiëren.
 
 ## Bestaande basis
 
@@ -79,3 +79,44 @@ varianten; opslagfout behoudt de editorinhoud; ruwe transcriptie blijft behouden
 notulenregeneratie en Obsidian-export gebruiken de correctie op beide platforms.
 Native acceptatie: dezelfde correctie eenmaal aanmaken, app opnieuw openen en een
 nieuwe korte opname verwerken met zowel een lokale als een ingestelde cloudprovider.
+
+## Ingebouwde bediening en verificatie
+
+Selecteer in een notule een woord, kies **Woord corrigeren**, vul de correcte term
+in en kies **Corrigeren**. **Onthouden voor volgende opnames** slaat de relatie
+lokaal op. Extra varianten voor dezelfde term en hetzelfde bereik worden samengevoegd.
+Beheer, wijzig, deactiveer of verwijder regels via **Instellingen > Verwerking >
+Woorden en namen**. Bestaande notulen veranderen alleen na een expliciete correctie
+of opnieuw genereren. De ruwe transcriptie blijft behouden.
+
+Eigen providerverwerking gebruikt gecorrigeerde afgeleide invoer, een begrensde
+woordenprompt en controle van de gegenereerde HTML. De bestaande accountbackendroute
+krijgt geen persoonlijke woordenlijst: daarvoor corrigeert de desktopclient het
+resultaat en schrijft het terug. Een mislukte terugschrijving van correcties wordt
+als fout gemeld. De export gebruikt de opgeslagen gecorrigeerde notule.
+
+Beide platforms gebruiken versie 1 van `personal-corrections.json`, met expliciete
+`scope: null` voor globale regels. Opslag gebruikt atomair vervangen van een bestand.
+Er is geen automatische synchronisatie tussen apparaten. Spraakherkenning krijgt
+maximaal 30 correcte termen als voorkeur; die voorkeur garandeert geen juiste
+herkenning. Alleen expliciete varianten worden achteraf vervangen. HTML-entiteiten
+blijven ongemoeid; een naam die door entiteiten of tags wordt opgesplitst valt niet
+onder de eerste exacte-vervangingsversie.
+
+Herhaalbare broncontroles:
+
+```sh
+# Vanuit windows/
+npm run build
+npx vitest run
+# Vanuit windows/src-tauri/
+cargo test --lib
+# Vanuit de repositoryroot
+swiftc macos/Services/PersonalCorrections.swift scripts/check-personal-corrections.swift -o /tmp/thoughtvault-corrections-check
+/tmp/thoughtvault-corrections-check
+```
+
+De UI-fixture controleerde de geselecteerde variant, opslaan in de notule en behoud
+van het ruwe transcript. Componenttests controleren dat een opslagfout het formulier
+behoudt en de regel niet leert. Dit vervangt de native acceptatie met echte opname,
+AI-provider en Obsidian-vault niet.

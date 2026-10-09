@@ -6,6 +6,9 @@ import { invoke } from "@tauri-apps/api/core";
 import { DEFAULT_SETTINGS } from "../types";
 import type { Profile, NotulenProvider } from "../types";
 
+import { usePersonalCorrectionsStore } from "../stores/personalCorrectionsStore";
+import { correctText, correctHTML, correctionPrompt } from "./personalCorrections";
+
 interface LLMConfig {
   provider: NotulenProvider;
   ollamaUrl: string;
@@ -206,11 +209,14 @@ export class LLMService {
     participants: string[] = [],
     quickNote: string = "",
   ): Promise<string> {
+    await usePersonalCorrectionsStore.getState().hydrate();
+    const corrections = usePersonalCorrectionsStore.getState().entries;
+    const finish = (html: string) => correctHTML(ensureNotesSection(stripCodeFences(html), quickNote), corrections, profile.id);
     const config = getConfig();
     const enriched = enrichProfile(profile);
-    const userPrompt = quickNotePrompt(quickNote) + buildUserContent(
+    const userPrompt = correctionPrompt(corrections, profile.id) + quickNotePrompt(quickNote) + buildUserContent(
       enriched.notule_prompt ?? "",
-      transcription,
+      correctText(transcription, corrections, profile.id),
       enriched.output_template ?? enriched.notule_template,
       participants
     );
@@ -225,7 +231,7 @@ export class LLMService {
         apiKey ?? "",
         onProgress
       );
-      return ensureNotesSection(stripCodeFences(html), quickNote);
+      return finish(html);
     }
 
     if (config.provider === "lm-studio") {
@@ -237,17 +243,17 @@ export class LLMService {
         "",
         onProgress
       );
-      return ensureNotesSection(stripCodeFences(html), quickNote);
+      return finish(html);
     }
 
     if (config.provider === "openai" || config.provider === "anthropic") {
       const provider = config.provider;
       const key = await loadCredential(`${provider}_api_key`);
       if (!key) throw new Error(`Vul je ${provider === "openai" ? "OpenAI" : "Anthropic"} API-sleutel in bij Instellingen.`);
-      return ensureNotesSection(stripCodeFences(await generateWithHostedAPI(
+      return finish(await generateWithHostedAPI(
         provider, provider === "openai" ? config.openAIModel : config.anthropicModel,
         enriched.system_prompt ?? "", userPrompt, key, onProgress,
-      )), quickNote);
+      ));
     }
 
     throw new Error("Cloud provider moet via de server worden verwerkt");

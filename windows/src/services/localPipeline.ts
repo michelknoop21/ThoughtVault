@@ -10,6 +10,8 @@ import { exportToObsidian } from "./obsidian";
 import { extractTitle } from "./titleExtractor";
 import { getQuickNote } from "./quickNotes";
 import { hasUsableNotule, hasUsableTranscription } from "./notuleValidation";
+import { usePersonalCorrectionsStore } from "../stores/personalCorrectionsStore";
+import { activeCorrections } from "./personalCorrections";
 import type { Participant } from "./participants";
 import type { RecordingMode, Transcript, TranscriptTask } from "../types";
 
@@ -84,9 +86,12 @@ export async function processLocally(
         updateBackgroundTask(taskId, { progress: Math.round(10 + frac * 40) });
       });
       try {
+        await usePersonalCorrectionsStore.getState().hydrate();
+        const vocabulary = activeCorrections(usePersonalCorrectionsStore.getState().entries, profile.id).slice(0,30).map(e => e.canonical).join(", ");
         transcription = await invoke<string>("transcribe_local", {
           filePath,
           modelId: model,
+          vocabulary,
         });
       } finally {
         unlistenTr();
@@ -107,6 +112,7 @@ export async function processLocally(
         notule_html: "",
         duration_seconds: durationSeconds,
         profile_name: profile?.name,
+        profile_id: profile?.id,
         tags: [],
         has_transcription: true,
         has_notes: false,

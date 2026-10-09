@@ -35,6 +35,7 @@ enum PersonalVocabulary {
     static func terms() -> [String] {
         var raw: [String] = []
         let custom = UserDefaults.standard.string(forKey: defaultsKey) ?? ""
+        raw += (try? PersonalCorrections.load())?.filter { $0.enabled }.map { $0.canonical } ?? []
         raw += custom.components(separatedBy: CharacterSet(charactersIn: ",\n"))
 
         let context = LocalTranscriptStore.shared.container.mainContext

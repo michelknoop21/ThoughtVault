@@ -225,8 +225,8 @@ export function TranscriptsPage() {
           () => tasks.updateBackgroundTask(taskId, { progress: 60 }), [], transcript.quick_note);
         if (!hasUsableNotule(html)) throw new Error("Geen bruikbare notule gegenereerd");
         const title = extractTitle(html) || transcript.title;
-        await useLocalTranscriptsStore.getState().update(transcript.id, { notule_html: html, title, profile_name: profile.name });
-        updateTranscript(transcript.id, { notule_html: html, title, profile_name: profile.name });
+        await useLocalTranscriptsStore.getState().update(transcript.id, { notule_html: html, title, profile_name: profile.name, profile_id: profile.id });
+        updateTranscript(transcript.id, { notule_html: html, title, profile_name: profile.name, profile_id: profile.id });
         tasks.updateBackgroundTask(taskId, { status: "completed", progress: 100 });
         const settings = useSettingsStore.getState();
         if (settings.obsidian_enabled) {
@@ -268,8 +268,8 @@ export function TranscriptsPage() {
             try {
               const updated = await api.getTranscript(transcript.id);
               // The server wiped the Notities section when it regenerated.
-              if (updated.notule_html) updated.notule_html = await persistNotesSection(transcript.task_id ?? transcript.id, updated.notule_html);
-              updateTranscript(transcript.id, { title: updated.title, notule_html: updated.notule_html });
+              if (updated.notule_html) updated.notule_html = await persistNotesSection(transcript.task_id ?? transcript.id, updated.notule_html, profileId);
+              updateTranscript(transcript.id, { title: updated.title, notule_html: updated.notule_html, profile_id: profileId, profile_name: profile?.name ?? updated.profile_name });
               const settings = useSettingsStore.getState();
               if (settings.obsidian_enabled && updated.notule_html) {
                 await exportToObsidian(updated, settings);

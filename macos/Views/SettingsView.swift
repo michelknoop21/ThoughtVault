@@ -632,7 +632,7 @@ struct SettingsView: View {
             }
 
             SettingFieldRow("Eigen termen") {
-                TextField("Michel, Django, …", text: $personalVocabulary, axis: .vertical)
+                TextField("Michel, Yinga, …", text: $personalVocabulary, axis: .vertical)
                     .textFieldStyle(.roundedBorder)
                     .autocorrectionDisabled()
             }

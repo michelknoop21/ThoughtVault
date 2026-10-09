@@ -15,7 +15,7 @@ Gecontroleerd op 2026-10-09. De feature is geïmplementeerd en samengevoegd met 
 ## Geslaagde controles
 
 - Windows frontend: 34 testbestanden, 88 tests; TypeScript en Vite productiebuild.
-- Native Rust: 23 tests, zowel lokaal als in de Windows Release-build.
+- Native Rust: 23 tests lokaal op macOS; 24 tests in de Windows Release-build.
 - Windows: self-contained C++ runtime, MSI-installatie en upgrade, twee starts,
   behoud van opgeslagen notulen op de CI-runner.
 - macOS: Swift-correctiechecks en `ARCHIVE SUCCEEDED` voor de Release-app.

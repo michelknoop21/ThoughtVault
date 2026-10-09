@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, type CSSProperties } from "react";
 import { useNavigate } from "react-router-dom";
-import { open, ask } from "@tauri-apps/plugin-dialog";
+import { open } from "@tauri-apps/plugin-dialog";
 import {
   MicRecord24Regular,
   Stop24Regular,
@@ -43,7 +43,10 @@ import { DocumentText24Regular } from "../components/ui/StudioIcons";
 
 import { studioLayout } from "../components/recording/studioLayout";
 
+import { useConfirmation } from "../components/ui/useConfirmation";
+
 export function RecordingPage() {
+  const { confirm, confirmation } = useConfirmation();
   const workspaceRef = useRef<HTMLElement>(null);
   const [workspaceSize, setWorkspaceSize] = useState({ width: 0, height: 0 });
   useEffect(() => {
@@ -246,7 +249,6 @@ export function RecordingPage() {
       const result = await stopRecording();
       const filePath = result.file_path || filePathRef.current;
       filePathRef.current = filePath;
-      closeWidgetWindow().catch((e) => console.error("[Recording] Widget close failed:", e));
 
       // The global handler resolves participants before resetting the store.
       // Use our snapshot for the directory prompt without clearing its inputs.
@@ -314,14 +316,14 @@ export function RecordingPage() {
     : phase === "preparing" ? "OPNAME STARTEN" : phase === "stopping" ? "OPNAME STOPPEN" : "KLAAR OM OP TE NEMEN";
 
   async function handleKeepRecording() {
-    if (!await ask("Stoppen zonder te verwerken? De opname blijft beschikbaar bij Opgeslagen opnames.", { title: "Opname stoppen", kind: "warning", okLabel: "Stoppen", cancelLabel: "Annuleren" })) return;
+    if (!await confirm("Stoppen zonder te verwerken? De opname blijft beschikbaar bij Opgeslagen opnames.", "Opname stoppen", "Stoppen")) return;
     // Keep the session busy until its WAV is finalized, without starting processing.
     useRecordingStore.setState({ phase: "stopping", processOnStop: false });
     try {
       await stopRecording();
       saveQuickNote(filePathRef.current || useRecordingStore.getState().filePath || "", quickNote);
       useRecordingStore.getState().reset();
-      await closeWidgetWindow();
+      // The widget closes itself on recording-stopped.
     } catch (err) {
       // The native stop command has finished with an error; retain the saved draft.
       useRecordingStore.getState().reset();
@@ -330,7 +332,7 @@ export function RecordingPage() {
     }
   }
 
-  return <div className="recording-studio">
+  return <div className="recording-studio">{confirmation}
     <section ref={workspaceRef} className="studio-workspace" style={workspaceStyle} aria-label="Opnamestudio">
       <header className="studio-topline">
         <span className={`studio-status ${phase}`} role="status"><i />{status}</span>

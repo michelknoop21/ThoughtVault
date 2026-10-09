@@ -23,6 +23,27 @@ beforeEach(() => {
   useSettingsStore.setState({ processing_mode: "local", notulen_provider: "ollama" });
 });
 
+it("generates Ollama Cloud notes through the native proxy instead of WebView fetch", async () => {
+  useSettingsStore.setState({ ollama_url: "https://ollama.com/v1/", ollama_model: "gpt-oss:120b" });
+  loadCredential.mockResolvedValue("test-cloud-key");
+  invoke.mockResolvedValue({ status: 200, body: JSON.stringify({ choices: [{ message: { content: "<p>QA besluit</p>" } }] }) });
+  expect(await LLMService.generateNotulen("QA test.", profile)).toBe("<p>QA besluit</p>");
+  const request = invoke.mock.calls[0][1].request;
+  expect(request.url).toBe("https://ollama.com/v1/chat/completions");
+  expect(request.headers.Authorization).toBe("Bearer test-cloud-key");
+  expect(JSON.parse(request.body).stream).toBe(false);
+});
+
+it("reports a rejected Ollama Cloud key and never masks it as a local server failure", async () => {
+  useSettingsStore.setState({ ollama_url: "https://ollama.com" });
+  loadCredential.mockResolvedValue("test-cloud-key");
+  invoke.mockResolvedValue({ status: 401, body: "{}" });
+  await expect(LLMService.generateNotulen("QA test.", profile)).rejects.toThrow("API-sleutel geweigerd");
+  invoke.mockClear(); loadCredential.mockResolvedValue(null);
+  await expect(LLMService.generateNotulen("QA test.", profile)).rejects.toThrow("Vul je Ollama Cloud API-sleutel");
+  expect(invoke).not.toHaveBeenCalled();
+});
+
 it("uses the user's OpenAI API key for the selected profile and transcript", async () => {
   useSettingsStore.setState({ notulen_provider: "openai" as never });
   loadCredential.mockResolvedValue("openai-secret");

@@ -1,4 +1,4 @@
-import { ask } from "@tauri-apps/plugin-dialog";
+import { useConfirmation } from "../components/ui/useConfirmation";
 import { DesktopDialog } from "../components/ui/DesktopDialog";
 import { useEffect, useState, useRef, useCallback } from "react";
 import {
@@ -38,6 +38,7 @@ interface ContextMenu {
 }
 
 export function TranscriptsPage() {
+  const { confirm, confirmation } = useConfirmation();
   const {
     transcripts, selectedId, searchQuery, selectedTags,
     setTranscripts, updateTranscript, deleteTranscript,
@@ -390,7 +391,7 @@ export function TranscriptsPage() {
         toast.show("Obsidian-versie is bijgewerkt", "success");
         return;
       }
-      if (!await ask("De versie uit Obsidian vervangt de huidige notule in ThoughtVault. Doorgaan?", { title: "Notule vervangen", kind: "warning", okLabel: "Vervangen", cancelLabel: "Annuleren" })) return;
+      if (!await confirm("De versie uit Obsidian vervangt de huidige notule in ThoughtVault. Doorgaan?", "Notule vervangen", "Vervangen")) return;
       await handleSaveNotule(transcript.id, html, false);
       acknowledgeObsidianImport(transcript, markdown, html);
       toast.show("Wijzigingen uit Obsidian opgehaald", "success");
@@ -468,6 +469,7 @@ export function TranscriptsPage() {
 
   return (
     <div className={`tp-root desktop-notulen${selectedId ? " has-detail" : ""}`}>
+      {confirmation}
       <TranscriptsList
         transcripts={transcripts}
         selectedId={selectedId}

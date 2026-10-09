@@ -1,4 +1,4 @@
-import { ask } from "@tauri-apps/plugin-dialog";
+import { useConfirmation } from "../ui/useConfirmation";
 import { useState, useEffect, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
@@ -20,13 +20,17 @@ import { SettingsField, CredentialField } from "./SettingsFields";
 import { PersonalCorrections } from "./PersonalCorrections";
 
 export function ProcessingTab() {
+  const { confirm, confirmation } = useConfirmation();
   const [specs, setSpecs] = useState<SystemSpecs | null>(null);
   const [specError, setSpecError] = useState("");
   const [setupDetails, setSetupDetails] = useState(false);
   const [modelError, setModelError] = useState("");
   const advice = transcriptionAdvice(specs);
-  useEffect(() => { invoke<SystemSpecs>("get_system_specs").then(setSpecs).catch(() => setSpecError("Systeemgegevens niet beschikbaar")); }, []);
   const settings = useSettingsStore();
+  const [showAllModels, setShowAllModels] = useState(false);
+  const visibleModels = WHISPER_MODELS.filter(model => showAllModels || !advice.model
+    || advice.models.includes(model.id) || model.id === settings.whisper_model);
+  useEffect(() => { invoke<SystemSpecs>("get_system_specs").then(setSpecs).catch(() => setSpecError("Systeemgegevens niet beschikbaar")); }, []);
   const isTranscribing = useRecordingStore(s => s.backgroundTasks.some(task => task.status === "transcribing" || task.status === "downloading"));
   const [ollamaTestStatus, setOllamaTestStatus] = useState<"idle" | "testing" | "success" | "error">("idle");
 
@@ -121,11 +125,11 @@ export function ProcessingTab() {
     }
     setTimeout(() => setOllamaTestStatus("idle"), 3000);
   }
-  return <div className="processing-columns"><div>
+  return <div className="processing-columns">{confirmation}<div>
       <header className="settings-section-header"><div><h2>Verwerking</h2><p>Stel in hoe ThoughtVault gesprekken transcribeert en notulen genereert.</p></div></header>
       <section className="northstar-card setup-card"><header><div><small>Snelle setup</small><h3>Aanbevolen instellingen voor jouw pc</h3><p>Op basis van je systeem. Je kunt alles daarna nog aanpassen.</p></div>
         <button className="btn btn-accent" disabled={downloading} onClick={() => {
-          settings.updateSettings({ processing_mode: "local", whisper_model: advice.model, notulen_provider: settings.notulen_provider === "cloud" ? "ollama" : settings.notulen_provider });
+          settings.updateSettings({ processing_mode: "local", whisper_model: advice.model ?? settings.whisper_model, notulen_provider: settings.notulen_provider === "cloud" ? "ollama" : settings.notulen_provider });
         }}>Toepassen</button></header>
         <div className="setup-choices"><div><Laptop24Regular /><span><small>Transcriptie</small><strong>Lokaal op deze pc</strong><span>{advice.name}</span></span></div><div><DocumentText24Regular /><span><small>Notulen</small><strong>{settings.notulen_provider === "openai" ? "OpenAI" : settings.notulen_provider === "anthropic" ? "Claude" : settings.notulen_provider === "lm-studio" ? "LM Studio" : "Ollama"}</strong><span>{settings.notulen_provider === "openai" || settings.notulen_provider === "anthropic" ? "Eigen API-sleutel · aparte kosten" : "Controleer je eigen server"}</span></span></div></div>
         <button className="studio-link" onClick={() => setSetupDetails(!setupDetails)}>Bekijk details {setupDetails ? "↑" : "→"}</button>{setupDetails && <p>{advice.reason} Toepassen wijzigt de instellingen; download daarna het gekozen transcriptiemodel. Een bestaande API-provider blijft geselecteerd.</p>}
@@ -160,13 +164,17 @@ export function ProcessingTab() {
                       className="select"
                       style={{ width: "100%" }}
                     >
-                      {WHISPER_MODELS.map((m) => (
+                      {visibleModels.map((m) => (
                         <option key={m.id} value={m.id}>
-                          {m.label} ({m.size})
+                          {m.label} ({m.size}){advice.models.includes(m.id) ? " · aanbevolen" : ""}
                         </option>
                       ))}
                     </select>
                   </SettingsField>
+                </div>
+                <div style={{ padding: "0 20px 12px" }}>
+                  <label className="settings-desc"><input type="checkbox" checked={showAllModels} onChange={event => setShowAllModels(event.target.checked)} /> Alle modellen tonen</label>
+                  <p role="status" className="settings-desc">{advice.reason} Je huidige keuze blijft behouden. Dit advies meet geen snelheid of vrij werkgeheugen.</p>
                 </div>
                 <div style={{ padding: "0 20px 12px", display: "flex", flexDirection: "column", gap: 6 }}>
                   {downloading ? (
@@ -193,11 +201,11 @@ export function ProcessingTab() {
                   )}
                 </div>
                 <details className="model-library"><summary>Modellen beheren</summary>
-                  {WHISPER_MODELS.map(model => <div key={model.id}><span>{model.label} · {model.size}</span>
+                  {visibleModels.map(model => <div key={model.id}><span>{model.label} · {model.size}</span>
                     {modelLibrary.find(item => item.id === model.id)?.exists ? <>
                       <button className="btn btn-secondary btn-sm" onClick={() => invoke("show_whisper_model", { modelId: model.id }).catch(err => setModelError(String(err)))}>Toon bestand</button>
                       <button className="btn btn-secondary btn-sm" disabled={downloading || isTranscribing || model.id === settings.whisper_model} onClick={async () => {
-                        if (!await ask(`Gedownload model ${model.label} verwijderen? Je kunt het later opnieuw downloaden.`, { title: "Model verwijderen", kind: "warning", okLabel: "Verwijderen", cancelLabel: "Annuleren" })) return;
+                        if (!await confirm(`Gedownload model ${model.label} verwijderen? Je kunt het later opnieuw downloaden.`, "Model verwijderen", "Verwijderen")) return;
                         try { await invoke("remove_whisper_model", { modelId: model.id }); await checkModel(); }
                         catch (err) { setModelError(String(err)); }
                       }}>Verwijderen</button>
@@ -313,8 +321,8 @@ export function ProcessingTab() {
 
     <PersonalCorrections /></div><aside className="processing-side">
       <section className="northstar-card"><h3>Jouw pc</h3>{specs ? <dl className="system-specs"><div><dt>Processor</dt><dd>{specs.cpu || "Onbekend"}</dd></div><div><dt>Architectuur</dt><dd>{specs.architecture}</dd></div><div><dt>Geheugen</dt><dd>{specs.memory_gb} GB</dd></div><div><dt>Processorkernen</dt><dd>{specs.threads} threads</dd></div>{specs.free_storage_gb !== null && <div><dt>Opslag vrij</dt><dd>{specs.free_storage_gb} GB</dd></div>}<div><dt>Systeem</dt><dd>{specs.os_version}</dd></div></dl> : <p>{specError || "Systeemgegevens ophalen…"}</p>}</section>
-      <section className="northstar-card"><h3>Aanbevolen model</h3><h4>{advice.name}</h4><p>{advice.reason}</p><p>✓ Lokale transcriptie · Nederlands</p><p>{WHISPER_MODELS.find(m => m.id === advice.model)?.size} · CPU-verwerking</p>
-        <button className="btn btn-secondary" disabled={downloading} onClick={() => settings.updateSettings({ processing_mode: "local", whisper_model: advice.model })}>Gebruik dit model</button><p>Downloadstatus en modelkeuze staan bij Transcriptie.</p>
+      <section className="northstar-card"><h3>Aanbevolen model</h3><h4>{advice.name}</h4><p>{advice.reason}</p><p>Lokale transcriptie · CPU-verwerking</p>{advice.model && <p>{WHISPER_MODELS.find(m => m.id === advice.model)?.size} · CPU-verwerking</p>}
+        {advice.model && <button className="btn btn-secondary" disabled={downloading} onClick={() => settings.updateSettings({ processing_mode: "local", whisper_model: advice.model ?? settings.whisper_model })}>Gebruik dit model</button>}<p>Downloadstatus en modelkeuze staan bij Transcriptie.</p>
       </section>
       <section className="northstar-card"><h3>Privacy & gegevens</h3><h4>Transcriptie</h4><p>{settings.processing_mode === "local" ? "Audio wordt op deze pc omgezet naar tekst." : "Audio wordt naar de ThoughtVault-server geüpload."}</p><h4>Notulen</h4><p>{settings.processing_mode === "cloud" ? "Transcript en notulen worden op de ThoughtVault-server verwerkt." : settings.notulen_provider === "openai" ? "Het transcript wordt naar OpenAI gestuurd. Dit kost apart API-tegoed." : settings.notulen_provider === "anthropic" ? "Het transcript wordt naar Anthropic gestuurd. Dit kost apart API-tegoed." : "Het transcript wordt naar je ingestelde Ollama- of LM Studio-server gestuurd. Bij een externe server verlaat het deze pc."}</p><p>API-sleutels worden uitsluitend in Windows Credential Manager bewaard.</p></section>
     </aside></div>;

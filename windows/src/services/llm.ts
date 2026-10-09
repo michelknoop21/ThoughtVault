@@ -5,6 +5,7 @@ import { quickNotePrompt, ensureNotesSection } from "./quickNotes";
 import { invoke } from "@tauri-apps/api/core";
 import { DEFAULT_SETTINGS } from "../types";
 import type { Profile, NotulenProvider } from "../types";
+import { isOllamaCloudURL } from "./ollamaModels";
 
 import { usePersonalCorrectionsStore } from "../stores/personalCorrectionsStore";
 import { correctText, correctHTML, correctionPrompt } from "./personalCorrections";
@@ -93,6 +94,23 @@ async function generateWithOpenAICompatible(
   // http://localhost endpoint.
   if (apiKey && baseUrl.startsWith("https://")) {
     headers["Authorization"] = `Bearer ${apiKey}`;
+  }
+
+  // Ollama Cloud rejects WebView CORS; use the same native proxy as its model list.
+  if (isOllamaCloudURL(baseUrl)) {
+    if (!apiKey) throw new Error("Vul je Ollama Cloud API-sleutel in bij Instellingen.");
+    const base = baseUrl.replace(/\/+$/, "").replace(/\/v1$/, "");
+    const response = await invoke<{ status: number; body: string }>("proxy_request", {
+      request: { url: `${base}/v1/chat/completions`, method: "POST", headers, timeout_seconds: 300,
+        body: JSON.stringify({ model, messages: [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }], stream: false }) },
+    });
+    if (response.status === 401) throw new Error("Ollama Cloud API-sleutel geweigerd.");
+    if (response.status === 429) throw new Error("Ollama Cloud API-limiet bereikt. Probeer later opnieuw.");
+    if (response.status >= 400) throw new Error(`Ollama Cloud gaf HTTP ${response.status} voor model "${model}".`);
+    const text = JSON.parse(response.body).choices?.[0]?.message?.content;
+    if (typeof text !== "string" || !text.trim()) throw new Error("Ollama Cloud gaf een leeg antwoord.");
+    onProgress?.(text);
+    return text;
   }
 
   let response: Response;

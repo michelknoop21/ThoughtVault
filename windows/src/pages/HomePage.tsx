@@ -34,7 +34,8 @@ function getGreeting(name?: string, email?: string): string {
 
 export function HomePage() {
   const navigate = useNavigate();
-  const { setMode, setAutoStart } = useRecordingStore();
+  const { setMode, setAutoStart, phase } = useRecordingStore();
+  const sessionActive = phase !== "idle";
   const { transcripts, setTranscripts, deleteTranscript, setSelectedId, isLoading, setIsLoading } = useTranscriptsStore();
   const calendar = useCalendarStore();
   const user = useAuthStore((s) => s.user);
@@ -89,13 +90,12 @@ export function HomePage() {
   }
 
   function handleQuickStart(mode: "microphone" | "combined") {
-    setMode(mode);
+    if (!sessionActive) setMode(mode);
     navigate("/recording");
   }
 
   function handleRecordMeeting(_event: CalendarEvent) {
-    setMode("combined");
-    setAutoStart(true);
+    if (!sessionActive) { setMode("combined"); setAutoStart(true); }
     navigate("/recording");
   }
 
@@ -146,12 +146,12 @@ export function HomePage() {
       <section className="thoughtvault-new-recording" aria-label="Nieuwe opname">
         <div>
           <p className="section-label">Nieuwe opname</p>
-          <h2>Begin een nieuwe opname</h2>
+          <h2>{sessionActive ? phase === "paused" ? "Je opname is gepauzeerd" : "Je opname loopt" : "Begin een nieuwe opname"}</h2>
           <p>Spreek je gedachten, vergadering of idee. ThoughtVault maakt er automatisch notities, samenvattingen en taken van.</p>
           <div className="thoughtvault-record-controls">
             <button className="btn btn-secondary icon-btn" aria-label="Opname-instellingen" onClick={() => navigate("/settings")}><Settings24Regular /></button>
-            <button className="thoughtvault-record-orb" aria-label="Nieuwe opname voorbereiden" onClick={() => handleQuickStart("combined")}><MicRecord24Regular /><span>Nieuwe opname</span></button>
-            <div className="thoughtvault-wave-status"><div className="thoughtvault-idle-wave" aria-hidden="true">{Array.from({length: 57}, (_, i) => <i key={i} style={{ height: Math.max(4, Math.pow(Math.sin(Math.PI * i / 56), 1.4) * (0.25 + 0.75 * Math.abs(Math.sin(i * 1.73) * Math.cos(i * 0.61 + 0.4))) * 65) }} />)}</div><p className="thoughtvault-ready">Klaar om op te nemen</p></div><span className="thoughtvault-idle-time" aria-hidden="true">0:00</span>
+            <button className="thoughtvault-record-orb" aria-label={sessionActive ? "Open huidige opname" : "Nieuwe opname voorbereiden"} onClick={() => handleQuickStart("combined")}><MicRecord24Regular /><span>{sessionActive ? "Huidige opname" : "Nieuwe opname"}</span></button>
+            <div className="thoughtvault-wave-status"><div className="thoughtvault-idle-wave" aria-hidden="true">{Array.from({length: 57}, (_, i) => <i key={i} style={{ height: Math.max(4, Math.pow(Math.sin(Math.PI * i / 56), 1.4) * (0.25 + 0.75 * Math.abs(Math.sin(i * 1.73) * Math.cos(i * 0.61 + 0.4))) * 65) }} />)}</div><p className="thoughtvault-ready">{sessionActive ? "Open de opname om verder te gaan" : "Klaar om op te nemen"}</p></div>{!sessionActive && <span className="thoughtvault-idle-time" aria-hidden="true">0:00</span>}
           </div>
         </div>
         <section className="thoughtvault-record-tip"><h3>{micAvailable === true ? "Microfoon gevonden" : micAvailable === false ? "Geen microfoon gevonden" : "Opname-instellingen en toegang"}</h3><p>Windows controleert toegang wanneer je de opname start.</p><button className="btn btn-secondary" onClick={() => invoke("open_microphone_settings").catch(() => setMicError("Open Windows-instellingen → Privacy en beveiliging → Microfoon."))}>Toegang beheren</button>{micError && <p role="alert">{micError}</p>}<p>Spreek natuurlijk. Je kunt op elk moment pauzeren.</p></section>

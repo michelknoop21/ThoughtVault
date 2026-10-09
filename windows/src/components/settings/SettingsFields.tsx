@@ -30,8 +30,8 @@ export function CredentialField({ credentialKey, label, children, onCredentialCh
       setSaved(true);
       setError("");
       onCredentialChange?.();
-    } catch {
-      setError("Opslaan in Windows Credential Manager mislukt");
+    } catch (error) {
+      setError(typeof error === "string" ? error : "Opslaan in Windows Credential Manager mislukt");
     }
   }
 

@@ -162,7 +162,8 @@
 .desktop-tasks .empty-state { min-height:360px;justify-content:center; }
 .desktop-tasks .card { border-radius:12px; }
 .desktop-notulen { width:100%;min-height:0; }
-.desktop-notulen:not(.has-detail) { max-width:860px;margin-inline:auto; }
+.desktop-notulen:not(.has-detail) { max-width: none; margin-inline: 0; }
+.desktop-notulen > .tl-panel-full { max-width: 860px; margin-inline: auto; }
 .desktop-notulen.has-detail>.tl-panel { display:none; }
 .desktop-notulen .tl-header { padding:18px 24px 8px;gap:12px;border:0;background:transparent; }
 .desktop-notulen .tl-panel { background:transparent; }
@@ -236,7 +237,7 @@
 .thoughtvault-welcome-copy::after { content: ''; display: block; width: 43px; height: 1px; background: #5c6185; margin-top: 22px; }
 .thoughtvault-landscape { height: 190px; width: 480px; opacity: 1; }
 .thoughtvault-tagline { display: none; }
-.thoughtvault-new-recording { min-height: 301px; display: grid; grid-template-columns: minmax(0,1fr); padding: 35px 24px 20px 38px; border-radius: 14px; gap: 10px; container-type: inline-size; }
+.thoughtvault-new-recording { min-height: 301px; display: grid; grid-template-columns: minmax(0,1fr); padding: 35px 24px 20px 38px; border-radius: 14px; gap: 10px; }
 .thoughtvault-new-recording > div { display: block; min-width: 0; }
 .thoughtvault-new-recording .section-label { line-height: 13px; font-size: 11px; letter-spacing: 1.5px; }
 .thoughtvault-new-recording h2 { line-height: 1.2; font-size: 22px; margin: 9px 0 8px; }
@@ -251,7 +252,7 @@
 .thoughtvault-wave-status .thoughtvault-ready { position: absolute; top: 65px; width: 100%; text-align: center; white-space: nowrap; }
 .thoughtvault-idle-time { font-size: 13px; color: #b3aece; margin-left: 7px; }
 .thoughtvault-home .thoughtvault-ready { margin-top: 0; font-size: 12.5px; }
-.thoughtvault-record-tip { background: #171f31; padding: 18px; border: 1px solid #29334a; border-radius: 12px; min-width: 0; }
+.thoughtvault-record-tip { display: block; background: #171f31; padding: 18px; border: 1px solid #29334a; border-radius: 12px; min-width: 0; }
 .thoughtvault-record-tip h3 { font-size: 13px; margin: 0 0 8px; }
 .thoughtvault-record-tip p { font-size: 12px; margin-top: 8px; }
 .thoughtvault-record-tip .btn { width: 100%; margin-block: 12px; }
@@ -425,7 +426,7 @@ dialog.desktop-dialog > [role="dialog"] > :first-child, dialog.desktop-dialog > 
 /* Home keeps search fixed and gives each wide column its own native scroll owner. */
 .thoughtvault-home { overflow: hidden; }
 .thoughtvault-home-content { height: 100%; grid-template-columns: minmax(0,1fr); grid-template-rows: 51px minmax(0,1fr); padding-bottom: 0; }
-.thoughtvault-home-body { min-height: 0; display: grid; grid-template-columns: minmax(0,1fr); overflow-y: auto; padding-bottom: 24px; }
+.thoughtvault-home-body { min-height: 0; display: grid; grid-template-columns: minmax(0,1fr); grid-auto-rows: max-content; align-content: start; overflow-y: auto; padding-bottom: 24px; }
 .thoughtvault-home-main { display: contents; }
 .thoughtvault-welcome { grid-row: 1; }
 .thoughtvault-new-recording { grid-row: 2; }
@@ -435,7 +436,7 @@ dialog.desktop-dialog > [role="dialog"] > :first-child, dialog.desktop-dialog > 
 .thoughtvault-home-side .thoughtvault-brand-note { display: none; padding: 20px 0; grid-column: 1 / -1; }
 @container (min-width: 1180px) {
  .thoughtvault-home-side .thoughtvault-brand-note { display: block; }
- .thoughtvault-home-body { grid-template-columns: minmax(0,1fr) 295px; gap: 23px; overflow: hidden; padding-bottom: 0; }
+ .thoughtvault-home-body { grid-template-columns: minmax(0,1fr) 295px; grid-template-rows: minmax(0,1fr); grid-auto-rows: auto; gap: 23px; overflow: hidden; padding-bottom: 0; }
  .thoughtvault-home-main { display: block; min-width: 0; min-height: 0; overflow-y: auto; padding-bottom: 24px; }
  .thoughtvault-home-side { grid-column: 2; grid-row: 1; display: flex; flex-direction: column; overflow-y: auto; min-height: 0; padding-bottom: 24px; }
 }
@@ -460,3 +461,7 @@ dialog.desktop-dialog > [role="dialog"] > :first-child, dialog.desktop-dialog > 
  .desktop-people .page-header { flex-wrap: wrap; }
  .desktop-people .people-toolbar-search { order: 3; width: 100%; }
 }
+
+.desktop-notulen.has-detail > .tl-header-row { display: none; }
+
+.studio-transport > div:last-child .studio-round:not(.studio-record) { width: 70px; height: 70px; margin-top: 15px; }

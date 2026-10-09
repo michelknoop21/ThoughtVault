@@ -35,6 +35,7 @@ if(bar){
 const greeting=main.querySelector('.thoughtvault-welcome'),record=main.querySelector('.thoughtvault-new-recording');
 if(greeting&&box(greeting).h!==200)throw Error('Home greeting lost native density');
 if(record&&box(record).h<301)throw Error('Home recording card too short');
+if(record){const panel=main.querySelector('.thoughtvault-record-tip');if(box(panel).y+box(panel).h>box(record).y+box(record).h+1)throw Error('Microphone panel escapes Home card');}
 if(record){
  const toolbar=main.querySelector('.thoughtvault-home-toolbar'),body=main.querySelector('.thoughtvault-home-body'),column=main.querySelector('.thoughtvault-home-main');
  const owner=getComputedStyle(column).display==='contents'?body:column;

@@ -148,9 +148,7 @@ export function TranscriptsList({
   }, []);
 
   return (
-    <div className={`tl-panel${!selectedId ? " tl-panel-full" : ""}`}>
-      {/* Header */}
-      <div className="tl-header">
+    <>
         <div className="tl-header-row">
           <h1 className="tl-title">Notulen</h1>
           <div className="tl-header-actions">
@@ -167,6 +165,10 @@ export function TranscriptsList({
             </button>
           </div>
         </div>
+    <div className={`tl-panel${!selectedId ? " tl-panel-full" : ""}`}>
+      {/* Header */}
+      <div className="tl-header">
+
 
         <div className="tl-search">
           <Search24Regular style={{ fontSize: 14, color: "var(--text-tertiary)", flexShrink: 0 }} />
@@ -313,5 +315,6 @@ export function TranscriptsList({
         )}
       </div>
     </div>
+    </>
   );
 }

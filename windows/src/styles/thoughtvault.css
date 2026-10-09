@@ -445,3 +445,18 @@ dialog.desktop-dialog > [role="dialog"] > :first-child, dialog.desktop-dialog > 
 .studio-level-bars { display: inline-flex; align-items: end; justify-content: end; gap: 3px; height: 16px; }
 .studio-level-bars i { display: block; width: 4px; background: #a357ef; border-radius: 1px; }
 @container (max-width: 499px) { .studio-controlbar > label > svg { display: none; } }
+
+.desktop-people .page-header { min-height: 52px; padding: 8px 24px; gap: 16px; flex-shrink: 0; }
+.desktop-people .page-title-sm { font-size: 14px; margin: 0 auto 0 0; }
+.desktop-people .people-toolbar-search { width: 250px; min-width: 0; height: 32px; margin: 0; }
+.desktop-people .page-header .btn { min-height: 32px; padding-block: 4px; }
+.desktop-people .page-content { max-width: none; }
+.people-empty-icon { width: 48px; height: 48px; }
+.desktop-notulen:not(.has-detail) { position: relative; padding-top: 52px; }
+.desktop-notulen .tl-header-row { position: absolute; top: 8px; left: 24px; right: 24px; height: 36px; }
+.desktop-notulen .tl-title { font-size: 14px; margin: 0; }
+.desktop-notulen .tl-header { padding-top: 8px; }
+@container (max-width: 499px) {
+ .desktop-people .page-header { flex-wrap: wrap; }
+ .desktop-people .people-toolbar-search { order: 3; width: 100%; }
+}

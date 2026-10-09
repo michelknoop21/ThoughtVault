@@ -9,7 +9,7 @@ and provider traffic. They do not establish installed WebView or microphone beha
 | Surface | Shared geometry |
 | --- | --- |
 | Navigation | 238 wide, 52 collapsed; 45 rows, 17 glyphs, 40 x 48 logo |
-| Home | 51 search, 200 greeting, minimum 301 recording card, 89 record button |
+| Home | Fixed 51 search, independent wide column scroll, 200 greeting, minimum 301 recording card, 89 record button |
 | Recording | 309 inspector, 90 bottom bar; native short-height threshold 720 |
 | Recording transport | 100 primary, 74 secondary; waveform bounded above transport |
 | Settings | 40 tabs, adaptive 150 columns, 20 card padding; 342 side column at 1100 |
@@ -28,3 +28,8 @@ Validation: frontend build and 78 tests; browser matrices for 56 route/window si
 36 density/DPR measurements, 21 settings tab sizes, 6 onboarding steps and 3 person
 sheet sizes. Native installed candidate review is recorded separately after CI.
 No saved recordings, notes, people or provider configuration are replaced.
+
+Negative control: injecting the former 208px sidebar and sticky bottom control bar
+makes the measured parity checks reject both. The restored measurements pass again
+after removing those rules. macOS was recording during the final candidate work,
+so it was left running and not updated or navigated after detecting active capture.

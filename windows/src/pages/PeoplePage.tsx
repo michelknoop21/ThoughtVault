@@ -69,6 +69,13 @@ export function PeoplePage() {
       {/* Page header */}
       <div className="page-header">
         <h1 className="page-title-sm">Mensen</h1>
+          <input
+            type="search"
+            placeholder="Zoeken..."
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setDeleteConfirmId(null); }}
+            className="input people-toolbar-search"
+          />
         <button
           className="btn btn-primary"
           onClick={handleAddPerson}
@@ -83,15 +90,7 @@ export function PeoplePage() {
       <div className="page-content">
         <div className="page-content-narrow">
 
-          {/* Search input */}
-          <input
-            type="search"
-            className="input"
-            placeholder="Zoeken..."
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setDeleteConfirmId(null); }}
-            style={{ marginBottom: 16 }}
-          />
+
 
           {/* Empty state — no people at all */}
           {people.length === 0 && (
@@ -110,7 +109,7 @@ export function PeoplePage() {
               <p style={{ font: "var(--type-subtitle)", color: "var(--text-primary)", margin: 0 }}>
                 Nog geen personen toegevoegd
               </p>
-              <p style={{ font: "var(--type-body)", color: "var(--text-secondary)", margin: 0, maxWidth: 420 }}>
+              <p style={{ font: "400 13px/1.5 var(--font-family)", color: "var(--text-secondary)", margin: 0, maxWidth: 320 }}>
                 Voeg collega's en bekende externen toe zodat ThoughtVault actiepunten aan hen kan koppelen.
               </p>
               <button className="btn btn-primary" onClick={handleAddPerson}>

@@ -152,7 +152,7 @@ export function TranscriptsList({
       {/* Header */}
       <div className="tl-header">
         <div className="tl-header-row">
-          <h1 className="tl-title">Documenten</h1>
+          <h1 className="tl-title">Notulen</h1>
           <div className="tl-header-actions">
             <button className="icon-btn icon-btn-sm" onClick={onRefresh} disabled={isLoading} title="Vernieuwen">
               <ArrowSync24Regular style={{ fontSize: 15, animation: isLoading ? "spin 1s linear infinite" : undefined }} />

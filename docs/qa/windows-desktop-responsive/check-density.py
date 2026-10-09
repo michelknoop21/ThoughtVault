@@ -35,6 +35,14 @@ if(bar){
 const greeting=main.querySelector('.thoughtvault-welcome'),record=main.querySelector('.thoughtvault-new-recording');
 if(greeting&&box(greeting).h!==200)throw Error('Home greeting lost native density');
 if(record&&box(record).h<301)throw Error('Home recording card too short');
+if(record){
+ const toolbar=main.querySelector('.thoughtvault-home-toolbar'),body=main.querySelector('.thoughtvault-home-body'),column=main.querySelector('.thoughtvault-home-main');
+ const owner=getComputedStyle(column).display==='contents'?body:column;
+ const before=box(toolbar).y;owner.scrollTop=100;
+ if(box(toolbar).y!==before)throw Error('Home search moves with the content');
+ owner.scrollTop=0;
+ if(getComputedStyle(body).overflowY==='hidden'&&getComputedStyle(column).overflowY!=='auto')throw Error('Wide Home column cannot scroll independently');
+}
 return {logical:[innerWidth,innerHeight],dpr:devicePixelRatio,zoom:visualViewport.scale,raster:[innerWidth*devicePixelRatio,innerHeight*devicePixelRatio],safeArea:'0; browser fixture',textSize:getComputedStyle(main).fontSize,logo:lr,scrollOwners:owners,headings,firstData:firstData?box(firstData):null,fixedControlHeight:bar?box(bar).h:0,settingsTabsHeight:tabs?box(tabs).h:0};})())"""
 try:
  for size,scale in [('640x560','1'),('900x560','1'),('1280x800','1'),('1440x900','1'),('1920x1080','1'),('1440x900','2')]:

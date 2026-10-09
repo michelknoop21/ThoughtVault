@@ -269,7 +269,7 @@
 .thoughtvault-note-open { gap: 20px; }
 .thoughtvault-note-icon { width: 50px; height: 50px; border-radius: 10px; }
 .thoughtvault-note-summary { margin-top: 8px; }
-@container (min-width: 820px) { .thoughtvault-tagline { display: block; } }
+@container (min-width: 860px) { .thoughtvault-tagline { display: block; } }
 @container (max-width: 740px) {
   .thoughtvault-welcome h1 { font-size: 34px; }
   .thoughtvault-landscape { width: 340px; opacity: .6; }
@@ -421,3 +421,27 @@ dialog.desktop-dialog > [role="dialog"] > :first-child, dialog.desktop-dialog > 
 .studio-dialog > .card-static > div:last-child { min-height: 0; }
 
 .person-editor-fields > .flex-col { gap: 2px; }
+
+/* Home keeps search fixed and gives each wide column its own native scroll owner. */
+.thoughtvault-home { overflow: hidden; }
+.thoughtvault-home-content { height: 100%; grid-template-columns: minmax(0,1fr); grid-template-rows: 51px minmax(0,1fr); padding-bottom: 0; }
+.thoughtvault-home-body { min-height: 0; display: grid; grid-template-columns: minmax(0,1fr); overflow-y: auto; padding-bottom: 24px; }
+.thoughtvault-home-main { display: contents; }
+.thoughtvault-welcome { grid-row: 1; }
+.thoughtvault-new-recording { grid-row: 2; }
+.thoughtvault-home-side { grid-column: 1; grid-row: 3; }
+.thoughtvault-home-recent { grid-row: 5; }
+.thoughtvault-processing { grid-row: 4; }
+.thoughtvault-home-side .thoughtvault-brand-note { display: none; padding: 20px 0; grid-column: 1 / -1; }
+@container (min-width: 1180px) {
+ .thoughtvault-home-side .thoughtvault-brand-note { display: block; }
+ .thoughtvault-home-body { grid-template-columns: minmax(0,1fr) 295px; gap: 23px; overflow: hidden; padding-bottom: 0; }
+ .thoughtvault-home-main { display: block; min-width: 0; min-height: 0; overflow-y: auto; padding-bottom: 24px; }
+ .thoughtvault-home-side { grid-column: 2; grid-row: 1; display: flex; flex-direction: column; overflow-y: auto; min-height: 0; padding-bottom: 24px; }
+}
+
+.studio-controlbar > label > svg { width: 44px; height: 44px; flex-shrink: 0; border-radius: 50%; padding: 12px; background: #222742; }
+.studio-controlbar > label { padding: 3px; }
+.studio-level-bars { display: inline-flex; align-items: end; justify-content: end; gap: 3px; height: 16px; }
+.studio-level-bars i { display: block; width: 4px; background: #a357ef; border-radius: 1px; }
+@container (max-width: 499px) { .studio-controlbar > label > svg { display: none; } }

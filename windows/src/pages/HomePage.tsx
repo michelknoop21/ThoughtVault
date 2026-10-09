@@ -123,6 +123,7 @@ export function HomePage() {
         </form>
         <button className="thoughtvault-account" aria-label={user ? "Account" : "Instellingen"} onClick={() => navigate(user ? "/account" : "/settings")}><Person24Regular /></button>
       </div>
+      <div className="thoughtvault-home-body"><div className="thoughtvault-home-main">
       <header className="thoughtvault-welcome">
         <svg className="thoughtvault-landscape" viewBox="0 0 480 190" aria-hidden="true">
           <defs>
@@ -155,44 +156,9 @@ export function HomePage() {
         </div>
         <section className="thoughtvault-record-tip"><h3>{micAvailable === true ? "Microfoon gevonden" : micAvailable === false ? "Geen microfoon gevonden" : "Opname-instellingen en toegang"}</h3><p>Windows controleert toegang wanneer je de opname start.</p><button className="btn btn-secondary" onClick={() => invoke("open_microphone_settings").catch(() => setMicError("Open Windows-instellingen → Privacy en beveiliging → Microfoon."))}>Toegang beheren</button>{micError && <p role="alert">{micError}</p>}<p>Kies je opnamebron en profiel. Je start de opname op het volgende scherm.</p><p>Spreek natuurlijk. Je kunt op elk moment pauzeren.</p></section>
       </section>
-      <aside className="thoughtvault-home-side">
-      {/* Upcoming meetings */}
-        <section className="thoughtvault-agenda" aria-label="Vandaag">
-          <h2>Vandaag</h2>
-          {upcomingEvents.length === 0 && <div className="thoughtvault-agenda-empty"><p>{calendar.isConnected ? "Geen aankomende vergaderingen." : "Koppel je agenda om je meetings hier te zien."}</p>{!calendar.isConnected && <button className="btn btn-secondary" onClick={() => navigate("/settings")}>Agenda koppelen</button>}</div>}
-          <div className="flex-col gap-8">
-            {upcomingEvents.map((event) => (
-              <div key={event.id} className="card session-card flex-row gap-12">
-                <CalendarLtr24Regular style={{ fontSize: 18, color: "var(--fill-accent-default)", flexShrink: 0 }} />
-                <div className="flex-1" style={{ minWidth: 0 }}>
-                  <p className="truncate" style={{ fontSize: 13, fontWeight: 500, color: "var(--text-primary)" }}>{event.title}</p>
-                  <p className="text-caption" style={{ marginTop: 1 }}>
-                    {formatEventTime(event.start, event.end)}
-                  </p>
-                </div>
-                {event.join_url && (
-                  <button
-                    onClick={() => handleRecordMeeting(event)}
-                    className="btn btn-accent flex-shrink-0"
-                    style={{ padding: "4px 10px", fontSize: 12 }}
-                  >
-                    <MicRecord24Regular style={{ fontSize: 13 }} />
-                    Direct opnemen
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
-        </section>
 
-      <section className="thoughtvault-quick-capture" aria-label="Snel vastleggen">
-        <h2>Snel vastleggen</h2>
-        <button className="btn btn-secondary" onClick={() => handleQuickStart("microphone")}><MicRecord24Regular />Alleen audio opnemen</button>
-        <button className="btn btn-secondary" onClick={() => handleQuickStart("combined")}><VideoChat24Regular />Gesprek opnemen</button>
-        <button className="btn btn-secondary" onClick={() => navigate("/recording")}><DocumentText24Regular />Audiobestand importeren</button>
-      </section>
 
-      </aside>
+      {activeTasks.length > 0 && <section className="northstar-card thoughtvault-processing"><h3>Bezig met verwerken</h3>{activeTasks.map(task => <button className="home-task-row" key={task.task_id} onClick={() => navigate("/tasks")}><span>{task.extracted_title || task.filename || "Opname"}<small>{task.error_message || task.message || task.status}</small></span><span>{task.progress}%</span></button>)}</section>}
 
       {/* Recent notes */}
       <section style={{ flex: 1, minHeight: 0 }} className="flex-col thoughtvault-home-recent">
@@ -245,8 +211,48 @@ export function HomePage() {
         )}
       </section>
 
-      {activeTasks.length > 0 && <section className="northstar-card thoughtvault-processing"><h3>Bezig met verwerken</h3>{activeTasks.map(task => <button className="home-task-row" key={task.task_id} onClick={() => navigate("/tasks")}><span>{task.extracted_title || task.filename || "Opname"}<small>{task.error_message || task.message || task.status}</small></span><span>{task.progress}%</span></button>)}</section>}
+
+      </div>
+      <aside className="thoughtvault-home-side">
+      {/* Upcoming meetings */}
+        <section className="thoughtvault-agenda" aria-label="Vandaag">
+          <h2>Vandaag</h2>
+          {upcomingEvents.length === 0 && <div className="thoughtvault-agenda-empty"><p>{calendar.isConnected ? "Geen aankomende vergaderingen." : "Koppel je agenda om je meetings hier te zien."}</p>{!calendar.isConnected && <button className="btn btn-secondary" onClick={() => navigate("/settings")}>Agenda koppelen</button>}</div>}
+          <div className="flex-col gap-8">
+            {upcomingEvents.map((event) => (
+              <div key={event.id} className="card session-card flex-row gap-12">
+                <CalendarLtr24Regular style={{ fontSize: 18, color: "var(--fill-accent-default)", flexShrink: 0 }} />
+                <div className="flex-1" style={{ minWidth: 0 }}>
+                  <p className="truncate" style={{ fontSize: 13, fontWeight: 500, color: "var(--text-primary)" }}>{event.title}</p>
+                  <p className="text-caption" style={{ marginTop: 1 }}>
+                    {formatEventTime(event.start, event.end)}
+                  </p>
+                </div>
+                {event.join_url && (
+                  <button
+                    onClick={() => handleRecordMeeting(event)}
+                    className="btn btn-accent flex-shrink-0"
+                    style={{ padding: "4px 10px", fontSize: 12 }}
+                  >
+                    <MicRecord24Regular style={{ fontSize: 13 }} />
+                    Direct opnemen
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
+
+      <section className="thoughtvault-quick-capture" aria-label="Snel vastleggen">
+        <h2>Snel vastleggen</h2>
+        <button className="btn btn-secondary" onClick={() => handleQuickStart("microphone")}><MicRecord24Regular />Alleen audio opnemen</button>
+        <button className="btn btn-secondary" onClick={() => handleQuickStart("combined")}><VideoChat24Regular />Gesprek opnemen</button>
+        <button className="btn btn-secondary" onClick={() => navigate("/recording")}><DocumentText24Regular />Audiobestand importeren</button>
+      </section>
+
       <section className="thoughtvault-brand-note"><strong>Laat gedachten groeien tot kennis.</strong><p>Eén gesprek kan meerdere inzichten, taken en plannen opleveren.</p></section>
+      </aside>
+      </div>
     </div>
 
       {/* Delete confirmation dialog */}

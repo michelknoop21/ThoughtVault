@@ -363,10 +363,10 @@ export function RecordingPage() {
           <span>{isBusy ? "Even geduld…" : "Start opname"}</span></div>}
       </div>
       <div className="studio-controlbar">
-        <label><VideoChat24Regular /><span><small>Bron</small><select aria-label="Bron" value={mode} disabled={isLive || isBusy} onChange={e => setMode(e.target.value as "combined" | "microphone")}>
+        <label><WaveformIcon /><span><small>Bron</small><select aria-label="Bron" value={mode} disabled={isLive || isBusy} onChange={e => setMode(e.target.value as "combined" | "microphone")}>
           <option value="combined">Gecombineerd</option><option value="microphone">Microfoon</option>
         </select></span></label>
-        <label><DocumentText24Regular /><span><small>Opnameprofiel</small><select aria-label="Opnameprofiel" value={selectedProfileId} onChange={e => setSelectedProfileId(e.target.value)}>
+        <label><WaveformIcon /><span><small>Opnameprofiel</small><select aria-label="Opnameprofiel" value={selectedProfileId} onChange={e => setSelectedProfileId(e.target.value)}>
           {profiles.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
         </select></span></label>
         <div className="studio-transcription"><small>Transcriptie</small><span>{settings.processing_mode === "local" ? "Whisper op deze pc" : "ThoughtVault Cloud"}</span>
@@ -381,7 +381,7 @@ export function RecordingPage() {
       <button className="studio-meta studio-people" onClick={() => setPanel("people")}><People24Regular />{selectedParticipantIds.length ? `${selectedParticipantIds.length} personen` : "Geen personen"}<span>＋</span></button>
       <p className="studio-meta"><DocumentText24Regular />Wordt na verwerking aangevuld</p>
       <section className="studio-live-panel"><h3><WaveformIcon />Live opname</h3>
-        <dl><div><dt>Duur</dt><dd>{duration}</dd></div><div><dt>Geluidsniveau</dt><dd><meter min={0} max={100} value={phase === "recording" ? level : 0} aria-label="Geluidsniveau" /></dd></div>
+        <dl><div><dt>Duur</dt><dd>{duration}</dd></div><div><dt>Geluidsniveau</dt><dd><span className="studio-level-bars" role="meter" aria-label="Geluidsniveau" aria-valuemin={0} aria-valuemax={100} aria-valuenow={phase === "recording" ? level : 0}>{Array.from({ length: 9 }, (_, i) => <i key={i} aria-hidden="true" style={{ height: 6 + i * 1.2, opacity: phase === "recording" && i < level * 9 / 100 ? 1 : .2 }} />)}</span></dd></div>
           <div><dt>Bron</dt><dd>{mode === "combined" ? "Gecombineerd" : "Microfoon"}</dd></div><div><dt>Profiel</dt><dd>{profileName}</dd></div></dl>
       </section>
       </section>

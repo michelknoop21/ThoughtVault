@@ -10,7 +10,8 @@ Gecontroleerd op 2026-10-09. De feature is geïmplementeerd en samengevoegd met 
   tussen deze twee commits. De latere wijziging is uitsluitend voor macOS.
 - Windows CI: https://github.com/michelknoop21/ThoughtVault/actions/runs/37915084903
 - CI-resultaat: success. `publish=false`; Upload to server is skipped.
-- Beide installers zijn private kandidaten. Geen installatie op Michels apparaten.
+- Beide installers blijven private kandidaten; de publieke downloadfeed is niet gewijzigd.
+- Geïnstalleerd op Michels Mac en echte Windows-pc via Royal TSX op 2026-10-09.
 
 ## Geslaagde controles
 
@@ -23,6 +24,15 @@ Gecontroleerd op 2026-10-09. De feature is geïmplementeerd en samengevoegd met 
   Intel en Apple Silicon. De designated requirement komt overeen met de
   geïnstalleerde `/Applications/ThoughtVault.app`.
 - macOS-DMG: checksumcontrole door hdiutil geslaagd.
+- macOS: `/Applications/ThoughtVault.app` meldt 1.0.270, handtekening geldig,
+  app gestart en bestaande notulen zichtbaar. Vorige appbundel lokaal bewaard.
+- Windows: MSI-checksum gecontroleerd, upgrade van 1.0.269 naar 1.0.270 met
+  exitcode 0. Lokale notulenback-up gemaakt; SHA-256 van de notulen onveranderd
+  na installatie en appstart. Draaiende executable meldt 1.0.270 en Responding=True.
+- Beide geïnstalleerde apps: Instellingen > Verwerking > Woorden en namen
+  bereikbaar. Geen gebruikersnotulen gewijzigd tijdens deze controle.
+- Avast CyberCapture controleerde de Windows-executable bij de eerste start;
+  de controle verdween en de app werd bruikbaar zonder beveiliging te omzeilen.
 - UI-fixture: geselecteerde variant wordt vooringevuld; Jengo wordt in de notule
   Yinga; ruwe transcriptie blijft Jengo. Correctievenster past bij 880 x 600
   zonder scroll of horizontale overflow; focus blijft in de dialoog.
@@ -38,9 +48,9 @@ Gecontroleerd op 2026-10-09. De feature is geïmplementeerd en samengevoegd met 
 
 ## Nog te verifiëren
 
-De nieuwe bediening is nog niet interactief gecontroleerd in de geïnstalleerde
-macOS-app of via Royal TSX in de echte Windows-app. Een nieuwe opname met een
-echte lokale/cloudprovider en een echte Obsidian-vault blijft open. CI-installatie
+Het opslaan en toepassen van een nieuwe woordregel in de geïnstalleerde apps
+is nog niet interactief gecontroleerd. Een nieuwe opname met een echte
+lokale/cloudprovider en een echte Obsidian-vault blijft open. CI-installatie
 en fixtures bewijzen dat niet. De macOS-kandidaat is niet genotariseerd.
 
 De woordenlijst blijft per apparaat; geen automatische synchronisatie. Alleen

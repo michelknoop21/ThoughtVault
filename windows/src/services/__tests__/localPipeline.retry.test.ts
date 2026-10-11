@@ -66,3 +66,18 @@ it("keeps simultaneous transcription progress attached to its own task", async (
   for (const finish of finishTranscription.values()) finish("De planning begint maandag om tien uur.");
   await Promise.all([first, second]);
 });
+
+it("shows native transcription errors without discarding the original message", async () => {
+  vi.mocked(invoke).mockImplementation(async (command) => {
+    if (command === "whisper_model_status") return { exists: true } as never;
+    throw "Segment lezen mislukt: invalid UTF-8";
+  });
+  vi.spyOn(usePersonalCorrectionsStore.getState(), "hydrate").mockResolvedValue(undefined);
+  const add = vi.fn();
+  useLocalTranscriptsStore.setState({ items: [], add, update: vi.fn() });
+  await processLocally("C:\\recording.wav", "standaard", "combined", [], 12, "local-failed");
+  expect(useRecordingStore.getState().backgroundTasks[0]).toMatchObject({
+    status: "failed", error_message: "Segment lezen mislukt: invalid UTF-8",
+  });
+  expect(add).not.toHaveBeenCalled();
+});

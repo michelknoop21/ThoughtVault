@@ -186,7 +186,9 @@ pub async fn transcribe_local(
     // whisper inference is blocking + CPU-heavy: keep it off the async runtime.
     tokio::task::spawn_blocking(move || {
         let _guard = TRANSCRIPTION_LOCK.lock().map_err(|e| format!("Transcriptiewachtrij mislukt: {e}"))?;
-        run_whisper(app, &model, &file_path, &vocabulary, &request_id)
+        let result = run_whisper(app, &model, &file_path, &vocabulary, &request_id);
+        if let Err(error) = &result { eprintln!("[transcribe_local] {error}"); }
+        result
     })
         .await
         .map_err(|e| format!("Transcriptie-thread mislukt: {}", e))?
@@ -303,10 +305,10 @@ fn run_whisper(app: AppHandle, model: &PathBuf, wav_path: &str, vocabulary: &str
 
             state
                 .full(params, &float_buf[range])
-                .map_err(|e| format!("Transcriptie mislukt: {}", e))?;
+                .map_err(|e| format!("Transcriptie mislukt bij {}s: {}", start / 16_000, e))?;
 
             for segment in state.as_iter() {
-                text.push_str(segment.to_str().map_err(|e| format!("Segment lezen mislukt: {e}"))?);
+                text.push_str(segment.to_str().map_err(|e| format!("Segment lezen mislukt bij {}s: {e}", start / 16_000))?);
             }
             text.push(' ');
         }

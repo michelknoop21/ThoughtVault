@@ -166,7 +166,7 @@ export async function processLocally(
     updateBackgroundTask(taskId, { status: "completed", progress: 100 });
     setTimeout(() => removeBackgroundTask(taskId), 1500);
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "Lokale verwerking mislukt";
+    const msg = err instanceof Error ? err.message : typeof err === "string" && err.trim() ? err : "Lokale verwerking mislukt";
     console.error("[LocalPipeline] Failed:", msg);
     updateBackgroundTask(taskId, { status: "failed", error_message: msg });
   }

@@ -22,18 +22,18 @@ Previous audit results are not counted as fresh acceptance.
 
 | Area | Required checks | Current result |
 | --- | --- | --- |
-| Installation/data | Upgrade, reopen, notes/profiles/people/settings preserved | Notes hash preserved; other readback pending |
-| Recording | Combined start, sound/silence alignment, mic/system levels, pause/resume both directions, navigation, quick notes, stop/process, keep-only | Pending |
-| Widget | Fast stop during initialization, main/widget state, timers after an hour, stop/error cleanup | Source race fixed; 97 frontend tests pass; native pending |
-| Multi-hour capture | At least 3 hours real elapsed capture, periodic synthetic speech and silence, pause, continuous audio/file growth, CPU/memory, final save and processing | Not started |
-| Long-file processing | Read full duration, transcription at start/middle/end, safe mix memory, provider chunking/retry | Mix streaming source fix under native test |
-| Imports/saved audio | File selection, supported formats, invalid input, import/reprocess, no duplicate temporary source after successful mix | Pending |
-| Notes | Edit/save/reopen, search/filter, copy, available exports, word corrections in actual pipeline | Pending |
-| People/profiles | Validation, create/edit/readback, participant selection, profile application | Pending |
-| Processing/tasks | Progress, failed provider, retry without lost transcript, concurrent jobs, supported cancellation | Pending |
-| Settings/models | Every tab, local/cloud provider discovery, recommendations and all-model override, download/cancel, key persistence | Pending; credential entry remains user-operated |
-| Integrations | Calendar known event, Obsidian test note export, MCP if offered, external connection failure | Pending; use current configured services only |
-| Recovery | Restart persistence, device disconnect, insufficient disk errors, interrupted processing, update while recording | Pending |
+| Installation/data | Upgrade, reopen, notes/profiles/people/settings preserved | 1.0.277 installed; notes hash preserved; own note editor survives full restart; people/profile readback passes |
+| Recording | Combined start, sound/silence alignment, mic/system levels, pause/resume both directions, navigation, quick notes, stop/process, keep-only | Short combined capture, pause/widget synchronization, navigation, quick note and final mix pass; keep-only pending |
+| Widget | Fast stop during initialization, main/widget state, timers after an hour, stop/error cleanup | Normal pause/resume/stop pass; idle-race regression passes; hour display pending |
+| Multi-hour capture | At least 3 hours real elapsed capture, periodic synthetic speech and silence, continuous audio/file growth, CPU/memory, final save and processing | Started about 10:45 CEST; numeric monitor and periodic speech running since 10:51; not completed |
+| Long-file processing | Read full duration, transcription at start/middle/end, safe mix memory, provider chunking/retry | Three-hour accelerated PCM stress passes locally and Windows CI 1.0.280; actual long native transcription pending |
+| Imports/saved audio | File selection, supported formats, invalid input, import/reprocess, no duplicate temporary source after successful mix | Invalid WAV rejection and own capture reprocessing pass; short final mix leaves one WAV; saved delete cancellation pending |
+| Notes | Edit/save/reopen, search/filter, copy, available exports, word corrections in actual pipeline | Edit/restart persistence, tags, one-time correction, copy, MD/HTML pass. Content search and TXT fixes await installed retest. PDF file saves but follow-up navigation freezes in 1.0.277 |
+| People/profiles | Validation, create/edit/readback, participant selection, profile application | Own person/profile edit/readback and blank validation pass; participant picker passes; custom profile pipeline pending |
+| Processing/tasks | Progress, failed provider, retry without lost transcript, concurrent jobs, supported cancellation | Normal processing persists; tasks empty-state/refresh pass; scoped progress source regression passes; failure/retry and concurrency native pending |
+| Settings/models | Every tab, local/cloud provider discovery, recommendations and all-model override, download/cancel, key persistence | Local/cloud presets/discovery, cloud connection, selected model preservation, recommended/all override, download/cancel pass. Credential entry user-operated |
+| Integrations | Calendar known event, Obsidian test note export, MCP if offered, external connection failure | Microsoft 365 connected, known-event proof pending. Obsidian failure message passes; positive vault export blocked by unavailable local service |
+| Recovery | Restart persistence, device disconnect, insufficient disk errors, interrupted processing, update while recording | Notes survive full restart; upgrade preserves storage. Device/disk fault and interrupted processing native pending |
 
 ## Source findings being fixed
 
@@ -107,3 +107,17 @@ Combined capture: no pause, stop after 49.96s. Mic WAV held 696851 samples (43.5
 - Standalone Silero VAD with padded, bounded utterances recovers both own speech fixtures from the captured file. Built-in FullParams VAD alone is bypassed by whisper-rs full_with_state, so it is not used as a fix.
 - The bundled 864 KiB detector works offline and its MIT license ships with the MSI. Synthetic fixture is committed; actual recorded audio is not.
 - New Small-model regression preserves Alex and Monday twice, including speech reduced to 4% amplitude after 45 seconds of silence. It passes locally in 2.8 seconds. Silence detector test and all 28 ordinary native tests pass; 3 explicit stress/model tests remain ignored in the normal suite and are separately exercised. Native Windows verification remains pending.
+
+
+### Real elapsed duration test, 10:45 onward
+
+- Combined capture 1.0.277 started about 10:45 CEST. Main and widget show matching 07:01 at 10:52. No update/restart is allowed while this capture is active. Recorder source is unchanged through candidate 1.0.281.
+- Own synthetic Dutch speech plays at 15-minute intervals. PowerShell Job3 runs a three-hour monitor started at approximately 10:51:40; it does not stop or restart the app. Earliest finalization is after the completion marker, expected after 13:51 CEST.
+- First CSV row: UTC 2026-10-11T08:51:50.0863935Z, PID 11116, main/system WAV sizes both 11796480 bytes. Root-process working set 36773888 and private memory 11558912 bytes; these values exclude WebView subprocesses and must not be reported as whole-app memory. CSV is `%TEMP%/ThoughtVault-duration-20261011.csv`, completion marker `%TEMP%/ThoughtVault-duration-20261011.finished.json`.
+- First diagnostic job failed because its filename filter selected the loopback file; corrected the diagnostic script to exclude `.loopback.wav`. Native capture remained uninterrupted.
+- Own 09:16 note editor content survives a full app restart, exact text visually read back at 10:43.
+- Candidate 1.0.281 source 8e6fa7c is pushed on the owned branch. CI 38125812625 is in progress. Do not claim installed acceptance until the long capture is finalized, upgrade verified and regressions retested.
+- At 10:54, deleting the own 09:42 QA note opens the app confirmation sheet with its permanent-deletion warning. Cancelling retains the note. No permanent deletion performed.
+- At 10:58, widget shows active duration 12:55. PID remains 11116. CSV rows at UTC 08:56:50 and 08:57:50 show main WAV growth from 21405696 to 23322624 bytes, while system WAV remains 11796480 bytes between synthetic speech markers. Check the next marker and final PCM alignment before attributing a system-audio failure. Root-process working set is 38432768 bytes and private memory 13180928 bytes, excluding WebView processes.
+- CI 38125812625 has passed frontend/native verification and the accelerated three-hour mixer gate. Packaging, packaged CPU inference and installer acceptance remain in progress.
+- Thread heartbeat `thoughtvault-windows-duurtest-en-audit` continues at 15-minute intervals. It must preserve active capture, wait for three real elapsed hours and the completion marker, then finalize the own test capture before installing and retesting candidate 1.0.281.

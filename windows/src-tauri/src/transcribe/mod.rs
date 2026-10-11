@@ -198,6 +198,8 @@ fn speech_detector() -> Result<(tempfile::NamedTempFile, whisper_rs::WhisperVadC
     file.write_all(include_bytes!("../../resources/vad/ggml-silero-v5.1.2.bin")).map_err(|e| e.to_string())?;
     let mut params = whisper_rs::WhisperVadContextParams::new();
     params.set_use_gpu(false);
+    // Small sequential VAD frames do not benefit from CPU thread synchronization.
+    params.set_n_threads(1);
     let detector = whisper_rs::WhisperVadContext::new(&file.path().to_string_lossy(), params)
         .map_err(|e| format!("Spraakdetectie laden mislukt: {e}"))?;
     Ok((file, detector))
@@ -337,7 +339,9 @@ mod tests {
         samples.extend(fixture.iter().map(|sample| sample * 0.04));
         samples.extend(vec![0.0; 20 * 16_000]);
         let (_file, mut detector) = super::speech_detector().unwrap();
+        let detection_started = std::time::Instant::now();
         let ranges = super::speech_ranges(&mut detector, &samples).unwrap();
+        assert!(detection_started.elapsed().as_secs() < 60, "VAD must process this two-minute fixture faster than realtime");
         assert!(!ranges.is_empty());
         assert!(ranges.iter().all(|range| range.len() <= 30 * 16_000));
         let mut text = String::new();

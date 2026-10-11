@@ -47,3 +47,15 @@ Combined capture: no pause, stop after 49.96s. Mic WAV held 696851 samples (43.5
 - Stop awaits the existing completion channel instead of resetting after 60s while a large mix might still be writing.
 
 - Real typing in the note editor reset the DOM/caret per keystroke, reversing the own test marker. Fix keeps the browser-owned editing DOM and reads/sanitizes it on save/correction; regression verifies text node and caret survive input and failed save retains the draft.
+
+- Native TXT export created Downloads/Verslag gesprek.txt (559 bytes). Markdown and HTML files verified in Downloads: 577 and 703 bytes respectively, 09:25:54 and 09:26:01. PDF click silently produced no print window in native WebView, because it depended on an empty popup. Replaced with an in-app print iframe, escaped title and sanitized note body; native retest pending.
+
+### Additional fresh native checks, 1.0.274
+
+- Existing own QA person retained after upgrade. Added expertise `Functionele audit 20261011, opnamecontrole`, saved, closed and reopened; exact text retained.
+- General update preference toggled off, navigated away and back; off retained. Restored original on preference.
+- Microsoft 365 remains connected; no known calendar-event proof yet. Account page correctly describes login-free local operation.
+- Obsidian remains disabled with no API key; test connection returns `Niet bereikbaar` for its configured local endpoint. Successful vault export cannot be accepted until a service is available.
+- System advice initially displayed unavailable while CIM data were still loading, then correctly recommended Medium without altering the selected Small model. Separate read-only system check returned Ryzen 7 5700X3D, AMD64, 48 GB, 16 threads, Windows 11, 770 GB free. Avast blocked the separately encoded diagnostic command; no protection disabled. This does not establish a persistent app detection failure. Fix labels pending advice as loading, with regression preserving the selected model.
+- Long local-compatible transcripts previously sent as a single unbounded request. Mirror macOS thresholds (8000 characters locally/unknown model, 64000 hosted GPT-OSS), summarize every chunk before applying the final profile, and reject nonshrinking intermediate output rather than silently truncate. Tests preserve Unicode, start/middle/end, participants, quick notes and profile template. This is not yet native multi-hour processing proof.
+- Latest frontend verification: 102 tests across 37 files and TypeScript/Vite build pass. Native audio changes are in candidate 1.0.275, CI run 38121287866, source ea82f9ede95e394ae4afa762010cfb6a5c38ed84, publication disabled. Native retest and 3-hour elapsed recording remain outstanding.

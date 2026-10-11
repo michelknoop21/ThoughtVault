@@ -113,3 +113,30 @@ it("adds a tag to a local note without a server request", async () => {
   expect(serverTags).not.toHaveBeenCalled();
   await act(async () => { root.unmount(); });
 });
+
+it("prints a sanitized note inside the app without relying on a popup", async () => {
+  const note: Transcript = { id: "local-print", title: "Overleg <test>", notule_html: '<p>Planning</p><script>alert(1)</script>',
+    duration_seconds: 43.553, tags: [], created_at: new Date().toISOString(), updated_at: new Date().toISOString() };
+  useSettingsStore.getState().updateSettings({ processing_mode: "local" });
+  vi.spyOn(Store, "load").mockResolvedValue({ get: vi.fn().mockResolvedValue([]), set: vi.fn(), save: vi.fn() } as unknown as Store);
+  await useLocalTranscriptsStore.getState().hydrate();
+  await useLocalTranscriptsStore.getState().add(note);
+  useTranscriptsStore.setState({ transcripts: [note], selectedId: note.id });
+  const popup = vi.spyOn(window, "open");
+  const container = document.createElement("div");
+  const root = createRoot(container);
+  await act(async () => { root.render(<TranscriptsPage />); });
+  await act(async () => { container.querySelector<HTMLButtonElement>('button[title="Exporteren"]')!.click(); });
+  await act(async () => { Array.from(container.querySelectorAll<HTMLButtonElement>(".td-export-item")).find(button => button.textContent?.includes("PDF"))!.click(); });
+  const frame = document.querySelector<HTMLIFrameElement>('iframe[title="Notule afdrukken"]')!;
+  expect(frame.srcdoc).toContain("Overleg &lt;test&gt;");
+  expect(frame.srcdoc).toContain("43s");
+  expect(frame.srcdoc).not.toContain("<script>");
+  expect(popup).not.toHaveBeenCalled();
+  const print = vi.spyOn(frame.contentWindow!, "print").mockImplementation(() => {});
+  frame.dispatchEvent(new Event("load"));
+  expect(print).toHaveBeenCalledOnce();
+  frame.contentWindow!.dispatchEvent(new Event("afterprint"));
+  expect(frame.isConnected).toBe(false);
+  await act(async () => { root.unmount(); });
+});

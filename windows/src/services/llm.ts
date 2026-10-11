@@ -232,21 +232,47 @@ export class LLMService {
     const finish = (html: string) => correctHTML(ensureNotesSection(stripCodeFences(html), quickNote), corrections, profile.id);
     const config = getConfig();
     const enriched = enrichProfile(profile);
+    let processed = correctText(transcription, corrections, profile.id);
+    const compatible = config.provider === "ollama" || config.provider === "lm-studio";
+    const baseURL = config.provider === "ollama" ? config.ollamaUrl : config.lmStudioUrl;
+    const model = config.provider === "ollama" ? config.ollamaModel : config.lmStudioModel;
+    const compatibleKey = compatible && config.provider === "ollama" && baseURL.startsWith("https://")
+      ? await loadCredential("ollama_api_key") : null;
+    if (compatible) {
+      // Match macOS: small local contexts need summaries before the final profile.
+      const hostedGPTOSS = isOllamaCloudURL(baseURL)
+        && ["gpt-oss:120b", "gpt-oss:120b-cloud", "gpt-oss:20b", "gpt-oss:20b-cloud"].includes(model);
+      const limit = hostedGPTOSS ? 64_000 : 8_000;
+      while (Array.from(processed).length > limit) {
+        const characters = Array.from(processed);
+        const summaries: string[] = [];
+        for (let offset = 0; offset < characters.length; offset += limit) {
+          summaries.push(await generateWithOpenAICompatible(baseURL, model,
+            "Je vat transcripties samen. Bewaar namen, feiten, besluiten, actiepunten, eigenaren en termijnen. Verzin niets.",
+            correctionPrompt(corrections, profile.id) + "Vat dit deel compact samen:\n\n" + characters.slice(offset, offset + limit).join(""),
+            compatibleKey ?? ""));
+        }
+        const summarized = summaries.join("\n\n");
+        if (Array.from(summarized).length >= characters.length) {
+          throw new Error("De notule-generator verkort de lange transcriptie onvoldoende. De transcriptie is bewaard; kies een ander model en probeer opnieuw.");
+        }
+        processed = summarized;
+      }
+    }
     const userPrompt = correctionPrompt(corrections, profile.id) + quickNotePrompt(quickNote) + buildUserContent(
       enriched.notule_prompt ?? "",
-      correctText(transcription, corrections, profile.id),
+      processed,
       enriched.output_template ?? enriched.notule_template,
       participants
     );
 
     if (config.provider === "ollama") {
-      const apiKey = config.ollamaUrl.startsWith("https://") ? await loadCredential("ollama_api_key") : null;
       const html = await generateWithOpenAICompatible(
         config.ollamaUrl,
         config.ollamaModel,
         enriched.system_prompt ?? "",
         userPrompt,
-        apiKey ?? "",
+        compatibleKey ?? "",
         onProgress
       );
       return finish(html);

@@ -116,3 +116,44 @@ it("corrects derived provider input and returned HTML without changing the raw t
   expect(html).toBe('<p title="Django">Yinga</p><code>Django</code>');
   expect(raw).toBe("Jengo bespreekt de planning.");
 });
+
+it("summarizes every part of a long meeting before applying the profile without splitting Unicode", async () => {
+  useSettingsStore.setState({ ollama_url: "https://ollama.com", ollama_model: "unknown-small-context" });
+  loadCredential.mockResolvedValue("test-key");
+  const raw = "START " + "a".repeat(7993) + "😀 MIDDLE " + "b".repeat(8000) + " END";
+  invoke.mockImplementation(async (_command, args) => {
+    const content = JSON.parse(args.request.body).messages[1].content;
+    const summary = content.includes("Vat dit deel compact samen:")
+      ? ["START", "MIDDLE", "END"].filter(marker => content.includes(marker)).join(" ")
+      : "<p>START MIDDLE END</p>";
+    return { status: 200, body: JSON.stringify({ choices: [{ message: { content: summary } }] }) };
+  });
+  const progress = vi.fn();
+  expect(await LLMService.generateNotulen(raw, profile, progress, ["Alex"], "Budget controleren")).toContain("START MIDDLE END");
+  const contents = invoke.mock.calls.map(call => JSON.parse(call[1].request.body).messages[1].content);
+  const chunks = contents.slice(0, -1).map(content => content.split("Vat dit deel compact samen:\n\n")[1]);
+  expect(chunks.join("")).toBe(raw);
+  expect(chunks.every(chunk => Array.from(chunk).length <= 8000)).toBe(true);
+  expect(contents.at(-1)).toContain("Alex");
+  expect(contents.at(-1)).toContain("Budget controleren");
+  expect(contents.at(-1)).toContain("<h1>Titel</h1>");
+  expect(progress).toHaveBeenCalledTimes(1);
+});
+
+it("retains the hosted GPT-OSS context allowance instead of creating unnecessary chunk requests", async () => {
+  useSettingsStore.setState({ ollama_url: "https://ollama.com", ollama_model: "gpt-oss:120b" });
+  loadCredential.mockResolvedValue("test-key");
+  invoke.mockResolvedValue({ status: 200, body: JSON.stringify({ choices: [{ message: { content: "<p>Akkoord</p>" } }] }) });
+  await LLMService.generateNotulen("a".repeat(9000), profile);
+  expect(invoke).toHaveBeenCalledTimes(1);
+});
+
+it("stops without silently truncating a long meeting when the model does not shorten its chunks", async () => {
+  useSettingsStore.setState({ ollama_url: "https://ollama.com", ollama_model: "unknown-small-context" });
+  loadCredential.mockResolvedValue("test-key");
+  invoke.mockImplementation(async (_command, args) => ({ status: 200, body: JSON.stringify({ choices: [{ message: {
+    content: JSON.parse(args.request.body).messages[1].content.split("Vat dit deel compact samen:\n\n")[1],
+  } }] }) }));
+  await expect(LLMService.generateNotulen("a".repeat(9000), profile)).rejects.toThrow("transcriptie is bewaard");
+  expect(invoke).toHaveBeenCalledTimes(2);
+});

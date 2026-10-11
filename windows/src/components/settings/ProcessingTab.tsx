@@ -25,7 +25,10 @@ export function ProcessingTab() {
   const [specError, setSpecError] = useState("");
   const [setupDetails, setSetupDetails] = useState(false);
   const [modelError, setModelError] = useState("");
-  const advice = transcriptionAdvice(specs);
+  const advice = {
+    ...transcriptionAdvice(specs),
+    ...(!specs && !specError ? { name: "Systeemadvies wordt geladen", reason: "Systeemgegevens worden opgehaald. Je huidige modelkeuze blijft behouden." } : {}),
+  };
   const settings = useSettingsStore();
   const [showAllModels, setShowAllModels] = useState(false);
   const visibleModels = WHISPER_MODELS.filter(model => showAllModels || !advice.model

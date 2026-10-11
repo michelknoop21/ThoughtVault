@@ -34,3 +34,20 @@ it("prefills each Ollama location, loads its models and ignores a stale response
   expect(useSettingsStore.getState().ollama_model).toBe("gpt-oss:120b");
   await act(async () => { root.unmount(); }); host.remove(); vi.useRealTimers();
 });
+
+it("does not call pending system advice unavailable or replace the selected model", async () => {
+  const { invoke } = await import("@tauri-apps/api/core");
+  let finish!: (value: unknown) => void;
+  vi.mocked(invoke).mockImplementation(command => command === "get_system_specs"
+    ? new Promise(resolve => { finish = resolve; }) : Promise.resolve(null) as never);
+  useSettingsStore.setState({ processing_mode: "local", notulen_provider: "openai", whisper_model: "small" });
+  const host = document.createElement("div"); document.body.appendChild(host);
+  const root = createRoot(host);
+  await act(async () => { root.render(<ProcessingTab />); });
+  expect(host.textContent).toContain("Systeemadvies wordt geladen");
+  expect(host.textContent).not.toContain("Systeemadvies niet beschikbaar");
+  await act(async () => { finish({ cpu: "QA", architecture: "AMD64", memory_gb: 48, threads: 16, os_version: "Windows", free_storage_gb: 770 }); });
+  expect(host.textContent).toContain("Whisper Medium");
+  expect(useSettingsStore.getState().whisper_model).toBe("small");
+  await act(async () => { root.unmount(); }); host.remove();
+});

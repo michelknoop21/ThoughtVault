@@ -86,3 +86,24 @@ Combined capture: no pause, stop after 49.96s. Mic WAV held 696851 samples (43.5
 - Own QA notulen profile updated with `Opslagcontrole 20261011`, saved and reopened; description retained. Creating an empty profile rejects with the in-app message that name and instruction are mandatory. Existing default stays Standaard.
 - Add-person dialog fits without scrolling; blank and whitespace-only names keep creation disabled. Existing own QA person found in participant picker and selected; recording sidebar shows one participant.
 - Concurrent transcription used a global unscoped number event, allowing one import to overwrite another task's progress. Scope native progress by task request ID and filter in the existing listener. Serialize CPU-heavy Whisper inference to avoid loading simultaneous model contexts. Focused regression sends one task's progress to both listeners and verifies the other task remains unchanged.
+
+### Installed 1.0.277 acceptance, 10:10 to 10:23
+
+- CI 38122510862 passed native regression, packaged CPU inference, runtime and installer upgrade checks. Installed MSI SHA256 `dc095cd7d8c601a9010ed20819410efee1ded1460204f972a136c419e1bc23be` matches downloaded artifact. Backed up both local and roaming app directories; actual `local-transcripts.json` hash preserved across upgrade.
+- Own combined capture `recording_1791706354744.wav`: microphone and CPAL system fallback both initialize at 44.1 kHz. Main pause/widget resume and widget pause/main resume synchronize. Navigation through Home and Settings keeps capture active. Quick note saves and reopens with exact QA text while active and paused. Stop closes widget and starts processing.
+- Native log records 1874272 mono samples, 117.14 seconds of audio versus 270.69 seconds elapsed including pauses. Final WAV is 3748588 bytes; temporary loopback file absent. Numeric PCM inspection locates the two own speech fixtures at active seconds 32–39 and 89–99 with the gap retained. First fixture ends at the intentional pause. This is a short native alignment check, not three-hour acceptance.
+- Editing the own 09:16 note no longer reverses typing. Saved `Kern. QA opslagcontrole 20261011: wijziging behouden na heropenen.` and read back exactly after opening another note and returning. Full app restart persistence still pending.
+- PDF export opens the native print preview with the correct title, metadata and note body. Microsoft Print to PDF saves `Downloads/ThoughtVault-QA-277-20261011.pdf`, 67126 bytes, 10:23:22. PDF file creation passes. Follow-up interaction fails: navigation and processing progress freeze after printing although native processing continues. Deferred iframe cleanup is covered by the existing frontend test; native retest pending.
+- The 117-second fixture completed and persisted at 10:22:41, but the UI incorrectly remained at 48% after PDF printing. The app may now be updated, since no capture or processing is active. Candidate 1.0.280 adds content search, scoped progress/serialized inference and block-preserving TXT/copy; 106 frontend tests across 40 files and TypeScript/Vite pass. CI 38123916166 has reached the three-hour PCM mixing gate; installation and native retests remain pending.
+
+### 10:36 transcription diagnosis and PDF follow-up
+
+- CI 38123916166 for private 1.0.280 passes all gates, including Windows three-hour accelerated PCM mixing and installer upgrade. Actual three-hour elapsed recording has not started.
+- Captured second speech fixture matches its generated reference at correlation 0.99958. Cropped local Small inference recovers Alex, Monday 10:00 and the decision; full 117-second inference instead repeats invented text. No-context alone does not correct it. Standalone speech detection and bounded utterances are being tested; no production fix claimed. Diagnostic captured audio stays outside Git.
+- Deferred PDF frame cleanup passes all 106 frontend tests across 40 files. Native follow-up navigation must still be verified.
+
+### 10:42 candidate 1.0.281
+
+- Standalone Silero VAD with padded, bounded utterances recovers both own speech fixtures from the captured file. Built-in FullParams VAD alone is bypassed by whisper-rs full_with_state, so it is not used as a fix.
+- The bundled 864 KiB detector works offline and its MIT license ships with the MSI. Synthetic fixture is committed; actual recorded audio is not.
+- New Small-model regression preserves Alex and Monday twice, including speech reduced to 4% amplitude after 45 seconds of silence. It passes locally in 2.8 seconds. Silence detector test and all 28 ordinary native tests pass; 3 explicit stress/model tests remain ignored in the normal suite and are separately exercised. Native Windows verification remains pending.

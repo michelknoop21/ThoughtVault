@@ -192,6 +192,38 @@ pub async fn transcribe_local(
         .map_err(|e| format!("Transcriptie-thread mislukt: {}", e))?
 }
 
+fn speech_detector() -> Result<(tempfile::NamedTempFile, whisper_rs::WhisperVadContext), String> {
+    use std::io::Write;
+    let mut file = tempfile::NamedTempFile::new().map_err(|e| e.to_string())?;
+    file.write_all(include_bytes!("../../resources/vad/ggml-silero-v5.1.2.bin")).map_err(|e| e.to_string())?;
+    let mut params = whisper_rs::WhisperVadContextParams::new();
+    params.set_use_gpu(false);
+    let detector = whisper_rs::WhisperVadContext::new(&file.path().to_string_lossy(), params)
+        .map_err(|e| format!("Spraakdetectie laden mislukt: {e}"))?;
+    Ok((file, detector))
+}
+
+fn speech_ranges(detector: &mut whisper_rs::WhisperVadContext, samples: &[f32]) -> Result<Vec<std::ops::Range<usize>>, String> {
+    let mut params = whisper_rs::WhisperVadParams::new();
+    params.set_speech_pad(300);
+    params.set_max_speech_duration(29.4);
+    let segments = detector.segments_from_samples(params, samples).map_err(|e| format!("Spraakdetectie mislukt: {e}"))?;
+    let mut ranges: Vec<std::ops::Range<usize>> = Vec::new();
+    for segment in segments {
+        let start = ((segment.start * 160.0) as usize).min(samples.len());
+        let end = ((segment.end * 160.0).ceil() as usize).min(samples.len());
+        if start >= end { continue; }
+        if let Some(last) = ranges.last_mut() {
+            if start <= last.end + 16_000 && end - last.start <= 30 * 16_000 {
+                last.end = last.end.max(end);
+                continue;
+            }
+        }
+        ranges.push(start..end);
+    }
+    Ok(ranges)
+}
+
 fn run_whisper(app: AppHandle, model: &PathBuf, wav_path: &str, vocabulary: &str, request_id: &str) -> Result<String, String> {
     use whisper_rs::{
         convert_integer_to_float_audio, FullParams, SamplingStrategy, WhisperContext,
@@ -209,6 +241,7 @@ fn run_whisper(app: AppHandle, model: &PathBuf, wav_path: &str, vocabulary: &str
         ));
     }
     let total_samples = reader.len() as usize;
+    let (_vad_file, mut detector) = speech_detector()?;
 
     let ctx = WhisperContext::new_with_params(
         model,
@@ -243,30 +276,37 @@ fn run_whisper(app: AppHandle, model: &PathBuf, wav_path: &str, vocabulary: &str
         convert_integer_to_float_audio(&int_buf, &mut float_buf)
             .map_err(|e| format!("Audioconversie mislukt: {}", e))?;
 
-        let mut params = FullParams::new(SamplingStrategy::Greedy { best_of: 1 });
-        params.set_language(Some("nl"));
-        if !vocabulary.is_empty() { params.set_initial_prompt(vocabulary); }
-        params.set_print_special(false);
-        params.set_print_progress(false);
-        params.set_print_realtime(false);
-        params.set_print_timestamps(false);
+        // Long silence can trap Whisper in repetition; decode bounded speech only.
+        // whisper-rs calls full_with_state, which bypasses whisper.cpp's built-in VAD.
+        for range in speech_ranges(&mut detector, &float_buf)? {
+            let start = chunk_index * CHUNK_SAMPLES + range.start;
+            let end = chunk_index * CHUNK_SAMPLES + range.end;
+            let mut params = FullParams::new(SamplingStrategy::Greedy { best_of: 1 });
+            params.set_language(Some("nl"));
+            params.set_no_context(true);
+            if !vocabulary.is_empty() { params.set_initial_prompt(vocabulary); }
+            params.set_print_special(false);
+            params.set_print_progress(false);
+            params.set_print_realtime(false);
+            params.set_print_timestamps(false);
 
-        // Map this chunk's 0-100 progress onto its slice of the overall bar.
-        let app_progress = app.clone();
-        let progress_request_id = request_id.to_string();
-        let base = (chunk_index * 100 / total_chunks) as i32;
-        let span = (100 / total_chunks) as i32;
-        params.set_progress_callback_safe(move |progress: i32| {
-            let overall = base + progress * span / 100;
-            let _ = app_progress.emit("transcribe-progress", serde_json::json!({ "request_id": progress_request_id, "progress": overall.min(100) }));
-        });
+            // Map this chunk's 0-100 progress onto its slice of the overall bar.
+            let app_progress = app.clone();
+            let progress_request_id = request_id.to_string();
+            params.set_progress_callback_safe(move |progress: i32| {
+                let position = start + (end - start) * progress.clamp(0, 100) as usize / 100;
+                let overall = position * 100 / total_samples.max(1);
+                let _ = app_progress.emit("transcribe-progress", serde_json::json!({ "request_id": progress_request_id, "progress": overall.min(100) }));
+            });
 
-        state
-            .full(params, &float_buf)
-            .map_err(|e| format!("Transcriptie mislukt: {}", e))?;
+            state
+                .full(params, &float_buf[range])
+                .map_err(|e| format!("Transcriptie mislukt: {}", e))?;
 
-        for segment in state.as_iter() {
-            text.push_str(segment.to_str().map_err(|e| format!("Segment lezen mislukt: {e}"))?);
+            for segment in state.as_iter() {
+                text.push_str(segment.to_str().map_err(|e| format!("Segment lezen mislukt: {e}"))?);
+            }
+            text.push(' ');
         }
     }
 
@@ -276,6 +316,46 @@ fn run_whisper(app: AppHandle, model: &PathBuf, wav_path: &str, vocabulary: &str
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn speech_detection_ignores_silence() {
+        let (_file, mut detector) = super::speech_detector().unwrap();
+        assert!(super::speech_ranges(&mut detector, &vec![0.0; 32_000]).unwrap().is_empty());
+    }
+
+    #[test]
+    #[ignore = "Requires THOUGHTVAULT_TEST_WHISPER_MODEL; exercised by Windows CI"]
+    fn whisper_inference_cpu_long_silence() {
+        use whisper_rs::{FullParams, SamplingStrategy, WhisperContext, WhisperContextParameters};
+        let model = std::env::var("THOUGHTVAULT_TEST_WHISPER_MODEL").unwrap();
+        let ctx = WhisperContext::new_with_params(model, WhisperContextParameters::default()).unwrap();
+        let mut state = ctx.create_state().unwrap();
+        let mut reader = hound::WavReader::new(std::io::Cursor::new(include_bytes!("../../tests/fixtures/dutch-qa.wav"))).unwrap();
+        let fixture: Vec<f32> = reader.samples::<i16>().map(|s| s.unwrap() as f32 / 32768.0).collect();
+        let mut samples = vec![0.0; 32 * 16_000];
+        samples.extend(&fixture);
+        samples.extend(vec![0.0; 45 * 16_000]);
+        samples.extend(fixture.iter().map(|sample| sample * 0.04));
+        samples.extend(vec![0.0; 20 * 16_000]);
+        let (_file, mut detector) = super::speech_detector().unwrap();
+        let ranges = super::speech_ranges(&mut detector, &samples).unwrap();
+        assert!(!ranges.is_empty());
+        assert!(ranges.iter().all(|range| range.len() <= 30 * 16_000));
+        let mut text = String::new();
+        for range in ranges {
+            let mut params = FullParams::new(SamplingStrategy::Greedy { best_of: 1 });
+            params.set_language(Some("nl"));
+            params.set_no_context(true);
+            params.set_print_realtime(false);
+            params.set_print_progress(false);
+            state.full(params, &samples[range]).unwrap();
+            for segment in state.as_iter() { text.push_str(segment.to_str().unwrap()); }
+        }
+        let lower = text.to_lowercase();
+        assert_eq!(lower.matches("alex").count(), 2, "Both normal and quiet speech must survive: {text}");
+        assert_eq!(lower.matches("maandag").count(), 2, "Both decisions must survive: {text}");
+        assert!(!lower.contains("ik ben blij"), "No silence hallucination: {text}");
+    }
+
     #[test]
     #[ignore = "Requires THOUGHTVAULT_TEST_WHISPER_MODEL; exercised by Windows CI"]
     fn whisper_inference_cpu_smoke() {

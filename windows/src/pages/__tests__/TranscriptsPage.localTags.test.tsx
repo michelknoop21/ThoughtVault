@@ -136,7 +136,11 @@ it("prints a sanitized note inside the app without relying on a popup", async ()
   const print = vi.spyOn(frame.contentWindow!, "print").mockImplementation(() => {});
   frame.dispatchEvent(new Event("load"));
   expect(print).toHaveBeenCalledOnce();
+  vi.useFakeTimers();
   frame.contentWindow!.dispatchEvent(new Event("afterprint"));
+  expect(frame.isConnected).toBe(true);
+  vi.runOnlyPendingTimers();
   expect(frame.isConnected).toBe(false);
+  vi.useRealTimers();
   await act(async () => { root.unmount(); });
 });

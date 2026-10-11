@@ -119,9 +119,9 @@ jobs:
               if (!(Select-String -Path $Cache.FullName -Pattern $Flag -SimpleMatch -Quiet)) { throw "Unsafe Whisper CPU build: $Flag" }
             }
           }
-          $env:THOUGHTVAULT_TEST_WHISPER_MODEL = Join-Path $env:RUNNER_TEMP 'ggml-tiny.bin'
-          Invoke-WebRequest 'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.bin' -OutFile $env:THOUGHTVAULT_TEST_WHISPER_MODEL
-          cargo test --release --manifest-path src-tauri/Cargo.toml --lib whisper_inference_cpu_smoke -- --ignored
+          $env:THOUGHTVAULT_TEST_WHISPER_MODEL = Join-Path $env:RUNNER_TEMP 'ggml-small.bin'
+          Invoke-WebRequest 'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.bin' -OutFile $env:THOUGHTVAULT_TEST_WHISPER_MODEL
+          cargo test --release --manifest-path src-tauri/Cargo.toml --lib whisper_inference_cpu -- --ignored
           if ($LASTEXITCODE -ne 0) { throw "Whisper inference failed" }
 
       - name: Verify self-contained C++ runtime

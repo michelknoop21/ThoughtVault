@@ -81,8 +81,9 @@ export async function processLocally(
 
       // 2. Transcribe on-device. Map whisper progress (0-100) → 10..50.
       updateBackgroundTask(taskId, { status: "transcribing", progress: 10 });
-      const unlistenTr = await listen<number>("transcribe-progress", (e) => {
-        const frac = Math.max(0, Math.min(100, e.payload)) / 100;
+      const unlistenTr = await listen<{ request_id: string; progress: number }>("transcribe-progress", (e) => {
+        if (e.payload.request_id !== taskId) return;
+        const frac = Math.max(0, Math.min(100, e.payload.progress)) / 100;
         updateBackgroundTask(taskId, { progress: Math.round(10 + frac * 40) });
       });
       try {
@@ -92,6 +93,7 @@ export async function processLocally(
           filePath,
           modelId: model,
           vocabulary,
+          requestId: taskId,
         });
       } finally {
         unlistenTr();

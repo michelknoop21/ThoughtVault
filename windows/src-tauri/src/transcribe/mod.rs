@@ -8,6 +8,9 @@ use std::path::PathBuf;
 use std::sync::Mutex;
 use tokio::sync::watch;
 
+// Keep simultaneous imports from loading multiple CPU-heavy Whisper contexts.
+static TRANSCRIPTION_LOCK: Mutex<()> = Mutex::new(());
+
 #[derive(Default)]
 pub struct ModelDownloadControl {
     active: Mutex<Option<(String, watch::Sender<bool>)>>,
@@ -170,6 +173,7 @@ pub async fn transcribe_local(
     file_path: String,
     model_id: String,
     vocabulary: Option<String>,
+    request_id: String,
 ) -> Result<String, String> {
     let model = model_path(&app, &model_id)?;
     if !model.is_file() {
@@ -180,12 +184,15 @@ pub async fn transcribe_local(
     // Thirty validated names of up to 120 characters also fit in UTF-8.
     if vocabulary.len() > 16_384 || vocabulary.contains('\0') { return Err("Ongeldige woordenlijst".into()); }
     // whisper inference is blocking + CPU-heavy: keep it off the async runtime.
-    tokio::task::spawn_blocking(move || run_whisper(app, &model, &file_path, &vocabulary))
+    tokio::task::spawn_blocking(move || {
+        let _guard = TRANSCRIPTION_LOCK.lock().map_err(|e| format!("Transcriptiewachtrij mislukt: {e}"))?;
+        run_whisper(app, &model, &file_path, &vocabulary, &request_id)
+    })
         .await
         .map_err(|e| format!("Transcriptie-thread mislukt: {}", e))?
 }
 
-fn run_whisper(app: AppHandle, model: &PathBuf, wav_path: &str, vocabulary: &str) -> Result<String, String> {
+fn run_whisper(app: AppHandle, model: &PathBuf, wav_path: &str, vocabulary: &str, request_id: &str) -> Result<String, String> {
     use whisper_rs::{
         convert_integer_to_float_audio, FullParams, SamplingStrategy, WhisperContext,
         WhisperContextParameters,
@@ -246,11 +253,12 @@ fn run_whisper(app: AppHandle, model: &PathBuf, wav_path: &str, vocabulary: &str
 
         // Map this chunk's 0-100 progress onto its slice of the overall bar.
         let app_progress = app.clone();
+        let progress_request_id = request_id.to_string();
         let base = (chunk_index * 100 / total_chunks) as i32;
         let span = (100 / total_chunks) as i32;
         params.set_progress_callback_safe(move |progress: i32| {
             let overall = base + progress * span / 100;
-            let _ = app_progress.emit("transcribe-progress", overall.min(100));
+            let _ = app_progress.emit("transcribe-progress", serde_json::json!({ "request_id": progress_request_id, "progress": overall.min(100) }));
         });
 
         state
@@ -262,7 +270,7 @@ fn run_whisper(app: AppHandle, model: &PathBuf, wav_path: &str, vocabulary: &str
         }
     }
 
-    let _ = app.emit("transcribe-progress", 100);
+    let _ = app.emit("transcribe-progress", serde_json::json!({ "request_id": request_id, "progress": 100 }));
     Ok(text.trim().to_string())
 }
 

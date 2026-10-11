@@ -74,3 +74,9 @@ Combined capture: no pause, stop after 49.96s. Mic WAV held 696851 samples (43.5
 - Ollama Cloud auto-discovered 18 models, stored key indicator present without exposing the key, native test connection shows connected. Local preset fills http://localhost:11434 and missing local service shows an actionable model-discovery error. Original cloud selection is being restored.
 - Three-hour synthetic PCM mix stress passes locally in release mode (4.98s): exact 172800000 sample duration, start/middle/end markers and adjacent silence intact. Added an explicit Windows CI stress gate. This validates large-file processing, not three elapsed hours of native capture.
 - Original Ollama settings restored and visually verified: https://ollama.com, gpt-oss:120b, saved key still present. Candidate 1.0.278 frontend: 104 tests in 39 files, TypeScript/Vite pass.
+
+### Further native acceptance and concurrent processing
+
+- Own QA notulen profile updated with `Opslagcontrole 20261011`, saved and reopened; description retained. Creating an empty profile rejects with the in-app message that name and instruction are mandatory. Existing default stays Standaard.
+- Add-person dialog fits without scrolling; blank and whitespace-only names keep creation disabled. Existing own QA person found in participant picker and selected; recording sidebar shows one participant.
+- Concurrent transcription used a global unscoped number event, allowing one import to overwrite another task's progress. Scope native progress by task request ID and filter in the existing listener. Serialize CPU-heavy Whisper inference to avoid loading simultaneous model contexts. Focused regression sends one task's progress to both listeners and verifies the other task remains unchanged.

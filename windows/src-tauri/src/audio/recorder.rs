@@ -606,6 +606,34 @@ mod mix_tests {
     }
 
     #[test]
+    #[ignore = "creates three hours of PCM to verify long-meeting processing"]
+    fn three_hour_mix_preserves_duration_and_timed_markers() {
+        let dir = tempfile::tempdir().unwrap();
+        let mic = dir.path().join("mic.wav");
+        let system = dir.path().join("system.wav");
+        let total = 3 * 60 * 60 * TARGET_SAMPLE_RATE;
+        let markers = [17 * TARGET_SAMPLE_RATE, total / 2, total - TARGET_SAMPLE_RATE];
+        let spec = WavSpec { channels: 1, sample_rate: TARGET_SAMPLE_RATE, bits_per_sample: 16, sample_format: HoundSampleFormat::Int };
+        for (path, is_system) in [(&mic, false), (&system, true)] {
+            let mut writer = WavWriter::create(path, spec).unwrap();
+            for index in 0..total {
+                let sample: i16 = if markers.contains(&index) { if is_system { -2000 } else { 1000 } } else { 0 };
+                writer.write_sample(sample).unwrap();
+            }
+            writer.finalize().unwrap();
+        }
+        mix_wav_files(mic.to_str().unwrap(), system.to_str().unwrap()).unwrap();
+        let mut reader = hound::WavReader::open(&mic).unwrap();
+        assert_eq!(reader.duration(), total);
+        for marker in markers {
+            reader.seek(marker - 1).unwrap();
+            let samples = reader.samples::<i16>().take(3).collect::<Result<Vec<_>, _>>().unwrap();
+            assert_eq!(samples, [0, -2000, 0]);
+        }
+        assert!(system.is_file());
+    }
+
+    #[test]
     fn streamed_mix_preserves_extremes_tails_and_resampling() {
         let dir = tempfile::tempdir().unwrap();
         let mic = dir.path().join("mic.wav");

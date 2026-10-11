@@ -129,8 +129,10 @@ export function TranscriptsList({
     return () => window.removeEventListener("keydown", handleKey);
   }, []);
 
+  const query = searchQuery.trim().toLocaleLowerCase("nl-NL");
   const filtered = transcripts.filter((t) => {
-    const matchesSearch = !searchQuery || t.title.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = !query || [t.title, t.raw_transcription ?? "", ...t.tags]
+      .some(value => value.toLocaleLowerCase("nl-NL").includes(query));
     const matchesTags = selectedTags.length === 0 || selectedTags.some((tag) => t.tags.includes(tag));
     const matchesTime = filterByTime(t, timeFilter);
     return matchesSearch && matchesTags && matchesTime;

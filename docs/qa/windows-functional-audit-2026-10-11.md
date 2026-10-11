@@ -66,3 +66,11 @@ Combined capture: no pause, stop after 49.96s. Mic WAV held 696851 samples (43.5
 - Native 1.0.274 reprocessing of the own QA capture generated a second notule at 09:42. Importing `ThoughtVault-QA-invalid-20261011.wav` shows an in-app audio-format error and leaves capture idle; no crash.
 - Saved recording delete and age cleanup previously permanently removed audio immediately. Both now use the existing app confirmation sheet; cancellation and acceptance regression passes. No existing user audio deleted during audit.
 - Candidate 1.0.277: 103 frontend tests across 38 files and TypeScript/Vite build pass. No installed candidate acceptance or multi-hour capture claim yet.
+
+### Native 1.0.274 additional acceptance
+
+- Title search `Verslag` returns the two own QA notes; nonsense search returns the empty state. Content search `Alex` returns no results despite matching raw transcription. Windows filtered titles only, unlike macOS title/raw transcript/tags. Local source fix and one focused search regression pass; installed retest pending.
+- Own 09:42 note: adding QA tag succeeds. One-time `Duitvalt` to `ThoughtVault` correction with remember unchecked updates the note and shows saved confirmation; raw transcription remains unchanged. Transcript copy verified through Windows clipboard readback of this own QA fixture.
+- Ollama Cloud auto-discovered 18 models, stored key indicator present without exposing the key, native test connection shows connected. Local preset fills http://localhost:11434 and missing local service shows an actionable model-discovery error. Original cloud selection is being restored.
+- Three-hour synthetic PCM mix stress passes locally in release mode (4.98s): exact 172800000 sample duration, start/middle/end markers and adjacent silence intact. Added an explicit Windows CI stress gate. This validates large-file processing, not three elapsed hours of native capture.
+- Original Ollama settings restored and visually verified: https://ollama.com, gpt-oss:120b, saved key still present. Candidate 1.0.278 frontend: 104 tests in 39 files, TypeScript/Vite pass.

@@ -95,6 +95,12 @@ jobs:
           cargo test --release --manifest-path src-tauri/Cargo.toml --lib
           if ($LASTEXITCODE -ne 0) { throw "Native tests failed" }
 
+      - name: Verify three-hour recording mix
+        working-directory: windows
+        run: |
+          cargo test --release --manifest-path src-tauri/Cargo.toml --lib three_hour_mix_preserves_duration_and_timed_markers -- --ignored
+          if ($LASTEXITCODE -ne 0) { throw "Long recording mix failed" }
+
       - name: Build Tauri app
         working-directory: windows
         env:

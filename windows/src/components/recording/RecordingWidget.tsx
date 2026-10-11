@@ -33,6 +33,12 @@ export function RecordingWidget() {
     const unlistenSync = listen<{ phase: string; recordingStartedAt: number | null; pausedAt: number | null; pausedDuration: number }>(
       "widget-sync-timer",
       (event) => {
+        // A newly loaded widget may have missed the native stop event.
+        if (!event.payload.recordingStartedAt) {
+          if (timerRef.current) clearInterval(timerRef.current);
+          void getCurrentWindow().close().catch(console.error);
+          return;
+        }
         if (event.payload.recordingStartedAt) {
           startedAtRef.current = event.payload.recordingStartedAt;
           pausedDurationRef.current = event.payload.pausedDuration ?? 0;

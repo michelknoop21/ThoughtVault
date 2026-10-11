@@ -123,6 +123,10 @@ export function TranscriptDetail({
     }
   }
 
+  useEffect(() => {
+    if (isEditingNotule && editorRef.current) editorRef.current.innerHTML = DOMPurify.sanitize(editedHTML);
+  }, [isEditingNotule, editedHTML]);
+
   // Notule editing
   function startNotuleEdit() {
     setEditedHTML(prepareNotuleHtml(transcript.notule_html || "", transcript.title));
@@ -130,10 +134,11 @@ export function TranscriptDetail({
   }
 
   async function saveNotuleEdit() {
-    if (!editedHTML.trim()) return;
+    const html = DOMPurify.sanitize(editorRef.current?.innerHTML ?? editedHTML);
+    if (!html.trim()) return;
     setIsSaving(true);
     try {
-      await onSaveNotule(transcript.id, editedHTML);
+      await onSaveNotule(transcript.id, html);
       setIsEditingNotule(false);
     } catch {
       // Keep the draft in the editor; the parent shows the save error.
@@ -157,7 +162,7 @@ export function TranscriptDetail({
       const store = usePersonalCorrectionsStore.getState();
       await store.hydrate();
       validateCorrections({version:1,entries:rememberCorrection ? upsertCorrection(store.entries,entry) : [entry]});
-      const html = correctHTML(isEditingNotule ? editedHTML : transcript.notule_html || "", [entry], entry.scope ?? undefined);
+      const html = correctHTML(isEditingNotule ? editorRef.current?.innerHTML ?? editedHTML : transcript.notule_html || "", [entry], entry.scope ?? undefined);
       await onSaveNotule(transcript.id,html);
       if (isEditingNotule) setEditedHTML(html);
       if (rememberCorrection) {
@@ -382,8 +387,6 @@ export function TranscriptDetail({
                   aria-label="Notule bewerken"
                   aria-multiline="true"
                   suppressContentEditableWarning
-                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(editedHTML) }}
-                  onInput={(e) => setEditedHTML((e.target as HTMLDivElement).innerHTML)}
                 />
               ) : (
                 <div
@@ -458,7 +461,7 @@ function formatDate(dateStr: string): string {
 
 function formatDuration(seconds: number): string {
   const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
+  const s = Math.floor(seconds % 60);
   return m > 0 ? `${m}m ${s}s` : `${s}s`;
 }
 

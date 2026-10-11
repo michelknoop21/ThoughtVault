@@ -150,9 +150,8 @@ pub async fn stop_recording(
             tx.send(RecordingCommand::Stop).await.map_err(|_| "Opname-thread is gestopt".to_string())?;
         }
         let completion = completion.ok_or("Opname-resultaat niet beschikbaar")?;
-        tokio::time::timeout(std::time::Duration::from_secs(60), completion).await
-            .map_err(|_| "Opslaan van de opname duurt te lang. Controleer Opgeslagen opnames.".to_string())?
-            .map_err(|_| "Opname-thread is gestopt zonder resultaat".to_string())?
+        // Large meetings must finish mixing before the session is cleared.
+        completion.await.map_err(|_| "Opname-thread is gestopt zonder resultaat".to_string())?
     }.await;
     let mut guard = state.lock().map_err(|e| e.to_string())?;
     if guard.file_path == file_path { *guard = RecordingState::default(); }

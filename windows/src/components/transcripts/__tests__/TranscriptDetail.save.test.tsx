@@ -9,6 +9,7 @@ import { TranscriptDetail } from "../TranscriptDetail";
 it("keeps an edited notule open when saving fails", async () => {
   const save = vi.fn().mockRejectedValue(new Error("Schijf vol"));
   const container = document.createElement("div");
+  document.body.append(container);
   const root = createRoot(container);
   const note = {
     id: "local-note", title: "Overleg", notule_html: "<p>Oude tekst</p>",
@@ -23,16 +24,23 @@ it("keeps an edited notule open when saving fails", async () => {
   });
   await act(async () => { container.querySelector<HTMLButtonElement>('[title="Notule bewerken"]')!.click(); });
   const editor = container.querySelector<HTMLDivElement>('[aria-label="Notule bewerken"]')!;
-  await act(async () => {
-    editor.innerHTML = "<p>Mijn concept blijft bewaard</p>";
-    editor.dispatchEvent(new Event("input", { bubbles: true }));
-  });
+  const text = editor.querySelector("p")!.firstChild!;
+  text.textContent = "Mijn concept blijft bewaard";
+  const selection = window.getSelection()!;
+  const range = document.createRange();
+  range.setStart(text, 5); range.collapse(true);
+  selection.removeAllRanges(); selection.addRange(range);
+  await act(async () => { editor.dispatchEvent(new Event("input", { bubbles: true })); });
+  expect(editor.querySelector("p")!.firstChild).toBe(text);
+  expect(selection.anchorNode).toBe(text);
+  expect(selection.anchorOffset).toBe(5);
   await act(async () => {
     [...container.querySelectorAll<HTMLButtonElement>("button")].find((button) => button.textContent?.includes("Opslaan"))!.click();
   });
   expect(save).toHaveBeenCalledWith("local-note", "<p>Mijn concept blijft bewaard</p>");
   expect(container.querySelector<HTMLDivElement>('[aria-label="Notule bewerken"]')?.textContent).toBe("Mijn concept blijft bewaard");
   await act(async () => { root.unmount(); });
+  container.remove();
 });
 
 it("allows regeneration from a saved transcript without a notule", async () => {

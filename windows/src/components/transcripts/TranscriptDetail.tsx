@@ -28,6 +28,7 @@ import { prepareNotuleHtml } from "../../services/notulePresentation";
 import { marked } from "marked";
 import type { Transcript } from "../../types";
 import { getTranscriptQuickNote } from "../../services/quickNotes";
+import { htmlToPlainText } from "../../utils/htmlToMarkdown";
 
 type DetailTab = "notule" | "transcriptie";
 
@@ -304,7 +305,7 @@ export function TranscriptDetail({
               {transcript.notule_html && (
                 <>
                   <div className="td-export-divider" />
-                  <button className="td-export-item" onClick={() => { onCopy(stripHtml(prepareNotuleHtml(transcript.notule_html!, transcript.title))); setExportOpen(false); }}>
+                  <button className="td-export-item" onClick={() => { onCopy(htmlToPlainText(prepareNotuleHtml(transcript.notule_html!, transcript.title))); setExportOpen(false); }}>
                     <Copy24Regular style={{ fontSize: 15 }} /> Kopieer tekst
                   </button>
                 </>
@@ -463,10 +464,4 @@ function formatDuration(seconds: number): string {
   const m = Math.floor(seconds / 60);
   const s = Math.floor(seconds % 60);
   return m > 0 ? `${m}m ${s}s` : `${s}s`;
-}
-
-function stripHtml(html: string): string {
-  const tmp = document.createElement("div");
-  tmp.innerHTML = html;
-  return tmp.textContent || tmp.innerText || "";
 }

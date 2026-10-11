@@ -24,7 +24,7 @@ import { api } from "../services/api";
 import { createSSEClient } from "../services/sse";
 import { persistNotesSection } from "../services/uploadAndTrack";
 import { exportToObsidian, importFromObsidian, acknowledgeObsidianImport } from "../services/obsidian";
-import { htmlToMarkdown } from "../utils/htmlToMarkdown";
+import { htmlToMarkdown, htmlToPlainText } from "../utils/htmlToMarkdown";
 import { useToast } from "../components/ui/InfoBar";
 import { clampMenuPosition } from "../utils/menuPosition";
 import { TranscriptsList } from "../components/transcripts/TranscriptsList";
@@ -363,7 +363,7 @@ export function TranscriptsPage() {
 
   function handleExportTXT(transcript: Transcript) {
     const content = transcript.notule_html
-      ? stripHtml(prepareNotuleHtml(transcript.notule_html, transcript.title))
+      ? htmlToPlainText(prepareNotuleHtml(transcript.notule_html, transcript.title))
       : transcript.raw_transcription;
     if (content) downloadFile(content, `${transcript.title || "notulen"}.txt`, "text/plain");
   }
@@ -633,10 +633,4 @@ function formatDuration(seconds: number): string {
   const m = Math.floor(seconds / 60);
   const s = Math.floor(seconds % 60);
   return m > 0 ? `${m}m ${s}s` : `${s}s`;
-}
-
-function stripHtml(html: string): string {
-  const tmp = document.createElement("div");
-  tmp.innerHTML = html;
-  return tmp.textContent || tmp.innerText || "";
 }

@@ -2,6 +2,12 @@
 
 Status: in progress. Not approved for colleagues yet.
 
+### Additional export and model checks
+
+- Native TXT readback joins adjacent headings/paragraphs in 1.0.274. Shared plain-text conversion now preserves block breaks and excludes style/script text for TXT and note copying. Full frontend suite: 106 tests in 40 files; TypeScript and Vite build pass. Native retest pending.
+- Whisper recommended list and all-model override visually tested. Selected Small preserved. Medium download starts with visible progress and cancellation returns `Download geannuleerd`. Read-only file listing confirms only existing ggml-small.bin remains, no partial Medium file.
+- Private candidate 1.0.277 run 38122510862 passes Windows native tests, build, CPU inference, packaged runtime and installer upgrade checks. MSI SHA256 dc095cd7d8c601a9010ed20819410efee1ded1460204f972a136c419e1bc23be matches the downloaded Windows file. Publication disabled.
+
 ## Environment and upgrade
 
 Native Windows app, existing Royal TSX Dalf38 VPN session. Initial executable version 1.0.273. Updated to candidate 1.0.274 from private GitHub Actions run 37935735527, source 1c3c82652112a2f58b362b983c4b9e4c39946e15. Publication disabled.

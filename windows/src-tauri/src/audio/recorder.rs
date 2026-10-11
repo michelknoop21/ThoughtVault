@@ -513,7 +513,7 @@ fn mix_wav_files(mic_path: &str, loopback_path: &str) -> Result<(), String> {
     let parent = std::path::Path::new(mic_path).parent().ok_or("Opnamemap ontbreekt")?;
     let mut mixed_file = tempfile::NamedTempFile::new_in(parent)
         .map_err(|e| format!("Kan tijdelijk mixed WAV niet maken: {e}"))?;
-    let mut writer = WavWriter::new(mixed_file.as_file_mut(), mic_spec)
+    let mut writer = WavWriter::new(std::io::BufWriter::new(mixed_file.as_file_mut()), mic_spec)
         .map_err(|e| format!("Kan mixed WAV niet schrijven: {}", e))?;
     let mut count = 0_u64;
     loop {
@@ -531,6 +531,9 @@ fn mix_wav_files(mic_path: &str, loopback_path: &str) -> Result<(), String> {
     }
     writer.finalize()
         .map_err(|e| format!("Fout bij finaliseren mixed WAV: {}", e))?;
+    // Windows cannot replace the destination while its reader handle is open.
+    drop(mic_samples);
+    drop(system_samples);
     mixed_file.persist(mic_path).map_err(|e| format!("Mixed WAV vervangen mislukt: {e}"))?;
 
     eprintln!("[Audio] Mixed output: {} samples", count);

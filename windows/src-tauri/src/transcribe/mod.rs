@@ -308,7 +308,8 @@ fn run_whisper(app: AppHandle, model: &PathBuf, wav_path: &str, vocabulary: &str
                 .map_err(|e| format!("Transcriptie mislukt bij {}s: {}", start / 16_000, e))?;
 
             for segment in state.as_iter() {
-                text.push_str(segment.to_str().map_err(|e| format!("Segment lezen mislukt bij {}s: {e}", start / 16_000))?);
+                let bytes = segment.to_bytes().map_err(|e| format!("Segment lezen mislukt bij {}s: {e}", start / 16_000))?;
+                text.push_str(&decode_whisper_text(bytes, start / 16_000));
             }
             text.push(' ');
         }
@@ -318,8 +319,22 @@ fn run_whisper(app: AppHandle, model: &PathBuf, wav_path: &str, vocabulary: &str
     Ok(text.trim().to_string())
 }
 
+fn decode_whisper_text(bytes: &[u8], offset_seconds: usize) -> std::borrow::Cow<'_, str> {
+    // Whisper may emit incomplete UTF-8; retain surrounding speech instead of failing the recording.
+    if let Err(error) = std::str::from_utf8(bytes) {
+        eprintln!("Whisper invalid UTF-8 repaired at {offset_seconds}s: {error}");
+    }
+    String::from_utf8_lossy(bytes)
+}
+
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn malformed_whisper_text_preserves_surrounding_words() {
+        assert_eq!(super::decode_whisper_text(b" Alex \xff maandag", 390), " Alex \u{fffd} maandag");
+        assert_eq!(super::decode_whisper_text(" Caf\u{e9} maandag".as_bytes(), 390), " Caf\u{e9} maandag");
+    }
+
     #[test]
     fn speech_detection_ignores_silence() {
         let (_file, mut detector) = super::speech_detector().unwrap();
@@ -354,7 +369,7 @@ mod tests {
             params.set_print_realtime(false);
             params.set_print_progress(false);
             state.full(params, &samples[range]).unwrap();
-            for segment in state.as_iter() { text.push_str(segment.to_str().unwrap()); }
+            for segment in state.as_iter() { text.push_str(&super::decode_whisper_text(segment.to_bytes().unwrap(), 0)); }
         }
         let lower = text.to_lowercase();
         assert_eq!(lower.matches("alex").count(), 2, "Both normal and quiet speech must survive: {text}");

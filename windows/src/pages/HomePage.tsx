@@ -25,11 +25,10 @@ import { api } from "../services/api";
 import { MicrosoftGraphService } from "../services/microsoftGraph";
 import type { CalendarEvent, Transcript } from "../types";
 
-function getGreeting(name?: string, email?: string): string {
+function getGreeting(): string {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Goedemorgen" : hour < 18 ? "Goedemiddag" : "Goedenavond";
-  const firstName = name?.split(" ")[0] || email?.split("@")[0] || "";
-  return firstName ? `${greeting}, ${firstName}` : greeting;
+  return greeting;
 }
 
 export function HomePage() {
@@ -126,10 +125,11 @@ export function HomePage() {
       <header className="thoughtvault-welcome">
         <svg className="thoughtvault-landscape" viewBox="0 0 480 190" aria-hidden="true">
           <defs>
-            <linearGradient id="ridge" x2="0" y2="1"><stop stopColor="#3b2e7a" /><stop offset="1" stopColor="#141628" stopOpacity="0" /></linearGradient>
+            <radialGradient id="haze"><stop stopColor="#4c339e" stopOpacity=".45"/><stop offset="1" stopColor="#4c339e" stopOpacity="0"/></radialGradient><linearGradient id="ridge" x2="0" y2="1"><stop stopColor="#3b2e7a" /><stop offset="1" stopColor="#141628" stopOpacity="0" /></linearGradient>
             <linearGradient id="moon" x2="0" y2="1"><stop stopColor="#eee6ff" /><stop offset="1" stopColor="#baa8f2" /></linearGradient>
             <linearGradient id="front" x2="0" y2="1"><stop stopColor="#261f54" /><stop offset="1" stopColor="#141628" stopOpacity="0" /></linearGradient>
           </defs>
+          <ellipse cx="260" cy="90" rx="240" ry="130" fill="url(#haze)"/>
           <path d="M0 160 C60 140 120 120 170 95 C215 72 265 22 292 18 C325 20 360 60 400 62 C430 64 460 55 480 58 L480 190 L0 190Z" fill="url(#ridge)" />
           <circle cx="168" cy="105" r="25" fill="url(#moon)" />
           <path d="M0 178 C55 160 110 128 150 122 C190 116 220 128 250 140 C320 168 420 160 480 165 L480 190 L0 190Z" fill="url(#front)" />
@@ -137,12 +137,12 @@ export function HomePage() {
         </svg>
         <div className="thoughtvault-welcome-copy">
           <p className="section-label">{new Date().toLocaleDateString("nl-NL", { weekday: "long", day: "numeric", month: "long" })}</p>
-          <h1>{getGreeting(user?.name, user?.email)}.</h1>
+          <h1>{getGreeting()}{(user?.name || user?.email) && <>, <span className="thoughtvault-greeting-name">{user?.name?.split(" ")[0] || user?.email?.split("@")[0]}</span></>}.</h1>
           <p>“Goede ideeën beginnen vaak met een gesprek.”</p>
         </div>
         <div className="thoughtvault-tagline"><strong>Spreek. Denk. Bewaar.</strong><p>ThoughtVault zet je gesprekken om in heldere notities, taken en inzichten.</p></div>
       </header>
-      <section className="thoughtvault-new-recording" aria-label="Nieuwe opname">
+      <section className="thoughtvault-new-recording" aria-label="Nieuwe opname"><div className="thoughtvault-record-card-content">
         <div>
           <p className="section-label">Nieuwe opname</p>
           <h2>{sessionActive ? phase === "paused" ? "Je opname is gepauzeerd" : "Je opname loopt" : "Begin een nieuwe opname"}</h2>
@@ -153,20 +153,19 @@ export function HomePage() {
             <div className="thoughtvault-wave-status"><div className="thoughtvault-idle-wave" aria-hidden="true">{Array.from({length: 57}, (_, i) => <i key={i} style={{ height: Math.max(4, Math.pow(Math.sin(Math.PI * i / 56), 1.4) * (0.25 + 0.75 * Math.abs(Math.sin(i * 1.73) * Math.cos(i * 0.61 + 0.4))) * 65) }} />)}</div><p className="thoughtvault-ready">{sessionActive ? "Open de opname om verder te gaan" : "Klaar om op te nemen"}</p></div>{!sessionActive && <span className="thoughtvault-idle-time" aria-hidden="true">0:00</span>}
           </div>
         </div>
-        <section className="thoughtvault-record-tip"><h3>{micAvailable === true ? "Microfoon gevonden" : micAvailable === false ? "Geen microfoon gevonden" : "Opname-instellingen en toegang"}</h3><p>Windows controleert toegang wanneer je de opname start.</p><button className="btn btn-secondary" onClick={() => invoke("open_microphone_settings").catch(() => setMicError("Open Windows-instellingen → Privacy en beveiliging → Microfoon."))}>Toegang beheren</button>{micError && <p role="alert">{micError}</p>}<p>Spreek natuurlijk. Je kunt op elk moment pauzeren.</p></section>
-      </section>
+        <section className="thoughtvault-record-tip"><span className="thoughtvault-permission-icon" aria-hidden="true"><MicRecord24Regular /></span><h3>{micAvailable === true ? "Microfoon gevonden" : micAvailable === false ? "Geen microfoon gevonden" : "Opname-instellingen en toegang"}</h3><p>Windows controleert toegang wanneer je de opname start.</p><button className="btn btn-secondary" onClick={() => invoke("open_microphone_settings").catch(() => setMicError("Open Windows-instellingen → Privacy en beveiliging → Microfoon."))}>Toegang beheren</button>{micError && <p role="alert">{micError}</p>}<hr /><p>Spreek natuurlijk. Je kunt op elk moment pauzeren.</p></section>
+      </div></section>
 
 
 
       {/* Recent notes */}
-      <section style={{ flex: 1, minHeight: 0 }} className="flex-col thoughtvault-home-recent">
+      <section className="flex-col thoughtvault-home-recent">
         <div className="flex-row justify-between" style={{ alignItems: "center" }}>
           <h2>Recente notities</h2>
           {isLoading && <span className="text-caption" style={{ color: "var(--fill-accent-default)" }}>Laden...</span>}
-        </div>
         <div className="thoughtvault-recent-filters" role="group" aria-label="Notities filteren">
           {([["all", "Alle"], ["recordings", "Opnames"], ["notes", "Notulen"]] as const).map(([value, label]) => <button key={value} className="btn btn-ghost btn-sm" aria-pressed={filter === value} onClick={() => setFilter(value)}>{label}</button>)}
-        </div>
+        </div></div>
         {loadError ? (
           <div className="error-banner-inline">
             <span>{loadError}</span>
@@ -303,7 +302,7 @@ function SessionCard({
         <span className={`thoughtvault-note-icon${hasNotes ? "" : " thoughtvault-note-audio"}`}><DocumentText24Regular /></span>
         <span className="thoughtvault-note-copy">
           <span className="thoughtvault-note-title">{transcript.title || "Naamloze opname"}</span>
-          <span className="thoughtvault-note-summary"><time dateTime={transcript.created_at}>{formatDate(transcript.created_at)}</time>{previewText && <span>{previewText}</span>}</span>
+          <span className="thoughtvault-note-summary"><time dateTime={transcript.created_at}>{formatDate(transcript.created_at)} · {new Date(transcript.created_at).toLocaleTimeString("nl-NL", {hour: "2-digit", minute: "2-digit"})}{transcript.duration_seconds > 0 && ` · ${Math.round(transcript.duration_seconds / 60)} min`}</time>{previewText && <span>{previewText}</span>}</span>
         </span>
         <ChevronRight24Regular className="thoughtvault-note-chevron" />
       </button>

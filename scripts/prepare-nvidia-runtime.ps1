@@ -14,5 +14,11 @@ $Destination = Join-Path $PSScriptRoot "../windows/src-tauri/resources/nemo-spee
 New-Item -ItemType Directory -Path $Destination -Force | Out-Null
 Copy-Item (Join-Path $Stage "$Archive/bin") $Destination -Recurse -Force
 Copy-Item (Join-Path $Stage "$Archive/share") $Destination -Recurse -Force
+$vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio/Installer/vswhere.exe'
+$installation = & $vswhere -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+$crt = Get-ChildItem "$installation/VC/Redist/MSVC/*/x64/Microsoft.VC*.CRT" -Directory | Sort-Object FullName -Descending | Select-Object -First 1
+if (!$crt) { throw 'Microsoft x64 CRT redistributable directory not found' }
+# Use Microsoft's redistributable directory, never DLLs from the host System32.
+Copy-Item (Join-Path $crt.FullName '*.dll') (Join-Path $Destination 'bin') -Force
 & (Join-Path $Destination 'bin/nemo-speech.exe') --version
 if ($LASTEXITCODE -ne 0) { throw 'NVIDIA CPU runtime does not start' }

@@ -135,7 +135,13 @@ jobs:
 
       - name: Verify Parakeet CPU runtime and Dutch inference
         run: |
-          ./scripts/verify-windows-runtime.ps1 -Executable windows/src-tauri/resources/nemo-speech-0.2.0/bin/nemo-speech.exe
+          $incomplete = Join-Path $env:TEMP 'ThoughtVault-runtime-negative'
+          New-Item -ItemType Directory $incomplete -Force | Out-Null
+          Copy-Item windows/src-tauri/resources/nemo-speech-0.2.0/bin/nemo-speech.exe $incomplete
+          $rejected = $false
+          try { ./scripts/verify-windows-runtime.ps1 -Executable "$incomplete/nemo-speech.exe" -AppLocalRuntime } catch { $rejected = $true }
+          if (!$rejected) { throw 'Missing app-local CRT was not rejected' }
+          ./scripts/verify-windows-runtime.ps1 -Executable windows/src-tauri/resources/nemo-speech-0.2.0/bin/nemo-speech.exe -AppLocalRuntime
           ./scripts/verify-parakeet-cpu.ps1
 
       - name: Copy and upload MSI

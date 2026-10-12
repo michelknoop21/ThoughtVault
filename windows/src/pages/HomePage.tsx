@@ -43,7 +43,6 @@ export function HomePage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [micAvailable, setMicAvailable] = useState<boolean | null>(null);
   const [micError, setMicError] = useState("");
-  const activeTasks = useRecordingStore(s => s.backgroundTasks);
   useEffect(() => { getAudioDevices().then(devices => setMicAvailable(devices.some(d => d.is_input))).catch(() => setMicAvailable(null)); }, []);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"all" | "recordings" | "notes">("all");
@@ -158,7 +157,6 @@ export function HomePage() {
       </section>
 
 
-      {activeTasks.length > 0 && <section className="northstar-card thoughtvault-processing"><h3>Bezig met verwerken</h3>{activeTasks.map(task => <button className="home-task-row" key={task.task_id} onClick={() => navigate("/tasks")}><span>{task.extracted_title || task.filename || "Opname"}<small>{task.error_message || task.message || task.status}</small></span><span>{task.progress}%</span></button>)}</section>}
 
       {/* Recent notes */}
       <section style={{ flex: 1, minHeight: 0 }} className="flex-col thoughtvault-home-recent">

@@ -317,6 +317,14 @@
 .studio-live-panel dt { display: flex; align-items: center; gap: 16px; }
 .studio-live-panel dt::before { content: ''; width: 10px; height: 10px; border-radius: 50%; background: #af50fd; }
 .studio-actions button { height: 47px; padding: 0 16px; font-size: 14px; }
+@media (max-height: 850px) {
+  @container (min-width: 662px) {
+    .studio-inspector { padding-top: 24px; }
+    .studio-live-panel { height: 184px; margin-block: 16px; }
+    .studio-live-panel h3 { height: 43px; }
+    .studio-live-panel dl > div { height: 32px; }
+  }
+}
 @container (max-width: 499px) {
   .studio-language { max-width: 46px; overflow: hidden; padding: 0 13px; font-size: 0; }
   .studio-language::before { content: 'NL'; font-size: 13px; }
@@ -328,7 +336,7 @@
 @container (max-width: 661px) {
   .recording-studio { height: auto; min-height: 100%; grid-template-columns: minmax(0,1fr); grid-auto-rows: auto; overflow-y: auto; }
   .studio-workspace { height: 560px; flex-shrink: 0; }
-  .studio-inspector { border-left: 0; border-top: 1px solid #303858; }
+  .studio-inspector { border-left: 0; border-top: 1px solid #303858; overflow-y: visible; }
   .thoughtvault-home-side { grid-template-columns: minmax(0,1fr); }
 }
 .desktop-notulen .td-toolbar { flex-wrap: wrap; }
@@ -435,10 +443,23 @@ dialog.desktop-dialog > [role="dialog"] > :first-child, dialog.desktop-dialog > 
 .thoughtvault-home-recent { grid-row: 5; }
 .thoughtvault-processing { grid-row: 4; }
 .thoughtvault-home-side .thoughtvault-brand-note { display: none; padding: 20px 0; grid-column: 1 / -1; }
+.thoughtvault-home-recent .empty-state { padding: 16px; min-height: 0; }
+@container (min-width: 890px) and (max-width: 1179px) {
+ .thoughtvault-home-body { grid-template-columns: minmax(0,1fr) 270px; grid-template-rows: minmax(0,1fr); gap: 18px; overflow: hidden; padding-bottom: 0; }
+ .thoughtvault-home-main { display: block; min-width: 0; min-height: 0; overflow-y: auto; padding-bottom: 16px; }
+ .thoughtvault-home-side { grid-column: 2; grid-row: 1; display: flex; flex-direction: column; overflow-y: auto; min-height: 0; padding-bottom: 16px; }
+ .thoughtvault-welcome { height: 120px; min-height: 120px; padding-top: 20px; }
+ .thoughtvault-welcome h1 { font-size: 32px; margin-block: 8px 4px; }
+ .thoughtvault-welcome-copy > p:last-child { font-size: 14px; }
+ .thoughtvault-welcome-copy::after { margin-top: 12px; }
+ .thoughtvault-new-recording { min-height: 0; padding: 20px; }
+ .thoughtvault-record-controls { min-height: 110px; }
+ .thoughtvault-home-recent { padding-top: 20px; }
+}
 @container (min-width: 1180px) {
  .thoughtvault-home-side .thoughtvault-brand-note { display: block; }
  .thoughtvault-home-body { grid-template-columns: minmax(0,1fr) 295px; grid-template-rows: minmax(0,1fr); grid-auto-rows: auto; gap: 23px; overflow: hidden; padding-bottom: 0; }
- .thoughtvault-home-main { display: block; min-width: 0; min-height: 0; overflow-y: auto; padding-bottom: 24px; }
+ .thoughtvault-home-main { display: block; min-width: 0; min-height: 0; overflow-y: auto; padding-bottom: 8px; }
  .thoughtvault-home-side { grid-column: 2; grid-row: 1; display: flex; flex-direction: column; overflow-y: auto; min-height: 0; padding-bottom: 24px; }
 }
 

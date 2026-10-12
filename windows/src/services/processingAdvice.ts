@@ -11,7 +11,7 @@ export function transcriptionAdvice(specs: SystemSpecs | null) {
     model: !known ? null : medium ? "medium" : "small",
     name: !known ? "Systeemadvies niet beschikbaar" : medium ? "Whisper Medium" : "Whisper Small",
     reason: !known ? "Systeemgegevens ontbreken. Je kunt zelf een model kiezen; we kunnen nu geen betrouwbaar advies geven."
-      : limited ? "Deze pc heeft weinig geheugen of processorthreads voor transcriptie naast een videocall. Small is de lichtste keuze in deze app. Verwerking kan lang duren; cloudtranscriptie is een alternatief."
+      : limited ? "Deze pc heeft weinig geheugen of processorthreads voor transcriptie naast een videocall. Base is kleiner dan Small; de snelheid en kwaliteit op deze pc zijn nog niet gemeten. Verwerking kan lang duren; cloudtranscriptie is een alternatief."
       : medium ? "Medium is een voorlopige aanbeveling op basis van totaal RAM en processorthreads. Small verwerkt doorgaans sneller."
       : "Small is onze voorlopige aanbeveling op basis van totaal RAM en processorthreads. Zwaardere modellen kunnen meer tijd en geheugen vragen.",
   };

@@ -49,5 +49,9 @@ it("does not call pending system advice unavailable or replace the selected mode
   await act(async () => { finish({ cpu: "QA", architecture: "AMD64", memory_gb: 48, threads: 16, os_version: "Windows", free_storage_gb: 770 }); });
   expect(host.textContent).toContain("Whisper Medium");
   expect(useSettingsStore.getState().whisper_model).toBe("small");
+  const model = host.querySelector<HTMLSelectElement>('[aria-label="Transcriptiemodel"]')!;
+  expect([...model.options].map(option => option.value)).toContain("base");
+  await act(async () => { model.value = "base"; model.dispatchEvent(new Event("change", { bubbles: true })); });
+  expect(useSettingsStore.getState().whisper_model).toBe("base");
   await act(async () => { root.unmount(); }); host.remove();
 });

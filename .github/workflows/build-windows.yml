@@ -119,10 +119,13 @@ jobs:
               if (!(Select-String -Path $Cache.FullName -Pattern $Flag -SimpleMatch -Quiet)) { throw "Unsafe Whisper CPU build: $Flag" }
             }
           }
-          $env:THOUGHTVAULT_TEST_WHISPER_MODEL = Join-Path $env:RUNNER_TEMP 'ggml-small.bin'
-          Invoke-WebRequest 'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.bin' -OutFile $env:THOUGHTVAULT_TEST_WHISPER_MODEL
-          cargo test --release --manifest-path src-tauri/Cargo.toml --lib whisper_inference_cpu -- --ignored
-          if ($LASTEXITCODE -ne 0) { throw "Whisper inference failed" }
+          foreach ($Model in @('small', 'base')) {
+            $env:THOUGHTVAULT_TEST_WHISPER_MODEL = Join-Path $env:RUNNER_TEMP "ggml-$Model.bin"
+            Invoke-WebRequest "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-$Model.bin" -OutFile $env:THOUGHTVAULT_TEST_WHISPER_MODEL
+            Write-Host "QA_WHISPER_MODEL=$Model"
+            cargo test --release --manifest-path src-tauri/Cargo.toml --lib whisper_inference_cpu -- --ignored --nocapture --test-threads=1
+            if ($LASTEXITCODE -ne 0) { throw "Whisper $Model inference failed" }
+          }
 
       - name: Verify self-contained C++ runtime
         run: powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify-windows-runtime.ps1 -Executable windows/src-tauri/target/release/ThoughtVault.exe

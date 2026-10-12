@@ -20,7 +20,7 @@ use tauri::{AppHandle, Emitter, Manager};
 /// Maps a short model id (as stored in settings) to its GGML filename.
 /// Mirrors the model picker in the Windows Settings UI.
 fn model_filename(model_id: &str) -> Result<String, String> {
-    if !matches!(model_id, "small" | "medium" | "large-v3") {
+    if !matches!(model_id, "base" | "small" | "medium" | "large-v3") {
         return Err("Onbekend transcriptiemodel".to_string());
     }
     Ok(format!("ggml-{}.bin", model_id))
@@ -330,6 +330,14 @@ fn decode_whisper_text(bytes: &[u8], offset_seconds: usize) -> std::borrow::Cow<
 #[cfg(test)]
 mod tests {
     #[test]
+    fn model_files_include_base_and_reject_paths() {
+        for model in ["base", "small", "medium", "large-v3"] {
+            assert_eq!(super::model_filename(model).unwrap(), format!("ggml-{model}.bin"));
+        }
+        assert!(super::model_filename("../base").is_err());
+    }
+
+    #[test]
     fn malformed_whisper_text_preserves_surrounding_words() {
         assert_eq!(super::decode_whisper_text(b" Alex \xff maandag", 390), " Alex \u{fffd} maandag");
         assert_eq!(super::decode_whisper_text(" Caf\u{e9} maandag".as_bytes(), 390), " Caf\u{e9} maandag");
@@ -361,6 +369,9 @@ mod tests {
         assert!(detection_started.elapsed().as_secs() < 60, "VAD must process this two-minute fixture faster than realtime");
         assert!(!ranges.is_empty());
         assert!(ranges.iter().all(|range| range.len() <= 30 * 16_000));
+        let speech_samples: usize = ranges.iter().map(|range| range.len()).sum();
+        let segment_count = ranges.len();
+        let inference_started = std::time::Instant::now();
         let mut text = String::new();
         for range in ranges {
             let mut params = FullParams::new(SamplingStrategy::Greedy { best_of: 1 });
@@ -371,6 +382,7 @@ mod tests {
             state.full(params, &samples[range]).unwrap();
             for segment in state.as_iter() { text.push_str(&super::decode_whisper_text(segment.to_bytes().unwrap(), 0)); }
         }
+        eprintln!("QA_WHISPER segments={segment_count} speech_seconds={:.2} inference_seconds={:.2}", speech_samples as f64 / 16_000.0, inference_started.elapsed().as_secs_f64());
         let lower = text.to_lowercase();
         assert_eq!(lower.matches("alex").count(), 2, "Both normal and quiet speech must survive: {text}");
         assert_eq!(lower.matches("maandag").count(), 2, "Both decisions must survive: {text}");

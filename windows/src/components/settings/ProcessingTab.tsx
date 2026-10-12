@@ -32,7 +32,7 @@ export function ProcessingTab() {
   const settings = useSettingsStore();
   const [showAllModels, setShowAllModels] = useState(false);
   const visibleModels = WHISPER_MODELS.filter(model => showAllModels || !advice.model
-    || advice.models.includes(model.id) || model.id === settings.whisper_model);
+    || model.id === "base" || advice.models.includes(model.id) || model.id === settings.whisper_model);
   useEffect(() => { invoke<SystemSpecs>("get_system_specs").then(setSpecs).catch(() => setSpecError("Systeemgegevens niet beschikbaar")); }, []);
   const isTranscribing = useRecordingStore(s => s.backgroundTasks.some(task => task.status === "transcribing" || task.status === "downloading"));
   const [ollamaTestStatus, setOllamaTestStatus] = useState<"idle" | "testing" | "success" | "error">("idle");

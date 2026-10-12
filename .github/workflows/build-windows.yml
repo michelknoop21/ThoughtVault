@@ -85,6 +85,9 @@ jobs:
       - name: Verify ThoughtVault project identity
         run: python scripts/test-project-identity.py
 
+      - name: Prepare pinned NVIDIA CPU runtime
+        run: ./scripts/prepare-nvidia-runtime.ps1
+
       - name: Verify frontend and native code
         working-directory: windows
         run: |
@@ -129,6 +132,11 @@ jobs:
 
       - name: Verify self-contained C++ runtime
         run: powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify-windows-runtime.ps1 -Executable windows/src-tauri/target/release/ThoughtVault.exe
+
+      - name: Verify Parakeet CPU runtime and Dutch inference
+        run: |
+          ./scripts/verify-windows-runtime.ps1 -Executable windows/src-tauri/resources/nemo-speech-0.2.0/bin/nemo-speech.exe
+          ./scripts/verify-parakeet-cpu.ps1
 
       - name: Copy and upload MSI
         shell: bash

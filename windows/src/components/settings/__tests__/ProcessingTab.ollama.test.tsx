@@ -51,6 +51,10 @@ it("does not call pending system advice unavailable or replace the selected mode
   expect(useSettingsStore.getState().whisper_model).toBe("small");
   const model = host.querySelector<HTMLSelectElement>('[aria-label="Transcriptiemodel"]')!;
   expect([...model.options].map(option => option.value)).toContain("base");
+  expect([...model.options].map(option => option.value)).toContain("parakeet-tdt-0.6b-v3");
+  await act(async () => { model.value = "parakeet-tdt-0.6b-v3"; model.dispatchEvent(new Event("change", { bubbles: true })); });
+  expect(useSettingsStore.getState().whisper_model).toBe("parakeet-tdt-0.6b-v3");
+  expect(host.textContent).toContain("nog niet als herkenningshint");
   await act(async () => { model.value = "base"; model.dispatchEvent(new Event("change", { bubbles: true })); });
   expect(useSettingsStore.getState().whisper_model).toBe("base");
   await act(async () => { root.unmount(); }); host.remove();

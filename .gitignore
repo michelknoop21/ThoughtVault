@@ -33,6 +33,7 @@ Package.resolved
 windows/node_modules/
 windows/dist/
 windows/src-tauri/target/
+windows/src-tauri/resources/nemo-speech-*/
 windows/.vite/
 
 # Environment

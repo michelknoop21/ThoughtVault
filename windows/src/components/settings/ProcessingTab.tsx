@@ -32,7 +32,7 @@ export function ProcessingTab() {
   const settings = useSettingsStore();
   const [showAllModels, setShowAllModels] = useState(false);
   const visibleModels = WHISPER_MODELS.filter(model => showAllModels || !advice.model
-    || model.id === "base" || advice.models.includes(model.id) || model.id === settings.whisper_model);
+    || model.id === "base" || model.id.startsWith("parakeet-") || advice.models.includes(model.id) || model.id === settings.whisper_model);
   useEffect(() => { invoke<SystemSpecs>("get_system_specs").then(setSpecs).catch(() => setSpecError("Systeemgegevens niet beschikbaar")); }, []);
   const isTranscribing = useRecordingStore(s => s.backgroundTasks.some(task => task.status === "transcribing" || task.status === "downloading"));
   const [ollamaTestStatus, setOllamaTestStatus] = useState<"idle" | "testing" | "success" | "error">("idle");
@@ -160,7 +160,7 @@ export function ProcessingTab() {
             {settings.processing_mode === "local" && (
               <>
                 <div style={{ padding: "0 20px 4px" }}>
-                  <SettingsField label="Transcriptiemodel (Whisper)">
+                  <SettingsField label="Transcriptiemodel">
                     <select
                       aria-label="Transcriptiemodel" disabled={downloading} value={settings.whisper_model}
                       onChange={(e) => settings.updateSettings({ whisper_model: e.target.value })}
@@ -174,6 +174,7 @@ export function ProcessingTab() {
                       ))}
                     </select>
                   </SettingsField>
+                  {settings.whisper_model === "parakeet-tdt-0.6b-v3" && <p className="settings-desc">Parakeet gebruikt je persoonlijke woordenlijst nog niet als herkenningshint.</p>}
                 </div>
                 <div style={{ padding: "0 20px 12px" }}>
                   <label className="settings-desc"><input type="checkbox" checked={showAllModels} onChange={event => setShowAllModels(event.target.checked)} /> Alle modellen tonen</label>

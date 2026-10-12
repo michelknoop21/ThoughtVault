@@ -38,8 +38,9 @@ export type NotulenProvider = "cloud" | "ollama" | "lm-studio" | "openai" | "ant
 // fully on-device (Whisper + Ollama/LM Studio). Mirrors the macOS processingMode.
 export type ProcessingMode = "cloud" | "local";
 
-// Available local Whisper models (GGML). Maps 1:1 to ggml-<id>.bin filenames.
+// Existing model IDs stay compatible with saved settings.
 export const WHISPER_MODELS: { id: string; label: string; size: string }[] = [
+  { id: "parakeet-tdt-0.6b-v3", label: "Parakeet TDT v3: lokaal op CPU", size: "~714 MB" },
   { id: "base", label: "Base: compact model, lagere nauwkeurigheid", size: "~142 MB" },
   { id: "small", label: "Small: sneller, minder accuraat", size: "~466 MB" },
   { id: "medium", label: "Medium: balans tussen snelheid en kwaliteit", size: "~1,5 GB" },

@@ -7,6 +7,7 @@
 use std::path::PathBuf;
 use std::sync::Mutex;
 use tokio::sync::watch;
+mod nvidia;
 
 // Keep simultaneous imports from loading multiple CPU-heavy Whisper contexts.
 static TRANSCRIPTION_LOCK: Mutex<()> = Mutex::new(());
@@ -20,6 +21,7 @@ use tauri::{AppHandle, Emitter, Manager};
 /// Maps a short model id (as stored in settings) to its GGML filename.
 /// Mirrors the model picker in the Windows Settings UI.
 fn model_filename(model_id: &str) -> Result<String, String> {
+    if let Some(model) = nvidia::model(model_id) { return Ok(model.filename.into()); }
     if !matches!(model_id, "base" | "small" | "medium" | "large-v3") {
         return Err("Onbekend transcriptiemodel".to_string());
     }
@@ -55,7 +57,7 @@ pub async fn whisper_model_status(
 ) -> Result<WhisperModelStatus, String> {
     let path = model_path(&app, &model_id)?;
     let (exists, size_bytes) = match std::fs::metadata(&path) {
-        Ok(m) => (m.is_file() && m.len() > 0, m.len()),
+        Ok(m) => (m.is_file() && nvidia::model(&model_id).map_or(m.len() > 0, |model| m.len() == model.size), m.len()),
         Err(_) => (false, 0),
     };
     Ok(WhisperModelStatus {
@@ -74,9 +76,11 @@ pub async fn download_whisper_model(
     control: tauri::State<'_, ModelDownloadControl>,
 ) -> Result<String, String> {
     use futures_util::StreamExt;
+    use sha2::{Digest, Sha256};
     use tokio::io::AsyncWriteExt;
     let dest = model_path(&app, &model_id)?;
     if dest.metadata().map(|m| m.is_file() && m.len() > 0).unwrap_or(false) {
+        if let Some(model) = nvidia::model(&model_id) { nvidia::verify_model(&dest, &model)?; }
         return Ok(dest.to_string_lossy().to_string());
     }
     let (cancel, mut cancelled) = watch::channel(false);
@@ -87,7 +91,12 @@ pub async fn download_whisper_model(
     }
     let tmp = dest.with_extension("bin.part");
     let result = async {
-        let url = format!("https://huggingface.co/ggerganov/whisper.cpp/resolve/main/{}", model_filename(&model_id)?);
+        let nvidia_model = nvidia::model(&model_id);
+        let url = if let Some(model) = &nvidia_model {
+            format!("https://huggingface.co/nvidia/{model_id}/resolve/{}/{}", model.revision, model.filename)
+        } else {
+            format!("https://huggingface.co/ggerganov/whisper.cpp/resolve/main/{}", model_filename(&model_id)?)
+        };
         let client = reqwest::Client::builder().timeout(std::time::Duration::from_secs(3600)).build().map_err(|e| e.to_string())?;
         let resp = tokio::select! {
             _ = cancelled.changed() => return Err("Download geannuleerd".to_string()),
@@ -97,6 +106,7 @@ pub async fn download_whisper_model(
         let total = resp.content_length().unwrap_or(0);
         let mut file = tokio::fs::File::create(&tmp).await.map_err(|e| e.to_string())?;
         let mut downloaded: u64 = 0;
+        let mut hash = Sha256::new();
         let mut last_emit: u64 = 0;
         let mut stream = resp.bytes_stream();
         loop {
@@ -106,6 +116,7 @@ pub async fn download_whisper_model(
             };
             let Some(chunk) = chunk else { break; };
             let chunk = chunk.map_err(|e| format!("Downloadfout: {e}"))?;
+            if nvidia_model.is_some() { hash.update(&chunk); }
             file.write_all(&chunk).await.map_err(|e| e.to_string())?;
             downloaded += chunk.len() as u64;
             if downloaded - last_emit >= 2_000_000 || downloaded == total {
@@ -115,6 +126,11 @@ pub async fn download_whisper_model(
             }
         }
         if downloaded == 0 || (total > 0 && downloaded != total) { return Err("Het model is niet volledig gedownload. Probeer opnieuw.".to_string()); }
+        if let Some(model) = nvidia_model {
+            if downloaded != model.size || format!("{:x}", hash.finalize()) != model.sha256 {
+                return Err("De NVIDIA-modelcontrole is mislukt. Probeer opnieuw.".into());
+            }
+        }
         if *cancelled.borrow() { return Err("Download geannuleerd".to_string()); }
         file.flush().await.map_err(|e| e.to_string())?;
         drop(file);
@@ -186,7 +202,11 @@ pub async fn transcribe_local(
     // whisper inference is blocking + CPU-heavy: keep it off the async runtime.
     tokio::task::spawn_blocking(move || {
         let _guard = TRANSCRIPTION_LOCK.lock().map_err(|e| format!("Transcriptiewachtrij mislukt: {e}"))?;
-        let result = run_whisper(app, &model, &file_path, &vocabulary, &request_id);
+        let result = if let Some(info) = nvidia::model(&model_id) {
+            nvidia::verify_model(&model, &info).and_then(|_| nvidia::run(app, &model, &file_path, &request_id))
+        } else {
+            run_whisper(app, &model, &file_path, &vocabulary, &request_id)
+        };
         if let Err(error) = &result { eprintln!("[transcribe_local] {error}"); }
         result
     })
@@ -335,6 +355,10 @@ mod tests {
             assert_eq!(super::model_filename(model).unwrap(), format!("ggml-{model}.bin"));
         }
         assert!(super::model_filename("../base").is_err());
+        for model in ["parakeet-tdt-0.6b-v3"] {
+            assert_eq!(super::model_filename(model).unwrap(), format!("{model}.q8_0.gguf"));
+        }
+        assert!(super::model_filename("../parakeet-tdt-0.6b-v3").is_err());
     }
 
     #[test]

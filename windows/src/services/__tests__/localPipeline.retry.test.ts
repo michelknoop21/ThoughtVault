@@ -81,3 +81,31 @@ it("shows native transcription errors without discarding the original message", 
   });
   expect(add).not.toHaveBeenCalled();
 });
+
+it("persists imported audio duration and keeps it on the task", async () => {
+  vi.mocked(invoke).mockImplementation(async command => {
+    if (command === "audio_duration") return 600 as never;
+    if (command === "whisper_model_status") return { exists: true } as never;
+    if (command === "transcribe_local") return "Alex controleert maandag de eigen QA opname." as never;
+    throw new Error(`Unexpected command: ${command}`);
+  });
+  vi.spyOn(usePersonalCorrectionsStore.getState(), "hydrate").mockResolvedValue(undefined);
+  const add = vi.fn();
+  useLocalTranscriptsStore.setState({ items: [], add, update: vi.fn() });
+  vi.spyOn(LLMService, "generateNotulen").mockResolvedValue("<h2>Besluit</h2><p>Alex controleert maandag de opname.</p>");
+  await processLocally("C:\\import.wav", "standaard", "microphone", [], 0, "local-import");
+  expect(add).toHaveBeenCalledWith(expect.objectContaining({ duration_seconds: 600 }));
+  expect(useRecordingStore.getState().backgroundTasks[0].duration_seconds).toBe(600);
+});
+
+it("keeps a duration read failure visible without saving an incomplete import", async () => {
+  vi.mocked(invoke).mockRejectedValue("Kan de audioduur niet lezen");
+  const add = vi.fn();
+  useLocalTranscriptsStore.setState({ items: [], add, update: vi.fn() });
+  await processLocally("C:\\missing.wav", "standaard", "microphone", [], 0, "local-missing");
+  expect(invoke).toHaveBeenCalledWith("audio_duration", { filePath: "C:\\missing.wav" });
+  expect(useRecordingStore.getState().backgroundTasks[0]).toMatchObject({
+    status: "failed", error_message: "Kan de audioduur niet lezen",
+  });
+  expect(add).not.toHaveBeenCalled();
+});

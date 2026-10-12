@@ -60,6 +60,10 @@ export async function processLocally(
   try {
     let transcription = existingPartial?.raw_transcription;
     if (!transcription) {
+      if (!Number.isFinite(durationSeconds) || durationSeconds <= 0) {
+        durationSeconds = await invoke<number>("audio_duration", { filePath });
+      }
+      updateBackgroundTask(taskId, { duration_seconds: durationSeconds });
       const model = settings.whisper_model || "medium";
 
       // 1. Ensure the Whisper model is present (download on first use).

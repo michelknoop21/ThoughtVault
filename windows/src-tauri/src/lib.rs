@@ -74,6 +74,7 @@ pub fn run() {
             commands::filesystem::cleanup_old_recordings,
             commands::filesystem::get_recordings_dir,
             commands::filesystem::import_audio,
+            commands::filesystem::audio_duration,
             commands::filesystem::migrate_recordings_dir,
             commands::filesystem::concatenate_wav_files,
             // HTTP

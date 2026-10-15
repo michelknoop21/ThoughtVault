@@ -256,3 +256,10 @@ Combined capture: no pause, stop after 49.96s. Mic WAV held 696851 samples (43.5
 -11:40 final driver output confirms **QA_FASTER_WHISPER_CPU_SECONDS=3.9916073 ALEX=1 MONDAY=1** and `QA_LOCAL_CANDIDATE_RUNTIME_AND_TESTS_PASS`. The gate independently downloaded and SHA-verified all four pinned model files, probed packaged1.2.1 CPU identity, required exit0 and final progress100. Both packaged Dutch gates now PASS; their fixture sizes/workloads differ and these timings must not be used as a direct engine speed comparison. Existing stderr tail contains expected Whisper VAD test diagnostics, not a new pipeline failure. Native integrated use, downloads through Settings, upgrade and full audit remain OPEN.
 
 -11:42 final process check: QA driver3104 absent, installed288 PID48380 still started09:33:26. Parakeet model SHA reconfirmed e3880d0aaaaf2c308ea2c35016b2b895c423eb3fda924c1b463d1c19b7f4d32e. Fresh native Tasks screenshot11:43 explicitly **Geen actieve taken**. App left on Tasks, no capture/model/provider change.
+
+
+### Rollout request — 15 October 2026, 11:47 CEST
+
+- Michel explicitly requested deployment of the corrections. Pushed the owned candidate commit8c9311018fcea541a45d437de9ec3a5fd931eb59 to private GitHub build ref `codex/windows-audit-1.0.290` using the existing SSH identity; remote head verified exactly. Original dirty experiments/schemas remain excluded.
+- Started one new private production-identity build `38715517799`, channel=production,publish=false,headSha exact. This is the new290 correction candidate, not a redispatch of289. Run failed before any job step. Check116357125345 annotation explicitly reports failed recent account payments or spending-limit increase required in Billing & plans.
+- No MSI produced, installed288 unchanged, no backup/installer action or public release attempted. Deployment remains BLOCKED on the human GitHub billing/account action; do not repeatedly dispatch unchanged runs or change payments, limits or accounts. After a human repair message, rerun this exact verified candidate ref with production/publish=false, then all CI/hash/installer/idle/fresh-backup/native gates.

@@ -88,6 +88,13 @@ jobs:
       - name: Prepare pinned NVIDIA CPU runtime
         run: ./scripts/prepare-nvidia-runtime.ps1
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Prepare pinned Faster Whisper CPU runtime
+        run: ./scripts/prepare-faster-whisper-runtime.ps1
+
       - name: Verify frontend and native code
         working-directory: windows
         run: |
@@ -143,6 +150,9 @@ jobs:
           if (!$rejected) { throw 'Missing app-local CRT was not rejected' }
           ./scripts/verify-windows-runtime.ps1 -Executable windows/src-tauri/resources/nemo-speech-0.2.0/bin/nemo-speech.exe -AppLocalRuntime
           ./scripts/verify-parakeet-cpu.ps1
+
+      - name: Verify Faster Whisper packaged CPU inference
+        run: ./scripts/verify-faster-whisper.ps1
 
       - name: Copy and upload MSI
         shell: bash

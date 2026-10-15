@@ -12,6 +12,7 @@ afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 it("plots real amplitude, flat silence, bounded compact waves and no movement while inactive", async () => {
   let draw: FrameRequestCallback = () => {};
   let paths: TestPath[] = [];
+  let glowAlphas: number[] = [];
   vi.stubGlobal("Path2D", TestPath);
   vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} });
   vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => { draw = callback; return 1; });
@@ -19,9 +20,10 @@ it("plots real amplitude, flat silence, bounded compact waves and no movement wh
   const motion = { matches: false };
   vi.stubGlobal("matchMedia", () => motion);
   vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({
-    setTransform() {}, clearRect() { paths = []; },
+    setTransform() {}, clearRect() { paths = []; glowAlphas = []; },
     createLinearGradient() { return { addColorStop() {} }; }, save() {}, restore() {},
-    stroke(path: TestPath) { paths.push(path); },
+    globalAlpha: 1, filter: "none",
+    stroke(path: TestPath) { paths.push(path); if (this.filter.startsWith("blur")) glowAlphas.push(this.globalAlpha); this.filter = "none"; },
   } as unknown as CanvasRenderingContext2D);
   const container = document.createElement("div");
   Object.defineProperty(container, "clientWidth", { value: 600 });
@@ -56,6 +58,7 @@ it("plots real amplitude, flat silence, bounded compact waves and no movement wh
   bandsRef.current = [0,0,0,0,0,0,.8]; draw(performance.now() + 80);
   expect(paths.map(path => path.points.map(point => point[1]))).not.toEqual(lowPaths);
   expect(extent()).toBeGreaterThan(35);
+  expect(glowAlphas).toEqual([.20, .32, .32, .20, .75]); // Exact macOS support-strand glow.
   expect(paths.at(-1)!.points.map(point => point[1])).toEqual(lowPaths.at(-1)); // Reduced Motion keeps peak positions fixed.
   levelsRef.current.fill(0); draw(performance.now() + 80);
   expect(extent()).toBe(0); // A stale spectrum cannot keep silence moving.

@@ -40,6 +40,7 @@ export type ProcessingMode = "cloud" | "local";
 
 // Existing model IDs stay compatible with saved settings.
 export const WHISPER_MODELS: { id: string; label: string; size: string }[] = [
+  { id: "faster-whisper-small", label: "Faster Whisper Small: Nederlands, CPU int8", size: "~486 MB" },
   { id: "parakeet-tdt-0.6b-v3", label: "Parakeet TDT v3: lokaal op CPU", size: "~714 MB" },
   { id: "base", label: "Base: compact model, lagere nauwkeurigheid", size: "~142 MB" },
   { id: "small", label: "Small: sneller, minder accuraat", size: "~466 MB" },

@@ -167,8 +167,8 @@ export function TranscriptsPage() {
   async function handleSaveNotule(id: string, html: string, syncObsidian = true) {
     try {
       if (isLocalId(id)) {
-        await useLocalTranscriptsStore.getState().update(id, { notule_html: html });
-        updateTranscript(id, { notule_html: html });
+        await useLocalTranscriptsStore.getState().update(id, { notule_html: html, has_notes: !!html.trim() });
+        updateTranscript(id, { notule_html: html, has_notes: !!html.trim() });
         toast.show("Notule opgeslagen", "success");
         const settings = useSettingsStore.getState();
         if (syncObsidian && settings.obsidian_enabled) {
@@ -179,7 +179,7 @@ export function TranscriptsPage() {
         return;
       }
       await api.updateNotuleHTML(id, html);
-      updateTranscript(id, { notule_html: html });
+      updateTranscript(id, { notule_html: html, has_notes: !!html.trim() });
       toast.show("Notule opgeslagen", "success");
       const settings = useSettingsStore.getState();
       if (syncObsidian && settings.obsidian_enabled) {
@@ -226,8 +226,8 @@ export function TranscriptsPage() {
           () => tasks.updateBackgroundTask(taskId, { progress: 60 }), [], transcript.quick_note);
         if (!hasUsableNotule(html)) throw new Error("Geen bruikbare notule gegenereerd");
         const title = extractTitle(html) || transcript.title;
-        await useLocalTranscriptsStore.getState().update(transcript.id, { notule_html: html, title, profile_name: profile.name, profile_id: profile.id });
-        updateTranscript(transcript.id, { notule_html: html, title, profile_name: profile.name, profile_id: profile.id });
+        await useLocalTranscriptsStore.getState().update(transcript.id, { notule_html: html, has_notes: true, title, profile_name: profile.name, profile_id: profile.id });
+        updateTranscript(transcript.id, { notule_html: html, has_notes: true, title, profile_name: profile.name, profile_id: profile.id });
         tasks.updateBackgroundTask(taskId, { status: "completed", progress: 100 });
         const settings = useSettingsStore.getState();
         if (settings.obsidian_enabled) {

@@ -364,7 +364,7 @@ export function RecordingPage() {
         <label><WaveformIcon /><span><small>Opnameprofiel</small><select aria-label="Opnameprofiel" value={selectedProfileId} onChange={e => setSelectedProfileId(e.target.value)}>
           {profiles.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
         </select></span></label>
-        <div className="studio-transcription"><small>Transcriptie</small><span>{settings.processing_mode === "local" ? settings.whisper_model.startsWith("parakeet-") ? "Parakeet op deze pc" : "Whisper op deze pc" : "ThoughtVault Cloud"}</span>
+        <div className="studio-transcription"><small>Transcriptie</small><span>{settings.processing_mode === "local" ? settings.whisper_model.startsWith("faster-whisper-") ? "Faster Whisper op deze pc" : settings.whisper_model.startsWith("parakeet-") ? "Parakeet op deze pc" : "Whisper op deze pc" : "ThoughtVault Cloud"}</span>
           <button className="studio-link" disabled={isLive || isBusy} onClick={() => navigate("/settings")}>Instellen</button></div>
       </div>
     </section>

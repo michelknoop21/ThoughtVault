@@ -109,7 +109,7 @@ export function WaveformVisualizer({ levelsRef, bandsRef, isActive, height = 240
         ctx.strokeStyle = gradient(line.main);
         if (line.main || (j >= 1 && j <= 4)) {
           ctx.save(); ctx.globalCompositeOperation = "lighter";
-          ctx.globalAlpha = (line.main ? .75 : .25) * (.1 + .9 * Math.min(1, level / .3));
+          ctx.globalAlpha = (line.main ? .75 : (j === 2 || j === 3 ? .32 : .20)) * (.1 + .9 * Math.min(1, level / .3));
           ctx.filter = `blur(${compact ? 3 : line.main ? 10 : 7}px)`;
           ctx.lineWidth = compact ? 5 : line.main ? 20 : 8;
           ctx.stroke(path); ctx.restore();

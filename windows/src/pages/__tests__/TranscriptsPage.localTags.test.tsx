@@ -57,7 +57,8 @@ it("asks for a template before regeneration and shows the job on Taken", async (
 
   expect(generate).toHaveBeenCalledWith(note.raw_transcription, expect.objectContaining({ id: "decisions" }), expect.any(Function), [], undefined);
   expect(useRecordingStore.getState().backgroundTasks[0].status).toBe("completed");
-  expect(useLocalTranscriptsStore.getState().items.find((item) => item.id === note.id)?.profile_name).toBe("Besluiten");
+  expect(useLocalTranscriptsStore.getState().items.find((item) => item.id === note.id)).toMatchObject({ profile_name: "Besluiten", has_notes: true });
+  expect(useTranscriptsStore.getState().transcripts.find((item) => item.id === note.id)?.has_notes).toBe(true);
   await act(async () => { root.unmount(); });
 });
 

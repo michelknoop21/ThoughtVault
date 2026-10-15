@@ -8,6 +8,7 @@ use std::path::PathBuf;
 use std::sync::Mutex;
 use tokio::sync::watch;
 mod nvidia;
+mod faster;
 
 // Keep simultaneous imports from loading multiple CPU-heavy Whisper contexts.
 static TRANSCRIPTION_LOCK: Mutex<()> = Mutex::new(());
@@ -21,6 +22,7 @@ use tauri::{AppHandle, Emitter, Manager};
 /// Maps a short model id (as stored in settings) to its GGML filename.
 /// Mirrors the model picker in the Windows Settings UI.
 fn model_filename(model_id: &str) -> Result<String, String> {
+    if model_id == faster::MODEL_ID { return Ok(model_id.into()); }
     if let Some(model) = nvidia::model(model_id) { return Ok(model.filename.into()); }
     if !matches!(model_id, "base" | "small" | "medium" | "large-v3") {
         return Err("Onbekend transcriptiemodel".to_string());
@@ -56,10 +58,10 @@ pub async fn whisper_model_status(
     model_id: String,
 ) -> Result<WhisperModelStatus, String> {
     let path = model_path(&app, &model_id)?;
-    let (exists, size_bytes) = match std::fs::metadata(&path) {
+    let (exists, size_bytes) = if model_id == faster::MODEL_ID { faster::status(&path) } else { match std::fs::metadata(&path) {
         Ok(m) => (m.is_file() && nvidia::model(&model_id).map_or(m.len() > 0, |model| m.len() == model.size), m.len()),
         Err(_) => (false, 0),
-    };
+    }};
     Ok(WhisperModelStatus {
         exists,
         path: path.to_string_lossy().to_string(),
@@ -91,6 +93,7 @@ pub async fn download_whisper_model(
     }
     let tmp = dest.with_extension("bin.part");
     let result = async {
+        if model_id == faster::MODEL_ID { return faster::download(&app, &dest, &mut cancelled).await; }
         let nvidia_model = nvidia::model(&model_id);
         let url = if let Some(model) = &nvidia_model {
             format!("https://huggingface.co/nvidia/{model_id}/resolve/{}/{}", model.revision, model.filename)
@@ -160,7 +163,8 @@ pub async fn cancel_whisper_download(control: tauri::State<'_, ModelDownloadCont
 pub async fn remove_whisper_model(app: AppHandle, model_id: String, control: tauri::State<'_, ModelDownloadControl>) -> Result<(), String> {
     let path = model_path(&app, &model_id)?;
     if control.active.lock().map_err(|e| e.to_string())?.is_some() { return Err("Wacht tot de download klaar is".to_string()); }
-    match tokio::fs::remove_file(path).await {
+    let result = if model_id == faster::MODEL_ID { tokio::fs::remove_dir_all(path).await } else { tokio::fs::remove_file(path).await };
+    match result {
         Ok(()) => Ok(()),
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
         Err(e) => Err(e.to_string()),
@@ -192,7 +196,7 @@ pub async fn transcribe_local(
     request_id: String,
 ) -> Result<String, String> {
     let model = model_path(&app, &model_id)?;
-    if !model.is_file() {
+    if !(if model_id == faster::MODEL_ID { faster::status(&model).0 } else { model.is_file() }) {
         return Err("Model nog niet gedownload".to_string());
     }
 
@@ -202,7 +206,9 @@ pub async fn transcribe_local(
     // whisper inference is blocking + CPU-heavy: keep it off the async runtime.
     tokio::task::spawn_blocking(move || {
         let _guard = TRANSCRIPTION_LOCK.lock().map_err(|e| format!("Transcriptiewachtrij mislukt: {e}"))?;
-        let result = if let Some(info) = nvidia::model(&model_id) {
+        let result = if model_id == faster::MODEL_ID {
+            faster::run(app, &model, &file_path, &vocabulary, &request_id)
+        } else if let Some(info) = nvidia::model(&model_id) {
             nvidia::verify_model(&model, &info).and_then(|_| nvidia::run(app, &model, &file_path, &request_id))
         } else {
             run_whisper(app, &model, &file_path, &vocabulary, &request_id)

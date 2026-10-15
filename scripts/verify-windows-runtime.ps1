@@ -6,7 +6,7 @@ $dumpbin = Get-ChildItem "$installation/VC/Tools/MSVC/*/bin/Hostx64/x64/dumpbin.
 if (-not $dumpbin) { throw 'dumpbin niet gevonden; runtime-afhankelijkheden niet gecontroleerd.' }
 $directory = Split-Path (Resolve-Path $Executable)
 $binaries = @($Executable)
-if ($AppLocalRuntime) { $binaries = @(Get-ChildItem $directory -File | Where-Object { $_.Extension -in '.exe','.dll' } | ForEach-Object FullName) }
+if ($AppLocalRuntime) { $binaries = @(Get-ChildItem $directory -File -Recurse | Where-Object { $_.Extension -in '.exe','.dll','.pyd' } | ForEach-Object FullName) }
 foreach ($binary in $binaries) {
     $dependencies = & $dumpbin.FullName /dependents $binary
     if ($LASTEXITCODE -ne 0) { throw 'Runtime-controle mislukt.' }
@@ -14,8 +14,9 @@ foreach ($binary in $binaries) {
     foreach ($line in $dependencies) {
         if ($line -match '(?i)^\s*((?:MSVCP|VCRUNTIME|CONCRT|VCOMP)[\w]+\.dll)\s*$') {
             if (!$AppLocalRuntime) { throw 'De executable vereist nog een afzonderlijke Visual C++ runtime.' }
-            $dependency = Join-Path $directory $Matches[1]
-            if (!(Test-Path $dependency -PathType Leaf)) { throw "App-local runtime ontbreekt: $dependency" }
+            $name = $Matches[1]
+            $dependency = @((Join-Path (Split-Path $binary) $name), (Join-Path $directory $name), (Join-Path "$directory/_internal" $name)) | Where-Object { Test-Path $_ -PathType Leaf } | Select-Object -First 1
+            if (!$dependency) { throw "App-local runtime ontbreekt: $dependency" }
             $signature = Get-AuthenticodeSignature $dependency
             if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -notmatch 'O=Microsoft Corporation') { throw "Ongeldige Microsoft runtime: $dependency" }
         }

@@ -270,40 +270,28 @@ export class LLMService {
       participants
     );
 
-    if (config.provider === "ollama") {
-      const html = await generateWithOpenAICompatible(
-        config.ollamaUrl,
-        config.ollamaModel,
-        systemPrompt,
-        userPrompt,
-        compatibleKey ?? "",
-        onProgress
-      );
-      return finish(html);
-    }
-
-    if (config.provider === "lm-studio") {
-      const html = await generateWithOpenAICompatible(
-        config.lmStudioUrl,
-        config.lmStudioModel,
-        systemPrompt,
-        userPrompt,
-        "",
-        onProgress
-      );
-      return finish(html);
-    }
-
-    if (config.provider === "openai" || config.provider === "anthropic") {
-      const provider = config.provider;
-      const key = await loadCredential(`${provider}_api_key`);
-      if (!key) throw new Error(`Vul je ${provider === "openai" ? "OpenAI" : "Anthropic"} API-sleutel in bij Instellingen.`);
-      return finish(await generateWithHostedAPI(
-        provider, provider === "openai" ? config.openAIModel : config.anthropicModel,
-        systemPrompt, userPrompt, key, onProgress,
-      ));
-    }
-
-    throw new Error("Cloud provider moet via de server worden verwerkt");
+    const generate = async (system: string, user: string, progress?: ProgressCallback): Promise<string> => {
+      if (config.provider === "ollama" || config.provider === "lm-studio") {
+        return generateWithOpenAICompatible(baseURL, model, system, user, compatibleKey ?? "", progress);
+      }
+      if (config.provider === "openai" || config.provider === "anthropic") {
+        const provider = config.provider;
+        const key = await loadCredential(`${provider}_api_key`);
+        if (!key) throw new Error(`Vul je ${provider === "openai" ? "OpenAI" : "Anthropic"} API-sleutel in bij Instellingen.`);
+        return generateWithHostedAPI(provider, provider === "openai" ? config.openAIModel : config.anthropicModel,
+          system, user, key, progress);
+      }
+      throw new Error("Cloud provider moet via de server worden verwerkt");
+    };
+    // Keep the unverified draft out of progress updates and saved notes.
+    const draft = await generate(systemPrompt, userPrompt);
+    if (!draft.trim()) throw new Error("De notule-generator gaf een leeg concept. De transcriptie is bewaard.");
+    const checked = await generate(
+      `${systemPrompt}\nControleer nu het concept tegen de transcriptie. De transcriptie is de enige bron voor feiten. Controleer iedere bewering, vooral de richting van ontkenningen, verboden, vervallen termijnen en aanwezigheid. Herstel tegenspraken en voeg weggelaten beperkingen toe. Neem een bewering uit het concept nooit als bewijs. Behoud de gekozen template en geef uitsluitend de volledige gecorrigeerde HTML-notule terug.`,
+      `${userPrompt}\n\nConceptnotule ter controle (kan fouten bevatten):\n${draft}`,
+      onProgress,
+    );
+    if (!checked.trim()) throw new Error("De inhoudscontrole gaf geen notule terug. De transcriptie is bewaard.");
+    return finish(checked);
   }
 }

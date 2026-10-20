@@ -133,7 +133,7 @@ it("summarizes every part of a long meeting before applying the profile without 
   const messages = invoke.mock.calls.map(call => JSON.parse(call[1].request.body).messages);
   expect(messages.slice(0, -1).every(pair => pair[0].content.includes("ontkenningen, verboden, voorwaarden en vervallen afspraken"))).toBe(true);
   const contents = messages.map(pair => pair[1].content);
-  const chunks = contents.slice(0, -1).map(content => content.split("Vat dit deel compact samen:\n\n")[1]);
+  const chunks = contents.slice(0, -2).map(content => content.split("Vat dit deel compact samen:\n\n")[1]);
   expect(chunks.join("")).toBe(raw);
   expect(chunks.every(chunk => Array.from(chunk).length <= 8000)).toBe(true);
   expect(contents.at(-1)).toContain("Alex");
@@ -147,7 +147,8 @@ it("retains the hosted GPT-OSS context allowance instead of creating unnecessary
   loadCredential.mockResolvedValue("test-key");
   invoke.mockResolvedValue({ status: 200, body: JSON.stringify({ choices: [{ message: { content: "<p>Akkoord</p>" } }] }) });
   await LLMService.generateNotulen("a".repeat(9000), profile);
-  expect(invoke).toHaveBeenCalledTimes(1);
+  expect(invoke).toHaveBeenCalledTimes(2);
+  expect(invoke.mock.calls.every(call => !JSON.parse(call[1].request.body).messages[1].content.includes("Vat dit deel compact samen:"))).toBe(true);
 });
 
 it("stops without silently truncating a long meeting when the model does not shorten its chunks", async () => {
@@ -182,5 +183,55 @@ it.each(["ollama", "lm-studio", "openai", "anthropic"] as const)("preserves deci
     expect(prompt).toContain("uitnodiging is geen aanwezigheid");
     expect(prompt).toContain("open vraag is geen besluit");
     expect(prompt).toContain("Controleer vóór het antwoorden");
+  } finally { vi.unstubAllGlobals(); }
+});
+
+it.each(["ollama", "lm-studio", "openai", "anthropic"] as const)("checks the %s draft against its source before returning notes", async provider => {
+  useSettingsStore.setState({ notulen_provider: provider, ollama_url: "https://ollama.com", ollama_model: "gpt-oss:120b" });
+  loadCredential.mockResolvedValue("test-key");
+  const raw = "Het contract is niet verlengd. De datum van donderdag vervalt. Kim was afwezig.";
+  const draft = "<p>Het contract loopt door. Donderdag blijft staan. Kim was aanwezig.</p>";
+  const checked = "<p>Het contract is niet verlengd. Donderdag vervalt. Kim was afwezig.</p>";
+  const requests: { messages: { content: string }[] }[] = [];
+  const answer = (request: { messages: { content: string }[] }) => {
+    requests.push(request);
+    return requests.length === 1 ? draft : checked;
+  };
+  invoke.mockImplementation(async (_command, args) => {
+    const content = answer(JSON.parse(args.request.body));
+    return { status: 200, body: JSON.stringify({ choices: [{ message: { content } }], content: [{ type: "text", text: content }] }) };
+  });
+  vi.stubGlobal("fetch", vi.fn(async (_url: string, options: RequestInit) => {
+    const content = answer(JSON.parse(options.body as string));
+    return new Response(`data: ${JSON.stringify({ choices: [{ delta: { content } }] })}\n\n`);
+  }));
+  const progress = vi.fn();
+  try {
+    expect(await LLMService.generateNotulen(raw, profile, progress)).toBe(checked);
+    expect(requests).toHaveLength(2);
+    expect(requests[1].messages.at(-1)?.content).toContain(raw);
+    expect(requests[1].messages.at(-1)?.content).toContain(draft);
+    expect(progress.mock.calls.flat().join("")).toBe(checked);
+  } finally { vi.unstubAllGlobals(); }
+});
+
+it("fails rather than returning the draft when source checking is unavailable", async () => {
+  useSettingsStore.setState({ notulen_provider: "openai" });
+  loadCredential.mockResolvedValue("test-key");
+  invoke.mockResolvedValueOnce({ status: 200, body: JSON.stringify({ choices: [{ message: { content: "<p>Concept</p>" } }] }) })
+    .mockResolvedValueOnce({ status: 500, body: "{}" });
+  const progress = vi.fn();
+  await expect(LLMService.generateNotulen("QA bron.", profile, progress)).rejects.toThrow("HTTP 500");
+  expect(progress).not.toHaveBeenCalled();
+  expect(invoke).toHaveBeenCalledTimes(2);
+});
+
+it("does not ask the checker to invent notes from an empty draft", async () => {
+  useSettingsStore.setState({ notulen_provider: "lm-studio" });
+  const fetchMock = vi.fn(async () => new Response("data: [DONE]\n\n"));
+  vi.stubGlobal("fetch", fetchMock);
+  try {
+    await expect(LLMService.generateNotulen("QA bron.", profile)).rejects.toThrow("leeg concept");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   } finally { vi.unstubAllGlobals(); }
 });

@@ -130,7 +130,9 @@ it("summarizes every part of a long meeting before applying the profile without 
   });
   const progress = vi.fn();
   expect(await LLMService.generateNotulen(raw, profile, progress, ["Alex"], "Budget controleren")).toContain("START MIDDLE END");
-  const contents = invoke.mock.calls.map(call => JSON.parse(call[1].request.body).messages[1].content);
+  const messages = invoke.mock.calls.map(call => JSON.parse(call[1].request.body).messages);
+  expect(messages.slice(0, -1).every(pair => pair[0].content.includes("ontkenningen, verboden, voorwaarden en vervallen afspraken"))).toBe(true);
+  const contents = messages.map(pair => pair[1].content);
   const chunks = contents.slice(0, -1).map(content => content.split("Vat dit deel compact samen:\n\n")[1]);
   expect(chunks.join("")).toBe(raw);
   expect(chunks.every(chunk => Array.from(chunk).length <= 8000)).toBe(true);
@@ -156,4 +158,24 @@ it("stops without silently truncating a long meeting when the model does not sho
   } }] }) }));
   await expect(LLMService.generateNotulen("a".repeat(9000), profile)).rejects.toThrow("transcriptie is bewaard");
   expect(invoke).toHaveBeenCalledTimes(2);
+});
+
+
+it.each(["ollama", "lm-studio", "openai", "anthropic"] as const)("preserves decision constraints in the %s generation request", async provider => {
+  useSettingsStore.setState({ notulen_provider: provider, ollama_url: "https://ollama.com", ollama_model: "gpt-oss:120b" });
+  loadCredential.mockResolvedValue("test-key");
+  invoke.mockResolvedValue({ status: 200, body: JSON.stringify({ choices: [{ message: { content: "<p>Besluit</p>" } }], content: [{ type: "text", text: "<p>Besluit</p>" }] }) });
+  const fetchMock = vi.fn(async (_url: string, _options?: RequestInit) => new Response('data: {"choices":[{"delta":{"content":"<p>Besluit</p>"}}]}\n\n'));
+  vi.stubGlobal("fetch", fetchMock);
+  const raw = "Het onderhoudscontract is niet verlengd. Tot akkoord geen bestelling plaatsen. De datum van donderdag vervalt. Uitgenodigde Kim was afwezig. Over wissen is niets besloten.";
+  try {
+    await LLMService.generateNotulen(raw, profile);
+    const request = provider === "lm-studio" ? JSON.parse(fetchMock.mock.calls[0][1]!.body as string) : JSON.parse(invoke.mock.calls[0][1].request.body);
+    const prompt = request.messages.at(-1).content;
+    expect(prompt).toContain(raw);
+    expect(prompt).toContain("ontkenningen, verboden, voorwaarden en vervallen afspraken");
+    expect(prompt).toContain("uitnodiging is geen aanwezigheid");
+    expect(prompt).toContain("open vraag is geen besluit");
+    expect(prompt).toContain("Controleer vóór het antwoorden");
+  } finally { vi.unstubAllGlobals(); }
 });

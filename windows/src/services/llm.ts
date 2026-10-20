@@ -22,6 +22,9 @@ interface LLMConfig {
 
 type ProgressCallback = (chunk: string) => void;
 
+// These constraints must survive both chunk summaries and the final profile.
+const FACTUALITY_RULES = "Behoud expliciete ontkenningen, verboden, voorwaarden en vervallen afspraken bij het bijbehorende besluit of de actie, ook in een compacte notule. Een uitnodiging is geen aanwezigheid; vermeld expliciete afwezigheid. Een open vraag is geen besluit: presenteer onbesliste onderwerpen niet als opdracht of afgesproken vervolg. Voeg geen vervolgafspraken toe die niet zijn genoemd. Controleer vóór het antwoorden alle besluiten en acties tegen de transcriptie op deze beperkingen en herstel weglatingen.";
+
 function getConfig(): LLMConfig {
   const settings = useSettingsStore.getState();
   // In local mode the cloud provider is unreachable, so a leftover "cloud"
@@ -78,7 +81,7 @@ function buildUserContent(
   if (names && !notulePrompt.includes("{{PARTICIPANTS}}")) {
     content += `\n\nDeelnemers aan dit gesprek: ${names}`;
   }
-  return content + `\n\nLaatste inhoudsregels: volg de gekozen template en laat lege secties weg. Verzin geen feiten, besluiten, eigenaren of termijnen. Schrijf eenvoudige HTML zonder CSS, style-blok of code fences.`;
+  return content + `\n\nLaatste inhoudsregels: volg de gekozen template en laat lege secties weg. Verzin geen feiten, besluiten, eigenaren of termijnen. ${FACTUALITY_RULES} Schrijf eenvoudige HTML zonder CSS, style-blok of code fences.`;
 }
 
 async function generateWithOpenAICompatible(
@@ -248,7 +251,7 @@ export class LLMService {
         const summaries: string[] = [];
         for (let offset = 0; offset < characters.length; offset += limit) {
           summaries.push(await generateWithOpenAICompatible(baseURL, model,
-            "Je vat transcripties samen. Bewaar namen, feiten, besluiten, actiepunten, eigenaren en termijnen. Verzin niets.",
+            `Je vat transcripties samen. Bewaar namen, feiten, besluiten, actiepunten, eigenaren en termijnen. Verzin niets. ${FACTUALITY_RULES}`,
             correctionPrompt(corrections, profile.id) + "Vat dit deel compact samen:\n\n" + characters.slice(offset, offset + limit).join(""),
             compatibleKey ?? ""));
         }

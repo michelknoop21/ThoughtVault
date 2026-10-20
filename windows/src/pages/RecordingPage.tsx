@@ -171,7 +171,8 @@ export function RecordingPage() {
           console.error("[SSE] YouTube task error:", err);
           updateBackgroundTask(task.task_id, { status: "failed", error_message: "Verbinding verloren" });
         },
-        async () => {
+        async (status) => {
+          if (status === "failed" || status === "cancelled" || status === "error") return;
           try {
             const transcripts = await api.getTranscripts();
             const result = transcripts.find(item => item.task_id === task.task_id || item.id === task.task_id);

@@ -82,7 +82,8 @@ export async function uploadAndTrack(
           error_message: "Verbinding met de server verloren. De verwerking gaat door op de achtergrond; bekijk de status in Opnames.",
         });
       },
-      async () => {
+      async (status) => {
+        if (status === "failed" || status === "cancelled" || status === "error") return;
         try {
         const transcripts = await api.getTranscripts();
         const completed = transcripts.find(transcript => transcript.task_id === task_id || transcript.id === task_id);

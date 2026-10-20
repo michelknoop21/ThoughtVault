@@ -322,7 +322,7 @@ function ProtectedRoutes() {
     if (!isAuthenticated) return;
     if (recoveryRanRef.current) return;
     // Local mode has no server-side tasks to recover.
-    if (useSettingsStore.getState().processing_mode === "local") return;
+    if (processing_mode === "local") return;
     recoveryRanRef.current = true;
 
     (async () => {
@@ -344,10 +344,20 @@ function ProtectedRoutes() {
               console.error("[TaskRecovery] SSE error:", err);
               updateBackgroundTask(task.task_id, { status: "failed", error_message: "Verbinding verloren" });
             },
-            async () => {
-              const transcripts = await api.getTranscripts();
-              if (transcripts[0]) addTranscript(transcripts[0]);
-              removeBackgroundTask(task.task_id);
+            async (status) => {
+              if (status === "failed" || status === "cancelled" || status === "error") return;
+              try {
+                const transcripts = await api.getTranscripts();
+                const completed = transcripts.find((t) => t.task_id === task.task_id || t.id === task.task_id);
+                if (!completed) throw new Error("Het resultaat is nog niet beschikbaar. Vernieuw Notulen om het op te halen.");
+                addTranscript(completed);
+                removeBackgroundTask(task.task_id);
+              } catch (error) {
+                updateBackgroundTask(task.task_id, {
+                  status: "failed",
+                  error_message: error instanceof Error ? error.message : "Resultaat ophalen mislukt",
+                });
+              }
             }
           );
         }
@@ -355,7 +365,7 @@ function ProtectedRoutes() {
         // Recovery failed — not critical
       }
     })();
-  }, [isAuthenticated]);
+  }, [isAuthenticated, processing_mode]);
 
   if (isInitializing && processing_mode !== "local") {
     return null;

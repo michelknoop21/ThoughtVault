@@ -8,6 +8,7 @@ import {
   Delete24Regular,
 } from "../ui/StudioIcons";
 import type { Transcript } from "../../types";
+import { htmlToPlainText } from "../../utils/htmlToMarkdown";
 
 type TimeFilter = "alles" | "vandaag" | "week" | "maand";
 
@@ -93,12 +94,6 @@ function timeAgo(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString("nl-NL", { day: "numeric", month: "short" });
 }
 
-function stripHtml(html: string): string {
-  const tmp = document.createElement("div");
-  tmp.innerHTML = html;
-  return tmp.textContent || tmp.innerText || "";
-}
-
 export function TranscriptsList({
   transcripts,
   selectedId,
@@ -131,7 +126,7 @@ export function TranscriptsList({
 
   const query = searchQuery.trim().toLocaleLowerCase("nl-NL");
   const filtered = transcripts.filter((t) => {
-    const matchesSearch = !query || [t.title, t.raw_transcription ?? "", ...t.tags]
+    const matchesSearch = !query || [t.title, t.raw_transcription ?? "", htmlToPlainText(t.notule_html || t.preview || "").replace(/\s+/g, " "), ...t.tags]
       .some(value => value.toLocaleLowerCase("nl-NL").includes(query));
     const matchesTags = selectedTags.length === 0 || selectedTags.some((tag) => t.tags.includes(tag));
     const matchesTime = filterByTime(t, timeFilter);
@@ -285,7 +280,7 @@ export function TranscriptsList({
                     </div>
                     {(t.notule_html || t.raw_transcription) && (
                       <p className="tl-item-preview">
-                        {t.notule_html ? stripHtml(t.notule_html) : t.raw_transcription?.slice(0, 120)}
+                        {t.notule_html ? htmlToPlainText(t.notule_html).replace(/\s+/g, " ") : t.raw_transcription?.slice(0, 120)}
                       </p>
                     )}
                     <div className="tl-item-meta-row">

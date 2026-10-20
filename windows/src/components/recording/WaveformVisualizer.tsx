@@ -37,12 +37,15 @@ function siriwaveDisplacement(x: number, amplitude: number, gain: number, travel
 export function WaveformVisualizer({ levelsRef, bandsRef, isActive, height = 240, strands }: WaveformVisualizerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const activeRef = useRef(isActive);
+  // Resizing the studio must not restart the travelling crests.
+  const clock = useRef({ travel: 0, last: null as number | null });
   activeRef.current = isActive;
+  useEffect(() => { clock.current.last = null; }, [isActive]);
   useEffect(() => {
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext("2d");
     if (!canvas || !ctx) return;
-    let width = 0, frame = 0, last = performance.now(), travel = 0, idleDrawn = false;
+    let width = 0, frame = 0, idleDrawn = false;
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
     const compact = height < 64;
     const lines = compact ? [LINES[1], LINES[2], LINES[4], LINES[6]] : LINES;
@@ -61,21 +64,22 @@ export function WaveformVisualizer({ levelsRef, bandsRef, isActive, height = 240
     const draw = (now: number) => {
       // Hidden window, or an inactive wave that is already on screen: nothing changes.
       if (document.hidden || (!activeRef.current && idleDrawn)) {
-        last = now;
+        clock.current.last = null;
         frame = requestAnimationFrame(draw);
         return;
       }
-      const dt = Math.max(0, Math.min(.064, (now - last) / 1000));
-      last = now;
+      const dt = clock.current.last === null ? 0 : Math.max(0, Math.min(.064, (now - clock.current.last) / 1000));
+      clock.current.last = reduced.matches ? null : now;
       const raw = activeRef.current ? levelsRef.current.slice(-HISTORY_SIZE) : [];
       const history = [...new Array(Math.max(0, HISTORY_SIZE - raw.length)).fill(0), ...raw];
       const live = history[history.length - 1] ?? 0;
-      const bands = activeRef.current ? bandsRef?.current ?? [] : [];
+      const bands = activeRef.current ? (bandsRef?.current ?? []).map(value => Number.isFinite(value) ? Math.max(0, Math.min(1, value)) : 0) : [];
       const level = visualEnergy(live);
       const peakBand = Math.max(0, ...bands);
       if (!reduced.matches && activeRef.current && !document.hidden) {
-        travel += dt * TAU * .65 * (1 + .8 * level / .9);
+        clock.current.travel += dt * TAU * .65 * (1 + .8 * level / .9);
       }
+      const travel = clock.current.travel;
       const sample = (delay: number) => {
         const f = Math.max(0, history.length - 1 - delay / (1000 / 30));
         const i = Math.floor(f), u = f - i;
@@ -85,8 +89,8 @@ export function WaveformVisualizer({ levelsRef, bandsRef, isActive, height = 240
       const gradient = (main: boolean) => {
         const g = ctx.createLinearGradient(0, 0, width, 0);
         const stops: [number, string][] = main
-          ? [[0, "#f557d600"], [.08, "#f557d6b3"], [.27, "#ff6ee8"], [.36, "#ffc4ff"], [.47, "#bf70ff"], [.64, "#e3b3ff"], [.79, "#8778ff"], [1, "#5c87ff00"]]
-          : [[0, "#f040c400"], [.08, "#f040c4b3"], [.25, "#f54de0"], [.51, "#b863fa"], [.77, "#9166ff"], [.92, "#5c87ffb3"], [1, "#5c87ff00"]];
+          ? [[0, "rgb(96% 34% 84% / 0)"], [.08, "rgb(96% 34% 84% / .7)"], [.27, "rgb(100% 43% 91%)"], [.36, "rgb(100% 77% 100%)"], [.47, "rgb(75% 44% 100%)"], [.64, "rgb(89% 70% 100%)"], [.79, "rgb(53% 47% 100%)"], [1, "rgb(36% 53% 100% / 0)"]]
+          : [[0, "rgb(94% 25% 77% / 0)"], [.08, "rgb(94% 25% 77% / .7)"], [.25, "rgb(96% 30% 88%)"], [.51, "rgb(72% 39% 98%)"], [.77, "rgb(57% 40% 100%)"], [.92, "rgb(36% 53% 100% / .7)"], [1, "rgb(36% 53% 100% / 0)"]];
         stops.forEach(([stop, color]) => g.addColorStop(stop, color));
         return g;
       };

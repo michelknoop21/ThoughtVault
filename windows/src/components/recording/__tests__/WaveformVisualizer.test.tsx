@@ -60,6 +60,9 @@ it("plots real amplitude, flat silence, bounded compact waves and no movement wh
   expect(extent()).toBeGreaterThan(35);
   expect(glowAlphas).toEqual([.20, .32, .32, .20, .75]); // Exact macOS support-strand glow.
   expect(paths.at(-1)!.points.map(point => point[1])).toEqual(lowPaths.at(-1)); // Reduced Motion keeps peak positions fixed.
+  bandsRef.current = [NaN, Infinity, -1, 2, 0, 0, 0]; draw(performance.now() + 80);
+  expect(paths.flatMap(path => path.points).every(point => point.every(Number.isFinite))).toBe(true);
+  expect(extent()).toBeGreaterThan(35); // Invalid spectral input must not erase audible volume.
   levelsRef.current.fill(0); draw(performance.now() + 80);
   expect(extent()).toBe(0); // A stale spectrum cannot keep silence moving.
   bandsRef.current = [];

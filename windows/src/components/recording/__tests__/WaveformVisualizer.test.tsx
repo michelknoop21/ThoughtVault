@@ -2,6 +2,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { WaveformVisualizer } from "../WaveformVisualizer";
+import { useSettingsStore } from "../../../stores/settingsStore";
 
 class TestPath {
   points: number[][] = [];
@@ -10,6 +11,7 @@ class TestPath {
 }
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 it("plots real amplitude, flat silence, bounded compact waves and no movement while inactive", async () => {
+  useSettingsStore.setState({ waveform_motion: "system" });
   let draw: FrameRequestCallback = () => {};
   let paths: TestPath[] = [];
   let glowAlphas: number[] = [];
@@ -47,6 +49,12 @@ it("plots real amplitude, flat silence, bounded compact waves and no movement wh
   expect(speech).toBeGreaterThan(18); // Previously ~10 px: normal speech was attenuated twice.
   draw(performance.now() + 74);
   expect(extent()).toBe(speech); // Reduced motion freezes travel, not audio responsiveness.
+  await act(async () => useSettingsStore.setState({ waveform_motion: "full" }));
+  draw(performance.now() + 100);
+  const moving = paths.at(-1)!.points.map(point => point[1]);
+  draw(performance.now() + 150);
+  expect(paths.at(-1)!.points.map(point => point[1])).not.toEqual(moving);
+  await act(async () => useSettingsStore.setState({ waveform_motion: "system" }));
   levelsRef.current.fill(.8); draw(performance.now() + 78);
   expect(extent()).toBeGreaterThan(speech * 2);
   // Frequency data must not suppress loudness, or make all strands identical.

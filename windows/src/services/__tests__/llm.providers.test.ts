@@ -165,10 +165,10 @@ it("stops without silently truncating a long meeting when the model does not sho
 it.each(["ollama", "lm-studio", "openai", "anthropic"] as const)("preserves decision constraints in the %s generation request", async provider => {
   useSettingsStore.setState({ notulen_provider: provider, ollama_url: "https://ollama.com", ollama_model: "gpt-oss:120b" });
   loadCredential.mockResolvedValue("test-key");
-  invoke.mockResolvedValue({ status: 200, body: JSON.stringify({ choices: [{ message: { content: "<p>Besluit</p>" } }], content: [{ type: "text", text: "<p>Besluit</p>" }] }) });
-  const fetchMock = vi.fn(async (_url: string, _options?: RequestInit) => new Response('data: {"choices":[{"delta":{"content":"<p>Besluit</p>"}}]}\n\n'));
-  vi.stubGlobal("fetch", fetchMock);
   const raw = "Het onderhoudscontract is niet verlengd. Tot akkoord geen bestelling plaatsen. De datum van donderdag vervalt. Uitgenodigde Kim was afwezig. Over wissen is niets besloten.";
+  invoke.mockResolvedValue({ status: 200, body: JSON.stringify({ choices: [{ message: { content: `<p>${raw}</p>` } }], content: [{ type: "text", text: `<p>${raw}</p>` }] }) });
+  const fetchMock = vi.fn(async (_url: string, _options?: RequestInit) => new Response(`data: ${JSON.stringify({choices:[{delta:{content:`<p>${raw}</p>`}}]})}\n\n`));
+  vi.stubGlobal("fetch", fetchMock);
   try {
     await LLMService.generateNotulen(raw, profile);
     const request = provider === "lm-studio" ? JSON.parse(fetchMock.mock.calls[0][1]!.body as string) : JSON.parse(invoke.mock.calls[0][1].request.body);
@@ -191,7 +191,7 @@ it.each(["ollama", "lm-studio", "openai", "anthropic"] as const)("checks the %s 
   loadCredential.mockResolvedValue("test-key");
   const raw = "Het contract is niet verlengd. De datum van donderdag vervalt. Kim was afwezig.";
   const draft = "<p>Het contract loopt door. Donderdag blijft staan. Kim was aanwezig.</p>";
-  const checked = "<p>Het contract is niet verlengd. Donderdag vervalt. Kim was afwezig.</p>";
+  const checked = `<p>${raw}</p>`;
   const requests: { messages: { content: string }[] }[] = [];
   const answer = (request: { messages: { content: string }[] }) => {
     requests.push(request);
@@ -211,6 +211,7 @@ it.each(["ollama", "lm-studio", "openai", "anthropic"] as const)("checks the %s 
     expect(requests).toHaveLength(2);
     expect(requests[1].messages.at(-1)?.content).toContain(raw);
     expect(requests[1].messages.at(-1)?.content).toContain(draft);
+    expect(requests[1].messages.at(-1)?.content).toContain("Verplicht te behouden bronzinnen");
     expect(progress.mock.calls.flat().join("")).toBe(checked);
   } finally { vi.unstubAllGlobals(); }
 });
@@ -234,4 +235,21 @@ it("does not ask the checker to invent notes from an empty draft", async () => {
     await expect(LLMService.generateNotulen("QA bron.", profile)).rejects.toThrow("leeg concept");
     expect(fetchMock).toHaveBeenCalledTimes(1);
   } finally { vi.unstubAllGlobals(); }
+});
+
+it("rejects a checked note that still omits an explicit constraint instead of saving it", async () => {
+  useSettingsStore.setState({ notulen_provider: "openai" });
+  loadCredential.mockResolvedValue("test-key");
+  invoke.mockResolvedValue({ status: 200, body: JSON.stringify({ choices: [{ message: { content: "<p>Het overleg is afgerond.</p>" } }] }) });
+  const progress = vi.fn();
+  await expect(LLMService.generateNotulen("De afspraak voor donderdag vervalt.", profile, progress)).rejects.toThrow("beperkingen");
+  expect(progress).not.toHaveBeenCalled();
+});
+
+it("does not accept constraints hidden in CSS as note content", async () => {
+  useSettingsStore.setState({ notulen_provider: "openai" });
+  loadCredential.mockResolvedValue("test-key");
+  const raw = "Er is geen besluit over archivering genomen.";
+  invoke.mockResolvedValue({ status: 200, body: JSON.stringify({ choices: [{ message: { content: `<style>/* ${raw} */</style><p>De archivering is besloten.</p>` } }] }) });
+  await expect(LLMService.generateNotulen(raw, profile)).rejects.toThrow("beperkingen");
 });

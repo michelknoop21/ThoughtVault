@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { HISTORY_SIZE } from "../../hooks/useAudioLevel";
+import { useSettingsStore } from "../../stores/settingsStore";
 
 interface WaveformVisualizerProps {
   levelsRef: React.RefObject<number[]>;
@@ -47,6 +48,11 @@ export function WaveformVisualizer({ levelsRef, bandsRef, isActive, height = 240
     if (!canvas || !ctx) return;
     let width = 0, frame = 0, idleDrawn = false;
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
+    // Other WebViews (the floating widget) share the saved preference.
+    const syncMotion = (event: StorageEvent) => {
+      if (event.key === "settings-store") void useSettingsStore.persist.rehydrate();
+    };
+    window.addEventListener("storage", syncMotion);
     const compact = height < 64;
     const lines = compact ? [LINES[1], LINES[2], LINES[4], LINES[6]] : LINES;
     const selected = strands ? [...lines.filter(l => !l.main).slice(0, Math.max(0, strands - 1)), LINES[6]] : lines;
@@ -69,14 +75,16 @@ export function WaveformVisualizer({ levelsRef, bandsRef, isActive, height = 240
         return;
       }
       const dt = clock.current.last === null ? 0 : Math.max(0, Math.min(.064, (now - clock.current.last) / 1000));
-      clock.current.last = reduced.matches ? null : now;
+      const motion = useSettingsStore.getState().waveform_motion ?? "system";
+      const frozen = motion === "reduced" || (motion === "system" && reduced.matches);
+      clock.current.last = frozen ? null : now;
       const raw = activeRef.current ? levelsRef.current.slice(-HISTORY_SIZE) : [];
       const history = [...new Array(Math.max(0, HISTORY_SIZE - raw.length)).fill(0), ...raw];
       const live = history[history.length - 1] ?? 0;
       const bands = activeRef.current ? (bandsRef?.current ?? []).map(value => Number.isFinite(value) ? Math.max(0, Math.min(1, value)) : 0) : [];
       const level = visualEnergy(live);
       const peakBand = Math.max(0, ...bands);
-      if (!reduced.matches && activeRef.current && !document.hidden) {
+      if (!frozen && activeRef.current && !document.hidden) {
         clock.current.travel += dt * TAU * .65 * (1 + .8 * level / .9);
       }
       const travel = clock.current.travel;
@@ -100,13 +108,13 @@ export function WaveformVisualizer({ levelsRef, bandsRef, isActive, height = 240
         const bandIndex = Math.min(bands.length - 1, Math.floor(j * bands.length / Math.max(1, selected.length - 1)));
         const bandEnd = Math.min(bands.length, Math.max(bandIndex + 1, Math.floor((j + 1) * bands.length / Math.max(1, selected.length - 1))));
         const gain = line.main || !bands.length ? 1 : peakBand > 0 ? Math.max(...bands.slice(bandIndex, bandEnd)) / peakBand : 0;
-        const frequency = reduced.matches ? 3.4 : line.main ? 3.4 : 2.8 + Math.max(0, bandIndex) * .22;
-        const delayed = reduced.matches ? level : visualEnergy(sample(j * 25));
+        const frequency = frozen ? 3.4 : line.main ? 3.4 : 2.8 + Math.max(0, bandIndex) * .22;
+        const delayed = frozen ? level : visualEnergy(sample(j * 25));
         const amplitude = level === 0 ? 0 : line.main ? level : .65 * level + .35 * delayed;
         const path = new Path2D();
         for (let p = 0; p <= steps; p++) {
           const x = p / steps;
-          const y = cy - maxH * siriwaveDisplacement(x, amplitude, gain, travel, j, frequency, line, reduced.matches);
+          const y = cy - maxH * siriwaveDisplacement(x, amplitude, gain, travel, j, frequency, line, frozen);
           if (!p) path.moveTo(x * width, y); else path.lineTo(x * width, y);
         }
         ctx.lineCap = "round"; ctx.lineJoin = "round";
@@ -127,7 +135,7 @@ export function WaveformVisualizer({ levelsRef, bandsRef, isActive, height = 240
       frame = requestAnimationFrame(draw);
     };
     frame = requestAnimationFrame(draw);
-    return () => { cancelAnimationFrame(frame); observer.disconnect(); };
+    return () => { cancelAnimationFrame(frame); observer.disconnect(); window.removeEventListener("storage", syncMotion); };
   }, [height, strands, levelsRef, bandsRef]);
   return <canvas ref={canvasRef} aria-hidden="true" style={{ display: "block", width: "100%", height }} />;
 }

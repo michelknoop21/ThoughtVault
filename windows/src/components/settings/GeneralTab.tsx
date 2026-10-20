@@ -35,6 +35,21 @@ export function GeneralTab() {
             </div>
           </div>
 
+          <div className="settings-group">
+            <div className="settings-row">
+              <label className="flex-1" htmlFor="waveform-motion">
+                <p className="settings-label">Beweging van de geluidsgolf</p>
+                <p className="settings-desc">Windows kan beweging ook beperken tijdens een externe verbinding.</p>
+              </label>
+              <select id="waveform-motion" className="select" value={settings.waveform_motion ?? "system"}
+                onChange={e => settings.updateSettings({ waveform_motion: e.target.value as "system" | "full" | "reduced" })}>
+                <option value="system">Windows volgen</option>
+                <option value="full">Beweging aan</option>
+                <option value="reduced">Rustige weergave</option>
+              </select>
+            </div>
+          </div>
+
           {/* Over */}
           <div className="settings-group">
             <CardHead icon={<Info24Regular />} title="Over" subtitle="Deze installatie" />

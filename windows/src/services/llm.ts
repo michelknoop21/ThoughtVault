@@ -9,6 +9,7 @@ import { isOllamaCloudURL } from "./ollamaModels";
 
 import { usePersonalCorrectionsStore } from "../stores/personalCorrectionsStore";
 import { correctText, correctHTML, correctionPrompt } from "./personalCorrections";
+import { htmlToPlainText } from "../utils/htmlToMarkdown";
 
 interface LLMConfig {
   provider: NotulenProvider;
@@ -283,15 +284,30 @@ export class LLMService {
       }
       throw new Error("Cloud provider moet via de server worden verwerkt");
     };
+    // Preserve source wording for polarity-sensitive clauses: a second fluent
+    // rewrite can otherwise silently reverse or omit the same condition again.
+    // shortcut: lexical Dutch/English constraints only; extend for other languages
+    // when adding their acceptance fixtures, never treat this as a semantic proof.
+    const constraints = [...new Set((correctText(transcription, corrections, profile.id).match(/[^.!?\n]+[.!?]?/gu) ?? [])
+      .map(sentence => sentence.trim())
+      .filter(sentence => /\b(niet|geen|niets|nooit|zonder|vervalt|vervallen|afgewezen|afgekeurd|afwezig|onbeslist|onbekend|not|never|without|cancelled|canceled)\b|open vraag/iu.test(sentence)))];
+    const constraintPrompt = constraints.length
+      ? `\n\nVerplicht te behouden bronzinnen (neem iedere zin letterlijk op bij het passende onderwerp, besluit of open punt; wijzig de betekenis ook nergens anders):\n${constraints.map((sentence, index) => `${index + 1}. ${sentence}`).join("\n")}` : "";
     // Keep the unverified draft out of progress updates and saved notes.
     const draft = await generate(systemPrompt, userPrompt);
     if (!draft.trim()) throw new Error("De notule-generator gaf een leeg concept. De transcriptie is bewaard.");
     const checked = await generate(
       `${systemPrompt}\nControleer nu het concept tegen de transcriptie. De transcriptie is de enige bron voor feiten. Controleer iedere bewering, vooral de richting van ontkenningen, verboden, vervallen termijnen en aanwezigheid. Herstel tegenspraken en voeg weggelaten beperkingen toe. Neem een bewering uit het concept nooit als bewijs. Behoud de gekozen template en geef uitsluitend de volledige gecorrigeerde HTML-notule terug.`,
-      `${userPrompt}\n\nConceptnotule ter controle (kan fouten bevatten):\n${draft}`,
-      onProgress,
+      `${userPrompt}\n\nConceptnotule ter controle (kan fouten bevatten):\n${draft}${constraintPrompt}`,
     );
     if (!checked.trim()) throw new Error("De inhoudscontrole gaf geen notule terug. De transcriptie is bewaard.");
-    return finish(checked);
+    const html = finish(checked);
+    const normalize = (value: string) => value.replace(/\s+/gu, " ").trim().toLocaleLowerCase("nl");
+    const text = normalize(htmlToPlainText(html));
+    if (constraints.some(sentence => !text.includes(normalize(sentence)))) {
+      throw new Error("De notule mist expliciete beperkingen uit de transcriptie. De bestaande notule en transcriptie zijn bewaard; er is geen nieuwe notule opgeslagen.");
+    }
+    onProgress?.(html);
+    return html;
   }
 }

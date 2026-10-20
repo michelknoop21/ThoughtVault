@@ -364,6 +364,7 @@ export interface AppSettings {
   default_recording_mode: RecordingMode;
   has_completed_onboarding: boolean;
   check_for_updates: boolean;
+  waveform_motion: "system" | "full" | "reduced";
   dismissed_update_version: string;
   ms365_tenant_id?: string;
   ms365_client_id?: string;
@@ -387,6 +388,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   default_recording_mode: "combined",
   has_completed_onboarding: false,
   check_for_updates: true,
+  waveform_motion: "system",
   dismissed_update_version: "",
   obsidian_enabled: false,
   obsidian_base_url: "https://127.0.0.1:27124",

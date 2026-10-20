@@ -64,13 +64,13 @@ struct PermissionBanner: View {
                         }
 
                         #if os(macOS)
-                        if !permissionManager.screenRecordingGranted {
+                        if permissionManager.systemAudioGranted == false {
                             permissionRow(
-                                icon: "rectangle.dashed.badge.record",
-                                title: "Schermopname",
-                                description: "Vereist voor systeemaudio bij videocalls",
+                                icon: "waveform",
+                                title: "Systeemaudio",
+                                description: "Voor het opnemen van geluid uit videocalls",
                                 action: {
-                                    Task { await permissionManager.requestScreenRecording() }
+                                    permissionManager.openSystemAudioSettings()
                                 }
                             )
                         }

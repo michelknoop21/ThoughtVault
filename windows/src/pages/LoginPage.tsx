@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../services/api";
 import { useAuthStore } from "../stores/authStore";
+import { useSettingsStore } from "../stores/settingsStore";
 import { TitleBar } from "../components/layout/TitleBar";
 import { BrandFooter } from "../components/brand/BrandFooter";
 import appLogo from "../assets/app-logo.png";
@@ -21,6 +22,7 @@ type LoginView = "login" | "2fa" | "reset-request" | "reset-verify" | "reset-com
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const updateSettings = useSettingsStore((s) => s.updateSettings);
   const {
     setToken, setUser, isAuthenticated,
     rememberMe, setRememberMe, savedEmail, setSavedEmail,
@@ -208,7 +210,7 @@ export function LoginPage() {
               alt="ThoughtVault"
               className="login-logo"
             />
-            <h1 className="text-accent login-title">Transcript Studio</h1>
+            <h1 className="text-accent login-title">ThoughtVault</h1>
           </div>
 
           {/* Success message */}
@@ -273,6 +275,17 @@ export function LoginPage() {
                   className="btn btn-accent login-btn"
                 >
                   {isLoading ? "Inloggen..." : "Inloggen"}
+                </button>
+
+                <button
+                  type="button"
+                  className="btn btn-secondary login-btn"
+                  onClick={() => {
+                    updateSettings({ processing_mode: "local", notulen_provider: "ollama" });
+                    navigate("/recording", { replace: true });
+                  }}
+                >
+                  Lokaal gebruiken zonder account
                 </button>
 
                 <button

@@ -1,8 +1,14 @@
 # ThoughtVault
 
+Windows MSI builds draaien in GitHub Actions op een expliciete bronref. Lees
+`docs/WINDOWS-BUILD-WORKFLOW.md` voor tests, installatie en publicatie.
+De actuele Windows-bron staat op Gitea; gebruik geen oudere GitHub-defaultbranch.
+
 ## Stack
 Native macOS/iOS (Swift 6, SwiftUI, `@Observable`) + Windows (Tauri 2, React/TypeScript).
-Backend: FastAPI op `https://n8n.prezent.nl/tstudio/api/` — lees docs/API.md bij API-werk.
+Windows: lokale opslag/transcriptie, lokale of rechtstreeks geconfigureerde cloud-AI.
+Lokale Windows-schermen werken zonder ThoughtVault-account.
+Historische opslag-ID’s blijven compatibel.
 
 ## Commands
 ```bash
@@ -19,8 +25,8 @@ xcodebuild test -project ThoughtVault.xcodeproj -scheme ThoughtVaultTests
 cd windows && npm run tauri dev
 
 # Release via CI (aanbevolen)
-scripts/deploy-dev.sh             # dev-v* tag → GitLab CI (macOS + Android + Windows + deploy)
-scripts/deploy-production.sh      # v* tag → GitLab CI (macOS + Android + Windows + deploy)
+scripts/deploy-dev.sh <github-ref>         # expliciete Windows-dev-build
+scripts/deploy-production.sh <github-ref>  # expliciete Windows-production-build
 
 # Release lokaal (fallback)
 scripts/release.sh                # volledige pipeline
@@ -104,4 +110,3 @@ Grep stays right for known exact strings, regex, and file globs. Refresh the
 index with `gbrain embed --stale` after large changes.
 
 <!-- gstack-gbrain-search-guidance:end -->
-

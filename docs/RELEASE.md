@@ -242,3 +242,22 @@ De download route wordt bediend door de `n8n_nginx` container:
 5. **Productie release**: `./scripts/deploy-production.sh` (maakt `v*` tag, triggert GitLab CI)
 6. GitLab CI bouwt, uploadt naar server, en maakt GitLab Release met release notes
 7. Download page op `https://n8n.prezent.nl/tstudio/download/` toont automatisch de juiste versies
+
+
+## ThoughtVault website op n8n01
+
+De commerciële website draait sinds 7 oktober 2026 in de aparte container
+`thoughtvault-website` op https://thoughtvault.yinga.ai/ . Deployment:
+`scripts/deploy-website.sh`; live controle: `python3 scripts/check-website.py`.
+Zie `deploy/website/README.md` voor configuratie en herstel.
+
+De website mount dezelfde `/home/michelk/tstudio-releases` map read-only.
+Bestaande uploads uit CI en lokale releasecommando's komen daardoor automatisch
+beschikbaar op de nieuwe privé-downloadpagina, zonder kopieerjob of herbouw.
+Elke platformkaart toont zijn eigen werkelijk beschikbare versie uit het manifest.
+
+De privépagina en alle installer-URLs op het nieuwe domein zijn alleen bereikbaar
+via een willekeurige, server-only downloadcapability. Ze hebben noindex-headers,
+noindex-meta op de pagina en staan niet in de sitemap of LLM-bestanden. De publieke
+website blijft indexeerbaar. De bestaande download- en update-endpoints op
+`n8n.prezent.nl` blijven bestaan voor de huidige native updateclients.

@@ -139,6 +139,35 @@ enum ProcessingMode: String, Codable, Sendable, CaseIterable, Identifiable {
     }
 }
 
+// MARK: - CloudAIConfiguration
+
+/// A user-defined OpenAI-compatible endpoint. The API key lives in the Keychain.
+struct CloudAIConfiguration: Codable, Identifiable, Equatable {
+    static let selectedKey = "selectedCloudAIConfiguration"
+
+    var id: String = UUID().uuidString
+    var name: String = "Nieuwe aanbieder"
+    var baseURL: String = "https://"
+    var model: String = ""
+    var keychainKey: String { Self.keychainKey(for: id) }
+
+    static func keychainKey(for id: String) -> String { "cloudAI-" + id }
+
+    static func load(defaults: UserDefaults = .standard) -> [Self] {
+        guard let data = defaults.data(forKey: "cloudAIConfigurations") else { return [] }
+        return (try? JSONDecoder().decode([Self].self, from: data)) ?? []
+    }
+
+    static func save(_ configurations: [Self], defaults: UserDefaults = .standard) {
+        if let data = try? JSONEncoder().encode(configurations) { defaults.set(data, forKey: "cloudAIConfigurations") }
+    }
+
+    static func selected(defaults: UserDefaults = .standard) -> Self? {
+        let id = defaults.string(forKey: selectedKey)
+        return load(defaults: defaults).first { $0.id == id }
+    }
+}
+
 // MARK: - NotulenProvider
 
 enum NotulenProvider: String, Codable, Sendable, CaseIterable, Identifiable {
@@ -146,6 +175,10 @@ enum NotulenProvider: String, Codable, Sendable, CaseIterable, Identifiable {
     case ollama         // Local Ollama instance
     case lmStudio       // Local LM Studio instance
     case appleIntelligence  // Apple Intelligence (macOS 26+ / iOS 26+)
+    case openAI         // Hosted, user's own API key
+    case anthropic      // Hosted, user's own API key
+    case ollamaCloud    // Hosted Ollama (https://ollama.com), user's own API key
+    case openAICompatible  // Any HTTPS endpoint with the OpenAI chat API
 
     var id: String { rawValue }
 
@@ -156,7 +189,33 @@ enum NotulenProvider: String, Codable, Sendable, CaseIterable, Identifiable {
         case .ollama:            return "Ollama (lokaal)"
         case .lmStudio:          return "LM Studio (lokaal)"
         case .appleIntelligence: return "Apple Intelligence"
+        case .openAI:            return "ChatGPT"
+        case .anthropic:         return "Claude"
+        case .ollamaCloud:       return "Ollama Cloud"
+        case .openAICompatible:  return "OpenAI-compatibel"
         }
+    }
+
+    /// Keychain key of the user's own API key for hosted providers; nil for the rest.
+    var apiKeyKeychainKey: String? {
+        switch self {
+        case .openAI:    return "openAIApiKey"
+        case .anthropic: return "anthropicApiKey"
+        case .ollamaCloud: return "ollamaApiKey"
+        case .openAICompatible:
+            let id = UserDefaults.standard.string(forKey: CloudAIConfiguration.selectedKey) ?? ""
+            return id.isEmpty ? nil : CloudAIConfiguration.keychainKey(for: id)
+        default:         return nil
+        }
+    }
+
+    /// Provider name for error messages.
+    var studioNameForErrors: String { self == .anthropic ? "Claude" : displayName }
+
+    /// True when a hosted provider has an API key stored.
+    var hasAPIKey: Bool {
+        guard let key = apiKeyKeychainKey else { return false }
+        return !(KeychainService.shared.load(for: key) ?? "").isEmpty
     }
 
     /// Default local-mode provider for the current platform.
@@ -316,19 +375,59 @@ struct Profile: Identifiable, Codable, Hashable, Sendable {
         isDefault: true
     )
 
-    /// Built-in profiles, enriched with the rich prompts + HTML templates from
-    /// ProfileTemplates.json (falling back to the inline prompts when unavailable).
+    /// Only current built-ins appear for new recordings. The static legacy
+    /// definitions above remain available when reading old document IDs.
     static var defaults: [Profile] {
-        let base: [Profile] = [.zakelijk, .informeel, .technisch, .handleiding, .blogSamenvatting, .notitie]
-        return base.map { profile in
-            guard let entry = ProfileTemplates.entry(for: profile.id) else { return profile }
-            var enriched = profile
-            enriched.systemPrompt = entry.systemPrompt ?? profile.systemPrompt
-            enriched.notulePrompt = entry.notulePrompt ?? profile.notulePrompt
-            enriched.template = entry.template ?? profile.template
-            if enriched.description == nil { enriched.description = entry.description }
-            return enriched
+        ProfileTemplates.entries.map { entry in
+            Profile(id: entry.id, name: entry.name, description: entry.description,
+                    icon: entry.icon, systemPrompt: entry.systemPrompt,
+                    notulePrompt: entry.notulePrompt, template: entry.template,
+                    isDefault: true)
         }
+    }
+
+    var sectionNames: [String] {
+        guard let template, template.contains("[Brongebonden inhoud]") else { return [] }
+        return template.components(separatedBy: "<h2>").dropFirst().compactMap { part in
+            guard let name = part.components(separatedBy: "</h2>").first, !name.isEmpty else { return nil }
+            return name.replacingOccurrences(of: "&lt;", with: "<")
+                .replacingOccurrences(of: "&gt;", with: ">")
+                .replacingOccurrences(of: "&amp;", with: "&")
+        }
+    }
+
+    static func currentChoices(_ remote: [Profile]) -> [Profile] {
+        let legacyIds: Set<String> = ["zakelijk", "informeel", "technisch", "handleiding", "blog_samenvatting", "notitie"]
+        let currentIds = Set(defaults.map(\.id))
+        return defaults + remote.filter {
+            $0.isDefault != true && !legacyIds.contains($0.id) && !currentIds.contains($0.id)
+        }
+    }
+
+}
+
+enum LocalProfileStore {
+    private static let key = "localNotuleProfiles"
+
+    static func load(defaults: UserDefaults = .standard) -> [Profile] {
+        guard let data = defaults.data(forKey: key) else { return [] }
+        return (try? JSONDecoder().decode([Profile].self, from: data)) ?? []
+    }
+
+    static func choices(defaults: UserDefaults = .standard) -> [Profile] {
+        Profile.defaults + load(defaults: defaults)
+    }
+
+    static func save(_ profile: Profile, defaults: UserDefaults = .standard) throws {
+        var profiles = load(defaults: defaults)
+        profiles.removeAll { $0.id == profile.id }
+        profiles.append(profile)
+        defaults.set(try JSONEncoder().encode(profiles), forKey: key)
+    }
+
+    static func delete(id: String, defaults: UserDefaults = .standard) throws {
+        let profiles = load(defaults: defaults).filter { $0.id != id }
+        defaults.set(try JSONEncoder().encode(profiles), forKey: key)
     }
 }
 
@@ -366,6 +465,8 @@ struct TranscriptTask: Identifiable, Codable, Sendable {
         case createdAt = "created_at"
         case username
     }
+
+    private enum ResultCodingKey: String, CodingKey { case result }
 
     init(
         id: String = UUID().uuidString,
@@ -415,6 +516,7 @@ struct TranscriptTask: Identifiable, Codable, Sendable {
 
         self.rawTranscription = try container.decodeIfPresent(String.self, forKey: .rawTranscription)
         self.notuleHtml = try container.decodeIfPresent(String.self, forKey: .notuleHtml)
+            ?? decoder.container(keyedBy: ResultCodingKey.self).decodeIfPresent(String.self, forKey: .result)
         self.errorMessage = try container.decodeIfPresent(String.self, forKey: .errorMessage)
         self.localAudioPath = try container.decodeIfPresent(String.self, forKey: .localAudioPath)
         self.progress = try container.decodeIfPresent(Double.self, forKey: .progress) ?? 0.0
@@ -436,6 +538,13 @@ struct TranscriptTask: Identifiable, Codable, Sendable {
             return Date(timeIntervalSince1970: unix)
         }
         return nil
+    }
+}
+
+extension TranscriptTask {
+    /// Local processing updates `progress` live; other states use the status step.
+    var displayProgress: Double {
+        status == .transcribing || status == .generatingLocal ? progress : status.progress
     }
 }
 

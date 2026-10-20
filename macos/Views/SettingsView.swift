@@ -10,9 +10,7 @@ import SwiftUI
 import AVFoundation
 import Speech
 import UniformTypeIdentifiers
-#if os(macOS)
-import ScreenCaptureKit
-#endif
+
 
 // MARK: - SettingsView
 
@@ -23,8 +21,8 @@ struct SettingsView: View {
 
     // MARK: - AppStorage
 
-    @AppStorage("defaultProfile") private var defaultProfile: String = ""
-    @AppStorage("preferOnDeviceTranscription") private var preferOnDeviceTranscription: Bool = false
+    @AppStorage("defaultProfile") var defaultProfile: String = ""
+    @AppStorage("preferOnDeviceTranscription") var preferOnDeviceTranscription: Bool = false
     @AppStorage("biometricLoginEnabled") private var biometricLoginEnabled: Bool = false
     @AppStorage("videoCallDetectionEnabled") private var videoCallDetectionEnabled: Bool = true
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding: Bool = false
@@ -37,14 +35,16 @@ struct SettingsView: View {
 
     // MARK: - Local State
 
-    @State private var profiles: [Profile] = []
+    @State var profiles: [Profile] = []
     @State private var isLoadingProfiles: Bool = false
     @State private var showLogoutConfirm: Bool = false
     @State private var showBugReportSheet: Bool = false
+    @State private var feedbackTitle = ""
+    @State private var feedbackDescription = ""
     @State private var biometricError: String? = nil
     @State private var micPermissionGranted: Bool? = nil
     @State private var speechPermissionGranted: Bool? = nil
-    @State private var screenRecordingGranted: Bool? = nil
+    @State private var systemAudioGranted: Bool? = nil
 
     // Obsidian
     @State private var obsidianApiKey: String = ""
@@ -62,13 +62,27 @@ struct SettingsView: View {
     /// vertically instead of squeezing in a single HStack.
     @State private var isCompact: Bool = false
 
+    #if os(macOS)
+    // Verwerking studio layout (SettingsView+Studio / +Verwerking).
+    @State var settingsTab: SettingsTab = {
+        #if DEBUG
+        if let raw = UserDefaults.standard.string(forKey: "TVDebugSettingsTab"), let tab = SettingsTab(rawValue: raw) { return tab }
+        #endif
+        return .verwerking
+    }()
+    @State var showManualModel: Bool = false
+    @State var showSetupDetails: Bool = false
+    @State var showTranscriptionHelp: Bool = false
+    @State var showNotuleHelp: Bool = false
+    #endif
+
     var body: some View {
         GeometryReader { geo in
             Group {
                 #if os(macOS)
-                tabbedSettings
+                settingsStudio
                 #else
-                flatSettings
+                iosSettings
                 #endif
             }
             .onAppear { isCompact = geo.size.width < 640 }
@@ -77,14 +91,48 @@ struct SettingsView: View {
             }
         }
         .navigationTitle("Instellingen")
+        #if os(macOS)
+        .sheet(isPresented: $showBugReportSheet) {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Feedback").font(TS.Font.title3Semibold)
+                Text("Kopieer je melding om deze met Yinga te delen.")
+                    .font(TS.Font.body).foregroundStyle(Color.labelSecondary)
+                TextField("Titel", text: $feedbackTitle).textFieldStyle(.roundedBorder)
+                Text("Beschrijving").font(TS.Font.bodyMedium)
+                TextEditor(text: $feedbackDescription)
+                    .font(TS.Font.body).frame(height: 140)
+                    .scrollIndicators(.never)
+                    .accessibilityLabel("Beschrijving")
+                HStack {
+                    Button("Annuleer") { showBugReportSheet = false }
+                        .buttonStyle(SecondaryButtonStyle()).keyboardShortcut(.cancelAction)
+                    Spacer()
+                    Button("Kopieer feedback") {
+                        NSPasteboard.general.clearContents()
+                        NSPasteboard.general.setString("ThoughtVault feedback\n\(feedbackTitle.trimmingCharacters(in: .whitespacesAndNewlines))\n\n\(feedbackDescription.trimmingCharacters(in: .whitespacesAndNewlines))", forType: .string)
+                        showBugReportSheet = false
+                    }
+                    .buttonStyle(PrimaryButtonStyle())
+                    .disabled(feedbackTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || feedbackDescription.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }.padding(24).frame(width: 440)
+        }
+        #endif
         .onAppear {
             loadApiKey()
+            #if os(macOS)
+            let ollamaEndpoint = URL(string: ollamaURL.trimmingCharacters(in: .whitespacesAndNewlines))
+            if activeLocalProvider == .ollama, ollamaEndpoint?.scheme?.lowercased() == "https", ollamaEndpoint?.host?.lowercased() == "ollama.com" {
+                UserDefaults.standard.set(ollamaModel, forKey: "ollamaCloudModel")
+                notulenProvider = NotulenProvider.ollamaCloud.rawValue
+            }
+            #endif
             obsidianApiKey = KeychainService.shared.load(for: ObsidianService.apiKeyKeychainKey) ?? ""
             Task {
                 await loadProfiles()
                 await checkServerConnection()
                 await checkPermissions()
-                if isLocalProcessing && activeLocalProvider == .ollama { await loadOllamaModels() }
+
                 if isLocalProcessing && localTranscriber == LocalTranscriberEngine.whisperKit.rawValue { await loadWhisperModels() }
             }
         }
@@ -109,6 +157,7 @@ struct SettingsView: View {
     private func cappedForm<Content: View>(@ViewBuilder content: () -> Content) -> some View {
         Form { content() }
             .formStyle(.grouped)
+            .scrollIndicators(.never)
             .frame(maxWidth: 860)
             .frame(maxWidth: .infinity)
     }
@@ -116,33 +165,7 @@ struct SettingsView: View {
     // MARK: - macOS: Tabbed Layout (System Settings-style)
 
     #if os(macOS)
-    private var tabbedSettings: some View {
-        TabView {
-            algemeenTab
-                .tabItem { Label("Algemeen", systemImage: "gear") }
-
-            verwerkingTab
-                .tabItem { Label("Verwerking", systemImage: "waveform") }
-
-            profielTab
-                .tabItem { Label("Profiel", systemImage: "person.crop.circle") }
-
-            agendaTab
-                .tabItem { Label("Agenda", systemImage: "calendar") }
-
-            obsidianTab
-                .tabItem { Label("Obsidian", systemImage: "tray.and.arrow.down") }
-
-            accountTab
-                .tabItem { Label("Account", systemImage: "lock") }
-
-            geavanceerdTab
-                .tabItem { Label("Geavanceerd", systemImage: "slider.horizontal.3") }
-        }
-        .frame(minWidth: 360, minHeight: 520)
-    }
-
-    private var algemeenTab: some View {
+    var algemeenTab: some View {
         cappedForm {
             // Hide "Verbinding" section in local mode — no server to connect to.
             if !isLocalProcessing {
@@ -153,47 +176,41 @@ struct SettingsView: View {
         }
     }
 
-    private var verwerkingTab: some View {
+    var profielTab: some View {
         cappedForm {
-            verwerkingsmodusSection
-            if isLocalProcessing {
-                transcriptieSection
-                lokaleNotulenSection
-            } else {
-                cloudNotulenSection
-            }
             profielenSection
-            spraakherkenningSection
-        }
-    }
-
-    private var profielTab: some View {
-        cappedForm {
             ProfileSettingsView()
             onboardingSection
         }
     }
 
-    private var agendaTab: some View {
+    var agendaTab: some View {
         cappedForm {
             agendaSection
         }
     }
 
-    private var obsidianTab: some View {
+    var obsidianTab: some View {
         cappedForm {
             obsidianSection
         }
     }
 
-    private var accountTab: some View {
+    var accountTab: some View {
         cappedForm {
-            accountSection
+            if isLocalProcessing {
+                Section("Lokale app") {
+                    Text("Deze app werkt lokaal zonder ThoughtVault-login.")
+                    Text("Je profiel stel je in bij Notulen.").foregroundStyle(Color.labelSecondary)
+                }
+            } else {
+                accountSection
+            }
             feedbackSection
         }
     }
 
-    private var geavanceerdTab: some View {
+    var geavanceerdTab: some View {
         cappedForm {
             permissiesSection
             Section {
@@ -203,40 +220,12 @@ struct SettingsView: View {
     }
     #endif
 
-    // MARK: - iOS: Flat Layout (single Form)
-
-    #if os(iOS)
-    private var flatSettings: some View {
-        cappedForm {
-            verbindingSection
-            verwerkingsmodusSection
-            if isLocalProcessing {
-                transcriptieSection
-                lokaleNotulenSection
-            } else {
-                cloudNotulenSection
-            }
-            ProfileSettingsView()
-            onboardingSection
-            profielenSection
-            spraakherkenningSection
-            permissiesSection
-            agendaSection
-            obsidianSection
-            accountSection
-            feedbackSection
-            overSection
-            updatesSection
-        }
-    }
-    #endif
-
     // MARK: - Verbinding (Connection)
 
     @State private var isCheckingServer: Bool = false
     @State private var serverConnected: Bool? = nil
 
-    private var verbindingSection: some View {
+    var verbindingSection: some View {
         Section {
             // Server status
             HStack(spacing: TS.Spacing.sm) {
@@ -269,7 +258,7 @@ struct SettingsView: View {
 
     @State private var revealObsidianKey: Bool = false
 
-    private var obsidianSection: some View {
+    var obsidianSection: some View {
         Section {
             Toggle(isOn: $obsidianEnabled) {
                 Text("Automatisch exporteren naar Obsidian")
@@ -483,7 +472,7 @@ struct SettingsView: View {
 
     // MARK: - Profielen (Profiles)
 
-    private var profielenSection: some View {
+    var profielenSection: some View {
         Section {
             if isLoadingProfiles {
                 HStack {
@@ -517,38 +506,38 @@ struct SettingsView: View {
 
     // MARK: - Lokale Verwerking (Local Processing)
 
-    @AppStorage("processingMode") private var processingMode: String = ProcessingMode.local.rawValue
-    @AppStorage("localTranscriber") private var localTranscriber: String = LocalTranscriberEngine.whisperKit.rawValue
-    @AppStorage("whisperModel") private var whisperModel: String = LocalTranscriberFactory.defaultWhisperModel
-    @AppStorage(PersonalVocabulary.defaultsKey) private var personalVocabulary: String = ""
-    @AppStorage("ollamaURL") private var ollamaURL: String = "http://localhost:11434"
-    @AppStorage("ollamaModel") private var ollamaModel: String = "llama3.2"
-    @AppStorage("lmStudioURL") private var lmStudioURL: String = "http://localhost:1234"
-    @AppStorage("lmStudioModel") private var lmStudioModel: String = "local-model"
+    @AppStorage("processingMode") var processingMode: String = ProcessingMode.local.rawValue
+    @AppStorage("localTranscriber") var localTranscriber: String = LocalTranscriberEngine.whisperKit.rawValue
+    @AppStorage("whisperModel") var whisperModel: String = LocalTranscriberFactory.defaultWhisperModel
+    @AppStorage(PersonalVocabulary.defaultsKey) var personalVocabulary: String = ""
+    @AppStorage("ollamaURL") var ollamaURL: String = "http://localhost:11434"
+    @AppStorage("ollamaModel") var ollamaModel: String = "llama3.2"
+    @AppStorage("lmStudioURL") var lmStudioURL: String = "http://localhost:1234"
+    @AppStorage("lmStudioModel") var lmStudioModel: String = "local-model"
 
     // WhisperKit model discovery
-    @State private var whisperModels: [String] = []
-    @State private var whisperModelsLoading: Bool = false
+    @State var whisperModels: [String] = []
+    @State var whisperModelsLoading: Bool = false
 
     // API key lives in the Keychain, not UserDefaults. Mirrored into @State for editing.
-    @State private var ollamaApiKey: String = ""
-    @State private var revealApiKey: Bool = false
+    @State var ollamaApiKey: String = ""
+    @State var revealApiKey: Bool = false
     @FocusState private var apiKeyFocused: Bool
 
-    @State private var ollamaTesting: Bool = false
-    @State private var ollamaConnected: Bool? = nil
-    @State private var ollamaModels: [String] = []
-    @State private var ollamaModelsLoading: Bool = false
+    @State var ollamaTesting: Bool = false
+    @State var ollamaStatus: OpenAICompatibleLLMService.ConnectionStatus? = nil
+    @State var ollamaModels: [String] = []
+    @State var ollamaModelsLoading: Bool = false
 
-    private static let apiKeyKeychainKey = "ollamaApiKey"
+    static let apiKeyKeychainKey = "ollamaApiKey"
 
-    private var isLocalProcessing: Bool {
+    var isLocalProcessing: Bool {
         (ProcessingMode(rawValue: processingMode) ?? .local) == .local
     }
 
     /// True when a key is set but the endpoint is plain HTTP — the bearer would be
     /// withheld for safety, so the key won't actually authenticate.
-    private var apiKeyOverHTTPWarning: Bool {
+    var apiKeyOverHTTPWarning: Bool {
         !ollamaApiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             && !ollamaURL.lowercased().hasPrefix("https://")
     }
@@ -556,21 +545,21 @@ struct SettingsView: View {
     /// The notule provider actually used when processing locally. `.cloud` is
     /// meaningless offline (RecordingViewModel maps it to Ollama), so it is
     /// normalised away here — keeping the UI and the runtime in agreement.
-    private var activeLocalProvider: NotulenProvider {
+    var activeLocalProvider: NotulenProvider {
         let p = NotulenProvider(rawValue: notulenProvider) ?? .ollama
         return p == .cloud ? .ollama : p
     }
 
     /// Picker binding for the local notule provider. Coerces a stale `.cloud`
     /// selection (the legacy default) to `.ollama` so the picker never renders blank.
-    private var localNotuleProviderBinding: Binding<String> {
+    var localNotuleProviderBinding: Binding<String> {
         Binding(
             get: { activeLocalProvider.rawValue },
             set: { notulenProvider = $0 }
         )
     }
 
-    private var verwerkingsmodusSection: some View {
+    var verwerkingsmodusSection: some View {
         Section {
             Picker("Verwerkingsmodus", selection: $processingMode) {
                 Text("Lokaal").tag(ProcessingMode.local.rawValue)
@@ -590,7 +579,7 @@ struct SettingsView: View {
 
     // MARK: - Transcriptie (Local)
 
-    private var transcriptieSection: some View {
+    var transcriptieSection: some View {
         Section {
             Picker("Engine", selection: $localTranscriber) {
                 ForEach(LocalTranscriberEngine.allCases) { engine in
@@ -643,7 +632,7 @@ struct SettingsView: View {
             }
 
             SettingFieldRow("Eigen termen") {
-                TextField("Michel, Django, …", text: $personalVocabulary, axis: .vertical)
+                TextField("Michel, Yinga, …", text: $personalVocabulary, axis: .vertical)
                     .textFieldStyle(.roundedBorder)
                     .autocorrectionDisabled()
             }
@@ -661,18 +650,24 @@ struct SettingsView: View {
 
     // MARK: - Notulen (Local provider)
 
-    private var lokaleNotulenSection: some View {
+    var lokaleNotulenSection: some View {
         Section {
             Picker("Provider", selection: localNotuleProviderBinding) {
                 Text("Ollama").tag(NotulenProvider.ollama.rawValue)
                 Text("LM Studio").tag(NotulenProvider.lmStudio.rawValue)
                 Text("Apple Intelligence").tag(NotulenProvider.appleIntelligence.rawValue)
+                Text("ChatGPT").tag(NotulenProvider.openAI.rawValue)
+                Text("Claude").tag(NotulenProvider.anthropic.rawValue)
+                Text("Ollama Cloud").tag(NotulenProvider.ollamaCloud.rawValue)
+                Text("OpenAI-compatibel").tag(NotulenProvider.openAICompatible.rawValue)
             }
 
             switch activeLocalProvider {
             case .ollama:            ollamaConfig
             case .lmStudio:          lmStudioConfig
             case .appleIntelligence: appleIntelligenceNote
+            case .openAI, .anthropic: HostedProviderConfig(provider: activeLocalProvider).id(activeLocalProvider)
+            case .ollamaCloud, .openAICompatible: CloudProviderConfig(provider: activeLocalProvider).id(activeLocalProvider)
             case .cloud:             EmptyView()
             }
 
@@ -691,7 +686,7 @@ struct SettingsView: View {
         }
     }
 
-    private var localNotuleDescription: String {
+    var localNotuleDescription: String {
         switch activeLocalProvider {
         case .ollama:
             return "Notulen worden lokaal gegenereerd via Ollama. Vul een API-sleutel in voor Ollama Cloud."
@@ -699,6 +694,14 @@ struct SettingsView: View {
             return "Notulen worden lokaal gegenereerd via LM Studio."
         case .appleIntelligence:
             return "Notulen worden gegenereerd met Apple Intelligence op dit apparaat."
+        case .openAI:
+            return "Het transcript wordt naar OpenAI gestuurd. De kosten lopen via je eigen API-account."
+        case .anthropic:
+            return "Het transcript wordt naar Anthropic gestuurd. De kosten lopen via je eigen API-account."
+        case .ollamaCloud:
+            return "Het transcript wordt naar Ollama Cloud gestuurd. De kosten lopen via je eigen account."
+        case .openAICompatible:
+            return "Het transcript wordt naar het HTTPS-adres van je eigen aanbieder gestuurd."
         case .cloud:
             return ""
         }
@@ -706,7 +709,7 @@ struct SettingsView: View {
 
     // MARK: - Notulen (Cloud)
 
-    private var cloudNotulenSection: some View {
+    var cloudNotulenSection: some View {
         Section {
             NavigationLink {
                 ProfilesView()
@@ -726,7 +729,7 @@ struct SettingsView: View {
     // MARK: - LM Studio config
 
     @ViewBuilder
-    private var lmStudioConfig: some View {
+    var lmStudioConfig: some View {
         SettingFieldRow(
             "LM Studio-server",
             hint: "LM Studio draait standaard op http://localhost:1234."
@@ -748,7 +751,7 @@ struct SettingsView: View {
     // MARK: - Apple Intelligence note
 
     @ViewBuilder
-    private var appleIntelligenceNote: some View {
+    var appleIntelligenceNote: some View {
         #if canImport(FoundationModels)
         if #available(macOS 26, iOS 26, *) {
             if let reason = AppleFoundationModelService.unavailabilityReason {
@@ -773,7 +776,7 @@ struct SettingsView: View {
     }
 
     @ViewBuilder
-    private var ollamaConfig: some View {
+    var ollamaConfig: some View {
         // Server URL + Cloud preset
         #if os(iOS)
         let ollamaHint = "Ollama draait niet op iPhone/iPad. Vul de URL van een remote Ollama-server in."
@@ -788,12 +791,16 @@ struct SettingsView: View {
             if isCompact {
                 VStack(alignment: .leading, spacing: TS.Spacing.sm) {
                     ollamaURLField
+                    #if os(iOS)
                     ollamaCloudButton
+                    #endif
                 }
             } else {
                 HStack(spacing: TS.Spacing.sm) {
                     ollamaURLField
+                    #if os(iOS)
                     ollamaCloudButton
+                    #endif
                 }
             }
         }
@@ -808,8 +815,8 @@ struct SettingsView: View {
                         .autocorrectionDisabled()
                 } else {
                     Picker("", selection: $ollamaModel) {
-                        if !ollamaModels.contains(ollamaModel) && !ollamaModel.isEmpty {
-                            Text(ollamaModel).tag(ollamaModel)
+                        if !ollamaModels.contains(ollamaModel) {
+                            Text(ollamaModel.isEmpty ? "Kies een model" : ollamaModel).tag(ollamaModel)
                         }
                         ForEach(ollamaModels, id: \.self) { name in
                             Text(name).tag(name)
@@ -833,6 +840,10 @@ struct SettingsView: View {
                 .help("Beschikbare modellen laden")
                 .accessibilityLabel("Beschikbare modellen laden")
             }
+        }
+        if !ollamaModelsLoading && ollamaModels.isEmpty {
+            Text("Geen modellen opgehaald. Controleer het adres en de verbinding.")
+                .font(TS.Font.caption).foregroundStyle(Color.labelSecondary)
         }
         if !ollamaModels.isEmpty {
             Text("\(ollamaModels.count) modellen beschikbaar")
@@ -898,29 +909,30 @@ struct SettingsView: View {
             .tint(Color.brandPrimary)
             .disabled(ollamaTesting)
 
-            if let connected = ollamaConnected {
+            if let status = ollamaStatus {
+                let ready = status == .ready
                 Label(
-                    connected ? "Verbonden" : "Niet bereikbaar",
-                    systemImage: connected ? "checkmark.circle.fill" : "xmark.circle.fill"
+                    Self.ollamaStatusText(status),
+                    systemImage: ready ? "checkmark.circle.fill" : "xmark.circle.fill"
                 )
                 .font(TS.Font.footnoteSemibold)
-                .foregroundStyle(connected ? Color.statusSuccess : Color.statusError)
+                .foregroundStyle(ready ? Color.statusSuccess : Color.statusError)
             }
         }
         .padding(.top, TS.Spacing.xs)
     }
 
-    private var ollamaURLField: some View {
+    var ollamaURLField: some View {
         TextField("http://localhost:11434", text: $ollamaURL)
             .textFieldStyle(.roundedBorder)
             .font(TS.Font.bodyMonospaced)
             .autocorrectionDisabled()
     }
 
-    private var ollamaCloudButton: some View {
+    var ollamaCloudButton: some View {
         Button("Cloud") {
             ollamaURL = "https://ollama.com"
-            ollamaConnected = nil
+            ollamaStatus = nil
             apiKeyFocused = true
         }
         .buttonStyle(.bordered)
@@ -929,12 +941,14 @@ struct SettingsView: View {
 
     // MARK: - API key (Keychain) helpers
 
-    private func loadApiKey() {
+    func loadApiKey() {
         ollamaApiKey = KeychainService.shared.load(for: Self.apiKeyKeychainKey) ?? ""
     }
 
-    private func saveApiKey(_ value: String) {
+    func saveApiKey(_ value: String) {
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Loading the stored key into the field must not rewrite it (save() is delete + add).
+        guard trimmed != (KeychainService.shared.load(for: Self.apiKeyKeychainKey) ?? "") else { return }
         if trimmed.isEmpty {
             KeychainService.shared.delete(for: Self.apiKeyKeychainKey)
         } else {
@@ -942,7 +956,7 @@ struct SettingsView: View {
         }
     }
 
-    private func ollamaService() -> OpenAICompatibleLLMService {
+    func ollamaService() -> OpenAICompatibleLLMService {
         let key = ollamaApiKey.trimmingCharacters(in: .whitespacesAndNewlines)
         return OpenAICompatibleLLMService(
             baseURL: ollamaURL,
@@ -951,24 +965,32 @@ struct SettingsView: View {
         )
     }
 
-    private func testOllamaConnection() async {
+    func testOllamaConnection() async {
         ollamaTesting = true
-        ollamaConnected = nil
-        let available = await ollamaService().isAvailable
-        ollamaConnected = available
+        ollamaStatus = nil
+        let status = await ollamaService().checkConnection()
+        ollamaStatus = status
         ollamaTesting = false
-        if available { await loadOllamaModels() }
+        // The model list is public on Ollama Cloud, so load it even when the key is missing.
+        if status != .unreachable { await loadOllamaModels() }
+    }
+
+    static func ollamaStatusText(_ status: OpenAICompatibleLLMService.ConnectionStatus) -> String {
+        switch status {
+        case .ready: return "Verbonden"
+        case .unreachable: return "Niet bereikbaar"
+        case .keyMissing: return "Bereikbaar, maar deze server vraagt een API-sleutel"
+        case .keyRejected: return "API-sleutel geweigerd door de server"
+        }
     }
 
     /// Fetches the available model list (local Ollama or Ollama Cloud) for the picker.
-    private func loadOllamaModels() async {
+    func loadOllamaModels(includeCredential: Bool = true) async {
         ollamaModelsLoading = true
-        let models = await ollamaService().fetchModels()
+        let service = includeCredential ? ollamaService() : OpenAICompatibleLLMService(baseURL: ollamaURL, model: ollamaModel)
+        let models = await service.fetchModels()
+        guard !Task.isCancelled else { return }
         ollamaModels = models
-        // Default the selection to the first model when nothing valid is selected yet.
-        if ollamaModel.isEmpty, let first = models.first {
-            ollamaModel = first
-        }
         ollamaModelsLoading = false
     }
 
@@ -976,11 +998,11 @@ struct SettingsView: View {
 
     // Source of truth for the local notule provider. Read by RecordingViewModel's
     // processLocally / regenerateNotuleLocally. Selected in `lokaleNotulenSection`.
-    @AppStorage("notulenProvider") private var notulenProvider: String = NotulenProvider.platformDefault.rawValue
+    @AppStorage("notulenProvider") var notulenProvider: String = NotulenProvider.platformDefault.rawValue
 
     // MARK: - Spraakherkenning (Transcription)
 
-    private var spraakherkenningSection: some View {
+    var spraakherkenningSection: some View {
         Section {
             if OnDeviceTranscriber.shared.isAvailable() {
                 Toggle(isOn: $preferOnDeviceTranscription) {
@@ -1021,7 +1043,7 @@ struct SettingsView: View {
     /// RootView (ThoughtVaultApp) present OnboardingView again; OnboardingView
     /// sets the flag back to true on finish/skip. Essential in local-only mode,
     /// where there is no login window to reach onboarding from.
-    private var onboardingSection: some View {
+    var onboardingSection: some View {
         Section {
             Button {
                 hasCompletedOnboarding = false
@@ -1050,7 +1072,7 @@ struct SettingsView: View {
 
     // MARK: - Permissies (Permissions)
 
-    private var permissiesSection: some View {
+    var permissiesSection: some View {
         Section {
             permissionRow(
                 icon: "mic.fill",
@@ -1069,9 +1091,10 @@ struct SettingsView: View {
             #if os(macOS)
             permissionRow(
                 icon: "rectangle.dashed",
-                title: "Schermopname",
-                description: "Vereist voor systeemgeluidsopname",
-                status: screenRecordingGranted
+                title: "Systeemaudio",
+                description: "Geluid van videocalls; wordt bij de eerste opname gevraagd",
+                status: systemAudioGranted,
+                negativeLabel: "Controleer toegang"
             )
             #endif
 
@@ -1100,7 +1123,7 @@ struct SettingsView: View {
         }
     }
 
-    private func permissionRow(icon: String, title: String, description: String, status: Bool? = nil) -> some View {
+    private func permissionRow(icon: String, title: String, description: String, status: Bool? = nil, negativeLabel: String = "Geweigerd") -> some View {
         HStack(spacing: TS.Spacing.sm) {
             Image(systemName: icon)
                 .font(.system(size: 16))
@@ -1129,7 +1152,7 @@ struct SettingsView: View {
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundStyle(Color.statusSuccess)
                 case .some(false):
-                    Text("Geweigerd")
+                    Text(negativeLabel)
                         .font(TS.Font.footnote)
                         .foregroundStyle(Color.statusError)
                     Image(systemName: "xmark.circle.fill")
@@ -1141,7 +1164,7 @@ struct SettingsView: View {
 
     // MARK: - Agenda (Calendar)
 
-    private var agendaSection: some View {
+    var agendaSection: some View {
         Section {
             // Provider picker (only show when Microsoft is configured)
             if calendarService.isMicrosoftConfigured {
@@ -1330,10 +1353,14 @@ struct SettingsView: View {
 
     // MARK: - Account
 
-    private var accountSection: some View {
+    var accountSection: some View {
         Section {
             NavigationLink {
-                AccountView()
+                if authVM.isAuthenticated {
+                    AccountView()
+                } else {
+                    LoginView()
+                }
             } label: {
                 if let user = authVM.currentUser {
                     HStack(spacing: TS.Spacing.sm) {
@@ -1442,7 +1469,7 @@ struct SettingsView: View {
 
     // MARK: - Feedback
 
-    private var feedbackSection: some View {
+    var feedbackSection: some View {
         Section {
             Button {
                 showBugReportSheet = true
@@ -1465,7 +1492,7 @@ struct SettingsView: View {
 
     // MARK: - Over (About)
 
-    private var overSection: some View {
+    var overSection: some View {
         Section {
             HStack {
                 Text("Versie")
@@ -1501,7 +1528,7 @@ struct SettingsView: View {
 
     @AppStorage("checkForUpdates") private var checkForUpdates = true
 
-    private var updatesSection: some View {
+    var updatesSection: some View {
         Section {
             Toggle(isOn: $checkForUpdates) {
                 VStack(alignment: .leading, spacing: 2) {
@@ -1524,10 +1551,11 @@ struct SettingsView: View {
         isLoadingProfiles = true
         defer { isLoadingProfiles = false }
         if isLocalProcessing {
-            profiles = Profile.defaults
+            profiles = LocalProfileStore.choices()
             return
         }
-        profiles = (try? await APIService.shared.getProfiles()) ?? Profile.defaults
+        let remote = (try? await APIService.shared.getProfiles()) ?? []
+        profiles = Profile.currentChoices(remote)
     }
 
     private func checkServerConnection() async {
@@ -1547,7 +1575,7 @@ struct SettingsView: View {
     }
 
     /// Fetches the available WhisperKit models for the dropdown picker.
-    private func loadWhisperModels() async {
+    func loadWhisperModels() async {
         whisperModelsLoading = true
         defer { whisperModelsLoading = false }
         if let models = await WhisperKitModelDiscovery.fetchRecommendedModels() {
@@ -1569,14 +1597,8 @@ struct SettingsView: View {
         let speechStatus = SFSpeechRecognizer.authorizationStatus()
         speechPermissionGranted = speechStatus == .authorized
 
-        // Screen recording (macOS only)
         #if os(macOS)
-        do {
-            _ = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: false)
-            screenRecordingGranted = true
-        } catch {
-            screenRecordingGranted = false
-        }
+        systemAudioGranted = PermissionManager.shared.systemAudioGranted
         #endif
     }
 

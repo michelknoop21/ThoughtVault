@@ -32,16 +32,19 @@ export const TaskStatusLabels: Record<TaskStatus, string> = {
 export type RecordingMode = "microphone" | "combined";
 
 // Notulen providers
-export type NotulenProvider = "cloud" | "ollama" | "lm-studio";
+export type NotulenProvider = "cloud" | "ollama" | "lm-studio" | "openai" | "anthropic";
 
 // Processing mode: "cloud" = upload to backend, "local" = transcribe + generate
 // fully on-device (Whisper + Ollama/LM Studio). Mirrors the macOS processingMode.
 export type ProcessingMode = "cloud" | "local";
 
-// Available local Whisper models (GGML). Maps 1:1 to ggml-<id>.bin filenames.
+// Existing model IDs stay compatible with saved settings.
 export const WHISPER_MODELS: { id: string; label: string; size: string }[] = [
+  { id: "faster-whisper-small", label: "Faster Whisper Small: Nederlands, CPU int8", size: "~486 MB" },
+  { id: "parakeet-tdt-0.6b-v3", label: "Parakeet TDT v3: lokaal op CPU", size: "~714 MB" },
+  { id: "base", label: "Base: compact model, lagere nauwkeurigheid", size: "~142 MB" },
   { id: "small", label: "Small: sneller, minder accuraat", size: "~466 MB" },
-  { id: "medium", label: "Medium: aanbevolen", size: "~1,5 GB" },
+  { id: "medium", label: "Medium: balans tussen snelheid en kwaliteit", size: "~1,5 GB" },
   { id: "large-v3", label: "Large v3: beste kwaliteit, traag op CPU", size: "~3 GB" },
 ];
 
@@ -55,6 +58,7 @@ export interface TranscriptTask {
   notule_html?: string;
   error_message?: string;
   filename?: string;
+  local_audio_path?: string;
   extracted_title?: string;
   profile_id?: string;
   source_type?: string;
@@ -69,11 +73,14 @@ export interface TranscriptTask {
 
 // Completed saved transcript
 export interface Transcript {
+  profile_id?: string;
   id: string;
+  task_id?: string;
   title: string;
   raw_transcription?: string;
   notule_html?: string;
   preview?: string;
+  quick_note?: string;
   has_notes?: boolean;
   has_transcription?: boolean;
   duration_seconds: number;
@@ -121,44 +128,18 @@ export interface Profile {
   limit?: number;            // For profile list endpoint
 }
 
-export const DEFAULT_PROFILES: Profile[] = [
-  {
-    id: "zakelijk",
-    name: "Zakelijk",
-    system_prompt:
-      "Je bent een professionele notulist. Genereer gestructureerde vergadernotulen in het Nederlands. Gebruik geen analyse of redenering. Geef direct het eindresultaat.",
-    notule_prompt:
-      "Maak gestructureerde notulen van deze vergadering. Gebruik kopjes voor: Aanwezigen, Agendapunten, Besluiten, Actiepunten.",
-    is_default: true,
-  },
-  {
-    id: "informeel",
-    name: "Informeel",
-    system_prompt:
-      "Je bent een notulist voor informele vergaderingen. Schrijf in een toegankelijke stijl in het Nederlands.",
-    notule_prompt:
-      "Maak een beknopte samenvatting van dit gesprek. Noteer de belangrijkste punten en afspraken.",
-    is_default: false,
-  },
-  {
-    id: "technisch",
-    name: "Technisch",
-    system_prompt:
-      "Je bent een technische notulist. Noteer technische details nauwkeurig in het Nederlands.",
-    notule_prompt:
-      "Maak gedetailleerde technische notulen. Noteer alle technische beslissingen, architectuurkeuzes en actiepunten.",
-    is_default: false,
-  },
-  {
-    id: "handleiding",
-    name: "Handleiding",
-    system_prompt:
-      "Je bent een technisch schrijver die ingesproken walkthroughs omzet naar stapsgewijze eindgebruikershandleidingen.",
-    notule_prompt:
-      "Analyseer deze ingesproken walkthrough en maak er een gestructureerde handleiding van. Benoem schermen, knoppen, menu's en velden. Structureer per functionaliteit met genummerde stappen.",
-    is_default: true,
-  },
-];
+import profileTemplates from "./data/profileTemplates.json";
+
+export const DEFAULT_PROFILES: Profile[] = profileTemplates.map((entry) => ({
+  id: entry.id,
+  name: entry.name,
+  description: entry.description,
+  icon: entry.emoji,
+  system_prompt: entry.systemPrompt,
+  notule_prompt: entry.notulePrompt,
+  output_template: entry.template,
+  is_default: true,
+}));
 
 // Authentication
 export interface User {
@@ -375,9 +356,10 @@ export interface AppSettings {
   notulen_provider: NotulenProvider;
   ollama_url: string;
   ollama_model: string;
-  ollama_api_key: string;  // For Ollama Cloud (https://ollama.com); empty = local
   lm_studio_url: string;
   lm_studio_model: string;
+  openai_model: string;
+  anthropic_model: string;
   default_profile_id: string;
   default_recording_mode: RecordingMode;
   has_completed_onboarding: boolean;
@@ -388,20 +370,20 @@ export interface AppSettings {
   obsidian_enabled: boolean;
   obsidian_base_url: string;
   obsidian_vault_path: string;
-  obsidian_api_key: string;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
   server_url: "https://n8n.prezent.nl/tstudio/api",
-  processing_mode: "cloud",
+  processing_mode: "local",
   whisper_model: "medium",
-  notulen_provider: "cloud",
+  notulen_provider: "ollama",
   ollama_url: "http://localhost:11434",
   ollama_model: "llama3.2",
-  ollama_api_key: "",
   lm_studio_url: "http://localhost:1234",
   lm_studio_model: "local-model",
-  default_profile_id: "zakelijk",
+  openai_model: "gpt-5.6-terra",
+  anthropic_model: "claude-sonnet-5-5",
+  default_profile_id: "standaard",
   default_recording_mode: "combined",
   has_completed_onboarding: false,
   check_for_updates: true,
@@ -409,5 +391,4 @@ export const DEFAULT_SETTINGS: AppSettings = {
   obsidian_enabled: false,
   obsidian_base_url: "https://127.0.0.1:27124",
   obsidian_vault_path: "Notulen",
-  obsidian_api_key: "",
 };

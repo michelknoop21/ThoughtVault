@@ -22,7 +22,6 @@ const ENTRIES = templates as TemplateEntry[];
  * profiles that already carry their own output template are returned untouched.
  */
 export function enrichProfile(profile: Profile): Profile {
-  if (profile.output_template || profile.notule_template) return profile;
   const entry = ENTRIES.find((e) => e.id === profile.id);
   if (!entry) return profile;
   return {

@@ -1,30 +1,30 @@
-import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
+import { useUpdateCheck } from "./hooks/useUpdateCheck";
+import { UpdateBanner } from "./components/ui/UpdateBanner";
 import { TitleBar } from "./components/layout/TitleBar";
 import { Sidebar } from "./components/layout/Sidebar";
 import { CallAlertOverlay } from "./components/calendar/CallAlertOverlay";
-import { BrandFooter } from "./components/brand/BrandFooter";
 import { ErrorBoundary } from "./components/ui/ErrorBoundary";
 import { InfoBarHost } from "./components/ui/InfoBar";
 import { LoginPage } from "./pages/LoginPage";
 import { HomePage } from "./pages/HomePage";
 import { RecordingPage } from "./pages/RecordingPage";
 import { TranscriptsPage } from "./pages/TranscriptsPage";
-import { ProfilesPage } from "./pages/ProfilesPage";
 import { AccountPage } from "./pages/AccountPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { AdminPage } from "./pages/AdminPage";
 import { TasksPage } from "./pages/TasksPage";
 import { PeoplePage } from "./pages/PeoplePage";
-import FeedbackWidget from "./components/FeedbackWidget";
 import { ProcessingBar } from "./components/ProcessingBar";
 import { OnboardingWizard } from "./components/onboarding/OnboardingWizard";
 import { useAuthStore } from "./stores/authStore";
 import { useSettingsStore } from "./stores/settingsStore";
-import { useProfilesStore } from "./stores/profilesStore";
+import { currentProfileChoices, useProfilesStore } from "./stores/profilesStore";
 import { useRecordingStore } from "./stores/recordingStore";
 import { useTranscriptsStore } from "./stores/transcriptsStore";
+import { useLocalTranscriptsStore } from "./stores/localTranscriptsStore";
 import { MicrosoftGraphService } from "./services/microsoftGraph";
 import { api } from "./services/api";
 import { createSSEClient } from "./services/sse";
@@ -34,6 +34,7 @@ import { useUploadQueueStore } from "./stores/uploadQueueStore";
 import { useGlobalRecordingHandler } from "./hooks/useGlobalRecordingHandler";
 import { useToast } from "./components/ui/InfoBar";
 import type { Profile } from "./types";
+import { canOpenRoute, shouldBlockForLocalNotes } from "./services/routeAccess";
 
 initCrashReporter();
 
@@ -206,6 +207,9 @@ function OfflineQueueBanner() {
 }
 
 function AppShell({ children }: { children: React.ReactNode }) {
+  const {isUpdateAvailable, latestVersion, downloadUrl, nativeUpdate} = useUpdateCheck();
+  const dismissed = useSettingsStore(s => s.dismissed_update_version);
+  const updateSettings = useSettingsStore(s => s.updateSettings);
   return (
     <>
       <div className="app-shell">
@@ -216,14 +220,13 @@ function AppShell({ children }: { children: React.ReactNode }) {
           <main className="app-main" id="main-content">
             <ProcessingBar />
             <OfflineQueueBanner />
+            {isUpdateAvailable && latestVersion && dismissed !== latestVersion && <UpdateBanner nativeUpdate={nativeUpdate} version={latestVersion} downloadUrl={downloadUrl} onDismiss={() => updateSettings({dismissed_update_version:latestVersion})} />}
             <div className="app-main-content">
               {children}
             </div>
-            <BrandFooter compact />
           </main>
         </div>
       </div>
-      <FeedbackWidget />
       <CallAlertOverlay />
     </>
   );
@@ -246,13 +249,13 @@ function KeyboardShortcuts() {
 
       const ctrl = e.ctrlKey || e.metaKey;
 
-      // Ctrl+1..5 = Navigate tabs
+      // Ctrl+1..6 mirrors the macOS navigation order
       if (ctrl && e.key === "1") { e.preventDefault(); navigate("/"); }
       if (ctrl && e.key === "2") { e.preventDefault(); navigate("/recording"); }
-      if (ctrl && e.key === "3") { e.preventDefault(); navigate("/transcripts"); }
-      if (ctrl && e.key === "4") { e.preventDefault(); navigate("/settings"); }
-      if (ctrl && e.key === "5") { e.preventDefault(); navigate("/profiles"); }
-      if (ctrl && e.key === "6") { e.preventDefault(); navigate("/people"); }
+      if (ctrl && e.key === "3") { e.preventDefault(); navigate("/tasks"); }
+      if (ctrl && e.key === "4") { e.preventDefault(); navigate("/transcripts"); }
+      if (ctrl && e.key === "5") { e.preventDefault(); navigate("/people"); }
+      if (ctrl && e.key === "6") { e.preventDefault(); navigate("/settings"); }
 
       // Ctrl+N = New recording
       if (ctrl && e.key === "n") { e.preventDefault(); navigate("/recording"); }
@@ -274,8 +277,10 @@ function KeyboardShortcuts() {
 
 function ProtectedRoutes() {
   const { isAuthenticated, isInitializing } = useAuthStore();
-  const { has_completed_onboarding, updateSettings } = useSettingsStore();
+  const { has_completed_onboarding, processing_mode, updateSettings } = useSettingsStore();
+  const location = useLocation();
   const setProfiles = useProfilesStore((s) => s.setProfiles);
+  const showLocalProfiles = useProfilesStore((s) => s.showLocalProfiles);
 
   const addBackgroundTask = useRecordingStore((s) => s.addBackgroundTask);
   const updateBackgroundTask = useRecordingStore((s) => s.updateBackgroundTask);
@@ -285,10 +290,16 @@ function ProtectedRoutes() {
   // Validate token on app start — show toast if invalid, never auto-logout
   const tokenValidatedRef = useRef(false);
   useEffect(() => {
+    if (processing_mode === "local") {
+      tokenValidatedRef.current = false;
+      showLocalProfiles();
+      return;
+    }
     if (!isAuthenticated || tokenValidatedRef.current) return;
+    let cancelled = false;
     tokenValidatedRef.current = true;
     api.getProfiles().then((profiles: Profile[]) => {
-      if (profiles.length > 0) setProfiles(profiles);
+      if (!cancelled) setProfiles(currentProfileChoices(profiles));
     }).catch(() => {
       // Token may be invalid — show non-disruptive message
       useToast.getState().show("Sessie mogelijk verlopen. Log opnieuw in als er problemen zijn.", "warning");
@@ -299,7 +310,8 @@ function ProtectedRoutes() {
         ms365_tenant_id: settings.ms365_tenant_id || undefined,
       });
     }).catch(() => { /* ignore - settings will remain as-is */ });
-  }, [isAuthenticated, setProfiles, updateSettings]);
+    return () => { cancelled = true; };
+  }, [isAuthenticated, processing_mode, setProfiles, showLocalProfiles, updateSettings]);
 
   // Global recording stop/error handler — always active, survives page navigation
   useGlobalRecordingHandler();
@@ -310,7 +322,7 @@ function ProtectedRoutes() {
     if (!isAuthenticated) return;
     if (recoveryRanRef.current) return;
     // Local mode has no server-side tasks to recover.
-    if (useSettingsStore.getState().processing_mode === "local") return;
+    if (processing_mode === "local") return;
     recoveryRanRef.current = true;
 
     (async () => {
@@ -332,10 +344,20 @@ function ProtectedRoutes() {
               console.error("[TaskRecovery] SSE error:", err);
               updateBackgroundTask(task.task_id, { status: "failed", error_message: "Verbinding verloren" });
             },
-            async () => {
-              const transcripts = await api.getTranscripts();
-              if (transcripts[0]) addTranscript(transcripts[0]);
-              removeBackgroundTask(task.task_id);
+            async (status) => {
+              if (status === "failed" || status === "cancelled" || status === "error") return;
+              try {
+                const transcripts = await api.getTranscripts();
+                const completed = transcripts.find((t) => t.task_id === task.task_id || t.id === task.task_id);
+                if (!completed) throw new Error("Het resultaat is nog niet beschikbaar. Vernieuw Notulen om het op te halen.");
+                addTranscript(completed);
+                removeBackgroundTask(task.task_id);
+              } catch (error) {
+                updateBackgroundTask(task.task_id, {
+                  status: "failed",
+                  error_message: error instanceof Error ? error.message : "Resultaat ophalen mislukt",
+                });
+              }
             }
           );
         }
@@ -343,17 +365,17 @@ function ProtectedRoutes() {
         // Recovery failed — not critical
       }
     })();
-  }, [isAuthenticated]);
+  }, [isAuthenticated, processing_mode]);
 
-  if (isInitializing) {
+  if (isInitializing && processing_mode !== "local") {
     return null;
   }
 
-  if (!isAuthenticated) {
+  if (!canOpenRoute(location.pathname, processing_mode, isAuthenticated)) {
     return <Navigate to="/login" replace />;
   }
 
-  if (!has_completed_onboarding) {
+  if (!has_completed_onboarding && processing_mode !== "local") {
     return (
       <div className="app-shell">
         <OnboardingWizard />
@@ -369,7 +391,7 @@ function ProtectedRoutes() {
         <Route path="/recording"   element={<RecordingPage />} />
         <Route path="/tasks"       element={<TasksPage />} />
         <Route path="/transcripts" element={<TranscriptsPage />} />
-        <Route path="/profiles"    element={<ProfilesPage />} />
+        <Route path="/profiles"    element={<Navigate to="/settings?tab=notulen" replace />} />
         <Route path="/people"      element={<PeoplePage />} />
         <Route path="/account"     element={<AccountPage />} />
         <Route path="/settings"    element={<SettingsPage />} />
@@ -414,10 +436,30 @@ function UpdateRequiredOverlay({ currentVersion, minimumVersion }: { currentVers
 
 export default function App() {
   const [updateRequired, setUpdateRequired] = useState<{ current: string; minimum: string } | null>(null);
+  const processingMode = useSettingsStore((s) => s.processing_mode);
+  const [localReady, setLocalReady] = useState(false);
+  const [localLoadError, setLocalLoadError] = useState<string | null>(null);
+
+  async function loadLocalNotes() {
+    try {
+      await useLocalTranscriptsStore.getState().hydrate();
+      setLocalReady(true);
+      setLocalLoadError(null);
+    } catch (error) {
+      setLocalLoadError(error instanceof Error ? error.message : "Lokale notulen laden mislukt");
+    }
+  }
+
+  useEffect(() => { void loadLocalNotes(); }, []);
 
   // Force update check on launch (skip in browser dev mode)
   useEffect(() => {
+    if (processingMode === "local") {
+      setUpdateRequired(null);
+      return;
+    }
     if (!("__TAURI_INTERNALS__" in window)) return;
+    let cancelled = false;
     (async () => {
       try {
         const { getAppVersion } = await import("./services/tauriCommands");
@@ -431,14 +473,15 @@ export default function App() {
         const min = parse(versionInfo.minimum_version);
         const isOutdated = cur[0] < min[0] || (cur[0] === min[0] && cur[1] < min[1]) || (cur[0] === min[0] && cur[1] === min[1] && cur[2] < min[2]);
 
-        if (isOutdated) {
+        if (isOutdated && !cancelled) {
           setUpdateRequired({ current: currentVersion, minimum: versionInfo.minimum_version });
         }
       } catch {
         // Version check failed — allow app to continue
       }
     })();
-  }, []);
+    return () => { cancelled = true; };
+  }, [processingMode]);
 
   useEffect(() => {
     if (!("__TAURI_INTERNALS__" in window)) return;
@@ -463,15 +506,9 @@ export default function App() {
     })();
   }, []);
 
-  // Detect system theme preference
+  // The approved desktop design uses the same night palette on every platform.
   useEffect(() => {
-    const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    document.documentElement.dataset.theme = mq.matches ? "dark" : "light";
-    const handler = (e: MediaQueryListEvent) => {
-      document.documentElement.dataset.theme = e.matches ? "dark" : "light";
-    };
-    mq.addEventListener("change", handler);
-    return () => mq.removeEventListener("change", handler);
+    document.documentElement.dataset.theme = "dark";
   }, []);
 
   // Handle Microsoft 365 OAuth deep-link callbacks
@@ -497,6 +534,15 @@ export default function App() {
 
   if (updateRequired) {
     return <UpdateRequiredOverlay currentVersion={updateRequired.current} minimumVersion={updateRequired.minimum} />;
+  }
+
+  if (shouldBlockForLocalNotes(processingMode, localReady)) {
+    return localLoadError ? (
+      <div className="empty-state">
+        <p>Lokale notulen konden niet worden geladen: {localLoadError}</p>
+        <button className="btn btn-accent" onClick={() => void loadLocalNotes()}>Opnieuw proberen</button>
+      </div>
+    ) : null;
   }
 
   return (

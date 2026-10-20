@@ -1,0 +1,482 @@
+<!doctype html>
+<!-- PROTOTYPE: standalone mock-up van het herontwerp (app-shell, schermen, nieuwe golf). Geen productintegratie. Voorbeelddata. -->
+<html lang="nl" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ThoughtVault herontwerp mock-up</title>
+<style>
+/* Tokens = bestaande merktokens uit Color+Brand.swift. Geen nieuwe kleuren. */
+:root[data-theme=dark]{--bg:#0B0D16;--s1:#141628;--s2:#1B1E33;--s3:#232741;--fg:#EDEBF6;--fg2:#B3AECE;--fg3:#8D87B2;--bd:#343056;--bd2:#272444;--brand:#9048F0;--lav:#D890F0;--link:#A87DF7;--err:#FA7373;--warn:#FFC74D;--ok:#4DD180}
+:root[data-theme=light]{--bg:#F5F5F7;--s1:#FFFFFF;--s2:#F5F5F7;--s3:#EBEBF0;--fg:#333338;--fg2:#6B6B78;--fg3:#7A7A86;--bd:#E0E0E6;--bd2:#EDEDF2;--brand:#9048F0;--lav:#D890F0;--link:#782FD8;--err:#B31F1F;--warn:#805400;--ok:#006B2E}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-synthesis:none}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{outline:2px solid var(--link);outline-offset:2px}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+/* mockup-balk, buiten de app */
+.mockbar{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;padding:8px 14px;border-bottom:1px solid var(--bd);background:var(--s1);font-size:12px;color:var(--fg2)}
+.mockbar label{display:inline-flex;align-items:center;gap:6px}
+.mockbar select{background:var(--s2);border:1px solid var(--bd);border-radius:6px;padding:3px 6px}
+/* app */
+.app{display:flex;min-height:calc(100vh - 42px)}
+.side{width:210px;flex:none;background:var(--s1);border-right:1px solid var(--bd);display:flex;flex-direction:column;padding:12px 8px}
+.side.small{width:52px}
+.brandrow{display:flex;align-items:center;justify-content:space-between;padding:4px 8px 14px;font-weight:650;font-size:15px}
+.brandrow b{color:var(--brand);font-weight:650}
+.small .brandrow{justify-content:center;padding-left:0;padding-right:0}.small .hide-s{display:none}
+.user{padding:8px;margin-bottom:8px;border-bottom:1px solid var(--bd2);font-size:12px;color:var(--fg2)}
+.user strong{display:block;color:var(--fg);font-size:13px;font-weight:600}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav button{display:flex;align-items:center;gap:10px;border:0;background:none;text-align:left;padding:7px 8px;border-radius:6px;color:var(--fg2)}
+.nav button:hover{background:var(--s2)}
+.nav button[aria-current=page]{background:var(--s3);color:var(--fg);font-weight:600}
+.nav button[aria-current=page] svg{color:var(--link)}
+.nav svg,.ico{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.small .nav button{justify-content:center}
+.side .foot{margin-top:auto;padding:8px;font-size:12px;color:var(--fg3)}
+.link{background:none;border:0;padding:0;color:var(--link);text-decoration:underline;text-underline-offset:2px}
+main{flex:1;min-width:0;padding:24px 28px 48px;overflow:auto}
+.page{max-width:860px;margin:0 auto}
+h1{font-size:22px;margin:0 0 4px;font-weight:650;letter-spacing:-.01em}
+h2{font-size:13px;margin:26px 0 8px;font-weight:650;color:var(--fg2);text-transform:none}
+.sub{color:var(--fg2);margin:0 0 16px}
+/* knoppen: gewone knoppen, bescheiden radius */
+.btn{border:1px solid var(--bd);background:var(--s1);border-radius:6px;padding:7px 14px;min-height:34px}
+.btn:hover:not(:disabled){background:var(--s2)}
+.btn.primary{background:var(--brand);border-color:var(--brand);color:#fff;font-weight:600}
+.btn.primary:hover:not(:disabled){filter:brightness(1.08);background:var(--brand)}
+.btn.text{border-color:transparent;background:none;color:var(--link)}
+.btn.danger{color:var(--err)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+/* lijsten */
+.list{border-top:1px solid var(--bd)}
+.item{display:flex;align-items:center;gap:12px;padding:10px 2px;border-bottom:1px solid var(--bd2)}
+.item .grow{flex:1;min-width:0}
+.item .t{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item .m{color:var(--fg2);font-size:12px}
+.st{font-size:12px;display:inline-flex;align-items:center;gap:6px;color:var(--fg2)}
+.st:before{content:"";width:7px;height:7px;border-radius:50%;background:var(--fg3)}
+.st.ok:before{background:var(--ok)}.st.busy:before{background:var(--link)}.st.err:before{background:var(--err)}.st.warn:before{background:var(--warn)}
+.field{display:flex;flex-direction:column;gap:4px;margin-bottom:12px;font-size:12px;color:var(--fg2)}
+.field input,.field select,.field textarea,input.in,select.in{background:var(--s1);border:1px solid var(--bd);border-radius:6px;padding:7px 9px;color:var(--fg);font-size:14px}
+fieldset{border:0;padding:0;margin:0 0 14px}
+legend{font-size:12px;color:var(--fg2);padding:0;margin-bottom:6px}
+.opts{display:flex;flex-wrap:wrap;gap:6px 18px}
+.opts label{display:inline-flex;gap:6px;align-items:center}
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--bd);margin:12px 0 16px}
+.tabs button{border:0;background:none;padding:8px 12px;color:var(--fg2);border-bottom:2px solid transparent;margin-bottom:-1px}
+.tabs button[aria-selected=true]{color:var(--fg);border-bottom-color:var(--brand);font-weight:600}
+/* opnamebalk */
+.rec{border:1px solid var(--bd);border-radius:8px;background:var(--s1);padding:16px 18px}
+.rec .head{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.timer{font-size:38px;font-weight:300;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.1}
+.live{font-size:12px;font-weight:600;color:var(--fg2);display:inline-flex;gap:6px;align-items:center}
+.live:before{content:"";width:8px;height:8px;border-radius:50%;background:var(--fg3)}
+.live.on{color:var(--fg)}.live.on:before{background:var(--err)}
+.live.pause:before{background:var(--warn)}
+.wavebox{margin:8px auto 10px;max-width:100%;transition:none}
+.wavebox canvas{display:block;width:100%;height:160px}
+.wavelabel{font-size:11px;color:var(--fg3);margin:10px 0 0}
+.hud{margin:10px 0 0;font-size:12px;color:var(--fg2);line-height:1.6;white-space:pre-wrap}
+.widget{display:flex;align-items:center;gap:10px;width:360px;max-width:100%;border:1px solid var(--bd);border-radius:8px;background:var(--s1);padding:8px 10px;margin-top:10px}
+.widget canvas{width:120px;height:32px;flex:none}
+.widget .tm{font-variant-numeric:tabular-nums;font-size:13px;flex:1}
+.widget button{border:1px solid var(--bd);background:var(--s2);border-radius:6px;width:32px;height:32px;padding:0;display:grid;place-items:center}
+.note{font-size:12px;color:var(--fg3)}.sr{position:absolute;left:-9999px}
+hr{border:0;border-top:1px solid var(--bd2);margin:18px 0}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:0 24px}
+@media(max-width:700px){.side{width:52px}.side .hide-s{display:none}.brandrow{justify-content:center}.nav button{justify-content:center}main{padding:16px}.two{grid-template-columns:1fr}.timer{font-size:30px}}
+</style>
+</head>
+<body>
+<div class="mockbar" role="toolbar" aria-label="Mock-up bediening">
+  <strong>Mock-up</strong>
+  <label>Thema <select id="m-theme"><option value="dark">donker</option><option value="light">licht</option></select></label>
+  <label>Bron <select id="m-src"><option value="mic">Live microfoon</option><option value="fixture">Fixture (testaudio)</option><option value="sim">Simulatie (alleen ontwikkelen)</option></select></label>
+  <label>Golfbreedte <select id="m-width"><option value="360">smal (360)</option><option value="900" selected>breed (900)</option></select></label>
+  <label><input type="checkbox" id="m-old"> vorige versie erbij</label>
+  <label><input type="checkbox" id="m-glow"> glow (vergelijken)</label>
+  <label><input type="checkbox" id="m-rm"> reduced motion</label>
+  <span>voorbeelddata, niets wordt opgeslagen</span>
+</div>
+<div class="app">
+  <aside class="side" id="side"><div class="brandrow"><span class="hide-s">Thought<b>Vault</b></span><button class="btn text" id="collapse" aria-label="Zijbalk in- of uitklappen" style="padding:2px 6px;min-height:0">
+    <svg class="ico" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg></button></div>
+    <div class="user hide-s"><strong>Michel Knoop</strong>info@michelknoop.nl</div>
+    <nav class="nav" id="nav" aria-label="Hoofdnavigatie"></nav>
+    <div class="foot hide-s"><button class="link" style="font-size:12px">Uitloggen</button></div>
+  </aside>
+  <main><div class="page" id="page"></div></main>
+</div>
+<script>
+'use strict';
+/* ============ CONFIG: alle afstelwaarden ============ */
+const CONFIG={
+  env:{analysisWindowMs:30,publishHz:30,initialFloorDb:-60,minFloorDb:-75,maxFloorDb:-35,gateStartOffsetDb:3,gateEndOffsetDb:9,
+       visMinFloorDb:-55,visMinOffsetDb:6,visMaxDb:-8,exponent:0.65,attackMs:35,releaseMs:220,silenceThreshold:0.015,
+       historyLength:90,floorHistoryMs:2000,speechOffsetDb:12,floorFallTcMs:500,floorRiseTcMs:2000},
+  wave:{
+    heightFrac:0.40,            // max uitwijking t.o.v. hoogte (marge voor glow, tanh-knie)
+    knee:1.7,                   // tanh-gevoeligheid
+    taperPow:0.8,               // amplitude-taper naar de uiteinden
+    alphaEdge:0.14,             // aandeel van de breedte waarover alpha uitfadet
+    carrierCycles:2.2,          // lage draaggolf: cycli over de volle breedte
+    travelHz:0.32,              // constante reissnelheid (cycli/s)
+    energyBoost:0.25,           // level verhoogt reissnelheid hooguit 25%
+    breath:0.012,               // stilte: ademing als aandeel van hoogte (<1,5%)
+    glowBlur:4,
+    bellies:[{c:.72,w:.15,delay:0,f:.037},{c:.50,w:.17,delay:90,f:.053},{c:.29,w:.16,delay:180,f:.071}],
+    drift:{center:.05,width:.25},          // hoe ver middelpunt/breedte trage sinussen volgen
+    // lijnen: [px, alpha, kleur, basisgewicht, gewichtsamplitude]
+    lines:[
+      {px:0.6,a:.10,col:'ink',base:.40,amp:.60,bg:true},
+      {px:0.6,a:.10,col:'ink',base:.55,amp:.55,bg:true},
+      {px:1.4,a:.55,col:'brand',base:.62,amp:.70},
+      {px:1.1,a:.60,col:'lav',base:.75,amp:.65},
+      {px:0.8,a:.42,col:'brand',base:.50,amp:.75},
+      {px:2.0,a:1.0,col:'brand',base:1.00,amp:.14,main:true}
+    ]
+  },
+  fixture:{sr:48000,noiseDb:-68,segments:[
+    {t0:1.0,t1:2.5,type:'steady',db:-40},{t0:2.5,t1:5.0,type:'syll',db:-22,hz:4},{t0:5.0,t1:5.6,type:'steady',db:-10}],length:7.1},
+  measure:{onsetLevel:.1,offsetLevel:.05}
+};
+
+/* ============ envelope: 1-op-1 port van AudioEnvelopeProcessor.swift ============ */
+class EnvelopeProcessor{
+  constructor(){this.reset()}
+  reset(){this.floorDb=CONFIG.env.initialFloorDb;this.smoothed=0;this.hist=[];this.histMs=0;this.lastDb=-120;this.gate=0}
+  static a(dtMs,tc){return 1-Math.exp(-dtMs/tc)}
+  process(rawDb,dt){
+    const C=CONFIG.env;
+    const db=Math.min(0,Math.max(-120,Number.isFinite(rawDb)?rawDb:-120));
+    const dtMs=Math.max(1,Math.min(250,dt*1000));
+    this.hist.push({db,dtMs});this.histMs+=dtMs;
+    while(this.histMs-this.hist[0].dtMs>C.floorHistoryMs&&this.hist.length>1)this.histMs-=this.hist.shift().dtMs;
+    const sorted=this.hist.map(h=>h.db).sort((x,y)=>x-y);
+    const cand=sorted[Math.floor(sorted.length/5)];
+    const isSpeech=db>this.floorDb+C.speechOffsetDb;
+    if(cand<this.floorDb)this.floorDb+=(cand-this.floorDb)*EnvelopeProcessor.a(dtMs,C.floorFallTcMs);
+    else if(!isSpeech)this.floorDb+=(cand-this.floorDb)*EnvelopeProcessor.a(dtMs,C.floorRiseTcMs);
+    this.floorDb=Math.min(C.maxFloorDb,Math.max(C.minFloorDb,this.floorDb));
+    const ss=(e0,e1,x)=>{const t=Math.min(1,Math.max(0,(x-e0)/(e1-e0)));return t*t*(3-2*t)};
+    this.gate=ss(this.floorDb+C.gateStartOffsetDb,this.floorDb+C.gateEndOffsetDb,db);
+    const visMin=Math.max(this.floorDb+C.visMinOffsetDb,C.visMinFloorDb);
+    const norm=Math.min(1,Math.max(0,(db-visMin)/(C.visMaxDb-visMin)));
+    const target=Math.pow(norm,C.exponent)*this.gate;
+    const tc=target>this.smoothed?C.attackMs:C.releaseMs;
+    this.smoothed+=(target-this.smoothed)*EnvelopeProcessor.a(dtMs,tc);
+    this.lastDb=db;
+    return this.smoothed<C.silenceThreshold?0:this.smoothed;
+  }
+}
+
+/* ============ audiobronnen ============ */
+const Audio_={ctx:null,an:null,buf:null,stream:null,src:null,t0:0,simT:0,
+  async start(kind){
+    this.kind=kind;this.simT=0;
+    if(kind==='sim')return;
+    this.ctx=new (window.AudioContext||window.webkitAudioContext)();
+    this.an=this.ctx.createAnalyser();this.an.fftSize=2048;this.buf=new Float32Array(2048);
+    if(kind==='mic'){
+      this.stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
+      this.src=this.ctx.createMediaStreamSource(this.stream);this.src.connect(this.an); // niet naar destination: geen feedback
+    }else{
+      const b=makeFixture(this.ctx);const s=this.ctx.createBufferSource();s.buffer=b;s.connect(this.an);
+      const mute=this.ctx.createGain();mute.gain.value=0;this.an.connect(mute).connect(this.ctx.destination);
+      s.start();this.src=s;
+    }
+    await this.ctx.resume();
+  },
+  pause(){if(this.ctx)this.ctx.suspend()},
+  resume(){if(this.ctx)this.ctx.resume()},
+  stop(){
+    if(this.stream){this.stream.getTracks().forEach(t=>t.stop());this.stream=null} // microfoon vrijgeven
+    if(this.ctx){this.ctx.close();this.ctx=null}
+    this.an=null;this.src=null;
+  },
+  position(){return this.kind==='sim'?this.simT:(this.ctx?this.ctx.currentTime:0)},
+  dbNow(dt){
+    if(this.kind==='sim'){this.simT+=dt;return simDb(this.simT)}
+    if(!this.an)return -120;
+    this.an.getFloatTimeDomainData(this.buf);
+    const n=Math.round(this.ctx.sampleRate*CONFIG.env.analysisWindowMs/1000);
+    let s=0;for(let i=this.buf.length-n;i<this.buf.length;i++)s+=this.buf[i]*this.buf[i];
+    const rms=Math.sqrt(s/n);return rms>0?20*Math.log10(rms):-120;
+  }
+};
+function simDb(t){ // expliciet gesimuleerd: zinnen met pauzes
+  const phrase=Math.sin(2*Math.PI*t/6.5)>-0.15;
+  const syl=Math.abs(Math.sin(Math.PI*3.6*t));
+  return phrase?-34+14*Math.pow(syl,.7)+2*Math.sin(t*7.1):-68+Math.sin(t*13)*1.5;
+}
+function makeFixture(ctx){ // deterministisch: geen Math.random
+  const F=CONFIG.fixture,sr=ctx.sampleRate,n=Math.round(F.length*sr);
+  const b=ctx.createBuffer(1,n,sr),d=b.getChannelData(0);
+  const nz=Math.pow(10,F.noiseDb/20)*Math.sqrt(3);
+  let seed=1;const rnd=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296*2-1};
+  const H=8,unit=1/Math.sqrt(Array.from({length:H},(_,k)=>1/((k+1)*(k+1))/2).reduce((a,b)=>a+b,0));
+  for(let i=0;i<n;i++){
+    const t=i/sr;let v=rnd()*nz;
+    for(const s of F.segments){
+      if(t<s.t0||t>=s.t1)continue;
+      const edge=Math.min(1,(t-s.t0)/0.01,(s.t1-t)/0.01);
+      let env=1;if(s.type==='syll')env=Math.pow(Math.max(0,Math.sin(2*Math.PI*s.hz*(t-s.t0))),.6)*1.25;
+      const amp=Math.pow(10,s.db/20)*unit*env*edge;
+      const f0=130+6*Math.sin(2*Math.PI*.7*t);let x=0;
+      for(let k=1;k<=H;k++)x+=Math.sin(2*Math.PI*f0*k*t)/k;
+      v+=amp*x;
+    }
+    d[i]=Math.max(-1,Math.min(1,v));
+  }
+  return b;
+}
+
+/* ============ rec-state ============ */
+const R={phase:'idle',elapsed:0,proc:new EnvelopeProcessor(),hist:new Array(CONFIG.env.historyLength).fill(0),level:0,db:-120,
+  drift:0,travel:0,oldPhase:0,last:performance.now(),
+  m:{react:null,fall:null,armedOn:null,armedOff:null,loud:false},tick:0};
+const $=id=>document.getElementById(id);
+
+function pushSample(){
+  const now=performance.now(),dt=(now-R.last)/1000;R.last=now;
+  let lvl=0;
+  if(R.phase==='recording'){
+    R.elapsed+=dt;
+    R.db=Audio_.dbNow(dt);
+    lvl=R.proc.process(R.db,dt);
+    measure(now,lvl);
+  }else{R.db=-120;R.proc.reset()} // pauze/idle: history loopt uit naar 0
+  R.level=lvl;R.hist.push(lvl);R.hist.shift();
+}
+function measure(now,lvl){
+  const m=R.m,f=R.proc.floorDb,db=R.db,up=db>f+CONFIG.env.gateStartOffsetDb;
+  // onset: eerste sample boven gate-start vanuit stilte; reactie tot level>drempel (resolutie = 1 tick, 33 ms)
+  if(!m.loud&&up&&m.armedOn==null)m.armedOn=now;
+  if(!up&&m.armedOn!=null&&lvl<CONFIG.measure.onsetLevel)m.armedOn=null;
+  if(m.armedOn!=null&&lvl>CONFIG.measure.onsetLevel){m.react=now-m.armedOn;m.armedOn=null;m.loud=true}
+  // offset: eerste sample terug onder gate-start; terugval tot level<drempel
+  if(m.loud&&!up&&m.armedOff==null)m.armedOff=now;
+  if(m.armedOff!=null&&up)m.armedOff=null;
+  if(m.armedOff!=null&&lvl<CONFIG.measure.offsetLevel){m.fall=now-m.armedOff;m.armedOff=null;m.loud=false}
+}
+setInterval(pushSample,1000/CONFIG.env.publishHz);
+
+/* ============ golf: nieuwe vorm ============ */
+const hex=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16));
+function tok(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim()}
+function inkRGB(){return document.documentElement.dataset.theme==='dark'?[237,235,246]:[51,51,59]} // labelPrimary
+function envAt(delayMs){
+  const H=R.hist,f=H.length-1-delayMs/(1000/CONFIG.env.publishHz);
+  const i0=Math.max(0,Math.floor(f)),i1=Math.min(H.length-1,i0+1),u=f-Math.floor(f);
+  return H[i0]*(1-u)+H[i1]*u;
+}
+const TAU=Math.PI*2;
+function drawThreads(cv,strands,rm){
+  const dpr=devicePixelRatio||1,W=cv.clientWidth,Hh=cv.clientHeight;
+  if(!W||!Hh)return;
+  if(cv.width!==Math.round(W*dpr)||cv.height!==Math.round(Hh*dpr)){cv.width=Math.round(W*dpr);cv.height=Math.round(Hh*dpr)}
+  const g=cv.getContext('2d');g.setTransform(dpr,0,0,dpr,0,0);g.clearRect(0,0,W,Hh);
+  const C=CONFIG.wave,cy=Hh/2,maxH=Hh*C.heightFrac,lvl=R.level,td=rm?0:R.drift,tr=rm?0:R.travel;
+  const lvEff=rm?lvl:lvl; // bij reduced motion volgt alleen de hoogte het level
+  const spread=0.2+0.8*Math.min(1,lvEff*1.6);
+  const bl=C.bellies.map((b,i)=>{
+    const c=b.c+C.drift.center*Math.sin(TAU*b.f*td+i*2.1);
+    const w=b.w*(1+C.drift.width*Math.sin(TAU*b.f*.83*td+i*1.3));
+    const sg=Math.tanh(2.5*Math.sin(TAU*b.f*.6*td+i*1.7)+0.9); // teken slaat traag om
+    const env=rm?lvl:envAt(b.delay);
+    return {c,w,sg:i===0?Math.abs(sg)*.9+.1:sg,env};
+  });
+  const ink=inkRGB(),brand=hex(tok('--brand')),lav=hex(tok('--lav'));
+  const cols={ink,brand,lav};
+  const idx=C.lines.map((_,j)=>j);
+  const step=2,pts=Math.floor(W/step)+1;
+  const sums=idx.map(()=>new Float32Array(pts));
+  for(let p=0;p<pts;p++){
+    const x=p/(pts-1),taper=Math.pow(Math.max(0,Math.sin(Math.PI*x)),C.taperPow);
+    const raw=C.lines.map((L,j)=>{
+      let s=0;
+      for(let i=0;i<bl.length;i++){
+        const b=bl[i],z=(x-b.c)/b.w,gs=Math.exp(-.5*z*z);
+        const wt=L.base+L.amp*Math.sin(TAU*(.021+.0073*(i+1)*Math.sqrt(j+1))*td+i*1.9+j*.8);
+        const ph=TAU*C.carrierCycles*(x-b.c)-tr+0.4*j+1.3*i;
+        s+=b.sg*wt*b.env*gs*Math.sin(ph);
+      }
+      return s;
+    });
+    const mainS=raw[idx.length-1];
+    for(let j=0;j<idx.length;j++){
+      const s=C.lines[j].main?mainS:mainS+(raw[j]-mainS)*spread;
+      let y=Math.tanh(s*C.knee)*maxH*taper;
+      if(C.lines[j].main)y+=Hh*C.breath*Math.sin(TAU*1.3*x+(rm?0:R.time*.9))*taper; // ademing in stilte
+      sums[j][p]=y;
+    }
+  }
+  const shown=strands>=6?idx:[2,3,5];
+  const edge=C.alphaEdge;
+  const quiet=.15+.85*Math.min(1,lvl*2);
+  for(const j of idx){
+    if(!shown.includes(j))continue;
+    const L=C.lines[j],col=cols[L.col];
+    const a=L.a*(L.bg?quiet:1);
+    const gr=g.createLinearGradient(0,0,W,0),rg=al=>`rgba(${col[0]},${col[1]},${col[2]},${al})`;
+    gr.addColorStop(0,rg(0));gr.addColorStop(edge,rg(a));gr.addColorStop(1-edge,rg(a));gr.addColorStop(1,rg(0));
+    g.beginPath();
+    for(let p=0;p<pts;p++){const X=p*(W/(pts-1)),Y=cy-sums[j][p];p?g.lineTo(X,Y):g.moveTo(X,Y)}
+    g.lineWidth=L.px;g.lineJoin='round';g.strokeStyle=gr;
+    if(L.main&&$('m-glow').checked){g.shadowColor=rg(.9);g.shadowBlur=C.glowBlur}else g.shadowBlur=0;
+    g.stroke();g.shadowBlur=0;
+  }
+}
+/* ============ golf: vorige versie (poort van neonWaveform) ============ */
+function drawOld(cv,strands){
+  const dpr=devicePixelRatio||1,W=cv.clientWidth,Hh=cv.clientHeight;if(!W||!Hh)return;
+  if(cv.width!==Math.round(W*dpr)||cv.height!==Math.round(Hh*dpr)){cv.width=Math.round(W*dpr);cv.height=Math.round(Hh*dpr)}
+  const g=cv.getContext('2d');g.setTransform(dpr,0,0,dpr,0,0);g.clearRect(0,0,W,Hh);
+  const AMP=[1,.9,.75,.62,.5,.42,.3],K=[6,6,8.5,8.5,11,11,14],SP=[1.1,1.1,1.45,1.45,1.8,1.8,2.2],PH=[0,3.14,1.2,4.34,2.2,5.34,.7],
+        WD=[2.4,2.4,1.9,1.9,1.5,1.5,1.2],AL=[.95,.95,.85,.85,.75,.75,.65],
+        COL=['51,102,255','51,102,255','0,204,255','0,204,255','153,51,230','153,51,230','255,77,153'];
+  const cy=Hh/2,maxH=Hh*.46,live=R.level,n=R.hist.length;
+  const at=t=>{const f=t*(n-1),i=Math.floor(f),j=Math.min(n-1,i+1),u=(1-Math.cos((f-i)*Math.PI))/2;return R.hist[i]*(1-u)+R.hist[j]*u};
+  g.globalCompositeOperation='lighter';
+  const ns=Math.min(7,strands>=6?7:3);
+  for(let i=0;i<ns;i++){
+    const ph=R.oldPhase*SP[i]+PH[i];g.beginPath();
+    for(let x=0;x<=W;x+=2){
+      const t=x/W,gx=t*4-2,att=Math.pow(4/(4+Math.pow(gx,4)),4),lw=t*t*.85,amp=at(t)*(1-lw)+live*lw;
+      const c=Math.sin(K[i]*gx+ph)*.82+Math.sin(K[i]*1.9*gx+ph*1.3+1.1)*.18;
+      const y=cy-c*amp*AMP[i]*maxH*att;x?g.lineTo(x,y):g.moveTo(x,y);
+    }
+    g.lineWidth=Math.max(.7,WD[i]*Math.min(1,Hh/120));g.strokeStyle=`rgba(${COL[i]},${AL[i]})`;
+    g.shadowColor=`rgba(${COL[i]},.8)`;g.shadowBlur=6+live*24;g.stroke();
+  }
+  g.globalCompositeOperation='source-over';g.shadowBlur=0;
+}
+/* ============ render-loop ============ */
+R.time=0;
+function frame(now){
+  const dt=Math.min(.1,(now-(frame.l||now))/1000);frame.l=now;
+  const rm=$('m-rm').checked;
+  R.time+=dt;
+  if(R.phase!=='paused'){R.drift+=dt;R.travel+=dt*TAU*CONFIG.wave.travelHz*(1+CONFIG.wave.energyBoost*R.level);R.oldPhase+=dt*(2.2+R.level*5.5)}
+  const w=$('wave'),o=$('wave-old'),mini=$('wave-mini');
+  if(w)drawThreads(w,6,rm);
+  if(o&&!o.parentElement.hidden)drawOld(o,6);
+  if(mini)drawThreads(mini,3,rm);
+  updateHud();
+  requestAnimationFrame(frame);
+}
+const fmtT=s=>{s=Math.floor(s);return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')};
+function updateHud(){
+  const h=$('hud');if(!h)return;
+  const m=R.m,f=v=>v==null?'nog niet gemeten':v<1?'binnen 1 tick (33 ms)':Math.round(v)+' ms';
+  h.textContent=`bron ${srcLabel()}${R.phase!=='idle'&&Audio_.kind!=='mic'?'  positie '+Audio_.position().toFixed(1)+' s':''}   status ${R.phase}\n`+
+   `dB ${R.db>-120?R.db.toFixed(1):'--'}   vloer ${R.proc.floorDb.toFixed(1)}   gate ${R.proc.gate.toFixed(2)}   level ${R.level.toFixed(3)}\n`+
+   `reactie (onset naar level>${CONFIG.measure.onsetLevel}) ${f(m.react)}\nterugval (offset naar level<${CONFIG.measure.offsetLevel}) ${f(m.fall)}`;
+  const t=$('timer');if(t)t.textContent=fmtT(R.elapsed);
+  const wt=$('w-tm');if(wt)wt.textContent=fmtT(R.elapsed);
+}
+const srcLabel=()=>({mic:'live microfoon',fixture:'fixture',sim:'simulatie'})[$('m-src').value];
+
+/* ============ acties ============ */
+async function startRec(){
+  if(R.phase!=='idle')return;
+  R.elapsed=0;R.proc.reset();R.hist.fill(0);R.m={react:null,fall:null,armedOn:null,armedOff:null,loud:false};R.last=performance.now();
+  try{await Audio_.start($('m-src').value)}catch(e){Audio_.stop();alert('Microfoon niet beschikbaar: '+e.message);return}
+  R.phase='recording';R.last=performance.now();render();
+}
+function pauseRec(){if(R.phase!=='recording')return;Audio_.pause();R.phase='paused';render()}
+function resumeRec(){if(R.phase!=='paused')return;Audio_.resume();R.last=performance.now();R.phase='recording';render()}
+function stopRec(){if(R.phase==='idle')return;Audio_.stop();R.phase='idle';render()}
+
+/* ============ schermen ============ */
+const ICON={home:'<path d="M3 11l9-8 9 8v10h-6v-6H9v6H3z"/>',mic:'<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/>',
+ tasks:'<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 9h6M9 13h6M9 17h4"/>',doc:'<path d="M6 3h8l4 4v14H6z"/><path d="M9 12h6M9 16h6"/>',
+ people:'<circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0112 0"/><circle cx="17" cy="9" r="2.5"/><path d="M17 14a5 5 0 014 5"/>',
+ gear:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/>',
+ admin:'<circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0110-4M17 14v6M14 17h6"/>'};
+const TABS=[['home','Home','home'],['opnemen','Opnemen','mic'],['taken','Taken','tasks'],['notulen','Notulen','doc'],['mensen','Mensen','people'],['instellingen','Instellingen','gear'],['admin','Admin','admin']];
+let screen='home',ntab='notule',stab='Algemeen';
+const NOTES=[['Projectoverleg vervolgstappen','Vandaag, 10:12','Zakelijk','ok','Afgerond'],['Retro sprint 41','Gisteren','Technisch','ok','Afgerond'],['Klantgesprek Van Dijk','Ma 21 sep','Informeel','busy','Transcript']];
+const rows=(a,f)=>`<div class="list">${a.map(f).join('')}</div>`;
+const S={
+ home:()=>`<h1>Goedemiddag, Michel.</h1><p class="sub">Alles blijft lokaal op dit apparaat.</p>
+  <div class="row"><button class="btn primary" data-go="opnemen">Nieuwe opname starten</button><span class="note">Microfoon, lokale transcriptie</span></div>
+  <p class="note mono" style="margin:14px 0 0">2 actieve taken · 1 in wachtrij · 5 recent</p>
+  <h2>Bezig met verwerken</h2>${rows([['vergadering-0929.m4a','Transcriberen','busy','62%']],r=>`<div class="item"><div class="grow"><div class="t">${r[0]}</div><div class="m">${r[1]}</div></div><span class="st ${r[2]} mono">${r[3]}</span></div>`)}
+  <h2>Recente notulen <button class="link" data-go="notulen" style="margin-left:8px;font-weight:400">Alles bekijken</button></h2>
+  ${rows(NOTES,n=>`<div class="item"><div class="grow"><div class="t">${n[0]}</div><div class="m">${n[1]}</div></div><span class="st ${n[3]}">${n[4]}</span></div>`)}`,
+ opnemen:()=>{const idle=R.phase==='idle',rec=R.phase==='recording',pa=R.phase==='paused';
+  return `<h1>Opnemen</h1><p class="sub">${idle?'Kies een bron en profiel, start wanneer je klaar bent.':'Opname loopt op dit apparaat.'}</p>
+  <section class="rec" aria-label="Opnamebalk">
+   <div class="head"><span class="live ${rec?'on':pa?'pause':''}">${rec?'LIVE, opname actief':pa?'Opname is gepauzeerd':'Klaar om op te nemen'}</span><span class="timer" id="timer">00:00</span></div>
+   <div class="wavebox" id="wavebox" style="width:${Math.min(+$('m-width').value,10000)}px"><canvas id="wave" role="img" aria-label="Live audioniveau"></canvas></div>
+   <div class="row" role="group" aria-label="Opnamebediening">
+     <button class="btn primary" id="b-start" ${idle?'':'disabled'}>Start opname</button>
+     <button class="btn" id="b-pause" ${rec?'':'disabled'}>Pauze</button>
+     <button class="btn" id="b-resume" ${pa?'':'disabled'}>Hervat</button>
+     <button class="btn" id="b-stop" ${idle?'disabled':''}>Stop en verwerk</button>
+   </div>
+   <p class="hud mono" id="hud" aria-live="off"></p>
+   <div hidden id="oldbox"><p class="wavelabel mono">vorige versie</p><div class="wavebox" style="width:${$('m-width').value}px"><canvas id="wave-old" style="height:120px"></canvas></div></div>
+  </section>
+  ${idle?'':`<p class="wavelabel mono">zwevende opnamebalk (360)</p><div class="widget"><canvas id="wave-mini"></canvas><span class="tm mono" id="w-tm">00:00</span>
+   <button id="w-pause" aria-label="${pa?'Hervat opname':'Pauzeer opname'}">${pa?'▶':'❚❚'}</button><button id="w-stop" aria-label="Stop opname en upload">■</button></div>
+   <h2>Snelle notitie</h2><input class="in" style="width:100%" placeholder="Bijv. actiepunt of context..." aria-label="Snelle notitie">
+   <h2>Live transcriptie <span class="note">op apparaat</span></h2><p class="note">Luisteren...</p>`}
+  ${idle?`<h2>Opnamebron</h2>
+  <fieldset><legend class="sr">Modus</legend><div class="opts"><label><input type="radio" name="mode" checked> Microfoon</label><label><input type="radio" name="mode"> Systeemgeluid</label><label><input type="radio" name="mode"> Gecombineerd</label></div></fieldset>
+  <div class="two"><label class="field">Profiel<select><option>Zakelijk (standaard)</option><option>Informeel</option><option>Technisch</option></select></label>
+   <div class="field">Opties<label style="display:flex;gap:6px;align-items:center;color:var(--fg);font-size:14px"><input type="checkbox"> Premium model <span class="note">betere kwaliteit, langzamer</span></label>
+   <span><button class="btn text" style="padding-left:0">Deelnemers (2)</button></span></div></div>
+  <div class="row"><button class="btn">Importeer bestand</button><button class="btn">YouTube-video</button><span class="note">WAV, MP3, M4A, tot 500 MB</span></div>
+  <h2>Verwerking</h2>${rows([['vergadering-0929.m4a','Transcriberen','busy']],r=>`<div class="item"><div class="grow"><div class="t">${r[0]}</div></div><span class="st ${r[2]}">${r[1]}</span></div>`)}
+  <h2>Opgeslagen opnames <span class="note">2</span></h2>${rows(['opname-0928.wav','opname-0925.wav'],n=>`<div class="item"><div class="grow"><div class="t">${n}</div></div><button class="btn text">Opnieuw verwerken</button><button class="btn text danger">Verwijderen</button></div>`)}`:''}
+  `},
+ taken:()=>`<h1>Taken</h1><p class="sub">Voortgang van opnames en imports.</p>${rows([['vergadering-0929.m4a','Transcriberen','busy','vandaag 10:20'],['interview-kandidaat.mp3','Wachten','warn','vandaag 10:22'],['standup-0928.m4a','Fout: geen spraak gevonden','err','gisteren']],r=>`<div class="item"><div class="grow"><div class="t">${r[0]}</div><div class="m">${r[3]}</div></div><span class="st ${r[2]}">${r[1]}</span><button class="btn text" aria-label="Annuleer of verwijder">Verwijder</button></div>`)}`,
+ notulen:()=>ntab==='detail'?`<button class="btn text" data-n="list" style="padding-left:0">Terug</button><h1>Projectoverleg vervolgstappen</h1><p class="sub">Vandaag 10:12 · 42 min · Zakelijk</p>
+  <div class="row"><button class="btn">Bewerken</button><button class="btn">Regenereer</button><button class="btn">Exporteer</button></div>
+  <div class="tabs" role="tablist"><button role="tab" aria-selected="true">Notule</button><button role="tab" aria-selected="false">Transcriptie</button></div>
+  <h2>Samenvatting</h2><p>Het team besprak de planning voor de volgende release. De voortgang ligt op schema.</p><h2>Besluiten</h2><p>De testfase start volgende week. De conceptnotule wordt voor vrijdag gedeeld.</p><h2>Actiepunten</h2><p>Lisa verzamelt feedback. Amir controleert de openstaande punten.</p>`
+  :`<h1>Notulen</h1><div class="row" style="margin:10px 0"><input class="in" placeholder="Zoeken..." aria-label="Zoeken" style="min-width:220px"><select class="in" aria-label="Periode"><option>Alles</option><option>Vandaag</option><option>Deze week</option><option>Deze maand</option></select><select class="in" aria-label="Sorteren"><option>Nieuwste eerst</option><option>Oudste eerst</option></select></div>
+  ${rows(NOTES,n=>`<div class="item"><div class="grow"><div class="t"><button class="link" data-n="detail" style="text-decoration:none;color:inherit;font-weight:600">${n[0]}</button></div><div class="m">${n[1]} · ${n[2]}</div></div><span class="st ${n[3]}">${n[4]}</span></div>`)}`,
+ mensen:()=>`<h1>Mensen</h1><div class="row" style="margin:10px 0"><input class="in" placeholder="Zoeken..." aria-label="Zoeken" style="min-width:220px"><button class="btn primary">Persoon toevoegen</button></div>
+  ${rows([['Lisa de Vries','Productowner, Prezent','Intern'],['Amir Haddad','Tester, Prezent','Intern'],['Jan van Dijk','Inkoper, Van Dijk BV','Extern']],p=>`<div class="item"><div class="grow"><div class="t">${p[0]}</div><div class="m">${p[1]}</div></div><span class="st">${p[2]}</span><button class="btn text">Bewerk</button><button class="btn text danger">Verwijder</button></div>`)}`,
+ instellingen:()=>`<h1>Instellingen</h1><div class="tabs" role="tablist">${['Algemeen','Verwerking','Profiel','Agenda','Obsidian','Account','Geavanceerd'].map(t=>`<button role="tab" data-s="${t}" aria-selected="${t===stab}">${t}</button>`).join('')}</div>
+  ${stab==='Verwerking'?`<label class="field" style="max-width:320px">Verwerkingsmodus<select><option>Lokaal</option><option>Cloud</option></select></label><label class="field" style="max-width:320px">Transcriptie-engine<select><option>WhisperKit</option><option>Apple</option></select></label><label class="field" style="max-width:320px">Notulen via<select><option>Ollama</option><option>LM Studio</option><option>Apple Intelligence</option></select></label><button class="btn">Verbinding testen</button> <button class="btn text">Eigen profielen beheren</button>`
+  :stab==='Geavanceerd'?rows([['Microfoon','Verleend','ok'],['Schermopname','Geweigerd','err'],['Spraakherkenning','Verleend','ok'],['Agenda','Verleend','ok']],p=>`<div class="item"><div class="grow t">${p[0]}</div><span class="st ${p[2]}">${p[1]}</span></div>`)+'<p><button class="btn">Systeeminstellingen openen</button></p>'
+  :`<label style="display:flex;gap:8px;align-items:center;margin:8px 0"><input type="checkbox" checked> Controleer op updates</label><p class="note">Versie 1.0.254 · macOS</p>`}`,
+ admin:()=>`<h1>Admin</h1><p class="sub">Zichtbaar voor beheerders. Dit scherm is in deze mock-up nog niet herontworpen.</p>`
+};
+function render(){
+  $('nav').innerHTML=TABS.map(([k,l,i])=>`<button data-go="${k}" ${k===screen?'aria-current="page"':''}><svg class="ico" viewBox="0 0 24 24">${ICON[i]}</svg><span class="hide-s">${l}</span></button>`).join('');
+  $('page').innerHTML=S[screen]();
+  const o=$('oldbox');if(o)o.hidden=!$('m-old').checked;
+  const b={'b-start':startRec,'b-pause':pauseRec,'b-resume':resumeRec,'b-stop':stopRec,'w-pause':()=>R.phase==='paused'?resumeRec():pauseRec(),'w-stop':stopRec};
+  for(const k in b){const e=$(k);if(e)e.onclick=b[k]}
+  document.querySelectorAll('[data-go]').forEach(e=>e.onclick=()=>{screen=e.dataset.go;render()});
+  document.querySelectorAll('[data-n]').forEach(e=>e.onclick=()=>{ntab=e.dataset.n;render()});
+  document.querySelectorAll('[data-s]').forEach(e=>e.onclick=()=>{stab=e.dataset.s;render()});
+}
+$('collapse').onclick=()=>$('side').classList.toggle('small');
+$('m-theme').onchange=()=>document.documentElement.dataset.theme=$('m-theme').value;
+$('m-width').onchange=()=>render();
+$('m-old').onchange=()=>{const o=$('oldbox');if(o)o.hidden=!$('m-old').checked};
+$('m-src').onchange=()=>{if(R.phase!=='idle')stopRec()};
+if(matchMedia('(prefers-reduced-motion: reduce)').matches)$('m-rm').checked=true;
+/* URL-parameters voor verificatie: #screen=opnemen&theme=light&src=fixture&width=360&old=1&glow=1&rm=1&auto=1 */
+const P=new URLSearchParams(location.hash.slice(1));
+if(P.get('theme'))$('m-theme').value=P.get('theme'),$('m-theme').onchange();
+if(P.get('src'))$('m-src').value=P.get('src');
+if(P.get('width'))$('m-width').value=P.get('width');
+if(P.get('old'))$('m-old').checked=true;if(P.get('glow'))$('m-glow').checked=true;if(P.get('rm'))$('m-rm').checked=true;
+if(P.get('screen'))screen=P.get('screen');
+render();requestAnimationFrame(frame);
+if(P.get('auto'))startRec();
+window.__tv={R,CONFIG,startRec,stopRec,pauseRec,resumeRec};
+</script>
+</body>
+</html>

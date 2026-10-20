@@ -11,6 +11,7 @@ pub struct HttpRequest {
     pub method: String,
     pub headers: Option<HashMap<String, String>>,
     pub body: Option<String>,
+    pub timeout_seconds: Option<u64>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -24,7 +25,7 @@ pub struct HttpResponse {
 #[tauri::command]
 pub async fn proxy_request(request: HttpRequest) -> Result<HttpResponse, String> {
     let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(30))
+        .timeout(std::time::Duration::from_secs(request.timeout_seconds.unwrap_or(30).min(300)))
         .build()
         .map_err(|e| e.to_string())?;
 
@@ -319,6 +320,22 @@ fn encode_path(p: &str) -> String {
     p.split('/').map(encode_segment).collect::<Vec<_>>().join("/")
 }
 
+fn obsidian_base_url(base_url: &str) -> Result<reqwest::Url, String> {
+    let url = reqwest::Url::parse(base_url.trim_end_matches('/'))
+        .map_err(|_| "Ongeldige Obsidian URL".to_string())?;
+    let local = match url.host_str() {
+        Some("localhost") => true,
+        Some(host) => host.parse::<std::net::IpAddr>().is_ok_and(|ip| ip.is_loopback()),
+        None => false,
+    };
+    if !local || !matches!(url.scheme(), "http" | "https") || !url.username().is_empty()
+        || url.password().is_some() || url.query().is_some() || url.fragment().is_some()
+    {
+        return Err("Obsidian Local REST API moet op localhost draaien".to_string());
+    }
+    Ok(url)
+}
+
 /// Write a markdown note into an Obsidian vault via the Local REST API plugin.
 /// The plugin's HTTPS endpoint uses a self-signed certificate, so cert
 /// validation is disabled — this is only ever called against localhost.
@@ -330,16 +347,17 @@ pub async fn obsidian_put(
     filename: String,
     markdown: String,
 ) -> Result<HttpResponse, String> {
+    let base = obsidian_base_url(&base_url)?;
     let client = reqwest::Client::builder()
         .danger_accept_invalid_certs(true)
+        .redirect(reqwest::redirect::Policy::none())
         .timeout(std::time::Duration::from_secs(15))
         .build()
         .map_err(|e| e.to_string())?;
 
-    let base = base_url.trim_end_matches('/');
     let vault = vault_path.trim_matches('/');
     let encoded_path = encode_path(&format!("{}/{}", vault, filename));
-    let url = format!("{}/vault/{}", base, encoded_path);
+    let url = format!("{}/vault/{}", base.as_str().trim_end_matches('/'), encoded_path);
 
     let response = client
         .put(&url)
@@ -362,16 +380,43 @@ pub async fn obsidian_put(
     Ok(HttpResponse { status, body, headers: resp_headers })
 }
 
+/// Read a note from the same local vault endpoint used by obsidian_put.
+#[tauri::command]
+pub async fn obsidian_get(
+    base_url: String,
+    api_key: String,
+    vault_path: String,
+    filename: String,
+) -> Result<HttpResponse, String> {
+    let base = obsidian_base_url(&base_url)?;
+    let client = reqwest::Client::builder()
+        .danger_accept_invalid_certs(true)
+        .redirect(reqwest::redirect::Policy::none())
+        .timeout(std::time::Duration::from_secs(15))
+        .build()
+        .map_err(|e| e.to_string())?;
+    let vault = vault_path.trim_matches('/');
+    let url = format!("{}/vault/{}", base.as_str().trim_end_matches('/'), encode_path(&format!("{}/{}", vault, filename)));
+    let response = client.get(&url)
+        .header("Authorization", format!("Bearer {}", api_key))
+        .send().await.map_err(|e| e.to_string())?;
+    let status = response.status().as_u16();
+    let body = response.text().await.map_err(|e| e.to_string())?;
+    Ok(HttpResponse { status, body, headers: HashMap::new() })
+}
+
 /// Probe the Obsidian Local REST API (GET /) to verify base URL + API key.
 #[tauri::command]
 pub async fn obsidian_test(base_url: String, api_key: String) -> Result<HttpResponse, String> {
+    let base = obsidian_base_url(&base_url)?;
     let client = reqwest::Client::builder()
         .danger_accept_invalid_certs(true)
+        .redirect(reqwest::redirect::Policy::none())
         .timeout(std::time::Duration::from_secs(15))
         .build()
         .map_err(|e| e.to_string())?;
 
-    let url = format!("{}/", base_url.trim_end_matches('/'));
+    let url = format!("{}/", base.as_str().trim_end_matches('/'));
 
     let response = client
         .get(&url)

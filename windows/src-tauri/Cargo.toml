@@ -1,17 +1,17 @@
 [package]
-name = "transcript-studio"
-version = "1.0.254"
+name = "thoughtvault"
+version = "1.0.290"
 description = "ThoughtVault - Meeting recorder and transcription app"
 authors = ["Prezent Internet B.V."]
 edition = "2021"
-default-run = "transcript-studio"
+default-run = "thoughtvault"
 
 [lib]
-name = "transcript_studio_lib"
+name = "thoughtvault_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [[bin]]
-name = "transcript-studio"
+name = "thoughtvault"
 path = "src/main.rs"
 
 [build-dependencies]
@@ -20,11 +20,13 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 tauri          = { version = "2", features = ["tray-icon"] }
 tauri-plugin-shell          = "2"
+tauri-plugin-updater        = "~2.10.0"
 tauri-plugin-deep-link      = "2"
 tauri-plugin-notification   = "2"
 tauri-plugin-store          = "2"
 tauri-plugin-single-instance = { version = "2", features = ["deep-link"] }
 tauri-plugin-fs            = "2"
+tauri-plugin-dialog        = "2"
 
 serde       = { version = "1", features = ["derive"] }
 serde_json  = "1"
@@ -36,13 +38,15 @@ futures-util = "0.3"
 # Audio recording
 cpal  = "0.15"
 hound = "3.5"
+symphonia = { version = "0.5", features = ["all"] }
 
 # Local transcription (whisper.cpp bindings). Builds whisper.cpp from source —
 # requires CMake + a C/C++ toolchain on the build machine. CPU inference by default.
-whisper-rs = "0.14"
+# 0.16 uses bindgen 0.72, which supports LLVM 22 on current Windows build hosts.
+whisper-rs = "0.16"
 
 # Credentials
-keyring = "3"
+keyring = { version = "3", features = ["windows-native", "apple-native"] }
 
 # Utilities
 chrono   = { version = "0.4", features = ["serde"] }

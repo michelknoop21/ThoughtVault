@@ -1,35 +1,82 @@
-// WaveformView.swift
-// ThoughtVault
-// com.buildmind.ThoughtVault
-//
-// SiriWave-style neon soundwave rendered by a Metal fragment shader
-// (WaveformShader.metal): seven braided strands plus a core line, scrolling the
-// full envelope history from right (new) to left (old) over 3 seconds. The
-// history comes from AudioEnvelopeProcessor (30 Hz); the view interpolates the
-// last two samples at display refresh rate for the live level and integrates
-// the phase clock, because a shader is stateless.
-//
-// The shader returns its own alpha, so the background stays transparent and the
-// waveform drops into whatever surface hosts it.
+// ThoughtVault light-thread styling with the SiriWave Classic curve.
+// Adapted from kopiro/siriwave (MIT); see docs/licenses/siriwave-MIT.txt.
+// AudioEnvelopeProcessor supplies real loudness and frequency bands.
 
 import SwiftUI
 
-/// Phase accumulator for the shader. A reference type in `@State` so ticking it
-/// from inside the `TimelineView` body does not invalidate the view — the
-/// timeline already re-renders every frame.
-private final class WavePhaseClock {
-    var phase: Double = 0
+/// Continuous travel accumulator. A reference type in `@State` so ticking it from
+/// inside the `TimelineView` body does not invalidate the view.
+final class WavePhaseClock {
+    var travel: Double = 0
     var lastTick: Date?
 
-    /// Integrates `phaseTime += dt * (2.2 + live * 5.5)`: calm when silent,
-    /// energetic during loud speech. `dt` is capped at 64 ms so a paused or
-    /// backgrounded timeline never causes a jump on resume.
-    func advance(to date: Date, live: Float) -> Double {
+    /// `dt` is capped at 64 ms so a paused or backgrounded timeline never jumps.
+    func advance(to date: Date, level: Float) {
         let dt = lastTick.map { min(0.064, max(0, date.timeIntervalSince($0))) } ?? 0
         lastTick = date
-        phase += dt * (2.2 + Double(live) * 5.5)
-        if phase > 1_000_000 { phase -= 1_000_000 }
-        return phase
+        travel += dt * 2 * .pi * WaveConfig.travelHz * (1 + WaveConfig.energyBoost * Double(level))
+    }
+}
+
+/// macOS Studio waveform tuning; the compact widget uses the same geometry.
+enum WaveConfig {
+    static let heightFrac: Double = 0.40
+    static let travelHz: Double = 0.65
+    static let energyBoost: Double = 0.8
+    static let glow: CGFloat = 10
+
+    /// SiriWave Classic: graph domain -2...2, fourth-power attenuation.
+    /// Keep height bounded; spectra shape support strands, never gate loudness.
+    static func displacement(x: Double, amplitude: Double, gain: Double,
+                             travel: Double, index: Int, frequency: Double,
+                             line: Line, frozen: Bool) -> Double {
+        let graphX = 4 * x - 2
+        let attenuation = pow(4 / (4 + pow(graphX, 4)), 4)
+        let strandGain = line.main ? 1 : 0.25 + 0.75 * gain
+        let speed = line.main ? 1 : 0.82 + Double(index) * 0.065
+        let phase = frozen ? 0 : travel * speed
+        return attenuation * amplitude * line.k * strandGain
+            * sin(frequency * graphX - phase + line.phase)
+    }
+
+    static let gradient = Gradient(stops: [
+        .init(color: Color(red: 0.94, green: 0.25, blue: 0.77).opacity(0), location: 0),
+        .init(color: Color(red: 0.94, green: 0.25, blue: 0.77).opacity(0.7), location: 0.08),
+        .init(color: Color(red: 0.96, green: 0.30, blue: 0.88), location: 0.25),
+        .init(color: Color(red: 0.72, green: 0.39, blue: 0.98), location: 0.51),
+        .init(color: Color(red: 0.57, green: 0.40, blue: 1.00), location: 0.77),
+        .init(color: Color(red: 0.36, green: 0.53, blue: 1.00).opacity(0.7), location: 0.92),
+        .init(color: Color(red: 0.36, green: 0.53, blue: 1.00).opacity(0), location: 1),
+    ])
+    static let mainGradient = Gradient(stops: [
+        .init(color: Color(red: 0.96, green: 0.34, blue: 0.84).opacity(0), location: 0),
+        .init(color: Color(red: 0.96, green: 0.34, blue: 0.84).opacity(0.7), location: 0.08),
+        .init(color: Color(red: 1.00, green: 0.43, blue: 0.91), location: 0.27),
+        .init(color: Color(red: 1.00, green: 0.77, blue: 1.00), location: 0.36),
+        .init(color: Color(red: 0.75, green: 0.44, blue: 1.00), location: 0.47),
+        .init(color: Color(red: 0.89, green: 0.70, blue: 1.00), location: 0.64),
+        .init(color: Color(red: 0.53, green: 0.47, blue: 1.00), location: 0.79),
+        .init(color: Color(red: 0.36, green: 0.53, blue: 1.00).opacity(0), location: 1),
+    ])
+
+    struct Line { let width, alpha, k, phase: Double; let main: Bool }
+
+    static let desktopLines: [Line] = [
+        Line(width: 0.7, alpha: 0.44, k: 0.76, phase: -0.90, main: false),
+        Line(width: 0.9, alpha: 0.68, k: 0.88, phase: -0.51, main: false),
+        Line(width: 1.1, alpha: 0.80, k: 0.96, phase: -0.23, main: false),
+        Line(width: 1.1, alpha: 0.80, k: 0.96, phase: 0.24, main: false),
+        Line(width: 0.9, alpha: 0.68, k: 0.88, phase: 0.54, main: false),
+        Line(width: 0.7, alpha: 0.44, k: 0.76, phase: 0.94, main: false),
+        Line(width: 2.2, alpha: 1, k: 1, phase: 0, main: true),
+    ]
+    static let widgetLines: [Line] = [desktopLines[1], desktopLines[2], desktopLines[4], desktopLines[6]]
+
+    /// The native envelope already gates noise and shapes the response. Keep
+    /// quiet speech visible, with headroom for strand spread in compact views.
+    static func visualEnergy(_ level: Float) -> Double {
+        let x = Double(min(1, max(0, level.isFinite ? level : 0)))
+        return 0.9 * x
     }
 }
 
@@ -37,98 +84,106 @@ struct WaveformView: View {
     /// Provider of the processed level history (0..1, newest last).
     let levelsProvider: () -> [Float]
     let isActive: Bool
-    /// Caps the shader framerate. nil = display refresh rate. Decorative
-    /// (idle) waves should cap this: 120fps on ProMotion drains the battery.
+    /// Caps the frame rate. nil = display refresh rate.
     var maxFPS: Double? = nil
+    var bandsProvider: (() -> [Float])? = nil
+    var animatesInBackground = false
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.scenePhase) private var scenePhase
 
     @State private var clock = WavePhaseClock()
 
-    private static let idleLevel: Float = 0.0
-
     var body: some View {
-        if reduceMotion {
-            staticWaveform
-        } else {
-            animatedWaveform
-        }
-    }
-
-    // MARK: Static (Reduce Motion)
-
-    private var staticWaveform: some View {
-        Canvas { context, size in
-            let midY = size.height / 2
-            var line = Path()
-            line.move(to: CGPoint(x: 0, y: midY))
-            line.addLine(to: CGPoint(x: size.width, y: midY))
-            context.stroke(line, with: .color(Color(red: 0.5, green: 0.3, blue: 0.8).opacity(0.9)),
-                           style: StrokeStyle(lineWidth: 1.5, lineCap: .round))
-        }
-        .accessibilityHidden(true)
-    }
-
-    // MARK: Animated (Metal shader)
-
-    private var animatedWaveform: some View {
         GeometryReader { geo in
-            let size = geo.size
-            // Seven strands become a blur on small surfaces (the 120x32 widget,
-            // the mini variants) — draw only the two outer mirror pairs there.
-            // Must stay even: the strand table is ordered in pairs and an odd
-            // count leaves one carrier without its phase-offset twin, which
-            // reads as a lopsided braid.
-            let strandCount: Float = size.height >= 64 ? 7 : 4
-            // Freeze the shader when the app is not frontmost; per-pixel glow
-            // at display refresh rate is the app's biggest energy consumer.
+            let lines = geo.size.height >= 64 ? WaveConfig.desktopLines : WaveConfig.widgetLines
             TimelineView(.animation(
                 minimumInterval: maxFPS.map { 1.0 / $0 },
-                // Also freeze when inactive: the wave is a flat line at level 0,
-                // so animating it only burns GPU.
-                paused: scenePhase != .active || !isActive
+                paused: (!animatesInBackground && scenePhase != .active) || !isActive
             )) { timeline in
                 let levels = currentLevels()
-                let level = currentLevel(levels, at: timeline.date.timeIntervalSinceReferenceDate)
-                let phase = clock.advance(to: timeline.date, live: level)
-                // Opaque fill purely so the rounded rect rasterizes; the shader
-                // replaces every channel including alpha.
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(Color.black)
-                    .colorEffect(
-                        ShaderLibrary.neonWaveform(
-                            .float2(Float(size.width), Float(size.height)),
-                            .float(Float(phase)),
-                            .floatArray(levels),
-                            .float(level),
-                            .float(strandCount)
-                        )
-                    )
+                let level = levels.last ?? 0
+                let bands = isActive ? bandsProvider?() ?? [] : []
+                let _ = reduceMotion ? () : clock.advance(to: timeline.date, level: level)
+                // Capture values, not the mutable clock reference: Canvas must
+                // receive a different input on every animation tick.
+                let travel = clock.travel
+                Canvas { context, size in
+                    Self.draw(in: &context, size: size, levels: levels, bands: bands,
+                              travel: travel,
+                              lines: lines, frozen: reduceMotion)
+                }
             }
         }
+        .clipped()
         .accessibilityHidden(true)
     }
 
-    // MARK: Level
-
-    /// Full envelope history for the shader, padded to a fixed length so the
-    /// wave scrolls in from the right while the buffer is still filling.
+    /// Full envelope history, padded to a fixed length while the buffer fills.
     private func currentLevels() -> [Float] {
         let target = AudioEnvelopeConfig.historyLength
-        guard isActive else { return Array(repeating: Self.idleLevel, count: target) }
+        guard isActive else { return Array(repeating: 0, count: target) }
         let levels = levelsProvider()
         if levels.count >= target { return Array(levels.suffix(target)) }
-        return Array(repeating: Self.idleLevel, count: target - levels.count) + levels
+        return Array(repeating: 0, count: target - levels.count) + levels
     }
 
-    /// Display-refresh interpolation between the last two 30 Hz envelope
-    /// samples; the envelope processor already applies attack/release.
-    private func currentLevel(_ levels: [Float], at time: TimeInterval) -> Float {
-        guard isActive, let last = levels.last else { return Self.idleLevel }
-        let previous = levels.count >= 2 ? levels[levels.count - 2] : last
-        let slot = 1.0 / AudioEnvelopeConfig.publishRateHz
-        let progress = Float((time.truncatingRemainder(dividingBy: slot)) / slot)
-        return previous * (1 - progress) + last * progress
+    /// History sampled `delayMs` in the past, linearly interpolated.
+    private static func envelope(_ h: [Float], delayMs: Double) -> Double {
+        guard !h.isEmpty else { return 0 }
+        let f = Double(h.count - 1) - delayMs / (1000 / AudioEnvelopeConfig.publishRateHz)
+        let i0 = max(0, Int(floor(f))), i1 = min(h.count - 1, i0 + 1), u = f - floor(f)
+        return Double(h[i0]) * (1 - u) + Double(h[i1]) * u
+    }
+
+    private static func draw(in context: inout GraphicsContext, size: CGSize, levels: [Float], bands: [Float],
+                             travel: Double,
+                             lines: [WaveConfig.Line], frozen: Bool) {
+        let w = size.width, h = size.height
+        guard w > 0, h > 0 else { return }
+        let compact = h < 64
+        let cy = h / 2, maxH = h * WaveConfig.heightFrac
+        let level = WaveConfig.visualEnergy(levels.last ?? 0)
+        let peakBand = bands.max() ?? 0
+        let step: CGFloat = compact ? 0.5 : 2
+        let n = max(2, Int(ceil(w / step)) + 1)
+        let quiet = 0.55 + 0.45 * min(1, level * 2)
+        let shading = GraphicsContext.Shading.linearGradient(
+            WaveConfig.gradient, startPoint: .zero, endPoint: CGPoint(x: w, y: 0))
+        let mainShading = GraphicsContext.Shading.linearGradient(
+            WaveConfig.mainGradient, startPoint: .zero, endPoint: CGPoint(x: w, y: 0))
+
+        var ctx = context
+        ctx.blendMode = .normal
+        for (j, line) in lines.enumerated() {
+            let bandIndex = min(bands.count - 1, j * bands.count / max(1, lines.count - 1))
+            let bandEnd = min(bands.count, max(bandIndex + 1, (j + 1) * bands.count / max(1, lines.count - 1)))
+            let gain = line.main || bands.isEmpty ? 1 : peakBand > 0 ? Double((bands[bandIndex..<bandEnd].max() ?? 0) / peakBand) : 0
+            let frequency = frozen ? 3.4 : line.main ? 3.4 : 2.8 + Double(max(0, bandIndex)) * 0.22
+            let delayed = frozen ? level : WaveConfig.visualEnergy(Float(envelope(levels, delayMs: Double(j) * 25)))
+            let amplitude = level == 0 ? 0 : line.main ? level : 0.65 * level + 0.35 * delayed
+            var path = Path()
+            for p in 0..<n {
+                let x = Double(p) / Double(n - 1)
+                let y = WaveConfig.displacement(x: x, amplitude: amplitude, gain: gain,
+                                              travel: travel, index: j, frequency: frequency,
+                                              line: line, frozen: frozen)
+                let pt = CGPoint(x: x * w, y: cy - y * maxH)
+                if p == 0 { path.move(to: pt) } else { path.addLine(to: pt) }
+            }
+            if line.main || (j >= 1 && j <= 4) {
+                var glow = ctx
+                let glowGain = 0.1 + 0.9 * min(1, level / 0.3)
+                glow.opacity = (line.main ? 0.75 : (j == 2 || j == 3 ? 0.32 : 0.20)) * glowGain
+                glow.blendMode = .plusLighter
+                glow.addFilter(.blur(radius: compact ? 3 : (line.main ? WaveConfig.glow : 7)))
+                glow.stroke(path, with: line.main ? mainShading : shading,
+                            style: StrokeStyle(lineWidth: compact ? 5 : (line.main ? 20 : 8), lineCap: .round, lineJoin: .round))
+            }
+            var lc = ctx
+            lc.opacity = line.main ? 1 : line.alpha * quiet
+            lc.stroke(path, with: line.main ? mainShading : shading,
+                      style: StrokeStyle(lineWidth: line.width * (compact ? 0.72 : 1), lineCap: .round, lineJoin: .round))
+        }
     }
 }

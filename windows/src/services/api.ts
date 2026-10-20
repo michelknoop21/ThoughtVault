@@ -80,6 +80,7 @@ function mapTranscript(raw: unknown): Transcript {
 
   return {
     id: safeString(r.id ?? r.task_id, ""),
+    task_id: safeOptionalString(r.task_id),
     title: safeString(r.title ?? r.extracted_title ?? r.filename, "Naamloze opname"),
     raw_transcription: rawTranscription,
     notule_html: notuleHtml,
@@ -88,6 +89,7 @@ function mapTranscript(raw: unknown): Transcript {
     has_transcription: hasTranscription,
     duration_seconds: Number(r.duration ?? r.duration_seconds ?? 0),
     profile_name: safeOptionalString(r.profile_name, r.profile_id),
+    profile_id: safeOptionalString(r.profile_id),
     tags: Array.isArray(r.tags) ? r.tags.filter((t): t is string => typeof t === "string") : [],
     created_at: safeString(r.created_at ?? r.date, new Date().toISOString()),
     updated_at: safeString(r.updated_at ?? r.created_at, new Date().toISOString()),
@@ -545,18 +547,27 @@ class APIService {
   }
 
   async createProfile(profile: Omit<Profile, "id">): Promise<Profile> {
-    const response = await this.request<{ success: boolean; profile: Profile } | { id: string } & Partial<Profile>>(
-      "POST",
-      "/profiles/me",
-      profile
-    );
-    // Handle both { success, profile } and { id, ...profile } formats
-    if ("profile" in response && response.profile) return response.profile;
-    return response as Profile;
+    const payload = {
+      name: profile.name,
+      description: profile.description || profile.name,
+      icon: profile.icon || "📝",
+      systemPrompt: profile.system_prompt || "",
+      notulePrompt: profile.notule_prompt || "",
+      outputTemplate: profile.output_template || profile.notule_template || "",
+    };
+    const response = await this.request<{ success: boolean; profile: Profile }>("POST", "/profiles/me", payload);
+    return response.profile;
   }
 
   async updateProfile(id: string, updates: Partial<Profile>): Promise<Profile> {
-    await this.request<{ success: boolean }>("PUT", `/profiles/me/${id}`, updates);
+    await this.request<{ success: boolean }>("PUT", `/profiles/me/${id}`, {
+      name: updates.name,
+      description: updates.description,
+      icon: updates.icon,
+      systemPrompt: updates.system_prompt,
+      notulePrompt: updates.notule_prompt,
+      outputTemplate: updates.output_template || updates.notule_template,
+    });
     return { id, ...updates } as Profile;
   }
 

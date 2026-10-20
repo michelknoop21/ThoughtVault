@@ -1,0 +1,15 @@
+# ThoughtVault
+
+> ThoughtVault zet gesproken gedachten en gesprekken om in een transcript, notitie of notulen, met export naar je eigen Obsidian-vault. Developed by Yinga.
+
+ThoughtVault is beschikbaar voor macOS en Windows. Je kunt microfoon- en systeemaudio opnemen, bestaande audio importeren en een profiel kiezen voor de gewenste structuur. Lokale verwerking en cloudverwerking zijn beschikbaar; mogelijkheden kunnen per platform verschillen. Automatische Obsidian-export vereist een ingestelde koppeling.
+
+## Publieke informatie
+- [ThoughtVault](https://thoughtvault.yinga.ai/): werking, productbeelden, mogelijkheden en veelgestelde vragen.
+- [Yinga](https://www.yinga.nl/): ontwikkelaar.
+
+## Contact
+Een demo of informatie over toegang: sales@yinga.nl.
+
+## Toegang
+Installers worden via een privé-downloadlink verstrekt. De downloadpagina en bestanden zijn geen publieke documentatie en mogen niet worden geïndexeerd, gecrawld of opgenomen in trainingsdatasets. Publiceer geen privé-downloadlinks.

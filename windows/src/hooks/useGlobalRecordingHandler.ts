@@ -1,11 +1,13 @@
-import { useEffect, useRef } from "react";
-import { listen } from "@tauri-apps/api/event";
+import { useEffect } from "react";
+import { emit, listen } from "@tauri-apps/api/event";
 import { useRecordingStore } from "../stores/recordingStore";
 import { useSettingsStore } from "../stores/settingsStore";
 import { uploadAndTrack } from "../services/uploadAndTrack";
 import { processLocally } from "../services/localPipeline";
 import { resolveParticipants } from "../services/participants";
 import { closeWidgetWindow } from "./useWidgetWindow";
+import { useToast } from "../components/ui/InfoBar";
+import { saveQuickNote } from "../services/quickNotes";
 
 /**
  * Global handler for recording-stopped and recording-error events.
@@ -16,11 +18,36 @@ import { closeWidgetWindow } from "./useWidgetWindow";
  * floating widget while on a different page.
  */
 export function useGlobalRecordingHandler() {
-  const isUploadingRef = useRef(false);
-
   useEffect(() => {
     let unlistenStopped: (() => void) | undefined;
     let unlistenError: (() => void) | undefined;
+    const syncWidget = () => {
+      const { phase, recordingStartedAt, pausedAt, pausedDuration } = useRecordingStore.getState();
+      void emit("widget-sync-timer", { phase, recordingStartedAt, pausedAt, pausedDuration }).catch(console.error);
+    };
+    const unsubscribe = useRecordingStore.subscribe((state, previous) => {
+      if (state.phase !== previous.phase || state.pausedAt !== previous.pausedAt || state.pausedDuration !== previous.pausedDuration) syncWidget();
+    });
+    const ready = listen("widget-ready", syncWidget);
+    const paused = listen("recording-paused", () => {
+      const store = useRecordingStore.getState();
+      if (store.phase !== "recording") return;
+      store.pauseTimer();
+      store.setPhase("paused");
+    });
+    const stopping = listen("recording-stopping", () => {
+      const store = useRecordingStore.getState();
+      if (store.phase === "recording" || store.phase === "paused") {
+        if (store.pausedAt === null) store.pauseTimer();
+        store.setPhase("stopping");
+      }
+    });
+    const resumed = listen("recording-resumed", () => {
+      const store = useRecordingStore.getState();
+      if (store.phase !== "paused") return;
+      store.resumeTimer();
+      store.setPhase("recording");
+    });
 
     listen<{ file_path: string; duration_seconds: number }>(
       "recording-stopped",
@@ -34,17 +61,22 @@ export function useGlobalRecordingHandler() {
         }
 
         const filePath = event.payload.file_path || store.filePath || "";
-        handleUpload(filePath, event.payload.duration_seconds || 0, isUploadingRef);
+        if (!filePath || (store.filePath && filePath !== store.filePath)) return;
+        if (!store.processOnStop) return;
+        void handleUpload(filePath, event.payload.duration_seconds || 0).catch(console.error);
       }
     ).then((fn) => { unlistenStopped = fn; }).catch(console.error);
 
     listen<string>("recording-error", (event) => {
       console.error("[Recording] Event: recording-error:", event.payload);
       useRecordingStore.getState().setPhase("idle");
+      useToast.getState().show(event.payload, "error");
       closeWidgetWindow().catch((e) => console.error("[Recording] Widget close on error failed:", e));
     }).then((fn) => { unlistenError = fn; }).catch(console.error);
 
     return () => {
+      unsubscribe();
+      for (const listener of [ready, paused, resumed, stopping]) listener.then(fn => fn()).catch(console.error);
       unlistenStopped?.();
       unlistenError?.();
     };
@@ -54,27 +86,20 @@ export function useGlobalRecordingHandler() {
 async function handleUpload(
   filePath: string,
   durationSeconds: number,
-  isUploadingRef: React.RefObject<boolean>,
 ) {
-  if (isUploadingRef.current) return;
-  isUploadingRef.current = true;
-
-  try {
-    const store = useRecordingStore.getState();
-    const { mode, selectedProfileId, usePremium } = store;
-    // Resolve participants (self + calendar attendees + manual picks) BEFORE
-    // reset() clears the attendee/selection state (D-B).
-    const participants = resolveParticipants(
-      store.pendingSeedAttendees,
-      store.selectedParticipantIds,
-    );
-    store.reset();
-    if (useSettingsStore.getState().processing_mode === "local") {
-      await processLocally(filePath, selectedProfileId, mode, participants, durationSeconds);
-    } else {
-      await uploadAndTrack(filePath, selectedProfileId, mode, usePremium, participants);
-    }
-  } finally {
-    isUploadingRef.current = false;
+  const store = useRecordingStore.getState();
+  const { mode, selectedProfileId, usePremium } = store;
+  // Resolve participants (self + calendar attendees + manual picks) BEFORE
+  // reset() clears the attendee/selection state (D-B).
+  const participants = resolveParticipants(
+    store.pendingSeedAttendees,
+    store.selectedParticipantIds,
+  );
+  saveQuickNote(filePath, store.quickNote);
+  store.reset();
+  if (useSettingsStore.getState().processing_mode === "local") {
+    await processLocally(filePath, selectedProfileId, mode, participants, durationSeconds);
+  } else {
+    await uploadAndTrack(filePath, selectedProfileId, mode, usePremium, participants);
   }
 }

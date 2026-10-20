@@ -1,100 +1,76 @@
-import { NavLink } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { BrandFooter } from "../brand/BrandFooter";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   Home24Regular,
   MicRecord24Regular,
   TaskListLtr24Regular,
   DocumentText24Regular,
   Settings24Regular,
-  ShieldPersonRegular,
-  Person24Regular,
-  NotepadPerson24Regular,
-  PersonAccounts24Regular,
+  ChevronLeft24Regular,
+  ChevronRight24Regular,
   People24Regular,
-  SignOut24Regular,
-} from "@fluentui/react-icons";
-import { useAuthStore } from "../../stores/authStore";
-import { api } from "../../services/api";
+} from "../ui/StudioIcons";
+import { useLocalTranscriptsStore } from "../../stores/localTranscriptsStore";
+import { useTranscriptsStore } from "../../stores/transcriptsStore";
 import appLogo from "../../assets/app-logo.png";
 
 export function Sidebar() {
-  const { user, logout } = useAuthStore();
-  const isAdmin = user?.role === "admin";
-
-  // Display name: full name > email prefix > email
-  const userDisplayName = (() => {
-    if (user?.name && user.name.trim()) return user.name.trim();
-    if (user?.email) return user.email.split("@")[0];
-    return "Gebruiker";
-  })();
-
-  const userInitial = userDisplayName ? userDisplayName[0].toUpperCase() : null;
-
-  async function handleLogout() {
-    await api.logout();
-    logout();
-  }
-
+  const [collapsed, setCollapsed] = useState(false);
+  useEffect(() => {
+    const toggle = (event: KeyboardEvent) => {
+      if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === "s") {
+        event.preventDefault();
+        setCollapsed(value => !value);
+      }
+    };
+    window.addEventListener("keydown", toggle);
+    return () => window.removeEventListener("keydown", toggle);
+  }, []);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const local = useLocalTranscriptsStore(s => s.items);
+  const remote = useTranscriptsStore(s => s.transcripts);
+  const select = useTranscriptsStore(s => s.setSelectedId);
+  const recent = [...new Map([...remote, ...local].map(t => [t.id, t])).values()]
+    .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at)).slice(0, 5);
   return (
-    <nav className="sidebar">
+    <nav className={`sidebar${collapsed ? " collapsed" : ""}`} aria-label="Hoofdnavigatie" data-theme="dark">
+      <button type="button" className="sidebar-toggle" aria-label={collapsed ? "Zijbalk uitklappen" : "Zijbalk inklappen"} aria-expanded={!collapsed} onClick={() => setCollapsed(!collapsed)}>{collapsed ? <ChevronRight24Regular /> : <ChevronLeft24Regular />}</button>
       {/* Logo + app title */}
       <div className="sidebar-logo-section">
         <img
           src={appLogo}
-          alt="Transcript Studio"
+          alt="ThoughtVault"
           className="sidebar-logo"
         />
-        <span className="sidebar-app-name">Transcript Studio</span>
+        <span className="sidebar-app-name">ThoughtVault</span>
       </div>
-
-      {/* User profile */}
-      {user && (
-        <div className="sidebar-user-section">
-          <div className="avatar avatar-sm avatar-accent">
-            {userInitial ?? <Person24Regular style={{ fontSize: 14 }} />}
-          </div>
-          <div className="sidebar-user-info">
-            <span className="sidebar-user-name">{userDisplayName}</span>
-            {isAdmin && (
-              <span className="sidebar-role-badge">Admin</span>
-            )}
-          </div>
-        </div>
-      )}
 
       <hr className="sidebar-divider" />
 
       {/* Main navigation */}
       <SidebarItem to="/" icon={<Home24Regular />} label="Home" shortcut="Ctrl+1" />
       <SidebarItem to="/recording" icon={<MicRecord24Regular />} label="Opnemen" shortcut="Ctrl+2" />
-      <SidebarItem to="/tasks" icon={<TaskListLtr24Regular />} label="Taken" />
-      <SidebarItem to="/transcripts" icon={<DocumentText24Regular />} label="Notulen" shortcut="Ctrl+3" />
-      <SidebarItem to="/profiles" icon={<NotepadPerson24Regular />} label="Profielen" shortcut="Ctrl+5" />
-      <SidebarItem to="/people" icon={<People24Regular />} label="Mensen" shortcut="Ctrl+6" />
+      <SidebarItem to="/tasks" icon={<TaskListLtr24Regular />} label="Taken" shortcut="Ctrl+3" />
+      <SidebarItem to="/transcripts" icon={<DocumentText24Regular />} label="Notulen" shortcut="Ctrl+4" />
+      <SidebarItem to="/people" icon={<People24Regular />} label="Mensen" shortcut="Ctrl+5" />
 
+      {!collapsed && location.pathname !== "/" && recent.length > 0 && <section className="sidebar-recent" aria-label="Recente notulen">
+        <h2>Recent</h2>
+        {recent.map(t => <button key={t.id} onClick={() => { select(t.id); navigate("/transcripts"); }} title={t.title}>
+          <span className="sidebar-recent-icon"><DocumentText24Regular /></span>
+          <span>{t.title || "Naamloze opname"}<small>{new Date(t.created_at).toLocaleString("nl-NL", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</small></span>
+        </button>)}
+      </section>}
       {/* Spacer pushes bottom items down */}
       <div className="flex-1" />
 
       <hr className="sidebar-divider" />
 
       {/* Bottom items */}
-      <SidebarItem to="/account" icon={<PersonAccounts24Regular />} label="Account" />
-      <SidebarItem to="/settings" icon={<Settings24Regular />} label="Instellingen" shortcut="Ctrl+4" />
-      {isAdmin && (
-        <SidebarItem to="/admin" icon={<ShieldPersonRegular />} label="Beheer" />
-      )}
-
-      <hr className="sidebar-divider" />
-
-      {/* Logout button */}
-      <button
-        onClick={handleLogout}
-        className="sidebar-item"
-        style={{ border: "none", width: "100%", textAlign: "left", cursor: "default", fontFamily: "inherit" }}
-        title="Uitloggen"
-      >
-        <span className="sidebar-item-icon"><SignOut24Regular /></span>
-        <span className="sidebar-item-label">Uitloggen</span>
-      </button>
+      <SidebarItem to="/settings" icon={<Settings24Regular />} label="Instellingen" shortcut="Ctrl+6" />
+      {!collapsed && <BrandFooter compact />}
     </nav>
   );
 }

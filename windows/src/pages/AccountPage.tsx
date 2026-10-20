@@ -8,7 +8,7 @@ import {
   ShieldCheckmark24Regular,
   Mail24Regular,
   SignOut24Regular,
-} from "@fluentui/react-icons";
+} from "../components/ui/StudioIcons";
 import { useAuthStore } from "../stores/authStore";
 import { api } from "../services/api";
 import { useToast } from "../components/ui/InfoBar";

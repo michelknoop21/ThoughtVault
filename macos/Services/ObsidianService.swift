@@ -9,6 +9,7 @@
 
 import Foundation
 import OSLog
+import CryptoKit
 
 private let logger = Logger(subsystem: "com.buildmind.ThoughtVault", category: "ObsidianService")
 
@@ -46,9 +47,19 @@ struct ObsidianService: Sendable {
     /// Auto-export is on when the user enabled the integration in Settings.
     static var isEnabled: Bool { UserDefaults.standard.bool(forKey: enabledKey) }
 
+    private func localURL(_ path: String) -> URL? {
+        guard let base = URL(string: baseURL),
+              ["http", "https"].contains(base.scheme ?? ""),
+              ["127.0.0.1", "localhost", "::1"].contains(base.host ?? ""),
+              base.user == nil, base.password == nil,
+              base.query == nil, base.fragment == nil else { return nil }
+        return URL(string: baseURL + path)
+    }
+
     enum ObsidianError: LocalizedError {
         case missingConfig
         case badStatus(Int, String)
+        case externallyChanged
 
         var errorDescription: String? {
             switch self {
@@ -56,6 +67,8 @@ struct ObsidianService: Sendable {
                 return "Vul eerst de Obsidian base-URL, vault-pad en API-sleutel in."
             case .badStatus(let code, let detail):
                 return "Obsidian gaf status \(code)\(detail.isEmpty ? "" : ": \(detail)")."
+            case .externallyChanged:
+                return "Deze notule is gewijzigd in Obsidian. Haal die versie eerst op voordat je exporteert."
             }
         }
     }
@@ -64,7 +77,7 @@ struct ObsidianService: Sendable {
 
     /// GET / with the Bearer key; succeeds when the plugin reports `authenticated:true`.
     func testConnection() async -> Result<Void, Error> {
-        guard !apiKey.isEmpty, let url = URL(string: baseURL + "/") else {
+        guard !apiKey.isEmpty, let url = localURL("/") else {
             return .failure(ObsidianError.missingConfig)
         }
         var req = URLRequest(url: url)
@@ -92,6 +105,59 @@ struct ObsidianService: Sendable {
 
     // MARK: - Export
 
+    private static func syncKey(_ filename: String) -> String { "obsidianSync-\(filename)" }
+
+    private static func digest(_ text: String) -> String {
+        SHA256.hash(data: Data(text.utf8)).map { String(format: "%02x", $0) }.joined()
+    }
+
+    static func acknowledgeImport(filename: String, markdown: String) {
+        if VaultFolderStore.isConfigured {
+            VaultFolderStore.acknowledgeImport(filename: filename, markdown: markdown)
+        } else {
+            UserDefaults.standard.set(digest(markdown), forKey: syncKey(filename))
+        }
+    }
+
+    private func noteURL(filename: String) -> URL? {
+        let path = vaultPath.trimmingCharacters(in: CharacterSet(charactersIn: "/")) + "/" + filename
+        let encoded = path.split(separator: "/").map {
+            $0.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? String($0)
+        }.joined(separator: "/")
+        return localURL("/vault/" + encoded)
+    }
+
+    private func readRemote(filename: String) async throws -> String? {
+        guard !apiKey.isEmpty, let url = noteURL(filename: filename) else { throw ObsidianError.missingConfig }
+        var req = URLRequest(url: url)
+        req.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        let (data, response) = try await session.data(for: req)
+        let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+        if status == 404 { return nil }
+        guard (200..<300).contains(status) else { throw ObsidianError.badStatus(status, "") }
+        return String(data: data, encoding: .utf8)
+    }
+
+    static func readNote(title: String, date: Date, noteID: String) async throws -> (filename: String, markdown: String, html: String) {
+        var filename = fileName(title: title, date: date, noteID: noteID)
+        var markdown: String?
+        if VaultFolderStore.isConfigured {
+            markdown = VaultFolderStore.readNote(filename: filename)
+        } else {
+            markdown = try await ObsidianService().readRemote(filename: filename)
+        }
+        if markdown == nil {
+            filename = fileName(title: title, date: date)
+            if VaultFolderStore.isConfigured {
+                markdown = VaultFolderStore.readNote(filename: filename)
+            } else {
+                markdown = try await ObsidianService().readRemote(filename: filename)
+            }
+        }
+        guard let markdown else { throw ObsidianError.badStatus(404, "Notule niet gevonden") }
+        return (filename, markdown, markdownToNotuleHTML(markdown))
+    }
+
     /// Convenience over a (non-Sendable) record: reads its fields on the MainActor,
     /// then performs the network export with value types only.
     @MainActor
@@ -105,7 +171,8 @@ struct ObsidianService: Sendable {
         let tags = record.tags
         try await export(
             title: title, html: html, date: date,
-            participants: participants, profileName: profileName, profileId: profileId, tags: tags
+            participants: participants, profileName: profileName, profileId: profileId, tags: tags,
+            noteID: record.taskId
         )
     }
 
@@ -120,7 +187,8 @@ struct ObsidianService: Sendable {
             participants: record.participants,
             profileName: record.profileName,
             profileId: record.profileId,
-            tags: record.tags
+            tags: record.tags,
+            noteID: record.taskId
         )
     }
 
@@ -131,24 +199,30 @@ struct ObsidianService: Sendable {
         participants: [Participant],
         profileName: String?,
         profileId: String? = nil,
-        tags: [String]
+        tags: [String],
+        noteID: String? = nil
     ) async throws {
         guard !apiKey.isEmpty, !vaultPath.isEmpty else { throw ObsidianError.missingConfig }
 
-        let filename = Self.fileName(title: title, date: date)
+        let filename = Self.fileName(title: title, date: date, noteID: noteID)
         let rawPath = vaultPath.trimmingCharacters(in: CharacterSet(charactersIn: "/")) + "/" + filename
         let encodedPath = rawPath
             .split(separator: "/", omittingEmptySubsequences: false)
             .map { $0.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? String($0) }
             .joined(separator: "/")
-        guard let url = URL(string: baseURL + "/vault/" + encodedPath) else {
+        guard let url = localURL("/vault/" + encodedPath) else {
             throw ObsidianError.missingConfig
         }
 
         let body = Self.frontmatter(
             title: title, date: date, participants: participants,
-            profileName: profileName, profileId: profileId, tags: tags
+            profileName: profileName, profileId: profileId, tags: tags, noteID: noteID
         ) + htmlToMarkdown(html) + "\n"
+
+        if let existing = try await readRemote(filename: filename), existing != body,
+           UserDefaults.standard.string(forKey: Self.syncKey(filename)) != Self.digest(existing) {
+            throw ObsidianError.externallyChanged
+        }
 
         var req = URLRequest(url: url)
         req.httpMethod = "PUT"
@@ -161,6 +235,7 @@ struct ObsidianService: Sendable {
         guard (200..<300).contains(code) else {
             throw ObsidianError.badStatus(code, String(data: data, encoding: .utf8) ?? "")
         }
+        Self.acknowledgeImport(filename: filename, markdown: body)
     }
 
     /// Single auto-export entry point: no-op when disabled, fails silently with a
@@ -176,7 +251,8 @@ struct ObsidianService: Sendable {
             participants: record.participants,
             profileName: record.profileName,
             profileId: record.profileId,
-            tags: record.tags
+            tags: record.tags,
+            noteID: record.taskId
         )
     }
 
@@ -191,17 +267,18 @@ struct ObsidianService: Sendable {
         participants: [Participant],
         profileName: String?,
         profileId: String? = nil,
-        tags: [String]
+        tags: [String],
+        noteID: String? = nil
     ) {
         // Prefer the file-based vault folder when configured — it is the only path
         // that works on iOS and needs no REST plugin running.
         if VaultFolderStore.isConfigured {
-            let filename = Self.fileName(title: title, date: date)
+            let filename = Self.fileName(title: title, date: date, noteID: noteID)
             let markdown = Self.frontmatter(
                 title: title, date: date, participants: participants,
-                profileName: profileName, profileId: profileId, tags: tags
+                profileName: profileName, profileId: profileId, tags: tags, noteID: noteID
             ) + htmlToMarkdown(html) + "\n"
-            if !VaultFolderStore.writeNote(filename: filename, markdown: markdown) {
+            if VaultFolderStore.writeNote(filename: filename, markdown: markdown) != .written {
                 logger.error("Export naar Obsidian-map mislukt")
             }
             return
@@ -212,7 +289,8 @@ struct ObsidianService: Sendable {
             do {
                 try await service.export(
                     title: title, html: html, date: date,
-                    participants: participants, profileName: profileName, profileId: profileId, tags: tags
+                    participants: participants, profileName: profileName, profileId: profileId, tags: tags,
+                    noteID: noteID
                 )
             } catch {
                 logger.error("Export naar Obsidian mislukt: \(error.localizedDescription)")
@@ -231,17 +309,20 @@ struct ObsidianService: Sendable {
         participants: [Participant],
         profileName: String?,
         profileId: String? = nil,
-        tags: [String]
+        tags: [String],
+        noteID: String? = nil
     ) async throws {
         // Prefer the file-based vault folder when configured.
         if VaultFolderStore.isConfigured {
-            let filename = Self.fileName(title: title, date: date)
+            let filename = Self.fileName(title: title, date: date, noteID: noteID)
             let markdown = Self.frontmatter(
                 title: title, date: date, participants: participants,
-                profileName: profileName, profileId: profileId, tags: tags
+                profileName: profileName, profileId: profileId, tags: tags, noteID: noteID
             ) + htmlToMarkdown(html) + "\n"
-            guard VaultFolderStore.writeNote(filename: filename, markdown: markdown) else {
-                throw ObsidianError.badStatus(0, "Kon niet naar de vault-map schrijven")
+            switch VaultFolderStore.writeNote(filename: filename, markdown: markdown) {
+            case .written: break
+            case .externallyChanged: throw ObsidianError.externallyChanged
+            case .failed: throw ObsidianError.badStatus(0, "Kon niet naar de vault-map schrijven")
             }
             return
         }
@@ -249,18 +330,19 @@ struct ObsidianService: Sendable {
         // Fall back to the REST API (desktop only).
         try await ObsidianService().export(
             title: title, html: html, date: date,
-            participants: participants, profileName: profileName, profileId: profileId, tags: tags
+            participants: participants, profileName: profileName, profileId: profileId, tags: tags,
+            noteID: noteID
         )
     }
 
     // MARK: - Builders
 
     /// `{yyyy-MM-dd}-{kebab-title}.md`, matching the vault's note-naming convention.
-    static func fileName(title: String, date: Date) -> String {
+    static func fileName(title: String, date: Date, noteID: String? = nil) -> String {
         let df = DateFormatter()
         df.dateFormat = "yyyy-MM-dd"
         df.locale = Locale(identifier: "en_US_POSIX")
-        let slug = slugify(title)
+        let slug = slugify(noteID ?? title)
         return slug.isEmpty ? "\(df.string(from: date))-notule.md" : "\(df.string(from: date))-\(slug).md"
     }
 
@@ -280,7 +362,8 @@ struct ObsidianService: Sendable {
         participants: [Participant],
         profileName: String?,
         profileId: String? = nil,
-        tags: [String]
+        tags: [String],
+        noteID: String? = nil
     ) -> String {
         let df = DateFormatter()
         df.dateFormat = "yyyy-MM-dd"
@@ -296,6 +379,7 @@ struct ObsidianService: Sendable {
 
         var lines = ["---"]
         lines.append("type: \(noteType)")
+        if let noteID { lines.append("thoughtvault_id: \(yaml(noteID))") }
         lines.append("title: \(yaml(title))")
         lines.append("date: \(df.string(from: date))")
         if !participants.isEmpty {
@@ -322,7 +406,17 @@ struct ObsidianService: Sendable {
 
 /// Accepts the self-signed server certificate for 127.0.0.1 / localhost only;
 /// every other host falls through to default validation.
-private final class LoopbackTrustDelegate: NSObject, URLSessionDelegate, Sendable {
+private final class LoopbackTrustDelegate: NSObject, URLSessionDelegate, URLSessionTaskDelegate, Sendable {
+    func urlSession(
+        _ session: URLSession,
+        task: URLSessionTask,
+        willPerformHTTPRedirection response: HTTPURLResponse,
+        newRequest request: URLRequest,
+        completionHandler: @escaping (URLRequest?) -> Void
+    ) {
+        completionHandler(nil)
+    }
+
     func urlSession(
         _ session: URLSession,
         didReceive challenge: URLAuthenticationChallenge,

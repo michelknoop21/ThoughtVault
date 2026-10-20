@@ -8,7 +8,7 @@ import {
   Person24Regular,
   ArrowRight24Regular,
   ArrowLeft24Regular,
-} from "@fluentui/react-icons";
+} from "../ui/StudioIcons";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { usePersonProfileStore } from "../../stores/personProfileStore";
 import { MicrosoftGraphService } from "../../services/microsoftGraph";
@@ -93,7 +93,7 @@ export function OnboardingWizard() {
       }}
     >
       <BrandBar />
-      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", minHeight: 0, overflowY: "auto" }}>
+      <div style={{ flex: 1, display: "flex", alignItems: "safe center", justifyContent: "center", minHeight: 0, overflowY: "auto" }}>
       <div style={{ width: "100%", maxWidth: 440, padding: 32 }}>
         {/* Progress dots */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginBottom: 32 }}>
@@ -118,7 +118,7 @@ export function OnboardingWizard() {
               icon={
                 <img
                   src={appLogo}
-                  alt="Transcript Studio"
+                  alt="ThoughtVault"
                   style={{
                     width: 64,
                     height: 64,
@@ -129,7 +129,7 @@ export function OnboardingWizard() {
                   }}
                 />
               }
-              title="Welkom bij Transcript Studio"
+              title="Welkom bij ThoughtVault"
               description="Neem vergaderingen op, genereer automatisch notulen en sla alles overzichtelijk op. Laten we je setup in orde maken."
             />
           )}

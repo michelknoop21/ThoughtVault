@@ -1,0 +1,23 @@
+services:
+  thoughtvault-website:
+    build:
+      context: .
+      dockerfile: deploy/website/Dockerfile
+    image: thoughtvault-website:local
+    container_name: thoughtvault-website
+    restart: unless-stopped
+    environment:
+      DOWNLOAD_TOKEN: ${DOWNLOAD_TOKEN:?Set a random private download token}
+      NGINX_ENVSUBST_FILTER: DOWNLOAD_TOKEN
+    volumes:
+      - /home/michelk/tstudio-releases:/srv/releases:ro
+    networks:
+      - yinga-network
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+networks:
+  yinga-network:
+    external: true

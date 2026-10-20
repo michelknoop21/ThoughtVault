@@ -50,6 +50,7 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
     var isPaused: Bool = false
     var duration: TimeInterval = 0
     var audioLevels: [Float] = Array(repeating: 0, count: AudioEnvelopeConfig.historyLength)
+    var frequencyBands = Array(repeating: Float(0), count: AudioSpectrumProcessor.frequencies.count)
 #if DEBUG
     /// Live pipeline diagnostics for the DEBUG waveform overlay.
     var meterDebugText: String = ""
@@ -68,6 +69,8 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
     private var audioRecorder: AVAudioRecorder?
     /// Shared cross-platform amplitude envelope (dBFS → 0..1 scalar).
     private var envelope = AudioEnvelopeProcessor()
+    private var spectrum = AudioSpectrumProcessor()
+    private var spectrumFile: FileHandle?
     private var lastMeterDate: Date?
     private var meteringTimer: Timer?
     private var durationTimer: Timer?
@@ -217,6 +220,9 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
                 }
                 self.audioRecorder = recorder
                 self.currentRecordingURL = url
+                self.spectrumFile = try? FileHandle(forReadingFrom: url)
+                self.spectrum = AudioSpectrumProcessor()
+                self.frequencyBands = Array(repeating: 0, count: AudioSpectrumProcessor.frequencies.count)
                 self.isRecording = true
                 self.isPaused = false
                 self.duration = 0
@@ -265,6 +271,8 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
         await MainActor.run {
             audioRecorder?.stop()
             audioRecorder = nil  // Force dealloc to flush WAV header
+            try? spectrumFile?.close()
+            spectrumFile = nil
             self.isRecording = false
             self.isPaused = false
             self.recordingStartDate = nil
@@ -334,6 +342,19 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
         let dt = lastMeterDate.map { now.timeIntervalSince($0) } ?? 1.0 / AudioEnvelopeConfig.publishRateHz
         lastMeterDate = now
         let level = envelope.process(db: db, dt: dt)
+        // Read the existing mono Int16 writer; never open a second microphone capture graph.
+        // ponytail: latency follows AVAudioRecorder flushes; use a shared PCM tap if hardware checks show visible lag.
+        if let spectrumFile, let end = try? spectrumFile.seekToEnd(), end >= 4096 {
+            do {
+                try spectrumFile.seek(toOffset: end - 2048)
+                if let data = try spectrumFile.read(upToCount: 2048) {
+                    let samples = stride(from: 0, to: data.count - 1, by: 2).map { index in
+                        Float(Int16(bitPattern: UInt16(data[index]) | UInt16(data[index + 1]) << 8)) / 32768
+                    }
+                    frequencyBands = spectrum.process(samples: samples, sampleRate: 16_000, dt: dt).map { $0 * envelope.lastGate }
+                }
+            } catch { frequencyBands = spectrum.process(samples: [0], sampleRate: 16_000, dt: dt) }
+        }
 
 #if DEBUG
         meterDebugText = String(format: "db %.1f  floor %.1f  gate %.2f  target %.2f  out %.3f  dt %.0fms",
@@ -390,6 +411,36 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
         // ponytail: vaste extensielijst; uitbreiden als er een nieuw bronformaat opduikt.
         let audioExts: Set<String> = ["wav", "m4a", "mp3", "aiff", "caf"]
         return items.filter { audioExts.contains($0.pathExtension.lowercased()) }
+    }
+
+    /// Keep source audio recoverable, but show a combined session only once.
+    static func primaryRecordingURLs(from urls: [URL], defaults: UserDefaults = .standard) -> [URL] {
+        urls.filter { url in
+            guard let combinedPath = defaults.string(forKey: "combinedAudio_\(url.lastPathComponent)") else { return true }
+            return !FileManager.default.fileExists(atPath: combinedPath)
+        }
+    }
+
+    static func removeSourceIfMixIsComplete(sourceURL: URL, combinedURL: URL, expectedFrames: AVAudioFramePosition) throws -> Bool {
+        guard sourceURL.standardizedFileURL != combinedURL.standardizedFileURL, expectedFrames > 0 else { return false }
+        do {
+            let mixed = try AVAudioFile(forReading: combinedURL)
+            guard mixed.length == expectedFrames,
+                  mixed.processingFormat.sampleRate == 16_000,
+                  mixed.processingFormat.channelCount == 1,
+                  let buffer = AVAudioPCMBuffer(pcmFormat: mixed.processingFormat, frameCapacity: 16_000 * 10)
+            else { return false }
+            var readFrames: AVAudioFramePosition = 0
+            while readFrames < expectedFrames {
+                try mixed.read(into: buffer, frameCount: AVAudioFrameCount(min(160_000, expectedFrames - readFrames)))
+                guard buffer.frameLength > 0 else { return false }
+                readFrames += AVAudioFramePosition(buffer.frameLength)
+            }
+        } catch {
+            return false
+        }
+        try FileManager.default.removeItem(at: sourceURL)
+        return true
     }
 
     /// Deletes recordings older than 7 days, protecting any URLs in the given set.

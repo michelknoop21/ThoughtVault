@@ -167,7 +167,12 @@ final class TranscriptsViewModel {
 
         let localRecord = LocalTranscriptStore.shared.record(forTaskId: transcript.taskId)
         if localRecord != nil {
-            LocalTranscriptStore.shared.delete(taskId: transcript.taskId)
+            do {
+                try LocalTranscriptStore.shared.delete(taskId: transcript.taskId)
+            } catch {
+                errorMessage = error.localizedDescription
+                return
+            }
         }
 
         // Only hit the server for records that did not originate locally.

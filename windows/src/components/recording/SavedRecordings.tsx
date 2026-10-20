@@ -4,7 +4,7 @@ import {
   ArrowSync24Regular,
   BinRecycle24Regular,
   Folder24Regular,
-} from "@fluentui/react-icons";
+} from "../ui/StudioIcons";
 import {
   listRecordings,
   deleteRecording,
@@ -16,6 +16,7 @@ import { uploadAndTrack } from "../../services/uploadAndTrack";
 import { processLocally } from "../../services/localPipeline";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { useToast } from "../ui/InfoBar";
+import { useConfirmation } from "../ui/useConfirmation";
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -41,14 +42,17 @@ function formatDate(timestamp: number): string {
 
 export function SavedRecordings({
   onReprocess,
+  initiallyExpanded = false,
 }: {
   onReprocess?: (filePath: string) => void;
+  initiallyExpanded?: boolean;
 }) {
   const [recordings, setRecordings] = useState<RecordingFile[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(initiallyExpanded);
   const settings = useSettingsStore();
   const toast = useToast();
+  const { confirm, confirmation } = useConfirmation();
 
   useEffect(() => {
     if (expanded) loadRecordings();
@@ -68,6 +72,7 @@ export function SavedRecordings({
   }
 
   async function handleDelete(file: RecordingFile) {
+    if (!await confirm(`“${file.filename}” wordt definitief verwijderd.`, "Opname verwijderen", "Verwijderen")) return;
     try {
       await deleteRecording(file.path);
       setRecordings((prev) => prev.filter((r) => r.path !== file.path));
@@ -78,6 +83,7 @@ export function SavedRecordings({
   }
 
   async function handleCleanup() {
+    if (!await confirm("Alle opnames ouder dan 7 dagen worden definitief verwijderd.", "Oude opnames opruimen", "Opruimen")) return;
     try {
       const dir = await getRecordingsDir();
       const count = await cleanupOldRecordings(dir, 7);
@@ -128,6 +134,7 @@ export function SavedRecordings({
 
   return (
     <div className="card card-static" style={{ width: "100%", padding: 0, overflow: "hidden" }}>
+      {confirmation}
       {/* Header */}
       <div
         className="flex-row justify-between"

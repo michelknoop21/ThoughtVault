@@ -782,6 +782,18 @@ actor APIService {
         let profile: Profile
     }
 
+    func updateProfile(_ profile: Profile) async throws {
+        let payload: [String: String] = [
+            "name": profile.name,
+            "systemPrompt": profile.systemPrompt ?? "",
+            "notulePrompt": profile.notulePrompt ?? "",
+            "outputTemplate": profile.template ?? ""
+        ]
+        let body = try JSONEncoder().encode(payload)
+        let req = try request(path: "/profiles/me/\(profile.id)", method: "PUT", body: body)
+        try await performVoid(req)
+    }
+
     func deleteProfile(id: String) async throws {
         let req = try request(path: "/profiles/me/\(id)", method: "DELETE")
         try await performVoid(req)

@@ -219,51 +219,50 @@ final class LocalTranscriptStore {
         return try? context.fetch(descriptor).first
     }
 
-    func delete(taskId: String) {
-        guard let record = record(forTaskId: taskId) else { return }
+    func delete(taskId: String) throws {
+        guard let record = record(forTaskId: taskId) else { throw LocalStoreError.recordNotFound }
         context.delete(record)
-        persist()
+        do { try context.save() } catch { context.rollback(); throw error }
     }
 
-    func updateTags(taskId: String, tags: [String]) {
-        guard let record = record(forTaskId: taskId) else { return }
+    func updateTags(taskId: String, tags: [String]) throws {
+        guard let record = record(forTaskId: taskId) else { throw LocalStoreError.recordNotFound }
+        let original = record.tags
         record.tags = tags
-        persist()
+        do { try context.save() } catch { record.tags = original; throw error }
     }
 
-    func updateNotule(taskId: String, html: String) {
-        guard let record = record(forTaskId: taskId) else { return }
+    func updateNotule(taskId: String, html: String) throws {
+        guard let record = record(forTaskId: taskId) else { throw LocalStoreError.recordNotFound }
+        let original = record.notuleHtml
         record.notuleHtml = html
-        persist()
+        do { try context.save() } catch { record.notuleHtml = original; throw error }
     }
 
-    func updateTitle(taskId: String, title: String) {
-        guard let record = record(forTaskId: taskId) else { return }
+    func updateTitle(taskId: String, title: String) throws {
+        guard let record = record(forTaskId: taskId) else { throw LocalStoreError.recordNotFound }
+        let original = record.title
         record.title = title
-        persist()
+        do { try context.save() } catch { record.title = original; throw error }
     }
 
     /// Updates the generated notule + title for a previously saved (partial) record.
     /// Throwing so callers can surface persistence failures instead of silently
     /// reporting success.
-    func finalizeNotule(taskId: String, html: String, title: String) throws {
+    func finalizeNotule(taskId: String, html: String, title: String, profileId: String? = nil, profileName: String? = nil) throws {
         guard let record = record(forTaskId: taskId) else {
             throw LocalStoreError.recordNotFound
         }
+        let original = (record.notuleHtml, record.title, record.profileId, record.profileName)
         record.notuleHtml = html
         record.title = title
-        try context.save()
-    }
-
-    // MARK: - Private
-
-    private func persist() {
-        do {
-            try context.save()
-        } catch {
-            logger.error("Save failed: \(error.localizedDescription)")
+        if let profileId { record.profileId = profileId; record.profileName = profileName }
+        do { try context.save() } catch {
+            (record.notuleHtml, record.title, record.profileId, record.profileName) = original
+            throw error
         }
     }
+
 }
 
 // MARK: - LocalStoreError

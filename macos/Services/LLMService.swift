@@ -16,6 +16,9 @@ enum LLMError: LocalizedError {
         case .providerUnavailable:
             return "De AI-provider is niet beschikbaar."
         case .serverError(let code):
+            if code == 429 {
+                return "De AI-provider heeft een gebruikslimiet bereikt (429). Probeer later opnieuw of controleer je limiet bij de provider."
+            }
             return "Serverfout: statuscode \(code)."
         case .generationFailed(let message):
             return "Generatie mislukt: \(message)"
@@ -61,18 +64,26 @@ func buildNotuleUserContent(
     transcription: String,
     outputTemplate: String?
 ) -> String {
+    let template = (outputTemplate ?? "").replacingOccurrences(
+        of: "<style\\b[^>]*>[\\s\\S]*?</style>", with: "",
+        options: [.regularExpression, .caseInsensitive]
+    )
+    let contentRules = """
+
+    Laatste inhoudsregels: volg de gekozen template en laat lege secties weg. Verzin geen feiten, besluiten, eigenaren of termijnen. Schrijf eenvoudige HTML zonder CSS, style-blok of code fences.
+    """
     if notulePrompt.contains("{{TRANSCRIPTION}}") {
         // Substitute the trusted template first, then insert the untrusted
         // transcription last so its content can never trigger a placeholder swap.
         return notulePrompt
-            .replacingOccurrences(of: "{{OUTPUT_TEMPLATE}}", with: outputTemplate ?? "")
-            .replacingOccurrences(of: "{{TRANSCRIPTION}}", with: transcription)
+            .replacingOccurrences(of: "{{OUTPUT_TEMPLATE}}", with: template)
+            .replacingOccurrences(of: "{{TRANSCRIPTION}}", with: transcription) + contentRules
     }
     var content = "\(notulePrompt)\n\nTranscriptie:\n\(transcription)"
-    if let template = outputTemplate, !template.isEmpty {
+    if !template.isEmpty {
         content += "\n\nGebruik dit outputformaat:\n\(template)"
     }
-    return content
+    return content + contentRules
 }
 
 // MARK: - LLMServiceFactory
@@ -99,6 +110,34 @@ class LLMServiceFactory {
             let baseURL = UserDefaults.standard.string(forKey: "lmStudioURL") ?? "http://localhost:1234"
             return OpenAICompatibleLLMService(baseURL: baseURL, model: model)
 
+        case .openAI:
+            guard provider.hasAPIKey else { return MissingAPIKeyLLMService(providerName: provider.studioNameForErrors) }
+            let model = UserDefaults.standard.string(forKey: "openAIModel") ?? OpenAICompatibleLLMService.openAIDefaultModel
+            // Large hosted context: chunk only truly huge transcripts.
+            return OpenAICompatibleLLMService(baseURL: OpenAICompatibleLLMService.openAIBaseURL, model: model,
+                                              apiKey: KeychainService.shared.load(for: "openAIApiKey"),
+                                              maxChunkCharacters: 400_000)
+
+        case .anthropic:
+            guard provider.hasAPIKey else { return MissingAPIKeyLLMService(providerName: provider.studioNameForErrors) }
+            let model = UserDefaults.standard.string(forKey: "anthropicModel") ?? AnthropicLLMService.defaultModel
+            return AnthropicLLMService(model: model, apiKey: KeychainService.shared.load(for: "anthropicApiKey"))
+
+        case .ollamaCloud:
+            guard provider.hasAPIKey else { return MissingAPIKeyLLMService(providerName: provider.displayName) }
+            return OpenAICompatibleLLMService(baseURL: OpenAICompatibleLLMService.ollamaCloudBaseURL,
+                                              model: UserDefaults.standard.string(forKey: "ollamaCloudModel") ?? "",
+                                              apiKey: KeychainService.shared.load(for: "ollamaApiKey"))
+
+        case .openAICompatible:
+            // The bearer token is only sent over HTTPS, so other schemes are refused up front.
+            guard let config = CloudAIConfiguration.selected(), provider.hasAPIKey,
+                  URL(string: config.baseURL)?.scheme?.lowercased() == "https" else {
+                return MissingAPIKeyLLMService(providerName: provider.displayName)
+            }
+            return OpenAICompatibleLLMService(baseURL: config.baseURL, model: config.model,
+                                              apiKey: KeychainService.shared.load(for: config.keychainKey))
+
         case .appleIntelligence:
             #if canImport(FoundationModels)
             if #available(macOS 26, iOS 26, *) {
@@ -112,6 +151,25 @@ class LLMServiceFactory {
             return CloudLLMServiceStub()
             #endif
         }
+    }
+}
+
+// MARK: - MissingAPIKeyLLMService
+
+/// A hosted provider is selected (or synced from another device) but no key is
+/// stored on this device yet.
+private struct MissingAPIKeyLLMService: LLMService {
+    let providerName: String
+    var isAvailable: Bool { false }
+
+    func generateNotulen(
+        transcription: String,
+        systemPrompt: String,
+        notulePrompt: String,
+        outputTemplate: String?,
+        onProgress: @Sendable (String) -> Void
+    ) async throws -> String {
+        throw LLMError.generationFailed("Geen API-sleutel voor \(providerName) op dit apparaat. Vul die in bij Instellingen > Verwerking.")
     }
 }
 
@@ -144,12 +202,22 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
     /// Optional bearer token. Set for hosted endpoints such as Ollama Cloud.
     private let apiKey: String?
 
-    /// Maximum tokens a typical local model handles comfortably (conservative estimate).
-    private static let maxChunkCharacters = 8_000
+    static let openAIBaseURL = "https://api.openai.com"
+    static let ollamaCloudBaseURL = "https://ollama.com"
+    static let openAIDefaultModel = "gpt-5.6-terra"
 
-    init(baseURL: String, model: String, apiKey: String? = nil) {
+    /// Transcript size above which it is summarized in chunks first. The default
+    /// is what a typical local model handles comfortably (conservative estimate).
+    let maxChunkCharacters: Int
+
+    init(baseURL: String, model: String, apiKey: String? = nil, maxChunkCharacters: Int? = nil) {
         self.baseURL = baseURL
         self.model = model
+        // Hosted gpt-oss has 128K context; leave ample room for the profile and output.
+        let hostedGPTOSS = URL(string: baseURL)?.scheme == "https"
+            && URL(string: baseURL)?.host?.lowercased() == "ollama.com"
+            && ["gpt-oss:120b", "gpt-oss:120b-cloud", "gpt-oss:20b", "gpt-oss:20b-cloud"].contains(model)
+        self.maxChunkCharacters = maxChunkCharacters ?? (hostedGPTOSS ? 64_000 : 8_000)
         let trimmed = apiKey?.trimmingCharacters(in: .whitespacesAndNewlines)
         self.apiKey = (trimmed?.isEmpty == false) ? trimmed : nil
     }
@@ -158,17 +226,57 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
 
     var isAvailable: Bool {
         get async {
-            // Try the OpenAI-compatible endpoint first, then fall back to Ollama's
-            // native one. The previous `URL(...) ?? URL(...)` never fell back
-            // because the first string always parses into a valid URL.
-            if await endpointReturns200("/v1/models") { return true }
-            if await endpointReturns200("/api/tags") { return true }
-            return false
+            await checkConnection() == .ready
         }
     }
 
+    enum ConnectionStatus: Equatable {
+        case ready
+        case unreachable
+        /// HTTPS server requires a key and none is configured.
+        case keyMissing
+        /// HTTPS server answered 401/403 to the configured key.
+        case keyRejected
+    }
+
+    /// Reachability alone is not enough: Ollama Cloud lists models without a key but
+    /// answers 401 on chat. HTTPS endpoints are therefore also probed on a protected
+    /// endpoint, so a missing or wrong key shows up here instead of during generation.
+    func checkConnection() async -> ConnectionStatus {
+        // Try the OpenAI-compatible endpoint first, then fall back to Ollama's
+        // native one. The previous `URL(...) ?? URL(...)` never fell back
+        // because the first string always parses into a valid URL.
+        var reachable = await endpointReturns200("/v1/models")
+        if !reachable { reachable = await endpointReturns200("/api/tags") }
+        guard reachable else { return .unreachable }
+        guard URL(string: baseURL)?.scheme?.lowercased() == "https" else { return .ready }
+        guard let status = await protectedEndpointStatus() else { return .unreachable }
+        guard status == 401 || status == 403 else { return .ready }
+        return apiKey == nil ? .keyMissing : .keyRejected
+    }
+
+    /// POSTs an empty body to chat completions: an authenticated caller gets a
+    /// validation error (4xx other than 401/403), an unauthenticated one 401. No tokens are spent.
+    private func protectedEndpointStatus() async -> Int? {
+        guard let url = URL(string: endpoint("/v1/chat/completions")) else { return nil }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.timeoutInterval = 8
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = Data("{}".utf8)
+        applyAuth(to: &request)
+        guard let (_, response) = try? await URLSession.shared.data(for: request) else { return nil }
+        return (response as? HTTPURLResponse)?.statusCode
+    }
+
+    /// Accepts base URLs with or without a trailing `/v1`, as hosted providers document both.
+    private func endpoint(_ path: String) -> String {
+        let base = baseURL.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        return base + (base.hasSuffix("/v1") && path.hasPrefix("/v1/") ? String(path.dropFirst(3)) : path)
+    }
+
     private func endpointReturns200(_ path: String) async -> Bool {
-        guard let url = URL(string: "\(baseURL)\(path)") else { return false }
+        guard let url = URL(string: endpoint(path)) else { return false }
         var request = URLRequest(url: url)
         request.timeoutInterval = 5
         applyAuth(to: &request)
@@ -200,7 +308,7 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
     }
 
     private func fetchModelsOpenAI() async -> [String]? {
-        guard let url = URL(string: "\(baseURL)/v1/models") else { return nil }
+        guard let url = URL(string: endpoint("/v1/models")) else { return nil }
         var request = URLRequest(url: url)
         request.timeoutInterval = 10
         applyAuth(to: &request)
@@ -213,7 +321,7 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
     }
 
     private func fetchModelsOllamaTags() async -> [String]? {
-        guard let url = URL(string: "\(baseURL)/api/tags") else { return nil }
+        guard let url = URL(string: endpoint("/api/tags")) else { return nil }
         var request = URLRequest(url: url)
         request.timeoutInterval = 10
         applyAuth(to: &request)
@@ -237,7 +345,7 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
 
         // If the transcription is long, summarize it in chunks first
         let processedTranscription: String
-        if transcription.count > Self.maxChunkCharacters {
+        if transcription.count > maxChunkCharacters {
             logger.info("OpenAICompatibleLLMService: transcription is long (\(transcription.count) chars), chunking first")
             processedTranscription = try await summarizeInChunks(transcription)
         } else {
@@ -261,7 +369,7 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
     // MARK: - Chunked Summarization
 
     private func summarizeInChunks(_ text: String) async throws -> String {
-        let chunks = splitIntoChunks(text, maxChars: Self.maxChunkCharacters)
+        let chunks = splitIntoChunks(text, maxChars: maxChunkCharacters)
         var summaries: [String] = []
 
         for (index, chunk) in chunks.enumerated() {
@@ -308,7 +416,10 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
         onProgress: @Sendable (String) -> Void
     ) async throws -> String {
 
-        guard let url = URL(string: "\(baseURL)/v1/chat/completions") else {
+        guard !model.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            throw LLMError.generationFailed("Kies een model bij Instellingen > Verwerking.")
+        }
+        guard let url = URL(string: endpoint("/v1/chat/completions")) else {
             throw LLMError.generationFailed("Ongeldige server URL: \(baseURL)")
         }
 
@@ -376,144 +487,7 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
     }
 }
 
-// MARK: - AppleFoundationModelService
-
-#if canImport(FoundationModels)
-import FoundationModels
-
-/// LLM service implementation using Apple's on-device Foundation Models framework.
-/// Requires macOS 26+ or iOS 26+.
-@available(macOS 26, iOS 26, *)
-final class AppleFoundationModelService: LLMService, @unchecked Sendable {
-
-    // The on-device model has a 4,096-token context window shared by instructions,
-    // prompt AND output (~3-4 chars/token). Keep every request's variable part small.
-    private static let maxChunkCharacters = 6_000
-    private static let maxFinalTranscriptCharacters = 5_000
-
-    /// Compact output skeleton used instead of the profile's full HTML template —
-    /// the real templates (4-10k chars) alone would overflow the context window.
-    private static let compactTemplate = """
-    <h1>[Titel]</h1>
-    <p><em>[Datum] — [Deelnemers]</em></p>
-    <h2>Samenvatting</h2>
-    <p>...</p>
-    <h2>Besproken punten</h2>
-    <ul><li>...</li></ul>
-    <h2>Besluiten</h2>
-    <ul><li>...</li></ul>
-    <h2>Actiepunten</h2>
-    <ul><li>[Wie]: [Wat]</li></ul>
-    """
-
-    // MARK: - Availability
-
-    var isAvailable: Bool {
-        get async { Self.unavailabilityReason == nil }
-    }
-
-    // MARK: - Generate Notulen
-
-    func generateNotulen(
-        transcription: String,
-        systemPrompt: String,
-        notulePrompt: String,
-        outputTemplate: String?,
-        onProgress: @Sendable (String) -> Void
-    ) async throws -> String {
-
-        // Refuse early with a clear reason rather than letting LanguageModelSession
-        // fail opaquely when Apple Intelligence is off, unsupported, or still loading.
-        if let reason = Self.unavailabilityReason {
-            throw LLMError.generationFailed(reason)
-        }
-
-        // Compress long transcriptions until they fit the final request.
-        // ponytail: max 3 reduce-passes; genoeg voor uren transcript (6000^n groei).
-        var processedTranscription = transcription
-        var passes = 0
-        while processedTranscription.count > Self.maxFinalTranscriptCharacters, passes < 3 {
-            logger.info("AppleFoundationModelService: transcript \(processedTranscription.count) chars, reduce pass \(passes + 1)")
-            processedTranscription = try await summarizeInChunks(processedTranscription)
-            passes += 1
-        }
-
-        let userContent = buildNotuleUserContent(
-            notulePrompt: notulePrompt,
-            transcription: processedTranscription,
-            outputTemplate: Self.compactTemplate
-        )
-
-        let instructions = systemPrompt.isEmpty
-            ? "Je bent een professionele notulist die vergaderingen nauwkeurig samenvat in het Nederlands."
-            : systemPrompt
-
-        let session = LanguageModelSession(instructions: instructions)
-        var fullText = ""
-        var lastReportedLength = 0
-
-        // Stream the response token by token; onProgress receives each new chunk
-        for try await snapshot in session.streamResponse(to: userContent) {
-            fullText = snapshot.content
-            let newChunk = String(fullText.dropFirst(lastReportedLength))
-            if !newChunk.isEmpty {
-                onProgress(newChunk)
-                lastReportedLength = fullText.count
-            }
-        }
-
-        if fullText.isEmpty {
-            throw LLMError.emptyResponse
-        }
-
-        return fullText
-    }
-
-    // MARK: - Chunked Summarization
-
-    private func summarizeInChunks(_ text: String) async throws -> String {
-        let chunks = splitIntoChunks(text, maxChars: Self.maxChunkCharacters)
-        var summaries: [String] = []
-
-        let summaryInstructions = "Je bent een assistent die transcripties samenvat. Bewaar alle belangrijke informatie, namen, besluiten en actiepunten."
-
-        for (index, chunk) in chunks.enumerated() {
-            try Task.checkCancellation()
-            logger.info("AppleFoundationModelService: summarizing chunk \(index + 1)/\(chunks.count)")
-            let session = LanguageModelSession(instructions: summaryInstructions)
-            let response = try await session.respond(
-                to: "Vat dit deel van de transcriptie samen:\n\n\(chunk)"
-            )
-            summaries.append(response.content)
-        }
-
-        return summaries.joined(separator: "\n\n")
-    }
-
-    // MARK: - Helpers
-
-    private func splitIntoChunks(_ text: String, maxChars: Int) -> [String] {
-        var chunks: [String] = []
-        var current = ""
-        let sentences = text.components(separatedBy: ". ")
-
-        for sentence in sentences {
-            let candidate = current.isEmpty ? sentence : current + ". " + sentence
-            if candidate.count > maxChars && !current.isEmpty {
-                chunks.append(current)
-                current = sentence
-            } else {
-                current = candidate
-            }
-        }
-
-        if !current.isEmpty {
-            chunks.append(current)
-        }
-
-        return hardSplitOversizedChunks(chunks.isEmpty ? [text] : chunks, maxChars: maxChars)
-    }
-}
+// MARK: - Chunk helpers
 
 /// Transcriptions without ". " separators produce one giant chunk that overflows
 /// the model's context window (hang or empty output). Hard-split any chunk that
@@ -530,28 +504,3 @@ func hardSplitOversizedChunks(_ chunks: [String], maxChars: Int) -> [String] {
     }
     return result
 }
-
-// MARK: - Apple Intelligence availability
-
-@available(macOS 26, iOS 26, *)
-extension AppleFoundationModelService {
-    /// Single source of truth for whether on-device Apple Intelligence can run.
-    /// `nil` means ready; otherwise a user-facing Dutch reason it cannot.
-    /// Consumed by `isAvailable`, the generation guard, and SettingsView's status note.
-    static var unavailabilityReason: String? {
-        switch SystemLanguageModel.default.availability {
-        case .available:
-            return nil
-        case .unavailable(.appleIntelligenceNotEnabled):
-            return "Schakel Apple Intelligence in via Systeeminstellingen."
-        case .unavailable(.deviceNotEligible):
-            return "Dit apparaat ondersteunt Apple Intelligence niet."
-        case .unavailable(.modelNotReady):
-            return "Apple Intelligence-model wordt nog gedownload. Probeer later opnieuw."
-        case .unavailable:
-            return "Apple Intelligence is momenteel niet beschikbaar."
-        }
-    }
-}
-
-#endif

@@ -63,7 +63,7 @@ describe("uploadRecording", () => {
 
     await expect(
       api.uploadRecording("/path/to/big.wav", "p1", "microphone")
-    ).rejects.toThrow("Upload mislukt: Bestand te groot");
+    ).rejects.toThrow("Bestand te groot");
   });
 
   it("handles Rust invoke failure (file not found)", async () => {
@@ -223,6 +223,6 @@ describe("uploadRecordingWithProgress", () => {
         "combined",
         progress
       )
-    ).rejects.toThrow("Upload mislukt: Server overbelast");
+    ).rejects.toThrow("Server overbelast");
   });
 });

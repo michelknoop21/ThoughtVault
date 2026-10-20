@@ -7,6 +7,32 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		AC110001 /* WhisperLoadingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC110001 /* WhisperLoadingTests.swift */; };
+		AA00PC02 /* PersonalCorrectionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA00PC02 /* PersonalCorrectionsView.swift */; };
+		AA00PC01 /* PersonalCorrections.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA00PC01 /* PersonalCorrections.swift */; };
+		AASIRI01 /* siriwave-MIT.txt in Resources */ = {isa = PBXBuildFile; fileRef = FASIRI01 /* siriwave-MIT.txt */; };
+		AB0000S5 /* QuickNoteStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000S5 /* QuickNoteStoreTests.swift */; };
+		AB9E5A02 /* VaultFolderStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB9E5A02 /* VaultFolderStoreTests.swift */; };
+		AA0000S4 /* QuickNoteStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000S4 /* QuickNoteStore.swift */; };
+		AA0000H1 /* HomeView+Studio.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000H1 /* HomeView+Studio.swift */; };
+		AA0000J2 /* OnboardingView+iOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000J2 /* OnboardingView+iOS.swift */; };
+		AA0000J1 /* AccountView+iOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000J1 /* AccountView+iOS.swift */; };
+		AA0000I9 /* ProfilesView+iOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000I9 /* ProfilesView+iOS.swift */; };
+		AA0000I8 /* SettingsView+iOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000I8 /* SettingsView+iOS.swift */; };
+		AA0000I7 /* TranscriptDetail+iOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000I7 /* TranscriptDetail+iOS.swift */; };
+		AA0000I6 /* TranscriptsView+iOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000I6 /* TranscriptsView+iOS.swift */; };
+		AA0000I5 /* TasksView+iOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000I5 /* TasksView+iOS.swift */; };
+		AA0000I4 /* RecordingView+iOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000I4 /* RecordingView+iOS.swift */; };
+		AA0000I3 /* IOSProcessingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000I3 /* IOSProcessingView.swift */; };
+		AA0000I2 /* HomeView+iOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000I2 /* HomeView+iOS.swift */; };
+		AA0000H2 /* HomeView+Card.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000H2 /* HomeView+Card.swift */; };
+		AA0000H3 /* HomeView+Panels.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000H3 /* HomeView+Panels.swift */; };
+		AA0000H4 /* HomeView+Side.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000H4 /* HomeView+Side.swift */; };
+		AA0000H5 /* HomeDecor.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000H5 /* HomeDecor.swift */; };
+		AA0000I1 /* IOSTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000I1 /* IOSTheme.swift */; };
+		AA0000S3 /* MainSidebar.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000S3 /* MainSidebar.swift */; };
+		AA0000S2 /* RecordingView+Inspector.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000S2 /* RecordingView+Inspector.swift */; };
+		AA0000S1 /* RecordingView+Studio.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000S1 /* RecordingView+Studio.swift */; };
 		AA000001 /* ThoughtVaultApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000001 /* ThoughtVaultApp.swift */; };
 		AA000002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000002 /* ContentView.swift */; };
 		AA000003 /* Color+Brand.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000003 /* Color+Brand.swift */; };
@@ -24,6 +50,10 @@
 		AB000301 /* ObsidianService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000301 /* ObsidianService.swift */; };
 		AB000401 /* VaultFolderStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000401 /* VaultFolderStore.swift */; };
 		AA000014 /* LLMService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000014 /* LLMService.swift */; };
+		AA0000K4 /* ProcessingAdvisor.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000K4 /* ProcessingAdvisor.swift */; };
+		AA0000K3 /* WhisperModelStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000K3 /* WhisperModelStore.swift */; };
+		AA0000K2 /* AppleFoundationModelService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000K2 /* AppleFoundationModelService.swift */; };
+		AA0000K1 /* AnthropicLLMService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000K1 /* AnthropicLLMService.swift */; };
 		AA000015 /* NetworkMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000015 /* NetworkMonitor.swift */; };
 		AA000016 /* OfflineQueue.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000016 /* OfflineQueue.swift */; };
 		AA000017 /* OnDeviceTranscriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000017 /* OnDeviceTranscriber.swift */; };
@@ -31,6 +61,7 @@
 		AA000059 /* VideoCallDetectionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000059 /* VideoCallDetectionService.swift */; };
 		AA000019 /* AuthViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000019 /* AuthViewModel.swift */; };
 		AA000020 /* RecordingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000020 /* RecordingViewModel.swift */; };
+		AA9E5A01 /* RecordingViewModel+Restart.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA9E5A01 /* RecordingViewModel+Restart.swift */; };
 		AA000021 /* TranscriptsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000021 /* TranscriptsViewModel.swift */; };
 		AA000022 /* AccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000022 /* AccountView.swift */; };
 		AA000023 /* AdminView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000023 /* AdminView.swift */; };
@@ -42,6 +73,11 @@
 		AA000029 /* ProfilesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000029 /* ProfilesView.swift */; };
 		AA000030 /* RecordingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000030 /* RecordingView.swift */; };
 		AA000031 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000031 /* SettingsView.swift */; };
+		AA0000K8 /* SettingsView+VerwerkingSide.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000K8 /* SettingsView+VerwerkingSide.swift */; };
+		AA0000K7 /* SettingsView+Verwerking.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000K7 /* SettingsView+Verwerking.swift */; };
+		AA0000K6 /* SettingsView+Studio.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000K6 /* SettingsView+Studio.swift */; };
+		AA0000K5 /* HostedProviderConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000K5 /* HostedProviderConfig.swift */; };
+		AA0000CP1 /* CloudProviderConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000CP1 /* CloudProviderConfig.swift */; };
 		AA000032 /* TranscriptsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000032 /* TranscriptsView.swift */; };
 		AA000033 /* OnboardingViewiOSStub.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000033 /* OnboardingViewiOSStub.swift */; };
 		AA000034 /* FloatingWidgetPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000034 /* FloatingWidgetPanel.swift */; };
@@ -57,7 +93,6 @@
 		AA000060 /* ProcessingBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000060 /* ProcessingBar.swift */; };
 		AA000039 /* TranscriptCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000039 /* TranscriptCard.swift */; };
 		AA000040 /* WaveformView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000040 /* WaveformView.swift */; };
-		AA000075 /* HomeHeroCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000075 /* HomeHeroCard.swift */; };
 		AA000041 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = FA000041 /* Localizable.strings */; };
 		AA000042 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = FA000042 /* Localizable.strings */; };
 		AA000043 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = FA000043 /* PrivacyInfo.xcprivacy */; };
@@ -92,12 +127,12 @@
 		AA000063 /* LocalTranscriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000063 /* LocalTranscriber.swift */; };
 		AA000090 /* AudioChunker.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000090 /* AudioChunker.swift */; };
 		AA000091 /* AudioEnvelopeProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000091 /* AudioEnvelopeProcessor.swift */; };
-		AA0000M1 /* WaveformShader.metal in Sources */ = {isa = PBXBuildFile; fileRef = FA0000M1 /* WaveformShader.metal */; };
 		AA000064 /* NotuleTitleExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000064 /* NotuleTitleExtractor.swift */; };
 		AA000065 /* WhisperKit in Frameworks */ = {isa = PBXBuildFile; productRef = SD000001 /* WhisperKit */; };
 		AA000066 /* ProfileTemplates.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000066 /* ProfileTemplates.swift */; };
 		AA000067 /* ProfileTemplates.json in Resources */ = {isa = PBXBuildFile; fileRef = FA000067 /* ProfileTemplates.json */; };
 		AB000001 /* ThoughtVaultTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000001 /* ThoughtVaultTests.swift */; };
+		AAUP0001 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = SDUP0001 /* Sparkle */; platformFilter = macos; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -111,6 +146,32 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		FC110001 /* WhisperLoadingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhisperLoadingTests.swift; sourceTree = "<group>"; };
+		FA00PC02 /* PersonalCorrectionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "../Views/PersonalCorrectionsView.swift"; sourceTree = "<group>"; };
+		FA00PC01 /* PersonalCorrections.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonalCorrections.swift; sourceTree = "<group>"; };
+		FASIRI01 /* siriwave-MIT.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "siriwave-MIT.txt"; sourceTree = "<group>"; };
+		FB0000S5 /* QuickNoteStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickNoteStoreTests.swift; sourceTree = "<group>"; };
+		FB9E5A02 /* VaultFolderStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VaultFolderStoreTests.swift; sourceTree = "<group>"; };
+		FA0000S4 /* QuickNoteStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickNoteStore.swift; sourceTree = "<group>"; };
+		FA0000H1 /* HomeView+Studio.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "HomeView+Studio.swift"; sourceTree = "<group>"; };
+		FA0000J2 /* OnboardingView+iOS.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "OnboardingView+iOS.swift"; sourceTree = "<group>"; };
+		FA0000J1 /* AccountView+iOS.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AccountView+iOS.swift"; sourceTree = "<group>"; };
+		FA0000I9 /* ProfilesView+iOS.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ProfilesView+iOS.swift"; sourceTree = "<group>"; };
+		FA0000I8 /* SettingsView+iOS.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SettingsView+iOS.swift"; sourceTree = "<group>"; };
+		FA0000I7 /* TranscriptDetail+iOS.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TranscriptDetail+iOS.swift"; sourceTree = "<group>"; };
+		FA0000I6 /* TranscriptsView+iOS.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TranscriptsView+iOS.swift"; sourceTree = "<group>"; };
+		FA0000I5 /* TasksView+iOS.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TasksView+iOS.swift"; sourceTree = "<group>"; };
+		FA0000I4 /* RecordingView+iOS.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RecordingView+iOS.swift"; sourceTree = "<group>"; };
+		FA0000I3 /* IOSProcessingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IOSProcessingView.swift; sourceTree = "<group>"; };
+		FA0000I2 /* HomeView+iOS.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "HomeView+iOS.swift"; sourceTree = "<group>"; };
+		FA0000H2 /* HomeView+Card.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "HomeView+Card.swift"; sourceTree = "<group>"; };
+		FA0000H3 /* HomeView+Panels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "HomeView+Panels.swift"; sourceTree = "<group>"; };
+		FA0000H4 /* HomeView+Side.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "HomeView+Side.swift"; sourceTree = "<group>"; };
+		FA0000H5 /* HomeDecor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "HomeDecor.swift"; sourceTree = "<group>"; };
+		FA0000I1 /* IOSTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IOSTheme.swift; sourceTree = "<group>"; };
+		FA0000S3 /* MainSidebar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MainSidebar.swift"; sourceTree = "<group>"; };
+		FA0000S2 /* RecordingView+Inspector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RecordingView+Inspector.swift"; sourceTree = "<group>"; };
+		FA0000S1 /* RecordingView+Studio.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RecordingView+Studio.swift"; sourceTree = "<group>"; };
 		C96A32F62F65A4C4001691E3 /* ThoughtVault.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = ThoughtVault.xctestplan; sourceTree = "<group>"; };
 		FA000001 /* ThoughtVaultApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThoughtVaultApp.swift; sourceTree = "<group>"; };
 		FA000002 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -129,6 +190,10 @@
 		FB000301 /* ObsidianService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ObsidianService.swift; sourceTree = "<group>"; };
 		FB000401 /* VaultFolderStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VaultFolderStore.swift; sourceTree = "<group>"; };
 		FA000014 /* LLMService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMService.swift; sourceTree = "<group>"; };
+		FA0000K4 /* ProcessingAdvisor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessingAdvisor.swift; sourceTree = "<group>"; };
+		FA0000K3 /* WhisperModelStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhisperModelStore.swift; sourceTree = "<group>"; };
+		FA0000K2 /* AppleFoundationModelService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleFoundationModelService.swift; sourceTree = "<group>"; };
+		FA0000K1 /* AnthropicLLMService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnthropicLLMService.swift; sourceTree = "<group>"; };
 		FA000015 /* NetworkMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkMonitor.swift; sourceTree = "<group>"; };
 		FA000016 /* OfflineQueue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineQueue.swift; sourceTree = "<group>"; };
 		FA000017 /* OnDeviceTranscriber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnDeviceTranscriber.swift; sourceTree = "<group>"; };
@@ -136,6 +201,7 @@
 		FA000059 /* VideoCallDetectionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoCallDetectionService.swift; sourceTree = "<group>"; };
 		FA000019 /* AuthViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthViewModel.swift; sourceTree = "<group>"; };
 		FA000020 /* RecordingViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingViewModel.swift; sourceTree = "<group>"; };
+		FA9E5A01 /* RecordingViewModel+Restart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RecordingViewModel+Restart.swift"; sourceTree = "<group>"; };
 		FA000021 /* TranscriptsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptsViewModel.swift; sourceTree = "<group>"; };
 		FA000022 /* AccountView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountView.swift; sourceTree = "<group>"; };
 		FA000023 /* AdminView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminView.swift; sourceTree = "<group>"; };
@@ -147,6 +213,11 @@
 		FA000029 /* ProfilesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfilesView.swift; sourceTree = "<group>"; };
 		FA000030 /* RecordingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingView.swift; sourceTree = "<group>"; };
 		FA000031 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		FA0000K8 /* SettingsView+VerwerkingSide.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SettingsView+VerwerkingSide.swift"; sourceTree = "<group>"; };
+		FA0000K7 /* SettingsView+Verwerking.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SettingsView+Verwerking.swift"; sourceTree = "<group>"; };
+		FA0000K6 /* SettingsView+Studio.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SettingsView+Studio.swift"; sourceTree = "<group>"; };
+		FA0000K5 /* HostedProviderConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostedProviderConfig.swift; sourceTree = "<group>"; };
+		FA0000CP1 /* CloudProviderConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudProviderConfig.swift; sourceTree = "<group>"; };
 		FA000032 /* TranscriptsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptsView.swift; sourceTree = "<group>"; };
 		FA000033 /* OnboardingViewiOSStub.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingViewiOSStub.swift; sourceTree = "<group>"; };
 		FA000034 /* FloatingWidgetPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloatingWidgetPanel.swift; sourceTree = "<group>"; };
@@ -162,7 +233,6 @@
 		FA000060 /* ProcessingBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessingBar.swift; sourceTree = "<group>"; };
 		FA000039 /* TranscriptCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptCard.swift; sourceTree = "<group>"; };
 		FA000040 /* WaveformView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaveformView.swift; sourceTree = "<group>"; };
-		FA000075 /* HomeHeroCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeHeroCard.swift; sourceTree = "<group>"; };
 		FA000041 /* Localizable.strings */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = Localizable.strings; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
 		FA000042 /* Localizable.strings */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = Localizable.strings; path = nl.lproj/Localizable.strings; sourceTree = "<group>"; };
 		FA000043 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
@@ -200,7 +270,6 @@
 		FA000063 /* LocalTranscriber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalTranscriber.swift; sourceTree = "<group>"; };
 		FA000090 /* AudioChunker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioChunker.swift; sourceTree = "<group>"; };
 		FA000091 /* AudioEnvelopeProcessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioEnvelopeProcessor.swift; sourceTree = "<group>"; };
-		FA0000M1 /* WaveformShader.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = WaveformShader.metal; sourceTree = "<group>"; };
 		FA000064 /* NotuleTitleExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotuleTitleExtractor.swift; sourceTree = "<group>"; };
 		FA000066 /* ProfileTemplates.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileTemplates.swift; sourceTree = "<group>"; };
 		FA000067 /* ProfileTemplates.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = ProfileTemplates.json; sourceTree = "<group>"; };
@@ -215,6 +284,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				AA000065 /* WhisperKit in Frameworks */,
+				AAUP0001 /* Sparkle in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -239,14 +309,6 @@
 			name = ThoughtVaultApp;
 			sourceTree = "<group>";
 		};
-		GG0000M0 /* Shaders */ = {
-			isa = PBXGroup;
-			children = (
-				FA0000M1 /* WaveformShader.metal */,
-			);
-			path = Shaders;
-			sourceTree = "<group>";
-		};
 		GG000001 /* macos */ = {
 			isa = PBXGroup;
 			children = (
@@ -254,7 +316,6 @@
 				GG000020 /* Extensions */,
 				GG000030 /* Models */,
 				GG000040 /* Services */,
-				GG0000M0 /* Shaders */,
 				GG000050 /* ViewModels */,
 				GG000060 /* Views */,
 				GG000070 /* Resources */,
@@ -305,6 +366,7 @@
 				FA000006 /* Analytics.swift */,
 				FA000007 /* APIService.swift */,
 				FA000008 /* AudioRecorder.swift */,
+				FA0000S4 /* QuickNoteStore.swift */,
 				FA000009 /* BiometricService.swift */,
 				FA000010 /* CalendarService.swift */,
 				FA000011 /* CrashReporter.swift */,
@@ -312,9 +374,15 @@
 				FA000058 /* GoogleAuthService.swift */,
 				FA000013 /* KeychainService.swift */,
 				FA000014 /* LLMService.swift */,
+				FA0000K4 /* ProcessingAdvisor.swift */,
+				FA0000K3 /* WhisperModelStore.swift */,
+				FA0000K2 /* AppleFoundationModelService.swift */,
+				FA0000K1 /* AnthropicLLMService.swift */,
 				FA000062 /* LocalTranscriptStore.swift */,
 				FA000071 /* PersonDirectoryService.swift */,
 				FA000063 /* LocalTranscriber.swift */,
+				FA00PC02 /* PersonalCorrectionsView.swift */,
+				FA00PC01 /* PersonalCorrections.swift */,
 				FA000090 /* AudioChunker.swift */,
 				CAFE0014 /* SettingsSyncService.swift */,
 				FA000091 /* AudioEnvelopeProcessor.swift */,
@@ -339,6 +407,7 @@
 			children = (
 				FA000019 /* AuthViewModel.swift */,
 				FA000020 /* RecordingViewModel.swift */,
+				FA9E5A01 /* RecordingViewModel+Restart.swift */,
 				FA000055 /* TasksViewModel.swift */,
 				FA000021 /* TranscriptsViewModel.swift */,
 			);
@@ -351,13 +420,34 @@
 				FA000022 /* AccountView.swift */,
 				FA000023 /* AdminView.swift */,
 				FA000024 /* HomeView.swift */,
+				FA0000H1 /* HomeView+Studio.swift */,
+				FA0000J2 /* OnboardingView+iOS.swift */,
+				FA0000J1 /* AccountView+iOS.swift */,
+				FA0000I9 /* ProfilesView+iOS.swift */,
+				FA0000I8 /* SettingsView+iOS.swift */,
+				FA0000I7 /* TranscriptDetail+iOS.swift */,
+				FA0000I6 /* TranscriptsView+iOS.swift */,
+				FA0000I5 /* TasksView+iOS.swift */,
+				FA0000I4 /* RecordingView+iOS.swift */,
+				FA0000I3 /* IOSProcessingView.swift */,
+				FA0000I2 /* HomeView+iOS.swift */,
+				FA0000H2 /* HomeView+Card.swift */,
+				FA0000H3 /* HomeView+Panels.swift */,
+				FA0000H4 /* HomeView+Side.swift */,
 				FA000025 /* LoginView.swift */,
 				FA000026 /* NotuleResultView.swift */,
 				FA000027 /* OnboardingView.swift */,
 				FA000028 /* ProcessingView.swift */,
 				FA000029 /* ProfilesView.swift */,
 				FA000030 /* RecordingView.swift */,
+				FA0000S2 /* RecordingView+Inspector.swift */,
+				FA0000S1 /* RecordingView+Studio.swift */,
 				FA000031 /* SettingsView.swift */,
+				FA0000K8 /* SettingsView+VerwerkingSide.swift */,
+				FA0000K7 /* SettingsView+Verwerking.swift */,
+				FA0000K6 /* SettingsView+Studio.swift */,
+				FA0000K5 /* HostedProviderConfig.swift */,
+				FA0000CP1 /* CloudProviderConfig.swift */,
 				FA000070 /* ProfileSettingsView.swift */,
 				FA000072 /* PeopleDirectoryView.swift */,
 				FA000073 /* PersonEditView.swift */,
@@ -386,7 +476,9 @@
 				FA0000F1 /* SpinningProgressView.swift */,
 				FA000039 /* TranscriptCard.swift */,
 				FA000040 /* WaveformView.swift */,
-				FA000075 /* HomeHeroCard.swift */,
+				FA0000S3 /* MainSidebar.swift */,
+				FA0000H5 /* HomeDecor.swift */,
+				FA0000I1 /* IOSTheme.swift */,
 				FA000052 /* PermissionBanner.swift */,
 				FA000053 /* EditableHTMLWebView.swift */,
 			);
@@ -399,6 +491,7 @@
 				FA000041 /* Localizable.strings */,
 				FA000042 /* Localizable.strings */,
 				FA000067 /* ProfileTemplates.json */,
+				FASIRI01 /* siriwave-MIT.txt */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -416,12 +509,15 @@
 			isa = PBXGroup;
 			children = (
 				FB000001 /* ThoughtVaultTests.swift */,
+				FB0000S5 /* QuickNoteStoreTests.swift */,
+				FB9E5A02 /* VaultFolderStoreTests.swift */,
 				FB000002 /* MigrationTests.swift */,
 				FB000003 /* PersonProfileTests.swift */,
 				FB000004 /* PersonDirectoryServiceTests.swift */,
 				FB000005 /* GraphAttendeeDecodeTests.swift */,
 				FB000007 /* AudioEnvelopeProcessorTests.swift */,
 				FB000008 /* LLMChunkingTests.swift */,
+				FC110001 /* WhisperLoadingTests.swift */,
 				GG000100 /* Fixtures */,
 			);
 			path = ThoughtVaultTests;
@@ -453,6 +549,7 @@
 			name = ThoughtVault;
 			packageProductDependencies = (
 				SD000001 /* WhisperKit */,
+				SDUP0001 /* Sparkle */,
 			);
 			productName = ThoughtVault;
 			productReference = FC000001 /* ThoughtVault.app */;
@@ -507,6 +604,7 @@
 			mainGroup = GG000000 /* ThoughtVaultApp */;
 			packageReferences = (
 				SP000001 /* XCRemoteSwiftPackageReference "WhisperKit" */,
+				SPUP0001 /* Sparkle */,
 			);
 			productRefGroup = GG000090 /* Products */;
 			projectDirPath = "";
@@ -528,6 +626,7 @@
 				AA000043 /* PrivacyInfo.xcprivacy in Resources */,
 				AA000044 /* Assets.xcassets in Resources */,
 				AA000067 /* ProfileTemplates.json in Resources */,
+				AASIRI01 /* siriwave-MIT.txt in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -556,9 +655,10 @@
 				AA000062 /* LocalTranscriptStore.swift in Sources */,
 				AA000071 /* PersonDirectoryService.swift in Sources */,
 				AA000063 /* LocalTranscriber.swift in Sources */,
+				AA00PC02 /* PersonalCorrectionsView.swift in Sources */,
+				AA00PC01 /* PersonalCorrections.swift in Sources */,
 				AA000090 /* AudioChunker.swift in Sources */,
 				AA000091 /* AudioEnvelopeProcessor.swift in Sources */,
-				AA0000M1 /* WaveformShader.metal in Sources */,
 				AA000064 /* NotuleTitleExtractor.swift in Sources */,
 				AA000006 /* Analytics.swift in Sources */,
 				AA000007 /* APIService.swift in Sources */,
@@ -573,6 +673,10 @@
 				AB000301 /* ObsidianService.swift in Sources */,
 				AB000401 /* VaultFolderStore.swift in Sources */,
 				AA000014 /* LLMService.swift in Sources */,
+				AA0000K4 /* ProcessingAdvisor.swift in Sources */,
+				AA0000K3 /* WhisperModelStore.swift in Sources */,
+				AA0000K2 /* AppleFoundationModelService.swift in Sources */,
+				AA0000K1 /* AnthropicLLMService.swift in Sources */,
 				AA000015 /* NetworkMonitor.swift in Sources */,
 				AA000016 /* OfflineQueue.swift in Sources */,
 				AA000017 /* OnDeviceTranscriber.swift in Sources */,
@@ -580,6 +684,7 @@
 				AA000059 /* VideoCallDetectionService.swift in Sources */,
 				AA000019 /* AuthViewModel.swift in Sources */,
 				AA000020 /* RecordingViewModel.swift in Sources */,
+				AA9E5A01 /* RecordingViewModel+Restart.swift in Sources */,
 				AA000021 /* TranscriptsViewModel.swift in Sources */,
 				AA000055 /* TasksViewModel.swift in Sources */,
 				AA000022 /* AccountView.swift in Sources */,
@@ -591,7 +696,32 @@
 				AA000028 /* ProcessingView.swift in Sources */,
 				AA000029 /* ProfilesView.swift in Sources */,
 				AA000030 /* RecordingView.swift in Sources */,
+				AA0000S4 /* QuickNoteStore.swift in Sources */,
+				AA0000S3 /* MainSidebar.swift in Sources */,
+				AA0000H1 /* HomeView+Studio.swift in Sources */,
+				AA0000J2 /* OnboardingView+iOS.swift in Sources */,
+				AA0000J1 /* AccountView+iOS.swift in Sources */,
+				AA0000I9 /* ProfilesView+iOS.swift in Sources */,
+				AA0000I8 /* SettingsView+iOS.swift in Sources */,
+				AA0000I7 /* TranscriptDetail+iOS.swift in Sources */,
+				AA0000I6 /* TranscriptsView+iOS.swift in Sources */,
+				AA0000I5 /* TasksView+iOS.swift in Sources */,
+				AA0000I4 /* RecordingView+iOS.swift in Sources */,
+				AA0000I3 /* IOSProcessingView.swift in Sources */,
+				AA0000I2 /* HomeView+iOS.swift in Sources */,
+				AA0000H2 /* HomeView+Card.swift in Sources */,
+				AA0000H3 /* HomeView+Panels.swift in Sources */,
+				AA0000H4 /* HomeView+Side.swift in Sources */,
+				AA0000H5 /* HomeDecor.swift in Sources */,
+				AA0000I1 /* IOSTheme.swift in Sources */,
+				AA0000S2 /* RecordingView+Inspector.swift in Sources */,
+				AA0000S1 /* RecordingView+Studio.swift in Sources */,
 				AA000031 /* SettingsView.swift in Sources */,
+				AA0000K8 /* SettingsView+VerwerkingSide.swift in Sources */,
+				AA0000K7 /* SettingsView+Verwerking.swift in Sources */,
+				AA0000K6 /* SettingsView+Studio.swift in Sources */,
+				AA0000K5 /* HostedProviderConfig.swift in Sources */,
+				AA0000CP1 /* CloudProviderConfig.swift in Sources */,
 				AA000032 /* TranscriptsView.swift in Sources */,
 				AA000033 /* OnboardingViewiOSStub.swift in Sources */,
 				AA000034 /* FloatingWidgetPanel.swift in Sources */,
@@ -607,7 +737,6 @@
 				AA0000F1 /* SpinningProgressView.swift in Sources */,
 				AA000039 /* TranscriptCard.swift in Sources */,
 				AA000040 /* WaveformView.swift in Sources */,
-				AA000075 /* HomeHeroCard.swift in Sources */,
 				AA000051 /* PermissionManager.swift in Sources */,
 				AA000052 /* PermissionBanner.swift in Sources */,
 				AA000053 /* EditableHTMLWebView.swift in Sources */,
@@ -623,12 +752,15 @@
 			buildActionMask = 2147483647;
 			files = (
 				AB000001 /* ThoughtVaultTests.swift in Sources */,
+				AB0000S5 /* QuickNoteStoreTests.swift in Sources */,
+				AB9E5A02 /* VaultFolderStoreTests.swift in Sources */,
 				AB000002 /* MigrationTests.swift in Sources */,
 				AB000003 /* PersonProfileTests.swift in Sources */,
 				AB000004 /* PersonDirectoryServiceTests.swift in Sources */,
 				AB000005 /* GraphAttendeeDecodeTests.swift in Sources */,
 				AB000007 /* AudioEnvelopeProcessorTests.swift in Sources */,
 				AB000008 /* LLMChunkingTests.swift in Sources */,
+				AC110001 /* WhisperLoadingTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -783,7 +915,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 254;
+				CURRENT_PROJECT_VERSION = 289;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = XL9KN38ATX;
 				ENABLE_APP_SANDBOX = YES;
@@ -800,8 +932,8 @@
 					"@executable_path/../Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.0.254;
+				MACOSX_DEPLOYMENT_TARGET = 14.2;
+				MARKETING_VERSION = 1.0.289;
 				PRODUCT_BUNDLE_IDENTIFIER = com.buildmind.ThoughtVault;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "macosx iphoneos iphonesimulator";
@@ -824,7 +956,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 254;
+				CURRENT_PROJECT_VERSION = 289;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = XL9KN38ATX;
 				ENABLE_APP_SANDBOX = YES;
@@ -841,8 +973,8 @@
 					"@executable_path/../Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.0.254;
+				MACOSX_DEPLOYMENT_TARGET = 14.2;
+				MARKETING_VERSION = 1.0.289;
 				PRODUCT_BUNDLE_IDENTIFIER = com.buildmind.ThoughtVault;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "macosx iphoneos iphonesimulator";
@@ -859,12 +991,12 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 254;
+				CURRENT_PROJECT_VERSION = 289;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.0.254;
+				MACOSX_DEPLOYMENT_TARGET = 14.2;
+				MARKETING_VERSION = 1.0.289;
 				PRODUCT_BUNDLE_IDENTIFIER = com.buildmind.ThoughtVaultTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "macosx iphoneos iphonesimulator";
@@ -879,12 +1011,12 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 254;
+				CURRENT_PROJECT_VERSION = 289;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.0.254;
+				MACOSX_DEPLOYMENT_TARGET = 14.2;
+				MARKETING_VERSION = 1.0.289;
 				PRODUCT_BUNDLE_IDENTIFIER = com.buildmind.ThoughtVaultTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "macosx iphoneos iphonesimulator";
@@ -935,6 +1067,7 @@
 				version = 0.18.0;
 			};
 		};
+		SPUP0001 /* Sparkle */ = {isa = XCRemoteSwiftPackageReference; repositoryURL = "https://github.com/sparkle-project/Sparkle"; requirement = {kind = exactVersion; version = 2.10.0; }; };
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -943,6 +1076,7 @@
 			package = SP000001 /* XCRemoteSwiftPackageReference "WhisperKit" */;
 			productName = WhisperKit;
 		};
+		SDUP0001 /* Sparkle */ = {isa = XCSwiftPackageProductDependency; package = SPUP0001 /* Sparkle */; productName = Sparkle; };
 /* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = PP000001 /* Project object */;

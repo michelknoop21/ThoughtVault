@@ -23,6 +23,15 @@ export interface MeetingApp {
   is_running: boolean;
 }
 
+export interface SystemSpecs {
+  cpu: string;
+  architecture: string;
+  memory_gb: number;
+  threads: number;
+  os_version: string;
+  free_storage_gb: number | null;
+}
+
 export interface RecordingFile {
   path: string;
   filename: string;
@@ -105,6 +114,10 @@ export async function getAppVersion(): Promise<string> {
 // Filesystem commands (extended)
 export async function getRecordingsDir(): Promise<string> {
   return invoke<string>("get_recordings_dir");
+}
+
+export async function importAudio(sourcePath: string): Promise<string> {
+  return invoke<string>("import_audio", { sourcePath });
 }
 
 /**

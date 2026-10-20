@@ -57,59 +57,11 @@ export function ProfileSettings() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      {/* Heading */}
-      <div>
-        <h3
-          style={{
-            fontSize: 14,
-            fontWeight: 600,
-            color: "var(--text-primary)",
-            margin: 0,
-          }}
-        >
-          Profiel
-        </h3>
-        <p
-          style={{
-            fontSize: 12,
-            color: "var(--text-secondary)",
-            margin: "2px 0 0",
-          }}
-        >
-          Over jou
-        </p>
-      </div>
-
       {/* Empty state notice */}
       {profile === null && (
-        <div
-          style={{
-            padding: "10px 12px",
-            background: "var(--fill-control-default)",
-            borderRadius: "var(--radius-sm)",
-            border: "1px solid var(--stroke-control-secondary)",
-          }}
-        >
-          <p
-            style={{
-              fontSize: 13,
-              fontWeight: 600,
-              color: "var(--text-primary)",
-              margin: 0,
-            }}
-          >
-            Geen profiel ingevuld
-          </p>
-          <p
-            style={{
-              fontSize: 12,
-              color: "var(--text-secondary)",
-              margin: "4px 0 0",
-              lineHeight: 1.5,
-            }}
-          >
-            Vul je naam, rol en organisatie in zodat ThoughtVault actiepunten aan jou kan koppelen.
-          </p>
+        <div className="profile-empty">
+          <p>Geen profiel ingevuld</p>
+          <span>Vul je naam, rol en organisatie in zodat ThoughtVault actiepunten aan jou kan koppelen.</span>
         </div>
       )}
 
@@ -154,12 +106,11 @@ export function ProfileSettings() {
       </div>
 
       {/* Save button + feedback */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 4 }}>
+      <div className="action-row">
         <button
           onClick={handleSave}
           disabled={isSaving}
-          className="btn btn-accent"
-          style={{ fontSize: 13, padding: "7px 16px" }}
+          className="btn btn-accent btn-sm"
         >
           {isSaving ? "Opslaan..." : "Profiel opslaan"}
         </button>
@@ -193,30 +144,14 @@ function ProfileFormField({
   placeholder?: string;
 }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-      <label
-        style={{ fontSize: 13, fontWeight: 500, color: "var(--text-secondary)" }}
-      >
-        {label}
-      </label>
+    <div className="form-field">
+      <label className="form-label-sm">{label}</label>
       <input
         type="text"
+        className="input"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        style={{
-          width: "100%",
-          padding: "7px 10px",
-          background: "var(--fill-control-default)",
-          border: "1px solid var(--stroke-control-secondary)",
-          borderBottom: "1px solid var(--stroke-control-default)",
-          borderRadius: "var(--radius-sm)",
-          color: "var(--text-primary)",
-          fontSize: 13,
-          outline: "none",
-          fontFamily: "inherit",
-          boxSizing: "border-box",
-        }}
       />
     </div>
   );

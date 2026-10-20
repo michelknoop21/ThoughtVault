@@ -11,18 +11,24 @@ import SwiftUI
 
 struct ProfilesView: View {
 
-    @State private var profiles: [Profile] = []
-    @State private var isLoading: Bool = false
-    @State private var errorMessage: String? = nil
-    @State private var showCreateSheet: Bool = false
-    @State private var profileToEdit: Profile? = nil
-    @State private var profileToDelete: Profile? = nil
-    @State private var showDeleteConfirm: Bool = false
+    @Environment(RecordingViewModel.self) var recordingVM
+
+    @State var profiles: [Profile] = []
+    @State var isLoading: Bool = false
+    @State var errorMessage: String? = nil
+    @State var showCreateSheet: Bool = false
+    @State var profileToEdit: Profile? = nil
+    @State var profileToDelete: Profile? = nil
+    @State var showDeleteConfirm: Bool = false
 
     var defaultProfiles: [Profile] { profiles.filter { $0.isDefault == true } }
     var customProfiles: [Profile] { profiles.filter { $0.isDefault != true } }
 
     var body: some View {
+        Group {
+#if os(iOS)
+        iosBody
+#else
         ScrollView {
             VStack(spacing: TS.Spacing.lg) {
                 // Default profiles section
@@ -91,7 +97,6 @@ struct ProfilesView: View {
             .padding(TS.Spacing.lg)
         }
         .background(Color.surfaceSecondary.opacity(0.5))
-        .navigationTitle("Profielen")
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button {
@@ -101,6 +106,9 @@ struct ProfilesView: View {
                 }
             }
         }
+#endif
+        }
+        .navigationTitle("Profielen")
         .task { await loadProfiles() }
         .overlay {
             if isLoading {
@@ -125,7 +133,7 @@ struct ProfilesView: View {
             ProfileEditSheet(
                 existingProfile: nil,
                 onSave: { newProfile in
-                    Task { await createProfile(newProfile) }
+                    try await createProfile(newProfile)
                     showCreateSheet = false
                 },
                 onCancel: { showCreateSheet = false }
@@ -135,10 +143,7 @@ struct ProfilesView: View {
             ProfileEditSheet(
                 existingProfile: profile,
                 onSave: { updated in
-                    // No updateProfile API exists, so edit must recreate. Create the
-                    // replacement FIRST and only delete the original once that succeeds —
-                    // otherwise a failure between the two destroys the profile (data loss).
-                    Task { await replaceProfile(original: profile, with: updated) }
+                    try await replaceProfile(original: profile, with: updated)
                     profileToEdit = nil
                 },
                 onCancel: { profileToEdit = nil }
@@ -220,55 +225,55 @@ struct ProfilesView: View {
     private func loadProfiles() async {
         isLoading = true
         defer { isLoading = false }
-        if let remote = try? await APIService.shared.getProfiles() {
-            profiles = remote
+        if ProcessingMode.isLocalMode {
+            profiles = LocalProfileStore.choices()
+        } else if let remote = try? await APIService.shared.getProfiles() {
+            profiles = Profile.currentChoices(remote)
         } else {
             profiles = Profile.defaults
         }
     }
 
-    private func createProfile(_ profile: Profile) async {
-        do {
-            let created = try await APIService.shared.createProfile(
+    private func createProfile(_ profile: Profile) async throws {
+        if ProcessingMode.isLocalMode {
+            try LocalProfileStore.save(profile)
+        } else {
+            _ = try await APIService.shared.createProfile(
                 name: profile.name,
                 systemPrompt: profile.systemPrompt ?? "",
                 notulePrompt: profile.notulePrompt ?? "",
                 template: profile.template
             )
-            profiles.append(created)
-        } catch {
-            errorMessage = error.localizedDescription
         }
+        await loadProfiles()
+        await recordingVM.reloadProfiles()
     }
 
     private func deleteProfile(_ profile: Profile) async {
         do {
-            try await APIService.shared.deleteProfile(id: profile.id)
-            profiles.removeAll { $0.id == profile.id }
+            if ProcessingMode.isLocalMode {
+                try LocalProfileStore.delete(id: profile.id)
+            } else {
+                try await APIService.shared.deleteProfile(id: profile.id)
+            }
+            await loadProfiles()
+            await recordingVM.reloadProfiles()
         } catch {
             errorMessage = error.localizedDescription
         }
     }
 
-    /// Edit = recreate (no update API). Create the replacement first; only remove
-    /// the original after the new one is confirmed created, so a mid-flight failure
-    /// can never leave the user with no profile.
-    private func replaceProfile(original: Profile, with updated: Profile) async {
-        do {
-            let created = try await APIService.shared.createProfile(
-                name: updated.name,
-                systemPrompt: updated.systemPrompt ?? "",
-                notulePrompt: updated.notulePrompt ?? "",
-                template: updated.template
-            )
-            profiles.append(created)
-            // New profile is safely persisted; now retire the old one.
-            try await APIService.shared.deleteProfile(id: original.id)
-            profiles.removeAll { $0.id == original.id }
-        } catch {
-            errorMessage = "Bijwerken mislukt: \(error.localizedDescription). Je oorspronkelijke profiel is behouden."
+    private func replaceProfile(original: Profile, with updated: Profile) async throws {
+        if ProcessingMode.isLocalMode {
+            try LocalProfileStore.save(updated)
+        } else {
+            // The backend's update endpoint keeps the same ID, including in old documents.
+            try await APIService.shared.updateProfile(updated)
         }
+        await loadProfiles()
+        await recordingVM.reloadProfiles()
     }
+
 }
 
 // MARK: - Profile Card
@@ -398,7 +403,7 @@ private struct ProfileCard: View {
 struct ProfileEditSheet: View {
 
     let existingProfile: Profile?
-    let onSave: (Profile) -> Void
+    let onSave: (Profile) async throws -> Void
     let onCancel: () -> Void
 
     private static let defaultSystemPrompt = "Je bent een professionele notulist die vergaderingen nauwkeurig en beknopt samenvat in het Nederlands."
@@ -444,6 +449,9 @@ struct ProfileEditSheet: View {
     @State private var showAdvanced: Bool = false
     @State private var systemPrompt: String = ""
     @State private var template: String = ""
+    @State private var sectionNames: String = ""
+    @State private var saveError: String?
+    @State private var isSaving = false
 
     var isFormValid: Bool {
         !name.trimmingCharacters(in: .whitespaces).isEmpty
@@ -533,6 +541,14 @@ struct ProfileEditSheet: View {
                         .foregroundStyle(Color.labelTertiary)
                 }
 
+                Section {
+                    TextField("Bijv. Onderwerpen, Acties, Open vragen", text: $sectionNames)
+                } header: {
+                    Text("Secties (optioneel, gescheiden door komma's)")
+                } footer: {
+                    Text("Lege secties worden weggelaten.")
+                }
+
                 // Advanced toggle
                 Section {
                     DisclosureGroup(isExpanded: $showAdvanced) {
@@ -559,17 +575,6 @@ struct ProfileEditSheet: View {
                                     .foregroundStyle(Color.labelTertiary)
                             }
 
-                            VStack(alignment: .leading, spacing: TS.Spacing.xs) {
-                                Text("HTML-sjabloon")
-                                    .font(TS.Font.captionSemibold)
-                                    .foregroundStyle(Color.labelSecondary)
-                                TextEditor(text: $template)
-                                    .font(TS.Font.footnote)
-                                    .frame(minHeight: 50)
-                                Text("Optioneel. Laat leeg voor de standaard opmaak.")
-                                    .font(TS.Font.caption)
-                                    .foregroundStyle(Color.labelTertiary)
-                            }
                         }
                         .padding(.top, TS.Spacing.xs)
                     } label: {
@@ -581,26 +586,45 @@ struct ProfileEditSheet: View {
             }
             .formStyle(.grouped)
             .navigationTitle(existingProfile == nil ? "Nieuw profiel" : "Profiel bewerken")
+            .safeAreaInset(edge: .bottom) {
+                if let saveError {
+                    Text(saveError).font(TS.Font.caption).foregroundStyle(Color.statusError)
+                        .padding(TS.Spacing.sm)
+                }
+            }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Annuleer", action: onCancel)
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Opslaan") {
-                        // Use custom system prompt from advanced section, or fall back to selected style
                         let customSys = systemPrompt.trimmingCharacters(in: .whitespaces)
-                        let finalSystemPrompt = customSys.isEmpty ? selectedStijl.systemPrompt : customSys
+                        let sections = sectionNames.split(separator: ",").map {
+                            $0.trimmingCharacters(in: .whitespacesAndNewlines)
+                        }.filter { !$0.isEmpty }
+                        let sectionTemplate = sections.isEmpty ? nil : "<h1>[Titel]</h1>\n" + sections.map {
+                            let safe = $0.replacingOccurrences(of: "&", with: "&amp;")
+                                .replacingOccurrences(of: "<", with: "&lt;")
+                                .replacingOccurrences(of: ">", with: "&gt;")
+                            return "<section><h2>\(safe)</h2><p>[Brongebonden inhoud]</p></section>"
+                        }.joined(separator: "\n")
                         let profile = Profile(
                             id: existingProfile?.id ?? UUID().uuidString,
                             name: name.trimmingCharacters(in: .whitespaces),
-                            systemPrompt: finalSystemPrompt,
+                            systemPrompt: customSys.isEmpty ? selectedStijl.systemPrompt : customSys,
                             notulePrompt: opdracht.trimmingCharacters(in: .whitespaces),
-                            template: template.isEmpty ? nil : template.trimmingCharacters(in: .whitespaces),
+                            template: sectionTemplate ?? (template.contains("[Brongebonden inhoud]") || template.isEmpty ? nil : template),
                             isDefault: false
                         )
-                        onSave(profile)
+                        isSaving = true
+                        saveError = nil
+                        Task {
+                            do { try await onSave(profile) }
+                            catch { saveError = error.localizedDescription }
+                            isSaving = false
+                        }
                     }
-                    .disabled(!isFormValid)
+                    .disabled(!isFormValid || isSaving)
                     .fontWeight(.semibold)
                 }
             }
@@ -610,6 +634,7 @@ struct ProfileEditSheet: View {
                 name = profile.name
                 opdracht = profile.notulePrompt ?? ""
                 template = profile.template ?? ""
+                sectionNames = profile.sectionNames.joined(separator: ", ")
                 // Detect which style matches the existing system prompt
                 let sys = profile.systemPrompt ?? ""
                 if let matchedStijl = Stijl.allCases.first(where: { $0.systemPrompt == sys }) {

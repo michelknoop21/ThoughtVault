@@ -5,7 +5,7 @@ import {
   Warning24Regular,
   Info24Regular,
   Dismiss16Regular,
-} from "@fluentui/react-icons";
+} from "./StudioIcons";
 import { create } from "zustand";
 
 type Severity = "success" | "error" | "warning" | "info";

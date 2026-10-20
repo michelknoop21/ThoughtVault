@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { invoke } from "@tauri-apps/api/core";
 import { api } from "../services/api";
+import { useSettingsStore } from "./settingsStore";
 import type { User } from "../types";
 
 const CREDENTIAL_KEY = "auth_token";
@@ -107,6 +108,7 @@ export const useAuthStore = create<AuthState>()(
         invoke("delete_credential", { key: SAVED_PASSWORD_KEY }).catch(() => {});
         invoke("delete_credential", { key: REMEMBER_ME_KEY }).catch(() => {});
         set({ token: null, user: null, isAuthenticated: false, pendingTwoFactor: null });
+        useSettingsStore.getState().updateSettings({ processing_mode: "local" });
       },
 
       loadTokenFromKeyring: async () => {
@@ -226,6 +228,9 @@ export const useAuthStore = create<AuthState>()(
         } catch {
           // Keyring completely unavailable — token stays null
         } finally {
+          if (!get().isAuthenticated) {
+            useSettingsStore.getState().updateSettings({ processing_mode: "local" });
+          }
           set({ isInitializing: false });
         }
       },

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Delete24Regular, PersonAdd24Regular } from "@fluentui/react-icons";
+import { Delete24Regular, PersonAdd24Regular, People24Regular } from "../components/ui/StudioIcons";
 import { usePeopleDirectoryStore } from "../stores/peopleDirectoryStore";
 import type { PersonProfile } from "../types";
 import { PersonEditModal } from "./PersonEditModal";
@@ -65,10 +65,17 @@ export function PeoplePage() {
   }
 
   return (
-    <div className="page-scroll">
+    <div className="page-scroll desktop-page desktop-people">
       {/* Page header */}
       <div className="page-header">
         <h1 className="page-title-sm">Mensen</h1>
+          <input
+            type="search"
+            placeholder="Zoeken..."
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setDeleteConfirmId(null); }}
+            className="input people-toolbar-search"
+          />
         <button
           className="btn btn-primary"
           onClick={handleAddPerson}
@@ -83,19 +90,12 @@ export function PeoplePage() {
       <div className="page-content">
         <div className="page-content-narrow">
 
-          {/* Search input */}
-          <input
-            type="search"
-            className="input"
-            placeholder="Zoeken..."
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setDeleteConfirmId(null); }}
-            style={{ marginBottom: 16 }}
-          />
+
 
           {/* Empty state — no people at all */}
           {people.length === 0 && (
             <div
+              className="people-empty"
               style={{
                 display: "flex",
                 flexDirection: "column",
@@ -105,10 +105,11 @@ export function PeoplePage() {
                 textAlign: "center",
               }}
             >
+              <People24Regular className="people-empty-icon" />
               <p style={{ font: "var(--type-subtitle)", color: "var(--text-primary)", margin: 0 }}>
                 Nog geen personen toegevoegd
               </p>
-              <p style={{ font: "var(--type-body)", color: "var(--text-secondary)", margin: 0, maxWidth: 420 }}>
+              <p style={{ font: "400 13px/1.5 var(--font-family)", color: "var(--text-secondary)", margin: 0, maxWidth: 320 }}>
                 Voeg collega's en bekende externen toe zodat ThoughtVault actiepunten aan hen kan koppelen.
               </p>
               <button className="btn btn-primary" onClick={handleAddPerson}>

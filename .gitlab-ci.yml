@@ -246,13 +246,18 @@ build-windows:
   script:
     - |
       cd windows
-      npm install
+      npm ci
+      if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      $env:CMAKE = (Get-Command cmake -ErrorAction Stop).Source
+      # whisper.cpp/MSVC file tracking requires a short build path.
+      $env:CARGO_TARGET_DIR = Join-Path $env:SystemDrive "tv-ci-target"
       $env:TAURI_CONFIG = '{"identifier":"' + $env:W_BUNDLE_ID + '","productName":"' + $env:W_PRODUCT_NAME + '"}'
-      npx tauri build
+      npx tauri build --bundles msi
+      if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     - |
       # Still in windows/ after cd above
       New-Item -ItemType Directory -Force -Path "..\build" | Out-Null
-      $msi = Get-ChildItem -Path "src-tauri\target\release\bundle" -Recurse -Filter "*.msi" | Select-Object -First 1
+      $msi = Get-ChildItem -Path "$env:CARGO_TARGET_DIR\release\bundle\msi" -Filter "*.msi" | Sort-Object LastWriteTime -Descending | Select-Object -First 1
       if (-not $msi) { Write-Error "MSI not found"; exit 1 }
       Copy-Item $msi.FullName "..\build\$env:W_MSI_NAME"
       Write-Host "Built: $env:W_MSI_NAME ($([math]::Round($msi.Length / 1MB, 1)) MB)"

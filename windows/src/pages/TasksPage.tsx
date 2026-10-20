@@ -1,15 +1,19 @@
+import { DesktopDialog } from "../components/ui/DesktopDialog";
 import { useEffect, useState } from "react";
 import {
   ArrowSync24Regular,
   Delete24Regular,
   DismissCircle24Regular,
   Clock24Regular,
-  CheckmarkCircle24Regular,
   ErrorCircle24Regular,
   ArrowClockwise24Regular,
   Person24Regular,
-} from "@fluentui/react-icons";
+  TaskListLtr24Regular,
+} from "../components/ui/StudioIcons";
 import { useTasksStore } from "../stores/tasksStore";
+import { useRecordingStore } from "../stores/recordingStore";
+import { useSettingsStore } from "../stores/settingsStore";
+import { processLocally } from "../services/localPipeline";
 import { TaskStatusLabels } from "../types";
 import type { TranscriptTask, TaskStatus } from "../types";
 
@@ -77,17 +81,7 @@ function ConfirmDialog({
   onCancel: () => void;
 }) {
   return (
-    <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 1000,
-        display: "grid",
-        placeItems: "center",
-        background: "rgba(0,0,0,0.4)",
-      }}
-      onClick={onCancel}
-    >
+    <DesktopDialog label={title} onClose={onCancel}>
       <div
         className="card"
         style={{
@@ -113,7 +107,7 @@ function ConfirmDialog({
           </button>
         </div>
       </div>
-    </div>
+    </DesktopDialog>
   );
 }
 
@@ -123,10 +117,14 @@ function TaskCard({
   task,
   onCancel,
   onDelete,
+  onRetry,
+  isLocal,
 }: {
   task: TranscriptTask;
   onCancel: (taskId: string) => void;
   onDelete: (taskId: string) => void;
+  onRetry: (task: TranscriptTask) => void;
+  isLocal: boolean;
 }) {
   const colors = getStatusColors(task.status);
   const active = isActiveStatus(task.status);
@@ -225,7 +223,12 @@ function TaskCard({
           )}
         </div>
         <div className="flex-row gap-4">
-          {active && (
+          {task.status === "failed" && task.local_audio_path && (
+            <button className="btn btn-sm" onClick={() => onRetry(task)}>
+              <ArrowSync24Regular style={{ fontSize: 14 }} /> Opnieuw verwerken
+            </button>
+          )}
+          {active && !isLocal && (
             <button
               className="btn btn-sm"
               onClick={() => onCancel(task.task_id)}
@@ -236,7 +239,7 @@ function TaskCard({
               Annuleren
             </button>
           )}
-          <button
+          {(!active || !isLocal) && <button
             className="btn btn-sm"
             onClick={() => onDelete(task.task_id)}
             title="Verwijderen"
@@ -244,7 +247,7 @@ function TaskCard({
           >
             <Delete24Regular style={{ fontSize: 14 }} />
             Verwijderen
-          </button>
+          </button>}
         </div>
       </div>
     </div>
@@ -255,6 +258,12 @@ function TaskCard({
 
 export function TasksPage() {
   const { activeTasks, isLoading, error, loadActiveTasks, cancelTask, deleteTask, startAutoRefresh, stopAutoRefresh } = useTasksStore();
+  const isLocal = useSettingsStore((s) => s.processing_mode === "local");
+  const localTasks = useRecordingStore((s) => s.backgroundTasks);
+  const removeLocalTask = useRecordingStore((s) => s.removeBackgroundTask);
+  const visibleTasks = [...localTasks, ...(isLocal ? [] : activeTasks.filter(
+    (task) => !localTasks.some((local) => local.task_id === task.task_id),
+  ))];
 
   const [confirmAction, setConfirmAction] = useState<{
     type: "cancel" | "delete";
@@ -277,12 +286,22 @@ export function TasksPage() {
   }
 
   function handleDelete(taskId: string) {
-    const task = activeTasks.find((t) => t.task_id === taskId);
+    if (localTasks.some((task) => task.task_id === taskId)) {
+      removeLocalTask(taskId);
+      return;
+    }
+    const task = visibleTasks.find((t) => t.task_id === taskId);
     setConfirmAction({
       type: "delete",
       taskId,
       title: task?.extracted_title || task?.filename || "deze taak",
     });
+  }
+
+  function handleRetry(task: TranscriptTask) {
+    if (!task.local_audio_path) return;
+    removeLocalTask(task.task_id);
+    void processLocally(task.local_audio_path, task.profile_id || "standaard", task.mode, [], task.duration_seconds ?? 0, task.task_id);
   }
 
   async function executeConfirmAction() {
@@ -296,17 +315,9 @@ export function TasksPage() {
   }
 
   return (
-    <div className="page-scroll">
-      <div className="page-content">
-        {/* Header */}
-        <section>
-          <div className="flex-row justify-between" style={{ alignItems: "center" }}>
-            <div>
-              <h2 className="text-subtitle" style={{ margin: 0 }}>Taken</h2>
-              <p className="text-caption" style={{ marginTop: 4 }}>
-                Overzicht van actieve en recente verwerkingstaken
-              </p>
-            </div>
+    <div className="page-scroll desktop-page desktop-tasks">
+      <header className="page-header tasks-toolbar">
+              <h2 className="page-title-sm">Taken</h2>
             <button
               className="icon-btn"
               onClick={() => loadActiveTasks()}
@@ -320,9 +331,8 @@ export function TasksPage() {
                 }}
               />
             </button>
-          </div>
-        </section>
-
+      </header>
+      <div className="page-content">
         {/* Error banner */}
         {error && (
           <div className="error-banner-inline">
@@ -335,7 +345,7 @@ export function TasksPage() {
         )}
 
         {/* Content */}
-        {isLoading && activeTasks.length === 0 ? (
+        {!isLocal && isLoading && visibleTasks.length === 0 ? (
           <div className="empty-state">
             <ArrowClockwise24Regular
               style={{
@@ -346,27 +356,29 @@ export function TasksPage() {
             />
             <p className="empty-state-text" style={{ marginTop: 12 }}>Taken laden...</p>
           </div>
-        ) : activeTasks.length === 0 ? (
+        ) : visibleTasks.length === 0 ? (
           <div className="empty-state">
-            <CheckmarkCircle24Regular
-              style={{ fontSize: 40, color: "var(--text-secondary)", opacity: 0.5 }}
+            <TaskListLtr24Regular
+              style={{ width: 56, height: 56, color: "#9293b7" }}
             />
-            <p className="empty-state-text" style={{ marginTop: 12 }}>
+            <p className="empty-state-title" style={{ marginTop: 12 }}>
               Geen actieve taken
             </p>
             <p className="text-caption" style={{ marginTop: 4 }}>
-              Start een opname om verwerkingstaken te zien
+              Wanneer je een opname start of een audiobestand importeert, verschijnt de voortgang hier.
             </p>
           </div>
         ) : (
           <section>
             <div className="flex-col gap-10">
-              {activeTasks.map((task) => (
+              {visibleTasks.map((task) => (
                 <TaskCard
                   key={task.task_id}
                   task={task}
                   onCancel={handleCancel}
                   onDelete={handleDelete}
+                  onRetry={handleRetry}
+                  isLocal={localTasks.some((local) => local.task_id === task.task_id)}
                 />
               ))}
             </div>

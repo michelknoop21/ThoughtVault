@@ -26,6 +26,25 @@ AUTH_ARGS=(-allowProvisioningUpdates
 WHAT="${1:-all}"
 mkdir -p "$BUILD_DIR"
 
+# Export options are generated in the ignored build directory, so a fresh
+# checkout can be uploaded without machine-specific plist files.
+write_export_options() {
+    local path="$1" destination="$2"
+    cat > "$path" <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>method</key><string>app-store-connect</string>
+  <key>destination</key><string>$destination</string>
+  <key>signingStyle</key><string>automatic</string>
+  <key>teamID</key><string>XL9KN38ATX</string>
+</dict></plist>
+EOF
+}
+
+write_export_options "$BUILD_DIR/ExportOptions-iOS-TestFlight.plist" upload
+write_export_options "$BUILD_DIR/ExportOptions-macOS-TestFlight.plist" export
+
 archive_and_ship() {
     local platform="$1" destination="$2" archive="$3" exportopts="$4" altool_type="$5"
 

@@ -12,18 +12,22 @@ struct TasksView: View {
 
     // MARK: Dependencies
 
-    @Environment(TasksViewModel.self) private var tasksVM
-    @Environment(RecordingViewModel.self) private var recordingVM
+    @Environment(TasksViewModel.self) var tasksVM
+    @Environment(RecordingViewModel.self) var recordingVM
     @Environment(\.scenePhase) private var scenePhase
 
     // MARK: State
 
-    @State private var taskToCancel: TranscriptTask? = nil
-    @State private var taskToDelete: TranscriptTask? = nil
+    @State var taskToCancel: TranscriptTask? = nil
+    @State var taskToDelete: TranscriptTask? = nil
 
     // MARK: Body
 
     var body: some View {
+        Group {
+#if os(iOS)
+        iosBody
+#else
         GeometryReader { geo in
             // Width-tier responsive layout: compact stacks task rows vertically,
             // wide windows get a capped, centered column.
@@ -36,9 +40,10 @@ struct TasksView: View {
 
                 // In local mode, tasks come from recordingVM (no server).
                 // In cloud mode, merge both sources.
+                let fetchedIDs = Set(tasksVM.activeTasks.map(\.taskId))
                 let allTasks = ProcessingMode.isLocalMode
                     ? recordingVM.activeTasks
-                    : (tasksVM.activeTasks + recordingVM.activeTasks.filter { $0.taskId.hasPrefix("local-") })
+                    : (tasksVM.activeTasks + recordingVM.activeTasks.filter { !fetchedIDs.contains($0.taskId) })
 
                 if tasksVM.isLoading && allTasks.isEmpty {
                     // First load
@@ -50,6 +55,8 @@ struct TasksView: View {
                     taskList(tasks: allTasks, isCompact: isCompact)
                 }
             }
+        }
+#endif
         }
         .navigationTitle("Taken")
         .toolbar {
@@ -197,7 +204,8 @@ struct TasksView: View {
                         task: task,
                         isCompact: isCompact,
                         onCancel: { taskToCancel = task },
-                        onDelete: { taskToDelete = task }
+                        onDelete: { taskToDelete = task },
+                        onRestart: recordingVM.canRestartTask(task) ? { recordingVM.restartTask(task) } : nil
                     )
                 }
             }
@@ -217,6 +225,7 @@ private struct TaskRow: View {
     let isCompact: Bool
     let onCancel: () -> Void
     let onDelete: () -> Void
+    var onRestart: (() -> Void)? = nil
 
     @State private var isHovered = false
 
@@ -316,7 +325,7 @@ private struct TaskRow: View {
 
     private var actionButtons: some View {
         HStack(spacing: TS.Spacing.xs) {
-            if task.status.isActive {
+            if task.status.isActive && !task.taskId.hasPrefix("local-regen-") {
                 Button {
                     onCancel()
                 } label: {
@@ -326,6 +335,18 @@ private struct TaskRow: View {
                 }
                 .buttonStyle(.plain)
                 .help("Annuleren")
+            }
+
+            if let onRestart {
+                Button {
+                    onRestart()
+                } label: {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.system(size: 14))
+                        .foregroundStyle(Color.brandPrimary)
+                }
+                .buttonStyle(.plain)
+                .help("Opnieuw starten")
             }
 
             Button {
@@ -346,15 +367,7 @@ private struct TaskRow: View {
         task.status.isActive && task.status != .pending && task.status != .queued
     }
 
-    private var isLocalProcessing: Bool {
-        task.status == .transcribing || task.status == .generatingLocal
-    }
-
-    private var progressValue: Double {
-        // Local processing tasks update task.progress live; use that instead of
-        // the static enum value so the progress bar reflects real progress.
-        isLocalProcessing ? task.progress : task.status.progress
-    }
+    private var progressValue: Double { task.displayProgress }
 
     private var statusIconName: String {
         switch task.status {

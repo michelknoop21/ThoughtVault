@@ -1,3 +1,4 @@
+import { DesktopDialog } from "../components/ui/DesktopDialog";
 import { useState, useEffect } from "react";
 import {
   Add24Regular,
@@ -7,12 +8,17 @@ import {
   Globe24Regular,
   LockClosed24Regular,
   Star24Regular,
-} from "@fluentui/react-icons";
-import { useProfilesStore } from "../stores/profilesStore";
+  ProfileIcons,
+} from "../components/ui/StudioIcons";
+import { currentProfileChoices, useProfilesStore } from "../stores/profilesStore";
 import { api } from "../services/api";
+import { saveProfileForMode, deleteProfileForMode } from "../services/profileActions";
+import { useSettingsStore } from "../stores/settingsStore";
+import { useRecordingStore } from "../stores/recordingStore";
 import { useToast } from "../components/ui/InfoBar";
 import type { Profile } from "../types";
 import { DEFAULT_PROFILES } from "../types";
+import profileTemplates from "../data/profileTemplates.json";
 
 const STIJLEN = [
   {
@@ -46,11 +52,16 @@ const emptyForm = {
   system_prompt: "",
   notule_prompt: "",
   notule_template: "",
+  sections: "",
 };
 
-export function ProfilesPage() {
-  const { profiles, addProfile, updateProfile, deleteProfile, setProfiles } = useProfilesStore();
+export function ProfilesPage({ embedded = false }: { embedded?: boolean }) {
+  const { profiles, addProfile, updateProfile, setProfiles, showLocalProfiles } = useProfilesStore();
   const toast = useToast();
+  const processingMode = useSettingsStore((state) => state.processing_mode);
+  const defaultProfileId = useSettingsStore((state) => state.default_profile_id);
+  const updateSettings = useSettingsStore((state) => state.updateSettings);
+  const setSelectedProfileId = useRecordingStore((state) => state.setSelectedProfileId);
 
   const [showModal, setShowModal] = useState(false);
   const [editingProfile, setEditingProfile] = useState<Profile | null>(null);
@@ -65,14 +76,17 @@ export function ProfilesPage() {
   const defaultProfiles = profiles.filter((p) => defaultProfileIds.has(p.id));
   const myProfiles = profiles.filter((p) => !defaultProfileIds.has(p.id));
 
-  // Load profiles from server on mount
   useEffect(() => {
+    if (processingMode === "local") {
+      showLocalProfiles();
+      return;
+    }
+    let cancelled = false;
     api.getProfiles().then((serverProfiles) => {
-      if (serverProfiles.length > 0) {
-        setProfiles(serverProfiles);
-      }
+      if (!cancelled) setProfiles(currentProfileChoices(serverProfiles));
     });
-  }, [setProfiles]);
+    return () => { cancelled = true; };
+  }, [processingMode, setProfiles, showLocalProfiles]);
 
   function openCreate() {
     setEditingProfile(null);
@@ -90,48 +104,40 @@ export function ProfilesPage() {
       stijl: matchedStijl?.id || "zakelijk",
       system_prompt: matchedStijl ? "" : (profile.system_prompt || ""),
       notule_prompt: profile.notule_prompt || "",
-      notule_template: profile.notule_template || "",
+      notule_template: profile.notule_template || profile.output_template || "",
+      sections: (profile.output_template || profile.notule_template || "").includes("[Brongebonden inhoud]")
+        ? [...(profile.output_template || profile.notule_template || "").matchAll(/<h2>([^<]+)<\/h2>/g)].map((match) => match[1]).join(", ")
+        : "",
     });
     setShowModal(true);
   }
 
   async function handleSave() {
-    if (!form.name.trim()) {
-      toast.show("Naam is verplicht", "error");
+    if (!form.name.trim() || !form.notule_prompt.trim()) {
+      toast.show("Naam en instructie zijn verplicht", "error");
       return;
     }
 
     setLoading(true);
     try {
       const stijlPrompt = STIJLEN.find((s) => s.id === form.stijl)?.system_prompt || DEFAULT_SYSTEM_PROMPT;
-      const finalSystemPrompt = form.system_prompt.trim() || stijlPrompt;
-
-      if (editingProfile) {
-        // Update existing
-        const updates: Partial<Profile> = {
-          name: form.name,
-          description: form.description || undefined,
-          icon: form.icon || undefined,
-          system_prompt: finalSystemPrompt,
-          notule_prompt: form.notule_prompt || undefined,
-          notule_template: form.notule_template || undefined,
-        };
-        await api.updateProfile(editingProfile.id, updates);
-        updateProfile(editingProfile.id, updates);
-        toast.show("Profiel bijgewerkt", "success");
-      } else {
-        // Create new
-        const created = await api.createProfile({
-          name: form.name,
-          description: form.description || undefined,
-          icon: form.icon || undefined,
-          system_prompt: finalSystemPrompt,
-          notule_prompt: form.notule_prompt || undefined,
-          notule_template: form.notule_template || undefined,
-        });
-        addProfile(created);
-        toast.show("Profiel aangemaakt", "success");
-      }
+      const sectionList = form.sections.split(",").map((part) => part.trim()).filter(Boolean);
+      const escapeHtml = (value: string) => value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      const sectionTemplate = sectionList.length
+        ? `<h1>[Titel]</h1>\n${sectionList.map((name) => `<section><h2>${escapeHtml(name)}</h2><p>[Brongebonden inhoud]</p></section>`).join("\n")}`
+        : undefined;
+      const profile: Profile = {
+        id: editingProfile?.id ?? crypto.randomUUID(),
+        name: form.name.trim(),
+        description: form.description || undefined,
+        icon: form.icon || undefined,
+        system_prompt: form.system_prompt.trim() || stijlPrompt,
+        notule_prompt: form.notule_prompt.trim(),
+        output_template: sectionTemplate ?? (form.notule_template.includes("[Brongebonden inhoud]") ? "" : form.notule_template.trim()),
+        is_default: false,
+      };
+      await saveProfileForMode(processingMode, profile, Boolean(editingProfile));
+      toast.show(editingProfile ? "Profiel bijgewerkt" : "Profiel aangemaakt", "success");
       setShowModal(false);
     } catch (err) {
       toast.show(err instanceof Error ? err.message : "Fout bij opslaan", "error");
@@ -143,8 +149,7 @@ export function ProfilesPage() {
   async function handleDelete(id: string) {
     setLoading(true);
     try {
-      await api.deleteProfile(id);
-      deleteProfile(id);
+      await deleteProfileForMode(processingMode, id);
       toast.show("Profiel verwijderd", "success");
     } catch (err) {
       toast.show(err instanceof Error ? err.message : "Fout bij verwijderen", "error");
@@ -165,14 +170,9 @@ export function ProfilesPage() {
     }
   }
 
-  async function handleSetDefault(profile: Profile) {
-    // Clear previous default, set new one
-    profiles.forEach((p) => {
-      if (p.is_default || p.isDefault) {
-        updateProfile(p.id, { is_default: false, isDefault: false });
-      }
-    });
-    updateProfile(profile.id, { is_default: true, isDefault: true });
+  function handleSetDefault(profile: Profile) {
+    updateSettings({ default_profile_id: profile.id });
+    setSelectedProfileId(profile.id);
     toast.show(`"${profile.name}" ingesteld als standaard`, "success");
   }
 
@@ -197,10 +197,8 @@ export function ProfilesPage() {
   }
 
   return (
-    <div className="page-scroll">
-      <div className="page-header">
-        <h1 className="page-title-sm">Profielen</h1>
-      </div>
+    <div className={embedded ? "desktop-profiles embedded-profiles" : "page-scroll desktop-page desktop-profiles"}>
+      {!embedded && <div className="page-header"><h1 className="page-title-sm">Profielen</h1></div>}
 
       <div className="page-content">
         <div className="page-content-narrow">
@@ -214,7 +212,7 @@ export function ProfilesPage() {
                   key={profile.id}
                   profile={profile}
                   readOnly
-                  isDefault={profile.is_default || profile.isDefault}
+                  isDefault={defaultProfileId === profile.id}
                   onSetDefault={() => handleSetDefault(profile)}
                 />
               ))}
@@ -240,10 +238,10 @@ export function ProfilesPage() {
                   <ProfileCard
                     key={profile.id}
                     profile={profile}
-                    isDefault={profile.is_default || profile.isDefault}
+                    isDefault={defaultProfileId === profile.id}
                     onEdit={() => openEdit(profile)}
                     onDelete={() => setDeleteConfirm(profile.id)}
-                    onToggleVisibility={() => handleToggleVisibility(profile)}
+                    onToggleVisibility={processingMode === "cloud" ? () => handleToggleVisibility(profile) : undefined}
                     onSetDefault={() => handleSetDefault(profile)}
                   />
                 ))
@@ -252,7 +250,7 @@ export function ProfilesPage() {
           </div>
 
           {/* Browse publieke profielen */}
-          <div className="settings-group">
+          {processingMode === "cloud" && <div className="settings-group">
             <p className="settings-group-label">Community</p>
             <div className="profile-list">
               {!showPublic ? (
@@ -278,14 +276,14 @@ export function ProfilesPage() {
                 </>
               )}
             </div>
-          </div>
+          </div>}
 
         </div>
       </div>
 
       {/* Create/Edit Modal */}
       {showModal && (
-        <ModalOverlay onClose={() => setShowModal(false)}>
+        <ModalOverlay label={editingProfile ? "Profiel bewerken" : "Nieuw profiel"} onClose={() => setShowModal(false)}>
           <div className="card profile-modal">
             <p className="text-body-strong profile-modal-title">
               {editingProfile ? "Profiel bewerken" : "Nieuw profiel"}
@@ -330,6 +328,10 @@ export function ProfilesPage() {
                       className="card-static"
                       style={{
                         flex: 1,
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        justifyContent: "flex-start",
                         padding: "10px 8px",
                         textAlign: "center",
                         cursor: "pointer",
@@ -338,7 +340,7 @@ export function ProfilesPage() {
                         borderRadius: 8,
                       }}
                     >
-                      <p style={{ margin: 0, fontWeight: 600, fontSize: 13, color: form.stijl === stijl.id ? "var(--fill-accent)" : "var(--text-primary)" }}>
+                      <p style={{ margin: 0, fontWeight: 600, fontSize: 13, color: form.stijl === stijl.id ? "var(--interactive-text)" : "var(--text-primary)" }}>
                         {stijl.label}
                       </p>
                       <p className="text-caption" style={{ margin: "4px 0 0", color: "var(--text-tertiary)" }}>
@@ -364,6 +366,12 @@ export function ProfilesPage() {
                 <p className="text-caption" style={{ marginTop: 4, color: "var(--text-tertiary)" }}>
                   Beschrijf in je eigen woorden wat de AI moet doen: welke onderdelen, gewenste toon, en hoeveel detail.
                 </p>
+              </div>
+              <div className="form-field">
+                <label className="form-label">Secties (optioneel, gescheiden door komma&apos;s)</label>
+                <input className="input" value={form.sections}
+                  onChange={(e) => setForm({ ...form, sections: e.target.value })}
+                  placeholder="Bijv. Onderwerpen, Acties, Open vragen" />
               </div>
               <details className="profile-advanced-section">
                 <summary className="text-caption" style={{ cursor: "pointer", color: "var(--text-secondary)", userSelect: "none" }}>
@@ -418,7 +426,7 @@ export function ProfilesPage() {
 
       {/* Delete confirmation */}
       {deleteConfirm && (
-        <ModalOverlay onClose={() => setDeleteConfirm(null)}>
+        <ModalOverlay label="Profiel verwijderen" onClose={() => setDeleteConfirm(null)}>
           <div className="card profile-modal-confirm">
             <p className="text-body-strong" style={{ marginBottom: 8 }}>Profiel verwijderen?</p>
             <p className="text-caption" style={{ marginBottom: 16 }}>
@@ -466,10 +474,12 @@ function ProfileCard({
   onSetDefault?: () => void;
   onCopy?: () => void;
 }) {
+  const template = profileTemplates.find((entry) => entry.id === profile.id);
+  const Icon = template ? ProfileIcons[template.icon] : undefined;
   return (
     <div className="card-static profile-card">
       {/* Icon */}
-      <span className="profile-card-icon">{profile.icon || "📄"}</span>
+      <span className="profile-card-icon">{Icon ? <Icon /> : profile.icon || "📄"}</span>
 
       {/* Name + description */}
       <div className="profile-card-info">
@@ -528,16 +538,6 @@ function ProfileCard({
   );
 }
 
-// Simple modal overlay
-function ModalOverlay({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
-  return (
-    <div
-      className="profile-overlay"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      {children}
-    </div>
-  );
+function ModalOverlay({ children, label, onClose }: { children: React.ReactNode; label: string; onClose: () => void }) {
+  return <DesktopDialog label={label} onClose={onClose}>{children}</DesktopDialog>;
 }

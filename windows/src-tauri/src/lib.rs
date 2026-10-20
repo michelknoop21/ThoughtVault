@@ -1,6 +1,7 @@
 mod audio;
 mod commands;
 mod transcribe;
+mod personal_corrections;
 
 use commands::audio::SharedRecordingState;
 use std::sync::{Arc, Mutex};
@@ -12,12 +13,15 @@ pub fn run() {
 
     tauri::Builder::default()
         .manage(recording_state)
+        .manage(transcribe::ModelDownloadControl::default())
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(tauri_plugin_single_instance::init(|_app, _args, _cwd| {}))
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             let main_window = app.get_webview_window("main").unwrap();
 
@@ -38,7 +42,7 @@ pub fn run() {
             let app_handle2 = app.handle().clone();
             app.listen("deep-link://new-url", move |event| {
                 let payload = event.payload().to_string();
-                eprintln!("[DeepLink] OAuth callback: {}", payload);
+                eprintln!("[DeepLink] OAuth callback ontvangen");
 
                 if let Some(window) = app_handle2.get_webview_window("main") {
                     let _ = window.emit("oauth-callback", payload);
@@ -69,6 +73,8 @@ pub fn run() {
             commands::filesystem::delete_recording,
             commands::filesystem::cleanup_old_recordings,
             commands::filesystem::get_recordings_dir,
+            commands::filesystem::import_audio,
+            commands::filesystem::audio_duration,
             commands::filesystem::migrate_recordings_dir,
             commands::filesystem::concatenate_wav_files,
             // HTTP
@@ -76,17 +82,26 @@ pub fn run() {
             commands::http::proxy_upload,
             commands::http::http_sse_stream,
             commands::http::obsidian_put,
+            commands::http::obsidian_get,
             commands::http::obsidian_test,
             commands::http::ollama_test,
             // System
             commands::system::get_network_status,
             commands::system::detect_meeting_apps,
             commands::system::get_app_version,
+            commands::system::get_system_specs,
+            commands::system::open_microphone_settings,
             commands::system::download_and_run_installer,
             // Local transcription (whisper.cpp)
             transcribe::whisper_model_status,
             transcribe::download_whisper_model,
+            transcribe::cancel_whisper_download,
+            transcribe::whisper_download_status,
+            transcribe::remove_whisper_model,
+            transcribe::show_whisper_model,
             transcribe::transcribe_local,
+            personal_corrections::load_personal_corrections,
+            personal_corrections::save_personal_corrections,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

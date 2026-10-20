@@ -1,0 +1,4 @@
+interface:
+  display_name: "Audio Reactive Waveform"
+  short_description: "Meet en verbeter soundwaves in apps en widgets"
+  default_prompt: "Gebruik $audio-reactive-waveform om de soundwave te meten, te verbeteren en visueel te controleren."

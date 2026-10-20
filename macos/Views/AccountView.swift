@@ -28,7 +28,7 @@ struct AccountView: View {
     @State private var passwordMessage: (text: String, isError: Bool)? = nil
 
     // 2FA
-    @State private var twoFAStatus: TwoFAStatus? = nil
+    @State var twoFAStatus: TwoFAStatus? = nil
     @State private var isLoading2FA: Bool = false
     @State private var setupData: TwoFASetupResponse? = nil
     @State private var verifyCode: String = ""
@@ -38,14 +38,18 @@ struct AccountView: View {
     @State private var twoFAMessage: (text: String, isError: Bool)? = nil
 
     // GDPR
-    @State private var isExportingData: Bool = false
-    @State private var exportSuccessMessage: String? = nil
+    @State var isExportingData: Bool = false
+    @State var exportSuccessMessage: String? = nil
 
     // General
-    @State private var showLogoutConfirm: Bool = false
-    @State private var errorMessage: String? = nil
+    @State var showLogoutConfirm: Bool = false
+    @State var errorMessage: String? = nil
 
     var body: some View {
+        Group {
+#if os(iOS)
+        iosBody
+#else
         List {
             profileSection
             passwordSection
@@ -55,6 +59,8 @@ struct AccountView: View {
             logoutSection
         }
         .listStyle(.inset)
+#endif
+        }
         .navigationTitle("Account")
         .task {
             await load2FAStatus()
@@ -72,7 +78,7 @@ struct AccountView: View {
 
     // MARK: - Profile Section
 
-    private var profileSection: some View {
+    var profileSection: some View {
         Section {
             if let user = authVM.currentUser {
                 HStack(spacing: TS.Spacing.md) {
@@ -177,7 +183,7 @@ struct AccountView: View {
 
     // MARK: - Password Section
 
-    private var passwordSection: some View {
+    var passwordSection: some View {
         Section {
             VStack(alignment: .leading, spacing: TS.Spacing.sm) {
                 SecureField("Huidig wachtwoord", text: $currentPassword)
@@ -220,7 +226,7 @@ struct AccountView: View {
 
     // MARK: - 2FA Section
 
-    private var twoFASection: some View {
+    var twoFASection: some View {
         Section {
             // Status row
             HStack {
@@ -690,7 +696,7 @@ struct AccountView: View {
 
     // MARK: - Data Export
 
-    private func exportUserData() async {
+    func exportUserData() async {
         isExportingData = true
         exportSuccessMessage = nil
         errorMessage = nil

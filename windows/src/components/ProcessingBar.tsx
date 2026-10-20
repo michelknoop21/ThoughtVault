@@ -5,8 +5,9 @@ import {
   Dismiss24Regular,
   DismissCircle24Regular,
   MicRecord24Regular,
-} from "@fluentui/react-icons";
+} from "./ui/StudioIcons";
 import { useRecordingStore } from "../stores/recordingStore";
+import { processLocally } from "../services/localPipeline";
 import type { TranscriptTask } from "../types";
 
 const STATUS_CONFIG: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
@@ -98,13 +99,25 @@ function ProcessingBarItem({ task }: { task: TranscriptTask }) {
             Bekijk
           </button>
         ) : isFailed ? (
-          <button
-            className="processing-bar-dismiss"
-            onClick={() => removeBackgroundTask(task.task_id)}
-            aria-label="Sluiten"
-          >
-            <Dismiss24Regular style={{ fontSize: 12 }} />
-          </button>
+          <>
+            <button className="processing-bar-action" onClick={() => {
+              if (task.local_audio_path) {
+                removeBackgroundTask(task.task_id);
+                void processLocally(task.local_audio_path, task.profile_id || "standaard", task.mode, [], task.duration_seconds ?? 0, task.task_id);
+              } else {
+                navigate("/recording");
+              }
+            }}>
+              {task.local_audio_path ? "Opnieuw verwerken" : "Opname openen"}
+            </button>
+            <button
+              className="processing-bar-dismiss"
+              onClick={() => removeBackgroundTask(task.task_id)}
+              aria-label="Sluiten"
+            >
+              <Dismiss24Regular style={{ fontSize: 12 }} />
+            </button>
+          </>
         ) : isUploading ? (
           <button
             className="processing-bar-dismiss"

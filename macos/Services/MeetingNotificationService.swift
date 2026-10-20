@@ -16,7 +16,8 @@ extension Notification.Name {
     static let videoCallDetected = Notification.Name("videoCallDetected")
 }
 
-final class MeetingNotificationService: NSObject, UNUserNotificationCenterDelegate, @unchecked Sendable {
+@MainActor
+final class MeetingNotificationService: NSObject, UNUserNotificationCenterDelegate {
 
     static let shared = MeetingNotificationService()
 
@@ -55,6 +56,10 @@ final class MeetingNotificationService: NSObject, UNUserNotificationCenterDelega
     }
 
     func requestPermission() async {
+        #if DEBUG
+        // Simulator screenshots cannot dismiss the system prompt.
+        if UserDefaults.standard.bool(forKey: "TVDebugNoNotify") { return }
+        #endif
         do {
             let granted = try await center.requestAuthorization(options: [.alert, .sound, .badge])
             logger.info("Notification permission granted: \(granted)")

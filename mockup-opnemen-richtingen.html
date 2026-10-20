@@ -1,0 +1,544 @@
+<!doctype html>
+<!-- PROTOTYPE: Opnemen-scherm, drie compositierichtingen. Standalone, voorbeelddata, geen productintegratie. -->
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ThoughtVault Opnemen richtingen</title>
+<style>
+/* Alleen bestaande tokens uit Color+Brand.swift (app draait geforceerd donker). */
+:root{--bg:#0B0D16;--s1:#141628;--s2:#1B1E33;--s3:#232741;--fg:#EDEBF6;--fg2:#B3AECE;--fg3:#8D87B2;--bd:#343056;--bd2:#272444;
+ --brand:#9048F0;--brand2:#6048F0;--lav:#D890F0;--neon:#8F6BFF;--link:#A87DF7;--err:#FA7373;--warn:#FFC74D;--ok:#4DD180;--lvl:0;
+ --ease:cubic-bezier(.2,.8,.2,1)}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font:14px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",sans-serif;-webkit-font-smoothing:antialiased;font-synthesis:none}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--link);outline-offset:2px}
+svg.i{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;flex:none}
+
+/* ---------- review-balk (buiten de app) ---------- */
+.review{position:fixed;left:50%;top:10px;transform:translateX(-50%);z-index:50;display:flex;gap:12px;align-items:center;padding:5px 6px 5px 12px;border-radius:10px;background:#000c;border:1px solid #fff2;font-size:12px;color:#ccc;backdrop-filter:blur(12px)}
+.review .grp{display:flex;background:#ffffff14;border-radius:7px;padding:2px}
+.review .grp button{border:0;background:none;padding:3px 9px;border-radius:5px;color:#bbb}
+.review .grp button[aria-pressed=true]{background:#fff;color:#000}
+.review select{background:#ffffff14;border:0;border-radius:6px;padding:3px 6px;color:#ddd}
+.review[hidden]{display:none}
+
+/* ---------- venster ---------- */
+.win{position:relative;height:100vh;display:grid;overflow:hidden;background:var(--bg)}
+.lights{display:flex;gap:8px;padding:0 0 0 2px;height:14px}
+.lights i{width:12px;height:12px;border-radius:50%;background:#FF5F57}.lights i:nth-child(2){background:#FEBC2E}.lights i:nth-child(3){background:#28C840}
+
+/* navigatie: sidebar (A, C) */
+.side{display:flex;flex-direction:column;padding:18px 12px 14px;background:rgba(20,22,40,.72);border-right:1px solid var(--bd2);backdrop-filter:blur(30px);z-index:2;min-width:0}
+.wordmark{display:flex;align-items:center;gap:9px;margin:22px 8px 22px;font-size:17px;font-weight:650;letter-spacing:-.01em}
+.wordmark b{color:var(--link);font-weight:650}
+.mark{width:22px;height:18px}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav button{display:flex;align-items:center;gap:11px;height:34px;padding:0 10px;border:0;border-radius:8px;background:none;color:var(--fg2);font-size:14px;text-align:left;transition:background .15s,color .15s}
+.nav button:hover{background:#ffffff0a;color:var(--fg)}
+.nav button[aria-current=page]{background:rgba(144,72,240,.24);color:#fff;font-weight:560}
+.nav button[aria-current=page] svg{color:var(--lav)}
+.navlabel{font-size:11px;font-weight:600;color:var(--fg3);margin:22px 10px 6px;letter-spacing:.02em}
+.recent button{height:auto;padding:6px 10px;flex-direction:column;align-items:flex-start;gap:0}
+.recent small{color:var(--fg3);font-size:12px}
+.side .util{margin-top:auto;padding-top:10px;border-top:1px solid var(--bd2)}
+/* navigatie: rail (B) */
+.rail{display:flex;flex-direction:column;align-items:center;gap:4px;padding:18px 0 14px;background:rgba(20,22,40,.6);border-right:1px solid var(--bd2);backdrop-filter:blur(30px);z-index:2}
+.rail .lights{margin-bottom:26px}
+.rail button{width:44px;height:44px;border:0;border-radius:12px;background:none;color:var(--fg3);display:grid;place-items:center;transition:background .15s,color .15s}
+.rail button:hover{background:#ffffff0d;color:var(--fg)}
+.rail button[aria-current=page]{background:rgba(144,72,240,.28);color:#fff}
+.rail button svg{width:21px;height:21px}
+.rail .util{margin-top:auto}
+
+/* ---------- gedeelde opname-onderdelen ---------- */
+.status{display:inline-flex;align-items:center;gap:9px;font-size:12px;font-weight:650;letter-spacing:.06em;text-transform:uppercase;color:var(--fg2)}
+.status i{width:8px;height:8px;border-radius:50%;background:var(--fg3);transition:background .3s}
+.s-rec .status i{background:var(--err);animation:pulse 1.6s ease-in-out infinite}
+.s-pause .status i{background:var(--warn)}
+.s-rec .status,.s-pause .status{color:var(--fg)}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(250,115,115,.55)}60%{box-shadow:0 0 0 7px rgba(250,115,115,0)}}
+.timer{font-family:-apple-system,"SF Pro Display",BlinkMacSystemFont,sans-serif;font-weight:200;font-variant-numeric:tabular-nums;letter-spacing:-.03em;line-height:1;color:var(--fg3);transition:color .5s,transform .6s var(--ease)}
+.s-idle .timer{opacity:.38}
+.s-live .timer{color:var(--fg)}
+.s-pause .timer{animation:blink 1.8s steps(1) infinite}
+@keyframes blink{50%{opacity:.45}}
+.levelnote{font-size:13px;color:var(--fg3);display:flex;align-items:center;gap:8px}
+.bars{display:inline-flex;gap:2px;align-items:flex-end;height:12px}
+.bars i{width:3px;border-radius:2px;background:var(--link);height:3px;transition:height .08s}
+.wavewrap{position:relative;pointer-events:none}
+.wavewrap canvas{display:block;width:100%;height:100%}
+.haze{position:absolute;inset:-30% 5%;background:radial-gradient(ellipse 50% 42% at 50% 50%,rgba(144,72,240,.30),rgba(96,72,240,.10) 45%,transparent 72%);opacity:calc(.25 + var(--lvl)*.9);transition:opacity .25s;pointer-events:none}
+.s-idle .haze{opacity:.18}
+
+/* transport */
+.transport{display:grid;justify-items:center}
+.transport>.grp{grid-area:1/1;display:flex;gap:36px;align-items:flex-start;transition:opacity .35s var(--ease),transform .45s var(--ease),visibility .45s}
+.s-idle .transport .live,.s-live .transport .idle{opacity:0;visibility:hidden;transform:translateY(10px) scale(.96)}
+.tp{display:flex;flex-direction:column;align-items:center;gap:10px;font-size:13px;color:var(--fg2)}
+.tb{width:58px;height:58px;border-radius:50%;border:1px solid #ffffff1c;background:rgba(35,39,65,.7);color:var(--fg);display:grid;place-items:center;backdrop-filter:blur(20px);transition:transform .12s,background .15s,border-color .15s}
+.tb:hover{background:rgba(52,48,86,.9);border-color:#ffffff30}
+.tb:active{transform:scale(.94)}
+.tb svg{width:22px;height:22px}
+.tb svg.only-rec,.tb svg.only-pause{fill:currentColor;stroke:none}
+.tp>.tb:not(.big){margin:10px 0}
+.tb.big{width:78px;height:78px}
+.tb.rec{background:var(--brand);border-color:transparent;box-shadow:0 0 0 6px rgba(144,72,240,.18),0 10px 30px -8px rgba(144,72,240,.7)}
+.tb.rec:hover{background:#9c5cf3}
+.tb.rec i{width:22px;height:22px;border-radius:50%;background:#fff}
+.tb.stop{background:rgba(250,115,115,.16);border:1.5px solid rgba(250,115,115,.75);box-shadow:0 0 24px -4px rgba(250,115,115,.45)}
+.tb.stop:hover{background:rgba(250,115,115,.26)}
+.tb.stop i{width:22px;height:22px;border-radius:5px;background:var(--err)}
+.tb.danger{color:var(--err)}
+.tp .k{font-size:11px;color:var(--fg3);margin-top:-6px}
+.only-pause{display:none!important}.s-pause .only-pause{display:flex!important}.s-pause .only-rec{display:none!important}
+.tb .only-pause{display:none!important}.s-pause .tb .only-pause{display:block!important}
+
+/* instellingen vóór opname */
+.setup{display:flex;align-items:center;gap:10px;flex-wrap:wrap;transition:opacity .4s var(--ease),filter .4s,transform .5s var(--ease)}
+.s-live .setup{opacity:.38;filter:saturate(.2)}
+.seg{display:inline-flex;padding:3px;border-radius:10px;background:rgba(11,13,22,.55);border:1px solid var(--bd2)}
+.seg button{border:0;background:none;border-radius:7px;padding:6px 12px;color:var(--fg2);display:inline-flex;gap:7px;align-items:center;font-size:13px;transition:background .15s,color .15s}
+.seg button[aria-checked=true]{background:var(--s3);color:#fff;box-shadow:0 1px 2px #0006}
+.seg svg{width:15px;height:15px}
+.pick{display:inline-flex;flex-direction:column;gap:1px;padding:6px 12px;border-radius:10px;background:rgba(11,13,22,.55);border:1px solid var(--bd2);min-width:150px}
+.pick span{font-size:11px;color:var(--fg3)}
+.pick select{border:0;background:none;padding:0;font-size:13px;color:var(--fg);-webkit-appearance:none;appearance:none;cursor:pointer}
+.switch{display:inline-flex;align-items:center;gap:9px;font-size:13px;color:var(--fg2);cursor:pointer}
+.switch input{appearance:none;width:32px;height:19px;border-radius:10px;background:var(--s3);position:relative;margin:0;cursor:pointer;transition:background .2s}
+.switch input:after{content:"";position:absolute;left:2px;top:2px;width:15px;height:15px;border-radius:50%;background:#fff;transition:transform .2s var(--ease)}
+.switch input:checked{background:var(--brand)}.switch input:checked:after{transform:translateX(13px)}
+.plain{border:0;background:none;color:var(--fg2);padding:6px 8px;border-radius:7px;display:inline-flex;gap:7px;align-items:center;font-size:13px}
+.plain:hover{background:#ffffff0d;color:var(--fg)}
+.avatars{display:inline-flex}.avatars b{width:22px;height:22px;border-radius:50%;background:var(--s3);border:1.5px solid var(--s1);display:grid;place-items:center;font-size:10px;font-weight:650;margin-left:-6px;color:var(--fg2)}
+.avatars b:first-child{margin-left:0}
+
+/* zijpaneel-inhoud */
+.h3{font-size:15px;font-weight:620;margin:0 0 10px;color:var(--fg)}
+.meta{font-size:12px;color:var(--fg3)}
+.note{width:100%;min-height:74px;resize:vertical;border-radius:10px;border:1px solid var(--bd2);background:rgba(11,13,22,.5);padding:10px 12px;font-size:13px;color:var(--fg)}
+.note::placeholder{color:var(--fg3)}
+.tline{font-size:14px;line-height:1.55;color:var(--fg2);margin:0 0 10px;transition:opacity .5s}
+.tline time{display:block;font-size:11px;color:var(--fg3);font-variant-numeric:tabular-nums}
+.tline:last-child{color:var(--fg)}
+.cursor{display:inline-block;width:2px;height:14px;background:var(--link);vertical-align:-2px;margin-left:2px;animation:blink 1s steps(1) infinite}
+.rowi{display:flex;align-items:center;gap:10px;padding:9px 0;font-size:13px}
+.rowi+.rowi{border-top:1px solid var(--bd2)}
+.rowi .g{flex:1;min-width:0}.rowi .g div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.prog{height:3px;border-radius:2px;background:var(--s3);margin-top:6px;overflow:hidden}.prog i{display:block;height:100%;width:62%;background:var(--link)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--link);flex:none}
+.swap{display:grid}.swap>*{grid-area:1/1;transition:opacity .35s var(--ease),transform .45s var(--ease),visibility .45s}
+.s-idle .swap>.live,.s-live .swap>.idle{opacity:0;visibility:hidden;transform:translateY(8px)}
+.secondary-actions{display:flex;gap:4px;justify-content:center;transition:opacity .35s}
+.s-live .secondary-actions{opacity:0;visibility:hidden}
+
+/* ================= A: Podium + inspector ================= */
+.A{grid-template-columns:236px minmax(0,1fr) 320px}
+.A .stage{position:relative;display:grid;grid-template-rows:auto 1fr auto;padding:22px 32px 22px;min-width:0}
+.A .top{display:flex;justify-content:space-between;align-items:center;height:36px;z-index:1}
+.A .srcsum{font-size:13px;color:var(--fg2);transition:opacity .3s}.s-idle.A .srcsum{opacity:0}
+.A .center{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;min-height:0}
+.A .timer{font-size:clamp(76px,8vw,112px)}
+.A .wavewrap{width:calc(100% + 64px);margin:6px -32px 18px;height:clamp(180px,30vh,280px)}
+.A .dock{justify-self:center;display:flex;justify-content:center;padding:10px 12px;border-radius:16px;background:rgba(20,22,40,.72);border:1px solid var(--bd2);backdrop-filter:blur(24px);box-shadow:0 20px 40px -20px #000c;transition:transform .5s var(--ease),opacity .4s}
+.s-live.A .dock{transform:translateY(6px)}
+.A .insp{background:rgba(20,22,40,.5);border-left:1px solid var(--bd2);padding:58px 22px 22px;overflow:auto;backdrop-filter:blur(30px)}
+.A .insp section{margin-bottom:26px}
+.A .title-in{font-size:19px;font-weight:620;border:0;background:none;padding:0;width:100%;color:var(--fg);letter-spacing:-.01em}
+
+/* ================= B: Focus, randloos ================= */
+.B{grid-template-columns:78px minmax(0,1fr)}
+.B .stage{position:relative;min-width:0;overflow:hidden}
+.B .wavewrap{position:absolute;left:0;right:0;top:calc(50% - 170px);height:340px}
+.B .top{position:absolute;left:44px;right:36px;top:34px;display:flex;justify-content:space-between;align-items:flex-start;z-index:1}
+.B .timer{font-size:clamp(84px,9vw,128px);margin-top:12px;display:block}
+.B .right{display:flex;flex-direction:column;align-items:flex-end;gap:8px;text-align:right}
+.B .caption{position:absolute;left:0;right:0;top:calc(50% + 150px);text-align:center;padding:0 12%;font-size:19px;line-height:1.5;color:var(--fg2);transition:opacity .4s}
+.B .caption b{color:var(--fg);font-weight:450}
+.s-idle.B .caption{opacity:0}
+.B .idlecenter{position:absolute;left:0;right:0;top:calc(50% - 39px);display:grid;justify-items:center}
+.B .capsule{position:absolute;left:50%;bottom:34px;transform:translateX(-50%);display:flex;align-items:center;gap:10px;padding:8px;border-radius:999px;background:rgba(27,30,51,.72);border:1px solid #ffffff16;backdrop-filter:blur(28px);box-shadow:0 24px 50px -20px #000;transition:opacity .4s,transform .5s var(--ease),visibility .5s}
+.B .capsule .tb{width:48px;height:48px}.B .capsule .tb.big{width:58px;height:58px}
+.B .capsule .lbl{font-size:13px;color:var(--fg2);padding:0 6px}
+.s-idle.B .capsule.live,.s-live.B .capsule.idle{opacity:0;visibility:hidden;transform:translate(-50%,14px)}
+.B .capsule.idle{border-radius:18px;padding:8px 10px;flex-wrap:nowrap;white-space:nowrap}
+.B .drawer{position:absolute;top:0;right:0;bottom:0;width:340px;background:rgba(20,22,40,.86);border-left:1px solid var(--bd2);backdrop-filter:blur(30px);padding:30px 22px;transform:translateX(100%);transition:transform .45s var(--ease);z-index:3;overflow:auto}
+.B.drawer-open .drawer{transform:none}
+.B .drawer section{margin-bottom:24px}
+
+/* ================= C: Band + document ================= */
+.C{grid-template-columns:236px minmax(0,1fr)}
+.C .main{display:grid;grid-template-rows:minmax(300px,46vh) 1fr;min-width:0;min-height:0}
+.C .band{position:relative;background:linear-gradient(#080A12,#0B0D16);border-bottom:1px solid var(--bd2);display:grid;grid-template-columns:auto 1fr auto;grid-template-rows:auto 1fr;align-items:center;padding:26px 36px 0;overflow:hidden}
+.C .band .wavewrap{grid-row:2;grid-column:1/-1;margin:0 -36px;height:100%;min-height:180px}
+.C .band .left{z-index:1}
+.C .timer{font-size:clamp(64px,6.4vw,92px);margin-top:10px}
+.C .band .transport{z-index:1;grid-column:3;grid-row:1}
+.C .band .transport>.grp{gap:22px}
+.C .band .tp{font-size:12px}
+.C .doc{display:grid;grid-template-columns:minmax(0,1fr) 300px;min-height:0;overflow:hidden}
+.C .reading{overflow:auto;padding:30px 48px}
+.C .reading .inner{max-width:680px}
+.C .ctx{border-left:1px solid var(--bd2);padding:30px 24px;overflow:auto}
+.C .ctx section{margin-bottom:24px}
+.C .form{display:grid;grid-template-columns:140px 1fr;gap:16px 20px;align-items:center;max-width:620px}
+.C .form>span{font-size:13px;color:var(--fg2)}
+.C .form .secondary-actions{justify-content:flex-start;margin-left:-8px}
+.C .form [data-t=profdesc]{display:block;margin:6px 0 0!important}
+.C h2{font-size:22px;font-weight:620;margin:0 0 4px;letter-spacing:-.015em}
+.C .lead{color:var(--fg3);margin:0 0 26px}
+.C .tl2 p{font-size:16px;line-height:1.7;color:var(--fg2);margin:0 0 16px}
+.C .tl2 time{font-size:12px;color:var(--fg3);margin-right:10px;font-variant-numeric:tabular-nums}
+.C .tl2 p:last-child{color:var(--fg)}
+.C .tl2 .mnote{border-left:2px solid var(--lav);padding-left:12px;color:var(--fg);font-size:14px}
+
+/* dialoog */
+dialog{border:1px solid var(--bd);border-radius:14px;background:var(--s2);color:var(--fg);padding:22px;max-width:360px;box-shadow:0 30px 60px #000a}
+dialog::backdrop{background:#0008;backdrop-filter:blur(3px)}
+dialog h3{margin:0 0 8px;font-size:16px}dialog p{margin:0 0 18px;color:var(--fg2);font-size:13px}
+.btnrow{display:flex;gap:8px;justify-content:flex-end}
+.btn{border:1px solid var(--bd);background:var(--s3);border-radius:8px;padding:7px 14px;font-size:13px}
+.btn.red{background:rgba(250,115,115,.18);border-color:rgba(250,115,115,.6);color:#fff}
+.hudline{position:fixed;left:12px;bottom:8px;font:11px ui-monospace,Menlo,monospace;color:#8D87B2aa;z-index:40;pointer-events:none}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="review" id="review" role="toolbar" aria-label="Review-bediening (geen onderdeel van de app)">
+  <span>Richting</span>
+  <div class="grp" id="r-dir"><button data-v="A">A Podium</button><button data-v="B">B Focus</button><button data-v="C">C Band + document</button></div>
+  <span>Toestand</span>
+  <div class="grp" id="r-state"><button data-v="idle">Klaar</button><button data-v="rec">Opname</button><button data-v="pause">Pauze</button></div>
+  <label>Bron <select id="r-src"><option value="sim">Simulatie</option><option value="fixture">Fixture</option><option value="mic">Live microfoon</option></select></label>
+</div>
+<div id="app"></div>
+<div class="hudline" id="hud"></div>
+<dialog id="cancel"><h3>Opname annuleren?</h3><p>Je huidige opname wordt verwijderd. Dit kan niet ongedaan worden gemaakt.</p>
+  <div class="btnrow"><button class="btn" id="c-no">Doorgaan met opnemen</button><button class="btn red" id="c-yes">Annuleer opname</button></div></dialog>
+<script>
+'use strict';
+const CONFIG={
+  env:{analysisWindowMs:30,publishHz:30,initialFloorDb:-60,minFloorDb:-75,maxFloorDb:-35,gateStartOffsetDb:3,gateEndOffsetDb:9,
+       visMinFloorDb:-55,visMinOffsetDb:6,visMaxDb:-8,exponent:0.65,attackMs:35,releaseMs:220,silenceThreshold:0.015,
+       historyLength:90,floorHistoryMs:2000,speechOffsetDb:12,floorFallTcMs:500,floorRiseTcMs:2000},
+  wave:{heightFrac:.38,knee:1.7,taperPow:.9,carrierCycles:2.2,travelHz:.3,energyBoost:.25,breath:.012,
+    lines:14,glow:14,
+    bellies:[{c:.70,w:.15,delay:0,f:.037},{c:.50,w:.17,delay:90,f:.053},{c:.30,w:.16,delay:180,f:.071}],
+    drift:{center:.05,width:.25}},
+  fixture:{sr:48000,noiseDb:-68,segments:[
+    {t0:1.0,t1:2.5,type:'steady',db:-40},{t0:2.5,t1:5.0,type:'syll',db:-22,hz:4},{t0:5.0,t1:5.6,type:'steady',db:-10}],length:7.1}
+};
+/* ============ envelope: 1-op-1 port van AudioEnvelopeProcessor.swift ============ */
+class EnvelopeProcessor{
+  constructor(){this.reset()}
+  reset(){this.floorDb=CONFIG.env.initialFloorDb;this.smoothed=0;this.hist=[];this.histMs=0;this.lastDb=-120;this.gate=0}
+  static a(dtMs,tc){return 1-Math.exp(-dtMs/tc)}
+  process(rawDb,dt){
+    const C=CONFIG.env;
+    const db=Math.min(0,Math.max(-120,Number.isFinite(rawDb)?rawDb:-120));
+    const dtMs=Math.max(1,Math.min(250,dt*1000));
+    this.hist.push({db,dtMs});this.histMs+=dtMs;
+    while(this.histMs-this.hist[0].dtMs>C.floorHistoryMs&&this.hist.length>1)this.histMs-=this.hist.shift().dtMs;
+    const sorted=this.hist.map(h=>h.db).sort((x,y)=>x-y);
+    const cand=sorted[Math.floor(sorted.length/5)];
+    const isSpeech=db>this.floorDb+C.speechOffsetDb;
+    if(cand<this.floorDb)this.floorDb+=(cand-this.floorDb)*EnvelopeProcessor.a(dtMs,C.floorFallTcMs);
+    else if(!isSpeech)this.floorDb+=(cand-this.floorDb)*EnvelopeProcessor.a(dtMs,C.floorRiseTcMs);
+    this.floorDb=Math.min(C.maxFloorDb,Math.max(C.minFloorDb,this.floorDb));
+    const ss=(e0,e1,x)=>{const t=Math.min(1,Math.max(0,(x-e0)/(e1-e0)));return t*t*(3-2*t)};
+    this.gate=ss(this.floorDb+C.gateStartOffsetDb,this.floorDb+C.gateEndOffsetDb,db);
+    const visMin=Math.max(this.floorDb+C.visMinOffsetDb,C.visMinFloorDb);
+    const norm=Math.min(1,Math.max(0,(db-visMin)/(C.visMaxDb-visMin)));
+    const target=Math.pow(norm,C.exponent)*this.gate;
+    const tc=target>this.smoothed?C.attackMs:C.releaseMs;
+    this.smoothed+=(target-this.smoothed)*EnvelopeProcessor.a(dtMs,tc);
+    this.lastDb=db;
+    return this.smoothed<C.silenceThreshold?0:this.smoothed;
+  }
+}
+
+/* ============ audiobronnen ============ */
+const Audio_={ctx:null,an:null,buf:null,stream:null,src:null,t0:0,simT:0,
+  async start(kind){
+    this.kind=kind;this.simT=0;
+    if(kind==='sim')return;
+    this.ctx=new (window.AudioContext||window.webkitAudioContext)();
+    this.an=this.ctx.createAnalyser();this.an.fftSize=2048;this.buf=new Float32Array(2048);
+    if(kind==='mic'){
+      this.stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
+      this.src=this.ctx.createMediaStreamSource(this.stream);this.src.connect(this.an); // niet naar destination: geen feedback
+    }else{
+      const b=makeFixture(this.ctx);const s=this.ctx.createBufferSource();s.buffer=b;s.connect(this.an);
+      const mute=this.ctx.createGain();mute.gain.value=0;this.an.connect(mute).connect(this.ctx.destination);
+      s.start();this.src=s;
+    }
+    await this.ctx.resume();
+  },
+  pause(){if(this.ctx)this.ctx.suspend()},
+  resume(){if(this.ctx)this.ctx.resume()},
+  stop(){
+    if(this.stream){this.stream.getTracks().forEach(t=>t.stop());this.stream=null} // microfoon vrijgeven
+    if(this.ctx){this.ctx.close();this.ctx=null}
+    this.an=null;this.src=null;
+  },
+  position(){return this.kind==='sim'?this.simT:(this.ctx?this.ctx.currentTime:0)},
+  dbNow(dt){
+    if(this.kind==='sim'){this.simT+=dt;return simDb(this.simT)}
+    if(!this.an)return -120;
+    this.an.getFloatTimeDomainData(this.buf);
+    const n=Math.round(this.ctx.sampleRate*CONFIG.env.analysisWindowMs/1000);
+    let s=0;for(let i=this.buf.length-n;i<this.buf.length;i++)s+=this.buf[i]*this.buf[i];
+    const rms=Math.sqrt(s/n);return rms>0?20*Math.log10(rms):-120;
+  }
+};
+function simDb(t){ // expliciet gesimuleerd: zinnen met pauzes
+  const phrase=Math.sin(2*Math.PI*t/6.5)>-0.15;
+  const syl=Math.abs(Math.sin(Math.PI*3.6*t));
+  return phrase?-34+14*Math.pow(syl,.7)+2*Math.sin(t*7.1):-68+Math.sin(t*13)*1.5;
+}
+function makeFixture(ctx){ // deterministisch: geen Math.random
+  const F=CONFIG.fixture,sr=ctx.sampleRate,n=Math.round(F.length*sr);
+  const b=ctx.createBuffer(1,n,sr),d=b.getChannelData(0);
+  const nz=Math.pow(10,F.noiseDb/20)*Math.sqrt(3);
+  let seed=1;const rnd=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296*2-1};
+  const H=8,unit=1/Math.sqrt(Array.from({length:H},(_,k)=>1/((k+1)*(k+1))/2).reduce((a,b)=>a+b,0));
+  for(let i=0;i<n;i++){
+    const t=i/sr;let v=rnd()*nz;
+    for(const s of F.segments){
+      if(t<s.t0||t>=s.t1)continue;
+      const edge=Math.min(1,(t-s.t0)/0.01,(s.t1-t)/0.01);
+      let env=1;if(s.type==='syll')env=Math.pow(Math.max(0,Math.sin(2*Math.PI*s.hz*(t-s.t0))),.6)*1.25;
+      const amp=Math.pow(10,s.db/20)*unit*env*edge;
+      const f0=130+6*Math.sin(2*Math.PI*.7*t);let x=0;
+      for(let k=1;k<=H;k++)x+=Math.sin(2*Math.PI*f0*k*t)/k;
+      v+=amp*x;
+    }
+    d[i]=Math.max(-1,Math.min(1,v));
+  }
+  return b;
+}
+
+
+
+/* ---------- opname-state ---------- */
+const R={phase:'idle',elapsed:0,proc:new EnvelopeProcessor(),hist:new Array(CONFIG.env.historyLength).fill(0),level:0,db:-120,drift:0,travel:0,time:0,last:performance.now()};
+const $=id=>document.getElementById(id);
+setInterval(()=>{
+  const now=performance.now(),dt=(now-R.last)/1000;R.last=now;let lvl=0;
+  if(R.phase==='recording'){R.elapsed+=dt;R.db=Audio_.dbNow(dt);lvl=R.proc.process(R.db,dt)}
+  else if(R.phase==='idle'){R.db=-120;R.proc.reset()}
+  R.level=lvl;R.hist.push(lvl);R.hist.shift();
+},1000/CONFIG.env.publishHz);
+
+/* ---------- golf ---------- */
+const TAU=Math.PI*2,RGB={brand:[144,72,240],brand2:[96,72,240],lav:[216,144,240],neon:[143,107,255]};
+const hsh=n=>{const x=Math.sin(n*127.1+311.7)*43758.5453;return x-Math.floor(x)};
+const LINES=Array.from({length:CONFIG.wave.lines},(_,j,)=>j===CONFIG.wave.lines-1
+  ?{px:2.2,a:1,base:1,amp:.14,col:'lav',main:true}
+  :{px:.6+.9*hsh(j),a:.22+.35*hsh(j+7),base:.3+.65*hsh(j+3),amp:.4+.5*hsh(j+11),col:['brand','lav','neon'][j%3]});
+function envAt(ms){const H=R.hist,f=H.length-1-ms/(1000/CONFIG.env.publishHz),i0=Math.max(0,Math.floor(f)),i1=Math.min(H.length-1,i0+1),u=f-Math.floor(f);return H[i0]*(1-u)+H[i1]*u}
+const RM=matchMedia('(prefers-reduced-motion: reduce)').matches;
+function drawWave(cv){
+  const dpr=devicePixelRatio||1,W=cv.clientWidth,H=cv.clientHeight;if(!W||!H)return;
+  if(cv.width!==Math.round(W*dpr)||cv.height!==Math.round(H*dpr)){cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr)}
+  const g=cv.getContext('2d');g.setTransform(dpr,0,0,dpr,0,0);g.clearRect(0,0,W,H);
+  const C=CONFIG.wave,cy=H/2,maxH=H*C.heightFrac,lvl=R.level,td=RM?0:R.drift,tr=RM?0:R.travel;
+  const spread=.18+.82*Math.min(1,lvl*1.6);
+  const bl=C.bellies.map((b,i)=>{
+    const c=b.c+C.drift.center*Math.sin(TAU*b.f*td+i*2.1),w=b.w*(1+C.drift.width*Math.sin(TAU*b.f*.83*td+i*1.3));
+    const sg=Math.tanh(2.5*Math.sin(TAU*b.f*.6*td+i*1.7)+.9);
+    return {c,w,sg:i===0?Math.abs(sg)*.9+.1:sg,env:RM?lvl:envAt(b.delay)};
+  });
+  const step=2,n=Math.floor(W/step)+1,N=LINES.length,ys=LINES.map(()=>new Float32Array(n));
+  for(let p=0;p<n;p++){
+    const x=p/(n-1),taper=Math.pow(Math.max(0,Math.sin(Math.PI*x)),C.taperPow),raw=new Array(N);
+    for(let j=0;j<N;j++){let s=0;const L=LINES[j];
+      for(let i=0;i<3;i++){const b=bl[i],z=(x-b.c)/b.w;
+        const wt=L.base+L.amp*Math.sin(TAU*(.021+.0073*(i+1)*Math.sqrt(j+1))*td+i*1.9+j*.8);
+        s+=b.sg*wt*b.env*Math.exp(-.5*z*z)*Math.sin(TAU*C.carrierCycles*(x-b.c)-tr+.4*j+1.3*i)}
+      raw[j]=s}
+    const m=raw[N-1];
+    for(let j=0;j<N;j++){let y=Math.tanh((LINES[j].main?m:m+(raw[j]-m)*spread)*C.knee)*maxH*taper;
+      y+=H*C.breath*Math.sin(TAU*1.3*x+(RM?0:R.time*.9)+j*.35)*taper;ys[j][p]=y}
+  }
+  g.globalCompositeOperation='lighter';
+  const quiet=.45+.55*Math.min(1,lvl*2);
+  for(let j=0;j<N;j++){
+    const L=LINES[j],a=L.main?.95:L.a*quiet,c=RGB[L.col],e=RGB.brand2,nb=RGB.neon,rg=(k,al)=>`rgba(${k[0]},${k[1]},${k[2]},${al})`;
+    const gr=g.createLinearGradient(0,0,W,0);
+    gr.addColorStop(0,rg(e,0));gr.addColorStop(.12,rg(e,a*.55));gr.addColorStop(.5,rg(c,a));gr.addColorStop(.88,rg(nb,a*.55));gr.addColorStop(1,rg(nb,0));
+    g.beginPath();for(let p=0;p<n;p++){const X=p*step,Y=cy-ys[j][p];p?g.lineTo(X,Y):g.moveTo(X,Y)}
+    g.lineWidth=L.px;g.strokeStyle=gr;
+    g.shadowColor=rg(L.main?RGB.lav:c,.8);g.shadowBlur=L.main||j%4===0?C.glow*(.5+.8*lvl):0;
+    g.stroke();
+  }
+  g.shadowBlur=0;g.globalCompositeOperation='source-over';
+}
+
+/* ---------- markup ---------- */
+const I={home:'<path d="M3 11l9-8 9 8v10h-6v-6H9v6H3z"/>',mic:'<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/>',
+ tasks:'<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 12l3 3 5-6"/>',doc:'<path d="M6 3h8l4 4v14H6z"/><path d="M9 12h6M9 16h6"/>',
+ people:'<circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0112 0"/><circle cx="17" cy="9" r="2.5"/><path d="M17 14a5 5 0 014 5"/>',
+ gear:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/>',
+ admin:'<circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0110-4M17 14v6M14 17h6"/>',
+ speaker:'<path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16 9a4 4 0 010 6M19 6a8 8 0 010 12"/>',
+ combo:'<rect x="4" y="3" width="5" height="9" rx="2.5"/><path d="M2 10a4.5 4.5 0 009 0M14 9v6h3l4 3V6l-4 3z"/>',
+ pause:'<rect x="7" y="5" width="3.5" height="14" rx="1"/><rect x="13.5" y="5" width="3.5" height="14" rx="1"/>',
+ play:'<path d="M8 5v14l11-7z"/>',note:'<path d="M5 4h10l4 4v12H5z"/><path d="M9 12h6M9 16h4"/>',x:'<path d="M6 6l12 12M18 6L6 18"/>',
+ file:'<path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v4h16v-4"/>',yt:'<rect x="3" y="6" width="18" height="12" rx="4"/><path d="M10 9.5v5l4.5-2.5z"/>',
+ side:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/>',users:'<circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0112 0M16 5a3 3 0 010 6M21 20a6 6 0 00-4-5.6"/>',
+ more:'<circle cx="6" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="18" cy="12" r="1"/>'};
+const ic=(k,cl='i')=>`<svg class="${cl}" viewBox="0 0 24 24" aria-hidden="true">${I[k]}</svg>`;
+const NAV=[['Home','home'],['Opnemen','mic'],['Taken','tasks'],['Notulen','doc'],['Mensen','people']];
+const mark=`<svg class="mark" viewBox="0 0 22 18" aria-hidden="true">${[3,9,15,11,5].map((h,i)=>`<rect x="${i*4.5}" y="${9-h/2}" width="2.4" height="${h}" rx="1.2" fill="${i%2?'#D890F0':'#9048F0'}"/>`).join('')}</svg>`;
+const sidebar=recent=>`<aside class="side"><div class="lights" aria-hidden="true"><i></i><i></i><i></i></div>
+  <div class="wordmark">${mark}<span>Thought<b>Vault</b></span></div>
+  <nav class="nav" aria-label="Hoofdnavigatie">${NAV.map(([l,k])=>`<button ${l==='Opnemen'?'aria-current="page"':''}>${ic(k)}${l}</button>`).join('')}</nav>
+  ${recent?`<div class="navlabel">Recent</div><nav class="nav recent" aria-label="Recente notulen">${[['Projectoverleg vervolgstappen','Vandaag 10:12'],['Retro sprint 41','Gisteren 16:34'],['Klantgesprek Van Dijk','Ma 21 sep']].map(r=>`<button>${r[0]}<small>${r[1]}</small></button>`).join('')}</nav>`:''}
+  <nav class="nav util" aria-label="Overig"><button>${ic('gear')}Instellingen</button><button>${ic('admin')}Admin</button></nav></aside>`;
+const rail=`<nav class="rail" aria-label="Hoofdnavigatie"><div class="lights" aria-hidden="true"><i></i><i></i><i></i></div>
+  ${NAV.map(([l,k])=>`<button title="${l}" aria-label="${l}" ${l==='Opnemen'?'aria-current="page"':''}>${ic(k)}</button>`).join('')}
+  <div class="util"><button title="Instellingen" aria-label="Instellingen">${ic('gear')}</button><button title="Admin" aria-label="Admin">${ic('admin')}</button></div></nav>`;
+
+const statusEl=`<div class="status" role="status"><i></i><span data-t="status">Klaar om op te nemen</span></div>`;
+const timerEl=`<span class="timer" data-t="timer">00:00</span>`;
+const wave=`<div class="wavewrap"><div class="haze"></div><canvas data-wave role="img" aria-label="Live audioniveau"></canvas></div>`;
+const level=`<div class="levelnote" aria-hidden="true"><span class="bars">${'<i></i>'.repeat(7)}</span><span data-t="level">Live audioniveau</span></div>`;
+const transport=`<div class="transport">
+  <div class="grp idle"><div class="tp"><button class="tb big rec" data-a="start" aria-label="Start opname"><i></i></button>Start opname<span class="k">⌘R</span></div></div>
+  <div class="grp live">
+    <div class="tp"><button class="tb" data-a="pause" aria-label="Pauzeer of hervat opname">${ic('pause','i only-rec')}${ic('play','i only-pause')}</button><span class="only-rec">Pauzeer</span><span class="only-pause">Hervat</span></div>
+    <div class="tp"><button class="tb big stop" data-a="stop" aria-label="Stop en verwerk opname"><i></i></button><span class="only-rec">Stop en verwerk</span><span class="only-pause">Verstuur opname</span></div>
+    <div class="tp only-rec"><button class="tb" data-a="note" aria-label="Snelle notitie">${ic('note')}</button>Notitie</div>
+    <div class="tp only-pause"><button class="tb danger" data-a="cancel" aria-label="Annuleer opname">${ic('x')}</button>Annuleer</div>
+  </div></div>`;
+const seg=`<div class="seg" role="radiogroup" aria-label="Opnamebron">
+  <button role="radio" aria-checked="true" data-mode="Microfoon">${ic('mic')}Microfoon</button><button role="radio" aria-checked="false" data-mode="Systeemgeluid">${ic('speaker')}Systeemgeluid</button><button role="radio" aria-checked="false" data-mode="Gecombineerd">${ic('combo')}Gecombineerd</button></div>`;
+const profile=`<label class="pick"><span>Profiel</span><select data-profile><option>Zakelijk (standaard)</option><option>Informeel</option><option>Technisch</option></select></label>`;
+const premium=`<label class="switch"><input type="checkbox" role="switch" data-premium> Premium model</label>`;
+const people=`<button class="plain" aria-label="Deelnemers kiezen, 2 gekozen">${ic('users')}<span class="avatars"><b>LV</b><b>AH</b></span> 2</button>`;
+const secondary=`<div class="secondary-actions"><button class="plain">${ic('file')}Importeer bestand</button><button class="plain">${ic('yt')}YouTube-video</button></div>`;
+const queue=`<section><h3 class="h3">Verwerking</h3><div class="rowi"><span class="dot"></span><div class="g"><div>vergadering-0929.m4a</div><div class="prog"><i></i></div></div><span class="meta">62%</span></div></section>
+  <section><h3 class="h3">Opgeslagen opnames <span class="meta">2</span></h3>${['opname-0928.wav','opname-0925.wav'].map(f=>`<div class="rowi"><div class="g"><div>${f}</div><span class="meta">Niet verwerkt</span></div><button class="plain" aria-label="Acties voor ${f}: opnieuw verwerken, verwijderen">${ic('more')}</button></div>`).join('')}</section>`;
+const T=[[4,'We beginnen met de planning voor de release van volgende maand.'],[9,'Lisa, kun jij de feedback van het testteam verzamelen voor vrijdag?'],[15,'Ja, dat lukt. Ik zet de openstaande punten in één overzicht.'],[22,'Dan kijkt Amir naar de migratie en koppelen we dinsdag terug.'],[30,'Goed. Dan het tweede punt: de conceptnotule voor de klant.']];
+const tfmt=s=>String(Math.floor(s/60)).padStart(2,'0')+':'+String(Math.floor(s%60)).padStart(2,'0');
+const transcriptLines=()=>{const v=T.filter(t=>t[0]<=R.elapsed);return v.length?v:null};
+
+const DIR={
+ A:()=>`<div class="win A">${sidebar(true)}
+   <main class="stage"><div class="top">${statusEl}<span class="srcsum" data-t="srcsum">Microfoon · Zakelijk</span></div>
+     <div class="center">${timerEl}${level}${wave}${transport}${secondary}</div>
+     <div class="dock setup">${seg}${profile}${premium}${people}</div></main>
+   <aside class="insp" aria-label="Deze opname"><div class="swap">
+     <div class="idle"><section><h3 class="h3">Deze opname</h3><p class="meta" data-t="profdesc">Zakelijk: formele toon, geschikt voor directie en management.</p></section>${queue}</div>
+     <div class="live"><section><input class="title-in" value="Opname 29 sep 10:14" aria-label="Titel"><div class="meta">Microfoon · Zakelijk · 2 deelnemers</div></section>
+       <section><h3 class="h3">Snelle notitie</h3><textarea class="note" data-notefield placeholder="Bijv. actiepunt of context..."></textarea></section>
+       <section><h3 class="h3">Live transcriptie <span class="meta">op apparaat</span></h3><div data-t="transcript"></div></section></div>
+   </div></aside></div>`,
+ B:()=>`<div class="win B">${rail}
+   <main class="stage">${wave}
+     <div class="top"><div>${statusEl}${timerEl}</div><div class="right"><span class="srcsum meta" data-t="srcsum" style="font-size:13px">Microfoon · Zakelijk</span><button class="plain" data-a="drawer">${ic('side')}Details</button></div></div>
+     <div class="caption" data-t="caption" aria-live="polite"></div>
+     <div class="idlecenter swap"><div class="idle">${transport.replace('class="transport"','class="transport"')}</div></div>
+     <div class="capsule idle setup">${seg}${profile}${premium}${people}<button class="plain" aria-label="Importeer bestand">${ic('file')}</button><button class="plain" aria-label="YouTube-video">${ic('yt')}</button></div>
+     <div class="capsule live" role="group" aria-label="Opnamebediening">
+       <button class="tb" data-a="pause" aria-label="Pauzeer of hervat opname">${ic('pause','i only-rec')}${ic('play','i only-pause')}</button>
+       <button class="tb big stop" data-a="stop" aria-label="Stop en verwerk opname"><i></i></button>
+       <button class="tb only-rec" data-a="note" aria-label="Snelle notitie">${ic('note')}</button><button class="tb danger only-pause" data-a="cancel" aria-label="Annuleer opname">${ic('x')}</button>
+       <span class="lbl"><span class="only-rec" style="display:inline">Stop en verwerk</span><span class="only-pause">Verstuur of annuleer</span></span></div>
+     <aside class="drawer" aria-label="Details"><div class="swap">
+       <div class="idle"><section><h3 class="h3">Deze opname</h3><p class="meta" data-t="profdesc"></p></section>${queue}</div>
+       <div class="live"><section><h3 class="h3">Snelle notitie</h3><textarea class="note" data-notefield placeholder="Bijv. actiepunt of context..."></textarea></section>
+         <section><h3 class="h3">Live transcriptie <span class="meta">op apparaat</span></h3><div data-t="transcript"></div></section></div></div></aside>
+   </main></div>`,
+ C:()=>`<div class="win C">${sidebar(false)}
+   <div class="main"><section class="band">${wave}<div class="left">${statusEl}<div>${timerEl}</div></div><div></div>${transport}</section>
+    <div class="doc"><div class="reading"><div class="inner swap">
+      <div class="idle"><h2>Nieuwe opname</h2><p class="lead">Kies de bron en het profiel. Tijdens de opname verschijnt hier de live transcriptie.</p>
+        <div class="form setup"><span>Bron</span><div>${seg}</div><span>Profiel</span><div>${profile}<span class="meta" data-t="profdesc"></span></div><span>Kwaliteit</span><div>${premium} <span class="meta">betere kwaliteit, langzamer</span></div><span>Deelnemers</span><div>${people}</div><span>Of</span><div>${secondary}</div></div></div>
+      <div class="live"><h2><input class="title-in" style="font-size:22px;font-weight:620;border:0;background:none;padding:0;width:100%" value="Opname 29 sep 10:14" aria-label="Titel"></h2><p class="lead">Live transcriptie op apparaat · Microfoon · Zakelijk</p><div class="tl2" data-t="doc"></div></div>
+    </div></div>
+    <aside class="ctx swap"><div class="idle">${queue}</div>
+      <div class="live"><section><h3 class="h3">Snelle notitie</h3><textarea class="note" data-notefield placeholder="Bijv. actiepunt of context..."></textarea></section>
+      <section><h3 class="h3">Deelnemers</h3><div class="rowi"><div class="g">Lisa de Vries</div></div><div class="rowi"><div class="g">Amir Haddad</div></div></section></div></aside></div></div></div>`
+};
+const DESC={'Zakelijk (standaard)':'Zakelijk: formele toon, geschikt voor directie en management.','Informeel':'Informeel: vlotte, leesbare toon voor team-overleggen.','Technisch':'Technisch: jargon, focus op architectuur en code.'};
+
+/* ---------- gedrag ---------- */
+let dir='A',mode='Microfoon',prof='Zakelijk (standaard)';
+function setClasses(){
+  const w=document.querySelector('.win');if(!w)return;
+  const live=R.phase!=='idle';
+  w.classList.toggle('s-idle',!live);w.classList.toggle('s-live',live);
+  w.classList.toggle('s-rec',R.phase==='recording');w.classList.toggle('s-pause',R.phase==='paused');
+  document.querySelectorAll('.setup').forEach(s=>s.inert=live);
+  document.querySelectorAll('.swap>.idle').forEach(s=>s.inert=live);document.querySelectorAll('.swap>.live').forEach(s=>s.inert=!live);
+  document.querySelectorAll('.transport .idle').forEach(s=>s.inert=live);document.querySelectorAll('.transport .live').forEach(s=>s.inert=!live);
+  document.querySelectorAll('.capsule.idle').forEach(s=>s.inert=live);document.querySelectorAll('.capsule.live').forEach(s=>s.inert=!live);
+  txt('status',R.phase==='recording'?'Opname actief':R.phase==='paused'?'Opname gepauzeerd':'Klaar om op te nemen');
+  txt('level',R.phase==='paused'?'Opname is gepauzeerd':R.phase==='recording'?'Live audioniveau':'Microfoon gereed');
+  txt('srcsum',mode+' · '+prof.replace(' (standaard)',''));
+  txt('profdesc',DESC[prof]);
+  document.querySelectorAll('#r-state button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===({idle:'idle',recording:'rec',paused:'pause'})[R.phase]));
+}
+const txt=(k,v)=>document.querySelectorAll(`[data-t="${k}"]`).forEach(e=>{if(e.textContent!==v)e.textContent=v});
+function render(){
+  $('app').innerHTML=DIR[dir]();
+  document.querySelectorAll('#r-dir button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===dir));
+  document.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>ACT[b.dataset.a]());
+  document.querySelectorAll('[data-mode]').forEach(b=>{b.setAttribute('aria-checked',b.dataset.mode===mode);b.onclick=()=>{mode=b.dataset.mode;document.querySelectorAll('[data-mode]').forEach(x=>x.setAttribute('aria-checked',x.dataset.mode===mode));setClasses()}});
+  document.querySelectorAll('[data-profile]').forEach(s=>{s.value=prof;s.onchange=()=>{prof=s.value;setClasses()}});
+  setClasses();
+}
+const ACT={
+  async start(){if(R.phase!=='idle')return;R.elapsed=0;R.proc.reset();R.hist.fill(0);
+    try{await Audio_.start($('r-src').value)}catch(e){Audio_.stop();txt('level','Microfoon niet beschikbaar');return}
+    R.last=performance.now();R.phase='recording';setClasses()},
+  pause(){if(R.phase==='recording'){Audio_.pause();R.phase='paused'}else if(R.phase==='paused'){Audio_.resume();R.last=performance.now();R.phase='recording'}setClasses()},
+  stop(){if(R.phase==='idle')return;Audio_.stop();R.phase='idle';R.elapsed=0;setClasses()},
+  note(){const n=[...document.querySelectorAll('[data-notefield]')].find(e=>e.offsetParent);if(dir==='B')document.querySelector('.win').classList.add('drawer-open');setTimeout(()=>{const f=[...document.querySelectorAll('[data-notefield]')].find(e=>!e.closest('[inert]'));f&&f.focus()},dir==='B'?450:0)},
+  cancel(){$('cancel').showModal()},
+  drawer(){document.querySelector('.win').classList.toggle('drawer-open')}
+};
+$('c-no').onclick=()=>$('cancel').close();
+$('c-yes').onclick=()=>{$('cancel').close();ACT.stop()};
+document.addEventListener('keydown',e=>{
+  if(e.target.matches('input,textarea,select'))return;
+  if(e.metaKey&&e.key.toLowerCase()==='r'){e.preventDefault();ACT.start()}
+  else if(e.code==='Space'&&R.phase!=='idle'){e.preventDefault();ACT.pause()}
+});
+$('r-dir').onclick=e=>{const v=e.target.dataset.v;if(v){dir=v;render()}};
+$('r-state').onclick=async e=>{const v=e.target.dataset.v;if(!v)return;
+  if(v==='idle')ACT.stop();else{if(R.phase==='idle')await ACT.start();if(v==='pause'&&R.phase==='recording')ACT.pause();if(v==='rec'&&R.phase==='paused')ACT.pause()}};
+$('r-src').onchange=()=>{if(R.phase!=='idle')ACT.stop()};
+
+/* ---------- frame-loop ---------- */
+let lastT=performance.now(),lastTr='';
+function frame(now){
+  const dt=Math.min(.1,(now-lastT)/1000);lastT=now;R.time+=dt;
+  if(R.phase!=='paused'){R.drift+=dt;R.travel+=dt*TAU*CONFIG.wave.travelHz*(1+CONFIG.wave.energyBoost*R.level)}
+  document.documentElement.style.setProperty('--lvl',R.level.toFixed(3));
+  document.querySelectorAll('canvas[data-wave]').forEach(drawWave);
+  txt('timer',tfmt(R.elapsed));
+  document.querySelectorAll('.bars').forEach(b=>[...b.children].forEach((i,k)=>{const v=envAt(k*45);i.style.height=(3+9*v)+'px'}));
+  const tl=transcriptLines(),key=(tl?tl.length:0)+R.phase;
+  if(key!==lastTr){lastTr=key;
+    const listen=`<p class="tline">Luisteren...<span class="cursor"></span></p>`;
+    document.querySelectorAll('[data-t="transcript"]').forEach(e=>e.innerHTML=tl?tl.map(t=>`<p class="tline"><time>${tfmt(t[0])}</time>${t[1]}</p>`).join(''):listen);
+    document.querySelectorAll('[data-t="doc"]').forEach(e=>e.innerHTML=tl?tl.map(t=>`<p><time>${tfmt(t[0])}</time>${t[1]}</p>`).join('')+(R.elapsed>12?'':'')+'<span class="cursor"></span>':listen);
+    document.querySelectorAll('[data-t="caption"]').forEach(e=>e.innerHTML=tl?(tl.length>1?tl[tl.length-2][1]+' ':'')+`<b>${tl[tl.length-1][1]}</b>`:'Luisteren...');
+  }
+  $('hud').textContent=`voorbeelddata · bron ${$('r-src').selectedOptions[0].text.toLowerCase()} · dB ${R.db>-120?R.db.toFixed(1):'--'} · level ${R.level.toFixed(2)}`;
+  requestAnimationFrame(frame);
+}
+
+/* ---------- start, URL-parameters voor review: #dir=B&state=rec&src=sim&t=24&clean=1 ---------- */
+const P=new URLSearchParams(location.hash.slice(1));
+if(P.get('dir'))dir=P.get('dir');if(P.get('src'))$('r-src').value=P.get('src');if(P.get('clean')){$('review').hidden=true;$('hud').hidden=true}
+render();requestAnimationFrame(frame);
+(async()=>{const s=P.get('state');if(s&&s!=='idle'){await ACT.start();if(P.get('t'))R.elapsed=+P.get('t');if(s==='pause')setTimeout(ACT.pause,1500)}})();
+</script>
+</body>
+</html>

@@ -8,7 +8,7 @@ final class KeychainService: Sendable {
 
     /// Keys that sync via iCloud Keychain so a Mac-configured credential is
     /// available on the iPhone (e.g. the Ollama Cloud API key).
-    private static let synchronizableKeys: Set<String> = ["ollamaApiKey"]
+    private static let synchronizableKeys: Set<String> = ["ollamaApiKey", "openAIApiKey", "anthropicApiKey"]
 
     private init() {}
 

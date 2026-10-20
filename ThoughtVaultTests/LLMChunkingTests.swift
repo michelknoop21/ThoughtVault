@@ -2,6 +2,21 @@ import XCTest
 @testable import ThoughtVault
 
 final class LLMChunkingTests: XCTestCase {
+    func testHostedGPTOSSUsesSingleRequestForMeetingButLocalModelsStayConservative() {
+        XCTAssertEqual(OpenAICompatibleLLMService(baseURL: "https://ollama.com", model: "gpt-oss:120b").maxChunkCharacters, 64_000)
+        XCTAssertEqual(OpenAICompatibleLLMService(baseURL: "https://ollama.com", model: "gpt-oss:120b-cloud").maxChunkCharacters, 64_000)
+        XCTAssertEqual(OpenAICompatibleLLMService(baseURL: "http://localhost:11434", model: "gpt-oss:120b").maxChunkCharacters, 8_000)
+        XCTAssertEqual(OpenAICompatibleLLMService(baseURL: "https://ollama.com", model: "unknown").maxChunkCharacters, 8_000)
+        XCTAssertEqual(OpenAICompatibleLLMService(baseURL: "https://other.example", model: "gpt-oss:120b").maxChunkCharacters, 8_000)
+        XCTAssertEqual(OpenAICompatibleLLMService(baseURL: "https://ollama.com", model: "gpt-oss:120b", maxChunkCharacters: 9000).maxChunkCharacters, 9000)
+    }
+
+
+    func testRateLimitFailureExplainsRetryAndKeepsOtherServerErrors() {
+        XCTAssertTrue(LLMError.serverError(429).localizedDescription.contains("gebruikslimiet"))
+        XCTAssertTrue(LLMError.serverError(429).localizedDescription.contains("later opnieuw"))
+        XCTAssertEqual(LLMError.serverError(500).localizedDescription, "Serverfout: statuscode 500.")
+    }
 
     func testHardSplitCapsChunksWithoutSentenceBreaks() {
         // Whisper output without ". " separators: one 50k-char blob.

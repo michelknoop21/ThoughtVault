@@ -172,6 +172,11 @@ it.each(["ollama", "lm-studio", "openai", "anthropic"] as const)("preserves deci
     await LLMService.generateNotulen(raw, profile);
     const request = provider === "lm-studio" ? JSON.parse(fetchMock.mock.calls[0][1]!.body as string) : JSON.parse(invoke.mock.calls[0][1].request.body);
     const prompt = request.messages.at(-1).content;
+    const system = provider === "anthropic" ? request.system : request.messages[0].content;
+    expect(system).toContain(profile.system_prompt);
+    expect(system).toContain("Brongetrouwheid gaat vóór beknoptheid");
+    expect(system).toContain("Vermeld ieder expliciet vervallen tijdstip");
+    expect(system).toContain("geen besluit over uitvoering");
     expect(prompt).toContain(raw);
     expect(prompt).toContain("ontkenningen, verboden, voorwaarden en vervallen afspraken");
     expect(prompt).toContain("uitnodiging is geen aanwezigheid");

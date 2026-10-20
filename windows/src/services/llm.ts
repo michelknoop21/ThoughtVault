@@ -235,6 +235,7 @@ export class LLMService {
     const finish = (html: string) => correctHTML(ensureNotesSection(stripCodeFences(html), quickNote), corrections, profile.id);
     const config = getConfig();
     const enriched = enrichProfile(profile);
+    const systemPrompt = `${enriched.system_prompt ?? ""}\n\nBrongetrouwheid gaat vóór beknoptheid en de template. ${FACTUALITY_RULES} Vermeld ieder expliciet vervallen tijdstip en iedere expliciete afwezigheid, ook als dat geen actie is. Als ergens geen besluit over uitvoering is genomen, behoud dat letterlijk als onbeslist; vraag niet hoe het uitgevoerd moet worden.`;
     let processed = correctText(transcription, corrections, profile.id);
     const compatible = config.provider === "ollama" || config.provider === "lm-studio";
     const baseURL = config.provider === "ollama" ? config.ollamaUrl : config.lmStudioUrl;
@@ -273,7 +274,7 @@ export class LLMService {
       const html = await generateWithOpenAICompatible(
         config.ollamaUrl,
         config.ollamaModel,
-        enriched.system_prompt ?? "",
+        systemPrompt,
         userPrompt,
         compatibleKey ?? "",
         onProgress
@@ -285,7 +286,7 @@ export class LLMService {
       const html = await generateWithOpenAICompatible(
         config.lmStudioUrl,
         config.lmStudioModel,
-        enriched.system_prompt ?? "",
+        systemPrompt,
         userPrompt,
         "",
         onProgress
@@ -299,7 +300,7 @@ export class LLMService {
       if (!key) throw new Error(`Vul je ${provider === "openai" ? "OpenAI" : "Anthropic"} API-sleutel in bij Instellingen.`);
       return finish(await generateWithHostedAPI(
         provider, provider === "openai" ? config.openAIModel : config.anthropicModel,
-        enriched.system_prompt ?? "", userPrompt, key, onProgress,
+        systemPrompt, userPrompt, key, onProgress,
       ));
     }
 

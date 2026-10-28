@@ -2,8 +2,11 @@
 
 Gitea (`origin`: `ssh://gitea/michelk/ThoughtVault.git`) is de bronrepository.
 Een Gitea-remote betekent niet dat de Windows-build op Gitea draait.
-Het bewezen buildproces gebruikt GitHub Actions in de private repository
+Het bewezen buildproces gebruikt GitHub Actions in repository
 `michelknoop21/ThoughtVault`, workflow `.github/workflows/build-windows.yml`.
+**Controle 28 oktober 2026:** GitHub API meldt `private:false`, `visibility:public`.
+Een bronpush daarheen maakt die bron openbaar en vereist afzonderlijk akkoord.
+`publish=false` voorkomt serverpublicatie, maar maakt de bronrepository niet privé.
 RDP en een handmatige build op een Windows-pc zijn hiervoor niet nodig.
 
 ## Bewezen uitvoering
@@ -41,7 +44,7 @@ Gebruik `bash scripts/deploy-dev.sh <github-ref>` of
 `bash scripts/deploy-production.sh <github-ref>` om deze bestaande workflow te
 starten. Deze scripts veranderen geen remotes en pushen geen broncode/tags.
 
-## Private kandidaat vóór publicatie
+## CI-kandidaat zonder serverpublicatie
 
 De workflow heeft een boolean `publish` (standaard `true`). Gebruik voor een
 installatie-/visuele controle vóór publicatie:
@@ -50,7 +53,7 @@ installatie-/visuele controle vóór publicatie:
 gh workflow run build-windows.yml --repo michelknoop21/ThoughtVault --ref <gecontroleerde-ref> -f channel=production -f publish=false
 ```
 
-Dit bouwt en test de MSI op Windows en bewaart private CI-artifacts. Het verandert
+Dit bouwt en test de MSI op Windows en bewaart CI-artifacts; behandel die niet als vertrouwelijk op basis van deze workflow-instelling. Het verandert
 geen downloadmanifest of updaterfeed. Publiceren blijft een afzonderlijke run met
 `publish=true`, met de juiste broncommit en geslaagde normale controles.
 
@@ -62,3 +65,11 @@ oude appcode. Bij een geïsoleerde bronkopie: kopieer de actuele wijzigingen en
 assets, registreer de bronhashes, dispatch die ref en controleer de CI-commit.
 Gebruik de daadwerkelijk gebouwde MSI met zijn eigen versie/signature. De
 website leest artifacts van de server; zij bouwt de desktopapp niet.
+
+## Lokale testbuild zonder updaterpakket
+
+De bestaande route `cd windows; npm run tauri:portable` voert `tauri build --no-bundle` uit. Hiermee kunnen bronfixes lokaal op Windows worden getest zonder MSI, updaterpakket of signingkey. Behoud publieke updaterkey, endpoints, updaterplugin en beveiliging. Dit bewijst geen installatie of update.
+
+Gebruik een afzonderlijke bronkopie met herkenbare testversie en venstertitel; neem de bestaande `resources` naast de EXE mee, waaronder Faster Whisper en Nemo met hun app-local DLL's. Controleer de runtime-afhankelijkheden met `scripts/verify-windows-runtime.ps1`. Gebruik het directe npm-commando: de kopieerstap van `scripts/build.ps1 -Portable` noemt nog de oude binarynaam `transcript-studio.exe`.
+
+Bouw met aanwezige toolchain, caches en runtimes. Een ontbrekend model of nieuwe toolchaininstallatie eerst voorleggen; deze route vraagt geen nieuwe sleutel. Houd de geïnstalleerde versie en beide appdatamappen met back-up beschikbaar voor herstel.

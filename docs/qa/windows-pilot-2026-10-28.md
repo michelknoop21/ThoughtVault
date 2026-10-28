@@ -74,3 +74,19 @@ Native transcript bewaart bedragen, afwijzing, drie proefcollega's, productie-/l
 ## Lokale overdracht
 
 `build/windows-pilot-20261028/` bevat precies één bewaarde MSI 1.0.294 met oorspronkelijke sig, SHA256SUMS, bronidentificatie, NIET-UITROLLEN-status, bronpatch, testlogs en deze documenten. Dit is een controlepakket, geen gefixte pilotrelease.
+
+## Vervolg: lokale portable testbuild
+
+Na afzonderlijk akkoord op de lokale route is op 28 oktober circa 16:34 CET op Dalf38 bevestigd dat Node, npm, cargo, rustc en CMake beschikbaar zijn. De eerdere tijdelijke bronmap is leeg; deze wordt niet als actuele kandidaat gebruikt.
+
+Bronarchief uit `e2bf26ee8803d3d6770600418a20d5dc7ed4d3dd` (inclusief beide fixes, alleen Windows/scripts/tests/VERSION) overgebracht naar `%TEMP%/ThoughtVault-Pilot295/source.zip`: 5.025.617 bytes, SHA-256 `0ed9496171b12785380266b243e055260e6ceafabbb866329d0e93f098d9d630`; op Windows expliciet `SOURCE_HASH_VERIFIED` en uitgepakt in `src`. Git-werkboom en geïnstalleerde EXE blijven behouden.
+
+HTTP via Mac-VPN-adres was onbereikbaar; de tijdelijke server is gestopt. Overdracht gebruikt uitsluitend tijdelijke RDP-map `/private/tmp/thoughtvault-pilot-transfer-20261028`; geen Home/Documenten of volledige schijf gedeeld. Audio blijft Leave at remote computer, Mac-microfoon uit.
+
+Eenmalige driver `build-pilot.ps1` SHA-256 `a5ff07b6fd1650654394812f6a9f9da2e0a41ce29bceed60d4ab274236a97e91` gekopieerd en startcommando met `powershell -NoProfile -File` verstuurd. Driver gebruikt alleen geïnstalleerde runtimes, offline npm/cargo, regressies en `tauri build --no-bundle`, met testversie `1.0.295-pilot.1` in de afzonderlijke kopie. Assert op ongewijzigde updaterconfig en CSP. Geen MSI/signature/feedwijziging beoogd.
+
+**Bouw geblokkeerd:** na tijdelijk `cgWindowNotFound` heeft Michel de bediening hersteld. Bouwproces PID33560 bevestigd. Offline npm-installatie slaagt; native Windows Vitest **45 bestanden / 147 tests PASS**, 30,10 s. De Rust-releasecompilatie stopt vóór uitvoering van regressies bij `whisper-rs-sys v0.15.0`: `could not execute .../whisper-rs-sys-680f400b919ffee3/build-script-build (never executed)`, `Toegang geweigerd. (os error 5)`. Rond dezelfde bouwpoging toont Avast eerst een veiligmelding voor een gegenereerd bouwbestand, daarna **Dreiging gedetecteerd en veiliggesteld**, `build-script-build.exe` in quarantaine. Geen exacte malwareclassificatie of false-positive aangetoond; geen uitzondering, herstel uit quarantaine, scannerwijziging of nieuwe poging langs de blokkade uitgevoerd. Driver beëindigd; ExitCode-object retourneert null, dus geen exitcodeclaim. `portable/ThoughtVault.exe` ontbreekt; geïnstalleerde executable blijft 1.0.294. De portable bouwstap en lange native opnameketen zijn niet bereikt. Logs en driver bewaard onder `build/windows-pilot-20261028/portable-attempt/`. Hervatten vereist beoordeling van de beveiligingsdetectie of een geschikte andere bestaande bouwomgeving; geen nieuwe sleutel nodig.
+
+Correctie eerdere documentatie: GitHub API op 28 oktober 16:48 CET bevestigt `michelknoop21/ThoughtVault` openbaar (`private:false`). Geen nieuwe bronpush of CI-dispatch uitgevoerd. `publish=false` alleen is geen garantie voor private bron/artifacts.
+
+Tijdelijke RDP-mapredirectie na logoverdracht teruggezet naar **None** (map uit lijst verwijderd, Apply & Close, sessie opnieuw verbonden). Audio blijft aan de remote kant en Mac-microfoon uit. Beide overgebrachte fixbestanden zijn op Windows opnieuw gehasht en komen exact overeen met broncommit b58d3a2.

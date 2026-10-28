@@ -100,81 +100,26 @@ async function generateWithOpenAICompatible(
     headers["Authorization"] = `Bearer ${apiKey}`;
   }
 
-  // Ollama Cloud rejects WebView CORS; use the same native proxy as its model list.
-  if (isOllamaCloudURL(baseUrl)) {
-    if (!apiKey) throw new Error("Vul je Ollama Cloud API-sleutel in bij Instellingen.");
-    const base = baseUrl.replace(/\/+$/, "").replace(/\/v1$/, "");
-    const response = await invoke<{ status: number; body: string }>("proxy_request", {
+  // Local Ollama and LM Studio can reject WebView CORS just like Ollama Cloud.
+  const cloud = isOllamaCloudURL(baseUrl);
+  if (cloud && !apiKey) throw new Error("Vul je Ollama Cloud API-sleutel in bij Instellingen.");
+  const base = baseUrl.trim().replace(/\/+$/, "").replace(/\/v1$/, "");
+  let response: { status: number; body: string };
+  try {
+    response = await invoke("proxy_request", {
       request: { url: `${base}/v1/chat/completions`, method: "POST", headers, timeout_seconds: 300,
         body: JSON.stringify({ model, messages: [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }], stream: false }) },
     });
-    if (response.status === 401) throw new Error("Ollama Cloud API-sleutel geweigerd.");
-    if (response.status === 429) throw new Error("Ollama Cloud API-limiet bereikt. Probeer later opnieuw.");
-    if (response.status >= 400) throw new Error(`Ollama Cloud gaf HTTP ${response.status} voor model "${model}".`);
-    const text = JSON.parse(response.body).choices?.[0]?.message?.content;
-    if (typeof text !== "string" || !text.trim()) throw new Error("Ollama Cloud gaf een leeg antwoord.");
-    onProgress?.(text);
-    return text;
-  }
-
-  let response: Response;
-  try {
-    response = await fetch(`${baseUrl}/v1/chat/completions`, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        stream: true,
-      }),
-    });
   } catch {
-    // A bare "Failed to fetch" hides which server is down — name it.
-    throw new Error(
-      `Kan de notule-generator niet bereiken op ${baseUrl} (model "${model}"). Draait Ollama/LM Studio en klopt de URL in Instellingen?`,
-    );
+    throw new Error(`Kan de notule-generator niet bereiken op ${baseUrl} (model "${model}"). Draait Ollama/LM Studio en klopt de URL in Instellingen?`);
   }
-
-  if (!response.ok) {
-    throw new Error(`Notule-generator op ${baseUrl} gaf een fout (HTTP ${response.status}, model "${model}").`);
-  }
-
-  const reader = response.body?.getReader();
-  if (!reader) throw new Error("No response body");
-
-  const decoder = new TextDecoder();
-  let fullText = "";
-  let buffer = "";
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split("\n");
-    buffer = lines.pop() ?? ""; // keep incomplete trailing line for next chunk
-
-    for (const line of lines) {
-      if (!line.startsWith("data: ")) continue;
-      const data = line.slice(6).trim();
-      if (data === "[DONE]") continue;
-      try {
-        const parsed = JSON.parse(data);
-        const delta = parsed.choices?.[0]?.delta?.content || "";
-        if (delta) {
-          fullText += delta;
-          onProgress?.(delta);
-        }
-      } catch {
-        // ignore parse errors on partial frames
-      }
-    }
-  }
-
-  return fullText;
+  if (cloud && response.status === 401) throw new Error("Ollama Cloud API-sleutel geweigerd.");
+  if (cloud && response.status === 429) throw new Error("Ollama Cloud API-limiet bereikt. Probeer later opnieuw.");
+  if (response.status >= 400) throw new Error(`${cloud ? "Ollama Cloud" : `Notule-generator op ${baseUrl}`} gaf HTTP ${response.status} voor model "${model}".`);
+  const text = JSON.parse(response.body).choices?.[0]?.message?.content;
+  if (typeof text !== "string" || !text.trim()) throw new Error(cloud ? "Ollama Cloud gaf een leeg antwoord." : "De notule-generator gaf een leeg concept.");
+  onProgress?.(text);
+  return text;
 }
 
 async function generateWithHostedAPI(

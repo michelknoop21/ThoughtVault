@@ -23,6 +23,24 @@ beforeEach(() => {
   useSettingsStore.setState({ processing_mode: "local", notulen_provider: "ollama" });
 });
 
+it.each(["ollama", "lm-studio"] as const)("uses the native route for %s when WebView CORS is denied", async provider => {
+  useSettingsStore.setState({ notulen_provider: provider, ollama_url: "http://localhost:11434/v1/", ollama_model: "hermes3:8b", lm_studio_url: "http://localhost:1234/v1/", lm_studio_model: "local-model" });
+  const fetchMock = vi.fn().mockRejectedValue(new TypeError("Failed to fetch"));
+  vi.stubGlobal("fetch", fetchMock);
+  invoke.mockResolvedValue({ status: 200, body: JSON.stringify({ choices: [{ message: { content: "<p>Het overleg is afgerond.</p>" } }] }) });
+  const progress = vi.fn();
+  try {
+    expect(await LLMService.generateNotulen("Het overleg is afgerond.", profile, progress)).toBe("<p>Het overleg is afgerond.</p>");
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(loadCredential).not.toHaveBeenCalled();
+    expect(invoke).toHaveBeenCalledWith("proxy_request", expect.objectContaining({ request: expect.objectContaining({
+      url: provider === "ollama" ? "http://localhost:11434/v1/chat/completions" : "http://localhost:1234/v1/chat/completions",
+      headers: { "Content-Type": "application/json" }, timeout_seconds: 300,
+    }) }));
+    expect(progress).toHaveBeenCalledWith("<p>Het overleg is afgerond.</p>");
+  } finally { vi.unstubAllGlobals(); }
+});
+
 it("generates Ollama Cloud notes through the native proxy instead of WebView fetch", async () => {
   useSettingsStore.setState({ ollama_url: "https://ollama.com/v1/", ollama_model: "gpt-oss:120b" });
   loadCredential.mockResolvedValue("test-cloud-key");
@@ -32,6 +50,22 @@ it("generates Ollama Cloud notes through the native proxy instead of WebView fet
   expect(request.url).toBe("https://ollama.com/v1/chat/completions");
   expect(request.headers.Authorization).toBe("Bearer test-cloud-key");
   expect(JSON.parse(request.body).stream).toBe(false);
+});
+
+it.each([401, 429, 500])("keeps local provider HTTP %s visible without reporting completed notes", async status => {
+  useSettingsStore.setState({ ollama_url: "http://localhost:11434", ollama_model: "hermes3:8b" });
+  invoke.mockResolvedValue({ status, body: "{}" });
+  const progress = vi.fn();
+  await expect(LLMService.generateNotulen("QA bron.", profile, progress)).rejects.toThrow(`HTTP ${status}`);
+  expect(invoke).toHaveBeenCalledTimes(1);
+  expect(progress).not.toHaveBeenCalled();
+});
+
+it("names the configured local provider when its native request fails", async () => {
+  useSettingsStore.setState({ ollama_url: "http://localhost:11434", ollama_model: "hermes3:8b" });
+  invoke.mockRejectedValue("connection refused");
+  await expect(LLMService.generateNotulen("QA bron.", profile)).rejects.toThrow('http://localhost:11434 (model "hermes3:8b")');
+  expect(invoke).toHaveBeenCalledTimes(1);
 });
 
 it("reports a rejected Ollama Cloud key and never masks it as a local server failure", async () => {
@@ -171,7 +205,7 @@ it.each(["ollama", "lm-studio", "openai", "anthropic"] as const)("preserves deci
   vi.stubGlobal("fetch", fetchMock);
   try {
     await LLMService.generateNotulen(raw, profile);
-    const request = provider === "lm-studio" ? JSON.parse(fetchMock.mock.calls[0][1]!.body as string) : JSON.parse(invoke.mock.calls[0][1].request.body);
+    const request = JSON.parse(invoke.mock.calls[0][1].request.body);
     const prompt = request.messages.at(-1).content;
     const system = provider === "anthropic" ? request.system : request.messages[0].content;
     expect(system).toContain(profile.system_prompt);
@@ -229,12 +263,9 @@ it("fails rather than returning the draft when source checking is unavailable", 
 
 it("does not ask the checker to invent notes from an empty draft", async () => {
   useSettingsStore.setState({ notulen_provider: "lm-studio" });
-  const fetchMock = vi.fn(async () => new Response("data: [DONE]\n\n"));
-  vi.stubGlobal("fetch", fetchMock);
-  try {
-    await expect(LLMService.generateNotulen("QA bron.", profile)).rejects.toThrow("leeg concept");
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-  } finally { vi.unstubAllGlobals(); }
+  invoke.mockResolvedValue({ status: 200, body: JSON.stringify({ choices: [{ message: { content: "" } }] }) });
+  await expect(LLMService.generateNotulen("QA bron.", profile)).rejects.toThrow("leeg concept");
+  expect(invoke).toHaveBeenCalledTimes(1);
 });
 
 it("rejects a checked note that still omits an explicit constraint instead of saving it", async () => {

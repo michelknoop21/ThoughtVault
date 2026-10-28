@@ -30,6 +30,7 @@ impl CaptureClock {
 fn write_timed_chunk<W: std::io::Write + std::io::Seek>(
     writer: &mut WavWriter<W>, samples: &[i16], position: u64, written: &mut u64,
 ) -> Result<(), hound::Error> {
+    let previous_seconds = *written / u64::from(TARGET_SAMPLE_RATE);
     // Ignore sub-20ms callback jitter, but preserve actual gaps and trim late packets.
     let tolerance = u64::from(TARGET_SAMPLE_RATE / 50);
     if position > written.saturating_add(tolerance) {
@@ -43,6 +44,10 @@ fn write_timed_chunk<W: std::io::Write + std::io::Seek>(
     for &sample in &samples[skip..] {
         writer.write_sample(sample)?;
         *written += 1;
+    }
+    // Keep the WAV header and buffered audio readable if the process is killed.
+    if *written / u64::from(TARGET_SAMPLE_RATE) > previous_seconds {
+        writer.flush()?;
     }
     Ok(())
 }
@@ -555,6 +560,22 @@ mod mix_tests {
         assert!(ready.await.unwrap().is_err());
         let result = tokio::time::timeout(std::time::Duration::from_secs(5), result).await.unwrap().unwrap();
         assert!(result.unwrap_err().contains("niet gevonden"));
+    }
+
+    #[test]
+    fn timed_chunks_keep_interrupted_recording_readable() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("interrupted.wav");
+        let spec = WavSpec { channels: 1, sample_rate: TARGET_SAMPLE_RATE, bits_per_sample: 16, sample_format: HoundSampleFormat::Int };
+        let mut writer = WavWriter::create(&path, spec).unwrap();
+        let mut written = 0;
+        write_timed_chunk(&mut writer, &vec![123_i16; TARGET_SAMPLE_RATE as usize], 0, &mut written).unwrap();
+        // Read before finalize/drop: neither runs when the process is killed.
+        let mut reader = hound::WavReader::open(&path).unwrap();
+        assert_eq!(reader.duration(), TARGET_SAMPLE_RATE);
+        assert!(reader.samples::<i16>().all(|sample| sample.unwrap() == 123));
+        write_timed_chunk(&mut writer, &[456; 160], TARGET_SAMPLE_RATE as u64, &mut written).unwrap();
+        assert_eq!(hound::WavReader::open(&path).unwrap().duration(), TARGET_SAMPLE_RATE);
     }
 
     #[test]

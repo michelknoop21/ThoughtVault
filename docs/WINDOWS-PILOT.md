@@ -18,6 +18,14 @@ Get-FileHash .\ThoughtVault_1.0.294_x64.msi -Algorithm SHA256
 
 Sluit ThoughtVault vóór installeren of bijwerken. Start de MSI via de bestaande installatieroute; een upgrade kan beheerdersrechten vragen. De MSI heeft voorlopig geen Windows-uitgeverssignering en kan **onbekende uitgever** tonen. Omzeil geen beveiligingsblokkade, voeg geen antivirusuitzondering toe en verlaag geen Windows-beveiliging. Bij een blokkade: bewaar de melding en laat de pilotbeheerder deze onderzoeken.
 
+## Afzonderlijke portable testbuild
+
+Op Dalf38 is **1.0.295-pilot.1** gebouwd uit broncommit `e2bf26ee8803d3d6770600418a20d5dc7ed4d3dd`, inclusief beide fixes. Alleen voor lokale acceptatie, **niet uitrollen**. Geen MSI/updaterpakket gemaakt; normale updaterconfiguratie en sleutel blijven intact.
+
+Locatie: `%TEMP%\ThoughtVault-Pilot295\ThoughtVault_1.0.295-pilot.1_x64_portable.zip`. SHA-256: `b44d701730a53d3eb549ad2eaf7ac040a256ad4f9a9202fe2c61b782fa7ef639`. Pak volledig uit, behoud `resources` naast de EXE en sluit andere ThoughtVault-kopieën vóór starten. Maak eerst de volledige back-up uit Back-up en herstel: deze testbuild hergebruikt de bestaande gebruikersopslag. Modellen en providers zijn niet meegeleverd.
+
+Windows-start, 147 frontendtests, 36 native tests en leesbare WAV-checkpoints na procescrash zijn bevestigd. **Herverwerking is geblokkeerd door Avast IDP.HELU.PSD11 op de Faster Whisper-worker.** Geen blokkade omzeilen; eerst laten onderzoeken. Lokale Ollama-generatie bereikt de bestaande inhoudscontrole maar die weigert ontbrekende bronbeperkingen; geen nieuwe notulen opgeslagen. Zie het [pilotbewijs](qa/windows-pilot-2026-10-28.md).
+
 ## Eerste inrichting
 
 ThoughtVault start zonder ThoughtVault-account in lokale modus; daarbij wordt de serverwizard overgeslagen. Controleer **Instellingen → Verwerking** vóór de eerste verwerking:

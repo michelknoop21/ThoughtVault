@@ -1,5 +1,8 @@
 # Windows collega-pilot — 28 oktober 2026
 
+Vervolg: [de lokale MSI-kandidaat 1.0.295 en acceptatiematrix van 29 oktober](windows-pilot-2026-10-29.md).
+De onderstaande resultaten blijven historisch en versiegebonden.
+
 ## Kandidaat en grenzen
 
 - MSI-basis: `92abce850a0a8cfd7ebfa4a6e18bf086b9bfb12a`, versie `1.0.294`.

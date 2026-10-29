@@ -73,3 +73,35 @@ De bestaande route `cd windows; npm run tauri:portable` voert `tauri build --no-
 Gebruik een afzonderlijke bronkopie met herkenbare testversie en venstertitel; neem de bestaande `resources` naast de EXE mee, waaronder Faster Whisper en Nemo met hun app-local DLL's. Controleer de runtime-afhankelijkheden met `scripts/verify-windows-runtime.ps1`. Gebruik het directe npm-commando: de kopieerstap van `scripts/build.ps1 -Portable` noemt nog de oude binarynaam `transcript-studio.exe`.
 
 Bouw met aanwezige toolchain, caches en runtimes. Een ontbrekend model of nieuwe toolchaininstallatie eerst voorleggen; deze route vraagt geen nieuwe sleutel. Houd de geïnstalleerde versie en beide appdatamappen met back-up beschikbaar voor herstel.
+
+## Lokale pilot-MSI met bestaande releasekey
+
+Voor de pilot van 29 oktober geldt de expliciet gekozen Dalf38-route; geen
+GitHub-push of workflowdispatch. De bestaande private Windows-updaterkey staat
+beschreven in [AUTOMATISCHE-UPDATES.md](AUTOMATISCHE-UPDATES.md). Controleer eerst
+met een proefhandtekening of deze bij de publieke sleutel in Tauri-config hoort.
+De key hoeft niet naar Windows: de bestaande Tauri-signer op de Mac kan de
+ongewijzigde Windows-MSI ondertekenen met `signer sign --private-key-path`.
+
+Bouw vanuit een gehashte bronkopie met gesynchroniseerde `VERSION`, Tauri- en
+Cargo-versie (inclusief de eigen package-entry in `Cargo.lock`). Behoud
+`createUpdaterArtifacts: true`, productie-ID, publieke key en endpoints. Gebruik
+alleen aanwezige npm/Cargo- en WiX-caches en bestaande, gehashte resources;
+de `prepare-*-runtime.ps1`-scripts downloaden/bouwen runtimes en zijn hier geen
+voorbereidingsstap. WiX staat bij `useLocalToolsDir: true` onder
+`windows/src-tauri/target/.tauri/WixTools314`; een bestaande gebruikerscache kan
+byte-identiek daarheen worden gekopieerd.
+
+`npm run tauri -- build --bundles msi --ci` bouwt de MSI. Zonder signingkey op
+Windows kan de afsluitende updater-signingstap falen nadat de MSI is gemaakt.
+Dit is nog geen geslaagde pakketbouw of leverbaar bestand: bewaar de exitcode en
+log, breng precies die MSI met hashcontrole naar de Mac, onderteken daar met de
+bestaande key en verifieer zowel signature als trusted comment met de publieke
+productiesleutel. Een gewijzigde MSI-testkopie moet worden afgewezen. Lever alleen
+het gecontroleerde MSI/`.sig`-paar, broncommit, SHA-256-manifest en bewijsrapport.
+Ontbreekt een geldige handtekening, dan stopt de levering.
+
+Updaterondertekening is geen Windows-uitgeverssignering of antivirusacceptatie.
+Een beveiligingsblokkade wordt vastgelegd; een ontbrekende/quarantaine-worker
+wordt niet voor een nieuwe test teruggezet of vervangen. De inhoudscontrole en
+volledige installatie-/werkketenacceptatie blijven afzonderlijke voorwaarden.

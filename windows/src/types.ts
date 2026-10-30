@@ -73,6 +73,8 @@ export interface TranscriptTask {
 
 // Completed saved transcript
 export interface Transcript {
+  notule_draft_html?: string;
+  notule_review_reason?: string;
   profile_id?: string;
   id: string;
   task_id?: string;

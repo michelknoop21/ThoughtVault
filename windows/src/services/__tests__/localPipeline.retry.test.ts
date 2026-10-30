@@ -109,3 +109,45 @@ it("keeps a duration read failure visible without saving an incomplete import", 
   });
   expect(add).not.toHaveBeenCalled();
 });
+
+it("keeps a rejected draft separate, preserves transcript and never completes or autoexports", async () => {
+  const { NotuleReviewError } = await import("../notuleAudit");
+  const { useSettingsStore } = await import("../../stores/settingsStore");
+  useSettingsStore.setState({ obsidian_enabled: true });
+  const update = vi.fn().mockResolvedValue(undefined);
+  useLocalTranscriptsStore.setState({ items: [partial], add: vi.fn(), update });
+  vi.spyOn(LLMService, "generateNotulen").mockRejectedValue(new NotuleReviewError("Actie ontbreekt", "<p>Ongecontroleerd concept</p>"));
+  await processLocally("C:\\recording.wav", "standaard", "microphone", [], 12, partial.id);
+  expect(update).toHaveBeenCalledExactlyOnceWith(partial.id, expect.objectContaining({
+    notule_draft_html: "<p>Ongecontroleerd concept</p>", notule_review_reason: "Actie ontbreekt",
+  }));
+  const patch = update.mock.calls[0][1];
+  expect(patch).not.toHaveProperty("notule_html");
+  expect(patch).not.toHaveProperty("raw_transcription");
+  expect(patch).not.toHaveProperty("has_notes");
+  expect(invoke).not.toHaveBeenCalled();
+  expect(useRecordingStore.getState().backgroundTasks[0]).toMatchObject({ status: "failed", error_message: expect.stringContaining("apart bewaard") });
+});
+
+it("reports a failed draft write without claiming the concept was saved", async () => {
+  const { NotuleReviewError } = await import("../notuleAudit");
+  useLocalTranscriptsStore.setState({ items: [partial], add: vi.fn(), update: vi.fn().mockRejectedValue(new Error("disk full")) });
+  vi.spyOn(LLMService, "generateNotulen").mockRejectedValue(new NotuleReviewError("Controle onzeker", "<p>Concept</p>"));
+  await processLocally("C:\\recording.wav", "standaard", "microphone", [], 12, partial.id);
+  const task = useRecordingStore.getState().backgroundTasks[0];
+  expect(task.status).toBe("failed");
+  expect(task.error_message).toContain("kon niet worden bewaard");
+  expect(task.error_message).not.toContain("apart bewaard");
+  expect(useTranscriptsStore.getState().transcripts[0]).toEqual(partial);
+});
+
+it("clears stale review fields only when a new validated replacement is saved", async () => {
+  const update = vi.fn().mockResolvedValue(undefined);
+  useLocalTranscriptsStore.setState({ items: [{ ...partial, notule_draft_html: "old draft", notule_review_reason: "old reason" }], add: vi.fn(), update });
+  vi.spyOn(LLMService, "generateNotulen").mockResolvedValue("<p>De planning begint maandag.</p>");
+  const { useSettingsStore } = await import("../../stores/settingsStore");
+  useSettingsStore.setState({ obsidian_enabled: false });
+  await processLocally("C:\\recording.wav", "standaard", "microphone", [], 12, partial.id);
+  expect(update).toHaveBeenCalledWith(partial.id, expect.objectContaining({ has_notes: true, notule_draft_html: "", notule_review_reason: "" }));
+  expect(useRecordingStore.getState().backgroundTasks[0].status).toBe("completed");
+});

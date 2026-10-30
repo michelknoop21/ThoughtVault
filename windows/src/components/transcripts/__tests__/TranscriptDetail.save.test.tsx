@@ -89,3 +89,20 @@ it("retains the selected-word correction after a failed note save and learns onl
   expect(dictionary.save).toHaveBeenCalledOnce();expect(container.querySelector("dialog")).toBeNull();expect(note.raw_transcription).toBe("Jengo");
   await act(async()=>{root.unmount();});container.remove();
 });
+
+it("shows a sanitized rejected draft separately without turning it into an accepted note", async () => {
+  const noop = vi.fn(); const container = document.createElement("div"); const root = createRoot(container);
+  const note = { id: "local-review", title: "Transcriptie", raw_transcription: "Sam controleert vrijdag.", has_notes: false,
+    notule_html: "", notule_draft_html: '<p>Ongecontroleerd concept</p><script>alert(1)</script>', notule_review_reason: "Actie niet bevestigd",
+    duration_seconds: 10, tags: [], created_at: new Date().toISOString(), updated_at: new Date().toISOString() };
+  await act(async () => { root.render(<TranscriptDetail transcript={note} regeneratingId={null} onBack={noop}
+    onRegenerate={noop} onDelete={noop} onUpdateTitle={async () => {}} onSaveNotule={async () => {}}
+    onCopy={noop} onExportPDF={noop} onExportTXT={noop} onExportMarkdown={noop} onExportHTML={noop}
+    onExportObsidian={noop} onImportObsidian={noop} onOpenTags={noop} onGenerateTitle={noop} />); });
+  expect(container.querySelector('[aria-label="Concept ter beoordeling"]')?.textContent).toContain("Concept — niet gevalideerd");
+  expect(container.querySelector('[aria-label="Concept ter beoordeling"] script')).toBeNull();
+  expect(container.querySelector(".td-transcription")?.textContent).toBe(note.raw_transcription);
+  expect(container.querySelector('button[title="Notule bewerken"]')).toBeNull();
+  expect(noop).not.toHaveBeenCalled();
+  await act(async () => { root.unmount(); });
+});

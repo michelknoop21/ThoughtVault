@@ -6,6 +6,7 @@ import { useLocalTranscriptsStore, newLocalId } from "../stores/localTranscripts
 import { useSettingsStore } from "../stores/settingsStore";
 import { useProfilesStore } from "../stores/profilesStore";
 import { LLMService } from "./llm";
+import { NotuleReviewError } from "./notuleAudit";
 import { exportToObsidian } from "./obsidian";
 import { extractTitle } from "./titleExtractor";
 import { getQuickNote } from "./quickNotes";
@@ -152,6 +153,8 @@ export async function processLocally(
 
     const title = extractTitle(html) || profile?.name || "Notule";
     const finished: Partial<Transcript> = {
+      notule_draft_html: "",
+      notule_review_reason: "",
       title,
       notule_html: html,
       has_notes: true,
@@ -170,7 +173,17 @@ export async function processLocally(
     updateBackgroundTask(taskId, { status: "completed", progress: 100 });
     setTimeout(() => removeBackgroundTask(taskId), 1500);
   } catch (err) {
-    const msg = err instanceof Error ? err.message : typeof err === "string" && err.trim() ? err : "Lokale verwerking mislukt";
+    let msg = err instanceof Error ? err.message : typeof err === "string" && err.trim() ? err : "Lokale verwerking mislukt";
+    if (err instanceof NotuleReviewError) {
+      try {
+        const patch = { notule_draft_html: err.draftHtml, notule_review_reason: msg, updated_at: new Date().toISOString() };
+        await useLocalTranscriptsStore.getState().update(taskId, patch);
+        useTranscriptsStore.getState().updateTranscript(taskId, patch);
+        msg += ". Het concept is apart bewaard voor beoordeling; er is geen nieuwe goedgekeurde notule opgeslagen.";
+      } catch {
+        msg += ". Het concept kon niet worden bewaard. De transcriptie en opname zijn niet vervangen.";
+      }
+    }
     console.error("[LocalPipeline] Failed:", msg);
     updateBackgroundTask(taskId, { status: "failed", error_message: msg });
   }

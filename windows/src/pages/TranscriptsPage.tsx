@@ -17,6 +17,7 @@ import { useSettingsStore } from "../stores/settingsStore";
 import { useProfilesStore } from "../stores/profilesStore";
 import { useRecordingStore } from "../stores/recordingStore";
 import { LLMService } from "../services/llm";
+import { NotuleReviewError } from "../services/notuleAudit";
 import { prepareNotuleHtml } from "../services/notulePresentation";
 import { hasUsableNotule, hasUsableTranscription } from "../services/notuleValidation";
 import { extractTitle } from "../services/titleExtractor";
@@ -226,8 +227,10 @@ export function TranscriptsPage() {
           () => tasks.updateBackgroundTask(taskId, { progress: 60 }), [], transcript.quick_note);
         if (!hasUsableNotule(html)) throw new Error("Geen bruikbare notule gegenereerd");
         const title = extractTitle(html) || transcript.title;
-        await useLocalTranscriptsStore.getState().update(transcript.id, { notule_html: html, has_notes: true, title, profile_name: profile.name, profile_id: profile.id });
-        updateTranscript(transcript.id, { notule_html: html, has_notes: true, title, profile_name: profile.name, profile_id: profile.id });
+        const finished = { notule_html: html, has_notes: true, title, profile_name: profile.name, profile_id: profile.id,
+          notule_draft_html: "", notule_review_reason: "", updated_at: new Date().toISOString() };
+        await useLocalTranscriptsStore.getState().update(transcript.id, finished);
+        updateTranscript(transcript.id, finished);
         tasks.updateBackgroundTask(taskId, { status: "completed", progress: 100 });
         const settings = useSettingsStore.getState();
         if (settings.obsidian_enabled) {
@@ -237,7 +240,18 @@ export function TranscriptsPage() {
         }
         toast.show("Notule opnieuw gegenereerd", "success");
       } catch (error) {
-        tasks.updateBackgroundTask(taskId, { status: "failed", error_message: error instanceof Error ? error.message : "Regenereren mislukt" });
+        let message = error instanceof Error ? error.message : "Regenereren mislukt";
+        if (error instanceof NotuleReviewError) {
+          try {
+            const patch = { notule_draft_html: error.draftHtml, notule_review_reason: message, updated_at: new Date().toISOString() };
+            await useLocalTranscriptsStore.getState().update(transcript.id, patch);
+            updateTranscript(transcript.id, patch);
+            message += ". Het concept is apart bewaard voor beoordeling; de bestaande notule is behouden.";
+          } catch {
+            message += ". Het concept kon niet worden bewaard; de bestaande notule is behouden.";
+          }
+        }
+        tasks.updateBackgroundTask(taskId, { status: "failed", error_message: message });
         toast.show("Regenereren mislukt", "error");
       } finally {
         setRegeneratingId(null);

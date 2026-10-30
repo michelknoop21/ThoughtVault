@@ -29,6 +29,7 @@ import { marked } from "marked";
 import type { Transcript } from "../../types";
 import { getTranscriptQuickNote } from "../../services/quickNotes";
 import { htmlToPlainText } from "../../utils/htmlToMarkdown";
+import { draftForReview } from "../../services/notuleAudit";
 
 type DetailTab = "notule" | "transcriptie";
 
@@ -375,6 +376,12 @@ export function TranscriptDetail({
 
           <div className="td-doc-divider" />
           {quickNote && <details className="td-quick-note"><summary>Snelle notitie bij deze opname</summary><p style={{ whiteSpace: "pre-wrap" }}>{quickNote}</p></details>}
+          {transcript.notule_draft_html && <section className="td-quick-note" aria-label="Concept ter beoordeling">
+            <h3>Concept — niet gevalideerd</h3>
+            <p>{transcript.notule_review_reason}</p>
+            <p>Dit concept is geen goedgekeurde notule. Controleer feiten, acties en beperkingen tegen de transcriptie en opname. De automatische controle kan fouten missen.</p>
+            <details><summary>Bekijk het bewaarde concept</summary><div className="prose" dangerouslySetInnerHTML={{ __html: draftForReview(transcript.notule_draft_html) }} /></details>
+          </section>}
 
           {/* Content */}
           {detailTab === "notule" ? (

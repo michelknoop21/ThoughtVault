@@ -1,13 +1,19 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { LLMService } from "../llm";
+import { auditFixture } from "./notuleAuditFixtures";
 
 const corrections = vi.hoisted(() => ({entries:[] as import("../personalCorrections").PersonalCorrection[]}));
 const { loadCredential } = vi.hoisted(() => ({ loadCredential: vi.fn() }));
-const { invoke } = vi.hoisted(() => ({ invoke: vi.fn() }));
+const { invoke, auditInvoke } = vi.hoisted(() => ({ invoke: vi.fn(), auditInvoke: vi.fn() }));
 vi.mock("../../stores/personalCorrectionsStore", () => ({ usePersonalCorrectionsStore: { getState: () => ({hydrate:async () => {},entries:corrections.entries}) } }));
 vi.mock("../tauriCommands", () => ({ loadCredential }));
-vi.mock("@tauri-apps/api/core", () => ({ invoke }));
+// Keep generation/checking transport assertions separate from the fixed audit request.
+vi.mock("@tauri-apps/api/core", () => ({ invoke: (...args: unknown[]) => {
+  const request = (args[1] as { request?: { body?: string } })?.request;
+  const messages = request?.body ? JSON.parse(request.body).messages : [];
+  return messages.at(-1)?.content.startsWith("Inhoudsaudit (geen generatie):") ? auditInvoke(...args) : invoke(...args);
+} }));
 
 const profile = {
   id: "custom",
@@ -20,6 +26,10 @@ const profile = {
 beforeEach(() => {
   vi.resetAllMocks();
   corrections.entries = [];
+  auditInvoke.mockImplementation(async (_command, args) => {
+    const content = auditFixture(JSON.parse(args.request.body).messages.at(-1).content);
+    return { status: 200, body: JSON.stringify({ choices: [{ message: { content } }], content: [{ type: "text", text: content }] }) };
+  });
   useSettingsStore.setState({ processing_mode: "local", notulen_provider: "ollama" });
 });
 
@@ -269,6 +279,7 @@ it("does not ask the checker to invent notes from an empty draft", async () => {
 });
 
 it("rejects a checked note that still omits an explicit constraint instead of saving it", async () => {
+  auditInvoke.mockResolvedValue({ status: 200, body: JSON.stringify({ choices: [{ message: { content: JSON.stringify({ source: [], notes: [], uncertain: true }) } }] }) });
   useSettingsStore.setState({ notulen_provider: "openai" });
   loadCredential.mockResolvedValue("test-key");
   invoke.mockResolvedValue({ status: 200, body: JSON.stringify({ choices: [{ message: { content: "<p>Het overleg is afgerond.</p>" } }] }) });
@@ -278,6 +289,7 @@ it("rejects a checked note that still omits an explicit constraint instead of sa
 });
 
 it("does not accept constraints hidden in CSS as note content", async () => {
+  auditInvoke.mockResolvedValue({ status: 200, body: JSON.stringify({ choices: [{ message: { content: JSON.stringify({ source: [], notes: [], uncertain: true }) } }] }) });
   useSettingsStore.setState({ notulen_provider: "openai" });
   loadCredential.mockResolvedValue("test-key");
   const raw = "Er is geen besluit over archivering genomen.";

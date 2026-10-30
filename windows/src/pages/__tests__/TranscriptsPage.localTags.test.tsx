@@ -145,3 +145,36 @@ it("prints a sanitized note inside the app without relying on a popup", async ()
   vi.useRealTimers();
   await act(async () => { root.unmount(); });
 });
+
+it.each([false, true])("keeps accepted notes intact when review is required (draft write failure: %s)", async failWrite => {
+  const { NotuleReviewError } = await import("../../services/notuleAudit");
+  const note: Transcript = { id: "local-review", title: "Bestaande notule", raw_transcription: "Sam controleert vrijdag de offerte.",
+    notule_html: "<p>Bestaande goedgekeurde tekst</p>", has_notes: true, duration_seconds: 12, profile_name: "Standaard",
+    tags: [], created_at: new Date().toISOString(), updated_at: new Date().toISOString() };
+  useSettingsStore.getState().updateSettings({ processing_mode: "local", obsidian_enabled: true });
+  useProfilesStore.setState({ profiles: [{ id: "standard", name: "Standaard" }] });
+  useLocalTranscriptsStore.setState({ items: [note] });
+  useTranscriptsStore.setState({ transcripts: [note], selectedId: note.id });
+  const update = vi.spyOn(useLocalTranscriptsStore.getState(), "update").mockImplementation(async (id, patch) => {
+    if (failWrite) throw new Error("disk full");
+    useLocalTranscriptsStore.setState({ items: [{ ...note, ...patch }] });
+  });
+  vi.spyOn(LLMService, "generateNotulen").mockRejectedValue(new NotuleReviewError("Controle onzeker", "<p>Ongecontroleerd nieuw concept</p>"));
+  const autoexport = vi.spyOn(obsidian, "exportToObsidian").mockResolvedValue(undefined);
+  const container = document.createElement("div"); const root = createRoot(container);
+  await act(async () => { root.render(<TranscriptsPage />); });
+  await act(async () => { container.querySelector<HTMLButtonElement>('button[title="Notulen opnieuw genereren met AI"]')!.click(); });
+  await act(async () => { Array.from(container.querySelectorAll<HTMLButtonElement>(".td-overlay button")).find(b => b.textContent === "Regenereren")!.click(); });
+  expect(update).toHaveBeenCalledWith(note.id, expect.objectContaining({ notule_draft_html: "<p>Ongecontroleerd nieuw concept</p>" }));
+  const saved = useLocalTranscriptsStore.getState().items.find(item => item.id === note.id)!;
+  expect(saved.notule_html).toBe(note.notule_html);
+  expect(saved.raw_transcription).toBe(note.raw_transcription);
+  expect(saved.title).toBe(note.title);
+  expect(saved.has_notes).toBe(true);
+  expect(autoexport).not.toHaveBeenCalled();
+  const task = useRecordingStore.getState().backgroundTasks[0];
+  expect(task.status).toBe("failed");
+  if (failWrite) { expect(task.error_message).toContain("kon niet worden bewaard"); expect(saved.notule_draft_html).toBeUndefined(); }
+  else { expect(task.error_message).toContain("apart bewaard"); expect(container.textContent).toContain("Concept — niet gevalideerd"); }
+  await act(async () => { root.unmount(); });
+});

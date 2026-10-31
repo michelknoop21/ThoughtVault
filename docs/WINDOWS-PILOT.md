@@ -2,17 +2,63 @@
 
 Status: voorbereiding, **nog niet vrijgegeven voor collega's**. Gebruik tijdens acceptatie alleen fictieve vergaderingen.
 
-De nieuwe lokale MSI-kandidaat is **1.0.295**, broncommit
-`55ecb9077588afaa1559a1d1f9b921c065746f16`, inclusief beide bronfixes.
-Bestand: `build/windows-pilot-20261029/ThoughtVault_1.0.295_x64.msi`, met de eigen
+De nieuwe lokale MSI-kandidaat is **1.0.296**, broncommit
+`132b9e190ff56e6529b10e4c52f5fafe9a6c97d8`, met de bedragfix, aanvullende
+inhoudscontrole en apart behoud van afgewezen concepten.
+Bestand: `build/windows-pilot-20261030/ThoughtVault_1.0.296_x64.msi`, met de eigen
 `.sig` en `SHA256SUMS.txt` in dezelfde map. De oorspronkelijke updaterkey is
 teruggevonden en gecontroleerd; de sleutel ontbreekt dus niet meer als voorziening.
 Dit pakket is nog **geen geaccepteerde pilotrelease**. Zie de afzonderlijke
 [acceptatiematrix van 29 oktober](qa/windows-pilot-2026-10-29.md).
 
-SHA-256 MSI: `c212094768d98ffaa9b76e4fec48bf81e6033f1d2817ca0fe3e57ed4cb95ee8b`.
+SHA-256 MSI: `af178ed1ecff90e0939959f666124b870c499316c7f42105922dfd2111141aa2`.
 De MSI is voor de hele machine (`ALLUSERS=1`); reken voor een standaardaccount
 op beheerdershulp. De werkelijke UAC-/installatieproef staat afzonderlijk in de matrix.
+
+Een afgewezen generatie krijgt geen voltooidstatus. Het transcript, eerdere
+notulen en een afzonderlijk concept blijven beschikbaar voor inhoudelijke
+beoordeling. De extra controle gebruikt dezelfde ingestelde provider en hetzelfde
+model: één extra request, geen garantie op foutloze inhoud. Onzeker bewijs,
+complexe niet controleerbare opmaak of meer dan 64.000 tekens/400 zineenheden
+vraagt review. Controleer bedragen, ontkenningen, acties en voorwaarden tegen de
+hoorbare opname. Bronfouten door transcriptie kan deze controle niet bewijzen.
+De nieuwe praktijkacceptatie staat nog open; de onderstaande VM-resultaten
+gelden uitsluitend voor de eerdere MSI 1.0.295.
+
+## Parallels-proef: bereik en voorwaarden
+
+De aanvullende testomgeving is een bestaande Windows 11 Pro ARM64-VM (build
+26100, 4 vCPU, 8 GiB RAM), met actieve Defender en reeds aanwezige WebView2.
+De x64-MSI wordt daar onder emulatie getest. Dit bewijst geen schone installatie,
+prestaties of audio op een native x64-collega-laptop. De acceptatiematrix houdt
+beide omgevingen apart; uitrol blijft NO-GO zolang verplichte proeven openstaan.
+
+In deze VM is de normale upgrade van 1.0.262 naar 1.0.295 geslaagd (msiexec
+exitcode 0). Defender-scans van MSI en geïnstalleerde appmap inclusief worker
+zijn voltooid zonder waargenomen detectie. Alle 285 appdatabestanden bleven vóór
+eerste start gelijk in hash, grootte en tijdstempels. Dit bewijst nog geen
+werkelijke transcriptie, herstart of volledige UI-keten. De app is zichtbaar gestart;
+de exacte worker gaf bij uitsluitend `--help` exitcode 0 met actieve Defender en
+zonder waargenomen detectie. Dit controleert alleen het laden van de worker.
+
+De normale editor, opslaan, opnieuw openen, normale appherstart en TXT/PDF-export
+zijn aanvullend met één fictief record getest. Beide proef-PDF's zijn leesbaar en
+doorzoekbaar. De editor verwijderde een dubbele HTML-titel; de aparte zichtbare
+titel en bestaande body bleven behouden. Deze technische controles keuren de
+inhoud niet goed: de proefnotule bevat onjuiste en ontbrekende informatie.
+Controleer transcript en notulen daarom steeds tegen de oorspronkelijke opname.
+
+Een snapshot vóór installatie en een volledige lokale veiligheidskopie van beide
+gebruikte appmappen zijn gemaakt. De kopie is op alle 285 bestanden gecontroleerd
+op hash, grootte en tijdstempels. Terugzetten en daarna openen/afspelen/bewerken
+zijn daarmee nog niet bewezen. De bestaande gebruikers-VM is niet beschikbaar
+voor crash- of onderbroken-upgradeproeven.
+
+Het aangetroffen oudere `ggml-small.bin` is geen Faster Whisper-modelset. De voor
+Faster Whisper gebruikte Small-set bestaat uit vier bestanden (486,2 MB totaal)
+en wordt niet door deze MSI meegeleverd. Kopieer of download modellen pas na de
+voorafgaande modelkeuze en controle; start geen verwerking om de beschikbaarheid
+uit te proberen, omdat dat een automatische download kan veroorzaken.
 
 ## Eerdere installer (herstelreferentie)
 
@@ -25,7 +71,7 @@ SHA-256: `39e01dab4979c9ef3dd5e6ea8cb2d6fcf6a26de1b1f4a51b3cfe53c18227cc39`.
 Controleer vóór installatie met PowerShell:
 
 ```powershell
-Get-FileHash .\ThoughtVault_1.0.295_x64.msi -Algorithm SHA256
+Get-FileHash .\ThoughtVault_1.0.296_x64.msi -Algorithm SHA256
 ```
 
 Sluit ThoughtVault vóór installeren of bijwerken. Start de MSI via de bestaande installatieroute; een upgrade kan beheerdersrechten vragen. De MSI heeft voorlopig geen Windows-uitgeverssignering en kan **onbekende uitgever** tonen. Omzeil geen beveiligingsblokkade, voeg geen antivirusuitzondering toe en verlaag geen Windows-beveiliging. Bij een blokkade: bewaar de melding en laat de pilotbeheerder deze onderzoeken.

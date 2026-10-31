@@ -132,7 +132,7 @@
 		AA000066 /* ProfileTemplates.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000066 /* ProfileTemplates.swift */; };
 		AA000067 /* ProfileTemplates.json in Resources */ = {isa = PBXBuildFile; fileRef = FA000067 /* ProfileTemplates.json */; };
 		AB000001 /* ThoughtVaultTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000001 /* ThoughtVaultTests.swift */; };
-		AAUP0001 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = SDUP0001 /* Sparkle */; platformFilter = macos; };
+		AAUP0001 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = SDUP0001 /* Sparkle */; platformFilters = (macos, ); };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -545,11 +545,11 @@
 			buildRules = (
 			);
 			dependencies = (
+				TDUP0001 /* Sparkle (macOS only) */,
 			);
 			name = ThoughtVault;
 			packageProductDependencies = (
 				SD000001 /* WhisperKit */,
-				SDUP0001 /* Sparkle */,
 			);
 			productName = ThoughtVault;
 			productReference = FC000001 /* ThoughtVault.app */;
@@ -775,6 +775,11 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		TDUP0001 /* Sparkle (macOS only) */ = {
+			isa = PBXTargetDependency;
+			platformFilters = (macos, );
+			productRef = SDUP0001 /* Sparkle */;
+		};
 		TD000001 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = TT000001 /* ThoughtVault */;

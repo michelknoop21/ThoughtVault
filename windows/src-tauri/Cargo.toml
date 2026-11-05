@@ -1,10 +1,11 @@
 [package]
 name = "thoughtvault"
-version = "1.0.297"
+version = "1.0.298"
 description = "ThoughtVault - Meeting recorder and transcription app"
 authors = ["Prezent Internet B.V."]
 edition = "2021"
 default-run = "thoughtvault"
+autobins = false
 
 [lib]
 name = "thoughtvault_lib"

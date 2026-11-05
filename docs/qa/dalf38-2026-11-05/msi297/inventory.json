@@ -1,0 +1,60 @@
+﻿{
+    "largeProcess":  {
+                         "script":  "No -File path found",
+                         "pid":  31896,
+                         "parentPid":  34852,
+                         "executable":  null
+                     },
+    "models":  [
+                   {
+                       "path":  "ggml-base.bin",
+                       "sha256":  "60ED5BC3DD14EEA856493D334349B405782DDCAF0028D4B5DF4088345FBA2EFE",
+                       "length":  147951465
+                   },
+                   {
+                       "path":  "ggml-large-v3.bin",
+                       "sha256":  "64D182B440B98D5203C4F9BD541544D84C605196C4F7B845DFA11FB23594D1E2",
+                       "length":  3095033483
+                   },
+                   {
+                       "path":  "ggml-medium.bin",
+                       "sha256":  "6C14D5ADEE5F86394037B4E4E8B59F1673B6CEE10E3CF0B11BBDBEE79C156208",
+                       "length":  1533763059
+                   },
+                   {
+                       "path":  "ggml-small.bin",
+                       "sha256":  "1BE3A9B2063867B937E64E2EC7483364A79917E157FA98C5D94B5C1FFFEA987B",
+                       "length":  487601967
+                   },
+                   {
+                       "path":  "parakeet-tdt-0.6b-v3.q8_0.gguf",
+                       "sha256":  "E3880D0AAAAF2C308EA2C35016B2B895C423EB3FDA924C1B463D1C19B7F4D32E",
+                       "length":  713975456
+                   },
+                   {
+                       "path":  "faster-whisper-small\\config.json",
+                       "sha256":  "B55496AC7940A7AE47D2C01EAB40EDFD8701FEEC1229D9CCE3B40014383FB828",
+                       "length":  2370
+                   },
+                   {
+                       "path":  "faster-whisper-small\\model.bin",
+                       "sha256":  "3E305921506D8872816023E4C273E75D2419FB89B24DA97B4FE7BCE14170D671",
+                       "length":  483546902
+                   },
+                   {
+                       "path":  "faster-whisper-small\\tokenizer.json",
+                       "sha256":  "FB7B63191E9BB045082C79FD742A3106A12C99513AB30DF4A0D47FA6CB6FD0AB",
+                       "length":  2203239
+                   },
+                   {
+                       "path":  "faster-whisper-small\\vocabulary.txt",
+                       "sha256":  "34CE3FE1C5041027B3F8D42912270993F986DBC4BB34CF27F951E34A1E453913",
+                       "length":  459861
+                   }
+               ],
+    "rollback":  {
+                     "backupVerified":  true,
+                     "path":  "C:\\Users\\michel\\AppData\\Local\\Temp\\ThoughtVault-Pilot295\\ThoughtVault_1.0.295_x64.msi",
+                     "sha256":  "C212094768D98FFAA9B76E4FEC48BF81E6033F1D2817CA0FE3E57ED4CB95EE8B"
+                 }
+}

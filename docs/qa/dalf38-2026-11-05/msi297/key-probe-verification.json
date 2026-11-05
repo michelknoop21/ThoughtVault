@@ -1,0 +1,9 @@
+{
+  "sha256": "790fdd4b9b9c04e735b0d57d70bd5f8ade18d96b6758e348ac07f21ebb3c9b90",
+  "length": 44,
+  "signatureValid": true,
+  "trustedCommentValid": true,
+  "trustedComment": "timestamp:1793886098\tfile:thoughtvault-signing-probe.txt",
+  "tamperedPayloadRejected": true,
+  "tamperedCommentRejected": true
+}

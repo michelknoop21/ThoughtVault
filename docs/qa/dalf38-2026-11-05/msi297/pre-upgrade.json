@@ -1,0 +1,35 @@
+﻿{
+    "timestamp":  "2026-11-05T13:36:06.1623511Z",
+    "installed":  [
+
+                  ],
+    "identity":  "DESKTOP-98B3AHB\\michel",
+    "counts":  {
+                   "Local":  {
+                                 "files":  616,
+                                 "bytes":  1225797686,
+                                 "hashesAndTimestampsVerified":  true
+                             },
+                   "Roaming":  {
+                                   "files":  12,
+                                   "bytes":  6464631527,
+                                   "hashesAndTimestampsVerified":  true
+                               }
+               },
+    "oldMsis":  [
+                    {
+                        "FullName":  "C:\\Users\\michel\\AppData\\Local\\Temp\\ThoughtVault-Pilot295\\ThoughtVault_1.0.295_x64.msi",
+                        "Length":  111144969
+                    },
+                    {
+                        "FullName":  "C:\\Users\\michel\\AppData\\Local\\Temp\\ThoughtVault-Pilot295\\src\\windows\\src-tauri\\target\\release\\bundle\\msi\\ThoughtVault_1.0.295_x64_en-US.msi",
+                        "Length":  111144969
+                    },
+                    {
+                        "FullName":  "C:\\Users\\michel\\AppData\\Local\\Temp\\ThoughtVault-Pilot295\\src\\windows\\src-tauri\\target\\release\\bundle\\msi\\ThoughtVault_1.0.296_x64_en-US.msi",
+                        "Length":  111333385
+                    }
+                ],
+    "status":  "verified",
+    "backup":  "C:\\Users\\michel\\AppData\\Local\\Temp\\ThoughtVault297-backup-20261105-143300"
+}

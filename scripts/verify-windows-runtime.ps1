@@ -2,6 +2,8 @@ param([Parameter(Mandatory=$true)][string]$Executable, [switch]$AppLocalRuntime)
 $ErrorActionPreference = 'Stop'
 $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio/Installer/vswhere.exe'
 $installation = & $vswhere -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+# Existing BuildTools installations can be usable without a vswhere registration.
+if (!$installation) { $installation = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio/2022/BuildTools' }
 $dumpbin = Get-ChildItem "$installation/VC/Tools/MSVC/*/bin/Hostx64/x64/dumpbin.exe" | Sort-Object FullName -Descending | Select-Object -First 1
 if (-not $dumpbin) { throw 'dumpbin niet gevonden; runtime-afhankelijkheden niet gecontroleerd.' }
 $directory = Split-Path (Resolve-Path $Executable)

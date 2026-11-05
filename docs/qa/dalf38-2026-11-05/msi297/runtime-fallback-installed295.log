@@ -1,0 +1,51 @@
+Microsoft (R) COFF/PE Dumper Version 14.44.35222.0
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+Dump of file C:\Program Files\ThoughtVault\ThoughtVault.exe
+
+File Type: EXECUTABLE IMAGE
+
+  Image has the following dependencies:
+
+    kernel32.dll
+    advapi32.dll
+    oleaut32.dll
+    bcryptprimitives.dll
+    ntdll.dll
+    user32.dll
+    comctl32.dll
+    ole32.dll
+    gdi32.dll
+    dwmapi.dll
+    shlwapi.dll
+    shell32.dll
+    api-ms-win-core-synch-l1-2-0.dll
+    api-ms-win-core-winrt-l1-1-0.dll
+    ws2_32.dll
+    crypt32.dll
+    bcrypt.dll
+    secur32.dll
+    ADVAPI32.dll
+    SHELL32.dll
+    api-ms-win-crt-math-l1-1-0.dll
+    api-ms-win-crt-string-l1-1-0.dll
+    api-ms-win-crt-runtime-l1-1-0.dll
+    api-ms-win-crt-stdio-l1-1-0.dll
+    api-ms-win-crt-filesystem-l1-1-0.dll
+    api-ms-win-crt-utility-l1-1-0.dll
+    api-ms-win-crt-heap-l1-1-0.dll
+    api-ms-win-crt-locale-l1-1-0.dll
+    api-ms-win-crt-time-l1-1-0.dll
+    api-ms-win-crt-convert-l1-1-0.dll
+    api-ms-win-crt-environment-l1-1-0.dll
+
+  Summary
+
+      150000 .data
+       E6000 .pdata
+      785000 .rdata
+       12000 .reloc
+       1F000 .rsrc
+     1121000 .text
+Geen afzonderlijke Visual C++ runtime-installatie vereist.

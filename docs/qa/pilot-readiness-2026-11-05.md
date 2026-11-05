@@ -247,3 +247,50 @@ compiler-PATH/MSVC-omgeving wordt uitsluitend per job ingesteld.
 Nog uit te voeren vóór uitrol: unieke releaseversie, MSI/signature, verse
 back-up/upgrade/herstel, native matrix incl. echte opname en inhoudskwaliteit,
 en afzonderlijke distributievrijgave. Deze tests zijn geen volledige releaseacceptatie.
+
+### MSI 1.0.297 en gecontroleerde acceptatievoorbereiding
+
+Unieke kandidaatversie 1.0.297, productbron `6ff05811314086abff94f1398dab973545725866`.
+Centrale projectregistratie `thoughtvault-msi1105`; actuele bouwjob
+`11f72adb15b34c80813aa5cb00023f03`, bronmanifesthash
+`2632c5cf68af7c3e6a3d1e8a8f2bb737f6aa757a2a8246dbd4181609f24dec49`.
+Deze aanlevering bevat de gecommitte CMP0091-correctie. De actuele job heeft
+209 frontendtests PASS, één opt-in SKIP en een geslaagde frontendbuild;
+releasecompilatie is bij deze notitie nog actief. Geen MSI-PASS of installatieclaim.
+Aanwezige WiX 3.14 uit C:/tvb-20261001 wordt per bestand hashgelijk naar de
+centrale targetcache gekopieerd; geen nieuwe WiX-installatie.
+
+Verse back-up in de echte michel-sessie, app gesloten: 616 Local-bestanden
+(1.225.797.686 bytes) en 12 Roaming-bestanden (6.464.631.527 bytes). Bron vóór/na
+kopiëren en back-up hebben gelijke hashes, grootte en beide tijdstempels.
+Gebruikersinhoud en volledige manifests blijven uitsluitend op Dalf38. Back-up:
+C:/Users/michel/AppData/Local/Temp/ThoughtVault297-backup-20261105-143300.
+Dit is kopiebewijs; daadwerkelijke herstel-/rollbackacceptatie blijft open.
+De oorspronkelijke MSI 1.0.295 is teruggevonden, apart bewaard en heeft dezelfde
+SHA-256 als het historische gecontroleerde pakket: c212094768d98ffaa9b76e4fec48bf81e6033f1d2817ca0fe3e57ed4cb95ee8b.
+Negen bestaande modelbestanden zijn geïnventariseerd/gehasht; niets gedownload.
+
+Een oude losse `dalf.ps1 logs -Id ad615a30c16140bdbb103ec0148a5e5e`-client,
+PID 31896, gestart 12:38:46 UTC, gebruikte circa 33 GB RAM. Commandopad,
+actie, job-ID en starttijd zijn via alleen-lezen procesquery bevestigd vóór
+uitsluitend die client werd gestopt. Dispatcher PID 8904 en workers bleven intact;
+heartbeat gecontroleerd en PowerShell-geheugen daarna weer normaal. De diepe
+JSON-serialisatie van door Get-Content gedecoreerde strings is een vermoede
+verklaring, geen bewezen/fixeerde centrale root cause. Gebruik voorlopig SCP of
+direct Get-Content voor logbestanden; centrale beheercode is niet gewijzigd.
+Eerste bouwpoging abb20637a3754496a0bf4aef736ca057 bewust geannuleerd (1223).
+Huidige helper begrenst Vitest op twee workers en Cargo op twee buildtaken.
+
+Bestaande updaterkey op de Mac gecontroleerd met een synthetisch proefbestand:
+payload en trusted comment geldig, gewijzigde payload en comment afgewezen.
+Dit is nog geen handtekeningbewijs voor de toekomstige MSI. Synthese met de
+reeds geïnstalleerde Nederlandse Xander-stem levert een 29,89s fictieve
+Waddenspoor-fixture; PCM 16kHz mono i16 en bronhash gecontroleerd. Nog niet als
+opname-, ASR- of inhoudsacceptatie tellen.
+
+Runtimeverificatiescript vindt nu de bestaande VS2022 BuildTools ook wanneer
+vswhere geen registratie teruggeeft. De fallback is daadwerkelijk op de
+geïnstalleerde 1.0.295 gecontroleerd; geen afzonderlijke VC++ runtime vereist.
+Nieuwe kandidaat moet dezelfde controle nog doorlopen. Installatie-/rollbackscript
+is geparseerd; uitvoering en gegevensbehoud blijven open tot het MSI/handtekeningpaar
+is geverifieerd. Helpers en voorbereidende bewijsstukken: dalf38-2026-11-05/msi297/.

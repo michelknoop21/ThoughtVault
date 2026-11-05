@@ -98,3 +98,14 @@ heropen het resultaat na herstart en probeer export. Controleer namen, cijfers e
 zelf vóór gebruik. Meld platform, versie, stappen en foutmelding; stuur geen vertrouwelijke
 opname mee. Stop bij verdwenen gegevens of vastgelopen opname en bewaar de bronbestanden.
 Pilot: 3–5 collega's, vijf werkdagen, pas na afzonderlijke vrijgave en groene native gates.
+
+## Vervolg 5 november, 11:40–11:45
+
+Toegankelijkheid is inmiddels bruikbaar na toestemming voor Supacode: verse
+System Events-proef kan RustDesk-venster `Dalf38@desktop-98b3ahb` lezen.
+Remote desktop zichtbaar; er is een aparte PowerShell-tab geopend naast de bestaande
+gebruikerswerk-tab. Geen installatie, providerwijziging of build uitgevoerd.
+Muisinvoer via native events werkt; toetsenbordinvoer kwam onvolledig/afwijkend aan.
+Een onverwachte, niet uitgevoerde commandoregel is waargenomen. Invoer gestopt en
+exclusief gebruik van deze remote sessie bij de gebruiker nagevraagd. Native
+appversie, idle-status en Windows-kandidaatacceptatie blijven onbewezen.

@@ -1,0 +1,32 @@
+        Info Looking up installed tauri packages to check mismatched versions...
+     Running beforeBuildCommand `npm run build`
+Browserslist: browsers data (caniuse-lite) is 9 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+[33m[plugin vite:reporter] 
+(!) C:/Dalf38/workspaces/thoughtvault-msi299/windows/src/stores/recordingStore.ts is dynamically imported by C:/Dalf38/workspaces/thoughtvault-msi299/windows/src/hooks/useWidgetWindow.ts but also statically imported by C:/Dalf38/workspaces/thoughtvault-msi299/windows/src/App.tsx, C:/Dalf38/workspaces/thoughtvault-msi299/windows/src/components/ProcessingBar.tsx, C:/Dalf38/workspaces/thoughtvault-msi299/windows/src/components/calendar/CallAlertOverlay.tsx, C:/Dalf38/workspaces/thoughtvault-msi299/windows/src/components/layout/TitleBar.tsx, C:/Dalf38/workspaces/thoughtvault-msi299/windows/src/components/settings/ProcessingTab.tsx, C:/Dalf38/workspaces/thoughtvault-msi299/windows/src/components/ui/UpdateBanner.tsx, C:/Dalf38/workspaces/thoughtvault-msi299/windows/src/hooks/useGlobalRecordingHandler.ts, C:/Dalf38/workspaces/thoughtvault-msi299/windows/src/pages/HomePage.tsx, C:/Dalf38/workspaces/thoughtvault-msi299/windows/src/pages/ParticipantPicker.tsx, C:/Dalf38/workspaces/thoughtvault-msi299/windows/src/pages/ProfilesPage.tsx, C:/Dalf38/workspaces/thoughtvault-msi299/windows/src/pages/RecordingPage.tsx, C:/Dalf38/workspaces/thoughtvault-msi299/windows/src/pages/TasksPage.tsx, C:/Dalf38/workspaces/thoughtvault-msi299/windows/src/pages/TranscriptsPage.tsx, C:/Dalf38/workspaces/thoughtvault-msi299/windows/src/services/localPipeline.ts, C:/Dalf38/workspaces/thoughtvault-msi299/windows/src/services/uploadAndTrack.ts, dynamic import will not move module into another chunk.
+[39m
+[33m[plugin vite:reporter] 
+(!) C:/Dalf38/workspaces/thoughtvault-msi299/windows/node_modules/@tauri-apps/api/app.js is dynamically imported by C:/Dalf38/workspaces/thoughtvault-msi299/windows/src/hooks/useUpdateCheck.ts but also statically imported by C:/Dalf38/workspaces/thoughtvault-msi299/windows/src/components/layout/TitleBar.tsx, C:/Dalf38/workspaces/thoughtvault-msi299/windows/src/components/settings/GeneralTab.tsx, dynamic import will not move module into another chunk.
+[39m
+[33m[plugin vite:reporter] 
+(!) C:/Dalf38/workspaces/thoughtvault-msi299/windows/node_modules/@tauri-apps/plugin-fs/dist-js/index.js is dynamically imported by C:/Dalf38/workspaces/thoughtvault-msi299/windows/src/services/uploadAndTrack.ts but also statically imported by C:/Dalf38/workspaces/thoughtvault-msi299/windows/src/services/offlineQueue.ts, dynamic import will not move module into another chunk.
+[39m
+[33m[plugin vite:reporter] 
+(!) C:/Dalf38/workspaces/thoughtvault-msi299/windows/src/services/offlineQueue.ts is dynamically imported by C:/Dalf38/workspaces/thoughtvault-msi299/windows/src/App.tsx, C:/Dalf38/workspaces/thoughtvault-msi299/windows/src/App.tsx but also statically imported by C:/Dalf38/workspaces/thoughtvault-msi299/windows/src/services/uploadAndTrack.ts, dynamic import will not move module into another chunk.
+[39m
+   Compiling thoughtvault v1.0.299 (C:\Dalf38\workspaces\thoughtvault-msi299\windows\src-tauri)
+warning: fields `file_path` and `duration_seconds` are never read
+  --> src\audio\types.rs:49:15
+   |
+49 |     Stopped { file_path: String, duration_seconds: f64 },
+   |     -------   ^^^^^^^^^          ^^^^^^^^^^^^^^^^
+   |     |
+   |     fields in this variant
+   |
+   = note: `RecordingEvent` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `thoughtvault` (lib) generated 1 warning
+    Finished `release` profile [optimized] target(s) in 1m 52s
+       Built application at: C:\Dalf38\temp\thoughtvault-cargo-target\release\ThoughtVault.exe

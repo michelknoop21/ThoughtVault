@@ -336,3 +336,20 @@ releasebuild en volledige nieuwe MSI-payloadcontrole blijven verplicht.
 Installatie, rollback, daadwerkelijk herstel en opname-/inhoudsacceptatie zijn
 nog steeds OPEN. Windows Sandbox is niet aanwezig; Dalf38 is een bestaande
 gebruikersinstallatie en bewijst geen schone OS-installatie.
+
+### Uitsluitend SSH — actuele uitvoergrens
+
+Gebruiker heeft verduidelijkt dat verdere uitvoering uitsluitend via SSH moet
+lopen. Computeruse is gestopt. Royal TSX was tijdelijk onzichtbaar voor de
+schermtool en werd door gebruiker heropend; er is daarna alleen het pad naar
+het 299-pakketscript ingevuld, niet uitgevoerd. Geen installatie gestart.
+
+Job 18916d4c4d5b4251bfeb9a9f7f8074ee is inmiddels geslaagd, exit 0; native 299
+gebouwd en runtimecontrole geslaagd. De nieuwe installerdefinitie verwijst niet
+meer naar read_token, terwijl de oude binary nog in de cache staat. Definitieve
+299-MSI en payloadacceptatie blijven open. Ook een rechtstreekse niet-verhoogde
+SSH-pakketpoging faalt op Windows Installer/ICE-toegang. De bestaande centrale
+laag biedt uitsluitend een vaste sessieprobe, geen installatie-/interactieve
+acceptatieacties. Deze grens is beschreven in
+[dalf38-ssh-acceptance-gap-2026-11-05.md](dalf38-ssh-acceptance-gap-2026-11-05.md).
+Geen Windows-rechten/taakdefinities, centrale code of SSH-instellingen gewijzigd.

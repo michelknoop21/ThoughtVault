@@ -1,0 +1,1102 @@
+[
+    {
+        "path":  "dalf-build.ps1",
+        "sha256":  "f258d12e550ef5c7c800740009e28ab97ba079ab1ade65240eadac524ef9530c",
+        "length":  4643
+    },
+    {
+        "path":  "SOURCE.json",
+        "sha256":  "640753bd5980b480f67534b51b6af0290c56f82f1485d8e4e6ea677fda1de5e7",
+        "length":  179
+    },
+    {
+        "path":  "tests/fixtures/envelope-fixture.json",
+        "sha256":  "67315cd09fd3770843afa91109894d6b143dfd62cf803e9192bf1d50912fa200",
+        "length":  1960
+    },
+    {
+        "path":  "tests/fixtures/generate-system-audio.py",
+        "sha256":  "806958cc466cc9e48c10e003247a056c5e68cfab07770227b57b798c05312f30",
+        "length":  1039
+    },
+    {
+        "path":  "tests/fixtures/meeting-transcript.txt",
+        "sha256":  "ad589221399162b946d97b7ff845ccf25d878c67c57439a5e1a352ed62fd1993",
+        "length":  667
+    },
+    {
+        "path":  "tests/fixtures/promptnote-transcript.txt",
+        "sha256":  "89118abc8606b880d0970e91e1a4bc1446e9020cc337a0f469dcfdaef1e2e9e0",
+        "length":  238
+    },
+    {
+        "path":  "tests/fixtures/waveform-reference.json",
+        "sha256":  "3d7113c8a8f80f2070257872cf918300f2e6eb16918813ce33795c7f45bc6e13",
+        "length":  25991
+    },
+    {
+        "path":  "vc-env.cmd",
+        "sha256":  "850b04f31826a52a224403116411cec7654f1bc244d1b4fa3c727a58231f6ab8",
+        "length":  162
+    },
+    {
+        "path":  "VERSION",
+        "sha256":  "e7da5f88cae6cbaa9d701b45b4c0e1cb68f761e90152fecf3c5a48729a078056",
+        "length":  8
+    },
+    {
+        "path":  "windows/.cargo/config.toml",
+        "sha256":  "fc8b1ad791a1e3a90bbdaf873051045df6bc50b48eab70c9121442304a394177",
+        "length":  569
+    },
+    {
+        "path":  "windows/.gitignore",
+        "sha256":  "81fa4a6dc49da481112d2957e4bcb19e524d620f2680a158d0991669c88d206b",
+        "length":  322
+    },
+    {
+        "path":  "windows/desktop-review.html",
+        "sha256":  "87d64c3c0443214c1a8116ce428953e08c6258d577f38d50b9b72f7f6c218574",
+        "length":  277
+    },
+    {
+        "path":  "windows/docs/API.md",
+        "sha256":  "49f7947715d81ea442b13057f10e770a99cee84b7dc2fd21d726b3f9be392284",
+        "length":  9059
+    },
+    {
+        "path":  "windows/docs/ARCHITECTURE.md",
+        "sha256":  "1a0974d769d12f1ce2d76c3f27d8b0794802113db061ac510031fdeb514cc67e",
+        "length":  3393
+    },
+    {
+        "path":  "windows/docs/PRD.md",
+        "sha256":  "b775faf74f2d0186c6a7632a39ee5fd31869395ba136c13e40b417c76748e708",
+        "length":  2949
+    },
+    {
+        "path":  "windows/get_token.ps1",
+        "sha256":  "e60831e092493704f1bed763c32731e611c3f0ab4937b496ba729474ab3fb89c",
+        "length":  871
+    },
+    {
+        "path":  "windows/index.html",
+        "sha256":  "cef825feb8c1c6367e0dc8eab6011b83274e597f36efea34ba17b66bce48db92",
+        "length":  491
+    },
+    {
+        "path":  "windows/package.json",
+        "sha256":  "e5a112f0d81b88ff5d273c7ea24e056c80ab8f0e43c51fef24093468cc65e6d0",
+        "length":  1190
+    },
+    {
+        "path":  "windows/package-lock.json",
+        "sha256":  "c3d6329abd5ec0029de0444fd7486e2b9bb889bfef272c5ebccefcf3c7d724be",
+        "length":  141680
+    },
+    {
+        "path":  "windows/postcss.config.js",
+        "sha256":  "e32657baf631d7c5f4dc67b4b2ee0ec8e7d5b3c41860e09cddce7c0377cd80bc",
+        "length":  81
+    },
+    {
+        "path":  "windows/public/icon.png",
+        "sha256":  "68a04a4a7fba2df2bb63099f5aad061d04174bc4f00b0a0f68dcc4e685ab6559",
+        "length":  136934
+    },
+    {
+        "path":  "windows/public/licenses/siriwave-MIT.txt",
+        "sha256":  "2895598c988e615210dac52580a35ec00e007cf3995ab7178644cc1bc47d6a39",
+        "length":  1080
+    },
+    {
+        "path":  "windows/src/__tests__/App.recovery.test.tsx",
+        "sha256":  "4112908c57937746fc1cde14660551216d3dc4869a08c059a29b1d50b8c4b8a4",
+        "length":  6324
+    },
+    {
+        "path":  "windows/src/App.tsx",
+        "sha256":  "d27b16a65f90790eae5a3635cf6a3d9e9778394c0e7a19c8df1c9ef8b63e60d4",
+        "length":  22234
+    },
+    {
+        "path":  "windows/src/assets/app-logo.png",
+        "sha256":  "68a04a4a7fba2df2bb63099f5aad061d04174bc4f00b0a0f68dcc4e685ab6559",
+        "length":  136934
+    },
+    {
+        "path":  "windows/src/assets/home-mountains.svg",
+        "sha256":  "58f8eef4d21e673cfec8723c57d89ea091c0a71eeb34271a82654cba792d4862",
+        "length":  1466
+    },
+    {
+        "path":  "windows/src/assets/yinga-logo.svg",
+        "sha256":  "36c34d3332ef5e3482a51841b88ae811527b275d4ae9547f6c159b4ea1e0a39b",
+        "length":  3177
+    },
+    {
+        "path":  "windows/src/components/__tests__/FeedbackWidget.test.tsx",
+        "sha256":  "d1961cc7e2fe3255538ab67769dca74a2ee1d0bdaa808c7354283777599351cd",
+        "length":  2171
+    },
+    {
+        "path":  "windows/src/components/brand/BrandBar.tsx",
+        "sha256":  "1dc61e8bccf8e46ce8b570cbca42220368c98c328c0bba20f753de8dd84e6b4e",
+        "length":  251
+    },
+    {
+        "path":  "windows/src/components/brand/BrandFooter.tsx",
+        "sha256":  "c919fbb4897792df2323aff93ced103c864f8fa17550f11af93a271dc49f8b33",
+        "length":  410
+    },
+    {
+        "path":  "windows/src/components/calendar/CallAlertOverlay.tsx",
+        "sha256":  "4a6639d13f0fbf3f1b8dcf762bca728462777eb9b3ccdd640edbd3261dc7cb95",
+        "length":  5327
+    },
+    {
+        "path":  "windows/src/components/FeedbackWidget.tsx",
+        "sha256":  "930eeb5d7154fea10762944012cf3c7a15c0a84a5b33fa6355bddf28a54d0326",
+        "length":  14861
+    },
+    {
+        "path":  "windows/src/components/layout/__tests__/Sidebar.test.tsx",
+        "sha256":  "150c41300652446d1f808d4e81c475d2741a3818ba5305f5370d99fe4ecb5a97",
+        "length":  2267
+    },
+    {
+        "path":  "windows/src/components/layout/Sidebar.tsx",
+        "sha256":  "0c34c9dbdb6371203e78fce6dbb895c669415e21805a5f26c952ed7f3dbc9121",
+        "length":  4143
+    },
+    {
+        "path":  "windows/src/components/layout/TitleBar.tsx",
+        "sha256":  "7dc56ddd1ac77b9ada008e70f0cb96518eeb0792f16bb4f5618ebe556b102bcd",
+        "length":  801
+    },
+    {
+        "path":  "windows/src/components/onboarding/OnboardingWizard.tsx",
+        "sha256":  "50160fbe8da5eb2955d59509f2426565804ee87e73249306d22229f91b7b8751",
+        "length":  14376
+    },
+    {
+        "path":  "windows/src/components/ProcessingBar.tsx",
+        "sha256":  "95794ada9cfe771a1b70353fff858e0966de06408d6f21e80eceb68bc16dc17b",
+        "length":  4684
+    },
+    {
+        "path":  "windows/src/components/recording/__tests__/RecordingWidget.test.tsx",
+        "sha256":  "f94ad0401be40a5f28e9a388eaf98545bc84ab9b4601c6d7af1178889c50c06d",
+        "length":  1758
+    },
+    {
+        "path":  "windows/src/components/recording/__tests__/SavedRecordings.test.tsx",
+        "sha256":  "38b05d88143ce65fbbd95911fc992fd53e34d7cab4135211a12634e06f8d67bd",
+        "length":  2168
+    },
+    {
+        "path":  "windows/src/components/recording/__tests__/studioLayout.test.ts",
+        "sha256":  "34070220ab658551c2dbf071c22cdc6141517a662487dabffa8e1f73d494a05c",
+        "length":  1160
+    },
+    {
+        "path":  "windows/src/components/recording/__tests__/WaveformVisualizer.parity.test.tsx",
+        "sha256":  "6175669fb4a3c1aac444ed9c7dc314fbd7f42eeca5c8641eba12f323a470ae53",
+        "length":  2926
+    },
+    {
+        "path":  "windows/src/components/recording/__tests__/WaveformVisualizer.test.tsx",
+        "sha256":  "47a4946ed2931335ca06a199710d0a34172b6f714fca158d29ba41a45874931a",
+        "length":  5835
+    },
+    {
+        "path":  "windows/src/components/recording/RecordingWidget.tsx",
+        "sha256":  "f756703d58857619e65a869e9f0c16297de3aa70578e77946fb1b39bf5ceb6c8",
+        "length":  5340
+    },
+    {
+        "path":  "windows/src/components/recording/SavedRecordings.tsx",
+        "sha256":  "21a0857047fae23775d1f0ee4d6b214efbd3e0217f78dca16ad083c20ed1c24b",
+        "length":  7327
+    },
+    {
+        "path":  "windows/src/components/recording/studioLayout.ts",
+        "sha256":  "a9983cca62a04a58581e04d357f3fde20437362af8253bfadf1f2376f907423e",
+        "length":  834
+    },
+    {
+        "path":  "windows/src/components/recording/WaveformVisualizer.tsx",
+        "sha256":  "a3877faa1d9626c6be45c596ec77c600c10c2656e30ac247341b27165b73dc25",
+        "length":  7910
+    },
+    {
+        "path":  "windows/src/components/settings/__tests__/ProcessingTab.ollama.test.tsx",
+        "sha256":  "04bc76980661240df3e3ae341f4610a611ef474e244966dc8e595506dad4f722",
+        "length":  4351
+    },
+    {
+        "path":  "windows/src/components/settings/AccountTab.tsx",
+        "sha256":  "db276286839c8a305c7902e2058cf4e788755f039c4dcaf97e547fe0b54e4455",
+        "length":  754
+    },
+    {
+        "path":  "windows/src/components/settings/AdvancedTab.tsx",
+        "sha256":  "c25dc9972725a85c870501a25efdcbc1a16865621d5f11a5682838386142db3b",
+        "length":  5169
+    },
+    {
+        "path":  "windows/src/components/settings/CalendarTab.tsx",
+        "sha256":  "9d84b560f4f55289768a9f5a7d7274ef4357b3262514e5771f49215a47218e45",
+        "length":  3587
+    },
+    {
+        "path":  "windows/src/components/settings/GeneralTab.tsx",
+        "sha256":  "2f4c1e3c896c790683ec6507c2bc316a591f7b41bb64918f2f39a95817e75c1f",
+        "length":  3229
+    },
+    {
+        "path":  "windows/src/components/settings/NotulenTab.tsx",
+        "sha256":  "b47d887faa002550f27f176d2aabccd3b5e4878c6d79e766527e016189a27f59",
+        "length":  2958
+    },
+    {
+        "path":  "windows/src/components/settings/ObsidianTab.tsx",
+        "sha256":  "4109b68c0afb31524dba4839957c910b55e9811e0f4fcf92bf65215b05867b0e",
+        "length":  3815
+    },
+    {
+        "path":  "windows/src/components/settings/PersonalCorrections.tsx",
+        "sha256":  "f43108a2d4e3ce2e939a96f6ec68faddb687df86883c6ca4ee0648dde665178f",
+        "length":  3623
+    },
+    {
+        "path":  "windows/src/components/settings/ProcessingTab.tsx",
+        "sha256":  "32729e054c108884727ee10ecf68a6068917f98f6a32ac55d08d3299b655f109",
+        "length":  22712
+    },
+    {
+        "path":  "windows/src/components/settings/ProfileSettings.tsx",
+        "sha256":  "c96205ec28ca623fb53fef07005a9e3a56fdd92d8d7796e15204608b172f495d",
+        "length":  4725
+    },
+    {
+        "path":  "windows/src/components/settings/SettingsFields.tsx",
+        "sha256":  "9b9802c4e6ea98644c81efbc2fba6c6fd3c15ea5d5da037902ae5be44dd99a77",
+        "length":  2451
+    },
+    {
+        "path":  "windows/src/components/transcripts/__tests__/TranscriptDetail.save.test.tsx",
+        "sha256":  "512459bba5c914bddbed6ddb0a3ee8db6d4cab3a4f1d2de77c48ccec1a7a0d75",
+        "length":  7647
+    },
+    {
+        "path":  "windows/src/components/transcripts/__tests__/TranscriptsList.search.test.tsx",
+        "sha256":  "1f644a37a64c86e2546fd33890e42df949d290c2264ee5fb046433f3351ac712",
+        "length":  1723
+    },
+    {
+        "path":  "windows/src/components/transcripts/TranscriptDetail.tsx",
+        "sha256":  "41679578cf2b2fda2123a7bdf85ae1e6ca5d5d991da6c749841b1f74e747e9be",
+        "length":  20734
+    },
+    {
+        "path":  "windows/src/components/transcripts/TranscriptsList.tsx",
+        "sha256":  "e13fc74ae5bb30d51ca75e72131f68c70356d2eb142ad182159c1e858eb6e14a",
+        "length":  11867
+    },
+    {
+        "path":  "windows/src/components/ui/__tests__/useConfirmation.test.tsx",
+        "sha256":  "04e1793dbd01c4680c594e1d8b6b93c6dac336ca152658cc6b5b49e62d07b771",
+        "length":  1457
+    },
+    {
+        "path":  "windows/src/components/ui/DesktopDialog.tsx",
+        "sha256":  "5b8ddc00624616f9d24e8b0f05e766240cc17e7da893871e8affaee1970808e0",
+        "length":  826
+    },
+    {
+        "path":  "windows/src/components/ui/ErrorBoundary.tsx",
+        "sha256":  "bf1e064d34f1715619e66b3802e833492c04f3a4e2a77ac8010f4381a28e44a9",
+        "length":  2191
+    },
+    {
+        "path":  "windows/src/components/ui/InfoBar.tsx",
+        "sha256":  "88ef01af55c8d074ecbaa8c8f3728615e3e2014302cccc8e6f1c8e542b9075ce",
+        "length":  4018
+    },
+    {
+        "path":  "windows/src/components/ui/StudioIcons.tsx",
+        "sha256":  "628eebac311266451626610b74dc8d5177e754d8fb7bf14d1f16f3463db5ad29",
+        "length":  10538
+    },
+    {
+        "path":  "windows/src/components/ui/UpdateBanner.tsx",
+        "sha256":  "b5e4a3e68f8fed287c8c0ce53d21979d29d5d735b16c05d966d3db3ccd0680af",
+        "length":  2459
+    },
+    {
+        "path":  "windows/src/components/ui/useConfirmation.tsx",
+        "sha256":  "412d77997b5aae73b16592e74bf32b937cfa891c44c877c381f5dc8a27762b57",
+        "length":  1512
+    },
+    {
+        "path":  "windows/src/data/profileTemplates.json",
+        "sha256":  "450ed79c6266ef2972a7e9db2602dd459acd76c3217eecd529d43d13bb18813d",
+        "length":  11850
+    },
+    {
+        "path":  "windows/src/desktop-review.tsx",
+        "sha256":  "09ae4aabc39aef1f6cbcce6ba84f2d8067f6bf1ca4d93dbd6228a2df03550dba",
+        "length":  4352
+    },
+    {
+        "path":  "windows/src/hooks/__tests__/useAudioLevel.test.tsx",
+        "sha256":  "eb7105b18d83c4640f74bdc8c796467235962d96982494c860f2501a6a697bc4",
+        "length":  990
+    },
+    {
+        "path":  "windows/src/hooks/__tests__/useGlobalRecordingHandler.test.tsx",
+        "sha256":  "f0c3fe6484bc48889646a06c735a05f6c33122e8a1e2579e011effca5dca0c60",
+        "length":  4065
+    },
+    {
+        "path":  "windows/src/hooks/__tests__/useUpdateCheck.test.tsx",
+        "sha256":  "deba7f126f5d16ba7649140aa37c12ed58d08bdf9a9c152d026776fa3ed348ec",
+        "length":  1313
+    },
+    {
+        "path":  "windows/src/hooks/__tests__/useWidgetWindow.test.ts",
+        "sha256":  "90706316492d1b02daf02390bd4a7e82cf414281dfaac7707eec80fc1a8cbc87",
+        "length":  970
+    },
+    {
+        "path":  "windows/src/hooks/useAudioLevel.ts",
+        "sha256":  "94fab6951284ccd8419b1989e27565168252405cc54e4e08869ead2a3a9f59f0",
+        "length":  2030
+    },
+    {
+        "path":  "windows/src/hooks/useGlobalRecordingHandler.ts",
+        "sha256":  "9f218c383d56ef668a63eac1505f0d9b1370dd594cd8f439d6f83e850d5172f4",
+        "length":  4456
+    },
+    {
+        "path":  "windows/src/hooks/useOAuthCallback.ts",
+        "sha256":  "835e94ccbcb805481187d5290c2db37b96342797885a6b282b1ffd684de969d6",
+        "length":  545
+    },
+    {
+        "path":  "windows/src/hooks/useUpdateCheck.ts",
+        "sha256":  "cdd77e849ff113f32a11f2f9be197e9adb1a15fc853584ad63a70e8feb14954a",
+        "length":  2985
+    },
+    {
+        "path":  "windows/src/hooks/useWidgetWindow.ts",
+        "sha256":  "833d6e46a695c34d8a45029e8a05fa6b5bb4726e6b3399a5df04c15a3f74f21a",
+        "length":  2743
+    },
+    {
+        "path":  "windows/src/main.tsx",
+        "sha256":  "86595d6bc4ba6ebd596700b92c9b17cfd65ae21771160979273c5497870b9c1c",
+        "length":  281
+    },
+    {
+        "path":  "windows/src/pages/__tests__/LoginPage.local.test.tsx",
+        "sha256":  "ea2b91a007a739d04c297f2b9f0a8ec9df1a45228f19f374ba21722c49db7bb9",
+        "length":  1359
+    },
+    {
+        "path":  "windows/src/pages/__tests__/ParticipantPicker.parity.test.tsx",
+        "sha256":  "5f492f80308ce4d8aaa2f19e4f4851e20f4b50f74b0271431bcdfb449bb7df02",
+        "length":  2634
+    },
+    {
+        "path":  "windows/src/pages/__tests__/SettingsPage.tabs.test.tsx",
+        "sha256":  "25cd27df2e47ac8a153e697bd905e8c0e466766dcaad5443f815615931e27921",
+        "length":  3513
+    },
+    {
+        "path":  "windows/src/pages/__tests__/TasksPage.local.test.tsx",
+        "sha256":  "197892b46f0f2591296914bef45003ffb123a801fd2afdc9598944054cf34cce",
+        "length":  2017
+    },
+    {
+        "path":  "windows/src/pages/__tests__/TranscriptsPage.localTags.test.tsx",
+        "sha256":  "b89b4334c7591e612f28c9c3561d7cca37feaafdbbe23eb253e7627b7990c0ba",
+        "length":  11499
+    },
+    {
+        "path":  "windows/src/pages/AccountPage.tsx",
+        "sha256":  "bffc4ee06bc14feb14ffe384bbe431ca20a143b86f4f84b9c1b0df558df0ec57",
+        "length":  22560
+    },
+    {
+        "path":  "windows/src/pages/AdminPage.tsx",
+        "sha256":  "8a8f78495a568492e07bf631aacbb5583118b3be6099b386fd4d331bca9d129a",
+        "length":  52566
+    },
+    {
+        "path":  "windows/src/pages/HomePage.tsx",
+        "sha256":  "546470c08265ed6d1dc03664d293e8a18a9850860f0dc120051c6a4102355079",
+        "length":  19310
+    },
+    {
+        "path":  "windows/src/pages/LoginPage.tsx",
+        "sha256":  "47d16ed5015d86a8a90de08c5608b27ace229095aed69cca3c316770e11d382d",
+        "length":  15455
+    },
+    {
+        "path":  "windows/src/pages/ParticipantPicker.tsx",
+        "sha256":  "adaaddbe8b34625d820f0d7a8812c5b4990f27008bbcc492e60b4c29d31a475f",
+        "length":  5392
+    },
+    {
+        "path":  "windows/src/pages/PeoplePage.tsx",
+        "sha256":  "351edd4ad130121dd7880ca3166398c79008003744c735b81536887b45adb0aa",
+        "length":  9848
+    },
+    {
+        "path":  "windows/src/pages/PersonEditModal.tsx",
+        "sha256":  "2657eab176dd46a4dcce7ce2eb31e173170ecf27f284f30448e91fa782b7588a",
+        "length":  9871
+    },
+    {
+        "path":  "windows/src/pages/ProfilesPage.tsx",
+        "sha256":  "ee76a2b029decc9be26c2f36375ea3cfe3b01a863f5d2d7ac661d809c86b4bbf",
+        "length":  22463
+    },
+    {
+        "path":  "windows/src/pages/RecordingPage.tsx",
+        "sha256":  "f338a9723a612202eb884694e5daaccf65c201bc57d5322d22068f8ab9ac992f",
+        "length":  24836
+    },
+    {
+        "path":  "windows/src/pages/SeedReviewSheet.tsx",
+        "sha256":  "f512190ea37c89abf1beed92581842a5c8adf0e21ded5d68a2c456c2a39878d6",
+        "length":  5838
+    },
+    {
+        "path":  "windows/src/pages/SettingsPage.tsx",
+        "sha256":  "55f494ec1790fe260bc7b41ca2799540bf2f5381c25ea1105a7e668cbe0b4ed3",
+        "length":  1915
+    },
+    {
+        "path":  "windows/src/pages/TasksPage.tsx",
+        "sha256":  "c0cd8a1d9462241d1a64a0c7af28b909442fd41e9f292736965e506f9ec8eea2",
+        "length":  14620
+    },
+    {
+        "path":  "windows/src/pages/TranscriptsPage.tsx",
+        "sha256":  "467d3f26170c77c61387a3cf2315ca62b58a27d46f6f25388e7a55c77f76a5a8",
+        "length":  29734
+    },
+    {
+        "path":  "windows/src/services/__tests__/api.upload.test.ts",
+        "sha256":  "e72c702ce391c6129e97e188b663bf1468243f09e61eaebff693b4eeb5327332",
+        "length":  6272
+    },
+    {
+        "path":  "windows/src/services/__tests__/llm.audit-integration.test.ts",
+        "sha256":  "b1aa75a7fd00caec16a1b33e7ef9c57175245f73db79376ed51bbdad9df60ebf",
+        "length":  5363
+    },
+    {
+        "path":  "windows/src/services/__tests__/llm.decimal-constraints.test.ts",
+        "sha256":  "cc9a8c37b9204934beeff46af0f013850662dcc3043af6fc18f7b1e16a5cfcca",
+        "length":  3057
+    },
+    {
+        "path":  "windows/src/services/__tests__/llm.providers.test.ts",
+        "sha256":  "6fe91a0ca19ea62bcf22d56beb04d84e418aab7d09b7293435878ecd20ae2554",
+        "length":  18601
+    },
+    {
+        "path":  "windows/src/services/__tests__/llm.quality-contract.test.ts",
+        "sha256":  "4a32857c93c2f6b9de1929934f9ad6c64f13d64a7894b56f5402930f6f140a58",
+        "length":  2688
+    },
+    {
+        "path":  "windows/src/services/__tests__/localPipeline.retry.test.ts",
+        "sha256":  "e2068c9659628ab9a2cf20cffe581d5906ec0d4a83565c7b4251f240d1be0f16",
+        "length":  9267
+    },
+    {
+        "path":  "windows/src/services/__tests__/notuleAudit.test.ts",
+        "sha256":  "7bb17edbd64916571e877348819e91a33ce3a6a7db00f6db0e7f44627b9b2ba7",
+        "length":  7360
+    },
+    {
+        "path":  "windows/src/services/__tests__/notuleAuditFixtures.ts",
+        "sha256":  "a33e67deebabf05d59f00d1715c5191c4d6f7bb486cb801b6ea1557892b5e2b1",
+        "length":  543
+    },
+    {
+        "path":  "windows/src/services/__tests__/notulePresentation.test.ts",
+        "sha256":  "684d2725733295b76a85c45ffc5fb34531f44bf174f152865d832fc30c96717a",
+        "length":  1088
+    },
+    {
+        "path":  "windows/src/services/__tests__/notuleValidation.test.ts",
+        "sha256":  "41081dde1aca2e5239f4ae9852a7417752b148c94a68a0729e3c61b8e5640c62",
+        "length":  1123
+    },
+    {
+        "path":  "windows/src/services/__tests__/obsidian.sync.test.ts",
+        "sha256":  "b4169f101eba813f1d7ceb5d69136428f580fdd70f06bd1dba776e522f3173af",
+        "length":  3127
+    },
+    {
+        "path":  "windows/src/services/__tests__/offlineQueue.test.ts",
+        "sha256":  "6a35f7d3bd9bd13b1faae0304f6816565788f73d212b8b498b5a4f9382c009cc",
+        "length":  4856
+    },
+    {
+        "path":  "windows/src/services/__tests__/ollamaModels.test.ts",
+        "sha256":  "3424fa415b8dce56c384f0d6467470f5b3f7c089082579b0f8c95209ba000b0e",
+        "length":  2926
+    },
+    {
+        "path":  "windows/src/services/__tests__/personalCorrections.cloud.test.ts",
+        "sha256":  "249c3a198aff43eeea27cf92a465a80f07774d5ddb509e7325fb42a8bd062e3d",
+        "length":  1407
+    },
+    {
+        "path":  "windows/src/services/__tests__/personalCorrections.test.ts",
+        "sha256":  "3cd4e9844d3fd68b4ebb0b6ec0f534aee3f6c9c7a90afa91eadc84c9bf623b01",
+        "length":  2546
+    },
+    {
+        "path":  "windows/src/services/__tests__/processingAdvice.test.ts",
+        "sha256":  "b8bace8b2583fecea1f56310f8818eacc83e4f184e3ec3eed082d550b039c547",
+        "length":  1238
+    },
+    {
+        "path":  "windows/src/services/__tests__/profileChoices.test.ts",
+        "sha256":  "ea494f3aac401857c6f84c321d9f6ebdaeac5ea560b89ce0336c915241b11610",
+        "length":  1914
+    },
+    {
+        "path":  "windows/src/services/__tests__/qa-short-quality/modelcontrole.test.js",
+        "sha256":  "80741c09742533db26fa8f942659015cee5bf3caf19edf9dd6695391d476ecee",
+        "length":  3783
+    },
+    {
+        "path":  "windows/src/services/__tests__/qa-short-quality/modelcontrole-live-gate.ts",
+        "sha256":  "b220c4195c40b25a166e789347eb32b526d9cda5d8470c0971602a1998a5a547",
+        "length":  4885
+    },
+    {
+        "path":  "windows/src/services/__tests__/qa-short-quality/modelcontrole-regressiefixtures.json",
+        "sha256":  "570bc4afb08d2b5c6fa1e636aad6b7ed73b069b19f27102cb4f3196d4f4485b2",
+        "length":  6241
+    },
+    {
+        "path":  "windows/src/services/__tests__/qa-short-quality/README.md",
+        "sha256":  "31e0a4ed2c0b7dfb18b37a1b5e2ed3af918444ba06ba4d8bab6e377e53ba093c",
+        "length":  2455
+    },
+    {
+        "path":  "windows/src/services/__tests__/quickNotes.test.ts",
+        "sha256":  "f8789bf15a87a5783ea6d362ec9d682fa71957bafea0acdb9c2f0cd74c84d229",
+        "length":  3073
+    },
+    {
+        "path":  "windows/src/services/__tests__/routeAccess.test.ts",
+        "sha256":  "2756ba4c65ab8dd087a33359f19b67feafc80764111e3587b2a313bf03260992",
+        "length":  732
+    },
+    {
+        "path":  "windows/src/services/__tests__/sse.terminal.test.ts",
+        "sha256":  "ee8c6b9b3bfc4c1b002053e92f9afcef312461aa20aa8f1d094e408f7b73ff07",
+        "length":  1598
+    },
+    {
+        "path":  "windows/src/services/__tests__/uploadAndTrack.terminal.test.ts",
+        "sha256":  "b13a56029cb8f11b7deaf5f7a849945906a4289ee7c9fea9019ba6bd11e4685f",
+        "length":  2432
+    },
+    {
+        "path":  "windows/src/services/api.ts",
+        "sha256":  "6b216960e3993e0bb5067531442c6f29854505f256b01828939e062eb1a0bab8",
+        "length":  33874
+    },
+    {
+        "path":  "windows/src/services/crashReporter.ts",
+        "sha256":  "46eb5592b804903e5bb45f068fccb2f11b8dc708a74bc81957177a75eab980b6",
+        "length":  1264
+    },
+    {
+        "path":  "windows/src/services/llm.ts",
+        "sha256":  "f0bc3a465a7183abd321f707503801e3fbfc8a03f9be16800f71973123fd6ba7",
+        "length":  14534
+    },
+    {
+        "path":  "windows/src/services/localPipeline.ts",
+        "sha256":  "23a1037fc639b13c03ae3cd406f5ee6b87723c24222028a581a122b8d437a7ed",
+        "length":  7731
+    },
+    {
+        "path":  "windows/src/services/meetingNotifications.ts",
+        "sha256":  "84646cdeb324d6652cc09033d1ed13fb2e5f35d0febedda41ef16868578854c5",
+        "length":  854
+    },
+    {
+        "path":  "windows/src/services/microsoftGraph.ts",
+        "sha256":  "029801fe4b93c18ca1729c59c0c6e26754496b6c2f3d01c04b717a1af6887b38",
+        "length":  7455
+    },
+    {
+        "path":  "windows/src/services/notuleAudit.ts",
+        "sha256":  "2b058c77789df7f75aa4b285caf82e72d5dbb09cd29179493272ba4745f08dea",
+        "length":  7483
+    },
+    {
+        "path":  "windows/src/services/notulePresentation.ts",
+        "sha256":  "dca5cf19cfb94e91b602bf7d27d1bbcf4eac260976e12044e052e7ecabd733f4",
+        "length":  526
+    },
+    {
+        "path":  "windows/src/services/notuleValidation.ts",
+        "sha256":  "3d847041f35b3b37a72570f01eb182ba81731a3e9a845a5742c55678f9ee026a",
+        "length":  837
+    },
+    {
+        "path":  "windows/src/services/obsidian.ts",
+        "sha256":  "79996a82c2d25f81858535803457f85ffd8d3c89f03b45fb7ecf55ffb2fd554a",
+        "length":  6693
+    },
+    {
+        "path":  "windows/src/services/offlineQueue.ts",
+        "sha256":  "8bd9b3b8f622f8b008d64cbccac9128fcdd16ad391293776e01fbdb41cfd0d6e",
+        "length":  5185
+    },
+    {
+        "path":  "windows/src/services/ollamaModels.ts",
+        "sha256":  "bd72be687b60072650aa943d9d6e08d0245c8d43fa395e71da61a4b1f19d257e",
+        "length":  1765
+    },
+    {
+        "path":  "windows/src/services/participants.ts",
+        "sha256":  "330678ff7ebf0ec06253058e36748623aad040e735a159546a252bde100faaa7",
+        "length":  2584
+    },
+    {
+        "path":  "windows/src/services/personalCorrections.ts",
+        "sha256":  "b21dc021964e9e28fc49b87147defba737eb01b36fcf45e0dd5ed0bc5110edd7",
+        "length":  4890
+    },
+    {
+        "path":  "windows/src/services/processingAdvice.ts",
+        "sha256":  "a1fd0434a03a1c763157b8e7ce0447d9ff20467e1580bde26289c1fe706a9925",
+        "length":  1431
+    },
+    {
+        "path":  "windows/src/services/profileActions.ts",
+        "sha256":  "bdb1e658458b77c82d8831fbeff0e9166e860fb679e917aa938bc0e98927b1ca",
+        "length":  902
+    },
+    {
+        "path":  "windows/src/services/profileTemplates.ts",
+        "sha256":  "5e4967e34cb23db8986085d398df15f97065136417dd5211bac86129361d3b04",
+        "length":  1093
+    },
+    {
+        "path":  "windows/src/services/quickNotes.ts",
+        "sha256":  "e9e0344283feef8c6b0ed4effb8f1498153ba2c2b3f830a65f261e6e521c175c",
+        "length":  2237
+    },
+    {
+        "path":  "windows/src/services/routeAccess.ts",
+        "sha256":  "9cc50ece896f817dabb71e952073b12bbd8dd5691256b6a2b111b6f66075edfd",
+        "length":  484
+    },
+    {
+        "path":  "windows/src/services/sse.ts",
+        "sha256":  "dd219f5e57cd8eb663e4b9c3daa4bf78973ef1710530a02aee001ba358c2ccf1",
+        "length":  6164
+    },
+    {
+        "path":  "windows/src/services/tauriCommands.ts",
+        "sha256":  "188b2f29d24dc19c7cb3380df135eb2b2c3e017f1287e6120e4dcfdbeca24473",
+        "length":  3484
+    },
+    {
+        "path":  "windows/src/services/titleExtractor.ts",
+        "sha256":  "ed6f7d4e2e20ce1cc2ca558c76ed6b6e341eb476f4ebaf34a8fc352575377899",
+        "length":  3926
+    },
+    {
+        "path":  "windows/src/services/uploadAndTrack.ts",
+        "sha256":  "a963142961632d6b77809cb4e3f00af6212975d93adc9dff38fc5c8cd1514c88",
+        "length":  5733
+    },
+    {
+        "path":  "windows/src/stores/__tests__/authStore.local-start.test.ts",
+        "sha256":  "b8282b1dea798b5d796660f312a308c4cd38a48719fdb4b45a58ab4822549ff4",
+        "length":  811
+    },
+    {
+        "path":  "windows/src/stores/__tests__/localTranscriptsStore.migration.test.ts",
+        "sha256":  "8dea9c467d49f4698847120e07494a29de47dbe0fb1f81a0be9d87a77a62ea46",
+        "length":  1082
+    },
+    {
+        "path":  "windows/src/stores/__tests__/localTranscriptsStore.persistence.test.ts",
+        "sha256":  "eeabddba6042f1fd61f66371b1628fe6b08e1c072d53ccd10483d68324241d41",
+        "length":  1235
+    },
+    {
+        "path":  "windows/src/stores/__tests__/localTranscriptsStore.status.test.ts",
+        "sha256":  "35d9d7644e38752fafed46a392a6a68e1259474378cf58a8c727ab4d4fa3786a",
+        "length":  983
+    },
+    {
+        "path":  "windows/src/stores/__tests__/peopleDirectoryStore.test.ts",
+        "sha256":  "36ff582e10259f9efb16e438a80d2d130de5b357af1b86e9c529a638d4db5d38",
+        "length":  6243
+    },
+    {
+        "path":  "windows/src/stores/__tests__/personalCorrectionsStore.test.ts",
+        "sha256":  "ce194d69e8bad0c0b3168e6f21d2131613afab3a14d91a8cb7d53ee3cab5f73e",
+        "length":  1117
+    },
+    {
+        "path":  "windows/src/stores/__tests__/settingsStore.credentials.test.ts",
+        "sha256":  "374e113feff6aea8871e16f7902dfd05ff941a10abf9db3307e87ed4df25a875",
+        "length":  1089
+    },
+    {
+        "path":  "windows/src/stores/authStore.ts",
+        "sha256":  "0f2d085e91b90c9e3c344b0a229abb635d40d5b70b235bf772994433c906ce82",
+        "length":  9690
+    },
+    {
+        "path":  "windows/src/stores/calendarStore.ts",
+        "sha256":  "2851d0eda75ec58d25fc64ea8c68341780f68a84dd303a883916b85186ea158e",
+        "length":  1835
+    },
+    {
+        "path":  "windows/src/stores/localTranscriptsStore.ts",
+        "sha256":  "66c211028bea3bfbc707275f008a98999c02f85d276478b0a271d1b9a56bc54d",
+        "length":  3054
+    },
+    {
+        "path":  "windows/src/stores/peopleDirectoryStore.ts",
+        "sha256":  "6a3033326a573deb795e42dd381f1d0cf0db83eedff9a08a54be731cf43ede1c",
+        "length":  3048
+    },
+    {
+        "path":  "windows/src/stores/personalCorrectionsStore.ts",
+        "sha256":  "f7e8a575735db12d262b33eba0710d3481316013bcacc54d0e9a5cbbad45594f",
+        "length":  1594
+    },
+    {
+        "path":  "windows/src/stores/personProfileStore.ts",
+        "sha256":  "a5f9f62b394dfc4975e188cbe671a5d9f76217bfbea21b0d5f2bdb537e353b55",
+        "length":  1431
+    },
+    {
+        "path":  "windows/src/stores/profilesStore.ts",
+        "sha256":  "5b5126ec48b7d046b8b41629c2905f2a76756691400782eb71ac15b9f3769330",
+        "length":  2700
+    },
+    {
+        "path":  "windows/src/stores/recordingStore.ts",
+        "sha256":  "e4c6e524937db6f200c207b68d470eb1e75a742a762c88791bb426fa227cc257",
+        "length":  6662
+    },
+    {
+        "path":  "windows/src/stores/settingsStore.ts",
+        "sha256":  "969ffc33983db73b293db31daf2f164bea681ce194a70b2974ea25ed387a575c",
+        "length":  1313
+    },
+    {
+        "path":  "windows/src/stores/tasksStore.ts",
+        "sha256":  "cf5f00a3c137813446932738be611ffb384bed6182788acf8a945a7625637140",
+        "length":  2356
+    },
+    {
+        "path":  "windows/src/stores/transcriptsStore.ts",
+        "sha256":  "04d70f9c3eba6b8c62add71fbc017ec4404b156635c12a739533b17bb2cccf08",
+        "length":  2275
+    },
+    {
+        "path":  "windows/src/stores/uploadQueueStore.ts",
+        "sha256":  "f1951f9fcc3d966fca2e99798ff9f7d4adacf22959c5a6e6444f5ce0dd569e4c",
+        "length":  2060
+    },
+    {
+        "path":  "windows/src/styles/globals.css",
+        "sha256":  "26c48acccb44924c93283451e07ad8d7771d3a0ddb537135130e3bf5a233ffa5",
+        "length":  106194
+    },
+    {
+        "path":  "windows/src/styles/thoughtvault.css",
+        "sha256":  "a8a678ecfef86873e0cdc24f083f09bdd851873c17efb02065569004f0996a28",
+        "length":  42972
+    },
+    {
+        "path":  "windows/src/styles/widget.css",
+        "sha256":  "76e7a1c796190afb0e88b0dd4b13739d310075671bbbbce193896935c8f81a08",
+        "length":  5653
+    },
+    {
+        "path":  "windows/src/test-setup.ts",
+        "sha256":  "2d7d69341d20060c4a6aa855df2dc2eab610e9a5781dc8f90c60e52d535a3503",
+        "length":  1246
+    },
+    {
+        "path":  "windows/src/types.ts",
+        "sha256":  "c23b3613b09a85ecbc89a847228adf0a0ff3e99ec073f89e461779c0cb94c287",
+        "length":  10392
+    },
+    {
+        "path":  "windows/src/utils/__tests__/htmlToPlainText.test.ts",
+        "sha256":  "b8fb7ac9fe08cb474587a9cafe14aca03c2515a665a2902c0a5d8986112e26a4",
+        "length":  451
+    },
+    {
+        "path":  "windows/src/utils/htmlToMarkdown.ts",
+        "sha256":  "0900865ba0806ae3ddf4f9a53dccf9e22aaaaf8525f400c167b236eec82c3dbd",
+        "length":  2997
+    },
+    {
+        "path":  "windows/src/utils/menuPosition.ts",
+        "sha256":  "fa306b4261c0add3e6bad46fd9c8c44fe1d4b7138d97cb8d1faf4977924da0b6",
+        "length":  291
+    },
+    {
+        "path":  "windows/src/vite-env.d.ts",
+        "sha256":  "7cc5befdae983daeef6f3f695afb72090a1e78db1a0a27cc9dd822c2ca9d0aa5",
+        "length":  322
+    },
+    {
+        "path":  "windows/src/widget.tsx",
+        "sha256":  "0131b5f26dee82ded32c14c272420f6f2e41b02556315523bedc0043d25834fc",
+        "length":  312
+    },
+    {
+        "path":  "windows/src-tauri/build.rs",
+        "sha256":  "9ef5ad6c3eb844dba04974ef8586462eab769225d64d46affef878ff880cbfe7",
+        "length":  85
+    },
+    {
+        "path":  "windows/src-tauri/capabilities/default.json",
+        "sha256":  "c4763b09432ccbb0cdbfcfbc6723fa117a3f769f324a137b0456a0abadc4132e",
+        "length":  1043
+    },
+    {
+        "path":  "windows/src-tauri/Cargo.lock",
+        "sha256":  "95b3ad499c4abe02e473f2156c085af008e9275753c97e29a864ebe4c96d3c21",
+        "length":  166538
+    },
+    {
+        "path":  "windows/src-tauri/Cargo.toml",
+        "sha256":  "484e122e23c5911874af93f4c3b98459f09705fa6651a1db695cfde7e05d39bb",
+        "length":  1971
+    },
+    {
+        "path":  "windows/src-tauri/gen/schemas/acl-manifests.json",
+        "sha256":  "6e61155d1a3e29a8ba3b046d637f6e2e6664e3241e80729009ca36a790759514",
+        "length":  154568
+    },
+    {
+        "path":  "windows/src-tauri/gen/schemas/capabilities.json",
+        "sha256":  "f492bda3d9f065fa75951d6dfd72ee46fb84bf4a26d28d585e4bc78b50e18abf",
+        "length":  816
+    },
+    {
+        "path":  "windows/src-tauri/gen/schemas/desktop-schema.json",
+        "sha256":  "d666518751ddae1f44a4e58d875f584d07ceb9cf2b493fcb3b644045d7b0153e",
+        "length":  432855
+    },
+    {
+        "path":  "windows/src-tauri/gen/schemas/macOS-schema.json",
+        "sha256":  "d666518751ddae1f44a4e58d875f584d07ceb9cf2b493fcb3b644045d7b0153e",
+        "length":  432855
+    },
+    {
+        "path":  "windows/src-tauri/gen/schemas/windows-schema.json",
+        "sha256":  "bacb38cf6238680ace2965211a98143fc7ee6d675bfb91f6bdd7cdadca09cd7d",
+        "length":  426295
+    },
+    {
+        "path":  "windows/src-tauri/icons/128x128.png",
+        "sha256":  "2a442fd0ba854f38271bf8776df62d29b40763cc3076c12134a1d820ba183300",
+        "length":  24541
+    },
+    {
+        "path":  "windows/src-tauri/icons/128x128@2x.png",
+        "sha256":  "6e759f7dd539f827f51b0586e49cc67161de7637393dd863054d295639cec46b",
+        "length":  83763
+    },
+    {
+        "path":  "windows/src-tauri/icons/32x32.png",
+        "sha256":  "85787507181977c0b4376b3bc05b4c6852f44908cb32849aa8677045191f0f4a",
+        "length":  2439
+    },
+    {
+        "path":  "windows/src-tauri/icons/icon.icns",
+        "sha256":  "e07efdd48b2f02d518638004bb2c40f7d3c6cb51460ca43320724280bbcf4bc3",
+        "length":  1987231
+    },
+    {
+        "path":  "windows/src-tauri/icons/icon.ico",
+        "sha256":  "35dc131348a95fe7899ba592dccd16b3090413369edf0fef9dd086e5d5efea00",
+        "length":  125297
+    },
+    {
+        "path":  "windows/src-tauri/resources/vad/ggml-silero-v5.1.2.bin",
+        "sha256":  "29940d98d42b91fbd05ce489f3ecf7c72f0a42f027e4875919a28fb4c04ea2cf",
+        "length":  885098
+    },
+    {
+        "path":  "windows/src-tauri/resources/vad/LICENSE",
+        "sha256":  "2e63e9a38b6e8fc0c7bc37ce174caca1862870856c6daf5697cfb785e925520b",
+        "length":  1075
+    },
+    {
+        "path":  "windows/src-tauri/resources/vad/README.md",
+        "sha256":  "3967a4f348257c9d43b9347aee1c18972626a75c37e3c263af753c393e47b260",
+        "length":  511
+    },
+    {
+        "path":  "windows/src-tauri/src/audio/envelope.rs",
+        "sha256":  "ed65dd0c491fd7b7595886872e3671cb01a4fb86aeb840289118dde056b8c990",
+        "length":  13125
+    },
+    {
+        "path":  "windows/src-tauri/src/audio/mod.rs",
+        "sha256":  "b8dfc375d5e9fbf1583b4753c005639836e7e9188e08b02072346ee52fba15ba",
+        "length":  51
+    },
+    {
+        "path":  "windows/src-tauri/src/audio/recorder.rs",
+        "sha256":  "b84c0cd8ea4b2a4961ccd5a5df919e6f2d2d016fb49ac715acea7483b9c037c4",
+        "length":  49104
+    },
+    {
+        "path":  "windows/src-tauri/src/audio/types.rs",
+        "sha256":  "1f1c6b38cfd40d061b65c4de36cac86b8677e9b3abdb9dcb75e31cee5df54529",
+        "length":  1305
+    },
+    {
+        "path":  "windows/src-tauri/src/commands/audio.rs",
+        "sha256":  "bcacff5494b7cb8175104a4f8b5e8d504f8f7654fee9dec12862aa6797f482fc",
+        "length":  9441
+    },
+    {
+        "path":  "windows/src-tauri/src/commands/auth.rs",
+        "sha256":  "cb94595b2d72e1cfcf86ae6545b3df7e1eababf4e996ac383df1e09df0c39cd8",
+        "length":  2648
+    },
+    {
+        "path":  "windows/src-tauri/src/commands/filesystem.rs",
+        "sha256":  "c9826267165b20bc1f789376aad9adb762925e763ef619d6a0e1152e05bbb8ab",
+        "length":  14432
+    },
+    {
+        "path":  "windows/src-tauri/src/commands/http.rs",
+        "sha256":  "2e83a1ff35e01ed52eee8339eb095bcd36d3da9216b28d0814835601a4455f0c",
+        "length":  32969
+    },
+    {
+        "path":  "windows/src-tauri/src/commands/mod.rs",
+        "sha256":  "d0d39640493d5ef5aa57f221a59018c5641a1e75ddb33e570d385068b31752c9",
+        "length":  79
+    },
+    {
+        "path":  "windows/src-tauri/src/commands/system.rs",
+        "sha256":  "1d8cbbf14d457e905875ebb76de9625299873b600d750e1cd930ba6c63a610b8",
+        "length":  7289
+    },
+    {
+        "path":  "windows/src-tauri/src/lib.rs",
+        "sha256":  "64b5fe780358d70d9207aa73855ed63da2ef810ff29a570cbbb814f6c3c99052",
+        "length":  4477
+    },
+    {
+        "path":  "windows/src-tauri/src/main.rs",
+        "sha256":  "7bf5f60067aad75f7f884fcc2032c63f3771379e59223ed052e3fbd5d764affd",
+        "length":  110
+    },
+    {
+        "path":  "windows/src-tauri/src/personal_corrections.rs",
+        "sha256":  "983c3ed7a91d88ce46a59632a1ca8015a1a2909e0149deb0bb15a4c2481432c6",
+        "length":  2579
+    },
+    {
+        "path":  "windows/src-tauri/src/transcribe/faster.rs",
+        "sha256":  "e7ee23bb1841263923818a13ae4acb7a1f524093c25c3f2689af6f427d01d939",
+        "length":  7420
+    },
+    {
+        "path":  "windows/src-tauri/src/transcribe/mod.rs",
+        "sha256":  "82bf291880c380e37ee1fe739563b61e722a7456bcfd2e24b60972fe63c3cb2e",
+        "length":  20635
+    },
+    {
+        "path":  "windows/src-tauri/src/transcribe/nvidia.rs",
+        "sha256":  "154cf57efb1f99e20b32f0cdaf49e85c5f8c72eba472a5538ebea309d8a5b2b8",
+        "length":  7427
+    },
+    {
+        "path":  "windows/src-tauri/tauri.conf.json",
+        "sha256":  "f7052da9dcabddfb0dd64414d24b70b6442adb09e8986b2aec866432a166dec6",
+        "length":  2023
+    },
+    {
+        "path":  "windows/src-tauri/testdata/short.m4a",
+        "sha256":  "c5eea3b5b92e5eb2cc399c31777ef06b9392dd9646f6d727fd71505eb537c2a7",
+        "length":  2949
+    },
+    {
+        "path":  "windows/src-tauri/testdata/short.mp3",
+        "sha256":  "04e8199b9f1caace53bd1efb00ad6796e525b3ded66b4c2d32a87892341957f3",
+        "length":  1866
+    },
+    {
+        "path":  "windows/src-tauri/tests/fixtures/dutch-qa.wav",
+        "sha256":  "a37c678fdf2c6e3879b91b8eff38f10c466a77fe857d2adcb617cedc7c2f3b3f",
+        "length":  312392
+    },
+    {
+        "path":  "windows/src-tauri/tests/fixtures/README.md",
+        "sha256":  "1d652611e2323f2d45d79ae59e2cd0449175d31ca9e697e00905fabaac577ac5",
+        "length":  327
+    },
+    {
+        "path":  "windows/tailwind.config.ts",
+        "sha256":  "4c0404c996e8ca28be8724fbd975ace800ef533e1d9a673c24fafb01bdf266bf",
+        "length":  1678
+    },
+    {
+        "path":  "windows/test_upload.sh",
+        "sha256":  "7f44438c58cc30204dbe42ceba21b510a223d630add4b5188df2fadf51c06f8f",
+        "length":  697
+    },
+    {
+        "path":  "windows/transcript-studio-expert.skill",
+        "sha256":  "11025b1151cc750ecd2ce754c1b756770d31d33ffc5ce592551ab498f393b11b",
+        "length":  10826
+    },
+    {
+        "path":  "windows/tsconfig.json",
+        "sha256":  "8358554ffab41859cedfe36fc1d8244918a95b423baf98a1f2af9d508979cd7b",
+        "length":  621
+    },
+    {
+        "path":  "windows/tsconfig.node.json",
+        "sha256":  "9e2abb169ea87b7190613a1d4da57ca608463a453bd4231fa3aeee5e308370dd",
+        "length":  213
+    },
+    {
+        "path":  "windows/vite.config.ts",
+        "sha256":  "056b23582e001eb7845e5da6ff23454e5df657aa21543c1c892b707151423e2e",
+        "length":  1049
+    },
+    {
+        "path":  "windows/widget.html",
+        "sha256":  "c4083bd12d7ab2126b6293d38759bd13e55eb6735fb851fb9d78ddef94ee12a1",
+        "length":  315
+    }
+]

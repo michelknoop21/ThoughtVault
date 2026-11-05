@@ -1,0 +1,124 @@
+
+added 226 packages in 5m
+
+[1m[46m RUN [49m[22m [36mv4.1.0 [39m[90mC:/Dalf38/workspaces/thoughtvault-pilot1105-v3[39m
+
+[90mstdout[2m | src/services/__tests__/api.upload.test.ts[2m > [22m[2muploadRecording[2m > [22m[2mcalls proxy_upload with correct arguments
+[22m[39m[API] Upload C:\Users\bas\recordings\test.wav via Rust proxy to https://n8n.prezent.nl/tstudio/api/transcribe
+
+[90mstdout[2m | src/services/__tests__/api.upload.test.ts[2m > [22m[2muploadRecording[2m > [22m[2mcalls proxy_upload with correct arguments
+[22m[39m[API] Upload response: 200 (22 bytes)
+[API] Upload complete → task_id: task-abc
+
+[90mstdout[2m | src/services/__tests__/api.upload.test.ts[2m > [22m[2muploadRecording[2m > [22m[2mhandles HTTP error response from server
+[22m[39m[API] Upload /path/to/big.wav via Rust proxy to https://n8n.prezent.nl/tstudio/api/transcribe
+
+[90mstdout[2m | src/services/__tests__/api.upload.test.ts[2m > [22m[2muploadRecording[2m > [22m[2mhandles HTTP error response from server
+[22m[39m[API] Upload response: 413 (28 bytes)
+
+ [32m✓[39m src/stores/__tests__/peopleDirectoryStore.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+[90mstdout[2m | src/services/__tests__/api.upload.test.ts[2m > [22m[2muploadRecording[2m > [22m[2mhandles Rust invoke failure (file not found)
+[22m[39m[API] Upload /tmp/gone.wav via Rust proxy to https://n8n.prezent.nl/tstudio/api/transcribe
+
+[90mstdout[2m | src/services/__tests__/api.upload.test.ts[2m > [22m[2muploadRecording[2m > [22m[2mhandles Rust invoke failure (empty file)
+[22m[39m[API] Upload /tmp/empty.wav via Rust proxy to https://n8n.prezent.nl/tstudio/api/transcribe
+
+ [32m✓[39m src/services/__tests__/offlineQueue.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+[90mstdout[2m | src/services/__tests__/api.upload.test.ts[2m > [22m[2muploadRecording[2m > [22m[2mhandles Rust invoke failure (network error)
+[22m[39m[API] Upload /tmp/test.wav via Rust proxy to https://n8n.prezent.nl/tstudio/api/transcribe
+
+[90mstdout[2m | src/services/__tests__/api.upload.test.ts[2m > [22m[2muploadRecording[2m > [22m[2mhandles invalid JSON response from server
+[22m[39m[API] Upload /tmp/test.wav via Rust proxy to https://n8n.prezent.nl/tstudio/api/transcribe
+
+[90mstdout[2m | src/services/__tests__/api.upload.test.ts[2m > [22m[2muploadRecording[2m > [22m[2mhandles invalid JSON response from server
+[22m[39m[API] Upload response: 200 (8 bytes)
+
+[90mstdout[2m | src/services/__tests__/api.upload.test.ts[2m > [22m[2muploadRecording[2m > [22m[2msends empty string token when not authenticated
+[22m[39m[API] Upload /tmp/test.wav via Rust proxy to https://n8n.prezent.nl/tstudio/api/transcribe
+
+[90mstdout[2m | src/services/__tests__/api.upload.test.ts[2m > [22m[2muploadRecording[2m > [22m[2msends empty string token when not authenticated
+[22m[39m[API] Upload response: 200 (16 bytes)
+[API] Upload complete → task_id: t1
+
+[90mstdout[2m | src/services/__tests__/api.upload.test.ts[2m > [22m[2muploadRecording[2m > [22m[2muses custom server URL from localStorage
+[22m[39m[API] Upload /tmp/test.wav via Rust proxy to https://custom.server/api/transcribe
+
+[90mstdout[2m | src/services/__tests__/api.upload.test.ts[2m > [22m[2muploadRecording[2m > [22m[2muses custom server URL from localStorage
+[22m[39m[API] Upload response: 200 (16 bytes)
+[API] Upload complete → task_id: t1
+
+[90mstdout[2m | src/services/__tests__/api.upload.test.ts[2m > [22m[2muploadRecordingWithProgress[2m > [22m[2mcalls progress callback during upload
+[22m[39m[API] Upload with progress /tmp/test.wav via Rust proxy
+
+[90mstdout[2m | src/services/__tests__/api.upload.test.ts[2m > [22m[2muploadRecordingWithProgress[2m > [22m[2mcalls progress callback during upload
+[22m[39m[API] Upload complete → task_id: task-progress
+
+[90mstdout[2m | src/services/__tests__/api.upload.test.ts[2m > [22m[2muploadRecordingWithProgress[2m > [22m[2mhandles abort signal
+[22m[39m[API] Upload with progress /tmp/test.wav via Rust proxy
+
+[90mstdout[2m | src/services/__tests__/api.upload.test.ts[2m > [22m[2muploadRecordingWithProgress[2m > [22m[2mpropagates Rust errors with details
+[22m[39m[API] Upload with progress /tmp/no-access.wav via Rust proxy
+
+[90mstdout[2m | src/services/__tests__/api.upload.test.ts[2m > [22m[2muploadRecordingWithProgress[2m > [22m[2mhandles HTTP error in progress upload
+[22m[39m[API] Upload with progress /tmp/test.wav via Rust proxy
+
+ [32m✓[39m src/services/__tests__/api.upload.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 19[2mms[22m[39m
+ [32m✓[39m src/services/__tests__/qa-short-quality/modelcontrole.test.js [2m([22m[2m4 tests[22m[2m | [22m[33m1 skipped[39m[2m)[22m[32m 81[2mms[22m[39m
+ [32m✓[39m src/services/__tests__/notuleAudit.test.ts [2m([22m[2m34 tests[22m[2m)[22m[32m 106[2mms[22m[39m
+ [32m✓[39m src/services/__tests__/localPipeline.retry.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 93[2mms[22m[39m
+ [32m✓[39m src/hooks/__tests__/useGlobalRecordingHandler.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 31[2mms[22m[39m
+ [32m✓[39m src/components/recording/__tests__/WaveformVisualizer.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 74[2mms[22m[39m
+ [32m✓[39m src/services/__tests__/llm.audit-integration.test.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 547[2mms[22m[39m
+   [33m[2m✓[22m[39m audits correct conditional and negative paraphrases through ollama without literal-only rejection [33m 506[2mms[22m[39m
+ [32m✓[39m src/__tests__/App.recovery.test.tsx [2m([22m[2m8 tests[22m[2m)[22m[32m 133[2mms[22m[39m
+ [32m✓[39m src/services/__tests__/llm.providers.test.ts [2m([22m[2m29 tests[22m[2m)[22m[33m 593[2mms[22m[39m
+   [33m[2m✓[22m[39m uses the native route for ollama when WebView CORS is denied [33m 511[2mms[22m[39m
+ [32m✓[39m src/components/settings/__tests__/ProcessingTab.ollama.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[32m 238[2mms[22m[39m
+ [32m✓[39m src/components/transcripts/__tests__/TranscriptDetail.save.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 277[2mms[22m[39m
+ [32m✓[39m src/pages/__tests__/SettingsPage.tabs.test.tsx [2m([22m[2m1 test[22m[2m)[22m[33m 336[2mms[22m[39m
+   [33m[2m✓[22m[39m renders every settings tab with its own content [33m 335[2mms[22m[39m
+ [32m✓[39m src/pages/__tests__/TranscriptsPage.localTags.test.tsx [2m([22m[2m6 tests[22m[2m)[22m[33m 551[2mms[22m[39m
+ [32m✓[39m src/services/__tests__/personalCorrections.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 17[2mms[22m[39m
+ [31m❯[39m src/components/recording/__tests__/WaveformVisualizer.parity.test.tsx [2m([22m[2m0 test[22m[2m)[22m
+ [32m✓[39m src/services/__tests__/quickNotes.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m src/services/__tests__/profileChoices.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m src/services/__tests__/ollamaModels.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 30[2mms[22m[39m
+ [32m✓[39m src/services/__tests__/llm.quality-contract.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 76[2mms[22m[39m
+ [32m✓[39m src/services/__tests__/llm.decimal-constraints.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 77[2mms[22m[39m
+ [32m✓[39m src/services/__tests__/uploadAndTrack.terminal.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m src/components/recording/__tests__/RecordingWidget.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 52[2mms[22m[39m
+ [32m✓[39m src/services/__tests__/obsidian.sync.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 44[2mms[22m[39m
+ [32m✓[39m src/components/recording/__tests__/SavedRecordings.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 127[2mms[22m[39m
+ [32m✓[39m src/components/__tests__/FeedbackWidget.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 154[2mms[22m[39m
+ [32m✓[39m src/components/layout/__tests__/Sidebar.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[32m 114[2mms[22m[39m
+ [32m✓[39m src/pages/__tests__/ParticipantPicker.parity.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 145[2mms[22m[39m
+[90mstdout[2m | src/pages/__tests__/TasksPage.local.test.tsx[2m > [22m[2mshows an app regeneration task even when cloud mode is selected
+[22m[39m[API] GET https://n8n.prezent.nl/tstudio/api/tasks/active
+
+ [32m✓[39m src/pages/__tests__/TasksPage.local.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[32m 141[2mms[22m[39m
+ [32m✓[39m src/services/__tests__/processingAdvice.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m src/components/recording/__tests__/studioLayout.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m src/stores/__tests__/localTranscriptsStore.persistence.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m src/stores/__tests__/localTranscriptsStore.migration.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m src/stores/__tests__/personalCorrectionsStore.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 35[2mms[22m[39m
+ [32m✓[39m src/services/__tests__/sse.terminal.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32m✓[39m src/stores/__tests__/settingsStore.credentials.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m src/services/__tests__/notuleValidation.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 27[2mms[22m[39m
+ [32m✓[39m src/services/__tests__/notulePresentation.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 33[2mms[22m[39m
+ [32m✓[39m src/services/__tests__/personalCorrections.cloud.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m src/hooks/__tests__/useAudioLevel.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 19[2mms[22m[39m
+ [32m✓[39m src/hooks/__tests__/useUpdateCheck.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 27[2mms[22m[39m
+ [32m✓[39m src/components/ui/__tests__/useConfirmation.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 49[2mms[22m[39m
+ [32m✓[39m src/components/transcripts/__tests__/TranscriptsList.search.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 90[2mms[22m[39m
+ [32m✓[39m src/pages/__tests__/LoginPage.local.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 44[2mms[22m[39m
+ [32m✓[39m src/services/__tests__/routeAccess.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m src/utils/__tests__/htmlToPlainText.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 21[2mms[22m[39m
+ [32m✓[39m src/hooks/__tests__/useWidgetWindow.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m src/stores/__tests__/authStore.local-start.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m src/stores/__tests__/localTranscriptsStore.status.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 7[2mms[22m[39m
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m49 passed[39m[22m[90m (50)[39m
+[2m      Tests [22m [1m[32m208 passed[39m[22m[2m | [22m[33m1 skipped[39m[90m (209)[39m
+[2m   Start at [22m 14:00:34
+[2m   Duration [22m 23.34s[2m (transform 8.59s, setup 3.34s, import 16.81s, tests 4.52s, environment 260.27s)[22m
+

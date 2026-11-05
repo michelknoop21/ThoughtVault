@@ -1,0 +1,25 @@
+npm notice
+npm notice New minor version of npm available! 11.11.0 -> 11.21.2
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.21.2
+npm notice To update run: npm install -g npm@11.21.2
+npm notice
+Browserslist: browsers data (caniuse-lite) is 9 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+[33m[plugin vite:reporter] 
+(!) C:/Dalf38/workspaces/thoughtvault-pilot1105-v2/src/stores/recordingStore.ts is dynamically imported by C:/Dalf38/workspaces/thoughtvault-pilot1105-v2/src/hooks/useWidgetWindow.ts but also statically imported by C:/Dalf38/workspaces/thoughtvault-pilot1105-v2/src/App.tsx, C:/Dalf38/workspaces/thoughtvault-pilot1105-v2/src/components/ProcessingBar.tsx, C:/Dalf38/workspaces/thoughtvault-pilot1105-v2/src/components/calendar/CallAlertOverlay.tsx, C:/Dalf38/workspaces/thoughtvault-pilot1105-v2/src/components/layout/TitleBar.tsx, C:/Dalf38/workspaces/thoughtvault-pilot1105-v2/src/components/settings/ProcessingTab.tsx, C:/Dalf38/workspaces/thoughtvault-pilot1105-v2/src/components/ui/UpdateBanner.tsx, C:/Dalf38/workspaces/thoughtvault-pilot1105-v2/src/hooks/useGlobalRecordingHandler.ts, C:/Dalf38/workspaces/thoughtvault-pilot1105-v2/src/pages/HomePage.tsx, C:/Dalf38/workspaces/thoughtvault-pilot1105-v2/src/pages/ParticipantPicker.tsx, C:/Dalf38/workspaces/thoughtvault-pilot1105-v2/src/pages/ProfilesPage.tsx, C:/Dalf38/workspaces/thoughtvault-pilot1105-v2/src/pages/RecordingPage.tsx, C:/Dalf38/workspaces/thoughtvault-pilot1105-v2/src/pages/TasksPage.tsx, C:/Dalf38/workspaces/thoughtvault-pilot1105-v2/src/pages/TranscriptsPage.tsx, C:/Dalf38/workspaces/thoughtvault-pilot1105-v2/src/services/localPipeline.ts, C:/Dalf38/workspaces/thoughtvault-pilot1105-v2/src/services/uploadAndTrack.ts, dynamic import will not move module into another chunk.
+[39m
+[33m[plugin vite:reporter] 
+(!) C:/Dalf38/workspaces/thoughtvault-pilot1105-v2/node_modules/@tauri-apps/api/app.js is dynamically imported by C:/Dalf38/workspaces/thoughtvault-pilot1105-v2/src/hooks/useUpdateCheck.ts but also statically imported by C:/Dalf38/workspaces/thoughtvault-pilot1105-v2/src/components/layout/TitleBar.tsx, C:/Dalf38/workspaces/thoughtvault-pilot1105-v2/src/components/settings/GeneralTab.tsx, dynamic import will not move module into another chunk.
+[39m
+[33m[plugin vite:reporter] 
+(!) C:/Dalf38/workspaces/thoughtvault-pilot1105-v2/node_modules/@tauri-apps/plugin-fs/dist-js/index.js is dynamically imported by C:/Dalf38/workspaces/thoughtvault-pilot1105-v2/src/services/uploadAndTrack.ts but also statically imported by C:/Dalf38/workspaces/thoughtvault-pilot1105-v2/src/services/offlineQueue.ts, dynamic import will not move module into another chunk.
+[39m
+[33m[plugin vite:reporter] 
+(!) C:/Dalf38/workspaces/thoughtvault-pilot1105-v2/src/services/offlineQueue.ts is dynamically imported by C:/Dalf38/workspaces/thoughtvault-pilot1105-v2/src/App.tsx, C:/Dalf38/workspaces/thoughtvault-pilot1105-v2/src/App.tsx but also statically imported by C:/Dalf38/workspaces/thoughtvault-pilot1105-v2/src/services/uploadAndTrack.ts, dynamic import will not move module into another chunk.
+[39m
+npm notice
+npm notice New minor version of npm available! 11.11.0 -> 11.21.2
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.21.2
+npm notice To update run: npm install -g npm@11.21.2
+npm notice

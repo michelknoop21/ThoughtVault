@@ -4,6 +4,8 @@ rustflags = ["-C", "target-feature=+crt-static"]
 [target.aarch64-pc-windows-msvc]
 rustflags = ["-C", "target-feature=+crt-static"]
 [env]
+# whisper.cpp requests CMake 3.5 policies; NEW makes the static runtime setting effective.
+CMAKE_POLICY_DEFAULT_CMP0091 = "NEW"
 CMAKE_MSVC_RUNTIME_LIBRARY = "MultiThreaded"
 # Build-server AVX-512 instructions crash Whisper on AVX2 desktop CPUs.
 GGML_NATIVE = "OFF"

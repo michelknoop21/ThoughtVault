@@ -1,0 +1,38 @@
+{
+    "upload":  "",
+    "ref":  "",
+    "project":  {
+                    "name":  "thoughtvault-native1105",
+                    "source":  {
+                                   "type":  "upload",
+                                   "location":  "thoughtvault-dalf38-native1105"
+                               },
+                    "workspace":  "C:\\Dalf38\\workspaces\\thoughtvault-native1105",
+                    "build":  {
+                                  "executable":  "powershell.exe",
+                                  "arguments":  [
+                                                    "-NoProfile",
+                                                    "-ExecutionPolicy",
+                                                    "RemoteSigned",
+                                                    "-File",
+                                                    "dalf-build.ps1"
+                                                ]
+                              },
+                    "test":  {
+                                 "executable":  "node.exe",
+                                 "arguments":  [
+                                                   "node_modules/vitest/vitest.mjs",
+                                                   "run"
+                                               ]
+                             },
+                    "artifacts":  [
+                                      "dist"
+                                  ],
+                    "toolchain":  [
+                                      "node",
+                                      "npm"
+                                  ]
+                },
+    "id":  "96ec289bb8f64a6b906d23f8ced910d2",
+    "action":  "build"
+}

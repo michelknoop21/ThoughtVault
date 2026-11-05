@@ -1,0 +1,10 @@
+{
+    "executable":  "powershell.exe",
+    "arguments":  [
+                      "-NoProfile",
+                      "-ExecutionPolicy",
+                      "RemoteSigned",
+                      "-File",
+                      "dalf-build.ps1"
+                  ]
+}

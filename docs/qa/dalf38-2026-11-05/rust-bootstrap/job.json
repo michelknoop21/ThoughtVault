@@ -1,0 +1,17 @@
+{
+    "id":  "f2833ec34a7e43d1866fe2bbddc90c29",
+    "project":  "rust-bootstrap1105",
+    "action":  "build",
+    "requestedAt":  "2026-11-05T12:40:44.4774085Z",
+    "requestedBy":  "DESKTOP-98B3AHB\\developer",
+    "startedAt":  "2026-11-05T12:40:45.7145398Z",
+    "finishedAt":  "2026-11-05T12:41:11.3442439Z",
+    "status":  "succeeded",
+    "exitCode":  0,
+    "sourceCommit":  null,
+    "sourceHash":  "8d331de6c7e1756cebaf910c89ab4a23878407de42f45d9a2004c8e67863ec88",
+    "logLocation":  "C:\\Dalf38\\jobs\\f2833ec34a7e43d1866fe2bbddc90c29",
+    "artifactLocation":  "C:\\Dalf38\\artifacts\\f2833ec34a7e43d1866fe2bbddc90c29",
+    "workerPid":  42116,
+    "message":  null
+}

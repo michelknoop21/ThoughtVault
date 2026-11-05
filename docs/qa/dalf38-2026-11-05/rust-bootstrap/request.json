@@ -1,0 +1,38 @@
+{
+    "upload":  "",
+    "ref":  "",
+    "project":  {
+                    "name":  "rust-bootstrap1105",
+                    "source":  {
+                                   "type":  "upload",
+                                   "location":  "dalf38-rust-bootstrap1105"
+                               },
+                    "workspace":  "C:\\Dalf38\\workspaces\\rust-bootstrap1105",
+                    "build":  {
+                                  "executable":  "powershell.exe",
+                                  "arguments":  [
+                                                    "-NoProfile",
+                                                    "-ExecutionPolicy",
+                                                    "RemoteSigned",
+                                                    "-File",
+                                                    "dalf-build.ps1"
+                                                ]
+                              },
+                    "test":  {
+                                 "executable":  "node.exe",
+                                 "arguments":  [
+                                                   "node_modules/vitest/vitest.mjs",
+                                                   "run"
+                                               ]
+                             },
+                    "artifacts":  [
+                                      "dist"
+                                  ],
+                    "toolchain":  [
+                                      "node",
+                                      "npm"
+                                  ]
+                },
+    "id":  "f2833ec34a7e43d1866fe2bbddc90c29",
+    "action":  "build"
+}

@@ -1,0 +1,62 @@
+[
+    {
+        "path":  "windows/dist/assets/app-logo-D_2eLrno.png",
+        "sha256":  "68a04a4a7fba2df2bb63099f5aad061d04174bc4f00b0a0f68dcc4e685ab6559",
+        "length":  136934
+    },
+    {
+        "path":  "windows/dist/assets/index-BIJ-Tnzo.js",
+        "sha256":  "85c71f14cab2b709f657f95a950cfa6271b8cac240ca6d849d1736d824b975e4",
+        "length":  2217
+    },
+    {
+        "path":  "windows/dist/assets/index-Cmz8eXsi.js",
+        "sha256":  "1bedf97c085642b0327be831e72426d31143253e99b60e4e06f1a87c0ac623d0",
+        "length":  1090
+    },
+    {
+        "path":  "windows/dist/assets/main-BYXhh9Bh.css",
+        "sha256":  "d87c9436360aeec155437ce06e6004553d3ab195f07ac0346316f7ec143a236f",
+        "length":  128113
+    },
+    {
+        "path":  "windows/dist/assets/main-voSF1lcF.js",
+        "sha256":  "123438ffd52efc5a1cd64c84e0c15d2c0b6b14c7275e92f40e72b4d6bcb9330a",
+        "length":  428715
+    },
+    {
+        "path":  "windows/dist/assets/WaveformVisualizer-CocyHYYy.js",
+        "sha256":  "77738e272fc99597a959a0ec5d487f303f14e62a3ae47f0f85b302a4b8ca9d0a",
+        "length":  244654
+    },
+    {
+        "path":  "windows/dist/assets/widget-Cw9cyAJ3.js",
+        "sha256":  "40432d504c2d60787631d4f82add93511d5b345cb6fbc6b952134bbb7f1f2748",
+        "length":  2695
+    },
+    {
+        "path":  "windows/dist/assets/widget-iBxBy2bK.css",
+        "sha256":  "0b12b314e9a698b3ce1150c20fa2abb839413095f8152368fcf1c37079fe5909",
+        "length":  4033
+    },
+    {
+        "path":  "windows/dist/icon.png",
+        "sha256":  "68a04a4a7fba2df2bb63099f5aad061d04174bc4f00b0a0f68dcc4e685ab6559",
+        "length":  136934
+    },
+    {
+        "path":  "windows/dist/index.html",
+        "sha256":  "7b85c39f40df13809f7f2b913ce8ac808645ba824d66457ae600773253107b14",
+        "length":  676
+    },
+    {
+        "path":  "windows/dist/licenses/siriwave-MIT.txt",
+        "sha256":  "2895598c988e615210dac52580a35ec00e007cf3995ab7178644cc1bc47d6a39",
+        "length":  1080
+    },
+    {
+        "path":  "windows/dist/widget.html",
+        "sha256":  "0edcf0d2974151d6ed8a5c453a4044e3d1b12504bc3705afa3e916b338e8435a",
+        "length":  502
+    }
+]

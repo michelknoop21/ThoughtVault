@@ -1,0 +1,38 @@
+{
+    "upload":  "",
+    "ref":  "",
+    "project":  {
+                    "name":  "thoughtvault-pilot1105-v2",
+                    "source":  {
+                                   "type":  "upload",
+                                   "location":  "thoughtvault-dalf38-pilot1105-v2"
+                               },
+                    "workspace":  "C:\\Dalf38\\workspaces\\thoughtvault-pilot1105-v2",
+                    "build":  {
+                                  "executable":  "powershell.exe",
+                                  "arguments":  [
+                                                    "-NoProfile",
+                                                    "-ExecutionPolicy",
+                                                    "RemoteSigned",
+                                                    "-File",
+                                                    "dalf-build.ps1"
+                                                ]
+                              },
+                    "test":  {
+                                 "executable":  "node.exe",
+                                 "arguments":  [
+                                                   "node_modules/vitest/vitest.mjs",
+                                                   "run"
+                                               ]
+                             },
+                    "artifacts":  [
+                                      "dist"
+                                  ],
+                    "toolchain":  [
+                                      "node",
+                                      "npm"
+                                  ]
+                },
+    "id":  "748c988634104ad4aca0e82e7aa9ef22",
+    "action":  "build"
+}

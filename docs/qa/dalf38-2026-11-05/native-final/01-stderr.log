@@ -1,0 +1,50 @@
+     Removed 1017 files, 134.0MiB total
+   Compiling whisper-rs-sys v0.15.0
+   Compiling thoughtvault v1.0.296 (C:\Dalf38\workspaces\thoughtvault-native-canonical1105\windows\src-tauri)
+   Compiling whisper-rs v0.16.0
+warning: fields `file_path` and `duration_seconds` are never read
+  --> src\audio\types.rs:49:15
+   |
+49 |     Stopped { file_path: String, duration_seconds: f64 },
+   |     -------   ^^^^^^^^^          ^^^^^^^^^^^^^^^^
+   |     |
+   |     fields in this variant
+   |
+   = note: `RecordingEvent` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `thoughtvault` (lib test) generated 1 warning (1 duplicate)
+warning: `thoughtvault` (lib) generated 1 warning
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2m 18s
+     Running unittests src\lib.rs (C:\Dalf38\temp\thoughtvault-cargo-target\debug\deps\thoughtvault_lib-72bdd667a9d23e17.exe)
+whisper_vad_init_from_file_with_params: loading VAD model from 'C:\Dalf38\temp\5e0479f3e8e643d4a14bdda80dc5c3c3\.tmphvOQkW'
+whisper_vad_init_with_params: model type: silero-16k
+whisper_vad_init_with_params: model version: 5.1.2
+whisper_vad_init_with_params: n_encoder_layers = 4
+whisper_vad_init_with_params: encoder_in_channels[0] = 129
+whisper_vad_init_with_params: encoder_in_channels[1] = 128
+whisper_vad_init_with_params: encoder_in_channels[2] = 64
+whisper_vad_init_with_params: encoder_in_channels[3] = 64
+whisper_vad_init_with_params: encoder_out_channels[0] = 128
+whisper_vad_init_with_params: encoder_out_channels[1] = 64
+whisper_vad_init_with_params: encoder_out_channels[2] = 64
+whisper_vad_init_with_params: encoder_out_channels[3] = 128
+whisper_vad_init_with_params: lstm_input_size = 128
+whisper_vad_init_with_params: lstm_hidden_size = 128
+whisper_vad_init_with_params: final_conv_in = 128
+whisper_vad_init_with_params: final_conv_out = 1
+whisper_vad_init_with_params:          CPU total size =     0.88 MB
+whisper_vad_init_with_params: model size    =    0.88 MB
+whisper_backend_init_gpu: no GPU found
+whisper_vad_init_context: compute buffer (VAD)   =    1.60 MB
+whisper_vad_segments_from_samples: detecting speech timestamps in 32000 samples
+whisper_vad_detect_speech: detecting speech in 32000 samples
+whisper_vad_detect_speech: n_chunks: 63
+whisper_vad_detect_speech: props size: 63
+whisper_vad_detect_speech: chunk_len: 256 < n_window: 512
+whisper_vad_detect_speech: vad time = 5.01 ms processing 32000 samples
+whisper_vad_segments_from_probs: detecting speech timestamps using 63 probabilities
+whisper_vad_segments_from_probs: Final speech segments after filtering: 0
+     Running unittests src\bin\read_token.rs (C:\Dalf38\temp\thoughtvault-cargo-target\debug\deps\read_token-b25a6c0cdfd10c71.exe)
+     Running unittests src\main.rs (C:\Dalf38\temp\thoughtvault-cargo-target\debug\deps\thoughtvault-07f55d94ef4258a3.exe)
+   Doc-tests thoughtvault_lib

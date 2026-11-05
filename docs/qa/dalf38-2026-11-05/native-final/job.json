@@ -1,0 +1,17 @@
+{
+    "id":  "5e0479f3e8e643d4a14bdda80dc5c3c3",
+    "project":  "thoughtvault-native-canonical1105",
+    "action":  "test",
+    "requestedAt":  "2026-11-05T13:17:49.3300502Z",
+    "requestedBy":  "DESKTOP-98B3AHB\\developer",
+    "startedAt":  "2026-11-05T13:17:50.0728499Z",
+    "finishedAt":  "2026-11-05T13:20:30.0202933Z",
+    "status":  "succeeded",
+    "exitCode":  0,
+    "sourceCommit":  null,
+    "sourceHash":  "49d659694d977543e8d6de84eb3a2202963667a8434c837f3ba3d92cb19f9df6",
+    "logLocation":  "C:\\Dalf38\\jobs\\5e0479f3e8e643d4a14bdda80dc5c3c3",
+    "artifactLocation":  "C:\\Dalf38\\artifacts\\5e0479f3e8e643d4a14bdda80dc5c3c3",
+    "workerPid":  43340,
+    "message":  null
+}

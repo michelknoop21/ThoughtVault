@@ -1,0 +1,12 @@
+[
+    {
+        "path":  "dalf-build.ps1",
+        "sha256":  "e23c671ad99494368e15c5851f6c8bd292a32db49b8dc4b878e65ec58ff1cfd3",
+        "length":  697
+    },
+    {
+        "path":  "rustup-init.exe",
+        "sha256":  "38027d51d69a5d05493627a0634dbea52d6cd793c8f072d2373d3f4163eec7db",
+        "length":  12839424
+    }
+]

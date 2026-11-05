@@ -1,0 +1,17 @@
+{
+    "id":  "96ec289bb8f64a6b906d23f8ced910d2",
+    "project":  "thoughtvault-native1105",
+    "action":  "build",
+    "requestedAt":  "2026-11-05T12:59:09.7965060Z",
+    "requestedBy":  "DESKTOP-98B3AHB\\developer",
+    "startedAt":  "2026-11-05T12:59:11.5567408Z",
+    "finishedAt":  "2026-11-05T13:01:36.0830015Z",
+    "status":  "failed",
+    "exitCode":  101,
+    "sourceCommit":  null,
+    "sourceHash":  "ae4ce56f19fef6613b592cbaf860b9ea2a2b61d354c4f584c6c340fc5dee4b30",
+    "logLocation":  "C:\\Dalf38\\jobs\\96ec289bb8f64a6b906d23f8ced910d2",
+    "artifactLocation":  "C:\\Dalf38\\artifacts\\96ec289bb8f64a6b906d23f8ced910d2",
+    "workerPid":  38212,
+    "message":  "Command failed with exit code 101 (phase 01)"
+}

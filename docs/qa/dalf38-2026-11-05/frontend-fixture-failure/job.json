@@ -1,0 +1,17 @@
+{
+    "id":  "519eb4556f0a4e598ea2dc4bad572f9e",
+    "project":  "thoughtvault-pilot1105-v3",
+    "action":  "build",
+    "requestedAt":  "2026-11-05T12:55:36.0579245Z",
+    "requestedBy":  "DESKTOP-98B3AHB\\developer",
+    "startedAt":  "2026-11-05T12:55:37.1752022Z",
+    "finishedAt":  "2026-11-05T13:00:58.2571361Z",
+    "status":  "failed",
+    "exitCode":  1,
+    "sourceCommit":  null,
+    "sourceHash":  "5fb10662c98d46a00564fbc4b3105b1a5e6effcfb5dc7aeedec00ed3f6949510",
+    "logLocation":  "C:\\Dalf38\\jobs\\519eb4556f0a4e598ea2dc4bad572f9e",
+    "artifactLocation":  "C:\\Dalf38\\artifacts\\519eb4556f0a4e598ea2dc4bad572f9e",
+    "workerPid":  33384,
+    "message":  "Command failed with exit code 1 (phase 01)"
+}

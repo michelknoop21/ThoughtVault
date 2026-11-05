@@ -1,0 +1,736 @@
+[90mstderr[2m | src/services/__tests__/api.upload.test.ts[2m > [22m[2muploadRecording[2m > [22m[2mhandles Rust invoke failure (file not found)
+[22m[39m[API] proxy_upload failed: Bestand niet gevonden: /tmp/gone.wav
+
+[90mstderr[2m | src/services/__tests__/api.upload.test.ts[2m > [22m[2muploadRecording[2m > [22m[2mhandles Rust invoke failure (empty file)
+[22m[39m[API] proxy_upload failed: Opnamebestand is leeg (0 bytes)
+
+[90mstderr[2m | src/services/__tests__/api.upload.test.ts[2m > [22m[2muploadRecording[2m > [22m[2mhandles Rust invoke failure (network error)
+[22m[39m[API] proxy_upload failed: Upload netwerkfout: connection refused
+
+[90mstderr[2m | src/services/__tests__/api.upload.test.ts[2m > [22m[2muploadRecordingWithProgress[2m > [22m[2mpropagates Rust errors with details
+[22m[39m[API] proxy_upload failed: Kan bestand niet lezen: Permission denied
+
+[90mstderr[2m | src/services/__tests__/localPipeline.retry.test.ts[2m > [22m[2mshows native transcription errors without discarding the original message
+[22m[39m[LocalPipeline] Failed: Segment lezen mislukt: invalid UTF-8
+
+[90mstderr[2m | src/services/__tests__/localPipeline.retry.test.ts[2m > [22m[2mkeeps a duration read failure visible without saving an incomplete import
+[22m[39m[LocalPipeline] Failed: Kan de audioduur niet lezen
+
+[90mstderr[2m | src/services/__tests__/localPipeline.retry.test.ts[2m > [22m[2mkeeps a rejected draft separate, preserves transcript and never completes or autoexports
+[22m[39m[LocalPipeline] Failed: Actie ontbreekt. Het concept is apart bewaard voor beoordeling; er is geen nieuwe goedgekeurde notule opgeslagen.
+
+[90mstderr[2m | src/services/__tests__/localPipeline.retry.test.ts[2m > [22m[2mreports a failed draft write without claiming the concept was saved
+[22m[39m[LocalPipeline] Failed: Controle onzeker. Het concept kon niet worden bewaard. De transcriptie en opname zijn niet vervangen.
+
+[90mstderr[2m | src/hooks/__tests__/useGlobalRecordingHandler.test.tsx[2m > [22m[2mprocesses a second recording while the first job is pending and ignores stale stop events
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/recording/__tests__/WaveformVisualizer.test.tsx[2m > [22m[2mplots real amplitude, flat silence, bounded compact waves and no movement while inactive
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/hooks/__tests__/useGlobalRecordingHandler.test.tsx[2m > [22m[2mprocesses a second recording while the first job is pending and ignores stale stop events
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/hooks/__tests__/useGlobalRecordingHandler.test.tsx[2m > [22m[2msynchronizes widget pause and resume while the recording page is unmounted
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/hooks/__tests__/useGlobalRecordingHandler.test.tsx[2m > [22m[2msynchronizes widget pause and resume while the recording page is unmounted
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/hooks/__tests__/useGlobalRecordingHandler.test.tsx[2m > [22m[2mkeeps an unprocessed recording busy without sending it to a provider
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/hooks/__tests__/useGlobalRecordingHandler.test.tsx[2m > [22m[2mkeeps an unprocessed recording busy without sending it to a provider
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/transcripts/__tests__/TranscriptDetail.save.test.tsx[2m > [22m[2mkeeps an edited notule open when saving fails
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/settings/__tests__/ProcessingTab.ollama.test.tsx[2m > [22m[2mprefills each Ollama location, loads its models and ignores a stale response
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/recording/__tests__/WaveformVisualizer.test.tsx[2m > [22m[2mplots real amplitude, flat silence, bounded compact waves and no movement while inactive
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/recording/__tests__/WaveformVisualizer.test.tsx[2m > [22m[2mplots real amplitude, flat silence, bounded compact waves and no movement while inactive
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/recording/__tests__/WaveformVisualizer.test.tsx[2m > [22m[2mplots real amplitude, flat silence, bounded compact waves and no movement while inactive
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/__tests__/App.recovery.test.tsx[2m > [22m[2mrecovers the matching task_id result even when another result is first
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/settings/__tests__/ProcessingTab.ollama.test.tsx[2m > [22m[2mprefills each Ollama location, loads its models and ignores a stale response
+[22m[39mThe current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/settings/__tests__/ProcessingTab.ollama.test.tsx[2m > [22m[2mprefills each Ollama location, loads its models and ignores a stale response
+[22m[39mThe current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/__tests__/App.recovery.test.tsx[2m > [22m[2mrecovers the matching task_id result even when another result is first
+[22m[39mThe current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/__tests__/App.recovery.test.tsx[2m > [22m[2mrecovers the matching task_id result even when another result is first
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/__tests__/App.recovery.test.tsx[2m > [22m[2mrecovers the matching task_id result even when another result is first
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/__tests__/App.recovery.test.tsx[2m > [22m[2mrecovers the matching id result even when another result is first
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/settings/__tests__/ProcessingTab.ollama.test.tsx[2m > [22m[2mprefills each Ollama location, loads its models and ignores a stale response
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/__tests__/App.recovery.test.tsx[2m > [22m[2mrecovers the matching id result even when another result is first
+[22m[39mThe current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/transcripts/__tests__/TranscriptDetail.save.test.tsx[2m > [22m[2mkeeps an edited notule open when saving fails
+[22m[39mThe current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/__tests__/App.recovery.test.tsx[2m > [22m[2mrecovers the matching id result even when another result is first
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/__tests__/App.recovery.test.tsx[2m > [22m[2mrecovers the matching id result even when another result is first
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/__tests__/App.recovery.test.tsx[2m > [22m[2mkeeps a visible failure when the recovered result is not available yet
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/settings/__tests__/ProcessingTab.ollama.test.tsx[2m > [22m[2mprefills each Ollama location, loads its models and ignores a stale response
+[22m[39mThe current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/__tests__/App.recovery.test.tsx[2m > [22m[2mkeeps a visible failure when the recovered result is not available yet
+[22m[39mThe current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/transcripts/__tests__/TranscriptDetail.save.test.tsx[2m > [22m[2mkeeps an edited notule open when saving fails
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/__tests__/App.recovery.test.tsx[2m > [22m[2mkeeps a visible failure when the recovered result is not available yet
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/__tests__/App.recovery.test.tsx[2m > [22m[2mhandles failure to fetch the recovered result without losing the task
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/settings/__tests__/ProcessingTab.ollama.test.tsx[2m > [22m[2mprefills each Ollama location, loads its models and ignores a stale response
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/transcripts/__tests__/TranscriptDetail.save.test.tsx[2m > [22m[2mkeeps an edited notule open when saving fails
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/settings/__tests__/ProcessingTab.ollama.test.tsx[2m > [22m[2mprefills each Ollama location, loads its models and ignores a stale response
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/__tests__/App.recovery.test.tsx[2m > [22m[2mhandles failure to fetch the recovered result without losing the task
+[22m[39mThe current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/__tests__/App.recovery.test.tsx[2m > [22m[2mhandles failure to fetch the recovered result without losing the task
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/__tests__/App.recovery.test.tsx[2m > [22m[2mrecovers server tasks when an authenticated user switches from local to cloud mode
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/transcripts/__tests__/TranscriptDetail.save.test.tsx[2m > [22m[2mkeeps an edited notule open when saving fails
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/__tests__/App.recovery.test.tsx[2m > [22m[2mrecovers server tasks when an authenticated user switches from local to cloud mode
+[22m[39mThe current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/transcripts/__tests__/TranscriptDetail.save.test.tsx[2m > [22m[2mallows regeneration from a saved transcript without a notule
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/__tests__/App.recovery.test.tsx[2m > [22m[2mrecovers server tasks when an authenticated user switches from local to cloud mode
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/__tests__/App.recovery.test.tsx[2m > [22m[2mrecovers server tasks when an authenticated user switches from local to cloud mode
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/__tests__/App.recovery.test.tsx[2m > [22m[2mrecovers server tasks when an authenticated user switches from local to cloud mode
+[22m[39mThe current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/settings/__tests__/ProcessingTab.ollama.test.tsx[2m > [22m[2mprefills each Ollama location, loads its models and ignores a stale response
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/transcripts/__tests__/TranscriptDetail.save.test.tsx[2m > [22m[2mallows regeneration from a saved transcript without a notule
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/settings/__tests__/ProcessingTab.ollama.test.tsx[2m > [22m[2mprefills each Ollama location, loads its models and ignores a stale response
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/__tests__/App.recovery.test.tsx[2m > [22m[2mrecovers server tasks when an authenticated user switches from local to cloud mode
+[22m[39mThe current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/TranscriptsPage.localTags.test.tsx[2m > [22m[2masks for a template before regeneration and shows the job on Taken
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/transcripts/__tests__/TranscriptDetail.save.test.tsx[2m > [22m[2mallows regeneration from a saved transcript without a notule
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/settings/__tests__/ProcessingTab.ollama.test.tsx[2m > [22m[2mdoes not call pending system advice unavailable or replace the selected model
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/__tests__/App.recovery.test.tsx[2m > [22m[2mrecovers server tasks when an authenticated user switches from local to cloud mode
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/transcripts/__tests__/TranscriptDetail.save.test.tsx[2m > [22m[2mretains the selected-word correction after a failed note save and learns only after success
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/settings/__tests__/ProcessingTab.ollama.test.tsx[2m > [22m[2mdoes not call pending system advice unavailable or replace the selected model
+[22m[39mThe current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/__tests__/App.recovery.test.tsx[2m > [22m[2mrecovers server tasks when an authenticated user switches from local to cloud mode
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/settings/__tests__/ProcessingTab.ollama.test.tsx[2m > [22m[2mdoes not call pending system advice unavailable or replace the selected model
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/__tests__/App.recovery.test.tsx[2m > [22m[2mpreserves a recovered failed task and its server error instead of fetching a partial result
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/__tests__/App.recovery.test.tsx[2m > [22m[2mpreserves a recovered failed task and its server error instead of fetching a partial result
+[22m[39mThe current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/__tests__/App.recovery.test.tsx[2m > [22m[2mpreserves a recovered failed task and its server error instead of fetching a partial result
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/__tests__/App.recovery.test.tsx[2m > [22m[2mpreserves a recovered cancelled task and its server error instead of fetching a partial result
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/__tests__/App.recovery.test.tsx[2m > [22m[2mpreserves a recovered cancelled task and its server error instead of fetching a partial result
+[22m[39mThe current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/__tests__/App.recovery.test.tsx[2m > [22m[2mpreserves a recovered cancelled task and its server error instead of fetching a partial result
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/__tests__/App.recovery.test.tsx[2m > [22m[2mpreserves a recovered error task and its server error instead of fetching a partial result
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/__tests__/App.recovery.test.tsx[2m > [22m[2mpreserves a recovered error task and its server error instead of fetching a partial result
+[22m[39mThe current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/__tests__/App.recovery.test.tsx[2m > [22m[2mpreserves a recovered error task and its server error instead of fetching a partial result
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/transcripts/__tests__/TranscriptDetail.save.test.tsx[2m > [22m[2mretains the selected-word correction after a failed note save and learns only after success
+[22m[39mThe current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/settings/__tests__/ProcessingTab.ollama.test.tsx[2m > [22m[2mdoes not call pending system advice unavailable or replace the selected model
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/settings/__tests__/ProcessingTab.ollama.test.tsx[2m > [22m[2mdoes not call pending system advice unavailable or replace the selected model
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/settings/__tests__/ProcessingTab.ollama.test.tsx[2m > [22m[2mdoes not call pending system advice unavailable or replace the selected model
+[22m[39mThe current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/transcripts/__tests__/TranscriptDetail.save.test.tsx[2m > [22m[2mretains the selected-word correction after a failed note save and learns only after success
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/transcripts/__tests__/TranscriptDetail.save.test.tsx[2m > [22m[2mretains the selected-word correction after a failed note save and learns only after success
+[22m[39mThe current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/settings/__tests__/ProcessingTab.ollama.test.tsx[2m > [22m[2mdoes not call pending system advice unavailable or replace the selected model
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/settings/__tests__/ProcessingTab.ollama.test.tsx[2m > [22m[2mdoes not call pending system advice unavailable or replace the selected model
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/transcripts/__tests__/TranscriptDetail.save.test.tsx[2m > [22m[2mretains the selected-word correction after a failed note save and learns only after success
+[22m[39mThe current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/settings/__tests__/ProcessingTab.ollama.test.tsx[2m > [22m[2mdoes not call pending system advice unavailable or replace the selected model
+[22m[39mThe current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/transcripts/__tests__/TranscriptDetail.save.test.tsx[2m > [22m[2mretains the selected-word correction after a failed note save and learns only after success
+[22m[39mThe current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/transcripts/__tests__/TranscriptDetail.save.test.tsx[2m > [22m[2mretains the selected-word correction after a failed note save and learns only after success
+[22m[39mThe current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/settings/__tests__/ProcessingTab.ollama.test.tsx[2m > [22m[2mdoes not call pending system advice unavailable or replace the selected model
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/transcripts/__tests__/TranscriptDetail.save.test.tsx[2m > [22m[2mretains the selected-word correction after a failed note save and learns only after success
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/transcripts/__tests__/TranscriptDetail.save.test.tsx[2m > [22m[2mshows a sanitized rejected draft separately without turning it into an accepted note
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/transcripts/__tests__/TranscriptDetail.save.test.tsx[2m > [22m[2mshows a sanitized rejected draft separately without turning it into an accepted note
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/transcripts/__tests__/TranscriptDetail.save.test.tsx[2m > [22m[2mshows a sanitized rejected draft separately without turning it into an accepted note
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/TranscriptsPage.localTags.test.tsx[2m > [22m[2masks for a template before regeneration and shows the job on Taken
+[22m[39mThe current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/TranscriptsPage.localTags.test.tsx[2m > [22m[2masks for a template before regeneration and shows the job on Taken
+[22m[39mThe current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/TranscriptsPage.localTags.test.tsx[2m > [22m[2masks for a template before regeneration and shows the job on Taken
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/SettingsPage.tabs.test.tsx[2m > [22m[2mrenders every settings tab with its own content
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/TranscriptsPage.localTags.test.tsx[2m > [22m[2masks for a template before regeneration and shows the job on Taken
+[22m[39mThe current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/TranscriptsPage.localTags.test.tsx[2m > [22m[2masks for a template before regeneration and shows the job on Taken
+[22m[39mThe current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/TranscriptsPage.localTags.test.tsx[2m > [22m[2masks for a template before regeneration and shows the job on Taken
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/TranscriptsPage.localTags.test.tsx[2m > [22m[2macknowledges Obsidian metadata edits even when imported HTML is unchanged
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/TranscriptsPage.localTags.test.tsx[2m > [22m[2macknowledges Obsidian metadata edits even when imported HTML is unchanged
+[22m[39mThe current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/TranscriptsPage.localTags.test.tsx[2m > [22m[2macknowledges Obsidian metadata edits even when imported HTML is unchanged
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/TranscriptsPage.localTags.test.tsx[2m > [22m[2macknowledges Obsidian metadata edits even when imported HTML is unchanged
+[22m[39mThe current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/TranscriptsPage.localTags.test.tsx[2m > [22m[2macknowledges Obsidian metadata edits even when imported HTML is unchanged
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/TranscriptsPage.localTags.test.tsx[2m > [22m[2madds a tag to a local note without a server request
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/SettingsPage.tabs.test.tsx[2m > [22m[2mrenders every settings tab with its own content
+[22m[39mThe current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/SettingsPage.tabs.test.tsx[2m > [22m[2mrenders every settings tab with its own content
+[22m[39mThe current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/TranscriptsPage.localTags.test.tsx[2m > [22m[2madds a tag to a local note without a server request
+[22m[39mThe current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/SettingsPage.tabs.test.tsx[2m > [22m[2mrenders every settings tab with its own content
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/TranscriptsPage.localTags.test.tsx[2m > [22m[2madds a tag to a local note without a server request
+[22m[39mThe current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/SettingsPage.tabs.test.tsx[2m > [22m[2mrenders every settings tab with its own content
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/TranscriptsPage.localTags.test.tsx[2m > [22m[2madds a tag to a local note without a server request
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/SettingsPage.tabs.test.tsx[2m > [22m[2mrenders every settings tab with its own content
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/TranscriptsPage.localTags.test.tsx[2m > [22m[2madds a tag to a local note without a server request
+[22m[39mThe current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/TranscriptsPage.localTags.test.tsx[2m > [22m[2madds a tag to a local note without a server request
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/TranscriptsPage.localTags.test.tsx[2m > [22m[2mprints a sanitized note inside the app without relying on a popup
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/SettingsPage.tabs.test.tsx[2m > [22m[2mrenders every settings tab with its own content
+[22m[39mThe current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/SettingsPage.tabs.test.tsx[2m > [22m[2mrenders every settings tab with its own content
+[22m[39mThe current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/SettingsPage.tabs.test.tsx[2m > [22m[2mrenders every settings tab with its own content
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/TranscriptsPage.localTags.test.tsx[2m > [22m[2mprints a sanitized note inside the app without relying on a popup
+[22m[39mThe current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/TranscriptsPage.localTags.test.tsx[2m > [22m[2mprints a sanitized note inside the app without relying on a popup
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/SettingsPage.tabs.test.tsx[2m > [22m[2mrenders every settings tab with its own content
+[22m[39mThe current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/SettingsPage.tabs.test.tsx[2m > [22m[2mrenders every settings tab with its own content
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/SettingsPage.tabs.test.tsx[2m > [22m[2mrenders every settings tab with its own content
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/TranscriptsPage.localTags.test.tsx[2m > [22m[2mprints a sanitized note inside the app without relying on a popup
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/SettingsPage.tabs.test.tsx[2m > [22m[2mrenders every settings tab with its own content
+[22m[39mThe current testing environment is not configured to support act(...)
+
+Not implemented: Window's print() method
+[90mstderr[2m | src/pages/__tests__/SettingsPage.tabs.test.tsx[2m > [22m[2mrenders every settings tab with its own content
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/TranscriptsPage.localTags.test.tsx[2m > [22m[2mprints a sanitized note inside the app without relying on a popup
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/TranscriptsPage.localTags.test.tsx[2m > [22m[2mkeeps accepted notes intact when review is required (draft write failure: false)
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/TranscriptsPage.localTags.test.tsx[2m > [22m[2mkeeps accepted notes intact when review is required (draft write failure: false)
+[22m[39mThe current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/TranscriptsPage.localTags.test.tsx[2m > [22m[2mkeeps accepted notes intact when review is required (draft write failure: false)
+[22m[39mThe current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/TranscriptsPage.localTags.test.tsx[2m > [22m[2mkeeps accepted notes intact when review is required (draft write failure: false)
+[22m[39mThe current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/SettingsPage.tabs.test.tsx[2m > [22m[2mrenders every settings tab with its own content
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/TranscriptsPage.localTags.test.tsx[2m > [22m[2mkeeps accepted notes intact when review is required (draft write failure: false)
+[22m[39mThe current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/SettingsPage.tabs.test.tsx[2m > [22m[2mrenders every settings tab with its own content
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/TranscriptsPage.localTags.test.tsx[2m > [22m[2mkeeps accepted notes intact when review is required (draft write failure: false)
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/TranscriptsPage.localTags.test.tsx[2m > [22m[2mkeeps accepted notes intact when review is required (draft write failure: true)
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/SettingsPage.tabs.test.tsx[2m > [22m[2mrenders every settings tab with its own content
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/SettingsPage.tabs.test.tsx[2m > [22m[2mrenders every settings tab with its own content
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/SettingsPage.tabs.test.tsx[2m > [22m[2mrenders every settings tab with its own content
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/SettingsPage.tabs.test.tsx[2m > [22m[2mrenders every settings tab with its own content
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/TranscriptsPage.localTags.test.tsx[2m > [22m[2mkeeps accepted notes intact when review is required (draft write failure: true)
+[22m[39mThe current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/TranscriptsPage.localTags.test.tsx[2m > [22m[2mkeeps accepted notes intact when review is required (draft write failure: true)
+[22m[39mThe current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/TranscriptsPage.localTags.test.tsx[2m > [22m[2mkeeps accepted notes intact when review is required (draft write failure: true)
+[22m[39mThe current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/TranscriptsPage.localTags.test.tsx[2m > [22m[2mkeeps accepted notes intact when review is required (draft write failure: true)
+[22m[39mThe current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/TranscriptsPage.localTags.test.tsx[2m > [22m[2mkeeps accepted notes intact when review is required (draft write failure: true)
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/__tests__/FeedbackWidget.test.tsx[2m > [22m[2mcopies local feedback without a server call and preserves the draft after clipboard failure
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/recording/__tests__/SavedRecordings.test.tsx[2m > [22m[2mrequires explicit confirmation before deleting one recording or cleaning old recordings
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/recording/__tests__/RecordingWidget.test.tsx[2m > [22m[2mcloses a late widget that missed stop, but keeps an active or paused recording
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/__tests__/FeedbackWidget.test.tsx[2m > [22m[2mcopies local feedback without a server call and preserves the draft after clipboard failure
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/recording/__tests__/RecordingWidget.test.tsx[2m > [22m[2mcloses a late widget that missed stop, but keeps an active or paused recording
+[22m[39mThe current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/recording/__tests__/SavedRecordings.test.tsx[2m > [22m[2mrequires explicit confirmation before deleting one recording or cleaning old recordings
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/recording/__tests__/SavedRecordings.test.tsx[2m > [22m[2mrequires explicit confirmation before deleting one recording or cleaning old recordings
+[22m[39mThe current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/recording/__tests__/RecordingWidget.test.tsx[2m > [22m[2mcloses a late widget that missed stop, but keeps an active or paused recording
+[22m[39mThe current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/recording/__tests__/RecordingWidget.test.tsx[2m > [22m[2mcloses a late widget that missed stop, but keeps an active or paused recording
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/ParticipantPicker.parity.test.tsx[2m > [22m[2msearches names, aliases and organizations while retaining hidden participant selections
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/layout/__tests__/Sidebar.test.tsx[2m > [22m[2mtoggles desktop navigation with Ctrl+Shift+S, keeping every destination
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/__tests__/FeedbackWidget.test.tsx[2m > [22m[2mcopies local feedback without a server call and preserves the draft after clipboard failure
+[22m[39mThe current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/recording/__tests__/SavedRecordings.test.tsx[2m > [22m[2mrequires explicit confirmation before deleting one recording or cleaning old recordings
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/__tests__/FeedbackWidget.test.tsx[2m > [22m[2mcopies local feedback without a server call and preserves the draft after clipboard failure
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/recording/__tests__/SavedRecordings.test.tsx[2m > [22m[2mrequires explicit confirmation before deleting one recording or cleaning old recordings
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/recording/__tests__/SavedRecordings.test.tsx[2m > [22m[2mrequires explicit confirmation before deleting one recording or cleaning old recordings
+[22m[39mThe current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/__tests__/FeedbackWidget.test.tsx[2m > [22m[2mcopies local feedback without a server call and preserves the draft after clipboard failure
+[22m[39mThe current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/recording/__tests__/SavedRecordings.test.tsx[2m > [22m[2mrequires explicit confirmation before deleting one recording or cleaning old recordings
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/__tests__/FeedbackWidget.test.tsx[2m > [22m[2mcopies local feedback without a server call and preserves the draft after clipboard failure
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/__tests__/FeedbackWidget.test.tsx[2m > [22m[2mcopies local feedback without a server call and preserves the draft after clipboard failure
+[22m[39mThe current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/TasksPage.local.test.tsx[2m > [22m[2mshows a failed local processing task and its retry action on Taken
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/__tests__/FeedbackWidget.test.tsx[2m > [22m[2mcopies local feedback without a server call and preserves the draft after clipboard failure
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/layout/__tests__/Sidebar.test.tsx[2m > [22m[2mtoggles desktop navigation with Ctrl+Shift+S, keeping every destination
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/layout/__tests__/Sidebar.test.tsx[2m > [22m[2mtoggles desktop navigation with Ctrl+Shift+S, keeping every destination
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/layout/__tests__/Sidebar.test.tsx[2m > [22m[2mtoggles desktop navigation with Ctrl+Shift+S, keeping every destination
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/ParticipantPicker.parity.test.tsx[2m > [22m[2msearches names, aliases and organizations while retaining hidden participant selections
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/layout/__tests__/Sidebar.test.tsx[2m > [22m[2mopens notes by keyboard without activating the row from its menu
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/ParticipantPicker.parity.test.tsx[2m > [22m[2msearches names, aliases and organizations while retaining hidden participant selections
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/ParticipantPicker.parity.test.tsx[2m > [22m[2msearches names, aliases and organizations while retaining hidden participant selections
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/ParticipantPicker.parity.test.tsx[2m > [22m[2msearches names, aliases and organizations while retaining hidden participant selections
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/ParticipantPicker.parity.test.tsx[2m > [22m[2msearches names, aliases and organizations while retaining hidden participant selections
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/TasksPage.local.test.tsx[2m > [22m[2mshows a failed local processing task and its retry action on Taken
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/ParticipantPicker.parity.test.tsx[2m > [22m[2msearches names, aliases and organizations while retaining hidden participant selections
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/layout/__tests__/Sidebar.test.tsx[2m > [22m[2mopens notes by keyboard without activating the row from its menu
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/ParticipantPicker.parity.test.tsx[2m > [22m[2msearches names, aliases and organizations while retaining hidden participant selections
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/TasksPage.local.test.tsx[2m > [22m[2mshows a failed local processing task and its retry action on Taken
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/TasksPage.local.test.tsx[2m > [22m[2mshows an app regeneration task even when cloud mode is selected
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/TasksPage.local.test.tsx[2m > [22m[2mshows an app regeneration task even when cloud mode is selected
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/TasksPage.local.test.tsx[2m > [22m[2mshows an app regeneration task even when cloud mode is selected
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/TasksPage.local.test.tsx[2m > [22m[2mshows an app regeneration task even when cloud mode is selected
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/stores/__tests__/settingsStore.credentials.test.ts[2m > [22m[2mremoves plaintext credentials even when keyring migration fails
+[22m[39mSleutel ollama_api_key kon niet naar de Windows-kluis worden verplaatst; voer deze opnieuw in.
+
+[90mstderr[2m | src/hooks/__tests__/useAudioLevel.test.tsx[2m > [22m[2mkeeps frequency bands independent, sanitizes values, and unsubscribes
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/ui/__tests__/useConfirmation.test.tsx[2m > [22m[2mresolves app confirmations for accept, cancellation and unmount
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/ui/__tests__/useConfirmation.test.tsx[2m > [22m[2mresolves app confirmations for accept, cancellation and unmount
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/hooks/__tests__/useAudioLevel.test.tsx[2m > [22m[2mkeeps frequency bands independent, sanitizes values, and unsubscribes
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/transcripts/__tests__/TranscriptsList.search.test.tsx[2m > [22m[2msearches titles, transcript, visible notes and tags, ignoring case and surrounding whitespace
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/hooks/__tests__/useUpdateCheck.test.tsx[2m > [22m[2muses the existing private installer URL without doubling its origin
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/ui/__tests__/useConfirmation.test.tsx[2m > [22m[2mresolves app confirmations for accept, cancellation and unmount
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/hooks/__tests__/useUpdateCheck.test.tsx[2m > [22m[2muses the existing private installer URL without doubling its origin
+[22m[39mThe current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/ui/__tests__/useConfirmation.test.tsx[2m > [22m[2mresolves app confirmations for accept, cancellation and unmount
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/ui/__tests__/useConfirmation.test.tsx[2m > [22m[2mresolves app confirmations for accept, cancellation and unmount
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/ui/__tests__/useConfirmation.test.tsx[2m > [22m[2mresolves app confirmations for accept, cancellation and unmount
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/hooks/__tests__/useUpdateCheck.test.tsx[2m > [22m[2muses the existing private installer URL without doubling its origin
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/ui/__tests__/useConfirmation.test.tsx[2m > [22m[2mresolves app confirmations for accept, cancellation and unmount
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/transcripts/__tests__/TranscriptsList.search.test.tsx[2m > [22m[2msearches titles, transcript, visible notes and tags, ignoring case and surrounding whitespace
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/transcripts/__tests__/TranscriptsList.search.test.tsx[2m > [22m[2msearches titles, transcript, visible notes and tags, ignoring case and surrounding whitespace
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/LoginPage.local.test.tsx[2m > [22m[2menters local recording without asking for an account
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/transcripts/__tests__/TranscriptsList.search.test.tsx[2m > [22m[2msearches titles, transcript, visible notes and tags, ignoring case and surrounding whitespace
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/transcripts/__tests__/TranscriptsList.search.test.tsx[2m > [22m[2msearches titles, transcript, visible notes and tags, ignoring case and surrounding whitespace
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/transcripts/__tests__/TranscriptsList.search.test.tsx[2m > [22m[2msearches titles, transcript, visible notes and tags, ignoring case and surrounding whitespace
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/components/transcripts/__tests__/TranscriptsList.search.test.tsx[2m > [22m[2msearches titles, transcript, visible notes and tags, ignoring case and surrounding whitespace
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/LoginPage.local.test.tsx[2m > [22m[2menters local recording without asking for an account
+[22m[39mThe current testing environment is not configured to support act(...)
+
+[90mstderr[2m | src/pages/__tests__/LoginPage.local.test.tsx[2m > [22m[2menters local recording without asking for an account
+[22m[39mThe current testing environment is not configured to support act(...)
+
+
+[31m⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Suites 1 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m src/components/recording/__tests__/WaveformVisualizer.parity.test.tsx[2m [ src/components/recording/__tests__/WaveformVisualizer.parity.test.tsx ][22m
+[31m[1mError[22m: Failed to resolve import "../../../../../tests/fixtures/waveform-reference.json" from "src/components/recording/__tests__/WaveformVisualizer.parity.test.tsx". Does the file exist?[39m
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Dalf38/workspaces/thoughtvault-pilot1105-v3/src/components/recording/__tests__/WaveformVisualizer.parity.test.tsx[39m:4:22
+[33m  3  |  import { act } from "react";
+  4  |  import { createRoot } from "react-dom/client";
+  5  |  import reference from "../../../../../tests/fixtures/waveform-reference.json";
+     |                         ^
+  6  |  import { WaveformVisualizer } from "../WaveformVisualizer";
+  7  |  class TestPath {[39m
+[90m [2m❯[22m TransformPluginContext._formatLog node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m42528:41[22m[39m
+[90m [2m❯[22m TransformPluginContext.error node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m42525:16[22m[39m
+[90m [2m❯[22m normalizeUrl node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m40504:23[22m[39m
+[90m [2m❯[22m node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m40623:37[22m[39m
+[90m [2m❯[22m TransformPluginContext.transform node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m40550:7[22m[39m
+[90m [2m❯[22m EnvironmentPluginContainer.transform node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m42323:18[22m[39m
+[90m [2m❯[22m loadAndTransform node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m35739:27[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯[22m[39m
+

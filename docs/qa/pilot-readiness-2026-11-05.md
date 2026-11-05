@@ -39,7 +39,7 @@ Aanvullende correcties:
 | Scriptregressies | PASS | `python3 -m unittest discover -s scripts/tests -v`: 8 tests |
 | macOS tests | PASS | 69 PASS, 3 SKIP; `/tmp/thoughtvault-pilot-swift-final.log` en xcresult in `/tmp/thoughtvault-pilot-derived/Logs/Test` |
 | iOS compilatie | PASS | `/tmp/thoughtvault-pilot-ios.log`; unsigned generic iOS build, vóór uitsluitend Apple-versiesync |
-| Native Windows x64 | BLOCKED | Dalf38 via RustDesk gevraagd; lokale schermbediening door macOS geweigerd |
+| Native Windows x64 | UNIT PASS / ACCEPTATIE OPEN | Centrale LocalService-job: 36 Rust PASS, 3 ignored; geen MSI/GUI/hardwareacceptatie voor kandidaat |
 | iPhone/iPad | UITGESTELD | Expliciete gebruikerskeuze; geen apparaatacceptatie claimen |
 | macOS distributie | BLOCKED | Apple Development/Distribution aanwezig, geen Developer ID in actuele identitycheck |
 | Website visueel | NOT TESTED | Inspectiescript vereist browsercontext; Node-aanroep was ongeldig, geen productfout bewezen |
@@ -109,3 +109,141 @@ Muisinvoer via native events werkt; toetsenbordinvoer kwam onvolledig/afwijkend 
 Een onverwachte, niet uitgevoerde commandoregel is waargenomen. Invoer gestopt en
 exclusief gebruik van deze remote sessie bij de gebruiker nagevraagd. Native
 appversie, idle-status en Windows-kandidaatacceptatie blijven onbewezen.
+
+## Vervolg 5 november — Royal TSX en directe bouwverbinding
+
+Royal TSX `Dalf38 VPN` bereikt de bestaande desktop. Twee navigatieklikken
+openen Instellingen en Algemeen; geïnstalleerd: ThoughtVault 1.0.295 Windows.
+Korte PowerShell-invoer (`Get-Location`) en een directorylisting werken, maar
+langere invoer raakt vervormd en opent soms Windows-sneltoetsen. Geen kandidaat
+geïnstalleerd; geen nieuwe native PASS afgeleid uit deze bediening.
+De eerder onverwachte tekst bewijst geen tweede gebruiker: gebruiker meldt
+uitsluitend lokaal MacBook-gebruik; onze invoerroute is aantoonbaar onbetrouwbaar.
+
+Bestaande SSH-alias `windsurf` (Dalf38, poort 2222) werkt met bestaande sleutel.
+`hostname`: DESKTOP-98B3AHB; account: desktop-98b3ahb/developer.
+Node, npm en Git zijn bereikbaar. Cargo is niet op PATH of onder
+C:/Users/developer/.cargo/bin/cargo.exe aangetroffen. Toegang tot Michels
+persoonlijke Temp-map is geweigerd; geen rechtenwijziging uitgevoerd.
+
+Uitvoeringsroute:
+1. SSH voor bronoverdracht, hashes, bouwen en testlogs; Royal TSX voor app-UI.
+2. Aparte bouwmap onder developer; aanwezige Rust/MSVC/runtime-caches inventariseren.
+   Ontbrekende toolchain expliciet vaststellen voordat installatie wordt voorgesteld.
+3. Unieke kandidaatversie, gehashte bronkopie, frontend- en Rust-tests, pakketbouw.
+4. Back-up en upgradecontrole uitvoeren in de interactieve gebruikerssessie;
+   SSH-account heeft geen bewezen toegang tot de werkelijke gebruikersstore.
+5. Native matrix uitvoeren, blockers oplossen, pas daarna pilotpakket vrijgeven.
+
+## Centrale beheerlaag — werkende MacBook-toegang en bouwidentiteit
+
+De MacBook gebruikt nu alias `dalf38` met eigen sleutel (geen private sleutel in
+repo/bewijs). ED25519-serverfingerprint komt overeen met de door gebruiker
+opgegeven `SHA256:ZdwqpVFXsP/AWPN8Apfs3SSoMK0v6Wle1tl95a1C0zY`.
+Centrale README gelezen; `dalf.ps1 status` exit 0 als niet-verhoogde developer.
+Geen SSH-server, beheeraccount of centrale beheercode gewijzigd.
+
+Gebruiker heeft een afzonderlijke Rust-toolchain onder `C:\Dalf38\tools`
+expliciet goedgekeurd. Installatie via centrale LocalService-job
+`f2833ec34a7e43d1866fe2bbddc90c29` exit 0: rustc/cargo 1.99.1.
+CARGO_HOME=`C:\Dalf38\tools\cargo`, RUSTUP_HOME=`C:\Dalf38\tools\rustup`.
+Installer SHA-256 gecontroleerd tegen de officiële rustup-download:
+`38027d51d69a5d05493627a0634dbea52d6cd793c8f072d2373d3f4163eec7db`.
+Geen algemene PATH-wijziging en geen persoonlijke toolchain/cache gedeeld.
+
+213 gehashte bronbestanden uit de getrackte Windows-map van kandidaatcommit
+6b31ac7 aangeleverd; SOURCE.json registreert de volledige broncommit.
+Project `thoughtvault-pilot1105-v2`: npm ci + TypeScript/Vite-build via
+LocalService geslaagd, job `748c988634104ad4aca0e82e7aa9ef22`, exit 0.
+Eerste opdracht met cmd.exe-argumentketen faalde op syntaxis; de werkende route
+gebruikt een PowerShell-bestand en bewaart iedere native exitcode.
+
+Project `thoughtvault-native1105`, job `1c9a3ba1cb3f4a6fa433bb4615490097`:
+opgeschoonde PATH uitsluitend binnen de job, bestaande VsDevCmd.bat gebruikt.
+Rust/MSVC-smoke compileert, linkt en voert smoke.exe uit met zichtbare PASS.
+Dit is nog geen geslaagde ThoughtVault-native build. Cargo-test en frontendtest
+`43188e8476494f6d97c3b713c9fbccb3` waren bij deze notitie nog actief.
+Native project gebruikt voor deze proef de actie build om cargo test te starten;
+het standaard testveld van deze tijdelijke registratie is niet geaccepteerd.
+
+Bewijs en uitgevoerde jobscripts: `docs/qa/dalf38-2026-11-05/`.
+Er is geen MSI gebouwd of geïnstalleerd en geen distributie uitgevoerd.
+
+### Efficiënte frontendketen
+
+Losse testjob na npm ci blijkt langdurig in bronhashing te blijven; annulering
+is aangevraagd, maar was nog niet afgehandeld. Niet als test-PASS tellen.
+Nieuwe schone bronmap `thoughtvault-pilot1105-v3` voert npm ci, Vitest en Vite
+in één centrale buildactie uit, met exitcodecontrole na iedere stap. Job:
+`b0b0f347297c44778f116a9460158f02`. Bronhash vóór dependency-installatie:
+`06ae18a8c8cafa160e9fefe7b05c02ba59e708e83cc305d460f225e0dc0676f0`.
+Deze aanpassing raakt uitsluitend de projectaanlevering; centrale beheerlaag
+blijft ongewijzigd.
+
+### Herstel van bronaanlevering en native cache
+
+Frontendjob 519eb4556f0a4e598ea2dc4bad572f9e: 208 PASS, 1 SKIP, één
+testbestand faalt door ontbrekende gedeelde tests/fixtures/waveform-reference.json.
+Aanleverfout: Windows-map was uitgevlakt. Project thoughtvault-windows1105
+behoudt nu windows/ plus de getrackte tests/fixtures/. Geen app-/testcode gewijzigd.
+Nieuwe gecombineerde test/buildjob: 46a3d8c218a44b4f97a90b6e160ef4b1.
+
+Eerste cargo-testjob exit 101 wegens ontbrekende niet-getrackte runtimes.
+Volgende job verifieerde 885 bestanden uit de bestaande installatie met SHA-256,
+maar exit 101 wegens absolute oude Tauri-buildpaden na cacheverplaatsing.
+Nieuwe job 5c68cf14ee1b43a388095a34f94be427 maakt alleen de Tauri-packagecache
+schoon en herbouwt die. CARGO_TARGET_DIR staat buiten de bronmap; bestaande
+CMake en LLVM zijn uitsluitend op job-PATH gezet. Geen aanvullende toolchain
+geïnstalleerd, geen runtime gedownload, geen quarantainemateriaal hersteld.
+
+Annulering van job 43188e8476494f6d97c3b713c9fbccb3 uiteindelijk bevestigd
+(exit 1223); ruim 17 minuten bronhashing. Annulering was tijdens hashing niet
+responsief. Centrale beheercode is niet gewijzigd.
+
+### Frontend definitief geverifieerd op Dalf38
+
+Job 46a3d8c218a44b4f97a90b6e160ef4b1, project thoughtvault-windows1105:
+50 testbestanden PASS, 209 tests PASS, één opt-in SKIP. TypeScript/Vite-build
+geslaagd, job exit 0. Alle 12 frontendartifacts via SCP opgehaald en lokale
+SHA-256/lengte gelijk aan het centrale artifactmanifest. Logs in
+`dalf38-2026-11-05/frontend-final`.
+
+Native job 5c68cf14ee1b43a388095a34f94be427 faalde nog op ontbrekende
+root-fixture envelope-fixture.json en frontendDist. Dit waren aanleverfouten.
+Project thoughtvault-native-canonical1105 behoudt de repositorystructuur en
+gebruikt de 12 geverifieerde frontendartifacts van bovengenoemde job. Alleen
+de eigen app moet daardoor opnieuw worden gecompileerd. Alle aangeboden
+getrackte broncode blijft gebaseerd op dezelfde kandidaatcommit.
+
+### Native eindresultaat en runtimecorrectie
+
+Centrale testjob `5e0479f3e8e643d4a14bdda80dc5c3c3` slaagt met exit 0:
+36 Rust-tests PASS, 3 ignored; geen falende tests. Bronhash
+`49d659694d977543e8d6de84eb3a2202963667a8434c837f3ba3d92cb19f9df6`.
+Logs en 885 runtimehashes zijn teruggehaald in `dalf38-2026-11-05/native-final`
+en `resource-provenance.json`. Hardware-/modeltests blijven expliciet OPEN.
+
+Na herstel van de bronaanlevering trad een echte native-linkfout op: Whisper
+werd met DLL-runtimes gebouwd terwijl Rust crt-static gebruikt. De gegenereerde
+Visual Studio-projecten toonden MultiThreadedDLL/DebugDLL ondanks de bestaande
+CMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded. whisper.cpp vraagt CMake 3.5 aan;
+CMake-policy CMP0091 OLD negeert die runtimekeuze. De geïnstalleerde officiële
+CMake-documentatie bevestigt dit gedrag. Hertest met
+CMAKE_POLICY_DEFAULT_CMP0091=NEW en uitsluitend een herbouw van whisper-rs-sys
+slaagt. Dezelfde instelling is toegevoegd aan windows/.cargo/config.toml,
+zodat de correctie niet afhankelijk is van deze ene jobomgeving. De groene
+job gebruikte de instelling als expliciete jobvariabele; geen andere appcode
+of testverwachting is aangepast om de tests groen te maken.
+
+Werkende centrale projecten: thoughtvault-windows1105 (frontendtest/build) en
+thoughtvault-native-canonical1105 (native tests met vastgelegde frontendartifacts).
+Scripts en definities staan naast het bewijs. Eerdere pilot1105/v2/v3/native1105
+registraties zijn tussenproeven, geen vrijgegeven buildroutes. Voor herhaling
+vooraf schoon importeren: dependencies/resultaten in een bestaande bronmap
+kunnen de centrale bronhashing langdurig vertragen. Centrale beheercode bleef
+ongewijzigd. De schone Rust/Cargo-toolchain staat centraal onder C:/Dalf38/tools;
+compiler-PATH/MSVC-omgeving wordt uitsluitend per job ingesteld.
+
+Nog uit te voeren vóór uitrol: unieke releaseversie, MSI/signature, verse
+back-up/upgrade/herstel, native matrix incl. echte opname en inhoudskwaliteit,
+en afzonderlijke distributievrijgave. Deze tests zijn geen volledige releaseacceptatie.

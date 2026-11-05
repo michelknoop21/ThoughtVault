@@ -1,0 +1,17 @@
+{
+    "id":  "2c17e207d4784332860a2c58362efd40",
+    "project":  "thoughtvault-msi298",
+    "action":  "build",
+    "requestedAt":  "2026-11-05T14:01:54.3383552Z",
+    "requestedBy":  "DESKTOP-98B3AHB\\developer",
+    "startedAt":  "2026-11-05T14:01:54.8630761Z",
+    "finishedAt":  null,
+    "status":  "running",
+    "exitCode":  null,
+    "sourceCommit":  null,
+    "sourceHash":  "a144b60fd33590ac38821ad392ecfc59a45c9cb12787881b4e602786854b7738",
+    "logLocation":  "C:\\Dalf38\\jobs\\2c17e207d4784332860a2c58362efd40",
+    "artifactLocation":  "C:\\Dalf38\\artifacts\\2c17e207d4784332860a2c58362efd40",
+    "workerPid":  27388,
+    "message":  null
+}

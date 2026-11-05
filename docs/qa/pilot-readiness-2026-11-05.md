@@ -294,3 +294,45 @@ geïnstalleerde 1.0.295 gecontroleerd; geen afzonderlijke VC++ runtime vereist.
 Nieuwe kandidaat moet dezelfde controle nog doorlopen. Installatie-/rollbackscript
 is geparseerd; uitvoering en gegevensbehoud blijven open tot het MSI/handtekeningpaar
 is geverifieerd. Helpers en voorbereidende bewijsstukken: dalf38-2026-11-05/msi297/.
+
+### Afwijzing 297/298 en actuele kandidaat 299
+
+Native build 297 slaagde, maar LocalService kon Windows Installer niet bereiken
+voor WiX ICE-validatie (LGHT0217). Uitgebreide pakketjob
+848edabfb1d645b6a9df81758eb03f0a bevestigde die concrete fout. Geen validatie
+uitgeschakeld, geen service/ACL/SSH-configuratie gewijzigd. Laatste WiX-stap in de
+bestaande interactieve michel-sessie met dezelfde inputs slaagde (exit 0), met
+bewaarde ICE-templatewaarschuwingen. MSI 297 is ondertekend en cryptografisch
+geverifieerd, maar vervolgens **AFGEWEZEN** wegens meegebundelde read_token.exe.
+Deze bestaande, ongebruikte ontwikkelhulp print een opgeslagen credential.
+De helper is niet uitgevoerd; geen token opgevraagd. Hij is ook aangetroffen in
+de bestaande 1.0.295-installatie. Nog geen upgrade uitgevoerd.
+
+Kandidaat 298 voegde autobins=false toe (3fe7815). Centrale job
+2c17e207d4784332860a2c58362efd40 slaagde: 209 frontendtests PASS, 1 SKIP,
+frontendbuild en native releasebuild PASS. Cargo-metadata bevatte alleen
+thoughtvault. Tauri bundle onder michel maakte de MSI met ICE-validatie en
+faalde daarna uitsluitend op ontbrekende Windows-private updaterkey. Op de Mac
+ondertekend en cryptografisch gecontroleerd. Payloadcontrole wees ook deze MSI
+**AF**: Tauri's gegenereerde main.wxs bevatte nog een read_token-component.
+Cargo-metadata alleen is dus onvoldoende pakketbewijs. Beide afgewezen MSI/.sig-paren
+blijven apart onder build/windows-pilot-20261105/rejected-1.0.297 en rejected-1.0.298;
+geen daarvan is geïnstalleerd of gepubliceerd.
+
+De native EXE verschilt legitiem van het MSI-exemplaar door precies drie bytes
+in Tauri's __TAURI_BUNDLE_TYPE_VAR_UNK-marker (UNK naar MSI). Alle overige bytes
+zijn volledig vergeleken en gelijk; tauri-utils 2.8.3/src/platform.rs:349–359
+bevestigt de marker. Payloadhashcontrole normaliseert uitsluitend deze bekende
+bundelmarker; geen algemene uitzondering op binary-integriteit. 885 runtimefiles
+moeten daarnaast afzonderlijk hashgelijk zijn en onverwachte payload wordt afgewezen.
+
+De ongebruikte helperbron is nu verwijderd in commit
+870c3f93f75620f4a932f6cacf595f7ce2850aea; unieke kandidaat **1.0.299**.
+Centrale buildjob 18916d4c4d5b4251bfeb9a9f7f8074ee was bij deze notitie actief.
+Frontend wordt alleen herbouwd: de helper vergelijkt de frontendbronbestanden
+met de 209-PASS-baseline van job 2c17e207d4784332860a2c58362efd40 voordat de
+ongewijzigde frontendteststatus wordt hergebruikt. Cargo-binarycheck, native
+releasebuild en volledige nieuwe MSI-payloadcontrole blijven verplicht.
+Installatie, rollback, daadwerkelijk herstel en opname-/inhoudsacceptatie zijn
+nog steeds OPEN. Windows Sandbox is niet aanwezig; Dalf38 is een bestaande
+gebruikersinstallatie en bewijst geen schone OS-installatie.

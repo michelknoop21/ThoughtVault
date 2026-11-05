@@ -1,0 +1,9 @@
+{
+  "sha256": "2487143419fcff7b648967f8378ec2fe0367d257cb3fc0001173775df30e0fd5",
+  "length": 110997513,
+  "signatureValid": true,
+  "trustedCommentValid": true,
+  "trustedComment": "timestamp:1793887066\tfile:ThoughtVault_1.0.297_x64.msi",
+  "tamperedPayloadRejected": true,
+  "tamperedCommentRejected": true
+}

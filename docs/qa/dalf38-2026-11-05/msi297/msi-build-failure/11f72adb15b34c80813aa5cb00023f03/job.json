@@ -1,0 +1,17 @@
+{
+    "id":  "11f72adb15b34c80813aa5cb00023f03",
+    "project":  "thoughtvault-msi1105",
+    "action":  "build",
+    "requestedAt":  "2026-11-05T13:37:19.8473686Z",
+    "requestedBy":  "DESKTOP-98B3AHB\\developer",
+    "startedAt":  "2026-11-05T13:37:22.8074663Z",
+    "finishedAt":  "2026-11-05T13:49:27.6732501Z",
+    "status":  "failed",
+    "exitCode":  1,
+    "sourceCommit":  null,
+    "sourceHash":  "2632c5cf68af7c3e6a3d1e8a8f2bb737f6aa757a2a8246dbd4181609f24dec49",
+    "logLocation":  "C:\\Dalf38\\jobs\\11f72adb15b34c80813aa5cb00023f03",
+    "artifactLocation":  "C:\\Dalf38\\artifacts\\11f72adb15b34c80813aa5cb00023f03",
+    "workerPid":  24620,
+    "message":  "Command failed with exit code 1 (phase 01)"
+}

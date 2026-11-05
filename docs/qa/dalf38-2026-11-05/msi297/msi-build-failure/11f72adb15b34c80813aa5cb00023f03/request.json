@@ -1,0 +1,48 @@
+{
+    "upload":  "",
+    "ref":  "",
+    "project":  {
+                    "name":  "thoughtvault-msi1105",
+                    "source":  {
+                                   "type":  "upload",
+                                   "location":  "thoughtvault-msi1105-upload"
+                               },
+                    "workspace":  "C:\\Dalf38\\workspaces\\thoughtvault-msi1105",
+                    "build":  {
+                                  "executable":  "powershell.exe",
+                                  "arguments":  [
+                                                    "-NoProfile",
+                                                    "-ExecutionPolicy",
+                                                    "RemoteSigned",
+                                                    "-File",
+                                                    "dalf-build.ps1"
+                                                ]
+                              },
+                    "test":  {
+                                 "executable":  "powershell.exe",
+                                 "arguments":  [
+                                                   "-NoProfile",
+                                                   "-ExecutionPolicy",
+                                                   "RemoteSigned",
+                                                   "-File",
+                                                   "dalf-build.ps1"
+                                               ]
+                             },
+                    "artifacts":  [
+                                      "package",
+                                      "resource-provenance.json",
+                                      "wix-provenance.json"
+                                  ],
+                    "toolchain":  [
+                                      "node",
+                                      "npm",
+                                      "rust-x86_64-pc-windows-msvc",
+                                      "msvc",
+                                      "cmake",
+                                      "llvm",
+                                      "existing-wix314"
+                                  ]
+                },
+    "id":  "11f72adb15b34c80813aa5cb00023f03",
+    "action":  "build"
+}

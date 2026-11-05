@@ -1,0 +1,22 @@
+rustc 1.99.1 (58cf8f9c3 2026-10-13)
+cargo 1.99.1 (5f94df478 2026-08-27)
+
+> thoughtvault-windows@0.1.0 build
+> tsc && vite build
+
+[36mvite v6.4.1 [32mbuilding for production...[36m[39m
+transforming...
+[32m✓[39m 156 modules transformed.
+rendering chunks...
+computing gzip size...
+[2mdist/[22m[32mwidget.html                            [39m[1m[2m  0.50 kB[22m[1m[22m[2m │ gzip:   0.31 kB[22m
+[2mdist/[22m[32mindex.html                             [39m[1m[2m  0.68 kB[22m[1m[22m[2m │ gzip:   0.38 kB[22m
+[2mdist/[22m[32massets/app-logo-D_2eLrno.png           [39m[1m[2m136.93 kB[22m[1m[22m
+[2mdist/[22m[35massets/widget-iBxBy2bK.css             [39m[1m[2m  4.03 kB[22m[1m[22m[2m │ gzip:   1.33 kB[22m
+[2mdist/[22m[35massets/main-BYXhh9Bh.css               [39m[1m[2m128.11 kB[22m[1m[22m[2m │ gzip:  24.30 kB[22m
+[2mdist/[22m[36massets/index-Cmz8eXsi.js               [39m[1m[2m  1.09 kB[22m[1m[22m[2m │ gzip:   0.52 kB[22m
+[2mdist/[22m[36massets/index-BIJ-Tnzo.js               [39m[1m[2m  2.22 kB[22m[1m[22m[2m │ gzip:   0.82 kB[22m
+[2mdist/[22m[36massets/widget-Cw9cyAJ3.js              [39m[1m[2m  2.70 kB[22m[1m[22m[2m │ gzip:   1.13 kB[22m
+[2mdist/[22m[36massets/WaveformVisualizer-CocyHYYy.js  [39m[1m[2m244.65 kB[22m[1m[22m[2m │ gzip:  75.58 kB[22m
+[2mdist/[22m[36massets/main-voSF1lcF.js                [39m[1m[2m428.72 kB[22m[1m[22m[2m │ gzip: 128.01 kB[22m
+[32m✓ built in 2.57s[39m

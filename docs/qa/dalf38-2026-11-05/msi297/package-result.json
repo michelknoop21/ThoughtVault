@@ -1,0 +1,29 @@
+﻿{
+    "path":  "C:\\Dalf38\\incoming\\acceptance297\\ThoughtVault_1.0.297_x64.msi",
+    "lightExitCode":  0,
+    "inputs":  [
+                   {
+                       "sha256":  "E54F9A3C63BCE6AB9210072D3A28861AEA3C25E0811242207CBE763487ACE4FE",
+                       "path":  "C:\\Dalf38\\temp\\thoughtvault-cargo-target\\release\\wix\\x64\\main.wxs"
+                   },
+                   {
+                       "sha256":  "A0D957C03A34AEA9961EC42D3531A76B58593F4B08259C9C96B7385DF6EAFD55",
+                       "path":  "C:\\Dalf38\\temp\\thoughtvault-cargo-target\\release\\wix\\x64\\main.wixobj"
+                   },
+                   {
+                       "sha256":  "556505F49B8E12B63BD43931F4B7BFA5BA33D08319C64DC0F78095D90FE3E78A",
+                       "path":  "C:\\Dalf38\\temp\\thoughtvault-cargo-target\\release\\wix\\x64\\locale.wxl"
+                   },
+                   {
+                       "sha256":  "326B7C177E6E9E73BF01F61CBD348997B65C4CB55D47A7A20E8AAA5A9E97C365",
+                       "path":  "C:\\Dalf38\\temp\\thoughtvault-cargo-target\\release\\ThoughtVault.exe"
+                   }
+               ],
+    "length":  110997513,
+    "sourceCommit":  "6ff05811314086abff94f1398dab973545725866",
+    "sha256":  "2487143419FCFF7B648967F8378EC2FE0367D257CB3FC0001173775DF30E0FD5",
+    "identity":  "DESKTOP-98B3AHB\\michel",
+    "verifiedResources":  885,
+    "status":  "built-validation-enabled",
+    "updaterVerified":  false
+}

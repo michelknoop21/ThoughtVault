@@ -1,0 +1,13 @@
+﻿{
+    "verifiedResources":  885,
+    "tauriBundleExitCode":  1,
+    "path":  "C:\\Dalf38\\incoming\\acceptance298\\ThoughtVault_1.0.298_x64.msi",
+    "nativeBuildJob":  "2c17e207d4784332860a2c58362efd40",
+    "sourceCommit":  "3fe781593104a7c2416bec524cf3d044bf50f34f",
+    "bundledExecutableHash":  "CA08BB0E2D32E24C93E7C832F95AD74591303389D720E724F107A24C2F22813B",
+    "sha256":  "4D12F8706691F1558D6D4443D9A1A83CA4AA696DF4CE203E50B4A5CABD56EB12",
+    "identity":  "DESKTOP-98B3AHB\\michel",
+    "length":  110972946,
+    "status":  "built-updater-signing-pending",
+    "updaterVerified":  false
+}

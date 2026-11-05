@@ -1,0 +1,12 @@
+[
+    {
+        "path":  "dalf-build.ps1",
+        "sha256":  "5b3ec1018869716be8c9cbae9f8873c151802fef5d02d17bc2c31b72e03bbd75",
+        "length":  1968
+    },
+    {
+        "path":  "vc-env.cmd",
+        "sha256":  "850b04f31826a52a224403116411cec7654f1bc244d1b4fa3c727a58231f6ab8",
+        "length":  162
+    }
+]

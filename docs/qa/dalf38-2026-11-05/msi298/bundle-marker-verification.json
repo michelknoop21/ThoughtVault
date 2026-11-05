@@ -1,0 +1,9 @@
+{
+  "nativeSha256": "ca08bb0e2d32e24c93e7c832f95ad74591303389d720e724f107a24c2f22813b",
+  "packagedSha256": "a368f45ca39d14b8911506248ca1c154504509e993b027ae9d95c0573fe6316a",
+  "onlyChange": "__TAURI_BUNDLE_TYPE_VAR_UNK -> __TAURI_BUNDLE_TYPE_VAR_MSI",
+  "offset": 20995234,
+  "changedBytes": 3,
+  "allOtherBytesEqual": true,
+  "source": "Installed tauri-utils-2.8.3/src/platform.rs:349-359"
+}

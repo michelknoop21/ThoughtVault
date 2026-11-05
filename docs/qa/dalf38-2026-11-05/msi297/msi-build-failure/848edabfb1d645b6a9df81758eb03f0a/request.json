@@ -1,0 +1,40 @@
+{
+    "upload":  "",
+    "ref":  "",
+    "project":  {
+                    "name":  "thoughtvault-package297",
+                    "source":  {
+                                   "type":  "upload",
+                                   "location":  "thoughtvault-package297-upload"
+                               },
+                    "workspace":  "C:\\Dalf38\\workspaces\\thoughtvault-package297",
+                    "build":  {
+                                  "executable":  "powershell.exe",
+                                  "arguments":  [
+                                                    "-NoProfile",
+                                                    "-ExecutionPolicy",
+                                                    "RemoteSigned",
+                                                    "-File",
+                                                    "dalf-build.ps1"
+                                                ]
+                              },
+                    "test":  {
+                                 "executable":  "powershell.exe",
+                                 "arguments":  [
+                                                   "-NoProfile",
+                                                   "-ExecutionPolicy",
+                                                   "RemoteSigned",
+                                                   "-File",
+                                                   "dalf-build.ps1"
+                                               ]
+                             },
+                    "artifacts":  [
+                                      "package"
+                                  ],
+                    "toolchain":  [
+                                      "existing-validated-thoughtvault-msi1105-source-and-cache"
+                                  ]
+                },
+    "id":  "848edabfb1d645b6a9df81758eb03f0a",
+    "action":  "build"
+}

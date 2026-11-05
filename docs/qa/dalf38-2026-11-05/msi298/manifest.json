@@ -1,0 +1,47 @@
+[
+  {
+    "path": "invalid.wav",
+    "length": 45,
+    "sha256": "e5d1cb43803fda5f50bdf3ec8b69483464327eb45d6213cfb905f59a03738511"
+  },
+  {
+    "path": "qa.aac",
+    "length": 285492,
+    "sha256": "fcaecfdfaa046025bd38bb5760f4bd24ab168b8c4e417949c9055bd2693c8859"
+  },
+  {
+    "path": "qa.flac",
+    "length": 551900,
+    "sha256": "2ee7c8a4d638cd71ac02dc8f7ab6f040fb80beb43010713d7954c05b1be220e4"
+  },
+  {
+    "path": "qa.m4a",
+    "length": 284894,
+    "sha256": "fe2609eefd2c49173d42144976ceb94eb59c91f542d60491ef7377c83f280ce0"
+  },
+  {
+    "path": "qa.mp3",
+    "length": 90188,
+    "sha256": "0c445969a0bff2c0c2439928dca990c175f2cceb66182f3759d5b29044ebc704"
+  },
+  {
+    "path": "qa.mp4",
+    "length": 284914,
+    "sha256": "4937058973d92b378917d5b44c3263a3fe1e93be3356e015e74988de2d1b7e80"
+  },
+  {
+    "path": "qa.ogg",
+    "length": 218877,
+    "sha256": "0f8a5c2101d8313bca96be7968e46b60acfb2bdeabae1ca89569e3d4ae52dd2e"
+  },
+  {
+    "path": "qa.wav",
+    "length": 956416,
+    "sha256": "8e02af1de58b53b5771fd53e630c67b75510845f36304bc469fef04ddb5b5b37"
+  },
+  {
+    "path": "silence.wav",
+    "length": 160044,
+    "sha256": "262d1f34f300560a4c82ba8127ddea9e1d72946f187fdbd3e8f70ee096077aec"
+  }
+]

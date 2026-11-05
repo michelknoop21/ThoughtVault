@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Settings24Regular, Options24Regular, DocumentText24Regular, Calendar24Regular, Notebook24Regular, Person24Regular } from "@fluentui/react-icons";
+import { useSearchParams } from "react-router-dom";
+import { Settings24Regular, WaveformIcon, AdvancedIcon, DocumentText24Regular, Calendar24Regular, VaultIcon, Person24Regular } from "../components/ui/StudioIcons";
 import { GeneralTab } from "../components/settings/GeneralTab";
 import { ProcessingTab } from "../components/settings/ProcessingTab";
 import { NotulenTab } from "../components/settings/NotulenTab";
@@ -10,16 +11,17 @@ import { AdvancedTab } from "../components/settings/AdvancedTab";
 
 const TABS = [
   { name: "Algemeen", icon: <Settings24Regular /> },
-  { name: "Verwerking", icon: <Options24Regular /> },
+  { name: "Verwerking", icon: <WaveformIcon /> },
   { name: "Notulen", icon: <DocumentText24Regular /> },
   { name: "Agenda", icon: <Calendar24Regular /> },
-  { name: "Obsidian", icon: <Notebook24Regular /> },
+  { name: "Obsidian", icon: <VaultIcon /> },
   { name: "Account", icon: <Person24Regular /> },
-  { name: "Geavanceerd", icon: <Settings24Regular /> },
+  { name: "Geavanceerd", icon: <AdvancedIcon /> },
 ];
 
 export function SettingsPage() {
-  const [tab, setTab] = useState("Verwerking");
+  const [params] = useSearchParams();
+  const [tab, setTab] = useState(params.get("tab") === "notulen" ? "Notulen" : "Verwerking");
 
   return <div className="page-scroll northstar-settings">
     <h1>Instellingen</h1>

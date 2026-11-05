@@ -1,3 +1,4 @@
+import { useConfirmation } from "../ui/useConfirmation";
 import { useState, useEffect, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
@@ -6,26 +7,57 @@ import {
   CheckmarkCircle24Regular,
   ErrorCircle24Regular,
   Laptop24Regular,
-} from "@fluentui/react-icons";
+} from "../ui/StudioIcons";
 import { transcriptionAdvice } from "../../services/processingAdvice";
 import type { SystemSpecs } from "../../services/tauriCommands";
 import { loadCredential } from "../../services/tauriCommands";
+import { fetchOllamaModels, isOllamaCloudURL, OLLAMA_LOCAL_URL, OLLAMA_CLOUD_URL } from "../../services/ollamaModels";
 import { WHISPER_MODELS } from "../../types";
 import { useRecordingStore } from "../../stores/recordingStore";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { SettingsField, CredentialField } from "./SettingsFields";
 
+import { PersonalCorrections } from "./PersonalCorrections";
+
 export function ProcessingTab() {
+  const { confirm, confirmation } = useConfirmation();
   const [specs, setSpecs] = useState<SystemSpecs | null>(null);
   const [specError, setSpecError] = useState("");
   const [setupDetails, setSetupDetails] = useState(false);
   const [modelError, setModelError] = useState("");
-  const advice = transcriptionAdvice(specs);
-  useEffect(() => { invoke<SystemSpecs>("get_system_specs").then(setSpecs).catch(() => setSpecError("Systeemgegevens niet beschikbaar")); }, []);
+  const advice = {
+    ...transcriptionAdvice(specs),
+    ...(!specs && !specError ? { name: "Systeemadvies wordt geladen", reason: "Systeemgegevens worden opgehaald. Je huidige modelkeuze blijft behouden." } : {}),
+  };
   const settings = useSettingsStore();
+  const [showAllModels, setShowAllModels] = useState(false);
+  const visibleModels = WHISPER_MODELS.filter(model => showAllModels || !advice.model
+    || model.id.startsWith("faster-whisper-") || model.id === "base" || model.id.startsWith("parakeet-") || advice.models.includes(model.id) || model.id === settings.whisper_model);
+  useEffect(() => { invoke<SystemSpecs>("get_system_specs").then(setSpecs).catch(() => setSpecError("Systeemgegevens niet beschikbaar")); }, []);
   const isTranscribing = useRecordingStore(s => s.backgroundTasks.some(task => task.status === "transcribing" || task.status === "downloading"));
   const [ollamaTestStatus, setOllamaTestStatus] = useState<"idle" | "testing" | "success" | "error">("idle");
 
+
+  const [ollamaModels, setOllamaModels] = useState<string[]>([]);
+  const [ollamaModelsLoading, setOllamaModelsLoading] = useState(false);
+  const [ollamaModelsError, setOllamaModelsError] = useState("");
+  const [modelsRefresh, setModelsRefresh] = useState(0);
+  const ollamaCloud = isOllamaCloudURL(settings.ollama_url);
+  useEffect(() => {
+    if (settings.processing_mode !== "local" || settings.notulen_provider !== "ollama") return;
+    let active = true;
+    setOllamaModels([]);
+    setOllamaModelsError("");
+    setOllamaModelsLoading(true);
+    const timer = setTimeout(() => {
+      void fetchOllamaModels(settings.ollama_url).then(models => {
+        if (!active) return;
+        setOllamaModels(models);
+      }).catch(error => { if (active) setOllamaModelsError(String(error instanceof Error ? error.message : error)); })
+        .finally(() => { if (active) setOllamaModelsLoading(false); });
+    }, 350);
+    return () => { active = false; clearTimeout(timer); };
+  }, [settings.processing_mode, settings.notulen_provider, settings.ollama_url, modelsRefresh]);
 
   // Local Whisper model state
   const [modelExists, setModelExists] = useState<boolean | null>(null);
@@ -96,11 +128,11 @@ export function ProcessingTab() {
     }
     setTimeout(() => setOllamaTestStatus("idle"), 3000);
   }
-  return <div className="processing-columns"><div>
+  return <div className="processing-columns">{confirmation}<div>
       <header className="settings-section-header"><div><h2>Verwerking</h2><p>Stel in hoe ThoughtVault gesprekken transcribeert en notulen genereert.</p></div></header>
       <section className="northstar-card setup-card"><header><div><small>Snelle setup</small><h3>Aanbevolen instellingen voor jouw pc</h3><p>Op basis van je systeem. Je kunt alles daarna nog aanpassen.</p></div>
         <button className="btn btn-accent" disabled={downloading} onClick={() => {
-          settings.updateSettings({ processing_mode: "local", whisper_model: advice.model, notulen_provider: settings.notulen_provider === "cloud" ? "ollama" : settings.notulen_provider });
+          settings.updateSettings({ processing_mode: "local", whisper_model: advice.model ?? settings.whisper_model, notulen_provider: settings.notulen_provider === "cloud" ? "ollama" : settings.notulen_provider });
         }}>Toepassen</button></header>
         <div className="setup-choices"><div><Laptop24Regular /><span><small>Transcriptie</small><strong>Lokaal op deze pc</strong><span>{advice.name}</span></span></div><div><DocumentText24Regular /><span><small>Notulen</small><strong>{settings.notulen_provider === "openai" ? "OpenAI" : settings.notulen_provider === "anthropic" ? "Claude" : settings.notulen_provider === "lm-studio" ? "LM Studio" : "Ollama"}</strong><span>{settings.notulen_provider === "openai" || settings.notulen_provider === "anthropic" ? "Eigen API-sleutel · aparte kosten" : "Controleer je eigen server"}</span></span></div></div>
         <button className="studio-link" onClick={() => setSetupDetails(!setupDetails)}>Bekijk details {setupDetails ? "↑" : "→"}</button>{setupDetails && <p>{advice.reason} Toepassen wijzigt de instellingen; download daarna het gekozen transcriptiemodel. Een bestaande API-provider blijft geselecteerd.</p>}
@@ -127,27 +159,32 @@ export function ProcessingTab() {
 
             {settings.processing_mode === "local" && (
               <>
-                <div style={{ padding: "0 14px 4px" }}>
-                  <SettingsField label="Transcriptiemodel (Whisper)">
+                <div style={{ padding: "0 20px 4px" }}>
+                  <SettingsField label="Transcriptiemodel">
                     <select
                       aria-label="Transcriptiemodel" disabled={downloading} value={settings.whisper_model}
                       onChange={(e) => settings.updateSettings({ whisper_model: e.target.value })}
                       className="select"
                       style={{ width: "100%" }}
                     >
-                      {WHISPER_MODELS.map((m) => (
+                      {visibleModels.map((m) => (
                         <option key={m.id} value={m.id}>
-                          {m.label} ({m.size})
+                          {m.label} ({m.size}){advice.models.includes(m.id) ? " · aanbevolen" : ""}
                         </option>
                       ))}
                     </select>
                   </SettingsField>
+                  {settings.whisper_model === "parakeet-tdt-0.6b-v3" && <p className="settings-desc">Parakeet gebruikt je persoonlijke woordenlijst nog niet als herkenningshint.</p>}
                 </div>
-                <div style={{ padding: "0 14px 12px", display: "flex", flexDirection: "column", gap: 6 }}>
+                <div style={{ padding: "0 20px 12px" }}>
+                  <label className="settings-desc"><input type="checkbox" checked={showAllModels} onChange={event => setShowAllModels(event.target.checked)} /> Alle modellen tonen</label>
+                  <p role="status" className="settings-desc">{advice.reason} Je huidige keuze blijft behouden. Dit advies meet geen snelheid of vrij werkgeheugen.</p>
+                </div>
+                <div style={{ padding: "0 20px 12px", display: "flex", flexDirection: "column", gap: 6 }}>
                   {downloading ? (
                     <><p className="settings-desc" style={{ margin: 0 }}>Downloaden… {dlPct}%</p>
                       <progress value={dlPct} max={100} aria-label="Modeldownload" />
-                      <button className="btn btn-secondary btn-sm" onClick={() => invoke("cancel_whisper_download").catch(err => setModelError(String(err)))}>Annuleren</button></>
+                      <button className="btn btn-secondary btn-sm" style={{ alignSelf: "flex-start" }} onClick={() => invoke("cancel_whisper_download").catch(err => setModelError(String(err)))}>Annuleren</button></>
                   ) : modelExists ? (
                     <p className="settings-desc-success" style={{ margin: 0 }}>
                       <CheckmarkCircle24Regular style={{ fontSize: 14, verticalAlign: "middle" }} /> Model gedownload en klaar voor gebruik
@@ -168,11 +205,11 @@ export function ProcessingTab() {
                   )}
                 </div>
                 <details className="model-library"><summary>Modellen beheren</summary>
-                  {WHISPER_MODELS.map(model => <div key={model.id}><span>{model.label} · {model.size}</span>
+                  {visibleModels.map(model => <div key={model.id}><span>{model.label} · {model.size}</span>
                     {modelLibrary.find(item => item.id === model.id)?.exists ? <>
                       <button className="btn btn-secondary btn-sm" onClick={() => invoke("show_whisper_model", { modelId: model.id }).catch(err => setModelError(String(err)))}>Toon bestand</button>
                       <button className="btn btn-secondary btn-sm" disabled={downloading || isTranscribing || model.id === settings.whisper_model} onClick={async () => {
-                        if (!confirm(`Gedownload model ${model.label} verwijderen? Je kunt het later opnieuw downloaden.`)) return;
+                        if (!await confirm(`Gedownload model ${model.label} verwijderen? Je kunt het later opnieuw downloaden.`, "Model verwijderen", "Verwijderen")) return;
                         try { await invoke("remove_whisper_model", { modelId: model.id }); await checkModel(); }
                         catch (err) { setModelError(String(err)); }
                       }}>Verwijderen</button>
@@ -190,7 +227,7 @@ export function ProcessingTab() {
             <header className="card-head"><span className="card-icon"><DocumentText24Regular /></span><div><h3>Notulen generatie</h3><p>Maak gestructureerde notulen van het transcript.</p></div></header>
             <div className="provider-tiles">{([
               ["openai", "OpenAI", "Eigen API-sleutel"], ["anthropic", "Claude", "Eigen Anthropic API-sleutel"],
-              ["ollama", "Ollama", "Lokale of eigen server"], ["lm-studio", "LM Studio", "Lokale of eigen server"],
+              ["ollama", "Ollama", "Lokaal of cloud"], ["lm-studio", "LM Studio", "Lokale of eigen server"],
             ] as const).map(([id, name, subtitle]) => <button key={id} className={settings.notulen_provider === id ? "selected" : ""}
               aria-pressed={settings.notulen_provider === id} disabled={settings.processing_mode === "cloud"}
               onClick={() => settings.updateSettings({ notulen_provider: id })}><strong>{name}</strong><span>{subtitle}</span></button>)}
@@ -200,7 +237,11 @@ export function ProcessingTab() {
 
             {settings.processing_mode === "local" && settings.notulen_provider === "ollama" && (
               <>
-                <div style={{ padding: "0 14px 4px" }}>
+                <div className="action-row" role="group" aria-label="Ollama locatie" style={{ margin: "0 20px 12px" }}>
+                  <button aria-pressed={!ollamaCloud} className={`btn btn-sm ${!ollamaCloud ? "btn-accent" : "btn-secondary"}`} onClick={() => settings.updateSettings({ ollama_url: OLLAMA_LOCAL_URL, ollama_model: "" })}>Lokaal</button>
+                  <button aria-pressed={ollamaCloud} className={`btn btn-sm ${ollamaCloud ? "btn-accent" : "btn-secondary"}`} onClick={() => settings.updateSettings({ ollama_url: OLLAMA_CLOUD_URL, ollama_model: "" })}>Cloud</button>
+                </div>
+                <div style={{ padding: "0 20px 4px" }}>
                   <SettingsField label="Ollama URL">
                     <input
                       type="url"
@@ -210,19 +251,19 @@ export function ProcessingTab() {
                     />
                   </SettingsField>
                 </div>
-                <div style={{ padding: "0 14px 4px" }}>
+                <div style={{ padding: "0 20px 4px" }}>
                   <SettingsField label="Model">
-                    <input
-                      type="text"
-                      value={settings.ollama_model}
-                      onChange={(e) => settings.updateSettings({ ollama_model: e.target.value })}
-                      placeholder="llama3.2"
-                      className="input"
-                    />
+                    {ollamaModels.length ? <select className="input" aria-label="Ollama model" value={settings.ollama_model} onChange={e => settings.updateSettings({ ollama_model: e.target.value })}>
+                      <option value="" disabled>Kies een model</option>
+                      {settings.ollama_model && !ollamaModels.includes(settings.ollama_model) && <option value={settings.ollama_model}>{settings.ollama_model}</option>}
+                      {ollamaModels.map(model => <option key={model} value={model}>{model}</option>)}
+                    </select> : <input aria-label="Ollama model" type="text" value={settings.ollama_model} onChange={e => settings.updateSettings({ ollama_model: e.target.value })} placeholder="Modelnaam" className="input" />}
+                    <p className="settings-desc" role="status">{ollamaModelsLoading ? "Modellen ophalen…" : ollamaModelsError || `${ollamaModels.length} modellen beschikbaar`}</p>
+                    <button className="btn btn-secondary btn-sm" disabled={ollamaModelsLoading} onClick={() => setModelsRefresh(n => n + 1)}>Modellen vernieuwen</button>
                   </SettingsField>
                 </div>
-                <div style={{ padding: "0 14px 14px" }}>
-                  <CredentialField credentialKey="ollama_api_key" label="API-sleutel (alleen Ollama Cloud)">
+                <div style={{ padding: "0 20px 14px" }}>
+                  <CredentialField credentialKey="ollama_api_key" label="API-sleutel (alleen Ollama Cloud)" onCredentialChange={() => setModelsRefresh(n => n + 1)}>
                   <button
                     onClick={handleTestOllama}
                     className="btn btn-secondary btn-sm"
@@ -241,7 +282,7 @@ export function ProcessingTab() {
 
             {settings.processing_mode === "local" && settings.notulen_provider === "lm-studio" && (
               <>
-                <div style={{ padding: "0 14px 4px" }}>
+                <div style={{ padding: "0 20px 4px" }}>
                   <SettingsField label="LM Studio URL">
                     <input
                       type="url"
@@ -251,7 +292,7 @@ export function ProcessingTab() {
                     />
                   </SettingsField>
                 </div>
-                <div style={{ padding: "0 14px 12px" }}>
+                <div style={{ padding: "0 20px 12px" }}>
                   <SettingsField label="Model">
                     <input
                       type="text"
@@ -267,7 +308,7 @@ export function ProcessingTab() {
 
             {settings.processing_mode === "local" &&
               (settings.notulen_provider === "openai" || settings.notulen_provider === "anthropic") && (
-              <div style={{ padding: "0 14px 12px" }}>
+              <div style={{ padding: "0 20px 12px" }}>
                 <p className="settings-desc">Dit gebruikt je eigen API-sleutel met aparte API-kosten. Je ChatGPT- of Claude-abonnement wordt hiervoor niet gebruikt.</p>
                 <SettingsField label="Model">
                   <input className="input" type="text"
@@ -282,10 +323,10 @@ export function ProcessingTab() {
           </div>
 
 
-    </div><aside className="processing-side">
+    <PersonalCorrections /></div><aside className="processing-side">
       <section className="northstar-card"><h3>Jouw pc</h3>{specs ? <dl className="system-specs"><div><dt>Processor</dt><dd>{specs.cpu || "Onbekend"}</dd></div><div><dt>Architectuur</dt><dd>{specs.architecture}</dd></div><div><dt>Geheugen</dt><dd>{specs.memory_gb} GB</dd></div><div><dt>Processorkernen</dt><dd>{specs.threads} threads</dd></div>{specs.free_storage_gb !== null && <div><dt>Opslag vrij</dt><dd>{specs.free_storage_gb} GB</dd></div>}<div><dt>Systeem</dt><dd>{specs.os_version}</dd></div></dl> : <p>{specError || "Systeemgegevens ophalen…"}</p>}</section>
-      <section className="northstar-card"><h3>Aanbevolen model</h3><h4>{advice.name}</h4><p>{advice.reason}</p><p>✓ Lokale transcriptie · Nederlands</p><p>{WHISPER_MODELS.find(m => m.id === advice.model)?.size} · CPU-verwerking</p>
-        <button className="btn btn-secondary" disabled={downloading} onClick={() => settings.updateSettings({ processing_mode: "local", whisper_model: advice.model })}>Gebruik dit model</button><p>Downloadstatus en modelkeuze staan bij Transcriptie.</p>
+      <section className="northstar-card"><h3>Aanbevolen model</h3><h4>{advice.name}</h4><p>{advice.reason}</p><p>Lokale transcriptie · CPU-verwerking</p>{advice.model && <p>{WHISPER_MODELS.find(m => m.id === advice.model)?.size} · CPU-verwerking</p>}
+        {advice.model && <button className="btn btn-secondary" disabled={downloading} onClick={() => settings.updateSettings({ processing_mode: "local", whisper_model: advice.model ?? settings.whisper_model })}>Gebruik dit model</button>}<p>Downloadstatus en modelkeuze staan bij Transcriptie.</p>
       </section>
       <section className="northstar-card"><h3>Privacy & gegevens</h3><h4>Transcriptie</h4><p>{settings.processing_mode === "local" ? "Audio wordt op deze pc omgezet naar tekst." : "Audio wordt naar de ThoughtVault-server geüpload."}</p><h4>Notulen</h4><p>{settings.processing_mode === "cloud" ? "Transcript en notulen worden op de ThoughtVault-server verwerkt." : settings.notulen_provider === "openai" ? "Het transcript wordt naar OpenAI gestuurd. Dit kost apart API-tegoed." : settings.notulen_provider === "anthropic" ? "Het transcript wordt naar Anthropic gestuurd. Dit kost apart API-tegoed." : "Het transcript wordt naar je ingestelde Ollama- of LM Studio-server gestuurd. Bij een externe server verlaat het deze pc."}</p><p>API-sleutels worden uitsluitend in Windows Credential Manager bewaard.</p></section>
     </aside></div>;

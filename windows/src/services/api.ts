@@ -89,6 +89,7 @@ function mapTranscript(raw: unknown): Transcript {
     has_transcription: hasTranscription,
     duration_seconds: Number(r.duration ?? r.duration_seconds ?? 0),
     profile_name: safeOptionalString(r.profile_name, r.profile_id),
+    profile_id: safeOptionalString(r.profile_id),
     tags: Array.isArray(r.tags) ? r.tags.filter((t): t is string => typeof t === "string") : [],
     created_at: safeString(r.created_at ?? r.date, new Date().toISOString()),
     updated_at: safeString(r.updated_at ?? r.created_at, new Date().toISOString()),

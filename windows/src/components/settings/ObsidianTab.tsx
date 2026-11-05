@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Notebook24Regular, CheckmarkCircle24Regular, ErrorCircle24Regular } from "@fluentui/react-icons";
+import { Notebook24Regular, CheckmarkCircle24Regular, ErrorCircle24Regular } from "../ui/StudioIcons";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { testObsidian } from "../../services/obsidian";
 import { SettingsField, CredentialField, CardHead } from "./SettingsFields";

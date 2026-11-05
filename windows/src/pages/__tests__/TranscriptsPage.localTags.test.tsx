@@ -57,7 +57,8 @@ it("asks for a template before regeneration and shows the job on Taken", async (
 
   expect(generate).toHaveBeenCalledWith(note.raw_transcription, expect.objectContaining({ id: "decisions" }), expect.any(Function), [], undefined);
   expect(useRecordingStore.getState().backgroundTasks[0].status).toBe("completed");
-  expect(useLocalTranscriptsStore.getState().items.find((item) => item.id === note.id)?.profile_name).toBe("Besluiten");
+  expect(useLocalTranscriptsStore.getState().items.find((item) => item.id === note.id)).toMatchObject({ profile_name: "Besluiten", has_notes: true });
+  expect(useTranscriptsStore.getState().transcripts.find((item) => item.id === note.id)?.has_notes).toBe(true);
   await act(async () => { root.unmount(); });
 });
 
@@ -111,5 +112,69 @@ it("adds a tag to a local note without a server request", async () => {
   await act(async () => { container.querySelector<HTMLButtonElement>(".td-tags-add button")!.click(); });
   expect(useLocalTranscriptsStore.getState().items[0].tags).toContain("prioriteit");
   expect(serverTags).not.toHaveBeenCalled();
+  await act(async () => { root.unmount(); });
+});
+
+it("prints a sanitized note inside the app without relying on a popup", async () => {
+  const note: Transcript = { id: "local-print", title: "Overleg <test>", notule_html: '<p>Planning</p><script>alert(1)</script>',
+    duration_seconds: 43.553, tags: [], created_at: new Date().toISOString(), updated_at: new Date().toISOString() };
+  useSettingsStore.getState().updateSettings({ processing_mode: "local" });
+  vi.spyOn(Store, "load").mockResolvedValue({ get: vi.fn().mockResolvedValue([]), set: vi.fn(), save: vi.fn() } as unknown as Store);
+  await useLocalTranscriptsStore.getState().hydrate();
+  await useLocalTranscriptsStore.getState().add(note);
+  useTranscriptsStore.setState({ transcripts: [note], selectedId: note.id });
+  const popup = vi.spyOn(window, "open");
+  const container = document.createElement("div");
+  const root = createRoot(container);
+  await act(async () => { root.render(<TranscriptsPage />); });
+  await act(async () => { container.querySelector<HTMLButtonElement>('button[title="Exporteren"]')!.click(); });
+  await act(async () => { Array.from(container.querySelectorAll<HTMLButtonElement>(".td-export-item")).find(button => button.textContent?.includes("PDF"))!.click(); });
+  const frame = document.querySelector<HTMLIFrameElement>('iframe[title="Notule afdrukken"]')!;
+  expect(frame.srcdoc).toContain("Overleg &lt;test&gt;");
+  expect(frame.srcdoc).toContain("43s");
+  expect(frame.srcdoc).not.toContain("<script>");
+  expect(popup).not.toHaveBeenCalled();
+  const print = vi.spyOn(frame.contentWindow!, "print").mockImplementation(() => {});
+  frame.dispatchEvent(new Event("load"));
+  expect(print).toHaveBeenCalledOnce();
+  vi.useFakeTimers();
+  frame.contentWindow!.dispatchEvent(new Event("afterprint"));
+  expect(frame.isConnected).toBe(true);
+  vi.runOnlyPendingTimers();
+  expect(frame.isConnected).toBe(false);
+  vi.useRealTimers();
+  await act(async () => { root.unmount(); });
+});
+
+it.each([false, true])("keeps accepted notes intact when review is required (draft write failure: %s)", async failWrite => {
+  const { NotuleReviewError } = await import("../../services/notuleAudit");
+  const note: Transcript = { id: "local-review", title: "Bestaande notule", raw_transcription: "Sam controleert vrijdag de offerte.",
+    notule_html: "<p>Bestaande goedgekeurde tekst</p>", has_notes: true, duration_seconds: 12, profile_name: "Standaard",
+    tags: [], created_at: new Date().toISOString(), updated_at: new Date().toISOString() };
+  useSettingsStore.getState().updateSettings({ processing_mode: "local", obsidian_enabled: true });
+  useProfilesStore.setState({ profiles: [{ id: "standard", name: "Standaard" }] });
+  useLocalTranscriptsStore.setState({ items: [note] });
+  useTranscriptsStore.setState({ transcripts: [note], selectedId: note.id });
+  const update = vi.spyOn(useLocalTranscriptsStore.getState(), "update").mockImplementation(async (id, patch) => {
+    if (failWrite) throw new Error("disk full");
+    useLocalTranscriptsStore.setState({ items: [{ ...note, ...patch }] });
+  });
+  vi.spyOn(LLMService, "generateNotulen").mockRejectedValue(new NotuleReviewError("Controle onzeker", "<p>Ongecontroleerd nieuw concept</p>"));
+  const autoexport = vi.spyOn(obsidian, "exportToObsidian").mockResolvedValue(undefined);
+  const container = document.createElement("div"); const root = createRoot(container);
+  await act(async () => { root.render(<TranscriptsPage />); });
+  await act(async () => { container.querySelector<HTMLButtonElement>('button[title="Notulen opnieuw genereren met AI"]')!.click(); });
+  await act(async () => { Array.from(container.querySelectorAll<HTMLButtonElement>(".td-overlay button")).find(b => b.textContent === "Regenereren")!.click(); });
+  expect(update).toHaveBeenCalledWith(note.id, expect.objectContaining({ notule_draft_html: "<p>Ongecontroleerd nieuw concept</p>" }));
+  const saved = useLocalTranscriptsStore.getState().items.find(item => item.id === note.id)!;
+  expect(saved.notule_html).toBe(note.notule_html);
+  expect(saved.raw_transcription).toBe(note.raw_transcription);
+  expect(saved.title).toBe(note.title);
+  expect(saved.has_notes).toBe(true);
+  expect(autoexport).not.toHaveBeenCalled();
+  const task = useRecordingStore.getState().backgroundTasks[0];
+  expect(task.status).toBe("failed");
+  if (failWrite) { expect(task.error_message).toContain("kon niet worden bewaard"); expect(saved.notule_draft_html).toBeUndefined(); }
+  else { expect(task.error_message).toContain("apart bewaard"); expect(container.textContent).toContain("Concept — niet gevalideerd"); }
   await act(async () => { root.unmount(); });
 });

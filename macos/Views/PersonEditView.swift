@@ -46,6 +46,12 @@ struct PersonEditView: View {
     // MARK: - Body
 
     var body: some View {
+        Group {
+        #if os(macOS)
+        content
+            .frame(width: 520)
+            .fixedSize(horizontal: false, vertical: true)
+        #else
         NavigationStack {
             content
                 .toolbar {
@@ -55,6 +61,8 @@ struct PersonEditView: View {
                 }
         }
         .frame(minWidth: 420, minHeight: 480)
+        #endif
+        }
         .onAppear { loadFields() }
     }
 
@@ -65,19 +73,15 @@ struct PersonEditView: View {
                 .font(TS.Font.title3Semibold)
                 .foregroundStyle(Color.labelPrimary)
 
-            // Form — label-above rows (SettingFieldRow) so the wide
-            // comma-separated inputs aren't cramped, matching Instellingen.
-            Form {
-                PersonFormFields(
-                    naam: $naam,
-                    rol: $rol,
-                    organisatie: $organisatie,
-                    aliassen: $aliassen,
-                    expertise: $expertise,
-                    internalStatus: $internalStatus
-                )
+            #if os(macOS)
+            VStack(alignment: .leading, spacing: TS.Spacing.sm) {
+                personFields
             }
-            .formStyle(.grouped)
+            .labelsHidden()
+            #else
+            Form { personFields }
+                .formStyle(.grouped)
+            #endif
 
             // Save button + feedback
             VStack(alignment: .leading, spacing: TS.Spacing.xs) {
@@ -88,6 +92,12 @@ struct PersonEditView: View {
                 }
 
                 HStack {
+                    #if os(macOS)
+                    Button("Annuleer") { dismiss() }
+                        .buttonStyle(SecondaryButtonStyle())
+                        .keyboardShortcut(.cancelAction)
+                    Spacer()
+                    #endif
                     Button {
                         savePerson()
                     } label: {
@@ -111,9 +121,19 @@ struct PersonEditView: View {
                 }
             }
 
+            #if !os(macOS)
             Spacer()
+            #endif
         }
         .padding(TS.Spacing.lg)
+    }
+
+    private var personFields: some View {
+        PersonFormFields(
+            naam: $naam, rol: $rol, organisatie: $organisatie,
+            aliassen: $aliassen, expertise: $expertise,
+            internalStatus: $internalStatus
+        )
     }
 
     // MARK: - Load

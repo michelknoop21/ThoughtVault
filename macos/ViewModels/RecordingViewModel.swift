@@ -17,6 +17,14 @@ final class RecordingViewModel {
     // MARK: - Published State
 
     var recordingState: RecordingState = .idle
+    var updateInstalling = false
+    private var pendingRegenerations = 0
+    var updateIsBusy: Bool {
+        switch recordingState {
+        case .idle, .error: return activeTasks.contains { $0.status.isActive } || isProcessingQueue || !localProcessingTasks.isEmpty || pendingRegenerations > 0
+        default: return true
+        }
+    }
 #if os(macOS)
     var selectedMode: RecordingMode = .combined
 #else
@@ -57,8 +65,21 @@ final class RecordingViewModel {
     /// Reset after each recording is dispatched.
     var selectedParticipantIDs: [String] = []
     /// "Snelle notitie" typed during the current recording; kept across pause/resume
-    /// and stored with the audio file on stop (QuickNoteStore).
-    var quickNote: String = ""
+    /// and saved while editing, then linked to the final audio file on stop.
+    var quickNote: String = "" {
+        didSet { saveQuickNoteDraft() }
+    }
+
+    func saveQuickNoteDraft() {
+        guard recordingState == .recording || recordingState == .paused else { return }
+        let url: URL?
+        #if os(macOS)
+        url = selectedMode == .systemAudio ? systemAudioCapture.currentOutputURL : audioRecorder.currentRecordingURL
+        #else
+        url = audioRecorder.currentRecordingURL
+        #endif
+        if let url { QuickNoteStore.saveDraft(quickNote, audioFilename: url.lastPathComponent) }
+    }
 
     // YouTube transcription
     var isYouTubeEnabled: Bool = false
@@ -72,6 +93,18 @@ final class RecordingViewModel {
     var captionsNotAvailable: Bool = false
 
     // MARK: - Audio Properties (computed, @Observable-compatible)
+
+    var frequencyBands: [Float] {
+        #if os(macOS)
+        switch selectedMode {
+        case .microphone: return audioRecorder.frequencyBands
+        case .systemAudio: return systemAudioCapture.frequencyBands
+        case .combined: return zip(audioRecorder.frequencyBands, systemAudioCapture.frequencyBands).map(max)
+        }
+        #else
+        return audioRecorder.frequencyBands
+        #endif
+    }
 
     /// Combined audio levels from the active recorder(s). In combined mode the
     /// levels from both audioRecorder and systemAudioCapture are merged using
@@ -306,7 +339,7 @@ final class RecordingViewModel {
     // MARK: - Recording Lifecycle
 
     func startRecording() async {
-        guard recordingState == .idle else { return }
+        guard recordingState == .idle, !updateInstalling else { return }
 
         await MainActor.run {
             recordingState = .preparing
@@ -448,6 +481,8 @@ final class RecordingViewModel {
                 let mixed = await mixAudioFiles(micURL: mic, systemURL: sys)
                 if mixed == mic {
                     audioMixFallbackOccurred = true
+                } else {
+                    UserDefaults.standard.set(mixed.path, forKey: "combinedAudio_\(mic.lastPathComponent)")
                 }
                 finalURL = mixed
             } else {
@@ -536,6 +571,7 @@ final class RecordingViewModel {
     /// the persistent Recordings directory and runs it through the standard pipeline.
     /// The picked URL is security-scoped (from .fileImporter).
     func importAudioFile(_ pickedURL: URL) async {
+        guard !updateInstalling else { return }
         let accessed = pickedURL.startAccessingSecurityScopedResource()
         defer { if accessed { pickedURL.stopAccessingSecurityScopedResource() } }
 
@@ -717,7 +753,7 @@ final class RecordingViewModel {
             var fullTranscription = ""
 
             try LocalTranscriberFactory.validateAudioFile(at: url)
-            let result = try await onDeviceTranscriber.transcribe(url: url)
+            let result = try await onDeviceTranscriber.transcribe(url: url, profileId: profileId)
             await MainActor.run {
                 self.liveTranscriptText = result
                 fullTranscription = result
@@ -764,6 +800,7 @@ final class RecordingViewModel {
     /// in the local SwiftData store. No backend server is contacted.
     /// Runs on a detached Task so the MainActor stays responsive and the user can cancel.
     func processLocally(url: URL, profileId: String, participants: [Participant] = []) async {
+        guard !updateInstalling else { return }
         let profile = availableProfiles.first { $0.id == profileId }
             ?? Profile.defaults.first { $0.id == profileId }
             ?? selectedProfile
@@ -805,7 +842,7 @@ final class RecordingViewModel {
             try Task.checkCancellation()
             try LocalTranscriberFactory.validateAudioFile(at: url)
             let transcriber = LocalTranscriberFactory.make()
-            transcription = try await transcriber.transcribe(url: url) { [weak self] fraction in
+            transcription = try await transcriber.transcribe(url: url, profileId: profile.id) { [weak self] fraction in
                 Task { @MainActor in
                     guard let self else { return }
                     guard !Task.isCancelled else { return }
@@ -881,12 +918,14 @@ final class RecordingViewModel {
         do {
             try Task.checkCancellation()
             let service = LLMServiceFactory.service(for: provider, serverURL: "")
+            let corrections = try PersonalCorrections.load()
             let html = try await service.generateNotulen(
-                transcription: transcription,
+                transcription: PersonalCorrections.text(transcription, entries: corrections, profileId: profile.id),
                 systemPrompt: profile.systemPrompt ?? "",
                 notulePrompt: QuickNoteStore.promptBlock(QuickNoteStore.note(audioFilename: url.lastPathComponent))
                     + Self.injectParticipants(into: profile.notulePrompt ?? "", participants: participants)
-                    + PersonalVocabulary.promptInstruction(),
+                    + PersonalVocabulary.promptInstruction()
+                    + PersonalCorrections.prompt(corrections, profileId: profile.id),
                 outputTemplate: profile.template
             ) { [weak self] chunk in
                 Task { @MainActor in
@@ -897,9 +936,9 @@ final class RecordingViewModel {
             }
             try Task.checkCancellation()
 
-            let datedHtml = Self.injectDate(
+            let datedHtml = PersonalCorrections.html(Self.injectDate(
                 into: QuickNoteStore.ensureNotesSection(Self.stripCodeFences(html), note: QuickNoteStore.note(audioFilename: url.lastPathComponent)),
-                date: record.createdAt)
+                date: record.createdAt), entries: corrections, profileId: profile.id)
             guard Self.hasUsableNotule(datedHtml) else {
                 throw LLMError.generationFailed("De notule bevat geen bruikbare inhoud. Controleer de transcriptie en probeer opnieuw.")
             }
@@ -987,6 +1026,9 @@ final class RecordingViewModel {
     /// transcription and the given profile — entirely on-device. Returns the new
     /// HTML and title so the open detail view can stay in sync with SwiftData.
     func regenerateNotuleLocally(taskId: String, profileId: String) async throws -> (html: String, title: String) {
+        guard !updateInstalling else { throw LLMError.generationFailed("De app wordt bijgewerkt. Probeer na de herstart opnieuw.") }
+        pendingRegenerations += 1
+        defer { pendingRegenerations -= 1 }
         guard let record = LocalTranscriptStore.shared.record(forTaskId: taskId) else {
             throw LocalStoreError.recordNotFound
         }
@@ -1005,25 +1047,27 @@ final class RecordingViewModel {
 
         let service = LLMServiceFactory.service(for: provider, serverURL: "")
         do {
+            let corrections = try PersonalCorrections.load()
             let html = try await service.generateNotulen(
-                transcription: record.rawTranscription,
+                transcription: PersonalCorrections.text(record.rawTranscription, entries: corrections, profileId: profile.id),
                 systemPrompt: profile.systemPrompt ?? "",
                 notulePrompt: QuickNoteStore.promptBlock(QuickNoteStore.note(forTranscriptId: taskId))
                     + Self.injectParticipants(into: profile.notulePrompt ?? "", participants: record.participants)
-                    + PersonalVocabulary.promptInstruction(),
+                    + PersonalVocabulary.promptInstruction()
+                    + PersonalCorrections.prompt(corrections, profileId: profile.id),
                 outputTemplate: profile.template
             ) { [weak self] _ in
                 Task { @MainActor in self?.updateTask(regenerationId, status: .generatingLocal, progress: 0.85) }
             }
 
-            let datedHtml = Self.injectDate(
+            let datedHtml = PersonalCorrections.html(Self.injectDate(
                 into: QuickNoteStore.ensureNotesSection(Self.stripCodeFences(html), note: QuickNoteStore.note(forTranscriptId: taskId)),
-                date: record.createdAt)
+                date: record.createdAt), entries: corrections, profileId: profile.id)
             guard Self.hasUsableNotule(datedHtml) else {
                 throw LLMError.generationFailed("De notule bevat geen bruikbare inhoud. Controleer de transcriptie en probeer opnieuw.")
             }
             let title = NotuleTitleExtractor.extract(from: datedHtml) ?? record.title
-            try LocalTranscriptStore.shared.finalizeNotule(taskId: taskId, html: datedHtml, title: title)
+            try LocalTranscriptStore.shared.finalizeNotule(taskId: taskId, html: datedHtml, title: title, profileId: profile.id, profileName: profile.name)
             updateTask(regenerationId, status: .completed, progress: 1)
             return (datedHtml, title)
         } catch {
@@ -1245,7 +1289,7 @@ final class RecordingViewModel {
     // MARK: - Saved Recordings
 
     func loadSavedRecordings() {
-        let urls = AudioRecorder.savedRecordingURLs()
+        let urls = AudioRecorder.primaryRecordingURLs(from: AudioRecorder.savedRecordingURLs())
         let fm = FileManager.default
         var recordings: [SavedRecording] = []
 
@@ -1452,13 +1496,15 @@ final class RecordingViewModel {
         // passed here.
         if updatedTask.status == .completed, let html = updatedTask.notuleHtml, !html.isEmpty {
             Task { @MainActor in
-                let html = await self.addNotesSectionToCloudNotule(taskId: updatedTask.taskId, html: html)
+                let correctedHTML: String
+                do { correctedHTML = try await self.addNotesSectionToCloudNotule(taskId: updatedTask.taskId, html: html, profileId: updatedTask.profileId) }
+                catch { self.updateTask(updatedTask.id, status: .error, errorMessage: "Woordenlijst toepassen mislukt: " + error.localizedDescription); return }
                 guard ObsidianService.isEnabled else { return }
-                let title = NotuleTitleExtractor.extract(from: html)
+                let title = NotuleTitleExtractor.extract(from: correctedHTML)
                     ?? (updatedTask.filename as NSString).deletingPathExtension
                 ObsidianService.tryExportDetached(
                     title: title,
-                    html: html,
+                    html: correctedHTML,
                     date: updatedTask.createdAt ?? Date(),
                     participants: [],
                     profileName: updatedTask.profileId,
@@ -1472,14 +1518,17 @@ final class RecordingViewModel {
 
     /// The server never sees the quick note: a finished cloud notule gets its Notities section
     /// on the client and is written back. Once per task, so repeated completion events stay quiet; a regenerate forces it because the server wiped the section.
-    func addNotesSectionToCloudNotule(taskId: String, html: String, force: Bool = false) async -> String {
-        let fixed = QuickNoteStore.ensureNotesSection(html, note: QuickNoteStore.note(forTranscriptId: taskId))
+    func addNotesSectionToCloudNotule(taskId: String, html: String, profileId: String? = nil, force: Bool = false) async throws -> String {
+        let entries = try PersonalCorrections.load()
+        let withNotes = QuickNoteStore.ensureNotesSection(html, note: QuickNoteStore.note(forTranscriptId: taskId))
+        let fixed = PersonalCorrections.html(withNotes, entries: entries, profileId: profileId)
         guard fixed != html, force || notesSectionWritten.insert(taskId).inserted else { return fixed }
         do {
             try await APIService.shared.updateNotuleHTML(taskId: taskId, html: fixed)
             if let index = activeTasks.firstIndex(where: { $0.taskId == taskId }) { activeTasks[index].notuleHtml = fixed }
         } catch {
             notesSectionWritten.remove(taskId)
+            if fixed != withNotes { throw error }
             os_log("[RecordingVM] Notities-sectie terugschrijven mislukt voor %{public}@: %{public}@", log: .default, type: .error, taskId, error.localizedDescription)
         }
         return fixed
@@ -1707,39 +1756,51 @@ final class RecordingViewModel {
                     AVLinearPCMIsBigEndianKey: false,
                     AVLinearPCMIsNonInterleaved: false
                 ]
-                let outputFile = try AVAudioFile(forWriting: outputURL, settings: diskSettings)
-
                 var framesWritten: AVAudioFramePosition = 0
-                while framesWritten < totalFrames {
-                    let remaining = AVAudioFrameCount(min(AVAudioFramePosition(chunkFrames), totalFrames - framesWritten))
+                do {
+                    let outputFile = try AVAudioFile(forWriting: outputURL, settings: diskSettings)
 
-                    micBuffer.frameLength = 0
-                    if micFile.framePosition < micFile.length {
-                        try micFile.read(into: micBuffer, frameCount: remaining)
-                    }
-                    sysBuffer.frameLength = 0
-                    if sysFile.framePosition < sysFile.length {
-                        try sysFile.read(into: sysBuffer, frameCount: remaining)
-                    }
+                    while framesWritten < totalFrames {
+                        let remaining = AVAudioFrameCount(min(AVAudioFramePosition(chunkFrames), totalFrames - framesWritten))
 
-                    guard let micData = micBuffer.floatChannelData?[0],
-                          let sysData = sysBuffer.floatChannelData?[0],
-                          let mixData = mixBuffer.floatChannelData?[0] else {
-                        os_log("[RecordingVM] Audio mixing failed: nil channel data, using mic only", log: log, type: .error)
+                        micBuffer.frameLength = 0
+                        if micFile.framePosition < micFile.length {
+                            try micFile.read(into: micBuffer, frameCount: remaining)
+                        }
+                        sysBuffer.frameLength = 0
+                        if sysFile.framePosition < sysFile.length {
+                            try sysFile.read(into: sysBuffer, frameCount: remaining)
+                        }
+
+                        guard let micData = micBuffer.floatChannelData?[0],
+                              let sysData = sysBuffer.floatChannelData?[0],
+                              let mixData = mixBuffer.floatChannelData?[0] else {
+                            os_log("[RecordingVM] Audio mixing failed: nil channel data, using mic only", log: log, type: .error)
+                            return micURL
+                        }
+
+                        mixBuffer.frameLength = remaining
+                        for i in 0..<Int(remaining) {
+                            let micSample: Float = i < Int(micBuffer.frameLength) ? micData[i] : 0
+                            let sysSample: Float = i < Int(sysBuffer.frameLength) ? sysData[i] : 0
+                            // Element-wise magnitude-max: pick the louder source at each sample, preserving its sign
+                            let sample = abs(micSample) >= abs(sysSample) ? micSample : sysSample
+                            mixData[i] = max(-1.0, min(1.0, sample))
+                        }
+
+                        try outputFile.write(from: mixBuffer)
+                        framesWritten += AVAudioFramePosition(remaining)
+                    }
+                }
+
+                // Reopen the finalized file before removing the redundant source.
+                do {
+                    guard try AudioRecorder.removeSourceIfMixIsComplete(sourceURL: micURL, combinedURL: outputURL, expectedFrames: totalFrames) else {
+                        os_log("[RecordingVM] Finalized mix is incomplete, using mic only", log: log, type: .error)
                         return micURL
                     }
-
-                    mixBuffer.frameLength = remaining
-                    for i in 0..<Int(remaining) {
-                        let micSample: Float = i < Int(micBuffer.frameLength) ? micData[i] : 0
-                        let sysSample: Float = i < Int(sysBuffer.frameLength) ? sysData[i] : 0
-                        // Element-wise magnitude-max: pick the louder source at each sample, preserving its sign
-                        let sample = abs(micSample) >= abs(sysSample) ? micSample : sysSample
-                        mixData[i] = max(-1.0, min(1.0, sample))
-                    }
-
-                    try outputFile.write(from: mixBuffer)
-                    framesWritten += AVAudioFramePosition(remaining)
+                } catch {
+                    os_log("[RecordingVM] Source cleanup skipped: %{public}@", log: log, type: .error, error.localizedDescription)
                 }
 
                 let attrs = try? FileManager.default.attributesOfItem(atPath: outputURL.path)

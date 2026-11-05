@@ -221,3 +221,15 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .widget-badge-dot { animation: none; }
 }
+
+/* Logical dimensions from the native macOS RecordingWidgetView. */
+.widget-drag-region { padding-left: 14px; }
+.widget-drag-handle { width: 20px; height: 32px; flex-shrink: 0; display: grid; grid-template-columns: repeat(2,2.5px); gap: 3px; align-content: center; justify-content: center; }
+.widget-drag-handle i { width: 2.5px; height: 2.5px; border-radius: 50%; background: #c9c9d580; }
+.widget-badge { gap: 6px; padding-block: 4px; }
+.widget-badge-label { font-size: 11px; }
+.widget-waveform { flex: 0 0 120px; min-width: 120px; max-width: 120px; background: rgba(8,5,15,.92); border-radius: 10px; overflow: hidden; }
+.widget-timer { font-size: 15px; min-width: 52px; font-family: ui-monospace, Consolas, monospace; }
+.widget-actions { gap: 6px; }
+.widget-btn { width: 32px; height: 32px; }
+.widget-btn-stop { padding: 7px 12px; gap: 5px; }

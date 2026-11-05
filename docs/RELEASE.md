@@ -261,3 +261,12 @@ via een willekeurige, server-only downloadcapability. Ze hebben noindex-headers,
 noindex-meta op de pagina en staan niet in de sitemap of LLM-bestanden. De publieke
 website blijft indexeerbaar. De bestaande download- en update-endpoints op
 `n8n.prezent.nl` blijven bestaan voor de huidige native updateclients.
+
+## Pilot zonder publicatie
+
+`scripts/testflight.sh ios --no-upload` archiveert en exporteert lokaal zonder
+TestFlight-upload. Ook `macos` en `all` ondersteunen deze vlag. Zonder vlag blijft
+het bestaande uploadgedrag gelden. Credentials/provisioning zijn ook voor lokale
+App Store-export vereist. Deze export is geen bewijs van installatie of acceptatie.
+
+Actuele kandidaat, checks en open gates: [pilot 5 november](qa/pilot-readiness-2026-11-05.md).

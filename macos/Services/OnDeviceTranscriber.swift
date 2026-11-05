@@ -113,7 +113,7 @@ final class OnDeviceTranscriber {
 
     /// Transcribes an audio file at the given URL and returns the full transcription text.
     /// Uses on-device recognition where available, falls back to server if needed.
-    func transcribe(url: URL) async throws -> String {
+    func transcribe(url: URL, profileId: String? = nil) async throws -> String {
         guard let recognizer = speechRecognizer, recognizer.isAvailable else {
             throw TranscriberError.recognizerUnavailable
         }
@@ -134,7 +134,7 @@ final class OnDeviceTranscriber {
             isTranscribing = false
         }
 
-        let vocabulary = PersonalVocabulary.terms()
+        let vocabulary = PersonalVocabulary.terms(profileId: profileId)
 
         // Watchdog: SFSpeechRecognizer can hang indefinitely on files it cannot
         // handle (never calls back). A timeout Task races the recognition callback

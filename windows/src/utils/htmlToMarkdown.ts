@@ -5,6 +5,13 @@
  * `<div>`s (kicker, sections, decision callouts, badge chips), so those are
  * flattened to clean Markdown here.
  */
+export function htmlToPlainText(html: string): string {
+  const container = document.createElement("div");
+  container.innerHTML = html.replace(/<br\s*\/?>|<\/(?:p|h[1-6]|li|div|section|blockquote|tr)>/gi, "$&\n").replace(/<\/(?:td|th)>/gi, "$&\t");
+  container.querySelectorAll("style, script, head").forEach((element) => element.remove());
+  return (container.textContent || "").split("\n").map((line) => line.trim()).join("\n").replace(/\n{3,}/g, "\n\n").trim();
+}
+
 export function htmlToMarkdown(html: string): string {
   let md = html;
 

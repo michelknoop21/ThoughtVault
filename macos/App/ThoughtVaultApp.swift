@@ -30,6 +30,20 @@ struct ThoughtVaultApp: App {
                 .environment(permissionManager)
                 .modelContainer(LocalTranscriptStore.shared.container)
                 .task {
+                    #if os(macOS)
+                    while !Task.isCancelled {
+                        if UserDefaults.standard.object(forKey: "checkForUpdates") as? Bool ?? true {
+                            await updateCheckService.checkForUpdate()
+                        }
+                        do { try await Task.sleep(for: .seconds(6 * 60 * 60)) } catch { return }
+                    }
+                    #endif
+                }
+                .task {
+                    #if os(macOS)
+                    updateCheckService.installationStateChanged = { recordingVM.updateInstalling = $0 }
+                    updateCheckService.isBusy = { recordingVM.updateIsBusy }
+                    #endif
                     await permissionManager.checkAllPermissions()
                     AudioRecorder.cleanupOldRecordings(
                         protecting: recordingVM.offlineQueue.queuedAudioURLs

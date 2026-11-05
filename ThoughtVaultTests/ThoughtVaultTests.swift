@@ -189,3 +189,41 @@ final class LiveTranscriptionPolicyTests: XCTestCase {
         XCTAssertNil(status(true, true, nil))
     }
 }
+
+@MainActor
+final class UpdateInstallationTests: XCTestCase {
+    func testRecordingCannotStartDuringUpdateInstallation() async {
+        let vm = RecordingViewModel()
+        XCTAssertFalse(vm.updateIsBusy)
+        vm.recordingState = .paused
+        XCTAssertTrue(vm.updateIsBusy)
+        vm.recordingState = .idle
+        vm.updateInstalling = true
+        await vm.startRecording()
+        XCTAssertEqual(vm.recordingState, .idle)
+    }
+}
+
+@MainActor
+final class CloudProviderTests: XCTestCase {
+    func testCloudConfigurationsSurviveReloadAndSelection() {
+        let defaults = UserDefaults(suiteName: "CloudProviderTests")!
+        defer { defaults.removePersistentDomain(forName: "CloudProviderTests") }
+        let first = CloudAIConfiguration(name: "Eerste", baseURL: "https://first.example/v1", model: "one")
+        let second = CloudAIConfiguration(name: "Tweede", baseURL: "https://second.example", model: "two")
+        CloudAIConfiguration.save([first, second], defaults: defaults)
+        XCTAssertEqual(CloudAIConfiguration.load(defaults: defaults), [first, second])
+        XCTAssertNil(CloudAIConfiguration.selected(defaults: defaults))
+        defaults.set(second.id, forKey: CloudAIConfiguration.selectedKey)
+        XCTAssertEqual(CloudAIConfiguration.selected(defaults: defaults), second)
+        XCTAssertNotEqual(first.keychainKey, second.keychainKey)
+    }
+
+    func testHostedProvidersHaveStudioEntryPoints() {
+        let choices = NotulenProvider.studioChoices
+        // Ollama Cloud is selected inside the shared Ollama location panel.
+        for provider in [NotulenProvider.openAI, .anthropic, .ollama, .openAICompatible] {
+            XCTAssertTrue(choices.contains(provider), provider.rawValue)
+        }
+    }
+}

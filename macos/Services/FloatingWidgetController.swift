@@ -38,7 +38,7 @@ class FloatingWidgetController {
         hostingView.layer?.backgroundColor = .clear
 
         let panel = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 380, height: 60),
+            contentRect: NSRect(x: 0, y: 0, width: 470, height: 60),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false

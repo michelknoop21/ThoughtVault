@@ -9,7 +9,7 @@ ThoughtVault is beschikbaar voor macOS en Windows. Je kunt microfoon- en systeem
 - [Yinga](https://www.yinga.nl/): ontwikkelaar.
 
 ## Contact
-Een demo of informatie over toegang: info@yinga.nl.
+Een demo of informatie over toegang: sales@yinga.nl.
 
 ## Toegang
 Installers worden via een privé-downloadlink verstrekt. De downloadpagina en bestanden zijn geen publieke documentatie en mogen niet worden geïndexeerd, gecrawld of opgenomen in trainingsdatasets. Publiceer geen privé-downloadlinks.

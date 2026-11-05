@@ -5,12 +5,23 @@
 # Usage: scripts/testflight.sh            # both platforms
 #        scripts/testflight.sh ios        # iOS only
 #        scripts/testflight.sh macos      # macOS only
+#        scripts/testflight.sh ios --no-upload # archive and export locally
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT_DIR="$(dirname "$SCRIPT_DIR")"
 BUILD_DIR="$ROOT_DIR/build"
 VERSION="$(tr -d '[:space:]' < "$ROOT_DIR/VERSION")"
+
+WHAT=all
+UPLOAD=true
+for arg in "$@"; do
+    case "$arg" in
+        ios|macos|all) WHAT="$arg" ;;
+        --no-upload) UPLOAD=false ;;
+        *) echo "Usage: $0 [ios|macos|all] [--no-upload]" >&2; exit 2 ;;
+    esac
+done
 
 # App Store Connect API key (identifiers, not secrets — the .p8 is the secret).
 ASC_CONFIG="$HOME/.appstoreconnect/config.json"
@@ -23,7 +34,6 @@ AUTH_ARGS=(-allowProvisioningUpdates
   -authenticationKeyID "$KEY_ID"
   -authenticationKeyIssuerID "$ISSUER_ID")
 
-WHAT="${1:-all}"
 mkdir -p "$BUILD_DIR"
 
 # Export options are generated in the ignored build directory, so a fresh
@@ -42,7 +52,9 @@ write_export_options() {
 EOF
 }
 
-write_export_options "$BUILD_DIR/ExportOptions-iOS-TestFlight.plist" upload
+IOS_DESTINATION=export
+if [ "$UPLOAD" = true ]; then IOS_DESTINATION=upload; fi
+write_export_options "$BUILD_DIR/ExportOptions-iOS-TestFlight.plist" "$IOS_DESTINATION"
 write_export_options "$BUILD_DIR/ExportOptions-macOS-TestFlight.plist" export
 
 archive_and_ship() {
@@ -68,7 +80,7 @@ archive_and_ship() {
         "${AUTH_ARGS[@]}"
 
     # macOS ExportOptions uses destination=export → upload the resulting .pkg separately.
-    if [ -n "$altool_type" ]; then
+    if [ "$UPLOAD" = true ] && [ -n "$altool_type" ]; then
         local pkg
         pkg="$(find "$exportdir" -name '*.pkg' | head -1)"
         [ -n "$pkg" ] || { echo "ERROR: no .pkg produced for $platform"; exit 1; }
@@ -91,4 +103,8 @@ if [ "$WHAT" = "macos" ] || [ "$WHAT" = "all" ]; then
         "$BUILD_DIR/ExportOptions-macOS-TestFlight.plist" "macos"
 fi
 
-echo "All requested TestFlight uploads submitted for $VERSION."
+if [ "$UPLOAD" = true ]; then
+    echo "All requested TestFlight uploads submitted for $VERSION."
+else
+    echo "Local archives and exports complete for $VERSION; nothing uploaded."
+fi

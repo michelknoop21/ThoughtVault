@@ -1,3 +1,4 @@
+import { DesktopDialog } from "../components/ui/DesktopDialog";
 import { useState } from "react";
 import { usePeopleDirectoryStore } from "../stores/peopleDirectoryStore";
 
@@ -61,19 +62,7 @@ export function SeedReviewSheet({ candidates, onClose }: SeedReviewSheetProps) {
 
   return (
     /* Overlay backdrop */
-    <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 1100,
-        background: "rgba(0,0,0,0.45)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: 24,
-      }}
-      onClick={(e) => { if (e.target === e.currentTarget) handleSkip(); }}
-    >
+    <DesktopDialog label="Deelnemers herkennen" onClose={onClose}>
       {/* Modal panel */}
       <div
         style={{
@@ -202,6 +191,6 @@ export function SeedReviewSheet({ candidates, onClose }: SeedReviewSheetProps) {
           </button>
         </div>
       </div>
-    </div>
+    </DesktopDialog>
   );
 }

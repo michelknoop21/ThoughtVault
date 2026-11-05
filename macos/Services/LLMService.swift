@@ -16,6 +16,9 @@ enum LLMError: LocalizedError {
         case .providerUnavailable:
             return "De AI-provider is niet beschikbaar."
         case .serverError(let code):
+            if code == 429 {
+                return "De AI-provider heeft een gebruikslimiet bereikt (429). Probeer later opnieuw of controleer je limiet bij de provider."
+            }
             return "Serverfout: statuscode \(code)."
         case .generationFailed(let message):
             return "Generatie mislukt: \(message)"
@@ -120,6 +123,21 @@ class LLMServiceFactory {
             let model = UserDefaults.standard.string(forKey: "anthropicModel") ?? AnthropicLLMService.defaultModel
             return AnthropicLLMService(model: model, apiKey: KeychainService.shared.load(for: "anthropicApiKey"))
 
+        case .ollamaCloud:
+            guard provider.hasAPIKey else { return MissingAPIKeyLLMService(providerName: provider.displayName) }
+            return OpenAICompatibleLLMService(baseURL: OpenAICompatibleLLMService.ollamaCloudBaseURL,
+                                              model: UserDefaults.standard.string(forKey: "ollamaCloudModel") ?? "",
+                                              apiKey: KeychainService.shared.load(for: "ollamaApiKey"))
+
+        case .openAICompatible:
+            // The bearer token is only sent over HTTPS, so other schemes are refused up front.
+            guard let config = CloudAIConfiguration.selected(), provider.hasAPIKey,
+                  URL(string: config.baseURL)?.scheme?.lowercased() == "https" else {
+                return MissingAPIKeyLLMService(providerName: provider.displayName)
+            }
+            return OpenAICompatibleLLMService(baseURL: config.baseURL, model: config.model,
+                                              apiKey: KeychainService.shared.load(for: config.keychainKey))
+
         case .appleIntelligence:
             #if canImport(FoundationModels)
             if #available(macOS 26, iOS 26, *) {
@@ -185,16 +203,21 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
     private let apiKey: String?
 
     static let openAIBaseURL = "https://api.openai.com"
+    static let ollamaCloudBaseURL = "https://ollama.com"
     static let openAIDefaultModel = "gpt-5.6-terra"
 
     /// Transcript size above which it is summarized in chunks first. The default
     /// is what a typical local model handles comfortably (conservative estimate).
-    private let maxChunkCharacters: Int
+    let maxChunkCharacters: Int
 
-    init(baseURL: String, model: String, apiKey: String? = nil, maxChunkCharacters: Int = 8_000) {
+    init(baseURL: String, model: String, apiKey: String? = nil, maxChunkCharacters: Int? = nil) {
         self.baseURL = baseURL
         self.model = model
-        self.maxChunkCharacters = maxChunkCharacters
+        // Hosted gpt-oss has 128K context; leave ample room for the profile and output.
+        let hostedGPTOSS = URL(string: baseURL)?.scheme == "https"
+            && URL(string: baseURL)?.host?.lowercased() == "ollama.com"
+            && ["gpt-oss:120b", "gpt-oss:120b-cloud", "gpt-oss:20b", "gpt-oss:20b-cloud"].contains(model)
+        self.maxChunkCharacters = maxChunkCharacters ?? (hostedGPTOSS ? 64_000 : 8_000)
         let trimmed = apiKey?.trimmingCharacters(in: .whitespacesAndNewlines)
         self.apiKey = (trimmed?.isEmpty == false) ? trimmed : nil
     }
@@ -235,7 +258,7 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
     /// POSTs an empty body to chat completions: an authenticated caller gets a
     /// validation error (4xx other than 401/403), an unauthenticated one 401. No tokens are spent.
     private func protectedEndpointStatus() async -> Int? {
-        guard let url = URL(string: "\(baseURL)/v1/chat/completions") else { return nil }
+        guard let url = URL(string: endpoint("/v1/chat/completions")) else { return nil }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.timeoutInterval = 8
@@ -246,8 +269,14 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
         return (response as? HTTPURLResponse)?.statusCode
     }
 
+    /// Accepts base URLs with or without a trailing `/v1`, as hosted providers document both.
+    private func endpoint(_ path: String) -> String {
+        let base = baseURL.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        return base + (base.hasSuffix("/v1") && path.hasPrefix("/v1/") ? String(path.dropFirst(3)) : path)
+    }
+
     private func endpointReturns200(_ path: String) async -> Bool {
-        guard let url = URL(string: "\(baseURL)\(path)") else { return false }
+        guard let url = URL(string: endpoint(path)) else { return false }
         var request = URLRequest(url: url)
         request.timeoutInterval = 5
         applyAuth(to: &request)
@@ -279,7 +308,7 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
     }
 
     private func fetchModelsOpenAI() async -> [String]? {
-        guard let url = URL(string: "\(baseURL)/v1/models") else { return nil }
+        guard let url = URL(string: endpoint("/v1/models")) else { return nil }
         var request = URLRequest(url: url)
         request.timeoutInterval = 10
         applyAuth(to: &request)
@@ -292,7 +321,7 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
     }
 
     private func fetchModelsOllamaTags() async -> [String]? {
-        guard let url = URL(string: "\(baseURL)/api/tags") else { return nil }
+        guard let url = URL(string: endpoint("/api/tags")) else { return nil }
         var request = URLRequest(url: url)
         request.timeoutInterval = 10
         applyAuth(to: &request)
@@ -387,7 +416,10 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
         onProgress: @Sendable (String) -> Void
     ) async throws -> String {
 
-        guard let url = URL(string: "\(baseURL)/v1/chat/completions") else {
+        guard !model.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            throw LLMError.generationFailed("Kies een model bij Instellingen > Verwerking.")
+        }
+        guard let url = URL(string: endpoint("/v1/chat/completions")) else {
             throw LLMError.generationFailed("Ongeldige server URL: \(baseURL)")
         }
 

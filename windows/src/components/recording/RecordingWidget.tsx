@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState } from "react";
-import { listen } from "@tauri-apps/api/event";
+import { emit, listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { stopRecording, pauseRecording, resumeRecording } from "../../services/tauriCommands";
 import { WaveformVisualizer } from "./WaveformVisualizer";
-import { useAudioLevelsRef } from "../../hooks/useAudioLevel";
+import { useAudioLevelsRef, useAudioBandsRef } from "../../hooks/useAudioLevel";
 import {
   Stop24Regular,
   Pause24Regular,
   Play24Regular,
-} from "@fluentui/react-icons";
+} from "../ui/StudioIcons";
 
 type WidgetState = "recording" | "paused" | "stopping";
 
@@ -16,6 +16,7 @@ export function RecordingWidget() {
   const [elapsed, setElapsed] = useState(0);
   const [state, setState] = useState<WidgetState>("recording");
   const levelsBufferRef = useAudioLevelsRef();
+  const bandsBufferRef = useAudioBandsRef();
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startedAtRef = useRef<number>(Date.now());
   const pausedDurationRef = useRef<number>(0);
@@ -29,16 +30,26 @@ export function RecordingWidget() {
     }
 
     // Receive synced start time from main window
-    const unlistenSync = listen<{ recordingStartedAt: number | null; pausedDuration: number }>(
+    const unlistenSync = listen<{ phase: string; recordingStartedAt: number | null; pausedAt: number | null; pausedDuration: number }>(
       "widget-sync-timer",
       (event) => {
+        // A newly loaded widget may have missed the native stop event.
+        if (!event.payload.recordingStartedAt) {
+          if (timerRef.current) clearInterval(timerRef.current);
+          void getCurrentWindow().close().catch(console.error);
+          return;
+        }
         if (event.payload.recordingStartedAt) {
           startedAtRef.current = event.payload.recordingStartedAt;
           pausedDurationRef.current = event.payload.pausedDuration ?? 0;
+          pausedAtRef.current = event.payload.pausedAt;
+          setState(event.payload.phase === "paused" ? "paused" : event.payload.phase === "stopping" ? "stopping" : "recording");
           setElapsed(calcElapsed());
         }
       }
     );
+
+    unlistenSync.then(() => emit("widget-ready")).catch(console.error);
 
     timerRef.current = setInterval(() => {
       setElapsed(calcElapsed());
@@ -57,7 +68,6 @@ export function RecordingWidget() {
   }, []);
 
   async function handleStop() {
-    if (timerRef.current) clearInterval(timerRef.current);
     setState("stopping");
     try {
       await stopRecording();
@@ -71,22 +81,8 @@ export function RecordingWidget() {
     try {
       if (state === "paused") {
         await resumeRecording();
-        // Accumulate paused duration
-        if (pausedAtRef.current) {
-          pausedDurationRef.current += Date.now() - pausedAtRef.current;
-          pausedAtRef.current = null;
-        }
-        timerRef.current = setInterval(() => {
-          const now = Date.now();
-          const totalPaused = pausedDurationRef.current;
-          setElapsed(Math.floor((now - startedAtRef.current - totalPaused) / 1000));
-        }, 1000);
-        setState("recording");
       } else {
         await pauseRecording();
-        pausedAtRef.current = Date.now();
-        if (timerRef.current) clearInterval(timerRef.current);
-        setState("paused");
       }
     } catch (e) {
       console.error("[Widget] Pause/resume failed:", e);
@@ -106,6 +102,7 @@ export function RecordingWidget() {
     <div className={`widget-pill ${isPaused ? "paused" : ""} ${isStopping ? "stopping" : ""}`}>
       {/* Drag region — entire pill is draggable except buttons */}
       <div className="widget-drag-region" data-tauri-drag-region>
+        <span className="widget-drag-handle" aria-hidden="true">{Array.from({ length: 6 }, (_, i) => <i key={i} />)}</span>
         {/* Status badge */}
         <div className={`widget-badge ${state}`}>
           <span className={`widget-badge-dot ${state}`} />
@@ -116,7 +113,7 @@ export function RecordingWidget() {
 
         {/* Waveform */}
         <div className="widget-waveform">
-          <WaveformVisualizer levelsRef={levelsBufferRef} isActive={!isPaused && !isStopping} height={32} />
+          <WaveformVisualizer levelsRef={levelsBufferRef} bandsRef={bandsBufferRef} isActive={!isPaused && !isStopping} height={32} />
         </div>
 
         {/* Timer */}

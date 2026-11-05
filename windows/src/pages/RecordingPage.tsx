@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, type CSSProperties } from "react";
 import { useNavigate } from "react-router-dom";
 import { open } from "@tauri-apps/plugin-dialog";
 import {
@@ -10,12 +10,15 @@ import {
   ArrowUpload24Regular,
   VideoChat24Regular,
   People24Regular,
-} from "@fluentui/react-icons";
+  Person24Regular,
+  Tag24Regular,
+  WaveformIcon,
+} from "../components/ui/StudioIcons";
 import { useRecordingStore } from "../stores/recordingStore";
 import { useSettingsStore } from "../stores/settingsStore";
 import { useTranscriptsStore } from "../stores/transcriptsStore";
 import { useProfilesStore } from "../stores/profilesStore";
-import { useAudioLevelsRef, useAudioLevel } from "../hooks/useAudioLevel";
+import { useAudioLevelsRef, useAudioLevel, useAudioBandsRef } from "../hooks/useAudioLevel";
 import { openWidgetWindow, closeWidgetWindow } from "../hooks/useWidgetWindow";
 import {
   startRecording,
@@ -33,12 +36,32 @@ import { SavedRecordings } from "../components/recording/SavedRecordings";
 import { SeedReviewSheet } from "./SeedReviewSheet";
 import { ParticipantPicker } from "./ParticipantPicker";
 import { usePeopleDirectoryStore } from "../stores/peopleDirectoryStore";
-import { saveQuickNote } from "../services/quickNotes";
+import { saveQuickNote, saveQuickNoteDraft } from "../services/quickNotes";
 import { useCalendarStore } from "../stores/calendarStore";
 
-import { DocumentText24Regular } from "@fluentui/react-icons";
+import { DocumentText24Regular } from "../components/ui/StudioIcons";
+
+import { studioLayout } from "../components/recording/studioLayout";
+
+import { useConfirmation } from "../components/ui/useConfirmation";
 
 export function RecordingPage() {
+  const { confirm, confirmation } = useConfirmation();
+  const workspaceRef = useRef<HTMLElement>(null);
+  const [workspaceSize, setWorkspaceSize] = useState({ width: 0, height: 0 });
+  useEffect(() => {
+    const element = workspaceRef.current;
+    if (!element) return;
+    const observer = new ResizeObserver(([entry]) => {
+      const { width, height } = entry.contentRect;
+      setWorkspaceSize({ width, height });
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+  const geometry = studioLayout(workspaceSize.width, workspaceSize.height);
+  const workspaceStyle = Object.fromEntries(Object.entries(geometry).map(([key, value]) =>
+    [`--${key.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`)}`, `${value}px`])) as CSSProperties;
   const navigate = useNavigate();
   const mode = useRecordingStore((s) => s.mode);
   const phase = useRecordingStore((s) => s.phase);
@@ -48,8 +71,6 @@ export function RecordingPage() {
   const setFilePath = useRecordingStore((s) => s.setFilePath);
   const setAutoStart = useRecordingStore((s) => s.setAutoStart);
   const startTimer = useRecordingStore((s) => s.startTimer);
-  const pauseTimer = useRecordingStore((s) => s.pauseTimer);
-  const resumeTimer = useRecordingStore((s) => s.resumeTimer);
   const addBackgroundTask = useRecordingStore((s) => s.addBackgroundTask);
   const updateBackgroundTask = useRecordingStore((s) => s.updateBackgroundTask);
   const removeBackgroundTask = useRecordingStore((s) => s.removeBackgroundTask);
@@ -82,6 +103,7 @@ export function RecordingPage() {
   const newSeedCandidates = usePeopleDirectoryStore((s) => s.newSeedCandidates);
 
   const audioLevelsRef = useAudioLevelsRef();
+  const audioBandsRef = useAudioBandsRef();
   const filePathRef = useRef<string>("");
 
   // A persisted legacy profile ID is still valid for old documents, but not
@@ -149,7 +171,8 @@ export function RecordingPage() {
           console.error("[SSE] YouTube task error:", err);
           updateBackgroundTask(task.task_id, { status: "failed", error_message: "Verbinding verloren" });
         },
-        async () => {
+        async (status) => {
+          if (status === "failed" || status === "cancelled" || status === "error") return;
           try {
             const transcripts = await api.getTranscripts();
             const result = transcripts.find(item => item.task_id === task.task_id || item.id === task.task_id);
@@ -227,7 +250,6 @@ export function RecordingPage() {
       const result = await stopRecording();
       const filePath = result.file_path || filePathRef.current;
       filePathRef.current = filePath;
-      closeWidgetWindow().catch((e) => console.error("[Recording] Widget close failed:", e));
 
       // The global handler resolves participants before resetting the store.
       // Use our snapshot for the directory prompt without clearing its inputs.
@@ -244,7 +266,7 @@ export function RecordingPage() {
       // after the WAV file is fully finalized by the recording thread.
     } catch (err) {
       console.error("[Recording] Stop failed:", err);
-      setError(err instanceof Error ? err.message : "Stoppen mislukt");
+      setError(err instanceof Error ? err.message : typeof err === "string" ? err : "Stoppen mislukt");
       setPhase("idle");
     }
   }
@@ -252,8 +274,6 @@ export function RecordingPage() {
   async function handlePause() {
     try {
       await pauseRecording();
-      setPhase("paused");
-      pauseTimer();
     } catch (error) {
       setError(error instanceof Error ? error.message : "Pauzeren mislukt");
     }
@@ -262,8 +282,6 @@ export function RecordingPage() {
   async function handleResume() {
     try {
       await resumeRecording();
-      setPhase("recording");
-      resumeTimer();
     } catch (error) {
       setError(error instanceof Error ? error.message : "Hervatten mislukt");
     }
@@ -299,38 +317,37 @@ export function RecordingPage() {
     : phase === "preparing" ? "OPNAME STARTEN" : phase === "stopping" ? "OPNAME STOPPEN" : "KLAAR OM OP TE NEMEN";
 
   async function handleKeepRecording() {
-    if (!window.confirm("Stoppen zonder te verwerken? De opname blijft beschikbaar bij Opgeslagen opnames.")) return;
-    // The global stopped handler deliberately ignores idle, keeping the WAV for
-    // manual processing later. It must not upload a recording the user cancelled.
-    setPhase("idle");
+    if (!await confirm("Stoppen zonder te verwerken? De opname blijft beschikbaar bij Opgeslagen opnames.", "Opname stoppen", "Stoppen")) return;
+    // Keep the session busy until its WAV is finalized, without starting processing.
+    useRecordingStore.setState({ phase: "stopping", processOnStop: false });
     try {
       await stopRecording();
       saveQuickNote(filePathRef.current || useRecordingStore.getState().filePath || "", quickNote);
       useRecordingStore.getState().reset();
-      await closeWidgetWindow();
+      // The widget closes itself on recording-stopped.
     } catch (err) {
-      // The phase is already idle: drop the session and widget so the UI matches.
+      // The native stop command has finished with an error; retain the saved draft.
       useRecordingStore.getState().reset();
       closeWidgetWindow().catch((e) => console.error("[Recording] Widget close failed:", e));
-      setError(err instanceof Error ? err.message : "Stoppen mislukt");
+      setError(err instanceof Error ? err.message : typeof err === "string" ? err : "Stoppen mislukt");
     }
   }
 
-  return <div className="recording-studio">
-    <section className="studio-workspace" aria-label="Opnamestudio">
+  return <div className="recording-studio">{confirmation}
+    <section ref={workspaceRef} className="studio-workspace" style={workspaceStyle} aria-label="Opnamestudio">
       <header className="studio-topline">
         <span className={`studio-status ${phase}`} role="status"><i />{status}</span>
         <span className="studio-language">Spreektaal: Nederlands</span>
       </header>
-      {error && <div className="error-banner" role="alert">{error}</div>}
+      <div className="studio-notices">{error && <div className="error-banner" role="alert">{error}</div>}
       {!isLive && !isBusy && <MeetingDetectionBanner onRecord={() => {
         setMode("combined"); void handleStartRecording("combined");
-      }} />}
+      }} />}</div>
       <div className="studio-timer" aria-label={`Opnameduur ${duration}`}>{duration}</div>
       <div className="studio-listening"><span className="studio-mini-bars" aria-hidden="true">
         {Array.from({ length: 9 }, (_, i) => <i key={i} style={{ height: 3 + (phase === "recording" ? level / 100 * (14 - i) : 0) }} />)}
       </span><span>{phase === "recording" ? "Ik luister…" : phase === "paused" ? "Opname is gepauzeerd" : isBusy ? "Even geduld…" : "Klaar"}</span></div>
-      <div className="studio-wave"><WaveformVisualizer levelsRef={audioLevelsRef} isActive={phase === "recording"} height={240} /></div>
+      <div className="studio-wave"><WaveformVisualizer levelsRef={audioLevelsRef} bandsRef={audioBandsRef} isActive={phase === "recording"} height={geometry.waveHeight} /></div>
       <div className="studio-transport">
         {isLive ? <>
           <div><button className="studio-round" onClick={phase === "paused" ? handleResume : handlePause}
@@ -338,30 +355,33 @@ export function RecordingPage() {
             <span>{phase === "paused" ? "Hervat" : "Pauzeer"}</span></div>
           <div><button className="studio-round studio-stop" onClick={handleStopRecording} aria-label="Stop en verwerk"><Stop24Regular /></button><span>Stop en verwerk</span></div>
           <div><button className="studio-round" onClick={() => setPanel("note")} aria-label="Notitie maken"><Edit24Regular /></button><span>Notitie</span></div>
-        </> : <div><button className="studio-round studio-record" onClick={() => void handleStartRecording()} disabled={isBusy} aria-label="Start opname"><MicRecord24Regular /></button>
+        </> : <div><button className="studio-round studio-record" onClick={() => void handleStartRecording()} disabled={isBusy} aria-label="Start opname"><span className="studio-record-dot" aria-hidden="true" /></button>
           <span>{isBusy ? "Even geduld…" : "Start opname"}</span></div>}
       </div>
       <div className="studio-controlbar">
-        <label><VideoChat24Regular /><span><small>Bron</small><select aria-label="Bron" value={mode} disabled={isLive || isBusy} onChange={e => setMode(e.target.value as "combined" | "microphone")}>
+        <label><WaveformIcon /><span><small>Bron</small><select aria-label="Bron" value={mode} disabled={isLive || isBusy} onChange={e => setMode(e.target.value as "combined" | "microphone")}>
           <option value="combined">Gecombineerd</option><option value="microphone">Microfoon</option>
         </select></span></label>
-        <label><DocumentText24Regular /><span><small>Opnameprofiel</small><select aria-label="Opnameprofiel" value={selectedProfileId} onChange={e => setSelectedProfileId(e.target.value)}>
+        <label><WaveformIcon /><span><small>Opnameprofiel</small><select aria-label="Opnameprofiel" value={selectedProfileId} onChange={e => setSelectedProfileId(e.target.value)}>
           {profiles.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
         </select></span></label>
-        <div className="studio-transcription"><small>Transcriptie</small><span>{settings.processing_mode === "local" ? "Whisper op deze pc" : "ThoughtVault Cloud"}</span>
+        <div className="studio-transcription"><small>Transcriptie</small><span>{settings.processing_mode === "local" ? settings.whisper_model.startsWith("faster-whisper-") ? "Faster Whisper op deze pc" : settings.whisper_model.startsWith("parakeet-") ? "Parakeet op deze pc" : "Whisper op deze pc" : "ThoughtVault Cloud"}</span>
           <button className="studio-link" disabled={isLive || isBusy} onClick={() => navigate("/settings")}>Instellen</button></div>
       </div>
     </section>
     <aside className="studio-inspector">
+      <section>
       <h2>Huidige opname</h2>
-      <div className="studio-identity"><MicRecord24Regular /><div><strong>Nieuwe opname</strong><span>Titel na verwerking</span></div></div>
-      <p className="studio-meta">Tags na verwerking</p>
+      <div className="studio-identity"><Person24Regular /><div><strong>Nieuwe opname</strong><span>Titel na verwerking</span></div></div>
+      <p className="studio-meta"><Tag24Regular />Tags na verwerking</p>
       <button className="studio-meta studio-people" onClick={() => setPanel("people")}><People24Regular />{selectedParticipantIds.length ? `${selectedParticipantIds.length} personen` : "Geen personen"}<span>＋</span></button>
-      <p className="studio-meta">Wordt na verwerking aangevuld</p>
-      <section className="studio-live-panel"><h3>Live opname</h3>
-        <dl><div><dt>Duur</dt><dd>{duration}</dd></div><div><dt>Geluidsniveau</dt><dd><meter min={0} max={100} value={phase === "recording" ? level : 0} aria-label="Geluidsniveau" /></dd></div>
+      <p className="studio-meta"><DocumentText24Regular />Wordt na verwerking aangevuld</p>
+      <section className="studio-live-panel"><h3><WaveformIcon />Live opname</h3>
+        <dl><div><dt>Duur</dt><dd>{duration}</dd></div><div><dt>Geluidsniveau</dt><dd><span className="studio-level-bars" role="meter" aria-label="Geluidsniveau" aria-valuemin={0} aria-valuemax={100} aria-valuenow={phase === "recording" ? level : 0}>{Array.from({ length: 9 }, (_, i) => <i key={i} aria-hidden="true" style={{ height: 6 + i * 1.2, opacity: phase === "recording" && i < level * 9 / 100 ? 1 : .2 }} />)}</span></dd></div>
           <div><dt>Bron</dt><dd>{mode === "combined" ? "Gecombineerd" : "Microfoon"}</dd></div><div><dt>Profiel</dt><dd>{profileName}</dd></div></dl>
       </section>
+      </section>
+      <section>
       <h2>Snelle acties</h2>
       <div className="studio-actions">
         {isLive ? <><button onClick={() => setPanel("note")}><Edit24Regular />Notitie maken{quickNote.trim() && <span>●</span>}</button>
@@ -373,13 +393,23 @@ export function RecordingPage() {
       </div>
       {settings.processing_mode === "cloud" && <label className="studio-premium"><input type="checkbox" checked={usePremium} onChange={e => setUsePremium(e.target.checked)} />Premium model</label>}
       <p className="studio-hint">{mode === "combined" ? "Microfoon en systeemgeluid worden opgenomen." : "Alleen je microfoon wordt opgenomen."} Transcriptie gebeurt na afloop.</p>
+      </section>
     </aside>
     {panel === "people" && <ParticipantPicker onClose={() => setPanel(null)} />}
     {panel && panel !== "people" && <dialog ref={dialogRef} className="studio-dialog" aria-label={panel === "note" ? "Snelle notitie" : panel === "saved" ? "Opgeslagen opnames" : "YouTube-video"} onCancel={() => setPanel(null)}>
       <header><h2>{panel === "note" ? "Snelle notitie" : panel === "saved" ? "Opgeslagen opnames" : "YouTube-video"}</h2><button className="btn btn-secondary" onClick={() => setPanel(null)}>Sluiten</button></header>
       {panel === "note" && <><p>Context voor je notulen; dit wordt apart van het gesproken transcript bewaard.</p>
-        <textarea autoFocus rows={7} className="input" aria-label="Snelle notitie" value={quickNote} onChange={e => setQuickNote(e.target.value)} />
-        <p className="text-caption">Wordt bij het stoppen met deze opname opgeslagen.</p></>}
+        <textarea autoFocus rows={7} className="input" aria-label="Snelle notitie" value={quickNote} onChange={e => {
+          try { setQuickNote(e.target.value); }
+          catch { setError("De notitie kon niet lokaal worden bewaard. De tekst blijft in het veld staan; probeer opnieuw te bewaren."); }
+        }} />
+        <p>Wordt lokaal bewaard en meegenomen in de notulen.</p>
+        <button className="btn btn-accent" disabled={!quickNote.trim()} onClick={() => {
+          try {
+            saveQuickNoteDraft(useRecordingStore.getState().filePath ?? "", quickNote);
+            setPanel(null);
+          } catch { setError("De notitie kon niet lokaal worden bewaard. Probeer opnieuw."); }
+        }}>Bewaar notitie</button></>}
       {panel === "saved" && <SavedRecordings initiallyExpanded />}
       {panel === "youtube" && <form onSubmit={e => { e.preventDefault(); void handleSubmitYouTube(); }}>
         <label>Video-URL<input className="input" type="url" value={youtubeURL} onChange={e => setYouTubeURL(e.target.value)} required placeholder="https://www.youtube.com/watch?v=…" /></label>

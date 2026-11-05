@@ -29,6 +29,16 @@ final class QuickNoteStoreTests: XCTestCase {
         XCTAssertNil(QuickNoteStore.note(audioFilename: "recording_2.wav", defaults: defaults))
     }
 
+    func testDraftEditsReplaceAndClearingRemovesOnlyThatRecordingNote() {
+        QuickNoteStore.saveDraft("Eerste punt", audioFilename: "current.wav", defaults: defaults)
+        QuickNoteStore.save("Andere opname", audioFilename: "other.wav", defaults: defaults)
+        QuickNoteStore.saveDraft("Eerste punt\nTweede punt", audioFilename: "current.wav", defaults: defaults)
+        XCTAssertEqual(QuickNoteStore.note(audioFilename: "current.wav", defaults: defaults), "Eerste punt\nTweede punt")
+        QuickNoteStore.saveDraft(" \n", audioFilename: "current.wav", defaults: defaults)
+        XCTAssertNil(QuickNoteStore.note(audioFilename: "current.wav", defaults: defaults))
+        XCTAssertEqual(QuickNoteStore.note(audioFilename: "other.wav", defaults: defaults), "Andere opname")
+    }
+
     func testPromptBlockCarriesNoteAsContext() {
         XCTAssertEqual(QuickNoteStore.promptBlock(nil), "")
         XCTAssertTrue(QuickNoteStore.promptBlock("Budget besproken").contains("Budget besproken"))

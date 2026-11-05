@@ -38,10 +38,13 @@ export type NotulenProvider = "cloud" | "ollama" | "lm-studio" | "openai" | "ant
 // fully on-device (Whisper + Ollama/LM Studio). Mirrors the macOS processingMode.
 export type ProcessingMode = "cloud" | "local";
 
-// Available local Whisper models (GGML). Maps 1:1 to ggml-<id>.bin filenames.
+// Existing model IDs stay compatible with saved settings.
 export const WHISPER_MODELS: { id: string; label: string; size: string }[] = [
+  { id: "faster-whisper-small", label: "Faster Whisper Small: Nederlands, CPU int8", size: "~486 MB" },
+  { id: "parakeet-tdt-0.6b-v3", label: "Parakeet TDT v3: lokaal op CPU", size: "~714 MB" },
+  { id: "base", label: "Base: compact model, lagere nauwkeurigheid", size: "~142 MB" },
   { id: "small", label: "Small: sneller, minder accuraat", size: "~466 MB" },
-  { id: "medium", label: "Medium: aanbevolen", size: "~1,5 GB" },
+  { id: "medium", label: "Medium: balans tussen snelheid en kwaliteit", size: "~1,5 GB" },
   { id: "large-v3", label: "Large v3: beste kwaliteit, traag op CPU", size: "~3 GB" },
 ];
 
@@ -70,6 +73,9 @@ export interface TranscriptTask {
 
 // Completed saved transcript
 export interface Transcript {
+  notule_draft_html?: string;
+  notule_review_reason?: string;
+  profile_id?: string;
   id: string;
   task_id?: string;
   title: string;
@@ -360,6 +366,7 @@ export interface AppSettings {
   default_recording_mode: RecordingMode;
   has_completed_onboarding: boolean;
   check_for_updates: boolean;
+  waveform_motion: "system" | "full" | "reduced";
   dismissed_update_version: string;
   ms365_tenant_id?: string;
   ms365_client_id?: string;
@@ -370,9 +377,9 @@ export interface AppSettings {
 
 export const DEFAULT_SETTINGS: AppSettings = {
   server_url: "https://n8n.prezent.nl/tstudio/api",
-  processing_mode: "cloud",
+  processing_mode: "local",
   whisper_model: "medium",
-  notulen_provider: "cloud",
+  notulen_provider: "ollama",
   ollama_url: "http://localhost:11434",
   ollama_model: "llama3.2",
   lm_studio_url: "http://localhost:1234",
@@ -383,6 +390,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   default_recording_mode: "combined",
   has_completed_onboarding: false,
   check_for_updates: true,
+  waveform_motion: "system",
   dismissed_update_version: "",
   obsidian_enabled: false,
   obsidian_base_url: "https://127.0.0.1:27124",

@@ -36,7 +36,9 @@ struct RecordingWidgetView: View {
             WaveformView(
                 levelsProvider: { recordingVM.audioLevels },
                 isActive: isRecording,
-                maxFPS: 60
+                maxFPS: 30,
+                bandsProvider: { recordingVM.frequencyBands },
+                animatesInBackground: true
             )
             .frame(width: 120, height: 32)
             .background {
@@ -79,12 +81,6 @@ struct RecordingWidgetView: View {
                 )
         }
         .shadow(color: .black.opacity(0.12), radius: 8, y: 3)
-        .shadow(
-            color: isRecording
-                ? Color.brandPrimary.opacity(0.10)
-                : Color.clear,
-            radius: 12, y: 0
-        )
         .scaleEffect(isHovered ? 1.02 : 1.0)
         .animation(TS.Animation.hover, value: isHovered)
         .onHover { isHovered = $0 }
@@ -104,7 +100,7 @@ struct RecordingWidgetView: View {
                 }
             }
         }
-        .foregroundStyle(Color.labelTertiary.opacity(isHovered ? 0.7 : 0.4))
+        .foregroundStyle(Color.labelSecondary.opacity(isHovered ? 1 : 0.8))
         .frame(width: 20, height: 32)
         .contentShape(Rectangle())
         .overlay { WindowDragArea() }
@@ -115,13 +111,8 @@ struct RecordingWidgetView: View {
 
     @ViewBuilder
     private var pillBackground: some View {
-        if #available(macOS 26.0, iOS 26.0, *) {
-            Capsule()
-                .fill(.ultraThinMaterial)
-        } else {
-            Capsule()
-                .fill(.ultraThickMaterial)
-        }
+        // A fixed surface keeps controls readable over both bright and dark call windows.
+        Capsule().fill(Color.surfacePrimary)
     }
 
     // MARK: - Status Badge
@@ -130,7 +121,7 @@ struct RecordingWidgetView: View {
         HStack(spacing: 6) {
             statusIndicator
             Text(stateLabelText)
-                .font(TS.Font.microBold)
+                .font(TS.Font.captionBold)
                 .foregroundStyle(statusLabelColor)
                 .textCase(.uppercase)
                 .kerning(0.8)
@@ -172,7 +163,7 @@ struct RecordingWidgetView: View {
 
     private var statusLabelColor: Color {
         switch recordingVM.recordingState {
-        case .recording: return Color.brandPrimary
+        case .recording: return Color.brandLink
         case .paused: return Color.statusWarning
         case .uploading: return Color.neonBlue
         default: return Color.labelSecondary
@@ -273,17 +264,17 @@ struct RecordingWidgetView: View {
                 Text("Stop")
                     .font(TS.Font.captionBold)
             }
-            .foregroundStyle(.white)
+            .foregroundStyle(Color.surfacePrimary)
             .padding(.horizontal, 12)
             .padding(.vertical, 7)
             .background(
                 Capsule()
                     .fill(Color.statusError)
-                    .shadow(color: Color.statusError.opacity(0.35), radius: 6, y: 2)
+
             )
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("Stop opname en upload")
+        .accessibilityLabel("Stop opname en verwerk")
     }
 
     private var uploadIndicator: some View {
@@ -370,4 +361,3 @@ private class WindowDragNSView: NSView {
         .background(Color.backgroundDark)
         .preferredColorScheme(.dark)
 }
-

@@ -249,13 +249,18 @@ final class LocalTranscriptStore {
     /// Updates the generated notule + title for a previously saved (partial) record.
     /// Throwing so callers can surface persistence failures instead of silently
     /// reporting success.
-    func finalizeNotule(taskId: String, html: String, title: String) throws {
+    func finalizeNotule(taskId: String, html: String, title: String, profileId: String? = nil, profileName: String? = nil) throws {
         guard let record = record(forTaskId: taskId) else {
             throw LocalStoreError.recordNotFound
         }
+        let original = (record.notuleHtml, record.title, record.profileId, record.profileName)
         record.notuleHtml = html
         record.title = title
-        try context.save()
+        if let profileId { record.profileId = profileId; record.profileName = profileName }
+        do { try context.save() } catch {
+            (record.notuleHtml, record.title, record.profileId, record.profileName) = original
+            throw error
+        }
     }
 
 }

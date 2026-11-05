@@ -6,10 +6,11 @@ import { useRecordingStore } from "../../stores/recordingStore";
 import { useSettingsStore } from "../../stores/settingsStore";
 
 const mocks = vi.hoisted(() => ({
+  emit: vi.fn(async () => {}),
   events: new Map<string, (event: { payload: unknown }) => void>(),
   process: vi.fn(() => new Promise<void>(() => {})),
 }));
-vi.mock("@tauri-apps/api/event", () => ({ listen: vi.fn(async (name, callback) => {
+vi.mock("@tauri-apps/api/event", () => ({ emit: mocks.emit, listen: vi.fn(async (name, callback) => {
   mocks.events.set(name, callback); return () => mocks.events.delete(name);
 }) }));
 vi.mock("../../services/localPipeline", () => ({ processLocally: mocks.process }));
@@ -32,5 +33,31 @@ it("processes a second recording while the first job is pending and ignores stal
   expect(mocks.process).toHaveBeenCalledTimes(2);
   expect(mocks.process).toHaveBeenLastCalledWith("second.wav", "second", "combined", [], 20);
   expect(useRecordingStore.getState().phase).toBe("idle");
+  await act(async () => root.unmount());
+});
+
+it("synchronizes widget pause and resume while the recording page is unmounted", async () => {
+  vi.spyOn(Date, "now").mockReturnValue(10000);
+  const root = createRoot(document.createElement("div"));
+  await act(async () => root.render(<Handler />));
+  useRecordingStore.setState({ phase: "recording", recordingStartedAt: 5000, filePath: "test.wav" });
+  await act(async () => mocks.events.get("recording-paused")!({ payload: null }));
+  expect(useRecordingStore.getState()).toMatchObject({ phase: "paused", pausedAt: 10000 });
+  expect(mocks.emit).toHaveBeenLastCalledWith("widget-sync-timer", expect.objectContaining({ phase: "paused", pausedAt: 10000 }));
+  vi.mocked(Date.now).mockReturnValue(14000);
+  await act(async () => mocks.events.get("recording-resumed")!({ payload: null }));
+  expect(useRecordingStore.getState()).toMatchObject({ phase: "recording", pausedAt: null, pausedDuration: 4000 });
+  await act(async () => mocks.events.get("recording-stopping")!({ payload: null }));
+  expect(useRecordingStore.getState()).toMatchObject({ phase: "stopping", pausedAt: 14000 });
+  await act(async () => root.unmount());
+  vi.restoreAllMocks();
+});
+it("keeps an unprocessed recording busy without sending it to a provider", async () => {
+  const root = createRoot(document.createElement("div"));
+  await act(async () => root.render(<Handler />));
+  useRecordingStore.setState({ phase: "stopping", filePath: "saved.wav", processOnStop: false });
+  await act(async () => mocks.events.get("recording-stopped")!({ payload: { file_path: "saved.wav", duration_seconds: 10 } }));
+  expect(mocks.process).not.toHaveBeenCalled();
+  expect(useRecordingStore.getState().phase).toBe("stopping");
   await act(async () => root.unmount());
 });

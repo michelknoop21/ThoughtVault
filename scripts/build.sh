@@ -1,6 +1,6 @@
 #!/bin/bash
 # Build release artifacts for the current platform
-set -e
+set -eo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/env.sh"

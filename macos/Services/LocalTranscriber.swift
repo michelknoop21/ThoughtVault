@@ -32,9 +32,10 @@ enum PersonalVocabulary {
     /// on-device directory (incl. the self-profile). MainActor because the
     /// people directory lives in SwiftData's mainContext.
     @MainActor
-    static func terms() -> [String] {
+    static func terms(profileId: String? = nil) -> [String] {
         var raw: [String] = []
         let custom = UserDefaults.standard.string(forKey: defaultsKey) ?? ""
+        raw += PersonalCorrections.active((try? PersonalCorrections.load()) ?? [], profileId: profileId).map { $0.canonical }
         raw += custom.components(separatedBy: CharacterSet(charactersIn: ",\n"))
 
         let context = LocalTranscriptStore.shared.container.mainContext
@@ -240,7 +241,7 @@ enum LocalTranscriberError: LocalizedError {
 protocol LocalTranscriber: Sendable {
     /// Transcribes an audio file fully locally and returns the text.
     /// - Parameter onProgress: coarse 0.0...1.0 progress (model download / transcription).
-    func transcribe(url: URL, onProgress: @Sendable @escaping (Double) -> Void) async throws -> String
+    func transcribe(url: URL, profileId: String?, onProgress: @Sendable @escaping (Double) -> Void) async throws -> String
 }
 
 // MARK: - Factory
@@ -303,7 +304,7 @@ struct AppleSpeechTranscriber: LocalTranscriber {
     /// are split into chunks and transcribed sequentially.
     private static let maxSingleRequestDuration: TimeInterval = 55
 
-    func transcribe(url: URL, onProgress: @Sendable @escaping (Double) -> Void) async throws -> String {
+    func transcribe(url: URL, profileId: String?, onProgress: @Sendable @escaping (Double) -> Void) async throws -> String {
         onProgress(0.05)
 
         let text: String
@@ -312,13 +313,13 @@ struct AppleSpeechTranscriber: LocalTranscriber {
             defer { chunks.forEach { try? FileManager.default.removeItem(at: $0) } }
             var parts: [String] = []
             for (index, chunkURL) in chunks.enumerated() {
-                let part = try await OnDeviceTranscriber.shared.transcribe(url: chunkURL)
+                let part = try await OnDeviceTranscriber.shared.transcribe(url: chunkURL, profileId: profileId)
                 parts.append(part)
                 onProgress(0.05 + 0.9 * (Double(index + 1) / Double(chunks.count)))
             }
             text = parts.joined(separator: " ")
         } else {
-            text = try await OnDeviceTranscriber.shared.transcribe(url: url)
+            text = try await OnDeviceTranscriber.shared.transcribe(url: url, profileId: profileId)
         }
 
         onProgress(1.0)
@@ -342,21 +343,9 @@ final class WhisperKitTranscriber: LocalTranscriber, @unchecked Sendable {
         self.model = model
     }
 
-    /// Best-effort check whether the WhisperKit model is already on disk
-    /// (default HubApi download location). Only used to pick an init timeout.
-    private static func isModelCached(_ model: String) -> Bool {
-        let base = URL.documentsDirectory
-            .appendingPathComponent("huggingface/models/argmaxinc/whisperkit-coreml")
-        guard let entries = try? FileManager.default.contentsOfDirectory(atPath: base.path) else {
-            return false
-        }
-        return entries.contains { $0.contains(model) }
-    }
-
     private struct UncheckedSendableBox<T>: @unchecked Sendable { let value: T }
 
-    /// Runs `operation` with a hard timeout. On expiry the group is cancelled
-    /// and a clear error is thrown instead of hanging forever.
+    /// Cancels the operation on timeout; Core ML may finish loading before observing cancellation.
     private static func withTimeout<T: Sendable>(
         seconds: TimeInterval,
         errorMessage: String,
@@ -374,7 +363,7 @@ final class WhisperKitTranscriber: LocalTranscriber, @unchecked Sendable {
         }
     }
 
-    func transcribe(url: URL, onProgress: @Sendable @escaping (Double) -> Void) async throws -> String {
+    func transcribe(url: URL, profileId: String?, onProgress: @Sendable @escaping (Double) -> Void) async throws -> String {
         do {
             onProgress(0.02)
 
@@ -395,18 +384,16 @@ final class WhisperKitTranscriber: LocalTranscriber, @unchecked Sendable {
             }
             onProgress(0.06)
 
-            // Loads (and downloads on first use) the requested model variant.
-            // A stalled download would otherwise hang this await forever, so cap
-            // it: generous when the model still needs downloading (626 MB),
-            // short when it is already cached locally.
+            // Cached files can still require a slow first Core ML specialization.
             let modelName = model
-            let initTimeout: TimeInterval = Self.isModelCached(modelName) ? 60 : 300
+            let initTimeout: TimeInterval = 300
             let pipe = try await Self.withTimeout(
                 seconds: initTimeout,
-                errorMessage: "Model laden duurde te lang (\(Int(initTimeout))s). Controleer je internetverbinding en probeer opnieuw."
+                errorMessage: "Model gereedmaken duurde te lang (\(Int(initTimeout))s). Probeer opnieuw of kies een kleiner model."
             ) {
                 // WhisperKit isn't Sendable; box it to cross the task-group boundary.
-                UncheckedSendableBox(value: try await WhisperKit(WhisperKitConfig(model: modelName)))
+                // Load once before VAD workers can concurrently request the same models.
+                UncheckedSendableBox(value: try await WhisperKit(WhisperKitConfig(model: modelName, load: true)))
             }.value
 
             onProgress(0.15)
@@ -420,7 +407,7 @@ final class WhisperKitTranscriber: LocalTranscriber, @unchecked Sendable {
             options.chunkingStrategy = .vad
 
             // Bias recognition toward known names/terms via Whisper's initial prompt.
-            let vocab = await MainActor.run { PersonalVocabulary.terms() }
+            let vocab = await MainActor.run { PersonalVocabulary.terms(profileId: profileId) }
             if !vocab.isEmpty, let tokenizer = pipe.tokenizer {
                 let prompt = "Namen en termen: \(vocab.joined(separator: ", "))."
                 options.promptTokens = tokenizer.encode(text: " " + prompt)

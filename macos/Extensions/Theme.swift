@@ -228,6 +228,7 @@ extension View {
 
 /// Primary button — gradient fill with brand shadow.
 struct PrimaryButtonStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var isEnabled
     var isDestructive: Bool = false
 
     func makeBody(configuration: Configuration) -> some View {
@@ -256,7 +257,7 @@ struct PrimaryButtonStyle: ButtonStyle {
                     )
             }
             .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
-            .opacity(configuration.isPressed ? 0.88 : 1.0)
+            .opacity(isEnabled ? (configuration.isPressed ? 0.88 : 1.0) : 0.45)
             .animation(TS.Animation.quick, value: configuration.isPressed)
     }
 }
@@ -297,7 +298,7 @@ struct BrandBar: View {
     }
 }
 
-/// "Developed by BuildMind" footer for consistent branding across the app.
+/// "Developed by Yinga" footer for consistent branding across the app.
 /// On macOS shown in all views; on iOS only on LoginView.
 struct BrandFooter: View {
     var body: some View {
@@ -306,20 +307,12 @@ struct BrandFooter: View {
                 .font(TS.Font.caption)
                 .foregroundStyle(Color.labelTertiary)
 
-            Image("BuildMindMark")
+            Image("YingaLogo")
+                .renderingMode(.original)
                 .resizable()
-                .aspectRatio(contentMode: .fit)
-                .frame(height: 15)
-
-            Text("BuildMind")
-                .font(.system(size: 13, weight: .semibold, design: .rounded))
-                .foregroundStyle(
-                    LinearGradient(
-                        colors: [Color.brandPrimary, Color.brandSecondary],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                )
+                .scaledToFit()
+                .frame(width: 42, height: 18)
+                .accessibilityLabel("Yinga")
         }
         .frame(maxWidth: .infinity, alignment: .center)
         .padding(.vertical, TS.Spacing.sm)

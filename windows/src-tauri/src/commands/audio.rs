@@ -77,28 +77,30 @@ pub async fn start_recording(
             let now = std::time::Instant::now();
             let mut mic = (0.0, now);
             let mut system = (0.0, now);
+            let mut mic_bands = ([0.0_f32; 7], now);
+            let mut system_bands = ([0.0_f32; 7], now);
             let mut ticker = tokio::time::interval(std::time::Duration::from_millis(33));
             loop {
                 tokio::select! {
                     _ = ticker.tick() => {
                         let level = combined_level(mic, system, std::time::Instant::now());
                         let _ = app_clone.emit("audio-level", level);
+                        let now = std::time::Instant::now();
+                        let bands: [f32; 7] = std::array::from_fn(|index| combined_level((mic_bands.0[index], mic_bands.1), (system_bands.0[index], system_bands.1), now));
+                        let _ = app_clone.emit("audio-spectrum", bands);
                     }
                     event = event_rx.recv() => match event {
                         Some(RecordingEvent::AudioLevel(level)) => mic = (level, std::time::Instant::now()),
                         Some(RecordingEvent::SystemAudioLevel(level)) => system = (level, std::time::Instant::now()),
-                        Some(RecordingEvent::Stopped { file_path, duration_seconds }) => {
-                            let _ = done_tx.send(Ok(RecordingResult { file_path: file_path.clone(), duration_seconds }));
-                            let _ = app_clone.emit("audio-level", 0.0_f32);
-                            let _ = app_clone.emit("recording-stopped", serde_json::json!({ "file_path": file_path, "duration_seconds": duration_seconds }));
-                            break;
-                        }
+                        Some(RecordingEvent::AudioSpectrum(bands)) => mic_bands = (bands, std::time::Instant::now()),
+                        Some(RecordingEvent::SystemAudioSpectrum(bands)) => system_bands = (bands, std::time::Instant::now()),
+                        Some(RecordingEvent::Stopped { .. }) => break,
                         Some(RecordingEvent::Error(error)) => {
-                            let _ = done_tx.send(Err(error.clone()));
                             if let Ok(mut state) = shared_state.lock() {
                                 if state.file_path.as_ref() == Some(&session_path) { *state = RecordingState::default(); }
                             }
                             let _ = app_clone.emit("audio-level", 0.0_f32);
+                            let _ = app_clone.emit("audio-spectrum", [0.0_f32; 7]);
                             let _ = app_clone.emit("recording-error", error);
                             break;
                         }
@@ -113,6 +115,7 @@ pub async fn start_recording(
             recording_mode,
             file_path.clone(),
             event_tx,
+            done_tx,
         )?;
 
         guard.cmd_tx = Some(cmd_tx);
@@ -129,6 +132,7 @@ pub async fn start_recording(
 
 #[tauri::command]
 pub async fn stop_recording(
+    app: AppHandle,
     state: tauri::State<'_, SharedRecordingState>,
 ) -> Result<RecordingResult, String> {
     let (cmd_tx, completion, file_path) = {
@@ -138,6 +142,7 @@ pub async fn stop_recording(
         guard.is_paused = false;
         (guard.cmd_tx.take(), guard.completion.take(), guard.file_path.clone())
     };
+    let _ = app.emit("recording-stopping", ());
     // Every exit below must clear the session, otherwise a failed stop leaves
     // is_recording=true with no completion and blocks all later recordings.
     let result: Result<RecordingResult, String> = async {
@@ -145,17 +150,24 @@ pub async fn stop_recording(
             tx.send(RecordingCommand::Stop).await.map_err(|_| "Opname-thread is gestopt".to_string())?;
         }
         let completion = completion.ok_or("Opname-resultaat niet beschikbaar")?;
-        tokio::time::timeout(std::time::Duration::from_secs(60), completion).await
-            .map_err(|_| "Opslaan van de opname duurt te lang. Controleer Opgeslagen opnames.".to_string())?
-            .map_err(|_| "Opname-thread is gestopt zonder resultaat".to_string())?
+        // Large meetings must finish mixing before the session is cleared.
+        completion.await.map_err(|_| "Opname-thread is gestopt zonder resultaat".to_string())?
     }.await;
     let mut guard = state.lock().map_err(|e| e.to_string())?;
     if guard.file_path == file_path { *guard = RecordingState::default(); }
+    drop(guard);
+    let _ = app.emit("audio-level", 0.0_f32);
+    let _ = app.emit("audio-spectrum", [0.0_f32; 7]);
+    match &result {
+        Ok(recording) => { let _ = app.emit("recording-stopped", recording); }
+        Err(error) => { let _ = app.emit("recording-error", error); }
+    }
     result
 }
 
 #[tauri::command]
 pub async fn pause_recording(
+    app: AppHandle,
     state: tauri::State<'_, SharedRecordingState>,
 ) -> Result<(), String> {
     let mut guard = state.lock().map_err(|e| e.to_string())?;
@@ -178,12 +190,15 @@ pub async fn pause_recording(
 
     // Update shared state to reflect paused status
     guard.is_paused = true;
+    drop(guard);
+    let _ = app.emit("recording-paused", ());
 
     Ok(())
 }
 
 #[tauri::command]
 pub async fn resume_recording(
+    app: AppHandle,
     state: tauri::State<'_, SharedRecordingState>,
 ) -> Result<(), String> {
     let mut guard = state.lock().map_err(|e| e.to_string())?;
@@ -206,6 +221,8 @@ pub async fn resume_recording(
 
     // Update shared state to reflect recording status
     guard.is_paused = false;
+    drop(guard);
+    let _ = app.emit("recording-resumed", ());
 
     Ok(())
 }

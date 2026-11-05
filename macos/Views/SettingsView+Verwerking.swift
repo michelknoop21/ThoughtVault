@@ -21,6 +21,8 @@ extension SettingsView {
                     quickSetupCard(advice)
                     transcriptionCard(advice)
                     notuleCard
+                    PersonalCorrectionsView(profiles: profiles)
+                        .padding(20).background(Color.surfaceSecondary).clipShape(RoundedRectangle(cornerRadius: 16))
                     if !layout.twoColumn {
                         verwerkingSide(specs, advice)
                     }
@@ -289,7 +291,7 @@ extension SettingsView {
         HStack(alignment: .top, spacing: 16) {
             Text("Eigen termen").font(.system(size: 14)).foregroundStyle(HomeColor.text2).frame(width: 96, alignment: .leading)
             VStack(alignment: .leading, spacing: 4) {
-                TextField("Michel, Django, …", text: $personalVocabulary, axis: .vertical)
+                TextField("Michel, Yinga, …", text: $personalVocabulary, axis: .vertical)
                     .textFieldStyle(.roundedBorder)
                     .autocorrectionDisabled()
                 Text("Komma-gescheiden. Deze termen en de personen uit de app sturen de herkenning van namen.")
@@ -356,14 +358,15 @@ extension SettingsView {
         VStack(alignment: .leading, spacing: 18) {
             cardHeader(icon: "doc.text", title: "Notulen", subtitle: "Maak gestructureerde notulen van het transcript.",
                        helpShown: $showNotuleHelp,
-                       help: "Het transcript gaat naar de aanbieder die je kiest en die schrijft de notulen. Ollama, LM Studio en Apple Intelligence draaien lokaal. ChatGPT en Claude gebruiken je eigen API-sleutel en API-account.")
+                       help: "Het transcript gaat naar de aanbieder die je kiest en die schrijft de notulen. Ollama, LM Studio en Apple Intelligence draaien lokaal. ChatGPT, Claude, Ollama Cloud en een OpenAI-compatibele aanbieder gebruiken je eigen API-sleutel en account.")
 
             if isLocalProcessing {
-                HStack(alignment: .top, spacing: 12) {
+                // Seven tiles do not fit one row; the grid wraps them.
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 12, alignment: .top)], spacing: 12) {
                     ForEach(NotulenProvider.studioChoices) { provider in
-                        StudioChoiceTile(selected: activeLocalProvider == provider, icon: provider.studioIcon,
+                        StudioChoiceTile(selected: (activeLocalProvider == provider || (provider == .ollama && activeLocalProvider == .ollamaCloud)), icon: provider.studioIcon,
                                          title: provider.studioName, subtitle: provider.studioSubtitle, vertical: true) {
-                            notulenProvider = provider.rawValue
+                            if !(provider == .ollama && activeLocalProvider == .ollamaCloud) { notulenProvider = provider.rawValue }
                         }
                     }
                 }
@@ -389,14 +392,47 @@ extension SettingsView {
         .studioCard()
     }
 
+    private var ollamaLocation: Binding<String> {
+        Binding(
+            get: {
+                let url = URL(string: ollamaURL.trimmingCharacters(in: .whitespacesAndNewlines))
+                let legacyCloud = url?.scheme?.lowercased() == "https" && url?.host?.lowercased() == "ollama.com"
+                return (activeLocalProvider == .ollamaCloud || legacyCloud) ? NotulenProvider.ollamaCloud.rawValue : NotulenProvider.ollama.rawValue
+            },
+            set: { value in
+                if value == NotulenProvider.ollama.rawValue {
+                    ollamaURL = "http://localhost:11434"
+                    ollamaModel = ""
+                }
+                notulenProvider = value
+            }
+        )
+    }
+
     /// Configuration of the selected provider, reusing the existing forms.
     private var providerPanel: some View {
         VStack(alignment: .leading, spacing: 10) {
+            if activeLocalProvider == .ollama || activeLocalProvider == .ollamaCloud {
+                Picker("Ollama", selection: ollamaLocation) {
+                    Text("Lokaal").tag(NotulenProvider.ollama.rawValue)
+                    Text("Cloud").tag(NotulenProvider.ollamaCloud.rawValue)
+                }
+                .pickerStyle(.segmented)
+            }
             switch activeLocalProvider {
-            case .ollama:                      ollamaConfig
+            case .ollama:
+                VStack(alignment: .leading, spacing: 10) { ollamaConfig }
+                    .task(id: ollamaURL) {
+                        ollamaModels = []
+                        try? await Task.sleep(for: .milliseconds(350))
+                        guard !Task.isCancelled else { return }
+                        let url = URL(string: ollamaURL.trimmingCharacters(in: .whitespacesAndNewlines))
+                        await loadOllamaModels(includeCredential: url?.scheme?.lowercased() == "https" && url?.host?.lowercased() == "ollama.com")
+                    }
             case .lmStudio:                    lmStudioConfig
             case .appleIntelligence:           appleIntelligenceNote
             case .openAI, .anthropic:          HostedProviderConfig(provider: activeLocalProvider).id(activeLocalProvider)
+            case .ollamaCloud, .openAICompatible: CloudProviderConfig(provider: activeLocalProvider).id(activeLocalProvider)
             case .cloud:                       EmptyView()
             }
         }

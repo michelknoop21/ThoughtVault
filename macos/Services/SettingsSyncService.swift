@@ -18,7 +18,7 @@ import Foundation
 final class SettingsSyncService: NSObject, @unchecked Sendable {
     static let shared = SettingsSyncService()
 
-    private static let keys = ["notulenProvider", "ollamaURL", "ollamaModel", "openAIModel", "anthropicModel"]
+    private static let keys = ["notulenProvider", "ollamaURL", "ollamaModel", "openAIModel", "anthropicModel", "ollamaCloudModel"]
 
     private let store = NSUbiquitousKeyValueStore.default
     private let defaults = UserDefaults.standard

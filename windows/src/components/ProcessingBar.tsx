@@ -5,7 +5,7 @@ import {
   Dismiss24Regular,
   DismissCircle24Regular,
   MicRecord24Regular,
-} from "@fluentui/react-icons";
+} from "./ui/StudioIcons";
 import { useRecordingStore } from "../stores/recordingStore";
 import { processLocally } from "../services/localPipeline";
 import type { TranscriptTask } from "../types";

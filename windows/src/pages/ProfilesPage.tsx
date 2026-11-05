@@ -1,3 +1,4 @@
+import { DesktopDialog } from "../components/ui/DesktopDialog";
 import { useState, useEffect } from "react";
 import {
   Add24Regular,
@@ -7,7 +8,8 @@ import {
   Globe24Regular,
   LockClosed24Regular,
   Star24Regular,
-} from "@fluentui/react-icons";
+  ProfileIcons,
+} from "../components/ui/StudioIcons";
 import { currentProfileChoices, useProfilesStore } from "../stores/profilesStore";
 import { api } from "../services/api";
 import { saveProfileForMode, deleteProfileForMode } from "../services/profileActions";
@@ -16,6 +18,7 @@ import { useRecordingStore } from "../stores/recordingStore";
 import { useToast } from "../components/ui/InfoBar";
 import type { Profile } from "../types";
 import { DEFAULT_PROFILES } from "../types";
+import profileTemplates from "../data/profileTemplates.json";
 
 const STIJLEN = [
   {
@@ -52,7 +55,7 @@ const emptyForm = {
   sections: "",
 };
 
-export function ProfilesPage() {
+export function ProfilesPage({ embedded = false }: { embedded?: boolean }) {
   const { profiles, addProfile, updateProfile, setProfiles, showLocalProfiles } = useProfilesStore();
   const toast = useToast();
   const processingMode = useSettingsStore((state) => state.processing_mode);
@@ -194,10 +197,8 @@ export function ProfilesPage() {
   }
 
   return (
-    <div className="page-scroll">
-      <div className="page-header">
-        <h1 className="page-title-sm">Profielen</h1>
-      </div>
+    <div className={embedded ? "desktop-profiles embedded-profiles" : "page-scroll desktop-page desktop-profiles"}>
+      {!embedded && <div className="page-header"><h1 className="page-title-sm">Profielen</h1></div>}
 
       <div className="page-content">
         <div className="page-content-narrow">
@@ -282,7 +283,7 @@ export function ProfilesPage() {
 
       {/* Create/Edit Modal */}
       {showModal && (
-        <ModalOverlay onClose={() => setShowModal(false)}>
+        <ModalOverlay label={editingProfile ? "Profiel bewerken" : "Nieuw profiel"} onClose={() => setShowModal(false)}>
           <div className="card profile-modal">
             <p className="text-body-strong profile-modal-title">
               {editingProfile ? "Profiel bewerken" : "Nieuw profiel"}
@@ -327,6 +328,10 @@ export function ProfilesPage() {
                       className="card-static"
                       style={{
                         flex: 1,
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        justifyContent: "flex-start",
                         padding: "10px 8px",
                         textAlign: "center",
                         cursor: "pointer",
@@ -335,7 +340,7 @@ export function ProfilesPage() {
                         borderRadius: 8,
                       }}
                     >
-                      <p style={{ margin: 0, fontWeight: 600, fontSize: 13, color: form.stijl === stijl.id ? "var(--fill-accent)" : "var(--text-primary)" }}>
+                      <p style={{ margin: 0, fontWeight: 600, fontSize: 13, color: form.stijl === stijl.id ? "var(--interactive-text)" : "var(--text-primary)" }}>
                         {stijl.label}
                       </p>
                       <p className="text-caption" style={{ margin: "4px 0 0", color: "var(--text-tertiary)" }}>
@@ -421,7 +426,7 @@ export function ProfilesPage() {
 
       {/* Delete confirmation */}
       {deleteConfirm && (
-        <ModalOverlay onClose={() => setDeleteConfirm(null)}>
+        <ModalOverlay label="Profiel verwijderen" onClose={() => setDeleteConfirm(null)}>
           <div className="card profile-modal-confirm">
             <p className="text-body-strong" style={{ marginBottom: 8 }}>Profiel verwijderen?</p>
             <p className="text-caption" style={{ marginBottom: 16 }}>
@@ -469,10 +474,12 @@ function ProfileCard({
   onSetDefault?: () => void;
   onCopy?: () => void;
 }) {
+  const template = profileTemplates.find((entry) => entry.id === profile.id);
+  const Icon = template ? ProfileIcons[template.icon] : undefined;
   return (
     <div className="card-static profile-card">
       {/* Icon */}
-      <span className="profile-card-icon">{profile.icon || "📄"}</span>
+      <span className="profile-card-icon">{Icon ? <Icon /> : profile.icon || "📄"}</span>
 
       {/* Name + description */}
       <div className="profile-card-info">
@@ -531,16 +538,6 @@ function ProfileCard({
   );
 }
 
-// Simple modal overlay
-function ModalOverlay({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
-  return (
-    <div
-      className="profile-overlay"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      {children}
-    </div>
-  );
+function ModalOverlay({ children, label, onClose }: { children: React.ReactNode; label: string; onClose: () => void }) {
+  return <DesktopDialog label={label} onClose={onClose}>{children}</DesktopDialog>;
 }

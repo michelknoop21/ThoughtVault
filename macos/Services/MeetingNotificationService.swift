@@ -16,7 +16,8 @@ extension Notification.Name {
     static let videoCallDetected = Notification.Name("videoCallDetected")
 }
 
-final class MeetingNotificationService: NSObject, UNUserNotificationCenterDelegate, @unchecked Sendable {
+@MainActor
+final class MeetingNotificationService: NSObject, UNUserNotificationCenterDelegate {
 
     static let shared = MeetingNotificationService()
 

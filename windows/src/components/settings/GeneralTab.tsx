@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ArrowSync24Regular, Info24Regular } from "@fluentui/react-icons";
+import { ArrowSync24Regular, Info24Regular } from "../ui/StudioIcons";
 import { getVersion } from "@tauri-apps/api/app";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { CardHead } from "./SettingsFields";
@@ -19,7 +19,7 @@ export function GeneralTab() {
                 <ArrowSync24Regular className="settings-icon" />
                 <div className="flex-1">
                   <p className="settings-label">Controleer op updates</p>
-                  <p className="settings-desc">Toon een melding op de homepage als er een nieuwe versie beschikbaar is</p>
+                  <p className="settings-desc">Toon een melding als er een nieuwe versie beschikbaar is</p>
                 </div>
                 <label className="toggle-switch">
                   <input
@@ -35,6 +35,21 @@ export function GeneralTab() {
             </div>
           </div>
 
+          <div className="settings-group">
+            <div className="settings-row">
+              <label className="flex-1" htmlFor="waveform-motion">
+                <p className="settings-label">Beweging van de geluidsgolf</p>
+                <p className="settings-desc">Windows kan beweging ook beperken tijdens een externe verbinding.</p>
+              </label>
+              <select id="waveform-motion" className="select" value={settings.waveform_motion ?? "system"}
+                onChange={e => settings.updateSettings({ waveform_motion: e.target.value as "system" | "full" | "reduced" })}>
+                <option value="system">Windows volgen</option>
+                <option value="full">Beweging aan</option>
+                <option value="reduced">Rustige weergave</option>
+              </select>
+            </div>
+          </div>
+
           {/* Over */}
           <div className="settings-group">
             <CardHead icon={<Info24Regular />} title="Over" subtitle="Deze installatie" />
@@ -43,7 +58,7 @@ export function GeneralTab() {
                 <Info24Regular className="settings-icon-muted" />
                 <div className="flex-1">
                   <p className="settings-label">ThoughtVault</p>
-                  <p className="settings-desc">Versie {appVersion || "..."} · Windows (Tauri 2)</p>
+                  <p className="settings-desc">Versie {appVersion || "..."} · Windows</p>
                 </div>
               </div>
             </div>

@@ -16,8 +16,8 @@ export async function openWidgetWindow(): Promise<void> {
   }
 
   // Position bottom-right of primary monitor with margin
-  const width = 380;
-  const height = 56;
+  const width = 470;
+  const height = 60;
   const margin = 20;
   let x = margin;
   let y = margin;
@@ -26,8 +26,8 @@ export async function openWidgetWindow(): Promise<void> {
     const monitors = await availableMonitors();
     const primary = monitors.find((m) => m.name === "") || monitors[0];
     if (primary) {
-      x = Math.round(primary.position.x + primary.size.width / primary.scaleFactor - width - margin);
-      y = Math.round(primary.position.y + primary.size.height / primary.scaleFactor - height - margin - 48); // 48px above taskbar
+      x = Math.round((primary.position.x + primary.size.width) / primary.scaleFactor - width - margin);
+      y = Math.round((primary.position.y + primary.size.height) / primary.scaleFactor - height - margin - 48); // 48px above taskbar
     }
   } catch (e) {
     console.warn("[Widget] Could not get monitor info:", e);
@@ -39,9 +39,9 @@ export async function openWidgetWindow(): Promise<void> {
       title: "Opname",
       width,
       height,
-      minWidth: 300,
-      minHeight: 56,
-      maxHeight: 56,
+      minWidth: 470,
+      minHeight: 60,
+      maxHeight: 60,
       decorations: false,
       transparent: true,
       shadow: false,
@@ -61,8 +61,8 @@ export async function openWidgetWindow(): Promise<void> {
         await widget.setFocus();
         // Send the recording start timestamp so the widget timer stays in sync
         const { useRecordingStore } = await import("../stores/recordingStore");
-        const { recordingStartedAt, pausedDuration } = useRecordingStore.getState();
-        await emit("widget-sync-timer", { recordingStartedAt, pausedDuration });
+        const { phase, recordingStartedAt, pausedAt, pausedDuration } = useRecordingStore.getState();
+        await emit("widget-sync-timer", { phase, recordingStartedAt, pausedAt, pausedDuration });
       } catch (e) {
         console.error("[Widget] Show after create failed:", e);
       }

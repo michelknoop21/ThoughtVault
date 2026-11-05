@@ -6,10 +6,13 @@ import { useLocalTranscriptsStore, newLocalId } from "../stores/localTranscripts
 import { useSettingsStore } from "../stores/settingsStore";
 import { useProfilesStore } from "../stores/profilesStore";
 import { LLMService } from "./llm";
+import { NotuleReviewError } from "./notuleAudit";
 import { exportToObsidian } from "./obsidian";
 import { extractTitle } from "./titleExtractor";
 import { getQuickNote } from "./quickNotes";
 import { hasUsableNotule, hasUsableTranscription } from "./notuleValidation";
+import { usePersonalCorrectionsStore } from "../stores/personalCorrectionsStore";
+import { activeCorrections } from "./personalCorrections";
 import type { Participant } from "./participants";
 import type { RecordingMode, Transcript, TranscriptTask } from "../types";
 
@@ -58,6 +61,10 @@ export async function processLocally(
   try {
     let transcription = existingPartial?.raw_transcription;
     if (!transcription) {
+      if (!Number.isFinite(durationSeconds) || durationSeconds <= 0) {
+        durationSeconds = await invoke<number>("audio_duration", { filePath });
+      }
+      updateBackgroundTask(taskId, { duration_seconds: durationSeconds });
       const model = settings.whisper_model || "medium";
 
       // 1. Ensure the Whisper model is present (download on first use).
@@ -79,14 +86,19 @@ export async function processLocally(
 
       // 2. Transcribe on-device. Map whisper progress (0-100) → 10..50.
       updateBackgroundTask(taskId, { status: "transcribing", progress: 10 });
-      const unlistenTr = await listen<number>("transcribe-progress", (e) => {
-        const frac = Math.max(0, Math.min(100, e.payload)) / 100;
+      const unlistenTr = await listen<{ request_id: string; progress: number }>("transcribe-progress", (e) => {
+        if (e.payload.request_id !== taskId) return;
+        const frac = Math.max(0, Math.min(100, e.payload.progress)) / 100;
         updateBackgroundTask(taskId, { progress: Math.round(10 + frac * 40) });
       });
       try {
+        await usePersonalCorrectionsStore.getState().hydrate();
+        const vocabulary = activeCorrections(usePersonalCorrectionsStore.getState().entries, profile.id).slice(0,30).map(e => e.canonical).join(", ");
         transcription = await invoke<string>("transcribe_local", {
           filePath,
           modelId: model,
+          vocabulary,
+          requestId: taskId,
         });
       } finally {
         unlistenTr();
@@ -107,6 +119,7 @@ export async function processLocally(
         notule_html: "",
         duration_seconds: durationSeconds,
         profile_name: profile?.name,
+        profile_id: profile?.id,
         tags: [],
         has_transcription: true,
         has_notes: false,
@@ -140,6 +153,8 @@ export async function processLocally(
 
     const title = extractTitle(html) || profile?.name || "Notule";
     const finished: Partial<Transcript> = {
+      notule_draft_html: "",
+      notule_review_reason: "",
       title,
       notule_html: html,
       has_notes: true,
@@ -158,7 +173,17 @@ export async function processLocally(
     updateBackgroundTask(taskId, { status: "completed", progress: 100 });
     setTimeout(() => removeBackgroundTask(taskId), 1500);
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "Lokale verwerking mislukt";
+    let msg = err instanceof Error ? err.message : typeof err === "string" && err.trim() ? err : "Lokale verwerking mislukt";
+    if (err instanceof NotuleReviewError) {
+      try {
+        const patch = { notule_draft_html: err.draftHtml, notule_review_reason: msg, updated_at: new Date().toISOString() };
+        await useLocalTranscriptsStore.getState().update(taskId, patch);
+        useTranscriptsStore.getState().updateTranscript(taskId, patch);
+        msg += ". Het concept is apart bewaard voor beoordeling; er is geen nieuwe goedgekeurde notule opgeslagen.";
+      } catch {
+        msg += ". Het concept kon niet worden bewaard. De transcriptie en opname zijn niet vervangen.";
+      }
+    }
     console.error("[LocalPipeline] Failed:", msg);
     updateBackgroundTask(taskId, { status: "failed", error_message: msg });
   }

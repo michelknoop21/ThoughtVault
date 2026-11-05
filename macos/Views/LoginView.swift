@@ -77,22 +77,11 @@ struct LoginView: View {
 
     private var brandingHeader: some View {
         VStack(spacing: TS.Spacing.md) {
-            // App icon
-            #if os(macOS)
-            Image(nsImage: NSApp.applicationIconImage)
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .frame(width: 64, height: 64)
-                .clipShape(RoundedRectangle(cornerRadius: 14))
-                .shadow(color: .black.opacity(0.12), radius: 4, y: 2)
-            #else
             Image("AppLogo")
                 .resizable()
-                .aspectRatio(contentMode: .fit)
-                .frame(width: 64, height: 64)
-                .clipShape(RoundedRectangle(cornerRadius: 14))
-                .shadow(color: .black.opacity(0.12), radius: 4, y: 2)
-            #endif
+                .scaledToFit()
+                .frame(width: 96, height: 112)
+                .accessibilityHidden(true)
 
             (Text("Thought").foregroundStyle(Color.labelPrimary)
                 + Text("Vault").foregroundStyle(

@@ -5,7 +5,7 @@ import type { TranscriptTask } from "../types";
 
 type SSECallback = (task: Partial<TranscriptTask>) => void;
 type ErrorCallback = (error: Error) => void;
-type CompleteCallback = () => void;
+type CompleteCallback = (status?: string) => void;
 
 const TERMINAL_STATUSES = new Set(["completed", "failed", "cancelled", "error"]);
 const MAX_RECONNECT_ATTEMPTS = 5;
@@ -64,7 +64,7 @@ export class SSEClient {
         if (TERMINAL_STATUSES.has(data.status ?? "")) {
           this.terminalReached = true;
           this.disconnect();
-          this.onComplete?.();
+          this.onComplete?.(data.status);
         }
       } catch (e) {
         console.error("[SSE] Parse error:", e);

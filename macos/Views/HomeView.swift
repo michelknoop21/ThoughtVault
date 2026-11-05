@@ -96,17 +96,48 @@ struct HomeView: View {
         return "Goedenavond"
     }
 
-    // MARK: Update banner
+    // MARK: - Helpers
+
+    func loadRecentTranscripts() async {
+        isLoadingRecent = true
+        loadError = nil
+        // macOS filters the list (Alle / Opnames / Notulen), so it loads more.
+        #if os(macOS)
+        let result = await RecentTranscripts.load(limit: 30)
+        #else
+        let result = await RecentTranscripts.load(limit: 3)
+        #endif
+        recentTranscripts = result.items
+        loadError = result.error
+        isLoadingRecent = false
+    }
+}
+
+// MARK: - Preview
+
+#Preview {
+    HomeView()
+        .environment(RecordingViewModel())
+        .environment(AuthViewModel())
+        .environment(UpdateCheckService())
+}
+
+struct AppUpdateBanner: View {
+    let version: String
+    @Environment(RecordingViewModel.self) private var recordingVM
+    @Environment(UpdateCheckService.self) private var updateCheck
+    @AppStorage("dismissedUpdateVersion") private var dismissedUpdateVersion = ""
+
 
     private var updateBannerButtonLabel: String {
         if updateCheck.isDownloading {
             let pct = Int((updateCheck.downloadProgress * 100).rounded())
             return pct > 0 ? "\(pct)%" : "Downloaden…"
         }
-        return "Download"
+        return "Nu bijwerken"
     }
 
-    func updateBanner(version: String) -> some View {
+    var body: some View {
         HStack(spacing: TS.Spacing.sm) {
             Image(systemName: "arrow.down.circle.fill")
                 .font(.system(size: 18, weight: .semibold))
@@ -116,6 +147,8 @@ struct HomeView: View {
                 Text("Versie \(version) is beschikbaar")
                     .font(TS.Font.footnoteSemibold)
                     .foregroundStyle(.white)
+                if recordingVM.updateIsBusy { Text("Bijwerken kan zodra opnemen en verwerken klaar zijn.").font(TS.Font.caption) }
+                if let error = updateCheck.errorMessage { Text(error).font(TS.Font.caption) }
             }
 
             Spacer()
@@ -139,7 +172,7 @@ struct HomeView: View {
                         }
                 }
                 .buttonStyle(.plain)
-                .disabled(updateCheck.isDownloading)
+                .disabled(updateCheck.isDownloading || recordingVM.updateIsBusy)
             }
 
             Button {
@@ -168,28 +201,4 @@ struct HomeView: View {
         .transition(.move(edge: .top).combined(with: .opacity))
     }
 
-    // MARK: - Helpers
-
-    func loadRecentTranscripts() async {
-        isLoadingRecent = true
-        loadError = nil
-        // macOS filters the list (Alle / Opnames / Notulen), so it loads more.
-        #if os(macOS)
-        let result = await RecentTranscripts.load(limit: 30)
-        #else
-        let result = await RecentTranscripts.load(limit: 3)
-        #endif
-        recentTranscripts = result.items
-        loadError = result.error
-        isLoadingRecent = false
-    }
-}
-
-// MARK: - Preview
-
-#Preview {
-    HomeView()
-        .environment(RecordingViewModel())
-        .environment(AuthViewModel())
-        .environment(UpdateCheckService())
 }

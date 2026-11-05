@@ -77,6 +77,7 @@ final class AuthViewModel {
             }
         } else {
             isAuthenticated = false
+            UserDefaults.standard.set(ProcessingMode.local.rawValue, forKey: "processingMode")
         }
     }
 
@@ -271,6 +272,7 @@ final class AuthViewModel {
         // Only remove it when the user explicitly disables biometric login in Settings.
 
         isAuthenticated = false
+        UserDefaults.standard.set(ProcessingMode.local.rawValue, forKey: "processingMode")
         currentUser = nil
         requiresTwoFactor = false
         tempToken = nil

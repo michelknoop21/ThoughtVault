@@ -1,23 +1,22 @@
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
+import { useUpdateCheck } from "./hooks/useUpdateCheck";
+import { UpdateBanner } from "./components/ui/UpdateBanner";
 import { TitleBar } from "./components/layout/TitleBar";
 import { Sidebar } from "./components/layout/Sidebar";
 import { CallAlertOverlay } from "./components/calendar/CallAlertOverlay";
-import { BrandFooter } from "./components/brand/BrandFooter";
 import { ErrorBoundary } from "./components/ui/ErrorBoundary";
 import { InfoBarHost } from "./components/ui/InfoBar";
 import { LoginPage } from "./pages/LoginPage";
 import { HomePage } from "./pages/HomePage";
 import { RecordingPage } from "./pages/RecordingPage";
 import { TranscriptsPage } from "./pages/TranscriptsPage";
-import { ProfilesPage } from "./pages/ProfilesPage";
 import { AccountPage } from "./pages/AccountPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { AdminPage } from "./pages/AdminPage";
 import { TasksPage } from "./pages/TasksPage";
 import { PeoplePage } from "./pages/PeoplePage";
-import FeedbackWidget from "./components/FeedbackWidget";
 import { ProcessingBar } from "./components/ProcessingBar";
 import { OnboardingWizard } from "./components/onboarding/OnboardingWizard";
 import { useAuthStore } from "./stores/authStore";
@@ -208,6 +207,9 @@ function OfflineQueueBanner() {
 }
 
 function AppShell({ children }: { children: React.ReactNode }) {
+  const {isUpdateAvailable, latestVersion, downloadUrl, nativeUpdate} = useUpdateCheck();
+  const dismissed = useSettingsStore(s => s.dismissed_update_version);
+  const updateSettings = useSettingsStore(s => s.updateSettings);
   return (
     <>
       <div className="app-shell">
@@ -218,14 +220,13 @@ function AppShell({ children }: { children: React.ReactNode }) {
           <main className="app-main" id="main-content">
             <ProcessingBar />
             <OfflineQueueBanner />
+            {isUpdateAvailable && latestVersion && dismissed !== latestVersion && <UpdateBanner nativeUpdate={nativeUpdate} version={latestVersion} downloadUrl={downloadUrl} onDismiss={() => updateSettings({dismissed_update_version:latestVersion})} />}
             <div className="app-main-content">
               {children}
             </div>
-            <BrandFooter compact />
           </main>
         </div>
       </div>
-      <FeedbackWidget />
       <CallAlertOverlay />
     </>
   );
@@ -248,13 +249,13 @@ function KeyboardShortcuts() {
 
       const ctrl = e.ctrlKey || e.metaKey;
 
-      // Ctrl+1..5 = Navigate tabs
+      // Ctrl+1..6 mirrors the macOS navigation order
       if (ctrl && e.key === "1") { e.preventDefault(); navigate("/"); }
       if (ctrl && e.key === "2") { e.preventDefault(); navigate("/recording"); }
-      if (ctrl && e.key === "3") { e.preventDefault(); navigate("/transcripts"); }
-      if (ctrl && e.key === "4") { e.preventDefault(); navigate("/settings"); }
-      if (ctrl && e.key === "5") { e.preventDefault(); navigate("/profiles"); }
-      if (ctrl && e.key === "6") { e.preventDefault(); navigate("/people"); }
+      if (ctrl && e.key === "3") { e.preventDefault(); navigate("/tasks"); }
+      if (ctrl && e.key === "4") { e.preventDefault(); navigate("/transcripts"); }
+      if (ctrl && e.key === "5") { e.preventDefault(); navigate("/people"); }
+      if (ctrl && e.key === "6") { e.preventDefault(); navigate("/settings"); }
 
       // Ctrl+N = New recording
       if (ctrl && e.key === "n") { e.preventDefault(); navigate("/recording"); }
@@ -321,7 +322,7 @@ function ProtectedRoutes() {
     if (!isAuthenticated) return;
     if (recoveryRanRef.current) return;
     // Local mode has no server-side tasks to recover.
-    if (useSettingsStore.getState().processing_mode === "local") return;
+    if (processing_mode === "local") return;
     recoveryRanRef.current = true;
 
     (async () => {
@@ -343,10 +344,20 @@ function ProtectedRoutes() {
               console.error("[TaskRecovery] SSE error:", err);
               updateBackgroundTask(task.task_id, { status: "failed", error_message: "Verbinding verloren" });
             },
-            async () => {
-              const transcripts = await api.getTranscripts();
-              if (transcripts[0]) addTranscript(transcripts[0]);
-              removeBackgroundTask(task.task_id);
+            async (status) => {
+              if (status === "failed" || status === "cancelled" || status === "error") return;
+              try {
+                const transcripts = await api.getTranscripts();
+                const completed = transcripts.find((t) => t.task_id === task.task_id || t.id === task.task_id);
+                if (!completed) throw new Error("Het resultaat is nog niet beschikbaar. Vernieuw Notulen om het op te halen.");
+                addTranscript(completed);
+                removeBackgroundTask(task.task_id);
+              } catch (error) {
+                updateBackgroundTask(task.task_id, {
+                  status: "failed",
+                  error_message: error instanceof Error ? error.message : "Resultaat ophalen mislukt",
+                });
+              }
             }
           );
         }
@@ -354,7 +365,7 @@ function ProtectedRoutes() {
         // Recovery failed — not critical
       }
     })();
-  }, [isAuthenticated]);
+  }, [isAuthenticated, processing_mode]);
 
   if (isInitializing && processing_mode !== "local") {
     return null;
@@ -380,7 +391,7 @@ function ProtectedRoutes() {
         <Route path="/recording"   element={<RecordingPage />} />
         <Route path="/tasks"       element={<TasksPage />} />
         <Route path="/transcripts" element={<TranscriptsPage />} />
-        <Route path="/profiles"    element={<ProfilesPage />} />
+        <Route path="/profiles"    element={<Navigate to="/settings?tab=notulen" replace />} />
         <Route path="/people"      element={<PeoplePage />} />
         <Route path="/account"     element={<AccountPage />} />
         <Route path="/settings"    element={<SettingsPage />} />

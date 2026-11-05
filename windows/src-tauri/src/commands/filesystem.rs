@@ -127,6 +127,7 @@ mod import_tests {
             writer.write_sample(4_000i16).unwrap();
         }
         writer.finalize().unwrap();
+        assert_eq!(get_wav_duration(source.to_str().unwrap()), Some(1.0));
 
         let imported = convert_audio(&source, dir.path()).unwrap();
         let reader = hound::WavReader::open(imported).unwrap();
@@ -376,9 +377,13 @@ pub async fn concatenate_wav_files(
     Ok(output_path)
 }
 
+#[tauri::command]
+pub fn audio_duration(file_path: String) -> Result<f64, String> {
+    get_wav_duration(&file_path).ok_or("Kan de audioduur niet lezen".into())
+}
+
 fn get_wav_duration(file_path: &str) -> Option<f64> {
     let reader = WavReader::open(file_path).ok()?;
     let spec = reader.spec();
-    let num_samples = reader.len();
-    Some(num_samples as f64 / spec.sample_rate as f64)
+    Some(reader.duration() as f64 / spec.sample_rate as f64)
 }

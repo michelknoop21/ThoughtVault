@@ -2,7 +2,7 @@
 // ThoughtVault
 //
 // Keeps the "Snelle notitie" typed during a recording with that recording.
-// Stored per audio filename when the recording stops, so it survives every
+// Stored per audio filename while editing and when the recording stops, surviving every
 // processing path (local, cloud, offline queue). A transcript finds its note
 // through the existing `localAudio_<taskId>` path mapping.
 
@@ -11,11 +11,19 @@ import Foundation
 enum QuickNoteStore {
     private static func key(_ audioFilename: String) -> String { "quickNote_\(audioFilename)" }
 
-    /// Stores a trimmed note; an empty note stores nothing.
+    /// Stores a trimmed note; an empty processing retry leaves the saved note intact.
     static func save(_ note: String, audioFilename: String, defaults: UserDefaults = .standard) {
         let trimmed = note.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         defaults.set(trimmed, forKey: key(audioFilename))
+    }
+
+    static func saveDraft(_ note: String, audioFilename: String, defaults: UserDefaults = .standard) {
+        if note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            defaults.removeObject(forKey: key(audioFilename))
+        } else {
+            save(note, audioFilename: audioFilename, defaults: defaults)
+        }
     }
 
     static func note(audioFilename: String, defaults: UserDefaults = .standard) -> String? {

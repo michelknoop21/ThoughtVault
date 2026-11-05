@@ -39,6 +39,8 @@ struct SettingsView: View {
     @State private var isLoadingProfiles: Bool = false
     @State private var showLogoutConfirm: Bool = false
     @State private var showBugReportSheet: Bool = false
+    @State private var feedbackTitle = ""
+    @State private var feedbackDescription = ""
     @State private var biometricError: String? = nil
     @State private var micPermissionGranted: Bool? = nil
     @State private var speechPermissionGranted: Bool? = nil
@@ -89,14 +91,48 @@ struct SettingsView: View {
             }
         }
         .navigationTitle("Instellingen")
+        #if os(macOS)
+        .sheet(isPresented: $showBugReportSheet) {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Feedback").font(TS.Font.title3Semibold)
+                Text("Kopieer je melding om deze met Yinga te delen.")
+                    .font(TS.Font.body).foregroundStyle(Color.labelSecondary)
+                TextField("Titel", text: $feedbackTitle).textFieldStyle(.roundedBorder)
+                Text("Beschrijving").font(TS.Font.bodyMedium)
+                TextEditor(text: $feedbackDescription)
+                    .font(TS.Font.body).frame(height: 140)
+                    .scrollIndicators(.never)
+                    .accessibilityLabel("Beschrijving")
+                HStack {
+                    Button("Annuleer") { showBugReportSheet = false }
+                        .buttonStyle(SecondaryButtonStyle()).keyboardShortcut(.cancelAction)
+                    Spacer()
+                    Button("Kopieer feedback") {
+                        NSPasteboard.general.clearContents()
+                        NSPasteboard.general.setString("ThoughtVault feedback\n\(feedbackTitle.trimmingCharacters(in: .whitespacesAndNewlines))\n\n\(feedbackDescription.trimmingCharacters(in: .whitespacesAndNewlines))", forType: .string)
+                        showBugReportSheet = false
+                    }
+                    .buttonStyle(PrimaryButtonStyle())
+                    .disabled(feedbackTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || feedbackDescription.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }.padding(24).frame(width: 440)
+        }
+        #endif
         .onAppear {
             loadApiKey()
+            #if os(macOS)
+            let ollamaEndpoint = URL(string: ollamaURL.trimmingCharacters(in: .whitespacesAndNewlines))
+            if activeLocalProvider == .ollama, ollamaEndpoint?.scheme?.lowercased() == "https", ollamaEndpoint?.host?.lowercased() == "ollama.com" {
+                UserDefaults.standard.set(ollamaModel, forKey: "ollamaCloudModel")
+                notulenProvider = NotulenProvider.ollamaCloud.rawValue
+            }
+            #endif
             obsidianApiKey = KeychainService.shared.load(for: ObsidianService.apiKeyKeychainKey) ?? ""
             Task {
                 await loadProfiles()
                 await checkServerConnection()
                 await checkPermissions()
-                if isLocalProcessing && activeLocalProvider == .ollama { await loadOllamaModels() }
+
                 if isLocalProcessing && localTranscriber == LocalTranscriberEngine.whisperKit.rawValue { await loadWhisperModels() }
             }
         }
@@ -121,6 +157,7 @@ struct SettingsView: View {
     private func cappedForm<Content: View>(@ViewBuilder content: () -> Content) -> some View {
         Form { content() }
             .formStyle(.grouped)
+            .scrollIndicators(.never)
             .frame(maxWidth: 860)
             .frame(maxWidth: .infinity)
     }
@@ -161,7 +198,14 @@ struct SettingsView: View {
 
     var accountTab: some View {
         cappedForm {
-            accountSection
+            if isLocalProcessing {
+                Section("Lokale app") {
+                    Text("Deze app werkt lokaal zonder ThoughtVault-login.")
+                    Text("Je profiel stel je in bij Notulen.").foregroundStyle(Color.labelSecondary)
+                }
+            } else {
+                accountSection
+            }
             feedbackSection
         }
     }
@@ -588,7 +632,7 @@ struct SettingsView: View {
             }
 
             SettingFieldRow("Eigen termen") {
-                TextField("Michel, Django, …", text: $personalVocabulary, axis: .vertical)
+                TextField("Michel, Yinga, …", text: $personalVocabulary, axis: .vertical)
                     .textFieldStyle(.roundedBorder)
                     .autocorrectionDisabled()
             }
@@ -614,6 +658,8 @@ struct SettingsView: View {
                 Text("Apple Intelligence").tag(NotulenProvider.appleIntelligence.rawValue)
                 Text("ChatGPT").tag(NotulenProvider.openAI.rawValue)
                 Text("Claude").tag(NotulenProvider.anthropic.rawValue)
+                Text("Ollama Cloud").tag(NotulenProvider.ollamaCloud.rawValue)
+                Text("OpenAI-compatibel").tag(NotulenProvider.openAICompatible.rawValue)
             }
 
             switch activeLocalProvider {
@@ -621,6 +667,7 @@ struct SettingsView: View {
             case .lmStudio:          lmStudioConfig
             case .appleIntelligence: appleIntelligenceNote
             case .openAI, .anthropic: HostedProviderConfig(provider: activeLocalProvider).id(activeLocalProvider)
+            case .ollamaCloud, .openAICompatible: CloudProviderConfig(provider: activeLocalProvider).id(activeLocalProvider)
             case .cloud:             EmptyView()
             }
 
@@ -651,6 +698,10 @@ struct SettingsView: View {
             return "Het transcript wordt naar OpenAI gestuurd. De kosten lopen via je eigen API-account."
         case .anthropic:
             return "Het transcript wordt naar Anthropic gestuurd. De kosten lopen via je eigen API-account."
+        case .ollamaCloud:
+            return "Het transcript wordt naar Ollama Cloud gestuurd. De kosten lopen via je eigen account."
+        case .openAICompatible:
+            return "Het transcript wordt naar het HTTPS-adres van je eigen aanbieder gestuurd."
         case .cloud:
             return ""
         }
@@ -740,12 +791,16 @@ struct SettingsView: View {
             if isCompact {
                 VStack(alignment: .leading, spacing: TS.Spacing.sm) {
                     ollamaURLField
+                    #if os(iOS)
                     ollamaCloudButton
+                    #endif
                 }
             } else {
                 HStack(spacing: TS.Spacing.sm) {
                     ollamaURLField
+                    #if os(iOS)
                     ollamaCloudButton
+                    #endif
                 }
             }
         }
@@ -760,8 +815,8 @@ struct SettingsView: View {
                         .autocorrectionDisabled()
                 } else {
                     Picker("", selection: $ollamaModel) {
-                        if !ollamaModels.contains(ollamaModel) && !ollamaModel.isEmpty {
-                            Text(ollamaModel).tag(ollamaModel)
+                        if !ollamaModels.contains(ollamaModel) {
+                            Text(ollamaModel.isEmpty ? "Kies een model" : ollamaModel).tag(ollamaModel)
                         }
                         ForEach(ollamaModels, id: \.self) { name in
                             Text(name).tag(name)
@@ -785,6 +840,10 @@ struct SettingsView: View {
                 .help("Beschikbare modellen laden")
                 .accessibilityLabel("Beschikbare modellen laden")
             }
+        }
+        if !ollamaModelsLoading && ollamaModels.isEmpty {
+            Text("Geen modellen opgehaald. Controleer het adres en de verbinding.")
+                .font(TS.Font.caption).foregroundStyle(Color.labelSecondary)
         }
         if !ollamaModels.isEmpty {
             Text("\(ollamaModels.count) modellen beschikbaar")
@@ -926,14 +985,12 @@ struct SettingsView: View {
     }
 
     /// Fetches the available model list (local Ollama or Ollama Cloud) for the picker.
-    func loadOllamaModels() async {
+    func loadOllamaModels(includeCredential: Bool = true) async {
         ollamaModelsLoading = true
-        let models = await ollamaService().fetchModels()
+        let service = includeCredential ? ollamaService() : OpenAICompatibleLLMService(baseURL: ollamaURL, model: ollamaModel)
+        let models = await service.fetchModels()
+        guard !Task.isCancelled else { return }
         ollamaModels = models
-        // Default the selection to the first model when nothing valid is selected yet.
-        if ollamaModel.isEmpty, let first = models.first {
-            ollamaModel = first
-        }
         ollamaModelsLoading = false
     }
 
@@ -1299,7 +1356,11 @@ struct SettingsView: View {
     var accountSection: some View {
         Section {
             NavigationLink {
-                AccountView()
+                if authVM.isAuthenticated {
+                    AccountView()
+                } else {
+                    LoginView()
+                }
             } label: {
                 if let user = authVM.currentUser {
                     HStack(spacing: TS.Spacing.sm) {

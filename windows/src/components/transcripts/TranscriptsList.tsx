@@ -6,8 +6,9 @@ import {
   CheckboxChecked24Regular,
   CheckboxUnchecked24Regular,
   Delete24Regular,
-} from "@fluentui/react-icons";
+} from "../ui/StudioIcons";
 import type { Transcript } from "../../types";
+import { htmlToPlainText } from "../../utils/htmlToMarkdown";
 
 type TimeFilter = "alles" | "vandaag" | "week" | "maand";
 
@@ -93,12 +94,6 @@ function timeAgo(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString("nl-NL", { day: "numeric", month: "short" });
 }
 
-function stripHtml(html: string): string {
-  const tmp = document.createElement("div");
-  tmp.innerHTML = html;
-  return tmp.textContent || tmp.innerText || "";
-}
-
 export function TranscriptsList({
   transcripts,
   selectedId,
@@ -129,8 +124,10 @@ export function TranscriptsList({
     return () => window.removeEventListener("keydown", handleKey);
   }, []);
 
+  const query = searchQuery.trim().toLocaleLowerCase("nl-NL");
   const filtered = transcripts.filter((t) => {
-    const matchesSearch = !searchQuery || t.title.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = !query || [t.title, t.raw_transcription ?? "", htmlToPlainText(t.notule_html || t.preview || "").replace(/\s+/g, " "), ...t.tags]
+      .some(value => value.toLocaleLowerCase("nl-NL").includes(query));
     const matchesTags = selectedTags.length === 0 || selectedTags.some((tag) => t.tags.includes(tag));
     const matchesTime = filterByTime(t, timeFilter);
     return matchesSearch && matchesTags && matchesTime;
@@ -148,11 +145,9 @@ export function TranscriptsList({
   }, []);
 
   return (
-    <div className={`tl-panel${!selectedId ? " tl-panel-full" : ""}`}>
-      {/* Header */}
-      <div className="tl-header">
+    <>
         <div className="tl-header-row">
-          <h1 className="tl-title">Documenten</h1>
+          <h1 className="tl-title">Notulen</h1>
           <div className="tl-header-actions">
             <button className="icon-btn icon-btn-sm" onClick={onRefresh} disabled={isLoading} title="Vernieuwen">
               <ArrowSync24Regular style={{ fontSize: 15, animation: isLoading ? "spin 1s linear infinite" : undefined }} />
@@ -167,6 +162,10 @@ export function TranscriptsList({
             </button>
           </div>
         </div>
+    <div className={`tl-panel${!selectedId ? " tl-panel-full" : ""}`}>
+      {/* Header */}
+      <div className="tl-header">
+
 
         <div className="tl-search">
           <Search24Regular style={{ fontSize: 14, color: "var(--text-tertiary)", flexShrink: 0 }} />
@@ -255,6 +254,14 @@ export function TranscriptsList({
                 <div
                   key={t.id}
                   className={`tl-item${selectedId === t.id ? " active" : ""}`}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={t.title || "Naamloze opname"}
+                  onKeyDown={(event) => {
+                    if (event.target !== event.currentTarget || !["Enter", " "].includes(event.key)) return;
+                    event.preventDefault();
+                    bulkMode ? toggleBulk(t.id) : onSelect(t.id);
+                  }}
                   onClick={() => bulkMode ? toggleBulk(t.id) : onSelect(t.id)}
                   onContextMenu={(e) => onContextMenu(e, t)}
                 >
@@ -273,7 +280,7 @@ export function TranscriptsList({
                     </div>
                     {(t.notule_html || t.raw_transcription) && (
                       <p className="tl-item-preview">
-                        {t.notule_html ? stripHtml(t.notule_html) : t.raw_transcription?.slice(0, 120)}
+                        {t.notule_html ? htmlToPlainText(t.notule_html).replace(/\s+/g, " ") : t.raw_transcription?.slice(0, 120)}
                       </p>
                     )}
                     <div className="tl-item-meta-row">
@@ -305,5 +312,6 @@ export function TranscriptsList({
         )}
       </div>
     </div>
+    </>
   );
 }

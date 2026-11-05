@@ -4,12 +4,53 @@ use hound::{SampleFormat as HoundSampleFormat, WavSpec, WavWriter};
 use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use tokio::sync::mpsc;
-use super::envelope::{EnvelopeConfig, EnvelopeProcessor};
-use super::types::{AudioDevice, RecordingCommand, RecordingEvent, RecordingMode};
+use super::envelope::{EnvelopeConfig, EnvelopeProcessor, SpectrumProcessor};
+use super::types::{AudioDevice, RecordingCommand, RecordingEvent, RecordingMode, RecordingResult};
 
 const TARGET_SAMPLE_RATE: u32 = 16000;
 const CHANNELS: u16 = 1;
 const BITS_PER_SAMPLE: u16 = 16;
+
+// Both sources use the same active clock; WASAPI omits packets during silence.
+struct CaptureClock {
+    started: std::time::Instant,
+    paused_at: Option<std::time::Instant>,
+    paused: std::time::Duration,
+}
+
+impl CaptureClock {
+    fn position(&self, info: &cpal::InputCallbackInfo) -> u64 {
+        let timestamp = info.timestamp();
+        let latency = timestamp.callback.duration_since(&timestamp.capture).unwrap_or_default();
+        let elapsed = self.started.elapsed().saturating_sub(self.paused).saturating_sub(latency);
+        (elapsed.as_secs_f64() * TARGET_SAMPLE_RATE as f64).round() as u64
+    }
+}
+
+fn write_timed_chunk<W: std::io::Write + std::io::Seek>(
+    writer: &mut WavWriter<W>, samples: &[i16], position: u64, written: &mut u64,
+) -> Result<(), hound::Error> {
+    let previous_seconds = *written / u64::from(TARGET_SAMPLE_RATE);
+    // Ignore sub-20ms callback jitter, but preserve actual gaps and trim late packets.
+    let tolerance = u64::from(TARGET_SAMPLE_RATE / 50);
+    if position > written.saturating_add(tolerance) {
+        while *written < position {
+            writer.write_sample(0_i16)?;
+            *written += 1;
+        }
+    }
+    let overlap = written.saturating_sub(position);
+    let skip = if overlap > tolerance { overlap.min(samples.len() as u64) as usize } else { 0 };
+    for &sample in &samples[skip..] {
+        writer.write_sample(sample)?;
+        *written += 1;
+    }
+    // Keep the WAV header and buffered audio readable if the process is killed.
+    if *written / u64::from(TARGET_SAMPLE_RATE) > previous_seconds {
+        writer.flush()?;
+    }
+    Ok(())
+}
 
 /// Streaming resampler that downsamples audio in chunks across callbacks.
 /// Uses linear interpolation — sufficient quality for 48→16 kHz speech.
@@ -56,6 +97,9 @@ impl StreamingResampler {
 /// RMS → dBFS → shared envelope and returns the 0..1 scalar to emit (~30 Hz).
 /// Owned by the audio callback closure — no shared state needed.
 struct LevelMeter {
+    samples: std::collections::VecDeque<f32>,
+    sample_rate: u32,
+    spectrum: SpectrumProcessor,
     sum_sq: f64,
     count: usize,
     window: usize,
@@ -68,6 +112,9 @@ impl LevelMeter {
     fn new(sample_rate: u32) -> Self {
         let now = std::time::Instant::now();
         Self {
+            samples: std::collections::VecDeque::new(),
+            sample_rate,
+            spectrum: SpectrumProcessor::new(),
             sum_sq: 0.0,
             count: 0,
             window: ((sample_rate as f64 / EnvelopeConfig::PUBLISH_RATE_HZ) as usize).max(1),
@@ -77,7 +124,9 @@ impl LevelMeter {
         }
     }
 
-    fn push(&mut self, sample: f32) -> Option<f32> {
+    fn push(&mut self, sample: f32) -> Option<(f32, [f32; 7])> {
+        self.samples.push_back(sample);
+        if self.samples.len() > (self.sample_rate as f64 * 0.064) as usize { self.samples.pop_front(); }
         self.sum_sq += (sample * sample) as f64;
         self.count += 1;
         if self.count < self.window {
@@ -97,7 +146,9 @@ impl LevelMeter {
             eprintln!("[Audio] Envelope — db={:.1} floor={:.1} out={:.3} dt={:.0}ms",
                 db, self.processor.noise_floor_db(), level, dt * 1000.0);
         }
-        Some(level)
+        let mut bands = self.spectrum.process(self.samples.make_contiguous(), self.sample_rate as f64, dt);
+        if level == 0.0 { bands.fill(0.0); }
+        Some((level, bands))
     }
 }
 
@@ -133,6 +184,7 @@ pub fn start_recording_thread(
     mode: RecordingMode,
     output_path: String,
     event_tx: mpsc::UnboundedSender<RecordingEvent>,
+    done_tx: tokio::sync::oneshot::Sender<Result<RecordingResult, String>>,
 ) -> Result<(mpsc::Sender<RecordingCommand>, tokio::sync::oneshot::Receiver<Result<(), String>>), String> {
     let (ready_tx, ready_rx) = tokio::sync::oneshot::channel();
     let (cmd_tx, mut cmd_rx) = mpsc::channel::<RecordingCommand>(16);
@@ -155,6 +207,7 @@ pub fn start_recording_thread(
             &rt_handle,
             &mut ready,
         );
+        let _ = done_tx.send(result.clone());
         if let Err(e) = result {
             if let Some(ready) = ready.take() { let _ = ready.send(Err(e.clone())); }
             let _ = event_tx.send(RecordingEvent::Error(e));
@@ -172,7 +225,7 @@ fn recording_thread_body(
     event_tx: &mpsc::UnboundedSender<RecordingEvent>,
     rt_handle: &tokio::runtime::Handle,
     ready: &mut Option<tokio::sync::oneshot::Sender<Result<(), String>>>,
-) -> Result<(), String> {
+) -> Result<RecordingResult, String> {
     let host = cpal::default_host();
 
     // Select input device
@@ -254,6 +307,9 @@ fn recording_thread_body(
     let mic_writer = Arc::new(Mutex::new(Some(mic_writer)));
 
     let is_paused = Arc::new(AtomicBool::new(false));
+    let clock = Arc::new(Mutex::new(CaptureClock {
+        started: std::time::Instant::now(), paused_at: None, paused: std::time::Duration::ZERO,
+    }));
 
     // Track samples written for debugging
     let samples_written = Arc::new(AtomicU64::new(0));
@@ -271,13 +327,13 @@ fn recording_thread_body(
     let input_stream = match sample_format {
         cpal::SampleFormat::I16 => build_input_stream_i16(
             &input_device, &config, actual_sample_rate, device_channels,
-            Arc::clone(&mic_writer), Arc::clone(&is_paused),
+            Arc::clone(&mic_writer), Arc::clone(&is_paused), Arc::clone(&clock),
             event_tx.clone(), Arc::clone(&samples_written),
             Arc::clone(&mic_resampler),
         )?,
         cpal::SampleFormat::F32 => build_input_stream_f32(
             &input_device, &config, actual_sample_rate, device_channels,
-            Arc::clone(&mic_writer), Arc::clone(&is_paused),
+            Arc::clone(&mic_writer), Arc::clone(&is_paused), Arc::clone(&clock),
             event_tx.clone(), Arc::clone(&samples_written),
             Arc::clone(&mic_resampler),
         )?,
@@ -299,7 +355,7 @@ fn recording_thread_body(
         {
             match try_build_loopback_stream(
                 &host, &loopback_path,
-                Arc::clone(&loopback_writer), Arc::clone(&is_paused), event_tx.clone(),
+                Arc::clone(&loopback_writer), Arc::clone(&is_paused), Arc::clone(&clock), event_tx.clone(),
             ) {
                 Ok(stream) => {
                     eprintln!("[Audio] Loopback stream gestart voor systeemaudio opname");
@@ -336,8 +392,12 @@ fn recording_thread_body(
             match cmd_rx.recv().await {
                 Some(RecordingCommand::Pause) => {
                     is_paused.store(true, Ordering::Relaxed);
+                    let mut clock = clock.lock().unwrap();
+                    if clock.paused_at.is_none() { clock.paused_at = Some(std::time::Instant::now()); }
                 }
                 Some(RecordingCommand::Resume) => {
+                    let mut clock = clock.lock().unwrap();
+                    if let Some(paused_at) = clock.paused_at.take() { clock.paused += paused_at.elapsed(); }
                     is_paused.store(false, Ordering::Relaxed);
                 }
                 Some(RecordingCommand::Stop) | None => break,
@@ -400,7 +460,7 @@ fn recording_thread_body(
 
     eprintln!("[Audio] Recording stopped, file: {}", output_path);
 
-    Ok(())
+    Ok(RecordingResult { file_path: output_path, duration_seconds: duration })
 }
 
 /// Resample audio using linear interpolation.
@@ -440,59 +500,114 @@ fn mix_wav_files(mic_path: &str, loopback_path: &str) -> Result<(), String> {
     eprintln!("[Audio] Mix specs — mic: {}Hz {}ch, loopback: {}Hz {}ch",
         mic_spec.sample_rate, mic_spec.channels, loopback_spec.sample_rate, loopback_spec.channels);
 
-    let mic_samples: Vec<i16> = mic_reader.into_samples::<i16>()
-        .filter_map(|s| s.ok())
-        .collect();
-    let loopback_samples: Vec<i16> = loopback_reader.into_samples::<i16>()
-        .filter_map(|s| s.ok())
-        .collect();
-
-    // Resample to match mic's sample rate if needed
-    let loopback_resampled = if loopback_spec.sample_rate != mic_spec.sample_rate {
-        eprintln!("[Audio] Resampling loopback from {} Hz to {} Hz ({} samples)",
-            loopback_spec.sample_rate, mic_spec.sample_rate, loopback_samples.len());
-        let resampled = resample(&loopback_samples, loopback_spec.sample_rate, mic_spec.sample_rate);
-        eprintln!("[Audio] Resampled to {} samples", resampled.len());
-        resampled
-    } else {
-        loopback_samples
-    };
-
-    eprintln!("[Audio] Mixing: mic={} samples, loopback={} samples",
-        mic_samples.len(), loopback_resampled.len());
-
-    let max_len = mic_samples.len().max(loopback_resampled.len());
-    let mut mixed = Vec::with_capacity(max_len);
-
-    for i in 0..max_len {
-        let mic_s = if i < mic_samples.len() { mic_samples[i] } else { 0 };
-        let loopback_s = if i < loopback_resampled.len() { loopback_resampled[i] } else { 0 };
-        // Element-wise max by absolute value — keeps whichever source is louder
-        let mixed_s = if mic_s.unsigned_abs() >= loopback_s.unsigned_abs() { mic_s } else { loopback_s };
-        mixed.push(mixed_s);
-    }
+    let mut mic_samples = mic_reader.into_samples::<i16>();
+    // Native recordings are both 16 kHz; stream them instead of allocating
+    // three complete recordings in memory when a multi-hour meeting stops.
+    let mut system_samples: Box<dyn Iterator<Item = Result<i16, hound::Error>>> =
+        if loopback_spec.sample_rate == mic_spec.sample_rate {
+            Box::new(loopback_reader.into_samples::<i16>())
+        } else {
+            let samples = loopback_reader.into_samples::<i16>()
+                .collect::<Result<Vec<_>, _>>()
+                .map_err(|e| format!("Systeemaudio lezen mislukt: {e}"))?;
+            Box::new(resample(&samples, loopback_spec.sample_rate, mic_spec.sample_rate)
+                .into_iter().map(Ok))
+        };
 
     // Keep both sources intact until the complete mixed WAV is safely written.
     let parent = std::path::Path::new(mic_path).parent().ok_or("Opnamemap ontbreekt")?;
     let mut mixed_file = tempfile::NamedTempFile::new_in(parent)
         .map_err(|e| format!("Kan tijdelijk mixed WAV niet maken: {e}"))?;
-    let mut writer = WavWriter::new(mixed_file.as_file_mut(), mic_spec)
+    let mut writer = WavWriter::new(std::io::BufWriter::new(mixed_file.as_file_mut()), mic_spec)
         .map_err(|e| format!("Kan mixed WAV niet schrijven: {}", e))?;
-    for sample in &mixed {
-        writer.write_sample(*sample)
-            .map_err(|e| format!("Fout bij schrijven mixed sample: {}", e))?;
+    let mut count = 0_u64;
+    loop {
+        let mic = mic_samples.next().transpose()
+            .map_err(|e| format!("Microfoonaudio lezen mislukt: {e}"))?;
+        let system = system_samples.next().transpose()
+            .map_err(|e| format!("Systeemaudio lezen mislukt: {e}"))?;
+        if mic.is_none() && system.is_none() { break; }
+        let mic = mic.unwrap_or(0);
+        let system = system.unwrap_or(0);
+        let mixed = if mic.unsigned_abs() >= system.unsigned_abs() { mic } else { system };
+        writer.write_sample(mixed)
+            .map_err(|e| format!("Fout bij schrijven mixed sample: {e}"))?;
+        count += 1;
     }
     writer.finalize()
         .map_err(|e| format!("Fout bij finaliseren mixed WAV: {}", e))?;
+    // Windows cannot replace the destination while its reader handle is open.
+    drop(mic_samples);
+    drop(system_samples);
     mixed_file.persist(mic_path).map_err(|e| format!("Mixed WAV vervangen mislukt: {e}"))?;
 
-    eprintln!("[Audio] Mixed output: {} samples", mixed.len());
+    eprintln!("[Audio] Mixed output: {} samples", count);
     Ok(())
 }
 
 #[cfg(test)]
 mod mix_tests {
     use super::*;
+
+    #[tokio::test]
+    async fn completion_does_not_depend_on_draining_visual_events() {
+        let (events, _unread_events) = mpsc::unbounded_channel();
+        let (done, result) = tokio::sync::oneshot::channel();
+        let (_commands, ready) = start_recording_thread(
+            Some("ThoughtVault QA missing device".into()), RecordingMode::Microphone,
+            "unused-qa-recording.wav".into(), events, done,
+        ).unwrap();
+        assert!(ready.await.unwrap().is_err());
+        let result = tokio::time::timeout(std::time::Duration::from_secs(5), result).await.unwrap().unwrap();
+        assert!(result.unwrap_err().contains("niet gevonden"));
+    }
+
+    #[test]
+    fn timed_chunks_keep_interrupted_recording_readable() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("interrupted.wav");
+        let spec = WavSpec { channels: 1, sample_rate: TARGET_SAMPLE_RATE, bits_per_sample: 16, sample_format: HoundSampleFormat::Int };
+        let mut writer = WavWriter::create(&path, spec).unwrap();
+        let mut written = 0;
+        write_timed_chunk(&mut writer, &vec![123_i16; TARGET_SAMPLE_RATE as usize], 0, &mut written).unwrap();
+        // Read before finalize/drop: neither runs when the process is killed.
+        let mut reader = hound::WavReader::open(&path).unwrap();
+        assert_eq!(reader.duration(), TARGET_SAMPLE_RATE);
+        assert!(reader.samples::<i16>().all(|sample| sample.unwrap() == 123));
+        write_timed_chunk(&mut writer, &[456; 160], TARGET_SAMPLE_RATE as u64, &mut written).unwrap();
+        assert_eq!(hound::WavReader::open(&path).unwrap().duration(), TARGET_SAMPLE_RATE);
+    }
+
+    #[test]
+    fn timed_chunks_preserve_silence_and_do_not_duplicate_late_packets() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("timeline.wav");
+        let spec = WavSpec { channels: 1, sample_rate: TARGET_SAMPLE_RATE, bits_per_sample: 16, sample_format: HoundSampleFormat::Int };
+        let mut writer = WavWriter::create(&path, spec).unwrap();
+        let mut written = 0;
+        write_timed_chunk(&mut writer, &[12, -34], 16000, &mut written).unwrap();
+        write_timed_chunk(&mut writer, &[56, -78], 32000, &mut written).unwrap();
+        write_timed_chunk(&mut writer, &[999; 400], 16000, &mut written).unwrap();
+        assert_eq!(written, 32002);
+        writer.finalize().unwrap();
+        let samples = hound::WavReader::open(path).unwrap().into_samples::<i16>().collect::<Result<Vec<_>, _>>().unwrap();
+        assert!(samples[..16000].iter().all(|&sample| sample == 0));
+        assert_eq!(&samples[16000..16002], &[12, -34]);
+        assert!(samples[16002..32000].iter().all(|&sample| sample == 0));
+        assert_eq!(&samples[32000..], &[56, -78]);
+    }
+
+    #[test]
+    fn timed_chunks_tolerate_callback_jitter_without_growing_silence() {
+        let mut writer = WavWriter::new(std::io::Cursor::new(Vec::new()), WavSpec {
+            channels: 1, sample_rate: TARGET_SAMPLE_RATE, bits_per_sample: 16, sample_format: HoundSampleFormat::Int,
+        }).unwrap();
+        let mut written = 0;
+        for position in [0, 180, 300, 500] {
+            write_timed_chunk(&mut writer, &[1; 160], position, &mut written).unwrap();
+        }
+        assert_eq!(written, 640);
+    }
 
     #[test]
     fn mixed_file_keeps_system_audio_when_microphone_is_silent() {
@@ -510,6 +625,59 @@ mod mix_tests {
         assert_eq!(reader.samples::<i16>().collect::<Result<Vec<_>, _>>().unwrap(), vec![2000, -4000, 1000]);
         assert!(system.is_file());
     }
+
+    #[test]
+    #[ignore = "creates three hours of PCM to verify long-meeting processing"]
+    fn three_hour_mix_preserves_duration_and_timed_markers() {
+        let dir = tempfile::tempdir().unwrap();
+        let mic = dir.path().join("mic.wav");
+        let system = dir.path().join("system.wav");
+        let total = 3 * 60 * 60 * TARGET_SAMPLE_RATE;
+        let markers = [17 * TARGET_SAMPLE_RATE, total / 2, total - TARGET_SAMPLE_RATE];
+        let spec = WavSpec { channels: 1, sample_rate: TARGET_SAMPLE_RATE, bits_per_sample: 16, sample_format: HoundSampleFormat::Int };
+        for (path, is_system) in [(&mic, false), (&system, true)] {
+            let mut writer = WavWriter::create(path, spec).unwrap();
+            for index in 0..total {
+                let sample: i16 = if markers.contains(&index) { if is_system { -2000 } else { 1000 } } else { 0 };
+                writer.write_sample(sample).unwrap();
+            }
+            writer.finalize().unwrap();
+        }
+        mix_wav_files(mic.to_str().unwrap(), system.to_str().unwrap()).unwrap();
+        let mut reader = hound::WavReader::open(&mic).unwrap();
+        assert_eq!(reader.duration(), total);
+        for marker in markers {
+            reader.seek(marker - 1).unwrap();
+            let samples = reader.samples::<i16>().take(3).collect::<Result<Vec<_>, _>>().unwrap();
+            assert_eq!(samples, [0, -2000, 0]);
+        }
+        assert!(system.is_file());
+    }
+
+    #[test]
+    fn streamed_mix_preserves_extremes_tails_and_resampling() {
+        let dir = tempfile::tempdir().unwrap();
+        let mic = dir.path().join("mic.wav");
+        let system = dir.path().join("system.wav");
+        for system_rate in [16000, 32000] {
+            for (path, rate, samples) in [
+                (&mic, 16000, vec![i16::MIN, 1]),
+                (&system, system_rate, if system_rate == 16000 {
+                    vec![i16::MAX, -2, 3]
+                } else { vec![i16::MAX, 0, -2, 0, 3, 0] }),
+            ] {
+                let spec = WavSpec { channels: 1, sample_rate: rate, bits_per_sample: 16, sample_format: HoundSampleFormat::Int };
+                let mut writer = WavWriter::create(path, spec).unwrap();
+                for sample in samples { writer.write_sample(sample).unwrap(); }
+                writer.finalize().unwrap();
+            }
+            mix_wav_files(mic.to_str().unwrap(), system.to_str().unwrap()).unwrap();
+            let samples = hound::WavReader::open(&mic).unwrap().into_samples::<i16>()
+                .collect::<Result<Vec<_>, _>>().unwrap();
+            assert_eq!(samples, vec![i16::MIN, -2, 3]);
+            assert!(system.is_file());
+        }
+    }
 }
 
 /// Build an input stream for devices that output i16 samples (most Windows devices).
@@ -521,17 +689,20 @@ fn build_input_stream_i16(
     channels: u16,
     writer: Arc<Mutex<Option<WavWriter<std::io::BufWriter<std::fs::File>>>>>,
     is_paused: Arc<AtomicBool>,
+    clock: Arc<Mutex<CaptureClock>>,
     event_tx: mpsc::UnboundedSender<RecordingEvent>,
     samples_written: Arc<AtomicU64>,
     resampler: Arc<Mutex<StreamingResampler>>,
 ) -> Result<cpal::Stream, String> {
     let writer_clone = Arc::clone(&writer);
     let event_tx_clone = event_tx.clone();
+    let errors_tx = event_tx.clone();
     let samples_written_clone = Arc::clone(&samples_written);
     let resampler_clone = Arc::clone(&resampler);
 
     // Envelope meter (RMS → dBFS → shared envelope) owned by the callback
     let mut meter = LevelMeter::new(sample_rate);
+    let mut written = 0_u64;
 
     // Log first callback
     let first_callback = Arc::new(AtomicBool::new(true));
@@ -541,7 +712,7 @@ fn build_input_stream_i16(
 
     let stream = device.build_input_stream(
         config,
-        move |data: &[i16], _| {
+        move |data: &[i16], info| {
             if first_callback_clone.swap(false, Ordering::Relaxed) {
                 eprintln!("[Audio] FIRST CALLBACK: {} raw samples, {} channels → mono downmix + resample",
                     data.len(), channels);
@@ -551,6 +722,7 @@ fn build_input_stream_i16(
                 return;
             }
 
+            let position = clock.lock().unwrap().position(info);
             if let Ok(mut guard) = writer_clone.lock() {
                 if let Some(ref mut w) = *guard {
                     let ch = channels as usize;
@@ -568,8 +740,9 @@ fn build_input_stream_i16(
                         mono_chunk.push(mono_sample);
 
                         // Envelope on pre-resample samples, emitted at ~30 Hz
-                        if let Some(level) = meter.push(mono_sample.to_float_sample()) {
+                        if let Some((level, bands)) = meter.push(mono_sample.to_float_sample()) {
                             let _ = event_tx_clone.send(RecordingEvent::AudioLevel(level));
+                            let _ = event_tx_clone.send(RecordingEvent::AudioSpectrum(bands));
                         }
                     }
 
@@ -580,19 +753,12 @@ fn build_input_stream_i16(
                         mono_chunk // fallback: write unresampled
                     };
 
-                    // Step 3: Write resampled samples to WAV
-                    for &sample in &resampled {
-                        let _ = w.write_sample(sample);
-
-                        let count = samples_written_clone.fetch_add(1, Ordering::Relaxed) + 1;
-                        let count_usize = count as usize;
-
-                        // Log every ~5 seconds (based on target rate)
-                        if count_usize % (5 * TARGET_SAMPLE_RATE as usize) == 0 {
-                            eprintln!("[Audio] Written {} mono samples (~{} seconds)",
-                                count, count_usize / TARGET_SAMPLE_RATE as usize);
-                        }
+                    if let Err(error) = write_timed_chunk(w, &resampled, position, &mut written) {
+                        is_paused.store(true, Ordering::Relaxed);
+                        let _ = event_tx_clone.send(RecordingEvent::Error(format!("Audio opslaan mislukt: {error}")));
+                        return;
                     }
+                    samples_written_clone.store(written, Ordering::Relaxed);
                 } else {
                     eprintln!("[Audio] ERROR: writer is None in callback!");
                 }
@@ -600,7 +766,7 @@ fn build_input_stream_i16(
                 eprintln!("[Audio] ERROR: Failed to lock writer mutex in callback!");
             }
         },
-        |err| eprintln!("[Audio] Stream error: {}", err),
+        move |err| { let _ = errors_tx.send(RecordingEvent::Error(format!("Microfoonverbinding onderbroken: {err}"))); },
         None,
     ).map_err(|e| format!("Kan i16 audio stream niet openen: {}", e))?;
 
@@ -616,17 +782,20 @@ fn build_input_stream_f32(
     channels: u16,
     writer: Arc<Mutex<Option<WavWriter<std::io::BufWriter<std::fs::File>>>>>,
     is_paused: Arc<AtomicBool>,
+    clock: Arc<Mutex<CaptureClock>>,
     event_tx: mpsc::UnboundedSender<RecordingEvent>,
     samples_written: Arc<AtomicU64>,
     resampler: Arc<Mutex<StreamingResampler>>,
 ) -> Result<cpal::Stream, String> {
     let writer_clone = Arc::clone(&writer);
     let event_tx_clone = event_tx.clone();
+    let errors_tx = event_tx.clone();
     let samples_written_clone = Arc::clone(&samples_written);
     let resampler_clone = Arc::clone(&resampler);
 
     // Envelope meter (RMS → dBFS → shared envelope) owned by the callback
     let mut meter = LevelMeter::new(sample_rate);
+    let mut written = 0_u64;
 
     // Log first callback
     let first_callback = Arc::new(AtomicBool::new(true));
@@ -636,7 +805,7 @@ fn build_input_stream_f32(
 
     let stream = device.build_input_stream(
         config,
-        move |data: &[f32], _| {
+        move |data: &[f32], info| {
             if first_callback_clone.swap(false, Ordering::Relaxed) {
                 eprintln!("[Audio] FIRST CALLBACK (f32): {} raw samples, {} channels → mono downmix + resample",
                     data.len(), channels);
@@ -646,6 +815,7 @@ fn build_input_stream_f32(
                 return;
             }
 
+            let position = clock.lock().unwrap().position(info);
             if let Ok(mut guard) = writer_clone.lock() {
                 if let Some(ref mut w) = *guard {
                     let ch = channels as usize;
@@ -664,8 +834,9 @@ fn build_input_stream_f32(
                         mono_chunk.push(s16);
 
                         // Envelope on pre-resample samples, emitted at ~30 Hz
-                        if let Some(level) = meter.push(mono_sample) {
+                        if let Some((level, bands)) = meter.push(mono_sample) {
                             let _ = event_tx_clone.send(RecordingEvent::AudioLevel(level));
+                            let _ = event_tx_clone.send(RecordingEvent::AudioSpectrum(bands));
                         }
                     }
 
@@ -676,19 +847,12 @@ fn build_input_stream_f32(
                         mono_chunk // fallback: write unresampled
                     };
 
-                    // Step 3: Write resampled samples to WAV
-                    for &sample in &resampled {
-                        let _ = w.write_sample(sample);
-
-                        let count = samples_written_clone.fetch_add(1, Ordering::Relaxed) + 1;
-                        let count_usize = count as usize;
-
-                        // Log every ~5 seconds (based on target rate)
-                        if count_usize % (5 * TARGET_SAMPLE_RATE as usize) == 0 {
-                            eprintln!("[Audio] Written {} mono samples (~{} seconds)",
-                                count, count_usize / TARGET_SAMPLE_RATE as usize);
-                        }
+                    if let Err(error) = write_timed_chunk(w, &resampled, position, &mut written) {
+                        is_paused.store(true, Ordering::Relaxed);
+                        let _ = event_tx_clone.send(RecordingEvent::Error(format!("Audio opslaan mislukt: {error}")));
+                        return;
                     }
+                    samples_written_clone.store(written, Ordering::Relaxed);
                 } else {
                     eprintln!("[Audio] ERROR: writer is None in f32 callback!");
                 }
@@ -696,7 +860,7 @@ fn build_input_stream_f32(
                 eprintln!("[Audio] ERROR: Failed to lock writer mutex in f32 callback!");
             }
         },
-        |err| eprintln!("[Audio] Stream error: {}", err),
+        move |err| { let _ = errors_tx.send(RecordingEvent::Error(format!("Microfoonverbinding onderbroken: {err}"))); },
         None,
     ).map_err(|e| format!("Kan f32 audio stream niet openen: {}", e))?;
 
@@ -712,6 +876,7 @@ fn try_build_loopback_stream(
     loopback_path: &str,
     writer: Arc<Mutex<Option<WavWriter<std::io::BufWriter<std::fs::File>>>>>,
     is_paused: Arc<AtomicBool>,
+    clock: Arc<Mutex<CaptureClock>>,
     event_tx: mpsc::UnboundedSender<RecordingEvent>,
 ) -> Result<cpal::Stream, String> {
     use cpal::traits::HostTrait;
@@ -795,7 +960,9 @@ fn try_build_loopback_stream(
             let writer_clone = Arc::clone(&writer);
             let resampler_clone = Arc::clone(&loopback_resampler);
             let mut meter = LevelMeter::new(loopback_rate);
+            let mut written = 0_u64;
             let levels_tx = event_tx.clone();
+            let errors_tx = event_tx.clone();
 
             // Log first callback once
             let first_callback = Arc::new(AtomicBool::new(true));
@@ -803,7 +970,7 @@ fn try_build_loopback_stream(
 
             let stream = output_device.build_input_stream(
                 &config,
-                move |data: &[i16], _| {
+                move |data: &[i16], info| {
                     if first_callback_clone.swap(false, Ordering::Relaxed) {
                         eprintln!("[Audio] Loopback FIRST CALLBACK: {} raw samples, {} channels → mono downmix + resample",
                             data.len(), loopback_channels);
@@ -812,6 +979,7 @@ fn try_build_loopback_stream(
                     if is_paused.load(Ordering::Relaxed) {
                         return;
                     }
+                    let position = clock.lock().unwrap().position(info);
                     if let Ok(mut guard) = writer_clone.lock() {
                         if let Some(ref mut w) = &mut *guard {
                             let ch = loopback_channels as usize;
@@ -827,8 +995,9 @@ fn try_build_loopback_stream(
                                 }
                                 let mono = (sum / loopback_channels as i32) as i16;
                                 mono_chunk.push(mono);
-                                if let Some(level) = meter.push(mono.to_float_sample()) {
+                                if let Some((level, bands)) = meter.push(mono.to_float_sample()) {
                                     let _ = levels_tx.send(RecordingEvent::SystemAudioLevel(level));
+                                    let _ = levels_tx.send(RecordingEvent::SystemAudioSpectrum(bands));
                                 }
                             }
 
@@ -839,14 +1008,14 @@ fn try_build_loopback_stream(
                                 mono_chunk
                             };
 
-                            // Step 3: Write resampled samples to WAV
-                            for &sample in &resampled {
-                                let _ = w.write_sample(sample);
+                            if let Err(error) = write_timed_chunk(w, &resampled, position, &mut written) {
+                                is_paused.store(true, Ordering::Relaxed);
+                                let _ = levels_tx.send(RecordingEvent::Error(format!("Systeemaudio opslaan mislukt: {error}")));
                             }
                         }
                     }
                 },
-                |err| eprintln!("[Audio] Loopback stream error: {}", err),
+                move |err| { let _ = errors_tx.send(RecordingEvent::Error(format!("Systeemgeluidverbinding onderbroken: {err}"))); },
                 None,
             ).map_err(|e| format!("Loopback i16 stream fout: {}", e))?;
             stream.play().map_err(|e| format!("Kan loopback stream niet starten: {}", e))?;
@@ -856,7 +1025,9 @@ fn try_build_loopback_stream(
             let writer_clone = Arc::clone(&writer);
             let resampler_clone = Arc::clone(&loopback_resampler);
             let mut meter = LevelMeter::new(loopback_rate);
+            let mut written = 0_u64;
             let levels_tx = event_tx.clone();
+            let errors_tx = event_tx.clone();
 
             // Log first callback once
             let first_callback = Arc::new(AtomicBool::new(true));
@@ -864,7 +1035,7 @@ fn try_build_loopback_stream(
 
             let stream = output_device.build_input_stream(
                 &config,
-                move |data: &[f32], _| {
+                move |data: &[f32], info| {
                     if first_callback_clone.swap(false, Ordering::Relaxed) {
                         eprintln!("[Audio] Loopback FIRST CALLBACK (f32): {} raw samples, {} channels → mono downmix + resample",
                             data.len(), loopback_channels);
@@ -873,6 +1044,7 @@ fn try_build_loopback_stream(
                     if is_paused.load(Ordering::Relaxed) {
                         return;
                     }
+                    let position = clock.lock().unwrap().position(info);
                     if let Ok(mut guard) = writer_clone.lock() {
                         if let Some(ref mut w) = &mut *guard {
                             let ch = loopback_channels as usize;
@@ -888,8 +1060,9 @@ fn try_build_loopback_stream(
                                 }
                                 let mono_sample = sum / loopback_channels as f32;
                                 mono_chunk.push((mono_sample.clamp(-1.0, 1.0) * i16::MAX as f32) as i16);
-                                if let Some(level) = meter.push(mono_sample) {
+                                if let Some((level, bands)) = meter.push(mono_sample) {
                                     let _ = levels_tx.send(RecordingEvent::SystemAudioLevel(level));
+                                    let _ = levels_tx.send(RecordingEvent::SystemAudioSpectrum(bands));
                                 }
                             }
 
@@ -900,14 +1073,14 @@ fn try_build_loopback_stream(
                                 mono_chunk
                             };
 
-                            // Step 3: Write resampled samples to WAV
-                            for &sample in &resampled {
-                                let _ = w.write_sample(sample);
+                            if let Err(error) = write_timed_chunk(w, &resampled, position, &mut written) {
+                                is_paused.store(true, Ordering::Relaxed);
+                                let _ = levels_tx.send(RecordingEvent::Error(format!("Systeemaudio opslaan mislukt: {error}")));
                             }
                         }
                     }
                 },
-                |err| eprintln!("[Audio] Loopback stream error: {}", err),
+                move |err| { let _ = errors_tx.send(RecordingEvent::Error(format!("Systeemgeluidverbinding onderbroken: {err}"))); },
                 None,
             ).map_err(|e| format!("Loopback f32 stream fout: {}", e))?;
             stream.play().map_err(|e| format!("Kan loopback stream niet starten: {}", e))?;

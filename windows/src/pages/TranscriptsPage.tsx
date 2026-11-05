@@ -1,3 +1,5 @@
+import { useConfirmation } from "../components/ui/useConfirmation";
+import { DesktopDialog } from "../components/ui/DesktopDialog";
 import { useEffect, useState, useRef, useCallback } from "react";
 import {
   ArrowDownload24Regular,
@@ -7,7 +9,7 @@ import {
   Document24Regular,
   Dismiss24Regular,
   Add24Regular,
-} from "@fluentui/react-icons";
+} from "../components/ui/StudioIcons";
 import DOMPurify from "dompurify";
 import { useTranscriptsStore } from "../stores/transcriptsStore";
 import { useLocalTranscriptsStore, isLocalId } from "../stores/localTranscriptsStore";
@@ -15,6 +17,7 @@ import { useSettingsStore } from "../stores/settingsStore";
 import { useProfilesStore } from "../stores/profilesStore";
 import { useRecordingStore } from "../stores/recordingStore";
 import { LLMService } from "../services/llm";
+import { NotuleReviewError } from "../services/notuleAudit";
 import { prepareNotuleHtml } from "../services/notulePresentation";
 import { hasUsableNotule, hasUsableTranscription } from "../services/notuleValidation";
 import { extractTitle } from "../services/titleExtractor";
@@ -22,7 +25,7 @@ import { api } from "../services/api";
 import { createSSEClient } from "../services/sse";
 import { persistNotesSection } from "../services/uploadAndTrack";
 import { exportToObsidian, importFromObsidian, acknowledgeObsidianImport } from "../services/obsidian";
-import { htmlToMarkdown } from "../utils/htmlToMarkdown";
+import { htmlToMarkdown, htmlToPlainText } from "../utils/htmlToMarkdown";
 import { useToast } from "../components/ui/InfoBar";
 import { clampMenuPosition } from "../utils/menuPosition";
 import { TranscriptsList } from "../components/transcripts/TranscriptsList";
@@ -36,6 +39,7 @@ interface ContextMenu {
 }
 
 export function TranscriptsPage() {
+  const { confirm, confirmation } = useConfirmation();
   const {
     transcripts, selectedId, searchQuery, selectedTags,
     setTranscripts, updateTranscript, deleteTranscript,
@@ -164,8 +168,8 @@ export function TranscriptsPage() {
   async function handleSaveNotule(id: string, html: string, syncObsidian = true) {
     try {
       if (isLocalId(id)) {
-        await useLocalTranscriptsStore.getState().update(id, { notule_html: html });
-        updateTranscript(id, { notule_html: html });
+        await useLocalTranscriptsStore.getState().update(id, { notule_html: html, has_notes: !!html.trim() });
+        updateTranscript(id, { notule_html: html, has_notes: !!html.trim() });
         toast.show("Notule opgeslagen", "success");
         const settings = useSettingsStore.getState();
         if (syncObsidian && settings.obsidian_enabled) {
@@ -176,7 +180,7 @@ export function TranscriptsPage() {
         return;
       }
       await api.updateNotuleHTML(id, html);
-      updateTranscript(id, { notule_html: html });
+      updateTranscript(id, { notule_html: html, has_notes: !!html.trim() });
       toast.show("Notule opgeslagen", "success");
       const settings = useSettingsStore.getState();
       if (syncObsidian && settings.obsidian_enabled) {
@@ -223,8 +227,10 @@ export function TranscriptsPage() {
           () => tasks.updateBackgroundTask(taskId, { progress: 60 }), [], transcript.quick_note);
         if (!hasUsableNotule(html)) throw new Error("Geen bruikbare notule gegenereerd");
         const title = extractTitle(html) || transcript.title;
-        await useLocalTranscriptsStore.getState().update(transcript.id, { notule_html: html, title, profile_name: profile.name });
-        updateTranscript(transcript.id, { notule_html: html, title, profile_name: profile.name });
+        const finished = { notule_html: html, has_notes: true, title, profile_name: profile.name, profile_id: profile.id,
+          notule_draft_html: "", notule_review_reason: "", updated_at: new Date().toISOString() };
+        await useLocalTranscriptsStore.getState().update(transcript.id, finished);
+        updateTranscript(transcript.id, finished);
         tasks.updateBackgroundTask(taskId, { status: "completed", progress: 100 });
         const settings = useSettingsStore.getState();
         if (settings.obsidian_enabled) {
@@ -234,7 +240,18 @@ export function TranscriptsPage() {
         }
         toast.show("Notule opnieuw gegenereerd", "success");
       } catch (error) {
-        tasks.updateBackgroundTask(taskId, { status: "failed", error_message: error instanceof Error ? error.message : "Regenereren mislukt" });
+        let message = error instanceof Error ? error.message : "Regenereren mislukt";
+        if (error instanceof NotuleReviewError) {
+          try {
+            const patch = { notule_draft_html: error.draftHtml, notule_review_reason: message, updated_at: new Date().toISOString() };
+            await useLocalTranscriptsStore.getState().update(transcript.id, patch);
+            updateTranscript(transcript.id, patch);
+            message += ". Het concept is apart bewaard voor beoordeling; de bestaande notule is behouden.";
+          } catch {
+            message += ". Het concept kon niet worden bewaard; de bestaande notule is behouden.";
+          }
+        }
+        tasks.updateBackgroundTask(taskId, { status: "failed", error_message: message });
         toast.show("Regenereren mislukt", "error");
       } finally {
         setRegeneratingId(null);
@@ -266,8 +283,8 @@ export function TranscriptsPage() {
             try {
               const updated = await api.getTranscript(transcript.id);
               // The server wiped the Notities section when it regenerated.
-              if (updated.notule_html) updated.notule_html = await persistNotesSection(transcript.task_id ?? transcript.id, updated.notule_html);
-              updateTranscript(transcript.id, { title: updated.title, notule_html: updated.notule_html });
+              if (updated.notule_html) updated.notule_html = await persistNotesSection(transcript.task_id ?? transcript.id, updated.notule_html, profileId);
+              updateTranscript(transcript.id, { title: updated.title, notule_html: updated.notule_html, profile_id: profileId, profile_name: profile?.name ?? updated.profile_name });
               const settings = useSettingsStore.getState();
               if (settings.obsidian_enabled && updated.notule_html) {
                 await exportToObsidian(updated, settings);
@@ -343,16 +360,25 @@ export function TranscriptsPage() {
   // --- Export utilities ---
   function handleExportPDF(transcript: Transcript) {
     if (!transcript.notule_html) return;
-    const printWindow = window.open("", "_blank");
-    if (!printWindow) return;
-    printWindow.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${transcript.title || "Notulen"}</title><style>body{font-family:'Segoe UI Variable','Segoe UI',system-ui,sans-serif;font-size:12pt;line-height:1.6;color:#1a1a1a;padding:20pt}h1{font-size:18pt;font-weight:700;color:#9048F0;margin-bottom:12pt}h2{font-size:14pt;font-weight:600;margin-top:16pt}h3{font-size:12pt;font-weight:600;margin-top:12pt}p{margin:6pt 0}ul,ol{margin:6pt 0;padding-left:20pt}li{margin:3pt 0}table{border-collapse:collapse;width:100%;margin:12pt 0}th,td{border:1px solid #ddd;padding:6pt 8pt;text-align:left}th{background:#f5f5f5;font-weight:600}</style></head><body><h1>${transcript.title || "Notulen"}</h1><p style="color:#666;font-size:10pt">${formatDate(transcript.created_at)} &middot; ${formatDuration(transcript.duration_seconds)}</p>${DOMPurify.sanitize(prepareNotuleHtml(transcript.notule_html, transcript.title))}</body></html>`);
-    printWindow.document.close();
-    setTimeout(() => printWindow.print(), 250);
+    const title = document.createElement("span");
+    title.textContent = transcript.title || "Notulen";
+    const frame = document.createElement("iframe");
+    frame.title = "Notule afdrukken";
+    frame.style.cssText = "position:fixed;width:0;height:0;border:0";
+    frame.onload = () => {
+      const printWindow = frame.contentWindow;
+      if (!printWindow) { frame.remove(); toast.show("Afdrukvenster openen mislukt", "error"); return; }
+      // WebView2 must unwind printing before its frame is destroyed.
+      printWindow.addEventListener("afterprint", () => window.setTimeout(() => frame.remove(), 0), { once: true });
+      printWindow.print();
+    };
+    frame.srcdoc = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${title.innerHTML}</title><style>body{font-family:'Segoe UI Variable','Segoe UI',system-ui,sans-serif;font-size:12pt;line-height:1.6;color:#1a1a1a;padding:20pt}h1{font-size:18pt;font-weight:700;color:#9048F0;margin-bottom:12pt}h2{font-size:14pt;font-weight:600;margin-top:16pt}h3{font-size:12pt;font-weight:600;margin-top:12pt}p{margin:6pt 0}ul,ol{margin:6pt 0;padding-left:20pt}li{margin:3pt 0}table{border-collapse:collapse;width:100%;margin:12pt 0}th,td{border:1px solid #ddd;padding:6pt 8pt;text-align:left}th{background:#f5f5f5;font-weight:600}</style></head><body><h1>${title.innerHTML}</h1><p style="color:#666;font-size:10pt">${formatDate(transcript.created_at)} &middot; ${formatDuration(transcript.duration_seconds)}</p>${DOMPurify.sanitize(prepareNotuleHtml(transcript.notule_html, transcript.title))}</body></html>`;
+    document.body.append(frame);
   }
 
   function handleExportTXT(transcript: Transcript) {
     const content = transcript.notule_html
-      ? stripHtml(prepareNotuleHtml(transcript.notule_html, transcript.title))
+      ? htmlToPlainText(prepareNotuleHtml(transcript.notule_html, transcript.title))
       : transcript.raw_transcription;
     if (content) downloadFile(content, `${transcript.title || "notulen"}.txt`, "text/plain");
   }
@@ -388,7 +414,7 @@ export function TranscriptsPage() {
         toast.show("Obsidian-versie is bijgewerkt", "success");
         return;
       }
-      if (!window.confirm("De versie uit Obsidian vervangt de huidige notule in ThoughtVault. Doorgaan?")) return;
+      if (!await confirm("De versie uit Obsidian vervangt de huidige notule in ThoughtVault. Doorgaan?", "Notule vervangen", "Vervangen")) return;
       await handleSaveNotule(transcript.id, html, false);
       acknowledgeObsidianImport(transcript, markdown, html);
       toast.show("Wijzigingen uit Obsidian opgehaald", "success");
@@ -465,7 +491,8 @@ export function TranscriptsPage() {
   const selected = transcripts.find((t) => t.id === selectedId);
 
   return (
-    <div className="tp-root">
+    <div className={`tp-root desktop-notulen${selectedId ? " has-detail" : ""}`}>
+      {confirmation}
       <TranscriptsList
         transcripts={transcripts}
         selectedId={selectedId}
@@ -532,7 +559,7 @@ export function TranscriptsPage() {
         </div>
       )}
 
-      {regenerateTarget && <div className="td-overlay" onClick={() => setRegenerateTarget(null)}>
+      {regenerateTarget && <DesktopDialog className="td-overlay" label="Notule opnieuw genereren" onClose={() => setRegenerateTarget(null)}>
         <div className="td-tags-dialog" onClick={(e) => e.stopPropagation()}>
           <h3 className="td-tags-title">Notulen regenereren</h3>
           <p className="text-caption">Kies het template voor de nieuwe notulen.</p>
@@ -546,11 +573,11 @@ export function TranscriptsPage() {
             <button className="btn btn-accent" onClick={() => void handleRegenerate(regenerateTarget, regenerateProfileId)}>Regenereren</button>
           </div>
         </div>
-      </div>}
+      </DesktopDialog>}
 
       {/* Tags dialog */}
       {tagsDialogId && (
-        <div className="td-overlay" onClick={() => setTagsDialogId(null)}>
+        <DesktopDialog className="td-overlay" label="Tags beheren" onClose={() => setTagsDialogId(null)}>
           <div className="td-tags-dialog" onClick={(e) => e.stopPropagation()}>
             <h3 className="td-tags-title">Tags beheren</h3>
             <div className="td-tags-current">
@@ -595,7 +622,7 @@ export function TranscriptsPage() {
               <button className="btn btn-secondary btn-sm" onClick={() => setTagsDialogId(null)}>Sluiten</button>
             </div>
           </div>
-        </div>
+        </DesktopDialog>
       )}
     </div>
   );
@@ -619,12 +646,6 @@ function formatDate(dateStr: string): string {
 
 function formatDuration(seconds: number): string {
   const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
+  const s = Math.floor(seconds % 60);
   return m > 0 ? `${m}m ${s}s` : `${s}s`;
-}
-
-function stripHtml(html: string): string {
-  const tmp = document.createElement("div");
-  tmp.innerHTML = html;
-  return tmp.textContent || tmp.innerText || "";
 }

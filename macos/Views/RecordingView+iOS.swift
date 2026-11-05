@@ -39,7 +39,8 @@ extension RecordingView {
                 timerBlock
                     .padding(.top, 14)
                 IOSLiveWave(isActive: recordingVM.recordingState == .recording,
-                            levels: { recordingVM.audioLevels })
+                            levels: { recordingVM.audioLevels },
+                            bands: { recordingVM.frequencyBands })
                     .frame(height: 130)
                     .padding(.top, -34)
                 controls
@@ -517,13 +518,14 @@ extension RecordingView {
 struct IOSLiveWave: View {
     let isActive: Bool
     let levels: () -> [Float]
+    var bands: () -> [Float] = { [] }
 
     var body: some View {
         ZStack {
             RadialGradient(colors: [Color(red: 0.36, green: 0.18, blue: 0.80).opacity(isActive ? 0.35 : 0.15), .clear],
                            center: .center, startRadius: 0, endRadius: 220)
                 .scaleEffect(x: 1.6, y: 0.6)
-            WaveformView(levelsProvider: levels, isActive: isActive, maxFPS: 60)
+            WaveformView(levelsProvider: levels, isActive: isActive, bandsProvider: bands)
         }
         .accessibilityHidden(true)
     }

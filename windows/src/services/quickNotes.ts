@@ -4,6 +4,11 @@ const noteKey = (path: string) => `quick-note:${path}`;
 export function saveQuickNote(audioPath: string, note: string): void {
   if (note.trim()) localStorage.setItem(noteKey(audioPath), note.trim());
 }
+export function saveQuickNoteDraft(audioPath: string, note: string): void {
+  if (!audioPath) return;
+  if (note.trim()) saveQuickNote(audioPath, note);
+  else localStorage.removeItem(noteKey(audioPath));
+}
 export function getQuickNote(audioPath: string): string {
   return localStorage.getItem(noteKey(audioPath)) ?? "";
 }

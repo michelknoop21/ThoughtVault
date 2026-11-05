@@ -1,6 +1,7 @@
 mod audio;
 mod commands;
 mod transcribe;
+mod personal_corrections;
 
 use commands::audio::SharedRecordingState;
 use std::sync::{Arc, Mutex};
@@ -14,6 +15,7 @@ pub fn run() {
         .manage(recording_state)
         .manage(transcribe::ModelDownloadControl::default())
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(tauri_plugin_single_instance::init(|_app, _args, _cwd| {}))
@@ -72,6 +74,7 @@ pub fn run() {
             commands::filesystem::cleanup_old_recordings,
             commands::filesystem::get_recordings_dir,
             commands::filesystem::import_audio,
+            commands::filesystem::audio_duration,
             commands::filesystem::migrate_recordings_dir,
             commands::filesystem::concatenate_wav_files,
             // HTTP
@@ -97,6 +100,8 @@ pub fn run() {
             transcribe::remove_whisper_model,
             transcribe::show_whisper_model,
             transcribe::transcribe_local,
+            personal_corrections::load_personal_corrections,
+            personal_corrections::save_personal_corrections,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -51,3 +51,15 @@ export function useAudioLevelsRef(): React.MutableRefObject<number[]> {
 
   return bufferRef;
 }
+
+/** Native PCM frequency bands; both the main window and the widget subscribe. */
+export function useAudioBandsRef(): React.MutableRefObject<number[]> {
+  const bandsRef = useRef<number[]>([]);
+  useEffect(() => {
+    const unlisten = listen<number[]>("audio-spectrum", event => {
+      bandsRef.current = event.payload.map(value => Number.isFinite(value) ? Math.max(0, Math.min(1, value)) : 0);
+    });
+    return () => { unlisten.then(fn => fn()); };
+  }, []);
+  return bandsRef;
+}

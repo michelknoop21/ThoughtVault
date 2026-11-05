@@ -34,16 +34,25 @@ export const useLocalTranscriptsStore = create<LocalTranscriptsState>()((set, ge
         const store = await Store.load(STORE_FILE, { defaults: { items: [] }, autoSave: false });
         let items = await store.get<Transcript[]>("items") ?? [];
         const legacy = localStorage.getItem(LEGACY_KEY);
+        let migrated = false;
         if (legacy) {
           const oldItems = (JSON.parse(legacy) as { state?: { items?: Transcript[] } }).state?.items ?? [];
           if (oldItems.length > 0) {
             const ids = new Set(items.map((item) => item.id));
             items = [...items, ...oldItems.filter((item) => !ids.has(item.id))];
-            await store.set("items", items);
-            await store.save();
+            migrated = true;
           }
-          localStorage.removeItem(LEGACY_KEY);
         }
+        // Older regenerate/edit paths saved HTML without updating the presence flag.
+        const repaired = items.map((item) => typeof item.notule_html === "string"
+          && item.has_notes !== !!item.notule_html.trim()
+          ? { ...item, has_notes: !!item.notule_html.trim() } : item);
+        if (migrated || repaired.some((item, index) => item !== items[index])) {
+          await store.set("items", repaired);
+          await store.save();
+          items = repaired;
+        }
+        if (legacy) localStorage.removeItem(LEGACY_KEY);
         diskStore = store;
         set({ items });
       })().catch((error) => {

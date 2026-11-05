@@ -1,0 +1,9 @@
+{
+    "bundle":  {
+                   "useLocalToolsDir":  true,
+                   "createUpdaterArtifacts":  false
+               },
+    "build":  {
+                  "beforeBundleCommand":  ""
+              }
+}

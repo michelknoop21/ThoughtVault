@@ -353,3 +353,28 @@ laag biedt uitsluitend een vaste sessieprobe, geen installatie-/interactieve
 acceptatieacties. Deze grens is beschreven in
 [dalf38-ssh-acceptance-gap-2026-11-05.md](dalf38-ssh-acceptance-gap-2026-11-05.md).
 Geen Windows-rechten/taakdefinities, centrale code of SSH-instellingen gewijzigd.
+
+### Centrale MSI-route opgelost; ondertekening en waarschuwingen beoordeeld
+
+De beheerder heeft de vaste centrale MSI-taak toegevoegd. Job
+39b7f1a680c14372846bd1ca05e3cd4a slaagde, exit 0; ICE-validatie en 887 payloadhashes
+PASS. Exact MSI 1.0.299 met SHA-256
+b18758ab9ea2084d99f25b770a86cca3c333f5e235288f9022172a8f20647502
+is via SSH opgehaald, op de Mac met de bestaande updaterkey ondertekend en
+cryptografisch geverifieerd, inclusief negatieve payload-/commentaarproeven.
+Ondertekend paar op Dalf38: C:/Dalf38/incoming/thoughtvault-1-0-299-signed/.
+Transferhashes en teruggehaalde signature opnieuw gecontroleerd.
+
+ICE57 is bevestigd als gemengde gebruikers-/machinebronnen in RegistryEntries
+én CMP_UninstallShortcut; niet afgetekend voor brede uitrol. ICE61 is verklaard
+door AllowDowngrades=yes, maar vereist expliciet upgradebeleid en bewezen
+gegevenscompatibiliteit/rollback. Het log bevat daarnaast ICE03 en ICE40; hun
+installatie-/herinstallatiepaden blijven onderdeel van de acceptatie. Geen
+waarschuwing onderdrukt en geen template-/configwijziging in dit pakket.
+Beoordeling en bewijs: [MSI-review](dalf38-2026-11-05/msi299-central/REVIEW.md).
+
+Geïnstalleerd blijft 1.0.295. Niets geïnstalleerd of gepubliceerd. Updater-signature
+is geen Authenticode: Windows rapporteert NotSigned. Installatie, rollback,
+gegevensherstel en opname-/inhoudsacceptatie zijn niet door de pakketvalidatie
+vervangen. De eerdere blokkade van de SSH-MSI-route is hiermee opgelost;
+algemene uitrol blijft NO-GO.

@@ -1,0 +1,14 @@
+{
+    "sourceWxsSha256":  "0713D4040DB8F2F1978A809F468643A87C5EBED73AE2315A703144691C521CDA",
+    "majorUpgrade":  "\u003cMajorUpgrade Schedule=\"afterInstallInitialize\" AllowDowngrades=\"yes\" xmlns=\"http://schemas.microsoft.com/wix/2006/wi\" /\u003e",
+    "components":  [
+                       {
+                           "id":  "RegistryEntries",
+                           "xml":  "\u003cComponent Id=\"RegistryEntries\" Guid=\"*\" xmlns=\"http://schemas.microsoft.com/wix/2006/wi\"\u003e\u003cRegistryKey Root=\"HKCU\" Key=\"Software\\prezent\\ThoughtVault\"\u003e\u003cRegistryValue Name=\"InstallDir\" Type=\"string\" Value=\"[INSTALLDIR]\" KeyPath=\"yes\" /\u003e\u003c/RegistryKey\u003e\u003c!-- Change the Root to HKCU for perUser installations --\u003e\u003cRegistryKey Root=\"HKLM\" Key=\"Software\\Classes\\transcript-studio\"\u003e\u003cRegistryValue Type=\"string\" Name=\"URL Protocol\" Value=\"\" /\u003e\u003cRegistryValue Type=\"string\" Value=\"URL: protocol\" /\u003e\u003cRegistryKey Key=\"DefaultIcon\"\u003e\u003cRegistryValue Type=\"string\" Value=\"\u0026quot;[!Path]\u0026quot;,0\" /\u003e\u003c/RegistryKey\u003e\u003cRegistryKey Key=\"shell\\open\\command\"\u003e\u003cRegistryValue Type=\"string\" Value=\"\u0026quot;[!Path]\u0026quot; \u0026quot;%1\u0026quot;\" /\u003e\u003c/RegistryKey\u003e\u003c/RegistryKey\u003e\u003c/Component\u003e"
+                       },
+                       {
+                           "id":  "CMP_UninstallShortcut",
+                           "xml":  "\u003cComponent Id=\"CMP_UninstallShortcut\" Guid=\"*\" xmlns=\"http://schemas.microsoft.com/wix/2006/wi\"\u003e\u003cShortcut Id=\"UninstallShortcut\" Name=\"Uninstall ThoughtVault\" Description=\"Uninstalls ThoughtVault\" Target=\"[System64Folder]msiexec.exe\" Arguments=\"/x [ProductCode]\" /\u003e\u003cRemoveFolder Id=\"INSTALLDIR\" On=\"uninstall\" /\u003e\u003cRegistryValue Root=\"HKCU\" Key=\"Software\\prezent\\ThoughtVault\" Name=\"Uninstaller Shortcut\" Type=\"integer\" Value=\"1\" KeyPath=\"yes\" /\u003e\u003c/Component\u003e"
+                       }
+                   ]
+}

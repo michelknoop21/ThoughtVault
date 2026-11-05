@@ -1,5 +1,11 @@
 # Dalf38: ontbrekende acties voor uitvoering uitsluitend via SSH
 
+**Update:** de MSI-verpakkings-/validatieroute is inmiddels opgelost met de vaste
+centrale MSI-taak. Job 39b7f1a680c14372846bd1ca05e3cd4a en updaterondertekening
+zijn gecontroleerd; zie [MSI-review](dalf38-2026-11-05/msi299-central/REVIEW.md).
+Onderstaande oorspronkelijke MSI-blokkade is historisch. Installatie en
+interactieve applicatie-/hardwareacceptatie blijven afzonderlijk open.
+
 Gebruikerskeuze: alle verdere bediening via de bestaande centrale SSH-beheerlaag;
 geen computeruse/Royal TSX als uitvoerroute. Geen nieuwe SSH-server, beheeraccount
 of projectgebonden beheerlaag.

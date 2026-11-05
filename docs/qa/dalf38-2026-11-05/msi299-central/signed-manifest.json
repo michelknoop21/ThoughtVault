@@ -1,0 +1,23 @@
+{
+  "version": "1.0.299",
+  "sourceCommit": "870c3f93f75620f4a932f6cacf595f7ce2850aea",
+  "sourceJob": "18916d4c4d5b4251bfeb9a9f7f8074ee",
+  "sourceHash": "36fb2f0b95dee20fe8dd2da7755d3835c6ef1e67040e18ba6551263a139a6244",
+  "msiJob": "39b7f1a680c14372846bd1ca05e3cd4a",
+  "packagingSnapshotHash": "a09a6af6d12e60084a3308d7f287bded8cb441e484aff8d85b6d742e8fa72ab6",
+  "files": [
+    {
+      "path": "ThoughtVault_1.0.299_x64_en-US.msi",
+      "sha256": "b18758ab9ea2084d99f25b770a86cca3c333f5e235288f9022172a8f20647502",
+      "length": 110751664
+    },
+    {
+      "path": "ThoughtVault_1.0.299_x64_en-US.msi.sig",
+      "sha256": "c53d4f120da1a3d1831f7b3bf4379fd91539d876eef2c709aeb9a2aac0fa30e4",
+      "length": 428
+    }
+  ],
+  "updaterSignatureVerified": true,
+  "windowsPublisherSignatureClaimed": false,
+  "releaseReady": false
+}

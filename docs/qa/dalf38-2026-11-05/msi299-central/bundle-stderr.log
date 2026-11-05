@@ -1,0 +1,22 @@
+       Debug [tauri_cli::helpers::app_paths] Found Tauri project inside C:\ProgramData\Dalf38\msi-acceptance\jobs\39b7f1a680c14372846bd1ca05e3cd4a\work\project\src-tauri on early lookup
+        Info [tauri_bundler::bundle] Patching C:\ProgramData\Dalf38\msi-acceptance\jobs\39b7f1a680c14372846bd1ca05e3cd4a\work\target\release\ThoughtVault.exe with bundle type information: msi
+        Info [tauri_bundler::bundle::windows::msi] Target: x64
+     Running [tauri_bundler::bundle::windows::msi] candle for "C:\\ProgramData\\Dalf38\\msi-acceptance\\jobs\\39b7f1a680c14372846bd1ca05e3cd4a\\work\\target\\release\\wix\\x64\\main.wxs"
+     Running [tauri_bundler::utils] Command `C:\ProgramData\Dalf38\msi-acceptance\jobs\39b7f1a680c14372846bd1ca05e3cd4a\work\target\.tauri\WixTools314\candle.exe  -arch x64 C:\ProgramData\Dalf38\msi-acceptance\jobs\39b7f1a680c14372846bd1ca05e3cd4a\work\target\release\wix\x64\main.wxs -dSourceDir=C:\ProgramData\Dalf38\msi-acceptance\jobs\39b7f1a680c14372846bd1ca05e3cd4a\work\target\release\ThoughtVault.exe`
+Windows Installer XML Toolset Compiler version 3.14.1.8722
+Copyright (c) .NET Foundation and contributors. All rights reserved.
+
+main.wxs
+     Running [tauri_bundler::bundle::windows::msi] light to produce C:\ProgramData\Dalf38\msi-acceptance\jobs\39b7f1a680c14372846bd1ca05e3cd4a\work\target\release\bundle\msi\ThoughtVault_1.0.299_x64_en-US.msi
+     Running [tauri_bundler::utils] Command `C:\ProgramData\Dalf38\msi-acceptance\jobs\39b7f1a680c14372846bd1ca05e3cd4a\work\target\.tauri\WixTools314\light.exe  -ext C:\ProgramData\Dalf38\msi-acceptance\jobs\39b7f1a680c14372846bd1ca05e3cd4a\work\target\.tauri\WixTools314\WixUIExtension.dll -ext C:\ProgramData\Dalf38\msi-acceptance\jobs\39b7f1a680c14372846bd1ca05e3cd4a\work\target\.tauri\WixTools314\WixUtilExtension.dll -o C:\ProgramData\Dalf38\msi-acceptance\jobs\39b7f1a680c14372846bd1ca05e3cd4a\work\target\release\wix\x64\output.msi -cultures:en-us -loc C:\ProgramData\Dalf38\msi-acceptance\jobs\39b7f1a680c14372846bd1ca05e3cd4a\work\target\release\wix\x64\locale.wxl *.wixobj`
+Windows Installer XML Toolset Linker version 3.14.1.8722
+Copyright (c) .NET Foundation and contributors. All rights reserved.
+
+C:\ProgramData\Dalf38\msi-acceptance\jobs\39b7f1a680c14372846bd1ca05e3cd4a\work\target\release\wix\x64\main.wxs(1092) : warning LGHT1076 : ICE03: String overflow (greater than length permitted in column); Table: CustomAction, Column: Target, Key(s): DownloadAndInvokeBootstrapper
+C:\ProgramData\Dalf38\msi-acceptance\jobs\39b7f1a680c14372846bd1ca05e3cd4a\work\target\release\wix\x64\main.wxs(33) : warning LGHT1076 : ICE40: REINSTALLMODE is defined in the Property table. This may cause difficulties.
+C:\ProgramData\Dalf38\msi-acceptance\jobs\39b7f1a680c14372846bd1ca05e3cd4a\work\target\release\wix\x64\main.wxs(110) : warning LGHT1076 : ICE57: Component 'RegistryEntries' has both per-user and per-machine data with an HKCU Registry KeyPath.
+C:\ProgramData\Dalf38\msi-acceptance\jobs\39b7f1a680c14372846bd1ca05e3cd4a\work\target\release\wix\x64\main.wxs(130) : warning LGHT1076 : ICE57: Component 'CMP_UninstallShortcut' has both per-user and per-machine data with an HKCU Registry KeyPath.
+C:\ProgramData\Dalf38\msi-acceptance\jobs\39b7f1a680c14372846bd1ca05e3cd4a\work\target\release\wix\x64\main.wxs(40) : warning LGHT1076 : ICE61: This product should remove only older versions of itself. No Maximum version was detected for the current product. (WIX_UPGRADE_DETECTED)
+    Finished [tauri_bundler::bundle] 1 bundle at:
+        C:\ProgramData\Dalf38\msi-acceptance\jobs\39b7f1a680c14372846bd1ca05e3cd4a\work\target\release\bundle\msi\ThoughtVault_1.0.299_x64_en-US.msi
+

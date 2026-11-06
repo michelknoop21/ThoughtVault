@@ -8,7 +8,8 @@ Gebruiker heeft iPhone/iPad-acceptatie uitgesteld. Dalf38 wordt uitsluitend via 
 Er is niets gepubliceerd, geïnstalleerd op gebruikersapparaten of aan collega's verstuurd.
 
 Actuele Windows-kandidaat: **1.0.300**, broncommit `fef23dd1d8d5df093b1eb17bd7c511e34662b22d`.
-Native build PASS; MSI-validatie wacht op lokale snapshotgoedkeuring.
+Native build, MSI/ICE, 888 payloadhashes en updaterondertekening PASS.
+Installatie/rollback en opname-/inhoudsacceptatie blijven OPEN.
 Zie [actueel pakketbewijs](dalf38-2026-11-06/msi300/REVIEW.md).
 De onderstaande vervolgronden behouden de eerdere waarnemingen en hun eigen versies.
 
@@ -404,3 +405,17 @@ Vervolg: echte MSI/ICE- en payloadcontrole, exacte MSI op Mac ondertekenen;
 daarna afzonderlijke installatie/rollback en native opname-/inhoudsacceptatie.
 De huidige centrale taak installeert niets. Geen GUI-bediening hervatten of de
 verpakkingstaak gebruiken als willekeurige uitvoerbrug naar een ander account.
+
+### 6 november — MSI 1.0.300 gevalideerd en ondertekend
+
+MSI-job `2a1f78ee9b9d4e888094bc5982e7412b` exit 0; 888 payloads geverifieerd,
+geen read_token. ICE57/ICE61/ICE40 verdwenen; ICE03 voor WebView2-bootstrapper
+blijft. Exact MSI SHA-256 `a1ac99e94ba06f1f5a062068ae95df099884ffe910c3e8cb579a37c034a40912`
+is op de Mac ondertekend en cryptografisch geverifieerd, inclusief afwijzing van
+gewijzigde payload/commentaar. Ondertekend paar terug op Dalf38 met hashcontrole.
+Geïnstalleerde versie via SSH blijft 1.0.295. Zie actueel pakketbewijs bovenaan.
+
+Gebruiker wil geen handmatige snapshotgoedkeuringen meer. De bestaande centrale
+beheerbron is apart gekopieerd met behoud van Git-historie. Een beperkte automatische
+route wordt voorbereid; geen blijvend verhoogde broker, nieuwe SSH-ingang of
+projectgebonden beheerlaag. Centrale productiecode/taak/policy is nog niet gewijzigd.

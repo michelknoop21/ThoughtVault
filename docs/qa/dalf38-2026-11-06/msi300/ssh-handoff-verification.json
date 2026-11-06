@@ -1,0 +1,14 @@
+[
+  {
+    "path": "ThoughtVault_1.0.300_x64_en-US.msi",
+    "sha256": "a1ac99e94ba06f1f5a062068ae95df099884ffe910c3e8cb579a37c034a40912",
+    "verified": true,
+    "length": 110772409
+  },
+  {
+    "path": "ThoughtVault_1.0.300_x64_en-US.msi.sig",
+    "sha256": "7481ee994b1c9adba7a2f08400510b9974b09b7ae848d18f3bfc0a8394125616",
+    "verified": true,
+    "length": 428
+  }
+]

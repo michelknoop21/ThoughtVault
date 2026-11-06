@@ -10,7 +10,8 @@
   "automaticSmokeRequest": "c79cf1d550bd4212a03597182d1ae588",
   "automaticSnapshotHash": "2e6160c685b818275eea13fee935a107b13d57219be99674a7a3e2c880f9ba33",
   "snapshotApprovalAutomatic": true,
-  "packageResult": "running, final result not yet recorded",
+  "packageResult": "failed: WiX LGHT0103, automatic workspace exceeds MAX_PATH",
   "applicationInstalled": false,
-  "applicationAcceptance": false
+  "applicationAcceptance": false,
+  "shortPathFix": "Windows source tests passed; protected worker update pending"
 }

@@ -1,0 +1,20 @@
+{
+  "sourceCommit": "75e2feba5e54108bfa4ebbd8ef911c3e22de7e70",
+  "archiveSha256": "9d43cfb8255eec516ff9a412702f353abf43caca007ebaf72c0aff5faebe2d6d",
+  "stagedAt": "C:/Dalf38/incoming/dalf38-msi-short-path-75e2feb",
+  "installed": false,
+  "tests": [
+    {
+      "test": "Msi.Tests.ps1",
+      "exitCode": 0,
+      "stdout": "PASS: MSI provenance, pending-status protection, snapshot/hash/path/junction/hardlink checks, generated-resource policy, payload/version/architecture checks\n",
+      "stderr": ""
+    },
+    {
+      "test": "MsiAuto.Tests.ps1",
+      "exitCode": 0,
+      "stdout": "PASS: real snapshot/manifest, one-time approval, historical exclusion, interruption, cancellation, source drift, invalid requests, disabled policy and syntax\n",
+      "stderr": ""
+    }
+  ]
+}

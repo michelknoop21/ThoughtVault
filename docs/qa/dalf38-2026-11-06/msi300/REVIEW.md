@@ -62,5 +62,9 @@ zij installeert niets en voert geen algemene app-/microfoontests uit.
 De automatische snapshotvoorbereiding is na Windows-tests en onafhankelijke
 review eenmalig door de beheerder geactiveerd (centrale commit a442929). De nieuwe
 aanvraag c79cf1d550bd4212a03597182d1ae588 is zonder handmatige snapshotopdrachten
-voorbereid/goedgekeurd en de beperkte verpakkingstaak draait. Eindresultaat volgt.
-Dit geeft geen toestemming voor installatie/publicatie. Appdata bleef onaangeroerd.
+voorbereid/goedgekeurd. De verpakking faalde daarna met WiX LGHT0103: vier bestaande
+runtimebestanden kregen in de diepere automatische werkmap een pad boven MAX_PATH.
+De kleine correctie gebruikt een kortere, nog steeds unieke geïsoleerde werkmap.
+De Windows-brontests zijn geslaagd; activering in de beschermde beheerlaag en een
+nieuwe volledige automatische verpakkingsproef staan nog open. De eerder gevalideerde
+en ondertekende MSI 1.0.300 blijft ongewijzigd. Appdata bleef onaangeroerd.

@@ -16,3 +16,18 @@ Regel de ontbrekende technische toegang binnen deze bestaande laag:
 Bouw de kleinste werkende uitbreiding met bestaande Windows/PowerShell-middelen. Installeer geen extra toolchains of diensten en zet geen beveiliging uit. Maak vóór configuratiewijzigingen een herstelbare kopie. Voer geen gelijktijdige ThoughtVault-installatie of app-tests uit: die worden door de Mac-agent gecoördineerd. Publiceer niets.
 
 Lever werkende SSH-commando's voor beheer, installatie/rollback en interactieve acceptatie, met bewijs van de juiste identiteit/rechten/sessie en een herstelprocedure. Benoem exact wanneer een ingelogde of ontgrendelde sessie nodig is en welke fysieke microfoonproef nog menselijke testspraak vereist. Claim geen opnameacceptatie op basis van een sessieprobe.
+
+
+## Klaargezette padcorrectie
+
+De minimale padcorrectie staat al op Dalf38 in
+`C:/Dalf38/incoming/dalf38-msi-short-path-75e2feb` (commit
+`75e2feba5e54108bfa4ebbd8ef911c3e22de7e70`). Beide MSI-testsuites zijn daar
+onder developer geslaagd. Het archief ernaast heeft SHA256
+`9d43cfb8255eec516ff9a412702f353abf43caca007ebaf72c0aff5faebe2d6d`.
+Controleer vóór activering de actuele geïnstalleerde commit en eventuele wijzigingen.
+Werk via de bestaande `Update-Dalf38.ps1` bij, met de bestaande MSI-workerlock
+vastgehouden en zonder actieve verpakkingstaak. Herhaal de eenmalige
+`Setup-MsiAutomation.ps1` niet: die verwacht de oude basiscommit.
+Laat de oorspronkelijke gevalideerde/ondertekende MSI 1.0.300 ongewijzigd;
+de Mac-agent start na activering een nieuwe automatische verpakkingsproef.

@@ -4,8 +4,13 @@
 
 **NIET GEREED VOOR UITROL.** Lokale code-integratie en regressietests zijn afgerond;
 Windows-native acceptatie, inhoudskwaliteit, herstel en distributie zijn niet bewezen.
-Gebruiker heeft iPhone/iPad-acceptatie uitgesteld en Dalf38 via RustDesk aangewezen.
+Gebruiker heeft iPhone/iPad-acceptatie uitgesteld. Dalf38 wordt uitsluitend via de centrale SSH-route bediend.
 Er is niets gepubliceerd, geïnstalleerd op gebruikersapparaten of aan collega's verstuurd.
+
+Actuele Windows-kandidaat: **1.0.300**, broncommit `fef23dd1d8d5df093b1eb17bd7c511e34662b22d`.
+Native build PASS; MSI-validatie wacht op lokale snapshotgoedkeuring.
+Zie [actueel pakketbewijs](dalf38-2026-11-06/msi300/REVIEW.md).
+De onderstaande vervolgronden behouden de eerdere waarnemingen en hun eigen versies.
 
 ## Kandidaat en herkomst
 
@@ -75,7 +80,7 @@ Alle onderstaande rijen zijn voor deze kandidaat **NOT TESTED**, tenzij BLOCKED 
 | N16 | Toetsenbord/focus/toegankelijkheid; Windows 100/125/150%, klein/groot venster; native waveform met bewegend bewijs |
 | N17 | Gedownload distributiepakket, identiteit, signing, installatie en rollback; hashes en bron herleidbaar |
 
-## Eerstvolgende uitvoering
+## Oorspronkelijke uitvoering van 5 november (historisch)
 
 1. RustDesk-bediening herstellen. Zowel codex-daemon als osascript kregen volgens gebruiker
    Toegankelijkheidstoestemming, maar verse probes blijven -25211 teruggeven. Geen TCC-reset of bypass.
@@ -378,3 +383,24 @@ is geen Authenticode: Windows rapporteert NotSigned. Installatie, rollback,
 gegevensherstel en opname-/inhoudsacceptatie zijn niet door de pakketvalidatie
 vervangen. De eerdere blokkade van de SSH-MSI-route is hiermee opgelost;
 algemene uitrol blijft NO-GO.
+
+### 6 november — installerfix 1.0.300 en geslaagde native build
+
+De vaste upstream-WiX-template is met minimale wijzigingen opgenomen: HKLM voor
+het machinecomponent, verwijderde gedeelde uninstallshortcut, geen automatische
+downgrade/gelijkversie-upgrade en geen geforceerde REINSTALLMODE. Bestaande
+product-ID, UpgradeCode, updaterkey, resources en gebruikersopslag blijven behouden.
+De twee oude HKCU-padzoekopdrachten blijven als upgradecompatibiliteit aanwezig;
+het nieuwe HKLM-pad heeft voorrang. De upstreamlicentie is als resource toegevoegd.
+
+11 scripttests PASS; de scope-regressietest faalt aantoonbaar op de oorspronkelijke
+upstreamtemplate. Native x64-job `6432b5df2af247978710b98664a5df68` PASS (exit 0).
+De bronaanlevering bevat 223 gehashte bestanden. 173 frontendinputs komen overeen
+met de eerder gecontroleerde 209-PASS-baseline; frontend opnieuw gebouwd.
+MSI-aanvraag `2a1f78ee9b9d4e888094bc5982e7412b` wacht op lokale
+snapshotvoorbereiding/goedkeuring volgens de centrale handleiding.
+
+Vervolg: echte MSI/ICE- en payloadcontrole, exacte MSI op Mac ondertekenen;
+daarna afzonderlijke installatie/rollback en native opname-/inhoudsacceptatie.
+De huidige centrale taak installeert niets. Geen GUI-bediening hervatten of de
+verpakkingstaak gebruiken als willekeurige uitvoerbrug naar een ander account.

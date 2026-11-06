@@ -1,0 +1,26 @@
+{
+  "snapshotHash": "2e6160c685b818275eea13fee935a107b13d57219be99674a7a3e2c880f9ba33",
+  "selected": [
+    {
+      "path": "native.exe",
+      "sha256": "b5f5389f7abe176822b3c515c6c289324a16b452c4ee5ad442693e737e90d4a3",
+      "length": 27411456
+    },
+    {
+      "path": "project/src-tauri/installer/LICENSE-MIT.md",
+      "sha256": "86fc515b82835f7cb6ad400cc64a9d3380d22d55b593e8c34f51efee9f6a250b",
+      "length": 2159
+    },
+    {
+      "path": "project/src-tauri/installer/main.wxs",
+      "sha256": "c08e2ddc535e9fdf3b656921381e766ce7817246abab331c359e9f03888725d4",
+      "length": 16197
+    },
+    {
+      "path": "project/src-tauri/tauri.conf.json",
+      "sha256": "427a02c2ffa6e3a56074f541dff791362eb60a2aa209a41c2cf5e7c45f2f2356",
+      "length": 2234
+    }
+  ],
+  "files": 31358
+}

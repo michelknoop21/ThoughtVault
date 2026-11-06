@@ -2,6 +2,16 @@
 
 Status: voorbereiding, **nog niet vrijgegeven voor collega's**. Gebruik tijdens acceptatie alleen fictieve vergaderingen.
 
+**Actuele kandidaat (6 november): 1.0.300**, broncommit
+`fef23dd1d8d5df093b1eb17bd7c511e34662b22d`. De native x64-build is geslaagd;
+de centrale MSI-aanvraag wacht op snapshotgoedkeuring. Het distributiepakket is
+nog niet gereed. Volg het [actuele bewijs](qa/dalf38-2026-11-06/msi300/REVIEW.md)
+en de [acceptatiematrix](qa/pilot-readiness-2026-11-05.md).
+De versies en pakkethashes hieronder zijn **historische acceptatiegegevens**,
+geen downloadadvies voor collega's.
+
+## Historische kandidaat 1.0.296
+
 De nieuwe lokale MSI-kandidaat is **1.0.296**, broncommit
 `132b9e190ff56e6529b10e4c52f5fafe9a6c97d8`, met de bedragfix, aanvullende
 inhoudscontrole en apart behoud van afgewezen concepten.

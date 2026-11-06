@@ -1,0 +1,26 @@
+{
+  "id": "2a1f78ee9b9d4e888094bc5982e7412b",
+  "operation": "tauri-msi",
+  "status": "prepared",
+  "sourceJob": "6432b5df2af247978710b98664a5df68",
+  "project": "thoughtvault-msi300",
+  "projectDirectory": "windows",
+  "nativeArtifact": "package/ThoughtVault.exe",
+  "nativeSha256": "b5f5389f7abe176822b3c515c6c289324a16b452c4ee5ad442693e737e90d4a3",
+  "binaryName": "ThoughtVault",
+  "version": "1.0.300",
+  "forbiddenPayloadNames": [],
+  "requestedAt": "2026-11-06T08:29:57.5860435Z",
+  "requestedBy": "DESKTOP-98B3AHB\\developer",
+  "approvedAt": null,
+  "approvedBy": "DESKTOP-98B3AHB\\michel",
+  "sourceHash": "184ab77858709c4d73445145d9fe6547ba585b35a9e64858469e81d2b27fe208",
+  "sourceCommit": null,
+  "snapshotHash": "2e6160c685b818275eea13fee935a107b13d57219be99674a7a3e2c880f9ba33",
+  "generatedInputs": {
+    "schemas": 0,
+    "dependencies": 30246,
+    "resources": 885,
+    "frontend": 12
+  }
+}

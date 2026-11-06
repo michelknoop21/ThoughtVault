@@ -1,0 +1,16 @@
+test_inference_error_does_not_publish_partial_output (test_faster_whisper_worker.WorkerTests.test_inference_error_does_not_publish_partial_output) ... ok
+test_offline_cpu_inference_finishes_before_persisting_result (test_faster_whisper_worker.WorkerTests.test_offline_cpu_inference_finishes_before_persisting_result) ... ok
+test_ios_has_no_sparkle_build_dependency (test_sparkle_platforms.SparklePlatformsTests.test_ios_has_no_sparkle_build_dependency) ... ok
+test_macos_keeps_sparkle_build_dependency_and_version (test_sparkle_platforms.SparklePlatformsTests.test_macos_keeps_sparkle_build_dependency_and_version) ... ok
+test_sparkle_link_remains_macos_only (test_sparkle_platforms.SparklePlatformsTests.test_sparkle_link_remains_macos_only) ... ok
+test_explicit_upload_preserves_both_routes (test_testflight.TestFlightTests.test_explicit_upload_preserves_both_routes) ... ok
+test_invalid_option_fails_before_build (test_testflight.TestFlightTests.test_invalid_option_fails_before_build) ... ok
+test_local_exports_never_upload (test_testflight.TestFlightTests.test_local_exports_never_upload) ... ok
+test_machine_components_do_not_depend_on_user_registry_keys (test_windows_installer.WindowsInstallerTests.test_machine_components_do_not_depend_on_user_registry_keys) ... ok
+test_machine_install_path_takes_priority_without_losing_legacy_upgrades (test_windows_installer.WindowsInstallerTests.test_machine_install_path_takes_priority_without_losing_legacy_upgrades) ... ok
+test_only_forward_upgrades_keep_the_existing_application_identity (test_windows_installer.WindowsInstallerTests.test_only_forward_upgrades_keep_the_existing_application_identity) ... ok
+
+----------------------------------------------------------------------
+Ran 11 tests in 1.815s
+
+OK

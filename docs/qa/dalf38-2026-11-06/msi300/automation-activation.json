@@ -1,0 +1,16 @@
+{
+  "managementCommit": "a442929837bbd7acf5f59fd921d13bd608d37115",
+  "policy": {
+    "scope": "MSI snapshot and packaging only; all managed projects",
+    "enabledAt": "2026-11-06T09:00:01.4334263Z",
+    "installationAllowed": false,
+    "trustManagedBuildInputs": true,
+    "authorizedBy": "DESKTOP-98B3AHB\\michel"
+  },
+  "automaticSmokeRequest": "c79cf1d550bd4212a03597182d1ae588",
+  "automaticSnapshotHash": "2e6160c685b818275eea13fee935a107b13d57219be99674a7a3e2c880f9ba33",
+  "snapshotApprovalAutomatic": true,
+  "packageResult": "running, final result not yet recorded",
+  "applicationInstalled": false,
+  "applicationAcceptance": false
+}

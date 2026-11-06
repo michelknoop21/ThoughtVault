@@ -59,6 +59,8 @@ geautoriseerde beveiligde adapter en volg de bestaande
 
 Uitsluitend SSH gebruikt. De huidige centrale MSI-taak verpakt en controleert;
 zij installeert niets en voert geen algemene app-/microfoontests uit.
-De gevraagde automatische snapshotvoorbereiding wordt in de centrale beheerbron
-apart uitgewerkt en getest. Zij is nog niet op de machine geactiveerd en geeft
-geen toestemming voor installatie/publicatie. Bestaande appdata bleef onaangeroerd.
+De automatische snapshotvoorbereiding is na Windows-tests en onafhankelijke
+review eenmalig door de beheerder geactiveerd (centrale commit a442929). De nieuwe
+aanvraag c79cf1d550bd4212a03597182d1ae588 is zonder handmatige snapshotopdrachten
+voorbereid/goedgekeurd en de beperkte verpakkingstaak draait. Eindresultaat volgt.
+Dit geeft geen toestemming voor installatie/publicatie. Appdata bleef onaangeroerd.

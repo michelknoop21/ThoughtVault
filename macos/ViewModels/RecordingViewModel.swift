@@ -207,6 +207,7 @@ final class RecordingViewModel {
     private var pollingFallbackTasks: [String: Task<Void, Never>] = [:]
     @ObservationIgnored
     private var uploadTask: Task<Void, Never>?
+    private var onDeviceCancelled = false
     @ObservationIgnored
     private var localProcessingTasks: [String: Task<Void, Never>] = [:]
     private var isProcessingQueue = false
@@ -678,6 +679,11 @@ final class RecordingViewModel {
                 uploadTask = nil
             }
         } else {
+            if recordingState == .uploading {
+                // Widget cancel during on-device transcription; the audio file is kept.
+                onDeviceCancelled = true
+                onDeviceTranscriber.cancelFileTranscription()
+            }
             // Cancel the current upload task (legacy call without ID)
             uploadTask?.cancel()
             uploadTask = nil
@@ -694,6 +700,7 @@ final class RecordingViewModel {
                 liveSystemText = ""
             recordingState = .uploading
         }
+        onDeviceCancelled = false
 
         do {
             var fullTranscription = ""
@@ -735,7 +742,7 @@ final class RecordingViewModel {
         } catch {
             await MainActor.run {
                 isLiveTranscribing = false
-                recordingState = .error(error.localizedDescription)
+                recordingState = onDeviceCancelled ? .idle : .error(error.localizedDescription)
             }
         }
     }

@@ -106,6 +106,7 @@
 		AA000051 /* PermissionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000051 /* PermissionManager.swift */; };
 		AA000052 /* PermissionBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000052 /* PermissionBanner.swift */; };
 		AA000053 /* EditableHTMLWebView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000053 /* EditableHTMLWebView.swift */; };
+		AADF1101 /* DraftReviewSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = FADF1101 /* DraftReviewSection.swift */; };
 		AA000054 /* MeetingNotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000054 /* MeetingNotificationService.swift */; };
 		AA000055 /* TasksViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000055 /* TasksViewModel.swift */; };
 		AA000056 /* TasksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000056 /* TasksView.swift */; };
@@ -265,6 +266,7 @@
 		FA000051 /* PermissionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionManager.swift; sourceTree = "<group>"; };
 		FA000052 /* PermissionBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionBanner.swift; sourceTree = "<group>"; };
 		FA000053 /* EditableHTMLWebView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditableHTMLWebView.swift; sourceTree = "<group>"; };
+		FADF1101 /* DraftReviewSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DraftReviewSection.swift; sourceTree = "<group>"; };
 		FA000054 /* MeetingNotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeetingNotificationService.swift; sourceTree = "<group>"; };
 		FA000055 /* TasksViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TasksViewModel.swift; sourceTree = "<group>"; };
 		FA000056 /* TasksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TasksView.swift; sourceTree = "<group>"; };
@@ -518,6 +520,7 @@
 				FA0000I1 /* IOSTheme.swift */,
 				FA000052 /* PermissionBanner.swift */,
 				FA000053 /* EditableHTMLWebView.swift */,
+				FADF1101 /* DraftReviewSection.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -793,6 +796,7 @@
 				AA000051 /* PermissionManager.swift in Sources */,
 				AA000052 /* PermissionBanner.swift in Sources */,
 				AA000053 /* EditableHTMLWebView.swift in Sources */,
+				AADF1101 /* DraftReviewSection.swift in Sources */,
 				AA000054 /* MeetingNotificationService.swift in Sources */,
 				AA000057 /* UpdateCheckService.swift in Sources */,
 				AA000058 /* GoogleAuthService.swift in Sources */,

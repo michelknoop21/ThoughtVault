@@ -752,6 +752,14 @@ struct SettingsView: View {
 
     @ViewBuilder
     var appleIntelligenceNote: some View {
+        appleIntelligenceAvailability
+        Text("Lange vergaderingen worden meestal als concept bewaard; kies een cloudmodel voor gecontroleerde notulen.")
+            .font(TS.Font.caption)
+            .foregroundStyle(Color.labelSecondary)
+    }
+
+    @ViewBuilder
+    private var appleIntelligenceAvailability: some View {
         #if canImport(FoundationModels)
         if #available(macOS 26, iOS 26, *) {
             if let reason = AppleFoundationModelService.unavailabilityReason {

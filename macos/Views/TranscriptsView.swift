@@ -1089,6 +1089,7 @@ struct TranscriptDetailView: View {
                     VStack(spacing: 0) {
                         documentHeader(isCompact: isCompact)
                         Divider()
+                        draftReviewSection
                         contentArea
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
@@ -1672,6 +1673,15 @@ struct TranscriptDetailView: View {
             return "\(mins) min \(secs) sec"
         }
         return "\(secs) sec"
+    }
+
+    /// Rejected local notule draft (audit), shown above the approved notule.
+    @ViewBuilder
+    var draftReviewSection: some View {
+        if let record = LocalTranscriptStore.shared.record(forTaskId: fullTranscript.taskId),
+           let draft = record.notuleDraftHtml {
+            DraftReviewSection(reason: record.notuleReviewReason ?? "", draftHtml: draft)
+        }
     }
 
     @ViewBuilder

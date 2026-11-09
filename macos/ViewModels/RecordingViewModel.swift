@@ -1345,7 +1345,9 @@ final class RecordingViewModel {
     // MARK: - Live Transcription
 
     func startLiveTranscriptionIfEnabled() async {
-        guard onDeviceTranscriptionAvailable, preferOnDeviceTranscription else { return }
+        guard LiveTranscriptionPolicy.isEnabled(preferred: preferOnDeviceTranscription,
+                                                available: onDeviceTranscriptionAvailable,
+                                                localMode: isLocalMode) else { return }
         let sources = LiveTranscriptionPolicy.sources(for: selectedMode)
 
         // Prevent concurrent starts (e.g. rapid pause/resume)
@@ -1392,6 +1394,7 @@ final class RecordingViewModel {
     var liveTranscriptionStatusText: String? {
         LiveTranscriptionPolicy.statusText(preferred: preferOnDeviceTranscription,
                                            available: onDeviceTranscriptionAvailable,
+                                           localMode: isLocalMode,
                                            error: liveTranscriptionError)
     }
 

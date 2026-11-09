@@ -450,7 +450,7 @@ extension RecordingView {
                 sourceMenu(tier: tier)
                 profileMenu(tier: tier)
             }
-            onDeviceTranscriptionControl(tier: tier)
+            if !recordingVM.isLocalMode { onDeviceTranscriptionControl(tier: tier) }
         }
         .padding(.horizontal, tier == .regular ? 19 : 12)
         .frame(maxWidth: .infinity, maxHeight: .infinity)

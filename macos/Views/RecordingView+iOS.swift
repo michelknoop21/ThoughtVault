@@ -331,7 +331,7 @@ extension RecordingView {
             }
             // Same setting as "Transcriptie op apparaat": it also runs the live
             // transcript, so the cell is labelled by what it really switches.
-            if OnDeviceTranscriber.shared.isAvailable() {
+            if !recordingVM.isLocalMode && OnDeviceTranscriber.shared.isAvailable() {
             cellDivider
             settingCell(icon: "doc.plaintext", label: "Op apparaat") {
                 HStack(spacing: 4) {

@@ -23,7 +23,7 @@ extension SettingsView {
                     .padding(.top, -4)
 
                 group("Opname") {
-                    if OnDeviceTranscriber.shared.isAvailable() {
+                    if !isLocalProcessing && OnDeviceTranscriber.shared.isAvailable() {
                         IOSRow(icon: "mic", title: "Transcriptie op apparaat", subtitle: "Sneller, geen audiodata naar server") {
                             Toggle("Transcriptie op apparaat", isOn: $preferOnDeviceTranscription)
                                 .labelsHidden()

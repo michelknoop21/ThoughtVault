@@ -232,7 +232,7 @@ extension SettingsView {
                     .font(.system(size: 13.5)).foregroundStyle(HomeColor.text2)
             }
 
-            if OnDeviceTranscriber.shared.isAvailable() {
+            if !isLocalProcessing && OnDeviceTranscriber.shared.isAvailable() {
                 HStack(alignment: .center, spacing: 16) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Transcriptie op apparaat").font(.system(size: 14, weight: .medium)).foregroundStyle(HomeColor.text)

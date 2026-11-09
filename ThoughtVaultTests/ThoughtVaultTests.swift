@@ -156,6 +156,16 @@ final class RestartTaskTests: XCTestCase {
 }
 
 final class LiveTranscriptionPolicyTests: XCTestCase {
+    func testLiveTranscriptionDisabledInLocalMode() {
+        XCTAssertFalse(LiveTranscriptionPolicy.isEnabled(preferred: true, available: true, localMode: true))
+        XCTAssertTrue(LiveTranscriptionPolicy.isEnabled(preferred: true, available: true, localMode: false))
+        XCTAssertFalse(LiveTranscriptionPolicy.isEnabled(preferred: false, available: true, localMode: false))
+    }
+
+    func testNoStatusTextInLocalMode() {
+        XCTAssertNil(LiveTranscriptionPolicy.statusText(preferred: false, available: true, localMode: true, error: nil))
+    }
+
     #if os(macOS)
     func testEveryModeListensToItsOwnSources() {
         XCTAssertEqual(LiveTranscriptionPolicy.sources(for: .microphone), [.microphone])

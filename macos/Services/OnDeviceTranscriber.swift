@@ -407,9 +407,15 @@ enum LiveTranscriptionPolicy {
         #endif
     }
 
+    /// Live text only exists in Cloud mode; Local mode never shows it, whatever the stored preference says.
+    static func isEnabled(preferred: Bool, available: Bool, localMode: Bool) -> Bool {
+        preferred && available && !localMode
+    }
+
     /// Why no live text appears, or nil when live recognition is (or is about to be)
     /// running and "Ik luister..." is the honest answer.
-    static func statusText(preferred: Bool, available: Bool, error: String?) -> String? {
+    static func statusText(preferred: Bool, available: Bool, localMode: Bool = false, error: String?) -> String? {
+        guard !localMode else { return nil }
         guard preferred else { return "Opname loopt (live tekst staat uit)" }
         guard available else { return "Opname loopt (live tekst niet beschikbaar)" }
         if let error { return "Live tekst gestopt: \(error)" }

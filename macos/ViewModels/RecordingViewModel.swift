@@ -34,7 +34,6 @@ final class RecordingViewModel {
     var usePremium: Bool = false
     var availableProfiles: [Profile] = []
     var activeTasks: [TranscriptTask] = []
-    var uploadProgress: Double = 0
     var liveTranscriptText: String = ""
     /// Live text of the system audio; the screen shows whichever source spoke last.
     var liveSystemText: String = ""
@@ -579,7 +578,6 @@ final class RecordingViewModel {
 
         await MainActor.run {
             recordingState = .idle
-            uploadProgress = 0
             activeMeeting = nil
             quickNote = ""
         }

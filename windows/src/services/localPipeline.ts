@@ -13,6 +13,7 @@ import { getQuickNote } from "./quickNotes";
 import { hasUsableNotule, hasUsableTranscription } from "./notuleValidation";
 import { usePersonalCorrectionsStore } from "../stores/personalCorrectionsStore";
 import { activeCorrections } from "./personalCorrections";
+import { runInBackground } from "./contextSuggestions";
 import type { Participant } from "./participants";
 import type { RecordingMode, Transcript, TranscriptTask } from "../types";
 
@@ -154,6 +155,8 @@ export async function processLocally(
     await useLocalTranscriptsStore.getState().update(taskId, finished);
 
     useTranscriptsStore.getState().updateTranscript(taskId, finished);
+    // Background term and people suggestions; never blocks or fails the saved notule.
+    runInBackground(taskId, transcription, participants, profile?.id, profile?.name ?? "");
 
     if (settings.obsidian_enabled) {
       const saved = useLocalTranscriptsStore.getState().items.find((item) => item.id === taskId);

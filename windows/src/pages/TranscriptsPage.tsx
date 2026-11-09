@@ -31,6 +31,7 @@ import { useToast } from "../components/ui/InfoBar";
 import { clampMenuPosition } from "../utils/menuPosition";
 import { TranscriptsList } from "../components/transcripts/TranscriptsList";
 import { TranscriptDetail } from "../components/transcripts/TranscriptDetail";
+import { runInBackground } from "../services/contextSuggestions";
 import type { Transcript } from "../types";
 
 interface ContextMenu {
@@ -232,6 +233,7 @@ export function TranscriptsPage() {
           notule_draft_html: "", notule_review_reason: "", updated_at: new Date().toISOString() };
         await useLocalTranscriptsStore.getState().update(transcript.id, finished);
         updateTranscript(transcript.id, finished);
+        runInBackground(transcript.id, transcription, [], profile.id, profile.name);
         tasks.updateBackgroundTask(taskId, { status: "completed", progress: 100 });
         const settings = useSettingsStore.getState();
         if (settings.obsidian_enabled) {

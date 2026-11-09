@@ -33,6 +33,7 @@ export const usePersonProfileStore = create<PersonProfileState>()(
                 aliases: [],
                 meetingTypes: [],
                 expertiseTags: [],
+                responsibilities: [],
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
                 ...updates,
@@ -43,6 +44,12 @@ export const usePersonProfileStore = create<PersonProfileState>()(
     {
       // MUST differ from "profiles-store" and "settings-store" (Pitfall 4)
       name: "person-profile-store",
+      // v1 adds responsibilities to the profile shape.
+      version: 1,
+      migrate: (persisted) => {
+        const state = persisted as { profile?: PersonProfile | null };
+        return { ...state, profile: state.profile ? { ...state.profile, responsibilities: state.profile.responsibilities ?? [] } : null } as PersonProfileState;
+      },
     }
   )
 );

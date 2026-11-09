@@ -18,7 +18,7 @@ final class RecordingViewModel {
 
     var recordingState: RecordingState = .idle
     var updateInstalling = false
-    private var pendingRegenerations = 0
+    var pendingRegenerations = 0
     var updateIsBusy: Bool {
         switch recordingState {
         case .idle, .error: return activeTasks.contains { $0.status.isActive } || isProcessingQueue || !localProcessingTasks.isEmpty || pendingRegenerations > 0
@@ -208,7 +208,7 @@ final class RecordingViewModel {
     private var uploadTask: Task<Void, Never>?
     private var onDeviceCancelled = false
     @ObservationIgnored
-    private var localProcessingTasks: [String: Task<Void, Never>] = [:]
+    var localProcessingTasks: [String: Task<Void, Never>] = [:]
     private var isProcessingQueue = false
     private var networkMonitor = NetworkMonitor.shared
 
@@ -861,103 +861,9 @@ final class RecordingViewModel {
             self.loadSavedRecordings()
         }
 
-        // 3. Local notule generation via the configured provider.
-        let providerRaw = UserDefaults.standard.string(forKey: "notulenProvider") ?? NotulenProvider.platformDefault.rawValue
-        var provider = NotulenProvider(rawValue: providerRaw) ?? .ollama
-        if provider == .cloud { provider = .ollama }   // cloud is meaningless offline
-
-        do {
-            try Task.checkCancellation()
-            let service = LLMServiceFactory.service(for: provider, serverURL: "")
-            let corrections = try PersonalCorrections.load()
-            let html = try await service.generateNotulen(
-                transcription: PersonalCorrections.text(transcription, entries: corrections, profileId: profile.id),
-                systemPrompt: profile.systemPrompt ?? "",
-                notulePrompt: QuickNoteStore.promptBlock(QuickNoteStore.note(audioFilename: url.lastPathComponent))
-                    + Self.injectParticipants(into: profile.notulePrompt ?? "", participants: participants)
-                    + PersonalVocabulary.promptInstruction()
-                    + PersonalCorrections.prompt(corrections, profileId: profile.id),
-                outputTemplate: profile.template
-            ) { [weak self] chunk in
-                Task { @MainActor in
-                    guard let self else { return }
-                    guard !Task.isCancelled else { return }
-                    self.appendTaskNotuleHtml(localId, chunk)
-                }
-            }
-            try Task.checkCancellation()
-
-            let datedHtml = PersonalCorrections.html(Self.injectDate(
-                into: QuickNoteStore.ensureNotesSection(Self.stripCodeFences(html), note: QuickNoteStore.note(audioFilename: url.lastPathComponent)),
-                date: record.createdAt), entries: corrections, profileId: profile.id)
-            guard Self.hasUsableNotule(datedHtml) else {
-                throw LLMError.generationFailed("De notule bevat geen bruikbare inhoud. Controleer de transcriptie en probeer opnieuw.")
-            }
-            let title = NotuleTitleExtractor.extract(from: datedHtml) ?? fallback
-            try LocalTranscriptStore.shared.finalizeNotule(taskId: localId, html: datedHtml, title: title)
-
-            // Auto-export the finished notule to Obsidian (no-op when disabled).
-            await MainActor.run {
-                let record = LocalTranscriptStore.shared.record(forTaskId: localId)
-                if let record { ObsidianService.autoExport(record) }
-            }
-
-            await MainActor.run {
-                self.updateTask(localId, status: .completed, progress: 1.0)
-                self.isGeneratingLocally = false
-                self.localGenerationProgress = 1.0
-            }
-
-        } catch is CancellationError {
-            await MainActor.run { self.cancelLocalTaskCleanup(localId) }
-            return
-        } catch {
-            os_log("[RecordingVM] Local notule generation failed: %{public}@", log: log, type: .error, error.localizedDescription)
-
-            // Cloud fallback: the transcription is already saved locally, so let
-            // the backend generate the notule (it also triggers the Obsidian
-            // export via the normal SSE completion path). Skipped in local mode:
-            // the API layer refuses server calls there anyway.
-            if !ProcessingMode.isLocalMode {
-                do {
-                    let cloudTask = try await APIService.shared.uploadTranscriptionText(
-                        transcription: transcription,
-                        profileId: profile.id,
-                        participants: participants
-                    )
-                    self.saveLocalAudioPath(url: url, taskId: cloudTask.taskId)   // links the quick note
-                    await MainActor.run {
-                        self.isGeneratingLocally = false
-                        self.removeTask(localId)
-                        self.addTask(cloudTask)
-                        self.localProcessingTasks.removeValue(forKey: localId)
-                    }
-                    await self.startSSEStream(for: cloudTask.taskId)
-                    return
-                } catch {
-                    os_log("[RecordingVM] Cloud fallback also failed: %{public}@", log: log, type: .error, error.localizedDescription)
-                }
-            }
-
-            let reason = Self.friendlyNotuleFailureReason(error)
-            await MainActor.run {
-                self.isGeneratingLocally = false
-                self.updateTask(localId, status: .error,
-                           errorMessage: "Transcriptie opgeslagen, notule mislukt: \(reason)")
-            }
-        }
-        await MainActor.run { self.localProcessingTasks.removeValue(forKey: localId) }
-    }
-
-    /// Turns cryptic connection errors into a message the user can act on.
-    /// The classic case: no Apple Intelligence available, provider falls back
-    /// to Ollama on localhost, which does not exist on an iPhone.
-    private static func friendlyNotuleFailureReason(_ error: Error) -> String {
-        let urlError = error as? URLError
-        if urlError?.code == .cannotConnectToHost || urlError?.code == .cannotFindHost {
-            return "geen lokale AI bereikbaar. Stel een AI-provider in bij Instellingen, of schakel de cloud-modus in."
-        }
-        return error.localizedDescription
+        // 3. Local notule generation, audited before anything is saved.
+        await generateLocalNotule(url: url, localId: localId, transcription: transcription, createdAt: record.createdAt,
+                                  fallbackTitle: fallback, profile: profile, participants: participants)
     }
 
     /// Cancels an in-progress local processing task (transcription or notule generation).
@@ -968,68 +874,11 @@ final class RecordingViewModel {
     }
 
     /// Marks a cancelled task as error and cleans up.
-    private func cancelLocalTaskCleanup(_ taskId: String) {
+    func cancelLocalTaskCleanup(_ taskId: String) {
         updateTask(taskId, status: .error, errorMessage: "Geannuleerd door gebruiker.")
         isGeneratingLocally = false
     }
 
-    /// Regenerates the notule for an already-stored local record using its saved
-    /// transcription and the given profile — entirely on-device. Returns the new
-    /// HTML and title so the open detail view can stay in sync with SwiftData.
-    func regenerateNotuleLocally(taskId: String, profileId: String) async throws -> (html: String, title: String) {
-        guard !updateInstalling else { throw LLMError.generationFailed("De app wordt bijgewerkt. Probeer na de herstart opnieuw.") }
-        pendingRegenerations += 1
-        defer { pendingRegenerations -= 1 }
-        guard let record = LocalTranscriptStore.shared.record(forTaskId: taskId) else {
-            throw LocalStoreError.recordNotFound
-        }
-        let regenerationId = "local-regen-\(taskId)"
-        removeTask(regenerationId)
-        addTask(TranscriptTask(id: regenerationId, taskId: regenerationId,
-                               filename: record.title, status: .generatingLocal,
-                               progress: 0.65, profileId: profileId, createdAt: Date()))
-        let profile = availableProfiles.first { $0.id == profileId }
-            ?? Profile.defaults.first { $0.id == profileId }
-            ?? selectedProfile
-            ?? Profile.defaults[0]
-
-        var provider = NotulenProvider(rawValue: UserDefaults.standard.string(forKey: "notulenProvider") ?? NotulenProvider.platformDefault.rawValue) ?? .ollama
-        if provider == .cloud { provider = .ollama }
-
-        let service = LLMServiceFactory.service(for: provider, serverURL: "")
-        do {
-            let corrections = try PersonalCorrections.load()
-            let html = try await service.generateNotulen(
-                transcription: PersonalCorrections.text(record.rawTranscription, entries: corrections, profileId: profile.id),
-                systemPrompt: profile.systemPrompt ?? "",
-                notulePrompt: QuickNoteStore.promptBlock(QuickNoteStore.note(forTranscriptId: taskId))
-                    + Self.injectParticipants(into: profile.notulePrompt ?? "", participants: record.participants)
-                    + PersonalVocabulary.promptInstruction()
-                    + PersonalCorrections.prompt(corrections, profileId: profile.id),
-                outputTemplate: profile.template
-            ) { [weak self] _ in
-                Task { @MainActor in self?.updateTask(regenerationId, status: .generatingLocal, progress: 0.85) }
-            }
-
-            let datedHtml = PersonalCorrections.html(Self.injectDate(
-                into: QuickNoteStore.ensureNotesSection(Self.stripCodeFences(html), note: QuickNoteStore.note(forTranscriptId: taskId)),
-                date: record.createdAt), entries: corrections, profileId: profile.id)
-            guard Self.hasUsableNotule(datedHtml) else {
-                throw LLMError.generationFailed("De notule bevat geen bruikbare inhoud. Controleer de transcriptie en probeer opnieuw.")
-            }
-            let title = NotuleTitleExtractor.extract(from: datedHtml) ?? record.title
-            try LocalTranscriptStore.shared.finalizeNotule(taskId: taskId, html: datedHtml, title: title, profileId: profile.id, profileName: profile.name)
-            updateTask(regenerationId, status: .completed, progress: 1)
-            return (datedHtml, title)
-        } catch {
-            updateTask(regenerationId, status: .error, errorMessage: error.localizedDescription)
-            throw error
-        }
-    }
-
-    /// Removes the markdown code fences some models wrap around their HTML output.
-    /// The cloud backend strips these server-side; on-device generation needs the
-    /// same guard because the prompt discourages fences but cannot prevent them.
     nonisolated static func hasUsableTranscription(_ text: String) -> Bool {
         let spoken = text.replacingOccurrences(
             of: "\\b(ruis|stilte|onverstaanbaar|muziek|applaus|gelach)\\b",
@@ -1038,47 +887,6 @@ final class RecordingViewModel {
         return spoken.unicodeScalars.filter { CharacterSet.alphanumerics.contains($0) }.count >= 10
             && text.trimmingCharacters(in: .whitespacesAndNewlines)
                 .range(of: "^(geen transcriptie|transcriptie ontbreekt|onvoldoende transcriptie)[.!\\s]*$", options: [.regularExpression, .caseInsensitive]) == nil
-    }
-
-    nonisolated static func hasUsableNotule(_ html: String) -> Bool {
-        let visible = html
-            .replacingOccurrences(of: "<(style|script|template)\\b[^>]*>[\\s\\S]*?</\\1>", with: "", options: [.regularExpression, .caseInsensitive])
-            .replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        guard visible.unicodeScalars.filter({ CharacterSet.alphanumerics.contains($0) }).count >= 20 else { return false }
-        guard visible.range(of: "\\[[^\\]]+\\]", options: .regularExpression) == nil else { return false }
-        return visible.range(of: "geen transcriptie|transcriptie ontbreekt|onvoldoende transcriptie", options: [.regularExpression, .caseInsensitive]) == nil
-    }
-
-    private static func stripCodeFences(_ html: String) -> String {
-        var text = html.trimmingCharacters(in: .whitespacesAndNewlines)
-        text = text.replacingOccurrences(of: "^```(?:html)?\\s*\\n?", with: "", options: .regularExpression)
-        text = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        text = text.replacingOccurrences(of: "\\n?```\\s*$", with: "", options: .regularExpression)
-        return text.trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
-    /// Replaces the {{DATE}} template placeholder with a localized date. The cloud
-    /// backend fills this server-side; for on-device generation the app does it.
-    private static func injectDate(into html: String, date: Date) -> String {
-        guard html.contains("{{DATE}}") else { return html }
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "nl_NL")
-        formatter.dateFormat = "d MMMM yyyy"
-        return html.replacingOccurrences(of: "{{DATE}}", with: formatter.string(from: date))
-    }
-
-    /// Injects the DEELNEMERS block into a notule prompt for on-device generation.
-    /// Substitutes a {{PARTICIPANTS}} placeholder when present, otherwise prepends
-    /// the block. Mirrors what the cloud backend does server-side so both paths
-    /// produce an attendee list + name attribution.
-    private static func injectParticipants(into notulePrompt: String, participants: [Participant]) -> String {
-        let block = participants.notulePromptBlock
-        if notulePrompt.contains("{{PARTICIPANTS}}") {
-            return notulePrompt.replacingOccurrences(of: "{{PARTICIPANTS}}", with: block)
-        }
-        guard !block.isEmpty else { return notulePrompt }
-        return block + "\n\n" + notulePrompt
     }
 
     /// Builds a fallback title from the transcription's first sentence or the filename.
@@ -1097,12 +905,6 @@ final class RecordingViewModel {
         guard let idx = activeTasks.firstIndex(where: { $0.id == id }) else { return }
         guard activeTasks[idx].status.isActive else { return }
         activeTasks[idx].rawTranscription = text
-    }
-
-    private func appendTaskNotuleHtml(_ id: String, _ chunk: String) {
-        guard let idx = activeTasks.firstIndex(where: { $0.id == id }) else { return }
-        guard activeTasks[idx].status.isActive else { return }
-        activeTasks[idx].notuleHtml = (activeTasks[idx].notuleHtml ?? "") + chunk
     }
 
     // MARK: - Offline Recording
@@ -1288,7 +1090,7 @@ final class RecordingViewModel {
         return FileManager.default.fileExists(atPath: path)
     }
 
-    private func saveLocalAudioPath(url: URL, taskId: String) {
+    func saveLocalAudioPath(url: URL, taskId: String) {
         let key = "localAudio_\(taskId)"
         UserDefaults.standard.set(url.path, forKey: key)
     }

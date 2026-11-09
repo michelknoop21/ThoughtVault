@@ -45,6 +45,7 @@ final class AppleFoundationModelService: LLMService, @unchecked Sendable {
         systemPrompt: String,
         notulePrompt: String,
         outputTemplate: String?,
+        constraints: [String],
         onProgress: @Sendable (String) -> Void
     ) async throws -> String {
 
@@ -75,7 +76,8 @@ final class AppleFoundationModelService: LLMService, @unchecked Sendable {
             let userContent = buildNotuleUserContent(
                 notulePrompt: notulePrompt,
                 transcription: processedTranscription,
-                outputTemplate: Self.compactTemplate
+                outputTemplate: Self.compactTemplate,
+                constraints: constraints
             )
             do {
                 return try await streamNotule(instructions: instructions, prompt: userContent, emitted: &emitted, onProgress: onProgress)

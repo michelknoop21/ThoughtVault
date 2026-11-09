@@ -20,6 +20,11 @@ final class LocalTranscriptStore {
 
     private var context: ModelContext { container.mainContext }
 
+    /// Test seam: a store over an injected (in-memory) container.
+    init(container: ModelContainer) {
+        self.container = container
+    }
+
     private init() {
         // Use an app-specific store URL instead of SwiftData's default
         // (`Application Support/default.store`). That default store is shared with
@@ -253,12 +258,26 @@ final class LocalTranscriptStore {
         guard let record = record(forTaskId: taskId) else {
             throw LocalStoreError.recordNotFound
         }
-        let original = (record.notuleHtml, record.title, record.profileId, record.profileName)
+        let original = (record.notuleHtml, record.title, record.profileId, record.profileName, record.notuleDraftHtml, record.notuleReviewReason)
         record.notuleHtml = html
         record.title = title
         if let profileId { record.profileId = profileId; record.profileName = profileName }
+        record.notuleDraftHtml = nil
+        record.notuleReviewReason = nil
         do { try context.save() } catch {
-            (record.notuleHtml, record.title, record.profileId, record.profileName) = original
+            (record.notuleHtml, record.title, record.profileId, record.profileName, record.notuleDraftHtml, record.notuleReviewReason) = original
+            throw error
+        }
+    }
+
+    /// Keeps a notule that failed the audit apart for review; the approved `notuleHtml` is never touched.
+    func saveRejectedDraft(taskId: String, html: String, reason: String) throws {
+        guard let record = record(forTaskId: taskId) else { throw LocalStoreError.recordNotFound }
+        let original = (record.notuleDraftHtml, record.notuleReviewReason)
+        record.notuleDraftHtml = html
+        record.notuleReviewReason = reason
+        do { try context.save() } catch {
+            (record.notuleDraftHtml, record.notuleReviewReason) = original
             throw error
         }
     }

@@ -31,6 +31,11 @@ final class TranscriptRecord {
     /// regeneration (other profile) can re-inject the deelnemerslijst. Optional →
     /// lightweight-migration safe for existing stores.
     var participantsJSON: String?
+    /// A generated notule that failed the fact audit, kept apart from `notuleHtml`
+    /// for manual review. Optional → lightweight-migration safe.
+    var notuleDraftHtml: String?
+    /// Why that draft was not approved (Dutch, shown to the user).
+    var notuleReviewReason: String?
 
     init(
         id: String = UUID().uuidString,

@@ -42,6 +42,7 @@ protocol LLMService: Sendable {
     ///   - systemPrompt: System-level instructions for the model persona.
     ///   - notulePrompt: User-level instructions describing the desired output format.
     ///   - outputTemplate: Optional HTML/Markdown template to structure the output.
+    ///   - constraints: Source sentences the notule must keep; appended as a numbered block.
     ///   - onProgress: Called with each streamed text chunk as it arrives.
     /// - Returns: The complete generated notulen as a string.
     func generateNotulen(
@@ -49,6 +50,7 @@ protocol LLMService: Sendable {
         systemPrompt: String,
         notulePrompt: String,
         outputTemplate: String?,
+        constraints: [String],
         onProgress: @Sendable (String) -> Void
     ) async throws -> String
 
@@ -204,6 +206,7 @@ private struct MissingAPIKeyLLMService: LLMService {
         systemPrompt: String,
         notulePrompt: String,
         outputTemplate: String?,
+        constraints: [String],
         onProgress: @Sendable (String) -> Void
     ) async throws -> String {
         throw LLMError.generationFailed("Geen API-sleutel voor \(providerName) op dit apparaat. Vul die in bij Instellingen > Verwerking.")
@@ -225,6 +228,7 @@ private struct CloudLLMServiceStub: LLMService {
         systemPrompt: String,
         notulePrompt: String,
         outputTemplate: String?,
+        constraints: [String],
         onProgress: @Sendable (String) -> Void
     ) async throws -> String {
         throw LLMError.generationFailed("Cloud provider genereert notulen server-side via n8n.")
@@ -388,6 +392,7 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
         systemPrompt: String,
         notulePrompt: String,
         outputTemplate: String?,
+        constraints: [String],
         onProgress: @Sendable (String) -> Void
     ) async throws -> String {
 
@@ -404,7 +409,8 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
         let userContent = buildNotuleUserContent(
             notulePrompt: notulePrompt,
             transcription: processedTranscription,
-            outputTemplate: outputTemplate
+            outputTemplate: outputTemplate,
+            constraints: constraints
         )
 
         return try await streamChatCompletion(

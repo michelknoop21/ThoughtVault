@@ -58,6 +58,7 @@ final class AnthropicLLMService: LLMService, @unchecked Sendable {
         systemPrompt: String,
         notulePrompt: String,
         outputTemplate: String?,
+        constraints: [String],
         onProgress: @Sendable (String) -> Void
     ) async throws -> String {
         guard var request = request("/v1/messages") else {
@@ -78,7 +79,8 @@ final class AnthropicLLMService: LLMService, @unchecked Sendable {
                 "role": "user",
                 "content": buildNotuleUserContent(notulePrompt: notulePrompt,
                                                   transcription: transcription,
-                                                  outputTemplate: outputTemplate)
+                                                  outputTemplate: outputTemplate,
+                                                  constraints: constraints)
             ]]
         ]
         request.httpMethod = "POST"

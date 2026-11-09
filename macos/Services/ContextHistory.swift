@@ -19,16 +19,18 @@ struct HistoryEntry: Codable, Identifiable {
     let snapshotJSON: String
 }
 
+/// Main-actor isolated: every read-modify-write of the history file runs serially there.
+@MainActor
 enum ContextHistory {
     static let maxPerItem = 50
 
-    /// History file; tests point this at a temp file.
-    nonisolated(unsafe) static var url = PersonalCorrections.url.deletingLastPathComponent().appendingPathComponent("context-history.json")
+    /// History file. The test host is the sandboxed app, so this points into the real
+    /// app container: tests must swap it for a temp file and restore it afterwards.
+    static var url = PersonalCorrections.url.deletingLastPathComponent().appendingPathComponent("context-history.json")
 
-    // ponytail: whole-file read-modify-write without a lock; callers are on the main actor.
     static func record<T: Encodable>(kind: HistoryKind, itemId: String, source: String, snapshot: T) throws {
         let json = String(decoding: try JSONEncoder().encode(snapshot), as: UTF8.self)
-        var entries = load()
+        var entries = try load()
         entries.append(HistoryEntry(id: UUID(), kind: kind, itemId: itemId, date: Date(), source: source, snapshotJSON: json))
         // Entries are appended in order, so the first matches are the oldest.
         var excess = entries.filter { $0.kind == kind && $0.itemId == itemId }.count - maxPerItem
@@ -43,16 +45,17 @@ enum ContextHistory {
 
     /// Versions of one item, newest first.
     static func versions(kind: HistoryKind, itemId: String) -> [HistoryEntry] {
-        load().filter { $0.kind == kind && $0.itemId == itemId }.reversed()
+        ((try? load()) ?? []).filter { $0.kind == kind && $0.itemId == itemId }.reversed()
     }
 
-    /// Reads the history file. An unreadable file is moved aside (kept for recovery)
-    /// so a damaged history never blocks edits.
-    private static func load() -> [HistoryEntry] {
-        guard let data = try? Data(contentsOf: url) else { return [] }
+    /// Reads the history file; empty only when it does not exist. A read error throws,
+    /// so the file is never overwritten. A file that does not decode is moved aside under
+    /// a unique name (kept for recovery), so a damaged history never blocks edits.
+    private static func load() throws -> [HistoryEntry] {
+        guard FileManager.default.fileExists(atPath: url.path) else { return [] }
+        let data = try Data(contentsOf: url)
         if let entries = try? JSONDecoder().decode([HistoryEntry].self, from: data) { return entries }
-        let aside = url.appendingPathExtension("unreadable-\(Int(Date().timeIntervalSince1970))")
-        try? FileManager.default.moveItem(at: url, to: aside)
+        try FileManager.default.moveItem(at: url, to: url.appendingPathExtension("unreadable-\(UUID().uuidString)"))
         return []
     }
 }

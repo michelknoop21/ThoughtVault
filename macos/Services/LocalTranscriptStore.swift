@@ -162,13 +162,17 @@ final class LocalTranscriptStore {
             predicate: #Predicate { $0.isSelf == true }
         )
         if let existing = try? context.fetch(descriptor).first {
-            try ContextHistory.record(kind: .person, itemId: existing.id, source: "handmatig", snapshot: PersonSnapshot(existing))
+            let before = PersonSnapshot(existing)
             existing.name = name
             existing.role = role
             existing.organization = organization
             existing.aliases = aliases
             existing.meetingTypes = meetingTypes
             existing.expertiseTags = expertiseTags
+            if PersonSnapshot(existing) != before {
+                do { try ContextHistory.record(kind: .person, itemId: existing.id, source: "handmatig", snapshot: before) }
+                catch { before.apply(to: existing); throw error }
+            }
             existing.updatedAt = Date()
             logger.debug("upsertSelfProfile: updated existing isSelf record")
         } else {

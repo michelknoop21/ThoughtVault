@@ -60,11 +60,16 @@ final class PersonDirectoryService {
 
     // MARK: - Update
 
-    /// Changes a directory person and saves. The state from before `mutate` is kept in
-    /// ContextHistory under `source` ("handmatig", "gesprek:<taskId>", ...). Bumps updatedAt.
+    /// Changes a directory person and saves. When `mutate` changed anything, the state from
+    /// before is kept in ContextHistory under `source` ("handmatig", "gesprek:<taskId>", ...).
+    /// Bumps updatedAt.
     func update(_ person: PersonProfile, source: String, mutate: (PersonProfile) -> Void) throws {
-        try ContextHistory.record(kind: .person, itemId: person.id, source: source, snapshot: PersonSnapshot(person))
+        let before = PersonSnapshot(person)
         mutate(person)
+        if PersonSnapshot(person) != before {
+            do { try ContextHistory.record(kind: .person, itemId: person.id, source: source, snapshot: before) }
+            catch { before.apply(to: person); throw error }
+        }
         person.updatedAt = Date()
         try context.save()
     }

@@ -66,6 +66,31 @@ final class ContextHistoryTests: XCTestCase {
         XCTAssertEqual(kept.responsibilities, ["v3"])
     }
 
+    func testUpdateWithoutChangeAddsNoVersion() throws {
+        let container = try ModelContainer(
+            for: TranscriptRecord.self, PersonProfile.self,
+            migrationPlan: AppMigrationPlan.self,
+            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+        )
+        let service = PersonDirectoryService(container: container)
+        let person = PersonProfile(name: "Anke Bakker", role: "PM")
+        try service.add(person)
+        try service.update(person, source: "handmatig") { $0.role = "PM" }
+        XCTAssertTrue(ContextHistory.versions(kind: .person, itemId: person.id).isEmpty)
+        try service.update(person, source: "handmatig") { $0.role = "Projectleider" }
+        XCTAssertEqual(ContextHistory.versions(kind: .person, itemId: person.id).count, 1)
+    }
+
+    func testDamagedHistoryIsMovedAsideNotOverwritten() throws {
+        try Data("geen json".utf8).write(to: ContextHistory.url)
+        try ContextHistory.record(kind: .term, itemId: "a", source: "handmatig", snapshot: ["x"])
+        XCTAssertEqual(ContextHistory.versions(kind: .term, itemId: "a").count, 1)
+        try Data("weer kapot".utf8).write(to: ContextHistory.url)
+        try ContextHistory.record(kind: .term, itemId: "a", source: "handmatig", snapshot: ["y"])
+        let aside = try FileManager.default.contentsOfDirectory(atPath: dir.path).filter { $0.contains("unreadable-") }
+        XCTAssertEqual(aside.count, 2, "each damaged file keeps its own copy")
+    }
+
     func testSaveRecordingTwiceKeepsFirstStateAndRestores() throws {
         let path = dir.appendingPathComponent("personal-corrections.json")
         var entry = PersonalCorrection(canonical: "Yinga", variants: ["Jengo"])

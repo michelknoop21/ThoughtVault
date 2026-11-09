@@ -55,6 +55,7 @@ enum PersonalCorrections {
     }
     /// Upserts `entry` and saves; the stored version it replaces is kept in ContextHistory
     /// under `source`. Returns the saved entries.
+    @MainActor
     @discardableResult
     static func saveRecording(_ entry: PersonalCorrection, source: String, to path: URL = url) throws -> [PersonalCorrection] {
         let entries = try load(from: path)
@@ -70,6 +71,7 @@ enum PersonalCorrections {
         return next
     }
     /// Removes an entry; its last state is kept in ContextHistory so `restore` can bring it back.
+    @MainActor
     static func delete(id: String, source: String, to path: URL = url) throws {
         let entries = try load(from: path)
         guard let old = entries.first(where: { $0.id == id }) else { return }
@@ -77,6 +79,7 @@ enum PersonalCorrections {
         try save(entries.filter { $0.id != id }, to: path)
     }
     /// Puts an earlier version of a glossary entry back as a new version.
+    @MainActor
     static func restore(_ entry: HistoryEntry, to path: URL = url) throws {
         try saveRecording(JSONDecoder().decode(PersonalCorrection.self, from: Data(entry.snapshotJSON.utf8)), source: "herstel", to: path)
     }

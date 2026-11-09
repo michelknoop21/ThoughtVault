@@ -24,7 +24,7 @@
   "acceptedCandidate": null,
   "gates": {
     "source": "passed",
-    "content": "failed_alternate_model_under_test",
+    "content": "passed_service_scope_native_pending",
     "short": "failed",
     "long": "failed",
     "onboarding": "not_proven",
@@ -51,8 +51,26 @@
       "independentlyUsable": 2,
       "cases": 3,
       "passed": false
+    },
+    "selectedRoute": {
+      "provider": "ollama",
+      "endpoint": "https://ollama.com",
+      "model": "kimi-k2.6",
+      "generatorJob": "163c73591d5749c7bab6413320b2ea6c",
+      "generatorCases": 3,
+      "independentlyPassed": 3,
+      "auditJob": "bc58d19b05e3433791f1c86943aa4f1f",
+      "auditCasesPassed": 6,
+      "preferencesChanged": false
     }
   },
   "unreleasedWorkCommit": "cce4bced01301e77e7eede7f9ea4426f93172982",
-  "pendingDecision": "Kimi K2.6 empirical comparison running; no candidate released"
+  "pendingDecision": null,
+  "developmentCandidate": {
+    "version": "1.0.306",
+    "sourceCommit": "df2b9be",
+    "nativeJob": "39bfe92d5a1c4107a9ed41e8c986f566",
+    "sourceHash": "18fe49ad80d310e0b4a766f09347a5d1d578f8162f364cf83fa343fed1d4ef53",
+    "status": "building_not_accepted"
+  }
 }

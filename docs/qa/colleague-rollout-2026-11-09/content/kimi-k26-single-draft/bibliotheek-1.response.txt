@@ -1,0 +1,13 @@
+<h1>Fictief overleg leeshoek bibliotheek De Linde</h1>
+<section>
+<h2>Kern</h2>
+<p>Dit verslag betreft een fictief overleg tussen Sara de Boer en Daan Bos over een interne proef voor een leeshoek in bibliotheek De Linde. Het budget is 2.750 euro inclusief btw, niet 3.000 euro. Er is nog geen leverancier gekozen.</p>
+</section>
+<section>
+<h2>Besproken onderwerpen</h2>
+<p>De bibliotheek is tijdens de interne proef niet toegankelijk voor bezoekers. Bestellen mag alleen na schriftelijke goedkeuring van Sara.</p>
+</section>
+<section>
+<h2>Acties</h2>
+<p>Daan vraagt uiterlijk vrijdag 13 november twee offertes op. Sara beoordeelt de offertes maandag 16 november.</p>
+</section>

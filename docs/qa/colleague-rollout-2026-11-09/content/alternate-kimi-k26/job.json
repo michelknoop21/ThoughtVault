@@ -1,0 +1,18 @@
+{
+    "sessionId":  1,
+    "id":  "bc58d19b05e3433791f1c86943aa4f1f",
+    "finishedAt":  "2026-11-09T11:34:56.1629103Z",
+    "exitCode":  0,
+    "startedAt":  "2026-11-09T11:32:48.3929004Z",
+    "name":  "tv-audit-kimi26-20261109",
+    "isAdmin":  false,
+    "lane":  "desktop",
+    "kind":  "acceptance",
+    "status":  "succeeded",
+    "sourceJob":  "",
+    "identity":  "DESKTOP-98B3AHB\\michel",
+    "directory":  "C:\\ProgramData\\Dalf38\\operations\\desktop\\bc58d19b05e3433791f1c86943aa4f1f",
+    "createdAt":  "2026-11-09T11:32:46.9426423Z",
+    "message":  null,
+    "rebootRequired":  false
+}

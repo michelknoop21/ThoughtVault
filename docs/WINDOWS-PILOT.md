@@ -1,14 +1,42 @@
 # ThoughtVault Windows — installatie en gebruik voor de interne pilot
 
-Status: voorbereiding, **nog niet vrijgegeven voor collega's**. Gebruik tijdens acceptatie alleen fictieve vergaderingen.
+Status 9 november: **nog niet vrijgegeven voor collega’s**. Dalf38 heeft 1.0.305;
+1.0.306 wordt als ontwikkelkandidaat gebouwd. Er is nog geen goedgekeurde download.
+Het [actuele uitrolbewijs](qa/colleague-rollout-2026-11-09/STATUS.md) en de
+[inhoudsbeoordeling](qa/colleague-rollout-2026-11-09/CONTENT-REVIEW.md) bepalen de
+vrijgave. Oudere versies hieronder zijn uitsluitend herstelreferenties.
 
-**Actuele kandidaat (6 november): 1.0.300**, broncommit
-`fef23dd1d8d5df093b1eb17bd7c511e34662b22d`. De native x64-build is geslaagd;
-MSI/ICE, 888 payloadhashes en updaterondertekening zijn gecontroleerd.
-Installatie/rollback en echte opname-/inhoudsacceptatie staan nog open. Volg het [actuele bewijs](qa/dalf38-2026-11-06/msi300/REVIEW.md)
-en de [acceptatiematrix](qa/pilot-readiness-2026-11-05.md).
-De versies en pakkethashes hieronder zijn **historische acceptatiegegevens**,
-geen downloadadvies voor collega's.
+## Eerste start en eerste notule
+
+Deze instructie wordt pas met de goedgekeurde MSI verstuurd. Installatie voor de
+hele pc vraagt Windows-beheerrechten; ontwikkeltools zijn niet nodig.
+
+1. Installeer de aangeleverde MSI en open ThoughtVault met je eigen Windowsaccount.
+   Lokale verwerking vereist geen ThoughtVault-account.
+2. Open **Instellingen → Verwerking**. Kies de bij de pilot bevestigde
+   transcriptie- en notulenconfiguratie. De definitieve modelnamen worden na
+   praktijkacceptatie ingevuld; installeer niet op basis van een oude kandidaat.
+3. Download het gekozen transcriptiemodel bewust via de downloadknop en wacht op
+   de gereedmelding. Een ontbrekend model bewaart de opname met een herstelmelding.
+   Voor externe notulen gebruik je je eigen bevoegde providerautorisatie in het
+   API-sleutelveld; kopieer geen sleutel van een collega. De sleutel wordt in de
+   Windows-kluis opgeslagen. Het toegangsproces moet vóór uitnodiging zijn geregeld.
+4. Controleer microfoontoegang bij **Windows-instellingen → Privacy en beveiliging
+   → Microfoon**, inclusief toegang voor bureaubladapps. Kies in ThoughtVault je
+   bron en microfoon. Gebruik eerst een korte fictieve proefvergadering.
+5. Neem op, pauzeer/hervat indien nodig en kies **Stop en verwerk**. De audio wordt
+   lokaal getranscribeerd. Bij een externe notulenprovider wordt het transcript
+   naar die provider gestuurd. Gebruik uitsluitend gegevens die daarvoor zijn toegestaan.
+6. Controleer transcript en notulen tegen de opname: namen, bedragen, acties,
+   termijnen, ontkenningen en voorwaarden. Een reviewconcept is nog geen
+   goedgekeurde notule; verbeter de bron of beoordeel het concept vóór gebruik.
+   Bij een fout blijven opname en beschikbare transcriptie behouden; hervat bewust.
+7. Bewerk en bewaar je notule, open haar opnieuw en gebruik TXT/PDF-export.
+   Controleer ook het geëxporteerde document voordat je het deelt.
+
+Agenda en Obsidian zijn optioneel. Voor de eerste notule zijn ze niet nodig.
+Het echte supportcontact, de beperkte download en het toegangsproces worden vóór
+uitnodiging ingevuld; deze voorbereiding is nog geen collega-uitnodiging.
 
 ## Historische kandidaat 1.0.296
 

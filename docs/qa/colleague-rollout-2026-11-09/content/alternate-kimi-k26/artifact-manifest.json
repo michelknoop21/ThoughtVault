@@ -1,0 +1,117 @@
+[
+    {
+        "path":  "correcte_parafrase.request.json",
+        "sha256":  "75c2dd0af0f98c138693f8bf5280192c517dafbb034d4f92ff28cada7caf1d1c",
+        "length":  4211
+    },
+    {
+        "path":  "correcte_parafrase.response.txt",
+        "sha256":  "0bd1d04d5ae56ca2b74a0fd8676c6b0606c9f262f612a60b4b088ce4cd52bc64",
+        "length":  558
+    },
+    {
+        "path":  "correcte_parafrase.source.request.json",
+        "sha256":  "a2cf28d689729c1c1cd43a3867b2d8df283f5c4549c54ec6ea670edc21c0f3ed",
+        "length":  1501
+    },
+    {
+        "path":  "correcte_parafrase.source.response.txt",
+        "sha256":  "76d420ba596e708020b45e8c61930ccf3a77b9302fe637d78bddd3f304b7dc76",
+        "length":  19
+    },
+    {
+        "path":  "opname10_ambigue_bron_numerieke_invulling.source.request.json",
+        "sha256":  "c7d279c71e4ff8012d5bb29f7e6bb4cb769bba23b00aac8068b147c4cc4ae8c8",
+        "length":  1839
+    },
+    {
+        "path":  "opname10_ambigue_bron_numerieke_invulling.source.response.txt",
+        "sha256":  "ec3130306287d3de2be13b494f770cda2144cb4584e51e0b3ca642663e8e8431",
+        "length":  18
+    },
+    {
+        "path":  "tegenstrijdige_toestemming.request.json",
+        "sha256":  "d530956fe4902eca54627185be7bbd42fbd7eaee194f7094303e281a75ddbe26",
+        "length":  4304
+    },
+    {
+        "path":  "tegenstrijdige_toestemming.response.txt",
+        "sha256":  "851ee1a1a31be69f84facf24f4fb47f937244eb9f005f9ec388bb3e1d7c9e4d6",
+        "length":  613
+    },
+    {
+        "path":  "tegenstrijdige_toestemming.source.request.json",
+        "sha256":  "a2cf28d689729c1c1cd43a3867b2d8df283f5c4549c54ec6ea670edc21c0f3ed",
+        "length":  1501
+    },
+    {
+        "path":  "tegenstrijdige_toestemming.source.response.txt",
+        "sha256":  "76d420ba596e708020b45e8c61930ccf3a77b9302fe637d78bddd3f304b7dc76",
+        "length":  19
+    },
+    {
+        "path":  "transport-results.json",
+        "sha256":  "d1dfd5427879227e73df0fce27b6a77e63775e03425dab7ccfb4ae25ec04554b",
+        "length":  3614
+    },
+    {
+        "path":  "tweede_actie_ontbreekt.request.json",
+        "sha256":  "3a284a96b47d2b052fedf249388c5e5667499d7901f9a344a82c3ffae8a516fd",
+        "length":  4169
+    },
+    {
+        "path":  "tweede_actie_ontbreekt.response.txt",
+        "sha256":  "21269dfee3b07abcf9c5e987ffe706a35f9231aca8a1f31a4a338c08becafd88",
+        "length":  553
+    },
+    {
+        "path":  "tweede_actie_ontbreekt.source.request.json",
+        "sha256":  "a2cf28d689729c1c1cd43a3867b2d8df283f5c4549c54ec6ea670edc21c0f3ed",
+        "length":  1501
+    },
+    {
+        "path":  "tweede_actie_ontbreekt.source.response.txt",
+        "sha256":  "76d420ba596e708020b45e8c61930ccf3a77b9302fe637d78bddd3f304b7dc76",
+        "length":  19
+    },
+    {
+        "path":  "verkeerd_budget.request.json",
+        "sha256":  "4e43796b2bfb5e17f5c3de59188bdc34d1a1bc1fb8a86cfde91a7248ef53c7c5",
+        "length":  4316
+    },
+    {
+        "path":  "verkeerd_budget.response.txt",
+        "sha256":  "52682171f5145e5d1604ee0a258e980ccad8b0d9b5ae887cf8a4f6c1f165c1c9",
+        "length":  700
+    },
+    {
+        "path":  "verkeerd_budget.source.request.json",
+        "sha256":  "a2cf28d689729c1c1cd43a3867b2d8df283f5c4549c54ec6ea670edc21c0f3ed",
+        "length":  1501
+    },
+    {
+        "path":  "verkeerd_budget.source.response.txt",
+        "sha256":  "76d420ba596e708020b45e8c61930ccf3a77b9302fe637d78bddd3f304b7dc76",
+        "length":  19
+    },
+    {
+        "path":  "voorwaarde_wordt_opdracht.request.json",
+        "sha256":  "2591330bfaee322277645ed9316c862f9df2a70f8eb383684e20ed4d4fd822a7",
+        "length":  5250
+    },
+    {
+        "path":  "voorwaarde_wordt_opdracht.response.txt",
+        "sha256":  "a7ed06922eff41e3827ce51ec70076fd04da35f38a41dc2cb06407147ba68d43",
+        "length":  1300
+    },
+    {
+        "path":  "voorwaarde_wordt_opdracht.source.request.json",
+        "sha256":  "e4be5fb09518f7dd201cd41eb2afc0a225aaeea31d703ff0329dc792512ec8ad",
+        "length":  1530
+    },
+    {
+        "path":  "voorwaarde_wordt_opdracht.source.response.txt",
+        "sha256":  "76d420ba596e708020b45e8c61930ccf3a77b9302fe637d78bddd3f304b7dc76",
+        "length":  19
+    }
+]

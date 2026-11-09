@@ -1,0 +1,10 @@
+{
+  "name": "bibliotheek",
+  "source": "Dit is een fictief overleg over een leeshoek in bibliotheek De Linde. Sara de Boer en Daan Bos bespreken een interne proef. Het budget is 2.750 euro inclusief btw, niet 3.000 euro. Daan vraagt uiterlijk vrijdag 13 november twee offertes op. Sara beoordeelt de offertes maandag 16 november. Er is nog geen leverancier gekozen. Bestellen mag alleen na schriftelijke goedkeuring van Sara. De bibliotheek is tijdens de interne proef niet toegankelijk voor bezoekers.",
+  "scope": "Real LLMService and model; isolated in-memory stores; no native recording/UI acceptance",
+  "model": "kimi-k2.6",
+  "html": "<h1>Fictief overleg leeshoek bibliotheek De Linde</h1>\n<section>\n<h2>Kern</h2>\n<p>Dit verslag betreft een fictief overleg tussen Sara de Boer en Daan Bos over een interne proef voor een leeshoek in bibliotheek De Linde. Het budget is 2.750 euro inclusief btw, niet 3.000 euro. Er is nog geen leverancier gekozen.</p>\n</section>\n<section>\n<h2>Besproken onderwerpen</h2>\n<p>De bibliotheek is tijdens de interne proef niet toegankelijk voor bezoekers. Bestellen mag alleen na schriftelijke goedkeuring van Sara.</p>\n</section>\n<section>\n<h2>Acties</h2>\n<p>Daan vraagt uiterlijk vrijdag 13 november twee offertes op. Sara beoordeelt de offertes maandag 16 november.</p>\n</section>",
+  "productionGate": "accepted",
+  "status": "accepted_requires_independent_content_review",
+  "calls": 3
+}

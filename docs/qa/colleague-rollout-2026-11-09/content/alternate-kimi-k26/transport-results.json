@@ -1,0 +1,79 @@
+﻿[
+    {
+        "requestSha256":  "A2CF28D689729C1C1CD43A3867B2D8DF283F5C4549C54EC6EA670EDC21C0F3ED",
+        "status":  "response_preserved",
+        "name":  "correcte_parafrase.source",
+        "model":  "kimi-k2.6",
+        "responseSha256":  "76D420BA596E708020B45E8C61930CCF3A77B9302FE637D78BDDD3F304B7DC76"
+    },
+    {
+        "requestSha256":  "75C2DD0AF0F98C138693F8BF5280192C517DAFBB034D4F92FF28CADA7CAF1D1C",
+        "status":  "response_preserved",
+        "name":  "correcte_parafrase",
+        "model":  "kimi-k2.6",
+        "responseSha256":  "0BD1D04D5AE56CA2B74A0FD8676C6B0606C9F262F612A60B4B088CE4CD52BC64"
+    },
+    {
+        "requestSha256":  "A2CF28D689729C1C1CD43A3867B2D8DF283F5C4549C54EC6EA670EDC21C0F3ED",
+        "status":  "response_preserved",
+        "name":  "tweede_actie_ontbreekt.source",
+        "model":  "kimi-k2.6",
+        "responseSha256":  "76D420BA596E708020B45E8C61930CCF3A77B9302FE637D78BDDD3F304B7DC76"
+    },
+    {
+        "requestSha256":  "3A284A96B47D2B052FEDF249388C5E5667499D7901F9A344A82C3FFAE8A516FD",
+        "status":  "response_preserved",
+        "name":  "tweede_actie_ontbreekt",
+        "model":  "kimi-k2.6",
+        "responseSha256":  "21269DFEE3B07ABCF9C5E987FFE706A35F9231ACA8A1F31A4A338C08BECAFD88"
+    },
+    {
+        "requestSha256":  "A2CF28D689729C1C1CD43A3867B2D8DF283F5C4549C54EC6EA670EDC21C0F3ED",
+        "status":  "response_preserved",
+        "name":  "tegenstrijdige_toestemming.source",
+        "model":  "kimi-k2.6",
+        "responseSha256":  "76D420BA596E708020B45E8C61930CCF3A77B9302FE637D78BDDD3F304B7DC76"
+    },
+    {
+        "requestSha256":  "D530956FE4902ECA54627185BE7BBD42FBD7EAEE194F7094303E281A75DDBE26",
+        "status":  "response_preserved",
+        "name":  "tegenstrijdige_toestemming",
+        "model":  "kimi-k2.6",
+        "responseSha256":  "851EE1A1A31BE69F84FACF24F4FB47F937244EB9F005F9EC388BB3E1D7C9E4D6"
+    },
+    {
+        "requestSha256":  "A2CF28D689729C1C1CD43A3867B2D8DF283F5C4549C54EC6EA670EDC21C0F3ED",
+        "status":  "response_preserved",
+        "name":  "verkeerd_budget.source",
+        "model":  "kimi-k2.6",
+        "responseSha256":  "76D420BA596E708020B45E8C61930CCF3A77B9302FE637D78BDDD3F304B7DC76"
+    },
+    {
+        "requestSha256":  "4E43796B2BFB5E17F5C3DE59188BDC34D1A1BC1FB8A86CFDE91A7248EF53C7C5",
+        "status":  "response_preserved",
+        "name":  "verkeerd_budget",
+        "model":  "kimi-k2.6",
+        "responseSha256":  "52682171F5145E5D1604EE0A258E980CCAD8B0D9B5AE887CF8A4F6C1F165C1C9"
+    },
+    {
+        "requestSha256":  "E4BE5FB09518F7DD201CD41EB2AFC0A225AAEEA31D703FF0329DC792512EC8AD",
+        "status":  "response_preserved",
+        "name":  "voorwaarde_wordt_opdracht.source",
+        "model":  "kimi-k2.6",
+        "responseSha256":  "76D420BA596E708020B45E8C61930CCF3A77B9302FE637D78BDDD3F304B7DC76"
+    },
+    {
+        "requestSha256":  "2591330BFAEE322277645ED9316C862F9DF2A70F8EB383684E20ED4D4FD822A7",
+        "status":  "response_preserved",
+        "name":  "voorwaarde_wordt_opdracht",
+        "model":  "kimi-k2.6",
+        "responseSha256":  "A7ED06922EFF41E3827CE51EC70076FD04DA35F38A41DC2CB06407147BA68D43"
+    },
+    {
+        "requestSha256":  "C7D279C71E4FF8012D5BB29F7E6BB4CB769BBA23B00AAC8068B147C4CC4AE8C8",
+        "status":  "response_preserved",
+        "name":  "opname10_ambigue_bron_numerieke_invulling.source",
+        "model":  "kimi-k2.6",
+        "responseSha256":  "EC3130306287D3DE2BE13B494F770CDA2144CB4584E51E0B3CA642663E8E8431"
+    }
+]

@@ -1,4 +1,34 @@
-# Inhoudsbeoordeling — geen vrijgave
+# Inhoudsbeoordeling — serviceproef geslaagd, native acceptatie open
+
+## Actueel besluit — 9 november 12:37 CET
+
+**Taak 2 geslaagd binnen de serviceproef.** De gekozen route voor verdere native
+acceptatie is **Ollama Cloud, Kimi K2.6**. Alle negen werkelijke generatieantwoorden
+noemen `kimi-k2.6`. Dit is een expliciete keuze op basis van onderstaande vergelijking;
+geen bestaande gebruikersvoorkeur, credential of provider-URL is overschreven.
+
+- Volledige productie-LLMService, job `163c73591d5749c7bab6413320b2ea6c`:
+  drie verschillende fictieve vergaderingen, elk eenmaal zonder retry. Onafhankelijk
+  beoordeeld: Waddenspoor bewaart 12.450 incl. btw, beide controles en beperkingen;
+  Noorderlicht bewaart annulering en voorwaarden vóór productie; Bibliotheek bewaart
+  2.750 incl. btw, beide offerteacties, geen leverancier en schriftelijke toestemming
+  zonder die toestemming tot een opdracht te maken. **3/3 PASS.**
+- Vaste audit, job `bc58d19b05e3433791f1c86943aa4f1f`: echte antwoorden opnieuw door
+  de productieparser en testpoort gehaald. **6/6 PASS**: correcte parafrase slagen;
+  ontbrekende actie, tegengestelde toestemming, verkeerd budget, voorwaarde als
+  opdracht en onbegrijpelijke bron gericht afgewezen. Geen transportfout als
+  semantische afwijzing meegeteld. Maximaal elf werkelijke requests; geen retries.
+- Beide centrale artifactmanifesten lokaal op lengte en SHA256 gecontroleerd.
+  Bewijs staat onder `content/kimi-k26-single-draft` en `content/alternate-kimi-k26`.
+- Frontend: 237 PASS / 1 opt-in live gate overgeslagen; die live gate is hierboven
+  afzonderlijk werkelijk uitgevoerd. Windows Rust: 38 PASS / 3 ignored.
+
+Dit bewijst geen native opname/import, lange vergadering, onboarding, export of
+herstel van de nog te bouwen MSI. Een kleine modelproef garandeert geen foutloze
+notulen; gebruikers moeten de inhoud blijven controleren. Historische mislukkingen
+hieronder blijven behouden en tellen niet als acceptatie.
+
+## Historische proeven
 
 Scope: echte Windows `LLMService` in een geïsoleerde bronkopie, echte bestaande
 Ollama Cloud `gpt-oss:120b`, uitsluitend fictieve teksten. Geen appdata of

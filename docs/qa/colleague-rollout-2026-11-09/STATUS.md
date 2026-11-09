@@ -1,5 +1,13 @@
 # Windows collega-uitrol — actuele status
 
+Actueel 9 november 12:37 CET: service-inhoudsacceptatie geslaagd op **Ollama Cloud
+Kimi K2.6** (3/3 volledige generaties, 6/6 vaste auditgevallen). Zie
+[inhoudsbeoordeling](CONTENT-REVIEW.md). Native ontwikkelkandidaat **1.0.306**,
+commit `df2b9be`, bouwjob `39bfe92d5a1c4107a9ed41e8c986f566`, wordt gebouwd.
+Geïnstalleerd blijft 1.0.305. Geen MSI gepubliceerd; korte/lange appketen,
+onboarding, exports, upgrade/rollback en collega-pilot zijn nog niet vrijgegeven.
+De eerdere statusregels hieronder zijn chronologisch bewijs.
+
 Bijgewerkt 9 november 2026. Nog niet vrijgegeven voor collega's.
 Dit bestand is de leidende blocker-lijst; oudere rapporten blijven historisch.
 

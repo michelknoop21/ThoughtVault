@@ -1,0 +1,10 @@
+{
+  "name": "noorderlicht",
+  "source": "Dit is een fictief planningsoverleg over project Noorderlicht. Mila Jansen en Oscar Visser zijn aanwezig. De servermigratie op maandag 16 november gaat niet door. Mila voert op dinsdag 17 november om 10 uur een interne herstelproef uit. Oscar controleert op woensdag 18 november de logbestanden. Productie mag pas worden gewijzigd nadat beide controles zijn geslaagd. Er is nog geen akkoord voor productie. Er mogen geen echte klantgegevens in de proef worden gebruikt.",
+  "scope": "Real LLMService and model; isolated in-memory stores; no native recording/UI acceptance",
+  "model": "kimi-k2.6",
+  "html": "<h1>Verslag fictief planningsoverleg project Noorderlicht</h1>\n<section><h2>Kern</h2><p>Dit verslag betreft een fictief planningsoverleg over project Noorderlicht. Mila Jansen en Oscar Visser zijn aanwezig. De servermigratie op maandag 16 november gaat niet door. Er is nog geen akkoord voor productie. Er mogen geen echte klantgegevens in de proef worden gebruikt.</p></section>\n<section><h2>Besproken onderwerpen</h2><p>De servermigratie op maandag 16 november gaat niet door.</p><p>Mila Jansen voert op dinsdag 17 november om 10 uur een interne herstelproef uit. Er mogen geen echte klantgegevens in de proef worden gebruikt. Oscar Visser controleert op woensdag 18 november de logbestanden. Productie mag pas worden gewijzigd nadat beide controles zijn geslaagd.</p><p>Er is nog geen akkoord voor productie.</p></section>\n<section><h2>Acties</h2><p>Mila Jansen voert op dinsdag 17 november om 10 uur een interne herstelproef uit.</p><p>Oscar Visser controleert op woensdag 18 november de logbestanden.</p></section>",
+  "productionGate": "accepted",
+  "status": "accepted_requires_independent_content_review",
+  "calls": 3
+}

@@ -22,7 +22,7 @@ struct DraftReviewSection: View {
                     .font(TS.Font.caption)
                     .foregroundStyle(Color.labelSecondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                HTMLWebView(htmlContent: NotuleAudit.draftForReview(draftHtml), isDarkMode: colorScheme == .dark)
+                draftView
                     .frame(height: 280)
             }
             .padding(.top, TS.Spacing.xs)
@@ -35,5 +35,15 @@ struct DraftReviewSection: View {
         .background(Color.statusWarning.opacity(0.08), in: RoundedRectangle(cornerRadius: TS.Radius.md, style: .continuous))
         .padding(.horizontal, TS.Spacing.md)
         .padding(.top, TS.Spacing.sm)
+    }
+
+    /// Same renderer as the approved notule below it, read-only, so both read alike.
+    @ViewBuilder private var draftView: some View {
+        let html = NotuleAudit.draftForReview(draftHtml)
+        #if os(macOS)
+        EditableHTMLWebView(htmlContent: html, editedHTML: .constant(""), isEditing: false, isDarkMode: colorScheme == .dark)
+        #else
+        HTMLWebView(htmlContent: html, isDarkMode: colorScheme == .dark)
+        #endif
     }
 }

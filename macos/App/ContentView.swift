@@ -198,10 +198,10 @@ struct ContentView: View {
             // Screenshot hook: open a tab without keystrokes (`-TVDebugTab settings`).
             .task {
                 LocalTranscriptStore.shared.seedDebugDraftIfRequested()
-                if let raw = UserDefaults.standard.string(forKey: "TVDebugTab"), let tab = AppTab(rawValue: raw) { selectedTab = tab }
+                // Opening goes through pendingTranscript, which needs the tab switch to happen there.
                 if UserDefaults.standard.string(forKey: "TVDebugOpen") == "transcript", let first = LocalTranscriptStore.shared.allTranscripts().first {
                     openTranscript(first)
-                }
+                } else if let raw = UserDefaults.standard.string(forKey: "TVDebugTab"), let tab = AppTab(rawValue: raw) { selectedTab = tab }
             }
             #endif
             .onReceive(NotificationCenter.default.publisher(for: .videoCallDetected)) { notification in

@@ -38,7 +38,7 @@ enum APIError: LocalizedError {
         case .localModeActive:
             // Local mode makes no backend calls. Callers degrade to local data;
             // this message is a benign fallback and should not surface to the user.
-            return "Lokale modus actief — geen serververbinding nodig."
+            return "Lokale modus actief: geen serververbinding nodig."
         case .httpError(let code, let message, _):
             return message ?? "Serverfout (HTTP \(code))."
         case .decodingError(let error):

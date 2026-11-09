@@ -500,7 +500,7 @@ struct TranscriptsView: View {
                                 .font(TS.Font.captionMedium)
                                 .foregroundStyle(Color.labelPrimary)
                                 .lineLimit(1)
-                            Text(task.status.displayName)
+                            Text(task.statusLabel)
                                 .font(TS.Font.micro)
                                 .foregroundStyle(Color.brandPrimary)
                         }

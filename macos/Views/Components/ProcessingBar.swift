@@ -59,7 +59,7 @@ private struct ProcessingBarItem: View {
                         .textSelection(.enabled)
                         .help(msg)
                 } else {
-                    Text(task.status.displayName)
+                    Text(task.statusLabel)
                         .font(TS.Font.micro)
                         .foregroundStyle(statusColor.opacity(0.8))
                 }

@@ -218,7 +218,7 @@ private struct IOSTasksScreen: View {
         case .error: return task.errorMessage ?? "Verwerking is mislukt."
         case .completed: return "Notities en samenvatting gereed."
         case .pending, .queued: return "Wacht op verwerking\u{2026}"
-        default: return task.status.displayName + "\u{2026}"
+        default: return task.statusLabel + "\u{2026}"
         }
     }
 

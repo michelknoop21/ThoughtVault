@@ -449,6 +449,8 @@ struct TranscriptTask: Identifiable, Codable, Sendable {
     var profileId: String?
     var createdAt: Date?
     var username: String?
+    /// Client-only note shown instead of the status name (not encoded).
+    var statusDetail: String?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -550,6 +552,8 @@ extension TranscriptTask {
     var displayProgress: Double {
         status == .transcribing || status == .generatingLocal ? progress : status.progress
     }
+
+    var statusLabel: String { statusDetail ?? status.displayName }
 }
 
 // MARK: - Transcript

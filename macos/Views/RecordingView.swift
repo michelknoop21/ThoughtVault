@@ -481,7 +481,7 @@ struct RecordingView: View {
                         .foregroundStyle(Color.statusErrorText)
                         .lineLimit(2)
                 } else {
-                    Text(task.status.displayName)
+                    Text(task.statusLabel)
                         .font(TS.Font.caption)
                         .foregroundStyle(task.status.isActive ? Color.brandPrimary : Color.labelSecondary)
                 }
@@ -505,7 +505,7 @@ struct RecordingView: View {
         if task.status == .error, let errMsg = task.errorMessage, !errMsg.isEmpty {
             return "\(task.filename), fout: \(errMsg)"
         }
-        return "\(task.filename), \(task.status.displayName)"
+        return "\(task.filename), \(task.statusLabel)"
     }
 
     // MARK: Saved recordings section (removed — now part of unifiedBottomBar as savedRecordingsPanel)

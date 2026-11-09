@@ -704,7 +704,10 @@ final class RecordingViewModel {
             var fullTranscription = ""
 
             try LocalTranscriberFactory.validateAudioFile(at: url)
-            let result = try await onDeviceTranscriber.transcribe(url: url, profileId: profileId)
+            let transcriber = onDeviceTranscriber
+            let result = try await LocalTranscriptionQueue.shared.run(id: "ondevice-\(UUID().uuidString)") {
+                try await transcriber.transcribe(url: url, profileId: profileId)
+            }
             await MainActor.run {
                 self.liveTranscriptText = result
                 fullTranscription = result
@@ -793,12 +796,17 @@ final class RecordingViewModel {
             try Task.checkCancellation()
             try LocalTranscriberFactory.validateAudioFile(at: url)
             let transcriber = LocalTranscriberFactory.make()
-            transcription = try await transcriber.transcribe(url: url, profileId: profile.id) { [weak self] fraction in
-                Task { @MainActor in
-                    guard let self else { return }
-                    guard !Task.isCancelled else { return }
-                    self.updateTask(localId, status: .transcribing,
-                                     progress: 0.15 + fraction * 0.35)
+            transcription = try await LocalTranscriptionQueue.shared.run(id: localId, onWait: { [weak self] in
+                Task { @MainActor in self?.updateTask(localId, status: .transcribing, statusDetail: "Wacht op vorige transcriptie") }
+            }) { [weak self] in
+                await self?.updateTask(localId, status: .transcribing)  // clears the waiting note
+                return try await transcriber.transcribe(url: url, profileId: profile.id) { [weak self] fraction in
+                    Task { @MainActor in
+                        guard let self else { return }
+                        guard !Task.isCancelled else { return }
+                        self.updateTask(localId, status: .transcribing,
+                                         progress: 0.15 + fraction * 0.35)
+                    }
                 }
             }
             guard Self.hasUsableTranscription(transcription) else {
@@ -1347,7 +1355,7 @@ final class RecordingViewModel {
         }
     }
 
-    func updateTask(_ id: String, status: TaskStatus, progress: Double? = nil, errorMessage: String? = nil) {
+    func updateTask(_ id: String, status: TaskStatus, progress: Double? = nil, errorMessage: String? = nil, statusDetail: String? = nil) {
         guard let idx = activeTasks.firstIndex(where: { $0.id == id }) else { return }
         if !activeTasks[idx].status.isActive, activeTasks[idx].status != status {
             return
@@ -1355,6 +1363,7 @@ final class RecordingViewModel {
         activeTasks[idx].status = status
         if let progress { activeTasks[idx].progress = progress }
         if let errorMessage { activeTasks[idx].errorMessage = errorMessage }
+        activeTasks[idx].statusDetail = statusDetail
 
         // Local processing reports completion through updateTask (not SSE), so the
         // auto-removal must be scheduled here too. Failures are deliberately left

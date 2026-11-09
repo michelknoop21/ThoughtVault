@@ -309,7 +309,7 @@ struct IOSProcessingCard: View {
                         .font(.system(size: 12.5))
                         .foregroundStyle(IOSColor.text2)
                 }
-                Text(task.status.displayName + "\u{2026}")
+                Text(task.statusLabel + "\u{2026}")
                     .font(.system(size: 12.5))
                     .foregroundStyle(IOSColor.text2)
             }

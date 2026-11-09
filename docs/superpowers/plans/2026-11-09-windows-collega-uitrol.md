@@ -66,11 +66,11 @@ verzoen uitsluitend gewijzigde productbestanden uit de 1.0.305-upload met de Mac
 source-manifest en Windows `source-provenance.json`. Produceert één `SOURCE_COMMIT`
 en een bestand-voor-bestand gecontroleerde basis voor alle volgende taken.
 
-- [ ] Haal de kleine jobmetadata, source-manifesten en gewijzigde bronbestanden via SFTP naar de externe SSD; controleer SHA256 vóór gebruik. Geen hele caches ophalen.
-- [ ] Vergelijk de 1.0.305-bron met basis `4de88a4`; behoud de onderbouwde 301–305-fixes, hun tests en provenance in Git. Geen blind kopiëren over een checkout.
-- [ ] Leg de daadwerkelijke oorzaak per gefaalde korte/MP4/uurproef vast: productfout, terechte inhoudsafwijzing, of defect scenario. Houd bewijstekort apart van een productbug.
-- [ ] Controleer `admin-status`, actuele jobs, desktopstatus en geïnstalleerde versie; start geen concurrerende installatie of appproef.
-- [ ] Commit de verzoende bron en status. **Klaar:** de geïnstalleerde basis is tot bronbestanden herleidbaar en maximaal één blocker-lijst is leidend.
+- [x] Haal de kleine jobmetadata, source-manifesten en gewijzigde bronbestanden via SFTP naar de externe SSD; controleer SHA256 vóór gebruik. Geen hele caches ophalen.
+- [x] Vergelijk de 1.0.305-bron met basis `4de88a4`; behoud de onderbouwde 301–305-fixes, hun tests en provenance in Git. Geen blind kopiëren over een checkout.
+- [x] Leg de daadwerkelijke oorzaak per gefaalde korte/MP4/uurproef vast: productfout, terechte inhoudsafwijzing, of defect scenario. Houd bewijstekort apart van een productbug.
+- [x] Controleer `admin-status`, actuele jobs, desktopstatus en geïnstalleerde versie; start geen concurrerende installatie of appproef.
+- [x] Commit de verzoende bron en status. **Klaar:** de geïnstalleerde basis is tot bronbestanden herleidbaar en maximaal één blocker-lijst is leidend.
 
 ### Task 2: Brongetrouwe notulen die ook bruikbaar slagen
 

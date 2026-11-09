@@ -1,0 +1,128 @@
+[
+  {
+    "path": "data/profileBlueprints.json",
+    "sha256": "b0d683db5c4463ed235ecf9f9c3f549b01f9579ec974f4cd024ff7b994816efc",
+    "length": 5107,
+    "tracked": true
+  },
+  {
+    "path": "macos/Resources/ProfileTemplates.json",
+    "sha256": "9f46d236a2b104bfbfa5cafe67b62794b88cd1b70f79f10026042ba8c1cf6e3a",
+    "length": 12158,
+    "tracked": true
+  },
+  {
+    "path": "VERSION",
+    "sha256": "9cd0b1da2b5d1f6450dcd23e6221d0a6cde203b7c4ac1a70ef74997e720eb17d",
+    "length": 8,
+    "tracked": true
+  },
+  {
+    "path": "windows/src/data/profileTemplates.json",
+    "sha256": "9f46d236a2b104bfbfa5cafe67b62794b88cd1b70f79f10026042ba8c1cf6e3a",
+    "length": 12158,
+    "tracked": true
+  },
+  {
+    "path": "windows/src/pages/TranscriptsPage.tsx",
+    "sha256": "4dee2767081c6a64285784d01c259588dbbb063e55127ebb51ab4453d1bcf61d",
+    "length": 29792,
+    "tracked": true
+  },
+  {
+    "path": "windows/src/services/__tests__/notuleAudit.test.ts",
+    "sha256": "7730bfe281345a896e37f334bc808fde6f37e6c00b9103f68fc4e57ca642c366",
+    "length": 8396,
+    "tracked": true
+  },
+  {
+    "path": "windows/src/services/__tests__/textExport.test.ts",
+    "sha256": "9eea0030e5a9449f597603e0e0c76ed8a56b88a7c999c9a53a2e9d9307c07f8d",
+    "length": 1738,
+    "tracked": false
+  },
+  {
+    "path": "windows/src/services/llm.ts",
+    "sha256": "11ba211c245e07fb381826af50e8c7fac2804f080b4ab915431d1109550492d8",
+    "length": 14700,
+    "tracked": true
+  },
+  {
+    "path": "windows/src/services/notuleAudit.ts",
+    "sha256": "1dd91199fe04d0a246ee22a2f7537f26d270564263f060b1fd7c2926c5b9645f",
+    "length": 9079,
+    "tracked": true
+  },
+  {
+    "path": "windows/src/services/textExport.ts",
+    "sha256": "36eb554cfbbdabb2189ac705db08c916a0a56f2781748ab41b5303958d595683",
+    "length": 653,
+    "tracked": false
+  },
+  {
+    "path": "windows/src-tauri/capabilities/text-export.json",
+    "sha256": "d221a242cc4668f8b0b838e078d2eaa2c8e29b58ac64ac6415d843806b5f833d",
+    "length": 208,
+    "tracked": false
+  },
+  {
+    "path": "windows/src-tauri/Cargo.lock",
+    "sha256": "8152c0ccbac8f07a92fd701353467822c8eea22939050f0d492d18bc18d8edab",
+    "length": 166538,
+    "tracked": true
+  },
+  {
+    "path": "windows/src-tauri/Cargo.toml",
+    "sha256": "0b35f33379b4d3be87dae1619ec6ec9678c7e1e18e02fe11f675582d380c20f2",
+    "length": 1971,
+    "tracked": true
+  },
+  {
+    "path": "windows/src-tauri/gen/schemas/capabilities.json",
+    "sha256": "e113047f96e15e591d39eee12abc614c14be5cec942d109e7c7d84ffaeb54ed4",
+    "length": 1033,
+    "tracked": true
+  },
+  {
+    "path": "windows/src-tauri/gen/schemas/windows-schema.json",
+    "sha256": "d666518751ddae1f44a4e58d875f584d07ceb9cf2b493fcb3b644045d7b0153e",
+    "length": 432855,
+    "tracked": true
+  },
+  {
+    "path": "windows/src-tauri/installer/main.wxs",
+    "sha256": "52883d092e99dcd63d5863698b4ee6af7adec0cfd7bcf3b0def519967e2258cf",
+    "length": 16419,
+    "tracked": true
+  },
+  {
+    "path": "windows/src-tauri/installer/README.md",
+    "sha256": "2328346149fba68e6579a684cd5382ae599ba4baa18aeb6e5faa50670683a6e0",
+    "length": 1956,
+    "tracked": true
+  },
+  {
+    "path": "windows/src-tauri/src/audio/recorder.rs",
+    "sha256": "7b63ac25b9a45c7a6b4fe72c3ed0704f12cdddae8a05ae7308759ea1f4133fb3",
+    "length": 50381,
+    "tracked": true
+  },
+  {
+    "path": "windows/src-tauri/src/commands/filesystem.rs",
+    "sha256": "10bbe860046c5bdcf0376564f7465e7f2e888d2edb10e567347746b5c4897e59",
+    "length": 15324,
+    "tracked": true
+  },
+  {
+    "path": "windows/src-tauri/tauri.conf.json",
+    "sha256": "da26ad52922e48e36309880092cde7ac0c34228b4ed89f279b633d5cfdc8352b",
+    "length": 2264,
+    "tracked": true
+  },
+  {
+    "path": "windows/src-tauri/tests/fixtures/video-first.mp4",
+    "sha256": "e9666f9d307c2aa59ec1482e64935d74c35ea7d16e31e6151cc9f00ea378ea17",
+    "length": 6432,
+    "tracked": false
+  }
+]

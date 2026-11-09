@@ -1,0 +1,33 @@
+{
+  "status": "not_released",
+  "version": "1.0.305",
+  "baseCommit": "4de88a4fcb5fddce65fb78f7d29b526395c18795",
+  "sourceCommit": "57dde58c07cb2f8543de8959788f074778f2f09a",
+  "sourceRecovery": {
+    "nativeJob": "19ab8be2adf747468acd886ca132f280",
+    "sourceHash": "eebb546cbf76684518b952ca0dab35497efd577aab7e92de6a428c3f9a89c08a",
+    "manifestFiles": 285,
+    "unchangedFiles": 261,
+    "reconciledProductFiles": 21,
+    "buildOnlyFiles": [
+      "dalf-build.ps1",
+      "vc-env.cmd",
+      "source-provenance.json"
+    ],
+    "frontendTests": {
+      "files": 51,
+      "passed": 216,
+      "skipped": 1
+    }
+  },
+  "acceptedCandidate": null,
+  "gates": {
+    "source": "passed",
+    "content": "failed_or_unproven",
+    "short": "failed",
+    "long": "failed",
+    "onboarding": "not_proven",
+    "recovery": "not_proven",
+    "pilot": "not_started"
+  }
+}

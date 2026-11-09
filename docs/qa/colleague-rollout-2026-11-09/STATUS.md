@@ -3,7 +3,8 @@
 Actueel 9 november 12:37 CET: service-inhoudsacceptatie geslaagd op **Ollama Cloud
 Kimi K2.6** (3/3 volledige generaties, 6/6 vaste auditgevallen). Zie
 [inhoudsbeoordeling](CONTENT-REVIEW.md). Native ontwikkelkandidaat **1.0.306**,
-commit `df2b9be`, bouwjob `39bfe92d5a1c4107a9ed41e8c986f566`, wordt gebouwd.
+commit `df2b9be`, native bouwjob `b990873ee58e43e38dd4ed11eed1fa03`, is geslaagd.
+MSI-aanvraag `cc36fde7f8194a428172777200544c70` wordt automatisch verpakt.
 Geïnstalleerd blijft 1.0.305. Geen MSI gepubliceerd; korte/lange appketen,
 onboarding, exports, upgrade/rollback en collega-pilot zijn nog niet vrijgegeven.
 De eerdere statusregels hieronder zijn chronologisch bewijs.

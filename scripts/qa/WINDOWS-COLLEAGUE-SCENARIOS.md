@@ -7,9 +7,9 @@ fixturepad en SHA256; gebruik dezelfde importproef voor elk van de zeven formate
 Registreer pas daarna de kopie met de exacte script-SHA via acceptance-register.
 Onvervangen metadata stopt vóór appstart; wijzig geen bestaande registraties.
 
-De scripts bewijzen vooralsnog opname/import en verwerking, geen export,
-bewerken/heropenen, lange vergadering of fysieke microfoon. Die assertions volgen
-in taak 3/5. Originele gegevens worden vergeleken; gewijzigde modelinstellingen
+De scripts controleren opname/import en verwerking. De korte proef controleert
+ook TXT-export per alinea; dit moet nog op de nieuwe installatie worden uitgevoerd.
+PDF, bewerken/heropenen, lange vergadering en fysieke microfoon volgen in taak 3/5. Originele gegevens worden vergeleken; gewijzigde modelinstellingen
 worden hersteld. Herstel krijgt eigen rapportvelden en overschrijft de oorzaak
 van een eerdere verwerkingsfout niet. Er wordt geen ontbrekend model gedownload.
 

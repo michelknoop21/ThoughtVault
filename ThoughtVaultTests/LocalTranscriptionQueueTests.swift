@@ -1,4 +1,5 @@
 import XCTest
+import os
 @testable import ThoughtVault
 
 final class LocalTranscriptionQueueTests: XCTestCase {
@@ -157,5 +158,35 @@ final class LocalTranscriptionQueueTests: XCTestCase {
         _ = try await (a.value, b.value)
         let positionAfter = await queue.position(of: "A")
         XCTAssertNil(positionAfter)
+    }
+
+    /// The usage pattern of the on-device upload: the caller keeps the child Task
+    /// handle and cancels it while the job waits.
+    func testCancellingStoredJobHandleSkipsWaitingWork() async throws {
+        let queue = LocalTranscriptionQueue()
+        let aStarted = Signal(), releaseA = Signal(), bQueued = Signal()
+        let ran = OSAllocatedUnfairLock(initialState: false)
+
+        let a = Task { try await queue.run(id: "A") { aStarted.fire(); await releaseA.wait() } }
+        await aStarted.wait()
+        let job = Task<String, Error> {
+            try await queue.run(id: "B", onWait: { bQueued.fire() }) {
+                ran.withLock { $0 = true }
+                return "done"
+            }
+        }
+        await bQueued.wait()
+
+        job.cancel()
+        do {
+            _ = try await job.value
+            XCTFail("expected CancellationError")
+        } catch is CancellationError {}
+
+        releaseA.fire()
+        try await a.value
+        let positionB = await queue.position(of: "B")
+        XCTAssertNil(positionB)
+        XCTAssertFalse(ran.withLock { $0 })
     }
 }

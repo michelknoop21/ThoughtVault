@@ -207,6 +207,8 @@ final class RecordingViewModel {
     @ObservationIgnored
     private var uploadTask: Task<Void, Never>?
     private var onDeviceCancelled = false
+    /// The queued on-device transcription of the current upload, with its queue id.
+    private var onDeviceJob: (id: String, task: Task<String, Error>)?
     @ObservationIgnored
     var localProcessingTasks: [String: Task<Void, Never>] = [:]
     private var isProcessingQueue = false
@@ -680,7 +682,18 @@ final class RecordingViewModel {
             if recordingState == .uploading {
                 // Widget cancel during on-device transcription; the audio file is kept.
                 onDeviceCancelled = true
-                onDeviceTranscriber.cancelFileTranscription()
+                if let job = onDeviceJob {
+                    // Waiting: cancelling the task removes it from the queue. The
+                    // transcriber ignores Task cancellation, so a running job needs
+                    // the recognition task cancelled; a waiting one must not touch it.
+                    job.task.cancel()
+                    let transcriber = onDeviceTranscriber
+                    Task {
+                        if await LocalTranscriptionQueue.shared.position(of: job.id) == 0 {
+                            await transcriber.cancelFileTranscription()
+                        }
+                    }
+                }
             }
             // Cancel the current upload task (legacy call without ID)
             uploadTask?.cancel()
@@ -705,9 +718,15 @@ final class RecordingViewModel {
 
             try LocalTranscriberFactory.validateAudioFile(at: url)
             let transcriber = onDeviceTranscriber
-            let result = try await LocalTranscriptionQueue.shared.run(id: "ondevice-\(UUID().uuidString)") {
-                try await transcriber.transcribe(url: url, profileId: profileId)
+            let jobId = "ondevice-\(UUID().uuidString)"
+            let job = Task {
+                try await LocalTranscriptionQueue.shared.run(id: jobId) {
+                    try await transcriber.transcribe(url: url, profileId: profileId)
+                }
             }
+            onDeviceJob = (jobId, job)
+            defer { onDeviceJob = nil }
+            let result = try await job.value
             await MainActor.run {
                 self.liveTranscriptText = result
                 fullTranscription = result

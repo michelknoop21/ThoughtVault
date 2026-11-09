@@ -93,6 +93,11 @@ final class AppleFoundationModelService: LLMService, @unchecked Sendable {
         }
     }
 
+    /// Not offered: the on-device context window is too small for the context step.
+    func complete(systemPrompt: String, userMessage: String) async throws -> String {
+        throw LLMError.providerUnavailable
+    }
+
     private func streamNotule(
         instructions: String,
         prompt: String,

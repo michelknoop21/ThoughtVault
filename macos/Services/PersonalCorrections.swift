@@ -64,6 +64,21 @@ enum PersonalCorrections {
         try FileManager.default.createDirectory(at: path.deletingLastPathComponent(), withIntermediateDirectories: true)
         try JSONEncoder().encode(document).write(to: path, options: .atomic)
     }
+    /// Rejected suggestion keys; empty when the file is missing or unreadable.
+    static func dismissed(at path: URL = url) -> [String] {
+        (try? JSONDecoder().decode(CorrectionDocument.self, from: Data(contentsOf: path)))?.dismissed ?? []
+    }
+    /// Records a rejected suggestion key so it is not offered again. Entries are kept.
+    @MainActor
+    static func addDismissed(_ key: String, to path: URL = url) throws {
+        let current = FileManager.default.fileExists(atPath: path.path)
+            ? try JSONDecoder().decode(CorrectionDocument.self, from: Data(contentsOf: path)) : CorrectionDocument()
+        guard !current.dismissed.contains(key) else { return }
+        let document = CorrectionDocument(entries: current.entries, dismissed: current.dismissed + [key])
+        try validate(document)
+        try FileManager.default.createDirectory(at: path.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try JSONEncoder().encode(document).write(to: path, options: .atomic)
+    }
     /// Upserts `entry` and saves; the stored version it replaces is kept in ContextHistory
     /// under `source`. Returns the saved entries.
     @MainActor

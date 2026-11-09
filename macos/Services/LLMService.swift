@@ -51,6 +51,9 @@ protocol LLMService: Sendable {
         outputTemplate: String?,
         onProgress: @Sendable (String) -> Void
     ) async throws -> String
+
+    /// One non-streaming request: returns the full reply to `userMessage`.
+    func complete(systemPrompt: String, userMessage: String) async throws -> String
 }
 
 // MARK: - Prompt assembly
@@ -171,6 +174,10 @@ private struct MissingAPIKeyLLMService: LLMService {
     ) async throws -> String {
         throw LLMError.generationFailed("Geen API-sleutel voor \(providerName) op dit apparaat. Vul die in bij Instellingen > Verwerking.")
     }
+
+    func complete(systemPrompt: String, userMessage: String) async throws -> String {
+        throw LLMError.providerUnavailable
+    }
 }
 
 // MARK: - CloudLLMServiceStub
@@ -187,6 +194,10 @@ private struct CloudLLMServiceStub: LLMService {
         onProgress: @Sendable (String) -> Void
     ) async throws -> String {
         throw LLMError.generationFailed("Cloud provider genereert notulen server-side via n8n.")
+    }
+
+    func complete(systemPrompt: String, userMessage: String) async throws -> String {
+        throw LLMError.providerUnavailable
     }
 }
 
@@ -364,6 +375,10 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
             userMessage: userContent,
             onProgress: onProgress
         )
+    }
+
+    func complete(systemPrompt: String, userMessage: String) async throws -> String {
+        try await streamChatCompletion(systemPrompt: systemPrompt, userMessage: userMessage, onProgress: { _ in })
     }
 
     // MARK: - Chunked Summarization

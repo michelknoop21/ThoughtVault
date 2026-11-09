@@ -943,6 +943,7 @@ final class RecordingViewModel {
             }
             let title = NotuleTitleExtractor.extract(from: datedHtml) ?? fallback
             try LocalTranscriptStore.shared.finalizeNotule(taskId: localId, html: datedHtml, title: title)
+            ContextSuggestions.runInBackground(taskId: localId, transcript: transcription, participants: participants, provider: provider)
 
             // Auto-export the finished notule to Obsidian (no-op when disabled).
             await MainActor.run {
@@ -1066,6 +1067,7 @@ final class RecordingViewModel {
             }
             let title = NotuleTitleExtractor.extract(from: datedHtml) ?? record.title
             try LocalTranscriptStore.shared.finalizeNotule(taskId: taskId, html: datedHtml, title: title, profileId: profile.id, profileName: profile.name)
+            ContextSuggestions.runInBackground(taskId: taskId, transcript: record.rawTranscription, participants: record.participants, provider: provider)
             updateTask(regenerationId, status: .completed, progress: 1)
             return (datedHtml, title)
         } catch {

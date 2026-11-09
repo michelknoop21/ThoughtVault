@@ -56,6 +56,22 @@ final class AnthropicLLMService: LLMService, @unchecked Sendable {
         outputTemplate: String?,
         onProgress: @Sendable (String) -> Void
     ) async throws -> String {
+        try await stream(systemPrompt: systemPrompt,
+                         userMessage: buildNotuleUserContent(notulePrompt: notulePrompt,
+                                                             transcription: transcription,
+                                                             outputTemplate: outputTemplate),
+                         onProgress: onProgress)
+    }
+
+    func complete(systemPrompt: String, userMessage: String) async throws -> String {
+        try await stream(systemPrompt: systemPrompt, userMessage: userMessage, onProgress: { _ in })
+    }
+
+    private func stream(
+        systemPrompt: String,
+        userMessage: String,
+        onProgress: @Sendable (String) -> Void
+    ) async throws -> String {
         guard var request = request("/v1/messages") else {
             throw LLMError.generationFailed("Vul je API-sleutel in bij Instellingen > Verwerking.")
         }
@@ -66,9 +82,7 @@ final class AnthropicLLMService: LLMService, @unchecked Sendable {
             "system": systemPrompt,
             "messages": [[
                 "role": "user",
-                "content": buildNotuleUserContent(notulePrompt: notulePrompt,
-                                                  transcription: transcription,
-                                                  outputTemplate: outputTemplate)
+                "content": userMessage
             ]]
         ]
         request.httpMethod = "POST"

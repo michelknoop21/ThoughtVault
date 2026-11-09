@@ -44,5 +44,7 @@
       "passed": 227,
       "skipped": 1
     }
-  }
+  },
+  "unreleasedWorkCommit": "cce4bced01301e77e7eede7f9ea4426f93172982",
+  "pendingDecision": "Model route versus explicitly mandatory human approval"
 }

@@ -90,7 +90,7 @@ enum PersonalCorrections {
 
     /// Glossary and people block for the minutes AI. `maxCharacters` limits the lines, not the fixed header.
     /// Order: lines matching the transcript, then lines for `profileId`, then the newest.
-    static func contextBlock(entries: [PersonalCorrection], people: [PersonContext], transcript: String, profileId: String?, maxCharacters: Int) -> String {
+    static func contextBlock(entries: [PersonalCorrection], people: [PersonContext], transcript: String, profileId: String?, maxCharacters: Int, extraTerms: [String] = []) -> String {
         let haystack = transcript.lowercased()
         func found(_ names: [String]) -> Bool { names.contains { let n = $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(); return !n.isEmpty && haystack.contains(n) } }
         func joined(_ parts: [String]) -> String { parts.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }.joined(separator: ", ") }
@@ -111,6 +111,13 @@ enum PersonalCorrections {
             if !tasks.isEmpty { line += ", taken: " + tasks.joined(separator: "; ") }
             candidates.append((line, found([person.name] + person.aliases) ? 0 : 2))
         }
+        // Extra terms (context note) go last, skipping anything already covered.
+        var covered = Set<String>()
+        for entry in active(entries, profileId: profileId) { covered.insert(entry.canonical.lowercased()); entry.variants.forEach { covered.insert($0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()) } }
+        for person in people { covered.insert(person.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()) }
+        for term in extraTerms.map({ $0.trimmingCharacters(in: .whitespacesAndNewlines) }) where !term.isEmpty && covered.insert(term.lowercased()).inserted {
+            candidates.append(("- " + term, 3))
+        }
         var lines: [String] = [], used = 0
         for candidate in candidates.enumerated().sorted(by: { ($0.element.rank, $0.offset) < ($1.element.rank, $1.offset) }).map(\.element) {
             guard used + candidate.line.count + 1 <= maxCharacters else { break }
@@ -126,7 +133,8 @@ enum PersonalCorrections {
         let people = PersonDirectoryService.shared.directoryPeople().map {
             PersonContext(name: $0.name, role: $0.role, organization: $0.organization, responsibilities: [], aliases: $0.aliases)
         }
-        return contextBlock(entries: entries, people: people, transcript: transcript, profileId: profileId, maxCharacters: contextBudget(for: provider))
+        return contextBlock(entries: entries, people: people, transcript: transcript, profileId: profileId, maxCharacters: contextBudget(for: provider),
+                            extraTerms: VaultFolderStore.readContextNote().map { VaultFolderStore.parseTerms(fromNote: $0) } ?? [])
     }
     static func text(_ text: String, entries: [PersonalCorrection], profileId: String?, html: Bool = false) -> String {
         var replacements: [String: String] = [:]

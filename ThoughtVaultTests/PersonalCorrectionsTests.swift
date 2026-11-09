@@ -67,4 +67,20 @@ final class PersonalCorrectionsTests: XCTestCase {
         XCTAssertTrue(entries.allSatisfy { $0.variants.isEmpty })
         XCTAssertNil(UserDefaults.standard.string(forKey: PersonalVocabulary.defaultsKey))
     }
+
+    func testContextBlockAddsExtraTermsLastAndDeduped() {
+        let entry = PersonalCorrection(canonical: "Yinga", variants: ["Jengo"])
+        let block = PersonalCorrections.contextBlock(entries: [entry], people: [person("Jan de Vries")], transcript: "", profileId: nil, maxCharacters: 6000,
+                                                     extraTerms: ["Zeta", "yinga", "JENGO", "jan de vries"])
+        let lines = block.components(separatedBy: "\n").filter { $0.hasPrefix("- ") }
+        XCTAssertEqual(lines.last, "- Zeta")
+        XCTAssertEqual(lines.count, 3)
+    }
+
+    func testMigrateKeepsLegacyKeyWhenTermSkipped() throws {
+        UserDefaults.standard.set("Yinga, Kapot<term>", forKey: PersonalVocabulary.defaultsKey)
+        try PersonalVocabulary.migrateLegacyTerms(at: tmp)
+        XCTAssertEqual(try PersonalCorrections.load(from: tmp).map(\.canonical), ["Yinga"])
+        XCTAssertNotNil(UserDefaults.standard.string(forKey: PersonalVocabulary.defaultsKey))
+    }
 }

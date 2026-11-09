@@ -263,8 +263,18 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
         }
     }
 
-    func stopRecording() async -> URL? {
-        guard isRecording else { return currentRecordingURL }
+    /// Ends the session bookkeeping: returns the URL of the session that was recording
+    /// (nil if none) and clears `currentRecordingURL` so it can never go stale.
+    func finishSession() -> URL? {
+        guard isRecording else { return nil }
+        defer { currentRecordingURL = nil }
+        return currentRecordingURL
+    }
+
+    /// `discardingTooSmall: false` always returns the session URL (used by cancel, which deletes it).
+    func stopRecording(discardingTooSmall: Bool = true) async -> URL? {
+        guard isRecording else { return nil }
+        let url = finishSession()
 
         // AVAudioRecorder.stop() must run on the main thread to match
         // the thread it was created/started on.
@@ -286,21 +296,24 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
         deactivateAudioSession()
 #endif
 
-        let url = currentRecordingURL
-
         resetMetrics()
 
         // Log file size for diagnostics
         if let url, let attrs = try? FileManager.default.attributesOfItem(atPath: url.path),
            let size = attrs[.size] as? Int64 {
             log.info("[AudioRecorder] Recording stopped — file size: \(size) bytes at \(url.lastPathComponent)")
-            if size < Self.minimumValidFileSize {
+            if discardingTooSmall, size < Self.minimumValidFileSize {
                 log.warning("[AudioRecorder] File too small (\(size) bytes < \(Self.minimumValidFileSize)), discarding")
                 return nil
             }
         }
 
         return url
+    }
+
+    /// Files a cancelled session owns; never includes earlier recordings.
+    static func filesToDiscard(sessionMicURL: URL?, systemURL: URL?, microphoneURL: URL?) -> [URL] {
+        [sessionMicURL, systemURL, microphoneURL].compactMap { $0 }
     }
 
     // MARK: - Timers

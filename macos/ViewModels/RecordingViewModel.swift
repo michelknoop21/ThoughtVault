@@ -615,20 +615,15 @@ final class RecordingViewModel {
 #if os(macOS)
         let captureResult = await systemAudioCapture.stopCapture()
 #endif
-        _ = await audioRecorder.stopRecording()
+        let sessionMicURL = await audioRecorder.stopRecording(discardingTooSmall: false)
 
-        // Delete recording files
-        if let url = audioRecorder.currentRecordingURL {
-            try? FileManager.default.removeItem(at: url)
-        }
+        // Delete only this session's files
 #if os(macOS)
-        if let url = captureResult.systemAudioURL {
-            try? FileManager.default.removeItem(at: url)
-        }
-        if let url = captureResult.microphoneURL {
-            try? FileManager.default.removeItem(at: url)
-        }
+        let discard = AudioRecorder.filesToDiscard(sessionMicURL: sessionMicURL, systemURL: captureResult.systemAudioURL, microphoneURL: captureResult.microphoneURL)
+#else
+        let discard = AudioRecorder.filesToDiscard(sessionMicURL: sessionMicURL, systemURL: nil, microphoneURL: nil)
 #endif
+        discard.forEach { try? FileManager.default.removeItem(at: $0) }
 
         await MainActor.run {
             recordingState = .idle

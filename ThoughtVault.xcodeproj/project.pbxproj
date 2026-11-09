@@ -123,6 +123,7 @@
 		AB000007 /* AudioEnvelopeProcessorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000007 /* AudioEnvelopeProcessorTests.swift */; };
 		AB000008 /* LLMChunkingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000008 /* LLMChunkingTests.swift */; };
 		AB0000A1 /* SystemAudioStorageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000A1 /* SystemAudioStorageTests.swift */; };
+		AB0000A2 /* CancelRecordingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000A2 /* CancelRecordingTests.swift */; };
 		AB000090 /* AuthViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000090 /* AuthViewModelTests.swift */; };
 		AB000091 /* TranscriptDecoderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000091 /* TranscriptDecoderTests.swift */; };
 		AB000006 /* GraphCalendarViewResponse.json in Resources */ = {isa = PBXBuildFile; fileRef = FB000006 /* GraphCalendarViewResponse.json */; };
@@ -268,6 +269,7 @@
 		FB000007 /* AudioEnvelopeProcessorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioEnvelopeProcessorTests.swift; sourceTree = "<group>"; };
 		FB000008 /* LLMChunkingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMChunkingTests.swift; sourceTree = "<group>"; };
 		FB0000A1 /* SystemAudioStorageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemAudioStorageTests.swift; sourceTree = "<group>"; };
+		FB0000A2 /* CancelRecordingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CancelRecordingTests.swift; sourceTree = "<group>"; };
 		FB000090 /* AuthViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthViewModelTests.swift; sourceTree = "<group>"; };
 		FB000091 /* TranscriptDecoderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptDecoderTests.swift; sourceTree = "<group>"; };
 		FB000006 /* GraphCalendarViewResponse.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = GraphCalendarViewResponse.json; sourceTree = "<group>"; };
@@ -521,6 +523,7 @@
 				FB000007 /* AudioEnvelopeProcessorTests.swift */,
 				FB000008 /* LLMChunkingTests.swift */,
 				FB0000A1 /* SystemAudioStorageTests.swift */,
+				FB0000A2 /* CancelRecordingTests.swift */,
 				FB000090 /* AuthViewModelTests.swift */,
 				FB000091 /* TranscriptDecoderTests.swift */,
 				FC110001 /* WhisperLoadingTests.swift */,
@@ -766,6 +769,7 @@
 				AB000007 /* AudioEnvelopeProcessorTests.swift in Sources */,
 				AB000008 /* LLMChunkingTests.swift in Sources */,
 				AB0000A1 /* SystemAudioStorageTests.swift in Sources */,
+				AB0000A2 /* CancelRecordingTests.swift in Sources */,
 				AB000090 /* AuthViewModelTests.swift in Sources */,
 				AB000091 /* TranscriptDecoderTests.swift in Sources */,
 				AC110001 /* WhisperLoadingTests.swift in Sources */,

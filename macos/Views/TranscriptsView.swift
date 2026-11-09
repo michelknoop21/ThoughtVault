@@ -85,10 +85,11 @@ struct TranscriptsView: View {
 
         // Search
         if !searchText.isEmpty {
-            let q = searchText.lowercased()
+            // ponytail: converts notule HTML on every keystroke; fine for hundreds of notules,
+            // cache the plain text per transcript if the list grows into thousands.
             result = result.filter {
-                $0.title.lowercased().contains(q) ||
-                ($0.rawTranscription?.lowercased().contains(q) ?? false)
+                TranscriptSearch.matches(searchText, title: $0.title, transcript: $0.rawTranscription ?? "",
+                                         notuleHtml: $0.notuleHtml ?? "", tags: $0.tags)
             }
         }
 

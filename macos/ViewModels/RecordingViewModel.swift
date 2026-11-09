@@ -1799,6 +1799,8 @@ final class RecordingViewModel {
                         os_log("[RecordingVM] Finalized mix is incomplete, using mic only", log: log, type: .error)
                         return micURL
                     }
+                    // System audio lives in Recordings too; drop it only once the mix is verified.
+                    _ = try AudioRecorder.removeSourceIfMixIsComplete(sourceURL: systemURL, combinedURL: outputURL, expectedFrames: totalFrames)
                 } catch {
                     os_log("[RecordingVM] Source cleanup skipped: %{public}@", log: log, type: .error, error.localizedDescription)
                 }

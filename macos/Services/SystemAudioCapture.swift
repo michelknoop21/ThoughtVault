@@ -54,11 +54,17 @@ final class SystemAudioCapture {
     private var lastMeterDate: Date?
     private let ioQueue = DispatchQueue(label: "com.buildmind.ThoughtVault.SystemAudioCapture.io")
 
+    nonisolated static func outputURL(in directory: URL, date: Date) -> URL {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyyMMdd-HHmmss"
+        return directory.appendingPathComponent("system_audio_\(formatter.string(from: date)).wav")
+    }
+
     @discardableResult
     func startCapture(includeMicrophone: Bool = false) async throws -> URL {
         let outputUID = try Self.defaultOutputUID()
-        let outputURL = URL(fileURLWithPath: NSTemporaryDirectory())
-            .appendingPathComponent("system_audio_\(UUID().uuidString).wav")
+        let outputURL = Self.outputURL(in: AudioRecorder.recordingsDirectoryURL(), date: Date())
         guard let fileFormat = AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: 16_000,
                                              channels: 1, interleaved: false) else {
             throw SystemAudioCaptureError.coreAudio("audioformaat", -1)

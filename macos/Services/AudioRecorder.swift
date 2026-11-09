@@ -387,22 +387,21 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
     // MARK: - File Management
 
     private func makeRecordingURL() -> URL {
-        let dir = recordingsDirectory()
+        let dir = Self.recordingsDirectoryURL()
         let timestamp = Int(Date().timeIntervalSince1970)
         return dir.appendingPathComponent("recording_\(timestamp).wav")
     }
 
-    private func recordingsDirectory() -> URL {
+    static func recordingsDirectoryURL() -> URL {
         let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        let dir = docs.appendingPathComponent(Self.recordingsDirectory)
+        let dir = docs.appendingPathComponent(recordingsDirectory)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         return dir
     }
 
     /// Returns all WAV URLs from the persistent Recordings directory.
     static func savedRecordingURLs() -> [URL] {
-        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        let dir = docs.appendingPathComponent(recordingsDirectory)
+        let dir = recordingsDirectoryURL()
         guard let items = try? FileManager.default.contentsOfDirectory(
             at: dir,
             includingPropertiesForKeys: [.creationDateKey, .fileSizeKey],

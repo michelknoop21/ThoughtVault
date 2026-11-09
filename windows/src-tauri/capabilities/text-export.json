@@ -1,0 +1,6 @@
+{
+  "identifier": "text-export",
+  "description": "Save text exports from the main window to a user-selected file",
+  "windows": ["main"],
+  "permissions": ["dialog:allow-save", "fs:allow-write-text-file"]
+}

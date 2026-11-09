@@ -529,7 +529,8 @@ fn mix_wav_files(mic_path: &str, loopback_path: &str) -> Result<(), String> {
         if mic.is_none() && system.is_none() { break; }
         let mic = mic.unwrap_or(0);
         let system = system.unwrap_or(0);
-        let mixed = if mic.unsigned_abs() >= system.unsigned_abs() { mic } else { system };
+        // Fixed headroom preserves both waveforms without overflowing PCM16.
+        let mixed = ((i32::from(mic) + i32::from(system)) / 2) as i16;
         writer.write_sample(mixed)
             .map_err(|e| format!("Fout bij schrijven mixed sample: {e}"))?;
         count += 1;
@@ -610,7 +611,29 @@ mod mix_tests {
     }
 
     #[test]
-    fn mixed_file_keeps_system_audio_when_microphone_is_silent() {
+    fn simultaneous_sources_keep_both_waveforms_with_headroom() {
+        let dir = tempfile::tempdir().unwrap();
+        let mic = dir.path().join("mic.wav");
+        let system = dir.path().join("system.wav");
+        let spec = WavSpec { channels: 1, sample_rate: 16000, bits_per_sample: 16, sample_format: HoundSampleFormat::Int };
+        // Opposing signs must combine, rather than discard whichever source is quieter.
+        // The last two frames exercise full-scale overlap without overflow or clipping.
+        for (path, samples) in [
+            (&mic, [10000_i16, -10000, 5000, -5000, i16::MAX, i16::MIN]),
+            (&system, [8000_i16, 8000, -8000, -8000, i16::MAX, i16::MIN]),
+        ] {
+            let mut writer = WavWriter::create(path, spec).unwrap();
+            for sample in samples { writer.write_sample(sample).unwrap(); }
+            writer.finalize().unwrap();
+        }
+        mix_wav_files(mic.to_str().unwrap(), system.to_str().unwrap()).unwrap();
+        let mixed = hound::WavReader::open(mic).unwrap().into_samples::<i16>()
+            .collect::<Result<Vec<_>, _>>().unwrap();
+        assert_eq!(mixed, [9000, -1000, -1500, -6500, i16::MAX, i16::MIN]);
+    }
+
+    #[test]
+    fn mixed_file_keeps_system_audio_with_headroom_when_microphone_is_silent() {
         let dir = tempfile::tempdir().unwrap();
         let mic = dir.path().join("mic.wav");
         let system = dir.path().join("system.wav");
@@ -622,7 +645,7 @@ mod mix_tests {
         }
         mix_wav_files(mic.to_str().unwrap(), system.to_str().unwrap()).unwrap();
         let mut reader = hound::WavReader::open(mic).unwrap();
-        assert_eq!(reader.samples::<i16>().collect::<Result<Vec<_>, _>>().unwrap(), vec![2000, -4000, 1000]);
+        assert_eq!(reader.samples::<i16>().collect::<Result<Vec<_>, _>>().unwrap(), vec![1000, -2000, 500]);
         assert!(system.is_file());
     }
 
@@ -649,13 +672,13 @@ mod mix_tests {
         for marker in markers {
             reader.seek(marker - 1).unwrap();
             let samples = reader.samples::<i16>().take(3).collect::<Result<Vec<_>, _>>().unwrap();
-            assert_eq!(samples, [0, -2000, 0]);
+            assert_eq!(samples, [0, -500, 0]);
         }
         assert!(system.is_file());
     }
 
     #[test]
-    fn streamed_mix_preserves_extremes_tails_and_resampling() {
+    fn streamed_mix_preserves_cancellation_tails_and_resampling() {
         let dir = tempfile::tempdir().unwrap();
         let mic = dir.path().join("mic.wav");
         let system = dir.path().join("system.wav");
@@ -674,7 +697,7 @@ mod mix_tests {
             mix_wav_files(mic.to_str().unwrap(), system.to_str().unwrap()).unwrap();
             let samples = hound::WavReader::open(&mic).unwrap().into_samples::<i16>()
                 .collect::<Result<Vec<_>, _>>().unwrap();
-            assert_eq!(samples, vec![i16::MIN, -2, 3]);
+            assert_eq!(samples, vec![0, 0, 1]);
             assert!(system.is_file());
         }
     }

@@ -50,7 +50,10 @@ fn convert_audio(source: &Path, destination_dir: &Path) -> Result<String, String
         .format(&hint, media, &FormatOptions::default(), &MetadataOptions::default())
         .map_err(|e| format!("Kan audioformaat niet lezen: {e}"))?;
     let mut format = probed.format;
-    let track = format.default_track().ok_or("Geen audiospoor gevonden")?;
+    // MP4 may list its video track first; decode a track with audio metadata.
+    let track = format.tracks().iter()
+        .find(|track| track.codec_params.sample_rate.is_some())
+        .ok_or("Geen audiospoor gevonden")?;
     let track_id = track.id;
     let params = track.codec_params.clone();
     let mut decoder = get_codecs()
@@ -134,6 +137,20 @@ mod import_tests {
         assert_eq!(reader.spec().channels, 1);
         assert_eq!(reader.spec().sample_rate, 16_000);
         assert_eq!(reader.len(), 16_000);
+    }
+
+    #[test]
+    fn imports_audio_when_mp4_video_track_comes_first() {
+        let dir = tempfile::tempdir().unwrap();
+        let source = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("tests/fixtures/video-first.mp4");
+        let imported = convert_audio(&source, dir.path());
+        assert!(imported.is_ok(), "audio track must be selected despite the leading video track: {imported:?}");
+        let mut reader = hound::WavReader::open(imported.unwrap()).unwrap();
+        assert_eq!(reader.spec().channels, 1);
+        assert_eq!(reader.spec().sample_rate, 16_000);
+        assert!((15_000..18_000).contains(&reader.len()));
+        assert!(reader.samples::<i16>().any(|sample| sample.unwrap().unsigned_abs() > 500));
     }
 
     #[test]

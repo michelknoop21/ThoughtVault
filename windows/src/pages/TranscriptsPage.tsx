@@ -19,6 +19,7 @@ import { useRecordingStore } from "../stores/recordingStore";
 import { LLMService } from "../services/llm";
 import { NotuleReviewError } from "../services/notuleAudit";
 import { prepareNotuleHtml } from "../services/notulePresentation";
+import { saveTextExport } from "../services/textExport";
 import { hasUsableNotule, hasUsableTranscription } from "../services/notuleValidation";
 import { extractTitle } from "../services/titleExtractor";
 import { api } from "../services/api";
@@ -376,23 +377,31 @@ export function TranscriptsPage() {
     document.body.append(frame);
   }
 
+  async function exportText(content: string, title: string, extension: "txt" | "md" | "html") {
+    try {
+      if (await saveTextExport(content, title, extension)) toast.show("Bestand opgeslagen", "success");
+    } catch (error) {
+      toast.show(error instanceof Error ? error.message : "Bestand opslaan mislukt", "error");
+    }
+  }
+
   function handleExportTXT(transcript: Transcript) {
     const content = transcript.notule_html
       ? htmlToPlainText(prepareNotuleHtml(transcript.notule_html, transcript.title))
       : transcript.raw_transcription;
-    if (content) downloadFile(content, `${transcript.title || "notulen"}.txt`, "text/plain");
+    if (content) void exportText(content, transcript.title || "notulen", "txt");
   }
 
   function handleExportMarkdown(transcript: Transcript) {
     if (!transcript.notule_html) return;
-    downloadFile(htmlToMarkdown(prepareNotuleHtml(transcript.notule_html, transcript.title)), `${transcript.title || "notulen"}.md`, "text/markdown");
+    void exportText(htmlToMarkdown(prepareNotuleHtml(transcript.notule_html, transcript.title)), transcript.title || "notulen", "md");
   }
 
   function handleExportHTML(transcript: Transcript) {
     if (!transcript.notule_html) return;
     const title = document.createElement("h1");
     title.textContent = transcript.title || "Notulen";
-    downloadFile(title.outerHTML + prepareNotuleHtml(transcript.notule_html, transcript.title), `${transcript.title || "notulen"}.html`, "text/html");
+    void exportText(title.outerHTML + prepareNotuleHtml(transcript.notule_html, transcript.title), transcript.title || "notulen", "html");
   }
 
   async function handleExportObsidian(transcript: Transcript) {
@@ -629,14 +638,6 @@ export function TranscriptsPage() {
 }
 
 // --- Utilities ---
-
-function downloadFile(content: string, filename: string, mimeType: string) {
-  const blob = new Blob([content], { type: mimeType });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url; a.download = filename; a.click();
-  URL.revokeObjectURL(url);
-}
 
 function formatDate(dateStr: string): string {
   const d = new Date(dateStr);

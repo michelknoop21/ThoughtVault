@@ -142,6 +142,8 @@
             </Component>
             <Component Id="Path" Guid="{{path_component_guid}}" Win64="$(var.Win64)">
                 <File Id="Path" Source="{{main_binary_path}}" KeyPath="yes" Checksum="yes"/>
+                <!-- Earlier MSI versions left this shortcut pointing at their obsolete ProductCode. -->
+                <RemoveFile Id="RemoveLegacyUninstallShortcut" Name="Uninstall {{product_name}}.lnk" On="install" />
                 {{#each file_associations as |association| ~}}
                 {{#each association.ext as |ext| ~}}
                 <ProgId Id="{{../../product_name}}.{{ext}}" Advertise="yes" Description="{{association.description}}">

@@ -12,6 +12,10 @@ Gerichte afwijkingen:
   HKLM-zoekopdracht heeft voorrang. De bestaande UpgradeCode blijft behouden.
 - De extra uninstall-snelkoppeling in Program Files is verwijderd. Verwijderen
   blijft beschikbaar via Windows Geïnstalleerde apps. Desktop/startmenu blijven.
+  Bij installatie wordt ook de achtergebleven `Uninstall ThoughtVault.lnk`
+  uit de installatiemap verwijderd; deze verwees na upgrades nog naar het
+  ProductCode van de voorganger. Alleen deze exacte productbestandsnaam wordt
+  geraakt. Upgradegedrag moet met de nieuwe MSI op Windows worden bewezen.
 - Alleen oudere versies mogen automatisch worden vervangen. Ook vervanging van
   dezelfde versie door een anders gebouwde installer wordt niet toegestaan.
   Rollback vereist een afzonderlijke, gecontroleerde herstelprocedure.

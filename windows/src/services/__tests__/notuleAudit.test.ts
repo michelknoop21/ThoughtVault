@@ -13,6 +13,20 @@ const fixture = (change?: (report: ReturnType<typeof complete>, user: string) =>
   const report = complete(user); change?.(report, user); return JSON.stringify(report);
 });
 
+it("identifies the missing source information for manual review without accepting the draft", async () => {
+  const request = fixture(report => { report.source[1].status = "missing"; report.source[1].evidence = []; });
+  await expect(auditNotule("Sam controleert vrijdag. Joris belt maandag.", "<p>Sam voert vrijdag de controle uit.</p>", "", request))
+    .rejects.toThrow("De notule mist broninformatie: Joris belt maandag.");
+  expect(request).toHaveBeenCalledTimes(1);
+});
+
+it("identifies a contradictory note claim for manual review without accepting the draft", async () => {
+  const request = fixture(report => { report.notes.at(-1)!.status = "contradiction"; report.notes.at(-1)!.evidence = []; });
+  await expect(auditNotule("Klantgegevens mogen niet worden gedeeld.", "<p>Klantgegevens mogen niet worden gedeeld. Het delen van klantgegevens is toegestaan.</p>", "", request))
+    .rejects.toThrow("De notule spreekt de bron tegen: Het delen van klantgegevens is toegestaan.");
+  expect(request).toHaveBeenCalledTimes(1);
+});
+
 it("needs no model verdict only for the exact complete visible source", async () => {
   const request = fixture();
   await auditNotule("Noor controleert donderdag.", "<p>Noor controleert donderdag.</p>", "", request);

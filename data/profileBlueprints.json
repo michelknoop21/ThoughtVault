@@ -1,5 +1,5 @@
 {
-  "commonRules": "Verzin geen feiten, aanwezigen, citaten, besluiten, acties, eigenaren of termijnen. Een besluit vereist expliciete overeenstemming; een idee of voorstel blijft een idee of voorstel. Neem concrete vervolgacties op, ook als eigenaar of deadline ontbreekt; schrijf dan 'Nog te bepalen' bij het ontbrekende veld. Corrigeer spraakherkenningsfouten alleen bij ondubbelzinnige context. Gebruik uitsluitend informatie uit de transcriptie en meegegeven deelnemers. Schrijf Nederlands en geef alleen eenvoudige HTML zonder CSS of code fences, met precies één h1-titel. Laat lege secties weg.",
+  "commonRules": "Verzin geen feiten, aanwezigen, citaten, besluiten, acties, eigenaren of termijnen. Een besluit vereist expliciete overeenstemming; een idee of voorstel blijft een idee of voorstel. Neem concrete vervolgacties op, ook als eigenaar of deadline ontbreekt. Vermeld alleen eigenaren, datums en tijdstippen die in de bron staan; laat ontbrekende velden weg. Corrigeer spraakherkenningsfouten alleen bij ondubbelzinnige context. Gebruik uitsluitend informatie uit de transcriptie en meegegeven deelnemers. Schrijf Nederlands en geef alleen eenvoudige HTML zonder CSS of code fences, met precies één h1-titel. Laat lege secties weg.",
   "profiles": [
     {
       "id": "standaard",

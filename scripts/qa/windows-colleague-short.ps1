@@ -189,6 +189,40 @@ try{
  $report.originalRecordsUnchanged=($beforeItems|ConvertTo-Json -Depth 30 -Compress) -ceq ($afterOriginals|ConvertTo-Json -Depth 30 -Compress)
  if(!$report.originalRecordsUnchanged){throw 'An original record changed'}
  if(!$result.has_notes){throw 'Production content audit rejected the draft; preserved without retry'}
+ Activate 'Notulen' 'Hyperlink'
+ # Duplicate titles cannot identify the new record reliably; stop rather than export another note.
+ $condition=New-Object System.Windows.Automation.AndCondition @(
+  (New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::NameProperty,([string]$result.title))),
+  (New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::ControlTypeProperty,[System.Windows.Automation.ControlType]::Button))
+ )
+ $recordControls=$script:w.FindAll([System.Windows.Automation.TreeScope]::Descendants,$condition)
+ # The same record can also appear in the recent sidebar; both open that exact unique title.
+ $sameTitle=@($items|Where-Object {$_.title -ceq $result.title})
+ if($sameTitle.Count -ne 1 -or $recordControls.Count -lt 1){throw 'New record is not uniquely identifiable by title'}
+ Activate ([string]$result.title) 'Button'
+ $null=Find-Control 'Bewerken' 'Button'
+ Activate 'Export' 'Button';Activate 'TXT' 'Button'
+ $deadline=[DateTime]::UtcNow.AddSeconds(15);$dialog=$null
+ do{$dialog=Dialog-For-App;if($dialog){break};Start-Sleep -Milliseconds 100}while([DateTime]::UtcNow -lt $deadline)
+ if(!$dialog){throw 'TXT save dialog did not open'}
+ $target=Join-Path $env:DALF_ARTIFACT_DIR 'fictional-note.txt'
+ if(Test-Path $target){throw 'Export destination exists'}
+ $edit=[TVNativeDialog]::FilenameEdit([IntPtr]$dialog.Current.NativeWindowHandle)
+ if($edit -eq [IntPtr]::Zero -or ![TVNativeDialog]::SetWindowText($edit,$target)){throw 'TXT filename control unavailable'}
+ Native-Button $dialog @('Save')
+ $deadline=[DateTime]::UtcNow.AddSeconds(15)
+ while(!(Test-Path $target) -and [DateTime]::UtcNow -lt $deadline){Start-Sleep -Milliseconds 100}
+ if(!(Test-Path $target)){throw 'TXT export was not saved'}
+ $text=[IO.File]::ReadAllText($target)
+ $actual=$text -replace '\s+',' '
+ # The exporter removes a duplicate document title; compare each content paragraph instead.
+ $paragraphs=[regex]::Matches([string]$result.notule_html,'(?is)<(?:p|li)\b[^>]*>(.*?)</(?:p|li)>')
+ if($paragraphs.Count -lt 1){throw 'No factual paragraphs to verify in TXT export'}
+ foreach($paragraph in $paragraphs){
+  $plain=([Net.WebUtility]::HtmlDecode(($paragraph.Groups[1].Value -replace '<[^>]*>',' ')) -replace '\s+',' ').Trim()
+  if($plain -and !$actual.Contains($plain)){throw 'TXT export lost a note paragraph'}
+ }
+ $report.exports+=@{format='txt';path=$target;sha256=(Get-FileHash $target).Hash;paragraphsVerified=$paragraphs.Count}
  $report.status='native_pipeline_completed_requires_independent_content_review'
  $report.pipelineStage=$report.stage
 }catch{$report.error=$_.Exception.Message;$report.errorLocation=$_.ScriptStackTrace;$report.failureStage=$report.stage}finally{

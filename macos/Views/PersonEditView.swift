@@ -34,6 +34,8 @@ struct PersonEditView: View {
     /// Bumped after each save so the history list reloads.
     @State private var historyRefresh = 0
     @State private var saveError: String? = nil
+    /// Loaded once in loadFields(); the lookup decodes every record's participants.
+    @State private var conversations: [TranscriptRecord] = []
 
     @Environment(\.dismiss) private var dismiss
 
@@ -92,12 +94,17 @@ struct PersonEditView: View {
                     Text("Geschiedenis").font(TS.Font.headline)
                     ScrollView { historyList(person) }.frame(maxHeight: 120)
                 }
+                VStack(alignment: .leading, spacing: TS.Spacing.sm) {
+                    Text("Gesprekken").font(TS.Font.headline)
+                    ScrollView { conversationList }.frame(maxHeight: 120)
+                }
             }
             #else
             Form {
                 personFields
                 Section("Taken en verantwoordelijkheden") { takenEditor }
                 if let person { Section("Geschiedenis") { historyList(person) } }
+                if person != nil { Section("Gesprekken") { conversationList } }
             }
             .formStyle(.grouped)
             #endif
@@ -209,6 +216,28 @@ struct PersonEditView: View {
         .id(historyRefresh)
     }
 
+    /// Recordings this person was linked to, newest first.
+    private var conversationList: some View {
+        VStack(alignment: .leading, spacing: TS.Spacing.xs) {
+            if conversations.isEmpty {
+                Text("Nog geen gekoppelde gesprekken")
+                    .font(TS.Font.caption)
+                    .foregroundStyle(Color.labelSecondary)
+            }
+            ForEach(conversations, id: \.taskId) { record in
+                HStack(alignment: .firstTextBaseline, spacing: TS.Spacing.sm) {
+                    Text(record.createdAt.formatted(Date.FormatStyle(date: .abbreviated, time: .omitted).locale(Locale(identifier: "nl_NL"))))
+                        .font(TS.Font.caption)
+                        .foregroundStyle(Color.labelSecondary)
+                    Text(record.title)
+                        .font(TS.Font.body)
+                        .foregroundStyle(Color.labelPrimary)
+                        .lineLimit(1)
+                }
+            }
+        }
+    }
+
     // MARK: - Load
 
     private func loadFields() {
@@ -220,6 +249,7 @@ struct PersonEditView: View {
         expertise = p.expertiseTags.joined(separator: ", ")
         internalStatus = InternalStatus.from(p.isInternal)
         taken = p.responsibilities
+        conversations = LocalTranscriptStore.shared.records(linkedTo: p.id)
     }
 
     // MARK: - Save

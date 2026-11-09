@@ -41,11 +41,13 @@ struct PersonSuggestion: Codable, Hashable, Sendable {
     var heardAs: [String]
     /// Directory person this suggestion updates; nil means a new person.
     var matchedPersonId: String?
+    /// Directory people this suggestion could be when the name was ambiguous.
+    var candidateIds: [String] = []
 
-    init(name: String, role: String, organization: String, responsibilities: [String], topics: [String], heardAs: [String], matchedPersonId: String?) {
+    init(name: String, role: String, organization: String, responsibilities: [String], topics: [String], heardAs: [String], matchedPersonId: String?, candidateIds: [String] = []) {
         self.name = name; self.role = role; self.organization = organization
         self.responsibilities = responsibilities; self.topics = topics; self.heardAs = heardAs
-        self.matchedPersonId = matchedPersonId
+        self.matchedPersonId = matchedPersonId; self.candidateIds = candidateIds
     }
     /// AI output: missing or mistyped fields become empty.
     init(from decoder: Decoder) throws {
@@ -57,6 +59,7 @@ struct PersonSuggestion: Codable, Hashable, Sendable {
         topics = values.lenient(.topics) ?? []
         heardAs = values.lenient(.heardAs) ?? []
         matchedPersonId = values.lenient(.matchedPersonId)
+        candidateIds = values.lenient(.candidateIds) ?? []
     }
 }
 
@@ -99,8 +102,10 @@ enum ContextSuggestions {
     // MARK: - Parsing
 
     /// Turns the raw AI reply into checked suggestions. Never throws: anything unusable is dropped.
-    /// `selfNames` (the user's own name and aliases) are never suggested as people.
-    static func parse(_ raw: String, transcript: String, entries: [PersonalCorrection], dismissed: [String], selfNames: [String] = []) -> ContextSuggestionSet {
+    /// The user is never suggested: a name equal to `selfNames` or `selfAliases` is dropped, a
+    /// heardAs spelling only when it equals a self name (a bare first-name alias would otherwise
+    /// drop everyone else with that first name).
+    static func parse(_ raw: String, transcript: String, entries: [PersonalCorrection], dismissed: [String], selfNames: [String] = [], selfAliases: [String] = []) -> ContextSuggestionSet {
         // Reasoning models may prefix their answer with a think block that can contain braces.
         let raw = raw.replacingOccurrences(of: #"<think>[\s\S]*?</think>"#, with: "", options: .regularExpression)
         guard let start = raw.firstIndex(of: "{"), let end = raw.lastIndex(of: "}"), start < end,
@@ -111,6 +116,7 @@ enum ContextSuggestions {
         for entry in entries { ([entry.canonical] + entry.variants).forEach { known.insert(trim($0).lowercased()) } }
 
         let ownNames = Set(selfNames.map { trim($0).lowercased() }.filter { !$0.isEmpty })
+        let ownNamesAndAliases = ownNames.union(selfAliases.map { trim($0).lowercased() }.filter { !$0.isEmpty })
 
         // Plain loops, not lazy compactMap + prefix: a lazy collection re-runs its closure while
         // slicing, which would repeat the `seen` insert and drop valid items.
@@ -134,7 +140,8 @@ enum ContextSuggestions {
                                            heardAs: list(person.heardAs), matchedPersonId: nil)
             let key = dismissKey(for: .person(cleaned))
             guard !cleaned.name.isEmpty, !rejected.contains(key),
-                  !([cleaned.name] + cleaned.heardAs).contains(where: { ownNames.contains($0.lowercased()) }),
+                  !ownNamesAndAliases.contains(cleaned.name.lowercased()),
+                  !cleaned.heardAs.contains(where: { ownNames.contains($0.lowercased()) }),
                   seen.insert(key).inserted else { continue }
             people.append(cleaned)
         }
@@ -192,25 +199,28 @@ enum ContextSuggestions {
 
     /// Starts the suggestion call after the notule was saved. Fire and forget: failures are
     /// only logged. Skipped for Apple Intelligence, very long transcripts and under tests.
-    static func runInBackground(taskId: String, transcript: String, participants: [Participant], profileId: String?, provider: NotulenProvider) {
+    static func runInBackground(taskId: String, transcript: String, participants: [Participant], profileId: String?, profileName: String, provider: NotulenProvider) {
         let provider: NotulenProvider = provider == .cloud ? .ollama : provider
         guard !AppEnvironment.isRunningTests, provider != .appleIntelligence,
               transcript.count <= maxTranscriptCharacters else { return }
         Task.detached(priority: .utility) {
             do {
-                let (context, entries, dismissed, selfNames) = await MainActor.run {
+                let (context, entries, dismissed, selfName, selfAliases) = await MainActor.run {
                     let entries = PersonalCorrections.loadOrEmpty()
                     let me = LocalTranscriptStore.shared.fetchSelfProfile()
                     return (PersonalCorrections.contextBlock(entries: entries, transcript: transcript, profileId: profileId, provider: provider),
-                            entries, PersonalCorrections.dismissed(), me.map { [$0.name] + $0.aliases } ?? [])
+                            entries, PersonalCorrections.dismissed(), me?.name ?? "", me?.aliases ?? [])
                 }
-                let message = userMessage(context: context, participants: participants, selfName: selfNames.first ?? "", transcript: transcript)
+                let message = userMessage(context: context, participants: participants, selfName: selfName, transcript: transcript)
                 let raw = try await LLMServiceFactory.service(for: provider, serverURL: "")
                     .complete(systemPrompt: systemPrompt, userMessage: message)
-                let set = parse(raw, transcript: transcript, entries: entries, dismissed: dismissed, selfNames: selfNames)
-                try await MainActor.run {
+                let parsed = parse(raw, transcript: transcript, entries: entries, dismissed: dismissed, selfNames: [selfName], selfAliases: selfAliases)
+                let set = try await MainActor.run {
+                    // Matched people are filled in directly; only what needs the user is stored.
+                    let set = PersonMatcher.link(parsed, taskId: taskId, profileName: profileName)
                     try save(set, taskId: taskId)
                     NotificationCenter.default.post(name: .contextSuggestionsUpdated, object: nil, userInfo: ["taskId": taskId])
+                    return set
                 }
                 logger.info("Context suggestions: \(set.terms.count) terms, \(set.people.count) people")
             } catch {

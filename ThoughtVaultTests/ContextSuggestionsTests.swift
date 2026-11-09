@@ -91,9 +91,10 @@ final class ContextSuggestionsTests: XCTestCase {
     }
 
     func testParseDropsUnnamedPeopleAndTheUser() {
-        let raw = #"{"people": [{"name": ""}, {"name": "michel knoop"}, {"name": "M. Knoop"}, {"name": "Peter", "heardAs": ["Mike"]}, {"name": "Pieter van Kaskop"}]}"#
-        let set = ContextSuggestions.parse(raw, transcript: transcript, entries: [], dismissed: [], selfNames: ["Michel Knoop", "M. Knoop", "Mike"])
-        XCTAssertEqual(set.people.map(\.name), ["Pieter van Kaskop"])
+        let raw = #"{"people": [{"name": ""}, {"name": "michel knoop"}, {"name": "M. Knoop"}, {"name": "Peter", "heardAs": ["Michel Knoop"]}, {"name": "Mike de Boer", "heardAs": ["Mike"]}, {"name": "Pieter van Kaskop"}]}"#
+        let set = ContextSuggestions.parse(raw, transcript: transcript, entries: [], dismissed: [], selfNames: ["Michel Knoop"], selfAliases: ["M. Knoop", "Mike"])
+        XCTAssertEqual(set.people.map(\.name), ["Mike de Boer", "Pieter van Kaskop"],
+                       "a heardAs equal to a self alias (a bare first name) does not drop someone else")
     }
 
     func testParseIgnoresThinkBlock() {

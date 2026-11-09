@@ -245,6 +245,19 @@ final class LocalTranscriptStore {
         do { try context.save() } catch { record.notuleHtml = original; throw error }
     }
 
+    func updateParticipants(taskId: String, participants: [Participant]) throws {
+        guard let record = record(forTaskId: taskId) else { throw LocalStoreError.recordNotFound }
+        let original = record.participantsJSON
+        record.participants = participants
+        do { try context.save() } catch { record.participantsJSON = original; throw error }
+    }
+
+    /// Records with a participant linked to `personId`, newest first.
+    /// Decodes every record's participants (linear scan); add an indexed link if this gets slow.
+    func records(linkedTo personId: String, limit: Int = 50) -> [TranscriptRecord] {
+        Array(allRecords().filter { $0.participants.contains { $0.personId == personId } }.prefix(limit))
+    }
+
     func updateTitle(taskId: String, title: String) throws {
         guard let record = record(forTaskId: taskId) else { throw LocalStoreError.recordNotFound }
         let original = record.title

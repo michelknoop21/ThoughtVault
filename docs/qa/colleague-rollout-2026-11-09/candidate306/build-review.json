@@ -1,0 +1,20 @@
+{
+  "version": "1.0.306",
+  "sourceCommit": "df2b9be",
+  "sourceHash": "18fe49ad80d310e0b4a766f09347a5d1d578f8162f364cf83fa343fed1d4ef53",
+  "nativeJob": "b990873ee58e43e38dd4ed11eed1fa03",
+  "nativeSha256": "c6aa2dc5ee7152f99381a7a7b2c6affc9c596ebe970c5e4b2a4325c8a55f5e37",
+  "nativeArtifactsVerified": 5,
+  "frontendTests": {
+    "passed": 237,
+    "skipped": 1
+  },
+  "rustTests": {
+    "passed": 38,
+    "ignored": 3
+  },
+  "msiRequest": "cc36fde7f8194a428172777200544c70",
+  "status": "msi_packaging_in_progress",
+  "installed": false,
+  "released": false
+}

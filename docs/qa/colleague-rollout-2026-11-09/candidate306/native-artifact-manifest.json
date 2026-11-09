@@ -1,0 +1,27 @@
+[
+  {
+    "path": "package/binary-targets.json",
+    "sha256": "affcd16ffd495e3da3636e98fe272dbc1fe6800a17359560ca8f17938c03d3ce",
+    "length": 195
+  },
+  {
+    "path": "package/build-result.json",
+    "sha256": "b2f40a0981192d042fe56873337c813085ecac5b91b75a66195aa4ea6a44c766",
+    "length": 106
+  },
+  {
+    "path": "package/ThoughtVault.exe",
+    "sha256": "c6aa2dc5ee7152f99381a7a7b2c6affc9c596ebe970c5e4b2a4325c8a55f5e37",
+    "length": 27400704
+  },
+  {
+    "path": "resource-provenance.json",
+    "sha256": "314f4d26458c80116130753c2ef7fd41e3b80d5d95739bf49242591fed1e93be",
+    "length": 230377
+  },
+  {
+    "path": "wix-provenance.json",
+    "sha256": "13b36c6186d434183f3f004615b8408dae1873c658a823ed901ac4417979dde6",
+    "length": 38197
+  }
+]

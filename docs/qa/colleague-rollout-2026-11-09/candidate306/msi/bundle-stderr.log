@@ -1,0 +1,18 @@
+       Debug [tauri_cli::helpers::app_paths] Found Tauri project inside C:\D38m\cc36fde7f8194a428172777200544c70\p\src-tauri on early lookup
+        Info [tauri_bundler::bundle] Patching C:\D38m\cc36fde7f8194a428172777200544c70\t\release\ThoughtVault.exe with bundle type information: msi
+        Info [tauri_bundler::bundle::windows::msi] Target: x64
+     Running [tauri_bundler::bundle::windows::msi] candle for "C:\\D38m\\cc36fde7f8194a428172777200544c70\\t\\release\\wix\\x64\\main.wxs"
+     Running [tauri_bundler::utils] Command `C:\D38m\cc36fde7f8194a428172777200544c70\t\.tauri\WixTools314\candle.exe  -arch x64 C:\D38m\cc36fde7f8194a428172777200544c70\t\release\wix\x64\main.wxs -dSourceDir=C:\D38m\cc36fde7f8194a428172777200544c70\t\release\ThoughtVault.exe`
+Windows Installer XML Toolset Compiler version 3.14.1.8722
+Copyright (c) .NET Foundation and contributors. All rights reserved.
+
+main.wxs
+     Running [tauri_bundler::bundle::windows::msi] light to produce C:\D38m\cc36fde7f8194a428172777200544c70\t\release\bundle\msi\ThoughtVault_1.0.306_x64_en-US.msi
+     Running [tauri_bundler::utils] Command `C:\D38m\cc36fde7f8194a428172777200544c70\t\.tauri\WixTools314\light.exe  -ext C:\D38m\cc36fde7f8194a428172777200544c70\t\.tauri\WixTools314\WixUIExtension.dll -ext C:\D38m\cc36fde7f8194a428172777200544c70\t\.tauri\WixTools314\WixUtilExtension.dll -o C:\D38m\cc36fde7f8194a428172777200544c70\t\release\wix\x64\output.msi -cultures:en-us -loc C:\D38m\cc36fde7f8194a428172777200544c70\t\release\wix\x64\locale.wxl *.wixobj`
+Windows Installer XML Toolset Linker version 3.14.1.8722
+Copyright (c) .NET Foundation and contributors. All rights reserved.
+
+C:\D38m\cc36fde7f8194a428172777200544c70\t\release\wix\x64\main.wxs(1075) : warning LGHT1076 : ICE03: String overflow (greater than length permitted in column); Table: CustomAction, Column: Target, Key(s): DownloadAndInvokeBootstrapper
+    Finished [tauri_bundler::bundle] 1 bundle at:
+        C:\D38m\cc36fde7f8194a428172777200544c70\t\release\bundle\msi\ThoughtVault_1.0.306_x64_en-US.msi
+

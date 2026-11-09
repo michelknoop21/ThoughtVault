@@ -71,8 +71,13 @@
     "sourceCommit": "df2b9be",
     "nativeJob": "b990873ee58e43e38dd4ed11eed1fa03",
     "sourceHash": "18fe49ad80d310e0b4a766f09347a5d1d578f8162f364cf83fa343fed1d4ef53",
-    "status": "native_passed_msi_packaging",
+    "status": "msi_verified_upgrade_running",
     "nativeSha256": "c6aa2dc5ee7152f99381a7a7b2c6affc9c596ebe970c5e4b2a4325c8a55f5e37",
-    "msiRequest": "cc36fde7f8194a428172777200544c70"
+    "msiRequest": "cc36fde7f8194a428172777200544c70",
+    "msiSha256": "63be0f1173a11c77cb192de7677467b4e5c9d4438f886040ec201fe85a77809a",
+    "payloadFiles": 888,
+    "installedExeExpectedSha256": "81bbb9015759461e7b869a7c58a7f1eb86a94e4bfbb1aa3641cce87d7f4cf0be",
+    "updaterSignatureVerified": true,
+    "upgradeJob": "ba838458e1e44c40916134f2596706af"
   }
 }

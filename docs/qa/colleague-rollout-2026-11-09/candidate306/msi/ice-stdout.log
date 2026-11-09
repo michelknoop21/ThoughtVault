@@ -1,0 +1,2 @@
+ThoughtVault_1.0.306_x64_en-US.msi
+C:\D38m\cc36fde7f8194a428172777200544c70\t\release\bundle\msi\ThoughtVault_1.0.306_x64_en-US.msi : warning SMOK1076 : ICE03: String overflow (greater than length permitted in column); Table: CustomAction, Column: Target, Key(s): DownloadAndInvokeBootstrapper

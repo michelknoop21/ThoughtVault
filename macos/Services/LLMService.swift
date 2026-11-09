@@ -104,10 +104,8 @@ func buildNotuleUserContent(
         of: "<style\\b[^>]*>[\\s\\S]*?</style>", with: "",
         options: [.regularExpression, .caseInsensitive]
     )
-    let contentRules = """
-
-    Laatste inhoudsregels: volg de gekozen template en laat lege secties weg. Verzin geen feiten, besluiten, eigenaren of termijnen. \(NotuleAudit.factualityRules) Schrijf eenvoudige HTML zonder CSS, style-blok of code fences.
-    """
+    // Byte-identical to the Windows closing rules (llm.ts buildUserContent).
+    let contentRules = "\n\nLaatste inhoudsregels: volg de gekozen template en laat lege secties weg. Verzin geen feiten, besluiten, eigenaren of termijnen. \(NotuleAudit.factualityRules) Schrijf eenvoudige HTML zonder CSS, style-blok of code fences."
     let constraintBlock = constraints.isEmpty ? "" :
         "\n\nVerplicht te behouden bronzinnen (behoud de volledige betekenis, bedragen en voorwaarden bij het passende onderwerp, besluit of open punt; correcte parafrases mogen, tegenspraken nergens):\n"
         + constraints.enumerated().map { "\($0.offset + 1). \($0.element)" }.joined(separator: "\n")

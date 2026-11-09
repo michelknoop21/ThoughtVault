@@ -60,7 +60,7 @@ final class LocalTranscriptStore {
     /// next launch, and we move the incompatible store aside so the app starts cleanly
     /// instead of crash-looping. The set-aside store is preserved (not deleted) for
     /// manual recovery.
-    private static func makeContainer(at url: URL, defaults: UserDefaults) -> ModelContainer {
+    private static func makeContainer(at url: URL, defaults: UserDefaults = .standard) -> ModelContainer {
         let watchdogKey = "localStoreOpenInProgress"
 
         if defaults.bool(forKey: watchdogKey) {

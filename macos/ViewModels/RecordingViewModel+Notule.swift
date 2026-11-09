@@ -50,7 +50,7 @@ extension RecordingViewModel {
             let html = try await NotuleGenerator(service: Self.localNotuleService()).generate(
                 transcription: transcription, profile: profile, participants: participants,
                 quickNote: QuickNoteStore.note(audioFilename: url.lastPathComponent),
-                createdAt: createdAt, corrections: try PersonalCorrections.load())
+                createdAt: createdAt, corrections: PersonalCorrections.loadOrEmpty())
             try Task.checkCancellation()
 
             let title = NotuleTitleExtractor.extract(from: html) ?? fallbackTitle
@@ -151,7 +151,7 @@ extension RecordingViewModel {
             let html = try await NotuleGenerator(service: Self.localNotuleService()).generate(
                 transcription: record.rawTranscription, profile: profile, participants: record.participants,
                 quickNote: QuickNoteStore.note(forTranscriptId: taskId),
-                createdAt: record.createdAt, corrections: try PersonalCorrections.load())
+                createdAt: record.createdAt, corrections: PersonalCorrections.loadOrEmpty())
             let title = NotuleTitleExtractor.extract(from: html) ?? record.title
             try LocalTranscriptStore.shared.finalizeNotule(taskId: taskId, html: html, title: title, profileId: profile.id, profileName: profile.name)
             updateTask(regenerationId, status: .completed, progress: 1)

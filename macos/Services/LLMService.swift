@@ -265,11 +265,10 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
     init(baseURL: String, model: String, apiKey: String? = nil, maxChunkCharacters: Int? = nil) {
         self.baseURL = baseURL
         self.model = model
-        // Hosted gpt-oss has 128K context; leave ample room for the profile and output.
-        let hostedGPTOSS = URL(string: baseURL)?.scheme == "https"
+        // Ollama Cloud models have at least 128K context; leave ample room for the profile and output.
+        let ollamaCloud = URL(string: baseURL)?.scheme == "https"
             && URL(string: baseURL)?.host?.lowercased() == "ollama.com"
-            && ["gpt-oss:120b", "gpt-oss:120b-cloud", "gpt-oss:20b", "gpt-oss:20b-cloud"].contains(model)
-        self.maxChunkCharacters = maxChunkCharacters ?? (hostedGPTOSS ? 64_000 : 8_000)
+        self.maxChunkCharacters = maxChunkCharacters ?? (ollamaCloud ? 64_000 : 8_000)
         let trimmed = apiKey?.trimmingCharacters(in: .whitespacesAndNewlines)
         self.apiKey = (trimmed?.isEmpty == false) ? trimmed : nil
     }

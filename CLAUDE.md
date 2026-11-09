@@ -9,6 +9,9 @@ Native macOS/iOS (Swift 6, SwiftUI, `@Observable`) + Windows (Tauri 2, React/Typ
 Windows: lokale opslag/transcriptie, lokale of rechtstreeks geconfigureerde cloud-AI.
 Lokale Windows-schermen werken zonder ThoughtVault-account.
 Historische opslag-ID’s blijven compatibel.
+Notulen worden in de app zelf gegenereerd (`LLMServiceFactory`): Apple Intelligence, Ollama lokaal of Cloud,
+LM Studio, OpenAI, Anthropic of een OpenAI-compatibel endpoint met eigen sleutel. Profielprompts komen uit
+`data/profileBlueprints.json`; na wijzigen `python3 scripts/generate_profile_templates.py` draaien (DEC-060).
 
 ## Commands
 ```bash
@@ -19,14 +22,15 @@ xcodebuild -project ThoughtVault.xcodeproj -scheme ThoughtVault -configuration D
 xcodebuild -project ThoughtVault.xcodeproj -scheme ThoughtVault -configuration Debug build CODE_SIGNING_ALLOWED=NO
 
 # Tests
-xcodebuild test -project ThoughtVault.xcodeproj -scheme ThoughtVault
+xcodebuild test -project ThoughtVault.xcodeproj -scheme ThoughtVault -destination "platform=macOS"
 
 # Windows dev
 cd windows && npm run tauri dev
 
-# Release via CI (aanbevolen)
-scripts/deploy-dev.sh <github-ref>         # expliciete Windows-dev-build
-scripts/deploy-production.sh <github-ref>  # expliciete Windows-production-build
+# Release Windows via GitHub Actions (build-windows.yml in michelknoop21/ThoughtVault)
+# Vooraf: nieuwe versie (VERSION + sync-version.sh), ref pushen naar GitHub (openbare repo, akkoord nodig)
+scripts/deploy-dev.sh <github-ref>         # Windows-build, kanaal dev
+scripts/deploy-production.sh <github-ref>  # Windows-build, kanaal production
 
 # Release lokaal (fallback)
 scripts/release.sh                # volledige pipeline
@@ -35,15 +39,15 @@ scripts/sync-version.sh           # alleen versie sync naar platform configs
 ```
 
 ## Werkprincipes (Karpathy)
-IMPORTANT: werk in dit project volgens deze vier principes — boven snelheid.
+IMPORTANT: werk in dit project volgens deze vier principes, boven snelheid.
 - **Denk eerst.** Benoem aannames expliciet; twijfel = vragen, niet gokken. Meerdere interpretaties → leg ze voor. Simpeler pad bestaat → zeg het.
 - **Simpelste oplossing.** Minimale code die het probleem oplost. Geen speculatieve features, abstracties voor eenmalig gebruik, of "flexibiliteit" die niemand vroeg. 200 regels die 50 kunnen zijn → herschrijf.
 - **Chirurgische wijzigingen.** Raak alleen wat moet. Geen ongevraagde refactors/herformattering van omliggende code; volg bestaande stijl. Eigen rommel (orphan imports/vars) opruimen; bestaande dead code benoemen, niet stilletjes verwijderen. Elke gewijzigde regel traceert naar de opdracht.
 - **Doelgericht + verifieer.** Vertaal taken naar toetsbare doelen ("voeg X toe" → "test/bewijs dat X werkt"). Claim NOOIT "klaar" zonder bewijs-output (BUILD/ARCHIVE SUCCEEDED, test-output, draaiende app). Kun je het niet verifiëren, zeg dat.
 
 ## IMPORTANT: macOS Code Patterns
-- Gebruik `@Observable` — NOOIT `ObservableObject/@Published`
-- `async/await` overal — geen Combine, geen completion handlers
+- Gebruik `@Observable`, NOOIT `ObservableObject/@Published`
+- `async/await` overal: geen Combine, geen completion handlers
 - ViewModels: `@MainActor class`, Services: `actor`
 - UI strings Nederlands via `Localizable.strings`, code/comments in het Engels
 - Design tokens: `TS.Spacing`, `TS.Font`, `TS.Radius` (Theme.swift)
@@ -58,21 +62,22 @@ FastAPI op AWS EC2 GPU `michelk@3.69.205.209`, container `n8n_transcript_studio`
 - Combined recording: `AudioMixer.mix` (`macos/Services/AudioMixer.swift`, via `mixAudioFiles()` in RecordingViewModel): gemiddelde (mic+systeem)/2, systeemstart uitgelijnd op het starttijdverschil
 - Auth header: macOS → `X-User-Token`, Windows → `Authorization: Bearer` (beide geaccepteerd)
 - Backend `username` veld is het e-mailadres (niet `email`)
-- macOS TCC/rechten: lokaal **signed** bouwen (`-allowProvisioningUpdates`, cert `Apple Development: info@michelknoop.nl`, team `XL9KN38ATX`). Ad-hoc builds (`CODE_SIGNING_ALLOWED=NO`) hebben geen stabiele designated requirement → macOS vraagt rechten elke build opnieuw. Signed = stabiele identity → **mic / spraak / agenda / documenten blijven behouden** (deze TCC-grants zijn op bundle-ID gekeyed in de user-db). **Uitzondering: Screen Recording** (`kTCCServiceScreenCapture`, via ScreenCaptureKit) re-prompt blijft op macOS 26 Tahoe: die grant leeft in de SIP-protected system-db, is pad/cdhash-gevoelig en wordt door macOS bij elke binary-wijziging + periodiek opnieuw gevraagd — ongeacht stabiele signing. Mitigatie: app altijd vanaf **hetzelfde vaste pad** draaien (`/Applications/ThoughtVault.app`), nooit vanuit roterende DerivedData-pad en nooit meerdere kopieën tegelijk (elke kopie/rebuild = andere cdhash → TCC ziet "andere app").
-- **SwiftData store-divergentie (notulen "ineens kwijt")**: de app is **gesandboxed** (`com.apple.security.app-sandbox`). `URL.applicationSupportDirectory` (zie `LocalTranscriptStore.storeURL`) wijst dan naar de container `~/Library/Containers/nl.prezent.ThoughtVault/Data/Library/Application Support/ThoughtVault/Local.store`. Een **niet-gesandboxde** build schrijft naar `~/Library/Application Support/ThoughtVault/Local.store` — een andere store. Wissel je tussen sandboxed/non-sandboxed builds, dan lijken notulen verdwenen (app leest de verkeerde store; een sandboxed app kán de non-sandbox map niet eens lezen). **Altijd gesandboxed bouwen/draaien.** Herstel = store-bestand handmatig naar de container kopiëren (app eerst afsluiten i.v.m. open WAL).
+- macOS TCC/rechten: lokaal **signed** bouwen (`-allowProvisioningUpdates`, cert `Apple Development: info@michelknoop.nl`, team `XL9KN38ATX`). Ad-hoc builds (`CODE_SIGNING_ALLOWED=NO`) hebben geen stabiele designated requirement → macOS vraagt rechten elke build opnieuw. Signed = stabiele identity → **mic / spraak / agenda / documenten blijven behouden** (deze TCC-grants zijn op bundle-ID gekeyed in de user-db). **Uitzondering: Screen Recording** (`kTCCServiceScreenCapture`, via ScreenCaptureKit) re-prompt blijft op macOS 26 Tahoe: die grant leeft in de SIP-protected system-db, is pad/cdhash-gevoelig en wordt door macOS bij elke binary-wijziging + periodiek opnieuw gevraagd, ongeacht stabiele signing. Mitigatie: app altijd vanaf **hetzelfde vaste pad** draaien (`/Applications/ThoughtVault.app`), nooit vanuit roterende DerivedData-pad en nooit meerdere kopieën tegelijk (elke kopie/rebuild = andere cdhash → TCC ziet "andere app").
+- **SwiftData store-divergentie (notulen "ineens kwijt")**: de app is **gesandboxed** (`com.apple.security.app-sandbox`). `URL.applicationSupportDirectory` (zie `LocalTranscriptStore.storeURL`) wijst dan naar de container `~/Library/Containers/com.buildmind.ThoughtVault/Data/Library/Application Support/ThoughtVault/Local.store`. Een **niet-gesandboxde** build schrijft naar `~/Library/Application Support/ThoughtVault/Local.store`: een andere store. Wissel je tussen sandboxed/non-sandboxed builds, dan lijken notulen verdwenen (app leest de verkeerde store; een sandboxed app kán de non-sandbox map niet eens lezen). **Altijd gesandboxed bouwen/draaien.** Herstel = store-bestand handmatig naar de container kopiëren (app eerst afsluiten i.v.m. open WAL).
 - Versioning: elke commit op `main` bumpt automatisch patch via `.githooks/post-commit`
 - Na version bump: `scripts/sync-version.sh` draaien om VERSION naar alle platform configs te syncen
-- Downloads: `https://n8n.prezent.nl/tstudio/download/` — lees docs/RELEASE.md voor infra details
-- **CI/CD**: GitLab CI (`.gitlab-ci.yml`) voor macOS + Android + Windows + deploy. Mac runner (shell executor) voor macOS/Android, self-hosted Windows PC (tag `windows`) voor MSI builds. GitHub Actions als fallback voor Windows. Windows runner draait als SYSTEM — `useLocalToolsDir: true` in tauri.conf.json is vereist. Zie DEC-055, DEC-056, DEC-058.
-- **Multi-instance deployment** — Lees docs/PLAN-MULTI-INSTANCE.md en DEC-033 wanneer relevant
-- **n8n notule flow**: `handleiding` profiel → Claude proxy (`n8n_claude_code:3100`), overige → Ollama. Backend stuurt `profile_id` mee in webhook payload. Zie docs/ARCHITECTURE.md "n8n Notule Generation Flow" (DEC-057)
+- Downloads: `https://n8n.prezent.nl/tstudio/download/`; lees docs/RELEASE.md voor infra details
+- **CI/CD**: de Windows-MSI wordt gebouwd door GitHub Actions (`.github/workflows/build-windows.yml` in `michelknoop21/ThoughtVault`), gestart met `deploy-dev.sh`/`deploy-production.sh` op een expliciete GitHub-ref. Gitea (`origin`) is de bron, geen buildrunner, en de scripts pushen zelf niets. Controleer na het starten dat `headSha` van de run de bedoelde commit is. Gebruik nooit een versienummer dat een andere branch al als kandidaat heeft gebouwd. macOS gaat niet mee in deze workflow. Details: `docs/WINDOWS-BUILD-WORKFLOW.md`.
+- **Multi-instance deployment**: lees docs/PLAN-MULTI-INSTANCE.md en DEC-033 wanneer relevant
+- **n8n notule flow is legacy (TranscriptStudio)**: macOS zet provider `cloud` om naar een lokale provider; notulen gaan niet meer via n8n. Zie docs/ARCHITECTURE.md "Notulegeneratie (lokaal)" (DEC-060). Oude flow: DEC-057.
+- **Notulekwaliteit hangt vooral af van het model**: eval 9 nov 2026 (schadebezoek, 43k tekens) scoorde gpt-oss:120b 8-9/18 feiten, mistral-large-4 17/18 met hetzelfde profiel. Zie DEC-060.
 - **HTMLWebView + eigen CSS**: Als notule-HTML een `<style>` block bevat (handleiding-profiel), dan `extractStyles()` gebruiken om CSS naar `<head>` te verplaatsen. WKWebView past counters/grid/pseudo-elements niet toe vanuit `<style>` in `<body>`.
-- **Notule titels**: Backend extraheert titels via `_extract_title_from_html()` in `transcription.py`. Sectiekoppen (bijv. "Kernargumenten") worden gefilterd via `_SECTION_WORDS`. Titel-extractie gebeurt in twee codepaths: `/callback/notule` route EN `app.py` queue callback — beide moeten in sync blijven.
+- **Notule titels**: Backend extraheert titels via `_extract_title_from_html()` in `transcription.py`. Sectiekoppen (bijv. "Kernargumenten") worden gefilterd via `_SECTION_WORDS`. Titel-extractie gebeurt in twee codepaths: `/callback/notule` route EN `app.py` queue callback; beide moeten in sync blijven.
 
 ## Credentials & Environment Variables
 Beheerd door Claude Vault: vrijgave via `/grant NAAM`, gebruik via `vault-exec` (zie globale instructies). Vereiste variabelen: zie `.env.example`.
 
-## gstack (REQUIRED — global install)
+## gstack (REQUIRED, global install)
 
 **Before doing ANY work, verify gstack is installed:**
 

@@ -44,6 +44,8 @@
 		AA0000C1 /* RecordingRecovery.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000C1 /* RecordingRecovery.swift */; };
 		AA0000E7 /* HTMLPlainText.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000E7 /* HTMLPlainText.swift */; };
 		AA0000Q1 /* TranscriptSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000Q1 /* TranscriptSearch.swift */; };
+		AA0000X1 /* ExportFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000X1 /* ExportFile.swift */; };
+		AA0000X2 /* PrintCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000X2 /* PrintCommand.swift */; };
 		AA0000N8 /* NotuleAudit.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000N8 /* NotuleAudit.swift */; };
 		AA0000T1 /* NotuleGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000T1 /* NotuleGenerator.swift */; };
 		AA000009 /* BiometricService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000009 /* BiometricService.swift */; };
@@ -135,6 +137,7 @@
 		AB0000A3 /* RecordingRecoveryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000A3 /* RecordingRecoveryTests.swift */; };
 		AB0000E7 /* HTMLPlainTextTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000E7 /* HTMLPlainTextTests.swift */; };
 		AB0000Q1 /* TranscriptSearchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000Q1 /* TranscriptSearchTests.swift */; };
+		AB0000X1 /* ExportFileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000X1 /* ExportFileTests.swift */; };
 		AB0000N8 /* NotuleAuditTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000N8 /* NotuleAuditTests.swift */; };
 		AB0000T3 /* NotuleGeneratorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000T3 /* NotuleGeneratorTests.swift */; };
 		AB0000T5 /* LocalPipelineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000T5 /* LocalPipelineTests.swift */; };
@@ -204,6 +207,8 @@
 		FA0000C1 /* RecordingRecovery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingRecovery.swift; sourceTree = "<group>"; };
 		FA0000E7 /* HTMLPlainText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HTMLPlainText.swift; sourceTree = "<group>"; };
 		FA0000Q1 /* TranscriptSearch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptSearch.swift; sourceTree = "<group>"; };
+		FA0000X1 /* ExportFile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportFile.swift; sourceTree = "<group>"; };
+		FA0000X2 /* PrintCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrintCommand.swift; sourceTree = "<group>"; };
 		FA0000N8 /* NotuleAudit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotuleAudit.swift; sourceTree = "<group>"; };
 		FA0000T1 /* NotuleGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotuleGenerator.swift; sourceTree = "<group>"; };
 		FA000009 /* BiometricService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BiometricService.swift; sourceTree = "<group>"; };
@@ -298,6 +303,7 @@
 		FB0000A3 /* RecordingRecoveryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingRecoveryTests.swift; sourceTree = "<group>"; };
 		FB0000E7 /* HTMLPlainTextTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HTMLPlainTextTests.swift; sourceTree = "<group>"; };
 		FB0000Q1 /* TranscriptSearchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptSearchTests.swift; sourceTree = "<group>"; };
+		FB0000X1 /* ExportFileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportFileTests.swift; sourceTree = "<group>"; };
 		FB0000N8 /* NotuleAuditTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotuleAuditTests.swift; sourceTree = "<group>"; };
 		FB0000T3 /* NotuleGeneratorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotuleGeneratorTests.swift; sourceTree = "<group>"; };
 		FB0000T5 /* LocalPipelineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalPipelineTests.swift; sourceTree = "<group>"; };
@@ -409,6 +415,7 @@
 				FA0000C1 /* RecordingRecovery.swift */,
 				FA0000E7 /* HTMLPlainText.swift */,
 				FA0000Q1 /* TranscriptSearch.swift */,
+				FA0000X1 /* ExportFile.swift */,
 				FA0000N8 /* NotuleAudit.swift */,
 				FA0000T1 /* NotuleGenerator.swift */,
 				FA0000S4 /* QuickNoteStore.swift */,
@@ -500,6 +507,7 @@
 				FB000202 /* ParticipantPickerSheet.swift */,
 				FA000074 /* SeedReviewSheet.swift */,
 				FA000032 /* TranscriptsView.swift */,
+				FA0000X2 /* PrintCommand.swift */,
 				FA000056 /* TasksView.swift */,
 				FA000033 /* OnboardingViewiOSStub.swift */,
 				FA000034 /* FloatingWidgetPanel.swift */,
@@ -569,6 +577,7 @@
 				FB0000A3 /* RecordingRecoveryTests.swift */,
 				FB0000E7 /* HTMLPlainTextTests.swift */,
 				FB0000Q1 /* TranscriptSearchTests.swift */,
+				FB0000X1 /* ExportFileTests.swift */,
 				FB0000N8 /* NotuleAuditTests.swift */,
 				FB0000T3 /* NotuleGeneratorTests.swift */,
 				FB0000T5 /* LocalPipelineTests.swift */,
@@ -726,6 +735,8 @@
 				AA0000C1 /* RecordingRecovery.swift in Sources */,
 				AA0000E7 /* HTMLPlainText.swift in Sources */,
 				AA0000Q1 /* TranscriptSearch.swift in Sources */,
+				AA0000X1 /* ExportFile.swift in Sources */,
+				AA0000X2 /* PrintCommand.swift in Sources */,
 				AA0000N8 /* NotuleAudit.swift in Sources */,
 				AA0000T1 /* NotuleGenerator.swift in Sources */,
 				AA000009 /* BiometricService.swift in Sources */,
@@ -832,6 +843,7 @@
 				AB0000A3 /* RecordingRecoveryTests.swift in Sources */,
 				AB0000E7 /* HTMLPlainTextTests.swift in Sources */,
 				AB0000Q1 /* TranscriptSearchTests.swift in Sources */,
+				AB0000X1 /* ExportFileTests.swift in Sources */,
 				AB0000N8 /* NotuleAuditTests.swift in Sources */,
 				AB0000T3 /* NotuleGeneratorTests.swift in Sources */,
 				AB0000T5 /* LocalPipelineTests.swift in Sources */,

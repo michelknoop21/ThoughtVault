@@ -1101,6 +1101,9 @@ struct TranscriptDetailView: View {
         .toolbar { detailToolbar }
 #endif
         }
+        #if os(macOS)
+        .focusedSceneValue(\.printAction, fullTranscript.notuleHtml == nil ? nil : { exportAsPDF() })
+        #endif
         .alert("Titel bewerken", isPresented: $showTitleEditAlert) {
             TextField("Titel", text: $pendingTitle)
             Button("Opslaan") {
@@ -2205,7 +2208,8 @@ struct TranscriptDetailView: View {
     }
 
     func exportAsPDF() {
-        guard let html = fullTranscript.notuleHtml ?? fullTranscript.rawTranscription else { return }
+        guard let html = fullTranscript.notuleHtml
+                ?? fullTranscript.rawTranscription.map(ExportFile.transcriptHTML) else { return }
 
         let styledHTML = """
         <!DOCTYPE html>
@@ -2228,27 +2232,9 @@ struct TranscriptDetailView: View {
         """
 
         #if os(macOS)
-        let printInfo = NSPrintInfo.shared
-        printInfo.paperSize = NSSize(width: 595, height: 842)
-        printInfo.topMargin = 36
-        printInfo.bottomMargin = 36
-        printInfo.leftMargin = 54
-        printInfo.rightMargin = 54
-
-        let webView = WKWebView(frame: NSRect(x: 0, y: 0, width: 595, height: 842))
-        printWebView = webView
-        webView.loadHTMLString(styledHTML, baseURL: nil)
-
-        Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(800))
-            let op = webView.printOperation(with: printInfo)
-            op.showsPrintPanel = true
-            op.showsProgressPanel = true
-            op.run()
-            printWebView = nil
-        }
+        NotulePrinter.print(html: styledHTML) { printWebView = $0 }
         #else
-        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("\(fullTranscript.title).html")
+        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(ExportFile.filename(title: fullTranscript.title, ext: "html"))
         do {
             try styledHTML.write(to: tempURL, atomically: true, encoding: .utf8)
         } catch {
@@ -2269,8 +2255,8 @@ struct TranscriptDetailView: View {
 
         #if os(macOS)
         let panel = NSSavePanel()
-        panel.nameFieldStringValue = "\(fullTranscript.title).txt"
-        panel.allowedContentTypes = [.plainText]
+        panel.nameFieldStringValue = ExportFile.filename(title: fullTranscript.title, ext: "txt")
+        panel.allowedContentTypes = [ExportFile.contentType(ext: "txt")]
         if panel.runModal() == .OK, let url = panel.url {
             do {
                 try stripped.write(to: url, atomically: true, encoding: .utf8)
@@ -2279,7 +2265,7 @@ struct TranscriptDetailView: View {
             }
         }
         #else
-        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("\(fullTranscript.title).txt")
+        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(ExportFile.filename(title: fullTranscript.title, ext: "txt"))
         do {
             try stripped.write(to: tempURL, atomically: true, encoding: .utf8)
         } catch {
@@ -2295,13 +2281,13 @@ struct TranscriptDetailView: View {
     }
 
     func exportAsMarkdown() {
-        let html = fullTranscript.notuleHtml ?? fullTranscript.rawTranscription ?? ""
-        let md = htmlToMarkdown(html)
+        // A raw transcript is plain text: never run it through the HTML converter.
+        let md = fullTranscript.notuleHtml.map(htmlToMarkdown) ?? fullTranscript.rawTranscription ?? ""
 
         #if os(macOS)
         let panel = NSSavePanel()
-        panel.nameFieldStringValue = "\(fullTranscript.title).md"
-        panel.allowedContentTypes = [.plainText]
+        panel.nameFieldStringValue = ExportFile.filename(title: fullTranscript.title, ext: "md")
+        panel.allowedContentTypes = [ExportFile.contentType(ext: "md")]
         if panel.runModal() == .OK, let url = panel.url {
             do {
                 try md.write(to: url, atomically: true, encoding: .utf8)
@@ -2310,7 +2296,7 @@ struct TranscriptDetailView: View {
             }
         }
         #else
-        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("\(fullTranscript.title).md")
+        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(ExportFile.filename(title: fullTranscript.title, ext: "md"))
         do {
             try md.write(to: tempURL, atomically: true, encoding: .utf8)
         } catch {
@@ -2381,8 +2367,7 @@ struct TranscriptDetailView: View {
 
     func shareContent() {
         let text = fullTranscript.rawTranscription
-            ?? (fullTranscript.notuleHtml ?? "")
-                .replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)
+            ?? HTMLPlainText.from(fullTranscript.notuleHtml ?? "")
         #if os(macOS)
         let picker = NSSharingServicePicker(items: [text])
         picker.show(relativeTo: .zero, of: NSApp.keyWindow?.contentView ?? NSView(), preferredEdge: .minY)

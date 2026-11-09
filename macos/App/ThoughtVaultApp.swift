@@ -86,6 +86,7 @@ struct ThoughtVaultApp: App {
 #if os(macOS)
         .defaultSize(width: 1100, height: 750)
         .windowStyle(.automatic)
+        .commands { PrintCommands() }
 #endif
 
 #if os(macOS)

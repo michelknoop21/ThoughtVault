@@ -389,7 +389,7 @@ export function TranscriptDetail({
           </section>}
 
           {detailTab === "notule" && transcript.notule_html && !isEditingNotule && (
-            <ContextSuggestionBar taskId={transcript.id} profileName={transcript.profile_name ?? ""} scope={correctionScope()}
+            <ContextSuggestionBar key={transcript.id} taskId={transcript.id} profileName={transcript.profile_name ?? ""} scope={correctionScope()}
               onAddTerm={(entry, done) => { suggestionDone.current = done; setCorrection(entry); setRememberCorrection(true); setCorrectionError(""); }} />
           )}
 

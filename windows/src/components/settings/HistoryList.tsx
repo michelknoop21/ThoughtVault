@@ -15,9 +15,11 @@ export function HistoryList({ kind, itemId, onRestore, disabled = false }: {
   onRestore: (entry: HistoryEntry) => Promise<void>;
   disabled?: boolean;
 }) {
-  const [list, setList] = useState<HistoryEntry[]>([]);
+  // null until the first load, so "Nog geen eerdere versies" does not flash.
+  const [list, setList] = useState<HistoryEntry[] | null>(null);
   const reload = () => versions(kind, itemId).then(setList);
   useEffect(() => { void reload(); }, [kind, itemId]);
+  if (!list) return null;
   if (!list.length) return <p className="history-empty">Nog geen eerdere versies</p>;
   return <ul className="history-list">
     {list.map(entry => <li key={entry.id}>

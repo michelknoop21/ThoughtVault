@@ -4,7 +4,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { ChevronRight24Regular, Sparkle24Regular } from "../ui/StudioIcons";
 import { usePeopleDirectoryStore } from "../../stores/peopleDirectoryStore";
-import { dismiss, dismissKey, load, remove, save, SUGGESTIONS_UPDATED_EVENT, type ContextSuggestionItem, type ContextSuggestionSet, type PersonSuggestion, type TermSuggestion } from "../../services/contextSuggestions";
+import { dismiss, dismissKey, load, remove, replacePerson, SUGGESTIONS_UPDATED_EVENT, type ContextSuggestionItem, type ContextSuggestionSet, type PersonSuggestion, type TermSuggestion } from "../../services/contextSuggestions";
 import { autoApply } from "../../services/personMatcher";
 import { personSnapshot } from "../../services/contextHistory";
 import type { PersonalCorrection } from "../../services/personalCorrections";
@@ -57,7 +57,7 @@ export function ContextSuggestionBar({ taskId, profileName, scope, onAddTerm }: 
 
   async function replace(old: PersonSuggestion, next: PersonSuggestion) {
     try {
-      await save({ ...set, people: set.people.map(p => p === old ? next : p) }, taskId);
+      await replacePerson(taskId, old, next);
       setError("");
     } catch (e) {
       setError(`Voorstel verwerken mislukt: ${message(e)}`);
@@ -152,7 +152,7 @@ export function ContextSuggestionBar({ taskId, profileName, scope, onAddTerm }: 
 function Row({ title, detail, children }: { title: string; detail: string[]; children: ReactNode }) {
   return <div className="context-bar-row">
     <strong>{title}</strong>
-    {detail.filter(Boolean).map(line => <span key={line} className="context-bar-detail">{line}</span>)}
+    {detail.filter(Boolean).map((line, index) => <span key={index} className="context-bar-detail">{line}</span>)}
     <div className="context-bar-buttons">{children}</div>
   </div>;
 }

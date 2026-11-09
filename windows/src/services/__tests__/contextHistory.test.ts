@@ -65,6 +65,18 @@ it("updateWithoutChangeAddsNoVersion", async () => {
   expect((await history.versions("person", person.id)).length).toBe(1);
 });
 
+it("overlappingUpdatesRecordEachPreState", async () => {
+  const { history, people } = await fresh();
+  const person = people.getState().createDefaultPerson({ name: "Anke Bakker", role: "v0" });
+  people.getState().addPerson(person);
+  await Promise.all([
+    people.getState().recordUpdate(person.id, "handmatig", { role: "v1" }),
+    people.getState().recordUpdate(person.id, "handmatig", { role: "v2" }),
+  ]);
+  expect((await history.versions("person", person.id)).map(v => JSON.parse(v.snapshotJSON).role)).toEqual(["v1", "v0"]);
+  expect(people.getState().people[0].role).toBe("v2");
+});
+
 it("damagedHistoryIsMovedAsideNotOverwritten", async () => {
   const { history } = await fresh();
   files.set("context-history.json", "geen json");

@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { PersonProfile } from "../types";
 import { usePersonProfileStore } from "./personProfileStore";
-import { applySnapshot, personSnapshot, record, type HistoryEntry, type PersonSnapshot } from "../services/contextHistory";
+import { applySnapshot, personSnapshot, recordChange, type HistoryEntry, type PersonSnapshot } from "../services/contextHistory";
 
 type PersonChanges = Partial<Omit<PersonProfile, "id" | "isSelf" | "createdAt">>;
 
@@ -12,8 +12,11 @@ interface PeopleDirectoryState {
   addPerson: (person: PersonProfile) => void;
   updatePerson: (id: string, partial: Partial<Omit<PersonProfile, "id" | "isSelf" | "createdAt">>) => void;
   removePerson: (id: string) => void;
-  /** Like updatePerson, but when anything changed the state from before is kept in ContextHistory under `source`. */
-  recordUpdate: (id: string, source: string, partial: PersonChanges) => Promise<void>;
+  /**
+   * Like updatePerson, but when anything changed the state from before is kept in ContextHistory under `source`.
+   * A function receives the person as it is when the update runs, so merges see earlier updates.
+   */
+  recordUpdate: (id: string, source: string, partial: PersonChanges | ((person: PersonProfile) => PersonChanges)) => Promise<void>;
   /** Puts an earlier version back; the current state is recorded first, so nothing is lost. */
   restorePerson: (entry: HistoryEntry) => Promise<void>;
 
@@ -49,22 +52,20 @@ export const usePeopleDirectoryStore = create<PeopleDirectoryState>()(
           people: state.people.filter((p) => p.id !== id),
         })),
 
-      recordUpdate: async (id, source, partial) => {
+      // Before-state, history and update all run inside the history queue.
+      recordUpdate: (id, source, partial) => recordChange("person", id, source, () => {
         const person = get().people.find((p) => p.id === id);
-        if (!person) return;
+        if (!person) return undefined;
+        const changes = typeof partial === "function" ? partial(person) : partial;
         const before = personSnapshot(person);
-        if (JSON.stringify(personSnapshot({ ...person, ...partial })) !== JSON.stringify(before)) {
-          await record("person", id, source, before);
-        }
-        get().updatePerson(id, partial);
-      },
+        const changed = JSON.stringify(personSnapshot({ ...person, ...changes })) !== JSON.stringify(before);
+        return { before: changed ? before : undefined, apply: () => get().updatePerson(id, changes) };
+      }),
 
-      restorePerson: async (entry) => {
-        const person = get().people.find((p) => p.id === entry.itemId);
-        if (!person) return;
+      restorePerson: (entry) => {
+        const snapshot = JSON.parse(entry.snapshotJSON) as PersonSnapshot;
         // id, isSelf and createdAt come back unchanged from the current person.
-        const restored: PersonChanges = applySnapshot(JSON.parse(entry.snapshotJSON) as PersonSnapshot, person);
-        await get().recordUpdate(person.id, "herstel", restored);
+        return get().recordUpdate(entry.itemId, "herstel", (person): PersonChanges => applySnapshot(snapshot, person));
       },
 
       createDefaultPerson: (overrides = {}) => ({

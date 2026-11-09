@@ -62,20 +62,37 @@ async function load(): Promise<HistoryEntry[]> {
 let queue: Promise<unknown> = Promise.resolve();
 
 export function record(kind: HistoryKind, itemId: string, source: string, snapshot: unknown): Promise<void> {
+  return recordChange(kind, itemId, source, () => ({ before: snapshot, apply: () => {} }));
+}
+
+/**
+ * Runs `change` inside the history queue, so overlapping edits never record the same
+ * pre-state: it reads the current state and returns the snapshot to keep (undefined when
+ * nothing changed) plus the update, applied only after the history was written.
+ */
+export function recordChange(kind: HistoryKind, itemId: string, source: string,
+  change: () => { before?: unknown; apply: () => void } | undefined): Promise<void> {
   const operation = queue.then(async () => {
-    const entries = await load();
-    entries.push({ id: crypto.randomUUID().toUpperCase(), kind, itemId, date: (Date.now() - REFERENCE_DATE_MS) / 1000, source, snapshotJSON: JSON.stringify(snapshot) });
-    // Entries are appended in order, so the first matches are the oldest.
-    let excess = entries.filter(e => e.kind === kind && e.itemId === itemId).length - MAX_PER_ITEM;
-    const kept = entries.filter(e => {
-      if (excess <= 0 || e.kind !== kind || e.itemId !== itemId) return true;
-      excess -= 1;
-      return false;
-    });
-    await invoke("write_context_file", { name: FILE, contents: JSON.stringify(kept) });
+    const next = change();
+    if (!next) return;
+    if (next.before !== undefined) await append(kind, itemId, source, next.before);
+    next.apply();
   });
   queue = operation.catch(() => {});
   return operation;
+}
+
+async function append(kind: HistoryKind, itemId: string, source: string, snapshot: unknown) {
+  const entries = await load();
+  entries.push({ id: crypto.randomUUID().toUpperCase(), kind, itemId, date: (Date.now() - REFERENCE_DATE_MS) / 1000, source, snapshotJSON: JSON.stringify(snapshot) });
+  // Entries are appended in order, so the first matches are the oldest.
+  let excess = entries.filter(e => e.kind === kind && e.itemId === itemId).length - MAX_PER_ITEM;
+  const kept = entries.filter(e => {
+    if (excess <= 0 || e.kind !== kind || e.itemId !== itemId) return true;
+    excess -= 1;
+    return false;
+  });
+  await invoke("write_context_file", { name: FILE, contents: JSON.stringify(kept) });
 }
 
 /** Versions of one item, newest first. An unreadable history counts as empty. */

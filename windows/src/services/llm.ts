@@ -7,7 +7,7 @@ import { DEFAULT_SETTINGS } from "../types";
 import type { Profile, NotulenProvider } from "../types";
 import { isOllamaCloudURL } from "./ollamaModels";
 
-import { usePersonalCorrectionsStore } from "../stores/personalCorrectionsStore";
+import { loadCorrectionsOrEmpty } from "../stores/personalCorrectionsStore";
 import { usePeopleDirectoryStore } from "../stores/peopleDirectoryStore";
 import { correctText, correctHTML, contextBlock, CONTEXT_BUDGET, type PersonalCorrection } from "./personalCorrections";
 import { auditSource, auditNotule, NotuleReviewError } from "./notuleAudit";
@@ -48,7 +48,8 @@ function getConfig(): LLMConfig {
 
 /** Glossary and directory people for the minutes AI, within the provider budget. */
 export function minutesContext(entries: PersonalCorrection[], transcript: string, profileId: string | undefined): string {
-  const people = usePeopleDirectoryStore.getState().people.filter(p => !p.isSelf).map(p => ({
+  // Sorted by name, like the macOS directoryPeople().
+  const people = usePeopleDirectoryStore.getState().people.filter(p => !p.isSelf).sort((a, b) => a.name.localeCompare(b.name)).map(p => ({
     name: p.name, role: p.role, organization: p.organization, responsibilities: p.responsibilities ?? [], aliases: p.aliases,
   }));
   return contextBlock(entries, people, transcript, profileId, CONTEXT_BUDGET);
@@ -199,11 +200,7 @@ export class LLMService {
     participants: string[] = [],
     quickNote: string = "",
   ): Promise<string> {
-    // An unreadable glossary (e.g. a newer file version) must not block the minutes.
-    const corrections = await usePersonalCorrectionsStore.getState().hydrate().then(() => usePersonalCorrectionsStore.getState().entries, (error: unknown) => {
-      console.warn("[PersonalCorrections] Woordenlijst onleesbaar, notule gaat verder zonder:", error instanceof Error ? error.message : String(error));
-      return [];
-    });
+    const corrections = await loadCorrectionsOrEmpty();
     const context = minutesContext(corrections, transcription, profile.id);
     const finish = (html: string) => correctHTML(ensureNotesSection(stripCodeFences(html), quickNote), corrections, profile.id);
     const config = getConfig();

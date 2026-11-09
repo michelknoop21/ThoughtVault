@@ -73,6 +73,8 @@ export function PersonEditModal({ person, isNew, onClose, onAdded }: PersonEditM
 
   /** Puts an earlier version back and shows it in the fields. */
   async function restore(entry: HistoryEntry) {
+    if (isSaving) return;
+    setIsSaving(true);
     try {
       await usePeopleDirectoryStore.getState().restorePerson(entry);
       const fresh = usePeopleDirectoryStore.getState().people.find((p) => p.id === person.id);
@@ -85,6 +87,8 @@ export function PersonEditModal({ person, isNew, onClose, onAdded }: PersonEditM
       setSaveError(null);
     } catch (err) {
       setSaveError(`Herstellen mislukt: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setIsSaving(false);
     }
   }
 
@@ -107,11 +111,11 @@ export function PersonEditModal({ person, isNew, onClose, onAdded }: PersonEditM
         aliases: splitAndTrim(aliasesText),
         expertiseTags: splitAndTrim(expertiseText),
         isInternal: parseIsInternal(isInternalValue),
-        emails: person.emails,
-        meetingTypes: person.meetingTypes,
         responsibilities: tasks,
       };
 
+      // A new person keeps the emails and meeting types it was created with; an edit only
+      // sends the fields shown here, so changes made elsewhere meanwhile are not overwritten.
       if (isNew) {
         addPerson({ ...person, ...updates });
         onAdded?.({ ...person, ...updates });

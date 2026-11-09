@@ -6,7 +6,7 @@ import { auditFixture, sourceFixture } from "./notuleAuditFixtures";
 const corrections = vi.hoisted(() => ({entries:[] as import("../personalCorrections").PersonalCorrection[]}));
 const { loadCredential } = vi.hoisted(() => ({ loadCredential: vi.fn() }));
 const { invoke, auditInvoke } = vi.hoisted(() => ({ invoke: vi.fn(), auditInvoke: vi.fn() }));
-vi.mock("../../stores/personalCorrectionsStore", () => ({ usePersonalCorrectionsStore: { getState: () => ({hydrate:async () => {},entries:corrections.entries}) } }));
+vi.mock("../../stores/personalCorrectionsStore", () => ({ usePersonalCorrectionsStore: { getState: () => ({hydrate:async () => {},entries:corrections.entries}) }, loadCorrectionsOrEmpty: async () => corrections.entries }));
 vi.mock("../tauriCommands", () => ({ loadCredential }));
 // Keep generation transport assertions separate from the source and factual audits.
 vi.mock("@tauri-apps/api/core", () => ({ invoke: (...args: unknown[]) => {

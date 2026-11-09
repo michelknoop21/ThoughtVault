@@ -15,6 +15,7 @@ vi.mock("@tauri-apps/api/core", () => ({ invoke: (...args: unknown[]) => {
 vi.mock("../tauriCommands", () => ({ loadCredential: async () => null }));
 vi.mock("../../stores/personalCorrectionsStore", () => ({
   usePersonalCorrectionsStore: { getState: () => ({ hydrate: async () => {}, entries: [] }) },
+  loadCorrectionsOrEmpty: async () => [],
 }));
 
 const profile = { id: "standaard", name: "Standaard" };

@@ -6,6 +6,8 @@ use tauri::Manager;
 
 /// Context files kept next to the glossary; the frontend owns their JSON format.
 const CONTEXT_FILES: [&str; 2] = ["context-history.json", "context-suggestions.json"];
+/// History keeps up to 50 versions per item, so it may grow well past the glossary cap.
+const CONTEXT_FILE_MAX_BYTES: usize = 32 * 1024 * 1024;
 
 fn read(path: &Path) -> Result<Option<serde_json::Value>, String> {
     match std::fs::read(path) {
@@ -30,6 +32,10 @@ fn write_atomic(path: &Path, bytes: &[u8]) -> Result<(), String> {
     file.as_file().sync_all().map_err(|e| e.to_string())?;
     file.persist(path).map_err(|e| e.to_string())?;
     Ok(())
+}
+fn write_context(path: &Path, contents: &str) -> Result<(), String> {
+    if contents.len() > CONTEXT_FILE_MAX_BYTES { return Err("Contextbestand te groot".into()); }
+    write_atomic(path, contents.as_bytes()).map_err(|e| format!("Contextbestand bewaren mislukt: {e}"))
 }
 fn context_path(dir: &Path, name: &str) -> Result<PathBuf, String> {
     if CONTEXT_FILES.contains(&name) { Ok(dir.join(name)) } else { Err("Onbekend contextbestand".into()) }
@@ -63,16 +69,17 @@ pub fn load_personal_corrections(app: tauri::AppHandle) -> Result<Option<serde_j
 pub fn save_personal_corrections(app: tauri::AppHandle, document: serde_json::Value) -> Result<(), String> {
     write(&data_dir(&app)?.join("personal-corrections.json"), &document)
 }
+// The context commands are async so the read, fsync and rename run off the UI thread.
 #[tauri::command]
-pub fn read_context_file(app: tauri::AppHandle, name: String) -> Result<Option<String>, String> {
+pub async fn read_context_file(app: tauri::AppHandle, name: String) -> Result<Option<String>, String> {
     read_text(&context_path(&data_dir(&app)?, &name)?)
 }
 #[tauri::command]
-pub fn write_context_file(app: tauri::AppHandle, name: String, contents: String) -> Result<(), String> {
-    write_atomic(&context_path(&data_dir(&app)?, &name)?, contents.as_bytes()).map_err(|e| format!("Contextbestand bewaren mislukt: {e}"))
+pub async fn write_context_file(app: tauri::AppHandle, name: String, contents: String) -> Result<(), String> {
+    write_context(&context_path(&data_dir(&app)?, &name)?, &contents)
 }
 #[tauri::command]
-pub fn set_aside_context_file(app: tauri::AppHandle, name: String, suffix: String) -> Result<(), String> {
+pub async fn set_aside_context_file(app: tauri::AppHandle, name: String, suffix: String) -> Result<(), String> {
     set_aside(&context_path(&data_dir(&app)?, &name)?, &suffix)
 }
 #[cfg(test)]
@@ -98,7 +105,8 @@ mod tests {
         assert!(context_path(dir.path(), "../personal-corrections.json").is_err());
         let path = context_path(dir.path(), "context-history.json").unwrap();
         assert!(read_text(&path).unwrap().is_none());
-        write_atomic(&path, b"geen json").unwrap();
+        write_context(&path, "geen json").unwrap();
+        assert!(write_context(&path, &"x".repeat(CONTEXT_FILE_MAX_BYTES + 1)).is_err());
         assert_eq!(read_text(&path).unwrap().as_deref(), Some("geen json"));
         assert!(set_aside(&path, "../x").is_err());
         set_aside(&path, "AB-12").unwrap();

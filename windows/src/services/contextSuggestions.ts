@@ -157,6 +157,14 @@ export const remove = (taskId: string, item: ContextSuggestionItem): Promise<voi
   await write({ terms: set.terms.filter(term => dismissKey({ term }) !== key), people: set.people.filter(person => dismissKey({ person }) !== key) }, taskId);
 });
 
+/** Swaps one person suggestion (matched on its dismiss key) for `next`, e.g. a remainder. */
+export const replacePerson = (taskId: string, old: PersonSuggestion, next: PersonSuggestion): Promise<void> => serial(async () => {
+  const set = (await loadAll())[taskId];
+  if (!set) return;
+  const key = dismissKey({ person: old });
+  await write({ ...set, people: set.people.map(person => dismissKey({ person }) === key ? next : person) }, taskId);
+});
+
 /** Remembers a rejected suggestion so it is not offered again. */
 export const dismiss = (key: string): Promise<void> => usePersonalCorrectionsStore.getState().addDismissed(key);
 

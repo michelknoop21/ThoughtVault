@@ -56,11 +56,11 @@ export async function autoApply(s: PersonSuggestion, id: string, profileName: st
   const store = usePeopleDirectoryStore.getState();
   const person = store.people.find(p => p.id === id);
   if (!person) return s;
-  await store.recordUpdate(id, `gesprek:${taskId}`, {
-    meetingTypes: merged(person.meetingTypes, [profileName]),
-    expertiseTags: merged(person.expertiseTags, s.topics),
-    responsibilities: merged(person.responsibilities ?? [], s.responsibilities),
-  });
+  await store.recordUpdate(id, `gesprek:${taskId}`, (current) => ({
+    meetingTypes: merged(current.meetingTypes, [profileName]),
+    expertiseTags: merged(current.expertiseTags, s.topics),
+    responsibilities: merged(current.responsibilities ?? [], s.responsibilities),
+  }));
   const role = differs(s.role, person.role) ? s.role.trim() : "";
   const organization = differs(s.organization, person.organization) ? s.organization.trim() : "";
   const known = names(personSnapshot(person));
@@ -80,7 +80,8 @@ export async function autoApply(s: PersonSuggestion, id: string, profileName: st
  * macOS participant-linking step has nothing to link here.
  */
 export async function link(set: ContextSuggestionSet, taskId: string, profileName: string): Promise<ContextSuggestionSet> {
-  const people = candidates(usePeopleDirectoryStore.getState().people);
+  // Sorted by name, like the macOS directoryPeople().
+  const people = candidates([...usePeopleDirectoryStore.getState().people].sort((a, b) => a.name.localeCompare(b.name)));
   const kept: ContextSuggestionSet = { terms: set.terms, people: [] };
   for (const suggestion of set.people) {
     const found = match(suggestion, people);

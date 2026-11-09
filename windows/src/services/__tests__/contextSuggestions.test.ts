@@ -89,6 +89,11 @@ it("storeRoundTripRemoveAndDismiss", async () => {
   await suggestions.save({ terms: [term], people: [person] }, "t1");
   await suggestions.save({ terms: [term], people: [] }, "t2");
 
+  const remainder = { ...person, role: "Teamleider", matchedPersonId: "p1" };
+  await suggestions.replacePerson("t1", person, remainder);
+  expect((await suggestions.load("t1"))?.people).toEqual([remainder]);
+  await suggestions.replacePerson("t1", remainder, person);
+
   await suggestions.remove("t1", { term });
   expect((await suggestions.load("t1"))?.terms).toEqual([]);
   expect((await suggestions.load("t1"))?.people).toEqual([person]);

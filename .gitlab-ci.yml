@@ -311,7 +311,7 @@ deploy:
         # macOS: publish-release.py validates notarization + Sparkle signature and writes the feed
         STAGING=$(ssh $SERVER "mktemp -d $REMOTE_DIR/.upload.XXXXXXXX")
         scp "build/$DMG_NAME" "build/$DMG_NAME.sparkle.json" scripts/publish-release.py "$SERVER:$STAGING/"
-        ssh $SERVER "python3 $STAGING/publish-release.py --directory $REMOTE_DIR --staging $STAGING --version $VERSION --channel $CHANNEL; rm -rf $STAGING"
+        ssh $SERVER "python3 $STAGING/publish-release.py --directory $REMOTE_DIR --staging $STAGING --version $VERSION --channel $CHANNEL; rc=\$?; rm -rf $STAGING; exit \$rc"
         echo "Published: $DMG_NAME"
         HAS_MACOS=true
       fi

@@ -18,6 +18,8 @@ struct PersonEditView: View {
     let person: PersonProfile?
     /// Fields for a new person taken from a conversation suggestion.
     var prefill: PersonSuggestion? = nil
+    /// Called right after a new person was stored, before the saved confirmation delay.
+    var onAdded: ((PersonProfile) -> Void)? = nil
     let onSave: (PersonProfile) -> Void
 
     // MARK: - State
@@ -305,6 +307,7 @@ struct PersonEditView: View {
                 )
                 newPerson.responsibilities = taken
                 try service.add(newPerson)
+                onAdded?(newPerson)
                 finishSave(person: newPerson)
             }
         } catch {

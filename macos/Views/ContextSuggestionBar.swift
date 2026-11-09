@@ -74,6 +74,8 @@ struct ContextSuggestionBar: View {
     @State private var correction: PersonalCorrection?
     @State private var pendingTerm: TermSuggestion?
     @State private var addingPerson: PersonSuggestion?
+    /// The DEBUG screenshot sample is shown read-only.
+    @State private var isSample = false
 
     var body: some View {
         panel
@@ -88,9 +90,9 @@ struct ContextSuggestionBar: View {
                 }
             }
             .sheet(item: $addingPerson) { suggestion in
-                PersonEditView(person: nil, prefill: suggestion) { _ in
+                // Removed as soon as the person exists, so closing the sheet early cannot leave it to be added twice.
+                PersonEditView(person: nil, prefill: suggestion, onAdded: { _ in finish(.person(suggestion)) }) { _ in
                     addingPerson = nil
-                    finish(.person(suggestion))
                 }
             }
     }
@@ -191,6 +193,7 @@ struct ContextSuggestionBar: View {
             }
             .controlSize(.small)
             .tint(Color.brandPrimary)
+            .disabled(isSample)
             .padding(.top, TS.Spacing.xs)
         }
     }
@@ -203,8 +206,9 @@ struct ContextSuggestionBar: View {
 
     private func reload() {
         set = ContextSuggestions.load(taskId: taskId) ?? ContextSuggestionSet()
+        isSample = false
         #if DEBUG
-        if set.isEmpty, let sample = debugSample() { set = sample }
+        if set.isEmpty, let sample = debugSample() { set = sample; isSample = true }
         #endif
         directory = set.people.isEmpty ? [:] : Dictionary(PersonDirectoryService.shared.directoryPeople().map { ($0.id, $0) },
                                                          uniquingKeysWith: { first, _ in first })
@@ -265,7 +269,7 @@ struct ContextSuggestionBar: View {
     @MainActor private static var debugTaskId: String?
 
     /// `-TVDebugSuggestions YES` (or `expanded`) shows sample suggestions on the first notule
-    /// opened, in memory only. Debug builds only, never under tests. The remainder and
+    /// opened, in memory only and read-only (buttons disabled). Debug builds only, never under tests. The remainder and
     /// ambiguous samples use the first two directory people when they exist.
     private func debugSample() -> ContextSuggestionSet? {
         let flag = UserDefaults.standard.string(forKey: "TVDebugSuggestions")

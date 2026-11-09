@@ -40,6 +40,7 @@
 		AA0000S1 /* RecordingView+Studio.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000S1 /* RecordingView+Studio.swift */; };
 		AA000001 /* ThoughtVaultApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000001 /* ThoughtVaultApp.swift */; };
 		AA000002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000002 /* ContentView.swift */; };
+		AA00DS01 /* DebugScreenshotSeed.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA00DS01 /* DebugScreenshotSeed.swift */; };
 		AA000003 /* Color+Brand.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000003 /* Color+Brand.swift */; };
 		AA000004 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000004 /* Theme.swift */; };
 		AA000005 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000005 /* Models.swift */; };
@@ -189,6 +190,7 @@
 		C96A32F62F65A4C4001691E3 /* ThoughtVault.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = ThoughtVault.xctestplan; sourceTree = "<group>"; };
 		FA000001 /* ThoughtVaultApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThoughtVaultApp.swift; sourceTree = "<group>"; };
 		FA000002 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		FA00DS01 /* DebugScreenshotSeed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugScreenshotSeed.swift; sourceTree = "<group>"; };
 		FA000003 /* Color+Brand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Color+Brand.swift"; sourceTree = "<group>"; };
 		FA000004 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		FA000005 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
@@ -353,6 +355,7 @@
 			children = (
 				FA000001 /* ThoughtVaultApp.swift */,
 				FA000002 /* ContentView.swift */,
+				FA00DS01 /* DebugScreenshotSeed.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -669,6 +672,7 @@
 			files = (
 				AA000001 /* ThoughtVaultApp.swift in Sources */,
 				AA000002 /* ContentView.swift in Sources */,
+				AA00DS01 /* DebugScreenshotSeed.swift in Sources */,
 				AA000003 /* Color+Brand.swift in Sources */,
 				AA000004 /* Theme.swift in Sources */,
 				AA000005 /* Models.swift in Sources */,

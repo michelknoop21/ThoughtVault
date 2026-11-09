@@ -199,6 +199,9 @@ struct ContentView: View {
             // (`-TVDebugOpen transcript`) without keystrokes. Opening goes through the tab
             // switch, which would otherwise reset the navigation path.
             .task {
+                DebugScreenshotSeed.run()
+                Task { for _ in 0..<5 { try? await Task.sleep(for: .seconds(1)); DebugScreenshotSeed.sizeWindow() } }
+                Task { await DebugScreenshotSeed.snapshotAndQuit() }
                 if UserDefaults.standard.string(forKey: "TVDebugOpen") == "transcript", let first = LocalTranscriptStore.shared.allTranscripts().first(where: { !($0.notuleHtml ?? "").isEmpty }) {
                     openTranscript(first)
                 } else if let raw = UserDefaults.standard.string(forKey: "TVDebugTab"), let tab = AppTab(rawValue: raw) { selectedTab = tab }
@@ -222,6 +225,9 @@ struct ContentView: View {
             }
             .task { await fetchCalendarIfGranted() }
             .task {
+                #if DEBUG
+                DebugScreenshotSeed.run()
+                #endif
                 if let tab = IOSDebug.string("TVDebugTab").flatMap(AppTab.init(rawValue:)) { selectedTab = tab }
                 if IOSDebug.open == "transcript", let first = LocalTranscriptStore.shared.allTranscripts().first(where: { !($0.notuleHtml ?? "").isEmpty }) {
                     openTranscript(first)

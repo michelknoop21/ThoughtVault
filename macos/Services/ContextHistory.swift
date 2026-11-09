@@ -24,8 +24,8 @@ struct HistoryEntry: Codable, Identifiable {
 enum ContextHistory {
     static let maxPerItem = 50
 
-    /// History file. The test host is the sandboxed app, so this points into the real
-    /// app container: tests must swap it for a temp file and restore it afterwards.
+    /// History file. Under tests it resolves to a temp directory (AppEnvironment); tests
+    /// still swap it for their own file and restore it afterwards.
     static var url = PersonalCorrections.url.deletingLastPathComponent().appendingPathComponent("context-history.json")
 
     static func record<T: Encodable>(kind: HistoryKind, itemId: String, source: String, snapshot: T) throws {

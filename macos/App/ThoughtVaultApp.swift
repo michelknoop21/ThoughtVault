@@ -1,7 +1,31 @@
 import SwiftUI
 import SwiftData
 
+/// The XCTest bundle is injected into this sandboxed app, so a test run shares the real
+/// app container, keychain and defaults. Under tests the real app must not start and
+/// on-disk data must live in a throwaway directory.
+enum AppEnvironment {
+    static let isRunningTests = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+        || NSClassFromString("XCTestCase") != nil
+
+    /// Application Support normally; a unique temp directory per test run.
+    static let supportDirectory: URL = isRunningTests
+        ? FileManager.default.temporaryDirectory.appending(path: "ThoughtVaultTests-\(UUID().uuidString)", directoryHint: .isDirectory)
+        : URL.applicationSupportDirectory
+}
+
 @main
+enum AppEntry {
+    @MainActor static func main() {
+        if AppEnvironment.isRunningTests { TestHostApp.main() } else { ThoughtVaultApp.main() }
+    }
+}
+
+/// Empty host for the test bundle: no view models, store, sync or permission requests.
+struct TestHostApp: App {
+    var body: some Scene { WindowGroup { EmptyView() } }
+}
+
 struct ThoughtVaultApp: App {
     @State private var authVM = AuthViewModel()
     @State private var recordingVM = RecordingViewModel()

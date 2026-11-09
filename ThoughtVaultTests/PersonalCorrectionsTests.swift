@@ -107,4 +107,17 @@ final class PersonalCorrectionsTests: XCTestCase {
         let block = PersonalCorrections.contextBlock(entries: [ai, other], people: [], transcript: "we maintain it", profileId: nil, maxCharacters: 6000)
         XCTAssertTrue(block.range(of: "- Zeta")!.lowerBound < block.range(of: "- AI")!.lowerBound)
     }
+
+    func testUnknownGlossaryVersionYieldsEmptyListForMinutes() throws {
+        try #"{"version":99,"entries":[]}"#.write(to: tmp, atomically: true, encoding: .utf8)
+        XCTAssertThrowsError(try PersonalCorrections.load(from: tmp))
+        let entries = PersonalCorrections.loadOrEmpty(at: tmp)
+        XCTAssertEqual(entries, [])
+        XCTAssertTrue(PersonalCorrections.contextBlock(entries: entries, people: [person("Jan de Vries")], transcript: "", profileId: nil, maxCharacters: 6000).contains("Jan de Vries"))
+    }
+
+    func testTestHostNeverResolvesToRealAppSupport() {
+        XCTAssertTrue(AppEnvironment.isRunningTests)
+        XCTAssertFalse(PersonalCorrections.url.path.hasPrefix(URL.applicationSupportDirectory.path))
+    }
 }

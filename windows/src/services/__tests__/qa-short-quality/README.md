@@ -25,3 +25,9 @@ TV_AUDIT_MODE=replay TV_AUDIT_DIR=/absolute/path/new-baseline \
 Replay vergelijkt de effectieve requestbody exact met de eerder bewaarde versie, voert de echte parser/validatie uit en schrijft `REPLAY.json`. Een ontbrekend antwoord, ongeldige JSON of ongerichte afwijzing is geen negatieve PASS. Bewijsbestanden worden niet overschreven. Iedere promptwijziging krijgt een eigen locatie en maximaal twaalf nieuwe begrensde calls; behoud eerdere fouten.
 
 De oorspronkelijke auditresponse van de app-proef is niet bewaard. Een nieuwe baseline is een nieuwe waarneming en reconstrueert die historische response niet. De geobserveerde onterechte appacceptatie blijft staan, ook bij een later gunstig antwoord. Zonder echte modelantwoorden is een gerichte productfix nog niet onderbouwd.
+
+Voor een expliciete vergelijking binnen dezelfde goedgekeurde providerroute kan
+`TV_AUDIT_MODEL` bij zowel prepare als replay worden gezet. De standaard blijft
+`gpt-oss:120b`; dit wijzigt geen appinstelling. Bewaar elk model in een eigen
+lege map. Antwoorden blijven bytegelijk bewaard, inclusief eventuele JSON-fences;
+productie en QA gebruiken dezelfde strikte parser voor één geheel JSON-codeblok.

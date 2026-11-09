@@ -100,3 +100,24 @@ Interne opruimcontrole: 11 eigen npm-debuglogs naar de externe SSD verplaatst,
 hashes gecontroleerd en originelen verwijderd; 45056 toegewezen bytes
 vrijgemaakt. Gedeelde npm-cache ongemoeid gelaten wegens gedeeld eigenaarschap.
 Bewijs: `build/colleague-rollout-20261109/internal-task-logs/migration.json`.
+
+## Hervatting 9 november, 11:34–11:47 CET
+
+Uitvoering hervat; er is geen nieuwe vraag om infrastructuurrechten nodig.
+Mistral Large 4 en GPT-OSS20b zijn via dezelfde bestaande Ollama Cloud-route
+met dezelfde zes gevallen onderzocht, zonder appinstellingen te wijzigen.
+
+- Mistral-job `3eec310f863f4c2dbfa0c41ed886f2f8`: **6/6 PASS** na een
+  beperkte parserreparatie: één geheel JSON-codeblok wordt toegestaan;
+  omliggende tekst, ongeldige JSON en negatieve verdicts blijven afwijzingen.
+  Bewaarde originele antwoorden zijn opnieuw gespeeld, zonder nieuwe calls.
+- GPT-OSS20b-job `a224482bec0c48c68867ec7d0a11b651`: **5/6**, nog steeds
+  onterechte goedkeuring van een voorwaarde als opdracht. Geen kandidaat.
+- Volledige drie-vergaderingenproef met Mistral gestart als
+  `772ab523a3cb446f97fb46780883941a`; nog geen inhoudelijke conclusie.
+- Fenceregressies zijn RED→GREEN bevestigd; volledige frontendtest 235 PASS,
+  1 opt-in live test overgeslagen. Dit vervangt de echte live-gateresultaten niet.
+
+Taak 2 blijft open tot de drie volledige resultaten inhoudelijk beoordeeld zijn.
+De actuele ASR-beoordeling staat in `ASR-REVIEW.md`: Small is op de vaste
+actiehouderproef niet geaccepteerd; geen nieuwe standaard stilzwijgend ingesteld.

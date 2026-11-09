@@ -69,7 +69,7 @@ it.runIf(process.env.TV_AUDIT_MODE === "prepare" || process.env.TV_AUDIT_MODE ==
       if (evidence.kind === "request") {
         const path = resolve(dir, `${currentCase}.request.json`);
         const json = JSON.stringify({
-          model: "gpt-oss:120b",
+          model: process.env.TV_AUDIT_MODEL || "gpt-oss:120b",
           messages: [{ role: "system", content: evidence.system }, { role: "user", content: evidence.user }],
           stream: false,
         }, null, 2) + "\n";

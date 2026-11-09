@@ -1,7 +1,7 @@
 // QA-only. Place beside modelcontrole-regressiefixtures.json in
 // windows/src/services/__tests__/qa-short-quality/ in the existing Mac test tree.
 // Import explicitly in the existing DOM-enabled test route. No automatic calls.
-import { auditSource, auditNotule } from "../../notuleAudit";
+import { auditSource, auditNotule, parseAuditResponse } from "../../notuleAudit";
 import fixture from "./modelcontrole-regressiefixtures.json";
 
 type Request = (system: string, user: string) => Promise<string>;
@@ -55,7 +55,7 @@ export async function runShortModelGate(
         record({ kind: "request", case_name: `${testCase.name}.source`, system, user });
         const response = await request(system, user);
         record({ kind: "response", case_name: `${testCase.name}.source`, response });
-        try { sourceReport = JSON.parse(response.trim()); } catch { sourceReport = undefined; }
+        try { sourceReport = parseAuditResponse(response); } catch { sourceReport = undefined; }
         return response;
       });
       sourceAccepted = true;
@@ -66,7 +66,7 @@ export async function runShortModelGate(
         record({ kind: "request", case_name: testCase.name, system, user });
         const response = await request(system, user);
         record({ kind: "response", case_name: testCase.name, response });
-        try { report = JSON.parse(response.trim()); } catch { report = undefined; }
+        try { report = parseAuditResponse(response); } catch { report = undefined; }
         return response;
       }, constraints);
       accepted = true;

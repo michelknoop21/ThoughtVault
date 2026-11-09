@@ -1,0 +1,18 @@
+{
+  "sessionId": 1,
+  "id": "3eec310f863f4c2dbfa0c41ed886f2f8",
+  "finishedAt": "2026-11-09T10:43:24.4276734Z",
+  "exitCode": 0,
+  "startedAt": "2026-11-09T10:37:51.4592473Z",
+  "name": "tv-audit-mistral4-20261109-1137",
+  "isAdmin": false,
+  "lane": "desktop",
+  "kind": "acceptance",
+  "status": "succeeded",
+  "sourceJob": "",
+  "identity": "DESKTOP-98B3AHB\\michel",
+  "directory": "C:\\ProgramData\\Dalf38\\operations\\desktop\\3eec310f863f4c2dbfa0c41ed886f2f8",
+  "createdAt": "2026-11-09T10:37:49.0379771Z",
+  "message": null,
+  "rebootRequired": false
+}

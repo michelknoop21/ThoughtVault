@@ -1,0 +1,18 @@
+{
+  "sessionId": 1,
+  "id": "a224482bec0c48c68867ec7d0a11b651",
+  "finishedAt": "2026-11-09T10:45:03.3254057Z",
+  "exitCode": 0,
+  "startedAt": "2026-11-09T10:43:59.3327482Z",
+  "name": "tv-audit-gpt20-20261109-1137",
+  "isAdmin": false,
+  "lane": "desktop",
+  "kind": "acceptance",
+  "status": "succeeded",
+  "sourceJob": "",
+  "identity": "DESKTOP-98B3AHB\\michel",
+  "directory": "C:\\ProgramData\\Dalf38\\operations\\desktop\\a224482bec0c48c68867ec7d0a11b651",
+  "createdAt": "2026-11-09T10:37:51.9102247Z",
+  "message": null,
+  "rebootRequired": false
+}

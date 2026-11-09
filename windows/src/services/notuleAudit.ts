@@ -42,6 +42,11 @@ function verdicts(value: unknown, expected: Unit[], references: Unit[], statuses
   });
 }
 
+// Accept one complete JSON fence; surrounding prose remains invalid.
+export function parseAuditResponse(text: string) {
+  return JSON.parse(text.trim().replace(/^```(?:json)?[ \t]*\r?\n([\s\S]*?)\r?\n```$/iu, "$1"));
+}
+
 /** Judge intelligibility without showing the model the fluent candidate. */
 export async function auditSource(source: string, quickNote: string, request: (system: string, user: string) => Promise<string>): Promise<void> {
   if (!source.trim() || source.length + quickNote.length > 64_000) {
@@ -51,7 +56,7 @@ export async function auditSource(source: string, quickNote: string, request: (s
 Gewone spreektaal of verwijzingen met ondubbelzinnige context zijn begrijpelijk. Begroetingen en herhalingen zonder informatie mogen worden genegeerd. Als woorden, rollen, relaties of getallen in een inhoudelijke passage niet betrouwbaar te duiden zijn, kies uncertain=true; vul niets in op basis van algemene kennis. Een herkenbaar onderwerp of percentage maakt een ontspoorde zin niet begrijpelijk. Ontbrekende informatie mag je niet reconstrueren.
 Geef uitsluitend {"uncertain":false} als alle inhoudelijke passages begrijpelijk zijn, anders {"uncertain":true}. Geen toelichting, geen lijsten of afkortingen.`;
   let result: { uncertain?: unknown };
-  try { result = JSON.parse((await request(system, `Broncontrole (zonder notule):\n${JSON.stringify({ source, quickNote })}`)).trim()); }
+  try { result = parseAuditResponse(await request(system, `Broncontrole (zonder notule):\n${JSON.stringify({ source, quickNote })}`)); }
   catch { throw new Error("De broncontrole leverde geen bruikbaar antwoord; beoordeel het concept"); }
   if (!result || result.uncertain !== false) {
     throw new Error("De bron is onvoldoende duidelijk; beoordeel het concept");
@@ -92,7 +97,7 @@ Geef alleen JSON, met de onzekerheidsbeslissing eerst: {"uncertain":false,"sourc
 Geef precies één item voor ELKE aangeleverde bron- en notule-ID. Bronstatus: covered, non_factual, missing, uncertain. Notulestatus: supported, non_factual, contradiction, unsupported, uncertain. Alleen notes bevat evidence: uitsluitend relevante T-/Q-IDs. Vermeld iedere bewijsrelatie precies eenmaal bij de notulezin; schrijf geen tweede omgekeerde lijst bij source. supported vereist ten minste één inhoudelijk bron-ID; zonder passend bewijs is een notulezin unsupported, nooit supported met lege evidence. covered betekent dat ten minste één ondersteunde notulezin die bronzin betekenisgetrouw bewaart; anders missing. Een algemene verwijzing naar vereiste acties vervangt niet hun inhoud, actiehouders en termijnen. non_factual bij notes heeft lege evidence en is alleen voor begroetingen, herhalingen zonder nieuwe informatie, opmaaklabels en koppen zonder feitelijke claim; NOOIT voor acties, besluiten, voorwaarden, termijnen of andere feiten. Bij contradiction/unsupported/uncertain mag evidence leeg zijn. Geef geen eindgoedkeuring op basis van alleen trefwoorden of gelijkende namen.`;
   let result: unknown;
   try {
-    result = JSON.parse((await request(system, `Inhoudsaudit (geen generatie):\n${JSON.stringify({ source: sourceUnits, notes: noteUnits })}`)).trim());
+    result = parseAuditResponse(await request(system, `Inhoudsaudit (geen generatie):\n${JSON.stringify({ source: sourceUnits, notes: noteUnits })}`));
   } catch {
     throw new Error("De inhoudscontrole leverde geen bruikbaar controlebewijs; beoordeel het concept");
   }

@@ -6,6 +6,36 @@ _Decisions DEC-029 through DEC-038 archived to [archive/DECISIONS-DEC-029-to-DEC
 
 ---
 
+## DEC-060: Notuleprompt per onderwerp en chunkdrempel voor elk Ollama Cloud-model
+
+**Date:** 2026-11-09
+**Status:** Accepted
+
+**Context:** Een notule van een schadebezoek (43.000 tekens transcriptie, Ollama Cloud met `gpt-oss:120b`, profiel Standaard) miste feiten die ChatGPT uit dezelfde tekst wel haalde: 29 juli, 11 september 2024, €425, €100 tot €200, de bouwjaren 2006, 2018 en 2022. Zeven acties stonden op "Eigenaar: Nog te bepalen". Chunking speelde in versie 1.0.270 niet mee: de drempel voor hosted gpt-oss stond al op 64.000 tekens. Wel gold die drempel alleen voor gpt-oss-modelnamen, zodat elk ander Ollama Cloud-model weer op 8.000 tekens chunkte.
+
+Eval (zelfde transcriptie, 18 feiten uit de ChatGPT-versie, scratch-script tegen `https://ollama.com/v1/chat/completions`):
+
+| Model | Oude prompt | Nieuwe prompt |
+|-------|-------------|---------------|
+| gpt-oss:120b | 7/18, 14x "Nog te bepalen" | 9/18, 0x |
+| gpt-oss:120b, reasoning high | 9/18, 30x | 8/18, 0x |
+| gpt-oss:120b, gechunkt op 8k | 9/18, 13x | niet gemeten |
+| mistral-large-4 | 12/18, 7x | 17/18, 0x |
+| kimi-k3 | 16/18, 6x | 16/18, 0x |
+| glm-5.3 | niet gemeten | 15/18, 0x |
+| deepseek-v4-pro | niet gemeten | 13/18, 0x |
+
+Het model bepaalt het grootste deel van het verschil. De prompt haalt "Nog te bepalen" weg en levert bij mistral-large-4 vijf feiten extra op.
+
+**Decision:**
+1. `commonRules` (alle profielen): concrete details letterlijk overnemen, indicatie of vermoeden apart benoemen van een afspraak, sprekers bij hun rol noemen als de tekst dat eenduidig maakt, eigenaar en termijn alleen invullen als ze uit de tekst blijken, smalltalk en storingen weglaten. De regel "schrijf 'Nog te bepalen'" is geschrapt.
+2. Profiel Standaard: kern, dan één h2 per besproken onderwerp (situatie, vaststelling of inschatting, afspraak), acties als tabel Wie / Actie / Wanneer, daarna openstaande punten. De generator kreeg daarvoor een optioneel `template`-veld per profiel.
+3. `OpenAICompatibleLLMService`: 64.000 tekens voor elk model op `https://ollama.com`, niet alleen gpt-oss. Lokale endpoints blijven op 8.000.
+
+**Consequences:** Een vergadering tot ongeveer een uur gaat bij Ollama Cloud in één verzoek. Voor notules op het niveau van de ChatGPT-versie is `mistral-large-4` of `kimi-k3` de aanbevolen keuze; `gpt-oss:120b` blijft bruikbaar maar oppervlakkig. Ingebouwde profielen komen bij elke start uit de bundle, dus er is geen migratie nodig. De backendkopie van de profielen wordt mee gegenereerd maar niet meer door macOS gebruikt.
+
+---
+
 ## DEC-059 — Hardened Windows Upload Pipeline na Empirische Weerlegging python-multipart Hypothese
 
 **Date:** 2026-05-06

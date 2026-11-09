@@ -133,6 +133,7 @@
 		AB000202 /* ParticipantPickerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000202 /* ParticipantPickerSheet.swift */; };
 		AB000002 /* MigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000002 /* MigrationTests.swift */; };
 		AB000003 /* PersonProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000003 /* PersonProfileTests.swift */; };
+		AB0000K1 /* KeychainServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000K1 /* KeychainServiceTests.swift */; };
 		AB000004 /* PersonDirectoryServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000004 /* PersonDirectoryServiceTests.swift */; };
 		AB000005 /* GraphAttendeeDecodeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000005 /* GraphAttendeeDecodeTests.swift */; };
 		AB000007 /* AudioEnvelopeProcessorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000007 /* AudioEnvelopeProcessorTests.swift */; };
@@ -309,6 +310,7 @@
 		FB000201 /* Participant.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Participant.swift; sourceTree = "<group>"; };
 		FB000202 /* ParticipantPickerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParticipantPickerSheet.swift; sourceTree = "<group>"; };
 		FB000002 /* MigrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MigrationTests.swift; sourceTree = "<group>"; };
+		FB0000K1 /* KeychainServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainServiceTests.swift; sourceTree = "<group>"; };
 		FB000003 /* PersonProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonProfileTests.swift; sourceTree = "<group>"; };
 		FB000004 /* PersonDirectoryServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonDirectoryServiceTests.swift; sourceTree = "<group>"; };
 		FB000005 /* GraphAttendeeDecodeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GraphAttendeeDecodeTests.swift; sourceTree = "<group>"; };
@@ -593,6 +595,7 @@
 				FB9E5A02 /* VaultFolderStoreTests.swift */,
 				FB000002 /* MigrationTests.swift */,
 				FB000003 /* PersonProfileTests.swift */,
+				FB0000K1 /* KeychainServiceTests.swift */,
 				FB000004 /* PersonDirectoryServiceTests.swift */,
 				FB000005 /* GraphAttendeeDecodeTests.swift */,
 				FB000007 /* AudioEnvelopeProcessorTests.swift */,
@@ -870,6 +873,7 @@
 				AB9E5A02 /* VaultFolderStoreTests.swift in Sources */,
 				AB000002 /* MigrationTests.swift in Sources */,
 				AB000003 /* PersonProfileTests.swift in Sources */,
+				AB0000K1 /* KeychainServiceTests.swift in Sources */,
 				AB000004 /* PersonDirectoryServiceTests.swift in Sources */,
 				AB000005 /* GraphAttendeeDecodeTests.swift in Sources */,
 				AB000007 /* AudioEnvelopeProcessorTests.swift in Sources */,

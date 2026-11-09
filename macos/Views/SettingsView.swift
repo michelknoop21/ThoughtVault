@@ -449,7 +449,11 @@ struct SettingsView: View {
         if trimmed.isEmpty {
             KeychainService.shared.delete(for: ObsidianService.apiKeyKeychainKey)
         } else {
-            KeychainService.shared.save(trimmed, for: ObsidianService.apiKeyKeychainKey)
+            do {
+                try KeychainService.shared.save(trimmed, for: ObsidianService.apiKeyKeychainKey)
+            } catch {
+                obsidianTestResult = .failure(error.localizedDescription)
+            }
         }
     }
 
@@ -523,6 +527,7 @@ struct SettingsView: View {
     // API key lives in the Keychain, not UserDefaults. Mirrored into @State for editing.
     @State var ollamaApiKey: String = ""
     @State var revealApiKey: Bool = false
+    @State var ollamaKeyError: String?
     @FocusState private var apiKeyFocused: Bool
 
     @State var ollamaTesting: Bool = false
@@ -895,6 +900,12 @@ struct SettingsView: View {
                 .font(TS.Font.caption)
         }
 
+        if let ollamaKeyError {
+            Text(ollamaKeyError)
+                .font(TS.Font.footnote)
+                .foregroundStyle(Color.statusError)
+        }
+
         if apiKeyOverHTTPWarning {
             Label("Sleutel wordt alleen over HTTPS verstuurd. Gebruik een https-URL (bijv. de Cloud-knop).",
                   systemImage: "exclamationmark.triangle.fill")
@@ -961,7 +972,12 @@ struct SettingsView: View {
         if trimmed.isEmpty {
             KeychainService.shared.delete(for: Self.apiKeyKeychainKey)
         } else {
-            KeychainService.shared.save(trimmed, for: Self.apiKeyKeychainKey)
+            do {
+                try KeychainService.shared.save(trimmed, for: Self.apiKeyKeychainKey)
+                ollamaKeyError = nil
+            } catch {
+                ollamaKeyError = error.localizedDescription
+            }
         }
     }
 

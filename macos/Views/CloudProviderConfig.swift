@@ -18,6 +18,7 @@ struct CloudProviderConfig: View {
     @State private var models: [String] = []
     @State private var loadingModels = false
     @State private var saveTask: Task<Void, Never>?
+    @State private var saveError: String?
 
     private var isOllamaCloud: Bool { provider == .ollamaCloud }
     private var current: CloudAIConfiguration? { configurations.first { $0.id == selected } }
@@ -155,6 +156,7 @@ struct CloudProviderConfig: View {
     }
 
     private var status: (text: String, color: Color) {
+        if let saveError { return (saveError, Color.statusError) }
         if !isHTTPS { return ("Vul een HTTPS-adres in", Color.labelTertiary) }
         if !hasKey { return ("Geen sleutel ingesteld", Color.labelTertiary) }
         switch connected {
@@ -184,8 +186,14 @@ struct CloudProviderConfig: View {
         if trimmed.isEmpty {
             KeychainService.shared.delete(for: key)
         } else {
-            KeychainService.shared.save(trimmed, for: key)
+            do {
+                try KeychainService.shared.save(trimmed, for: key)
+            } catch {
+                saveError = error.localizedDescription
+                return
+            }
         }
+        saveError = nil
         connected = nil
     }
 

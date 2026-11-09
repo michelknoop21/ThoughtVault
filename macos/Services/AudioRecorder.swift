@@ -406,7 +406,10 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
     }
 
     static func recordingsDirectoryURL() -> URL {
-        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        // Tests must never list, repair or clean up the user's real recordings.
+        let docs = AppEnvironment.isRunningTests
+            ? AppEnvironment.supportDirectory
+            : FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         let dir = docs.appendingPathComponent(recordingsDirectory)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         return dir

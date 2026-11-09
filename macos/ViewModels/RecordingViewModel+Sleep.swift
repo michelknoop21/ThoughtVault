@@ -18,7 +18,11 @@ extension RecordingViewModel {
             let result = await systemAudioCapture.stopCapture()
             let micURL = await audioRecorder.stopRecording()
             if let sys = result.systemAudioURL, let mic = micURL {
-                let mixed = await mixAudioFiles(micURL: mic, systemURL: sys)
+                var offset: TimeInterval = 0
+                if let sysStart = systemAudioCapture.startedAt, let micStart = audioRecorder.startedAt {
+                    offset = sysStart.timeIntervalSince(micStart)
+                }
+                let mixed = await mixAudioFiles(micURL: mic, systemURL: sys, systemStartOffset: offset)
                 if mixed == mic {
                     audioMixFallbackOccurred = true
                 } else {

@@ -1493,116 +1493,22 @@ final class RecordingViewModel {
     // MARK: - Audio Mixing (macOS Combined Mode)
 
 #if os(macOS)
-    /// Reads mic and system audio WAV files, mixes them at equal volume into a
-    /// new temporary WAV file, and returns its URL.  Falls back to the mic file
-    /// on any AVFoundation error so the upload always proceeds.
-    func mixAudioFiles(micURL: URL, systemURL: URL) async -> URL {
-        return await Task.detached(priority: .userInitiated) {
+    /// Mixes mic and system audio (average, start-aligned by `systemStartOffset`) into a new
+    /// recording. Falls back to the mic file on any error so the upload always proceeds.
+    func mixAudioFiles(micURL: URL, systemURL: URL, systemStartOffset: TimeInterval = 0) async -> URL {
+        await Task.detached(priority: .userInitiated) {
+            let outputURL = AudioRecorder.recordingsDirectoryURL()
+                .appendingPathComponent("combined_\(Int(Date().timeIntervalSince1970)).wav")
             do {
-                let micFile = try AVAudioFile(forReading: micURL)
-                let sysFile = try AVAudioFile(forReading: systemURL)
-
-                guard let format = AVAudioFormat(
-                    commonFormat: .pcmFormatFloat32,
-                    sampleRate: 16_000,
-                    channels: 1,
-                    interleaved: false
-                ) else {
-                    os_log("[RecordingVM] Could not create mix format, using mic only", log: log, type: .error)
+                let frames = try AudioMixer.mix(micURL: micURL, systemURL: systemURL, systemStartOffset: systemStartOffset, into: outputURL)
+                // Reopen the finalized file before removing the redundant sources.
+                guard try AudioRecorder.removeSourceIfMixIsComplete(sourceURL: micURL, combinedURL: outputURL, expectedFrames: frames) else {
+                    os_log("[RecordingVM] Finalized mix is incomplete, using mic only", log: log, type: .error)
                     return micURL
                 }
-
-                let totalFrames = max(micFile.length, sysFile.length)
-
-                // Stream in 10s chunks with reusable buffers: loading both files
-                // whole costs hundreds of MB per hour and risks an OOM kill.
-                let chunkFrames: AVAudioFrameCount = 16_000 * 10
-                guard totalFrames > 0,
-                      let micBuffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: chunkFrames),
-                      let sysBuffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: chunkFrames),
-                      let mixBuffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: chunkFrames)
-                else {
-                    os_log("[RecordingVM] Could not allocate mix buffers, using mic only", log: log, type: .error)
-                    return micURL
-                }
-
-                let recordingsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-                    .appendingPathComponent("Recordings")
-                try? FileManager.default.createDirectory(at: recordingsDir, withIntermediateDirectories: true)
-                let outputURL = recordingsDir
-                    .appendingPathComponent("combined_\(Int(Date().timeIntervalSince1970)).wav")
-                // Write 16kHz mono Int16 PCM — the same on-disk format as every other
-                // writer in the app (AudioRecorder, AudioChunker, AudioPreConverter).
-                // `format` above stays Float32 for the mixing buffers; AVAudioFile
-                // encodes to Int16 on write.
-                let diskSettings: [String: Any] = [
-                    AVFormatIDKey: Int(kAudioFormatLinearPCM),
-                    AVSampleRateKey: 16_000.0,
-                    AVNumberOfChannelsKey: 1,
-                    AVLinearPCMBitDepthKey: 16,
-                    AVLinearPCMIsFloatKey: false,
-                    AVLinearPCMIsBigEndianKey: false,
-                    AVLinearPCMIsNonInterleaved: false
-                ]
-                var framesWritten: AVAudioFramePosition = 0
-                do {
-                    let outputFile = try AVAudioFile(forWriting: outputURL, settings: diskSettings)
-
-                    while framesWritten < totalFrames {
-                        let remaining = AVAudioFrameCount(min(AVAudioFramePosition(chunkFrames), totalFrames - framesWritten))
-
-                        micBuffer.frameLength = 0
-                        if micFile.framePosition < micFile.length {
-                            try micFile.read(into: micBuffer, frameCount: remaining)
-                        }
-                        sysBuffer.frameLength = 0
-                        if sysFile.framePosition < sysFile.length {
-                            try sysFile.read(into: sysBuffer, frameCount: remaining)
-                        }
-
-                        guard let micData = micBuffer.floatChannelData?[0],
-                              let sysData = sysBuffer.floatChannelData?[0],
-                              let mixData = mixBuffer.floatChannelData?[0] else {
-                            os_log("[RecordingVM] Audio mixing failed: nil channel data, using mic only", log: log, type: .error)
-                            return micURL
-                        }
-
-                        mixBuffer.frameLength = remaining
-                        for i in 0..<Int(remaining) {
-                            let micSample: Float = i < Int(micBuffer.frameLength) ? micData[i] : 0
-                            let sysSample: Float = i < Int(sysBuffer.frameLength) ? sysData[i] : 0
-                            // Element-wise magnitude-max: pick the louder source at each sample, preserving its sign
-                            let sample = abs(micSample) >= abs(sysSample) ? micSample : sysSample
-                            mixData[i] = max(-1.0, min(1.0, sample))
-                        }
-
-                        try outputFile.write(from: mixBuffer)
-                        framesWritten += AVAudioFramePosition(remaining)
-                    }
-                }
-
-                // Reopen the finalized file before removing the redundant source.
-                do {
-                    guard try AudioRecorder.removeSourceIfMixIsComplete(sourceURL: micURL, combinedURL: outputURL, expectedFrames: totalFrames) else {
-                        os_log("[RecordingVM] Finalized mix is incomplete, using mic only", log: log, type: .error)
-                        return micURL
-                    }
-                    // System audio lives in Recordings too; drop it only once the mix is verified.
-                    _ = try AudioRecorder.removeSourceIfMixIsComplete(sourceURL: systemURL, combinedURL: outputURL, expectedFrames: totalFrames)
-                } catch {
-                    os_log("[RecordingVM] Source cleanup skipped: %{public}@", log: log, type: .error, error.localizedDescription)
-                }
-
-                let attrs = try? FileManager.default.attributesOfItem(atPath: outputURL.path)
-                let outSize = (attrs?[.size] as? Int64) ?? 0
-                os_log("[RecordingVM] Audio mix OK — mic %.1fs (%lld frames), system %.1fs (%lld frames) → %lld frames, %lld bytes Int16 at %{public}@",
-                       log: log, type: .info,
-                       Double(micFile.length) / micFile.processingFormat.sampleRate, micFile.length,
-                       Double(sysFile.length) / sysFile.processingFormat.sampleRate, sysFile.length,
-                       framesWritten, outSize, outputURL.path)
-
+                _ = try AudioRecorder.removeSourceIfMixIsComplete(sourceURL: systemURL, combinedURL: outputURL, expectedFrames: frames)
+                os_log("[RecordingVM] Audio mix OK: %lld frames, offset %.3fs", log: log, type: .info, frames, systemStartOffset)
                 return outputURL
-
             } catch {
                 os_log("[RecordingVM] Audio mix failed: %{public}@, using mic only", log: log, type: .error, error.localizedDescription)
                 return micURL

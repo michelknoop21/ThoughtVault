@@ -76,6 +76,8 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
     private var durationTimer: Timer?
     private var lastDiagnosticLog: Date = .distantPast
     private var recordingStartDate: Date?
+    /// Wall-clock start of the last recording; kept after stop for mix alignment.
+    private(set) var startedAt: Date?
     private var pausedAt: Date?
     private var accumulatedPauseDuration: TimeInterval = 0
 
@@ -227,6 +229,7 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
                 self.isPaused = false
                 self.duration = 0
                 self.recordingStartDate = Date()
+                self.startedAt = self.recordingStartDate
                 self.pausedAt = nil
                 self.accumulatedPauseDuration = 0
                 self.audioLevels = Array(repeating: 0, count: AudioEnvelopeConfig.historyLength)

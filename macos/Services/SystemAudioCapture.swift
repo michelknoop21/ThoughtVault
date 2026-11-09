@@ -48,6 +48,8 @@ final class SystemAudioCapture {
     private var writer: TapAudioWriter?
     private var timer: Timer?
     private var startDate: Date?
+    /// Wall-clock start of the last capture; kept after stop for mix alignment.
+    private(set) var startedAt: Date?
     private var pausedAt: Date?
     private var accumulatedPauseDuration: TimeInterval = 0
     private var envelope = AudioEnvelopeProcessor()
@@ -142,6 +144,7 @@ final class SystemAudioCapture {
         envelope.reset()
         lastMeterDate = nil
         startDate = Date()
+        startedAt = startDate
         timer = Timer.scheduledTimer(withTimeInterval: 1 / AudioEnvelopeConfig.publishRateHz, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated {
                 guard let self, let startDate = self.startDate else { return }

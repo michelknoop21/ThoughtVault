@@ -40,6 +40,7 @@
 		AA000005 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000005 /* Models.swift */; };
 		AA000006 /* Analytics.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000006 /* Analytics.swift */; };
 		AA000007 /* APIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000007 /* APIService.swift */; };
+		AA00T19A /* AudioExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA00T19A /* AudioExtractor.swift */; };
 		AA0000M1 /* AudioMixer.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000M1 /* AudioMixer.swift */; };
 		AA000008 /* AudioRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000008 /* AudioRecorder.swift */; };
 		AA0000C1 /* RecordingRecovery.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000C1 /* RecordingRecovery.swift */; };
@@ -134,6 +135,9 @@
 		AB000005 /* GraphAttendeeDecodeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000005 /* GraphAttendeeDecodeTests.swift */; };
 		AB000007 /* AudioEnvelopeProcessorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000007 /* AudioEnvelopeProcessorTests.swift */; };
 		AB000008 /* LLMChunkingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000008 /* LLMChunkingTests.swift */; };
+		AB00T19A /* AudioExtractorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB00T19A /* AudioExtractorTests.swift */; };
+		AB00T19B /* tone-1s.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = FB00T19B /* tone-1s.mp4 */; };
+		AB00T19C /* video-no-audio.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = FB00T19C /* video-no-audio.mp4 */; };
 		AB0000M1 /* AudioMixerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000M1 /* AudioMixerTests.swift */; };
 		AB0000A1 /* SystemAudioStorageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000A1 /* SystemAudioStorageTests.swift */; };
 		AB0000A2 /* CancelRecordingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000A2 /* CancelRecordingTests.swift */; };
@@ -208,6 +212,7 @@
 		FA000005 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		FA000006 /* Analytics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Analytics.swift; sourceTree = "<group>"; };
 		FA000007 /* APIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIService.swift; sourceTree = "<group>"; };
+		FA00T19A /* AudioExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioExtractor.swift; sourceTree = "<group>"; };
 		FA0000M1 /* AudioMixer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioMixer.swift; sourceTree = "<group>"; };
 		FA000008 /* AudioRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioRecorder.swift; sourceTree = "<group>"; };
 		FA0000C1 /* RecordingRecovery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingRecovery.swift; sourceTree = "<group>"; };
@@ -305,6 +310,9 @@
 		FB000005 /* GraphAttendeeDecodeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GraphAttendeeDecodeTests.swift; sourceTree = "<group>"; };
 		FB000007 /* AudioEnvelopeProcessorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioEnvelopeProcessorTests.swift; sourceTree = "<group>"; };
 		FB000008 /* LLMChunkingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMChunkingTests.swift; sourceTree = "<group>"; };
+		FB00T19A /* AudioExtractorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioExtractorTests.swift; sourceTree = "<group>"; };
+		FB00T19B /* tone-1s.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "tone-1s.mp4"; sourceTree = "<group>"; };
+		FB00T19C /* video-no-audio.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "video-no-audio.mp4"; sourceTree = "<group>"; };
 		FB0000M1 /* AudioMixerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioMixerTests.swift; sourceTree = "<group>"; };
 		FB0000A1 /* SystemAudioStorageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemAudioStorageTests.swift; sourceTree = "<group>"; };
 		FB0000A2 /* CancelRecordingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CancelRecordingTests.swift; sourceTree = "<group>"; };
@@ -423,6 +431,7 @@
 				FA000007 /* APIService.swift */,
 				FA000008 /* AudioRecorder.swift */,
 				FA0000M1 /* AudioMixer.swift */,
+				FA00T19A /* AudioExtractor.swift */,
 				FA0000C1 /* RecordingRecovery.swift */,
 				FA0000E7 /* HTMLPlainText.swift */,
 				FA0000Q1 /* TranscriptSearch.swift */,
@@ -586,6 +595,7 @@
 				FB000008 /* LLMChunkingTests.swift */,
 				FB0000A1 /* SystemAudioStorageTests.swift */,
 				FB0000M1 /* AudioMixerTests.swift */,
+				FB00T19A /* AudioExtractorTests.swift */,
 				FB0000A2 /* CancelRecordingTests.swift */,
 				FB0000A3 /* RecordingRecoveryTests.swift */,
 				FB0000E7 /* HTMLPlainTextTests.swift */,
@@ -611,6 +621,8 @@
 			children = (
 				FB000006 /* GraphCalendarViewResponse.json */,
 				FB0000T4 /* PreDraftFields.store */,
+				FB00T19B /* tone-1s.mp4 */,
+				FB00T19C /* video-no-audio.mp4 */,
 			);
 			path = Fixtures;
 			sourceTree = "<group>";
@@ -748,6 +760,7 @@
 				AA000007 /* APIService.swift in Sources */,
 				AA000008 /* AudioRecorder.swift in Sources */,
 				AA0000M1 /* AudioMixer.swift in Sources */,
+				AA00T19A /* AudioExtractor.swift in Sources */,
 				AA0000C1 /* RecordingRecovery.swift in Sources */,
 				AA0000E7 /* HTMLPlainText.swift in Sources */,
 				AA0000Q1 /* TranscriptSearch.swift in Sources */,
@@ -857,6 +870,7 @@
 				AB000008 /* LLMChunkingTests.swift in Sources */,
 				AB0000A1 /* SystemAudioStorageTests.swift in Sources */,
 				AB0000M1 /* AudioMixerTests.swift in Sources */,
+				AB00T19A /* AudioExtractorTests.swift in Sources */,
 				AB0000A2 /* CancelRecordingTests.swift in Sources */,
 				AB0000A3 /* RecordingRecoveryTests.swift in Sources */,
 				AB0000E7 /* HTMLPlainTextTests.swift in Sources */,
@@ -881,6 +895,8 @@
 			files = (
 				AB000006 /* GraphCalendarViewResponse.json in Resources */,
 				AB0000T4 /* PreDraftFields.store in Resources */,
+				AB00T19B /* tone-1s.mp4 in Resources */,
+				AB00T19C /* video-no-audio.mp4 in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

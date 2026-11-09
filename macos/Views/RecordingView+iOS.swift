@@ -96,7 +96,7 @@ extension RecordingView {
                     .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Gereed") { showYouTubeSection = false } } }
             }
         }
-        .fileImporter(isPresented: $showImporter, allowedContentTypes: [.audio], allowsMultipleSelection: false) { result in
+        .fileImporter(isPresented: $showImporter, allowedContentTypes: [.audio, .audiovisualContent, .movie, .mpeg4Movie], allowsMultipleSelection: false) { result in
             if case .success(let urls) = result, let url = urls.first {
                 Task { await recordingVM.importAudioFile(url) }
             }

@@ -1,6 +1,7 @@
 import Foundation
 import SwiftUI
 import OSLog
+import UniformTypeIdentifiers
 
 private let logger = Logger(subsystem: "com.buildmind.ThoughtVault", category: "APIService")
 
@@ -501,6 +502,11 @@ actor APIService {
         return try handleResponse(data: data, response: response)
     }
 
+    /// MIME type for the multipart file part, derived from the file extension.
+    nonisolated static func uploadContentType(for fileURL: URL) -> String {
+        UTType(filenameExtension: fileURL.pathExtension)?.preferredMIMEType ?? "application/octet-stream"
+    }
+
     /// Streams the multipart form body to a temp file. Nonisolated so the
     /// large file copy runs off the APIService actor.
     private nonisolated static func buildMultipartBody(
@@ -530,7 +536,7 @@ actor APIService {
         // File part header
         writeString("--\(boundary)\r\n")
         writeString("Content-Disposition: form-data; name=\"file\"; filename=\"\(filename)\"\r\n")
-        writeString("Content-Type: audio/wav\r\n\r\n")
+        writeString("Content-Type: \(uploadContentType(for: fileURL))\r\n\r\n")
 
         // Stream audio data in 64KB chunks
         guard let inputStream = InputStream(url: fileURL) else {

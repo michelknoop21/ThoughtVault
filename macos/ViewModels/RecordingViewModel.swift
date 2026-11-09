@@ -536,17 +536,22 @@ final class RecordingViewModel {
         }
 
         // Copy into Recordings/ → stable path for localAudioPath and "Opgeslagen opnames".
-        let recordingsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("Recordings")
-        try? FileManager.default.createDirectory(at: recordingsDir, withIntermediateDirectories: true)
-        let dest = recordingsDir
-            .appendingPathComponent("import_\(Int(Date().timeIntervalSince1970))_\(pickedURL.lastPathComponent)")
+        let recordingsDir = AudioRecorder.recordingsDirectoryURL()
+        let stamp = "import_\(Int(Date().timeIntervalSince1970))_"
+        let type = (try? pickedURL.resourceValues(forKeys: [.contentTypeKey]))?.contentType
+        let isVideo = type.map { $0.conforms(to: .audiovisualContent) && !$0.conforms(to: .audio) } ?? false
+        let dest = recordingsDir.appendingPathComponent(
+            stamp + (isVideo ? pickedURL.deletingPathExtension().lastPathComponent + ".wav" : pickedURL.lastPathComponent))
         do {
-            try FileManager.default.copyItem(at: pickedURL, to: dest)
+            if isVideo {
+                try await AudioExtractor.extractAudio(from: pickedURL, to: dest)
+            } else {
+                try FileManager.default.copyItem(at: pickedURL, to: dest)
+            }
         } catch {
-            os_log("[RecordingVM] importAudioFile: copy failed: %{public}@", log: log, type: .error, error.localizedDescription)
+            os_log("[RecordingVM] importAudioFile: import failed: %{public}@", log: log, type: .error, error.localizedDescription)
             await MainActor.run {
-                recordingState = .error("Kon het audiobestand niet importeren.")
+                recordingState = .error(isVideo ? error.localizedDescription : "Kon het audiobestand niet importeren.")
             }
             return
         }

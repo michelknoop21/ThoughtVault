@@ -60,7 +60,8 @@ enum PersonMatcher {
         let role = differs(s.role, from: person.role) ? trim(s.role) : ""
         let organization = differs(s.organization, from: person.organization) ? trim(s.organization) : ""
         var known = names(PersonSnapshot(person))
-        let aliases = ([s.name] + s.heardAs).map(trim).filter { !$0.isEmpty && known.insert(key($0)).inserted }
+        // A bare first name is never proposed as an alias: it would bypass the first-name uniqueness check.
+        let aliases = ((words(key(s.name)).count > 1 ? [s.name] : []) + s.heardAs).map(trim).filter { !$0.isEmpty && known.insert(key($0)).inserted }
         guard !role.isEmpty || !organization.isEmpty || !aliases.isEmpty else { return nil }
         return PersonSuggestion(name: s.name, role: role, organization: organization, responsibilities: [],
                                 topics: [], heardAs: aliases, matchedPersonId: id)

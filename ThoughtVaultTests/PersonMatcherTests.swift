@@ -130,6 +130,17 @@ final class PersonMatcherTests: XCTestCase {
         XCTAssertEqual(versions.map(\.source), ["gesprek:T1"])
     }
 
+    func testAutoApplyProposesOnlyMultiWordNameAsAlias() throws {
+        let service = try makeService()
+        let anke = PersonProfile(name: "Anke Bakker")
+        try service.add(anke)
+
+        let rest = try PersonMatcher.autoApply(suggestion("A. Bakker"), to: anke.id, profileName: "", taskId: "T1", service: service)
+        XCTAssertEqual(rest?.heardAs, ["A. Bakker"])
+        XCTAssertNil(try PersonMatcher.autoApply(suggestion("Anke", topics: ["X"]), to: anke.id, profileName: "", taskId: "T1", service: service),
+                     "a bare first name is not proposed as an alias")
+    }
+
     // MARK: - Participants
 
     func testParticipantDecodesWithoutPersonId() throws {

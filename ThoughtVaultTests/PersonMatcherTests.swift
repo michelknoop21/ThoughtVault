@@ -30,13 +30,16 @@ final class PersonMatcherTests: XCTestCase {
                          topics: topics, heardAs: heardAs, matchedPersonId: nil)
     }
 
-    private func makeService() throws -> PersonDirectoryService {
-        let container = try ModelContainer(
+    private func makeContainer() throws -> ModelContainer {
+        try ModelContainer(
             for: TranscriptRecord.self, PersonProfile.self,
             migrationPlan: AppMigrationPlan.self,
             configurations: ModelConfiguration(isStoredInMemoryOnly: true)
         )
-        return PersonDirectoryService(container: container)
+    }
+
+    private func makeService() throws -> PersonDirectoryService {
+        PersonDirectoryService(container: try makeContainer())
     }
 
     // MARK: - match
@@ -46,6 +49,18 @@ final class PersonMatcherTests: XCTestCase {
         let people = PersonMatcher.candidates([anke, PersonProfile(name: "Jan Smit")])
         XCTAssertEqual(PersonMatcher.match(suggestion("anke bakker"), in: people), .existing(id: anke.id))
         XCTAssertEqual(PersonMatcher.match(suggestion("Kees"), in: people), .new)
+        XCTAssertEqual(PersonMatcher.match(suggestion(" Ánke  Bakker "), in: people), .existing(id: anke.id),
+                       "diacritics and extra whitespace are folded")
+    }
+
+    func testOneWordHeardAsNeverFallsBackToFirstName() {
+        let people = PersonMatcher.candidates([PersonProfile(name: "Pieter Jansen")])
+        XCTAssertEqual(PersonMatcher.match(suggestion("Pieter van Kaskop", heardAs: ["Pieter"]), in: people), .new)
+    }
+
+    func testOneWordHeardAsDoesNotMatchAliasExactly() {
+        let people = PersonMatcher.candidates([PersonProfile(name: "Anke Bakker", aliases: ["Anke"])])
+        XCTAssertEqual(PersonMatcher.match(suggestion("Anke de Boer", heardAs: ["Anke"]), in: people), .new)
     }
 
     func testAliasMatches() {
@@ -128,5 +143,40 @@ final class PersonMatcherTests: XCTestCase {
         let linked = PersonMatcher.linked([Participant(name: "anke b."), Participant(name: "Kees")],
                                           to: PersonMatcher.candidates([anke]))
         XCTAssertEqual(linked.map(\.personId), [anke.id, nil])
+
+        var kept = Participant(name: "Anke Bakker")
+        kept.personId = "other"
+        XCTAssertEqual(PersonMatcher.linked([kept], to: PersonMatcher.candidates([anke])).map(\.personId), ["other"],
+                       "an existing link is never replaced")
+    }
+
+    // MARK: - link
+
+    func testLinkRoutesAmbiguousMatchedAndNewPeople() throws {
+        let container = try makeContainer()
+        let service = PersonDirectoryService(container: container)
+        let store = LocalTranscriptStore(container: container)
+        let devries = PersonProfile(name: "Jan de Vries"), smit = PersonProfile(name: "Jan Smit")
+        let anke = PersonProfile(name: "Anke Bakker")
+        for person in [devries, smit, anke] { try service.add(person) }
+        let record = TranscriptRecord(taskId: "T1", title: "Overleg")
+        record.participants = [Participant(name: "Anke Bakker"), Participant(name: "Kees de Wit")]
+        try store.save(record)
+
+        let set = ContextSuggestionSet(
+            terms: [TermSuggestion(heard: "Kaskop", canonical: "Kascop", note: "")],
+            people: [suggestion("Jan"), suggestion("Anke Bakker", topics: ["Dakschade"]), suggestion("Kees de Wit")])
+        let kept = PersonMatcher.link(set, taskId: "T1", profileName: "Overleg", service: service, store: store)
+
+        XCTAssertEqual(kept.terms, set.terms)
+        XCTAssertEqual(kept.people.map(\.name), ["Jan", "Kees de Wit"], "the fully applied match is not proposed")
+        XCTAssertEqual(Set(kept.people[0].candidateIds), [devries.id, smit.id])
+        XCTAssertNil(kept.people[0].matchedPersonId)
+        XCTAssertEqual(kept.people[1].candidateIds, [])
+        XCTAssertNil(kept.people[1].matchedPersonId)
+        XCTAssertEqual(anke.expertiseTags, ["Dakschade"])
+        XCTAssertEqual(anke.meetingTypes, ["Overleg"])
+        XCTAssertEqual(store.record(forTaskId: "T1")?.participants.map(\.personId), [anke.id, nil])
+        XCTAssertNotNil(store.record(forTaskId: "T1")?.participantsJSON?.range(of: anke.id), "the link is saved")
     }
 }

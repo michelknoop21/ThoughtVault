@@ -20,6 +20,11 @@ final class LocalTranscriptStore {
 
     private var context: ModelContext { container.mainContext }
 
+    /// Test init: an injected (in-memory) container.
+    init(container: ModelContainer) {
+        self.container = container
+    }
+
     private init() {
         // Use an app-specific store URL instead of SwiftData's default
         // (`Application Support/default.store`). That default store is shared with

@@ -515,15 +515,8 @@ struct NotuleResultView: View {
 
     private func exportAsTXT() {
         showExportMenu = false
-        // Strip HTML tags
         guard let html = task.notuleHtml else { return }
-        let stripped = html.replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)
-        let decoded = stripped
-            .replacingOccurrences(of: "&amp;", with: "&")
-            .replacingOccurrences(of: "&lt;", with: "<")
-            .replacingOccurrences(of: "&gt;", with: ">")
-            .replacingOccurrences(of: "&nbsp;", with: " ")
-            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let decoded = HTMLPlainText.from(html)
 
         #if os(macOS)
         let panel = NSSavePanel()
@@ -580,13 +573,7 @@ struct NotuleResultView: View {
     private func copyContent() {
         showExportMenu = false
         guard let html = task.notuleHtml else { return }
-        let stripped = prepareNotuleContent(html).replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)
-        let decoded = stripped
-            .replacingOccurrences(of: "&amp;", with: "&")
-            .replacingOccurrences(of: "&lt;", with: "<")
-            .replacingOccurrences(of: "&gt;", with: ">")
-            .replacingOccurrences(of: "&nbsp;", with: " ")
-            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let decoded = HTMLPlainText.from(prepareNotuleContent(html))
 
         #if os(macOS)
         NSPasteboard.general.clearContents()

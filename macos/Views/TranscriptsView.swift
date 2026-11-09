@@ -2180,9 +2180,7 @@ struct TranscriptDetailView: View {
     func copyContent() {
         let content: String
         if selectedTab == .notule, let html = fullTranscript.notuleHtml {
-            content = html
-                .replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)
-                .trimmingCharacters(in: .whitespacesAndNewlines)
+            content = HTMLPlainText.from(html)
         } else {
             content = fullTranscript.rawTranscription ?? ""
         }
@@ -2255,14 +2253,8 @@ struct TranscriptDetailView: View {
     }
 
     func exportAsTXT() {
-        let html = fullTranscript.notuleHtml ?? fullTranscript.rawTranscription ?? ""
-        let stripped = html
-            .replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)
-            .replacingOccurrences(of: "&amp;", with: "&")
-            .replacingOccurrences(of: "&lt;", with: "<")
-            .replacingOccurrences(of: "&gt;", with: ">")
-            .replacingOccurrences(of: "&nbsp;", with: " ")
-            .trimmingCharacters(in: .whitespacesAndNewlines)
+        // Raw transcripts are already plain text; only notule HTML is converted.
+        let stripped = fullTranscript.notuleHtml.map(HTMLPlainText.from) ?? fullTranscript.rawTranscription ?? ""
 
         #if os(macOS)
         let panel = NSSavePanel()

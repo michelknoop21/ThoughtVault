@@ -42,6 +42,7 @@
 		AA000007 /* APIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000007 /* APIService.swift */; };
 		AA000008 /* AudioRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000008 /* AudioRecorder.swift */; };
 		AA0000C1 /* RecordingRecovery.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000C1 /* RecordingRecovery.swift */; };
+		AA0000E7 /* HTMLPlainText.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000E7 /* HTMLPlainText.swift */; };
 		AA000009 /* BiometricService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000009 /* BiometricService.swift */; };
 		AA000010 /* CalendarService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000010 /* CalendarService.swift */; };
 		AA000011 /* CrashReporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000011 /* CrashReporter.swift */; };
@@ -127,6 +128,7 @@
 		AB0000A1 /* SystemAudioStorageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000A1 /* SystemAudioStorageTests.swift */; };
 		AB0000A2 /* CancelRecordingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000A2 /* CancelRecordingTests.swift */; };
 		AB0000A3 /* RecordingRecoveryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000A3 /* RecordingRecoveryTests.swift */; };
+		AB0000E7 /* HTMLPlainTextTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000E7 /* HTMLPlainTextTests.swift */; };
 		AB000090 /* AuthViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000090 /* AuthViewModelTests.swift */; };
 		AB000091 /* TranscriptDecoderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000091 /* TranscriptDecoderTests.swift */; };
 		AB000006 /* GraphCalendarViewResponse.json in Resources */ = {isa = PBXBuildFile; fileRef = FB000006 /* GraphCalendarViewResponse.json */; };
@@ -188,6 +190,7 @@
 		FA000007 /* APIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIService.swift; sourceTree = "<group>"; };
 		FA000008 /* AudioRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioRecorder.swift; sourceTree = "<group>"; };
 		FA0000C1 /* RecordingRecovery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingRecovery.swift; sourceTree = "<group>"; };
+		FA0000E7 /* HTMLPlainText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HTMLPlainText.swift; sourceTree = "<group>"; };
 		FA000009 /* BiometricService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BiometricService.swift; sourceTree = "<group>"; };
 		FA000010 /* CalendarService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarService.swift; sourceTree = "<group>"; };
 		FA000011 /* CrashReporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrashReporter.swift; sourceTree = "<group>"; };
@@ -276,6 +279,7 @@
 		FB0000A1 /* SystemAudioStorageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemAudioStorageTests.swift; sourceTree = "<group>"; };
 		FB0000A2 /* CancelRecordingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CancelRecordingTests.swift; sourceTree = "<group>"; };
 		FB0000A3 /* RecordingRecoveryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingRecoveryTests.swift; sourceTree = "<group>"; };
+		FB0000E7 /* HTMLPlainTextTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HTMLPlainTextTests.swift; sourceTree = "<group>"; };
 		FB000090 /* AuthViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthViewModelTests.swift; sourceTree = "<group>"; };
 		FB000091 /* TranscriptDecoderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptDecoderTests.swift; sourceTree = "<group>"; };
 		FB000006 /* GraphCalendarViewResponse.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = GraphCalendarViewResponse.json; sourceTree = "<group>"; };
@@ -379,6 +383,7 @@
 				FA000007 /* APIService.swift */,
 				FA000008 /* AudioRecorder.swift */,
 				FA0000C1 /* RecordingRecovery.swift */,
+				FA0000E7 /* HTMLPlainText.swift */,
 				FA0000S4 /* QuickNoteStore.swift */,
 				FA000009 /* BiometricService.swift */,
 				FA000010 /* CalendarService.swift */,
@@ -533,6 +538,7 @@
 				FB0000A1 /* SystemAudioStorageTests.swift */,
 				FB0000A2 /* CancelRecordingTests.swift */,
 				FB0000A3 /* RecordingRecoveryTests.swift */,
+				FB0000E7 /* HTMLPlainTextTests.swift */,
 				FB000090 /* AuthViewModelTests.swift */,
 				FB000091 /* TranscriptDecoderTests.swift */,
 				FC110001 /* WhisperLoadingTests.swift */,
@@ -682,6 +688,7 @@
 				AA000007 /* APIService.swift in Sources */,
 				AA000008 /* AudioRecorder.swift in Sources */,
 				AA0000C1 /* RecordingRecovery.swift in Sources */,
+				AA0000E7 /* HTMLPlainText.swift in Sources */,
 				AA000009 /* BiometricService.swift in Sources */,
 				AA000010 /* CalendarService.swift in Sources */,
 				AA000050 /* MicrosoftGraphService.swift in Sources */,
@@ -782,6 +789,7 @@
 				AB0000A1 /* SystemAudioStorageTests.swift in Sources */,
 				AB0000A2 /* CancelRecordingTests.swift in Sources */,
 				AB0000A3 /* RecordingRecoveryTests.swift in Sources */,
+				AB0000E7 /* HTMLPlainTextTests.swift in Sources */,
 				AB000090 /* AuthViewModelTests.swift in Sources */,
 				AB000091 /* TranscriptDecoderTests.swift in Sources */,
 				AC110001 /* WhisperLoadingTests.swift in Sources */,

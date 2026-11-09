@@ -62,7 +62,6 @@
 		AA000019 /* AuthViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000019 /* AuthViewModel.swift */; };
 		AA000020 /* RecordingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000020 /* RecordingViewModel.swift */; };
 		AA9E5A01 /* RecordingViewModel+Restart.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA9E5A01 /* RecordingViewModel+Restart.swift */; };
-		AA000021 /* TranscriptsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000021 /* TranscriptsViewModel.swift */; };
 		AA000022 /* AccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000022 /* AccountView.swift */; };
 		AA000023 /* AdminView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000023 /* AdminView.swift */; };
 		AA000024 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000024 /* HomeView.swift */; };
@@ -123,6 +122,8 @@
 		AB000005 /* GraphAttendeeDecodeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000005 /* GraphAttendeeDecodeTests.swift */; };
 		AB000007 /* AudioEnvelopeProcessorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000007 /* AudioEnvelopeProcessorTests.swift */; };
 		AB000008 /* LLMChunkingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000008 /* LLMChunkingTests.swift */; };
+		AB000090 /* AuthViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000090 /* AuthViewModelTests.swift */; };
+		AB000091 /* TranscriptDecoderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000091 /* TranscriptDecoderTests.swift */; };
 		AB000006 /* GraphCalendarViewResponse.json in Resources */ = {isa = PBXBuildFile; fileRef = FB000006 /* GraphCalendarViewResponse.json */; };
 		AA000063 /* LocalTranscriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000063 /* LocalTranscriber.swift */; };
 		AA000090 /* AudioChunker.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000090 /* AudioChunker.swift */; };
@@ -202,7 +203,6 @@
 		FA000019 /* AuthViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthViewModel.swift; sourceTree = "<group>"; };
 		FA000020 /* RecordingViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingViewModel.swift; sourceTree = "<group>"; };
 		FA9E5A01 /* RecordingViewModel+Restart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RecordingViewModel+Restart.swift"; sourceTree = "<group>"; };
-		FA000021 /* TranscriptsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptsViewModel.swift; sourceTree = "<group>"; };
 		FA000022 /* AccountView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountView.swift; sourceTree = "<group>"; };
 		FA000023 /* AdminView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminView.swift; sourceTree = "<group>"; };
 		FA000024 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
@@ -266,6 +266,8 @@
 		FB000005 /* GraphAttendeeDecodeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GraphAttendeeDecodeTests.swift; sourceTree = "<group>"; };
 		FB000007 /* AudioEnvelopeProcessorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioEnvelopeProcessorTests.swift; sourceTree = "<group>"; };
 		FB000008 /* LLMChunkingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMChunkingTests.swift; sourceTree = "<group>"; };
+		FB000090 /* AuthViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthViewModelTests.swift; sourceTree = "<group>"; };
+		FB000091 /* TranscriptDecoderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptDecoderTests.swift; sourceTree = "<group>"; };
 		FB000006 /* GraphCalendarViewResponse.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = GraphCalendarViewResponse.json; sourceTree = "<group>"; };
 		FA000063 /* LocalTranscriber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalTranscriber.swift; sourceTree = "<group>"; };
 		FA000090 /* AudioChunker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioChunker.swift; sourceTree = "<group>"; };
@@ -409,7 +411,6 @@
 				FA000020 /* RecordingViewModel.swift */,
 				FA9E5A01 /* RecordingViewModel+Restart.swift */,
 				FA000055 /* TasksViewModel.swift */,
-				FA000021 /* TranscriptsViewModel.swift */,
 			);
 			path = ViewModels;
 			sourceTree = "<group>";
@@ -517,6 +518,8 @@
 				FB000005 /* GraphAttendeeDecodeTests.swift */,
 				FB000007 /* AudioEnvelopeProcessorTests.swift */,
 				FB000008 /* LLMChunkingTests.swift */,
+				FB000090 /* AuthViewModelTests.swift */,
+				FB000091 /* TranscriptDecoderTests.swift */,
 				FC110001 /* WhisperLoadingTests.swift */,
 				GG000100 /* Fixtures */,
 			);
@@ -685,7 +688,6 @@
 				AA000019 /* AuthViewModel.swift in Sources */,
 				AA000020 /* RecordingViewModel.swift in Sources */,
 				AA9E5A01 /* RecordingViewModel+Restart.swift in Sources */,
-				AA000021 /* TranscriptsViewModel.swift in Sources */,
 				AA000055 /* TasksViewModel.swift in Sources */,
 				AA000022 /* AccountView.swift in Sources */,
 				AA000023 /* AdminView.swift in Sources */,
@@ -760,6 +762,8 @@
 				AB000005 /* GraphAttendeeDecodeTests.swift in Sources */,
 				AB000007 /* AudioEnvelopeProcessorTests.swift in Sources */,
 				AB000008 /* LLMChunkingTests.swift in Sources */,
+				AB000090 /* AuthViewModelTests.swift in Sources */,
+				AB000091 /* TranscriptDecoderTests.swift in Sources */,
 				AC110001 /* WhisperLoadingTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

@@ -309,31 +309,6 @@ final class RecordingViewModel {
             }
         }
     }
-
-    private func handleWillSleep() {
-        guard recordingState.isRecording else { return }
-        os_log("[RecordingVM] System will sleep — stopping active recording", log: .default)
-        // Capture the current file URL before stopping
-        sleepInterruptedFileURL = audioRecorder.currentRecordingURL
-        Task {
-            await stopLiveTranscription()
-            // Stop recorder synchronously via the sleep notification path
-            _ = await audioRecorder.stopRecording()
-#if os(macOS)
-            let _ = await systemAudioCapture.stopCapture()
-#endif
-            await MainActor.run {
-                self.recordingState = .idle
-            }
-        }
-    }
-
-    private func handleDidWake() {
-        guard sleepInterruptedFileURL != nil else { return }
-        os_log("[RecordingVM] System woke — interrupted recording file available for recovery", log: .default)
-        // Load saved recordings so the user can find and reprocess the interrupted file
-        loadSavedRecordings()
-    }
 #endif
 
     // MARK: - Recording Lifecycle
@@ -465,31 +440,7 @@ final class RecordingViewModel {
         let finalURL: URL?
 
 #if os(macOS)
-        switch selectedMode {
-        case .microphone:
-            _ = await systemAudioCapture.stopCapture()
-            let micURL = await audioRecorder.stopRecording()
-            finalURL = micURL
-        case .systemAudio:
-            let result = await systemAudioCapture.stopCapture()
-            _ = await audioRecorder.stopRecording()
-            finalURL = result.systemAudioURL
-        case .combined:
-            let result = await systemAudioCapture.stopCapture()
-            let micURL = await audioRecorder.stopRecording()
-            if let sys = result.systemAudioURL, let mic = micURL {
-                let mixed = await mixAudioFiles(micURL: mic, systemURL: sys)
-                if mixed == mic {
-                    audioMixFallbackOccurred = true
-                } else {
-                    UserDefaults.standard.set(mixed.path, forKey: "combinedAudio_\(mic.lastPathComponent)")
-                }
-                finalURL = mixed
-            } else {
-                audioMixFallbackOccurred = true
-                finalURL = result.systemAudioURL ?? micURL
-            }
-        }
+        finalURL = await finishCapturedSession()
 #else
         let micURL = await audioRecorder.stopRecording()
         finalURL = micURL
@@ -1703,7 +1654,7 @@ final class RecordingViewModel {
     /// Reads mic and system audio WAV files, mixes them at equal volume into a
     /// new temporary WAV file, and returns its URL.  Falls back to the mic file
     /// on any AVFoundation error so the upload always proceeds.
-    private func mixAudioFiles(micURL: URL, systemURL: URL) async -> URL {
+    func mixAudioFiles(micURL: URL, systemURL: URL) async -> URL {
         return await Task.detached(priority: .userInitiated) {
             do {
                 let micFile = try AVAudioFile(forReading: micURL)

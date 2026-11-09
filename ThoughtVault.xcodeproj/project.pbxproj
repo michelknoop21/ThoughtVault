@@ -63,6 +63,7 @@
 		AA000019 /* AuthViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000019 /* AuthViewModel.swift */; };
 		AA000020 /* RecordingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000020 /* RecordingViewModel.swift */; };
 		AA9E5A01 /* RecordingViewModel+Restart.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA9E5A01 /* RecordingViewModel+Restart.swift */; };
+		AA0000D1 /* RecordingViewModel+Sleep.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000D1 /* RecordingViewModel+Sleep.swift */; };
 		AA000022 /* AccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000022 /* AccountView.swift */; };
 		AA000023 /* AdminView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000023 /* AdminView.swift */; };
 		AA000024 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000024 /* HomeView.swift */; };
@@ -208,6 +209,7 @@
 		FA000019 /* AuthViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthViewModel.swift; sourceTree = "<group>"; };
 		FA000020 /* RecordingViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingViewModel.swift; sourceTree = "<group>"; };
 		FA9E5A01 /* RecordingViewModel+Restart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RecordingViewModel+Restart.swift"; sourceTree = "<group>"; };
+		FA0000D1 /* RecordingViewModel+Sleep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RecordingViewModel+Sleep.swift"; sourceTree = "<group>"; };
 		FA000022 /* AccountView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountView.swift; sourceTree = "<group>"; };
 		FA000023 /* AdminView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminView.swift; sourceTree = "<group>"; };
 		FA000024 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
@@ -419,6 +421,7 @@
 				FA000019 /* AuthViewModel.swift */,
 				FA000020 /* RecordingViewModel.swift */,
 				FA9E5A01 /* RecordingViewModel+Restart.swift */,
+				FA0000D1 /* RecordingViewModel+Sleep.swift */,
 				FA000055 /* TasksViewModel.swift */,
 			);
 			path = ViewModels;
@@ -701,6 +704,7 @@
 				AA000019 /* AuthViewModel.swift in Sources */,
 				AA000020 /* RecordingViewModel.swift in Sources */,
 				AA9E5A01 /* RecordingViewModel+Restart.swift in Sources */,
+				AA0000D1 /* RecordingViewModel+Sleep.swift in Sources */,
 				AA000055 /* TasksViewModel.swift in Sources */,
 				AA000022 /* AccountView.swift in Sources */,
 				AA000023 /* AdminView.swift in Sources */,

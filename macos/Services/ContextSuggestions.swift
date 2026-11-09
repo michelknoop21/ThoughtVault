@@ -184,7 +184,7 @@ enum ContextSuggestions {
 
     /// Starts the suggestion call after the notule was saved. Fire and forget: failures are
     /// only logged. Skipped for Apple Intelligence, very long transcripts and under tests.
-    static func runInBackground(taskId: String, transcript: String, participants: [Participant], provider: NotulenProvider) {
+    static func runInBackground(taskId: String, transcript: String, participants: [Participant], profileId: String?, provider: NotulenProvider) {
         let provider: NotulenProvider = provider == .cloud ? .ollama : provider
         guard !AppEnvironment.isRunningTests, provider != .appleIntelligence,
               transcript.count <= maxTranscriptCharacters else { return }
@@ -192,7 +192,7 @@ enum ContextSuggestions {
             do {
                 let (context, entries, dismissed) = await MainActor.run {
                     let entries = PersonalCorrections.loadOrEmpty()
-                    return (PersonalCorrections.contextBlock(entries: entries, transcript: transcript, profileId: nil, provider: provider),
+                    return (PersonalCorrections.contextBlock(entries: entries, transcript: transcript, profileId: profileId, provider: provider),
                             entries, PersonalCorrections.dismissed())
                 }
                 let raw = try await LLMServiceFactory.service(for: provider, serverURL: "")

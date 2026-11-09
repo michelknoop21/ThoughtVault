@@ -197,7 +197,11 @@ struct ContentView: View {
             #if DEBUG
             // Screenshot hook: open a tab without keystrokes (`-TVDebugTab settings`).
             .task {
+                LocalTranscriptStore.shared.seedDebugDraftIfRequested()
                 if let raw = UserDefaults.standard.string(forKey: "TVDebugTab"), let tab = AppTab(rawValue: raw) { selectedTab = tab }
+                if UserDefaults.standard.string(forKey: "TVDebugOpen") == "transcript", let first = LocalTranscriptStore.shared.allTranscripts().first {
+                    openTranscript(first)
+                }
             }
             #endif
             .onReceive(NotificationCenter.default.publisher(for: .videoCallDetected)) { notification in
@@ -218,6 +222,7 @@ struct ContentView: View {
             }
             .task { await fetchCalendarIfGranted() }
             .task {
+                LocalTranscriptStore.shared.seedDebugDraftIfRequested()
                 if let tab = IOSDebug.string("TVDebugTab").flatMap(AppTab.init(rawValue:)) { selectedTab = tab }
                 if IOSDebug.open == "transcript", let first = LocalTranscriptStore.shared.allTranscripts().first {
                     openTranscript(first)

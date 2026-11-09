@@ -8,7 +8,11 @@ struct DraftReviewSection: View {
     let reason: String
     let draftHtml: String
 
+    #if DEBUG
+    @State private var isExpanded = UserDefaults.standard.string(forKey: "TVDebugExpandDraft") == "YES"
+    #else
     @State private var isExpanded = false
+    #endif
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {

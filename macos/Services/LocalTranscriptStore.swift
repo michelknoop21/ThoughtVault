@@ -284,6 +284,26 @@ final class LocalTranscriptStore {
 
 }
 
+#if DEBUG
+extension LocalTranscriptStore {
+    /// Screenshot hook (`-TVDebugSeedDraft YES`): one record with an approved notule plus a rejected draft.
+    func seedDebugDraftIfRequested() {
+        guard UserDefaults.standard.string(forKey: "TVDebugSeedDraft") == "YES",
+              record(forTaskId: "debug-draft-demo") == nil else { return }
+        let record = TranscriptRecord(
+            id: "debug-draft-demo",
+            taskId: "debug-draft-demo",
+            title: "Projectoverleg Noord",
+            rawTranscription: "We bespraken de planning van fase twee. De leverancier meldt een vertraging van twee weken. Iris kijkt of de oplevering daardoor schuift. Het budget blijft voorlopig ongewijzigd.",
+            notuleHtml: "<h2>Projectoverleg Noord</h2><p>De planning van fase twee is besproken.</p><p>De leverancier meldt een vertraging van twee weken en het budget blijft voorlopig ongewijzigd.</p><ul><li>Iris onderzoekt of de oplevering schuift.</li></ul>"
+        )
+        record.notuleDraftHtml = "<h2>Projectoverleg Noord</h2><p>Fase twee loopt door, maar de leverancier is twee weken later.</p><p>Het budget wordt niet aangepast.</p><ul><li>Iris belt de leverancier vóór vrijdag.</li></ul>"
+        record.notuleReviewReason = "Feiten, acties en beperkingen konden niet worden bevestigd: De notule bevat een onbevestigde bewering: Iris belt de leverancier vóór vrijdag."
+        try? save(record)
+    }
+}
+#endif
+
 // MARK: - LocalStoreError
 
 enum LocalStoreError: LocalizedError {

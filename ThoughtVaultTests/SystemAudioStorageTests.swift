@@ -19,7 +19,9 @@ final class SystemAudioStorageTests: XCTestCase {
         let url = SystemAudioCapture.outputURL(in: AudioRecorder.recordingsDirectoryURL(), date: date)
         XCTAssertEqual(url.deletingLastPathComponent().lastPathComponent, "Recordings")
         XCTAssertEqual(url.pathExtension, "wav")
-        XCTAssertEqual(url.lastPathComponent, "system_audio_20261109-140507.wav")
+        XCTAssertTrue(url.lastPathComponent.hasPrefix("system_audio_20261109-140507-"), url.lastPathComponent)
+        // DST fall-back or two starts in one second must not reuse a file.
+        XCTAssertNotEqual(url, SystemAudioCapture.outputURL(in: AudioRecorder.recordingsDirectoryURL(), date: date))
 
         try writeWAV(url, frames: 160)
         defer { try? FileManager.default.removeItem(at: url) }
@@ -41,5 +43,15 @@ final class SystemAudioStorageTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: source.path))
         XCTAssertTrue(try AudioRecorder.removeSourceIfMixIsComplete(sourceURL: source, combinedURL: combined, expectedFrames: 1600))
         XCTAssertFalse(FileManager.default.fileExists(atPath: source.path))
+    }
+
+    func testActiveSystemCaptureIsNotAnOrphan() throws {
+        let url = AudioRecorder.recordingsDirectoryURL().appendingPathComponent("system_audio_active-\(UUID().uuidString).wav")
+        try writeWAV(url, frames: 160)
+        defer { try? FileManager.default.removeItem(at: url) }
+        try FileManager.default.setAttributes([.creationDate: Date().addingTimeInterval(-3600)], ofItemAtPath: url.path)
+        let recorder = AudioRecorder()
+        XCTAssertTrue(recorder.getOrphanedRecordings().contains { $0.lastPathComponent == url.lastPathComponent })
+        XCTAssertFalse(recorder.getOrphanedRecordings(excluding: [url]).contains { $0.lastPathComponent == url.lastPathComponent })
     }
 }

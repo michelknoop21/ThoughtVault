@@ -281,6 +281,13 @@ final class NotuleAuditTests: XCTestCase {
     func testHiddenEvidenceRejected_3() async { await assertHiddenRejected(#"<p aria-hidden="true">Sam controleert vrijdag.</p>"#) }
     func testHiddenEvidenceRejected_4() async { await assertHiddenRejected(#"<style>p{display:none}</style><p>Sam controleert vrijdag.</p>"#) }
 
+    // Inside the app's <body> wrapper a stray <head> is ignored and its children display unaudited.
+    func testHeadWithBodyContentIsRejected() async {
+        await assertHiddenRejected(#"<head><p>Iedereen krijgt opslag.</p></head><p>Sam controleert vrijdag.</p>"#)
+        await assertHiddenRejected(#"<head><title>x</title>Iedereen krijgt opslag.</head><p>Sam controleert vrijdag.</p>"#)
+        await assertHiddenRejected(#"<head><meta charset="utf-8"><p>Sam controleert vrijdag.</p>"#)
+    }
+
     // "does not approve an entirely non-factual report without any evidence"
     func testAllNonFactualRejected() async {
         let log = CallLog()

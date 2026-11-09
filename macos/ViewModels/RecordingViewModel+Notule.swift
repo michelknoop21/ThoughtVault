@@ -79,32 +79,8 @@ extension RecordingViewModel {
             updateTask(localId, status: .error, errorMessage: message)
         } catch {
             os_log("[RecordingVM] Local notule generation failed: %{public}@", log: log, type: .error, error.localizedDescription)
-
-            // Cloud fallback: the transcription is already saved locally, so let
-            // the backend generate the notule (it also triggers the Obsidian
-            // export via the normal SSE completion path). Skipped in local mode:
-            // the API layer refuses server calls there anyway.
-            if !ProcessingMode.isLocalMode {
-                do {
-                    let cloudTask = try await APIService.shared.uploadTranscriptionText(
-                        transcription: transcription,
-                        profileId: profile.id,
-                        participants: participants
-                    )
-                    self.saveLocalAudioPath(url: url, taskId: cloudTask.taskId)   // links the quick note
-                    await MainActor.run {
-                        self.isGeneratingLocally = false
-                        self.removeTask(localId)
-                        self.addTask(cloudTask)
-                        self.localProcessingTasks.removeValue(forKey: localId)
-                    }
-                    await self.startSSEStream(for: cloudTask.taskId)
-                    return
-                } catch {
-                    os_log("[RecordingVM] Cloud fallback also failed: %{public}@", log: log, type: .error, error.localizedDescription)
-                }
-            }
-
+            // No cloud fallback either: the backend notule is unaudited. The transcription
+            // is already saved, so the user can retry.
             let reason = Self.friendlyNotuleFailureReason(error)
             await MainActor.run {
                 self.isGeneratingLocally = false

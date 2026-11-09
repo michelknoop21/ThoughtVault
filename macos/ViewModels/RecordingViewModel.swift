@@ -732,6 +732,12 @@ final class RecordingViewModel {
             onDeviceJob = (jobId, job)
             defer { onDeviceJob = nil }
             let result = try await job.value
+            // A cancel can land after recognition already finished; never upload then.
+            guard !onDeviceCancelled else {
+                isLiveTranscribing = false
+                recordingState = .idle
+                return
+            }
             await MainActor.run {
                 self.liveTranscriptText = result
                 fullTranscription = result
@@ -1511,7 +1517,8 @@ final class RecordingViewModel {
                     os_log("[RecordingVM] Finalized mix is incomplete, using mic only", log: log, type: .error)
                     return micURL
                 }
-                _ = try AudioRecorder.removeSourceIfMixIsComplete(sourceURL: systemURL, combinedURL: outputURL, expectedFrames: frames)
+                // The mic source is gone and the mix verified: a failed cleanup must not return the deleted mic URL.
+                _ = try? AudioRecorder.removeSourceIfMixIsComplete(sourceURL: systemURL, combinedURL: outputURL, expectedFrames: frames)
                 os_log("[RecordingVM] Audio mix OK: %lld frames, offset %.3fs", log: log, type: .info, frames, systemStartOffset)
                 return outputURL
             } catch {

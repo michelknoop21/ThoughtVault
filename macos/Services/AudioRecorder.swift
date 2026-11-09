@@ -462,13 +462,14 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
         }
     }
 
-    /// Returns recording files older than 60 seconds that were not created in this session.
-    func getOrphanedRecordings() -> [URL] {
+    /// Returns recording files older than 60 seconds that are not being written:
+    /// the active microphone file and any `active` file (the system capture's output).
+    func getOrphanedRecordings(excluding active: [URL?] = []) -> [URL] {
         let cutoff = Date().addingTimeInterval(-Self.orphanAge)
         let fm = FileManager.default
+        let busy = Set((active + [currentRecordingURL]).compactMap { $0?.lastPathComponent })
         return Self.savedRecordingURLs().filter { url in
-            // Exclude the active recording
-            if let current = currentRecordingURL, url == current { return false }
+            if busy.contains(url.lastPathComponent) { return false }
             guard let attrs = try? fm.attributesOfItem(atPath: url.path),
                   let created = attrs[.creationDate] as? Date
             else { return false }

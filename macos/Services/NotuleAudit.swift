@@ -108,7 +108,8 @@ enum NotuleAudit {
                             requiredSentences: [String] = []) async throws {
         // Only plain semantic HTML has a checkable text representation here, not arbitrary CSS/layout.
         let markup = scan(html, dropping: ["script", "template", "head"])
-        if regex(#"<style(?![A-Za-z0-9_])"#, .caseInsensitive).firstMatch(in: html, range: whole(html)) != nil || markup.hidesContent {
+        if regex(#"<style(?![A-Za-z0-9_])"#, .caseInsensitive).firstMatch(in: html, range: whole(html)) != nil || markup.hidesContent
+            || headHoldsContent(html) {
             throw NotuleAuditError(message: "De opmaak kan inhoud verbergen; beoordeel het concept")
         }
         let noteText = HTMLPlainText.from(markup.html)
@@ -319,6 +320,17 @@ enum NotuleAudit {
         }
         text(upTo: source.length)
         return markup
+    }
+
+    /// The app renders notules inside a `<body>` wrapper, where a stray `<head>` start tag is
+    /// ignored and its children display. The audit drops `head`, so it may hold metadata only.
+    private static func headHoldsContent(_ html: String) -> Bool {
+        let metadata = regex(#"<title(?![A-Za-z0-9_])[^>]*>[\s\S]*?</title\s*>|<(?:meta|link|base)(?![A-Za-z0-9_])[^>]*>|<!--[\s\S]*?-->"#, .caseInsensitive)
+        return regex(#"<head(?![A-Za-z0-9_])[^>]*>([\s\S]*?)(?:</head\s*>|\z)"#, .caseInsensitive)
+            .matches(in: html, range: whole(html)).contains { match in
+                let inner = (html as NSString).substring(with: match.range(at: 1))
+                return !trim(metadata.stringByReplacingMatches(in: inner, range: whole(inner), withTemplate: "")).isEmpty
+            }
     }
 
     /// `[style], [class], [hidden], [aria-hidden='true']` on one start tag's attribute text.

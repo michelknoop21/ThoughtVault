@@ -69,7 +69,12 @@ struct ThoughtVaultApp: App {
                     updateCheckService.isBusy = { recordingVM.updateIsBusy }
                     #endif
                     await permissionManager.checkAllPermissions()
-                    let recovered = RecordingRecovery.recoverOrphans(recordingVM.audioRecorder.getOrphanedRecordings())
+                    #if os(macOS)
+                    let activeSystemAudio = recordingVM.systemAudioCapture.currentOutputURL
+                    #else
+                    let activeSystemAudio: URL? = nil
+                    #endif
+                    let recovered = RecordingRecovery.recoverOrphans(recordingVM.audioRecorder.getOrphanedRecordings(excluding: [activeSystemAudio]))
                     if !recovered.isEmpty { recordingVM.loadSavedRecordings() }
                     AudioRecorder.cleanupOldRecordings(
                         protecting: recordingVM.offlineQueue.queuedAudioURLs,

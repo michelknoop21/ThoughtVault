@@ -60,7 +60,9 @@ final class SystemAudioCapture {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.dateFormat = "yyyyMMdd-HHmmss"
-        return directory.appendingPathComponent("system_audio_\(formatter.string(from: date)).wav")
+        // Local time repeats on DST fall-back and two starts can share a second: add a unique suffix.
+        let suffix = UUID().uuidString.prefix(8).lowercased()
+        return directory.appendingPathComponent("system_audio_\(formatter.string(from: date))-\(suffix).wav")
     }
 
     @discardableResult

@@ -138,22 +138,26 @@ final class AppleFoundationModelService: LLMService, @unchecked Sendable {
     // MARK: - Chunked Summarization
 
     private func summarizeInChunks(_ text: String) async throws -> String {
+        // One pass; the caller loops (with its own pass cap). Same not-shorter guard as the shared helper.
         let chunks = splitIntoChunks(text, maxChars: Self.maxChunkCharacters)
         var summaries: [String] = []
-
-        let summaryInstructions = "Je bent een assistent die transcripties samenvat. Bewaar alle belangrijke informatie, namen, besluiten en actiepunten."
 
         for (index, chunk) in chunks.enumerated() {
             try Task.checkCancellation()
             logger.info("AppleFoundationModelService: summarizing chunk \(index + 1)/\(chunks.count)")
-            let session = LanguageModelSession(instructions: summaryInstructions)
-            let response = try await session.respond(
-                to: "Vat dit deel van de transcriptie samen:\n\n\(chunk)"
-            )
-            summaries.append(response.content)
+            summaries.append(try await complete(system: chunkSummarySystemPrompt, user: "Vat dit deel compact samen:\n\n" + chunk))
         }
 
-        return summaries.joined(separator: "\n\n")
+        let joined = summaries.joined(separator: "\n\n")
+        guard joined.count < text.count else {
+            throw LLMError.generationFailed(chunkSummaryNotShorterMessage)
+        }
+        return joined
+    }
+
+    func complete(system: String, user: String) async throws -> String {
+        let session = LanguageModelSession(instructions: system)
+        return try await session.respond(to: user).content
     }
 
     // MARK: - Helpers

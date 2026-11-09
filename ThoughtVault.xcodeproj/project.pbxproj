@@ -132,6 +132,7 @@
 		AB0000E7 /* HTMLPlainTextTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000E7 /* HTMLPlainTextTests.swift */; };
 		AB0000N8 /* NotuleAuditTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000N8 /* NotuleAuditTests.swift */; };
 		AB0000N9 /* NotuleConstraintTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000N9 /* NotuleConstraintTests.swift */; };
+		AB0000NA /* NotulePromptTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000NA /* NotulePromptTests.swift */; };
 		AB000090 /* AuthViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000090 /* AuthViewModelTests.swift */; };
 		AB000091 /* TranscriptDecoderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000091 /* TranscriptDecoderTests.swift */; };
 		AB000006 /* GraphCalendarViewResponse.json in Resources */ = {isa = PBXBuildFile; fileRef = FB000006 /* GraphCalendarViewResponse.json */; };
@@ -286,6 +287,7 @@
 		FB0000E7 /* HTMLPlainTextTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HTMLPlainTextTests.swift; sourceTree = "<group>"; };
 		FB0000N8 /* NotuleAuditTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotuleAuditTests.swift; sourceTree = "<group>"; };
 		FB0000N9 /* NotuleConstraintTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotuleConstraintTests.swift; sourceTree = "<group>"; };
+		FB0000NA /* NotulePromptTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotulePromptTests.swift; sourceTree = "<group>"; };
 		FB000090 /* AuthViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthViewModelTests.swift; sourceTree = "<group>"; };
 		FB000091 /* TranscriptDecoderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptDecoderTests.swift; sourceTree = "<group>"; };
 		FB000006 /* GraphCalendarViewResponse.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = GraphCalendarViewResponse.json; sourceTree = "<group>"; };
@@ -548,6 +550,7 @@
 				FB0000E7 /* HTMLPlainTextTests.swift */,
 				FB0000N8 /* NotuleAuditTests.swift */,
 				FB0000N9 /* NotuleConstraintTests.swift */,
+				FB0000NA /* NotulePromptTests.swift */,
 				FB000090 /* AuthViewModelTests.swift */,
 				FB000091 /* TranscriptDecoderTests.swift */,
 				FC110001 /* WhisperLoadingTests.swift */,
@@ -802,6 +805,7 @@
 				AB0000E7 /* HTMLPlainTextTests.swift in Sources */,
 				AB0000N8 /* NotuleAuditTests.swift in Sources */,
 				AB0000N9 /* NotuleConstraintTests.swift in Sources */,
+				AB0000NA /* NotulePromptTests.swift in Sources */,
 				AB000090 /* AuthViewModelTests.swift in Sources */,
 				AB000091 /* TranscriptDecoderTests.swift in Sources */,
 				AC110001 /* WhisperLoadingTests.swift in Sources */,

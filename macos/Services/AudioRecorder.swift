@@ -3,8 +3,6 @@ import Foundation
 import OSLog
 #if os(iOS)
 import UIKit
-#elseif os(macOS)
-import AppKit
 #endif
 
 private let log = Logger(subsystem: "com.buildmind.ThoughtVault", category: "AudioRecorder")
@@ -100,15 +98,10 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
 
     // MARK: - Notifications
 
+    /// macOS sleep is handled by RecordingViewModel.handleWillSleep, the single owner of
+    /// stopping: it needs the live session to mix (combined) and to keep the file URL.
     private func setupNotifications() {
-#if os(macOS)
-        NSWorkspace.shared.notificationCenter.addObserver(
-            self,
-            selector: #selector(handleWillSleep),
-            name: NSWorkspace.willSleepNotification,
-            object: nil
-        )
-#elseif os(iOS)
+#if os(iOS)
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(handleAudioInterruption(_:)),
@@ -117,17 +110,6 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
         )
 #endif
     }
-
-#if os(macOS)
-    @objc private func handleWillSleep() {
-        guard isRecording else { return }
-        // Finalize WAV header by stopping cleanly before sleep.
-        audioRecorder?.stop()
-        finalizeTimers()
-        isRecording = false
-        isPaused = false
-    }
-#endif
 
 #if os(iOS)
     @objc private func handleAudioInterruption(_ notification: Notification) {

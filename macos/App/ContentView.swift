@@ -222,7 +222,9 @@ struct ContentView: View {
             }
             .task { await fetchCalendarIfGranted() }
             .task {
+                #if DEBUG
                 LocalTranscriptStore.shared.seedDebugDraftIfRequested()
+                #endif
                 if let tab = IOSDebug.string("TVDebugTab").flatMap(AppTab.init(rawValue:)) { selectedTab = tab }
                 if IOSDebug.open == "transcript", let first = LocalTranscriptStore.shared.allTranscripts().first {
                     openTranscript(first)

@@ -166,13 +166,16 @@ final class SystemAudioCapture {
         writer?.setLiveHandler(handler)
     }
 
+    /// Returns this session's file once; nil when nothing was capturing, so a caller
+    /// (cancel deletes the result) can never get an earlier session's file.
     func stopCapture() async -> CaptureResult {
-        guard isCapturing else { return CaptureResult(systemAudioURL: currentOutputURL, microphoneURL: nil) }
+        guard isCapturing else { return CaptureResult(systemAudioURL: nil, microphoneURL: nil) }
         tearDown()
         timer?.invalidate()
         timer = nil
         isCapturing = false
         resetMetrics()
+        defer { currentOutputURL = nil }
         return CaptureResult(systemAudioURL: currentOutputURL, microphoneURL: nil)
     }
 

@@ -1,4 +1,7 @@
 import XCTest
+#if os(macOS)
+import AppKit
+#endif
 @testable import ThoughtVault
 
 final class CancelRecordingTests: XCTestCase {
@@ -42,4 +45,59 @@ final class CancelRecordingTests: XCTestCase {
         XCTAssertEqual(files.map(\.lastPathComponent), ["sys.wav"])
         XCTAssertFalse(files.contains(previous))
     }
+#if os(macOS)
+    @MainActor
+    func testSystemCaptureThatNeverStartedReturnsNoURL() async {
+        let capture = SystemAudioCapture()
+        capture.currentOutputURL = URL(fileURLWithPath: "/tmp/earlier-system.wav")
+        let result = await capture.stopCapture()
+        XCTAssertNil(result.systemAudioURL)
+    }
+
+    @MainActor
+    func testSystemStopReturnsSessionURLOnce() async {
+        let capture = SystemAudioCapture()
+        let url = URL(fileURLWithPath: "/tmp/session-system.wav")
+        capture.isCapturing = true
+        capture.currentOutputURL = url
+        let first = await capture.stopCapture()
+        XCTAssertEqual(first.systemAudioURL, url)
+        XCTAssertNil(capture.currentOutputURL)
+        let second = await capture.stopCapture()
+        XCTAssertNil(second.systemAudioURL)
+    }
+
+    @MainActor
+    func testMicrophoneCancelKeepsEarlierSystemAudio() async throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let earlierSystem = dir.appendingPathComponent("system_audio_earlier.wav")
+        let session = dir.appendingPathComponent("session.wav")
+        for u in [earlierSystem, session] { try Data([1]).write(to: u) }
+
+        let vm = RecordingViewModel()
+        vm.selectedMode = .microphone
+        vm.systemAudioCapture.currentOutputURL = earlierSystem // left over from an earlier session
+        vm.audioRecorder.isRecording = true
+        vm.audioRecorder.currentRecordingURL = session
+        vm.recordingState = .recording
+        await vm.cancelRecording()
+
+        XCTAssertTrue(FileManager.default.fileExists(atPath: earlierSystem.path))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: session.path))
+        XCTAssertEqual(vm.recordingState, .idle)
+    }
+
+    /// Sleep is stopped by the view model; the recorder must not end the session itself,
+    /// or `finishSession()` returns nil and combined mode never mixes.
+    func testSleepLeavesSessionForTheViewModel() {
+        let recorder = AudioRecorder()
+        let url = URL(fileURLWithPath: "/tmp/sleep-session.wav")
+        recorder.isRecording = true
+        recorder.currentRecordingURL = url
+        NSWorkspace.shared.notificationCenter.post(name: NSWorkspace.willSleepNotification, object: nil)
+        XCTAssertEqual(recorder.finishSession(), url)
+    }
+#endif
 }

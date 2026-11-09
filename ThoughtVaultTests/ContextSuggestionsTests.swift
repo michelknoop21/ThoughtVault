@@ -82,6 +82,26 @@ final class ContextSuggestionsTests: XCTestCase {
         XCTAssertEqual(set.people.count, 8)
     }
 
+    func testParseSplitsSlashSeparatedSpellings() {
+        let raw = #"{"terms": [{"heard": "Kaskop / Kazkop / dossier", "canonical": "Kascop", "note": "Bureau"}]}"#
+        let set = ContextSuggestions.parse(raw, transcript: transcript, entries: [], dismissed: [])
+        XCTAssertEqual(set.terms, [TermSuggestion(heard: "Kaskop", canonical: "Kascop", note: "Bureau"),
+                                   TermSuggestion(heard: "dossier", canonical: "Kascop", note: "Bureau")],
+                       "each spelling found in the transcript becomes its own term; absent ones are dropped")
+    }
+
+    func testParseDropsUnnamedPeopleAndTheUser() {
+        let raw = #"{"people": [{"name": ""}, {"name": "michel knoop"}, {"name": "M. Knoop"}, {"name": "Peter", "heardAs": ["Mike"]}, {"name": "Pieter van Kaskop"}]}"#
+        let set = ContextSuggestions.parse(raw, transcript: transcript, entries: [], dismissed: [], selfNames: ["Michel Knoop", "M. Knoop", "Mike"])
+        XCTAssertEqual(set.people.map(\.name), ["Pieter van Kaskop"])
+    }
+
+    func testParseIgnoresThinkBlock() {
+        let raw = "<think>Eerst {\"terms\": []} overwegen.</think>\n{\"terms\": [{\"heard\": \"Kaskop\", \"canonical\": \"Kascop\"}]}"
+        let set = ContextSuggestions.parse(raw, transcript: transcript, entries: [], dismissed: [])
+        XCTAssertEqual(set.terms.map(\.canonical), ["Kascop"])
+    }
+
     func testStoreRoundTripRemoveAndDismiss() throws {
         let term = TermSuggestion(heard: "Kaskop", canonical: "Kascop", note: "")
         let person = PersonSuggestion(name: "Pieter", role: "", organization: "", responsibilities: [], topics: [], heardAs: [], matchedPersonId: nil)

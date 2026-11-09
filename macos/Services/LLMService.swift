@@ -377,8 +377,11 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
         )
     }
 
+    /// No chunking here: a message well past the chunk size would overflow a local model's
+    /// context and silently truncate the system prompt, so it is refused instead.
     func complete(systemPrompt: String, userMessage: String) async throws -> String {
-        try await streamChatCompletion(systemPrompt: systemPrompt, userMessage: userMessage, onProgress: { _ in })
+        guard userMessage.count <= maxChunkCharacters + 8_000 else { throw LLMError.providerUnavailable }
+        return try await streamChatCompletion(systemPrompt: systemPrompt, userMessage: userMessage, onProgress: { _ in })
     }
 
     // MARK: - Chunked Summarization

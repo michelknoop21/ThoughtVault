@@ -228,6 +228,7 @@ final class LocalTranscriptStore {
         guard let record = record(forTaskId: taskId) else { throw LocalStoreError.recordNotFound }
         context.delete(record)
         do { try context.save() } catch { context.rollback(); throw error }
+        try? ContextSuggestions.save(ContextSuggestionSet(), taskId: taskId)
     }
 
     func updateTags(taskId: String, tags: [String]) throws {

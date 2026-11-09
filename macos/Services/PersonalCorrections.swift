@@ -142,6 +142,11 @@ enum PersonalCorrections {
     static func active(_ entries: [PersonalCorrection], profileId: String?) -> [PersonalCorrection] {
         entries.filter { $0.enabled && ($0.scope == nil || $0.scope == profileId) }
     }
+    /// Case-insensitive whole-word match, same boundaries as text().
+    static func containsWord(_ word: String, in text: String) -> Bool {
+        text.range(of: #"(?<![\p{L}\p{N}_])"# + NSRegularExpression.escapedPattern(for: word) + #"(?![\p{L}\p{N}_])"#,
+                   options: [.regularExpression, .caseInsensitive]) != nil
+    }
     static func contextBudget(for provider: NotulenProvider) -> Int { provider == .appleIntelligence ? 1200 : 6000 }
 
     /// Glossary and people block for the minutes AI. `maxCharacters` limits the lines, not the fixed header.
@@ -151,8 +156,7 @@ enum PersonalCorrections {
         func found(_ names: [String]) -> Bool {
             names.contains {
                 let n = $0.trimmingCharacters(in: .whitespacesAndNewlines)
-                guard !n.isEmpty else { return false }
-                return transcript.range(of: #"(?<![\p{L}\p{N}_])"# + NSRegularExpression.escapedPattern(for: n) + #"(?![\p{L}\p{N}_])"#, options: [.regularExpression, .caseInsensitive]) != nil
+                return !n.isEmpty && containsWord(n, in: transcript)
             }
         }
         func joined(_ parts: [String]) -> String { parts.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }.joined(separator: ", ") }

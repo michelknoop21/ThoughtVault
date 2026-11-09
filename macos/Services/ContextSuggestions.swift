@@ -99,7 +99,10 @@ enum ContextSuggestions {
     // MARK: - Parsing
 
     /// Turns the raw AI reply into checked suggestions. Never throws: anything unusable is dropped.
-    static func parse(_ raw: String, transcript: String, entries: [PersonalCorrection], dismissed: [String]) -> ContextSuggestionSet {
+    /// `selfNames` (the user's own name and aliases) are never suggested as people.
+    static func parse(_ raw: String, transcript: String, entries: [PersonalCorrection], dismissed: [String], selfNames: [String] = []) -> ContextSuggestionSet {
+        // Reasoning models may prefix their answer with a think block that can contain braces.
+        let raw = raw.replacingOccurrences(of: #"<think>[\s\S]*?</think>"#, with: "", options: .regularExpression)
         guard let start = raw.firstIndex(of: "{"), let end = raw.lastIndex(of: "}"), start < end,
               let decoded = try? JSONDecoder().decode(ContextSuggestionSet.self, from: Data(raw[start...end].utf8))
         else { return ContextSuggestionSet() }
@@ -107,26 +110,35 @@ enum ContextSuggestions {
         var known = Set<String>()
         for entry in entries { ([entry.canonical] + entry.variants).forEach { known.insert(trim($0).lowercased()) } }
 
-        var seen = Set<String>()
-        let terms = decoded.terms.compactMap { term -> TermSuggestion? in
-            let cleaned = TermSuggestion(heard: trim(term.heard), canonical: trim(term.canonical), note: noteText(term.note))
-            let key = dismissKey(for: .term(cleaned))
-            guard PersonalCorrections.validTerm(cleaned.heard), PersonalCorrections.validTerm(cleaned.canonical),
-                  cleaned.heard.lowercased() != cleaned.canonical.lowercased(),
-                  !known.contains(cleaned.canonical.lowercased()),
-                  !rejected.contains(key), containsWord(cleaned.heard, in: transcript),
-                  seen.insert(key).inserted else { return nil }
-            return cleaned
+        let ownNames = Set(selfNames.map { trim($0).lowercased() }.filter { !$0.isEmpty })
+
+        // Plain loops, not lazy compactMap + prefix: a lazy collection re-runs its closure while
+        // slicing, which would repeat the `seen` insert and drop valid items.
+        var seen = Set<String>(), terms: [TermSuggestion] = [], people: [PersonSuggestion] = []
+        // "a / b" in heard is several spellings in one item: one term per spelling found.
+        for term in decoded.terms {
+            for heard in term.heard.components(separatedBy: " / ") where terms.count < maxItems {
+                let cleaned = TermSuggestion(heard: trim(heard), canonical: trim(term.canonical), note: noteText(term.note))
+                let key = dismissKey(for: .term(cleaned))
+                guard PersonalCorrections.validTerm(cleaned.heard), PersonalCorrections.validTerm(cleaned.canonical),
+                      cleaned.heard.lowercased() != cleaned.canonical.lowercased(),
+                      !known.contains(cleaned.canonical.lowercased()),
+                      !rejected.contains(key), PersonalCorrections.containsWord(cleaned.heard, in: transcript),
+                      seen.insert(key).inserted else { continue }
+                terms.append(cleaned)
+            }
         }
-        let people = decoded.people.compactMap { person -> PersonSuggestion? in
+        for person in decoded.people where people.count < maxItems {
             let cleaned = PersonSuggestion(name: trim(person.name), role: trim(person.role), organization: trim(person.organization),
                                            responsibilities: list(person.responsibilities), topics: list(person.topics),
                                            heardAs: list(person.heardAs), matchedPersonId: nil)
             let key = dismissKey(for: .person(cleaned))
-            guard !cleaned.name.isEmpty, !rejected.contains(key), seen.insert(key).inserted else { return nil }
-            return cleaned
+            guard !cleaned.name.isEmpty, !rejected.contains(key),
+                  !([cleaned.name] + cleaned.heardAs).contains(where: { ownNames.contains($0.lowercased()) }),
+                  seen.insert(key).inserted else { continue }
+            people.append(cleaned)
         }
-        return ContextSuggestionSet(terms: Array(terms.prefix(maxItems)), people: Array(people.prefix(maxItems)))
+        return ContextSuggestionSet(terms: terms, people: people)
     }
 
     private static func trim(_ text: String) -> String { text.trimmingCharacters(in: .whitespacesAndNewlines) }
@@ -137,12 +149,6 @@ enum ContextSuggestions {
         var note = trim(text.components(separatedBy: CharacterSet(charactersIn: "\r\n<>")).joined(separator: " "))
         while note.utf16.count > 200 { note.removeLast() }
         return trim(note)
-    }
-
-    /// Case-insensitive whole-word match, same boundaries as PersonalCorrections.text().
-    private static func containsWord(_ word: String, in text: String) -> Bool {
-        text.range(of: #"(?<![\p{L}\p{N}_])"# + NSRegularExpression.escapedPattern(for: word) + #"(?![\p{L}\p{N}_])"#,
-                   options: [.regularExpression, .caseInsensitive]) != nil
     }
 
     // MARK: - Storage
@@ -161,7 +167,9 @@ enum ContextSuggestions {
     /// Replaces the suggestions for `taskId`; an empty set removes them.
     @MainActor static func save(_ set: ContextSuggestionSet, taskId: String) throws {
         var all = loadAll()
-        all[taskId] = set.isEmpty ? nil : set
+        let next = set.isEmpty ? nil : set
+        guard all[taskId] != next else { return }
+        all[taskId] = next
         try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
         try JSONEncoder().encode(all).write(to: url, options: .atomic)
     }
@@ -190,14 +198,16 @@ enum ContextSuggestions {
               transcript.count <= maxTranscriptCharacters else { return }
         Task.detached(priority: .utility) {
             do {
-                let (context, entries, dismissed) = await MainActor.run {
+                let (context, entries, dismissed, selfNames) = await MainActor.run {
                     let entries = PersonalCorrections.loadOrEmpty()
+                    let me = LocalTranscriptStore.shared.fetchSelfProfile()
                     return (PersonalCorrections.contextBlock(entries: entries, transcript: transcript, profileId: profileId, provider: provider),
-                            entries, PersonalCorrections.dismissed())
+                            entries, PersonalCorrections.dismissed(), me.map { [$0.name] + $0.aliases } ?? [])
                 }
+                let message = userMessage(context: context, participants: participants, selfName: selfNames.first ?? "", transcript: transcript)
                 let raw = try await LLMServiceFactory.service(for: provider, serverURL: "")
-                    .complete(systemPrompt: systemPrompt, userMessage: userMessage(context: context, participants: participants, transcript: transcript))
-                let set = parse(raw, transcript: transcript, entries: entries, dismissed: dismissed)
+                    .complete(systemPrompt: systemPrompt, userMessage: message)
+                let set = parse(raw, transcript: transcript, entries: entries, dismissed: dismissed, selfNames: selfNames)
                 try await MainActor.run {
                     try save(set, taskId: taskId)
                     NotificationCenter.default.post(name: .contextSuggestionsUpdated, object: nil, userInfo: ["taskId": taskId])
@@ -211,27 +221,31 @@ enum ContextSuggestions {
 
     static let systemPrompt = """
     Je helpt een persoonlijke woordenlijst en personenlijst bij te houden voor gespreksverslagen. \
-    Je krijgt de bekende context, de deelnemers en een automatisch herkende transcriptie. \
+    Je krijgt de bekende context, de naam van de gebruiker, de deelnemers en een automatisch herkende transcriptie. \
     Antwoord uitsluitend met één JSON-object, zonder uitleg en zonder code fences, in precies deze vorm:
     {"terms":[{"heard":"","canonical":"","note":""}],"people":[{"name":"","role":"","organization":"","responsibilities":[],"topics":[],"heardAs":[]}]}
 
     Regels:
-    - terms zijn namen, bedrijven, producten of vakjargon die de spraakherkenning waarschijnlijk verkeerd heeft verstaan.
-    - heard is letterlijk de tekst zoals die in de transcriptie staat. canonical is de juiste schrijfwijze. note is een korte toelichting van hooguit één zin.
+    - terms zijn alleen eigennamen, organisaties, producten, merken, afkortingen of vakjargon die de gebruiker in een persoonlijke woordenlijst zou willen hebben en die de spraakherkenning waarschijnlijk verkeerd heeft verstaan.
+    - Een gewoon Nederlands woord met een herkenningsfout is nooit een term.
+    - heard is precies één letterlijke schrijfwijze zoals die in de transcriptie staat. Komt een term in meerdere schrijfwijzen voor, herhaal het item dan per schrijfwijze.
+    - canonical is de juiste schrijfwijze. note is een korte toelichting van hooguit één zin.
     - Stel geen term voor die al in de bekende context staat.
-    - people zijn alleen personen die in het gesprek een rol spelen.
+    - people zijn alleen personen die in het gesprek met naam worden genoemd en een rol spelen. Laat personen zonder naam weg, zoals "mijn schoonvader". Stel de gebruiker zelf nooit voor.
     - Vul role, organization en responsibilities alleen in als dat in het gesprek expliciet wordt gezegd. Anders laat je ze leeg.
     - topics zijn de onderwerpen waar de persoon in dit gesprek bij betrokken is. heardAs bevat letterlijke schrijfwijzen van de naam uit de transcriptie.
+    - Liever een paar zekere items dan veel twijfelachtige: hooguit 8 terms en 8 people.
     - Verzin geen feiten. Twijfel je, laat het item dan weg.
     - Voldoet er niets, antwoord dan met {"terms":[],"people":[]}.
     """
 
-    static func userMessage(context: String, participants: [Participant], transcript: String) -> String {
+    static func userMessage(context: String, participants: [Participant], selfName: String, transcript: String) -> String {
         let people = participants.map { person in
             let detail = [person.role, person.organization].map(trim).filter { !$0.isEmpty }.joined(separator: ", ")
             return "- " + trim(person.name) + (detail.isEmpty ? "" : " (\(detail))")
         }
         return "Bekende context:\n" + (trim(context).isEmpty ? "(leeg)" : trim(context))
+            + (trim(selfName).isEmpty ? "" : "\n\nGebruiker (niet voorstellen): " + trim(selfName))
             + "\n\nDeelnemers:\n" + (people.isEmpty ? "(niet opgegeven)" : people.joined(separator: "\n"))
             + "\n\nTranscriptie:\n" + transcript
     }

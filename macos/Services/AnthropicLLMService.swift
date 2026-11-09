@@ -100,7 +100,7 @@ final class AnthropicLLMService: LLMService, @unchecked Sendable {
         }
 
         var fullText = ""
-        stream: for try await line in bytes.lines {
+        events: for try await line in bytes.lines {
             guard line.hasPrefix("data: "),
                   let data = line.dropFirst(6).data(using: .utf8),
                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
@@ -115,7 +115,7 @@ final class AnthropicLLMService: LLMService, @unchecked Sendable {
                 let message = (json["error"] as? [String: Any])?["message"] as? String ?? "onbekende fout"
                 throw LLMError.generationFailed(message)
             case "message_stop":
-                break stream
+                break events
             default:
                 continue
             }

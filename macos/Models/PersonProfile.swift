@@ -31,6 +31,8 @@ final class PersonProfile {
     /// Tri-state: true = intern, false = extern, nil = onbekend (D-01).
     /// Non-optional → optional is a relaxing change, lightweight-migration eligible.
     var isInternal: Bool?
+    /// What this person is responsible for, so the minutes AI can assign actions (schema V4).
+    var responsibilities: [String] = []
     var createdAt: Date
     var updatedAt: Date
 

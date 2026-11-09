@@ -10,6 +10,7 @@
 		AC110001 /* WhisperLoadingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC110001 /* WhisperLoadingTests.swift */; };
 		AA00PC02 /* PersonalCorrectionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA00PC02 /* PersonalCorrectionsView.swift */; };
 		AA00PC01 /* PersonalCorrections.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA00PC01 /* PersonalCorrections.swift */; };
+		AA00CH01 /* ContextHistory.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA00CH01 /* ContextHistory.swift */; };
 		AASIRI01 /* siriwave-MIT.txt in Resources */ = {isa = PBXBuildFile; fileRef = FASIRI01 /* siriwave-MIT.txt */; };
 		AB0000S5 /* QuickNoteStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000S5 /* QuickNoteStoreTests.swift */; };
 		AB9E5A02 /* VaultFolderStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB9E5A02 /* VaultFolderStoreTests.swift */; };
@@ -121,6 +122,7 @@
 		AB000003 /* PersonProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000003 /* PersonProfileTests.swift */; };
 		AB000004 /* PersonDirectoryServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000004 /* PersonDirectoryServiceTests.swift */; };
 		AB00PCT1 /* PersonalCorrectionsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB00PCT1 /* PersonalCorrectionsTests.swift */; };
+		AB00CHT1 /* ContextHistoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB00CHT1 /* ContextHistoryTests.swift */; };
 		AB000005 /* GraphAttendeeDecodeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000005 /* GraphAttendeeDecodeTests.swift */; };
 		AB000007 /* AudioEnvelopeProcessorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000007 /* AudioEnvelopeProcessorTests.swift */; };
 		AB000008 /* LLMChunkingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000008 /* LLMChunkingTests.swift */; };
@@ -150,6 +152,7 @@
 		FC110001 /* WhisperLoadingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhisperLoadingTests.swift; sourceTree = "<group>"; };
 		FA00PC02 /* PersonalCorrectionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "../Views/PersonalCorrectionsView.swift"; sourceTree = "<group>"; };
 		FA00PC01 /* PersonalCorrections.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonalCorrections.swift; sourceTree = "<group>"; };
+		FA00CH01 /* ContextHistory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContextHistory.swift; sourceTree = "<group>"; };
 		FASIRI01 /* siriwave-MIT.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "siriwave-MIT.txt"; sourceTree = "<group>"; };
 		FB0000S5 /* QuickNoteStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickNoteStoreTests.swift; sourceTree = "<group>"; };
 		FB9E5A02 /* VaultFolderStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VaultFolderStoreTests.swift; sourceTree = "<group>"; };
@@ -265,6 +268,7 @@
 		FB000003 /* PersonProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonProfileTests.swift; sourceTree = "<group>"; };
 		FB000004 /* PersonDirectoryServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonDirectoryServiceTests.swift; sourceTree = "<group>"; };
 		FB00PCT1 /* PersonalCorrectionsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonalCorrectionsTests.swift; sourceTree = "<group>"; };
+		FB00CHT1 /* ContextHistoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContextHistoryTests.swift; sourceTree = "<group>"; };
 		FB000005 /* GraphAttendeeDecodeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GraphAttendeeDecodeTests.swift; sourceTree = "<group>"; };
 		FB000007 /* AudioEnvelopeProcessorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioEnvelopeProcessorTests.swift; sourceTree = "<group>"; };
 		FB000008 /* LLMChunkingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMChunkingTests.swift; sourceTree = "<group>"; };
@@ -385,6 +389,7 @@
 				FA000063 /* LocalTranscriber.swift */,
 				FA00PC02 /* PersonalCorrectionsView.swift */,
 				FA00PC01 /* PersonalCorrections.swift */,
+				FA00CH01 /* ContextHistory.swift */,
 				FA000090 /* AudioChunker.swift */,
 				CAFE0014 /* SettingsSyncService.swift */,
 				FA000091 /* AudioEnvelopeProcessor.swift */,
@@ -517,6 +522,7 @@
 				FB000003 /* PersonProfileTests.swift */,
 				FB000004 /* PersonDirectoryServiceTests.swift */,
 				FB00PCT1 /* PersonalCorrectionsTests.swift */,
+				FB00CHT1 /* ContextHistoryTests.swift */,
 				FB000005 /* GraphAttendeeDecodeTests.swift */,
 				FB000007 /* AudioEnvelopeProcessorTests.swift */,
 				FB000008 /* LLMChunkingTests.swift */,
@@ -660,6 +666,7 @@
 				AA000063 /* LocalTranscriber.swift in Sources */,
 				AA00PC02 /* PersonalCorrectionsView.swift in Sources */,
 				AA00PC01 /* PersonalCorrections.swift in Sources */,
+				AA00CH01 /* ContextHistory.swift in Sources */,
 				AA000090 /* AudioChunker.swift in Sources */,
 				AA000091 /* AudioEnvelopeProcessor.swift in Sources */,
 				AA000064 /* NotuleTitleExtractor.swift in Sources */,
@@ -761,6 +768,7 @@
 				AB000003 /* PersonProfileTests.swift in Sources */,
 				AB000004 /* PersonDirectoryServiceTests.swift in Sources */,
 				AB00PCT1 /* PersonalCorrectionsTests.swift in Sources */,
+				AB00CHT1 /* ContextHistoryTests.swift in Sources */,
 				AB000005 /* GraphAttendeeDecodeTests.swift in Sources */,
 				AB000007 /* AudioEnvelopeProcessorTests.swift in Sources */,
 				AB000008 /* LLMChunkingTests.swift in Sources */,

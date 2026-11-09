@@ -55,8 +55,7 @@ struct PersonalCorrectionsView: View {
             var cleaned = entry
             cleaned.canonical = entry.canonical.trimmingCharacters(in: .whitespacesAndNewlines)
             cleaned.variants = entry.variants.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            let next = PersonalCorrections.upsert(entries, entry: cleaned)
-            try PersonalCorrections.save(next); entries = next; error = ""
+            entries = try PersonalCorrections.saveRecording(cleaned, source: "handmatig"); error = ""
             if close { draft = nil }
         } catch { self.error = error.localizedDescription }
     }

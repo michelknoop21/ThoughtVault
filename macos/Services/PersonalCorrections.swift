@@ -53,6 +53,25 @@ enum PersonalCorrections {
         try FileManager.default.createDirectory(at: path.deletingLastPathComponent(), withIntermediateDirectories: true)
         try JSONEncoder().encode(document).write(to: path, options: .atomic)
     }
+    /// Upserts `entry` and saves; the stored version it replaces is kept in ContextHistory
+    /// under `source`. Returns the saved entries.
+    @discardableResult
+    static func saveRecording(_ entry: PersonalCorrection, source: String, to path: URL = url) throws -> [PersonalCorrection] {
+        let entries = try load(from: path)
+        let next = upsert(entries, entry: entry)
+        try validate(CorrectionDocument(entries: next))
+        // upsert may merge into an existing entry with the same term; record both old versions.
+        let saved = next.last
+        for old in entries where (old.id == entry.id || old.id == saved?.id) && old != saved {
+            try ContextHistory.record(kind: .term, itemId: old.id, source: source, snapshot: old)
+        }
+        try save(next, to: path)
+        return next
+    }
+    /// Puts an earlier version of a glossary entry back as a new version.
+    static func restore(_ entry: HistoryEntry, to path: URL = url) throws {
+        try saveRecording(JSONDecoder().decode(PersonalCorrection.self, from: Data(entry.snapshotJSON.utf8)), source: "herstel", to: path)
+    }
     static func validate(_ document: CorrectionDocument) throws {
         func invalid(_ message: String) -> NSError { NSError(domain: "PersonalCorrections", code: 1, userInfo: [NSLocalizedDescriptionKey: message]) }
         guard document.version == 1 || document.version == 2 else { throw invalid("Onbekend woordenlijstformaat.") }
@@ -137,7 +156,7 @@ enum PersonalCorrections {
     @MainActor
     static func contextBlock(entries: [PersonalCorrection], transcript: String, profileId: String?, provider: NotulenProvider) -> String {
         let people = PersonDirectoryService.shared.directoryPeople().map {
-            PersonContext(name: $0.name, role: $0.role, organization: $0.organization, responsibilities: [], aliases: $0.aliases)
+            PersonContext(name: $0.name, role: $0.role, organization: $0.organization, responsibilities: $0.responsibilities, aliases: $0.aliases)
         }
         return contextBlock(entries: entries, people: people, transcript: transcript, profileId: profileId, maxCharacters: contextBudget(for: provider),
                             extraTerms: (VaultFolderStore.readContextNote().map { VaultFolderStore.parseTerms(fromNote: $0) } ?? [])

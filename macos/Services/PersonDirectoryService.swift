@@ -60,10 +60,19 @@ final class PersonDirectoryService {
 
     // MARK: - Update
 
-    /// Updates a directory person by ID. Bumps updatedAt.
-    func update(_ person: PersonProfile) throws {
+    /// Changes a directory person and saves. The state from before `mutate` is kept in
+    /// ContextHistory under `source` ("handmatig", "gesprek:<taskId>", ...). Bumps updatedAt.
+    func update(_ person: PersonProfile, source: String, mutate: (PersonProfile) -> Void) throws {
+        try ContextHistory.record(kind: .person, itemId: person.id, source: source, snapshot: PersonSnapshot(person))
+        mutate(person)
         person.updatedAt = Date()
         try context.save()
+    }
+
+    /// Puts an earlier version back. The current state is recorded first, so nothing is lost.
+    func restore(_ entry: HistoryEntry, to person: PersonProfile) throws {
+        let snapshot = try JSONDecoder().decode(PersonSnapshot.self, from: Data(entry.snapshotJSON.utf8))
+        try update(person, source: "herstel") { snapshot.apply(to: $0) }
     }
 
     /// Convenience: update only the name field by ID.

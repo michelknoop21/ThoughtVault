@@ -165,14 +165,15 @@ struct PersonEditView: View {
 
         do {
             if let existing = person {
-                // Edit mode — mutate and update
-                existing.name = naam.trimmingCharacters(in: .whitespacesAndNewlines)
-                existing.role = rol.trimmingCharacters(in: .whitespacesAndNewlines)
-                existing.organization = organisatie.trimmingCharacters(in: .whitespacesAndNewlines)
-                existing.aliases = splitAndTrim(aliassen)
-                existing.expertiseTags = splitAndTrim(expertise)
-                existing.isInternal = internalStatus.boolValue
-                try service.update(existing)
+                // Edit mode: the service keeps the previous version in the history
+                try service.update(existing, source: "handmatig") { p in
+                    p.name = naam.trimmingCharacters(in: .whitespacesAndNewlines)
+                    p.role = rol.trimmingCharacters(in: .whitespacesAndNewlines)
+                    p.organization = organisatie.trimmingCharacters(in: .whitespacesAndNewlines)
+                    p.aliases = splitAndTrim(aliassen)
+                    p.expertiseTags = splitAndTrim(expertise)
+                    p.isInternal = internalStatus.boolValue
+                }
                 finishSave(person: existing)
             } else {
                 // New person mode

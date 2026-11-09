@@ -151,3 +151,26 @@ it("clears stale review fields only when a new validated replacement is saved", 
   expect(update).toHaveBeenCalledWith(partial.id, expect.objectContaining({ has_notes: true, notule_draft_html: "", notule_review_reason: "" }));
   expect(useRecordingStore.getState().backgroundTasks[0].status).toBe("completed");
 });
+
+it("keeps the recording retryable instead of downloading a missing model without a user action", async () => {
+  const { useSettingsStore } = await import("../../stores/settingsStore");
+  useSettingsStore.setState({ whisper_model: "parakeet-tdt-0.6b-v3", obsidian_enabled: false });
+  vi.mocked(listen).mockResolvedValue(() => {});
+  vi.mocked(invoke).mockImplementation(async command => {
+    if (command === "whisper_model_status") return { exists: false } as never;
+    if (command === "transcribe_local") return "Noor controleert vrijdag de offertes." as never;
+    return undefined as never;
+  });
+  const generate = vi.spyOn(LLMService, "generateNotulen").mockResolvedValue("<p>Noor controleert vrijdag de offertes.</p>");
+  const add = vi.fn();
+  useLocalTranscriptsStore.setState({ items: [], add, update: vi.fn() });
+  await processLocally("C:/eigen opnamen/één overleg.wav", "standaard", "microphone", [], 12, "local-needs-model");
+  expect(useRecordingStore.getState().backgroundTasks[0]).toMatchObject({
+    task_id: "local-needs-model", status: "failed", local_audio_path: "C:/eigen opnamen/één overleg.wav",
+    error_message: expect.stringContaining("Instellingen → Verwerking"),
+  });
+  expect(invoke).not.toHaveBeenCalledWith("download_whisper_model", expect.anything());
+  expect(invoke).not.toHaveBeenCalledWith("transcribe_local", expect.anything());
+  expect(generate).not.toHaveBeenCalled();
+  expect(add).not.toHaveBeenCalled();
+});

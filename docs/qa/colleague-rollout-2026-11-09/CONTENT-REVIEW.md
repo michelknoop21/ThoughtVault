@@ -62,3 +62,23 @@ van model/provider en geen kwaliteitspoort groen maken met mocks.
 Normale frontendtests: 227 PASS / 1 opt-in live gate overgeslagen. De uitgevoerde
 live gate staat hierboven apart en is rood. Geen nieuwe MSI geïnstalleerd of
 release gepubliceerd in deze uitvoeringsronde.
+
+## Vervolg: alternatieve route en één generatie (9 november 12:30 CET)
+
+Mistral Large 4 doorstaat de zes vaste auditgevallen na strikte verwerking van
+één volledig JSON-codeblok. GPT OSS 20b blijft de toestemmingsvoorwaarde verkeerd
+accepteren. Een tweede generatieve herschrijving verminkte eerder een correcte
+eerste notule; die onvoorwaardelijke herschrijving is daarom verwijderd. De
+bestaande bron- en inhoudsaudit controleren nu het oorspronkelijke concept.
+
+Job `6a1ccc67dbc04965846fb6b312a42d06` met Mistral Large 4 accepteerde automatisch
+3/3 concepten, maar onafhankelijke beoordeling geeft **2/3 bruikbaar**. Waddenspoor
+en Noorderlicht behouden de feiten. Bibliotheek bevat in het ruwe providerantwoord
+`Einrichtung` en `Sara beoordeelt deettes maandag 16 november.` De audit accepteert
+dit onterecht als volledig ondersteund; deze generatie telt niet als PASS. Alle
+centrale artifacts zijn met hun manifesthash gecontroleerd en hier bewaard.
+
+Taak 2 blijft open; geen gebruikersinstellingen aangepast. Een begrensde proef met
+Kimi K2.6 via dezelfde Ollama Cloud-verbinding is gestart als job
+`163c73591d5749c7bab6413320b2ea6c`, maximaal negen requests zonder retries. Dit
+is een empirische vergelijking, geen reeds gekozen pilotmodel.

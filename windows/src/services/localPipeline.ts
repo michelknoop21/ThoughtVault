@@ -67,21 +67,12 @@ export async function processLocally(
       updateBackgroundTask(taskId, { duration_seconds: durationSeconds });
       const model = settings.whisper_model || "medium";
 
-      // 1. Ensure the Whisper model is present (download on first use).
+      // Model setup is explicit; leave the recording available for a deliberate retry.
       const status = await invoke<WhisperModelStatus>("whisper_model_status", {
         modelId: model,
       });
       if (!status.exists) {
-        updateBackgroundTask(taskId, { status: "downloading", progress: 0 });
-        const unlistenDl = await listen<{ pct: number }>(
-          "whisper-download-progress",
-          (e) => updateBackgroundTask(taskId, { progress: e.payload.pct ?? 0 }),
-        );
-        try {
-          await invoke("download_whisper_model", { modelId: model });
-        } finally {
-          unlistenDl();
-        }
+        throw new Error("Transcriptiemodel ontbreekt. Download het gekozen model bij Instellingen → Verwerking en verwerk daarna deze opname opnieuw. De opname wordt niet gewijzigd.");
       }
 
       // 2. Transcribe on-device. Map whisper progress (0-100) → 10..50.

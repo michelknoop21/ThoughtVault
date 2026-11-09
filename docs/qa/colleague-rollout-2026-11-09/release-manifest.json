@@ -24,7 +24,7 @@
   "acceptedCandidate": null,
   "gates": {
     "source": "passed",
-    "content": "failed_model_decision_pending",
+    "content": "failed_alternate_model_under_test",
     "short": "failed",
     "long": "failed",
     "onboarding": "not_proven",
@@ -43,8 +43,16 @@
     "frontendTests": {
       "passed": 227,
       "skipped": 1
+    },
+    "latestComparison": {
+      "model": "mistral-large-4",
+      "job": "6a1ccc67dbc04965846fb6b312a42d06",
+      "productionAccepted": 3,
+      "independentlyUsable": 2,
+      "cases": 3,
+      "passed": false
     }
   },
   "unreleasedWorkCommit": "cce4bced01301e77e7eede7f9ea4426f93172982",
-  "pendingDecision": "Model route versus explicitly mandatory human approval"
+  "pendingDecision": "Kimi K2.6 empirical comparison running; no candidate released"
 }

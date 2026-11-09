@@ -1,0 +1,9 @@
+<h1>Verslag fictief planningsoverleg project Noorderlicht</h1>
+
+<section><h2>Kern</h2><p>Dit is een verslag van een fictief planningsoverleg over project Noorderlicht waarbij Mila Jansen en Oscar Visser aanwezig zijn. De servermigratie op maandag 16 november gaat niet door. Er is nog geen akkoord voor productie. Er mogen geen echte klantgegevens in de proef worden gebruikt.</p></section>
+
+<section><h2>Besproken onderwerpen</h2><p>De deelnemers bespraken de planning van project Noorderlicht. Aan de orde kwamen de servermigratie op maandag 16 november, een interne herstelproef op dinsdag 17 november om 10 uur, een controle van logbestanden op woensdag 18 november, de voorwaarden voor het wijzigen van productie en het gebruik van gegevens in de proef.</p></section>
+
+<section><h2>Besluiten</h2><p>De servermigratie op maandag 16 november gaat niet door. Productie mag pas worden gewijzigd nadat beide controles zijn geslaagd. Er is nog geen akkoord voor productie. Er mogen geen echte klantgegevens in de proef worden gebruikt.</p></section>
+
+<section><h2>Acties</h2><p>Mila Jansen voert op dinsdag 17 november om 10 uur een interne herstelproef uit. Oscar Visser controleert op woensdag 18 november de logbestanden.</p></section>

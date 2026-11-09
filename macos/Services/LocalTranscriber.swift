@@ -59,12 +59,17 @@ enum PersonalVocabulary {
             .map { $0 }
     }
 
-    /// Short correction instruction appended to the notule prompt; empty when no terms.
-    @MainActor
-    static func promptInstruction() -> String {
-        let all = terms()
-        guard !all.isEmpty else { return "" }
-        return "\n\nCorrecte spelling van namen en termen: \(all.joined(separator: ", ")). Corrigeer afwijkende spellingen hiervan in de transcriptie stilzwijgend."
+    /// One-time move of the free-text "Persoonlijke context" terms into the Woordenlijst (no variants).
+    static func migrateLegacyTerms(at path: URL = PersonalCorrections.url) throws {
+        guard let legacy = UserDefaults.standard.string(forKey: defaultsKey) else { return }
+        var entries = try PersonalCorrections.load(from: path)
+        var known = Set(entries.map { $0.canonical.lowercased() })
+        for term in legacy.components(separatedBy: CharacterSet(charactersIn: ",\n")).map({ $0.trimmingCharacters(in: .whitespacesAndNewlines) })
+        where PersonalCorrections.validTerm(term) && known.insert(term.lowercased()).inserted {
+            entries.append(PersonalCorrection(canonical: term, variants: []))
+        }
+        try PersonalCorrections.save(entries, to: path)
+        UserDefaults.standard.removeObject(forKey: defaultsKey)
     }
 }
 

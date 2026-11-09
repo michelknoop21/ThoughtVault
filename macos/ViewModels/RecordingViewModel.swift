@@ -924,8 +924,7 @@ final class RecordingViewModel {
                 systemPrompt: profile.systemPrompt ?? "",
                 notulePrompt: QuickNoteStore.promptBlock(QuickNoteStore.note(audioFilename: url.lastPathComponent))
                     + Self.injectParticipants(into: profile.notulePrompt ?? "", participants: participants)
-                    + PersonalVocabulary.promptInstruction()
-                    + PersonalCorrections.prompt(corrections, profileId: profile.id),
+                    + PersonalCorrections.contextBlock(entries: corrections, transcript: transcription, profileId: profile.id, provider: provider),
                 outputTemplate: profile.template
             ) { [weak self] chunk in
                 Task { @MainActor in
@@ -1053,8 +1052,7 @@ final class RecordingViewModel {
                 systemPrompt: profile.systemPrompt ?? "",
                 notulePrompt: QuickNoteStore.promptBlock(QuickNoteStore.note(forTranscriptId: taskId))
                     + Self.injectParticipants(into: profile.notulePrompt ?? "", participants: record.participants)
-                    + PersonalVocabulary.promptInstruction()
-                    + PersonalCorrections.prompt(corrections, profileId: profile.id),
+                    + PersonalCorrections.contextBlock(entries: corrections, transcript: record.rawTranscription, profileId: profile.id, provider: provider),
                 outputTemplate: profile.template
             ) { [weak self] _ in
                 Task { @MainActor in self?.updateTask(regenerationId, status: .generatingLocal, progress: 0.85) }

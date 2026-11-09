@@ -38,7 +38,7 @@ struct PersonalCorrectionsView: View {
                     }
                     Spacer()
                     Button("Bewerken") { draft = entry }
-                    Button("Verwijderen") { do { let next = entries.filter { $0.id != entry.id }; try PersonalCorrections.save(next); entries = next } catch { self.error = error.localizedDescription } }
+                    Button("Verwijderen") { do { try PersonalCorrections.delete(id: entry.id, source: "handmatig"); entries = try PersonalCorrections.load() } catch { self.error = error.localizedDescription } }
                 }
             }
             if draft == nil { Button("Woord toevoegen") { draft = PersonalCorrection() } }

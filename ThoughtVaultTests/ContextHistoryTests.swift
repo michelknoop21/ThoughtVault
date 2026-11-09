@@ -88,6 +88,42 @@ final class ContextHistoryTests: XCTestCase {
         XCTAssertEqual(versions.map(\.source), ["herstel", "handmatig"])
     }
 
+    func testDeletedTermCanBeRestored() throws {
+        let path = dir.appendingPathComponent("personal-corrections.json")
+        let keep = PersonalCorrection(canonical: "Prezent", variants: [])
+        let entry = PersonalCorrection(canonical: "Yinga", variants: ["Jengo"], note: "Merknaam")
+        try PersonalCorrections.saveRecording(keep, source: "handmatig", to: path)
+        try PersonalCorrections.saveRecording(entry, source: "handmatig", to: path)
+
+        try PersonalCorrections.delete(id: entry.id, source: "handmatig", to: path)
+
+        XCTAssertEqual(try PersonalCorrections.load(from: path), [keep])
+        let versions = ContextHistory.versions(kind: .term, itemId: entry.id)
+        XCTAssertEqual(versions.count, 1)
+        try PersonalCorrections.restore(versions[0], to: path)
+        XCTAssertEqual(try PersonalCorrections.load(from: path), [keep, entry])
+    }
+
+    /// upsert merges a new entry into an existing one with the same term: the saved
+    /// entry keeps the existing id, and its earlier state is recorded under that id.
+    func testSaveRecordingMergeRecordsExistingEntry() throws {
+        let path = dir.appendingPathComponent("personal-corrections.json")
+        let first = PersonalCorrection(canonical: "Yinga", variants: ["Jengo"])
+        let other = PersonalCorrection(canonical: "Prezent", variants: [])
+        try PersonalCorrections.saveRecording(first, source: "handmatig", to: path)
+        try PersonalCorrections.saveRecording(other, source: "handmatig", to: path)
+
+        let saved = try PersonalCorrections.saveRecording(PersonalCorrection(canonical: "yinga", variants: ["Django"]), source: "gesprek:t1", to: path)
+
+        XCTAssertEqual(saved.map(\.canonical), ["Prezent", "yinga"])
+        XCTAssertEqual(saved.last?.id, first.id)
+        XCTAssertEqual(saved.last?.variants, ["Jengo", "Django"])
+        let versions = ContextHistory.versions(kind: .term, itemId: first.id)
+        XCTAssertEqual(versions.map(\.source), ["gesprek:t1"])
+        XCTAssertEqual(try JSONDecoder().decode(PersonalCorrection.self, from: Data(versions[0].snapshotJSON.utf8)), first)
+        XCTAssertTrue(ContextHistory.versions(kind: .term, itemId: other.id).isEmpty)
+    }
+
     func testPersonSnapshotRoundTrip() throws {
         let person = PersonProfile(name: "Bram", role: "PM", emails: ["b@x.nl"], isInternal: false)
         person.responsibilities = ["Planning"]

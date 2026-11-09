@@ -162,6 +162,7 @@ final class LocalTranscriptStore {
             predicate: #Predicate { $0.isSelf == true }
         )
         if let existing = try? context.fetch(descriptor).first {
+            try ContextHistory.record(kind: .person, itemId: existing.id, source: "handmatig", snapshot: PersonSnapshot(existing))
             existing.name = name
             existing.role = role
             existing.organization = organization

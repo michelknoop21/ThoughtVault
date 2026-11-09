@@ -60,13 +60,21 @@ enum PersonalCorrections {
         let entries = try load(from: path)
         let next = upsert(entries, entry: entry)
         try validate(CorrectionDocument(entries: next))
-        // upsert may merge into an existing entry with the same term; record both old versions.
+        // upsert appends the saved entry last and may merge into an existing entry with
+        // the same term; record both old versions.
         let saved = next.last
         for old in entries where (old.id == entry.id || old.id == saved?.id) && old != saved {
             try ContextHistory.record(kind: .term, itemId: old.id, source: source, snapshot: old)
         }
         try save(next, to: path)
         return next
+    }
+    /// Removes an entry; its last state is kept in ContextHistory so `restore` can bring it back.
+    static func delete(id: String, source: String, to path: URL = url) throws {
+        let entries = try load(from: path)
+        guard let old = entries.first(where: { $0.id == id }) else { return }
+        try ContextHistory.record(kind: .term, itemId: id, source: source, snapshot: old)
+        try save(entries.filter { $0.id != id }, to: path)
     }
     /// Puts an earlier version of a glossary entry back as a new version.
     static func restore(_ entry: HistoryEntry, to path: URL = url) throws {

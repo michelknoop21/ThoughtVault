@@ -80,11 +80,11 @@ final class PersonalCorrectionsTests: XCTestCase {
         XCTAssertEqual(lines.count, 3)
     }
 
-    func testMigrateKeepsLegacyKeyWhenTermSkipped() throws {
+    func testMigrateDropsKeyAndSkipsInvalidTerms() throws {
         UserDefaults.standard.set("Yinga, Kapot<term>", forKey: PersonalVocabulary.defaultsKey)
         try PersonalVocabulary.migrateLegacyTerms(at: tmp)
         XCTAssertEqual(try PersonalCorrections.load(from: tmp).map(\.canonical), ["Yinga"])
-        XCTAssertNotNil(UserDefaults.standard.string(forKey: PersonalVocabulary.defaultsKey))
+        XCTAssertNil(UserDefaults.standard.string(forKey: PersonalVocabulary.defaultsKey))
     }
 
     func testBudgetSmallerThanFirstLineStillFillsWithShorterLine() {

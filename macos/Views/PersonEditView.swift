@@ -31,6 +31,8 @@ struct PersonEditView: View {
 
     @State private var isSaving: Bool = false
     @State private var showSaved: Bool = false
+    /// Bumped after each save so the history list reloads.
+    @State private var historyRefresh = 0
     @State private var saveError: String? = nil
 
     @Environment(\.dismiss) private var dismiss
@@ -157,21 +159,31 @@ struct PersonEditView: View {
 
     private var takenEditor: some View {
         VStack(alignment: .leading, spacing: TS.Spacing.xs) {
-            ForEach(taken, id: \.self) { taak in
-                HStack {
-                    Text(taak).font(TS.Font.body).foregroundStyle(Color.labelPrimary)
-                    Spacer()
-                    Button { taken.removeAll { $0 == taak } } label: { Image(systemName: "minus.circle") }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel("Verwijder \(taak)")
-                }
-            }
+            #if os(macOS)
+            ScrollView { takenRows }.frame(maxHeight: 120)
+            #else
+            takenRows
+            #endif
             HStack {
                 TextField("Nieuwe taak", text: $nieuweTaak)
                     .textFieldStyle(.roundedBorder)
                     .onSubmit(addTaak)
                 Button("Toevoegen", action: addTaak)
                     .disabled(nieuweTaak.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+        }
+    }
+
+    private var takenRows: some View {
+        VStack(alignment: .leading, spacing: TS.Spacing.xs) {
+            ForEach(Array(taken.enumerated()), id: \.offset) { index, taak in
+                HStack {
+                    Text(taak).font(TS.Font.body).foregroundStyle(Color.labelPrimary)
+                    Spacer()
+                    Button { taken.remove(at: index) } label: { Image(systemName: "minus.circle") }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Verwijder \(taak)")
+                }
             }
         }
     }
@@ -194,6 +206,7 @@ struct PersonEditView: View {
                 saveError = "Herstellen mislukt: \(error.localizedDescription)"
             }
         }
+        .id(historyRefresh)
     }
 
     // MARK: - Load
@@ -261,6 +274,7 @@ struct PersonEditView: View {
     private func finishSave(person: PersonProfile) {
         isSaving = false
         showSaved = true
+        historyRefresh += 1
         Task {
             try? await Task.sleep(for: .seconds(2))
             await MainActor.run {

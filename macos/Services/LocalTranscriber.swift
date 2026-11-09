@@ -21,7 +21,7 @@ private let logger = Logger(subsystem: "com.buildmind.ThoughtVault", category: "
 /// the correct spellings (e.g. "Michel" instead of "Migel").
 enum PersonalVocabulary {
 
-    /// UserDefaults key for the free-text terms in Settings ("Michel, Django, ...").
+    /// Legacy UserDefaults key for the free-text terms; only read by `migrateLegacyTerms`.
     static let defaultsKey = "personalVocabulary"
 
     // ponytail: cap terms to protect Whisper's 224-token prompt budget and
@@ -34,9 +34,7 @@ enum PersonalVocabulary {
     @MainActor
     static func terms(profileId: String? = nil) -> [String] {
         var raw: [String] = []
-        let custom = UserDefaults.standard.string(forKey: defaultsKey) ?? ""
         raw += PersonalCorrections.active((try? PersonalCorrections.load()) ?? [], profileId: profileId).map { $0.canonical }
-        raw += custom.components(separatedBy: CharacterSet(charactersIn: ",\n"))
 
         let context = LocalTranscriptStore.shared.container.mainContext
         if let people = try? context.fetch(FetchDescriptor<PersonProfile>()) {
@@ -63,17 +61,15 @@ enum PersonalVocabulary {
     static func migrateLegacyTerms(at path: URL = PersonalCorrections.url) throws {
         guard let legacy = UserDefaults.standard.string(forKey: defaultsKey) else { return }
         var entries = try PersonalCorrections.load(from: path)
-        var skipped = false
         let before = entries.count
         var known = Set(entries.map { $0.canonical.lowercased() })
         for term in legacy.components(separatedBy: CharacterSet(charactersIn: ",\n")).map({ $0.trimmingCharacters(in: .whitespacesAndNewlines) })
         where !term.isEmpty {
-            guard PersonalCorrections.validTerm(term) else { skipped = true; continue }
+            guard PersonalCorrections.validTerm(term) else { logger.info("Legacy term skipped during migration: \(term, privacy: .public)"); continue }
             if known.insert(term.lowercased()).inserted { entries.append(PersonalCorrection(canonical: term, variants: [])) }
         }
         if entries.count != before { try PersonalCorrections.save(entries, to: path) }
-        // Keep the legacy text when a term was skipped, so nothing is lost silently.
-        if !skipped { UserDefaults.standard.removeObject(forKey: defaultsKey) }
+        UserDefaults.standard.removeObject(forKey: defaultsKey)
     }
 }
 

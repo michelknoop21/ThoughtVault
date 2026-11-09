@@ -170,9 +170,7 @@ enum PersonalCorrections {
             PersonContext(name: $0.name, role: $0.role, organization: $0.organization, responsibilities: $0.responsibilities, aliases: $0.aliases)
         }
         return contextBlock(entries: entries, people: people, transcript: transcript, profileId: profileId, maxCharacters: contextBudget(for: provider),
-                            extraTerms: (VaultFolderStore.readContextNote().map { VaultFolderStore.parseTerms(fromNote: $0) } ?? [])
-                                // Interim: free text still editable in Settings until the field is removed.
-                                + (UserDefaults.standard.string(forKey: PersonalVocabulary.defaultsKey) ?? "").components(separatedBy: CharacterSet(charactersIn: ",\n")))
+                            extraTerms: VaultFolderStore.readContextNote().map { VaultFolderStore.parseTerms(fromNote: $0) } ?? [])
     }
     static func text(_ text: String, entries: [PersonalCorrection], profileId: String?, html: Bool = false) -> String {
         var replacements: [String: String] = [:]

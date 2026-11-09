@@ -41,7 +41,7 @@ struct PersonalCorrectionsView: View {
     @State private var query = ""
     @State private var error = ""
     #if os(macOS)
-    @State private var selection: String?
+    @State private var selection: Set<PersonalCorrection.ID> = []
     #endif
 
     private var shown: [PersonalCorrection] {
@@ -68,15 +68,15 @@ struct PersonalCorrectionsView: View {
                 Button("Term toevoegen") { editing = PersonalCorrection(variants: []) }
             }
             if entries.isEmpty {
-                VStack(alignment: .leading, spacing: TS.Spacing.sm) {
-                    Text("Nog geen termen. Voeg een term toe of corrigeer een woord in een notule.").foregroundStyle(Color.labelSecondary)
-                }.padding(.vertical, TS.Spacing.md)
+                Text("Nog geen termen. Voeg een term toe of corrigeer een woord in een notule.")
+                    .foregroundStyle(Color.labelSecondary)
+                    .padding(.vertical, TS.Spacing.md)
             } else {
+                TextField("Zoeken", text: $query).textFieldStyle(.roundedBorder).autocorrectionDisabled()
                 list
             }
             if !error.isEmpty { Text(error).foregroundStyle(Color.red).font(TS.Font.caption) }
         }
-        .searchable(text: $query, prompt: "Zoek in woordenlijst")
         .task { reload() }
         .sheet(item: $editing) { entry in
             CorrectionEditor(entry: entry, profiles: profiles, isNew: !entries.contains { $0.id == entry.id }, onChange: reload)
@@ -96,24 +96,30 @@ struct PersonalCorrectionsView: View {
             }.width(50)
         }
         .frame(minHeight: 280)
-        .onChange(of: selection) { _, id in
-            guard let id, let entry = entries.first(where: { $0.id == id }) else { return }
-            editing = entry
-            selection = nil
+        .contextMenu(forSelectionType: PersonalCorrection.ID.self) { ids in
+            if let entry = entries.first(where: { ids.contains($0.id) }) { Button("Bewerken") { editing = entry } }
+        } primaryAction: { ids in
+            // Double-click or Return
+            if let entry = entries.first(where: { ids.contains($0.id) }) { editing = entry }
         }
     }
     #else
     private var list: some View {
-        List(shown) { entry in
+        // Plain rows: the settings subpage Form already scrolls.
+        VStack(alignment: .leading, spacing: TS.Spacing.sm) { ForEach(shown) { entry in
             Button { editing = entry } label: {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(entry.canonical).fontWeight(.semibold)
+                    HStack {
+                        Text(entry.canonical).fontWeight(.semibold)
+                        if !entry.enabled { Text("Uit").font(TS.Font.caption) }
+                    }
                     if !variantsText(entry).isEmpty { Text("Herkend als \(variantsText(entry))").font(TS.Font.caption).foregroundStyle(Color.labelSecondary) }
                     if let note = entry.note, !note.isEmpty { Text(note).font(TS.Font.caption).foregroundStyle(Color.labelSecondary) }
                 }
-            }.buttonStyle(.plain)
-        }
-        .frame(minHeight: 320)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(entry.enabled ? Color.labelPrimary : Color.labelSecondary)
+        } }
     }
     #endif
 
@@ -139,6 +145,7 @@ struct CorrectionEditor: View {
             VStack(alignment: .leading, spacing: TS.Spacing.md) {
                 Text(isNew ? "Term toevoegen" : "Term bewerken").font(TS.Font.headline)
                 CorrectionFields(entry: $entry, profiles: profiles)
+                Toggle("Aan", isOn: $entry.enabled)
                 if !isNew {
                     Text("Geschiedenis").font(TS.Font.headline)
                     HistoryListView(kind: .term, itemId: entry.id) { restore($0) }

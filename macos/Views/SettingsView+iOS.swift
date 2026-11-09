@@ -52,11 +52,7 @@ extension SettingsView {
                     }
                     IOSDivider()
                     link(icon: "character.book.closed", title: "Woordenlijst", subtitle: "Namen en termen voor betere notulen.") {
-                        PersonalCorrectionsView(profiles: profiles)
-                            .padding(.horizontal, IOSMetric.gutter)
-                            .background(IOSBackground())
-                            .preferredColorScheme(.dark)
-                            .navigationTitle("Woordenlijst")
+                        subpage("Woordenlijst") { PersonalCorrectionsView(profiles: profiles) }
                     }
                     IOSDivider()
                     link(icon: "person.text.rectangle", title: "Over jou", subtitle: "Context voor betere notulen.") {

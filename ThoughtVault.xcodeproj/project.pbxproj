@@ -168,6 +168,132 @@
 		AA000067 /* ProfileTemplates.json in Resources */ = {isa = PBXBuildFile; fileRef = FA000067 /* ProfileTemplates.json */; };
 		AB000001 /* ThoughtVaultTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000001 /* ThoughtVaultTests.swift */; };
 		AAUP0001 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = SDUP0001 /* Sparkle */; platformFilters = (macos, ); };
+		69A946299389FC95A31753CB /* ThoughtVaultApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000001 /* ThoughtVaultApp.swift */; };
+		BFBDDFC8BD5DBCCEE9BB3D1F /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000002 /* ContentView.swift */; };
+		CE70F46EB82FC0E02341FC0D /* Color+Brand.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000003 /* Color+Brand.swift */; };
+		C992E12A9F75BA774464D54C /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000004 /* Theme.swift */; };
+		FAF79309FD5AB0DD574B7E14 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000005 /* Models.swift */; };
+		B98B9500E2D74EC32386765B /* TranscriptRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000061 /* TranscriptRecord.swift */; };
+		21EFD040AEE4E2087BFE0318 /* PersonProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000068 /* PersonProfile.swift */; };
+		EE46EAA04FA9E51BD53BCC19 /* AppMigrationPlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000069 /* AppMigrationPlan.swift */; };
+		30010DB6B00C5752975CA076 /* ProfileSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000070 /* ProfileSettingsView.swift */; };
+		8D3B1DE872D7C0F15192EEC8 /* PeopleDirectoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000072 /* PeopleDirectoryView.swift */; };
+		4F19064CA021CC1310287A30 /* PersonEditView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000073 /* PersonEditView.swift */; };
+		F526743AF4321F1A6F85821C /* SeedReviewSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000074 /* SeedReviewSheet.swift */; };
+		72C26EB28F1EEDB35C396E9B /* Participant.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000201 /* Participant.swift */; };
+		EC976A08470F53B4CC9F6373 /* ParticipantPickerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000202 /* ParticipantPickerSheet.swift */; };
+		07B9AB1C5FA8AE056C9DC513 /* ProfileTemplates.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000066 /* ProfileTemplates.swift */; };
+		FF4B2B2EB90A7A4C28013494 /* LocalTranscriptStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000062 /* LocalTranscriptStore.swift */; };
+		9D50F179AF913CBA129AFF66 /* PersonDirectoryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000071 /* PersonDirectoryService.swift */; };
+		88BAD6D1EE4B2257757B886A /* LocalTranscriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000063 /* LocalTranscriber.swift */; };
+		B1D10AB41AA9610D411227AF /* PersonalCorrectionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA00PC02 /* PersonalCorrectionsView.swift */; };
+		8875D757BB161BCC147860C7 /* PersonalCorrections.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA00PC01 /* PersonalCorrections.swift */; };
+		8FF27B6E18A90EF98DD80187 /* AudioChunker.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000090 /* AudioChunker.swift */; };
+		1A418B953FAFCEFDCCFFA337 /* AudioEnvelopeProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000091 /* AudioEnvelopeProcessor.swift */; };
+		6C2DFBE9B00BBB4840386CC9 /* NotuleTitleExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000064 /* NotuleTitleExtractor.swift */; };
+		D723621ACD955DDDB101DBD8 /* Analytics.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000006 /* Analytics.swift */; };
+		DD40A0E6ADF98C867B635301 /* APIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000007 /* APIService.swift */; };
+		27DDA4B5D18D918FF9BB526A /* AudioRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000008 /* AudioRecorder.swift */; };
+		AE2130EF2C6D5B706A6A446B /* AudioMixer.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000M1 /* AudioMixer.swift */; };
+		0BF89D95AB27505DDE904CFF /* AudioExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA00T19A /* AudioExtractor.swift */; };
+		537064E33617D5903A8C4F53 /* RecordingRecovery.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000C1 /* RecordingRecovery.swift */; };
+		D23314225557D9C4C1AD5B5B /* HTMLPlainText.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000E7 /* HTMLPlainText.swift */; };
+		66472F7361C4CB7C5BC25DF0 /* TranscriptSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000Q1 /* TranscriptSearch.swift */; };
+		B74E45FDC7F73618EC0381EE /* LocalTranscriptionQueue.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000L1 /* LocalTranscriptionQueue.swift */; };
+		E3DA3F9156A85ECFFA28641D /* ExportFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000X1 /* ExportFile.swift */; };
+		3C67C8AEB636FBDE7FD839F1 /* PrintCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000X2 /* PrintCommand.swift */; };
+		963E7F6A40A45BEDA7CD6653 /* NotuleAudit.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000N8 /* NotuleAudit.swift */; };
+		F2989054FE6E2130E893C3F6 /* NotuleGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000T1 /* NotuleGenerator.swift */; };
+		5A935BD00B5251609DE098B6 /* BiometricService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000009 /* BiometricService.swift */; };
+		AF2C410D5B41F46199D97BEC /* CalendarService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000010 /* CalendarService.swift */; };
+		12FA72337F4AEBB450C3300C /* MicrosoftGraphService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000050 /* MicrosoftGraphService.swift */; };
+		30A4A1590F40E6666B656992 /* CrashReporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000011 /* CrashReporter.swift */; };
+		52973B4CF8B2E88345A106D5 /* DebugLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000012 /* DebugLogger.swift */; };
+		454C0B68769007AED3B6A604 /* KeychainService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000013 /* KeychainService.swift */; };
+		A23EFFA926D54319F3536D8B /* HTMLToMarkdown.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000300 /* HTMLToMarkdown.swift */; };
+		1DE535FD7256E55DE22E4D11 /* ObsidianService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000301 /* ObsidianService.swift */; };
+		DBE3CB94EDD968D9603A3D83 /* VaultFolderStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000401 /* VaultFolderStore.swift */; };
+		ACD72B79FEE68085FEC690E2 /* LLMService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000014 /* LLMService.swift */; };
+		CD0587910450321492A85EF4 /* ProcessingAdvisor.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000K4 /* ProcessingAdvisor.swift */; };
+		11685BD636C7AE752A379481 /* WhisperModelStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000K3 /* WhisperModelStore.swift */; };
+		B971B9D6CA39EB0775BCB683 /* AppleFoundationModelService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000K2 /* AppleFoundationModelService.swift */; };
+		29AC450D5D6456AEABE3C258 /* AnthropicLLMService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000K1 /* AnthropicLLMService.swift */; };
+		1225DEE54C5F11F501DE7F20 /* NetworkMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000015 /* NetworkMonitor.swift */; };
+		141F2D5FCC802F15F8DD83BE /* OfflineQueue.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000016 /* OfflineQueue.swift */; };
+		2163B16A7A1E21C9DE0C2044 /* OnDeviceTranscriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000017 /* OnDeviceTranscriber.swift */; };
+		9BB2542FD5E3FC3AF167A963 /* SystemAudioCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000018 /* SystemAudioCapture.swift */; };
+		423B7A3E6F0DF422C42295C1 /* VideoCallDetectionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000059 /* VideoCallDetectionService.swift */; };
+		9C15166FCA4C58DD2D1A2FFD /* AuthViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000019 /* AuthViewModel.swift */; };
+		754D5ED8F4A74EAFEF5B9D29 /* RecordingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000020 /* RecordingViewModel.swift */; };
+		BC1FBC8564A6681ACDCC16C0 /* RecordingViewModel+Restart.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA9E5A01 /* RecordingViewModel+Restart.swift */; };
+		FBF07AB70FD0D5C74DD003B4 /* RecordingViewModel+Notule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000T2 /* RecordingViewModel+Notule.swift */; };
+		A4CA9C573E92699C8A0CE8A3 /* RecordingViewModel+Sleep.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000D1 /* RecordingViewModel+Sleep.swift */; };
+		46FFC6B1D33219939EFB68EB /* TasksViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000055 /* TasksViewModel.swift */; };
+		9F35613718A80A32BCA01EDF /* AccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000022 /* AccountView.swift */; };
+		600B641E715DCF071A4D0286 /* AdminView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000023 /* AdminView.swift */; };
+		67CD2AD20D18FB1AFAE01F10 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000024 /* HomeView.swift */; };
+		87C6FFEA1976B900AEA7E4B2 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000025 /* LoginView.swift */; };
+		A4364D4B6DE1298A381CD02D /* NotuleResultView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000026 /* NotuleResultView.swift */; };
+		DCDE572FA76CB1118126DDE8 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000027 /* OnboardingView.swift */; };
+		5EF9D76E9D559B8FCDCC8623 /* ProcessingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000028 /* ProcessingView.swift */; };
+		3AD1600824520BF1239FE28A /* ProfilesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000029 /* ProfilesView.swift */; };
+		3C74FCD92B117FFF7A1CCA63 /* RecordingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000030 /* RecordingView.swift */; };
+		668C9A73F2F12D991B6DFF2F /* QuickNoteStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000S4 /* QuickNoteStore.swift */; };
+		430991C83EA855CD3103A0A6 /* MainSidebar.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000S3 /* MainSidebar.swift */; };
+		CE88FF70931AB410D41B5518 /* HomeView+Studio.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000H1 /* HomeView+Studio.swift */; };
+		9B57EB1502C20EDAA98CFC12 /* OnboardingView+iOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000J2 /* OnboardingView+iOS.swift */; };
+		D2526AF56612BC8B19CD0AEA /* AccountView+iOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000J1 /* AccountView+iOS.swift */; };
+		E79868E1879C0FD03B00A5E6 /* ProfilesView+iOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000I9 /* ProfilesView+iOS.swift */; };
+		ADF08833A647392A15993E47 /* SettingsView+iOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000I8 /* SettingsView+iOS.swift */; };
+		BB8DBC4A23E23CF61059188E /* TranscriptDetail+iOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000I7 /* TranscriptDetail+iOS.swift */; };
+		2AFBCB91B6AE4D1016C96501 /* TranscriptsView+iOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000I6 /* TranscriptsView+iOS.swift */; };
+		401E085AFCB2376EBE2870B8 /* TasksView+iOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000I5 /* TasksView+iOS.swift */; };
+		DE35FCDC9AB2DCA87D0974C9 /* RecordingView+iOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000I4 /* RecordingView+iOS.swift */; };
+		BA7627760238A79BB8D62418 /* IOSProcessingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000I3 /* IOSProcessingView.swift */; };
+		E4AD559D22DE8747F9C6F46C /* HomeView+iOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000I2 /* HomeView+iOS.swift */; };
+		83D93888216AF4967B8669D6 /* HomeView+Card.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000H2 /* HomeView+Card.swift */; };
+		DAE9862785265E3CEA4CAFC8 /* HomeView+Panels.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000H3 /* HomeView+Panels.swift */; };
+		2EB5B389A582344A5083A86F /* HomeView+Side.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000H4 /* HomeView+Side.swift */; };
+		994D116A1A25F38DD352FD3D /* HomeDecor.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000H5 /* HomeDecor.swift */; };
+		895966C70988350EEE88A998 /* IOSTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000I1 /* IOSTheme.swift */; };
+		B064E235A84FEC734E5D99B0 /* RecordingView+Inspector.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000S2 /* RecordingView+Inspector.swift */; };
+		7CE40F1A7A24022A074685F6 /* RecordingView+Studio.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000S1 /* RecordingView+Studio.swift */; };
+		DC7D121D186F2C44F0902D68 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000031 /* SettingsView.swift */; };
+		825525A8990BF36A59F0ACEF /* SettingsView+VerwerkingSide.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000K8 /* SettingsView+VerwerkingSide.swift */; };
+		F4571C89E479D18DF7C6601B /* SettingsView+Verwerking.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000K7 /* SettingsView+Verwerking.swift */; };
+		EB2F34883F1AF554F86EBF01 /* SettingsView+Studio.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000K6 /* SettingsView+Studio.swift */; };
+		0CE3268CA29568C899DDCE43 /* HostedProviderConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000K5 /* HostedProviderConfig.swift */; };
+		F01B80B1F831A440DEEE29CD /* CloudProviderConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000CP1 /* CloudProviderConfig.swift */; };
+		E4189B0528CC9F6E2CBC8633 /* TranscriptsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000032 /* TranscriptsView.swift */; };
+		2F18AC211F758AD888268AFA /* OnboardingViewiOSStub.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000033 /* OnboardingViewiOSStub.swift */; };
+		D57A1B551B62D15D0EAD71D6 /* FloatingWidgetPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000034 /* FloatingWidgetPanel.swift */; };
+		6CAA9DE4370A05E262F0CA75 /* CallAlertView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000035 /* CallAlertView.swift */; };
+		AA1F7790EF326E581FC20504 /* ProfilePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000036 /* ProfilePicker.swift */; };
+		C4F2BC65ACE507324A759D5F /* RecordingWidgetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000037 /* RecordingWidgetView.swift */; };
+		D5CBF3FB80E1307FCCB4F20C /* ProcessingBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000060 /* ProcessingBar.swift */; };
+		85E7E528A41E3A47A8BA9C6F /* StatusBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000038 /* StatusBadge.swift */; };
+		F400DEBD8879168BDEB56283 /* PersonFormFields.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAFE0013 /* PersonFormFields.swift */; };
+		F6C07D496860E88669B58583 /* TagSuggestionList.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAFE0012 /* TagSuggestionList.swift */; };
+		738CFF0FEA4C6C9EB30EEBED /* SuggestingTextField.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAFE0011 /* SuggestingTextField.swift */; };
+		BD7BAAFBF47D9720A1844684 /* SettingsSyncService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAFE0014 /* SettingsSyncService.swift */; };
+		24DB45BDF6C6E56553B0DAD8 /* SpinningProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000F1 /* SpinningProgressView.swift */; };
+		2BC37F5418870BD49E74893A /* TranscriptCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000039 /* TranscriptCard.swift */; };
+		7DA0DBE31E1841E8E31D08B4 /* WaveformView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000040 /* WaveformView.swift */; };
+		1083DB313C44E69CB6AE8BDA /* PermissionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000051 /* PermissionManager.swift */; };
+		53ACE3D321DF5E80AE09A75B /* PermissionBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000052 /* PermissionBanner.swift */; };
+		98923C5BDF1FBC928A161B9B /* EditableHTMLWebView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000053 /* EditableHTMLWebView.swift */; };
+		F4DFB15E3F5260AB1C9ED3AB /* DraftReviewSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = FADF1101 /* DraftReviewSection.swift */; };
+		E8B48AFE71B57E4829485C26 /* MeetingNotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000054 /* MeetingNotificationService.swift */; };
+		A35EF7927202A8BF1D45ECA9 /* UpdateCheckService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000057 /* UpdateCheckService.swift */; };
+		A964E14BD8B550E2AC03919E /* GoogleAuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000058 /* GoogleAuthService.swift */; };
+		A07360D3FEBDAF68D9327F02 /* TasksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000056 /* TasksView.swift */; };
+		1C0B282982F32DD265B211FB /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = FA000041 /* Localizable.strings */; };
+		CFB647584DEC845B17AFE6EC /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = FA000042 /* Localizable.strings */; };
+		A2153F886454AABBC7D1AA12 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = FA000043 /* PrivacyInfo.xcprivacy */; };
+		8FD8EDF38F34ECC80B3B84D4 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = FA000046 /* Assets.xcassets */; };
+		59D4559821B7539107EB4ED1 /* ProfileTemplates.json in Resources */ = {isa = PBXBuildFile; fileRef = FA000067 /* ProfileTemplates.json */; };
+		B574C1F9B396FF3605203217 /* siriwave-MIT.txt in Resources */ = {isa = PBXBuildFile; fileRef = FASIRI01 /* siriwave-MIT.txt */; };
+		A8E86B545582AEF6E232112A /* WhisperKit in Frameworks */ = {isa = PBXBuildFile; productRef = FC0416C3791FB02F36F1DFE3 /* WhisperKit */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -346,6 +472,7 @@
 		FB000001 /* ThoughtVaultTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThoughtVaultTests.swift; sourceTree = "<group>"; };
 		FC000001 /* ThoughtVault.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ThoughtVault.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		FC000002 /* ThoughtVaultTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ThoughtVaultTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		4B0C1A153C3D40142C200C53 /* ThoughtVault.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ThoughtVault.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -362,6 +489,14 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		348F3A0191A6B54837C2FE36 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A8E86B545582AEF6E232112A /* WhisperKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -583,6 +718,7 @@
 			children = (
 				FC000001 /* ThoughtVault.app */,
 				FC000002 /* ThoughtVaultTests.xctest */,
+				4B0C1A153C3D40142C200C53 /* ThoughtVault.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -678,6 +814,26 @@
 			productReference = FC000002 /* ThoughtVaultTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
+		7FB6844DF6C3A8F560AFF951 /* ThoughtVault AppStore */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 77259BF67F4E39E84FFC88AE /* Build configuration list for PBXNativeTarget "ThoughtVault AppStore" */;
+			buildPhases = (
+				02A518B57A3B4523A8114B33 /* Sources */,
+				B9D7EC09AC32E2AF85C3D87E /* Resources */,
+				348F3A0191A6B54837C2FE36 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "ThoughtVault AppStore";
+			packageProductDependencies = (
+				FC0416C3791FB02F36F1DFE3 /* WhisperKit */,
+			);
+			productName = ThoughtVault;
+			productReference = 4B0C1A153C3D40142C200C53 /* ThoughtVault.app */;
+			productType = "com.apple.product-type.application";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -717,6 +873,7 @@
 			targets = (
 				TT000001 /* ThoughtVault */,
 				TT000002 /* ThoughtVaultTests */,
+				7FB6844DF6C3A8F560AFF951 /* ThoughtVault AppStore */,
 			);
 		};
 /* End PBXProject section */
@@ -732,6 +889,19 @@
 				AA000044 /* Assets.xcassets in Resources */,
 				AA000067 /* ProfileTemplates.json in Resources */,
 				AASIRI01 /* siriwave-MIT.txt in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B9D7EC09AC32E2AF85C3D87E /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1C0B282982F32DD265B211FB /* Localizable.strings in Resources */,
+				CFB647584DEC845B17AFE6EC /* Localizable.strings in Resources */,
+				A2153F886454AABBC7D1AA12 /* PrivacyInfo.xcprivacy in Resources */,
+				8FD8EDF38F34ECC80B3B84D4 /* Assets.xcassets in Resources */,
+				59D4559821B7539107EB4ED1 /* ProfileTemplates.json in Resources */,
+				B574C1F9B396FF3605203217 /* siriwave-MIT.txt in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -909,6 +1079,132 @@
 				AB00T19B /* tone-1s.mp4 in Resources */,
 				AB200002 /* dutch-qa.wav in Resources */,
 				AB00T19C /* video-no-audio.mp4 in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		02A518B57A3B4523A8114B33 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				69A946299389FC95A31753CB /* ThoughtVaultApp.swift in Sources */,
+				BFBDDFC8BD5DBCCEE9BB3D1F /* ContentView.swift in Sources */,
+				CE70F46EB82FC0E02341FC0D /* Color+Brand.swift in Sources */,
+				C992E12A9F75BA774464D54C /* Theme.swift in Sources */,
+				FAF79309FD5AB0DD574B7E14 /* Models.swift in Sources */,
+				B98B9500E2D74EC32386765B /* TranscriptRecord.swift in Sources */,
+				21EFD040AEE4E2087BFE0318 /* PersonProfile.swift in Sources */,
+				EE46EAA04FA9E51BD53BCC19 /* AppMigrationPlan.swift in Sources */,
+				30010DB6B00C5752975CA076 /* ProfileSettingsView.swift in Sources */,
+				8D3B1DE872D7C0F15192EEC8 /* PeopleDirectoryView.swift in Sources */,
+				4F19064CA021CC1310287A30 /* PersonEditView.swift in Sources */,
+				F526743AF4321F1A6F85821C /* SeedReviewSheet.swift in Sources */,
+				72C26EB28F1EEDB35C396E9B /* Participant.swift in Sources */,
+				EC976A08470F53B4CC9F6373 /* ParticipantPickerSheet.swift in Sources */,
+				07B9AB1C5FA8AE056C9DC513 /* ProfileTemplates.swift in Sources */,
+				FF4B2B2EB90A7A4C28013494 /* LocalTranscriptStore.swift in Sources */,
+				9D50F179AF913CBA129AFF66 /* PersonDirectoryService.swift in Sources */,
+				88BAD6D1EE4B2257757B886A /* LocalTranscriber.swift in Sources */,
+				B1D10AB41AA9610D411227AF /* PersonalCorrectionsView.swift in Sources */,
+				8875D757BB161BCC147860C7 /* PersonalCorrections.swift in Sources */,
+				8FF27B6E18A90EF98DD80187 /* AudioChunker.swift in Sources */,
+				1A418B953FAFCEFDCCFFA337 /* AudioEnvelopeProcessor.swift in Sources */,
+				6C2DFBE9B00BBB4840386CC9 /* NotuleTitleExtractor.swift in Sources */,
+				D723621ACD955DDDB101DBD8 /* Analytics.swift in Sources */,
+				DD40A0E6ADF98C867B635301 /* APIService.swift in Sources */,
+				27DDA4B5D18D918FF9BB526A /* AudioRecorder.swift in Sources */,
+				AE2130EF2C6D5B706A6A446B /* AudioMixer.swift in Sources */,
+				0BF89D95AB27505DDE904CFF /* AudioExtractor.swift in Sources */,
+				537064E33617D5903A8C4F53 /* RecordingRecovery.swift in Sources */,
+				D23314225557D9C4C1AD5B5B /* HTMLPlainText.swift in Sources */,
+				66472F7361C4CB7C5BC25DF0 /* TranscriptSearch.swift in Sources */,
+				B74E45FDC7F73618EC0381EE /* LocalTranscriptionQueue.swift in Sources */,
+				E3DA3F9156A85ECFFA28641D /* ExportFile.swift in Sources */,
+				3C67C8AEB636FBDE7FD839F1 /* PrintCommand.swift in Sources */,
+				963E7F6A40A45BEDA7CD6653 /* NotuleAudit.swift in Sources */,
+				F2989054FE6E2130E893C3F6 /* NotuleGenerator.swift in Sources */,
+				5A935BD00B5251609DE098B6 /* BiometricService.swift in Sources */,
+				AF2C410D5B41F46199D97BEC /* CalendarService.swift in Sources */,
+				12FA72337F4AEBB450C3300C /* MicrosoftGraphService.swift in Sources */,
+				30A4A1590F40E6666B656992 /* CrashReporter.swift in Sources */,
+				52973B4CF8B2E88345A106D5 /* DebugLogger.swift in Sources */,
+				454C0B68769007AED3B6A604 /* KeychainService.swift in Sources */,
+				A23EFFA926D54319F3536D8B /* HTMLToMarkdown.swift in Sources */,
+				1DE535FD7256E55DE22E4D11 /* ObsidianService.swift in Sources */,
+				DBE3CB94EDD968D9603A3D83 /* VaultFolderStore.swift in Sources */,
+				ACD72B79FEE68085FEC690E2 /* LLMService.swift in Sources */,
+				CD0587910450321492A85EF4 /* ProcessingAdvisor.swift in Sources */,
+				11685BD636C7AE752A379481 /* WhisperModelStore.swift in Sources */,
+				B971B9D6CA39EB0775BCB683 /* AppleFoundationModelService.swift in Sources */,
+				29AC450D5D6456AEABE3C258 /* AnthropicLLMService.swift in Sources */,
+				1225DEE54C5F11F501DE7F20 /* NetworkMonitor.swift in Sources */,
+				141F2D5FCC802F15F8DD83BE /* OfflineQueue.swift in Sources */,
+				2163B16A7A1E21C9DE0C2044 /* OnDeviceTranscriber.swift in Sources */,
+				9BB2542FD5E3FC3AF167A963 /* SystemAudioCapture.swift in Sources */,
+				423B7A3E6F0DF422C42295C1 /* VideoCallDetectionService.swift in Sources */,
+				9C15166FCA4C58DD2D1A2FFD /* AuthViewModel.swift in Sources */,
+				754D5ED8F4A74EAFEF5B9D29 /* RecordingViewModel.swift in Sources */,
+				BC1FBC8564A6681ACDCC16C0 /* RecordingViewModel+Restart.swift in Sources */,
+				FBF07AB70FD0D5C74DD003B4 /* RecordingViewModel+Notule.swift in Sources */,
+				A4CA9C573E92699C8A0CE8A3 /* RecordingViewModel+Sleep.swift in Sources */,
+				46FFC6B1D33219939EFB68EB /* TasksViewModel.swift in Sources */,
+				9F35613718A80A32BCA01EDF /* AccountView.swift in Sources */,
+				600B641E715DCF071A4D0286 /* AdminView.swift in Sources */,
+				67CD2AD20D18FB1AFAE01F10 /* HomeView.swift in Sources */,
+				87C6FFEA1976B900AEA7E4B2 /* LoginView.swift in Sources */,
+				A4364D4B6DE1298A381CD02D /* NotuleResultView.swift in Sources */,
+				DCDE572FA76CB1118126DDE8 /* OnboardingView.swift in Sources */,
+				5EF9D76E9D559B8FCDCC8623 /* ProcessingView.swift in Sources */,
+				3AD1600824520BF1239FE28A /* ProfilesView.swift in Sources */,
+				3C74FCD92B117FFF7A1CCA63 /* RecordingView.swift in Sources */,
+				668C9A73F2F12D991B6DFF2F /* QuickNoteStore.swift in Sources */,
+				430991C83EA855CD3103A0A6 /* MainSidebar.swift in Sources */,
+				CE88FF70931AB410D41B5518 /* HomeView+Studio.swift in Sources */,
+				9B57EB1502C20EDAA98CFC12 /* OnboardingView+iOS.swift in Sources */,
+				D2526AF56612BC8B19CD0AEA /* AccountView+iOS.swift in Sources */,
+				E79868E1879C0FD03B00A5E6 /* ProfilesView+iOS.swift in Sources */,
+				ADF08833A647392A15993E47 /* SettingsView+iOS.swift in Sources */,
+				BB8DBC4A23E23CF61059188E /* TranscriptDetail+iOS.swift in Sources */,
+				2AFBCB91B6AE4D1016C96501 /* TranscriptsView+iOS.swift in Sources */,
+				401E085AFCB2376EBE2870B8 /* TasksView+iOS.swift in Sources */,
+				DE35FCDC9AB2DCA87D0974C9 /* RecordingView+iOS.swift in Sources */,
+				BA7627760238A79BB8D62418 /* IOSProcessingView.swift in Sources */,
+				E4AD559D22DE8747F9C6F46C /* HomeView+iOS.swift in Sources */,
+				83D93888216AF4967B8669D6 /* HomeView+Card.swift in Sources */,
+				DAE9862785265E3CEA4CAFC8 /* HomeView+Panels.swift in Sources */,
+				2EB5B389A582344A5083A86F /* HomeView+Side.swift in Sources */,
+				994D116A1A25F38DD352FD3D /* HomeDecor.swift in Sources */,
+				895966C70988350EEE88A998 /* IOSTheme.swift in Sources */,
+				B064E235A84FEC734E5D99B0 /* RecordingView+Inspector.swift in Sources */,
+				7CE40F1A7A24022A074685F6 /* RecordingView+Studio.swift in Sources */,
+				DC7D121D186F2C44F0902D68 /* SettingsView.swift in Sources */,
+				825525A8990BF36A59F0ACEF /* SettingsView+VerwerkingSide.swift in Sources */,
+				F4571C89E479D18DF7C6601B /* SettingsView+Verwerking.swift in Sources */,
+				EB2F34883F1AF554F86EBF01 /* SettingsView+Studio.swift in Sources */,
+				0CE3268CA29568C899DDCE43 /* HostedProviderConfig.swift in Sources */,
+				F01B80B1F831A440DEEE29CD /* CloudProviderConfig.swift in Sources */,
+				E4189B0528CC9F6E2CBC8633 /* TranscriptsView.swift in Sources */,
+				2F18AC211F758AD888268AFA /* OnboardingViewiOSStub.swift in Sources */,
+				D57A1B551B62D15D0EAD71D6 /* FloatingWidgetPanel.swift in Sources */,
+				6CAA9DE4370A05E262F0CA75 /* CallAlertView.swift in Sources */,
+				AA1F7790EF326E581FC20504 /* ProfilePicker.swift in Sources */,
+				C4F2BC65ACE507324A759D5F /* RecordingWidgetView.swift in Sources */,
+				D5CBF3FB80E1307FCCB4F20C /* ProcessingBar.swift in Sources */,
+				85E7E528A41E3A47A8BA9C6F /* StatusBadge.swift in Sources */,
+				F400DEBD8879168BDEB56283 /* PersonFormFields.swift in Sources */,
+				F6C07D496860E88669B58583 /* TagSuggestionList.swift in Sources */,
+				738CFF0FEA4C6C9EB30EEBED /* SuggestingTextField.swift in Sources */,
+				BD7BAAFBF47D9720A1844684 /* SettingsSyncService.swift in Sources */,
+				24DB45BDF6C6E56553B0DAD8 /* SpinningProgressView.swift in Sources */,
+				2BC37F5418870BD49E74893A /* TranscriptCard.swift in Sources */,
+				7DA0DBE31E1841E8E31D08B4 /* WaveformView.swift in Sources */,
+				1083DB313C44E69CB6AE8BDA /* PermissionManager.swift in Sources */,
+				53ACE3D321DF5E80AE09A75B /* PermissionBanner.swift in Sources */,
+				98923C5BDF1FBC928A161B9B /* EditableHTMLWebView.swift in Sources */,
+				F4DFB15E3F5260AB1C9ED3AB /* DraftReviewSection.swift in Sources */,
+				E8B48AFE71B57E4829485C26 /* MeetingNotificationService.swift in Sources */,
+				A35EF7927202A8BF1D45ECA9 /* UpdateCheckService.swift in Sources */,
+				A964E14BD8B550E2AC03919E /* GoogleAuthService.swift in Sources */,
+				A07360D3FEBDAF68D9327F02 /* TasksView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1171,6 +1467,82 @@
 			};
 			name = Release;
 		};
+		C3A7F75973E2A5E37E69CDF1 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "macos/ThoughtVault-AppStore.entitlements";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 309;
+				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = XL9KN38ATX;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
+				ENABLE_RESOURCE_ACCESS_AUDIO_INPUT = YES;
+				ENABLE_RESOURCE_ACCESS_CALENDARS = YES;
+				ENABLE_RESOURCE_ACCESS_CAMERA = YES;
+				ENABLE_USER_SELECTED_FILES = readwrite;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = macos/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.2;
+				MARKETING_VERSION = 1.0.309;
+				PRODUCT_BUNDLE_IDENTIFIER = com.buildmind.ThoughtVault;
+				PRODUCT_NAME = ThoughtVault;
+				SUPPORTED_PLATFORMS = macosx;
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) APP_STORE";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		B2BB9B2103E6B2E83A2FF034 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "macos/ThoughtVault-AppStore.entitlements";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 309;
+				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = XL9KN38ATX;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
+				ENABLE_RESOURCE_ACCESS_AUDIO_INPUT = YES;
+				ENABLE_RESOURCE_ACCESS_CALENDARS = YES;
+				ENABLE_RESOURCE_ACCESS_CAMERA = YES;
+				ENABLE_USER_SELECTED_FILES = readwrite;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = macos/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.2;
+				MARKETING_VERSION = 1.0.309;
+				PRODUCT_BUNDLE_IDENTIFIER = com.buildmind.ThoughtVault;
+				PRODUCT_NAME = ThoughtVault;
+				SUPPORTED_PLATFORMS = macosx;
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) APP_STORE";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -1201,6 +1573,15 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		77259BF67F4E39E84FFC88AE /* Build configuration list for PBXNativeTarget "ThoughtVault AppStore" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C3A7F75973E2A5E37E69CDF1 /* Debug */,
+				B2BB9B2103E6B2E83A2FF034 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
@@ -1222,6 +1603,11 @@
 			productName = WhisperKit;
 		};
 		SDUP0001 /* Sparkle */ = {isa = XCSwiftPackageProductDependency; package = SPUP0001 /* Sparkle */; productName = Sparkle; };
+		FC0416C3791FB02F36F1DFE3 /* WhisperKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = SP000001 /* XCRemoteSwiftPackageReference "WhisperKit" */;
+			productName = WhisperKit;
+		};
 /* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = PP000001 /* Project object */;

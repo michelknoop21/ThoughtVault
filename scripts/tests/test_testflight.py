@@ -44,6 +44,8 @@ class TestFlightTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertNotIn('altool', calls)
         self.assertEqual(calls.count('-exportArchive'), 2)
+        self.assertIn('-scheme ThoughtVault AppStore -configuration Release -destination generic/platform=macOS', calls)
+        self.assertIn('-scheme ThoughtVault -configuration Release -destination generic/platform=iOS', calls)
         self.assertTrue(all('<string>upload</string>' not in p for p in plists.values()))
         self.assertIn('nothing uploaded', result.stdout)
 

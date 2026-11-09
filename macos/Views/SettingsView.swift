@@ -172,7 +172,9 @@ struct SettingsView: View {
             if !isLocalProcessing {
                 verbindingSection
             }
+            #if !APP_STORE
             updatesSection
+            #endif
             overSection
         }
     }

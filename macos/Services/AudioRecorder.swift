@@ -455,12 +455,17 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
         return true
     }
 
-    /// Deletes recordings older than 7 days, protecting any URLs in the given set.
-    static func cleanupOldRecordings(protecting protectedURLs: Set<URL>) {
+    /// Deletes processed recordings older than 7 days, protecting any URLs in the given set.
+    /// Files without a transcript record (by name, directly or via their combined file) are never deleted.
+    static func cleanupOldRecordings(protecting protectedURLs: Set<URL>, knownRecordingNames: Set<String>) {
         let cutoff = Date().addingTimeInterval(-cleanupAge)
         let fm = FileManager.default
         for url in savedRecordingURLs() {
             guard !protectedURLs.contains(url) else { continue }
+            let combinedName = UserDefaults.standard.string(forKey: "combinedAudio_\(url.lastPathComponent)")
+                .map { URL(fileURLWithPath: $0).lastPathComponent }
+            guard knownRecordingNames.contains(url.lastPathComponent)
+                    || combinedName.map(knownRecordingNames.contains) == true else { continue }
             guard let attrs = try? fm.attributesOfItem(atPath: url.path),
                   let created = attrs[.creationDate] as? Date,
                   created < cutoff

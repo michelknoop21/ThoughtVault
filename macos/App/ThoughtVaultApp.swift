@@ -45,8 +45,11 @@ struct ThoughtVaultApp: App {
                     updateCheckService.isBusy = { recordingVM.updateIsBusy }
                     #endif
                     await permissionManager.checkAllPermissions()
+                    let recovered = RecordingRecovery.recoverOrphans(recordingVM.audioRecorder.getOrphanedRecordings())
+                    if !recovered.isEmpty { recordingVM.loadSavedRecordings() }
                     AudioRecorder.cleanupOldRecordings(
-                        protecting: recordingVM.offlineQueue.queuedAudioURLs
+                        protecting: recordingVM.offlineQueue.queuedAudioURLs,
+                        knownRecordingNames: Set(LocalTranscriptStore.shared.allRecords().map(\.filename))
                     )
                     await recordingVM.processQueueOnStartupIfNeeded()
                     MeetingNotificationService.shared.setup()

@@ -918,7 +918,7 @@ final class RecordingViewModel {
         do {
             try Task.checkCancellation()
             let service = LLMServiceFactory.service(for: provider, serverURL: "")
-            let corrections = try PersonalCorrections.load()
+            let corrections = PersonalCorrections.loadOrEmpty()
             let html = try await service.generateNotulen(
                 transcription: PersonalCorrections.text(transcription, entries: corrections, profileId: profile.id),
                 systemPrompt: profile.systemPrompt ?? "",
@@ -1047,7 +1047,7 @@ final class RecordingViewModel {
 
         let service = LLMServiceFactory.service(for: provider, serverURL: "")
         do {
-            let corrections = try PersonalCorrections.load()
+            let corrections = PersonalCorrections.loadOrEmpty()
             let html = try await service.generateNotulen(
                 transcription: PersonalCorrections.text(record.rawTranscription, entries: corrections, profileId: profile.id),
                 systemPrompt: profile.systemPrompt ?? "",
@@ -1519,7 +1519,7 @@ final class RecordingViewModel {
     /// The server never sees the quick note: a finished cloud notule gets its Notities section
     /// on the client and is written back. Once per task, so repeated completion events stay quiet; a regenerate forces it because the server wiped the section.
     func addNotesSectionToCloudNotule(taskId: String, html: String, profileId: String? = nil, force: Bool = false) async throws -> String {
-        let entries = try PersonalCorrections.load()
+        let entries = PersonalCorrections.loadOrEmpty()
         let withNotes = QuickNoteStore.ensureNotesSection(html, note: QuickNoteStore.note(forTranscriptId: taskId))
         let fixed = PersonalCorrections.html(withNotes, entries: entries, profileId: profileId)
         guard fixed != html, force || notesSectionWritten.insert(taskId).inserted else { return fixed }

@@ -4,7 +4,8 @@ import Security
 final class KeychainService: Sendable {
     static let shared = KeychainService()
 
-    private let serviceIdentifier = "com.buildmind.ThoughtVault"
+    /// Tests get their own keychain service so they never touch the user's real tokens.
+    private let serviceIdentifier = AppEnvironment.isRunningTests ? "com.buildmind.ThoughtVault.tests" : "com.buildmind.ThoughtVault"
 
     /// Keys that sync via iCloud Keychain so a Mac-configured credential is
     /// available on the iPhone (e.g. the Ollama Cloud API key).

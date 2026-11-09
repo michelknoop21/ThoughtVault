@@ -18,6 +18,8 @@ struct PersonEditView: View {
     let person: PersonProfile?
     /// Fields for a new person taken from a conversation suggestion.
     var prefill: PersonSuggestion? = nil
+    /// Meeting type of the conversation the prefill came from (same as PersonMatcher.autoApply).
+    var prefillMeetingType: String = ""
     /// Called right after a new person was stored, before the saved confirmation delay.
     var onAdded: ((PersonProfile) -> Void)? = nil
     let onSave: (PersonProfile) -> Void
@@ -131,16 +133,16 @@ struct PersonEditView: View {
                     Button {
                         savePerson()
                     } label: {
-                        if isSaving {
+                        if showSaved {
+                            HStack(spacing: TS.Spacing.xs) {
+                                Image(systemName: "checkmark")
+                                Text("Opgeslagen")
+                            }
+                        } else if isSaving {
                             HStack(spacing: TS.Spacing.xs) {
                                 ProgressView()
                                     .controlSize(.small)
                                 Text(saveLabel)
-                            }
-                        } else if showSaved {
-                            HStack(spacing: TS.Spacing.xs) {
-                                Image(systemName: "checkmark")
-                                Text("Opgeslagen")
                             }
                         } else {
                             Text(saveLabel)
@@ -306,6 +308,8 @@ struct PersonEditView: View {
                     isInternal: internalStatus.boolValue
                 )
                 newPerson.responsibilities = taken
+                let meetingType = prefillMeetingType.trimmingCharacters(in: .whitespacesAndNewlines)
+                if prefill != nil, !meetingType.isEmpty { newPerson.meetingTypes = [meetingType] }
                 try service.add(newPerson)
                 onAdded?(newPerson)
                 finishSave(person: newPerson)
@@ -317,13 +321,15 @@ struct PersonEditView: View {
     }
 
     private func finishSave(person: PersonProfile) {
-        isSaving = false
+        // A new person stays saving until onSave, so a second tap cannot add it twice.
+        isSaving = isNewPerson
         showSaved = true
         historyRefresh += 1
         Task {
             try? await Task.sleep(for: .seconds(2))
             await MainActor.run {
                 showSaved = false
+                isSaving = false
                 onSave(person)
             }
         }

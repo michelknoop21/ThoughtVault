@@ -78,6 +78,14 @@ struct ContextSuggestionSet: Codable, Equatable, Sendable {
     }
 }
 
+extension TermSuggestion: Identifiable {
+    var id: String { ContextSuggestions.dismissKey(for: .term(self)) }
+}
+
+extension PersonSuggestion: Identifiable {
+    var id: String { ContextSuggestions.dismissKey(for: .person(self)) }
+}
+
 enum ContextSuggestionItem: Hashable, Sendable {
     case term(TermSuggestion)
     case person(PersonSuggestion)

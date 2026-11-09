@@ -53,10 +53,6 @@ enum ContextSuggestionBarLogic {
     private static func trim(_ text: String) -> String { text.trimmingCharacters(in: .whitespacesAndNewlines) }
 }
 
-extension PersonSuggestion: Identifiable {
-    var id: String { ContextSuggestions.dismissKey(for: .person(self)) }
-}
-
 struct ContextSuggestionBar: View {
     let taskId: String
     /// Meeting type added to a person chosen from an ambiguous suggestion.
@@ -71,7 +67,6 @@ struct ContextSuggestionBar: View {
     @State private var directory: [String: PersonProfile] = [:]
     @State private var expanded = false
     @State private var error = ""
-    @State private var correction: PersonalCorrection?
     @State private var pendingTerm: TermSuggestion?
     @State private var addingPerson: PersonSuggestion?
     /// The DEBUG screenshot sample is shown read-only.
@@ -79,19 +74,21 @@ struct ContextSuggestionBar: View {
 
     var body: some View {
         panel
-            .task(id: taskId) { reload() }
+            .task(id: taskId) { error = ""; reload() }
             .onReceive(NotificationCenter.default.publisher(for: .contextSuggestionsUpdated)) { note in
                 if note.userInfo?["taskId"] as? String == taskId { reload() }
             }
-            .sheet(item: $correction) { entry in
+            .sheet(item: $pendingTerm) { term in
+                let entry = PersonalCorrection(canonical: term.canonical, variants: [term.heard], scope: scope,
+                                               note: term.note.isEmpty ? nil : term.note)
                 WordCorrectionSheet(entry: entry, profiles: profiles) { draft, remember in
                     try await applyCorrection(draft, remember)
-                    if let term = pendingTerm { finish(.term(term)) }
+                    finish(.term(term))
                 }
             }
             .sheet(item: $addingPerson) { suggestion in
                 // Removed as soon as the person exists, so closing the sheet early cannot leave it to be added twice.
-                PersonEditView(person: nil, prefill: suggestion, onAdded: { _ in finish(.person(suggestion)) }) { _ in
+                PersonEditView(person: nil, prefill: suggestion, prefillMeetingType: profileName, onAdded: { _ in finish(.person(suggestion)) }) { _ in
                     addingPerson = nil
                 }
             }
@@ -108,7 +105,7 @@ struct ContextSuggestionBar: View {
                     ForEach(set.people) { person in Divider(); personRow(person) }
                 }
                 if !error.isEmpty {
-                    Text(error).font(TS.Font.caption).foregroundStyle(Color.statusError)
+                    Text(error).font(TS.Font.caption).foregroundStyle(Color.statusErrorText)
                 }
             }
             .padding(.horizontal, TS.Spacing.md)
@@ -120,11 +117,12 @@ struct ContextSuggestionBar: View {
     }
 
     private var header: some View {
-        Button { withAnimation(TS.Animation.smooth) { expanded.toggle() } } label: {
+        let counter = ContextSuggestionBarLogic.counter(terms: set.terms.count, people: set.people.count)
+        return Button { withAnimation(TS.Animation.smooth) { expanded.toggle() } } label: {
             HStack(spacing: TS.Spacing.sm) {
                 Image(systemName: "lightbulb").foregroundStyle(Color.brandPrimary)
                 Text("Voorstellen").font(TS.Font.footnoteSemibold).foregroundStyle(Color.labelPrimary)
-                Text(ContextSuggestionBarLogic.counter(terms: set.terms.count, people: set.people.count))
+                Text(counter)
                     .font(TS.Font.footnote).foregroundStyle(Color.labelSecondary)
                 Spacer(minLength: 0)
                 Image(systemName: "chevron.down")
@@ -134,24 +132,22 @@ struct ContextSuggestionBar: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(expanded ? "Voorstellen inklappen" : "Voorstellen uitklappen")
+        .accessibilityLabel("Voorstellen, " + counter)
+        .accessibilityHint(expanded ? "Inklappen" : "Uitklappen")
     }
 
     // MARK: - Rows
 
     private func termRow(_ term: TermSuggestion) -> some View {
         row(title: "\(term.heard) → \(term.canonical)", detail: [term.note]) {
-            Button("Toevoegen") {
-                pendingTerm = term
-                correction = PersonalCorrection(canonical: term.canonical, variants: [term.heard], scope: scope,
-                                                note: term.note.isEmpty ? nil : term.note)
-            }
-            .buttonStyle(.borderedProminent)
+            Button("Toevoegen") { pendingTerm = term }.buttonStyle(.borderedProminent)
             ignoreButton(.term(term))
         }
     }
 
+    /// Fewer than two candidates left in the directory: offered as a new person.
     @ViewBuilder private func personRow(_ s: PersonSuggestion) -> some View {
+        let candidates = s.candidateIds.compactMap { directory[$0] }
         if let id = s.matchedPersonId {
             let current = directory[id]
             let summary = current.map { ContextSuggestionBarLogic.changeSummary(s, current: PersonSnapshot($0)) } ?? []
@@ -159,13 +155,12 @@ struct ContextSuggestionBar: View {
                 Button("Bijwerken") { update(s) }.buttonStyle(.borderedProminent)
                 ignoreButton(.person(s))
             }
-        } else if s.candidateIds.count > 1 {
-            let candidates = s.candidateIds.compactMap { directory[$0] }
+        } else if candidates.count > 1 {
             row(title: ContextSuggestionBarLogic.ambiguousQuestion(candidates.map(\.name)), detail: [s.name]) {
                 ForEach(candidates, id: \.id) { person in
                     Button(person.name) { choose(person.id, for: s) }.buttonStyle(.bordered)
                 }
-                Button("Geen van beiden") { var new = s; new.candidateIds = []; replace(s, with: new) }
+                Button(candidates.count > 2 ? "Geen van deze" : "Geen van beiden") { var new = s; new.candidateIds = []; replace(s, with: new) }
                     .buttonStyle(.bordered)
                 ignoreButton(.person(s))
             }
@@ -191,7 +186,11 @@ struct ContextSuggestionBar: View {
                 HStack(spacing: TS.Spacing.sm) { buttons }
                 VStack(alignment: .leading, spacing: TS.Spacing.xs) { buttons }
             }
+            #if os(iOS)
+            .controlSize(.regular)
+            #else
             .controlSize(.small)
+            #endif
             .tint(Color.brandPrimary)
             .disabled(isSample)
             .padding(.top, TS.Spacing.xs)
@@ -278,7 +277,7 @@ struct ContextSuggestionBar: View {
         guard Self.debugTaskId == taskId else { return nil }
         let people = PersonDirectoryService.shared.directoryPeople()
         var sample = ContextSuggestionSet(
-            terms: [TermSuggestion(heard: "Jengo", canonical: "Yinga", note: "Adviesbureau voor AI-toepassingen"),
+            terms: [TermSuggestion(heard: "Kuber netes", canonical: "Kubernetes", note: "Platform voor containerbeheer"),
                     TermSuggestion(heard: "Thought fold", canonical: "ThoughtVault", note: "")],
             people: [PersonSuggestion(name: "Sanne Bakker", role: "Projectleider", organization: "Gemeente Utrecht",
                                       responsibilities: ["Planning", "Subsidieaanvraag"], topics: ["Subsidie"],

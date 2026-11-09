@@ -26,6 +26,8 @@ struct PersonEditView: View {
     @State private var aliassen: String = ""
     @State private var expertise: String = ""
     @State private var internalStatus: InternalStatus = .onbekend
+    @State private var taken: [String] = []
+    @State private var nieuweTaak: String = ""
 
     @State private var isSaving: Bool = false
     @State private var showSaved: Bool = false
@@ -78,9 +80,24 @@ struct PersonEditView: View {
                 personFields
             }
             .labelsHidden()
+
+            VStack(alignment: .leading, spacing: TS.Spacing.sm) {
+                Text("Taken en verantwoordelijkheden").font(TS.Font.headline)
+                takenEditor
+            }
+            if let person {
+                VStack(alignment: .leading, spacing: TS.Spacing.sm) {
+                    Text("Geschiedenis").font(TS.Font.headline)
+                    ScrollView { historyList(person) }.frame(maxHeight: 120)
+                }
+            }
             #else
-            Form { personFields }
-                .formStyle(.grouped)
+            Form {
+                personFields
+                Section("Taken en verantwoordelijkheden") { takenEditor }
+                if let person { Section("Geschiedenis") { historyList(person) } }
+            }
+            .formStyle(.grouped)
             #endif
 
             // Save button + feedback
@@ -136,6 +153,49 @@ struct PersonEditView: View {
         )
     }
 
+    // MARK: - Responsibilities and history
+
+    private var takenEditor: some View {
+        VStack(alignment: .leading, spacing: TS.Spacing.xs) {
+            ForEach(taken, id: \.self) { taak in
+                HStack {
+                    Text(taak).font(TS.Font.body).foregroundStyle(Color.labelPrimary)
+                    Spacer()
+                    Button { taken.removeAll { $0 == taak } } label: { Image(systemName: "minus.circle") }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Verwijder \(taak)")
+                }
+            }
+            HStack {
+                TextField("Nieuwe taak", text: $nieuweTaak)
+                    .textFieldStyle(.roundedBorder)
+                    .onSubmit(addTaak)
+                Button("Toevoegen", action: addTaak)
+                    .disabled(nieuweTaak.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+        }
+    }
+
+    /// Trims and ignores duplicates, case-insensitive.
+    private func addTaak() {
+        let taak = nieuweTaak.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !taak.isEmpty else { return }
+        if !taken.contains(where: { $0.caseInsensitiveCompare(taak) == .orderedSame }) { taken.append(taak) }
+        nieuweTaak = ""
+    }
+
+    private func historyList(_ person: PersonProfile) -> some View {
+        HistoryListView(kind: .person, itemId: person.id) { entry in
+            do {
+                try PersonDirectoryService.shared.restore(entry, to: person)
+                loadFields()
+                saveError = nil
+            } catch {
+                saveError = "Herstellen mislukt: \(error.localizedDescription)"
+            }
+        }
+    }
+
     // MARK: - Load
 
     private func loadFields() {
@@ -146,6 +206,7 @@ struct PersonEditView: View {
         aliassen = p.aliases.joined(separator: ", ")
         expertise = p.expertiseTags.joined(separator: ", ")
         internalStatus = InternalStatus.from(p.isInternal)
+        taken = p.responsibilities
     }
 
     // MARK: - Save
@@ -173,6 +234,7 @@ struct PersonEditView: View {
                     p.aliases = splitAndTrim(aliassen)
                     p.expertiseTags = splitAndTrim(expertise)
                     p.isInternal = internalStatus.boolValue
+                    p.responsibilities = taken
                 }
                 finishSave(person: existing)
             } else {
@@ -186,6 +248,7 @@ struct PersonEditView: View {
                     isSelf: false,
                     isInternal: internalStatus.boolValue
                 )
+                newPerson.responsibilities = taken
                 try service.add(newPerson)
                 finishSave(person: newPerson)
             }

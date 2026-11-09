@@ -1,0 +1,46 @@
+{
+  "mode": "real_response_replay",
+  "pass": false,
+  "results": [
+    {
+      "name": "correcte_parafrase",
+      "expected_accept": true,
+      "accepted": true,
+      "reason": "",
+      "calls": 1,
+      "well_formed_report": true,
+      "target_semantic_finding": false,
+      "pass": true
+    },
+    {
+      "name": "tweede_actie_ontbreekt",
+      "expected_accept": false,
+      "accepted": false,
+      "reason": "Ontbrekend controlebewijs bij T6",
+      "calls": 1,
+      "well_formed_report": false,
+      "target_semantic_finding": false,
+      "pass": false
+    },
+    {
+      "name": "tegenstrijdige_toestemming",
+      "expected_accept": false,
+      "accepted": false,
+      "reason": "De notule spreekt de bron tegen: Klantgegevens mogen toch naar externe diensten worden gestuurd.",
+      "calls": 1,
+      "well_formed_report": true,
+      "target_semantic_finding": true,
+      "pass": true
+    },
+    {
+      "name": "opname10_ambigue_bron_numerieke_invulling",
+      "expected_accept": false,
+      "accepted": false,
+      "reason": "De inhoudscontrole is onzeker; beoordeel het concept",
+      "calls": 1,
+      "well_formed_report": true,
+      "target_semantic_finding": true,
+      "pass": true
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+﻿[
+    {
+        "requestSha256":  "DE51924150A5BB6F3F811BC79B313A871D969E91047E1CB1319EC39C0EE141A1",
+        "status":  "response_preserved",
+        "name":  "correcte_parafrase",
+        "model":  "gpt-oss:120b",
+        "responseSha256":  "F99504B3D0ADF8B9C90FFBCB11136EC76B4715543F2D4E1A2A916C66BD1D9F77"
+    },
+    {
+        "requestSha256":  "63D5A2CA4A14FE872B2E5716AC5F101E4EFFA4807D64F4344F0B0498FB43E6EA",
+        "status":  "response_preserved",
+        "name":  "tweede_actie_ontbreekt",
+        "model":  "gpt-oss:120b",
+        "responseSha256":  "3DD484937860268E5F17EE113A3A1312DDF5FE2A05B5989097AD9995C0F149C9"
+    },
+    {
+        "requestSha256":  "C2F9C021067983EC4885FFAC482511E573F6207C32E0A55BDE0BD81E879C3E9E",
+        "status":  "response_preserved",
+        "name":  "tegenstrijdige_toestemming",
+        "model":  "gpt-oss:120b",
+        "responseSha256":  "8325AE74DD862F06786A3C6B4409CF783C23C754AA346447A6F017C349379487"
+    },
+    {
+        "requestSha256":  "205D69D5FF0814CF76FB90D5E08AE8789C640BC88967157C08C5E25CE30CC0B3",
+        "status":  "response_preserved",
+        "name":  "verkeerd_budget",
+        "model":  "gpt-oss:120b",
+        "responseSha256":  "0ACC5D1C2CA21A64ADF3BD26014D4B05EFEFE406C33337E158510D194033880D"
+    },
+    {
+        "requestSha256":  "266E4B457953AF07CC9522DC29220FFEC78DA6ACCC43C664D0C9BB5F4AA44676",
+        "status":  "response_preserved",
+        "name":  "opname10_ambigue_bron_numerieke_invulling",
+        "model":  "gpt-oss:120b",
+        "responseSha256":  "D8148F6D4E1E5D69C43A2B1DE860E184E35DFB3DCFFD2AB5BF53E44EB1894D35"
+    }
+]

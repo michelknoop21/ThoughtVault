@@ -1,0 +1,21 @@
+{
+  "uncertain": false,
+  "source": [
+    {"id": "T1", "status": "covered", "evidence": ["N1"]},
+    {"id": "T2", "status": "covered", "evidence": ["N2"]},
+    {"id": "T3", "status": "covered", "evidence": ["N1"]},
+    {"id": "T4", "status": "covered", "evidence": ["N3"]},
+    {"id": "T5", "status": "covered", "evidence": ["N4"]},
+    {"id": "T6", "status": "covered", "evidence": ["N4"]},
+    {"id": "T7", "status": "covered", "evidence": ["N5"]},
+    {"id": "T8", "status": "covered", "evidence": ["N2"]}
+  ],
+  "notes": [
+    {"id": "N1", "status": "supported", "evidence": ["T1", "T3"]},
+    {"id": "N2", "status": "supported", "evidence": ["T2", "T8"]},
+    {"id": "N3", "status": "supported", "evidence": ["T4"]},
+    {"id": "N4", "status": "supported", "evidence": ["T5", "T6"]},
+    {"id": "N5", "status": "supported", "evidence": ["T7"]},
+    {"id": "N6", "status": "contradiction", "evidence": ["T4"]}
+  ]
+}

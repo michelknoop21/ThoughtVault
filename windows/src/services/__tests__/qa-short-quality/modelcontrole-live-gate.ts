@@ -1,13 +1,13 @@
 // QA-only. Place beside modelcontrole-regressiefixtures.json in
 // windows/src/services/__tests__/qa-short-quality/ in the existing Mac test tree.
 // Import explicitly in the existing DOM-enabled test route. No automatic calls.
-import { auditNotule } from "../../notuleAudit";
+import { auditSource, auditNotule } from "../../notuleAudit";
 import fixture from "./modelcontrole-regressiefixtures.json";
 
 type Request = (system: string, user: string) => Promise<string>;
 type Unit = { id: string; text: string };
 type Verdict = { id: string; status: string; evidence: string[] };
-type Report = { source: Verdict[]; notes: Verdict[]; uncertain: boolean };
+type Report = { source: { id: string; status: string }[]; notes: Verdict[]; uncertain: boolean };
 function validSide(value: unknown, units: Unit[], references: Unit[], statuses: string[]): value is Verdict[] {
   if (!Array.isArray(value) || value.length !== units.length) return false;
   const ids = new Set(units.map(unit => unit.id));
@@ -28,7 +28,7 @@ type Evidence = {
 };
 
 /** Use the existing approved provider adapter, never a mock or an exported key.
- * Call once per code/prompt revision: four cases, no retries. Record only these
+ * Call once per code/prompt revision: six cases, at most two requests each, no retries. Record only these
  * fictional prompts/model texts, never transport headers or credential data.
  */
 export async function runShortModelGate(
@@ -47,10 +47,21 @@ export async function runShortModelGate(
     let reason = "";
     let payload: { source: Unit[]; notes: Unit[] } | undefined;
     let report: Report | undefined;
+    let sourceReport: { uncertain?: unknown } | undefined;
+    let sourceAccepted = false;
     try {
+      await auditSource(testCase.source, "", async (system, user) => {
+        calls++;
+        record({ kind: "request", case_name: `${testCase.name}.source`, system, user });
+        const response = await request(system, user);
+        record({ kind: "response", case_name: `${testCase.name}.source`, response });
+        try { sourceReport = JSON.parse(response.trim()); } catch { sourceReport = undefined; }
+        return response;
+      });
+      sourceAccepted = true;
       await auditNotule(testCase.source, testCase.html, "", async (system, user) => {
         calls++;
-        if (calls > 1) throw new Error("QA: unexpected additional audit request");
+        if (calls > 2) throw new Error("QA: unexpected additional audit request");
         payload = JSON.parse(user.slice(user.indexOf("\n") + 1));
         record({ kind: "request", case_name: testCase.name, system, user });
         const response = await request(system, user);
@@ -62,15 +73,26 @@ export async function runShortModelGate(
     } catch (error) {
       reason = error instanceof Error ? error.message : String(error);
     }
-    const wellFormed = !!(payload && report && typeof report.uncertain === "boolean"
-      && validSide(report.source, payload.source, payload.notes, ["covered", "non_factual", "missing", "uncertain"])
-      && validSide(report.notes, payload.notes, payload.source, ["supported", "non_factual", "contradiction", "unsupported", "uncertain"]));
+    const validSource = !!(sourceReport && typeof sourceReport.uncertain === "boolean");
+    const sourceIds = new Set(payload?.source.map(unit => unit.id));
+    const validAuditSource = !!(report && Array.isArray(report.source) && report.source.length === sourceIds.size
+      && report.source.every(unit => unit && sourceIds.delete(unit.id) && ["covered", "non_factual", "missing", "uncertain"].includes(unit.status)));
+    const wellFormed = validSource && (!sourceAccepted || !!(payload && report && typeof report.uncertain === "boolean"
+      && validAuditSource
+      && validSide(report.notes, payload.notes, payload.source, ["supported", "non_factual", "contradiction", "unsupported", "uncertain"])));
     // A transport error, malformed JSON or unrelated rejection is not a negative PASS.
-    let targetFinding = false;
+    let targetFinding = testCase.name === "opname10_ambigue_bron_numerieke_invulling" && validSource
+      && sourceReport?.uncertain === true;
     if (wellFormed && payload && report) {
       if (testCase.name === "tweede_actie_ontbreekt") {
         const id = payload.source.find(unit => unit.text.includes("Iris controleert de inhoud"))?.id;
         targetFinding = report.source.some(unit => unit.id === id && unit.status === "missing");
+      } else if (testCase.name === "voorwaarde_wordt_opdracht") {
+        const id = payload.notes.find(unit => unit.text.includes("schriftelijke goedkeuring geven"))?.id;
+        targetFinding = report.notes.some(unit => unit.id === id && ["unsupported", "contradiction"].includes(unit.status));
+      } else if (testCase.name === "verkeerd_budget") {
+        const id = payload.notes.find(unit => unit.text.includes("Het budget bedraagt 15.000 euro"))?.id;
+        targetFinding = report.notes.some(unit => unit.id === id && ["contradiction", "unsupported"].includes(unit.status));
       } else if (testCase.name === "tegenstrijdige_toestemming") {
         const id = payload.notes.find(unit => unit.text.includes("Klantgegevens mogen toch"))?.id;
         targetFinding = report.notes.some(unit => unit.id === id && unit.status === "contradiction");
@@ -86,7 +108,7 @@ export async function runShortModelGate(
       calls,
       well_formed_report: wellFormed,
       target_semantic_finding: targetFinding,
-      pass: calls === 1 && wellFormed && (testCase.expect_accept ? accepted : !accepted && targetFinding),
+      pass: calls === (sourceAccepted ? 2 : 1) && wellFormed && (testCase.expect_accept ? accepted : !accepted && targetFinding),
     });
   }
   return { pass: results.every(result => result.pass), results };

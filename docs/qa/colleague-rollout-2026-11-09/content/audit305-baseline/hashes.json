@@ -1,0 +1,50 @@
+[
+  {
+    "file": "REPLAY.json",
+    "sha256": "9da60d2ca9cd6d84c5c0de98698cf73bf8b9340b586b11f6e682bcf9cd176696"
+  },
+  {
+    "file": "correcte_parafrase.request.json",
+    "sha256": "a49a20a5c0b33cd352133ecf52b1ce130682b5321f37fd7107432bcf54dfe81f"
+  },
+  {
+    "file": "correcte_parafrase.response.txt",
+    "sha256": "f99504b3d0adf8b9c90ffbcb11136ec76b4715543f2d4e1a2a916c66bd1d9f77"
+  },
+  {
+    "file": "opname10_ambigue_bron_numerieke_invulling.request.json",
+    "sha256": "f24252fc38c40f4515a0f581c85f84f9d05e09ecfc38c88a6cd176da601f8dc8"
+  },
+  {
+    "file": "opname10_ambigue_bron_numerieke_invulling.response.txt",
+    "sha256": "fc3e3b9ede75b94d6524369a5e9d9b7493958edbf12615692ddf8fa640c18990"
+  },
+  {
+    "file": "short305.request.json",
+    "sha256": "3ea07493fefcf344e012d97295dfe3347406ab28d4f6ba7d3b5647e2b9ebd406"
+  },
+  {
+    "file": "short305.response.txt",
+    "sha256": "63941fe2172576dd35e7190b9b6fa314095260c41d0109f9341c2c8754bc26a1"
+  },
+  {
+    "file": "tegenstrijdige_toestemming.request.json",
+    "sha256": "071a181d47404b359c030c087d7af0f37deba49db44829f7909098dac1d7b5f6"
+  },
+  {
+    "file": "tegenstrijdige_toestemming.response.txt",
+    "sha256": "c27ab1fd42a3157fefd29fea1f59a4ca9485f2b5078289303de93c63c8db4173"
+  },
+  {
+    "file": "transport-results.json",
+    "sha256": "288fa2085d0b0c6a964eb7bd0054f9f746801ceeade594096454bd47fb449ca6"
+  },
+  {
+    "file": "tweede_actie_ontbreekt.request.json",
+    "sha256": "1a1742a344f213ef268bbd188aad1a6cd127b313bdd9875be1139af9c9b03e92"
+  },
+  {
+    "file": "tweede_actie_ontbreekt.response.txt",
+    "sha256": "24f59b0f3362880d36c50d51c87bd32356916cc859d450b8614ece3609d64031"
+  }
+]

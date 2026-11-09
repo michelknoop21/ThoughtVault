@@ -9,7 +9,7 @@ import { isOllamaCloudURL } from "./ollamaModels";
 
 import { usePersonalCorrectionsStore } from "../stores/personalCorrectionsStore";
 import { correctText, correctHTML, correctionPrompt } from "./personalCorrections";
-import { auditNotule, NotuleReviewError } from "./notuleAudit";
+import { auditSource, auditNotule, NotuleReviewError } from "./notuleAudit";
 
 interface LLMConfig {
   provider: NotulenProvider;
@@ -24,7 +24,7 @@ interface LLMConfig {
 type ProgressCallback = (chunk: string) => void;
 
 // These constraints must survive both chunk summaries and the final profile.
-const FACTUALITY_RULES = "Behoud expliciete ontkenningen, verboden, voorwaarden en vervallen afspraken bij het bijbehorende besluit of de actie, ook in een compacte notule. Behoud ook de aard en status van het besprokene: een fictief of hypothetisch voorbeeld mag geen echte afspraak worden, een voorgenomen proef geen uitgevoerd project. Een uitnodiging is geen aanwezigheid; vermeld expliciete afwezigheid. Een open vraag is geen besluit: presenteer onbesliste onderwerpen niet als opdracht of afgesproken vervolg. Voeg geen vervolgafspraken toe die niet zijn genoemd. Controleer vóór het antwoorden alle besluiten en acties tegen de transcriptie op deze beperkingen en herstel weglatingen.";
+const FACTUALITY_RULES = "Behoud expliciete ontkenningen, verboden, voorwaarden en vervallen afspraken bij het bijbehorende besluit of de actie, ook in een compacte notule. Behoud ook de aard en status van het besprokene: een fictief of hypothetisch voorbeeld mag geen echte afspraak worden, een voorgenomen proef geen uitgevoerd project. Noem een expliciet fictieve of hypothetische status ook expliciet in de kern van het verslag. Leid daaruit geen ongenoemde uitvoeringsstatus af: zeg alleen dat iets al wel of nog niet is uitgevoerd als de bron dat expliciet vermeldt. Een uitnodiging is geen aanwezigheid; vermeld expliciete afwezigheid. Een open vraag is geen besluit: presenteer onbesliste onderwerpen niet als opdracht of afgesproken vervolg. Voeg geen vervolgafspraken toe die niet zijn genoemd. Een toestemmingsvoorwaarde is geen opdracht of toezegging om die toestemming te geven; maak daar geen actie van. Controleer vóór het antwoorden alle besluiten en acties tegen de transcriptie op deze beperkingen en herstel weglatingen.";
 
 function getConfig(): LLMConfig {
   const settings = useSettingsStore.getState();
@@ -250,6 +250,7 @@ export class LLMService {
       if (!checked.trim()) throw new Error("De inhoudscontrole gaf geen notule terug. De transcriptie is bewaard.");
       const html = finish(checked);
       candidate = html;
+      await auditSource(correctText(transcription, corrections, profile.id), quickNote, generate);
       await auditNotule(correctText(transcription, corrections, profile.id), html, quickNote, generate, constraints);
       onProgress?.(html);
       return html;

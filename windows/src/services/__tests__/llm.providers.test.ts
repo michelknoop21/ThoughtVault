@@ -1,7 +1,7 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { LLMService } from "../llm";
-import { auditFixture } from "./notuleAuditFixtures";
+import { auditFixture, sourceFixture } from "./notuleAuditFixtures";
 
 const corrections = vi.hoisted(() => ({entries:[] as import("../personalCorrections").PersonalCorrection[]}));
 const { loadCredential } = vi.hoisted(() => ({ loadCredential: vi.fn() }));
@@ -12,6 +12,10 @@ vi.mock("../tauriCommands", () => ({ loadCredential }));
 vi.mock("@tauri-apps/api/core", () => ({ invoke: (...args: unknown[]) => {
   const request = (args[1] as { request?: { body?: string } })?.request;
   const messages = request?.body ? JSON.parse(request.body).messages : [];
+  if (messages.at(-1)?.content.startsWith("Broncontrole")) {
+    const content = sourceFixture(messages.at(-1).content);
+    return Promise.resolve({ status: 200, body: JSON.stringify({ choices: [{ message: { content } }], content: [{ type: "text", text: content }] }) });
+  }
   return messages.at(-1)?.content.startsWith("Inhoudsaudit (geen generatie):") ? auditInvoke(...args) : invoke(...args);
 } }));
 

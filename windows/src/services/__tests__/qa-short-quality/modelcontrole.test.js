@@ -1,14 +1,14 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { expect, it } from "vitest";
-import { auditFixture } from "../notuleAuditFixtures";
+import { auditFixture, sourceFixture } from "../notuleAuditFixtures";
 import { runShortModelGate } from "./modelcontrole-live-gate";
 
 it("does not count transport failures or malformed replies as semantic rejection", async () => {
   for (const reply of [async () => { throw new Error("offline"); }, async () => "not JSON"]) {
     const result = await runShortModelGate(reply, () => {});
     expect(result.pass).toBe(false);
-    expect(result.results).toHaveLength(4);
+    expect(result.results).toHaveLength(6);
     expect(result.results.every(item => item.calls === 1 && !item.pass && !item.well_formed_report)).toBe(true);
   }
 });
@@ -16,18 +16,31 @@ it("does not count transport failures or malformed replies as semantic rejection
 it("does not count fabricated all-positive evidence as a passed model gate", async () => {
   const result = await runShortModelGate(async (_system, user) => auditFixture(user), () => {});
   expect(result.pass).toBe(false);
-  expect(result.results.map(item => item.pass)).toEqual([true, false, false, false]);
+  expect(result.results.map(item => item.pass)).toEqual([true, false, false, false, false, false]);
 });
 
 it("recognizes targeted schema-valid findings in synthetic harness self-checks", async () => {
   const result = await runShortModelGate(async (_system, user) => {
     const input = JSON.parse(user.slice(user.indexOf("\n") + 1));
+    if (!input.notes) {
+      if (input.source.startsWith("En 70% mensen")) {
+        const report = JSON.parse(sourceFixture(user)); report.uncertain = true;
+        return JSON.stringify(report);
+      }
+      return sourceFixture(user);
+    }
     const report = JSON.parse(auditFixture(user));
-    if (!input.source.some(unit => unit.text.includes("Iris controleert de inhoud"))) {
+    if (input.source.some(unit => unit.text.startsWith("En 70% mensen"))) {
       report.uncertain = true;
-    } else if (!input.notes.some(unit => unit.text.includes("Iris beoordeelt"))) {
+    } else if (input.notes.some(unit => unit.text.includes("schriftelijke goedkeuring geven"))) {
+      const id = input.notes.find(unit => unit.text.includes("schriftelijke goedkeuring geven")).id;
+      Object.assign(report.notes.find(unit => unit.id === id), { status: "unsupported", evidence: [] });
+    } else if (!input.notes.some(unit => /Iris (beoordeelt|controleert) .*inhoud/u.test(unit.text))) {
       const id = input.source.find(unit => unit.text.includes("Iris controleert de inhoud")).id;
       Object.assign(report.source.find(unit => unit.id === id), { status: "missing", evidence: [] });
+    } else if (input.notes.some(unit => unit.text.includes("Het budget bedraagt 15.000 euro"))) {
+      const id = input.notes.find(unit => unit.text.includes("Het budget bedraagt 15.000 euro")).id;
+      Object.assign(report.notes.find(unit => unit.id === id), { status: "contradiction", evidence: [] });
     } else if (input.notes.some(unit => unit.text.includes("Klantgegevens mogen toch"))) {
       const id = input.notes.find(unit => unit.text.includes("Klantgegevens mogen toch")).id;
       Object.assign(report.notes.find(unit => unit.id === id), { status: "contradiction", evidence: [] });
@@ -47,7 +60,8 @@ it.runIf(process.env.TV_AUDIT_MODE === "prepare" || process.env.TV_AUDIT_MODE ==
     mkdirSync(dir, { recursive: true });
     let currentCase = "";
     const prepare = process.env.TV_AUDIT_MODE === "prepare";
-    const result = await runShortModelGate(async () => {
+    const result = await runShortModelGate(async (_system, user) => {
+      if (prepare && currentCase.endsWith(".source")) return sourceFixture(user);
       if (prepare) throw new Error("QA preparation only; no provider request");
       return readFileSync(resolve(dir, `${currentCase}.response.txt`), "utf8");
     }, evidence => {
@@ -67,7 +81,7 @@ it.runIf(process.env.TV_AUDIT_MODE === "prepare" || process.env.TV_AUDIT_MODE ==
       mode: prepare ? "prepared_only_no_provider_calls" : "real_response_replay",
       ...result,
     }, null, 2) + "\n", { flag: "wx" });
-    if (prepare) expect(result.results.every(item => item.calls === 1)).toBe(true);
+    if (prepare) expect(result.results.every(item => item.calls === 2)).toBe(true);
     else expect(result.pass).toBe(true);
   },
 );

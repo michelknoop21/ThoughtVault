@@ -1,0 +1,32 @@
+{
+  "uncertain": false,
+  "source": [
+    {"id": "T1", "status": "covered", "evidence": ["N3", "N8"]},
+    {"id": "T2", "status": "covered", "evidence": ["N4", "N8", "N10"]},
+    {"id": "T3", "status": "covered", "evidence": ["N5", "N8", "N11"]},
+    {"id": "T4", "status": "covered", "evidence": ["N6", "N8", "N12"]},
+    {"id": "T5", "status": "covered", "evidence": ["N16", "N8"]},
+    {"id": "T6", "status": "covered", "evidence": ["N17", "N8"]},
+    {"id": "T7", "status": "covered", "evidence": ["N14", "N8"]},
+    {"id": "T8", "status": "covered", "evidence": ["N13", "N8"]}
+  ],
+  "notes": [
+    {"id": "N1", "status": "non_factual", "evidence": []},
+    {"id": "N2", "status": "non_factual", "evidence": []},
+    {"id": "N3", "status": "supported", "evidence": ["T1"]},
+    {"id": "N4", "status": "supported", "evidence": ["T2"]},
+    {"id": "N5", "status": "supported", "evidence": ["T3"]},
+    {"id": "N6", "status": "supported", "evidence": ["T4"]},
+    {"id": "N7", "status": "non_factual", "evidence": []},
+    {"id": "N8", "status": "supported", "evidence": ["T1", "T2", "T3", "T4", "T5", "T6", "T7", "T8"]},
+    {"id": "N9", "status": "non_factual", "evidence": []},
+    {"id": "N10", "status": "supported", "evidence": ["T2"]},
+    {"id": "N11", "status": "supported", "evidence": ["T3"]},
+    {"id": "N12", "status": "supported", "evidence": ["T4"]},
+    {"id": "N13", "status": "supported", "evidence": ["T8"]},
+    {"id": "N14", "status": "supported", "evidence": ["T7"]},
+    {"id": "N15", "status": "non_factual", "evidence": []},
+    {"id": "N16", "status": "supported", "evidence": ["T5"]},
+    {"id": "N17", "status": "supported", "evidence": ["T6"]}
+  ]
+}

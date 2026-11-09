@@ -1,0 +1,23 @@
+{
+  "uncertain": false,
+  "source": [
+    {"id":"T1","status":"covered"},
+    {"id":"T2","status":"missing"},
+    {"id":"T3","status":"covered"},
+    {"id":"T4","status":"covered"},
+    {"id":"T5","status":"covered"},
+    {"id":"T6","status":"covered"},
+    {"id":"T7","status":"covered"},
+    {"id":"T8","status":"covered"}
+  ],
+  "notes": [
+    {"id":"N1","status":"supported","evidence":["T1"]},
+    {"id":"N2","status":"contradiction","evidence":[]},
+    {"id":"N3","status":"supported","evidence":["T3"]},
+    {"id":"N4","status":"supported","evidence":["T4"]},
+    {"id":"N5","status":"supported","evidence":["T5"]},
+    {"id":"N6","status":"supported","evidence":["T6"]},
+    {"id":"N7","status":"supported","evidence":["T7"]},
+    {"id":"N8","status":"supported","evidence":["T8"]}
+  ]
+}

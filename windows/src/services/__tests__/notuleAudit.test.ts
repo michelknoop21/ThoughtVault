@@ -122,3 +122,19 @@ it("renders rejected drafts with safe readable markup without presentation or ex
   expect(container.textContent).toBe("Bewaar dit concept");
   expect(container.querySelector("style, script, img, [style], [class], [hidden], [aria-hidden], [aria-label]")).toBeNull();
 });
+
+it("accepts complete source and note verdicts with a single canonical evidence relation", async () => {
+  await expect(auditNotule("Noor controleert vrijdag. Bram belt maandag.", "<p>Vrijdag voert Noor de controle uit. Maandag neemt Bram telefonisch contact op.</p>", "", async () => JSON.stringify({
+    uncertain: false,
+    source: [{ id: "T1", status: "covered" }, { id: "T2", status: "covered" }],
+    notes: [{ id: "N1", status: "supported", evidence: ["T1"] }, { id: "N2", status: "supported", evidence: ["T2"] }],
+  }))).resolves.toBeUndefined();
+});
+
+it("rejects a source fact without a supporting note in the canonical evidence relation", async () => {
+  await expect(auditNotule("Noor controleert vrijdag. Bram belt maandag.", "<p>Vrijdag voert Noor de controle uit.</p>", "", async () => JSON.stringify({
+    uncertain: false,
+    source: [{ id: "T1", status: "covered" }, { id: "T2", status: "covered" }],
+    notes: [{ id: "N1", status: "supported", evidence: ["T1"] }],
+  }))).rejects.toThrow();
+});

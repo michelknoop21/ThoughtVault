@@ -2,7 +2,7 @@ import { beforeEach, expect, it, vi } from "vitest";
 import { LLMService } from "../llm";
 import { NotuleReviewError } from "../notuleAudit";
 import { useSettingsStore } from "../../stores/settingsStore";
-import { auditFixture } from "./notuleAuditFixtures";
+import { auditFixture, sourceFixture } from "./notuleAuditFixtures";
 const { invoke } = vi.hoisted(() => ({ invoke: vi.fn() }));
 vi.mock("@tauri-apps/api/core", () => ({ invoke }));
 vi.mock("../tauriCommands", () => ({ loadCredential: async () => "fixture-key" }));
@@ -18,13 +18,14 @@ it.each(["ollama", "lm-studio", "openai", "anthropic"] as const)("audits correct
   const html = "<p>De offerte wordt vrijdag door Fatima verstuurd. Bram geeft maandag uitsluitend bij een geslaagde test akkoord. Over uitvoering bestaat nog geen besluit.</p>";
   invoke.mockImplementation(async (_command, args) => {
     const user = JSON.parse(args.request.body).messages.at(-1).content;
+    if (user.startsWith("Broncontrole")) return answer(sourceFixture(user));
     return answer(user.startsWith("Inhoudsaudit") ? auditFixture(user) : html);
   });
   const progress = vi.fn();
   expect(await LLMService.generateNotulen(raw, profile, progress)).toBe(html);
-  expect(invoke).toHaveBeenCalledTimes(3);
+  expect(invoke).toHaveBeenCalledTimes(4);
   expect(progress).toHaveBeenCalledExactlyOnceWith(html);
-  const auditRequest = JSON.parse(invoke.mock.calls[2][1].request.body);
+  const auditRequest = JSON.parse(invoke.mock.calls[3][1].request.body);
   expect(auditRequest.messages.at(-1).content).toContain("Fatima stuurt de offerte vrijdag.");
   expect(auditRequest.messages.at(-1).content).toContain("Over uitvoering bestaat nog geen besluit.");
 });
@@ -34,6 +35,7 @@ it.each(["Emma", "Youssef", "Robin"])("fails closed when the structured audit re
   const html = "<p>Sam neemt dinsdag telefonisch contact op.</p>";
   invoke.mockImplementation(async (_command, args) => {
     const user = JSON.parse(args.request.body).messages.at(-1).content;
+    if (user.startsWith("Broncontrole")) return answer(sourceFixture(user));
     if (!user.startsWith("Inhoudsaudit")) return answer(html);
     const report = JSON.parse(auditFixture(user)); report.source[1].status = "missing"; report.source[1].evidence = [];
     return answer(JSON.stringify(report));
@@ -42,7 +44,7 @@ it.each(["Emma", "Youssef", "Robin"])("fails closed when the structured audit re
   const failure = await LLMService.generateNotulen(raw, profile, progress).catch(error => error);
   expect(failure).toBeInstanceOf(NotuleReviewError);
   expect(failure.draftHtml).toBe(html);
-  expect(invoke).toHaveBeenCalledTimes(3);
+  expect(invoke).toHaveBeenCalledTimes(4);
   expect(progress).not.toHaveBeenCalled();
 });
 
@@ -51,18 +53,20 @@ it("rejects contradictory permission with valid JSON evidence, not merely malfor
   const html = `<p>${raw} Persoonsgegevens delen met leveranciers is toegestaan.</p>`;
   invoke.mockImplementation(async (_command, args) => {
     const user = JSON.parse(args.request.body).messages.at(-1).content;
+    if (user.startsWith("Broncontrole")) return answer(sourceFixture(user));
     return answer(user.startsWith("Inhoudsaudit") ? auditFixture(user, "contradiction") : html);
   });
   const progress = vi.fn();
   await expect(LLMService.generateNotulen(raw, profile, progress)).rejects.toBeInstanceOf(NotuleReviewError);
   expect(progress).not.toHaveBeenCalled();
-  expect(invoke).toHaveBeenCalledTimes(3);
+  expect(invoke).toHaveBeenCalledTimes(4);
 });
 
 it("never labels a protected source condition non-factual to approve its omission", async () => {
   const raw = "Er is geen besluit genomen. Sam belt vrijdag.";
   invoke.mockImplementation(async (_command, args) => {
     const user = JSON.parse(args.request.body).messages.at(-1).content;
+    if (user.startsWith("Broncontrole")) return answer(sourceFixture(user));
     if (!user.startsWith("Inhoudsaudit")) return answer("<p>Sam neemt vrijdag contact op.</p>");
     const report = JSON.parse(auditFixture(user));
     report.source[0].status = "non_factual"; report.source[0].evidence = [];
@@ -81,4 +85,18 @@ it("retains the checked candidate when the audit service fails, with no success 
   expect(failure.draftHtml).toBe(html);
   expect(progress).not.toHaveBeenCalled();
   expect(invoke).toHaveBeenCalledTimes(3);
+});
+
+it("retains a readable draft when a separate source-only check cannot understand the transcript", async () => {
+  const html = "<p>Een stellig verhaal over een pilot.</p>";
+  invoke.mockImplementation(async (_command, args) => {
+    const user = JSON.parse(args.request.body).messages.at(-1).content;
+    if (user.startsWith("Broncontrole")) return answer(JSON.stringify({ uncertain: true }));
+    return answer(user.startsWith("Inhoudsaudit") ? auditFixture(user) : html);
+  });
+  const progress = vi.fn();
+  const failure = await LLMService.generateNotulen("En mensen processen stok maken voorbij pilot zeker leeg.", profile, progress).catch(error => error);
+  expect(failure).toBeInstanceOf(NotuleReviewError);
+  expect(failure.draftHtml).toBe(html);
+  expect(progress).not.toHaveBeenCalled();
 });

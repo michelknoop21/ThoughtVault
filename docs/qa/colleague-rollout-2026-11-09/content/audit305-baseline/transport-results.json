@@ -1,0 +1,37 @@
+﻿[
+    {
+        "requestSha256":  "3EA07493FEFCF344E012D97295DFE3347406AB28D4F6BA7D3B5647E2B9EBD406",
+        "status":  "response_preserved",
+        "name":  "short305",
+        "model":  "gpt-oss:120b",
+        "responseSha256":  "63941FE2172576DD35E7190B9B6FA314095260C41D0109F9341C2C8754BC26A1"
+    },
+    {
+        "requestSha256":  "A49A20A5C0B33CD352133ECF52B1CE130682B5321F37FD7107432BCF54DFE81F",
+        "status":  "response_preserved",
+        "name":  "correcte_parafrase",
+        "model":  "gpt-oss:120b",
+        "responseSha256":  "F99504B3D0ADF8B9C90FFBCB11136EC76B4715543F2D4E1A2A916C66BD1D9F77"
+    },
+    {
+        "requestSha256":  "1A1742A344F213EF268BBD188AAD1A6CD127B313BDD9875BE1139AF9C9B03E92",
+        "status":  "response_preserved",
+        "name":  "tweede_actie_ontbreekt",
+        "model":  "gpt-oss:120b",
+        "responseSha256":  "24F59B0F3362880D36C50D51C87BD32356916CC859D450B8614ECE3609D64031"
+    },
+    {
+        "requestSha256":  "071A181D47404B359C030C087D7AF0F37DEBA49DB44829F7909098DAC1D7B5F6",
+        "status":  "response_preserved",
+        "name":  "tegenstrijdige_toestemming",
+        "model":  "gpt-oss:120b",
+        "responseSha256":  "C27AB1FD42A3157FEFD29FEA1F59A4CA9485F2B5078289303DE93C63C8DB4173"
+    },
+    {
+        "requestSha256":  "F24252FC38C40F4515A0F581C85F84F9D05E09ECFC38C88A6CD176DA601F8DC8",
+        "status":  "response_preserved",
+        "name":  "opname10_ambigue_bron_numerieke_invulling",
+        "model":  "gpt-oss:120b",
+        "responseSha256":  "FC3E3B9EDE75B94D6524369A5E9D9B7493958EDBF12615692DDF8FA640C18990"
+    }
+]

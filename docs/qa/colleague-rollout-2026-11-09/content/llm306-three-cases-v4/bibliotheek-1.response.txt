@@ -1,0 +1,4 @@
+<h1>Verslag overleg leeshoek bibliotheek De Linde</h1>
+<section><h2>Kern</h2><p>Dit is een fictief overleg over een leeshoek in bibliotheek De Linde. De interne proef is nog niet uitgevoerd; de bibliotheek is tijdens de proef niet toegankelijk voor bezoekers.</p></section>
+<section><h2>Besproken onderwerpen</h2><p>Het beschikbare budget bedraagt 2.750 euro inclusief btw, niet 3.000 euro. Er worden twee offertes aangevraagd, waarna Sara de Boer de offertes zal beoordelen. Er is nog geen leverancier gekozen. Bestellen mag alleen na schriftelijke goedkeuring van Sara.</p></section>
+<section><h2>Acties</h2><p>Daan Bos vraagt uiterlijk vrijdag 13 november twee offertes op.<br>Sara de Boer beoordeelt de offertes maandag 16 november.</p></section>

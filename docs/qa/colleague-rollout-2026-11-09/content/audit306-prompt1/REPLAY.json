@@ -1,0 +1,56 @@
+{
+  "mode": "real_response_replay",
+  "pass": false,
+  "results": [
+    {
+      "name": "correcte_parafrase",
+      "expected_accept": true,
+      "accepted": true,
+      "reason": "",
+      "calls": 1,
+      "well_formed_report": true,
+      "target_semantic_finding": false,
+      "pass": true
+    },
+    {
+      "name": "tweede_actie_ontbreekt",
+      "expected_accept": false,
+      "accepted": false,
+      "reason": "De notule mist broninformatie: Iris controleert de inhoud op donderdag 12 november.",
+      "calls": 1,
+      "well_formed_report": true,
+      "target_semantic_finding": true,
+      "pass": true
+    },
+    {
+      "name": "tegenstrijdige_toestemming",
+      "expected_accept": false,
+      "accepted": false,
+      "reason": "De notule spreekt de bron tegen: Klantgegevens mogen toch naar externe diensten worden gestuurd.",
+      "calls": 1,
+      "well_formed_report": true,
+      "target_semantic_finding": true,
+      "pass": true
+    },
+    {
+      "name": "verkeerd_budget",
+      "expected_accept": false,
+      "accepted": false,
+      "reason": "De notule mist broninformatie: Het budget is 12.450 euro inclusief btw, niet 15.000 euro.",
+      "calls": 1,
+      "well_formed_report": true,
+      "target_semantic_finding": true,
+      "pass": true
+    },
+    {
+      "name": "opname10_ambigue_bron_numerieke_invulling",
+      "expected_accept": false,
+      "accepted": true,
+      "reason": "",
+      "calls": 1,
+      "well_formed_report": true,
+      "target_semantic_finding": false,
+      "pass": false
+    }
+  ]
+}

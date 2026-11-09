@@ -1,9 +1,15 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { LLMService } from "../llm";
+import { sourceFixture } from "./notuleAuditFixtures";
 
 const { invoke } = vi.hoisted(() => ({ invoke: vi.fn() }));
-vi.mock("@tauri-apps/api/core", () => ({ invoke }));
+vi.mock("@tauri-apps/api/core", () => ({ invoke: (...args: unknown[]) => {
+  const request = (args[1] as { request?: { body?: string } })?.request;
+  const user = request?.body ? JSON.parse(request.body).messages.at(-1)?.content : "";
+  if (user.startsWith("Broncontrole")) return Promise.resolve({ status: 200, body: JSON.stringify({ choices: [{ message: { content: sourceFixture(user) } }] }) });
+  return invoke(...args);
+} }));
 vi.mock("../tauriCommands", () => ({ loadCredential: async () => null }));
 vi.mock("../../stores/personalCorrectionsStore", () => ({
   usePersonalCorrectionsStore: { getState: () => ({ hydrate: async () => {}, entries: [] }) },

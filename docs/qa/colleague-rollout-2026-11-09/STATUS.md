@@ -53,3 +53,50 @@ reproduceer de oorzaak met een gerichte regressie vóór een minimale reparatie.
 Bronherstelcommit: `57dde58c07cb2f8543de8959788f074778f2f09a`. Frontendbasis vóór herstel: 209 tests PASS;
 na herstel: 216 tests PASS, 1 bestaande opt-in modelproef overgeslagen.
 De print()-melding komt uit de bestaande jsdom-testomgeving; geen PDF-acceptatie.
+
+## Inhoudsherstel in uitvoering
+
+De echte providerresponses zijn nu vastgelegd, zonder headers of credentials.
+- Baseline `b836c967aa074c4f85f7da53197073c5`: ontbrekende actie kreeg een
+  ongeldig positief verdict zonder bewijs; veilig afgewezen maar QA-gate faalde.
+- Prompt-only `de1cc8101f364282b3cc44a3863b32a2`: Opname10 onterecht geaccepteerd;
+  deze variant is niet geschikt voor release.
+- Afzonderlijke broncontrole `4e79a6a475084ea0a6bbce6c80267b1b`: vijf vaste
+  gevallen PASS, 9 begrensde calls, geen retry; onbegrijpelijke bron stopt vóór notulenaudit.
+- Volledige generator `4924f6491a3c490face6b220109b4f5c`: drie bruikbare
+  concepten faalden op dubbel, inconsistent teruggeschreven bewijsverwijzingen.
+- Canonieke bewijsrelaties `76e2088ae5fc42638084798a75e4b872`: vijf vaste
+  gevallen opnieuw PASS. Alle bron-/notule-IDs, verplichte bronvoorwaarden,
+  affirmative bewijs en negatieve verdicts blijven gevalideerd; omgekeerde
+  relaties volgen mechanisch uit dezelfde links.
+- Generator-v2 `fcab49af4b1b43319aa9841174b77ec2`: twee productieacceptaties
+  maar scenarioasserties faalden op NBSP-datums. Derde concept terecht afgewezen
+  wegens een ongenoemde uitvoeringsstatus. Historische job blijft FAILED.
+- Generator-v3 `e3e1d472d8e84c068ffb1a56586c762a`: lopende nieuwe proef met
+  generieke statusverduidelijking en alleen in QA genormaliseerde witruimte.
+
+Dit is service-/providerbewijs; nog geen nieuwe geïnstalleerde MSI-acceptatie.
+
+## Actuele beslissing na de volledige proeven
+
+**Taak 1 afgerond; taak 2 open en inhoudelijk NO-GO. Taken 3–8 niet afgerond.**
+De laatste zesvoudige echte auditproef `9acd06163a5b4c0fba8c2b0c0ae4a696`
+keurt één onterechte actie goed. Generator-v4 `05a36312371c4fd480b6a368339ec55d`
+levert slechts 1/3 productieacceptaties; de twee overige concepten bevatten
+opnieuw niet genoemde uitvoeringsstatussen. Zie `CONTENT-REVIEW.md` voor
+beoordeling, raw request-/responsehashes en precieze beperkingen.
+De modelrichting is voorgelegd; geen nieuwe promptfixes of modelwissel zolang
+die keuze openstaat. Er zijn geen eigen proeven meer op de achtergrond actief.
+
+De geïnstalleerde 305-binary is nu ook bytegewijs herleid: de enige afwijking
+tegenover native job `19ab8…` is de driebyte bundelmarkering `UNK`→`MSI` op offset
+20987538, overeenkomstig het Tauri-verpakkingslog. Alle overige bytes zijn gelijk.
+MSI-request `b46dd82726654eae9e1961045ca206dc` en het huidige pakket hebben hash
+`cf85b2576ebb9869bd51703f28e66a601c227519dd92ff3a3c945f0dcf8118da`.
+Zie `binary-lineage305.json`; een gewone hashvergelijking zonder deze
+verpakkingsstap zou onterecht bronafwijking suggereren.
+
+Interne opruimcontrole: 11 eigen npm-debuglogs naar de externe SSD verplaatst,
+hashes gecontroleerd en originelen verwijderd; 45056 toegewezen bytes
+vrijgemaakt. Gedeelde npm-cache ongemoeid gelaten wegens gedeeld eigenaarschap.
+Bewijs: `build/colleague-rollout-20261109/internal-task-logs/migration.json`.

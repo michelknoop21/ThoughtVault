@@ -1,0 +1,23 @@
+{
+  "uncertain": false,
+  "source": [
+    {"id":"T1","status":"covered","evidence":["N1"]},
+    {"id":"T2","status":"missing","evidence":[]},
+    {"id":"T3","status":"covered","evidence":["N3"]},
+    {"id":"T4","status":"covered","evidence":["N4"]},
+    {"id":"T5","status":"covered","evidence":["N5"]},
+    {"id":"T6","status":"covered","evidence":["N6"]},
+    {"id":"T7","status":"covered","evidence":["N7"]},
+    {"id":"T8","status":"covered","evidence":["N8"]}
+  ],
+  "notes": [
+    {"id":"N1","status":"supported","evidence":["T1"]},
+    {"id":"N2","status":"contradiction","evidence":["T2"]},
+    {"id":"N3","status":"supported","evidence":["T3"]},
+    {"id":"N4","status":"supported","evidence":["T4"]},
+    {"id":"N5","status":"supported","evidence":["T5"]},
+    {"id":"N6","status":"supported","evidence":["T6"]},
+    {"id":"N7","status":"supported","evidence":["T7"]},
+    {"id":"N8","status":"supported","evidence":["T8"]}
+  ]
+}

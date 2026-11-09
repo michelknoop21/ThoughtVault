@@ -1,0 +1,16 @@
+{
+  "nativeSha256": "912D87A35B9C7137B9B204CAAA696879B32854BBCCDFC809CC373235547674F0",
+  "sourceHash": "eebb546cbf76684518b952ca0dab35497efd577aab7e92de6a428c3f9a89c08a",
+  "allOtherBytesEqual": true,
+  "msiRequest": "b46dd82726654eae9e1961045ca206dc",
+  "sourceJob": "19ab8be2adf747468acd886ca132f280",
+  "onlyDifference": {
+    "offset": 20987538,
+    "native": "UNK",
+    "installed": "MSI",
+    "length": 3
+  },
+  "scope": "Observed Tauri bundler log patches bundle type information to msi; original native and installed package payload match except this marker",
+  "installedSha256": "583D5C66C91939C79F143BC2BA056ABA7CB652F3CCD469F993D330D72BF0FD07",
+  "msiSha256": "CF85B2576EBB9869BD51703F28E66A601C227519DD92FF3A3C945F0DCF8118DA"
+}

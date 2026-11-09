@@ -18,16 +18,31 @@
       "files": 51,
       "passed": 216,
       "skipped": 1
-    }
+    },
+    "binaryLineage": "binary-lineage305.json"
   },
   "acceptedCandidate": null,
   "gates": {
     "source": "passed",
-    "content": "failed_or_unproven",
+    "content": "failed_model_decision_pending",
     "short": "failed",
     "long": "failed",
     "onboarding": "not_proven",
     "recovery": "not_proven",
     "pilot": "not_started"
+  },
+  "contentEvidence": {
+    "fixedAuditJob": "9acd06163a5b4c0fba8c2b0c0ae4a696",
+    "fixedAuditPass": false,
+    "fixedAuditCases": 6,
+    "fixedAuditPassed": 5,
+    "fullGeneratorJob": "05a36312371c4fd480b6a368339ec55d",
+    "fullGeneratorAccepted": 1,
+    "fullGeneratorCases": 3,
+    "report": "CONTENT-REVIEW.md",
+    "frontendTests": {
+      "passed": 227,
+      "skipped": 1
+    }
   }
 }

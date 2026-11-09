@@ -1,0 +1,65 @@
+﻿[
+    {
+        "requestSha256":  "40D0C8C6CDAFA2388494DFEEBFB7FB0EF02856DECD3E92C0F373A0FEEC683CBC",
+        "status":  "response_preserved",
+        "name":  "correcte_parafrase.source",
+        "model":  "gpt-oss:120b",
+        "responseSha256":  "76D420BA596E708020B45E8C61930CCF3A77B9302FE637D78BDDD3F304B7DC76"
+    },
+    {
+        "requestSha256":  "1CDFAF477FECEC6BA39CE507A7935B9A6F4AE7A0D8918B8A779DFDF19916444D",
+        "status":  "response_preserved",
+        "name":  "correcte_parafrase",
+        "model":  "gpt-oss:120b",
+        "responseSha256":  "2FBC7772DE6DB3EC450C5DC86A357D722320F94A09F07BEECD1DC616CEE5E3DB"
+    },
+    {
+        "requestSha256":  "40D0C8C6CDAFA2388494DFEEBFB7FB0EF02856DECD3E92C0F373A0FEEC683CBC",
+        "status":  "response_preserved",
+        "name":  "tweede_actie_ontbreekt.source",
+        "model":  "gpt-oss:120b",
+        "responseSha256":  "76D420BA596E708020B45E8C61930CCF3A77B9302FE637D78BDDD3F304B7DC76"
+    },
+    {
+        "requestSha256":  "DEEBB6411502F28D73270BA3A795F61064A0EE67BF5198C9D03D09C412B0AB81",
+        "status":  "response_preserved",
+        "name":  "tweede_actie_ontbreekt",
+        "model":  "gpt-oss:120b",
+        "responseSha256":  "E71D632DD04D55EE98FC248C984BC458421B13556FA276AAEA7F8380C00FD675"
+    },
+    {
+        "requestSha256":  "40D0C8C6CDAFA2388494DFEEBFB7FB0EF02856DECD3E92C0F373A0FEEC683CBC",
+        "status":  "response_preserved",
+        "name":  "tegenstrijdige_toestemming.source",
+        "model":  "gpt-oss:120b",
+        "responseSha256":  "76D420BA596E708020B45E8C61930CCF3A77B9302FE637D78BDDD3F304B7DC76"
+    },
+    {
+        "requestSha256":  "FB02DE4B4BEEBED5E9FEA314A46FBB99CBB9ACE20B57FD2005A842E2DCF42152",
+        "status":  "response_preserved",
+        "name":  "tegenstrijdige_toestemming",
+        "model":  "gpt-oss:120b",
+        "responseSha256":  "77B1A6E02A370EA999689F4F0BBD46DBEE360A0747C3290D6329751B9B7CD556"
+    },
+    {
+        "requestSha256":  "40D0C8C6CDAFA2388494DFEEBFB7FB0EF02856DECD3E92C0F373A0FEEC683CBC",
+        "status":  "response_preserved",
+        "name":  "verkeerd_budget.source",
+        "model":  "gpt-oss:120b",
+        "responseSha256":  "76D420BA596E708020B45E8C61930CCF3A77B9302FE637D78BDDD3F304B7DC76"
+    },
+    {
+        "requestSha256":  "FC4AE705DFB840C1E6881F26FFBCC963B7DD1D7EDEEDC105A49C1744888677AD",
+        "status":  "response_preserved",
+        "name":  "verkeerd_budget",
+        "model":  "gpt-oss:120b",
+        "responseSha256":  "C517BD6CE5FF887A595E530DD4273D389C8D825D7E655CD70AD272A3F1091CB5"
+    },
+    {
+        "requestSha256":  "E99B6DA0D36B3C11B536C82117F9803EF32B2F2D315B8E0BCFE6D152D0891695",
+        "status":  "response_preserved",
+        "name":  "opname10_ambigue_bron_numerieke_invulling.source",
+        "model":  "gpt-oss:120b",
+        "responseSha256":  "EC3130306287D3DE2BE13B494F770CDA2144CB4584E51E0B3CA642663E8E8431"
+    }
+]

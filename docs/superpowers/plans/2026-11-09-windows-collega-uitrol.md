@@ -82,11 +82,11 @@ tests `notuleAudit.test.ts`, `llm.audit-integration.test.ts`, `llm.decimal-const
 en `auditNotule(source, html, quickNote, request, requiredSentences?): Promise<void>`.
 Afwijzing blijft `NotuleReviewError` met bewaard concept; geen nieuwe parallelle pipeline.
 
-- [ ] Reproduceer één recente afwijzing met de echte gekozen provider/model en exacte productieprompt; bewaar requestbody en antwoord zonder headers/secrets. De Hermes-proef is geen vervangend bewijs.
-- [ ] Voeg voor de gevonden oorzaak een falende regressie toe. Assert: correcte parafrase mag slagen; fout bedrag `15.000` in plaats van `12.450`, ontbrekende tweede actie, omgekeerd verbod en onbegrijpelijke Opname10-bron mogen niet slagen.
-- [ ] Run vanuit `windows`: `npx --no-install vitest run src/services/__tests__/notuleAudit.test.ts src/services/__tests__/llm.audit-integration.test.ts src/services/__tests__/llm.decimal-constraints.test.ts`. Bevestig de nieuwe regressiefout vóór de minimale reparatie.
+- [x] Reproduceer één recente afwijzing met de echte gekozen provider/model en exacte productieprompt; bewaar requestbody en antwoord zonder headers/secrets. De Hermes-proef is geen vervangend bewijs.
+- [x] Voeg voor de gevonden oorzaak een falende regressie toe. Assert: correcte parafrase mag slagen; fout bedrag `15.000` in plaats van `12.450`, ontbrekende tweede actie, omgekeerd verbod en onbegrijpelijke Opname10-bron mogen niet slagen.
+- [x] Run vanuit `windows`: `npx --no-install vitest run src/services/__tests__/notuleAudit.test.ts src/services/__tests__/llm.audit-integration.test.ts src/services/__tests__/llm.decimal-constraints.test.ts`. Bevestig de nieuwe regressiefout vóór de minimale reparatie.
 - [ ] Corrigeer uitsluitend de aangetoonde oorzaak in de bestaande generatie/parser/validatie; behoud onzekerheid, bronbewijs en afgewezen concepten. Maak geen uitzonderingsregel voor één voorbeeldtekst.
-- [ ] Herhaal gerichte tests en de bestaande prepare/replay-route met een nieuwe bewijslocatie. Beoordeel inhoud onafhankelijk van job-exitcode: bedragen, personen, acties, datums, voorwaarden en geen ononderbouwde claims.
+- [x] Herhaal gerichte tests en de bestaande prepare/replay-route met een nieuwe bewijslocatie. Beoordeel inhoud onafhankelijk van job-exitcode: bedragen, personen, acties, datums, voorwaarden en geen ononderbouwde claims.
 - [ ] Verifieer drie verschillende korte fictieve vergaderingen: correcte gevallen slagen elk één keer; negatieve gevallen blijven review/afgewezen. Een altijd afwijzende audit is geen productacceptatie.
 - [ ] Commit met request-/responsehashes en conclusie. **Klaar:** zowel juiste acceptatie als gerichte afwijzing aangetoond op de gekozen route.
 

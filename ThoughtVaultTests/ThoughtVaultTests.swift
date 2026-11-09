@@ -164,6 +164,7 @@ final class LiveTranscriptionPolicyTests: XCTestCase {
 
     func testNoStatusTextInLocalMode() {
         XCTAssertNil(LiveTranscriptionPolicy.statusText(preferred: false, available: true, localMode: true, error: nil))
+        XCTAssertNil(LiveTranscriptionPolicy.statusText(preferred: true, available: false, localMode: true, error: nil))
     }
 
     #if os(macOS)
@@ -190,7 +191,7 @@ final class LiveTranscriptionPolicyTests: XCTestCase {
 
     func testStatusExplainsWhyThereIsNoLiveText() {
         func status(_ preferred: Bool = true, _ available: Bool = true, _ error: String? = nil) -> String? {
-            LiveTranscriptionPolicy.statusText(preferred: preferred, available: available, error: error)
+            LiveTranscriptionPolicy.statusText(preferred: preferred, available: available, localMode: false, error: error)
         }
         XCTAssertEqual(status(false), "Opname loopt (live tekst staat uit)")
         XCTAssertEqual(status(true, false), "Opname loopt (live tekst niet beschikbaar)")

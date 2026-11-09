@@ -414,7 +414,7 @@ enum LiveTranscriptionPolicy {
 
     /// Why no live text appears, or nil when live recognition is (or is about to be)
     /// running and "Ik luister..." is the honest answer.
-    static func statusText(preferred: Bool, available: Bool, localMode: Bool = false, error: String?) -> String? {
+    static func statusText(preferred: Bool, available: Bool, localMode: Bool, error: String?) -> String? {
         guard !localMode else { return nil }
         guard preferred else { return "Opname loopt (live tekst staat uit)" }
         guard available else { return "Opname loopt (live tekst niet beschikbaar)" }

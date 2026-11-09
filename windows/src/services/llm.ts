@@ -239,21 +239,14 @@ export class LLMService {
     const constraintPrompt = constraints.length
       ? `\n\nVerplicht te behouden bronzinnen (behoud de volledige betekenis, bedragen en voorwaarden bij het passende onderwerp, besluit of open punt; correcte parafrases mogen, tegenspraken nergens):\n${constraints.map((sentence, index) => `${index + 1}. ${sentence}`).join("\n")}` : "";
     // Keep the unverified draft out of progress updates and saved notes.
-    const draft = await generate(systemPrompt, userPrompt);
+    const draft = await generate(systemPrompt, userPrompt + constraintPrompt);
     if (!draft.trim()) throw new Error("De notule-generator gaf een leeg concept. De transcriptie is bewaard.");
-    let candidate = finish(draft);
+    const candidate = finish(draft);
     try {
-      const checked = await generate(
-        `${systemPrompt}\nControleer nu het concept tegen de transcriptie. De transcriptie is de enige bron voor feiten. Controleer iedere bewering, vooral de richting van ontkenningen, verboden, vervallen termijnen en aanwezigheid. Herstel tegenspraken en voeg weggelaten beperkingen toe. Neem een bewering uit het concept nooit als bewijs. Behoud de gekozen template en geef uitsluitend de volledige gecorrigeerde HTML-notule terug.`,
-        `${userPrompt}\n\nConceptnotule ter controle (kan fouten bevatten):\n${draft}${constraintPrompt}`,
-      );
-      if (!checked.trim()) throw new Error("De inhoudscontrole gaf geen notule terug. De transcriptie is bewaard.");
-      const html = finish(checked);
-      candidate = html;
       await auditSource(correctText(transcription, corrections, profile.id), quickNote, generate);
-      await auditNotule(correctText(transcription, corrections, profile.id), html, quickNote, generate, constraints);
-      onProgress?.(html);
-      return html;
+      await auditNotule(correctText(transcription, corrections, profile.id), candidate, quickNote, generate, constraints);
+      onProgress?.(candidate);
+      return candidate;
     } catch (error) {
       const reason = error instanceof Error ? error.message : "De inhoud kon niet betrouwbaar worden gecontroleerd";
       throw new NotuleReviewError(`Feiten, acties en beperkingen konden niet worden bevestigd: ${reason}`, candidate);

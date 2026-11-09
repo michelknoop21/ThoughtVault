@@ -23,9 +23,9 @@ it.each(["ollama", "lm-studio", "openai", "anthropic"] as const)("audits correct
   });
   const progress = vi.fn();
   expect(await LLMService.generateNotulen(raw, profile, progress)).toBe(html);
-  expect(invoke).toHaveBeenCalledTimes(4);
+  expect(invoke).toHaveBeenCalledTimes(3);
   expect(progress).toHaveBeenCalledExactlyOnceWith(html);
-  const auditRequest = JSON.parse(invoke.mock.calls[3][1].request.body);
+  const auditRequest = JSON.parse(invoke.mock.calls[2][1].request.body);
   expect(auditRequest.messages.at(-1).content).toContain("Fatima stuurt de offerte vrijdag.");
   expect(auditRequest.messages.at(-1).content).toContain("Over uitvoering bestaat nog geen besluit.");
 });
@@ -44,7 +44,7 @@ it.each(["Emma", "Youssef", "Robin"])("fails closed when the structured audit re
   const failure = await LLMService.generateNotulen(raw, profile, progress).catch(error => error);
   expect(failure).toBeInstanceOf(NotuleReviewError);
   expect(failure.draftHtml).toBe(html);
-  expect(invoke).toHaveBeenCalledTimes(4);
+  expect(invoke).toHaveBeenCalledTimes(3);
   expect(progress).not.toHaveBeenCalled();
 });
 
@@ -59,7 +59,7 @@ it("rejects contradictory permission with valid JSON evidence, not merely malfor
   const progress = vi.fn();
   await expect(LLMService.generateNotulen(raw, profile, progress)).rejects.toBeInstanceOf(NotuleReviewError);
   expect(progress).not.toHaveBeenCalled();
-  expect(invoke).toHaveBeenCalledTimes(4);
+  expect(invoke).toHaveBeenCalledTimes(3);
 });
 
 it("never labels a protected source condition non-factual to approve its omission", async () => {
@@ -76,9 +76,9 @@ it("never labels a protected source condition non-factual to approve its omissio
   await expect(LLMService.generateNotulen(raw, profile)).rejects.toThrow("expliciete beperkingen");
 });
 
-it("retains the checked candidate when the audit service fails, with no success or retry", async () => {
+it("retains the generated candidate when the audit service fails, with no success or retry", async () => {
   const html = "<p>Sam neemt vrijdag contact op.</p>";
-  invoke.mockResolvedValueOnce(answer("<p>Eerste concept</p>")).mockResolvedValueOnce(answer(html)).mockResolvedValueOnce({ status: 500, body: "{}" });
+  invoke.mockResolvedValueOnce(answer(html)).mockResolvedValueOnce(answer(sourceFixture(""))).mockResolvedValueOnce({ status: 500, body: "{}" });
   const progress = vi.fn();
   const failure = await LLMService.generateNotulen("Sam belt vrijdag.", profile, progress).catch(error => error);
   expect(failure).toBeInstanceOf(NotuleReviewError);
@@ -99,4 +99,22 @@ it("retains a readable draft when a separate source-only check cannot understand
   expect(failure).toBeInstanceOf(NotuleReviewError);
   expect(failure.draftHtml).toBe(html);
   expect(progress).not.toHaveBeenCalled();
+});
+
+it("keeps a valid first draft instead of losing its actions in an unnecessary rewrite", async () => {
+  const html = "<p>Vrijdag vraagt Noor twee offertes op.</p>";
+  let writes = 0;
+  invoke.mockImplementation(async (_command, args) => {
+    const user = JSON.parse(args.request.body).messages.at(-1).content;
+    if (user.startsWith("Broncontrole")) return answer(sourceFixture(user));
+    if (user.startsWith("Inhoudsaudit")) {
+      const report = JSON.parse(auditFixture(user));
+      if (user.includes("NOTES")) { report.source[0].status = "missing"; report.notes[0].status = "unsupported"; report.notes[0].evidence = []; }
+      return answer(JSON.stringify(report));
+    }
+    return answer(++writes === 1 ? html : "<p>Vrijdag vraagt Noor twee NOTES op.</p>");
+  });
+  const progress = vi.fn();
+  await expect(LLMService.generateNotulen("Noor vraagt vrijdag twee offertes op.", profile, progress)).resolves.toBe(html);
+  expect(progress).toHaveBeenCalledExactlyOnceWith(html);
 });

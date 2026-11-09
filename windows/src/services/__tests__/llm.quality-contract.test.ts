@@ -29,10 +29,10 @@ beforeEach(() => {
     ollama_url: "http://localhost:11434", ollama_model: "qa-fixture" });
 });
 
-it("passes the complete clean transcript to both requests and accepts complete factual output", async () => {
+it("passes the complete clean transcript to generation and accepts complete factual output", async () => {
   invoke.mockResolvedValue(answer(raw));
   expect(await LLMService.generateNotulen(raw, profile)).toBe(`<p>${raw}</p>`);
-  expect(invoke).toHaveBeenCalledTimes(2);
+  expect(invoke).toHaveBeenCalledTimes(1);
   for (const call of invoke.mock.calls) {
     expect(JSON.parse(call[1].request.body).messages[1].content).toContain(raw);
   }

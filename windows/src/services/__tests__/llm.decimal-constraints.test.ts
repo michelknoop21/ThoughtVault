@@ -1,7 +1,7 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { LLMService } from "../llm";
-import { sourceFixture } from "./notuleAuditFixtures";
+import { sourceFixture, auditFixture } from "./notuleAuditFixtures";
 
 const { invoke } = vi.hoisted(() => ({ invoke: vi.fn() }));
 vi.mock("@tauri-apps/api/core", () => ({ invoke: (...args: unknown[]) => {
@@ -37,23 +37,28 @@ beforeEach(() => {
 // and the final guard accepts that incomplete amount as the full constraint.
 it("rejects a checked note that truncates the negated 15.000 euro amount", async () => {
   const raw = "Het budget is 12.450 euro inclusief btw. Niet 15.000 euro.";
-  invoke.mockResolvedValue(response("<p>Niet 15.</p>"));
+  invoke.mockImplementation(async (_command, args) => {
+    const user = JSON.parse(args.request.body).messages[1].content;
+    if (!user.startsWith("Inhoudsaudit")) return response("<p>Niet 15.</p>");
+    const report = JSON.parse(auditFixture(user)); report.source[1].status = "missing";
+    return response(JSON.stringify(report));
+  });
   const progress = vi.fn();
-  await expect(LLMService.generateNotulen(raw, profile, progress)).rejects.toThrow("beperkingen");
-  expect(invoke).toHaveBeenCalledTimes(3);
+  await expect(LLMService.generateNotulen(raw, profile, progress)).rejects.toThrow("De notule mist broninformatie: Niet 15.000 euro.");
+  expect(invoke).toHaveBeenCalledTimes(2);
   expect(progress).not.toHaveBeenCalled();
 });
 
 it.each(["Niet 15.000 euro.", "Niet 1.500.000 euro.", "Niet 15.000,50 euro.", "Niet 15.5 euro."])(
-  "keeps the complete numeric constraint in the checking request: %s", async constraint => {
+  "keeps the complete numeric constraint in the generation request: %s", async constraint => {
     const raw = `Budgetcontrole. ${constraint} Milan controleert de techniek woensdag. Noor controleert de inhoud donderdag.`;
     const checked = `<p>${raw}</p>`;
     invoke.mockResolvedValue(response(checked));
     expect(await LLMService.generateNotulen(raw, profile)).toBe(checked);
     const prompts = invoke.mock.calls.map(call => JSON.parse(call[1].request.body).messages[1].content as string);
-    expect(prompts).toHaveLength(2);
+    expect(prompts).toHaveLength(1);
     expect(prompts.every(prompt => prompt.includes(raw))).toBe(true);
-    const required = prompts[1].split("Verplicht te behouden bronzinnen")[1];
+    const required = prompts[0].split("Verplicht te behouden bronzinnen")[1];
     expect(required).toContain(`1. ${constraint}`);
     expect(required).not.toContain("1. Niet 15.\n");
   },
@@ -61,8 +66,13 @@ it.each(["Niet 15.000 euro.", "Niet 1.500.000 euro.", "Niet 15.000,50 euro.", "N
 
 it("still enforces a prohibition after a normal sentence boundary", async () => {
   const raw = "Niet 15.000 euro. Geen klantgegevens naar externe diensten.";
-  invoke.mockResolvedValue(response("<p>Niet 15.000 euro.</p>"));
+  invoke.mockImplementation(async (_command, args) => {
+    const user = JSON.parse(args.request.body).messages[1].content;
+    if (!user.startsWith("Inhoudsaudit")) return response("<p>Niet 15.000 euro.</p>");
+    const report = JSON.parse(auditFixture(user)); report.source[1].status = "missing";
+    return response(JSON.stringify(report));
+  });
   await expect(LLMService.generateNotulen(raw, profile)).rejects.toThrow("beperkingen");
-  const prompt = JSON.parse(invoke.mock.calls[1][1].request.body).messages[1].content as string;
+  const prompt = JSON.parse(invoke.mock.calls[0][1].request.body).messages[1].content as string;
   expect(prompt).toContain("1. Niet 15.000 euro.\n2. Geen klantgegevens naar externe diensten.");
 });

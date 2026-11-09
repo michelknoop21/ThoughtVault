@@ -3,13 +3,17 @@ import XCTest
 
 final class PersonalCorrectionsTests: XCTestCase {
     private var tmp: URL!
+    private var savedVocabulary: String?
 
     override func setUpWithError() throws {
+        savedVocabulary = UserDefaults.standard.string(forKey: PersonalVocabulary.defaultsKey)
+        UserDefaults.standard.removeObject(forKey: PersonalVocabulary.defaultsKey)
         tmp = FileManager.default.temporaryDirectory.appendingPathComponent("pc-\(UUID().uuidString).json")
     }
     override func tearDownWithError() throws {
         try? FileManager.default.removeItem(at: tmp)
-        UserDefaults.standard.removeObject(forKey: PersonalVocabulary.defaultsKey)
+        if let savedVocabulary { UserDefaults.standard.set(savedVocabulary, forKey: PersonalVocabulary.defaultsKey) }
+        else { UserDefaults.standard.removeObject(forKey: PersonalVocabulary.defaultsKey) }
     }
 
     private func person(_ name: String, role: String = "", org: String = "", tasks: [String] = [], aliases: [String] = []) -> PersonContext {
@@ -58,7 +62,6 @@ final class PersonalCorrectionsTests: XCTestCase {
     }
 
     func testMigrateLegacyTermsCreatesEntriesOnce() throws {
-        // Uses the real store path via migrateLegacyTerms(at:), so pass the temp file.
         UserDefaults.standard.set("Yinga, Prezent", forKey: PersonalVocabulary.defaultsKey)
         try PersonalVocabulary.migrateLegacyTerms(at: tmp)
         try PersonalVocabulary.migrateLegacyTerms(at: tmp)
@@ -82,5 +85,26 @@ final class PersonalCorrectionsTests: XCTestCase {
         try PersonalVocabulary.migrateLegacyTerms(at: tmp)
         XCTAssertEqual(try PersonalCorrections.load(from: tmp).map(\.canonical), ["Yinga"])
         XCTAssertNotNil(UserDefaults.standard.string(forKey: PersonalVocabulary.defaultsKey))
+    }
+
+    func testBudgetSmallerThanFirstLineStillFillsWithShorterLine() {
+        let long = PersonalCorrection(canonical: "Lang", variants: [], note: String(repeating: "x", count: 100))
+        let short = PersonalCorrection(canonical: "Kort", variants: [])
+        // Newest is first ("Kort"), so put the long one newest to force the skip.
+        let block = PersonalCorrections.contextBlock(entries: [short, long], people: [], transcript: "", profileId: nil, maxCharacters: 20)
+        XCTAssertTrue(block.contains("- Kort"))
+        XCTAssertFalse(block.contains("Lang"))
+    }
+
+    func testEmptyInputsReturnEmptyString() {
+        XCTAssertEqual(PersonalCorrections.contextBlock(entries: [], people: [], transcript: "", profileId: nil, maxCharacters: 6000), "")
+    }
+
+    func testTranscriptMatchUsesWordBoundaries() {
+        let ai = PersonalCorrection(canonical: "AI", variants: [])
+        let other = PersonalCorrection(canonical: "Zeta", variants: [])
+        // Entries are newest-last; "Zeta" is newest so it leads unless "AI" wrongly matches "maintain".
+        let block = PersonalCorrections.contextBlock(entries: [ai, other], people: [], transcript: "we maintain it", profileId: nil, maxCharacters: 6000)
+        XCTAssertTrue(block.range(of: "- Zeta")!.lowerBound < block.range(of: "- AI")!.lowerBound)
     }
 }

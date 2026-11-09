@@ -91,8 +91,14 @@ enum PersonalCorrections {
     /// Glossary and people block for the minutes AI. `maxCharacters` limits the lines, not the fixed header.
     /// Order: lines matching the transcript, then lines for `profileId`, then the newest.
     static func contextBlock(entries: [PersonalCorrection], people: [PersonContext], transcript: String, profileId: String?, maxCharacters: Int, extraTerms: [String] = []) -> String {
-        let haystack = transcript.lowercased()
-        func found(_ names: [String]) -> Bool { names.contains { let n = $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(); return !n.isEmpty && haystack.contains(n) } }
+        // Word-boundary, case-insensitive match, same boundaries as text().
+        func found(_ names: [String]) -> Bool {
+            names.contains {
+                let n = $0.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !n.isEmpty else { return false }
+                return transcript.range(of: #"(?<![\p{L}\p{N}_])"# + NSRegularExpression.escapedPattern(for: n) + #"(?![\p{L}\p{N}_])"#, options: [.regularExpression, .caseInsensitive]) != nil
+            }
+        }
         func joined(_ parts: [String]) -> String { parts.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }.joined(separator: ", ") }
         var candidates: [(line: String, rank: Int)] = []
         // Entries are appended on upsert, so the last one is the newest.
@@ -120,7 +126,7 @@ enum PersonalCorrections {
         }
         var lines: [String] = [], used = 0
         for candidate in candidates.enumerated().sorted(by: { ($0.element.rank, $0.offset) < ($1.element.rank, $1.offset) }).map(\.element) {
-            guard used + candidate.line.count + 1 <= maxCharacters else { break }
+            guard used + candidate.line.count + 1 <= maxCharacters else { continue }
             lines.append(candidate.line); used += candidate.line.count + 1
         }
         guard !lines.isEmpty else { return "" }
@@ -134,7 +140,9 @@ enum PersonalCorrections {
             PersonContext(name: $0.name, role: $0.role, organization: $0.organization, responsibilities: [], aliases: $0.aliases)
         }
         return contextBlock(entries: entries, people: people, transcript: transcript, profileId: profileId, maxCharacters: contextBudget(for: provider),
-                            extraTerms: VaultFolderStore.readContextNote().map { VaultFolderStore.parseTerms(fromNote: $0) } ?? [])
+                            extraTerms: (VaultFolderStore.readContextNote().map { VaultFolderStore.parseTerms(fromNote: $0) } ?? [])
+                                // Interim: free text still editable in Settings until the field is removed.
+                                + (UserDefaults.standard.string(forKey: PersonalVocabulary.defaultsKey) ?? "").components(separatedBy: CharacterSet(charactersIn: ",\n")))
     }
     static func text(_ text: String, entries: [PersonalCorrection], profileId: String?, html: Bool = false) -> String {
         var replacements: [String: String] = [:]

@@ -64,13 +64,14 @@ enum PersonalVocabulary {
         guard let legacy = UserDefaults.standard.string(forKey: defaultsKey) else { return }
         var entries = try PersonalCorrections.load(from: path)
         var skipped = false
+        let before = entries.count
         var known = Set(entries.map { $0.canonical.lowercased() })
         for term in legacy.components(separatedBy: CharacterSet(charactersIn: ",\n")).map({ $0.trimmingCharacters(in: .whitespacesAndNewlines) })
         where !term.isEmpty {
             guard PersonalCorrections.validTerm(term) else { skipped = true; continue }
             if known.insert(term.lowercased()).inserted { entries.append(PersonalCorrection(canonical: term, variants: [])) }
         }
-        try PersonalCorrections.save(entries, to: path)
+        if entries.count != before { try PersonalCorrections.save(entries, to: path) }
         // Keep the legacy text when a term was skipped, so nothing is lost silently.
         if !skipped { UserDefaults.standard.removeObject(forKey: defaultsKey) }
     }

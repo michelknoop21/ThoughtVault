@@ -510,6 +510,10 @@ struct TranscriptTask: Identifiable, Codable, Sendable {
         if let rawStatus = try container.decodeIfPresent(String.self, forKey: .status),
            let parsedStatus = TaskStatus(rawValue: rawStatus) {
             self.status = parsedStatus
+        } else if let rawStatus = try container.decodeIfPresent(String.self, forKey: .status),
+                  ["failed", "cancelled", "canceled"].contains(rawStatus) {
+            // Terminal server statuses (as on Windows); must not fall back to an active state.
+            self.status = .error
         } else {
             self.status = .pending
         }

@@ -38,6 +38,7 @@ struct SettingsView: View {
     @State var profiles: [Profile] = []
     @State private var isLoadingProfiles: Bool = false
     @State private var showLogoutConfirm: Bool = false
+    @State var modelToRemove: String?
     @State private var showBugReportSheet: Bool = false
     @State private var feedbackTitle = ""
     @State private var feedbackDescription = ""

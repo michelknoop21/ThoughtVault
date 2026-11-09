@@ -1303,12 +1303,18 @@ final class RecordingViewModel {
 
     // MARK: - Pending Task Recovery
 
+    /// Active tasks only, one per taskId (first wins), server order kept.
+    nonisolated static func tasksToResume(_ tasks: [TranscriptTask]) -> [TranscriptTask] {
+        var seen = Set<String>()
+        return tasks.filter { $0.status.isActive && seen.insert($0.taskId).inserted }
+    }
+
     /// Checks the server for any active tasks and reconnects SSE streams so the
     /// user can see progress after an app restart.
     func checkPendingTasks() async {
         do {
             let active = try await APIService.shared.getActiveTasks()
-            for task in active where task.status.isActive {
+            for task in Self.tasksToResume(active) {
                 addTask(task)
                 await startSSEStream(for: task.taskId)
             }

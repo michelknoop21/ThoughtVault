@@ -138,6 +138,7 @@
 		AB0000E7 /* HTMLPlainTextTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000E7 /* HTMLPlainTextTests.swift */; };
 		AB0000Q1 /* TranscriptSearchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000Q1 /* TranscriptSearchTests.swift */; };
 		AB0000X1 /* ExportFileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000X1 /* ExportFileTests.swift */; };
+		AB0000P1 /* PendingTaskRecoveryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000P1 /* PendingTaskRecoveryTests.swift */; };
 		AB0000N8 /* NotuleAuditTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000N8 /* NotuleAuditTests.swift */; };
 		AB0000T3 /* NotuleGeneratorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000T3 /* NotuleGeneratorTests.swift */; };
 		AB0000T5 /* LocalPipelineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000T5 /* LocalPipelineTests.swift */; };
@@ -304,6 +305,7 @@
 		FB0000E7 /* HTMLPlainTextTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HTMLPlainTextTests.swift; sourceTree = "<group>"; };
 		FB0000Q1 /* TranscriptSearchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptSearchTests.swift; sourceTree = "<group>"; };
 		FB0000X1 /* ExportFileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportFileTests.swift; sourceTree = "<group>"; };
+		FB0000P1 /* PendingTaskRecoveryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingTaskRecoveryTests.swift; sourceTree = "<group>"; };
 		FB0000N8 /* NotuleAuditTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotuleAuditTests.swift; sourceTree = "<group>"; };
 		FB0000T3 /* NotuleGeneratorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotuleGeneratorTests.swift; sourceTree = "<group>"; };
 		FB0000T5 /* LocalPipelineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalPipelineTests.swift; sourceTree = "<group>"; };
@@ -578,6 +580,7 @@
 				FB0000E7 /* HTMLPlainTextTests.swift */,
 				FB0000Q1 /* TranscriptSearchTests.swift */,
 				FB0000X1 /* ExportFileTests.swift */,
+				FB0000P1 /* PendingTaskRecoveryTests.swift */,
 				FB0000N8 /* NotuleAuditTests.swift */,
 				FB0000T3 /* NotuleGeneratorTests.swift */,
 				FB0000T5 /* LocalPipelineTests.swift */,
@@ -844,6 +847,7 @@
 				AB0000E7 /* HTMLPlainTextTests.swift in Sources */,
 				AB0000Q1 /* TranscriptSearchTests.swift in Sources */,
 				AB0000X1 /* ExportFileTests.swift in Sources */,
+				AB0000P1 /* PendingTaskRecoveryTests.swift in Sources */,
 				AB0000N8 /* NotuleAuditTests.swift in Sources */,
 				AB0000T3 /* NotuleGeneratorTests.swift in Sources */,
 				AB0000T5 /* LocalPipelineTests.swift in Sources */,

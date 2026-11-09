@@ -24,6 +24,7 @@ struct RecordingView: View {
     // Internal (not private): shared with the macOS studio in RecordingView+Studio.swift.
     @State var showNoteField = false
     @State var showCancelConfirm = false
+    @State private var recordingToDelete: SavedRecording?
     @State var showProfileLoadError = false
     @State var showParticipantPicker = false
     @State var showImporter = false
@@ -547,12 +548,22 @@ struct RecordingView: View {
             Divider()
 
             Button(role: .destructive) {
-                withAnimation(TS.Animation.smooth) {
-                    recordingVM.deleteSavedRecording(recording)
-                }
+                recordingToDelete = recording
             } label: {
                 Label("Verwijderen", systemImage: "trash")
             }
+        }
+        .confirmationDialog("Opname verwijderen?", isPresented: Binding(
+            get: { recordingToDelete?.id == recording.id },
+            set: { if !$0 { recordingToDelete = nil } }
+        ), titleVisibility: .visible) {
+            Button("Verwijderen", role: .destructive) {
+                withAnimation(TS.Animation.smooth) { recordingVM.deleteSavedRecording(recording) }
+                recordingToDelete = nil
+            }
+            Button("Annuleren", role: .cancel) { recordingToDelete = nil }
+        } message: {
+            Text("Het audiobestand wordt permanent verwijderd. Dit kan niet ongedaan worden gemaakt.")
         }
     }
 

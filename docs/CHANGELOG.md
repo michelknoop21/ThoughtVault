@@ -5,6 +5,14 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2026-11-09]: Notules met meer feiten bij Ollama Cloud
+
+### Changed
+- **Profiel Standaard en gedeelde profielregels**: notule per onderwerp, acties als tabel, datums en bedragen letterlijk, indicaties apart van afspraken, geen "Nog te bepalen" meer. Bron `data/profileBlueprints.json`, gegenereerd naar macOS- en Windows-bundels (DEC-060).
+- **Chunkdrempel Ollama Cloud**: 64.000 tekens voor elk model op `https://ollama.com`; voorheen alleen voor gpt-oss, andere Cloud-modellen werden op 8.000 tekens in stukken samengevat.
+
+---
+
 ## [2026-08-10] — Lange lokale opnames mislukten stil (v1.0.251)
 
 ### Fixed

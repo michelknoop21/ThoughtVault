@@ -1,23 +1,23 @@
 {
-  "commonRules": "Verzin geen feiten, aanwezigen, citaten, besluiten, acties, eigenaren of termijnen. Een besluit vereist expliciete overeenstemming; een idee of voorstel blijft een idee of voorstel. Neem concrete vervolgacties op, ook als eigenaar of deadline ontbreekt; schrijf dan 'Nog te bepalen' bij het ontbrekende veld. Corrigeer spraakherkenningsfouten alleen bij ondubbelzinnige context. Gebruik uitsluitend informatie uit de transcriptie en meegegeven deelnemers. Schrijf Nederlands en geef alleen eenvoudige HTML zonder CSS of code fences, met precies één h1-titel. Laat lege secties weg.",
+  "commonRules": "Verzin geen feiten, aanwezigen, citaten, besluiten, acties, eigenaren of termijnen. Een besluit vereist expliciete overeenstemming; een idee, voorstel, vermoeden of indicatie blijft dat ook en wordt zo benoemd. Zeg wat nog niet vaststaat. Neem concrete details letterlijk over: datums, bedragen, jaartallen, aantallen, namen en materialen. Noem sprekers bij hun rol (bijvoorbeeld eigenaar, expert, klant) wanneer de transcriptie die rol ondubbelzinnig maakt. Neem concrete vervolgacties op; noem een eigenaar of termijn alleen als die uit de transcriptie blijkt en laat dat veld anders leeg. Laat smalltalk, onderbrekingen en technische storingen weg. Corrigeer spraakherkenningsfouten alleen bij ondubbelzinnige context. Gebruik uitsluitend informatie uit de transcriptie en meegegeven deelnemers. Schrijf Nederlands en geef alleen eenvoudige HTML zonder CSS of code fences, met precies één h1-titel. Laat lege secties weg.",
   "profiles": [
     {
       "id": "standaard",
       "name": "Standaard",
       "icon": "doc.text",
       "description": "Evenwichtige notulen met onderwerpen, besluiten en vervolgwerk",
-      "goal": "Maak een helder verslag van het gesprek.",
+      "goal": "Maak een verslag waarmee iemand die er niet bij was direct verder kan.",
       "sections": [
         "Kern",
-        "Besproken onderwerpen",
-        "Besluiten",
+        "één sectie per besproken onderwerp",
         "Acties",
-        "Open vragen"
+        "Openstaande punten"
       ],
-      "focus": "Behoud de belangrijkste context en alle concrete vervolgacties.",
-      "detail": "Middel: korte alinea's per onderwerp.",
+      "focus": "Beschrijf per onderwerp de situatie, wat is vastgesteld of ingeschat en wat is afgesproken. Bewaar alle concrete details.",
+      "detail": "Ruim: liever een concreet feit te veel dan een algemene zin.",
       "style": "Neutraal en helder.",
-      "emoji": "📝"
+      "emoji": "📝",
+      "template": "<h1>[Beschrijvende titel]</h1>\n<section><h2>Kern</h2><p>[Twee tot vier zinnen: aanleiding, belangrijkste vaststellingen en vervolg]</p></section>\n<section><h2>[Onderwerp]</h2><p>[Situatie, vaststelling of inschatting, afspraak; met datums en bedragen]</p></section>\n<section><h2>Acties</h2><table><tr><th>Wie</th><th>Actie</th><th>Wanneer</th></tr><tr><td>[Naam of rol]</td><td>[Actie]</td><td>[Termijn uit de tekst, anders leeg]</td></tr></table></section>\n<section><h2>Openstaande punten</h2><ul><li>[Wat nog niet vaststaat]</li></ul></section>"
     },
     {
       "id": "executive",

@@ -20,7 +20,9 @@ def build_entries(source):
         else:
             prompt += " Geef alleen de prompt als doorlopende, kopieerbare tekst; geen vergadersecties. Verander de bedoeling niet."
         prompt += " Laat secties zonder inhoud weg.\n\nVormvoorbeeld:\n{{OUTPUT_TEMPLATE}}\n\nTranscriptie:\n{{TRANSCRIPTION}}"
-        if sections:
+        if item.get('template'):
+            template = item['template']
+        elif sections:
             template = '<h1>[Beschrijvende titel]</h1>\n' + '\n'.join(
                 f'<section><h2>{section}</h2><p>[Alleen brongebonden inhoud]</p></section>' for section in sections
             )

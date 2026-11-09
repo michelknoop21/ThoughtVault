@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		AC110001 /* WhisperLoadingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC110001 /* WhisperLoadingTests.swift */; };
+		AC200001 /* WhisperSilenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC200001 /* WhisperSilenceTests.swift */; };
+		AB200002 /* dutch-qa.wav in Resources */ = {isa = PBXBuildFile; fileRef = FB200002 /* dutch-qa.wav */; };
 		AA00PC02 /* PersonalCorrectionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA00PC02 /* PersonalCorrectionsView.swift */; };
 		AA00PC01 /* PersonalCorrections.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA00PC01 /* PersonalCorrections.swift */; };
 		AASIRI01 /* siriwave-MIT.txt in Resources */ = {isa = PBXBuildFile; fileRef = FASIRI01 /* siriwave-MIT.txt */; };
@@ -179,6 +181,8 @@
 
 /* Begin PBXFileReference section */
 		FC110001 /* WhisperLoadingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhisperLoadingTests.swift; sourceTree = "<group>"; };
+		FC200001 /* WhisperSilenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhisperSilenceTests.swift; sourceTree = "<group>"; };
+		FB200002 /* dutch-qa.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "dutch-qa.wav"; sourceTree = "<group>"; };
 		FA00PC02 /* PersonalCorrectionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "../Views/PersonalCorrectionsView.swift"; sourceTree = "<group>"; };
 		FA00PC01 /* PersonalCorrections.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonalCorrections.swift; sourceTree = "<group>"; };
 		FASIRI01 /* siriwave-MIT.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "siriwave-MIT.txt"; sourceTree = "<group>"; };
@@ -611,6 +615,7 @@
 				FB000090 /* AuthViewModelTests.swift */,
 				FB000091 /* TranscriptDecoderTests.swift */,
 				FC110001 /* WhisperLoadingTests.swift */,
+				FC200001 /* WhisperSilenceTests.swift */,
 				GG000100 /* Fixtures */,
 			);
 			path = ThoughtVaultTests;
@@ -622,6 +627,7 @@
 				FB000006 /* GraphCalendarViewResponse.json */,
 				FB0000T4 /* PreDraftFields.store */,
 				FB00T19B /* tone-1s.mp4 */,
+				FB200002 /* dutch-qa.wav */,
 				FB00T19C /* video-no-audio.mp4 */,
 			);
 			path = Fixtures;
@@ -886,6 +892,7 @@
 				AB000090 /* AuthViewModelTests.swift in Sources */,
 				AB000091 /* TranscriptDecoderTests.swift in Sources */,
 				AC110001 /* WhisperLoadingTests.swift in Sources */,
+				AC200001 /* WhisperSilenceTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -896,6 +903,7 @@
 				AB000006 /* GraphCalendarViewResponse.json in Resources */,
 				AB0000T4 /* PreDraftFields.store in Resources */,
 				AB00T19B /* tone-1s.mp4 in Resources */,
+				AB200002 /* dutch-qa.wav in Resources */,
 				AB00T19C /* video-no-audio.mp4 in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

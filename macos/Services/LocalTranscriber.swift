@@ -405,6 +405,7 @@ final class WhisperKitTranscriber: LocalTranscriber, @unchecked Sendable {
 
             onProgress(0.15)
 
+            // WhisperKit 0.18 defaults already apply the OpenAI thresholds against silence and repetition (compression 2.4, logprob -1.0, no-speech 0.6).
             var options = DecodingOptions(
                 task: .transcribe,
                 language: "nl"

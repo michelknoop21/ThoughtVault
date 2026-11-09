@@ -26,13 +26,14 @@ final class LocalTranscriptStore {
         // every other unsandboxed SwiftData app on the machine, which caused an
         // incompatible-schema "store not reachable" failure in dev builds.
         let newURL = Self.storeURL
-        let oldDefaultURL = URL.applicationSupportDirectory.appending(path: "default.store")
+        let oldDefaultURL = AppEnvironment.supportDirectory.appending(path: "default.store")
         // Earlier builds saved local history to the default store. Migrate it once,
         // before the new (empty) store exists.
         let shouldMigrate = !FileManager.default.fileExists(atPath: newURL.path)
             && FileManager.default.fileExists(atPath: oldDefaultURL.path)
 
-        container = Self.makeContainer(at: newURL)
+        // The watchdog flag must not leak into the real app's defaults from a test run.
+        container = Self.makeContainer(at: newURL, defaults: AppEnvironment.isRunningTests ? UserDefaults(suiteName: "ThoughtVaultTests")! : .standard)
 
         if shouldMigrate {
             migrateFromDefaultStore(at: oldDefaultURL)
@@ -54,8 +55,7 @@ final class LocalTranscriptStore {
     /// next launch, and we move the incompatible store aside so the app starts cleanly
     /// instead of crash-looping. The set-aside store is preserved (not deleted) for
     /// manual recovery.
-    private static func makeContainer(at url: URL) -> ModelContainer {
-        let defaults = UserDefaults.standard
+    private static func makeContainer(at url: URL, defaults: UserDefaults = .standard) -> ModelContainer {
         let watchdogKey = "localStoreOpenInProgress"
 
         if defaults.bool(forKey: watchdogKey) {
@@ -108,7 +108,7 @@ final class LocalTranscriptStore {
 
     /// Dedicated on-disk location: `Application Support/ThoughtVault/Local.store`.
     private static var storeURL: URL {
-        let base = URL.applicationSupportDirectory.appending(path: "ThoughtVault", directoryHint: .isDirectory)
+        let base = AppEnvironment.supportDirectory.appending(path: "ThoughtVault", directoryHint: .isDirectory)
         try? FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
         return base.appending(path: "Local.store")
     }

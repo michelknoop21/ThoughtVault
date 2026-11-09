@@ -1,4 +1,7 @@
 import Foundation
+import OSLog
+
+private let logger = Logger(subsystem: "com.buildmind.ThoughtVault", category: "PersonalCorrections")
 
 struct PersonalCorrection: Codable, Identifiable, Equatable, Sendable {
     var id: String = UUID().uuidString
@@ -20,7 +23,15 @@ struct CorrectionDocument: Codable, Sendable {
 }
 enum PersonalCorrections {
     static var url: URL {
-        URL.applicationSupportDirectory.appendingPathComponent("ThoughtVault/personal-corrections.json")
+        AppEnvironment.supportDirectory.appendingPathComponent("ThoughtVault/personal-corrections.json")
+    }
+    /// For the minutes path: an unreadable glossary (e.g. a newer file version) must not
+    /// block the minutes, so it is logged and treated as empty.
+    static func loadOrEmpty(at path: URL = url) -> [PersonalCorrection] {
+        do { return try load(from: path) } catch {
+            logger.error("Glossary unreadable, minutes continue without it: \(error.localizedDescription, privacy: .public)")
+            return []
+        }
     }
     static func load(from path: URL = url) throws -> [PersonalCorrection] {
         guard FileManager.default.fileExists(atPath: path.path) else { return [] }

@@ -88,28 +88,25 @@ Client                    Backend                    n8n / Claude
 
 **Status pipeline:** `pending → uploading → converting → transcribing → transcribed → processingWebhook → completed`
 
-### n8n Notule Generation Flow
+### Notulegeneratie (lokaal)
 
-**Workflow:** "Notule Generator - Compleet Met Guardrails" (`Iq3AAf8Vk8eQ9dcZ`)
+De macOS-app maakt notulen zelf; de server ziet de transcriptie niet. `LLMServiceFactory` (`macos/Services/LLMService.swift`) kiest de service op basis van `notulenProvider`. De waarde `cloud` wordt in `RecordingViewModel` omgezet naar Ollama.
 
-The backend sends a webhook payload to n8n after transcription completes. The payload includes `profile_id` so n8n can route to the correct LLM.
+| Provider | Service | Chunkdrempel |
+|----------|---------|--------------|
+| Apple Intelligence | `AppleFoundationModelService` | afgeleid van de contextgrootte |
+| Ollama lokaal, LM Studio | `OpenAICompatibleLLMService` | 8.000 tekens |
+| Ollama Cloud (`https://ollama.com`, elk model) | `OpenAICompatibleLLMService` | 64.000 tekens |
+| OpenAI | `OpenAICompatibleLLMService` | 400.000 tekens |
+| Anthropic | `AnthropicLLMService` | geen chunking |
 
-```
-Webhook → Extract JSON Data → Build Prompts → Guardrails1 → Route Profile
-  ├─ handleiding → Claude HTTP Request → Parse Claude Response ─┐
-  └─ overig → Prepare for AI Agent → AI Agent (Ollama) → Guardrails → Convert to HTML ─┘
-                                                                                        ↓
-                                                                              Cleanup LLM Output → Extract Title → HTTP Request (callback)
-```
+Boven de drempel wordt de transcriptie eerst per stuk samengevat en wordt de notule uit die samenvattingen gemaakt. Daarbij gaan datums en bedragen verloren, dus de drempel moet zo hoog als de context toelaat.
 
-| Profile | LLM | Output | Notes |
-|---------|-----|--------|-------|
-| `handleiding` | Claude via `http://n8n_claude_code:3100/v1/chat/completions` | HTML with embedded `<style>` block | Skips Convert to HTML; 300s timeout |
-| All others | Ollama (`ministral-3:8b`) via AI Agent node | Markdown → HTML | Markdown converted by Convert to HTML node |
+Promptopbouw: systeemprompt = `commonRules` van het profiel. Usermessage = `buildNotuleUserContent()`, die `{{OUTPUT_TEMPLATE}}` en daarna `{{TRANSCRIPTION}}` in de profielprompt invult en een korte regel met inhoudsregels toevoegt. Windows doet hetzelfde in `buildUserContent()` (`windows/src/services/llm.ts`) en chunkt niet.
 
-**Webhook payload fields:** `task_id`, `filename`, `transcription`, `profile_id`, `system_prompt`, `notule_prompt`, `output_template`, `requested_by`, `callback_url`, `callback_admin_key`, `is_chunked`, `total_chunks`, `chunks`
+Profielen hebben één bron: `data/profileBlueprints.json`. `scripts/generate_profile_templates.py` schrijft daaruit `macos/Resources/ProfileTemplates.json`, `windows/src/data/profileTemplates.json` en, als die checkout ernaast staat, de legacy backendkopie. Een profiel kan een eigen `template` meegeven; anders wordt er een uit `sections` gemaakt. Zie DEC-060.
 
-**Handleiding HTML rendering:** The handleiding profile generates self-styled HTML with CSS custom properties, dark mode support (`html.dark`), and class-based components (`.doc-header`, `.section`, `.steps`, `.field-list`, `.info-box`). The macOS/iOS `HTMLWebView` detects `<style>` tags in content and extracts them to `<head>` for proper WKWebView rendering (counters, grid, pseudo-elements require `<style>` in `<head>`).
+De oude n8n-flow ("Notule Generator - Compleet Met Guardrails", DEC-057) hoort bij TranscriptStudio en wordt door de huidige macOS-app niet aangeroepen.
 
 **YouTube captions pipeline (primary):** `transcribed → processingWebhook → completed` (~1 second, no GPU). Three-step priority: (1) anonymous captions via `youtube-transcript-api` (no auth needed), (2) Google API captions via YouTube Data API v3 if `X-Google-Token` header present, (3) yt-dlp + Whisper fallback. Caption track priority: nl manual > nl ASR > en manual > en ASR > any. Response includes `source_type: "youtube_captions"` and `captions_available: true`. See DEC-044, DEC-041.
 

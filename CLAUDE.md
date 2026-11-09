@@ -9,6 +9,9 @@ Native macOS/iOS (Swift 6, SwiftUI, `@Observable`) + Windows (Tauri 2, React/Typ
 Windows: lokale opslag/transcriptie, lokale of rechtstreeks geconfigureerde cloud-AI.
 Lokale Windows-schermen werken zonder ThoughtVault-account.
 Historische opslag-ID’s blijven compatibel.
+Notulen worden in de app zelf gegenereerd (`LLMServiceFactory`): Apple Intelligence, Ollama lokaal of Cloud,
+LM Studio, OpenAI, Anthropic of een OpenAI-compatibel endpoint met eigen sleutel. Profielprompts komen uit
+`data/profileBlueprints.json`; na wijzigen `python3 scripts/generate_profile_templates.py` draaien (DEC-060).
 
 ## Commands
 ```bash
@@ -19,7 +22,7 @@ xcodebuild -project ThoughtVault.xcodeproj -scheme ThoughtVault -configuration D
 xcodebuild -project ThoughtVault.xcodeproj -scheme ThoughtVault -configuration Debug build CODE_SIGNING_ALLOWED=NO
 
 # Tests
-xcodebuild test -project ThoughtVault.xcodeproj -scheme ThoughtVault
+xcodebuild test -project ThoughtVault.xcodeproj -scheme ThoughtVault -destination "platform=macOS"
 
 # Windows dev
 cd windows && npm run tauri dev
@@ -65,7 +68,8 @@ FastAPI op AWS EC2 GPU `michelk@3.69.205.209`, container `n8n_transcript_studio`
 - Downloads: `https://n8n.prezent.nl/tstudio/download/` — lees docs/RELEASE.md voor infra details
 - **CI/CD**: GitLab CI (`.gitlab-ci.yml`) voor macOS + Android + Windows + deploy. Mac runner (shell executor) voor macOS/Android, self-hosted Windows PC (tag `windows`) voor MSI builds. GitHub Actions als fallback voor Windows. Windows runner draait als SYSTEM — `useLocalToolsDir: true` in tauri.conf.json is vereist. Zie DEC-055, DEC-056, DEC-058.
 - **Multi-instance deployment** — Lees docs/PLAN-MULTI-INSTANCE.md en DEC-033 wanneer relevant
-- **n8n notule flow**: `handleiding` profiel → Claude proxy (`n8n_claude_code:3100`), overige → Ollama. Backend stuurt `profile_id` mee in webhook payload. Zie docs/ARCHITECTURE.md "n8n Notule Generation Flow" (DEC-057)
+- **n8n notule flow is legacy (TranscriptStudio)**: macOS zet provider `cloud` om naar een lokale provider; notulen gaan niet meer via n8n. Zie docs/ARCHITECTURE.md "Notulegeneratie (lokaal)" (DEC-060). Oude flow: DEC-057.
+- **Notulekwaliteit hangt vooral af van het model**: eval 9 nov 2026 (schadebezoek, 43k tekens) scoorde gpt-oss:120b 8-9/18 feiten, mistral-large-4 17/18 met hetzelfde profiel. Zie DEC-060.
 - **HTMLWebView + eigen CSS**: Als notule-HTML een `<style>` block bevat (handleiding-profiel), dan `extractStyles()` gebruiken om CSS naar `<head>` te verplaatsen. WKWebView past counters/grid/pseudo-elements niet toe vanuit `<style>` in `<body>`.
 - **Notule titels**: Backend extraheert titels via `_extract_title_from_html()` in `transcription.py`. Sectiekoppen (bijv. "Kernargumenten") worden gefilterd via `_SECTION_WORDS`. Titel-extractie gebeurt in twee codepaths: `/callback/notule` route EN `app.py` queue callback — beide moeten in sync blijven.
 

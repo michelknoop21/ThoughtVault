@@ -36,6 +36,8 @@ final class TranscriptRecord {
     var notuleDraftHtml: String?
     /// Why that draft was not approved (Dutch, shown to the user).
     var notuleReviewReason: String?
+    /// Audio length in seconds, set on record/import. Optional → lightweight-migration safe.
+    var durationSeconds: Double?
 
     init(
         id: String = UUID().uuidString,
@@ -93,7 +95,7 @@ final class TranscriptRecord {
             notuleHtml: notuleHtml.isEmpty ? nil : notuleHtml,
             tags: tags,
             createdAt: formatter.string(from: createdAt),
-            duration: nil,
+            duration: durationSeconds,
             profileName: profileName
         )
     }

@@ -226,12 +226,14 @@ enum LocalTranscriberError: LocalizedError {
     case engineUnavailable(String)
     case transcriptionFailed(String)
     case emptyResult
+    case modelNotInstalled(String)
 
     var errorDescription: String? {
         switch self {
         case .engineUnavailable(let name): return "Transcriptie-engine '\(name)' is niet beschikbaar."
         case .transcriptionFailed(let msg): return "Lokale transcriptie mislukt: \(msg)"
         case .emptyResult: return "De transcriptie was leeg."
+        case .modelNotInstalled: return "Het spraakmodel is nog niet gedownload. Download het in Instellingen; de opname blijft bewaard."
         }
     }
 }
@@ -334,13 +336,16 @@ struct AppleSpeechTranscriber: LocalTranscriber {
 #if canImport(WhisperKit)
 import WhisperKit
 
-/// CoreML Whisper transcription via WhisperKit. Downloads the model on first use.
+/// CoreML Whisper transcription via WhisperKit. Never downloads; the model must be installed (see WhisperModelStore).
 final class WhisperKitTranscriber: LocalTranscriber, @unchecked Sendable {
 
     private let model: String
+    /// Injectable so tests need no model on disk.
+    private let isInstalled: @Sendable (String) -> Bool
 
-    init(model: String) {
+    init(model: String, isInstalled: @escaping @Sendable (String) -> Bool = { WhisperModelStore.isInstalled($0) }) {
         self.model = model
+        self.isInstalled = isInstalled
     }
 
     private struct UncheckedSendableBox<T>: @unchecked Sendable { let value: T }
@@ -364,6 +369,8 @@ final class WhisperKitTranscriber: LocalTranscriber, @unchecked Sendable {
     }
 
     func transcribe(url: URL, profileId: String?, onProgress: @Sendable @escaping (Double) -> Void) async throws -> String {
+        // Never download implicitly mid-transcription; the user downloads in Settings.
+        guard isInstalled(model) else { throw LocalTranscriberError.modelNotInstalled(model) }
         do {
             onProgress(0.02)
 
@@ -393,7 +400,7 @@ final class WhisperKitTranscriber: LocalTranscriber, @unchecked Sendable {
             ) {
                 // WhisperKit isn't Sendable; box it to cross the task-group boundary.
                 // Load once before VAD workers can concurrently request the same models.
-                UncheckedSendableBox(value: try await WhisperKit(WhisperKitConfig(model: modelName, load: true)))
+                UncheckedSendableBox(value: try await WhisperKit(WhisperKitConfig(model: modelName, modelFolder: WhisperModelStore.folder(for: modelName).path, load: true, download: false)))
             }.value
 
             onProgress(0.15)

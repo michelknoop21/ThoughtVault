@@ -5,12 +5,25 @@
 // On-device notule generation: generate once, audit, then either save the approved
 // notule or keep the rejected draft apart for review.
 
+import AVFoundation
 import Foundation
 import os.log
 
 private let log = OSLog(subsystem: "com.buildmind.ThoughtVault", category: "RecordingVM")
 
 extension RecordingViewModel {
+
+    /// Audio length in seconds; nil when unreadable, zero or non-finite.
+    nonisolated static func audioDuration(_ url: URL) async -> Double? {
+        guard let seconds = try? await AVURLAsset(url: url).load(.duration).seconds,
+              seconds.isFinite, seconds > 0 else { return nil }
+        return seconds
+    }
+
+    /// Task message for a failed transcription: the thrown error's own text (localPipeline.retry.test.ts).
+    nonisolated static func transcriptionFailureMessage(_ error: Error) -> String {
+        error.localizedDescription
+    }
 
     /// The configured notule provider; the cloud is meaningless for on-device generation.
     private static func localNotuleService() -> any LLMService {

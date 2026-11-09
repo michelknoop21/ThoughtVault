@@ -125,6 +125,7 @@ final class MigrationTests: XCTestCase {
         XCTAssertEqual(record.notuleHtml, "<p>Sam belt vrijdag.</p>")
         XCTAssertNil(record.notuleDraftHtml)
         XCTAssertNil(record.notuleReviewReason)
+        XCTAssertNil(record.durationSeconds)
 
         record.notuleDraftHtml = "<p>Concept</p>"
         try container.mainContext.save()

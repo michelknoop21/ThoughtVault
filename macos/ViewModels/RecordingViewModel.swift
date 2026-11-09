@@ -811,7 +811,7 @@ final class RecordingViewModel {
         } catch {
             os_log("[RecordingVM] processLocally transcription failed: %{public}@", log: log, type: .error, error.localizedDescription)
             await MainActor.run {
-                self.updateTask(localId, status: .error, errorMessage: error.localizedDescription)
+                self.updateTask(localId, status: .error, errorMessage: Self.transcriptionFailureMessage(error))
                 self.localProcessingTasks.removeValue(forKey: localId)
                 // The recording itself is safe in Documents/Recordings — offer it
                 // under "Opgeslagen opnames" so the user has a retry route.
@@ -841,6 +841,7 @@ final class RecordingViewModel {
             source: "local"
         )
         record.participants = participants
+        record.durationSeconds = await Self.audioDuration(url)
         do {
             try LocalTranscriptStore.shared.save(record)
         } catch {

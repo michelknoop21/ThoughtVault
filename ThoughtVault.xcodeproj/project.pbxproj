@@ -135,6 +135,7 @@
 		AB0000E7 /* HTMLPlainTextTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000E7 /* HTMLPlainTextTests.swift */; };
 		AB0000N8 /* NotuleAuditTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000N8 /* NotuleAuditTests.swift */; };
 		AB0000T3 /* NotuleGeneratorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000T3 /* NotuleGeneratorTests.swift */; };
+		AB0000T5 /* LocalPipelineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000T5 /* LocalPipelineTests.swift */; };
 		AB0000N9 /* NotuleConstraintTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000N9 /* NotuleConstraintTests.swift */; };
 		AB0000NA /* NotulePromptTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000NA /* NotulePromptTests.swift */; };
 		AB000090 /* AuthViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000090 /* AuthViewModelTests.swift */; };
@@ -295,6 +296,7 @@
 		FB0000E7 /* HTMLPlainTextTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HTMLPlainTextTests.swift; sourceTree = "<group>"; };
 		FB0000N8 /* NotuleAuditTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotuleAuditTests.swift; sourceTree = "<group>"; };
 		FB0000T3 /* NotuleGeneratorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotuleGeneratorTests.swift; sourceTree = "<group>"; };
+		FB0000T5 /* LocalPipelineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalPipelineTests.swift; sourceTree = "<group>"; };
 		FB0000N9 /* NotuleConstraintTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotuleConstraintTests.swift; sourceTree = "<group>"; };
 		FB0000NA /* NotulePromptTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotulePromptTests.swift; sourceTree = "<group>"; };
 		FB000090 /* AuthViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthViewModelTests.swift; sourceTree = "<group>"; };
@@ -563,6 +565,7 @@
 				FB0000E7 /* HTMLPlainTextTests.swift */,
 				FB0000N8 /* NotuleAuditTests.swift */,
 				FB0000T3 /* NotuleGeneratorTests.swift */,
+				FB0000T5 /* LocalPipelineTests.swift */,
 				FB0000N9 /* NotuleConstraintTests.swift */,
 				FB0000NA /* NotulePromptTests.swift */,
 				FB000090 /* AuthViewModelTests.swift */,
@@ -823,6 +826,7 @@
 				AB0000E7 /* HTMLPlainTextTests.swift in Sources */,
 				AB0000N8 /* NotuleAuditTests.swift in Sources */,
 				AB0000T3 /* NotuleGeneratorTests.swift in Sources */,
+				AB0000T5 /* LocalPipelineTests.swift in Sources */,
 				AB0000N9 /* NotuleConstraintTests.swift in Sources */,
 				AB0000NA /* NotulePromptTests.swift in Sources */,
 				AB000090 /* AuthViewModelTests.swift in Sources */,

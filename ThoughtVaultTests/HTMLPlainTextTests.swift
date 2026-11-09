@@ -20,6 +20,21 @@ final class HTMLPlainTextTests: XCTestCase {
         XCTAssertEqual(HTMLPlainText.from("&#x20AC;"), "€")
     }
 
+    func testDecodesCommonNamedEntities() {
+        XCTAssertEqual(HTMLPlainText.from("&euro; 12.450"), "€ 12.450")
+        XCTAssertEqual(HTMLPlainText.from("caf&eacute;"), "café")
+        XCTAssertEqual(HTMLPlainText.from("&ldquo;ja&rdquo;"), "“ja”")
+        XCTAssertEqual(HTMLPlainText.from("&hellip;"), "…")
+        XCTAssertEqual(HTMLPlainText.from("&mdash;"), "—")
+        XCTAssertEqual(HTMLPlainText.from("&Euml;"), "Ë")
+        XCTAssertEqual(HTMLPlainText.from("a&shy;b"), "a\u{00AD}b")
+        XCTAssertEqual(HTMLPlainText.from("&unknown;"), "&unknown;")
+    }
+
+    func testAmpersandEscapedEntityStaysLiteral() {
+        XCTAssertEqual(HTMLPlainText.from("&amp;euro;"), "&euro;")
+    }
+
     func testCollapsesBlankRuns() {
         XCTAssertEqual(HTMLPlainText.from("<p>A</p><p></p><p></p><p></p><p>B</p>"), "A\n\nB")
     }

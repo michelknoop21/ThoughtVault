@@ -16,6 +16,8 @@ struct PersonEditView: View {
 
     /// nil = new person mode; non-nil = edit mode.
     let person: PersonProfile?
+    /// Fields for a new person taken from a conversation suggestion.
+    var prefill: PersonSuggestion? = nil
     let onSave: (PersonProfile) -> Void
 
     // MARK: - State
@@ -241,7 +243,17 @@ struct PersonEditView: View {
     // MARK: - Load
 
     private func loadFields() {
-        guard let p = person else { return }
+        guard let p = person else {
+            if let s = prefill {
+                naam = s.name
+                rol = s.role
+                organisatie = s.organization
+                aliassen = s.heardAs.joined(separator: ", ")
+                expertise = s.topics.joined(separator: ", ")
+                taken = s.responsibilities
+            }
+            return
+        }
         naam = p.name
         rol = p.role
         organisatie = p.organization

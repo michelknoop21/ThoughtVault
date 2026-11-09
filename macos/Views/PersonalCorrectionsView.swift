@@ -215,6 +215,10 @@ struct WordCorrectionSheet: View {
                     }
                 }.buttonStyle(PrimaryButtonStyle()).disabled(busy)
             }
-        }.padding(TS.Spacing.lg).frame(width: 480).interactiveDismissDisabled(busy)
+        }.padding(TS.Spacing.lg)
+        #if os(macOS)
+        .frame(width: 480)
+        #endif
+        .interactiveDismissDisabled(busy)
     }
 }

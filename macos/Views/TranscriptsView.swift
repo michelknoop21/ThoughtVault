@@ -1729,6 +1729,10 @@ struct TranscriptDetailView: View {
 
     private func htmlContentView(_ html: String) -> some View {
         VStack(spacing: 0) {
+            if !isEditingNotule {
+                ContextSuggestionBar(taskId: fullTranscript.taskId, profileName: fullTranscript.profileName ?? "", scope: correctionProfileId,
+                                     profiles: recordingVM.availableProfiles, applyCorrection: applyWordCorrection)
+            }
             if isEditingNotule {
                 FormattingToolbar(webView: editableWebViewRef)
                     .padding(.horizontal, TS.Spacing.md)

@@ -1,0 +1,16 @@
+M2 Developer ID signing, attempt on 2026-11-09
+Candidate commit: 6ed9bf44291d7a7a27ab97f01c96aa687cfe20c6
+
+$ security find-identity -v -p codesigning
+  1) <hash> "Apple Development: info@michelknoop.nl (X438DWJA6N)"
+  2) <hash> "Apple Distribution: Michel Knoop (XL9KN38ATX)"
+     2 valid identities found
+
+$ xcodebuild archive (Release, API key NA27NHZ724, -allowProvisioningUpdates)
+** ARCHIVE SUCCEEDED **
+
+$ xcodebuild -exportArchive (method developer-id, signingStyle automatic, API key)
+** EXPORT FAILED **
+error: exportArchive Cloud signing permission error
+error: exportArchive No profiles for 'com.buildmind.ThoughtVault' were found
+error: exportArchive No signing certificate "Developer ID Application" found

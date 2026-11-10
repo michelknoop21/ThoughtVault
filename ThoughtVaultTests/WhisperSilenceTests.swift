@@ -17,14 +17,6 @@ final class WhisperSilenceTests: XCTestCase {
         if let tempDir { try? FileManager.default.removeItem(at: tempDir) }
     }
 
-    /// Test host stdout is not captured by xcodebuild; keep produced texts in the sandbox temp dir for inspection.
-    private func record(_ label: String, _ text: String) {
-        let url = FileManager.default.temporaryDirectory.appendingPathComponent("whisper-texts.txt")
-        let line = "\(label): [\(text)]\n"
-        if let h = try? FileHandle(forWritingTo: url) { h.seekToEndOfFile(); h.write(Data(line.utf8)); try? h.close() }
-        else { try? line.write(to: url, atomically: true, encoding: .utf8) }
-    }
-
     private var fixtureURL: URL {
         Bundle(for: Self.self).url(forResource: "dutch-qa", withExtension: "wav")!
     }
@@ -66,7 +58,6 @@ final class WhisperSilenceTests: XCTestCase {
         let url = try makeAudio(name: "silence.wav", silenceSeconds: 60, appending: nil)
         do {
             let text = try await transcribe(url)
-            record("silence", text)
             XCTAssertFalse(text.contains("*"), "Asterisks in: \(text)")
             assertNoRepeats(text)
             XCTAssertLessThan(text.filter { $0.isLetter || $0.isNumber }.count, 20, "Hallucinated: \(text)")
@@ -77,7 +68,6 @@ final class WhisperSilenceTests: XCTestCase {
 
     func testDutchClipStillTranscribes() async throws {
         let text = try await transcribe(fixtureURL)
-        record("dutch", text)
         XCTAssertFalse(text.isEmpty)
         XCTAssertFalse(text.contains("*"), "Asterisks in: \(text)")
         let hits = ["alex", "maandag", "installatie", "notulen"].filter { text.lowercased().contains($0) }
@@ -87,7 +77,6 @@ final class WhisperSilenceTests: XCTestCase {
     func testSilenceThenSpeechHasNoTextBeforeSpeech() async throws {
         let url = try makeAudio(name: "silence-speech.wav", silenceSeconds: 60, appending: fixtureURL)
         let text = try await transcribe(url)
-        record("silence+speech", text)
         XCTAssertFalse(text.contains("*"), "Asterisks in: \(text)")
         let head = String(text.trimmingCharacters(in: .whitespacesAndNewlines).prefix(80)).lowercased()
         XCTAssertTrue(["begincontrole", "thoughtvault", "alex"].contains { head.contains($0) }, "Head: \(head)")

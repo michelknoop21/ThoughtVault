@@ -67,6 +67,7 @@ struct ProspectFlowOfferSheet: View {
         .frame(width: 460, height: 460)
         #endif
         .task { await loadCandidates() }
+        .onDisappear { searchTask?.cancel() }
     }
 
     @ViewBuilder
@@ -120,10 +121,14 @@ struct ProspectFlowOfferSheet: View {
                 VStack(alignment: .leading, spacing: 2) {
                     ForEach(candidates) { c in
                         row(title: c.plaats.map { "\(c.naam), \($0)" } ?? c.naam, selected: selectedId == c.id) {
+                            searchTask?.cancel()
                             selectedId = c.id
                         }
                     }
-                    row(title: String(localized: "Nieuwe klant"), selected: selectedId == nil) { selectedId = nil }
+                    row(title: String(localized: "Nieuwe klant"), selected: selectedId == nil) {
+                        searchTask?.cancel()
+                        selectedId = nil
+                    }
                 }
             }
             .frame(maxHeight: 180)

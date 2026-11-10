@@ -27,7 +27,7 @@ export function ProspectFlowTab() {
       <CardHead icon={<DocumentText24Regular />} title="Prospect Flow-koppeling" subtitle="Conceptofferte uit notule en transcript" />
       <div style={{ padding: "0 14px 4px" }}>
         <SettingsField label="Basis-URL">
-          <input type="url" className="input" value={settings.prospectflow_base_url} placeholder="https://prospectflow.yinga.ai"
+          <input type="url" aria-label="Basis-URL" className="input" value={settings.prospectflow_base_url} placeholder="https://prospectflow.yinga.ai"
             onChange={(e) => settings.updateSettings({ prospectflow_base_url: e.target.value })} />
         </SettingsField>
       </div>

@@ -399,8 +399,17 @@ final class NotuleFallbackTests: XCTestCase {
 
 final class NotuleFallbackProviderTests: XCTestCase {
     private let key = NotuleGenerator.fallbackProviderKey
+    private var originalValue: Any?
 
-    override func tearDown() { UserDefaults.standard.removeObject(forKey: key) }
+    override func setUp() {
+        super.setUp()
+        originalValue = UserDefaults.standard.object(forKey: key)
+    }
+
+    override func tearDown() {
+        UserDefaults.standard.set(originalValue, forKey: key)
+        super.tearDown()
+    }
 
     func testFallbackGuards() {
         UserDefaults.standard.removeObject(forKey: key)

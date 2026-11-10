@@ -63,7 +63,7 @@ export function ProspectFlowDialog({ transcript, onClose }: { transcript: Transc
   }
 
   return <DesktopDialog label="Offerte in Prospect Flow" onClose={creating ? () => {} : onClose}>
-    <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 12, minWidth: 380 }}>
+    <div className="card-static correction-dialog" style={{ padding: 20, display: "flex", flexDirection: "column", gap: 12 }}>
       <h3>Offerte in Prospect Flow</h3>
       {result ? <>
         <p><strong>Offerte {result.number}</strong>{result.bestaand ? " (al eerder gemaakt)" : ""} voor {result.klant.naam}{result.klant.nieuw ? " (nieuwe klant)" : ""}.</p>
@@ -86,12 +86,12 @@ export function ProspectFlowDialog({ transcript, onClose }: { transcript: Transc
           </div>
         </fieldset>}
         {creating && <p className="settings-desc" role="status">Regels afleiden, dit kan tot 2 minuten duren.</p>}
-        {error && <p role="alert" className="text-error">{error}</p>}
         <div className="action-row">
           <button className="btn btn-accent" disabled={!ready || creating || matching} onClick={() => void create()}>Maak conceptofferte</button>
           <button className="btn btn-secondary" disabled={creating} onClick={onClose}>Annuleren</button>
         </div>
       </>}
+      {error && <p role="alert" className="text-error">{error}</p>}
     </div>
   </DesktopDialog>;
 }

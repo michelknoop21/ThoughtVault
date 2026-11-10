@@ -55,3 +55,27 @@ it("gives another customer choice a new request id", async () => {
   await expect(createOffer({ ...input, customerId: 13 })).rejects.toThrow();
   expect(loadOfferRef("t1")!.pendingRequestId).not.toBe(first);
 });
+
+it("does not send an offer when its pending id cannot be saved", async () => {
+  const save = vi.spyOn(localStorage, "setItem").mockImplementation(() => {
+    throw new DOMException("full", "QuotaExceededError");
+  });
+  try {
+    await expect(createOffer({ ...input, customerId: 12 })).rejects.toThrow();
+    expect(invoke).not.toHaveBeenCalled();
+  } finally { save.mockRestore(); }
+});
+
+it.each(["http://pf.test", "ftp://localhost", "not-a-url"])("rejects unsafe base URL %s before loading a key", async (url) => {
+  useSettingsStore.setState({ prospectflow_base_url: url });
+  await expect(createOffer({ ...input, customerId: 12 })).rejects.toThrow();
+  expect(loadCredential).not.toHaveBeenCalled();
+  expect(invoke).not.toHaveBeenCalled();
+});
+
+it.each(["http://localhost:8089", "http://127.0.0.1:8089", "http://[::1]:8089"])("allows local test URL %s", async (url) => {
+  useSettingsStore.setState({ prospectflow_base_url: url });
+  invoke.mockResolvedValue({ status: 201, body: JSON.stringify(ok) });
+  await createOffer({ ...input, customerId: 12 });
+  expect(invoke).toHaveBeenCalledOnce();
+});

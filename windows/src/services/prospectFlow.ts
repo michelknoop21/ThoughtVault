@@ -20,17 +20,25 @@ export function loadOfferRef(taskId: string): OfferRef | null {
   try { return JSON.parse(localStorage.getItem(refKey(taskId)) ?? "null"); } catch { return null; }
 }
 function saveOfferRef(taskId: string, ref: OfferRef): void {
-  try { localStorage.setItem(refKey(taskId), JSON.stringify(ref)); } catch { /* storage unavailable */ }
+  try { localStorage.setItem(refKey(taskId), JSON.stringify(ref)); }
+  catch { throw new Error("De offertelink kan niet worden bewaard. Controleer de lokale opslag en probeer opnieuw."); }
 }
 
 function baseUrl(): string {
-  return useSettingsStore.getState().prospectflow_base_url.trim().replace(/\/+$/, "");
+  const base = useSettingsStore.getState().prospectflow_base_url.trim().replace(/\/+$/, "");
+  if (!base) return "";
+  let url: URL;
+  try { url = new URL(base); }
+  catch { throw new Error("Vul een geldig Prospect Flow-adres in."); }
+  if (url.protocol !== "https:" && !(url.protocol === "http:" && ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname))) {
+    throw new Error("Gebruik een HTTPS-adres voor Prospect Flow. HTTP is alleen toegestaan op deze computer.");
+  }
+  return base;
 }
 
 /** True when both the base URL and the API key are set. */
 export async function isConfigured(): Promise<boolean> {
-  if (!baseUrl()) return false;
-  try { return Boolean(await loadCredential(PROSPECTFLOW_KEY)); } catch { return false; }
+  try { return Boolean(baseUrl() && await loadCredential(PROSPECTFLOW_KEY)); } catch { return false; }
 }
 
 const STATUS_TEXT: Record<number, string> = {

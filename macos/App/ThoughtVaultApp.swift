@@ -80,7 +80,7 @@ struct ThoughtVaultApp: App {
                 }
                 .task {
                     #if DEBUG
-                    if IOSDebug.supportSeed {
+                    if IOSDebug.supportSeed || IOSDebug.supportSettingsSnapshot {
                         DebugScreenshotSeed.seedSupport(supportVM)
                         return
                     }

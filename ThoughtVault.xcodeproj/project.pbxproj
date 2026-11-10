@@ -112,6 +112,7 @@
 		AA0000K8 /* SettingsView+VerwerkingSide.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000K8 /* SettingsView+VerwerkingSide.swift */; };
 		AA0000K7 /* SettingsView+Verwerking.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000K7 /* SettingsView+Verwerking.swift */; };
 		AA0000K6 /* SettingsView+Studio.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000K6 /* SettingsView+Studio.swift */; };
+		B90000000000000000000001 /* SettingsView+Support.swift in Sources */ = {isa = PBXBuildFile; fileRef = B90000000000000000000003 /* SettingsView+Support.swift */; };
 		AA0000K5 /* HostedProviderConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000K5 /* HostedProviderConfig.swift */; };
 		AA0000CP1 /* CloudProviderConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000CP1 /* CloudProviderConfig.swift */; };
 		AA000032 /* TranscriptsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000032 /* TranscriptsView.swift */; };
@@ -299,6 +300,7 @@
 		825525A8990BF36A59F0ACEF /* SettingsView+VerwerkingSide.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000K8 /* SettingsView+VerwerkingSide.swift */; };
 		F4571C89E479D18DF7C6601B /* SettingsView+Verwerking.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000K7 /* SettingsView+Verwerking.swift */; };
 		EB2F34883F1AF554F86EBF01 /* SettingsView+Studio.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000K6 /* SettingsView+Studio.swift */; };
+		B90000000000000000000002 /* SettingsView+Support.swift in Sources */ = {isa = PBXBuildFile; fileRef = B90000000000000000000003 /* SettingsView+Support.swift */; };
 		0CE3268CA29568C899DDCE43 /* HostedProviderConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000K5 /* HostedProviderConfig.swift */; };
 		F01B80B1F831A440DEEE29CD /* CloudProviderConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000CP1 /* CloudProviderConfig.swift */; };
 		E4189B0528CC9F6E2CBC8633 /* TranscriptsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000032 /* TranscriptsView.swift */; };
@@ -445,6 +447,7 @@
 		FA0000K8 /* SettingsView+VerwerkingSide.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SettingsView+VerwerkingSide.swift"; sourceTree = "<group>"; };
 		FA0000K7 /* SettingsView+Verwerking.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SettingsView+Verwerking.swift"; sourceTree = "<group>"; };
 		FA0000K6 /* SettingsView+Studio.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SettingsView+Studio.swift"; sourceTree = "<group>"; };
+		B90000000000000000000003 /* SettingsView+Support.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SettingsView+Support.swift"; sourceTree = "<group>"; };
 		FA0000K5 /* HostedProviderConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostedProviderConfig.swift; sourceTree = "<group>"; };
 		FA0000CP1 /* CloudProviderConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudProviderConfig.swift; sourceTree = "<group>"; };
 		FA000032 /* TranscriptsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptsView.swift; sourceTree = "<group>"; };
@@ -744,6 +747,7 @@
 				FA0000K8 /* SettingsView+VerwerkingSide.swift */,
 				FA0000K7 /* SettingsView+Verwerking.swift */,
 				FA0000K6 /* SettingsView+Studio.swift */,
+				B90000000000000000000003 /* SettingsView+Support.swift */,
 				FA0000K5 /* HostedProviderConfig.swift */,
 				FA0000CP1 /* CloudProviderConfig.swift */,
 				FA000070 /* ProfileSettingsView.swift */,
@@ -1118,6 +1122,7 @@
 				AA0000K8 /* SettingsView+VerwerkingSide.swift in Sources */,
 				AA0000K7 /* SettingsView+Verwerking.swift in Sources */,
 				AA0000K6 /* SettingsView+Studio.swift in Sources */,
+				B90000000000000000000001 /* SettingsView+Support.swift in Sources */,
 				AA0000K5 /* HostedProviderConfig.swift in Sources */,
 				AA0000CP1 /* CloudProviderConfig.swift in Sources */,
 				AA000032 /* TranscriptsView.swift in Sources */,
@@ -1320,6 +1325,7 @@
 				825525A8990BF36A59F0ACEF /* SettingsView+VerwerkingSide.swift in Sources */,
 				F4571C89E479D18DF7C6601B /* SettingsView+Verwerking.swift in Sources */,
 				EB2F34883F1AF554F86EBF01 /* SettingsView+Studio.swift in Sources */,
+				B90000000000000000000002 /* SettingsView+Support.swift in Sources */,
 				0CE3268CA29568C899DDCE43 /* HostedProviderConfig.swift in Sources */,
 				F01B80B1F831A440DEEE29CD /* CloudProviderConfig.swift in Sources */,
 				E4189B0528CC9F6E2CBC8633 /* TranscriptsView.swift in Sources */,

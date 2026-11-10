@@ -1,3 +1,5 @@
+#[macro_use]
+mod applog;
 mod audio;
 mod commands;
 mod transcribe;

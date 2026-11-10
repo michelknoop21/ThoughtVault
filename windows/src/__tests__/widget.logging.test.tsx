@@ -2,7 +2,7 @@ import { expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({ crashes: vi.fn(), console: vi.fn(), clicks: vi.fn(), render: vi.fn() }));
 vi.mock("react-dom/client", () => ({ default: { createRoot: vi.fn(() => ({ render: mocks.render })) } }));
-vi.mock("../services/crashReporter", () => ({ initCrashReporter: mocks.crashes }));
+vi.mock("../services/localCrashReporter", () => ({ initCrashReporter: mocks.crashes }));
 vi.mock("../services/appLog", () => ({ installConsoleForwarding: mocks.console, installClickPath: mocks.clicks }));
 vi.mock("../components/recording/RecordingWidget", () => ({ RecordingWidget: () => null }));
 vi.mock("../App", () => { throw new Error("The widget must initialize without importing App"); });

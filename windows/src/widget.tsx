@@ -1,5 +1,5 @@
 import React from "react";
-import { initCrashReporter } from "./services/crashReporter";
+import { initCrashReporter } from "./services/localCrashReporter";
 import ReactDOM from "react-dom/client";
 import { RecordingWidget } from "./components/recording/RecordingWidget";
 import "./styles/widget.css";

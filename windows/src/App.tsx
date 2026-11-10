@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
-import { useEffect, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
+import { startSupportOwner } from "./services/supportOwner";
 import { useUpdateCheck } from "./hooks/useUpdateCheck";
 import { UpdateBanner } from "./components/ui/UpdateBanner";
 import { TitleBar } from "./components/layout/TitleBar";
@@ -39,8 +40,10 @@ import { canOpenRoute, shouldBlockForLocalNotes } from "./services/routeAccess";
 
 initCrashReporter(); installConsoleForwarding(); installClickPath();
 
+const UpdateContext = createContext<ReturnType<typeof useUpdateCheck> | null>(null);
+
 function AppShell({ children }: { children: React.ReactNode }) {
-  const {isUpdateAvailable, latestVersion, downloadUrl, nativeUpdate} = useUpdateCheck();
+  const {isUpdateAvailable, latestVersion, downloadUrl, nativeUpdate, downloaded, installNow} = useContext(UpdateContext)!;
   const dismissed = useSettingsStore(s => s.dismissed_update_version);
   const updateSettings = useSettingsStore(s => s.updateSettings);
   return (
@@ -53,7 +56,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
           <main className="app-main" id="main-content">
             <ProcessingBar />
             <OfflineQueueBanner />
-            {isUpdateAvailable && latestVersion && dismissed !== latestVersion && <UpdateBanner nativeUpdate={nativeUpdate} version={latestVersion} downloadUrl={downloadUrl} onDismiss={() => updateSettings({dismissed_update_version:latestVersion})} />}
+            {isUpdateAvailable && latestVersion && dismissed !== latestVersion && <UpdateBanner downloaded={downloaded} onInstall={installNow} nativeUpdate={nativeUpdate} version={latestVersion} downloadUrl={downloadUrl} onDismiss={() => updateSettings({dismissed_update_version:latestVersion})} />}
             <div className="app-main-content">
               {children}
             </div>
@@ -148,7 +151,6 @@ function ProtectedRoutes() {
   }, [isAuthenticated, processing_mode, setProfiles, showLocalProfiles, updateSettings]);
 
   // Global recording stop/error handler — always active, survives page navigation
-  useGlobalRecordingHandler();
 
   // Recover active tasks on app start via /tasks/active endpoint
   const recoveryRanRef = useRef(false);
@@ -269,6 +271,9 @@ function UpdateRequiredOverlay({ currentVersion, minimumVersion }: { currentVers
 }
 
 export default function App() {
+  const updates = useUpdateCheck();
+  useEffect(startSupportOwner, []);
+  useGlobalRecordingHandler();
   const [updateRequired, setUpdateRequired] = useState<{ current: string; minimum: string } | null>(null);
   const processingMode = useSettingsStore((s) => s.processing_mode);
   const [localReady, setLocalReady] = useState(false);
@@ -380,6 +385,7 @@ export default function App() {
   }
 
   return (
+    <UpdateContext.Provider value={updates}>
     <ErrorBoundary>
       <BrowserRouter>
         <div style={{ height: "100%" }}>
@@ -391,5 +397,6 @@ export default function App() {
         </div>
       </BrowserRouter>
     </ErrorBoundary>
+    </UpdateContext.Provider>
   );
 }

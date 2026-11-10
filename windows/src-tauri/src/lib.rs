@@ -15,12 +15,27 @@ pub fn run() {
 
     tauri::Builder::default()
         .manage(recording_state)
+        .on_window_event(|window, event| {
+            if window.label() == "main" {
+                if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                    // Keep main through webview reload; JS explicitly destroys only after idle checks.
+                    api.prevent_close();
+                    let _ = window.hide();
+                }
+            }
+        })
         .manage(transcribe::ModelDownloadControl::default())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_store::Builder::default().build())
-        .plugin(tauri_plugin_single_instance::init(|_app, _args, _cwd| {}))
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.show();
+                let _ = window.unminimize();
+                let _ = window.set_focus();
+            }
+        }))
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
@@ -75,6 +90,7 @@ pub fn run() {
             applog::session_stage,
             // Audio
             commands::audio::get_audio_devices,
+            commands::audio::recording_active,
             commands::audio::start_recording,
             commands::audio::stop_recording,
             commands::audio::pause_recording,

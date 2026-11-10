@@ -31,6 +31,12 @@ impl Default for RecordingState {
 pub type SharedRecordingState = Arc<Mutex<RecordingState>>;
 
 #[tauri::command]
+pub fn recording_active(state: tauri::State<'_, SharedRecordingState>) -> bool {
+    // Contention or poisoning is uncertainty, so do not permit close/install.
+    state.try_lock().map(|guard| guard.is_recording).unwrap_or(true)
+}
+
+#[tauri::command]
 pub async fn get_audio_devices() -> Result<Vec<AudioDevice>, String> {
     Ok(recorder::get_devices())
 }

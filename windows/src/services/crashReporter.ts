@@ -1,26 +1,10 @@
 import { invoke } from "@tauri-apps/api/core";
 import { log, mask, readClickPath, scrubReportText } from "./appLog";
-import { useSupportStore } from "../stores/supportStore";
+import { isSupportReportDurable, useSupportStore } from "../stores/supportStore";
 import type { ReportStage } from "./supportRelay";
 import type { TaskStatus } from "../types";
 
-let initialized = false;
-
-export function initCrashReporter(): void {
-  if (initialized) return;
-  initialized = true;
-  window.addEventListener("error", event => {
-    try { log.error("Onverwacht", `uncaught_error ${mask(event.message)}`); }
-    catch { /* Diagnostics must never cause another error. */ }
-  });
-  window.addEventListener("unhandledrejection", event => {
-    try {
-      const reason = event.reason;
-      const message = typeof reason === "string" ? reason : reason instanceof Error ? reason.message : "details omitted";
-      log.error("Onverwacht", `unhandled_rejection ${mask(message)}`);
-    } catch { /* Do not inspect or serialize arbitrary rejection objects. */ }
-  });
-}
+export { initCrashReporter } from "./localCrashReporter";
 
 export function stageForStatus(status: TaskStatus): ReportStage | null {
   switch (status) {
@@ -42,22 +26,31 @@ export async function fingerprint(stage: string, errorText: string): Promise<str
 }
 
 // Callers must supply audited error metadata, never provider response bodies or meeting text.
-export async function reportFailure(stage: ReportStage, shown: string, error: string): Promise<void> {
+export async function enqueueFailure(stage: ReportStage, shown: string, error: string, id: string): Promise<"queued" | "discarded" | "failed"> {
   try {
     log.error("Fout", `${stage}: ${mask(error)}`);
-    if (!useSupportStore.getState().auto_report) return;
+    if (!useSupportStore.getState().auto_report) return "discarded";
     const [key, shownMessage, errorText, clickPath] = await Promise.all([
       fingerprint(stage, error), scrubReportText(shown), scrubReportText(error),
       readClickPath().then(lines => Promise.all(lines.map(line => scrubReportText(line)))),
     ]);
     const store = useSupportStore.getState();
-    if (!store.auto_report) return;
-    store.enqueue({ id: crypto.randomUUID(), kind: "auto", category: "BUG", stage,
+    if (!store.auto_report) return "discarded";
+    store.enqueue({ id, kind: "auto", category: "BUG", stage,
       shownMessage: Array.from(shownMessage).slice(0, 5000).join(""),
       errorText: Array.from(errorText).slice(0, 2000).join(""), fingerprint: key,
       clickPath: clickPath.slice(-30).map(line => Array.from(line).slice(0, 80).join("")), occurredAt: new Date().toISOString() });
-    void useSupportStore.getState().flushQueue().catch(() => {});
-  } catch { /* No queue or transmission when scrubbing, hashing or storage fails. */ }
+    return isSupportReportDurable(id) ? "queued" : "failed";
+  } catch { return "failed"; }
+}
+
+// Public callers retain the non-throwing three-argument API.
+export async function reportFailure(stage: ReportStage, shown: string, error: string): Promise<void> {
+  try {
+    if (await enqueueFailure(stage, shown, error, crypto.randomUUID()) === "queued") {
+      void useSupportStore.getState().flushQueue().catch(() => {});
+    }
+  } catch { /* Diagnostics must not interrupt the caller. */ }
 }
 
 export async function markStage(stage: ReportStage | null): Promise<void> {

@@ -36,7 +36,7 @@ function save(change: Partial<SupportState>): boolean {
   try { useSupportStore.setState(change); return true; }
   catch { log.warn("Melden", "De supportgegevens konden niet worden bewaard."); return false; }
 }
-function durable(id: string): boolean {
+export function isSupportReportDurable(id: string): boolean {
   try {
     const value = JSON.parse(localStorage.getItem("support-store") ?? "null");
     return value?.state?.queue?.some((item: QueuedReport) => item.id === id) === true;
@@ -111,7 +111,7 @@ async function flush(): Promise<void> {
     if (!item || !current.name.trim() || !isValidEmail(current.email)) return;
     if (item.kind === "auto" && !current.auto_report) { finish(item.id, "failed"); continue; }
     // A failed persist must not turn an in-memory entry into an apparent durable submission.
-    if (!durable(item.id)) return;
+    if (!isSupportReportDurable(item.id)) return;
     activeId = item.id;
     try {
       const [logTail, appVersion, specs] = await Promise.all([
@@ -172,13 +172,13 @@ export const useSupportStore = create<SupportState>()(persist((_set, get) => ({
     const item: QueuedReport = { id, kind: "manual", category, stage: "", errorText: "",
       shownMessage: Array.from(description).slice(0, 5000).join(""), clickPath: await readClickPath(), occurredAt: new Date().toISOString() };
     get().enqueue(item);
-    if (!durable(id)) { save({ queue: get().queue.filter(entry => entry.id !== id) }); return "failed"; }
+    if (!isSupportReportDurable(id)) { save({ queue: get().queue.filter(entry => entry.id !== id) }); return "failed"; }
     submissions.set(id, "queued");
     await get().flushQueue();
     const outcome = submissions.get(id) ?? "failed";
     submissions.delete(id);
     await get().refreshUnread();
-    return outcome === "queued" && !durable(id) ? "failed" : outcome;
+    return outcome === "queued" && !isSupportReportDurable(id) ? "failed" : outcome;
   },
 }), {
   name: "support-store",

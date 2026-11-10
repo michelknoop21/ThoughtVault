@@ -213,7 +213,8 @@ pub async fn transcribe_local(
         } else {
             run_whisper(app, &model, &file_path, &vocabulary, &request_id)
         };
-        if let Err(error) = &result { eprintln!("[transcribe_local] {error}"); }
+        // Runtime stderr can include recognized speech; keep only a correlation token.
+        if let Err(error) = &result { elog!("[transcribe_local] error={}", crate::applog::mask_token(error)); }
         result
     })
         .await
@@ -348,7 +349,7 @@ fn run_whisper(app: AppHandle, model: &PathBuf, wav_path: &str, vocabulary: &str
 fn decode_whisper_text(bytes: &[u8], offset_seconds: usize) -> std::borrow::Cow<'_, str> {
     // Whisper may emit incomplete UTF-8; retain surrounding speech instead of failing the recording.
     if let Err(error) = std::str::from_utf8(bytes) {
-        eprintln!("Whisper invalid UTF-8 repaired at {offset_seconds}s: {error}");
+        elog!("Whisper invalid UTF-8 repaired at {offset_seconds}s: {error}");
     }
     String::from_utf8_lossy(bytes)
 }
@@ -412,7 +413,7 @@ mod tests {
             state.full(params, &samples[range]).unwrap();
             for segment in state.as_iter() { text.push_str(&super::decode_whisper_text(segment.to_bytes().unwrap(), 0)); }
         }
-        eprintln!("QA_WHISPER segments={segment_count} speech_seconds={:.2} inference_seconds={:.2}", speech_samples as f64 / 16_000.0, inference_started.elapsed().as_secs_f64());
+        elog!("QA_WHISPER segments={segment_count} speech_seconds={:.2} inference_seconds={:.2}", speech_samples as f64 / 16_000.0, inference_started.elapsed().as_secs_f64());
         let lower = text.to_lowercase();
         assert_eq!(lower.matches("alex").count(), 2, "Both normal and quiet speech must survive: {text}");
         assert_eq!(lower.matches("maandag").count(), 2, "Both decisions must survive: {text}");

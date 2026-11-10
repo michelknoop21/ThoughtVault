@@ -1,7 +1,10 @@
+#[macro_use]
+mod applog;
 mod audio;
 mod commands;
 mod transcribe;
 mod personal_corrections;
+mod main_navigation;
 
 use commands::audio::SharedRecordingState;
 use std::sync::{Arc, Mutex};
@@ -13,24 +16,54 @@ pub fn run() {
 
     tauri::Builder::default()
         .manage(recording_state)
+        .on_window_event(|window, event| {
+            if window.label() == "main" {
+                if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                    // Keep main through webview reload; JS explicitly destroys only after idle checks.
+                    api.prevent_close();
+                    let _ = window.hide();
+                }
+            }
+        })
         .manage(transcribe::ModelDownloadControl::default())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_store::Builder::default().build())
-        .plugin(tauri_plugin_single_instance::init(|_app, _args, _cwd| {}))
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.show();
+                let _ = window.unminimize();
+                let _ = window.set_focus();
+            }
+        }))
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
-            let main_window = app.get_webview_window("main").unwrap();
+            applog::init(app.path().app_data_dir()?.join("logs"));
+            let default = std::panic::take_hook();
+            std::panic::set_hook(Box::new(move |info| {
+                // Panic payloads may contain transcript text; persist only the source location.
+                let location = info.location().map(|l| l.to_string()).unwrap_or_default();
+                applog::write("error", "panic", &format!("panic at {location}"));
+                default(info);
+            }));
+            let main_config = app.config().app.windows.iter()
+                .find(|window| window.label == "main")
+                .ok_or("main window configuration missing")?;
+            let expected = main_navigation::packaged_main_url(main_config, &app.config().build)?;
+            let navigation = main_navigation::MainNavigation::new(expected);
+            let main_window = tauri::WebviewWindowBuilder::from_config(app, main_config)?
+                .on_navigation(move |url| navigation.allows("main", url.as_str(), cfg!(debug_assertions)))
+                .build()?;
 
             // Apply Windows 11 Mica effect to main window
             #[cfg(target_os = "windows")]
             {
                 use window_vibrancy::apply_mica;
                 if let Err(e) = apply_mica(&main_window, Some(true)) {
-                    eprintln!("[Window] Mica effect niet beschikbaar: {}", e);
+                    elog!("[Window] Mica effect niet beschikbaar: {}", e);
                 }
             }
 
@@ -42,7 +75,7 @@ pub fn run() {
             let app_handle2 = app.handle().clone();
             app.listen("deep-link://new-url", move |event| {
                 let payload = event.payload().to_string();
-                eprintln!("[DeepLink] OAuth callback ontvangen");
+                elog!("[DeepLink] OAuth callback ontvangen");
 
                 if let Some(window) = app_handle2.get_webview_window("main") {
                     let _ = window.emit("oauth-callback", payload);
@@ -58,8 +91,14 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            applog::log_write,
+            applog::log_tail,
+            applog::log_scrub,
+            applog::session_begin,
+            applog::session_stage,
             // Audio
             commands::audio::get_audio_devices,
+            commands::audio::recording_active,
             commands::audio::start_recording,
             commands::audio::stop_recording,
             commands::audio::pause_recording,
@@ -106,6 +145,11 @@ pub fn run() {
             personal_corrections::write_context_file,
             personal_corrections::set_aside_context_file,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|_app, event| {
+            if let tauri::RunEvent::Exit = event {
+                applog::session_end();
+            }
+        });
 }

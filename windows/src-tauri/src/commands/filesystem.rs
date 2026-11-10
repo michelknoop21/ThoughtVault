@@ -1,7 +1,7 @@
 use chrono::Utc;
 use hound::WavReader;
 use serde::{Deserialize, Serialize};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use crate::audio::recorder::StreamingResampler;
 use symphonia::core::audio::SampleBuffer;
 use symphonia::core::codecs::DecoderOptions;
@@ -24,8 +24,8 @@ pub struct RecordingFile {
 /// Copy a chosen audio file into the existing recordings folder as the WAV
 /// format already accepted by local Whisper and the saved-recordings view.
 #[tauri::command]
-pub async fn import_audio(source_path: String) -> Result<String, String> {
-    let destination_dir = get_recordings_dir().await?;
+pub async fn import_audio(app: tauri::AppHandle, source_path: String) -> Result<String, String> {
+    let destination_dir = get_recordings_dir(app).await?;
     tokio::task::spawn_blocking(move || {
         convert_audio(Path::new(&source_path), Path::new(&destination_dir))
     })
@@ -169,9 +169,13 @@ mod import_tests {
     }
 }
 
+fn recordings_path(base: &Path, identifier: &str) -> PathBuf {
+    base.join(identifier).join("Recordings")
+}
+
 /// Returns the platform-appropriate recordings directory.
 ///
-/// Windows: %LOCALAPPDATA%\nl.prezent.transcript-studio\Recordings
+/// Windows: %LOCALAPPDATA%\<effective app identifier>\Recordings
 ///   (NOT %APPDATA%/Roaming — Roaming gets pulled into OneDrive Known Folder
 ///    Move and Windows roaming profiles, which lock/sync 100MB+ WAV files
 ///    while the upload stream is reading them. That race produces truncated
@@ -179,15 +183,13 @@ mod import_tests {
 /// macOS / Linux: same path that data_dir() returned before — local-vs-roaming
 ///   distinction only exists on Windows.
 #[tauri::command]
-pub async fn get_recordings_dir() -> Result<String, String> {
+pub async fn get_recordings_dir(app: tauri::AppHandle) -> Result<String, String> {
     let base = dirs::data_local_dir()
         .or_else(|| dirs::data_dir())
         .or_else(|| dirs::home_dir())
         .ok_or("Kan app-data map niet vinden")?;
 
-    let recordings = base
-        .join("nl.prezent.transcript-studio")
-        .join("Recordings");
+    let recordings = recordings_path(&base, &app.config().identifier);
 
     std::fs::create_dir_all(&recordings)
         .map_err(|e| format!("Kan opnamemap niet aanmaken: {}", e))?;
@@ -201,11 +203,12 @@ pub async fn get_recordings_dir() -> Result<String, String> {
 ///
 /// Returns the number of files moved.
 #[tauri::command]
-pub async fn migrate_recordings_dir() -> Result<u32, String> {
+pub async fn migrate_recordings_dir(app: tauri::AppHandle) -> Result<u32, String> {
     // Only Windows has a meaningful Roaming/Local split — on macOS/Linux both
     // dirs::data_dir() and dirs::data_local_dir() resolve to the same path.
     #[cfg(not(target_os = "windows"))]
     {
+        let _ = app;
         return Ok(0);
     }
 
@@ -224,8 +227,9 @@ pub async fn migrate_recordings_dir() -> Result<u32, String> {
             return Ok(0);
         }
 
-        let old_dir = old_base.join("nl.prezent.transcript-studio").join("Recordings");
-        let new_dir = new_base.join("nl.prezent.transcript-studio").join("Recordings");
+        let identifier = &app.config().identifier;
+        let old_dir = recordings_path(&old_base, identifier);
+        let new_dir = recordings_path(&new_base, identifier);
 
         if !old_dir.exists() {
             return Ok(0);
@@ -264,7 +268,7 @@ pub async fn migrate_recordings_dir() -> Result<u32, String> {
         // Best-effort cleanup of the now-empty legacy folder
         let _ = std::fs::remove_dir(&old_dir);
 
-        eprintln!("[Filesystem] Migrated {} recording(s) from %APPDATA% to %LOCALAPPDATA%", moved);
+        elog!("[Filesystem] Migrated {} recording(s) from %APPDATA% to %LOCALAPPDATA%", moved);
         Ok(moved)
     }
 }
@@ -389,7 +393,7 @@ pub async fn concatenate_wav_files(
     writer.finalize().map_err(|e| e.to_string())?;
 
     let duration = total_samples as f64 / 16000.0;
-    eprintln!("[Concat] {} bestanden samengevoegd → {} ({:.1}s)", input_paths.len(), output_path, duration);
+    elog!("[Concat] {} bestanden samengevoegd → {} ({:.1}s)", input_paths.len(), output_path, duration);
 
     Ok(output_path)
 }
@@ -403,4 +407,24 @@ fn get_wav_duration(file_path: &str) -> Option<f64> {
     let reader = WavReader::open(file_path).ok()?;
     let spec = reader.spec();
     Some(reader.duration() as f64 / spec.sample_rate as f64)
+}
+
+#[cfg(test)]
+mod isolation_tests {
+    use super::*;
+
+    #[test]
+    fn recording_roots_preserve_production_and_separate_other_identities() {
+        let config: serde_json::Value = serde_json::from_str(include_str!("../../tauri.conf.json")).unwrap();
+        let production = config["identifier"].as_str().unwrap();
+        assert_eq!(production, "nl.prezent.transcript-studio");
+        for base in [Path::new("LocalAppData"), Path::new("RoamingAppData")] {
+            assert_eq!(recordings_path(base, production), base.join("nl.prezent.transcript-studio").join("Recordings"));
+            for isolated in ["nl.prezent.transcript-studio-dev", "nl.prezent.transcript-studio-qa-20261110"] {
+                let path = recordings_path(base, isolated);
+                assert_eq!(path, base.join(isolated).join("Recordings"));
+                assert_ne!(path, recordings_path(base, production));
+            }
+        }
+    }
 }

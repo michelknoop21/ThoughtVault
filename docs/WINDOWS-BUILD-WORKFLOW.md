@@ -105,3 +105,7 @@ Updaterondertekening is geen Windows-uitgeverssignering of antivirusacceptatie.
 Een beveiligingsblokkade wordt vastgelegd; een ontbrekende/quarantaine-worker
 wordt niet voor een nieuwe test teruggezet of vervangen. De inhoudscontrole en
 volledige installatie-/werkketenacceptatie blijven afzonderlijke voorwaarden.
+
+## Support-ownerregressie in aparte JavaScript-realms
+
+Vanuit `windows/`: `node scripts/support-owner-realms.mjs`. Dit gebruikt de al door Vite geïnstalleerde esbuild en aparte `vm.Context`-heaps voor main en widget. Alleen de Tauri-grens is vervangen; opslag, Credential Manager en relay zijn gedeelde fakes. Het controleert de echte C6-code, ACK-verlies, toestemming, opslagfouten, disposal, throttling en de begrensde ACK-cache. Dit is geen Windows-native-, MSI- of live-relaybewijs.

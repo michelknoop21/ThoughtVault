@@ -1,7 +1,5 @@
 use keyring::Entry;
 
-const SERVICE_NAME: &str = "nl.prezent.transcript-studio";
-
 fn storage_error(error: keyring::Error) -> String {
     // Do not format arbitrary credential attributes or blobs into UI errors.
     match error {
@@ -13,14 +11,14 @@ fn storage_error(error: keyring::Error) -> String {
 }
 
 #[tauri::command]
-pub async fn store_credential(key: String, value: String) -> Result<(), String> {
-    let entry = Entry::new(SERVICE_NAME, &key).map_err(storage_error)?;
+pub async fn store_credential(app: tauri::AppHandle, key: String, value: String) -> Result<(), String> {
+    let entry = Entry::new(&app.config().identifier, &key).map_err(storage_error)?;
     entry.set_password(&value).map_err(storage_error)
 }
 
 #[tauri::command]
-pub async fn load_credential(key: String) -> Result<Option<String>, String> {
-    let entry = Entry::new(SERVICE_NAME, &key).map_err(|e| e.to_string())?;
+pub async fn load_credential(app: tauri::AppHandle, key: String) -> Result<Option<String>, String> {
+    let entry = Entry::new(&app.config().identifier, &key).map_err(|e| e.to_string())?;
     match entry.get_password() {
         Ok(value) => Ok(Some(value)),
         Err(keyring::Error::NoEntry) => Ok(None),
@@ -29,8 +27,8 @@ pub async fn load_credential(key: String) -> Result<Option<String>, String> {
 }
 
 #[tauri::command]
-pub async fn delete_credential(key: String) -> Result<(), String> {
-    let entry = Entry::new(SERVICE_NAME, &key).map_err(|e| e.to_string())?;
+pub async fn delete_credential(app: tauri::AppHandle, key: String) -> Result<(), String> {
+    let entry = Entry::new(&app.config().identifier, &key).map_err(|e| e.to_string())?;
     match entry.delete_credential() {
         Ok(()) => Ok(()),
         Err(keyring::Error::NoEntry) => Ok(()),
@@ -48,14 +46,16 @@ mod tests {
         assert!(storage_error(keyring::Error::TooLong(secret.into(), 2560)).contains("te lang"));
     }
 
-    #[tokio::test]
-    async fn credentials_survive_a_new_entry_and_are_removed() {
+    #[test]
+    fn credentials_survive_a_new_entry_and_are_removed() {
         let key = format!("test-credential-{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos());
-        store_credential(key.clone(), "disposable-test-value".to_string()).await.unwrap();
-        let loaded = load_credential(key.clone()).await;
+        let service = "nl.prezent.transcript-studio.credential-lifecycle-test";
+        let entry = Entry::new(service, &key).unwrap();
+        entry.set_password("disposable-test-value").unwrap();
+        let loaded = Entry::new(service, &key).and_then(|entry| entry.get_password());
         // Always clean up our disposable credential, including on assertion failure.
-        delete_credential(key.clone()).await.unwrap();
-        assert_eq!(loaded.unwrap().as_deref(), Some("disposable-test-value"));
-        assert_eq!(load_credential(key).await.unwrap(), None);
+        entry.delete_credential().unwrap();
+        assert_eq!(loaded.unwrap(), "disposable-test-value");
+        assert!(matches!(entry.get_password(), Err(keyring::Error::NoEntry)));
     }
 }

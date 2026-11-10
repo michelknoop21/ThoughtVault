@@ -110,7 +110,7 @@ pub(super) fn run(app: AppHandle, model: &Path, audio: &str, vocabulary: &str, r
         use std::os::windows::process::CommandExt;
         command.creation_flags(0x08000000);
     }
-    eprintln!("[transcribe_local] engine=faster-whisper version=1.2.1 device=cpu compute=int8");
+    elog!("[transcribe_local] engine=faster-whisper version=1.2.1 device=cpu compute=int8");
     let mut child = command.spawn().map_err(|e| format!("Faster Whisper starten mislukt: {e}"))?;
     for line in BufReader::new(child.stdout.take().unwrap()).lines() {
         let Ok(line) = line else { let _ = child.kill(); let _ = child.wait(); return Err("Faster Whisper-voortgang lezen mislukt".into()); };

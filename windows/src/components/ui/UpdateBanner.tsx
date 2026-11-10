@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { Update } from "@tauri-apps/plugin-updater";
-import { useRecordingStore } from "../../stores/recordingStore";
+import { isBusy, useRecordingStore } from "../../stores/recordingStore";
 import { ArrowDownload24Regular, Dismiss24Regular } from "./StudioIcons";
 
 interface UpdateBannerProps {
@@ -8,18 +8,20 @@ interface UpdateBannerProps {
   downloadUrl: string | null;
   onDismiss: () => void;
   nativeUpdate?: Update | null;
+  downloaded?: boolean;
+  onInstall?: () => Promise<void>;
 }
 
-export function UpdateBanner({ version, downloadUrl, onDismiss, nativeUpdate }: UpdateBannerProps) {
+export function UpdateBanner({ version, downloadUrl, onDismiss, nativeUpdate, downloaded = false, onInstall }: UpdateBannerProps) {
   const [installing, setInstalling] = useState(false);
   const [error, setError] = useState("");
-  const busy = useRecordingStore(s => s.phase !== "idle" || s.backgroundTasks.some(t => !["completed", "failed"].includes(t.status)));
+  const busy = useRecordingStore(isBusy);
 
   async function handleUpdate() {
     setInstalling(true);
     setError("");
     try {
-      if (nativeUpdate) await nativeUpdate.downloadAndInstall();
+      if (nativeUpdate && onInstall) await onInstall();
       else if (downloadUrl) {
         const { open } = await import("@tauri-apps/plugin-shell");
         await open(downloadUrl);
@@ -44,7 +46,9 @@ export function UpdateBanner({ version, downloadUrl, onDismiss, nativeUpdate }: 
       <ArrowDownload24Regular style={{ fontSize: 18, color: "#fff", flexShrink: 0 }} />
       <div className="flex-1" style={{ minWidth: 0 }}>
         <p style={{ fontSize: 13, fontWeight: 600, color: "#fff", margin: 0 }}>
-          Versie {version} is beschikbaar
+          {downloaded
+            ? `Versie ${version} is gedownload en wordt geïnstalleerd als je ThoughtVault afsluit`
+            : `Versie ${version} is beschikbaar`}
         </p>
       </div>
       {error && <p role="alert">{error}</p>}

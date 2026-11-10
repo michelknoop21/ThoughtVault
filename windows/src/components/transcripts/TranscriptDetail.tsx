@@ -1,3 +1,4 @@
+import { openNoteLink } from "../../services/externalLinks";
 import { correctHTML, validateCorrections, upsertCorrection, type PersonalCorrection } from "../../services/personalCorrections";
 import { useProfilesStore } from "../../stores/profilesStore";
 import { usePersonalCorrectionsStore } from "../../stores/personalCorrectionsStore";
@@ -409,6 +410,8 @@ export function TranscriptDetail({
               ) : (
                 <div
                   className="prose td-doc-body"
+                  onClick={openNoteLink}
+                  onAuxClick={openNoteLink}
                   dangerouslySetInnerHTML={{ __html: sanitizedNotule }}
                 />
               )

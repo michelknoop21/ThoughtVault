@@ -30,3 +30,30 @@ it("opens notes by keyboard without activating the row from its menu", async () 
  expect(select).not.toHaveBeenCalled();
  await act(async () => {root.unmount();});
 });
+
+import { useSupportStore } from "../../../stores/supportStore";
+it("shows positive unread counts on the same settings item while expanded and collapsed", async () => {
+ const initial = useSupportStore.getState().unread_count;
+ useSupportStore.setState({ unread_count: 2 });
+ const host = document.createElement("div"), root = createRoot(host);
+ try {
+  await act(async () => {root.render(<MemoryRouter><Sidebar/></MemoryRouter>);});
+  const settings = host.querySelector('a[href="/settings"]')!;
+  expect(settings.querySelector(".sidebar-item-badge")?.textContent).toBe("2");
+  expect(settings.querySelector(".sidebar-item-badge")?.getAttribute("aria-label")).toBe("2 ongelezen");
+  expect(settings.getAttribute("aria-label")).toBe("Instellingen, 2 ongelezen");
+  await act(async () => {host.querySelector<HTMLButtonElement>(".sidebar-toggle")!.click();});
+  expect(host.querySelector(".sidebar.collapsed")).not.toBeNull();
+  expect(settings.querySelector(".sidebar-item-badge")?.textContent).toBe("2");
+  expect(host.querySelectorAll(".sidebar-item-badge")).toHaveLength(1);
+  expect(host.querySelectorAll(".sidebar a")).toHaveLength(6);
+  for (const unread_count of [0, -1]) {
+   await act(async () => {useSupportStore.setState({ unread_count });});
+   expect(host.querySelector(".sidebar-item-badge")).toBeNull();
+   expect(settings.getAttribute("aria-label")).toBe("Instellingen");
+  }
+ } finally {
+  await act(async () => root.unmount());
+  useSupportStore.setState({ unread_count: initial });
+ }
+});

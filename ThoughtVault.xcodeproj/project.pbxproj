@@ -75,6 +75,7 @@
 		AA00PC02 /* PersonalCorrectionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA00PC02 /* PersonalCorrectionsView.swift */; };
 		AA00CE01 /* CorrectionEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA00CE01 /* CorrectionEditor.swift */; };
 		AA00PC01 /* PersonalCorrections.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA00PC01 /* PersonalCorrections.swift */; };
+		AA00GA01 /* GlossaryAutoMatch.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA00GA01 /* GlossaryAutoMatch.swift */; };
 		AA00CH01 /* ContextHistory.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA00CH01 /* ContextHistory.swift */; };
 		AA00CS01 /* ContextSuggestions.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA00CS01 /* ContextSuggestions.swift */; };
 		AA00PM01 /* PersonMatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA00PM01 /* PersonMatcher.swift */; };
@@ -236,6 +237,8 @@
 		AB0000K1 /* KeychainServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000K1 /* KeychainServiceTests.swift */; };
 		AB000004 /* PersonDirectoryServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000004 /* PersonDirectoryServiceTests.swift */; };
 		AB00PCT1 /* PersonalCorrectionsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB00PCT1 /* PersonalCorrectionsTests.swift */; };
+		AB00GAT1 /* GlossaryAutoMatchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB00GAT1 /* GlossaryAutoMatchTests.swift */; };
+		AB00GAT2 /* glossary-automatch.json in Resources */ = {isa = PBXBuildFile; fileRef = FB00GAT2 /* glossary-automatch.json */; };
 		AB00CHT1 /* ContextHistoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB00CHT1 /* ContextHistoryTests.swift */; };
 		AB00CST1 /* ContextSuggestionsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB00CST1 /* ContextSuggestionsTests.swift */; };
 		AB00PMT1 /* PersonMatcherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB00PMT1 /* PersonMatcherTests.swift */; };
@@ -301,6 +304,7 @@
 		B1D10AB41AA9610D411227AF /* PersonalCorrectionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA00PC02 /* PersonalCorrectionsView.swift */; };
 		BB00CE01 /* CorrectionEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA00CE01 /* CorrectionEditor.swift */; };
 		8875D757BB161BCC147860C7 /* PersonalCorrections.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA00PC01 /* PersonalCorrections.swift */; };
+		BB00GA01 /* GlossaryAutoMatch.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA00GA01 /* GlossaryAutoMatch.swift */; };
 		8FF27B6E18A90EF98DD80187 /* AudioChunker.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000090 /* AudioChunker.swift */; };
 		1A418B953FAFCEFDCCFFA337 /* AudioEnvelopeProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000091 /* AudioEnvelopeProcessor.swift */; };
 		6C2DFBE9B00BBB4840386CC9 /* NotuleTitleExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000064 /* NotuleTitleExtractor.swift */; };
@@ -462,6 +466,7 @@
 		FA00PC02 /* PersonalCorrectionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "../Views/PersonalCorrectionsView.swift"; sourceTree = "<group>"; };
 		FA00CE01 /* CorrectionEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "../Views/CorrectionEditor.swift"; sourceTree = "<group>"; };
 		FA00PC01 /* PersonalCorrections.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonalCorrections.swift; sourceTree = "<group>"; };
+		FA00GA01 /* GlossaryAutoMatch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlossaryAutoMatch.swift; sourceTree = "<group>"; };
 		FA00CH02 /* HistoryListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "../Views/HistoryListView.swift"; sourceTree = "<group>"; };
 		FA00CH01 /* ContextHistory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContextHistory.swift; sourceTree = "<group>"; };
 		FA00CS01 /* ContextSuggestions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContextSuggestions.swift; sourceTree = "<group>"; };
@@ -628,6 +633,8 @@
 		FB000003 /* PersonProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonProfileTests.swift; sourceTree = "<group>"; };
 		FB000004 /* PersonDirectoryServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonDirectoryServiceTests.swift; sourceTree = "<group>"; };
 		FB00PCT1 /* PersonalCorrectionsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonalCorrectionsTests.swift; sourceTree = "<group>"; };
+		FB00GAT1 /* GlossaryAutoMatchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlossaryAutoMatchTests.swift; sourceTree = "<group>"; };
+		FB00GAT2 /* glossary-automatch.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "../../tests/fixtures/glossary-automatch.json"; sourceTree = "<group>"; };
 		FB00CHT1 /* ContextHistoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContextHistoryTests.swift; sourceTree = "<group>"; };
 		FB00CST1 /* ContextSuggestionsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContextSuggestionsTests.swift; sourceTree = "<group>"; };
 		FB00PMT1 /* PersonMatcherTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonMatcherTests.swift; sourceTree = "<group>"; };
@@ -817,6 +824,7 @@
 				FA00PC02 /* PersonalCorrectionsView.swift */,
 				FA00CE01 /* CorrectionEditor.swift */,
 				FA00PC01 /* PersonalCorrections.swift */,
+				FA00GA01 /* GlossaryAutoMatch.swift */,
 				FA00CH01 /* ContextHistory.swift */,
 				FA00CS01 /* ContextSuggestions.swift */,
 				FA00PM01 /* PersonMatcher.swift */,
@@ -995,6 +1003,7 @@
 				FB0000K1 /* KeychainServiceTests.swift */,
 				FB000004 /* PersonDirectoryServiceTests.swift */,
 				FB00PCT1 /* PersonalCorrectionsTests.swift */,
+				FB00GAT1 /* GlossaryAutoMatchTests.swift */,
 				FB00CHT1 /* ContextHistoryTests.swift */,
 				FB00CST1 /* ContextSuggestionsTests.swift */,
 				FB00PMT1 /* PersonMatcherTests.swift */,
@@ -1043,6 +1052,7 @@
 				FB0F0E01 /* envelope-fixture.json */,
 				FB000006 /* GraphCalendarViewResponse.json */,
 				FB0000G4 /* M3LiveContentGate.json */,
+				FB00GAT2 /* glossary-automatch.json */,
 				FB0000T4 /* PreDraftFields.store */,
 				FB00T19B /* tone-1s.mp4 */,
 				FB200002 /* dutch-qa.wav */,
@@ -1237,6 +1247,7 @@
 				AA00PC02 /* PersonalCorrectionsView.swift in Sources */,
 				AA00CE01 /* CorrectionEditor.swift in Sources */,
 				AA00PC01 /* PersonalCorrections.swift in Sources */,
+				AA00GA01 /* GlossaryAutoMatch.swift in Sources */,
 				AA00CH01 /* ContextHistory.swift in Sources */,
 				AA00CS01 /* ContextSuggestions.swift in Sources */,
 				AA00PM01 /* PersonMatcher.swift in Sources */,
@@ -1389,6 +1400,7 @@
 				AB0000K1 /* KeychainServiceTests.swift in Sources */,
 				AB000004 /* PersonDirectoryServiceTests.swift in Sources */,
 				AB00PCT1 /* PersonalCorrectionsTests.swift in Sources */,
+				AB00GAT1 /* GlossaryAutoMatchTests.swift in Sources */,
 				AB00CHT1 /* ContextHistoryTests.swift in Sources */,
 				AB00CST1 /* ContextSuggestionsTests.swift in Sources */,
 				AB00PMT1 /* PersonMatcherTests.swift in Sources */,
@@ -1432,6 +1444,7 @@
 				AB0F0E01 /* envelope-fixture.json in Resources */,
 				AB000006 /* GraphCalendarViewResponse.json in Resources */,
 				AB0000G4 /* M3LiveContentGate.json in Resources */,
+				AB00GAT2 /* glossary-automatch.json in Resources */,
 				AB0000T4 /* PreDraftFields.store in Resources */,
 				AB00T19B /* tone-1s.mp4 in Resources */,
 				AB200002 /* dutch-qa.wav in Resources */,
@@ -1490,6 +1503,7 @@
 				B1D10AB41AA9610D411227AF /* PersonalCorrectionsView.swift in Sources */,
 				BB00CE01 /* CorrectionEditor.swift in Sources */,
 				8875D757BB161BCC147860C7 /* PersonalCorrections.swift in Sources */,
+				BB00GA01 /* GlossaryAutoMatch.swift in Sources */,
 				8FF27B6E18A90EF98DD80187 /* AudioChunker.swift in Sources */,
 				1A418B953FAFCEFDCCFFA337 /* AudioEnvelopeProcessor.swift in Sources */,
 				6C2DFBE9B00BBB4840386CC9 /* NotuleTitleExtractor.swift in Sources */,

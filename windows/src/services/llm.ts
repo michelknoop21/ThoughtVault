@@ -7,7 +7,7 @@ import type { Profile, NotulenProvider } from "../types";
 import { isHostedURL, isOllamaCloudURL } from "./ollamaModels";
 import { modelRefusal, usableModel } from "./suggestedModels";
 
-import { loadCorrectionsOrEmpty } from "../stores/personalCorrectionsStore";
+import { loadCorrectionsOrEmpty, usePersonalCorrectionsStore } from "../stores/personalCorrectionsStore";
 import { usePeopleDirectoryStore } from "../stores/peopleDirectoryStore";
 import { correctText, correctHTML, contextBlock, CONTEXT_BUDGET, type PersonalCorrection } from "./personalCorrections";
 import { auditSource, auditNotule, appendWarnings, AuditFinding, constraintSentences, UNCHECKED_CONTENT_WARNING, AUDIT_CONCURRENCY, HOSTED_AUDIT_CONCURRENCY } from "./notuleAudit";
@@ -20,6 +20,8 @@ import { modelRequest, RATE_LIMIT_MESSAGE, STREAM_IDLE_SECONDS, STREAM_TIME_LIMI
 export { rateLimitWaitMs, RATE_LIMIT_DEFAULT_WAIT_MS, RATE_LIMIT_MAX_WAIT_MS } from "./modelTransport";
 
 export { TIME_LIMIT_MESSAGE, TRUNCATED_MESSAGE };
+
+import { autoMatch, matchTargets } from "./glossaryAutoMatch";
 
 interface LLMConfig {
   provider: NotulenProvider;
@@ -70,6 +72,31 @@ export function minutesContext(entries: PersonalCorrection[], transcript: string
     name: p.name, role: p.role, organization: p.organization, responsibilities: p.responsibilities ?? [], aliases: p.aliases,
   }));
   return contextBlock(entries, people, transcript, profileId, CONTEXT_BUDGET, [], includeRoles);
+}
+
+/**
+ * Automatic glossary matching (DEC-062): misheard spellings the model confirms in context are
+ * replaced in this transcript and learned, a term as `learned`, a person as alias. The stored
+ * transcription is not changed. Failures leave the transcript as it was.
+ */
+async function matchGlossary(transcription: string, corrections: PersonalCorrection[], profileId: string, taskId?: string): Promise<string> {
+  const people = usePeopleDirectoryStore.getState().people.filter(p => !p.isSelf);
+  const result = await autoMatch(transcription, matchTargets(corrections, people, profileId),
+    usePersonalCorrectionsStore.getState().dismissed, (system, user) => LLMService.complete(system, user));
+  const source = `automatisch:${taskId ?? "onbekend"}`;
+  for (const { target, heard } of result.learned) {
+    try {
+      if (target.kind === "person") {
+        await usePeopleDirectoryStore.getState().recordUpdate(target.id, source, person => ({ aliases: [...person.aliases, heard] }));
+        continue;
+      }
+      const entry = usePersonalCorrectionsStore.getState().entries.find(e => e.id === target.id);
+      if (entry) await usePersonalCorrectionsStore.getState().save({ ...entry, learned: [...(entry.learned ?? []), heard] }, source);
+    } catch (error) {
+      console.warn("[GlossaryAutoMatch] Leren mislukt:", error instanceof Error ? error.message : String(error));
+    }
+  }
+  return result.text;
 }
 
 function todayNL(): string {
@@ -344,6 +371,7 @@ export class LLMService {
     meter?: UsageMeter,
   ): Promise<string> {
     const corrections = await loadCorrectionsOrEmpty();
+    
     const context = minutesContext(corrections, transcription, profile.id);
     const finish = (html: string) => correctHTML(ensureNotesSection(stripCodeFences(html), quickNote), corrections, profile.id);
     const config = getConfig(providerOverride);

@@ -177,6 +177,23 @@ _Decisions DEC-039 through DEC-053 archived to [archive/DECISIONS-DEC-039-to-DEC
 
 ---
 
+## DEC-062: Woordenlijst vindt verkeerd gehoorde spellingen zelf
+
+**Date:** 2026-11-10
+**Status:** Accepted
+
+**Context:** De woordenlijst verving alleen spellingen die de gebruiker zelf als variant had ingevuld. Wie "Yinga" invoert, moest ook "Jengo", "Jinga" en "Django" kennen voordat de notule klopte. Een variant wordt bovendien blind vervangen: als "Django" ooit als variant van Yinga in de lijst komt, verandert elk gesprek over het webframework mee.
+
+**Decision:**
+1. **Kandidaten zonder model.** `GlossaryAutoMatch` (Swift) en `glossaryAutoMatch.ts` zoeken n-grammen van 1 tot 3 woorden die lijken op een actieve term of een persoon uit de personenlijst. Een woord telt mee bij een gelijkenis (1 min Levenshtein gedeeld door de langste lengte) van 0,75 of hoger, of bij een gelijke klanksleutel en een gelijkenis vanaf 0,5. De klanksleutel maakt ph/f, ch/g, ij/ei, ou/au, y/j, c/k, v/f en z/s gelijk, voegt dubbele letters samen en houdt de eerste klank plus de medeklinkers over: "Jengo" en "Yinga" geven allebei `jng`. Woorden onder 4 tekens, de juiste spelling zelf, vaste varianten en afgewezen spellingen vallen af. Hoogstens 12 kandidaten, hoogstens 3 per spelling.
+2. **Eén controle door het notulemodel.** Per kandidaat gaan het gehoorde woord, de zin (hoogstens 160 tekens) en de bedoelde term mee, samen onder de 1500 tekens zodat Apple Intelligence het ook aankan. Het model antwoordt per regel `n ja` of `n nee`. Een onleesbaar of tegenstrijdig antwoord telt als nee. Bij een fout, een time-out van 20 seconden of geen kandidaten loopt de notule door met het ongewijzigde transcript.
+3. **Toepassen en leren.** Alleen de bevestigde plekken worden vervangen, in de tekst die naar de notulegenerator gaat. De opgeslagen transcriptie blijft zoals ze was. Een spelling wordt geleerd als ze in deze opname ergens ja en nergens nee kreeg: bij een term in het nieuwe veld `learned`, bij een persoon als alias, met bron `automatisch:<taskId>` in de geschiedenis zodat herstellen werkt.
+4. **`learned` is geen variant.** Een geleerde spelling gaat mee in "ook gehoord als" in het contextblok en is in een volgende opname meteen kandidaat, maar `PersonalCorrections.text()` vervangt hem niet. Elke opname controleert het model hem opnieuw in context. In de editor maakt "Vast maken" er een variant van. "Verwijderen" zet de sleutel `learned:<term>:<spelling>` in `dismissed`, zodat de spelling niet terugkomt.
+5. **Personen.** Aliassen tellen als bekende spellingen. Een alias die alleen uit delen van de naam bestaat ("Michel" bij "Michel Knoop") doet niet mee, anders zou elke voornaam door de volledige naam worden vervangen.
+6. **Alleen lokale notulen.** De cloudroute krijgt dit niet: daar maakt de server de notule uit het transcript.
+
+**Consequences:** Een opname met kandidaten kost één extra modelaanroep vóór de notule. Het zoeken kost ongeveer 0,4 seconde voor een transcript van een uur met 100 termen en namen (gemeten in vitest op de Mac). De fixture `tests/fixtures/glossary-automatch.json` houdt beide platforms gelijk. Een oudere app-versie leest `learned` niet en laat het veld weg bij opslaan.
+
 ## DEC-061: Lerende context: één woordenlijst, één contextblok, voorstellen na de notule
 
 **Date:** 2026-11-09

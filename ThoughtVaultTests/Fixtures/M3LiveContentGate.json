@@ -1,0 +1,222 @@
+{
+ "description": "M3 content gate inputs extracted from docs/qa/colleague-rollout-2026-11-09/content (alternate-kimi-k26 jobs bc58d19b, kimi-k26-single-draft job 163c7359). windows[] holds the SHA-256 of each Windows system/user message and the model text it received, for offline replay.",
+ "baseURL": "https://ollama.com",
+ "model": "kimi-k2.6",
+ "profile": {
+  "systemPrompt": "Verzin geen feiten, aanwezigen, citaten, besluiten, acties, eigenaren of termijnen. Een besluit vereist expliciete overeenstemming; een idee of voorstel blijft een idee of voorstel. Neem concrete vervolgacties op, ook als eigenaar of deadline ontbreekt. Vermeld alleen eigenaren, datums en tijdstippen die in de bron staan; laat ontbrekende velden weg. Corrigeer spraakherkenningsfouten alleen bij ondubbelzinnige context. Gebruik uitsluitend informatie uit de transcriptie en meegegeven deelnemers. Schrijf Nederlands en geef alleen eenvoudige HTML zonder CSS of code fences, met precies één h1-titel. Laat lege secties weg.",
+  "notulePrompt": "Maak een helder verslag van het gesprek. Inhoudsfocus: Behoud de belangrijkste context en alle concrete vervolgacties. Detailniveau: Middel: korte alinea's per onderwerp. Stijl: Neutraal en helder. Gebruik deze secties in deze volgorde wanneer ze inhoud hebben: Kern, Besproken onderwerpen, Besluiten, Acties, Open vragen. Laat secties zonder inhoud weg.\n\nVormvoorbeeld:\n<h1>[Beschrijvende titel]</h1>\n<section><h2>Kern</h2><p>[Alleen brongebonden inhoud]</p></section>\n<section><h2>Besproken onderwerpen</h2><p>[Alleen brongebonden inhoud]</p></section>\n<section><h2>Besluiten</h2><p>[Alleen brongebonden inhoud]</p></section>\n<section><h2>Acties</h2><p>[Alleen brongebonden inhoud]</p></section>\n<section><h2>Open vragen</h2><p>[Alleen brongebonden inhoud]</p></section>"
+ },
+ "auditCases": [
+  {
+   "name": "correcte_parafrase",
+   "expectAccept": true,
+   "windowsReason": "",
+   "source": "Iris Meijer en Ruben Smit bespreken de fictieve proef Waddenspoor. Het budget is 12.450 euro inclusief btw, niet 15.000 euro. Alleen een interne proef is besloten. Er mogen geen klantgegevens naar externe diensten. Ruben controleert de techniek op woensdag 11 november om 16 uur. Iris controleert de inhoud op donderdag 12 november. Zonder beide controles mag geen bredere uitrol plaatsvinden. Er is geen budgetverhoging goedgekeurd.",
+   "html": "<p>Voor Waddenspoor spreken Iris Meijer en Ruben Smit uitsluitend een interne test af. Het budget blijft inclusief btw 12.450 euro; 15.000 euro en een verhoging zijn niet goedgekeurd. Klantgegevens delen met externe diensten is verboden. Ruben voert woensdag 11 november om 16 uur de technische controle uit; Iris beoordeelt donderdag 12 november de inhoud. Bredere uitrol vereist eerst beide controles.</p>",
+   "windows": [
+    {
+     "systemSha256": "a0482036d6ee028018dbda432c5ab5732382b4ba00de1891d949ec1dba25c149",
+     "userSha256": "38d153be3956f540d723e3913086cb777c3b96297f02bd7ac7086980b5f14c76",
+     "response": "{\"uncertain\":false}"
+    },
+    {
+     "systemSha256": "45df34856fb36e2aaec5ca0f0804b870599c95c116cb20ca3253b47fd6b14de0",
+     "userSha256": "920fadd3018cd4a889fc623c4944dd7af02b51f29eaa673a6b5048ab828f2deb",
+     "response": "{\"uncertain\":false,\"source\":[{\"id\":\"T1\",\"status\":\"covered\"},{\"id\":\"T2\",\"status\":\"covered\"},{\"id\":\"T3\",\"status\":\"covered\"},{\"id\":\"T4\",\"status\":\"covered\"},{\"id\":\"T5\",\"status\":\"covered\"},{\"id\":\"T6\",\"status\":\"covered\"},{\"id\":\"T7\",\"status\":\"covered\"},{\"id\":\"T8\",\"status\":\"covered\"}],\"notes\":[{\"id\":\"N1\",\"status\":\"supported\",\"evidence\":[\"T1\",\"T3\"]},{\"id\":\"N2\",\"status\":\"supported\",\"evidence\":[\"T2\",\"T8\"]},{\"id\":\"N3\",\"status\":\"supported\",\"evidence\":[\"T4\"]},{\"id\":\"N4\",\"status\":\"supported\",\"evidence\":[\"T5\",\"T6\"]},{\"id\":\"N5\",\"status\":\"supported\",\"evidence\":[\"T7\"]}]}"
+    }
+   ]
+  },
+  {
+   "name": "tweede_actie_ontbreekt",
+   "expectAccept": false,
+   "windowsReason": "De notule mist broninformatie: Iris controleert de inhoud op donderdag 12 november.",
+   "source": "Iris Meijer en Ruben Smit bespreken de fictieve proef Waddenspoor. Het budget is 12.450 euro inclusief btw, niet 15.000 euro. Alleen een interne proef is besloten. Er mogen geen klantgegevens naar externe diensten. Ruben controleert de techniek op woensdag 11 november om 16 uur. Iris controleert de inhoud op donderdag 12 november. Zonder beide controles mag geen bredere uitrol plaatsvinden. Er is geen budgetverhoging goedgekeurd.",
+   "html": "<p>Voor Waddenspoor spreken Iris Meijer en Ruben Smit uitsluitend een interne test af. Het budget blijft inclusief btw 12.450 euro, niet 15.000 euro; een verhoging is niet goedgekeurd. Klantgegevens delen met externe diensten is verboden. Ruben controleert de techniek woensdag 11 november om 16 uur. Zonder beide controles mag geen bredere uitrol plaatsvinden.</p>",
+   "windows": [
+    {
+     "systemSha256": "a0482036d6ee028018dbda432c5ab5732382b4ba00de1891d949ec1dba25c149",
+     "userSha256": "38d153be3956f540d723e3913086cb777c3b96297f02bd7ac7086980b5f14c76",
+     "response": "{\"uncertain\":false}"
+    },
+    {
+     "systemSha256": "45df34856fb36e2aaec5ca0f0804b870599c95c116cb20ca3253b47fd6b14de0",
+     "userSha256": "7166a87c5b8e19eb5d45f6b9bccfcfd11b9727c1bb667de49c74a88633d4fe24",
+     "response": "{\"uncertain\":false,\"source\":[{\"id\":\"T1\",\"status\":\"covered\"},{\"id\":\"T2\",\"status\":\"covered\"},{\"id\":\"T3\",\"status\":\"covered\"},{\"id\":\"T4\",\"status\":\"covered\"},{\"id\":\"T5\",\"status\":\"covered\"},{\"id\":\"T6\",\"status\":\"missing\"},{\"id\":\"T7\",\"status\":\"covered\"},{\"id\":\"T8\",\"status\":\"covered\"}],\"notes\":[{\"id\":\"N1\",\"status\":\"supported\",\"evidence\":[\"T1\",\"T3\"]},{\"id\":\"N2\",\"status\":\"supported\",\"evidence\":[\"T2\",\"T8\"]},{\"id\":\"N3\",\"status\":\"supported\",\"evidence\":[\"T4\"]},{\"id\":\"N4\",\"status\":\"supported\",\"evidence\":[\"T5\"]},{\"id\":\"N5\",\"status\":\"supported\",\"evidence\":[\"T7\"]}]}"
+    }
+   ],
+   "target": {
+    "side": "source",
+    "contains": "Iris controleert de inhoud",
+    "statuses": [
+     "missing"
+    ]
+   }
+  },
+  {
+   "name": "tegenstrijdige_toestemming",
+   "expectAccept": false,
+   "windowsReason": "De notule spreekt de bron tegen: Klantgegevens mogen toch naar externe diensten worden gestuurd.",
+   "source": "Iris Meijer en Ruben Smit bespreken de fictieve proef Waddenspoor. Het budget is 12.450 euro inclusief btw, niet 15.000 euro. Alleen een interne proef is besloten. Er mogen geen klantgegevens naar externe diensten. Ruben controleert de techniek op woensdag 11 november om 16 uur. Iris controleert de inhoud op donderdag 12 november. Zonder beide controles mag geen bredere uitrol plaatsvinden. Er is geen budgetverhoging goedgekeurd.",
+   "html": "<p>Voor Waddenspoor spreken Iris Meijer en Ruben Smit uitsluitend een interne test af. Het budget blijft inclusief btw 12.450 euro; 15.000 euro en een verhoging zijn niet goedgekeurd. Klantgegevens delen met externe diensten is verboden. Ruben voert woensdag 11 november om 16 uur de technische controle uit; Iris beoordeelt donderdag 12 november de inhoud. Bredere uitrol vereist eerst beide controles. Klantgegevens mogen toch naar externe diensten worden gestuurd.</p>",
+   "windows": [
+    {
+     "systemSha256": "a0482036d6ee028018dbda432c5ab5732382b4ba00de1891d949ec1dba25c149",
+     "userSha256": "38d153be3956f540d723e3913086cb777c3b96297f02bd7ac7086980b5f14c76",
+     "response": "{\"uncertain\":false}"
+    },
+    {
+     "systemSha256": "45df34856fb36e2aaec5ca0f0804b870599c95c116cb20ca3253b47fd6b14de0",
+     "userSha256": "2d4a7ed9e675ecbb9d334d17a53627a715a0cc014e88ffa476b2da8d73e68f8a",
+     "response": "{\"uncertain\":false,\"source\":[{\"id\":\"T1\",\"status\":\"covered\"},{\"id\":\"T2\",\"status\":\"covered\"},{\"id\":\"T3\",\"status\":\"covered\"},{\"id\":\"T4\",\"status\":\"covered\"},{\"id\":\"T5\",\"status\":\"covered\"},{\"id\":\"T6\",\"status\":\"covered\"},{\"id\":\"T7\",\"status\":\"covered\"},{\"id\":\"T8\",\"status\":\"covered\"}],\"notes\":[{\"id\":\"N1\",\"status\":\"supported\",\"evidence\":[\"T1\",\"T3\"]},{\"id\":\"N2\",\"status\":\"supported\",\"evidence\":[\"T2\",\"T8\"]},{\"id\":\"N3\",\"status\":\"supported\",\"evidence\":[\"T4\"]},{\"id\":\"N4\",\"status\":\"supported\",\"evidence\":[\"T5\",\"T6\"]},{\"id\":\"N5\",\"status\":\"supported\",\"evidence\":[\"T7\"]},{\"id\":\"N6\",\"status\":\"contradiction\",\"evidence\":[\"T4\"]}]}"
+    }
+   ],
+   "target": {
+    "side": "notes",
+    "contains": "Klantgegevens mogen toch",
+    "statuses": [
+     "contradiction"
+    ]
+   }
+  },
+  {
+   "name": "verkeerd_budget",
+   "expectAccept": false,
+   "windowsReason": "De notule mist broninformatie: Het budget is 12.450 euro inclusief btw, niet 15.000 euro.",
+   "source": "Iris Meijer en Ruben Smit bespreken de fictieve proef Waddenspoor. Het budget is 12.450 euro inclusief btw, niet 15.000 euro. Alleen een interne proef is besloten. Er mogen geen klantgegevens naar externe diensten. Ruben controleert de techniek op woensdag 11 november om 16 uur. Iris controleert de inhoud op donderdag 12 november. Zonder beide controles mag geen bredere uitrol plaatsvinden. Er is geen budgetverhoging goedgekeurd.",
+   "html": "<p>Voor de fictieve proef Waddenspoor overleggen Iris Meijer en Ruben Smit. Het budget bedraagt 15.000 euro inclusief btw. Alleen een interne proef is besloten. Klantgegevens mogen niet naar externe diensten. Ruben controleert de techniek woensdag 11 november om 16 uur. Iris controleert de inhoud donderdag 12 november. Zonder beide controles mag geen bredere uitrol plaatsvinden. Er is geen budgetverhoging goedgekeurd.</p>",
+   "windows": [
+    {
+     "systemSha256": "a0482036d6ee028018dbda432c5ab5732382b4ba00de1891d949ec1dba25c149",
+     "userSha256": "38d153be3956f540d723e3913086cb777c3b96297f02bd7ac7086980b5f14c76",
+     "response": "{\"uncertain\":false}"
+    },
+    {
+     "systemSha256": "45df34856fb36e2aaec5ca0f0804b870599c95c116cb20ca3253b47fd6b14de0",
+     "userSha256": "8fb96b2c1fa4bd2e7fd38ccdbb9fec2eba8abd3b380c9d7617f799ef689217c6",
+     "response": "{\"uncertain\":false,\"source\":[{\"id\":\"T1\",\"status\":\"covered\"},{\"id\":\"T2\",\"status\":\"missing\"},{\"id\":\"T3\",\"status\":\"covered\"},{\"id\":\"T4\",\"status\":\"covered\"},{\"id\":\"T5\",\"status\":\"covered\"},{\"id\":\"T6\",\"status\":\"covered\"},{\"id\":\"T7\",\"status\":\"covered\"},{\"id\":\"T8\",\"status\":\"covered\"}],\"notes\":[{\"id\":\"N1\",\"status\":\"supported\",\"evidence\":[\"T1\"]},{\"id\":\"N2\",\"status\":\"contradiction\",\"evidence\":[\"T2\"]},{\"id\":\"N3\",\"status\":\"supported\",\"evidence\":[\"T3\"]},{\"id\":\"N4\",\"status\":\"supported\",\"evidence\":[\"T4\"]},{\"id\":\"N5\",\"status\":\"supported\",\"evidence\":[\"T5\"]},{\"id\":\"N6\",\"status\":\"supported\",\"evidence\":[\"T6\"]},{\"id\":\"N7\",\"status\":\"supported\",\"evidence\":[\"T7\"]},{\"id\":\"N8\",\"status\":\"supported\",\"evidence\":[\"T8\"]}]}"
+    }
+   ],
+   "target": {
+    "side": "notes",
+    "contains": "Het budget bedraagt 15.000 euro",
+    "statuses": [
+     "contradiction",
+     "unsupported"
+    ]
+   }
+  },
+  {
+   "name": "voorwaarde_wordt_opdracht",
+   "expectAccept": false,
+   "windowsReason": "De notule bevat een onbevestigde bewering: Sara de Boer: schriftelijke goedkeuring geven voordat bestellingen worden geplaatst.",
+   "source": "Dit is een fictief overleg over een leeshoek in bibliotheek De Linde. Sara de Boer en Daan Bos bespreken een interne proef. Het budget is 2.750 euro inclusief btw, niet 3.000 euro. Daan vraagt uiterlijk vrijdag 13 november twee offertes op. Sara beoordeelt de offertes maandag 16 november. Er is nog geen leverancier gekozen. Bestellen mag alleen na schriftelijke goedkeuring van Sara. De bibliotheek is tijdens de interne proef niet toegankelijk voor bezoekers.",
+   "html": "<h1>Verslag interne proef leeshoek bibliotheek De Linde</h1>\n<section><h2>Kern</h2><p>Fictief overleg tussen Sara de Boer en Daan Bos over een interne proef van een leeshoek in bibliotheek De Linde.</p></section>\n<section><h2>Besproken onderwerpen</h2><p>Het budget is 2.750 euro inclusief btw, niet 3.000 euro. Er is nog geen leverancier gekozen. De bibliotheek is tijdens de interne proef niet toegankelijk voor bezoekers. Daan Bos moet twee offertes opvragen. Sara de Boer zal de offertes beoordelen. Bestellingen mogen alleen na schriftelijke goedkeuring van Sara de Boer.</p></section>\n<section><h2>Besluiten</h2><p>Daan Bos zal uiterlijk vrijdag 13 november twee offertes opvragen.<br>Sara de Boer beoordeelt de offertes maandag 16 november.<br>Bestellen mag alleen na schriftelijke goedkeuring van Sara de Boer.<br>Het budget bedraagt 2.750 euro inclusief btw en is niet 3.000 euro.</p></section>\n<section><h2>Acties</h2><p>Daan Bos: twee offertes opvragen uiterlijk vrijdag 13 november.<br>Sara de Boer: offertes beoordelen maandag 16 november.<br>Sara de Boer: schriftelijke goedkeuring geven voordat bestellingen worden geplaatst.</p></section>",
+   "windows": [
+    {
+     "systemSha256": "a0482036d6ee028018dbda432c5ab5732382b4ba00de1891d949ec1dba25c149",
+     "userSha256": "0257dbadece3fe74d5f31586658580b0086c69a70e628660b417bca0f115b067",
+     "response": "{\"uncertain\":false}"
+    },
+    {
+     "systemSha256": "45df34856fb36e2aaec5ca0f0804b870599c95c116cb20ca3253b47fd6b14de0",
+     "userSha256": "2caae70fe09f54a985968f93a76899f78347c3208e6c16e92397801d5cc6fa5e",
+     "response": "{\"uncertain\":false,\"source\":[{\"id\":\"T1\",\"status\":\"covered\"},{\"id\":\"T2\",\"status\":\"covered\"},{\"id\":\"T3\",\"status\":\"covered\"},{\"id\":\"T4\",\"status\":\"covered\"},{\"id\":\"T5\",\"status\":\"covered\"},{\"id\":\"T6\",\"status\":\"covered\"},{\"id\":\"T7\",\"status\":\"covered\"},{\"id\":\"T8\",\"status\":\"covered\"}],\"notes\":[{\"id\":\"N1\",\"status\":\"non_factual\",\"evidence\":[]},{\"id\":\"N2\",\"status\":\"non_factual\",\"evidence\":[]},{\"id\":\"N3\",\"status\":\"supported\",\"evidence\":[\"T1\",\"T2\"]},{\"id\":\"N4\",\"status\":\"non_factual\",\"evidence\":[]},{\"id\":\"N5\",\"status\":\"supported\",\"evidence\":[\"T3\"]},{\"id\":\"N6\",\"status\":\"supported\",\"evidence\":[\"T6\"]},{\"id\":\"N7\",\"status\":\"supported\",\"evidence\":[\"T8\"]},{\"id\":\"N8\",\"status\":\"supported\",\"evidence\":[\"T2\",\"T4\"]},{\"id\":\"N9\",\"status\":\"supported\",\"evidence\":[\"T2\",\"T5\"]},{\"id\":\"N10\",\"status\":\"supported\",\"evidence\":[\"T2\",\"T7\"]},{\"id\":\"N11\",\"status\":\"non_factual\",\"evidence\":[]},{\"id\":\"N12\",\"status\":\"supported\",\"evidence\":[\"T2\",\"T4\"]},{\"id\":\"N13\",\"status\":\"supported\",\"evidence\":[\"T2\",\"T5\"]},{\"id\":\"N14\",\"status\":\"supported\",\"evidence\":[\"T2\",\"T7\"]},{\"id\":\"N15\",\"status\":\"supported\",\"evidence\":[\"T3\"]},{\"id\":\"N16\",\"status\":\"non_factual\",\"evidence\":[]},{\"id\":\"N17\",\"status\":\"supported\",\"evidence\":[\"T2\",\"T4\"]},{\"id\":\"N18\",\"status\":\"supported\",\"evidence\":[\"T2\",\"T5\"]},{\"id\":\"N19\",\"status\":\"unsupported\",\"evidence\":[]}]}"
+    }
+   ],
+   "target": {
+    "side": "notes",
+    "contains": "schriftelijke goedkeuring geven",
+    "statuses": [
+     "unsupported",
+     "contradiction"
+    ]
+   }
+  },
+  {
+   "name": "opname10_ambigue_bron_numerieke_invulling",
+   "expectAccept": false,
+   "windowsReason": "De bron is onvoldoende duidelijk; beoordeel het concept",
+   "source": "En 70% mensen en processen als je daar werkt, met een stok willen maken en voorbij die pilot wil komen. Nou, we hebben Frans Velberg en die gaat hier precies op in de her. Hij is hongerderaar data and AI driven business in de vee aan de Vrij Universiteit Amsterdam. Frans, ik ben heel bedoeld naar jouw verhaal en jij hebt een beloofd want we moeten ook concrete gaan. Zeker leeg. Zeker leeg. Jorvleurs, heers.  Dank je wel, L.A. Gershield. Goedemorgen.  AI verdreft innovatie van onbegrens experimenteren na succesvol implementeren. En we gaan naar de lessen van Heraclitus, de kenten alpans. Voornamelijk ook allemaal. Stooi zijn ze natuurlijk zo, kijken of we naar een groot is punt te zien voor de grote vraagste de werelder naar AI hebben. Echt een gewone beginnend.",
+   "html": "<h1>Verslag van het gesprek</h1>\n<section><h2>Kern</h2><p>In het gesprek kwam onder meer het onderwerp van 70 % van de mensen en processen in een pilot ter sprake. Frans Velberg, die werkt aan data‑ en AI‑gedreven business aan de Vrije Universiteit Amsterdam, werd genoemd. Er werd gesproken over de behoefte aan concrete vervolgstappen, over AI die innovatie en experimenteren stimuleert, en er werd een verwijzing gemaakt naar de lessen van Heraclitus.</p></section>\n<section><h2>Besproken onderwerpen</h2><p>De deelnemers bespraken onder andere:</p><ul><li>Het percentage (70 %) van mensen en processen dat bij een pilot betrokken is.</li><li>De rol van Frans Velberg en zijn expertise in data‑ en AI‑gedreven business aan de Vrije Universiteit Amsterdam.</li><li>De wens om na de pilot concrete vervolgstappen te nemen.</li><li>De impact van AI op innovatie en onbegrensd experimenteren na succesvolle implementatie.</li><li>Een verwijzing naar de lessen van Heraclitus in de context van AI.</li></ul></section>",
+   "windows": [
+    {
+     "systemSha256": "a0482036d6ee028018dbda432c5ab5732382b4ba00de1891d949ec1dba25c149",
+     "userSha256": "b91b120791640e8ff82a24f7c2182187504e16f326e50323bbcb0bf6a3a2e7a2",
+     "response": "{\"uncertain\":true}"
+    }
+   ],
+   "target": {
+    "side": "sourceCheck",
+    "contains": "",
+    "statuses": [
+     "uncertain"
+    ]
+   }
+  }
+ ],
+ "meetings": [
+  {
+   "name": "waddenspoor",
+   "source": "Iris Meijer en Ruben Smit bespreken de fictieve proef Waddenspoor. Het budget is 12.450 euro inclusief btw, niet 15.000 euro. Alleen een interne proef is besloten. Er mogen geen klantgegevens naar externe diensten. Ruben controleert de techniek op woensdag 11 november om 16 uur. Iris controleert de inhoud op donderdag 12 november. Zonder beide controles mag geen bredere uitrol plaatsvinden. Er is geen budgetverhoging goedgekeurd.",
+   "windows": [
+    {
+     "systemSha256": "d6bb2fb2647f7ef72d308019c0681523b3d9d7246cc96986b3567384ecde13f3",
+     "userSha256": "654d6d86f52f572444efcd0afb5e2cc545ee7ed77ab7be888f85f861ca1aaf4f",
+     "response": "<h1>Verslag bespreking fictieve proef Waddenspoor</h1>\n\n<section>\n<h2>Kern</h2>\n<p>Iris Meijer en Ruben Smit bespraken de fictieve proef Waddenspoor. Het budget is 12.450 euro inclusief btw, niet 15.000 euro. Er is besloten tot een interne proef; er is geen budgetverhoging goedgekeurd.</p>\n</section>\n\n<section>\n<h2>Besproken onderwerpen</h2>\n<p>Het gesprek betrof de fictieve proef Waddenspoor. Het budget is 12.450 euro inclusief btw, niet 15.000 euro. Er is geen budgetverhoging goedgekeurd.</p>\n<p>De proef is besloten als interne proef. Er gelden beperkingen op het uitwisselen van klantgegevens met externe diensten. Een bredere uitrol is alleen mogelijk na het voltooien van vereiste controles.</p>\n</section>\n\n<section>\n<h2>Besluiten</h2>\n<p>Alleen een interne proef is besloten. Er mogen geen klantgegevens naar externe diensten. Zonder beide controles mag geen bredere uitrol plaatsvinden. Er is geen budgetverhoging goedgekeurd.</p>\n</section>\n\n<section>\n<h2>Acties</h2>\n<p>Ruben controleert de techniek op woensdag 11 november om 16 uur.</p>\n<p>Iris controleert de inhoud op donderdag 12 november.</p>\n</section>"
+    },
+    {
+     "systemSha256": "a0482036d6ee028018dbda432c5ab5732382b4ba00de1891d949ec1dba25c149",
+     "userSha256": "38d153be3956f540d723e3913086cb777c3b96297f02bd7ac7086980b5f14c76",
+     "response": "{\"uncertain\":false}"
+    },
+    {
+     "systemSha256": "45df34856fb36e2aaec5ca0f0804b870599c95c116cb20ca3253b47fd6b14de0",
+     "userSha256": "7d52b7944d1da61697ff9f9c6719e01cd212b6afc29a1a83fe5ea0e28e2d10a4",
+     "response": "{\"uncertain\":false,\"source\":[{\"id\":\"T1\",\"status\":\"covered\"},{\"id\":\"T2\",\"status\":\"covered\"},{\"id\":\"T3\",\"status\":\"covered\"},{\"id\":\"T4\",\"status\":\"covered\"},{\"id\":\"T5\",\"status\":\"covered\"},{\"id\":\"T6\",\"status\":\"covered\"},{\"id\":\"T7\",\"status\":\"covered\"},{\"id\":\"T8\",\"status\":\"covered\"}],\"notes\":[{\"id\":\"N1\",\"status\":\"non_factual\",\"evidence\":[]},{\"id\":\"N2\",\"status\":\"non_factual\",\"evidence\":[]},{\"id\":\"N3\",\"status\":\"supported\",\"evidence\":[\"T1\"]},{\"id\":\"N4\",\"status\":\"supported\",\"evidence\":[\"T2\"]},{\"id\":\"N5\",\"status\":\"supported\",\"evidence\":[\"T3\",\"T8\"]},{\"id\":\"N6\",\"status\":\"non_factual\",\"evidence\":[]},{\"id\":\"N7\",\"status\":\"supported\",\"evidence\":[\"T1\"]},{\"id\":\"N8\",\"status\":\"supported\",\"evidence\":[\"T2\"]},{\"id\":\"N9\",\"status\":\"supported\",\"evidence\":[\"T8\"]},{\"id\":\"N10\",\"status\":\"supported\",\"evidence\":[\"T3\"]},{\"id\":\"N11\",\"status\":\"supported\",\"evidence\":[\"T4\"]},{\"id\":\"N12\",\"status\":\"supported\",\"evidence\":[\"T7\"]},{\"id\":\"N13\",\"status\":\"non_factual\",\"evidence\":[]},{\"id\":\"N14\",\"status\":\"supported\",\"evidence\":[\"T3\"]},{\"id\":\"N15\",\"status\":\"supported\",\"evidence\":[\"T4\"]},{\"id\":\"N16\",\"status\":\"supported\",\"evidence\":[\"T7\"]},{\"id\":\"N17\",\"status\":\"supported\",\"evidence\":[\"T8\"]},{\"id\":\"N18\",\"status\":\"non_factual\",\"evidence\":[]},{\"id\":\"N19\",\"status\":\"supported\",\"evidence\":[\"T5\"]},{\"id\":\"N20\",\"status\":\"supported\",\"evidence\":[\"T6\"]}]}"
+    }
+   ]
+  },
+  {
+   "name": "noorderlicht",
+   "source": "Dit is een fictief planningsoverleg over project Noorderlicht. Mila Jansen en Oscar Visser zijn aanwezig. De servermigratie op maandag 16 november gaat niet door. Mila voert op dinsdag 17 november om 10 uur een interne herstelproef uit. Oscar controleert op woensdag 18 november de logbestanden. Productie mag pas worden gewijzigd nadat beide controles zijn geslaagd. Er is nog geen akkoord voor productie. Er mogen geen echte klantgegevens in de proef worden gebruikt.",
+   "windows": [
+    {
+     "systemSha256": "d6bb2fb2647f7ef72d308019c0681523b3d9d7246cc96986b3567384ecde13f3",
+     "userSha256": "d6fd9b5e59984c0857eb052eccf01301f3b3a52d1657b220971b0e95b6102435",
+     "response": "<h1>Verslag fictief planningsoverleg project Noorderlicht</h1>\n<section><h2>Kern</h2><p>Dit verslag betreft een fictief planningsoverleg over project Noorderlicht. Mila Jansen en Oscar Visser zijn aanwezig. De servermigratie op maandag 16 november gaat niet door. Er is nog geen akkoord voor productie. Er mogen geen echte klantgegevens in de proef worden gebruikt.</p></section>\n<section><h2>Besproken onderwerpen</h2><p>De servermigratie op maandag 16 november gaat niet door.</p><p>Mila Jansen voert op dinsdag 17 november om 10 uur een interne herstelproef uit. Er mogen geen echte klantgegevens in de proef worden gebruikt. Oscar Visser controleert op woensdag 18 november de logbestanden. Productie mag pas worden gewijzigd nadat beide controles zijn geslaagd.</p><p>Er is nog geen akkoord voor productie.</p></section>\n<section><h2>Acties</h2><p>Mila Jansen voert op dinsdag 17 november om 10 uur een interne herstelproef uit.</p><p>Oscar Visser controleert op woensdag 18 november de logbestanden.</p></section>"
+    },
+    {
+     "systemSha256": "a0482036d6ee028018dbda432c5ab5732382b4ba00de1891d949ec1dba25c149",
+     "userSha256": "b4e9fb1aea2aefa8fef109983f9b82f1a4912b4d8150b26cbc5fbd6cf9bbe599",
+     "response": "{\"uncertain\":false}"
+    },
+    {
+     "systemSha256": "45df34856fb36e2aaec5ca0f0804b870599c95c116cb20ca3253b47fd6b14de0",
+     "userSha256": "68e5f94b51710d474a698c5515a8b4b84d0ec3d42dd411b77a7b9edee4cc602a",
+     "response": "```json\n{\"uncertain\":false,\"source\":[{\"id\":\"T1\",\"status\":\"covered\"},{\"id\":\"T2\",\"status\":\"covered\"},{\"id\":\"T3\",\"status\":\"covered\"},{\"id\":\"T4\",\"status\":\"covered\"},{\"id\":\"T5\",\"status\":\"covered\"},{\"id\":\"T6\",\"status\":\"covered\"},{\"id\":\"T7\",\"status\":\"covered\"},{\"id\":\"T8\",\"status\":\"covered\"}],\"notes\":[{\"id\":\"N1\",\"status\":\"non_factual\",\"evidence\":[]},{\"id\":\"N2\",\"status\":\"non_factual\",\"evidence\":[]},{\"id\":\"N3\",\"status\":\"supported\",\"evidence\":[\"T1\"]},{\"id\":\"N4\",\"status\":\"supported\",\"evidence\":[\"T2\"]},{\"id\":\"N5\",\"status\":\"supported\",\"evidence\":[\"T3\"]},{\"id\":\"N6\",\"status\":\"supported\",\"evidence\":[\"T7\"]},{\"id\":\"N7\",\"status\":\"supported\",\"evidence\":[\"T8\"]},{\"id\":\"N8\",\"status\":\"non_factual\",\"evidence\":[]},{\"id\":\"N9\",\"status\":\"supported\",\"evidence\":[\"T3\"]},{\"id\":\"N10\",\"status\":\"supported\",\"evidence\":[\"T2\",\"T4\"]},{\"id\":\"N11\",\"status\":\"supported\",\"evidence\":[\"T8\"]},{\"id\":\"N12\",\"status\":\"supported\",\"evidence\":[\"T2\",\"T5\"]},{\"id\":\"N13\",\"status\":\"supported\",\"evidence\":[\"T6\"]},{\"id\":\"N14\",\"status\":\"supported\",\"evidence\":[\"T7\"]},{\"id\":\"N15\",\"status\":\"non_factual\",\"evidence\":[]},{\"id\":\"N16\",\"status\":\"supported\",\"evidence\":[\"T2\",\"T4\"]},{\"id\":\"N17\",\"status\":\"supported\",\"evidence\":[\"T2\",\"T5\"]}]}\n```"
+    }
+   ]
+  },
+  {
+   "name": "bibliotheek",
+   "source": "Dit is een fictief overleg over een leeshoek in bibliotheek De Linde. Sara de Boer en Daan Bos bespreken een interne proef. Het budget is 2.750 euro inclusief btw, niet 3.000 euro. Daan vraagt uiterlijk vrijdag 13 november twee offertes op. Sara beoordeelt de offertes maandag 16 november. Er is nog geen leverancier gekozen. Bestellen mag alleen na schriftelijke goedkeuring van Sara. De bibliotheek is tijdens de interne proef niet toegankelijk voor bezoekers.",
+   "windows": [
+    {
+     "systemSha256": "d6bb2fb2647f7ef72d308019c0681523b3d9d7246cc96986b3567384ecde13f3",
+     "userSha256": "3f7679177db18e879b96975f4fd8faf08615efdbf72dcccab21ee284d0f160f6",
+     "response": "<h1>Fictief overleg leeshoek bibliotheek De Linde</h1>\n<section>\n<h2>Kern</h2>\n<p>Dit verslag betreft een fictief overleg tussen Sara de Boer en Daan Bos over een interne proef voor een leeshoek in bibliotheek De Linde. Het budget is 2.750 euro inclusief btw, niet 3.000 euro. Er is nog geen leverancier gekozen.</p>\n</section>\n<section>\n<h2>Besproken onderwerpen</h2>\n<p>De bibliotheek is tijdens de interne proef niet toegankelijk voor bezoekers. Bestellen mag alleen na schriftelijke goedkeuring van Sara.</p>\n</section>\n<section>\n<h2>Acties</h2>\n<p>Daan vraagt uiterlijk vrijdag 13 november twee offertes op. Sara beoordeelt de offertes maandag 16 november.</p>\n</section>"
+    },
+    {
+     "systemSha256": "a0482036d6ee028018dbda432c5ab5732382b4ba00de1891d949ec1dba25c149",
+     "userSha256": "0257dbadece3fe74d5f31586658580b0086c69a70e628660b417bca0f115b067",
+     "response": "{\"uncertain\":false}"
+    },
+    {
+     "systemSha256": "45df34856fb36e2aaec5ca0f0804b870599c95c116cb20ca3253b47fd6b14de0",
+     "userSha256": "70ec85dc78c02a8182840b2c47ef3f909351ad9885d9302cf3712efd2ad2bf11",
+     "response": "{\"uncertain\":false,\"source\":[{\"id\":\"T1\",\"status\":\"covered\"},{\"id\":\"T2\",\"status\":\"covered\"},{\"id\":\"T3\",\"status\":\"covered\"},{\"id\":\"T4\",\"status\":\"covered\"},{\"id\":\"T5\",\"status\":\"covered\"},{\"id\":\"T6\",\"status\":\"covered\"},{\"id\":\"T7\",\"status\":\"covered\"},{\"id\":\"T8\",\"status\":\"covered\"}],\"notes\":[{\"id\":\"N1\",\"status\":\"non_factual\",\"evidence\":[]},{\"id\":\"N2\",\"status\":\"non_factual\",\"evidence\":[]},{\"id\":\"N3\",\"status\":\"supported\",\"evidence\":[\"T1\",\"T2\"]},{\"id\":\"N4\",\"status\":\"supported\",\"evidence\":[\"T3\"]},{\"id\":\"N5\",\"status\":\"supported\",\"evidence\":[\"T6\"]},{\"id\":\"N6\",\"status\":\"non_factual\",\"evidence\":[]},{\"id\":\"N7\",\"status\":\"supported\",\"evidence\":[\"T8\"]},{\"id\":\"N8\",\"status\":\"supported\",\"evidence\":[\"T7\"]},{\"id\":\"N9\",\"status\":\"non_factual\",\"evidence\":[]},{\"id\":\"N10\",\"status\":\"supported\",\"evidence\":[\"T4\"]},{\"id\":\"N11\",\"status\":\"supported\",\"evidence\":[\"T5\"]}]}"
+    }
+   ]
+  }
+ ]
+}

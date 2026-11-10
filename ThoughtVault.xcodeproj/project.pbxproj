@@ -172,6 +172,10 @@
 		AB0000T5 /* LocalPipelineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000T5 /* LocalPipelineTests.swift */; };
 		AB0000N9 /* NotuleConstraintTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000N9 /* NotuleConstraintTests.swift */; };
 		AB0000NA /* NotulePromptTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000NA /* NotulePromptTests.swift */; };
+		AB0000G1 /* M3LiveContentGateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000G1 /* M3LiveContentGateTests.swift */; };
+		AB0000G2 /* M3LiveContentGate.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000G2 /* M3LiveContentGate.swift */; };
+		AB0000G3 /* M3GateRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000G3 /* M3GateRecorder.swift */; };
+		AB0000G4 /* M3LiveContentGate.json in Resources */ = {isa = PBXBuildFile; fileRef = FB0000G4 /* M3LiveContentGate.json */; };
 		AB000090 /* AuthViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000090 /* AuthViewModelTests.swift */; };
 		AB000091 /* TranscriptDecoderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000091 /* TranscriptDecoderTests.swift */; };
 		AB000006 /* GraphCalendarViewResponse.json in Resources */ = {isa = PBXBuildFile; fileRef = FB000006 /* GraphCalendarViewResponse.json */; };
@@ -487,6 +491,10 @@
 		FB0000T5 /* LocalPipelineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalPipelineTests.swift; sourceTree = "<group>"; };
 		FB0000N9 /* NotuleConstraintTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotuleConstraintTests.swift; sourceTree = "<group>"; };
 		FB0000NA /* NotulePromptTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotulePromptTests.swift; sourceTree = "<group>"; };
+		FB0000G1 /* M3LiveContentGateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = M3LiveContentGateTests.swift; sourceTree = "<group>"; };
+		FB0000G2 /* M3LiveContentGate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = M3LiveContentGate.swift; sourceTree = "<group>"; };
+		FB0000G3 /* M3GateRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = M3GateRecorder.swift; sourceTree = "<group>"; };
+		FB0000G4 /* M3LiveContentGate.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = M3LiveContentGate.json; sourceTree = "<group>"; };
 		FB000090 /* AuthViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthViewModelTests.swift; sourceTree = "<group>"; };
 		FB000091 /* TranscriptDecoderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptDecoderTests.swift; sourceTree = "<group>"; };
 		FB000006 /* GraphCalendarViewResponse.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = GraphCalendarViewResponse.json; sourceTree = "<group>"; };
@@ -790,6 +798,9 @@
 				FB0000T5 /* LocalPipelineTests.swift */,
 				FB0000N9 /* NotuleConstraintTests.swift */,
 				FB0000NA /* NotulePromptTests.swift */,
+				FB0000G1 /* M3LiveContentGateTests.swift */,
+				FB0000G2 /* M3LiveContentGate.swift */,
+				FB0000G3 /* M3GateRecorder.swift */,
 				FB000090 /* AuthViewModelTests.swift */,
 				FB000091 /* TranscriptDecoderTests.swift */,
 				FC110001 /* WhisperLoadingTests.swift */,
@@ -803,6 +814,7 @@
 			isa = PBXGroup;
 			children = (
 				FB000006 /* GraphCalendarViewResponse.json */,
+				FB0000G4 /* M3LiveContentGate.json */,
 				FB0000T4 /* PreDraftFields.store */,
 				FB00T19B /* tone-1s.mp4 */,
 				FB200002 /* dutch-qa.wav */,
@@ -1113,6 +1125,9 @@
 				AB0000T5 /* LocalPipelineTests.swift in Sources */,
 				AB0000N9 /* NotuleConstraintTests.swift in Sources */,
 				AB0000NA /* NotulePromptTests.swift in Sources */,
+				AB0000G1 /* M3LiveContentGateTests.swift in Sources */,
+				AB0000G2 /* M3LiveContentGate.swift in Sources */,
+				AB0000G3 /* M3GateRecorder.swift in Sources */,
 				AB000090 /* AuthViewModelTests.swift in Sources */,
 				AB000091 /* TranscriptDecoderTests.swift in Sources */,
 				AC110001 /* WhisperLoadingTests.swift in Sources */,
@@ -1125,6 +1140,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				AB000006 /* GraphCalendarViewResponse.json in Resources */,
+				AB0000G4 /* M3LiveContentGate.json in Resources */,
 				AB0000T4 /* PreDraftFields.store in Resources */,
 				AB00T19B /* tone-1s.mp4 in Resources */,
 				AB200002 /* dutch-qa.wav in Resources */,

@@ -8,6 +8,14 @@ enum AppEnvironment {
     static let isRunningTests = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
         || NSClassFromString("XCTestCase") != nil
 
+    static var isDebugSnapshot: Bool {
+        #if DEBUG
+        return UserDefaults.standard.string(forKey: "TVDebugSnapshot") != nil
+        #else
+        return false
+        #endif
+    }
+
     /// Application Support normally; a unique temp directory per test run.
     static let supportDirectory: URL = isRunningTests
         ? FileManager.default.temporaryDirectory.appending(path: "ThoughtVaultTests-\(UUID().uuidString)", directoryHint: .isDirectory)
@@ -71,6 +79,7 @@ struct ThoughtVaultApp: App {
                     #endif
                 }
                 .task {
+                    guard !AppEnvironment.isDebugSnapshot else { return }
                     // Install the failure hook before startup work or support network awaits.
                     recordingVM.onFailure = { stage, message in
                         Task { await supportVM.report(stage: stage, shown: message, error: message) }
@@ -108,11 +117,16 @@ struct ThoughtVaultApp: App {
                     VideoCallDetectionService.shared.startMonitoring()
                     #endif
                 }
-                .task { await supportVM.startPolling() }
+                .task {
+                    guard !AppEnvironment.isDebugSnapshot else { return }
+                    await supportVM.startPolling()
+                }
                 .onChange(of: NetworkMonitor.shared.isConnected) { _, connected in
+                    guard !AppEnvironment.isDebugSnapshot else { return }
                     if connected { Task { await SupportRelay.shared.flush() } }
                 }
                 .onChange(of: scenePhase) { _, phase in
+                    guard !AppEnvironment.isDebugSnapshot else { return }
                     if phase == .active {
                         #if os(iOS)
                         // Startup must read the previous marker before any resume can replace it.
@@ -166,12 +180,22 @@ struct ThoughtVaultApp: App {
 // MARK: - RootView
 
 struct RootView: View {
+    @AppStorage(SupportIdentity.nameKey) private var supportName = ""
+    @AppStorage(SupportIdentity.emailKey) private var supportEmail = ""
     @AppStorage("hasCompletedOnboarding") var hasCompletedOnboarding = false
     @Environment(RecordingViewModel.self) private var recordingVM
 
     var body: some View {
         Group {
-            if hasCompletedOnboarding {
+            if SupportIdentity.showsGate(name: supportName, email: supportEmail, arguments: ProcessInfo.processInfo.arguments) {
+                SupportIdentityView()
+                    #if DEBUG
+                    .task {
+                        Task { for _ in 0..<5 { try? await Task.sleep(for: .seconds(1)); DebugScreenshotSeed.sizeWindow() } }
+                        await DebugScreenshotSeed.snapshotAndQuit()
+                    }
+                    #endif
+            } else if hasCompletedOnboarding {
                 ContentView()
             } else {
                 OnboardingView()

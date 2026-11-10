@@ -452,3 +452,10 @@
 "Woord toevoegen" = "Woord toevoegen";
 "Woord corrigeren" = "Woord corrigeren";
 "Onthouden voor volgende opnames" = "Onthouden voor volgende opnames";
+
+/* Support identity */
+"Voor wie zijn de antwoorden?" = "Voor wie zijn de antwoorden?";
+"Antwoorden op je meldingen verschijnen in de app en komen per e-mail." = "Antwoorden op je meldingen verschijnen in de app en komen per e-mail.";
+"Gaat er iets mis bij opnemen, transcriberen of de notule, dan stuurt ThoughtVault automatisch een foutrapport met app-versie, apparaat, je klikpad en een afgeschermd logbestand naar de ontwikkelaar. Je opnames, transcripties, notules en titels gaan nooit mee." = "Gaat er iets mis bij opnemen, transcriberen of de notule, dan stuurt ThoughtVault automatisch een foutrapport met app-versie, apparaat, je klikpad en een afgeschermd logbestand naar de ontwikkelaar. Je opnames, transcripties, notules en titels gaan nooit mee.";
+"Doorgaan" = "Doorgaan";
+"Dit e-mailadres klopt niet." = "Dit e-mailadres klopt niet.";

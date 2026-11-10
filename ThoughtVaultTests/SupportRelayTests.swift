@@ -289,6 +289,34 @@ final class SupportRelayTests: XCTestCase, @unchecked Sendable {
         XCTAssertFalse(SupportIdentity.isComplete(name: "\n ", email: "a@example.com"))
     }
 
+    func testEmailValidation() {
+        XCTAssertTrue(SupportIdentity.isValidEmail("anna@example.com"))
+        XCTAssertTrue(SupportIdentity.isValidEmail(" anna@example.com "))
+        for email in ["anna@example", "anna example.com", "anna@@example.com"] {
+            XCTAssertFalse(SupportIdentity.isValidEmail(email))
+        }
+    }
+
+    func testGateShowsUntilIdentityComplete() {
+        XCTAssertTrue(SupportIdentity.showsGate(name: "", email: "anna@example.com", arguments: []))
+        XCTAssertTrue(SupportIdentity.showsGate(name: "Anna", email: "anna@", arguments: []))
+        XCTAssertFalse(SupportIdentity.showsGate(name: " Anna ", email: " anna@example.com ", arguments: []))
+    }
+
+    func testDebugGateArguments() {
+        let bypass = ["-TVDebugTab", "settings"]
+        let force = ["-TVDebugOpen", "identity"]
+        #if DEBUG
+        XCTAssertFalse(SupportIdentity.showsGate(name: "", email: "", arguments: bypass))
+        XCTAssertTrue(SupportIdentity.showsGate(name: "Anna", email: "anna@example.com", arguments: force))
+        XCTAssertTrue(SupportIdentity.showsGate(name: "Anna", email: "anna@example.com", arguments: bypass + force))
+        XCTAssertFalse(SupportIdentity.showsGate(name: "", email: "", arguments: ["-TVDebugOpen"]))
+        #else
+        XCTAssertTrue(SupportIdentity.showsGate(name: "", email: "", arguments: bypass))
+        XCTAssertFalse(SupportIdentity.showsGate(name: "Anna", email: "anna@example.com", arguments: force))
+        #endif
+    }
+
     private func fixture(shown: String = "Fout") -> SupportReport {
         .make(kind: "manual", category: .bug, stage: "", shown: shown, error: "", fingerprint: nil, clickPath: [])
     }

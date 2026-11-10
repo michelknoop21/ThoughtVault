@@ -452,3 +452,10 @@
 "Woord toevoegen" = "Add word";
 "Woord corrigeren" = "Correct word";
 "Onthouden voor volgende opnames" = "Remember for future recordings";
+
+/* Support identity */
+"Voor wie zijn de antwoorden?" = "Who are the replies for?";
+"Antwoorden op je meldingen verschijnen in de app en komen per e-mail." = "Replies to your reports appear in the app and arrive by email.";
+"Gaat er iets mis bij opnemen, transcriberen of de notule, dan stuurt ThoughtVault automatisch een foutrapport met app-versie, apparaat, je klikpad en een afgeschermd logbestand naar de ontwikkelaar. Je opnames, transcripties, notules en titels gaan nooit mee." = "If something goes wrong while recording, transcribing or generating minutes, ThoughtVault automatically sends an error report with the app version, device, your click path and a redacted log file to the developer. Your recordings, transcripts, minutes and titles are never included.";
+"Doorgaan" = "Continue";
+"Dit e-mailadres klopt niet." = "This email address is not valid.";

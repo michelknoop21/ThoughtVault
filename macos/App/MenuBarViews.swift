@@ -15,6 +15,8 @@ struct MenuBarContentView: View {
         return alert.runModal() == .alertFirstButtonReturn
     }
 
+    @AppStorage(SupportIdentity.nameKey) private var supportName = ""
+    @AppStorage(SupportIdentity.emailKey) private var supportEmail = ""
     @Environment(RecordingViewModel.self) private var recordingVM
     @Environment(AuthViewModel.self) private var authVM
     @Environment(CalendarService.self) private var calendarService
@@ -45,6 +47,7 @@ struct MenuBarContentView: View {
                     Label("Start opname", systemImage: "mic.circle.fill")
                 }
                 .keyboardShortcut("r", modifiers: [.command, .shift])
+                .disabled(SupportIdentity.showsGate(name: supportName, email: supportEmail, arguments: ProcessInfo.processInfo.arguments))
 
             case .recording:
                 Button {
@@ -104,6 +107,7 @@ struct MenuBarContentView: View {
                 } label: {
                     Label("Opnieuw proberen", systemImage: "arrow.clockwise")
                 }
+                .disabled(SupportIdentity.showsGate(name: supportName, email: supportEmail, arguments: ProcessInfo.processInfo.arguments))
             }
 
             // Upcoming meetings

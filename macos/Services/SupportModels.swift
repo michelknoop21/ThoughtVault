@@ -82,6 +82,15 @@ enum SupportIdentity {
         return domain.contains(".") && !domain.hasPrefix(".") && !domain.hasSuffix(".")
     }
 
+    static func showsGate(name: String, email: String, arguments: [String]) -> Bool {
+        #if DEBUG
+        if let index = arguments.firstIndex(of: "-TVDebugOpen"),
+           arguments.indices.contains(index + 1), arguments[index + 1] == "identity" { return true }
+        if arguments.contains(where: { $0.hasPrefix("-TVDebug") }) { return false }
+        #endif
+        return !isComplete(name: name, email: email)
+    }
+
     static func isComplete(name: String, email: String) -> Bool {
         !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && isValidEmail(email)
     }

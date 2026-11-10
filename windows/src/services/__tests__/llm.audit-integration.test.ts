@@ -6,7 +6,7 @@ import { auditFixture, sourceFixture } from "./notuleAuditFixtures";
 const { invoke } = vi.hoisted(() => ({ invoke: vi.fn() }));
 vi.mock("@tauri-apps/api/core", () => ({ invoke }));
 vi.mock("../tauriCommands", () => ({ loadCredential: async () => "fixture-key" }));
-vi.mock("../../stores/personalCorrectionsStore", () => ({ usePersonalCorrectionsStore: { getState: () => ({ hydrate: async () => {}, entries: [] }) } }));
+vi.mock("../../stores/personalCorrectionsStore", () => ({ usePersonalCorrectionsStore: { getState: () => ({ hydrate: async () => {}, entries: [] }) }, loadCorrectionsOrEmpty: async () => [] }));
 const profile = { id: "standaard", name: "Standaard" };
 const answer = (content: string) => ({ status: 200, body: JSON.stringify({ choices: [{ message: { content } }], content: [{ type: "text", text: content }] }) });
 

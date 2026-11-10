@@ -7,8 +7,9 @@ import { DEFAULT_SETTINGS } from "../types";
 import type { Profile, NotulenProvider } from "../types";
 import { isOllamaCloudURL } from "./ollamaModels";
 
-import { usePersonalCorrectionsStore } from "../stores/personalCorrectionsStore";
-import { correctText, correctHTML, correctionPrompt } from "./personalCorrections";
+import { loadCorrectionsOrEmpty } from "../stores/personalCorrectionsStore";
+import { usePeopleDirectoryStore } from "../stores/peopleDirectoryStore";
+import { correctText, correctHTML, contextBlock, CONTEXT_BUDGET, type PersonalCorrection } from "./personalCorrections";
 import { auditSource, auditNotule, NotuleReviewError } from "./notuleAudit";
 
 interface LLMConfig {
@@ -43,6 +44,15 @@ function getConfig(): LLMConfig {
     openAIModel: settings.openai_model || DEFAULT_SETTINGS.openai_model,
     anthropicModel: settings.anthropic_model || "claude-sonnet-5-5",
   };
+}
+
+/** Glossary and directory people for the minutes AI, within the provider budget. */
+export function minutesContext(entries: PersonalCorrection[], transcript: string, profileId: string | undefined, includeRoles = false): string {
+  // Sorted by name, like the macOS directoryPeople().
+  const people = usePeopleDirectoryStore.getState().people.filter(p => !p.isSelf).sort((a, b) => a.name.localeCompare(b.name)).map(p => ({
+    name: p.name, role: p.role, organization: p.organization, responsibilities: p.responsibilities ?? [], aliases: p.aliases,
+  }));
+  return contextBlock(entries, people, transcript, profileId, CONTEXT_BUDGET, [], includeRoles);
 }
 
 function todayNL(): string {
@@ -169,6 +179,20 @@ function stripCodeFences(html: string): string {
 }
 
 export class LLMService {
+  /** One plain request to the selected provider, for small helper prompts (no audit, no chunking). */
+  static async complete(systemPrompt: string, userMessage: string): Promise<string> {
+    const config = getConfig();
+    const provider = config.provider === "cloud" ? "ollama" : config.provider;
+    if (provider === "openai" || provider === "anthropic") {
+      const key = await loadCredential(`${provider}_api_key`);
+      if (!key) throw new Error(`Vul je ${provider === "openai" ? "OpenAI" : "Anthropic"} API-sleutel in bij Instellingen.`);
+      return generateWithHostedAPI(provider, provider === "openai" ? config.openAIModel : config.anthropicModel, systemPrompt, userMessage, key);
+    }
+    const baseURL = provider === "ollama" ? config.ollamaUrl : config.lmStudioUrl;
+    const key = provider === "ollama" && baseURL.startsWith("https://") ? await loadCredential("ollama_api_key") : null;
+    return generateWithOpenAICompatible(baseURL, provider === "ollama" ? config.ollamaModel : config.lmStudioModel, systemPrompt, userMessage, key ?? "");
+  }
+
   static async generateNotulen(
     transcription: string,
     profile: Profile,
@@ -176,8 +200,8 @@ export class LLMService {
     participants: string[] = [],
     quickNote: string = "",
   ): Promise<string> {
-    await usePersonalCorrectionsStore.getState().hydrate();
-    const corrections = usePersonalCorrectionsStore.getState().entries;
+    const corrections = await loadCorrectionsOrEmpty();
+    const context = minutesContext(corrections, transcription, profile.id);
     const finish = (html: string) => correctHTML(ensureNotesSection(stripCodeFences(html), quickNote), corrections, profile.id);
     const config = getConfig();
     const enriched = enrichProfile(profile);
@@ -199,7 +223,7 @@ export class LLMService {
         for (let offset = 0; offset < characters.length; offset += limit) {
           summaries.push(await generateWithOpenAICompatible(baseURL, model,
             `Je vat transcripties samen. Bewaar namen, feiten, besluiten, actiepunten, eigenaren en termijnen. Verzin niets. ${FACTUALITY_RULES}`,
-            correctionPrompt(corrections, profile.id) + "Vat dit deel compact samen:\n\n" + characters.slice(offset, offset + limit).join(""),
+            (context ? context.trim() + "\n\n" : "") + "Vat dit deel compact samen:\n\n" + characters.slice(offset, offset + limit).join(""),
             compatibleKey ?? ""));
         }
         const summarized = summaries.join("\n\n");
@@ -209,8 +233,9 @@ export class LLMService {
         processed = summarized;
       }
     }
-    const userPrompt = correctionPrompt(corrections, profile.id) + quickNotePrompt(quickNote) + buildUserContent(
-      enriched.notule_prompt ?? "",
+    // Same place as macOS: the context block follows the profile's notule prompt.
+    const userPrompt = quickNotePrompt(quickNote) + buildUserContent(
+      (enriched.notule_prompt ?? "") + context,
       processed,
       enriched.output_template ?? enriched.notule_template,
       participants

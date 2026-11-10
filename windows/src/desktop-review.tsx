@@ -20,10 +20,15 @@ import { useSettingsStore } from "./stores/settingsStore";
 import "./styles/globals.css";
 import "./styles/thoughtvault.css";
 const reviewStores = new Map<number, Map<string, unknown>>();
-let reviewCorrections: unknown = {version:1,entries:[]};
+let reviewCorrections: unknown = {version:2,dismissed:[],entries:[
+ {id:"review-yinga",canonical:"Yinga",variants:["Jengo","Django"],scope:null,enabled:true,note:"Merknaam van de klant"},
+ {id:"review-prezent",canonical:"Prezent",variants:[],scope:null,enabled:false}]};
+const reviewContextFiles = new Map<string, string>();
 Object.assign(window, { __TAURI_INTERNALS__: {
  metadata: {currentWindow:{label:"main"},currentWebview:{label:"main"}}, transformCallback: () => 0,
- invoke: async (command: string, args?: {document?:unknown;path?:string;rid?:number;key?:string;value?:unknown}) => {
+ invoke: async (command: string, args?: {document?:unknown;path?:string;rid?:number;key?:string;value?:unknown;name?:string;contents?:string}) => {
+  if (command === "read_context_file") return reviewContextFiles.get(args!.name!) ?? null;
+  if (command === "write_context_file") { reviewContextFiles.set(args!.name!, args!.contents!); return; }
   if (command === "plugin:store|load") {
     const rid = reviewStores.size + 1;
     reviewStores.set(rid, new Map(args?.path === "local-transcripts.json" ? [["items",useLocalTranscriptsStore.getState().items]] : []));
@@ -37,7 +42,12 @@ Object.assign(window, { __TAURI_INTERNALS__: {
 window.fetch = async () => { throw new Error("Review fixture blocks network access"); };
 useSettingsStore.setState({processing_mode:"local",has_completed_onboarding:true});
 useLocalTranscriptsStore.setState({items:Array.from({length:8}, (_, i) => ({id:`local-review-${i}`,title:["Projectoverleg","Idee voor volgende week","Voorbereiding klantgesprek"][i%3],duration_seconds:180,tags:[],created_at:new Date().toISOString(),updated_at:new Date().toISOString(),raw_transcription:"Jengo bespreekt de planning.",notule_html:"<h2>Besproken</h2><p>Jengo bespreekt de planning.</p>"}))});
-usePeopleDirectoryStore.setState({people: [usePeopleDirectoryStore.getState().createDefaultPerson({name:"Voorbeeld persoon",role:"Projectleider",organization:"Voorbeeldteam"})]});
+usePeopleDirectoryStore.setState({people: [usePeopleDirectoryStore.getState().createDefaultPerson({name:"Voorbeeld persoon",role:"Projectleider",organization:"Voorbeeldteam",responsibilities:["Planning bewaken"]})]});
+// Suggestions on the first local notule: a term, a new person and a remainder for the directory person.
+reviewContextFiles.set("context-suggestions.json", JSON.stringify({"local-review-0": {
+ terms:[{heard:"Kuber netes",canonical:"Kubernetes",note:"Platform voor containerbeheer"}],
+ people:[{name:"Sanne Bakker",role:"Projectleider",organization:"Gemeente Utrecht",responsibilities:["Planning","Subsidieaanvraag"],topics:["Subsidie"],heardAs:["Sanne Backer"],candidateIds:[]},
+  {name:"Voorbeeld persoon",role:"Teamleider",organization:"",responsibilities:[],topics:[],heardAs:["Voorbeeld P."],matchedPersonId:usePeopleDirectoryStore.getState().people[0].id,candidateIds:[]}]}}));
 if (new URLSearchParams(location.search).get("scenario") === "recording") useRecordingStore.setState({phase:"recording",recordingStartedAt:Date.now()});
 const pages = {"/onboarding":<OnboardingWizard/>,"/seed-review":<SeedReviewSheet candidates={["voorbeeld@example.test"]} onClose={() => history.back()}/>,"/":<HomePage/>,"/recording":<RecordingPage/>,"/tasks":<TasksPage/>,"/transcripts":<TranscriptsPage/>,"/profiles":<ProfilesPage/>,"/people":<PeoplePage/>,"/settings":<SettingsPage/>};
 if (new URLSearchParams(location.search).get("scenario") === "widget") {

@@ -106,6 +106,62 @@ final class MigrationTests: XCTestCase {
         //     After 02-02 changes isInternal to Bool?, this assertion still passes (value = .some(true)).
         XCTAssertEqual(fetchedPerson.isInternal, true, "isInternal must be preserved as true after Bool→Bool? relaxation")
     }
+    /// A real on-disk store with the V3 shape (PersonProfile without `responsibilities`)
+    /// opens through the app's own container path: people intact, no move-aside.
+    func testV3StoreWithPeopleOpensUnderV4() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("v3-store-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let url = dir.appendingPathComponent("Local.store")
+
+        try makeV3Store(at: url)
+
+        let suite = "MigrationTests-\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let container = LocalTranscriptStore.makeContainer(at: url, defaults: defaults)
+
+        XCTAssertEqual(container.configurations.first?.url, url, "must be the on-disk store, not the in-memory fallback")
+        let people = try ModelContext(container).fetch(FetchDescriptor<PersonProfile>(sortBy: [SortDescriptor(\.name)]))
+        XCTAssertEqual(people.map(\.name), ["Anke Bakker", "Bram Visser"])
+        XCTAssertEqual(people.map(\.responsibilities), [[], []])
+        XCTAssertEqual(people.first?.emails, ["anke@voorbeeld.nl"])
+        XCTAssertEqual(people.map(\.isInternal), [true, nil])
+        XCTAssertTrue(FileManager.default.fileExists(atPath: url.path))
+        let files = try FileManager.default.contentsOfDirectory(atPath: dir.path)
+        XCTAssertFalse(files.contains { $0.contains("incompatible") }, "store was moved aside: \(files)")
+        XCTAssertFalse(defaults.bool(forKey: "localStoreOpenInProgress"))
+    }
+
+    /// The versioned plan itself also migrates a V3 store (distinct checksums per version).
+    func testV3StoreOpensWithMigrationPlan() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("v3-plan-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let url = dir.appendingPathComponent("Local.store")
+
+        try makeV3Store(at: url)
+
+        let container = try ModelContainer(
+            for: TranscriptRecord.self, PersonProfile.self,
+            migrationPlan: AppMigrationPlan.self,
+            configurations: ModelConfiguration(url: url)
+        )
+        let people = try ModelContext(container).fetch(FetchDescriptor<PersonProfile>(sortBy: [SortDescriptor(\.name)]))
+        XCTAssertEqual(people.map(\.name), ["Anke Bakker", "Bram Visser"])
+        XCTAssertEqual(people.map(\.responsibilities), [[], []])
+    }
+
+    /// Writes two people with the frozen V3 model and releases the container.
+    private func makeV3Store(at url: URL) throws {
+        let schema = Schema(versionedSchema: AppSchemaV3.self)
+        XCTAssertNil(schema.entitiesByName["PersonProfile"]?.attributesByName["responsibilities"], "V3 must be the frozen shape")
+        let container = try ModelContainer(for: schema, configurations: ModelConfiguration(schema: schema, url: url))
+        let context = ModelContext(container)
+        context.insert(AppSchemaV3.PersonProfile(name: "Anke Bakker", role: "Projectleider", emails: ["anke@voorbeeld.nl"], isInternal: true))
+        context.insert(AppSchemaV3.PersonProfile(name: "Bram Visser"))
+        try context.save()
+    }
 
     /// Opens an on-disk store written by the model before `notuleDraftHtml` and
     /// `notuleReviewReason` existed (Fixtures/PreDraftFields.store), the same way

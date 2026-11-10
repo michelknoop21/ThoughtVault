@@ -103,6 +103,7 @@ export interface PersonProfile {
   aliases: string[];
   meetingTypes: string[];
   expertiseTags: string[];
+  responsibilities: string[];  // Tasks the minutes AI links actions to; [] for data from before this field
   emails: string[];        // Primary dedup key for directory entries (D-02)
   isSelf: boolean;
   isInternal: boolean | null;  // null = onbekend, true = intern, false = extern (D-01)

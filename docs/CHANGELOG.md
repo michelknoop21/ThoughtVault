@@ -5,6 +5,23 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2026-11-09]: Lerende context voor termen en personen
+
+### Added
+- **Woordenlijst v2**: toelichting per term (max. 200 tekens), termen zonder varianten, lijst met afgewezen voorstellen en een eigen instellingentab met zoekveld en geschiedenis. Het vrije veld "Eigen termen" is eenmalig omgezet. Eén contextblok (6000 tekens, 1200 bij Apple Intelligence) vervangt de lijst van 30 namen en de correctieprompt (DEC-061).
+- **Voorstellen na de notule**: een aparte achtergrondaanroep stelt termen en personen voor via een balk boven de notule (Toevoegen, Bijwerken, Negeren). Bekende personen krijgen soort gesprek, onderwerpen en verantwoordelijkheden automatisch; het persoonsdetail toont "Gesprekken".
+- **Geschiedenis per persoon en term**: tot 50 versies in `context-history.json`, met herstel.
+- **Windows**: dezelfde formaten en prompt, zonder Gesprekken en deelnemerskoppeling.
+
+### Changed
+- "Transcriptie op apparaat" staat alleen in de instellingen bij verwerking in de Cloud; in Lokaal is er nooit live tekst.
+- `PersonProfile` kreeg `responsibilities` (schema V4). Teruggaan naar een build van vóór V4 is niet getest en wordt afgeraden.
+
+### Fixed
+- Testruns raakten de echte `Local.store` en schreven een woordenlijst die de geïnstalleerde app niet las. De testhost start nu een lege app met tijdelijke opslag, en een onleesbare woordenlijst laat een notule niet meer falen.
+
+---
+
 ## [2026-11-09]: Notules met meer feiten bij Ollama Cloud
 
 ### Changed

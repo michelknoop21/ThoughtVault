@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct CorrectionFields: View {
+    static let noteLimit = 200
     @Binding var entry: PersonalCorrection
     var profiles: [Profile]
     var body: some View {
@@ -9,6 +10,9 @@ struct CorrectionFields: View {
             TextField("Bijvoorbeeld Yinga", text: $entry.canonical).textFieldStyle(.roundedBorder).autocorrectionDisabled()
             Text("Verkeerde spellingen (komma-gescheiden)")
             TextField("Bijvoorbeeld Jengo, Django", text: Binding(get: { entry.variants.joined(separator: ",") }, set: { entry.variants = $0.components(separatedBy: ",") })).textFieldStyle(.roundedBorder).autocorrectionDisabled()
+            Text("Toelichting (optioneel)")
+            TextField("Bijvoorbeeld Klant uit Utrecht", text: noteBinding).textFieldStyle(.roundedBorder)
+            Text("Nog \(Self.noteLimit - (entry.note?.utf16.count ?? 0)) tekens").font(TS.Font.caption).foregroundStyle(Color.labelSecondary)
             Picker("Toepassen op", selection: Binding(get: { entry.scope ?? "" }, set: { entry.scope = $0.isEmpty ? nil : $0 })) {
                 Text("Alle opnames").tag("")
                 ForEach(profiles) { profile in Text(profile.name).tag(profile.id) }
@@ -18,48 +22,172 @@ struct CorrectionFields: View {
             }
         }
     }
+    /// Blocks input beyond the limit and the characters the glossary does not allow.
+    private var noteBinding: Binding<String> {
+        Binding(
+            get: { entry.note ?? "" },
+            set: { value in
+                let clean = String(value.unicodeScalars.filter { !"\r\n<>".unicodeScalars.contains($0) })
+                entry.note = clean.isEmpty ? nil : String(clean.prefix(Self.noteLimit))
+            }
+        )
+    }
 }
 
 struct PersonalCorrectionsView: View {
     var profiles: [Profile]
     @State private var entries: [PersonalCorrection] = []
-    @State private var draft: PersonalCorrection?
+    @State private var editing: PersonalCorrection?
+    @State private var query = ""
     @State private var error = ""
+    #if os(macOS)
+    @State private var selection: Set<PersonalCorrection.ID> = []
+    #endif
+
+    private var shown: [PersonalCorrection] {
+        let sorted = entries.sorted { $0.canonical.localizedCaseInsensitiveCompare($1.canonical) == .orderedAscending }
+        let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !q.isEmpty else { return sorted }
+        return sorted.filter { ([$0.canonical, $0.note ?? ""] + $0.variants).contains { $0.localizedCaseInsensitiveContains(q) } }
+    }
+    private var counter: String { entries.count == 1 ? "1 term" : "\(entries.count) termen" }
+    private func variantsText(_ entry: PersonalCorrection) -> String {
+        entry.variants.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }.joined(separator: ", ")
+    }
+    private func scopeName(_ entry: PersonalCorrection) -> String {
+        entry.scope.map { id in profiles.first { $0.id == id }?.name ?? id } ?? "Alle profielen"
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: TS.Spacing.md) {
-            Text("Woorden en namen").font(TS.Font.headline)
-            Text("Corrigeer een naam één keer en onthoud de juiste spelling voor volgende notulen. Deze lijst blijft op dit apparaat.").font(TS.Font.caption).foregroundStyle(Color.labelSecondary)
-            ForEach(entries) { entry in
-                HStack {
-                    Toggle(entry.canonical, isOn: Binding(get: { entry.enabled }, set: { value in var changed = entry; changed.enabled = value; persist(changed) }))
-                    VStack(alignment: .leading) {
-                        Text(entry.variants.joined(separator: ", "))
-                        Text(entry.scope.flatMap { id in profiles.first { $0.id == id }?.name } ?? (entry.scope ?? "Alle opnames")).font(TS.Font.caption).foregroundStyle(Color.labelSecondary)
-                    }
-                    Spacer()
-                    Button("Bewerken") { draft = entry }
-                    Button("Verwijderen") { do { let next = entries.filter { $0.id != entry.id }; try PersonalCorrections.save(next); entries = next } catch { self.error = error.localizedDescription } }
-                }
+            Text("Corrigeer een naam één keer en onthoud de juiste spelling voor volgende notulen. Deze lijst blijft op dit apparaat.")
+                .font(TS.Font.caption).foregroundStyle(Color.labelSecondary)
+            HStack {
+                Text(counter).font(TS.Font.caption).foregroundStyle(Color.labelSecondary)
+                Spacer()
+                Button("Term toevoegen") { editing = PersonalCorrection(variants: []) }
             }
-            if draft == nil { Button("Woord toevoegen") { draft = PersonalCorrection() } }
-            if let draft {
-                CorrectionFields(entry: Binding(get: { self.draft ?? draft }, set: { self.draft = $0 }), profiles: profiles)
-                HStack { Spacer(); Button("Annuleren") { self.draft = nil }; Button("Opslaan") { persist(draft, close: true) }.buttonStyle(PrimaryButtonStyle()) }
+            if entries.isEmpty {
+                Text("Nog geen termen. Voeg een term toe of corrigeer een woord in een notule.")
+                    .foregroundStyle(Color.labelSecondary)
+                    .padding(.vertical, TS.Spacing.md)
+            } else {
+                TextField("Zoeken", text: $query).textFieldStyle(.roundedBorder).autocorrectionDisabled()
+                list
             }
             if !error.isEmpty { Text(error).foregroundStyle(Color.red).font(TS.Font.caption) }
         }
-        .task { do { entries = try PersonalCorrections.load() } catch { self.error = error.localizedDescription } }
+        .task { reload() }
+        .sheet(item: $editing) { entry in
+            CorrectionEditor(entry: entry, profiles: profiles, isNew: !entries.contains { $0.id == entry.id }, onChange: reload)
+        }
     }
-    private func persist(_ entry: PersonalCorrection, close: Bool = false) {
+
+    #if os(macOS)
+    private var list: some View {
+        Table(shown, selection: $selection) {
+            TableColumn("Term") { Text($0.canonical).fontWeight(.semibold) }
+            TableColumn("Herkend als") { Text(variantsText($0)) }
+            TableColumn("Toelichting") { Text($0.note ?? "") }
+            TableColumn("Profiel") { Text(scopeName($0)) }
+            TableColumn("Aan") { entry in
+                Toggle("Aan", isOn: Binding(get: { entry.enabled }, set: { value in var changed = entry; changed.enabled = value; save(changed) }))
+                    .labelsHidden()
+            }.width(50)
+        }
+        .frame(minHeight: 280)
+        .contextMenu(forSelectionType: PersonalCorrection.ID.self) { ids in
+            if let entry = entries.first(where: { ids.contains($0.id) }) { Button("Bewerken") { editing = entry } }
+        } primaryAction: { ids in
+            // Double-click or Return
+            if let entry = entries.first(where: { ids.contains($0.id) }) { editing = entry }
+        }
+    }
+    #else
+    private var list: some View {
+        // Plain rows: the settings subpage Form already scrolls.
+        VStack(alignment: .leading, spacing: TS.Spacing.sm) { ForEach(shown) { entry in
+            Button { editing = entry } label: {
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack {
+                        Text(entry.canonical).fontWeight(.semibold)
+                        if !entry.enabled { Text("Uit").font(TS.Font.caption) }
+                    }
+                    if !variantsText(entry).isEmpty { Text("Herkend als \(variantsText(entry))").font(TS.Font.caption).foregroundStyle(Color.labelSecondary) }
+                    if let note = entry.note, !note.isEmpty { Text(note).font(TS.Font.caption).foregroundStyle(Color.labelSecondary) }
+                }
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(entry.enabled ? Color.labelPrimary : Color.labelSecondary)
+        } }
+    }
+    #endif
+
+    private func reload() {
+        do { entries = try PersonalCorrections.load(); error = "" } catch { self.error = error.localizedDescription }
+    }
+    private func save(_ entry: PersonalCorrection) {
+        do { entries = try PersonalCorrections.saveRecording(entry, source: "handmatig"); error = "" } catch { self.error = error.localizedDescription }
+    }
+}
+
+/// Edit panel for one glossary entry: fields, delete and version history.
+struct CorrectionEditor: View {
+    @State var entry: PersonalCorrection
+    var profiles: [Profile]
+    var isNew: Bool
+    var onChange: () -> Void
+    @Environment(\.dismiss) private var dismiss
+    @State private var error = ""
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: TS.Spacing.md) {
+                Text(isNew ? "Term toevoegen" : "Term bewerken").font(TS.Font.headline)
+                CorrectionFields(entry: $entry, profiles: profiles)
+                Toggle("Aan", isOn: $entry.enabled)
+                if !isNew {
+                    Text("Geschiedenis").font(TS.Font.headline)
+                    HistoryListView(kind: .term, itemId: entry.id) { restore($0) }
+                }
+                if !error.isEmpty { Text(error).foregroundStyle(Color.red).font(TS.Font.caption) }
+                HStack {
+                    if !isNew { Button("Verwijderen", role: .destructive) { remove() } }
+                    Spacer()
+                    Button("Annuleren") { dismiss() }
+                    Button("Opslaan") { save() }.buttonStyle(PrimaryButtonStyle())
+                }
+            }.padding(TS.Spacing.lg)
+        }
+        #if os(macOS)
+        .frame(width: 480, height: 560)
+        #endif
+    }
+
+    private func save() {
         do {
             var cleaned = entry
             cleaned.canonical = entry.canonical.trimmingCharacters(in: .whitespacesAndNewlines)
-            cleaned.variants = entry.variants.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            let next = PersonalCorrections.upsert(entries, entry: cleaned)
-            try PersonalCorrections.save(next); entries = next; error = ""
-            if close { draft = nil }
+            cleaned.variants = entry.variants.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
+            cleaned.note = entry.note?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+            try PersonalCorrections.saveRecording(cleaned, source: "handmatig")
+            onChange(); dismiss()
         } catch { self.error = error.localizedDescription }
     }
+    private func remove() {
+        do { try PersonalCorrections.delete(id: entry.id, source: "handmatig"); onChange(); dismiss() } catch { self.error = error.localizedDescription }
+    }
+    private func restore(_ version: HistoryEntry) {
+        do {
+            try PersonalCorrections.restore(version)
+            onChange()
+            if let fresh = try PersonalCorrections.load().first(where: { $0.id == entry.id }) { entry = fresh; error = "" } else { dismiss() }
+        } catch { self.error = error.localizedDescription }
+    }
+}
+
+private extension String {
+    var nilIfEmpty: String? { isEmpty ? nil : self }
 }
 
 struct WordCorrectionSheet: View {
@@ -87,6 +215,10 @@ struct WordCorrectionSheet: View {
                     }
                 }.buttonStyle(PrimaryButtonStyle()).disabled(busy)
             }
-        }.padding(TS.Spacing.lg).frame(width: 480).interactiveDismissDisabled(busy)
+        }.padding(TS.Spacing.lg)
+        #if os(macOS)
+        .frame(width: 480)
+        #endif
+        .interactiveDismissDisabled(busy)
     }
 }

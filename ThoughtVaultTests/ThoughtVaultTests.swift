@@ -156,6 +156,17 @@ final class RestartTaskTests: XCTestCase {
 }
 
 final class LiveTranscriptionPolicyTests: XCTestCase {
+    func testLiveTranscriptionDisabledInLocalMode() {
+        XCTAssertFalse(LiveTranscriptionPolicy.isEnabled(preferred: true, available: true, localMode: true))
+        XCTAssertTrue(LiveTranscriptionPolicy.isEnabled(preferred: true, available: true, localMode: false))
+        XCTAssertFalse(LiveTranscriptionPolicy.isEnabled(preferred: false, available: true, localMode: false))
+    }
+
+    func testNoStatusTextInLocalMode() {
+        XCTAssertNil(LiveTranscriptionPolicy.statusText(preferred: false, available: true, localMode: true, error: nil))
+        XCTAssertNil(LiveTranscriptionPolicy.statusText(preferred: true, available: false, localMode: true, error: nil))
+    }
+
     #if os(macOS)
     func testEveryModeListensToItsOwnSources() {
         XCTAssertEqual(LiveTranscriptionPolicy.sources(for: .microphone), [.microphone])
@@ -180,7 +191,7 @@ final class LiveTranscriptionPolicyTests: XCTestCase {
 
     func testStatusExplainsWhyThereIsNoLiveText() {
         func status(_ preferred: Bool = true, _ available: Bool = true, _ error: String? = nil) -> String? {
-            LiveTranscriptionPolicy.statusText(preferred: preferred, available: available, error: error)
+            LiveTranscriptionPolicy.statusText(preferred: preferred, available: available, localMode: false, error: error)
         }
         XCTAssertEqual(status(false), "Opname loopt (live tekst staat uit)")
         XCTAssertEqual(status(true, false), "Opname loopt (live tekst niet beschikbaar)")

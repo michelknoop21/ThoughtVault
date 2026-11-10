@@ -16,6 +16,12 @@ struct PersonEditView: View {
 
     /// nil = new person mode; non-nil = edit mode.
     let person: PersonProfile?
+    /// Fields for a new person taken from a conversation suggestion.
+    var prefill: PersonSuggestion? = nil
+    /// Meeting type of the conversation the prefill came from (same as PersonMatcher.autoApply).
+    var prefillMeetingType: String = ""
+    /// Called right after a new person was stored, before the saved confirmation delay.
+    var onAdded: ((PersonProfile) -> Void)? = nil
     let onSave: (PersonProfile) -> Void
 
     // MARK: - State
@@ -26,10 +32,16 @@ struct PersonEditView: View {
     @State private var aliassen: String = ""
     @State private var expertise: String = ""
     @State private var internalStatus: InternalStatus = .onbekend
+    @State private var taken: [String] = []
+    @State private var nieuweTaak: String = ""
 
     @State private var isSaving: Bool = false
     @State private var showSaved: Bool = false
+    /// Bumped after each save so the history list reloads.
+    @State private var historyRefresh = 0
     @State private var saveError: String? = nil
+    /// Loaded once in loadFields(); the lookup decodes every record's participants.
+    @State private var conversations: [TranscriptRecord] = []
 
     @Environment(\.dismiss) private var dismiss
 
@@ -78,9 +90,29 @@ struct PersonEditView: View {
                 personFields
             }
             .labelsHidden()
+
+            VStack(alignment: .leading, spacing: TS.Spacing.sm) {
+                Text("Taken en verantwoordelijkheden").font(TS.Font.headline)
+                takenEditor
+            }
+            if let person {
+                VStack(alignment: .leading, spacing: TS.Spacing.sm) {
+                    Text("Geschiedenis").font(TS.Font.headline)
+                    ScrollView { historyList(person) }.frame(maxHeight: 120)
+                }
+                VStack(alignment: .leading, spacing: TS.Spacing.sm) {
+                    Text("Gesprekken").font(TS.Font.headline)
+                    ScrollView { conversationList }.frame(maxHeight: 120)
+                }
+            }
             #else
-            Form { personFields }
-                .formStyle(.grouped)
+            Form {
+                personFields
+                Section("Taken en verantwoordelijkheden") { takenEditor }
+                if let person { Section("Geschiedenis") { historyList(person) } }
+                if person != nil { Section("Gesprekken") { conversationList } }
+            }
+            .formStyle(.grouped)
             #endif
 
             // Save button + feedback
@@ -101,16 +133,16 @@ struct PersonEditView: View {
                     Button {
                         savePerson()
                     } label: {
-                        if isSaving {
+                        if showSaved {
+                            HStack(spacing: TS.Spacing.xs) {
+                                Image(systemName: "checkmark")
+                                Text("Opgeslagen")
+                            }
+                        } else if isSaving {
                             HStack(spacing: TS.Spacing.xs) {
                                 ProgressView()
                                     .controlSize(.small)
                                 Text(saveLabel)
-                            }
-                        } else if showSaved {
-                            HStack(spacing: TS.Spacing.xs) {
-                                Image(systemName: "checkmark")
-                                Text("Opgeslagen")
                             }
                         } else {
                             Text(saveLabel)
@@ -136,16 +168,104 @@ struct PersonEditView: View {
         )
     }
 
+    // MARK: - Responsibilities and history
+
+    private var takenEditor: some View {
+        VStack(alignment: .leading, spacing: TS.Spacing.xs) {
+            #if os(macOS)
+            ScrollView { takenRows }.frame(maxHeight: 120)
+            #else
+            takenRows
+            #endif
+            HStack {
+                TextField("Nieuwe taak", text: $nieuweTaak)
+                    .textFieldStyle(.roundedBorder)
+                    .onSubmit(addTaak)
+                Button("Toevoegen", action: addTaak)
+                    .disabled(nieuweTaak.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+        }
+    }
+
+    private var takenRows: some View {
+        VStack(alignment: .leading, spacing: TS.Spacing.xs) {
+            ForEach(Array(taken.enumerated()), id: \.offset) { index, taak in
+                HStack {
+                    Text(taak).font(TS.Font.body).foregroundStyle(Color.labelPrimary)
+                    Spacer()
+                    Button { taken.remove(at: index) } label: { Image(systemName: "minus.circle") }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Verwijder \(taak)")
+                }
+            }
+        }
+    }
+
+    /// Trims and ignores duplicates, case-insensitive.
+    private func addTaak() {
+        let taak = nieuweTaak.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !taak.isEmpty else { return }
+        if !taken.contains(where: { $0.caseInsensitiveCompare(taak) == .orderedSame }) { taken.append(taak) }
+        nieuweTaak = ""
+    }
+
+    private func historyList(_ person: PersonProfile) -> some View {
+        HistoryListView(kind: .person, itemId: person.id) { entry in
+            do {
+                try PersonDirectoryService.shared.restore(entry, to: person)
+                loadFields()
+                saveError = nil
+            } catch {
+                saveError = "Herstellen mislukt: \(error.localizedDescription)"
+            }
+        }
+        .id(historyRefresh)
+    }
+
+    /// Recordings this person was linked to, newest first.
+    private var conversationList: some View {
+        VStack(alignment: .leading, spacing: TS.Spacing.xs) {
+            if conversations.isEmpty {
+                Text("Nog geen gekoppelde gesprekken")
+                    .font(TS.Font.caption)
+                    .foregroundStyle(Color.labelSecondary)
+            }
+            ForEach(conversations, id: \.taskId) { record in
+                HStack(alignment: .firstTextBaseline, spacing: TS.Spacing.sm) {
+                    Text(record.createdAt.formatted(Date.FormatStyle(date: .abbreviated, time: .omitted).locale(Locale(identifier: "nl_NL"))))
+                        .font(TS.Font.caption)
+                        .foregroundStyle(Color.labelSecondary)
+                    Text(record.title)
+                        .font(TS.Font.body)
+                        .foregroundStyle(Color.labelPrimary)
+                        .lineLimit(1)
+                }
+            }
+        }
+    }
+
     // MARK: - Load
 
     private func loadFields() {
-        guard let p = person else { return }
+        guard let p = person else {
+            if let s = prefill {
+                naam = s.name
+                rol = s.role
+                organisatie = s.organization
+                aliassen = s.heardAs.joined(separator: ", ")
+                expertise = s.topics.joined(separator: ", ")
+                taken = s.responsibilities
+            }
+            return
+        }
         naam = p.name
         rol = p.role
         organisatie = p.organization
         aliassen = p.aliases.joined(separator: ", ")
         expertise = p.expertiseTags.joined(separator: ", ")
         internalStatus = InternalStatus.from(p.isInternal)
+        taken = p.responsibilities
+        conversations = LocalTranscriptStore.shared.records(linkedTo: p.id)
     }
 
     // MARK: - Save
@@ -165,14 +285,16 @@ struct PersonEditView: View {
 
         do {
             if let existing = person {
-                // Edit mode — mutate and update
-                existing.name = naam.trimmingCharacters(in: .whitespacesAndNewlines)
-                existing.role = rol.trimmingCharacters(in: .whitespacesAndNewlines)
-                existing.organization = organisatie.trimmingCharacters(in: .whitespacesAndNewlines)
-                existing.aliases = splitAndTrim(aliassen)
-                existing.expertiseTags = splitAndTrim(expertise)
-                existing.isInternal = internalStatus.boolValue
-                try service.update(existing)
+                // Edit mode: the service keeps the previous version in the history
+                try service.update(existing, source: "handmatig") { p in
+                    p.name = naam.trimmingCharacters(in: .whitespacesAndNewlines)
+                    p.role = rol.trimmingCharacters(in: .whitespacesAndNewlines)
+                    p.organization = organisatie.trimmingCharacters(in: .whitespacesAndNewlines)
+                    p.aliases = splitAndTrim(aliassen)
+                    p.expertiseTags = splitAndTrim(expertise)
+                    p.isInternal = internalStatus.boolValue
+                    p.responsibilities = taken
+                }
                 finishSave(person: existing)
             } else {
                 // New person mode
@@ -185,7 +307,11 @@ struct PersonEditView: View {
                     isSelf: false,
                     isInternal: internalStatus.boolValue
                 )
+                newPerson.responsibilities = taken
+                let meetingType = prefillMeetingType.trimmingCharacters(in: .whitespacesAndNewlines)
+                if prefill != nil, !meetingType.isEmpty { newPerson.meetingTypes = [meetingType] }
                 try service.add(newPerson)
+                onAdded?(newPerson)
                 finishSave(person: newPerson)
             }
         } catch {
@@ -195,12 +321,15 @@ struct PersonEditView: View {
     }
 
     private func finishSave(person: PersonProfile) {
-        isSaving = false
+        // A new person stays saving until onSave, so a second tap cannot add it twice.
+        isSaving = isNewPerson
         showSaved = true
+        historyRefresh += 1
         Task {
             try? await Task.sleep(for: .seconds(2))
             await MainActor.run {
                 showSaved = false
+                isSaving = false
                 onSave(person)
             }
         }

@@ -23,7 +23,7 @@ extension SettingsView {
                     .padding(.top, -4)
 
                 group("Opname") {
-                    if OnDeviceTranscriber.shared.isAvailable() {
+                    if !isLocalProcessing && OnDeviceTranscriber.shared.isAvailable() {
                         IOSRow(icon: "mic", title: "Transcriptie op apparaat", subtitle: "Sneller, geen audiodata naar server") {
                             Toggle("Transcriptie op apparaat", isOn: $preferOnDeviceTranscription)
                                 .labelsHidden()
@@ -49,6 +49,10 @@ extension SettingsView {
                                 cloudNotulenSection
                             }
                         }
+                    }
+                    IOSDivider()
+                    link(icon: "character.book.closed", title: "Woordenlijst", subtitle: "Namen en termen voor betere notulen.") {
+                        subpage("Woordenlijst") { PersonalCorrectionsView(profiles: profiles) }
                     }
                     IOSDivider()
                     link(icon: "person.text.rectangle", title: "Over jou", subtitle: "Context voor betere notulen.") {

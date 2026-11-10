@@ -39,6 +39,7 @@ struct ThoughtVaultApp: App {
         // Before any view reads UserDefaults: adopt iCloud-synced provider
         // settings (Ollama Cloud URL/model/provider from the Mac).
         SettingsSyncService.shared.start()
+        try? PersonalVocabulary.migrateLegacyTerms()
     }
 
     var body: some Scene {

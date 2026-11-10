@@ -3,6 +3,7 @@ import { useProfilesStore } from "../../stores/profilesStore";
 import { usePersonalCorrectionsStore } from "../../stores/personalCorrectionsStore";
 import { CorrectionFields, newCorrection } from "../settings/PersonalCorrections";
 import { DesktopDialog } from "../ui/DesktopDialog";
+import { ContextSuggestionBar } from "./ContextSuggestionBar";
 import { useState, useRef, useEffect } from "react";
 import {
   ArrowLeft24Regular,
@@ -84,6 +85,8 @@ export function TranscriptDetail({
   const titleInputRef = useRef<HTMLInputElement>(null);
   const editorRef = useRef<HTMLDivElement>(null);
   const exportRef = useRef<HTMLDivElement>(null);
+  /** Set while the correction dialog handles a term suggestion; called once the correction is applied. */
+  const suggestionDone = useRef<(() => void) | null>(null);
 
   const hasNotule = !!(transcript.notule_html || transcript.has_notes);
   const hasTranscription = !!(transcript.raw_transcription || transcript.has_transcription);
@@ -149,11 +152,12 @@ export function TranscriptDetail({
     }
   }
 
+  const correctionScope = () => transcript.profile_id || useProfilesStore.getState().profiles.find(p => p.name === transcript.profile_name || p.id === transcript.profile_name)?.id || null;
   function openCorrection() {
     const selection = window.getSelection();
     const selected = selection?.anchorNode?.parentElement?.closest(".td-doc-body") ? selection.toString().trim() : "";
-    const profileId = transcript.profile_id || useProfilesStore.getState().profiles.find(p => p.name === transcript.profile_name || p.id === transcript.profile_name)?.id;
-    setCorrection({...newCorrection(profileId ?? null), variants:[selected]});
+    suggestionDone.current = null;
+    setCorrection({...newCorrection(correctionScope()), variants:[selected]});
     setRememberCorrection(true); setCorrectionError("");
   }
   async function saveCorrection() {
@@ -172,6 +176,7 @@ export function TranscriptDetail({
         catch(e) { setCorrectionError("Notule opgeslagen, maar de correctie is niet onthouden: " + String(e)); return; }
       }
       setCorrection(null);
+      suggestionDone.current?.(); suggestionDone.current = null;
     } catch(e) { setCorrectionError(e instanceof Error ? e.message : String(e)); }
     finally { setIsSaving(false); }
   }
@@ -382,6 +387,11 @@ export function TranscriptDetail({
             <p>Dit concept is geen goedgekeurde notule. Controleer feiten, acties en beperkingen tegen de transcriptie en opname. De automatische controle kan fouten missen.</p>
             <details><summary>Bekijk het bewaarde concept</summary><div className="prose" dangerouslySetInnerHTML={{ __html: draftForReview(transcript.notule_draft_html) }} /></details>
           </section>}
+
+          {detailTab === "notule" && transcript.notule_html && !isEditingNotule && (
+            <ContextSuggestionBar key={transcript.id} taskId={transcript.id} profileName={transcript.profile_name ?? ""} scope={correctionScope()}
+              onAddTerm={(entry, done) => { suggestionDone.current = done; setCorrection(entry); setRememberCorrection(true); setCorrectionError(""); }} />
+          )}
 
           {/* Content */}
           {detailTab === "notule" ? (

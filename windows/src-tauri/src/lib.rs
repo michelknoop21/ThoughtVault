@@ -102,6 +102,9 @@ pub fn run() {
             transcribe::transcribe_local,
             personal_corrections::load_personal_corrections,
             personal_corrections::save_personal_corrections,
+            personal_corrections::read_context_file,
+            personal_corrections::write_context_file,
+            personal_corrections::set_aside_context_file,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

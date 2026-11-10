@@ -195,11 +195,16 @@ struct ContentView: View {
                 callAlertMeeting = nil
             }
             #if DEBUG
-            // Screenshot hook: open a tab without keystrokes (`-TVDebugTab settings`).
+            // Screenshot hooks: open a tab (`-TVDebugTab settings`) or the newest transcript
+            // (`-TVDebugOpen transcript`) without keystrokes. Opening goes through the tab
+            // switch, which would otherwise reset the navigation path.
             .task {
+                DebugScreenshotSeed.run()
                 LocalTranscriptStore.shared.seedDebugDraftIfRequested()
+                Task { for _ in 0..<5 { try? await Task.sleep(for: .seconds(1)); DebugScreenshotSeed.sizeWindow() } }
+                Task { await DebugScreenshotSeed.snapshotAndQuit() }
                 // Opening goes through pendingTranscript, which needs the tab switch to happen there.
-                if UserDefaults.standard.string(forKey: "TVDebugOpen") == "transcript", let first = LocalTranscriptStore.shared.allTranscripts().first {
+                if UserDefaults.standard.string(forKey: "TVDebugOpen") == "transcript", let first = LocalTranscriptStore.shared.allTranscripts().first(where: { !($0.notuleHtml ?? "").isEmpty }) {
                     openTranscript(first)
                 } else if let raw = UserDefaults.standard.string(forKey: "TVDebugTab"), let tab = AppTab(rawValue: raw) { selectedTab = tab }
             }
@@ -223,10 +228,11 @@ struct ContentView: View {
             .task { await fetchCalendarIfGranted() }
             .task {
                 #if DEBUG
+                DebugScreenshotSeed.run()
                 LocalTranscriptStore.shared.seedDebugDraftIfRequested()
                 #endif
                 if let tab = IOSDebug.string("TVDebugTab").flatMap(AppTab.init(rawValue:)) { selectedTab = tab }
-                if IOSDebug.open == "transcript", let first = LocalTranscriptStore.shared.allTranscripts().first {
+                if IOSDebug.open == "transcript", let first = LocalTranscriptStore.shared.allTranscripts().first(where: { !($0.notuleHtml ?? "").isEmpty }) {
                     openTranscript(first)
                 }
                 if IOSDebug.open == "record" { await recordingVM.startRecording() }

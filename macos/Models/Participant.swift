@@ -14,6 +14,8 @@ struct Participant: Codable, Sendable, Hashable {
     var name: String
     var role: String
     var organization: String
+    /// Directory person this participant was linked to after the conversation; absent in older data.
+    var personId: String? = nil
 
     init(name: String, role: String = "", organization: String = "") {
         self.name = name

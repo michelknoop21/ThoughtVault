@@ -6,7 +6,7 @@ import { auditFixture, sourceFixture } from "./notuleAuditFixtures";
 const corrections = vi.hoisted(() => ({entries:[] as import("../personalCorrections").PersonalCorrection[]}));
 const { loadCredential } = vi.hoisted(() => ({ loadCredential: vi.fn() }));
 const { invoke, auditInvoke } = vi.hoisted(() => ({ invoke: vi.fn(), auditInvoke: vi.fn() }));
-vi.mock("../../stores/personalCorrectionsStore", () => ({ usePersonalCorrectionsStore: { getState: () => ({hydrate:async () => {},entries:corrections.entries}) } }));
+vi.mock("../../stores/personalCorrectionsStore", () => ({ usePersonalCorrectionsStore: { getState: () => ({hydrate:async () => {},entries:corrections.entries}) }, loadCorrectionsOrEmpty: async () => corrections.entries }));
 vi.mock("../tauriCommands", () => ({ loadCredential }));
 // Keep generation transport assertions separate from the source and factual audits.
 vi.mock("@tauri-apps/api/core", () => ({ invoke: (...args: unknown[]) => {
@@ -159,7 +159,7 @@ it("corrects derived provider input and returned HTML without changing the raw t
   const raw = "Jengo bespreekt de planning.";
   const html = await LLMService.generateNotulen(raw,profile);
   const messages = JSON.parse(invoke.mock.calls[0][1].request.body).messages;
-  expect(messages[1].content).toContain("Jengo, Django -> Yinga");
+  expect(messages[1].content).toContain("- Yinga (ook gehoord als: Jengo, Django)");
   expect(messages[1].content).toContain("Yinga bespreekt de planning.");
   expect(html).toBe('<p title="Django">Yinga</p><code>Django</code>');
   expect(raw).toBe("Jengo bespreekt de planning.");

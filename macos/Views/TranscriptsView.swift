@@ -1743,6 +1743,10 @@ struct TranscriptDetailView: View {
 
     private func htmlContentView(_ html: String) -> some View {
         VStack(spacing: 0) {
+            if !isEditingNotule {
+                ContextSuggestionBar(taskId: fullTranscript.taskId, profileName: fullTranscript.profileName ?? "", scope: correctionProfileId,
+                                     profiles: recordingVM.availableProfiles, applyCorrection: applyWordCorrection)
+            }
             if isEditingNotule {
                 FormattingToolbar(webView: editableWebViewRef)
                     .padding(.horizontal, TS.Spacing.md)
@@ -2058,7 +2062,7 @@ struct TranscriptDetailView: View {
         fullTranscript.notuleHtml = html
         if isEditingNotule { editedHTML = prepareNotuleContent(html); isEditingNotule = false }
         if remember {
-            do { try PersonalCorrections.save(PersonalCorrections.upsert(entries, entry: entry)) }
+            do { try PersonalCorrections.saveRecording(entry, source: "handmatig") }
             catch { throw NSError(domain: "PersonalCorrections", code: 2, userInfo: [NSLocalizedDescriptionKey: "Notule opgeslagen, maar de correctie is niet onthouden: " + error.localizedDescription]) }
         }
         if ObsidianService.isEnabled {

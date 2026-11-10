@@ -59,8 +59,8 @@ final class LocalTranscriptStore {
     /// previous launch aborted inside CoreData migration, the flag is still set on the
     /// next launch, and we move the incompatible store aside so the app starts cleanly
     /// instead of crash-looping. The set-aside store is preserved (not deleted) for
-    /// manual recovery.
-    private static func makeContainer(at url: URL, defaults: UserDefaults = .standard) -> ModelContainer {
+    /// manual recovery. `defaults` holds the watchdog flag; tests pass their own suite.
+    static func makeContainer(at url: URL, defaults: UserDefaults = .standard) -> ModelContainer {
         let watchdogKey = "localStoreOpenInProgress"
 
         if defaults.bool(forKey: watchdogKey) {
@@ -168,12 +168,17 @@ final class LocalTranscriptStore {
             predicate: #Predicate { $0.isSelf == true }
         )
         if let existing = try? context.fetch(descriptor).first {
+            let before = PersonSnapshot(existing)
             existing.name = name
             existing.role = role
             existing.organization = organization
             existing.aliases = aliases
             existing.meetingTypes = meetingTypes
             existing.expertiseTags = expertiseTags
+            if PersonSnapshot(existing) != before {
+                do { try ContextHistory.record(kind: .person, itemId: existing.id, source: "handmatig", snapshot: before) }
+                catch { before.apply(to: existing); throw error }
+            }
             existing.updatedAt = Date()
             logger.debug("upsertSelfProfile: updated existing isSelf record")
         } else {
@@ -228,6 +233,7 @@ final class LocalTranscriptStore {
         guard let record = record(forTaskId: taskId) else { throw LocalStoreError.recordNotFound }
         context.delete(record)
         do { try context.save() } catch { context.rollback(); throw error }
+        try? ContextSuggestions.save(ContextSuggestionSet(), taskId: taskId)
     }
 
     func updateTags(taskId: String, tags: [String]) throws {
@@ -242,6 +248,19 @@ final class LocalTranscriptStore {
         let original = record.notuleHtml
         record.notuleHtml = html
         do { try context.save() } catch { record.notuleHtml = original; throw error }
+    }
+
+    func updateParticipants(taskId: String, participants: [Participant]) throws {
+        guard let record = record(forTaskId: taskId) else { throw LocalStoreError.recordNotFound }
+        let original = record.participantsJSON
+        record.participants = participants
+        do { try context.save() } catch { record.participantsJSON = original; throw error }
+    }
+
+    /// Records with a participant linked to `personId`, newest first.
+    /// Decodes every record's participants (linear scan); add an indexed link if this gets slow.
+    func records(linkedTo personId: String, limit: Int = 50) -> [TranscriptRecord] {
+        Array(allRecords().filter { $0.participants.contains { $0.personId == personId } }.prefix(limit))
     }
 
     func updateTitle(taskId: String, title: String) throws {

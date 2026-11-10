@@ -516,7 +516,6 @@ struct SettingsView: View {
     @AppStorage("processingMode") var processingMode: String = ProcessingMode.local.rawValue
     @AppStorage("localTranscriber") var localTranscriber: String = LocalTranscriberEngine.whisperKit.rawValue
     @AppStorage("whisperModel") var whisperModel: String = LocalTranscriberFactory.defaultWhisperModel
-    @AppStorage(PersonalVocabulary.defaultsKey) var personalVocabulary: String = ""
     @AppStorage("ollamaURL") var ollamaURL: String = "http://localhost:11434"
     @AppStorage("ollamaModel") var ollamaModel: String = "llama3.2"
     @AppStorage("lmStudioURL") var lmStudioURL: String = "http://localhost:1234"
@@ -638,19 +637,12 @@ struct SettingsView: View {
                         .foregroundStyle(Color.labelTertiary)
                 }
             }
-
-            SettingFieldRow("Eigen termen") {
-                TextField("Michel, Yinga, …", text: $personalVocabulary, axis: .vertical)
-                    .textFieldStyle(.roundedBorder)
-                    .autocorrectionDisabled()
-            }
         } header: {
             Text("Transcriptie")
         } footer: {
             Text((localTranscriber == LocalTranscriberEngine.whisperKit.rawValue
                 ? "WhisperKit downloadt het gekozen model bij eerste gebruik. Klik het refresh-icoon om alle beschikbare modellen te laden. "
-                : "Apple Spraakherkenning werkt direct, zonder download. ")
-                + "Eigen termen (komma-gescheiden) en personen uit de app sturen de herkenning van namen zoals \"Michel\".")
+                : "Apple Spraakherkenning werkt direct, zonder download."))
                 .font(TS.Font.caption)
                 .foregroundStyle(Color.labelTertiary)
         }

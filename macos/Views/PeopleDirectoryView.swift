@@ -69,6 +69,10 @@ struct PeopleDirectoryView: View {
         }
         .onAppear {
             loadPeople()
+            #if DEBUG
+            // Screenshot hook: `-TVDebugOpen person` opens the first person's editor.
+            if UserDefaults.standard.string(forKey: "TVDebugOpen") == "person" { personToEdit = people.first }
+            #endif
         }
         .sheet(isPresented: $showAddSheet, onDismiss: loadPeople) {
             PersonEditView(person: nil, onSave: { _ in

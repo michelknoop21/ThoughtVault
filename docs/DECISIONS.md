@@ -6,6 +6,41 @@ _Decisions DEC-029 through DEC-038 archived to [archive/DECISIONS-DEC-029-to-DEC
 
 ---
 
+## DEC-061: Lerende context: één woordenlijst, één contextblok, voorstellen na de notule
+
+**Date:** 2026-11-09
+**Status:** Accepted
+
+**Context:** Namen en vaktermen worden door spraakherkenning steeds opnieuw verkeerd gehoord (in het schadebezoek werd dezelfde organisatie als "SRC" en als "RSC" herkend). De app had daar drie losse mechanismen voor: een vrij tekstveld "Eigen termen" (`personalVocabulary` in UserDefaults), een lijst met correcties (`personal-corrections.json`) en een lijst van maximaal 30 namen in de notuleprompt, plus een aparte correctieprompt. Wat de gebruiker over een persoon wist (functie, organisatie, verantwoordelijkheden) kwam nergens in de notule terecht, en niets leerde uit eerdere gesprekken.
+
+**Decision:**
+1. **Woordenlijst v2.** `personal-corrections.json` krijgt `version: 2`. Een term heeft een toelichting van maximaal 200 tekens, mag zonder varianten bestaan en er is een `dismissed`-lijst voor voorstellen die de gebruiker heeft afgewezen. Versie 1 blijft laden. Het oude vrije tekstveld wordt eenmalig omgezet naar termen en daarna verwijderd. De Woordenlijst kreeg een eigen instellingentab met doorzoekbare tabel, teller en een editor met geschiedenis.
+2. **Eén contextblok met vaste kop** gaat naar de notule-AI en vervangt de lijst van 30 namen en de correctieprompt. Inhoud: termen met varianten en toelichting, personen met aliassen en verantwoordelijkheden, en termen uit Obsidian-contextnotities. Rol en organisatie gaan alleen mee naar de voorstellenstap: in een echte run met mistral-large-4 (10 november 2026) nam het model ze over in de notule ("Rudy (schade-expert, Achmea)") terwijl het transcript ze niet noemde, en dat botst met de notule-audit. Volgorde: eerst wat in de transcriptie voorkomt, dan wat bij het gekozen profiel hoort, dan nieuwste eerst. Budget 6000 tekens, 1200 voor Apple Intelligence, afgekapt op hele regels. De Whisper-prompt houdt zijn limiet van 30 termen.
+3. **Aparte AI-stap na de notule.** Zodra de notule is opgeslagen vraagt `LLMService.complete` op de achtergrond om termen en personen als JSON. De stap slaat over bij Apple Intelligence, bij transcripties boven 64.000 tekens en bij lokale modellen waarvan de context overschreden zou worden (`maxChunkCharacters + 8000`). Fouten worden alleen gelogd. Het parsen is defensief: think-blokken weg, snijden van eerste tot laatste accolade, soepel decoderen, varianten "a / b" splitsen, een hele-woord-match in de transcriptie eisen, bekende, afgewezen, naamloze en eigen items laten vallen, maximaal 8 termen en 8 personen. Resultaat staat in `context-suggestions.json`, per taak.
+4. **Regels voor personen** (`PersonMatcher`). Koppelen op exacte naam of een meerwoordige `heardAs` tegen naam of aliassen. Een losse voornaam koppelt alleen als hij uniek is, anders is het resultaat dubbelzinnig en kiest de gebruiker. Bekende personen krijgen aanvullende velden automatisch: soort gesprek, onderwerpen (`expertiseTags`) en verantwoordelijkheden, met bron `gesprek:<taskId>` in de geschiedenis. Rol, organisatie en nieuwe aliassen veranderen alleen via een voorstel. Nieuwe personen ontstaan alleen via een voorstel. Deelnemers krijgen een `personId` en het persoonsdetail toont "Gesprekken". Er komt geen AI-samenvatting per persoon.
+5. **Voorstellenbalk** boven de notule: Toevoegen, Bijwerken, een keuze bij twijfel ("Is dit A of B?") en Negeren. Wat genegeerd is komt niet terug.
+6. **Geschiedenis als JSON.** `context-history.json` bewaart per persoon of term maximaal 50 versies, met een momentopname vóór elke wijziging en de bron (handmatig, gesprek, voorstel, herstel). Herstellen maakt een nieuwe versie. Opslaan zonder wijziging legt niets vast.
+7. **`PersonProfile.responsibilities`** is toegevoegd. De store opent met afgeleide lichte migratie. `AppMigrationPlan` kreeg bevroren geneste modellen V2 en V3 plus V4, alleen door tests gebruikt. Een test opent een echte store in V3-vorm met `makeContainer` van de app.
+8. **Testisolatie.** De testhost is de volledige gesandboxte app. Op 9 november 2026 verplaatsten testruns de echte `Local.store` en schreven ze een v2-woordenlijst die de geïnstalleerde app niet kon lezen. Onder XCTest start `AppEntry` nu een lege `TestHostApp`, wijst `AppEnvironment.supportDirectory` naar een tijdelijke map, gebruiken tests eigen watchdog-defaults en een aparte keychain-service, en geeft `PersonalCorrections.loadOrEmpty` bij een onleesbare woordenlijst een lege lijst in plaats van een mislukte notule. Dezelfde bescherming staat op `main` (cherry-pick 861d9eb).
+
+**Alternatives considered:**
+- Een tweede lijst naast de bestaande correcties: dubbel onderhoud en twee plekken waar dezelfde term kon afwijken. Eén lijst met een optionele toelichting dekt beide.
+- Termen en personen laten voorstellen binnen de notuleaanroep: de notule wordt dan langer en de JSON-vraag verstoort het notuleformaat. Een aparte aanroep kan falen of wegblijven zonder dat de notule lijdt.
+- Alles automatisch bijwerken: de eerste prompt gaf 22 termen (vooral gewone verkeerd verstane woorden) en 6 personen, onder wie de gebruiker zelf en personen zonder naam. Zonder bevestiging raakt de woordenlijst daarmee snel vervuild.
+- Een AI-samenvatting per persoon: veroudert, is niet te controleren en kost een aanroep per gesprek.
+- Geschiedenis als SwiftData `@Model`: elke extra entiteit vraagt een nieuwe schemaversie en een migratie, en de app gebruikt sinds juni 2026 (abde890) geen expliciet migratieplan meer. Een JSON-bestand staat los van het schema.
+- Zwaardere migratie voor V4: het nieuwe veld is additief, dus afgeleide lichte migratie volstaat.
+
+**Evaluation:** Op de transcriptie van het schadebezoek met `mistral-large-4` gaf de eerste prompt 22 termen en 6 personen. De aangescherpte prompt gaf 8 specifieke termen (waaronder SRC/RSC naar SAC) en 2 genoemde personen, in 75 seconden.
+
+**Consequences:**
+- Windows heeft dezelfde bestandsformaten en prompttekst, maar geen "Gesprekken" en geen koppeling van deelnemers (Windows slaat geen deelnemers op bij transcripties) en geen extra termen uit Obsidian. Nieuwe Tauri-commando's: `read_context_file`, `write_context_file` (atomisch, allowlist, grens 32 MB) en `set_aside_context_file`.
+- Niet getest: of een build van vóór V4 een store opent die al naar V4 is gemigreerd. Lukt dat niet, dan zet het vangnet `moveStoreAside` de store opzij (niet verwijderd). Terug naar een oudere build na deze update is daarom af te raden.
+- De kwaliteit van de voorstellen hangt af van het model. Bij zwakke of kleine modellen komen er meer ruis en gemiste termen. De stap stelt alleen voor, dus de schade blijft een negeerklik.
+- De sleutel `personalVocabulary` is na de eenmalige migratie weg; terugzetten van een oudere build leest hem niet meer.
+
+---
+
 ## DEC-060: Notuleprompt per onderwerp en chunkdrempel voor elk Ollama Cloud-model
 
 **Date:** 2026-11-09

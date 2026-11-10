@@ -108,6 +108,24 @@ Profielen hebben één bron: `data/profileBlueprints.json`. `scripts/generate_pr
 
 De oude n8n-flow ("Notule Generator - Compleet Met Guardrails", DEC-057) hoort bij TranscriptStudio en wordt door de huidige macOS-app niet aangeroepen.
 
+#### Lerende context (macOS en Windows)
+
+Voor de notule bouwt de app één contextblok met een vaste kop (`PersonalCorrections`, `PersonMatcher`, `ContextHistory`, `ContextSuggestions` in `macos/Services/`). Het vervangt de oude lijst van 30 namen en de aparte correctieprompt. Het blok bevat termen met varianten en toelichting, personen met aliassen en verantwoordelijkheden, en termen uit Obsidian-contextnotities. Rol en organisatie gaan alleen mee naar de voorstellenstap (`includeRoles`), omdat het model ze anders zonder bron in de notule zet. Volgorde: voorkomen in de transcriptie, dan het profiel, dan nieuwste eerst. Het budget is 6000 tekens (1200 bij Apple Intelligence) en wordt op hele regels afgekapt. De Whisper-prompt blijft bij 30 termen.
+
+Nadat de notule is opgeslagen draait op de achtergrond een tweede aanroep, `LLMService.complete`, die termen en personen als JSON voorstelt. Die stap wordt overgeslagen bij Apple Intelligence, bij transcripties boven 64.000 tekens en bij lokale modellen waarvan de context (`maxChunkCharacters + 8000`) te klein is. Een fout wordt gelogd en verder niets. De parser verwijdert think-blokken, pakt van de eerste tot de laatste accolade, eist een hele-woord-match in de transcriptie en laat bekende, afgewezen, naamloze en eigen items vallen (maximaal 8 termen en 8 personen). `ContextSuggestionBar` toont de uitkomst boven de notule. Zie DEC-061.
+
+Opslag in de supportmap van de app, alle drie als JSON:
+
+| Bestand | Inhoud |
+|---------|--------|
+| `personal-corrections.json` | Woordenlijst, `version: 2`, met `dismissed`-lijst; v1 wordt nog gelezen |
+| `context-suggestions.json` | Openstaande voorstellen, per taak |
+| `context-history.json` | Maximaal 50 versies per persoon of term, met bron (handmatig, gesprek, voorstel, herstel) |
+
+De geschiedenis is bewust geen SwiftData-model. Alleen `PersonProfile.responsibilities` is aan het schema toegevoegd (V4, afgeleide lichte migratie; V2 en V3 staan bevroren in `AppMigrationPlan` voor tests). Op Windows lezen en schrijven `read_context_file`, `write_context_file` (atomisch, allowlist, 32 MB) en `set_aside_context_file` dezelfde bestanden; `windows/src/services` bevat de tegenhangers.
+
+**Testisolatie macOS.** De testhost is de volledige gesandboxte app. Onder XCTest start `AppEntry` een lege `TestHostApp`, wijst `AppEnvironment.supportDirectory` (`ThoughtVaultApp.swift`) naar een tijdelijke map en gebruiken tests eigen watchdog-defaults en een aparte keychain-service. `PersonalCorrections.loadOrEmpty` zorgt dat een onleesbare woordenlijst nooit een notule laat falen.
+
 **YouTube captions pipeline (primary):** `transcribed → processingWebhook → completed` (~1 second, no GPU). Three-step priority: (1) anonymous captions via `youtube-transcript-api` (no auth needed), (2) Google API captions via YouTube Data API v3 if `X-Google-Token` header present, (3) yt-dlp + Whisper fallback. Caption track priority: nl manual > nl ASR > en manual > en ASR > any. Response includes `source_type: "youtube_captions"` and `captions_available: true`. See DEC-044, DEC-041.
 
 **YouTube yt-dlp pipeline (fallback):** `pending → downloading → converting → transcribing → transcribed → processingWebhook → completed`. Used when no captions available from either anonymous or Google API sources.

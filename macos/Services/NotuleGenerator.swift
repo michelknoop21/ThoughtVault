@@ -8,7 +8,7 @@ struct NotuleGenerator: Sendable {
     let service: any LLMService
 
     func generate(transcription: String, profile: Profile, participants: [Participant], quickNote: String?,
-                  createdAt: Date, corrections: [PersonalCorrection]) async throws -> String {
+                  createdAt: Date, corrections: [PersonalCorrection], context: String = "") async throws -> String {
         let source = PersonalCorrections.text(transcription, entries: corrections, profileId: profile.id)
         let constraints = NotuleAudit.constraintSentences(source)
         // Keep the unverified draft out of progress updates and saved notes.
@@ -17,8 +17,7 @@ struct NotuleGenerator: Sendable {
             systemPrompt: notuleSystemPrompt(profile.systemPrompt ?? ""),
             notulePrompt: QuickNoteStore.promptBlock(quickNote)
                 + Self.injectParticipants(into: profile.notulePrompt ?? "", participants: participants)
-                + PersonalVocabulary.promptInstruction()
-                + PersonalCorrections.prompt(corrections, profileId: profile.id),
+                + context,
             outputTemplate: profile.template,
             constraints: constraints,
             onProgress: { _ in }

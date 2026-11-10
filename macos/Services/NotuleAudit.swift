@@ -58,8 +58,21 @@ enum NotuleAudit {
     static func constraintSentences(_ text: String) -> [String] {
         var seen = Set<[UInt16]>()
         return matches(sentence, in: text).map(trim).filter {
-            regex(keyword, .caseInsensitive).firstMatch(in: $0, range: whole($0)) != nil && seen.insert(Array($0.utf16)).inserted
+            regex(keyword, .caseInsensitive).firstMatch(in: $0, range: whole($0)) != nil && isConstraint($0)
+                && seen.insert(Array($0.utf16)).inserted
         }
+    }
+
+    // Spoken filler ("Ik denk niet dat het dat is") is no constraint. A weak negation counts when the sentence
+    // carries a number, a permission or decision word, or reads as a plain statement (no first/second person,
+    // no filler word, no question). Strong keywords always count. All QA fixtures keep their constraints.
+    private static let strongKeyword = #"(?<![A-Za-z0-9_])(?:vervalt|vervallen|afgewezen|afgekeurd|afwezig|onbeslist|onbekend|cancelled|canceled)(?![A-Za-z0-9_])|open vraag"#
+    private static let anchor = #"[0-9]|(?<![A-Za-z0-9_])(?:mag|mogen|moet|moeten|toegestaan|toestemming|verboden|besloten|besluit|goedgekeurd|akkoord|afgesproken|gekozen|geannuleerd|must|may|allowed|approved|decided)(?![A-Za-z0-9_])"#
+    private static let spoken = #"(?<![A-Za-z0-9_])(?:ik|je|jij|jou|jouw|jullie|we|wij|ons|onze|me|mij|mijn|u|uw|denk|denkt|weet|vind|natuurlijk|eigenlijk|misschien|hoor|nou|ja|nee|toch|gewoon|zeg|dus|maar|want|wel|zo|dan|even|ook|zou|kan|kunnen|waarschijnlijk|i|you|think|know)(?![A-Za-z0-9_])"#
+
+    private static func isConstraint(_ sentence: String) -> Bool {
+        func has(_ pattern: String) -> Bool { regex(pattern, .caseInsensitive).firstMatch(in: sentence, range: whole(sentence)) != nil }
+        return has(strongKeyword) || has(anchor) || !(has(spoken) || sentence.hasSuffix("?"))
     }
 
     // MARK: Model response

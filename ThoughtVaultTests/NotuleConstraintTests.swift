@@ -29,8 +29,25 @@ final class NotuleConstraintTests: XCTestCase {
 
     // JavaScript `\b` is ASCII-only, so "é" counts as a boundary and "nietig" does not match.
     func testConstraintKeywordBoundaryIsASCII() {
-        XCTAssertEqual(NotuleAudit.constraintSentences("éniet zo. Dat is nietig. Er is een OPEN VRAAG. NIET doen. Niet doen."),
-                       ["éniet zo.", "Er is een OPEN VRAAG.", "NIET doen.", "Niet doen."])
+        XCTAssertEqual(NotuleAudit.constraintSentences("éniet doen. Dat is nietig. Er is een OPEN VRAAG. NIET doen. Niet doen."),
+                       ["éniet doen.", "Er is een OPEN VRAAG.", "NIET doen.", "Niet doen."])
+    }
+
+    // Spoken filler with a negation is not a constraint: in the 300-sentence schadebezoek part 60 sentences
+    // were mandatory and the notule copied them verbatim.
+    func testConversationalNegationsAreNotMandatory() {
+        let raw = "Ik denk niet dat het dat is. Dus dat wordt nooit nat. Je kunt het niet zien, natuurlijk. Is dat niet raar? Nee, dat weet ik niet."
+        XCTAssertEqual(NotuleAudit.constraintSentences(raw), [])
+    }
+
+    // A number, a permission, a decision or a strong keyword keeps a sentence mandatory, also in spoken form;
+    // a plain third-person negation stays mandatory too.
+    func testAnchoredAndFactualNegationsStayMandatory() {
+        let kept = ["Het budget is 12.450 euro inclusief btw, niet 15.000 euro.", "We mogen geen klantgegevens doorsturen.",
+                    "Ik mag alleen de gevolgschade noteren, dat zit er niet in.", "Er is nog geen leverancier gekozen.",
+                    "Bram is afwezig, dus ik weet het niet.", "Is de migratie op 16 november niet doorgegaan?",
+                    "De bibliotheek is tijdens de interne proef niet toegankelijk voor bezoekers."]
+        XCTAssertEqual(NotuleAudit.constraintSentences(kept.joined(separator: " ")), kept)
     }
 
     // Duplicates are dropped, original order kept, matches only trimmed (not whitespace-normalised).

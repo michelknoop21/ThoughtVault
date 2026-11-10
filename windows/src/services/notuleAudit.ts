@@ -42,6 +42,23 @@ function verdicts(value: unknown, expected: Unit[], references: Unit[], statuses
   });
 }
 
+// Spoken filler ("Ik denk niet dat het dat is") is no constraint. A weak negation counts when the sentence
+// carries a number, a permission or decision word, or reads as a plain statement (no first/second person,
+// no filler word, no question). Strong keywords always count. All QA fixtures keep their constraints.
+// shortcut: lexical Dutch/English constraints only, never a semantic proof; same lists as NotuleAudit.swift.
+const NEGATION = /\b(niet|geen|niets|nooit|zonder|vervalt|vervallen|afgewezen|afgekeurd|afwezig|onbeslist|onbekend|not|never|without|cancelled|canceled)\b|open vraag/iu;
+const STRONG = /\b(vervalt|vervallen|afgewezen|afgekeurd|afwezig|onbeslist|onbekend|cancelled|canceled)\b|open vraag/iu;
+const ANCHOR = /[0-9]|\b(mag|mogen|moet|moeten|toegestaan|toestemming|verboden|besloten|besluit|goedgekeurd|akkoord|afgesproken|gekozen|geannuleerd|must|may|allowed|approved|decided)\b/iu;
+const SPOKEN = /\b(ik|je|jij|jou|jouw|jullie|we|wij|ons|onze|me|mij|mijn|u|uw|denk|denkt|weet|vind|natuurlijk|eigenlijk|misschien|hoor|nou|ja|nee|toch|gewoon|zeg|dus|maar|want|wel|zo|dan|even|ook|zou|kan|kunnen|waarschijnlijk|i|you|think|know)\b/iu;
+
+/** Explicit constraints that remain mandatory audit obligations. A dot between digits belongs to a number. */
+export function constraintSentences(text: string): string[] {
+  return [...new Set((text.match(/(?:[^.!?\n]|(?<=\d)\.(?=\d))+[.!?]?/gu) ?? [])
+    .map(sentence => sentence.trim())
+    .filter(sentence => NEGATION.test(sentence)
+      && (STRONG.test(sentence) || ANCHOR.test(sentence) || !(SPOKEN.test(sentence) || sentence.endsWith("?")))))];
+}
+
 // Accept one complete JSON fence; surrounding prose remains invalid.
 export function parseAuditResponse(text: string) {
   return JSON.parse(text.trim().replace(/^```(?:json)?[ \t]*\r?\n([\s\S]*?)\r?\n```$/iu, "$1"));

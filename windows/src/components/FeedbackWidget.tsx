@@ -1,443 +1,88 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { DesktopDialog } from "./ui/DesktopDialog";
-import {
-  Bug24Regular,
-  Dismiss16Regular,
-  Send20Regular,
-  ArrowSync16Regular,
-} from "./ui/StudioIcons";
-import { useSettingsStore } from "../stores/settingsStore";
-import { api } from "../services/api";
+import { Bug24Regular, Dismiss16Regular, Send20Regular } from "./ui/StudioIcons";
 import { useToast } from "./ui/InfoBar";
-import type { FeedbackSubmission, UserFeedback } from "../types";
+import { listTickets } from "../services/supportRelay";
+import type { ReportCategory, SupportTicket } from "../services/supportRelay";
+import { useSupportStore, withInstallation } from "../stores/supportStore";
+import { SupportThread, TicketRow } from "./support/SupportThread";
 
 type Tab = "new" | "history";
-type Category = FeedbackSubmission["category"];
-
-const CATEGORY_OPTIONS: { value: Category; label: string }[] = [
-  { value: "bug", label: "Bug" },
-  { value: "feature", label: "Feature request" },
-  { value: "general", label: "Vraag" },
+const CATEGORY_OPTIONS: { value: ReportCategory; label: string }[] = [
+  { value: "BUG", label: "Probleem" }, { value: "FEATURE_REQUEST", label: "Suggestie" }, { value: "QUESTION", label: "Vraag" },
 ];
-
-const STATUS_LABELS: Record<string, { label: string; className: string }> = {
-  new: { label: "Nieuw", className: "status-badge-neutral" },
-  open: { label: "Open", className: "status-badge-neutral" },
-  in_progress: { label: "In behandeling", className: "status-badge-neutral" },
-  resolved: { label: "Opgelost", className: "status-badge-success" },
-  closed: { label: "Gesloten", className: "status-badge-success" },
-};
-
-function formatDate(iso: string): string {
-  try {
-    return new Intl.DateTimeFormat("nl-NL", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    }).format(new Date(iso));
-  } catch {
-    return iso;
-  }
-}
-
-export default function FeedbackWidget() {
-  const isLocal = useSettingsStore(s => s.processing_mode) === "local";
-  const [open, setOpen] = useState(false);
+export default function FeedbackWidget({ initialOpen = false }: { initialOpen?: boolean }) {
+  const [open, setOpen] = useState(initialOpen);
   const [tab, setTab] = useState<Tab>("new");
-  const [unreadCount, setUnreadCount] = useState(0);
-
-  // Form state
-  const [title, setTitle] = useState("");
-  const [category, setCategory] = useState<Category>("bug");
+  const [category, setCategory] = useState<ReportCategory>("BUG");
   const [description, setDescription] = useState("");
   const [submitting, setSubmitting] = useState(false);
-
-  // History state
-  const [feedbackList, setFeedbackList] = useState<UserFeedback[]>([]);
-  const [loadingHistory, setLoadingHistory] = useState(false);
-
+  const [replying, setReplying] = useState(false);
+  const [tickets, setTickets] = useState<SupportTicket[]>([]);
+  const [selected, setSelected] = useState<SupportTicket | null>(null);
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(false);
+  const locked = useRef(false);
+  const historyRequest = useRef(0);
+  const unread = useSupportStore(state => state.unread_count);
   const toast = useToast();
-
-  // Load unread count on mount
+  const busy = submitting || replying;
+  const close = () => { if (!locked.current) setOpen(false); };
   useEffect(() => {
-    if (!isLocal) api.getUnreadFeedbackCount().then(setUnreadCount);
-  }, [isLocal]);
-
-  // Load history when tab switches to history
-  useEffect(() => {
-    if (!isLocal && tab === "history" && open) {
-      loadHistory();
-    }
-  }, [tab, open, isLocal]);
-
-  const loadHistory = useCallback(async () => {
-    setLoadingHistory(true);
+    if (!open || tab !== "history" || selected) return;
+    const generation = ++historyRequest.current;
+    setLoading(true);
+    void withInstallation(listTickets).then(items => {
+      if (generation === historyRequest.current) setTickets(items);
+    }).catch(() => {
+      if (generation !== historyRequest.current) return;
+      setTickets([]); toast.show("Meldingen ophalen lukt nu niet.", "error");
+    }).finally(() => { if (generation === historyRequest.current) setLoading(false); });
+    return () => { historyRequest.current++; };
+  }, [open, tab, selected, toast.show]);
+  const submit = async () => {
+    const body = description.trim();
+    if (locked.current || !body || Array.from(body).length > 5000) return;
+    locked.current = true; setSubmitting(true);
     try {
-      const items = await api.getMyFeedback();
-      setFeedbackList(items);
-
-      // Mark unread items as read
-      const unread = items.filter(
-        (item) => item.response && item.status !== "new"
-      );
-      for (const item of unread) {
-        await api.markFeedbackRead(item.id);
-      }
-      setUnreadCount(0);
+      const outcome = await useSupportStore.getState().submitManual(category, body);
+      if (outcome === "sent" || outcome === "queued") {
+        setDescription(""); setCategory("BUG");
+        toast.show(outcome === "sent" ? "Melding verstuurd." : "Geen verbinding. De melding wordt verstuurd zodra er weer internet is.", outcome === "sent" ? "success" : "info");
+      } else toast.show("Melding versturen lukt nu niet. Je tekst blijft bewaard.", "error");
     } catch {
-      // Silently fail
-    } finally {
-      setLoadingHistory(false);
-    }
-  }, []);
-
-  const handleSubmit = async () => {
-    if (!title.trim() || !description.trim()) {
-      toast.show("Vul titel en beschrijving in.", "warning");
-      return;
-    }
-
-    setSubmitting(true);
-    try {
-      if (isLocal) {
-        await navigator.clipboard.writeText(`ThoughtVault feedback\n${title.trim()}\n\n${description.trim()}`);
-        toast.show("Feedback gekopieerd. Deel je melding met Yinga.", "success");
-        setOpen(false);
-        return;
-      }
-      await api.submitFeedback({ category, title: title.trim(), description: description.trim() });
-      toast.show("Feedback verstuurd!", "success");
-      setTitle("");
-      setDescription("");
-      setCategory("bug");
-      // Refresh unread count
-      const count = await api.getUnreadFeedbackCount();
-      setUnreadCount(count);
-    } catch (err) {
-      toast.show(
-        err instanceof Error ? err.message : "Fout bij versturen.",
-        "error"
-      );
-    } finally {
-      setSubmitting(false);
-    }
+      toast.show("Melding versturen lukt nu niet. Je tekst blijft bewaard.", "error");
+    } finally { locked.current = false; setSubmitting(false); }
   };
-
-  return (
-    <>
-      <button
-        onClick={() => setOpen(true)}
-        className="btn btn-secondary feedback-trigger"
-        aria-label="Feedback openen"
-        title="Feedback"
-      >
-        <Bug24Regular />
-        Probleem melden of suggestie
-        {unreadCount > 0 && (
-          <span
-            style={{
-              position: "absolute",
-              top: -2,
-              right: -2,
-              minWidth: 18,
-              height: 18,
-              borderRadius: 9,
-              background: "var(--status-error)",
-              color: "#fff",
-              fontSize: "var(--font-micro)",
-              fontWeight: 700,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: "0 5px",
-              lineHeight: 1,
-            }}
-          >
-            {unreadCount}
-          </span>
-        )}
-      </button>
-
-      {/* Panel */}
-      {open && (
-        <DesktopDialog label="Feedback" onClose={() => setOpen(false)}>
-        <div
-          className="feedback-panel"
-          style={{
-            width: Math.min(360, window.innerWidth - 40),
-            maxHeight: "calc(100dvh - 32px)",
-            background: "var(--card-bg)",
-            backdropFilter: `blur(var(--card-blur))`,
-            border: "1px solid var(--card-border)",
-            borderRadius: "var(--radius-sm)",
-            boxShadow: "0 8px 32px rgba(0,0,0,0.16)",
-            display: "flex",
-            flexDirection: "column",
-            overflow: "hidden",
-            animation: "feedbackSlideIn 150ms var(--ease-smooth)",
-          }}
-        >
-          {/* Header */}
-          <div
-            className="flex-row"
-            style={{
-              padding: "12px 16px",
-              borderBottom: "1px solid var(--border-secondary)",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: 8,
-              flexShrink: 0,
-            }}
-          >
-            <span
-              style={{
-                fontSize: "var(--font-headline)",
-                fontWeight: 600,
-                color: "var(--text-primary)",
-              }}
-            >
-              Feedback
-            </span>
-            <button
-              onClick={() => setOpen(false)}
-              aria-label="Feedback sluiten"
-              style={{
-                background: "none",
-                border: "none",
-                color: "var(--text-tertiary)",
-                cursor: "default",
-                padding: 0,
-                width: 28,
-                height: 28,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <Dismiss16Regular />
-            </button>
-          </div>
-
-          {/* Tabs */}
-          <div
-            className="flex-row"
-            style={{
-              padding: "0 16px",
-              borderBottom: "1px solid var(--border-secondary)",
-              gap: 0,
-              flexShrink: 0,
-            }}
-          >
-            {((isLocal ? ["new"] : ["new", "history"]) as Tab[]).map((t) => (
-              <button
-                key={t}
-                onClick={() => setTab(t)}
-                style={{
-                  background: "none",
-                  border: "none",
-                  borderBottom:
-                    tab === t
-                      ? "2px solid var(--brand-primary)"
-                      : "2px solid transparent",
-                  color:
-                    tab === t
-                      ? "var(--brand-primary)"
-                      : "var(--text-secondary)",
-                  fontSize: "var(--font-body)",
-                  fontWeight: tab === t ? 600 : 400,
-                  padding: "10px 16px",
-                  cursor: "default",
-                  transition:
-                    "color 150ms ease, border-color 150ms ease",
-                }}
-              >
-                {t === "new" ? "Nieuw" : "Mijn feedback"}
-              </button>
-            ))}
-          </div>
-
-          {/* Content */}
-          <div
-            style={{
-              flex: 1,
-              overflowY: "auto",
-              padding: 16,
-            }}
-          >
-            {tab === "new" ? (
-              <div className="flex-col" style={{ gap: 12 }}>
-                {/* Title */}
-                <div className="form-field">
-                  <label className="form-label">Titel</label>
-                  <input
-                    className="input"
-                    type="text"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="Korte omschrijving"
-                    maxLength={100}
-                  />
-                </div>
-
-                {/* Category */}
-                <div className="form-field">
-                  <label className="form-label">Categorie</label>
-                  <select
-                    className="select"
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value as Category)}
-                  >
-                    {CATEGORY_OPTIONS.map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Description */}
-                <div className="form-field">
-                  <label className="form-label">Beschrijving</label>
-                  <textarea
-                    className="input"
-                    rows={4}
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Beschrijf je feedback..."
-                    style={{ resize: "vertical" }}
-                  />
-                </div>
-
-                {/* Submit */}
-                <button
-                  className="btn btn-accent"
-                  onClick={handleSubmit}
-                  disabled={submitting || !title.trim() || !description.trim()}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: 6,
-                  }}
-                >
-                  <Send20Regular />
-                  {isLocal ? "Kopieer feedback" : submitting ? "Versturen..." : "Versturen"}
-                </button>
-              </div>
-            ) : (
-              <div className="flex-col" style={{ gap: 8 }}>
-                {loadingHistory ? (
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: 8,
-                      padding: 24,
-                      color: "var(--text-tertiary)",
-                      fontSize: "var(--font-body)",
-                    }}
-                  >
-                    <ArrowSync16Regular
-                      style={{ animation: "spin 1s linear infinite" }}
-                    />
-                    Laden...
-                  </div>
-                ) : feedbackList.length === 0 ? (
-                  <div
-                    className="text-caption"
-                    style={{
-                      textAlign: "center",
-                      padding: 24,
-                      color: "var(--text-tertiary)",
-                    }}
-                  >
-                    Nog geen feedback verstuurd.
-                  </div>
-                ) : (
-                  feedbackList.map((item) => {
-                    const statusInfo = STATUS_LABELS[item.status] ?? {
-                      label: item.status,
-                      className: "status-badge-neutral",
-                    };
-                    return (
-                      <div
-                        key={item.id}
-                        style={{
-                          padding: 12,
-                          background: "var(--surface-secondary)",
-                          borderRadius: "var(--radius-xs)",
-                          border: "1px solid var(--border-secondary)",
-                        }}
-                      >
-                        <div
-                          className="flex-row"
-                          style={{
-                            justifyContent: "space-between",
-                            alignItems: "flex-start",
-                            gap: 8,
-                            marginBottom: 4,
-                          }}
-                        >
-                          <span
-                            style={{
-                              fontSize: "var(--font-body)",
-                              fontWeight: 600,
-                              color: "var(--text-primary)",
-                              flex: 1,
-                            }}
-                          >
-                            {item.title}
-                          </span>
-                          <span className={statusInfo.className}>
-                            {statusInfo.label}
-                          </span>
-                        </div>
-                        <span
-                          className="text-caption"
-                          style={{ color: "var(--text-tertiary)" }}
-                        >
-                          {formatDate(item.created_at)}
-                        </span>
-                        {item.response && (
-                          <div
-                            style={{
-                              marginTop: 8,
-                              padding: "8px 10px",
-                              background: "var(--accent-bg-secondary)",
-                              borderRadius: "var(--radius-xs)",
-                              fontSize: "var(--font-caption)",
-                              color: "var(--text-secondary)",
-                              lineHeight: 1.4,
-                            }}
-                          >
-                            <span
-                              style={{
-                                fontWeight: 600,
-                                fontSize: "var(--font-micro)",
-                                textTransform: "uppercase",
-                                letterSpacing: "0.5px",
-                                color: "var(--brand-secondary)",
-                                display: "block",
-                                marginBottom: 4,
-                              }}
-                            >
-                              Reactie
-                            </span>
-                            {item.response}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            )}
-          </div>
+  return <>
+    <button onClick={() => setOpen(true)} className="btn btn-secondary feedback-trigger" aria-label="Feedback openen" title="Feedback">
+      <Bug24Regular />Probleem melden of suggestie
+      {unread > 0 && <span aria-label={`${unread} ongelezen reacties`} style={{ position: "absolute", top: -2, right: -2, minWidth: 18, height: 18, borderRadius: 9, background: "var(--status-error)", color: "oklch(0.98 0.005 80)", fontSize: "var(--font-micro)", fontWeight: 700, padding: "0 5px" }}>{unread}</span>}
+    </button>
+    {open && <DesktopDialog label="Feedback" onClose={close}>
+      <div className="feedback-panel" style={{ width: Math.min(360, window.innerWidth - 40), maxHeight: "calc(100dvh - 32px)", background: "var(--card-bg)", backdropFilter: "blur(var(--card-blur))", border: "1px solid var(--card-border)", borderRadius: "var(--radius-sm)", boxShadow: "0 8px 32px rgba(0,0,0,0.16)", display: "flex", flexDirection: "column", overflow: "hidden", animation: "feedbackSlideIn 150ms var(--ease-smooth)" }}>
+        <div className="flex-row" style={{ padding: "12px 16px", borderBottom: "1px solid var(--border-secondary)", alignItems: "center", justifyContent: "space-between", gap: 8, flexShrink: 0 }}>
+          <span style={{ fontSize: "var(--font-headline)", fontWeight: 600, color: "var(--text-primary)" }}>Feedback</span>
+          <button className="btn btn-ghost" onClick={close} disabled={busy} aria-label="Feedback sluiten" style={{ minWidth: 44, minHeight: 44, padding: 8 }}><Dismiss16Regular /></button>
         </div>
-        </DesktopDialog>
-      )}
-
-    </>
-  );
+        <div className="flex-row" aria-label="Feedbackweergave" style={{ padding: "0 16px", borderBottom: "1px solid var(--border-secondary)", gap: 0, flexShrink: 0 }}>
+          {(["new", "history"] as Tab[]).map(item => <button key={item} disabled={busy} aria-pressed={tab === item} onClick={() => { if (!locked.current) { setSelected(null); setTab(item); } }} style={{ background: "none", border: "none", borderBottom: tab === item ? "2px solid var(--brand-primary)" : "2px solid transparent", color: tab === item ? "var(--brand-primary)" : "var(--text-secondary)", fontSize: "var(--font-body)", fontWeight: tab === item ? 600 : 400, padding: "10px 16px", minHeight: 44 }}>{item === "new" ? "Nieuw" : "Mijn meldingen"}</button>)}
+        </div>
+        <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: 16 }}>
+          {tab === "new" ? <div className="flex-col" style={{ gap: 12 }}>
+            <label className="form-label">Categorie
+              <select className="select" value={category} disabled={submitting} onChange={event => setCategory(event.target.value as ReportCategory)} style={{ display: "block", width: "100%", minHeight: 44 }}>{CATEGORY_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select>
+            </label>
+            <label className="form-label">Beschrijving
+              <textarea className="input" rows={4} maxLength={5000} value={description} disabled={submitting} onChange={event => setDescription(event.target.value)} placeholder="Beschrijf je melding..." style={{ display: "block", width: "100%", resize: "vertical" }} />
+            </label>
+            <p className="text-caption" style={{ color: "var(--text-secondary)" }}>Je melding wordt met je naam, e-mailadres en technische log naar ThoughtVault verstuurd. Voeg geen wachtwoorden of andere gevoelige gegevens toe.</p>
+            <button className="btn btn-accent" onClick={() => void submit()} disabled={submitting || !description.trim() || Array.from(description.trim()).length > 5000} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, minHeight: 44 }}><Send20Regular />{submitting ? "Versturen..." : "Versturen"}</button>
+          </div> : selected ? <SupportThread key={selected.id} ticket={selected} onBack={() => setSelected(null)} draft={drafts[selected.id] ?? ""} onDraftChange={value => setDrafts(current => ({ ...current, [selected.id]: value }))} onBusyChange={value => { locked.current = value; setReplying(value); }} /> : <div className="flex-col" style={{ gap: 8 }}>
+            {loading ? <p role="status" className="text-caption">Meldingen laden...</p> : tickets.length === 0 ? <p className="text-caption" style={{ textAlign: "center", padding: 24, color: "var(--text-secondary)" }}>Nog geen meldingen verstuurd.</p> : tickets.map(ticket => <TicketRow key={ticket.id} ticket={ticket} onOpen={() => setSelected(ticket)} />)}
+          </div>}
+        </div>
+      </div>
+    </DesktopDialog>}
+  </>;
 }

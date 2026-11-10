@@ -1,7 +1,6 @@
 import Foundation
-import OSLog
 
-private let logger = Logger(subsystem: "com.buildmind.ThoughtVault", category: "OfflineQueue")
+private let logger = AppLog(category: "OfflineQueue")
 
 // MARK: - OfflineQueue
 
@@ -105,7 +104,7 @@ final class OfflineQueue: @unchecked Sendable {
             lastPersistError = nil
         } catch {
             lastPersistError = error.localizedDescription
-            logger.error("OfflineQueue: failed to persist — \(error.localizedDescription)")
+            logger.error("OfflineQueue: failed to persist — \(LogRedact.mask(error.localizedDescription))")
             CrashReporter.shared.recordError(error, context: "OfflineQueue.persist")
         }
     }
@@ -120,7 +119,7 @@ final class OfflineQueue: @unchecked Sendable {
             items = try JSONDecoder().decode([QueuedItem].self, from: data)
             logger.info("OfflineQueue: loaded \(self.items.count) persisted item(s)")
         } catch {
-            logger.error("OfflineQueue: failed to load persisted queue — \(error.localizedDescription)")
+            logger.error("OfflineQueue: failed to load persisted queue — \(LogRedact.mask(error.localizedDescription))")
             lastPersistError = "Wachtrij kon niet geladen worden en is gewist."
             CrashReporter.shared.recordError(error, context: "OfflineQueue.load")
             items = []

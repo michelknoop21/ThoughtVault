@@ -7,7 +7,6 @@
 
 import AVFoundation
 import Foundation
-import OSLog
 import Speech
 #if os(iOS)
 import UIKit
@@ -15,7 +14,7 @@ import UIKit
 import AppKit
 #endif
 
-private let log = Logger(subsystem: "com.buildmind.ThoughtVault", category: "Permissions")
+private let log = AppLog(category: "Permissions")
 
 @MainActor
 @Observable

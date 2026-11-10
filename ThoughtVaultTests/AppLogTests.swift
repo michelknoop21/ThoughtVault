@@ -123,6 +123,51 @@ final class AppLogTests: XCTestCase {
         XCTAssertFalse(tail.contains("anna@"))
     }
 
+    func testDebugLoggerErrorsLandOnceInLogFileWithoutPrivateBody() async {
+        let privateMessage = "synthetic transcript body and API secret B2-string"
+        let privateDescription = "synthetic notule body B2-error"
+        let privateContext = "synthetic participant B2-context"
+        let privateDomain = "synthetic private provider domain B2-domain"
+        let logger = DebugLogger.shared
+        let previousLevel = logger.minimumLevel
+        defer { logger.minimumLevel = previousLevel }
+        logger.minimumLevel = .error
+        logger.error(privateMessage, category: "B2String")
+        logger.error(NSError(domain: privateDomain, code: -1009, userInfo: [NSLocalizedDescriptionKey: privateDescription]),
+                     context: privateContext, category: "B2Error")
+        await AppLog.flush()
+        let tail = await AppLog.tail()
+        for (category, value, suffix) in [("B2String", privateMessage, ""), ("B2Error", "[\(privateContext)] \(privateDescription)", " (code: -1009)")] {
+            let lines = tail.split(separator: "\n").filter { $0.contains("ERROR [\(category)]") }
+            XCTAssertEqual(lines.count, 1)
+            XCTAssertTrue(lines.first?.hasSuffix(LogRedact.mask(value) + suffix) == true)
+        }
+        XCTAssertFalse(tail.contains(privateMessage))
+        XCTAssertFalse(tail.contains(privateDescription))
+        XCTAssertFalse(tail.contains(privateContext))
+        XCTAssertFalse(tail.contains(privateDomain))
+    }
+
+    func testCrashReporterErrorsAndMessagesMaskUnstructuredContent() async {
+        let description = "synthetic provider response B2-crash-error"
+        let message = "synthetic glossary secret B2-crash-message"
+        let context = "synthetic meeting title B2-crash-context"
+        let domain = "synthetic private provider domain B2-crash-domain"
+        CrashReporter.shared.recordError(NSError(domain: domain, code: -42, userInfo: [NSLocalizedDescriptionKey: description]),
+                                         context: context)
+        CrashReporter.shared.recordMessage(message, context: context)
+        await AppLog.flush()
+        let tail = await AppLog.tail()
+        for value in [description, message] {
+            let lines = tail.split(separator: "\n").filter { $0.contains("ERROR [CrashReporter]") && $0.contains(LogRedact.mask(value)) }
+            XCTAssertEqual(lines.count, 1)
+            if value == description { XCTAssertTrue(lines.first?.contains("(code: -42)") == true) }
+            XCTAssertFalse(tail.contains(value))
+        }
+        XCTAssertFalse(tail.contains(context))
+        XCTAssertFalse(tail.contains(domain))
+    }
+
     private func assertToken(_ text: String, file: StaticString = #filePath, line: UInt = #line) {
         XCTAssertNotNil(text.range(of: #"k-[0-9a-f]{6}"#, options: .regularExpression), text, file: file, line: line)
     }

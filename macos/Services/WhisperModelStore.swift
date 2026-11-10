@@ -6,12 +6,11 @@
 // into the same folder WhisperKit loads from at transcription time.
 
 import Foundation
-import OSLog
 #if canImport(WhisperKit)
 import WhisperKit
 #endif
 
-private let logger = Logger(subsystem: "com.buildmind.ThoughtVault", category: "WhisperModelStore")
+private let logger = AppLog(category: "WhisperModelStore")
 
 @MainActor
 @Observable
@@ -125,14 +124,14 @@ final class WhisperModelStore {
                     Task { @MainActor in self.progress = fraction }
                 }
                 try Task.checkCancellation()
-                logger.info("Downloaded \(variant)")
+                logger.info("Downloaded \(LogRedact.mask(variant))")
             } catch {
                 // A partial folder would pass the installed check and break loading.
                 try? FileManager.default.removeItem(at: Self.folder(for: variant))
                 if Task.isCancelled || error is CancellationError {
-                    logger.info("Download cancelled: \(variant)")
+                    logger.info("Download cancelled: \(LogRedact.mask(variant))")
                 } else {
-                    logger.error("Download failed \(variant): \(error.localizedDescription)")
+                    logger.error("Download failed \(LogRedact.mask(variant)): \(LogRedact.mask(error.localizedDescription))")
                     failure = (variant, error.localizedDescription)
                 }
             }

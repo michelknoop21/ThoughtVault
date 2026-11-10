@@ -1,12 +1,11 @@
 import Foundation
 import Speech
-import OSLog
 import os
 #if os(iOS)
 import UIKit
 #endif
 
-private let logger = Logger(subsystem: "com.buildmind.ThoughtVault", category: "OnDeviceTranscriber")
+private let logger = AppLog(category: "OnDeviceTranscriber")
 
 // MARK: - OnDeviceTranscriber
 
@@ -126,7 +125,7 @@ final class OnDeviceTranscriber {
         }
 
         isTranscribing = true
-        logger.info("OnDeviceTranscriber: starting file transcription for \(url.lastPathComponent)")
+        logger.info("OnDeviceTranscriber: starting file transcription for \(LogRedact.mask(url.lastPathComponent))")
 
         // Runs on MainActor when the function exits (normal return or thrown
         // timeout). Cancelling the recognition task here stops the orphaned
@@ -165,7 +164,7 @@ final class OnDeviceTranscriber {
 
             recognitionTask = recognizer.recognitionTask(with: request) { result, error in
                 if let error = error {
-                    logger.error("OnDeviceTranscriber: transcription error — \(error.localizedDescription)")
+                    logger.error("OnDeviceTranscriber: transcription error — \(LogRedact.mask(error.localizedDescription))")
                     resumeOnce(.failure(TranscriberError.recognitionFailed(error.localizedDescription)))
                     return
                 }
@@ -290,12 +289,12 @@ final class OnDeviceTranscriber {
         guard liveSession == session, var stream = liveStreams[source], stream.generation == generation else { return }
 
         if let error {
-            logger.debug("OnDeviceTranscriber: live \(String(describing: source)) ended — \(error.domain) \(error.code)")
+            logger.debug("OnDeviceTranscriber: live \(String(describing: source)) ended — \(LogRedact.mask(error.domain)) \(error.code)")
 #if DEBUG
             lastLiveError = "\(error.domain) \(error.code)"
 #endif
             guard Self.isBenignLiveError(error) else {
-                logger.error("OnDeviceTranscriber: live recognition error — \(error.localizedDescription)")
+                logger.error("OnDeviceTranscriber: live recognition error — \(LogRedact.mask(error.localizedDescription))")
                 onError?(error.localizedDescription)
                 return
             }

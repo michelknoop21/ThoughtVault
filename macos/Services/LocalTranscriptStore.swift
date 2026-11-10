@@ -7,9 +7,8 @@
 
 import Foundation
 import SwiftData
-import OSLog
 
-private let logger = Logger(subsystem: "com.buildmind.ThoughtVault", category: "LocalTranscriptStore")
+private let logger = AppLog(category: "LocalTranscriptStore")
 
 @MainActor
 final class LocalTranscriptStore {
@@ -81,7 +80,7 @@ final class LocalTranscriptStore {
                 return created
             } catch {
                 defaults.set(false, forKey: watchdogKey)
-                logger.error("Persistent store open failed: \(error.localizedDescription)")
+                logger.error("Persistent store open failed: \(LogRedact.mask(error.localizedDescription))")
                 return nil
             }
         }
@@ -140,7 +139,7 @@ final class LocalTranscriptStore {
             logger.info("Migrated \(oldRecords.count) record(s) from the previous local store.")
         } catch {
             // No compatible local store to migrate (different schema or unreadable). Skip.
-            logger.info("No compatible local store to migrate: \(error.localizedDescription)")
+            logger.info("No compatible local store to migrate: \(LogRedact.mask(error.localizedDescription))")
         }
     }
 
@@ -212,7 +211,7 @@ final class LocalTranscriptStore {
         do {
             return try context.fetch(descriptor)
         } catch {
-            logger.error("Fetch failed: \(error.localizedDescription)")
+            logger.error("Fetch failed: \(LogRedact.mask(error.localizedDescription))")
             return []
         }
     }

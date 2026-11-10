@@ -8,10 +8,9 @@
 // validation is accepted for the loopback host only (see LoopbackTrustDelegate).
 
 import Foundation
-import OSLog
 import CryptoKit
 
-private let logger = Logger(subsystem: "com.buildmind.ThoughtVault", category: "ObsidianService")
+private let logger = AppLog(category: "ObsidianService")
 
 struct ObsidianService: Sendable {
 
@@ -293,7 +292,7 @@ struct ObsidianService: Sendable {
                     noteID: noteID
                 )
             } catch {
-                logger.error("Export naar Obsidian mislukt: \(error.localizedDescription)")
+                logger.error("Export naar Obsidian mislukt: \(LogRedact.mask(error.localizedDescription))")
             }
         }
     }

@@ -16,7 +16,9 @@ final class RecordingViewModel {
 
     // MARK: - Published State
 
-    var recordingState: RecordingState = .idle
+    var recordingState: RecordingState = .idle { didSet { recordingStateDidChange(from: oldValue) } }
+    @ObservationIgnored var onFailure: ((SupportStage, String) -> Void)?
+    @ObservationIgnored var recordingFailureSupportMessage: String?
     var updateInstalling = false
     var pendingRegenerations = 0
     var updateIsBusy: Bool {
@@ -659,15 +661,15 @@ final class RecordingViewModel {
                 }
                 loadSavedRecordings()
                 await MainActor.run {
-                    self.updateTask(tempId, status: .error, errorMessage: error.localizedDescription)
+                    self.updateTask(tempId, status: .error, errorMessage: error.localizedDescription, supportMessage: Self.supportFailureMessage(error))
                     self.lastFailedRecording = self.savedRecordings.first { $0.filename == url.lastPathComponent }
                 }
-                os_log("[RecordingVM] Upload failed: %{public}@", log: .default, type: .error, error.localizedDescription)
+                os_log("[RecordingVM] Upload failed: %{public}@", log: .default, type: .error, Self.supportFailureMessage(error))
             } catch {
-                os_log("[RecordingVM] Upload failed (non-API): %{public}@", log: .default, type: .error, error.localizedDescription)
+                os_log("[RecordingVM] Upload failed (non-API): %{public}@", log: .default, type: .error, Self.supportFailureMessage(error))
                 loadSavedRecordings()
                 await MainActor.run {
-                    self.updateTask(tempId, status: .error, errorMessage: error.localizedDescription)
+                    self.updateTask(tempId, status: .error, errorMessage: error.localizedDescription, supportMessage: Self.supportFailureMessage(error))
                     self.lastFailedRecording = self.savedRecordings.first { $0.filename == url.lastPathComponent }
                 }
             }
@@ -773,7 +775,7 @@ final class RecordingViewModel {
         } catch {
             await MainActor.run {
                 isLiveTranscribing = false
-                recordingState = onDeviceCancelled ? .idle : .error(error.localizedDescription)
+                recordingFailed(error, cancelled: onDeviceCancelled)
             }
         }
     }
@@ -1273,7 +1275,10 @@ final class RecordingViewModel {
 
     func handleSSEEvent(_ updatedTask: TranscriptTask) {
         if let index = activeTasks.firstIndex(where: { $0.taskId == updatedTask.taskId }) {
+            let previous = activeTasks[index].status
             activeTasks[index] = updatedTask
+            let failure = updatedTask.errorMessage ?? ""
+            taskDidChange(from: previous, to: updatedTask.status, message: SupportViewModel.shouldReport(failure) ? "Verwerking op de server mislukt." : failure)
         }
 
         // Reset recording state so user can start a new recording
@@ -1293,7 +1298,7 @@ final class RecordingViewModel {
             Task { @MainActor in
                 let correctedHTML: String
                 do { correctedHTML = try await self.addNotesSectionToCloudNotule(taskId: updatedTask.taskId, html: html, profileId: updatedTask.profileId) }
-                catch { self.updateTask(updatedTask.id, status: .error, errorMessage: "Woordenlijst toepassen mislukt: " + error.localizedDescription); return }
+                catch { self.updateTask(updatedTask.id, status: .error, errorMessage: "Woordenlijst toepassen mislukt: " + error.localizedDescription, supportMessage: Self.supportFailureMessage(error)); return }
                 guard ObsidianService.isEnabled else { return }
                 let title = NotuleTitleExtractor.extract(from: correctedHTML)
                     ?? (updatedTask.filename as NSString).deletingPathExtension
@@ -1324,7 +1329,7 @@ final class RecordingViewModel {
         } catch {
             notesSectionWritten.remove(taskId)
             if fixed != withNotes { throw error }
-            os_log("[RecordingVM] Notities-sectie terugschrijven mislukt voor %{public}@: %{public}@", log: .default, type: .error, taskId, error.localizedDescription)
+            os_log("[RecordingVM] Notities-sectie terugschrijven mislukt voor %{public}@: %{public}@", log: .default, type: .error, taskId, Self.supportFailureMessage(error))
         }
         return fixed
     }
@@ -1388,15 +1393,17 @@ final class RecordingViewModel {
         }
     }
 
-    func updateTask(_ id: String, status: TaskStatus, progress: Double? = nil, errorMessage: String? = nil, statusDetail: String? = nil) {
+    func updateTask(_ id: String, status: TaskStatus, progress: Double? = nil, errorMessage: String? = nil, statusDetail: String? = nil, supportMessage: String? = nil) {
         guard let idx = activeTasks.firstIndex(where: { $0.id == id }) else { return }
         if !activeTasks[idx].status.isActive, activeTasks[idx].status != status {
             return
         }
+        let previous = activeTasks[idx].status
         activeTasks[idx].status = status
         if let progress { activeTasks[idx].progress = progress }
         if let errorMessage { activeTasks[idx].errorMessage = errorMessage }
         activeTasks[idx].statusDetail = statusDetail
+        taskDidChange(from: previous, to: status, message: supportMessage ?? activeTasks[idx].errorMessage)
 
         // Local processing reports completion through updateTask (not SSE), so the
         // auto-removal must be scheduled here too. Failures are deliberately left

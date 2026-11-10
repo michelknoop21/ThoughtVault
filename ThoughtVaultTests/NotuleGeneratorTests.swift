@@ -113,6 +113,7 @@ final class NotuleGeneratorTests: XCTestCase {
             let error = await reviewError { try await generate(service, "Sam belt dinsdag. \(owner) controleert woensdag de offerte.") }
             XCTAssertEqual(error?.draftHtml, html)
             XCTAssertEqual(error?.reason, reviewPrefix + "De notule mist broninformatie: \(owner) controleert woensdag de offerte.")
+            XCTAssertEqual(error?.supportReason, "Inhoudscontrole bron T2: missing")
             XCTAssertEqual(service.audits.count, 2)
         }
     }

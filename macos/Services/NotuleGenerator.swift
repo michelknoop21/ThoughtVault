@@ -52,7 +52,8 @@ struct NotuleGenerator: Sendable {
         } catch {
             if Task.isCancelled || cancelled.withLock({ $0 }) { throw CancellationError() }
             throw NotuleReviewError(reason: "Feiten, acties en beperkingen konden niet worden bevestigd: \(error.localizedDescription)",
-                                    draftHtml: candidate)
+                                    draftHtml: candidate,
+                                    supportReason: (error as? NotuleAuditError)?.supportMessage ?? error.localizedDescription)
         }
     }
 

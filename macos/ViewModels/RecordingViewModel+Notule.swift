@@ -83,19 +83,19 @@ extension RecordingViewModel {
             return
         } catch let review as NotuleReviewError {
             // No cloud fallback: the backend would produce an unaudited notule.
-            os_log("[RecordingVM] Local notule rejected by the audit: %{public}@", log: log, type: .error, review.reason)
+            os_log("[RecordingVM] Local notule rejected by the audit: %{public}@", log: log, type: .error, (review.supportReason ?? "Inhoudscontrole mislukt"))
             let message = keepRejectedDraft(review, taskId: localId)
             isGeneratingLocally = false
-            updateTask(localId, status: .error, errorMessage: message)
+            updateTask(localId, status: .error, errorMessage: message, supportMessage: review.supportReason ?? "Inhoudscontrole mislukt")
         } catch {
-            os_log("[RecordingVM] Local notule generation failed: %{public}@", log: log, type: .error, error.localizedDescription)
+            os_log("[RecordingVM] Local notule generation failed: %{public}@", log: log, type: .error, Self.supportFailureMessage(error))
             // No cloud fallback either: the backend notule is unaudited. The transcription
             // is already saved, so the user can retry.
             let reason = Self.friendlyNotuleFailureReason(error)
             await MainActor.run {
                 self.isGeneratingLocally = false
                 self.updateTask(localId, status: .error,
-                           errorMessage: "Transcriptie opgeslagen, notule mislukt: \(reason)")
+                           errorMessage: "Transcriptie opgeslagen, notule mislukt: \(reason)", supportMessage: Self.supportFailureMessage(error))
             }
         }
         await MainActor.run { self.localProcessingTasks.removeValue(forKey: localId) }
@@ -145,10 +145,10 @@ extension RecordingViewModel {
             return (html, title)
         } catch let review as NotuleReviewError {
             let message = keepRejectedDraft(review, taskId: taskId)
-            updateTask(regenerationId, status: .error, errorMessage: message)
-            throw NotuleReviewError(reason: message, draftHtml: review.draftHtml)
+            updateTask(regenerationId, status: .error, errorMessage: message, supportMessage: review.supportReason ?? "Inhoudscontrole mislukt")
+            throw NotuleReviewError(reason: message, draftHtml: review.draftHtml, supportReason: review.supportReason)
         } catch {
-            updateTask(regenerationId, status: .error, errorMessage: error.localizedDescription)
+            updateTask(regenerationId, status: .error, errorMessage: error.localizedDescription, supportMessage: Self.supportFailureMessage(error))
             throw error
         }
     }

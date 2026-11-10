@@ -7,12 +7,14 @@ typealias AuditRequest = @Sendable (_ system: String, _ user: String) async thro
 struct NotuleReviewError: LocalizedError, Sendable {
     let reason: String
     let draftHtml: String
+    var supportReason: String? = nil
     var errorDescription: String? { reason }
 }
 
 /// Audit rejection; `message` is the Dutch text the Windows app shows for the same case.
 struct NotuleAuditError: LocalizedError, Sendable {
     let message: String
+    var supportMessage: String? = nil
     var errorDescription: String? { message }
 }
 
@@ -157,13 +159,15 @@ enum NotuleAudit {
         // A valid negative verdict remains a rejection; tell the reviewer which text needs attention.
         if let problem = sourceChecks.first(where: { $0.status != "covered" && $0.status != "non_factual" }) {
             let text = sourceUnits.first { same($0.id, problem.id) }!.text
-            throw NotuleAuditError(message: "\(problem.status == "missing" ? "De notule mist broninformatie" : "De bron is onvoldoende duidelijk"): \(text)")
+            throw NotuleAuditError(message: "\(problem.status == "missing" ? "De notule mist broninformatie" : "De bron is onvoldoende duidelijk"): \(text)",
+                                   supportMessage: "Inhoudscontrole bron \(problem.id): \(problem.status)")
         }
         if let problem = noteChecks.first(where: { $0.status != "supported" && $0.status != "non_factual" }) {
             let text = noteUnits.first { same($0.id, problem.id) }!.text
             let reason = problem.status == "contradiction" ? "De notule spreekt de bron tegen"
                 : problem.status == "unsupported" ? "De notule bevat een onbevestigde bewering" : "De bewering is onvoldoende duidelijk"
-            throw NotuleAuditError(message: "\(reason): \(text)")
+            throw NotuleAuditError(message: "\(reason): \(text)",
+                                   supportMessage: "Inhoudscontrole notule \(problem.id): \(problem.status)")
         }
         // Only affirmative, fully indexed evidence may reach a successful result.
         for sentence in requiredSentences {

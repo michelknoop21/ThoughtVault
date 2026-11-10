@@ -294,7 +294,7 @@ final class SupportRelayTests: XCTestCase, @unchecked Sendable {
     }
 }
 
-private final class SupportStub: URLProtocol, @unchecked Sendable {
+final class SupportStub: URLProtocol, @unchecked Sendable {
     struct Reply: Sendable { var status: Int; var text: String; var headers: [String: String] = [:] }
     typealias Handler = @Sendable (URLRequest, Int) throws -> Reply
     private struct State {

@@ -324,6 +324,11 @@
 		59D4559821B7539107EB4ED1 /* ProfileTemplates.json in Resources */ = {isa = PBXBuildFile; fileRef = FA000067 /* ProfileTemplates.json */; };
 		B574C1F9B396FF3605203217 /* siriwave-MIT.txt in Resources */ = {isa = PBXBuildFile; fileRef = FASIRI01 /* siriwave-MIT.txt */; };
 		A8E86B545582AEF6E232112A /* WhisperKit in Frameworks */ = {isa = PBXBuildFile; productRef = FC0416C3791FB02F36F1DFE3 /* WhisperKit */; };
+		AA0F0D101 /* SupportViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0F0D101 /* SupportViewModel.swift */; };
+		AA0F0D102 /* SupportViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0F0D101 /* SupportViewModel.swift */; };
+		AA0F0D201 /* RecordingViewModel+Support.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0F0D201 /* RecordingViewModel+Support.swift */; };
+		AA0F0D202 /* RecordingViewModel+Support.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0F0D201 /* RecordingViewModel+Support.swift */; };
+		AA0F0D301 /* SupportViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0F0D301 /* SupportViewModelTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -524,6 +529,9 @@
 		FC000001 /* ThoughtVault.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ThoughtVault.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		FC000002 /* ThoughtVaultTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ThoughtVaultTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		4B0C1A153C3D40142C200C53 /* ThoughtVault.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ThoughtVault.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		FA0F0D101 /* SupportViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SupportViewModel.swift"; sourceTree = "<group>"; };
+		FA0F0D201 /* RecordingViewModel+Support.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RecordingViewModel+Support.swift"; sourceTree = "<group>"; };
+		FA0F0D301 /* SupportViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SupportViewModelTests.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -682,6 +690,8 @@
 				FA000020 /* RecordingViewModel.swift */,
 				FA9E5A01 /* RecordingViewModel+Restart.swift */,
 				FA0000T2 /* RecordingViewModel+Notule.swift */,
+				FA0F0D201 /* RecordingViewModel+Support.swift */,
+				FA0F0D101 /* SupportViewModel.swift */,
 				FA0000D1 /* RecordingViewModel+Sleep.swift */,
 				FA000055 /* TasksViewModel.swift */,
 			);
@@ -792,6 +802,7 @@
 				FB000002 /* MigrationTests.swift */,
 				FB0F0A03 /* AppLogTests.swift */,
 				FB0F0B03 /* SupportRelayTests.swift */,
+				FA0F0D301 /* SupportViewModelTests.swift */,
 				FB000003 /* PersonProfileTests.swift */,
 				FB0000K1 /* KeychainServiceTests.swift */,
 				FB000004 /* PersonDirectoryServiceTests.swift */,
@@ -1052,6 +1063,8 @@
 				AA000020 /* RecordingViewModel.swift in Sources */,
 				AA9E5A01 /* RecordingViewModel+Restart.swift in Sources */,
 				AA0000T2 /* RecordingViewModel+Notule.swift in Sources */,
+				AA0F0D201 /* RecordingViewModel+Support.swift in Sources */,
+				AA0F0D101 /* SupportViewModel.swift in Sources */,
 				AA0000D1 /* RecordingViewModel+Sleep.swift in Sources */,
 				AA000055 /* TasksViewModel.swift in Sources */,
 				AA000022 /* AccountView.swift in Sources */,
@@ -1125,6 +1138,7 @@
 				AB000002 /* MigrationTests.swift in Sources */,
 				AB0F0A03 /* AppLogTests.swift in Sources */,
 				AB0F0B03 /* SupportRelayTests.swift in Sources */,
+				AA0F0D301 /* SupportViewModelTests.swift in Sources */,
 				AB000003 /* PersonProfileTests.swift in Sources */,
 				AB0000K1 /* KeychainServiceTests.swift in Sources */,
 				AB000004 /* PersonDirectoryServiceTests.swift in Sources */,
@@ -1247,6 +1261,8 @@
 				754D5ED8F4A74EAFEF5B9D29 /* RecordingViewModel.swift in Sources */,
 				BC1FBC8564A6681ACDCC16C0 /* RecordingViewModel+Restart.swift in Sources */,
 				FBF07AB70FD0D5C74DD003B4 /* RecordingViewModel+Notule.swift in Sources */,
+				AA0F0D202 /* RecordingViewModel+Support.swift in Sources */,
+				AA0F0D102 /* SupportViewModel.swift in Sources */,
 				A4CA9C573E92699C8A0CE8A3 /* RecordingViewModel+Sleep.swift in Sources */,
 				46FFC6B1D33219939EFB68EB /* TasksViewModel.swift in Sources */,
 				9F35613718A80A32BCA01EDF /* AccountView.swift in Sources */,

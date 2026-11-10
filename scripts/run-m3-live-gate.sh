@@ -3,7 +3,8 @@
 # meetings) against Ollama Cloud, model kimi-k2.6, through the production macOS services.
 #
 # Start it with the key from the vault; the key is never typed, printed or written:
-#   vault-exec OLLAMA_CLOUD_API --env-var TEST_RUNNER_TV_M3_OLLAMA_KEY -- scripts/run-m3-live-gate.sh
+#   vault-exec OLLAMA_CLOUD_API -- scripts/run-m3-live-gate.sh
+# vault-exec only allows fixed --env-var names, so the key arrives as VAULT_VALUE.
 #
 # xcodebuild strips the TEST_RUNNER_ prefix, so the test reads TV_M3_OLLAMA_KEY.
 # Without the key M3LiveContentGateTests skips. At most 21 requests, no retries.
@@ -11,6 +12,9 @@
 # is copied to docs/qa/macos-go-2026-11-09/M3/<run>.
 set -euo pipefail
 cd "$(dirname "$0")/.."
+
+export TEST_RUNNER_TV_M3_OLLAMA_KEY="${TEST_RUNNER_TV_M3_OLLAMA_KEY:-${VAULT_VALUE:-}}"
+unset VAULT_VALUE
 
 if [ -z "${TEST_RUNNER_TV_M3_OLLAMA_KEY:-}" ]; then
   echo "TEST_RUNNER_TV_M3_OLLAMA_KEY is not set; start this script via vault-exec (see header)." >&2

@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		AB0F0E01 /* envelope-fixture.json in Resources */ = {isa = PBXBuildFile; fileRef = FB0F0E01 /* envelope-fixture.json */; };
+        AA0F0601 /* MenuBarViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0F0601 /* MenuBarViews.swift */; };
+        AA0F0602 /* MenuBarViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0F0601 /* MenuBarViews.swift */; };
 		AB00FA00DS01 /* DebugScreenshotSeed.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA00DS01 /* DebugScreenshotSeed.swift */; };
 		AB01FA00CSB1 /* ContextSuggestionBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA00CSB1 /* ContextSuggestionBar.swift */; };
 		AB02FA00CH01 /* ContextHistory.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA00CH01 /* ContextHistory.swift */; };
@@ -342,6 +345,8 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		FB0F0E01 /* envelope-fixture.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "tests/fixtures/envelope-fixture.json"; sourceTree = SOURCE_ROOT; };
+        FA0F0601 /* MenuBarViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarViews.swift; sourceTree = "<group>"; };
 		FC110001 /* WhisperLoadingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhisperLoadingTests.swift; sourceTree = "<group>"; };
 		FC200090 /* WhisperOfflineTokenizerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhisperOfflineTokenizerTests.swift; sourceTree = "<group>"; };
 		FC200001 /* WhisperSilenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhisperSilenceTests.swift; sourceTree = "<group>"; };
@@ -596,6 +601,7 @@
 			isa = PBXGroup;
 			children = (
 				FA000001 /* ThoughtVaultApp.swift */,
+				FA0F0601 /* MenuBarViews.swift */,
 				FA000002 /* ContentView.swift */,
 				FA00DS01 /* DebugScreenshotSeed.swift */,
 			);
@@ -845,6 +851,7 @@
 		GG000100 /* Fixtures */ = {
 			isa = PBXGroup;
 			children = (
+				FB0F0E01 /* envelope-fixture.json */,
 				FB000006 /* GraphCalendarViewResponse.json */,
 				FB0000G4 /* M3LiveContentGate.json */,
 				FB0000T4 /* PreDraftFields.store */,
@@ -996,6 +1003,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				AA000001 /* ThoughtVaultApp.swift in Sources */,
+				AA0F0601 /* MenuBarViews.swift in Sources */,
 				AA000002 /* ContentView.swift in Sources */,
 				AA00DS01 /* DebugScreenshotSeed.swift in Sources */,
 				AA000003 /* Color+Brand.swift in Sources */,
@@ -1180,6 +1188,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AB0F0E01 /* envelope-fixture.json in Resources */,
 				AB000006 /* GraphCalendarViewResponse.json in Resources */,
 				AB0000G4 /* M3LiveContentGate.json in Resources */,
 				AB0000T4 /* PreDraftFields.store in Resources */,
@@ -1200,6 +1209,7 @@
 				AB04FA00PM01 /* PersonMatcher.swift in Sources */,
 				AB05FA00CH02 /* HistoryListView.swift in Sources */,
 				69A946299389FC95A31753CB /* ThoughtVaultApp.swift in Sources */,
+				AA0F0602 /* MenuBarViews.swift in Sources */,
 				BFBDDFC8BD5DBCCEE9BB3D1F /* ContentView.swift in Sources */,
 				CE70F46EB82FC0E02341FC0D /* Color+Brand.swift in Sources */,
 				C992E12A9F75BA774464D54C /* Theme.swift in Sources */,

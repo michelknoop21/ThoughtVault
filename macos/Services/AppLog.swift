@@ -1,6 +1,9 @@
 import CryptoKit
 import Foundation
 import os
+#if os(macOS)
+import AppKit
+#endif
 
 // MARK: - Redaction
 
@@ -210,3 +213,18 @@ struct AppLog: Sendable {
         try? FileManager.default.removeItem(at: marker(in: directory))
     }
 }
+
+#if os(macOS)
+extension AppLog {
+    @MainActor private static var terminationObserver: (center: NotificationCenter, token: NSObjectProtocol)?
+
+    @MainActor
+    static func endSessionOnTermination(center: NotificationCenter = .default, directory: URL = AppLog.directory) {
+        if let observer = terminationObserver { observer.center.removeObserver(observer.token) }
+        let token = center.addObserver(forName: NSApplication.willTerminateNotification, object: nil, queue: nil) { _ in
+            AppLog.endSession(in: directory)
+        }
+        terminationObserver = (center, token)
+    }
+}
+#endif

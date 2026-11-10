@@ -1,4 +1,7 @@
 import XCTest
+#if os(macOS)
+import AppKit
+#endif
 @testable import ThoughtVault
 
 final class AppLogTests: XCTestCase {
@@ -75,6 +78,28 @@ final class AppLogTests: XCTestCase {
         AppLog.setSessionStage("notule", in: dir)   // no marker: must not create one
         XCTAssertEqual(AppLog.beginSession(in: dir), .clean)
     }
+
+    #if os(macOS)
+    @MainActor func testTerminationNotificationRemovesMarkerSynchronously() {
+        let center = NotificationCenter()
+        _ = AppLog.beginSession(in: dir)
+        AppLog.endSessionOnTermination(center: center, directory: dir)
+        center.post(name: NSApplication.willTerminateNotification, object: nil)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: dir.appending(path: "session.open").path))
+    }
+
+    @MainActor func testReplacingTerminationObserverRemovesPreviousObserver() {
+        let previous = NotificationCenter()
+        let current = NotificationCenter()
+        _ = AppLog.beginSession(in: dir)
+        AppLog.endSessionOnTermination(center: previous, directory: dir)
+        AppLog.endSessionOnTermination(center: current, directory: dir)
+        previous.post(name: NSApplication.willTerminateNotification, object: nil)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: dir.appending(path: "session.open").path))
+        current.post(name: NSApplication.willTerminateNotification, object: nil)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: dir.appending(path: "session.open").path))
+    }
+    #endif
 
     func testClickPathTakesLastThirtyMessagesCappedAtEightyChars() {
         var log = (0..<40).map { "2026-11-10T09:00:00Z INFO [Klikpad] Tab \($0)" }

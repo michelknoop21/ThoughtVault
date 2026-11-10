@@ -6,6 +6,8 @@ enum SupportPane: Hashable { case report, tickets }
 
 @MainActor @Observable
 final class SupportViewModel {
+    private(set) var hasBegunSession = false
+    @ObservationIgnored private var pollingTask: Task<Void, Never>?
     var unreadCount = 0
     var tickets: [SupportTicket] = []
     var thread: [SupportMessage] = []
@@ -17,6 +19,22 @@ final class SupportViewModel {
     init(relay: SupportRelay = .shared, defaults: UserDefaults = .standard) {
         self.relay = relay
         self.defaults = defaults
+    }
+
+    deinit { pollingTask?.cancel() }
+
+    /// The app owns one view model across all windows and root-view task restarts.
+    func beginSessionIfNeeded(in directory: URL = AppLog.directory) -> SessionOutcome? {
+        guard !hasBegunSession else { return nil }
+        hasBegunSession = true
+        return AppLog.beginSession(in: directory)
+    }
+
+    /// Reconcile only after startup has consumed the previous process marker.
+    func reconcileSession(isBackground: Bool, in directory: URL = AppLog.directory) {
+        guard hasBegunSession else { return }
+        if isBackground { AppLog.endSession(in: directory) }
+        else { AppLog.resumeSession(in: directory) }
     }
 
     var isAutoReportEnabled: Bool {
@@ -73,10 +91,16 @@ final class SupportViewModel {
     }
 
     func startPolling() async {
-        while !Task.isCancelled {
-            await refreshUnread()
-            do { try await Task.sleep(for: .seconds(15 * 60)) }
-            catch { return }
+        guard pollingTask == nil else { return }
+        let relay = relay
+        // Polling belongs to the app view model, not the first window's cancellable task.
+        pollingTask = Task { [weak self] in
+            while !Task.isCancelled {
+                await relay.flush()
+                await self?.refreshUnread()
+                do { try await Task.sleep(for: .seconds(15 * 60)) }
+                catch { return }
+            }
         }
     }
 

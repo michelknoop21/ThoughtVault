@@ -26,6 +26,65 @@ final class SupportViewModelTests: XCTestCase {
         try? FileManager.default.removeItem(at: directory)
     }
 
+    @MainActor func testSessionStartupConsumesPreviousCrashOnlyOnce() throws {
+        let (vm, _, defaults, session, directory, suite) = fixture()
+        defer { cleanup(defaults, session, directory, suite) }
+        _ = AppLog.beginSession(in: directory)
+        AppLog.setSessionStage("transcriberen", in: directory)
+        XCTAssertFalse(vm.hasBegunSession)
+        XCTAssertEqual(vm.beginSessionIfNeeded(in: directory), .crashed(stage: "transcriberen"))
+        XCTAssertTrue(vm.hasBegunSession)
+        AppLog.setSessionStage("opnemen", in: directory)
+        XCTAssertNil(vm.beginSessionIfNeeded(in: directory))
+        XCTAssertEqual(try String(contentsOf: directory.appending(path: "session.open"), encoding: .utf8), "opnemen")
+    }
+
+    @MainActor func testCleanStartupDoesNotReportCrashOnRootRestart() {
+        let (vm, _, defaults, session, directory, suite) = fixture()
+        defer { cleanup(defaults, session, directory, suite) }
+        XCTAssertEqual(vm.beginSessionIfNeeded(in: directory), .clean)
+        XCTAssertNil(vm.beginSessionIfNeeded(in: directory))
+    }
+
+    @MainActor func testBackgroundBeforeStartupLeavesNoFalseCrashMarker() {
+        let (vm, _, defaults, session, directory, suite) = fixture()
+        defer { cleanup(defaults, session, directory, suite) }
+        _ = AppLog.beginSession(in: directory)
+        AppLog.setSessionStage("transcriberen", in: directory)
+        vm.reconcileSession(isBackground: true, in: directory)
+        let previous = vm.beginSessionIfNeeded(in: directory)
+        // Startup reconciles the current background phase even without another scene event.
+        vm.reconcileSession(isBackground: true, in: directory)
+        XCTAssertEqual(previous, .crashed(stage: "transcriberen"))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: directory.appending(path: "session.open").path))
+        XCTAssertEqual(AppLog.beginSession(in: directory), .clean)
+    }
+
+    @MainActor func testStartupBeforeBackgroundLeavesNoFalseCrashMarker() {
+        let (vm, _, defaults, session, directory, suite) = fixture()
+        defer { cleanup(defaults, session, directory, suite) }
+        XCTAssertEqual(vm.beginSessionIfNeeded(in: directory), .clean)
+        vm.reconcileSession(isBackground: false, in: directory)
+        AppLog.setSessionStage("opnemen", in: directory)
+        vm.reconcileSession(isBackground: true, in: directory)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: directory.appending(path: "session.open").path))
+        XCTAssertEqual(AppLog.beginSession(in: directory), .clean)
+    }
+
+    @MainActor func testActiveBeforeStartupPreservesCapturedCrashAndRestoresCurrentStage() throws {
+        let (vm, _, defaults, session, directory, suite) = fixture()
+        defer { cleanup(defaults, session, directory, suite) }
+        _ = AppLog.beginSession(in: directory)
+        AppLog.setSessionStage("notule", in: directory)
+        vm.reconcileSession(isBackground: false, in: directory)
+        let previous = vm.beginSessionIfNeeded(in: directory)
+        vm.reconcileSession(isBackground: false, in: directory)
+        AppLog.setSessionStage("opnemen", in: directory)
+        XCTAssertEqual(previous, .crashed(stage: "notule"))
+        XCTAssertEqual(try String(contentsOf: directory.appending(path: "session.open"), encoding: .utf8), "opnemen")
+        XCTAssertNil(vm.beginSessionIfNeeded(in: directory))
+    }
+
     func testFingerprintIgnoresDigits() {
         let first = "WhisperKit-model laden duurde langer dan 120 s (code 3)"
         let second = "WhisperKit-model laden duurde langer dan 90 s (code 17)"

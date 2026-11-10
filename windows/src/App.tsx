@@ -207,7 +207,7 @@ function OfflineQueueBanner() {
 }
 
 function AppShell({ children }: { children: React.ReactNode }) {
-  const {isUpdateAvailable, latestVersion, downloadUrl, nativeUpdate} = useUpdateCheck();
+  const {isUpdateAvailable, latestVersion, downloadUrl, nativeUpdate, downloaded, installNow} = useUpdateCheck();
   const dismissed = useSettingsStore(s => s.dismissed_update_version);
   const updateSettings = useSettingsStore(s => s.updateSettings);
   return (
@@ -220,7 +220,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
           <main className="app-main" id="main-content">
             <ProcessingBar />
             <OfflineQueueBanner />
-            {isUpdateAvailable && latestVersion && dismissed !== latestVersion && <UpdateBanner nativeUpdate={nativeUpdate} version={latestVersion} downloadUrl={downloadUrl} onDismiss={() => updateSettings({dismissed_update_version:latestVersion})} />}
+            {isUpdateAvailable && latestVersion && dismissed !== latestVersion && <UpdateBanner downloaded={downloaded} onInstall={installNow} nativeUpdate={nativeUpdate} version={latestVersion} downloadUrl={downloadUrl} onDismiss={() => updateSettings({dismissed_update_version:latestVersion})} />}
             <div className="app-main-content">
               {children}
             </div>

@@ -29,6 +29,7 @@ export function useUpdateCheck() {
   const downloadRef = useRef<Promise<void> | null>(null);
   const downloadedRef = useRef(false);
   const unmountedRef = useRef(false);
+  const installingRef = useRef<Promise<void> | null>(null);
 
   const runCheck = useCallback(async () => {
     if (!("__TAURI_INTERNALS__" in window)) return;
@@ -41,6 +42,10 @@ export function useUpdateCheck() {
         const { check } = await import("@tauri-apps/plugin-updater");
         const candidate = await check();
         if (candidate && unmountedRef.current) { await candidate.close(); return; }
+        if (candidate && installingRef.current) {
+          if (candidate !== updateRef.current) await candidate.close();
+          return;
+        }
         if (candidate?.version) {
           const held = updateRef.current;
           if (held && held.version === candidate.version && downloadRef.current) {
@@ -99,6 +104,33 @@ export function useUpdateCheck() {
     }
   }, []);
 
+  const installNow = useCallback(async () => {
+    if (installingRef.current) return installingRef.current;
+    const update = updateRef.current;
+    if (!update || unmountedRef.current || isBusy(useRecordingStore.getState())) return;
+    if (!downloadRef.current) {
+      downloadRef.current = update.download().then(() => {
+        if (unmountedRef.current || updateRef.current !== update) return;
+        downloadedRef.current = true;
+        setDownloaded(true);
+      }, (error) => {
+        if (updateRef.current === update) downloadRef.current = null;
+        throw error;
+      });
+    }
+    await downloadRef.current;
+    if (installingRef.current) return installingRef.current;
+    if (unmountedRef.current || updateRef.current !== update || isBusy(useRecordingStore.getState())) return;
+    if (!downloadedRef.current) throw new Error("Update download failed");
+    const installation = update.install();
+    installingRef.current = installation;
+    try {
+      await installation;
+    } finally {
+      if (installingRef.current === installation) installingRef.current = null;
+    }
+  }, []);
+
   useEffect(() => {
     unmountedRef.current = false;
     return () => {
@@ -111,28 +143,32 @@ export function useUpdateCheck() {
   useEffect(() => {
     if (!("__TAURI_INTERNALS__" in window)) return;
     let disposed = false;
-    let installing = false;
     let unlisten: (() => void) | null = null;
     void (async () => {
       try {
         const { getCurrentWindow } = await import("@tauri-apps/api/window");
         const un = await getCurrentWindow().onCloseRequested(async (event) => {
           if (disposed) return;
-          if (installing) { event.preventDefault(); return; }
           const update = updateRef.current;
-          if (!update || !downloadedRef.current) return;
-          if (!useSettingsStore.getState().check_for_updates) return;
-          if (isBusy(useRecordingStore.getState())) return;
+          let installation = installingRef.current;
+          if (!installation) {
+            if (!update || !downloadedRef.current) return;
+            if (!useSettingsStore.getState().check_for_updates) return;
+            if (isBusy(useRecordingStore.getState())) return;
+          }
           event.preventDefault();
-          installing = true;
           try {
-            await update.install();
+            if (!installation) {
+              installation = update!.install();
+              installingRef.current = installation;
+            }
+            await installation;
           } catch (e) {
             console.warn("Update install failed", e);
             // preventDefault stopped the default close, so close by hand.
             try { await getCurrentWindow().destroy(); } catch { /* nothing left to do */ }
           } finally {
-            installing = false;
+            if (installingRef.current === installation) installingRef.current = null;
           }
         });
         if (disposed) un(); else unlisten = un;
@@ -155,5 +191,5 @@ export function useUpdateCheck() {
     return () => window.removeEventListener(CHECK_UPDATES_EVENT, onEvent);
   }, [runCheck]);
 
-  return { isUpdateAvailable: latestVersion !== null, latestVersion, downloadUrl, nativeUpdate, downloaded };
+  return { isUpdateAvailable: latestVersion !== null, latestVersion, downloadUrl, nativeUpdate, downloaded, installNow };
 }

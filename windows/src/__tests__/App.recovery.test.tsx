@@ -25,7 +25,7 @@ vi.mock("../services/microsoftGraph", () => ({ MicrosoftGraphService: {} }));
 vi.mock("../services/offlineQueue", () => ({ getQueue: vi.fn(async () => []) }));
 vi.mock("../stores/localTranscriptsStore", () => ({ useLocalTranscriptsStore: { getState: () => ({ hydrate: async () => {} }) } }));
 vi.mock("../hooks/useGlobalRecordingHandler", () => ({ useGlobalRecordingHandler: vi.fn() }));
-vi.mock("../hooks/useUpdateCheck", () => ({ useUpdateCheck: () => ({ isUpdateAvailable: false }) }));
+vi.mock("../hooks/useUpdateCheck", () => ({ useUpdateCheck: () => ({ isUpdateAvailable: false, downloaded: false, installNow: async () => {} }) }));
 vi.mock("../components/ui/UpdateBanner", () => ({ UpdateBanner: () => null }));
 vi.mock("../components/layout/TitleBar", () => ({ TitleBar: () => null }));
 vi.mock("../components/layout/Sidebar", () => ({ Sidebar: () => null }));

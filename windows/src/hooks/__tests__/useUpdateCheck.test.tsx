@@ -1,10 +1,11 @@
 import { act } from "react";
+import { Update } from "@tauri-apps/plugin-updater";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { CHECK_UPDATES_EVENT, UPDATE_CHECK_INTERVAL_MS, useUpdateCheck } from "../useUpdateCheck";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { useRecordingStore } from "../../stores/recordingStore";
-const { checkMock } = vi.hoisted(() => ({ checkMock: vi.fn(async (): Promise<any> => null) }));
+const { checkMock } = vi.hoisted(() => ({ checkMock: vi.fn(async (): Promise<Update | null> => null) }));
 let closeHandler: (e: unknown) => Promise<void> | void = () => {};
 const fakeWindow = {
   onCloseRequested: vi.fn(async (cb: (e: unknown) => Promise<void> | void) => { closeHandler = cb; return () => {}; }),
@@ -12,7 +13,9 @@ const fakeWindow = {
 };
 vi.mock("@tauri-apps/api/window", () => ({ getCurrentWindow: () => fakeWindow }));
 vi.mock("@tauri-apps/api/app", () => ({getVersion: async () => "1.0.260", getName: async () => "ThoughtVault"}));
-vi.mock("@tauri-apps/plugin-updater", () => ({check: checkMock}));
+vi.mock("@tauri-apps/plugin-updater", async (importOriginal) => ({
+  ...await importOriginal<typeof import("@tauri-apps/plugin-updater")>(), check: checkMock,
+}));
 afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers(); });
 it("uses the existing private installer URL without doubling its origin", async () => {
   Object.assign(window, {__TAURI_INTERNALS__:{}});
@@ -30,13 +33,12 @@ it("uses the existing private installer URL without doubling its origin", async 
 });
 
 function fakeUpdate(version: string) {
-  return {
-    version,
+  return Object.assign(new Update({ rid: 1, version, currentVersion: "1.0.260", rawJson: {} }), {
     download: vi.fn(async () => {}),
     install: vi.fn(async () => {}),
     downloadAndInstall: vi.fn(async () => {}),
     close: vi.fn(async () => {}),
-  };
+  });
 }
 let lastResult: ReturnType<typeof useUpdateCheck>;
 const mounted: ReturnType<typeof createRoot>[] = [];
@@ -182,9 +184,11 @@ it("prevents repeated close requests from starting another install", async () =>
   await render();
   const firstEvent = { preventDefault: vi.fn() };
   const first = closeHandler(firstEvent);
-  expect((await close()).preventDefault).toHaveBeenCalled();
+  const repeatedEvent = { preventDefault: vi.fn() };
+  const repeated = closeHandler(repeatedEvent);
+  expect(repeatedEvent.preventDefault).toHaveBeenCalled();
   expect(u.install).toHaveBeenCalledTimes(1);
-  finish(); await first;
+  finish(); await Promise.all([first, repeated]);
 });
 it("ignores close events after unmount", async () => {
   const u = fakeUpdate("1.0.400"); checkMock.mockResolvedValue(u);
@@ -246,4 +250,171 @@ it("starts the download when the toggle is switched on while an update is held",
   expect(u.download).not.toHaveBeenCalled();
   await act(async () => { useSettingsStore.setState({ check_for_updates: true }); });
   expect(u.download).toHaveBeenCalledTimes(1);
+});
+
+it("installNow waits for the running download and shares installation completion across clicks", async () => {
+  const u = fakeUpdate("1.0.400");
+  let finish!: () => void, finishInstall!: () => void;
+  u.download.mockReturnValue(new Promise<void>((resolve) => { finish = resolve; }));
+  u.install.mockReturnValue(new Promise<void>((resolve) => { finishInstall = resolve; }));
+  checkMock.mockResolvedValue(u);
+  await render();
+  const firstFinished = vi.fn(), secondFinished = vi.fn();
+  const first = lastResult.installNow().then(firstFinished), second = lastResult.installNow().then(secondFinished);
+  expect(u.install).not.toHaveBeenCalled();
+  await act(async () => { finish(); });
+  expect(firstFinished).not.toHaveBeenCalled();
+  expect(secondFinished).not.toHaveBeenCalled();
+  expect(u.download).toHaveBeenCalledTimes(1);
+  expect(u.install).toHaveBeenCalledTimes(1);
+  await act(async () => { finishInstall(); await Promise.all([first, second]); });
+  expect(firstFinished).toHaveBeenCalledTimes(1);
+  expect(secondFinished).toHaveBeenCalledTimes(1);
+});
+
+it("installNow downloads and installs an explicitly checked update with the toggle off", async () => {
+  useSettingsStore.setState({ check_for_updates: false });
+  const u = fakeUpdate("1.0.400"); checkMock.mockResolvedValue(u);
+  await render();
+  await act(async () => { window.dispatchEvent(new Event(CHECK_UPDATES_EVENT)); });
+  await act(async () => { await lastResult.installNow(); });
+  expect(u.download).toHaveBeenCalledTimes(1);
+  expect(u.install).toHaveBeenCalledTimes(1);
+});
+it("installNow does nothing without a native update", async () => {
+  await render();
+  await expect(lastResult.installNow()).resolves.toBeUndefined();
+});
+it("installNow does not download or install while busy", async () => {
+  useSettingsStore.setState({ check_for_updates: false });
+  const u = fakeUpdate("1.0.400"); checkMock.mockResolvedValue(u);
+  await render();
+  await act(async () => { window.dispatchEvent(new Event(CHECK_UPDATES_EVENT)); });
+  useRecordingStore.setState({ phase: "recording" });
+  await lastResult.installNow();
+  expect(u.download).not.toHaveBeenCalled();
+  expect(u.install).not.toHaveBeenCalled();
+});
+it("installNow rechecks busy after waiting for the download", async () => {
+  const u = fakeUpdate("1.0.400");
+  let finish!: () => void;
+  u.download.mockReturnValue(new Promise<void>((resolve) => { finish = resolve; }));
+  checkMock.mockResolvedValue(u);
+  await render();
+  const pending = lastResult.installNow();
+  useRecordingStore.setState({ backgroundTasks: [{ task_id: "t1", status: "transcribing", progress: 40, mode: "combined", created_at: "2026-11-10T10:00:00Z" }] });
+  await act(async () => { finish(); await pending; });
+  expect(u.install).not.toHaveBeenCalled();
+});
+it("installNow does not install an update replaced during its download", async () => {
+  const first = fakeUpdate("1.0.400"), second = fakeUpdate("1.0.401");
+  let finish!: () => void;
+  first.download.mockReturnValue(new Promise<void>((resolve) => { finish = resolve; }));
+  checkMock.mockResolvedValueOnce(first).mockResolvedValueOnce(second);
+  await render();
+  const pending = lastResult.installNow();
+  await act(async () => { window.dispatchEvent(new Event(CHECK_UPDATES_EVENT)); });
+  await act(async () => { finish(); await pending; });
+  expect(first.install).not.toHaveBeenCalled();
+  expect(second.install).not.toHaveBeenCalled();
+});
+it("installNow surfaces a failed background download instead of installing", async () => {
+  vi.spyOn(console, "warn").mockImplementation(() => {});
+  const u = fakeUpdate("1.0.400");
+  let fail!: (reason: Error) => void;
+  u.download.mockReturnValue(new Promise<void>((_resolve, reject) => { fail = reject; }));
+  checkMock.mockResolvedValue(u);
+  await render();
+  const pending = lastResult.installNow();
+  const rejected = expect(pending).rejects.toThrow("Update download failed");
+  await act(async () => { fail(new Error("offline")); await rejected; });
+  expect(u.install).not.toHaveBeenCalled();
+});
+it("installNow surfaces manual download failure and allows retry", async () => {
+  useSettingsStore.setState({ check_for_updates: false });
+  const u = fakeUpdate("1.0.400");
+  u.download.mockRejectedValueOnce(new Error("offline")); checkMock.mockResolvedValue(u);
+  await render();
+  await act(async () => { window.dispatchEvent(new Event(CHECK_UPDATES_EVENT)); });
+  await expect(lastResult.installNow()).rejects.toThrow("offline");
+  expect(u.install).not.toHaveBeenCalled();
+  await act(async () => { await lastResult.installNow(); });
+  expect(u.download).toHaveBeenCalledTimes(2);
+  expect(u.install).toHaveBeenCalledTimes(1);
+});
+it("prevents closing and replacement while a manual installation is running", async () => {
+  const u = fakeUpdate("1.0.400"), replacement = fakeUpdate("1.0.401");
+  let finish!: () => void;
+  u.install.mockReturnValue(new Promise<void>((resolve) => { finish = resolve; }));
+  checkMock.mockResolvedValueOnce(u).mockResolvedValueOnce(replacement);
+  await render();
+  let pending!: Promise<void>;
+  await act(async () => { pending = lastResult.installNow(); });
+  const closeEvent = { preventDefault: vi.fn() };
+  const closing = closeHandler(closeEvent);
+  expect(closeEvent.preventDefault).toHaveBeenCalled();
+  const secondFinished = vi.fn();
+  const second = lastResult.installNow().then(secondFinished);
+  await act(async () => { window.dispatchEvent(new Event(CHECK_UPDATES_EVENT)); });
+  expect(secondFinished).not.toHaveBeenCalled();
+  expect(u.install).toHaveBeenCalledTimes(1);
+  expect(u.close).not.toHaveBeenCalled();
+  expect(replacement.close).toHaveBeenCalledTimes(1);
+  expect(replacement.download).not.toHaveBeenCalled();
+  expect(lastResult.nativeUpdate).toBe(u);
+  await act(async () => { finish(); await Promise.all([pending, closing, second]); });
+  expect(secondFinished).toHaveBeenCalledTimes(1);
+});
+it("installNow cannot race an installation started by closing", async () => {
+  const u = fakeUpdate("1.0.400");
+  let finish!: () => void;
+  u.install.mockReturnValue(new Promise<void>((resolve) => { finish = resolve; }));
+  checkMock.mockResolvedValue(u);
+  await render();
+  const pending = closeHandler({ preventDefault: vi.fn() });
+  const manualFinished = vi.fn();
+  const manual = lastResult.installNow().then(manualFinished);
+  await act(async () => {});
+  expect(manualFinished).not.toHaveBeenCalled();
+  expect(u.install).toHaveBeenCalledTimes(1);
+  finish(); await Promise.all([pending, manual]);
+  expect(manualFinished).toHaveBeenCalledTimes(1);
+});
+it("installNow does not install after unmount while a download was pending", async () => {
+  const u = fakeUpdate("1.0.400");
+  let finish!: () => void;
+  u.download.mockReturnValue(new Promise<void>((resolve) => { finish = resolve; }));
+  checkMock.mockResolvedValue(u);
+  const root = await render();
+  const pending = lastResult.installNow();
+  await act(async () => { root.unmount(); finish(); await pending; });
+  expect(u.install).not.toHaveBeenCalled();
+});
+it("installNow reports install failure and releases the guard for retry", async () => {
+  const u = fakeUpdate("1.0.400");
+  u.install.mockRejectedValueOnce(new Error("bad signature")); checkMock.mockResolvedValue(u);
+  await render();
+  await expect(lastResult.installNow()).rejects.toThrow("bad signature");
+  await lastResult.installNow();
+  expect(u.install).toHaveBeenCalledTimes(2);
+  expect(u.download).toHaveBeenCalledTimes(1);
+});
+
+it("closes the window when a shared manual installation fails and still rejects to the banner", async () => {
+  vi.spyOn(console, "warn").mockImplementation(() => {});
+  const u = fakeUpdate("1.0.400");
+  let fail!: (reason: Error) => void;
+  u.install.mockReturnValue(new Promise<void>((_resolve, reject) => { fail = reject; }));
+  checkMock.mockResolvedValue(u);
+  await render();
+  let manual!: Promise<void>;
+  await act(async () => { manual = lastResult.installNow(); });
+  const rejected = expect(manual).rejects.toThrow("bad signature");
+  const secondRejected = expect(lastResult.installNow()).rejects.toThrow("bad signature");
+  const event = { preventDefault: vi.fn() };
+  const closing = closeHandler(event);
+  expect(event.preventDefault).toHaveBeenCalled();
+  expect(u.install).toHaveBeenCalledTimes(1);
+  await act(async () => { fail(new Error("bad signature")); await Promise.all([rejected, secondRejected, closing]); });
+  expect(fakeWindow.destroy).toHaveBeenCalledTimes(1);
 });

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { ArrowSync24Regular, Info24Regular } from "../ui/StudioIcons";
 import { getVersion } from "@tauri-apps/api/app";
 import { useSettingsStore } from "../../stores/settingsStore";
+import { CHECK_UPDATES_EVENT } from "../../hooks/useUpdateCheck";
 import { CardHead } from "./SettingsFields";
 
 export function GeneralTab() {
@@ -18,19 +19,21 @@ export function GeneralTab() {
               <div className="flex-row gap-10 flex-1">
                 <ArrowSync24Regular className="settings-icon" />
                 <div className="flex-1">
-                  <p className="settings-label">Controleer op updates</p>
-                  <p className="settings-desc">Toon een melding als er een nieuwe versie beschikbaar is</p>
+                  <p className="settings-label">Automatisch bijwerken</p>
+                  <p className="settings-desc">Nieuwe versies worden op de achtergrond gedownload en geïnstalleerd als je ThoughtVault afsluit. Nooit tijdens een opname of verwerking.</p>
                 </div>
                 <label className="toggle-switch">
                   <input
                     type="checkbox"
                     role="switch"
+                    aria-label="Automatisch bijwerken"
                     aria-checked={settings.check_for_updates}
                     checked={settings.check_for_updates}
                     onChange={(e) => settings.updateSettings({ check_for_updates: e.target.checked })}
                   />
                   <span className="toggle-slider" />
                 </label>
+                <button className="btn btn-sm" onClick={() => window.dispatchEvent(new Event(CHECK_UPDATES_EVENT))}>Zoek naar updates</button>
               </div>
             </div>
           </div>

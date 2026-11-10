@@ -117,7 +117,21 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
           TAURI_CONFIG: '{"identifier":"${{ steps.names.outputs.bundle_id }}","productName":"${{ steps.names.outputs.product_name }}","plugins":{"updater":{"endpoints":["https://thoughtvault.yinga.ai/releases/windows/${{ steps.names.outputs.feed }}.json"]}}}'
-        run: npm run tauri build
+        run: |
+          $env:TAURI_CONFIG = @'
+          const fs = require("node:fs");
+          const config = JSON.parse(process.env.TAURI_CONFIG);
+          if (config.identifier === "nl.prezent.transcript-studio-dev") {
+            const base = JSON.parse(fs.readFileSync("src-tauri/tauri.conf.json", "utf8"));
+            config.app = { windows: base.app.windows };
+            config.app.windows[0].title = config.productName;
+            config.bundle = { windows: { wix: { upgradeCode: "359d8426-cc94-5d8a-9c80-40137b3a59d9" } } };
+            config.plugins["deep-link"] = { desktop: { schemes: ["transcript-studio-dev"] } };
+          }
+          process.stdout.write(JSON.stringify(config));
+          '@ | node
+          if ($LASTEXITCODE -ne 0) { throw "Tauri channel configuration failed" }
+          npm run tauri build
 
       - name: Verify portable Whisper CPU inference
         working-directory: windows

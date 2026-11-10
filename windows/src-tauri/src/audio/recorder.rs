@@ -143,7 +143,7 @@ impl LevelMeter {
         // Dev diagnostics every ~5 s (same fields as the macOS DEBUG overlay).
         if cfg!(debug_assertions) && now.duration_since(self.last_log).as_secs_f64() >= 5.0 {
             self.last_log = now;
-            eprintln!("[Audio] Envelope — db={:.1} floor={:.1} out={:.3} dt={:.0}ms",
+            elog!("[Audio] Envelope — db={:.1} floor={:.1} out={:.3} dt={:.0}ms",
                 db, self.processor.noise_floor_db(), level, dt * 1000.0);
         }
         let mut bands = self.spectrum.process(self.samples.make_contiguous(), self.sample_rate as f64, dt);
@@ -247,10 +247,10 @@ fn recording_thread_body(
         .map_err(|e| format!("Kan audio configs niet lezen: {}", e))?;
 
     // Debug: log all available configs and collect them for later use
-    eprintln!("[Audio] Available configs for device:");
+    elog!("[Audio] Available configs for device:");
     let configs_vec: Vec<_> = configs
         .map(|cfg| {
-            eprintln!("  channels={:?}, min_rate={:?}, max_rate={:?}, format={:?}",
+            elog!("  channels={:?}, min_rate={:?}, max_rate={:?}, format={:?}",
                 cfg.channels(), cfg.min_sample_rate(), cfg.max_sample_rate(), cfg.sample_format());
             cfg
         })
@@ -269,7 +269,7 @@ fn recording_thread_body(
             && c.max_sample_rate() >= cpal::SampleRate(TARGET_SAMPLE_RATE))
         .or_else(|| {
             // Fall back to any config with enough channels, preferring higher sample rates
-            eprintln!("[Audio] {} Hz niet beschikbaar, valt terug op alternatief", TARGET_SAMPLE_RATE);
+            elog!("[Audio] {} Hz niet beschikbaar, valt terug op alternatief", TARGET_SAMPLE_RATE);
             configs_vec.iter()
                 .filter(|c| c.channels() >= CHANNELS)
                 .max_by_key(|c| c.max_sample_rate())
@@ -286,7 +286,7 @@ fn recording_thread_body(
     let device_max = supported.max_sample_rate().0;
     let actual_sample_rate = TARGET_SAMPLE_RATE.clamp(device_min, device_max);
 
-    eprintln!("[Audio] Mic: rate={} Hz (range: {}-{}), channels={}, format={:?}",
+    elog!("[Audio] Mic: rate={} Hz (range: {}-{}), channels={}, format={:?}",
         actual_sample_rate, device_min, device_max, device_channels, sample_format);
 
     let config: cpal::StreamConfig = supported.clone()
@@ -317,11 +317,11 @@ fn recording_thread_body(
     // Streaming resampler for mic: device rate → 16 kHz
     let mic_resampler = Arc::new(Mutex::new(StreamingResampler::new(actual_sample_rate, TARGET_SAMPLE_RATE)));
     if actual_sample_rate != TARGET_SAMPLE_RATE {
-        eprintln!("[Audio] Mic resampler active: {} Hz → {} Hz (ratio {:.2})",
+        elog!("[Audio] Mic resampler active: {} Hz → {} Hz (ratio {:.2})",
             actual_sample_rate, TARGET_SAMPLE_RATE, actual_sample_rate as f64 / TARGET_SAMPLE_RATE as f64);
     }
 
-    eprintln!("[Audio] WAV file created: {} (sample rate: {} Hz)", output_path, TARGET_SAMPLE_RATE);
+    elog!("[Audio] WAV file created: {} (sample rate: {} Hz)", output_path, TARGET_SAMPLE_RATE);
 
     // Build the appropriate input stream based on the device's sample format
     let input_stream = match sample_format {
@@ -358,7 +358,7 @@ fn recording_thread_body(
                 Arc::clone(&loopback_writer), Arc::clone(&is_paused), Arc::clone(&clock), event_tx.clone(),
             ) {
                 Ok(stream) => {
-                    eprintln!("[Audio] Loopback stream gestart voor systeemaudio opname");
+                    elog!("[Audio] Loopback stream gestart voor systeemaudio opname");
                     has_loopback = true;
                     Some(Box::new(stream))
                 },
@@ -410,7 +410,7 @@ fn recording_thread_body(
     // Log samples written before finalize
     let total_samples = samples_written.load(Ordering::Relaxed);
     let duration = total_samples as f64 / TARGET_SAMPLE_RATE as f64;
-    eprintln!("[Audio] Stopping recording: {} mono samples written ({:.2}s audio, {:.2}s elapsed)", total_samples, duration, elapsed);
+    elog!("[Audio] Stopping recording: {} mono samples written ({:.2}s audio, {:.2}s elapsed)", total_samples, duration, elapsed);
 
     // Drop streams before finalizing writers
     drop(input_stream);
@@ -419,31 +419,31 @@ fn recording_thread_body(
     // Finalize mic WAV
     if let Ok(mut guard) = mic_writer.lock() {
         if let Some(w) = guard.take() {
-            eprintln!("[Audio] Finalizing mic WAV file...");
+            elog!("[Audio] Finalizing mic WAV file...");
             w.finalize().map_err(|e| format!("Microfoonopname opslaan mislukt: {e}"))?;
-            eprintln!("[Audio] Mic WAV file finalized successfully");
+            elog!("[Audio] Mic WAV file finalized successfully");
         } else {
-            eprintln!("[Audio] ERROR: mic writer was already None during finalize!");
+            elog!("[Audio] ERROR: mic writer was already None during finalize!");
         }
     } else {
-        eprintln!("[Audio] ERROR: Failed to lock mic writer for finalize!");
+        elog!("[Audio] ERROR: Failed to lock mic writer for finalize!");
     }
 
     // Finalize loopback WAV
     if has_loopback {
         if let Ok(mut guard) = loopback_writer.lock() {
             if let Some(w) = guard.take() {
-                eprintln!("[Audio] Finalizing loopback WAV file...");
+                elog!("[Audio] Finalizing loopback WAV file...");
                 w.finalize().map_err(|e| format!("Systeemaudio opslaan mislukt: {e}"))?;
-                eprintln!("[Audio] Loopback WAV file finalized successfully");
+                elog!("[Audio] Loopback WAV file finalized successfully");
             }
         }
 
         // Mix mic + loopback into the final output file
-        eprintln!("[Audio] Mixing mic and loopback audio...");
+        elog!("[Audio] Mixing mic and loopback audio...");
         match mix_wav_files(&output_path, &loopback_path) {
             Ok(()) => {
-                eprintln!("[Audio] Audio mixing completed successfully");
+                elog!("[Audio] Audio mixing completed successfully");
                 let _ = std::fs::remove_file(&loopback_path);
             }
             Err(e) => {
@@ -458,7 +458,7 @@ fn recording_thread_body(
         duration_seconds: duration,
     });
 
-    eprintln!("[Audio] Recording stopped, file: {}", output_path);
+    elog!("[Audio] Recording stopped, file: {}", output_path);
 
     Ok(RecordingResult { file_path: output_path, duration_seconds: duration })
 }
@@ -497,7 +497,7 @@ fn mix_wav_files(mic_path: &str, loopback_path: &str) -> Result<(), String> {
     let mic_spec = mic_reader.spec();
     let loopback_spec = loopback_reader.spec();
 
-    eprintln!("[Audio] Mix specs — mic: {}Hz {}ch, loopback: {}Hz {}ch",
+    elog!("[Audio] Mix specs — mic: {}Hz {}ch, loopback: {}Hz {}ch",
         mic_spec.sample_rate, mic_spec.channels, loopback_spec.sample_rate, loopback_spec.channels);
 
     let mut mic_samples = mic_reader.into_samples::<i16>();
@@ -542,7 +542,7 @@ fn mix_wav_files(mic_path: &str, loopback_path: &str) -> Result<(), String> {
     drop(system_samples);
     mixed_file.persist(mic_path).map_err(|e| format!("Mixed WAV vervangen mislukt: {e}"))?;
 
-    eprintln!("[Audio] Mixed output: {} samples", count);
+    elog!("[Audio] Mixed output: {} samples", count);
     Ok(())
 }
 
@@ -731,13 +731,13 @@ fn build_input_stream_i16(
     let first_callback = Arc::new(AtomicBool::new(true));
     let first_callback_clone = Arc::clone(&first_callback);
 
-    eprintln!("[Audio] Building i16 input stream ({} channels)...", channels);
+    elog!("[Audio] Building i16 input stream ({} channels)...", channels);
 
     let stream = device.build_input_stream(
         config,
         move |data: &[i16], info| {
             if first_callback_clone.swap(false, Ordering::Relaxed) {
-                eprintln!("[Audio] FIRST CALLBACK: {} raw samples, {} channels → mono downmix + resample",
+                elog!("[Audio] FIRST CALLBACK: {} raw samples, {} channels → mono downmix + resample",
                     data.len(), channels);
             }
 
@@ -783,10 +783,10 @@ fn build_input_stream_i16(
                     }
                     samples_written_clone.store(written, Ordering::Relaxed);
                 } else {
-                    eprintln!("[Audio] ERROR: writer is None in callback!");
+                    elog!("[Audio] ERROR: writer is None in callback!");
                 }
             } else {
-                eprintln!("[Audio] ERROR: Failed to lock writer mutex in callback!");
+                elog!("[Audio] ERROR: Failed to lock writer mutex in callback!");
             }
         },
         move |err| { let _ = errors_tx.send(RecordingEvent::Error(format!("Microfoonverbinding onderbroken: {err}"))); },
@@ -824,13 +824,13 @@ fn build_input_stream_f32(
     let first_callback = Arc::new(AtomicBool::new(true));
     let first_callback_clone = Arc::clone(&first_callback);
 
-    eprintln!("[Audio] Building f32 input stream ({} channels)...", channels);
+    elog!("[Audio] Building f32 input stream ({} channels)...", channels);
 
     let stream = device.build_input_stream(
         config,
         move |data: &[f32], info| {
             if first_callback_clone.swap(false, Ordering::Relaxed) {
-                eprintln!("[Audio] FIRST CALLBACK (f32): {} raw samples, {} channels → mono downmix + resample",
+                elog!("[Audio] FIRST CALLBACK (f32): {} raw samples, {} channels → mono downmix + resample",
                     data.len(), channels);
             }
 
@@ -877,10 +877,10 @@ fn build_input_stream_f32(
                     }
                     samples_written_clone.store(written, Ordering::Relaxed);
                 } else {
-                    eprintln!("[Audio] ERROR: writer is None in f32 callback!");
+                    elog!("[Audio] ERROR: writer is None in f32 callback!");
                 }
             } else {
-                eprintln!("[Audio] ERROR: Failed to lock writer mutex in f32 callback!");
+                elog!("[Audio] ERROR: Failed to lock writer mutex in f32 callback!");
             }
         },
         move |err| { let _ = errors_tx.send(RecordingEvent::Error(format!("Microfoonverbinding onderbroken: {err}"))); },
@@ -909,7 +909,7 @@ fn try_build_loopback_stream(
         .ok_or("Geen standaard uitvoerapparaat voor loopback")?;
 
     let device_name = output_device.name().unwrap_or_else(|_| "unknown".to_string());
-    eprintln!("[Audio] Loopback device: {}", device_name);
+    elog!("[Audio] Loopback device: {}", device_name);
 
     // CRITICAL FIX: Use supported_output_configs() instead of supported_input_configs().
     // cpal returns empty from supported_input_configs() for output devices, but
@@ -919,7 +919,7 @@ fn try_build_loopback_stream(
         .supported_output_configs()
         .map_err(|e| format!("Kan loopback configs niet lezen: {}", e))?
         .map(|cfg| {
-            eprintln!("[Audio] Loopback config: channels={}, rate={}-{}, format={:?}",
+            elog!("[Audio] Loopback config: channels={}, rate={}-{}, format={:?}",
                 cfg.channels(), cfg.min_sample_rate().0, cfg.max_sample_rate().0, cfg.sample_format());
             cfg
         })
@@ -936,7 +936,7 @@ fn try_build_loopback_stream(
             && c.min_sample_rate() <= cpal::SampleRate(TARGET_SAMPLE_RATE)
             && c.max_sample_rate() >= cpal::SampleRate(TARGET_SAMPLE_RATE))
         .or_else(|| {
-            eprintln!("[Audio] Loopback: {} Hz niet beschikbaar, zoekt alternatief", TARGET_SAMPLE_RATE);
+            elog!("[Audio] Loopback: {} Hz niet beschikbaar, zoekt alternatief", TARGET_SAMPLE_RATE);
             configs_vec.iter()
                 .filter(|c| c.channels() >= CHANNELS)
                 .max_by_key(|c| c.max_sample_rate())
@@ -951,7 +951,7 @@ fn try_build_loopback_stream(
     let device_max = supported.max_sample_rate().0;
     let loopback_rate = TARGET_SAMPLE_RATE.clamp(device_min, device_max);
 
-    eprintln!("[Audio] Loopback: rate={} Hz (range: {}-{}), channels={}, format={:?}",
+    elog!("[Audio] Loopback: rate={} Hz (range: {}-{}), channels={}, format={:?}",
         loopback_rate, device_min, device_max, loopback_channels, sample_format);
 
     let config: cpal::StreamConfig = supported.clone()
@@ -973,7 +973,7 @@ fn try_build_loopback_stream(
     // Streaming resampler for loopback: device rate → 16 kHz
     let loopback_resampler = Arc::new(Mutex::new(StreamingResampler::new(loopback_rate, TARGET_SAMPLE_RATE)));
     if loopback_rate != TARGET_SAMPLE_RATE {
-        eprintln!("[Audio] Loopback resampler active: {} Hz → {} Hz (ratio {:.2})",
+        elog!("[Audio] Loopback resampler active: {} Hz → {} Hz (ratio {:.2})",
             loopback_rate, TARGET_SAMPLE_RATE, loopback_rate as f64 / TARGET_SAMPLE_RATE as f64);
     }
 
@@ -995,7 +995,7 @@ fn try_build_loopback_stream(
                 &config,
                 move |data: &[i16], info| {
                     if first_callback_clone.swap(false, Ordering::Relaxed) {
-                        eprintln!("[Audio] Loopback FIRST CALLBACK: {} raw samples, {} channels → mono downmix + resample",
+                        elog!("[Audio] Loopback FIRST CALLBACK: {} raw samples, {} channels → mono downmix + resample",
                             data.len(), loopback_channels);
                     }
 
@@ -1060,7 +1060,7 @@ fn try_build_loopback_stream(
                 &config,
                 move |data: &[f32], info| {
                     if first_callback_clone.swap(false, Ordering::Relaxed) {
-                        eprintln!("[Audio] Loopback FIRST CALLBACK (f32): {} raw samples, {} channels → mono downmix + resample",
+                        elog!("[Audio] Loopback FIRST CALLBACK (f32): {} raw samples, {} channels → mono downmix + resample",
                             data.len(), loopback_channels);
                     }
 

@@ -25,6 +25,14 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
+            applog::init(app.path().app_data_dir()?.join("logs"));
+            let default = std::panic::take_hook();
+            std::panic::set_hook(Box::new(move |info| {
+                // Panic payloads may contain transcript text; persist only the source location.
+                let location = info.location().map(|l| l.to_string()).unwrap_or_default();
+                applog::write("error", "panic", &format!("panic at {location}"));
+                default(info);
+            }));
             let main_window = app.get_webview_window("main").unwrap();
 
             // Apply Windows 11 Mica effect to main window
@@ -32,7 +40,7 @@ pub fn run() {
             {
                 use window_vibrancy::apply_mica;
                 if let Err(e) = apply_mica(&main_window, Some(true)) {
-                    eprintln!("[Window] Mica effect niet beschikbaar: {}", e);
+                    elog!("[Window] Mica effect niet beschikbaar: {}", e);
                 }
             }
 
@@ -44,7 +52,7 @@ pub fn run() {
             let app_handle2 = app.handle().clone();
             app.listen("deep-link://new-url", move |event| {
                 let payload = event.payload().to_string();
-                eprintln!("[DeepLink] OAuth callback ontvangen");
+                elog!("[DeepLink] OAuth callback ontvangen");
 
                 if let Some(window) = app_handle2.get_webview_window("main") {
                     let _ = window.emit("oauth-callback", payload);
@@ -60,6 +68,11 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            applog::log_write,
+            applog::log_tail,
+            applog::log_scrub,
+            applog::session_begin,
+            applog::session_stage,
             // Audio
             commands::audio::get_audio_devices,
             commands::audio::start_recording,
@@ -108,6 +121,11 @@ pub fn run() {
             personal_corrections::write_context_file,
             personal_corrections::set_aside_context_file,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|_app, event| {
+            if let tauri::RunEvent::Exit = event {
+                applog::session_end();
+            }
+        });
 }

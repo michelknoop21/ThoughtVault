@@ -264,7 +264,7 @@ pub async fn migrate_recordings_dir() -> Result<u32, String> {
         // Best-effort cleanup of the now-empty legacy folder
         let _ = std::fs::remove_dir(&old_dir);
 
-        eprintln!("[Filesystem] Migrated {} recording(s) from %APPDATA% to %LOCALAPPDATA%", moved);
+        elog!("[Filesystem] Migrated {} recording(s) from %APPDATA% to %LOCALAPPDATA%", moved);
         Ok(moved)
     }
 }
@@ -389,7 +389,7 @@ pub async fn concatenate_wav_files(
     writer.finalize().map_err(|e| e.to_string())?;
 
     let duration = total_samples as f64 / 16000.0;
-    eprintln!("[Concat] {} bestanden samengevoegd → {} ({:.1}s)", input_paths.len(), output_path, duration);
+    elog!("[Concat] {} bestanden samengevoegd → {} ({:.1}s)", input_paths.len(), output_path, duration);
 
     Ok(output_path)
 }

@@ -1,12 +1,12 @@
 //! Masked, rotating log file plus a session marker that detects crashes.
-//! All functions take the log directory so tests can run on a temp dir.
+//! Directory-based helpers keep file behavior testable without global state.
 
 use sha2::{Digest, Sha256};
 use std::fs;
 use std::io::Write;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Mutex;
+use std::sync::{Mutex, OnceLock};
 use std::time::{Duration, SystemTime};
 
 pub const MAX_BYTES: u64 = 2_500_000;
@@ -18,6 +18,17 @@ const ROTATED: &str = "thoughtvault.1.log";
 const MARKER: &str = "session.open";
 // Rotation, reads and pruning share the same files across background threads.
 static LOG_LOCK: Mutex<()> = Mutex::new(());
+static LOG_DIR: OnceLock<PathBuf> = OnceLock::new();
+static LOG_QUEUE: OnceLock<std::sync::mpsc::SyncSender<LogEntry>> = OnceLock::new();
+static SESSION_STARTED: AtomicBool = AtomicBool::new(false);
+const QUEUE_CAPACITY: usize = 256;
+const MAX_RUNTIME_CHARS: usize = 2_000;
+
+enum LogEntry {
+    Line(String, String, String),
+    #[cfg(test)]
+    Flush(std::sync::mpsc::Sender<()>),
+}
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize)]
 pub struct PreviousSession {
@@ -180,182 +191,95 @@ pub fn session_end_at(dir: &Path) {
     let _ = fs::remove_file(dir.join(MARKER));
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn append_writes_level_category_and_scrubbed_message() {
-        let d = tempfile::tempdir().unwrap();
-        append(d.path(), "error", "Fout", r#"open "C:\Users\Jan\x.wav" mislukt"#).unwrap();
-        let text = std::fs::read_to_string(d.path().join("thoughtvault.log")).unwrap();
-        assert!(text.contains(" ERROR [Fout] open \"k-"));
-        assert!(!text.contains("Jan"));
-        assert!(text.ends_with("\" mislukt\n"));
-    }
-
-    #[test]
-    fn rotates_when_the_next_line_would_exceed_the_limit() {
-        let d = tempfile::tempdir().unwrap();
-        std::fs::write(d.path().join("thoughtvault.log"), vec![b'a'; (MAX_BYTES - 10) as usize])
-            .unwrap();
-        append(d.path(), "info", "Test", "volgende regel").unwrap();
-        assert_eq!(
-            std::fs::metadata(d.path().join("thoughtvault.1.log")).unwrap().len(),
-            MAX_BYTES - 10
-        );
-        assert!(std::fs::read_to_string(d.path().join("thoughtvault.log"))
-            .unwrap()
-            .contains("volgende regel"));
-    }
-
-    #[test]
-    fn prune_removes_rotated_file_older_than_seven_days() {
-        let d = tempfile::tempdir().unwrap();
-        let old = d.path().join("thoughtvault.1.log");
-        std::fs::write(&old, "x").unwrap();
-        let now = std::time::SystemTime::now();
-        std::fs::File::options()
-            .write(true)
-            .open(&old)
-            .unwrap()
-            .set_modified(now - std::time::Duration::from_secs(6 * 86_400))
-            .unwrap();
-        prune(d.path(), now);
-        assert!(old.exists());
-        std::fs::File::options()
-            .write(true)
-            .open(&old)
-            .unwrap()
-            .set_modified(now - std::time::Duration::from_secs(8 * 86_400))
-            .unwrap();
-        prune(d.path(), now);
-        assert!(!old.exists());
-    }
-
-    #[test]
-    fn tail_spans_both_files_and_starts_on_a_line_boundary() {
-        let d = tempfile::tempdir().unwrap();
-        let lines =
-            |r: std::ops::Range<u32>| r.map(|i| format!("line-{i:04}\n")).collect::<String>(); // 10 bytes each
-        std::fs::write(d.path().join("thoughtvault.1.log"), lines(0..5)).unwrap();
-        std::fs::write(d.path().join("thoughtvault.log"), lines(5..10)).unwrap();
-        let t = tail(d.path(), 75).unwrap();
-        assert_eq!(t, lines(3..10)); // 70 bytes, the partial line before is dropped
-        assert!(tail(d.path(), 10_000_000).unwrap().len() as u64 <= TAIL_LIMIT);
-    }
-
-    #[test]
-    fn mask_token_is_stable_and_short() {
-        let a = mask_token("Overleg Gemeente");
-        assert_eq!(a, mask_token("Overleg Gemeente"));
-        assert_ne!(a, mask_token("Overleg Provincie"));
-        assert!(
-            a.starts_with("k-") && a.len() == 8 && a[2..].chars().all(|c| c.is_ascii_hexdigit())
-        );
-    }
-
-    #[test]
-    fn scrub_masks_emails_and_windows_paths_with_spaces() {
-        let s = scrub(r"Bestand niet gevonden: C:\Users\Jan\Documents\Overleg Gemeente.wav");
-        assert!(s.starts_with("Bestand niet gevonden: k-"));
-        assert!(!s.contains("Jan") && !s.contains("Overleg"));
-        let q = scrub(r#"open "C:\Users\Jan\a b.wav": os error 2"#);
-        assert!(q.ends_with(r#"": os error 2"#) && !q.contains("Jan"));
-        let unc = scrub(r"\\server\share\Klant X\notulen.txt kon niet worden gelezen");
-        assert!(!unc.contains("Klant"));
-        let m = scrub("mail jan.devries@example.nl faalde");
-        assert_eq!(m, format!("mail {} faalde", mask_token("jan.devries@example.nl")));
-        assert_eq!(scrub("Model niet geladen na 30 s"), "Model niet geladen na 30 s");
-        assert_eq!(scrub("mail a@example.com."), format!("mail {}", mask_token("a@example.com.")));
-        assert_eq!(
-            scrub(r"open C:\Users\Jan\x.wav mislukt"),
-            format!("open {}", mask_token(r"C:\Users\Jan\x.wav mislukt"))
-        );
-        for path in [r"C:\Users\Jan\meeting.wav", "C:/Users/Jan/meeting.wav"] {
-            assert_eq!(
-                scrub(&format!("open path_{path}")),
-                format!("open path_{}", mask_token(path))
-            );
-        }
-    }
-
-    #[test]
-    fn rotation_replaces_an_existing_rotated_file() {
-        let d = tempfile::tempdir().unwrap();
-        fs::write(d.path().join(ROTATED), "old").unwrap();
-        fs::write(d.path().join(CURRENT), vec![b'a'; MAX_BYTES as usize]).unwrap();
-        append(d.path(), "info", "Test", "new").unwrap();
-        assert_eq!(fs::metadata(d.path().join(ROTATED)).unwrap().len(), MAX_BYTES);
-    }
-
-    #[test]
-    fn tail_ignores_missing_files_but_propagates_other_errors() {
-        let d = tempfile::tempdir().unwrap();
-        assert_eq!(tail(d.path(), 100).unwrap(), "");
-        fs::create_dir(d.path().join(CURRENT)).unwrap();
-        assert!(tail(d.path(), 100).is_err());
-    }
-
-    #[test]
-    fn concurrent_appends_keep_every_line() {
-        let d = tempfile::tempdir().unwrap();
-        std::thread::scope(|scope| {
-            for _ in 0..8 {
-                scope.spawn(|| {
-                    for _ in 0..20 {
-                        append(d.path(), "info", "Test", "concurrent").unwrap();
+pub fn init(dir: PathBuf) {
+    LOG_DIR.get_or_init(|| {
+        let _ = fs::create_dir_all(&dir);
+        prune(&dir, SystemTime::now());
+        let (tx, rx) = std::sync::mpsc::sync_channel(QUEUE_CAPACITY);
+        let writer_dir = dir.clone();
+        let writer = std::thread::Builder::new().name("applog".into()).spawn(move || {
+            while let Ok(entry) = rx.recv() {
+                match entry {
+                    LogEntry::Line(level, category, message) => {
+                        let category = scrub(&category.replace(['\r', '\n', '[', ']'], " "));
+                        // Scrub before truncating so a cut cannot expose part of a path or email.
+                        let category: String = category.chars().take(MAX_RUNTIME_CHARS).collect();
+                        let message: String = scrub(&message).chars()
+                            .take(MAX_RUNTIME_CHARS - category.chars().count()).collect();
+                        let _ = append(&writer_dir, &level, &category, &message);
                     }
-                });
+                    #[cfg(test)]
+                    LogEntry::Flush(done) => { let _ = done.send(()); }
+                }
             }
         });
-        assert_eq!(tail(d.path(), TAIL_LIMIT).unwrap().lines().count(), 160);
-    }
+        if writer.is_ok() { let _ = LOG_QUEUE.set(tx); }
+        dir
+    });
+}
 
-    #[test]
-    fn tail_handles_line_boundaries_zero_limits_and_unicode() {
-        let d = tempfile::tempdir().unwrap();
-        fs::write(d.path().join(CURRENT), "eerste\nlaatst é\n").unwrap();
-        assert_eq!(tail(d.path(), "laatst é\n".len() as u64).unwrap(), "laatst é\n");
-        assert_eq!(tail(d.path(), 0).unwrap(), "");
-        assert_eq!(tail(d.path(), 2).unwrap(), "");
-    }
-
-    #[test]
-    fn invalid_marker_still_reports_a_previous_crash() {
-        let d = tempfile::tempdir().unwrap();
-        fs::write(d.path().join(MARKER), [255]).unwrap();
-        assert_eq!(session_begin_at(d.path()), PreviousSession { crashed: true, stage: None });
-    }
-
-    #[test]
-    fn session_marker_reports_crash_with_running_stage() {
-        let d = tempfile::tempdir().unwrap();
-        assert_eq!(session_begin_at(d.path()), PreviousSession { crashed: false, stage: None });
-        session_stage_at(d.path(), Some("transcriberen")).unwrap();
-        assert_eq!(
-            session_begin_at(d.path()),
-            PreviousSession { crashed: true, stage: Some("transcriberen".into()) }
-        );
-        session_end_at(d.path());
-        assert_eq!(session_begin_at(d.path()), PreviousSession { crashed: false, stage: None });
-        session_stage_at(d.path(), None).unwrap();
-        assert_eq!(session_begin_at(d.path()), PreviousSession { crashed: true, stage: None });
-    }
-
-    #[test]
-    fn session_begin_once_reports_clean_on_later_calls() {
-        let d = tempfile::tempdir().unwrap();
-        std::fs::create_dir_all(d.path()).unwrap();
-        std::fs::write(d.path().join("session.open"), "notule").unwrap();
-        let started = std::sync::atomic::AtomicBool::new(false);
-        assert_eq!(
-            session_begin_once(d.path(), &started),
-            PreviousSession { crashed: true, stage: Some("notule".into()) }
-        );
-        assert_eq!(
-            session_begin_once(d.path(), &started),
-            PreviousSession { crashed: false, stage: None }
-        );
+/// Audio callbacks must not wait for log-file I/O or LOG_LOCK.
+pub fn write(level: &str, category: &str, message: &str) {
+    if let Some(queue) = LOG_QUEUE.get() {
+        let level = match level {
+            "error" | "warn" | "debug" | "trace" => level,
+            _ => "info",
+        };
+        // shortcut: a full queue drops diagnostics; use durable logging if the session marker is insufficient.
+        let _ = queue.try_send(LogEntry::Line(level.into(), category.into(), message.into()));
     }
 }
+
+macro_rules! elog {
+    ($($arg:tt)*) => {{
+        let line = format!($($arg)*);
+        eprintln!("{}", line);
+        $crate::applog::write("info", "rust", &line);
+    }};
+}
+
+#[tauri::command]
+pub fn log_write(level: String, category: String, message: String) {
+    write(&level, &category, &message);
+}
+
+#[tauri::command]
+pub fn log_tail(max_bytes: u64) -> Result<String, String> {
+    // Pending diagnostics may not have reached the file yet.
+    match LOG_DIR.get() {
+        Some(dir) => tail(dir, max_bytes).map_err(|e| e.to_string()),
+        None => Ok(String::new()),
+    }
+}
+
+#[tauri::command]
+pub fn log_scrub(text: String) -> String {
+    scrub(&text)
+}
+
+#[tauri::command]
+pub fn session_begin() -> PreviousSession {
+    match LOG_DIR.get() {
+        Some(dir) => session_begin_once(dir, &SESSION_STARTED),
+        None => PreviousSession { crashed: false, stage: None },
+    }
+}
+
+#[tauri::command]
+pub fn session_stage(stage: Option<String>) {
+    if let Some(dir) = LOG_DIR.get() {
+        let stage = stage.map(|s| scrub(&s));
+        let _ = session_stage_at(dir, stage.as_deref());
+    }
+}
+
+pub fn session_end() {
+    // The crash marker is synchronous even when diagnostics remain queued.
+    if let Some(dir) = LOG_DIR.get() {
+        session_end_at(dir);
+    }
+}
+
+#[cfg(test)]
+#[path = "applog_tests.rs"]
+mod tests;

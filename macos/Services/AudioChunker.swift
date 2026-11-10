@@ -8,9 +8,8 @@
 
 import Foundation
 import AVFoundation
-import OSLog
 
-private let logger = Logger(subsystem: "com.buildmind.ThoughtVault", category: "AudioChunker")
+private let logger = AppLog(category: "AudioChunker")
 
 enum AudioChunker {
 
@@ -193,7 +192,7 @@ enum AudioChunker {
         }
 
         let count = created.count
-        logger.info("Chunked \(url.lastPathComponent) into \(count) chunk(s) of ≤\(Int(chunkDuration))s")
+        logger.info("Chunked \(LogRedact.mask(url.lastPathComponent)) into \(count) chunk(s) of ≤\(Int(chunkDuration))s")
         return created
     }
 }

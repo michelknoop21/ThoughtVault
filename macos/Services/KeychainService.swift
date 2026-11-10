@@ -16,14 +16,15 @@ final class KeychainService: Sendable {
     static let shared = KeychainService()
 
     /// Tests get their own keychain service so they never touch the user's real tokens.
-    private let serviceIdentifier: String = {
+    private static var defaultServiceIdentifier: String {
         if AppEnvironment.isRunningTests { return "com.buildmind.ThoughtVault.tests" }
         #if DEBUG
         // Screenshot builds (bundle id `.screens`) must never read the real app's items.
-        if Bundle.main.bundleIdentifier?.hasSuffix(".screens") == true { return "com.buildmind.ThoughtVault.screens" }
+        if let bundleID = Bundle.main.bundleIdentifier, bundleID.hasSuffix(".screens") { return bundleID }
         #endif
         return "com.buildmind.ThoughtVault"
-    }()
+    }
+    private let serviceIdentifier: String
 
     /// Keys that sync via iCloud Keychain so a Mac-configured credential is
     /// available on the iPhone (e.g. the Ollama Cloud API key).
@@ -37,9 +38,11 @@ final class KeychainService: Sendable {
 
     /// The SecItem functions are injectable so tests can force write failures.
     init(
+        serviceIdentifier: String? = nil,
         add: @escaping AddFunction = { SecItemAdd($0, nil) },
         update: @escaping UpdateFunction = { SecItemUpdate($0, $1) }
     ) {
+        self.serviceIdentifier = serviceIdentifier ?? Self.defaultServiceIdentifier
         self.add = add
         self.update = update
     }

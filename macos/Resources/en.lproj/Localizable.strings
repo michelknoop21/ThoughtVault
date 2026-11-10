@@ -452,3 +452,42 @@
 "Woord toevoegen" = "Add word";
 "Woord corrigeren" = "Correct word";
 "Onthouden voor volgende opnames" = "Remember for future recordings";
+
+/* Support identity */
+"Voor wie zijn de antwoorden?" = "Who are the replies for?";
+"Antwoorden op je meldingen verschijnen in de app en komen per e-mail." = "Replies to your reports appear in the app and arrive by email.";
+"Gaat er iets mis bij opnemen, transcriberen of de notule, dan stuurt ThoughtVault automatisch een foutrapport met app-versie, apparaat, je klikpad en een afgeschermd logbestand naar de ontwikkelaar. Je opnames, transcripties, notules en titels gaan nooit mee." = "If something goes wrong while recording, transcribing or generating minutes, ThoughtVault automatically sends an error report with the app version, device, your click path and a redacted log file to the developer. Your recordings, transcripts, minutes and titles are never included.";
+"Doorgaan" = "Continue";
+"Dit e-mailadres klopt niet." = "This email address is not valid.";
+
+/* Support center */
+"Support" = "Support";
+"Melding maken" = "Create report";
+"Mijn meldingen" = "My reports";
+"Terug naar Mijn meldingen" = "Back to My reports";
+"Categorie" = "Category";
+"Fout" = "Bug";
+"Idee" = "Idea";
+"Vraag" = "Question";
+"Omschrijving" = "Description";
+"Versturen" = "Send";
+"Verstuurd. Het antwoord zie je in Mijn meldingen en in je e-mail." = "Sent. You will see the reply in My reports and in your email.";
+"Geen verbinding. De melding gaat vanzelf de deur uit zodra je weer online bent." = "No connection. Your report will be sent automatically when you are back online.";
+"Versturen lukte niet. Probeer het zo nog eens." = "Sending failed. Please try again shortly.";
+"Nog geen meldingen. Via Melding maken stuur je een fout, idee of vraag." = "No reports yet. Use Create report to send a bug, idea or question.";
+"Ongelezen" = "Unread";
+"In behandeling" = "In progress";
+"Wacht op jou" = "Waiting for you";
+"Opgelost" = "Resolved";
+"Gesloten" = "Closed";
+"Antwoord" = "Reply";
+"Stuur" = "Send";
+
+"Foutrapporten automatisch versturen" = "Automatically send error reports";
+
+/* Support window and navigation unread count */
+"Meldingen" = "Reports";
+"Melding maken…" = "Create report…";
+"%lld ongelezen meldingen" = "%lld unread reports";
+
+"support.privacy.link" = "Privacy statement";

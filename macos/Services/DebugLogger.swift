@@ -1,5 +1,4 @@
 import Foundation
-import OSLog
 
 // MARK: - Log Level
 
@@ -37,7 +36,7 @@ enum LogLevel: Int, Comparable, CustomStringConvertible {
 /// Application-wide debug logger.
 ///
 /// In DEBUG builds, messages are printed to the Xcode console with level, subsystem, and message.
-/// In RELEASE builds, logging is silent — no output is produced and no data is written to disk.
+/// Errors are masked and written to AppLog in every build; other levels keep their existing behavior.
 final class DebugLogger: @unchecked Sendable {
 
     static let shared = DebugLogger()
@@ -46,16 +45,12 @@ final class DebugLogger: @unchecked Sendable {
     /// Defaults to `.debug` in DEBUG builds, `.error` in RELEASE builds.
     var minimumLevel: LogLevel
 
-    private let subsystem = "com.buildmind.ThoughtVault"
-    private let osLogger: Logger
-
     private init() {
         #if DEBUG
         self.minimumLevel = .debug
         #else
         self.minimumLevel = .error
         #endif
-        self.osLogger = Logger(subsystem: "com.buildmind.ThoughtVault", category: "App")
     }
 
     // MARK: - Logging Methods
@@ -75,7 +70,7 @@ final class DebugLogger: @unchecked Sendable {
         log(level: .warning, message: message, category: category, file: file, line: line)
     }
 
-    /// Logs an error-level message. Also reported to CrashReporter in release builds.
+    /// Logs a masked error-level message through AppLog in every build.
     func error(_ message: String, category: String = "General", file: String = #file, line: Int = #line) {
         log(level: .error, message: message, category: category, file: file, line: line)
     }
@@ -84,23 +79,21 @@ final class DebugLogger: @unchecked Sendable {
     func error(_ error: Error, context: String? = nil, category: String = "General", file: String = #file, line: Int = #line) {
         let contextPrefix = context.map { "[\($0)] " } ?? ""
         let message = "\(contextPrefix)\(error.localizedDescription)"
-        log(level: .error, message: message, category: category, file: file, line: line)
+        log(level: .error, message: message, category: category, file: file, line: line, errorCode: (error as NSError).code)
     }
 
     // MARK: - Core Log
 
-    private func log(level: LogLevel, message: String, category: String, file: String, line: Int) {
+    private func log(level: LogLevel, message: String, category: String, file: String, line: Int, errorCode: Int? = nil) {
         guard level >= minimumLevel else { return }
+
+        let message = level == .error ? LogRedact.mask(message) + (errorCode.map { " (code: \($0))" } ?? "") : message
+        if level == .error { AppLog(category: category).error(message) }
 
         #if DEBUG
         let filename = URL(fileURLWithPath: file).lastPathComponent
         let output = "\(level.emoji) [\(level)] [\(category)] \(filename):\(line) — \(message)"
         print(output)
-        #else
-        // In release: only log errors to the system log via OSLog (no console output)
-        if level == .error {
-            osLogger.error("\(message, privacy: .public)")
-        }
         #endif
     }
 }

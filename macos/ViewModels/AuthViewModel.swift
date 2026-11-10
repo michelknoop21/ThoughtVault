@@ -2,10 +2,9 @@
 import AppKit
 #endif
 import Foundation
-import OSLog
 import SwiftUI
 
-private let logger = Logger(subsystem: "com.buildmind.ThoughtVault", category: "AuthViewModel")
+private let logger = AppLog(category: "AuthViewModel")
 
 // MARK: - Notification Name
 
@@ -71,7 +70,7 @@ final class AuthViewModel {
                     _ = try await APIService.shared.getProfiles()
                     logger.info("Token validated against backend.")
                 } catch {
-                    logger.warning("Token validation failed: \(error.localizedDescription) — user stays authenticated.")
+                    logger.warning("Token validation failed: \(LogRedact.mask(error.localizedDescription)) — user stays authenticated.")
                     // Show non-disruptive message if needed — the user stays logged in
                 }
             }
@@ -122,7 +121,7 @@ final class AuthViewModel {
                 do {
                     try await BiometricService.shared.saveTokenWithBiometrics(token)
                 } catch {
-                    logger.error("Failed to save biometric token: \(error.localizedDescription)")
+                    logger.error("Failed to save biometric token: \(LogRedact.mask(error.localizedDescription))")
                 }
             }
 
@@ -130,7 +129,7 @@ final class AuthViewModel {
             do {
                 userInfo = try await APIService.shared.getCurrentUser()
             } catch {
-                logger.error("Failed to fetch current user after login: \(error.localizedDescription)")
+                logger.error("Failed to fetch current user after login: \(LogRedact.mask(error.localizedDescription))")
                 userInfo = nil
             }
 
@@ -140,12 +139,12 @@ final class AuthViewModel {
             isAuthenticated = true
             isLoading = false
 
-            logger.info("Login succeeded for \(email, privacy: .private).")
+            logger.info("Login succeeded for \(LogRedact.mask(email)).")
 
         } catch {
             isLoading = false
             errorMessage = dutchErrorMessage(for: error)
-            logger.error("Login failed: \(error.localizedDescription)")
+            logger.error("Login failed: \(LogRedact.mask(error.localizedDescription))")
         }
     }
 
@@ -181,7 +180,7 @@ final class AuthViewModel {
                 do {
                     try await BiometricService.shared.saveTokenWithBiometrics(token)
                 } catch {
-                    logger.error("Failed to save biometric token after 2FA: \(error.localizedDescription)")
+                    logger.error("Failed to save biometric token after 2FA: \(LogRedact.mask(error.localizedDescription))")
                 }
             }
 
@@ -189,7 +188,7 @@ final class AuthViewModel {
             do {
                 userInfo = try await APIService.shared.getCurrentUser()
             } catch {
-                logger.error("Failed to fetch current user after 2FA: \(error.localizedDescription)")
+                logger.error("Failed to fetch current user after 2FA: \(LogRedact.mask(error.localizedDescription))")
                 userInfo = nil
             }
 
@@ -206,7 +205,7 @@ final class AuthViewModel {
         } catch {
             isLoading = false
             errorMessage = dutchErrorMessage(for: error)
-            logger.error("Two-factor verification failed: \(error.localizedDescription)")
+            logger.error("Two-factor verification failed: \(LogRedact.mask(error.localizedDescription))")
         }
     }
 
@@ -265,7 +264,7 @@ final class AuthViewModel {
             do {
                 userInfo = try await APIService.shared.getCurrentUser()
             } catch {
-                logger.error("Failed to fetch current user after biometric login: \(error.localizedDescription)")
+                logger.error("Failed to fetch current user after biometric login: \(LogRedact.mask(error.localizedDescription))")
                 userInfo = nil
             }
             currentUser = userInfo
@@ -278,7 +277,7 @@ final class AuthViewModel {
         } catch {
             isLoading = false
             errorMessage = dutchErrorMessage(for: error)
-            logger.error("Biometric login error: \(error.localizedDescription)")
+            logger.error("Biometric login error: \(LogRedact.mask(error.localizedDescription))")
         }
     }
 
@@ -365,7 +364,7 @@ final class AuthViewModel {
                     _ = try await APIService.shared.getProfiles()
                     logger.info("Token still valid after wake.")
                 } catch {
-                    logger.warning("Token validation failed after wake: \(error.localizedDescription) — user stays authenticated.")
+                    logger.warning("Token validation failed after wake: \(LogRedact.mask(error.localizedDescription)) — user stays authenticated.")
                 }
             }
         }

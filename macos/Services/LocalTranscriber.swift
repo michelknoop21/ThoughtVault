@@ -9,10 +9,9 @@
 
 import Foundation
 import AVFoundation
-import OSLog
 import SwiftData
 
-private let logger = Logger(subsystem: "com.buildmind.ThoughtVault", category: "LocalTranscriber")
+private let logger = AppLog(category: "LocalTranscriber")
 
 // MARK: - PersonalVocabulary
 
@@ -65,7 +64,7 @@ enum PersonalVocabulary {
         var known = Set(entries.map { $0.canonical.lowercased() })
         for term in legacy.components(separatedBy: CharacterSet(charactersIn: ",\n")).map({ $0.trimmingCharacters(in: .whitespacesAndNewlines) })
         where !term.isEmpty {
-            guard PersonalCorrections.validTerm(term) else { logger.info("Legacy term skipped during migration: \(term, privacy: .public)"); continue }
+            guard PersonalCorrections.validTerm(term) else { logger.info("Legacy term skipped during migration: \(LogRedact.mask(term))"); continue }
             if known.insert(term.lowercased()).inserted { entries.append(PersonalCorrection(canonical: term, variants: [])) }
         }
         if entries.count != before { try PersonalCorrections.save(entries, to: path) }
@@ -191,7 +190,7 @@ enum AudioPreConverter {
             }
         }
 
-        logger.info("Pre-converted \(url.lastPathComponent) → 16kHz mono WAV")
+        logger.info("Pre-converted \(LogRedact.mask(url.lastPathComponent)) → 16kHz mono WAV")
         return outputURL
     }
 
@@ -386,7 +385,7 @@ final class WhisperKitTranscriber: LocalTranscriber, @unchecked Sendable {
                 wavURL = try await AudioPreConverter.convertToWav16k(url)
             } catch {
                 // If conversion fails, try the original file — WhisperKit may still handle it.
-                logger.warning("Pre-conversion failed (\(error.localizedDescription)), trying original file")
+                logger.warning("Pre-conversion failed (\(LogRedact.mask(error.localizedDescription))), trying original file")
                 wavURL = url
             }
             // The converted copy is a temp file of ~170 MB per recorded hour;
@@ -475,7 +474,7 @@ final class WhisperKitTranscriber: LocalTranscriber, @unchecked Sendable {
         } catch let error as LocalTranscriberError {
             throw error
         } catch {
-            logger.error("WhisperKit failed: \(error.localizedDescription)")
+            logger.error("WhisperKit failed: \(LogRedact.mask(error.localizedDescription))")
             throw LocalTranscriberError.transcriptionFailed(error.localizedDescription)
         }
     }

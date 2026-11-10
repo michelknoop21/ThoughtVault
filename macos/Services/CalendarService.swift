@@ -1,8 +1,7 @@
 import Foundation
 import EventKit
-import OSLog
 
-private let logger = Logger(subsystem: "com.buildmind.ThoughtVault", category: "CalendarService")
+private let logger = AppLog(category: "CalendarService")
 
 // MARK: - MeetingPlatform
 
@@ -123,7 +122,7 @@ final class CalendarService: @unchecked Sendable {
             }
         } catch {
             await MainActor.run { self.hasCalendarAccess = false }
-            logger.error("CalendarService: access request failed — \(error.localizedDescription)")
+            logger.error("CalendarService: access request failed — \(LogRedact.mask(error.localizedDescription))")
         }
     }
 

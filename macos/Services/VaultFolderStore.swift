@@ -12,10 +12,9 @@
 // REST path stays in use (macOS only).
 
 import Foundation
-import OSLog
 import CryptoKit
 
-private let logger = Logger(subsystem: "com.buildmind.ThoughtVault", category: "VaultFolderStore")
+private let logger = AppLog(category: "VaultFolderStore")
 
 enum VaultFolderStore {
 
@@ -83,7 +82,7 @@ enum VaultFolderStore {
             if stale { try? setFolder(url) }   // refresh the bookmark opportunistically
             return try body(url)
         } catch {
-            logger.error("Vault-bookmark onbruikbaar: \(error.localizedDescription)")
+            logger.error("Vault-bookmark onbruikbaar: \(LogRedact.mask(error.localizedDescription))")
             return nil
         }
     }
@@ -163,7 +162,7 @@ enum VaultFolderStore {
             let fileURL = dir.appendingPathComponent(filename)
             if let existing = try? String(contentsOf: fileURL, encoding: .utf8), existing != markdown {
                 guard UserDefaults.standard.string(forKey: syncKey(filename)) == digest(existing) else {
-                    logger.warning("Obsidian-notule is extern gewijzigd: \(filename)")
+                    logger.warning("Obsidian-notule is extern gewijzigd: \(LogRedact.mask(filename))")
                     return .externallyChanged
                 }
             }

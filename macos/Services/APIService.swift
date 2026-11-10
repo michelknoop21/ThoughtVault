@@ -1,9 +1,8 @@
 import Foundation
 import SwiftUI
-import OSLog
 import UniformTypeIdentifiers
 
-private let logger = Logger(subsystem: "com.buildmind.ThoughtVault", category: "APIService")
+private let logger = AppLog(category: "APIService")
 
 // MARK: - URL Validation Error
 
@@ -231,7 +230,7 @@ actor APIService {
             return try handleResponse(data: data, response: response)
         } catch APIError.sessionExpired where !retriedAuth {
             // Retry 401 once after 2s (transient server issues) — never auto-logout
-            logger.warning("401 on \(req.url?.path ?? "?") — retrying in 2s")
+            logger.warning("401 on \(LogRedact.mask(req.url?.path ?? "?")) — retrying in 2s")
             try await Task.sleep(nanoseconds: 2_000_000_000)
             return try await perform(req, retries: retries, retriedAuth: true)
         } catch let apiErr as APIError {
@@ -252,7 +251,7 @@ actor APIService {
             let (data, response) = try await session.data(for: req)
             let _: EmptyResponse = try handleResponse(data: data, response: response)
         } catch APIError.sessionExpired where !retriedAuth {
-            logger.warning("401 on \(req.url?.path ?? "?") — retrying in 2s")
+            logger.warning("401 on \(LogRedact.mask(req.url?.path ?? "?")) — retrying in 2s")
             try await Task.sleep(nanoseconds: 2_000_000_000)
             return try await performVoid(req, retries: retries, retriedAuth: true)
         } catch let apiErr as APIError {
@@ -309,7 +308,7 @@ actor APIService {
         do {
             return try decoder.decode(T.self, from: data)
         } catch {
-            logger.error("Decoding error for \(T.self): \(error)")
+            logger.error("Decoding error for \(T.self): \(LogRedact.mask(String(describing: error)))")
             throw APIError.decodingError(error)
         }
     }
@@ -684,10 +683,10 @@ actor APIService {
         let req = try request(path: "/transcripts/\(taskId)")
         let (data, response) = try await session.data(for: req)
         let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
-        logger.info("GET transcript \(taskId): HTTP \(statusCode), \(data.count) bytes")
+        logger.info("GET transcript \(LogRedact.mask(taskId)): HTTP \(statusCode), \(data.count) bytes")
         if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
             let keys = json.keys.sorted().joined(separator: ", ")
-            logger.info("Response keys: \(keys)")
+            logger.info("Response keys: \(LogRedact.mask(keys))")
             let notulePresent = json["notule_html"] != nil && !(json["notule_html"] as? String ?? "").isEmpty
             let resultPresent = json["result"] != nil && !(json["result"] as? String ?? "").isEmpty
             let rawPresent = json["raw_transcription"] != nil && !(json["raw_transcription"] as? String ?? "").isEmpty
@@ -1238,7 +1237,7 @@ final class SSEClient: @unchecked Sendable {
                 onEvent?(.completed)
             }
         } catch {
-            logger.debug("SSE: Could not decode event data as TranscriptTask: \(error)")
+            logger.debug("SSE: Could not decode event data as TranscriptTask: \(LogRedact.mask(String(describing: error)))")
         }
     }
 

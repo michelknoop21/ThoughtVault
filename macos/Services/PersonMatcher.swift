@@ -6,9 +6,8 @@
 // organization or aliases are only ever proposed, never written.
 
 import Foundation
-import OSLog
 
-private let logger = Logger(subsystem: "com.buildmind.ThoughtVault", category: "PersonMatcher")
+private let logger = AppLog(category: "PersonMatcher")
 
 enum MatchResult: Equatable {
     case existing(id: String)
@@ -83,7 +82,7 @@ enum PersonMatcher {
                         kept.people.append(rest)
                     }
                 } catch {
-                    logger.error("Auto-apply failed: \(error.localizedDescription, privacy: .public)")
+                    logger.error("Auto-apply failed: \(LogRedact.mask(error.localizedDescription))")
                     var proposal = suggestion
                     proposal.matchedPersonId = id
                     kept.people.append(proposal)
@@ -100,7 +99,7 @@ enum PersonMatcher {
             let participants = linked(record.participants, to: people)
             if participants != record.participants {
                 do { try store.updateParticipants(taskId: taskId, participants: participants) }
-                catch { logger.error("Linking participants failed: \(error.localizedDescription, privacy: .public)") }
+                catch { logger.error("Linking participants failed: \(LogRedact.mask(error.localizedDescription))") }
             }
         }
         return kept

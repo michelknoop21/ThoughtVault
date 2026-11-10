@@ -420,6 +420,28 @@ final class NotuleAuditTests: XCTestCase {
     func testWarnsSourceResponse_uncertainStringFalse() async { await assertSourceResponseWarns(#"{"uncertain":"false"}"#, unclear) }
     func testWarnsSourceResponse_uncertainZero() async { await assertSourceResponseWarns(#"{"uncertain":0}"#, unclear) }
 
+    // An exact copy of the source skips the model audit only when the source check had no warning.
+    func testExactCopyNeedsTheAuditWhenTheSourceWasUnclear() async throws {
+        let source = "Noor belt vrijdag."
+        let plain = CallLog()
+        try await NotuleAudit.auditNotule(source: source, html: "<p>Noor belt vrijdag.</p>", quickNote: "", request: respond(plain, positive))
+        let plainCount = await plain.count
+        XCTAssertEqual(plainCount, 0)
+        let unclear = CallLog()
+        try await NotuleAudit.auditNotule(source: source, html: "<p>Noor belt vrijdag.</p>", quickNote: "", request: respond(unclear, positive),
+                                          sourceUnclear: true)
+        let unclearCount = await unclear.count
+        XCTAssertEqual(unclearCount, 1)
+    }
+
+    // The warning heading is never the title: the title comes from the notule before it.
+    func testTitleIgnoresTheWarningSection() {
+        let html = "<h1>Notulen</h1><h2>Besluiten</h2><p>Noor neemt vrijdag contact op met de leverancier.</p>"
+        XCTAssertEqual(NotuleTitleExtractor.extract(from: NotuleAudit.appendingWarning(unclear, to: html)),
+                       NotuleTitleExtractor.extract(from: html))
+        XCTAssertEqual(NotuleTitleExtractor.extract(from: html), "Noor neemt vrijdag contact op met de leverancier")
+    }
+
     // The warning goes before </body> when the notule is a full document, otherwise at the end.
     func testWarningIsPlacedBeforeBody() {
         let section = "<h2>Let op: controleer de transcriptie</h2><p>\(unclear)</p>"

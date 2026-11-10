@@ -33,19 +33,18 @@ final class NotuleConstraintTests: XCTestCase {
                        ["éniet doen.", "Er is een OPEN VRAAG.", "NIET doen.", "Niet doen."])
     }
 
-    // Spoken filler with a negation is not a constraint: in the 300-sentence schadebezoek part 60 sentences
-    // were mandatory and the notule copied them verbatim.
-    func testConversationalNegationsAreNotMandatory() {
-        let raw = "Ik denk niet dat het dat is. Dus dat wordt nooit nat. Je kunt het niet zien, natuurlijk. Is dat niet raar? Nee, dat weet ik niet."
+    // A hedged or questioning negation is not a constraint.
+    func testHedgedNegationsAreNotMandatory() {
+        let raw = "Ik denk niet dat het dat is. Misschien zit het niet bij de regenpijp. Is dat niet raar? Nee, dat weet ik niet. Waarschijnlijk niet."
         XCTAssertEqual(NotuleAudit.constraintSentences(raw), [])
     }
 
-    // A number, a permission, a decision or a strong keyword keeps a sentence mandatory, also in spoken form;
-    // a plain third-person negation stays mandatory too.
+    // Every negation without a hedge stays mandatory, also with pronouns or "dus"/"kan" (the review's
+    // examples); a number, a permission, a decision or a strong keyword keeps even a hedged one mandatory.
     func testAnchoredAndFactualNegationsStayMandatory() {
-        let kept = ["Het budget is 12.450 euro inclusief btw, niet 15.000 euro.", "We mogen geen klantgegevens doorsturen.",
+        let kept = ["We delen geen klantgegevens met derden.", "We starten niet zonder handtekening van de klant.", "Dus de afspraak van vrijdag gaat niet door.", "We betalen geen duizend euro.", "De API kan niet zonder authenticatie worden gebruikt.", "Het budget is 12.450 euro inclusief btw, niet 15.000 euro.", "We mogen geen klantgegevens doorsturen.",
                     "Ik mag alleen de gevolgschade noteren, dat zit er niet in.", "Er is nog geen leverancier gekozen.",
-                    "Bram is afwezig, dus ik weet het niet.", "Is de migratie op 16 november niet doorgegaan?",
+                    "Bram is afwezig, dus ik weet het niet.", "We besluiten dit niet vandaag.", "Is de migratie op 16 november niet doorgegaan?",
                     "De bibliotheek is tijdens de interne proef niet toegankelijk voor bezoekers."]
         XCTAssertEqual(NotuleAudit.constraintSentences(kept.joined(separator: " ")), kept)
     }

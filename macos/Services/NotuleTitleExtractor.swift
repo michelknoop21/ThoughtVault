@@ -54,6 +54,8 @@ enum NotuleTitleExtractor {
     /// Strategies: descriptive heading (h1-h4) → TL;DR/summary paragraph → first
     /// substantial paragraph. Generic words and section headings are skipped.
     static func extract(from html: String) -> String? {
+        // The source warning is appended last; the title comes from the notule before it.
+        let html = html.range(of: NotuleAudit.warningHeading).map { String(html[..<$0.lowerBound]) } ?? html
         // Strategy 1: first descriptive heading (h1–h4)
         for match in regexMatches(#"<(h[1-4])[^>]*>(.*?)</\1>"#, in: html, group: 2) {
             let title = clean(match)

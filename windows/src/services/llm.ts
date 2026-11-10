@@ -265,7 +265,7 @@ export class LLMService {
     let warning: string | null = null;
     try {
       warning = await auditSource(correctText(transcription, corrections, profile.id), quickNote, generate);
-      await auditNotule(correctText(transcription, corrections, profile.id), candidate, quickNote, generate, constraints);
+      await auditNotule(correctText(transcription, corrections, profile.id), candidate, quickNote, generate, constraints, warning !== null);
       const approved = appendSourceWarning(warning, candidate);
       onProgress?.(approved);
       return approved;

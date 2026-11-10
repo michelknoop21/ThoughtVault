@@ -1,5 +1,6 @@
 import DOMPurify from "dompurify";
 import { htmlToPlainText } from "../utils/htmlToMarkdown";
+import { SOURCE_WARNING_HEADING } from "./titleExtractor";
 
 export class NotuleReviewError extends Error {
   constructor(message: string, readonly draftHtml: string) {
@@ -42,21 +43,21 @@ function verdicts(value: unknown, expected: Unit[], references: Unit[], statuses
   });
 }
 
-// Spoken filler ("Ik denk niet dat het dat is") is no constraint. A weak negation counts when the sentence
-// carries a number, a permission or decision word, or reads as a plain statement (no first/second person,
-// no filler word, no question). Strong keywords always count. All QA fixtures keep their constraints.
+// A hedged or questioning negation ("Ik denk niet dat het dat is", "Is dat niet raar?") is no constraint.
+// Every other negation stays mandatory, also with pronouns ("We delen geen klantgegevens"). A number, a
+// permission or decision word, or a strong keyword always keeps it mandatory. All QA fixtures keep their constraints.
 // shortcut: lexical Dutch/English constraints only, never a semantic proof; same lists as NotuleAudit.swift.
 const NEGATION = /\b(niet|geen|niets|nooit|zonder|vervalt|vervallen|afgewezen|afgekeurd|afwezig|onbeslist|onbekend|not|never|without|cancelled|canceled)\b|open vraag/iu;
 const STRONG = /\b(vervalt|vervallen|afgewezen|afgekeurd|afwezig|onbeslist|onbekend|cancelled|canceled)\b|open vraag/iu;
-const ANCHOR = /[0-9]|\b(mag|mogen|moet|moeten|toegestaan|toestemming|verboden|besloten|besluit|goedgekeurd|akkoord|afgesproken|gekozen|geannuleerd|must|may|allowed|approved|decided)\b/iu;
-const SPOKEN = /\b(ik|je|jij|jou|jouw|jullie|we|wij|ons|onze|me|mij|mijn|u|uw|denk|denkt|weet|vind|natuurlijk|eigenlijk|misschien|hoor|nou|ja|nee|toch|gewoon|zeg|dus|maar|want|wel|zo|dan|even|ook|zou|kan|kunnen|waarschijnlijk|i|you|think|know)\b/iu;
+const ANCHOR = /[0-9]|\b(mag|mogen|moet|moeten|toegestaan|toestemming|verboden|besloten|besluit|besluiten|beslissen|beslist|beslissing|goedgekeurd|akkoord|afgesproken|gekozen|geannuleerd|must|may|allowed|approved|decided)\b/iu;
+const HEDGE = /\b(denk|denkt|dacht|weet|weten|misschien|waarschijnlijk|wellicht|vermoed|vermoedelijk|geloof|think|maybe|probably|perhaps|guess)\b/iu;
 
 /** Explicit constraints that remain mandatory audit obligations. A dot between digits belongs to a number. */
 export function constraintSentences(text: string): string[] {
   return [...new Set((text.match(/(?:[^.!?\n]|(?<=\d)\.(?=\d))+[.!?]?/gu) ?? [])
     .map(sentence => sentence.trim())
     .filter(sentence => NEGATION.test(sentence)
-      && (STRONG.test(sentence) || ANCHOR.test(sentence) || !(SPOKEN.test(sentence) || sentence.endsWith("?")))))];
+      && (STRONG.test(sentence) || ANCHOR.test(sentence) || !(HEDGE.test(sentence) || sentence.endsWith("?")))))];
 }
 
 // Accept one complete JSON fence; surrounding prose remains invalid.
@@ -89,8 +90,10 @@ Geef uitsluitend {"uncertain":false} als alle inhoudelijke passages begrijpelijk
 /** Adds the warning as the last section (before </body>), after the audit, so it is never checked as a claim. */
 export function appendSourceWarning(warning: string | null, html: string): string {
   if (!warning) return html;
-  const section = `<h2>Let op: controleer de transcriptie</h2><p>${warning}</p>`;
-  const body = html.toLowerCase().lastIndexOf("</body>");
+  const section = `${SOURCE_WARNING_HEADING}<p>${warning}</p>`;
+  // Index into the original string: toLowerCase() can change the length (İ becomes i plus a dot).
+  let body = -1;
+  for (const match of html.matchAll(/<\/body>/gi)) body = match.index ?? -1;
   return body < 0 ? html + section : html.slice(0, body) + section + html.slice(body);
 }
 
@@ -101,6 +104,8 @@ export async function auditNotule(
   quickNote: string,
   request: (system: string, user: string) => Promise<string>,
   requiredSentences: string[] = [],
+  // The source check warned, so an exact copy of the source still needs the model audit.
+  sourceUnclear = false,
 ): Promise<void> {
   // Only plain semantic HTML has a checkable text representation here, not arbitrary CSS/layout.
   const safe = DOMPurify.sanitize(html);
@@ -113,7 +118,7 @@ export async function auditNotule(
   const noteText = htmlToPlainText(safe);
   if (!normalize(source) || !normalize(noteText)) throw new Error("De bron of notule bevat geen controleerbare tekst");
   // Exact complete source equality cannot omit/add/reverse a source claim. No fuzzy bypass.
-  if (!quickNote.trim() && normalize(noteText) === normalize(source)) return;
+  if (!sourceUnclear && !quickNote.trim() && normalize(noteText) === normalize(source)) return;
   const sourceUnits = [...units(source, "T"), ...units(quickNote, "Q")];
   const noteUnits = units(noteText, "N");
   if (!sourceUnits.length || !noteUnits.length || source.length + quickNote.length + noteText.length > 64_000

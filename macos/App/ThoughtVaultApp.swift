@@ -80,7 +80,7 @@ struct ThoughtVaultApp: App {
                 }
                 .task {
                     #if DEBUG
-                    if IOSDebug.supportSeed || IOSDebug.supportSettingsSnapshot {
+                    if IOSDebug.supportSeed || IOSDebug.supportSettingsSnapshot || IOSDebug.supportBadgeSnapshot {
                         DebugScreenshotSeed.seedSupport(supportVM)
                         return
                     }
@@ -151,10 +151,16 @@ struct ThoughtVaultApp: App {
 #if os(macOS)
         .defaultSize(width: 1100, height: 750)
         .windowStyle(.automatic)
-        .commands { PrintCommands() }
+        .commands { PrintCommands(); SupportCommands(supportVM: supportVM) }
 #endif
 
 #if os(macOS)
+        Window("Meldingen", id: "support") {
+            SupportCenterView()
+                .environment(supportVM)
+                .preferredColorScheme(.dark)
+        }
+
         Settings {
             SettingsView()
                 .preferredColorScheme(.dark)
@@ -190,7 +196,11 @@ struct RootView: View {
     @AppStorage(SupportIdentity.emailKey) private var supportEmail = ""
     @AppStorage("hasCompletedOnboarding") var hasCompletedOnboarding = false
     @Environment(RecordingViewModel.self) private var recordingVM
+    #if os(macOS)
+    @Environment(\.openWindow) private var openWindow
+    #else
     @State private var debugSupportPresented = false
+    #endif
 
     var body: some View {
         Group {
@@ -210,8 +220,14 @@ struct RootView: View {
                 OnboardingView()
             }
         }
+        #if os(macOS)
+        .task {
+            if IOSDebug.supportSeed { openWindow(id: "support") }
+        }
+        #else
         .sheet(isPresented: $debugSupportPresented) { SupportCenterView() }
         .task { debugSupportPresented = IOSDebug.supportSeed }
+        #endif
 #if os(macOS)
         .frame(minWidth: 900, minHeight: 600)
         .onChange(of: recordingVM.recordingState) { _, newState in
@@ -226,3 +242,23 @@ struct RootView: View {
     }
 
 }
+
+#if os(macOS)
+struct SupportCommands: Commands {
+    let supportVM: SupportViewModel
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some Commands {
+        CommandGroup(replacing: .help) {
+            Button("Melding maken…") {
+                supportVM.pane = .report
+                openWindow(id: "support")
+            }
+            Button("Mijn meldingen") {
+                supportVM.pane = .tickets
+                openWindow(id: "support")
+            }
+        }
+    }
+}
+#endif

@@ -32,6 +32,7 @@ enum RecentTranscripts {
 
 #if os(macOS)
 struct MainSidebar: View {
+    @Environment(SupportViewModel.self) private var supportVM
     @Binding var selectedTab: AppTab
     @Binding var collapsed: Bool
     let visibleTabs: [AppTab]
@@ -104,7 +105,7 @@ struct MainSidebar: View {
 
             VStack(spacing: 2) {
                 ForEach(visibleTabs.filter { Self.utilityTabs.contains($0) }) { tab in
-                    SidebarNavItem(tab: tab, isSelected: selectedTab == tab) { selectedTab = tab }
+                    SidebarNavItem(tab: tab, isSelected: selectedTab == tab, unreadCount: tab == .settings ? supportVM.unreadCount : 0) { selectedTab = tab }
                 }
             }
             .padding(.bottom, 12)
@@ -199,6 +200,15 @@ struct MainSidebar: View {
                         }
                 }
                 .buttonStyle(.plain)
+                .overlay(alignment: .topTrailing) {
+                    if tab == .settings && supportVM.unreadCount > 0 {
+                        SupportUnreadBadge(count: supportVM.unreadCount)
+                            .frame(maxWidth: 28)
+                            .offset(x: 4, y: -4)
+                            .allowsHitTesting(false)
+                    }
+                }
+                .accessibilityValue(tab == .settings && supportVM.unreadCount > 0 ? Text("\(supportVM.unreadCount) ongelezen meldingen") : Text(""))
                 .help(tab.title)
             }
             Spacer()
@@ -218,11 +228,28 @@ struct MainSidebar: View {
     }
 }
 
+private struct SupportUnreadBadge: View {
+    let count: Int
+
+    var body: some View {
+        Text("\(count)")
+            .font(.system(size: 10, weight: .semibold))
+            .foregroundStyle(.white)
+            .lineLimit(1)
+            .minimumScaleFactor(0.7)
+            .padding(.horizontal, 4)
+            .frame(minWidth: 18, minHeight: 18)
+            .background(.red, in: Capsule())
+            .accessibilityHidden(true)
+    }
+}
+
 // MARK: - SidebarNavItem
 
 struct SidebarNavItem: View {
     let tab: AppTab
     let isSelected: Bool
+    var unreadCount: Int = 0
     let action: () -> Void
 
     @State private var isHovered = false
@@ -239,6 +266,10 @@ struct SidebarNavItem: View {
                 Text(tab.title)
                     .font(.system(size: 15))
                 Spacer(minLength: 0)
+                if unreadCount > 0 {
+                    SupportUnreadBadge(count: unreadCount)
+                        .padding(.trailing, 10)
+                }
             }
             .foregroundStyle(isSelected ? .white : Color(red: 0.9, green: 0.906, blue: 0.95))
             .padding(.leading, 16)
@@ -262,6 +293,7 @@ struct SidebarNavItem: View {
             withAnimation(TS.Animation.hover) { isHovered = hovering }
         }
         .accessibilityLabel(tab.title)
+        .accessibilityValue(unreadCount > 0 ? Text("\(unreadCount) ongelezen meldingen") : Text(""))
         .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
     }
 }

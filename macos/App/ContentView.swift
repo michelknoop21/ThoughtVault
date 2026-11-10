@@ -68,6 +68,7 @@ enum AppTab: String, CaseIterable, Identifiable {
 // MARK: - ContentView
 
 struct ContentView: View {
+    @Environment(SupportViewModel.self) private var supportVM
     @Environment(UpdateCheckService.self) private var updateCheck
     @AppStorage("dismissedUpdateVersion") private var dismissedUpdateVersion = ""
     @Environment(AuthViewModel.self) private var authVM
@@ -199,6 +200,9 @@ struct ContentView: View {
             // (`-TVDebugOpen transcript`) without keystrokes. Opening goes through the tab
             // switch, which would otherwise reset the navigation path.
             .task {
+                if IOSDebug.supportBadgeSnapshot {
+                    sidebarCollapsed = IOSDebug.string("TVDebugSnapshot") == "support-badge-collapsed"
+                }
                 DebugScreenshotSeed.run()
                 LocalTranscriptStore.shared.seedDebugDraftIfRequested()
                 Task { for _ in 0..<5 { try? await Task.sleep(for: .seconds(1)); DebugScreenshotSeed.sizeWindow() } }
@@ -371,6 +375,7 @@ struct ContentView: View {
                     .tabItem {
                         Label(tab.title, systemImage: tab.icon)
                     }
+                    .badge(tab == .settings ? supportVM.unreadCount : 0)
                     .tag(tab)
             }
         }

@@ -80,6 +80,13 @@ enum IOSDebug {
         return false
         #endif
     }
+    @MainActor static var supportBadgeSnapshot: Bool {
+        #if DEBUG && !APP_STORE
+        return DebugScreenshotSeed.isEnabled && ["support-badge", "support-badge-collapsed"].contains(string("TVDebugSnapshot") ?? "")
+        #else
+        return false
+        #endif
+    }
     static var scrollAnchor: UnitPoint { string("TVDebugBottom") == "YES" ? .bottom : .top }
 }
 

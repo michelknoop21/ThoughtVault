@@ -31,7 +31,7 @@ enum DebugScreenshotSeed {
     }
 
     static func seedSupport(_ support: SupportViewModel) {
-        guard IOSDebug.supportSeed || IOSDebug.supportSettingsSnapshot, support.tickets.isEmpty else { return }
+        guard IOSDebug.supportSeed || IOSDebug.supportSettingsSnapshot || IOSDebug.supportBadgeSnapshot, support.tickets.isEmpty else { return }
         let date = Date(timeIntervalSince1970: 1_794_312_000)
         support.tickets = [
             SupportTicket(id: "support-demo-1", ref: "TV-001", status: "WAITING_FOR_USER", category: "BUG",

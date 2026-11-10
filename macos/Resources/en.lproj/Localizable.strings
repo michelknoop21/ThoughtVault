@@ -484,3 +484,8 @@
 "Stuur" = "Send";
 
 "Foutrapporten automatisch versturen" = "Automatically send error reports";
+
+/* Support window and navigation unread count */
+"Meldingen" = "Reports";
+"Melding maken…" = "Create report…";
+"%lld ongelezen meldingen" = "%lld unread reports";

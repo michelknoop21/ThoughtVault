@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { Update } from "@tauri-apps/plugin-updater";
-import { useRecordingStore } from "../../stores/recordingStore";
+import { isBusy, useRecordingStore } from "../../stores/recordingStore";
 import { ArrowDownload24Regular, Dismiss24Regular } from "./StudioIcons";
 
 interface UpdateBannerProps {
@@ -13,7 +13,7 @@ interface UpdateBannerProps {
 export function UpdateBanner({ version, downloadUrl, onDismiss, nativeUpdate }: UpdateBannerProps) {
   const [installing, setInstalling] = useState(false);
   const [error, setError] = useState("");
-  const busy = useRecordingStore(s => s.phase !== "idle" || s.backgroundTasks.some(t => !["completed", "failed"].includes(t.status)));
+  const busy = useRecordingStore(isBusy);
 
   async function handleUpdate() {
     setInstalling(true);

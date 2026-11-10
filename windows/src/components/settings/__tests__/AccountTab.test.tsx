@@ -1,14 +1,18 @@
+import { PRIVACY_URL } from "../../../services/supportRelay";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { AccountTab } from "../AccountTab";
 import { useSupportStore } from "../../../stores/supportStore";
 
+const { open } = vi.hoisted(() => ({ open: vi.fn(async () => {}) }));
+vi.mock("@tauri-apps/plugin-shell", () => ({ open }));
 vi.mock("../../FeedbackWidget", () => ({ default: () => <button>Feedback melden</button> }));
 let host: HTMLDivElement;
 let root: Root;
 const initial = useSupportStore.getState();
 beforeEach(async () => {
+  open.mockReset().mockResolvedValue(undefined);
   useSupportStore.setState({ ...initial, auto_report: true, name: "Jan", email: "jan@example.nl", queue: [] });
   host = document.createElement("div"); document.body.append(host);
   root = createRoot(host);
@@ -72,5 +76,46 @@ it("requires the whole identity to be valid and uses associated labels and email
   expect(field("email").autocomplete).toBe("email");
   expect(field("email").type).toBe("email");
   expect(field("email").inputMode).toBe("email");
-  expect(host.querySelectorAll("button")).toHaveLength(1);
+  expect([...host.querySelectorAll("button")].some(button => button.textContent === "Feedback melden")).toBe(true);
+});
+
+function privacyButton() { return [...host.querySelectorAll<HTMLButtonElement>("button")].find(button => button.textContent === "Privacyverklaring")!; }
+it.each([true, false])("opens privacy outside the switch label preserving invalid drafts (auto_report=%s)", async (autoReport) => {
+  const setAutoReport = vi.fn(initial.setAutoReport);
+  const setIdentity = vi.fn(initial.setIdentity);
+  await act(async () => useSupportStore.setState({ setAutoReport, setIdentity, auto_report: autoReport }));
+  await fill("email", "jan@");
+  expect(privacyButton().type).toBe("button");
+  expect(privacyButton().closest("label")).toBeNull();
+  expect(privacyButton().disabled).toBe(false);
+  await act(async () => privacyButton().click());
+  expect(open).toHaveBeenCalledExactlyOnceWith(PRIVACY_URL);
+  expect(setAutoReport).not.toHaveBeenCalled();
+  expect(setIdentity).not.toHaveBeenCalled();
+  expect(useSupportStore.getState()).toMatchObject({ auto_report: autoReport, name: "Jan", email: "jan@example.nl" });
+  expect(field("email").value).toBe("jan@");
+});
+it("preserves contact blur saving when focus moves to the privacy button", async () => {
+  await fill("name", "  Jan Nieuw  ");
+  await act(async () => field("name").focus());
+  await act(async () => privacyButton().focus());
+  await act(async () => privacyButton().click());
+  expect(open).toHaveBeenCalledExactlyOnceWith(PRIVACY_URL);
+  expect(useSupportStore.getState()).toMatchObject({ auto_report: true, name: "Jan Nieuw", email: "jan@example.nl" });
+  expect(field("name").value).toBe("Jan Nieuw");
+});
+it.each([true, false])("handles rejected privacy open and retry (auto_report=%s)", async (autoReport) => {
+  const setAutoReport = vi.fn(initial.setAutoReport);
+  await act(async () => useSupportStore.setState({ setAutoReport, auto_report: autoReport }));
+  open.mockRejectedValueOnce(new Error("sensitive native details"));
+  await act(async () => privacyButton().click());
+  expect(open).toHaveBeenCalledExactlyOnceWith(PRIVACY_URL);
+  expect(host.querySelector('[role="status"]')?.textContent).toBe("De privacyverklaring kon niet worden geopend. Probeer het opnieuw.");
+  expect(host.textContent).not.toContain("sensitive native details");
+  expect(useSupportStore.getState().auto_report).toBe(autoReport);
+  await act(async () => privacyButton().click());
+  expect(host.querySelector('[role="status"]')).toBeNull();
+  expect(open).toHaveBeenCalledTimes(2);
+  expect(useSupportStore.getState().auto_report).toBe(autoReport);
+  expect(setAutoReport).not.toHaveBeenCalled();
 });

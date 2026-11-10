@@ -1,7 +1,10 @@
+import { open } from "@tauri-apps/plugin-shell";
+import { PRIVACY_URL } from "../../services/supportRelay";
 import { useRef, useState, type FormEvent, type JSX } from "react";
 import { isValidEmail, useSupportStore } from "../../stores/supportStore";
 
 export function IdentityGate(): JSX.Element {
+  const [privacyError, setPrivacyError] = useState(false);
   const [name, setName] = useState(() => useSupportStore.getState().name);
   const [email, setEmail] = useState(() => useSupportStore.getState().email);
   const [emailTouched, setEmailTouched] = useState(false);
@@ -29,6 +32,11 @@ export function IdentityGate(): JSX.Element {
         <p id="identity-introduction">Met je naam en e-mailadres kan de ontwikkelaar je meldingen beantwoorden.</p>
         <p id="identity-reporting" style={{ color: "var(--text-secondary)" }}>Gaat er iets mis bij opnemen, transcriberen of de notule, dan stuurt ThoughtVault automatisch een foutrapport met app-versie, apparaat, je klikpad en een afgeschermd logbestand naar de ontwikkelaar. Je opnames, transcripties, notules en titels gaan nooit mee.</p>
         <p id="identity-setting" style={{ color: "var(--text-secondary)" }}>Automatisch versturen zet je uit bij Instellingen, Account.</p>
+        <button type="button" className="studio-link" style={{ minHeight: 44 }} onClick={() => {
+          setPrivacyError(false);
+          void open(PRIVACY_URL).catch(() => setPrivacyError(true));
+        }}>Privacyverklaring</button>
+        {privacyError && <p role="status" style={{ color: "var(--status-error)" }}>De privacyverklaring kon niet worden geopend. Probeer het opnieuw.</p>}
         <div className="form-field">
           <label className="form-label" htmlFor="identity-name">Naam</label>
           <input id="identity-name" className="input" type="text" name="name" autoComplete="name" required autoFocus

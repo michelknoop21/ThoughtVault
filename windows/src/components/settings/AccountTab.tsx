@@ -1,3 +1,5 @@
+import { open } from "@tauri-apps/plugin-shell";
+import { PRIVACY_URL } from "../../services/supportRelay";
 import { useEffect, useState } from "react";
 import { isValidEmail, useSupportStore } from "../../stores/supportStore";
 import { Bug24Regular, Person24Regular } from "../ui/StudioIcons";
@@ -5,6 +7,7 @@ import { CardHead } from "./SettingsFields";
 import FeedbackWidget from "../FeedbackWidget";
 
 export function AccountTab() {
+  const [privacyError, setPrivacyError] = useState(false);
   const { auto_report, setAutoReport, name, email, setIdentity } = useSupportStore();
   const [draftName, setDraftName] = useState(name);
   const [draftEmail, setDraftEmail] = useState(email);
@@ -39,6 +42,13 @@ export function AccountTab() {
           <span className="toggle-slider" />
         </label>
         </div>
+      </div>
+      <div className="settings-row" style={{ display: "block" }}>
+        <button type="button" className="studio-link" style={{ minHeight: 44 }} onClick={() => {
+          setPrivacyError(false);
+          void open(PRIVACY_URL).catch(() => setPrivacyError(true));
+        }}>Privacyverklaring</button>
+        {privacyError && <p role="status" style={{ color: "var(--status-error)" }}>De privacyverklaring kon niet worden geopend. Probeer het opnieuw.</p>}
       </div>
       <div className="settings-row" style={{ display: "block" }}>
         <h3 className="settings-label">Contact voor meldingen</h3>

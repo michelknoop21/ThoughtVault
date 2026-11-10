@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 
 export const SUPPORT_BASE_URL = "https://thoughtvault.yinga.ai/support";
+export const PRIVACY_URL = "https://thoughtvault.yinga.ai/privacy.html";
 export type ReportCategory = "BUG" | "FEATURE_REQUEST" | "QUESTION";
 export type ReportStage = "opnemen" | "transcriberen" | "notule" | "crash";
 export type HubStatus = "NEW" | "IN_PROGRESS" | "WAITING_FOR_USER" | "RESOLVED" | "CLOSED";

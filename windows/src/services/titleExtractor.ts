@@ -75,7 +75,13 @@ function matches(pattern: RegExp, text: string, group: number): string[] {
 }
 
 /** Returns a descriptive title from the HTML, or null if none qualifies. */
+/** Heading of the source warning that notuleAudit appends last; never a title. */
+export const SOURCE_WARNING_HEADING = "<h2>Let op: controleer de transcriptie</h2>";
+
 export function extractTitle(html: string): string | null {
+  // The source warning is appended last; the title comes from the notule before it.
+  const warning = html.indexOf(SOURCE_WARNING_HEADING);
+  if (warning >= 0) html = html.slice(0, warning);
   // Strategy 1: first descriptive heading (h1-h4)
   for (const raw of matches(/<(h[1-4])[^>]*>([\s\S]*?)<\/\1>/gi, html, 2)) {
     const title = clean(raw);

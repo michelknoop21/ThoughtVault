@@ -29,8 +29,24 @@ final class NotuleConstraintTests: XCTestCase {
 
     // JavaScript `\b` is ASCII-only, so "é" counts as a boundary and "nietig" does not match.
     func testConstraintKeywordBoundaryIsASCII() {
-        XCTAssertEqual(NotuleAudit.constraintSentences("éniet zo. Dat is nietig. Er is een OPEN VRAAG. NIET doen. Niet doen."),
-                       ["éniet zo.", "Er is een OPEN VRAAG.", "NIET doen.", "Niet doen."])
+        XCTAssertEqual(NotuleAudit.constraintSentences("éniet doen. Dat is nietig. Er is een OPEN VRAAG. NIET doen. Niet doen."),
+                       ["éniet doen.", "Er is een OPEN VRAAG.", "NIET doen.", "Niet doen."])
+    }
+
+    // A hedged or questioning negation is not a constraint.
+    func testHedgedNegationsAreNotMandatory() {
+        let raw = "Ik denk niet dat het dat is. Misschien zit het niet bij de regenpijp. Is dat niet raar? Nee, dat weet ik niet. Waarschijnlijk niet."
+        XCTAssertEqual(NotuleAudit.constraintSentences(raw), [])
+    }
+
+    // Every negation without a hedge stays mandatory, also with pronouns or "dus"/"kan" (the review's
+    // examples); a number, a permission, a decision or a strong keyword keeps even a hedged one mandatory.
+    func testAnchoredAndFactualNegationsStayMandatory() {
+        let kept = ["We delen geen klantgegevens met derden.", "We starten niet zonder handtekening van de klant.", "Dus de afspraak van vrijdag gaat niet door.", "We betalen geen duizend euro.", "De API kan niet zonder authenticatie worden gebruikt.", "Het budget is 12.450 euro inclusief btw, niet 15.000 euro.", "We mogen geen klantgegevens doorsturen.",
+                    "Ik mag alleen de gevolgschade noteren, dat zit er niet in.", "Er is nog geen leverancier gekozen.",
+                    "Bram is afwezig, dus ik weet het niet.", "We besluiten dit niet vandaag.", "Is de migratie op 16 november niet doorgegaan?",
+                    "De bibliotheek is tijdens de interne proef niet toegankelijk voor bezoekers."]
+        XCTAssertEqual(NotuleAudit.constraintSentences(kept.joined(separator: " ")), kept)
     }
 
     // Duplicates are dropped, original order kept, matches only trimmed (not whitespace-normalised).

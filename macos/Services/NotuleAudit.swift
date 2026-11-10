@@ -58,8 +58,21 @@ enum NotuleAudit {
     static func constraintSentences(_ text: String) -> [String] {
         var seen = Set<[UInt16]>()
         return matches(sentence, in: text).map(trim).filter {
-            regex(keyword, .caseInsensitive).firstMatch(in: $0, range: whole($0)) != nil && seen.insert(Array($0.utf16)).inserted
+            regex(keyword, .caseInsensitive).firstMatch(in: $0, range: whole($0)) != nil && isConstraint($0)
+                && seen.insert(Array($0.utf16)).inserted
         }
+    }
+
+    // A hedged or questioning negation ("Ik denk niet dat het dat is", "Is dat niet raar?") is no constraint.
+    // Every other negation stays mandatory, also with pronouns ("We delen geen klantgegevens"). A number, a
+    // permission or decision word, or a strong keyword always keeps it mandatory. All QA fixtures keep their constraints.
+    private static let strongKeyword = #"(?<![A-Za-z0-9_])(?:vervalt|vervallen|afgewezen|afgekeurd|afwezig|onbeslist|onbekend|cancelled|canceled)(?![A-Za-z0-9_])|open vraag"#
+    private static let anchor = #"[0-9]|(?<![A-Za-z0-9_])(?:mag|mogen|moet|moeten|toegestaan|toestemming|verboden|besloten|besluit|besluiten|beslissen|beslist|beslissing|goedgekeurd|akkoord|afgesproken|gekozen|geannuleerd|must|may|allowed|approved|decided)(?![A-Za-z0-9_])"#
+    private static let hedge = #"(?<![A-Za-z0-9_])(?:denk|denkt|dacht|weet|weten|misschien|waarschijnlijk|wellicht|vermoed|vermoedelijk|geloof|think|maybe|probably|perhaps|guess)(?![A-Za-z0-9_])"#
+
+    private static func isConstraint(_ sentence: String) -> Bool {
+        func has(_ pattern: String) -> Bool { regex(pattern, .caseInsensitive).firstMatch(in: sentence, range: whole(sentence)) != nil }
+        return has(strongKeyword) || has(anchor) || !(has(hedge) || sentence.hasSuffix("?"))
     }
 
     // MARK: Model response
@@ -109,9 +122,11 @@ enum NotuleAudit {
 
     /// Adds the warning as the last section (before `</body>`), like the quick-note section. It is added
     /// after the audit, so it is never checked as a claim.
+    static let warningHeading = "<h2>Let op: controleer de transcriptie</h2>"
+
     static func appendingWarning(_ warning: String?, to html: String) -> String {
         guard let warning else { return html }
-        let section = "<h2>Let op: controleer de transcriptie</h2><p>\(warning)</p>"
+        let section = warningHeading + "<p>\(warning)</p>"
         if let body = html.range(of: "</body>", options: [.backwards, .caseInsensitive]) {
             return html.replacingCharacters(in: body, with: section + "</body>")
         }
@@ -119,8 +134,9 @@ enum NotuleAudit {
     }
 
     /// A bounded model-assisted check; evidence links prove coverage, not semantic truth.
+    /// `sourceUnclear`: the source check warned, so an exact copy of the source still needs the model audit.
     static func auditNotule(source: String, html: String, quickNote: String, request: AuditRequest,
-                            requiredSentences: [String] = []) async throws {
+                            requiredSentences: [String] = [], sourceUnclear: Bool = false) async throws {
         // Only plain semantic HTML has a checkable text representation here, not arbitrary CSS/layout.
         let markup = scan(html, dropping: ["script", "template", "head"])
         if regex(#"<style(?![A-Za-z0-9_])"#, .caseInsensitive).firstMatch(in: html, range: whole(html)) != nil || markup.hidesContent
@@ -132,7 +148,7 @@ enum NotuleAudit {
             throw NotuleAuditError(message: "De bron of notule bevat geen controleerbare tekst")
         }
         // Exact complete source equality cannot omit/add/reverse a source claim. No fuzzy bypass.
-        if trim(quickNote).isEmpty, same(normalize(noteText), normalize(source)) { return }
+        if !sourceUnclear, trim(quickNote).isEmpty, same(normalize(noteText), normalize(source)) { return }
         let sourceUnits = units(source, prefix: "T") + units(quickNote, prefix: "Q")
         let noteUnits = units(noteText, prefix: "N")
         guard !sourceUnits.isEmpty, !noteUnits.isEmpty,

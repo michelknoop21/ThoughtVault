@@ -1,5 +1,6 @@
 import { expect, it, vi } from "vitest";
-import { appendSourceWarning, auditSource, UNCHECKED_SOURCE_WARNING, UNCLEAR_SOURCE_WARNING } from "../notuleAudit";
+import { appendSourceWarning, auditNotule, auditSource, UNCHECKED_SOURCE_WARNING, UNCLEAR_SOURCE_WARNING } from "../notuleAudit";
+import { extractTitle } from "../titleExtractor";
 
 it("checks the source and separate user note without exposing the candidate", async () => {
   const request = vi.fn(async (_system: string, user: string) => {
@@ -30,4 +31,26 @@ it("places the warning before </body> when the notule is a full document, otherw
   expect(appendSourceWarning(UNCLEAR_SOURCE_WARNING, "<html><body><p>Notule.</p></BODY></html>")).toBe(`<html><body><p>Notule.</p>${section}</BODY></html>`);
   expect(appendSourceWarning(UNCLEAR_SOURCE_WARNING, "<p>x</p>")).toBe(`<p>x</p>${section}`);
   expect(appendSourceWarning(null, "<p>x</p>")).toBe("<p>x</p>");
+});
+
+it("keeps the insertion point when lowercasing changes the length", () => {
+  const html = "<html><body><p>İstanbul: Noor belt vrijdag.</p></body></html>";
+  expect(appendSourceWarning(UNCLEAR_SOURCE_WARNING, html)).toBe(
+    `<html><body><p>İstanbul: Noor belt vrijdag.</p><h2>Let op: controleer de transcriptie</h2><p>${UNCLEAR_SOURCE_WARNING}</p></body></html>`);
+});
+
+it("never uses the warning heading as the title", () => {
+  const html = "<h1>Notulen</h1><h2>Besluiten</h2><p>Noor neemt vrijdag contact op met de leverancier.</p>";
+  expect(extractTitle(appendSourceWarning(UNCLEAR_SOURCE_WARNING, html))).toBe(extractTitle(html));
+  expect(extractTitle(html)).toBe("Noor neemt vrijdag contact op met de leverancier");
+});
+
+it("still audits an exact copy of the source when the source check warned", async () => {
+  const positive = '{"uncertain":false,"source":[{"id":"T1","status":"covered"}],"notes":[{"id":"N1","status":"supported","evidence":["T1"]}]}';
+  const plain = vi.fn(async () => positive);
+  await auditNotule("Noor belt vrijdag.", "<p>Noor belt vrijdag.</p>", "", plain);
+  expect(plain).not.toHaveBeenCalled();
+  const unclear = vi.fn(async () => positive);
+  await auditNotule("Noor belt vrijdag.", "<p>Noor belt vrijdag.</p>", "", unclear, [], true);
+  expect(unclear).toHaveBeenCalledTimes(1);
 });

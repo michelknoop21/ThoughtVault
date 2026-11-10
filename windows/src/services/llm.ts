@@ -10,7 +10,7 @@ import { isOllamaCloudURL } from "./ollamaModels";
 import { loadCorrectionsOrEmpty } from "../stores/personalCorrectionsStore";
 import { usePeopleDirectoryStore } from "../stores/peopleDirectoryStore";
 import { correctText, correctHTML, contextBlock, CONTEXT_BUDGET, type PersonalCorrection } from "./personalCorrections";
-import { auditSource, auditNotule, appendSourceWarning, NotuleReviewError } from "./notuleAudit";
+import { auditSource, auditNotule, appendSourceWarning, constraintSentences, NotuleReviewError } from "./notuleAudit";
 
 interface LLMConfig {
   provider: NotulenProvider;
@@ -254,13 +254,8 @@ export class LLMService {
       }
       throw new Error("Cloud provider moet via de server worden verwerkt");
     };
-    // Explicit constraints remain mandatory audit obligations, including numeric punctuation.
-    // shortcut: lexical Dutch/English constraints only; extend for other languages
-    // when adding their acceptance fixtures, never treat this as a semantic proof.
-    // A dot between digits belongs to a number (15.000, 1.500.000, 15.5), not a sentence boundary.
-    const constraints = [...new Set((correctText(transcription, corrections, profile.id).match(/(?:[^.!?\n]|(?<=\d)\.(?=\d))+[.!?]?/gu) ?? [])
-      .map(sentence => sentence.trim())
-      .filter(sentence => /\b(niet|geen|niets|nooit|zonder|vervalt|vervallen|afgewezen|afgekeurd|afwezig|onbeslist|onbekend|not|never|without|cancelled|canceled)\b|open vraag/iu.test(sentence)))];
+    // Explicit constraints remain mandatory audit obligations (rules in constraintSentences).
+    const constraints = constraintSentences(correctText(transcription, corrections, profile.id));
     const constraintPrompt = constraints.length
       ? `\n\nVerplicht te behouden bronzinnen (behoud de volledige betekenis, bedragen en voorwaarden bij het passende onderwerp, besluit of open punt; correcte parafrases mogen, tegenspraken nergens):\n${constraints.map((sentence, index) => `${index + 1}. ${sentence}`).join("\n")}` : "";
     // Keep the unverified draft out of progress updates and saved notes.
@@ -270,7 +265,7 @@ export class LLMService {
     let warning: string | null = null;
     try {
       warning = await auditSource(correctText(transcription, corrections, profile.id), quickNote, generate);
-      await auditNotule(correctText(transcription, corrections, profile.id), candidate, quickNote, generate, constraints);
+      await auditNotule(correctText(transcription, corrections, profile.id), candidate, quickNote, generate, constraints, warning !== null);
       const approved = appendSourceWarning(warning, candidate);
       onProgress?.(approved);
       return approved;

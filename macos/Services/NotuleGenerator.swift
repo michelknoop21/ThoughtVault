@@ -49,7 +49,7 @@ struct NotuleGenerator: Sendable {
             warning = try await NotuleAudit.auditSource(source: source, quickNote: quickNote ?? "", request: request)
             if Task.isCancelled || cancelled.withLock({ $0 }) { throw CancellationError() }
             try await NotuleAudit.auditNotule(source: source, html: candidate, quickNote: quickNote ?? "",
-                                              request: request, requiredSentences: constraints)
+                                              request: request, requiredSentences: constraints, sourceUnclear: warning != nil)
             return NotuleAudit.appendingWarning(warning, to: candidate)
         } catch {
             if Task.isCancelled || cancelled.withLock({ $0 }) { throw CancellationError() }

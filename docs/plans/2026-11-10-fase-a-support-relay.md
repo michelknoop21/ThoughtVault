@@ -44,7 +44,9 @@ De suite draait in seconden en hoeft niet via `heavy run`. Draai nooit een kale 
 Vastgesteld op `origin/main` (`7909542`) en in `/Volumes/SSD/Projects/feedback-hub` (`298ca28`). Het plan volgt de code waar die van de spec afwijkt.
 
 1. De IP-limiet. Spec r.73 zegt dat de limiter het eerste `X-Forwarded-For`-adres gebruikt via `APP/middleware/rate_limiting.py` r.22-27. De limiter zelf (`APP/rate_limiting.py` r.7 en r.37) gebruikt `slowapi.util.get_remote_address`, dus `request.client.host`. Uvicorn draait zonder `--forwarded-allow-ips` (Dockerfile laatste regel, `start.sh` r.3), dus dat is het adres van de proxy en delen alle apps één IP-emmer. De functie uit de middleware wordt alleen in de 429-log gebruikt (r.35). Dit plan geeft de IP-limieten daarom een eigen `key_func` die die middlewarefunctie aanroept.
-2. Het voorvoegsel. `connect_tool` heeft geen veld `refPrefix`. De hub leidt het af uit de slug: één woord geeft de eerste twee letters, dus `thoughtvault` wordt `TH` (`backend/src/services/publicRef.ts` r.97-101, `onboarding.ts` r.101). Via de admin-API is het voorvoegsel niet te wijzigen (`routes/adminManage.ts` r.115-138). Taak 10 legt dit als beslispunt aan Michel voor.
+2. Het voorvoegsel. `connect_tool` heeft geen veld `refPrefix`; de hub leidt het af uit de slug (`backend/src/services/publicRef.ts` r.97-101, `onboarding.ts` r.101), dus `thoughtvault` zou `TH` worden. Besluit van Michel op 10 november: slug `thought-vault`, waarmee de hub zelf `TV` geeft. Geen handwerk in de hubdatabase.
+
+Antwoordvormen van de relay, gedeeld met fase b en c: de leesroutes geven de hub-body ongewijzigd door. `GET /tickets` geeft `{"data": [ticket...], "pagination": {...}}`, `GET /unread-count` geeft `{"data": {"count": n}}`, `GET /tickets/{id}/messages` geeft `{"data": [bericht...]}`. Ticketvelden `id`, `ref`, `status`, `category`, `description`, `createdAt`, `unread`, `lastMessage`; berichtvelden `id`, `body`, `senderRole`, `createdAt`. Hubdatums kunnen milliseconden hebben. Referenties hebben zes cijfers (`TV-000001`). Vingerafdruk op alle platforms: SHA-256 over de UTF-8-string `<stage>|<ruwe foutmelding>` waaruit de tekens 0 tot en met 9 zijn verwijderd, eerste 16 tekens lowercase hex, berekend vóór het afschermen.
 3. De referentie heeft zes cijfers: `TV-000001`, niet `TV-1` (`publicRef.ts` r.31-35).
 4. `environment` kent op de hub alleen productie, staging en ontwikkeling (`services/context.ts` r.10-31). Een platformnaam wordt stil `null`. Het plan stuurt `environment=production`; het platform staat al in `browserInfo` en `diagnostics`.
 5. De hub leest `userId` bij het aanmaken uit de formuliervelden, niet uit de header (`routes/widget.ts` r.243-262). De relay stuurt beide.
@@ -794,13 +796,11 @@ Daarna een review van de hele branch (superpowers:requesting-code-review) vóór
 
 **Interfaces:**
 - Consumes: de keuze voor `FEEDBACK_HUB_URL` uit taak 1.
-- Produces: tool `thoughtvault` met één instance, voorvoegsel `TV`, shadow uit; `FEEDBACK_HUB_URL` en `FEEDBACK_HUB_INSTANCE_KEY` in de server-`.env` van de backend.
+- Produces: tool `thought-vault` met één instance, voorvoegsel `TV`, shadow uit; `FEEDBACK_HUB_URL` en `FEEDBACK_HUB_INSTANCE_KEY` in de server-`.env` van de backend.
 
 - [ ] **Step 1: Beslispunt voorleggen** (vraag akkoord van Michel voor uitvoering)
 
-Met slug `thoughtvault` geeft de hub het voorvoegsel `TH` (zie Afwijkingen, punt 2). Twee routes; geen van beide uitvoeren zonder keuze van Michel:
-- A (aanbevolen, houdt besluit 14 heel): `connect_tool` met slug `thoughtvault`, daarna vóór de eerste melding één update in de hubdatabase, `UPDATE "Instance" SET "refPrefix" = 'TV' WHERE id = '<instance-id>'`, met een kopie van die rij vooraf. In de hub-repo loopt een andere sessie; dit eerst daar afstemmen.
-- B: slug `thought-vault`, dan geeft de hub zelf `TV`. Wijkt af van de slug in besluit 14.
+Slug `thought-vault` (besluit van Michel, 10 november): de hub geeft dan zelf het voorvoegsel `TV`. Controleer na het aanmaken met `list_instances` dat `refPrefix` `TV` is; anders stoppen en melden.
 
 - [ ] **Step 2: Controleren dat de tool nog niet bestaat** (vraag akkoord van Michel voor uitvoering)
 
@@ -808,7 +808,7 @@ MCP `list_tools` en `list_instances`. Verwacht: geen tool `thoughtvault` of `tho
 
 - [ ] **Step 3: Aanmaken** (vraag akkoord van Michel voor uitvoering)
 
-MCP `connect_tool` met `{"naam": "ThoughtVault", "eigenOpslag": false, "domain": "thoughtvault.yinga.ai", "nieuweTool": {"slug": "<keuze uit stap 1>", "name": "ThoughtVault"}}`. `eigenOpslag: false` zet shadow uit (`feedback-hub/backend/src/services/onboarding.ts` r.119-123). Bij route A daarna de update uit stap 1.
+MCP `connect_tool` met `{"naam": "ThoughtVault", "eigenOpslag": false, "domain": "thoughtvault.yinga.ai", "nieuweTool": {"slug": "thought-vault", "name": "ThoughtVault"}}`. `eigenOpslag: false` zet shadow uit (`feedback-hub/backend/src/services/onboarding.ts` r.119-123).
 
 De sleutel staat in het antwoord van `connect_tool` en komt daarmee in het sessieverslag. Herhaal hem nergens. Michel roteert de sleutel daarna zelf in het hubbeheer (`rotate-key` op de instance) en zet de nieuwe waarde zelf in de server-`.env`, samen met `FEEDBACK_HUB_URL`. Zo staat de werkende sleutel nooit in een verslag.
 
@@ -932,7 +932,7 @@ Verwacht: eerst `{"ticketId":"<id>","ref":"TV-000001","repeated":false,"count":1
 
 - [ ] **Step 4: In de hub controleren**
 
-MCP `list_tickets` met `tool` = de slug uit taak 10: precies één ticket, `TV-000001`. MCP `get_ticket` op dat id: `diagnostics` met `"stage": "transcriberen"` en `"count": 1`, een bericht "Logbestand van dit apparaat" met bijlage `thoughtvault-log.txt`, en een bericht "Opnieuw opgetreden (2 keer), laatste keer 2026-11-10T09:15:00Z" met bijlage.
+MCP `list_tickets` met `tool` = `thought-vault`: precies één ticket, `TV-000001`. MCP `get_ticket` op dat id: `diagnostics` met `"stage": "transcriberen"` en `"count": 1`, een bericht "Logbestand van dit apparaat" met bijlage `thoughtvault-log.txt`, en een bericht "Opnieuw opgetreden (2 keer), laatste keer 2026-11-10T09:15:00Z" met bijlage.
 
 - [ ] **Step 5: Opruimen** (vraag akkoord van Michel voor uitvoering)
 

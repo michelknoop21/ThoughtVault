@@ -8,6 +8,23 @@ _Decisions DEC-039 through DEC-053 archived to [archive/DECISIONS-DEC-039-to-DEC
 
 ---
 
+## DEC-066: Lokale integratie van support, veilig bijwerken en privacy
+
+**Date:** 2026-11-10
+**Status:** Implemented locally; release acceptance pending
+
+**Context:** De support-relay (DEC-064) heeft afzonderlijke implementaties voor macOS/iOS en Windows. Deze lokale kandidaat voegt die samen met veilig Windows-bijwerken en de goedgekeurde privacyverklaring. Remote main stond bij controle op `b54806d3b32e3983880ef7a693b99ca9df8b6923`; DEC-065 was het hoogste besluit.
+
+**Decision:**
+- Apps registreren een installatie zonder ThoughtVault-account. De gebruiker kiest naam, e-mailadres en toestemming voordat automatische rapporten worden verzonden. Handmatige meldingen, antwoorden, ongelezen meldingen en een offline wachtrij lopen via de relay; intrekken van toestemming stopt automatische verzending.
+- Automatische rapporten bevatten technische foutcontext en gemaskeerde metadata/logs. Transcriptie, notuletekst, audio en automatische screenshots horen daar niet bij. De inhoudscontrole houdt de actuele waarschuwingen en lange-meetingcontrole van DEC-062 tot en met DEC-065; supportredenen bevatten alleen controle-ID en status.
+- Windows wacht met bijwerken zolang opname of verwerking actief is en sluit de widget gecontroleerd. Dev blijft gescheiden (`nl.prezent.transcript-studio-dev`, eigen updatekanaal); de bestaande MSI-upgradecode `7358330f-1c84-5898-90db-45fe21eb4f31` blijft behouden.
+- De supportschermen verwijzen naar `https://thoughtvault.yinga.ai/privacy`. De goedgekeurde webtekst komt uitsluitend uit `feat/fase-e-privacy`.
+
+**Consequences:** Lokale merge en geautomatiseerde controles zijn geen native Windows-acceptatie, iOS-runtimebewijs of vrijgave. Alleen synthetische gegevens en `@example.com` mogen in relayproeven; geen echte gebruikersopslag of automatische screenshots. Publicatie vereist afzonderlijke bronref-, signing-, installer-, device- en kanaalcontroles volgens `WINDOWS-BUILD-WORKFLOW.md` en `AUTOMATISCHE-UPDATES.md`. Deze integratie autoriseert geen push, installatie, main-merge of release.
+
+---
+
 ## DEC-065: Lange meetings: dekking per deel, één verificatie per notulezin
 
 **Date:** 2026-11-10

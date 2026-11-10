@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { invoke } from "@tauri-apps/api/core";
-import { installClickPath, installConsoleForwarding, log, logRoute, mask, readClickPath, readLogTail, scrubText } from "../appLog";
+import { installClickPath, installConsoleForwarding, log, logRoute, mask, readClickPath, readLogTail, scrubText, scrubReportText } from "../appLog";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn(async () => undefined) }));
 const writes = () => vi.mocked(invoke).mock.calls.filter(([command]) => command === "log_write").map(([, args]) => args as { level: string; category: string; message: string });
@@ -88,4 +88,15 @@ it("uses the Rust tail and scrub contracts with bounded reads and failure fallba
   vi.mocked(invoke).mockResolvedValueOnce("scrubbed");
   expect(await scrubText("raw")).toBe("scrubbed");
   expect(invoke).toHaveBeenLastCalledWith("log_scrub", { text: "raw" });
+});
+
+it("fails closed for automatic report scrubbing without changing legacy fallback", async () => {
+  vi.mocked(invoke).mockRejectedValue(new Error("IPC unavailable"));
+  await expect(scrubReportText("private")).rejects.toThrow();
+  expect(await scrubText("legacy")).toBe("legacy");
+  vi.mocked(invoke).mockResolvedValueOnce(undefined);
+  await expect(scrubReportText("private")).rejects.toThrow();
+  vi.mocked(invoke).mockResolvedValueOnce("masked");
+  expect(await scrubReportText("private")).toBe("masked");
+  expect(invoke).toHaveBeenLastCalledWith("log_scrub", { text: "private" });
 });

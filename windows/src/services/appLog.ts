@@ -82,3 +82,10 @@ export async function scrubText(text: string): Promise<string> {
   try { return await invoke<string>("log_scrub", { text }); }
   catch { return text; }
 }
+
+// Automatic diagnostics must never fall back to unsanitized input.
+export async function scrubReportText(text: string): Promise<string> {
+  const scrubbed = await invoke<string>("log_scrub", { text });
+  if (typeof scrubbed !== "string") throw new Error("Diagnostic scrubbing failed");
+  return scrubbed;
+}

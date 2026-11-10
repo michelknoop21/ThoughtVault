@@ -1,9 +1,11 @@
 import React from "react";
+import { initCrashReporter } from "./services/crashReporter";
 import ReactDOM from "react-dom/client";
 import { RecordingWidget } from "./components/recording/RecordingWidget";
 import "./styles/widget.css";
 import { installClickPath, installConsoleForwarding } from "./services/appLog";
 
+initCrashReporter();
 installConsoleForwarding();
 installClickPath();
 

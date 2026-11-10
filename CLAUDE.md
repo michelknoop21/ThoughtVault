@@ -55,6 +55,7 @@ IMPORTANT: werk in dit project volgens deze vier principes, boven snelheid.
 
 ## Backend (productie)
 FastAPI op AWS EC2 GPU `michelk@3.69.205.209`, container `n8n_transcript_studio` (bind-mount → deploy = file sync + restart, geen rebuild). Lokale repo: `../transcript-studio-backend/`. **Deploy-commando's + server-paden: lees docs/BACKEND.md.**
+Let op: container `n8n_transcript_studio` draait niet op n8n01 (gecontroleerd 10 november 2026, `/tstudio/api` geeft 502). De support-relay draait als container `thoughtvault-support`: lees `docs/SUPPORT-RELAY.md`.
 
 ## Gotchas
 - `notifications(named:)` gebruiken, NIET `notifications(for:)` in AuthViewModel

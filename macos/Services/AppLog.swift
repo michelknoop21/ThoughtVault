@@ -13,7 +13,8 @@ enum LogRedact {
     }
 
     private static let patterns: [NSRegularExpression] = [
-        #"(?:file://|~|(?<![\w.:/]))/(?:[^\s/"',]+/)+[^\s/"',]*"#,
+        // Unquoted paths may contain spaces: redact through the next hard delimiter to avoid leaking a suffix.
+        #"(?:file://|~|(?<![\w.:/]))/(?:[^\r\n/"',]+/)+[^\r\n/"',]*"#,
         #"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}"#,
         #"[^\s"',:()][^"',:()\r\n]*?\.(?:m4a|wav|caf|mp3|mp4|mov|m4v|aac|aiff)\b"#,
     ].enumerated().map { index, pattern in
@@ -124,7 +125,7 @@ struct AppLog: Sendable {
     static var directory: URL { AppEnvironment.supportDirectory.appending(path: "Logs", directoryHint: .isDirectory) }
 
     private func write(_ level: String, _ message: String) {
-        let flat = LogRedact.scrub(String(message.prefix(2_000))).replacingOccurrences(of: "\r", with: " ").replacingOccurrences(of: "\n", with: " ")
+        let flat = String(LogRedact.scrub(message).prefix(2_000)).replacingOccurrences(of: "\r", with: " ").replacingOccurrences(of: "\n", with: " ")
         Sink.shared.send(.line("\(Date().formatted(.iso8601)) \(level) [\(category)] \(flat)\n"))
     }
 

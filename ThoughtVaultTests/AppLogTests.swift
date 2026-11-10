@@ -113,6 +113,29 @@ final class AppLogTests: XCTestCase {
         XCTAssertEqual(LogRedact.scrub("Model laden duurde 30 s"), "Model laden duurde 30 s")
     }
 
+    func testScrubMasksNonMediaPathsWithSpaces() {
+        for path in ["/Users/anna/My Documents/private.txt", "~/My Documents/private.txt", "file:///Users/anna/My Documents/private.txt"] {
+            let scrubbed = LogRedact.scrub("open \(path) mislukt\nVolgende regel")
+            XCTAssertFalse(scrubbed.contains("anna"))
+            XCTAssertFalse(scrubbed.contains("Documents"))
+            XCTAssertFalse(scrubbed.contains("private.txt"))
+            XCTAssertTrue(scrubbed.hasSuffix("\nVolgende regel"))
+            assertToken(scrubbed)
+        }
+    }
+
+    func testAppLogScrubsBeforeClippingSensitiveValues() async {
+        let prefix = String(repeating: "x", count: 1_987)
+        AppLog(category: "CapEmail").error(prefix + " anna@example.com")
+        AppLog(category: "CapMedia").error(prefix + ": Overleg Jansen.m4a")
+        await AppLog.flush()
+        let tail = await AppLog.tail()
+        let email = tail.split(separator: "\n").last { $0.contains("[CapEmail]") }
+        let media = tail.split(separator: "\n").last { $0.contains("[CapMedia]") }
+        XCTAssertEqual(email?.components(separatedBy: "[CapEmail] ").last, prefix + " " + LogRedact.mask("anna@example.com"))
+        XCTAssertEqual(media?.components(separatedBy: "[CapMedia] ").last, prefix + ": " + LogRedact.mask("Overleg Jansen.m4a"))
+    }
+
     func testLongMessageIsCapped() async {
         let log = AppLog(category: "Cap")
         log.error(String(repeating: "b", count: 5_000))

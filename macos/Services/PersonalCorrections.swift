@@ -151,7 +151,9 @@ enum PersonalCorrections {
 
     /// Glossary and people block for the minutes AI. `maxCharacters` limits the lines, not the fixed header.
     /// Order: lines matching the transcript, then lines for `profileId`, then the newest.
-    static func contextBlock(entries: [PersonalCorrection], people: [PersonContext], transcript: String, profileId: String?, maxCharacters: Int, extraTerms: [String] = []) -> String {
+    /// Role and organization only go along with `includeRoles` (the suggestion step): in the minutes
+    /// prompt, models copied them into the notule without the transcript saying them.
+    static func contextBlock(entries: [PersonalCorrection], people: [PersonContext], transcript: String, profileId: String?, maxCharacters: Int, extraTerms: [String] = [], includeRoles: Bool = false) -> String {
         // Word-boundary, case-insensitive match, same boundaries as text().
         func found(_ names: [String]) -> Bool {
             names.contains {
@@ -171,8 +173,8 @@ enum PersonalCorrections {
         }
         for person in people {
             var line = "- " + person.name
-            let detail = joined([person.role, person.organization])
-            if !detail.isEmpty { line += " (\(detail))" }
+            let detail = includeRoles ? joined([person.role, person.organization]) : joined(person.aliases)
+            if !detail.isEmpty { line += includeRoles ? " (\(detail))" : " (ook gehoord als: \(detail))" }
             let tasks = person.responsibilities.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
             if !tasks.isEmpty { line += ", taken: " + tasks.joined(separator: "; ") }
             candidates.append((line, found([person.name] + person.aliases) ? 0 : 2))
@@ -195,12 +197,12 @@ enum PersonalCorrections {
 
     /// Call-site helper: adds the directory people and the provider budget.
     @MainActor
-    static func contextBlock(entries: [PersonalCorrection], transcript: String, profileId: String?, provider: NotulenProvider) -> String {
+    static func contextBlock(entries: [PersonalCorrection], transcript: String, profileId: String?, provider: NotulenProvider, includeRoles: Bool = false) -> String {
         let people = PersonDirectoryService.shared.directoryPeople().map {
             PersonContext(name: $0.name, role: $0.role, organization: $0.organization, responsibilities: $0.responsibilities, aliases: $0.aliases)
         }
         return contextBlock(entries: entries, people: people, transcript: transcript, profileId: profileId, maxCharacters: contextBudget(for: provider),
-                            extraTerms: VaultFolderStore.readContextNote().map { VaultFolderStore.parseTerms(fromNote: $0) } ?? [])
+                            extraTerms: VaultFolderStore.readContextNote().map { VaultFolderStore.parseTerms(fromNote: $0) } ?? [], includeRoles: includeRoles)
     }
     static func text(_ text: String, entries: [PersonalCorrection], profileId: String?, html: Bool = false) -> String {
         var replacements: [String: String] = [:]

@@ -223,7 +223,7 @@ enum ContextSuggestions {
                 let (context, entries, dismissed, selfName, selfAliases) = await MainActor.run {
                     let entries = PersonalCorrections.loadOrEmpty()
                     let me = LocalTranscriptStore.shared.fetchSelfProfile()
-                    return (PersonalCorrections.contextBlock(entries: entries, transcript: transcript, profileId: profileId, provider: provider),
+                    return (PersonalCorrections.contextBlock(entries: entries, transcript: transcript, profileId: profileId, provider: provider, includeRoles: true),
                             entries, PersonalCorrections.dismissed(), me?.name ?? "", me?.aliases ?? [])
                 }
                 let message = userMessage(context: context, participants: participants, selfName: selfName, transcript: transcript)

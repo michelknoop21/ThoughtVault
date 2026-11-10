@@ -180,7 +180,7 @@ export function runInBackground(taskId: string, transcript: string, participants
     try {
       const entries = await loadCorrectionsOrEmpty();
       const me = usePersonProfileStore.getState().profile;
-      const message = userMessage(minutesContext(entries, transcript, profileId), participants, me?.name ?? "", transcript);
+      const message = userMessage(minutesContext(entries, transcript, profileId, true), participants, me?.name ?? "", transcript);
       const raw = await LLMService.complete(SYSTEM_PROMPT, message);
       const parsed = parse(raw, transcript, entries, usePersonalCorrectionsStore.getState().dismissed, [me?.name ?? ""], me?.aliases ?? []);
       // Matched people are filled in directly; only what needs the user is stored.

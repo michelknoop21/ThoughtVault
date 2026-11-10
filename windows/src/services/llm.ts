@@ -47,12 +47,12 @@ function getConfig(): LLMConfig {
 }
 
 /** Glossary and directory people for the minutes AI, within the provider budget. */
-export function minutesContext(entries: PersonalCorrection[], transcript: string, profileId: string | undefined): string {
+export function minutesContext(entries: PersonalCorrection[], transcript: string, profileId: string | undefined, includeRoles = false): string {
   // Sorted by name, like the macOS directoryPeople().
   const people = usePeopleDirectoryStore.getState().people.filter(p => !p.isSelf).sort((a, b) => a.name.localeCompare(b.name)).map(p => ({
     name: p.name, role: p.role, organization: p.organization, responsibilities: p.responsibilities ?? [], aliases: p.aliases,
   }));
-  return contextBlock(entries, people, transcript, profileId, CONTEXT_BUDGET);
+  return contextBlock(entries, people, transcript, profileId, CONTEXT_BUDGET, [], includeRoles);
 }
 
 function todayNL(): string {

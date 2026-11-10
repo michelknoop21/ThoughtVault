@@ -96,7 +96,7 @@ export function containsWord(word: string, text: string): boolean {
  * Order: lines matching the transcript, then lines for `profileId`, then the newest. Port of the macOS
  * PersonalCorrections.contextBlock; the output must stay identical.
  */
-export function contextBlock(entries: PersonalCorrection[], people: PersonContext[], transcript: string, profileId: string | undefined, maxCharacters: number, extraTerms: string[] = []): string {
+export function contextBlock(entries: PersonalCorrection[], people: PersonContext[], transcript: string, profileId: string | undefined, maxCharacters: number, extraTerms: string[] = [], includeRoles = false): string {
   const clean = (items: string[]) => items.map(item => item.trim()).filter(Boolean);
   const found = (names: string[]) => clean(names).some(name => containsWord(name, transcript));
   const candidates: { line: string; rank: number }[] = [];
@@ -111,8 +111,9 @@ export function contextBlock(entries: PersonalCorrection[], people: PersonContex
   }
   for (const person of people) {
     let line = "- " + person.name;
-    const detail = clean([person.role, person.organization]).join(", ");
-    if (detail) line += ` (${detail})`;
+    // Role and organization only for the suggestion step: models copied them into the notule.
+    const detail = (includeRoles ? clean([person.role, person.organization]) : clean(person.aliases)).join(", ");
+    if (detail) line += includeRoles ? ` (${detail})` : ` (ook gehoord als: ${detail})`;
     const tasks = clean(person.responsibilities);
     if (tasks.length) line += ", taken: " + tasks.join("; ");
     candidates.push({ line, rank: found([person.name, ...person.aliases]) ? 0 : 2 });

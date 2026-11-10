@@ -79,8 +79,16 @@ it("contextBlockPrioritisesTermsFoundInTranscript", () => {
 });
 
 it("contextBlockListsPeopleWithResponsibilities", () => {
-  const block = contextBlock([], [person("Jan de Vries", "schade-expert", "Achmea", ["rapport opstellen"])], "", undefined, 6000);
+  const block = contextBlock([], [person("Jan de Vries", "schade-expert", "Achmea", ["rapport opstellen"])], "", undefined, 6000, [], true);
   expect(block).toContain("Jan de Vries (schade-expert, Achmea), taken: rapport opstellen");
+});
+
+it("minutesContextOmitsRoleAndOrganization", () => {
+  const jan = person("Jan de Vries", "schade-expert", "Achmea", ["rapport opstellen"], ["Jan V."]);
+  const block = contextBlock([], [jan], "", undefined, 6000);
+  expect(block).toContain("- Jan de Vries (ook gehoord als: Jan V.), taken: rapport opstellen");
+  expect(block).not.toContain("Achmea");
+  expect(block).not.toContain("schade-expert");
 });
 
 it("contextBlockAddsExtraTermsLastAndDeduped", () => {

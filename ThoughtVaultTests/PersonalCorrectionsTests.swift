@@ -57,8 +57,18 @@ final class PersonalCorrectionsTests: XCTestCase {
     }
 
     func testContextBlockListsPeopleWithResponsibilities() {
-        let block = PersonalCorrections.contextBlock(entries: [], people: [person("Jan de Vries", role: "schade-expert", org: "Achmea", tasks: ["rapport opstellen"])], transcript: "", profileId: nil, maxCharacters: 6000)
+        let block = PersonalCorrections.contextBlock(entries: [], people: [person("Jan de Vries", role: "schade-expert", org: "Achmea", tasks: ["rapport opstellen"])], transcript: "", profileId: nil, maxCharacters: 6000, includeRoles: true)
         XCTAssertTrue(block.contains("Jan de Vries (schade-expert, Achmea), taken: rapport opstellen"))
+    }
+
+    /// The minutes prompt leaves role and organization out: models copied them into the notule
+    /// although the transcript never said them, and the audit then rejects the notule.
+    func testMinutesContextOmitsRoleAndOrganization() {
+        let jan = person("Jan de Vries", role: "schade-expert", org: "Achmea", tasks: ["rapport opstellen"], aliases: ["Jan V."])
+        let block = PersonalCorrections.contextBlock(entries: [], people: [jan], transcript: "", profileId: nil, maxCharacters: 6000)
+        XCTAssertTrue(block.contains("- Jan de Vries (ook gehoord als: Jan V.), taken: rapport opstellen"), block)
+        XCTAssertFalse(block.contains("Achmea"))
+        XCTAssertFalse(block.contains("schade-expert"))
     }
 
     func testMigrateLegacyTermsCreatesEntriesOnce() throws {

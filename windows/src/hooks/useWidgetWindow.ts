@@ -1,3 +1,4 @@
+import { requireMainRecordingHandler } from "../services/mainRecordingLifetime";
 import { requireMainCloseHandler, reserveWidgetStart } from "../services/mainWindowLifetime";
 import { requireSupportOwner } from "../services/supportOwner";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
@@ -13,9 +14,9 @@ export async function openWidgetWindow(): Promise<void> {
   const release = reserveWidgetStart();
   let releaseWhenDone = true;
   try {
-    const [ownerCurrent, closeCurrent] = await Promise.all([requireSupportOwner(), requireMainCloseHandler()]);
+    const [ownerCurrent, closeCurrent, recordingCurrent] = await Promise.all([requireSupportOwner(), requireMainCloseHandler(), requireMainRecordingHandler()]);
     const checkCurrent = () => {
-      if (!ownerCurrent() || !closeCurrent()) throw new Error("Widget owner changed");
+      if (!ownerCurrent() || !closeCurrent() || !recordingCurrent()) throw new Error("Widget owner changed");
     };
     checkCurrent();
     const existing = await WebviewWindow.getByLabel("recording-widget");

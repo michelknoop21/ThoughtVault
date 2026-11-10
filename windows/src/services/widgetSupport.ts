@@ -2,8 +2,8 @@ import { emitTo, listen } from "@tauri-apps/api/event";
 
 export const WIDGET_FAILURE_EVENT = "support-widget-failure";
 export const WIDGET_ACK_EVENT = "support-widget-ack";
-// Stop is reported from the native recording-error event by the future C8 main hook.
 export const WIDGET_FAILURES = {
+  stop_failed: "Opname stoppen mislukt",
   pause_failed: "Pauzeren mislukt",
   resume_failed: "Hervatten mislukt",
 } as const;

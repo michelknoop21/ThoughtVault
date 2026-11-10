@@ -5,7 +5,7 @@ use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use tokio::sync::mpsc;
 use super::envelope::{EnvelopeConfig, EnvelopeProcessor, SpectrumProcessor};
-use super::types::{AudioDevice, RecordingCommand, RecordingEvent, RecordingMode, RecordingResult};
+use super::types::{AudioDevice, RecordingCommand, RecordingEvent, RecordingMode, RecordingResult, RecordingDiagnosticCode, TerminalDiagnostic};
 
 const TARGET_SAMPLE_RATE: u32 = 16000;
 const CHANNELS: u16 = 1;
@@ -185,6 +185,7 @@ pub fn start_recording_thread(
     output_path: String,
     event_tx: mpsc::UnboundedSender<RecordingEvent>,
     done_tx: tokio::sync::oneshot::Sender<Result<RecordingResult, String>>,
+    terminal: Arc<TerminalDiagnostic>,
 ) -> Result<(mpsc::Sender<RecordingCommand>, tokio::sync::oneshot::Receiver<Result<(), String>>), String> {
     let (ready_tx, ready_rx) = tokio::sync::oneshot::channel();
     let (cmd_tx, mut cmd_rx) = mpsc::channel::<RecordingCommand>(16);
@@ -206,15 +207,30 @@ pub fn start_recording_thread(
             &event_tx,
             &rt_handle,
             &mut ready,
+            &terminal,
         );
+        complete_recording_thread(result, ready, done_tx, &event_tx, &terminal);
+    });
+
+    Ok((cmd_tx, ready_rx))
+}
+
+fn complete_recording_thread(
+    result: Result<RecordingResult, String>,
+    mut ready: Option<tokio::sync::oneshot::Sender<Result<(), String>>>,
+    done_tx: tokio::sync::oneshot::Sender<Result<RecordingResult, String>>,
+    event_tx: &mpsc::UnboundedSender<RecordingEvent>,
+    terminal: &TerminalDiagnostic,
+) {
+        // Claim at the source before completion can wake a concurrent stop.
+        if result.is_err() {
+            terminal.claim(if ready.is_some() { RecordingDiagnosticCode::StartFailed } else { RecordingDiagnosticCode::StopFailed });
+        }
         let _ = done_tx.send(result.clone());
         if let Err(e) = result {
             if let Some(ready) = ready.take() { let _ = ready.send(Err(e.clone())); }
             let _ = event_tx.send(RecordingEvent::Error(e));
         }
-    });
-
-    Ok((cmd_tx, ready_rx))
 }
 
 fn recording_thread_body(
@@ -225,6 +241,7 @@ fn recording_thread_body(
     event_tx: &mpsc::UnboundedSender<RecordingEvent>,
     rt_handle: &tokio::runtime::Handle,
     ready: &mut Option<tokio::sync::oneshot::Sender<Result<(), String>>>,
+    terminal: &Arc<TerminalDiagnostic>,
 ) -> Result<RecordingResult, String> {
     let host = cpal::default_host();
 
@@ -329,13 +346,13 @@ fn recording_thread_body(
             &input_device, &config, actual_sample_rate, device_channels,
             Arc::clone(&mic_writer), Arc::clone(&is_paused), Arc::clone(&clock),
             event_tx.clone(), Arc::clone(&samples_written),
-            Arc::clone(&mic_resampler),
+            Arc::clone(&mic_resampler), Arc::clone(terminal),
         )?,
         cpal::SampleFormat::F32 => build_input_stream_f32(
             &input_device, &config, actual_sample_rate, device_channels,
             Arc::clone(&mic_writer), Arc::clone(&is_paused), Arc::clone(&clock),
             event_tx.clone(), Arc::clone(&samples_written),
-            Arc::clone(&mic_resampler),
+            Arc::clone(&mic_resampler), Arc::clone(terminal),
         )?,
         _ => return Err("Niet-ondersteunde sample format".to_string()),
     };
@@ -355,7 +372,7 @@ fn recording_thread_body(
         {
             match try_build_loopback_stream(
                 &host, &loopback_path,
-                Arc::clone(&loopback_writer), Arc::clone(&is_paused), Arc::clone(&clock), event_tx.clone(),
+                Arc::clone(&loopback_writer), Arc::clone(&is_paused), Arc::clone(&clock), event_tx.clone(), Arc::clone(terminal),
             ) {
                 Ok(stream) => {
                     elog!("[Audio] Loopback stream gestart voor systeemaudio opname");
@@ -556,7 +573,7 @@ mod mix_tests {
         let (done, result) = tokio::sync::oneshot::channel();
         let (_commands, ready) = start_recording_thread(
             Some("ThoughtVault QA missing device".into()), RecordingMode::Microphone,
-            "unused-qa-recording.wav".into(), events, done,
+            "unused-qa-recording.wav".into(), events, done, Arc::new(TerminalDiagnostic::default()),
         ).unwrap();
         assert!(ready.await.unwrap().is_err());
         let result = tokio::time::timeout(std::time::Duration::from_secs(5), result).await.unwrap().unwrap();
@@ -716,10 +733,12 @@ fn build_input_stream_i16(
     event_tx: mpsc::UnboundedSender<RecordingEvent>,
     samples_written: Arc<AtomicU64>,
     resampler: Arc<Mutex<StreamingResampler>>,
+    terminal: Arc<TerminalDiagnostic>,
 ) -> Result<cpal::Stream, String> {
     let writer_clone = Arc::clone(&writer);
     let event_tx_clone = event_tx.clone();
     let errors_tx = event_tx.clone();
+    let errors_terminal = Arc::clone(&terminal);
     let samples_written_clone = Arc::clone(&samples_written);
     let resampler_clone = Arc::clone(&resampler);
 
@@ -778,6 +797,7 @@ fn build_input_stream_i16(
 
                     if let Err(error) = write_timed_chunk(w, &resampled, position, &mut written) {
                         is_paused.store(true, Ordering::Relaxed);
+                        terminal.claim(RecordingDiagnosticCode::CaptureFailed);
                         let _ = event_tx_clone.send(RecordingEvent::Error(format!("Audio opslaan mislukt: {error}")));
                         return;
                     }
@@ -789,7 +809,7 @@ fn build_input_stream_i16(
                 elog!("[Audio] ERROR: Failed to lock writer mutex in callback!");
             }
         },
-        move |err| { let _ = errors_tx.send(RecordingEvent::Error(format!("Microfoonverbinding onderbroken: {err}"))); },
+        move |err| { errors_terminal.claim(RecordingDiagnosticCode::CaptureFailed); let _ = errors_tx.send(RecordingEvent::Error(format!("Microfoonverbinding onderbroken: {err}"))); },
         None,
     ).map_err(|e| format!("Kan i16 audio stream niet openen: {}", e))?;
 
@@ -809,10 +829,12 @@ fn build_input_stream_f32(
     event_tx: mpsc::UnboundedSender<RecordingEvent>,
     samples_written: Arc<AtomicU64>,
     resampler: Arc<Mutex<StreamingResampler>>,
+    terminal: Arc<TerminalDiagnostic>,
 ) -> Result<cpal::Stream, String> {
     let writer_clone = Arc::clone(&writer);
     let event_tx_clone = event_tx.clone();
     let errors_tx = event_tx.clone();
+    let errors_terminal = Arc::clone(&terminal);
     let samples_written_clone = Arc::clone(&samples_written);
     let resampler_clone = Arc::clone(&resampler);
 
@@ -872,6 +894,7 @@ fn build_input_stream_f32(
 
                     if let Err(error) = write_timed_chunk(w, &resampled, position, &mut written) {
                         is_paused.store(true, Ordering::Relaxed);
+                        terminal.claim(RecordingDiagnosticCode::CaptureFailed);
                         let _ = event_tx_clone.send(RecordingEvent::Error(format!("Audio opslaan mislukt: {error}")));
                         return;
                     }
@@ -883,7 +906,7 @@ fn build_input_stream_f32(
                 elog!("[Audio] ERROR: Failed to lock writer mutex in f32 callback!");
             }
         },
-        move |err| { let _ = errors_tx.send(RecordingEvent::Error(format!("Microfoonverbinding onderbroken: {err}"))); },
+        move |err| { errors_terminal.claim(RecordingDiagnosticCode::CaptureFailed); let _ = errors_tx.send(RecordingEvent::Error(format!("Microfoonverbinding onderbroken: {err}"))); },
         None,
     ).map_err(|e| format!("Kan f32 audio stream niet openen: {}", e))?;
 
@@ -901,6 +924,7 @@ fn try_build_loopback_stream(
     is_paused: Arc<AtomicBool>,
     clock: Arc<Mutex<CaptureClock>>,
     event_tx: mpsc::UnboundedSender<RecordingEvent>,
+    terminal: Arc<TerminalDiagnostic>,
 ) -> Result<cpal::Stream, String> {
     use cpal::traits::HostTrait;
 
@@ -986,6 +1010,7 @@ fn try_build_loopback_stream(
             let mut written = 0_u64;
             let levels_tx = event_tx.clone();
             let errors_tx = event_tx.clone();
+    let errors_terminal = Arc::clone(&terminal);
 
             // Log first callback once
             let first_callback = Arc::new(AtomicBool::new(true));
@@ -1033,12 +1058,13 @@ fn try_build_loopback_stream(
 
                             if let Err(error) = write_timed_chunk(w, &resampled, position, &mut written) {
                                 is_paused.store(true, Ordering::Relaxed);
+                                terminal.claim(RecordingDiagnosticCode::CaptureFailed);
                                 let _ = levels_tx.send(RecordingEvent::Error(format!("Systeemaudio opslaan mislukt: {error}")));
                             }
                         }
                     }
                 },
-                move |err| { let _ = errors_tx.send(RecordingEvent::Error(format!("Systeemgeluidverbinding onderbroken: {err}"))); },
+                move |err| { errors_terminal.claim(RecordingDiagnosticCode::CaptureFailed); let _ = errors_tx.send(RecordingEvent::Error(format!("Systeemgeluidverbinding onderbroken: {err}"))); },
                 None,
             ).map_err(|e| format!("Loopback i16 stream fout: {}", e))?;
             stream.play().map_err(|e| format!("Kan loopback stream niet starten: {}", e))?;
@@ -1051,6 +1077,7 @@ fn try_build_loopback_stream(
             let mut written = 0_u64;
             let levels_tx = event_tx.clone();
             let errors_tx = event_tx.clone();
+    let errors_terminal = Arc::clone(&terminal);
 
             // Log first callback once
             let first_callback = Arc::new(AtomicBool::new(true));
@@ -1098,17 +1125,110 @@ fn try_build_loopback_stream(
 
                             if let Err(error) = write_timed_chunk(w, &resampled, position, &mut written) {
                                 is_paused.store(true, Ordering::Relaxed);
+                                terminal.claim(RecordingDiagnosticCode::CaptureFailed);
                                 let _ = levels_tx.send(RecordingEvent::Error(format!("Systeemaudio opslaan mislukt: {error}")));
                             }
                         }
                     }
                 },
-                move |err| { let _ = errors_tx.send(RecordingEvent::Error(format!("Systeemgeluidverbinding onderbroken: {err}"))); },
+                move |err| { errors_terminal.claim(RecordingDiagnosticCode::CaptureFailed); let _ = errors_tx.send(RecordingEvent::Error(format!("Systeemgeluidverbinding onderbroken: {err}"))); },
                 None,
             ).map_err(|e| format!("Loopback f32 stream fout: {}", e))?;
             stream.play().map_err(|e| format!("Kan loopback stream niet starten: {}", e))?;
             Ok(stream)
         }
         _ => Err("Niet-ondersteunde loopback sample format".to_string()),
+    }
+}
+
+#[cfg(test)]
+mod diagnostic_contract_tests {
+    use super::*;
+
+    #[test]
+    fn startup_and_finalization_claim_before_completion_without_draining_ui_events() {
+        for startup in [true, false] {
+            let terminal = Arc::new(TerminalDiagnostic::default());
+            let (events, _unread) = mpsc::unbounded_channel();
+            let (done, completed) = tokio::sync::oneshot::channel::<Result<RecordingResult, String>>();
+            let (ready, mut readiness) = tokio::sync::oneshot::channel();
+            std::thread::scope(|threads| {
+                let receiver_terminal = Arc::clone(&terminal);
+                let receiver = threads.spawn(move || {
+                    assert_eq!(completed.blocking_recv().unwrap().unwrap_err(), "original UI message");
+                    // Completion must never expose an unclaimed terminal error to a concurrent stop.
+                    assert_eq!(receiver_terminal.take(), Some(if startup { RecordingDiagnosticCode::StartFailed } else { RecordingDiagnosticCode::StopFailed }));
+                });
+                complete_recording_thread(Err("original UI message".into()), if startup { Some(ready) } else { None }, done, &events, &terminal);
+                receiver.join().unwrap();
+            });
+            terminal.claim(RecordingDiagnosticCode::StopFailed);
+            assert_eq!(terminal.take(), None);
+            if startup { assert_eq!(readiness.try_recv().unwrap().unwrap_err(), "original UI message"); }
+        }
+    }
+
+    #[test]
+    fn callback_finalization_and_stop_race_has_one_owner_and_next_session_is_fresh() {
+        let terminal = Arc::new(TerminalDiagnostic::default());
+        let barrier = Arc::new(std::sync::Barrier::new(3));
+        let (diagnostics, received) = std::sync::mpsc::channel();
+        std::thread::scope(|threads| {
+            for source in 0..3 {
+                let terminal = Arc::clone(&terminal);
+                let barrier = Arc::clone(&barrier);
+                let diagnostics = diagnostics.clone();
+                threads.spawn(move || {
+                    barrier.wait();
+                    match source {
+                        0 => terminal.claim(RecordingDiagnosticCode::CaptureFailed),
+                        1 => {
+                            let (done, _completion) = tokio::sync::oneshot::channel();
+                            let (events, _ui) = mpsc::unbounded_channel();
+                            complete_recording_thread(Err("finalization failed".into()), None, done, &events, &terminal);
+                        }
+                        _ => terminal.claim(RecordingDiagnosticCode::StopFailed),
+                    }
+                    if let Some(code) = terminal.take() { diagnostics.send(code).unwrap(); }
+                });
+            }
+        });
+        terminal.claim(RecordingDiagnosticCode::CaptureFailed);
+        assert_eq!(terminal.take(), None);
+        assert_eq!(received.try_iter().count(), 1);
+        let fresh = TerminalDiagnostic::default();
+        // Reading an empty marker must not prevent a later legitimate claim.
+        assert_eq!(fresh.take(), None);
+        fresh.claim(RecordingDiagnosticCode::StartFailed);
+        assert_eq!(fresh.take(), Some(RecordingDiagnosticCode::StartFailed));
+    }
+
+    #[test]
+    fn loser_error_arriving_before_winner_enqueue_consumes_winning_code_once() {
+        let terminal = Arc::new(TerminalDiagnostic::default());
+        let (events, mut receiver) = mpsc::unbounded_channel();
+        let (claimed, claim_received) = std::sync::mpsc::channel();
+        let (release, held) = std::sync::mpsc::channel();
+        std::thread::scope(|threads| {
+            let winner_terminal = Arc::clone(&terminal);
+            let winner_events = events.clone();
+            let winner = threads.spawn(move || {
+                winner_terminal.claim(RecordingDiagnosticCode::CaptureFailed);
+                claimed.send(()).unwrap();
+                held.recv_timeout(std::time::Duration::from_secs(5)).expect("winner was not released after forced preemption"); // Force preemption between atomic claim and Error enqueue.
+                assert!(winner_events.send(RecordingEvent::Error("winner UI".into())).is_err());
+            });
+            claim_received.recv().unwrap();
+            terminal.claim(RecordingDiagnosticCode::StopFailed);
+            events.send(RecordingEvent::Error("loser UI".into())).unwrap();
+            assert!(matches!(receiver.try_recv(), Ok(RecordingEvent::Error(_))));
+            // This is the production first-Error forwarder action, independent of producer order.
+            assert_eq!(terminal.take(), Some(RecordingDiagnosticCode::CaptureFailed));
+            drop(receiver); // Existing forwarder breaks after its first legacy Error.
+            release.send(()).unwrap();
+            winner.join().unwrap();
+        });
+        terminal.claim(RecordingDiagnosticCode::StopFailed);
+        assert_eq!(terminal.take(), None);
     }
 }

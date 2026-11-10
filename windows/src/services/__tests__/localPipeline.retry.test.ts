@@ -10,6 +10,9 @@ import { processLocally } from "../localPipeline";
 import type { Transcript } from "../../types";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
+vi.mock("../crashReporter", async original => ({
+  ...(await original<object>()), markStage: vi.fn(), reportFailure: vi.fn(async () => {}),
+}));
 vi.mock("@tauri-apps/api/event", () => ({ listen: vi.fn().mockResolvedValue(() => {}) }));
 
 const partial: Transcript = {

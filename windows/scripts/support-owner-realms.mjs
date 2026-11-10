@@ -135,3 +135,25 @@ for (const failure of ['failWrite', 'failRead']) {
   f.stop(); await f.restart(); await f.replay(original); assert.equal(f.reports.length, 259, 'restart has no durable transfer tombstone'); f.close();
 }
 console.log('PASS: isolated main/widget realms, real C6 persistence/credentials/relay path at fake native boundary; ACK loss, consent, storage failure, disposal, 429 and timeout');
+
+// Unknown stop IPC failures use the same owner-only bridge and fixed payload.
+{
+  const f = await fixture();
+  const p = f.widget.handoffWidgetFailure('stop_failed'); await drain();
+  assert.equal(await p, true); assert.equal(f.reports.length, 1);
+  assert.equal(f.requests[0].code, 'stop_failed');
+  assert.deepEqual(Object.keys(f.requests[0]).sort(), ['code', 'id']);
+  assert.equal(f.reports[0].shownMessage, 'Opname stoppen mislukt');
+  assert.equal(f.reports[0].errorText, 'widget_stop_failed');
+  f.close();
+}
+
+// Structured transport values must not coerce into an approved static code.
+{
+  const f = await fixture();
+  for (const code of [['stop_failed'], null, {}]) {
+    await f.replay({ id: '11111111-1111-4111-8111-111111111111', code });
+  }
+  assert.equal(f.reports.length, 0); assert.equal(f.acks.length, 0);
+  assert.equal(f.credentials.size, 0); f.close();
+}

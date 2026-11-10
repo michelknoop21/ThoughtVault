@@ -69,3 +69,17 @@ it("leaves a durable enqueue recoverable when its owner is disposed during prepa
   expect(fake.enqueue).toHaveBeenCalledTimes(1);
   expect(fake.emit).toHaveBeenCalledWith("recording-widget", WIDGET_ACK_EVENT, { id: failure.id, outcome: "queued" });
 });
+
+it("accepts fixed stop metadata and rejects text supplied beside an approved code", async () => {
+  await start();
+  fake.receive!({ payload: { ...failure, code: "stop_failed", error: "PRIVATE" } }); await drain();
+  expect(fake.enqueue).not.toHaveBeenCalled();
+  fake.receive!({ payload: { ...failure, code: "stop_failed" } }); await drain();
+  expect(fake.enqueue).toHaveBeenCalledExactlyOnceWith("opnemen", "Opname stoppen mislukt", "widget_stop_failed", failure.id);
+});
+
+it.each([{ code: ["stop_failed"] }, { code: null }, { code: { toString: () => "stop_failed" } }])("rejects a non-string widget failure code: %s", async ({ code }) => {
+  await start();
+  fake.receive!({ payload: { ...failure, code } }); await drain();
+  expect(fake.enqueue).not.toHaveBeenCalled(); expect(fake.emit).not.toHaveBeenCalled();
+});

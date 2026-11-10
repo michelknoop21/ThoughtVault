@@ -15,12 +15,16 @@ import {
   WaveformIcon,
 } from "../components/ui/StudioIcons";
 import { useRecordingStore } from "../stores/recordingStore";
+import { requireMainRecordingHandler } from "../services/mainRecordingLifetime";
+import { reportFailure } from "../services/crashReporter";
 import { useSettingsStore } from "../stores/settingsStore";
 import { useTranscriptsStore } from "../stores/transcriptsStore";
 import { useProfilesStore } from "../stores/profilesStore";
 import { useAudioLevelsRef, useAudioLevel, useAudioBandsRef } from "../hooks/useAudioLevel";
 import { openWidgetWindow, closeWidgetWindow } from "../hooks/useWidgetWindow";
 import {
+  shouldReportRecordingFailure,
+  recordingErrorForUI,
   startRecording,
   stopRecording,
   pauseRecording,
@@ -187,6 +191,7 @@ export function RecordingPage() {
     } catch (err) {
       const msg = err instanceof Error ? err.message : "YouTube transcriptie mislukt";
       setYouTubeError(msg);
+      void reportFailure("transcriberen", "YouTube transcriptie mislukt", "youtube_submit_failed");
     } finally {
       setSubmittingYouTube(false);
     }
@@ -198,7 +203,9 @@ export function RecordingPage() {
     setError(null);
 
     try {
+      const recordingCurrent = await requireMainRecordingHandler();
       const outputDir = await getRecordingsDir();
+      if (!recordingCurrent()) throw new Error("Recording handler changed");
       const filePath = await startRecording(null, recordingMode, outputDir);
       filePathRef.current = filePath;
       setFilePath(filePath);
@@ -214,8 +221,10 @@ export function RecordingPage() {
         }).catch((e) => console.error("[Recording] Minimize failed:", e));
       }
     } catch (err) {
+      const uiError = recordingErrorForUI(err);
       console.error("[Recording] Start failed:", err);
-      setError(err instanceof Error ? err.message : String(err));
+      if (shouldReportRecordingFailure(err)) void reportFailure("opnemen", "Opname starten mislukt", "recording_start_failed");
+      setError(uiError instanceof Error ? uiError.message : String(uiError));
       setPhase("idle");
     }
   }
@@ -237,6 +246,7 @@ export function RecordingPage() {
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
+      void reportFailure("transcriberen", "Audio importeren mislukt", "audio_import_failed");
     } finally {
       setIsImporting(false);
     }
@@ -266,7 +276,9 @@ export function RecordingPage() {
       // after the WAV file is fully finalized by the recording thread.
     } catch (err) {
       console.error("[Recording] Stop failed:", err);
-      setError(err instanceof Error ? err.message : typeof err === "string" ? err : "Stoppen mislukt");
+      const uiError = recordingErrorForUI(err);
+      if (shouldReportRecordingFailure(err)) void reportFailure("opnemen", "Opname stoppen mislukt", "recording_stop_failed");
+      setError(uiError instanceof Error ? uiError.message : typeof uiError === "string" ? uiError : "Stoppen mislukt");
       setPhase("idle");
     }
   }
@@ -275,7 +287,9 @@ export function RecordingPage() {
     try {
       await pauseRecording();
     } catch (error) {
-      setError(error instanceof Error ? error.message : "Pauzeren mislukt");
+      const uiError = recordingErrorForUI(error);
+      setError(uiError instanceof Error ? uiError.message : "Pauzeren mislukt");
+      if (shouldReportRecordingFailure(error)) void reportFailure("opnemen", "Pauzeren mislukt", "pause_failed");
     }
   }
 
@@ -283,7 +297,9 @@ export function RecordingPage() {
     try {
       await resumeRecording();
     } catch (error) {
-      setError(error instanceof Error ? error.message : "Hervatten mislukt");
+      const uiError = recordingErrorForUI(error);
+      setError(uiError instanceof Error ? uiError.message : "Hervatten mislukt");
+      if (shouldReportRecordingFailure(error)) void reportFailure("opnemen", "Hervatten mislukt", "resume_failed");
     }
   }
 
@@ -329,7 +345,9 @@ export function RecordingPage() {
       // The native stop command has finished with an error; retain the saved draft.
       useRecordingStore.getState().reset();
       closeWidgetWindow().catch((e) => console.error("[Recording] Widget close failed:", e));
-      setError(err instanceof Error ? err.message : typeof err === "string" ? err : "Stoppen mislukt");
+      const uiError = recordingErrorForUI(err);
+      if (shouldReportRecordingFailure(err)) void reportFailure("opnemen", "Opname stoppen mislukt", "recording_stop_failed");
+      setError(uiError instanceof Error ? uiError.message : typeof uiError === "string" ? uiError : "Stoppen mislukt");
     }
   }
 

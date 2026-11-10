@@ -30,8 +30,8 @@ export function startSupportOwner(): () => void {
     if (getCurrentWindow().label !== "main") throw new Error("Only main can own support");
     const stop = await listen<WidgetFailure>(WIDGET_FAILURE_EVENT, ({ payload }) => {
       // Never serialize or accept arbitrary caller error text, stage or extra fields.
-      if (!payload || typeof payload.id !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(payload.id)
-          || !Object.prototype.hasOwnProperty.call(WIDGET_FAILURES, payload.code)) return;
+      if (!payload || typeof payload !== "object" || Object.keys(payload).length !== 2 || typeof payload.id !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(payload.id)
+          || typeof payload.code !== "string" || !Object.prototype.hasOwnProperty.call(WIDGET_FAILURES, payload.code)) return;
       const { id, code } = payload;
       serial = serial.then(async () => {
         if (disposed) return;

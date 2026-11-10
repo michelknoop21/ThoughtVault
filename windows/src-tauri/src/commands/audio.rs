@@ -3,12 +3,25 @@ use tokio::sync::mpsc;
 use tauri::{AppHandle, Emitter};
 use crate::audio::{
     recorder,
-    types::{AudioDevice, RecordingCommand, RecordingEvent, RecordingMode, RecordingResult},
+    types::{AudioDevice, RecordingCommand, RecordingEvent, RecordingMode, RecordingResult, RecordingDiagnosticCode, RecordingCommandError, TerminalDiagnostic},
 };
+
+fn emit_diagnostic(app: &AppHandle, code: RecordingDiagnosticCode) {
+    let _ = app.emit("recording-diagnostic", code);
+}
+fn emit_terminal(app: &AppHandle, terminal: &TerminalDiagnostic, fallback: RecordingDiagnosticCode) {
+    terminal.claim(fallback);
+    if let Some(code) = terminal.take() { emit_diagnostic(app, code); }
+}
+fn command_failure(app: &AppHandle, code: RecordingDiagnosticCode, message: impl Into<String>) -> RecordingCommandError {
+    emit_diagnostic(app, code);
+    RecordingCommandError::native_owned(message)
+}
 
 /// Shared recording state stored in Tauri's managed state.
 /// Uses channels to avoid storing non-Send cpal Streams in state.
 pub struct RecordingState {
+    pub terminal: Option<Arc<TerminalDiagnostic>>,
     pub cmd_tx: Option<mpsc::Sender<RecordingCommand>>,
     pub is_recording: bool,
     pub is_paused: bool,
@@ -19,6 +32,7 @@ pub struct RecordingState {
 impl Default for RecordingState {
     fn default() -> Self {
         Self {
+            terminal: None,
             cmd_tx: None,
             is_recording: false,
             is_paused: false,
@@ -48,12 +62,13 @@ pub async fn start_recording(
     device_id: Option<String>,
     mode: String,
     output_dir: String,
-) -> Result<String, String> {
+) -> Result<String, RecordingCommandError> {
+    let terminal = Arc::new(TerminalDiagnostic::default());
     let (file_path, ready) = {
-        let mut guard = state.lock().map_err(|e| e.to_string())?;
+        let mut guard = state.lock().map_err(|e| command_failure(&app, RecordingDiagnosticCode::StartFailed, e.to_string()))?;
 
         if guard.is_recording {
-            return Err("Er loopt al een opname".to_string());
+            return Err(RecordingCommandError::expected("Er loopt al een opname"));
         }
 
         let recording_mode = match mode.as_str() {
@@ -63,7 +78,7 @@ pub async fn start_recording(
 
         // Ensure output directory exists
         std::fs::create_dir_all(&output_dir)
-            .map_err(|e| format!("Kan map niet aanmaken: {}", e))?;
+            .map_err(|e| command_failure(&app, RecordingDiagnosticCode::StartFailed, format!("Kan map niet aanmaken: {}", e)))?;
 
         let timestamp = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
@@ -79,6 +94,7 @@ pub async fn start_recording(
 
         let shared_state = Arc::clone(state.inner());
         let session_path = file_path.clone();
+        let event_terminal = Arc::clone(&terminal);
         tokio::spawn(async move {
             let now = std::time::Instant::now();
             let mut mic = (0.0, now);
@@ -102,6 +118,8 @@ pub async fn start_recording(
                         Some(RecordingEvent::SystemAudioSpectrum(bands)) => system_bands = (bands, std::time::Instant::now()),
                         Some(RecordingEvent::Stopped { .. }) => break,
                         Some(RecordingEvent::Error(error)) => {
+                            // A losing callback may enqueue first; consume the atomically published winner.
+                            if let Some(code) = event_terminal.take() { emit_diagnostic(&app_clone, code); }
                             if let Ok(mut state) = shared_state.lock() {
                                 if state.file_path.as_ref() == Some(&session_path) { *state = RecordingState::default(); }
                             }
@@ -122,8 +140,13 @@ pub async fn start_recording(
             file_path.clone(),
             event_tx,
             done_tx,
-        )?;
+            Arc::clone(&terminal),
+        ).map_err(|error| {
+            emit_terminal(&app, &terminal, RecordingDiagnosticCode::StartFailed);
+            RecordingCommandError::native_owned(error)
+        })?;
 
+        guard.terminal = Some(Arc::clone(&terminal));
         guard.cmd_tx = Some(cmd_tx);
         guard.is_recording = true;
         guard.is_paused = false;
@@ -132,7 +155,10 @@ pub async fn start_recording(
 
         (file_path, ready)
     };
-    ready.await.map_err(|_| "Opname-thread is gestopt tijdens het starten".to_string())??;
+    ready.await.map_err(|_| {
+        emit_terminal(&app, &terminal, RecordingDiagnosticCode::StartFailed);
+        RecordingCommandError::native_owned("Opname-thread is gestopt tijdens het starten")
+    })?.map_err(RecordingCommandError::native_owned)?;
     Ok(file_path)
 }
 
@@ -140,13 +166,17 @@ pub async fn start_recording(
 pub async fn stop_recording(
     app: AppHandle,
     state: tauri::State<'_, SharedRecordingState>,
-) -> Result<RecordingResult, String> {
-    let (cmd_tx, completion, file_path) = {
-        let mut guard = state.lock().map_err(|e| e.to_string())?;
-        if !guard.is_recording { return Err("Er is geen actieve opname".to_string()); }
-        if guard.completion.is_none() { return Err("De opname wordt al opgeslagen".to_string()); }
+) -> Result<RecordingResult, RecordingCommandError> {
+    let (cmd_tx, completion, file_path, terminal) = {
+        let mut guard = state.lock().map_err(|e| {
+            if let Some(terminal) = &e.get_ref().terminal { emit_terminal(&app, terminal, RecordingDiagnosticCode::StopFailed); }
+            else { emit_diagnostic(&app, RecordingDiagnosticCode::StopFailed); }
+            RecordingCommandError::native_owned(e.to_string())
+        })?;
+        if !guard.is_recording { return Err(RecordingCommandError::expected("Er is geen actieve opname")); }
+        if guard.completion.is_none() { return Err(RecordingCommandError::expected("De opname wordt al opgeslagen")); }
         guard.is_paused = false;
-        (guard.cmd_tx.take(), guard.completion.take(), guard.file_path.clone())
+        (guard.cmd_tx.take(), guard.completion.take(), guard.file_path.clone(), guard.terminal.clone())
     };
     let _ = app.emit("recording-stopping", ());
     // Every exit below must clear the session, otherwise a failed stop leaves
@@ -159,7 +189,15 @@ pub async fn stop_recording(
         // Large meetings must finish mixing before the session is cleared.
         completion.await.map_err(|_| "Opname-thread is gestopt zonder resultaat".to_string())?
     }.await;
-    let mut guard = state.lock().map_err(|e| e.to_string())?;
+    if result.is_err() {
+        if let Some(terminal) = &terminal { emit_terminal(&app, terminal, RecordingDiagnosticCode::StopFailed); }
+        else { emit_diagnostic(&app, RecordingDiagnosticCode::StopFailed); }
+    }
+    let mut guard = state.lock().map_err(|e| {
+        if let Some(terminal) = &terminal { emit_terminal(&app, terminal, RecordingDiagnosticCode::StopFailed); }
+        else { emit_diagnostic(&app, RecordingDiagnosticCode::StopFailed); }
+        RecordingCommandError::native_owned(e.to_string())
+    })?;
     if guard.file_path == file_path { *guard = RecordingState::default(); }
     drop(guard);
     let _ = app.emit("audio-level", 0.0_f32);
@@ -168,18 +206,18 @@ pub async fn stop_recording(
         Ok(recording) => { let _ = app.emit("recording-stopped", recording); }
         Err(error) => { let _ = app.emit("recording-error", error); }
     }
-    result
+    result.map_err(RecordingCommandError::native_owned)
 }
 
 #[tauri::command]
 pub async fn pause_recording(
     app: AppHandle,
     state: tauri::State<'_, SharedRecordingState>,
-) -> Result<(), String> {
-    let mut guard = state.lock().map_err(|e| e.to_string())?;
+) -> Result<(), RecordingCommandError> {
+    let mut guard = state.lock().map_err(|e| command_failure(&app, RecordingDiagnosticCode::PauseFailed, e.to_string()))?;
 
     if !guard.is_recording {
-        return Err("Geen actieve opname".to_string());
+        return Err(RecordingCommandError::expected("Geen actieve opname"));
     }
 
     if guard.is_paused {
@@ -189,9 +227,9 @@ pub async fn pause_recording(
 
     if let Some(ref tx) = guard.cmd_tx {
         tx.try_send(RecordingCommand::Pause)
-            .map_err(|e| format!("Pauze mislukt: {}", e))?;
+            .map_err(|e| command_failure(&app, RecordingDiagnosticCode::PauseFailed, format!("Pauze mislukt: {}", e)))?;
     } else {
-        return Err("Opnamekanaal is gesloten".to_string());
+        return Err(command_failure(&app, RecordingDiagnosticCode::PauseFailed, "Opnamekanaal is gesloten"));
     }
 
     // Update shared state to reflect paused status
@@ -206,11 +244,11 @@ pub async fn pause_recording(
 pub async fn resume_recording(
     app: AppHandle,
     state: tauri::State<'_, SharedRecordingState>,
-) -> Result<(), String> {
-    let mut guard = state.lock().map_err(|e| e.to_string())?;
+) -> Result<(), RecordingCommandError> {
+    let mut guard = state.lock().map_err(|e| command_failure(&app, RecordingDiagnosticCode::ResumeFailed, e.to_string()))?;
 
     if !guard.is_recording {
-        return Err("Geen actieve opname".to_string());
+        return Err(RecordingCommandError::expected("Geen actieve opname"));
     }
 
     if !guard.is_paused {
@@ -220,9 +258,9 @@ pub async fn resume_recording(
 
     if let Some(ref tx) = guard.cmd_tx {
         tx.try_send(RecordingCommand::Resume)
-            .map_err(|e| format!("Hervatten mislukt: {}", e))?;
+            .map_err(|e| command_failure(&app, RecordingDiagnosticCode::ResumeFailed, format!("Hervatten mislukt: {}", e)))?;
     } else {
-        return Err("Opnamekanaal is gesloten".to_string());
+        return Err(command_failure(&app, RecordingDiagnosticCode::ResumeFailed, "Opnamekanaal is gesloten"));
     }
 
     // Update shared state to reflect recording status

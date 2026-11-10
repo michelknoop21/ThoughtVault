@@ -19,7 +19,10 @@ vi.mock("../services/api", () => ({ api: {
 } }));
 vi.mock("../services/sse", () => ({ createSSEClient: () => ({ connect: (_update: unknown, _error: unknown, complete: (status?: string) => Promise<void>) => { mocks.complete = complete; } }) }));
 vi.mock("@tauri-apps/api/event", () => ({ listen: vi.fn(async () => () => {}) }));
-vi.mock("../services/crashReporter", () => ({ initCrashReporter: vi.fn() }));
+vi.mock("../services/crashReporter", () => ({
+  initCrashReporter: vi.fn(), reportFailure: vi.fn(async () => {}), markStage: vi.fn(),
+  stageForStatus: () => null, failureFromTransition: () => null,
+}));
 vi.mock("../services/meetingNotifications", () => ({ initMeetingNotifications: vi.fn() }));
 vi.mock("../services/microsoftGraph", () => ({ MicrosoftGraphService: {} }));
 vi.mock("../services/offlineQueue", () => ({ getQueue: vi.fn(async () => []) }));

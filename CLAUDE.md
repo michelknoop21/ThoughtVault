@@ -59,7 +59,7 @@ FastAPI op AWS EC2 GPU `michelk@3.69.205.209`, container `n8n_transcript_studio`
 ## Gotchas
 - `notifications(named:)` gebruiken, NIET `notifications(for:)` in AuthViewModel
 - Sidebar: custom collapsible sidebar (52px icon column ↔ full sidebar), toggle via `Shift+Cmd+S`. Niet meer `columnVisibility` gebruiken (DEC-029)
-- Combined recording: `mixAudioFiles()` in RecordingViewModel (element-wise max over PCM)
+- Combined recording: `AudioMixer.mix` (`macos/Services/AudioMixer.swift`, via `mixAudioFiles()` in RecordingViewModel): gemiddelde (mic+systeem)/2, systeemstart uitgelijnd op het starttijdverschil
 - Auth header: macOS → `X-User-Token`, Windows → `Authorization: Bearer` (beide geaccepteerd)
 - Backend `username` veld is het e-mailadres (niet `email`)
 - macOS TCC/rechten: lokaal **signed** bouwen (`-allowProvisioningUpdates`, cert `Apple Development: info@michelknoop.nl`, team `XL9KN38ATX`). Ad-hoc builds (`CODE_SIGNING_ALLOWED=NO`) hebben geen stabiele designated requirement → macOS vraagt rechten elke build opnieuw. Signed = stabiele identity → **mic / spraak / agenda / documenten blijven behouden** (deze TCC-grants zijn op bundle-ID gekeyed in de user-db). **Uitzondering: Screen Recording** (`kTCCServiceScreenCapture`, via ScreenCaptureKit) re-prompt blijft op macOS 26 Tahoe: die grant leeft in de SIP-protected system-db, is pad/cdhash-gevoelig en wordt door macOS bij elke binary-wijziging + periodiek opnieuw gevraagd, ongeacht stabiele signing. Mitigatie: app altijd vanaf **hetzelfde vaste pad** draaien (`/Applications/ThoughtVault.app`), nooit vanuit roterende DerivedData-pad en nooit meerdere kopieën tegelijk (elke kopie/rebuild = andere cdhash → TCC ziet "andere app").

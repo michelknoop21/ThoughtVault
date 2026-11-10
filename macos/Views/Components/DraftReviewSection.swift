@@ -1,0 +1,49 @@
+// DraftReviewSection.swift
+// Collapsed warning block above the approved notule when local generation
+// was rejected by the audit and only a draft was stored.
+
+import SwiftUI
+
+struct DraftReviewSection: View {
+    let reason: String
+    let draftHtml: String
+
+    #if DEBUG
+    @State private var isExpanded = UserDefaults.standard.string(forKey: "TVDebugExpandDraft") == "YES"
+    #else
+    @State private var isExpanded = false
+    #endif
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        DisclosureGroup(isExpanded: $isExpanded) {
+            VStack(alignment: .leading, spacing: TS.Spacing.sm) {
+                Text(reason)
+                    .font(TS.Font.caption)
+                    .foregroundStyle(Color.labelSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                draftView
+                    .frame(height: 280)
+            }
+            .padding(.top, TS.Spacing.xs)
+        } label: {
+            Label("Concept, niet gevalideerd", systemImage: "exclamationmark.triangle")
+                .font(TS.Font.footnoteSemibold)
+                .foregroundStyle(Color.statusWarning)
+        }
+        .padding(TS.Spacing.md)
+        .background(Color.statusWarning.opacity(0.08), in: RoundedRectangle(cornerRadius: TS.Radius.md, style: .continuous))
+        .padding(.horizontal, TS.Spacing.md)
+        .padding(.top, TS.Spacing.sm)
+    }
+
+    /// Same renderer as the approved notule below it, read-only, so both read alike.
+    @ViewBuilder private var draftView: some View {
+        let html = NotuleAudit.draftForReview(draftHtml)
+        #if os(macOS)
+        EditableHTMLWebView(htmlContent: html, editedHTML: .constant(""), isEditing: false, isDarkMode: colorScheme == .dark)
+        #else
+        HTMLWebView(htmlContent: html, isDarkMode: colorScheme == .dark)
+        #endif
+    }
+}

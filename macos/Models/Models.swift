@@ -449,6 +449,8 @@ struct TranscriptTask: Identifiable, Codable, Sendable {
     var profileId: String?
     var createdAt: Date?
     var username: String?
+    /// Client-only note shown instead of the status name (not encoded).
+    var statusDetail: String?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -510,6 +512,10 @@ struct TranscriptTask: Identifiable, Codable, Sendable {
         if let rawStatus = try container.decodeIfPresent(String.self, forKey: .status),
            let parsedStatus = TaskStatus(rawValue: rawStatus) {
             self.status = parsedStatus
+        } else if let rawStatus = try container.decodeIfPresent(String.self, forKey: .status),
+                  ["failed", "cancelled", "canceled"].contains(rawStatus) {
+            // Terminal server statuses (as on Windows); must not fall back to an active state.
+            self.status = .error
         } else {
             self.status = .pending
         }
@@ -546,6 +552,8 @@ extension TranscriptTask {
     var displayProgress: Double {
         status == .transcribing || status == .generatingLocal ? progress : status.progress
     }
+
+    var statusLabel: String { statusDetail ?? status.displayName }
 }
 
 // MARK: - Transcript

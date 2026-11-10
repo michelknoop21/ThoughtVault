@@ -222,7 +222,7 @@ extension HomeView {
                             .frame(width: 30, height: 30)
                             VStack(alignment: .leading, spacing: 3) {
                                 Text(task.filename).font(.system(size: 13.5, weight: .medium)).foregroundStyle(HomeColor.text).lineLimit(1)
-                                Text(task.status.displayName).font(.system(size: 12)).foregroundStyle(HomeColor.lavender)
+                                Text(task.statusLabel).font(.system(size: 12)).foregroundStyle(HomeColor.lavender)
                             }
                             Spacer()
                             Text("\(Int(task.status.progress * 100))%")

@@ -3,8 +3,6 @@ import Foundation
 import OSLog
 #if os(iOS)
 import UIKit
-#elseif os(macOS)
-import AppKit
 #endif
 
 private let log = Logger(subsystem: "com.buildmind.ThoughtVault", category: "AudioRecorder")
@@ -76,6 +74,8 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
     private var durationTimer: Timer?
     private var lastDiagnosticLog: Date = .distantPast
     private var recordingStartDate: Date?
+    /// Wall-clock start of the last recording; kept after stop for mix alignment.
+    private(set) var startedAt: Date?
     private var pausedAt: Date?
     private var accumulatedPauseDuration: TimeInterval = 0
 
@@ -98,15 +98,10 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
 
     // MARK: - Notifications
 
+    /// macOS sleep is handled by RecordingViewModel.handleWillSleep, the single owner of
+    /// stopping: it needs the live session to mix (combined) and to keep the file URL.
     private func setupNotifications() {
-#if os(macOS)
-        NSWorkspace.shared.notificationCenter.addObserver(
-            self,
-            selector: #selector(handleWillSleep),
-            name: NSWorkspace.willSleepNotification,
-            object: nil
-        )
-#elseif os(iOS)
+#if os(iOS)
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(handleAudioInterruption(_:)),
@@ -115,17 +110,6 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
         )
 #endif
     }
-
-#if os(macOS)
-    @objc private func handleWillSleep() {
-        guard isRecording else { return }
-        // Finalize WAV header by stopping cleanly before sleep.
-        audioRecorder?.stop()
-        finalizeTimers()
-        isRecording = false
-        isPaused = false
-    }
-#endif
 
 #if os(iOS)
     @objc private func handleAudioInterruption(_ notification: Notification) {
@@ -227,6 +211,7 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
                 self.isPaused = false
                 self.duration = 0
                 self.recordingStartDate = Date()
+                self.startedAt = self.recordingStartDate
                 self.pausedAt = nil
                 self.accumulatedPauseDuration = 0
                 self.audioLevels = Array(repeating: 0, count: AudioEnvelopeConfig.historyLength)
@@ -263,8 +248,18 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
         }
     }
 
-    func stopRecording() async -> URL? {
-        guard isRecording else { return currentRecordingURL }
+    /// Ends the session bookkeeping: returns the URL of the session that was recording
+    /// (nil if none) and clears `currentRecordingURL` so it can never go stale.
+    func finishSession() -> URL? {
+        guard isRecording else { return nil }
+        defer { currentRecordingURL = nil }
+        return currentRecordingURL
+    }
+
+    /// `discardingTooSmall: false` always returns the session URL (used by cancel, which deletes it).
+    func stopRecording(discardingTooSmall: Bool = true) async -> URL? {
+        guard isRecording else { return nil }
+        let url = finishSession()
 
         // AVAudioRecorder.stop() must run on the main thread to match
         // the thread it was created/started on.
@@ -286,21 +281,24 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
         deactivateAudioSession()
 #endif
 
-        let url = currentRecordingURL
-
         resetMetrics()
 
         // Log file size for diagnostics
         if let url, let attrs = try? FileManager.default.attributesOfItem(atPath: url.path),
            let size = attrs[.size] as? Int64 {
             log.info("[AudioRecorder] Recording stopped — file size: \(size) bytes at \(url.lastPathComponent)")
-            if size < Self.minimumValidFileSize {
+            if discardingTooSmall, size < Self.minimumValidFileSize {
                 log.warning("[AudioRecorder] File too small (\(size) bytes < \(Self.minimumValidFileSize)), discarding")
                 return nil
             }
         }
 
         return url
+    }
+
+    /// Files a cancelled session owns; never includes earlier recordings.
+    static func filesToDiscard(sessionMicURL: URL?, systemURL: URL?, microphoneURL: URL?) -> [URL] {
+        [sessionMicURL, systemURL, microphoneURL].compactMap { $0 }
     }
 
     // MARK: - Timers
@@ -387,22 +385,24 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
     // MARK: - File Management
 
     private func makeRecordingURL() -> URL {
-        let dir = recordingsDirectory()
+        let dir = Self.recordingsDirectoryURL()
         let timestamp = Int(Date().timeIntervalSince1970)
         return dir.appendingPathComponent("recording_\(timestamp).wav")
     }
 
-    private func recordingsDirectory() -> URL {
-        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        let dir = docs.appendingPathComponent(Self.recordingsDirectory)
+    static func recordingsDirectoryURL() -> URL {
+        // Tests must never list, repair or clean up the user's real recordings.
+        let docs = AppEnvironment.isRunningTests
+            ? AppEnvironment.supportDirectory
+            : FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        let dir = docs.appendingPathComponent(recordingsDirectory)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         return dir
     }
 
     /// Returns all WAV URLs from the persistent Recordings directory.
     static func savedRecordingURLs() -> [URL] {
-        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        let dir = docs.appendingPathComponent(recordingsDirectory)
+        let dir = recordingsDirectoryURL()
         guard let items = try? FileManager.default.contentsOfDirectory(
             at: dir,
             includingPropertiesForKeys: [.creationDateKey, .fileSizeKey],
@@ -443,12 +443,17 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
         return true
     }
 
-    /// Deletes recordings older than 7 days, protecting any URLs in the given set.
-    static func cleanupOldRecordings(protecting protectedURLs: Set<URL>) {
+    /// Deletes processed recordings older than 7 days, protecting any URLs in the given set.
+    /// Files without a transcript record (by name, directly or via their combined file) are never deleted.
+    static func cleanupOldRecordings(protecting protectedURLs: Set<URL>, knownRecordingNames: Set<String>) {
         let cutoff = Date().addingTimeInterval(-cleanupAge)
         let fm = FileManager.default
         for url in savedRecordingURLs() {
             guard !protectedURLs.contains(url) else { continue }
+            let combinedName = UserDefaults.standard.string(forKey: "combinedAudio_\(url.lastPathComponent)")
+                .map { URL(fileURLWithPath: $0).lastPathComponent }
+            guard knownRecordingNames.contains(url.lastPathComponent)
+                    || combinedName.map(knownRecordingNames.contains) == true else { continue }
             guard let attrs = try? fm.attributesOfItem(atPath: url.path),
                   let created = attrs[.creationDate] as? Date,
                   created < cutoff
@@ -457,13 +462,14 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
         }
     }
 
-    /// Returns recording files older than 60 seconds that were not created in this session.
-    func getOrphanedRecordings() -> [URL] {
+    /// Returns recording files older than 60 seconds that are not being written:
+    /// the active microphone file and any `active` file (the system capture's output).
+    func getOrphanedRecordings(excluding active: [URL?] = []) -> [URL] {
         let cutoff = Date().addingTimeInterval(-Self.orphanAge)
         let fm = FileManager.default
+        let busy = Set((active + [currentRecordingURL]).compactMap { $0?.lastPathComponent })
         return Self.savedRecordingURLs().filter { url in
-            // Exclude the active recording
-            if let current = currentRecordingURL, url == current { return false }
+            if busy.contains(url.lastPathComponent) { return false }
             guard let attrs = try? fm.attributesOfItem(atPath: url.path),
                   let created = attrs[.creationDate] as? Date
             else { return false }

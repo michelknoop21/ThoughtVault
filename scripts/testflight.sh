@@ -58,13 +58,13 @@ write_export_options "$BUILD_DIR/ExportOptions-iOS-TestFlight.plist" "$IOS_DESTI
 write_export_options "$BUILD_DIR/ExportOptions-macOS-TestFlight.plist" export
 
 archive_and_ship() {
-    local platform="$1" destination="$2" archive="$3" exportopts="$4" altool_type="$5"
+    local platform="$1" destination="$2" archive="$3" exportopts="$4" altool_type="$5" scheme="$6"
 
     echo "=== [$platform] Archiving $VERSION ==="
     rm -rf "$archive"
     xcodebuild archive \
         -project "$ROOT_DIR/ThoughtVault.xcodeproj" \
-        -scheme ThoughtVault \
+        -scheme "$scheme" \
         -configuration Release \
         -destination "$destination" \
         -archivePath "$archive" \
@@ -94,13 +94,15 @@ archive_and_ship() {
 if [ "$WHAT" = "ios" ] || [ "$WHAT" = "all" ]; then
     archive_and_ship ios "generic/platform=iOS" \
         "$BUILD_DIR/ThoughtVault-ios.xcarchive" \
-        "$BUILD_DIR/ExportOptions-iOS-TestFlight.plist" ""
+        "$BUILD_DIR/ExportOptions-iOS-TestFlight.plist" "" ThoughtVault
 fi
 
+# macOS ships the Sparkle-free App Store target: App Store validation rejects
+# Sparkle's helper executables because they are not sandboxed.
 if [ "$WHAT" = "macos" ] || [ "$WHAT" = "all" ]; then
     archive_and_ship macos "generic/platform=macOS" \
         "$BUILD_DIR/ThoughtVault-macos.xcarchive" \
-        "$BUILD_DIR/ExportOptions-macOS-TestFlight.plist" "macos"
+        "$BUILD_DIR/ExportOptions-macOS-TestFlight.plist" "macos" "ThoughtVault AppStore"
 fi
 
 if [ "$UPLOAD" = true ]; then

@@ -42,6 +42,7 @@ protocol LLMService: Sendable {
     ///   - systemPrompt: System-level instructions for the model persona.
     ///   - notulePrompt: User-level instructions describing the desired output format.
     ///   - outputTemplate: Optional HTML/Markdown template to structure the output.
+    ///   - constraints: Source sentences the notule must keep; appended as a numbered block.
     ///   - onProgress: Called with each streamed text chunk as it arrives.
     /// - Returns: The complete generated notulen as a string.
     func generateNotulen(
@@ -49,11 +50,47 @@ protocol LLMService: Sendable {
         systemPrompt: String,
         notulePrompt: String,
         outputTemplate: String?,
+        constraints: [String],
         onProgress: @Sendable (String) -> Void
     ) async throws -> String
+
+    /// Plain, non-streamed completion (used by the audit and chunk summaries).
+    func complete(system: String, user: String) async throws -> String
 }
 
 // MARK: - Prompt assembly
+
+/// System prompt for the final notule request (port of Windows llm.ts).
+func notuleSystemPrompt(_ profileSystemPrompt: String) -> String {
+    "\(profileSystemPrompt)\n\nBrongetrouwheid gaat vóór beknoptheid en de template. \(NotuleAudit.factualityRules) Vermeld ieder expliciet vervallen tijdstip en iedere expliciete afwezigheid, ook als dat geen actie is. Als ergens geen besluit over uitvoering is genomen, behoud dat letterlijk als onbeslist; vraag niet hoe het uitgevoerd moet worden."
+}
+
+let chunkSummarySystemPrompt = "Je vat transcripties samen. Bewaar namen, feiten, besluiten, actiepunten, eigenaren en termijnen. Verzin niets. \(NotuleAudit.factualityRules)"
+let chunkSummaryNotShorterMessage = "De notule-generator verkort de lange transcriptie onvoldoende. De transcriptie is bewaard; kies een ander model en probeer opnieuw."
+
+/// Summarizes `text` chunk by chunk and repeats until it fits `limit`. Fails loudly
+/// when a pass does not shrink the text, so it can never loop or silently truncate.
+func summarizeUntilFits(
+    _ text: String,
+    limit: Int,
+    split: (String, Int) -> [String],
+    complete: (String, String) async throws -> String
+) async throws -> String {
+    var processed = text
+    while processed.count > limit {
+        var summaries: [String] = []
+        for chunk in split(processed, limit) {
+            try Task.checkCancellation()
+            summaries.append(try await complete(chunkSummarySystemPrompt, "Vat dit deel compact samen:\n\n" + chunk))
+        }
+        let joined = summaries.joined(separator: "\n\n")
+        guard joined.count < processed.count else {
+            throw LLMError.generationFailed(chunkSummaryNotShorterMessage)
+        }
+        processed = joined
+    }
+    return processed
+}
 
 /// Builds the user message for notule generation. Backend-style profiles embed
 /// `{{TRANSCRIPTION}}` and `{{OUTPUT_TEMPLATE}}` placeholders in the notule prompt;
@@ -62,28 +99,30 @@ protocol LLMService: Sendable {
 func buildNotuleUserContent(
     notulePrompt: String,
     transcription: String,
-    outputTemplate: String?
+    outputTemplate: String?,
+    constraints: [String] = []
 ) -> String {
     let template = (outputTemplate ?? "").replacingOccurrences(
         of: "<style\\b[^>]*>[\\s\\S]*?</style>", with: "",
         options: [.regularExpression, .caseInsensitive]
     )
-    let contentRules = """
-
-    Laatste inhoudsregels: volg de gekozen template en laat lege secties weg. Verzin geen feiten, besluiten, eigenaren of termijnen. Schrijf eenvoudige HTML zonder CSS, style-blok of code fences.
-    """
+    // Byte-identical to the Windows closing rules (llm.ts buildUserContent).
+    let contentRules = "\n\nLaatste inhoudsregels: volg de gekozen template en laat lege secties weg. Verzin geen feiten, besluiten, eigenaren of termijnen. \(NotuleAudit.factualityRules) Schrijf eenvoudige HTML zonder CSS, style-blok of code fences."
+    let constraintBlock = constraints.isEmpty ? "" :
+        "\n\nVerplicht te behouden bronzinnen (behoud de volledige betekenis, bedragen en voorwaarden bij het passende onderwerp, besluit of open punt; correcte parafrases mogen, tegenspraken nergens):\n"
+        + constraints.enumerated().map { "\($0.offset + 1). \($0.element)" }.joined(separator: "\n")
     if notulePrompt.contains("{{TRANSCRIPTION}}") {
         // Substitute the trusted template first, then insert the untrusted
         // transcription last so its content can never trigger a placeholder swap.
         return notulePrompt
             .replacingOccurrences(of: "{{OUTPUT_TEMPLATE}}", with: template)
-            .replacingOccurrences(of: "{{TRANSCRIPTION}}", with: transcription) + contentRules
+            .replacingOccurrences(of: "{{TRANSCRIPTION}}", with: transcription) + contentRules + constraintBlock
     }
     var content = "\(notulePrompt)\n\nTranscriptie:\n\(transcription)"
     if !template.isEmpty {
         content += "\n\nGebruik dit outputformaat:\n\(template)"
     }
-    return content + contentRules
+    return content + contentRules + constraintBlock
 }
 
 // MARK: - LLMServiceFactory
@@ -167,8 +206,13 @@ private struct MissingAPIKeyLLMService: LLMService {
         systemPrompt: String,
         notulePrompt: String,
         outputTemplate: String?,
+        constraints: [String],
         onProgress: @Sendable (String) -> Void
     ) async throws -> String {
+        throw LLMError.generationFailed("Geen API-sleutel voor \(providerName) op dit apparaat. Vul die in bij Instellingen > Verwerking.")
+    }
+
+    func complete(system: String, user: String) async throws -> String {
         throw LLMError.generationFailed("Geen API-sleutel voor \(providerName) op dit apparaat. Vul die in bij Instellingen > Verwerking.")
     }
 }
@@ -184,8 +228,13 @@ private struct CloudLLMServiceStub: LLMService {
         systemPrompt: String,
         notulePrompt: String,
         outputTemplate: String?,
+        constraints: [String],
         onProgress: @Sendable (String) -> Void
     ) async throws -> String {
+        throw LLMError.generationFailed("Cloud provider genereert notulen server-side via n8n.")
+    }
+
+    func complete(system: String, user: String) async throws -> String {
         throw LLMError.generationFailed("Cloud provider genereert notulen server-side via n8n.")
     }
 }
@@ -209,6 +258,9 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
     /// Transcript size above which it is summarized in chunks first. The default
     /// is what a typical local model handles comfortably (conservative estimate).
     let maxChunkCharacters: Int
+
+    /// Test seam: replaces the network call behind `complete(system:user:)`.
+    var completionOverride: (@Sendable (String, String) async throws -> String)?
 
     init(baseURL: String, model: String, apiKey: String? = nil, maxChunkCharacters: Int? = nil) {
         self.baseURL = baseURL
@@ -339,6 +391,7 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
         systemPrompt: String,
         notulePrompt: String,
         outputTemplate: String?,
+        constraints: [String],
         onProgress: @Sendable (String) -> Void
     ) async throws -> String {
 
@@ -355,7 +408,8 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
         let userContent = buildNotuleUserContent(
             notulePrompt: notulePrompt,
             transcription: processedTranscription,
-            outputTemplate: outputTemplate
+            outputTemplate: outputTemplate,
+            constraints: constraints
         )
 
         return try await streamChatCompletion(
@@ -367,22 +421,18 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
 
     // MARK: - Chunked Summarization
 
-    private func summarizeInChunks(_ text: String) async throws -> String {
-        let chunks = splitIntoChunks(text, maxChars: maxChunkCharacters)
-        var summaries: [String] = []
+    func summarizeInChunks(_ text: String) async throws -> String {
+        try await summarizeUntilFits(
+            text,
+            limit: maxChunkCharacters,
+            split: { self.splitIntoChunks($0, maxChars: $1) },
+            complete: { try await self.complete(system: $0, user: $1) }
+        )
+    }
 
-        for (index, chunk) in chunks.enumerated() {
-            try Task.checkCancellation()
-            logger.info("OpenAICompatibleLLMService: summarizing chunk \(index + 1)/\(chunks.count)")
-            let summary = try await streamChatCompletion(
-                systemPrompt: "Je bent een assistent die transcripties samenvat. Bewaar alle belangrijke informatie, namen, besluiten en actiepunten.",
-                userMessage: "Vat dit deel van de transcriptie samen:\n\n\(chunk)",
-                onProgress: { _ in }  // No progress callbacks during intermediate summarization
-            )
-            summaries.append(summary)
-        }
-
-        return summaries.joined(separator: "\n\n")
+    func complete(system: String, user: String) async throws -> String {
+        if let completionOverride { return try await completionOverride(system, user) }
+        return try await streamChatCompletion(systemPrompt: system, userMessage: user, onProgress: { _ in })
     }
 
     private func splitIntoChunks(_ text: String, maxChars: Int) -> [String] {

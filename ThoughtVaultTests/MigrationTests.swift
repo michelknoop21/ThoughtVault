@@ -106,4 +106,28 @@ final class MigrationTests: XCTestCase {
         //     After 02-02 changes isInternal to Bool?, this assertion still passes (value = .some(true)).
         XCTAssertEqual(fetchedPerson.isInternal, true, "isInternal must be preserved as true after Bool→Bool? relaxation")
     }
+
+    /// Opens an on-disk store written by the model before `notuleDraftHtml` and
+    /// `notuleReviewReason` existed (Fixtures/PreDraftFields.store), the same way
+    /// LocalTranscriptStore opens the real store: implicit lightweight migration.
+    func testV3StoreOpensWithDraftFields() throws {
+        let fixture = try XCTUnwrap(Bundle(for: Self.self).url(forResource: "PreDraftFields", withExtension: "store"))
+        let dir = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let url = dir.appending(path: "Local.store")
+        try FileManager.default.copyItem(at: fixture, to: url)
+
+        let container = try ModelContainer(for: TranscriptRecord.self, PersonProfile.self,
+                                           configurations: ModelConfiguration(url: url))
+        let record = try XCTUnwrap(try container.mainContext.fetch(FetchDescriptor<TranscriptRecord>()).first)
+        XCTAssertEqual(record.id, "fixture-1")
+        XCTAssertEqual(record.notuleHtml, "<p>Sam belt vrijdag.</p>")
+        XCTAssertNil(record.notuleDraftHtml)
+        XCTAssertNil(record.notuleReviewReason)
+        XCTAssertNil(record.durationSeconds)
+
+        record.notuleDraftHtml = "<p>Concept</p>"
+        try container.mainContext.save()
+    }
 }

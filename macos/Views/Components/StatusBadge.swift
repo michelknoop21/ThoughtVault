@@ -12,11 +12,12 @@ import SwiftUI
 struct StatusBadge: View {
 
     let status: TaskStatus
+    var label: String? = nil
 
     var body: some View {
         HStack(spacing: 5) {
             statusIndicator
-            Text(status.displayName)
+            Text(label ?? status.displayName)
                 .font(TS.Font.microSemibold)
                 .foregroundStyle(textColor)
                 .lineLimit(1)
@@ -30,7 +31,7 @@ struct StatusBadge: View {
                 .stroke(borderColor, lineWidth: 0.5)
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Status: \(status.displayName)")
+        .accessibilityLabel("Status: \(label ?? status.displayName)")
     }
 
     // MARK: - Status Indicator

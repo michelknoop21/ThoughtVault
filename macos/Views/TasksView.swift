@@ -241,7 +241,7 @@ private struct TaskRow: View {
                     }
 
                     HStack(spacing: TS.Spacing.sm) {
-                        StatusBadge(status: task.status)
+                        StatusBadge(status: task.status, label: task.statusLabel)
 
                         if showsProgress {
                             ProgressView(value: progressValue)
@@ -261,7 +261,7 @@ private struct TaskRow: View {
 
                     // Center: status badge + progress
                     VStack(alignment: .trailing, spacing: 4) {
-                        StatusBadge(status: task.status)
+                        StatusBadge(status: task.status, label: task.statusLabel)
 
                         if showsProgress {
                             ProgressView(value: progressValue)

@@ -515,20 +515,13 @@ struct NotuleResultView: View {
 
     private func exportAsTXT() {
         showExportMenu = false
-        // Strip HTML tags
         guard let html = task.notuleHtml else { return }
-        let stripped = html.replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)
-        let decoded = stripped
-            .replacingOccurrences(of: "&amp;", with: "&")
-            .replacingOccurrences(of: "&lt;", with: "<")
-            .replacingOccurrences(of: "&gt;", with: ">")
-            .replacingOccurrences(of: "&nbsp;", with: " ")
-            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let decoded = HTMLPlainText.from(html)
 
         #if os(macOS)
         let panel = NSSavePanel()
-        panel.nameFieldStringValue = "notulen.txt"
-        panel.allowedContentTypes = [.plainText]
+        panel.nameFieldStringValue = exportFilename("txt")
+        panel.allowedContentTypes = [ExportFile.contentType(ext: "txt")]
         if panel.runModal() == .OK, let url = panel.url {
             do {
                 try decoded.write(to: url, atomically: true, encoding: .utf8)
@@ -537,7 +530,7 @@ struct NotuleResultView: View {
             }
         }
         #else
-        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("notulen.txt")
+        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(exportFilename("txt"))
         do {
             try decoded.write(to: tempURL, atomically: true, encoding: .utf8)
             let activityVC = UIActivityViewController(activityItems: [tempURL], applicationActivities: nil)
@@ -549,6 +542,11 @@ struct NotuleResultView: View {
             exportError = "Exporteren mislukt: \(error.localizedDescription)"
         }
         #endif
+    }
+
+    private func exportFilename(_ ext: String) -> String {
+        let title = task.notuleHtml.flatMap { NotuleTitleExtractor.extract(from: $0) } ?? task.filename
+        return ExportFile.filename(title: title, ext: ext)
     }
 
     private func exportToObsidian() {
@@ -580,13 +578,7 @@ struct NotuleResultView: View {
     private func copyContent() {
         showExportMenu = false
         guard let html = task.notuleHtml else { return }
-        let stripped = prepareNotuleContent(html).replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)
-        let decoded = stripped
-            .replacingOccurrences(of: "&amp;", with: "&")
-            .replacingOccurrences(of: "&lt;", with: "<")
-            .replacingOccurrences(of: "&gt;", with: ">")
-            .replacingOccurrences(of: "&nbsp;", with: " ")
-            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let decoded = HTMLPlainText.from(prepareNotuleContent(html))
 
         #if os(macOS)
         NSPasteboard.general.clearContents()
@@ -599,7 +591,7 @@ struct NotuleResultView: View {
     private func shareContent() {
         showExportMenu = false
         guard let html = task.notuleHtml else { return }
-        let stripped = html.replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)
+        let stripped = HTMLPlainText.from(html)
 
         #if os(macOS)
         let picker = NSSharingServicePicker(items: [stripped])

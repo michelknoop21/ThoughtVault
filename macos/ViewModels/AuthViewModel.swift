@@ -108,7 +108,13 @@ final class AuthViewModel {
                 isLoading = false
                 return
             }
-            KeychainService.shared.save(token, for: "authToken")
+            do {
+                try KeychainService.shared.save(token, for: "authToken")
+            } catch {
+                errorMessage = error.localizedDescription
+                isLoading = false
+                return
+            }
 
             // Save biometric token opportunistically so Face ID / Touch ID
             // can be offered on next launch.
@@ -163,7 +169,13 @@ final class AuthViewModel {
                 isLoading = false
                 return
             }
-            KeychainService.shared.save(token, for: "authToken")
+            do {
+                try KeychainService.shared.save(token, for: "authToken")
+            } catch {
+                errorMessage = error.localizedDescription
+                isLoading = false
+                return
+            }
 
             if BiometricService.shared.isEnabled {
                 do {
@@ -241,7 +253,13 @@ final class AuthViewModel {
             }
 #endif
 
-            KeychainService.shared.save(token, for: "authToken")
+            do {
+                try KeychainService.shared.save(token, for: "authToken")
+            } catch {
+                errorMessage = error.localizedDescription
+                isLoading = false
+                return
+            }
 
             let userInfo: TSUserInfo?
             do {

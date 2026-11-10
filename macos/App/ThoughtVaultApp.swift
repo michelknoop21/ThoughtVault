@@ -69,8 +69,16 @@ struct ThoughtVaultApp: App {
                     updateCheckService.isBusy = { recordingVM.updateIsBusy }
                     #endif
                     await permissionManager.checkAllPermissions()
+                    #if os(macOS)
+                    let activeSystemAudio = recordingVM.systemAudioCapture.currentOutputURL
+                    #else
+                    let activeSystemAudio: URL? = nil
+                    #endif
+                    let recovered = RecordingRecovery.recoverOrphans(recordingVM.audioRecorder.getOrphanedRecordings(excluding: [activeSystemAudio]))
+                    if !recovered.isEmpty { recordingVM.loadSavedRecordings() }
                     AudioRecorder.cleanupOldRecordings(
-                        protecting: recordingVM.offlineQueue.queuedAudioURLs
+                        protecting: recordingVM.offlineQueue.queuedAudioURLs,
+                        knownRecordingNames: Set(LocalTranscriptStore.shared.allRecords().map(\.filename))
                     )
                     await recordingVM.processQueueOnStartupIfNeeded()
                     MeetingNotificationService.shared.setup()
@@ -83,6 +91,7 @@ struct ThoughtVaultApp: App {
 #if os(macOS)
         .defaultSize(width: 1100, height: 750)
         .windowStyle(.automatic)
+        .commands { PrintCommands() }
 #endif
 
 #if os(macOS)
@@ -145,6 +154,17 @@ struct RootView: View {
 
 #if os(macOS)
 struct MenuBarContentView: View {
+    /// Menu items cannot host a confirmationDialog, so ask with an alert.
+    private static func confirmCancelRecording() -> Bool {
+        let alert = NSAlert()
+        alert.messageText = "Opname annuleren?"
+        alert.informativeText = "De opname wordt weggegooid en kan niet worden hersteld."
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "Annuleer opname")
+        alert.addButton(withTitle: "Doorgaan met opnemen")
+        return alert.runModal() == .alertFirstButtonReturn
+    }
+
     @Environment(RecordingViewModel.self) private var recordingVM
     @Environment(AuthViewModel.self) private var authVM
     @Environment(CalendarService.self) private var calendarService
@@ -192,7 +212,7 @@ struct MenuBarContentView: View {
                 }
 
                 Button(role: .destructive) {
-                    Task { await recordingVM.cancelRecording() }
+                    if Self.confirmCancelRecording() { Task { await recordingVM.cancelRecording() } }
                 } label: {
                     Label("Annuleer opname", systemImage: "xmark.circle.fill")
                 }
@@ -213,7 +233,7 @@ struct MenuBarContentView: View {
                 }
 
                 Button(role: .destructive) {
-                    Task { await recordingVM.cancelRecording() }
+                    if Self.confirmCancelRecording() { Task { await recordingVM.cancelRecording() } }
                 } label: {
                     Label("Annuleer opname", systemImage: "xmark.circle.fill")
                 }

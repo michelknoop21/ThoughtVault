@@ -111,6 +111,9 @@ final class OnDeviceTranscriber {
 
     // MARK: - Full-File Transcription
 
+    /// Stops a running file transcription; its pending `transcribe` call then throws.
+    func cancelFileTranscription() { recognitionTask?.cancel() }
+
     /// Transcribes an audio file at the given URL and returns the full transcription text.
     /// Uses on-device recognition where available, falls back to server if needed.
     func transcribe(url: URL, profileId: String? = nil) async throws -> String {

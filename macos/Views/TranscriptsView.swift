@@ -85,10 +85,11 @@ struct TranscriptsView: View {
 
         // Search
         if !searchText.isEmpty {
-            let q = searchText.lowercased()
+            // ponytail: converts notule HTML on every keystroke; fine for hundreds of notules,
+            // cache the plain text per transcript if the list grows into thousands.
             result = result.filter {
-                $0.title.lowercased().contains(q) ||
-                ($0.rawTranscription?.lowercased().contains(q) ?? false)
+                TranscriptSearch.matches(searchText, title: $0.title, transcript: $0.rawTranscription ?? "",
+                                         notuleHtml: $0.notuleHtml ?? "", tags: $0.tags)
             }
         }
 
@@ -499,7 +500,7 @@ struct TranscriptsView: View {
                                 .font(TS.Font.captionMedium)
                                 .foregroundStyle(Color.labelPrimary)
                                 .lineLimit(1)
-                            Text(task.status.displayName)
+                            Text(task.statusLabel)
                                 .font(TS.Font.micro)
                                 .foregroundStyle(Color.brandPrimary)
                         }
@@ -1089,6 +1090,7 @@ struct TranscriptDetailView: View {
                     VStack(spacing: 0) {
                         documentHeader(isCompact: isCompact)
                         Divider()
+                        draftReviewSection
                         contentArea
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
@@ -1099,6 +1101,9 @@ struct TranscriptDetailView: View {
         .toolbar { detailToolbar }
 #endif
         }
+        #if os(macOS)
+        .focusedSceneValue(\.printAction, fullTranscript.notuleHtml == nil ? nil : { exportAsPDF() })
+        #endif
         .alert("Titel bewerken", isPresented: $showTitleEditAlert) {
             TextField("Titel", text: $pendingTitle)
             Button("Opslaan") {
@@ -1674,6 +1679,15 @@ struct TranscriptDetailView: View {
         return "\(secs) sec"
     }
 
+    /// Rejected local notule draft (audit), shown above the approved notule.
+    @ViewBuilder
+    var draftReviewSection: some View {
+        if let record = LocalTranscriptStore.shared.record(forTaskId: fullTranscript.taskId),
+           let draft = record.notuleDraftHtml {
+            DraftReviewSection(reason: record.notuleReviewReason ?? "", draftHtml: draft)
+        }
+    }
+
     @ViewBuilder
     var contentArea: some View {
         let hasNotule = !(fullTranscript.notuleHtml ?? "").isEmpty
@@ -2180,9 +2194,7 @@ struct TranscriptDetailView: View {
     func copyContent() {
         let content: String
         if selectedTab == .notule, let html = fullTranscript.notuleHtml {
-            content = html
-                .replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)
-                .trimmingCharacters(in: .whitespacesAndNewlines)
+            content = HTMLPlainText.from(html)
         } else {
             content = fullTranscript.rawTranscription ?? ""
         }
@@ -2196,7 +2208,8 @@ struct TranscriptDetailView: View {
     }
 
     func exportAsPDF() {
-        guard let html = fullTranscript.notuleHtml ?? fullTranscript.rawTranscription else { return }
+        guard let html = fullTranscript.notuleHtml
+                ?? fullTranscript.rawTranscription.map(ExportFile.transcriptHTML) else { return }
 
         let styledHTML = """
         <!DOCTYPE html>
@@ -2219,27 +2232,9 @@ struct TranscriptDetailView: View {
         """
 
         #if os(macOS)
-        let printInfo = NSPrintInfo.shared
-        printInfo.paperSize = NSSize(width: 595, height: 842)
-        printInfo.topMargin = 36
-        printInfo.bottomMargin = 36
-        printInfo.leftMargin = 54
-        printInfo.rightMargin = 54
-
-        let webView = WKWebView(frame: NSRect(x: 0, y: 0, width: 595, height: 842))
-        printWebView = webView
-        webView.loadHTMLString(styledHTML, baseURL: nil)
-
-        Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(800))
-            let op = webView.printOperation(with: printInfo)
-            op.showsPrintPanel = true
-            op.showsProgressPanel = true
-            op.run()
-            printWebView = nil
-        }
+        NotulePrinter.print(html: styledHTML) { printWebView = $0 }
         #else
-        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("\(fullTranscript.title).html")
+        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(ExportFile.filename(title: fullTranscript.title, ext: "html"))
         do {
             try styledHTML.write(to: tempURL, atomically: true, encoding: .utf8)
         } catch {
@@ -2255,19 +2250,13 @@ struct TranscriptDetailView: View {
     }
 
     func exportAsTXT() {
-        let html = fullTranscript.notuleHtml ?? fullTranscript.rawTranscription ?? ""
-        let stripped = html
-            .replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)
-            .replacingOccurrences(of: "&amp;", with: "&")
-            .replacingOccurrences(of: "&lt;", with: "<")
-            .replacingOccurrences(of: "&gt;", with: ">")
-            .replacingOccurrences(of: "&nbsp;", with: " ")
-            .trimmingCharacters(in: .whitespacesAndNewlines)
+        // Raw transcripts are already plain text; only notule HTML is converted.
+        let stripped = fullTranscript.notuleHtml.map(HTMLPlainText.from) ?? fullTranscript.rawTranscription ?? ""
 
         #if os(macOS)
         let panel = NSSavePanel()
-        panel.nameFieldStringValue = "\(fullTranscript.title).txt"
-        panel.allowedContentTypes = [.plainText]
+        panel.nameFieldStringValue = ExportFile.filename(title: fullTranscript.title, ext: "txt")
+        panel.allowedContentTypes = [ExportFile.contentType(ext: "txt")]
         if panel.runModal() == .OK, let url = panel.url {
             do {
                 try stripped.write(to: url, atomically: true, encoding: .utf8)
@@ -2276,7 +2265,7 @@ struct TranscriptDetailView: View {
             }
         }
         #else
-        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("\(fullTranscript.title).txt")
+        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(ExportFile.filename(title: fullTranscript.title, ext: "txt"))
         do {
             try stripped.write(to: tempURL, atomically: true, encoding: .utf8)
         } catch {
@@ -2292,13 +2281,13 @@ struct TranscriptDetailView: View {
     }
 
     func exportAsMarkdown() {
-        let html = fullTranscript.notuleHtml ?? fullTranscript.rawTranscription ?? ""
-        let md = htmlToMarkdown(html)
+        // A raw transcript is plain text: never run it through the HTML converter.
+        let md = fullTranscript.notuleHtml.map(htmlToMarkdown) ?? fullTranscript.rawTranscription ?? ""
 
         #if os(macOS)
         let panel = NSSavePanel()
-        panel.nameFieldStringValue = "\(fullTranscript.title).md"
-        panel.allowedContentTypes = [.plainText]
+        panel.nameFieldStringValue = ExportFile.filename(title: fullTranscript.title, ext: "md")
+        panel.allowedContentTypes = [ExportFile.contentType(ext: "md")]
         if panel.runModal() == .OK, let url = panel.url {
             do {
                 try md.write(to: url, atomically: true, encoding: .utf8)
@@ -2307,7 +2296,7 @@ struct TranscriptDetailView: View {
             }
         }
         #else
-        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("\(fullTranscript.title).md")
+        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(ExportFile.filename(title: fullTranscript.title, ext: "md"))
         do {
             try md.write(to: tempURL, atomically: true, encoding: .utf8)
         } catch {
@@ -2378,8 +2367,7 @@ struct TranscriptDetailView: View {
 
     func shareContent() {
         let text = fullTranscript.rawTranscription
-            ?? (fullTranscript.notuleHtml ?? "")
-                .replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)
+            ?? HTMLPlainText.from(fullTranscript.notuleHtml ?? "")
         #if os(macOS)
         let picker = NSSharingServicePicker(items: [text])
         picker.show(relativeTo: .zero, of: NSApp.keyWindow?.contentView ?? NSView(), preferredEdge: .minY)

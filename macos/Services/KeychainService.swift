@@ -1,6 +1,17 @@
 import Foundation
 import Security
 
+enum KeychainError: LocalizedError, Equatable {
+    case writeFailed(OSStatus)
+
+    var errorDescription: String? {
+        switch self {
+        case .writeFailed(let status):
+            return "De sleutel kon niet veilig worden opgeslagen (code \(status)). Probeer opnieuw of controleer de sleutelhanger."
+        }
+    }
+}
+
 final class KeychainService: Sendable {
     static let shared = KeychainService()
 
@@ -11,32 +22,60 @@ final class KeychainService: Sendable {
     /// available on the iPhone (e.g. the Ollama Cloud API key).
     private static let synchronizableKeys: Set<String> = ["ollamaApiKey", "openAIApiKey", "anthropicApiKey"]
 
-    private init() {}
+    typealias AddFunction = @Sendable (CFDictionary) -> OSStatus
+    typealias UpdateFunction = @Sendable (CFDictionary, CFDictionary) -> OSStatus
+
+    private let add: AddFunction
+    private let update: UpdateFunction
+
+    /// The SecItem functions are injectable so tests can force write failures.
+    init(
+        add: @escaping AddFunction = { SecItemAdd($0, nil) },
+        update: @escaping UpdateFunction = { SecItemUpdate($0, $1) }
+    ) {
+        self.add = add
+        self.update = update
+    }
 
     // MARK: - Public API
 
-    func save(_ value: String, for key: String) {
+    /// Writes without deleting first, so a failed write keeps the previous value.
+    func save(_ value: String, for key: String) throws {
         guard let data = value.data(using: .utf8) else { return }
+        let synced = Self.synchronizableKeys.contains(key)
 
-        // Upsert: delete existing item first, then add fresh
-        delete(for: key)
-
-        var query: [CFString: Any] = [
+        var match: [CFString: Any] = [
             kSecClass: kSecClassGenericPassword,
             kSecAttrService: serviceIdentifier,
-            kSecAttrAccount: key,
-            kSecValueData: data,
-            kSecAttrAccessible: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+            kSecAttrAccount: key
         ]
-        if Self.synchronizableKeys.contains(key) {
+        // Exactly the synced variant: an existing pre-sync local item is not
+        // updated in place (it would stay device-only) but replaced below.
+        if synced { match[kSecAttrSynchronizable] = true }
+
+        var status = update(match as CFDictionary, [kSecValueData: data] as CFDictionary)
+        if status == errSecItemNotFound {
+            var attributes = match
+            attributes[kSecValueData] = data
             // ThisDeviceOnly accessibility is incompatible with iCloud sync.
-            query[kSecAttrAccessible] = kSecAttrAccessibleAfterFirstUnlock
-            query[kSecAttrSynchronizable] = true
+            attributes[kSecAttrAccessible] = synced
+                ? kSecAttrAccessibleAfterFirstUnlock
+                : kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+            status = add(attributes as CFDictionary)
+        }
+        guard status == errSecSuccess else {
+            DebugLogger.shared.error("Keychain write failed for key '\(key)': \(status)", category: "Keychain")
+            throw KeychainError.writeFailed(status)
         }
 
-        let status = SecItemAdd(query as CFDictionary, nil)
-        if status != errSecSuccess {
-            DebugLogger.shared.error("SecItemAdd failed for key '\(key)': \(status)", category: "Keychain")
+        if synced {
+            // Only after the new item exists: drop a stale pre-sync local variant.
+            SecItemDelete([
+                kSecClass: kSecClassGenericPassword,
+                kSecAttrService: serviceIdentifier,
+                kSecAttrAccount: key,
+                kSecAttrSynchronizable: false
+            ] as CFDictionary)
         }
     }
 

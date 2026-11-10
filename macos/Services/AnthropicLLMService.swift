@@ -2,7 +2,7 @@
 // ThoughtVault
 //
 // Notule generation through the hosted Messages API with the user's own API
-// key (Keychain). Uses the large context window directly: no chunking.
+// key (Keychain). Uses the large context window directly; only transcripts beyond `maxChunkCharacters` are chunked.
 
 import Foundation
 
@@ -11,6 +11,10 @@ final class AnthropicLLMService: LLMService, @unchecked Sendable {
     static let baseURL = "https://api.anthropic.com"
     static let defaultModel = "claude-sonnet-5-5"
     private static let apiVersion = "2023-06-01"
+
+    /// Claude models have >= 200K tokens of context; 150K characters (~40K tokens)
+    /// leaves ample room for the profile, template and output.
+    static let maxChunkCharacters = 150_000
 
     private let model: String
     private let apiKey: String?
@@ -54,11 +58,18 @@ final class AnthropicLLMService: LLMService, @unchecked Sendable {
         systemPrompt: String,
         notulePrompt: String,
         outputTemplate: String?,
+        constraints: [String],
         onProgress: @Sendable (String) -> Void
     ) async throws -> String {
         guard var request = request("/v1/messages") else {
             throw LLMError.generationFailed("Vul je API-sleutel in bij Instellingen > Verwerking.")
         }
+        let transcription = try await summarizeUntilFits(
+            transcription,
+            limit: Self.maxChunkCharacters,
+            split: { hardSplitOversizedChunks([$0], maxChars: $1) },
+            complete: { try await self.complete(system: $0, user: $1) }
+        )
         let body: [String: Any] = [
             "model": model,
             "max_tokens": 16_000,
@@ -68,7 +79,8 @@ final class AnthropicLLMService: LLMService, @unchecked Sendable {
                 "role": "user",
                 "content": buildNotuleUserContent(notulePrompt: notulePrompt,
                                                   transcription: transcription,
-                                                  outputTemplate: outputTemplate)
+                                                  outputTemplate: outputTemplate,
+                                                  constraints: constraints)
             ]]
         ]
         request.httpMethod = "POST"
@@ -109,5 +121,36 @@ final class AnthropicLLMService: LLMService, @unchecked Sendable {
 
         if fullText.isEmpty { throw LLMError.emptyResponse }
         return fullText
+    }
+
+    // MARK: - Plain completion
+
+    func complete(system: String, user: String) async throws -> String {
+        guard var request = request("/v1/messages") else {
+            throw LLMError.generationFailed("Vul je API-sleutel in bij Instellingen > Verwerking.")
+        }
+        let body: [String: Any] = [
+            "model": model,
+            "max_tokens": 16_000,
+            "system": system,
+            "messages": [["role": "user", "content": user]]
+        ]
+        request.httpMethod = "POST"
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.timeoutInterval = 300
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse else {
+            throw LLMError.generationFailed("Ongeldig serverantwoord.")
+        }
+        guard http.statusCode == 200 else {
+            if http.statusCode == 401 { throw LLMError.generationFailed("API-sleutel geweigerd. Controleer de sleutel.") }
+            throw LLMError.serverError(http.statusCode)
+        }
+        let blocks = (try? JSONSerialization.jsonObject(with: data) as? [String: Any])?["content"] as? [[String: Any]]
+        let text = (blocks ?? []).compactMap { $0["text"] as? String }.joined()
+        if text.isEmpty { throw LLMError.emptyResponse }
+        return text
     }
 }

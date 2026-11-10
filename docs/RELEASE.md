@@ -21,7 +21,7 @@ BUILD_CHANNEL (dev | production)
 | | Dev (standaard) | Productie (`--production`) |
 |---|---|---|
 | App naam | ThoughtVault Dev | ThoughtVault |
-| Bundle ID (macOS) | `nl.prezent.ThoughtVault.dev` | `nl.prezent.ThoughtVault` |
+| Bundle ID (macOS) | `com.buildmind.ThoughtVault.dev` | `com.buildmind.ThoughtVault` |
 | Bundle ID (Windows) | `nl.prezent.transcript-studio-dev` | `nl.prezent.transcript-studio` |
 | DMG naam | `ThoughtVault-Dev-{version}.dmg` | `ThoughtVault-{version}.dmg` |
 | MSI naam | `ThoughtVault-Dev_{version}_x64.msi` | `ThoughtVault_{version}_x64.msi` |
@@ -85,7 +85,7 @@ Wordt gesourced door alle andere scripts. Leest `BUILD_CHANNEL` (default `dev`) 
 | Variabele | Dev waarde | Productie waarde |
 |-----------|-----------|-----------------|
 | `APP_DISPLAY_NAME` | ThoughtVault Dev | ThoughtVault |
-| `BUNDLE_ID_MACOS` | nl.prezent.ThoughtVault.dev | nl.prezent.ThoughtVault |
+| `BUNDLE_ID_MACOS` | com.buildmind.ThoughtVault.dev | com.buildmind.ThoughtVault |
 | `BUNDLE_ID_WINDOWS` | nl.prezent.transcript-studio-dev | nl.prezent.transcript-studio |
 | `DMG_NAME` | ThoughtVault-Dev-{version}.dmg | ThoughtVault-{version}.dmg |
 | `MSI_PREFIX` | ThoughtVault-Dev | ThoughtVault |
@@ -177,6 +177,28 @@ Bestand: `.gitlab-ci.yml`
 - Release notes worden automatisch uit de eerste entry van `docs/CHANGELOG.md` geëxtraheerd
 - Release asset links verwijzen naar de server download URLs
 - Releases worden aangemaakt via de GitLab API met `CI_JOB_TOKEN`
+
+## macOS: Developer ID en notarisatie
+
+Publieke macOS-builds zijn altijd gesigneerd met Developer ID Application, genotariseerd en gestapled. Ad-hoc signing (`CODE_SIGNING_ALLOWED=NO`, `codesign --sign -`) is alleen voor lokale tests en komt nooit in een release.
+
+Bundle-ID's: productie `com.buildmind.ThoughtVault`, dev `com.buildmind.ThoughtVault.dev` (eigen container, dus geen migratie). De Windows- en Android-ID's staan los hiervan in `scripts/env.sh`.
+
+Lokaal draaien (bouwt, notariseert, staplet en schrijft de Sparkle-handtekening naar `build/`):
+
+```bash
+BUILD_CHANNEL=production scripts/build-macos-release.sh
+```
+
+Het script leest een App Store Connect API-sleutel uit drie variabelen:
+
+- `APPLE_API_KEY_PATH`: pad naar het `.p8`-bestand
+- `APPLE_API_KEY_ID`: sleutel-ID
+- `APPLE_API_ISSUER`: issuer-ID
+
+Zijn er een of meer niet gezet, dan vult het script ze aan uit `~/.appstoreconnect/config.json` (velden `key_path`, `api_key_id`, `api_issuer_id`). Ontbreekt er daarna nog een, dan stopt het. Dezelfde sleutel gaat ook naar `xcodebuild` voor cloud-managed signing. Het Developer ID Application-certificaat moet in de keychain staan, anders stopt het script direct.
+
+In GitLab CI draait `build-macos` hetzelfde script. Maak onder Settings > CI/CD > Variables drie variabelen aan, protected en waar mogelijk masked: `APPLE_API_KEY_FILE` (type File, de inhoud van het `.p8`-bestand), `APPLE_API_KEY_ID` en `APPLE_API_ISSUER`. De macOS-runner heeft het Developer ID Application-certificaat in zijn keychain nodig. De `deploy`-job publiceert de DMG via `scripts/publish-release.py`, dat notarisatie en Sparkle-handtekening controleert.
 
 ## Download URLs
 

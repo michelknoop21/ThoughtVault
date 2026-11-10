@@ -127,6 +127,7 @@ See [RELEASE.md](RELEASE.md) for the complete guide.
 | `README.md` | This file — developer onboarding, prerequisites, build commands |
 | `PRD.md` | Product Requirements Document: target users, features, technical requirements, out of scope |
 | `ARCHITECTURE.md` | System design: multi-platform overview, backend data flow, service layers, directory structures |
+| `SUPPORT-RELAY.md` | Support-relay: contract voor meldingen en foutrapporten, foutcodes, deploy en bediening op n8n01 |
 | `API.md` | Complete backend API reference: all endpoints, auth flows, data models, rate limits |
 | `DECISIONS.md` | Architectural Decision Records (ADRs): rationale for key technical choices |
 | `CHANGELOG.md` | Version history and release notes |

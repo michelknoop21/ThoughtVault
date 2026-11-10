@@ -54,6 +54,38 @@ Windows behoudt `nl.prezent.transcript-studio`. Bestaande notulen en sleutels
 blijven daardoor bereikbaar. De eerste Mac-versie met Sparkle moet eenmalig via
 DMG worden geïnstalleerd; oude Macs kunnen zichzelf nog niet vervangen.
 
+## Bijwerken op Windows
+
+Met "Automatisch bijwerken" aan controleert de app bij het starten en daarna
+elke zes uur op updates. Een beschikbare native update wordt op de achtergrond
+in het geheugen gedownload; na opnieuw starten moet het pakket opnieuw worden
+gedownload als het nog niet is geïnstalleerd. De banner meldt wanneer de download
+klaar is.
+
+Bij het afsluiten van het hoofdvenster installeert de app een volledig gedownloade
+update, zolang "Automatisch bijwerken" aan staat en er geen opname of verwerking
+loopt. Tijdens opnemen of verwerken wordt bij afsluiten geen update geïnstalleerd.
+De Windows-installer gebruikt `passive`: een klein voortgangsvenster.
+
+Instellingen > Algemeen bevat de schakelaar "Automatisch bijwerken" en de knop
+"Zoek naar updates". Die knop verstuurt `tv-check-updates` en werkt ook wanneer
+automatisch bijwerken uit staat; dan volgt geen automatische download of
+installatie bij afsluiten. Met "Nu bijwerken" in de banner kan de gebruiker een
+native update handmatig downloaden en installeren als de app niet bezig is.
+
+Gebruik voor het dev-kanaal de GitHub-workflow met `channel=dev` via
+`bash scripts/deploy-dev.sh <geverifieerde-github-ref>`. Die bouwt "ThoughtVault
+Dev" met ID `nl.prezent.transcript-studio-dev` en endpoint
+`https://thoughtvault.yinga.ai/releases/windows/dev.json`. De huidige GitLab-route
+wijzigt alleen naam en ID en houdt daardoor het standaardendpoint `stable.json`;
+zij is niet geschikt voor dit dev-bewijs. De bestaande manifestcontrole blijft
+een fallback voor een downloadlink; die bewijst geen native update-installatie.
+
+**Bewijsstatus:** het automatische herstartgedrag van de eigen WiX-installer is
+nog niet op Windows geobserveerd. Ook de volledige native update van N naar N+1
+met behoud van notulen en instellingen is nog niet uitgevoerd. Vul het feitelijke
+herstartgedrag en de bewijsverwijzingen pas na de twee onderstaande dev-rondes in.
+
 ## Checks
 
 - `python3 scripts/test-publish-release.py`
@@ -63,3 +95,18 @@ DMG worden geïnstalleerd; oude Macs kunnen zichzelf nog niet vervangen.
 - Verifieer op Windows een MSI-installatie, start en opname/transcriptie/export.
 - Verifieer met twee daadwerkelijk verschillende releases de volledige updater,
   behoud van opgeslagen notulen/sleutels en een afgebroken of ongeldige download.
+
+Voor fase D horen daar twee echte dev-rondes met verschillende releases N en N+1
+bij, in deze volgorde:
+
+1. Installeer N en wacht op de banner dat N+1 is gedownload. Start een opname en
+   sluit het hoofdvenster. Er mag geen installer verschijnen; na opnieuw openen
+   moet Instellingen nog N tonen. Bewaar banner- en versiebeelden.
+2. Wacht opnieuw op de gedownloade N+1-banner en sluit zonder opname of verwerking.
+   Leg het `passive`-installervenster vast en controleer daarna N+1, bestaande
+   notulen en instellingen. Noteer of de app vanzelf herstart of handmatig moest
+   worden geopend. Bewaar het versiebeeld en de workflow-URL's van N en N+1.
+
+Mocktests en browserbeelden tellen niet als dit native N-naar-N+1-bewijs. Beide
+rondes staan nog open. Deze Windows-fase wijzigt geen Swift; de macOS-test hierboven
+hoort bij het afzonderlijke macOS-deel.

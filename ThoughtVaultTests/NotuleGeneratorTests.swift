@@ -367,3 +367,60 @@ final class RejectedDraftStoreTests: XCTestCase {
         XCTAssertThrowsError(try store.saveRejectedDraft(taskId: "onbekend", html: "<p>x</p>", reason: "r"))
     }
 }
+
+final class NotuleFallbackTests: XCTestCase {
+    private struct Down: Error {}
+
+    func testFallbackDeliversWhenPrimaryFails() async throws {
+        let html = try await NotuleGenerator.withFallback({ "<p>terugval</p>" }) { throw Down() }
+        XCTAssertEqual(html, "<p>terugval</p>")
+    }
+
+    func testWithoutFallbackOriginalErrorSurfaces() async {
+        do {
+            _ = try await NotuleGenerator.withFallback(nil) { throw Down() }
+            XCTFail("expected the primary error")
+        } catch {
+            XCTAssertTrue(error is Down)
+        }
+    }
+
+    func testRejectedDraftAndCancellationSkipFallback() async {
+        for thrown: Error in [NotuleReviewError(reason: "r", draftHtml: "<p>x</p>"), CancellationError()] {
+            do {
+                _ = try await NotuleGenerator.withFallback({ XCTFail("fallback ran"); return "" }) { throw thrown }
+                XCTFail("expected an error")
+            } catch {
+                XCTAssertEqual(String(describing: type(of: error)), String(describing: type(of: thrown)))
+            }
+        }
+    }
+}
+
+final class NotuleFallbackProviderTests: XCTestCase {
+    private let key = NotuleGenerator.fallbackProviderKey
+
+    override func tearDown() { UserDefaults.standard.removeObject(forKey: key) }
+
+    func testFallbackGuards() {
+        UserDefaults.standard.removeObject(forKey: key)
+        XCTAssertNil(NotuleGenerator.fallbackProvider(for: .ollama), "unset means no fallback")
+        UserDefaults.standard.set(NotulenProvider.ollama.rawValue, forKey: key)
+        XCTAssertNil(NotuleGenerator.fallbackProvider(for: .ollama), "same as primary")
+        UserDefaults.standard.set(NotulenProvider.cloud.rawValue, forKey: key)
+        XCTAssertNil(NotuleGenerator.fallbackProvider(for: .ollama), "cloud is never a local fallback")
+        UserDefaults.standard.set(NotulenProvider.anthropic.rawValue, forKey: key)
+        XCTAssertEqual(NotuleGenerator.fallbackProvider(for: .ollama), .anthropic)
+    }
+
+    func testOfferResultDecodesServerShape() throws {
+        let json = #"{"offer_id":5,"number":"20261110-1","url":"/offers/5/build","klant":{"id":3,"naam":"X","nieuw":true},"regels":3,"te_controleren":2,"bestaand":false,"model":"hoofd","terugval_gebruikt":true}"#
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        let r = try decoder.decode(ProspectFlowService.OfferResult.self, from: Data(json.utf8))
+        XCTAssertEqual(r.offerId, 5)
+        XCTAssertEqual(r.teControleren, 2)
+        XCTAssertTrue(r.terugvalGebruikt)
+        XCTAssertEqual(r.klant.naam, "X")
+    }
+}

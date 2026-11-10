@@ -30,10 +30,28 @@ extension RecordingViewModel {
         return provider == .cloud ? .ollama : provider
     }
 
-    /// Generates with the glossary and people context block for `provider`'s budget.
+    /// Generates with `provider`, and once with the configured fallback provider when that fails.
     private static func generateNotule(provider: NotulenProvider, transcription: String, profile: Profile, participants: [Participant],
                                        quickNote: String?, createdAt: Date,
                                        onStep: @escaping @Sendable (ModelStep) -> Void) async throws -> String {
+        let once: @Sendable (NotulenProvider) async throws -> String = { p in
+            try await generateNotuleOnce(provider: p, transcription: transcription, profile: profile,
+                                         participants: participants, quickNote: quickNote, createdAt: createdAt, onStep: onStep)
+        }
+        let fallback = NotuleGenerator.fallbackProvider(for: provider).map { fb in
+            { @Sendable () async throws -> String in
+                os_log("Notule generation failed with %{public}@, retrying with fallback %{public}@",
+                       log: log, type: .info, provider.rawValue, fb.rawValue)
+                return try await once(fb)
+            }
+        }
+        return try await NotuleGenerator.withFallback(fallback) { try await once(provider) }
+    }
+
+    /// Generates with the glossary and people context block for `provider`'s budget.
+    private static func generateNotuleOnce(provider: NotulenProvider, transcription: String, profile: Profile, participants: [Participant],
+                                           quickNote: String?, createdAt: Date,
+                                           onStep: @escaping @Sendable (ModelStep) -> Void) async throws -> String {
         let corrections = PersonalCorrections.loadOrEmpty()
         return try await NotuleGenerator(service: LLMServiceFactory.service(for: provider, serverURL: ""),
                                          noteConcurrency: provider.auditNoteConcurrency).generate(

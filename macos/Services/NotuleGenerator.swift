@@ -118,3 +118,33 @@ struct NotuleGenerator: Sendable {
         return block + "\n\n" + notulePrompt
     }
 }
+
+// MARK: - Fallback
+
+extension NotuleGenerator {
+    /// UserDefaults key of the optional fallback provider; empty means no fallback.
+    static let fallbackProviderKey = "notulenFallbackProvider"
+
+    /// The configured fallback, or nil when none is set or it is the primary itself.
+    static func fallbackProvider(for primary: NotulenProvider) -> NotulenProvider? {
+        guard let raw = UserDefaults.standard.string(forKey: fallbackProviderKey),
+              let provider = NotulenProvider(rawValue: raw), provider != .cloud, provider != primary else { return nil }
+        return provider
+    }
+
+    /// Runs `primary`; on a model error tries `fallback` once. Cancellation and a draft
+    /// rejected by the audit are not model errors, so they never trigger the fallback.
+    static func withFallback(_ fallback: (@Sendable () async throws -> String)?,
+                             primary: @Sendable () async throws -> String) async throws -> String {
+        do {
+            return try await primary()
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch let review as NotuleReviewError {
+            throw review
+        } catch {
+            guard let fallback, !Task.isCancelled else { throw error }
+            return try await fallback()
+        }
+    }
+}

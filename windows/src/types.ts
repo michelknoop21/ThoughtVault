@@ -357,6 +357,8 @@ export interface AppSettings {
   processing_mode: ProcessingMode;
   whisper_model: string;
   notulen_provider: NotulenProvider;
+  /** Provider tried once when the main one fails; "" = no fallback. */
+  notulen_fallback_provider: NotulenProvider | "";
   ollama_url: string;
   ollama_model: string;
   lm_studio_url: string;
@@ -374,6 +376,7 @@ export interface AppSettings {
   obsidian_enabled: boolean;
   obsidian_base_url: string;
   obsidian_vault_path: string;
+  prospectflow_base_url: string;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -381,6 +384,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   processing_mode: "local",
   whisper_model: "medium",
   notulen_provider: "ollama",
+  notulen_fallback_provider: "",
   ollama_url: "http://localhost:11434",
   ollama_model: "llama3.2",
   lm_studio_url: "http://localhost:1234",
@@ -396,4 +400,5 @@ export const DEFAULT_SETTINGS: AppSettings = {
   obsidian_enabled: false,
   obsidian_base_url: "https://127.0.0.1:27124",
   obsidian_vault_path: "Notulen",
+  prospectflow_base_url: "",
 };

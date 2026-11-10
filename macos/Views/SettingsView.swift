@@ -178,6 +178,7 @@ struct SettingsView: View {
     var obsidianTab: some View {
         cappedForm {
             obsidianSection
+            ProspectFlowSettingsSection()
         }
     }
 
@@ -652,6 +653,8 @@ struct SettingsView: View {
             case .ollamaCloud, .openAICompatible: CloudProviderConfig(provider: activeLocalProvider).id(activeLocalProvider)
             case .cloud:             EmptyView()
             }
+
+            NotuleFallbackPicker()
 
             NavigationLink {
                 ProfilesView()

@@ -190,7 +190,7 @@ enum PersonalCorrections {
             lines.append(candidate.line); used += candidate.line.count + 1
         }
         guard !lines.isEmpty else { return "" }
-        return "\n\nWoordenboek en personen (juiste spelling en betekenis; corrigeer verkeerd herkende varianten stil, voeg geen feiten toe; koppel acties aan de persoon wiens taak het is):\n" + lines.joined(separator: "\n")
+        return "\n\nWoordenboek en personen (juiste spelling en betekenis; corrigeer verkeerd herkende varianten stil, voeg geen feiten toe; noem een functie of organisatie alleen als het transcript die noemt; koppel een actie alleen aan een persoon die het transcript noemt):\n" + lines.joined(separator: "\n")
     }
 
     /// Call-site helper: adds the directory people and the provider budget.

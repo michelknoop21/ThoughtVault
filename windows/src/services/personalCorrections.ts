@@ -139,5 +139,5 @@ export function contextBlock(entries: PersonalCorrection[], people: PersonContex
     used += length + 1;
   }
   if (!lines.length) return "";
-  return "\n\nWoordenboek en personen (juiste spelling en betekenis; corrigeer verkeerd herkende varianten stil, voeg geen feiten toe; koppel acties aan de persoon wiens taak het is):\n" + lines.join("\n");
+  return "\n\nWoordenboek en personen (juiste spelling en betekenis; corrigeer verkeerd herkende varianten stil, voeg geen feiten toe; noem een functie of organisatie alleen als het transcript die noemt; koppel een actie alleen aan een persoon die het transcript noemt):\n" + lines.join("\n");
 }

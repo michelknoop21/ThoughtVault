@@ -125,4 +125,23 @@ final class ContextSuggestionsTests: XCTestCase {
         XCTAssertEqual(document.dismissed, ["person:pieter"])
         XCTAssertEqual(document.entries.map(\.canonical), ["Kascop"], "entries survive")
     }
+
+    // MARK: - Size check
+
+    func testFitsRejectsOversizedMessageForLocalModel() {
+        let local = OpenAICompatibleLLMService(baseURL: "http://127.0.0.1:9", model: "test")   // 8,000-character chunks
+        XCTAssertTrue(ContextSuggestions.fits(String(repeating: "a", count: 16_000), service: local))
+        XCTAssertFalse(ContextSuggestions.fits(String(repeating: "a", count: 16_001), service: local))
+    }
+
+    /// The audit and chunk summaries share `complete`; it must never refuse a long source itself.
+    func testCompleteDoesNotRefuseLongInput() async {
+        let local = OpenAICompatibleLLMService(baseURL: "http://127.0.0.1:9", model: "test")
+        do {
+            _ = try await local.complete(system: "s", user: String(repeating: "a", count: 40_000))
+            XCTFail("port 9 should refuse the connection")
+        } catch LLMError.providerUnavailable {
+            XCTFail("complete must not apply the context-step size limit")
+        } catch {}
+    }
 }

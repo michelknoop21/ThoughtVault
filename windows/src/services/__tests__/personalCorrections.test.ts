@@ -116,5 +116,5 @@ it("unknownGlossaryVersionYieldsEmptyListForMinutes", async () => {
 
 it("contextBlockUsesTheMacHeader", () => {
   expect(contextBlock([term("Yinga", ["Jengo"], "Merk")], [], "", undefined, 6000)).toBe(
-    "\n\nWoordenboek en personen (juiste spelling en betekenis; corrigeer verkeerd herkende varianten stil, voeg geen feiten toe; koppel acties aan de persoon wiens taak het is):\n- Yinga (ook gehoord als: Jengo): Merk");
+    "\n\nWoordenboek en personen (juiste spelling en betekenis; corrigeer verkeerd herkende varianten stil, voeg geen feiten toe; noem een functie of organisatie alleen als het transcript die noemt; koppel een actie alleen aan een persoon die het transcript noemt):\n- Yinga (ook gehoord als: Jengo): Merk");
 });

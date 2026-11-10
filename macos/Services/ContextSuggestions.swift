@@ -205,6 +205,13 @@ enum ContextSuggestions {
 
     // MARK: - AI step
 
+    /// The context step sends the whole transcript in one request, unchunked. A message well past a
+    /// local model's chunk size would overflow its context and silently truncate the system prompt.
+    static func fits(_ message: String, service: any LLMService) -> Bool {
+        guard let local = service as? OpenAICompatibleLLMService else { return true }
+        return message.count <= local.maxChunkCharacters + 8_000
+    }
+
     /// Starts the suggestion call after the notule was saved. Fire and forget: failures are
     /// only logged. Skipped for Apple Intelligence, very long transcripts and under tests.
     static func runInBackground(taskId: String, transcript: String, participants: [Participant], profileId: String?, profileName: String, provider: NotulenProvider) {
@@ -220,8 +227,12 @@ enum ContextSuggestions {
                             entries, PersonalCorrections.dismissed(), me?.name ?? "", me?.aliases ?? [])
                 }
                 let message = userMessage(context: context, participants: participants, selfName: selfName, transcript: transcript)
-                let raw = try await LLMServiceFactory.service(for: provider, serverURL: "")
-                    .complete(system: systemPrompt, user: message)
+                let service = LLMServiceFactory.service(for: provider, serverURL: "")
+                guard fits(message, service: service) else {
+                    logger.info("Context suggestions skipped: \(message.count) characters is too long for the local model")
+                    return
+                }
+                let raw = try await service.complete(system: systemPrompt, user: message)
                 let parsed = parse(raw, transcript: transcript, entries: entries, dismissed: dismissed, selfNames: [selfName], selfAliases: selfAliases)
                 let set = try await MainActor.run {
                     // Matched people are filled in directly; only what needs the user is stored.

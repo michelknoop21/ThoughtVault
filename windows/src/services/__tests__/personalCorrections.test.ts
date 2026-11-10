@@ -139,3 +139,13 @@ it("builds a person correction without spellings that are part of the name", () 
   expect(correctRecording(entry!,"<p>Sanne Backer en Sanne</p>","Sanne zei tegen Sanne Backer")).toEqual({ notule:"<p>Sanne Bakker en Sanne</p>", transcript:"Sanne zei tegen Sanne Bakker" });
   expect(personCorrection("Sanne Bakker",["Sanne","SANNE BAKKER",""],null)).toBeNull();
 });
+it("testLearnedNotReplacedButInContextBlock", () => {
+  const entry: PersonalCorrection = { ...rule, variants: ["Jengo"], learned: ["Django"] };
+  expect(correctText("Jengo en Django", [entry])).toBe("Yinga en Django");
+  expect(contextBlock([entry], [], "Django", undefined, 6000).endsWith("- Yinga (ook gehoord als: Jengo, Django)")).toBe(true);
+  const merged = upsertCorrection([entry], { ...entry, id: "other", variants: ["Django"], learned: undefined });
+  expect(merged).toHaveLength(1);
+  expect(merged[0].variants).toEqual(["Jengo", "Django"]);
+  expect(merged[0].learned).toBeUndefined();
+  expect(() => validateCorrections({ version: 2, entries: [{ ...entry, learned: ["a<b"] }] })).toThrow();
+});

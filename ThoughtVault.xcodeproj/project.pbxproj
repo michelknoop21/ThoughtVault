@@ -73,6 +73,7 @@
 		AC200090 /* WhisperOfflineTokenizerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC200090 /* WhisperOfflineTokenizerTests.swift */; };
 		AB200002 /* dutch-qa.wav in Resources */ = {isa = PBXBuildFile; fileRef = FB200002 /* dutch-qa.wav */; };
 		AA00PC02 /* PersonalCorrectionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA00PC02 /* PersonalCorrectionsView.swift */; };
+		AA00CE01 /* CorrectionEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA00CE01 /* CorrectionEditor.swift */; };
 		AA00PC01 /* PersonalCorrections.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA00PC01 /* PersonalCorrections.swift */; };
 		AA00CH01 /* ContextHistory.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA00CH01 /* ContextHistory.swift */; };
 		AA00CS01 /* ContextSuggestions.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA00CS01 /* ContextSuggestions.swift */; };
@@ -298,6 +299,7 @@
 		9D50F179AF913CBA129AFF66 /* PersonDirectoryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000071 /* PersonDirectoryService.swift */; };
 		88BAD6D1EE4B2257757B886A /* LocalTranscriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000063 /* LocalTranscriber.swift */; };
 		B1D10AB41AA9610D411227AF /* PersonalCorrectionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA00PC02 /* PersonalCorrectionsView.swift */; };
+		BB00CE01 /* CorrectionEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA00CE01 /* CorrectionEditor.swift */; };
 		8875D757BB161BCC147860C7 /* PersonalCorrections.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA00PC01 /* PersonalCorrections.swift */; };
 		8FF27B6E18A90EF98DD80187 /* AudioChunker.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000090 /* AudioChunker.swift */; };
 		1A418B953FAFCEFDCCFFA337 /* AudioEnvelopeProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000091 /* AudioEnvelopeProcessor.swift */; };
@@ -458,6 +460,7 @@
 		FC200001 /* WhisperSilenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhisperSilenceTests.swift; sourceTree = "<group>"; };
 		FB200002 /* dutch-qa.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "dutch-qa.wav"; sourceTree = "<group>"; };
 		FA00PC02 /* PersonalCorrectionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "../Views/PersonalCorrectionsView.swift"; sourceTree = "<group>"; };
+		FA00CE01 /* CorrectionEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "../Views/CorrectionEditor.swift"; sourceTree = "<group>"; };
 		FA00PC01 /* PersonalCorrections.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonalCorrections.swift; sourceTree = "<group>"; };
 		FA00CH02 /* HistoryListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "../Views/HistoryListView.swift"; sourceTree = "<group>"; };
 		FA00CH01 /* ContextHistory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContextHistory.swift; sourceTree = "<group>"; };
@@ -812,6 +815,7 @@
 				FA000071 /* PersonDirectoryService.swift */,
 				FA000063 /* LocalTranscriber.swift */,
 				FA00PC02 /* PersonalCorrectionsView.swift */,
+				FA00CE01 /* CorrectionEditor.swift */,
 				FA00PC01 /* PersonalCorrections.swift */,
 				FA00CH01 /* ContextHistory.swift */,
 				FA00CS01 /* ContextSuggestions.swift */,
@@ -1231,6 +1235,7 @@
 				AA000071 /* PersonDirectoryService.swift in Sources */,
 				AA000063 /* LocalTranscriber.swift in Sources */,
 				AA00PC02 /* PersonalCorrectionsView.swift in Sources */,
+				AA00CE01 /* CorrectionEditor.swift in Sources */,
 				AA00PC01 /* PersonalCorrections.swift in Sources */,
 				AA00CH01 /* ContextHistory.swift in Sources */,
 				AA00CS01 /* ContextSuggestions.swift in Sources */,
@@ -1483,6 +1488,7 @@
 				9D50F179AF913CBA129AFF66 /* PersonDirectoryService.swift in Sources */,
 				88BAD6D1EE4B2257757B886A /* LocalTranscriber.swift in Sources */,
 				B1D10AB41AA9610D411227AF /* PersonalCorrectionsView.swift in Sources */,
+				BB00CE01 /* CorrectionEditor.swift in Sources */,
 				8875D757BB161BCC147860C7 /* PersonalCorrections.swift in Sources */,
 				8FF27B6E18A90EF98DD80187 /* AudioChunker.swift in Sources */,
 				1A418B953FAFCEFDCCFFA337 /* AudioEnvelopeProcessor.swift in Sources */,

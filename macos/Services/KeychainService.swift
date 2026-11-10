@@ -20,7 +20,7 @@ final class KeychainService: Sendable {
         if AppEnvironment.isRunningTests { return "com.buildmind.ThoughtVault.tests" }
         #if DEBUG
         // Screenshot builds (bundle id `.screens`) must never read the real app's items.
-        if Bundle.main.bundleIdentifier?.hasSuffix(".screens") == true { return "com.buildmind.ThoughtVault.screens" }
+        if let bundleID = Bundle.main.bundleIdentifier, bundleID.hasSuffix(".screens") { return bundleID }
         #endif
         return "com.buildmind.ThoughtVault"
     }

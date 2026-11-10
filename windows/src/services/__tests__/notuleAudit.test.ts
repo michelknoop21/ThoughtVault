@@ -1,5 +1,5 @@
 import { expect, it, vi } from "vitest";
-import { auditNotule, draftForReview } from "../notuleAudit";
+import { MAX_AUDIT_PARTS, MAX_NOTE_CHECKS, auditNotule, draftForReview } from "../notuleAudit";
 
 const complete = (user: string) => {
   const input = JSON.parse(user.split("\n").slice(1).join("\n"));
@@ -92,7 +92,8 @@ it("audits full source, final visible content and separate user notes as untrust
 it("does not truncate source or silently approve unsupported audit sizes", async () => {
   const request = fixture();
   await expect(auditNotule("a".repeat(64_001), "<p>Korte notule</p>", "", request)).rejects.toThrow("te groot");
-  await expect(auditNotule("Actie. ".repeat(401), "<p>Korte notule</p>", "", request)).rejects.toThrow("te groot");
+  await expect(auditNotule("Actie. ".repeat(399 * MAX_AUDIT_PARTS + 1), "<p>Korte notule</p>", "", request)).rejects.toThrow("te groot");
+  await expect(auditNotule("Actie. ".repeat(300), `<p>${"Besluit genomen. ".repeat(MAX_NOTE_CHECKS + 1)}</p>`, "", request)).rejects.toThrow("te groot");
   expect(request).not.toHaveBeenCalled();
 });
 

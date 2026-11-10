@@ -8,6 +8,41 @@ _Decisions DEC-039 through DEC-053 archived to [archive/DECISIONS-DEC-039-to-DEC
 
 ---
 
+## DEC-065: Lange meetings: dekking per deel, één verificatie per notulezin
+
+**Date:** 2026-11-10
+**Status:** Accepted
+
+**Context:** `auditNotule` stuurt één verzoek met de hele bron en de hele notule, en weigert vooraf zodra bron plus notule boven 400 eenheden (zinnen) of 64.000 tekens komen. Het schadebezoek uit DEC-062 heeft 932 bronzinnen en 42.831 tekens; het kwam nooit verder dan die grens. Sinds DEC-063 levert zo'n meeting wel een notule op, maar altijd met de algemene regel "We konden niet automatisch controleren of alles in de notule klopt" onder "Even nalopen". Een gesprek van een uur werd dus nooit inhoudelijk gecontroleerd.
+
+**Decision:**
+1. Tot en met 400 eenheden en 64.000 tekens verandert niets: hetzelfde ene verzoek met dezelfde systeemprompt en hetzelfde gebruikersbericht, zodat de prompt-hashes van de M3-gate geldig blijven.
+2. Boven die grens loopt de controle in twee stappen. **Stap 1, dekking per deel:** de transcriptiezinnen (T) gaan in volgorde in delen. Elk verzoek bevat de hele notule, één deel van de transcriptie en alle gebruikersnotities (Q), samen binnen 400 eenheden en 64.000 tekens. Het model geeft alleen bronoordelen: `covered` met de N-zinnen die de bronzin bewaren, of `non_factual`, `missing`, `uncertain` met lege evidence. Elk antwoord wordt direct gecontroleerd: precies de ID's van dat verzoek, ieder één keer, evidence alleen naar bestaande notulezinnen, `uncertain` bovenaan exact `false`. De oordelen over een Q-zin uit verschillende delen worden samengevoegd tot het strengste (`uncertain`, dan `missing`, dan `covered`, dan `non_factual`).
+3. **Stap 2, één verificatie per notulezin:** uit de `covered`-oordelen volgt per notulezin welke bronzinnen hem citeren. Elke geciteerde notulezin krijgt een eigen verzoek met alleen die zin, de citerende bronzinnen als bewijs en per geciteerde T-zin de drie buren aan elke kant als aparte lijst `context`, ook over een deelgrens heen. Context mag een kwalificatie, voorwaarde, ontkenning of intrekking zichtbaar maken, maar telt nooit als steun: `supported` met een ID uit de context wordt afgewezen. Notulezinnen zonder enige citatie gaan samen in één verzoek zonder bewijs, waarin alleen koppen, opmaaklabels, begroetingen en herhalingen `non_factual` mogen zijn en de rest `unsupported` is.
+4. De afwijzingen en de regels voor "Even nalopen" zijn dezelfde als in het korte pad (DEC-063). Bewijs voor een bronzin komt alleen uit notulezinnen die stap 2 als `supported` beoordeelde. Een bronzin die in stap 1 `covered` was maar geen zo'n notulezin overhoudt, wordt `missing`, zodat de melding de bronzin noemt en niet "Ontbrekend controlebewijs". Een probleem met een notulezin wordt vóór een bronprobleem gemeld.
+5. Elke fout sluit af: een mislukt verzoek, onleesbare JSON, verkeerde ID's of een onzeker antwoord eindigt in een afwijzing, nooit in een goedkeuring. Een annulering (Swift `CancellationError`, Windows `AbortError`) gaat ongewijzigd door.
+
+**Begrenzing:**
+- Hoogstens 8 delen (`MAX_AUDIT_PARTS`) en hoogstens 150 notulezinnen (`MAX_NOTE_CHECKS`), dus hoogstens 8 + 150 + 1 = 159 verzoeken per controle. Is er meer nodig, of past één stap-2-verzoek met bewijs en context niet binnen 400 eenheden en 64.000 tekens, dan volgt vooraf de bestaande fout "Deze inhoud is te groot of onvolledig voor betrouwbare controle; beoordeel het concept". Bij te veel notulezinnen of delen gaat er geen enkel verzoek uit; bij een te groot stap-2-verzoek is stap 1 al gelopen en start stap 2 niet.
+- Stap 1 loopt na elkaar. Stap 2 draait hoogstens 4 verzoeken tegelijk en leest de uitkomsten in volgorde van de notule, zodat bij meerdere problemen steeds het eerste wordt gemeld. Na het eerste probleem start er geen nieuw verzoek meer. Verzoeken die al lopen worden afgewacht en genegeerd, niet afgebroken: op macOS leest `NotuleGenerator` een `CancellationError` uit een verzoek als annulering door de gebruiker, en op Windows neemt het verzoek geen abortsignaal aan.
+- macOS en Windows delen constanten, prompts en foutteksten letterlijk (`NotuleAuditLong.swift` en het lange pad in `notuleAudit.ts`).
+
+**Alternatives considered:**
+- De bron in delen opdelen, elk deel tegen de hele notule laten beoordelen en de notuleoordelen samenvoegen (de eerste versie van deze branch). De review vond zes manieren waarop dat een foute notule goedkeurde of de verkeerde melding gaf. Een `uncertain` uit het ene deel werd overschreven door `supported` uit een ander deel. Bronoordelen werden pas na het samenvoegen gecontroleerd, dus een deel kon oordelen over ID's die het nooit had gezien. "Dit is alleen een fictief voorbeeld" in deel 1 en de actie in deel 2 werden los beoordeeld en allebei goedgekeurd. Gebruikersnotities zaten alleen in het laatste deel en werden nooit naast eerdere transcriptie gelegd. Een verzonnen actiehouder of termijn die in geen enkel deel stond, kon via het samenvoegen alsnog `supported` worden. Een tegenspraak in een later deel leverde "Ontbrekend controlebewijs" op in plaats van de tegenspraak. Het nieuwe ontwerp voegt geen notuleoordelen meer samen: elke notulezin krijgt één oordeel, op zijn eigen bewijs.
+- De grens van 400 eenheden verhogen: één verzoek met 932 zinnen vraagt het model om honderden ID's foutloos terug te geven, en `gpt-oss:120b` gaf al bij 300 zinnen niet voor elke zin een oordeel (DEC-062).
+
+**Aanvaarde beperkingen:**
+- Een intrekking of herziening die meer dan drie zinnen van de geciteerde bronzin staat, ziet stap 2 niet. Stap 1 ziet hem alleen als hij in hetzelfde deel valt.
+- Een tegenspraak tussen een gebruikersnotitie en de transcriptie wordt per deel gezien. Elke T-zin staat in één deel naast alle Q-zinnen, maar twee T-zinnen in verschillende delen worden nooit naast elkaar gelegd.
+- `auditSource` (DEC-062) houdt zijn eigen grens: bron plus gebruikersnotities boven 64.000 tekens geeft "De bron is te groot of onvolledig". Op beide platforms vangt de notulegenerator die fout op als elke andere controlefout (`NotuleGenerator.generate` op macOS, `LLMService.generateNotulen` op Windows): `auditNotule` wordt dan niet meer aangeroepen en de notule krijgt de algemene regel. Het lange pad helpt dus alleen meetings boven 400 eenheden met hoogstens 64.000 tekens transcriptie, zoals het schadebezoek. Langere meetings blijven ongecontroleerd tot `auditSource` een eigen besluit krijgt.
+
+**Consequences:**
+- Een meeting als het schadebezoek kost met een notule van 60 zinnen 3 dekkingsverzoeken en hoogstens 60 verificatieverzoeken, in plaats van geen controle.
+- Elke geciteerde notulezin is een los modelverzoek. Bij een lokaal model telt die wachttijd mee tot de notule klaar is; vier tegelijk beperkt dat, maar maakt het niet gratis.
+- Tests: `NotuleAuditPartsTests.swift` en `notuleAuditParts.test.ts` dekken dezelfde scenario's, waaronder precies 8 delen, de tekenbegroting, de kwalificatie over een deelgrens, de verzonnen termijn, het verzoekenvenster van 4 en het doorgeven van een annulering.
+
+---
+
 ## DEC-064: Foutrapporten, meldingen en bijwerken via de support-relay
 
 **Date:** 2026-11-10

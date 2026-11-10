@@ -65,6 +65,7 @@
 		AA0000X1 /* ExportFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000X1 /* ExportFile.swift */; };
 		AA0000X2 /* PrintCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000X2 /* PrintCommand.swift */; };
 		AA0000N8 /* NotuleAudit.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000N8 /* NotuleAudit.swift */; };
+		AA00AL01 /* NotuleAuditLong.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA00AL01 /* NotuleAuditLong.swift */; };
 		AA0000T1 /* NotuleGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000T1 /* NotuleGenerator.swift */; };
 		AA000009 /* BiometricService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000009 /* BiometricService.swift */; };
 		AA000010 /* CalendarService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000010 /* CalendarService.swift */; };
@@ -172,6 +173,7 @@
 		AB0000T3 /* NotuleGeneratorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000T3 /* NotuleGeneratorTests.swift */; };
 		AB0000T5 /* LocalPipelineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000T5 /* LocalPipelineTests.swift */; };
 		AB0000N9 /* NotuleConstraintTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000N9 /* NotuleConstraintTests.swift */; };
+		AB00AP01 /* NotuleAuditPartsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB00AP01 /* NotuleAuditPartsTests.swift */; };
 		AB0000NA /* NotulePromptTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000NA /* NotulePromptTests.swift */; };
 		AB0000G1 /* M3LiveContentGateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000G1 /* M3LiveContentGateTests.swift */; };
 		AB0000G2 /* M3LiveContentGate.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000G2 /* M3LiveContentGate.swift */; };
@@ -225,6 +227,7 @@
 		E3DA3F9156A85ECFFA28641D /* ExportFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000X1 /* ExportFile.swift */; };
 		3C67C8AEB636FBDE7FD839F1 /* PrintCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000X2 /* PrintCommand.swift */; };
 		963E7F6A40A45BEDA7CD6653 /* NotuleAudit.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000N8 /* NotuleAudit.swift */; };
+		AA00AL02 /* NotuleAuditLong.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA00AL01 /* NotuleAuditLong.swift */; };
 		F2989054FE6E2130E893C3F6 /* NotuleGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000T1 /* NotuleGenerator.swift */; };
 		5A935BD00B5251609DE098B6 /* BiometricService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000009 /* BiometricService.swift */; };
 		AF2C410D5B41F46199D97BEC /* CalendarService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000010 /* CalendarService.swift */; };
@@ -381,6 +384,7 @@
 		FA0000X1 /* ExportFile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportFile.swift; sourceTree = "<group>"; };
 		FA0000X2 /* PrintCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrintCommand.swift; sourceTree = "<group>"; };
 		FA0000N8 /* NotuleAudit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotuleAudit.swift; sourceTree = "<group>"; };
+		FA00AL01 /* NotuleAuditLong.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotuleAuditLong.swift; sourceTree = "<group>"; };
 		FA0000T1 /* NotuleGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotuleGenerator.swift; sourceTree = "<group>"; };
 		FA000009 /* BiometricService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BiometricService.swift; sourceTree = "<group>"; };
 		FA000010 /* CalendarService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarService.swift; sourceTree = "<group>"; };
@@ -492,6 +496,7 @@
 		FB0000T3 /* NotuleGeneratorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotuleGeneratorTests.swift; sourceTree = "<group>"; };
 		FB0000T5 /* LocalPipelineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalPipelineTests.swift; sourceTree = "<group>"; };
 		FB0000N9 /* NotuleConstraintTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotuleConstraintTests.swift; sourceTree = "<group>"; };
+		FB00AP01 /* NotuleAuditPartsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotuleAuditPartsTests.swift; sourceTree = "<group>"; };
 		FB0000NA /* NotulePromptTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotulePromptTests.swift; sourceTree = "<group>"; };
 		FB0000G1 /* M3LiveContentGateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = M3LiveContentGateTests.swift; sourceTree = "<group>"; };
 		FB0000G2 /* M3LiveContentGate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = M3LiveContentGate.swift; sourceTree = "<group>"; };
@@ -618,6 +623,7 @@
 				FA0000L1 /* LocalTranscriptionQueue.swift */,
 				FA0000X1 /* ExportFile.swift */,
 				FA0000N8 /* NotuleAudit.swift */,
+				FA00AL01 /* NotuleAuditLong.swift */,
 				FA0000T1 /* NotuleGenerator.swift */,
 				FA0000S4 /* QuickNoteStore.swift */,
 				FA000009 /* BiometricService.swift */,
@@ -799,6 +805,7 @@
 				FB0000T3 /* NotuleGeneratorTests.swift */,
 				FB0000T5 /* LocalPipelineTests.swift */,
 				FB0000N9 /* NotuleConstraintTests.swift */,
+				FB00AP01 /* NotuleAuditPartsTests.swift */,
 				FB0000NA /* NotulePromptTests.swift */,
 				FB0000G1 /* M3LiveContentGateTests.swift */,
 				FB0000G2 /* M3LiveContentGate.swift */,
@@ -1007,6 +1014,7 @@
 				AA0000X1 /* ExportFile.swift in Sources */,
 				AA0000X2 /* PrintCommand.swift in Sources */,
 				AA0000N8 /* NotuleAudit.swift in Sources */,
+				AA00AL01 /* NotuleAuditLong.swift in Sources */,
 				AA0000T1 /* NotuleGenerator.swift in Sources */,
 				AA000009 /* BiometricService.swift in Sources */,
 				AA000010 /* CalendarService.swift in Sources */,
@@ -1127,6 +1135,7 @@
 				AB0000T3 /* NotuleGeneratorTests.swift in Sources */,
 				AB0000T5 /* LocalPipelineTests.swift in Sources */,
 				AB0000N9 /* NotuleConstraintTests.swift in Sources */,
+				AB00AP01 /* NotuleAuditPartsTests.swift in Sources */,
 				AB0000NA /* NotulePromptTests.swift in Sources */,
 				AB0000G1 /* M3LiveContentGateTests.swift in Sources */,
 				AB0000G2 /* M3LiveContentGate.swift in Sources */,
@@ -1197,6 +1206,7 @@
 				E3DA3F9156A85ECFFA28641D /* ExportFile.swift in Sources */,
 				3C67C8AEB636FBDE7FD839F1 /* PrintCommand.swift in Sources */,
 				963E7F6A40A45BEDA7CD6653 /* NotuleAudit.swift in Sources */,
+				AA00AL02 /* NotuleAuditLong.swift in Sources */,
 				F2989054FE6E2130E893C3F6 /* NotuleGenerator.swift in Sources */,
 				5A935BD00B5251609DE098B6 /* BiometricService.swift in Sources */,
 				AF2C410D5B41F46199D97BEC /* CalendarService.swift in Sources */,

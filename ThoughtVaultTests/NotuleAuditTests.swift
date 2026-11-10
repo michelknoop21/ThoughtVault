@@ -259,7 +259,12 @@ final class NotuleAuditTests: XCTestCase {
                                               quickNote: "", request: fixture(log))
         }
         await assertRejects("te groot") {
-            try await NotuleAudit.auditNotule(source: String(repeating: "Actie. ", count: 401), html: "<p>Korte notule</p>",
+            try await NotuleAudit.auditNotule(source: String(repeating: "Actie. ", count: 399 * NotuleAudit.maxAuditParts + 1), html: "<p>Korte notule</p>",
+                                              quickNote: "", request: fixture(log))
+        }
+        await assertRejects("te groot") {
+            try await NotuleAudit.auditNotule(source: String(repeating: "Actie. ", count: 300),
+                                              html: "<p>" + String(repeating: "Besluit genomen. ", count: NotuleAudit.maxNoteChecks + 1) + "</p>",
                                               quickNote: "", request: fixture(log))
         }
         let count = await log.count

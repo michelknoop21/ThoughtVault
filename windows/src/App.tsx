@@ -30,13 +30,14 @@ import { MicrosoftGraphService } from "./services/microsoftGraph";
 import { api } from "./services/api";
 import { createSSEClient } from "./services/sse";
 import { initCrashReporter } from "./services/crashReporter";
+import { installClickPath, installConsoleForwarding, logRoute } from "./services/appLog";
 import { initMeetingNotifications } from "./services/meetingNotifications";
 import { useGlobalRecordingHandler } from "./hooks/useGlobalRecordingHandler";
 import { useToast } from "./components/ui/InfoBar";
 import type { Profile } from "./types";
 import { canOpenRoute, shouldBlockForLocalNotes } from "./services/routeAccess";
 
-initCrashReporter();
+initCrashReporter(); installConsoleForwarding(); installClickPath();
 
 function AppShell({ children }: { children: React.ReactNode }) {
   const {isUpdateAvailable, latestVersion, downloadUrl, nativeUpdate} = useUpdateCheck();
@@ -111,6 +112,7 @@ function ProtectedRoutes() {
   const { isAuthenticated, isInitializing } = useAuthStore();
   const { has_completed_onboarding, processing_mode, updateSettings } = useSettingsStore();
   const location = useLocation();
+  useEffect(() => logRoute(location.pathname), [location.pathname]);
   const setProfiles = useProfilesStore((s) => s.setProfiles);
   const showLocalProfiles = useProfilesStore((s) => s.showLocalProfiles);
 

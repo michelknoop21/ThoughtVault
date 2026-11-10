@@ -9,7 +9,8 @@ it("does not count transport failures or malformed replies as semantic rejection
     const result = await runShortModelGate(reply, () => {});
     expect(result.pass).toBe(false);
     expect(result.results).toHaveLength(6);
-    expect(result.results.every(item => item.calls === 1 && !item.pass && !item.well_formed_report)).toBe(true);
+    // The source check only warns, so the notule audit is still reached (and fails): two calls.
+    expect(result.results.every(item => item.calls === 2 && !item.pass && !item.well_formed_report)).toBe(true);
   }
 });
 

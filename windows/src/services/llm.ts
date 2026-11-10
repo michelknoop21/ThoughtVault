@@ -10,7 +10,7 @@ import { isOllamaCloudURL } from "./ollamaModels";
 import { loadCorrectionsOrEmpty } from "../stores/personalCorrectionsStore";
 import { usePeopleDirectoryStore } from "../stores/peopleDirectoryStore";
 import { correctText, correctHTML, contextBlock, CONTEXT_BUDGET, type PersonalCorrection } from "./personalCorrections";
-import { auditSource, auditNotule, NotuleReviewError } from "./notuleAudit";
+import { auditSource, auditNotule, appendSourceWarning, NotuleReviewError } from "./notuleAudit";
 
 interface LLMConfig {
   provider: NotulenProvider;
@@ -267,14 +267,16 @@ export class LLMService {
     const draft = await generate(systemPrompt, userPrompt + constraintPrompt);
     if (!draft.trim()) throw new Error("De notule-generator gaf een leeg concept. De transcriptie is bewaard.");
     const candidate = finish(draft);
+    let warning: string | null = null;
     try {
-      await auditSource(correctText(transcription, corrections, profile.id), quickNote, generate);
+      warning = await auditSource(correctText(transcription, corrections, profile.id), quickNote, generate);
       await auditNotule(correctText(transcription, corrections, profile.id), candidate, quickNote, generate, constraints);
-      onProgress?.(candidate);
-      return candidate;
+      const approved = appendSourceWarning(warning, candidate);
+      onProgress?.(approved);
+      return approved;
     } catch (error) {
       const reason = error instanceof Error ? error.message : "De inhoud kon niet betrouwbaar worden gecontroleerd";
-      throw new NotuleReviewError(`Feiten, acties en beperkingen konden niet worden bevestigd: ${reason}`, candidate);
+      throw new NotuleReviewError(`Feiten, acties en beperkingen konden niet worden bevestigd: ${reason}`, appendSourceWarning(warning, candidate));
     }
   }
 }

@@ -44,15 +44,17 @@ struct NotuleGenerator: Sendable {
                 throw CancellationError()
             }
         }
+        var warning: String?
         do {
-            try await NotuleAudit.auditSource(source: source, quickNote: quickNote ?? "", request: request)
+            warning = try await NotuleAudit.auditSource(source: source, quickNote: quickNote ?? "", request: request)
+            if Task.isCancelled || cancelled.withLock({ $0 }) { throw CancellationError() }
             try await NotuleAudit.auditNotule(source: source, html: candidate, quickNote: quickNote ?? "",
                                               request: request, requiredSentences: constraints)
-            return candidate
+            return NotuleAudit.appendingWarning(warning, to: candidate)
         } catch {
             if Task.isCancelled || cancelled.withLock({ $0 }) { throw CancellationError() }
             throw NotuleReviewError(reason: "Feiten, acties en beperkingen konden niet worden bevestigd: \(error.localizedDescription)",
-                                    draftHtml: candidate)
+                                    draftHtml: NotuleAudit.appendingWarning(warning, to: candidate))
         }
     }
 

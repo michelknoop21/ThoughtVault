@@ -82,8 +82,14 @@ enum NotuleAudit {
 
     // MARK: Audits
 
-    /// Judge intelligibility without showing the model the fluent candidate.
-    static func auditSource(source: String, quickNote: String, request: AuditRequest) async throws {
+    static let unclearSourceWarning = "De transcriptie bevat passages die mogelijk verkeerd zijn verstaan. Controleer namen, getallen en afspraken in deze notule."
+    static let uncheckedSourceWarning = "De transcriptie kon niet automatisch op verstaanbaarheid worden gecontroleerd. Controleer de notule zelf."
+
+    /// Judge intelligibility without showing the model the fluent candidate. Returns a warning, never
+    /// rejects: real speech recognition mishears words in nearly every passage (the 43k schadebezoek
+    /// failed in 0 of 11 pieces), and `auditNotule` still rejects source sentences it cannot interpret.
+    /// The prompt stays byte-identical to Windows. Nil means the source is clear.
+    static func auditSource(source: String, quickNote: String, request: AuditRequest) async throws -> String? {
         guard !trim(source).isEmpty, source.utf16.count + quickNote.utf16.count <= 64_000 else {
             throw NotuleAuditError(message: "De bron is te groot of onvolledig voor betrouwbare controle; beoordeel het concept")
         }
@@ -96,11 +102,20 @@ enum NotuleAudit {
         do {
             result = try parseAuditResponse(try await request(system, "Broncontrole (zonder notule):\n{\"source\":\(json(source)),\"quickNote\":\(json(quickNote))}"))
         } catch {
-            throw NotuleAuditError(message: "De broncontrole leverde geen bruikbaar antwoord; beoordeel het concept")
+            return uncheckedSourceWarning
         }
-        guard isFalse((result as? [String: Any])?["uncertain"]) else {
-            throw NotuleAuditError(message: "De bron is onvoldoende duidelijk; beoordeel het concept")
+        return isFalse((result as? [String: Any])?["uncertain"]) ? nil : unclearSourceWarning
+    }
+
+    /// Adds the warning as the last section (before `</body>`), like the quick-note section. It is added
+    /// after the audit, so it is never checked as a claim.
+    static func appendingWarning(_ warning: String?, to html: String) -> String {
+        guard let warning else { return html }
+        let section = "<h2>Let op: controleer de transcriptie</h2><p>\(warning)</p>"
+        if let body = html.range(of: "</body>", options: [.backwards, .caseInsensitive]) {
+            return html.replacingCharacters(in: body, with: section + "</body>")
         }
+        return html + section
     }
 
     /// A bounded model-assisted check; evidence links prove coverage, not semantic truth.

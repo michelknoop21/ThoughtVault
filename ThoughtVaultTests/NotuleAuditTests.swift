@@ -359,7 +359,8 @@ final class NotuleAuditTests: XCTestCase {
 
     // "accepts a clear source check wrapped in one JSON code block"
     func testAcceptsFencedSourceCheck() async throws {
-        try await NotuleAudit.auditSource(source: "Noor belt vrijdag.", quickNote: "", request: respond(CallLog(), fenced(#"{"uncertain":false}"#)))
+        let warning = try await NotuleAudit.auditSource(source: "Noor belt vrijdag.", quickNote: "", request: respond(CallLog(), fenced(#"{"uncertain":false}"#)))
+        XCTAssertNil(warning)
     }
 
     // "keeps a fenced negative audit as a specific rejection"
@@ -370,9 +371,9 @@ final class NotuleAuditTests: XCTestCase {
                                               html: "<p>Noor neemt vrijdag telefonisch contact op.</p>", quickNote: "",
                                               request: respond(CallLog(), fenced(missing)))
         }
-        await assertRejects("De bron is onvoldoende duidelijk") {
-            try await NotuleAudit.auditSource(source: "Onduidelijke bron.", quickNote: "", request: respond(CallLog(), fenced(#"{"uncertain":true}"#)))
-        }
+        // The source check only warns; the notule audit stays the gate.
+        let warning = try? await NotuleAudit.auditSource(source: "Onduidelijke bron.", quickNote: "", request: respond(CallLog(), fenced(#"{"uncertain":true}"#)))
+        XCTAssertEqual(warning, NotuleAudit.unclearSourceWarning)
     }
 
     // "does not extract approval from prose, another language, or malformed JSON"
@@ -394,7 +395,7 @@ final class NotuleAuditTests: XCTestCase {
     // "checks the source and separate user note without exposing the candidate"
     func testSourceCheckExcludesCandidate() async throws {
         let log = CallLog()
-        try await NotuleAudit.auditSource(source: "Noor controleert vrijdag.", quickNote: "Budget is nog onbeslist.",
+        _ = try await NotuleAudit.auditSource(source: "Noor controleert vrijdag.", quickNote: "Budget is nog onbeslist.",
                                           request: respond(log, #"{"uncertain":false}"#))
         let calls = await log.calls
         XCTAssertEqual(calls.count, 1)
@@ -402,25 +403,31 @@ final class NotuleAuditTests: XCTestCase {
         XCTAssertEqual(calls.first?.user, "Broncontrole (zonder notule):\n{\"source\":\"Noor controleert vrijdag.\",\"quickNote\":\"Budget is nog onbeslist.\"}")
     }
 
-    // "rejects uncertain or invalid source evidence without retry: %s"
-    private func assertSourceResponseRejected(_ response: String, _ expected: String, line: UInt = #line) async {
+    // "warns on uncertain or invalid source evidence without retry: %s"
+    private func assertSourceResponseWarns(_ response: String, _ expected: String, line: UInt = #line) async {
         let log = CallLog()
-        await assertRejects(expected, line: line) {
-            try await NotuleAudit.auditSource(source: "Noor controleert vrijdag.", quickNote: "", request: respond(log, response))
-        }
+        let warning = try? await NotuleAudit.auditSource(source: "Noor controleert vrijdag.", quickNote: "", request: respond(log, response))
+        XCTAssertEqual(warning, expected, line: line)
         let count = await log.count
         XCTAssertEqual(count, 1, line: line)
     }
 
-    private let unclear = "De bron is onvoldoende duidelijk; beoordeel het concept"
-    func testRejectsSourceResponse_notJSON() async {
-        await assertSourceResponseRejected("not JSON", "De broncontrole leverde geen bruikbaar antwoord; beoordeel het concept")
+    private let unclear = NotuleAudit.unclearSourceWarning
+    func testWarnsSourceResponse_notJSON() async { await assertSourceResponseWarns("not JSON", NotuleAudit.uncheckedSourceWarning) }
+    func testWarnsSourceResponse_null() async { await assertSourceResponseWarns("null", unclear) }
+    func testWarnsSourceResponse_emptyObject() async { await assertSourceResponseWarns("{}", unclear) }
+    func testWarnsSourceResponse_uncertainTrue() async { await assertSourceResponseWarns(#"{"uncertain":true}"#, unclear) }
+    func testWarnsSourceResponse_uncertainStringFalse() async { await assertSourceResponseWarns(#"{"uncertain":"false"}"#, unclear) }
+    func testWarnsSourceResponse_uncertainZero() async { await assertSourceResponseWarns(#"{"uncertain":0}"#, unclear) }
+
+    // The warning goes before </body> when the notule is a full document, otherwise at the end.
+    func testWarningIsPlacedBeforeBody() {
+        let section = "<h2>Let op: controleer de transcriptie</h2><p>\(unclear)</p>"
+        XCTAssertEqual(NotuleAudit.appendingWarning(unclear, to: "<html><body><p>Notule.</p></body></html>"),
+                       "<html><body><p>Notule.</p>" + section + "</body></html>")
+        XCTAssertEqual(NotuleAudit.appendingWarning(unclear, to: "<p>x</p>"), "<p>x</p>" + section)
+        XCTAssertEqual(NotuleAudit.appendingWarning(nil, to: "<p>x</p>"), "<p>x</p>")
     }
-    func testRejectsSourceResponse_null() async { await assertSourceResponseRejected("null", unclear) }
-    func testRejectsSourceResponse_emptyObject() async { await assertSourceResponseRejected("{}", unclear) }
-    func testRejectsSourceResponse_uncertainTrue() async { await assertSourceResponseRejected(#"{"uncertain":true}"#, unclear) }
-    func testRejectsSourceResponse_uncertainStringFalse() async { await assertSourceResponseRejected(#"{"uncertain":"false"}"#, unclear) }
-    func testRejectsSourceResponse_uncertainZero() async { await assertSourceResponseRejected(#"{"uncertain":0}"#, unclear) }
 
     // "rejects empty or oversized sources before making a request"
     func testSourceSizeLimits() async {

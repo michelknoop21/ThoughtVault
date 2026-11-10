@@ -47,8 +47,16 @@ export function parseAuditResponse(text: string) {
   return JSON.parse(text.trim().replace(/^```(?:json)?[ \t]*\r?\n([\s\S]*?)\r?\n```$/iu, "$1"));
 }
 
-/** Judge intelligibility without showing the model the fluent candidate. */
-export async function auditSource(source: string, quickNote: string, request: (system: string, user: string) => Promise<string>): Promise<void> {
+export const UNCLEAR_SOURCE_WARNING = "De transcriptie bevat passages die mogelijk verkeerd zijn verstaan. Controleer namen, getallen en afspraken in deze notule.";
+export const UNCHECKED_SOURCE_WARNING = "De transcriptie kon niet automatisch op verstaanbaarheid worden gecontroleerd. Controleer de notule zelf.";
+
+/**
+ * Judge intelligibility without showing the model the fluent candidate. Returns a warning, never
+ * rejects: real speech recognition mishears words in nearly every passage (the 43k schadebezoek
+ * failed in 0 of 11 pieces), and auditNotule still rejects source sentences it cannot interpret.
+ * The prompt stays byte-identical to macOS. Null means the source is clear.
+ */
+export async function auditSource(source: string, quickNote: string, request: (system: string, user: string) => Promise<string>): Promise<string | null> {
   if (!source.trim() || source.length + quickNote.length > 64_000) {
     throw new Error("De bron is te groot of onvolledig voor betrouwbare controle; beoordeel het concept");
   }
@@ -57,10 +65,16 @@ Gewone spreektaal of verwijzingen met ondubbelzinnige context zijn begrijpelijk.
 Geef uitsluitend {"uncertain":false} als alle inhoudelijke passages begrijpelijk zijn, anders {"uncertain":true}. Geen toelichting, geen lijsten of afkortingen.`;
   let result: { uncertain?: unknown };
   try { result = parseAuditResponse(await request(system, `Broncontrole (zonder notule):\n${JSON.stringify({ source, quickNote })}`)); }
-  catch { throw new Error("De broncontrole leverde geen bruikbaar antwoord; beoordeel het concept"); }
-  if (!result || result.uncertain !== false) {
-    throw new Error("De bron is onvoldoende duidelijk; beoordeel het concept");
-  }
+  catch { return UNCHECKED_SOURCE_WARNING; }
+  return result && result.uncertain === false ? null : UNCLEAR_SOURCE_WARNING;
+}
+
+/** Adds the warning as the last section (before </body>), after the audit, so it is never checked as a claim. */
+export function appendSourceWarning(warning: string | null, html: string): string {
+  if (!warning) return html;
+  const section = `<h2>Let op: controleer de transcriptie</h2><p>${warning}</p>`;
+  const body = html.toLowerCase().lastIndexOf("</body>");
+  return body < 0 ? html + section : html.slice(0, body) + section + html.slice(body);
 }
 
 /** A bounded model-assisted check; evidence links prove coverage, not semantic truth. */

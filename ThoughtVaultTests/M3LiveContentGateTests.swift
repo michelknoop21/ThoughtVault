@@ -85,13 +85,13 @@ final class M3LiveContentGateOfflineTests: XCTestCase {
             XCTAssertEqual(result.promptsMatchWindows, Array(repeating: true, count: result.calls), "\(result.name) prompt differs from Windows")
             XCTAssertEqual(result.model, "kimi-k2.6")
         }
-        XCTAssertEqual(results.map(\.calls), [2, 2, 2, 2, 2, 1, 3, 3, 3])
-        XCTAssertEqual(M3GateRecorder.requestCount, 20)
+        XCTAssertEqual(results.map(\.calls), [2, 2, 2, 2, 2, 2, 3, 3, 3])
+        XCTAssertEqual(M3GateRecorder.requestCount, 21)
         XCTAssertTrue(queue.withLock { $0.isEmpty })
 
         // Evidence: one request and response per call plus a summary, and never the key.
         let files = try FileManager.default.contentsOfDirectory(atPath: evidence.path)
-        XCTAssertEqual(files.count, 20 * 2 + 1)
+        XCTAssertEqual(files.count, 21 * 2 + 1)
         XCTAssertTrue(files.contains("summary.json"))
         XCTAssertTrue(files.contains("waddenspoor-1.request.json"))
         for file in files {
@@ -115,7 +115,8 @@ final class M3LiveContentGateOfflineTests: XCTestCase {
 
         XCTAssertEqual(result.actual, "transport_error")
         XCTAssertFalse(result.pass)
-        XCTAssertEqual(result.calls, 1)
+        // The source check only warns, so the notule audit is still reached and fails the same way.
+        XCTAssertEqual(result.calls, 2)
         XCTAssertTrue(result.reason.contains("HTTP 500"), result.reason)
     }
 

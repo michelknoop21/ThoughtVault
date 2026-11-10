@@ -1,6 +1,6 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import { LLMService } from "../llm";
-import { NotuleReviewError } from "../notuleAudit";
+import { appendSourceWarning, NotuleReviewError, UNCLEAR_SOURCE_WARNING } from "../notuleAudit";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { auditFixture, sourceFixture } from "./notuleAuditFixtures";
 const { invoke } = vi.hoisted(() => ({ invoke: vi.fn() }));
@@ -87,17 +87,33 @@ it("retains the generated candidate when the audit service fails, with no succes
   expect(invoke).toHaveBeenCalledTimes(3);
 });
 
-it("retains a readable draft when a separate source-only check cannot understand the transcript", async () => {
-  const html = "<p>Een stellig verhaal over een pilot.</p>";
+it("adds the source warning to an approved notule when only the source check is unsure", async () => {
+  const html = "<p>Sam neemt vrijdag contact op.</p>";
   invoke.mockImplementation(async (_command, args) => {
     const user = JSON.parse(args.request.body).messages.at(-1).content;
     if (user.startsWith("Broncontrole")) return answer(JSON.stringify({ uncertain: true }));
     return answer(user.startsWith("Inhoudsaudit") ? auditFixture(user) : html);
   });
   const progress = vi.fn();
+  const expected = appendSourceWarning(UNCLEAR_SOURCE_WARNING, html);
+  expect(await LLMService.generateNotulen("Sam belt vrijdag. Het zit op derf.", profile, progress)).toBe(expected);
+  expect(progress).toHaveBeenCalledExactlyOnceWith(expected);
+  expect(invoke).toHaveBeenCalledTimes(3);
+});
+
+it("retains a readable draft with the warning when the notule audit cannot understand the transcript", async () => {
+  const html = "<p>Een stellig verhaal over een pilot.</p>";
+  invoke.mockImplementation(async (_command, args) => {
+    const user = JSON.parse(args.request.body).messages.at(-1).content;
+    if (user.startsWith("Broncontrole")) return answer(JSON.stringify({ uncertain: true }));
+    if (user.startsWith("Inhoudsaudit")) return answer(JSON.stringify({ ...JSON.parse(auditFixture(user)), uncertain: true }));
+    return answer(html);
+  });
+  const progress = vi.fn();
   const failure = await LLMService.generateNotulen("En mensen processen stok maken voorbij pilot zeker leeg.", profile, progress).catch(error => error);
   expect(failure).toBeInstanceOf(NotuleReviewError);
-  expect(failure.draftHtml).toBe(html);
+  expect(failure.draftHtml).toBe(appendSourceWarning(UNCLEAR_SOURCE_WARNING, html));
+  expect(failure.message).toContain("De inhoudscontrole is onzeker");
   expect(progress).not.toHaveBeenCalled();
 });
 

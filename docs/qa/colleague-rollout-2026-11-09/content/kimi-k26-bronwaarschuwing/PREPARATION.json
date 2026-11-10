@@ -1,0 +1,66 @@
+{
+  "mode": "prepared_only_no_provider_calls",
+  "pass": false,
+  "results": [
+    {
+      "name": "correcte_parafrase",
+      "expected_accept": true,
+      "accepted": false,
+      "reason": "De inhoudscontrole leverde geen bruikbaar controlebewijs; beoordeel het concept",
+      "calls": 2,
+      "well_formed_report": false,
+      "target_semantic_finding": false,
+      "pass": false
+    },
+    {
+      "name": "tweede_actie_ontbreekt",
+      "expected_accept": false,
+      "accepted": false,
+      "reason": "De inhoudscontrole leverde geen bruikbaar controlebewijs; beoordeel het concept",
+      "calls": 2,
+      "well_formed_report": false,
+      "target_semantic_finding": false,
+      "pass": false
+    },
+    {
+      "name": "tegenstrijdige_toestemming",
+      "expected_accept": false,
+      "accepted": false,
+      "reason": "De inhoudscontrole leverde geen bruikbaar controlebewijs; beoordeel het concept",
+      "calls": 2,
+      "well_formed_report": false,
+      "target_semantic_finding": false,
+      "pass": false
+    },
+    {
+      "name": "verkeerd_budget",
+      "expected_accept": false,
+      "accepted": false,
+      "reason": "De inhoudscontrole leverde geen bruikbaar controlebewijs; beoordeel het concept",
+      "calls": 2,
+      "well_formed_report": false,
+      "target_semantic_finding": false,
+      "pass": false
+    },
+    {
+      "name": "voorwaarde_wordt_opdracht",
+      "expected_accept": false,
+      "accepted": false,
+      "reason": "De inhoudscontrole leverde geen bruikbaar controlebewijs; beoordeel het concept",
+      "calls": 2,
+      "well_formed_report": false,
+      "target_semantic_finding": false,
+      "pass": false
+    },
+    {
+      "name": "opname10_ambigue_bron_numerieke_invulling",
+      "expected_accept": false,
+      "accepted": false,
+      "reason": "De inhoudscontrole leverde geen bruikbaar controlebewijs; beoordeel het concept",
+      "calls": 2,
+      "well_formed_report": false,
+      "target_semantic_finding": false,
+      "pass": false
+    }
+  ]
+}

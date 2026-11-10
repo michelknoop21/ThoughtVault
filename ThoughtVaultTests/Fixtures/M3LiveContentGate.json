@@ -135,7 +135,7 @@
   {
    "name": "opname10_ambigue_bron_numerieke_invulling",
    "expectAccept": false,
-   "windowsReason": "De bron is onvoldoende duidelijk; beoordeel het concept",
+   "windowsReason": "De inhoudscontrole is onzeker; beoordeel het concept",
    "source": "En 70% mensen en processen als je daar werkt, met een stok willen maken en voorbij die pilot wil komen. Nou, we hebben Frans Velberg en die gaat hier precies op in de her. Hij is hongerderaar data and AI driven business in de vee aan de Vrij Universiteit Amsterdam. Frans, ik ben heel bedoeld naar jouw verhaal en jij hebt een beloofd want we moeten ook concrete gaan. Zeker leeg. Zeker leeg. Jorvleurs, heers.  Dank je wel, L.A. Gershield. Goedemorgen.  AI verdreft innovatie van onbegrens experimenteren na succesvol implementeren. En we gaan naar de lessen van Heraclitus, de kenten alpans. Voornamelijk ook allemaal. Stooi zijn ze natuurlijk zo, kijken of we naar een groot is punt te zien voor de grote vraagste de werelder naar AI hebben. Echt een gewone beginnend.",
    "html": "<h1>Verslag van het gesprek</h1>\n<section><h2>Kern</h2><p>In het gesprek kwam onder meer het onderwerp van 70 % van de mensen en processen in een pilot ter sprake. Frans Velberg, die werkt aan data‑ en AI‑gedreven business aan de Vrije Universiteit Amsterdam, werd genoemd. Er werd gesproken over de behoefte aan concrete vervolgstappen, over AI die innovatie en experimenteren stimuleert, en er werd een verwijzing gemaakt naar de lessen van Heraclitus.</p></section>\n<section><h2>Besproken onderwerpen</h2><p>De deelnemers bespraken onder andere:</p><ul><li>Het percentage (70 %) van mensen en processen dat bij een pilot betrokken is.</li><li>De rol van Frans Velberg en zijn expertise in data‑ en AI‑gedreven business aan de Vrije Universiteit Amsterdam.</li><li>De wens om na de pilot concrete vervolgstappen te nemen.</li><li>De impact van AI op innovatie en onbegrensd experimenteren na succesvolle implementatie.</li><li>Een verwijzing naar de lessen van Heraclitus in de context van AI.</li></ul></section>",
    "windows": [
@@ -143,6 +143,11 @@
      "systemSha256": "a0482036d6ee028018dbda432c5ab5732382b4ba00de1891d949ec1dba25c149",
      "userSha256": "b91b120791640e8ff82a24f7c2182187504e16f326e50323bbcb0bf6a3a2e7a2",
      "response": "{\"uncertain\":true}"
+    },
+    {
+     "systemSha256": "45df34856fb36e2aaec5ca0f0804b870599c95c116cb20ca3253b47fd6b14de0",
+     "userSha256": "450817e1a61c1181357574f423e5b7493916d39827d6bc568dddbac4ab33b838",
+     "response": "{\"uncertain\":true,\"source\":[{\"id\":\"T1\",\"status\":\"covered\"},{\"id\":\"T2\",\"status\":\"covered\"},{\"id\":\"T3\",\"status\":\"covered\"},{\"id\":\"T4\",\"status\":\"covered\"},{\"id\":\"T5\",\"status\":\"uncertain\"},{\"id\":\"T6\",\"status\":\"non_factual\"},{\"id\":\"T7\",\"status\":\"uncertain\"},{\"id\":\"T8\",\"status\":\"missing\"},{\"id\":\"T9\",\"status\":\"non_factual\"},{\"id\":\"T10\",\"status\":\"uncertain\"},{\"id\":\"T11\",\"status\":\"non_factual\"},{\"id\":\"T12\",\"status\":\"covered\"},{\"id\":\"T13\",\"status\":\"covered\"},{\"id\":\"T14\",\"status\":\"missing\"},{\"id\":\"T15\",\"status\":\"uncertain\"},{\"id\":\"T16\",\"status\":\"uncertain\"}],\"notes\":[{\"id\":\"N1\",\"status\":\"non_factual\",\"evidence\":[]},{\"id\":\"N2\",\"status\":\"non_factual\",\"evidence\":[]},{\"id\":\"N3\",\"status\":\"supported\",\"evidence\":[\"T1\"]},{\"id\":\"N4\",\"status\":\"supported\",\"evidence\":[\"T2\",\"T3\"]},{\"id\":\"N5\",\"status\":\"supported\",\"evidence\":[\"T4\",\"T12\",\"T13\"]},{\"id\":\"N6\",\"status\":\"non_factual\",\"evidence\":[]},{\"id\":\"N7\",\"status\":\"non_factual\",\"evidence\":[]},{\"id\":\"N8\",\"status\":\"supported\",\"evidence\":[\"T1\"]},{\"id\":\"N9\",\"status\":\"supported\",\"evidence\":[\"T2\",\"T3\"]},{\"id\":\"N10\",\"status\":\"supported\",\"evidence\":[\"T1\",\"T4\"]},{\"id\":\"N11\",\"status\":\"supported\",\"evidence\":[\"T12\"]},{\"id\":\"N12\",\"status\":\"supported\",\"evidence\":[\"T13\"]}]}"
     }
    ],
    "target": {

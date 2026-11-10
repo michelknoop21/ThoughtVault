@@ -2,7 +2,7 @@
 
 ## Besluit
 
-**NO-GO.** De broncode is groen en de TestFlight-build staat bij Apple, maar de praktijkpoorten M3 tot en met M13 zijn nog niet uitgevoerd. Een gedeeltelijk resultaat telt niet als PASS.
+**NO-GO.** De broncode is groen en de TestFlight-build staat bij Apple, maar de praktijkpoorten M4 tot en met M13 zijn nog niet uitgevoerd (M3 is PASS). Een gedeeltelijk resultaat telt niet als PASS.
 
 De macOS-route is TestFlight (App Store-target zonder Sparkle). Build 1.0.309 (309) is op 9 november 2026 geüpload: Delivery UUID `06185210-e1ee-4c08-934d-52d06341e80f`. Build 1.0.310 (310) volgde op 10 november 2026: Delivery UUID `ed4e6505-1d05-426a-84ab-d0938143cc6f`. Er is geen DMG gepubliceerd en niets naar Developer ID-notarisatie gestuurd.
 

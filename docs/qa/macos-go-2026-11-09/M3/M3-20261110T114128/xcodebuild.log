@@ -1,0 +1,233 @@
+heavy-queue: queued 00000000000000000004-3b65e73f93ba464db2ad6bca32cd4dc2 m3-gate
+heavy-queue: active 00000000000000000004-3b65e73f93ba464db2ad6bca32cd4dc2 m3-gate
+Command line invocation:
+    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild test -project ThoughtVault.xcodeproj -scheme ThoughtVault -destination platform=macOS -allowProvisioningUpdates "-only-testing:ThoughtVaultTests/M3LiveContentGateTests" -jobs 4
+
+Resolve Package Graph
+2026-11-10 11:41:13.770 xcodebuild[9836:110894555] Malformed bundle does not contain an identifier at /Volumes/SSD/CoreSimulator/Profiles/Runtimes/iOS 27.0.simruntime
+
+
+Resolved source packages:
+  whisperkit: https://github.com/argmaxinc/WhisperKit.git @ 0.18.0
+  swift-transformers: https://github.com/huggingface/swift-transformers.git @ 1.1.9
+  Jinja: https://github.com/huggingface/swift-jinja.git @ 2.5.2
+  swift-asn1: https://github.com/apple/swift-asn1.git @ 1.7.4
+  swift-collections: https://github.com/apple/swift-collections.git @ 1.7.5
+  swift-argument-parser: https://github.com/apple/swift-argument-parser.git @ 1.8.2
+  swift-crypto: https://github.com/apple/swift-crypto.git @ 4.5.2
+  Sparkle: https://github.com/sparkle-project/Sparkle @ 2.10.0
+  yyjson: https://github.com/ibireme/yyjson.git @ 0.12.0
+
+--- xcodebuild: WARNING: Using the first of multiple matching destinations:
+{ platform:macOS, arch:arm64, id:00006040-001A68C01E87801C, name:My Mac }
+{ platform:macOS, arch:x86_64, id:00006040-001A68C01E87801C, name:My Mac }
+Build Preparation
+Build task concurrency set to 4 via user default IDEBuildOperationMaxNumberOfConcurrentCompileTasks
+
+ComputePackagePrebuildTargetDependencyGraph
+
+Prepare packages
+
+CreateBuildRequest
+
+SendProjectDescription
+
+CreateBuildOperation
+
+ComputeTargetDependencyGraph
+note: Building targets in dependency order
+note: Target dependency graph (21 targets)
+    Target 'ThoughtVaultTests' in project 'ThoughtVault'
+        ➜ Explicit dependency on target 'ThoughtVault' in project 'ThoughtVault'
+    Target 'ThoughtVault' in project 'ThoughtVault'
+        ➜ Explicit dependency on target 'Sparkle-product' in project 'Sparkle'
+        ➜ Explicit dependency on target 'WhisperKit-product' in project 'whisperkit'
+    Target 'WhisperKit-product' in project 'whisperkit'
+        ➜ Explicit dependency on target 'WhisperKit' in project 'whisperkit'
+        ➜ Explicit dependency on target 'ArgmaxCore' in project 'whisperkit'
+        ➜ Explicit dependency on target 'Hub-product' in project 'swift-transformers'
+        ➜ Explicit dependency on target 'Tokenizers-product' in project 'swift-transformers'
+    Target 'WhisperKit' in project 'whisperkit'
+        ➜ Explicit dependency on target 'ArgmaxCore' in project 'whisperkit'
+        ➜ Explicit dependency on target 'Hub-product' in project 'swift-transformers'
+        ➜ Explicit dependency on target 'Tokenizers-product' in project 'swift-transformers'
+    Target 'Tokenizers-product' in project 'swift-transformers'
+        ➜ Explicit dependency on target 'Tokenizers' in project 'swift-transformers'
+        ➜ Explicit dependency on target 'Hub' in project 'swift-transformers'
+        ➜ Explicit dependency on target 'Jinja-product' in project 'Jinja'
+        ➜ Explicit dependency on target 'OrderedCollections-product' in project 'swift-collections'
+        ➜ Explicit dependency on target 'Crypto-product' in project 'swift-crypto'
+        ➜ Explicit dependency on target 'yyjson-product' in project 'yyjson'
+    Target 'Tokenizers' in project 'swift-transformers'
+        ➜ Explicit dependency on target 'Hub' in project 'swift-transformers'
+        ➜ Explicit dependency on target 'Jinja-product' in project 'Jinja'
+        ➜ Explicit dependency on target 'OrderedCollections-product' in project 'swift-collections'
+        ➜ Explicit dependency on target 'Crypto-product' in project 'swift-crypto'
+        ➜ Explicit dependency on target 'yyjson-product' in project 'yyjson'
+    Target 'ArgmaxCore' in project 'whisperkit'
+        ➜ Explicit dependency on target 'Hub-product' in project 'swift-transformers'
+    Target 'Hub-product' in project 'swift-transformers'
+        ➜ Explicit dependency on target 'Hub' in project 'swift-transformers'
+        ➜ Explicit dependency on target 'swift-transformers_Hub' in project 'swift-transformers'
+        ➜ Explicit dependency on target 'Jinja-product' in project 'Jinja'
+        ➜ Explicit dependency on target 'OrderedCollections-product' in project 'swift-collections'
+        ➜ Explicit dependency on target 'Crypto-product' in project 'swift-crypto'
+        ➜ Explicit dependency on target 'yyjson-product' in project 'yyjson'
+    Target 'Hub' in project 'swift-transformers'
+        ➜ Explicit dependency on target 'swift-transformers_Hub' in project 'swift-transformers'
+        ➜ Explicit dependency on target 'Jinja-product' in project 'Jinja'
+        ➜ Explicit dependency on target 'OrderedCollections-product' in project 'swift-collections'
+        ➜ Explicit dependency on target 'Crypto-product' in project 'swift-crypto'
+        ➜ Explicit dependency on target 'yyjson-product' in project 'yyjson'
+    Target 'yyjson-product' in project 'yyjson'
+        ➜ Explicit dependency on target 'yyjson' in project 'yyjson'
+    Target 'yyjson' in project 'yyjson' (no dependencies)
+    Target 'Crypto-product' in project 'swift-crypto'
+        ➜ Explicit dependency on target 'Crypto' in project 'swift-crypto'
+        ➜ Explicit dependency on target 'swift-crypto_Crypto' in project 'swift-crypto'
+    Target 'Crypto' in project 'swift-crypto'
+        ➜ Explicit dependency on target 'swift-crypto_Crypto' in project 'swift-crypto'
+    Target 'swift-crypto_Crypto' in project 'swift-crypto' (no dependencies)
+    Target 'Jinja-product' in project 'Jinja'
+        ➜ Explicit dependency on target 'Jinja' in project 'Jinja'
+        ➜ Explicit dependency on target 'OrderedCollections-product' in project 'swift-collections'
+    Target 'Jinja' in project 'Jinja'
+        ➜ Explicit dependency on target 'OrderedCollections-product' in project 'swift-collections'
+    Target 'OrderedCollections-product' in project 'swift-collections'
+        ➜ Explicit dependency on target 'OrderedCollections' in project 'swift-collections'
+        ➜ Explicit dependency on target 'InternalCollectionsUtilities' in project 'swift-collections'
+    Target 'OrderedCollections' in project 'swift-collections'
+        ➜ Explicit dependency on target 'InternalCollectionsUtilities' in project 'swift-collections'
+    Target 'InternalCollectionsUtilities' in project 'swift-collections' (no dependencies)
+    Target 'swift-transformers_Hub' in project 'swift-transformers' (no dependencies)
+    Target 'Sparkle-product' in project 'Sparkle' (no dependencies)
+
+GatherProvisioningInputs
+
+CreateBuildDescription
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc --version
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -v -E -dM -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk -x c -c /dev/null
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/usr/bin/actool --version --output-format xml1
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -v -E -dM -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk -x c -c /dev/null
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld -version_details
+
+ReadFileContents /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/share/docc/features.json
+
+Build description signature: 09a60854f4b794b5cc030af08eac05da
+Build description path: /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Intermediates.noindex/XCBuildData/09a60854f4b794b5cc030af08eac05da.xcbuilddata
+ClangStatCache /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk /Users/michelknoop/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/macosx27.0-26A425-e829b21a6f8c9b70876ba0858053c0447231f6df4def33e022ae2eb8f782df1a.sdkstatcache
+    cd /Volumes/SSD/Projects/thoughtvault-m3-gate/ThoughtVault.xcodeproj
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk -o /Users/michelknoop/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/macosx27.0-26A425-e829b21a6f8c9b70876ba0858053c0447231f6df4def33e022ae2eb8f782df1a.sdkstatcache
+
+ProcessInfoPlistFile /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Products/Debug/swift-transformers_Hub.bundle/Contents/Info.plist /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Intermediates.noindex/swift-transformers.build/Debug/swift-transformers_Hub-b.build/empty-swift-transformers_Hub.plist (in target 'swift-transformers_Hub' from project 'swift-transformers')
+    cd /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/SourcePackages/checkouts/swift-transformers
+    builtin-infoPlistUtility /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Intermediates.noindex/swift-transformers.build/Debug/swift-transformers_Hub-b.build/empty-swift-transformers_Hub.plist -producttype com.apple.product-type.bundle -expandbuildsettings -platform macosx -o /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Products/Debug/swift-transformers_Hub.bundle/Contents/Info.plist
+
+ProcessInfoPlistFile /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Products/Debug/swift-crypto_Crypto.bundle/Contents/Info.plist /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Intermediates.noindex/swift-crypto.build/Debug/swift-crypto_Crypto-b.build/empty-swift-crypto_Crypto.plist (in target 'swift-crypto_Crypto' from project 'swift-crypto')
+    cd /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/SourcePackages/checkouts/swift-crypto
+    builtin-infoPlistUtility /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Intermediates.noindex/swift-crypto.build/Debug/swift-crypto_Crypto-b.build/empty-swift-crypto_Crypto.plist -producttype com.apple.product-type.bundle -expandbuildsettings -platform macosx -o /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Products/Debug/swift-crypto_Crypto.bundle/Contents/Info.plist
+
+CopySwiftLibs /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Products/Debug/ThoughtVault.app (in target 'ThoughtVault' from project 'ThoughtVault')
+    cd /Volumes/SSD/Projects/thoughtvault-m3-gate
+    builtin-swiftStdLibTool --copy --verbose --sign FDF7AEC63F0BD400E0A61349A7E5312AF1137B55 --scan-executable /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Products/Debug/ThoughtVault.app/Contents/MacOS/ThoughtVault.debug.dylib --scan-folder /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Products/Debug/ThoughtVault.app/Contents/Frameworks --scan-folder /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Products/Debug/ThoughtVault.app/Contents/PlugIns --scan-folder /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Products/Debug/ThoughtVault.app/Contents/Library/SystemExtensions --scan-folder /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Products/Debug/ThoughtVault.app/Contents/Extensions --platform macosx --toolchain /var/run/com.apple.security.cryptexd/mnt/com.apple.MobileAsset.MetalToolchain-v27.1.266.1.Y7NkXU/Metal.xctoolchain --toolchain /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --destination /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Products/Debug/ThoughtVault.app/Contents/Frameworks --strip-bitcode --strip-bitcode-tool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/bitcode_strip --emit-dependency-info /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Intermediates.noindex/ThoughtVault.build/Debug/ThoughtVault.build/SwiftStdLibToolInputDependencies.dep --filter-for-swift-os --back-deploy-swift-span
+libswiftCompatibilitySpan.dylib is up to date at /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Products/Debug/ThoughtVault.app/Contents/Frameworks/libswiftCompatibilitySpan.dylib
+Probing signature of /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Products/Debug/ThoughtVault.app/Contents/Frameworks/libswiftCompatibilitySpan.dylib
+/usr/bin/codesign -r- --display /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Products/Debug/ThoughtVault.app/Contents/Frameworks/libswiftCompatibilitySpan.dylib
+Codesigning /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Products/Debug/ThoughtVault.app/Contents/Frameworks/libswiftCompatibilitySpan.dylib
+/usr/bin/codesign --force --sign FDF7AEC63F0BD400E0A61349A7E5312AF1137B55 --verbose /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Products/Debug/ThoughtVault.app/Contents/Frameworks/libswiftCompatibilitySpan.dylib
+Probing signature of /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Products/Debug/ThoughtVault.app/Contents/Frameworks/libswiftCompatibilitySpan.dylib
+/usr/bin/codesign -r- --display /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Products/Debug/ThoughtVault.app/Contents/Frameworks/libswiftCompatibilitySpan.dylib
+Code signature of /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Products/Debug/ThoughtVault.app/Contents/Frameworks/libswiftCompatibilitySpan.dylib is unchanged; keeping original
+
+Copy /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Products/Debug/ThoughtVault.app/Contents/Resources/swift-transformers_Hub.bundle /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Products/Debug/swift-transformers_Hub.bundle (in target 'ThoughtVault' from project 'ThoughtVault')
+    cd /Volumes/SSD/Projects/thoughtvault-m3-gate
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Products/Debug/swift-transformers_Hub.bundle /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Products/Debug/ThoughtVault.app/Contents/Resources
+
+Copy /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Products/Debug/ThoughtVault.app/Contents/Resources/swift-crypto_Crypto.bundle /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Products/Debug/swift-crypto_Crypto.bundle (in target 'ThoughtVault' from project 'ThoughtVault')
+    cd /Volumes/SSD/Projects/thoughtvault-m3-gate
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Products/Debug/swift-crypto_Crypto.bundle /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Products/Debug/ThoughtVault.app/Contents/Resources
+
+ProcessInfoPlistFile /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Products/Debug/ThoughtVault.app/Contents/Info.plist /Volumes/SSD/Projects/thoughtvault-m3-gate/macos/Info.plist (in target 'ThoughtVault' from project 'ThoughtVault')
+    cd /Volumes/SSD/Projects/thoughtvault-m3-gate
+    builtin-infoPlistUtility /Volumes/SSD/Projects/thoughtvault-m3-gate/macos/Info.plist -producttype com.apple.product-type.application -genpkginfo /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Products/Debug/ThoughtVault.app/Contents/PkgInfo -expandbuildsettings -platform macosx -additionalcontentfile /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Intermediates.noindex/ThoughtVault.build/Debug/ThoughtVault.build/assetcatalog_generated_info.plist -scanforprivacyfile /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Products/Debug/ThoughtVault.app/Contents/Frameworks/Sparkle.framework -scanforprivacyfile /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Products/Debug/ThoughtVault.app/Contents/Resources/swift-crypto_Crypto.bundle -scanforprivacyfile /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Products/Debug/ThoughtVault.app/Contents/Resources/swift-transformers_Hub.bundle -o /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Products/Debug/ThoughtVault.app/Contents/Info.plist
+removing value "audio" for "UIBackgroundModes" - not supported on macOS
+
+Copy /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Products/Debug/ThoughtVault.app/Contents/PlugIns/ThoughtVaultTests.xctest/Contents/Resources/swift-transformers_Hub.bundle /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Products/Debug/swift-transformers_Hub.bundle (in target 'ThoughtVaultTests' from project 'ThoughtVault')
+    cd /Volumes/SSD/Projects/thoughtvault-m3-gate
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Products/Debug/swift-transformers_Hub.bundle /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Products/Debug/ThoughtVault.app/Contents/PlugIns/ThoughtVaultTests.xctest/Contents/Resources
+
+Copy /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Products/Debug/ThoughtVault.app/Contents/PlugIns/ThoughtVaultTests.xctest/Contents/Resources/swift-crypto_Crypto.bundle /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Products/Debug/swift-crypto_Crypto.bundle (in target 'ThoughtVaultTests' from project 'ThoughtVault')
+    cd /Volumes/SSD/Projects/thoughtvault-m3-gate
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Products/Debug/swift-crypto_Crypto.bundle /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Products/Debug/ThoughtVault.app/Contents/PlugIns/ThoughtVaultTests.xctest/Contents/Resources
+
+ProcessInfoPlistFile /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Products/Debug/ThoughtVault.app/Contents/PlugIns/ThoughtVaultTests.xctest/Contents/Info.plist /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Intermediates.noindex/ThoughtVault.build/Debug/ThoughtVaultTests.build/empty-ThoughtVaultTests.plist (in target 'ThoughtVaultTests' from project 'ThoughtVault')
+    cd /Volumes/SSD/Projects/thoughtvault-m3-gate
+    builtin-infoPlistUtility /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Intermediates.noindex/ThoughtVault.build/Debug/ThoughtVaultTests.build/empty-ThoughtVaultTests.plist -producttype com.apple.product-type.bundle.unit-test -expandbuildsettings -platform macosx -scanforprivacyfile /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Products/Debug/ThoughtVault.app/Contents/PlugIns/ThoughtVaultTests.xctest/Contents/Resources/swift-crypto_Crypto.bundle -scanforprivacyfile /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Products/Debug/ThoughtVault.app/Contents/PlugIns/ThoughtVaultTests.xctest/Contents/Resources/swift-transformers_Hub.bundle -o /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Products/Debug/ThoughtVault.app/Contents/PlugIns/ThoughtVaultTests.xctest/Contents/Info.plist
+
+CopySwiftLibs /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Products/Debug/ThoughtVault.app/Contents/PlugIns/ThoughtVaultTests.xctest (in target 'ThoughtVaultTests' from project 'ThoughtVault')
+    cd /Volumes/SSD/Projects/thoughtvault-m3-gate
+    builtin-swiftStdLibTool --copy --verbose --sign - --scan-executable /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Products/Debug/ThoughtVault.app/Contents/PlugIns/ThoughtVaultTests.xctest/Contents/MacOS/ThoughtVaultTests --scan-folder /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Products/Debug/ThoughtVault.app/Contents/PlugIns/ThoughtVaultTests.xctest/Contents/Frameworks --scan-folder /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Products/Debug/ThoughtVault.app/Contents/PlugIns/ThoughtVaultTests.xctest/Contents/PlugIns --scan-folder /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Products/Debug/ThoughtVault.app/Contents/PlugIns/ThoughtVaultTests.xctest/Contents/Library/SystemExtensions --scan-folder /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Products/Debug/ThoughtVault.app/Contents/PlugIns/ThoughtVaultTests.xctest/Contents/Extensions --platform macosx --toolchain /var/run/com.apple.security.cryptexd/mnt/com.apple.MobileAsset.MetalToolchain-v27.1.266.1.Y7NkXU/Metal.xctoolchain --toolchain /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --destination /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Products/Debug/ThoughtVault.app/Contents/PlugIns/ThoughtVaultTests.xctest/Contents/Frameworks --strip-bitcode --scan-executable /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib/libXCTestSwiftSupport.dylib --strip-bitcode-tool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/bitcode_strip --emit-dependency-info /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Intermediates.noindex/ThoughtVault.build/Debug/ThoughtVaultTests.build/SwiftStdLibToolInputDependencies.dep --filter-for-swift-os --back-deploy-swift-span
+
+CodeSign /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Products/Debug/ThoughtVault.app/Contents/MacOS/ThoughtVault.debug.dylib (in target 'ThoughtVault' from project 'ThoughtVault')
+    cd /Volumes/SSD/Projects/thoughtvault-m3-gate
+    
+    Signing Identity:     "Apple Development: info@michelknoop.nl (X438DWJA6N)"
+    Provisioning Profile: "Mac Team Provisioning Profile: com.buildmind.ThoughtVault"
+                          (896190b4-80b5-4478-8574-d9133b36f370)
+    
+    /usr/bin/codesign --force --sign FDF7AEC63F0BD400E0A61349A7E5312AF1137B55 --timestamp\=none --generate-entitlement-der /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Products/Debug/ThoughtVault.app/Contents/MacOS/ThoughtVault.debug.dylib
+/Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Products/Debug/ThoughtVault.app/Contents/MacOS/ThoughtVault.debug.dylib: replacing existing signature
+
+CodeSign /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Products/Debug/ThoughtVault.app/Contents/MacOS/__preview.dylib (in target 'ThoughtVault' from project 'ThoughtVault')
+    cd /Volumes/SSD/Projects/thoughtvault-m3-gate
+    
+    Signing Identity:     "Apple Development: info@michelknoop.nl (X438DWJA6N)"
+    Provisioning Profile: "Mac Team Provisioning Profile: com.buildmind.ThoughtVault"
+                          (896190b4-80b5-4478-8574-d9133b36f370)
+    
+    /usr/bin/codesign --force --sign FDF7AEC63F0BD400E0A61349A7E5312AF1137B55 --timestamp\=none --generate-entitlement-der /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Products/Debug/ThoughtVault.app/Contents/MacOS/__preview.dylib
+/Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Products/Debug/ThoughtVault.app/Contents/MacOS/__preview.dylib: replacing existing signature
+
+CodeSign /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Products/Debug/ThoughtVault.app (in target 'ThoughtVault' from project 'ThoughtVault')
+    cd /Volumes/SSD/Projects/thoughtvault-m3-gate
+    
+    Signing Identity:     "Apple Development: info@michelknoop.nl (X438DWJA6N)"
+    Provisioning Profile: "Mac Team Provisioning Profile: com.buildmind.ThoughtVault"
+                          (896190b4-80b5-4478-8574-d9133b36f370)
+    
+    /usr/bin/codesign --force --sign FDF7AEC63F0BD400E0A61349A7E5312AF1137B55 --entitlements /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Intermediates.noindex/ThoughtVault.build/Debug/ThoughtVault.build/ThoughtVault.app.xcent --timestamp\=none --generate-entitlement-der /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Products/Debug/ThoughtVault.app
+/Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Products/Debug/ThoughtVault.app: replacing existing signature
+
+Validate /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Products/Debug/ThoughtVault.app (in target 'ThoughtVault' from project 'ThoughtVault')
+    cd /Volumes/SSD/Projects/thoughtvault-m3-gate
+    builtin-validationUtility /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Products/Debug/ThoughtVault.app -no-validate-extension -infoplist-subpath Contents/Info.plist
+
+RegisterWithLaunchServices /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Products/Debug/ThoughtVault.app (in target 'ThoughtVault' from project 'ThoughtVault')
+    cd /Volumes/SSD/Projects/thoughtvault-m3-gate
+    builtin-lsregisterurl --record-path /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Intermediates.noindex/XCBuildData/registered-launchservices.txt -- /System/Library/Frameworks/CoreServices.framework/Versions/Current/Frameworks/LaunchServices.framework/Versions/Current/Support/lsregister -f -R -trusted /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Products/Debug/ThoughtVault.app
+
+PruneExplicitPrecompiledModules /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules
+
+PruneExplicitPrecompiledModules /Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Build/Intermediates.noindex/ExplicitPrecompiledModules
+
+PruneExplicitPrecompiledModules /Users/michelknoop/Library/Developer/Xcode/DerivedData/SDKExplicitPrecompiledModules
+
+heavy-queue: no CPU activity in this task for 5 min; see heavy status
+2026-11-10 11:49:41.225 xcodebuild[9836:110893017] [MT] IDETestOperationsObserverDebug: 493.877 elapsed -- Testing started completed.
+2026-11-10 11:49:41.225 xcodebuild[9836:110893017] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-11-10 11:49:41.225 xcodebuild[9836:110893017] [MT] IDETestOperationsObserverDebug: 493.877 sec, +493.877 sec -- end
+
+Test session results, code coverage, and logs:
+	/Users/michelknoop/Library/Developer/Xcode/DerivedData/ThoughtVault-fmjqrbfjxvkhwiagunarolgblnsy/Logs/Test/Test-ThoughtVault-2026.11.10_11-41-21-+0100.xcresult
+
+** TEST SUCCEEDED **
+
+Testing started
+Test suite 'M3LiveContentGateTests' started on 'My Mac - ThoughtVault (20353)'
+Test case 'M3LiveContentGateTests.testLiveContentGate()' passNo M3 evidence directory founded on 'My Mac - ThoughtVault (20353)' (492.313 seconds)
+ (did the live test skip or crash?). xcodebuild exit: 0

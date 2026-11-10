@@ -489,3 +489,5 @@
 "Meldingen" = "Reports";
 "Melding maken…" = "Create report…";
 "%lld ongelezen meldingen" = "%lld unread reports";
+
+"support.privacy.link" = "Privacy statement";

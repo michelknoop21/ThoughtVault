@@ -16,6 +16,9 @@ extension SettingsView {
             #endif
             Toggle("Foutrapporten automatisch versturen", isOn: $supportAutoReport)
                 .tint(Color.brandPrimary)
+            Link(String(localized: "support.privacy.link"), destination: SupportLinks.privacy)
+                .font(TS.Font.caption)
+                .foregroundStyle(Color.brandPrimary)
             Text("Gaat er iets mis bij opnemen, transcriberen of de notule, dan stuurt ThoughtVault automatisch een foutrapport met app-versie, apparaat, je klikpad en een afgeschermd logbestand naar de ontwikkelaar. Je opnames, transcripties, notules en titels gaan nooit mee.")
                 .font(TS.Font.caption)
                 .foregroundStyle(Color.labelSecondary)

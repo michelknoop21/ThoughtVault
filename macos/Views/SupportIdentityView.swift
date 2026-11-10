@@ -1,5 +1,9 @@
 import SwiftUI
 
+enum SupportLinks {
+    static let privacy = URL(string: "https://thoughtvault.yinga.ai/privacy.html")!
+}
+
 struct SupportIdentityView: View {
     @AppStorage(SupportIdentity.nameKey) private var supportName = ""
     @AppStorage(SupportIdentity.emailKey) private var supportEmail = ""
@@ -17,6 +21,9 @@ struct SupportIdentityView: View {
                 Text("Gaat er iets mis bij opnemen, transcriberen of de notule, dan stuurt ThoughtVault automatisch een foutrapport met app-versie, apparaat, je klikpad en een afgeschermd logbestand naar de ontwikkelaar. Je opnames, transcripties, notules en titels gaan nooit mee.")
                     .font(TS.Font.callout)
                     .foregroundStyle(Color.labelSecondary)
+                Link(String(localized: "support.privacy.link"), destination: SupportLinks.privacy)
+                    .font(TS.Font.callout)
+                    .foregroundStyle(Color.brandPrimary)
                 VStack(alignment: .leading, spacing: TS.Spacing.sm) {
                     Text("Naam").font(TS.Font.calloutSemibold)
                     TextField("Naam", text: $name)

@@ -54,3 +54,4 @@ docs/BACKEND.md
 .codegraph/
 .serena/
 __pycache__/
+.router/

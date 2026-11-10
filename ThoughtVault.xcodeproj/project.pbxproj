@@ -81,6 +81,8 @@
 		AA0000K1 /* AnthropicLLMService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000K1 /* AnthropicLLMService.swift */; };
 		AA000015 /* NetworkMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000015 /* NetworkMonitor.swift */; };
 		AA0F0A01 /* AppLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0F0A01 /* AppLog.swift */; };
+		AA0F0C01 /* SupportRelay.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0F0C01 /* SupportRelay.swift */; };
+		AA0F0B01 /* SupportModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0F0B01 /* SupportModels.swift */; };
 		AA000016 /* OfflineQueue.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000016 /* OfflineQueue.swift */; };
 		AA000017 /* OnDeviceTranscriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000017 /* OnDeviceTranscriber.swift */; };
 		AA000018 /* SystemAudioCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000018 /* SystemAudioCapture.swift */; };
@@ -147,6 +149,7 @@
 		AB000202 /* ParticipantPickerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000202 /* ParticipantPickerSheet.swift */; };
 		AB000002 /* MigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000002 /* MigrationTests.swift */; };
 		AB0F0A03 /* AppLogTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0F0A03 /* AppLogTests.swift */; };
+		AB0F0B03 /* SupportRelayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0F0B03 /* SupportRelayTests.swift */; };
 		AB000003 /* PersonProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000003 /* PersonProfileTests.swift */; };
 		AB0000K1 /* KeychainServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000K1 /* KeychainServiceTests.swift */; };
 		AB000004 /* PersonDirectoryServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000004 /* PersonDirectoryServiceTests.swift */; };
@@ -244,6 +247,8 @@
 		29AC450D5D6456AEABE3C258 /* AnthropicLLMService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000K1 /* AnthropicLLMService.swift */; };
 		1225DEE54C5F11F501DE7F20 /* NetworkMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000015 /* NetworkMonitor.swift */; };
 		AA0F0A02 /* AppLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0F0A01 /* AppLog.swift */; };
+		AA0F0C02 /* SupportRelay.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0F0C01 /* SupportRelay.swift */; };
+		AA0F0B02 /* SupportModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0F0B01 /* SupportModels.swift */; };
 		141F2D5FCC802F15F8DD83BE /* OfflineQueue.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000016 /* OfflineQueue.swift */; };
 		2163B16A7A1E21C9DE0C2044 /* OnDeviceTranscriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000017 /* OnDeviceTranscriber.swift */; };
 		9BB2542FD5E3FC3AF167A963 /* SystemAudioCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000018 /* SystemAudioCapture.swift */; };
@@ -400,6 +405,8 @@
 		FA0000K1 /* AnthropicLLMService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnthropicLLMService.swift; sourceTree = "<group>"; };
 		FA000015 /* NetworkMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkMonitor.swift; sourceTree = "<group>"; };
 		FA0F0A01 /* AppLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLog.swift; sourceTree = "<group>"; };
+		FA0F0C01 /* SupportRelay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupportRelay.swift; sourceTree = "<group>"; };
+		FA0F0B01 /* SupportModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupportModels.swift; sourceTree = "<group>"; };
 		FA000016 /* OfflineQueue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineQueue.swift; sourceTree = "<group>"; };
 		FA000017 /* OnDeviceTranscriber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnDeviceTranscriber.swift; sourceTree = "<group>"; };
 		FA000018 /* SystemAudioCapture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemAudioCapture.swift; sourceTree = "<group>"; };
@@ -470,6 +477,7 @@
 		FB000202 /* ParticipantPickerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParticipantPickerSheet.swift; sourceTree = "<group>"; };
 		FB000002 /* MigrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MigrationTests.swift; sourceTree = "<group>"; };
 		FB0F0A03 /* AppLogTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLogTests.swift; sourceTree = "<group>"; };
+		FB0F0B03 /* SupportRelayTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupportRelayTests.swift; sourceTree = "<group>"; };
 		FB0000K1 /* KeychainServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainServiceTests.swift; sourceTree = "<group>"; };
 		FB000003 /* PersonProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonProfileTests.swift; sourceTree = "<group>"; };
 		FB000004 /* PersonDirectoryServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonDirectoryServiceTests.swift; sourceTree = "<group>"; };
@@ -655,6 +663,8 @@
 				FA000050 /* MicrosoftGraphService.swift */,
 				FA000015 /* NetworkMonitor.swift */,
 				FA0F0A01 /* AppLog.swift */,
+				FA0F0C01 /* SupportRelay.swift */,
+				FA0F0B01 /* SupportModels.swift */,
 				FA000051 /* PermissionManager.swift */,
 				FA000016 /* OfflineQueue.swift */,
 				FA000017 /* OnDeviceTranscriber.swift */,
@@ -781,6 +791,7 @@
 				FB9E5A02 /* VaultFolderStoreTests.swift */,
 				FB000002 /* MigrationTests.swift */,
 				FB0F0A03 /* AppLogTests.swift */,
+				FB0F0B03 /* SupportRelayTests.swift */,
 				FB000003 /* PersonProfileTests.swift */,
 				FB0000K1 /* KeychainServiceTests.swift */,
 				FB000004 /* PersonDirectoryServiceTests.swift */,
@@ -1031,6 +1042,8 @@
 				AA0000K1 /* AnthropicLLMService.swift in Sources */,
 				AA000015 /* NetworkMonitor.swift in Sources */,
 				AA0F0A01 /* AppLog.swift in Sources */,
+				AA0F0C01 /* SupportRelay.swift in Sources */,
+				AA0F0B01 /* SupportModels.swift in Sources */,
 				AA000016 /* OfflineQueue.swift in Sources */,
 				AA000017 /* OnDeviceTranscriber.swift in Sources */,
 				AA000018 /* SystemAudioCapture.swift in Sources */,
@@ -1111,6 +1124,7 @@
 				AB9E5A02 /* VaultFolderStoreTests.swift in Sources */,
 				AB000002 /* MigrationTests.swift in Sources */,
 				AB0F0A03 /* AppLogTests.swift in Sources */,
+				AB0F0B03 /* SupportRelayTests.swift in Sources */,
 				AB000003 /* PersonProfileTests.swift in Sources */,
 				AB0000K1 /* KeychainServiceTests.swift in Sources */,
 				AB000004 /* PersonDirectoryServiceTests.swift in Sources */,
@@ -1223,6 +1237,8 @@
 				29AC450D5D6456AEABE3C258 /* AnthropicLLMService.swift in Sources */,
 				1225DEE54C5F11F501DE7F20 /* NetworkMonitor.swift in Sources */,
 				AA0F0A02 /* AppLog.swift in Sources */,
+				AA0F0C02 /* SupportRelay.swift in Sources */,
+				AA0F0B02 /* SupportModels.swift in Sources */,
 				141F2D5FCC802F15F8DD83BE /* OfflineQueue.swift in Sources */,
 				2163B16A7A1E21C9DE0C2044 /* OnDeviceTranscriber.swift in Sources */,
 				9BB2542FD5E3FC3AF167A963 /* SystemAudioCapture.swift in Sources */,

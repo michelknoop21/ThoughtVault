@@ -476,3 +476,29 @@ it("keeps main when native recording survived reload with an idle JS store", asy
   expect(fakeWindow.hide).toHaveBeenCalledTimes(1);
   expect(fakeWindow.destroy).not.toHaveBeenCalled();
 });
+
+it.each(["cancelled", "error"] as const)("closes terminal %s tasks normally and installs downloaded updates", async status => {
+  useRecordingStore.setState({ backgroundTasks: [{ task_id: "terminal", status } as never] });
+  await render(); await close();
+  expect(fakeWindow.destroy).toHaveBeenCalledTimes(1);
+  expect(fakeWindow.hide).not.toHaveBeenCalled();
+  const u = fakeUpdate("1.0.400"); checkMock.mockResolvedValue(u);
+  await render(); await close();
+  expect(u.install).toHaveBeenCalledTimes(1);
+});
+it.each(["transcribing", "unexpected-status"])("keeps main and blocks explicit install for %s", async status => {
+  const u = fakeUpdate("1.0.400"); checkMock.mockResolvedValue(u);
+  await render();
+  useRecordingStore.setState({ backgroundTasks: [{ task_id: "active", status } as never] });
+  await close(); await act(async () => { await lastResult.installNow(); });
+  expect(u.install).not.toHaveBeenCalled(); expect(fakeWindow.destroy).not.toHaveBeenCalled();
+  expect(fakeWindow.hide).toHaveBeenCalled();
+});
+
+it.each(["cancelled", "error"] as const)("allows explicit installation after terminal %s", async status => {
+  const u = fakeUpdate("1.0.400"); checkMock.mockResolvedValue(u);
+  await render();
+  useRecordingStore.setState({ backgroundTasks: [{ task_id: "terminal", status } as never] });
+  await act(async () => { await lastResult.installNow(); });
+  expect(u.install).toHaveBeenCalledTimes(1);
+});

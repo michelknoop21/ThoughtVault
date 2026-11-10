@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { useRecordingStore } from "../recordingStore";
+import { isBusy, useRecordingStore } from "../recordingStore";
 import { failureFromTransition, markStage, reportFailure } from "../../services/crashReporter";
 import type { TranscriptTask } from "../../types";
 
@@ -48,4 +48,11 @@ it.each(["Provider: Vul je OpenAI API-sleutel in bij Instellingen.", "Geannuleer
   const state = add(); state.updateBackgroundTask("t", { status: "failed", error_message });
   expect(reportFailure).toHaveBeenCalledExactlyOnceWith("transcriberen", "Verwerking mislukt", "background_task_failed");
   expect(useRecordingStore.getState().backgroundTasks[0].error_message).toBe(error_message);
+});
+
+it("treats all terminal tasks as idle and unknown statuses as busy", () => {
+  const backgroundTasks = ["completed", "failed", "cancelled", "error"].map(status => ({ status }));
+  expect(isBusy({ phase: "idle", backgroundTasks })).toBe(false);
+  expect(isBusy({ phase: "recording", backgroundTasks })).toBe(true);
+  expect(isBusy({ phase: "idle", backgroundTasks: [...backgroundTasks, { status: "unknown" }] })).toBe(true);
 });

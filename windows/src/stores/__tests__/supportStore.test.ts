@@ -52,7 +52,7 @@ it("sends a queued report once when two flushes overlap after reconnect", async 
   expect(reports()).toHaveLength(2); expect(state().queue).toHaveLength(0);
 });
 it("waits for name and e-mail before sending", async () => {
-  state().setIdentity("", "bad"); state().enqueue(item()); await state().flushQueue();
+  support.useSupportStore.setState({ name: "", email: "bad" }); state().enqueue(item()); await state().flushQueue();
   expect(reports()).toHaveLength(0); expect(state().queue).toHaveLength(1);
   state().setIdentity(" Jan ", " jan@example.com "); await state().flushQueue();
   expect(state().name).toBe("Jan"); expect(state().email).toBe("jan@example.com"); expect(state().queue).toHaveLength(0);
@@ -197,7 +197,7 @@ it("holds a manual report when identity becomes incomplete during registration",
     return original(cmd, args);
   });
   const sending = state().submitManual("QUESTION", "Vraag"); await ready;
-  state().setIdentity("", ""); release();
+  support.useSupportStore.setState({ name: "", email: "" }); release();
   expect(await sending).toBe("queued"); expect(reports()).toHaveLength(0);
   expect(state().queue).toHaveLength(1);
 });
@@ -209,4 +209,31 @@ it("sends the current identity after registration waits", async () => {
   });
   expect(await state().submitManual("QUESTION", "Vraag")).toBe("sent");
   expect(reports()[0].body).toMatchObject({ name: "Alex", email: "alex@example.com" });
+});
+
+it("validates relay contact boundaries in code points without truncating", () => {
+  const email = "a".repeat(314) + "@b.com";
+  expect(support.isCompleteIdentity(" n ", " " + email + " ")).toBe(true);
+  expect(support.isCompleteIdentity("n".repeat(200), email)).toBe(true);
+  expect(support.isCompleteIdentity("n".repeat(201), email)).toBe(false);
+  expect(support.isCompleteIdentity("n", "a" + email)).toBe(false);
+  expect(support.isCompleteIdentity("😀".repeat(200), email)).toBe(true);
+  state().setIdentity("n".repeat(201), email);
+  expect(state().name).toBe("Jan");
+});
+it.each(["name", "email"])("holds reports for previously stored overlong %s until corrected", async field => {
+  support.useSupportStore.setState({ [field]: field === "name" ? "n".repeat(201) : "a".repeat(315) + "@b.com" });
+  state().enqueue(item()); await state().flushQueue();
+  expect(reports()).toHaveLength(0); expect(state().queue).toHaveLength(1);
+  state().setIdentity("Jan", "jan@example.com"); await state().flushQueue();
+  expect(reports()).toHaveLength(1); expect(state().queue).toHaveLength(0);
+});
+it("holds a manual report if stored identity overflows during registration", async () => {
+  const original = vi.mocked(invoke).getMockImplementation()!;
+  vi.mocked(invoke).mockImplementation(async (cmd, args) => {
+    if (cmd === "load_credential") support.useSupportStore.setState({ name: "n".repeat(201) });
+    return original(cmd, args);
+  });
+  expect(await state().submitManual("QUESTION", "Draft retained")).toBe("queued");
+  expect(reports()).toHaveLength(0); expect(state().queue[0].shownMessage).toBe("Draft retained");
 });

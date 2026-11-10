@@ -58,18 +58,19 @@ it("keeps edits in draft until blur, then saves and displays a trimmed valid ide
   expect(useSupportStore.getState()).toMatchObject({ name: "Jan Nieuw", email: "jan@prezent.nl" });
   expect(field("email").value).toBe("jan@prezent.nl");
 });
-it("restores invalid drafts without changing stored identity", async () => {
+it("keeps invalid drafts editable without changing stored identity", async () => {
   await fill("email", "jan@"); await blur("email");
-  expect(field("email").value).toBe("jan@example.nl");
+  expect(field("email").value).toBe("jan@");
+  expect(host.querySelector('[role="alert"]')?.textContent).toContain("320");
   await fill("name", "  "); await blur("name");
-  expect(field("name").value).toBe("Jan");
+  expect(field("name").value).toBe("  ");
   expect(useSupportStore.getState()).toMatchObject({ name: "Jan", email: "jan@example.nl" });
 });
 it("requires the whole identity to be valid and uses associated labels and email hints", async () => {
   await fill("name", "Nieuw"); await fill("email", "jan@"); await blur("name");
   expect(useSupportStore.getState()).toMatchObject({ name: "Jan", email: "jan@example.nl" });
-  expect(field("name").value).toBe("Jan");
-  expect(field("email").value).toBe("jan@example.nl");
+  expect(field("name").value).toBe("Nieuw");
+  expect(field("email").value).toBe("jan@");
   expect(field("name").labels?.[0].textContent).toBe("Naam");
   expect(field("email").labels?.[0].textContent).toBe("E-mailadres");
   expect(field("name").autocomplete).toBe("name");
@@ -118,4 +119,17 @@ it.each([true, false])("handles rejected privacy open and retry (auto_report=%s)
   expect(open).toHaveBeenCalledTimes(2);
   expect(useSupportStore.getState().auto_report).toBe(autoReport);
   expect(setAutoReport).not.toHaveBeenCalled();
+});
+
+it("holds oversized drafts and saves once both contacts are corrected", async () => {
+  await fill("name", "n".repeat(201)); await blur("name");
+  expect(field("name").value).toHaveLength(201);
+  expect(useSupportStore.getState().name).toBe("Jan");
+  await fill("email", "a".repeat(315) + "@b.com"); await blur("email");
+  expect(useSupportStore.getState().email).toBe("jan@example.nl");
+  await fill("name", "n".repeat(200)); await blur("name");
+  expect(useSupportStore.getState().name).toBe("Jan");
+  await fill("email", "a".repeat(314) + "@b.com"); await blur("email");
+  expect(useSupportStore.getState().name).toHaveLength(200);
+  expect(useSupportStore.getState().email).toHaveLength(320);
 });

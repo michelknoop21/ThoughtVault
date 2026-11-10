@@ -1,7 +1,7 @@
 import { open } from "@tauri-apps/plugin-shell";
 import { PRIVACY_URL } from "../../services/supportRelay";
 import { useRef, useState, type FormEvent, type JSX } from "react";
-import { isValidEmail, useSupportStore } from "../../stores/supportStore";
+import { isCompleteIdentity, isValidEmail, useSupportStore } from "../../stores/supportStore";
 
 export function IdentityGate(): JSX.Element {
   const [privacyError, setPrivacyError] = useState(false);
@@ -10,7 +10,7 @@ export function IdentityGate(): JSX.Element {
   const [emailTouched, setEmailTouched] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const submitting = useRef(false);
-  const valid = !!name.trim() && isValidEmail(email);
+  const valid = isCompleteIdentity(name, email);
   const emailInvalid = emailTouched && !isValidEmail(email);
 
   function submit(event: FormEvent<HTMLFormElement>) {
@@ -49,6 +49,7 @@ export function IdentityGate(): JSX.Element {
             aria-invalid={emailInvalid} aria-describedby={emailInvalid ? "identity-email-error" : undefined} />
           {emailInvalid && <p id="identity-email-error" role="alert" style={{ color: "var(--status-error)" }}>Vul een geldig e-mailadres in.</p>}
         </div>
+        {(Array.from(name.trim()).length > 200 || Array.from(email.trim()).length > 320) && <p role="alert">Gebruik maximaal 200 tekens voor je naam en 320 voor je e-mailadres.</p>}
         <button className="btn btn-accent" type="submit" disabled={!valid || submitted} style={{ minHeight: 44 }}>Doorgaan</button>
       </form>
     </main>

@@ -87,7 +87,7 @@ enum SupportIdentity {
 
     static func isValidEmail(_ value: String) -> Bool {
         let email = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !email.contains(where: { $0.isWhitespace }) else { return false }
+        guard email.unicodeScalars.count <= 320, !email.contains(where: { $0.isWhitespace }) else { return false }
         let parts = email.split(separator: "@", omittingEmptySubsequences: false)
         guard parts.count == 2, !parts[0].isEmpty else { return false }
         let domain = parts[1]
@@ -104,7 +104,8 @@ enum SupportIdentity {
     }
 
     static func isComplete(name: String, email: String) -> Bool {
-        !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && isValidEmail(email)
+        let name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        return !name.isEmpty && name.unicodeScalars.count <= 200 && isValidEmail(email)
     }
 }
 

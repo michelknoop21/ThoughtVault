@@ -500,6 +500,65 @@ final class SupportRelayTests: XCTestCase, @unchecked Sendable {
         return report
     }
 
+    func testContactContractBoundaries() {
+        let email = String(repeating: "a", count: 314) + "@b.com"
+        XCTAssertTrue(SupportIdentity.isComplete(name: String(repeating: "n", count: 200), email: " " + email + " "))
+        XCTAssertFalse(SupportIdentity.isComplete(name: String(repeating: "n", count: 201), email: email))
+        XCTAssertFalse(SupportIdentity.isComplete(name: "Anna", email: "a" + email))
+        XCTAssertTrue(SupportIdentity.isComplete(name: String(repeating: "e\u{301}", count: 100), email: email))
+        XCTAssertFalse(SupportIdentity.isComplete(name: String(repeating: "e\u{301}", count: 101), email: email))
+    }
+
+    func testOverlongStoredIdentityHoldsQueueWithoutPosting() async throws {
+        for key in [SupportIdentity.nameKey, SupportIdentity.emailKey] {
+            defaults.set("Anna", forKey: SupportIdentity.nameKey)
+            defaults.set("anna@example.com", forKey: SupportIdentity.emailKey)
+            defaults.set(key == SupportIdentity.nameKey ? String(repeating: "n", count: 201) : String(repeating: "a", count: 315) + "@b.com", forKey: key)
+            try await relay.enqueue(fixture())
+            await relay.flush()
+            XCTAssertTrue(SupportStub.paths.isEmpty)
+        }
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: directory.path).count, 2)
+        defaults.set("Anna", forKey: SupportIdentity.nameKey)
+        defaults.set("anna@example.com", forKey: SupportIdentity.emailKey)
+        reply(); await relay.flush()
+        XCTAssertEqual(SupportStub.paths.filter { $0.hasSuffix("/reports") }.count, 2)
+    }
+
+    func testIdentityOverflowAfterLogAwaitHoldsReport() async throws {
+        relay = makeRelay(logTail: { [self] _ in
+            defaults.set(String(repeating: "n", count: 201), forKey: SupportIdentity.nameKey)
+            return "LOG"
+        })
+        reply(); try await relay.enqueue(fixture()); await relay.flush()
+        XCTAssertFalse(SupportStub.paths.contains("/support/reports"))
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: directory.path).count, 1)
+    }
+
+    func testIdentityOverflowDuringRegistrationHoldsReport() async throws {
+        SupportStub.handler { [self] request, _ in
+            if request.url?.lastPathComponent == "installations" {
+                defaults.set(String(repeating: "a", count: 315) + "@b.com", forKey: SupportIdentity.emailKey)
+            }
+            return .init(status: 201, text: "{}")
+        }
+        try await relay.enqueue(fixture()); await relay.flush()
+        XCTAssertEqual(SupportStub.paths, ["/support/installations"])
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: directory.path).count, 1)
+    }
+
+    func testReplyLimitCountsUnicodeScalars() async throws {
+        reply(status: 201)
+        try await relay.sendMessage(ticketId: "c1", body: String(repeating: "e\u{301}", count: 2500))
+        try await relay.sendMessage(ticketId: "c1", body: String(repeating: "x", count: 5000))
+        let before = SupportStub.paths.count
+        do {
+            try await relay.sendMessage(ticketId: "c1", body: String(repeating: "e\u{301}", count: 2500) + "x")
+            XCTFail("Oversized reply accepted")
+        } catch { XCTAssertEqual(error as? SupportRelayError, .http(422)) }
+        XCTAssertEqual(SupportStub.paths.count, before)
+    }
+
     func testIdentityValidation() {
         XCTAssertTrue(SupportIdentity.isComplete(name: " Anna ", email: " anna@example.com "))
         for email in ["a@@example.com", "a@.com", "a@example.", "@example.com", "a b@example.com", "a@example"] {

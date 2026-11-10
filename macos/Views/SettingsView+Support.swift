@@ -36,6 +36,10 @@ extension SettingsView {
                     .font(TS.Font.caption)
                     .foregroundStyle(Color.statusError)
             }
+            if supportNameDraft.trimmingCharacters(in: .whitespacesAndNewlines).unicodeScalars.count > 200 || supportEmailDraft.trimmingCharacters(in: .whitespacesAndNewlines).unicodeScalars.count > 320 {
+                Text(String(localized: "support.identity.limit"))
+                    .font(TS.Font.caption).foregroundStyle(Color.statusError)
+            }
             Button("Opslaan") {
                 guard !IOSDebug.supportSettingsSnapshot,
                       SupportIdentity.isComplete(name: supportNameDraft, email: supportEmailDraft) else { return }

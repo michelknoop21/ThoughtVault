@@ -491,3 +491,6 @@
 "%lld ongelezen meldingen" = "%lld ongelezen meldingen";
 
 "support.privacy.link" = "Privacyverklaring";
+
+"support.identity.limit" = "Gebruik maximaal 200 tekens voor je naam en 320 voor je e-mailadres.";
+"support.reply.limit" = "Gebruik maximaal 5000 tekens voor je antwoord.";

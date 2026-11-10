@@ -1,7 +1,7 @@
 import { open } from "@tauri-apps/plugin-shell";
 import { PRIVACY_URL } from "../../services/supportRelay";
 import { useEffect, useState } from "react";
-import { isValidEmail, useSupportStore } from "../../stores/supportStore";
+import { isCompleteIdentity, useSupportStore } from "../../stores/supportStore";
 import { Bug24Regular, Person24Regular } from "../ui/StudioIcons";
 import { CardHead } from "./SettingsFields";
 import FeedbackWidget from "../FeedbackWidget";
@@ -13,13 +13,10 @@ export function AccountTab() {
   const [draftEmail, setDraftEmail] = useState(email);
   useEffect(() => { setDraftName(name); setDraftEmail(email); }, [name, email]);
   function saveContact() {
-    if (draftName.trim() && isValidEmail(draftEmail)) {
+    if (isCompleteIdentity(draftName, draftEmail)) {
       setIdentity(draftName.trim(), draftEmail.trim());
       setDraftName(draftName.trim());
       setDraftEmail(draftEmail.trim());
-    } else {
-      setDraftName(name);
-      setDraftEmail(email);
     }
   }
   return <div className="settings-other">
@@ -52,6 +49,7 @@ export function AccountTab() {
       </div>
       <div className="settings-row" style={{ display: "block" }}>
         <h3 className="settings-label">Contact voor meldingen</h3>
+        {!isCompleteIdentity(draftName, draftEmail) && <p role="alert">Vul een naam (maximaal 200 tekens) en geldig e-mailadres (maximaal 320 tekens) in.</p>}
         <div className="form-field">
           <label className="form-label-sm" htmlFor="support-contact-name">Naam</label>
           <input id="support-contact-name" className="input" autoComplete="name" value={draftName}

@@ -120,3 +120,13 @@ it.each([true, false])("handles rejected privacy open and retry (auto_report=%s)
   expect(setAutoReport).not.toHaveBeenCalled();
   expect(flushQueue).not.toHaveBeenCalled();
 });
+
+it("keeps oversized contact drafts editable and blocks direct submission", async () => {
+  await act(async () => { fill("#identity-name", "n".repeat(201)); fill("#identity-email", "jan@example.com"); });
+  await act(async () => submit());
+  expect(flushQueue).not.toHaveBeenCalled();
+  expect(host.querySelector<HTMLButtonElement>('button[type="submit"]')!.disabled).toBe(true);
+  expect(host.textContent).toContain("200");
+  await act(async () => fill("#identity-name", "n".repeat(200)));
+  expect(host.querySelector<HTMLButtonElement>('button[type="submit"]')!.disabled).toBe(false);
+});

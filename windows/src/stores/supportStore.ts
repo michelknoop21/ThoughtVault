@@ -22,7 +22,8 @@ interface SupportState {
   refreshUnread: () => Promise<void>;
   submitManual: (category: ReportCategory, description: string) => Promise<Outcome>;
 }
-export function isValidEmail(value: string): boolean { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim()); }
+export function isValidEmail(value: string): boolean { return Array.from(value.trim()).length <= 320 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim()); }
+export function isCompleteIdentity(name: string, email: string): boolean { return !!name.trim() && Array.from(name.trim()).length <= 200 && isValidEmail(email); }
 let registered: Installation | null = null;
 let registration: Promise<Installation> | null = null;
 let flushing: Promise<void> | null = null;
@@ -108,7 +109,7 @@ async function flush(): Promise<void> {
   while (true) {
     const current = useSupportStore.getState();
     const item = current.queue.find(entry => !completed.has(entry.id));
-    if (!item || !current.name.trim() || !isValidEmail(current.email)) return;
+    if (!item || !isCompleteIdentity(current.name, current.email)) return;
     if (item.kind === "auto" && !current.auto_report) { finish(item.id, "failed"); continue; }
     // A failed persist must not turn an in-memory entry into an apparent durable submission.
     if (!isSupportReportDurable(item.id)) return;
@@ -118,7 +119,7 @@ async function flush(): Promise<void> {
         readLogTail(), getAppVersion(), invoke<{ cpu: string; memory_gb: number; os_version: string }>("get_system_specs"),
       ]);
       const latest = useSupportStore.getState();
-      if (!latest.name.trim() || !isValidEmail(latest.email)) return;
+      if (!isCompleteIdentity(latest.name, latest.email)) return;
       if (!latest.queue.some(entry => entry.id === item.id) || (item.kind === "auto" && !latest.auto_report)) continue;
       const { id: _id, ...metadata } = item;
       const payload: ReportPayload = { ...metadata, log: logTail, appVersion, os: specs.os_version,
@@ -126,7 +127,7 @@ async function flush(): Promise<void> {
       const send = (reportLog: string) => withInstallation(async inst => {
         const current = useSupportStore.getState();
         if (!current.queue.some(entry => entry.id === item.id) || (item.kind === "auto" && !current.auto_report)) return "cancelled";
-        if (!current.name.trim() || !isValidEmail(current.email)) return "hold";
+        if (!isCompleteIdentity(current.name, current.email)) return "hold";
         await sendReport(inst, { ...payload, log: reportLog, name: current.name, email: current.email });
         return "accepted";
       });
@@ -147,7 +148,7 @@ async function flush(): Promise<void> {
 }
 export const useSupportStore = create<SupportState>()(persist((_set, get) => ({
   installation_id: null, name: "", email: "", auto_report: true, queue: [], unread_count: 0,
-  setIdentity: (name, email) => { save({ name: name.trim(), email: email.trim() }); },
+  setIdentity: (name, email) => { if (!isCompleteIdentity(name, email)) return; save({ name: name.trim(), email: email.trim() }); },
   setAutoReport: value => { save({ auto_report: value, queue: value ? get().queue : get().queue.filter(item => item.kind === "manual") }); },
   enqueue: item => {
     if (item.kind === "auto" && !get().auto_report) return;

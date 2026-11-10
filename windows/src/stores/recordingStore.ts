@@ -198,5 +198,5 @@ export const useRecordingStore = create<RecordingState>()((set, get) => ({
 
 /** True while recording, processing or any background task is still running. */
 export function isBusy(s: { phase: string; backgroundTasks: { status: string }[] }): boolean {
-  return s.phase !== "idle" || s.backgroundTasks.some((t) => !["completed", "failed"].includes(t.status));
+  return s.phase !== "idle" || s.backgroundTasks.some((t) => !["completed", "failed", "cancelled", "error"].includes(t.status));
 }

@@ -214,7 +214,7 @@ struct SupportThreadView: View {
             TextEditor(text: $draft).font(TS.Font.body).frame(minHeight: 70, maxHeight: 120)
                 .accessibilityLabel(Text("Antwoord")).disabled(sending)
             Button("Stuur") {
-                guard !sending, !trimmed.isEmpty, !IOSDebug.supportSeed else { return }
+                guard !sending, !trimmed.isEmpty, trimmed.unicodeScalars.count <= 5_000, !IOSDebug.supportSeed else { return }
                 sending = true
                 failed = false
                 let body = trimmed
@@ -229,7 +229,11 @@ struct SupportThreadView: View {
                 }
             }
             .buttonStyle(PrimaryButtonStyle())
-            .disabled(trimmed.isEmpty || sending || loading || snapshot.ticketID != ticket.id || IOSDebug.supportSeed)
+            .disabled(trimmed.isEmpty || trimmed.unicodeScalars.count > 5_000 || sending || loading || snapshot.ticketID != ticket.id || IOSDebug.supportSeed)
+            if trimmed.unicodeScalars.count > 5_000 {
+                Text(String(localized: "support.reply.limit"))
+                    .font(TS.Font.caption).foregroundStyle(Color.statusError)
+            }
             if failed { Text("Versturen lukte niet. Probeer het zo nog eens.") }
         }
         .task(id: ticket.id) {

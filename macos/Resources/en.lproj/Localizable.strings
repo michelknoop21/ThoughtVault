@@ -491,3 +491,6 @@
 "%lld ongelezen meldingen" = "%lld unread reports";
 
 "support.privacy.link" = "Privacy statement";
+
+"support.identity.limit" = "Use at most 200 characters for your name and 320 for your email address.";
+"support.reply.limit" = "Use at most 5000 characters for your reply.";

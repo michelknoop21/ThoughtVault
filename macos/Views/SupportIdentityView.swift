@@ -46,6 +46,10 @@ struct SupportIdentityView: View {
                             .foregroundStyle(.red)
                     }
                 }
+                if name.trimmingCharacters(in: .whitespacesAndNewlines).unicodeScalars.count > 200 || email.trimmingCharacters(in: .whitespacesAndNewlines).unicodeScalars.count > 320 {
+                    Text(String(localized: "support.identity.limit"))
+                        .font(TS.Font.caption).foregroundStyle(Color.statusError)
+                }
                 Button("Doorgaan") {
                     guard SupportIdentity.isComplete(name: name, email: email) else { return }
                     supportName = name.trimmingCharacters(in: .whitespacesAndNewlines)

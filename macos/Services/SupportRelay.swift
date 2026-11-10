@@ -221,6 +221,15 @@ actor SupportRelay {
                 throw SupportRelayError.automaticReportingDisabled
             }
         }
+        if queuedReport != nil {
+            let name = (defaults.string(forKey: SupportIdentity.nameKey) ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            let email = (defaults.string(forKey: SupportIdentity.emailKey) ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            guard SupportIdentity.isComplete(name: name, email: email) else { throw SupportRelayError.http(422) }
+            var report = try SupportJSON.decoder.decode(SupportReport.self, from: request.httpBody ?? Data())
+            report.name = name
+            report.email = email
+            request.httpBody = try SupportJSON.encoder.encode(report)
+        }
         let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse else { throw URLError(.badServerResponse) }
         if http.statusCode == 429, let header = http.value(forHTTPHeaderField: "Retry-After"),
@@ -254,7 +263,7 @@ actor SupportRelay {
     }
 
     func sendMessage(ticketId: String, body: String) async throws {
-        guard (1...5_000).contains(body.count) else { throw SupportRelayError.http(422) }
+        guard (1...5_000).contains(body.unicodeScalars.count) else { throw SupportRelayError.http(422) }
         let (_, response) = try await authenticated(messagePath(ticketId), body: SupportJSON.encoder.encode(["body": body]))
         guard (200..<300).contains(response.statusCode) else { throw SupportRelayError.http(response.statusCode) }
     }

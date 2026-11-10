@@ -8,7 +8,7 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [2026-11-10]: Appsupport, veilig Windows-bijwerken en privacy (lokale kandidaat)
 
 ### Added
-- macOS/iOS en Windows: handmatige meldingen, automatische foutrapporten na toestemming, supportgesprekken, ongelezen meldingen en een offline wachtrij. Technische logs en foutcontext worden gemaskeerd; automatische rapporten voegen geen transcripties, notules, audio of screenshots toe.
+- macOS/iOS en Windows: handmatige meldingen, toegelichte, standaard ingeschakelde automatische foutrapporten (uit te zetten via Instellingen), supportgesprekken, ongelezen meldingen en een offline wachtrij. Technische logs en foutcontext worden gemaskeerd; automatische rapporten voegen geen transcripties, notules, audio of screenshots toe.
 - Links naar de goedgekeurde privacyverklaring vanuit de supportschermen en website.
 
 ### Changed

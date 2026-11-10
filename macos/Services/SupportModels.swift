@@ -28,12 +28,24 @@ struct SupportReport: Codable, Sendable, Equatable {
         func capped(_ text: String, _ limit: Int) -> String {
             String((kind == "auto" ? LogRedact.scrub(text) : text).prefix(limit))
         }
-        return SupportReport(kind: kind, category: category, stage: stage,
+        var report = SupportReport(kind: kind, category: category, stage: stage,
                              shownMessage: capped(shown, 5_000), errorText: capped(error, 2_000),
                              fingerprint: kind == "auto" ? fingerprint : nil,
                              clickPath: clickPath.suffix(30).map { capped($0, 80) },
                              appVersion: DeviceInfo.appVersion, os: DeviceInfo.os,
                              device: DeviceInfo.device, platform: DeviceInfo.platform, occurredAt: Date())
+        report.normalizeAutomatic()
+        return report
+    }
+
+    mutating func normalizeAutomatic() {
+        guard kind == "auto" else { return }
+        stage = SupportStage(rawValue: stage)?.rawValue ?? SupportStage.crash.rawValue
+        // Only exact static crash messages can survive; arbitrary errors can quote private content.
+        let message = errorText == "onverwacht gestopt" || errorText == "gestopt tijdens \(stage)"
+            ? errorText : "Verwerking mislukt tijdens \(stage)."
+        shownMessage = message
+        errorText = message
     }
 }
 

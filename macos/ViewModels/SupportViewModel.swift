@@ -46,10 +46,12 @@ final class SupportViewModel {
         // Error strings can contain provider response text; never copy them into the log.
         logger.warning("Failure during \(stage.rawValue)")
         guard isAutoReportEnabled, Self.shouldReport(shown) else { return }
+        let clickPath = AppLog.clickPath(in: await AppLog.tail())
+        guard isAutoReportEnabled else { return }
         let report = SupportReport.make(kind: "auto", category: .bug, stage: stage.rawValue,
                                         shown: shown, error: error,
                                         fingerprint: Self.fingerprint(stage: stage, error: error),
-                                        clickPath: AppLog.clickPath(in: await AppLog.tail()))
+                                        clickPath: clickPath)
         do {
             try await relay.enqueue(report)
             Task { await relay.flush() }

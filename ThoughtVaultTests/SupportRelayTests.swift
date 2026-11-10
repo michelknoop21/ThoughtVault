@@ -274,11 +274,230 @@ final class SupportRelayTests: XCTestCase, @unchecked Sendable {
         let report = SupportReport.make(kind: "auto", category: .bug, stage: "notule", shown: String(repeating: "x", count: 4_990) + " " + email,
                                         error: String(repeating: "x", count: 1_990) + " " + email, fingerprint: "0123456789abcdef",
                                         clickPath: Array(repeating: email, count: 35))
-        XCTAssertFalse(report.shownMessage.contains(" a")); XCTAssertFalse(report.errorText.contains(" a"))
+        XCTAssertEqual(report.shownMessage, "Verwerking mislukt tijdens notule.")
+        XCTAssertEqual(report.errorText, report.shownMessage)
         XCTAssertEqual(report.clickPath.count, 30); XCTAssertTrue(report.clickPath.allSatisfy { $0.hasPrefix("k-") })
         XCTAssertLessThanOrEqual(report.shownMessage.count, 5_000)
         XCTAssertLessThanOrEqual(report.errorText.count, 2_000)
         XCTAssertEqual(fixture(shown: "anna@example.com").shownMessage, "anna@example.com")
+    }
+
+    func testAutomaticNormalizationIsIdempotentAndManualTextIsUnchanged() {
+        for stage in ["opnemen", "transcriberen", "notule", "crash", "PRIVATE_TITLE"] {
+            var report = automaticFixture(stage: stage)
+            report.normalizeAutomatic()
+            let boundedStage = SupportStage(rawValue: stage)?.rawValue ?? "crash"
+            XCTAssertEqual(report.stage, boundedStage)
+            XCTAssertEqual(report.shownMessage, "Verwerking mislukt tijdens \(boundedStage).")
+            XCTAssertEqual(report.errorText, report.shownMessage)
+            XCTAssertEqual(report.fingerprint, "0123456789abcdef")
+            let normalized = report
+            report.normalizeAutomatic()
+            XCTAssertEqual(report, normalized)
+        }
+        for message in ["onverwacht gestopt", "gestopt tijdens opnemen", "gestopt tijdens transcriberen",
+                        "gestopt tijdens notule", "gestopt tijdens crash"] {
+            let stage = message == "onverwacht gestopt" ? "crash" : String(message.dropFirst("gestopt tijdens ".count))
+            var report = automaticFixture(stage: stage, error: message)
+            report.normalizeAutomatic()
+            XCTAssertEqual(report.shownMessage, message)
+            let normalized = report
+            report.normalizeAutomatic()
+            XCTAssertEqual(report, normalized)
+        }
+        var manual = fixture(shown: "PRIVATE_USER_TEXT anna@example.com")
+        let original = manual
+        manual.normalizeAutomatic()
+        XCTAssertEqual(manual, original)
+        XCTAssertEqual(SupportReport.make(kind: "auto", category: .bug, stage: "notule",
+                                          shown: "PRIVATE_TITLE", error: "PRIVATE_TRANSCRIPT",
+                                          fingerprint: "0123456789abcdef", clickPath: []).shownMessage,
+                       "Verwerking mislukt tijdens notule.")
+    }
+
+    func testLegacyAutomaticOutboxIsNormalizedBeforeActualPost() async throws {
+        reply()
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let report = automaticFixture(error: #"{"error":"PRIVATE_TRANSCRIPT", "quote":"PRIVATE_NOTE"}"#)
+        try SupportJSON.encoder.encode(report).write(to: directory.appending(path: "1-legacy.json"))
+        await relay.flush()
+        let json = SupportStub.json(1)
+        XCTAssertEqual(json["kind"] as? String, "auto")
+        XCTAssertEqual(json["stage"] as? String, "notule")
+        XCTAssertEqual(json["shownMessage"] as? String, "Verwerking mislukt tijdens notule.")
+        XCTAssertEqual(json["errorText"] as? String, "Verwerking mislukt tijdens notule.")
+        XCTAssertEqual(json["fingerprint"] as? String, "0123456789abcdef")
+        XCTAssertFalse(String(describing: json).contains("PRIVATE_"))
+    }
+
+    func testDisabledAutomaticQueueDropsWithoutIdentityAndKeepsManual() async throws {
+        defaults.removeObject(forKey: SupportIdentity.emailKey)
+        try await relay.enqueue(automaticFixture())
+        try await relay.enqueue(fixture(shown: "PRIVATE_USER_TEXT"))
+        defaults.set(false, forKey: SupportIdentity.autoReportKey)
+        await relay.flush()
+        let pending = await relay.pendingReports()
+        XCTAssertEqual(pending.map(\.kind), ["manual"])
+        do {
+            try await relay.enqueue(automaticFixture())
+            XCTFail("Disabled automatic reporting must reject storage")
+        } catch { XCTAssertEqual(error as? SupportRelayError, .automaticReportingDisabled) }
+        defaults.set("anna@example.com", forKey: SupportIdentity.emailKey)
+        reply()
+        await relay.flush()
+        XCTAssertEqual(SupportStub.json(1)["kind"] as? String, "manual")
+        XCTAssertEqual(SupportStub.json(1)["shownMessage"] as? String, "PRIVATE_USER_TEXT")
+    }
+
+    func testOptOutDuringRegistrationPreventsAutomaticPostAndPreservesManual() async throws {
+        try await exerciseOptOutDuringRegistration(afterUnauthorized: false)
+    }
+
+    func testOptOutDuringUnauthorizedRegistrationPreventsAutomaticRetry() async throws {
+        try await exerciseOptOutDuringRegistration(afterUnauthorized: true)
+    }
+
+    private func exerciseOptOutDuringRegistration(afterUnauthorized: Bool) async throws {
+        try await relay.enqueue(automaticFixture())
+        try await relay.enqueue(fixture(shown: "PRIVATE_USER_TEXT"))
+        SupportStub.handler { request, index in
+            if request.url?.lastPathComponent == "installations" {
+                if !afterUnauthorized || index == 2 { self.defaults.set(false, forKey: SupportIdentity.autoReportKey) }
+                return .init(status: 201, text: "{}")
+            }
+            return .init(status: afterUnauthorized && index == 1 ? 401 : 201, text: self.result)
+        }
+        await relay.flush()
+        let reportIndexes = SupportStub.requests.indices.filter { SupportStub.requests[$0].url?.lastPathComponent == "reports" }
+        XCTAssertEqual(reportIndexes.map { SupportStub.json($0)["kind"] as? String }, afterUnauthorized ? ["auto", "manual"] : ["manual"])
+        let pending = await relay.pendingReports()
+        XCTAssertTrue(pending.isEmpty)
+    }
+
+    func testOptOutDuringHeldLogTailPreventsAutomaticPost() async throws {
+        try await exerciseOptOutDuringLogTail(limit: 1_048_576)
+    }
+
+    func testOptOutDuringHeld413LogTailPreventsAutomaticRetry() async throws {
+        try await exerciseOptOutDuringLogTail(limit: 262_144)
+    }
+
+    func testConcurrentOptOutFlushCannotResurrectDeletedAutomaticReport() async throws {
+        try await exerciseOptOutDuringLogTail(limit: 1_048_576, discardBeforeReenable: true)
+    }
+
+    func testConcurrentOptOutFlushCannotResurrectAutomaticReportAfterCleanupFailure() async throws {
+        try await exerciseOptOutDuringLogTail(limit: 1_048_576, discardBeforeReenable: true, failCleanup: true)
+    }
+
+    func testConcurrentOptOutFlushPreventsDiscardedAutomatic413Retry() async throws {
+        try await exerciseOptOutDuringLogTail(limit: 262_144, discardBeforeReenable: true)
+    }
+
+    private func exerciseOptOutDuringLogTail(limit: Int, discardBeforeReenable: Bool = false, failCleanup: Bool = false) async throws {
+        let started = expectation(description: "automatic log tail suspended")
+        let resume = expectation(description: "resume log tail")
+        let held = OSAllocatedUnfairLock(initialState: false)
+        relay = makeRelay(logTail: { size in
+            let shouldHold = held.withLock { used in
+                if size != limit || used { return false }
+                used = true
+                return true
+            }
+            if shouldHold {
+                started.fulfill()
+                await self.fulfillment(of: [resume], timeout: 5)
+            }
+            return "SAFE_LOG"
+        })
+        try await relay.enqueue(automaticFixture())
+        let autoFile = try XCTUnwrap(FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil).first)
+        if failCleanup { try FileManager.default.setAttributes([.immutable: true], ofItemAtPath: autoFile.path) }
+        defer { try? FileManager.default.setAttributes([.immutable: false], ofItemAtPath: autoFile.path) }
+        try await relay.enqueue(fixture(shown: "PRIVATE_USER_TEXT"))
+        SupportStub.handler { request, index in
+            .init(status: limit == 262_144 && index == 1 ? 413 : 201, text: self.result)
+        }
+        let flush = Task { await self.relay.flush() }
+        await fulfillment(of: [started], timeout: 5)
+        defaults.set(false, forKey: SupportIdentity.autoReportKey)
+        if discardBeforeReenable {
+            await relay.flush()
+            XCTAssertEqual(FileManager.default.fileExists(atPath: autoFile.path), failCleanup)
+            defaults.set(true, forKey: SupportIdentity.autoReportKey)
+        }
+        resume.fulfill()
+        await flush.value
+        let reportIndexes = SupportStub.requests.indices.filter { SupportStub.requests[$0].url?.lastPathComponent == "reports" }
+        XCTAssertEqual(reportIndexes.map { SupportStub.json($0)["kind"] as? String }, limit == 262_144 ? ["auto", "manual"] : ["manual"])
+        let pending = await relay.pendingReports()
+        XCTAssertTrue(pending.isEmpty)
+        if failCleanup {
+            try FileManager.default.setAttributes([.immutable: false], ofItemAtPath: autoFile.path)
+            await relay.flush()
+            XCTAssertFalse(FileManager.default.fileExists(atPath: autoFile.path))
+        }
+    }
+
+    func testAcceptedAutomaticResponseRemainsSentAfterConcurrentDiscard() async throws {
+        let started = expectation(description: "automatic request already started")
+        let resume = DispatchSemaphore(value: 0)
+        SupportStub.handler { request, _ in
+            if request.url?.lastPathComponent == "reports" {
+                started.fulfill()
+                guard resume.wait(timeout: .now() + 5) == .success else { throw URLError(.timedOut) }
+            }
+            return .init(status: 201, text: self.result)
+        }
+        let send = Task { await self.relay.send(self.automaticFixture()) }
+        await fulfillment(of: [started], timeout: 5)
+        defaults.set(false, forKey: SupportIdentity.autoReportKey)
+        await relay.flush()
+        defaults.set(true, forKey: SupportIdentity.autoReportKey)
+        resume.signal()
+        let outcome = await send.value
+        XCTAssertEqual(outcome, .sent(.init(ticketId: "c1", ref: "TV-000001", repeated: false, count: 1, logAttached: false)))
+        await relay.flush()
+        XCTAssertEqual(SupportStub.paths.filter { $0 == "/support/reports" }.count, 1)
+        let pending = await relay.pendingReports()
+        XCTAssertTrue(pending.isEmpty)
+    }
+
+    func testAcceptedAutomaticResponseRemainsSentAfterOptOut() async throws {
+        SupportStub.handler { request, _ in
+            if request.url?.lastPathComponent == "reports" { self.defaults.set(false, forKey: SupportIdentity.autoReportKey) }
+            return .init(status: 201, text: self.result)
+        }
+        let outcome = await relay.send(automaticFixture())
+        XCTAssertEqual(outcome, .sent(.init(ticketId: "c1", ref: "TV-000001", repeated: false, count: 1, logAttached: false)))
+        let pending = await relay.pendingReports()
+        XCTAssertTrue(pending.isEmpty)
+    }
+
+    func testDisabledAutomaticCleanupFailureDoesNotSendAfterReenable() async throws {
+        try await relay.enqueue(automaticFixture())
+        let file = try XCTUnwrap(FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil).first)
+        try FileManager.default.setAttributes([.immutable: true], ofItemAtPath: file.path)
+        defaults.set(false, forKey: SupportIdentity.autoReportKey)
+        await relay.flush()
+        defaults.set(true, forKey: SupportIdentity.autoReportKey)
+        reply()
+        await relay.flush()
+        XCTAssertTrue(SupportStub.requests.isEmpty)
+        let pending = await relay.pendingReports()
+        XCTAssertTrue(pending.isEmpty)
+        try FileManager.default.setAttributes([.immutable: false], ofItemAtPath: file.path)
+        await relay.flush()
+        XCTAssertTrue(try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil).isEmpty)
+    }
+
+    private func automaticFixture(stage: String = "notule", error: String = "PRIVATE_TRANSCRIPT") -> SupportReport {
+        var report = fixture(shown: "PRIVATE_TITLE")
+        report.kind = "auto"
+        report.stage = stage
+        report.errorText = error
+        report.fingerprint = "0123456789abcdef"
+        return report
     }
 
     func testIdentityValidation() {

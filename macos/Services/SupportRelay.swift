@@ -1,7 +1,7 @@
 import Foundation
 import Security
 
-enum SupportRelayError: Error, Equatable { case http(Int) }
+enum SupportRelayError: Error, Equatable { case http(Int), automaticReportingDisabled }
 
 actor SupportRelay {
     static let baseURL = URL(string: "https://thoughtvault.yinga.ai/support")!
@@ -37,9 +37,18 @@ actor SupportRelay {
 
     func enqueue(_ report: SupportReport) throws { _ = try store(report) }
 
+    private var isAutoReportEnabled: Bool {
+        defaults.object(forKey: SupportIdentity.autoReportKey) == nil
+            || defaults.bool(forKey: SupportIdentity.autoReportKey)
+    }
+
     private func store(_ report: SupportReport) throws -> URL {
+        guard report.kind != "auto" || isAutoReportEnabled else {
+            throw SupportRelayError.automaticReportingDisabled
+        }
         try FileManager.default.createDirectory(at: outbox, withIntermediateDirectories: true)
         var stored = report
+        stored.normalizeAutomatic()
         stored.name = ""
         stored.email = ""
         stored.log = nil
@@ -92,6 +101,15 @@ actor SupportRelay {
 
     private func drain(target: URL?) async -> SendOutcome? {
         for url in Array(completed.keys) { cleanup(url) }
+        if !isAutoReportEnabled {
+            for url in files() where completed[url] == nil {
+                if let report = try? SupportJSON.decoder.decode(SupportReport.self, from: Data(contentsOf: url)),
+                   report.kind == "auto" {
+                    completed[url] = .failed
+                    cleanup(url)
+                }
+            }
+        }
         let name = (defaults.string(forKey: SupportIdentity.nameKey) ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         let email = (defaults.string(forKey: SupportIdentity.emailKey) ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         guard !isFlushing, Date() >= retryAfter, SupportIdentity.isComplete(name: name, email: email) else { return nil }
@@ -101,13 +119,14 @@ actor SupportRelay {
         for url in files() where completed[url] == nil {
             do {
                 var report = try SupportJSON.decoder.decode(SupportReport.self, from: Data(contentsOf: url))
+                report.normalizeAutomatic()
                 report.name = name
                 report.email = email
                 report.log = await logTail(1_048_576)
-                var response = try await authenticated(["reports"], body: SupportJSON.encoder.encode(report))
+                var response = try await authenticated(["reports"], body: SupportJSON.encoder.encode(report), automatic: report.kind == "auto", queuedReport: url)
                 if response.1.statusCode == 413 {
                     report.log = await logTail(262_144)
-                    response = try await authenticated(["reports"], body: SupportJSON.encoder.encode(report))
+                    response = try await authenticated(["reports"], body: SupportJSON.encoder.encode(report), automatic: report.kind == "auto", queuedReport: url)
                 }
                 let status = response.1.statusCode
                 let outcome: SendOutcome
@@ -121,6 +140,10 @@ actor SupportRelay {
                 } else { break }
                 completed[url] = outcome
                 if url == target { targetOutcome = outcome }
+                cleanup(url)
+            } catch SupportRelayError.automaticReportingDisabled {
+                completed[url] = .failed
+                if url == target { targetOutcome = .failed }
                 cleanup(url)
             } catch {
                 logger.warning("Support queue paused; report retained")
@@ -168,18 +191,18 @@ actor SupportRelay {
         }
     }
 
-    private func authenticated(_ path: [String], body: Data? = nil) async throws -> (Data, HTTPURLResponse) {
+    private func authenticated(_ path: [String], body: Data? = nil, automatic: Bool = false, queuedReport: URL? = nil) async throws -> (Data, HTTPURLResponse) {
         try await ensureRegistered()
-        var response = try await request(path, body: body, signed: true)
+        var response = try await request(path, body: body, signed: true, automatic: automatic, queuedReport: queuedReport)
         if response.1.statusCode == 401 {
             registered = false
             try await ensureRegistered()
-            response = try await request(path, body: body, signed: true)
+            response = try await request(path, body: body, signed: true, automatic: automatic, queuedReport: queuedReport)
         }
         return response
     }
 
-    private func request(_ path: [String], body: Data?, signed: Bool = false) async throws -> (Data, HTTPURLResponse) {
+    private func request(_ path: [String], body: Data?, signed: Bool = false, automatic: Bool = false, queuedReport: URL? = nil) async throws -> (Data, HTTPURLResponse) {
         guard Date() >= retryAfter else { throw SupportRelayError.http(429) }
         let url = path.reduce(baseURL) { $0.appendingPathComponent($1) }
         var request = URLRequest(url: url)
@@ -190,6 +213,13 @@ actor SupportRelay {
             let pair = try credentials()
             request.setValue(pair.0, forHTTPHeaderField: "X-TV-Installation")
             request.setValue(pair.1, forHTTPHeaderField: "X-TV-Secret")
+        }
+        // Recheck after every await (registration, log tail and retries), immediately before POST.
+        guard !automatic || isAutoReportEnabled else { throw SupportRelayError.automaticReportingDisabled }
+        if let queuedReport {
+            guard completed[queuedReport] == nil, FileManager.default.fileExists(atPath: queuedReport.path) else {
+                throw SupportRelayError.automaticReportingDisabled
+            }
         }
         let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse else { throw URLError(.badServerResponse) }

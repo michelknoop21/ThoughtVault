@@ -154,27 +154,53 @@ final class SupportViewModelTests: XCTestCase {
         XCTAssertEqual(try String(contentsOf: marker, encoding: .utf8), "")
     }
 
-    @MainActor func testAutoReportScrubsShownMessage() async {
+    @MainActor func testAutomaticPayloadNeverStoresDynamicFailureContent() async throws {
         let (vm, relay, defaults, session, directory, suite) = fixture()
         defer { cleanup(defaults, session, directory, suite) }
-        await vm.report(stage: .opnemen, shown: "Bestand niet gevonden: Klant.m4a", error: "Bestand niet gevonden: Klant.m4a")
-        let report = await relay.pendingReports().first
-        XCTAssertEqual(report?.kind, "auto")
-        XCTAssertEqual(report?.category, .bug)
-        XCTAssertEqual(report?.stage, "opnemen")
-        XCTAssertEqual(report?.shownMessage, "Bestand niet gevonden: k-cc794b")
-        XCTAssertEqual(report?.errorText, "Bestand niet gevonden: k-cc794b")
-        XCTAssertEqual(report?.fingerprint?.count, 16)
+        let privateContent = ["PRIVATE_TRANSCRIPT", #"{"error":"PRIVATE_PROVIDER_BODY"}"#,
+                              "Audit quote: PRIVATE_NOTE", "PRIVATE_TITLE",
+                              String(repeating: "x", count: 5_100) + "PRIVATE_BEYOND_CAP"]
+        let stages: [SupportStage] = [.opnemen, .transcriberen, .notule, .crash, .notule]
+        for (stage, content) in zip(stages, privateContent) {
+            await vm.report(stage: stage, shown: content, error: content)
+        }
+        let reports = await relay.pendingReports()
+        XCTAssertEqual(reports.count, privateContent.count)
+        for (report, (stage, content)) in zip(reports, zip(stages, privateContent)) {
+            XCTAssertEqual(report.stage, stage.rawValue)
+            let expected = "Verwerking mislukt tijdens \(stage.rawValue)."
+            XCTAssertEqual(report.kind, "auto")
+            XCTAssertEqual(report.category, .bug)
+            XCTAssertEqual(report.shownMessage, expected)
+            XCTAssertEqual(report.errorText, expected)
+            XCTAssertEqual(report.fingerprint, SupportViewModel.fingerprint(stage: stage, error: content))
+        }
+        // Inspect the relay's actual queued JSON, not another serialization of a test model.
+        let files = try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
+        XCTAssertEqual(files.count, privateContent.count)
+        for file in files {
+            let data = try Data(contentsOf: file)
+            let json = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+            let stage = try XCTUnwrap(json["stage"] as? String)
+            XCTAssertEqual(json["shownMessage"] as? String, "Verwerking mislukt tijdens \(stage).")
+            XCTAssertEqual(json["errorText"] as? String, "Verwerking mislukt tijdens \(stage).")
+            XCTAssertFalse(String(decoding: data, as: UTF8.self).contains("PRIVATE_"))
+        }
     }
 
-    @MainActor func testAutoReportScrubsBeforeTruncating() async {
+    @MainActor func testAutomaticClassificationUsesOriginalMessageBeforeNormalization() async {
         let (vm, relay, defaults, session, directory, suite) = fixture()
         defer { cleanup(defaults, session, directory, suite) }
-        let shown = String(repeating: "x", count: 4_995) + " anna@example.com"
-        await vm.report(stage: .opnemen, shown: shown, error: shown)
-        let report = await relay.pendingReports().first
-        XCTAssertEqual(report?.shownMessage, String(LogRedact.scrub(shown).prefix(5_000)))
-        XCTAssertEqual(report?.errorText, String(LogRedact.scrub(shown).prefix(2_000)))
+        for shown in ["Microfoontoestemming geweigerd. Geef toegang via Instellingen.",
+                      "Opname is leeg of te kort om te verwerken.",
+                      "Opname is te kort (minimaal 3 seconden). Probeer opnieuw.",
+                      "Geen profiel geselecteerd. Kies een profiel en probeer opnieuw.",
+                      "Geannuleerd door gebruiker."] {
+            await vm.report(stage: .opnemen, shown: shown, error: "PRIVATE_TRANSCRIPT")
+        }
+        let reports = await relay.pendingReports()
+        XCTAssertTrue(reports.isEmpty)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: directory.path))
     }
 
     @MainActor func testAutoReportOffSkipsAutomaticReports() async {
@@ -195,17 +221,23 @@ final class SupportViewModelTests: XCTestCase {
         await vm.reportCrash(runningStage: nil)
         let reports = await relay.pendingReports()
         XCTAssertEqual(reports.map(\.stage), ["transcriberen", "crash"])
-        XCTAssertEqual(reports.map(\.errorText), ["gestopt tijdens transcriberen", "onverwacht gestopt"])
+        let messages = ["gestopt tijdens transcriberen", "onverwacht gestopt"]
+        XCTAssertEqual(reports.map(\.errorText), messages)
+        XCTAssertEqual(reports.map(\.shownMessage), messages)
+        XCTAssertEqual(reports.map(\.fingerprint), [
+            SupportViewModel.fingerprint(stage: .transcriberen, error: messages[0]),
+            SupportViewModel.fingerprint(stage: .crash, error: messages[1])
+        ])
     }
 
     @MainActor func testManualReportStillQueuesWhenAutomaticReportsAreOff() async {
         let (vm, relay, defaults, session, directory, suite) = fixture()
         defer { cleanup(defaults, session, directory, suite) }
         defaults.set(false, forKey: SupportIdentity.autoReportKey)
-        let outcome = await vm.submit(category: .question, description: "Mijn vraag")
+        let outcome = await vm.submit(category: .question, description: "Mijn vraag: PRIVATE_USER_TEXT")
         XCTAssertEqual(outcome, .queued)
         let reports = await relay.pendingReports()
-        XCTAssertEqual(reports.first?.shownMessage, "Mijn vraag")
+        XCTAssertEqual(reports.first?.shownMessage, "Mijn vraag: PRIVATE_USER_TEXT")
         XCTAssertEqual(reports.first?.kind, "manual")
         XCTAssertNil(reports.first?.fingerprint)
     }

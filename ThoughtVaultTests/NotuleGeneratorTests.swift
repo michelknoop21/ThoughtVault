@@ -64,7 +64,6 @@ private final class StubLLM: LLMService, @unchecked Sendable {
 
 private let profile = Profile(id: "standaard", name: "Standaard", systemPrompt: "Je bent notulist.",
                               notulePrompt: "Maak notulen.", template: nil)
-private let reviewPrefix = "Feiten, acties en beperkingen konden niet worden bevestigd: "
 
 private func generate(_ service: StubLLM, _ transcription: String, quickNote: String? = nil,
                       participants: [Participant] = []) async throws -> String {
@@ -73,16 +72,8 @@ private func generate(_ service: StubLLM, _ transcription: String, quickNote: St
         createdAt: Date(timeIntervalSince1970: 0), corrections: [])
 }
 
-private func reviewError(_ body: () async throws -> String, file: StaticString = #filePath, line: UInt = #line) async -> NotuleReviewError? {
-    do {
-        _ = try await body()
-        XCTFail("Expected a NotuleReviewError", file: file, line: line)
-    } catch let error as NotuleReviewError {
-        return error
-    } catch {
-        XCTFail("Expected a NotuleReviewError, got \(error)", file: file, line: line)
-    }
-    return nil
+private func warnings(_ items: String..., in html: String) -> String {
+    NotuleAudit.appendingWarnings(items, to: html)
 }
 
 final class NotuleGeneratorTests: XCTestCase {
@@ -101,8 +92,8 @@ final class NotuleGeneratorTests: XCTestCase {
         XCTAssertTrue(service.audits[1].contains("Over uitvoering bestaat nog geen besluit."))
     }
 
-    // "fails closed when the structured audit reports the omitted %s action"
-    func testRejectedDraftThrowsReviewErrorWithDraft() async {
+    // DEC-063: an audit finding no longer blocks; the notule is returned with the finding in plain words.
+    func testFindingIsShownInTheNotule() async throws {
         for owner in ["Emma", "Youssef", "Robin"] {
             let html = "<p>Sam neemt dinsdag telefonisch contact op.</p>"
             let service = StubLLM(draft: html, audit: StubLLM.approve { report in
@@ -110,85 +101,94 @@ final class NotuleGeneratorTests: XCTestCase {
                 source[1]["status"] = "missing"; source[1]["evidence"] = [String]()
                 report["source"] = source
             })
-            let error = await reviewError { try await generate(service, "Sam belt dinsdag. \(owner) controleert woensdag de offerte.") }
-            XCTAssertEqual(error?.draftHtml, html)
-            XCTAssertEqual(error?.reason, reviewPrefix + "De notule mist broninformatie: \(owner) controleert woensdag de offerte.")
+            let result = try await generate(service, "Sam belt dinsdag. \(owner) controleert woensdag de offerte.")
+            XCTAssertEqual(result, warnings("Dit is gezegd, maar staat misschien niet in de notule: “\(owner) controleert woensdag de offerte.”", in: html))
             XCTAssertEqual(service.audits.count, 2)
         }
     }
 
-    // The draft under review is the finished candidate, including the quick-note section.
-    func testRejectedDraftKeepsTheNotesSection() async {
+    // The quick-note section stays; both failed checks end up in one section.
+    func testFailedChecksKeepTheNotesSection() async throws {
         let html = "<p>Sam neemt dinsdag telefonisch contact op met de leverancier.</p>"
         let service = StubLLM(draft: html, audit: { _ in throw URLError(.timedOut) })
-        let error = await reviewError { try await generate(service, "Sam belt dinsdag de leverancier.", quickNote: "Offerte nalopen") }
-        // The failed source check becomes a warning at the end of the draft.
-        XCTAssertEqual(error?.draftHtml, NotuleAudit.appendingWarning(NotuleAudit.uncheckedSourceWarning,
-                                                                      to: html + "<h2>Notities</h2><p>Offerte nalopen</p>"))
+        let result = try await generate(service, "Sam belt dinsdag de leverancier.", quickNote: "Offerte nalopen")
+        XCTAssertEqual(result, warnings(NotuleAudit.uncheckedSourceWarning, NotuleAudit.uncheckedContentWarning,
+                                        in: html + "<h2>Notities</h2><p>Offerte nalopen</p>"))
     }
 
-    // "retains the generated candidate when the audit service fails, with no success or retry"
-    func testAuditServiceFailureKeepsTheDraft() async {
+    // A technical audit failure shows the general line, never an internal code like "T2".
+    func testAuditServiceFailureShowsGeneralWarning() async throws {
         let html = "<p>Sam neemt vrijdag contact op.</p>"
         let service = StubLLM(draft: html, audit: { user in
             if user.hasPrefix("Broncontrole") { return #"{"uncertain":false}"# }
             throw LLMError.serverError(500)
         })
-        let error = await reviewError { try await generate(service, "Sam belt vrijdag.") }
-        XCTAssertEqual(error?.draftHtml, html)
-        XCTAssertEqual(error?.reason, reviewPrefix + "De inhoudscontrole leverde geen bruikbaar controlebewijs; beoordeel het concept")
+        let result = try await generate(service, "Sam belt vrijdag.")
+        XCTAssertEqual(result, warnings(NotuleAudit.uncheckedContentWarning, in: html))
         XCTAssertEqual(service.generations.count, 1)
         XCTAssertEqual(service.audits.count, 2)
     }
 
-    // An unsure source check no longer blocks: the notule audit decides, the notule carries the warning.
+    // The T9 case: "covered" without any notule sentence pointing at it.
+    func testMissingEvidenceShowsGeneralWarningWithoutCode() async throws {
+        let html = "<p>Sam neemt vrijdag contact op.</p>"
+        let service = StubLLM(draft: html, audit: StubLLM.approve { report in
+            report["source"] = (report["source"] as! [[String: Any]]).map { var item = $0; item["status"] = "covered"; return item }
+            report["notes"] = (report["notes"] as! [[String: Any]]).map { var note = $0; note["evidence"] = ["T1"]; return note }
+        })
+        let result = try await generate(service, "Sam belt vrijdag. Iris mailt maandag.")
+        XCTAssertEqual(result, warnings(NotuleAudit.uncheckedContentWarning, in: html))
+        XCTAssertFalse(result.contains("T2"))
+    }
+
+    // An unsure source check never blocks: the notule carries the warning.
     func testUnclearSourceAddsWarningToApprovedNotule() async throws {
         let html = "<p>Sam neemt vrijdag contact op.</p>"
         let service = StubLLM(draft: html, audit: { user in
             user.hasPrefix("Broncontrole") ? #"{"uncertain":true}"# : try StubLLM.approve()(user)
         })
         let result = try await generate(service, "Sam belt vrijdag. Het zit op derf.")
-        XCTAssertEqual(result, html + "<h2>Let op: controleer de transcriptie</h2><p>\(NotuleAudit.unclearSourceWarning)</p>")
+        XCTAssertEqual(result, html + "<h2>Even nalopen</h2><ul><li>\(NotuleAudit.unclearSourceWarning)</li></ul>")
         XCTAssertEqual(service.audits.count, 2)
     }
 
-    // "retains a readable draft when a separate source-only check cannot understand the transcript":
-    // the notule audit still rejects unintelligible source sentences, and the draft carries the warning.
-    func testUnclearSourceRejectedByNotuleAuditKeepsDraftWithWarning() async {
+    // An unsure notule audit adds the general line next to the source warning.
+    func testUnclearSourceAndUnsureAuditBothWarn() async throws {
         let html = "<p>Een stellig verhaal over een pilot.</p>"
         let service = StubLLM(draft: html, audit: { user in
             if user.hasPrefix("Broncontrole") { return #"{"uncertain":true}"# }
             return try StubLLM.approve { $0["uncertain"] = true }(user)
         })
-        let error = await reviewError { try await generate(service, "En mensen processen stok maken voorbij pilot zeker leeg.") }
-        XCTAssertEqual(error?.draftHtml, NotuleAudit.appendingWarning(NotuleAudit.unclearSourceWarning, to: html))
-        XCTAssertEqual(error?.reason, reviewPrefix + "De inhoudscontrole is onzeker; beoordeel het concept")
+        let result = try await generate(service, "En mensen processen stok maken voorbij pilot zeker leeg.")
+        XCTAssertEqual(result, warnings(NotuleAudit.unclearSourceWarning, NotuleAudit.uncheckedContentWarning, in: html))
     }
 
-    // "never labels a protected source condition non-factual to approve its omission"
-    func testProtectedConstraintCannotBeWavedThrough() async {
-        let service = StubLLM(draft: "<p>Sam neemt vrijdag contact op.</p>", audit: StubLLM.approve { report in
+    // An unsupported notule sentence is quoted; one generation, two audit calls, no retry.
+    func testUnsupportedSentenceIsQuoted() async throws {
+        let html = "<p>Sam neemt dinsdag telefonisch contact op. Iris mailt vrijdag de offerte.</p>"
+        let service = StubLLM(draft: html, audit: StubLLM.approve { report in
+            var notes = report["notes"] as! [[String: Any]]
+            notes[1]["status"] = "unsupported"; notes[1]["evidence"] = [String]()
+            report["notes"] = notes
+        })
+        let result = try await generate(service, "Sam belt dinsdag.")
+        XCTAssertEqual(result, warnings("Dit staat in de notule, maar is misschien niet zo gezegd: “Iris mailt vrijdag de offerte.”", in: html))
+        XCTAssertEqual(service.progressChunks, 1, "the stub streamed its draft")
+        XCTAssertEqual(service.generations.count, 1)
+        XCTAssertEqual(service.audits.count, 2)
+    }
+
+    // "never labels a protected source condition non-factual to approve its omission": still flagged.
+    func testProtectedConstraintCannotBeWavedThrough() async throws {
+        let html = "<p>Sam neemt vrijdag contact op.</p>"
+        let service = StubLLM(draft: html, audit: StubLLM.approve { report in
             var source = report["source"] as! [[String: Any]]
             source[0]["status"] = "non_factual"; source[0]["evidence"] = [String]()
             report["source"] = source
             report["notes"] = (report["notes"] as! [[String: Any]]).map { var note = $0; note["evidence"] = ["T2"]; return note }
         })
-        let error = await reviewError { try await generate(service, "Er is geen besluit genomen. Sam belt vrijdag.") }
-        XCTAssertTrue(error?.reason.contains("expliciete beperkingen") == true, error?.reason ?? "")
-    }
-
-    /// The generator has no progress sink: a streamed draft reaches nobody, and a
-    /// rejection is never retried (one generation, two audit calls).
-    func testNoProgressChunksEmitted() async {
-        let service = StubLLM(draft: "<p>Sam neemt dinsdag telefonisch contact op.</p>", audit: StubLLM.approve { report in
-            var notes = report["notes"] as! [[String: Any]]
-            notes[0]["status"] = "unsupported"; notes[0]["evidence"] = [String]()
-            report["notes"] = notes
-        })
-        _ = await reviewError { try await generate(service, "Sam belt dinsdag.") }
-        XCTAssertEqual(service.progressChunks, 1, "the stub streamed its draft")
-        XCTAssertEqual(service.generations.count, 1)
-        XCTAssertEqual(service.audits.count, 2)
+        let result = try await generate(service, "Er is geen besluit genomen. Sam belt vrijdag.")
+        XCTAssertEqual(result, warnings(NotuleAudit.uncheckedContentWarning, in: html))
     }
 
     func testSystemPromptAndConstraintsReachTheModel() async throws {
@@ -211,7 +211,6 @@ final class NotuleGeneratorTests: XCTestCase {
             _ = try await generate(service, "Sam belt vrijdag.")
             XCTFail("Expected an error")
         } catch {
-            XCTAssertFalse(error is NotuleReviewError)
             XCTAssertTrue(error.localizedDescription.contains("De notule-generator gaf een leeg concept. De transcriptie is bewaard."))
         }
         XCTAssertEqual(service.audits.count, 0)
@@ -224,7 +223,6 @@ final class NotuleGeneratorTests: XCTestCase {
             _ = try await generate(service, "Sam belt vrijdag.", quickNote: String(repeating: "Offerte nalopen met Sam. ", count: 4))
             XCTFail("Expected an unusable notule")
         } catch {
-            XCTAssertFalse(error is NotuleReviewError)
             XCTAssertTrue(error.localizedDescription.contains("De notule bevat geen bruikbare inhoud. Controleer de transcriptie en probeer opnieuw."))
         }
         XCTAssertEqual(service.audits.count, 0)

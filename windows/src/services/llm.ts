@@ -10,7 +10,7 @@ import { isOllamaCloudURL } from "./ollamaModels";
 import { loadCorrectionsOrEmpty } from "../stores/personalCorrectionsStore";
 import { usePeopleDirectoryStore } from "../stores/peopleDirectoryStore";
 import { correctText, correctHTML, contextBlock, CONTEXT_BUDGET, type PersonalCorrection } from "./personalCorrections";
-import { auditSource, auditNotule, appendSourceWarning, constraintSentences, NotuleReviewError } from "./notuleAudit";
+import { auditSource, auditNotule, appendWarnings, AuditFinding, constraintSentences, UNCHECKED_CONTENT_WARNING } from "./notuleAudit";
 
 interface LLMConfig {
   provider: NotulenProvider;
@@ -266,12 +266,15 @@ export class LLMService {
     try {
       warning = await auditSource(correctText(transcription, corrections, profile.id), quickNote, generate);
       await auditNotule(correctText(transcription, corrections, profile.id), candidate, quickNote, generate, constraints, warning !== null);
-      const approved = appendSourceWarning(warning, candidate);
+      const approved = appendWarnings(warning ? [warning] : [], candidate);
       onProgress?.(approved);
       return approved;
     } catch (error) {
-      const reason = error instanceof Error ? error.message : "De inhoud kon niet betrouwbaar worden gecontroleerd";
-      throw new NotuleReviewError(`Feiten, acties en beperkingen konden niet worden bevestigd: ${reason}`, appendSourceWarning(warning, candidate));
+      // DEC-063: an audit problem never blocks the notule; it becomes a line in the warning section.
+      const finding = error instanceof AuditFinding ? error.finding : UNCHECKED_CONTENT_WARNING;
+      const result = appendWarnings(warning ? [warning, finding] : [finding], candidate);
+      onProgress?.(result);
+      return result;
     }
   }
 }

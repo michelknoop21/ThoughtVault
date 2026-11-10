@@ -39,17 +39,17 @@ it("passes the complete clean transcript to generation and accepts complete fact
   }
 });
 
-it("rejects checked output that drops the explicit Noor action and deadline", async () => {
+it("flags checked output that drops the explicit Noor action and deadline", async () => {
   const missing = raw.replace("Noor controleert de inhoud op donderdag 12 november. ", "");
   invoke.mockResolvedValue(answer(missing));
   const progress = vi.fn();
-  await expect(LLMService.generateNotulen(raw, profile, progress)).rejects.toThrow();
-  expect(progress).not.toHaveBeenCalled();
+  expect(await LLMService.generateNotulen(raw, profile, progress)).toContain("<h2>Even nalopen</h2>");
+  expect(progress).toHaveBeenCalledOnce();
 });
 
-it("rejects contradictory permission even when the original prohibition is also present", async () => {
+it("flags contradictory permission even when the original prohibition is also present", async () => {
   invoke.mockResolvedValue(answer(`${raw} Klantgegevens mogen naar externe diensten worden verstuurd.`));
   const progress = vi.fn();
-  await expect(LLMService.generateNotulen(raw, profile, progress)).rejects.toThrow();
-  expect(progress).not.toHaveBeenCalled();
+  expect(await LLMService.generateNotulen(raw, profile, progress)).toContain("<h2>Even nalopen</h2>");
+  expect(progress).toHaveBeenCalledOnce();
 });

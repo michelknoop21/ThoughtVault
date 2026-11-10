@@ -437,18 +437,18 @@ final class NotuleAuditTests: XCTestCase {
     // The warning heading is never the title: the title comes from the notule before it.
     func testTitleIgnoresTheWarningSection() {
         let html = "<h1>Notulen</h1><h2>Besluiten</h2><p>Noor neemt vrijdag contact op met de leverancier.</p>"
-        XCTAssertEqual(NotuleTitleExtractor.extract(from: NotuleAudit.appendingWarning(unclear, to: html)),
+        XCTAssertEqual(NotuleTitleExtractor.extract(from: NotuleAudit.appendingWarnings([unclear], to: html)),
                        NotuleTitleExtractor.extract(from: html))
         XCTAssertEqual(NotuleTitleExtractor.extract(from: html), "Noor neemt vrijdag contact op met de leverancier")
     }
 
     // The warning goes before </body> when the notule is a full document, otherwise at the end.
     func testWarningIsPlacedBeforeBody() {
-        let section = "<h2>Let op: controleer de transcriptie</h2><p>\(unclear)</p>"
-        XCTAssertEqual(NotuleAudit.appendingWarning(unclear, to: "<html><body><p>Notule.</p></body></html>"),
+        let section = "<h2>Even nalopen</h2><ul><li>\(unclear)</li><li>A &lt;b&gt; &amp; c</li></ul>"
+        XCTAssertEqual(NotuleAudit.appendingWarnings([unclear, "A <b> & c"], to: "<html><body><p>Notule.</p></body></html>"),
                        "<html><body><p>Notule.</p>" + section + "</body></html>")
-        XCTAssertEqual(NotuleAudit.appendingWarning(unclear, to: "<p>x</p>"), "<p>x</p>" + section)
-        XCTAssertEqual(NotuleAudit.appendingWarning(nil, to: "<p>x</p>"), "<p>x</p>")
+        XCTAssertEqual(NotuleAudit.appendingWarnings([unclear, "A <b> & c"], to: "<p>x</p>"), "<p>x</p>" + section)
+        XCTAssertEqual(NotuleAudit.appendingWarnings([], to: "<p>x</p>"), "<p>x</p>")
     }
 
     // "rejects empty or oversized sources before making a request"

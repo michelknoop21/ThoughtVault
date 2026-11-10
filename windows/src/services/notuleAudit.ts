@@ -9,6 +9,14 @@ export class NotuleReviewError extends Error {
   }
 }
 
+/** A concrete content problem; `finding` is the plain-language line shown in the notule. */
+export class AuditFinding extends Error {
+  constructor(message: string, readonly finding: string) {
+    super(message);
+    this.name = "AuditFinding";
+  }
+}
+
 interface Unit { id: string; text: string }
 interface Verdict { id: string; status: string; evidence: string[] }
 const normalize = (text: string) => text.replace(/\s+/gu, " ").trim();
@@ -65,8 +73,9 @@ export function parseAuditResponse(text: string) {
   return JSON.parse(text.trim().replace(/^```(?:json)?[ \t]*\r?\n([\s\S]*?)\r?\n```$/iu, "$1"));
 }
 
-export const UNCLEAR_SOURCE_WARNING = "De transcriptie bevat passages die mogelijk verkeerd zijn verstaan. Controleer namen, getallen en afspraken in deze notule.";
-export const UNCHECKED_SOURCE_WARNING = "De transcriptie kon niet automatisch op verstaanbaarheid worden gecontroleerd. Controleer de notule zelf.";
+export const UNCLEAR_SOURCE_WARNING = "Een deel van de opname was lastig te verstaan. Kijk namen, getallen en afspraken even na.";
+export const UNCHECKED_SOURCE_WARNING = "We konden niet nagaan of de opname goed te verstaan was. Lees de notule daarom even kritisch door.";
+export const UNCHECKED_CONTENT_WARNING = "We konden niet automatisch controleren of alles in de notule klopt. Kijk feiten, acties en afspraken even na.";
 
 /**
  * Judge intelligibility without showing the model the fluent candidate. Returns a warning, never
@@ -87,10 +96,11 @@ Geef uitsluitend {"uncertain":false} als alle inhoudelijke passages begrijpelijk
   return result && result.uncertain === false ? null : UNCLEAR_SOURCE_WARNING;
 }
 
-/** Adds the warning as the last section (before </body>), after the audit, so it is never checked as a claim. */
-export function appendSourceWarning(warning: string | null, html: string): string {
-  if (!warning) return html;
-  const section = `${SOURCE_WARNING_HEADING}<p>${warning}</p>`;
+/** Adds the warnings as one last section (before </body>), after the audit, so it is never checked as a claim. */
+export function appendWarnings(warnings: string[], html: string): string {
+  if (!warnings.length) return html;
+  const items = warnings.map(text => `<li>${text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</li>`).join("");
+  const section = `${SOURCE_WARNING_HEADING}<ul>${items}</ul>`;
   // Index into the original string: toLowerCase() can change the length (İ becomes i plus a dot).
   let body = -1;
   for (const match of html.matchAll(/<\/body>/gi)) body = match.index ?? -1;
@@ -153,14 +163,17 @@ Geef precies één item voor ELKE aangeleverde bron- en notule-ID. Bronstatus: c
   const sourceProblem = sourceChecks.find(item => !["covered", "non_factual"].includes(item.status));
   if (sourceProblem) {
     const text = sourceUnits.find(unit => unit.id === sourceProblem.id)!.text;
-    throw new Error(`${sourceProblem.status === "missing" ? "De notule mist broninformatie" : "De bron is onvoldoende duidelijk"}: ${text}`);
+    throw new AuditFinding(`${sourceProblem.status === "missing" ? "De notule mist broninformatie" : "De bron is onvoldoende duidelijk"}: ${text}`,
+      `${sourceProblem.status === "missing" ? "Dit is gezegd, maar staat misschien niet in de notule" : "Dit stuk van de opname was niet goed te volgen"}: “${text}”`);
   }
   const noteProblem = noteChecks.find(item => !["supported", "non_factual"].includes(item.status));
   if (noteProblem) {
     const text = noteUnits.find(unit => unit.id === noteProblem.id)!.text;
     const reason = noteProblem.status === "contradiction" ? "De notule spreekt de bron tegen"
       : noteProblem.status === "unsupported" ? "De notule bevat een onbevestigde bewering" : "De bewering is onvoldoende duidelijk";
-    throw new Error(`${reason}: ${text}`);
+    const finding = noteProblem.status === "contradiction" ? "Dit klopt misschien niet met wat er is gezegd"
+      : noteProblem.status === "unsupported" ? "Dit staat in de notule, maar is misschien niet zo gezegd" : "Dit is misschien niet helemaal goed samengevat";
+    throw new AuditFinding(`${reason}: ${text}`, `${finding}: “${text}”`);
   }
   // Only affirmative, fully indexed evidence may reach a successful result.
   for (const sentence of requiredSentences) {

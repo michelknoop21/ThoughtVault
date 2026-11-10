@@ -36,7 +36,7 @@ beforeEach(() => {
 
 // Red on 55ecb90: the checker is instructed to preserve only "Niet 15."
 // and the final guard accepts that incomplete amount as the full constraint.
-it("rejects a checked note that truncates the negated 15.000 euro amount", async () => {
+it("flags a checked note that truncates the negated 15.000 euro amount", async () => {
   const raw = "Het budget is 12.450 euro inclusief btw. Niet 15.000 euro.";
   invoke.mockImplementation(async (_command, args) => {
     const user = JSON.parse(args.request.body).messages[1].content;
@@ -45,9 +45,9 @@ it("rejects a checked note that truncates the negated 15.000 euro amount", async
     return response(JSON.stringify(report));
   });
   const progress = vi.fn();
-  await expect(LLMService.generateNotulen(raw, profile, progress)).rejects.toThrow("De notule mist broninformatie: Niet 15.000 euro.");
+  expect(await LLMService.generateNotulen(raw, profile, progress)).toContain("Dit is gezegd, maar staat misschien niet in de notule: “Niet 15.000 euro.”");
   expect(invoke).toHaveBeenCalledTimes(2);
-  expect(progress).not.toHaveBeenCalled();
+  expect(progress).toHaveBeenCalledOnce();
 });
 
 it.each(["Niet 15.000 euro.", "Niet 1.500.000 euro.", "Niet 15.000,50 euro.", "Niet 15.5 euro."])(
@@ -65,7 +65,7 @@ it.each(["Niet 15.000 euro.", "Niet 1.500.000 euro.", "Niet 15.000,50 euro.", "N
   },
 );
 
-it("still enforces a prohibition after a normal sentence boundary", async () => {
+it("still flags a prohibition after a normal sentence boundary", async () => {
   const raw = "Niet 15.000 euro. Geen klantgegevens naar externe diensten.";
   invoke.mockImplementation(async (_command, args) => {
     const user = JSON.parse(args.request.body).messages[1].content;
@@ -73,7 +73,7 @@ it("still enforces a prohibition after a normal sentence boundary", async () => 
     const report = JSON.parse(auditFixture(user)); report.source[1].status = "missing";
     return response(JSON.stringify(report));
   });
-  await expect(LLMService.generateNotulen(raw, profile)).rejects.toThrow("beperkingen");
+  expect(await LLMService.generateNotulen(raw, profile)).toContain("<h2>Even nalopen</h2>");
   const prompt = JSON.parse(invoke.mock.calls[0][1].request.body).messages[1].content as string;
   expect(prompt).toContain("1. Niet 15.000 euro.\n2. Geen klantgegevens naar externe diensten.");
 });

@@ -6,6 +6,31 @@ _Decisions DEC-029 through DEC-038 archived to [archive/DECISIONS-DEC-029-to-DEC
 
 ---
 
+## DEC-063: De inhoudscontrole waarschuwt in plaats van te blokkeren
+
+**Date:** 2026-11-10
+**Status:** Accepted (vervangt punt 2 en 3 van DEC-062)
+
+**Context:** De opname `combined_1794312568.wav` (17 minuten, 150 bronzinnen) kreeg geen notule. De melding was "Ontbrekend controlebewijs bij T9. Het concept is apart bewaard". T9 was de opvulzin "Dus ik doe zomaar met, nou ja, je pakt nou bijvoorbeeld prospect flow." `gpt-oss:120b` gaf die zin de status `covered`, terwijl geen enkele notulezin ernaar verwees, en `verdicts` wees daarop de hele notule af. Bij 150 zinnen moet elke verwijzing in het antwoord kloppen, dus een echte opname haalt die poort zelden. In de store hadden alleen de twee korte opnames (2.431 en 2.896 tekens) een notule.
+
+**Decision:**
+1. Een notule wordt altijd opgeslagen. Een fout in `auditNotule` blokkeert niet meer, maar komt als regel in de notule. Annuleren blijft annuleren, en een leeg of onbruikbaar concept blijft een fout.
+2. Alle waarschuwingen staan in één laatste sectie "Even nalopen", als lijstje in gewone taal. De broncontrole van DEC-062 schrijft daar ook in; de kop "Let op: controleer de transcriptie" vervalt.
+3. Bij een inhoudelijke bevinding noemt de regel wat er aan de hand is en citeert de zin, bijvoorbeeld: Dit staat in de notule, maar is misschien niet zo gezegd: “Iris belt de leverancier vóór vrijdag.” Kan de controle niet worden afgerond (ontbrekend bewijs, onvolledig antwoord, te lange bron, onzeker oordeel, opmaak), dan staat er één algemene regel. Interne codes zoals T9 komen niet meer in beeld.
+4. De controle zelf (prompts, `verdicts`, foutmeldingen in de audit) is ongewijzigd. Alleen de plek die de fout opvangt (`NotuleGenerator` op macOS, `LLMService.generateNotulen` op Windows) is aangepast. De teksten zijn op beide platforms letterlijk gelijk.
+
+**Alternatives considered:**
+- Het model per zin zonder verwijzing opnieuw laten oordelen: een extra verzoek per notule, en zonder blokkade levert het weinig op.
+- Een ander model (`mistral-large-4` scoorde 17 van 18 tegen 9 van 18 voor `gpt-oss:120b`): blijft de volgende stap als de algemene regel te vaak verschijnt.
+
+**Consequences:**
+- Bij lange opnames met `gpt-oss:120b` zal de algemene regel waarschijnlijk vaak onder de notule staan.
+- `NotuleReviewError`, `keepRejectedDraft` en de Windows-tegenhangers worden voor nieuwe notulen niet meer gebruikt. Ze blijven staan zodat bestaande concepten zichtbaar blijven; opruimen is een apart besluit.
+- Een eerder afgewezen opname krijgt een notule door hem opnieuw te genereren.
+- De M3-gate telt een notule met de sectie "Even nalopen" als `review`.
+
+---
+
 ## DEC-062: Broncontrole als waarschuwing, de inhoudscontrole blijft de poort
 
 **Date:** 2026-11-10

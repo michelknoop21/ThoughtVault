@@ -1,5 +1,5 @@
 import { expect, it, vi } from "vitest";
-import { appendSourceWarning, auditNotule, auditSource, UNCHECKED_SOURCE_WARNING, UNCLEAR_SOURCE_WARNING } from "../notuleAudit";
+import { appendWarnings, auditNotule, auditSource, UNCHECKED_SOURCE_WARNING, UNCLEAR_SOURCE_WARNING } from "../notuleAudit";
 import { extractTitle } from "../titleExtractor";
 
 it("checks the source and separate user note without exposing the candidate", async () => {
@@ -27,21 +27,22 @@ it("rejects empty or oversized sources before making a request", async () => {
 });
 
 it("places the warning before </body> when the notule is a full document, otherwise at the end", () => {
-  const section = `<h2>Let op: controleer de transcriptie</h2><p>${UNCLEAR_SOURCE_WARNING}</p>`;
-  expect(appendSourceWarning(UNCLEAR_SOURCE_WARNING, "<html><body><p>Notule.</p></BODY></html>")).toBe(`<html><body><p>Notule.</p>${section}</BODY></html>`);
-  expect(appendSourceWarning(UNCLEAR_SOURCE_WARNING, "<p>x</p>")).toBe(`<p>x</p>${section}`);
-  expect(appendSourceWarning(null, "<p>x</p>")).toBe("<p>x</p>");
+  const warnings = [UNCLEAR_SOURCE_WARNING, "A <b> & c"];
+  const section = `<h2>Even nalopen</h2><ul><li>${UNCLEAR_SOURCE_WARNING}</li><li>A &lt;b&gt; &amp; c</li></ul>`;
+  expect(appendWarnings(warnings, "<html><body><p>Notule.</p></BODY></html>")).toBe(`<html><body><p>Notule.</p>${section}</BODY></html>`);
+  expect(appendWarnings(warnings, "<p>x</p>")).toBe(`<p>x</p>${section}`);
+  expect(appendWarnings([], "<p>x</p>")).toBe("<p>x</p>");
 });
 
 it("keeps the insertion point when lowercasing changes the length", () => {
   const html = "<html><body><p>İstanbul: Noor belt vrijdag.</p></body></html>";
-  expect(appendSourceWarning(UNCLEAR_SOURCE_WARNING, html)).toBe(
-    `<html><body><p>İstanbul: Noor belt vrijdag.</p><h2>Let op: controleer de transcriptie</h2><p>${UNCLEAR_SOURCE_WARNING}</p></body></html>`);
+  expect(appendWarnings([UNCLEAR_SOURCE_WARNING], html)).toBe(
+    `<html><body><p>İstanbul: Noor belt vrijdag.</p><h2>Even nalopen</h2><ul><li>${UNCLEAR_SOURCE_WARNING}</li></ul></body></html>`);
 });
 
 it("never uses the warning heading as the title", () => {
   const html = "<h1>Notulen</h1><h2>Besluiten</h2><p>Noor neemt vrijdag contact op met de leverancier.</p>";
-  expect(extractTitle(appendSourceWarning(UNCLEAR_SOURCE_WARNING, html))).toBe(extractTitle(html));
+  expect(extractTitle(appendWarnings([UNCLEAR_SOURCE_WARNING], html))).toBe(extractTitle(html));
   expect(extractTitle(html)).toBe("Noor neemt vrijdag contact op met de leverancier");
 });
 

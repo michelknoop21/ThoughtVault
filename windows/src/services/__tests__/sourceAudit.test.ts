@@ -1,5 +1,5 @@
 import { expect, it, vi } from "vitest";
-import { appendSourceWarning, auditSource, UNCHECKED_SOURCE_WARNING, UNCLEAR_SOURCE_WARNING } from "../notuleAudit";
+import { appendWarnings, auditSource, UNCHECKED_SOURCE_WARNING, UNCLEAR_SOURCE_WARNING } from "../notuleAudit";
 
 it("checks the source and separate user note without exposing the candidate", async () => {
   const request = vi.fn(async (_system: string, user: string) => {
@@ -26,8 +26,9 @@ it("rejects empty or oversized sources before making a request", async () => {
 });
 
 it("places the warning before </body> when the notule is a full document, otherwise at the end", () => {
-  const section = `<h2>Let op: controleer de transcriptie</h2><p>${UNCLEAR_SOURCE_WARNING}</p>`;
-  expect(appendSourceWarning(UNCLEAR_SOURCE_WARNING, "<html><body><p>Notule.</p></BODY></html>")).toBe(`<html><body><p>Notule.</p>${section}</BODY></html>`);
-  expect(appendSourceWarning(UNCLEAR_SOURCE_WARNING, "<p>x</p>")).toBe(`<p>x</p>${section}`);
-  expect(appendSourceWarning(null, "<p>x</p>")).toBe("<p>x</p>");
+  const warnings = [UNCLEAR_SOURCE_WARNING, "A <b> & c"];
+  const section = `<h2>Even nalopen</h2><ul><li>${UNCLEAR_SOURCE_WARNING}</li><li>A &lt;b&gt; &amp; c</li></ul>`;
+  expect(appendWarnings(warnings, "<html><body><p>Notule.</p></BODY></html>")).toBe(`<html><body><p>Notule.</p>${section}</BODY></html>`);
+  expect(appendWarnings(warnings, "<p>x</p>")).toBe(`<p>x</p>${section}`);
+  expect(appendWarnings([], "<p>x</p>")).toBe("<p>x</p>");
 });

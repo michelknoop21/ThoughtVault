@@ -120,11 +120,8 @@ struct M3Gate {
         do {
             result.html = try await generator.generate(transcription: meeting.source, profile: profile, participants: [],
                                                        quickNote: nil, createdAt: Date(), corrections: [])
-            result.actual = "accepted"
-        } catch let error as NotuleReviewError {
-            result.actual = "review"
-            result.reason = error.reason
-            result.html = error.draftHtml
+            // DEC-063: problems are no longer thrown but shown in the warning section.
+            result.actual = result.html?.contains("<h2>\(NotuleAudit.warningHeading)</h2>") == true ? "review" : "accepted"
         } catch {
             result.actual = "generation_failed"
             result.reason = error.localizedDescription

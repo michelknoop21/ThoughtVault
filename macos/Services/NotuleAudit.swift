@@ -11,8 +11,11 @@ struct NotuleReviewError: LocalizedError, Sendable {
 }
 
 /// Audit rejection; `message` is the Dutch text the Windows app shows for the same case.
+/// `finding` is set only when the audit found a concrete content problem; it is the plain-language
+/// line shown in the notule. Technical failures leave it nil and get the general line.
 struct NotuleAuditError: LocalizedError, Sendable {
     let message: String
+    var finding: String? = nil
     var errorDescription: String? { message }
 }
 
@@ -82,8 +85,9 @@ enum NotuleAudit {
 
     // MARK: Audits
 
-    static let unclearSourceWarning = "De transcriptie bevat passages die mogelijk verkeerd zijn verstaan. Controleer namen, getallen en afspraken in deze notule."
-    static let uncheckedSourceWarning = "De transcriptie kon niet automatisch op verstaanbaarheid worden gecontroleerd. Controleer de notule zelf."
+    static let unclearSourceWarning = "Een deel van de opname was lastig te verstaan. Kijk namen, getallen en afspraken even na."
+    static let uncheckedSourceWarning = "We konden niet nagaan of de opname goed te verstaan was. Lees de notule daarom even kritisch door."
+    static let uncheckedContentWarning = "We konden niet automatisch controleren of alles in de notule klopt. Kijk feiten, acties en afspraken even na."
 
     /// Judge intelligibility without showing the model the fluent candidate. Returns a warning, never
     /// rejects: real speech recognition mishears words in nearly every passage (the 43k schadebezoek
@@ -107,11 +111,15 @@ enum NotuleAudit {
         return isFalse((result as? [String: Any])?["uncertain"]) ? nil : unclearSourceWarning
     }
 
-    /// Adds the warning as the last section (before `</body>`), like the quick-note section. It is added
+    static let warningHeading = "Even nalopen"
+
+    /// Adds the warnings as one last section (before `</body>`), like the quick-note section. It is added
     /// after the audit, so it is never checked as a claim.
-    static func appendingWarning(_ warning: String?, to html: String) -> String {
-        guard let warning else { return html }
-        let section = "<h2>Let op: controleer de transcriptie</h2><p>\(warning)</p>"
+    static func appendingWarnings(_ warnings: [String], to html: String) -> String {
+        guard !warnings.isEmpty else { return html }
+        let items = warnings.map { "<li>" + $0.replacingOccurrences(of: "&", with: "&amp;")
+            .replacingOccurrences(of: "<", with: "&lt;").replacingOccurrences(of: ">", with: "&gt;") + "</li>" }
+        let section = "<h2>\(warningHeading)</h2><ul>\(items.joined())</ul>"
         if let body = html.range(of: "</body>", options: [.backwards, .caseInsensitive]) {
             return html.replacingCharacters(in: body, with: section + "</body>")
         }
@@ -172,13 +180,16 @@ enum NotuleAudit {
         // A valid negative verdict remains a rejection; tell the reviewer which text needs attention.
         if let problem = sourceChecks.first(where: { $0.status != "covered" && $0.status != "non_factual" }) {
             let text = sourceUnits.first { same($0.id, problem.id) }!.text
-            throw NotuleAuditError(message: "\(problem.status == "missing" ? "De notule mist broninformatie" : "De bron is onvoldoende duidelijk"): \(text)")
+            throw NotuleAuditError(message: "\(problem.status == "missing" ? "De notule mist broninformatie" : "De bron is onvoldoende duidelijk"): \(text)",
+                                   finding: "\(problem.status == "missing" ? "Dit is gezegd, maar staat misschien niet in de notule" : "Dit stuk van de opname was niet goed te volgen"): “\(text)”")
         }
         if let problem = noteChecks.first(where: { $0.status != "supported" && $0.status != "non_factual" }) {
             let text = noteUnits.first { same($0.id, problem.id) }!.text
             let reason = problem.status == "contradiction" ? "De notule spreekt de bron tegen"
                 : problem.status == "unsupported" ? "De notule bevat een onbevestigde bewering" : "De bewering is onvoldoende duidelijk"
-            throw NotuleAuditError(message: "\(reason): \(text)")
+            let finding = problem.status == "contradiction" ? "Dit klopt misschien niet met wat er is gezegd"
+                : problem.status == "unsupported" ? "Dit staat in de notule, maar is misschien niet zo gezegd" : "Dit is misschien niet helemaal goed samengevat"
+            throw NotuleAuditError(message: "\(reason): \(text)", finding: "\(finding): “\(text)”")
         }
         // Only affirmative, fully indexed evidence may reach a successful result.
         for sentence in requiredSentences {

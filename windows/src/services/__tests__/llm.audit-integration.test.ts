@@ -1,6 +1,6 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import { LLMService } from "../llm";
-import { appendSourceWarning, NotuleReviewError, UNCLEAR_SOURCE_WARNING } from "../notuleAudit";
+import { appendWarnings, UNCHECKED_CONTENT_WARNING, UNCLEAR_SOURCE_WARNING } from "../notuleAudit";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { auditFixture, sourceFixture } from "./notuleAuditFixtures";
 const { invoke } = vi.hoisted(() => ({ invoke: vi.fn() }));
@@ -30,7 +30,7 @@ it.each(["ollama", "lm-studio", "openai", "anthropic"] as const)("audits correct
   expect(auditRequest.messages.at(-1).content).toContain("Over uitvoering bestaat nog geen besluit.");
 });
 
-it.each(["Emma", "Youssef", "Robin"])("fails closed when the structured audit reports the omitted %s action", async owner => {
+it.each(["Emma", "Youssef", "Robin"])("shows the omitted %s action as a finding in the notule (DEC-063)", async owner => {
   const raw = `Sam belt dinsdag. ${owner} controleert woensdag de offerte.`;
   const html = "<p>Sam neemt dinsdag telefonisch contact op.</p>";
   invoke.mockImplementation(async (_command, args) => {
@@ -41,14 +41,13 @@ it.each(["Emma", "Youssef", "Robin"])("fails closed when the structured audit re
     return answer(JSON.stringify(report));
   });
   const progress = vi.fn();
-  const failure = await LLMService.generateNotulen(raw, profile, progress).catch(error => error);
-  expect(failure).toBeInstanceOf(NotuleReviewError);
-  expect(failure.draftHtml).toBe(html);
+  const expected = appendWarnings([`Dit is gezegd, maar staat misschien niet in de notule: “${owner} controleert woensdag de offerte.”`], html);
+  expect(await LLMService.generateNotulen(raw, profile, progress)).toBe(expected);
   expect(invoke).toHaveBeenCalledTimes(3);
-  expect(progress).not.toHaveBeenCalled();
+  expect(progress).toHaveBeenCalledExactlyOnceWith(expected);
 });
 
-it("rejects contradictory permission with valid JSON evidence, not merely malformed audit syntax", async () => {
+it("flags contradictory permission with valid JSON evidence, not merely malformed audit syntax", async () => {
   const raw = "Er mogen geen persoonsgegevens naar leveranciers. Alex controleert vrijdag.";
   const html = `<p>${raw} Persoonsgegevens delen met leveranciers is toegestaan.</p>`;
   invoke.mockImplementation(async (_command, args) => {
@@ -57,8 +56,9 @@ it("rejects contradictory permission with valid JSON evidence, not merely malfor
     return answer(user.startsWith("Inhoudsaudit") ? auditFixture(user, "contradiction") : html);
   });
   const progress = vi.fn();
-  await expect(LLMService.generateNotulen(raw, profile, progress)).rejects.toBeInstanceOf(NotuleReviewError);
-  expect(progress).not.toHaveBeenCalled();
+  const result = await LLMService.generateNotulen(raw, profile, progress);
+  expect(result).toContain("<h2>Even nalopen</h2>");
+  expect(progress).toHaveBeenCalledExactlyOnceWith(result);
   expect(invoke).toHaveBeenCalledTimes(3);
 });
 
@@ -73,17 +73,16 @@ it("never labels a protected source condition non-factual to approve its omissio
     report.notes.forEach((n: { evidence: string[] }) => { n.evidence = ["T2"]; });
     return answer(JSON.stringify(report));
   });
-  await expect(LLMService.generateNotulen(raw, profile)).rejects.toThrow("expliciete beperkingen");
+  expect(await LLMService.generateNotulen(raw, profile)).toBe(appendWarnings([UNCHECKED_CONTENT_WARNING], "<p>Sam neemt vrijdag contact op.</p>"));
 });
 
-it("retains the generated candidate when the audit service fails, with no success or retry", async () => {
+it("keeps the notule with the general warning when the audit service fails, without retry", async () => {
   const html = "<p>Sam neemt vrijdag contact op.</p>";
   invoke.mockResolvedValueOnce(answer(html)).mockResolvedValueOnce(answer(sourceFixture(""))).mockResolvedValueOnce({ status: 500, body: "{}" });
   const progress = vi.fn();
-  const failure = await LLMService.generateNotulen("Sam belt vrijdag.", profile, progress).catch(error => error);
-  expect(failure).toBeInstanceOf(NotuleReviewError);
-  expect(failure.draftHtml).toBe(html);
-  expect(progress).not.toHaveBeenCalled();
+  const result = await LLMService.generateNotulen("Sam belt vrijdag.", profile, progress);
+  expect(result).toBe(appendWarnings([UNCHECKED_CONTENT_WARNING], html));
+  expect(result).not.toMatch(/\bT\d/);
   expect(invoke).toHaveBeenCalledTimes(3);
 });
 
@@ -95,13 +94,13 @@ it("adds the source warning to an approved notule when only the source check is 
     return answer(user.startsWith("Inhoudsaudit") ? auditFixture(user) : html);
   });
   const progress = vi.fn();
-  const expected = appendSourceWarning(UNCLEAR_SOURCE_WARNING, html);
+  const expected = `${html}<h2>Even nalopen</h2><ul><li>${UNCLEAR_SOURCE_WARNING}</li></ul>`;
   expect(await LLMService.generateNotulen("Sam belt vrijdag. Het zit op derf.", profile, progress)).toBe(expected);
   expect(progress).toHaveBeenCalledExactlyOnceWith(expected);
   expect(invoke).toHaveBeenCalledTimes(3);
 });
 
-it("retains a readable draft with the warning when the notule audit cannot understand the transcript", async () => {
+it("keeps the notule with both warnings when the notule audit cannot understand the transcript", async () => {
   const html = "<p>Een stellig verhaal over een pilot.</p>";
   invoke.mockImplementation(async (_command, args) => {
     const user = JSON.parse(args.request.body).messages.at(-1).content;
@@ -110,11 +109,9 @@ it("retains a readable draft with the warning when the notule audit cannot under
     return answer(html);
   });
   const progress = vi.fn();
-  const failure = await LLMService.generateNotulen("En mensen processen stok maken voorbij pilot zeker leeg.", profile, progress).catch(error => error);
-  expect(failure).toBeInstanceOf(NotuleReviewError);
-  expect(failure.draftHtml).toBe(appendSourceWarning(UNCLEAR_SOURCE_WARNING, html));
-  expect(failure.message).toContain("De inhoudscontrole is onzeker");
-  expect(progress).not.toHaveBeenCalled();
+  const expected = appendWarnings([UNCLEAR_SOURCE_WARNING, UNCHECKED_CONTENT_WARNING], html);
+  expect(await LLMService.generateNotulen("En mensen processen stok maken voorbij pilot zeker leeg.", profile, progress)).toBe(expected);
+  expect(progress).toHaveBeenCalledExactlyOnceWith(expected);
 });
 
 it("keeps a valid first draft instead of losing its actions in an unnecessary rewrite", async () => {

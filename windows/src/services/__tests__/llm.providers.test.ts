@@ -234,7 +234,7 @@ it.each(["ollama", "lm-studio", "openai", "anthropic"] as const)("preserves deci
   } finally { vi.unstubAllGlobals(); }
 });
 
-it.each(["ollama", "lm-studio", "openai", "anthropic"] as const)("rejects an audited contradictory %s draft before publishing notes", async provider => {
+it.each(["ollama", "lm-studio", "openai", "anthropic"] as const)("flags an audited contradictory %s draft in the notule (DEC-063)", async provider => {
   useSettingsStore.setState({ notulen_provider: provider, ollama_url: "https://ollama.com", ollama_model: "gpt-oss:120b" });
   loadCredential.mockResolvedValue("test-key");
   const raw = "Het contract is niet verlengd. De datum van donderdag vervalt. Kim was afwezig.";
@@ -245,19 +245,19 @@ it.each(["ollama", "lm-studio", "openai", "anthropic"] as const)("rejects an aud
     return { status: 200, body: JSON.stringify({ choices: [{ message: { content } }], content: [{ type: "text", text: content }] }) };
   });
   const progress = vi.fn();
-  await expect(LLMService.generateNotulen(raw, profile, progress)).rejects.toThrow();
-  expect(progress).not.toHaveBeenCalled();
+  expect(await LLMService.generateNotulen(raw, profile, progress)).toContain("<h2>Even nalopen</h2>");
+  expect(progress).toHaveBeenCalledOnce();
   expect(JSON.parse(invoke.mock.calls[0][1].request.body).messages.at(-1).content).toContain(raw);
 });
 
-it("fails rather than returning the draft when the factual audit is unavailable", async () => {
+it("returns the notule with the general warning when the factual audit is unavailable", async () => {
   useSettingsStore.setState({ notulen_provider: "openai" });
   loadCredential.mockResolvedValue("test-key");
   invoke.mockResolvedValue({ status: 200, body: JSON.stringify({ choices: [{ message: { content: "<p>Concept</p>" } }] }) });
   auditInvoke.mockResolvedValue({ status: 500, body: "{}" });
   const progress = vi.fn();
-  await expect(LLMService.generateNotulen("QA bron.", profile, progress)).rejects.toThrow("beoordeel het concept");
-  expect(progress).not.toHaveBeenCalled();
+  expect(await LLMService.generateNotulen("QA bron.", profile, progress)).toContain("<h2>Even nalopen</h2>");
+  expect(progress).toHaveBeenCalledOnce();
   expect(invoke).toHaveBeenCalledTimes(1);
 });
 
@@ -268,21 +268,21 @@ it("does not ask the checker to invent notes from an empty draft", async () => {
   expect(invoke).toHaveBeenCalledTimes(1);
 });
 
-it("rejects a checked note that still omits an explicit constraint instead of saving it", async () => {
+it("flags a checked note that still omits an explicit constraint", async () => {
   auditInvoke.mockResolvedValue({ status: 200, body: JSON.stringify({ choices: [{ message: { content: JSON.stringify({ source: [], notes: [], uncertain: true }) } }] }) });
   useSettingsStore.setState({ notulen_provider: "openai" });
   loadCredential.mockResolvedValue("test-key");
   invoke.mockResolvedValue({ status: 200, body: JSON.stringify({ choices: [{ message: { content: "<p>Het overleg is afgerond.</p>" } }] }) });
   const progress = vi.fn();
-  await expect(LLMService.generateNotulen("De afspraak voor donderdag vervalt.", profile, progress)).rejects.toThrow("beperkingen");
-  expect(progress).not.toHaveBeenCalled();
+  expect(await LLMService.generateNotulen("De afspraak voor donderdag vervalt.", profile, progress)).toContain("<h2>Even nalopen</h2>");
+  expect(progress).toHaveBeenCalledOnce();
 });
 
-it("does not accept constraints hidden in CSS as note content", async () => {
+it("flags constraints hidden in CSS as unchecked note content", async () => {
   auditInvoke.mockResolvedValue({ status: 200, body: JSON.stringify({ choices: [{ message: { content: JSON.stringify({ source: [], notes: [], uncertain: true }) } }] }) });
   useSettingsStore.setState({ notulen_provider: "openai" });
   loadCredential.mockResolvedValue("test-key");
   const raw = "Er is geen besluit over archivering genomen.";
   invoke.mockResolvedValue({ status: 200, body: JSON.stringify({ choices: [{ message: { content: `<style>/* ${raw} */</style><p>De archivering is besloten.</p>` } }] }) });
-  await expect(LLMService.generateNotulen(raw, profile)).rejects.toThrow("beperkingen");
+  expect(await LLMService.generateNotulen(raw, profile)).toContain("<h2>Even nalopen</h2>");
 });

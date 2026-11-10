@@ -1,9 +1,8 @@
 import Foundation
 import os
 
-/// Generates a notule once and audits it before anything may be saved as approved.
-/// Port of `LLMService.generateNotulen` in windows/src/services/llm.ts: a failed audit
-/// throws `NotuleReviewError` carrying the finished candidate so it can be kept apart.
+/// Generates a notule once and audits it. Port of `LLMService.generateNotulen` in
+/// windows/src/services/llm.ts: audit problems end up in an "Even nalopen" section, never block (DEC-063).
 struct NotuleGenerator: Sendable {
     let service: any LLMService
 
@@ -50,11 +49,12 @@ struct NotuleGenerator: Sendable {
             if Task.isCancelled || cancelled.withLock({ $0 }) { throw CancellationError() }
             try await NotuleAudit.auditNotule(source: source, html: candidate, quickNote: quickNote ?? "",
                                               request: request, requiredSentences: constraints)
-            return NotuleAudit.appendingWarning(warning, to: candidate)
+            return NotuleAudit.appendingWarnings([warning].compactMap { $0 }, to: candidate)
         } catch {
             if Task.isCancelled || cancelled.withLock({ $0 }) { throw CancellationError() }
-            throw NotuleReviewError(reason: "Feiten, acties en beperkingen konden niet worden bevestigd: \(error.localizedDescription)",
-                                    draftHtml: NotuleAudit.appendingWarning(warning, to: candidate))
+            // DEC-063: an audit problem never blocks the notule; it becomes a line in the warning section.
+            let finding = (error as? NotuleAuditError)?.finding ?? NotuleAudit.uncheckedContentWarning
+            return NotuleAudit.appendingWarnings([warning, finding].compactMap { $0 }, to: candidate)
         }
     }
 

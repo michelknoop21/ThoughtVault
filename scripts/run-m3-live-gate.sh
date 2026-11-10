@@ -27,7 +27,9 @@ contains_key() {
 }
 
 log="$(mktemp -t m3-live-gate)"
-trap 'rm -f "$log"' EXIT
+# tee keeps writing to $log until the end, so a separate start stamp marks this run's evidence.
+stamp="$(mktemp -t m3-live-gate-start)"
+trap 'rm -f "$log" "$stamp"' EXIT
 
 set +e
 heavy run --label m3-gate -- xcodebuild test \
@@ -46,7 +48,7 @@ run_dir="$(grep -o 'M3_EVIDENCE_DIR=.*' "$log" | tail -1 | cut -d= -f2- || true)
 # directory the sandboxed host wrote during this run.
 if [ -z "$run_dir" ]; then
   host_tmp="$HOME/Library/Containers/com.buildmind.ThoughtVault/Data/tmp"
-  run_dir="$(find "$host_tmp" -maxdepth 1 -type d -name 'M3-*' -newer "$log" 2>/dev/null | sort | tail -1)"
+  run_dir="$(find "$host_tmp" -maxdepth 1 -type d -name 'M3-*' -newer "$stamp" 2>/dev/null | sort | tail -1)"
 fi
 if [ -z "$run_dir" ] || [ ! -d "$run_dir" ]; then
   echo "No M3 evidence directory found (did the live test skip or crash?). xcodebuild exit: $status" >&2

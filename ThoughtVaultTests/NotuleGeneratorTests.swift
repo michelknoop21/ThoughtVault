@@ -122,7 +122,9 @@ final class NotuleGeneratorTests: XCTestCase {
         let html = "<p>Sam neemt dinsdag telefonisch contact op met de leverancier.</p>"
         let service = StubLLM(draft: html, audit: { _ in throw URLError(.timedOut) })
         let error = await reviewError { try await generate(service, "Sam belt dinsdag de leverancier.", quickNote: "Offerte nalopen") }
-        XCTAssertEqual(error?.draftHtml, html + "<h2>Notities</h2><p>Offerte nalopen</p>")
+        // The failed source check becomes a warning at the end of the draft.
+        XCTAssertEqual(error?.draftHtml, NotuleAudit.appendingWarning(NotuleAudit.uncheckedSourceWarning,
+                                                                      to: html + "<h2>Notities</h2><p>Offerte nalopen</p>"))
     }
 
     // "retains the generated candidate when the audit service fails, with no success or retry"
@@ -139,15 +141,28 @@ final class NotuleGeneratorTests: XCTestCase {
         XCTAssertEqual(service.audits.count, 2)
     }
 
-    // "retains a readable draft when a separate source-only check cannot understand the transcript"
-    func testUnclearSourceKeepsTheDraft() async {
-        let html = "<p>Een stellig verhaal over een pilot.</p>"
+    // An unsure source check no longer blocks: the notule audit decides, the notule carries the warning.
+    func testUnclearSourceAddsWarningToApprovedNotule() async throws {
+        let html = "<p>Sam neemt vrijdag contact op.</p>"
         let service = StubLLM(draft: html, audit: { user in
             user.hasPrefix("Broncontrole") ? #"{"uncertain":true}"# : try StubLLM.approve()(user)
         })
+        let result = try await generate(service, "Sam belt vrijdag. Het zit op derf.")
+        XCTAssertEqual(result, html + "<h2>Let op: controleer de transcriptie</h2><p>\(NotuleAudit.unclearSourceWarning)</p>")
+        XCTAssertEqual(service.audits.count, 2)
+    }
+
+    // "retains a readable draft when a separate source-only check cannot understand the transcript":
+    // the notule audit still rejects unintelligible source sentences, and the draft carries the warning.
+    func testUnclearSourceRejectedByNotuleAuditKeepsDraftWithWarning() async {
+        let html = "<p>Een stellig verhaal over een pilot.</p>"
+        let service = StubLLM(draft: html, audit: { user in
+            if user.hasPrefix("Broncontrole") { return #"{"uncertain":true}"# }
+            return try StubLLM.approve { $0["uncertain"] = true }(user)
+        })
         let error = await reviewError { try await generate(service, "En mensen processen stok maken voorbij pilot zeker leeg.") }
-        XCTAssertEqual(error?.draftHtml, html)
-        XCTAssertEqual(error?.reason, reviewPrefix + "De bron is onvoldoende duidelijk; beoordeel het concept")
+        XCTAssertEqual(error?.draftHtml, NotuleAudit.appendingWarning(NotuleAudit.unclearSourceWarning, to: html))
+        XCTAssertEqual(error?.reason, reviewPrefix + "De inhoudscontrole is onzeker; beoordeel het concept")
     }
 
     // "never labels a protected source condition non-factual to approve its omission"

@@ -6,6 +6,33 @@ _Decisions DEC-029 through DEC-038 archived to [archive/DECISIONS-DEC-029-to-DEC
 
 ---
 
+## DEC-062: Broncontrole als waarschuwing, de inhoudscontrole blijft de poort
+
+**Date:** 2026-11-10
+**Status:** Accepted
+
+**Context:** De lokale notule gaat door twee modelcontroles. `auditSource` beoordeelt zonder de notule of de transcriptie begrijpelijk is en wees af zodra één inhoudelijke passage niet betrouwbaar te duiden was. Daarna controleert `auditNotule` per bronzin en per notulezin. De broncontrole is gekalibreerd op een schone fictieve bron van 433 tekens (goedgekeurd) en een zwaar verhaspeld fragment van 771 tekens (afgewezen). Op een echte opname werkt dat niet. Met het exacte productieverzoek wees `mistral-large-4` het schadebezoek (Whisper, 42.831 tekens) af, net als `kimi-k2.6`, en in stukken van 4.000 tekens slaagde 0 van 11. Een schone tekst van dezelfde lengte, in dezelfde stukken, slaagde 11 van 11. Gevraagd naar de reden noemde het model in het eerste stuk acht verkeerd verstane passages, zoals "zit het bij de stadshuidloog" en "Het zit op derf". Echte spraakherkenning haalde deze poort dus nooit, en elke lokale notule van een echt gesprek werd een concept ter beoordeling.
+
+**Decision:**
+1. `auditSource` wijst niet meer af. Bij `uncertain: true` of een onbruikbaar antwoord geeft hij een waarschuwing terug; bij `uncertain: false` niets. Een lege of te grote bron blijft vóór de aanvraag een fout.
+2. `auditNotule` blijft de poort. Die markeert onbegrijpelijke bronzinnen zelf als `uncertain` en wijst dan af.
+3. De waarschuwing komt als laatste sectie in de notule ("Let op: controleer de transcriptie"), na de controle, zodat hij niet als bewering wordt gecontroleerd. Een afgewezen concept krijgt dezelfde sectie.
+4. De prompt van de broncontrole blijft byte voor byte gelijk op macOS en Windows. Daardoor blijven de prompt-hashes in de M3-gate en de Windows-opnames geldig. Citaten van de onduidelijke passages vragen een andere prompt en dus nieuwe opnames; die zijn niet gedaan.
+5. Een antwoord met lege `content` en de JSON alleen in het `reasoning`-veld (gezien bij `kimi-k2.6`) blijft een onbruikbaar antwoord. Er is geen terugval op `reasoning`: dat veld begint met denktekst, en de strikte parser die proza rond de JSON weigert blijft zo.
+
+**Alternatives considered:**
+- De broncontrole per stuk uitvoeren: bij echte opnames slaagde geen enkel stuk van 4.000 tekens, dus dat verandert niets aan de uitkomst.
+- De broncontrole verwijderen: de waarschuwing is nuttige informatie voor wie de notule leest, en de aanvraag kost één verzoek.
+- Terugvallen op het `reasoning`-veld (met of zonder het laatste JSON-object eruit te halen): verzwakt de strikte parser om een incidenteel modelgedrag op te vangen. Het concept ter beoordeling is de veilige uitkomst.
+
+**Consequences:**
+- Opname10, de onbegrijpelijke bron uit de QA-set, wordt nu door de inhoudscontrole afgewezen in plaats van door de broncontrole: met echte `kimi-k2.6`-antwoorden via de Windows-route 6 van 6 (`docs/qa/colleague-rollout-2026-11-09/content/kimi-k26-bronwaarschuwing/`). De M3-gate verwacht voor Opname10 nu twee aanvragen in plaats van één.
+- Een transport- of HTTP-fout in de broncontrole leidt nu tot een tweede aanvraag (de inhoudscontrole), die dan ook faalt. De uitkomst blijft een concept of transportfout, nooit een goedkeuring.
+- Het schadebezoek wordt hiermee nog niet goedgekeurd. Op de hele transcriptie (932 zinnen) weigert de inhoudscontrole vóór de aanvraag: de grens is 400 bron- plus notulezinnen, ongeveer 16.500 tekens transcriptie. Op de eerste 300 zinnen gaf `gpt-oss:120b` niet voor elke zin een oordeel ("Onvolledige inhoudscontrole"). Beide concepten droegen de waarschuwing. Lange gesprekken vragen een apart besluit over de inhoudscontrole.
+- Elke bronzin met "niet", "geen", "nooit" of "zonder" wordt een verplicht te behouden zin. In het schadebezoek zijn dat er ongeveer 150, en de notule nam ze letterlijk over. Dat is een apart probleem, buiten dit besluit.
+
+---
+
 ## DEC-061: Lerende context: één woordenlijst, één contextblok, voorstellen na de notule
 
 **Date:** 2026-11-09

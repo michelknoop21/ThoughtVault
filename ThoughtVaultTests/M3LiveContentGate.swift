@@ -90,7 +90,8 @@ struct M3Gate {
         var sourceAccepted = false
         var accepted = false
         do {
-            try await NotuleAudit.auditSource(source: testCase.source, quickNote: "", request: request)
+            // The source check only warns; auditNotule is the gate for every case.
+            _ = try await NotuleAudit.auditSource(source: testCase.source, quickNote: "", request: request)
             sourceAccepted = true
             try await NotuleAudit.auditNotule(source: testCase.source, html: testCase.html, quickNote: "", request: request,
                                               requiredSentences: NotuleAudit.constraintSentences(testCase.source))
@@ -139,11 +140,17 @@ struct M3Gate {
     /// Windows `target_semantic_finding`: the rejection must name the planted defect in a well-formed report.
     static func targetFinding(_ target: M3Fixture.Target?, _ exchanges: [M3GateRecorder.Exchange]) -> Bool {
         guard let target, let sourceReport = exchanges.first.flatMap(auditReport), isBool(sourceReport["uncertain"]) else { return false }
-        if target.side == "sourceCheck" { return sourceReport["uncertain"] as? Bool == true }
         guard exchanges.count == 2, let report = auditReport(exchanges[1]), let payload = auditPayload(exchanges[1]), isBool(report["uncertain"]),
               (report["source"] as? [Any])?.count == (payload["source"] as? [Any])?.count,
-              (report["notes"] as? [Any])?.count == (payload["notes"] as? [Any])?.count,
-              let units = payload[target.side] as? [[String: Any]], let verdicts = report[target.side] as? [[String: Any]],
+              (report["notes"] as? [Any])?.count == (payload["notes"] as? [Any])?.count
+        else { return false }
+        // An unclear source: the source check flags it and the notule audit rejects it as uncertain
+        // (the same fallback as modelcontrole-live-gate.ts).
+        if target.side == "sourceCheck" {
+            return sourceReport["uncertain"] as? Bool == true && (report["uncertain"] as? Bool == true
+                || (report["source"] as? [[String: Any]] ?? []).contains { $0["status"] as? String == "uncertain" })
+        }
+        guard let units = payload[target.side] as? [[String: Any]], let verdicts = report[target.side] as? [[String: Any]],
               let id = units.first(where: { ($0["text"] as? String)?.contains(target.contains) == true })?["id"] as? String
         else { return false }
         return verdicts.contains { $0["id"] as? String == id && target.statuses.contains($0["status"] as? String ?? "") }

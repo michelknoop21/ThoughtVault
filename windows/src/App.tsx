@@ -20,6 +20,8 @@ import { TasksPage } from "./pages/TasksPage";
 import { PeoplePage } from "./pages/PeoplePage";
 import { ProcessingBar } from "./components/ProcessingBar";
 import { OfflineQueueBanner } from "./components/OfflineQueueBanner";
+import { IdentityGate } from "./components/support/IdentityGate";
+import { isValidEmail, useSupportStore } from "./stores/supportStore";
 import { OnboardingWizard } from "./components/onboarding/OnboardingWizard";
 import { useAuthStore } from "./stores/authStore";
 import { useSettingsStore } from "./stores/settingsStore";
@@ -113,6 +115,7 @@ function KeyboardShortcuts() {
 }
 
 function ProtectedRoutes() {
+  const identityMissing = useSupportStore(s => !s.name.trim() || !isValidEmail(s.email));
   const { isAuthenticated, isInitializing } = useAuthStore();
   const { has_completed_onboarding, processing_mode, updateSettings } = useSettingsStore();
   const location = useLocation();
@@ -212,6 +215,10 @@ function ProtectedRoutes() {
 
   if (!canOpenRoute(location.pathname, processing_mode, isAuthenticated)) {
     return <Navigate to="/login" replace />;
+  }
+
+  if (identityMissing) {
+    return <div className="app-shell"><TitleBar /><IdentityGate /></div>;
   }
 
   if (!has_completed_onboarding && processing_mode !== "local") {

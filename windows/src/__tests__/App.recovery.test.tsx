@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
+import { useSupportStore } from "../stores/supportStore";
 import App from "../App";
 import { useAuthStore } from "../stores/authStore";
 import { useSettingsStore } from "../stores/settingsStore";
@@ -48,7 +49,8 @@ vi.mock("../components/layout/TitleBar", () => ({ TitleBar: () => null }));
 vi.mock("../components/layout/Sidebar", () => ({ Sidebar: () => null }));
 vi.mock("../components/calendar/CallAlertOverlay", () => ({ CallAlertOverlay: () => null }));
 vi.mock("../components/ProcessingBar", () => ({ ProcessingBar: () => null }));
-vi.mock("../components/onboarding/OnboardingWizard", () => ({ OnboardingWizard: () => null }));
+vi.mock("../components/support/IdentityGate", () => ({ IdentityGate: () => <p>naamscherm</p> }));
+vi.mock("../components/onboarding/OnboardingWizard", () => ({ OnboardingWizard: () => <p>onboarding</p> }));
 vi.mock("../pages/LoginPage", () => ({ LoginPage: () => null }));
 vi.mock("../pages/HomePage", () => ({ HomePage: () => {
   if (mocks.failChild) throw new Error("Transient child failure");
@@ -64,6 +66,7 @@ vi.mock("../pages/PeoplePage", () => ({ PeoplePage: () => null }));
 
 let root: Root;
 beforeEach(async () => {
+  useSupportStore.setState({ name: "Test", email: "test@example.com" });
   mocks.complete = undefined;
   mocks.failChild = false;
   useAuthStore.setState({ isAuthenticated: true, isInitializing: false });
@@ -193,4 +196,38 @@ it("claims a task only once when two recovery requests settle after a boundary r
   expect(useRecordingStore.getState().backgroundTasks).toEqual([expect.objectContaining({ task_id: "race" })]);
   expect(mocks.connect).toHaveBeenCalledTimes(connections + 1);
   consoleError.mockRestore();
+});
+
+it.each([
+  ["", "test@example.com"], ["Test", ""], ["Test", "test@"], ["   ", "test@example.com"],
+])("requires identity for existing local users (%s, %s)", async (name, email) => {
+  await act(async () => root.unmount());
+  useSettingsStore.setState({ processing_mode: "local", has_completed_onboarding: true });
+  useSupportStore.setState({ name, email });
+  const host = document.createElement("div");
+  root = createRoot(host);
+  const mounts = mocks.rootMounts;
+  vi.mocked(useSupportLifecycle).mockClear();
+  await act(async () => root.render(<App />));
+  expect(mocks.rootMounts).toBe(mounts + 1);
+  expect(useSupportLifecycle).toHaveBeenCalled();
+  expect(host.textContent).toContain("naamscherm");
+});
+
+it("gates before cloud onboarding without stopping recovered task hooks", async () => {
+  await act(async () => root.unmount());
+  useSupportStore.setState({ name: "", email: "" });
+  useSettingsStore.setState({ has_completed_onboarding: false });
+  const host = document.createElement("div");
+  root = createRoot(host);
+  const mounts = mocks.rootMounts;
+  vi.mocked(useSupportLifecycle).mockClear();
+  await act(async () => root.render(<App />));
+  expect(mocks.rootMounts).toBe(mounts + 1);
+  expect(useSupportLifecycle).toHaveBeenCalled();
+  expect(host.textContent).toContain("naamscherm");
+  expect(host.textContent).not.toContain("onboarding");
+  expect(mocks.complete).toBeTypeOf("function");
+  await act(async () => useSupportStore.setState({ name: "Test", email: "test@example.com" }));
+  expect(host.textContent).toContain("onboarding");
 });

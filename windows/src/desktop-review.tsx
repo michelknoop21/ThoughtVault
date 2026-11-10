@@ -1,3 +1,6 @@
+import { useEffect, useState } from "react";
+import { IdentityGate } from "./components/support/IdentityGate";
+import { useSupportStore } from "./stores/supportStore";
 import { RecordingWidget } from "./components/recording/RecordingWidget";
 import { OnboardingWizard } from "./components/onboarding/OnboardingWizard";
 import { SeedReviewSheet } from "./pages/SeedReviewSheet";
@@ -40,6 +43,7 @@ Object.assign(window, { __TAURI_INTERNALS__: {
  },
 }, __TAURI_EVENT_PLUGIN_INTERNALS__: {unregisterListener: () => {}} });
 window.fetch = async () => { throw new Error("Review fixture blocks network access"); };
+useSupportStore.setState({ name: "Review", email: "review@example.com" });
 useSettingsStore.setState({processing_mode:"local",has_completed_onboarding:true});
 useLocalTranscriptsStore.setState({items:Array.from({length:8}, (_, i) => ({id:`local-review-${i}`,title:["Projectoverleg","Idee voor volgende week","Voorbereiding klantgesprek"][i%3],duration_seconds:180,tags:[],created_at:new Date().toISOString(),updated_at:new Date().toISOString(),raw_transcription:"Jengo bespreekt de planning.",notule_html:"<h2>Besproken</h2><p>Jengo bespreekt de planning.</p>"}))});
 usePeopleDirectoryStore.setState({people: [usePeopleDirectoryStore.getState().createDefaultPerson({name:"Voorbeeld persoon",role:"Projectleider",organization:"Voorbeeldteam",responsibilities:["Planning bewaken"]})]});
@@ -49,7 +53,12 @@ reviewContextFiles.set("context-suggestions.json", JSON.stringify({"local-review
  people:[{name:"Sanne Bakker",role:"Projectleider",organization:"Gemeente Utrecht",responsibilities:["Planning","Subsidieaanvraag"],topics:["Subsidie"],heardAs:["Sanne Backer"],candidateIds:[]},
   {name:"Voorbeeld persoon",role:"Teamleider",organization:"",responsibilities:[],topics:[],heardAs:["Voorbeeld P."],matchedPersonId:usePeopleDirectoryStore.getState().people[0].id,candidateIds:[]}]}}));
 if (new URLSearchParams(location.search).get("scenario") === "recording") useRecordingStore.setState({phase:"recording",recordingStartedAt:Date.now()});
+function IdentityReview() {
+ const [ready, setReady] = useState(false);
+ useEffect(() => { useSupportStore.setState({ name: "", email: "" }); setReady(true); }, []);
+ return <div className="app-shell" data-theme="dark"><TitleBar/>{ready && <IdentityGate/>}</div>;
+}
 const pages = {"/onboarding":<OnboardingWizard/>,"/seed-review":<SeedReviewSheet candidates={["voorbeeld@example.test"]} onClose={() => history.back()}/>,"/":<HomePage/>,"/recording":<RecordingPage/>,"/tasks":<TasksPage/>,"/transcripts":<TranscriptsPage/>,"/profiles":<ProfilesPage/>,"/people":<PeoplePage/>,"/settings":<SettingsPage/>};
 if (new URLSearchParams(location.search).get("scenario") === "widget") {
  void import("./styles/widget.css").then(() => { const root = document.getElementById("root")!; root.id = "widget-root"; ReactDOM.createRoot(root).render(<RecordingWidget/>); });
-} else ReactDOM.createRoot(document.getElementById("root")!).render(<HashRouter><div className="app-shell" data-theme="dark"><TitleBar/><div style={{flex:1,display:"flex",minHeight:0}}><Sidebar/><main className="app-main"><div className="app-main-content"><Routes>{Object.entries(pages).map(([path,element]) => <Route key={path} path={path} element={element}/>)}</Routes></div></main></div></div></HashRouter>);
+} else ReactDOM.createRoot(document.getElementById("root")!).render(<HashRouter><Routes><Route path="/identity" element={<IdentityReview/>}/><Route path="/*" element={<div className="app-shell" data-theme="dark"><TitleBar/><div style={{flex:1,display:"flex",minHeight:0}}><Sidebar/><main className="app-main"><div className="app-main-content"><Routes>{Object.entries(pages).map(([path,element]) => <Route key={path} path={path} element={element}/>)}</Routes></div></main></div></div>}/></Routes></HashRouter>);

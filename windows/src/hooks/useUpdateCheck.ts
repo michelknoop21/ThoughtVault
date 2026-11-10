@@ -1,6 +1,7 @@
 import type { Update } from "@tauri-apps/plugin-updater";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSettingsStore } from "../stores/settingsStore";
+import { isBusy, useRecordingStore } from "../stores/recordingStore";
 
 const RELEASES_URL = "https://thoughtvault.yinga.ai/d-05921304471ce66e62d0a2b7f324c2354dfb1d895d23a895bba7f86110e2472e/releases.json";
 const DOWNLOAD_BASE = "https://thoughtvault.yinga.ai";
@@ -56,13 +57,13 @@ export function useUpdateCheck() {
             if (useSettingsStore.getState().check_for_updates) {
               const p = candidate.download().then(
                 () => {
-                  if (updateRef.current !== candidate) return;
+                  if (unmountedRef.current || updateRef.current !== candidate) return;
                   downloadedRef.current = true;
                   setDownloaded(true);
                 },
                 (e) => {
+                  if (unmountedRef.current || updateRef.current !== candidate) return;
                   console.warn("Update download failed", e);
-                  if (updateRef.current !== candidate) return;
                   downloadRef.current = null;
                   downloadedRef.current = false;
                   setDownloaded(false);
@@ -104,6 +105,40 @@ export function useUpdateCheck() {
       unmountedRef.current = true;
       if (!downloadedRef.current) void updateRef.current?.close().catch(() => {});
     };
+  }, []);
+
+  // Install a downloaded update when the window closes and nothing is running.
+  useEffect(() => {
+    if (!("__TAURI_INTERNALS__" in window)) return;
+    let disposed = false;
+    let installing = false;
+    let unlisten: (() => void) | null = null;
+    void (async () => {
+      try {
+        const { getCurrentWindow } = await import("@tauri-apps/api/window");
+        const un = await getCurrentWindow().onCloseRequested(async (event) => {
+          if (disposed) return;
+          if (installing) { event.preventDefault(); return; }
+          const update = updateRef.current;
+          if (!update || !downloadedRef.current) return;
+          if (!useSettingsStore.getState().check_for_updates) return;
+          if (isBusy(useRecordingStore.getState())) return;
+          event.preventDefault();
+          installing = true;
+          try {
+            await update.install();
+          } catch (e) {
+            console.warn("Update install failed", e);
+            // preventDefault stopped the default close, so close by hand.
+            try { await getCurrentWindow().destroy(); } catch { /* nothing left to do */ }
+          } finally {
+            installing = false;
+          }
+        });
+        if (disposed) un(); else unlisten = un;
+      } catch { /* not running inside Tauri */ }
+    })();
+    return () => { disposed = true; unlisten?.(); };
   }, []);
 
   useEffect(() => {

@@ -34,6 +34,7 @@ import { initCrashReporter } from "./services/crashReporter";
 import { installClickPath, installConsoleForwarding, logRoute } from "./services/appLog";
 import { initMeetingNotifications } from "./services/meetingNotifications";
 import { useGlobalRecordingHandler } from "./hooks/useGlobalRecordingHandler";
+import { useSupportLifecycle } from "./hooks/useSupportLifecycle";
 import { useToast } from "./components/ui/InfoBar";
 import type { Profile } from "./types";
 import { canOpenRoute, shouldBlockForLocalNotes } from "./services/routeAccess";
@@ -101,7 +102,7 @@ function KeyboardShortcuts() {
 
       // Escape = Close modals (handled by individual components)
 
-      // Don't intercept Ctrl+R — let the webview handle refresh
+      // Production document reload is denied by the native main navigation guard.
     }
 
     window.addEventListener("keydown", handleKeyDown);
@@ -165,6 +166,8 @@ function ProtectedRoutes() {
       try {
         const activeTasks = await api.getActiveTasks();
         for (const task of activeTasks) {
+          // Read now: another recovery response or the existing realm may already own this task.
+          if (useRecordingStore.getState().backgroundTasks.some((current) => current.task_id === task.task_id)) continue;
           addBackgroundTask({
             task_id: task.task_id,
             status: task.status as "uploading",
@@ -274,6 +277,7 @@ export default function App() {
   const updates = useUpdateCheck();
   useEffect(startSupportOwner, []);
   useGlobalRecordingHandler();
+  useSupportLifecycle();
   const [updateRequired, setUpdateRequired] = useState<{ current: string; minimum: string } | null>(null);
   const processingMode = useSettingsStore((s) => s.processing_mode);
   const [localReady, setLocalReady] = useState(false);

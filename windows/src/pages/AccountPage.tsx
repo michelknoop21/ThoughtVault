@@ -1,3 +1,4 @@
+import { openNoteLink } from "../services/externalLinks";
 import { useState, useEffect } from "react";
 import {
   Person24Regular,
@@ -517,6 +518,8 @@ export function AccountPage() {
                     Neem contact op met{" "}
                     <a
                       href="mailto:support@prezent.nl?subject=Account%20verwijderen%20ThoughtVault"
+                      onClick={openNoteLink}
+                      onAuxClick={openNoteLink}
                       style={{ color: "var(--text-accent)", textDecoration: "none" }}
                     >
                       support@prezent.nl

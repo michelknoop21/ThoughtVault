@@ -69,15 +69,13 @@ export class ErrorBoundary extends Component<Props, State> {
           <button
             onClick={() => {
               this.setState({ hasError: false, error: null });
-              window.location.hash = "/";
-              window.location.reload();
             }}
             className="btn btn-accent"
             style={{
               fontFamily: "inherit",
             }}
           >
-            Herlaad applicatie
+            Opnieuw proberen
           </button>
         </div>
       );

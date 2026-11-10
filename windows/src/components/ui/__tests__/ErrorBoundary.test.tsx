@@ -15,3 +15,32 @@ it("reports a render failure without uploading the error or component stack", as
   await act(async () => root.unmount());
   consoleError.mockRestore();
 });
+
+it("retries in the existing realm while capture and a local continuation retain their context", async () => {
+  const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+  const { useRecordingStore } = await import("../../../stores/recordingStore");
+  const previous = useRecordingStore.getState();
+  const task = { task_id: "local", status: "transcribing" as const, created_at: "2026-11-10" };
+  useRecordingStore.setState({ phase: "recording", selectedProfileId: "profile", selectedParticipantIds: ["person"], recordingStartedAt: 42, backgroundTasks: [task] });
+  let finish!: () => void;
+  const continuation = new Promise<void>(resolve => { finish = resolve; }).then(() => {
+    useRecordingStore.getState().updateBackgroundTask("local", { progress: 81 });
+  });
+  let fail = true;
+  function Child() { if (fail) throw new Error("Transient render failure"); return <span>Recovered</span>; }
+  const host = document.createElement("div");
+  const root = createRoot(host);
+  const pathname = window.location.pathname;
+  const hash = window.location.hash;
+  await act(async () => root.render(<ErrorBoundary><Child /></ErrorBoundary>));
+  fail = false;
+  await act(async () => { host.querySelector("button")!.click(); });
+  await act(async () => { finish(); await continuation; });
+  expect(host.textContent).toBe("Recovered");
+  expect(window.location.pathname).toBe(pathname);
+  expect(window.location.hash).toBe(hash);
+  expect(useRecordingStore.getState()).toMatchObject({ phase: "recording", selectedProfileId: "profile", selectedParticipantIds: ["person"], recordingStartedAt: 42, backgroundTasks: [{ ...task, progress: 81 }] });
+  await act(async () => root.unmount());
+  useRecordingStore.setState(previous, true);
+  consoleError.mockRestore();
+});

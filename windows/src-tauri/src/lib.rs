@@ -4,6 +4,7 @@ mod audio;
 mod commands;
 mod transcribe;
 mod personal_corrections;
+mod main_navigation;
 
 use commands::audio::SharedRecordingState;
 use std::sync::{Arc, Mutex};
@@ -48,7 +49,14 @@ pub fn run() {
                 applog::write("error", "panic", &format!("panic at {location}"));
                 default(info);
             }));
-            let main_window = app.get_webview_window("main").unwrap();
+            let main_config = app.config().app.windows.iter()
+                .find(|window| window.label == "main")
+                .ok_or("main window configuration missing")?;
+            let expected = main_navigation::packaged_main_url(main_config, &app.config().build)?;
+            let navigation = main_navigation::MainNavigation::new(expected);
+            let main_window = tauri::WebviewWindowBuilder::from_config(app, main_config)?
+                .on_navigation(move |url| navigation.allows("main", url.as_str(), cfg!(debug_assertions)))
+                .build()?;
 
             // Apply Windows 11 Mica effect to main window
             #[cfg(target_os = "windows")]

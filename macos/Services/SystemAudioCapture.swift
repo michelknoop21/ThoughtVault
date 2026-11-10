@@ -2,10 +2,9 @@
 @preconcurrency import AVFoundation
 import CoreAudio
 import Foundation
-import OSLog
 import os
 
-private let log = OSLog(subsystem: "com.buildmind.ThoughtVault", category: "SystemAudio")
+private let log = AppLog(category: "SystemAudio")
 
 struct CaptureResult {
     let systemAudioURL: URL?
@@ -190,8 +189,7 @@ final class SystemAudioCapture {
         ioQueue.sync {
             writer?.finishTimeline()
             if let writer {
-                os_log("[SystemAudio] Captured %llu frames, wrote %llu frames", log: log,
-                       writer.framesReceived, writer.framesWritten)
+                log.info("[SystemAudio] Captured \(writer.framesReceived) frames, wrote \(writer.framesWritten) frames")
             }
         }
         writer = nil
@@ -348,7 +346,7 @@ private final class TapAudioWriter: @unchecked Sendable {
                 liveHandler.append(converted)
             }
         } catch {
-            os_log("[SystemAudio] Audio write failed: %{public}@", log: log, error.localizedDescription)
+            log.error("[SystemAudio] Audio write failed: code=\((error as NSError).code), \(LogRedact.mask(error.localizedDescription))")
         }
     }
 
@@ -360,7 +358,7 @@ private final class TapAudioWriter: @unchecked Sendable {
         do {
             try writeSilence(until: timeline.framePosition(at: AVAudioTime.seconds(forHostTime: mach_absolute_time())))
         } catch {
-            os_log("[SystemAudio] Final timeline write failed: %{public}@", log: log, error.localizedDescription)
+            log.error("[SystemAudio] Final timeline write failed: code=\((error as NSError).code), \(LogRedact.mask(error.localizedDescription))")
         }
     }
 

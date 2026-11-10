@@ -5,9 +5,8 @@
 // Manages active backend tasks with auto-refresh, cancel, and delete support.
 
 import Foundation
-import OSLog
 
-private let logger = Logger(subsystem: "com.buildmind.ThoughtVault", category: "TasksViewModel")
+private let logger = AppLog(category: "TasksViewModel")
 
 @MainActor
 @Observable
@@ -36,7 +35,7 @@ final class TasksViewModel {
             logger.info("Loaded \(self.activeTasks.count) active tasks")
         } catch {
             errorMessage = error.localizedDescription
-            logger.error("Failed to load active tasks: \(error.localizedDescription)")
+            logger.error("Failed to load active tasks: \(LogRedact.mask(error.localizedDescription))")
         }
         isLoading = false
     }
@@ -47,11 +46,11 @@ final class TasksViewModel {
     func cancelTask(_ taskId: String) async {
         do {
             try await APIService.shared.cancelTask(taskId: taskId)
-            logger.info("Cancelled task \(taskId)")
+            logger.info("Cancelled task \(LogRedact.mask(taskId))")
             await loadActiveTasks()
         } catch {
             errorMessage = error.localizedDescription
-            logger.error("Failed to cancel task \(taskId): \(error.localizedDescription)")
+            logger.error("Failed to cancel task \(LogRedact.mask(taskId)): \(LogRedact.mask(error.localizedDescription))")
         }
     }
 
@@ -62,10 +61,10 @@ final class TasksViewModel {
         do {
             try await APIService.shared.deleteTask(taskId: taskId)
             activeTasks.removeAll { $0.taskId == taskId }
-            logger.info("Deleted task \(taskId)")
+            logger.info("Deleted task \(LogRedact.mask(taskId))")
         } catch {
             errorMessage = error.localizedDescription
-            logger.error("Failed to delete task \(taskId): \(error.localizedDescription)")
+            logger.error("Failed to delete task \(LogRedact.mask(taskId)): \(LogRedact.mask(error.localizedDescription))")
         }
     }
 

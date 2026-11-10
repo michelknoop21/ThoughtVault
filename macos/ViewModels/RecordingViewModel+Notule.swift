@@ -7,9 +7,8 @@
 
 import AVFoundation
 import Foundation
-import os.log
 
-private let log = OSLog(subsystem: "com.buildmind.ThoughtVault", category: "RecordingVM")
+private let log = AppLog(category: "RecordingVM")
 
 extension RecordingViewModel {
 
@@ -83,12 +82,12 @@ extension RecordingViewModel {
             return
         } catch let review as NotuleReviewError {
             // No cloud fallback: the backend would produce an unaudited notule.
-            os_log("[RecordingVM] Local notule rejected by the audit: %{public}@", log: log, type: .error, (review.supportReason ?? "Inhoudscontrole mislukt"))
+            log.error("[RecordingVM] Local notule rejected by the audit: \(LogRedact.mask(review.supportReason ?? "Inhoudscontrole mislukt"))")
             let message = keepRejectedDraft(review, taskId: localId)
             isGeneratingLocally = false
             updateTask(localId, status: .error, errorMessage: message, supportMessage: review.supportReason ?? "Inhoudscontrole mislukt")
         } catch {
-            os_log("[RecordingVM] Local notule generation failed: %{public}@", log: log, type: .error, Self.supportFailureMessage(error))
+            log.error("[RecordingVM] Local notule generation failed: \(LogRedact.mask(Self.supportFailureMessage(error)))")
             // No cloud fallback either: the backend notule is unaudited. The transcription
             // is already saved, so the user can retry.
             let reason = Self.friendlyNotuleFailureReason(error)

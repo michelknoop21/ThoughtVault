@@ -103,6 +103,7 @@ struct ContentView: View {
             }
         }
         .onChange(of: selectedTab) { _, newTab in
+            AppLog.clickPath.info("Tab \(newTab.rawValue)")
             if newTab != .transcripts { homeSearch = "" }
             transcriptsNavPath = NavigationPath()
             if let transcript = pendingTranscript {

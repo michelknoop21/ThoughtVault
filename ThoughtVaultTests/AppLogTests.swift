@@ -168,6 +168,41 @@ final class AppLogTests: XCTestCase {
         XCTAssertFalse(tail.contains(domain))
     }
 
+    #if os(macOS)
+    @MainActor
+    func testRecordingActionWritesClickPath() async {
+        let defaults = UserDefaults.standard
+        let previousArguments = defaults.volatileDomain(forName: UserDefaults.argumentDomain)
+        var localArguments = previousArguments
+        localArguments["processingMode"] = ProcessingMode.local.rawValue
+        defaults.setVolatileDomain(localArguments, forName: UserDefaults.argumentDomain)
+        var vm: RecordingViewModel? = RecordingViewModel()
+        weak var pendingVM = vm
+        XCTAssertEqual(vm?.recordingState, .idle)
+        vm?.resumeRecording()
+        await AppLog.flush()
+        let tail = await AppLog.tail()
+        XCTAssertEqual(AppLog.clickPath(in: tail).last, "Opname hervatten")
+        XCTAssertEqual(vm?.recordingState, .idle)
+        vm = nil
+        // A pending init task must never regain cloud mode, even if this test fails.
+        let clock = ContinuousClock()
+        let deadline = clock.now.advanced(by: .seconds(2))
+        while pendingVM != nil, clock.now < deadline {
+            do { try await Task.sleep(for: .milliseconds(10)) }
+            catch {
+                XCTFail("Initializer wait cancelled; retaining local mode for this test process")
+                return
+            }
+        }
+        guard pendingVM == nil else {
+            XCTFail("Initializer still pending; retaining local mode for this test process")
+            return
+        }
+        defaults.setVolatileDomain(previousArguments, forName: UserDefaults.argumentDomain)
+    }
+    #endif
+
     private func assertToken(_ text: String, file: StaticString = #filePath, line: UInt = #line) {
         XCTAssertNotNil(text.range(of: #"k-[0-9a-f]{6}"#, options: .regularExpression), text, file: file, line: line)
     }

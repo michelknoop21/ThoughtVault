@@ -1,12 +1,11 @@
 import AVFoundation
 import Foundation
-import OSLog
 import SwiftUI
 #if os(macOS)
 import AppKit
 #endif
 
-private let log = OSLog(subsystem: "com.buildmind.ThoughtVault", category: "RecordingVM")
+private let log = AppLog(category: "RecordingVM")
 
 // MARK: - RecordingViewModel
 
@@ -270,7 +269,7 @@ final class RecordingViewModel {
                 let remote = try await APIService.shared.getProfiles()
                 profiles = Profile.currentChoices(remote)
             } catch {
-                os_log("[RecordingVM] Could not load profiles from API, using defaults: %{public}@", log: .default, type: .error, error.localizedDescription)
+                log.error("[RecordingVM] Could not load profiles from API, using defaults: \(LogRedact.mask(error.localizedDescription))")
                 profiles = Profile.defaults
             }
         }
@@ -318,6 +317,7 @@ final class RecordingViewModel {
     // MARK: - Recording Lifecycle
 
     func startRecording() async {
+        AppLog.clickPath.info("Opname starten")
         guard recordingState == .idle, !updateInstalling else { return }
 
         await MainActor.run {
@@ -383,6 +383,7 @@ final class RecordingViewModel {
     }
 
     func pauseRecording() {
+        AppLog.clickPath.info("Opname pauzeren")
         guard case .recording = recordingState else { return }
 #if os(macOS)
         if selectedMode != .systemAudio {
@@ -403,6 +404,7 @@ final class RecordingViewModel {
     }
 
     func resumeRecording() {
+        AppLog.clickPath.info("Opname hervatten")
         guard case .paused = recordingState else { return }
 #if os(macOS)
         if selectedMode != .systemAudio {
@@ -419,9 +421,10 @@ final class RecordingViewModel {
     }
 
     func stopAndUpload() async {
+        AppLog.clickPath.info("Opname stoppen")
         guard recordingState == .recording || recordingState == .paused else { return }
 
-        os_log("[RecordingVM] stopAndUpload: state=%{public}@, profile=%{public}@", log: log, type: .info, "\(recordingState)", selectedProfile?.name ?? "nil")
+        log.info("[RecordingVM] stopAndUpload: state=\(recordingState), profile=\(LogRedact.mask(selectedProfile?.name ?? "nil"))")
 
         // Capture attendees before clearing activeMeeting (D-07 / T-02-06).
         // Signal is set after recordingState settles to .idle so the View layer
@@ -462,9 +465,9 @@ final class RecordingViewModel {
 
         // Validate file has actual audio content (16kHz mono 16-bit = ~32KB/sec, minimum 3 seconds)
         let fileSize = (try? FileManager.default.attributesOfItem(atPath: url.path))?[.size] as? Int64 ?? 0
-        os_log("[RecordingVM] stopAndUpload: fileSize=%lld, network=%{public}@", log: log, type: .info, fileSize, networkMonitor.isConnected ? "connected" : "offline")
+        log.info("[RecordingVM] stopAndUpload: fileSize=\(fileSize), network=\(networkMonitor.isConnected ? "connected" : "offline")")
         if fileSize < 96_000 {
-            os_log("[RecordingVM] Recording file too small (%lld bytes), likely too short", log: log, type: .error, fileSize)
+            log.error("[RecordingVM] Recording file too small (\(fileSize) bytes), likely too short")
             await MainActor.run {
                 recordingState = .error("Opname is te kort (minimaal 3 seconden). Probeer opnieuw.")
             }
@@ -494,7 +497,7 @@ final class RecordingViewModel {
     func dispatchProcessing(url: URL, profile: Profile, participants: [Participant]) async {
         // Fully local mode: transcribe + generate notulen on-device, no server needed.
         if isLocalMode {
-            os_log("[RecordingVM] dispatchProcessing: path=local", log: log, type: .info)
+            log.info("[RecordingVM] dispatchProcessing: path=local")
             await processLocally(url: url, profileId: profile.id, participants: participants)
             return
         }
@@ -510,14 +513,14 @@ final class RecordingViewModel {
             let canUseOnDevice = preferOnDeviceTranscription && onDeviceTranscriptionAvailable
 #endif
             if canUseOnDevice {
-                os_log("[RecordingVM] dispatchProcessing: path=onDevice", log: log, type: .info)
+                log.info("[RecordingVM] dispatchProcessing: path=onDevice")
                 await transcribeOnDeviceThenUpload(url: url, profileId: profile.id, participants: participants)
             } else {
-                os_log("[RecordingVM] dispatchProcessing: path=cloud", log: log, type: .info)
+                log.info("[RecordingVM] dispatchProcessing: path=cloud")
                 await uploadFile(url, profileId: profile.id, participants: participants)
             }
         } else {
-            os_log("[RecordingVM] dispatchProcessing: path=offline", log: log, type: .info)
+            log.info("[RecordingVM] dispatchProcessing: path=offline")
             await handleOfflineRecording(url: url)
         }
     }
@@ -526,6 +529,7 @@ final class RecordingViewModel {
     /// the persistent Recordings directory and runs it through the standard pipeline.
     /// The picked URL is security-scoped (from .fileImporter).
     func importAudioFile(_ pickedURL: URL) async {
+        AppLog.clickPath.info("Bestand importeren")
         guard !updateInstalling else { return }
         let accessed = pickedURL.startAccessingSecurityScopedResource()
         defer { if accessed { pickedURL.stopAccessingSecurityScopedResource() } }
@@ -551,7 +555,7 @@ final class RecordingViewModel {
                 try FileManager.default.copyItem(at: pickedURL, to: dest)
             }
         } catch {
-            os_log("[RecordingVM] importAudioFile: import failed: %{public}@", log: log, type: .error, error.localizedDescription)
+            log.error("[RecordingVM] importAudioFile: import failed: \(LogRedact.mask(error.localizedDescription))")
             await MainActor.run {
                 recordingState = .error(isVideo ? error.localizedDescription : "Kon het audiobestand niet importeren.")
             }
@@ -569,6 +573,7 @@ final class RecordingViewModel {
     }
 
     func cancelRecording() async {
+        AppLog.clickPath.info("Opname annuleren")
         guard recordingState == .recording || recordingState == .paused else { return }
 
         await stopLiveTranscription()
@@ -595,7 +600,7 @@ final class RecordingViewModel {
     // MARK: - Upload
 
     func uploadFile(_ url: URL, profileId: String, participants: [Participant] = []) async {
-        os_log("[RecordingVM] uploadFile: starting for %{public}@", log: log, type: .info, url.lastPathComponent)
+        log.info("[RecordingVM] uploadFile: starting for \(LogRedact.mask(url.lastPathComponent))")
 
         // Create a temporary task so the upload is immediately visible in the task list
         let tempId = "upload-\(UUID().uuidString)"
@@ -630,7 +635,7 @@ final class RecordingViewModel {
 
                 try Task.checkCancellation()
 
-                os_log("[RecordingVM] uploadFile: success, taskId=%{public}@", log: log, type: .info, task.taskId)
+                log.info("[RecordingVM] uploadFile: success, taskId=\(LogRedact.mask(task.taskId))")
 
                 await MainActor.run {
                     // Replace temp task with real server task
@@ -647,13 +652,13 @@ final class RecordingViewModel {
                 loadSavedRecordings()
 
             } catch is CancellationError {
-                os_log("[RecordingVM] Upload cancelled by user", log: log, type: .info)
+                log.info("[RecordingVM] Upload cancelled by user")
                 await MainActor.run {
                     self.activeTasks.removeAll { $0.id == tempId }
                 }
             } catch let error as APIError {
                 if RecordingViewModel.isAuthError(error) {
-                    os_log("[RecordingVM] Auth error during upload — enqueuing to offline queue", log: .default, type: .info)
+                    log.info("[RecordingVM] Auth error during upload — enqueuing to offline queue")
                     self.offlineQueue.enqueue(.audio(url: url))
                     await MainActor.run {
                         self.offlineStatusMessage = "Upload uitgesteld vanwege een sessiefout. De opname is opgeslagen en wordt automatisch opnieuw geprobeerd."
@@ -664,9 +669,9 @@ final class RecordingViewModel {
                     self.updateTask(tempId, status: .error, errorMessage: error.localizedDescription, supportMessage: Self.supportFailureMessage(error))
                     self.lastFailedRecording = self.savedRecordings.first { $0.filename == url.lastPathComponent }
                 }
-                os_log("[RecordingVM] Upload failed: %{public}@", log: .default, type: .error, Self.supportFailureMessage(error))
+                log.error("[RecordingVM] Upload failed: \(LogRedact.mask(Self.supportFailureMessage(error)))")
             } catch {
-                os_log("[RecordingVM] Upload failed (non-API): %{public}@", log: .default, type: .error, Self.supportFailureMessage(error))
+                log.error("[RecordingVM] Upload failed (non-API): \(LogRedact.mask(Self.supportFailureMessage(error)))")
                 loadSavedRecordings()
                 await MainActor.run {
                     self.updateTask(tempId, status: .error, errorMessage: error.localizedDescription, supportMessage: Self.supportFailureMessage(error))
@@ -849,7 +854,7 @@ final class RecordingViewModel {
             await MainActor.run { self.cancelLocalTaskCleanup(localId) }
             return
         } catch {
-            os_log("[RecordingVM] processLocally transcription failed: %{public}@", log: log, type: .error, error.localizedDescription)
+            log.error("[RecordingVM] processLocally transcription failed: \(LogRedact.mask(error.localizedDescription))")
             await MainActor.run {
                 self.updateTask(localId, status: .error, errorMessage: Self.transcriptionFailureMessage(error))
                 self.localProcessingTasks.removeValue(forKey: localId)
@@ -885,7 +890,7 @@ final class RecordingViewModel {
         do {
             try LocalTranscriptStore.shared.save(record)
         } catch {
-            os_log("[RecordingVM] processLocally save failed: %{public}@", log: log, type: .error, error.localizedDescription)
+            log.error("[RecordingVM] processLocally save failed: \(LogRedact.mask(error.localizedDescription))")
             await MainActor.run {
                 self.updateTask(localId, status: .error, errorMessage: "Opslaan mislukt: \(error.localizedDescription)")
                 self.localProcessingTasks.removeValue(forKey: localId)
@@ -989,7 +994,7 @@ final class RecordingViewModel {
                 await MainActor.run {
                     self.offlineStatusMessage = "Opname '\(filename)' kon na meerdere pogingen niet worden ge\u{00FC}pload. Ga naar Opgeslagen opnames om het handmatig opnieuw te proberen."
                 }
-                os_log("[RecordingVM] Offline queue item exceeded max retries, removed: %{public}@", log: .default, type: .error, filename)
+                log.error("[RecordingVM] Offline queue item exceeded max retries, removed: \(LogRedact.mask(filename))")
                 continue
             }
 
@@ -1031,7 +1036,7 @@ final class RecordingViewModel {
                     saveLocalAudioPath(url: url, taskId: task.taskId)
                     offlineQueue.removeItem(item)
                 } catch {
-                    os_log("[RecordingVM] Offline queue item upload failed, incrementing retry count: %{public}@", log: .default, type: .error, error.localizedDescription)
+                    log.error("[RecordingVM] Offline queue item upload failed, incrementing retry count: \(LogRedact.mask(error.localizedDescription))")
                     await MainActor.run { self.activeTasks.removeAll { $0.id == tempId } }
                     let updated = item.incrementingRetryCount()
                     offlineQueue.replaceItem(item, with: updated)
@@ -1046,7 +1051,7 @@ final class RecordingViewModel {
                     await startSSEStream(for: task.taskId)
                     offlineQueue.removeItem(item)
                 } catch {
-                    os_log("[RecordingVM] Failed to process queued text item, incrementing retry: %{public}@", log: .default, type: .error, error.localizedDescription)
+                    log.error("[RecordingVM] Failed to process queued text item, incrementing retry: \(LogRedact.mask(error.localizedDescription))")
                     let updated = item.incrementingRetryCount()
                     offlineQueue.replaceItem(item, with: updated)
                 }
@@ -1060,7 +1065,7 @@ final class RecordingViewModel {
     // MARK: - Reprocess Saved Recording
 
     func reprocessRecording(_ recording: SavedRecording, profileId: String, useOnDevice: Bool) async {
-        os_log("[RecordingVM] reprocessRecording: %{public}@, onDevice=%{public}@", log: log, type: .info, recording.filename, useOnDevice ? "true" : "false")
+        log.info("[RecordingVM] reprocessRecording: \(LogRedact.mask(recording.filename)), onDevice=\(useOnDevice ? "true" : "false")")
         let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         let url = docs.appendingPathComponent("Recordings").appendingPathComponent(recording.filename)
 
@@ -1176,7 +1181,7 @@ final class RecordingViewModel {
                 self.liveTranscriptionError = nil
             } catch {
                 // Best-effort: the recording continues, but the screen says why there is no live text.
-                os_log("[RecordingVM] Live transcription ended: %{public}@", log: .default, type: .info, error.localizedDescription)
+                log.info("[RecordingVM] Live transcription ended: \(LogRedact.mask(error.localizedDescription))")
                 self.liveTranscriptionError = error.localizedDescription
             }
 
@@ -1229,7 +1234,7 @@ final class RecordingViewModel {
                         self.sseClients.removeValue(forKey: taskId)
                     }
                 case .error(let error):
-                    os_log("[RecordingVM] SSE error for task %{public}@: %{public}@", log: .default, type: .error, taskId, error.localizedDescription)
+                    log.error("[RecordingVM] SSE error for task \(LogRedact.mask(taskId)): \(LogRedact.mask(error.localizedDescription))")
                     Task { @MainActor in
                         self.sseClients.removeValue(forKey: taskId)
                         // SSE gave up (max reconnects) — fall back to polling so
@@ -1243,7 +1248,7 @@ final class RecordingViewModel {
             client.connect()
 
         } catch {
-            os_log("[RecordingVM] Could not start SSE stream for task %{public}@: %{public}@", log: .default, type: .error, taskId, error.localizedDescription)
+            log.error("[RecordingVM] Could not start SSE stream for task \(LogRedact.mask(taskId)): \(LogRedact.mask(error.localizedDescription))")
         }
     }
 
@@ -1329,7 +1334,7 @@ final class RecordingViewModel {
         } catch {
             notesSectionWritten.remove(taskId)
             if fixed != withNotes { throw error }
-            os_log("[RecordingVM] Notities-sectie terugschrijven mislukt voor %{public}@: %{public}@", log: .default, type: .error, taskId, Self.supportFailureMessage(error))
+            log.error("[RecordingVM] Notities-sectie terugschrijven mislukt voor \(LogRedact.mask(taskId)): \(LogRedact.mask(Self.supportFailureMessage(error)))")
         }
         return fixed
     }
@@ -1365,10 +1370,10 @@ final class RecordingViewModel {
                 await startSSEStream(for: task.taskId)
             }
             if !active.isEmpty {
-                os_log("[RecordingVM] Recovered %d pending task(s)", log: log, type: .info, active.count)
+                log.info("[RecordingVM] Recovered \(active.count) pending task(s)")
             }
         } catch {
-            os_log("[RecordingVM] Could not check pending tasks: %{public}@", log: log, type: .error, error.localizedDescription)
+            log.error("[RecordingVM] Could not check pending tasks: \(LogRedact.mask(error.localizedDescription))")
         }
     }
 
@@ -1431,7 +1436,7 @@ final class RecordingViewModel {
             // Check existing Google connection
             await checkGoogleConnection()
         } catch {
-            os_log("[RecordingVM] Could not load features: %{public}@", log: log, type: .error, error.localizedDescription)
+            log.error("[RecordingVM] Could not load features: \(LogRedact.mask(error.localizedDescription))")
         }
     }
 
@@ -1524,15 +1529,15 @@ final class RecordingViewModel {
                 let frames = try AudioMixer.mix(micURL: micURL, systemURL: systemURL, systemStartOffset: systemStartOffset, into: outputURL)
                 // Reopen the finalized file before removing the redundant sources.
                 guard try AudioRecorder.removeSourceIfMixIsComplete(sourceURL: micURL, combinedURL: outputURL, expectedFrames: frames) else {
-                    os_log("[RecordingVM] Finalized mix is incomplete, using mic only", log: log, type: .error)
+                    log.error("[RecordingVM] Finalized mix is incomplete, using mic only")
                     return micURL
                 }
                 // The mic source is gone and the mix verified: a failed cleanup must not return the deleted mic URL.
                 _ = try? AudioRecorder.removeSourceIfMixIsComplete(sourceURL: systemURL, combinedURL: outputURL, expectedFrames: frames)
-                os_log("[RecordingVM] Audio mix OK: %lld frames, offset %.3fs", log: log, type: .info, frames, systemStartOffset)
+                log.info(String(format: "[RecordingVM] Audio mix OK: %lld frames, offset %.3fs", frames, systemStartOffset))
                 return outputURL
             } catch {
-                os_log("[RecordingVM] Audio mix failed: %{public}@, using mic only", log: log, type: .error, error.localizedDescription)
+                log.error("[RecordingVM] Audio mix failed: \(LogRedact.mask(error.localizedDescription)), using mic only")
                 return micURL
             }
         }.value

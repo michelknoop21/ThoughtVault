@@ -15,6 +15,7 @@
 		AB05FA00CH02 /* HistoryListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA00CH02 /* HistoryListView.swift */; };
 		AC110001 /* WhisperLoadingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC110001 /* WhisperLoadingTests.swift */; };
 		AC200001 /* WhisperSilenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC200001 /* WhisperSilenceTests.swift */; };
+		AC200090 /* WhisperOfflineTokenizerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC200090 /* WhisperOfflineTokenizerTests.swift */; };
 		AB200002 /* dutch-qa.wav in Resources */ = {isa = PBXBuildFile; fileRef = FB200002 /* dutch-qa.wav */; };
 		AA00PC02 /* PersonalCorrectionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA00PC02 /* PersonalCorrectionsView.swift */; };
 		AA00PC01 /* PersonalCorrections.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA00PC01 /* PersonalCorrections.swift */; };
@@ -329,6 +330,7 @@
 
 /* Begin PBXFileReference section */
 		FC110001 /* WhisperLoadingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhisperLoadingTests.swift; sourceTree = "<group>"; };
+		FC200090 /* WhisperOfflineTokenizerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhisperOfflineTokenizerTests.swift; sourceTree = "<group>"; };
 		FC200001 /* WhisperSilenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhisperSilenceTests.swift; sourceTree = "<group>"; };
 		FB200002 /* dutch-qa.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "dutch-qa.wav"; sourceTree = "<group>"; };
 		FA00PC02 /* PersonalCorrectionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "../Views/PersonalCorrectionsView.swift"; sourceTree = "<group>"; };
@@ -805,6 +807,7 @@
 				FB000091 /* TranscriptDecoderTests.swift */,
 				FC110001 /* WhisperLoadingTests.swift */,
 				FC200001 /* WhisperSilenceTests.swift */,
+				FC200090 /* WhisperOfflineTokenizerTests.swift */,
 				GG000100 /* Fixtures */,
 			);
 			path = ThoughtVaultTests;
@@ -1132,6 +1135,7 @@
 				AB000091 /* TranscriptDecoderTests.swift in Sources */,
 				AC110001 /* WhisperLoadingTests.swift in Sources */,
 				AC200001 /* WhisperSilenceTests.swift in Sources */,
+				AC200090 /* WhisperOfflineTokenizerTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

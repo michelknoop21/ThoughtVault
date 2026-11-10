@@ -42,13 +42,64 @@ final class WhisperModelStore {
         return modelsFolder.appendingPathComponent(safe)
     }
 
+    /// Hub base folder WhisperKit loads the tokenizer from (HubApi default).
+    nonisolated static var hubRoot: URL { URL.documentsDirectory.appendingPathComponent("huggingface") }
+
+    /// "Installed" means offline-ready: all model parts plus a tokenizer.json.
     /// Exact folder match: "large-v3-v20240930" must not match its "_626MB" sibling.
     nonisolated static func isInstalled(_ variant: String) -> Bool {
-        // A killed download can leave a partial folder; require every part WhisperKit loads.
-        let folder = folder(for: variant)
-        let needed = ["AudioEncoder.mlmodelc", "TextDecoder.mlmodelc", "MelSpectrogram.mlmodelc", "config.json"]
-        return needed.allSatisfy { FileManager.default.fileExists(atPath: folder.appendingPathComponent($0).path) }
+        isInstalled(modelFolder: folder(for: variant), tokenizerRoot: hubRoot)
     }
+
+    nonisolated static func isInstalled(modelFolder: URL, tokenizerRoot: URL) -> Bool {
+        // A killed download can leave a partial folder; require every part WhisperKit loads.
+        let fm = FileManager.default
+        let needed = ["AudioEncoder.mlmodelc", "TextDecoder.mlmodelc", "MelSpectrogram.mlmodelc", "config.json"]
+        guard needed.allSatisfy({ fm.fileExists(atPath: modelFolder.appendingPathComponent($0).path) }) else { return false }
+        #if canImport(WhisperKit)
+        if fm.fileExists(atPath: modelFolder.appendingPathComponent("tokenizer.json").path) { return true }
+        guard let variant = tokenizerVariant(modelFolder: modelFolder) else { return false }
+        return fm.fileExists(atPath: tokenizerFolder(for: variant, root: tokenizerRoot).appendingPathComponent("tokenizer.json").path)
+        #else
+        return true
+        #endif
+    }
+
+    #if canImport(WhisperKit)
+    /// Folder WhisperKit searches for the tokenizer of a variant.
+    nonisolated static func tokenizerFolder(for variant: ModelVariant, root: URL = hubRoot) -> URL {
+        root.appendingPathComponent("models/openai/whisper-\(variant.description)")
+    }
+
+    /// Mirrors WhisperKit's `ModelUtilities.detectVariant` using config.json (vocab_size, d_model).
+    /// Nil when the config is missing or the vocabulary size is unknown.
+    nonisolated static func tokenizerVariant(modelFolder: URL) -> ModelVariant? {
+        guard let data = try? Data(contentsOf: modelFolder.appendingPathComponent("config.json")),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let vocab = json["vocab_size"] as? Int
+        else { return nil }
+        let dim = json["d_model"] as? Int ?? 0
+        switch vocab {
+        case 51865:
+            switch dim {
+            case 384: return .tiny
+            case 768: return .small
+            case 1024: return .medium
+            case 1280: return .largev2
+            default: return .base
+            }
+        case 51864:
+            switch dim {
+            case 384: return .tinyEn
+            case 768: return .smallEn
+            case 1024: return .mediumEn
+            default: return .baseEn
+            }
+        case 51866: return .largev3
+        default: return nil
+        }
+    }
+    #endif
 
     /// Size on disk of an installed model, in bytes.
     nonisolated static func installedSize(_ variant: String) -> Int64? {
@@ -94,7 +145,13 @@ final class WhisperModelStore {
 
     #if canImport(WhisperKit)
     nonisolated private static func fetch(_ variant: String, onProgress: @escaping @Sendable (Double) -> Void) async throws {
-        _ = try await WhisperKit.download(variant: variant) { onProgress($0.fractionCompleted) }
+        let folder = try await WhisperKit.download(variant: variant) { onProgress($0.fractionCompleted) }
+        // Fetch the tokenizer together with the model so the first transcription works offline.
+        guard let tokenizerVariant = tokenizerVariant(modelFolder: folder) else {
+            throw NSError(domain: "WhisperModelStore", code: 1, userInfo: [
+                NSLocalizedDescriptionKey: "Het tokenizer-type van dit model kon niet worden bepaald."])
+        }
+        _ = try await ModelUtilities.loadTokenizer(for: tokenizerVariant)
     }
     #endif
 

@@ -97,4 +97,29 @@ final class AppLogTests: XCTestCase {
         XCTAssertFalse(tail.contains("debug-only"))
         XCTAssertFalse(tail.contains("anna@"))
     }
+
+    private func assertToken(_ text: String, file: StaticString = #filePath, line: UInt = #line) {
+        XCTAssertNotNil(text.range(of: #"k-[0-9a-f]{6}"#, options: .regularExpression), text, file: file, line: line)
+    }
+
+    func testScrubMasksMediaNamesWithSpaces() {
+        let a = LogRedact.scrub("Fout bij Overleg Jansen 2.m4a")
+        XCTAssertFalse(a.contains("Jansen"))
+        assertToken(a)
+        let b = LogRedact.scrub("open /Users/anna/My Documents/x.m4a mislukt")
+        XCTAssertFalse(b.contains("anna"))
+        XCTAssertFalse(b.contains("Documents"))
+        assertToken(b)
+        XCTAssertEqual(LogRedact.scrub("Model laden duurde 30 s"), "Model laden duurde 30 s")
+    }
+
+    func testLongMessageIsCapped() async {
+        let log = AppLog(category: "Cap")
+        log.error(String(repeating: "b", count: 5_000))
+        await AppLog.flush()
+        let tail = await AppLog.tail()
+        let line = tail.split(separator: "\n").last { $0.contains("[Cap]") }
+        XCTAssertNotNil(line)
+        XCTAssertLessThan((line ?? "").utf8.count, 2_100)
+    }
 }

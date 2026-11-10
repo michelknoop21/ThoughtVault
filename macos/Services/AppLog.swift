@@ -15,7 +15,7 @@ enum LogRedact {
     private static let patterns: [NSRegularExpression] = [
         #"(?:file://|~|(?<![\w.:/]))/(?:[^\s/"',]+/)+[^\s/"',]*"#,
         #"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}"#,
-        #"[^\s/"',:]+\.(?:m4a|wav|caf|mp3|mp4|mov|m4v|aac|aiff)\b"#,
+        #"[^\s"',:()][^"',:()\r\n]*?\.(?:m4a|wav|caf|mp3|mp4|mov|m4v|aac|aiff)\b"#,
     ].enumerated().map { index, pattern in
         // swiftlint:disable:next force_try
         try! NSRegularExpression(pattern: pattern, options: index == 2 ? [.caseInsensitive] : [])
@@ -124,7 +124,7 @@ struct AppLog: Sendable {
     static var directory: URL { AppEnvironment.supportDirectory.appending(path: "Logs", directoryHint: .isDirectory) }
 
     private func write(_ level: String, _ message: String) {
-        let flat = LogRedact.scrub(message).replacingOccurrences(of: "\r", with: " ").replacingOccurrences(of: "\n", with: " ")
+        let flat = LogRedact.scrub(String(message.prefix(2_000))).replacingOccurrences(of: "\r", with: " ").replacingOccurrences(of: "\n", with: " ")
         Sink.shared.send(.line("\(Date().formatted(.iso8601)) \(level) [\(category)] \(flat)\n"))
     }
 
@@ -135,7 +135,8 @@ struct AppLog: Sendable {
         case barrier(CheckedContinuation<Void, Never>)
     }
 
-    /// One ordered consumer writing to the log file.
+    /// One ordered consumer writing to the log file. Lines still queued in the stream at a hard crash can be lost:
+    /// the crash marker (`session.open`) is the primary crash signal, the log tail is context.
     private final class Sink: Sendable {
         static let shared = Sink()
         let file = LogFile(directory: AppLog.directory)

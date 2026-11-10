@@ -372,37 +372,29 @@ struct TranscriptsView: View {
     private func mainContent(isCompact: Bool) -> some View {
         // Compact windows keep tight md insets; regular windows breathe with lg.
         let hPad = isCompact ? TS.Spacing.md : TS.Spacing.lg
-        return List {
-            Section {
+        return ScrollView {
+            // Measure every card up front so scrolling cannot revise the document height.
+            // shortcut: eager layout suits modest libraries; paginate if opening large libraries becomes slow.
+            VStack(spacing: TS.Spacing.sm) {
                 offlineQueueBanner
                 errorBanner
                 activeProcessingSection
                 errorTasksSection
-            }
-            .listRowSeparator(.hidden)
-            .listRowInsets(EdgeInsets(top: 0, leading: hPad, bottom: 0, trailing: hPad))
-            .listRowBackground(Color.clear)
 
-            if isLoading && transcripts.isEmpty {
-                ProgressView("Laden...")
-                    .padding(TS.Spacing.xl)
-                    .listRowSeparator(.hidden)
-                    .listRowBackground(Color.clear)
-            } else if filteredTranscripts.isEmpty {
-                emptyState
-                    .listRowSeparator(.hidden)
-                    .listRowBackground(Color.clear)
-            } else {
-                ForEach(filteredTranscripts) { transcript in
-                    transcriptCardRow(transcript, isCompact: isCompact)
-                        .listRowSeparator(.hidden)
-                        .listRowInsets(EdgeInsets(top: TS.Spacing.sm / 2, leading: hPad, bottom: TS.Spacing.sm / 2, trailing: hPad))
-                        .listRowBackground(Color.clear)
+                if isLoading && transcripts.isEmpty {
+                    ProgressView("Laden...")
+                        .padding(TS.Spacing.xl)
+                } else if filteredTranscripts.isEmpty {
+                    emptyState
+                } else {
+                    ForEach(filteredTranscripts) { transcript in
+                        transcriptCardRow(transcript, isCompact: isCompact)
+                    }
                 }
             }
+            .padding(.horizontal, hPad)
+            .padding(.vertical, TS.Spacing.sm)
         }
-        .listStyle(.plain)
-        .scrollContentBackground(.hidden)
     }
 
     // MARK: Offline queue banner
@@ -633,13 +625,9 @@ struct TranscriptsView: View {
                 )
             }
         }
-        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-            Button(role: .destructive) {
-                transcriptToDelete = transcript
-                showSingleDeleteConfirm = true
-            } label: {
-                Label("Verwijderen", systemImage: "trash")
-            }
+        .accessibilityAction(named: Text("Verwijderen")) {
+            transcriptToDelete = transcript
+            showSingleDeleteConfirm = true
         }
         .contextMenu {
             Button {

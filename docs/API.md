@@ -2,6 +2,7 @@
 
 > Gedeelde documentatie voor alle platforms (macOS, Windows, Web).
 > Backend: FastAPI op `https://n8n.prezent.nl/tstudio/api/`
+> De support-relay (meldingen en foutrapporten zonder login) staat in `docs/SUPPORT-RELAY.md`.
 
 ## Inhoud
 

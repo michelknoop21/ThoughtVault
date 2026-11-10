@@ -5,6 +5,18 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2026-11-10]: Support-relay voor meldingen en foutrapporten
+
+### Added
+- **Support-relay** (fase a van `docs/plans/2026-11-10-foutrapporten-feedbackhub.md`): eigen container `thoughtvault-support` op n8n01 die meldingen en foutrapporten van de apps naar de feedback-hub zet, bereikbaar op `https://thoughtvault.yinga.ai/support` via een Caddy-route. Installaties registreren zich met een eigen id en geheim; er is geen login. Dubbele automatische fouten worden één ticket met teller. Code in de backend-repo (`08c0223`), Caddy-route in `5ed1c51`. Contract en bediening: `docs/SUPPORT-RELAY.md` (DEC-064).
+- Hub-tool `thought-vault` met prefix `TV`; de eerste tickets `TV-000001` en `TV-000002` zijn end-to-end getest en gesloten.
+
+### Changed
+- DEC-039 tot en met DEC-053 staan nu in `docs/archive/DECISIONS-DEC-039-to-DEC-053.md`, ongewijzigd. `docs/DECISIONS.md` loopt van 488 naar onder 250 regels.
+- `CLAUDE.md`: de backendcontainer `n8n_transcript_studio` draait niet op n8n01; `/tstudio/api` geeft 502.
+
+---
+
 ## [2026-11-09]: Lerende context voor termen en personen
 
 ### Added

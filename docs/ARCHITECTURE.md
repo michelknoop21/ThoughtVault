@@ -13,6 +13,7 @@ ThoughtVault is a cross-platform meeting transcription system consisting of:
 - **Android client** — Kotlin 2.x / Jetpack Compose / Material 3 (`/transcript-studio-android/`)
 - **iOS Widget** — SwiftUI Live Activity (`/ios-widget/`)
 - **Web app** — Server-rendered Jinja2 templates with vanilla JS (`../transcript-studio-backend/templates/`, `../transcript-studio-backend/static/`)
+- **Support-relay**: eigen FastAPI-container `thoughtvault-support` die meldingen en foutrapporten van de apps naar de feedback-hub doorzet, bereikbaar op `thoughtvault.yinga.ai/support`. Zie `docs/SUPPORT-RELAY.md`.
 - **Backend** — FastAPI (Python) with GPU-accelerated Whisper transcription and n8n workflow orchestration
 
 All clients share a common REST + SSE API and are deployed independently.

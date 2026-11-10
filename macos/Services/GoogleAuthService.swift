@@ -202,7 +202,7 @@ actor GoogleAuthService {
 
         // Persist refresh token to Keychain
         if let refresh = self.refreshToken {
-            KeychainService.shared.save(refresh, for: "googleRefreshToken")
+            try KeychainService.shared.save(refresh, for: "googleRefreshToken")
         }
 
         logger.info("Google connected for \(email)")
@@ -283,7 +283,7 @@ actor GoogleAuthService {
         // Google may issue a new refresh token
         if let newRefresh = tokenResponse.refresh_token {
             self.refreshToken = newRefresh
-            KeychainService.shared.save(newRefresh, for: "googleRefreshToken")
+            try KeychainService.shared.save(newRefresh, for: "googleRefreshToken")
         }
 
         logger.info("Google access token refreshed")

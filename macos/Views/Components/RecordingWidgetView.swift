@@ -186,7 +186,7 @@ struct RecordingWidgetView: View {
         case .recording:  return "Rec"
         case .paused:     return "Pauze"
         case .stopping:   return "Stop..."
-        case .uploading:  return "\(Int(recordingVM.uploadProgress * 100))%"
+        case .uploading:  return "Bezig..."
         case .error(let msg): return String(msg.prefix(12))
         }
     }
@@ -283,21 +283,10 @@ struct RecordingWidgetView: View {
                 .font(.system(size: 12, weight: .bold))
                 .foregroundStyle(Color.neonBlue)
 
-            // Upload progress ring
-            ZStack {
-                Circle()
-                    .stroke(Color.neonBlue.opacity(0.2), lineWidth: 2.5)
-                Circle()
-                    .trim(from: 0, to: recordingVM.uploadProgress)
-                    .stroke(Color.neonBlue, style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
-                    .rotationEffect(.degrees(-90))
-            }
-            .frame(width: 20, height: 20)
-
             widgetIconButton(
                 icon: "xmark",
                 color: Color.labelSecondary,
-                accessibilityLabel: "Upload annuleren"
+                accessibilityLabel: "Transcriptie annuleren"
             ) {
                 recordingVM.cancelUpload()
             }

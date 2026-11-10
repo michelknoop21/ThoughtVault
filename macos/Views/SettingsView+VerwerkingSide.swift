@@ -119,7 +119,7 @@ extension SettingsView {
                     if installed {
                         Menu {
                             Button("Toon in Finder") { NSWorkspace.shared.activateFileViewerSelecting([WhisperModelStore.folder(for: variant)]) }
-                            Button("Verwijderen", role: .destructive) { store.remove(variant) }
+                            Button("Verwijderen", role: .destructive) { modelToRemove = variant }
                                 .disabled(inUse)
                         } label: {
                             Image(systemName: "ellipsis").frame(width: 46, height: 37)
@@ -127,6 +127,15 @@ extension SettingsView {
                         }
                         .menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden)
                         .accessibilityLabel("Meer opties voor het model")
+                        .confirmationDialog("Model verwijderen?", isPresented: Binding(
+                            get: { modelToRemove == variant },
+                            set: { if !$0 { modelToRemove = nil } }
+                        ), titleVisibility: .visible) {
+                            Button("Verwijderen", role: .destructive) { store.remove(variant); modelToRemove = nil }
+                            Button("Annuleren", role: .cancel) { modelToRemove = nil }
+                        } message: {
+                            Text("Het model wordt van deze Mac verwijderd. Je kunt het later opnieuw downloaden.")
+                        }
                     }
                 }
             }

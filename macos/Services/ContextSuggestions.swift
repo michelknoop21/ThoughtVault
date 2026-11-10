@@ -221,7 +221,7 @@ enum ContextSuggestions {
                 }
                 let message = userMessage(context: context, participants: participants, selfName: selfName, transcript: transcript)
                 let raw = try await LLMServiceFactory.service(for: provider, serverURL: "")
-                    .complete(systemPrompt: systemPrompt, userMessage: message)
+                    .complete(system: systemPrompt, user: message)
                 let parsed = parse(raw, transcript: transcript, entries: entries, dismissed: dismissed, selfNames: [selfName], selfAliases: selfAliases)
                 let set = try await MainActor.run {
                     // Matched people are filled in directly; only what needs the user is stored.

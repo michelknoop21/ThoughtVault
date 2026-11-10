@@ -54,10 +54,10 @@ final class ThoughtVaultTests: XCTestCase {
         XCTAssertFalse(RecordingViewModel.hasUsableTranscription("Geen transcriptie."))
         XCTAssertFalse(RecordingViewModel.hasUsableTranscription("[ruis] ... (stilte) ... [onverstaanbaar]"))
         XCTAssertTrue(RecordingViewModel.hasUsableTranscription("We hebben de planning voor volgende week besproken."))
-        XCTAssertFalse(RecordingViewModel.hasUsableNotule("<style>h1{color:red}</style><p>...</p>"))
-        XCTAssertFalse(RecordingViewModel.hasUsableNotule("<h1>[Titel]</h1><p>[Samenvatting]</p>"))
-        XCTAssertFalse(RecordingViewModel.hasUsableNotule("<p>Er is geen transcriptie aangeleverd.</p>"))
-        XCTAssertTrue(RecordingViewModel.hasUsableNotule("<h2>Kernuitkomst</h2><p>De planning voor volgende week is besproken.</p>"))
+        XCTAssertFalse(NotuleGenerator.hasUsableNotule("<style>h1{color:red}</style><p>...</p>"))
+        XCTAssertFalse(NotuleGenerator.hasUsableNotule("<h1>[Titel]</h1><p>[Samenvatting]</p>"))
+        XCTAssertFalse(NotuleGenerator.hasUsableNotule("<p>Er is geen transcriptie aangeleverd.</p>"))
+        XCTAssertTrue(NotuleGenerator.hasUsableNotule("<h2>Kernuitkomst</h2><p>De planning voor volgende week is besproken.</p>"))
     }
 
     @MainActor

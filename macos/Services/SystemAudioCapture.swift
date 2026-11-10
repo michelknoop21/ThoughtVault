@@ -48,17 +48,27 @@ final class SystemAudioCapture {
     private var writer: TapAudioWriter?
     private var timer: Timer?
     private var startDate: Date?
+    /// Wall-clock start of the last capture; kept after stop for mix alignment.
+    private(set) var startedAt: Date?
     private var pausedAt: Date?
     private var accumulatedPauseDuration: TimeInterval = 0
     private var envelope = AudioEnvelopeProcessor()
     private var lastMeterDate: Date?
     private let ioQueue = DispatchQueue(label: "com.buildmind.ThoughtVault.SystemAudioCapture.io")
 
+    nonisolated static func outputURL(in directory: URL, date: Date) -> URL {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyyMMdd-HHmmss"
+        // Local time repeats on DST fall-back and two starts can share a second: add a unique suffix.
+        let suffix = UUID().uuidString.prefix(8).lowercased()
+        return directory.appendingPathComponent("system_audio_\(formatter.string(from: date))-\(suffix).wav")
+    }
+
     @discardableResult
     func startCapture(includeMicrophone: Bool = false) async throws -> URL {
         let outputUID = try Self.defaultOutputUID()
-        let outputURL = URL(fileURLWithPath: NSTemporaryDirectory())
-            .appendingPathComponent("system_audio_\(UUID().uuidString).wav")
+        let outputURL = Self.outputURL(in: AudioRecorder.recordingsDirectoryURL(), date: Date())
         guard let fileFormat = AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: 16_000,
                                              channels: 1, interleaved: false) else {
             throw SystemAudioCaptureError.coreAudio("audioformaat", -1)
@@ -136,6 +146,7 @@ final class SystemAudioCapture {
         envelope.reset()
         lastMeterDate = nil
         startDate = Date()
+        startedAt = startDate
         timer = Timer.scheduledTimer(withTimeInterval: 1 / AudioEnvelopeConfig.publishRateHz, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated {
                 guard let self, let startDate = self.startDate else { return }
@@ -157,13 +168,16 @@ final class SystemAudioCapture {
         writer?.setLiveHandler(handler)
     }
 
+    /// Returns this session's file once; nil when nothing was capturing, so a caller
+    /// (cancel deletes the result) can never get an earlier session's file.
     func stopCapture() async -> CaptureResult {
-        guard isCapturing else { return CaptureResult(systemAudioURL: currentOutputURL, microphoneURL: nil) }
+        guard isCapturing else { return CaptureResult(systemAudioURL: nil, microphoneURL: nil) }
         tearDown()
         timer?.invalidate()
         timer = nil
         isCapturing = false
         resetMetrics()
+        defer { currentOutputURL = nil }
         return CaptureResult(systemAudioURL: currentOutputURL, microphoneURL: nil)
     }
 

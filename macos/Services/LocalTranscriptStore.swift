@@ -20,7 +20,7 @@ final class LocalTranscriptStore {
 
     private var context: ModelContext { container.mainContext }
 
-    /// Test init: an injected (in-memory) container.
+    /// Test seam: a store over an injected (in-memory) container.
     init(container: ModelContainer) {
         self.container = container
     }
@@ -277,17 +277,51 @@ final class LocalTranscriptStore {
         guard let record = record(forTaskId: taskId) else {
             throw LocalStoreError.recordNotFound
         }
-        let original = (record.notuleHtml, record.title, record.profileId, record.profileName)
+        let original = (record.notuleHtml, record.title, record.profileId, record.profileName, record.notuleDraftHtml, record.notuleReviewReason)
         record.notuleHtml = html
         record.title = title
         if let profileId { record.profileId = profileId; record.profileName = profileName }
+        record.notuleDraftHtml = nil
+        record.notuleReviewReason = nil
         do { try context.save() } catch {
-            (record.notuleHtml, record.title, record.profileId, record.profileName) = original
+            (record.notuleHtml, record.title, record.profileId, record.profileName, record.notuleDraftHtml, record.notuleReviewReason) = original
+            throw error
+        }
+    }
+
+    /// Keeps a notule that failed the audit apart for review; the approved `notuleHtml` is never touched.
+    func saveRejectedDraft(taskId: String, html: String, reason: String) throws {
+        guard let record = record(forTaskId: taskId) else { throw LocalStoreError.recordNotFound }
+        let original = (record.notuleDraftHtml, record.notuleReviewReason)
+        record.notuleDraftHtml = html
+        record.notuleReviewReason = reason
+        do { try context.save() } catch {
+            (record.notuleDraftHtml, record.notuleReviewReason) = original
             throw error
         }
     }
 
 }
+
+#if DEBUG
+extension LocalTranscriptStore {
+    /// Screenshot hook (`-TVDebugSeedDraft YES`): one record with an approved notule plus a rejected draft.
+    func seedDebugDraftIfRequested() {
+        guard UserDefaults.standard.string(forKey: "TVDebugSeedDraft") == "YES",
+              record(forTaskId: "debug-draft-demo") == nil else { return }
+        let record = TranscriptRecord(
+            id: "debug-draft-demo",
+            taskId: "debug-draft-demo",
+            title: "Projectoverleg Noord",
+            rawTranscription: "We bespraken de planning van fase twee. De leverancier meldt een vertraging van twee weken. Iris kijkt of de oplevering daardoor schuift. Het budget blijft voorlopig ongewijzigd.",
+            notuleHtml: "<h2>Projectoverleg Noord</h2><p>De planning van fase twee is besproken.</p><p>De leverancier meldt een vertraging van twee weken en het budget blijft voorlopig ongewijzigd.</p><ul><li>Iris onderzoekt of de oplevering schuift.</li></ul>"
+        )
+        record.notuleDraftHtml = "<h2>Projectoverleg Noord</h2><p>Fase twee loopt door, maar de leverancier is twee weken later.</p><p>Het budget wordt niet aangepast.</p><ul><li>Iris belt de leverancier vóór vrijdag.</li></ul>"
+        record.notuleReviewReason = "Feiten, acties en beperkingen konden niet worden bevestigd: De notule bevat een onbevestigde bewering: Iris belt de leverancier vóór vrijdag."
+        try? save(record)
+    }
+}
+#endif
 
 // MARK: - LocalStoreError
 

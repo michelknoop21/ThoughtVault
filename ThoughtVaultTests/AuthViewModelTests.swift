@@ -32,7 +32,7 @@ struct AuthViewModelTests {
     @MainActor
     func initialStateAuthenticatedFromKeychain() {
         // Pre-populate keychain
-        KeychainService.shared.save("test-token-abc", for: "authToken")
+        try? KeychainService.shared.save("test-token-abc", for: "authToken")
         defer { KeychainService.shared.delete(for: "authToken") }
 
         let vm = AuthViewModel()
@@ -45,7 +45,7 @@ struct AuthViewModelTests {
     @Test("Logout clears authentication state and removes token from Keychain")
     @MainActor
     func logoutClearsState() {
-        KeychainService.shared.save("test-token", for: "authToken")
+        try? KeychainService.shared.save("test-token", for: "authToken")
         let vm = AuthViewModel()
         #expect(vm.isAuthenticated == true)
 

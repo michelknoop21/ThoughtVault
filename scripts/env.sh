@@ -17,7 +17,7 @@ BUILD_CHANNEL="${BUILD_CHANNEL:-dev}"
 
 if [ "$BUILD_CHANNEL" = "production" ]; then
     APP_DISPLAY_NAME="ThoughtVault"
-    BUNDLE_ID_MACOS="nl.prezent.ThoughtVault"
+    BUNDLE_ID_MACOS="com.buildmind.ThoughtVault"
     BUNDLE_ID_WINDOWS="nl.prezent.transcript-studio"
     BUNDLE_ID_ANDROID="nl.prezent.transcriptstudio"
     TAURI_PRODUCT_NAME="ThoughtVault"
@@ -26,7 +26,7 @@ if [ "$BUILD_CHANNEL" = "production" ]; then
     APK_NAME="ThoughtVault-${VERSION}.apk"
 else
     APP_DISPLAY_NAME="ThoughtVault Dev"
-    BUNDLE_ID_MACOS="nl.prezent.ThoughtVault.dev"
+    BUNDLE_ID_MACOS="com.buildmind.ThoughtVault.dev"
     BUNDLE_ID_WINDOWS="nl.prezent.transcript-studio-dev"
     BUNDLE_ID_ANDROID="nl.prezent.transcriptstudio.dev"
     TAURI_PRODUCT_NAME="ThoughtVault Dev"

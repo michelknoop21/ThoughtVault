@@ -17,6 +17,7 @@ struct HostedProviderConfig: View {
     @State private var models: [String] = []
     @State private var loaded = false
     @State private var saveTask: Task<Void, Never>?
+    @State private var saveError: String?
     @AppStorage("openAIModel") private var openAIModel = OpenAICompatibleLLMService.openAIDefaultModel
     @AppStorage("anthropicModel") private var anthropicModel = AnthropicLLMService.defaultModel
 
@@ -112,6 +113,7 @@ struct HostedProviderConfig: View {
     }
 
     private var status: (text: String, color: Color) {
+        if let saveError { return (saveError, Color.statusError) }
         if !hasKey { return ("Geen sleutel ingesteld", Color.labelTertiary) }
         switch connected {
         case .some(true):  return ("Verbonden met \(providerName)", Color.statusSuccess)
@@ -139,8 +141,14 @@ struct HostedProviderConfig: View {
         if trimmed.isEmpty {
             KeychainService.shared.delete(for: keychainKey)
         } else {
-            KeychainService.shared.save(trimmed, for: keychainKey)
+            do {
+                try KeychainService.shared.save(trimmed, for: keychainKey)
+            } catch {
+                saveError = error.localizedDescription
+                return
+            }
         }
+        saveError = nil
         connected = nil
     }
 

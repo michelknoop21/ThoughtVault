@@ -67,7 +67,8 @@ struct TranscriptDecoderTests {
         let decoder = JSONDecoder()
         let transcript = try decoder.decode(Transcript.self, from: json)
 
-        let calendar = Calendar.current
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "UTC")!
         let components = calendar.dateComponents([.year, .month, .day, .hour], from: transcript.date)
         #expect(components.year == 2026)
         #expect(components.month == 1)
@@ -205,10 +206,10 @@ struct TranscriptDecoderTests {
         {
             "id": "zakelijk",
             "name": "Zakelijk",
-            "system_prompt": "Je bent een professionele notulist.",
-            "notule_prompt": "Maak professionele notulen.",
+            "systemPrompt": "Je bent een professionele notulist.",
+            "notulePrompt": "Maak professionele notulen.",
             "template": null,
-            "is_default": true
+            "isDefault": true
         }
         """.data(using: .utf8)!
 
@@ -226,17 +227,17 @@ struct TranscriptDecoderTests {
     @Test("Default profiles exist and are valid")
     func defaultProfilesAreValid() {
         let defaults = Profile.defaults
-        #expect(defaults.count == 3)
+        #expect(defaults.count == 7)
 
         let ids = defaults.map(\.id)
-        #expect(ids.contains("zakelijk"))
-        #expect(ids.contains("informeel"))
-        #expect(ids.contains("technisch"))
+        #expect(ids.contains("standaard"))
+        #expect(ids.contains("executive"))
+        #expect(ids.contains("projectoverleg"))
 
         for profile in defaults {
             #expect(!profile.name.isEmpty)
-            #expect(!profile.systemPrompt.isEmpty)
-            #expect(!profile.notulePrompt.isEmpty)
+            #expect(profile.systemPrompt?.isEmpty == false)
+            #expect(profile.notulePrompt?.isEmpty == false)
             #expect(profile.isDefault == true)
         }
     }
@@ -247,7 +248,7 @@ struct TranscriptDecoderTests {
     func decodeTranscriptsResponse() throws {
         let json = """
         {
-            "transcripts": [
+            "items": [
                 {
                     "id": "1",
                     "title": "Test",
@@ -265,9 +266,6 @@ struct TranscriptDecoderTests {
         let response = try decoder.decode(TranscriptsResponse.self, from: json)
 
         #expect(response.items.count == 1)
-        #expect(response.total == 1)
-        #expect(response.page == 1)
-        #expect(response.limit == 20)
         #expect(response.items[0].title == "Test")
     }
 }

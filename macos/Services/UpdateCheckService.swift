@@ -1,6 +1,8 @@
 import Foundation
 import UserNotifications
-#if os(macOS)
+// APP_STORE builds (TestFlight/App Store) ship without Sparkle and update through the store,
+// so every update entry point below compiles to a no-op there.
+#if os(macOS) && !APP_STORE
 import Sparkle
 #endif
 
@@ -16,7 +18,7 @@ final class UpdateCheckService: NSObject {
     @ObservationIgnored var installationStateChanged: (Bool) -> Void = { _ in }
     @ObservationIgnored var isBusy: () -> Bool = { true }
     @ObservationIgnored private var lastCheck: Date?
-#if os(macOS)
+#if os(macOS) && !APP_STORE
     @ObservationIgnored private var controller: SPUStandardUpdaterController?
 
     private func prepareUpdater() throws {
@@ -30,7 +32,7 @@ final class UpdateCheckService: NSObject {
 #endif
 
     func checkForUpdate() async {
-#if os(macOS)
+#if os(macOS) && !APP_STORE
         guard lastCheck == nil || Date().timeIntervalSince(lastCheck!) >= 6 * 60 * 60 else { return }
         do {
             try prepareUpdater()
@@ -42,7 +44,7 @@ final class UpdateCheckService: NSObject {
     }
 
     func downloadAndOpen() async {
-#if os(macOS)
+#if os(macOS) && !APP_STORE
         guard !isBusy() else {
             errorMessage = "Bijwerken kan zodra opnemen en verwerken klaar zijn."
             return
@@ -70,7 +72,7 @@ final class UpdateCheckService: NSObject {
     }
 }
 
-#if os(macOS)
+#if os(macOS) && !APP_STORE
 extension UpdateCheckService: SPUUpdaterDelegate {
     func feedURLString(for updater: SPUUpdater) -> String? {
         let channel = Bundle.main.bundleIdentifier?.hasSuffix(".dev") == true ? "dev" : "stable"

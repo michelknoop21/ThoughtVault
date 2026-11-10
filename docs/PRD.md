@@ -168,7 +168,7 @@ The product consists of four client surfaces sharing a common backend:
 | Windows minimum | Windows 11 (ARM64 or x64) |
 | Swift version | Swift 6 (strict concurrency) |
 | Xcode minimum | Xcode 16 |
-| Bundle ID (macOS/iOS) | `nl.prezent.ThoughtVault` |
+| Bundle ID (macOS/iOS) | `com.buildmind.ThoughtVault` |
 | Architecture pattern | MVVM with `@Observable` (no Combine) |
 | Concurrency | `@MainActor` for ViewModels; `actor` for APIService |
 | Audio format | 16 kHz, mono, 16-bit PCM WAV |

@@ -155,6 +155,7 @@ extension TranscriptDetailView {
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
+                    draftReviewSection
                     contentArea
                 }
             }

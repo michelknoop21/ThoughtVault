@@ -7,6 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		AB00FA00DS01 /* DebugScreenshotSeed.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA00DS01 /* DebugScreenshotSeed.swift */; };
+		AB01FA00CSB1 /* ContextSuggestionBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA00CSB1 /* ContextSuggestionBar.swift */; };
+		AB02FA00CH01 /* ContextHistory.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA00CH01 /* ContextHistory.swift */; };
+		AB03FA00CS01 /* ContextSuggestions.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA00CS01 /* ContextSuggestions.swift */; };
+		AB04FA00PM01 /* PersonMatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA00PM01 /* PersonMatcher.swift */; };
+		AB05FA00CH02 /* HistoryListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA00CH02 /* HistoryListView.swift */; };
 		AC110001 /* WhisperLoadingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC110001 /* WhisperLoadingTests.swift */; };
 		AC200001 /* WhisperSilenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC200001 /* WhisperSilenceTests.swift */; };
 		AB200002 /* dutch-qa.wav in Resources */ = {isa = PBXBuildFile; fileRef = FB200002 /* dutch-qa.wav */; };
@@ -1130,6 +1136,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AB00FA00DS01 /* DebugScreenshotSeed.swift in Sources */,
+				AB01FA00CSB1 /* ContextSuggestionBar.swift in Sources */,
+				AB02FA00CH01 /* ContextHistory.swift in Sources */,
+				AB03FA00CS01 /* ContextSuggestions.swift in Sources */,
+				AB04FA00PM01 /* PersonMatcher.swift in Sources */,
+				AB05FA00CH02 /* HistoryListView.swift in Sources */,
 				69A946299389FC95A31753CB /* ThoughtVaultApp.swift in Sources */,
 				BFBDDFC8BD5DBCCEE9BB3D1F /* ContentView.swift in Sources */,
 				CE70F46EB82FC0E02341FC0D /* Color+Brand.swift in Sources */,

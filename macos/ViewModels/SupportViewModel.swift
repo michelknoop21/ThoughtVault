@@ -69,28 +69,45 @@ final class SupportViewModel {
     }
 
     func refreshUnread() async {
+        guard !IOSDebug.supportSeed else { return }
         do { unreadCount = try await relay.unreadCount() }
         catch { logger.warning("Support unread count could not be loaded") }
     }
 
     func loadTickets() async {
+        guard !IOSDebug.supportSeed else { return }
         do { tickets = try await relay.tickets() }
         catch { logger.warning("Support tickets could not be loaded") }
     }
 
-    func openThread(_ ticket: SupportTicket) async {
+    func messages(for ticket: SupportTicket) async -> [SupportMessage]? {
+        #if DEBUG
+        if IOSDebug.supportSeed { return DebugScreenshotSeed.supportMessages(for: ticket) }
+        #endif
         do {
-            thread = try await relay.messages(ticketId: ticket.id)
+            let messages = try await relay.messages(ticketId: ticket.id)
             await refreshUnread()
-        } catch { logger.warning("Support messages could not be loaded") }
+            return messages
+        } catch {
+            logger.warning("Support messages could not be loaded")
+            return nil
+        }
     }
 
-    func reply(_ body: String, to ticket: SupportTicket) async throws {
+    func openThread(_ ticket: SupportTicket) async {
+        if let messages = await messages(for: ticket) { thread = messages }
+    }
+
+    @discardableResult
+    func reply(_ body: String, to ticket: SupportTicket) async throws -> [SupportMessage]? {
         try await relay.sendMessage(ticketId: ticket.id, body: body)
-        await openThread(ticket)
+        let messages = await messages(for: ticket)
+        if let messages { thread = messages }
+        return messages
     }
 
     func startPolling() async {
+        guard !IOSDebug.supportSeed else { return }
         guard pollingTask == nil else { return }
         let relay = relay
         // Polling belongs to the app view model, not the first window's cancellable task.

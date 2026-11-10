@@ -365,4 +365,44 @@ final class SupportViewModelTests: XCTestCase {
         XCTAssertEqual(reported, "Fout bij verwerken van serverrespons.")
     }
 
+    @MainActor func testThreadSnapshotsKeepIndependentCentersAndRejectLateRequests() {
+        let a = SupportMessage(id: "a", body: "A", senderRole: "ADMIN", createdAt: Date())
+        let b = SupportMessage(id: "b", body: "B", senderRole: "ADMIN", createdAt: Date())
+        var first = SupportThreadSnapshot()
+        var second = SupportThreadSnapshot()
+        let firstA = first.begin(ticketID: "A")
+        let secondB = second.begin(ticketID: "B")
+        second.complete([b], ticketID: "B", request: secondB)
+        first.complete([a], ticketID: "A", request: firstA)
+        XCTAssertEqual(first.ticketID, "A")
+        XCTAssertEqual(first.messages, [a])
+        XCTAssertEqual(second.ticketID, "B")
+        XCTAssertEqual(second.messages, [b])
+        let oldA = first.begin(ticketID: "A")
+        let nextB = first.begin(ticketID: "B")
+        XCTAssertTrue(first.messages.isEmpty)
+        first.complete([b], ticketID: "B", request: nextB)
+        first.complete([a], ticketID: "A", request: oldA)
+        XCTAssertEqual(first.messages, [b])
+        let oldB = first.begin(ticketID: "B")
+        let newB = first.begin(ticketID: "B")
+        first.complete([a], ticketID: "B", request: oldB)
+        XCTAssertEqual(first.messages, [b])
+        first.complete([b], ticketID: "B", request: newB)
+    }
+
+    @MainActor func testThreadSnapshotPreservesSameTicketOfflineAndClearsNewTicket() {
+        let message = SupportMessage(id: "a", body: "A", senderRole: "ADMIN", createdAt: Date())
+        var state = SupportThreadSnapshot()
+        let first = state.begin(ticketID: "A")
+        state.complete([message], ticketID: "A", request: first)
+        let refresh = state.begin(ticketID: "A")
+        state.complete(nil, ticketID: "A", request: refresh)
+        XCTAssertEqual(state.messages, [message])
+        let next = state.begin(ticketID: "B")
+        state.complete(nil, ticketID: "B", request: next)
+        XCTAssertEqual(state.ticketID, "B")
+        XCTAssertTrue(state.messages.isEmpty)
+    }
+
 }

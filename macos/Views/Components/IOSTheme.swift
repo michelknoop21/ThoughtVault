@@ -48,6 +48,10 @@ enum IOSMetric {
     static let radius: CGFloat = 14
 }
 
+#endif
+
+import SwiftUI
+
 // MARK: - Screenshot hooks
 
 /// Debug-only launch arguments for simulator screenshots, where taps are not
@@ -62,9 +66,17 @@ enum IOSDebug {
         #endif
     }
     static var open: String? { string("TVDebugOpen") }
+    @MainActor static var supportSeed: Bool {
+        #if DEBUG && !APP_STORE
+        return DebugScreenshotSeed.isEnabled && ["support-report", "support-tickets", "support-thread"].contains(open ?? "")
+        #else
+        return false
+        #endif
+    }
     static var scrollAnchor: UnitPoint { string("TVDebugBottom") == "YES" ? .bottom : .top }
 }
 
+#if os(iOS)
 // MARK: - Formatting
 
 enum IOSFormat {

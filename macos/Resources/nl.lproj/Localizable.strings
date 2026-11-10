@@ -459,3 +459,26 @@
 "Gaat er iets mis bij opnemen, transcriberen of de notule, dan stuurt ThoughtVault automatisch een foutrapport met app-versie, apparaat, je klikpad en een afgeschermd logbestand naar de ontwikkelaar. Je opnames, transcripties, notules en titels gaan nooit mee." = "Gaat er iets mis bij opnemen, transcriberen of de notule, dan stuurt ThoughtVault automatisch een foutrapport met app-versie, apparaat, je klikpad en een afgeschermd logbestand naar de ontwikkelaar. Je opnames, transcripties, notules en titels gaan nooit mee.";
 "Doorgaan" = "Doorgaan";
 "Dit e-mailadres klopt niet." = "Dit e-mailadres klopt niet.";
+
+/* Support center */
+"Support" = "Support";
+"Melding maken" = "Melding maken";
+"Mijn meldingen" = "Mijn meldingen";
+"Terug naar Mijn meldingen" = "Terug naar Mijn meldingen";
+"Categorie" = "Categorie";
+"Fout" = "Fout";
+"Idee" = "Idee";
+"Vraag" = "Vraag";
+"Omschrijving" = "Omschrijving";
+"Versturen" = "Versturen";
+"Verstuurd. Het antwoord zie je in Mijn meldingen en in je e-mail." = "Verstuurd. Het antwoord zie je in Mijn meldingen en in je e-mail.";
+"Geen verbinding. De melding gaat vanzelf de deur uit zodra je weer online bent." = "Geen verbinding. De melding gaat vanzelf de deur uit zodra je weer online bent.";
+"Versturen lukte niet. Probeer het zo nog eens." = "Versturen lukte niet. Probeer het zo nog eens.";
+"Nog geen meldingen. Via Melding maken stuur je een fout, idee of vraag." = "Nog geen meldingen. Via Melding maken stuur je een fout, idee of vraag.";
+"Ongelezen" = "Ongelezen";
+"In behandeling" = "In behandeling";
+"Wacht op jou" = "Wacht op jou";
+"Opgelost" = "Opgelost";
+"Gesloten" = "Gesloten";
+"Antwoord" = "Antwoord";
+"Stuur" = "Stuur";

@@ -10,20 +10,45 @@ import AppKit
 /// simulator, so it can never touch real data.
 @MainActor
 enum DebugScreenshotSeed {
-    static func run() {
-        guard !AppEnvironment.isRunningTests, UserDefaults.standard.string(forKey: "TVDebugSeed") == "YES" else { return }
+    static var isEnabled: Bool {
+        guard !AppEnvironment.isRunningTests, UserDefaults.standard.string(forKey: "TVDebugSeed") == "YES" else { return false }
         #if targetEnvironment(simulator)
         let isolated = true
         #else
         let isolated = Bundle.main.bundleIdentifier?.hasSuffix(".screens") == true
         #endif
-        guard isolated, LocalTranscriptStore.shared.allTranscripts().isEmpty else { return }
+        return isolated
+    }
+
+    static func run() {
+        guard isEnabled, LocalTranscriptStore.shared.allTranscripts().isEmpty else { return }
         seedPeople()
         seedGlossary()
         try? LocalTranscriptStore.shared.save(TranscriptRecord(
             title: "Schadebezoek Keizersgracht", rawTranscription: "Jan de Vries neemt het rapport op zich.",
             notuleHtml: "<h1>Schadebezoek Keizersgracht</h1><h2>Besluiten</h2><ul><li>Jan de Vries stelt het rapport op voor vrijdag.</li><li>Contra-expertise wordt ingepland door Jan Smit.</li></ul>",
             profileId: "meeting", profileName: "Meeting"))
+    }
+
+    static func seedSupport(_ support: SupportViewModel) {
+        guard IOSDebug.supportSeed, support.tickets.isEmpty else { return }
+        let date = Date(timeIntervalSince1970: 1_794_312_000)
+        support.tickets = [
+            SupportTicket(id: "support-demo-1", ref: "TV-001", status: "WAITING_FOR_USER", category: "BUG",
+                          description: "Opnemen stopt onverwacht", unread: true, createdAt: date, updatedAt: nil,
+                          lastMessage: .init(senderRole: "ADMIN", createdAt: date, excerpt: "Welke microfoon gebruik je?")),
+            SupportTicket(id: "support-demo-2", ref: "TV-002", status: "RESOLVED", category: "QUESTION",
+                          description: "Waar vind ik mijn notules?", unread: false, createdAt: date, updatedAt: date,
+                          lastMessage: nil)
+        ]
+        support.unreadCount = 1
+        support.thread = supportMessages(for: support.tickets[0])
+    }
+
+    static func supportMessages(for ticket: SupportTicket) -> [SupportMessage] {
+        [SupportMessage(id: ticket.id + "-user", body: ticket.description, senderRole: "USER", createdAt: ticket.createdAt),
+         SupportMessage(id: ticket.id + "-admin", body: ticket.lastMessage?.excerpt ?? "Je vindt je notules bij Transcripties.",
+                        senderRole: "ADMIN", createdAt: ticket.createdAt.addingTimeInterval(60))]
     }
 
     private static func seedPeople() {

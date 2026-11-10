@@ -79,6 +79,12 @@ struct ThoughtVaultApp: App {
                     #endif
                 }
                 .task {
+                    #if DEBUG
+                    if IOSDebug.supportSeed {
+                        DebugScreenshotSeed.seedSupport(supportVM)
+                        return
+                    }
+                    #endif
                     guard !AppEnvironment.isDebugSnapshot else { return }
                     // Install the failure hook before startup work or support network awaits.
                     recordingVM.onFailure = { stage, message in
@@ -123,7 +129,7 @@ struct ThoughtVaultApp: App {
                 }
                 .onChange(of: NetworkMonitor.shared.isConnected) { _, connected in
                     guard !AppEnvironment.isDebugSnapshot else { return }
-                    if connected { Task { await SupportRelay.shared.flush() } }
+                    if connected && !IOSDebug.supportSeed { Task { await SupportRelay.shared.flush() } }
                 }
                 .onChange(of: scenePhase) { _, phase in
                     guard !AppEnvironment.isDebugSnapshot else { return }
@@ -184,10 +190,13 @@ struct RootView: View {
     @AppStorage(SupportIdentity.emailKey) private var supportEmail = ""
     @AppStorage("hasCompletedOnboarding") var hasCompletedOnboarding = false
     @Environment(RecordingViewModel.self) private var recordingVM
+    @State private var debugSupportPresented = false
 
     var body: some View {
         Group {
-            if SupportIdentity.showsGate(name: supportName, email: supportEmail, arguments: ProcessInfo.processInfo.arguments) {
+            if IOSDebug.supportSeed {
+                Color.clear
+            } else if SupportIdentity.showsGate(name: supportName, email: supportEmail, arguments: ProcessInfo.processInfo.arguments) {
                 SupportIdentityView()
                     #if DEBUG
                     .task {
@@ -201,6 +210,8 @@ struct RootView: View {
                 OnboardingView()
             }
         }
+        .sheet(isPresented: $debugSupportPresented) { SupportCenterView() }
+        .task { debugSupportPresented = IOSDebug.supportSeed }
 #if os(macOS)
         .frame(minWidth: 900, minHeight: 600)
         .onChange(of: recordingVM.recordingState) { _, newState in

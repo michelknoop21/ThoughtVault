@@ -75,6 +75,11 @@ async function call(method: "GET" | "POST", path: string, inst: Installation | n
       object(detail) && typeof detail.message === "string" ? detail.message : `Supportverzoek mislukt (HTTP ${response.status}).`,
       retryAfter(response.headers), object(detail) && text(detail.error_code, 100) ? detail.error_code : undefined);
   }
+  // An accepted report must not be posted again when only its receipt is broken.
+  if (path === "/reports") {
+    try { return { status: response.status, data: JSON.parse(response.body) }; }
+    catch { return { status: response.status, data: null }; }
+  }
   return { status: response.status, data: parse(response.body) };
 }
 
@@ -90,7 +95,7 @@ export async function registerInstallation(id: string, secret: string): Promise<
   }
 }
 
-export async function sendReport(inst: Installation, payload: ReportPayload): Promise<ReportResult> {
+export async function sendReport(inst: Installation, payload: ReportPayload): Promise<ReportResult | null> {
   requireInput(["auto", "manual"].includes(payload.kind) && categories.includes(payload.category) && payload.platform === "windows"
     && (payload.kind === "auto"
       ? payload.category === "BUG" && stages.includes(payload.stage) && typeof payload.fingerprint === "string" && /^[a-f0-9]{16,64}$/.test(payload.fingerprint)
@@ -102,7 +107,7 @@ export async function sendReport(inst: Installation, payload: ReportPayload): Pr
     && typeof payload.log === "string" && new TextEncoder().encode(payload.log).length <= 1_000_000);
   const { data } = await call("POST", "/reports", inst, payload);
   if (!object(data) || !ticketIdValid(data.ticketId) || !text(data.ref, 100, 1) || typeof data.repeated !== "boolean"
-    || !count(data.count) || data.count < 1 || typeof data.logAttached !== "boolean") return invalidResponse();
+    || !count(data.count) || data.count < 1 || typeof data.logAttached !== "boolean") return null;
   return data as unknown as ReportResult;
 }
 

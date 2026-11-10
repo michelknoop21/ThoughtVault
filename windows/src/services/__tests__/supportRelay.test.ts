@@ -52,8 +52,12 @@ describe("support relay transport", () => {
   });
   it.each([[], { tickets: [] }, { data: [null] }, { data: [{ ...ticket, unread: "yes" }] }])("rejects malformed ticket envelopes", async (body) => { reply(200, body); await expect(listTickets(inst)).rejects.toMatchObject({ status: 502 }); });
   it.each([{ count: 3 }, { data: { count: -1 } }, { data: { count: "3" } }])("rejects malformed unread envelopes", async (body) => { reply(200, body); await expect(unreadCount(inst)).rejects.toMatchObject({ status: 502 }); });
-  it("rejects malformed report and message replies and JSON", async () => {
-    reply(200, { ...result, logAttached: undefined }); await expect(sendReport(inst, payload)).rejects.toMatchObject({ status: 502 });
+  it.each([200, 201])("keeps HTTP %i report acceptance when the receipt is malformed", async status => {
+    reply(status, { ...result, logAttached: undefined }); expect(await sendReport(inst, payload)).toBeNull();
+    vi.mocked(invoke).mockResolvedValueOnce({ status, body: "<html>", headers: {} });
+    expect(await sendReport(inst, payload)).toBeNull(); expect(invoke).toHaveBeenCalledTimes(2);
+  });
+  it("rejects malformed message replies and JSON", async () => {
     reply(200, [message]); await expect(ticketMessages(inst, "a")).rejects.toMatchObject({ status: 502 });
     reply(201, { data: message }); await expect(postMessage(inst, "a", "test")).rejects.toMatchObject({ status: 502 });
     vi.mocked(invoke).mockResolvedValueOnce({ status: 200, body: "<html>", headers: {} }); await expect(listTickets(inst)).rejects.toMatchObject({ status: 502 });

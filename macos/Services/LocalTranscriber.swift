@@ -419,14 +419,9 @@ final class WhisperKitTranscriber: LocalTranscriber, @unchecked Sendable {
             // files transcribe instead of hanging (WhisperKit handles this internally).
             options.chunkingStrategy = .vad
 
-            // Bias recognition toward known names/terms via Whisper's initial prompt.
-            let vocab = await MainActor.run { PersonalVocabulary.terms(profileId: profileId) }
-            if !vocab.isEmpty, let tokenizer = pipe.tokenizer {
-                let prompt = "Namen en termen: \(vocab.joined(separator: ", "))."
-                options.promptTokens = tokenizer.encode(text: " " + prompt)
-                    .filter { $0 < tokenizer.specialTokens.specialTokenBegin }
-                options.usePrefillPrompt = true
-            }
+            // No vocabulary prompt: Whisper silently drops VAD windows when given
+            // one (29-min meeting 3265 -> 0 words, 109 s test 291 -> 110). Names
+            // are corrected afterwards via PersonalCorrections in NotuleGenerator.
 
             onProgress(0.20)
 

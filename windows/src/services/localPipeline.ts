@@ -11,8 +11,6 @@ import { exportToObsidian } from "./obsidian";
 import { extractTitle } from "./titleExtractor";
 import { getQuickNote } from "./quickNotes";
 import { hasUsableNotule, hasUsableTranscription } from "./notuleValidation";
-import { usePersonalCorrectionsStore } from "../stores/personalCorrectionsStore";
-import { activeCorrections } from "./personalCorrections";
 import { runInBackground } from "./contextSuggestions";
 import type { Participant } from "./participants";
 import type { RecordingMode, Transcript, TranscriptTask } from "../types";
@@ -84,12 +82,11 @@ export async function processLocally(
         updateBackgroundTask(taskId, { progress: Math.round(10 + frac * 40) });
       });
       try {
-        await usePersonalCorrectionsStore.getState().hydrate();
-        const vocabulary = activeCorrections(usePersonalCorrectionsStore.getState().entries, profile.id).slice(0,30).map(e => e.canonical).join(", ");
+        // No glossary as Whisper prompt: it silently drops speech. Names are
+        // corrected afterwards in LLMService (correctText/correctHTML).
         transcription = await invoke<string>("transcribe_local", {
           filePath,
           modelId: model,
-          vocabulary,
           requestId: taskId,
         });
       } finally {

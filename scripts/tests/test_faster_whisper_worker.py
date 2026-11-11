@@ -25,14 +25,15 @@ class WorkerTests(unittest.TestCase):
             output = Path(tmp) / "result.txt"
             stdout = io.StringIO()
             with contextlib.redirect_stdout(stdout):
-                worker.transcribe("model-dir", "audio.wav", output, "Alex")
+                worker.transcribe("model-dir", "audio.wav", output)
             constructor.assert_called_once_with("model-dir", device="cpu", compute_type="int8", cpu_threads=4, local_files_only=True)
             self.assertEqual(output.read_text(), "Alex plant maandag. De test is afgerond.")
             progress = [json.loads(line)["progress"] for line in stdout.getvalue().splitlines()]
             self.assertEqual(progress[-1], 100)
             self.assertNotIn("Alex", stdout.getvalue())
             self.assertEqual(model.transcribe.call_args.kwargs["language"], "nl")
-            self.assertEqual(model.transcribe.call_args.kwargs["initial_prompt"], "Alex")
+            # A glossary as initial_prompt made Whisper silently drop speech.
+            self.assertNotIn("initial_prompt", model.transcribe.call_args.kwargs)
 
     def test_inference_error_does_not_publish_partial_output(self):
         def segments():

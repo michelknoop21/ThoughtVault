@@ -4,11 +4,11 @@ import json
 from pathlib import Path
 
 
-def transcribe(model_path, audio_path, output_path, vocabulary=""):
+def transcribe(model_path, audio_path, output_path):
     from faster_whisper import WhisperModel
     model = WhisperModel(str(model_path), device="cpu", compute_type="int8", cpu_threads=4, local_files_only=True)
     segments, info = model.transcribe(str(audio_path), language="nl", beam_size=5,
-        vad_filter=True, initial_prompt=vocabulary or None, condition_on_previous_text=False)
+        vad_filter=True, condition_on_previous_text=False)  # no glossary prompt: it drops speech
     text = []
     for segment in segments:
         text.append(segment.text.strip())
@@ -24,7 +24,6 @@ def main():
     parser.add_argument("--model")
     parser.add_argument("--audio")
     parser.add_argument("--output")
-    parser.add_argument("--vocabulary", default="")
     args = parser.parse_args()
     if args.probe:
         import faster_whisper
@@ -33,7 +32,7 @@ def main():
     else:
         if not all((args.model, args.audio, args.output)):
             parser.error("model, audio and output are required")
-        transcribe(args.model, args.audio, args.output, args.vocabulary)
+        transcribe(args.model, args.audio, args.output)
 
 
 if __name__ == "__main__":

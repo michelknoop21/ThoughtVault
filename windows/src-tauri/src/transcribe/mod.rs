@@ -192,7 +192,6 @@ pub async fn transcribe_local(
     app: AppHandle,
     file_path: String,
     model_id: String,
-    vocabulary: Option<String>,
     request_id: String,
 ) -> Result<String, String> {
     let model = model_path(&app, &model_id)?;
@@ -200,18 +199,15 @@ pub async fn transcribe_local(
         return Err("Model nog niet gedownload".to_string());
     }
 
-    let vocabulary = vocabulary.unwrap_or_default();
-    // Thirty validated names of up to 120 characters also fit in UTF-8.
-    if vocabulary.len() > 16_384 || vocabulary.contains('\0') { return Err("Ongeldige woordenlijst".into()); }
     // whisper inference is blocking + CPU-heavy: keep it off the async runtime.
     tokio::task::spawn_blocking(move || {
         let _guard = TRANSCRIPTION_LOCK.lock().map_err(|e| format!("Transcriptiewachtrij mislukt: {e}"))?;
         let result = if model_id == faster::MODEL_ID {
-            faster::run(app, &model, &file_path, &vocabulary, &request_id)
+            faster::run(app, &model, &file_path, &request_id)
         } else if let Some(info) = nvidia::model(&model_id) {
             nvidia::verify_model(&model, &info).and_then(|_| nvidia::run(app, &model, &file_path, &request_id))
         } else {
-            run_whisper(app, &model, &file_path, &vocabulary, &request_id)
+            run_whisper(app, &model, &file_path, &request_id)
         };
         if let Err(error) = &result { eprintln!("[transcribe_local] {error}"); }
         result
@@ -254,7 +250,7 @@ fn speech_ranges(detector: &mut whisper_rs::WhisperVadContext, samples: &[f32]) 
     Ok(ranges)
 }
 
-fn run_whisper(app: AppHandle, model: &PathBuf, wav_path: &str, vocabulary: &str, request_id: &str) -> Result<String, String> {
+fn run_whisper(app: AppHandle, model: &PathBuf, wav_path: &str, request_id: &str) -> Result<String, String> {
     use whisper_rs::{
         convert_integer_to_float_audio, FullParams, SamplingStrategy, WhisperContext,
         WhisperContextParameters,
@@ -336,7 +332,7 @@ fn run_whisper(app: AppHandle, model: &PathBuf, wav_path: &str, vocabulary: &str
             let mut params = FullParams::new(SamplingStrategy::Greedy { best_of: 1 });
             params.set_language(Some("nl"));
             params.set_no_context(true);
-            if !vocabulary.is_empty() { params.set_initial_prompt(vocabulary); }
+            // No glossary as initial prompt: it makes Whisper silently drop speech.
             params.set_print_special(false);
             params.set_print_progress(false);
             params.set_print_realtime(false);

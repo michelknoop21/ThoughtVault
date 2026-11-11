@@ -94,6 +94,8 @@ it("persists imported audio duration and keeps it on the task", async () => {
   useLocalTranscriptsStore.setState({ items: [], add, update: vi.fn() });
   vi.spyOn(LLMService, "generateNotulen").mockResolvedValue("<h2>Besluit</h2><p>Alex controleert maandag de opname.</p>");
   await processLocally("C:\\import.wav", "standaard", "microphone", [], 0, "local-import");
+  // A glossary sent as Whisper prompt silently dropped speech; it must not reach transcription.
+  expect(invoke).toHaveBeenCalledWith("transcribe_local", expect.not.objectContaining({ vocabulary: expect.anything() }));
   expect(add).toHaveBeenCalledWith(expect.objectContaining({ duration_seconds: 600 }));
   expect(useRecordingStore.getState().backgroundTasks[0].duration_seconds).toBe(600);
 });

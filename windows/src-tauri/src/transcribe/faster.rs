@@ -92,7 +92,7 @@ pub(super) async fn download(app: &AppHandle, dest: &Path, cancelled: &mut watch
     result
 }
 
-pub(super) fn run(app: AppHandle, model: &Path, audio: &str, vocabulary: &str, request_id: &str) -> Result<String, String> {
+pub(super) fn run(app: AppHandle, model: &Path, audio: &str, request_id: &str) -> Result<String, String> {
     use std::io::{BufRead, BufReader};
     use std::process::{Command, Stdio};
     verify(model)?;
@@ -103,7 +103,7 @@ pub(super) fn run(app: AppHandle, model: &Path, audio: &str, vocabulary: &str, r
     let output: PathBuf = work.path().join("result.txt");
     let mut command = Command::new(runtime);
     command.arg("--model").arg(model).arg("--audio").arg(audio).arg("--output").arg(&output)
-        .arg("--vocabulary").arg(vocabulary).env("HF_HUB_OFFLINE", "1")
+        .env("HF_HUB_OFFLINE", "1")
         .stdin(Stdio::null()).stdout(Stdio::piped()).stderr(Stdio::null());
     #[cfg(target_os = "windows")]
     {

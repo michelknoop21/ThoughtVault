@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { DesktopDialog } from "../ui/DesktopDialog";
 import { htmlToPlainText } from "../../utils/htmlToMarkdown";
-import { createOffer, match, openOffer, searchCustomers, type OfferResult } from "../../services/prospectFlow";
+import { createOffer, loadOfferRef, match, openOffer, searchCustomers, type OfferResult } from "../../services/prospectFlow";
 import type { Transcript } from "../../types";
 
 interface Option { id: number; label: string }
@@ -24,17 +24,31 @@ export function ProspectFlowDialog({ transcript, onClose }: { transcript: Transc
 
   useEffect(() => {
     let active = true;
+    const ref = loadOfferRef(taskId);
+    const pending = ref?.pendingRequestId ? ref.pendingCustomer : undefined;
+    let pendingSelection: number | typeof NEW | null = null;
+    if (pending?.startsWith("new:") && pending.slice(4).trim()) {
+      pendingSelection = NEW;
+      setNewName(ref?.pendingNewCustomerName?.toLowerCase() === pending.slice(4) ? ref.pendingNewCustomerName : pending.slice(4));
+    } else if (pending && /^id:[1-9]\d*$/.test(pending) && Number.isSafeInteger(Number(pending.slice(3)))) {
+      pendingSelection = Number(pending.slice(3));
+    }
+    setSelected(pendingSelection);
     // Participant organisations are not stored with a transcript, so only the notule text is matched.
     match(htmlToPlainText(transcript.notule_html ?? ""))
       .then((found) => {
         if (!active) return;
-        addOptions(found.map((k) => ({ id: k.id, label: k.plaats ? `${k.naam} (${k.plaats})` : k.naam })));
-        if (found[0]) setSelected(found[0].id);
+        const choices = found.map((k) => ({ id: k.id, label: k.plaats ? `${k.naam} (${k.plaats})` : k.naam }));
+        if (typeof pendingSelection === "number" && !choices.some(k => k.id === pendingSelection)) {
+          choices.unshift({ id: pendingSelection, label: `Eerder gekozen klant (${pendingSelection})` });
+        }
+        addOptions(choices);
+        if (pendingSelection === null && found[0]) setSelected(found[0].id);
       })
       .catch((e) => { if (active) setError(e instanceof Error ? e.message : "Klanten zoeken mislukt"); })
       .finally(() => { if (active) setMatching(false); });
     return () => { active = false; };
-  }, [transcript.notule_html]);
+  }, [taskId, transcript.notule_html]);
 
   async function search() {
     if (!query.trim()) return;

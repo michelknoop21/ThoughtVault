@@ -1,5 +1,6 @@
 import XCTest
 import SwiftData
+import SwiftUI
 @testable import ThoughtVault
 
 // Flow assertions ported from windows/src/services/__tests__/llm.audit-integration.test.ts
@@ -470,6 +471,45 @@ final class ProspectFlowReferenceTests: XCTestCase {
         ProspectFlowService.setOfferRef(nil, for: "test", defaults: defaults)
         XCTAssertNil(ProspectFlowService.offerRef(for: "test", defaults: defaults))
     }
+    func testPendingCustomerChoiceKeepsOriginalNewCustomerAfterReopening() {
+        let ref = ProspectFlowService.OfferRef(pendingRequestId: "lost-reply", pendingCustomer: "new:nieuw bv", pendingNewCustomerName: "Nieuw BV")
+        guard case .new(let name) = ref.pendingChoice else { return XCTFail("Pending choice lost") }
+        XCTAssertEqual(name, "Nieuw BV")
+        XCTAssertEqual(ProspectFlowService.Customer.new(name).key, ref.pendingCustomer)
+        let legacy = ProspectFlowService.OfferRef(pendingRequestId: "legacy", pendingCustomer: "new:nieuw bv")
+        XCTAssertEqual(legacy.pendingChoice?.key, "new:nieuw bv")
+        let existing = ProspectFlowService.OfferRef(pendingRequestId: "existing", pendingCustomer: "id:12")
+        XCTAssertEqual(existing.pendingChoice?.key, "id:12")
+        XCTAssertNotEqual(existing.pendingChoice?.key, ref.pendingChoice?.key)
+        XCTAssertNil(ProspectFlowService.OfferRef(pendingCustomer: "new:nieuw bv").pendingChoice)
+        for key in ["new:", "new:  ", "id:0", "id:-1", "id:bad", "other"] {
+            XCTAssertNil(ProspectFlowService.OfferRef(pendingRequestId: "invalid", pendingCustomer: key).pendingChoice)
+        }
+    }
+
+    @MainActor
+    func testOfferOpeningReportsRefusalAndInvalidURL() async {
+        for url in [URL(string: "https://pf.example.test/offers/1/build"), nil] {
+            let error: String? = await withCheckedContinuation { continuation in
+                openProspectFlowOffer(url, using: OpenURLAction { _ in .discarded },
+                                      onFailure: { continuation.resume(returning: $0) },
+                                      onSuccess: { continuation.resume(returning: nil) })
+            }
+            XCTAssertNotNil(error)
+        }
+    }
+
+    @MainActor
+    func testOfferOpeningCompletesOnlyWhenBrowserAccepts() async {
+        let opened: Bool = await withCheckedContinuation { continuation in
+            openProspectFlowOffer(URL(string: "https://pf.example.test/offers/1/build"),
+                                  using: OpenURLAction { _ in .handled },
+                                  onFailure: { _ in continuation.resume(returning: false) },
+                                  onSuccess: { continuation.resume(returning: true) })
+        }
+        XCTAssertTrue(opened)
+    }
+
     func testOfferLinksCannotLeaveTheirInstance() {
         let service = ProspectFlowService(baseURL: "https://pf.example.test", apiKey: "fixture")
         XCTAssertEqual(service.openURL("/offers/1/build")?.absoluteString, "https://pf.example.test/offers/1/build")

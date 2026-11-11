@@ -14,7 +14,7 @@ export interface OfferResult {
   instanceBaseUrl?: string;
 }
 /** Saved per notule; `pendingRequestId` lives from before the POST until success. */
-export interface OfferRef { id?: number; number?: string; url?: string; pendingRequestId?: string; pendingCustomer?: string }
+export interface OfferRef { id?: number; number?: string; url?: string; pendingRequestId?: string; pendingCustomer?: string; pendingNewCustomerName?: string }
 
 const refKey = (taskId: string, instance: string) => `prospectFlowOffer-${JSON.stringify([instance, taskId])}`;
 
@@ -126,7 +126,7 @@ export async function createOffer(input: CreateOfferInput): Promise<OfferResult>
   // offer); another choice is a new request.
   const choice = input.customerId !== undefined ? `id:${input.customerId}` : `new:${input.newCustomerName!.toLowerCase()}`;
   const requestId = stored.pendingCustomer === choice && stored.pendingRequestId ? stored.pendingRequestId : crypto.randomUUID();
-  saveOfferRef(input.taskId, { ...stored, pendingRequestId: requestId, pendingCustomer: choice }, instance);
+  saveOfferRef(input.taskId, { ...stored, pendingRequestId: requestId, pendingCustomer: choice, pendingNewCustomerName: input.newCustomerName }, instance);
   const result = await request<OfferResult>("/api/ai/offers/from-conversation", "POST", {
     request_id: requestId, transcript_id: input.taskId, title: input.title, recorded_at: input.recordedAt,
     notule_html: input.notuleHtml, transcript: input.transcript,

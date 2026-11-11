@@ -59,6 +59,21 @@ struct ProspectFlowService: Sendable {
         var pendingRequestId: String?
         /// Customer choice the pending id was made for; another choice gets a new id.
         var pendingCustomer: String?
+        var pendingNewCustomerName: String?
+
+        var pendingChoice: Customer? {
+            guard pendingRequestId?.isEmpty == false, let pendingCustomer else { return nil }
+            if pendingCustomer.hasPrefix("new:") {
+                let normalized = String(pendingCustomer.dropFirst(4))
+                guard !normalized.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
+                let name = pendingNewCustomerName.flatMap { $0.lowercased() == normalized ? $0 : nil } ?? normalized
+                return .new(name)
+            }
+            if pendingCustomer.hasPrefix("id:"), let id = Int(pendingCustomer.dropFirst(3)), id > 0 {
+                return .existing(id)
+            }
+            return nil
+        }
     }
 
     enum Customer: Sendable {

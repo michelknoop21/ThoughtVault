@@ -540,3 +540,7 @@
 "Bij een terugval naar ChatGPT, Claude of een andere online aanbieder gaat het transcript naar die aanbieder." = "On a fallback to ChatGPT, Claude or another online provider, the transcript is sent to that provider.";
 
 "Prospect Flow gaf een ongeldige offertelink." = "Prospect Flow returned an invalid offer link.";
+
+"De offerte is bewaard, maar de link kon niet worden geopend. Probeer opnieuw." = "The offer is saved, but its link could not be opened. Try again.";
+
+"Eerder gekozen klant" = "Previously selected customer";

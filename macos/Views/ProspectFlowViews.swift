@@ -6,10 +6,23 @@
 
 import SwiftUI
 
+@MainActor
+func openProspectFlowOffer(
+    _ url: URL?, using openURL: OpenURLAction,
+    onFailure: @escaping (String) -> Void, onSuccess: @escaping () -> Void = {}
+) {
+    let failed = { onFailure(String(localized: "De offerte is bewaard, maar de link kon niet worden geopend. Probeer opnieuw.")) }
+    guard let url else { failed(); return }
+    openURL(url) { accepted in
+        if accepted { onSuccess() } else { failed() }
+    }
+}
+
 // MARK: - Menu items
 
 struct ProspectFlowMenuItems: View {
     let transcript: Transcript
+    let onOpenError: (String) -> Void
     let start: () -> Void
     @Environment(\.openURL) private var openURL
 
@@ -19,7 +32,7 @@ struct ProspectFlowMenuItems: View {
             if let ref = ProspectFlowService.offerRef(for: transcript.taskId),
                let number = ref.number, let path = ref.url {
                 Button {
-                    if let url = ProspectFlowService().openURL(path) { openURL(url) }
+                    openProspectFlowOffer(ProspectFlowService().openURL(path), using: openURL, onFailure: onOpenError)
                 } label: {
                     Label("Open offerte \(number)", systemImage: "doc.text.magnifyingglass")
                 }
@@ -51,6 +64,7 @@ struct ProspectFlowOfferSheet: View {
     @State private var newName = ""
     @State private var query = ""
     @State private var searchTask: Task<Void, Never>?
+    @State private var openError: String?
 
     private let service = ProspectFlowService()
 
@@ -59,6 +73,9 @@ struct ProspectFlowOfferSheet: View {
             Text("Conceptofferte in Prospect Flow")
                 .font(TS.Font.title3)
             content
+            if let openError {
+                Text(openError).font(TS.Font.footnote).foregroundStyle(Color.statusError)
+            }
             Spacer(minLength: 0)
             footer
         }
@@ -161,8 +178,8 @@ struct ProspectFlowOfferSheet: View {
             case .done(let result):
                 Button("Sluiten") { dismiss() }
                 Button("Open offerte") {
-                    if let url = service.openURL(result.url) { openURL(url) }
-                    dismiss()
+                    openProspectFlowOffer(service.openURL(result.url), using: openURL,
+                                          onFailure: { openError = $0 }, onSuccess: { dismiss() })
                 }
                 .buttonStyle(.borderedProminent)
             case .working:
@@ -181,9 +198,18 @@ struct ProspectFlowOfferSheet: View {
 
     private func loadCandidates() async {
         let text = transcript.title + "\n" + HTMLPlainText.from(transcript.notuleHtml ?? "")
+        let pendingChoice = ProspectFlowService.offerRef(for: transcript.taskId, baseURL: service.baseURL)?.pendingChoice
+        switch pendingChoice {
+        case .new(let name): selectedId = nil; newName = name
+        case .existing(let id): selectedId = id
+        case nil: break
+        }
         do {
             candidates = try await service.match(text: text)
-            selectedId = candidates.first?.id
+            if let selectedId, !candidates.contains(where: { $0.id == selectedId }) {
+                candidates.insert(.init(id: selectedId, naam: String(localized: "Eerder gekozen klant") + " (\(selectedId))", plaats: nil), at: 0)
+            }
+            if case nil = pendingChoice { selectedId = candidates.first?.id }
             phase = .choose
         } catch {
             phase = .failed(error.localizedDescription)
@@ -198,9 +224,11 @@ struct ProspectFlowOfferSheet: View {
             try? await Task.sleep(for: .milliseconds(300))
             guard !Task.isCancelled, let found = try? await service.search(term), !Task.isCancelled,
                   !found.isEmpty else { return }
+            let selected = candidates.first(where: { $0.id == selectedId })
             candidates = found
-            // Keep a choice the user already made while the search was running.
-            if !found.contains(where: { $0.id == selectedId }) { selectedId = found.first?.id }
+            if let selected, !found.contains(where: { $0.id == selected.id }) {
+                candidates.insert(selected, at: 0)
+            }
         }
     }
 
@@ -208,18 +236,20 @@ struct ProspectFlowOfferSheet: View {
         let taskId = transcript.taskId
         let customer: ProspectFlowService.Customer = selectedId.map { .existing($0) }
             ?? .new(newName.trimmingCharacters(in: .whitespaces))
-        var ref = ProspectFlowService.offerRef(for: taskId) ?? .init()
+        var ref = ProspectFlowService.offerRef(for: taskId, baseURL: service.baseURL) ?? .init()
         // Reuse a pending id for the same customer so a retry after a timeout cannot
         // create a second offer; another customer or no pending id is a new request.
         let requestId = ref.pendingCustomer == customer.key ? (ref.pendingRequestId ?? UUID().uuidString)
                                                             : UUID().uuidString
         ref.pendingRequestId = requestId
         ref.pendingCustomer = customer.key
-        ProspectFlowService.setOfferRef(ref, for: taskId)
+        if case .new(let name) = customer { ref.pendingNewCustomerName = name }
+        else { ref.pendingNewCustomerName = nil }
+        ProspectFlowService.setOfferRef(ref, for: taskId, baseURL: service.baseURL)
         phase = .working
         do {
             let result = try await service.createOffer(requestId: requestId, transcript: transcript, customer: customer)
-            ProspectFlowService.setOfferRef(.init(id: result.offerId, number: result.number, url: result.url), for: taskId)
+            ProspectFlowService.setOfferRef(.init(id: result.offerId, number: result.number, url: result.url), for: taskId, baseURL: service.baseURL)
             phase = .done(result)
         } catch {
             phase = .failed(error.localizedDescription)

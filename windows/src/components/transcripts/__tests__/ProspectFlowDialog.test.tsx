@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import { expect, it, vi } from "vitest";
 import { ProspectFlowDialog } from "../ProspectFlowDialog";
 
-const api = vi.hoisted(() => ({ match: vi.fn(), createOffer: vi.fn(), openOffer: vi.fn(), searchCustomers: vi.fn() }));
+const api = vi.hoisted(() => ({ match: vi.fn(), loadOfferRef: vi.fn(() => null), createOffer: vi.fn(), openOffer: vi.fn(), searchCustomers: vi.fn() }));
 vi.mock("../../../services/prospectFlow", () => api);
 
 it("shows an opening error after the offer has been created", async () => {

@@ -1500,7 +1500,7 @@ struct TranscriptDetailView: View {
                 Button { exportAsTXT() } label: {
                     Label("Platte tekst", systemImage: "doc.text")
                 }
-                ProspectFlowMenuItems(transcript: fullTranscript) { showProspectFlowSheet = true }
+                ProspectFlowMenuItems(transcript: fullTranscript, onOpenError: { errorMessage = $0 }) { showProspectFlowSheet = true }
                 Divider()
                 Button { copyContent() } label: {
                     Label("Kopieer tekst", systemImage: "doc.on.doc")

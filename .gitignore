@@ -57,3 +57,4 @@ docs/BACKEND.md
 __pycache__/
 
 windows/src-tauri/resources/faster-whisper-*/
+.router/

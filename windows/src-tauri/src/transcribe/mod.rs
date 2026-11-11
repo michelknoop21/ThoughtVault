@@ -273,6 +273,22 @@ fn run_whisper(app: AppHandle, model: &PathBuf, wav_path: &str, vocabulary: &str
     let total_samples = reader.len() as usize;
     let (_vad_file, mut detector) = speech_detector()?;
 
+    // Boost quiet recordings to the same level as macOS/iOS before whisper.
+    // Separate cheap pass because the main loop streams in windows.
+    let gain = {
+        let mut sum_squares = 0f64;
+        let mut count = 0f64;
+        for s in hound::WavReader::open(wav_path)
+            .map_err(|e| format!("Kan opname niet lezen: {}", e))?
+            .samples::<i16>()
+        {
+            let v = s.map_err(|e| format!("Kan audio niet decoderen: {}", e))? as f64 / 32768.0;
+            sum_squares += v * v;
+            count += 1.0;
+        }
+        normalization_gain(if count > 0.0 { sum_squares / count } else { 0.0 })
+    };
+
     let ctx = WhisperContext::new_with_params(
         model,
         WhisperContextParameters::default(),
@@ -305,6 +321,12 @@ fn run_whisper(app: AppHandle, model: &PathBuf, wav_path: &str, vocabulary: &str
         float_buf.resize(int_buf.len(), 0.0);
         convert_integer_to_float_audio(&int_buf, &mut float_buf)
             .map_err(|e| format!("Audioconversie mislukt: {}", e))?;
+        if gain != 1.0 {
+            // ponytail: hard clip after the boost; a soft limiter if clipping hurts accuracy
+            for v in float_buf.iter_mut() {
+                *v = (*v * gain).clamp(-1.0, 1.0);
+            }
+        }
 
         // Long silence can trap Whisper in repetition; decode bounded speech only.
         // whisper-rs calls full_with_state, which bypasses whisper.cpp's built-in VAD.
@@ -351,6 +373,18 @@ fn decode_whisper_text(bytes: &[u8], offset_seconds: usize) -> std::borrow::Cow<
         eprintln!("Whisper invalid UTF-8 repaired at {offset_seconds}s: {error}");
     }
     String::from_utf8_lossy(bytes)
+}
+
+/// Same rule as macOS/iOS `AudioPreConverter`: lift the whole-file mean RMS to
+/// -23 dBFS, boost at most 24 dB, never attenuate, ignore gains under 1 dB.
+fn normalization_gain(mean_square: f64) -> f32 {
+    const TARGET_RMS_DB: f64 = -23.0;
+    const MAX_GAIN_DB: f64 = 24.0;
+    if mean_square <= 0.0 {
+        return 1.0;
+    }
+    let needed_db = (TARGET_RMS_DB - 10.0 * mean_square.log10()).min(MAX_GAIN_DB);
+    if needed_db > 1.0 { 10f64.powf(needed_db / 20.0) as f32 } else { 1.0 }
 }
 
 #[cfg(test)]
@@ -431,5 +465,25 @@ mod tests {
         params.set_print_realtime(false);
         params.set_print_progress(false);
         state.full(params, &vec![0.0; 16_000]).unwrap();
+    }
+
+    fn ms(db: f64) -> f64 { 10f64.powf(db / 10.0) }
+    fn db(gain: f32) -> f64 { 20.0 * (gain as f64).log10() }
+
+    #[test]
+    fn quiet_recording_is_boosted_to_target() {
+        assert!((db(super::normalization_gain(ms(-41.0))) - 18.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn boost_is_capped() {
+        assert!((db(super::normalization_gain(ms(-80.0))) - 24.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn loud_or_silent_recording_is_untouched() {
+        assert_eq!(super::normalization_gain(ms(-17.0)), 1.0);
+        assert_eq!(super::normalization_gain(ms(-23.5)), 1.0);
+        assert_eq!(super::normalization_gain(0.0), 1.0);
     }
 }

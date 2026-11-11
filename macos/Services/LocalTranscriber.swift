@@ -9,6 +9,7 @@
 
 import Foundation
 import AVFoundation
+import Accelerate
 import OSLog
 import SwiftData
 
@@ -80,9 +81,17 @@ enum PersonalVocabulary {
 /// cause WhisperKit to silently hang during inference.
 enum AudioPreConverter {
 
+    /// Whole-file mean RMS that quiet recordings are boosted toward. Typical recordings
+    /// sit around -26..-17 dBFS; a -41 dBFS meeting gave 3333 instead of 3260 words
+    /// after boosting to this level.
+    private static let targetRMSdB: Float = -23
+    /// Upper bound on the boost so near-silent files don't turn noise into "speech".
+    private static let maxGainDB: Float = 24
+
     static func convertToWav16k(_ url: URL) async throws -> URL {
-        // ponytail: if already 16kHz mono WAV, skip conversion
-        if isAlreadyWav16kMono(url) { return url }
+        let gain = try normalizationGain(for: url)
+        // ponytail: if already 16kHz mono WAV and loud enough, skip conversion
+        if gain == 1, isAlreadyWav16kMono(url) { return url }
 
         let outputURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("preconv_\(UUID().uuidString).wav")
@@ -173,6 +182,13 @@ enum AudioPreConverter {
                 }
 
                 if outputBuffer.frameLength > 0 {
+                    if gain != 1, let samples = outputBuffer.floatChannelData?[0] {
+                        // ponytail: hard clip after the boost; a soft limiter if clipping hurts accuracy
+                        var g = gain, lo: Float = -1, hi: Float = 1
+                        let n = vDSP_Length(outputBuffer.frameLength)
+                        vDSP_vsmul(samples, 1, &g, samples, 1, n)
+                        vDSP_vclip(samples, 1, &lo, &hi, samples, 1, n)
+                    }
                     try outputFile.write(from: outputBuffer)
                 }
 
@@ -191,8 +207,36 @@ enum AudioPreConverter {
             }
         }
 
-        logger.info("Pre-converted \(url.lastPathComponent) → 16kHz mono WAV")
+        logger.info("Pre-converted \(url.lastPathComponent) → 16kHz mono WAV (gain \(gain))")
         return outputURL
+    }
+
+    /// Linear gain that lifts the file's mean RMS to `targetRMSdB`; 1 when it is
+    /// already loud enough. Never attenuates. Reads the first channel only.
+    static func normalizationGain(for url: URL) throws -> Float {
+        let file = try AVAudioFile(forReading: url)
+        let chunk: AVAudioFrameCount = 1 << 16
+        guard let buffer = AVAudioPCMBuffer(pcmFormat: file.processingFormat, frameCapacity: chunk) else { return 1 }
+        var sumSquares: Double = 0
+        var count: Double = 0
+        while file.framePosition < file.length {
+            let toRead = AVAudioFrameCount(min(AVAudioFramePosition(chunk), file.length - file.framePosition))
+            try file.read(into: buffer, frameCount: toRead)
+            guard let samples = buffer.floatChannelData?[0], buffer.frameLength > 0 else { break }
+            var s: Float = 0
+            vDSP_svesq(samples, 1, &s, vDSP_Length(buffer.frameLength))
+            sumSquares += Double(s)
+            count += Double(buffer.frameLength)
+        }
+        return gain(forMeanSquare: count > 0 ? sumSquares / count : 0)
+    }
+
+    /// Pure gain rule, split out so it can be unit tested without audio files.
+    static func gain(forMeanSquare meanSquare: Double) -> Float {
+        guard meanSquare > 0 else { return 1 }
+        let rmsDB = Float(10 * log10(meanSquare))
+        let neededDB = min(targetRMSdB - rmsDB, maxGainDB)
+        return neededDB > 1 ? powf(10, neededDB / 20) : 1
     }
 
     /// Quick check: is this file already 16kHz mono 16-bit WAV?

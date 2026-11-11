@@ -68,6 +68,10 @@ const STATUS_TEXT: Record<number, string> = {
   503: "Het AI-model van Prospect Flow is niet bereikbaar.",
 };
 
+class ProspectFlowRequestError extends Error {
+  constructor(message: string, readonly missingCustomer: boolean) { super(message); }
+}
+
 async function request<T>(path: string, method: "GET" | "POST", body?: unknown, timeout = 30): Promise<T> {
   const base = baseUrl();
   if (!base) throw new Error("Vul eerst de Prospect Flow-URL in bij Instellingen.");
@@ -87,7 +91,10 @@ async function request<T>(path: string, method: "GET" | "POST", body?: unknown, 
   try { data = JSON.parse(res.body); } catch { /* non-JSON body */ }
   if (res.status < 200 || res.status >= 300) {
     const detail = (data as { detail?: unknown } | null)?.detail;
-    throw new Error(typeof detail === "string" && detail ? detail : STATUS_TEXT[res.status] ?? `Prospect Flow gaf HTTP ${res.status}.`);
+    throw new ProspectFlowRequestError(
+      typeof detail === "string" && detail ? detail : STATUS_TEXT[res.status] ?? `Prospect Flow gaf HTTP ${res.status}.`,
+      res.status === 404 && detail === "Klant niet gevonden",
+    );
   }
   return data as T;
 }
@@ -122,16 +129,27 @@ export async function createOffer(input: CreateOfferInput): Promise<OfferResult>
   }
   const instance = baseUrl();
   const stored = loadOfferRef(input.taskId, instance) ?? {};
-  // Same customer choice keeps its pending id (a retry after a timeout cannot make a second
-  // offer); another choice is a new request.
+  // Resolve an uncertain POST before allowing a different customer choice.
   const choice = input.customerId !== undefined ? `id:${input.customerId}` : `new:${input.newCustomerName!.toLowerCase()}`;
+  if (stored.pendingRequestId && stored.pendingCustomer !== choice) {
+    throw new Error("Er is nog een onbevestigde offerteaanvraag. Heropen dit venster en rond die eerst af voordat je een andere klant kiest.");
+  }
   const requestId = stored.pendingCustomer === choice && stored.pendingRequestId ? stored.pendingRequestId : crypto.randomUUID();
   saveOfferRef(input.taskId, { ...stored, pendingRequestId: requestId, pendingCustomer: choice, pendingNewCustomerName: input.newCustomerName }, instance);
-  const result = await request<OfferResult>("/api/ai/offers/from-conversation", "POST", {
-    request_id: requestId, transcript_id: input.taskId, title: input.title, recorded_at: input.recordedAt,
-    notule_html: input.notuleHtml, transcript: input.transcript,
-    ...(input.customerId !== undefined ? { customer_id: input.customerId } : { new_customer_name: input.newCustomerName }),
-  }, 300);
+  let result: OfferResult;
+  try {
+    result = await request<OfferResult>("/api/ai/offers/from-conversation", "POST", {
+      request_id: requestId, transcript_id: input.taskId, title: input.title, recorded_at: input.recordedAt,
+      notule_html: input.notuleHtml, transcript: input.transcript,
+      ...(input.customerId !== undefined ? { customer_id: input.customerId } : { new_customer_name: input.newCustomerName }),
+    }, 300);
+  } catch (error) {
+    // The API checks this request ID before returning a missing-customer error.
+    if (error instanceof ProspectFlowRequestError && error.missingCustomer) {
+      saveOfferRef(input.taskId, { id: stored.id, number: stored.number, url: stored.url }, instance);
+    }
+    throw error;
+  }
   if (!result || typeof result !== "object" || !Number.isSafeInteger(result.offer_id) || result.offer_id <= 0
     || typeof result.number !== "string" || !result.number.trim() || typeof result.url !== "string"
     || !result.klant || typeof result.klant.naam !== "string" || !result.klant.naam.trim()

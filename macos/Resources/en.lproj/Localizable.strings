@@ -544,3 +544,5 @@
 "De offerte is bewaard, maar de link kon niet worden geopend. Probeer opnieuw." = "The offer is saved, but its link could not be opened. Try again.";
 
 "Eerder gekozen klant" = "Previously selected customer";
+
+"Er is nog een onbevestigde offerteaanvraag. Heropen dit venster en rond die eerst af voordat je een andere klant kiest." = "An offer request is still unconfirmed. Reopen this window and finish that request before choosing another customer.";

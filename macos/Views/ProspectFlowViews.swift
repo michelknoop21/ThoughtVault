@@ -237,8 +237,11 @@ struct ProspectFlowOfferSheet: View {
         let customer: ProspectFlowService.Customer = selectedId.map { .existing($0) }
             ?? .new(newName.trimmingCharacters(in: .whitespaces))
         var ref = ProspectFlowService.offerRef(for: taskId, baseURL: service.baseURL) ?? .init()
-        // Reuse a pending id for the same customer so a retry after a timeout cannot
-        // create a second offer; another customer or no pending id is a new request.
+        // Resolve an uncertain POST before allowing a different customer choice.
+        if ref.pendingRequestId?.isEmpty == false, ref.pendingCustomer != customer.key {
+            phase = .failed(String(localized: "Er is nog een onbevestigde offerteaanvraag. Heropen dit venster en rond die eerst af voordat je een andere klant kiest."))
+            return
+        }
         let requestId = ref.pendingCustomer == customer.key ? (ref.pendingRequestId ?? UUID().uuidString)
                                                             : UUID().uuidString
         ref.pendingRequestId = requestId
@@ -252,6 +255,11 @@ struct ProspectFlowOfferSheet: View {
             ProspectFlowService.setOfferRef(.init(id: result.offerId, number: result.number, url: result.url), for: taskId, baseURL: service.baseURL)
             phase = .done(result)
         } catch {
+            // The API checks this request ID before returning a missing-customer error.
+            if case ProspectFlowService.PFError.server(let code, let detail) = error,
+               code == 404, detail == "Klant niet gevonden" {
+                ProspectFlowService.setOfferRef(.init(id: ref.id, number: ref.number, url: ref.url), for: taskId, baseURL: service.baseURL)
+            }
             phase = .failed(error.localizedDescription)
         }
     }

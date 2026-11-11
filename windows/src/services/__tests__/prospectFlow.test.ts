@@ -47,13 +47,19 @@ it("shows the server detail, or a Dutch fallback by status", async () => {
   await expect(createOffer({ ...input, customerId: 1 })).rejects.toThrow("niet bereikbaar");
 });
 
-it("gives another customer choice a new request id", async () => {
+it("requires resolving the pending request before another customer gets a new request id", async () => {
   invoke.mockRejectedValueOnce("timeout");
   await expect(createOffer({ ...input, customerId: 12 })).rejects.toThrow();
   const first = loadOfferRef("t1")!.pendingRequestId;
-  invoke.mockRejectedValueOnce("timeout");
-  await expect(createOffer({ ...input, customerId: 13 })).rejects.toThrow();
-  expect(loadOfferRef("t1")!.pendingRequestId).not.toBe(first);
+  await expect(createOffer({ ...input, customerId: 13 })).rejects.toThrow("onbevestigde offerteaanvraag");
+  expect(invoke).toHaveBeenCalledOnce();
+  expect(loadOfferRef("t1")!.pendingRequestId).toBe(first);
+  invoke.mockResolvedValueOnce({ status: 201, body: JSON.stringify(ok) });
+  await createOffer({ ...input, customerId: 12 });
+  expect(body().request_id).toBe(first);
+  invoke.mockResolvedValueOnce({ status: 201, body: JSON.stringify({ ...ok, klant: { ...ok.klant, id: 13 } }) });
+  await createOffer({ ...input, customerId: 13 });
+  expect(body().request_id).not.toBe(first);
 });
 
 it("does not send an offer when its pending id cannot be saved", async () => {
@@ -100,4 +106,32 @@ it("rejects a redirect response without clearing the pending request", async () 
 it.each(["@other.example.test/path", "//other.example.test/path", "https://other.example.test/offers/1", "http://pf.test/offers/1", "javascript:alert(1)"])("never opens an untrusted offer destination %s", async path => {
   await expect(openOffer(path)).rejects.toThrow();
   expect(open).not.toHaveBeenCalled();
+});
+
+it("allows replacing a definitively missing customer and preserves the previous completed offer", async () => {
+  invoke.mockResolvedValueOnce({ status: 201, body: JSON.stringify(ok) });
+  await createOffer({ ...input, customerId: 12 });
+  const completed = loadOfferRef("t1");
+  invoke.mockResolvedValueOnce({ status: 404, body: JSON.stringify({ detail: "Klant niet gevonden" }) });
+  await expect(createOffer({ ...input, customerId: 99 })).rejects.toThrow("Klant niet gevonden");
+  expect(loadOfferRef("t1")).toEqual(completed);
+  invoke.mockResolvedValueOnce({ status: 201, body: JSON.stringify({ ...ok, klant: { ...ok.klant, id: 13 } }) });
+  await createOffer({ ...input, customerId: 13 });
+  expect(body().customer_id).toBe(13);
+});
+
+it.each([
+  { status: 404, body: "<html>Klant niet gevonden</html>" },
+  { status: 404, body: JSON.stringify({ detail: "Pagina niet gevonden" }) },
+  { status: 404, body: '{"detail":"Klant niet gevonden"' },
+  { status: 409, body: JSON.stringify({ detail: "Klant niet gevonden" }) },
+  { status: 503, body: JSON.stringify({ detail: "Klant niet gevonden" }) },
+])("keeps pending identity for an unconfirmed error $status $body", async response => {
+  invoke.mockResolvedValueOnce(response);
+  await expect(createOffer({ ...input, customerId: 12 })).rejects.toThrow();
+  const pending = loadOfferRef("t1");
+  expect(pending?.pendingRequestId).toBeTruthy();
+  await expect(createOffer({ ...input, customerId: 13 })).rejects.toThrow("onbevestigde offerteaanvraag");
+  expect(loadOfferRef("t1")).toEqual(pending);
+  expect(invoke).toHaveBeenCalledOnce();
 });

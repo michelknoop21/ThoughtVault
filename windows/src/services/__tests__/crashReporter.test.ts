@@ -2,7 +2,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { invoke } from "@tauri-apps/api/core";
 import { useSupportStore } from "../../stores/supportStore";
 import { mask } from "../appLog";
-import { failureFromTransition, fingerprint, initCrashReporter, markStage, reportFailure, stageForStatus } from "../crashReporter";
+import { failureFromTransition, fingerprint, initCrashReporter, markStage, processingDiagnostic, reportFailure, stageForStatus } from "../crashReporter";
 import type { TaskStatus } from "../../types";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
@@ -24,6 +24,27 @@ it("uses canonical raw input with ASCII digits removed and the first 16 SHA256 h
   expect(await fingerprint("transcriberen", "Model niet geladen na 30 s (code 12)")).toBe("390655eba19539fc");
   expect(await fingerprint("transcriberen", "Model niet geladen na 45 s (code 7)")).toBe("390655eba19539fc");
   expect(await fingerprint("notule", "Model niet geladen na 30 s (code 12)")).toBe("f2990848e3a1a105");
+});
+
+it.each([
+  ["OpenAI API-sleutel geweigerd.", "openai_unauthorized"],
+  ["Anthropic API-limiet bereikt. Probeer later opnieuw.", "anthropic_rate_limited"],
+  ["Ollama Cloud gaf een leeg antwoord.", "ollama_empty_response"],
+  ["De notule-generator gaf een leeg concept.", "notule_empty_response"],
+  ["De notule bevat geen bruikbare inhoud. Controleer de transcriptie en probeer opnieuw.", "notule_unusable_content"],
+  ["OpenAI gaf HTTP 401.", "notule_http_unauthorized"],
+  ["Anthropic gaf HTTP 429.", "notule_http_rate_limited"],
+  ["Ollama Cloud gaf HTTP 404 voor model \"private\".", "notule_http_client_error"],
+  ["Notule-generator op http://localhost:9 gaf HTTP 500 voor model \"private\".", "notule_http_server_error"],
+])("classifies the complete known message without dynamic parameters: %s", (message, code) => {
+  expect(processingDiagnostic(message)).toMatchObject({ code });
+  expect(processingDiagnostic(message)?.shown).not.toContain("private");
+  expect(processingDiagnostic(`Provider: ${message}`)).toBeNull();
+  expect(processingDiagnostic(`${message} PRIVATE_BODY`)).toBeNull();
+});
+
+it.each(["__proto__", "constructor", "toString", "PRIVATE_BODY", "", "OpenAI gaf HTTP 999."])("rejects unknown bodies and inherited property names: %s", message => {
+  expect(processingDiagnostic(message)).toBeNull();
 });
 
 it("maps every status and only reports a new failed or error transition", () => {

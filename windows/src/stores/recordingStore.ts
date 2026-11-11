@@ -2,7 +2,7 @@ import { create } from "zustand";
 import type { RecordingMode, TranscriptTask } from "../types";
 import { saveQuickNoteDraft } from "../services/quickNotes";
 import { isExpectedProcessingNotice } from "../services/automaticFailure";
-import { failureFromTransition, markStage, reportFailure, stageForStatus } from "../services/crashReporter";
+import { failureFromTransition, markStage, processingDiagnostic, reportFailure, stageForStatus } from "../services/crashReporter";
 
 // AbortController registry — lives outside Zustand (not serializable)
 const abortControllers = new Map<string, AbortController>();
@@ -142,16 +142,18 @@ export const useRecordingStore = create<RecordingState>()((set, get) => ({
     set((state) => ({ backgroundTasks: [...state.backgroundTasks, task] })),
   updateBackgroundTask: (taskId, update) => {
     const previous = get().backgroundTasks.find(task => task.task_id === taskId);
+    const diagnostic = update.status === "failed" || update.status === "error"
+      ? processingDiagnostic(update.error_message ?? previous?.error_message ?? "") : null;
     set((state) => ({
       backgroundTasks: state.backgroundTasks.map((t) =>
-        t.task_id === taskId ? { ...t, ...update } : t
+        t.task_id === taskId ? { ...t, ...update, ...(diagnostic ? { error_message: diagnostic.shown } : {}) } : t
       ),
     }));
     if (!previous || !update.status || update.status === previous.status) return;
     void markStage(stageForStatus(update.status));
     // Check cancellation on the original UI message before replacing untrusted bodies.
     const failure = failureFromTransition(previous.status, update.status, update.error_message ?? previous.error_message);
-    if (failure && !isExpectedProcessingNotice(failure.message)) void reportFailure(failure.stage, "Verwerking mislukt", "background_task_failed");
+    if (failure && !isExpectedProcessingNotice(failure.message)) void reportFailure(failure.stage, diagnostic?.shown ?? "Verwerking mislukt", diagnostic?.code ?? "background_task_failed");
   },
   removeBackgroundTask: (taskId) =>
     set((state) => ({

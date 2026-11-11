@@ -29,7 +29,7 @@ vi.mock("../services/sse", () => ({ createSSEClient: () => ({ connect: (_update:
 vi.mock("@tauri-apps/api/event", () => ({ listen: vi.fn(async () => () => {}) }));
 vi.mock("../services/crashReporter", () => ({
   initCrashReporter: vi.fn(), reportFailure: vi.fn(async () => {}), markStage: vi.fn(),
-  stageForStatus: () => null, failureFromTransition: () => null,
+  stageForStatus: () => null, failureFromTransition: () => null, processingDiagnostic: () => null,
 }));
 vi.mock("../services/meetingNotifications", () => ({ initMeetingNotifications: vi.fn() }));
 vi.mock("../services/microsoftGraph", () => ({ MicrosoftGraphService: {} }));

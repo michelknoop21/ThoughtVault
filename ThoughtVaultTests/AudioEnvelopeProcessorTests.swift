@@ -248,3 +248,23 @@ final class AudioEnvelopeProcessorTests: XCTestCase {
         }
     }
 }
+
+/// Quiet recordings are boosted toward -23 dBFS before WhisperKit; loud ones untouched.
+final class AudioPreConverterGainTests: XCTestCase {
+    private func ms(_ db: Double) -> Double { pow(10, db / 10) }
+
+    func testQuietRecordingIsBoostedToTarget() {
+        // -41 dBFS mean: the quiet meeting recording this boost was measured on.
+        XCTAssertEqual(20 * log10(Double(AudioPreConverter.gain(forMeanSquare: ms(-41)))), 18, accuracy: 0.01)
+    }
+
+    func testBoostIsCapped() {
+        XCTAssertEqual(20 * log10(Double(AudioPreConverter.gain(forMeanSquare: ms(-80)))), 24, accuracy: 0.01)
+    }
+
+    func testLoudOrSilentRecordingIsUntouched() {
+        XCTAssertEqual(AudioPreConverter.gain(forMeanSquare: ms(-17)), 1)
+        XCTAssertEqual(AudioPreConverter.gain(forMeanSquare: ms(-23.5)), 1)
+        XCTAssertEqual(AudioPreConverter.gain(forMeanSquare: 0), 1)
+    }
+}

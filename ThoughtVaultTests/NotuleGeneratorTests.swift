@@ -432,4 +432,50 @@ final class NotuleFallbackProviderTests: XCTestCase {
         XCTAssertTrue(r.terugvalGebruikt)
         XCTAssertEqual(r.klant.naam, "X")
     }
+
+}
+
+final class ProspectFlowReferenceTests: XCTestCase {
+    func testOfferReferencesStayWithinConfiguredInstance() {
+        let suiteName = "ProspectFlowTests-" + UUID().uuidString
+        let defaults = UserDefaults(suiteName: suiteName)!
+        let taskId = "instance-test-" + UUID().uuidString
+        let first = "https://first.example.test"
+        let second = "https://second.example.test"
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        defaults.set(first, forKey: ProspectFlowService.baseURLKey)
+        let pending = ProspectFlowService.OfferRef(pendingRequestId: "pending-first", pendingCustomer: "id:12")
+        ProspectFlowService.setOfferRef(pending, for: taskId, defaults: defaults)
+        defaults.set(second, forKey: ProspectFlowService.baseURLKey)
+        XCTAssertNil(ProspectFlowService.offerRef(for: taskId, defaults: defaults))
+        ProspectFlowService.setOfferRef(.init(id: 42, number: "second", url: "/offers/42/build"), for: taskId, defaults: defaults)
+        defaults.set(first + "/", forKey: ProspectFlowService.baseURLKey)
+        XCTAssertEqual(ProspectFlowService.offerRef(for: taskId, defaults: defaults), pending)
+        defaults.set(second, forKey: ProspectFlowService.baseURLKey)
+        ProspectFlowService.setOfferRef(.init(id: 43), for: taskId, baseURL: first, defaults: defaults)
+        XCTAssertEqual(ProspectFlowService.offerRef(for: taskId, defaults: defaults)?.id, 42)
+        XCTAssertEqual(ProspectFlowService.offerRef(for: taskId, baseURL: first, defaults: defaults)?.id, 43)
+    }
+
+    func testLegacyReferencesOnlyBelongToYinga() throws {
+        let suiteName = "ProspectFlowLegacyTests-" + UUID().uuidString
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let reference = ProspectFlowService.OfferRef(id: 3, url: "/offers/3/build")
+        defaults.set(try JSONEncoder().encode(reference), forKey: "prospectFlowOffer-test")
+        defaults.set("https://other.example.test", forKey: ProspectFlowService.baseURLKey)
+        XCTAssertNil(ProspectFlowService.offerRef(for: "test", defaults: defaults))
+        defaults.set(ProspectFlowService.defaultBaseURL, forKey: ProspectFlowService.baseURLKey)
+        XCTAssertEqual(ProspectFlowService.offerRef(for: "test", defaults: defaults), reference)
+        ProspectFlowService.setOfferRef(nil, for: "test", defaults: defaults)
+        XCTAssertNil(ProspectFlowService.offerRef(for: "test", defaults: defaults))
+    }
+    func testOfferLinksCannotLeaveTheirInstance() {
+        let service = ProspectFlowService(baseURL: "https://pf.example.test", apiKey: "fixture")
+        XCTAssertEqual(service.openURL("/offers/1/build")?.absoluteString, "https://pf.example.test/offers/1/build")
+        for path in ["@other.example.test/path", "//other.example.test/path", "https://other.example.test/path", "javascript:alert(1)"] {
+            XCTAssertNil(service.openURL(path), path)
+        }
+    }
+
 }

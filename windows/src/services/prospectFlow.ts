@@ -8,32 +8,49 @@ export interface Candidate { id: number; naam: string; plaats?: string; treffers
 export interface Customer { id: number; name: string; city?: string }
 export interface OfferResult {
   offer_id: number; number: string; url: string;
-  klant: { id: number; naam: string; nieuw: boolean };
-  regels: number; te_controleren: number; bestaand: boolean; model: string; terugval_gebruikt: boolean;
+  klant: { id: number | null; naam: string; nieuw: boolean };
+  regels: number; te_controleren: number; bestaand: boolean; model?: string | null; terugval_gebruikt: boolean;
+  /** Added by this client, so opening the result stays on the request instance. */
+  instanceBaseUrl?: string;
 }
 /** Saved per notule; `pendingRequestId` lives from before the POST until success. */
 export interface OfferRef { id?: number; number?: string; url?: string; pendingRequestId?: string; pendingCustomer?: string }
 
-const refKey = (taskId: string) => `prospectFlowOffer-${taskId}`;
+const refKey = (taskId: string, instance: string) => `prospectFlowOffer-${JSON.stringify([instance, taskId])}`;
 
-export function loadOfferRef(taskId: string): OfferRef | null {
-  try { return JSON.parse(localStorage.getItem(refKey(taskId)) ?? "null"); } catch { return null; }
+export function loadOfferRef(taskId: string, instance?: string): OfferRef | null {
+  try {
+    const base = instance ?? baseUrl();
+    const stored = localStorage.getItem(refKey(taskId, base));
+    // Unscoped references were created by the first, Yinga-only version.
+    const legacy = base === "https://prospectflow.yinga.ai" ? localStorage.getItem(`prospectFlowOffer-${taskId}`) : null;
+    return JSON.parse(stored ?? legacy ?? "null");
+  } catch { return null; }
 }
-function saveOfferRef(taskId: string, ref: OfferRef): void {
-  try { localStorage.setItem(refKey(taskId), JSON.stringify(ref)); }
+function saveOfferRef(taskId: string, ref: OfferRef, instance: string): void {
+  try { localStorage.setItem(refKey(taskId, instance), JSON.stringify(ref)); }
   catch { throw new Error("De offertelink kan niet worden bewaard. Controleer de lokale opslag en probeer opnieuw."); }
 }
 
-function baseUrl(): string {
-  const base = useSettingsStore.getState().prospectflow_base_url.trim().replace(/\/+$/, "");
+function baseUrl(value = useSettingsStore.getState().prospectflow_base_url): string {
+  const base = value.trim().replace(/\/+$/, "");
   if (!base) return "";
   let url: URL;
   try { url = new URL(base); }
   catch { throw new Error("Vul een geldig Prospect Flow-adres in."); }
+  if (url.username || url.password) throw new Error("Gebruik een Prospect Flow-adres zonder gebruikersgegevens.");
   if (url.protocol !== "https:" && !(url.protocol === "http:" && ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname))) {
     throw new Error("Gebruik een HTTPS-adres voor Prospect Flow. HTTP is alleen toegestaan op deze computer.");
   }
   return base;
+}
+
+function offerUrl(path: string, instance: string): string {
+  const base = baseUrl(instance);
+  if (!path.startsWith("/") || path.startsWith("//")) throw new Error("Prospect Flow gaf een ongeldige offertelink.");
+  const url = new URL(base + path);
+  if (url.origin !== new URL(base).origin || url.username || url.password) throw new Error("De offertelink hoort niet bij deze Prospect Flow-instance.");
+  return url.href;
 }
 
 /** True when both the base URL and the API key are set. */
@@ -68,7 +85,7 @@ async function request<T>(path: string, method: "GET" | "POST", body?: unknown, 
   }
   let data: unknown = null;
   try { data = JSON.parse(res.body); } catch { /* non-JSON body */ }
-  if (res.status >= 400) {
+  if (res.status < 200 || res.status >= 300) {
     const detail = (data as { detail?: unknown } | null)?.detail;
     throw new Error(typeof detail === "string" && detail ? detail : STATUS_TEXT[res.status] ?? `Prospect Flow gaf HTTP ${res.status}.`);
   }
@@ -103,22 +120,35 @@ export async function createOffer(input: CreateOfferInput): Promise<OfferResult>
   if ((input.customerId === undefined) === (input.newCustomerName === undefined)) {
     throw new Error("Kies een bestaande klant of geef een nieuwe klantnaam op.");
   }
-  const stored = loadOfferRef(input.taskId) ?? {};
+  const instance = baseUrl();
+  const stored = loadOfferRef(input.taskId, instance) ?? {};
   // Same customer choice keeps its pending id (a retry after a timeout cannot make a second
   // offer); another choice is a new request.
   const choice = input.customerId !== undefined ? `id:${input.customerId}` : `new:${input.newCustomerName!.toLowerCase()}`;
   const requestId = stored.pendingCustomer === choice && stored.pendingRequestId ? stored.pendingRequestId : crypto.randomUUID();
-  saveOfferRef(input.taskId, { ...stored, pendingRequestId: requestId, pendingCustomer: choice });
+  saveOfferRef(input.taskId, { ...stored, pendingRequestId: requestId, pendingCustomer: choice }, instance);
   const result = await request<OfferResult>("/api/ai/offers/from-conversation", "POST", {
     request_id: requestId, transcript_id: input.taskId, title: input.title, recorded_at: input.recordedAt,
     notule_html: input.notuleHtml, transcript: input.transcript,
     ...(input.customerId !== undefined ? { customer_id: input.customerId } : { new_customer_name: input.newCustomerName }),
   }, 300);
-  saveOfferRef(input.taskId, { id: result.offer_id, number: result.number, url: result.url });
-  return result;
+  if (!result || typeof result !== "object" || !Number.isSafeInteger(result.offer_id) || result.offer_id <= 0
+    || typeof result.number !== "string" || !result.number.trim() || typeof result.url !== "string"
+    || !result.klant || typeof result.klant.naam !== "string" || !result.klant.naam.trim()
+    || !(result.klant.id === null || (Number.isSafeInteger(result.klant.id) && result.klant.id > 0))
+    || typeof result.klant.nieuw !== "boolean" || !Number.isSafeInteger(result.regels) || result.regels < 0
+    || !Number.isSafeInteger(result.te_controleren) || result.te_controleren < 0 || typeof result.bestaand !== "boolean"
+    || typeof result.terugval_gebruikt !== "boolean" || !(result.model == null || typeof result.model === "string")
+    || (result.terugval_gebruikt && !result.model?.trim())) {
+    throw new Error("Prospect Flow gaf een onvolledig offerteantwoord. De aanvraag is bewaard; probeer opnieuw.");
+  }
+  offerUrl(result.url, instance);
+  saveOfferRef(input.taskId, { id: result.offer_id, number: result.number, url: result.url }, instance);
+  return { ...result, instanceBaseUrl: instance };
 }
 
-export async function openOffer(url: string): Promise<void> {
+export async function openOffer(url: string, instance = baseUrl()): Promise<void> {
+  const target = offerUrl(url, instance);
   const { open } = await import("@tauri-apps/plugin-shell");
-  await open(baseUrl() + url);
+  await open(target);
 }

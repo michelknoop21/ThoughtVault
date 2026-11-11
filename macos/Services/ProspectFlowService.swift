@@ -114,7 +114,13 @@ struct ProspectFlowService: Sendable {
         }
     }
 
-    func openURL(_ path: String) -> URL? { URL(string: baseURL + path) }
+    func openURL(_ path: String) -> URL? {
+        guard path.hasPrefix("/"), !path.hasPrefix("//"), let base = URL(string: baseURL), let host = base.host,
+              base.scheme == "https" || (base.scheme == "http" && ["localhost", "127.0.0.1", "::1", "[::1]"].contains(host)),
+              let url = URL(string: baseURL + path), url.scheme == base.scheme, url.host == host, url.port == base.port,
+              url.user == nil, url.password == nil else { return nil }
+        return url
+    }
 
     // MARK: - Calls
 
@@ -150,13 +156,15 @@ struct ProspectFlowService: Sendable {
         case .existing(let id): body["customer_id"] = id
         case .new(let name): body["new_customer_name"] = name
         }
-        return try await send("/api/ai/offers/from-conversation", body: body, timeout: 300)
+        let result: OfferResult = try await send("/api/ai/offers/from-conversation", body: body, timeout: 300)
+        guard openURL(result.url) != nil else { throw PFError.server(502, String(localized: "Prospect Flow gaf een ongeldige offertelink.")) }
+        return result
     }
 
     // MARK: - HTTP
 
     private func send<T: Decodable>(_ path: String, body: [String: Any]?, timeout: TimeInterval = 30) async throws -> T {
-        guard !apiKey.isEmpty, let url = URL(string: baseURL + path), url.scheme == "https" || url.host == "localhost"
+        guard !apiKey.isEmpty, let url = openURL(path)
         else { throw PFError.missingConfig }
         var req = URLRequest(url: url, timeoutInterval: timeout)
         req.setValue(apiKey, forHTTPHeaderField: "X-API-Key")
@@ -166,7 +174,7 @@ struct ProspectFlowService: Sendable {
             req.setValue("application/json", forHTTPHeaderField: "Content-Type")
             req.httpBody = try JSONSerialization.data(withJSONObject: body)
         }
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await URLSession.shared.data(for: req, delegate: ProspectFlowNoRedirect())
         let code = (resp as? HTTPURLResponse)?.statusCode ?? 0
         guard (200..<300).contains(code) else {
             let detail = (try? JSONSerialization.jsonObject(with: data) as? [String: Any])?["detail"] as? String
@@ -175,5 +183,14 @@ struct ProspectFlowService: Sendable {
         let decoder = JSONDecoder()
         decoder.keyDecodingStrategy = .convertFromSnakeCase
         return try decoder.decode(T.self, from: data)
+    }
+}
+
+
+/// A redirect must never forward the instance key or conversation to another destination.
+private final class ProspectFlowNoRedirect: NSObject, URLSessionTaskDelegate, Sendable {
+    func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse,
+                    newRequest request: URLRequest, completionHandler: @escaping (URLRequest?) -> Void) {
+        completionHandler(nil)
     }
 }

@@ -7,7 +7,7 @@ vi.mock("@tauri-apps/api/core", () => ({ invoke }));
 vi.mock("../tauriCommands", () => ({ loadCredential }));
 
 const input = { taskId: "t1", title: "Gesprek", recordedAt: "2026-11-10T10:00:00Z", notuleHtml: "<p>n</p>", transcript: "tekst" };
-const ok = { offer_id: 431, number: "20261110-1", url: "/offers/431/build" };
+const ok = { offer_id: 431, number: "20261110-1", url: "/offers/431/build", klant: { id: 12, naam: "Voorbeeldklant", nieuw: false }, regels: 2, te_controleren: 0, bestaand: false, model: "fixture", terugval_gebruikt: false };
 const body = () => JSON.parse(invoke.mock.calls.at(-1)![1].request.body);
 
 beforeEach(() => {
@@ -78,4 +78,26 @@ it.each(["http://localhost:8089", "http://127.0.0.1:8089", "http://[::1]:8089"])
   invoke.mockResolvedValue({ status: 201, body: JSON.stringify(ok) });
   await createOffer({ ...input, customerId: 12 });
   expect(invoke).toHaveBeenCalledOnce();
+});
+
+
+it.each(["{}", "null", "{", JSON.stringify({ ...ok, klant: null }), JSON.stringify({ ...ok, url: "@other.example.test/path" })])("preserves the pending request after an invalid success reply %s", async reply => {
+  invoke.mockResolvedValueOnce({ status: 200, body: reply });
+  await expect(createOffer({ ...input, customerId: 12 })).rejects.toThrow();
+  const pending = body().request_id;
+  expect(loadOfferRef("t1")?.pendingRequestId).toBe(pending);
+  invoke.mockResolvedValueOnce({ status: 201, body: JSON.stringify(ok) });
+  await createOffer({ ...input, customerId: 12 });
+  expect(body().request_id).toBe(pending);
+});
+
+it("rejects a redirect response without clearing the pending request", async () => {
+  invoke.mockResolvedValueOnce({ status: 307, body: JSON.stringify(ok) });
+  await expect(createOffer({ ...input, customerId: 12 })).rejects.toThrow();
+  expect(loadOfferRef("t1")?.pendingRequestId).toBe(body().request_id);
+});
+
+it.each(["@other.example.test/path", "//other.example.test/path", "https://other.example.test/offers/1", "http://pf.test/offers/1", "javascript:alert(1)"])("never opens an untrusted offer destination %s", async path => {
+  await expect(openOffer(path)).rejects.toThrow();
+  expect(open).not.toHaveBeenCalled();
 });

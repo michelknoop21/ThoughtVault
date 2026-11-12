@@ -19,7 +19,7 @@ enum LLMError: LocalizedError {
             return "De AI-provider is niet beschikbaar."
         case .serverError(let code):
             if code == 429 {
-                return "De AI-provider heeft een gebruikslimiet bereikt (429). Probeer later opnieuw of controleer je limiet bij de provider."
+                return "De AI-provider heeft een gebruikslimiet bereikt (429), ook na een nieuwe poging. Probeer het later opnieuw, verwerk minder opnames tegelijk of controleer je limiet bij de provider."
             }
             return "Serverfout: statuscode \(code)."
         case .generationFailed(let message):
@@ -55,6 +55,47 @@ let llmSession: URLSession = {
 /// URLSession reports the idle and the total time limit as `.timedOut`; name the cause instead.
 func mappingTimeout<T>(_ body: () async throws -> T) async throws -> T {
     do { return try await body() } catch let error as URLError where error.code == .timedOut { throw LLMError.timedOut }
+}
+
+/// Wait before retrying an HTTP 429 when the provider sends no usable Retry-After.
+let rateLimitDefaultWait: TimeInterval = 2
+/// Longest Retry-After that is waited for; a provider asking more is reported as rate limiting right away.
+let rateLimitMaxWait: TimeInterval = 30
+let llmSleep: @Sendable (TimeInterval) async throws -> Void = { try await Task.sleep(nanoseconds: UInt64($0 * 1_000_000_000)) }
+
+/// Seconds to wait before retrying a 429: Retry-After as delta-seconds or HTTP date, else the default.
+/// nil when the provider asks for more than `rateLimitMaxWait`.
+func rateLimitWait(_ retryAfter: String?, now: Date = Date()) -> TimeInterval? {
+    let value = retryAfter?.trimmingCharacters(in: .whitespaces) ?? ""
+    let httpDate = DateFormatter()
+    httpDate.locale = Locale(identifier: "en_US_POSIX")
+    httpDate.timeZone = TimeZone(identifier: "GMT")
+    httpDate.dateFormat = "EEE, dd MMM yyyy HH:mm:ss zzz"
+    guard let seconds = UInt(value).map(TimeInterval.init) ?? httpDate.date(from: value).map({ max(0, $0.timeIntervalSince(now)) })
+    else { return rateLimitDefaultWait }
+    return seconds <= rateLimitMaxWait ? seconds : nil
+}
+
+/// Sends a model request and retries it once on HTTP 429, after the provider's Retry-After plus up to one second
+/// of jitter, so requests that were rate limited together do not collide again. The wait and the retry count
+/// against the first attempt's `llmRequestTimeLimit`. When the wait is too long the 429 is returned unchanged, and
+/// a second 429 is returned as well: the caller reports it. Cancellation during the wait throws CancellationError.
+func sendRetryingRateLimit<T>(session: URLSession, sleep: @Sendable (TimeInterval) async throws -> Void,
+                              _ send: (URLSession) async throws -> (T, URLResponse)) async throws -> (T, URLResponse) {
+    let started = Date()
+    let first = try await send(session)
+    guard let http = first.1 as? HTTPURLResponse, http.statusCode == 429,
+          let wait = rateLimitWait(http.value(forHTTPHeaderField: "Retry-After")).map({ $0 + .random(in: 0...1) })
+    else { return first }
+    let remaining = llmRequestTimeLimit - Date().timeIntervalSince(started) - wait
+    guard remaining >= 1 else { return first }
+    try await sleep(wait)
+    // Same session settings, but only the time that is left.
+    let configuration = session.configuration
+    configuration.timeoutIntervalForResource = remaining
+    let retrySession = URLSession(configuration: configuration)
+    defer { retrySession.finishTasksAndInvalidate() }
+    return try await send(retrySession)
 }
 
 // MARK: - LLMService Protocol
@@ -289,6 +330,8 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
 
     /// Test seam: replaces the network call behind `complete(system:user:)`.
     var completionOverride: (@Sendable (String, String) async throws -> String)?
+    /// Test seam: the wait before retrying an HTTP 429.
+    var rateLimitSleep = llmSleep
     private let session: URLSession
 
     /// Hosted (HTTPS) providers have a large context window; without the explicit limit the
@@ -537,7 +580,9 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
         // and a premature timeout kills the whole notule generation. `llmSession` bounds the total.
         request.timeoutInterval = 300
 
-        let (asyncBytes, response) = try await session.bytes(for: request)
+        let (asyncBytes, response) = try await sendRetryingRateLimit(session: session, sleep: rateLimitSleep) {
+            try await $0.bytes(for: request)
+        }
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw LLMError.generationFailed("Ongeldig serverantwoord.")

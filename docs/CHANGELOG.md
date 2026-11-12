@@ -12,6 +12,7 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - De broncontrole (DEC-062) start tegelijk met het concept. Waarschuwingen en uitkomsten zijn gelijk; een mislukt concept wint.
 - Lange controle (DEC-065): de dekkingsdelen van stap 1 lopen hoogstens 4 tegelijk en worden in de volgorde van de delen samengevoegd. Stap 2 vult een vrijgekomen plek direct aan, zodat een trage zincontrole de andere niet ophoudt.
 - Stap 2 van de lange controle draait bij een gehoste aanbieder 8 zincontroles tegelijk in plaats van 4; lokale modellen blijven op 4.
+- Een modelverzoek dat HTTP 429 krijgt, wordt één keer opnieuw gestuurd na de Retry-After van de aanbieder (seconden of HTTP-datum, anders 2 seconden) plus hoogstens 1 seconde spreiding. Vraagt de aanbieder meer dan 30 seconden, of valt de wachttijd buiten de tijdslimiet van 900 seconden, dan volgt direct de melding dat de aanbieder het aantal verzoeken beperkt. Alleen 429 wordt herhaald, geen 5xx en geen time-out.
 
 ---
 

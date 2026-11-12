@@ -1,10 +1,12 @@
 import XCTest
 @testable import ThoughtVault
 
-/// Answers every request of `stubSession` with `StubProtocol.reply` and records the sent body.
+/// Answers requests of `stubSession` with the `queued` replies first, then with `reply`, and records the sent body.
 private final class StubProtocol: URLProtocol, @unchecked Sendable {
     nonisolated(unsafe) static var reply: Result<String, URLError> = .success("")
+    nonisolated(unsafe) static var queued: [(status: Int, headers: [String: String], body: String)] = []
     nonisolated(unsafe) static var sentBody: [String: Any] = [:]
+    nonisolated(unsafe) static var requestCount = 0
 
     override class func canInit(with request: URLRequest) -> Bool { true }
     override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
@@ -16,6 +18,15 @@ private final class StubProtocol: URLProtocol, @unchecked Sendable {
             while case let count = stream.read(&buffer, maxLength: buffer.count), count > 0 { data.append(buffer, count: count) }
             stream.close()
             Self.sentBody = (try? JSONSerialization.jsonObject(with: data) as? [String: Any]) ?? [:]
+        }
+        Self.requestCount += 1
+        if !Self.queued.isEmpty {
+            let next = Self.queued.removeFirst()
+            client?.urlProtocol(self, didReceive: HTTPURLResponse(url: request.url!, statusCode: next.status, httpVersion: nil,
+                                                                  headerFields: next.headers)!, cacheStoragePolicy: .notAllowed)
+            client?.urlProtocol(self, didLoad: Data(next.body.utf8))
+            client?.urlProtocolDidFinishLoading(self)
+            return
         }
         switch Self.reply {
         case .failure(let error):
@@ -29,6 +40,14 @@ private final class StubProtocol: URLProtocol, @unchecked Sendable {
     }
 }
 
+/// Recorded 429 waits.
+private final class Waits: @unchecked Sendable {
+    private let lock = NSLock()
+    private var _values: [TimeInterval] = []
+    var values: [TimeInterval] { lock.withLock { _values } }
+    func append(_ value: TimeInterval) { lock.withLock { _values.append(value) } }
+}
+
 private let stubSession: URLSession = {
     let configuration = URLSessionConfiguration.ephemeral
     configuration.protocolClasses = [StubProtocol.self]
@@ -36,6 +55,12 @@ private let stubSession: URLSession = {
 }()
 
 final class LLMChunkingTests: XCTestCase {
+    override func setUp() {
+        super.setUp()
+        StubProtocol.queued = []
+        StubProtocol.requestCount = 0
+    }
+
     private func failure(_ body: () async throws -> String) async -> LLMError? {
         do { _ = try await body(); return nil } catch { return error as? LLMError }
     }
@@ -80,6 +105,90 @@ final class LLMChunkingTests: XCTestCase {
         let service = AnthropicLLMService(model: "m", apiKey: "k", session: stubSession)
         let error = await failure { try await service.complete(system: "s", user: "u") }
         guard case .truncated? = error else { return XCTFail("\(String(describing: error))") }
+    }
+
+    // MARK: HTTP 429
+
+    private let streamed = "data: {\"choices\":[{\"delta\":{\"content\":\"klaar\"}}]}\n\ndata: [DONE]\n\n"
+
+    /// A service on the stub whose 429 wait is recorded instead of slept.
+    private func rateLimited(_ replies: [(status: Int, headers: [String: String], body: String)],
+                             sleep: (@Sendable (TimeInterval) async throws -> Void)? = nil) -> (OpenAICompatibleLLMService, Waits) {
+        StubProtocol.queued = replies
+        StubProtocol.requestCount = 0
+        let waits = Waits()
+        let service = OpenAICompatibleLLMService(baseURL: "http://localhost:11434", model: "m", session: stubSession)
+        service.rateLimitSleep = sleep ?? { waits.append($0) }
+        return (service, waits)
+    }
+
+    func testRateLimitIsRetriedOnceAfterRetryAfter() async throws {
+        let (service, waits) = rateLimited([(429, ["Retry-After": "7"], ""), (200, [:], streamed)])
+        let text = try await service.complete(system: "s", user: "u")
+        XCTAssertEqual(text, "klaar")
+        XCTAssertEqual(StubProtocol.requestCount, 2)
+        XCTAssertEqual(waits.values.count, 1)
+        XCTAssertTrue((7...8).contains(waits.values[0]), "\(waits.values)")
+    }
+
+    func testSecondRateLimitFails() async {
+        let (service, waits) = rateLimited([(429, [:], ""), (429, [:], "")])
+        let error = await failure { try await service.complete(system: "s", user: "u") }
+        guard case .serverError(429)? = error else { return XCTFail("\(String(describing: error))") }
+        XCTAssertTrue(error!.localizedDescription.contains("minder opnames tegelijk"))
+        XCTAssertEqual(StubProtocol.requestCount, 2)
+        XCTAssertTrue((2...3).contains(waits.values.first ?? 0), "default wait, \(waits.values)")
+    }
+
+    func testRetryAfterAboveTheCapFailsWithoutWaiting() async {
+        let (service, waits) = rateLimited([(429, ["Retry-After": "120"], ""), (200, [:], streamed)])
+        let error = await failure { try await service.complete(system: "s", user: "u") }
+        guard case .serverError(429)? = error else { return XCTFail("\(String(describing: error))") }
+        XCTAssertEqual(StubProtocol.requestCount, 1)
+        XCTAssertTrue(waits.values.isEmpty)
+    }
+
+    func testCancellationDuringTheWaitCancels() async {
+        let (service, _) = rateLimited([(429, ["Retry-After": "5"], ""), (200, [:], streamed)], sleep: { _ in
+            withUnsafeCurrentTask { $0?.cancel() }
+            try Task.checkCancellation()
+        })
+        do {
+            _ = try await service.complete(system: "s", user: "u")
+            XCTFail("Expected a cancellation")
+        } catch {
+            XCTAssertTrue(error is CancellationError, "\(error)")
+        }
+        XCTAssertEqual(StubProtocol.requestCount, 1)
+    }
+
+    func testServerErrorIsNotRetried() async {
+        let (service, waits) = rateLimited([(500, [:], ""), (200, [:], streamed)])
+        let error = await failure { try await service.complete(system: "s", user: "u") }
+        guard case .serverError(500)? = error else { return XCTFail("\(String(describing: error))") }
+        XCTAssertEqual(StubProtocol.requestCount, 1)
+        XCTAssertTrue(waits.values.isEmpty)
+    }
+
+    func testAnthropicRetriesARateLimitToo() async throws {
+        StubProtocol.queued = [(429, ["retry-after": "1"], ""), (200, [:], #"{"content":[{"type":"text","text":"klaar"}]}"#)]
+        StubProtocol.requestCount = 0
+        let service = AnthropicLLMService(model: "m", apiKey: "k", session: stubSession)
+        service.rateLimitSleep = { _ in }
+        let text = try await service.complete(system: "s", user: "u")
+        XCTAssertEqual(text, "klaar")
+        XCTAssertEqual(StubProtocol.requestCount, 2)
+    }
+
+    func testRetryAfterParsing() {
+        let now = Date(timeIntervalSince1970: 1_445_412_480)  // Wed, 21 Oct 2015 07:28:00 GMT
+        XCTAssertEqual(rateLimitWait("Wed, 21 Oct 2015 07:28:10 GMT", now: now), 10)
+        XCTAssertEqual(rateLimitWait("Wed, 21 Oct 2015 07:27:00 GMT", now: now), 0)
+        XCTAssertEqual(rateLimitWait("30"), 30)
+        XCTAssertNil(rateLimitWait("31"))
+        XCTAssertEqual(rateLimitWait(nil), rateLimitDefaultWait)
+        XCTAssertEqual(rateLimitWait("soon"), rateLimitDefaultWait)
+        XCTAssertEqual(rateLimitWait("-5"), rateLimitDefaultWait)
     }
 
     func testOllamaCloudUsesSingleRequestForMeetingButLocalModelsStayConservative() {

@@ -19,6 +19,8 @@ final class AnthropicLLMService: LLMService, @unchecked Sendable {
     private let model: String
     private let apiKey: String?
     private let session: URLSession
+    /// Test seam: the wait before retrying an HTTP 429.
+    var rateLimitSleep = llmSleep
 
     init(model: String, apiKey: String?, session: URLSession = llmSession) {
         self.model = model
@@ -91,7 +93,9 @@ final class AnthropicLLMService: LLMService, @unchecked Sendable {
         request.timeoutInterval = 300
 
         let fullText = try await mappingTimeout { () async throws -> String in
-            let (bytes, response) = try await session.bytes(for: request)
+            let (bytes, response) = try await sendRetryingRateLimit(session: session, sleep: rateLimitSleep) {
+                try await $0.bytes(for: request)
+            }
             guard let http = response as? HTTPURLResponse else {
                 throw LLMError.generationFailed("Ongeldig serverantwoord.")
             }
@@ -148,7 +152,9 @@ final class AnthropicLLMService: LLMService, @unchecked Sendable {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.timeoutInterval = 300
 
-        let (data, response) = try await mappingTimeout { try await session.data(for: request) }
+        let (data, response) = try await mappingTimeout {
+            try await sendRetryingRateLimit(session: session, sleep: rateLimitSleep) { try await $0.data(for: request) }
+        }
         guard let http = response as? HTTPURLResponse else {
             throw LLMError.generationFailed("Ongeldig serverantwoord.")
         }

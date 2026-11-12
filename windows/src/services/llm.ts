@@ -35,13 +35,47 @@ export const TRUNCATED_MESSAGE = "Het antwoord van de AI-provider is afgebroken 
 /** Prefix of the proxy_request error for a timeout (http.rs). */
 const PROXY_TIMEOUT = "Tijdslimiet bereikt";
 
-/** Every model request goes through here: one total time limit, and a timeout named as such. */
-async function modelRequest(request: { url: string; headers: Record<string, string>; body: string }): Promise<{ status: number; body: string }> {
+/** Wait before retrying an HTTP 429 when the provider sends no usable Retry-After, as on macOS. */
+export const RATE_LIMIT_DEFAULT_WAIT_MS = 2_000;
+/** Longest Retry-After that is waited for; a provider asking more is reported as rate limiting right away. */
+export const RATE_LIMIT_MAX_WAIT_MS = 30_000;
+const RATE_LIMIT_MESSAGE = "API-limiet bereikt (429), ook na een nieuwe poging. Probeer het later opnieuw of verwerk minder opnames tegelijk.";
+
+/** Milliseconds to wait before retrying a 429: Retry-After as delta-seconds or HTTP date, else the default.
+ * null when the provider asks for more than RATE_LIMIT_MAX_WAIT_MS. */
+export function rateLimitWaitMs(retryAfter: string | undefined, now = Date.now()): number | null {
+  const value = (retryAfter ?? "").trim();
+  const wait = /^\d+$/.test(value) ? Number(value) * 1000 : /[a-z]/i.test(value) && !Number.isNaN(Date.parse(value))
+    ? Math.max(0, Date.parse(value) - now) : RATE_LIMIT_DEFAULT_WAIT_MS;
+  return wait <= RATE_LIMIT_MAX_WAIT_MS ? wait : null;
+}
+
+type ProxyResponse = { status: number; body: string; headers?: Record<string, string> };
+
+async function proxy(request: { url: string; headers: Record<string, string>; body: string }, timeoutSeconds: number): Promise<ProxyResponse> {
   try {
-    return await invoke("proxy_request", { request: { ...request, method: "POST", timeout_seconds: LLM_TIME_LIMIT_SECONDS } });
+    return await invoke("proxy_request", { request: { ...request, method: "POST", timeout_seconds: timeoutSeconds } });
   } catch (error) {
     throw String(error).startsWith(PROXY_TIMEOUT) ? new Error(TIME_LIMIT_MESSAGE) : error;
   }
+}
+
+/** Every model request goes through here: one total time limit, a timeout named as such, and one retry on HTTP 429
+ * after the provider's Retry-After plus up to one second of jitter, so requests that were rate limited together do
+ * not collide again. The wait and the retry count against the same time limit. A wait that is too long, and a
+ * second 429, return the 429 to the caller, which reports it. Windows requests take no abort signal, so there is
+ * no cancellation during the wait. */
+async function modelRequest(request: { url: string; headers: Record<string, string>; body: string }): Promise<ProxyResponse> {
+  const started = Date.now();
+  const first = await proxy(request, LLM_TIME_LIMIT_SECONDS);
+  const header = Object.entries(first.headers ?? {}).find(([name]) => name.toLowerCase() === "retry-after")?.[1];
+  const wait = first.status === 429 ? rateLimitWaitMs(header) : null;
+  if (wait === null) return first;
+  const jittered = wait + Math.random() * 1000;
+  const remainingSeconds = Math.floor((LLM_TIME_LIMIT_SECONDS * 1000 - (Date.now() - started) - jittered) / 1000);
+  if (remainingSeconds < 1) return first;
+  await new Promise(resolve => setTimeout(resolve, jittered));
+  return proxy(request, remainingSeconds);
 }
 
 // These constraints must survive both chunk summaries and the final profile.
@@ -143,7 +177,7 @@ async function generateWithOpenAICompatible(
     throw new Error(`Kan de notule-generator niet bereiken op ${baseUrl} (model "${model}"). Draait Ollama/LM Studio en klopt de URL in Instellingen?`);
   }
   if (cloud && response.status === 401) throw new Error("Ollama Cloud API-sleutel geweigerd.");
-  if (cloud && response.status === 429) throw new Error("Ollama Cloud API-limiet bereikt. Probeer later opnieuw.");
+  if (cloud && response.status === 429) throw new Error(`Ollama Cloud ${RATE_LIMIT_MESSAGE}`);
   if (response.status >= 400) throw new Error(`${cloud ? "Ollama Cloud" : `Notule-generator op ${baseUrl}`} gaf HTTP ${response.status} voor model "${model}".`);
   const choice = JSON.parse(response.body).choices?.[0];
   // A capped answer is incomplete; never parse it as a short one.
@@ -176,7 +210,7 @@ async function generateWithHostedAPI(
     body: JSON.stringify(body),
   });
   if (response.status === 401) throw new Error(`${openAI ? "OpenAI" : "Anthropic"} API-sleutel geweigerd.`);
-  if (response.status === 429) throw new Error(`${openAI ? "OpenAI" : "Anthropic"} API-limiet bereikt. Probeer later opnieuw.`);
+  if (response.status === 429) throw new Error(`${openAI ? "OpenAI" : "Anthropic"} ${RATE_LIMIT_MESSAGE}`);
   if (response.status >= 400) throw new Error(`${openAI ? "OpenAI" : "Anthropic"} gaf HTTP ${response.status}.`);
   const result = JSON.parse(response.body);
   if (openAI ? result.choices?.[0]?.finish_reason === "length" : result.stop_reason === "max_tokens") throw new Error(TRUNCATED_MESSAGE);

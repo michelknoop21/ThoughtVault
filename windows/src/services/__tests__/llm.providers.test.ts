@@ -1,6 +1,6 @@
-import { beforeEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useSettingsStore } from "../../stores/settingsStore";
-import { LLMService, MAX_OUTPUT_TOKENS, TIME_LIMIT_MESSAGE, TRUNCATED_MESSAGE, auditNoteConcurrency } from "../llm";
+import { LLMService, MAX_OUTPUT_TOKENS, TIME_LIMIT_MESSAGE, TRUNCATED_MESSAGE, auditNoteConcurrency, rateLimitWaitMs } from "../llm";
 import { auditFixture, sourceFixture } from "./notuleAuditFixtures";
 
 const corrections = vi.hoisted(() => ({entries:[] as import("../personalCorrections").PersonalCorrection[]}));
@@ -66,7 +66,7 @@ it("generates Ollama Cloud notes through the native proxy instead of WebView fet
   expect(JSON.parse(request.body).stream).toBe(false);
 });
 
-it.each([401, 429, 500])("keeps local provider HTTP %s visible without reporting completed notes", async status => {
+it.each([401, 500])("keeps local provider HTTP %s visible without reporting completed notes", async status => {
   useSettingsStore.setState({ ollama_url: "http://localhost:11434", ollama_model: "hermes3:8b" });
   invoke.mockResolvedValue({ status, body: "{}" });
   const progress = vi.fn();
@@ -80,6 +80,57 @@ it("names the configured local provider when its native request fails", async ()
   invoke.mockRejectedValue("connection refused");
   await expect(LLMService.generateNotulen("QA bron.", profile)).rejects.toThrow('http://localhost:11434 (model "hermes3:8b")');
   expect(invoke).toHaveBeenCalledTimes(1);
+});
+
+describe("HTTP 429", () => {
+  const notes = { status: 200, body: JSON.stringify({ choices: [{ message: { content: "<p>Akkoord</p>" } }] }) };
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    useSettingsStore.setState({ notulen_provider: "openai" as never });
+    loadCredential.mockResolvedValue("openai-secret");
+  });
+  afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); });
+
+  it("retries once after the Retry-After wait, within the same time limit", async () => {
+    invoke.mockResolvedValueOnce({ status: 429, body: "{}", headers: { "retry-after": "7" } }).mockResolvedValueOnce(notes);
+    const result = LLMService.generateNotulen("Akkoord.", profile);
+    await vi.advanceTimersByTimeAsync(6_999);
+    expect(invoke).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(1);
+    await expect(result).resolves.toBe("<p>Akkoord</p>");
+    expect(invoke).toHaveBeenCalledTimes(2);
+    expect(invoke.mock.calls[1][1].request.timeout_seconds).toBe(893);
+  });
+
+  it("fails on a second 429 with the rate-limit message", async () => {
+    invoke.mockResolvedValue({ status: 429, body: "{}" });
+    const result = expect(LLMService.generateNotulen("Akkoord.", profile)).rejects.toThrow("OpenAI API-limiet bereikt (429), ook na een nieuwe poging");
+    await vi.advanceTimersByTimeAsync(2_000);
+    await result;
+    expect(invoke).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not wait for a Retry-After above the cap", async () => {
+    invoke.mockResolvedValueOnce({ status: 429, body: "{}", headers: { "Retry-After": "120" } }).mockResolvedValueOnce(notes);
+    await expect(LLMService.generateNotulen("Akkoord.", profile)).rejects.toThrow("API-limiet bereikt (429)");
+    expect(invoke).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not retry a server error", async () => {
+    invoke.mockResolvedValueOnce({ status: 500, body: "{}" }).mockResolvedValueOnce(notes);
+    await expect(LLMService.generateNotulen("Akkoord.", profile)).rejects.toThrow("HTTP 500");
+    expect(invoke).toHaveBeenCalledTimes(1);
+  });
+
+  it("reads Retry-After as seconds or as an HTTP date", () => {
+    const now = Date.parse("Wed, 21 Oct 2015 07:28:00 GMT");
+    expect(rateLimitWaitMs("Wed, 21 Oct 2015 07:28:10 GMT", now)).toBe(10_000);
+    expect(rateLimitWaitMs("Wed, 21 Oct 2015 07:27:00 GMT", now)).toBe(0);
+    expect(rateLimitWaitMs("30")).toBe(30_000);
+    expect(rateLimitWaitMs("31")).toBeNull();
+    for (const value of [undefined, "soon", "-5", "1.5"]) expect(rateLimitWaitMs(value)).toBe(2_000);
+  });
 });
 
 it("gives only hosted providers the higher step-2 limit", () => {

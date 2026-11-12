@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { extractTitle } from "../titleExtractor";
+import { extractTitle, truncateTitle } from "../titleExtractor";
 
 const body = "<p>Het team koos voor een nieuwe hostingpartij omdat de huidige te traag is.</p>";
 
@@ -17,5 +17,12 @@ describe("extractTitle", () => {
   it("keeps a heading that names the purpose", () => {
     expect(extractTitle(`<h1>Keuze hostingpartij webshop</h1>${body}`)).toBe("Keuze hostingpartij webshop");
     expect(extractTitle(`<h1>Verslag hostingkeuze</h1>${body}`)).toBe("Verslag hostingkeuze");
+  });
+
+  it("cuts a long title at the last space", () => {
+    const long = "Afspraken over Confluence-documentatie bij leverancierbeoordeling en contactmeldingen";
+    expect(extractTitle(`<h1>${long}</h1>${body}`)).toBe("Afspraken over Confluence-documentatie bij leverancierbeoordeling en");
+    expect(truncateTitle("a".repeat(60) + " planning, " + "b".repeat(30))).toBe("a".repeat(60) + " planning");
+    expect(truncateTitle("x".repeat(100))).toBe("x".repeat(80));
   });
 });

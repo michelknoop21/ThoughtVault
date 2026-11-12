@@ -576,4 +576,17 @@ final class NotuleTitleExtractorTests: XCTestCase {
             "Verslag hostingkeuze"
         )
     }
+
+    func testCutsLongTitleAtLastSpace() {
+        let long = "Afspraken over Confluence-documentatie bij leverancierbeoordeling en contactmeldingen"
+        XCTAssertEqual(
+            NotuleTitleExtractor.extract(from: "<h1>\(long)</h1>\(body)"),
+            "Afspraken over Confluence-documentatie bij leverancierbeoordeling en"
+        )
+        XCTAssertEqual(
+            NotuleTitleExtractor.truncateTitle(String(repeating: "a", count: 60) + " planning, " + String(repeating: "b", count: 30)),
+            String(repeating: "a", count: 60) + " planning"
+        )
+        XCTAssertEqual(NotuleTitleExtractor.truncateTitle(String(repeating: "x", count: 100)), String(repeating: "x", count: 80))
+    }
 }

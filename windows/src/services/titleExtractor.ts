@@ -68,6 +68,14 @@ function isDescriptive(text: string): boolean {
   return true;
 }
 
+/** Caps a title at 80 characters, cutting at the last space so no word is split. */
+export function truncateTitle(text: string, limit = 80): string {
+  if (text.length <= limit) return text;
+  const cut = text.slice(0, limit);
+  const space = cut.lastIndexOf(" ");
+  return (space > 0 ? cut.slice(0, space) : cut).replace(/[\s,;:\-]+$/, "");
+}
+
 function firstSentence(text: string): string {
   return (text.split(/[.!?]/)[0] ?? text).trim();
 }
@@ -93,7 +101,7 @@ export function extractTitle(html: string): string | null {
   const headings = /<h1[\s>]/i.test(html) ? /<(h1)[^>]*>([\s\S]*?)<\/\1>/gi : /<(h[1-4])[^>]*>([\s\S]*?)<\/\1>/gi;
   for (const raw of matches(headings, html, 2)) {
     const title = clean(raw);
-    if (isDescriptive(title)) return title.slice(0, 80);
+    if (isDescriptive(title)) return truncateTitle(title);
   }
 
   // Strategy 2: TL;DR / summary box — the following <p>
@@ -106,7 +114,7 @@ export function extractTitle(html: string): string | null {
     const summary = clean(tldr);
     if (summary.length > 20) {
       const sentence = firstSentence(summary);
-      if (sentence.length > 10) return sentence.slice(0, 80);
+      if (sentence.length > 10) return truncateTitle(sentence);
     }
   }
 
@@ -115,7 +123,7 @@ export function extractTitle(html: string): string | null {
     const text = clean(raw);
     if (text.length > 30 && !text.startsWith("📅")) {
       const sentence = firstSentence(text);
-      if (sentence.length > 10) return sentence.slice(0, 80);
+      if (sentence.length > 10) return truncateTitle(sentence);
     }
   }
 

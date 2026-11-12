@@ -236,17 +236,19 @@ async function auditLong(sourceUnits: Unit[], noteUnits: Unit[], request: Reques
   const quick = sourceUnits.filter(unit => unit.id.startsWith("Q"));
   const parts = noteUnits.length <= MAX_NOTE_CHECKS ? transcriptParts(transcript, [...noteUnits, ...quick]) : null;
   if (!parts) throw new Error(TOO_LARGE);
-  // Step 1: source coverage per part; every part sees the whole notule and all quick notes.
-  const coverage = new Map<string, Verdict>();
-  for (const [index, part] of parts.entries()) {
+  // Step 1: source coverage per part; every part sees the whole notule and all quick notes. The parts run
+  // side by side and are merged in part order, so the result equals a run one after the other.
+  const checkedParts = await runInOrder(parts, async (part, index) => {
     const units = [...part, ...quick];
     const audit = await ask(request, COVERAGE_SYSTEM, `Inhoudsaudit deel ${index + 1} van ${parts.length} (geen generatie):\n${JSON.stringify({ source: units, notes: noteUnits })}`);
     const checks = verdicts(audit.source, units, noteUnits, ["covered", "non_factual", "missing", "uncertain"]);
     if (checks.some(check => check.status !== "covered" && check.evidence.length)) throw new Error("Ongeldig controlebewijs");
-    for (const check of checks) {
-      const earlier = coverage.get(check.id);
-      coverage.set(check.id, earlier ? stricter(earlier, check) : check);
-    }
+    return checks;
+  });
+  const coverage = new Map<string, Verdict>();
+  for (const check of checkedParts.flat()) {
+    const earlier = coverage.get(check.id);
+    coverage.set(check.id, earlier ? stricter(earlier, check) : check);
   }
   // Step 2: the reverse graph. A cited notule sentence is checked alone, against its sources plus the
   // neighbouring transcription as context; the uncited sentences share one request without evidence.
@@ -266,7 +268,7 @@ async function auditLong(sourceUnits: Unit[], noteUnits: Unit[], request: Reques
     if (sent.length > 400 || sent.reduce((length, unit) => length + unit.text.length, 0) > 64_000) throw new Error(TOO_LARGE);
     checks.push({ notes: [note], evidence, context });
   }
-  const checked = await runInOrder(checks, request);
+  const checked = (await runInOrder(checks, check => runCheck(check, request))).flat();
   const noteChecks = noteUnits.map(note => checked.find(item => item.id === note.id)!);
   // Only notule sentences that step 2 supported carry evidence. A covered source without one is missing,
   // so the reviewer reads the source sentence instead of a technical error.
@@ -333,27 +335,27 @@ async function runCheck(check: NoteCheck, request: Request): Promise<Verdict[]> 
   return checked;
 }
 
-/** Runs the checks at most AUDIT_CONCURRENCY at a time and reads the outcomes in order, so the reported
- * problem is always the first one. Any completion frees its slot for the next check, so one slow check
+/** Runs `operation` on the items at most AUDIT_CONCURRENCY at a time and reads the outcomes in order, so the
+ * reported problem is always the first one. Any completion frees its slot for the next item, so one slow request
  * does not hold back the others. After a failure no new request starts. */
 // ponytail: requests already running finish and are ignored; the request function takes no abort signal.
-async function runInOrder(checks: NoteCheck[], request: Request): Promise<Verdict[]> {
-  const outcomes: Promise<{ checked: Verdict[] } | { error: unknown }>[] = [];
-  // Started checks are always a prefix, so every check before a failure has run.
+async function runInOrder<Item, Output>(items: Item[], operation: (item: Item, index: number) => Promise<Output>): Promise<Output[]> {
+  const outcomes: Promise<{ output: Output } | { error: unknown }>[] = [];
+  // Started items are always a prefix, so every item before a failure has run.
   let started = 0, failed = false;
   const startNext = () => {
-    if (failed || started >= checks.length) return;
+    if (failed || started >= items.length) return;
     const index = started++;
-    outcomes[index] = runCheck(checks[index], request).then(
-      checked => { startNext(); return { checked }; },
+    outcomes[index] = operation(items[index], index).then(
+      output => { startNext(); return { output }; },
       error => { failed = true; return { error }; });
   };
   for (let slot = 0; slot < AUDIT_CONCURRENCY; slot++) startNext();
-  const checked: Verdict[] = [];
-  for (let index = 0; index < checks.length; index++) {
+  const collected: Output[] = [];
+  for (let index = 0; index < items.length; index++) {
     const outcome = await outcomes[index];
     if ("error" in outcome) throw outcome.error;
-    checked.push(...outcome.checked);
+    collected.push(outcome.output);
   }
-  return checked;
+  return collected;
 }

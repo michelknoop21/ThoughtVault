@@ -131,13 +131,55 @@ it.each([
 ])("rejects a step-1 reply with %s before merging", async (_name, change) => {
   const request = model({ cover: id => id === "T401" ? ["N1"] : [], coverage: change });
   await expect(auditNotule(longSource, sam, "", request)).rejects.toThrow();
-  expect(request).toHaveBeenCalledTimes(1);
+  // Both parts run side by side; step 2 never starts.
+  expect(request).toHaveBeenCalledTimes(2);
 });
 
 it("rejects an uncertain part and stops asking", async () => {
   const request = model({ coverage: report => { report.uncertain = true; } });
   await expect(auditNotule(longSource, sam, "", request)).rejects.toThrow("De inhoudscontrole is onzeker; beoordeel het concept");
-  expect(request).toHaveBeenCalledTimes(1);
+  // Both parts run side by side; step 2 never starts.
+  expect(request).toHaveBeenCalledTimes(2);
+});
+
+/** The part number of a step-1 request ("Inhoudsaudit deel 2 van 3"), undefined for other requests. */
+const partNumber = (user: string) => kind(user) === "coverage" ? Number(user.split(" ")[2]) : undefined;
+
+it("runs the coverage parts side by side", async () => {
+  const request = model({ cover: id => id === "T401" ? ["N1"] : [], delay: user => partNumber(user) === 1 ? 300 : 0 });
+  await auditNotule(longSource, sam, "", request);
+  expect(request.live.ended.map(partNumber).filter(Boolean)).toEqual([2, 1]);
+});
+
+it("merges the parts in part order, whichever part finishes first", async () => {
+  // Part 1 says the quick note is kept by N1, part 2 says by N2: both notule sentences must cite it.
+  const html = "<p>Sam belt vrijdag de klant. Punt 1 is besproken.</p>";
+  const stepTwo: string[][] = [];
+  for (const slowPart of [1, 2]) {
+    const request = model({
+      cover: id => id === "T401" ? ["N1"] : id === "T1" ? ["N2"] : [],
+      coverage: (report, data) => {
+        report.source = report.source!.map(item => item.id === "Q1" ? { id: "Q1", status: "covered", evidence: [data.source![0].id === "T1" ? "N1" : "N2"] } : item);
+      },
+      delay: user => partNumber(user) === slowPart ? 200 : 0,
+    });
+    await auditNotule(longSource, html, "Klant bellen.", request);
+    const notes = calls(request, "note").map(([, user]) => user).sort();
+    expect(notes.map(user => ids(input(user).evidence))).toEqual([["T401", "Q1"], ["T1", "Q1"]]);
+    stepTwo.push(notes);
+  }
+  expect(stepTwo[0]).toEqual(stepTwo[1]);
+});
+
+it("reports the first failing part even when a later part failed first, and starts no further parts", async () => {
+  // Six parts. Part 1 is slow and uncertain, part 2 fails at once, parts 3 and 4 finish after part 2.
+  const request = model({
+    coverage: (report, data) => { if (data.source![0].id === "T1") report.uncertain = true; },
+    reply: user => partNumber(user) === 2 ? '{"source":[' : undefined,
+    delay: user => { const part = partNumber(user); return part === 1 ? 300 : part === 2 || !part ? 0 : 100; },
+  });
+  await expect(auditNotule(points(399 * 6), "<p>Punt 1 is besproken.</p>", "", request)).rejects.toThrow("De inhoudscontrole is onzeker; beoordeel het concept");
+  expect(calls(request, "coverage").map(([, user]) => partNumber(user))).toEqual([1, 2, 3, 4]);
 });
 
 it("rejects unreadable JSON in part 2 after exactly two requests", async () => {

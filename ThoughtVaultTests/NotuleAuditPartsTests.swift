@@ -15,7 +15,16 @@ private actor LongRecorder {
     var ended: [String] = []
     func begin(_ system: String, _ user: String) { calls.append((system, user)); running += 1; peak = max(peak, running) }
     func end(_ user: String) { running -= 1; ended.append(user) }
-    func requests(_ kind: String) -> [(system: String, user: String)] { calls.filter { longKind($0.user) == kind } }
+    /// Requests of one kind; coverage requests in part order, since parts start side by side.
+    func requests(_ kind: String) -> [(system: String, user: String)] {
+        let matching = calls.filter { longKind($0.user) == kind }
+        return kind == "coverage" ? matching.sorted { partNumber($0.user)! < partNumber($1.user)! } : matching
+    }
+}
+
+/// The part number of a step-1 request ("Inhoudsaudit deel 2 van 3"), nil for other requests.
+private func partNumber(_ user: String) -> Int? {
+    longKind(user) == "coverage" ? Int(user.split(separator: " ")[2]) : nil
 }
 
 /// Answers on the units it receives, like `model()` in notuleAuditParts.test.ts.
@@ -198,8 +207,9 @@ final class NotuleAuditPartsTests: XCTestCase {
                 try await audit(longSource, sam, recorder, LongModel(cover: { $0 == "T401" ? ["N1"] : [] }, coverage: { _, report in change(&report) }))
             }
             XCTAssertNotNil(error, name)
+            // Both parts run side by side; step 2 never starts.
             let count = await recorder.calls.count
-            XCTAssertEqual(count, 1, name)
+            XCTAssertEqual(count, 2, name)
         }
     }
 
@@ -208,8 +218,58 @@ final class NotuleAuditPartsTests: XCTestCase {
         await assertRejects("De inhoudscontrole is onzeker; beoordeel het concept") {
             try await audit(longSource, sam, recorder, LongModel(coverage: { _, report in report["uncertain"] = true }))
         }
+        // Both parts run side by side; step 2 never starts.
         let count = await recorder.calls.count
-        XCTAssertEqual(count, 1)
+        XCTAssertEqual(count, 2)
+    }
+
+    func testCoveragePartsRunSideBySide() async throws {
+        let recorder = LongRecorder()
+        let model = LongModel(cover: { $0 == "T401" ? ["N1"] : [] }, delay: { partNumber($0) == 1 ? 300_000_000 : 0 })
+        try await audit(longSource, sam, recorder, model)
+        let ended = await recorder.ended.compactMap(partNumber)
+        XCTAssertEqual(ended, [2, 1], "part 2 must not wait for the slow part 1")
+    }
+
+    func testMergedCoverageDoesNotDependOnWhichPartFinishesFirst() async throws {
+        // Part 1 says the quick note is kept by N1, part 2 says by N2: both notule sentences must cite it.
+        let html = "<p>Sam belt vrijdag de klant. Punt 1 is besproken.</p>"
+        let coverQuickNote: @Sendable (String, inout LongReport) -> Void = { first, report in
+            editSource(&report) { source in
+                let index = source.firstIndex { ($0["id"] as? String) == "Q1" }!
+                source[index] = ["id": "Q1", "status": "covered", "evidence": [first == "T1" ? "N1" : "N2"]]
+            }
+        }
+        var stepTwo: [[String]] = []
+        for slowPart in [1, 2] {
+            let recorder = LongRecorder()
+            let model = LongModel(cover: { $0 == "T401" ? ["N1"] : $0 == "T1" ? ["N2"] : [] }, coverage: coverQuickNote,
+                                  delay: { partNumber($0) == slowPart ? 200_000_000 : 0 })
+            try await audit(longSource, html, quickNote: "Klant bellen.", recorder, model)
+            let notes = await recorder.requests("note").map(\.user).sorted()
+            XCTAssertEqual(notes.map { longIds(longInput($0)["evidence"]) }, [["T401", "Q1"], ["T1", "Q1"]])
+            stepTwo.append(notes)
+        }
+        XCTAssertEqual(stepTwo[0], stepTwo[1])
+    }
+
+    func testFirstFailingPartIsReportedAndLaterPartsDoNotStart() async {
+        // Six parts. Part 1 is slow and uncertain, part 2 fails at once, parts 3 and 4 finish after part 2.
+        let recorder = LongRecorder()
+        let model = LongModel(coverage: { first, report in if first == "T1" { report["uncertain"] = true } },
+                              reply: { partNumber($0) == 2 ? #"{"source":["# : nil },
+                              delay: { user in
+                                  switch partNumber(user) {
+                                  case 1?: 300_000_000
+                                  case 2?: 0
+                                  default: 100_000_000
+                                  }
+                              })
+        await assertRejects("De inhoudscontrole is onzeker; beoordeel het concept") {
+            try await audit(points(399 * 6), "<p>Punt 1 is besproken.</p>", recorder, model)
+        }
+        let started = await recorder.requests("coverage").compactMap { partNumber($0.user) }
+        XCTAssertEqual(started, [1, 2, 3, 4])
     }
 
     func testUnreadableJSONInPartTwoRejectsAfterTwoRequests() async {

@@ -24,7 +24,7 @@ _Decisions DEC-039 through DEC-053 archived to [archive/DECISIONS-DEC-039-to-DEC
 
 **Begrenzing:**
 - Hoogstens 8 delen (`MAX_AUDIT_PARTS`) en hoogstens 150 notulezinnen (`MAX_NOTE_CHECKS`), dus hoogstens 8 + 150 + 1 = 159 verzoeken per controle. Is er meer nodig, of past één stap-2-verzoek met bewijs en context niet binnen 400 eenheden en 64.000 tekens, dan volgt vooraf de bestaande fout "Deze inhoud is te groot of onvolledig voor betrouwbare controle; beoordeel het concept". Bij te veel notulezinnen of delen gaat er geen enkel verzoek uit; bij een te groot stap-2-verzoek is stap 1 al gelopen en start stap 2 niet.
-- Stap 1 loopt na elkaar. Stap 2 draait hoogstens 4 verzoeken tegelijk en leest de uitkomsten in volgorde van de notule, zodat bij meerdere problemen steeds het eerste wordt gemeld. Na het eerste probleem start er geen nieuw verzoek meer. Verzoeken die al lopen worden afgewacht en genegeerd, niet afgebroken: op macOS leest `NotuleGenerator` een `CancellationError` uit een verzoek als annulering door de gebruiker, en op Windows neemt het verzoek geen abortsignaal aan.
+- Stap 1 loopt na elkaar (gewijzigd op 12 november 2026: de delen lopen tegelijk, zie de wijziging onderaan). Stap 2 draait hoogstens 4 verzoeken tegelijk en leest de uitkomsten in volgorde van de notule, zodat bij meerdere problemen steeds het eerste wordt gemeld. Na het eerste probleem start er geen nieuw verzoek meer. Verzoeken die al lopen worden afgewacht en genegeerd, niet afgebroken: op macOS leest `NotuleGenerator` een `CancellationError` uit een verzoek als annulering door de gebruiker, en op Windows neemt het verzoek geen abortsignaal aan.
 - macOS en Windows delen constanten, prompts en foutteksten letterlijk (`NotuleAuditLong.swift` en het lange pad in `notuleAudit.ts`).
 
 **Alternatives considered:**
@@ -40,6 +40,11 @@ _Decisions DEC-039 through DEC-053 archived to [archive/DECISIONS-DEC-039-to-DEC
 - Een meeting als het schadebezoek kost met een notule van 60 zinnen 3 dekkingsverzoeken en hoogstens 60 verificatieverzoeken, in plaats van geen controle.
 - Elke geciteerde notulezin is een los modelverzoek. Bij een lokaal model telt die wachttijd mee tot de notule klaar is; vier tegelijk beperkt dat, maar maakt het niet gratis.
 - Tests: `NotuleAuditPartsTests.swift` en `notuleAuditParts.test.ts` dekken dezelfde scenario's, waaronder precies 8 delen, de tekenbegroting, de kwalificatie over een deelgrens, de verzonnen termijn, het verzoekenvenster van 4 en het doorgeven van een annulering.
+
+**Wijziging 2026-11-12 (besluit eigenaar, 12 november 2026):**
+- Stap 1 loopt niet meer na elkaar. De delen gaan hoogstens 4 tegelijk (`auditConcurrency`, dezelfde grens als stap 2). Reden: wachttijd. Het schadebezoek wachtte in stap 1 op drie verzoeken achter elkaar, nu op het traagste van de drie.
+- De uitkomst blijft gelijk aan een run na elkaar. De delen worden pas samengevoegd als alle delen klaar zijn, in de volgorde van de delen, dus de oordelen en de evidence van een Q-zin staan in dezelfde volgorde als voorheen. De controle per deel ("Ongeldig controlebewijs") en het doorgeven van een annulering zijn ongewijzigd.
+- Faalt een deel, dan wordt de eerste fout in de volgorde van de delen gemeld, ook als een later deel eerder klaar was, en start er geen nieuw deel meer. Delen die al liepen worden afgewacht en genegeerd. Een afgewezen lange controle kan daardoor tot drie verzoeken meer kosten dan voorheen.
 
 ---
 

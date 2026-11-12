@@ -5,6 +5,15 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2026-11-12]: Snellere en begrensde notulecontrole
+
+### Changed
+- Elk modelverzoek heeft een totale tijdslimiet van 900 seconden en een uitvoerplafond van 32.768 tokens (`max_completion_tokens` voor `api.openai.com`, `max_tokens` elders; de aanbieder met de Messages-API houdt zijn bestaande 16.000). Een afgekapt antwoord is een fout, en een time-out meldt "Tijdslimiet bereikt" in plaats van "niet bereikbaar". Windows staat in `proxy_request` nu 900 seconden toe in plaats van 300, gelijk aan macOS.
+- De broncontrole (DEC-062) start tegelijk met het concept. Waarschuwingen en uitkomsten zijn gelijk; een mislukt concept wint.
+- Lange controle (DEC-065): de dekkingsdelen van stap 1 lopen hoogstens 4 tegelijk en worden in de volgorde van de delen samengevoegd. Stap 2 vult een vrijgekomen plek direct aan, zodat een trage zincontrole de andere niet ophoudt.
+
+---
+
 ## [2026-11-10]: Support-relay voor meldingen en foutrapporten
 
 ### Added

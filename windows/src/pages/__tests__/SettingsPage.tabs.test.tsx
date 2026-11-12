@@ -20,7 +20,7 @@ import { invoke } from "@tauri-apps/api/core";
 
 // One heading per tab; guards the per-tab split against dropped or miswired tabs.
 const TABS: [string, string][] = [
-  ["Algemeen", "Controleer op updates"],
+  ["Algemeen", "Automatisch bijwerken"],
   ["Verwerking", "Snelle setup"],
   ["Notulen", "Standaard notulentemplate"],
   ["Agenda", "Microsoft 365"],

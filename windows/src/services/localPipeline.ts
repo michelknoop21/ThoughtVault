@@ -11,6 +11,7 @@ import { exportToObsidian } from "./obsidian";
 import { extractTitle } from "./titleExtractor";
 import { getQuickNote } from "./quickNotes";
 import { hasUsableNotule, hasUsableTranscription } from "./notuleValidation";
+import { mask } from "./appLog";
 import { runInBackground } from "./contextSuggestions";
 import type { Participant } from "./participants";
 import type { RecordingMode, Transcript, TranscriptTask } from "../types";
@@ -175,7 +176,7 @@ export async function processLocally(
         msg += ". Het concept kon niet worden bewaard. De transcriptie en opname zijn niet vervangen.";
       }
     }
-    console.error("[LocalPipeline] Failed:", msg);
+    console.error("[LocalPipeline] Failed:", mask(msg));
     updateBackgroundTask(taskId, { status: "failed", error_message: msg });
   }
 }

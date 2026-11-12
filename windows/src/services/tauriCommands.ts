@@ -1,5 +1,34 @@
 import { invoke } from "@tauri-apps/api/core";
 
+type RecordingErrorDiagnostic = "expected" | "native-owned";
+class RecordingCommandError extends Error {
+  constructor(message: string, readonly diagnostic: RecordingErrorDiagnostic) {
+    super(message);
+  }
+}
+
+function normalizeRecordingRejection(error: unknown): never {
+  if (typeof error === "object" && error !== null &&
+      Object.getPrototypeOf(error) === Object.prototype &&
+      Object.keys(error).length === 2 &&
+      "message" in error && typeof error.message === "string" &&
+      "diagnostic" in error &&
+      (error.diagnostic === "expected" || error.diagnostic === "native-owned")) {
+    throw new RecordingCommandError(error.message, error.diagnostic);
+  }
+  throw error;
+}
+
+/** Unknown IPC/permission failures must still be reported by the caller. */
+export function shouldReportRecordingFailure(error: unknown): boolean {
+  return !(error instanceof RecordingCommandError);
+}
+
+/** Feed this into each caller's existing String/instanceof Error UI logic. */
+export function recordingErrorForUI(error: unknown): unknown {
+  return error instanceof RecordingCommandError ? error.message : error;
+}
+
 export interface AudioDevice {
   id: string;
   name: string;
@@ -54,19 +83,19 @@ export async function startRecording(
     deviceId,
     mode,
     outputDir,
-  });
+  }).catch(normalizeRecordingRejection);
 }
 
 export async function stopRecording(): Promise<RecordingResult> {
-  return invoke<RecordingResult>("stop_recording");
+  return invoke<RecordingResult>("stop_recording").catch(normalizeRecordingRejection);
 }
 
 export async function pauseRecording(): Promise<void> {
-  return invoke("pause_recording");
+  return invoke<void>("pause_recording").catch(normalizeRecordingRejection);
 }
 
 export async function resumeRecording(): Promise<void> {
-  return invoke("resume_recording");
+  return invoke<void>("resume_recording").catch(normalizeRecordingRejection);
 }
 
 // Credential commands

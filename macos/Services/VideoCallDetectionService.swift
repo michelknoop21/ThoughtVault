@@ -10,9 +10,8 @@
 import Foundation
 import AVFoundation
 import AppKit
-import OSLog
 
-private let logger = Logger(subsystem: "com.buildmind.ThoughtVault", category: "VideoCallDetection")
+private let logger = AppLog(category: "VideoCallDetection")
 
 @Observable
 final class VideoCallDetectionService: @unchecked Sendable {

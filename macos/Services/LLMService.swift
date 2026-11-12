@@ -1,7 +1,6 @@
 import Foundation
-import OSLog
 
-private let logger = Logger(subsystem: "com.buildmind.ThoughtVault", category: "LLMService")
+private let logger = AppLog(category: "LLMService")
 
 // MARK: - LLMError
 

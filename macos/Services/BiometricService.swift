@@ -1,10 +1,9 @@
 import Foundation
 import LocalAuthentication
 import Security
-import OSLog
 import SwiftUI
 
-private let logger = Logger(subsystem: "com.buildmind.ThoughtVault", category: "BiometricService")
+private let logger = AppLog(category: "BiometricService")
 
 // MARK: - Token Wrapper
 
@@ -96,7 +95,7 @@ final class BiometricService: @unchecked Sendable {
             &accessError
         ) else {
             let errorMessage = accessError?.takeRetainedValue().localizedDescription ?? "Unknown error"
-            logger.error("SecAccessControlCreateWithFlags failed: \(errorMessage)")
+            logger.error("SecAccessControlCreateWithFlags failed: \(LogRedact.mask(errorMessage))")
             throw BiometricError.accessControlCreationFailed(errorMessage)
         }
 

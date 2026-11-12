@@ -1,6 +1,6 @@
 # Support-relay
 
-De support-relay neemt meldingen en foutrapporten van de ThoughtVault-apps aan en zet ze door naar de feedback-hub. De apps hebben geen login en geen hub-sleutel nodig: de relay kent elke installatie aan een eigen id en geheim en houdt zelf de sleutel van de hub. Besluit en achtergrond: DEC-064 en `docs/plans/2026-11-10-foutrapporten-feedbackhub.md`.
+De support-relay neemt meldingen en foutrapporten van de ThoughtVault-apps aan en zet ze door naar de feedback-hub. De apps hebben geen login en geen hub-sleutel nodig: de relay kent elke installatie aan een eigen id en geheim en houdt zelf de sleutel van de hub. Besluit en achtergrond: DEC-064 en DEC-066 en `docs/plans/2026-11-10-foutrapporten-feedbackhub.md`.
 
 ```
 app  ->  thoughtvault.yinga.ai/support  (Caddy)  ->  thoughtvault-support:8000  ->  feedback.yinga.ai (hub)
@@ -74,10 +74,11 @@ Repo `transcript-studio-backend`, onder `src/insanely_fast_whisper_api/app/`:
 
 | Bestand | Inhoud |
 |---|---|
-| `support_app.py` | FastAPI-app; de lifespan maakt alleen de twee supporttabellen; `GET /health`; docs en openapi uit; eigen 429-handler |
+| `support_app.py` | FastAPI-app; de lifespan maakt de twee supporttabellen en start de opruimlus; `GET /health`; docs en openapi uit; eigen 429-handler |
 | `routes/support.py` | de routes |
 | `services/support_hub.py` | asynchrone httpx-client voor de hub |
 | `support_models.py` | tabellen `support_installations` en `support_issues` |
+| `services/support_cleanup.py` | bewaartermijn en periodiek opruimen van relaygegevens |
 
 Buiten `src`: `Dockerfile.support` (python:3.10-slim, gebruiker `relay`, healthcheck, uvicorn met één worker op poort 8000), `Dockerfile.support.dockerignore` (allowlist: alleen `requirements-support.txt` en `src`), `docker-compose.support.yml`, `requirements-support.txt` en `.env.support.example`.
 
@@ -87,7 +88,7 @@ Testen, vanuit de backend-repo:
 PYTHONPATH=src python -m pytest tests/test_support_relay.py tests/test_profile_choice.py tests/test_note_completion_validation.py
 ```
 
-Dat geeft 85 geslaagd. Draai nooit een kale `pytest`: `tests/test_race_condition_fix.py` praat met productie.
+Eerder vastgelegd: 96 geslaagd voor deze gerichte backendtests (handoff bij backendcommit `bbdf1733dd1e4546dbe3640c901a2b1f0b8f0da5`); niet opnieuw gedraaid voor deze lokale app-integratie. Draai nooit een kale `pytest`: `tests/test_race_condition_fix.py` praat met productie.
 
 ## Deploy en bediening op n8n01
 
@@ -141,6 +142,10 @@ Tool-slug `thought-vault`, naam ThoughtVault, één instantie "ThoughtVault", pr
 ## Testen tegen de echte relay
 
 Gebruik nooit een echt e-mailadres: de hub mailt de melder. Neem `@example.com` en sluit testtickets daarna. Op 10 november liepen `TV-000001` (automatisch, twee gelijke meldingen werden één ticket met teller 2 en logbestand) en `TV-000002` (handmatig, bijlage teruggelezen via de relay, antwoord via de relay) zo door de hele keten; beide zijn gesloten.
+
+## Bewaartermijn van relaygegevens
+
+Backendcommit `bbdf1733dd1e4546dbe3640c901a2b1f0b8f0da5` stelt `RETENTION_DAYS = 365` in. De opruimlus draait direct bij starten en vervolgens iedere 24 uur. Zij beoordeelt installaties op `coalesce(last_seen_at, created_at)` en verwijdert eerst de gekoppelde `SupportIssue`-rijen, daarna de verlopen `SupportInstallation`-rijen, binnen één transactie. Een fout wordt gelogd; de lus blijft draaien voor een volgende poging. Dit verwijdert geen tickets of bijlagen uit de feedback-hub; daarvoor geldt afzonderlijk hubbeheer.
 
 ## Bekende grenzen
 

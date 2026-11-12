@@ -308,7 +308,7 @@ export function PersonEditModal({ person, isNew, onClose, onAdded }: PersonEditM
             {tasks.map((task, index) => (
               <div key={`${task}-${index}`} className="person-task-row">
                 <span>{task}</span>
-                <button className="btn btn-ghost btn-sm" aria-label={`Verwijder ${task}`} title="Verwijderen"
+                <button className="btn btn-ghost btn-sm" aria-label={`Verwijder ${task}`} data-log-label="Taak verwijderen" title="Verwijderen"
                   onClick={() => setTasks(tasks.filter((_, i) => i !== index))} disabled={isSaving || savedOk}>
                   <Dismiss24Regular style={{ fontSize: 14 }} />
                 </button>

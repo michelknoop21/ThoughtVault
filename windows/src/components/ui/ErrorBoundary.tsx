@@ -1,5 +1,6 @@
 import { Component } from "react";
 import type { ErrorInfo, ReactNode } from "react";
+import { reportFailure } from "../../services/crashReporter";
 
 interface Props {
   children: ReactNode;
@@ -22,6 +23,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, info: ErrorInfo) {
     console.error("[ErrorBoundary]", error, info.componentStack);
+    void reportFailure("crash", "Er is iets misgegaan", "react_render_failed");
   }
 
   render() {
@@ -67,15 +69,13 @@ export class ErrorBoundary extends Component<Props, State> {
           <button
             onClick={() => {
               this.setState({ hasError: false, error: null });
-              window.location.hash = "/";
-              window.location.reload();
             }}
             className="btn btn-accent"
             style={{
               fontFamily: "inherit",
             }}
           >
-            Herlaad applicatie
+            Opnieuw proberen
           </button>
         </div>
       );

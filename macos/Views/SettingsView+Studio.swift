@@ -79,6 +79,9 @@ extension SettingsView {
                 .ignoresSafeArea()
         )
         .ignoresSafeArea(.container, edges: .top)
+        .onChange(of: settingsTab) { _, tab in
+            AppLog.clickPath.info("Instellingen \(tab.rawValue)")
+        }
         .toolbarBackground(.hidden, for: .windowToolbar)
         .modifier(HiddenWindowTitle())
     }

@@ -6,9 +6,8 @@
 // accepts or rejects them; nothing is added to the glossary automatically.
 
 import Foundation
-import OSLog
 
-private let logger = Logger(subsystem: "com.buildmind.ThoughtVault", category: "ContextSuggestions")
+private let logger = AppLog(category: "ContextSuggestions")
 
 extension Notification.Name {
     /// Posted on the main actor after suggestions for a recording were stored; `userInfo["taskId"]`.
@@ -243,7 +242,7 @@ enum ContextSuggestions {
                 }
                 logger.info("Context suggestions: \(set.terms.count) terms, \(set.people.count) people")
             } catch {
-                logger.error("Context suggestions failed: \(error.localizedDescription, privacy: .public)")
+                logger.error("Context suggestions failed: \(LogRedact.mask(error.localizedDescription))")
             }
         }
     }

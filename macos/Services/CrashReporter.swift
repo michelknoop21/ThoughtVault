@@ -1,15 +1,13 @@
 import Foundation
-import OSLog
 
-private let logger = Logger(subsystem: "com.buildmind.ThoughtVault", category: "CrashReporter")
+private let logger = AppLog(category: "CrashReporter")
 
 // MARK: - CrashReporter
 
 /// Minimal crash reporting stub. Ready to be wired up to a real crash reporting SDK.
 ///
-/// In DEBUG builds, recorded errors are printed to the console.
-/// In RELEASE builds, this is a no-op until a real crash reporting SDK (e.g. Sentry, Crashlytics)
-/// is integrated via `configure()`.
+/// Non-fatal errors and messages are masked and written through AppLog in every build.
+/// A real crash reporting SDK can still be integrated via `configure()`.
 final class CrashReporter: @unchecked Sendable {
 
     static let shared = CrashReporter()
@@ -44,13 +42,14 @@ final class CrashReporter: @unchecked Sendable {
     ///   - error: The error to record.
     ///   - context: Optional description of where/why the error occurred.
     func recordError(_ error: Error, context: String? = nil) {
+        let code = (error as NSError).code
         let contextString = context ?? "unspecified"
 
         #if DEBUG
-        logger.error("CrashReporter: [non-fatal] \(error.localizedDescription) (context: \(contextString))")
+        logger.error("CrashReporter: [non-fatal] \(LogRedact.mask(error.localizedDescription)) (code: \(code)) (context: \(LogRedact.mask(contextString)))")
         #else
         // Forward to crash reporting SDK here when integrated.
-        logger.error("CrashReporter: non-fatal error recorded — \(error.localizedDescription, privacy: .public)")
+        logger.error("CrashReporter: non-fatal error recorded — \(LogRedact.mask(error.localizedDescription)) (code: \(code))")
         #endif
     }
 
@@ -63,10 +62,10 @@ final class CrashReporter: @unchecked Sendable {
         let contextString = context ?? "unspecified"
 
         #if DEBUG
-        logger.error("CrashReporter: [message] \(message) (context: \(contextString))")
+        logger.error("CrashReporter: [message] \(LogRedact.mask(message)) (context: \(LogRedact.mask(contextString)))")
         #else
         // Forward to crash reporting SDK here when integrated.
-        logger.error("CrashReporter: message recorded — \(message, privacy: .public)")
+        logger.error("CrashReporter: message recorded — \(LogRedact.mask(message))")
         #endif
     }
 
@@ -76,7 +75,7 @@ final class CrashReporter: @unchecked Sendable {
     /// - Parameter userId: An opaque, non-personally-identifiable user identifier.
     func setUserIdentifier(_ userId: String) {
         #if DEBUG
-        logger.debug("CrashReporter: user identifier set — \(userId)")
+        logger.debug("CrashReporter: user identifier set — \(LogRedact.mask(userId))")
         #else
         // Set user context on crash reporting SDK here when integrated.
         #endif

@@ -8,14 +8,13 @@
 
 import SwiftUI
 import WebKit
-import os
 #if os(macOS)
 import AppKit
 #else
 import UIKit
 #endif
 
-private let logger = Logger(subsystem: "com.buildmind.ThoughtVault", category: "TranscriptsView")
+private let logger = AppLog(category: "TranscriptsView")
 
 /// Locally processed records carry a deterministic "local-<uuid>" task id (minted in
 /// RecordingViewModel.processLocally) and live in SwiftData, not on the server.
@@ -1141,7 +1140,7 @@ struct TranscriptDetailView: View {
             isLoadingDetail = true
             do {
                 fullTranscript = try await APIService.shared.getTranscript(taskId: transcript.taskId)
-                logger.info("Detail fetch success for \(transcript.taskId): notuleHtml=\(fullTranscript.notuleHtml != nil), rawTranscription=\(fullTranscript.rawTranscription != nil)")
+                logger.info("Detail fetch success for \(LogRedact.mask(transcript.taskId)): notuleHtml=\(fullTranscript.notuleHtml != nil), rawTranscription=\(fullTranscript.rawTranscription != nil)")
 
                 // If notule_html is empty, try fetching linked notes separately
                 let hasNotule = !(fullTranscript.notuleHtml ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -1149,7 +1148,7 @@ struct TranscriptDetailView: View {
                     if let html = try? await APIService.shared.getTranscriptNotes(taskId: transcript.taskId),
                        !html.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                         fullTranscript.notuleHtml = html
-                        logger.info("Loaded notule from /notes endpoint for \(transcript.taskId)")
+                        logger.info("Loaded notule from /notes endpoint for \(LogRedact.mask(transcript.taskId))")
                     }
                 }
 
@@ -1160,7 +1159,7 @@ struct TranscriptDetailView: View {
                     selectedTab = .raw
                 }
             } catch {
-                logger.error("Detail fetch failed for \(transcript.taskId): \(error)")
+                logger.error("Detail fetch failed for \(LogRedact.mask(transcript.taskId)): \(LogRedact.mask(String(describing: error)))")
                 errorMessage = error.localizedDescription
             }
             isLoadingDetail = false
@@ -2072,7 +2071,7 @@ struct TranscriptDetailView: View {
             fullTranscript.notuleHtml = html
             editedHTML = ""
             withAnimation(TS.Animation.smooth) { isEditingNotule = false }
-            logger.info("Notule saved for \(fullTranscript.taskId)")
+            logger.info("Notule saved for \(LogRedact.mask(fullTranscript.taskId))")
             if ObsidianService.isEnabled {
                 do {
                     try await ObsidianService.tryExport(
@@ -2085,7 +2084,7 @@ struct TranscriptDetailView: View {
             }
         } catch {
             errorMessage = "Opslaan mislukt: \(error.localizedDescription)"
-            logger.error("Save notule failed: \(error)")
+            logger.error("Save notule failed: \(LogRedact.mask(String(describing: error)))")
         }
     }
 

@@ -1,8 +1,7 @@
 import Foundation
 import Network
-import OSLog
 
-private let logger = Logger(subsystem: "com.buildmind.ThoughtVault", category: "NetworkMonitor")
+private let logger = AppLog(category: "NetworkMonitor")
 
 // MARK: - NetworkMonitor
 

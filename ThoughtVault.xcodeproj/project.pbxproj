@@ -7,6 +7,13 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		AA0F0701 /* SupportIdentityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0F0701 /* SupportIdentityView.swift */; };
+		AA0F0801 /* SupportViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0F0801 /* SupportViews.swift */; };
+		AA0F0702 /* SupportIdentityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0F0701 /* SupportIdentityView.swift */; };
+		AB0F0E01 /* envelope-fixture.json in Resources */ = {isa = PBXBuildFile; fileRef = FB0F0E01 /* envelope-fixture.json */; };
+		AA0F0802 /* SupportViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0F0801 /* SupportViews.swift */; };
+        AA0F0601 /* MenuBarViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0F0601 /* MenuBarViews.swift */; };
+        AA0F0602 /* MenuBarViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0F0601 /* MenuBarViews.swift */; };
 		AB00FA00DS01 /* DebugScreenshotSeed.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA00DS01 /* DebugScreenshotSeed.swift */; };
 		AB01FA00CSB1 /* ContextSuggestionBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA00CSB1 /* ContextSuggestionBar.swift */; };
 		AB02FA00CH01 /* ContextHistory.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA00CH01 /* ContextHistory.swift */; };
@@ -81,6 +88,9 @@
 		AA0000K2 /* AppleFoundationModelService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000K2 /* AppleFoundationModelService.swift */; };
 		AA0000K1 /* AnthropicLLMService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000K1 /* AnthropicLLMService.swift */; };
 		AA000015 /* NetworkMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000015 /* NetworkMonitor.swift */; };
+		AA0F0A01 /* AppLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0F0A01 /* AppLog.swift */; };
+		AA0F0C01 /* SupportRelay.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0F0C01 /* SupportRelay.swift */; };
+		AA0F0B01 /* SupportModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0F0B01 /* SupportModels.swift */; };
 		AA000016 /* OfflineQueue.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000016 /* OfflineQueue.swift */; };
 		AA000017 /* OnDeviceTranscriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000017 /* OnDeviceTranscriber.swift */; };
 		AA000018 /* SystemAudioCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000018 /* SystemAudioCapture.swift */; };
@@ -103,6 +113,7 @@
 		AA0000K8 /* SettingsView+VerwerkingSide.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000K8 /* SettingsView+VerwerkingSide.swift */; };
 		AA0000K7 /* SettingsView+Verwerking.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000K7 /* SettingsView+Verwerking.swift */; };
 		AA0000K6 /* SettingsView+Studio.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000K6 /* SettingsView+Studio.swift */; };
+		B90000000000000000000001 /* SettingsView+Support.swift in Sources */ = {isa = PBXBuildFile; fileRef = B90000000000000000000003 /* SettingsView+Support.swift */; };
 		AA0000K5 /* HostedProviderConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000K5 /* HostedProviderConfig.swift */; };
 		AA0000CP1 /* CloudProviderConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000CP1 /* CloudProviderConfig.swift */; };
 		AA000032 /* TranscriptsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000032 /* TranscriptsView.swift */; };
@@ -146,6 +157,8 @@
 		AB000201 /* Participant.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000201 /* Participant.swift */; };
 		AB000202 /* ParticipantPickerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000202 /* ParticipantPickerSheet.swift */; };
 		AB000002 /* MigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000002 /* MigrationTests.swift */; };
+		AB0F0A03 /* AppLogTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0F0A03 /* AppLogTests.swift */; };
+		AB0F0B03 /* SupportRelayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0F0B03 /* SupportRelayTests.swift */; };
 		AB000003 /* PersonProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000003 /* PersonProfileTests.swift */; };
 		AB0000K1 /* KeychainServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000K1 /* KeychainServiceTests.swift */; };
 		AB000004 /* PersonDirectoryServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000004 /* PersonDirectoryServiceTests.swift */; };
@@ -244,6 +257,9 @@
 		B971B9D6CA39EB0775BCB683 /* AppleFoundationModelService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000K2 /* AppleFoundationModelService.swift */; };
 		29AC450D5D6456AEABE3C258 /* AnthropicLLMService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000K1 /* AnthropicLLMService.swift */; };
 		1225DEE54C5F11F501DE7F20 /* NetworkMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000015 /* NetworkMonitor.swift */; };
+		AA0F0A02 /* AppLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0F0A01 /* AppLog.swift */; };
+		AA0F0C02 /* SupportRelay.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0F0C01 /* SupportRelay.swift */; };
+		AA0F0B02 /* SupportModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0F0B01 /* SupportModels.swift */; };
 		141F2D5FCC802F15F8DD83BE /* OfflineQueue.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000016 /* OfflineQueue.swift */; };
 		2163B16A7A1E21C9DE0C2044 /* OnDeviceTranscriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000017 /* OnDeviceTranscriber.swift */; };
 		9BB2542FD5E3FC3AF167A963 /* SystemAudioCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000018 /* SystemAudioCapture.swift */; };
@@ -287,6 +303,7 @@
 		825525A8990BF36A59F0ACEF /* SettingsView+VerwerkingSide.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000K8 /* SettingsView+VerwerkingSide.swift */; };
 		F4571C89E479D18DF7C6601B /* SettingsView+Verwerking.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000K7 /* SettingsView+Verwerking.swift */; };
 		EB2F34883F1AF554F86EBF01 /* SettingsView+Studio.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000K6 /* SettingsView+Studio.swift */; };
+		B90000000000000000000002 /* SettingsView+Support.swift in Sources */ = {isa = PBXBuildFile; fileRef = B90000000000000000000003 /* SettingsView+Support.swift */; };
 		0CE3268CA29568C899DDCE43 /* HostedProviderConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000K5 /* HostedProviderConfig.swift */; };
 		F01B80B1F831A440DEEE29CD /* CloudProviderConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000CP1 /* CloudProviderConfig.swift */; };
 		E4189B0528CC9F6E2CBC8633 /* TranscriptsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000032 /* TranscriptsView.swift */; };
@@ -319,6 +336,11 @@
 		59D4559821B7539107EB4ED1 /* ProfileTemplates.json in Resources */ = {isa = PBXBuildFile; fileRef = FA000067 /* ProfileTemplates.json */; };
 		B574C1F9B396FF3605203217 /* siriwave-MIT.txt in Resources */ = {isa = PBXBuildFile; fileRef = FASIRI01 /* siriwave-MIT.txt */; };
 		A8E86B545582AEF6E232112A /* WhisperKit in Frameworks */ = {isa = PBXBuildFile; productRef = FC0416C3791FB02F36F1DFE3 /* WhisperKit */; };
+		AA0F0D101 /* SupportViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0F0D101 /* SupportViewModel.swift */; };
+		AA0F0D102 /* SupportViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0F0D101 /* SupportViewModel.swift */; };
+		AA0F0D201 /* RecordingViewModel+Support.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0F0D201 /* RecordingViewModel+Support.swift */; };
+		AA0F0D202 /* RecordingViewModel+Support.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0F0D201 /* RecordingViewModel+Support.swift */; };
+		AA0F0D301 /* SupportViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0F0D301 /* SupportViewModelTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -332,6 +354,10 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		FA0F0701 /* SupportIdentityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupportIdentityView.swift; sourceTree = "<group>"; };
+		FB0F0E01 /* envelope-fixture.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "tests/fixtures/envelope-fixture.json"; sourceTree = SOURCE_ROOT; };
+		FA0F0801 /* SupportViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupportViews.swift; sourceTree = "<group>"; };
+        FA0F0601 /* MenuBarViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarViews.swift; sourceTree = "<group>"; };
 		FC110001 /* WhisperLoadingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhisperLoadingTests.swift; sourceTree = "<group>"; };
 		FC200090 /* WhisperOfflineTokenizerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhisperOfflineTokenizerTests.swift; sourceTree = "<group>"; };
 		FC200001 /* WhisperSilenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhisperSilenceTests.swift; sourceTree = "<group>"; };
@@ -400,6 +426,9 @@
 		FA0000K2 /* AppleFoundationModelService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleFoundationModelService.swift; sourceTree = "<group>"; };
 		FA0000K1 /* AnthropicLLMService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnthropicLLMService.swift; sourceTree = "<group>"; };
 		FA000015 /* NetworkMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkMonitor.swift; sourceTree = "<group>"; };
+		FA0F0A01 /* AppLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLog.swift; sourceTree = "<group>"; };
+		FA0F0C01 /* SupportRelay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupportRelay.swift; sourceTree = "<group>"; };
+		FA0F0B01 /* SupportModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupportModels.swift; sourceTree = "<group>"; };
 		FA000016 /* OfflineQueue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineQueue.swift; sourceTree = "<group>"; };
 		FA000017 /* OnDeviceTranscriber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnDeviceTranscriber.swift; sourceTree = "<group>"; };
 		FA000018 /* SystemAudioCapture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemAudioCapture.swift; sourceTree = "<group>"; };
@@ -422,6 +451,7 @@
 		FA0000K8 /* SettingsView+VerwerkingSide.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SettingsView+VerwerkingSide.swift"; sourceTree = "<group>"; };
 		FA0000K7 /* SettingsView+Verwerking.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SettingsView+Verwerking.swift"; sourceTree = "<group>"; };
 		FA0000K6 /* SettingsView+Studio.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SettingsView+Studio.swift"; sourceTree = "<group>"; };
+		B90000000000000000000003 /* SettingsView+Support.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SettingsView+Support.swift"; sourceTree = "<group>"; };
 		FA0000K5 /* HostedProviderConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostedProviderConfig.swift; sourceTree = "<group>"; };
 		FA0000CP1 /* CloudProviderConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudProviderConfig.swift; sourceTree = "<group>"; };
 		FA000032 /* TranscriptsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptsView.swift; sourceTree = "<group>"; };
@@ -469,6 +499,8 @@
 		FB000201 /* Participant.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Participant.swift; sourceTree = "<group>"; };
 		FB000202 /* ParticipantPickerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParticipantPickerSheet.swift; sourceTree = "<group>"; };
 		FB000002 /* MigrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MigrationTests.swift; sourceTree = "<group>"; };
+		FB0F0A03 /* AppLogTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLogTests.swift; sourceTree = "<group>"; };
+		FB0F0B03 /* SupportRelayTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupportRelayTests.swift; sourceTree = "<group>"; };
 		FB0000K1 /* KeychainServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainServiceTests.swift; sourceTree = "<group>"; };
 		FB000003 /* PersonProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonProfileTests.swift; sourceTree = "<group>"; };
 		FB000004 /* PersonDirectoryServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonDirectoryServiceTests.swift; sourceTree = "<group>"; };
@@ -516,6 +548,9 @@
 		FC000001 /* ThoughtVault.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ThoughtVault.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		FC000002 /* ThoughtVaultTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ThoughtVaultTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		4B0C1A153C3D40142C200C53 /* ThoughtVault.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ThoughtVault.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		FA0F0D101 /* SupportViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SupportViewModel.swift"; sourceTree = "<group>"; };
+		FA0F0D201 /* RecordingViewModel+Support.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RecordingViewModel+Support.swift"; sourceTree = "<group>"; };
+		FA0F0D301 /* SupportViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SupportViewModelTests.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -580,6 +615,7 @@
 			isa = PBXGroup;
 			children = (
 				FA000001 /* ThoughtVaultApp.swift */,
+				FA0F0601 /* MenuBarViews.swift */,
 				FA000002 /* ContentView.swift */,
 				FA00DS01 /* DebugScreenshotSeed.swift */,
 			);
@@ -655,6 +691,9 @@
 				FA000054 /* MeetingNotificationService.swift */,
 				FA000050 /* MicrosoftGraphService.swift */,
 				FA000015 /* NetworkMonitor.swift */,
+				FA0F0A01 /* AppLog.swift */,
+				FA0F0C01 /* SupportRelay.swift */,
+				FA0F0B01 /* SupportModels.swift */,
 				FA000051 /* PermissionManager.swift */,
 				FA000016 /* OfflineQueue.swift */,
 				FA000017 /* OnDeviceTranscriber.swift */,
@@ -672,6 +711,8 @@
 				FA000020 /* RecordingViewModel.swift */,
 				FA9E5A01 /* RecordingViewModel+Restart.swift */,
 				FA0000T2 /* RecordingViewModel+Notule.swift */,
+				FA0F0D201 /* RecordingViewModel+Support.swift */,
+				FA0F0D101 /* SupportViewModel.swift */,
 				FA0000D1 /* RecordingViewModel+Sleep.swift */,
 				FA000055 /* TasksViewModel.swift */,
 			);
@@ -701,6 +742,8 @@
 				FA000025 /* LoginView.swift */,
 				FA000026 /* NotuleResultView.swift */,
 				FA000027 /* OnboardingView.swift */,
+				FA0F0701 /* SupportIdentityView.swift */,
+				FA0F0801 /* SupportViews.swift */,
 				FA000028 /* ProcessingView.swift */,
 				FA000029 /* ProfilesView.swift */,
 				FA000030 /* RecordingView.swift */,
@@ -710,6 +753,7 @@
 				FA0000K8 /* SettingsView+VerwerkingSide.swift */,
 				FA0000K7 /* SettingsView+Verwerking.swift */,
 				FA0000K6 /* SettingsView+Studio.swift */,
+				B90000000000000000000003 /* SettingsView+Support.swift */,
 				FA0000K5 /* HostedProviderConfig.swift */,
 				FA0000CP1 /* CloudProviderConfig.swift */,
 				FA000070 /* ProfileSettingsView.swift */,
@@ -780,6 +824,9 @@
 				FB0000S5 /* QuickNoteStoreTests.swift */,
 				FB9E5A02 /* VaultFolderStoreTests.swift */,
 				FB000002 /* MigrationTests.swift */,
+				FB0F0A03 /* AppLogTests.swift */,
+				FB0F0B03 /* SupportRelayTests.swift */,
+				FA0F0D301 /* SupportViewModelTests.swift */,
 				FB000003 /* PersonProfileTests.swift */,
 				FB0000K1 /* KeychainServiceTests.swift */,
 				FB000004 /* PersonDirectoryServiceTests.swift */,
@@ -823,6 +870,7 @@
 		GG000100 /* Fixtures */ = {
 			isa = PBXGroup;
 			children = (
+				FB0F0E01 /* envelope-fixture.json */,
 				FB000006 /* GraphCalendarViewResponse.json */,
 				FB0000G4 /* M3LiveContentGate.json */,
 				FB0000T4 /* PreDraftFields.store */,
@@ -974,6 +1022,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				AA000001 /* ThoughtVaultApp.swift in Sources */,
+				AA0F0601 /* MenuBarViews.swift in Sources */,
 				AA000002 /* ContentView.swift in Sources */,
 				AA00DS01 /* DebugScreenshotSeed.swift in Sources */,
 				AA000003 /* Color+Brand.swift in Sources */,
@@ -1031,6 +1080,9 @@
 				AA0000K2 /* AppleFoundationModelService.swift in Sources */,
 				AA0000K1 /* AnthropicLLMService.swift in Sources */,
 				AA000015 /* NetworkMonitor.swift in Sources */,
+				AA0F0A01 /* AppLog.swift in Sources */,
+				AA0F0C01 /* SupportRelay.swift in Sources */,
+				AA0F0B01 /* SupportModels.swift in Sources */,
 				AA000016 /* OfflineQueue.swift in Sources */,
 				AA000017 /* OnDeviceTranscriber.swift in Sources */,
 				AA000018 /* SystemAudioCapture.swift in Sources */,
@@ -1039,6 +1091,8 @@
 				AA000020 /* RecordingViewModel.swift in Sources */,
 				AA9E5A01 /* RecordingViewModel+Restart.swift in Sources */,
 				AA0000T2 /* RecordingViewModel+Notule.swift in Sources */,
+				AA0F0D201 /* RecordingViewModel+Support.swift in Sources */,
+				AA0F0D101 /* SupportViewModel.swift in Sources */,
 				AA0000D1 /* RecordingViewModel+Sleep.swift in Sources */,
 				AA000055 /* TasksViewModel.swift in Sources */,
 				AA000022 /* AccountView.swift in Sources */,
@@ -1047,6 +1101,8 @@
 				AA000025 /* LoginView.swift in Sources */,
 				AA000026 /* NotuleResultView.swift in Sources */,
 				AA000027 /* OnboardingView.swift in Sources */,
+				AA0F0701 /* SupportIdentityView.swift in Sources */,
+				AA0F0801 /* SupportViews.swift in Sources */,
 				AA000028 /* ProcessingView.swift in Sources */,
 				AA000029 /* ProfilesView.swift in Sources */,
 				AA000030 /* RecordingView.swift in Sources */,
@@ -1074,6 +1130,7 @@
 				AA0000K8 /* SettingsView+VerwerkingSide.swift in Sources */,
 				AA0000K7 /* SettingsView+Verwerking.swift in Sources */,
 				AA0000K6 /* SettingsView+Studio.swift in Sources */,
+				B90000000000000000000001 /* SettingsView+Support.swift in Sources */,
 				AA0000K5 /* HostedProviderConfig.swift in Sources */,
 				AA0000CP1 /* CloudProviderConfig.swift in Sources */,
 				AA000032 /* TranscriptsView.swift in Sources */,
@@ -1110,6 +1167,9 @@
 				AB0000S5 /* QuickNoteStoreTests.swift in Sources */,
 				AB9E5A02 /* VaultFolderStoreTests.swift in Sources */,
 				AB000002 /* MigrationTests.swift in Sources */,
+				AB0F0A03 /* AppLogTests.swift in Sources */,
+				AB0F0B03 /* SupportRelayTests.swift in Sources */,
+				AA0F0D301 /* SupportViewModelTests.swift in Sources */,
 				AB000003 /* PersonProfileTests.swift in Sources */,
 				AB0000K1 /* KeychainServiceTests.swift in Sources */,
 				AB000004 /* PersonDirectoryServiceTests.swift in Sources */,
@@ -1152,6 +1212,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AB0F0E01 /* envelope-fixture.json in Resources */,
 				AB000006 /* GraphCalendarViewResponse.json in Resources */,
 				AB0000G4 /* M3LiveContentGate.json in Resources */,
 				AB0000T4 /* PreDraftFields.store in Resources */,
@@ -1172,6 +1233,7 @@
 				AB04FA00PM01 /* PersonMatcher.swift in Sources */,
 				AB05FA00CH02 /* HistoryListView.swift in Sources */,
 				69A946299389FC95A31753CB /* ThoughtVaultApp.swift in Sources */,
+				AA0F0602 /* MenuBarViews.swift in Sources */,
 				BFBDDFC8BD5DBCCEE9BB3D1F /* ContentView.swift in Sources */,
 				CE70F46EB82FC0E02341FC0D /* Color+Brand.swift in Sources */,
 				C992E12A9F75BA774464D54C /* Theme.swift in Sources */,
@@ -1223,6 +1285,9 @@
 				B971B9D6CA39EB0775BCB683 /* AppleFoundationModelService.swift in Sources */,
 				29AC450D5D6456AEABE3C258 /* AnthropicLLMService.swift in Sources */,
 				1225DEE54C5F11F501DE7F20 /* NetworkMonitor.swift in Sources */,
+				AA0F0A02 /* AppLog.swift in Sources */,
+				AA0F0C02 /* SupportRelay.swift in Sources */,
+				AA0F0B02 /* SupportModels.swift in Sources */,
 				141F2D5FCC802F15F8DD83BE /* OfflineQueue.swift in Sources */,
 				2163B16A7A1E21C9DE0C2044 /* OnDeviceTranscriber.swift in Sources */,
 				9BB2542FD5E3FC3AF167A963 /* SystemAudioCapture.swift in Sources */,
@@ -1231,6 +1296,8 @@
 				754D5ED8F4A74EAFEF5B9D29 /* RecordingViewModel.swift in Sources */,
 				BC1FBC8564A6681ACDCC16C0 /* RecordingViewModel+Restart.swift in Sources */,
 				FBF07AB70FD0D5C74DD003B4 /* RecordingViewModel+Notule.swift in Sources */,
+				AA0F0D202 /* RecordingViewModel+Support.swift in Sources */,
+				AA0F0D102 /* SupportViewModel.swift in Sources */,
 				A4CA9C573E92699C8A0CE8A3 /* RecordingViewModel+Sleep.swift in Sources */,
 				46FFC6B1D33219939EFB68EB /* TasksViewModel.swift in Sources */,
 				9F35613718A80A32BCA01EDF /* AccountView.swift in Sources */,
@@ -1239,6 +1306,8 @@
 				87C6FFEA1976B900AEA7E4B2 /* LoginView.swift in Sources */,
 				A4364D4B6DE1298A381CD02D /* NotuleResultView.swift in Sources */,
 				DCDE572FA76CB1118126DDE8 /* OnboardingView.swift in Sources */,
+				AA0F0702 /* SupportIdentityView.swift in Sources */,
+				AA0F0802 /* SupportViews.swift in Sources */,
 				5EF9D76E9D559B8FCDCC8623 /* ProcessingView.swift in Sources */,
 				3AD1600824520BF1239FE28A /* ProfilesView.swift in Sources */,
 				3C74FCD92B117FFF7A1CCA63 /* RecordingView.swift in Sources */,
@@ -1266,6 +1335,7 @@
 				825525A8990BF36A59F0ACEF /* SettingsView+VerwerkingSide.swift in Sources */,
 				F4571C89E479D18DF7C6601B /* SettingsView+Verwerking.swift in Sources */,
 				EB2F34883F1AF554F86EBF01 /* SettingsView+Studio.swift in Sources */,
+				B90000000000000000000002 /* SettingsView+Support.swift in Sources */,
 				0CE3268CA29568C899DDCE43 /* HostedProviderConfig.swift in Sources */,
 				F01B80B1F831A440DEEE29CD /* CloudProviderConfig.swift in Sources */,
 				E4189B0528CC9F6E2CBC8633 /* TranscriptsView.swift in Sources */,

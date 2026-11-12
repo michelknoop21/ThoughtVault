@@ -1,6 +1,6 @@
 #if os(macOS)
 import Foundation
-import os
+private let log = AppLog(category: "RecordingVM")
 
 extension RecordingViewModel {
     /// Stops the active capture(s) for the selected mode and returns the final audio file.
@@ -38,7 +38,7 @@ extension RecordingViewModel {
 
     func handleWillSleep() {
         guard recordingState.isRecording else { return }
-        os_log("[RecordingVM] System will sleep — stopping active recording", log: .default)
+        log.info("[RecordingVM] System will sleep — stopping active recording")
         Task {
             await stopLiveTranscription()
             // The mixed file lands in the saved recordings; it is not processed automatically.
@@ -52,7 +52,7 @@ extension RecordingViewModel {
 
     func handleDidWake() {
         guard sleepInterruptedFileURL != nil else { return }
-        os_log("[RecordingVM] System woke — interrupted recording file available for recovery", log: .default)
+        log.info("[RecordingVM] System woke — interrupted recording file available for recovery")
         // Load saved recordings so the user can find and reprocess the interrupted file
         loadSavedRecordings()
     }

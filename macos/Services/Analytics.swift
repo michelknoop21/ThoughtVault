@@ -1,7 +1,6 @@
 import Foundation
-import OSLog
 
-private let logger = Logger(subsystem: "com.buildmind.ThoughtVault", category: "Analytics")
+private let logger = AppLog(category: "Analytics")
 
 // MARK: - Analytics
 
@@ -25,9 +24,9 @@ final class Analytics: Sendable {
     func track(_ event: String, properties: [String: Any]? = nil) {
         #if DEBUG
         if let properties = properties, !properties.isEmpty {
-            logger.debug("Analytics: \(event) — \(properties.map { "\($0.key)=\($0.value)" }.joined(separator: ", "))")
+            logger.debug("Analytics: \(LogRedact.mask(event)) — \(LogRedact.mask(String(describing: properties)))")
         } else {
-            logger.debug("Analytics: \(event)")
+            logger.debug("Analytics: \(LogRedact.mask(event))")
         }
         #endif
         // Integrate analytics SDK here when ready (e.g. TelemetryDeck).

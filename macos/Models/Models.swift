@@ -5,7 +5,6 @@
 // Core data models for the ThoughtVault app.
 
 import Foundation
-import OSLog
 import SwiftUI
 
 // MARK: - DateParsing
@@ -619,7 +618,7 @@ struct Transcript: Identifiable, Codable, Hashable, Sendable {
             if let parsed = DateParsing.parse(ds) {
                 date = parsed
             } else {
-                os_log("Failed to parse Transcript date: %{public}@", type: .error, ds)
+                AppLog(category: "Transcript").error("Failed to parse Transcript date: \(LogRedact.mask(ds))")
                 date = Date()
             }
         } else {

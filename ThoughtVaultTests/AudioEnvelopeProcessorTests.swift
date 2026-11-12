@@ -183,6 +183,7 @@ final class AudioEnvelopeProcessorTests: XCTestCase {
             completed.signal()
         }
         thread.stackSize = 512 * 1024
+        thread.qualityOfService = .userInteractive
         thread.start()
         XCTAssertEqual(completed.wait(timeout: .now() + 20), .success)
         XCTAssertEqual(calls.withLock { $0 }, 20_002)
@@ -197,11 +198,8 @@ final class AudioEnvelopeProcessorTests: XCTestCase {
 
     // Decoded on access — cheap and avoids Swift 6 static-mutable concurrency.
     private static var scenarios: [String: [Step]] {
-        // Fixture lives at the repo root; locate it relative to this source file.
-        let url = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent()   // ThoughtVaultTests/
-            .deletingLastPathComponent()   // repo root
-            .appendingPathComponent("tests/fixtures/envelope-fixture.json")
+        let url = Bundle(for: AudioEnvelopeProcessorTests.self)
+            .url(forResource: "envelope-fixture", withExtension: "json")!
         struct Fixture: Decodable { let scenarios: [String: [Step]] }
         let data = try! Data(contentsOf: url)
         return try! JSONDecoder().decode(Fixture.self, from: data).scenarios

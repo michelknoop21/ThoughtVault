@@ -279,12 +279,27 @@ export class LLMService {
     const constraintPrompt = constraints.length
       ? `\n\nVerplicht te behouden bronzinnen (behoud de volledige betekenis, bedragen en voorwaarden bij het passende onderwerp, besluit of open punt; correcte parafrases mogen, tegenspraken nergens):\n${constraints.map((sentence, index) => `${index + 1}. ${sentence}`).join("\n")}` : "";
     // Keep the unverified draft out of progress updates and saved notes.
-    const draft = await generate(systemPrompt, userPrompt + constraintPrompt);
-    if (!draft.trim()) throw new Error("De notule-generator gaf een leeg concept. De transcriptie is bewaard.");
-    const candidate = finish(draft);
+    const draftRequest = generate(systemPrompt, userPrompt + constraintPrompt);
+    // The source check never sees the notule (DEC-062), so it runs while the draft is written. Settled into a
+    // value so it cannot become an unhandled rejection while the draft is still running.
+    const sourceCheck = auditSource(correctText(transcription, corrections, profile.id), quickNote, generate)
+      .then(warning => ({ warning }), (error: unknown) => ({ error }));
+    let candidate: string;
+    try {
+      const draft = await draftRequest;
+      if (!draft.trim()) throw new Error("De notule-generator gaf een leeg concept. De transcriptie is bewaard.");
+      candidate = finish(draft);
+    } catch (error) {
+      // The request takes no abort signal: wait for the source check and drop it, so the draft error still
+      // wins and no request outlives this call (as DEC-065 does for step 2).
+      await sourceCheck;
+      throw error;
+    }
     let warning: string | null = null;
     try {
-      warning = await auditSource(correctText(transcription, corrections, profile.id), quickNote, generate);
+      const source = await sourceCheck;
+      if ("error" in source) throw source.error;
+      warning = source.warning;
       await auditNotule(correctText(transcription, corrections, profile.id), candidate, quickNote, generate, constraints, warning !== null);
       const approved = appendWarnings(warning ? [warning] : [], candidate);
       onProgress?.(approved);

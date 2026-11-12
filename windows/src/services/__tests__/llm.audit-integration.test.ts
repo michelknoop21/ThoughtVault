@@ -131,3 +131,38 @@ it("keeps a valid first draft instead of losing its actions in an unnecessary re
   await expect(LLMService.generateNotulen("Noor vraagt vrijdag twee offertes op.", profile, progress)).resolves.toBe(html);
   expect(progress).toHaveBeenCalledExactlyOnceWith(html);
 });
+
+it("runs the source check while the draft is still being written", async () => {
+  const html = "<p>Sam neemt vrijdag contact op.</p>";
+  let sourceStarted: () => void = () => {};
+  const started = new Promise<boolean>(resolve => { sourceStarted = () => resolve(true); setTimeout(() => resolve(false), 1000); });
+  let startedDuringDraft = false;
+  invoke.mockImplementation(async (_command, args) => {
+    const user = JSON.parse(args.request.body).messages.at(-1).content;
+    if (user.startsWith("Broncontrole")) { sourceStarted(); return answer(sourceFixture(user)); }
+    if (user.startsWith("Inhoudsaudit")) return answer(auditFixture(user));
+    startedDuringDraft = await started;
+    return answer(html);
+  });
+  expect(await LLMService.generateNotulen("Sam belt vrijdag.", profile)).toBe(html);
+  expect(startedDuringDraft).toBe(true);
+  expect(invoke).toHaveBeenCalledTimes(3);
+});
+
+it("reports a failed draft over the source check and waits for that request instead of leaving it running", async () => {
+  let sourceSettled = false;
+  invoke.mockImplementation(async (_command, args) => {
+    const user = JSON.parse(args.request.body).messages.at(-1).content;
+    if (user.startsWith("Broncontrole")) {
+      await new Promise(resolve => setTimeout(resolve, 50));
+      sourceSettled = true;
+      return answer(JSON.stringify({ uncertain: true }));
+    }
+    return { status: 500, body: "{}" };
+  });
+  const progress = vi.fn();
+  await expect(LLMService.generateNotulen("Sam belt vrijdag.", profile, progress)).rejects.toThrow("HTTP 500");
+  expect(sourceSettled).toBe(true);
+  expect(invoke).toHaveBeenCalledTimes(2);
+  expect(progress).not.toHaveBeenCalled();
+});

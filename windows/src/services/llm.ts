@@ -92,7 +92,7 @@ function buildUserContent(
   if (names && !notulePrompt.includes("{{PARTICIPANTS}}")) {
     content += `\n\nDeelnemers aan dit gesprek: ${names}`;
   }
-  return content + `\n\nLaatste inhoudsregels: volg de gekozen template en laat lege secties weg. Verzin geen feiten, besluiten, eigenaren of termijnen. ${FACTUALITY_RULES} Schrijf eenvoudige HTML zonder CSS, style-blok of code fences.`;
+  return content + `\n\nLaatste inhoudsregels: volg de gekozen template en laat lege secties weg. Begin met één h1 die in 4 tot 10 woorden het doel of de uitkomst van het gesprek noemt; nooit alleen een genre-woord als Verslag, Notulen, Meeting, Gesprek of Overleg. Verzin geen feiten, besluiten, eigenaren of termijnen. ${FACTUALITY_RULES} Schrijf eenvoudige HTML zonder CSS, style-blok of code fences.`;
 }
 
 async function generateWithOpenAICompatible(

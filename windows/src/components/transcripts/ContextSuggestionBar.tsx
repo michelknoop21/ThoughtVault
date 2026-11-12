@@ -4,7 +4,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { ChevronRight24Regular, Sparkle24Regular } from "../ui/StudioIcons";
 import { usePeopleDirectoryStore } from "../../stores/peopleDirectoryStore";
-import { dismiss, dismissKey, load, remove, replacePerson, SUGGESTIONS_UPDATED_EVENT, type ContextSuggestionItem, type ContextSuggestionSet, type PersonSuggestion, type TermSuggestion } from "../../services/contextSuggestions";
+import { dismiss, dismissKey, load, remove, replacePerson, SKIP_NOTICES, SUGGESTIONS_UPDATED_EVENT, type ContextSuggestionItem, type ContextSuggestionSet, type PersonSuggestion, type TermSuggestion } from "../../services/contextSuggestions";
 import { autoApply } from "../../services/personMatcher";
 import { personSnapshot } from "../../services/contextHistory";
 import type { PersonalCorrection } from "../../services/personalCorrections";
@@ -129,7 +129,7 @@ export function ContextSuggestionBar({ taskId, profileName, scope, onAddTerm }: 
   const hasItems = set.terms.length > 0 || set.people.length > 0;
   const count = counter(set.terms.length, set.people.length);
   // The add-person sheet stays open after its suggestion is handled, even when the bar empties.
-  return <>{(hasItems || error) && <section className="context-bar" aria-label="Voorstellen">
+  return <>{(hasItems || set.skipped || error) && <section className="context-bar" aria-label="Voorstellen">
     {hasItems && <button className="context-bar-header" onClick={() => setExpanded(!expanded)} aria-expanded={expanded} aria-label={`Voorstellen, ${count}`}>
       <Sparkle24Regular className="context-bar-icon" />
       <strong>Voorstellen</strong>
@@ -140,6 +140,7 @@ export function ContextSuggestionBar({ taskId, profileName, scope, onAddTerm }: 
       <button className="btn btn-accent btn-sm" onClick={() => addTerm(term)}>Toevoegen</button>{ignore({ term })}
     </Row>)}
     {expanded && set.people.map(personRow)}
+    {set.skipped && <p className="context-bar-detail">{SKIP_NOTICES[set.skipped]}</p>}
     {error && <p className="context-bar-error" role="alert">{error}</p>}
   </section>}
   {adding && <PersonEditModal person={adding.person} isNew

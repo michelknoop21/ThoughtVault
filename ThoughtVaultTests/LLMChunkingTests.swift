@@ -10,6 +10,16 @@ final class LLMChunkingTests: XCTestCase {
         XCTAssertEqual(OpenAICompatibleLLMService(baseURL: "https://ollama.com", model: "gpt-oss:120b", maxChunkCharacters: 9000).maxChunkCharacters, 9000)
     }
 
+    func testHostedOpenAICompatibleProviderGetsLargeLimit() {
+        var config = CloudAIConfiguration(id: "x", name: "OpenRouter")
+        config.baseURL = "https://openrouter.ai/api"
+        config.model = "mistralai/mistral-large"
+        let service = OpenAICompatibleLLMService.hosted(config, apiKey: "k")
+        XCTAssertEqual(service.maxChunkCharacters, 64_000)
+        XCTAssertTrue(ContextSuggestions.fits(String(repeating: "a", count: 18_358), service: service))
+        XCTAssertFalse(ContextSuggestions.fits(String(repeating: "a", count: 18_358),
+                                               service: OpenAICompatibleLLMService(baseURL: "https://other.example", model: "m")))
+    }
 
     func testRateLimitFailureExplainsRetryAndKeepsOtherServerErrors() {
         XCTAssertTrue(LLMError.serverError(429).localizedDescription.contains("gebruikslimiet"))

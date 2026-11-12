@@ -32,6 +32,19 @@ final class ContextSuggestionsTests: XCTestCase {
         XCTAssertTrue(set.people.isEmpty, "missing people key decodes as empty")
     }
 
+    func testSkipNoticeIsStoredNextToSuggestionsAndNotifies() throws {
+        let term = TermSuggestion(heard: "Kaskop", canonical: "Kascop", note: "")
+        try ContextSuggestions.save(ContextSuggestionSet(terms: [term]), taskId: "t1")
+        let posted = expectation(forNotification: .contextSuggestionsUpdated, object: nil) { $0.userInfo?["taskId"] as? String == "t1" }
+        ContextSuggestions.recordSkip(.transcriptTooLong, taskId: "t1")
+        wait(for: [posted], timeout: 1)
+        let stored = try XCTUnwrap(ContextSuggestions.load(taskId: "t1"))
+        XCTAssertEqual(stored.skipped, .transcriptTooLong)
+        XCTAssertEqual(stored.terms, [term], "pending suggestions are kept")
+        XCTAssertFalse(stored.isEmpty)
+        XCTAssertTrue(ContextSuggestionSkip.tooLongForModel.notice.contains("te lang voor het gekozen model"))
+    }
+
     func testParseInvalidJSONReturnsEmpty() {
         XCTAssertTrue(ContextSuggestions.parse("{\"terms\": [ {", transcript: transcript, entries: [], dismissed: []).isEmpty)
         XCTAssertTrue(ContextSuggestions.parse("geen json", transcript: transcript, entries: [], dismissed: []).isEmpty)

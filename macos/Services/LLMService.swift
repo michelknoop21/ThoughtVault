@@ -174,8 +174,7 @@ class LLMServiceFactory {
                   URL(string: config.baseURL)?.scheme?.lowercased() == "https" else {
                 return MissingAPIKeyLLMService(providerName: provider.displayName)
             }
-            return OpenAICompatibleLLMService(baseURL: config.baseURL, model: config.model,
-                                              apiKey: KeychainService.shared.load(for: config.keychainKey))
+            return OpenAICompatibleLLMService.hosted(config, apiKey: KeychainService.shared.load(for: config.keychainKey))
 
         case .appleIntelligence:
             #if canImport(FoundationModels)
@@ -261,6 +260,12 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
 
     /// Test seam: replaces the network call behind `complete(system:user:)`.
     var completionOverride: (@Sendable (String, String) async throws -> String)?
+
+    /// Hosted (HTTPS) providers have a large context window; without the explicit limit the
+    /// 8_000 local-model default would apply to any host other than ollama.com.
+    static func hosted(_ config: CloudAIConfiguration, apiKey: String?) -> OpenAICompatibleLLMService {
+        OpenAICompatibleLLMService(baseURL: config.baseURL, model: config.model, apiKey: apiKey, maxChunkCharacters: 64_000)
+    }
 
     init(baseURL: String, model: String, apiKey: String? = nil, maxChunkCharacters: Int? = nil) {
         self.baseURL = baseURL

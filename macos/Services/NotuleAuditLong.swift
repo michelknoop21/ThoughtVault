@@ -44,7 +44,8 @@ extension NotuleAudit {
     }
 
     static func auditLong(sourceUnits: [Unit], noteUnits: [Unit], request: @escaping AuditRequest,
-                          noteConcurrency: Int = auditConcurrency) async throws
+                          noteConcurrency: Int = auditConcurrency,
+                          onProgress: @escaping @Sendable (ModelStep) -> Void = { _ in }) async throws
         -> (source: [Verdict], notes: [Verdict]) {
         let transcript = sourceUnits.filter { $0.id.hasPrefix("T") }
         let quick = sourceUnits.filter { $0.id.hasPrefix("Q") }
@@ -53,11 +54,15 @@ extension NotuleAudit {
         }
         // Step 1: source coverage per part; every part sees the whole notule and all quick notes. The parts run
         // side by side and are merged in part order, so the result equals a run one after the other.
-        let checkedParts = try await runInOrder(Array(parts.indices)) { index in
+        onProgress(ModelStep(.coverage, 0, of: parts.count))
+        let checkedParts = try await runInOrder(Array(parts.indices),
+                                                onCompleted: { onProgress(ModelStep(.coverage, $0, of: parts.count)) }) { index in
             try Task.checkCancellation()
             let units = parts[index] + quick
-            let audit = try await ask(request, coverageSystem,
-                                      "Inhoudsaudit deel \(index + 1) van \(parts.count) (geen generatie):\n{\"source\":\(json(units)),\"notes\":\(json(noteUnits))}")
+            let audit = try await ModelStep.$current.withValue(ModelStep(.coverage, index + 1, of: parts.count)) {
+                try await ask(request, coverageSystem,
+                              "Inhoudsaudit deel \(index + 1) van \(parts.count) (geen generatie):\n{\"source\":\(json(units)),\"notes\":\(json(noteUnits))}")
+            }
             let partChecks = try verdicts(audit["source"], expected: units, references: noteUnits,
                                           statuses: ["covered", "non_factual", "missing", "uncertain"])
             guard partChecks.allSatisfy({ $0.status == "covered" || $0.evidence.isEmpty }) else {
@@ -89,7 +94,14 @@ extension NotuleAudit {
             }
             checks.append(NoteCheck(notes: [note], evidence: evidence, context: context))
         }
-        let checked = try await runInOrder(checks, limit: noteConcurrency) { try await run($0, request: request) }.flatMap { $0 }
+        let total = checks.count
+        onProgress(ModelStep(.sentenceCheck, 0, of: total))
+        let checked = try await runInOrder(Array(checks.enumerated()), limit: noteConcurrency,
+                                           onCompleted: { onProgress(ModelStep(.sentenceCheck, $0, of: total)) }) { item in
+            try await ModelStep.$current.withValue(ModelStep(.sentenceCheck, item.offset + 1, of: total)) {
+                try await run(item.element, request: request)
+            }
+        }.flatMap { $0 }
         let noteChecks = noteUnits.map { note in checked.first { $0.id == note.id }! }
         // Only notule sentences that step 2 supported carry evidence. A covered source without one is missing,
         // so the reviewer reads the source sentence instead of a technical error.
@@ -163,17 +175,19 @@ extension NotuleAudit {
 
     /// Runs `operation` on the items at most `limit` at a time and reads the outcomes in order, so the reported
     /// problem is always the first one. Any completion frees its slot for the next item, so one slow request
-    /// does not hold back the others. After a failure no new request starts.
+    /// does not hold back the others. After a failure no new request starts. `onCompleted` gets the number of
+    /// successful items so far, counted one completion at a time, so it only rises.
     // ponytail: requests already running finish and are ignored instead of cancelled, because NotuleGenerator
     // reads a CancellationError from a request as the user's cancellation. Add a separate signal if the wait matters.
     private static func runInOrder<Item: Sendable, Output: Sendable>(
-        _ items: [Item], limit: Int = auditConcurrency, operation: @escaping @Sendable (Item) async throws -> Output
+        _ items: [Item], limit: Int = auditConcurrency, onCompleted: (Int) -> Void = { _ in },
+        operation: @escaping @Sendable (Item) async throws -> Output
     ) async throws -> [Output] {
         let outcome = await withTaskGroup(of: (Int, Result<Output, any Error>).self,
                                           returning: Result<[Output], any Error>.self) { group in
             var finished: [Int: Result<Output, any Error>] = [:]
             var collected: [Output] = []
-            var started = 0, failed = false
+            var started = 0, failed = false, succeeded = 0
             // Started items are always a prefix, so every item before a failure has run.
             func startNext() {
                 guard !failed, started < items.count else { return }
@@ -191,7 +205,7 @@ extension NotuleAudit {
             for index in items.indices {
                 while finished[index] == nil, let next = await group.next() {
                     finished[next.0] = next.1
-                    if case .failure = next.1 { failed = true }
+                    if case .failure = next.1 { failed = true } else { succeeded += 1; onCompleted(succeeded) }
                     startNext()
                 }
                 switch finished[index] {

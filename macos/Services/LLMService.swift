@@ -88,6 +88,7 @@ func sendRetryingRateLimit<T>(session: URLSession, sleep: @Sendable (TimeInterva
     else { return first }
     let remaining = llmRequestTimeLimit - Date().timeIntervalSince(started) - wait
     guard remaining >= 1 else { return first }
+    ModelRequestLog.retry(wait: wait)
     try await sleep(wait)
     // Same session settings, but only the time that is left.
     let configuration = session.configuration
@@ -148,9 +149,12 @@ func summarizeUntilFits(
     var processed = text
     while processed.count > limit {
         var summaries: [String] = []
-        for chunk in split(processed, limit) {
+        let chunks = split(processed, limit)
+        for (index, chunk) in chunks.enumerated() {
             try Task.checkCancellation()
-            summaries.append(try await complete(chunkSummarySystemPrompt, "Vat dit deel compact samen:\n\n" + chunk))
+            summaries.append(try await ModelStep.$current.withValue(ModelStep(.chunkSummary, index + 1, of: chunks.count)) {
+                try await complete(chunkSummarySystemPrompt, "Vat dit deel compact samen:\n\n" + chunk)
+            })
         }
         let joined = summaries.joined(separator: "\n\n")
         guard joined.count < processed.count else {
@@ -490,12 +494,14 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
             constraints: constraints
         )
 
-        return try await mappingTimeout {
-            try await streamChatCompletion(
-                systemPrompt: systemPrompt,
-                userMessage: userContent,
-                onProgress: onProgress
-            )
+        return try await ModelRequestLog.run(provider: providerKind, model: model, system: systemPrompt, user: userContent) {
+            try await mappingTimeout {
+                try await streamChatCompletion(
+                    systemPrompt: systemPrompt,
+                    userMessage: userContent,
+                    onProgress: onProgress
+                )
+            }
         }
     }
 
@@ -512,7 +518,19 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
 
     func complete(system: String, user: String) async throws -> String {
         if let completionOverride { return try await completionOverride(system, user) }
-        return try await mappingTimeout { try await streamChatCompletion(systemPrompt: system, userMessage: user, onProgress: { _ in }) }
+        return try await ModelRequestLog.run(provider: providerKind, model: model, system: system, user: user) {
+            try await mappingTimeout { try await streamChatCompletion(systemPrompt: system, userMessage: user, onProgress: { _ in }) }
+        }
+    }
+
+    /// Provider kind for the log, without the host of a self-configured endpoint.
+    private var providerKind: String {
+        let url = URL(string: baseURL)
+        switch url?.host?.lowercased() {
+        case "api.openai.com": return "openai"
+        case "ollama.com": return "ollama-cloud"
+        default: return url?.scheme?.lowercased() == "https" ? "hosted" : "local"
+        }
     }
 
     private func splitIntoChunks(_ text: String, maxChars: Int) -> [String] {

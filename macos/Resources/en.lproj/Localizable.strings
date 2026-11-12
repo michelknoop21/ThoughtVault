@@ -494,3 +494,11 @@
 
 "support.identity.limit" = "Use at most 200 characters for your name and 320 for your email address.";
 "support.reply.limit" = "Use at most 5000 characters for your reply.";
+"Toon logbestand" = "Show log file";
+"notule.step.draft" = "Writing draft";
+"notule.step.chunkSummary" = "Summarizing %d of %d";
+"notule.step.sourceCheck" = "Source check";
+"notule.step.noteCheck" = "Content check";
+"notule.step.coverage" = "Coverage check %d of %d";
+"notule.step.sentenceCheck" = "Check %d of %d";
+"notule.step.contextSuggestions" = "Context suggestions";

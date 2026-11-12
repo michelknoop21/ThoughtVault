@@ -32,13 +32,20 @@ extension RecordingViewModel {
 
     /// Generates with the glossary and people context block for `provider`'s budget.
     private static func generateNotule(provider: NotulenProvider, transcription: String, profile: Profile, participants: [Participant],
-                                       quickNote: String?, createdAt: Date) async throws -> String {
+                                       quickNote: String?, createdAt: Date,
+                                       onStep: @escaping @Sendable (ModelStep) -> Void) async throws -> String {
         let corrections = PersonalCorrections.loadOrEmpty()
         return try await NotuleGenerator(service: LLMServiceFactory.service(for: provider, serverURL: ""),
                                          noteConcurrency: provider.auditNoteConcurrency).generate(
             transcription: transcription, profile: profile, participants: participants, quickNote: quickNote,
             createdAt: createdAt, corrections: corrections,
-            context: PersonalCorrections.contextBlock(entries: corrections, transcript: transcription, profileId: profile.id, provider: provider))
+            context: PersonalCorrections.contextBlock(entries: corrections, transcript: transcription, profileId: profile.id, provider: provider),
+            onStep: onStep)
+    }
+
+    /// Shows the running notule step as the task label; a late update after completion is ignored by `updateTask`.
+    private func showStep(taskId: String) -> @Sendable (ModelStep) -> Void {
+        { step in Task { @MainActor in self.updateTask(taskId, status: .generatingLocal, statusDetail: step.displayLabel) } }
     }
 
     /// Keeps a rejected draft next to the record and returns the task message (localPipeline.ts).
@@ -59,7 +66,8 @@ extension RecordingViewModel {
             let provider = Self.localNotuleProvider()
             let html = try await Self.generateNotule(
                 provider: provider, transcription: transcription, profile: profile, participants: participants,
-                quickNote: QuickNoteStore.note(audioFilename: url.lastPathComponent), createdAt: createdAt)
+                quickNote: QuickNoteStore.note(audioFilename: url.lastPathComponent), createdAt: createdAt,
+                onStep: showStep(taskId: localId))
             try Task.checkCancellation()
 
             let title = NotuleTitleExtractor.extract(from: html) ?? fallbackTitle
@@ -137,7 +145,8 @@ extension RecordingViewModel {
             let provider = Self.localNotuleProvider()
             let html = try await Self.generateNotule(
                 provider: provider, transcription: record.rawTranscription, profile: profile, participants: record.participants,
-                quickNote: QuickNoteStore.note(forTranscriptId: taskId), createdAt: record.createdAt)
+                quickNote: QuickNoteStore.note(forTranscriptId: taskId), createdAt: record.createdAt,
+                onStep: showStep(taskId: regenerationId))
             let title = NotuleTitleExtractor.extract(from: html) ?? record.title
             try LocalTranscriptStore.shared.finalizeNotule(taskId: taskId, html: html, title: title, profileId: profile.id, profileName: profile.name)
             ContextSuggestions.runInBackground(taskId: taskId, transcript: record.rawTranscription, participants: record.participants, profileId: profile.id, profileName: profile.name, provider: provider)

@@ -5,6 +5,8 @@ import { sourceFixture, auditFixture } from "./notuleAuditFixtures";
 
 const { invoke } = vi.hoisted(() => ({ invoke: vi.fn() }));
 vi.mock("@tauri-apps/api/core", () => ({ invoke: (...args: unknown[]) => {
+  // Log lines per model request are tested in modelRequestLog.test.ts; `invoke` counts model requests here.
+  if (args[0] === "log_write") return Promise.resolve();
   const request = (args[1] as { request?: { body?: string } })?.request;
   const user = request?.body ? JSON.parse(request.body).messages.at(-1)?.content : "";
   if (user.startsWith("Broncontrole")) return Promise.resolve({ status: 200, body: JSON.stringify({ choices: [{ message: { content: sourceFixture(user) } }] }) });

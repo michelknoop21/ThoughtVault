@@ -4,7 +4,8 @@ import { appendWarnings, UNCHECKED_CONTENT_WARNING, UNCLEAR_SOURCE_WARNING } fro
 import { useSettingsStore } from "../../stores/settingsStore";
 import { auditFixture, sourceFixture } from "./notuleAuditFixtures";
 const { invoke } = vi.hoisted(() => ({ invoke: vi.fn() }));
-vi.mock("@tauri-apps/api/core", () => ({ invoke }));
+// Log lines per model request are tested in modelRequestLog.test.ts; `invoke` counts model requests here.
+vi.mock("@tauri-apps/api/core", () => ({ invoke: (...args: unknown[]) => args[0] === "log_write" ? Promise.resolve() : invoke(...args) }));
 vi.mock("../tauriCommands", () => ({ loadCredential: async () => "fixture-key" }));
 vi.mock("../../stores/personalCorrectionsStore", () => ({ usePersonalCorrectionsStore: { getState: () => ({ hydrate: async () => {}, entries: [] }) }, loadCorrectionsOrEmpty: async () => [] }));
 const profile = { id: "standaard", name: "Standaard" };

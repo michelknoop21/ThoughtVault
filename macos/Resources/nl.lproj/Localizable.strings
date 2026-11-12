@@ -494,3 +494,11 @@
 
 "support.identity.limit" = "Gebruik maximaal 200 tekens voor je naam en 320 voor je e-mailadres.";
 "support.reply.limit" = "Gebruik maximaal 5000 tekens voor je antwoord.";
+"Toon logbestand" = "Toon logbestand";
+"notule.step.draft" = "Concept schrijven";
+"notule.step.chunkSummary" = "Samenvatten %d van %d";
+"notule.step.sourceCheck" = "Broncontrole";
+"notule.step.noteCheck" = "Inhoudscontrole";
+"notule.step.coverage" = "Dekkingscontrole %d van %d";
+"notule.step.sentenceCheck" = "Controle %d van %d";
+"notule.step.contextSuggestions" = "Contextsuggesties";

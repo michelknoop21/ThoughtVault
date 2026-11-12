@@ -6,6 +6,7 @@ import { useLocalTranscriptsStore, newLocalId } from "../stores/localTranscripts
 import { useSettingsStore } from "../stores/settingsStore";
 import { useProfilesStore } from "../stores/profilesStore";
 import { LLMService } from "./llm";
+import { stepLabel } from "./modelRequestLog";
 import { NotuleReviewError } from "./notuleAudit";
 import { exportToObsidian } from "./obsidian";
 import { extractTitle } from "./titleExtractor";
@@ -135,6 +136,7 @@ export async function processLocally(
       },
       names,
       getQuickNote(filePath),
+      step => updateBackgroundTask(taskId, { message: stepLabel(step) }),
     );
 
     if (!hasUsableNotule(html)) {
@@ -162,7 +164,7 @@ export async function processLocally(
         console.warn("Obsidian auto-export mislukt:", error instanceof Error ? error.message : String(error)));
     }
 
-    updateBackgroundTask(taskId, { status: "completed", progress: 100 });
+    updateBackgroundTask(taskId, { status: "completed", progress: 100, message: undefined });
     setTimeout(() => removeBackgroundTask(taskId), 1500);
   } catch (err) {
     let msg = err instanceof Error ? err.message : typeof err === "string" && err.trim() ? err : "Lokale verwerking mislukt";

@@ -78,6 +78,11 @@ export async function readClickPath(): Promise<string[]> {
   return lines.filter(line => line.includes("[Klikpad] ")).slice(-30).map(line => line.slice(line.indexOf("[Klikpad] ") + 10, line.indexOf("[Klikpad] ") + 90));
 }
 
+/** Shows the log file in Explorer. */
+export async function revealLogFile(): Promise<void> {
+  await invoke("log_reveal");
+}
+
 export async function scrubText(text: string): Promise<string> {
   try { return await invoke<string>("log_scrub", { text }); }
   catch { return text; }

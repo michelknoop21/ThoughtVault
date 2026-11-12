@@ -264,7 +264,9 @@ enum ContextSuggestions {
                     await MainActor.run { recordSkip(.tooLongForModel, taskId: taskId) }
                     return
                 }
-                let raw = try await service.complete(system: systemPrompt, user: message)
+                let raw = try await ModelStep.$current.withValue(ModelStep(.contextSuggestions)) {
+                    try await service.complete(system: systemPrompt, user: message)
+                }
                 let parsed = parse(raw, transcript: transcript, entries: entries, dismissed: dismissed, selfNames: [selfName], selfAliases: selfAliases)
                 let set = try await MainActor.run {
                     // Matched people are filled in directly; only what needs the user is stored.

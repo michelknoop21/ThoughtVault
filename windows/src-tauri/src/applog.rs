@@ -252,6 +252,21 @@ pub fn log_tail(max_bytes: u64) -> Result<String, String> {
     }
 }
 
+/// Shows the current log file in Explorer (Finder during development on a Mac).
+#[tauri::command]
+pub fn log_reveal() -> Result<(), String> {
+    let path = LOG_DIR.get().ok_or("Geen logmap")?.join(CURRENT);
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("explorer.exe").arg(format!("/select,{}", path.display())).spawn().map_err(|e| e.to_string())?;
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        std::process::Command::new("open").arg("-R").arg(path).spawn().map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
 #[tauri::command]
 pub fn log_scrub(text: String) -> String {
     scrub(&text)

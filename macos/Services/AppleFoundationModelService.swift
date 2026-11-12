@@ -79,7 +79,9 @@ final class AppleFoundationModelService: LLMService, @unchecked Sendable {
                 constraints: constraints
             )
             do {
-                return try await streamNotule(instructions: instructions, prompt: userContent, emitted: &emitted, onProgress: onProgress)
+                return try await ModelRequestLog.run(provider: "apple-intelligence", model: "on-device", system: instructions, user: userContent) {
+                    try await streamNotule(instructions: instructions, prompt: userContent, emitted: &emitted, onProgress: onProgress)
+                }
             } catch {
                 guard let overflow = Self.contextOverflow(error) else { throw error }
                 // onProgress is delta-based: once text went out, a retry would repeat it.
@@ -145,8 +147,9 @@ final class AppleFoundationModelService: LLMService, @unchecked Sendable {
 
         for (index, chunk) in chunks.enumerated() {
             try Task.checkCancellation()
-            logger.info("AppleFoundationModelService: summarizing chunk \(index + 1)/\(chunks.count)")
-            summaries.append(try await complete(system: chunkSummarySystemPrompt, user: "Vat dit deel compact samen:\n\n" + chunk))
+            summaries.append(try await ModelStep.$current.withValue(ModelStep(.chunkSummary, index + 1, of: chunks.count)) {
+                try await complete(system: chunkSummarySystemPrompt, user: "Vat dit deel compact samen:\n\n" + chunk)
+            })
         }
 
         let joined = summaries.joined(separator: "\n\n")
@@ -158,7 +161,9 @@ final class AppleFoundationModelService: LLMService, @unchecked Sendable {
 
     func complete(system: String, user: String) async throws -> String {
         let session = LanguageModelSession(instructions: system)
-        return try await session.respond(to: user).content
+        return try await ModelRequestLog.run(provider: "apple-intelligence", model: "on-device", system: system, user: user) {
+            try await session.respond(to: user).content
+        }
     }
 
     // MARK: - Helpers

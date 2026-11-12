@@ -5,6 +5,13 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2026-11-12]: Logregels en stapnaam bij het maken van de notule
+
+### Added
+- Elk modelverzoek van de notule (concept, samenvattingsdelen, broncontrole, inhoudscontrole, dekkingsdelen en zincontroles van de lange controle, contextsuggesties) schrijft een start- en een eindregel in het logbestand, categorie `ModelRequest`: stap met nummer en totaal (`sentence-check 12/61`), soort aanbieder, model, invoerlengte in tekens, duur in ms en uitkomst (`ok`, `HTTP 503`, `timed out`, `truncated`). Een herhaling na HTTP 429 krijgt een eigen regel. Prompt-, transcriptie- en notuletekst komen er nooit in, omdat het logbestand met een foutrapport meegaat (DEC-064).
+- Tijdens het maken van de notule toont de taak welke stap loopt, bijvoorbeeld "Concept schrijven", "Broncontrole" of "Controle 12 van 61". De teller telt afgeronde zincontroles en loopt alleen op.
+- Knop "Toon logbestand" bij Support (macOS: Finder, iOS: deelmenu) en bij Feedback in Account (Windows: Verkenner).
+
 ## [2026-11-12]: Snellere en begrensde notulecontrole
 
 ### Changed

@@ -61,12 +61,15 @@ actor SupportRelay {
             do { try FileManager.default.removeItem(at: old); completed.removeValue(forKey: old) }
             catch { logger.warning("Support outbox retention cleanup failed") }
         }
-        return url
+        return url.resolvingSymlinksInPath()
     }
 
+    /// Canonical URLs: the listing spells paths through symlinks differently from `outbox`
+    /// (/private/var vs /var), and `completed` and the send target are matched by URL equality.
     private func files() -> [URL] {
         ((try? FileManager.default.contentsOfDirectory(at: outbox, includingPropertiesForKeys: nil)) ?? [])
-            .filter { $0.pathExtension == "json" }.sorted { $0.lastPathComponent < $1.lastPathComponent }
+            .filter { $0.pathExtension == "json" }.map { $0.resolvingSymlinksInPath() }
+            .sorted { $0.lastPathComponent < $1.lastPathComponent }
     }
 
     func pendingReports() -> [SupportReport] {

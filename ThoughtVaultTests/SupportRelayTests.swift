@@ -204,6 +204,24 @@ final class SupportRelayTests: XCTestCase, @unchecked Sendable {
         let pending = await relay.pendingReports(); XCTAssertTrue(pending.isEmpty)
     }
 
+    func testAcceptedReportThroughSymlinkedOutboxIsSent() async throws {
+        // The outbox URL and its directory listing spell the same file differently
+        // (link/... vs /private/.../real/...); an accepted report must still count as sent.
+        let real = directory.appending(path: "real", directoryHint: .isDirectory)
+        let link = directory.appending(path: "link", directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: real, withIntermediateDirectories: true)
+        try FileManager.default.createSymbolicLink(atPath: link.path, withDestinationPath: real.path)
+        let symlinked = SupportRelay(baseURL: URL(string: "https://example.com/support")!, session: session, defaults: defaults,
+                                     keychain: keychain, outbox: link.appending(path: "outbox", directoryHint: .isDirectory),
+                                     logTail: { _ in "" })
+        reply()
+        let outcome = await symlinked.send(fixture())
+        guard case .sent = outcome else { return XCTFail("Accepted report through a symlinked outbox must be sent, got \(outcome)") }
+        let pending = await symlinked.pendingReports(); XCTAssertTrue(pending.isEmpty)
+        await symlinked.flush()
+        XCTAssertEqual(SupportStub.paths.filter { $0 == "/support/reports" }.count, 1)
+    }
+
     func testSendOfflineIsDurablyQueued() async throws {
         SupportStub.handler { _, _ in throw URLError(.notConnectedToInternet) }
         let outcome = await relay.send(fixture())

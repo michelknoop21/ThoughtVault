@@ -93,6 +93,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             applog::log_write,
             applog::log_tail,
+            applog::log_reveal,
             applog::log_scrub,
             applog::session_begin,
             applog::session_stage,

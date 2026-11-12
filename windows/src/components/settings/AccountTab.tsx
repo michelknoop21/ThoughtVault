@@ -1,5 +1,6 @@
 import { open } from "@tauri-apps/plugin-shell";
 import { PRIVACY_URL } from "../../services/supportRelay";
+import { revealLogFile } from "../../services/appLog";
 import { useEffect, useState } from "react";
 import { isCompleteIdentity, useSupportStore } from "../../stores/supportStore";
 import { Bug24Regular, Person24Regular } from "../ui/StudioIcons";
@@ -8,6 +9,7 @@ import FeedbackWidget from "../FeedbackWidget";
 
 export function AccountTab() {
   const [privacyError, setPrivacyError] = useState(false);
+  const [logError, setLogError] = useState(false);
   const { auto_report, setAutoReport, name, email, setIdentity } = useSupportStore();
   const [draftName, setDraftName] = useState(name);
   const [draftEmail, setDraftEmail] = useState(email);
@@ -46,6 +48,13 @@ export function AccountTab() {
           void open(PRIVACY_URL).catch(() => setPrivacyError(true));
         }}>Privacyverklaring</button>
         {privacyError && <p role="status" style={{ color: "var(--status-error)" }}>De privacyverklaring kon niet worden geopend. Probeer het opnieuw.</p>}
+      </div>
+      <div className="settings-row" style={{ display: "block" }}>
+        <button type="button" className="studio-link" style={{ minHeight: 44 }} onClick={() => {
+          setLogError(false);
+          void revealLogFile().catch(() => setLogError(true));
+        }}>Toon logbestand</button>
+        {logError && <p role="status" style={{ color: "var(--status-error)" }}>Het logbestand kon niet worden getoond. Probeer het opnieuw.</p>}
       </div>
       <div className="settings-row" style={{ display: "block" }}>
         <h3 className="settings-label">Contact voor meldingen</h3>

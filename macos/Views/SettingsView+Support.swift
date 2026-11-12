@@ -16,6 +16,15 @@ extension SettingsView {
             #endif
             Toggle("Foutrapporten automatisch versturen", isOn: $supportAutoReport)
                 .tint(Color.brandPrimary)
+            #if os(macOS)
+            Button { NSWorkspace.shared.activateFileViewerSelecting([AppLog.fileURL]) } label: {
+                Label("Toon logbestand", systemImage: "doc.text.magnifyingglass")
+            }
+            #else
+            ShareLink(item: AppLog.fileURL) {
+                Label("Toon logbestand", systemImage: "doc.text.magnifyingglass")
+            }
+            #endif
             Link(String(localized: "support.privacy.link"), destination: SupportLinks.privacy)
                 .font(TS.Font.caption)
                 .foregroundStyle(Color.brandPrimary)

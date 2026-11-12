@@ -8,8 +8,10 @@ struct NotuleGenerator: Sendable {
     /// Step-2 audit checks in flight; the caller knows the provider (`NotulenProvider.auditNoteConcurrency`).
     var noteConcurrency = NotuleAudit.auditConcurrency
 
+    /// `onStep` reports the running step for the task label (`ModelStep.displayLabel`).
     func generate(transcription: String, profile: Profile, participants: [Participant], quickNote: String?,
-                  createdAt: Date, corrections: [PersonalCorrection], context: String = "") async throws -> String {
+                  createdAt: Date, corrections: [PersonalCorrection], context: String = "",
+                  onStep: @escaping @Sendable (ModelStep) -> Void = { _ in }) async throws -> String {
         let source = PersonalCorrections.text(transcription, entries: corrections, profileId: profile.id)
         let constraints = NotuleAudit.constraintSentences(source)
 
@@ -27,16 +29,19 @@ struct NotuleGenerator: Sendable {
         async let sourceWarning = NotuleAudit.auditSource(source: source, quickNote: quickNote ?? "", request: request)
 
         // Keep the unverified draft out of progress updates and saved notes.
-        let draft = try await service.generateNotulen(
-            transcription: source,
-            systemPrompt: notuleSystemPrompt(profile.systemPrompt ?? ""),
-            notulePrompt: QuickNoteStore.promptBlock(quickNote)
-                + Self.injectParticipants(into: profile.notulePrompt ?? "", participants: participants)
-                + context,
-            outputTemplate: profile.template,
-            constraints: constraints,
-            onProgress: { _ in }
-        )
+        onStep(ModelStep(.draft))
+        let draft = try await ModelStep.$current.withValue(ModelStep(.draft)) {
+            try await service.generateNotulen(
+                transcription: source,
+                systemPrompt: notuleSystemPrompt(profile.systemPrompt ?? ""),
+                notulePrompt: QuickNoteStore.promptBlock(quickNote)
+                    + Self.injectParticipants(into: profile.notulePrompt ?? "", participants: participants)
+                    + context,
+                outputTemplate: profile.template,
+                constraints: constraints,
+                onProgress: { _ in }
+            )
+        }
         try Task.checkCancellation()
         guard !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             throw LLMError.generationFailed("De notule-generator gaf een leeg concept. De transcriptie is bewaard.")
@@ -52,11 +57,12 @@ struct NotuleGenerator: Sendable {
 
         var warning: String?
         do {
+            onStep(ModelStep(.sourceCheck))
             warning = try await sourceWarning
             if Task.isCancelled || cancelled.withLock({ $0 }) { throw CancellationError() }
             try await NotuleAudit.auditNotule(source: source, html: candidate, quickNote: quickNote ?? "",
                                               request: request, requiredSentences: constraints, sourceUnclear: warning != nil,
-                                              noteConcurrency: noteConcurrency)
+                                              noteConcurrency: noteConcurrency, onProgress: onStep)
             return NotuleAudit.appendingWarnings([warning].compactMap { $0 }, to: candidate)
         } catch {
             if Task.isCancelled || cancelled.withLock({ $0 }) { throw CancellationError() }

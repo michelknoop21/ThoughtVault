@@ -10,6 +10,8 @@ vi.mock("../../stores/personalCorrectionsStore", () => ({ usePersonalCorrections
 vi.mock("../tauriCommands", () => ({ loadCredential }));
 // Keep generation transport assertions separate from the source and factual audits.
 vi.mock("@tauri-apps/api/core", () => ({ invoke: (...args: unknown[]) => {
+  // Log lines per model request are tested in modelRequestLog.test.ts; `invoke` counts model requests here.
+  if (args[0] === "log_write") return Promise.resolve();
   const request = (args[1] as { request?: { body?: string } })?.request;
   const messages = request?.body ? JSON.parse(request.body).messages : [];
   if (messages.at(-1)?.content.startsWith("Broncontrole")) {

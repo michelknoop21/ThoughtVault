@@ -17,6 +17,7 @@ import { useSettingsStore } from "../stores/settingsStore";
 import { useProfilesStore } from "../stores/profilesStore";
 import { useRecordingStore } from "../stores/recordingStore";
 import { LLMService } from "../services/llm";
+import { stepLabel } from "../services/modelRequestLog";
 import { NotuleReviewError } from "../services/notuleAudit";
 import { prepareNotuleHtml } from "../services/notulePresentation";
 import { saveTextExport } from "../services/textExport";
@@ -226,7 +227,8 @@ export function TranscriptsPage() {
       setRegeneratingId(transcript.id);
       try {
         const html = await LLMService.generateNotulen(transcription, profile,
-          () => tasks.updateBackgroundTask(taskId, { progress: 60 }), [], transcript.quick_note);
+          () => tasks.updateBackgroundTask(taskId, { progress: 60 }), [], transcript.quick_note,
+          step => tasks.updateBackgroundTask(taskId, { message: stepLabel(step) }));
         if (!hasUsableNotule(html)) throw new Error("Geen bruikbare notule gegenereerd");
         const title = extractTitle(html) || transcript.title;
         const finished = { notule_html: html, has_notes: true, title, profile_name: profile.name, profile_id: profile.id,

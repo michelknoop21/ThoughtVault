@@ -43,6 +43,7 @@ enum LogRedact {
 /// Rotating log file: `thoughtvault.log` plus one previous generation `thoughtvault.1.log`.
 actor LogFile {
     static let rotateBytes = 2_621_440
+    static let currentName = "thoughtvault.log"
     static let retention: TimeInterval = 7 * 24 * 60 * 60
 
     private let current: URL
@@ -52,7 +53,7 @@ actor LogFile {
     init(directory: URL) {
         let fm = FileManager.default
         try? fm.createDirectory(at: directory, withIntermediateDirectories: true)
-        current = directory.appending(path: "thoughtvault.log")
+        current = directory.appending(path: Self.currentName)
         previous = directory.appending(path: "thoughtvault.1.log")
         if let date = (try? fm.attributesOfItem(atPath: previous.path))?[.modificationDate] as? Date,
            Date().timeIntervalSince(date) > Self.retention {
@@ -126,6 +127,8 @@ struct AppLog: Sendable {
     static let clickPath = AppLog(category: "Klikpad")
 
     static var directory: URL { AppEnvironment.supportDirectory.appending(path: "Logs", directoryHint: .isDirectory) }
+    /// The current log file, for "Toon logbestand".
+    static var fileURL: URL { directory.appending(path: LogFile.currentName) }
 
     private func write(_ level: String, _ message: String) {
         let flat = String(LogRedact.scrub(message).prefix(2_000)).replacingOccurrences(of: "\r", with: " ").replacingOccurrences(of: "\n", with: " ")

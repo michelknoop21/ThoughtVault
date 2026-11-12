@@ -79,7 +79,7 @@ function ProcessingBarItem({ task }: { task: TranscriptTask }) {
           )}
         </span>
 
-        <span className="processing-bar-label">{config.label}</span>
+        <span className="processing-bar-label">{status === "generating" && task.message ? task.message : config.label}</span>
 
         {isFailed && task.error_message && (
           <span className="processing-bar-error">{task.error_message}</span>

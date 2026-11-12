@@ -119,7 +119,9 @@ enum NotuleAudit {
         """
         let result: Any
         do {
-            result = try parseAuditResponse(try await request(system, "Broncontrole (zonder notule):\n{\"source\":\(json(source)),\"quickNote\":\(json(quickNote))}"))
+            result = try parseAuditResponse(try await ModelStep.$current.withValue(ModelStep(.sourceCheck)) {
+                try await request(system, "Broncontrole (zonder notule):\n{\"source\":\(json(source)),\"quickNote\":\(json(quickNote))}")
+            })
         } catch {
             return uncheckedSourceWarning
         }
@@ -144,9 +146,11 @@ enum NotuleAudit {
     /// A bounded model-assisted check; evidence links prove coverage, not semantic truth.
     /// `sourceUnclear`: the source check warned, so an exact copy of the source still needs the model audit.
     /// `noteConcurrency`: step-2 checks in flight for a long meeting (`NotulenProvider.auditNoteConcurrency`).
+    /// `onProgress`: the running step, with finished requests counted for a long meeting.
     static func auditNotule(source: String, html: String, quickNote: String, request: @escaping AuditRequest,
                             requiredSentences: [String] = [], sourceUnclear: Bool = false,
-                            noteConcurrency: Int = auditConcurrency) async throws {
+                            noteConcurrency: Int = auditConcurrency,
+                            onProgress: @escaping @Sendable (ModelStep) -> Void = { _ in }) async throws {
         // Only plain semantic HTML has a checkable text representation here, not arbitrary CSS/layout.
         let markup = scan(html, dropping: ["script", "template", "head"])
         if regex(#"<style(?![A-Za-z0-9_])"#, .caseInsensitive).firstMatch(in: html, range: whole(html)) != nil || markup.hidesContent
@@ -166,7 +170,7 @@ enum NotuleAudit {
               sourceUnits.count + noteUnits.count <= 400 else {
             // DEC-065: a long meeting is checked in two steps; within the limit the single request below stays unchanged.
             let checks = try await auditLong(sourceUnits: sourceUnits, noteUnits: noteUnits, request: request,
-                                             noteConcurrency: noteConcurrency)
+                                             noteConcurrency: noteConcurrency, onProgress: onProgress)
             return try conclude(sourceChecks: checks.source, noteChecks: checks.notes, sourceUnits: sourceUnits,
                                 noteUnits: noteUnits, requiredSentences: requiredSentences)
         }
@@ -180,7 +184,10 @@ enum NotuleAudit {
         """
         let result: Any
         do {
-            result = try parseAuditResponse(try await request(system, "Inhoudsaudit (geen generatie):\n{\"source\":\(json(sourceUnits)),\"notes\":\(json(noteUnits))}"))
+            onProgress(ModelStep(.noteCheck))
+            result = try parseAuditResponse(try await ModelStep.$current.withValue(ModelStep(.noteCheck)) {
+                try await request(system, "Inhoudsaudit (geen generatie):\n{\"source\":\(json(sourceUnits)),\"notes\":\(json(noteUnits))}")
+            })
         } catch {
             throw NotuleAuditError(message: "De inhoudscontrole leverde geen bruikbaar controlebewijs; beoordeel het concept")
         }

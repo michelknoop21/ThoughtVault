@@ -11,6 +11,9 @@ import { loadCorrectionsOrEmpty } from "../stores/personalCorrectionsStore";
 import { usePeopleDirectoryStore } from "../stores/peopleDirectoryStore";
 import { correctText, correctHTML, contextBlock, CONTEXT_BUDGET, type PersonalCorrection } from "./personalCorrections";
 import { auditSource, auditNotule, appendWarnings, AuditFinding, constraintSentences, UNCHECKED_CONTENT_WARNING, AUDIT_CONCURRENCY, HOSTED_AUDIT_CONCURRENCY } from "./notuleAudit";
+import { logModelRequest, logRetry, TIME_LIMIT_MESSAGE, TRUNCATED_MESSAGE, type ModelStep, type RequestTrace } from "./modelRequestLog";
+
+export { TIME_LIMIT_MESSAGE, TRUNCATED_MESSAGE };
 
 interface LLMConfig {
   provider: NotulenProvider;
@@ -30,8 +33,6 @@ const LLM_TIME_LIMIT_SECONDS = 900;
  * single-request audit: one JSON item of about 25 tokens per unit for up to 400 units, so about 10,000 tokens.
  * A long notule draft is several thousand. Reasoning models count their thinking against it, hence 3x headroom. */
 export const MAX_OUTPUT_TOKENS = 32_768;
-export const TIME_LIMIT_MESSAGE = "Tijdslimiet bereikt: de AI-provider gaf niet op tijd een volledig antwoord. Probeer het opnieuw of kies een sneller model.";
-export const TRUNCATED_MESSAGE = "Het antwoord van de AI-provider is afgebroken omdat het de maximale lengte bereikte.";
 /** Prefix of the proxy_request error for a timeout (http.rs). */
 const PROXY_TIMEOUT = "Tijdslimiet bereikt";
 
@@ -65,17 +66,21 @@ async function proxy(request: { url: string; headers: Record<string, string>; bo
  * not collide again. The wait and the retry count against the same time limit. A wait that is too long, and a
  * second 429, return the 429 to the caller, which reports it. Windows requests take no abort signal, so there is
  * no cancellation during the wait. */
-async function modelRequest(request: { url: string; headers: Record<string, string>; body: string }): Promise<ProxyResponse> {
+async function modelRequest(request: { url: string; headers: Record<string, string>; body: string }, trace: RequestTrace): Promise<ProxyResponse> {
   const started = Date.now();
   const first = await proxy(request, LLM_TIME_LIMIT_SECONDS);
+  trace.status = first.status;
   const header = Object.entries(first.headers ?? {}).find(([name]) => name.toLowerCase() === "retry-after")?.[1];
   const wait = first.status === 429 ? rateLimitWaitMs(header) : null;
   if (wait === null) return first;
   const jittered = wait + Math.random() * 1000;
   const remainingSeconds = Math.floor((LLM_TIME_LIMIT_SECONDS * 1000 - (Date.now() - started) - jittered) / 1000);
   if (remainingSeconds < 1) return first;
+  logRetry(trace, jittered);
   await new Promise(resolve => setTimeout(resolve, jittered));
-  return proxy(request, remainingSeconds);
+  const second = await proxy(request, remainingSeconds);
+  trace.status = second.status;
+  return second;
 }
 
 // These constraints must survive both chunk summaries and the final profile.
@@ -149,12 +154,28 @@ function buildUserContent(
   return content + `\n\nLaatste inhoudsregels: volg de gekozen template en laat lege secties weg. Begin met één h1 die in 4 tot 10 woorden het doel of de uitkomst van het gesprek noemt; nooit alleen een genre-woord als Verslag, Notulen, Meeting, Gesprek of Overleg. Verzin geen feiten, besluiten, eigenaren of termijnen. ${FACTUALITY_RULES} Schrijf eenvoudige HTML zonder CSS, style-blok of code fences.`;
 }
 
-async function generateWithOpenAICompatible(
+function generateWithOpenAICompatible(
   baseUrl: string,
   model: string,
   systemPrompt: string,
   userPrompt: string,
   apiKey: string,
+  onProgress?: ProgressCallback,
+  step?: ModelStep,
+): Promise<string> {
+  // Provider kind as on macOS, without the host of a self-configured endpoint.
+  const provider = isOllamaCloudURL(baseUrl) ? "ollama-cloud" : baseUrl.startsWith("https://") ? "hosted" : "local";
+  const trace: RequestTrace = { step, provider, model, system: systemPrompt, user: userPrompt };
+  return logModelRequest(trace, () => openAICompatibleRequest(baseUrl, model, systemPrompt, userPrompt, apiKey, trace, onProgress));
+}
+
+async function openAICompatibleRequest(
+  baseUrl: string,
+  model: string,
+  systemPrompt: string,
+  userPrompt: string,
+  apiKey: string,
+  trace: RequestTrace,
   onProgress?: ProgressCallback
 ): Promise<string> {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
@@ -171,7 +192,7 @@ async function generateWithOpenAICompatible(
   let response: { status: number; body: string };
   try {
     response = await modelRequest({ url: `${base}/v1/chat/completions`, headers,
-      body: JSON.stringify({ model, messages: [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }], stream: false, max_tokens: MAX_OUTPUT_TOKENS }) });
+      body: JSON.stringify({ model, messages: [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }], stream: false, max_tokens: MAX_OUTPUT_TOKENS }) }, trace);
   } catch (error) {
     if (error instanceof Error && error.message === TIME_LIMIT_MESSAGE) throw error;
     throw new Error(`Kan de notule-generator niet bereiken op ${baseUrl} (model "${model}"). Draait Ollama/LM Studio en klopt de URL in Instellingen?`);
@@ -188,12 +209,26 @@ async function generateWithOpenAICompatible(
   return text;
 }
 
-async function generateWithHostedAPI(
+function generateWithHostedAPI(
   provider: "openai" | "anthropic",
   model: string,
   systemPrompt: string,
   userPrompt: string,
   apiKey: string,
+  onProgress?: ProgressCallback,
+  step?: ModelStep,
+): Promise<string> {
+  const trace: RequestTrace = { step, provider, model, system: systemPrompt, user: userPrompt };
+  return logModelRequest(trace, () => hostedRequest(provider, model, systemPrompt, userPrompt, apiKey, trace, onProgress));
+}
+
+async function hostedRequest(
+  provider: "openai" | "anthropic",
+  model: string,
+  systemPrompt: string,
+  userPrompt: string,
+  apiKey: string,
+  trace: RequestTrace,
   onProgress?: ProgressCallback,
 ): Promise<string> {
   const openAI = provider === "openai";
@@ -208,7 +243,7 @@ async function generateWithHostedAPI(
       ? { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` }
       : { "Content-Type": "application/json", "anthropic-version": "2023-06-01", "x-api-key": apiKey },
     body: JSON.stringify(body),
-  });
+  }, trace);
   if (response.status === 401) throw new Error(`${openAI ? "OpenAI" : "Anthropic"} API-sleutel geweigerd.`);
   if (response.status === 429) throw new Error(`${openAI ? "OpenAI" : "Anthropic"} ${RATE_LIMIT_MESSAGE}`);
   if (response.status >= 400) throw new Error(`${openAI ? "OpenAI" : "Anthropic"} gaf HTTP ${response.status}.`);
@@ -244,17 +279,17 @@ function stripCodeFences(html: string): string {
 
 export class LLMService {
   /** One plain request to the selected provider, for small helper prompts (no audit, no chunking). */
-  static async complete(systemPrompt: string, userMessage: string): Promise<string> {
+  static async complete(systemPrompt: string, userMessage: string, step?: ModelStep): Promise<string> {
     const config = getConfig();
     const provider = config.provider === "cloud" ? "ollama" : config.provider;
     if (provider === "openai" || provider === "anthropic") {
       const key = await loadCredential(`${provider}_api_key`);
       if (!key) throw new Error(`Vul je ${provider === "openai" ? "OpenAI" : "Anthropic"} API-sleutel in bij Instellingen.`);
-      return generateWithHostedAPI(provider, provider === "openai" ? config.openAIModel : config.anthropicModel, systemPrompt, userMessage, key);
+      return generateWithHostedAPI(provider, provider === "openai" ? config.openAIModel : config.anthropicModel, systemPrompt, userMessage, key, undefined, step);
     }
     const baseURL = provider === "ollama" ? config.ollamaUrl : config.lmStudioUrl;
     const key = provider === "ollama" && baseURL.startsWith("https://") ? await loadCredential("ollama_api_key") : null;
-    return generateWithOpenAICompatible(baseURL, provider === "ollama" ? config.ollamaModel : config.lmStudioModel, systemPrompt, userMessage, key ?? "");
+    return generateWithOpenAICompatible(baseURL, provider === "ollama" ? config.ollamaModel : config.lmStudioModel, systemPrompt, userMessage, key ?? "", undefined, step);
   }
 
   static async generateNotulen(
@@ -263,6 +298,8 @@ export class LLMService {
     onProgress?: ProgressCallback,
     participants: string[] = [],
     quickNote: string = "",
+    /** The running step for the task label (stepLabel). */
+    onStep?: (step: ModelStep) => void,
   ): Promise<string> {
     const corrections = await loadCorrectionsOrEmpty();
     const context = minutesContext(corrections, transcription, profile.id);
@@ -282,11 +319,12 @@ export class LLMService {
       while (Array.from(processed).length > limit) {
         const characters = Array.from(processed);
         const summaries: string[] = [];
+        const total = Math.ceil(characters.length / limit);
         for (let offset = 0; offset < characters.length; offset += limit) {
           summaries.push(await generateWithOpenAICompatible(baseURL, model,
             `Je vat transcripties samen. Bewaar namen, feiten, besluiten, actiepunten, eigenaren en termijnen. Verzin niets. ${FACTUALITY_RULES}`,
             (context ? context.trim() + "\n\n" : "") + "Vat dit deel compact samen:\n\n" + characters.slice(offset, offset + limit).join(""),
-            compatibleKey ?? ""));
+            compatibleKey ?? "", undefined, { kind: "chunk-summary", index: offset / limit + 1, total }));
         }
         const summarized = summaries.join("\n\n");
         if (Array.from(summarized).length >= characters.length) {
@@ -303,16 +341,16 @@ export class LLMService {
       participants
     );
 
-    const generate = async (system: string, user: string, progress?: ProgressCallback): Promise<string> => {
+    const generate = async (system: string, user: string, step?: ModelStep): Promise<string> => {
       if (config.provider === "ollama" || config.provider === "lm-studio") {
-        return generateWithOpenAICompatible(baseURL, model, system, user, compatibleKey ?? "", progress);
+        return generateWithOpenAICompatible(baseURL, model, system, user, compatibleKey ?? "", undefined, step);
       }
       if (config.provider === "openai" || config.provider === "anthropic") {
         const provider = config.provider;
         const key = await loadCredential(`${provider}_api_key`);
         if (!key) throw new Error(`Vul je ${provider === "openai" ? "OpenAI" : "Anthropic"} API-sleutel in bij Instellingen.`);
         return generateWithHostedAPI(provider, provider === "openai" ? config.openAIModel : config.anthropicModel,
-          system, user, key, progress);
+          system, user, key, undefined, step);
       }
       throw new Error("Cloud provider moet via de server worden verwerkt");
     };
@@ -321,7 +359,8 @@ export class LLMService {
     const constraintPrompt = constraints.length
       ? `\n\nVerplicht te behouden bronzinnen (behoud de volledige betekenis, bedragen en voorwaarden bij het passende onderwerp, besluit of open punt; correcte parafrases mogen, tegenspraken nergens):\n${constraints.map((sentence, index) => `${index + 1}. ${sentence}`).join("\n")}` : "";
     // Keep the unverified draft out of progress updates and saved notes.
-    const draftRequest = generate(systemPrompt, userPrompt + constraintPrompt);
+    onStep?.({ kind: "draft" });
+    const draftRequest = generate(systemPrompt, userPrompt + constraintPrompt, { kind: "draft" });
     // The source check never sees the notule (DEC-062), so it runs while the draft is written. Settled into a
     // value so it cannot become an unhandled rejection while the draft is still running.
     const sourceCheck = auditSource(correctText(transcription, corrections, profile.id), quickNote, generate)
@@ -339,11 +378,12 @@ export class LLMService {
     }
     let warning: string | null = null;
     try {
+      onStep?.({ kind: "source-check" });
       const source = await sourceCheck;
       if ("error" in source) throw source.error;
       warning = source.warning;
       await auditNotule(correctText(transcription, corrections, profile.id), candidate, quickNote, generate, constraints, warning !== null,
-        auditNoteConcurrency(config.provider, baseURL));
+        auditNoteConcurrency(config.provider, baseURL), onStep);
       const approved = appendWarnings(warning ? [warning] : [], candidate);
       onProgress?.(approved);
       return approved;

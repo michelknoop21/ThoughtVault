@@ -53,8 +53,16 @@ struct M3CaseResult: Encodable, Sendable {
 }
 
 /// Runs the six audit cases and three meetings through the production macOS code.
-/// Requests go through URLSession.shared, so `M3GateRecorder` must be started first.
+/// Requests go through `recordedSession`, so `M3GateRecorder` must be started first.
 struct M3Gate {
+    /// The production session (`llmSession`, with its total time limit) plus `M3GateRecorder`. A custom session
+    /// does not see a globally registered URLProtocol, so the recorder is listed here explicitly.
+    static let recordedSession: URLSession = {
+        let configuration = llmSession.configuration
+        configuration.protocolClasses = [M3GateRecorder.self] + (configuration.protocolClasses ?? [])
+        return URLSession(configuration: configuration)
+    }()
+
     let fixture: M3Fixture
     let apiKey: String
     let evidence: URL
@@ -78,7 +86,7 @@ struct M3Gate {
     }
 
     private var service: OpenAICompatibleLLMService {
-        OpenAICompatibleLLMService(baseURL: fixture.baseURL, model: fixture.model, apiKey: apiKey)
+        OpenAICompatibleLLMService(baseURL: fixture.baseURL, model: fixture.model, apiKey: apiKey, session: Self.recordedSession)
     }
 
     /// Fixed source and notule through `auditSource` then `auditNotule`, one attempt each.
@@ -164,10 +172,20 @@ struct M3Gate {
     }
 
     private static func messages(_ exchange: M3GateRecorder.Exchange) -> (system: String, user: String)? {
-        guard let body = try? JSONSerialization.jsonObject(with: exchange.body) as? [String: Any],
+        prompts(exchange.body)
+    }
+
+    /// System and user message of a chat-completion request body.
+    static func prompts(_ body: Data) -> (system: String, user: String)? {
+        guard let body = try? JSONSerialization.jsonObject(with: body) as? [String: Any],
               let messages = body["messages"] as? [[String: Any]], messages.count == 2,
               let system = messages[0]["content"] as? String, let user = messages[1]["content"] as? String else { return nil }
         return (system, user)
+    }
+
+    /// True when the sent prompts are byte-identical to a recorded Windows exchange.
+    static func matches(_ sent: (system: String, user: String), _ windows: M3Fixture.Exchange) -> Bool {
+        sha256(sent.system) == windows.systemSha256 && sha256(sent.user) == windows.userSha256
     }
 
     /// `JSON.parse` boolean, not an NSNumber 0/1.
@@ -205,16 +223,15 @@ struct M3Gate {
     /// Writes this case's requests and raw responses and fills calls, model and prompt parity.
     private func record(_ result: inout M3CaseResult, windows: [M3Fixture.Exchange]) throws -> [M3GateRecorder.Exchange] {
         let exchanges = M3GateRecorder.exchanges(for: result.name)
-        for (offset, exchange) in exchanges.enumerated() {
+        for exchange in exchanges {
             let request = RequestEvidence(url: exchange.url, headers: exchange.headers,
                                           body: String(decoding: exchange.body, as: UTF8.self))
             try write(try Self.encoder.encode(request), to: "\(exchange.label).request.json")
             try write(exchange.error.map { Data("TRANSPORT ERROR: \($0)\n".utf8) } ?? exchange.response,
                       to: "\(exchange.label).response.txt")
+            // The source check runs alongside the draft, so compare by content, not by position.
             let sent = Self.messages(exchange)
-            result.promptsMatchWindows.append(offset < windows.count && sent.map {
-                Self.sha256($0.system) == windows[offset].systemSha256 && Self.sha256($0.user) == windows[offset].userSha256
-            } == true)
+            result.promptsMatchWindows.append(sent.map { sent in windows.contains { Self.matches(sent, $0) } } == true)
             result.model = result.model ?? M3GateRecorder.modelText(exchange.response).model
             if let status = exchange.status, status != 200 { result.reason += " [HTTP \(status) on \(exchange.label)]" }
             if let error = exchange.error { result.reason += " [transport error on \(exchange.label): \(error)]" }

@@ -5,11 +5,27 @@ import os
 /// windows/src/services/llm.ts: audit problems end up in an "Even nalopen" section, never block (DEC-063).
 struct NotuleGenerator: Sendable {
     let service: any LLMService
+    /// Step-2 audit checks in flight; the caller knows the provider (`NotulenProvider.auditNoteConcurrency`).
+    var noteConcurrency = NotuleAudit.auditConcurrency
 
     func generate(transcription: String, profile: Profile, participants: [Participant], quickNote: String?,
                   createdAt: Date, corrections: [PersonalCorrection], context: String = "") async throws -> String {
         let source = PersonalCorrections.text(transcription, entries: corrections, profileId: profile.id)
         let constraints = NotuleAudit.constraintSentences(source)
+
+        // NotuleAudit turns every request error into an audit message; remember cancellation separately.
+        let cancelled = OSAllocatedUnfairLock(initialState: false)
+        let service = service
+        let request: AuditRequest = { system, user in
+            do { return try await service.complete(system: system, user: user) } catch is CancellationError {
+                cancelled.withLock { $0 = true }
+                throw CancellationError()
+            }
+        }
+        // The source check never sees the notule (DEC-062), so it runs while the draft is written. Any throw
+        // below cancels it and waits for it, so a draft error still wins and no request is left running.
+        async let sourceWarning = NotuleAudit.auditSource(source: source, quickNote: quickNote ?? "", request: request)
+
         // Keep the unverified draft out of progress updates and saved notes.
         let draft = try await service.generateNotulen(
             transcription: source,
@@ -34,21 +50,13 @@ struct NotuleGenerator: Sendable {
             Self.injectDate(into: QuickNoteStore.ensureNotesSection(stripped, note: quickNote), date: createdAt),
             entries: corrections, profileId: profile.id)
 
-        // NotuleAudit turns every request error into an audit message; remember cancellation separately.
-        let cancelled = OSAllocatedUnfairLock(initialState: false)
-        let service = service
-        let request: AuditRequest = { system, user in
-            do { return try await service.complete(system: system, user: user) } catch is CancellationError {
-                cancelled.withLock { $0 = true }
-                throw CancellationError()
-            }
-        }
         var warning: String?
         do {
-            warning = try await NotuleAudit.auditSource(source: source, quickNote: quickNote ?? "", request: request)
+            warning = try await sourceWarning
             if Task.isCancelled || cancelled.withLock({ $0 }) { throw CancellationError() }
             try await NotuleAudit.auditNotule(source: source, html: candidate, quickNote: quickNote ?? "",
-                                              request: request, requiredSentences: constraints, sourceUnclear: warning != nil)
+                                              request: request, requiredSentences: constraints, sourceUnclear: warning != nil,
+                                              noteConcurrency: noteConcurrency)
             return NotuleAudit.appendingWarnings([warning].compactMap { $0 }, to: candidate)
         } catch {
             if Task.isCancelled || cancelled.withLock({ $0 }) { throw CancellationError() }

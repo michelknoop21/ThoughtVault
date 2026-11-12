@@ -35,7 +35,8 @@ extension RecordingViewModel {
     private static func generateNotule(provider: NotulenProvider, transcription: String, profile: Profile, participants: [Participant],
                                        quickNote: String?, createdAt: Date) async throws -> String {
         let corrections = PersonalCorrections.loadOrEmpty()
-        return try await NotuleGenerator(service: LLMServiceFactory.service(for: provider, serverURL: "")).generate(
+        return try await NotuleGenerator(service: LLMServiceFactory.service(for: provider, serverURL: ""),
+                                         noteConcurrency: provider.auditNoteConcurrency).generate(
             transcription: transcription, profile: profile, participants: participants, quickNote: quickNote,
             createdAt: createdAt, corrections: corrections,
             context: PersonalCorrections.contextBlock(entries: corrections, transcript: transcription, profileId: profile.id, provider: provider))

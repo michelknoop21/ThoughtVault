@@ -62,6 +62,39 @@ private final class StubLLM: LLMService, @unchecked Sendable {
     }
 }
 
+/// The draft waits up to two seconds for the source check to start; with `draftError` it then fails while
+/// the source check is still waiting to be cancelled.
+private final class OverlapLLM: LLMService, @unchecked Sendable {
+    private let lock = NSLock()
+    private let draftError: Error?
+    private var _sourceStarted = false, _startedDuringDraft = false, _sourceCancelled = false
+    init(draftError: Error? = nil) { self.draftError = draftError }
+
+    var startedDuringDraft: Bool { lock.withLock { _startedDuringDraft } }
+    var sourceCancelled: Bool { lock.withLock { _sourceCancelled } }
+    var isAvailable: Bool { true }
+
+    func generateNotulen(transcription: String, systemPrompt: String, notulePrompt: String, outputTemplate: String?,
+                         constraints: [String], onProgress: @Sendable (String) -> Void) async throws -> String {
+        var waited = 0
+        while !lock.withLock({ _sourceStarted }), waited < 200 { try await Task.sleep(nanoseconds: 10_000_000); waited += 1 }
+        lock.withLock { _startedDuringDraft = _sourceStarted }
+        if let draftError { throw draftError }
+        return "<p>Sam neemt vrijdag contact op met de klant.</p>"
+    }
+
+    func complete(system: String, user: String) async throws -> String {
+        guard user.hasPrefix("Broncontrole") else { return try StubLLM.approve()(user) }
+        lock.withLock { _sourceStarted = true }
+        guard draftError != nil else { return #"{"uncertain":false}"# }
+        do { try await Task.sleep(nanoseconds: 5_000_000_000) } catch {
+            lock.withLock { _sourceCancelled = true }
+            throw error
+        }
+        return #"{"uncertain":true}"#
+    }
+}
+
 private let profile = Profile(id: "standaard", name: "Standaard", systemPrompt: "Je bent notulist.",
                               notulePrompt: "Maak notulen.", template: nil)
 
@@ -213,7 +246,8 @@ final class NotuleGeneratorTests: XCTestCase {
         } catch {
             XCTAssertTrue(error.localizedDescription.contains("De notule-generator gaf een leeg concept. De transcriptie is bewaard."))
         }
-        XCTAssertEqual(service.audits.count, 0)
+        // Only the source check, which runs alongside the draft, may have been sent; never the content audit.
+        XCTAssertTrue(service.audits.allSatisfy { $0.hasPrefix("Broncontrole") }, "\(service.audits)")
     }
 
     /// A long quick note used to make an empty notule look usable once its section was added.
@@ -225,7 +259,8 @@ final class NotuleGeneratorTests: XCTestCase {
         } catch {
             XCTAssertTrue(error.localizedDescription.contains("De notule bevat geen bruikbare inhoud. Controleer de transcriptie en probeer opnieuw."))
         }
-        XCTAssertEqual(service.audits.count, 0)
+        // Only the source check, which runs alongside the draft, may have been sent; never the content audit.
+        XCTAssertTrue(service.audits.allSatisfy { $0.hasPrefix("Broncontrole") }, "\(service.audits)")
     }
 
     func testBracketTextIsNoLongerRejected() {
@@ -238,6 +273,30 @@ final class NotuleGeneratorTests: XCTestCase {
         XCTAssertFalse(NotuleGenerator.hasUsableNotule("<h1>[Beschrijvende titel]</h1><p>[Samenvatting]</p>"))
         XCTAssertFalse(NotuleGenerator.hasUsableNotule("<p>Er is geen transcriptie aangeleverd. Lever die eerst aan.</p>"))
         XCTAssertTrue(NotuleGenerator.hasUsableNotule("<h2>Kernuitkomst</h2><p>De planning voor volgende week is besproken.</p>"))
+    }
+
+    func testSourceCheckRunsWhileTheDraftIsWritten() async throws {
+        let service = OverlapLLM()
+        let html = try await NotuleGenerator(service: service).generate(
+            transcription: "Sam belt vrijdag de klant.", profile: profile, participants: [], quickNote: nil,
+            createdAt: Date(timeIntervalSince1970: 0), corrections: [])
+        XCTAssertEqual(html, "<p>Sam neemt vrijdag contact op met de klant.</p>")
+        XCTAssertTrue(service.startedDuringDraft)
+    }
+
+    func testFailedDraftWinsAndCancelsTheSourceCheck() async {
+        let service = OverlapLLM(draftError: LLMError.generationFailed("concept mislukt"))
+        let start = Date()
+        do {
+            _ = try await NotuleGenerator(service: service).generate(
+                transcription: "Sam belt vrijdag de klant.", profile: profile, participants: [], quickNote: nil,
+                createdAt: Date(timeIntervalSince1970: 0), corrections: [])
+            XCTFail("Expected the draft error")
+        } catch {
+            XCTAssertEqual(error.localizedDescription, "Generatie mislukt: concept mislukt")
+        }
+        XCTAssertTrue(service.sourceCancelled)
+        XCTAssertLessThan(Date().timeIntervalSince(start), 4, "the source request must be cancelled, not awaited")
     }
 
     func testCancellationIsNotAReviewError() async {

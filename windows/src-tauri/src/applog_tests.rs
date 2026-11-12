@@ -225,19 +225,24 @@ fn global_commands_handle_startup_session_lifecycle_and_io_failures() {
     write("error\nforged", "[Test]", "invalid-level-marker");
     flush_logs();
     assert!(log_tail(TAIL_LIMIT).unwrap().contains(" INFO [ Test ] invalid-level-marker"));
+    // Tests in other modules run in parallel and append through elog! once init() has run,
+    // so the newest line of the shared file is not necessarily this test's line.
+    let last_line_with = |marker: &str| {
+        fs::read_to_string(d.path().join(CURRENT)).unwrap().lines().rev()
+            .find(|l| l.contains(marker)).map(str::to_owned)
+            .unwrap_or_else(|| panic!("no log line contains {marker}"))
+    };
     // Both metadata and message are bounded only after complete secrets are scrubbed.
     let private_path = format!("C:\\Users\\{}\\meeting.wav", "Jan".repeat(MAX_RUNTIME_CHARS));
     write("info", "limit", &format!("{} {}", "🦀".repeat(MAX_RUNTIME_CHARS - 10), private_path));
     flush_logs();
-    let bounded = fs::read_to_string(d.path().join(CURRENT)).unwrap();
-    let line = bounded.lines().last().unwrap();
+    let line = last_line_with(" INFO [limit] ");
     assert!(line.contains("k-"));
     assert!(!line.contains("Jan") && !line.contains("C:"));
     assert!(line.len() <= MAX_RUNTIME_CHARS * 4 + 40);
     write("info", &"🦀".repeat(MAX_RUNTIME_CHARS * 2), &"x".repeat(MAX_BYTES as usize + 1));
     flush_logs();
-    let bounded = fs::read_to_string(d.path().join(CURRENT)).unwrap();
-    let line = bounded.lines().last().unwrap();
+    let line = last_line_with(" INFO [🦀");
     assert_eq!(line.matches('🦀').count(), MAX_RUNTIME_CHARS);
     assert!(!line.contains('x'));
     assert!(line.len() <= MAX_RUNTIME_CHARS * 4 + 40);
@@ -265,8 +270,12 @@ fn global_commands_handle_startup_session_lifecycle_and_io_failures() {
     flush_logs();
     assert!(!log_tail(TAIL_LIMIT).unwrap().contains("must-drop-without-waiting"));
 
-    fs::remove_file(d.path().join(CURRENT)).unwrap();
-    fs::create_dir(d.path().join(CURRENT)).unwrap();
+    {
+        // A parallel elog! append must not hold the file open while it is replaced.
+        let _guard = LOG_LOCK.lock().unwrap();
+        fs::remove_file(d.path().join(CURRENT)).unwrap();
+        fs::create_dir(d.path().join(CURRENT)).unwrap();
+    }
     write("info", "Test", "cannot write to a directory");
     flush_logs();
     assert!(log_tail(100).is_err());

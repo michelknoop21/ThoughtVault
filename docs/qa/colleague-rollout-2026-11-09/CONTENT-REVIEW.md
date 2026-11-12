@@ -112,3 +112,25 @@ Taak 2 blijft open; geen gebruikersinstellingen aangepast. Een begrensde proef m
 Kimi K2.6 via dezelfde Ollama Cloud-verbinding is gestart als job
 `163c73591d5749c7bab6413320b2ea6c`, maximaal negen requests zonder retries. Dit
 is een empirische vergelijking, geen reeds gekozen pilotmodel.
+
+## Nieuwe opnames na de titelregel (12 november 2026)
+
+De conceptprompt kreeg op 11 november een regel voor de h1-titel. De opgenomen
+Windows-antwoorden van de drie fictieve vergaderingen pasten daardoor niet meer
+bij de prompt. Ze zijn opnieuw opgenomen met
+`scripts/qa/record-m3-windows-meetings.sh`: de productiecode
+`LLMService.generateNotulen`, Ollama Cloud met `kimi-k2.6`, zonder herhalingen.
+
+Eerste opname, [kimi-k26-notuletitels](content/kimi-k26-notuletitels/), negen
+verzoeken: Waddenspoor en Bibliotheek geaccepteerd, Noorderlicht kreeg "Even
+nalopen". De inhoudscontrole noemde de zin "De aanwezigen bespraken het fictieve
+project Noorderlicht." niet onderbouwd, terwijl de bron zegt "Dit is een fictief
+planningsoverleg over project Noorderlicht." Data, namen en voorwaarden in die
+notule kloppen met de bron.
+
+Tweede opname van alleen Noorderlicht,
+[kimi-k26-notuletitels-noorderlicht-2](content/kimi-k26-notuletitels-noorderlicht-2/),
+drie verzoeken: geaccepteerd. De fixture `M3LiveContentGate.json` bevat voor
+Noorderlicht deze tweede opname en voor de andere twee de eerste. De eerste
+Noorderlicht-opname blijft als bewijs staan: het model keurt een inleidende zin
+soms af, en dat is hier één keer op twee gebeurd.

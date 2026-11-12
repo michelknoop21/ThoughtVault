@@ -2,7 +2,7 @@
 import { expect, it, vi } from "vitest";
 vi.mock("@tauri-apps/api/core", async () => (await import("./fakeAppData")).tauriCore);
 import { files } from "./fakeAppData";
-import { dismissKey, parse, type PersonSuggestion, type TermSuggestion } from "../contextSuggestions";
+import { dismissKey, load, parse, recordSkip, remove, runInBackground, SKIP_NOTICES, type PersonSuggestion, type TermSuggestion } from "../contextSuggestions";
 import type { PersonalCorrection } from "../personalCorrections";
 
 const transcript = "We bespraken het dossier met Pieter van Kaskop. De schade aan het dak is groot.";
@@ -108,4 +108,26 @@ it("storeRoundTripRemoveAndDismiss", async () => {
   const document = JSON.parse(files.get("personal-corrections.json")!);
   expect(document.dismissed).toEqual(["person:pieter"]);
   expect(document.entries.map((e: PersonalCorrection) => e.canonical)).toEqual(["Kascop"]);
+});
+
+it("storesASkipNoticeNextToPendingSuggestionsAndKeepsItWhenOneIsHandled", async () => {
+  files.clear();
+  const term = { heard: "Kaskop", canonical: "Kascop", note: "" };
+  files.set("context-suggestions.json", JSON.stringify({ t1: { terms: [term], people: [] } }));
+  const seen: string[] = [];
+  window.addEventListener("context-suggestions-updated", e => seen.push((e as CustomEvent<string>).detail));
+  await recordSkip("t1", "transcriptTooLong");
+  expect(await load("t1")).toEqual({ terms: [term], people: [], skipped: "transcriptTooLong" });
+  expect(seen).toEqual(["t1"]);
+  await remove("t1", { term });
+  expect(await load("t1")).toEqual({ terms: [], people: [], skipped: "transcriptTooLong" });
+});
+
+it("recordsASkipNoticeWhenTheTranscriptIsOverTheLimit", async () => {
+  files.clear();
+  vi.stubEnv("MODE", "development");
+  runInBackground("t2", "a".repeat(64_001), [], undefined, "Overleg");
+  await vi.waitFor(async () => expect((await load("t2"))?.skipped).toBe("transcriptTooLong"));
+  expect(SKIP_NOTICES.transcriptTooLong).toContain("te lang");
+  vi.unstubAllEnvs();
 });

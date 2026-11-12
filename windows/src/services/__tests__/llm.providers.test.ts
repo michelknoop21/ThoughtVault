@@ -166,7 +166,7 @@ it("corrects derived provider input and returned HTML without changing the raw t
 });
 
 it("summarizes every part of a long meeting before applying the profile without splitting Unicode", async () => {
-  useSettingsStore.setState({ ollama_url: "https://ollama.com", ollama_model: "unknown-small-context" });
+  useSettingsStore.setState({ ollama_url: "http://localhost:11434", ollama_model: "unknown-small-context" });
   loadCredential.mockResolvedValue("test-key");
   const raw = "START " + "a".repeat(7993) + "😀 MIDDLE " + "b".repeat(8000) + " END";
   invoke.mockImplementation(async (_command, args) => {
@@ -199,8 +199,16 @@ it("retains the hosted GPT-OSS context allowance instead of creating unnecessary
   expect(invoke.mock.calls.every(call => !JSON.parse(call[1].request.body).messages[1].content.includes("Vat dit deel compact samen:"))).toBe(true);
 });
 
+it("gives every hosted model the large context allowance, not only GPT-OSS", async () => {
+  useSettingsStore.setState({ ollama_url: "https://ollama.com", ollama_model: "mistral-large-4" });
+  loadCredential.mockResolvedValue("test-key");
+  invoke.mockResolvedValue({ status: 200, body: JSON.stringify({ choices: [{ message: { content: "<p>Akkoord</p>" } }] }) });
+  await LLMService.generateNotulen("a".repeat(9000), profile);
+  expect(invoke).toHaveBeenCalledTimes(1);
+});
+
 it("stops without silently truncating a long meeting when the model does not shorten its chunks", async () => {
-  useSettingsStore.setState({ ollama_url: "https://ollama.com", ollama_model: "unknown-small-context" });
+  useSettingsStore.setState({ ollama_url: "http://localhost:11434", ollama_model: "unknown-small-context" });
   loadCredential.mockResolvedValue("test-key");
   invoke.mockImplementation(async (_command, args) => ({ status: 200, body: JSON.stringify({ choices: [{ message: {
     content: JSON.parse(args.request.body).messages[1].content.split("Vat dit deel compact samen:\n\n")[1],

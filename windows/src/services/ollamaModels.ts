@@ -8,6 +8,17 @@ export function isOllamaCloudURL(baseURL: string): boolean {
   try { return new URL(baseURL).origin === OLLAMA_CLOUD_URL; } catch { return false; }
 }
 
+/** Remote https endpoint (not localhost, a private LAN address or a bare/.local host): a hosted model with a large context. */
+export function isHostedURL(baseURL: string): boolean {
+  try {
+    const { protocol, hostname } = new URL(baseURL);
+    const host = hostname.replace(/^\[|\]$/g, "").toLowerCase();
+    if (protocol !== "https:" || !host.includes(".") || host.endsWith(".local") || host.endsWith(".localhost")) return false;
+    if (/^(127|10)\./.test(host) || /^192\.168\./.test(host) || /^169\.254\./.test(host) || /^172\.(1[6-9]|2\d|3[01])\./.test(host)) return false;
+    return true;
+  } catch { return false; }
+}
+
 export async function fetchOllamaModels(baseURL: string): Promise<string[]> {
   const url = new URL(baseURL);
   if (!["http:", "https:"].includes(url.protocol)) throw new Error("Vul een HTTP- of HTTPS-adres in.");

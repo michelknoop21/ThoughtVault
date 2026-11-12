@@ -99,10 +99,13 @@ struct ContextSuggestionBar: View {
             Color.clear.frame(height: 0)
         } else {
             VStack(alignment: .leading, spacing: TS.Spacing.sm) {
-                if !set.isEmpty { header }
+                if set.hasSuggestions { header }
                 if expanded {
                     ForEach(set.terms, id: \.self) { term in Divider(); termRow(term) }
                     ForEach(set.people) { person in Divider(); personRow(person) }
+                }
+                if let skipped = set.skipped {
+                    Text(skipped.notice).font(TS.Font.caption).foregroundStyle(Color.labelSecondary)
                 }
                 if !error.isEmpty {
                     Text(error).font(TS.Font.caption).foregroundStyle(Color.statusErrorText)

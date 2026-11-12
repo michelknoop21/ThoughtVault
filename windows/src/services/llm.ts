@@ -5,7 +5,7 @@ import { quickNotePrompt, ensureNotesSection } from "./quickNotes";
 import { invoke } from "@tauri-apps/api/core";
 import { DEFAULT_SETTINGS } from "../types";
 import type { Profile, NotulenProvider } from "../types";
-import { isOllamaCloudURL } from "./ollamaModels";
+import { isHostedURL, isOllamaCloudURL } from "./ollamaModels";
 
 import { loadCorrectionsOrEmpty } from "../stores/personalCorrectionsStore";
 import { usePeopleDirectoryStore } from "../stores/peopleDirectoryStore";
@@ -214,9 +214,7 @@ export class LLMService {
       ? await loadCredential("ollama_api_key") : null;
     if (compatible) {
       // Match macOS: small local contexts need summaries before the final profile.
-      const hostedGPTOSS = isOllamaCloudURL(baseURL)
-        && ["gpt-oss:120b", "gpt-oss:120b-cloud", "gpt-oss:20b", "gpt-oss:20b-cloud"].includes(model);
-      const limit = hostedGPTOSS ? 64_000 : 8_000;
+      const limit = isHostedURL(baseURL) ? 64_000 : 8_000;
       while (Array.from(processed).length > limit) {
         const characters = Array.from(processed);
         const summaries: string[] = [];

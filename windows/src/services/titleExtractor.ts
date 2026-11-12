@@ -28,6 +28,11 @@ const SECTION_WORDS = new Set(
   ].map(normalize)
 );
 
+// A heading made only of genre words ("Verslag meeting", "Verslaggesprek") names
+// the document type, not the conversation. Compounds are runs of these stems;
+// a date ("10 november") adds nothing either.
+const GENRE_WORD = /^(verslag|notulen?|meetings?|gespreks?|overleg|vergadering|prompts?|van|het|de|een|\d|januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december)+$/;
+
 // lowercase, strip diacritics, strip punctuation, collapse whitespace.
 function normalize(text: string): string {
   return text
@@ -59,6 +64,7 @@ function isDescriptive(text: string): boolean {
   if (GENERIC_TITLES.has(key) || SECTION_WORDS.has(key)) return false;
   const words = key.split(" ").filter(Boolean);
   if (words.length <= 2 && words.some((w) => SECTION_WORDS.has(w))) return false;
+  if (words.every((w) => GENRE_WORD.test(w))) return false;
   return true;
 }
 
@@ -82,8 +88,10 @@ export function extractTitle(html: string): string | null {
   // The source warning is appended last; the title comes from the notule before it.
   const warning = html.indexOf(SOURCE_WARNING_HEADING);
   if (warning >= 0) html = html.slice(0, warning);
-  // Strategy 1: first descriptive heading (h1-h4)
-  for (const raw of matches(/<(h[1-4])[^>]*>([\s\S]*?)<\/\1>/gi, html, 2)) {
+  // Strategy 1: first descriptive heading. When the notule has an h1, only h1 counts:
+  // a rejected h1 must not promote a section heading ("Acties") to title.
+  const headings = /<h1[\s>]/i.test(html) ? /<(h1)[^>]*>([\s\S]*?)<\/\1>/gi : /<(h[1-4])[^>]*>([\s\S]*?)<\/\1>/gi;
+  for (const raw of matches(headings, html, 2)) {
     const title = clean(raw);
     if (isDescriptive(title)) return title.slice(0, 80);
   }

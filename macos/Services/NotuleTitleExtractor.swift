@@ -69,7 +69,7 @@ enum NotuleTitleExtractor {
             ? #"<(h[1-4])[^>]*>(.*?)</\1>"# : #"<(h1)[^>]*>(.*?)</\1>"#
         for match in regexMatches(headingPattern, in: html, group: 2) {
             let title = clean(match)
-            if isDescriptive(title) { return String(title.prefix(80)) }
+            if isDescriptive(title) { return truncateTitle(title) }
         }
 
         // Strategy 2: TL;DR / summary box — extract the following <p> content
@@ -78,7 +78,7 @@ enum NotuleTitleExtractor {
             let summary = clean(tldr)
             if summary.count > 20 {
                 let sentence = firstSentence(summary)
-                if sentence.count > 10 { return String(sentence.prefix(80)) }
+                if sentence.count > 10 { return truncateTitle(sentence) }
             }
         }
 
@@ -87,7 +87,7 @@ enum NotuleTitleExtractor {
             let text = clean(match)
             if text.count > 30 && !text.hasPrefix("📅") {
                 let sentence = firstSentence(text)
-                if sentence.count > 10 { return String(sentence.prefix(80)) }
+                if sentence.count > 10 { return truncateTitle(sentence) }
             }
         }
 
@@ -119,6 +119,14 @@ enum NotuleTitleExtractor {
             genreWord.firstMatch(in: word, range: NSRange(word.startIndex..., in: word)) != nil
         }) { return false }
         return true
+    }
+
+    /// Caps a title at 80 characters, cutting at the last space so no word is split.
+    static func truncateTitle(_ text: String, limit: Int = 80) -> String {
+        guard text.count > limit else { return text }
+        let cut = String(text.prefix(limit))
+        let kept = cut.range(of: " ", options: .backwards).map { String(cut[..<$0.lowerBound]) } ?? cut
+        return kept.trimmingCharacters(in: CharacterSet(charactersIn: " ,;:-").union(.whitespacesAndNewlines))
     }
 
     private static func firstSentence(_ text: String) -> String {

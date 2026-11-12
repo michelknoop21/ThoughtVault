@@ -1,6 +1,6 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import { useSettingsStore } from "../../stores/settingsStore";
-import { LLMService } from "../llm";
+import { LLMService, MAX_OUTPUT_TOKENS, TIME_LIMIT_MESSAGE, TRUNCATED_MESSAGE } from "../llm";
 import { auditFixture, sourceFixture } from "./notuleAuditFixtures";
 
 const corrections = vi.hoisted(() => ({entries:[] as import("../personalCorrections").PersonalCorrection[]}));
@@ -49,7 +49,7 @@ it.each(["ollama", "lm-studio"] as const)("uses the native route for %s when Web
     expect(loadCredential).not.toHaveBeenCalled();
     expect(invoke).toHaveBeenCalledWith("proxy_request", expect.objectContaining({ request: expect.objectContaining({
       url: provider === "ollama" ? "http://localhost:11434/v1/chat/completions" : "http://localhost:1234/v1/chat/completions",
-      headers: { "Content-Type": "application/json" }, timeout_seconds: 300,
+      headers: { "Content-Type": "application/json" }, timeout_seconds: 900,
     }) }));
     expect(progress).toHaveBeenCalledWith("<p>Het overleg is afgerond.</p>");
   } finally { vi.unstubAllGlobals(); }
@@ -80,6 +80,31 @@ it("names the configured local provider when its native request fails", async ()
   invoke.mockRejectedValue("connection refused");
   await expect(LLMService.generateNotulen("QA bron.", profile)).rejects.toThrow('http://localhost:11434 (model "hermes3:8b")');
   expect(invoke).toHaveBeenCalledTimes(1);
+});
+
+it("names a timeout as the time limit instead of an unreachable generator", async () => {
+  useSettingsStore.setState({ ollama_url: "http://localhost:11434", ollama_model: "hermes3:8b" });
+  invoke.mockRejectedValue("Tijdslimiet bereikt: geen volledig antwoord binnen 900 seconden.");
+  await expect(LLMService.generateNotulen("QA bron.", profile)).rejects.toThrow(TIME_LIMIT_MESSAGE);
+});
+
+it("caps the output and rejects an answer cut off at the cap", async () => {
+  useSettingsStore.setState({ ollama_url: "http://localhost:11434", ollama_model: "hermes3:8b" });
+  invoke.mockResolvedValue({ status: 200, body: JSON.stringify({ choices: [{ finish_reason: "length", message: { content: "<p>Het overleg is afgerond en</p>" } }] }) });
+  await expect(LLMService.generateNotulen("Het overleg is afgerond.", profile)).rejects.toThrow(TRUNCATED_MESSAGE);
+  expect(JSON.parse(invoke.mock.calls[0][1].request.body).max_tokens).toBe(MAX_OUTPUT_TOKENS);
+
+  useSettingsStore.setState({ notulen_provider: "openai" as never });
+  loadCredential.mockResolvedValue("openai-secret");
+  invoke.mockClear();
+  await expect(LLMService.generateNotulen("Het overleg is afgerond.", profile)).rejects.toThrow(TRUNCATED_MESSAGE);
+  const body = JSON.parse(invoke.mock.calls[0][1].request.body);
+  expect(body.max_completion_tokens).toBe(MAX_OUTPUT_TOKENS);
+  expect(body.max_tokens).toBeUndefined();
+
+  useSettingsStore.setState({ notulen_provider: "anthropic" as never });
+  invoke.mockResolvedValue({ status: 200, body: JSON.stringify({ stop_reason: "max_tokens", content: [{ type: "text", text: "<p>Het overleg is afgerond en</p>" }] }) });
+  await expect(LLMService.generateNotulen("Het overleg is afgerond.", profile)).rejects.toThrow(TRUNCATED_MESSAGE);
 });
 
 it("reports a rejected Ollama Cloud key and never masks it as a local server failure", async () => {

@@ -24,6 +24,26 @@ interface LLMConfig {
 
 type ProgressCallback = (chunk: string) => void;
 
+/** Total time per model request, as on macOS. A cold local model plus a long non-streamed draft can need it. */
+const LLM_TIME_LIMIT_SECONDS = 900;
+/** Output cap per model request, as on macOS (llmMaxOutputTokens). The largest legitimate output is the
+ * single-request audit: one JSON item of about 25 tokens per unit for up to 400 units, so about 10,000 tokens.
+ * A long notule draft is several thousand. Reasoning models count their thinking against it, hence 3x headroom. */
+export const MAX_OUTPUT_TOKENS = 32_768;
+export const TIME_LIMIT_MESSAGE = "Tijdslimiet bereikt: de AI-provider gaf niet op tijd een volledig antwoord. Probeer het opnieuw of kies een sneller model.";
+export const TRUNCATED_MESSAGE = "Het antwoord van de AI-provider is afgebroken omdat het de maximale lengte bereikte.";
+/** Prefix of the proxy_request error for a timeout (http.rs). */
+const PROXY_TIMEOUT = "Tijdslimiet bereikt";
+
+/** Every model request goes through here: one total time limit, and a timeout named as such. */
+async function modelRequest(request: { url: string; headers: Record<string, string>; body: string }): Promise<{ status: number; body: string }> {
+  try {
+    return await invoke("proxy_request", { request: { ...request, method: "POST", timeout_seconds: LLM_TIME_LIMIT_SECONDS } });
+  } catch (error) {
+    throw String(error).startsWith(PROXY_TIMEOUT) ? new Error(TIME_LIMIT_MESSAGE) : error;
+  }
+}
+
 // These constraints must survive both chunk summaries and the final profile.
 const FACTUALITY_RULES = "Behoud expliciete ontkenningen, verboden, voorwaarden en vervallen afspraken bij het bijbehorende besluit of de actie, ook in een compacte notule. Behoud ook de aard en status van het besprokene: een fictief of hypothetisch voorbeeld mag geen echte afspraak worden, een voorgenomen proef geen uitgevoerd project. Noem een expliciet fictieve of hypothetische status ook expliciet in de kern van het verslag. Leid daaruit geen ongenoemde uitvoeringsstatus af: zeg alleen dat iets al wel of nog niet is uitgevoerd als de bron dat expliciet vermeldt. Een uitnodiging is geen aanwezigheid; vermeld expliciete afwezigheid. Een open vraag is geen besluit: presenteer onbesliste onderwerpen niet als opdracht of afgesproken vervolg. Voeg geen vervolgafspraken toe die niet zijn genoemd. Een toestemmingsvoorwaarde is geen opdracht of toezegging om die toestemming te geven; maak daar geen actie van. Controleer vóór het antwoorden alle besluiten en acties tegen de transcriptie op deze beperkingen en herstel weglatingen.";
 
@@ -116,17 +136,19 @@ async function generateWithOpenAICompatible(
   const base = baseUrl.trim().replace(/\/+$/, "").replace(/\/v1$/, "");
   let response: { status: number; body: string };
   try {
-    response = await invoke("proxy_request", {
-      request: { url: `${base}/v1/chat/completions`, method: "POST", headers, timeout_seconds: 300,
-        body: JSON.stringify({ model, messages: [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }], stream: false }) },
-    });
-  } catch {
+    response = await modelRequest({ url: `${base}/v1/chat/completions`, headers,
+      body: JSON.stringify({ model, messages: [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }], stream: false, max_tokens: MAX_OUTPUT_TOKENS }) });
+  } catch (error) {
+    if (error instanceof Error && error.message === TIME_LIMIT_MESSAGE) throw error;
     throw new Error(`Kan de notule-generator niet bereiken op ${baseUrl} (model "${model}"). Draait Ollama/LM Studio en klopt de URL in Instellingen?`);
   }
   if (cloud && response.status === 401) throw new Error("Ollama Cloud API-sleutel geweigerd.");
   if (cloud && response.status === 429) throw new Error("Ollama Cloud API-limiet bereikt. Probeer later opnieuw.");
   if (response.status >= 400) throw new Error(`${cloud ? "Ollama Cloud" : `Notule-generator op ${baseUrl}`} gaf HTTP ${response.status} voor model "${model}".`);
-  const text = JSON.parse(response.body).choices?.[0]?.message?.content;
+  const choice = JSON.parse(response.body).choices?.[0];
+  // A capped answer is incomplete; never parse it as a short one.
+  if (choice?.finish_reason === "length") throw new Error(TRUNCATED_MESSAGE);
+  const text = choice?.message?.content;
   if (typeof text !== "string" || !text.trim()) throw new Error(cloud ? "Ollama Cloud gaf een leeg antwoord." : "De notule-generator gaf een leeg concept.");
   onProgress?.(text);
   return text;
@@ -142,22 +164,22 @@ async function generateWithHostedAPI(
 ): Promise<string> {
   const openAI = provider === "openai";
   const url = openAI ? "https://api.openai.com/v1/chat/completions" : "https://api.anthropic.com/v1/messages";
+  // api.openai.com rejects `max_tokens` for newer models.
   const body = openAI
-    ? { model, messages: [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }] }
+    ? { model, messages: [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }], max_completion_tokens: MAX_OUTPUT_TOKENS }
     : { model, max_tokens: 16000, system: systemPrompt, messages: [{ role: "user", content: userPrompt }] };
-  const response = await invoke<{ status: number; body: string }>("proxy_request", {
-    request: {
-      url, method: "POST", timeout_seconds: 300,
-      headers: openAI
-        ? { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` }
-        : { "Content-Type": "application/json", "anthropic-version": "2023-06-01", "x-api-key": apiKey },
-      body: JSON.stringify(body),
-    },
+  const response = await modelRequest({
+    url,
+    headers: openAI
+      ? { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` }
+      : { "Content-Type": "application/json", "anthropic-version": "2023-06-01", "x-api-key": apiKey },
+    body: JSON.stringify(body),
   });
   if (response.status === 401) throw new Error(`${openAI ? "OpenAI" : "Anthropic"} API-sleutel geweigerd.`);
   if (response.status === 429) throw new Error(`${openAI ? "OpenAI" : "Anthropic"} API-limiet bereikt. Probeer later opnieuw.`);
   if (response.status >= 400) throw new Error(`${openAI ? "OpenAI" : "Anthropic"} gaf HTTP ${response.status}.`);
   const result = JSON.parse(response.body);
+  if (openAI ? result.choices?.[0]?.finish_reason === "length" : result.stop_reason === "max_tokens") throw new Error(TRUNCATED_MESSAGE);
   const text = openAI ? result.choices?.[0]?.message?.content : result.content?.filter((part: { type: string }) => part.type === "text").map((part: { text: string }) => part.text).join("");
   if (typeof text !== "string" || !text.trim()) throw new Error("De aanbieder gaf een leeg antwoord.");
   onProgress?.(text);

@@ -10,6 +10,8 @@ enum LLMError: LocalizedError {
     case serverError(Int)
     case generationFailed(String)
     case emptyResponse
+    case timedOut
+    case truncated
 
     var errorDescription: String? {
         switch self {
@@ -24,8 +26,35 @@ enum LLMError: LocalizedError {
             return "Generatie mislukt: \(message)"
         case .emptyResponse:
             return "De AI-provider gaf een leeg antwoord."
+        case .timedOut:
+            return "Tijdslimiet bereikt: de AI-provider gaf niet op tijd een volledig antwoord. Probeer het opnieuw of kies een sneller model."
+        case .truncated:
+            return "Het antwoord van de AI-provider is afgebroken omdat het de maximale lengte bereikte."
         }
     }
+}
+
+// MARK: - Request limits
+
+/// Output cap per model request. The largest legitimate output is the single-request audit: one JSON item
+/// of about 25 tokens per unit for up to 400 units, so about 10,000 tokens. A long notule draft is several
+/// thousand. Reasoning models count their thinking against the same cap, hence 3x headroom.
+let llmMaxOutputTokens = 32_768
+
+/// Total time per model request, on top of the per-request idle timeout. SSE keep-alive lines reset the idle
+/// timer, so without this a stalled stream never ends. 15 minutes covers a cold-loading local model plus a
+/// long draft.
+let llmRequestTimeLimit: TimeInterval = 900
+
+let llmSession: URLSession = {
+    let configuration = URLSessionConfiguration.default
+    configuration.timeoutIntervalForResource = llmRequestTimeLimit
+    return URLSession(configuration: configuration)
+}()
+
+/// URLSession reports the idle and the total time limit as `.timedOut`; name the cause instead.
+func mappingTimeout<T>(_ body: () async throws -> T) async throws -> T {
+    do { return try await body() } catch let error as URLError where error.code == .timedOut { throw LLMError.timedOut }
 }
 
 // MARK: - LLMService Protocol
@@ -260,6 +289,7 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
 
     /// Test seam: replaces the network call behind `complete(system:user:)`.
     var completionOverride: (@Sendable (String, String) async throws -> String)?
+    private let session: URLSession
 
     /// Hosted (HTTPS) providers have a large context window; without the explicit limit the
     /// 8_000 local-model default would apply to any host other than ollama.com.
@@ -267,9 +297,10 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
         OpenAICompatibleLLMService(baseURL: config.baseURL, model: config.model, apiKey: apiKey, maxChunkCharacters: 64_000)
     }
 
-    init(baseURL: String, model: String, apiKey: String? = nil, maxChunkCharacters: Int? = nil) {
+    init(baseURL: String, model: String, apiKey: String? = nil, maxChunkCharacters: Int? = nil, session: URLSession = llmSession) {
         self.baseURL = baseURL
         self.model = model
+        self.session = session
         // Ollama Cloud models have at least 128K context; leave ample room for the profile and output.
         let ollamaCloud = URL(string: baseURL)?.scheme == "https"
             && URL(string: baseURL)?.host?.lowercased() == "ollama.com"
@@ -417,11 +448,13 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
             constraints: constraints
         )
 
-        return try await streamChatCompletion(
-            systemPrompt: systemPrompt,
-            userMessage: userContent,
-            onProgress: onProgress
-        )
+        return try await mappingTimeout {
+            try await streamChatCompletion(
+                systemPrompt: systemPrompt,
+                userMessage: userContent,
+                onProgress: onProgress
+            )
+        }
     }
 
     // MARK: - Chunked Summarization
@@ -437,7 +470,7 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
 
     func complete(system: String, user: String) async throws -> String {
         if let completionOverride { return try await completionOverride(system, user) }
-        return try await streamChatCompletion(systemPrompt: system, userMessage: user, onProgress: { _ in })
+        return try await mappingTimeout { try await streamChatCompletion(systemPrompt: system, userMessage: user, onProgress: { _ in }) }
     }
 
     private func splitIntoChunks(_ text: String, maxChars: Int) -> [String] {
@@ -477,9 +510,12 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
             throw LLMError.generationFailed("Ongeldige server URL: \(baseURL)")
         }
 
+        // api.openai.com rejects `max_tokens` for newer models; local servers only know `max_tokens`.
+        let capKey = URL(string: baseURL)?.host?.lowercased() == "api.openai.com" ? "max_completion_tokens" : "max_tokens"
         let requestBody: [String: Any] = [
             "model": model,
             "stream": true,
+            capKey: llmMaxOutputTokens,
             "messages": [
                 ["role": "system", "content": systemPrompt],
                 ["role": "user", "content": userMessage]
@@ -498,10 +534,10 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
         applyAuth(to: &request)
         // Idle timer (resets on every received byte). Generous on purpose: a
         // local model that cold-loads can take minutes before the first token,
-        // and a premature timeout kills the whole notule generation.
+        // and a premature timeout kills the whole notule generation. `llmSession` bounds the total.
         request.timeoutInterval = 300
 
-        let (asyncBytes, response) = try await URLSession.shared.bytes(for: request)
+        let (asyncBytes, response) = try await session.bytes(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw LLMError.generationFailed("Ongeldig serverantwoord.")
@@ -524,8 +560,11 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
             guard let jsonData = data.data(using: .utf8),
                   let json = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any],
                   let choices = json["choices"] as? [[String: Any]],
-                  let first = choices.first,
-                  let delta = first["delta"] as? [String: Any],
+                  let first = choices.first
+            else { continue }
+            // A capped answer is incomplete; never parse it as a short one.
+            if first["finish_reason"] as? String == "length" { throw LLMError.truncated }
+            guard let delta = first["delta"] as? [String: Any],
                   let content = delta["content"] as? String
             else { continue }
 

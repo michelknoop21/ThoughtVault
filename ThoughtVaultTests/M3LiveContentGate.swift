@@ -53,8 +53,16 @@ struct M3CaseResult: Encodable, Sendable {
 }
 
 /// Runs the six audit cases and three meetings through the production macOS code.
-/// Requests go through URLSession.shared, so `M3GateRecorder` must be started first.
+/// Requests go through `recordedSession`, so `M3GateRecorder` must be started first.
 struct M3Gate {
+    /// The production session (`llmSession`, with its total time limit) plus `M3GateRecorder`. A custom session
+    /// does not see a globally registered URLProtocol, so the recorder is listed here explicitly.
+    static let recordedSession: URLSession = {
+        let configuration = llmSession.configuration
+        configuration.protocolClasses = [M3GateRecorder.self] + (configuration.protocolClasses ?? [])
+        return URLSession(configuration: configuration)
+    }()
+
     let fixture: M3Fixture
     let apiKey: String
     let evidence: URL
@@ -78,7 +86,7 @@ struct M3Gate {
     }
 
     private var service: OpenAICompatibleLLMService {
-        OpenAICompatibleLLMService(baseURL: fixture.baseURL, model: fixture.model, apiKey: apiKey)
+        OpenAICompatibleLLMService(baseURL: fixture.baseURL, model: fixture.model, apiKey: apiKey, session: Self.recordedSession)
     }
 
     /// Fixed source and notule through `auditSource` then `auditNotule`, one attempt each.

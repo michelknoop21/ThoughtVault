@@ -1,9 +1,8 @@
 import Foundation
 import AuthenticationServices
-import OSLog
 import CommonCrypto
 
-private let logger = Logger(subsystem: "com.buildmind.ThoughtVault", category: "GoogleAuth")
+private let logger = AppLog(category: "GoogleAuth")
 
 // MARK: - GoogleAuthService
 
@@ -65,7 +64,7 @@ actor GoogleAuthService {
                 self.clientId = clientId
             }
         } catch {
-            logger.error("Failed to fetch Google OAuth config: \(error.localizedDescription)")
+            logger.error("Failed to fetch Google OAuth config: \(LogRedact.mask(error.localizedDescription))")
         }
     }
 
@@ -205,7 +204,7 @@ actor GoogleAuthService {
             try KeychainService.shared.save(refresh, for: "googleRefreshToken")
         }
 
-        logger.info("Google connected for \(email)")
+        logger.info("Google connected for \(LogRedact.mask(email))")
     }
 
     // MARK: - User Profile
@@ -238,7 +237,7 @@ actor GoogleAuthService {
                 try await refreshAccessToken()
                 return accessToken
             } catch {
-                logger.error("Token refresh failed: \(error.localizedDescription)")
+                logger.error("Token refresh failed: \(LogRedact.mask(error.localizedDescription))")
             }
         }
 

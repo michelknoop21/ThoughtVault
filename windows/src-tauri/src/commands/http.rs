@@ -213,12 +213,13 @@ pub async fn do_proxy_upload(
         "stream".to_string()
     };
 
-    eprintln!(
+    // Filenames can identify meetings; upload URLs can carry credentials.
+    elog!(
         "[Upload] {} ({} bytes, sha256={}) → {}  copy_took={:?}  mode={}",
-        original_filename,
+        crate::applog::mask_token(&original_filename),
         copy_size,
         sha_prefix,
-        upload_url,
+        crate::applog::mask_token(&upload_url),
         copy_elapsed,
         if in_memory.is_some() { "memory" } else { "stream" }
     );
@@ -295,7 +296,7 @@ pub async fn do_proxy_upload(
     }
     let body = response.text().await.map_err(|e| e.to_string())?;
 
-    eprintln!(
+    elog!(
         "[Upload] Response: {} ({} bytes)  send_took={:?}  total={:?}",
         status,
         body.len(),

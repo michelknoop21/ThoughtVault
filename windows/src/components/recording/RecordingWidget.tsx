@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { emit, listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { stopRecording, pauseRecording, resumeRecording } from "../../services/tauriCommands";
+import { shouldReportRecordingFailure, stopRecording, pauseRecording, resumeRecording } from "../../services/tauriCommands";
 import { WaveformVisualizer } from "./WaveformVisualizer";
+import { handoffWidgetFailure } from "../../services/widgetSupport";
 import { useAudioLevelsRef, useAudioBandsRef } from "../../hooks/useAudioLevel";
 import {
   Stop24Regular,
@@ -74,6 +75,10 @@ export function RecordingWidget() {
     } catch (e) {
       console.error("[Widget] Stop failed:", e);
       setState("recording");
+      if (shouldReportRecordingFailure(e)) {
+        const delivered = await handoffWidgetFailure("stop_failed");
+        if (!delivered) console.warn("[Widget] Support delivery not confirmed");
+      }
     }
   }
 
@@ -86,6 +91,9 @@ export function RecordingWidget() {
       }
     } catch (e) {
       console.error("[Widget] Pause/resume failed:", e);
+      if (!shouldReportRecordingFailure(e)) return;
+      const delivered = await handoffWidgetFailure(state === "paused" ? "resume_failed" : "pause_failed");
+      if (!delivered) console.warn("[Widget] Support delivery not confirmed");
     }
   }
 

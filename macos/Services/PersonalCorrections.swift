@@ -1,7 +1,6 @@
 import Foundation
-import OSLog
 
-private let logger = Logger(subsystem: "com.buildmind.ThoughtVault", category: "PersonalCorrections")
+private let logger = AppLog(category: "PersonalCorrections")
 
 struct PersonalCorrection: Codable, Identifiable, Equatable, Sendable {
     var id: String = UUID().uuidString
@@ -48,7 +47,7 @@ enum PersonalCorrections {
     /// block the minutes, so it is logged and treated as empty.
     static func loadOrEmpty(at path: URL = url) -> [PersonalCorrection] {
         do { return try load(from: path) } catch {
-            logger.error("Glossary unreadable, minutes continue without it: \(error.localizedDescription, privacy: .public)")
+            logger.error("Glossary unreadable, minutes continue without it: \(LogRedact.mask(error.localizedDescription))")
             return []
         }
     }

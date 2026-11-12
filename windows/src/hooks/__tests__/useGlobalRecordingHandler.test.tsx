@@ -1,8 +1,12 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { act } from "react";
+import { StrictMode, act } from "react";
 import { createRoot } from "react-dom/client";
+import { requireMainRecordingHandler } from "../../services/mainRecordingLifetime";
+import { listen } from "@tauri-apps/api/event";
 import { useGlobalRecordingHandler } from "../useGlobalRecordingHandler";
 import { useRecordingStore } from "../../stores/recordingStore";
+import { reportFailure } from "../../services/crashReporter";
+import { useToast } from "../../components/ui/InfoBar";
 import { useSettingsStore } from "../../stores/settingsStore";
 
 const mocks = vi.hoisted(() => ({
@@ -11,12 +15,15 @@ const mocks = vi.hoisted(() => ({
   process: vi.fn(() => new Promise<void>(() => {})),
 }));
 vi.mock("@tauri-apps/api/event", () => ({ emit: mocks.emit, listen: vi.fn(async (name, callback) => {
-  mocks.events.set(name, callback); return () => mocks.events.delete(name);
+  mocks.events.set(name, callback); return () => { if (mocks.events.get(name) === callback) mocks.events.delete(name); };
 }) }));
 vi.mock("../../services/localPipeline", () => ({ processLocally: mocks.process }));
 vi.mock("../../services/uploadAndTrack", () => ({ uploadAndTrack: vi.fn() }));
 vi.mock("../../services/participants", () => ({ resolveParticipants: () => [] }));
 vi.mock("../useWidgetWindow", () => ({ closeWidgetWindow: vi.fn(async () => {}) }));
+vi.mock("../../services/crashReporter", async original => ({
+  ...(await original<object>()), reportFailure: vi.fn(async () => {}), markStage: vi.fn(),
+}));
 function Handler() { useGlobalRecordingHandler(); return null; }
 afterEach(() => { useRecordingStore.getState().reset(); mocks.process.mockClear(); });
 it("processes a second recording while the first job is pending and ignores stale stop events", async () => {
@@ -60,4 +67,84 @@ it("keeps an unprocessed recording busy without sending it to a provider", async
   expect(mocks.process).not.toHaveBeenCalled();
   expect(useRecordingStore.getState().phase).toBe("stopping");
   await act(async () => root.unmount());
+});
+
+it("keeps raw native error UI without uploading its private content", async () => {
+  vi.mocked(reportFailure).mockClear();
+  const host = document.createElement("div");
+  const root = createRoot(host);
+  await act(async () => root.render(<Handler />));
+  await act(async () => mocks.events.get("recording-error")!({ payload: "PRIVATE_NATIVE_BODY" }));
+  expect(reportFailure).not.toHaveBeenCalled();
+  expect(useToast.getState().toasts.at(-1)?.message).toBe("PRIVATE_NATIVE_BODY");
+  await act(async () => root.unmount());
+});
+
+it("accepts only five static native codes, each with fixed metadata", async () => {
+  vi.mocked(reportFailure).mockClear();
+  const root = createRoot(document.createElement("div"));
+  await act(async () => root.render(<Handler />));
+  await requireMainRecordingHandler();
+  const receive = mocks.events.get("recording-diagnostic")!;
+  for (const payload of [null, {}, { code: "start_failed", message: "PRIVATE" }, "PRIVATE", "toString", "__proto__", 1]) receive({ payload });
+  expect(reportFailure).not.toHaveBeenCalled();
+  const cases = [
+    ["start_failed", "Opname starten mislukt", "recording_start_failed"],
+    ["capture_failed", "Opnemen mislukt", "native_recording_failed"],
+    ["stop_failed", "Opname stoppen mislukt", "recording_stop_failed"],
+    ["pause_failed", "Pauzeren mislukt", "pause_failed"],
+    ["resume_failed", "Hervatten mislukt", "resume_failed"],
+  ];
+  for (const [payload, shown, code] of cases) {
+    receive({ payload }); expect(reportFailure).toHaveBeenLastCalledWith("opnemen", shown, code);
+  }
+  receive({ payload: "pause_failed" }); // independent native queue errors remain independent
+  expect(reportFailure).toHaveBeenCalledTimes(6);
+  await act(async () => root.unmount());
+});
+it("blocks recording readiness until delayed listen resolves and unlistens after late cleanup", async () => {
+  const original = vi.mocked(listen).getMockImplementation()!;
+  let finish!: (stop: () => void) => void;
+  const stop = vi.fn();
+  vi.mocked(listen).mockImplementation((name, callback) => name === "recording-diagnostic"
+    ? new Promise(resolve => { finish = resolve; }) : original(name, callback));
+  const root = createRoot(document.createElement("div"));
+  await act(async () => root.render(<Handler />));
+  let ready = false;
+  const pending = requireMainRecordingHandler().then(() => { ready = true; });
+  const rejection = expect(pending).rejects.toThrow();
+  await Promise.resolve(); expect(ready).toBe(false);
+  await act(async () => root.unmount());
+  finish(stop); await rejection;
+  for (let n = 0; n < 10; n++) await Promise.resolve();
+  expect(stop).toHaveBeenCalledOnce();
+  vi.mocked(listen).mockImplementation(original);
+});
+it("a rejected listener blocks readiness and cleans every successful registration", async () => {
+  const original = vi.mocked(listen).getMockImplementation()!;
+  vi.mocked(listen).mockImplementation((name, callback) => name === "recording-diagnostic"
+    ? Promise.reject(new Error("listen failed")) : original(name, callback));
+  const root = createRoot(document.createElement("div"));
+  await act(async () => root.render(<Handler />));
+  await expect(requireMainRecordingHandler()).rejects.toThrow();
+  expect(mocks.events.size).toBe(0);
+  await act(async () => root.unmount());
+  vi.mocked(listen).mockImplementation(original);
+});
+it("StrictMode late old listener cannot activate the replacement generation", async () => {
+  const original = vi.mocked(listen).getMockImplementation()!;
+  let finishOld!: (stop: () => void) => void, finishNew!: (stop: () => void) => void;
+  const oldStop = vi.fn(), newStop = vi.fn();
+  let diagnostics = 0;
+  vi.mocked(listen).mockImplementation((name, callback) => name === "recording-diagnostic"
+    ? new Promise(resolve => { if (++diagnostics === 1) finishOld = resolve; else finishNew = resolve; })
+    : original(name, callback));
+  const root = createRoot(document.createElement("div"));
+  await act(async () => root.render(<StrictMode><Handler /></StrictMode>));
+  let ready = false; const pending = requireMainRecordingHandler().then(() => { ready = true; });
+  finishOld(oldStop); for (let n = 0; n < 10; n++) await Promise.resolve();
+  expect(oldStop).toHaveBeenCalledOnce(); expect(ready).toBe(false);
+  finishNew(newStop); await pending; expect(ready).toBe(true);
+  await act(async () => root.unmount()); expect(newStop).toHaveBeenCalledOnce();
+  vi.mocked(listen).mockImplementation(original);
 });

@@ -1,11 +1,10 @@
 import Foundation
 import AuthenticationServices
-import OSLog
 #if os(iOS)
 import UIKit
 #endif
 
-private let logger = Logger(subsystem: "com.buildmind.ThoughtVault", category: "MicrosoftGraph")
+private let logger = AppLog(category: "MicrosoftGraph")
 
 // MARK: - CalendarProvider
 
@@ -69,7 +68,7 @@ actor MicrosoftGraphService {
             self.tenantId = settings.ms365_tenant_id
             logger.info("OAuth config loaded: configured=\(self.isConfigured)")
         } catch {
-            logger.error("Failed to fetch OAuth config: \(error.localizedDescription)")
+            logger.error("Failed to fetch OAuth config: \(LogRedact.mask(error.localizedDescription))")
         }
     }
 
@@ -85,10 +84,10 @@ actor MicrosoftGraphService {
                 if let expiry = tokens.token_expiry {
                     self.tokenExpiry = Date(timeIntervalSince1970: expiry)
                 }
-                logger.info("Calendar tokens loaded from backend for \(self.accountEmail ?? "unknown")")
+                logger.info("Calendar tokens loaded from backend for \(LogRedact.mask(self.accountEmail ?? "unknown"))")
             }
         } catch {
-            logger.debug("No calendar tokens on backend: \(error.localizedDescription)")
+            logger.debug("No calendar tokens on backend: \(LogRedact.mask(error.localizedDescription))")
         }
     }
 
@@ -233,11 +232,11 @@ actor MicrosoftGraphService {
                 email: email
             )
         } catch {
-            logger.error("Failed to sync calendar tokens to backend: \(error.localizedDescription)")
+            logger.error("Failed to sync calendar tokens to backend: \(LogRedact.mask(error.localizedDescription))")
             CrashReporter.shared.recordError(error, context: "MicrosoftGraphService.saveCalendarTokens")
         }
 
-        logger.info("Microsoft 365 connected for \(email)")
+        logger.info("Microsoft 365 connected for \(LogRedact.mask(email))")
     }
 
     // MARK: - User Profile
@@ -324,7 +323,7 @@ actor MicrosoftGraphService {
                 )
             }
         } catch {
-            logger.error("Failed to fetch Graph calendar events: \(error.localizedDescription)")
+            logger.error("Failed to fetch Graph calendar events: \(LogRedact.mask(error.localizedDescription))")
             return []
         }
     }
@@ -340,7 +339,7 @@ actor MicrosoftGraphService {
         do {
             try await APIService.shared.deleteCalendarTokens()
         } catch {
-            logger.error("Failed to delete calendar tokens from backend: \(error.localizedDescription)")
+            logger.error("Failed to delete calendar tokens from backend: \(LogRedact.mask(error.localizedDescription))")
             CrashReporter.shared.recordError(error, context: "MicrosoftGraphService.deleteCalendarTokens")
         }
         logger.info("Microsoft 365 disconnected")

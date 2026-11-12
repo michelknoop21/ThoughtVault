@@ -4,9 +4,8 @@
 // Notule generation with Apple's on-device Foundation Models (macOS/iOS 26+).
 
 import Foundation
-import OSLog
 
-private let logger = Logger(subsystem: "com.buildmind.ThoughtVault", category: "LLMService")
+private let logger = AppLog(category: "LLMService")
 
 // MARK: - AppleFoundationModelService
 

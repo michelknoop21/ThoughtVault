@@ -18,6 +18,10 @@ struct SettingsView: View {
 
     @Environment(AuthViewModel.self) var authVM
     @Environment(CalendarService.self) var calendarService
+    @Environment(SupportViewModel.self) var supportVM
+    #if os(macOS)
+    @Environment(\.openWindow) var openSupportWindow
+    #endif
 
     // MARK: - AppStorage
 
@@ -33,15 +37,19 @@ struct SettingsView: View {
     @AppStorage(ObsidianService.vaultPathKey) private var obsidianVaultPath: String = "Notulen"
     @AppStorage(VaultFolderStore.contextNoteKey) private var obsidianContextNote: String = VaultFolderStore.defaultContextNote
 
+    @AppStorage("checkForUpdates") var checkForUpdates = true
+    @AppStorage(SupportIdentity.autoReportKey) var supportAutoReport = true
+    @AppStorage(SupportIdentity.nameKey) var supportName = ""
+    @AppStorage(SupportIdentity.emailKey) var supportEmail = ""
+    @State var supportNameDraft = ""
+    @State var supportEmailDraft = ""
+
     // MARK: - Local State
 
     @State var profiles: [Profile] = []
     @State private var isLoadingProfiles: Bool = false
     @State private var showLogoutConfirm: Bool = false
     @State var modelToRemove: String?
-    @State private var showBugReportSheet: Bool = false
-    @State private var feedbackTitle = ""
-    @State private var feedbackDescription = ""
     @State private var biometricError: String? = nil
     @State private var micPermissionGranted: Bool? = nil
     @State private var speechPermissionGranted: Bool? = nil
@@ -92,34 +100,8 @@ struct SettingsView: View {
             }
         }
         .navigationTitle("Instellingen")
-        #if os(macOS)
-        .sheet(isPresented: $showBugReportSheet) {
-            VStack(alignment: .leading, spacing: 16) {
-                Text("Feedback").font(TS.Font.title3Semibold)
-                Text("Kopieer je melding om deze met Yinga te delen.")
-                    .font(TS.Font.body).foregroundStyle(Color.labelSecondary)
-                TextField("Titel", text: $feedbackTitle).textFieldStyle(.roundedBorder)
-                Text("Beschrijving").font(TS.Font.bodyMedium)
-                TextEditor(text: $feedbackDescription)
-                    .font(TS.Font.body).frame(height: 140)
-                    .scrollIndicators(.never)
-                    .accessibilityLabel("Beschrijving")
-                HStack {
-                    Button("Annuleer") { showBugReportSheet = false }
-                        .buttonStyle(SecondaryButtonStyle()).keyboardShortcut(.cancelAction)
-                    Spacer()
-                    Button("Kopieer feedback") {
-                        NSPasteboard.general.clearContents()
-                        NSPasteboard.general.setString("ThoughtVault feedback\n\(feedbackTitle.trimmingCharacters(in: .whitespacesAndNewlines))\n\n\(feedbackDescription.trimmingCharacters(in: .whitespacesAndNewlines))", forType: .string)
-                        showBugReportSheet = false
-                    }
-                    .buttonStyle(PrimaryButtonStyle())
-                    .disabled(feedbackTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || feedbackDescription.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                }
-            }.padding(24).frame(width: 440)
-        }
-        #endif
         .onAppear {
+            guard !IOSDebug.supportSettingsSnapshot else { return }
             loadApiKey()
             #if os(macOS)
             let ollamaEndpoint = URL(string: ollamaURL.trimmingCharacters(in: .whitespacesAndNewlines))
@@ -1486,29 +1468,6 @@ struct SettingsView: View {
         }
     }
 
-    // MARK: - Feedback
-
-    var feedbackSection: some View {
-        Section {
-            Button {
-                showBugReportSheet = true
-            } label: {
-                HStack {
-                    Label("Probleem melden of suggestie", systemImage: "ladybug.fill")
-                        .font(TS.Font.body)
-                        .foregroundStyle(Color.labelPrimary)
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(TS.Font.caption)
-                        .foregroundStyle(Color.labelTertiary)
-                }
-            }
-            .buttonStyle(.plain)
-        } header: {
-            Text("Feedback")
-        }
-    }
-
     // MARK: - Over (About)
 
     var overSection: some View {
@@ -1540,27 +1499,6 @@ struct SettingsView: View {
             }
         } header: {
             Text("Over")
-        }
-    }
-
-    // MARK: - Updates
-
-    @AppStorage("checkForUpdates") private var checkForUpdates = true
-
-    var updatesSection: some View {
-        Section {
-            Toggle(isOn: $checkForUpdates) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Controleer op updates")
-                        .font(TS.Font.body)
-                    Text("Toon een melding op de homepage als er een nieuwe versie beschikbaar is")
-                        .font(TS.Font.caption)
-                        .foregroundStyle(Color.labelSecondary)
-                }
-            }
-            .tint(Color.brandPrimary)
-        } header: {
-            Text("Updates")
         }
     }
 
@@ -1680,6 +1618,7 @@ struct SettingFieldRow<Content: View>: View {
     NavigationStack {
         SettingsView()
             .environment(AuthViewModel())
+            .environment(SupportViewModel())
             .environment(CalendarService.shared)
     }
     .frame(width: 560, height: 700)

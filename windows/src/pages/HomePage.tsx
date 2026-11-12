@@ -307,7 +307,7 @@ function SessionCard({
         <ChevronRight24Regular className="thoughtvault-note-chevron" />
       </button>
       <div className="thoughtvault-note-menu">
-        <button onClick={() => setMenuOpen(!menuOpen)} className="icon-btn icon-btn-sm" aria-label={`Acties voor ${transcript.title || "Naamloze opname"}`} aria-expanded={menuOpen}><MoreHorizontal24Regular /></button>
+        <button onClick={() => setMenuOpen(!menuOpen)} className="icon-btn icon-btn-sm" aria-label={`Acties voor ${transcript.title || "Naamloze opname"}`} data-log-label="Opnameacties" aria-expanded={menuOpen}><MoreHorizontal24Regular /></button>
         {menuOpen && <div className="context-menu" style={{ position: "absolute", right: 0, top: "100%" }}><button onClick={() => { setMenuOpen(false); onDelete(transcript); }} className="context-menu-item context-menu-item-danger"><Delete24Regular />Verwijderen</button></div>}
       </div>
     </div>

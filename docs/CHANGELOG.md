@@ -16,6 +16,20 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2026-11-10]: Appsupport, veilig Windows-bijwerken en privacy (lokale kandidaat)
+
+### Added
+- macOS/iOS en Windows: handmatige meldingen, toegelichte, standaard ingeschakelde automatische foutrapporten (uit te zetten via Instellingen), supportgesprekken, ongelezen meldingen en een offline wachtrij. Technische logs en foutcontext worden gemaskeerd; automatische rapporten voegen geen transcripties, notules, audio of screenshots toe.
+- Links naar de goedgekeurde privacyverklaring vanuit de supportschermen en website.
+
+### Changed
+- Windows stelt bijwerken uit tijdens opname of verwerking en sluit de widget gecontroleerd; Dev en het bestaande MSI-upgradepad blijven gescheiden.
+- De actuele notulewaarschuwingen en controle van lange meetings (DEC-062–065) blijven behouden bij de samenvoeging. Relaydocumentatie beschrijft de bewaartermijn van 365 dagen en apart hubbeheer.
+
+**Status:** lokaal geïntegreerd, niet gepubliceerd. Native Windows-installatie, iOS-runtime en vrijgave zijn hiermee niet geaccepteerd. Besluit: DEC-066; bediening: `SUPPORT-RELAY.md` en `AUTOMATISCHE-UPDATES.md`.
+
+---
+
 ## [2026-11-10]: Support-relay voor meldingen en foutrapporten
 
 ### Added

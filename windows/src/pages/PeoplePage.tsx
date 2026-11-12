@@ -222,7 +222,7 @@ export function PeoplePage() {
                     ) : (
                       <button
                         className="btn btn-ghost btn-sm person-row-delete"
-                        aria-label={`Verwijder ${person.name}`}
+                        aria-label={`Verwijder ${person.name}`} data-log-label="Persoon verwijderen"
                         title={`Verwijder ${person.name}`}
                         onClick={(e) => handleDeleteClick(e, person.id)}
                         style={{ opacity: 0, transition: "opacity 0.1s", flexShrink: 0 }}

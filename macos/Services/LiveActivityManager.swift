@@ -10,9 +10,8 @@
 import ActivityKit
 import Foundation
 import Observation
-import OSLog
 
-private let log = Logger(subsystem: "com.buildmind.ThoughtVault", category: "LiveActivity")
+private let log = AppLog(category: "LiveActivity")
 
 @available(iOS 16.2, *)
 @Observable
@@ -62,9 +61,9 @@ final class LiveActivityManager {
                 pushType: nil
             )
             currentActivity = activity
-            log.info("Started Live Activity: \(activity.id)")
+            log.info("Started Live Activity: \(LogRedact.mask(activity.id))")
         } catch {
-            log.error("Failed to start Live Activity: \(error.localizedDescription)")
+            log.error("Failed to start Live Activity: \(LogRedact.mask(error.localizedDescription))")
         }
     }
 

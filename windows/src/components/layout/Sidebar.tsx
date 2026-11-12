@@ -13,6 +13,7 @@ import {
 } from "../ui/StudioIcons";
 import { useLocalTranscriptsStore } from "../../stores/localTranscriptsStore";
 import { useTranscriptsStore } from "../../stores/transcriptsStore";
+import { useSupportStore } from "../../stores/supportStore";
 import appLogo from "../../assets/app-logo.png";
 
 export function Sidebar() {
@@ -29,6 +30,7 @@ export function Sidebar() {
   }, []);
   const location = useLocation();
   const navigate = useNavigate();
+  const unread = useSupportStore(s => s.unread_count);
   const local = useLocalTranscriptsStore(s => s.items);
   const remote = useTranscriptsStore(s => s.transcripts);
   const select = useTranscriptsStore(s => s.setSelectedId);
@@ -69,7 +71,7 @@ export function Sidebar() {
       <hr className="sidebar-divider" />
 
       {/* Bottom items */}
-      <SidebarItem to="/settings" icon={<Settings24Regular />} label="Instellingen" shortcut="Ctrl+6" />
+      <SidebarItem to="/settings" icon={<Settings24Regular />} label="Instellingen" shortcut="Ctrl+6" badge={unread} />
       {!collapsed && <BrandFooter compact />}
     </nav>
   );
@@ -80,22 +82,29 @@ function SidebarItem({
   icon,
   label,
   shortcut,
+  badge,
 }: {
   to: string;
   icon: React.ReactNode;
   label: string;
   shortcut?: string;
+  badge?: number;
 }) {
   return (
     <NavLink
       to={to}
+      aria-label={badge && badge > 0 ? `${label}, ${badge} ongelezen` : label}
       end={to === "/"}
       className={({ isActive }) =>
         `sidebar-item${isActive ? " active" : ""}`
       }
       title={shortcut ? `${label} (${shortcut})` : label}
     >
-      <span className="sidebar-item-icon">{icon}</span>
+      <span className="sidebar-item-icon" style={{ position: "relative" }}>{icon}
+        {badge !== undefined && badge > 0 && <span className="sidebar-item-badge" aria-label={`${badge} ongelezen`}
+          style={{ position: "absolute", top: -7, right: -10, minWidth: 18, height: 18, padding: "0 4px", borderRadius: 9,
+            background: "var(--status-error)", color: "white", fontSize: 11, fontWeight: 700, lineHeight: "18px", textAlign: "center" }}>{badge}</span>}
+      </span>
       <span className="sidebar-item-label">{label}</span>
       {shortcut && (
         <span className="sidebar-item-shortcut">{shortcut}</span>

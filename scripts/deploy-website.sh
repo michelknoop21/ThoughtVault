@@ -9,7 +9,7 @@ trap 'rm -rf "$SITE_STAGE"' EXIT
 mkdir -p "$SITE_STAGE/docs/design/high-end-yinga/assets" "$SITE_STAGE/deploy"
 cp -R "$ROOT_DIR/deploy/website" "$SITE_STAGE/deploy/website"
 cp "$ROOT_DIR/deploy/website/compose.yaml" "$SITE_STAGE/compose.yaml"
-for file in index.html landing.css landing.js; do
+for file in index.html privacy.html landing.css landing.js; do
     cp "$ROOT_DIR/docs/design/high-end-yinga/$file" "$SITE_STAGE/docs/design/high-end-yinga/"
 done
 for file in thoughtvault-mark.png yinga-logo.svg macos-recording.png macos-processing.png favicon.png apple-touch-icon.png; do

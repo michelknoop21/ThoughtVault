@@ -1,11 +1,10 @@
 import AVFoundation
 import Foundation
-import OSLog
 #if os(iOS)
 import UIKit
 #endif
 
-private let log = Logger(subsystem: "com.buildmind.ThoughtVault", category: "AudioRecorder")
+private let log = AppLog(category: "AudioRecorder")
 
 // MARK: - Error
 
@@ -199,7 +198,7 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
                 recorder.delegate = self
                 recorder.isMeteringEnabled = true
                 guard recorder.record() else {
-                    log.error("[AudioRecorder] AVAudioRecorder.record() returned false for \(url.lastPathComponent)")
+                    log.error("[AudioRecorder] AVAudioRecorder.record() returned false for \(LogRedact.mask(url.lastPathComponent))")
                     throw AudioRecorderError.failedToStart
                 }
                 self.audioRecorder = recorder
@@ -218,11 +217,11 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
                 self.envelope.reset()
                 self.lastMeterDate = nil
                 self.errorMessage = nil
-                log.info("[AudioRecorder] Started recording to \(url.lastPathComponent) — 16kHz mono PCM")
+                log.info("[AudioRecorder] Started recording to \(LogRedact.mask(url.lastPathComponent)) — 16kHz mono PCM")
             } catch let error as AudioRecorderError {
                 throw error
             } catch {
-                log.error("[AudioRecorder] Failed to create AVAudioRecorder: \(error.localizedDescription)")
+                log.error("[AudioRecorder] Failed to create AVAudioRecorder: \(LogRedact.mask(error.localizedDescription))")
                 throw AudioRecorderError.failedToStart
             }
         }
@@ -286,7 +285,7 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
         // Log file size for diagnostics
         if let url, let attrs = try? FileManager.default.attributesOfItem(atPath: url.path),
            let size = attrs[.size] as? Int64 {
-            log.info("[AudioRecorder] Recording stopped — file size: \(size) bytes at \(url.lastPathComponent)")
+            log.info("[AudioRecorder] Recording stopped — file size: \(size) bytes at \(LogRedact.mask(url.lastPathComponent))")
             if discardingTooSmall, size < Self.minimumValidFileSize {
                 log.warning("[AudioRecorder] File too small (\(size) bytes < \(Self.minimumValidFileSize)), discarding")
                 return nil
@@ -362,7 +361,7 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
         // Diagnostic logging every 5 seconds
         if now.timeIntervalSince(lastDiagnosticLog) >= 5.0 {
             lastDiagnosticLog = now
-            log.info("[AudioRecorder] Metering — dB=\(db, format: .fixed(precision: 1)), floor=\(self.envelope.noiseFloorDb, format: .fixed(precision: 1)), level=\(level, format: .fixed(precision: 3)), duration=\(self.duration, format: .fixed(precision: 1))s")
+            log.info(String(format: "[AudioRecorder] Metering — dB=%.1f, floor=%.1f, level=%.3f, duration=%.1fs", db, self.envelope.noiseFloorDb, level, self.duration))
         }
 
         var levels = self.audioLevels

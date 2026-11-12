@@ -1,0 +1,253 @@
+import XCTest
+#if os(macOS)
+import AppKit
+#endif
+@testable import ThoughtVault
+
+final class AppLogTests: XCTestCase {
+    private var dir: URL!
+
+    override func setUpWithError() throws {
+        dir = FileManager.default.temporaryDirectory.appending(path: "AppLogTests-\(UUID().uuidString)", directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+    }
+
+    override func tearDownWithError() throws {
+        try? FileManager.default.removeItem(at: dir)
+    }
+
+    private func size(of name: String) throws -> Int {
+        try FileManager.default.attributesOfItem(atPath: dir.appending(path: name).path)[.size] as! Int
+    }
+
+    private func writeRotated(ageDays: Double) throws {
+        let url = dir.appending(path: "thoughtvault.1.log")
+        try Data("old\n".utf8).write(to: url)
+        try FileManager.default.setAttributes(
+            [.modificationDate: Date().addingTimeInterval(-ageDays * 24 * 60 * 60)], ofItemAtPath: url.path)
+    }
+
+    func testMaskIsStableShortToken() {
+        XCTAssertEqual(LogRedact.mask("Overleg Jansen"), "k-08122f")
+        XCTAssertEqual(LogRedact.mask("Overleg Jansen"), LogRedact.mask("Overleg Jansen"))
+        XCTAssertEqual(LogRedact.mask("anna@example.com"), "k-f7d54c")
+    }
+
+    func testScrubMasksEmailPathAndMediaFilename() {
+        XCTAssertEqual(LogRedact.scrub("Mail anna@example.com, file /Users/anna/Documents/Klant.m4a"),
+                       "Mail k-f7d54c, file k-29040c")
+        XCTAssertEqual(LogRedact.scrub("Bestand niet gevonden: Klant.m4a"), "Bestand niet gevonden: k-cc794b")
+        XCTAssertEqual(LogRedact.scrub("POST https://thoughtvault.yinga.ai/support/reports 201"),
+                       "POST https://thoughtvault.yinga.ai/support/reports 201")
+    }
+
+    func testRotatesAtTwoAndAHalfMegabytes() async throws {
+        let file = LogFile(directory: dir)
+        let line = String(repeating: "x", count: 999) + "\n"
+        for _ in 0..<2_700 { await file.append(line) }
+        XCTAssertTrue(FileManager.default.fileExists(atPath: dir.appending(path: "thoughtvault.1.log").path))
+        XCTAssertLessThanOrEqual(try size(of: "thoughtvault.log"), 2_621_440)
+        XCTAssertLessThanOrEqual(try size(of: "thoughtvault.1.log"), 2_621_440)
+    }
+
+    func testRotatedFileOlderThanSevenDaysIsRemovedAtStart() throws {
+        try writeRotated(ageDays: 8)
+        _ = LogFile(directory: dir)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: dir.appending(path: "thoughtvault.1.log").path))
+        try writeRotated(ageDays: 6)
+        _ = LogFile(directory: dir)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: dir.appending(path: "thoughtvault.1.log").path))
+    }
+
+    func testTailIsCappedAtOneMegabyteAndStartsAtALine() async {
+        let file = LogFile(directory: dir)
+        for i in 0..<3_000 { await file.append(String(format: "line-%04d ", i) + String(repeating: "é", count: 495) + "\n") }
+        let tail = await file.tail(maxBytes: 1_048_576)
+        XCTAssertLessThanOrEqual(tail.utf8.count, 1_048_576)
+        XCTAssertTrue(tail.hasPrefix("line-"))
+        XCTAssertTrue(tail.hasSuffix(String(repeating: "é", count: 495) + "\n"))
+        XCTAssertTrue(tail.contains("line-2999 "))
+    }
+
+    func testSessionMarker() {
+        XCTAssertEqual(AppLog.beginSession(in: dir), .clean)
+        XCTAssertEqual(AppLog.beginSession(in: dir), .crashed(stage: nil))
+        AppLog.setSessionStage("transcriberen", in: dir)
+        XCTAssertEqual(AppLog.beginSession(in: dir), .crashed(stage: "transcriberen"))
+        AppLog.endSession(in: dir)
+        AppLog.setSessionStage("notule", in: dir)   // no marker: must not create one
+        XCTAssertEqual(AppLog.beginSession(in: dir), .clean)
+    }
+
+    #if os(macOS)
+    @MainActor func testTerminationNotificationRemovesMarkerSynchronously() {
+        let center = NotificationCenter()
+        _ = AppLog.beginSession(in: dir)
+        AppLog.endSessionOnTermination(center: center, directory: dir)
+        center.post(name: NSApplication.willTerminateNotification, object: nil)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: dir.appending(path: "session.open").path))
+    }
+
+    @MainActor func testReplacingTerminationObserverRemovesPreviousObserver() {
+        let previous = NotificationCenter()
+        let current = NotificationCenter()
+        _ = AppLog.beginSession(in: dir)
+        AppLog.endSessionOnTermination(center: previous, directory: dir)
+        AppLog.endSessionOnTermination(center: current, directory: dir)
+        previous.post(name: NSApplication.willTerminateNotification, object: nil)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: dir.appending(path: "session.open").path))
+        current.post(name: NSApplication.willTerminateNotification, object: nil)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: dir.appending(path: "session.open").path))
+    }
+    #endif
+
+    func testClickPathTakesLastThirtyMessagesCappedAtEightyChars() {
+        var log = (0..<40).map { "2026-11-10T09:00:00Z INFO [Klikpad] Tab \($0)" }
+        log.insert("2026-11-10T09:00:00Z ERROR [RecordingVM] other", at: 20)
+        log.append("2026-11-10T09:00:01Z INFO [Klikpad] " + String(repeating: "a", count: 120))
+        let path = AppLog.clickPath(in: log.joined(separator: "\n"))
+        XCTAssertEqual(path.count, 30)
+        XCTAssertEqual(path.first, "Tab 11")
+        XCTAssertEqual(path.last?.count, 80)
+    }
+
+    func testAppLogWritesScrubbedLinesAndSkipsDebug() async {
+        // AppLog.directory is AppEnvironment.supportDirectory/Logs: a per-run temp dir under XCTest.
+        let log = AppLog(category: "Test")
+        log.debug("debug-only")
+        log.error("mislukt voor anna@example.com\nregel twee")
+        await AppLog.flush()
+        let tail = await AppLog.tail()
+        XCTAssertTrue(tail.contains("ERROR [Test] mislukt voor k-f7d54c regel twee"))
+        XCTAssertFalse(tail.contains("debug-only"))
+        XCTAssertFalse(tail.contains("anna@"))
+    }
+
+    func testDebugLoggerErrorsLandOnceInLogFileWithoutPrivateBody() async {
+        let privateMessage = "synthetic transcript body and API secret B2-string"
+        let privateDescription = "synthetic notule body B2-error"
+        let privateContext = "synthetic participant B2-context"
+        let privateDomain = "synthetic private provider domain B2-domain"
+        let logger = DebugLogger.shared
+        let previousLevel = logger.minimumLevel
+        defer { logger.minimumLevel = previousLevel }
+        logger.minimumLevel = .error
+        logger.error(privateMessage, category: "B2String")
+        logger.error(NSError(domain: privateDomain, code: -1009, userInfo: [NSLocalizedDescriptionKey: privateDescription]),
+                     context: privateContext, category: "B2Error")
+        await AppLog.flush()
+        let tail = await AppLog.tail()
+        for (category, value, suffix) in [("B2String", privateMessage, ""), ("B2Error", "[\(privateContext)] \(privateDescription)", " (code: -1009)")] {
+            let lines = tail.split(separator: "\n").filter { $0.contains("ERROR [\(category)]") }
+            XCTAssertEqual(lines.count, 1)
+            XCTAssertTrue(lines.first?.hasSuffix(LogRedact.mask(value) + suffix) == true)
+        }
+        XCTAssertFalse(tail.contains(privateMessage))
+        XCTAssertFalse(tail.contains(privateDescription))
+        XCTAssertFalse(tail.contains(privateContext))
+        XCTAssertFalse(tail.contains(privateDomain))
+    }
+
+    func testCrashReporterErrorsAndMessagesMaskUnstructuredContent() async {
+        let description = "synthetic provider response B2-crash-error"
+        let message = "synthetic glossary secret B2-crash-message"
+        let context = "synthetic meeting title B2-crash-context"
+        let domain = "synthetic private provider domain B2-crash-domain"
+        CrashReporter.shared.recordError(NSError(domain: domain, code: -42, userInfo: [NSLocalizedDescriptionKey: description]),
+                                         context: context)
+        CrashReporter.shared.recordMessage(message, context: context)
+        await AppLog.flush()
+        let tail = await AppLog.tail()
+        for value in [description, message] {
+            let lines = tail.split(separator: "\n").filter { $0.contains("ERROR [CrashReporter]") && $0.contains(LogRedact.mask(value)) }
+            XCTAssertEqual(lines.count, 1)
+            if value == description { XCTAssertTrue(lines.first?.contains("(code: -42)") == true) }
+            XCTAssertFalse(tail.contains(value))
+        }
+        XCTAssertFalse(tail.contains(context))
+        XCTAssertFalse(tail.contains(domain))
+    }
+
+    #if os(macOS)
+    @MainActor
+    func testRecordingActionWritesClickPath() async {
+        let defaults = UserDefaults.standard
+        let previousArguments = defaults.volatileDomain(forName: UserDefaults.argumentDomain)
+        var localArguments = previousArguments
+        localArguments["processingMode"] = ProcessingMode.local.rawValue
+        defaults.setVolatileDomain(localArguments, forName: UserDefaults.argumentDomain)
+        var vm: RecordingViewModel? = RecordingViewModel()
+        weak var pendingVM = vm
+        XCTAssertEqual(vm?.recordingState, .idle)
+        vm?.resumeRecording()
+        await AppLog.flush()
+        let tail = await AppLog.tail()
+        XCTAssertEqual(AppLog.clickPath(in: tail).last, "Opname hervatten")
+        XCTAssertEqual(vm?.recordingState, .idle)
+        vm = nil
+        // A pending init task must never regain cloud mode, even if this test fails.
+        let clock = ContinuousClock()
+        let deadline = clock.now.advanced(by: .seconds(2))
+        while pendingVM != nil, clock.now < deadline {
+            do { try await Task.sleep(for: .milliseconds(10)) }
+            catch {
+                XCTFail("Initializer wait cancelled; retaining local mode for this test process")
+                return
+            }
+        }
+        guard pendingVM == nil else {
+            XCTFail("Initializer still pending; retaining local mode for this test process")
+            return
+        }
+        defaults.setVolatileDomain(previousArguments, forName: UserDefaults.argumentDomain)
+    }
+    #endif
+
+    private func assertToken(_ text: String, file: StaticString = #filePath, line: UInt = #line) {
+        XCTAssertNotNil(text.range(of: #"k-[0-9a-f]{6}"#, options: .regularExpression), text, file: file, line: line)
+    }
+
+    func testScrubMasksMediaNamesWithSpaces() {
+        let a = LogRedact.scrub("Fout bij Overleg Jansen 2.m4a")
+        XCTAssertFalse(a.contains("Jansen"))
+        assertToken(a)
+        let b = LogRedact.scrub("open /Users/anna/My Documents/x.m4a mislukt")
+        XCTAssertFalse(b.contains("anna"))
+        XCTAssertFalse(b.contains("Documents"))
+        assertToken(b)
+        XCTAssertEqual(LogRedact.scrub("Model laden duurde 30 s"), "Model laden duurde 30 s")
+    }
+
+    func testScrubMasksNonMediaPathsWithSpaces() {
+        for path in ["/Users/anna/My Documents/private.txt", "~/My Documents/private.txt", "file:///Users/anna/My Documents/private.txt"] {
+            let scrubbed = LogRedact.scrub("open \(path) mislukt\nVolgende regel")
+            XCTAssertFalse(scrubbed.contains("anna"))
+            XCTAssertFalse(scrubbed.contains("Documents"))
+            XCTAssertFalse(scrubbed.contains("private.txt"))
+            XCTAssertTrue(scrubbed.hasSuffix("\nVolgende regel"))
+            assertToken(scrubbed)
+        }
+    }
+
+    func testAppLogScrubsBeforeClippingSensitiveValues() async {
+        let prefix = String(repeating: "x", count: 1_987)
+        AppLog(category: "CapEmail").error(prefix + " anna@example.com")
+        AppLog(category: "CapMedia").error(prefix + ": Overleg Jansen.m4a")
+        await AppLog.flush()
+        let tail = await AppLog.tail()
+        let email = tail.split(separator: "\n").last { $0.contains("[CapEmail]") }
+        let media = tail.split(separator: "\n").last { $0.contains("[CapMedia]") }
+        XCTAssertEqual(email?.components(separatedBy: "[CapEmail] ").last, prefix + " " + LogRedact.mask("anna@example.com"))
+        XCTAssertEqual(media?.components(separatedBy: "[CapMedia] ").last, prefix + ": " + LogRedact.mask("Overleg Jansen.m4a"))
+    }
+
+    func testLongMessageIsCapped() async {
+        let log = AppLog(category: "Cap")
+        log.error(String(repeating: "b", count: 5_000))
+        await AppLog.flush()
+        let tail = await AppLog.tail()
+        let line = tail.split(separator: "\n").last { $0.contains("[Cap]") }
+        XCTAssertNotNil(line)
+        XCTAssertLessThan((line ?? "").utf8.count, 2_100)
+    }
+}

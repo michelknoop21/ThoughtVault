@@ -7,9 +7,8 @@
 
 import Foundation
 import UserNotifications
-import OSLog
 
-private let logger = Logger(subsystem: "com.buildmind.ThoughtVault", category: "MeetingNotifications")
+private let logger = AppLog(category: "MeetingNotifications")
 
 extension Notification.Name {
     static let meetingRecordRequested = Notification.Name("meetingRecordRequested")
@@ -64,7 +63,7 @@ final class MeetingNotificationService: NSObject, UNUserNotificationCenterDelega
             let granted = try await center.requestAuthorization(options: [.alert, .sound, .badge])
             logger.info("Notification permission granted: \(granted)")
         } catch {
-            logger.error("Notification permission failed: \(error.localizedDescription)")
+            logger.error("Notification permission failed: \(LogRedact.mask(error.localizedDescription))")
         }
     }
 
@@ -100,9 +99,9 @@ final class MeetingNotificationService: NSObject, UNUserNotificationCenterDelega
 
         do {
             try await center.add(request)
-            logger.info("Scheduled notification for '\(meeting.title)' at \(triggerDate)")
+            logger.info("Scheduled notification for '\(LogRedact.mask(meeting.title))' at \(triggerDate)")
         } catch {
-            logger.error("Failed to schedule notification: \(error.localizedDescription)")
+            logger.error("Failed to schedule notification: \(LogRedact.mask(error.localizedDescription))")
         }
     }
 

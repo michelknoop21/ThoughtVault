@@ -7,6 +7,7 @@ typealias AuditRequest = @Sendable (_ system: String, _ user: String) async thro
 struct NotuleReviewError: LocalizedError, Sendable {
     let reason: String
     let draftHtml: String
+    var supportReason: String? = nil
     var errorDescription: String? { reason }
 }
 
@@ -16,6 +17,7 @@ struct NotuleReviewError: LocalizedError, Sendable {
 struct NotuleAuditError: LocalizedError, Sendable {
     let message: String
     var finding: String? = nil
+    var supportMessage: String? = nil
     var errorDescription: String? { message }
 }
 
@@ -210,7 +212,8 @@ enum NotuleAudit {
         if let problem = sourceChecks.first(where: { $0.status != "covered" && $0.status != "non_factual" }) {
             let text = sourceUnits.first { same($0.id, problem.id) }!.text
             throw NotuleAuditError(message: "\(problem.status == "missing" ? "De notule mist broninformatie" : "De bron is onvoldoende duidelijk"): \(text)",
-                                   finding: "\(problem.status == "missing" ? "Dit is gezegd, maar staat misschien niet in de notule" : "Dit stuk van de opname was niet goed te volgen"): “\(text)”")
+                                   finding: "\(problem.status == "missing" ? "Dit is gezegd, maar staat misschien niet in de notule" : "Dit stuk van de opname was niet goed te volgen"): “\(text)”",
+                                   supportMessage: "Inhoudscontrole bron \(problem.id): \(problem.status)")
         }
         try rejectNoteProblem(noteChecks, noteUnits: noteUnits)
         // Only affirmative, fully indexed evidence may reach a successful result.
@@ -233,7 +236,8 @@ enum NotuleAudit {
                 : problem.status == "unsupported" ? "De notule bevat een onbevestigde bewering" : "De bewering is onvoldoende duidelijk"
             let finding = problem.status == "contradiction" ? "Dit klopt misschien niet met wat er is gezegd"
                 : problem.status == "unsupported" ? "Dit staat in de notule, maar is misschien niet zo gezegd" : "Dit is misschien niet helemaal goed samengevat"
-            throw NotuleAuditError(message: "\(reason): \(text)", finding: "\(finding): “\(text)”")
+            throw NotuleAuditError(message: "\(reason): \(text)", finding: "\(finding): “\(text)”",
+                                   supportMessage: "Inhoudscontrole notule \(problem.id): \(problem.status)")
         }
     }
 

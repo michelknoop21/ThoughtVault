@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
-import { useEffect, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
+import { startSupportOwner } from "./services/supportOwner";
 import { useUpdateCheck } from "./hooks/useUpdateCheck";
 import { UpdateBanner } from "./components/ui/UpdateBanner";
 import { TitleBar } from "./components/layout/TitleBar";
@@ -18,6 +19,9 @@ import { AdminPage } from "./pages/AdminPage";
 import { TasksPage } from "./pages/TasksPage";
 import { PeoplePage } from "./pages/PeoplePage";
 import { ProcessingBar } from "./components/ProcessingBar";
+import { OfflineQueueBanner } from "./components/OfflineQueueBanner";
+import { IdentityGate } from "./components/support/IdentityGate";
+import { isCompleteIdentity, useSupportStore } from "./stores/supportStore";
 import { OnboardingWizard } from "./components/onboarding/OnboardingWizard";
 import { useAuthStore } from "./stores/authStore";
 import { useSettingsStore } from "./stores/settingsStore";
@@ -29,185 +33,20 @@ import { MicrosoftGraphService } from "./services/microsoftGraph";
 import { api } from "./services/api";
 import { createSSEClient } from "./services/sse";
 import { initCrashReporter } from "./services/crashReporter";
+import { installClickPath, installConsoleForwarding, logRoute } from "./services/appLog";
 import { initMeetingNotifications } from "./services/meetingNotifications";
-import { useUploadQueueStore } from "./stores/uploadQueueStore";
 import { useGlobalRecordingHandler } from "./hooks/useGlobalRecordingHandler";
+import { useSupportLifecycle } from "./hooks/useSupportLifecycle";
 import { useToast } from "./components/ui/InfoBar";
 import type { Profile } from "./types";
 import { canOpenRoute, shouldBlockForLocalNotes } from "./services/routeAccess";
 
-initCrashReporter();
+initCrashReporter(); installConsoleForwarding(); installClickPath();
 
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
-}
-
-function OfflineQueueBanner() {
-  const [count, setCount] = useState(0);
-  const [processing, setProcessing] = useState(false);
-  const isProcessingRef = useRef(false);
-
-  // Upload queue progress state
-  const currentItem = useUploadQueueStore((s) => s.currentItem);
-  const progress = useUploadQueueStore((s) => s.progress);
-  const uploadSpeed = useUploadQueueStore((s) => s.uploadSpeed);
-  const queueItems = useUploadQueueStore((s) => s.items);
-  const permanentlyFailed = useUploadQueueStore((s) => s.permanentlyFailed);
-  const clearPermanentlyFailed = useUploadQueueStore((s) => s.clearPermanentlyFailed);
-  const resetQueueStore = useUploadQueueStore((s) => s.reset);
-  const processingMode = useSettingsStore((s) => s.processing_mode);
-
-  async function handleClearQueue() {
-    try {
-      const { clearQueue } = await import("./services/offlineQueue");
-      await clearQueue();
-    } catch { /* best-effort */ }
-    resetQueueStore();
-    setCount(0);
-  }
-
-  useEffect(() => {
-    // The server upload queue only exists in cloud mode.
-    if (processingMode === "local") return;
-    let cancelled = false;
-
-    async function checkAndProcess() {
-      try {
-        const { getQueue, processQueue } = await import("./services/offlineQueue");
-        const queue = await getQueue();
-        if (cancelled) return;
-        setCount(queue.length);
-
-        // Try to process queued uploads if there are any and we're not already processing
-        if (queue.length > 0 && !isProcessingRef.current) {
-          isProcessingRef.current = true;
-          setProcessing(true);
-          try {
-            await processQueue();
-            // Re-check queue after processing
-            const remaining = await getQueue();
-            if (!cancelled) setCount(remaining.length);
-          } catch {
-            // Processing failed — will retry on next interval
-          }
-          isProcessingRef.current = false;
-          if (!cancelled) setProcessing(false);
-        }
-      } catch {
-        // Queue not available
-      }
-    }
-    checkAndProcess();
-    const interval = setInterval(checkAndProcess, 10000);
-    return () => { cancelled = true; clearInterval(interval); };
-  }, [processingMode]);
-
-  // Never surface the server upload queue in local mode.
-  if (processingMode === "local") return null;
-
-  // Use queueItems count if available, otherwise fallback to poll count
-  const displayCount = queueItems.length > 0 ? queueItems.length : count;
-
-  // Show permanently failed warning even when queue is empty
-  if (displayCount === 0 && !currentItem && permanentlyFailed.length === 0) return null;
-
-  // Permanently failed items warning
-  if (displayCount === 0 && !currentItem && permanentlyFailed.length > 0) {
-    return (
-      <div style={{
-        padding: "8px 14px",
-        background: "var(--fill-warning, #b45309)",
-        color: "#fff",
-        fontSize: 12,
-        fontWeight: 500,
-        flexShrink: 0,
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ flex: 1 }}>
-            {permanentlyFailed.map((item) => (
-              <div key={item.id}>
-                '{item.fileName}' kon na meerdere pogingen niet worden ge&uuml;pload. Ga naar Opgeslagen opnames om het handmatig te proberen.
-              </div>
-            ))}
-          </span>
-          <button
-            onClick={clearPermanentlyFailed}
-            style={{ background: "none", border: "none", color: "#fff", cursor: "pointer", fontSize: 14, padding: "2px 6px" }}
-          >
-            &times;
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  const fileName = currentItem?.file_name || currentItem?.file_path?.split(/[\\/]/).pop();
-  const fileSize = currentItem?.file_size_bytes;
-  const currentIndex = currentItem ? queueItems.findIndex((i) => i.id === currentItem.id) + 1 : 0;
-
-  return (
-    <div style={{
-      padding: "8px 14px",
-      background: "var(--fill-accent-default)",
-      color: "#fff",
-      fontSize: 12,
-      fontWeight: 500,
-      flexShrink: 0,
-    }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <span className="status-pulse" style={{ width: 8, height: 8, borderRadius: "50%", background: "#fff" }} />
-        <span style={{ flex: 1 }}>
-          {processing && currentItem ? (
-            <>
-              Uploaden: {fileName && <span>{fileName}</span>}
-              {fileSize ? ` (${formatBytes(fileSize)})` : ""}
-              {" · "}
-              {progress}%
-              {uploadSpeed > 0 && ` (${formatBytes(uploadSpeed)}/s)`}
-              {displayCount > 1 && ` [${currentIndex}/${displayCount}]`}
-            </>
-          ) : processing ? (
-            `${displayCount} opname${displayCount !== 1 ? "s" : ""} worden verstuurd...`
-          ) : (
-            `${displayCount} opname${displayCount !== 1 ? "s" : ""} in wachtrij, wordt automatisch verstuurd`
-          )}
-        </span>
-        {!processing && displayCount > 0 && (
-          <button
-            onClick={handleClearQueue}
-            title="Wachtrij leegmaken"
-            style={{ background: "rgba(255,255,255,0.2)", border: "1px solid rgba(255,255,255,0.3)", color: "#fff", cursor: "pointer", fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 4, flexShrink: 0 }}
-          >
-            Leegmaken
-          </button>
-        )}
-      </div>
-      {processing && currentItem && (
-        <div style={{
-          marginTop: 4,
-          height: 3,
-          borderRadius: 2,
-          background: "rgba(255,255,255,0.25)",
-          overflow: "hidden",
-        }}>
-          <div style={{
-            height: "100%",
-            width: `${progress}%`,
-            background: "#fff",
-            borderRadius: 2,
-            transition: "width 300ms ease",
-          }} />
-        </div>
-      )}
-    </div>
-  );
-}
+const UpdateContext = createContext<ReturnType<typeof useUpdateCheck> | null>(null);
 
 function AppShell({ children }: { children: React.ReactNode }) {
-  const {isUpdateAvailable, latestVersion, downloadUrl, nativeUpdate} = useUpdateCheck();
+  const {isUpdateAvailable, latestVersion, downloadUrl, nativeUpdate, downloaded, installNow} = useContext(UpdateContext)!;
   const dismissed = useSettingsStore(s => s.dismissed_update_version);
   const updateSettings = useSettingsStore(s => s.updateSettings);
   return (
@@ -220,7 +59,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
           <main className="app-main" id="main-content">
             <ProcessingBar />
             <OfflineQueueBanner />
-            {isUpdateAvailable && latestVersion && dismissed !== latestVersion && <UpdateBanner nativeUpdate={nativeUpdate} version={latestVersion} downloadUrl={downloadUrl} onDismiss={() => updateSettings({dismissed_update_version:latestVersion})} />}
+            {isUpdateAvailable && latestVersion && dismissed !== latestVersion && <UpdateBanner downloaded={downloaded} onInstall={installNow} nativeUpdate={nativeUpdate} version={latestVersion} downloadUrl={downloadUrl} onDismiss={() => updateSettings({dismissed_update_version:latestVersion})} />}
             <div className="app-main-content">
               {children}
             </div>
@@ -265,7 +104,7 @@ function KeyboardShortcuts() {
 
       // Escape = Close modals (handled by individual components)
 
-      // Don't intercept Ctrl+R — let the webview handle refresh
+      // Production document reload is denied by the native main navigation guard.
     }
 
     window.addEventListener("keydown", handleKeyDown);
@@ -276,9 +115,11 @@ function KeyboardShortcuts() {
 }
 
 function ProtectedRoutes() {
+  const identityMissing = useSupportStore(s => !isCompleteIdentity(s.name, s.email));
   const { isAuthenticated, isInitializing } = useAuthStore();
   const { has_completed_onboarding, processing_mode, updateSettings } = useSettingsStore();
   const location = useLocation();
+  useEffect(() => logRoute(location.pathname), [location.pathname]);
   const setProfiles = useProfilesStore((s) => s.setProfiles);
   const showLocalProfiles = useProfilesStore((s) => s.showLocalProfiles);
 
@@ -314,7 +155,6 @@ function ProtectedRoutes() {
   }, [isAuthenticated, processing_mode, setProfiles, showLocalProfiles, updateSettings]);
 
   // Global recording stop/error handler — always active, survives page navigation
-  useGlobalRecordingHandler();
 
   // Recover active tasks on app start via /tasks/active endpoint
   const recoveryRanRef = useRef(false);
@@ -329,6 +169,8 @@ function ProtectedRoutes() {
       try {
         const activeTasks = await api.getActiveTasks();
         for (const task of activeTasks) {
+          // Read now: another recovery response or the existing realm may already own this task.
+          if (useRecordingStore.getState().backgroundTasks.some((current) => current.task_id === task.task_id)) continue;
           addBackgroundTask({
             task_id: task.task_id,
             status: task.status as "uploading",
@@ -373,6 +215,10 @@ function ProtectedRoutes() {
 
   if (!canOpenRoute(location.pathname, processing_mode, isAuthenticated)) {
     return <Navigate to="/login" replace />;
+  }
+
+  if (identityMissing) {
+    return <div className="app-shell"><TitleBar /><IdentityGate /></div>;
   }
 
   if (!has_completed_onboarding && processing_mode !== "local") {
@@ -435,6 +281,10 @@ function UpdateRequiredOverlay({ currentVersion, minimumVersion }: { currentVers
 }
 
 export default function App() {
+  const updates = useUpdateCheck();
+  useEffect(startSupportOwner, []);
+  useGlobalRecordingHandler();
+  useSupportLifecycle();
   const [updateRequired, setUpdateRequired] = useState<{ current: string; minimum: string } | null>(null);
   const processingMode = useSettingsStore((s) => s.processing_mode);
   const [localReady, setLocalReady] = useState(false);
@@ -546,6 +396,7 @@ export default function App() {
   }
 
   return (
+    <UpdateContext.Provider value={updates}>
     <ErrorBoundary>
       <BrowserRouter>
         <div style={{ height: "100%" }}>
@@ -557,5 +408,6 @@ export default function App() {
         </div>
       </BrowserRouter>
     </ErrorBoundary>
+    </UpdateContext.Provider>
   );
 }

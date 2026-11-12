@@ -3,7 +3,7 @@ vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
 vi.mock("../tauriCommands", () => ({ loadCredential: vi.fn(async () => "private-test-key") }));
 import { invoke } from "@tauri-apps/api/core";
 import { loadCredential } from "../tauriCommands";
-import { fetchOllamaModels, isOllamaCloudURL } from "../ollamaModels";
+import { fetchOllamaModels, isHostedURL, isOllamaCloudURL } from "../ollamaModels";
 beforeEach(() => vi.clearAllMocks());
 it("discovers local models, deduplicates and never sends the cloud key over HTTP", async () => {
   vi.mocked(invoke).mockResolvedValueOnce({ status: 200, body: JSON.stringify({ data: [{ id: "z" }, { id: "a" }, { id: "a" }, { id: 7 }] }) });
@@ -38,4 +38,11 @@ it("does not send the saved cloud key to another HTTPS host during automatic dis
   await fetchOllamaModels("https://ollama.com.attacker.invalid");
   expect(loadCredential).not.toHaveBeenCalled();
   expect(invoke).toHaveBeenCalledWith("proxy_request", { request: expect.objectContaining({ headers: {} }) });
+});
+
+it("treats only remote https endpoints as hosted", () => {
+  for (const url of ["https://ollama.com", "https://openrouter.ai/api/v1", "https://llm.example.nl:8443"]) expect(isHostedURL(url)).toBe(true);
+  for (const url of ["http://ollama.com", "http://localhost:11434", "https://localhost", "https://127.0.0.1:1234", "https://[::1]:1234",
+    "https://10.0.0.5", "https://192.168.1.20", "https://172.20.1.1", "https://nas.local", "https://mini", "invalid"]) expect(isHostedURL(url)).toBe(false);
+  expect(isHostedURL("https://172.32.0.1")).toBe(true);
 });

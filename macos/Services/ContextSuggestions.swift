@@ -62,18 +62,36 @@ struct PersonSuggestion: Codable, Hashable, Sendable {
     }
 }
 
+/// Why the suggestion step did not run for a task; shown in the suggestion bar.
+enum ContextSuggestionSkip: String, Codable, Sendable {
+    case tooLongForModel, transcriptTooLong, appleIntelligence
+
+    var notice: String {
+        switch self {
+        case .tooLongForModel: return "Geen woord- en personensuggesties gemaakt: het gesprek is te lang voor het gekozen model. Kies een model met meer ruimte en maak de notule opnieuw."
+        case .transcriptTooLong: return "Geen woord- en personensuggesties gemaakt: het gesprek is te lang (meer dan 64.000 tekens). Splits de opname als je suggesties wilt."
+        case .appleIntelligence: return "Geen woord- en personensuggesties gemaakt: Apple Intelligence wordt hiervoor niet gebruikt. Kies een ander model om suggesties te krijgen."
+        }
+    }
+}
+
 struct ContextSuggestionSet: Codable, Equatable, Sendable {
     var terms: [TermSuggestion] = []
     var people: [PersonSuggestion] = []
-    var isEmpty: Bool { terms.isEmpty && people.isEmpty }
+    /// Set when the step was skipped for this task.
+    var skipped: ContextSuggestionSkip?
+    /// No suggestions and no skip notice.
+    var isEmpty: Bool { terms.isEmpty && people.isEmpty && skipped == nil }
+    var hasSuggestions: Bool { !terms.isEmpty || !people.isEmpty }
 
-    init(terms: [TermSuggestion] = [], people: [PersonSuggestion] = []) {
-        self.terms = terms; self.people = people
+    init(terms: [TermSuggestion] = [], people: [PersonSuggestion] = [], skipped: ContextSuggestionSkip? = nil) {
+        self.terms = terms; self.people = people; self.skipped = skipped
     }
     init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         terms = values.lenient(.terms) ?? []
         people = values.lenient(.people) ?? []
+        skipped = values.lenient(.skipped)
     }
 }
 
@@ -211,12 +229,26 @@ enum ContextSuggestions {
         return message.count <= local.maxChunkCharacters + 8_000
     }
 
+    /// Keeps pending suggestions and stores why the step did not run, so the bar can tell the user.
+    @MainActor static func recordSkip(_ reason: ContextSuggestionSkip, taskId: String) {
+        var set = load(taskId: taskId) ?? ContextSuggestionSet()
+        set.skipped = reason
+        do { try save(set, taskId: taskId) } catch { logger.error("Context suggestions skip not stored: \(LogRedact.mask(error.localizedDescription))") }
+        NotificationCenter.default.post(name: .contextSuggestionsUpdated, object: nil, userInfo: ["taskId": taskId])
+    }
+
     /// Starts the suggestion call after the notule was saved. Fire and forget: failures are
-    /// only logged. Skipped for Apple Intelligence, very long transcripts and under tests.
+    /// only logged. Skipped for Apple Intelligence, very long transcripts and under tests;
+    /// those skips are stored for the bar (a failed call is not).
     static func runInBackground(taskId: String, transcript: String, participants: [Participant], profileId: String?, profileName: String, provider: NotulenProvider) {
         let provider: NotulenProvider = provider == .cloud ? .ollama : provider
-        guard !AppEnvironment.isRunningTests, provider != .appleIntelligence,
-              transcript.count <= maxTranscriptCharacters else { return }
+        guard !AppEnvironment.isRunningTests else { return }
+        let early: ContextSuggestionSkip? = provider == .appleIntelligence ? .appleIntelligence
+            : transcript.count > maxTranscriptCharacters ? .transcriptTooLong : nil
+        if let early {
+            Task { @MainActor in recordSkip(early, taskId: taskId) }
+            return
+        }
         Task.detached(priority: .utility) {
             do {
                 let (context, entries, dismissed, selfName, selfAliases) = await MainActor.run {
@@ -229,6 +261,7 @@ enum ContextSuggestions {
                 let service = LLMServiceFactory.service(for: provider, serverURL: "")
                 guard fits(message, service: service) else {
                     logger.info("Context suggestions skipped: \(message.count) characters is too long for the local model")
+                    await MainActor.run { recordSkip(.tooLongForModel, taskId: taskId) }
                     return
                 }
                 let raw = try await service.complete(system: systemPrompt, user: message)

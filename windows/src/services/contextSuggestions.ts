@@ -23,7 +23,12 @@ export interface PersonSuggestion {
   /** Directory people this suggestion could be when the name was ambiguous. */
   candidateIds: string[];
 }
-export interface ContextSuggestionSet { terms: TermSuggestion[]; people: PersonSuggestion[] }
+/** Why the suggestion step did not run for a task; shown in the suggestion bar. */
+export type ContextSuggestionSkip = "transcriptTooLong";
+export const SKIP_NOTICES: Record<ContextSuggestionSkip, string> = {
+  transcriptTooLong: "Geen woord- en personensuggesties gemaakt: het gesprek is te lang (meer dan 64.000 tekens). Splits de opname als je suggesties wilt.",
+};
+export interface ContextSuggestionSet { terms: TermSuggestion[]; people: PersonSuggestion[]; skipped?: ContextSuggestionSkip }
 export type ContextSuggestionItem = { term: TermSuggestion } | { person: PersonSuggestion };
 
 export const MAX_ITEMS = 8;
@@ -34,7 +39,7 @@ const FILE = "context-suggestions.json";
 
 const trim = (text: string) => text.trim();
 const list = (items: string[]) => items.map(trim).filter(Boolean);
-export const isEmpty = (set: ContextSuggestionSet) => !set.terms.length && !set.people.length;
+export const isEmpty = (set: ContextSuggestionSet) => !set.terms.length && !set.people.length && !set.skipped;
 
 /** Key stored in the glossary's `dismissed` list when the user rejects a suggestion. */
 export function dismissKey(item: ContextSuggestionItem): string {
@@ -55,6 +60,7 @@ function decodeSet(value: Json): ContextSuggestionSet {
       topics: strs(p.topics), heardAs: strs(p.heardAs), ...(typeof p.matchedPersonId === "string" ? { matchedPersonId: p.matchedPersonId } : {}),
       candidateIds: strs(p.candidateIds),
     })),
+    ...(value.skipped === "transcriptTooLong" ? { skipped: value.skipped } : {}),
   };
 }
 
@@ -154,7 +160,7 @@ export const remove = (taskId: string, item: ContextSuggestionItem): Promise<voi
   const set = (await loadAll())[taskId];
   if (!set) return;
   const key = dismissKey(item);
-  await write({ terms: set.terms.filter(term => dismissKey({ term }) !== key), people: set.people.filter(person => dismissKey({ person }) !== key) }, taskId);
+  await write({ ...set, terms: set.terms.filter(term => dismissKey({ term }) !== key), people: set.people.filter(person => dismissKey({ person }) !== key) }, taskId);
 });
 
 /** Swaps one person suggestion (matched on its dismiss key) for `next`, e.g. a remainder. */
@@ -170,12 +176,23 @@ export const dismiss = (key: string): Promise<void> => usePersonalCorrectionsSto
 
 // MARK: AI step
 
+/** Keeps pending suggestions and stores why the step did not run, so the bar can tell the user. */
+export const recordSkip = (taskId: string, skipped: ContextSuggestionSkip): Promise<void> => serial(async () => {
+  const set = (await loadAll())[taskId] ?? { terms: [], people: [] };
+  await write({ ...set, skipped }, taskId);
+  window.dispatchEvent(new CustomEvent(SUGGESTIONS_UPDATED_EVENT, { detail: taskId }));
+});
+
 /**
  * Starts the suggestion call after the notule was saved. Fire and forget: failures are only
- * logged and never touch the notule. Skipped for very long transcripts and under tests.
+ * logged and never touch the notule. Skipped for very long transcripts (stored for the bar) and under tests.
  */
 export function runInBackground(taskId: string, transcript: string, participants: Participant[], profileId: string | undefined, profileName: string): void {
-  if (import.meta.env.MODE === "test" || Array.from(transcript).length > MAX_TRANSCRIPT_CHARACTERS) return;
+  if (import.meta.env.MODE === "test") return;
+  if (Array.from(transcript).length > MAX_TRANSCRIPT_CHARACTERS) {
+    void recordSkip(taskId, "transcriptTooLong").catch(error => console.warn("[ContextSuggestions] Overslaan niet bewaard:", error));
+    return;
+  }
   void (async () => {
     try {
       const entries = await loadCorrectionsOrEmpty();

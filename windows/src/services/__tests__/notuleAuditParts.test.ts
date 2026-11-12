@@ -16,19 +16,22 @@ interface Options {
   uncited?: (report: Report, input: Input) => void;
   /** Replaces the whole reply, or throws. */
   reply?: (user: string) => string | undefined;
-  delay?: number;
+  /** Milliseconds each request takes, by user message. */
+  delay?: (user: string) => number;
 }
 
 const input = (user: string): Input => JSON.parse(user.slice(user.indexOf("\n") + 1));
 const kind = (user: string) => user.startsWith("Inhoudsaudit deel") ? "coverage" : user.startsWith("Notulezin controleren") ? "note" : "uncited";
 
 function model(options: Options = {}) {
-  const live = { running: 0, peak: 0 };
+  // ended: user messages in the order their requests finished.
+  const live = { running: 0, peak: 0, ended: [] as string[] };
   const request = vi.fn(async (_system: string, user: string) => {
     live.running++;
     live.peak = Math.max(live.peak, live.running);
-    await new Promise(resolve => setTimeout(resolve, options.delay ?? 0));
+    await new Promise(resolve => setTimeout(resolve, options.delay?.(user) ?? 0));
     live.running--;
+    live.ended.push(user);
     const replaced = options.reply?.(user);
     if (replaced !== undefined) return replaced;
     const data = input(user);
@@ -53,6 +56,8 @@ function model(options: Options = {}) {
 
 const calls = (request: ReturnType<typeof model>, which: string) => request.mock.calls.filter(([, user]) => kind(user) === which);
 const ids = (units: Unit[] | undefined) => (units ?? []).map(unit => unit.id);
+/** The first notule ID of a step-2 request, undefined for other requests. */
+const noteId = (user: string) => kind(user) === "note" ? input(user).notes[0].id : undefined;
 const points = (count: number) => Array.from({ length: count }, (_, i) => `Punt ${i + 1} is besproken.`).join(" ");
 const longSource = `${points(400)} Sam belt vrijdag de klant.`;
 const sam = "<p>Sam belt vrijdag de klant.</p>";
@@ -224,7 +229,9 @@ const tenCover = (id: string) => {
 };
 
 it("reports a failed step-2 request and starts no new requests after the first problem", async () => {
-  const request = model({ cover: tenCover, reply: user => { if (kind(user) === "note" && input(user).notes[0].id === "N1") throw new Error("offline"); return undefined; } });
+  // N1 fails before the others finish, so no completion can start a fifth check first.
+  const request = model({ cover: tenCover, reply: user => { if (noteId(user) === "N1") throw new Error("offline"); return undefined; },
+    delay: user => noteId(user) && noteId(user) !== "N1" ? 50 : 0 });
   await expect(auditNotule(tenSource, tenHtml, "", request)).rejects.toThrow("De inhoudscontrole leverde geen bruikbaar controlebewijs; beoordeel het concept");
   // Two coverage parts, then only the first window.
   expect(request).toHaveBeenCalledTimes(2 + AUDIT_CONCURRENCY);
@@ -237,10 +244,31 @@ it("passes a cancellation on instead of turning it into an audit result", async 
 });
 
 it("never runs more than AUDIT_CONCURRENCY step-2 requests at once", async () => {
-  const request = model({ cover: tenCover, delay: 5 });
+  const request = model({ cover: tenCover, delay: () => 5 });
   await auditNotule(tenSource, tenHtml, "", request);
   expect(calls(request, "note")).toHaveLength(10);
   expect(request.live.peak).toBe(AUDIT_CONCURRENCY);
+});
+
+it("does not let a slow first check hold back the others, and still reports in order", async () => {
+  const request = model({ cover: tenCover, delay: user => noteId(user) === "N1" ? 300 : 0 });
+  await auditNotule(tenSource, tenHtml, "", request);
+  const ended = request.live.ended.map(noteId).filter(Boolean);
+  expect(ended).toHaveLength(10);
+  expect(ended.at(-1)).toBe("N1");
+  expect(request.live.peak).toBeLessThanOrEqual(AUDIT_CONCURRENCY);
+
+  // The fast N2 fails first, N3 and N4 finish after it without starting N5, and the slow N1 is reported.
+  const failing = model({
+    cover: tenCover,
+    note: (report, data) => {
+      if (data.notes[0].id === "N1") report.notes = [{ id: "N1", status: "unsupported", evidence: [] }];
+      if (data.notes[0].id === "N2") report.notes = [{ id: "N2", status: "contradiction", evidence: [] }];
+    },
+    delay: user => { const id = noteId(user); return id === "N1" ? 300 : id === "N2" || !id ? 0 : 100; },
+  });
+  await expect(auditNotule(tenSource, tenHtml, "", failing)).rejects.toThrow("De notule bevat een onbevestigde bewering: Punt 391 is besproken.");
+  expect(calls(failing, "note")).toHaveLength(AUDIT_CONCURRENCY);
 });
 
 it("reports a contradiction in a later part as a contradiction, not as missing evidence", async () => {

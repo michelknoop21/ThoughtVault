@@ -11,8 +11,10 @@ private actor LongRecorder {
     var calls: [(system: String, user: String)] = []
     var running = 0
     var peak = 0
+    /// User messages in the order their requests finished.
+    var ended: [String] = []
     func begin(_ system: String, _ user: String) { calls.append((system, user)); running += 1; peak = max(peak, running) }
-    func end() { running -= 1 }
+    func end(_ user: String) { running -= 1; ended.append(user) }
     func requests(_ kind: String) -> [(system: String, user: String)] { calls.filter { longKind($0.user) == kind } }
 }
 
@@ -25,8 +27,12 @@ private struct LongModel: Sendable {
     var uncited: @Sendable (_ report: inout LongReport) -> Void = { _ in }
     /// Replaces the whole reply, or throws.
     var reply: @Sendable (_ user: String) throws -> String? = { _ in nil }
-    var delayNanoseconds: UInt64 = 0
+    /// Time each request takes, by user message.
+    var delay: @Sendable (_ user: String) -> UInt64 = { _ in 0 }
 }
+
+/// The first notule ID of a step-2 request, nil for other requests.
+private func noteId(_ user: String) -> String? { longKind(user) == "note" ? longIds(longInput(user)["notes"]).first : nil }
 
 private func longKind(_ user: String) -> String {
     user.hasPrefix("Inhoudsaudit deel") ? "coverage" : user.hasPrefix("Notulezin controleren") ? "note" : "uncited"
@@ -49,8 +55,9 @@ private func editSource(_ report: inout LongReport, _ edit: (inout [[String: Any
 private func longRequest(_ recorder: LongRecorder, _ model: LongModel) -> AuditRequest {
     { system, user in
         await recorder.begin(system, user)
-        if model.delayNanoseconds > 0 { try? await Task.sleep(nanoseconds: model.delayNanoseconds) }
-        await recorder.end()
+        let delay = model.delay(user)
+        if delay > 0 { try? await Task.sleep(nanoseconds: delay) }
+        await recorder.end(user)
         if let replaced = try model.reply(user) { return replaced }
         let data = longInput(user)
         var report: LongReport = ["uncertain": false]
@@ -314,16 +321,46 @@ final class NotuleAuditPartsTests: XCTestCase {
     func testFailedStepTwoRequestStartsNoNewRequests() async {
         struct Offline: Error {}
         let recorder = LongRecorder()
+        // N1 fails before the others finish, so no completion can start a fifth check first.
         let model = LongModel(cover: tenCover, reply: { user in
-            if longKind(user) == "note", longIds(longInput(user)["notes"]) == ["N1"] { throw Offline() }
+            if noteId(user) == "N1" { throw Offline() }
             return nil
-        })
+        }, delay: { user in noteId(user).map { $0 == "N1" ? 0 : 50_000_000 } ?? 0 })
         await assertRejects("De inhoudscontrole leverde geen bruikbaar controlebewijs; beoordeel het concept") {
             try await audit(tenSource, tenHtml, recorder, model)
         }
         // Two coverage parts, then only the first window.
         let count = await recorder.calls.count
         XCTAssertEqual(count, 2 + NotuleAudit.auditConcurrency)
+    }
+
+    func testSlowFirstCheckDoesNotHoldBackTheOthers() async throws {
+        let slowFirst: @Sendable (String) -> UInt64 = { user in noteId(user) == "N1" ? 300_000_000 : 0 }
+        let recorder = LongRecorder()
+        try await audit(tenSource, tenHtml, recorder, LongModel(cover: tenCover, delay: slowFirst))
+        let ended = await recorder.ended.compactMap(noteId), peak = await recorder.peak
+        XCTAssertEqual(ended.count, 10)
+        XCTAssertEqual(ended.last, "N1", "\(ended)")
+        XCTAssertLessThanOrEqual(peak, NotuleAudit.auditConcurrency)
+
+        // Outcomes are still read in order and a failure starts nothing new: the fast N2 fails first,
+        // N3 and N4 finish after it without starting N5, and the slow N1 is the problem reported.
+        let failing = LongModel(cover: tenCover, note: { id, report in
+            if id == "N1" { report["notes"] = verdict("N1", "unsupported") }
+            if id == "N2" { report["notes"] = verdict("N2", "contradiction") }
+        }, delay: { user in
+            switch noteId(user) {
+            case "N1"?: 300_000_000
+            case "N2"?, nil: 0
+            default: 100_000_000
+            }
+        })
+        let second = LongRecorder()
+        await assertRejects("De notule bevat een onbevestigde bewering: Punt 391 is besproken.") {
+            try await audit(tenSource, tenHtml, second, failing)
+        }
+        let notes = await second.requests("note").count
+        XCTAssertEqual(notes, NotuleAudit.auditConcurrency)
     }
 
     func testCancellationIsPassedOn() async {
@@ -337,7 +374,7 @@ final class NotuleAuditPartsTests: XCTestCase {
 
     func testAtMostFourRequestsRunAtOnce() async throws {
         let recorder = LongRecorder()
-        try await audit(tenSource, tenHtml, recorder, LongModel(cover: tenCover, delayNanoseconds: 20_000_000))
+        try await audit(tenSource, tenHtml, recorder, LongModel(cover: tenCover, delay: { _ in 20_000_000 }))
         let note = await recorder.requests("note"), peak = await recorder.peak
         XCTAssertEqual(note.count, 10)
         XCTAssertLessThanOrEqual(peak, NotuleAudit.auditConcurrency)

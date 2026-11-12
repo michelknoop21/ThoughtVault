@@ -157,7 +157,8 @@ extension NotuleAudit {
     }
 
     /// Runs the checks at most `auditConcurrency` at a time and reads the outcomes in order, so the reported
-    /// problem is always the first one. After a failure no new request starts.
+    /// problem is always the first one. Any completion frees its slot for the next check, so one slow check
+    /// does not hold back the others. After a failure no new request starts.
     // ponytail: requests already running finish and are ignored instead of cancelled, because NotuleGenerator
     // reads a CancellationError from a request as the user's cancellation. Add a separate signal if the wait matters.
     private static func runInOrder(_ checks: [NoteCheck], request: @escaping AuditRequest) async throws -> [Verdict] {
@@ -165,21 +166,28 @@ extension NotuleAudit {
                                           returning: Result<[Verdict], any Error>.self) { group in
             var finished: [Int: Result<[Verdict], any Error>] = [:]
             var collected: [Verdict] = []
-            var started = 0
-            for index in checks.indices {
-                while started < min(checks.count, index + auditConcurrency) {
-                    let check = checks[started], position = started
-                    group.addTask {
-                        do {
-                            let checked = try await NotuleAudit.run(check, request: request)
-                            return (position, .success(checked))
-                        } catch {
-                            return (position, .failure(error))
-                        }
+            var started = 0, failed = false
+            // Started checks are always a prefix, so every check before a failure has run.
+            func startNext() {
+                guard !failed, started < checks.count else { return }
+                let check = checks[started], position = started
+                group.addTask {
+                    do {
+                        let checked = try await NotuleAudit.run(check, request: request)
+                        return (position, .success(checked))
+                    } catch {
+                        return (position, .failure(error))
                     }
-                    started += 1
                 }
-                while finished[index] == nil, let next = await group.next() { finished[next.0] = next.1 }
+                started += 1
+            }
+            for _ in 0..<auditConcurrency { startNext() }
+            for index in checks.indices {
+                while finished[index] == nil, let next = await group.next() {
+                    finished[next.0] = next.1
+                    if case .failure = next.1 { failed = true }
+                    startNext()
+                }
                 switch finished[index] {
                 case .success(let checked)?: collected += checked
                 case .failure(let error)?: return .failure(error)

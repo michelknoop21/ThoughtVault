@@ -334,20 +334,26 @@ async function runCheck(check: NoteCheck, request: Request): Promise<Verdict[]> 
 }
 
 /** Runs the checks at most AUDIT_CONCURRENCY at a time and reads the outcomes in order, so the reported
- * problem is always the first one. After a failure no new request starts. */
+ * problem is always the first one. Any completion frees its slot for the next check, so one slow check
+ * does not hold back the others. After a failure no new request starts. */
 // ponytail: requests already running finish and are ignored; the request function takes no abort signal.
 async function runInOrder(checks: NoteCheck[], request: Request): Promise<Verdict[]> {
   const outcomes: Promise<{ checked: Verdict[] } | { error: unknown }>[] = [];
-  const start = (index: number) => {
-    if (index < checks.length) outcomes[index] = runCheck(checks[index], request).then(checked => ({ checked }), error => ({ error }));
+  // Started checks are always a prefix, so every check before a failure has run.
+  let started = 0, failed = false;
+  const startNext = () => {
+    if (failed || started >= checks.length) return;
+    const index = started++;
+    outcomes[index] = runCheck(checks[index], request).then(
+      checked => { startNext(); return { checked }; },
+      error => { failed = true; return { error }; });
   };
-  for (let index = 0; index < AUDIT_CONCURRENCY; index++) start(index);
+  for (let slot = 0; slot < AUDIT_CONCURRENCY; slot++) startNext();
   const checked: Verdict[] = [];
   for (let index = 0; index < checks.length; index++) {
     const outcome = await outcomes[index];
     if ("error" in outcome) throw outcome.error;
     checked.push(...outcome.checked);
-    start(index + AUDIT_CONCURRENCY);
   }
   return checked;
 }

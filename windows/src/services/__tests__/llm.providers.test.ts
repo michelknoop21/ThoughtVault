@@ -1,6 +1,6 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import { useSettingsStore } from "../../stores/settingsStore";
-import { LLMService, MAX_OUTPUT_TOKENS, TIME_LIMIT_MESSAGE, TRUNCATED_MESSAGE } from "../llm";
+import { LLMService, MAX_OUTPUT_TOKENS, TIME_LIMIT_MESSAGE, TRUNCATED_MESSAGE, auditNoteConcurrency } from "../llm";
 import { auditFixture, sourceFixture } from "./notuleAuditFixtures";
 
 const corrections = vi.hoisted(() => ({entries:[] as import("../personalCorrections").PersonalCorrection[]}));
@@ -80,6 +80,15 @@ it("names the configured local provider when its native request fails", async ()
   invoke.mockRejectedValue("connection refused");
   await expect(LLMService.generateNotulen("QA bron.", profile)).rejects.toThrow('http://localhost:11434 (model "hermes3:8b")');
   expect(invoke).toHaveBeenCalledTimes(1);
+});
+
+it("gives only hosted providers the higher step-2 limit", () => {
+  expect(auditNoteConcurrency("openai", "http://localhost:1234")).toBe(8);
+  expect(auditNoteConcurrency("anthropic", "http://localhost:1234")).toBe(8);
+  expect(auditNoteConcurrency("ollama", "https://ollama.com")).toBe(8);
+  expect(auditNoteConcurrency("lm-studio", "https://llm.example.com/v1")).toBe(8);
+  expect(auditNoteConcurrency("ollama", "http://localhost:11434")).toBe(4);
+  expect(auditNoteConcurrency("lm-studio", "https://192.168.1.10:1234")).toBe(4);
 });
 
 it("names a timeout as the time limit instead of an unreachable generator", async () => {

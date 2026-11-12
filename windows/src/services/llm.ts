@@ -10,7 +10,7 @@ import { isHostedURL, isOllamaCloudURL } from "./ollamaModels";
 import { loadCorrectionsOrEmpty } from "../stores/personalCorrectionsStore";
 import { usePeopleDirectoryStore } from "../stores/peopleDirectoryStore";
 import { correctText, correctHTML, contextBlock, CONTEXT_BUDGET, type PersonalCorrection } from "./personalCorrections";
-import { auditSource, auditNotule, appendWarnings, AuditFinding, constraintSentences, UNCHECKED_CONTENT_WARNING } from "./notuleAudit";
+import { auditSource, auditNotule, appendWarnings, AuditFinding, constraintSentences, UNCHECKED_CONTENT_WARNING, AUDIT_CONCURRENCY, HOSTED_AUDIT_CONCURRENCY } from "./notuleAudit";
 
 interface LLMConfig {
   provider: NotulenProvider;
@@ -186,6 +186,14 @@ async function generateWithHostedAPI(
   return text;
 }
 
+/** Step-2 audit checks in flight for a long meeting: 8 for a hosted provider, 4 for a local model (DEC-065).
+ * Ollama and LM Studio count as hosted only with an https URL to a public host, as on macOS. */
+export function auditNoteConcurrency(provider: NotulenProvider, compatibleBaseURL: string): number {
+  const hosted = provider === "openai" || provider === "anthropic"
+    || ((provider === "ollama" || provider === "lm-studio") && isHostedURL(compatibleBaseURL));
+  return hosted ? HOSTED_AUDIT_CONCURRENCY : AUDIT_CONCURRENCY;
+}
+
 /**
  * Removes the markdown code fences some models wrap around their HTML output.
  * The cloud backend strips these server-side; local generation needs the same
@@ -300,7 +308,8 @@ export class LLMService {
       const source = await sourceCheck;
       if ("error" in source) throw source.error;
       warning = source.warning;
-      await auditNotule(correctText(transcription, corrections, profile.id), candidate, quickNote, generate, constraints, warning !== null);
+      await auditNotule(correctText(transcription, corrections, profile.id), candidate, quickNote, generate, constraints, warning !== null,
+        auditNoteConcurrency(config.provider, baseURL));
       const approved = appendWarnings(warning ? [warning] : [], candidate);
       onProgress?.(approved);
       return approved;

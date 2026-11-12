@@ -5,6 +5,8 @@ import os
 /// windows/src/services/llm.ts: audit problems end up in an "Even nalopen" section, never block (DEC-063).
 struct NotuleGenerator: Sendable {
     let service: any LLMService
+    /// Step-2 audit checks in flight; the caller knows the provider (`NotulenProvider.auditNoteConcurrency`).
+    var noteConcurrency = NotuleAudit.auditConcurrency
 
     func generate(transcription: String, profile: Profile, participants: [Participant], quickNote: String?,
                   createdAt: Date, corrections: [PersonalCorrection], context: String = "") async throws -> String {
@@ -53,7 +55,8 @@ struct NotuleGenerator: Sendable {
             warning = try await sourceWarning
             if Task.isCancelled || cancelled.withLock({ $0 }) { throw CancellationError() }
             try await NotuleAudit.auditNotule(source: source, html: candidate, quickNote: quickNote ?? "",
-                                              request: request, requiredSentences: constraints, sourceUnclear: warning != nil)
+                                              request: request, requiredSentences: constraints, sourceUnclear: warning != nil,
+                                              noteConcurrency: noteConcurrency)
             return NotuleAudit.appendingWarnings([warning].compactMap { $0 }, to: candidate)
         } catch {
             if Task.isCancelled || cancelled.withLock({ $0 }) { throw CancellationError() }

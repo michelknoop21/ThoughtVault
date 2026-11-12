@@ -218,6 +218,19 @@ enum NotulenProvider: String, Codable, Sendable, CaseIterable, Identifiable {
         return !(KeychainService.shared.load(for: key) ?? "").isEmpty
     }
 
+    /// Step-2 audit checks in flight for a long meeting: 8 for a hosted provider, 4 for a local model (DEC-065).
+    /// Ollama and LM Studio count as hosted only with an https URL to a public host, as on Windows.
+    var auditNoteConcurrency: Int {
+        let hosted: Bool
+        switch self {
+        case .openAI, .anthropic, .ollamaCloud, .openAICompatible: hosted = true
+        case .ollama: hosted = isHostedURL(UserDefaults.standard.string(forKey: "ollamaURL") ?? "")
+        case .lmStudio: hosted = isHostedURL(UserDefaults.standard.string(forKey: "lmStudioURL") ?? "")
+        case .cloud, .appleIntelligence: hosted = false
+        }
+        return hosted ? NotuleAudit.hostedAuditConcurrency : NotuleAudit.auditConcurrency
+    }
+
     /// Default local-mode provider for the current platform.
     /// macOS can run Ollama locally, so it stays the default there. iOS/iPadOS cannot run
     /// Ollama on-device, so it prefers on-device Apple Intelligence when available and
@@ -234,6 +247,15 @@ enum NotulenProvider: String, Codable, Sendable, CaseIterable, Identifiable {
         return .ollama
         #endif
     }
+}
+
+/// Remote https endpoint (not localhost, a private LAN address or a bare/.local host). Same rule as
+/// `isHostedURL` in windows/src/services/ollamaModels.ts.
+func isHostedURL(_ string: String) -> Bool {
+    guard let url = URL(string: string), url.scheme?.lowercased() == "https",
+          let host = url.host?.lowercased().trimmingCharacters(in: CharacterSet(charactersIn: "[]")),
+          host.contains("."), !host.hasSuffix(".local"), !host.hasSuffix(".localhost") else { return false }
+    return host.range(of: #"^(127|10)\.|^192\.168\.|^169\.254\.|^172\.(1[6-9]|2\d|3[01])\."#, options: .regularExpression) == nil
 }
 
 // MARK: - RecordingMode

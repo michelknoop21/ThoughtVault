@@ -7,6 +7,8 @@ extension NotuleAudit {
     static let maxAuditParts = 8
     static let maxNoteChecks = 150
     static let auditConcurrency = 4
+    /// Step-2 checks in flight for a hosted provider (DEC-065, changed 12 November 2026).
+    static let hostedAuditConcurrency = 8
     /// Transcription sentences on each side of a cited one, sent as context that never supports a claim.
     static let contextRadius = 3
 
@@ -41,7 +43,8 @@ extension NotuleAudit {
         let context: [Unit]
     }
 
-    static func auditLong(sourceUnits: [Unit], noteUnits: [Unit], request: @escaping AuditRequest) async throws
+    static func auditLong(sourceUnits: [Unit], noteUnits: [Unit], request: @escaping AuditRequest,
+                          noteConcurrency: Int = auditConcurrency) async throws
         -> (source: [Verdict], notes: [Verdict]) {
         let transcript = sourceUnits.filter { $0.id.hasPrefix("T") }
         let quick = sourceUnits.filter { $0.id.hasPrefix("Q") }
@@ -86,7 +89,7 @@ extension NotuleAudit {
             }
             checks.append(NoteCheck(notes: [note], evidence: evidence, context: context))
         }
-        let checked = try await runInOrder(checks) { try await run($0, request: request) }.flatMap { $0 }
+        let checked = try await runInOrder(checks, limit: noteConcurrency) { try await run($0, request: request) }.flatMap { $0 }
         let noteChecks = noteUnits.map { note in checked.first { $0.id == note.id }! }
         // Only notule sentences that step 2 supported carry evidence. A covered source without one is missing,
         // so the reviewer reads the source sentence instead of a technical error.
@@ -158,13 +161,13 @@ extension NotuleAudit {
         return checked
     }
 
-    /// Runs `operation` on the items at most `auditConcurrency` at a time and reads the outcomes in order, so
-    /// the reported problem is always the first one. Any completion frees its slot for the next item, so one slow
-    /// request does not hold back the others. After a failure no new request starts.
+    /// Runs `operation` on the items at most `limit` at a time and reads the outcomes in order, so the reported
+    /// problem is always the first one. Any completion frees its slot for the next item, so one slow request
+    /// does not hold back the others. After a failure no new request starts.
     // ponytail: requests already running finish and are ignored instead of cancelled, because NotuleGenerator
     // reads a CancellationError from a request as the user's cancellation. Add a separate signal if the wait matters.
     private static func runInOrder<Item: Sendable, Output: Sendable>(
-        _ items: [Item], operation: @escaping @Sendable (Item) async throws -> Output
+        _ items: [Item], limit: Int = auditConcurrency, operation: @escaping @Sendable (Item) async throws -> Output
     ) async throws -> [Output] {
         let outcome = await withTaskGroup(of: (Int, Result<Output, any Error>).self,
                                           returning: Result<[Output], any Error>.self) { group in
@@ -184,7 +187,7 @@ extension NotuleAudit {
                 }
                 started += 1
             }
-            for _ in 0..<auditConcurrency { startNext() }
+            for _ in 0..<limit { startNext() }
             for index in items.indices {
                 while finished[index] == nil, let next = await group.next() {
                     finished[next.0] = next.1

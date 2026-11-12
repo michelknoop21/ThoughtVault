@@ -1,5 +1,5 @@
 import { expect, it, vi } from "vitest";
-import { AUDIT_CONCURRENCY, AuditFinding, COVERAGE_SYSTEM, MAX_AUDIT_PARTS, MAX_NOTE_CHECKS, NOTE_SYSTEM, UNCITED_SYSTEM, auditNotule } from "../notuleAudit";
+import { AUDIT_CONCURRENCY, HOSTED_AUDIT_CONCURRENCY, AuditFinding, COVERAGE_SYSTEM, MAX_AUDIT_PARTS, MAX_NOTE_CHECKS, NOTE_SYSTEM, UNCITED_SYSTEM, auditNotule } from "../notuleAudit";
 
 // Long meetings (DEC-065): coverage per part, then one check per notule sentence. Same scenarios as
 // NotuleAuditPartsTests.swift.
@@ -311,6 +311,26 @@ it("does not let a slow first check hold back the others, and still reports in o
   });
   await expect(auditNotule(tenSource, tenHtml, "", failing)).rejects.toThrow("De notule bevat een onbevestigde bewering: Punt 391 is besproken.");
   expect(calls(failing, "note")).toHaveLength(AUDIT_CONCURRENCY);
+});
+
+it("lets a hosted provider check eight sentences at once with the same order and stop semantics", async () => {
+  expect(HOSTED_AUDIT_CONCURRENCY).toBe(8);
+  const request = model({ cover: tenCover, delay: () => 5 });
+  await auditNotule(tenSource, tenHtml, "", request, [], false, HOSTED_AUDIT_CONCURRENCY);
+  expect(request.live.peak).toBe(HOSTED_AUDIT_CONCURRENCY);
+
+  // The slow N1 problem is reported, a fast later failure starts nothing new.
+  const failing = model({
+    cover: tenCover,
+    note: (report, data) => {
+      if (data.notes[0].id === "N1") report.notes = [{ id: "N1", status: "unsupported", evidence: [] }];
+      if (data.notes[0].id === "N2") report.notes = [{ id: "N2", status: "contradiction", evidence: [] }];
+    },
+    delay: user => { const id = noteId(user); return id === "N1" ? 300 : id === "N2" || !id ? 0 : 100; },
+  });
+  await expect(auditNotule(tenSource, tenHtml, "", failing, [], false, HOSTED_AUDIT_CONCURRENCY))
+    .rejects.toThrow("De notule bevat een onbevestigde bewering: Punt 391 is besproken.");
+  expect(calls(failing, "note")).toHaveLength(HOSTED_AUDIT_CONCURRENCY);
 });
 
 it("reports a contradiction in a later part as a contradiction, not as missing evidence", async () => {

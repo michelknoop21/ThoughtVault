@@ -100,8 +100,10 @@ private func verdict(_ id: String, _ status: String, _ evidence: [String] = []) 
 }
 
 final class NotuleAuditPartsTests: XCTestCase {
-    private func audit(_ source: String, _ html: String, quickNote: String = "", _ recorder: LongRecorder, _ model: LongModel) async throws {
-        try await NotuleAudit.auditNotule(source: source, html: html, quickNote: quickNote, request: longRequest(recorder, model))
+    private func audit(_ source: String, _ html: String, quickNote: String = "", _ recorder: LongRecorder, _ model: LongModel,
+                       noteConcurrency: Int = NotuleAudit.auditConcurrency) async throws {
+        try await NotuleAudit.auditNotule(source: source, html: html, quickNote: quickNote, request: longRequest(recorder, model),
+                                          noteConcurrency: noteConcurrency)
     }
 
     private func rejection(_ body: () async throws -> Void) async -> (any Error)? {
@@ -439,6 +441,49 @@ final class NotuleAuditPartsTests: XCTestCase {
         XCTAssertEqual(note.count, 10)
         XCTAssertLessThanOrEqual(peak, NotuleAudit.auditConcurrency)
         XCTAssertGreaterThan(peak, 1)
+    }
+
+    func testHostedProvidersCheckEightSentencesAtOnceWithTheSameOrderAndStop() async throws {
+        let hosted = NotuleAudit.hostedAuditConcurrency
+        let recorder = LongRecorder()
+        try await audit(tenSource, tenHtml, recorder, LongModel(cover: tenCover, delay: { _ in 20_000_000 }), noteConcurrency: hosted)
+        let peak = await recorder.peak
+        XCTAssertEqual(hosted, 8)
+        XCTAssertLessThanOrEqual(peak, hosted)
+        XCTAssertGreaterThan(peak, NotuleAudit.auditConcurrency)
+
+        // Same semantics at 8: the slow N1 problem is reported, a fast later failure starts nothing new.
+        let failing = LongModel(cover: tenCover, note: { id, report in
+            if id == "N1" { report["notes"] = verdict("N1", "unsupported") }
+            if id == "N2" { report["notes"] = verdict("N2", "contradiction") }
+        }, delay: { user in
+            switch noteId(user) {
+            case "N1"?: 300_000_000
+            case "N2"?, nil: 0
+            default: 100_000_000
+            }
+        })
+        let second = LongRecorder()
+        await assertRejects("De notule bevat een onbevestigde bewering: Punt 391 is besproken.") {
+            try await audit(tenSource, tenHtml, second, failing, noteConcurrency: hosted)
+        }
+        let notes = await second.requests("note").count
+        XCTAssertEqual(notes, hosted)
+    }
+
+    func testOnlyHostedProvidersGetTheHigherLimit() {
+        for provider in [NotulenProvider.openAI, .anthropic, .ollamaCloud, .openAICompatible] {
+            XCTAssertEqual(provider.auditNoteConcurrency, NotuleAudit.hostedAuditConcurrency, provider.rawValue)
+        }
+        XCTAssertEqual(NotulenProvider.appleIntelligence.auditNoteConcurrency, NotuleAudit.auditConcurrency)
+        // Same cases as isHostedURL in ollamaModels.test.ts.
+        for url in ["https://ollama.com", "https://openrouter.ai/api/v1", "https://llm.example.nl:8443", "https://172.32.0.1"] {
+            XCTAssertTrue(isHostedURL(url), url)
+        }
+        for url in ["http://ollama.com", "http://localhost:11434", "https://localhost", "https://127.0.0.1:1234", "https://[::1]:1234",
+                    "https://10.0.0.5", "https://192.168.1.20", "https://172.20.1.1", "https://nas.local", "https://mini", "invalid"] {
+            XCTAssertFalse(isHostedURL(url), url)
+        }
     }
 
     func testContradictionInLaterPartIsReportedAsContradiction() async {

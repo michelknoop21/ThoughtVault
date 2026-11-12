@@ -33,6 +33,13 @@ enum NotuleTitleExtractor {
         "belangrijkste punten", "quotes", "highlights",
     ])
 
+    /// A heading made only of genre words ("Verslag meeting", "Verslaggesprek") names
+    /// the document type, not the conversation. Compounds are runs of these stems;
+    /// a date ("10 november") adds nothing either.
+    private static let genreWord = try! NSRegularExpression(
+        pattern: #"^(verslag|notulen?|meetings?|gespreks?|overleg|vergadering|prompts?|van|het|de|een|\d|januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december)+$"#
+    )
+
     /// Normalizes a string for section-word matching: lowercase, fold diacritics,
     /// strip punctuation, collapse whitespace. So "Ideeën & inzichten:" matches
     /// "ideeen inzichten".
@@ -56,8 +63,11 @@ enum NotuleTitleExtractor {
     static func extract(from html: String) -> String? {
         // The source warning is appended last; the title comes from the notule before it.
         let html = html.range(of: NotuleAudit.warningHeading).map { String(html[..<$0.lowerBound]) } ?? html
-        // Strategy 1: first descriptive heading (h1–h4)
-        for match in regexMatches(#"<(h[1-4])[^>]*>(.*?)</\1>"#, in: html, group: 2) {
+        // Strategy 1: first descriptive heading. When the notule has an h1, only h1 counts:
+        // a rejected h1 must not promote a section heading ("Acties") to title.
+        let headingPattern = regexMatches(#"(<h1[\s>])"#, in: html, group: 1).isEmpty
+            ? #"<(h[1-4])[^>]*>(.*?)</\1>"# : #"<(h1)[^>]*>(.*?)</\1>"#
+        for match in regexMatches(headingPattern, in: html, group: 2) {
             let title = clean(match)
             if isDescriptive(title) { return String(title.prefix(80)) }
         }
@@ -105,6 +115,9 @@ enum NotuleTitleExtractor {
         if words.count <= 2 && words.contains(where: { sectionWords.contains($0) }) {
             return false
         }
+        if words.allSatisfy({ word in
+            genreWord.firstMatch(in: word, range: NSRange(word.startIndex..., in: word)) != nil
+        }) { return false }
         return true
     }
 

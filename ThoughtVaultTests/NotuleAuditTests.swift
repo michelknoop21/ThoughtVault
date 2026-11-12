@@ -544,3 +544,36 @@ final class NotuleAuditTests: XCTestCase {
                                           requiredSentences: [" Geen  klantgegevens. "])
     }
 }
+
+final class NotuleTitleExtractorTests: XCTestCase {
+    // Mirrors windows/src/services/__tests__/titleExtractor.test.ts
+    private let body = "<p>Het team koos voor een nieuwe hostingpartij omdat de huidige te traag is.</p>"
+
+    func testSkipsHeadingMadeOnlyOfGenreWords() {
+        for h1 in ["Verslag meeting", "Verslaggesprek", "Gespreksverslag van het overleg", "Prompt", "Prompts", "Verslag van de meeting 10 november"] {
+            XCTAssertEqual(
+                NotuleTitleExtractor.extract(from: "<h1>\(h1)</h1>\(body)"),
+                "Het team koos voor een nieuwe hostingpartij omdat de huidige te traag is",
+                h1
+            )
+        }
+    }
+
+    func testDoesNotPromoteSectionHeadingWhenH1IsRejected() {
+        XCTAssertEqual(
+            NotuleTitleExtractor.extract(from: "<h1>Notulen</h1><h2>Acties</h2>\(body)"),
+            "Het team koos voor een nieuwe hostingpartij omdat de huidige te traag is"
+        )
+    }
+
+    func testKeepsHeadingThatNamesThePurpose() {
+        XCTAssertEqual(
+            NotuleTitleExtractor.extract(from: "<h1>Keuze hostingpartij webshop</h1>\(body)"),
+            "Keuze hostingpartij webshop"
+        )
+        XCTAssertEqual(
+            NotuleTitleExtractor.extract(from: "<h1>Verslag hostingkeuze</h1>\(body)"),
+            "Verslag hostingkeuze"
+        )
+    }
+}

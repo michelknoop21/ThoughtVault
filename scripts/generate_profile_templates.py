@@ -23,11 +23,11 @@ def build_entries(source):
         if item.get('template'):
             template = item['template']
         elif sections:
-            template = '<h1>[Beschrijvende titel]</h1>\n' + '\n'.join(
+            template = '<h1>[Doel of uitkomst van dit gesprek in 4-10 woorden]</h1>\n' + '\n'.join(
                 f'<section><h2>{section}</h2><p>[Alleen brongebonden inhoud]</p></section>' for section in sections
             )
         else:
-            template = '<h1>Prompt</h1>\n<p>[Kopieerbare prompttekst]</p>'
+            template = '<h1>[Waar de prompt voor dient, 4-10 woorden]</h1>\n<p>[Kopieerbare prompttekst]</p>'
         entries.append({
             'id': item['id'], 'name': item['name'], 'description': item['description'], 'icon': item['icon'], 'emoji': item['emoji'],
             'systemPrompt': common, 'notulePrompt': prompt, 'template': template,

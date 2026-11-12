@@ -1,0 +1,152 @@
+[
+  {
+    "path": "waddenspoor-1.request.json",
+    "sha256": "96b6b19d70fab097567bea370f09cfb68f0c42058011b42b8dc412a78723b767",
+    "length": 5098
+  },
+  {
+    "path": "waddenspoor-1.response.json",
+    "sha256": "fac98e15e9f770b773c33f06132bc15e1be73a33698e7af70de29cd1af9cee9d",
+    "length": 17832
+  },
+  {
+    "path": "waddenspoor-1.response.txt",
+    "sha256": "8f6bb50677285360eaf4ef95b492be6df9de76fc8172c4665a46a0ae61602c4b",
+    "length": 1103
+  },
+  {
+    "path": "waddenspoor-2.request.json",
+    "sha256": "d638a5523776312241f715572f375a69f7abe06d97219526947e6c56b8d487bf",
+    "length": 1451
+  },
+  {
+    "path": "waddenspoor-2.response.json",
+    "sha256": "721a705d0a0dfd341f27c41515035ab0d2064ef4fe8a4dd14c327bcc34941af5",
+    "length": 6584
+  },
+  {
+    "path": "waddenspoor-2.response.txt",
+    "sha256": "76d420ba596e708020b45e8c61930ccf3a77b9302fe637d78bddd3f304b7dc76",
+    "length": 19
+  },
+  {
+    "path": "waddenspoor-3.request.json",
+    "sha256": "bf9684a9ddf1eb53992af676f6af1fb6d62ceb42ef16d92b82c38722e28f8fef",
+    "length": 5105
+  },
+  {
+    "path": "waddenspoor-3.response.json",
+    "sha256": "5bdb3fa195f6acb45ca82c4cb9b0279293115ff79dd70caf178b231d7047dba8",
+    "length": 16988
+  },
+  {
+    "path": "waddenspoor-3.response.txt",
+    "sha256": "08684ecabeee8153e5a3b20971d9f5e2ec1e99f7a9844c076a1c6bd200c15d87",
+    "length": 1244
+  },
+  {
+    "path": "noorderlicht-1.request.json",
+    "sha256": "f8cb0d1f42b5ca7fc5dd05f6dd5f0efe629113dd3db6d938aa3a236b2f837fb4",
+    "length": 5078
+  },
+  {
+    "path": "noorderlicht-1.response.json",
+    "sha256": "e825172c01bd0e48c5fbb771f601f2c3a875cb95713acbca788b9bc8e4bd2f58",
+    "length": 33308
+  },
+  {
+    "path": "noorderlicht-1.response.txt",
+    "sha256": "721b073528a1819aee50301732f11b7e28b252cf33f239dc06044338b30a65ea",
+    "length": 1275
+  },
+  {
+    "path": "noorderlicht-2.request.json",
+    "sha256": "024797ed109d3e18e4bb94b84e919a93d90b2aa44a25151902ce930ac3b0c0af",
+    "length": 1487
+  },
+  {
+    "path": "noorderlicht-2.response.json",
+    "sha256": "1be4695fac884b5a4a9108ea213e8af9d420cf3268d90de98c019bfd10776e92",
+    "length": 1538
+  },
+  {
+    "path": "noorderlicht-2.response.txt",
+    "sha256": "76d420ba596e708020b45e8c61930ccf3a77b9302fe637d78bddd3f304b7dc76",
+    "length": 19
+  },
+  {
+    "path": "noorderlicht-3.request.json",
+    "sha256": "81997fbeaee865bbb907ee33ff89c1bae85f10b843ea70f5968e5bce1b564ee9",
+    "length": 5311
+  },
+  {
+    "path": "noorderlicht-3.response.json",
+    "sha256": "c2669c84300032d4ace8887f1892de5aa32abc5b8f2ddc2b589f303dbebdc7fb",
+    "length": 34791
+  },
+  {
+    "path": "noorderlicht-3.response.txt",
+    "sha256": "264265b25e1707c156e22d411fdcbd0989a614a6059a3399875e95ab2a9c6eee",
+    "length": 1195
+  },
+  {
+    "path": "bibliotheek-1.request.json",
+    "sha256": "e9d628487896a4510f69e66c96493f64d08cd53a3ee90ad76d072ae48e313012",
+    "length": 5082
+  },
+  {
+    "path": "bibliotheek-1.response.json",
+    "sha256": "55877fbfa2e31e13519540ed017750a1b06913ba3123c8fdfad82b0c2883569e",
+    "length": 12969
+  },
+  {
+    "path": "bibliotheek-1.response.txt",
+    "sha256": "1fdbe288f90f95301b16820abde221927a1c0c1932b791511d653bf14cf20c81",
+    "length": 924
+  },
+  {
+    "path": "bibliotheek-2.request.json",
+    "sha256": "b0fc7f5dd6b3be30678d0260954210e7441c52b6ab3be62344289c910634c853",
+    "length": 1480
+  },
+  {
+    "path": "bibliotheek-2.response.json",
+    "sha256": "577d6762a4ae89f5d514886970675d1c54b733229531479892dd103fc5d4e7af",
+    "length": 2498
+  },
+  {
+    "path": "bibliotheek-2.response.txt",
+    "sha256": "76d420ba596e708020b45e8c61930ccf3a77b9302fe637d78bddd3f304b7dc76",
+    "length": 19
+  },
+  {
+    "path": "bibliotheek-3.request.json",
+    "sha256": "f14d1aca63465751ca6a28d17f9362afeadbed90e6aee6be2bcf706438d39064",
+    "length": 4869
+  },
+  {
+    "path": "bibliotheek-3.response.json",
+    "sha256": "52e351ed496f6a8bfd57469ed0850b9dda3a107b7c7688d36f4a6d2af2d2a831",
+    "length": 18464
+  },
+  {
+    "path": "bibliotheek-3.response.txt",
+    "sha256": "097196417276f2353d388e50ab6a5d620e57fa576a633c5dd540d7d337be226c",
+    "length": 1014
+  },
+  {
+    "path": "waddenspoor.result.json",
+    "sha256": "ec9397724a39749dd305f72eca7bd9909df7fe93c110933d69692ac0f346d9a0",
+    "length": 2160
+  },
+  {
+    "path": "noorderlicht.result.json",
+    "sha256": "9e76b9f2fc5a23a6cc3e96894fc486a791ce7e7e778c5d00dd01b2fd5ee4c577",
+    "length": 2530
+  },
+  {
+    "path": "bibliotheek.result.json",
+    "sha256": "05d85921df24b810b840be13444b593a74e71f0746d6803828b094ed35cb5b7f",
+    "length": 2009
+  }
+]

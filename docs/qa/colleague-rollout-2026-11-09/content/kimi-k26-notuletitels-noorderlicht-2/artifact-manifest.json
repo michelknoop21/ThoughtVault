@@ -1,0 +1,52 @@
+[
+  {
+    "path": "noorderlicht-1.request.json",
+    "sha256": "f8cb0d1f42b5ca7fc5dd05f6dd5f0efe629113dd3db6d938aa3a236b2f837fb4",
+    "length": 5078
+  },
+  {
+    "path": "noorderlicht-1.response.json",
+    "sha256": "5657f63966fcb541989b4ecd42b1f34d560adb3e7f38def98a1ea02d50c3ecda",
+    "length": 25246
+  },
+  {
+    "path": "noorderlicht-1.response.txt",
+    "sha256": "30a0b821bfee4176f39a83cdf9c45f1eabfa8710003938b37cd5ae4e531e0bcc",
+    "length": 1477
+  },
+  {
+    "path": "noorderlicht-2.request.json",
+    "sha256": "024797ed109d3e18e4bb94b84e919a93d90b2aa44a25151902ce930ac3b0c0af",
+    "length": 1487
+  },
+  {
+    "path": "noorderlicht-2.response.json",
+    "sha256": "5b4ed81491837f47234dc4e9fff90c4402734bcab7aca021968b8df1051f85c9",
+    "length": 2362
+  },
+  {
+    "path": "noorderlicht-2.response.txt",
+    "sha256": "76d420ba596e708020b45e8c61930ccf3a77b9302fe637d78bddd3f304b7dc76",
+    "length": 19
+  },
+  {
+    "path": "noorderlicht-3.request.json",
+    "sha256": "e5a6c5a7d1a3c85f52da94d6aec875a4edb1109064c400d1f721748992cd98a5",
+    "length": 5545
+  },
+  {
+    "path": "noorderlicht-3.response.json",
+    "sha256": "eeb198aba16b0cc9240110c355177495b3e15a660b649b1e04e1fee783240124",
+    "length": 18095
+  },
+  {
+    "path": "noorderlicht-3.response.txt",
+    "sha256": "2df5af91d69c693975426dbf110e90dfdd2e14a19037ce84b5000bb4eb571128",
+    "length": 1490
+  },
+  {
+    "path": "noorderlicht.result.json",
+    "sha256": "11ceed623a349df62535e210d3c5055ff6e29dbde6423d2e6dd80bf40e839265",
+    "length": 2574
+  }
+]

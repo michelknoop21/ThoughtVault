@@ -67,11 +67,17 @@ final class M3LiveContentGateOfflineTests: XCTestCase {
 
     func testWindowsResponsesReplayToTheSameVerdicts() async throws {
         let fixture = try M3Fixture.load()
-        let queue = OSAllocatedUnfairLock(initialState: (fixture.auditCases.flatMap(\.windows) + fixture.meetings.flatMap(\.windows)).map(\.response))
+        let queue = OSAllocatedUnfairLock(initialState: fixture.auditCases.flatMap(\.windows) + fixture.meetings.flatMap(\.windows))
         M3GateRecorder.start(cap: fixture.requestCap) { request in
-            let next = queue.withLock { $0.isEmpty ? nil : $0.removeFirst() }
+            // The source check runs alongside the draft, so a meeting's requests arrive in any order: answer the
+            // recorded exchange with the same prompts, otherwise the next one in Windows order.
+            let sent = request.httpBody.flatMap(M3Gate.prompts)
+            let next = queue.withLock { queue -> M3Fixture.Exchange? in
+                guard !queue.isEmpty else { return nil }
+                return queue.remove(at: queue.firstIndex { recorded in sent.map { M3Gate.matches($0, recorded) } == true } ?? 0)
+            }
             guard let next else { throw URLError(.resourceUnavailable) }
-            return (Self.ok(request), Self.sse(next, model: fixture.model))
+            return (Self.ok(request), Self.sse(next.response, model: fixture.model))
         }
         let evidence = FileManager.default.temporaryDirectory.appending(path: "M3-offline-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: evidence) }

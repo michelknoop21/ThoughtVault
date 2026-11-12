@@ -18,9 +18,13 @@ final class AnthropicLLMService: LLMService, @unchecked Sendable {
 
     private let model: String
     private let apiKey: String?
+    private let session: URLSession
+    /// Test seam: the wait before retrying an HTTP 429.
+    var rateLimitSleep = llmSleep
 
-    init(model: String, apiKey: String?) {
+    init(model: String, apiKey: String?, session: URLSession = llmSession) {
         self.model = model
+        self.session = session
         let trimmed = apiKey?.trimmingCharacters(in: .whitespacesAndNewlines)
         self.apiKey = (trimmed?.isEmpty == false) ? trimmed : nil
     }
@@ -88,35 +92,43 @@ final class AnthropicLLMService: LLMService, @unchecked Sendable {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.timeoutInterval = 300
 
-        let (bytes, response) = try await URLSession.shared.bytes(for: request)
-        guard let http = response as? HTTPURLResponse else {
-            throw LLMError.generationFailed("Ongeldig serverantwoord.")
-        }
-        guard http.statusCode == 200 else {
-            if http.statusCode == 401 { throw LLMError.generationFailed("API-sleutel geweigerd. Controleer de sleutel.") }
-            throw LLMError.serverError(http.statusCode)
-        }
-
-        var fullText = ""
-        stream: for try await line in bytes.lines {
-            guard line.hasPrefix("data: "),
-                  let data = line.dropFirst(6).data(using: .utf8),
-                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
-            else { continue }
-            switch json["type"] as? String {
-            case "content_block_delta":
-                if let delta = json["delta"] as? [String: Any], let text = delta["text"] as? String {
-                    fullText += text
-                    onProgress(text)
-                }
-            case "error":
-                let message = (json["error"] as? [String: Any])?["message"] as? String ?? "onbekende fout"
-                throw LLMError.generationFailed(message)
-            case "message_stop":
-                break stream
-            default:
-                continue
+        let fullText = try await mappingTimeout { () async throws -> String in
+            let (bytes, response) = try await sendRetryingRateLimit(session: session, sleep: rateLimitSleep) {
+                try await $0.bytes(for: request)
             }
+            guard let http = response as? HTTPURLResponse else {
+                throw LLMError.generationFailed("Ongeldig serverantwoord.")
+            }
+            guard http.statusCode == 200 else {
+                if http.statusCode == 401 { throw LLMError.generationFailed("API-sleutel geweigerd. Controleer de sleutel.") }
+                throw LLMError.serverError(http.statusCode)
+            }
+
+            var fullText = ""
+            stream: for try await line in bytes.lines {
+                guard line.hasPrefix("data: "),
+                      let data = line.dropFirst(6).data(using: .utf8),
+                      let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+                else { continue }
+                switch json["type"] as? String {
+                case "content_block_delta":
+                    if let delta = json["delta"] as? [String: Any], let text = delta["text"] as? String {
+                        fullText += text
+                        onProgress(text)
+                    }
+                case "message_delta":
+                    // A capped answer is incomplete; never parse it as a short one.
+                    if (json["delta"] as? [String: Any])?["stop_reason"] as? String == "max_tokens" { throw LLMError.truncated }
+                case "error":
+                    let message = (json["error"] as? [String: Any])?["message"] as? String ?? "onbekende fout"
+                    throw LLMError.generationFailed(message)
+                case "message_stop":
+                    break stream
+                default:
+                    continue
+                }
+            }
+            return fullText
         }
 
         if fullText.isEmpty { throw LLMError.emptyResponse }
@@ -140,7 +152,9 @@ final class AnthropicLLMService: LLMService, @unchecked Sendable {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.timeoutInterval = 300
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await mappingTimeout {
+            try await sendRetryingRateLimit(session: session, sleep: rateLimitSleep) { try await $0.data(for: request) }
+        }
         guard let http = response as? HTTPURLResponse else {
             throw LLMError.generationFailed("Ongeldig serverantwoord.")
         }
@@ -148,7 +162,9 @@ final class AnthropicLLMService: LLMService, @unchecked Sendable {
             if http.statusCode == 401 { throw LLMError.generationFailed("API-sleutel geweigerd. Controleer de sleutel.") }
             throw LLMError.serverError(http.statusCode)
         }
-        let blocks = (try? JSONSerialization.jsonObject(with: data) as? [String: Any])?["content"] as? [[String: Any]]
+        let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        if json?["stop_reason"] as? String == "max_tokens" { throw LLMError.truncated }
+        let blocks = json?["content"] as? [[String: Any]]
         let text = (blocks ?? []).compactMap { $0["text"] as? String }.joined()
         if text.isEmpty { throw LLMError.emptyResponse }
         return text

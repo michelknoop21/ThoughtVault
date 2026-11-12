@@ -143,8 +143,10 @@ enum NotuleAudit {
 
     /// A bounded model-assisted check; evidence links prove coverage, not semantic truth.
     /// `sourceUnclear`: the source check warned, so an exact copy of the source still needs the model audit.
+    /// `noteConcurrency`: step-2 checks in flight for a long meeting (`NotulenProvider.auditNoteConcurrency`).
     static func auditNotule(source: String, html: String, quickNote: String, request: @escaping AuditRequest,
-                            requiredSentences: [String] = [], sourceUnclear: Bool = false) async throws {
+                            requiredSentences: [String] = [], sourceUnclear: Bool = false,
+                            noteConcurrency: Int = auditConcurrency) async throws {
         // Only plain semantic HTML has a checkable text representation here, not arbitrary CSS/layout.
         let markup = scan(html, dropping: ["script", "template", "head"])
         if regex(#"<style(?![A-Za-z0-9_])"#, .caseInsensitive).firstMatch(in: html, range: whole(html)) != nil || markup.hidesContent
@@ -163,7 +165,8 @@ enum NotuleAudit {
         guard source.utf16.count + quickNote.utf16.count + noteText.utf16.count <= 64_000,
               sourceUnits.count + noteUnits.count <= 400 else {
             // DEC-065: a long meeting is checked in two steps; within the limit the single request below stays unchanged.
-            let checks = try await auditLong(sourceUnits: sourceUnits, noteUnits: noteUnits, request: request)
+            let checks = try await auditLong(sourceUnits: sourceUnits, noteUnits: noteUnits, request: request,
+                                             noteConcurrency: noteConcurrency)
             return try conclude(sourceChecks: checks.source, noteChecks: checks.notes, sourceUnits: sourceUnits,
                                 noteUnits: noteUnits, requiredSentences: requiredSentences)
         }

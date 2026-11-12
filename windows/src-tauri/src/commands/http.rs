@@ -24,10 +24,19 @@ pub struct HttpResponse {
 /// Generic HTTP proxy — bypasses WebView CORS restrictions.
 #[tauri::command]
 pub async fn proxy_request(request: HttpRequest) -> Result<HttpResponse, String> {
+    let timeout = request.timeout_seconds.unwrap_or(30).min(900);
     let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(request.timeout_seconds.unwrap_or(30).min(300)))
+        .timeout(std::time::Duration::from_secs(timeout))
         .build()
         .map_err(|e| e.to_string())?;
+    // llm.ts recognises a timeout by this prefix (PROXY_TIMEOUT).
+    let request_error = |e: reqwest::Error| {
+        if e.is_timeout() {
+            format!("Tijdslimiet bereikt: geen volledig antwoord binnen {} seconden.", timeout)
+        } else {
+            e.to_string()
+        }
+    };
 
     let mut req = match request.method.to_uppercase().as_str() {
         "GET"    => client.get(&request.url),
@@ -49,7 +58,7 @@ pub async fn proxy_request(request: HttpRequest) -> Result<HttpResponse, String>
         req = req.body(body);
     }
 
-    let response = req.send().await.map_err(|e| e.to_string())?;
+    let response = req.send().await.map_err(request_error)?;
     let status = response.status().as_u16();
 
     let mut resp_headers = HashMap::new();
@@ -59,7 +68,7 @@ pub async fn proxy_request(request: HttpRequest) -> Result<HttpResponse, String>
         }
     }
 
-    let body = response.text().await.map_err(|e| e.to_string())?;
+    let body = response.text().await.map_err(request_error)?;
 
     Ok(HttpResponse { status, body, headers: resp_headers })
 }

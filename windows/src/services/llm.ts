@@ -10,7 +10,7 @@ import { isHostedURL, isOllamaCloudURL } from "./ollamaModels";
 import { loadCorrectionsOrEmpty } from "../stores/personalCorrectionsStore";
 import { usePeopleDirectoryStore } from "../stores/peopleDirectoryStore";
 import { correctText, correctHTML, contextBlock, CONTEXT_BUDGET, type PersonalCorrection } from "./personalCorrections";
-import { auditSource, auditNotule, appendWarnings, AuditFinding, constraintSentences, UNCHECKED_CONTENT_WARNING } from "./notuleAudit";
+import { auditSource, auditNotule, appendWarnings, AuditFinding, constraintSentences, UNCHECKED_CONTENT_WARNING, AUDIT_CONCURRENCY, HOSTED_AUDIT_CONCURRENCY } from "./notuleAudit";
 
 interface LLMConfig {
   provider: NotulenProvider;
@@ -23,6 +23,60 @@ interface LLMConfig {
 }
 
 type ProgressCallback = (chunk: string) => void;
+
+/** Total time per model request, as on macOS. A cold local model plus a long non-streamed draft can need it. */
+const LLM_TIME_LIMIT_SECONDS = 900;
+/** Output cap per model request, as on macOS (llmMaxOutputTokens). The largest legitimate output is the
+ * single-request audit: one JSON item of about 25 tokens per unit for up to 400 units, so about 10,000 tokens.
+ * A long notule draft is several thousand. Reasoning models count their thinking against it, hence 3x headroom. */
+export const MAX_OUTPUT_TOKENS = 32_768;
+export const TIME_LIMIT_MESSAGE = "Tijdslimiet bereikt: de AI-provider gaf niet op tijd een volledig antwoord. Probeer het opnieuw of kies een sneller model.";
+export const TRUNCATED_MESSAGE = "Het antwoord van de AI-provider is afgebroken omdat het de maximale lengte bereikte.";
+/** Prefix of the proxy_request error for a timeout (http.rs). */
+const PROXY_TIMEOUT = "Tijdslimiet bereikt";
+
+/** Wait before retrying an HTTP 429 when the provider sends no usable Retry-After, as on macOS. */
+export const RATE_LIMIT_DEFAULT_WAIT_MS = 2_000;
+/** Longest Retry-After that is waited for; a provider asking more is reported as rate limiting right away. */
+export const RATE_LIMIT_MAX_WAIT_MS = 30_000;
+const RATE_LIMIT_MESSAGE = "API-limiet bereikt (429), ook na een nieuwe poging. Probeer het later opnieuw of verwerk minder opnames tegelijk.";
+
+/** Milliseconds to wait before retrying a 429: Retry-After as delta-seconds or HTTP date, else the default.
+ * null when the provider asks for more than RATE_LIMIT_MAX_WAIT_MS. */
+export function rateLimitWaitMs(retryAfter: string | undefined, now = Date.now()): number | null {
+  const value = (retryAfter ?? "").trim();
+  const wait = /^\d+$/.test(value) ? Number(value) * 1000 : /[a-z]/i.test(value) && !Number.isNaN(Date.parse(value))
+    ? Math.max(0, Date.parse(value) - now) : RATE_LIMIT_DEFAULT_WAIT_MS;
+  return wait <= RATE_LIMIT_MAX_WAIT_MS ? wait : null;
+}
+
+type ProxyResponse = { status: number; body: string; headers?: Record<string, string> };
+
+async function proxy(request: { url: string; headers: Record<string, string>; body: string }, timeoutSeconds: number): Promise<ProxyResponse> {
+  try {
+    return await invoke("proxy_request", { request: { ...request, method: "POST", timeout_seconds: timeoutSeconds } });
+  } catch (error) {
+    throw String(error).startsWith(PROXY_TIMEOUT) ? new Error(TIME_LIMIT_MESSAGE) : error;
+  }
+}
+
+/** Every model request goes through here: one total time limit, a timeout named as such, and one retry on HTTP 429
+ * after the provider's Retry-After plus up to one second of jitter, so requests that were rate limited together do
+ * not collide again. The wait and the retry count against the same time limit. A wait that is too long, and a
+ * second 429, return the 429 to the caller, which reports it. Windows requests take no abort signal, so there is
+ * no cancellation during the wait. */
+async function modelRequest(request: { url: string; headers: Record<string, string>; body: string }): Promise<ProxyResponse> {
+  const started = Date.now();
+  const first = await proxy(request, LLM_TIME_LIMIT_SECONDS);
+  const header = Object.entries(first.headers ?? {}).find(([name]) => name.toLowerCase() === "retry-after")?.[1];
+  const wait = first.status === 429 ? rateLimitWaitMs(header) : null;
+  if (wait === null) return first;
+  const jittered = wait + Math.random() * 1000;
+  const remainingSeconds = Math.floor((LLM_TIME_LIMIT_SECONDS * 1000 - (Date.now() - started) - jittered) / 1000);
+  if (remainingSeconds < 1) return first;
+  await new Promise(resolve => setTimeout(resolve, jittered));
+  return proxy(request, remainingSeconds);
+}
 
 // These constraints must survive both chunk summaries and the final profile.
 const FACTUALITY_RULES = "Behoud expliciete ontkenningen, verboden, voorwaarden en vervallen afspraken bij het bijbehorende besluit of de actie, ook in een compacte notule. Behoud ook de aard en status van het besprokene: een fictief of hypothetisch voorbeeld mag geen echte afspraak worden, een voorgenomen proef geen uitgevoerd project. Noem een expliciet fictieve of hypothetische status ook expliciet in de kern van het verslag. Leid daaruit geen ongenoemde uitvoeringsstatus af: zeg alleen dat iets al wel of nog niet is uitgevoerd als de bron dat expliciet vermeldt. Een uitnodiging is geen aanwezigheid; vermeld expliciete afwezigheid. Een open vraag is geen besluit: presenteer onbesliste onderwerpen niet als opdracht of afgesproken vervolg. Voeg geen vervolgafspraken toe die niet zijn genoemd. Een toestemmingsvoorwaarde is geen opdracht of toezegging om die toestemming te geven; maak daar geen actie van. Controleer vóór het antwoorden alle besluiten en acties tegen de transcriptie op deze beperkingen en herstel weglatingen.";
@@ -116,17 +170,19 @@ async function generateWithOpenAICompatible(
   const base = baseUrl.trim().replace(/\/+$/, "").replace(/\/v1$/, "");
   let response: { status: number; body: string };
   try {
-    response = await invoke("proxy_request", {
-      request: { url: `${base}/v1/chat/completions`, method: "POST", headers, timeout_seconds: 300,
-        body: JSON.stringify({ model, messages: [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }], stream: false }) },
-    });
-  } catch {
+    response = await modelRequest({ url: `${base}/v1/chat/completions`, headers,
+      body: JSON.stringify({ model, messages: [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }], stream: false, max_tokens: MAX_OUTPUT_TOKENS }) });
+  } catch (error) {
+    if (error instanceof Error && error.message === TIME_LIMIT_MESSAGE) throw error;
     throw new Error(`Kan de notule-generator niet bereiken op ${baseUrl} (model "${model}"). Draait Ollama/LM Studio en klopt de URL in Instellingen?`);
   }
   if (cloud && response.status === 401) throw new Error("Ollama Cloud API-sleutel geweigerd.");
-  if (cloud && response.status === 429) throw new Error("Ollama Cloud API-limiet bereikt. Probeer later opnieuw.");
+  if (cloud && response.status === 429) throw new Error(`Ollama Cloud ${RATE_LIMIT_MESSAGE}`);
   if (response.status >= 400) throw new Error(`${cloud ? "Ollama Cloud" : `Notule-generator op ${baseUrl}`} gaf HTTP ${response.status} voor model "${model}".`);
-  const text = JSON.parse(response.body).choices?.[0]?.message?.content;
+  const choice = JSON.parse(response.body).choices?.[0];
+  // A capped answer is incomplete; never parse it as a short one.
+  if (choice?.finish_reason === "length") throw new Error(TRUNCATED_MESSAGE);
+  const text = choice?.message?.content;
   if (typeof text !== "string" || !text.trim()) throw new Error(cloud ? "Ollama Cloud gaf een leeg antwoord." : "De notule-generator gaf een leeg concept.");
   onProgress?.(text);
   return text;
@@ -142,26 +198,34 @@ async function generateWithHostedAPI(
 ): Promise<string> {
   const openAI = provider === "openai";
   const url = openAI ? "https://api.openai.com/v1/chat/completions" : "https://api.anthropic.com/v1/messages";
+  // api.openai.com rejects `max_tokens` for newer models.
   const body = openAI
-    ? { model, messages: [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }] }
+    ? { model, messages: [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }], max_completion_tokens: MAX_OUTPUT_TOKENS }
     : { model, max_tokens: 16000, system: systemPrompt, messages: [{ role: "user", content: userPrompt }] };
-  const response = await invoke<{ status: number; body: string }>("proxy_request", {
-    request: {
-      url, method: "POST", timeout_seconds: 300,
-      headers: openAI
-        ? { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` }
-        : { "Content-Type": "application/json", "anthropic-version": "2023-06-01", "x-api-key": apiKey },
-      body: JSON.stringify(body),
-    },
+  const response = await modelRequest({
+    url,
+    headers: openAI
+      ? { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` }
+      : { "Content-Type": "application/json", "anthropic-version": "2023-06-01", "x-api-key": apiKey },
+    body: JSON.stringify(body),
   });
   if (response.status === 401) throw new Error(`${openAI ? "OpenAI" : "Anthropic"} API-sleutel geweigerd.`);
-  if (response.status === 429) throw new Error(`${openAI ? "OpenAI" : "Anthropic"} API-limiet bereikt. Probeer later opnieuw.`);
+  if (response.status === 429) throw new Error(`${openAI ? "OpenAI" : "Anthropic"} ${RATE_LIMIT_MESSAGE}`);
   if (response.status >= 400) throw new Error(`${openAI ? "OpenAI" : "Anthropic"} gaf HTTP ${response.status}.`);
   const result = JSON.parse(response.body);
+  if (openAI ? result.choices?.[0]?.finish_reason === "length" : result.stop_reason === "max_tokens") throw new Error(TRUNCATED_MESSAGE);
   const text = openAI ? result.choices?.[0]?.message?.content : result.content?.filter((part: { type: string }) => part.type === "text").map((part: { text: string }) => part.text).join("");
   if (typeof text !== "string" || !text.trim()) throw new Error("De aanbieder gaf een leeg antwoord.");
   onProgress?.(text);
   return text;
+}
+
+/** Step-2 audit checks in flight for a long meeting: 8 for a hosted provider, 4 for a local model (DEC-065).
+ * Ollama and LM Studio count as hosted only with an https URL to a public host, as on macOS. */
+export function auditNoteConcurrency(provider: NotulenProvider, compatibleBaseURL: string): number {
+  const hosted = provider === "openai" || provider === "anthropic"
+    || ((provider === "ollama" || provider === "lm-studio") && isHostedURL(compatibleBaseURL));
+  return hosted ? HOSTED_AUDIT_CONCURRENCY : AUDIT_CONCURRENCY;
 }
 
 /**
@@ -257,13 +321,29 @@ export class LLMService {
     const constraintPrompt = constraints.length
       ? `\n\nVerplicht te behouden bronzinnen (behoud de volledige betekenis, bedragen en voorwaarden bij het passende onderwerp, besluit of open punt; correcte parafrases mogen, tegenspraken nergens):\n${constraints.map((sentence, index) => `${index + 1}. ${sentence}`).join("\n")}` : "";
     // Keep the unverified draft out of progress updates and saved notes.
-    const draft = await generate(systemPrompt, userPrompt + constraintPrompt);
-    if (!draft.trim()) throw new Error("De notule-generator gaf een leeg concept. De transcriptie is bewaard.");
-    const candidate = finish(draft);
+    const draftRequest = generate(systemPrompt, userPrompt + constraintPrompt);
+    // The source check never sees the notule (DEC-062), so it runs while the draft is written. Settled into a
+    // value so it cannot become an unhandled rejection while the draft is still running.
+    const sourceCheck = auditSource(correctText(transcription, corrections, profile.id), quickNote, generate)
+      .then(warning => ({ warning }), (error: unknown) => ({ error }));
+    let candidate: string;
+    try {
+      const draft = await draftRequest;
+      if (!draft.trim()) throw new Error("De notule-generator gaf een leeg concept. De transcriptie is bewaard.");
+      candidate = finish(draft);
+    } catch (error) {
+      // The request takes no abort signal: wait for the source check and drop it, so the draft error still
+      // wins and no request outlives this call (as DEC-065 does for step 2).
+      await sourceCheck;
+      throw error;
+    }
     let warning: string | null = null;
     try {
-      warning = await auditSource(correctText(transcription, corrections, profile.id), quickNote, generate);
-      await auditNotule(correctText(transcription, corrections, profile.id), candidate, quickNote, generate, constraints, warning !== null);
+      const source = await sourceCheck;
+      if ("error" in source) throw source.error;
+      warning = source.warning;
+      await auditNotule(correctText(transcription, corrections, profile.id), candidate, quickNote, generate, constraints, warning !== null,
+        auditNoteConcurrency(config.provider, baseURL));
       const approved = appendWarnings(warning ? [warning] : [], candidate);
       onProgress?.(approved);
       return approved;

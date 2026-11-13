@@ -136,7 +136,9 @@ jobs:
       - name: Verify portable Whisper CPU inference
         working-directory: windows
         run: |
-          $Caches = Get-ChildItem src-tauri/target/release/build/whisper-rs-sys-*/out/build/CMakeCache.txt
+          # Cargo 1.100 moved build script output from build/<pkg>-<hash>/out to build/<pkg>/<hash>/out.
+          $Caches = @(Get-ChildItem src-tauri/target/release/build/whisper-rs-sys-*/out/build/CMakeCache.txt -ErrorAction SilentlyContinue) +
+            @(Get-ChildItem src-tauri/target/release/build/whisper-rs-sys/*/out/build/CMakeCache.txt -ErrorAction SilentlyContinue)
           if (!$Caches) { throw "Whisper build cache missing" }
           foreach ($Cache in $Caches) {
             foreach ($Flag in @('GGML_NATIVE:BOOL=OFF', 'GGML_AVX2:BOOL=ON', 'GGML_AVX512:BOOL=OFF', 'GGML_BMI2:BOOL=OFF')) {

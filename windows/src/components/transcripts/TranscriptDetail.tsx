@@ -34,6 +34,7 @@ import { htmlToPlainText } from "../../utils/htmlToMarkdown";
 import { draftForReview } from "../../services/notuleAudit";
 import { isConfigured, loadOfferRef, openOffer, type OfferRef } from "../../services/prospectFlow";
 import { ProspectFlowDialog } from "./ProspectFlowDialog";
+import { useToast } from "../ui/InfoBar";
 
 type DetailTab = "notule" | "transcriptie";
 
@@ -74,6 +75,7 @@ export function TranscriptDetail({
   onOpenTags,
   onGenerateTitle,
 }: TranscriptDetailProps) {
+  const toast = useToast();
   const [detailTab, setDetailTab] = useState<DetailTab>("notule");
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editTitle, setEditTitle] = useState("");
@@ -326,7 +328,10 @@ export function TranscriptDetail({
                 <>
                   <div className="td-export-divider" />
                   {pfRef?.number && pfRef.url && (
-                    <button className="td-export-item" onClick={() => { void openOffer(pfRef.url!); setExportOpen(false); }}>
+                    <button className="td-export-item" onClick={() => {
+                      void openOffer(pfRef.url!).catch(e => toast.show(e instanceof Error ? e.message : String(e), "error"));
+                      setExportOpen(false);
+                    }}>
                       <Document24Regular style={{ fontSize: 15 }} /> Open offerte {pfRef.number}
                     </button>
                   )}

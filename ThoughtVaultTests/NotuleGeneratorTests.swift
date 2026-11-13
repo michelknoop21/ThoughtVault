@@ -423,6 +423,15 @@ final class NotuleFallbackProviderTests: XCTestCase {
         XCTAssertEqual(NotuleGenerator.fallbackProvider(for: .ollama), .anthropic)
     }
 
+    func testOfferBodyNamesTheColleague() {
+        let suite = "ProspectFlowMaker-" + UUID().uuidString
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        XCTAssertNil(ProspectFlowService.makerEmail(defaults: defaults))
+        defaults.set("  collega@example.com ", forKey: SupportIdentity.emailKey)
+        XCTAssertEqual(ProspectFlowService.makerEmail(defaults: defaults), "collega@example.com")
+    }
+
     func testOfferResultDecodesServerShape() throws {
         let json = #"{"offer_id":5,"number":"20261110-1","url":"/offers/5/build","klant":{"id":3,"naam":"X","nieuw":true},"regels":3,"te_controleren":2,"bestaand":false,"model":"hoofd","terugval_gebruikt":true}"#
         let decoder = JSONDecoder()

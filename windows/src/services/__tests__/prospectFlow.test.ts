@@ -178,3 +178,14 @@ it.each([
   expect(loadOfferRef("t1")).toEqual(pending);
   expect(invoke).toHaveBeenCalledOnce();
 });
+
+it("sends the colleague's e-mail so the draft lands in their own inbox", async () => {
+  const { useSupportStore } = await import("../../stores/supportStore");
+  invoke.mockResolvedValue({ status: 201, body: JSON.stringify(ok) });
+  useSupportStore.setState({ email: "collega@example.com" });
+  await createOffer({ ...input, customerId: 12 });
+  expect(body().maker_email).toBe("collega@example.com");
+  useSupportStore.setState({ email: "" });
+  await createOffer({ ...input, taskId: "t3", customerId: 12 });
+  expect(body()).not.toHaveProperty("maker_email");
+});

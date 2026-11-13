@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useSettingsStore } from "../stores/settingsStore";
+import { useSupportStore } from "../stores/supportStore";
 import { loadCredential } from "./tauriCommands";
 
 export const PROSPECTFLOW_KEY = "prospectflow_api_key";
@@ -51,6 +52,10 @@ function offerUrl(path: string, instance: string): string {
   const url = new URL(base + path);
   if (url.origin !== new URL(base).origin || url.username || url.password) throw new Error("De offertelink hoort niet bij deze Prospect Flow-instance.");
   return url.href;
+}
+
+function makerEmail(): string {
+  return useSupportStore.getState().email.trim();
 }
 
 /** True when both the base URL and the API key are set. */
@@ -142,6 +147,8 @@ export async function createOffer(input: CreateOfferInput): Promise<OfferResult>
       request_id: requestId, transcript_id: input.taskId, title: input.title, recorded_at: input.recordedAt,
       notule_html: input.notuleHtml, transcript: input.transcript,
       ...(input.customerId !== undefined ? { customer_id: input.customerId } : { new_customer_name: input.newCustomerName }),
+      // All installations share one API key; this puts the draft in the colleague's own inbox.
+      ...(makerEmail() ? { maker_email: makerEmail() } : {}),
     }, 300);
   } catch (error) {
     // The API checks this request ID before returning a missing-customer error.

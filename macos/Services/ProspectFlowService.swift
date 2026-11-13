@@ -121,6 +121,12 @@ struct ProspectFlowService: Sendable {
         "prospectFlowOffer-\(Data(baseURL.utf8).base64EncodedString())-\(taskId)"
     }
 
+    /// The e-mail from the support identity, which ThoughtVault asks for on first start.
+    static func makerEmail(defaults: UserDefaults = .standard) -> String? {
+        let email = defaults.string(forKey: SupportIdentity.emailKey)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return email.isEmpty ? nil : email
+    }
+
     static func offerRef(for taskId: String, baseURL: String? = nil, defaults: UserDefaults = .standard) -> OfferRef? {
         let base = normalizedBaseURL(baseURL ?? defaults.string(forKey: baseURLKey) ?? defaultBaseURL)
         // Unscoped references were created by the first, Yinga-only version.
@@ -181,6 +187,8 @@ struct ProspectFlowService: Sendable {
         case .existing(let id): body["customer_id"] = id
         case .new(let name): body["new_customer_name"] = name
         }
+        // All installations share one API key; this puts the draft in the colleague's own inbox.
+        if let maker = Self.makerEmail() { body["maker_email"] = maker }
         let result: OfferResult = try await send("/api/ai/offers/from-conversation", body: body, timeout: 300)
         guard openURL(result.url) != nil else { throw PFError.server(502, String(localized: "Prospect Flow gaf een ongeldige offertelink.")) }
         return result

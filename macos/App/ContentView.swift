@@ -291,6 +291,9 @@ struct ContentView: View {
         } detail: {
             detailView
                 .background(Color.backgroundDark)
+                // The background already reaches under the toolbar; without this the
+                // window toolbar draws its own grey material over it (Taken, Notulen, Mensen).
+                .toolbarBackground(.hidden, for: .windowToolbar)
         }
         .navigationSplitViewStyle(.balanced)
         .id(selectedTab)
@@ -418,7 +421,7 @@ struct ContentView: View {
 
         case .tasks:
             NavigationStack {
-                TasksView()
+                TasksView(onStartRecording: { selectedTab = .record })
             }
 #if os(macOS)
             .toolbar(removing: .sidebarToggle)

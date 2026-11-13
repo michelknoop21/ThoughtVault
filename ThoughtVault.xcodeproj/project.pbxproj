@@ -9,9 +9,11 @@
 /* Begin PBXBuildFile section */
 		AA0F0701 /* SupportIdentityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0F0701 /* SupportIdentityView.swift */; };
 		AA0F0801 /* SupportViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0F0801 /* SupportViews.swift */; };
+		40E8004F9E0DF7B8A00DBC28 /* SupportViews+Mac.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AF241B1198BCA47C72E616A /* SupportViews+Mac.swift */; };
 		AA0F0702 /* SupportIdentityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0F0701 /* SupportIdentityView.swift */; };
 		AB0F0E01 /* envelope-fixture.json in Resources */ = {isa = PBXBuildFile; fileRef = FB0F0E01 /* envelope-fixture.json */; };
 		AA0F0802 /* SupportViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0F0801 /* SupportViews.swift */; };
+		08A0B7F6078891FF34A1BBFF /* SupportViews+Mac.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AF241B1198BCA47C72E616A /* SupportViews+Mac.swift */; };
         AA0F0601 /* MenuBarViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0F0601 /* MenuBarViews.swift */; };
         AA0F0602 /* MenuBarViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0F0601 /* MenuBarViews.swift */; };
 		AB00FA00DS01 /* DebugScreenshotSeed.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA00DS01 /* DebugScreenshotSeed.swift */; };
@@ -113,6 +115,7 @@
 		AA000031 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000031 /* SettingsView.swift */; };
 		AA0000K8 /* SettingsView+VerwerkingSide.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000K8 /* SettingsView+VerwerkingSide.swift */; };
 		AA0000K7 /* SettingsView+Verwerking.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000K7 /* SettingsView+Verwerking.swift */; };
+		770D9E3134D29B0F7206FC61 /* SettingsView+Cards.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1D71F9B7A4C14F2548A9932 /* SettingsView+Cards.swift */; };
 		AA0000K6 /* SettingsView+Studio.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000K6 /* SettingsView+Studio.swift */; };
 		B90000000000000000000001 /* SettingsView+Support.swift in Sources */ = {isa = PBXBuildFile; fileRef = B90000000000000000000003 /* SettingsView+Support.swift */; };
 		AA0000K5 /* HostedProviderConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000K5 /* HostedProviderConfig.swift */; };
@@ -144,6 +147,7 @@
 		AA000054 /* MeetingNotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000054 /* MeetingNotificationService.swift */; };
 		AA000055 /* TasksViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000055 /* TasksViewModel.swift */; };
 		AA000056 /* TasksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000056 /* TasksView.swift */; };
+		CD6F1779103844AFFD3F5EF6 /* TasksView+Empty.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CCB0A7ED0A93DFB8685F497 /* TasksView+Empty.swift */; };
 		AA000057 /* UpdateCheckService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000057 /* UpdateCheckService.swift */; };
 		AA000058 /* GoogleAuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000058 /* GoogleAuthService.swift */; };
 		AA000061 /* TranscriptRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000061 /* TranscriptRecord.swift */; };
@@ -153,6 +157,7 @@
 		AA000070 /* ProfileSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000070 /* ProfileSettingsView.swift */; };
 		AA000071 /* PersonDirectoryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000071 /* PersonDirectoryService.swift */; };
 		AA000072 /* PeopleDirectoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000072 /* PeopleDirectoryView.swift */; };
+		7FFCE4E3525D0A0D796253D0 /* PeopleDirectoryView+Mac.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED06B10C0361262361C2B37D /* PeopleDirectoryView+Mac.swift */; };
 		AA000073 /* PersonEditView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000073 /* PersonEditView.swift */; };
 		AA000074 /* SeedReviewSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000074 /* SeedReviewSheet.swift */; };
 		AB000201 /* Participant.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000201 /* Participant.swift */; };
@@ -217,6 +222,7 @@
 		EE46EAA04FA9E51BD53BCC19 /* AppMigrationPlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000069 /* AppMigrationPlan.swift */; };
 		30010DB6B00C5752975CA076 /* ProfileSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000070 /* ProfileSettingsView.swift */; };
 		8D3B1DE872D7C0F15192EEC8 /* PeopleDirectoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000072 /* PeopleDirectoryView.swift */; };
+		07BEB8429B12E5CD299E0B62 /* PeopleDirectoryView+Mac.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED06B10C0361262361C2B37D /* PeopleDirectoryView+Mac.swift */; };
 		4F19064CA021CC1310287A30 /* PersonEditView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000073 /* PersonEditView.swift */; };
 		F526743AF4321F1A6F85821C /* SeedReviewSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000074 /* SeedReviewSheet.swift */; };
 		72C26EB28F1EEDB35C396E9B /* Participant.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000201 /* Participant.swift */; };
@@ -305,6 +311,7 @@
 		DC7D121D186F2C44F0902D68 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000031 /* SettingsView.swift */; };
 		825525A8990BF36A59F0ACEF /* SettingsView+VerwerkingSide.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000K8 /* SettingsView+VerwerkingSide.swift */; };
 		F4571C89E479D18DF7C6601B /* SettingsView+Verwerking.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000K7 /* SettingsView+Verwerking.swift */; };
+		E7EE50E3FD80FA8398D11280 /* SettingsView+Cards.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1D71F9B7A4C14F2548A9932 /* SettingsView+Cards.swift */; };
 		EB2F34883F1AF554F86EBF01 /* SettingsView+Studio.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000K6 /* SettingsView+Studio.swift */; };
 		B90000000000000000000002 /* SettingsView+Support.swift in Sources */ = {isa = PBXBuildFile; fileRef = B90000000000000000000003 /* SettingsView+Support.swift */; };
 		0CE3268CA29568C899DDCE43 /* HostedProviderConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000K5 /* HostedProviderConfig.swift */; };
@@ -332,6 +339,7 @@
 		A35EF7927202A8BF1D45ECA9 /* UpdateCheckService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000057 /* UpdateCheckService.swift */; };
 		A964E14BD8B550E2AC03919E /* GoogleAuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000058 /* GoogleAuthService.swift */; };
 		A07360D3FEBDAF68D9327F02 /* TasksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000056 /* TasksView.swift */; };
+		1136434EA81E5496ED41EC8D /* TasksView+Empty.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CCB0A7ED0A93DFB8685F497 /* TasksView+Empty.swift */; };
 		1C0B282982F32DD265B211FB /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = FA000041 /* Localizable.strings */; };
 		CFB647584DEC845B17AFE6EC /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = FA000042 /* Localizable.strings */; };
 		A2153F886454AABBC7D1AA12 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = FA000043 /* PrivacyInfo.xcprivacy */; };
@@ -360,6 +368,7 @@
 		FA0F0701 /* SupportIdentityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupportIdentityView.swift; sourceTree = "<group>"; };
 		FB0F0E01 /* envelope-fixture.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "tests/fixtures/envelope-fixture.json"; sourceTree = SOURCE_ROOT; };
 		FA0F0801 /* SupportViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupportViews.swift; sourceTree = "<group>"; };
+		4AF241B1198BCA47C72E616A /* SupportViews+Mac.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SupportViews+Mac.swift"; sourceTree = "<group>"; };
         FA0F0601 /* MenuBarViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarViews.swift; sourceTree = "<group>"; };
 		FC110001 /* WhisperLoadingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhisperLoadingTests.swift; sourceTree = "<group>"; };
 		FC200090 /* WhisperOfflineTokenizerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhisperOfflineTokenizerTests.swift; sourceTree = "<group>"; };
@@ -454,6 +463,7 @@
 		FA000031 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		FA0000K8 /* SettingsView+VerwerkingSide.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SettingsView+VerwerkingSide.swift"; sourceTree = "<group>"; };
 		FA0000K7 /* SettingsView+Verwerking.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SettingsView+Verwerking.swift"; sourceTree = "<group>"; };
+		F1D71F9B7A4C14F2548A9932 /* SettingsView+Cards.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SettingsView+Cards.swift"; sourceTree = "<group>"; };
 		FA0000K6 /* SettingsView+Studio.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SettingsView+Studio.swift"; sourceTree = "<group>"; };
 		B90000000000000000000003 /* SettingsView+Support.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SettingsView+Support.swift"; sourceTree = "<group>"; };
 		FA0000K5 /* HostedProviderConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostedProviderConfig.swift; sourceTree = "<group>"; };
@@ -488,6 +498,7 @@
 		FA000054 /* MeetingNotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeetingNotificationService.swift; sourceTree = "<group>"; };
 		FA000055 /* TasksViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TasksViewModel.swift; sourceTree = "<group>"; };
 		FA000056 /* TasksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TasksView.swift; sourceTree = "<group>"; };
+		8CCB0A7ED0A93DFB8685F497 /* TasksView+Empty.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TasksView+Empty.swift"; sourceTree = "<group>"; };
 		FA000057 /* UpdateCheckService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateCheckService.swift; sourceTree = "<group>"; };
 		FA000058 /* GoogleAuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleAuthService.swift; sourceTree = "<group>"; };
 		FA000061 /* TranscriptRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptRecord.swift; sourceTree = "<group>"; };
@@ -497,6 +508,7 @@
 		FA000070 /* ProfileSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileSettingsView.swift; sourceTree = "<group>"; };
 		FA000071 /* PersonDirectoryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonDirectoryService.swift; sourceTree = "<group>"; };
 		FA000072 /* PeopleDirectoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeopleDirectoryView.swift; sourceTree = "<group>"; };
+		ED06B10C0361262361C2B37D /* PeopleDirectoryView+Mac.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "PeopleDirectoryView+Mac.swift"; sourceTree = "<group>"; };
 		FA000073 /* PersonEditView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonEditView.swift; sourceTree = "<group>"; };
 		FA00CSB1 /* ContextSuggestionBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContextSuggestionBar.swift; sourceTree = "<group>"; };
 		FA000074 /* SeedReviewSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeedReviewSheet.swift; sourceTree = "<group>"; };
@@ -750,6 +762,7 @@
 				FA000027 /* OnboardingView.swift */,
 				FA0F0701 /* SupportIdentityView.swift */,
 				FA0F0801 /* SupportViews.swift */,
+				4AF241B1198BCA47C72E616A /* SupportViews+Mac.swift */,
 				FA000028 /* ProcessingView.swift */,
 				FA000029 /* ProfilesView.swift */,
 				FA000030 /* RecordingView.swift */,
@@ -758,12 +771,14 @@
 				FA000031 /* SettingsView.swift */,
 				FA0000K8 /* SettingsView+VerwerkingSide.swift */,
 				FA0000K7 /* SettingsView+Verwerking.swift */,
+				F1D71F9B7A4C14F2548A9932 /* SettingsView+Cards.swift */,
 				FA0000K6 /* SettingsView+Studio.swift */,
 				B90000000000000000000003 /* SettingsView+Support.swift */,
 				FA0000K5 /* HostedProviderConfig.swift */,
 				FA0000CP1 /* CloudProviderConfig.swift */,
 				FA000070 /* ProfileSettingsView.swift */,
 				FA000072 /* PeopleDirectoryView.swift */,
+				ED06B10C0361262361C2B37D /* PeopleDirectoryView+Mac.swift */,
 				FA000073 /* PersonEditView.swift */,
 				FA00CSB1 /* ContextSuggestionBar.swift */,
 				FB000202 /* ParticipantPickerSheet.swift */,
@@ -771,6 +786,7 @@
 				FA000032 /* TranscriptsView.swift */,
 				FA0000X2 /* PrintCommand.swift */,
 				FA000056 /* TasksView.swift */,
+				8CCB0A7ED0A93DFB8685F497 /* TasksView+Empty.swift */,
 				FA000033 /* OnboardingViewiOSStub.swift */,
 				FA000034 /* FloatingWidgetPanel.swift */,
 				GG000061 /* Components */,
@@ -1040,6 +1056,7 @@
 				AA000069 /* AppMigrationPlan.swift in Sources */,
 				AA000070 /* ProfileSettingsView.swift in Sources */,
 				AA000072 /* PeopleDirectoryView.swift in Sources */,
+				7FFCE4E3525D0A0D796253D0 /* PeopleDirectoryView+Mac.swift in Sources */,
 				AA000073 /* PersonEditView.swift in Sources */,
 				AA00CSB1 /* ContextSuggestionBar.swift in Sources */,
 				AA000074 /* SeedReviewSheet.swift in Sources */,
@@ -1111,6 +1128,7 @@
 				AA000027 /* OnboardingView.swift in Sources */,
 				AA0F0701 /* SupportIdentityView.swift in Sources */,
 				AA0F0801 /* SupportViews.swift in Sources */,
+				40E8004F9E0DF7B8A00DBC28 /* SupportViews+Mac.swift in Sources */,
 				AA000028 /* ProcessingView.swift in Sources */,
 				AA000029 /* ProfilesView.swift in Sources */,
 				AA000030 /* RecordingView.swift in Sources */,
@@ -1137,6 +1155,7 @@
 				AA000031 /* SettingsView.swift in Sources */,
 				AA0000K8 /* SettingsView+VerwerkingSide.swift in Sources */,
 				AA0000K7 /* SettingsView+Verwerking.swift in Sources */,
+				770D9E3134D29B0F7206FC61 /* SettingsView+Cards.swift in Sources */,
 				AA0000K6 /* SettingsView+Studio.swift in Sources */,
 				B90000000000000000000001 /* SettingsView+Support.swift in Sources */,
 				AA0000K5 /* HostedProviderConfig.swift in Sources */,
@@ -1164,6 +1183,7 @@
 				AA000057 /* UpdateCheckService.swift in Sources */,
 				AA000058 /* GoogleAuthService.swift in Sources */,
 				AA000056 /* TasksView.swift in Sources */,
+				CD6F1779103844AFFD3F5EF6 /* TasksView+Empty.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1252,6 +1272,7 @@
 				EE46EAA04FA9E51BD53BCC19 /* AppMigrationPlan.swift in Sources */,
 				30010DB6B00C5752975CA076 /* ProfileSettingsView.swift in Sources */,
 				8D3B1DE872D7C0F15192EEC8 /* PeopleDirectoryView.swift in Sources */,
+				07BEB8429B12E5CD299E0B62 /* PeopleDirectoryView+Mac.swift in Sources */,
 				4F19064CA021CC1310287A30 /* PersonEditView.swift in Sources */,
 				F526743AF4321F1A6F85821C /* SeedReviewSheet.swift in Sources */,
 				72C26EB28F1EEDB35C396E9B /* Participant.swift in Sources */,
@@ -1318,6 +1339,7 @@
 				DCDE572FA76CB1118126DDE8 /* OnboardingView.swift in Sources */,
 				AA0F0702 /* SupportIdentityView.swift in Sources */,
 				AA0F0802 /* SupportViews.swift in Sources */,
+				08A0B7F6078891FF34A1BBFF /* SupportViews+Mac.swift in Sources */,
 				5EF9D76E9D559B8FCDCC8623 /* ProcessingView.swift in Sources */,
 				3AD1600824520BF1239FE28A /* ProfilesView.swift in Sources */,
 				3C74FCD92B117FFF7A1CCA63 /* RecordingView.swift in Sources */,
@@ -1344,6 +1366,7 @@
 				DC7D121D186F2C44F0902D68 /* SettingsView.swift in Sources */,
 				825525A8990BF36A59F0ACEF /* SettingsView+VerwerkingSide.swift in Sources */,
 				F4571C89E479D18DF7C6601B /* SettingsView+Verwerking.swift in Sources */,
+				E7EE50E3FD80FA8398D11280 /* SettingsView+Cards.swift in Sources */,
 				EB2F34883F1AF554F86EBF01 /* SettingsView+Studio.swift in Sources */,
 				B90000000000000000000002 /* SettingsView+Support.swift in Sources */,
 				0CE3268CA29568C899DDCE43 /* HostedProviderConfig.swift in Sources */,
@@ -1371,6 +1394,7 @@
 				A35EF7927202A8BF1D45ECA9 /* UpdateCheckService.swift in Sources */,
 				A964E14BD8B550E2AC03919E /* GoogleAuthService.swift in Sources */,
 				A07360D3FEBDAF68D9327F02 /* TasksView.swift in Sources */,
+				1136434EA81E5496ED41EC8D /* TasksView+Empty.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

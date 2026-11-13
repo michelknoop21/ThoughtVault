@@ -59,3 +59,21 @@ it("does not call pending system advice unavailable or replace the selected mode
   expect(useSettingsStore.getState().whisper_model).toBe("base");
   await act(async () => { root.unmount(); }); host.remove();
 });
+
+it("reports a server that only lists models the OpenAI way as connected", async () => {
+  const { invoke } = await import("@tauri-apps/api/core");
+  vi.mocked(invoke).mockImplementation(() => Promise.resolve(null) as never);
+  vi.mocked(fetchOllamaModels).mockReset().mockResolvedValue(["mistralai/mistral-large-4-0"]);
+  useSettingsStore.setState({ processing_mode: "local", notulen_provider: "ollama", ollama_url: "https://openrouter.ai/api", ollama_model: "" });
+  const host = document.createElement("div"); document.body.appendChild(host);
+  const root = createRoot(host);
+  await act(async () => { root.render(<ProcessingTab />); });
+  const test = () => [...host.querySelectorAll("button")].find(b => /Test verbinding|Verbonden|Niet bereikbaar/.test(b.textContent ?? ""))!;
+  await act(async () => { test().click(); });
+  expect(test().textContent).toContain("Verbonden");
+  expect(fetchOllamaModels).toHaveBeenCalledWith("https://openrouter.ai/api");
+  vi.mocked(fetchOllamaModels).mockRejectedValue(new Error("Geen modellen opgehaald."));
+  await act(async () => { test().click(); });
+  expect(test().textContent).toContain("Niet bereikbaar");
+  await act(async () => { root.unmount(); }); host.remove();
+});

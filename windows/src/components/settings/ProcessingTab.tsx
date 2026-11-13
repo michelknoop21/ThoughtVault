@@ -10,7 +10,6 @@ import {
 } from "../ui/StudioIcons";
 import { transcriptionAdvice } from "../../services/processingAdvice";
 import type { SystemSpecs } from "../../services/tauriCommands";
-import { loadCredential } from "../../services/tauriCommands";
 import { fetchOllamaModels, isOllamaCloudURL, OLLAMA_LOCAL_URL, OLLAMA_CLOUD_URL } from "../../services/ollamaModels";
 import { WHISPER_MODELS } from "../../types";
 import { useRecordingStore } from "../../stores/recordingStore";
@@ -118,11 +117,9 @@ export function ProcessingTab() {
   async function handleTestOllama() {
     setOllamaTestStatus("testing");
     try {
-      const res = await invoke<{ status: number }>("ollama_test", {
-        baseUrl: settings.ollama_url,
-        apiKey: await loadCredential("ollama_api_key"),
-      });
-      setOllamaTestStatus(res.status === 200 ? "success" : "error");
+      // Same probe as the model list: /v1/models first, then Ollama's own /api/tags.
+      await fetchOllamaModels(settings.ollama_url);
+      setOllamaTestStatus("success");
     } catch {
       setOllamaTestStatus("error");
     }

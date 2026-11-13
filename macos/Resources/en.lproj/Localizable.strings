@@ -502,3 +502,15 @@
 "notule.step.coverage" = "Coverage check %d of %d";
 "notule.step.sentenceCheck" = "Check %d of %d";
 "notule.step.contextSuggestions" = "Context suggestions";
+
+/* Support window restyle (macOS) */
+"Waar gaat je melding over?" = "What is your report about?";
+"Iets werkt niet zoals het hoort" = "Something does not work as it should";
+"Een wens of verbetering" = "A wish or improvement";
+"Je wilt weten hoe iets werkt" = "You want to know how something works";
+"Wat deed je, wat verwachtte je en wat gebeurde er?" = "What did you do, what did you expect and what happened?";
+"Met je melding gaan je naam, e-mailadres, de app-versie, je apparaat, je klikpad en een afgeschermd logbestand mee. Je opnames, transcripties en notulen gaan nooit mee." = "Your report includes your name, email address, the app version, your device, your click path and a redacted log file. Your recordings, transcripts and minutes are never included.";
+"Kies links een melding om het gesprek te lezen." = "Choose a report on the left to read the conversation.";
+"Schrijf een antwoord" = "Write a reply";
+"Support: %@" = "Support: %@";
+"Jij" = "You";

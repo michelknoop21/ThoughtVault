@@ -1,0 +1,50 @@
+[
+  {
+    "file": "ios-home.webp",
+    "platform": "ios",
+    "args": "-TVDebugTab home",
+    "sources": [
+      "macos/Views/HomeView+iOS.swift"
+    ]
+  },
+  {
+    "file": "ios-opnemen.webp",
+    "platform": "ios",
+    "args": "-TVDebugTab record",
+    "sources": [
+      "macos/Views/RecordingView+iOS.swift"
+    ]
+  },
+  {
+    "file": "ios-taken.webp",
+    "platform": "ios",
+    "args": "-TVDebugTab tasks",
+    "sources": [
+      "macos/Views/TasksView+iOS.swift"
+    ]
+  },
+  {
+    "file": "ios-notulen.webp",
+    "platform": "ios",
+    "args": "-TVDebugTab transcripts",
+    "sources": [
+      "macos/Views/TranscriptsView+iOS.swift"
+    ]
+  },
+  {
+    "file": "ios-instellingen.webp",
+    "platform": "ios",
+    "args": "-TVDebugTab settings",
+    "sources": [
+      "macos/Views/SettingsView+iOS.swift"
+    ]
+  },
+  {
+    "file": "ios-onboarding-microfoon.webp",
+    "platform": "ios",
+    "args": "-hasCompletedOnboarding NO -TVDebugOpen onboarding-mic",
+    "sources": [
+      "macos/Views/OnboardingView+iOS.swift"
+    ]
+  }
+]

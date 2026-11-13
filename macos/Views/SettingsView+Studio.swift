@@ -3,9 +3,9 @@
 //
 // macOS Instellingen shell reconstructed from the approved NorthStar
 // (docs/design/settings/thoughtvault-settings-verwerking-northstar.png):
-// large title, pill tab bar and the Verwerking page. The other tabs keep their
-// existing forms on the same background. Shared building blocks live here; the
-// Verwerking cards are in SettingsView+Verwerking and +VerwerkingSide.
+// large title, pill tab bar and the Verwerking page. Shared building blocks live
+// here; the Verwerking cards are in SettingsView+Verwerking and +VerwerkingSide,
+// the cards of the other tabs in SettingsView+Cards.
 
 #if os(macOS)
 import SwiftUI
@@ -94,12 +94,12 @@ extension SettingsView {
             PersonalCorrectionsView(profiles: profiles)
                 .padding(.leading, layout.leading).padding(.trailing, layout.trailing)
                 .padding(.vertical, 24)
-        case .algemeen:    algemeenTab.scrollContentBackground(.hidden)
-        case .notulen:     profielTab.scrollContentBackground(.hidden)
-        case .agenda:      agendaTab.scrollContentBackground(.hidden)
-        case .obsidian:    obsidianTab.scrollContentBackground(.hidden)
-        case .account:     accountTab.scrollContentBackground(.hidden)
-        case .geavanceerd: geavanceerdTab.scrollContentBackground(.hidden)
+        case .algemeen:    algemeenCards(layout)
+        case .notulen:     notulenCards(layout)
+        case .agenda:      agendaCards(layout)
+        case .obsidian:    obsidianCards(layout)
+        case .account:     accountCards(layout)
+        case .geavanceerd: geavanceerdCards(layout)
         }
     }
 
@@ -237,6 +237,184 @@ struct StudioRadio: View {
         .frame(width: 20, height: 20)
         .background(Circle().fill(selected ? HomeColor.violet : .clear))
         .accessibilityHidden(true)
+    }
+}
+
+/// Settings card with an icon tile and a heading, as on the Verwerking page.
+/// Rows inside get the card switch style; long text wraps.
+struct SettingsCard<Content: View>: View {
+    let icon: String
+    let title: LocalizedStringKey
+    var subtitle: LocalizedStringKey?
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(alignment: .center, spacing: 14) {
+                StudioIconTile(systemName: icon, size: 40)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(HomeColor.text)
+                        .accessibilityAddTraits(.isHeader)
+                    if let subtitle {
+                        Text(subtitle)
+                            .font(.system(size: 13.5))
+                            .foregroundStyle(HomeColor.text2)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+            }
+            VStack(alignment: .leading, spacing: 14) { content }
+                .toggleStyle(StudioRowSwitchStyle())
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .studioCard()
+    }
+}
+
+/// Label on the left, the violet switch on the right, for toggles inside cards.
+struct StudioRowSwitchStyle: ToggleStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        HStack(alignment: .center, spacing: 14) {
+            configuration.label
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityHidden(true)
+            Toggle(isOn: configuration.$isOn) { configuration.label }
+                .toggleStyle(StudioSwitchStyle())
+        }
+    }
+}
+
+/// Quiet secondary button of the restyled windows: neutral fill, lighter on
+/// hover, pressed scale, dimmed when disabled.
+struct StudioQuietButtonStyle: ButtonStyle {
+    var height: CGFloat = 36
+
+    func makeBody(configuration: Configuration) -> some View {
+        QuietButtonBody(configuration: configuration, height: height)
+    }
+
+    private struct QuietButtonBody: View {
+        let configuration: ButtonStyleConfiguration
+        let height: CGFloat
+        @Environment(\.isEnabled) private var isEnabled
+        @Environment(\.accessibilityReduceMotion) private var reduceMotion
+        @State private var hovered = false
+
+        var body: some View {
+            configuration.label
+                .font(.system(size: 13.5, weight: .medium))
+                .foregroundStyle(HomeColor.text)
+                .lineLimit(1)
+                .padding(.horizontal, 14)
+                .frame(minHeight: height)
+                .background(RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(Color.white.opacity(hovered && isEnabled ? 0.11 : 0.06)))
+                .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .strokeBorder(HomeColor.controlBorder, lineWidth: 1))
+                .contentShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .scaleEffect(configuration.isPressed && !reduceMotion ? 0.97 : 1)
+                .opacity(isEnabled ? 1 : 0.45)
+                .onHover { hovered = $0 }
+                .animation(TS.Animation.quick, value: configuration.isPressed)
+                .animation(TS.Animation.quick, value: hovered)
+        }
+    }
+}
+
+/// Dark input chrome: field fill, hairline, indigo ring while focused.
+struct StudioFieldModifier: ViewModifier {
+    var minHeight: CGFloat = 38
+    @FocusState private var focused: Bool
+
+    func body(content: Content) -> some View {
+        content
+            .textFieldStyle(.plain)
+            .font(.system(size: 14))
+            .foregroundStyle(HomeColor.text)
+            .focused($focused)
+            .padding(.horizontal, 12)
+            .frame(minHeight: minHeight)
+            .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(HomeColor.field.opacity(0.75)))
+            .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .strokeBorder(focused ? Color.brandSecondary : HomeColor.fieldBorder, lineWidth: focused ? 1.5 : 1))
+            .animation(TS.Animation.quick, value: focused)
+    }
+}
+
+extension View {
+    func studioField(minHeight: CGFloat = 38) -> some View { modifier(StudioFieldModifier(minHeight: minHeight)) }
+}
+
+/// Small rounded status or kind chip (support status, Intern/Extern).
+struct StudioChip: View {
+    let text: String
+    let color: Color
+
+    var body: some View {
+        Text(text)
+            .font(.system(size: 12, weight: .medium))
+            .foregroundStyle(color)
+            .lineLimit(1)
+            .padding(.horizontal, 9)
+            .frame(height: 22)
+            .background(Capsule().fill(color.opacity(0.16)))
+    }
+}
+
+/// One segment of a pill switch; the selected thumb slides between segments
+/// that share the namespace.
+struct StudioSegmentButton: View {
+    let title: LocalizedStringKey
+    let badge: Int
+    let selected: Bool
+    let thumb: Namespace.ID
+    let action: () -> Void
+    @State private var hovered = false
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 6) {
+                Text(title)
+                if badge > 0 {
+                    Text(badge, format: .number)
+                        .font(.system(size: 11.5, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 6)
+                        .frame(minWidth: 18, minHeight: 18)
+                        .background(Capsule().fill(Color.brandPrimary))
+                }
+            }
+            .font(.system(size: 13.5, weight: .semibold))
+            .foregroundStyle(selected || hovered ? Color.white : HomeColor.text2)
+            .padding(.horizontal, 14)
+            .frame(height: 32)
+            .background {
+                if selected {
+                    RoundedRectangle(cornerRadius: 9, style: .continuous)
+                        .fill(HomeColor.violet.opacity(0.62))
+                        .matchedGeometryEffect(id: "thumb", in: thumb)
+                }
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(StudioScalePressStyle(scale: 0.97))
+        .onHover { hovered = $0 }
+        .accessibilityAddTraits(selected ? .isSelected : [])
+    }
+}
+
+/// Pressed-state scale with reduced-motion fallback.
+struct StudioScalePressStyle: ButtonStyle {
+    var scale: CGFloat
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed && !reduceMotion ? scale : 1)
+            .animation(TS.Animation.quick, value: configuration.isPressed)
     }
 }
 

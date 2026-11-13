@@ -9,6 +9,8 @@ import SwiftUI
 struct HistoryListView: View {
     let kind: HistoryKind
     let itemId: String
+    /// Small timeline (dot per version) instead of plain rows; macOS person sheet.
+    var timeline = false
     let onRestore: (HistoryEntry) -> Void
 
     @State private var versions: [HistoryEntry] = []
@@ -20,7 +22,30 @@ struct HistoryListView: View {
                     .font(TS.Font.caption)
                     .foregroundStyle(Color.labelSecondary)
             }
-            ForEach(versions) { entry in
+            #if os(macOS)
+            if timeline {
+                ForEach(Array(versions.enumerated()), id: \.element.id) { index, entry in
+                    HStack(alignment: .top, spacing: 12) {
+                        Circle()
+                            .fill(index == 0 ? Color.brandPrimary : HomeColor.controlBorder)
+                            .frame(width: 9, height: 9)
+                            .padding(.top, 5)
+                            .accessibilityHidden(true)
+                        (Text(Self.dateText(entry.date)).foregroundStyle(HomeColor.text)
+                            + Text(" · ").foregroundStyle(HomeColor.text3)
+                            + Text(Self.sourceText(entry.source)).foregroundStyle(HomeColor.text2))
+                            .font(.system(size: 13.5))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        Button("Herstel") {
+                            onRestore(entry)
+                            reload()
+                        }
+                        .buttonStyle(StudioQuietButtonStyle(height: 28))
+                    }
+                }
+            }
+            #endif
+            ForEach(timeline ? [] : versions) { entry in
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(Self.dateText(entry.date)).font(TS.Font.body).foregroundStyle(Color.labelPrimary)

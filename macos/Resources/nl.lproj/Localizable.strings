@@ -502,3 +502,15 @@
 "notule.step.coverage" = "Dekkingscontrole %d van %d";
 "notule.step.sentenceCheck" = "Controle %d van %d";
 "notule.step.contextSuggestions" = "Contextsuggesties";
+
+/* Support window restyle (macOS) */
+"Waar gaat je melding over?" = "Waar gaat je melding over?";
+"Iets werkt niet zoals het hoort" = "Iets werkt niet zoals het hoort";
+"Een wens of verbetering" = "Een wens of verbetering";
+"Je wilt weten hoe iets werkt" = "Je wilt weten hoe iets werkt";
+"Wat deed je, wat verwachtte je en wat gebeurde er?" = "Wat deed je, wat verwachtte je en wat gebeurde er?";
+"Met je melding gaan je naam, e-mailadres, de app-versie, je apparaat, je klikpad en een afgeschermd logbestand mee. Je opnames, transcripties en notulen gaan nooit mee." = "Met je melding gaan je naam, e-mailadres, de app-versie, je apparaat, je klikpad en een afgeschermd logbestand mee. Je opnames, transcripties en notulen gaan nooit mee.";
+"Kies links een melding om het gesprek te lezen." = "Kies links een melding om het gesprek te lezen.";
+"Schrijf een antwoord" = "Schrijf een antwoord";
+"Support: %@" = "Support: %@";
+"Jij" = "Jij";

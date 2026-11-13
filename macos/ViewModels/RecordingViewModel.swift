@@ -136,6 +136,8 @@ final class RecordingViewModel {
     /// Envelope pipeline diagnostics for the DEBUG waveform overlay.
     var meterDebugText: String {
 #if os(macOS)
+        // Manual screenshots (`-TVDebugSeed YES`) show the screen as a user sees it.
+        if DebugScreenshotSeed.isEnabled { return "" }
         let meters: String
         switch selectedMode {
         case .microphone: meters = audioRecorder.meterDebugText

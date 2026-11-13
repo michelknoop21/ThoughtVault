@@ -20,6 +20,10 @@ struct TasksView: View {
 
     @State var taskToCancel: TranscriptTask? = nil
     @State var taskToDelete: TranscriptTask? = nil
+    @State var showImporter = false
+
+    /// Opens the Opnemen tab (macOS empty state).
+    var onStartRecording: (() -> Void)? = nil
 
     // MARK: Body
 
@@ -143,27 +147,6 @@ struct TasksView: View {
                 Text("Weet je zeker dat je \"\(task.filename)\" wilt verwijderen? Dit kan niet ongedaan worden gemaakt.")
             }
         }
-    }
-
-    // MARK: - Empty State
-
-    private var emptyState: some View {
-        VStack(spacing: TS.Spacing.md) {
-            Image(systemName: "list.bullet.clipboard")
-                .font(.system(size: 48))
-                .foregroundStyle(Color.labelTertiary)
-
-            Text("Geen actieve taken")
-                .font(TS.Font.title3Semibold)
-                .foregroundStyle(Color.labelPrimary)
-
-            Text("Wanneer je een opname start of een audiobestand importeert, verschijnt de voortgang hier.")
-                .font(TS.Font.callout)
-                .foregroundStyle(Color.labelSecondary)
-                .multilineTextAlignment(.center)
-                .frame(maxWidth: 300)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     // MARK: - Error Banner

@@ -1,19 +1,48 @@
 import SwiftUI
 
+// The macOS layouts of these views live in SupportViews+Mac.swift; iOS keeps
+// the layouts below.
+
 struct SupportCenterView: View {
-    @Environment(SupportViewModel.self) private var support
-    @Environment(\.dismiss) private var dismiss
-    @State private var category: SupportCategory = .bug
-    @State private var description = ""
-    @State private var outcome: SendOutcome?
-    @State private var sending = false
-    @State private var selectedTicket: SupportTicket?
-    @State private var replies: [String: String] = [:]
-    @State private var replying = false
+    @Environment(SupportViewModel.self) var support
+    @Environment(\.dismiss) var dismiss
+    @State var category: SupportCategory = .bug
+    @State var description = ""
+    @State var outcome: SendOutcome?
+    @State var sending = false
+    @State var selectedTicket: SupportTicket?
+    @State var replies: [String: String] = [:]
+    @State var replying = false
+    @Namespace var paneThumb
 
     var body: some View {
+        Group {
+            #if os(macOS)
+            macBody
+            #else
+            stackedBody
+            #endif
+        }
+        .task {
+            #if DEBUG
+            if IOSDebug.supportSeed {
+                DebugScreenshotSeed.seedSupport(support)
+                if IOSDebug.open != "support-report" { support.pane = .tickets }
+                if IOSDebug.open == "support-thread" { selectedTicket = support.tickets.first }
+                DebugScreenshotSeed.sizeWindow()
+                await DebugScreenshotSeed.snapshotAndQuit()
+            }
+            #endif
+        }
+    }
+
+    func replyDraft(for ticket: SupportTicket) -> Binding<String> {
+        Binding(get: { replies[ticket.id, default: ""] }, set: { replies[ticket.id] = $0 })
+    }
+
+    private var stackedBody: some View {
         @Bindable var support = support
-        VStack(spacing: TS.Spacing.md) {
+        return VStack(spacing: TS.Spacing.md) {
             HStack {
                 Text("Support").font(TS.Font.titleBold)
                 Spacer()
@@ -32,9 +61,7 @@ struct SupportCenterView: View {
                 Button("Terug naar Mijn meldingen") { selectedTicket = nil }
                     .disabled(replying)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                SupportThreadView(ticket: ticket, draft: Binding(
-                    get: { replies[ticket.id, default: ""] },
-                    set: { replies[ticket.id] = $0 }), sending: $replying)
+                SupportThreadView(ticket: ticket, draft: replyDraft(for: ticket), sending: $replying)
             } else {
                 SupportTicketList { selectedTicket = $0 }
             }
@@ -43,30 +70,66 @@ struct SupportCenterView: View {
         .foregroundStyle(Color.labelPrimary)
         .background(.regularMaterial)
         .frame(idealWidth: 640, idealHeight: 620)
-        .task {
-            #if DEBUG
-            if IOSDebug.supportSeed {
-                DebugScreenshotSeed.seedSupport(support)
-                if IOSDebug.open != "support-report" { support.pane = .tickets }
-                if IOSDebug.open == "support-thread" { selectedTicket = support.tickets.first }
-                DebugScreenshotSeed.sizeWindow()
-                await DebugScreenshotSeed.snapshotAndQuit()
-            }
-            #endif
-        }
     }
 }
 
 struct SupportReportForm: View {
-    @Environment(SupportViewModel.self) private var support
+    @Environment(SupportViewModel.self) var support
     @Binding var category: SupportCategory
     @Binding var description: String
     @Binding var outcome: SendOutcome?
     @Binding var sending: Bool
+    @FocusState var editorFocused: Bool
 
-    private var trimmed: String { description.trimmingCharacters(in: .whitespacesAndNewlines) }
+    var trimmed: String { description.trimmingCharacters(in: .whitespacesAndNewlines) }
 
     var body: some View {
+        Group {
+            #if os(macOS)
+            macBody
+            #else
+            stackedBody
+            #endif
+        }
+        .onAppear { AppLog.clickPath.info("Melding maken geopend") }
+    }
+
+    func send() {
+        guard !sending, !trimmed.isEmpty, !IOSDebug.supportSeed else { return }
+        sending = true
+        outcome = nil
+        let body = trimmed
+        let selectedCategory = category
+        Task {
+            let result = await support.submit(category: selectedCategory, description: body)
+            outcome = result
+            switch result {
+            case .sent, .queued: description = ""
+            case .failed: break
+            }
+            sending = false
+        }
+    }
+
+    func limitLength(_ value: String) {
+        if value.count > 5_000 { description = String(value.prefix(5_000)) }
+    }
+
+    @ViewBuilder
+    var outcomeText: some View {
+        if let outcome {
+            switch outcome {
+            case .sent:
+                Text("Verstuurd. Het antwoord zie je in Mijn meldingen en in je e-mail.")
+            case .queued:
+                Text("Geen verbinding. De melding gaat vanzelf de deur uit zodra je weer online bent.")
+            case .failed:
+                Text("Versturen lukte niet. Probeer het zo nog eens.")
+            }
+        }
+    }
+
+    private var stackedBody: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: TS.Spacing.md) {
                 Picker("Categorie", selection: $category) {
@@ -82,50 +145,39 @@ struct SupportReportForm: View {
                     .frame(minHeight: 160)
                     .accessibilityLabel(Text("Omschrijving"))
                     .disabled(sending)
-                    .onChange(of: description) { _, value in
-                        if value.count > 5_000 { description = String(value.prefix(5_000)) }
-                    }
+                    .onChange(of: description) { _, value in limitLength(value) }
                 Text("\(description.count)/5000").font(TS.Font.caption).foregroundStyle(Color.labelSecondary)
-                Button("Versturen") {
-                    guard !sending, !trimmed.isEmpty, !IOSDebug.supportSeed else { return }
-                    sending = true
-                    outcome = nil
-                    let body = trimmed
-                    let selectedCategory = category
-                    Task {
-                        let result = await support.submit(category: selectedCategory, description: body)
-                        outcome = result
-                        switch result {
-                        case .sent, .queued: description = ""
-                        case .failed: break
-                        }
-                        sending = false
-                    }
-                }
-                .buttonStyle(PrimaryButtonStyle())
-                .disabled(trimmed.isEmpty || sending || IOSDebug.supportSeed)
+                Button("Versturen", action: send)
+                    .buttonStyle(PrimaryButtonStyle())
+                    .disabled(trimmed.isEmpty || sending || IOSDebug.supportSeed)
                 if sending { ProgressView().accessibilityLabel(Text("Versturen")) }
-                if let outcome {
-                    switch outcome {
-                    case .sent:
-                        Text("Verstuurd. Het antwoord zie je in Mijn meldingen en in je e-mail.")
-                    case .queued:
-                        Text("Geen verbinding. De melding gaat vanzelf de deur uit zodra je weer online bent.")
-                    case .failed:
-                        Text("Versturen lukte niet. Probeer het zo nog eens.")
-                    }
-                }
+                outcomeText
             }
         }
-        .onAppear { AppLog.clickPath.info("Melding maken geopend") }
     }
 }
 
 struct SupportTicketList: View {
-    @Environment(SupportViewModel.self) private var support
+    @Environment(SupportViewModel.self) var support
+    /// Highlighted ticket in the macOS two-pane layout.
+    var selectedID: String?
     let select: (SupportTicket) -> Void
 
     var body: some View {
+        Group {
+            #if os(macOS)
+            macBody
+            #else
+            stackedBody
+            #endif
+        }
+        .task {
+            AppLog.clickPath.info("Mijn meldingen geopend")
+            await support.loadTickets()
+        }
+    }
+
+    private var stackedBody: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: TS.Spacing.md) {
                 Button("Vernieuwen") { Task { await support.loadTickets() } }
@@ -148,7 +200,7 @@ struct SupportTicketList: View {
                             }
                             Text(ticket.description.split(separator: "\n", omittingEmptySubsequences: false).first.map(String.init) ?? "")
                                 .font(TS.Font.body).lineLimit(1)
-                            Text(statusLabel(ticket.status)).font(TS.Font.caption)
+                            Text(Self.statusLabel(ticket.status)).font(TS.Font.caption)
                                 .foregroundStyle(Color.labelSecondary)
                         }
                         .padding(TS.Spacing.md)
@@ -160,13 +212,9 @@ struct SupportTicketList: View {
                 }
             }
         }
-        .task {
-            AppLog.clickPath.info("Mijn meldingen geopend")
-            await support.loadTickets()
-        }
     }
 
-    private func statusLabel(_ status: String) -> String {
+    static func statusLabel(_ status: String) -> String {
         switch status {
         case "NEW": String(localized: "Nieuw")
         case "IN_PROGRESS": String(localized: "In behandeling")
@@ -179,23 +227,66 @@ struct SupportTicketList: View {
 }
 
 struct SupportThreadView: View {
-    @Environment(SupportViewModel.self) private var support
+    @Environment(SupportViewModel.self) var support
     let ticket: SupportTicket
     @Binding var draft: String
     @Binding var sending: Bool
-    @State private var failed = false
-    @State private var loading = true
-    @State private var snapshot = SupportThreadSnapshot()
+    @State var failed = false
+    @State var loading = true
+    @State var snapshot = SupportThreadSnapshot()
+    @FocusState var editorFocused: Bool
 
-    private var trimmed: String { draft.trimmingCharacters(in: .whitespacesAndNewlines) }
+    var trimmed: String { draft.trimmingCharacters(in: .whitespacesAndNewlines) }
+
+    var messages: [SupportMessage] {
+        (snapshot.ticketID == ticket.id ? snapshot.messages : []).sorted { $0.createdAt < $1.createdAt }
+    }
+
+    var canSend: Bool {
+        !(trimmed.isEmpty || trimmed.unicodeScalars.count > 5_000 || sending || loading || snapshot.ticketID != ticket.id || IOSDebug.supportSeed)
+    }
+
+    func send() {
+        guard !sending, !trimmed.isEmpty, trimmed.unicodeScalars.count <= 5_000, !IOSDebug.supportSeed else { return }
+        sending = true
+        failed = false
+        let body = trimmed
+        let request = snapshot.begin(ticketID: ticket.id)
+        Task {
+            do {
+                let messages = try await support.reply(body, to: ticket)
+                snapshot.complete(messages, ticketID: ticket.id, request: request)
+                draft = ""
+            } catch { failed = true }
+            sending = false
+        }
+    }
 
     var body: some View {
+        Group {
+            #if os(macOS)
+            macBody
+            #else
+            stackedBody
+            #endif
+        }
+        .task(id: ticket.id) {
+            loading = true
+            let request = snapshot.begin(ticketID: ticket.id)
+            let messages = await support.messages(for: ticket)
+            guard !Task.isCancelled else { return }
+            snapshot.complete(messages, ticketID: ticket.id, request: request)
+            loading = false
+        }
+    }
+
+    private var stackedBody: some View {
         VStack(alignment: .leading, spacing: TS.Spacing.md) {
             Text(ticket.ref).font(TS.Font.calloutSemibold)
             if loading { ProgressView() }
             ScrollView {
                 VStack(spacing: TS.Spacing.md) {
-                    ForEach((snapshot.ticketID == ticket.id ? snapshot.messages : []).sorted { $0.createdAt < $1.createdAt }) { message in
+                    ForEach(messages) { message in
                         HStack {
                             if message.senderRole != "ADMIN" { Spacer(minLength: TS.Spacing.xl) }
                             VStack(alignment: .leading, spacing: TS.Spacing.xs) {
@@ -213,36 +304,14 @@ struct SupportThreadView: View {
             Text("Antwoord").font(TS.Font.calloutSemibold)
             TextEditor(text: $draft).font(TS.Font.body).frame(minHeight: 70, maxHeight: 120)
                 .accessibilityLabel(Text("Antwoord")).disabled(sending)
-            Button("Stuur") {
-                guard !sending, !trimmed.isEmpty, trimmed.unicodeScalars.count <= 5_000, !IOSDebug.supportSeed else { return }
-                sending = true
-                failed = false
-                let body = trimmed
-                let request = snapshot.begin(ticketID: ticket.id)
-                Task {
-                    do {
-                        let messages = try await support.reply(body, to: ticket)
-                        snapshot.complete(messages, ticketID: ticket.id, request: request)
-                        draft = ""
-                    } catch { failed = true }
-                    sending = false
-                }
-            }
-            .buttonStyle(PrimaryButtonStyle())
-            .disabled(trimmed.isEmpty || trimmed.unicodeScalars.count > 5_000 || sending || loading || snapshot.ticketID != ticket.id || IOSDebug.supportSeed)
+            Button("Stuur", action: send)
+                .buttonStyle(PrimaryButtonStyle())
+                .disabled(!canSend)
             if trimmed.unicodeScalars.count > 5_000 {
                 Text(String(localized: "support.reply.limit"))
                     .font(TS.Font.caption).foregroundStyle(Color.statusError)
             }
             if failed { Text("Versturen lukte niet. Probeer het zo nog eens.") }
-        }
-        .task(id: ticket.id) {
-            loading = true
-            let request = snapshot.begin(ticketID: ticket.id)
-            let messages = await support.messages(for: ticket)
-            guard !Task.isCancelled else { return }
-            snapshot.complete(messages, ticketID: ticket.id, request: request)
-            loading = false
         }
     }
 }

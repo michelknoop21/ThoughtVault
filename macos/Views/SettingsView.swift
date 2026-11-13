@@ -133,78 +133,6 @@ struct SettingsView: View {
         }
     }
 
-    // MARK: - Form container
-
-    /// Grouped Form rendered as a capped, centered column on wide windows,
-    /// mirroring the responsive scroll-column pattern used on HomeView.
-    private func cappedForm<Content: View>(@ViewBuilder content: () -> Content) -> some View {
-        Form { content() }
-            .formStyle(.grouped)
-            .scrollIndicators(.never)
-            .frame(maxWidth: 860)
-            .frame(maxWidth: .infinity)
-    }
-
-    // MARK: - macOS: Tabbed Layout (System Settings-style)
-
-    #if os(macOS)
-    var algemeenTab: some View {
-        cappedForm {
-            // Hide "Verbinding" section in local mode — no server to connect to.
-            if !isLocalProcessing {
-                verbindingSection
-            }
-            #if !APP_STORE
-            updatesSection
-            #endif
-            overSection
-        }
-    }
-
-    var profielTab: some View {
-        cappedForm {
-            profielenSection
-            ProfileSettingsView()
-            onboardingSection
-        }
-    }
-
-    var agendaTab: some View {
-        cappedForm {
-            agendaSection
-        }
-    }
-
-    var obsidianTab: some View {
-        cappedForm {
-            obsidianSection
-        }
-    }
-
-    var accountTab: some View {
-        cappedForm {
-            if isLocalProcessing {
-                Section("Lokale app") {
-                    Text("Deze app werkt lokaal zonder ThoughtVault-login.")
-                    Text("Je profiel stel je in bij Notulen.").foregroundStyle(Color.labelSecondary)
-                }
-            } else {
-                accountSection
-            }
-            feedbackSection
-        }
-    }
-
-    var geavanceerdTab: some View {
-        cappedForm {
-            permissiesSection
-            Section {
-                BrandFooter()
-            }
-        }
-    }
-    #endif
-
     // MARK: - Verbinding (Connection)
 
     @State private var isCheckingServer: Bool = false
@@ -212,24 +140,7 @@ struct SettingsView: View {
 
     var verbindingSection: some View {
         Section {
-            // Server status
-            HStack(spacing: TS.Spacing.sm) {
-                if isCheckingServer {
-                    ProgressView()
-                        .scaleEffect(0.7)
-                    Text("Verbinding controleren...")
-                        .font(TS.Font.footnote)
-                        .foregroundStyle(Color.labelSecondary)
-                } else if let connected = serverConnected {
-                    Circle()
-                        .fill(connected ? Color.statusSuccess : Color.statusError)
-                        .frame(width: 8, height: 8)
-                    Text(connected ? "Verbonden" : "Niet verbonden")
-                        .font(TS.Font.footnote)
-                        .foregroundStyle(connected ? Color.statusSuccess : Color.statusError)
-                }
-                Spacer()
-            }
+            verbindingRows
         } header: {
             Text("Verbinding")
         } footer: {
@@ -239,102 +150,39 @@ struct SettingsView: View {
         }
     }
 
+    /// Server status row; shared by the iOS section and the macOS card.
+    var verbindingRows: some View {
+        // Server status
+        HStack(spacing: TS.Spacing.sm) {
+            if isCheckingServer {
+                ProgressView()
+                    .scaleEffect(0.7)
+                Text("Verbinding controleren...")
+                    .font(TS.Font.footnote)
+                    .foregroundStyle(Color.labelSecondary)
+            } else if let connected = serverConnected {
+                Circle()
+                    .fill(connected ? Color.statusSuccess : Color.statusError)
+                    .frame(width: 8, height: 8)
+                Text(connected ? "Verbonden" : "Niet verbonden")
+                    .font(TS.Font.footnote)
+                    .foregroundStyle(connected ? Color.statusSuccess : Color.statusError)
+            }
+            Spacer()
+        }
+    }
+
     // MARK: - Obsidian
 
     @State private var revealObsidianKey: Bool = false
 
     var obsidianSection: some View {
-        Section {
-            Toggle(isOn: $obsidianEnabled) {
-                Text("Automatisch exporteren naar Obsidian")
-                    .font(TS.Font.body)
-            }
-            .tint(Color.brandPrimary)
-
-            // Folder connection — the cross-platform path (works on iOS too).
-            // Compact stacks the folder name above the buttons.
-            SettingFieldRow("Vault-map") {
-                if isCompact {
-                    VStack(alignment: .leading, spacing: TS.Spacing.sm) {
-                        vaultFolderLabel
-                        HStack(spacing: TS.Spacing.sm) {
-                            vaultFolderButtons
-                            Spacer()
-                        }
-                    }
-                } else {
-                    HStack(spacing: TS.Spacing.sm) {
-                        vaultFolderLabel
-                        Spacer()
-                        vaultFolderButtons
-                    }
-                }
-            }
-
-            SettingFieldRow("Context-note") {
-                TextField(VaultFolderStore.defaultContextNote, text: $obsidianContextNote)
-                    .textFieldStyle(.roundedBorder)
-                    .font(TS.Font.body)
-                    .autocorrectionDisabled()
-                    #if os(iOS)
-                    .textInputAutocapitalization(.never)
-                    #endif
-            }
-
+        vaultFolderImporter(Section {
+            obsidianRows
             // REST API fields are desktop-only — iOS cannot reach a desktop's
             // localhost. Hidden on iOS to avoid confusion.
             #if os(macOS)
-            SettingFieldRow("Base-URL") {
-                TextField(ObsidianService.defaultBaseURL, text: $obsidianBaseURL)
-                    .textFieldStyle(.roundedBorder)
-                    .font(TS.Font.body)
-                    .autocorrectionDisabled()
-            }
-
-            SettingFieldRow("Vault-pad") {
-                TextField("Notulen", text: $obsidianVaultPath)
-                    .textFieldStyle(.roundedBorder)
-                    .font(TS.Font.body)
-                    .autocorrectionDisabled()
-            }
-
-            SettingFieldRow("API-sleutel") {
-                HStack(spacing: TS.Spacing.sm) {
-                    Group {
-                        if revealObsidianKey {
-                            TextField("Bearer-sleutel uit de plugin", text: $obsidianApiKey)
-                        } else {
-                            SecureField("Bearer-sleutel uit de plugin", text: $obsidianApiKey)
-                        }
-                    }
-                    .textFieldStyle(.roundedBorder)
-                    .font(TS.Font.bodyMonospaced)
-                    .autocorrectionDisabled()
-                    .onChange(of: obsidianApiKey) { _, newValue in saveObsidianKey(newValue) }
-
-                    Button {
-                        revealObsidianKey.toggle()
-                    } label: {
-                        Image(systemName: revealObsidianKey ? "eye.slash" : "eye")
-                    }
-                    .buttonStyle(.bordered)
-                    .help(revealObsidianKey ? "Verberg sleutel" : "Toon sleutel")
-                }
-            }
-
-            // Compact stacks the test result below the button.
-            if isCompact {
-                VStack(alignment: .leading, spacing: TS.Spacing.xs) {
-                    obsidianTestButton
-                    obsidianTestStatus
-                }
-            } else {
-                HStack(spacing: TS.Spacing.sm) {
-                    obsidianTestButton
-                    obsidianTestStatus
-                    Spacer()
-                }
-            }
+            obsidianRestRows
             #endif
         } header: {
             Text("Obsidian-koppeling")
@@ -346,15 +194,25 @@ struct SettingsView: View {
                 .font(TS.Font.caption)
                 .foregroundStyle(Color.labelTertiary)
             #else
-            Text("Kies je vault-map om notulen als bestand op te slaan én de context-note te lezen "
-                + "(namen/termen zoals \"Michel\"). Dit werkt op Mac én iPhone. "
-                + "De Base-URL/API-sleutel eronder zijn de desktop-fallback via de Local REST API plugin, "
-                + "alleen gebruikt als er geen vault-map is gekozen.")
+            Text(obsidianFooterText)
                 .font(TS.Font.caption)
                 .foregroundStyle(Color.labelTertiary)
             #endif
-        }
-        .fileImporter(
+        })
+    }
+
+    #if os(macOS)
+    var obsidianFooterText: String {
+        "Kies je vault-map om notulen als bestand op te slaan én de context-note te lezen "
+            + "(namen/termen zoals \"Michel\"). Dit werkt op Mac én iPhone. "
+            + "De Base-URL/API-sleutel eronder zijn de desktop-fallback via de Local REST API plugin, "
+            + "alleen gebruikt als er geen vault-map is gekozen."
+    }
+    #endif
+
+    /// Picker for the vault folder; attached once to whatever hosts the Obsidian rows.
+    func vaultFolderImporter<V: View>(_ content: V) -> some View {
+        content.fileImporter(
             isPresented: $showVaultFolderPicker,
             allowedContentTypes: [.folder],
             allowsMultipleSelection: false
@@ -369,6 +227,100 @@ struct SettingsView: View {
             }
         }
     }
+
+    @ViewBuilder
+    var obsidianRows: some View {
+        Toggle(isOn: $obsidianEnabled) {
+            Text("Automatisch exporteren naar Obsidian")
+                .font(TS.Font.body)
+        }
+        .tint(Color.brandPrimary)
+
+        // Folder connection — the cross-platform path (works on iOS too).
+        // Compact stacks the folder name above the buttons.
+        SettingFieldRow("Vault-map") {
+            if isCompact {
+                VStack(alignment: .leading, spacing: TS.Spacing.sm) {
+                    vaultFolderLabel
+                    HStack(spacing: TS.Spacing.sm) {
+                        vaultFolderButtons
+                        Spacer()
+                    }
+                }
+            } else {
+                HStack(spacing: TS.Spacing.sm) {
+                    vaultFolderLabel
+                    Spacer()
+                    vaultFolderButtons
+                }
+            }
+        }
+
+        SettingFieldRow("Context-note") {
+            TextField(VaultFolderStore.defaultContextNote, text: $obsidianContextNote)
+                .personFieldStyle()
+                .autocorrectionDisabled()
+                #if os(iOS)
+                .textInputAutocapitalization(.never)
+                #endif
+        }
+
+    }
+
+    #if os(macOS)
+    /// Local REST API fallback fields (desktop only).
+    @ViewBuilder
+    var obsidianRestRows: some View {
+        SettingFieldRow("Base-URL") {
+            TextField(ObsidianService.defaultBaseURL, text: $obsidianBaseURL)
+                .personFieldStyle()
+                .autocorrectionDisabled()
+        }
+
+        SettingFieldRow("Vault-pad") {
+            TextField("Notulen", text: $obsidianVaultPath)
+                .personFieldStyle()
+                .autocorrectionDisabled()
+        }
+
+        SettingFieldRow("API-sleutel") {
+            HStack(spacing: TS.Spacing.sm) {
+                Group {
+                    if revealObsidianKey {
+                        TextField("Bearer-sleutel uit de plugin", text: $obsidianApiKey)
+                    } else {
+                        SecureField("Bearer-sleutel uit de plugin", text: $obsidianApiKey)
+                    }
+                }
+                .personFieldStyle()
+                .autocorrectionDisabled()
+                .onChange(of: obsidianApiKey) { _, newValue in saveObsidianKey(newValue) }
+
+                Button {
+                    revealObsidianKey.toggle()
+                } label: {
+                    Image(systemName: revealObsidianKey ? "eye.slash" : "eye")
+                }
+                .buttonStyle(.bordered)
+                .help(revealObsidianKey ? "Verberg sleutel" : "Toon sleutel")
+            }
+        }
+
+        // Compact stacks the test result below the button.
+        if isCompact {
+            VStack(alignment: .leading, spacing: TS.Spacing.xs) {
+                obsidianTestButton
+                obsidianTestStatus
+            }
+        } else {
+            HStack(spacing: TS.Spacing.sm) {
+                obsidianTestButton
+                obsidianTestStatus
+                Spacer()
+            }
+        }
+    }
+    #endif
 
     private var vaultFolderLabel: some View {
         Text(vaultFolderName.isEmpty ? "Geen map gekozen" : vaultFolderName)
@@ -463,33 +415,38 @@ struct SettingsView: View {
 
     var profielenSection: some View {
         Section {
-            if isLoadingProfiles {
-                HStack {
-                    ProgressView()
-                        .controlSize(.small)
-                    Text("Profielen laden...")
-                        .font(TS.Font.footnote)
-                        .foregroundStyle(Color.labelSecondary)
-                }
-            } else if profiles.isEmpty {
-                Text("Geen profielen gevonden")
-                    .font(TS.Font.footnote)
-                    .foregroundStyle(Color.labelTertiary)
-            } else {
-                Picker("Standaard profiel", selection: $defaultProfile) {
-                    Text("Geen standaard").tag("")
-                    ForEach(profiles) { profile in
-                        Text(profile.name).tag(profile.id)
-                    }
-                }
-                .font(TS.Font.body)
-            }
+            profielenRows
         } header: {
             Text("Profielen")
         } footer: {
             Text("Het standaard profiel wordt automatisch geselecteerd bij een nieuwe opname.")
                 .font(TS.Font.caption)
                 .foregroundStyle(Color.labelTertiary)
+        }
+    }
+
+    @ViewBuilder
+    var profielenRows: some View {
+        if isLoadingProfiles {
+            HStack {
+                ProgressView()
+                    .controlSize(.small)
+                Text("Profielen laden...")
+                    .font(TS.Font.footnote)
+                    .foregroundStyle(Color.labelSecondary)
+            }
+        } else if profiles.isEmpty {
+            Text("Geen profielen gevonden")
+                .font(TS.Font.footnote)
+                .foregroundStyle(Color.labelTertiary)
+        } else {
+            Picker("Standaard profiel", selection: $defaultProfile) {
+                Text("Geen standaard").tag("")
+                ForEach(profiles) { profile in
+                    Text(profile.name).tag(profile.id)
+                }
+            }
+            .font(TS.Font.body)
         }
     }
 
@@ -1046,22 +1003,7 @@ struct SettingsView: View {
     /// where there is no login window to reach onboarding from.
     var onboardingSection: some View {
         Section {
-            Button {
-                hasCompletedOnboarding = false
-            } label: {
-                HStack(spacing: TS.Spacing.sm) {
-                    Image(systemName: "arrow.counterclockwise.circle")
-                        .foregroundStyle(Color.brandPrimary)
-                    Text("Onboarding opnieuw doorlopen")
-                        .font(TS.Font.bodyMedium)
-                        .foregroundStyle(Color.labelPrimary)
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(TS.Font.caption)
-                        .foregroundStyle(Color.labelTertiary)
-                }
-            }
-            .buttonStyle(.plain)
+            onboardingRows
         } header: {
             Text("Onboarding")
         } footer: {
@@ -1071,57 +1013,82 @@ struct SettingsView: View {
         }
     }
 
+    @ViewBuilder
+    var onboardingRows: some View {
+        Button {
+            hasCompletedOnboarding = false
+        } label: {
+            HStack(spacing: TS.Spacing.sm) {
+                Image(systemName: "arrow.counterclockwise.circle")
+                    .foregroundStyle(Color.brandPrimary)
+                Text("Onboarding opnieuw doorlopen")
+                    .font(TS.Font.bodyMedium)
+                    .foregroundStyle(Color.labelPrimary)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(TS.Font.caption)
+                    .foregroundStyle(Color.labelTertiary)
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
     // MARK: - Permissies (Permissions)
 
     var permissiesSection: some View {
         Section {
-            permissionRow(
-                icon: "mic.fill",
-                title: "Microfoon",
-                description: "Vereist voor audio-opnames",
-                status: micPermissionGranted
-            )
-
-            permissionRow(
-                icon: "waveform",
-                title: "Spraakherkenning",
-                description: "Vereist voor on-device transcriptie",
-                status: speechPermissionGranted
-            )
-
-            #if os(macOS)
-            permissionRow(
-                icon: "rectangle.dashed",
-                title: "Systeemaudio",
-                description: "Geluid van videocalls; wordt bij de eerste opname gevraagd",
-                status: systemAudioGranted,
-                negativeLabel: "Controleer toegang"
-            )
-            #endif
-
-            Button {
-                #if os(macOS)
-                NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone")!)
-                #else
-                if let url = URL(string: UIApplication.openSettingsURLString) {
-                    UIApplication.shared.open(url)
-                }
-                #endif
-            } label: {
-                HStack {
-                    Text("Systeeminstellingen openen")
-                        .font(TS.Font.bodyMedium)
-                        .foregroundStyle(Color.brandSecondary)
-                    Spacer()
-                    Image(systemName: "arrow.up.right.square")
-                        .font(TS.Font.footnote)
-                        .foregroundStyle(Color.labelTertiary)
-                }
-            }
-            .buttonStyle(.plain)
+            permissiesRows
         } header: {
             Text("Permissies")
         }
+    }
+
+    @ViewBuilder
+    var permissiesRows: some View {
+        permissionRow(
+            icon: "mic.fill",
+            title: "Microfoon",
+            description: "Vereist voor audio-opnames",
+            status: micPermissionGranted
+        )
+
+        permissionRow(
+            icon: "waveform",
+            title: "Spraakherkenning",
+            description: "Vereist voor on-device transcriptie",
+            status: speechPermissionGranted
+        )
+
+        #if os(macOS)
+        permissionRow(
+            icon: "rectangle.dashed",
+            title: "Systeemaudio",
+            description: "Geluid van videocalls; wordt bij de eerste opname gevraagd",
+            status: systemAudioGranted,
+            negativeLabel: "Controleer toegang"
+        )
+        #endif
+
+        Button {
+            #if os(macOS)
+            NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone")!)
+            #else
+            if let url = URL(string: UIApplication.openSettingsURLString) {
+                UIApplication.shared.open(url)
+            }
+            #endif
+        } label: {
+            HStack {
+                Text("Systeeminstellingen openen")
+                    .font(TS.Font.bodyMedium)
+                    .foregroundStyle(Color.brandSecondary)
+                Spacer()
+                Image(systemName: "arrow.up.right.square")
+                    .font(TS.Font.footnote)
+                    .foregroundStyle(Color.labelTertiary)
+            }
+        }
+        .buttonStyle(.plain)
     }
 
     private func permissionRow(icon: String, title: String, description: String, status: Bool? = nil, negativeLabel: String = "Geweigerd") -> some View {
@@ -1167,70 +1134,7 @@ struct SettingsView: View {
 
     var agendaSection: some View {
         Section {
-            // Provider picker (only show when Microsoft is configured)
-            if calendarService.isMicrosoftConfigured {
-                Picker("Agendabron", selection: Binding(
-                    get: { calendarService.activeProvider },
-                    set: { newProvider in
-                        calendarService.activeProvider = newProvider
-                        Task { await calendarService.fetchUpcomingMeetings() }
-                    }
-                )) {
-                    Text("Apple Agenda").tag(CalendarProvider.apple)
-                    Text("Microsoft 365").tag(CalendarProvider.microsoft)
-                }
-                .pickerStyle(.segmented)
-                .padding(.vertical, TS.Spacing.xs)
-            }
-
-            // Apple Calendar provider
-            if calendarService.activeProvider == .apple {
-                appleCalendarStatus
-            }
-
-            // Microsoft 365 provider
-            if calendarService.activeProvider == .microsoft {
-                microsoftCalendarStatus
-            }
-
-            // Upcoming meetings (regardless of provider)
-            if !calendarService.upcomingMeetings.isEmpty {
-                VStack(alignment: .leading, spacing: TS.Spacing.xs) {
-                    Text("Aankomende vergaderingen")
-                        .font(TS.Font.footnoteSemibold)
-                        .foregroundStyle(Color.labelSecondary)
-
-                    ForEach(calendarService.upcomingMeetings) { meeting in
-                        HStack(spacing: TS.Spacing.sm) {
-                            Image(systemName: meeting.platform.iconName)
-                                .font(TS.Font.footnote)
-                                .foregroundStyle(Color.brandSecondary)
-                            Text(meeting.title)
-                                .font(TS.Font.footnote)
-                                .lineLimit(1)
-                            Spacer()
-                            Text(meeting.formattedTime)
-                                .font(TS.Font.captionMonospaced)
-                                .foregroundStyle(Color.labelTertiary)
-                        }
-                    }
-                }
-                .padding(.vertical, TS.Spacing.xs)
-            }
-            #if os(macOS)
-            Divider()
-
-            Toggle(isOn: $videoCallDetectionEnabled) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Automatische vergaderdetectie")
-                        .font(TS.Font.body)
-                    Text("Detecteert wanneer een videogesprek start en toont een melding om de opname te starten.")
-                        .font(TS.Font.caption)
-                        .foregroundStyle(Color.labelSecondary)
-                }
-            }
-            .tint(Color.brandPrimary)
-            #endif
+            agendaRows
         } header: {
             Text("Agenda")
         } footer: {
@@ -1238,6 +1142,74 @@ struct SettingsView: View {
                 .font(TS.Font.caption)
                 .foregroundStyle(Color.labelTertiary)
         }
+    }
+
+    @ViewBuilder
+    var agendaRows: some View {
+        // Provider picker (only show when Microsoft is configured)
+        if calendarService.isMicrosoftConfigured {
+            Picker("Agendabron", selection: Binding(
+                get: { calendarService.activeProvider },
+                set: { newProvider in
+                    calendarService.activeProvider = newProvider
+                    Task { await calendarService.fetchUpcomingMeetings() }
+                }
+            )) {
+                Text("Apple Agenda").tag(CalendarProvider.apple)
+                Text("Microsoft 365").tag(CalendarProvider.microsoft)
+            }
+            .pickerStyle(.segmented)
+            .padding(.vertical, TS.Spacing.xs)
+        }
+
+        // Apple Calendar provider
+        if calendarService.activeProvider == .apple {
+            appleCalendarStatus
+        }
+
+        // Microsoft 365 provider
+        if calendarService.activeProvider == .microsoft {
+            microsoftCalendarStatus
+        }
+
+        // Upcoming meetings (regardless of provider)
+        if !calendarService.upcomingMeetings.isEmpty {
+            VStack(alignment: .leading, spacing: TS.Spacing.xs) {
+                Text("Aankomende vergaderingen")
+                    .font(TS.Font.footnoteSemibold)
+                    .foregroundStyle(Color.labelSecondary)
+
+                ForEach(calendarService.upcomingMeetings) { meeting in
+                    HStack(spacing: TS.Spacing.sm) {
+                        Image(systemName: meeting.platform.iconName)
+                            .font(TS.Font.footnote)
+                            .foregroundStyle(Color.brandSecondary)
+                        Text(meeting.title)
+                            .font(TS.Font.footnote)
+                            .lineLimit(1)
+                        Spacer()
+                        Text(meeting.formattedTime)
+                            .font(TS.Font.captionMonospaced)
+                            .foregroundStyle(Color.labelTertiary)
+                    }
+                }
+            }
+            .padding(.vertical, TS.Spacing.xs)
+        }
+        #if os(macOS)
+        Divider()
+
+        Toggle(isOn: $videoCallDetectionEnabled) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Automatische vergaderdetectie")
+                    .font(TS.Font.body)
+                Text("Detecteert wanneer een videogesprek start en toont een melding om de opname te starten.")
+                    .font(TS.Font.caption)
+                    .foregroundStyle(Color.labelSecondary)
+            }
+        }
+        .tint(Color.brandPrimary)
+        #endif
     }
 
     // MARK: - Apple Calendar Status
@@ -1356,149 +1328,159 @@ struct SettingsView: View {
 
     var accountSection: some View {
         Section {
-            NavigationLink {
-                if authVM.isAuthenticated {
-                    AccountView()
-                } else {
-                    LoginView()
-                }
-            } label: {
-                if let user = authVM.currentUser {
-                    HStack(spacing: TS.Spacing.sm) {
-                        ZStack {
-                            Circle()
-                                .fill(Color.surfaceTertiary)
-                                .frame(width: 40, height: 40)
-                            Text(String((user.name ?? user.email).prefix(1)).uppercased())
-                                .font(TS.Font.headlineBold)
-                                .foregroundStyle(Color.labelSecondary)
-                        }
-
-                        VStack(alignment: .leading, spacing: 2) {
-                            if let name = user.name, !name.isEmpty {
-                                Text(name)
-                                    .font(TS.Font.bodyMedium)
-                            }
-                            Text(user.email)
-                                .font(TS.Font.footnote)
-                                .foregroundStyle(Color.labelSecondary)
-                        }
-
-                        Spacer()
-
-                        if let role = user.role {
-                            Text(role == "admin" ? "Admin" : "Gebruiker")
-                                .font(TS.Font.microSemibold)
-                                .padding(.horizontal, TS.Spacing.sm)
-                                .padding(.vertical, TS.Spacing.xs)
-                                .background(Color.surfaceTertiary)
-                                .foregroundStyle(Color.labelSecondary)
-                                .clipShape(RoundedRectangle(cornerRadius: TS.Radius.xs))
-                        }
-                    }
-                } else {
-                    HStack(spacing: TS.Spacing.sm) {
-                        Image(systemName: "person.circle")
-                            .foregroundStyle(Color.labelTertiary)
-                        Text(authVM.userEmail.isEmpty ? "Niet ingelogd" : authVM.userEmail)
-                            .font(TS.Font.body)
-                            .foregroundStyle(Color.labelSecondary)
-                    }
-                }
-            }
-
-            // Biometric toggle in account section
-            if BiometricService.shared.availableType != .none {
-                VStack(alignment: .leading, spacing: TS.Spacing.xs) {
-                    Toggle(isOn: $biometricLoginEnabled) {
-                        let type = BiometricService.shared.availableType
-                        HStack(spacing: TS.Spacing.sm) {
-                            Image(systemName: type == .faceID ? "faceid" : "touchid")
-                                .foregroundStyle(Color.brandPrimary)
-                            Text(type == .faceID ? "Face ID inloggen" : "Touch ID inloggen")
-                                .font(TS.Font.body)
-                        }
-                    }
-                    .tint(Color.brandPrimary)
-                    .onChange(of: biometricLoginEnabled) { _, enabled in
-                        biometricError = nil
-                        BiometricService.shared.isEnabled = enabled
-                        if enabled {
-                            guard let token = KeychainService.shared.load(for: "authToken") else {
-                                biometricError = "Geen actieve sessie. Log eerst in met e-mail en wachtwoord."
-                                biometricLoginEnabled = false
-                                BiometricService.shared.isEnabled = false
-                                return
-                            }
-                            Task {
-                                do {
-                                    try await BiometricService.shared.saveTokenWithBiometrics(token)
-                                } catch {
-                                    biometricError = error.localizedDescription
-                                    biometricLoginEnabled = false
-                                    BiometricService.shared.isEnabled = false
-                                }
-                            }
-                        } else {
-                            BiometricService.shared.removeBiometricToken()
-                        }
-                    }
-
-                    if let error = biometricError {
-                        Text(error)
-                            .font(TS.Font.caption)
-                            .foregroundStyle(Color.statusError)
-                    }
-                }
-            }
-
-            Button(role: .destructive) {
-                showLogoutConfirm = true
-            } label: {
-                HStack(spacing: TS.Spacing.sm) {
-                    Image(systemName: "rectangle.portrait.and.arrow.right")
-                    Text("Uitloggen")
-                        .font(TS.Font.bodyMedium)
-                }
-                .foregroundStyle(Color.statusError)
-            }
-            .buttonStyle(.plain)
+            accountRows
         } header: {
             Text("Account")
         }
+    }
+
+    @ViewBuilder
+    var accountRows: some View {
+        NavigationLink {
+            if authVM.isAuthenticated {
+                AccountView()
+            } else {
+                LoginView()
+            }
+        } label: {
+            if let user = authVM.currentUser {
+                HStack(spacing: TS.Spacing.sm) {
+                    ZStack {
+                        Circle()
+                            .fill(Color.surfaceTertiary)
+                            .frame(width: 40, height: 40)
+                        Text(String((user.name ?? user.email).prefix(1)).uppercased())
+                            .font(TS.Font.headlineBold)
+                            .foregroundStyle(Color.labelSecondary)
+                    }
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        if let name = user.name, !name.isEmpty {
+                            Text(name)
+                                .font(TS.Font.bodyMedium)
+                        }
+                        Text(user.email)
+                            .font(TS.Font.footnote)
+                            .foregroundStyle(Color.labelSecondary)
+                    }
+
+                    Spacer()
+
+                    if let role = user.role {
+                        Text(role == "admin" ? "Admin" : "Gebruiker")
+                            .font(TS.Font.microSemibold)
+                            .padding(.horizontal, TS.Spacing.sm)
+                            .padding(.vertical, TS.Spacing.xs)
+                            .background(Color.surfaceTertiary)
+                            .foregroundStyle(Color.labelSecondary)
+                            .clipShape(RoundedRectangle(cornerRadius: TS.Radius.xs))
+                    }
+                }
+            } else {
+                HStack(spacing: TS.Spacing.sm) {
+                    Image(systemName: "person.circle")
+                        .foregroundStyle(Color.labelTertiary)
+                    Text(authVM.userEmail.isEmpty ? "Niet ingelogd" : authVM.userEmail)
+                        .font(TS.Font.body)
+                        .foregroundStyle(Color.labelSecondary)
+                }
+            }
+        }
+
+        // Biometric toggle in account section
+        if BiometricService.shared.availableType != .none {
+            VStack(alignment: .leading, spacing: TS.Spacing.xs) {
+                Toggle(isOn: $biometricLoginEnabled) {
+                    let type = BiometricService.shared.availableType
+                    HStack(spacing: TS.Spacing.sm) {
+                        Image(systemName: type == .faceID ? "faceid" : "touchid")
+                            .foregroundStyle(Color.brandPrimary)
+                        Text(type == .faceID ? "Face ID inloggen" : "Touch ID inloggen")
+                            .font(TS.Font.body)
+                    }
+                }
+                .tint(Color.brandPrimary)
+                .onChange(of: biometricLoginEnabled) { _, enabled in
+                    biometricError = nil
+                    BiometricService.shared.isEnabled = enabled
+                    if enabled {
+                        guard let token = KeychainService.shared.load(for: "authToken") else {
+                            biometricError = "Geen actieve sessie. Log eerst in met e-mail en wachtwoord."
+                            biometricLoginEnabled = false
+                            BiometricService.shared.isEnabled = false
+                            return
+                        }
+                        Task {
+                            do {
+                                try await BiometricService.shared.saveTokenWithBiometrics(token)
+                            } catch {
+                                biometricError = error.localizedDescription
+                                biometricLoginEnabled = false
+                                BiometricService.shared.isEnabled = false
+                            }
+                        }
+                    } else {
+                        BiometricService.shared.removeBiometricToken()
+                    }
+                }
+
+                if let error = biometricError {
+                    Text(error)
+                        .font(TS.Font.caption)
+                        .foregroundStyle(Color.statusError)
+                }
+            }
+        }
+
+        Button(role: .destructive) {
+            showLogoutConfirm = true
+        } label: {
+            HStack(spacing: TS.Spacing.sm) {
+                Image(systemName: "rectangle.portrait.and.arrow.right")
+                Text("Uitloggen")
+                    .font(TS.Font.bodyMedium)
+            }
+            .foregroundStyle(Color.statusError)
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Over (About)
 
     var overSection: some View {
         Section {
-            HStack {
-                Text("Versie")
-                    .font(TS.Font.body)
-                    .foregroundStyle(Color.labelPrimary)
-                Spacer()
-                Text(appVersion())
-                    .font(TS.Font.captionMonospaced)
-                    .foregroundStyle(Color.labelTertiary)
-            }
-
-            HStack {
-                Text("Platform")
-                    .font(TS.Font.body)
-                    .foregroundStyle(Color.labelPrimary)
-                Spacer()
-                #if os(macOS)
-                Text("macOS")
-                    .font(TS.Font.captionMonospaced)
-                    .foregroundStyle(Color.labelTertiary)
-                #else
-                Text("iOS")
-                    .font(TS.Font.captionMonospaced)
-                    .foregroundStyle(Color.labelTertiary)
-                #endif
-            }
+            overRows
         } header: {
             Text("Over")
+        }
+    }
+
+    @ViewBuilder
+    var overRows: some View {
+        HStack {
+            Text("Versie")
+                .font(TS.Font.body)
+                .foregroundStyle(Color.labelPrimary)
+            Spacer()
+            Text(appVersion())
+                .font(TS.Font.captionMonospaced)
+                .foregroundStyle(Color.labelTertiary)
+        }
+
+        HStack {
+            Text("Platform")
+                .font(TS.Font.body)
+                .foregroundStyle(Color.labelPrimary)
+            Spacer()
+            #if os(macOS)
+            Text("macOS")
+                .font(TS.Font.captionMonospaced)
+                .foregroundStyle(Color.labelTertiary)
+            #else
+            Text("iOS")
+                .font(TS.Font.captionMonospaced)
+                .foregroundStyle(Color.labelTertiary)
+            #endif
         }
     }
 

@@ -49,14 +49,8 @@ extension SettingsView {
                 Text(String(localized: "support.identity.limit"))
                     .font(TS.Font.caption).foregroundStyle(Color.statusError)
             }
-            Button("Opslaan") {
-                guard !IOSDebug.supportSettingsSnapshot,
-                      SupportIdentity.isComplete(name: supportNameDraft, email: supportEmailDraft) else { return }
-                supportName = supportNameDraft.trimmingCharacters(in: .whitespacesAndNewlines)
-                supportEmail = supportEmailDraft.trimmingCharacters(in: .whitespacesAndNewlines)
-            }
-            .disabled(!SupportIdentity.isComplete(name: supportNameDraft, email: supportEmailDraft)
-                      || (supportNameDraft == supportName && supportEmailDraft == supportEmail))
+            Button("Opslaan", action: saveSupportIdentity)
+                .disabled(!canSaveSupportIdentity)
         } header: {
             Text("Support")
         }
@@ -65,6 +59,18 @@ extension SettingsView {
             supportEmailDraft = IOSDebug.supportSettingsSnapshot ? "anna@example.com" : supportEmail
         }
         .allowsHitTesting(!IOSDebug.supportSettingsSnapshot)
+    }
+
+    var canSaveSupportIdentity: Bool {
+        SupportIdentity.isComplete(name: supportNameDraft, email: supportEmailDraft)
+            && !(supportNameDraft == supportName && supportEmailDraft == supportEmail)
+    }
+
+    func saveSupportIdentity() {
+        guard !IOSDebug.supportSettingsSnapshot,
+              SupportIdentity.isComplete(name: supportNameDraft, email: supportEmailDraft) else { return }
+        supportName = supportNameDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        supportEmail = supportEmailDraft.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private var supportTicketsLabel: some View {
@@ -82,7 +88,7 @@ extension SettingsView {
     }
 
     #if os(macOS)
-    private func openSupport(_ pane: SupportPane) {
+    func openSupport(_ pane: SupportPane) {
         guard !IOSDebug.supportSettingsSnapshot else { return }
         supportVM.pane = pane
         openSupportWindow(id: "support")
@@ -93,19 +99,23 @@ extension SettingsView {
 
     var updatesSection: some View {
         Section {
-            Toggle(isOn: $checkForUpdates) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Controleer op updates")
-                        .font(TS.Font.body)
-                    Text("Toon een melding op de homepage als er een nieuwe versie beschikbaar is")
-                        .font(TS.Font.caption)
-                        .foregroundStyle(Color.labelSecondary)
-                }
-            }
-            .tint(Color.brandPrimary)
+            updatesRows
         } header: {
             Text("Updates")
         }
+    }
+
+    var updatesRows: some View {
+        Toggle(isOn: $checkForUpdates) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Controleer op updates")
+                    .font(TS.Font.body)
+                Text("Toon een melding op de homepage als er een nieuwe versie beschikbaar is")
+                    .font(TS.Font.caption)
+                    .foregroundStyle(Color.labelSecondary)
+            }
+        }
+        .tint(Color.brandPrimary)
     }
 
 }

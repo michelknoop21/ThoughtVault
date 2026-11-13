@@ -1,10 +1,10 @@
 # ThoughtVault Windows: installatie en gebruik voor de interne pilot
 
-Status 13 november 2026: **1.0.320 staat op de downloadpagina en in de updatefeed.**
-Collega's zijn nog niet uitgenodigd; dat besluit staat open, zie
-[Open voor de uitnodiging](#open-voor-de-uitnodiging). Bestaande installaties met
-automatisch bijwerken krijgen 1.0.320 al, los van dat besluit. Oudere versies
-verderop in dit document zijn uitsluitend herstelreferenties.
+Status 13 november 2026: **1.0.320 is de vrijgave voor collega's** (besluit van
+Michel, zie [Besluiten van 13 november](#besluiten-van-13-november)). De versie staat
+op de downloadpagina en in de updatefeed; bestaande installaties met automatisch
+bijwerken krijgen haar vanzelf. Oudere versies verderop in dit document zijn
+uitsluitend herstelreferenties.
 
 ## Stand van 1.0.320
 
@@ -30,39 +30,51 @@ is TestFlight. En de App Store Connect-API antwoordde op 13 november met
 overeenkomst worden geaccepteerd voordat de TestFlight-stand opnieuw te lezen is
 of een build naar een externe groep kan.
 
-## Open voor de uitnodiging
+## Besluiten van 13 november
 
-De [blockerlijst van 9 november](qa/colleague-rollout-2026-11-09/STATUS.md) is
-sindsdien niet opnieuw beoordeeld. De CI dekt van blocker 4 de installatie, de
-signature en de upgrade; een rollback is niet bewezen. Deze vragen moet Michel
-beantwoorden voordat er een uitnodiging uitgaat:
+Michel heeft de open punten uit de [blockerlijst van 9 november](qa/colleague-rollout-2026-11-09/STATUS.md)
+beslist:
 
-1. Gelden blocker 2 (volledige flow, tien stabiele runs), 3 (verse identiteit met
-   eigen toegang op een schone installatie) en 5 (vijf werkdagen pilot) nog als
-   poort, of is 1.0.320 de vrijgave?
-2. Welk notulenmodel krijgt de collega voorgeschreven? De evaluatie van 9 november
-   (DEC-060) gaf `mistral-large-4` 17 van 18 feiten en `gpt-oss:120b` 9 van 18; de
-   inhoudsacceptatie van dezelfde dag liep op Ollama Cloud met Kimi K2.6. Welk
-   transcriptiemodel hoort daarbij?
-3. Hoe komt een collega aan een eigen providersleutel, en wie betaalt het gebruik?
-4. Welk supportcontact staat in de uitnodiging: het Support-scherm in de app
-   (DEC-066) of `sales@yinga.nl`, dat nu op de downloadpagina staat?
+- Blocker 2 (volledige flow, tien stabiele runs), 3 (verse identiteit op een schone
+  installatie) en 5 (vijf werkdagen pilot) vervallen als poort. Ze zijn niet
+  alsnog uitgevoerd.
+- Notulen lopen via OpenRouter met `mistralai/mistral-large-4-0`. Dat model
+  haalde in de evaluatie van 9 november 17 van 18 feiten, tegen 9 van 18 voor
+  `gpt-oss:120b` (DEC-060). Die evaluatie liep via Ollama Cloud, niet via OpenRouter.
+- Transcriptie blijft lokaal met Whisper Medium (ongeveer 1,5 GB download).
+- Elke collega krijgt een eigen OpenRouter-sleutel van Michel. Yinga betaalt het gebruik.
+- Vragen en meldingen gaan via het Support-scherm in de app; op Windows is dat de
+  knop **Feedback**.
+
+Nog niet aangetoond:
+
+1. De OpenRouter-route is in de Windows-app niet getest. Uit de code volgt dat ze
+   werkt via de aanbieder Ollama met een eigen adres (`llm.ts` stuurt naar
+   `<adres>/v1/chat/completions` en geeft de sleutel alleen over HTTPS mee), maar
+   er is met 1.0.320 nog geen notule via OpenRouter gemaakt. Doe dat op één pc
+   voordat de uitnodiging uitgaat.
+2. Een rollback naar een eerdere versie is niet bewezen; de CI dekt installatie,
+   signature en upgrade.
 
 ## Eerste start en eerste notule
 
-Deze instructie wordt pas met de goedgekeurde MSI verstuurd. Installatie voor de
-hele pc vraagt Windows-beheerrechten; ontwikkeltools zijn niet nodig.
+Deze instructie hoort bij de MSI van 1.0.320. Installatie voor de hele pc vraagt
+Windows-beheerrechten; ontwikkeltools zijn niet nodig.
 
 1. Installeer de aangeleverde MSI en open ThoughtVault met je eigen Windowsaccount.
    Lokale verwerking vereist geen ThoughtVault-account.
-2. Open **Instellingen → Verwerking**. Kies de bij de pilot bevestigde
-   transcriptie- en notulenconfiguratie. De definitieve modelnamen worden na
-   praktijkacceptatie ingevuld; installeer niet op basis van een oude kandidaat.
-3. Download het gekozen transcriptiemodel bewust via de downloadknop en wacht op
-   de gereedmelding. Een ontbrekend model bewaart de opname met een herstelmelding.
-   Voor externe notulen gebruik je je eigen bevoegde providerautorisatie in het
-   API-sleutelveld; kopieer geen sleutel van een collega. De sleutel wordt in de
-   Windows-kluis opgeslagen. Het toegangsproces moet vóór uitnodiging zijn geregeld.
+2. Open **Instellingen → Verwerking**. Kies bij Transcriptie het model **Medium**,
+   klik op de downloadknop en wacht op de gereedmelding (ongeveer 1,5 GB). Een
+   ontbrekend model bewaart de opname met een herstelmelding.
+3. Kies bij Notulen generatie de tegel **Ollama** en vul in:
+   - Ollama URL: `https://openrouter.ai/api`
+   - Model: `mistralai/mistral-large-4-0`
+   - API-sleutel: de OpenRouter-sleutel die je van Michel hebt gekregen. Het veld
+     heet "API-sleutel (alleen Ollama Cloud)", maar de sleutel gaat mee naar elk
+     HTTPS-adres.
+
+   Gebruik alleen je eigen sleutel en geef haar niet door. Ze wordt in de
+   Windows-kluis opgeslagen.
 4. Controleer microfoontoegang bij **Windows-instellingen → Privacy en beveiliging
    → Microfoon**, inclusief toegang voor bureaubladapps. Kies in ThoughtVault je
    bron en microfoon. Gebruik eerst een korte fictieve proefvergadering.
@@ -77,8 +89,8 @@ hele pc vraagt Windows-beheerrechten; ontwikkeltools zijn niet nodig.
    Controleer ook het geëxporteerde document voordat je het deelt.
 
 Agenda en Obsidian zijn optioneel. Voor de eerste notule zijn ze niet nodig.
-Supportcontact en toegangsproces staan nog open (zie hierboven); deze
-voorbereiding is nog geen collega-uitnodiging.
+Loopt er iets mis, meld het dan via **Feedback** in de app. Daar kun je ook het
+logbestand tonen en meesturen.
 
 ## Historische kandidaat 1.0.296
 

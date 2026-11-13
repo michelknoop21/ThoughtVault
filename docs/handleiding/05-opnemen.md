@@ -190,13 +190,13 @@ Verwijderen van een audiobestand is definitief. De notulen die er al van gemaakt
 ::: macos
 ### Het menubalkpictogram
 
-ThoughtVault staat met een pictogram in de menubalk. Tijdens een opname kleurt het rood en staat de opnametijd ernaast, in de pauze is het oranje. Het menu toont de status, bijvoorbeeld **Opname bezig** of **Gepauzeerd**. Loopt er geen opname, dan staat er **Niet aan het opnemen**, of **Niet ingelogd** als je zonder account werkt. Daaronder staan deze opdrachten:
+ThoughtVault staat met een pictogram in de menubalk. Tijdens een opname kleurt het rood en staat de opnametijd ernaast, in de pauze is het oranje. Het menu toont de status, bijvoorbeeld **Opname bezig** of **Gepauzeerd**. Loopt er geen opname, dan staat er **Niet aan het opnemen**. Alleen als je in de Cloud-modus werkt en niet bent ingelogd, staat er **Niet ingelogd**. Na het stoppen staat er **Verwerken...** zolang de app je opname verwerkt; in de Cloud-modus is dat **Uploaden...**, omdat de opname dan naar de server gaat. Daaronder staan deze opdrachten:
 
 | Opdracht | Wanneer zichtbaar |
 |----------|-------------------|
 | **Start opname** (`Shift+Cmd+R`) | Als er geen opname loopt. Start met de bron en het profiel die op het opnamescherm staan. |
 | **Pauzeer** of **Hervat** | Tijdens een opname |
-| **Stop en upload** | Tijdens een opname. Doet hetzelfde als **Stop en verwerk**. |
+| **Stop en verwerk** | Tijdens een opname. Doet hetzelfde als **Stop en verwerk** op het opnamescherm. |
 | **Annuleer opname** | Tijdens een opname, na bevestiging |
 | **Open ThoughtVault** | Altijd. Haalt het venster naar voren. |
 | **Afsluiten** | Altijd |

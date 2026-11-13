@@ -238,8 +238,8 @@ Met **Stoppen** verlaat je de selectie zonder iets te verwijderen.
 ::: windows
 Klik in de geopende notule op het prullenbakpictogram en bevestig met **Verwijderen**.
 
-Let op bij de andere twee routes: die vragen niet om bevestiging.
+Vanuit de lijst gaat het zo:
 
-- Rechtermuisknop op een notule in de lijst, dan **Verwijderen**: de notule is direct weg.
-- **Selectiemodus** naast de titel: vink notulen aan, of klik op **Alles**, en klik op **Verwijder**. Alle aangevinkte notulen zijn direct weg.
+- Klik met de rechtermuisknop op een notule, kies **Verwijderen** en bevestig met **Verwijderen**.
+- Meerdere tegelijk: klik op **Selectiemodus** naast de titel, vink notulen aan of klik op **Alles**, klik op **Verwijder** en bevestig met **Verwijderen**. Kies je **Annuleren**, dan blijven je notulen en je selectie staan.
 :::

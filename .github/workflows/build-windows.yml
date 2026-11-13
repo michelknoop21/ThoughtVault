@@ -116,11 +116,14 @@ jobs:
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-          TAURI_CONFIG: '{"identifier":"${{ steps.names.outputs.bundle_id }}","productName":"${{ steps.names.outputs.product_name }}","plugins":{"updater":{"endpoints":["https://thoughtvault.yinga.ai/releases/windows/${{ steps.names.outputs.feed }}.json"]}}}'
+          CHANNEL_CONFIG: '{"identifier":"${{ steps.names.outputs.bundle_id }}","productName":"${{ steps.names.outputs.product_name }}","plugins":{"updater":{"endpoints":["https://thoughtvault.yinga.ai/releases/windows/${{ steps.names.outputs.feed }}.json"]}}}'
         run: |
-          $env:TAURI_CONFIG = @'
+          # Tauri 2 does not read TAURI_CONFIG as input (the CLI sets it itself for the build
+          # scripts), so the channel settings go in as a --config file.
+          $ChannelConfig = Join-Path $env:RUNNER_TEMP "tauri.channel.json"
+          @'
           const fs = require("node:fs");
-          const config = JSON.parse(process.env.TAURI_CONFIG);
+          const config = JSON.parse(process.env.CHANNEL_CONFIG);
           if (config.identifier === "nl.prezent.transcript-studio-dev") {
             const base = JSON.parse(fs.readFileSync("src-tauri/tauri.conf.json", "utf8"));
             config.app = { windows: base.app.windows };
@@ -129,9 +132,14 @@ jobs:
             config.plugins["deep-link"] = { desktop: { schemes: ["transcript-studio-dev"] } };
           }
           process.stdout.write(JSON.stringify(config));
-          '@ | node
+          '@ | node | Set-Content -Encoding utf8NoBOM -NoNewline $ChannelConfig
           if ($LASTEXITCODE -ne 0) { throw "Tauri channel configuration failed" }
-          npm run tauri build
+          npm run tauri build -- --config $ChannelConfig
+          if ($LASTEXITCODE -ne 0) { throw "Tauri build failed" }
+          # A Dev build must never carry the production name: it would upgrade over ThoughtVault.
+          $Expected = "${{ steps.names.outputs.product_name }}_"
+          $Msi = Get-ChildItem src-tauri/target/release/bundle/msi/*.msi
+          if (-not ($Msi | Where-Object { $_.Name.StartsWith($Expected) })) { throw "MSI is not named for $Expected : $($Msi.Name)" }
 
       - name: Verify portable Whisper CPU inference
         working-directory: windows

@@ -8,6 +8,16 @@ Elke release is een blok `## <versie> - <titel>` met direct daaronder een cursie
 met datum en platforms, bijvoorbeeld `*12 november 2026 · macOS · iOS · Windows*`.
 De nieuwste release staat bovenaan.
 
+## 1.0.322 - Conceptofferte in Prospect Flow vanuit een notule
+
+*13 november 2026 · Windows*
+
+- Onder Exporteren staat **Maak offerte in Prospect Flow**. Prospect Flow leidt uit de notule en het transcript offerteregels af en zet een conceptofferte klaar bij een bestaande of nieuwe klant. Naar de klant gaat niets.
+- De conceptofferte komt in Prospect Flow op jouw naam in **Mijn inbox**. De app gebruikt daarvoor het e-mailadres bij Instellingen, Account.
+- Adres en API-sleutel van Prospect Flow vul je in op het nieuwe tabblad Instellingen, Prospect Flow.
+- Bij lokaal werken kun je een terugval kiezen: geeft de gekozen aanbieder een fout, dan probeert de app het één keer met een andere.
+- **Test verbinding** bij Ollama meldt nu ook Verbonden bij een dienst die modellen op de OpenAI-manier aanbiedt, zoals OpenRouter. Eerder stond daar Niet bereikbaar terwijl de notule wel lukte.
+
 ## 1.0.321 - Nieuwe opmaak, een handleiding in de app en kleine fixes
 
 *13 november 2026 · macOS · iOS · Windows*

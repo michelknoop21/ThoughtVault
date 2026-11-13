@@ -5,6 +5,16 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2026-11-13]: 1.0.322, conceptofferte in Prospect Flow (Windows)
+
+### Added
+- Windows en macOS: vanuit een notule een conceptofferte maken in Prospect Flow (`POST /api/ai/offers/from-conversation`), met klantkeuze, herstel van een onbevestigde aanvraag en het e-mailadres van de maker (`maker_email`), zodat de offerte in Mijn inbox van die collega landt. Vereist in Prospect Flow de module AI-hulp en een ingestelde AI-provider.
+- Terugvalaanbieder voor de notule bij een fout van de gekozen aanbieder.
+
+### Fixed
+- Windows: Test verbinding bij Ollama gebruikt dezelfde controle als de modellijst (`/v1/models`, daarna `/api/tags`). De Rust-opdracht `ollama_test` is weg.
+- CI: een Dev-build krijgt via `tauri build --config` echt de naam en ID van Dev; Tauri 2 leest `TAURI_CONFIG` niet als invoer. Een naamcontrole stopt een Dev-build die de productienaam draagt.
+
 ## [2026-11-12]: Logregels en stapnaam bij het maken van de notule
 
 ### Added

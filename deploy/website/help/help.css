@@ -89,6 +89,7 @@ h1{margin:0 0 14px;font-size:42px;font-weight:700;letter-spacing:-.02em;line-hei
 figure{margin:30px 0 34px}
 .stage{display:block;padding:clamp(14px,3.2vw,34px);border-radius:20px;background:var(--stage)}
 .stage img{width:100%;height:auto;border-radius:11px;box-shadow:0 22px 46px -18px rgba(28,16,80,.55),0 0 0 1px rgba(255,255,255,.14)}
+.stage img.tall{width:auto;max-width:min(300px,100%);margin:0 auto;border-radius:26px}
 figure .stage img{cursor:zoom-in;transition:transform .3s var(--ease-out)}@media(hover:hover){figure .stage img:hover{transform:scale(1.008)}}
 figcaption{margin-top:11px;font-size:14.5px;color:var(--muted);text-align:center}
 html[data-pf=macos] .pf:not([data-pf~=macos]),html[data-pf=windows] .pf:not([data-pf~=windows]),html[data-pf=ios] .pf:not([data-pf~=ios]){display:none}

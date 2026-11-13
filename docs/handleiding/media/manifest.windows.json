@@ -1,0 +1,179 @@
+[
+  {
+    "file": "win-home.webp",
+    "platform": "windows",
+    "screen": "Home",
+    "shows": "Het startscherm met de begroeting, de knop voor een nieuwe opname, de recente notities en de snelle acties.",
+    "url": "?scenario=handleiding#/",
+    "sources": [
+      "windows/src/pages/HomePage.tsx",
+      "windows/src/components/layout/Sidebar.tsx"
+    ]
+  },
+  {
+    "file": "win-opnemen.webp",
+    "platform": "windows",
+    "screen": "Opnemen",
+    "shows": "Het opnamescherm in rust: de tijd op 00:00, de knop Start opname en onderaan de keuze voor bron en opnameprofiel.",
+    "url": "?scenario=handleiding#/recording",
+    "sources": [
+      "windows/src/pages/RecordingPage.tsx",
+      "windows/src/components/layout/Sidebar.tsx"
+    ]
+  },
+  {
+    "file": "win-taken.webp",
+    "platform": "windows",
+    "screen": "Taken",
+    "shows": "Het scherm Taken met een opname die nog wordt getranscribeerd en een taak die klaar is.",
+    "url": "?scenario=handleiding#/tasks",
+    "sources": [
+      "windows/src/pages/TasksPage.tsx",
+      "windows/src/stores/recordingStore.ts"
+    ]
+  },
+  {
+    "file": "win-notulen.webp",
+    "platform": "windows",
+    "screen": "Notulen",
+    "shows": "De lijst met notulen, gegroepeerd op datum, met het zoekveld en de filters op periode en tag.",
+    "url": "?scenario=handleiding#/transcripts",
+    "sources": [
+      "windows/src/pages/TranscriptsPage.tsx",
+      "windows/src/components/transcripts/TranscriptsList.tsx"
+    ]
+  },
+  {
+    "file": "win-notule-open.webp",
+    "platform": "windows",
+    "screen": "Notulen: geopende notule",
+    "shows": "Een geopende notule met besproken punten, besluiten en een tabel met actiepunten.",
+    "url": "?scenario=handleiding#/transcripts",
+    "sources": [
+      "windows/src/pages/TranscriptsPage.tsx",
+      "windows/src/components/transcripts/TranscriptDetail.tsx",
+      "windows/src/components/transcripts/ContextSuggestionBar.tsx"
+    ]
+  },
+  {
+    "file": "win-mensen.webp",
+    "platform": "windows",
+    "screen": "Mensen",
+    "shows": "De lijst Mensen met per persoon de rol en de organisatie.",
+    "url": "?scenario=handleiding#/people",
+    "sources": [
+      "windows/src/pages/PeoplePage.tsx"
+    ]
+  },
+  {
+    "file": "win-persoon-bewerken.webp",
+    "platform": "windows",
+    "screen": "Mensen: persoon bewerken",
+    "shows": "Het venster waarin je de gegevens van een persoon aanpast, zoals rol, organisatie en verantwoordelijkheden.",
+    "url": "?scenario=handleiding#/people",
+    "sources": [
+      "windows/src/pages/PersonEditModal.tsx",
+      "windows/src/pages/PeoplePage.tsx"
+    ]
+  },
+  {
+    "file": "win-instellingen-algemeen.webp",
+    "platform": "windows",
+    "screen": "Instellingen: Algemeen",
+    "shows": "Het tabblad Algemeen met automatisch bijwerken, de beweging van de geluidsgolf en het versienummer van de app.",
+    "url": "?scenario=handleiding#/settings",
+    "sources": [
+      "windows/src/pages/SettingsPage.tsx",
+      "windows/src/components/settings/GeneralTab.tsx"
+    ]
+  },
+  {
+    "file": "win-instellingen-verwerking.webp",
+    "platform": "windows",
+    "screen": "Instellingen: Verwerking",
+    "shows": "Het tabblad Verwerking met de aanbevolen instellingen voor jouw pc, de keuze tussen lokaal en cloud en het transcriptiemodel.",
+    "url": "?scenario=handleiding#/settings",
+    "sources": [
+      "windows/src/pages/SettingsPage.tsx",
+      "windows/src/components/settings/ProcessingTab.tsx"
+    ]
+  },
+  {
+    "file": "win-instellingen-notulen.webp",
+    "platform": "windows",
+    "screen": "Instellingen: Notulen",
+    "shows": "Het tabblad Notulen met het standaardprofiel voor notulen en daaronder je eigen profiel.",
+    "url": "?scenario=handleiding#/settings",
+    "sources": [
+      "windows/src/pages/SettingsPage.tsx",
+      "windows/src/components/settings/NotulenTab.tsx"
+    ]
+  },
+  {
+    "file": "win-instellingen-agenda.webp",
+    "platform": "windows",
+    "screen": "Instellingen: Agenda",
+    "shows": "Het tabblad Agenda met de koppeling naar Microsoft 365, hier nog niet ingesteld.",
+    "url": "?scenario=handleiding#/settings",
+    "sources": [
+      "windows/src/pages/SettingsPage.tsx",
+      "windows/src/components/settings/CalendarTab.tsx"
+    ]
+  },
+  {
+    "file": "win-instellingen-obsidian.webp",
+    "platform": "windows",
+    "screen": "Instellingen: Obsidian",
+    "shows": "Het tabblad Obsidian met de schakelaar voor automatisch exporteren, de base-URL, het vault-pad en de API-sleutel.",
+    "url": "?scenario=handleiding#/settings",
+    "sources": [
+      "windows/src/pages/SettingsPage.tsx",
+      "windows/src/components/settings/ObsidianTab.tsx"
+    ]
+  },
+  {
+    "file": "win-instellingen-account.webp",
+    "platform": "windows",
+    "screen": "Instellingen: Account",
+    "shows": "Het tabblad Account met de instelling voor foutrapporten en de contactgegevens voor meldingen.",
+    "url": "?scenario=handleiding#/settings",
+    "sources": [
+      "windows/src/pages/SettingsPage.tsx",
+      "windows/src/components/settings/AccountTab.tsx"
+    ]
+  },
+  {
+    "file": "win-instellingen-geavanceerd.webp",
+    "platform": "windows",
+    "screen": "Instellingen: Geavanceerd",
+    "shows": "Het tabblad Geavanceerd met de knop naar de Windows-instellingen voor de microfoon.",
+    "url": "?scenario=handleiding#/settings",
+    "sources": [
+      "windows/src/pages/SettingsPage.tsx",
+      "windows/src/components/settings/AdvancedTab.tsx"
+    ]
+  },
+  {
+    "file": "win-support-melding.webp",
+    "platform": "windows",
+    "screen": "Support: melding maken",
+    "shows": "Het venster Feedback met het formulier voor een nieuwe melding: categorie en beschrijving.",
+    "url": "?scenario=handleiding#/settings",
+    "sources": [
+      "windows/src/components/FeedbackWidget.tsx",
+      "windows/src/components/settings/AccountTab.tsx"
+    ]
+  },
+  {
+    "file": "win-support-gesprek.webp",
+    "platform": "windows",
+    "screen": "Support: gesprek over een melding",
+    "shows": "Het gesprek bij een melding, met het antwoord van ThoughtVault en het veld om te reageren.",
+    "url": "?scenario=handleiding#/settings",
+    "sources": [
+      "windows/src/components/FeedbackWidget.tsx",
+      "windows/src/components/support/SupportThread.tsx",
+      "windows/src/components/settings/AccountTab.tsx"
+    ]
+  }
+]

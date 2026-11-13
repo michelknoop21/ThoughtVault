@@ -35,7 +35,8 @@ def img_tag(src, alt):
     size = ""
     if path.is_file():
         with Image.open(path) as im:
-            size = f' width="{im.width}" height="{im.height}"'
+            # A phone screenshot is portrait: the page shows it at phone width, not full width.
+            size = f' width="{im.width}" height="{im.height}"' + (' class="tall"' if im.height > im.width else "")
     return f'<img src="{html.escape(src)}" alt="{html.escape(alt)}"{size} loading="lazy">'
 
 

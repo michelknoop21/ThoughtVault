@@ -1,0 +1,163 @@
+[
+  {
+    "file": "mac-home.webp",
+    "platform": "macos",
+    "args": "-TVDebugTab home",
+    "sources": [
+      "macos/Views/HomeView.swift"
+    ]
+  },
+  {
+    "file": "mac-opnemen.webp",
+    "platform": "macos",
+    "args": "-TVDebugTab record",
+    "sources": [
+      "macos/Views/RecordingView.swift",
+      "macos/Views/RecordingView+Studio.swift"
+    ]
+  },
+  {
+    "file": "mac-taken.webp",
+    "platform": "macos",
+    "args": "-TVDebugTab tasks",
+    "sources": [
+      "macos/Views/TasksView.swift"
+    ]
+  },
+  {
+    "file": "mac-notulen.webp",
+    "platform": "macos",
+    "args": "-TVDebugTab transcripts",
+    "sources": [
+      "macos/Views/TranscriptsView.swift"
+    ]
+  },
+  {
+    "file": "mac-notule-open.webp",
+    "platform": "macos",
+    "args": "-TVDebugOpen transcript",
+    "sources": [
+      "macos/Views/NotuleResultView.swift",
+      "macos/Views/ContextSuggestionBar.swift"
+    ]
+  },
+  {
+    "file": "mac-mensen.webp",
+    "platform": "macos",
+    "args": "-TVDebugTab people",
+    "sources": [
+      "macos/Views/PeopleDirectoryView.swift"
+    ]
+  },
+  {
+    "file": "mac-persoon-bewerken.webp",
+    "platform": "macos",
+    "args": "-TVDebugTab people -TVDebugOpen person",
+    "sources": [
+      "macos/Views/PersonEditView.swift",
+      "macos/Views/Components/PersonFormFields.swift"
+    ]
+  },
+  {
+    "file": "mac-instellingen-algemeen.webp",
+    "platform": "macos",
+    "args": "-TVDebugTab settings -TVDebugSettingsTab algemeen",
+    "sources": [
+      "macos/Views/SettingsView.swift",
+      "macos/Views/SettingsView+Studio.swift"
+    ]
+  },
+  {
+    "file": "mac-instellingen-verwerking.webp",
+    "platform": "macos",
+    "args": "-TVDebugTab settings -TVDebugSettingsTab verwerking",
+    "sources": [
+      "macos/Views/SettingsView+Verwerking.swift"
+    ]
+  },
+  {
+    "file": "mac-instellingen-woordenlijst.webp",
+    "platform": "macos",
+    "args": "-TVDebugTab settings -TVDebugSettingsTab woordenlijst",
+    "sources": [
+      "macos/Views/PersonalCorrectionsView.swift"
+    ]
+  },
+  {
+    "file": "mac-instellingen-notulen.webp",
+    "platform": "macos",
+    "args": "-TVDebugTab settings -TVDebugSettingsTab notulen",
+    "sources": [
+      "macos/Views/SettingsView.swift",
+      "macos/Views/SettingsView+Studio.swift"
+    ]
+  },
+  {
+    "file": "mac-instellingen-agenda.webp",
+    "platform": "macos",
+    "args": "-TVDebugTab settings -TVDebugSettingsTab agenda",
+    "sources": [
+      "macos/Views/SettingsView.swift",
+      "macos/Views/SettingsView+Studio.swift"
+    ]
+  },
+  {
+    "file": "mac-instellingen-obsidian.webp",
+    "platform": "macos",
+    "args": "-TVDebugTab settings -TVDebugSettingsTab obsidian",
+    "sources": [
+      "macos/Views/SettingsView.swift",
+      "macos/Views/SettingsView+Studio.swift"
+    ]
+  },
+  {
+    "file": "mac-instellingen-account.webp",
+    "platform": "macos",
+    "args": "-TVDebugTab settings -TVDebugSettingsTab account",
+    "sources": [
+      "macos/Views/SettingsView+Support.swift"
+    ]
+  },
+  {
+    "file": "mac-instellingen-geavanceerd.webp",
+    "platform": "macos",
+    "args": "-TVDebugTab settings -TVDebugSettingsTab geavanceerd",
+    "sources": [
+      "macos/Views/SettingsView.swift",
+      "macos/Views/SettingsView+Studio.swift"
+    ]
+  },
+  {
+    "file": "mac-support-melding.webp",
+    "platform": "macos",
+    "args": "-TVDebugOpen support-report",
+    "sources": [
+      "macos/Views/SupportViews.swift"
+    ]
+  },
+  {
+    "file": "mac-support-gesprek.webp",
+    "platform": "macos",
+    "args": "-TVDebugOpen support-thread",
+    "sources": [
+      "macos/Views/SupportViews.swift"
+    ]
+  },
+  {
+    "file": "mac-notule-voorstellen.webp",
+    "platform": "macos",
+    "args": "-TVDebugOpen transcript -TVDebugSuggestions expanded",
+    "sources": [
+      "macos/Views/NotuleResultView.swift",
+      "macos/Views/ContextSuggestionBar.swift"
+    ]
+  },
+  {
+    "file": "mac-eerste-start-contact.webp",
+    "platform": "macos",
+    "args": "-TVDebugOpen identity",
+    "sources": [
+      "macos/Views/SupportIdentityView.swift"
+    ]
+  }
+]

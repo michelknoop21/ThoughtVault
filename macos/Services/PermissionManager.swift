@@ -59,6 +59,14 @@ final class PermissionManager {
     /// Checks all permissions without prompting the user.
     /// Call this at app startup to detect revoked permissions.
     func checkAllPermissions() async {
+        #if DEBUG
+        // Manual screenshots (`-TVDebugSeed YES`) run in their own container without any
+        // grant. Show the screens as a user with permissions sees them.
+        if DebugScreenshotSeed.isEnabled {
+            microphoneGranted = true; speechRecognitionGranted = true; systemAudioGranted = true
+            return
+        }
+        #endif
         isChecking = true
         defer { isChecking = false }
 

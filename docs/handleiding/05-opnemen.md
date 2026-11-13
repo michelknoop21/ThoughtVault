@@ -1,4 +1,6 @@
 groep: Opnemen en verwerken
+samenvatting: Start een opname van een vergadering of videocall, kies de bron en het profiel, en volg de opname terwijl hij loopt.
+beeld: media/mac-opnemen.png
 
 # Opnemen
 

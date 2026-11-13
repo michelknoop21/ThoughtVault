@@ -1,4 +1,6 @@
 groep: Instellingen en account
+samenvatting: Kies of je audio op je eigen apparaat of in de cloud wordt getranscribeerd, en welk model de notule schrijft.
+beeld: media/mac-instellingen-verwerking.png
 
 # Instellingen
 

@@ -12,6 +12,7 @@ import html, json, re, shutil, sys
 from pathlib import Path
 
 import markdown
+from PIL import Image
 
 ROOT = Path(__file__).resolve().parent.parent
 SRC = ROOT / "docs" / "handleiding"
@@ -28,6 +29,16 @@ def slugify(text):
     return text or "sectie"
 
 
+def img_tag(src, alt):
+    """<img> with intrinsic size, so the page does not jump while screenshots load."""
+    path = SRC / src
+    size = ""
+    if path.is_file():
+        with Image.open(path) as im:
+            size = f' width="{im.width}" height="{im.height}"'
+    return f'<img src="{html.escape(src)}" alt="{html.escape(alt)}"{size} loading="lazy">'
+
+
 def render(md_text):
     """Markdown to HTML with platform blocks (`::: macos ios` ... `:::`) and figures."""
     def block(m):
@@ -39,7 +50,7 @@ def render(md_text):
     md_text = re.sub(r"^::: *([a-z ]+)\n(.*?)^:::\s*$", block, md_text, flags=re.S | re.M)
     out = markdown.markdown(md_text, extensions=["tables", "md_in_html", "sane_lists"])
     return re.sub(r'<p><img alt="([^"]*)" src="([^"]+)" ?/?></p>',
-                  r'<figure><img src="\2" alt="\1" loading="lazy"><figcaption>\1</figcaption></figure>', out)
+                  lambda m: f'<figure><div class="stage">{img_tag(m.group(2), html.unescape(m.group(1)))}</div><figcaption>{m.group(1)}</figcaption></figure>', out)
 
 
 def add_heading_ids(body):
@@ -70,7 +81,8 @@ def load_chapters():
             continue
         body, outline = add_heading_ids(render(text[m.end():]))
         chapters.append({"slug": path.stem[3:], "title": m.group(1).strip(), "group": meta["groep"],
-                         "summary": meta.get("samenvatting", ""), "body": body, "outline": outline})
+                         "summary": meta.get("samenvatting", ""), "image": meta.get("beeld", ""),
+                         "body": body, "outline": outline})
     return chapters
 
 
@@ -90,6 +102,15 @@ def load_releases():
     return releases
 
 
+ICON_SEARCH = '<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="9" cy="9" r="5.5"/><path d="m13.5 13.5 3.5 3.5"/></svg>'
+ICON_NEXT = '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="m8 5 5 5-5 5"/></svg>'
+
+
+def search_form(big=False):
+    return (f'<button type="button" class="search{" big" if big else ""}" data-open-search>{ICON_SEARCH}'
+            '<span>Zoek op een functie of melding</span><kbd aria-hidden="true">/</kbd></button>')
+
+
 def page(title, main, chapters, active="", rail=""):
     groups = {}
     for c in chapters:
@@ -102,18 +123,16 @@ def page(title, main, chapters, active="", rail=""):
     return f"""<!doctype html>
 <html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow,noarchive"><meta name="referrer" content="no-referrer">
+<meta name="color-scheme" content="light dark">
 <title>{html.escape(title)} · ThoughtVault Help</title>
-<link rel="icon" href="favicon.png"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;450;500;550;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="help.css"><script src="help.js" defer></script></head>
-<body><a class="skip" href="#inhoud">Naar de inhoud</a>
-<header class="top"><a class="brand" href="index.html"><img src="thoughtvault-mark.png" alt="" width="30" height="37"><span>ThoughtVault</span><em>Help</em></a>
-<form class="search" role="search" onsubmit="return false"><label class="sr" for="q">Zoek in de handleiding</label>
-<input id="q" type="search" placeholder="Zoek, bijvoorbeeld: logbestand" autocomplete="off"><div id="results" hidden></div></form>
-<div class="pf-switch" role="group" aria-label="Toon uitleg voor">{switch}</div>
-<button class="menu" type="button" aria-expanded="false" aria-controls="zijbalk">Inhoud</button></header>
-<div class="shell"><nav id="zijbalk" class="side" aria-label="Handleiding"><a class="side-top{' on' if active == 'index' else ''}" href="index.html">Overzicht</a>{nav}
-<a class="side-top{' on' if active == 'release-notes' else ''}" href="release-notes.html">Releasenotes</a></nav>
+<link rel="icon" href="favicon.png"><link rel="stylesheet" href="help.css"><script src="help.js" defer></script></head>
+<body class="{'is-start' if active == 'index' else ''}"><a class="skip" href="#inhoud">Naar de inhoud</a>
+<header class="top"><div class="top-in"><a class="brand" href="index.html"><img src="thoughtvault-mark.png" alt="" width="28" height="31"><span>ThoughtVault</span><b>Help</b></a>
+{search_form()}
+<div class="pf-switch seg" role="group" aria-label="Toon uitleg voor">{switch}</div>
+<button class="menu" type="button" aria-expanded="false" aria-controls="zijbalk">Inhoud</button></div></header>
+<div class="shell"><nav id="zijbalk" class="side" aria-label="Handleiding"><a class="side-top" href="index.html"{' aria-current="page"' if active == 'index' else ''}>Overzicht</a>{nav}
+<a class="side-top" href="release-notes.html"{' aria-current="page"' if active == 'release-notes' else ''}>Releasenotes</a></nav>
 <main id="inhoud">{main}</main>{rail}</div>
 <footer class="foot"><span>ThoughtVault is een product van Yinga</span><a href="release-notes.html">Releasenotes</a></footer></body></html>
 """
@@ -153,7 +172,7 @@ def main():
         rail = ('<aside class="rail" aria-label="Op deze pagina"><p>Op deze pagina</p>' + "".join(
             f'<a href="#{hid}">{html.escape(t)}</a>' for hid, t in c["outline"]) + "</aside>") if len(c["outline"]) > 1 else ""
         lead = f'<p class="lead">{html.escape(c["summary"])}</p>' if c["summary"] else ""
-        article = f'<article class="doc"><p class="crumb">{html.escape(c["group"])}</p><h1>{html.escape(c["title"])}</h1>{lead}{c["body"]}{pager}</article>'
+        article = f'<article class="doc sheet"><nav class="crumb" aria-label="Kruimelpad"><a href="index.html">Handleiding</a>{ICON_NEXT}<span>{html.escape(c["group"])}</span></nav><h1>{html.escape(c["title"])}</h1>{lead}{c["body"]}{pager}</article>'
         files[name] = page(c["title"], article, chapters, c["slug"], rail)
         # One search entry per h2 section, plus the chapter intro.
         parts = re.split(r'<h2 id="([^"]+)">(.*?)</h2>', c["body"])
@@ -166,18 +185,27 @@ def main():
     for c in chapters:
         groups.setdefault(c["group"], []).append(c)
     latest = releases[0] if releases else None
-    start = '<section class="start"><h1>Handleiding ThoughtVault</h1><p class="lead">Uitleg bij opnemen, transcriberen en notulen maken op Mac, Windows, iPhone en iPad. Kies rechtsboven je apparaat: de stappen en schermafbeeldingen passen zich aan.</p>'
+    start = ('<section class="hero"><h1>Handleiding ThoughtVault</h1><p class="lead">Van opname tot notule, stap voor stap. '
+             'Kies je apparaat en de uitleg en schermafbeeldingen passen zich aan.</p>' + search_form(big=True))
     if latest:
-        start += f'<a class="latest" href="release-notes.html#v{latest["version"]}"><small>Nieuw in {latest["version"]} · {latest["date"]}</small>{html.escape(latest["title"])}</a>'
-    start += '<div class="groups">' + "".join(
-        f'<div><h2>{html.escape(g)}</h2><ul>' + "".join(
-            f'<li><a href="{c["slug"]}.html">{html.escape(c["title"])}</a><span>{html.escape(c["summary"])}</span></li>' for c in items)
+        start += (f'<a class="latest" href="release-notes.html#v{latest["version"]}"><b>Nieuw in {latest["version"]}</b>'
+                  f'<span>{html.escape(latest["title"])}</span>{ICON_NEXT}</a>')
+    start += "</section>"
+    for c in [c for c in chapters if c["image"]]:
+        if not (SRC / c["image"]).is_file():
+            errors.append(f'{c["slug"]}: beeld ontbreekt: {c["image"]}')
+        links = "".join(f'<li><a href="{c["slug"]}.html#{hid}">{html.escape(t)}{ICON_NEXT}</a></li>' for hid, t in c["outline"][:4])
+        start += (f'<section class="feature"><a class="stage" href="{c["slug"]}.html">{img_tag(c["image"], "")}</a>'
+                  f'<div><h2><a href="{c["slug"]}.html">{html.escape(c["title"])}</a></h2><p>{html.escape(c["summary"])}</p><ul>{links}</ul></div></section>')
+    start += '<section class="sheet all"><h2>Alle onderwerpen</h2><div class="groups">' + "".join(
+        f'<div><h3>{html.escape(g)}</h3><ul>' + "".join(
+            f'<li><a href="{c["slug"]}.html">{html.escape(c["title"])}</a></li>' for c in items)
         + "</ul></div>" for g, items in groups.items()) + "</div></section>"
     files["index.html"] = page("Handleiding", start, chapters, "index")
 
     tags = sorted({t for r in releases for t in r["tags"]})
-    notes = '<section class="notes"><h1>Releasenotes</h1><p class="lead">Wat er per versie voor jou verandert, de nieuwste bovenaan.</p>'
-    notes += '<div class="filter" role="group" aria-label="Filter op platform"><button type="button" data-tag="" aria-pressed="true">Alles</button>' + "".join(
+    notes = '<section class="notes sheet"><h1>Releasenotes</h1><p class="lead">Wat er per versie voor jou verandert, de nieuwste bovenaan.</p>'
+    notes += '<div class="filter seg" role="group" aria-label="Filter op platform"><button type="button" data-tag="" aria-pressed="true">Alles</button>' + "".join(
         f'<button type="button" data-tag="{html.escape(t)}" aria-pressed="false">{html.escape(t)}</button>' for t in tags) + "</div>"
     for r in releases:
         check_links("release-notes.html", r["body"], pages, anchors)
@@ -201,7 +229,7 @@ def main():
     brand = ROOT / "docs" / "design" / "high-end-yinga" / "assets"
     for asset in ("thoughtvault-mark.png", "favicon.png"):
         shutil.copy(brand / asset, out / asset)
-    for img in (SRC / "media").glob("*.webp"):
+    for img in sorted((SRC / "media").glob("*.*")):
         shutil.copy(img, out / "media" / img.name)
     print(f"Helpcentrum gebouwd: {len(chapters)} hoofdstukken, {len(releases)} releases, {len(index)} zoekitems -> {out}")
 

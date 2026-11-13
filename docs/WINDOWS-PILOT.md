@@ -46,15 +46,35 @@ beslist:
 - Vragen en meldingen gaan via het Support-scherm in de app; op Windows is dat de
   knop **Feedback**.
 
-Nog niet aangetoond:
+Een rollback naar een eerdere versie is niet bewezen; de CI dekt installatie,
+signature en upgrade.
 
-1. De OpenRouter-route is in de Windows-app niet getest. Uit de code volgt dat ze
-   werkt via de aanbieder Ollama met een eigen adres (`llm.ts` stuurt naar
-   `<adres>/v1/chat/completions` en geeft de sleutel alleen over HTTPS mee), maar
-   er is met 1.0.320 nog geen notule via OpenRouter gemaakt. Doe dat op één pc
-   voordat de uitnodiging uitgaat.
-2. Een rollback naar een eerdere versie is niet bewezen; de CI dekt installatie,
-   signature en upgrade.
+## Proef met OpenRouter op Dalf38
+
+Op 13 november is 1.0.320 via de beheerlaag op Dalf38 geïnstalleerd (job
+`726ad82672a04b95aeca605aedc042d2`, back-up van de appdata vooraf). Daarna is de
+route via de instellingen van de app zelf ingericht en één fictieve proefopname
+van ongeveer een halve minuut tot notule gemaakt (scenario `tv320-openrouter-20261113`).
+
+- De notule kwam zonder reviewreden, met titel "Besluit interne proef Waddespoor met
+  voorwaarden en controles", en bevatte alle feiten uit het transcript.
+- Het logbestand toont vier modelverzoeken naar `mistralai/mistral-large-4-0`
+  (concept, broncontrole, inhoudscontrole, contextsuggesties), alle vier `outcome=ok`.
+- De app haalde zelf 470 modellen op bij OpenRouter; de sleutel is via het
+  sleutelveld en **Opslaan** gezet.
+
+**Test verbinding** meldt in 1.0.320 bij OpenRouter **Niet bereikbaar**, terwijl de
+notule wel lukt. De knop vraagt alleen het Ollama-eigen pad `/api/tags` op, dat
+OpenRouter niet kent. De fix (`98172df`, de knop gebruikt dezelfde controle als de
+modellijst) staat op `feat/prospectflow-koppeling` en zit niet in 1.0.320. Tot die
+versie uit is: knop overslaan en de route controleren met een proefopname.
+
+**Tijdsduur.** De proefopname van een halve minuut duurde op Dalf38 (Ryzen 7 5700X3D,
+48 GB) ruim negen minuten van **Stop en verwerk** tot notule. Ruim zes minuten
+gingen op aan de stap vóór het eerste modelverzoek (transcriptie met Whisper Medium
+op de processor), daarna ruim drie minuten aan het schrijven en controleren van de
+notule. Een vergadering van een uur is met deze route niet gemeten; reken op
+aanzienlijk langer en laat de app openstaan tot de taak klaar is.
 
 ## Eerste start en eerste notule
 
@@ -63,10 +83,15 @@ Windows-beheerrechten; ontwikkeltools zijn niet nodig.
 
 1. Installeer de aangeleverde MSI en open ThoughtVault met je eigen Windowsaccount.
    Lokale verwerking vereist geen ThoughtVault-account.
-2. Open **Instellingen → Verwerking**. Kies bij Transcriptie het model **Medium**,
+2. Bij de eerste start vraagt het scherm **Even voorstellen** om je naam en
+   e-mailadres. Zonder die twee gaat de app niet verder. Ze dienen om je meldingen
+   te beantwoorden en gaan mee met automatische foutrapporten; dat versturen zet
+   je uit bij **Instellingen → Account**. Gebruik je werkadres: de koppeling met
+   Prospect Flow gebruikt het later om conceptoffertes op jouw naam te zetten.
+3. Open **Instellingen → Verwerking**. Kies bij Transcriptie het model **Medium**,
    klik op de downloadknop en wacht op de gereedmelding (ongeveer 1,5 GB). Een
    ontbrekend model bewaart de opname met een herstelmelding.
-3. Kies bij Notulen generatie de tegel **Ollama** en vul in:
+4. Kies bij Notulen generatie de tegel **Ollama** en vul in:
    - Ollama URL: `https://openrouter.ai/api`
    - Model: `mistralai/mistral-large-4-0`
    - API-sleutel: de OpenRouter-sleutel die je van Michel hebt gekregen. Het veld
@@ -74,23 +99,44 @@ Windows-beheerrechten; ontwikkeltools zijn niet nodig.
      HTTPS-adres.
 
    Gebruik alleen je eigen sleutel en geef haar niet door. Ze wordt in de
-   Windows-kluis opgeslagen.
-4. Controleer microfoontoegang bij **Windows-instellingen → Privacy en beveiliging
+   Windows-kluis opgeslagen. Sla **Test verbinding** over: in 1.0.320 meldt die
+   bij OpenRouter onterecht **Niet bereikbaar**. De lijst bij **Model** toont wel
+   of het adres en de sleutel werken.
+5. Controleer microfoontoegang bij **Windows-instellingen → Privacy en beveiliging
    → Microfoon**, inclusief toegang voor bureaubladapps. Kies in ThoughtVault je
    bron en microfoon. Gebruik eerst een korte fictieve proefvergadering.
-5. Neem op, pauzeer/hervat indien nodig en kies **Stop en verwerk**. De audio wordt
+6. Neem op, pauzeer/hervat indien nodig en kies **Stop en verwerk**. De audio wordt
    lokaal getranscribeerd. Bij een externe notulenprovider wordt het transcript
    naar die provider gestuurd. Gebruik uitsluitend gegevens die daarvoor zijn toegestaan.
-6. Controleer transcript en notulen tegen de opname: namen, bedragen, acties,
+   Een opname van een halve minuut duurde op een snelle desktop ruim negen minuten;
+   laat de app openstaan tot de taak klaar is.
+7. Controleer transcript en notulen tegen de opname: namen, bedragen, acties,
    termijnen, ontkenningen en voorwaarden. Een reviewconcept is nog geen
    goedgekeurde notule; verbeter de bron of beoordeel het concept vóór gebruik.
    Bij een fout blijven opname en beschikbare transcriptie behouden; hervat bewust.
-7. Bewerk en bewaar je notule, open haar opnieuw en gebruik TXT/PDF-export.
+8. Bewerk en bewaar je notule, open haar opnieuw en gebruik TXT/PDF-export.
    Controleer ook het geëxporteerde document voordat je het deelt.
 
 Agenda en Obsidian zijn optioneel. Voor de eerste notule zijn ze niet nodig.
 Loopt er iets mis, meld het dan via **Feedback** in de app. Daar kun je ook het
 logbestand tonen en meesturen.
+
+## Koppeling met Prospect Flow
+
+Van een notule een conceptofferte in Prospect Flow maken zit **niet in 1.0.320**.
+
+- Serverkant: live op prospectflow.yinga.ai sinds 13 november (`42175951`). Prijzen
+  komen uit de catalogus, een genoemde prijs alleen als hij letterlijk in het
+  transcript staat, en twijfelregels krijgen in Prospect Flow het label **Controleren**.
+- Client: op `feat/prospectflow-koppeling`, nog niet naar `main`. Windows-tests en
+  typecheck groen; de Swift-kant wacht op een compileer- en testronde.
+- **Mijn inbox** in Prospect Flow (eigen conceptoffertes onder **Leads**, met teller)
+  staat op `wt/mijn-inbox` en is nog niet geland. ThoughtVault stuurt daarvoor het
+  e-mailadres van **Even voorstellen** mee; komt dat overeen met je inlognaam in
+  Prospect Flow, dan staat de offerte op jouw naam.
+
+De koppeling komt met een volgende ThoughtVault-versie. Adres en API-sleutel van
+Prospect Flow regelt Michel per collega.
 
 ## Historische kandidaat 1.0.296
 

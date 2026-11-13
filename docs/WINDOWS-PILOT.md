@@ -1,34 +1,31 @@
 # ThoughtVault Windows: installatie en gebruik voor de interne pilot
 
-Status 13 november 2026: **1.0.320 is de vrijgave voor collega's** (besluit van
-Michel, zie [Besluiten van 13 november](#besluiten-van-13-november)). De versie staat
-op de downloadpagina en in de updatefeed; bestaande installaties met automatisch
-bijwerken krijgen haar vanzelf. Oudere versies verderop in dit document zijn
-uitsluitend herstelreferenties.
+Status 13 november 2026: **1.0.322 is de versie voor collega's**. Hij bevat alles
+uit 1.0.320 (de vrijgave volgens de [Besluiten van 13 november](#besluiten-van-13-november)),
+de nieuwe opmaak uit 1.0.321, de koppeling met Prospect Flow en een werkende knop
+**Test verbinding** bij OpenRouter. Bestaande installaties met automatisch bijwerken
+krijgen hem vanzelf. Oudere versies verderop in dit document zijn uitsluitend
+herstelreferenties.
 
-## Stand van 1.0.320
+## Stand van 1.0.322
 
 | Onderdeel | Gemeten op 13 november |
 |---|---|
-| Bron | `main` op `dd726c5`, tag `v1.0.320` |
-| Windows-build | GitHub Actions-run 43236189080 op `dd726c5`, geslaagd inclusief de stappen "Verify installed app and upgrade" en "Upload to server" |
-| Download | `ThoughtVault_1.0.320_x64.msi` op de downloadpagina uit [AUTOMATISCHE-UPDATES.md](AUTOMATISCHE-UPDATES.md); `releases.json` noemt dezelfde versie |
-| SHA-256 MSI | `3cb6e66d6f98677e4e1213ec289073917b97407518acaefad61ce9a997030201` |
-| Updatefeed | `/releases/windows/stable.json` meldt 1.0.320, gepubliceerd 12 november 14:38 UTC, met signature |
-| macOS en iOS | TestFlight build 320, geüpload op 12 november vanaf `v1.0.320`. Zichtbaar voor interne testers. Een externe testgroep vraagt Beta App Review en die is niet aangevraagd |
+| Bron | `main` op `2b128114`, tag `v1.0.322` (met `feat/prospectflow-koppeling` en `fix/ci-cargo-build-dir`) |
+| Windows-build | GitHub Actions-run 43459273421 op `build/1.0.322-20261113`, `headSha` `2b128114`, geslaagd |
+| Download | `ThoughtVault_1.0.322_x64.msi` op de downloadpagina uit [AUTOMATISCHE-UPDATES.md](AUTOMATISCHE-UPDATES.md); `releases.json` in die map noemt dezelfde versie |
+| SHA-256 MSI | `a0ffa80e1f451c2c2cc0131525b2a4e9e6054eadab7d5a6198caedbfca512e03`, gelijk aan het CI-artifact |
+| Updatefeed | `/releases/windows/stable.json` meldt 1.0.322, gepubliceerd 13 november 16:34 UTC, met signature |
+| macOS en iOS | TestFlight staat op 1.0.321. De Prospect Flow-koppeling zit ook in de Mac-code van 1.0.322, maar die versie is niet naar TestFlight gestuurd |
 
 Controleer de download vóór installatie:
 
 ```powershell
-Get-FileHash .\ThoughtVault_1.0.320_x64.msi -Algorithm SHA256
+Get-FileHash .\ThoughtVault_1.0.322_x64.msi -Algorithm SHA256
 ```
 
-Twee dingen kloppen nog niet buiten Windows. De downloadpagina biedt voor macOS
-`TranscriptStudio-1.0.242.dmg` aan: stuur Mac-collega's daar niet heen, hun route
-is TestFlight. En de App Store Connect-API antwoordde op 13 november met
-`403 REQUIRED_AGREEMENTS_MISSING_OR_EXPIRED`: in App Store Connect moet eerst een
-overeenkomst worden geaccepteerd voordat de TestFlight-stand opnieuw te lezen is
-of een build naar een externe groep kan.
+De downloadpagina biedt voor macOS nog `TranscriptStudio-1.0.242.dmg` aan. Stuur
+Mac-collega's daar niet heen: hun route is TestFlight.
 
 ## Besluiten van 13 november
 
@@ -63,11 +60,10 @@ van ongeveer een halve minuut tot notule gemaakt (scenario `tv320-openrouter-202
 - De app haalde zelf 470 modellen op bij OpenRouter; de sleutel is via het
   sleutelveld en **Opslaan** gezet.
 
-**Test verbinding** meldt in 1.0.320 bij OpenRouter **Niet bereikbaar**, terwijl de
-notule wel lukt. De knop vraagt alleen het Ollama-eigen pad `/api/tags` op, dat
-OpenRouter niet kent. De fix (`98172df`, de knop gebruikt dezelfde controle als de
-modellijst) staat op `feat/prospectflow-koppeling` en zit niet in 1.0.320. Tot die
-versie uit is: knop overslaan en de route controleren met een proefopname.
+**Test verbinding** meldde in 1.0.320 en 1.0.321 bij OpenRouter **Niet bereikbaar**,
+terwijl de notule wel lukte. De knop vroeg alleen het Ollama-eigen pad `/api/tags`
+op, dat OpenRouter niet kent. Vanaf 1.0.322 gebruikt de knop dezelfde controle als
+de modellijst (`98172df`). Op Dalf38 meldde hij daarna **Verbonden**.
 
 **Tijdsduur.** De proefopname van een halve minuut duurde op Dalf38 (Ryzen 7 5700X3D,
 48 GB) ruim negen minuten van **Stop en verwerk** tot notule. Ruim zes minuten
@@ -78,7 +74,7 @@ aanzienlijk langer en laat de app openstaan tot de taak klaar is.
 
 ## Eerste start en eerste notule
 
-Deze instructie hoort bij de MSI van 1.0.320. Installatie voor de hele pc vraagt
+Deze instructie hoort bij de MSI van 1.0.322. Installatie voor de hele pc vraagt
 Windows-beheerrechten; ontwikkeltools zijn niet nodig.
 
 1. Installeer de aangeleverde MSI en open ThoughtVault met je eigen Windowsaccount.
@@ -87,7 +83,7 @@ Windows-beheerrechten; ontwikkeltools zijn niet nodig.
    e-mailadres. Zonder die twee gaat de app niet verder. Ze dienen om je meldingen
    te beantwoorden en gaan mee met automatische foutrapporten; dat versturen zet
    je uit bij **Instellingen → Account**. Gebruik je werkadres: de koppeling met
-   Prospect Flow gebruikt het later om conceptoffertes op jouw naam te zetten.
+   Prospect Flow zet conceptoffertes op de gebruiker met dat adres.
 3. Open **Instellingen → Verwerking**. Kies bij Transcriptie het model **Medium**,
    klik op de downloadknop en wacht op de gereedmelding (ongeveer 1,5 GB). Een
    ontbrekend model bewaart de opname met een herstelmelding.
@@ -99,9 +95,8 @@ Windows-beheerrechten; ontwikkeltools zijn niet nodig.
      HTTPS-adres.
 
    Gebruik alleen je eigen sleutel en geef haar niet door. Ze wordt in de
-   Windows-kluis opgeslagen. Sla **Test verbinding** over: in 1.0.320 meldt die
-   bij OpenRouter onterecht **Niet bereikbaar**. De lijst bij **Model** toont wel
-   of het adres en de sleutel werken.
+   Windows-kluis opgeslagen. Klik daarna op **Test verbinding**: die moet
+   **Verbonden** melden.
 5. Controleer microfoontoegang bij **Windows-instellingen → Privacy en beveiliging
    → Microfoon**, inclusief toegang voor bureaubladapps. Kies in ThoughtVault je
    bron en microfoon. Gebruik eerst een korte fictieve proefvergadering.
@@ -123,20 +118,45 @@ logbestand tonen en meesturen.
 
 ## Koppeling met Prospect Flow
 
-Van een notule een conceptofferte in Prospect Flow maken zit **niet in 1.0.320**.
+Vanaf 1.0.322 maak je van een notule een conceptofferte in Prospect Flow. Kies bij
+de notule **Export → Maak offerte in Prospect Flow**, kies een bestaande klant
+of **Nieuwe klant** en klik op **Maak conceptofferte**. Prospect Flow leidt de
+regels af. Dat duurde op Dalf38 35 seconden; de app wacht tot twee minuten. Naar
+de klant gaat niets.
 
-- Serverkant: live op prospectflow.yinga.ai sinds 13 november (`42175951`). Prijzen
-  komen uit de catalogus, een genoemde prijs alleen als hij letterlijk in het
-  transcript staat, en twijfelregels krijgen in Prospect Flow het label **Controleren**.
-- Client: op `feat/prospectflow-koppeling`, nog niet naar `main`. Windows-tests en
-  typecheck groen; de Swift-kant wacht op een compileer- en testronde.
-- **Mijn inbox** in Prospect Flow (eigen conceptoffertes onder **Leads**, met teller)
-  staat op `wt/mijn-inbox` en is nog niet geland. ThoughtVault stuurt daarvoor het
-  e-mailadres van **Even voorstellen** mee; komt dat overeen met je inlognaam in
-  Prospect Flow, dan staat de offerte op jouw naam.
+Instellen in ThoughtVault: **Instellingen → Prospect Flow**, met als adres
+`https://prospectflow.yinga.ai` en de API-sleutel die Michel geeft. **Verbinding
+testen** moet **Verbonden** melden.
 
-De koppeling komt met een volgende ThoughtVault-versie. Adres en API-sleutel van
-Prospect Flow regelt Michel per collega.
+Prospect Flow zelf moet twee dingen aan hebben staan, anders weigert het met
+`403 "AI-hulpen staan uit"`:
+
+- de module **AI-hulp (Flow)** op `/beheer/modules`. Alleen het Yinga-supportaccount
+  kan die schakelen. De AI-kolom in de offertebouwer wordt dan zichtbaar voor alle
+  gebruikers van de instance;
+- een AI-provider onder de AI-instellingen. Op prospectflow.yinga.ai is dat sinds
+  13 november OpenRouter (`https://openrouter.ai/api/v1`, model
+  `mistralai/mistral-large-4-0`) met de sleutel van Yinga. Back-up van de
+  instellingen van vóór die wijziging: `~/prospectflow/backups/app_config-20261113-153129.json`
+  op n8n01.
+
+Wat er in Prospect Flow ontstaat:
+
+- een offerte met status concept en bron `thoughtvault`. Een prijs komt uit de
+  catalogus; een bedrag uit het gesprek wordt niet overgenomen maar als regel met
+  het label **Controleren** gemarkeerd;
+- bij **Nieuwe klant** een klantkaart met de notitie "Klantgesprek: <titel>" op de
+  tijdlijn;
+- de offerte in **Leads → Mijn inbox** van de collega van wie het e-mailadres uit
+  **Instellingen → Account** in ThoughtVault gelijk is aan de inlognaam in Prospect
+  Flow. Zonder overeenkomst valt de offerte op de gebruiker van de API-sleutel.
+
+**Proef op Dalf38** (13 november, Dev-build 1.0.321 van `feat/prospectflow-koppeling`,
+scenario `tv321-pf-offer-20261113f`): opname tot notule in 5 minuten met Whisper
+Base, daarna offerte `20261113-1` voor "Fictief Testbedrijf Waddenspoor BV". Die
+stond in Mijn inbox van yinga-support met teller 1 op **Leads**, met één regel
+**Controleren** voor het genoemde budget. De proefofferte staat in de prullenbak;
+de proefklant staat nog in Prospect Flow.
 
 ## Historische kandidaat 1.0.296
 

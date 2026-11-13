@@ -381,3 +381,33 @@ it("flags constraints hidden in CSS as unchecked note content", async () => {
   invoke.mockResolvedValue({ status: 200, body: JSON.stringify({ choices: [{ message: { content: `<style>/* ${raw} */</style><p>De archivering is besloten.</p>` } }] }) });
   expect(await LLMService.generateNotulen(raw, profile)).toContain("<h2>Even nalopen</h2>");
 });
+
+describe("fallback provider", () => {
+  const okAnthropic = { status: 200, body: JSON.stringify({ content: [{ type: "text", text: "<p>Terugval besluit</p>" }] }) };
+  const setup = (fallback: "" | "anthropic") => {
+    useSettingsStore.setState({ notulen_provider: "ollama", notulen_fallback_provider: fallback, ollama_url: "http://localhost:11434", ollama_model: "hermes3:8b" });
+    loadCredential.mockResolvedValue("key");
+    invoke.mockImplementation(async (_c, args) => String(args.request.url).includes("anthropic")
+      ? okAnthropic : { status: 500, body: "{}" });
+  };
+
+  it("retries once with the fallback provider and clears streamed text", async () => {
+    setup("anthropic");
+    const progress = vi.fn();
+    expect(await LLMService.generateNotulen("Het overleg is afgerond.", profile, progress)).toBe("<p>Terugval besluit</p>");
+    expect(progress).toHaveBeenCalledWith("");
+  });
+
+  it("surfaces the original error without a fallback", async () => {
+    setup("");
+    await expect(LLMService.generateNotulen("Het overleg is afgerond.", profile)).rejects.toThrow("HTTP 500");
+  });
+
+  it("does not fall back on abort", async () => {
+    setup("anthropic");
+    useSettingsStore.setState({ notulen_provider: "openai", notulen_fallback_provider: "anthropic" });
+    invoke.mockRejectedValue(new DOMException("aborted", "AbortError"));
+    await expect(LLMService.generateNotulen("Het overleg is afgerond.", profile)).rejects.toThrow("aborted");
+    expect(invoke).toHaveBeenCalledTimes(1);
+  });
+});

@@ -32,6 +32,9 @@ import type { Transcript } from "../../types";
 import { getTranscriptQuickNote } from "../../services/quickNotes";
 import { htmlToPlainText } from "../../utils/htmlToMarkdown";
 import { draftForReview } from "../../services/notuleAudit";
+import { isConfigured, loadOfferRef, openOffer, type OfferRef } from "../../services/prospectFlow";
+import { ProspectFlowDialog } from "./ProspectFlowDialog";
+import { useToast } from "../ui/InfoBar";
 
 type DetailTab = "notule" | "transcriptie";
 
@@ -72,6 +75,7 @@ export function TranscriptDetail({
   onOpenTags,
   onGenerateTitle,
 }: TranscriptDetailProps) {
+  const toast = useToast();
   const [detailTab, setDetailTab] = useState<DetailTab>("notule");
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editTitle, setEditTitle] = useState("");
@@ -83,6 +87,9 @@ export function TranscriptDetail({
   const [correctionError, setCorrectionError] = useState("");
   const [exportOpen, setExportOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [pfConfigured, setPfConfigured] = useState(false);
+  const [pfDialog, setPfDialog] = useState(false);
+  const [pfRef, setPfRef] = useState<OfferRef | null>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
   const editorRef = useRef<HTMLDivElement>(null);
   const exportRef = useRef<HTMLDivElement>(null);
@@ -100,6 +107,14 @@ export function TranscriptDetail({
     if (hasNotule) setDetailTab("notule");
     else if (hasTranscription) setDetailTab("transcriptie");
   }, [transcript.id]);
+
+  // Prospect Flow menu items only appear once URL and key are set.
+  useEffect(() => {
+    let active = true;
+    void isConfigured().then((ok) => { if (active) setPfConfigured(ok); });
+    setPfRef(loadOfferRef(transcript.task_id || transcript.id));
+    return () => { active = false; };
+  }, [transcript.id, exportOpen, pfDialog]);
 
   // Close export menu on outside click
   useEffect(() => {
@@ -309,6 +324,22 @@ export function TranscriptDetail({
               <button className="td-export-item" onClick={() => { onExportTXT(transcript); setExportOpen(false); }}>
                 <TextDescription24Regular style={{ fontSize: 15 }} /> TXT
               </button>
+              {transcript.notule_html && pfConfigured && (
+                <>
+                  <div className="td-export-divider" />
+                  {pfRef?.number && pfRef.url && (
+                    <button className="td-export-item" onClick={() => {
+                      void openOffer(pfRef.url!).catch(e => toast.show(e instanceof Error ? e.message : String(e), "error"));
+                      setExportOpen(false);
+                    }}>
+                      <Document24Regular style={{ fontSize: 15 }} /> Open offerte {pfRef.number}
+                    </button>
+                  )}
+                  <button className="td-export-item" onClick={() => { setPfDialog(true); setExportOpen(false); }}>
+                    <Document24Regular style={{ fontSize: 15 }} /> {pfRef?.number ? "Nieuwe conceptofferte maken" : "Maak offerte in Prospect Flow"}
+                  </button>
+                </>
+              )}
               {transcript.notule_html && (
                 <>
                   <div className="td-export-divider" />
@@ -448,6 +479,7 @@ export function TranscriptDetail({
           <div className="correction-actions"><button className="btn btn-secondary btn-sm" disabled={isSaving} onClick={() => setCorrection(null)}>Annuleren</button><button className="btn btn-accent btn-sm" disabled={isSaving} onClick={() => void saveCorrection()}>Corrigeren</button></div>
         </div></div>
       </DesktopDialog>}
+      {pfDialog && <ProspectFlowDialog transcript={transcript} onClose={() => setPfDialog(false)} />}
       {deleteConfirm && (
         <DesktopDialog className="td-overlay" label="Notule verwijderen" onClose={() => setDeleteConfirm(false)}>
           <div className="td-confirm" onClick={(e) => e.stopPropagation()}>

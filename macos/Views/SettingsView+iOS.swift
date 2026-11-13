@@ -70,6 +70,10 @@ extension SettingsView {
                     link(icon: "tray.and.arrow.down", title: "Obsidian", subtitle: "Notulen automatisch naar je vault.") {
                         subpage("Obsidian") { obsidianSection }
                     }
+                    IOSDivider()
+                    link(icon: "eurosign.square", title: "Prospect Flow", subtitle: "Conceptofferte uit een klantgesprek.") {
+                        subpage("Prospect Flow") { ProspectFlowSettingsSection() }
+                    }
                 }
 
                 group("Organisatie") {

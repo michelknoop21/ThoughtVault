@@ -358,6 +358,7 @@ extension SettingsView {
                     }
                 }
                 providerPanel
+                NotuleFallbackPicker()
                 Text(localNotuleDescription).font(.system(size: 12.5)).foregroundStyle(HomeColor.text3)
             } else {
                 Text("Notulen worden op de ThoughtVault-server gegenereerd.")

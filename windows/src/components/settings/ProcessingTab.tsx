@@ -10,7 +10,6 @@ import {
 } from "../ui/StudioIcons";
 import { transcriptionAdvice } from "../../services/processingAdvice";
 import type { SystemSpecs } from "../../services/tauriCommands";
-import { loadCredential } from "../../services/tauriCommands";
 import { fetchOllamaModels, isOllamaCloudURL, OLLAMA_LOCAL_URL, OLLAMA_CLOUD_URL } from "../../services/ollamaModels";
 import { WHISPER_MODELS } from "../../types";
 import { useRecordingStore } from "../../stores/recordingStore";
@@ -118,11 +117,9 @@ export function ProcessingTab() {
   async function handleTestOllama() {
     setOllamaTestStatus("testing");
     try {
-      const res = await invoke<{ status: number }>("ollama_test", {
-        baseUrl: settings.ollama_url,
-        apiKey: await loadCredential("ollama_api_key"),
-      });
-      setOllamaTestStatus(res.status === 200 ? "success" : "error");
+      // Same probe as the model list: /v1/models first, then Ollama's own /api/tags.
+      await fetchOllamaModels(settings.ollama_url);
+      setOllamaTestStatus("success");
     } catch {
       setOllamaTestStatus("error");
     }
@@ -234,6 +231,20 @@ export function ProcessingTab() {
               <button disabled title="Apple Intelligence is alleen beschikbaar op ondersteunde Apple-apparaten"><strong>Apple Intelligence</strong><span>Niet beschikbaar op Windows</span></button>
             </div>
             {settings.processing_mode === "cloud" && <p className="settings-desc" style={{ padding: "12px 20px" }}>ThoughtVault Cloud maakt transcriptie en notulen op de server. Kies lokale transcriptie om een eigen notulenaanbieder te gebruiken.</p>}
+            {settings.processing_mode === "local" && (
+              <div style={{ padding: "12px 20px 4px" }}>
+                <SettingsField label="Terugval bij fout">
+                  <select aria-label="Terugval bij fout" className="select" style={{ width: "100%" }} value={settings.notulen_fallback_provider}
+                    onChange={(e) => settings.updateSettings({ notulen_fallback_provider: e.target.value as typeof settings.notulen_fallback_provider })}>
+                    <option value="">Geen</option>
+                    {([["openai", "OpenAI"], ["anthropic", "Claude"], ["ollama", "Ollama"], ["lm-studio", "LM Studio"]] as const)
+                      .filter(([id]) => id !== settings.notulen_provider)
+                      .map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+                  </select>
+                  <p className="settings-desc">Als de gekozen aanbieder een fout geeft, probeert ThoughtVault het één keer met deze aanbieder en het model dat daar al is ingesteld. Bij een terugval naar OpenAI of Claude gaat het transcript naar die aanbieder.</p>
+                </SettingsField>
+              </div>
+            )}
 
             {settings.processing_mode === "local" && settings.notulen_provider === "ollama" && (
               <>

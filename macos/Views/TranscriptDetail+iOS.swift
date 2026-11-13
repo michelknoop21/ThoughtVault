@@ -188,6 +188,7 @@ extension TranscriptDetailView {
                 Button("Exporteer naar Obsidian", systemImage: "tray.and.arrow.down") { exportToObsidian() }
                 Button("Haal op uit Obsidian", systemImage: "tray.and.arrow.up") { importFromObsidian() }
                 Button("Platte tekst", systemImage: "doc.text") { exportAsTXT() }
+                ProspectFlowMenuItems(transcript: fullTranscript, onOpenError: { errorMessage = $0 }) { showProspectFlowSheet = true }
                 Divider()
                 Button("Kopieer tekst", systemImage: "doc.on.doc") { copyContent() }
             } label: {

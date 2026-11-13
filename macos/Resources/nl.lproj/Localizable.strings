@@ -514,3 +514,46 @@
 "Schrijf een antwoord" = "Schrijf een antwoord";
 "Support: %@" = "Support: %@";
 "Jij" = "Jij";
+/* Prospect Flow */
+"Maak offerte in Prospect Flow" = "Maak offerte in Prospect Flow";
+"Open offerte %@" = "Open offerte %@";
+"Nieuwe conceptofferte maken" = "Nieuwe conceptofferte maken";
+"Conceptofferte in Prospect Flow" = "Conceptofferte in Prospect Flow";
+"Klant zoeken…" = "Klant zoeken…";
+"Regels afleiden, dit kan tot 2 minuten duren." = "Regels afleiden, dit kan tot 2 minuten duren.";
+"Offerte %@ bestond al" = "Offerte %@ bestond al";
+"Offerte %@ aangemaakt" = "Offerte %@ aangemaakt";
+"Klant: %@%@" = "Klant: %@%@";
+"%lld regels, waarvan %lld te controleren." = "%lld regels, waarvan %lld te controleren.";
+"Gemaakt met het terugvalmodel %@." = "Gemaakt met het terugvalmodel %@.";
+"Concept: er is niets naar de klant gestuurd." = "Concept: er is niets naar de klant gestuurd.";
+"Klant" = "Klant";
+"Zoek een andere klant" = "Zoek een andere klant";
+"Nieuwe klant" = "Nieuwe klant";
+"Naam van de nieuwe klant" = "Naam van de nieuwe klant";
+"Open offerte" = "Open offerte";
+"Maak conceptofferte" = "Maak conceptofferte";
+"Adres" = "Adres";
+"API-sleutel" = "API-sleutel";
+"Sleutel van de Prospect Flow-instance" = "Sleutel van de Prospect Flow-instance";
+"Verbonden" = "Verbonden";
+"Maakt vanuit een notule een conceptofferte in Prospect Flow. Er gaat nooit iets naar de klant." = "Maakt vanuit een notule een conceptofferte in Prospect Flow. Er gaat nooit iets naar de klant.";
+"Conceptofferte uit een klantgesprek." = "Conceptofferte uit een klantgesprek.";
+"Vul eerst de Prospect Flow-URL en API-sleutel in." = "Vul eerst de Prospect Flow-URL en API-sleutel in.";
+"Prospect Flow accepteert de API-sleutel niet." = "Prospect Flow accepteert de API-sleutel niet.";
+"Deze functie staat uit in Prospect Flow." = "Deze functie staat uit in Prospect Flow.";
+"Het transcript is te lang voor Prospect Flow." = "Het transcript is te lang voor Prospect Flow.";
+"Te veel verzoeken. Probeer het over een minuut opnieuw." = "Te veel verzoeken. Probeer het over een minuut opnieuw.";
+"Het AI-model van Prospect Flow is niet bereikbaar." = "Het AI-model van Prospect Flow is niet bereikbaar.";
+"Prospect Flow gaf status %lld." = "Prospect Flow gaf status %lld.";
+"Terugval bij fout" = "Terugval bij fout";
+"Geen" = "Geen";
+"Bij een terugval naar ChatGPT, Claude of een andere online aanbieder gaat het transcript naar die aanbieder." = "Bij een terugval naar ChatGPT, Claude of een andere online aanbieder gaat het transcript naar die aanbieder.";
+
+"Prospect Flow gaf een ongeldige offertelink." = "Prospect Flow gaf een ongeldige offertelink.";
+
+"De offerte is bewaard, maar de link kon niet worden geopend. Probeer opnieuw." = "De offerte is bewaard, maar de link kon niet worden geopend. Probeer opnieuw.";
+
+"Eerder gekozen klant" = "Eerder gekozen klant";
+
+"Er is nog een onbevestigde offerteaanvraag. Heropen dit venster en rond die eerst af voordat je een andere klant kiest." = "Er is nog een onbevestigde offerteaanvraag. Heropen dit venster en rond die eerst af voordat je een andere klant kiest.";

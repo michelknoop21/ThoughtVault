@@ -1,5 +1,6 @@
 import XCTest
 import SwiftData
+import SwiftUI
 @testable import ThoughtVault
 
 // Flow assertions ported from windows/src/services/__tests__/llm.audit-integration.test.ts
@@ -366,4 +367,164 @@ final class RejectedDraftStoreTests: XCTestCase {
         let store = try makeStore()
         XCTAssertThrowsError(try store.saveRejectedDraft(taskId: "onbekend", html: "<p>x</p>", reason: "r"))
     }
+}
+
+final class NotuleFallbackTests: XCTestCase {
+    private struct Down: Error {}
+
+    func testFallbackDeliversWhenPrimaryFails() async throws {
+        let html = try await NotuleGenerator.withFallback({ "<p>terugval</p>" }) { throw Down() }
+        XCTAssertEqual(html, "<p>terugval</p>")
+    }
+
+    func testWithoutFallbackOriginalErrorSurfaces() async {
+        do {
+            _ = try await NotuleGenerator.withFallback(nil) { throw Down() }
+            XCTFail("expected the primary error")
+        } catch {
+            XCTAssertTrue(error is Down)
+        }
+    }
+
+    func testRejectedDraftAndCancellationSkipFallback() async {
+        for thrown: Error in [NotuleReviewError(reason: "r", draftHtml: "<p>x</p>"), CancellationError()] {
+            do {
+                _ = try await NotuleGenerator.withFallback({ XCTFail("fallback ran"); return "" }) { throw thrown }
+                XCTFail("expected an error")
+            } catch {
+                XCTAssertEqual(String(describing: type(of: error)), String(describing: type(of: thrown)))
+            }
+        }
+    }
+}
+
+final class NotuleFallbackProviderTests: XCTestCase {
+    private let key = NotuleGenerator.fallbackProviderKey
+    private var originalValue: Any?
+
+    override func setUp() {
+        super.setUp()
+        originalValue = UserDefaults.standard.object(forKey: key)
+    }
+
+    override func tearDown() {
+        UserDefaults.standard.set(originalValue, forKey: key)
+        super.tearDown()
+    }
+
+    func testFallbackGuards() {
+        UserDefaults.standard.removeObject(forKey: key)
+        XCTAssertNil(NotuleGenerator.fallbackProvider(for: .ollama), "unset means no fallback")
+        UserDefaults.standard.set(NotulenProvider.ollama.rawValue, forKey: key)
+        XCTAssertNil(NotuleGenerator.fallbackProvider(for: .ollama), "same as primary")
+        UserDefaults.standard.set(NotulenProvider.cloud.rawValue, forKey: key)
+        XCTAssertNil(NotuleGenerator.fallbackProvider(for: .ollama), "cloud is never a local fallback")
+        UserDefaults.standard.set(NotulenProvider.anthropic.rawValue, forKey: key)
+        XCTAssertEqual(NotuleGenerator.fallbackProvider(for: .ollama), .anthropic)
+    }
+
+    func testOfferResultDecodesServerShape() throws {
+        let json = #"{"offer_id":5,"number":"20261110-1","url":"/offers/5/build","klant":{"id":3,"naam":"X","nieuw":true},"regels":3,"te_controleren":2,"bestaand":false,"model":"hoofd","terugval_gebruikt":true}"#
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        let r = try decoder.decode(ProspectFlowService.OfferResult.self, from: Data(json.utf8))
+        XCTAssertEqual(r.offerId, 5)
+        XCTAssertEqual(r.teControleren, 2)
+        XCTAssertTrue(r.terugvalGebruikt)
+        XCTAssertEqual(r.klant.naam, "X")
+    }
+
+}
+
+final class ProspectFlowReferenceTests: XCTestCase {
+    func testOfferBodyNamesTheColleague() {
+        let suite = "ProspectFlowMaker-" + UUID().uuidString
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        XCTAssertNil(ProspectFlowService.makerEmail(defaults: defaults))
+        defaults.set("  collega@example.com ", forKey: SupportIdentity.emailKey)
+        XCTAssertEqual(ProspectFlowService.makerEmail(defaults: defaults), "collega@example.com")
+    }
+
+    func testOfferReferencesStayWithinConfiguredInstance() {
+        let suiteName = "ProspectFlowTests-" + UUID().uuidString
+        let defaults = UserDefaults(suiteName: suiteName)!
+        let taskId = "instance-test-" + UUID().uuidString
+        let first = "https://first.example.test"
+        let second = "https://second.example.test"
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        defaults.set(first, forKey: ProspectFlowService.baseURLKey)
+        let pending = ProspectFlowService.OfferRef(pendingRequestId: "pending-first", pendingCustomer: "id:12")
+        ProspectFlowService.setOfferRef(pending, for: taskId, defaults: defaults)
+        defaults.set(second, forKey: ProspectFlowService.baseURLKey)
+        XCTAssertNil(ProspectFlowService.offerRef(for: taskId, defaults: defaults))
+        ProspectFlowService.setOfferRef(.init(id: 42, number: "second", url: "/offers/42/build"), for: taskId, defaults: defaults)
+        defaults.set(first + "/", forKey: ProspectFlowService.baseURLKey)
+        XCTAssertEqual(ProspectFlowService.offerRef(for: taskId, defaults: defaults), pending)
+        defaults.set(second, forKey: ProspectFlowService.baseURLKey)
+        ProspectFlowService.setOfferRef(.init(id: 43), for: taskId, baseURL: first, defaults: defaults)
+        XCTAssertEqual(ProspectFlowService.offerRef(for: taskId, defaults: defaults)?.id, 42)
+        XCTAssertEqual(ProspectFlowService.offerRef(for: taskId, baseURL: first, defaults: defaults)?.id, 43)
+    }
+
+    func testLegacyReferencesOnlyBelongToYinga() throws {
+        let suiteName = "ProspectFlowLegacyTests-" + UUID().uuidString
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let reference = ProspectFlowService.OfferRef(id: 3, url: "/offers/3/build")
+        defaults.set(try JSONEncoder().encode(reference), forKey: "prospectFlowOffer-test")
+        defaults.set("https://other.example.test", forKey: ProspectFlowService.baseURLKey)
+        XCTAssertNil(ProspectFlowService.offerRef(for: "test", defaults: defaults))
+        defaults.set(ProspectFlowService.defaultBaseURL, forKey: ProspectFlowService.baseURLKey)
+        XCTAssertEqual(ProspectFlowService.offerRef(for: "test", defaults: defaults), reference)
+        ProspectFlowService.setOfferRef(nil, for: "test", defaults: defaults)
+        XCTAssertNil(ProspectFlowService.offerRef(for: "test", defaults: defaults))
+    }
+    func testPendingCustomerChoiceKeepsOriginalNewCustomerAfterReopening() {
+        let ref = ProspectFlowService.OfferRef(pendingRequestId: "lost-reply", pendingCustomer: "new:nieuw bv", pendingNewCustomerName: "Nieuw BV")
+        guard case .new(let name) = ref.pendingChoice else { return XCTFail("Pending choice lost") }
+        XCTAssertEqual(name, "Nieuw BV")
+        XCTAssertEqual(ProspectFlowService.Customer.new(name).key, ref.pendingCustomer)
+        let legacy = ProspectFlowService.OfferRef(pendingRequestId: "legacy", pendingCustomer: "new:nieuw bv")
+        XCTAssertEqual(legacy.pendingChoice?.key, "new:nieuw bv")
+        let existing = ProspectFlowService.OfferRef(pendingRequestId: "existing", pendingCustomer: "id:12")
+        XCTAssertEqual(existing.pendingChoice?.key, "id:12")
+        XCTAssertNotEqual(existing.pendingChoice?.key, ref.pendingChoice?.key)
+        XCTAssertNil(ProspectFlowService.OfferRef(pendingCustomer: "new:nieuw bv").pendingChoice)
+        for key in ["new:", "new:  ", "id:0", "id:-1", "id:bad", "other"] {
+            XCTAssertNil(ProspectFlowService.OfferRef(pendingRequestId: "invalid", pendingCustomer: key).pendingChoice)
+        }
+    }
+
+    @MainActor
+    func testOfferOpeningReportsRefusalAndInvalidURL() async {
+        for url in [URL(string: "https://pf.example.test/offers/1/build"), nil] {
+            let error: String? = await withCheckedContinuation { continuation in
+                openProspectFlowOffer(url, using: OpenURLAction { _ in .discarded },
+                                      onFailure: { continuation.resume(returning: $0) },
+                                      onSuccess: { continuation.resume(returning: nil) })
+            }
+            XCTAssertNotNil(error)
+        }
+    }
+
+    @MainActor
+    func testOfferOpeningCompletesOnlyWhenBrowserAccepts() async {
+        let opened: Bool = await withCheckedContinuation { continuation in
+            openProspectFlowOffer(URL(string: "https://pf.example.test/offers/1/build"),
+                                  using: OpenURLAction { _ in .handled },
+                                  onFailure: { _ in continuation.resume(returning: false) },
+                                  onSuccess: { continuation.resume(returning: true) })
+        }
+        XCTAssertTrue(opened)
+    }
+
+    func testOfferLinksCannotLeaveTheirInstance() {
+        let service = ProspectFlowService(baseURL: "https://pf.example.test", apiKey: "fixture")
+        XCTAssertEqual(service.openURL("/offers/1/build")?.absoluteString, "https://pf.example.test/offers/1/build")
+        for path in ["@other.example.test/path", "//other.example.test/path", "https://other.example.test/path", "javascript:alert(1)"] {
+            XCTAssertNil(service.openURL(path), path)
+        }
+    }
+
 }

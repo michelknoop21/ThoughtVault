@@ -86,11 +86,11 @@ async function modelRequest(request: { url: string; headers: Record<string, stri
 // These constraints must survive both chunk summaries and the final profile.
 const FACTUALITY_RULES = "Behoud expliciete ontkenningen, verboden, voorwaarden en vervallen afspraken bij het bijbehorende besluit of de actie, ook in een compacte notule. Behoud ook de aard en status van het besprokene: een fictief of hypothetisch voorbeeld mag geen echte afspraak worden, een voorgenomen proef geen uitgevoerd project. Noem een expliciet fictieve of hypothetische status ook expliciet in de kern van het verslag. Leid daaruit geen ongenoemde uitvoeringsstatus af: zeg alleen dat iets al wel of nog niet is uitgevoerd als de bron dat expliciet vermeldt. Een uitnodiging is geen aanwezigheid; vermeld expliciete afwezigheid. Een open vraag is geen besluit: presenteer onbesliste onderwerpen niet als opdracht of afgesproken vervolg. Voeg geen vervolgafspraken toe die niet zijn genoemd. Een toestemmingsvoorwaarde is geen opdracht of toezegging om die toestemming te geven; maak daar geen actie van. Controleer vóór het antwoorden alle besluiten en acties tegen de transcriptie op deze beperkingen en herstel weglatingen.";
 
-function getConfig(): LLMConfig {
+function getConfig(override?: NotulenProvider): LLMConfig {
   const settings = useSettingsStore.getState();
   // In local mode the cloud provider is unreachable, so a leftover "cloud"
   // selection would transcribe locally and then throw. Coerce to Ollama.
-  let provider = settings.notulen_provider || "cloud";
+  let provider = override || settings.notulen_provider || "cloud";
   if (settings.processing_mode === "local" && provider === "cloud") {
     provider = "ollama";
   }
@@ -292,6 +292,7 @@ export class LLMService {
     return generateWithOpenAICompatible(baseURL, provider === "ollama" ? config.ollamaModel : config.lmStudioModel, systemPrompt, userMessage, key ?? "", undefined, step);
   }
 
+  /** Generates notes; on a provider error retries once with `notulen_fallback_provider` (never on abort). */
   static async generateNotulen(
     transcription: string,
     profile: Profile,
@@ -301,10 +302,34 @@ export class LLMService {
     /** The running step for the task label (stepLabel). */
     onStep?: (step: ModelStep) => void,
   ): Promise<string> {
+    try {
+      return await LLMService.generateOnce(undefined, transcription, profile, onProgress, participants, quickNote, onStep);
+    } catch (error) {
+      const fallback = useSettingsStore.getState().notulen_fallback_provider;
+      const aborted = (error as { name?: string } | null)?.name === "AbortError";
+      if (!fallback || aborted || fallback === getConfig().provider) throw error;
+      onProgress?.(""); // drop anything streamed by the failed attempt
+      try {
+        return await LLMService.generateOnce(fallback, transcription, profile, onProgress, participants, quickNote, onStep);
+      } catch {
+        throw error;
+      }
+    }
+  }
+
+  private static async generateOnce(
+    providerOverride: NotulenProvider | undefined,
+    transcription: string,
+    profile: Profile,
+    onProgress?: ProgressCallback,
+    participants: string[] = [],
+    quickNote: string = "",
+    onStep?: (step: ModelStep) => void,
+  ): Promise<string> {
     const corrections = await loadCorrectionsOrEmpty();
     const context = minutesContext(corrections, transcription, profile.id);
     const finish = (html: string) => correctHTML(ensureNotesSection(stripCodeFences(html), quickNote), corrections, profile.id);
-    const config = getConfig();
+    const config = getConfig(providerOverride);
     const enriched = enrichProfile(profile);
     const systemPrompt = `${enriched.system_prompt ?? ""}\n\nBrongetrouwheid gaat vóór beknoptheid en de template. ${FACTUALITY_RULES} Vermeld ieder expliciet vervallen tijdstip en iedere expliciete afwezigheid, ook als dat geen actie is. Als ergens geen besluit over uitvoering is genomen, behoud dat letterlijk als onbeslist; vraag niet hoe het uitgevoerd moet worden.`;
     let processed = correctText(transcription, corrections, profile.id);

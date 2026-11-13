@@ -610,6 +610,8 @@ struct SettingsView: View {
             case .cloud:             EmptyView()
             }
 
+            NotuleFallbackPicker()
+
             NavigationLink {
                 ProfilesView()
             } label: {

@@ -104,6 +104,10 @@ extension SettingsView {
             SettingsCard(icon: "tray.and.arrow.down", title: "Obsidian-koppeling", subtitle: LocalizedStringKey(obsidianFooterText)) { obsidianRows }
         } right: {
             SettingsCard(icon: "network", title: "Local REST API") { obsidianRestRows }
+            SettingsCard(icon: "doc.text", title: "Prospect Flow",
+                         subtitle: "Maakt vanuit een notule een conceptofferte in Prospect Flow. Er gaat nooit iets naar de klant.") {
+                ProspectFlowSettingsSection(inCard: true)
+            }
         })
     }
 

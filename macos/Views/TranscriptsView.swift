@@ -1004,6 +1004,7 @@ struct TranscriptDetailView: View {
     @State private var regeneratingMessage = ""
     @State var showProfileSheet = false
     @State var profileSheetMode: ProfileSheetMode = .regenerate
+    @State var showProspectFlowSheet = false
 
     enum ProfileSheetMode { case regenerate, retranscribe }
 
@@ -1109,6 +1110,9 @@ struct TranscriptDetailView: View {
         }
         .sheet(item: $wordCorrection) { entry in
             WordCorrectionSheet(entry: entry, profiles: recordingVM.availableProfiles, apply: applyWordCorrection)
+        }
+        .sheet(isPresented: $showProspectFlowSheet) {
+            ProspectFlowOfferSheet(transcript: fullTranscript)
         }
         .sheet(isPresented: $showProfileSheet) {
             ProfileSelectionSheet(mode: profileSheetMode) { profile, usePremium in
@@ -1496,6 +1500,7 @@ struct TranscriptDetailView: View {
                 Button { exportAsTXT() } label: {
                     Label("Platte tekst", systemImage: "doc.text")
                 }
+                ProspectFlowMenuItems(transcript: fullTranscript, onOpenError: { errorMessage = $0 }) { showProspectFlowSheet = true }
                 Divider()
                 Button { copyContent() } label: {
                     Label("Kopieer tekst", systemImage: "doc.on.doc")

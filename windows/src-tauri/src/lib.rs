@@ -124,7 +124,6 @@ pub fn run() {
             commands::http::obsidian_put,
             commands::http::obsidian_get,
             commands::http::obsidian_test,
-            commands::http::ollama_test,
             // System
             commands::system::get_network_status,
             commands::system::detect_meeting_apps,

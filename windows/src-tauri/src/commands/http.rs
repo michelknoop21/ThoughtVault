@@ -26,6 +26,7 @@ pub struct HttpResponse {
 pub async fn proxy_request(request: HttpRequest) -> Result<HttpResponse, String> {
     let timeout = request.timeout_seconds.unwrap_or(30).min(900);
     let client = reqwest::Client::builder()
+        .redirect(reqwest::redirect::Policy::none())
         .timeout(std::time::Duration::from_secs(timeout))
         .build()
         .map_err(|e| e.to_string())?;
@@ -447,40 +448,6 @@ pub async fn obsidian_test(base_url: String, api_key: String) -> Result<HttpResp
     Ok(HttpResponse { status, body, headers: resp_headers })
 }
 
-/// Probe a running Ollama/OpenAI-compatible server (GET /api/tags) to verify it
-/// is reachable. Bearer auth only over HTTPS (Ollama Cloud); never leak a token
-/// to a plain http://localhost endpoint. 200 = connected.
-#[tauri::command]
-pub async fn ollama_test(base_url: String, api_key: Option<String>) -> Result<HttpResponse, String> {
-    let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(10))
-        .build()
-        .map_err(|e| e.to_string())?;
-
-    let base = base_url.trim_end_matches('/');
-    let url = format!("{}/api/tags", base);
-
-    let mut req = client.get(&url);
-    if let Some(key) = api_key.filter(|k| !k.is_empty()) {
-        if base.starts_with("https://") {
-            req = req.header("Authorization", format!("Bearer {}", key));
-        }
-    }
-
-    let response = req.send().await.map_err(|e| e.to_string())?;
-
-    let status = response.status().as_u16();
-    let mut resp_headers = HashMap::new();
-    for (k, v) in response.headers() {
-        if let Ok(val) = v.to_str() {
-            resp_headers.insert(k.to_string(), val.to_string());
-        }
-    }
-    let body = response.text().await.map_err(|e| e.to_string())?;
-
-    Ok(HttpResponse { status, body, headers: resp_headers })
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -644,6 +611,36 @@ mod tests {
     }
 
     // -- Tests --
+
+    #[tokio::test]
+    async fn proxy_does_not_forward_credentials_or_content_to_redirect_target() {
+        let target = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let target_url = format!("http://localhost:{}/capture", target.local_addr().unwrap().port());
+        let origin = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = format!("http://127.0.0.1:{}/offer", origin.local_addr().unwrap().port());
+        let redirect = tokio::spawn(async move {
+            let (mut stream, _) = origin.accept().await.unwrap();
+            let mut bytes = [0_u8; 4096];
+            let _ = stream.read(&mut bytes).await.unwrap();
+            stream.write_all(format!("HTTP/1.1 307 Temporary Redirect\r\nLocation: {target_url}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n").as_bytes()).await.unwrap();
+        });
+        let received = tokio::spawn(async move {
+            if let Ok(Ok((mut stream, _))) = tokio::time::timeout(std::time::Duration::from_secs(2), target.accept()).await {
+                let mut bytes = [0_u8; 4096];
+                let _ = stream.read(&mut bytes).await;
+                stream.write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\nConnection: close\r\n\r\n{}").await.unwrap();
+                true
+            } else { false }
+        });
+        let response = proxy_request(HttpRequest { url, method: "POST".into(),
+            headers: Some(HashMap::from([("X-API-Key".into(), "fixture-secret".into())])),
+            body: Some("FICTITIOUS_TRANSCRIPT".into()), timeout_seconds: Some(10),
+        }).await.unwrap();
+        redirect.await.unwrap();
+        assert!(!received.await.unwrap(), "redirect target received a credential-bearing request");
+        assert_eq!(response.status, 307);
+    }
+
 
     #[tokio::test]
     async fn test_upload_nonexistent_file() {

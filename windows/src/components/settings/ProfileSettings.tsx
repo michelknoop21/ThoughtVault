@@ -89,7 +89,7 @@ export function ProfileSettings() {
           label="Hoe noemen collega's jou?"
           value={aliases}
           onChange={setAliases}
-          placeholder="Michel, Knoop, MK (kommagescheiden)"
+          placeholder="Voornaam, bijnaam, initialen (kommagescheiden)"
         />
         <ProfileFormField
           label="Typische vergadertypen"

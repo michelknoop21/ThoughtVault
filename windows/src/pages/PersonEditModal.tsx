@@ -257,7 +257,7 @@ export function PersonEditModal({ person, isNew, onClose, onAdded }: PersonEditM
               aria-label="Aliassen"
               value={aliasesText}
               onChange={(e) => setAliasesText(e.target.value)}
-              placeholder="Michel, Knoop, MK (kommagescheiden)"
+              placeholder="Voornaam, bijnaam, initialen (kommagescheiden)"
               disabled={isSaving || savedOk}
             />
           </div>

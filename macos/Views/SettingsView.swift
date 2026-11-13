@@ -702,7 +702,7 @@ struct SettingsView: View {
         } header: {
             Text("Notulen")
         } footer: {
-            Text("Notulen worden via de server gegenereerd (N8N + Claude).")
+            Text("Notulen worden op de ThoughtVault-server gegenereerd.")
                 .font(TS.Font.caption)
                 .foregroundStyle(Color.labelTertiary)
         }

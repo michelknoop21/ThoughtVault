@@ -183,7 +183,7 @@
 "Melding sluiten" = "Dismiss notification";
 "Mensen" = "People";
 "Menu uitklappen" = "Expand menu";
-"Michel, Knoop, MK (kommagescheiden)" = "Michel, Knoop, MK (comma-separated)";
+"Voornaam, bijnaam, initialen (kommagescheiden)" = "First name, nickname, initials (comma-separated)";
 "Microfoon" = "Microphone";
 "Microsoft 365" = "Microsoft 365";
 "Microsoft 365 Agenda" = "Microsoft 365 Calendar";
@@ -213,7 +213,7 @@
 "Notule beschikbaar" = "Minutes available";
 "Notulen" = "Transcripts";
 "Notulen genereren" = "Generate minutes";
-"Notulen worden via de server gegenereerd (N8N + Claude)." = "Minutes are generated via the server (N8N + Claude).";
+"Notulen worden op de ThoughtVault-server gegenereerd." = "Minutes are generated on the ThoughtVault server.";
 "Of voer deze code handmatig in:" = "Or enter this code manually:";
 "Oké" = "OK";
 "Ollama" = "Ollama";
@@ -299,7 +299,7 @@
 "Stel in op Ollama Cloud en vul je API-sleutel in" = "Set up Ollama Cloud and enter your API key";
 "Stijl" = "Style";
 "Stop" = "Stop";
-"Stop en upload" = "Stop & upload";
+"Stop en verwerk" = "Stop & process";
 "Stop opname en upload" = "Stop recording and upload";
 "Systeem statistieken" = "System statistics";
 "Systeemaudio kon niet worden samengevoegd" = "System audio could not be merged";

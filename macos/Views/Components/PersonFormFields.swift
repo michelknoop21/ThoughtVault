@@ -83,7 +83,7 @@ struct PersonFormFields: View {
             }
 
             SettingFieldRow(aliasLabel, hint: Self.commaHint) {
-                TextField("Michel, Knoop, MK", text: $aliassen)
+                TextField("Voornaam, bijnaam, initialen", text: $aliassen)
                     .textFieldStyle(.roundedBorder)
                     .font(TS.Font.body)
                     .autocorrectionDisabled()

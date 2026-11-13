@@ -303,14 +303,14 @@ export class LLMService {
     onStep?: (step: ModelStep) => void,
   ): Promise<string> {
     try {
-      return await LLMService.generateOnce(undefined, transcription, profile, onProgress, participants, quickNote);
+      return await LLMService.generateOnce(undefined, transcription, profile, onProgress, participants, quickNote, onStep);
     } catch (error) {
       const fallback = useSettingsStore.getState().notulen_fallback_provider;
       const aborted = (error as { name?: string } | null)?.name === "AbortError";
       if (!fallback || aborted || fallback === getConfig().provider) throw error;
       onProgress?.(""); // drop anything streamed by the failed attempt
       try {
-        return await LLMService.generateOnce(fallback, transcription, profile, onProgress, participants, quickNote);
+        return await LLMService.generateOnce(fallback, transcription, profile, onProgress, participants, quickNote, onStep);
       } catch {
         throw error;
       }
@@ -324,6 +324,7 @@ export class LLMService {
     onProgress?: ProgressCallback,
     participants: string[] = [],
     quickNote: string = "",
+    onStep?: (step: ModelStep) => void,
   ): Promise<string> {
     const corrections = await loadCorrectionsOrEmpty();
     const context = minutesContext(corrections, transcription, profile.id);

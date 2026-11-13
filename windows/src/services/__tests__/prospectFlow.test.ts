@@ -1,10 +1,11 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import { useSettingsStore } from "../../stores/settingsStore";
-import { createOffer, loadOfferRef } from "../prospectFlow";
+import { createOffer, loadOfferRef, openOffer } from "../prospectFlow";
 
-const { invoke, loadCredential } = vi.hoisted(() => ({ invoke: vi.fn(), loadCredential: vi.fn() }));
+const { invoke, loadCredential, open } = vi.hoisted(() => ({ invoke: vi.fn(), loadCredential: vi.fn(), open: vi.fn() }));
 vi.mock("@tauri-apps/api/core", () => ({ invoke }));
 vi.mock("../tauriCommands", () => ({ loadCredential }));
+vi.mock("@tauri-apps/plugin-shell", () => ({ open }));
 
 const input = { taskId: "t1", title: "Gesprek", recordedAt: "2026-11-10T10:00:00Z", notuleHtml: "<p>n</p>", transcript: "tekst" };
 const ok = { offer_id: 431, number: "20261110-1", url: "/offers/431/build", klant: { id: 12, naam: "Voorbeeldklant", nieuw: false }, regels: 2, te_controleren: 0, bestaand: false, model: "fixture", terugval_gebruikt: false };
@@ -62,6 +63,40 @@ it("requires resolving the pending request before another customer gets a new re
   expect(body().request_id).not.toBe(first);
 });
 
+it("keeps offer links and pending requests within their configured instance", async () => {
+  invoke.mockRejectedValueOnce("timeout");
+  await expect(createOffer({ ...input, customerId: 12 })).rejects.toThrow();
+  const pendingA = loadOfferRef("t1")!.pendingRequestId;
+  useSettingsStore.setState({ prospectflow_base_url: "https://other.test" });
+  expect(loadOfferRef("t1")).toBeNull();
+  invoke.mockResolvedValueOnce({ status: 201, body: JSON.stringify(ok) });
+  await createOffer({ ...input, customerId: 12 });
+  expect(body().request_id).not.toBe(pendingA);
+  useSettingsStore.setState({ prospectflow_base_url: "https://pf.test/" });
+  expect(loadOfferRef("t1")!.pendingRequestId).toBe(pendingA);
+  expect(loadOfferRef("t1")!.number).toBeUndefined();
+});
+
+it("stores the result against the request instance if configuration changes while waiting", async () => {
+  invoke.mockImplementationOnce(async () => {
+    useSettingsStore.setState({ prospectflow_base_url: "https://other.test" });
+    return { status: 201, body: JSON.stringify(ok) };
+  });
+  const result = await createOffer({ ...input, customerId: 12 });
+  expect(loadOfferRef("t1")).toBeNull();
+  await openOffer(result.url, result.instanceBaseUrl);
+  expect(open).toHaveBeenCalledWith("https://pf.test/offers/431/build");
+  useSettingsStore.setState({ prospectflow_base_url: "https://pf.test/" });
+  expect(loadOfferRef("t1")!.id).toBe(431);
+});
+
+it("captures the opening instance before loading the shell plugin", async () => {
+  const opening = openOffer("/offers/3/build");
+  useSettingsStore.setState({ prospectflow_base_url: "https://other.test" });
+  await opening;
+  expect(open).toHaveBeenCalledWith("https://pf.test/offers/3/build");
+});
+
 it("does not send an offer when its pending id cannot be saved", async () => {
   const save = vi.spyOn(localStorage, "setItem").mockImplementation(() => {
     throw new DOMException("full", "QuotaExceededError");
@@ -74,9 +109,17 @@ it("does not send an offer when its pending id cannot be saved", async () => {
 
 it.each(["http://pf.test", "ftp://localhost", "not-a-url"])("rejects unsafe base URL %s before loading a key", async (url) => {
   useSettingsStore.setState({ prospectflow_base_url: url });
+  expect(loadOfferRef("t1")).toBeNull();
   await expect(createOffer({ ...input, customerId: 12 })).rejects.toThrow();
   expect(loadCredential).not.toHaveBeenCalled();
   expect(invoke).not.toHaveBeenCalled();
+});
+
+it("only reads legacy unscoped references on the original Yinga instance", () => {
+  localStorage.setItem("prospectFlowOffer-t1", JSON.stringify({ id: 3, url: "/offers/3/build" }));
+  expect(loadOfferRef("t1")).toBeNull();
+  useSettingsStore.setState({ prospectflow_base_url: "https://prospectflow.yinga.ai/" });
+  expect(loadOfferRef("t1")?.id).toBe(3);
 });
 
 it.each(["http://localhost:8089", "http://127.0.0.1:8089", "http://[::1]:8089"])("allows local test URL %s", async (url) => {

@@ -84,7 +84,7 @@ export function ProspectFlowDialog({ transcript, onClose }: { transcript: Transc
         <p>{result.regels} regels, waarvan {result.te_controleren} te controleren.</p>
         {result.terugval_gebruikt && <p className="settings-desc">Het terugvalmodel is gebruikt.</p>}
         <div className="action-row">
-          <button className="btn btn-accent" onClick={() => void openOffer(result.url).catch((e) => setError(String(e)))}>Open offerte</button>
+          <button className="btn btn-accent" onClick={() => void openOffer(result.url, result.instanceBaseUrl).catch((e) => setError(String(e)))}>Open offerte</button>
           <button className="btn btn-secondary" onClick={onClose}>Sluiten</button>
         </div>
       </> : <>

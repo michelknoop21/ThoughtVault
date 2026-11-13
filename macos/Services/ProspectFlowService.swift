@@ -17,10 +17,7 @@ struct ProspectFlowService: Sendable {
     private let apiKey: String
 
     init(baseURL: String? = nil, apiKey: String? = nil) {
-        var base = (baseURL ?? UserDefaults.standard.string(forKey: Self.baseURLKey) ?? Self.defaultBaseURL)
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        while base.hasSuffix("/") { base.removeLast() }
-        self.baseURL = base
+        self.baseURL = Self.normalizedBaseURL(baseURL ?? UserDefaults.standard.string(forKey: Self.baseURLKey) ?? Self.defaultBaseURL)
         self.apiKey = apiKey ?? KeychainService.shared.load(for: Self.apiKeyKeychainKey) ?? ""
     }
 
@@ -114,18 +111,31 @@ struct ProspectFlowService: Sendable {
 
     // MARK: - Stored reference
 
-    private static func refKey(_ taskId: String) -> String { "prospectFlowOffer-\(taskId)" }
+    private static func normalizedBaseURL(_ value: String) -> String {
+        var base = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        while base.hasSuffix("/") { base.removeLast() }
+        return base
+    }
 
-    static func offerRef(for taskId: String) -> OfferRef? {
-        guard let data = UserDefaults.standard.data(forKey: refKey(taskId)) else { return nil }
+    private static func refKey(_ taskId: String, baseURL: String) -> String {
+        "prospectFlowOffer-\(Data(baseURL.utf8).base64EncodedString())-\(taskId)"
+    }
+
+    static func offerRef(for taskId: String, baseURL: String? = nil, defaults: UserDefaults = .standard) -> OfferRef? {
+        let base = normalizedBaseURL(baseURL ?? defaults.string(forKey: baseURLKey) ?? defaultBaseURL)
+        // Unscoped references were created by the first, Yinga-only version.
+        let legacy = base == defaultBaseURL ? defaults.data(forKey: "prospectFlowOffer-\(taskId)") : nil
+        guard let data = defaults.data(forKey: refKey(taskId, baseURL: base)) ?? legacy else { return nil }
         return try? JSONDecoder().decode(OfferRef.self, from: data)
     }
 
-    static func setOfferRef(_ ref: OfferRef?, for taskId: String) {
+    static func setOfferRef(_ ref: OfferRef?, for taskId: String, baseURL: String? = nil, defaults: UserDefaults = .standard) {
+        let base = normalizedBaseURL(baseURL ?? defaults.string(forKey: baseURLKey) ?? defaultBaseURL)
         if let ref, let data = try? JSONEncoder().encode(ref) {
-            UserDefaults.standard.set(data, forKey: refKey(taskId))
+            defaults.set(data, forKey: refKey(taskId, baseURL: base))
         } else {
-            UserDefaults.standard.removeObject(forKey: refKey(taskId))
+            defaults.removeObject(forKey: refKey(taskId, baseURL: base))
+            if base == defaultBaseURL { defaults.removeObject(forKey: "prospectFlowOffer-\(taskId)") }
         }
     }
 

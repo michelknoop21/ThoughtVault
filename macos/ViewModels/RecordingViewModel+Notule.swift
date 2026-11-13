@@ -40,8 +40,7 @@ extension RecordingViewModel {
         }
         let fallback = NotuleGenerator.fallbackProvider(for: provider).map { fb in
             { @Sendable () async throws -> String in
-                os_log("Notule generation failed with %{public}@, retrying with fallback %{public}@",
-                       log: log, type: .info, provider.rawValue, fb.rawValue)
+                log.info("Notule generation failed with \(provider.rawValue), retrying with fallback \(fb.rawValue)")
                 return try await once(fb)
             }
         }

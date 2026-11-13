@@ -15,7 +15,7 @@ interface PersonEditModalProps {
 }
 
 /** "Jan de Vries" -> "JV"; empty when there is no name yet. */
-function initials(name: string): string {
+export function initials(name: string): string {
   const words = name.trim().split(/\s+/).filter(Boolean);
   if (words.length === 0) return "";
   return (words[0][0] + (words.length > 1 ? words[words.length - 1][0] : "")).toUpperCase();

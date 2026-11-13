@@ -416,21 +416,12 @@ dialog.desktop-dialog > [role="dialog"] > :first-child, dialog.desktop-dialog > 
 .people-empty-icon { width: 56px; height: 56px; color: #9293b7; margin-bottom: 8px; }
 
 /* A complete six-field sheet fits at the supported 600px client height. */
-.person-editor-fields { overflow-y: auto; min-height: 0; padding: 12px 20px; display: flex; flex-direction: column; gap: 8px; }
-.person-editor-fields .input { min-height: 32px; padding-block: 5px; }
-/* WebView scrollbars use the quiet desktop appearance, with usable hit areas. */
-::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-track, ::-webkit-scrollbar-corner { background: transparent; }
-::-webkit-scrollbar-thumb { background: #747d9e80; border: 2px solid transparent; background-clip: padding-box; border-radius: 8px; min-height: 32px; }
-::-webkit-scrollbar-thumb:hover { background-color: #9ba4c5; }
-::-webkit-scrollbar-button { display: none; }
-@media (forced-colors: active) { ::-webkit-scrollbar-thumb { background-color: ButtonText; } }
+.person-editor-fields { overflow-y: auto; min-height: 0; padding: 4px 24px 20px; display: flex; flex-direction: column; gap: 13px; }
 .studio-dialog:has(> .card-static) { display: flex; flex-direction: column; overflow: hidden; }
 .studio-dialog > .card-static { display: flex; flex-direction: column; min-height: 0; }
 .studio-dialog > header, .studio-dialog > .card-static > div:first-child { flex-shrink: 0; }
 .studio-dialog > .card-static > div:last-child { min-height: 0; }
 
-.person-editor-fields > .flex-col { gap: 2px; }
 
 /* macOS HomeLayout: content determines columns, each header/card determines its contents. */
 .thoughtvault-home { overflow: hidden; }
@@ -548,3 +539,73 @@ dialog.desktop-dialog > [role="dialog"] > :first-child, dialog.desktop-dialog > 
 .context-bar-detail { font-size: 12px; color: var(--text-secondary); }
 .context-bar-buttons { display: flex; flex-wrap: wrap; gap: 6px; padding-top: 4px; }
 .context-bar-error { margin: 0; font-size: 12px; color: var(--text-error); }
+
+/* Fields: soft inset hairline instead of a hard outline, violet ring on focus. */
+.input, .select { min-height: 40px; padding: 9px 13px; font-weight: 400; border: 0; border-radius: 11px; background-color: rgba(0,0,0,.28); box-shadow: inset 0 0 0 1px rgba(212,193,255,.14); color: var(--text-primary); transition: box-shadow 150ms var(--ease-out); }
+@media (hover: hover) { .input:hover:not(:disabled):not(:focus), .select:hover:not(:disabled):not(:focus) { box-shadow: inset 0 0 0 1px rgba(212,193,255,.24); } }
+.input:focus, .select:focus { outline: none; border: 0; box-shadow: inset 0 0 0 1.5px var(--brand-primary), 0 0 0 4px rgba(144,72,240,.18); }
+.input:disabled, .select:disabled { opacity: .55; cursor: default; }
+.input::placeholder { color: #8c8aa3; }
+@media (forced-colors: active) { .input, .select { border: 1px solid FieldText; } .input:focus, .select:focus { outline: 2px solid Highlight; } }
+
+/* Select: one chevron, and where the engine allows it the open list is drawn by us as well
+   (appearance: base-select keeps the native keyboard, typeahead and top-layer popup). */
+select:not([multiple]) { appearance: none; cursor: pointer; padding-right: 36px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23b8bdd6' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 8 5 5 5-5'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; background-size: 15px; }
+@supports (appearance: base-select) {
+  select:not([multiple]), select:not([multiple])::picker(select) { appearance: base-select; }
+  select:not([multiple]) { display: flex; align-items: center; gap: 8px; padding-right: 13px; background-image: none; text-align: left; }
+  select:not([multiple])::picker-icon { content: ""; flex-shrink: 0; margin-left: auto; width: 15px; height: 15px; background-color: #b8bdd6; -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 8 5 5 5-5'/%3E%3C/svg%3E") center / contain no-repeat; transition: rotate 180ms var(--ease-out); }
+  select:not([multiple]):open::picker-icon { rotate: 180deg; }
+  select:not([multiple]).select:open, select:not([multiple]).input:open { box-shadow: inset 0 0 0 1.5px var(--brand-secondary); }
+  ::picker(select) { position-try-order: normal; margin-block: 6px; padding: 5px; border: 0; border-radius: 13px; background: #1b1e34; color: #e9e8f2; box-shadow: inset 0 0 0 1px rgba(212,193,255,.14), 0 18px 40px -12px rgba(0,0,0,.7); max-height: min(340px, 60vh); overflow-y: auto; transform-origin: top center; opacity: 0; transform: scale(.97) translateY(-4px); transition: opacity 120ms var(--ease-out), transform 120ms var(--ease-out), display 120ms allow-discrete, overlay 120ms allow-discrete; }
+  select:open::picker(select) { opacity: 1; transform: none; transition-duration: 180ms; }
+  @starting-style { select:open::picker(select) { opacity: 0; transform: scale(.97) translateY(-4px); } }
+  select:not([multiple]) option { display: flex; align-items: center; gap: 10px; min-height: 36px; padding: 6px 11px; border-radius: 9px; background: transparent; color: #e9e8f2; font: inherit; font-size: 14px; font-weight: 400; cursor: pointer; }
+  select:not([multiple]) option::checkmark { order: 1; margin-left: auto; color: #b9adff; }
+  select:not([multiple]) option:checked { background: rgba(96,72,240,.22); color: #fff; }
+  select:not([multiple]) option:focus-visible { outline: 2px solid #b995ff; outline-offset: -2px; }
+  @media (hover: hover) { select:not([multiple]) option:hover:not(:checked):not(:disabled) { background: rgba(255,255,255,.06); } }
+  select:not([multiple]) option:disabled { opacity: .45; cursor: default; }
+}
+/* The recording bar shows its selects as plain text inside the labelled pill. */
+.studio-controlbar select:not([multiple]) { min-height: 0; padding: 0; background-color: transparent; box-shadow: none; border-radius: 6px; }
+@supports not (appearance: base-select) { .studio-controlbar select:not([multiple]) { padding-right: 22px; background-position: right 2px center; } }
+
+/* Disclosure rows: rotating chevron, animated height. */
+:root { interpolate-size: allow-keywords; }
+.settings-profile-manager > summary, .model-library > summary { list-style: none; display: flex; align-items: center; gap: 12px; }
+.settings-profile-manager > summary::-webkit-details-marker, .model-library > summary::-webkit-details-marker { display: none; }
+.settings-profile-manager > summary::after, .model-library > summary::after { content: ""; flex-shrink: 0; margin-left: auto; width: 15px; height: 15px; background-color: currentColor; -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m8 5 5 5-5 5'/%3E%3C/svg%3E") center / contain no-repeat; transition: rotate 200ms var(--ease-out); }
+.settings-profile-manager[open] > summary::after, .model-library[open] > summary::after { rotate: 90deg; }
+.settings-profile-manager::details-content, .model-library::details-content { block-size: 0; overflow: hidden; transition: block-size 180ms var(--ease-out), content-visibility 180ms allow-discrete; }
+.settings-profile-manager[open]::details-content, .model-library[open]::details-content { block-size: auto; transition-duration: 240ms; }
+.settings-profile-manager > summary { padding: 14px 16px; border-radius: 14px; background: rgba(255,255,255,.04); box-shadow: inset 0 0 0 1px rgba(212,193,255,.10); font-size: 15px; color: var(--text-primary); transition: background-color 150ms var(--ease-out), transform 160ms var(--ease-out); }
+@media (hover: hover) { .settings-profile-manager > summary:hover { background: rgba(255,255,255,.07); } }
+.settings-profile-manager > summary:active { transform: scale(.985); }
+.settings-profile-manager > summary:focus-visible { outline: 2px solid #b995ff; outline-offset: 3px; }
+
+/* Persoon bewerken. */
+.person-editor { width: 100%; max-width: 560px; max-height: calc(100dvh - 32px); display: flex; flex-direction: column; overflow: hidden; border-radius: 22px; background: #14172a; box-shadow: inset 0 0 0 1px rgba(212,193,255,.12), 0 30px 80px -20px rgba(0,0,0,.8); }
+.person-editor-head { display: flex; align-items: center; gap: 14px; padding: 22px 24px 16px; }
+.person-editor-head h2 { flex: 1; min-width: 0; margin: 0; font-size: 20px; font-weight: 650; color: var(--text-primary); }
+.person-avatar { display: grid; place-items: center; flex-shrink: 0; width: 46px; height: 46px; border-radius: 50%; background: rgba(144,72,240,.22); color: #d5bbff; font-weight: 700; font-size: 15px; }
+.person-avatar svg { width: 22px; height: 22px; }
+.person-editor-close, .person-task-remove { display: grid; place-items: center; flex-shrink: 0; padding: 0; border: 0; border-radius: 10px; background: rgba(255,255,255,.06); color: var(--text-primary); cursor: pointer; transition: background-color 150ms var(--ease-out), transform 160ms var(--ease-out); }
+.person-editor-close { width: 34px; height: 34px; }
+.person-task-remove { width: 26px; height: 26px; border-radius: 8px; }
+@media (hover: hover) { .person-editor-close:hover:not(:disabled), .person-task-remove:hover:not(:disabled) { background: rgba(255,255,255,.12); } }
+.person-editor-close:active, .person-task-remove:active { transform: scale(.97); }
+.person-editor-close:disabled, .person-task-remove:disabled { opacity: .45; cursor: default; }
+.person-editor-fields > .flex-col { gap: 6px; flex-shrink: 0; }
+.person-editor-fields > .flex-col > label { font-size: 13px; font-weight: 400; color: #a9a7bd; }
+.person-editor-fields .input { min-height: 36px; padding-block: 6px; }
+@media (min-height: 760px) { .person-editor-fields .input { min-height: 40px; } }
+.person-task-row > span { padding: 6px 0; font-size: 14px; }
+.person-editor-foot { display: flex; flex-direction: column; gap: 8px; padding: 16px 24px 20px; box-shadow: inset 0 1px 0 rgba(212,193,255,.10); }
+.person-editor-foot p { margin: 0; font-size: var(--font-caption); color: var(--fill-system-critical); }
+.person-editor-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 12px; }
+.person-editor-actions .btn { min-height: 40px; padding: 0 20px; border-radius: 12px; }
+.person-editor-actions .btn:not(.btn-primary) { border: 0; background: rgba(255,255,255,.06); }
+@media (hover: hover) { .person-editor-actions .btn:not(.btn-primary):hover { background: rgba(255,255,255,.1); } }
+@media (max-width: 420px) { .person-editor-actions .btn { flex: 1 1 auto; } .person-editor-head, .person-editor-fields, .person-editor-foot { padding-inline: 16px; } }
+input[type="checkbox"], input[type="radio"] { accent-color: var(--brand-primary); }

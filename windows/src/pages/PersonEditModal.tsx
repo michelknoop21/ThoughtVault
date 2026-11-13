@@ -1,6 +1,6 @@
 import { DesktopDialog } from "../components/ui/DesktopDialog";
 import { useState, useEffect, useRef } from "react";
-import { Dismiss24Regular, Checkmark24Regular } from "../components/ui/StudioIcons";
+import { Dismiss24Regular, Checkmark24Regular, Person24Regular } from "../components/ui/StudioIcons";
 import { usePeopleDirectoryStore } from "../stores/peopleDirectoryStore";
 import { HistoryList } from "../components/settings/HistoryList";
 import type { HistoryEntry } from "../services/contextHistory";
@@ -12,6 +12,13 @@ interface PersonEditModalProps {
   onClose: () => void;
   /** Called right after a new person was added (before the modal closes). */
   onAdded?: (person: PersonProfile) => void;
+}
+
+/** "Jan de Vries" -> "JV"; empty when there is no name yet. */
+function initials(name: string): string {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return "";
+  return (words[0][0] + (words.length > 1 ? words[words.length - 1][0] : "")).toUpperCase();
 }
 
 function splitAndTrim(value: string): string[] {
@@ -53,15 +60,6 @@ export function PersonEditModal({ person, isNew, onClose, onAdded }: PersonEditM
       if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
     };
   }, []);
-
-  // Close on Escape
-  useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
 
   /** Trims and ignores duplicates, case-insensitive. */
   function addTask() {
@@ -142,46 +140,15 @@ export function PersonEditModal({ person, isNew, onClose, onAdded }: PersonEditM
       {/* Modal panel */}
       <div
         className="person-editor"
-        style={{
-          background: "var(--surface-primary)",
-          borderRadius: "var(--radius-md)",
-          border: "1px solid var(--stroke-card)",
-          width: "100%",
-          maxWidth: 520,
-          maxHeight: "calc(100dvh - 32px)",
-          display: "flex",
-          flexDirection: "column",
-          overflow: "hidden",
-        }}
         role="dialog"
         aria-modal="true"
         aria-label={isNew ? "Persoon toevoegen" : `${name || "Persoon"} bewerken`}
       >
         {/* Modal header */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            padding: "12px 20px",
-            borderBottom: "1px solid var(--stroke-divider)",
-          }}
-        >
-          <h2
-            style={{
-              font: "var(--type-subtitle)",
-              color: "var(--text-primary)",
-              margin: 0,
-            }}
-          >
-            {isNew ? "Persoon toevoegen" : "Persoon bewerken"}
-          </h2>
-          <button
-            className="btn btn-ghost btn-sm"
-            onClick={onClose}
-            aria-label="Sluiten"
-            title="Sluiten"
-          >
+        <div className="person-editor-head">
+          <span className="person-avatar" aria-hidden="true">{initials(name) || <Person24Regular />}</span>
+          <h2>{isNew ? "Persoon toevoegen" : "Persoon bewerken"}</h2>
+          <button className="person-editor-close" onClick={onClose} aria-label="Sluiten" title="Sluiten">
             <Dismiss24Regular style={{ fontSize: 16 }} />
           </button>
         </div>
@@ -191,9 +158,7 @@ export function PersonEditModal({ person, isNew, onClose, onAdded }: PersonEditM
 
           {/* Naam */}
           <div className="flex-col gap-4">
-            <label
-              style={{ fontSize: "var(--font-body)", fontWeight: 500, color: "var(--text-primary)" }}
-            >
+            <label>
               Naam
             </label>
             <input
@@ -210,9 +175,7 @@ export function PersonEditModal({ person, isNew, onClose, onAdded }: PersonEditM
 
           {/* Rol / Functie */}
           <div className="flex-col gap-4">
-            <label
-              style={{ fontSize: "var(--font-body)", fontWeight: 500, color: "var(--text-primary)" }}
-            >
+            <label>
               Rol / Functie
             </label>
             <input
@@ -228,9 +191,7 @@ export function PersonEditModal({ person, isNew, onClose, onAdded }: PersonEditM
 
           {/* Organisatie */}
           <div className="flex-col gap-4">
-            <label
-              style={{ fontSize: "var(--font-body)", fontWeight: 500, color: "var(--text-primary)" }}
-            >
+            <label>
               Organisatie
             </label>
             <input
@@ -246,9 +207,7 @@ export function PersonEditModal({ person, isNew, onClose, onAdded }: PersonEditM
 
           {/* Aliassen */}
           <div className="flex-col gap-4">
-            <label
-              style={{ fontSize: "var(--font-body)", fontWeight: 500, color: "var(--text-primary)" }}
-            >
+            <label>
               Aliassen
             </label>
             <input
@@ -264,9 +223,7 @@ export function PersonEditModal({ person, isNew, onClose, onAdded }: PersonEditM
 
           {/* Expertise / onderwerpen */}
           <div className="flex-col gap-4">
-            <label
-              style={{ fontSize: "var(--font-body)", fontWeight: 500, color: "var(--text-primary)" }}
-            >
+            <label>
               Expertise / onderwerpen
             </label>
             <input
@@ -282,9 +239,7 @@ export function PersonEditModal({ person, isNew, onClose, onAdded }: PersonEditM
 
           {/* Intern / extern tri-state */}
           <div className="flex-col gap-4">
-            <label
-              style={{ fontSize: "var(--font-body)", fontWeight: 500, color: "var(--text-primary)" }}
-            >
+            <label>
               Intern / extern
             </label>
             <select
@@ -302,13 +257,13 @@ export function PersonEditModal({ person, isNew, onClose, onAdded }: PersonEditM
 
           {/* Taken en verantwoordelijkheden */}
           <div className="flex-col gap-4">
-            <label style={{ fontSize: "var(--font-body)", fontWeight: 500, color: "var(--text-primary)" }}>
+            <label>
               Taken en verantwoordelijkheden
             </label>
             {tasks.map((task, index) => (
               <div key={`${task}-${index}`} className="person-task-row">
                 <span>{task}</span>
-                <button className="btn btn-ghost btn-sm" aria-label={`Verwijder ${task}`} data-log-label="Taak verwijderen" title="Verwijderen"
+                <button className="person-task-remove" aria-label={`Verwijder ${task}`} data-log-label="Taak verwijderen" title="Verwijderen"
                   onClick={() => setTasks(tasks.filter((_, i) => i !== index))} disabled={isSaving || savedOk}>
                   <Dismiss24Regular style={{ fontSize: 14 }} />
                 </button>
@@ -324,54 +279,30 @@ export function PersonEditModal({ person, isNew, onClose, onAdded }: PersonEditM
 
           {!isNew && (
             <div className="flex-col gap-4">
-              <label style={{ fontSize: "var(--font-body)", fontWeight: 500, color: "var(--text-primary)" }}>Geschiedenis</label>
+              <label>Geschiedenis</label>
               <HistoryList key={historyKey} kind="person" itemId={person.id} onRestore={restore} disabled={isSaving || savedOk} />
             </div>
           )}
         </div>
 
         {/* Modal footer */}
-        <div
-          style={{
-            padding: "12px 20px",
-            borderTop: "1px solid var(--stroke-divider)",
-            display: "flex",
-            flexDirection: "column",
-            gap: 8,
-          }}
-        >
-          {/* Save error */}
-          {saveError && (
-            <p
-              style={{
-                fontSize: "var(--font-caption)",
-                color: "var(--fill-system-critical)",
-                margin: 0,
-              }}
-              role="alert"
-            >
-              {saveError}
-            </p>
-          )}
-
-          {/* Save button */}
-          <button
-            className="btn btn-primary"
-            onClick={handleSave}
-            disabled={isSaving || savedOk || !name.trim()}
-            style={{ width: "100%", justifyContent: "center", gap: 8 }}
-          >
-            {savedOk ? (
-              <>
-                <Checkmark24Regular style={{ fontSize: 16 }} />
-                Opgeslagen
-              </>
-            ) : isSaving ? (
-              "Opslaan..."
-            ) : (
-              isNew ? "Persoon toevoegen" : "Wijzigingen opslaan"
-            )}
-          </button>
+        <div className="person-editor-foot">
+          {saveError && <p role="alert">{saveError}</p>}
+          <div className="person-editor-actions">
+            <button className="btn" onClick={onClose}>Annuleren</button>
+            <button className="btn btn-primary" onClick={handleSave} disabled={isSaving || savedOk || !name.trim()}>
+              {savedOk ? (
+                <>
+                  <Checkmark24Regular style={{ fontSize: 16 }} />
+                  Opgeslagen
+                </>
+              ) : isSaving ? (
+                "Opslaan..."
+              ) : (
+                isNew ? "Persoon toevoegen" : "Wijzigingen opslaan"
+              )}
+            </button>
+          </div>
         </div>
       </div>
     </DesktopDialog>

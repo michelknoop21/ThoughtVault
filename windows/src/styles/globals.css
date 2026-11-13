@@ -65,7 +65,7 @@
   --fill-accent-tertiary: rgba(144, 72, 240, 0.80);
 
   /* Button primary gradient */
-  --btn-primary-gradient: linear-gradient(135deg, var(--brand-primary), rgba(184, 0, 94, 0.82));
+  --btn-primary-gradient: linear-gradient(135deg, var(--brand-primary), var(--brand-primary-dark));
   --btn-primary-shadow: 0 3px 8px rgba(144, 72, 240, 0.30);
 
   /* Status colors — matches macOS */
@@ -109,6 +109,7 @@
   --ease-quick: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-gentle: cubic-bezier(0.22, 0.61, 0.36, 1);
   --ease-hover: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --duration-quick: 150ms;
   --duration-smooth: 300ms;
   --duration-hover: 180ms;
@@ -263,7 +264,7 @@
   opacity: 0.88;
 }
 
-.btn-accent {
+.btn-accent, .btn-primary {
   background: var(--btn-primary-gradient);
   color: #FFFFFF;
   border: none;
@@ -271,14 +272,16 @@
   box-shadow: var(--btn-primary-shadow);
 }
 
-.btn-accent:hover {
-  background: var(--btn-primary-gradient);
-  color: #FFFFFF;
-  box-shadow: 0 4px 12px rgba(144, 72, 240, 0.40);
+@media (hover: hover) {
+  .btn-accent:hover, .btn-primary:hover {
+    background: var(--btn-primary-gradient);
+    color: #FFFFFF;
+    box-shadow: 0 4px 12px rgba(144, 72, 240, 0.40);
+  }
 }
 
-.btn-accent:active {
-  background: linear-gradient(135deg, #CC0068, rgba(160, 0, 82, 0.90));
+.btn-accent:active, .btn-primary:active {
+  background: var(--brand-primary-dark);
   box-shadow: 0 1px 4px rgba(144, 72, 240, 0.20);
   transform: scale(0.97);
   opacity: 1;
@@ -1859,25 +1862,41 @@ select option:checked {
 }
 
 /* ============================================================
-   Scrollbar (thin, brand-colored)
+   Scrollbars: 6px thumb inside a 12px hit area, every scroll container
    ============================================================ */
 
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 12px;
+  height: 12px;
 }
 
-::-webkit-scrollbar-track {
+::-webkit-scrollbar-track, ::-webkit-scrollbar-corner {
   background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--border-primary);
-  border-radius: 3px;
+  background-color: rgba(200, 190, 255, 0.24);
+  border: 3px solid transparent;
+  background-clip: padding-box;
+  border-radius: 8px;
+  min-height: 32px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--text-tertiary);
+  background-color: rgba(200, 190, 255, 0.44);
+}
+
+::-webkit-scrollbar-button {
+  display: none;
+}
+
+/* Chromium ignores the ::-webkit- rules once scrollbar-width is set, so only other engines get these. */
+@supports not selector(::-webkit-scrollbar) {
+  * { scrollbar-width: thin; scrollbar-color: rgba(200, 190, 255, 0.24) transparent; }
+}
+
+@media (forced-colors: active) {
+  ::-webkit-scrollbar-thumb { background-color: ButtonText; }
 }
 
 /* ============================================================
@@ -3715,7 +3734,7 @@ select option:checked {
     forced-color-adjust: none;
   }
 
-  .btn-accent {
+  .btn-accent, .btn-primary {
     background: Highlight;
     color: HighlightText;
     border-color: Highlight;
@@ -3806,6 +3825,7 @@ select option:checked {
   --text-primary:#eef0f8; --text-secondary:#b8bdd6; --text-tertiary:#959cb8;
   --text-accent:#b89eff; --fill-accent:#8d4af5; --fill-accent-secondary:#8042e2;
   --interactive-bg:#7943e2; --interactive-bg-subtle:#7943e226; --interactive-text:#c3a5ff;
+  --interactive-bg-hover:#7943e23a; --interactive-border:#7943e270;
   --border-primary:#343950; --border-secondary:#262d42;
   --card-bg:#151b2d; --card-bg-hover:#1a2037; --card-border:#343953;
   --sidebar-width:240px; --font-family:'Segoe UI Variable','Segoe UI',system-ui,sans-serif;

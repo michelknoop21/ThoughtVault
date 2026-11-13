@@ -71,7 +71,7 @@ export default function FeedbackWidget({ initialOpen = false }: { initialOpen?: 
         <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: 16 }}>
           {tab === "new" ? <div className="flex-col" style={{ gap: 12 }}>
             <label className="form-label">Categorie
-              <select className="select" value={category} disabled={submitting} onChange={event => setCategory(event.target.value as ReportCategory)} style={{ display: "block", width: "100%", minHeight: 44 }}>{CATEGORY_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select>
+              <select className="select" value={category} disabled={submitting} onChange={event => setCategory(event.target.value as ReportCategory)} style={{ width: "100%", minHeight: 44 }}>{CATEGORY_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select>
             </label>
             <label className="form-label">Beschrijving
               <textarea className="input" rows={4} maxLength={5000} value={description} disabled={submitting} onChange={event => setDescription(event.target.value)} placeholder="Beschrijf je melding..." style={{ display: "block", width: "100%", resize: "vertical" }} />

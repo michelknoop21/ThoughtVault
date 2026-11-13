@@ -1,0 +1,12 @@
+versie: 1.0.320
+Nieuw in deze versie:
+- De titel van een notule noemt het doel van het gesprek en wordt niet meer midden in een woord afgekapt.
+- Tijdens het maken van een notule zie je welke stap loopt, zoals Concept schrijven, Broncontrole of Dekkingscontrole 2 van 4.
+- Onder Instellingen, Support staat de knop Toon logbestand.
+
+Graag testen:
+1. Neem een gesprek op of importeer een opname en laat er een notule van maken. Past de titel bij het onderwerp?
+2. Kijk tijdens het maken naar de voortgang. Verschijnen de stapnamen en blijft er niets hangen?
+3. Kies Instellingen, Support, Toon logbestand. Opent het logbestand?
+
+Iets vreemds gezien? Meld het via Instellingen, Support, Melding maken.

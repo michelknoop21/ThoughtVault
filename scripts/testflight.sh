@@ -107,6 +107,9 @@ fi
 
 if [ "$UPLOAD" = true ]; then
     echo "All requested TestFlight uploads submitted for $VERSION."
+    # The upload stays valid when this fails; rerun the script by hand.
+    python3 "$ROOT_DIR/scripts/testflight_wat_te_testen.py" "$VERSION" "$WHAT" \
+        || echo "WARNING: 'Wat te testen' niet ingesteld; draai scripts/testflight_wat_te_testen.py $VERSION $WHAT"
 else
     echo "Local archives and exports complete for $VERSION; nothing uploaded."
 fi

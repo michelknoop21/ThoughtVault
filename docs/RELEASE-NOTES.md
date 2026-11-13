@@ -8,6 +8,17 @@ Elke release is een blok `## <versie> - <titel>` met direct daaronder een cursie
 met datum en platforms, bijvoorbeeld `*12 november 2026 · macOS · iOS · Windows*`.
 De nieuwste release staat bovenaan.
 
+## 1.0.321 - Nieuwe opmaak, een handleiding in de app en kleine fixes
+
+*13 november 2026 · macOS · iOS · Windows*
+
+- Support, Instellingen, Mensen, Persoon bewerken en het lege scherm Taken hebben een nieuwe opmaak die meeschaalt met een smal of breed venster. Op de Mac staan je meldingen links en het gesprek rechts.
+- Bij een persoon op de Mac worden aliassen en expertise losse labels. Typ een waarde en druk op Enter of een komma.
+- Op Windows zijn de keuzelijsten, knoppen en scrollbalken vernieuwd, en Mensen toont initialen, expertise en het label Intern of Extern.
+- Op Windows vraagt de app nu ook om bevestiging als je een notule verwijdert via de rechtermuisknop of in de selectiemodus.
+- Op de Mac heet de opdracht in het menubalkmenu nu **Stop en verwerk**, net als op het opnamescherm. Tijdens het verwerken staat er **Verwerken...**, en bij lokaal werken niet langer **Niet ingelogd**.
+- Het voorbeeld bij Aliassen is nu "Voornaam, bijnaam, initialen", en de Cloud-instelling noemt de ThoughtVault-server.
+
 ## 1.0.320 - Titels van notulen breken niet meer midden in een woord af
 
 *12 november 2026 · macOS · iOS · Windows*

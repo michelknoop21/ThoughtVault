@@ -19,6 +19,7 @@ struct MenuBarContentView: View {
     @AppStorage(SupportIdentity.emailKey) private var supportEmail = ""
     @Environment(RecordingViewModel.self) private var recordingVM
     @Environment(AuthViewModel.self) private var authVM
+    @AppStorage("processingMode") private var processingMode = ProcessingMode.local.rawValue
     @Environment(CalendarService.self) private var calendarService
 
     var body: some View {
@@ -61,7 +62,7 @@ struct MenuBarContentView: View {
                 Button {
                     Task { await recordingVM.stopAndUpload() }
                 } label: {
-                    Label("Stop en upload", systemImage: "arrow.up.circle.fill")
+                    Label("Stop en verwerk", systemImage: "stop.circle.fill")
                 }
 
                 Button(role: .destructive) {
@@ -82,7 +83,7 @@ struct MenuBarContentView: View {
                 Button {
                     Task { await recordingVM.stopAndUpload() }
                 } label: {
-                    Label("Stop en upload", systemImage: "arrow.up.circle.fill")
+                    Label("Stop en verwerk", systemImage: "stop.circle.fill")
                 }
 
                 Button(role: .destructive) {
@@ -162,7 +163,8 @@ struct MenuBarContentView: View {
     private var statusText: String {
         switch recordingVM.recordingState {
         case .idle:
-            return authVM.isAuthenticated ? "Niet aan het opnemen" : "Niet ingelogd"
+            let needsLogin = processingMode == ProcessingMode.cloud.rawValue && !authVM.isAuthenticated
+            return needsLogin ? "Niet ingelogd" : "Niet aan het opnemen"
         case .preparing:
             return "Voorbereiden..."
         case .recording:
@@ -172,7 +174,8 @@ struct MenuBarContentView: View {
         case .stopping:
             return "Stoppen..."
         case .uploading:
-            return "Uploaden..."
+            // Only Cloud mode sends the recording away; locally the app processes it itself.
+            return processingMode == ProcessingMode.cloud.rawValue ? "Uploaden..." : "Verwerken..."
         case .error:
             return "Fout opgetreden"
         }

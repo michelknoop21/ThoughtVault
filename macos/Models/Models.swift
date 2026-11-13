@@ -170,7 +170,7 @@ struct CloudAIConfiguration: Codable, Identifiable, Equatable {
 // MARK: - NotulenProvider
 
 enum NotulenProvider: String, Codable, Sendable, CaseIterable, Identifiable {
-    case cloud          // N8N + Claude (server-side)
+    case cloud          // generated on the ThoughtVault server
     case ollama         // Local Ollama instance
     case lmStudio       // Local LM Studio instance
     case appleIntelligence  // Apple Intelligence (macOS 26+ / iOS 26+)
@@ -184,7 +184,7 @@ enum NotulenProvider: String, Codable, Sendable, CaseIterable, Identifiable {
     /// Dutch display name.
     var displayName: String {
         switch self {
-        case .cloud:             return "Cloud (N8N + Claude)"
+        case .cloud:             return "Cloud (ThoughtVault-server)"
         case .ollama:            return "Ollama (lokaal)"
         case .lmStudio:          return "LM Studio (lokaal)"
         case .appleIntelligence: return "Apple Intelligence"

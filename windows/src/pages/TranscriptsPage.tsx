@@ -137,8 +137,15 @@ export function TranscriptsPage() {
     }
   }
 
+  async function confirmDelete(transcript: Transcript) {
+    const title = transcript.title || "Naamloze opname";
+    if (await confirm(`"${title}" wordt definitief verwijderd.`, "Notule verwijderen", "Verwijderen")) await handleDelete(transcript);
+  }
+
   // --- Bulk delete ---
-  async function handleBulkDelete(ids: string[]) {
+  async function handleBulkDelete(ids: string[]): Promise<boolean> {
+    const what = ids.length === 1 ? "1 notule wordt" : `${ids.length} notulen worden`;
+    if (!await confirm(`${what} definitief verwijderd.`, "Notulen verwijderen", "Verwijderen")) return false;
     const localIds = ids.filter(isLocalId);
     const serverIds = ids.filter((id) => !isLocalId(id));
     try {
@@ -146,8 +153,10 @@ export function TranscriptsPage() {
       if (serverIds.length) await api.bulkDeleteTranscripts(serverIds);
       ids.forEach((id) => deleteTranscript(id));
       toast.show(`${ids.length} items verwijderd`, "success");
+      return true;
     } catch {
       toast.show("Bulk verwijderen mislukt", "error");
+      return false;
     }
   }
 
@@ -566,7 +575,7 @@ export function TranscriptsPage() {
             <ArrowSync24Regular style={{ fontSize: 16 }} /> Regenereer notulen
           </button>
           <div className="context-menu-divider" />
-          <button className="context-menu-item context-menu-item-danger" onClick={() => { handleDelete(contextMenu.transcript); setContextMenu(null); }}>
+          <button className="context-menu-item context-menu-item-danger" onClick={() => { void confirmDelete(contextMenu.transcript); setContextMenu(null); }}>
             <Delete24Regular style={{ fontSize: 16 }} /> Verwijderen
           </button>
         </div>

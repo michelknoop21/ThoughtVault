@@ -249,7 +249,7 @@ export function OnboardingWizard() {
                   label="Hoe noemen collega's jou?"
                   value={profileAliases}
                   onChange={setProfileAliases}
-                  placeholder="Michel, Knoop, MK (kommagescheiden)"
+                  placeholder="Voornaam, bijnaam, initialen (kommagescheiden)"
                 />
                 <ProfileField
                   label="Typische vergadertypen"

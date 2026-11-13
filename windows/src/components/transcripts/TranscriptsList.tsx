@@ -23,7 +23,8 @@ interface TranscriptsListProps {
   onTagToggle: (tag: string) => void;
   onRefresh: () => void;
   onContextMenu: (e: React.MouseEvent, transcript: Transcript) => void;
-  onBulkDelete: (ids: string[]) => void;
+  /** Resolves true once the items are deleted; false when the user cancels or it fails. */
+  onBulkDelete: (ids: string[]) => Promise<boolean>;
 }
 
 const TIME_FILTERS: { key: TimeFilter; label: string }[] = [
@@ -217,8 +218,8 @@ export function TranscriptsList({
           {bulkSelected.size > 0 && (
             <>
               <span className="tl-bulk-count">{bulkSelected.size} geselecteerd</span>
-              <button className="btn btn-sm tl-bulk-delete" onClick={() => {
-                onBulkDelete(Array.from(bulkSelected));
+              <button className="btn btn-sm tl-bulk-delete" onClick={async () => {
+                if (!await onBulkDelete(Array.from(bulkSelected))) return;
                 setBulkSelected(new Set());
                 setBulkMode(false);
               }}>

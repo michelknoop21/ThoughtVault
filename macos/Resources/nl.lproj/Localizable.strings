@@ -183,7 +183,7 @@
 "Melding sluiten" = "Melding sluiten";
 "Mensen" = "Mensen";
 "Menu uitklappen" = "Menu uitklappen";
-"Michel, Knoop, MK (kommagescheiden)" = "Michel, Knoop, MK (kommagescheiden)";
+"Voornaam, bijnaam, initialen (kommagescheiden)" = "Voornaam, bijnaam, initialen (kommagescheiden)";
 "Microfoon" = "Microfoon";
 "Microsoft 365" = "Microsoft 365";
 "Microsoft 365 Agenda" = "Microsoft 365 Agenda";
@@ -213,7 +213,7 @@
 "Notule beschikbaar" = "Notule beschikbaar";
 "Notulen" = "Notulen";
 "Notulen genereren" = "Notulen genereren";
-"Notulen worden via de server gegenereerd (N8N + Claude)." = "Notulen worden via de server gegenereerd (N8N + Claude).";
+"Notulen worden op de ThoughtVault-server gegenereerd." = "Notulen worden op de ThoughtVault-server gegenereerd.";
 "Of voer deze code handmatig in:" = "Of voer deze code handmatig in:";
 "Oké" = "Oké";
 "Ollama" = "Ollama";
@@ -299,7 +299,7 @@
 "Stel in op Ollama Cloud en vul je API-sleutel in" = "Stel in op Ollama Cloud en vul je API-sleutel in";
 "Stijl" = "Stijl";
 "Stop" = "Stop";
-"Stop en upload" = "Stop en upload";
+"Stop en verwerk" = "Stop en verwerk";
 "Stop opname en upload" = "Stop opname en upload";
 "Systeem statistieken" = "Systeem statistieken";
 "Systeemaudio kon niet worden samengevoegd" = "Systeemaudio kon niet worden samengevoegd";

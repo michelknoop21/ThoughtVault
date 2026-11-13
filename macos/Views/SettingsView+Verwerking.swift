@@ -360,7 +360,7 @@ extension SettingsView {
                 providerPanel
                 Text(localNotuleDescription).font(.system(size: 12.5)).foregroundStyle(HomeColor.text3)
             } else {
-                Text("Notulen worden via de server gegenereerd (N8N + Claude).")
+                Text("Notulen worden op de ThoughtVault-server gegenereerd.")
                     .font(.system(size: 13.5)).foregroundStyle(HomeColor.text2)
             }
 

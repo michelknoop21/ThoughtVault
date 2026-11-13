@@ -1,10 +1,52 @@
-# ThoughtVault Windows — installatie en gebruik voor de interne pilot
+# ThoughtVault Windows: installatie en gebruik voor de interne pilot
 
-Status 9 november: **nog niet vrijgegeven voor collega’s**. Dalf38 heeft 1.0.305;
-1.0.306 wordt als ontwikkelkandidaat gebouwd. Er is nog geen goedgekeurde download.
-Het [actuele uitrolbewijs](qa/colleague-rollout-2026-11-09/STATUS.md) en de
-[inhoudsbeoordeling](qa/colleague-rollout-2026-11-09/CONTENT-REVIEW.md) bepalen de
-vrijgave. Oudere versies hieronder zijn uitsluitend herstelreferenties.
+Status 13 november 2026: **1.0.320 staat op de downloadpagina en in de updatefeed.**
+Collega's zijn nog niet uitgenodigd; dat besluit staat open, zie
+[Open voor de uitnodiging](#open-voor-de-uitnodiging). Bestaande installaties met
+automatisch bijwerken krijgen 1.0.320 al, los van dat besluit. Oudere versies
+verderop in dit document zijn uitsluitend herstelreferenties.
+
+## Stand van 1.0.320
+
+| Onderdeel | Gemeten op 13 november |
+|---|---|
+| Bron | `main` op `dd726c5`, tag `v1.0.320` |
+| Windows-build | GitHub Actions-run 43236189080 op `dd726c5`, geslaagd inclusief de stappen "Verify installed app and upgrade" en "Upload to server" |
+| Download | `ThoughtVault_1.0.320_x64.msi` op de downloadpagina uit [AUTOMATISCHE-UPDATES.md](AUTOMATISCHE-UPDATES.md); `releases.json` noemt dezelfde versie |
+| SHA-256 MSI | `3cb6e66d6f98677e4e1213ec289073917b97407518acaefad61ce9a997030201` |
+| Updatefeed | `/releases/windows/stable.json` meldt 1.0.320, gepubliceerd 12 november 14:38 UTC, met signature |
+| macOS en iOS | TestFlight build 320, geüpload op 12 november vanaf `v1.0.320`. Zichtbaar voor interne testers. Een externe testgroep vraagt Beta App Review en die is niet aangevraagd |
+
+Controleer de download vóór installatie:
+
+```powershell
+Get-FileHash .\ThoughtVault_1.0.320_x64.msi -Algorithm SHA256
+```
+
+Twee dingen kloppen nog niet buiten Windows. De downloadpagina biedt voor macOS
+`TranscriptStudio-1.0.242.dmg` aan: stuur Mac-collega's daar niet heen, hun route
+is TestFlight. En de App Store Connect-API antwoordde op 13 november met
+`403 REQUIRED_AGREEMENTS_MISSING_OR_EXPIRED`: in App Store Connect moet eerst een
+overeenkomst worden geaccepteerd voordat de TestFlight-stand opnieuw te lezen is
+of een build naar een externe groep kan.
+
+## Open voor de uitnodiging
+
+De [blockerlijst van 9 november](qa/colleague-rollout-2026-11-09/STATUS.md) is
+sindsdien niet opnieuw beoordeeld. De CI dekt van blocker 4 de installatie, de
+signature en de upgrade; een rollback is niet bewezen. Deze vragen moet Michel
+beantwoorden voordat er een uitnodiging uitgaat:
+
+1. Gelden blocker 2 (volledige flow, tien stabiele runs), 3 (verse identiteit met
+   eigen toegang op een schone installatie) en 5 (vijf werkdagen pilot) nog als
+   poort, of is 1.0.320 de vrijgave?
+2. Welk notulenmodel krijgt de collega voorgeschreven? De evaluatie van 9 november
+   (DEC-060) gaf `mistral-large-4` 17 van 18 feiten en `gpt-oss:120b` 9 van 18; de
+   inhoudsacceptatie van dezelfde dag liep op Ollama Cloud met Kimi K2.6. Welk
+   transcriptiemodel hoort daarbij?
+3. Hoe komt een collega aan een eigen providersleutel, en wie betaalt het gebruik?
+4. Welk supportcontact staat in de uitnodiging: het Support-scherm in de app
+   (DEC-066) of `sales@yinga.nl`, dat nu op de downloadpagina staat?
 
 ## Eerste start en eerste notule
 
@@ -35,8 +77,8 @@ hele pc vraagt Windows-beheerrechten; ontwikkeltools zijn niet nodig.
    Controleer ook het geëxporteerde document voordat je het deelt.
 
 Agenda en Obsidian zijn optioneel. Voor de eerste notule zijn ze niet nodig.
-Het echte supportcontact, de beperkte download en het toegangsproces worden vóór
-uitnodiging ingevuld; deze voorbereiding is nog geen collega-uitnodiging.
+Supportcontact en toegangsproces staan nog open (zie hierboven); deze
+voorbereiding is nog geen collega-uitnodiging.
 
 ## Historische kandidaat 1.0.296
 

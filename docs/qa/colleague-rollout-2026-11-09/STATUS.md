@@ -1,5 +1,9 @@
 # Windows collega-uitrol — actuele status
 
+Stand 13 november 2026: 1.0.320 is gebouwd en gepubliceerd. De actuele stand en de
+open vragen staan in [WINDOWS-PILOT.md](../../WINDOWS-PILOT.md); alles hieronder
+is de toestand van 9 november en is sindsdien niet opnieuw beoordeeld.
+
 Actueel 9 november 12:37 CET: service-inhoudsacceptatie geslaagd op **Ollama Cloud
 Kimi K2.6** (3/3 volledige generaties, 6/6 vaste auditgevallen). Zie
 [inhoudsbeoordeling](CONTENT-REVIEW.md). Native ontwikkelkandidaat **1.0.306**,

@@ -13,6 +13,10 @@ Elke opname die je stopt en elk audiobestand dat je importeert wordt een taak. E
 ![Taken op de iPhone, met de keuze tussen Actief, Wachtrij en Voltooid.](media/ios-taken.webp)
 :::
 
+::: macos
+Loopt er niets, dan zie je **Geen actieve taken** met de knoppen **Start een opname** en **Audiobestand importeren**, en drie kaarten met de stappen die een taak doorloopt: **Transcriberen**, **Concept schrijven** en **Controleren**.
+:::
+
 ## Wat je per taak ziet
 
 ::: macos

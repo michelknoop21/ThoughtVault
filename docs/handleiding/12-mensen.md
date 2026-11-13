@@ -40,10 +40,14 @@ Je opent het scherm via **Mensen** in de zijbalk of met `Ctrl+5`.
 | **Naam** | De volledige naam zoals hij in de notule moet staan. Verplicht. |
 | **Rol / Functie** | Bijvoorbeeld Projectmanager. |
 | **Organisatie** | Het bedrijf of de afdeling. |
-| **Aliassen** | Andere manieren waarop iemand genoemd wordt: voornaam, achternaam, initialen. Scheid ze met komma's. |
+| **Aliassen** | Andere manieren waarop iemand genoemd wordt: voornaam, bijnaam, initialen. Scheid ze met komma's. |
 | **Expertise / onderwerpen** | Waar iemand over gaat, gescheiden door komma's. |
 | **Intern / extern** | **Intern**, **Extern** of **Onbekend**. |
 | **Taken en verantwoordelijkheden** | Typ een taak bij **Nieuwe taak** en kies **Toevoegen**. Herhaal dat per taak. Een taak die er al staat, wordt niet dubbel toegevoegd. |
+
+::: macos
+Op de Mac worden aliassen en expertise losse labels: typ een waarde en druk op Enter of een komma. Met het kruisje op een label haal je hem weg. Het venster heeft twee kolommen: links de gegevens, rechts de taken, de geschiedenis en de gesprekken.
+:::
 
 ::: macos ios
 Bij **Rol / Functie**, **Organisatie** en **Expertise / onderwerpen** stelt de app waarden voor die je al bij andere personen hebt gebruikt.
@@ -53,14 +57,22 @@ Bij **Rol / Functie**, **Organisatie** en **Expertise / onderwerpen** stelt de a
 
 Het zoekveld zoekt in namen, aliassen en e-mailadressen.
 
+::: macos windows
+Bovenaan staat hoeveel personen er in de lijst staan. Elke regel toont de initialen, de naam, de rol en organisatie, de expertise als labels (of **Nog geen expertise**) en het label **Intern**, **Extern** of **Onbekend**. Is het venster smal, dan staan de labels onder de naam.
+:::
+
 ::: macos ios
-Elke regel toont de naam, de rol en organisatie en het label **Intern**, **Extern** of **Onbekend**. Kies het potlood om iemand te bewerken en sla op met **Wijzigingen opslaan**. Met de prullenbak verwijder je de persoon. De app vraagt om bevestiging.
+Kies het potlood om iemand te bewerken en sla op met **Wijzigingen opslaan**. Met de prullenbak verwijder je de persoon. De app vraagt om bevestiging.
+:::
+
+::: ios
+Elke regel toont de naam, de rol en organisatie en het label **Intern**, **Extern** of **Onbekend**.
 :::
 
 ::: windows
-Elke regel toont de naam met de rol en organisatie. De gekleurde stip ervoor staat voor intern, extern of onbekend: houd de muis erboven voor de betekenis. Klik op een regel om de persoon te bewerken en sla op met **Wijzigingen opslaan**.
+Klik op een regel of op het potlood om de persoon te bewerken en sla op met **Wijzigingen opslaan**, of sluit met **Annuleren**.
 
-Verwijderen: beweeg de muis over de regel, klik op de prullenbak en bevestig met **Verwijderen**.
+Verwijderen: klik op de prullenbak en bevestig in de regel met **Verwijderen**.
 :::
 
 Een verwijderde persoon verdwijnt uit de lijst en uit de deelnemerskeuze. Bestaande notulen veranderen niet.

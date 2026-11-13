@@ -10,7 +10,7 @@ Vanuit de app stuur je een melding rechtstreeks naar de ontwikkelaar: een fout, 
 Bij de eerste start vraagt de app om je naam en e-mailadres. Zonder die twee kun je niet verder. Ze zijn nodig om je meldingen te beantwoorden en maken geen account aan.
 
 ::: macos
-Het scherm heet **Voor wie zijn de antwoorden?**. Later pas je de gegevens aan bij **Instellingen** > **Account**, in het blok **Support**: wijzig **Naam** of **E-mailadres** en klik op **Opslaan**.
+Het scherm heet **Voor wie zijn de antwoorden?**. Later pas je de gegevens aan bij **Instellingen** > **Account**, in de kaart **Contact voor meldingen**: wijzig **Naam** of **E-mailadres** en klik op **Opslaan**.
 :::
 
 ::: ios
@@ -27,9 +27,11 @@ Je naam mag maximaal 200 tekens lang zijn, je e-mailadres maximaal 320.
 
 ::: macos
 1. Open **Instellingen** > **Account** en klik op **Melding maken**. Het kan ook via het menu **Help** > **Melding maken…** in de menubalk.
-2. Kies een **Categorie**: **Fout**, **Idee** of **Vraag**.
-3. Beschrijf bij **Omschrijving** wat er gebeurde of wat je wilt weten. Er passen 5000 tekens in, de teller staat onder het veld.
-4. Klik op **Versturen**.
+2. Kies bij **Waar gaat je melding over?** een van de drie kaarten: **Fout** (iets werkt niet zoals het hoort), **Idee** (een wens of verbetering) of **Vraag** (je wilt weten hoe iets werkt).
+3. Beschrijf bij **Omschrijving** wat je deed, wat je verwachtte en wat er gebeurde. Er passen 5000 tekens in, de teller staat onder het veld.
+4. Klik rechtsonder op **Versturen**.
+
+Boven de knop staat wat er met je melding meegaat: je naam, e-mailadres, de app-versie, je apparaat, je klikpad en een afgeschermd logbestand. Je opnames, transcripties en notulen gaan nooit mee.
 
 Onder de knop lees je de uitkomst:
 
@@ -76,10 +78,10 @@ Een antwoord op je melding komt in de app en per e-mail.
 
 ::: macos
 1. Open **Instellingen** > **Account** en klik op **Mijn meldingen**, of kies **Help** > **Mijn meldingen**.
-2. Klik op een melding om het gesprek te openen.
-3. Typ onder **Antwoord** je reactie en klik op **Stuur**.
+2. Links staan je meldingen, elk met nummer, status en het laatste antwoord. Klik op een melding: rechts opent het gesprek, met jouw berichten rechts en die van support links.
+3. Typ onderin bij **Schrijf een antwoord** je reactie en klik op **Stuur**.
 
-Met **Vernieuwen** haal je de lijst opnieuw op.
+Met **Vernieuwen** haal je de lijst opnieuw op. Is het venster smal, dan zie je eerst alleen de lijst; met **Terug naar Mijn meldingen** ga je vanuit een gesprek terug.
 :::
 
 ::: ios

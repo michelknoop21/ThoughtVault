@@ -40,15 +40,7 @@ extension SettingsView {
                 group("Notulen generatie") {
                     link(icon: "sparkles", title: "Verwerking",
                          subtitle: isLocalProcessing ? "Lokaal op dit apparaat" : "Cloud (server)") {
-                        subpage("Verwerking") {
-                            verwerkingsmodusSection
-                            if isLocalProcessing {
-                                transcriptieSection
-                                lokaleNotulenSection
-                            } else {
-                                cloudNotulenSection
-                            }
-                        }
+                        verwerkingIOSPage
                     }
                     IOSDivider()
                     link(icon: "character.book.closed", title: "Woordenlijst", subtitle: "Namen en termen voor betere notulen.") {
@@ -117,6 +109,7 @@ extension SettingsView {
         // Screenshot hooks (debug builds only, see IOSDebug).
         .navigationDestination(isPresented: .constant(IOSDebug.open == "profiles")) { ProfilesView() }
         .navigationDestination(isPresented: .constant(IOSDebug.open == "account")) { AccountView() }
+        .navigationDestination(isPresented: .constant(IOSDebug.open?.hasPrefix("verwerking") == true)) { verwerkingIOSPage }
     }
 
     // MARK: Building blocks

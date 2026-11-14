@@ -233,7 +233,7 @@ enum ContextSuggestions {
     @MainActor static func recordSkip(_ reason: ContextSuggestionSkip, taskId: String) {
         var set = load(taskId: taskId) ?? ContextSuggestionSet()
         set.skipped = reason
-        do { try save(set, taskId: taskId) } catch { logger.error("Context suggestions skip not stored: \(LogRedact.mask(error.localizedDescription))") }
+        do { try save(set, taskId: taskId) } catch { logger.error("Context suggestions skip not stored: \(LogRedact.mask(error.localizedDescription)) error=\(LogRedact.describe(error))") }
         NotificationCenter.default.post(name: .contextSuggestionsUpdated, object: nil, userInfo: ["taskId": taskId])
     }
 
@@ -277,7 +277,7 @@ enum ContextSuggestions {
                 }
                 logger.info("Context suggestions: \(set.terms.count) terms, \(set.people.count) people")
             } catch {
-                logger.error("Context suggestions failed: \(LogRedact.mask(error.localizedDescription))")
+                logger.error("Context suggestions failed: \(LogRedact.mask(error.localizedDescription)) error=\(LogRedact.describe(error))")
             }
         }
     }

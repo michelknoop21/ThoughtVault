@@ -32,7 +32,7 @@ export const TaskStatusLabels: Record<TaskStatus, string> = {
 export type RecordingMode = "microphone" | "combined";
 
 // Notulen providers
-export type NotulenProvider = "cloud" | "ollama" | "lm-studio" | "openai" | "anthropic";
+export type NotulenProvider = "cloud" | "ollama" | "lm-studio" | "openai" | "anthropic" | "openrouter";
 
 // Processing mode: "cloud" = upload to backend, "local" = transcribe + generate
 // fully on-device (Whisper + Ollama/LM Studio). Mirrors the macOS processingMode.
@@ -365,6 +365,7 @@ export interface AppSettings {
   lm_studio_model: string;
   openai_model: string;
   anthropic_model: string;
+  openrouter_model: string;
   default_profile_id: string;
   default_recording_mode: RecordingMode;
   has_completed_onboarding: boolean;
@@ -383,7 +384,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   server_url: "https://n8n.prezent.nl/tstudio/api",
   processing_mode: "local",
   whisper_model: "medium",
-  notulen_provider: "ollama",
+  notulen_provider: "openrouter",
   notulen_fallback_provider: "",
   ollama_url: "http://localhost:11434",
   ollama_model: "llama3.2",
@@ -391,6 +392,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   lm_studio_model: "local-model",
   openai_model: "gpt-5.6-terra",
   anthropic_model: "claude-sonnet-5-5",
+  openrouter_model: "mistralai/mistral-large-4-0",
   default_profile_id: "standaard",
   default_recording_mode: "combined",
   has_completed_onboarding: false,

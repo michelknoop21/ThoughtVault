@@ -8,6 +8,31 @@ _Decisions DEC-039 through DEC-053 archived to [archive/DECISIONS-DEC-039-to-DEC
 
 ---
 
+## DEC-070: Verwerking: Parakeet, OpenRouter als standaard en de iOS-pagina gelijk aan macOS
+
+**Date:** 2026-11-14
+**Status:** Implemented on `feat/ios-verwerking-parakeet-openrouter`; not accepted on a device
+
+**Context:** Op 14 november mislukte lokale transcriptie op een iPhone met "Model gereedmaken duurde te lang (300s)". De oorzaak zat in `withTimeout` (`LocalTranscriber.swift`): die liet één `Task.sleep` van 300 seconden tegen het laden van het model lopen en telde daarmee kloktijd. iOS had de app 12 minuten opgeschort, dus de limiet was al verlopen op het moment dat de app terugkwam, terwijl het model nauwelijks tijd had gehad. Los daarvan liep de iOS-pagina Verwerking achter op macOS: geen Snelle setup, geen modellijst, geen sleutelpaneel. Notulen via OpenRouter bestonden alleen als OpenAI-compatibel adres. DEC-067 tot en met DEC-069 staan op andere branches, daarom is dit DEC-070.
+
+**Decision:**
+- **Parakeet** wordt de derde lokale transcriptie-engine op macOS en iOS naast WhisperKit en Apple Spraakherkenning. De catalogus (`ParakeetCatalog.swift`) kent Parakeet Ultra (632 MB, aanbevolen vanaf 16 GB op een Mac), Parakeet TDT v3 (496 MB, vanaf 8 GB) en Parakeet Redux (220 MB, vraagt macOS 15 of iOS 18). Elk model kent Nederlands en 24 andere talen. Het toestel krijgt het eerste model uit die volgorde waarvoor geheugen, systeemversie en vrije opslag (twee keer de downloadgrootte) toereikend zijn. De drempels zijn een schatting en niet per toestel gemeten. De lijst (`ParakeetModelRows.swift`) is op beide platforms dezelfde, met Download, voortgang met Stop, Verwijder, Opnieuw, de labels "Aangeraden voor deze Mac" en "Aangeraden voor dit toestel" en bij een model dat niet past de reden. De modellen zijn van NVIDIA onder CC BY 4.0, wat in de lijst staat. WhisperKit blijft de engine die Snelle setup instelt. Windows had al een Parakeet-model en blijft ongewijzigd.
+- **OpenRouter** wordt een eigen aanbieder voor notulen op macOS, iOS en Windows, als eerste tegel, met een eigen sleutelveld en standaardmodel `mistralai/mistral-large-4-0` (de uitkomst van de evaluatie in DEC-060). Nieuwe installaties starten op OpenRouter. Bestaande installaties houden hun aanbieder: op Apple beslist `decideLegacyDefault` eenmalig bij de eerste start van de nieuwe versie en bewaart dat in de lokale vlag `notulenLegacyDefault`, die niet synchroniseert en `notulenProvider` zelf niet schrijft. Op Windows zet settingsmigratie naar versie 2 een ontbrekende aanbieder op Ollama. Snelle setup laat een OpenRouter zonder sleutel staan en toont "OpenRouter: sleutel nodig" met de knop "Sleutel invullen"; een andere gehoste aanbieder zonder sleutel valt nog steeds terug op Apple Intelligence of Ollama.
+- **iOS-pagina Verwerking** krijgt dezelfde kaarten als macOS (`SettingsView+VerwerkingIOS.swift`): Snelle setup, Transcriptie met engine, Whisper-modeldownload en Parakeet-rijen, en Notulen met aanbiedertegels, sleutelpaneel en "Terugval bij fout". Logica die beide platformen delen staat in `SettingsView+VerwerkingLogic.swift`.
+- **Opnemen op iOS** mengt met andere audio (`.mixWithOthers`): een video of muziek in een andere app speelt door en komt via de speaker in de opname. `allowBluetoothHFP` is eruit, zodat oordopjes niet naar belkwaliteit schakelen en de microfoon van de iPhone opneemt. Met oordopjes in hoort die microfoon de video dus niet.
+- **Modellimiet**: de tijdslimiet van 300 seconden voor het laden van een lokaal model telt alleen tijd waarin de app draait. `withTimeout` telt nu 300 tikken van een seconde, en tijdens een opschorting door iOS loopt geen tik. iOS pauzeert de verwerking nog steeds zodra de app naar de achtergrond gaat; de gebruiker houdt de app open tijdens verwerking.
+- **Diagnose**: het log en de automatische rapporten bevatten foutcodes, de gebruikte instellingen, de audioroute en de levenscyclus van de app, nooit inhoud. Dat staat beschreven in `SUPPORT-RELAY.md`.
+
+**Measurements (this Mac, not an iPhone):** een opname van 82 minuten met veel ruis kostte 55 seconden met Parakeet v3 en 39 seconden met Ultra, met een piekgeheugen van 757 en 671 MB. Engelse functiewoorden (the, and, you, that) kwamen 325 keer voor in het v3-transcript, 74 keer bij Ultra en 2 keer in het bewaarde Whisper-transcript: v3 laat in dit transcript veel Engelse woorden zien die Whisper niet had. Een opname van 17 minuten duurde met beide ongeveer 10 seconden. Op een iPhone is niets gemeten, dus de geheugendrempels voor iOS en de duur daar zijn niet bewezen.
+
+**Consequences:**
+- Parakeet is op beide platformen beschikbaar maar niet de standaard. Ultra past bij ruisige opnames beter dan v3; of Parakeet Whisper op kwaliteit verslaat, is met de woordtelling niet aangetoond.
+- Een nieuwe installatie kan zonder sleutel geen notulen maken. Snelle setup wijst die sleutel aan, maar een gebruiker die de pagina niet opent, ziet pas bij de eerste notule dat de sleutel ontbreekt.
+- Een bestaande installatie met een gesynchroniseerde `notulenProvider` verandert niet. `decideLegacyDefault` draait voor de start van de instellingensynchronisatie, zodat de beslissing valt voordat er een aanbieder uit iCloud binnenkomt.
+- De opnamewijziging en de iPhone-metingen zijn niet op een toestel geaccepteerd. Het handboek (`14-instellingen.md`, `09-lokaal-of-cloud.md`) is bijgewerkt; de schermafbeeldingen volgen.
+
+---
+
 ## DEC-066: Lokale integratie van support, veilig bijwerken en privacy
 
 **Date:** 2026-11-10

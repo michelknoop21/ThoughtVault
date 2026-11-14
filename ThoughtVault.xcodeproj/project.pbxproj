@@ -7,6 +7,26 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		AAPK0001 /* ParakeetCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAPK0001 /* ParakeetCatalog.swift */; };
+		ABPK0001 /* ParakeetCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAPK0001 /* ParakeetCatalog.swift */; };
+		AAPK1000 /* ParakeetModelRows.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAPK1000 /* ParakeetModelRows.swift */; };
+		ABPK1000 /* ParakeetModelRows.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAPK1000 /* ParakeetModelRows.swift */; };
+		AAPK1100 /* SettingsView+VerwerkingLogic.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAPK1100 /* SettingsView+VerwerkingLogic.swift */; };
+		ABPK1100 /* SettingsView+VerwerkingLogic.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAPK1100 /* SettingsView+VerwerkingLogic.swift */; };
+		AAPK1200 /* SettingsView+VerwerkingIOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAPK1200 /* SettingsView+VerwerkingIOS.swift */; };
+		ABPK1200 /* SettingsView+VerwerkingIOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAPK1200 /* SettingsView+VerwerkingIOS.swift */; };
+		AAPK1300 /* StudioComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAPK1300 /* StudioComponents.swift */; };
+		ABPK1300 /* StudioComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAPK1300 /* StudioComponents.swift */; };
+		AAPK0002 /* ParakeetModelStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAPK0002 /* ParakeetModelStore.swift */; };
+		AADG0001 /* DiagnosticLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = FADG0001 /* DiagnosticLog.swift */; };
+		ABPK0002 /* ParakeetModelStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAPK0002 /* ParakeetModelStore.swift */; };
+		ABDG0001 /* DiagnosticLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = FADG0001 /* DiagnosticLog.swift */; };
+		AAPK0003 /* ParakeetTranscriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAPK0003 /* ParakeetTranscriber.swift */; };
+		ABPK0003 /* ParakeetTranscriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAPK0003 /* ParakeetTranscriber.swift */; };
+		ACPK0001 /* ParakeetCatalogTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBPK0001 /* ParakeetCatalogTests.swift */; };
+		ACPK0002 /* NotulenDefaultMigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBPK0002 /* NotulenDefaultMigrationTests.swift */; };
+		AFFA0001 /* FluidAudio in Frameworks */ = {isa = PBXBuildFile; productRef = SDFA0001 /* FluidAudio */; };
+		AFFA0002 /* FluidAudio in Frameworks */ = {isa = PBXBuildFile; productRef = SDFA0002 /* FluidAudio */; };
 		AA0F0701 /* SupportIdentityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0F0701 /* SupportIdentityView.swift */; };
 		AA0F0801 /* SupportViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0F0801 /* SupportViews.swift */; };
 		40E8004F9E0DF7B8A00DBC28 /* SupportViews+Mac.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AF241B1198BCA47C72E616A /* SupportViews+Mac.swift */; };
@@ -371,6 +391,16 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		FAPK0001 /* ParakeetCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParakeetCatalog.swift; sourceTree = "<group>"; };
+		FAPK1000 /* ParakeetModelRows.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParakeetModelRows.swift; sourceTree = "<group>"; };
+		FAPK1100 /* SettingsView+VerwerkingLogic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SettingsView+VerwerkingLogic.swift"; sourceTree = "<group>"; };
+		FAPK1200 /* SettingsView+VerwerkingIOS.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SettingsView+VerwerkingIOS.swift"; sourceTree = "<group>"; };
+		FAPK1300 /* StudioComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StudioComponents.swift; sourceTree = "<group>"; };
+		FAPK0002 /* ParakeetModelStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParakeetModelStore.swift; sourceTree = "<group>"; };
+		FADG0001 /* DiagnosticLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticLog.swift; sourceTree = "<group>"; };
+		FAPK0003 /* ParakeetTranscriber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParakeetTranscriber.swift; sourceTree = "<group>"; };
+		FBPK0001 /* ParakeetCatalogTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParakeetCatalogTests.swift; sourceTree = "<group>"; };
+		FBPK0002 /* NotulenDefaultMigrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotulenDefaultMigrationTests.swift; sourceTree = "<group>"; };
 		FA0F0701 /* SupportIdentityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupportIdentityView.swift; sourceTree = "<group>"; };
 		FB0F0E01 /* envelope-fixture.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "tests/fixtures/envelope-fixture.json"; sourceTree = SOURCE_ROOT; };
 		FA0F0801 /* SupportViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupportViews.swift; sourceTree = "<group>"; };
@@ -585,6 +615,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				AA000065 /* WhisperKit in Frameworks */,
+				AFFA0001 /* FluidAudio in Frameworks */,
 				AAUP0001 /* Sparkle in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -601,6 +632,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A8E86B545582AEF6E232112A /* WhisperKit in Frameworks */,
+				AFFA0002 /* FluidAudio in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -698,6 +730,10 @@
 				FA000014 /* LLMService.swift */,
 				FA0000K4 /* ProcessingAdvisor.swift */,
 				FA0000K3 /* WhisperModelStore.swift */,
+				FAPK0001 /* ParakeetCatalog.swift */,
+				FAPK0002 /* ParakeetModelStore.swift */,
+				FADG0001 /* DiagnosticLog.swift */,
+				FAPK0003 /* ParakeetTranscriber.swift */,
 				FA0000K2 /* AppleFoundationModelService.swift */,
 				FA0000K1 /* AnthropicLLMService.swift */,
 				FA000062 /* LocalTranscriptStore.swift */,
@@ -782,6 +818,9 @@
 				FA0000S1 /* RecordingView+Studio.swift */,
 				FA000031 /* SettingsView.swift */,
 				FA0000K8 /* SettingsView+VerwerkingSide.swift */,
+				FAPK1200 /* SettingsView+VerwerkingIOS.swift */,
+				FAPK1100 /* SettingsView+VerwerkingLogic.swift */,
+				FAPK1000 /* ParakeetModelRows.swift */,
 				FA0000K7 /* SettingsView+Verwerking.swift */,
 				F1D71F9B7A4C14F2548A9932 /* SettingsView+Cards.swift */,
 				FA0000K6 /* SettingsView+Studio.swift */,
@@ -823,6 +862,7 @@
 				FA0000S3 /* MainSidebar.swift */,
 				FA0000H5 /* HomeDecor.swift */,
 				FA0000I1 /* IOSTheme.swift */,
+				FAPK1300 /* StudioComponents.swift */,
 				FA000052 /* PermissionBanner.swift */,
 				FA000053 /* EditableHTMLWebView.swift */,
 				FADF1101 /* DraftReviewSection.swift */,
@@ -885,6 +925,8 @@
 				FB0000N8 /* NotuleAuditTests.swift */,
 				FB0000T3 /* NotuleGeneratorTests.swift */,
 				FB0000T5 /* LocalPipelineTests.swift */,
+				FBPK0001 /* ParakeetCatalogTests.swift */,
+				FBPK0002 /* NotulenDefaultMigrationTests.swift */,
 				FB0000N9 /* NotuleConstraintTests.swift */,
 				FB00AP01 /* NotuleAuditPartsTests.swift */,
 				FB00ML01 /* ModelRequestLogTests.swift */,
@@ -935,6 +977,7 @@
 			name = ThoughtVault;
 			packageProductDependencies = (
 				SD000001 /* WhisperKit */,
+				SDFA0001 /* FluidAudio */,
 			);
 			productName = ThoughtVault;
 			productReference = FC000001 /* ThoughtVault.app */;
@@ -973,6 +1016,7 @@
 			name = "ThoughtVault AppStore";
 			packageProductDependencies = (
 				FC0416C3791FB02F36F1DFE3 /* WhisperKit */,
+				SDFA0002 /* FluidAudio */,
 			);
 			productName = ThoughtVault;
 			productReference = 4B0C1A153C3D40142C200C53 /* ThoughtVault.app */;
@@ -1009,6 +1053,7 @@
 			mainGroup = GG000000 /* ThoughtVaultApp */;
 			packageReferences = (
 				SP000001 /* XCRemoteSwiftPackageReference "WhisperKit" */,
+				SPFA0001 /* XCRemoteSwiftPackageReference "FluidAudio" */,
 				SPUP0001 /* Sparkle */,
 			);
 			productRefGroup = GG000090 /* Products */;
@@ -1056,6 +1101,14 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AAPK0001 /* ParakeetCatalog.swift in Sources */,
+				AAPK0002 /* ParakeetModelStore.swift in Sources */,
+				AADG0001 /* DiagnosticLog.swift in Sources */,
+				AAPK1300 /* StudioComponents.swift in Sources */,
+				AAPK1200 /* SettingsView+VerwerkingIOS.swift in Sources */,
+				AAPK1100 /* SettingsView+VerwerkingLogic.swift in Sources */,
+				AAPK1000 /* ParakeetModelRows.swift in Sources */,
+				AAPK0003 /* ParakeetTranscriber.swift in Sources */,
 				AA000001 /* ThoughtVaultApp.swift in Sources */,
 				AA0F0601 /* MenuBarViews.swift in Sources */,
 				AA000002 /* ContentView.swift in Sources */,
@@ -1206,6 +1259,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				ACPK0001 /* ParakeetCatalogTests.swift in Sources */,
+				ACPK0002 /* NotulenDefaultMigrationTests.swift in Sources */,
 				AB000001 /* ThoughtVaultTests.swift in Sources */,
 				AB0000S5 /* QuickNoteStoreTests.swift in Sources */,
 				AB9E5A02 /* VaultFolderStoreTests.swift in Sources */,
@@ -1270,6 +1325,14 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				ABPK0001 /* ParakeetCatalog.swift in Sources */,
+				ABPK0002 /* ParakeetModelStore.swift in Sources */,
+				ABDG0001 /* DiagnosticLog.swift in Sources */,
+				ABPK1300 /* StudioComponents.swift in Sources */,
+				ABPK1200 /* SettingsView+VerwerkingIOS.swift in Sources */,
+				ABPK1100 /* SettingsView+VerwerkingLogic.swift in Sources */,
+				ABPK1000 /* ParakeetModelRows.swift in Sources */,
+				ABPK0003 /* ParakeetTranscriber.swift in Sources */,
 				AB00FA00DS01 /* DebugScreenshotSeed.swift in Sources */,
 				AB01FA00CSB1 /* ContextSuggestionBar.swift in Sources */,
 				AB02FA00CH01 /* ContextHistory.swift in Sources */,
@@ -1793,6 +1856,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		SPFA0001 /* XCRemoteSwiftPackageReference "FluidAudio" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/FluidInference/FluidAudio.git";
+			requirement = {
+				kind = exactVersion;
+				version = 0.18.3;
+			};
+		};
 		SP000001 /* XCRemoteSwiftPackageReference "WhisperKit" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/argmaxinc/WhisperKit.git";
@@ -1805,6 +1876,16 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		SDFA0001 /* FluidAudio */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = SPFA0001 /* XCRemoteSwiftPackageReference "FluidAudio" */;
+			productName = FluidAudio;
+		};
+		SDFA0002 /* FluidAudio */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = SPFA0001 /* XCRemoteSwiftPackageReference "FluidAudio" */;
+			productName = FluidAudio;
+		};
 		SD000001 /* WhisperKit */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = SP000001 /* XCRemoteSwiftPackageReference "WhisperKit" */;

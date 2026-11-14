@@ -233,8 +233,9 @@ final class CloudProviderTests: XCTestCase {
     func testHostedProvidersHaveStudioEntryPoints() {
         let choices = NotulenProvider.studioChoices
         // Ollama Cloud is selected inside the shared Ollama location panel.
-        for provider in [NotulenProvider.openAI, .anthropic, .ollama, .openAICompatible] {
+        for provider in [NotulenProvider.openAI, .anthropic, .ollama, .openAICompatible, .openRouter] {
             XCTAssertTrue(choices.contains(provider), provider.rawValue)
         }
+        XCTAssertEqual(choices.first, .openRouter)
     }
 }

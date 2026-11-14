@@ -23,6 +23,7 @@ interface LLMConfig {
   lmStudioModel: string;
   openAIModel: string;
   anthropicModel: string;
+  openRouterModel: string;
 }
 
 type ProgressCallback = (chunk: string) => void;
@@ -89,10 +90,10 @@ const FACTUALITY_RULES = "Behoud expliciete ontkenningen, verboden, voorwaarden 
 function getConfig(override?: NotulenProvider): LLMConfig {
   const settings = useSettingsStore.getState();
   // In local mode the cloud provider is unreachable, so a leftover "cloud"
-  // selection would transcribe locally and then throw. Coerce to Ollama.
+  // selection would transcribe locally and then throw. Coerce to OpenRouter, the default provider.
   let provider = override || settings.notulen_provider || "cloud";
   if (settings.processing_mode === "local" && provider === "cloud") {
-    provider = "ollama";
+    provider = "openrouter";
   }
   return {
     provider,
@@ -102,6 +103,7 @@ function getConfig(override?: NotulenProvider): LLMConfig {
     lmStudioModel: settings.lm_studio_model || "local-model",
     openAIModel: settings.openai_model || DEFAULT_SETTINGS.openai_model,
     anthropicModel: settings.anthropic_model || "claude-sonnet-5-5",
+    openRouterModel: settings.openrouter_model || DEFAULT_SETTINGS.openrouter_model,
   };
 }
 
@@ -209,6 +211,15 @@ async function openAICompatibleRequest(
   return text;
 }
 
+const OPENROUTER_URL = "https://openrouter.ai/api/v1";
+
+/** OpenRouter speaks the OpenAI chat format; only the base URL and the stored key differ. */
+async function generateWithOpenRouter(model: string, systemPrompt: string, userPrompt: string, step?: ModelStep): Promise<string> {
+  const key = await loadCredential("openrouter_api_key");
+  if (!key) throw new Error("Vul je OpenRouter API-sleutel in bij Instellingen.");
+  return generateWithOpenAICompatible(OPENROUTER_URL, model, systemPrompt, userPrompt, key, undefined, step);
+}
+
 function generateWithHostedAPI(
   provider: "openai" | "anthropic",
   model: string,
@@ -258,7 +269,7 @@ async function hostedRequest(
 /** Step-2 audit checks in flight for a long meeting: 8 for a hosted provider, 4 for a local model (DEC-065).
  * Ollama and LM Studio count as hosted only with an https URL to a public host, as on macOS. */
 export function auditNoteConcurrency(provider: NotulenProvider, compatibleBaseURL: string): number {
-  const hosted = provider === "openai" || provider === "anthropic"
+  const hosted = provider === "openai" || provider === "anthropic" || provider === "openrouter"
     || ((provider === "ollama" || provider === "lm-studio") && isHostedURL(compatibleBaseURL));
   return hosted ? HOSTED_AUDIT_CONCURRENCY : AUDIT_CONCURRENCY;
 }
@@ -282,6 +293,7 @@ export class LLMService {
   static async complete(systemPrompt: string, userMessage: string, step?: ModelStep): Promise<string> {
     const config = getConfig();
     const provider = config.provider === "cloud" ? "ollama" : config.provider;
+    if (provider === "openrouter") return generateWithOpenRouter(config.openRouterModel, systemPrompt, userMessage, step);
     if (provider === "openai" || provider === "anthropic") {
       const key = await loadCredential(`${provider}_api_key`);
       if (!key) throw new Error(`Vul je ${provider === "openai" ? "OpenAI" : "Anthropic"} API-sleutel in bij Instellingen.`);
@@ -370,6 +382,7 @@ export class LLMService {
       if (config.provider === "ollama" || config.provider === "lm-studio") {
         return generateWithOpenAICompatible(baseURL, model, system, user, compatibleKey ?? "", undefined, step);
       }
+      if (config.provider === "openrouter") return generateWithOpenRouter(config.openRouterModel, system, user, step);
       if (config.provider === "openai" || config.provider === "anthropic") {
         const provider = config.provider;
         const key = await loadCredential(`${provider}_api_key`);

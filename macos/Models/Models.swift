@@ -178,6 +178,7 @@ enum NotulenProvider: String, Codable, Sendable, CaseIterable, Identifiable {
     case anthropic      // Hosted, user's own API key
     case ollamaCloud    // Hosted Ollama (https://ollama.com), user's own API key
     case openAICompatible  // Any HTTPS endpoint with the OpenAI chat API
+    case openRouter     // Hosted (https://openrouter.ai), user's own API key
 
     var id: String { rawValue }
 
@@ -192,6 +193,7 @@ enum NotulenProvider: String, Codable, Sendable, CaseIterable, Identifiable {
         case .anthropic:         return "Claude"
         case .ollamaCloud:       return "Ollama Cloud"
         case .openAICompatible:  return "OpenAI-compatibel"
+        case .openRouter:        return "OpenRouter"
         }
     }
 
@@ -201,6 +203,7 @@ enum NotulenProvider: String, Codable, Sendable, CaseIterable, Identifiable {
         case .openAI:    return "openAIApiKey"
         case .anthropic: return "anthropicApiKey"
         case .ollamaCloud: return "ollamaApiKey"
+        case .openRouter: return "openRouterApiKey"
         case .openAICompatible:
             let id = UserDefaults.standard.string(forKey: CloudAIConfiguration.selectedKey) ?? ""
             return id.isEmpty ? nil : CloudAIConfiguration.keychainKey(for: id)
@@ -222,7 +225,7 @@ enum NotulenProvider: String, Codable, Sendable, CaseIterable, Identifiable {
     var auditNoteConcurrency: Int {
         let hosted: Bool
         switch self {
-        case .openAI, .anthropic, .ollamaCloud, .openAICompatible: hosted = true
+        case .openAI, .anthropic, .ollamaCloud, .openAICompatible, .openRouter: hosted = true
         case .ollama: hosted = isHostedURL(UserDefaults.standard.string(forKey: "ollamaURL") ?? "")
         case .lmStudio: hosted = isHostedURL(UserDefaults.standard.string(forKey: "lmStudioURL") ?? "")
         case .cloud, .appleIntelligence: hosted = false
@@ -245,6 +248,27 @@ enum NotulenProvider: String, Codable, Sendable, CaseIterable, Identifiable {
         #else
         return .ollama
         #endif
+    }
+
+    /// Local, unsynced flag: true for installs that existed before OpenRouter became the default.
+    static let legacyDefaultKey = "notulenLegacyDefault"
+
+    /// Fallback when no provider is stored: existing installs keep the platform default, new ones start on OpenRouter.
+    static func installDefault(defaults: UserDefaults = .standard) -> NotulenProvider {
+        defaults.bool(forKey: legacyDefaultKey) ? platformDefault : .openRouter
+    }
+
+    /// The stored provider (an unknown value reads as Ollama), else the install default.
+    static func configured(defaults: UserDefaults = .standard) -> NotulenProvider {
+        guard let raw = defaults.string(forKey: "notulenProvider") else { return installDefault(defaults: defaults) }
+        return NotulenProvider(rawValue: raw) ?? .ollama
+    }
+
+    /// Decides once whether this install predates the OpenRouter default. Runs before settings
+    /// sync starts and never writes `notulenProvider`, which would be pushed to iCloud.
+    static func decideLegacyDefault(defaults: UserDefaults, storeExists: Bool) {
+        guard defaults.object(forKey: legacyDefaultKey) == nil else { return }
+        defaults.set(storeExists || defaults.object(forKey: "hasCompletedOnboarding") != nil, forKey: legacyDefaultKey)
     }
 }
 

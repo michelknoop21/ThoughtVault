@@ -63,28 +63,64 @@ enum VaultFolderStore {
 
     /// Resolves the bookmark and runs `body` with the security scope active.
     /// Returns nil (and logs) when no folder is configured or the bookmark is unusable.
+    /// The three failure points (resolve, scope, body) log distinctly; all of them return nil.
     static func withFolder<T>(_ body: (URL) throws -> T) -> T? {
         guard let data = UserDefaults.standard.data(forKey: bookmarkKey) else { return nil }
         var stale = false
+        let url: URL
         do {
             #if os(macOS)
-            let url = try URL(resolvingBookmarkData: data, options: .withSecurityScope,
-                              relativeTo: nil, bookmarkDataIsStale: &stale)
+            url = try URL(resolvingBookmarkData: data, options: .withSecurityScope,
+                          relativeTo: nil, bookmarkDataIsStale: &stale)
             #else
-            let url = try URL(resolvingBookmarkData: data, options: [],
-                              relativeTo: nil, bookmarkDataIsStale: &stale)
+            url = try URL(resolvingBookmarkData: data, options: [],
+                          relativeTo: nil, bookmarkDataIsStale: &stale)
             #endif
-            guard url.startAccessingSecurityScopedResource() else {
-                logger.error("Kon security scope niet openen voor vault-map")
-                return nil
-            }
-            defer { url.stopAccessingSecurityScopedResource() }
-            if stale { try? setFolder(url) }   // refresh the bookmark opportunistically
-            return try body(url)
         } catch {
-            logger.error("Vault-bookmark onbruikbaar: \(LogRedact.mask(error.localizedDescription))")
+            logger.error("Vault-bookmark onbruikbaar: \(LogRedact.mask(error.localizedDescription)) step=resolve error=\(LogRedact.describe(error))")
             return nil
         }
+        guard url.startAccessingSecurityScopedResource() else {
+            logger.error("Kon security scope niet openen voor vault-map step=scope stale=\(stale)")
+            return nil
+        }
+        defer { url.stopAccessingSecurityScopedResource() }
+        if stale {
+            logger.info("Vault-bookmark verouderd, wordt vernieuwd")
+            try? setFolder(url)   // refresh the bookmark opportunistically
+        }
+        do {
+            return try body(url)
+        } catch {
+            logger.error("Vault-bestand mislukt: \(LogRedact.mask(error.localizedDescription)) step=body reason=\(failureReason(error, at: nil)) error=\(LogRedact.describe(error))")
+            return nil
+        }
+    }
+
+    /// Reads a vault file as UTF-8; on failure logs why (missing, not downloaded from iCloud, permission) and returns nil.
+    private static func readText(_ url: URL, what: String) -> String? {
+        do {
+            return try String(contentsOf: url, encoding: .utf8)
+        } catch {
+            let reason = failureReason(error, at: url)
+            let line = "Vault-bestand niet gelezen what=\(what) reason=\(reason) error=\(LogRedact.describe(error))"
+            if reason == "missing" { logger.info(line) } else { logger.warning(line) }
+            return nil
+        }
+    }
+
+    /// "missing", "not-downloaded" (iCloud placeholder), "permission-denied" or "other".
+    static func failureReason(_ error: Error, at url: URL?) -> String {
+        let ns = error as NSError
+        let cocoa = ns.domain == NSCocoaErrorDomain
+        if cocoa, [NSFileReadNoPermissionError, NSFileWriteNoPermissionError].contains(ns.code) { return "permission-denied" }
+        if let url {
+            let status = try? url.resourceValues(forKeys: [.ubiquitousItemDownloadingStatusKey]).ubiquitousItemDownloadingStatus
+            let placeholder = url.deletingLastPathComponent().appendingPathComponent("." + url.lastPathComponent + ".icloud")
+            if status == .notDownloaded || FileManager.default.fileExists(atPath: placeholder.path) { return "not-downloaded" }
+        }
+        if cocoa, [NSFileReadNoSuchFileError, NSFileNoSuchFileError].contains(ns.code) { return "missing" }
+        return "other"
     }
 
     // MARK: - Read context note
@@ -96,7 +132,7 @@ enum VaultFolderStore {
         guard !rel.isEmpty else { return nil }
         return withFolder { root in
             let fileURL = rel.split(separator: "/").reduce(root) { $0.appendingPathComponent(String($1)) }
-            return try? String(contentsOf: fileURL, encoding: .utf8)
+            return readText(fileURL, what: "context-note")
         } ?? nil
     }
 
@@ -140,7 +176,7 @@ enum VaultFolderStore {
     static func readNote(filename: String) -> String? {
         withFolder { root in
             let dir = notesSubfolder.isEmpty ? root : root.appendingPathComponent(notesSubfolder, isDirectory: true)
-            return try? String(contentsOf: dir.appendingPathComponent(filename), encoding: .utf8)
+            return readText(dir.appendingPathComponent(filename), what: "note")
         } ?? nil
     }
 

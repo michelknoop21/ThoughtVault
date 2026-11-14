@@ -57,6 +57,25 @@ it.each(["ollama", "lm-studio"] as const)("uses the native route for %s when Web
   } finally { vi.unstubAllGlobals(); }
 });
 
+it("sends OpenRouter notes to openrouter.ai with the stored key and the configured model", async () => {
+  useSettingsStore.setState({ notulen_provider: "openrouter", openrouter_model: "mistralai/mistral-large-4-0" });
+  loadCredential.mockResolvedValue("or-key");
+  invoke.mockResolvedValue({ status: 200, body: JSON.stringify({ choices: [{ message: { content: "<p>Besluit</p>" } }] }) });
+  expect(await LLMService.generateNotulen("QA test.", profile)).toBe("<p>Besluit</p>");
+  expect(loadCredential).toHaveBeenCalledWith("openrouter_api_key");
+  const request = invoke.mock.calls[0][1].request;
+  expect(request.url).toBe("https://openrouter.ai/api/v1/chat/completions");
+  expect(request.headers.Authorization).toBe("Bearer or-key");
+  expect(JSON.parse(request.body).model).toBe("mistralai/mistral-large-4-0");
+});
+
+it("asks for the OpenRouter key when it is missing", async () => {
+  useSettingsStore.setState({ notulen_provider: "openrouter" });
+  loadCredential.mockResolvedValue(null);
+  await expect(LLMService.generateNotulen("QA test.", profile)).rejects.toThrow("Vul je OpenRouter API-sleutel in bij Instellingen.");
+  expect(invoke).not.toHaveBeenCalled();
+});
+
 it("generates Ollama Cloud notes through the native proxy instead of WebView fetch", async () => {
   useSettingsStore.setState({ ollama_url: "https://ollama.com/v1/", ollama_model: "gpt-oss:120b" });
   loadCredential.mockResolvedValue("test-cloud-key");

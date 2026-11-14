@@ -80,7 +80,7 @@ final class LocalTranscriptStore {
                 return created
             } catch {
                 defaults.set(false, forKey: watchdogKey)
-                logger.error("Persistent store open failed: \(LogRedact.mask(error.localizedDescription))")
+                logger.error("Persistent store open failed: \(LogRedact.mask(error.localizedDescription)) error=\(LogRedact.describe(error))")
                 return nil
             }
         }
@@ -108,6 +108,11 @@ final class LocalTranscriptStore {
             let dest = URL(fileURLWithPath: url.path + ext + "-incompatible-\(stamp)")
             try? fm.moveItem(at: src, to: dest)
         }
+    }
+
+    /// True when an earlier launch created the store. Unlike `storeURL` this creates no folder.
+    nonisolated static var storeFileExists: Bool {
+        FileManager.default.fileExists(atPath: AppEnvironment.supportDirectory.appending(path: "ThoughtVault/Local.store").path)
     }
 
     /// Dedicated on-disk location: `Application Support/ThoughtVault/Local.store`.
@@ -139,7 +144,7 @@ final class LocalTranscriptStore {
             logger.info("Migrated \(oldRecords.count) record(s) from the previous local store.")
         } catch {
             // No compatible local store to migrate (different schema or unreadable). Skip.
-            logger.info("No compatible local store to migrate: \(LogRedact.mask(error.localizedDescription))")
+            logger.info("No compatible local store to migrate: \(LogRedact.mask(error.localizedDescription)) error=\(LogRedact.describe(error))")
         }
     }
 
@@ -211,7 +216,7 @@ final class LocalTranscriptStore {
         do {
             return try context.fetch(descriptor)
         } catch {
-            logger.error("Fetch failed: \(LogRedact.mask(error.localizedDescription))")
+            logger.error("Fetch failed: \(LogRedact.mask(error.localizedDescription)) error=\(LogRedact.describe(error))")
             return []
         }
     }

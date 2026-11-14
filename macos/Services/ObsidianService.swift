@@ -292,7 +292,7 @@ struct ObsidianService: Sendable {
                     noteID: noteID
                 )
             } catch {
-                logger.error("Export naar Obsidian mislukt: \(LogRedact.mask(error.localizedDescription))")
+                logger.error("Export naar Obsidian mislukt: \(LogRedact.mask(error.localizedDescription)) error=\(LogRedact.describe(error))")
             }
         }
     }

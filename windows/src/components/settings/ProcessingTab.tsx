@@ -131,7 +131,7 @@ export function ProcessingTab() {
         <button className="btn btn-accent" disabled={downloading} onClick={() => {
           settings.updateSettings({ processing_mode: "local", whisper_model: advice.model ?? settings.whisper_model, notulen_provider: settings.notulen_provider === "cloud" ? "ollama" : settings.notulen_provider });
         }}>Toepassen</button></header>
-        <div className="setup-choices"><div><Laptop24Regular /><span><small>Transcriptie</small><strong>Lokaal op deze pc</strong><span>{advice.name}</span></span></div><div><DocumentText24Regular /><span><small>Notulen</small><strong>{settings.notulen_provider === "openai" ? "OpenAI" : settings.notulen_provider === "anthropic" ? "Claude" : settings.notulen_provider === "lm-studio" ? "LM Studio" : "Ollama"}</strong><span>{settings.notulen_provider === "openai" || settings.notulen_provider === "anthropic" ? "Eigen API-sleutel · aparte kosten" : "Controleer je eigen server"}</span></span></div></div>
+        <div className="setup-choices"><div><Laptop24Regular /><span><small>Transcriptie</small><strong>Lokaal op deze pc</strong><span>{advice.name}</span></span></div><div><DocumentText24Regular /><span><small>Notulen</small><strong>{settings.notulen_provider === "openrouter" ? "OpenRouter" : settings.notulen_provider === "openai" ? "OpenAI" : settings.notulen_provider === "anthropic" ? "Claude" : settings.notulen_provider === "lm-studio" ? "LM Studio" : "Ollama"}</strong><span>{settings.notulen_provider === "openrouter" || settings.notulen_provider === "openai" || settings.notulen_provider === "anthropic" ? "Eigen API-sleutel · aparte kosten" : "Controleer je eigen server"}</span></span></div></div>
         <button className="studio-link" onClick={() => setSetupDetails(!setupDetails)}>Bekijk details {setupDetails ? "↑" : "→"}</button>{setupDetails && <p>{advice.reason} Toepassen wijzigt de instellingen; download daarna het gekozen transcriptiemodel. Een bestaande API-provider blijft geselecteerd.</p>}
       </section>
           {/* Verwerking — local vs cloud, mirrors macOS processingMode */}
@@ -145,10 +145,10 @@ export function ProcessingTab() {
                 className={settings.processing_mode === mode ? "selected" : ""}
                 onClick={() => {
                   // Switching to local with the cloud provider still selected
-                  // would fail at notule generation, so move it to Ollama.
+                  // would fail at notule generation, so move it to OpenRouter.
                   const patch: Partial<typeof settings> = { processing_mode: mode };
                   if (mode === "local" && settings.notulen_provider === "cloud") {
-                    patch.notulen_provider = "ollama";
+                    patch.notulen_provider = "openrouter";
                   }
                   settings.updateSettings(patch);
                 }}><strong>{name}</strong><span>{desc}</span></button>)}
@@ -223,7 +223,7 @@ export function ProcessingTab() {
           <div className="settings-group">
             <header className="card-head"><span className="card-icon"><DocumentText24Regular /></span><div><h3>Notulen generatie</h3><p>Maak gestructureerde notulen van het transcript.</p></div></header>
             <div className="provider-tiles">{([
-              ["openai", "OpenAI", "Eigen API-sleutel"], ["anthropic", "Claude", "Eigen Anthropic API-sleutel"],
+              ["openrouter", "OpenRouter", "Eigen API-sleutel, veel modellen"], ["openai", "OpenAI", "Eigen API-sleutel"], ["anthropic", "Claude", "Eigen Anthropic API-sleutel"],
               ["ollama", "Ollama", "Lokaal of cloud"], ["lm-studio", "LM Studio", "Lokale of eigen server"],
             ] as const).map(([id, name, subtitle]) => <button key={id} className={settings.notulen_provider === id ? "selected" : ""}
               aria-pressed={settings.notulen_provider === id} disabled={settings.processing_mode === "cloud"}
@@ -237,11 +237,11 @@ export function ProcessingTab() {
                   <select aria-label="Terugval bij fout" className="select" style={{ width: "100%" }} value={settings.notulen_fallback_provider}
                     onChange={(e) => settings.updateSettings({ notulen_fallback_provider: e.target.value as typeof settings.notulen_fallback_provider })}>
                     <option value="">Geen</option>
-                    {([["openai", "OpenAI"], ["anthropic", "Claude"], ["ollama", "Ollama"], ["lm-studio", "LM Studio"]] as const)
+                    {([["openrouter", "OpenRouter"], ["openai", "OpenAI"], ["anthropic", "Claude"], ["ollama", "Ollama"], ["lm-studio", "LM Studio"]] as const)
                       .filter(([id]) => id !== settings.notulen_provider)
                       .map(([id, name]) => <option key={id} value={id}>{name}</option>)}
                   </select>
-                  <p className="settings-desc">Als de gekozen aanbieder een fout geeft, probeert ThoughtVault het één keer met deze aanbieder en het model dat daar al is ingesteld. Bij een terugval naar OpenAI of Claude gaat het transcript naar die aanbieder.</p>
+                  <p className="settings-desc">Als de gekozen aanbieder een fout geeft, probeert ThoughtVault het één keer met deze aanbieder en het model dat daar al is ingesteld. Bij een terugval naar OpenRouter, OpenAI of Claude gaat het transcript naar die aanbieder.</p>
                 </SettingsField>
               </div>
             )}
@@ -317,6 +317,17 @@ export function ProcessingTab() {
               </>
             )}
 
+            {settings.processing_mode === "local" && settings.notulen_provider === "openrouter" && (
+              <div style={{ padding: "0 20px 12px" }}>
+                <p className="settings-desc">Het transcript wordt naar OpenRouter gestuurd. De kosten lopen via je eigen account.</p>
+                <SettingsField label="Model">
+                  <input className="input" type="text" aria-label="OpenRouter model" value={settings.openrouter_model}
+                    onChange={(e) => settings.updateSettings({ openrouter_model: e.target.value })} />
+                </SettingsField>
+                <CredentialField credentialKey="openrouter_api_key" label="OpenRouter API-sleutel" />
+              </div>
+            )}
+
             {settings.processing_mode === "local" &&
               (settings.notulen_provider === "openai" || settings.notulen_provider === "anthropic") && (
               <div style={{ padding: "0 20px 12px" }}>
@@ -339,6 +350,6 @@ export function ProcessingTab() {
       <section className="northstar-card"><h3>Aanbevolen model</h3><h4>{advice.name}</h4><p>{advice.reason}</p><p>Lokale transcriptie · CPU-verwerking</p>{advice.model && <p>{WHISPER_MODELS.find(m => m.id === advice.model)?.size} · CPU-verwerking</p>}
         {advice.model && <button className="btn btn-secondary" disabled={downloading} onClick={() => settings.updateSettings({ processing_mode: "local", whisper_model: advice.model ?? settings.whisper_model })}>Gebruik dit model</button>}<p>Downloadstatus en modelkeuze staan bij Transcriptie.</p>
       </section>
-      <section className="northstar-card"><h3>Privacy & gegevens</h3><h4>Transcriptie</h4><p>{settings.processing_mode === "local" ? "Audio wordt op deze pc omgezet naar tekst." : "Audio wordt naar de ThoughtVault-server geüpload."}</p><h4>Notulen</h4><p>{settings.processing_mode === "cloud" ? "Transcript en notulen worden op de ThoughtVault-server verwerkt." : settings.notulen_provider === "openai" ? "Het transcript wordt naar OpenAI gestuurd. Dit kost apart API-tegoed." : settings.notulen_provider === "anthropic" ? "Het transcript wordt naar Anthropic gestuurd. Dit kost apart API-tegoed." : "Het transcript wordt naar je ingestelde Ollama- of LM Studio-server gestuurd. Bij een externe server verlaat het deze pc."}</p><p>API-sleutels worden uitsluitend in Windows Credential Manager bewaard.</p></section>
+      <section className="northstar-card"><h3>Privacy & gegevens</h3><h4>Transcriptie</h4><p>{settings.processing_mode === "local" ? "Audio wordt op deze pc omgezet naar tekst." : "Audio wordt naar de ThoughtVault-server geüpload."}</p><h4>Notulen</h4><p>{settings.processing_mode === "cloud" ? "Transcript en notulen worden op de ThoughtVault-server verwerkt." : settings.notulen_provider === "openrouter" ? "Het transcript wordt naar OpenRouter gestuurd. De kosten lopen via je eigen account." : settings.notulen_provider === "openai" ? "Het transcript wordt naar OpenAI gestuurd. Dit kost apart API-tegoed." : settings.notulen_provider === "anthropic" ? "Het transcript wordt naar Anthropic gestuurd. Dit kost apart API-tegoed." : "Het transcript wordt naar je ingestelde Ollama- of LM Studio-server gestuurd. Bij een externe server verlaat het deze pc."}</p><p>API-sleutels worden uitsluitend in Windows Credential Manager bewaard.</p></section>
     </aside></div>;
 }

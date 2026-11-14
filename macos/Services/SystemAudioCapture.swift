@@ -346,7 +346,7 @@ private final class TapAudioWriter: @unchecked Sendable {
                 liveHandler.append(converted)
             }
         } catch {
-            log.error("[SystemAudio] Audio write failed: code=\((error as NSError).code), \(LogRedact.mask(error.localizedDescription))")
+            log.error("[SystemAudio] Audio write failed: code=\((error as NSError).code), \(LogRedact.mask(error.localizedDescription)) error=\(LogRedact.describe(error))")
         }
     }
 
@@ -358,7 +358,7 @@ private final class TapAudioWriter: @unchecked Sendable {
         do {
             try writeSilence(until: timeline.framePosition(at: AVAudioTime.seconds(forHostTime: mach_absolute_time())))
         } catch {
-            log.error("[SystemAudio] Final timeline write failed: code=\((error as NSError).code), \(LogRedact.mask(error.localizedDescription))")
+            log.error("[SystemAudio] Final timeline write failed: code=\((error as NSError).code), \(LogRedact.mask(error.localizedDescription)) error=\(LogRedact.describe(error))")
         }
     }
 

@@ -1,6 +1,8 @@
 import Foundation
 import os
 
+private let log = AppLog(category: "NotuleGenerator")
+
 /// Generates a notule once and audits it. Port of `LLMService.generateNotulen` in
 /// windows/src/services/llm.ts: audit problems end up in an "Even nalopen" section, never block (DEC-063).
 struct NotuleGenerator: Sendable {
@@ -63,9 +65,11 @@ struct NotuleGenerator: Sendable {
             try await NotuleAudit.auditNotule(source: source, html: candidate, quickNote: quickNote ?? "",
                                               request: request, requiredSentences: constraints, sourceUnclear: warning != nil,
                                               noteConcurrency: noteConcurrency, onProgress: onStep)
+            log.info("Notule audit ran outcome=ok source_warning=\(warning != nil)")
             return NotuleAudit.appendingWarnings([warning].compactMap { $0 }, to: candidate)
         } catch {
             if Task.isCancelled || cancelled.withLock({ $0 }) { throw CancellationError() }
+            log.info("Notule audit ran outcome=\(LogRedact.describe(error)) source_warning=\(warning != nil)")
             // DEC-063: an audit problem never blocks the notule; it becomes a line in the warning section.
             let finding = (error as? NotuleAuditError)?.finding ?? NotuleAudit.uncheckedContentWarning
             return NotuleAudit.appendingWarnings([warning, finding].compactMap { $0 }, to: candidate)
@@ -144,6 +148,7 @@ extension NotuleGenerator {
             throw review
         } catch {
             guard let fallback, !Task.isCancelled else { throw error }
+            log.warning("Notule fallback provider used after error=\(LogRedact.describe(error))")
             return try await fallback()
         }
     }

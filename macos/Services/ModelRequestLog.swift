@@ -77,7 +77,7 @@ enum ModelRequestLog {
         if case LLMError.truncated = error { return "truncated" }
         if case LLMError.emptyResponse = error { return "empty" }
         if error is CancellationError || (error as? URLError)?.code == .cancelled { return "cancelled" }
-        return "error"
+        return "error " + LogRedact.describe(error)
     }
 
     private static func milliseconds(since start: Date) -> Int { Int(Date().timeIntervalSince(start) * 1000) }

@@ -10,10 +10,10 @@
 // Geometry values are the NorthStar's, measured at a 1567 x 972 window.
 // Every control maps onto existing behaviour; product gaps are left out.
 
-#if os(macOS)
 import SwiftUI
 
-/// Colours sampled from the approved Home NorthStar.
+/// Colours sampled from the approved Home NorthStar. Unguarded: the shared
+/// Studio components use them on iOS too.
 enum HomeColor {
     static let backgroundTop = Color(red: 0.078, green: 0.094, blue: 0.157)
     static let backgroundBottom = Color(red: 0.059, green: 0.075, blue: 0.133)
@@ -41,6 +41,7 @@ enum HomeColor {
     static let warning = Color(red: 0.98, green: 0.69, blue: 0.24)
 }
 
+#if os(macOS)
 /// Two columns at the NorthStar width; below it the right column's cards move
 /// under the recording card and the card's microphone panel moves under its
 /// controls.

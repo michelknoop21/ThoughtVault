@@ -26,7 +26,7 @@ extension RecordingViewModel {
 
     /// The configured notule provider; the cloud is meaningless for on-device generation.
     private static func localNotuleProvider() -> NotulenProvider {
-        let provider = NotulenProvider(rawValue: UserDefaults.standard.string(forKey: "notulenProvider") ?? NotulenProvider.platformDefault.rawValue) ?? .ollama
+        let provider = NotulenProvider.configured()
         return provider == .cloud ? .ollama : provider
     }
 
@@ -52,6 +52,7 @@ extension RecordingViewModel {
                                            quickNote: String?, createdAt: Date,
                                            onStep: @escaping @Sendable (ModelStep) -> Void) async throws -> String {
         let corrections = PersonalCorrections.loadOrEmpty()
+        log.info("Notule start provider=\(provider.rawValue) \(DiagnosticLog.notuleTarget(provider)) transcript_chars=\(transcription.count)")
         return try await NotuleGenerator(service: LLMServiceFactory.service(for: provider, serverURL: ""),
                                          noteConcurrency: provider.auditNoteConcurrency).generate(
             transcription: transcription, profile: profile, participants: participants, quickNote: quickNote,
@@ -111,16 +112,17 @@ extension RecordingViewModel {
             log.error("[RecordingVM] Local notule rejected by the audit: \(LogRedact.mask(review.supportReason ?? "Inhoudscontrole mislukt"))")
             let message = keepRejectedDraft(review, taskId: localId)
             isGeneratingLocally = false
-            updateTask(localId, status: .error, errorMessage: message, supportMessage: review.supportReason ?? "Inhoudscontrole mislukt")
+            updateTask(localId, status: .error, errorMessage: message, supportMessage: review.supportReason ?? "Inhoudscontrole mislukt", failure: review)
         } catch {
-            log.error("[RecordingVM] Local notule generation failed: \(LogRedact.mask(Self.supportFailureMessage(error)))")
+            log.error("[RecordingVM] Local notule generation failed: \(LogRedact.mask(Self.supportFailureMessage(error))) error=\(LogRedact.describe(error))")
             // No cloud fallback either: the backend notule is unaudited. The transcription
             // is already saved, so the user can retry.
             let reason = Self.friendlyNotuleFailureReason(error)
             await MainActor.run {
                 self.isGeneratingLocally = false
                 self.updateTask(localId, status: .error,
-                           errorMessage: "Transcriptie opgeslagen, notule mislukt: \(reason)", supportMessage: Self.supportFailureMessage(error))
+                           errorMessage: "Transcriptie opgeslagen, notule mislukt: \(reason)", supportMessage: Self.supportFailureMessage(error),
+                           failure: error)
             }
         }
         await MainActor.run { self.localProcessingTasks.removeValue(forKey: localId) }
@@ -171,10 +173,10 @@ extension RecordingViewModel {
             return (html, title)
         } catch let review as NotuleReviewError {
             let message = keepRejectedDraft(review, taskId: taskId)
-            updateTask(regenerationId, status: .error, errorMessage: message, supportMessage: review.supportReason ?? "Inhoudscontrole mislukt")
+            updateTask(regenerationId, status: .error, errorMessage: message, supportMessage: review.supportReason ?? "Inhoudscontrole mislukt", failure: review)
             throw NotuleReviewError(reason: message, draftHtml: review.draftHtml, supportReason: review.supportReason)
         } catch {
-            updateTask(regenerationId, status: .error, errorMessage: error.localizedDescription, supportMessage: Self.supportFailureMessage(error))
+            updateTask(regenerationId, status: .error, errorMessage: error.localizedDescription, supportMessage: Self.supportFailureMessage(error), failure: error)
             throw error
         }
     }

@@ -241,6 +241,11 @@ class LLMServiceFactory {
                                               model: UserDefaults.standard.string(forKey: "ollamaCloudModel") ?? "",
                                               apiKey: KeychainService.shared.load(for: "ollamaApiKey"))
 
+        case .openRouter:
+            guard provider.hasAPIKey else { return MissingAPIKeyLLMService(providerName: provider.displayName) }
+            return OpenAICompatibleLLMService.openRouter(model: UserDefaults.standard.string(forKey: "openRouterModel"),
+                                                         apiKey: KeychainService.shared.load(for: "openRouterApiKey"))
+
         case .openAICompatible:
             // The bearer token is only sent over HTTPS, so other schemes are refused up front.
             guard let config = CloudAIConfiguration.selected(), provider.hasAPIKey,
@@ -326,6 +331,8 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
     static let openAIBaseURL = "https://api.openai.com"
     static let ollamaCloudBaseURL = "https://ollama.com"
     static let openAIDefaultModel = "gpt-5.6-terra"
+    static let openRouterBaseURL = "https://openrouter.ai/api/v1"
+    static let openRouterDefaultModel = "mistralai/mistral-large-4-0"
 
     /// Transcript size above which it is summarized in chunks first. The default
     /// is what a typical local model handles comfortably (conservative estimate).
@@ -341,6 +348,11 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
     /// 8_000 local-model default would apply to any host other than ollama.com.
     static func hosted(_ config: CloudAIConfiguration, apiKey: String?) -> OpenAICompatibleLLMService {
         OpenAICompatibleLLMService(baseURL: config.baseURL, model: config.model, apiKey: apiKey, maxChunkCharacters: 64_000)
+    }
+
+    /// OpenRouter at its fixed address with the same hosted limit; no stored model means the default.
+    static func openRouter(model: String?, apiKey: String?) -> OpenAICompatibleLLMService {
+        OpenAICompatibleLLMService(baseURL: openRouterBaseURL, model: model ?? openRouterDefaultModel, apiKey: apiKey, maxChunkCharacters: 64_000)
     }
 
     init(baseURL: String, model: String, apiKey: String? = nil, maxChunkCharacters: Int? = nil, session: URLSession = llmSession) {
@@ -403,7 +415,7 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
     }
 
     /// Accepts base URLs with or without a trailing `/v1`, as hosted providers document both.
-    private func endpoint(_ path: String) -> String {
+    func endpoint(_ path: String) -> String {
         let base = baseURL.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
         return base + (base.hasSuffix("/v1") && path.hasPrefix("/v1/") ? String(path.dropFirst(3)) : path)
     }

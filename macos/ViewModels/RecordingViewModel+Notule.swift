@@ -63,7 +63,12 @@ extension RecordingViewModel {
 
     /// Shows the running notule step as the task label; a late update after completion is ignored by `updateTask`.
     private func showStep(taskId: String) -> @Sendable (ModelStep) -> Void {
-        { step in Task { @MainActor in self.updateTask(taskId, status: .generatingLocal, statusDetail: step.displayLabel) } }
+        { step in
+            Task { @MainActor in
+                self.updateTask(taskId, status: .generatingLocal, statusDetail: step.displayLabel)
+                ContinuedProcessing.shared?.update(runId: taskId, phase: .notule(step))
+            }
+        }
     }
 
     /// Keeps a rejected draft next to the record and returns the task message (localPipeline.ts).

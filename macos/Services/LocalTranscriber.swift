@@ -433,6 +433,16 @@ final class WhisperKitTranscriber: LocalTranscriber, @unchecked Sendable {
 
     private struct UncheckedSendableBox<T>: @unchecked Sendable { let value: T }
 
+    /// iOS: the mel spectrogram on the CPU instead of WhisperKit's default CPU+GPU, so a run keeps working in the
+    /// background without the background-GPU entitlement. Encoder and decoder keep their Neural Engine defaults.
+    private static var computeOptions: ModelComputeOptions? {
+        #if os(iOS)
+        ModelComputeOptions(melCompute: .cpuOnly)
+        #else
+        nil
+        #endif
+    }
+
     /// Cancels the operation on timeout; Core ML may finish loading before observing cancellation.
     private static func withTimeout<T: Sendable>(
         seconds: TimeInterval,
@@ -492,7 +502,7 @@ final class WhisperKitTranscriber: LocalTranscriber, @unchecked Sendable {
             ) {
                 // WhisperKit isn't Sendable; box it to cross the task-group boundary.
                 // Load once before VAD workers can concurrently request the same models.
-                UncheckedSendableBox(value: try await WhisperKit(WhisperKitConfig(model: modelName, modelFolder: WhisperModelStore.folder(for: modelName).path, load: true, download: false)))
+                UncheckedSendableBox(value: try await WhisperKit(WhisperKitConfig(model: modelName, modelFolder: WhisperModelStore.folder(for: modelName).path, computeOptions: Self.computeOptions, load: true, download: false)))
             }.value
             stages.end()
 

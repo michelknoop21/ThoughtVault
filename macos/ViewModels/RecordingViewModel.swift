@@ -831,11 +831,17 @@ final class RecordingViewModel {
                 liveSystemText = ""
         }
 
+        // iOS: keep the run alive in the background; an expired or user-stopped task cancels it.
+        ContinuedProcessing.shared?.track(runId: localId) { [weak self] in
+            self?.cancelLocalProcessing(localId, message: "Verwerking gestopt op de achtergrond. De opname staat bij Opgeslagen opnames; verwerk hem daar opnieuw.")
+        }
+
         // Run on a detached Task so the MainActor stays responsive. The task
         // reference is stored for cancellation.
         localProcessingTasks[localId] = Task.detached(priority: .userInitiated) { [weak self] in
             await self?.processLocallyWorker(url: url, localId: localId, profile: profile, participants: participants)
         }
+        await ContinuedProcessing.shared?.submit(runId: localId)
     }
 
     /// Worker that does the actual transcription + notule generation. Runs off the
@@ -852,7 +858,10 @@ final class RecordingViewModel {
             try LocalTranscriberFactory.validateAudioFile(at: url)
             let transcriber = LocalTranscriberFactory.make()
             transcription = try await LocalTranscriptionQueue.shared.run(id: localId, onWait: { [weak self] in
-                Task { @MainActor in self?.updateTask(localId, status: .transcribing, statusDetail: "Wacht op vorige transcriptie") }
+                Task { @MainActor in
+                    self?.updateTask(localId, status: .transcribing, statusDetail: "Wacht op vorige transcriptie")
+                    ContinuedProcessing.shared?.update(runId: localId, phase: .waiting)
+                }
             }) { [weak self] in
                 await self?.updateTask(localId, status: .transcribing)  // clears the waiting note
                 return try await transcriber.transcribe(url: url, profileId: profile.id) { [weak self] fraction in
@@ -860,6 +869,7 @@ final class RecordingViewModel {
                         guard let self else { return }
                         guard !Task.isCancelled else { return }
                         self.logTranscriptionProgress(localId, fraction)
+                        ContinuedProcessing.shared?.update(runId: localId, phase: .transcribing(fraction))
                         self.updateTask(localId, status: .transcribing,
                                          progress: 0.15 + fraction * 0.35)
                     }
@@ -934,15 +944,18 @@ final class RecordingViewModel {
     }
 
     /// Cancels an in-progress local processing task (transcription or notule generation).
-    func cancelLocalProcessing(_ taskId: String) {
+    func cancelLocalProcessing(_ taskId: String, message: String = "Geannuleerd door gebruiker.") {
         localProcessingTasks[taskId]?.cancel()
         localProcessingTasks.removeValue(forKey: taskId)
-        cancelLocalTaskCleanup(taskId)
+        cancelLocalTaskCleanup(taskId, message: message)
     }
 
-    /// Marks a cancelled task as error and cleans up.
-    func cancelLocalTaskCleanup(_ taskId: String) {
-        updateTask(taskId, status: .error, errorMessage: "Geannuleerd door gebruiker.")
+    /// Marks a cancelled task as error and cleans up. A task already marked as failed keeps its message,
+    /// so the worker's own cancellation catch does not overwrite why it was stopped.
+    func cancelLocalTaskCleanup(_ taskId: String, message: String = "Geannuleerd door gebruiker.") {
+        if activeTasks.first(where: { $0.id == taskId })?.status != .error {
+            updateTask(taskId, status: .error, errorMessage: message)
+        }
         isGeneratingLocally = false
     }
 
@@ -1432,7 +1445,10 @@ final class RecordingViewModel {
         activeTasks[idx].statusDetail = statusDetail
         taskDidChange(from: previous, to: status, message: supportMessage ?? activeTasks[idx].errorMessage,
                       shown: activeTasks[idx].errorMessage, failure: failure)
-        if !status.isActive { loggedTranscriptionQuarter.removeValue(forKey: id) }
+        if !status.isActive {
+            loggedTranscriptionQuarter.removeValue(forKey: id)
+            ContinuedProcessing.shared?.finish(runId: id, success: status == .completed)
+        }
 
         // Local processing reports completion through updateTask (not SSE), so the
         // auto-removal must be scheduled here too. Failures are deliberately left

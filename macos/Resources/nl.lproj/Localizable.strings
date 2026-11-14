@@ -616,3 +616,7 @@
 "Gedownload, %@" = "Gedownload, %@";
 "Wordt gedownload" = "Wordt gedownload";
 "Nog niet gedownload. Nodig om op dit toestel te transcriberen." = "Nog niet gedownload. Nodig om op dit toestel te transcriberen.";
+"continued.title" = "Opname verwerken";
+"continued.transcribing" = "Transcriberen %d%%";
+"continued.waiting" = "Wacht op vorige transcriptie";
+"Houd ThoughtVault open tot de verwerking klaar is." = "Houd ThoughtVault open tot de verwerking klaar is.";

@@ -70,6 +70,11 @@ enum ModelRequestLog {
         write("model request retry step=\(ModelStep.current?.logLabel ?? "other") after HTTP 429 wait_ms=\(Int(wait * 1000))", failed: false)
     }
 
+    /// The request lost its connection and is sent once more now that the app is active again.
+    static func retryAfterDrop(_ error: URLError) {
+        write("model request retry step=\(ModelStep.current?.logLabel ?? "other") after \(LogRedact.describe(error)) app=active", failed: false)
+    }
+
     static func outcome(_ error: any Error) -> String {
         if case LLMError.serverError(let code) = error { return "HTTP \(code)" }
         if case LLMError.timedOut = error { return "timed out" }

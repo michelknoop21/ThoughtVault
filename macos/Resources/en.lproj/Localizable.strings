@@ -616,3 +616,7 @@
 "Gedownload, %@" = "Downloaded, %@";
 "Wordt gedownload" = "Downloading";
 "Nog niet gedownload. Nodig om op dit toestel te transcriberen." = "Not downloaded yet. Needed to transcribe on this device.";
+"continued.title" = "Processing recording";
+"continued.transcribing" = "Transcribing %d%%";
+"continued.waiting" = "Waiting for previous transcription";
+"Houd ThoughtVault open tot de verwerking klaar is." = "Keep ThoughtVault open until processing is done.";

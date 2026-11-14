@@ -1,4 +1,7 @@
 import Foundation
+#if os(iOS)
+import UIKit
+#endif
 
 private let logger = AppLog(category: "LLMService")
 
@@ -53,8 +56,37 @@ let llmSession: URLSession = {
 
 /// URLSession reports the idle and the total time limit as `.timedOut`; name the cause instead.
 func mappingTimeout<T>(_ body: () async throws -> T) async throws -> T {
-    do { return try await body() } catch let error as URLError where error.code == .timedOut { throw LLMError.timedOut }
+    do { return try await retryingDroppedConnection(body) } catch let error as URLError where error.code == .timedOut { throw LLMError.timedOut }
 }
+
+/// Connection errors iOS causes by suspending the app mid-request.
+let droppedConnectionCodes: Set<URLError.Code> = [.networkConnectionLost, .notConnectedToInternet, .timedOut]
+
+/// iOS: sends a model request once more after it lost its connection, as soon as the app is active again.
+/// Safety net for a request cut off while the app was suspended without a continued processing task.
+/// macOS is never suspended this way and sends once.
+func retryingDroppedConnection<T>(_ body: () async throws -> T) async throws -> T {
+    #if os(iOS)
+    do { return try await body() } catch let error as URLError where droppedConnectionCodes.contains(error.code) {
+        await waitUntilAppActive()
+        try Task.checkCancellation()
+        ModelRequestLog.retryAfterDrop(error)
+        return try await body()
+    }
+    #else
+    return try await body()
+    #endif
+}
+
+#if os(iOS)
+/// Returns once the app is in the foreground; immediately when it already is.
+@MainActor
+func waitUntilAppActive() async {
+    let activations = NotificationCenter.default.notifications(named: UIApplication.didBecomeActiveNotification)
+    guard UIApplication.shared.applicationState != .active else { return }
+    for await _ in activations { return }
+}
+#endif
 
 /// Wait before retrying an HTTP 429 when the provider sends no usable Retry-After.
 let rateLimitDefaultWait: TimeInterval = 2

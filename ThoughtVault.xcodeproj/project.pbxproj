@@ -18,6 +18,9 @@
 		AAPK1300 /* StudioComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAPK1300 /* StudioComponents.swift */; };
 		ABPK1300 /* StudioComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAPK1300 /* StudioComponents.swift */; };
 		AAPK0002 /* ParakeetModelStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAPK0002 /* ParakeetModelStore.swift */; };
+		AACP0001 /* ContinuedProcessing.swift in Sources */ = {isa = PBXBuildFile; fileRef = FACP0001 /* ContinuedProcessing.swift */; };
+		ABCP0001 /* ContinuedProcessing.swift in Sources */ = {isa = PBXBuildFile; fileRef = FACP0001 /* ContinuedProcessing.swift */; };
+		ACCP0001 /* ContinuedProcessingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBCP0001 /* ContinuedProcessingTests.swift */; };
 		AADG0001 /* DiagnosticLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = FADG0001 /* DiagnosticLog.swift */; };
 		ABPK0002 /* ParakeetModelStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAPK0002 /* ParakeetModelStore.swift */; };
 		ABDG0001 /* DiagnosticLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = FADG0001 /* DiagnosticLog.swift */; };
@@ -397,6 +400,8 @@
 		FAPK1200 /* SettingsView+VerwerkingIOS.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SettingsView+VerwerkingIOS.swift"; sourceTree = "<group>"; };
 		FAPK1300 /* StudioComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StudioComponents.swift; sourceTree = "<group>"; };
 		FAPK0002 /* ParakeetModelStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParakeetModelStore.swift; sourceTree = "<group>"; };
+		FACP0001 /* ContinuedProcessing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContinuedProcessing.swift; sourceTree = "<group>"; };
+		FBCP0001 /* ContinuedProcessingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContinuedProcessingTests.swift; sourceTree = "<group>"; };
 		FADG0001 /* DiagnosticLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticLog.swift; sourceTree = "<group>"; };
 		FAPK0003 /* ParakeetTranscriber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParakeetTranscriber.swift; sourceTree = "<group>"; };
 		FBPK0001 /* ParakeetCatalogTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParakeetCatalogTests.swift; sourceTree = "<group>"; };
@@ -732,6 +737,7 @@
 				FA0000K3 /* WhisperModelStore.swift */,
 				FAPK0001 /* ParakeetCatalog.swift */,
 				FAPK0002 /* ParakeetModelStore.swift */,
+				FACP0001 /* ContinuedProcessing.swift */,
 				FADG0001 /* DiagnosticLog.swift */,
 				FAPK0003 /* ParakeetTranscriber.swift */,
 				FA0000K2 /* AppleFoundationModelService.swift */,
@@ -926,6 +932,7 @@
 				FB0000T3 /* NotuleGeneratorTests.swift */,
 				FB0000T5 /* LocalPipelineTests.swift */,
 				FBPK0001 /* ParakeetCatalogTests.swift */,
+				FBCP0001 /* ContinuedProcessingTests.swift */,
 				FBPK0002 /* NotulenDefaultMigrationTests.swift */,
 				FB0000N9 /* NotuleConstraintTests.swift */,
 				FB00AP01 /* NotuleAuditPartsTests.swift */,
@@ -1103,6 +1110,7 @@
 			files = (
 				AAPK0001 /* ParakeetCatalog.swift in Sources */,
 				AAPK0002 /* ParakeetModelStore.swift in Sources */,
+				AACP0001 /* ContinuedProcessing.swift in Sources */,
 				AADG0001 /* DiagnosticLog.swift in Sources */,
 				AAPK1300 /* StudioComponents.swift in Sources */,
 				AAPK1200 /* SettingsView+VerwerkingIOS.swift in Sources */,
@@ -1260,6 +1268,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				ACPK0001 /* ParakeetCatalogTests.swift in Sources */,
+				ACCP0001 /* ContinuedProcessingTests.swift in Sources */,
 				ACPK0002 /* NotulenDefaultMigrationTests.swift in Sources */,
 				AB000001 /* ThoughtVaultTests.swift in Sources */,
 				AB0000S5 /* QuickNoteStoreTests.swift in Sources */,
@@ -1327,6 +1336,7 @@
 			files = (
 				ABPK0001 /* ParakeetCatalog.swift in Sources */,
 				ABPK0002 /* ParakeetModelStore.swift in Sources */,
+				ABCP0001 /* ContinuedProcessing.swift in Sources */,
 				ABDG0001 /* DiagnosticLog.swift in Sources */,
 				ABPK1300 /* StudioComponents.swift in Sources */,
 				ABPK1200 /* SettingsView+VerwerkingIOS.swift in Sources */,

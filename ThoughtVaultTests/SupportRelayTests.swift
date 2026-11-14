@@ -676,3 +676,25 @@ final class SupportStub: URLProtocol, @unchecked Sendable {
         return result
     }
 }
+
+final class HelpLinkTests: XCTestCase {
+    func testBaseWithTrailingSlash() {
+        XCTAssertEqual(SupportLinks.helpURL(base: "https://example.com/help/", platform: "macos")?.absoluteString,
+                       "https://example.com/help/?platform=macos")
+    }
+
+    func testBaseWithoutTrailingSlash() {
+        XCTAssertEqual(SupportLinks.helpURL(base: "https://example.com/help", platform: "ios")?.absoluteString,
+                       "https://example.com/help/?platform=ios")
+    }
+
+    func testEmptyOrMissingBaseHidesButton() {
+        XCTAssertNil(SupportLinks.helpURL(base: "", platform: "macos"))
+        XCTAssertNil(SupportLinks.helpURL(base: "  ", platform: "macos"))
+        XCTAssertNil(SupportLinks.helpURL(base: nil, platform: "macos"))
+    }
+
+    func testUnresolvedBuildSettingHidesButton() {
+        XCTAssertNil(SupportLinks.helpURL(base: "$(TV_HELP_URL)", platform: "macos"))
+    }
+}

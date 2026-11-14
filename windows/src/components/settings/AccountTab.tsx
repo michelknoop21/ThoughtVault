@@ -1,5 +1,5 @@
 import { open } from "@tauri-apps/plugin-shell";
-import { PRIVACY_URL } from "../../services/supportRelay";
+import { HELP_URL, PRIVACY_URL } from "../../services/supportRelay";
 import { revealLogFile } from "../../services/appLog";
 import { useEffect, useState } from "react";
 import { isCompleteIdentity, useSupportStore } from "../../stores/supportStore";
@@ -8,6 +8,7 @@ import { CardHead } from "./SettingsFields";
 import FeedbackWidget from "../FeedbackWidget";
 
 export function AccountTab() {
+  const helpUrl = HELP_URL;
   const [privacyError, setPrivacyError] = useState(false);
   const [logError, setLogError] = useState(false);
   const { auto_report, setAutoReport, name, email, setIdentity } = useSupportStore();
@@ -70,6 +71,10 @@ export function AccountTab() {
             onChange={event => setDraftEmail(event.target.value)} onBlur={saveContact} />
         </div>
       </div>
+      {helpUrl && <div className="settings-row" style={{ display: "block" }}>
+        <button type="button" className="studio-link" style={{ minHeight: 44 }}
+          onClick={() => void open(helpUrl).catch(() => {})}>Handleiding</button>
+      </div>}
       <div className="settings-row"><FeedbackWidget /></div>
     </div>
   </div>;

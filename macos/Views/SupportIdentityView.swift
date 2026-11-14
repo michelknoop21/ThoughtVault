@@ -2,6 +2,24 @@ import SwiftUI
 
 enum SupportLinks {
     static let privacy = URL(string: "https://thoughtvault.yinga.ai/privacy.html")!
+
+    #if os(macOS)
+    static let helpPlatform = "macos"
+    #else
+    static let helpPlatform = "ios"
+    #endif
+
+    /// Help centre link, injected at build time via TV_HELP_URL. Nil hides the button.
+    static let help = helpURL(base: Bundle.main.object(forInfoDictionaryKey: "TVHelpURL") as? String,
+                              platform: helpPlatform)
+
+    /// `<base>/?platform=<platform>`; nil for an empty or unresolved base.
+    static func helpURL(base: String?, platform: String) -> URL? {
+        guard var base = base?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !base.isEmpty, !base.contains("$(") else { return nil }
+        if !base.hasSuffix("/") { base += "/" }
+        return URL(string: base + "?platform=" + platform)
+    }
 }
 
 struct SupportIdentityView: View {

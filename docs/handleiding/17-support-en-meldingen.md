@@ -5,6 +5,22 @@ samenvatting: Stuur een fout, idee of vraag vanuit de app, lees het antwoord ter
 
 Vanuit de app stuur je een melding rechtstreeks naar de ontwikkelaar: een fout, een idee of een vraag. Het antwoord lees je in de app terug. Gaat er iets mis bij opnemen, transcriberen of het maken van notulen, dan verstuurt de app zelf een foutrapport, tenzij je dat uitzet.
 
+## De handleiding openen
+
+Met **Handleiding** open je deze handleiding in je browser, op de pagina's voor jouw apparaat.
+
+::: macos
+Kies in de menubalk **Help** > **Handleiding**, of open **Instellingen** > **Account** en klik in de kaart **Support** op **Handleiding**, boven **Melding maken**.
+:::
+
+::: ios
+Open **Instellingen** > **Over ThoughtVault** en tik in het blok **Support** op **Handleiding**, boven **Melding maken**.
+:::
+
+::: windows
+Open **Instellingen** > **Account** en klik onder **Feedback** op **Handleiding**, boven **Probleem melden of suggestie**.
+:::
+
 ## Je naam en e-mailadres
 
 Bij de eerste start vraagt de app om je naam en e-mailadres. Zonder die twee kun je niet verder. Ze zijn nodig om je meldingen te beantwoorden en maken geen account aan.

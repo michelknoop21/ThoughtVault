@@ -116,6 +116,7 @@ jobs:
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          VITE_HELP_URL: ${{ secrets.THOUGHTVAULT_HELP_URL }}
           CHANNEL_CONFIG: '{"identifier":"${{ steps.names.outputs.bundle_id }}","productName":"${{ steps.names.outputs.product_name }}","plugins":{"updater":{"endpoints":["https://thoughtvault.yinga.ai/releases/windows/${{ steps.names.outputs.feed }}.json"]}}}'
         run: |
           # Tauri 2 does not read TAURI_CONFIG as input (the CLI sets it itself for the build

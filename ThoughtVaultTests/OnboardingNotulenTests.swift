@@ -4,10 +4,12 @@ import XCTest
 /// Answers every request with an empty JSON body and `status`.
 private final class ModelListStub: URLProtocol, @unchecked Sendable {
     nonisolated(unsafe) static var status = 200
+    nonisolated(unsafe) static var seen: [URLRequest] = []
     override class func canInit(with request: URLRequest) -> Bool { true }
     override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
     override func stopLoading() {}
     override func startLoading() {
+        Self.seen.append(request)
         client?.urlProtocol(self, didReceive: HTTPURLResponse(url: request.url!, statusCode: Self.status, httpVersion: nil, headerFields: nil)!,
                             cacheStoragePolicy: .notAllowed)
         client?.urlProtocol(self, didLoad: Data("{}".utf8))
@@ -91,25 +93,36 @@ final class OnboardingNotulenTests: XCTestCase {
         XCTAssertTrue(OnboardingNotulen.isReady(provider, localServers: true))
     }
 
-    /// A refused key stays refused per provider, through tile switches, tests of other
-    /// providers and inconclusive retries; only a passing test or another key lifts it.
-    func testRejectionIsKeptPerProviderUntilPassOrOtherKey() {
-        var rejections: [NotulenProvider: String] = [:]
-        OnboardingNotulen.record(.rejected, key: "sk-fout", for: .openRouter, in: &rejections)
-        XCTAssertTrue(OnboardingNotulen.isRejected(.openRouter, storedKey: "sk-fout", in: rejections))
-        XCTAssertFalse(rejections.values.contains("sk-fout"), "only a fingerprint is kept")
+    /// Volgende commits the key in the field, also while its delayed save is still pending.
+    func testVolgendeTakesTheTypedKeyOverTheStoredOne() {
+        XCTAssertEqual(OnboardingNotulen.keyForNext(typed: " sk-nieuw ", stored: "sk-oud"), "sk-nieuw")
+        XCTAssertEqual(OnboardingNotulen.keyForNext(typed: "", stored: "sk-oud"), "sk-oud")
+        XCTAssertNil(OnboardingNotulen.keyForNext(typed: "", stored: nil))
+    }
 
-        OnboardingNotulen.record(.passed, key: "sk-ander", for: .openAICompatible, in: &rejections)
-        XCTAssertTrue(OnboardingNotulen.isRejected(.openRouter, storedKey: "sk-fout", in: rejections))
+    /// Volgende decides on a fresh test of exactly the committed key, so nothing remembered
+    /// (or lost on a restart) and no late result for another key counts.
+    func testKeyTestSendsExactlyTheCommittedKey() async {
+        ModelListStub.seen = []
+        ModelListStub.status = 401
+        let refused = await OnboardingNotulen.keyTest(.openRouter, key: "sk-a", session: modelListSession)
+        XCTAssertEqual(refused, .rejected)
+        XCTAssertEqual(ModelListStub.seen.last?.value(forHTTPHeaderField: "Authorization"), "Bearer sk-a")
+        ModelListStub.status = 500
+        let anthropic = await OnboardingNotulen.keyTest(.anthropic, key: "sk-b", session: modelListSession)
+        XCTAssertEqual(anthropic, .inconclusive)
+        XCTAssertEqual(ModelListStub.seen.last?.value(forHTTPHeaderField: "x-api-key"), "sk-b")
+        ModelListStub.status = 200
+        let openAI = await OnboardingNotulen.keyTest(.openAI, key: "sk-c", session: modelListSession)
+        XCTAssertEqual(openAI, .passed)
+    }
 
-        OnboardingNotulen.record(.inconclusive, key: "sk-fout", for: .openRouter, in: &rejections)
-        XCTAssertTrue(OnboardingNotulen.isRejected(.openRouter, storedKey: "sk-fout", in: rejections))
-
-        XCTAssertFalse(OnboardingNotulen.isRejected(.openRouter, storedKey: "sk-nieuw", in: rejections))
-        XCTAssertFalse(OnboardingNotulen.isRejected(.openRouter, storedKey: nil, in: rejections))
-
-        OnboardingNotulen.record(.passed, key: "sk-fout", for: .openRouter, in: &rejections)
-        XCTAssertFalse(OnboardingNotulen.isRejected(.openRouter, storedKey: "sk-fout", in: rejections))
+    /// Only a full pass of the protected endpoint counts; a model list alone does not.
+    func testCloudConnectionOnlyReadyPasses() {
+        XCTAssertEqual(KeyTestOutcome(connection: .ready), .passed)
+        XCTAssertEqual(KeyTestOutcome(connection: .keyRejected), .rejected)
+        XCTAssertEqual(KeyTestOutcome(connection: .unreachable), .inconclusive)
+        XCTAssertEqual(KeyTestOutcome(connection: .keyMissing), .inconclusive)
     }
 
     func testKeyTestOutcomeFromStatus() {
@@ -130,11 +143,4 @@ final class OnboardingNotulenTests: XCTestCase {
                                                       apiKey: "k", session: modelListSession).fetchModelList()
         XCTAssertEqual(openAI.status, 401)
     }
-
-    /// A key the provider just refused blocks Volgende, even though it is stored.
-    func testRejectedKeyIsNotReady() {
-        XCTAssertFalse(OnboardingNotulen.isReady(.openRouter, keyRejected: true))
-        XCTAssertFalse(OnboardingNotulen.isReady(.openAICompatible, keyRejected: true))
-    }
-
 }

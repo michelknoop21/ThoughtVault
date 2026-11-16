@@ -6,6 +6,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { DEFAULT_SETTINGS } from "../types";
 import type { Profile, NotulenProvider } from "../types";
 import { isHostedURL, isOllamaCloudURL } from "./ollamaModels";
+import { compatibleRefusal, usableModel } from "./suggestedModels";
 
 import { loadCorrectionsOrEmpty } from "../stores/personalCorrectionsStore";
 import { usePeopleDirectoryStore } from "../stores/peopleDirectoryStore";
@@ -104,9 +105,10 @@ function getConfig(override?: NotulenProvider): LLMConfig {
     ollamaModel: settings.ollama_model || "llama3.2",
     lmStudioUrl: settings.lm_studio_url || "http://localhost:1234",
     lmStudioModel: settings.lm_studio_model || "local-model",
-    openAIModel: settings.openai_model || DEFAULT_SETTINGS.openai_model,
-    anthropicModel: settings.anthropic_model || "claude-sonnet-5-5",
-    openRouterModel: settings.openrouter_model || DEFAULT_SETTINGS.openrouter_model,
+    // Metered providers: never a model above the price cap (the task details say so).
+    openAIModel: usableModel(settings.openai_model || DEFAULT_SETTINGS.openai_model, "openai"),
+    anthropicModel: usableModel(settings.anthropic_model || "claude-sonnet-5-5", "anthropic"),
+    openRouterModel: usableModel(settings.openrouter_model || DEFAULT_SETTINGS.openrouter_model, "openrouter"),
   };
 }
 
@@ -184,6 +186,7 @@ function generateWithOpenAICompatible(
   step?: ModelStep,
   meter?: UsageMeter,
 ): Promise<string> {
+  const refusal = compatibleRefusal(model, baseUrl); if (refusal) return Promise.reject(new Error(refusal));
   const provider = providerKind(baseUrl);
   const trace: RequestTrace = { step, provider, model, system: systemPrompt, user: userPrompt, meter };
   return logModelRequest(trace, () => openAICompatibleRequest(baseUrl, model, systemPrompt, userPrompt, apiKey, trace, onProgress));

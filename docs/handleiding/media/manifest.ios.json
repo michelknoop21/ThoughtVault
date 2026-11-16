@@ -18,9 +18,10 @@
   {
     "file": "ios-taken.webp",
     "platform": "ios",
-    "args": "-TVDebugTab tasks",
+    "args": "-TVDebugTab tasks -TVDebugTaskFilter history",
     "sources": [
-      "macos/Views/TasksView+iOS.swift"
+      "macos/Views/TasksView+iOS.swift",
+      "macos/Views/TaskHistorySection.swift"
     ]
   },
   {

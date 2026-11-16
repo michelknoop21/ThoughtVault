@@ -421,7 +421,7 @@ struct ContentView: View {
 
         case .tasks:
             NavigationStack {
-                TasksView(onStartRecording: { selectedTab = .record })
+                TasksView(onStartRecording: { selectedTab = .record }, onOpenTranscript: openTranscript)
             }
 #if os(macOS)
             .toolbar(removing: .sidebarToggle)

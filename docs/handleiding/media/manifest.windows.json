@@ -25,10 +25,11 @@
     "file": "win-taken.webp",
     "platform": "windows",
     "screen": "Taken",
-    "shows": "Het scherm Taken met een opname die nog wordt getranscribeerd en een taak die klaar is.",
+    "shows": "Het scherm Taken met een opname die nog wordt getranscribeerd en de geschiedenis met een voltooide, een mislukte en een geannuleerde taak.",
     "url": "?scenario=handleiding#/tasks",
     "sources": [
       "windows/src/pages/TasksPage.tsx",
+      "windows/src/components/tasks/TaskHistoryList.tsx",
       "windows/src/stores/recordingStore.ts"
     ]
   },

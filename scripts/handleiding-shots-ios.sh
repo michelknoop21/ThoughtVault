@@ -65,7 +65,7 @@ PY
 
 shot ios-home               -TVDebugTab home
 shot ios-opnemen            -TVDebugTab record
-shot ios-taken              -TVDebugTab tasks
+shot ios-taken              -TVDebugTab tasks -TVDebugTaskFilter history
 shot ios-notulen            -TVDebugTab transcripts
 shot ios-instellingen       -TVDebugTab settings
 shot ios-onboarding-microfoon -hasCompletedOnboarding NO -TVDebugOpen onboarding-mic

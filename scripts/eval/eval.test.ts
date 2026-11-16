@@ -76,15 +76,19 @@ it("reserves concurrent costs and stops on unknown costs", async () => {
   const second = budget.reserve(0.8).then(release => { admitted = true; return release; });
   await Promise.resolve();
   expect(admitted).toBe(false);
+  expect(budget.exposure).toBeCloseTo(0.8);
   first(0.1);
   const release = await second;
   release(0.1);
   expect(budget.spent).toBeCloseTo(0.2);
   await expect(budget.reserve(0.9)).rejects.toThrow("Budget bereikt");
-  const unknown = await budget.reserve(0.2);
+  expect(budget.stopReason).toBe("Budget bereikt");
+  await expect(budget.reserve(0.1)).rejects.toThrow("Budget bereikt");
+  const uncertain = new SpendBudget(1);
+  const unknown = await uncertain.reserve(0.2);
   unknown();
-  expect(budget.spent).toBeCloseTo(0.4);
-  await expect(budget.reserve(0.1)).rejects.toThrow("Kosten onbekend");
+  expect(uncertain.exposure).toBeCloseTo(0.2);
+  await expect(uncertain.reserve(0.1)).rejects.toThrow("Kosten onbekend");
 });
 
 it("forwards catalog GET requests without a body", async () => {
@@ -201,17 +205,20 @@ it("notule-eval", async () => {
     let html = "", error: string | null = null;
     try { html = await LLMService.generateNotulen(data[conversation].transcript, profile, undefined, [], "", undefined, meter); }
     catch (e) { error = e instanceof Error ? e.message : String(e); }
+    if (state.spendBudget.stopReason) error = "Meetbudget: " + state.spendBudget.stopReason;
     const text = htmlToText(html), score = scoreFacts(text, data[conversation].facts);
     const run: RunResult = { model, conversation, rep, detail: "n.v.t.", ...score, chars: text.length, words: text.split(" ").filter(Boolean).length,
-      nalopen: nalopenCount(html), durationMs: Date.now() - started, costUsd: meter.totalCost, costKnown: meter.costKnown, budgetLimited: state.spendBudget.waited, error, commit: COMMIT };
+      nalopen: nalopenCount(html), durationMs: Date.now() - started, costUsd: meter.totalCost, costKnown: meter.costKnown, budgetLimited: state.spendBudget.waited || Boolean(state.spendBudget.stopReason), error, commit: COMMIT };
     runs.push(run); total += run.costUsd;
     secureWrite(join(resultsDir, `${model.replace(/\//g, "_")}__${conversation}__r${rep}.html`), html);
     secureWrite(join(resultsDir, "runs.jsonl"), JSON.stringify(run) + "\n", true);
     console.log(`${model} ${conversation} r${rep}: ${error ? "FOUT" : `${run.found}/${run.total} feiten`}, USD ${run.costUsd.toFixed(4)}, ${(run.durationMs / 1000).toFixed(1)}s`);
     // A failed run counts as an error and the comparison goes on; only a successful run
     // without a reported cost stops it, because then the budget can no longer be tracked.
-    if ((!meter.costKnown || state.spendBudget.blocked) && !state.dry) { stopped = "Kosten van een verzoek onbekend; gestopt om het budget te bewaken."; break outer; }
+    if ((!meter.costKnown || state.spendBudget.stopReason) && !state.dry) { stopped = state.spendBudget.stopReason || "Kosten onbekend of boven de raming; gestopt om het budget te bewaken."; break outer; }
   }
+  await state.spendBudget.drain();
+  if (!state.dry) stopped += "\nBetaald of conservatief gereserveerd: maximaal USD " + state.spendBudget.exposure.toFixed(4) + " van " + budget + ".";
   if (state.spendBudget.waited) stopped += "\nParalleliteit tijdelijk begrensd door het kostenplafond; deze looptijden zijn niet de normale app-snelheid.";
   const summary = summaryTable(runs, total) + (stopped ? `\n${stopped}\n` : "") + `\nDetailniveau: n.v.t. (pijplijn kent het niet)\n`;
   secureWrite(join(resultsDir, "summary.md"), summary);

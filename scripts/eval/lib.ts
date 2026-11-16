@@ -81,9 +81,13 @@ export function secureWrite(file: string, data: string, append = false): void {
 export class SpendBudget {
   spent = 0;
   waited = false;
-  blocked = false;
+  stopReason = "";
   private held = 0;
   private pending = new Set<Promise<void>>();
+
+  get exposure(): number { return this.spent + this.held; }
+
+  async drain(): Promise<void> { while (this.pending.size) await Promise.all(this.pending); }
 
   constructor(readonly limit: number) {
     if (!Number.isFinite(limit) || limit <= 0) throw new Error("Ongeldig budget");
@@ -92,8 +96,11 @@ export class SpendBudget {
   async reserve(ceiling: number): Promise<(actual?: number) => void> {
     if (!Number.isFinite(ceiling) || ceiling < 0) throw new Error("Ongeldige kostenraming");
     while (true) {
-      if (this.blocked) throw new Error("Kosten onbekend; geen nieuwe aanvragen");
-      if (this.spent + ceiling > this.limit) throw new Error("Budget bereikt");
+      if (this.stopReason) throw new Error(this.stopReason);
+      if (this.spent + ceiling > this.limit) {
+        this.stopReason = "Budget bereikt";
+        throw new Error(this.stopReason);
+      }
       if (this.spent + this.held + ceiling <= this.limit) break;
       this.waited = true;
       await Promise.race(this.pending);
@@ -107,7 +114,8 @@ export class SpendBudget {
       const known = actual !== undefined && Number.isFinite(actual) && actual >= 0;
       this.spent += known ? actual : ceiling;
       this.held -= ceiling;
-      if (!known || actual! > ceiling) this.blocked = true;
+      if (!known) this.stopReason = "Kosten onbekend";
+      else if (actual! > ceiling) this.stopReason = "Kosten boven de raming";
       finish();
     };
   }

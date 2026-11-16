@@ -44,15 +44,19 @@ final class AnthropicLLMService: LLMService, @unchecked Sendable {
     }
 
     /// Model ids available to this key; empty when the key is missing or rejected.
-    func fetchModels() async -> [String] {
-        guard var request = request("/v1/models?limit=100") else { return [] }
+    func fetchModels() async -> [String] { await fetchModelList().models }
+
+    /// Models plus the HTTP status (nil without an answer), so a 401/403 shows up as a refused key.
+    func fetchModelList() async -> (models: [String], status: Int?) {
+        guard var request = request("/v1/models?limit=100") else { return ([], nil) }
         request.timeoutInterval = 10
-        guard let (data, response) = try? await URLSession.shared.data(for: request),
-              (response as? HTTPURLResponse)?.statusCode == 200,
+        guard let (data, response) = try? await session.data(for: request) else { return ([], nil) }
+        let status = (response as? HTTPURLResponse)?.statusCode
+        guard status == 200,
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let items = json["data"] as? [[String: Any]]
-        else { return [] }
-        return items.compactMap { $0["id"] as? String }
+        else { return ([], status) }
+        return (items.compactMap { $0["id"] as? String }, status)
     }
 
     // MARK: - Generate Notulen

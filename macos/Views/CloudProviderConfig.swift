@@ -8,8 +8,8 @@ import SwiftUI
 
 struct CloudProviderConfig: View {
     let provider: NotulenProvider
-    /// True after a test the endpoint answered with 401/403, false once the key changes or a test passes.
-    var onKeyRejected: (Bool) -> Void = { _ in }
+    /// Outcome of each key test with the key it tested.
+    var onKeyTest: (KeyTestOutcome, String) -> Void = { _, _ in }
 
     @AppStorage("ollamaCloudModel") private var ollamaCloudModel = ""
     @AppStorage(CloudAIConfiguration.selectedKey) private var selected = ""
@@ -197,7 +197,6 @@ struct CloudProviderConfig: View {
         }
         saveError = nil
         connected = nil
-        onKeyRejected(false)
     }
 
     private func test() async {
@@ -209,7 +208,8 @@ struct CloudProviderConfig: View {
         // Listing models can succeed without a valid key, so also probe a protected endpoint.
         let status = await service.checkConnection()
         connected = status == .ready
-        onKeyRejected(status == .keyRejected)
+        onKeyTest(status == .ready ? .passed : status == .keyRejected ? .rejected : .inconclusive,
+                  apiKey.trimmingCharacters(in: .whitespacesAndNewlines))
     }
     private func loadModels() async {
         loadingModels = true

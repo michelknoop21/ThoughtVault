@@ -488,17 +488,21 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
         return []
     }
 
-    private func fetchModelsOpenAI() async -> [String]? {
-        guard let url = URL(string: endpoint("/v1/models")) else { return nil }
+    private func fetchModelsOpenAI() async -> [String]? { await fetchModelList().models }
+
+    /// `/v1/models` plus its HTTP status (nil without an answer), so a 401/403 shows up as a refused key.
+    func fetchModelList() async -> (models: [String], status: Int?) {
+        guard let url = URL(string: endpoint("/v1/models")) else { return ([], nil) }
         var request = URLRequest(url: url)
         request.timeoutInterval = 10
         applyAuth(to: &request)
-        guard let (data, response) = try? await URLSession.shared.data(for: request),
-              (response as? HTTPURLResponse)?.statusCode == 200,
+        guard let (data, response) = try? await session.data(for: request) else { return ([], nil) }
+        let status = (response as? HTTPURLResponse)?.statusCode
+        guard status == 200,
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let items = json["data"] as? [[String: Any]]
-        else { return nil }
-        return items.compactMap { $0["id"] as? String }.sorted()
+        else { return ([], status) }
+        return (items.compactMap { $0["id"] as? String }.sorted(), status)
     }
 
     private func fetchModelsOllamaTags() async -> [String]? {

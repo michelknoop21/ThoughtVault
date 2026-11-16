@@ -7,6 +7,7 @@
 // Key, model and connection test reuse HostedProviderConfig/CloudProviderConfig.
 // The iOS layout is in OnboardingView+NotulenIOS.
 
+import CryptoKit
 import SwiftUI
 
 /// Decisions of the notulen step, kept free of views so they can be tested.
@@ -52,6 +53,29 @@ enum OnboardingNotulen {
         }
     }
 
+    /// Hash of a key, so a refused key can be recognised without keeping the key itself.
+    static func fingerprint(_ key: String) -> String {
+        SHA256.hash(data: Data(key.trimmingCharacters(in: .whitespacesAndNewlines).utf8))
+            .map { String(format: "%02x", $0) }.joined()
+    }
+
+    /// Keeps the refusal of a provider until a test of that provider passes; an inconclusive test changes nothing.
+    static func record(_ outcome: KeyTestOutcome, key: String, for provider: NotulenProvider,
+                       in rejections: inout [NotulenProvider: String]) {
+        switch outcome {
+        case .passed: rejections[provider] = nil
+        case .rejected: rejections[provider] = fingerprint(key)
+        case .inconclusive: break
+        }
+    }
+
+    /// True when the stored key of the provider is the one it refused; another key lifts the refusal.
+    static func isRejected(_ provider: NotulenProvider, storedKey: String?,
+                           in rejections: [NotulenProvider: String]) -> Bool {
+        guard let refused = rejections[provider], let storedKey else { return false }
+        return fingerprint(storedKey) == refused
+    }
+
     static func apply(_ provider: NotulenProvider, defaults: UserDefaults = .standard) {
         defaults.set(provider.rawValue, forKey: "notulenProvider")
         defaults.set(false, forKey: skippedKey)
@@ -72,9 +96,15 @@ extension OnboardingView {
 
     func notulenNext() {
         let provider = notulenProvider
-        guard OnboardingNotulen.isReady(provider, keyRejected: notulenRejected == provider) else { notulenSkipAsk = true; return }
+        let storedKey = provider.apiKeyKeychainKey.flatMap { KeychainService.shared.load(for: $0) }
+        let rejected = OnboardingNotulen.isRejected(provider, storedKey: storedKey, in: notulenRejections)
+        guard OnboardingNotulen.isReady(provider, keyRejected: rejected) else { notulenSkipAsk = true; return }
         OnboardingNotulen.apply(provider)
         advanceStep()
+    }
+
+    private func notulenRecord(_ outcome: KeyTestOutcome, key: String, for provider: NotulenProvider) {
+        OnboardingNotulen.record(outcome, key: key, for: provider, in: &notulenRejections)
     }
 
     func notulenSkipAlert<V: View>(_ content: V) -> some View {
@@ -95,9 +125,9 @@ extension OnboardingView {
         let provider = notulenProvider
         switch provider {
         case .openRouter, .openAI, .anthropic:
-            HostedProviderConfig(provider: provider, onKeyRejected: { notulenRejected = $0 ? provider : nil }).id(provider)
+            HostedProviderConfig(provider: provider, onKeyTest: { notulenRecord($0, key: $1, for: provider) }).id(provider)
         case .ollamaCloud, .openAICompatible:
-            CloudProviderConfig(provider: provider, onKeyRejected: { notulenRejected = $0 ? provider : nil }).id(provider)
+            CloudProviderConfig(provider: provider, onKeyTest: { notulenRecord($0, key: $1, for: provider) }).id(provider)
         case .appleIntelligence:
             notulenNote("Apple Intelligence schrijft de notule op deze \(device). Er gaat niets naar internet.")
         default:

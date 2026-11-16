@@ -1,6 +1,26 @@
 import XCTest
 @testable import ThoughtVault
 
+/// Answers every request with an empty JSON body and `status`.
+private final class ModelListStub: URLProtocol, @unchecked Sendable {
+    nonisolated(unsafe) static var status = 200
+    override class func canInit(with request: URLRequest) -> Bool { true }
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+    override func stopLoading() {}
+    override func startLoading() {
+        client?.urlProtocol(self, didReceive: HTTPURLResponse(url: request.url!, statusCode: Self.status, httpVersion: nil, headerFields: nil)!,
+                            cacheStoragePolicy: .notAllowed)
+        client?.urlProtocol(self, didLoad: Data("{}".utf8))
+        client?.urlProtocolDidFinishLoading(self)
+    }
+}
+
+private let modelListSession: URLSession = {
+    let configuration = URLSessionConfiguration.ephemeral
+    configuration.protocolClasses = [ModelListStub.self]
+    return URLSession(configuration: configuration)
+}()
+
 final class OnboardingNotulenTests: XCTestCase {
 
     private var defaults: UserDefaults!
@@ -71,17 +91,50 @@ final class OnboardingNotulenTests: XCTestCase {
         XCTAssertTrue(OnboardingNotulen.isReady(provider, localServers: true))
     }
 
+    /// A refused key stays refused per provider, through tile switches, tests of other
+    /// providers and inconclusive retries; only a passing test or another key lifts it.
+    func testRejectionIsKeptPerProviderUntilPassOrOtherKey() {
+        var rejections: [NotulenProvider: String] = [:]
+        OnboardingNotulen.record(.rejected, key: "sk-fout", for: .openRouter, in: &rejections)
+        XCTAssertTrue(OnboardingNotulen.isRejected(.openRouter, storedKey: "sk-fout", in: rejections))
+        XCTAssertFalse(rejections.values.contains("sk-fout"), "only a fingerprint is kept")
+
+        OnboardingNotulen.record(.passed, key: "sk-ander", for: .openAICompatible, in: &rejections)
+        XCTAssertTrue(OnboardingNotulen.isRejected(.openRouter, storedKey: "sk-fout", in: rejections))
+
+        OnboardingNotulen.record(.inconclusive, key: "sk-fout", for: .openRouter, in: &rejections)
+        XCTAssertTrue(OnboardingNotulen.isRejected(.openRouter, storedKey: "sk-fout", in: rejections))
+
+        XCTAssertFalse(OnboardingNotulen.isRejected(.openRouter, storedKey: "sk-nieuw", in: rejections))
+        XCTAssertFalse(OnboardingNotulen.isRejected(.openRouter, storedKey: nil, in: rejections))
+
+        OnboardingNotulen.record(.passed, key: "sk-fout", for: .openRouter, in: &rejections)
+        XCTAssertFalse(OnboardingNotulen.isRejected(.openRouter, storedKey: "sk-fout", in: rejections))
+    }
+
+    func testKeyTestOutcomeFromStatus() {
+        XCTAssertEqual(KeyTestOutcome(status: 200), .passed)
+        XCTAssertEqual(KeyTestOutcome(status: 401), .rejected)
+        XCTAssertEqual(KeyTestOutcome(status: 403), .rejected)
+        XCTAssertEqual(KeyTestOutcome(status: 500), .inconclusive)
+        XCTAssertEqual(KeyTestOutcome(status: nil), .inconclusive)
+    }
+
+    /// The OpenAI and Anthropic key tests read the models list; its 401 must reach the caller.
+    func testModelListsReportTheStatus() async {
+        ModelListStub.status = 401
+        let anthropic = await AnthropicLLMService(model: "m", apiKey: "k", session: modelListSession).fetchModelList()
+        XCTAssertEqual(anthropic.status, 401)
+        XCTAssertTrue(anthropic.models.isEmpty)
+        let openAI = await OpenAICompatibleLLMService(baseURL: OpenAICompatibleLLMService.openAIBaseURL, model: "m",
+                                                      apiKey: "k", session: modelListSession).fetchModelList()
+        XCTAssertEqual(openAI.status, 401)
+    }
+
     /// A key the provider just refused blocks Volgende, even though it is stored.
     func testRejectedKeyIsNotReady() {
         XCTAssertFalse(OnboardingNotulen.isReady(.openRouter, keyRejected: true))
         XCTAssertFalse(OnboardingNotulen.isReady(.openAICompatible, keyRejected: true))
     }
 
-    func testOpenRouterKeyCheckOnlyCallsAuthErrorsARejection() {
-        XCTAssertNil(HostedProviderConfig.openRouterKeyProblem(status: 200))
-        XCTAssertEqual(HostedProviderConfig.openRouterKeyProblem(status: 401)?.rejected, true)
-        XCTAssertEqual(HostedProviderConfig.openRouterKeyProblem(status: 403)?.rejected, true)
-        XCTAssertEqual(HostedProviderConfig.openRouterKeyProblem(status: 500)?.rejected, false)
-        XCTAssertEqual(HostedProviderConfig.openRouterKeyProblem(status: nil)?.rejected, false)
-    }
 }

@@ -7,12 +7,26 @@
 
 import SwiftUI
 
+/// What a key test says about the key itself. Only 401/403 mean the provider refused it;
+/// a timeout or server error is inconclusive.
+enum KeyTestOutcome: Equatable {
+    case passed, rejected, inconclusive
+
+    init(status: Int?) {
+        switch status {
+        case 200: self = .passed
+        case 401, 403: self = .rejected
+        default: self = .inconclusive
+        }
+    }
+}
+
 struct HostedProviderConfig: View {
     let provider: NotulenProvider
     /// Called after the key in the Keychain changed.
     var onKeyChange: () -> Void = {}
-    /// True after a test the provider answered with 401/403, false once the key changes or a test passes.
-    var onKeyRejected: (Bool) -> Void = { _ in }
+    /// Outcome of each key test with the key it tested.
+    var onKeyTest: (KeyTestOutcome, String) -> Void = { _, _ in }
 
     @State private var apiKey = ""
     @State private var reveal = false
@@ -168,7 +182,6 @@ struct HostedProviderConfig: View {
         }
         saveError = nil
         connected = nil
-        onKeyRejected(false)
         onKeyChange()
     }
 
@@ -178,47 +191,52 @@ struct HostedProviderConfig: View {
         failure = nil
         let key = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
         // OpenRouter lists its models without a key, so the list alone proves nothing.
-        if isOpenRouter, let problem = await Self.openRouterKeyProblem(key) {
-            failure = problem.text
-            connected = false
-            models = []
-            onKeyRejected(problem.rejected)
-            return
+        if isOpenRouter {
+            let status = await Self.openRouterKeyStatus(key)
+            onKeyTest(KeyTestOutcome(status: status), key)
+            if let problem = Self.openRouterKeyProblem(status: status) {
+                failure = problem
+                connected = false
+                models = []
+                return
+            }
         }
-        onKeyRejected(false)
         let list: [String]
         if isOpenAI {
-            let all = await OpenAICompatibleLLMService(baseURL: OpenAICompatibleLLMService.openAIBaseURL,
-                                                       model: openAIModel, apiKey: key).fetchModels()
+            let result = await OpenAICompatibleLLMService(baseURL: OpenAICompatibleLLMService.openAIBaseURL,
+                                                          model: openAIModel, apiKey: key).fetchModelList()
+            onKeyTest(KeyTestOutcome(status: result.status), key)
             // The list also holds embedding, audio and image models; keep chat models.
-            list = all.filter { $0.hasPrefix("gpt-") || $0.hasPrefix("o") }.filter { !$0.contains("audio") && !$0.contains("image") && !$0.contains("realtime") && !$0.contains("transcribe") && !$0.contains("tts") }
+            list = result.models.filter { $0.hasPrefix("gpt-") || $0.hasPrefix("o") }.filter { !$0.contains("audio") && !$0.contains("image") && !$0.contains("realtime") && !$0.contains("transcribe") && !$0.contains("tts") }
         } else if isOpenRouter {
             list = await OpenAICompatibleLLMService(baseURL: OpenAICompatibleLLMService.openRouterBaseURL,
                                                     model: openRouterModel, apiKey: key).fetchModels()
         } else {
-            list = await AnthropicLLMService(model: anthropicModel, apiKey: key).fetchModels()
+            let result = await AnthropicLLMService(model: anthropicModel, apiKey: key).fetchModelList()
+            onKeyTest(KeyTestOutcome(status: result.status), key)
+            list = result.models
         }
         connected = !list.isEmpty
         models = list
     }
 
-    /// nil when OpenRouter accepts the key, else what went wrong. Only the status is
+    /// Status of OpenRouter's key endpoint (nil without an answer). Only the status is
     /// inspected; the key never reaches a log.
-    private static func openRouterKeyProblem(_ key: String) async -> (text: String, rejected: Bool)? {
+    private static func openRouterKeyStatus(_ key: String) async -> Int? {
         var request = URLRequest(url: URL(string: "https://openrouter.ai/api/v1/key")!)
         request.timeoutInterval = 10
         request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
         let response = try? await URLSession.shared.data(for: request).1
-        return openRouterKeyProblem(status: (response as? HTTPURLResponse)?.statusCode)
+        return (response as? HTTPURLResponse)?.statusCode
     }
 
-    /// nil for 200; `rejected` only for 401/403, which say the key itself is wrong.
-    static func openRouterKeyProblem(status: Int?) -> (text: String, rejected: Bool)? {
+    /// nil for 200, else what went wrong.
+    private static func openRouterKeyProblem(status: Int?) -> String? {
         switch status {
         case 200: return nil
-        case nil: return (String(localized: "OpenRouter is niet bereikbaar. Controleer je internetverbinding."), false)
-        case 401, 403: return (String(localized: "OpenRouter weigert deze sleutel. Controleer of je hem volledig hebt geplakt."), true)
-        case let status?: return (String(localized: "OpenRouter gaf foutcode \(status). Probeer het later opnieuw."), false)
+        case nil: return String(localized: "OpenRouter is niet bereikbaar. Controleer je internetverbinding.")
+        case 401, 403: return String(localized: "OpenRouter weigert deze sleutel. Controleer of je hem volledig hebt geplakt.")
+        case let status?: return String(localized: "OpenRouter gaf foutcode \(status). Probeer het later opnieuw.")
         }
     }
 }

@@ -36,6 +36,13 @@ export async function testKey(provider: KeyedProvider, key: string): Promise<Key
   } catch { return "unreachable"; }
 }
 
+/** Short hash, so a refused key can be recognised without keeping the key itself. */
+export function fingerprint(key: string): string {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < key.length; i++) hash = Math.imul(hash ^ key.charCodeAt(i), 0x01000193);
+  return (hash >>> 0).toString(16);
+}
+
 const TILES: [NotulenChoice, string, string][] = [
   ["openrouter", "OpenRouter", "Eén sleutel voor veel modellen."],
   ["local", "Op deze pc", "Via Ollama, gratis, vraagt een snelle pc."],
@@ -55,7 +62,11 @@ export function NotulenStep({ onBack, onDone }: { onBack: () => void; onDone: ()
   const [saved, setSaved] = useState<Partial<Record<KeyedProvider, boolean>>>({});
   /** Last test or save, tied to the provider and key it ran for, so a late result never lands on another tile or key. */
   const [check, setCheck] = useState<{ provider: KeyedProvider; key: string; state: KeyState; error?: string } | null>(null);
-  const keyState: KeyState = check && check.provider === keyed && check.key === typed ? check.state : "idle";
+  /** Fingerprint of the key each provider refused (401/403). Only a passing test or another key lifts it. */
+  const [rejected, setRejected] = useState<Partial<Record<KeyedProvider, string>>>({});
+  const refusedShown = keyed !== null && Boolean(rejected[keyed]) && (!typed || fingerprint(typed) === rejected[keyed]);
+  const checked: KeyState = check && check.provider === keyed && check.key === typed ? check.state : "idle";
+  const keyState: KeyState = checked === "idle" && refusedShown ? "rejected" : checked;
   const [saving, setSaving] = useState(false);
   const [askSkip, setAskSkip] = useState(false);
 
@@ -83,17 +94,29 @@ export function NotulenStep({ onBack, onDone }: { onBack: () => void; onDone: ()
     const provider = keyed, key = typed;
     setCheck({ provider, key, state: "testing" });
     if (!await saveDraft(provider, key)) return;
-    const state = await testKey(provider, key || await loadCredential(`${provider}_api_key`) || "");
+    const tested = key || await loadCredential(`${provider}_api_key`) || "";
+    const state = await testKey(provider, tested);
+    // A timeout or server error says nothing about the key: an earlier refusal stays.
+    if (state === "ok") setRejected(r => ({ ...r, [provider]: undefined }));
+    if (state === "rejected") setRejected(r => ({ ...r, [provider]: fingerprint(tested) }));
     setCheck(c => c?.provider === provider && c.key === key ? { provider, key, state } : c);
+  }
+
+  /** True when the key Volgende would install is the one the provider refused. */
+  async function isRefused(provider: KeyedProvider): Promise<boolean> {
+    const refused = rejected[provider];
+    if (!refused) return false;
+    return fingerprint(typed || await loadCredential(`${provider}_api_key`).catch(() => null) || "") === refused;
   }
 
   async function handleNext() {
     if (saving) return;
-    // A key the provider just refused cannot write a notule.
-    if (keyState === "rejected") { setAskSkip(true); return; }
     setSaving(true);
-    const stored = await saveDraft(keyed, typed);
+    const refused = keyed !== null && await isRefused(keyed);
+    const stored = !refused && await saveDraft(keyed, typed);
     setSaving(false);
+    // A refused key cannot write a notule.
+    if (refused) { setAskSkip(true); return; }
     if (!stored) return;
     if (keyed && !saved[keyed] && !typed) { setAskSkip(true); return; }
     const current = settings.notulen_provider;

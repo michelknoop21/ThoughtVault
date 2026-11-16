@@ -17,6 +17,7 @@ import { useSettingsStore } from "../stores/settingsStore";
 import { useProfilesStore } from "../stores/profilesStore";
 import { useRecordingStore } from "../stores/recordingStore";
 import { LLMService } from "../services/llm";
+import { UsageMeter } from "../services/usageMeter";
 import { stepLabel } from "../services/modelRequestLog";
 import { NotuleReviewError } from "../services/notuleAudit";
 import { prepareNotuleHtml } from "../services/notulePresentation";
@@ -235,12 +236,13 @@ export function TranscriptsPage() {
       }
       setRegeneratingId(transcript.id);
       try {
+        const meter = new UsageMeter();
         const html = await LLMService.generateNotulen(transcription, profile,
           () => tasks.updateBackgroundTask(taskId, { progress: 60 }), [], transcript.quick_note,
-          step => tasks.updateBackgroundTask(taskId, { message: stepLabel(step) }));
+          step => tasks.updateBackgroundTask(taskId, { message: stepLabel(step) }), meter);
         if (!hasUsableNotule(html)) throw new Error("Geen bruikbare notule gegenereerd");
         const title = extractTitle(html) || transcript.title;
-        const finished = { notule_html: html, has_notes: true, title, profile_name: profile.name, profile_id: profile.id,
+        const finished = { notule_html: html, notule_usage: meter.usageFor(transcription, html), has_notes: true, title, profile_name: profile.name, profile_id: profile.id,
           notule_draft_html: "", notule_review_reason: "", updated_at: new Date().toISOString() };
         await useLocalTranscriptsStore.getState().update(transcript.id, finished);
         updateTranscript(transcript.id, finished);

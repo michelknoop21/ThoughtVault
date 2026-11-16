@@ -32,6 +32,7 @@ import type { Transcript } from "../../types";
 import { getTranscriptQuickNote } from "../../services/quickNotes";
 import { htmlToPlainText } from "../../utils/htmlToMarkdown";
 import { draftForReview } from "../../services/notuleAudit";
+import { usageLine } from "../../services/usageMeter";
 import { isConfigured, loadOfferRef, openOffer, type OfferRef } from "../../services/prospectFlow";
 import { ProspectFlowDialog } from "./ProspectFlowDialog";
 import { useToast } from "../ui/InfoBar";
@@ -466,6 +467,9 @@ export function TranscriptDetail({
                 <p>Geen transcriptie beschikbaar</p>
               </div>
             )
+          )}
+          {detailTab === "notule" && transcript.notule_html && !isEditingNotule && (
+            <p className="td-usage-line" style={{ color: "var(--text-secondary)", fontSize: 12, marginTop: 24 }}>{usageLine(transcript.notule_usage, transcript.notule_html)}</p>
           )}
         </div>
       </div>

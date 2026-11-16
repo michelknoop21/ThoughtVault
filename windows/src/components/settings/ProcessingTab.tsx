@@ -17,6 +17,7 @@ import { useSettingsStore } from "../../stores/settingsStore";
 import { SettingsField, CredentialField } from "./SettingsFields";
 
 import { PersonalCorrections } from "./PersonalCorrections";
+import { UsageCard } from "./UsageCard";
 
 export function ProcessingTab() {
   const { confirm, confirmation } = useConfirmation();
@@ -350,6 +351,7 @@ export function ProcessingTab() {
       <section className="northstar-card"><h3>Aanbevolen model</h3><h4>{advice.name}</h4><p>{advice.reason}</p><p>Lokale transcriptie · CPU-verwerking</p>{advice.model && <p>{WHISPER_MODELS.find(m => m.id === advice.model)?.size} · CPU-verwerking</p>}
         {advice.model && <button className="btn btn-secondary" disabled={downloading} onClick={() => settings.updateSettings({ processing_mode: "local", whisper_model: advice.model ?? settings.whisper_model })}>Gebruik dit model</button>}<p>Downloadstatus en modelkeuze staan bij Transcriptie.</p>
       </section>
+      <UsageCard />
       <section className="northstar-card"><h3>Privacy & gegevens</h3><h4>Transcriptie</h4><p>{settings.processing_mode === "local" ? "Audio wordt op deze pc omgezet naar tekst." : "Audio wordt naar de ThoughtVault-server geüpload."}</p><h4>Notulen</h4><p>{settings.processing_mode === "cloud" ? "Transcript en notulen worden op de ThoughtVault-server verwerkt." : settings.notulen_provider === "openrouter" ? "Het transcript wordt naar OpenRouter gestuurd. De kosten lopen via je eigen account." : settings.notulen_provider === "openai" ? "Het transcript wordt naar OpenAI gestuurd. Dit kost apart API-tegoed." : settings.notulen_provider === "anthropic" ? "Het transcript wordt naar Anthropic gestuurd. Dit kost apart API-tegoed." : "Het transcript wordt naar je ingestelde Ollama- of LM Studio-server gestuurd. Bij een externe server verlaat het deze pc."}</p><p>API-sleutels worden uitsluitend in Windows Credential Manager bewaard.</p></section>
     </aside></div>;
 }

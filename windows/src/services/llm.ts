@@ -11,6 +11,7 @@ import { loadCorrectionsOrEmpty } from "../stores/personalCorrectionsStore";
 import { usePeopleDirectoryStore } from "../stores/peopleDirectoryStore";
 import { correctText, correctHTML, contextBlock, CONTEXT_BUDGET, type PersonalCorrection } from "./personalCorrections";
 import { auditSource, auditNotule, appendWarnings, AuditFinding, constraintSentences, UNCHECKED_CONTENT_WARNING, AUDIT_CONCURRENCY, HOSTED_AUDIT_CONCURRENCY } from "./notuleAudit";
+import { UsageMeter, parseUsage, addToLedger } from "./usageMeter";
 import { logModelRequest, logRetry, TIME_LIMIT_MESSAGE, TRUNCATED_MESSAGE, type ModelStep, type RequestTrace } from "./modelRequestLog";
 
 export { TIME_LIMIT_MESSAGE, TRUNCATED_MESSAGE };
@@ -164,10 +165,11 @@ function generateWithOpenAICompatible(
   apiKey: string,
   onProgress?: ProgressCallback,
   step?: ModelStep,
+  meter?: UsageMeter,
 ): Promise<string> {
   // Provider kind as on macOS, without the host of a self-configured endpoint.
   const provider = isOllamaCloudURL(baseUrl) ? "ollama-cloud" : baseUrl.startsWith("https://") ? "hosted" : "local";
-  const trace: RequestTrace = { step, provider, model, system: systemPrompt, user: userPrompt };
+  const trace: RequestTrace = { step, provider, model, system: systemPrompt, user: userPrompt, meter };
   return logModelRequest(trace, () => openAICompatibleRequest(baseUrl, model, systemPrompt, userPrompt, apiKey, trace, onProgress));
 }
 
@@ -202,7 +204,9 @@ async function openAICompatibleRequest(
   if (cloud && response.status === 401) throw new Error("Ollama Cloud API-sleutel geweigerd.");
   if (cloud && response.status === 429) throw new Error(`Ollama Cloud ${RATE_LIMIT_MESSAGE}`);
   if (response.status >= 400) throw new Error(`${cloud ? "Ollama Cloud" : `Notule-generator op ${baseUrl}`} gaf HTTP ${response.status} voor model "${model}".`);
-  const choice = JSON.parse(response.body).choices?.[0];
+  const parsed = JSON.parse(response.body);
+  trace.usage = parseUsage(parsed.usage);
+  const choice = parsed.choices?.[0];
   // A capped answer is incomplete; never parse it as a short one.
   if (choice?.finish_reason === "length") throw new Error(TRUNCATED_MESSAGE);
   const text = choice?.message?.content;
@@ -214,10 +218,10 @@ async function openAICompatibleRequest(
 const OPENROUTER_URL = "https://openrouter.ai/api/v1";
 
 /** OpenRouter speaks the OpenAI chat format; only the base URL and the stored key differ. */
-async function generateWithOpenRouter(model: string, systemPrompt: string, userPrompt: string, step?: ModelStep): Promise<string> {
+async function generateWithOpenRouter(model: string, systemPrompt: string, userPrompt: string, step?: ModelStep, meter?: UsageMeter): Promise<string> {
   const key = await loadCredential("openrouter_api_key");
   if (!key) throw new Error("Vul je OpenRouter API-sleutel in bij Instellingen.");
-  return generateWithOpenAICompatible(OPENROUTER_URL, model, systemPrompt, userPrompt, key, undefined, step);
+  return generateWithOpenAICompatible(OPENROUTER_URL, model, systemPrompt, userPrompt, key, undefined, step, meter);
 }
 
 function generateWithHostedAPI(
@@ -228,8 +232,9 @@ function generateWithHostedAPI(
   apiKey: string,
   onProgress?: ProgressCallback,
   step?: ModelStep,
+  meter?: UsageMeter,
 ): Promise<string> {
-  const trace: RequestTrace = { step, provider, model, system: systemPrompt, user: userPrompt };
+  const trace: RequestTrace = { step, provider, model, system: systemPrompt, user: userPrompt, meter };
   return logModelRequest(trace, () => hostedRequest(provider, model, systemPrompt, userPrompt, apiKey, trace, onProgress));
 }
 
@@ -259,6 +264,7 @@ async function hostedRequest(
   if (response.status === 429) throw new Error(`${openAI ? "OpenAI" : "Anthropic"} ${RATE_LIMIT_MESSAGE}`);
   if (response.status >= 400) throw new Error(`${openAI ? "OpenAI" : "Anthropic"} gaf HTTP ${response.status}.`);
   const result = JSON.parse(response.body);
+  trace.usage = parseUsage(result.usage);
   if (openAI ? result.choices?.[0]?.finish_reason === "length" : result.stop_reason === "max_tokens") throw new Error(TRUNCATED_MESSAGE);
   const text = openAI ? result.choices?.[0]?.message?.content : result.content?.filter((part: { type: string }) => part.type === "text").map((part: { text: string }) => part.text).join("");
   if (typeof text !== "string" || !text.trim()) throw new Error("De aanbieder gaf een leeg antwoord.");
@@ -313,16 +319,40 @@ export class LLMService {
     quickNote: string = "",
     /** The running step for the task label (stepLabel). */
     onStep?: (step: ModelStep) => void,
+    /** Counts the run's requests, tokens and cost; its totals go to the monthly ledger, also when the run fails. */
+    meter?: UsageMeter,
+  ): Promise<string> {
+    let succeeded = false;
+    try {
+      const html = await LLMService.generateWithFallback(transcription, profile, onProgress, participants, quickNote, onStep, meter);
+      succeeded = true;
+      return html;
+    } finally {
+      if (meter?.hasRequests) {
+        const settings = useSettingsStore.getState();
+        settings.updateSettings({ usage_ledger: addToLedger(settings.usage_ledger ?? {}, meter, succeeded) });
+      }
+    }
+  }
+
+  private static async generateWithFallback(
+    transcription: string,
+    profile: Profile,
+    onProgress?: ProgressCallback,
+    participants: string[] = [],
+    quickNote: string = "",
+    onStep?: (step: ModelStep) => void,
+    meter?: UsageMeter,
   ): Promise<string> {
     try {
-      return await LLMService.generateOnce(undefined, transcription, profile, onProgress, participants, quickNote, onStep);
+      return await LLMService.generateOnce(undefined, transcription, profile, onProgress, participants, quickNote, onStep, meter);
     } catch (error) {
       const fallback = useSettingsStore.getState().notulen_fallback_provider;
       const aborted = (error as { name?: string } | null)?.name === "AbortError";
       if (!fallback || aborted || fallback === getConfig().provider) throw error;
       onProgress?.(""); // drop anything streamed by the failed attempt
       try {
-        return await LLMService.generateOnce(fallback, transcription, profile, onProgress, participants, quickNote, onStep);
+        return await LLMService.generateOnce(fallback, transcription, profile, onProgress, participants, quickNote, onStep, meter);
       } catch {
         throw error;
       }
@@ -337,6 +367,7 @@ export class LLMService {
     participants: string[] = [],
     quickNote: string = "",
     onStep?: (step: ModelStep) => void,
+    meter?: UsageMeter,
   ): Promise<string> {
     const corrections = await loadCorrectionsOrEmpty();
     const context = minutesContext(corrections, transcription, profile.id);
@@ -350,6 +381,14 @@ export class LLMService {
     const model = config.provider === "ollama" ? config.ollamaModel : config.lmStudioModel;
     const compatibleKey = compatible && config.provider === "ollama" && baseURL.startsWith("https://")
       ? await loadCredential("ollama_api_key") : null;
+    if (meter) {
+      meter.provider = config.provider;
+      meter.model = config.provider === "openrouter" ? config.openRouterModel : config.provider === "openai" ? config.openAIModel
+        : config.provider === "anthropic" ? config.anthropicModel : model;
+      meter.contentCheckSkipped = false;
+      meter.billing = config.provider === "openrouter" ? "metered" : config.provider === "openai" || config.provider === "anthropic" ? "unpriced"
+        : compatibleKey ? "subscription" : isHostedURL(baseURL) ? "unpriced" : "free";
+    }
     if (compatible) {
       // Match macOS: small local contexts need summaries before the final profile.
       const limit = isHostedURL(baseURL) ? 64_000 : 8_000;
@@ -361,7 +400,7 @@ export class LLMService {
           summaries.push(await generateWithOpenAICompatible(baseURL, model,
             `Je vat transcripties samen. Bewaar namen, feiten, besluiten, actiepunten, eigenaren en termijnen. Verzin niets. ${FACTUALITY_RULES}`,
             (context ? context.trim() + "\n\n" : "") + "Vat dit deel compact samen:\n\n" + characters.slice(offset, offset + limit).join(""),
-            compatibleKey ?? "", undefined, { kind: "chunk-summary", index: offset / limit + 1, total }));
+            compatibleKey ?? "", undefined, { kind: "chunk-summary", index: offset / limit + 1, total }, meter));
         }
         const summarized = summaries.join("\n\n");
         if (Array.from(summarized).length >= characters.length) {
@@ -380,15 +419,15 @@ export class LLMService {
 
     const generate = async (system: string, user: string, step?: ModelStep): Promise<string> => {
       if (config.provider === "ollama" || config.provider === "lm-studio") {
-        return generateWithOpenAICompatible(baseURL, model, system, user, compatibleKey ?? "", undefined, step);
+        return generateWithOpenAICompatible(baseURL, model, system, user, compatibleKey ?? "", undefined, step, meter);
       }
-      if (config.provider === "openrouter") return generateWithOpenRouter(config.openRouterModel, system, user, step);
+      if (config.provider === "openrouter") return generateWithOpenRouter(config.openRouterModel, system, user, step, meter);
       if (config.provider === "openai" || config.provider === "anthropic") {
         const provider = config.provider;
         const key = await loadCredential(`${provider}_api_key`);
         if (!key) throw new Error(`Vul je ${provider === "openai" ? "OpenAI" : "Anthropic"} API-sleutel in bij Instellingen.`);
         return generateWithHostedAPI(provider, provider === "openai" ? config.openAIModel : config.anthropicModel,
-          system, user, key, undefined, step);
+          system, user, key, undefined, step, meter);
       }
       throw new Error("Cloud provider moet via de server worden verwerkt");
     };
@@ -427,6 +466,7 @@ export class LLMService {
       return approved;
     } catch (error) {
       // DEC-063: an audit problem never blocks the notule; it becomes a line in the warning section.
+      if (!(error instanceof AuditFinding) && meter) meter.contentCheckSkipped = true;
       const finding = error instanceof AuditFinding ? error.finding : UNCHECKED_CONTENT_WARNING;
       const result = appendWarnings(warning ? [warning, finding] : [finding], candidate);
       onProgress?.(result);

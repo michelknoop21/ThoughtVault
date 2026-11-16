@@ -33,3 +33,10 @@ it("defaults a fresh install to OpenRouter", async () => {
   expect(DEFAULT_SETTINGS.notulen_provider).toBe("openrouter");
   expect(DEFAULT_SETTINGS.openrouter_model).toBe("mistralai/mistral-large-4-0");
 });
+
+it("keeps existing values on migration and a stored install gets an empty usage ledger", async () => {
+  const migrated = await migrateLegacySettings({ processing_mode: "local", notulen_provider: "openai", openai_model: "x", usage_ledger: { "2026-11": { notules: 2, requests: 9, cost_usd: 1, unknown_cost_runs: 0 } } });
+  expect(migrated).toMatchObject({ notulen_provider: "openai", openai_model: "x", usage_ledger: { "2026-11": { notules: 2 } } });
+  const { DEFAULT_SETTINGS } = await import("../../types");
+  expect(DEFAULT_SETTINGS.usage_ledger).toEqual({});
+});

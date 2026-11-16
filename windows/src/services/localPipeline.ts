@@ -6,6 +6,7 @@ import { useLocalTranscriptsStore, newLocalId } from "../stores/localTranscripts
 import { useSettingsStore } from "../stores/settingsStore";
 import { useProfilesStore } from "../stores/profilesStore";
 import { LLMService } from "./llm";
+import { UsageMeter } from "./usageMeter";
 import { stepLabel } from "./modelRequestLog";
 import { NotuleReviewError } from "./notuleAudit";
 import { exportToObsidian } from "./obsidian";
@@ -125,6 +126,7 @@ export async function processLocally(
     updateBackgroundTask(taskId, { status: "generating", progress: 55 });
     const names = participants.map((p) => p.name).filter(Boolean);
     let streamed = 0;
+    const meter = new UsageMeter();
     const html = await LLMService.generateNotulen(
       transcription,
       profile,
@@ -137,6 +139,7 @@ export async function processLocally(
       names,
       getQuickNote(filePath),
       step => updateBackgroundTask(taskId, { message: stepLabel(step) }),
+      meter,
     );
 
     if (!hasUsableNotule(html)) {
@@ -149,6 +152,7 @@ export async function processLocally(
       notule_review_reason: "",
       title,
       notule_html: html,
+      notule_usage: meter.usageFor(transcription, html),
       has_notes: true,
       updated_at: new Date().toISOString(),
     };

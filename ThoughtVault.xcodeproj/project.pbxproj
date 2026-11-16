@@ -147,6 +147,7 @@
 		AA0000K3 /* WhisperModelStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000K3 /* WhisperModelStore.swift */; };
 		AA0000K2 /* AppleFoundationModelService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000K2 /* AppleFoundationModelService.swift */; };
 		AA0000K1 /* AnthropicLLMService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000K1 /* AnthropicLLMService.swift */; };
+		AA0000OR /* OpenRouterModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000OR /* OpenRouterModels.swift */; };
 		AA000015 /* NetworkMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000015 /* NetworkMonitor.swift */; };
 		AA0F0A01 /* AppLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0F0A01 /* AppLog.swift */; };
 		AA0F0C01 /* SupportRelay.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0F0C01 /* SupportRelay.swift */; };
@@ -323,6 +324,7 @@
 		11685BD636C7AE752A379481 /* WhisperModelStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000K3 /* WhisperModelStore.swift */; };
 		B971B9D6CA39EB0775BCB683 /* AppleFoundationModelService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000K2 /* AppleFoundationModelService.swift */; };
 		29AC450D5D6456AEABE3C258 /* AnthropicLLMService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000K1 /* AnthropicLLMService.swift */; };
+		0A7E5C3B9D1F4E2A8B6C0D1E /* OpenRouterModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000OR /* OpenRouterModels.swift */; };
 		1225DEE54C5F11F501DE7F20 /* NetworkMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000015 /* NetworkMonitor.swift */; };
 		AA0F0A02 /* AppLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0F0A01 /* AppLog.swift */; };
 		AA0F0C02 /* SupportRelay.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0F0C01 /* SupportRelay.swift */; };
@@ -520,6 +522,7 @@
 		FA0000K3 /* WhisperModelStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhisperModelStore.swift; sourceTree = "<group>"; };
 		FA0000K2 /* AppleFoundationModelService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleFoundationModelService.swift; sourceTree = "<group>"; };
 		FA0000K1 /* AnthropicLLMService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnthropicLLMService.swift; sourceTree = "<group>"; };
+		FA0000OR /* OpenRouterModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenRouterModels.swift; sourceTree = "<group>"; };
 		FA000015 /* NetworkMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkMonitor.swift; sourceTree = "<group>"; };
 		FA0F0A01 /* AppLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLog.swift; sourceTree = "<group>"; };
 		FA0F0C01 /* SupportRelay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupportRelay.swift; sourceTree = "<group>"; };
@@ -789,6 +792,7 @@
 				FAPK0003 /* ParakeetTranscriber.swift */,
 				FA0000K2 /* AppleFoundationModelService.swift */,
 				FA0000K1 /* AnthropicLLMService.swift */,
+				FA0000OR /* OpenRouterModels.swift */,
 				FA000062 /* LocalTranscriptStore.swift */,
 				D5C1AD17E20D4C3BA6057224 /* TaskHistoryStore.swift */,
 				9BDA166E30FC417B9B9FAC26 /* SuggestedModels.swift */,
@@ -1251,6 +1255,7 @@
 				AA0000K3 /* WhisperModelStore.swift in Sources */,
 				AA0000K2 /* AppleFoundationModelService.swift in Sources */,
 				AA0000K1 /* AnthropicLLMService.swift in Sources */,
+				AA0000OR /* OpenRouterModels.swift in Sources */,
 				AA000015 /* NetworkMonitor.swift in Sources */,
 				AA0F0A01 /* AppLog.swift in Sources */,
 				AA0F0C01 /* SupportRelay.swift in Sources */,
@@ -1494,6 +1499,7 @@
 				11685BD636C7AE752A379481 /* WhisperModelStore.swift in Sources */,
 				B971B9D6CA39EB0775BCB683 /* AppleFoundationModelService.swift in Sources */,
 				29AC450D5D6456AEABE3C258 /* AnthropicLLMService.swift in Sources */,
+				0A7E5C3B9D1F4E2A8B6C0D1E /* OpenRouterModels.swift in Sources */,
 				1225DEE54C5F11F501DE7F20 /* NetworkMonitor.swift in Sources */,
 				AA0F0A02 /* AppLog.swift in Sources */,
 				AA0F0C02 /* SupportRelay.swift in Sources */,

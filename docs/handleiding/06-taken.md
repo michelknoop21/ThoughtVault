@@ -121,7 +121,7 @@ Opnieuw verwerken gebruikt de opname, die moet dus nog op je pc staan. Bij een m
 Bij een aanbieder waarvoor je een eigen API-sleutel invult, betaal je per verwerkt woorddeel (token). De app toont daar alleen aanbevolen modellen die hoogstens $3 per miljoen invoertokens en $15 per miljoen uitvoertokens kosten. Duurdere modellen staan niet in de lijst. Achter elk model staat de prijs. Voor een model op je eigen computer of een abonnement met een vast bedrag betaal je niet per token, daar geldt geen grens.
 
 ::: windows
-Dezelfde lijst staat bij **Instellingen** > **Verwerking** onder **Model** voor aanbieders met een eigen API-sleutel. Stond er een duurder model ingesteld, dan zie je dat als **(boven de prijsgrens)** en kies je een van de aanbevolen modellen.
+Dezelfde lijst staat bij **Instellingen** > **Verwerking** onder **Model** voor aanbieders met een eigen API-sleutel. Stond er een duurder model ingesteld, dan zie je dat als **(boven de prijsgrens)** en kies je een van de aanbevolen modellen. Tot je dat doet, gebruikt de app het eerste aanbevolen model van die aanbieder en meldt dat in de details van de taak.
 :::
 
 ## Naar de notule
@@ -130,7 +130,7 @@ Kies **Naar de notule** om de notule van een voltooide taak te openen bij **Notu
 
 ## De opname verwijderen
 
-Kies **Opname verwijderen** om het audiobestand van een taak van je apparaat te halen, bijvoorbeeld als de notule klaar is en je geen geluid wilt bewaren. Na bevestiging is het bestand definitief weg. De notule en de transcriptie blijven staan. In de details staat daarna **Opname: Verwijderd**, en **Opnieuw verwerken** werkt alleen nog als de transcriptie is opgeslagen.
+Kies **Opname verwijderen** om het audiobestand van een taak van je apparaat te halen, bijvoorbeeld als de notule klaar is en je geen geluid wilt bewaren. Na bevestiging is het bestand definitief weg. De notule en de transcriptie blijven staan. In de details staat daarna **Opname: Verwijderd**, en **Opnieuw verwerken** werkt alleen nog als de transcriptie is opgeslagen. Heb je de opname eerder opnieuw verwerkt, dan gebruiken meerdere taken hetzelfde bestand; bij al die taken staat de opname daarna op **Verwijderd**.
 
 ## Een taak annuleren of verwijderen
 

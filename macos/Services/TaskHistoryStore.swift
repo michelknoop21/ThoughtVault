@@ -35,6 +35,8 @@ struct TaskHistoryEntry: Codable, Equatable, Identifiable, Sendable {
     var transcriptionEngine: String?
     var notuleProvider: String?
     var notuleModel: String?
+    /// Set when the stored model was above the price cap and another model was used.
+    var notuleNotice: String?
     var steps: [TaskHistoryStep] = []
 
     static let cancelledMessage = "Geannuleerd door gebruiker."
@@ -58,6 +60,7 @@ struct TaskHistoryContext: Sendable {
     var transcriptionEngine: String?
     var notuleProvider: String?
     var notuleModel: String?
+    var notuleNotice: String?
     var profileName: String?
 }
 
@@ -79,7 +82,21 @@ final class TaskHistoryStore {
 
     init(url: URL = TaskHistoryStore.defaultURL) {
         self.url = url
-        entries = (try? JSONDecoder.history.decode([TaskHistoryEntry].self, from: Data(contentsOf: url))) ?? []
+        entries = Self.load(from: url)
+    }
+
+    /// A missing file is an empty history. An unreadable one is kept aside under a timestamped
+    /// name and the history starts empty, so processing never depends on it.
+    private static func load(from url: URL) -> [TaskHistoryEntry] {
+        guard let data = try? Data(contentsOf: url) else { return [] }
+        do {
+            return try JSONDecoder.history.decode([TaskHistoryEntry].self, from: data)
+        } catch {
+            let aside = url.deletingPathExtension().appendingPathExtension("corrupt-\(Int(Date().timeIntervalSince1970)).json")
+            try? FileManager.default.moveItem(at: url, to: aside)
+            AppLog(category: "TaskHistory").error("Task history unreadable (\(type(of: error))), moved aside to \(aside.lastPathComponent)")
+            return []
+        }
     }
 
     func entry(_ id: String) -> TaskHistoryEntry? { entries.first { $0.id == id } }
@@ -97,6 +114,12 @@ final class TaskHistoryStore {
             // A finished task that runs again (retry under the same id).
             entry.finishedAt = nil
             entry.errorMessage = nil
+            // A regeneration reuses its id per run: only a title chosen for this run may name the notule.
+            if task.taskId.hasPrefix("local-regen-") { entry.titleEdited = false }
+        }
+        if task.status.isActive, let carried = takeCarriedTitle(task, transcriptId: entry.transcriptId) {
+            entry.title = carried
+            entry.titleEdited = true
         }
         entry.status = task.status
         if let error = task.errorMessage { entry.errorMessage = error }
@@ -118,6 +141,14 @@ final class TaskHistoryStore {
         replace(entry)
     }
 
+    /// A reprocess shares the recording, so every entry that uses `path` loses it.
+    func markRecordingDeleted(_ path: String) {
+        for index in entries.indices where entries[index].audioPath == path {
+            entries[index].recordingDeleted = true
+        }
+        save()
+    }
+
     func remove(_ id: String) {
         entries.removeAll { $0.id == id }
         save()
@@ -133,8 +164,7 @@ final class TaskHistoryStore {
     private func insertNew(_ task: TranscriptTask, label: String, context: TaskHistoryContext, now: Date) {
         let regenPrefix = "local-regen-"
         let transcriptId = task.taskId.hasPrefix(regenPrefix) ? String(task.taskId.dropFirst(regenPrefix.count)) : task.taskId
-        let carried = task.localAudioPath.flatMap { pendingTitles.removeValue(forKey: $0) }
-            ?? pendingTitles.removeValue(forKey: transcriptId)
+        let carried = takeCarriedTitle(task, transcriptId: transcriptId)
         let created = task.createdAt ?? now
         var entry = TaskHistoryEntry(
             id: task.taskId, title: carried ?? (task.filename.isEmpty ? "Naamloze opname" : task.filename),
@@ -142,7 +172,7 @@ final class TaskHistoryStore {
             profileName: context.profileName, createdAt: created, status: task.status,
             errorMessage: task.errorMessage, audioPath: task.localAudioPath, transcriptId: transcriptId,
             transcriptionEngine: context.transcriptionEngine, notuleProvider: context.notuleProvider,
-            notuleModel: context.notuleModel)
+            notuleModel: context.notuleModel, notuleNotice: context.notuleNotice)
         if task.status.isActive {
             entry.steps = [TaskHistoryStep(label: label, startedAt: now)]
         } else {
@@ -151,6 +181,10 @@ final class TaskHistoryStore {
         entries.insert(entry, at: 0)
         if entries.count > Self.limit { entries.removeLast(entries.count - Self.limit) }
         save()
+    }
+
+    private func takeCarriedTitle(_ task: TranscriptTask, transcriptId: String) -> String? {
+        task.localAudioPath.flatMap { pendingTitles.removeValue(forKey: $0) } ?? pendingTitles.removeValue(forKey: transcriptId)
     }
 
     private func closeLastStep(_ entry: inout TaskHistoryEntry, at now: Date) {

@@ -69,6 +69,20 @@ export function isModelAllowed(model: string, provider: ModelProvider, reportedP
   return !!price && isWithinCap(price);
 }
 
+/**
+ * The model a notule request uses: a model a metered provider does not allow (above the cap or
+ * without a known price) becomes the provider's first suggestion.
+ */
+export function usableModel(model: string, provider: ModelProvider): string {
+  return isModelAllowed(model, provider) ? model : suggestedModels(provider)[0] ?? model;
+}
+
+/** Short notice for the task details when usableModel replaced `model`. */
+export function capNotice(model: string, provider: ModelProvider): string | undefined {
+  const used = usableModel(model, provider);
+  return used === model ? undefined : `${model} valt boven de prijsgrens, daarom is ${used} gebruikt.`;
+}
+
 /** Picker choices: suggestions first, then the current and listed models that pass the cap. */
 export function modelChoices(provider: ModelProvider, current: string, available: string[] = []): string[] {
   return [...new Set([...suggestedModels(provider), current, ...available])]

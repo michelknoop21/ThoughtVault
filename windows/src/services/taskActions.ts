@@ -59,7 +59,7 @@ export function reprocessTask(entry: TaskHistoryEntry, title: string, profileId:
   void processLocally(entry.audio_path, profileId, mode, [], entry.recording_seconds ?? 0);
 }
 
-/** Deletes the audio file; the notule and transcription stay. */
+/** Deletes the audio file; the notule and transcription stay. Entries that share the file (a reprocess) are marked too. */
 export async function deleteTaskRecording(entry: TaskHistoryEntry): Promise<void> {
   try {
     if (entry.audio_path && !entry.recording_deleted) await deleteRecording(entry.audio_path);
@@ -67,7 +67,10 @@ export async function deleteTaskRecording(entry: TaskHistoryEntry): Promise<void
     // A file that is already gone counts as deleted.
     if (!/os error 2|not found|cannot find/i.test(String(error))) throw error;
   }
-  useTaskHistory.getState().update(entry.id, { recording_deleted: true });
+  const history = useTaskHistory.getState();
+  for (const other of history.entries) {
+    if (other.id === entry.id || (entry.audio_path && other.audio_path === entry.audio_path)) history.update(other.id, { recording_deleted: true });
+  }
 }
 
 /** Removes the task from Taken; the notule is only deleted when `includeNotule` is set. */

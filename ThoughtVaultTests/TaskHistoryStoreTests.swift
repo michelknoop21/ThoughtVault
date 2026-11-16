@@ -76,4 +76,67 @@ final class TaskHistoryStoreTests: XCTestCase {
         XCTAssertNil(store.entry("local-1")?.finishedAt)
         XCTAssertNil(store.entry("local-1")?.errorMessage)
     }
+
+    // MARK: - Review findings
+
+    func testCorruptFileIsMovedAsideAndHistoryStartsEmpty() throws {
+        let garbage = Data(#"[{"id":"local-1","title":"#.utf8)
+        try garbage.write(to: url)
+        let store = TaskHistoryStore(url: url)
+        XCTAssertTrue(store.entries.isEmpty)
+        store.track(task(status: .transcribing), context: context)
+        XCTAssertNotNil(TaskHistoryStore(url: url).entry("local-1"))
+
+        let siblings = try FileManager.default.contentsOfDirectory(at: url.deletingLastPathComponent(), includingPropertiesForKeys: nil)
+        let aside = try XCTUnwrap(siblings.first { $0.lastPathComponent.hasPrefix(url.deletingPathExtension().lastPathComponent + ".corrupt-") })
+        defer { try? FileManager.default.removeItem(at: aside) }
+        XCTAssertEqual(try Data(contentsOf: aside), garbage)
+    }
+
+    func testNewRunUnderSameIdTakesOnlyItsOwnTitle() {
+        let store = TaskHistoryStore(url: url)
+        let regen = "local-regen-local-1"
+        store.carryTitle("Eerste", to: "local-1")
+        store.track(task(regen, status: .generatingLocal), context: context)
+        store.track(task(regen, status: .completed), context: context)
+
+        store.carryTitle("Tweede", to: "local-1")
+        store.track(task(regen, status: .generatingLocal), context: context)
+        XCTAssertEqual(store.entry(regen)?.title, "Tweede")
+        store.track(task(regen, status: .completed), context: context)
+
+        // A run without a chosen title must not write an earlier run's title over the notule.
+        store.track(task(regen, status: .generatingLocal), context: context)
+        XCTAssertEqual(store.entry(regen)?.titleEdited, false)
+    }
+
+    func testDeletingASharedRecordingMarksEveryEntryThatUsesIt() throws {
+        let audio = FileManager.default.temporaryDirectory.appending(path: "shared-\(UUID().uuidString).wav")
+        try Data([1]).write(to: audio)
+        defer { try? FileManager.default.removeItem(at: audio) }
+        let store = TaskHistoryStore.shared
+        let ids = ["local-shared-\(UUID().uuidString)", "local-shared-\(UUID().uuidString)"]
+        defer { ids.forEach(store.remove) }
+        for id in ids {
+            store.track(TranscriptTask(id: id, taskId: id, filename: "x.wav", status: .completed, localAudioPath: audio.path),
+                        context: context)
+        }
+
+        RecordingViewModel().deleteHistoryRecording(try XCTUnwrap(store.entry(ids[0])))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: audio.path))
+        XCTAssertEqual(ids.map { store.entry($0)?.recordingDeleted }, [true, true])
+    }
+
+    func testOldRemovalTimerDoesNotRemoveANewRunUnderTheSameId() async throws {
+        let vm = RecordingViewModel()
+        let id = "local-regen-timer-\(UUID().uuidString)"
+        defer { vm.removeTask(id); TaskHistoryStore.shared.remove(id) }
+        let run = TranscriptTask(id: id, taskId: id, filename: "x", status: .generatingLocal, progress: 0.5)
+        vm.addTask(run)
+        vm.updateTask(id, status: .completed, progress: 1)  // schedules the removal of this run
+        vm.removeTask(id)
+        vm.addTask(run)  // the next run under the same id
+        try await Task.sleep(for: .seconds(3.5))
+        XCTAssertTrue(vm.activeTasks.contains { $0.taskId == id })
+    }
 }

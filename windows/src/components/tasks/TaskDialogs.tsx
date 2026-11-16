@@ -33,6 +33,7 @@ export function TaskDetailDialog({ entry, onAction, onOpenNotule, onClose }: {
     <section className="card" style={panel} onClick={e => e.stopPropagation()}>
       <h3 className="td-confirm-title" style={{ margin: 0, fontSize: 16 }}>{entry.title}</h3>
       {entry.error_message && entry.status !== "completed" && <div className="error-banner-inline" style={{ margin: 0 }}>{entry.error_message}</div>}
+      {entry.notule_notice && <p className="settings-desc" style={{ margin: 0 }}>{entry.notule_notice}</p>}
       <dl className="system-specs" style={{ margin: 0 }}>
         {rows.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}
       </dl>

@@ -70,6 +70,14 @@ it("sends OpenRouter notes to openrouter.ai with the stored key and the configur
   expect(JSON.parse(request.body).reasoning).toEqual({ effort: "low" });
 });
 
+it("does not send a stored model above the price cap", async () => {
+  useSettingsStore.setState({ notulen_provider: "openrouter", openrouter_model: "anthropic/claude-opus-5" });
+  loadCredential.mockResolvedValue("or-key");
+  invoke.mockResolvedValue({ status: 200, body: JSON.stringify({ choices: [{ message: { content: "<p>Besluit</p>" } }] }) });
+  await LLMService.generateNotulen("QA test.", profile);
+  expect(JSON.parse(invoke.mock.calls[0][1].request.body).model).toBe("mistralai/mistral-large-4-0");
+});
+
 it("asks only OpenRouter for low reasoning effort", async () => {
   const reply = { status: 200, body: JSON.stringify({ choices: [{ message: { content: "<p>Besluit</p>" } }] }) };
   useSettingsStore.setState({ notulen_provider: "openai" as never });

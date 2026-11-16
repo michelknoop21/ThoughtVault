@@ -53,9 +53,11 @@ enum SuggestedModels {
 
     /// Known price; a routed id such as `vendor/model` falls back to its last part, and a
     /// version written with a dot (`x-5.5`) also matches the dashed spelling (`x-5-5`).
+    /// A price the provider reported for a listed model counts as known too.
     static func price(of model: String) -> ModelPrice? {
         let last = model.split(separator: "/").last.map(String.init) ?? model
         return [model, last, last.replacingOccurrences(of: ".", with: "-")].lazy.compactMap { knownPrices[$0] }.first
+            ?? rememberedPrices[model]
     }
 
     static func isWithinCap(_ price: ModelPrice) -> Bool {
@@ -98,7 +100,17 @@ enum SuggestedModels {
               (response as? HTTPURLResponse)?.statusCode == 200,
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let items = json["data"] as? [[String: Any]] else { return nil }
-        return reportedPrices(items)
+        let prices = reportedPrices(items)
+        // Kept so a listed model chosen in settings stays allowed when the request is built later.
+        UserDefaults.standard.set(prices.mapValues { [$0.input, $0.output] }, forKey: rememberedPricesKey)
+        return prices
+    }
+
+    private static let rememberedPricesKey = "reportedModelPrices"
+
+    private static var rememberedPrices: [String: ModelPrice] {
+        let stored = UserDefaults.standard.dictionary(forKey: rememberedPricesKey) as? [String: [Double]] ?? [:]
+        return stored.compactMapValues { $0.count == 2 ? ModelPrice(input: $0[0], output: $0[1]) : nil }
     }
 
     /// Model id to reported price; a model without a usable price is left out.
@@ -133,7 +145,22 @@ enum SuggestedModels {
         return provider == .cloud ? .ollama : provider
     }
 
+    /// The model a notule request uses. A stored model that a metered provider does not allow
+    /// (above the cap or without a known price) is replaced by the provider's first suggestion;
+    /// `capNotice(for:)` says so in the task details.
     static func currentModel(for provider: NotulenProvider) -> String {
+        let stored = storedModel(for: provider)
+        guard !isAllowed(stored, provider: provider), let fallback = suggested(for: provider).first else { return stored }
+        return fallback
+    }
+
+    /// Short notice when `currentModel(for:)` replaced the stored model; nil otherwise.
+    static func capNotice(for provider: NotulenProvider) -> String? {
+        let stored = storedModel(for: provider), used = currentModel(for: provider)
+        return stored == used ? nil : "\(stored) valt boven de prijsgrens, daarom is \(used) gebruikt."
+    }
+
+    private static func storedModel(for provider: NotulenProvider) -> String {
         if let key = modelKey(for: provider), let model = UserDefaults.standard.string(forKey: key), !model.isEmpty { return model }
         switch provider {
         case .openAI: return OpenAICompatibleLLMService.openAIDefaultModel

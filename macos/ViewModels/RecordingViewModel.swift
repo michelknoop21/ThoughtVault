@@ -1430,6 +1430,8 @@ final class RecordingViewModel {
     func addTask(_ task: TranscriptTask) {
         // Avoid duplicates
         if !activeTasks.contains(where: { $0.taskId == task.taskId }) {
+            // A new run under a reused id (regeneration) must not be removed by the previous run's timer.
+            pendingRemovalTasks.removeValue(forKey: task.taskId)?.cancel()
             activeTasks.append(task)
             taskHistoryDidChange(task)
         }

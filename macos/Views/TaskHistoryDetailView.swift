@@ -56,6 +56,12 @@ struct TaskHistoryDetailView: View {
                             .foregroundStyle(Color.statusError)
                             .fixedSize(horizontal: false, vertical: true)
                     }
+                    if let notice = entry.notuleNotice {
+                        Label(notice, systemImage: "info.circle")
+                            .font(TS.Font.footnote)
+                            .foregroundStyle(Color.labelSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                     detailsGrid(entry, hasRecord: record != nil)
                     stepsList(entry)
                 }

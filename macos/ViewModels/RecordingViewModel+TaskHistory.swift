@@ -47,7 +47,8 @@ extension RecordingViewModel {
         let provider = SuggestedModels.currentProvider
         let model = SuggestedModels.currentModel(for: provider)
         return TaskHistoryContext(transcriptionEngine: engineLabel, notuleProvider: provider.displayName,
-                                  notuleModel: model.isEmpty ? nil : model, profileName: profileName)
+                                  notuleModel: model.isEmpty ? nil : model,
+                                  notuleNotice: SuggestedModels.capNotice(for: provider), profileName: profileName)
     }
 
     // MARK: - Lookups
@@ -111,10 +112,12 @@ extension RecordingViewModel {
     }
 
     /// Deletes the audio file of the task; the notule and transcription stay.
+    /// Other entries that share the file (a reprocess) are marked as well.
     func deleteHistoryRecording(_ entry: TaskHistoryEntry) {
         if let url = historyAudioURL(for: entry) {
             try? FileManager.default.removeItem(at: url)
         }
+        if let path = entry.audioPath { TaskHistoryStore.shared.markRecordingDeleted(path) }
         TaskHistoryStore.shared.update(entry.id) { $0.recordingDeleted = true }
         loadSavedRecordings()
     }

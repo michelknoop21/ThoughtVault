@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isModelAllowed, modelChoices, modelProvider, priceOf, pricePerToken, suggestedModels } from "../suggestedModels";
+import { capNotice, isModelAllowed, modelChoices, modelProvider, priceOf, pricePerToken, suggestedModels, usableModel } from "../suggestedModels";
 
 /** Ids from the routed provider's public model list (November 2026), kept here so the test needs no network. */
 const ROUTED_LIST_FIXTURE = new Set([
@@ -66,5 +66,12 @@ describe("suggested models and price cap", () => {
   it("treats Ollama on ollama.com as the flat-rate cloud", () => {
     expect(modelProvider({ notulen_provider: "ollama", ollama_url: "https://ollama.com" })).toBe("ollama-cloud");
     expect(modelProvider({ notulen_provider: "ollama", ollama_url: "http://localhost:11434" })).toBe("ollama");
+  });
+
+  it("replaces a model above the cap with the first suggestion and says so", () => {
+    expect(usableModel("anthropic/claude-opus-5", "openrouter")).toBe("mistralai/mistral-large-4-0");
+    expect(capNotice("anthropic/claude-opus-5", "openrouter")).toBe("anthropic/claude-opus-5 valt boven de prijsgrens, daarom is mistralai/mistral-large-4-0 gebruikt.");
+    expect(usableModel("gpt-oss:120b", "ollama-cloud")).toBe("gpt-oss:120b");
+    expect(capNotice("openai/gpt-5.6-luna", "openrouter")).toBeUndefined();
   });
 });

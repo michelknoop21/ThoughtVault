@@ -77,4 +77,18 @@ final class SuggestedModelsTests: XCTestCase {
         XCTAssertFalse(SuggestedModels.isAllowed("openai/gpt-5.6-sol", provider: .openRouter))
         XCTAssertTrue(SuggestedModels.isAllowed("openai/gpt-5.6-luna", provider: .openRouter))
     }
+
+    /// The model used for a request comes from `currentModel`; a stored model above the cap must not reach it.
+    func testStoredModelAboveTheCapIsNotUsed() {
+        let key = "openRouterModel"
+        let original = UserDefaults.standard.string(forKey: key)
+        defer { UserDefaults.standard.set(original, forKey: key) }
+        UserDefaults.standard.set("anthropic/claude-opus-5", forKey: key)
+        XCTAssertEqual(SuggestedModels.currentModel(for: .openRouter), "mistralai/mistral-large-4-0")
+        XCTAssertEqual(SuggestedModels.capNotice(for: .openRouter),
+                       "anthropic/claude-opus-5 valt boven de prijsgrens, daarom is mistralai/mistral-large-4-0 gebruikt.")
+        UserDefaults.standard.set("openai/gpt-5.6-luna", forKey: key)
+        XCTAssertEqual(SuggestedModels.currentModel(for: .openRouter), "openai/gpt-5.6-luna")
+        XCTAssertNil(SuggestedModels.capNotice(for: .openRouter))
+    }
 }

@@ -152,7 +152,8 @@ export const useRecordingStore = create<RecordingState>()((set, get) => ({
         t.task_id === taskId ? { ...t, ...update, ...(diagnostic ? { error_message: diagnostic.shown } : {}) } : t
       ),
     }));
-    const updated = get().backgroundTasks.find(task => task.task_id === taskId);
+    if (update.task_id && update.task_id !== taskId) useTaskHistory.getState().rekey(taskId, update.task_id);
+    const updated = get().backgroundTasks.find(task => task.task_id === (update.task_id || taskId));
     if (updated) useTaskHistory.getState().track(updated);
     if (!previous || !update.status || update.status === previous.status) return;
     void markStage(stageForStatus(update.status));

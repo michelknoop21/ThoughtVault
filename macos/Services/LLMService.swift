@@ -256,7 +256,7 @@ class LLMServiceFactory {
 
         case .openAI:
             guard provider.hasAPIKey else { return MissingAPIKeyLLMService(providerName: provider.studioNameForErrors) }
-            let model = UserDefaults.standard.string(forKey: "openAIModel") ?? OpenAICompatibleLLMService.openAIDefaultModel
+            let model = SuggestedModels.currentModel(for: .openAI)  // within the price cap
             // Large hosted context: chunk only truly huge transcripts.
             return OpenAICompatibleLLMService(baseURL: OpenAICompatibleLLMService.openAIBaseURL, model: model,
                                               apiKey: KeychainService.shared.load(for: "openAIApiKey"),
@@ -264,7 +264,7 @@ class LLMServiceFactory {
 
         case .anthropic:
             guard provider.hasAPIKey else { return MissingAPIKeyLLMService(providerName: provider.studioNameForErrors) }
-            let model = UserDefaults.standard.string(forKey: "anthropicModel") ?? AnthropicLLMService.defaultModel
+            let model = SuggestedModels.currentModel(for: .anthropic)  // within the price cap
             return AnthropicLLMService(model: model, apiKey: KeychainService.shared.load(for: "anthropicApiKey"))
 
         case .ollamaCloud:
@@ -275,7 +275,7 @@ class LLMServiceFactory {
 
         case .openRouter:
             guard provider.hasAPIKey else { return MissingAPIKeyLLMService(providerName: provider.displayName) }
-            return OpenAICompatibleLLMService.openRouter(model: UserDefaults.standard.string(forKey: "openRouterModel"),
+            return OpenAICompatibleLLMService.openRouter(model: SuggestedModels.currentModel(for: .openRouter),
                                                          apiKey: KeychainService.shared.load(for: "openRouterApiKey"))
 
         case .openAICompatible:

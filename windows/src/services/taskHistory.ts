@@ -1,12 +1,13 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { persist, type PersistStorage, type StorageValue } from "zustand/middleware";
+import { log } from "./appLog";
 import { TaskStatusLabels } from "../types";
 import type { RecordingMode, TaskStatus, TranscriptTask } from "../types";
 import { useSettingsStore } from "../stores/settingsStore";
 import { useProfilesStore } from "../stores/profilesStore";
 import { useLocalTranscriptsStore } from "../stores/localTranscriptsStore";
 import { useTranscriptsStore } from "../stores/transcriptsStore";
-import { modelProvider, modelSettingKey } from "./suggestedModels";
+import { capNotice, modelProvider, modelSettingKey, usableModel } from "./suggestedModels";
 
 export interface TaskHistoryStep { label: string; started_at: string; finished_at?: string }
 
@@ -30,6 +31,8 @@ export interface TaskHistoryEntry {
   transcription_engine?: string;
   notule_provider?: string;
   notule_model?: string;
+  /** Set when the stored model was above the price cap and another model was used. */
+  notule_notice?: string;
   steps: TaskHistoryStep[];
 }
 
@@ -38,6 +41,7 @@ export interface TaskHistoryContext {
   transcription_engine?: string;
   notule_provider?: string;
   notule_model?: string;
+  notule_notice?: string;
   profile_name?: string;
 }
 
@@ -127,11 +131,13 @@ export function currentContext(profileId?: string): TaskHistoryContext {
     return { transcription_engine: "ThoughtVault-server", notule_provider: "ThoughtVault-server", profile_name: profile?.name };
   }
   const provider = modelProvider(settings);
+  const model = settings[modelSettingKey(provider)];
   const names: Record<string, string> = { openrouter: "OpenRouter", openai: "OpenAI", anthropic: "Claude", ollama: "Ollama", "ollama-cloud": "Ollama Cloud", "lm-studio": "LM Studio" };
   return {
     transcription_engine: `Whisper · ${settings.whisper_model || "medium"}`,
     notule_provider: names[provider] ?? provider,
-    notule_model: settings[modelSettingKey(provider)] || undefined,
+    notule_model: model ? usableModel(model, provider) : undefined,
+    notule_notice: model ? capNotice(model, provider) : undefined,
     profile_name: profile?.name,
   };
 }
@@ -143,7 +149,45 @@ interface TaskHistoryState {
   track: (task: TranscriptTask) => void;
   update: (id: string, patch: Partial<TaskHistoryEntry>) => void;
   remove: (id: string) => void;
+  /** An upload gets its server id once the upload finishes; the entry moves along. */
+  rekey: (from: string, to: string) => void;
   carryTitle: (title: string, key: string) => void;
+}
+
+type Persisted = { entries: TaskHistoryEntry[] };
+
+const isEntry = (value: unknown): boolean =>
+  !!value && typeof (value as TaskHistoryEntry).id === "string" && Array.isArray((value as TaskHistoryEntry).steps);
+
+/**
+ * The history never blocks processing: read and write errors are logged (no content), and an
+ * unreadable value is kept aside under a timestamped key while the history starts empty.
+ */
+function historyStorage(): PersistStorage<Persisted> {
+  const warn = (what: string, error: unknown) => log.warn("TaskHistory", `${what}: ${error instanceof Error ? error.name : "invalid"}`);
+  return {
+    getItem: (name) => {
+      let raw: string | null = null;
+      try {
+        raw = localStorage.getItem(name);
+        if (raw == null) return null;
+        const value = JSON.parse(raw) as StorageValue<Persisted>;
+        if (Array.isArray(value?.state?.entries) && value.state.entries.every(isEntry)) return value;
+        throw new TypeError("invalid task history");
+      } catch (error) {
+        warn("Task history unreadable, moved aside", error);
+        try {
+          if (raw != null) localStorage.setItem(`${name}.corrupt-${Date.now()}`, raw);
+          localStorage.removeItem(name);
+        } catch { /* keeping it aside is best effort */ }
+        return null;
+      }
+    },
+    setItem: (name, value) => {
+      try { localStorage.setItem(name, JSON.stringify(value)); } catch (error) { warn("Task history not saved", error); }
+    },
+    removeItem: (name) => { try { localStorage.removeItem(name); } catch { /* nothing to keep */ } },
+  };
 }
 
 export const useTaskHistory = create<TaskHistoryState>()(persist((set, get) => ({
@@ -164,8 +208,11 @@ export const useTaskHistory = create<TaskHistoryState>()(persist((set, get) => (
   },
   update: (id, patch) => set(state => ({ entries: state.entries.map(entry => entry.id === id ? { ...entry, ...patch } : entry) })),
   remove: (id) => set(state => ({ entries: state.entries.filter(entry => entry.id !== id) })),
+  rekey: (from, to) => set(state => ({
+    entries: state.entries.filter(entry => entry.id !== to).map(entry => entry.id === from ? { ...entry, id: to, transcript_id: to } : entry),
+  })),
   carryTitle: (title, key) => set(state => ({ pendingTitles: { ...state.pendingTitles, [key]: title } })),
-}), { name: "task-history", partialize: state => ({ entries: state.entries }) }));
+}), { name: "task-history", storage: historyStorage(), partialize: state => ({ entries: state.entries }) }));
 
 /** A title the user chose replaces the generated one once the notule is saved. */
 function applyEditedTitle(entry?: TaskHistoryEntry) {

@@ -15,6 +15,9 @@ final class LocalTranscriptStore {
 
     static let shared = LocalTranscriptStore()
 
+    static let recoveryKey = "localStoreRecoveryRequiresReview"
+    var onTranscriptChange: (() -> Void)?
+
     let container: ModelContainer
 
     private var context: ModelContext { container.mainContext }
@@ -64,6 +67,7 @@ final class LocalTranscriptStore {
 
         if defaults.bool(forKey: watchdogKey) {
             logger.error("Previous store open aborted during migration; moving incompatible store aside.")
+            defaults.set(true, forKey: recoveryKey)
             moveStoreAside(at: url)
             defaults.set(false, forKey: watchdogKey)
         }
@@ -71,7 +75,7 @@ final class LocalTranscriptStore {
         func openPersistent() -> ModelContainer? {
             defaults.set(true, forKey: watchdogKey)
             do {
-                let config = ModelConfiguration(url: url)
+                let config = ModelConfiguration(url: url, cloudKitDatabase: .none)
                 let created = try ModelContainer(
                     for: TranscriptRecord.self, PersonProfile.self,
                     configurations: config
@@ -88,12 +92,13 @@ final class LocalTranscriptStore {
         if let created = openPersistent() { return created }
 
         // Swift-level failure: set the bad store aside and retry once on a clean store.
+        defaults.set(true, forKey: recoveryKey)
         moveStoreAside(at: url)
         if let created = openPersistent() { return created }
 
         // Last resort so the app still launches; local history is unavailable this session.
         logger.error("Falling back to in-memory store.")
-        let memConfig = ModelConfiguration(isStoredInMemoryOnly: true)
+        let memConfig = ModelConfiguration(isStoredInMemoryOnly: true, cloudKitDatabase: .none)
         return try! ModelContainer(for: TranscriptRecord.self, PersonProfile.self, configurations: memConfig)
     }
 
@@ -127,7 +132,7 @@ final class LocalTranscriptStore {
     /// schema (another app's default store), the open throws and migration is skipped.
     private func migrateFromDefaultStore(at oldURL: URL) {
         do {
-            let oldConfig = ModelConfiguration(url: oldURL, allowsSave: false)
+            let oldConfig = ModelConfiguration(url: oldURL, allowsSave: false, cloudKitDatabase: .none)
             let oldContainer = try ModelContainer(for: TranscriptRecord.self, configurations: oldConfig)
             let oldRecords = try ModelContext(oldContainer).fetch(FetchDescriptor<TranscriptRecord>())
             guard !oldRecords.isEmpty else { return }
@@ -201,11 +206,57 @@ final class LocalTranscriptStore {
         try context.save()
     }
 
+    /// A failed fetch must never be mistaken for deleting every record.
+    func recordsForSync() throws -> [TranscriptRecord] {
+        try context.fetch(FetchDescriptor<TranscriptRecord>())
+    }
+
+    private func saveTranscriptChanges() throws {
+        try context.save()
+        onTranscriptChange?()
+    }
+
+    func applySyncedNotule(_ note: SyncedNotule, preservingLocalConflict: Bool) throws {
+        let existing = try recordsForSync().first { $0.id == note.id }
+        do {
+            if preservingLocalConflict, let existing, SyncedNotule(existing) != note {
+                try preserveConflict(existing)
+            }
+            let record = existing ?? TranscriptRecord(id: note.id, title: note.title)
+            if existing == nil { context.insert(record) }
+            note.apply(to: record)
+            try context.save()
+        } catch { context.rollback(); throw error }
+    }
+
+    func deleteSyncedNotule(id: String, preservingLocalConflict: Bool) throws {
+        guard let record = try recordsForSync().first(where: { $0.id == id }) else { return }
+        do {
+            if preservingLocalConflict { try preserveConflict(record) }
+            context.delete(record)
+            try context.save()
+        } catch { context.rollback(); throw error }
+    }
+
+    func preserveRemoteConflict(_ note: SyncedNotule) throws {
+        let copy = try note.conflictCopy()
+        guard try !recordsForSync().contains(where: { $0.id == copy.id }) else { return }
+        try applySyncedNotule(copy, preservingLocalConflict: false)
+    }
+
+    private func preserveConflict(_ record: TranscriptRecord) throws {
+        let copy = try SyncedNotule(record).conflictCopy()
+        guard try !recordsForSync().contains(where: { $0.id == copy.id }) else { return }
+        let duplicate = TranscriptRecord(id: copy.id, title: copy.title, localAudioPath: record.localAudioPath)
+        copy.apply(to: duplicate)
+        context.insert(duplicate)
+    }
+
     // MARK: - CRUD
 
     func save(_ record: TranscriptRecord) throws {
         context.insert(record)
-        try context.save()
+        try saveTranscriptChanges()
     }
 
     /// All locally stored records, newest first.
@@ -236,7 +287,7 @@ final class LocalTranscriptStore {
     func delete(taskId: String) throws {
         guard let record = record(forTaskId: taskId) else { throw LocalStoreError.recordNotFound }
         context.delete(record)
-        do { try context.save() } catch { context.rollback(); throw error }
+        do { try saveTranscriptChanges() } catch { context.rollback(); throw error }
         try? ContextSuggestions.save(ContextSuggestionSet(), taskId: taskId)
     }
 
@@ -244,14 +295,14 @@ final class LocalTranscriptStore {
         guard let record = record(forTaskId: taskId) else { throw LocalStoreError.recordNotFound }
         let original = record.tags
         record.tags = tags
-        do { try context.save() } catch { record.tags = original; throw error }
+        do { try saveTranscriptChanges() } catch { record.tags = original; throw error }
     }
 
     func updateNotule(taskId: String, html: String) throws {
         guard let record = record(forTaskId: taskId) else { throw LocalStoreError.recordNotFound }
         let original = record.notuleHtml
         record.notuleHtml = html
-        do { try context.save() } catch { record.notuleHtml = original; throw error }
+        do { try saveTranscriptChanges() } catch { record.notuleHtml = original; throw error }
     }
 
     /// Saves a corrected notule and transcript together.
@@ -260,14 +311,14 @@ final class LocalTranscriptStore {
         let original = (record.notuleHtml, record.rawTranscription)
         record.notuleHtml = html
         if let transcription { record.rawTranscription = transcription }
-        do { try context.save() } catch { (record.notuleHtml, record.rawTranscription) = original; throw error }
+        do { try saveTranscriptChanges() } catch { (record.notuleHtml, record.rawTranscription) = original; throw error }
     }
 
     func updateParticipants(taskId: String, participants: [Participant]) throws {
         guard let record = record(forTaskId: taskId) else { throw LocalStoreError.recordNotFound }
         let original = record.participantsJSON
         record.participants = participants
-        do { try context.save() } catch { record.participantsJSON = original; throw error }
+        do { try saveTranscriptChanges() } catch { record.participantsJSON = original; throw error }
     }
 
     /// Records with a participant linked to `personId`, newest first.
@@ -280,7 +331,7 @@ final class LocalTranscriptStore {
         guard let record = record(forTaskId: taskId) else { throw LocalStoreError.recordNotFound }
         let original = record.title
         record.title = title
-        do { try context.save() } catch { record.title = original; throw error }
+        do { try saveTranscriptChanges() } catch { record.title = original; throw error }
     }
 
     /// Updates the generated notule + title for a previously saved (partial) record.
@@ -300,7 +351,7 @@ final class LocalTranscriptStore {
         record.notuleDraftHtml = nil
         record.notuleReviewReason = nil
         record.notuleUsageJSON = usage?.json
-        do { try context.save() } catch {
+        do { try saveTranscriptChanges() } catch {
             (record.notuleHtml, record.title, record.profileId, record.profileName, record.notuleDraftHtml, record.notuleReviewReason) = original
             record.notuleUsageJSON = originalUsage
             throw error
@@ -313,7 +364,7 @@ final class LocalTranscriptStore {
         let original = (record.notuleDraftHtml, record.notuleReviewReason)
         record.notuleDraftHtml = html
         record.notuleReviewReason = reason
-        do { try context.save() } catch {
+        do { try saveTranscriptChanges() } catch {
             (record.notuleDraftHtml, record.notuleReviewReason) = original
             throw error
         }

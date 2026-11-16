@@ -663,3 +663,19 @@
 "OpenRouter is niet bereikbaar. Controleer je internetverbinding." = "OpenRouter is niet bereikbaar. Controleer je internetverbinding.";
 "OpenRouter weigert deze sleutel. Controleer of je hem volledig hebt geplakt." = "OpenRouter weigert deze sleutel. Controleer of je hem volledig hebt geplakt.";
 "OpenRouter gaf foutcode %lld. Probeer het later opnieuw." = "OpenRouter gaf foutcode %lld. Probeer het later opnieuw.";
+
+/* Private iCloud minutes sync */
+"Synchroniseer notulen via iCloud" = "Synchroniseer notulen via iCloud";
+"Je notulen op Mac en iPhone." = "Je notulen op Mac en iPhone.";
+"Notulen, transcripties, titels en tags worden gesynchroniseerd met je eigen Apple-account. Zet dit aan op je Mac én iPhone. Audio blijft op het oorspronkelijke apparaat." = "Notulen, transcripties, titels en tags worden gesynchroniseerd met je eigen Apple-account. Zet dit aan op je Mac én iPhone. Audio blijft op het oorspronkelijke apparaat.";
+"Bewerken en verwijderen werkt door op je andere apparaten. Offline wijzigingen worden later verstuurd. Bij gelijktijdige wijzigingen bewaren we een extra versie met ‘bewerkingsconflict’ in de titel." = "Bewerken en verwijderen werkt door op je andere apparaten. Offline wijzigingen worden later verstuurd. Bij gelijktijdige wijzigingen bewaren we een extra versie met ‘bewerkingsconflict’ in de titel.";
+"Wijzigingen wachten op synchronisatie." = "Wijzigingen wachten op synchronisatie.";
+"Laatst gesynchroniseerd: %@" = "Laatst gesynchroniseerd: %@";
+"iCloud wordt verbonden…" = "iCloud wordt verbonden…";
+"Synchroniseer nu" = "Synchroniseer nu";
+"Uitschakelen bewaart je notulen op dit apparaat en in iCloud." = "Uitschakelen bewaart je notulen op dit apparaat en in iCloud.";
+"Meld je aan met het oorspronkelijke iCloud-account. Je notulen worden niet naar een ander account verstuurd." = "Meld je aan met het oorspronkelijke iCloud-account. Je notulen worden niet naar een ander account verstuurd.";
+"Meld je aan bij iCloud om je notulen te synchroniseren." = "Meld je aan bij iCloud om je notulen te synchroniseren.";
+"De synchronisatiegegevens konden niet veilig worden gelezen. Je lokale notulen blijven bewaard." = "De synchronisatiegegevens konden niet veilig worden gelezen. Je lokale notulen blijven bewaard.";
+"De lokale opslag moet eerst worden hersteld. iCloud-synchronisatie is gepauzeerd om je notulen te beschermen." = "De lokale opslag moet eerst worden hersteld. iCloud-synchronisatie is gepauzeerd om je notulen te beschermen.";
+"De notulenopslag is uit iCloud verwijderd. Synchronisatie is gepauzeerd; je lokale notulen blijven bewaard." = "De notulenopslag is uit iCloud verwijderd. Synchronisatie is gepauzeerd; je lokale notulen blijven bewaard.";

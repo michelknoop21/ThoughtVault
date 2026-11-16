@@ -663,3 +663,19 @@
 "OpenRouter is niet bereikbaar. Controleer je internetverbinding." = "OpenRouter cannot be reached. Check your internet connection.";
 "OpenRouter weigert deze sleutel. Controleer of je hem volledig hebt geplakt." = "OpenRouter rejects this key. Check that you pasted all of it.";
 "OpenRouter gaf foutcode %lld. Probeer het later opnieuw." = "OpenRouter returned error %lld. Try again later.";
+
+/* Private iCloud minutes sync */
+"Synchroniseer notulen via iCloud" = "Sync minutes with iCloud";
+"Je notulen op Mac en iPhone." = "Your minutes on Mac and iPhone.";
+"Notulen, transcripties, titels en tags worden gesynchroniseerd met je eigen Apple-account. Zet dit aan op je Mac én iPhone. Audio blijft op het oorspronkelijke apparaat." = "Minutes, transcripts, titles and tags sync with your own Apple Account. Enable this on both your Mac and iPhone. Audio stays on the original device.";
+"Bewerken en verwijderen werkt door op je andere apparaten. Offline wijzigingen worden later verstuurd. Bij gelijktijdige wijzigingen bewaren we een extra versie met ‘bewerkingsconflict’ in de titel." = "Edits and deletions also apply on your other devices. Offline changes are sent later. Simultaneous edits are preserved as an extra copy with ‘bewerkingsconflict’ in the title.";
+"Wijzigingen wachten op synchronisatie." = "Changes are waiting to sync.";
+"Laatst gesynchroniseerd: %@" = "Last synced: %@";
+"iCloud wordt verbonden…" = "Connecting to iCloud…";
+"Synchroniseer nu" = "Sync now";
+"Uitschakelen bewaart je notulen op dit apparaat en in iCloud." = "Turning this off keeps your minutes on this device and in iCloud.";
+"Meld je aan met het oorspronkelijke iCloud-account. Je notulen worden niet naar een ander account verstuurd." = "Sign in with the original iCloud account. Your minutes will not be sent to a different account.";
+"Meld je aan bij iCloud om je notulen te synchroniseren." = "Sign in to iCloud to sync your minutes.";
+"De synchronisatiegegevens konden niet veilig worden gelezen. Je lokale notulen blijven bewaard." = "Sync data could not be read safely. Your local minutes are preserved.";
+"De lokale opslag moet eerst worden hersteld. iCloud-synchronisatie is gepauzeerd om je notulen te beschermen." = "Local storage needs recovery first. iCloud sync is paused to protect your minutes.";
+"De notulenopslag is uit iCloud verwijderd. Synchronisatie is gepauzeerd; je lokale notulen blijven bewaard." = "Minutes storage was removed from iCloud. Sync is paused; your local minutes are preserved.";

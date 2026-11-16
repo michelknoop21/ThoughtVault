@@ -59,6 +59,10 @@ extension SettingsView {
                 }
 
                 group("Integraties") {
+                    link(icon: "icloud", title: "iCloud", subtitle: "Je notulen op Mac en iPhone.") {
+                        subpage("iCloud") { Section { NotuleSyncSettingsView() } }
+                    }
+                    IOSDivider()
                     link(icon: "tray.and.arrow.down", title: "Obsidian", subtitle: "Notulen automatisch naar je vault.") {
                         subpage("Obsidian") { obsidianSection }
                     }

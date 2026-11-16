@@ -60,6 +60,7 @@ extension SettingsView {
 
     func algemeenCards(_ layout: SettingsLayout) -> some View {
         cardsPage(layout) {
+            SettingsCard(icon: "icloud", title: "iCloud") { NotuleSyncSettingsView() }
             #if !APP_STORE
             SettingsCard(icon: "arrow.triangle.2.circlepath", title: "Updates") { updatesRows }
             #endif

@@ -97,8 +97,8 @@ it("asks low effort only from an OpenRouter model that reasons by default", asyn
   await LLMService.complete("s", "u");
   expect(JSON.parse(invoke.mock.calls[0][1].request.body).reasoning).toEqual({ effort: "low" });
   invoke.mockClear();
-  // Thinking is off by default here; an effort would switch it on.
-  useSettingsStore.setState({ openrouter_model: "anthropic/claude-sonnet-4.5" });
+  // Unknown metadata must not switch thinking on.
+  useSettingsStore.setState({ openrouter_model: "anthropic/claude-sonnet-4.6" });
   await LLMService.complete("s", "u");
   const body = JSON.parse(invoke.mock.calls[0][1].request.body);
   expect(body).not.toHaveProperty("reasoning");

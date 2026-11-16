@@ -45,7 +45,7 @@ final class SystemAudioStorageTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: source.path))
     }
 
-    /// Bluetooth HFP flips 48 -> 16 -> 48 -> 16 -> 48 kHz; every format notification lands one
+    /// Capture flips 48 -> 16 -> 48 -> 24 -> 48 -> 16 -> 48 kHz; every format notification lands one
     /// buffer late, as Core Audio may deliver it. The signal must stay at its timeline position
     /// (in sync with the microphone track) after each switch, without accumulating offset.
     func testTapWriterStaysInSyncAcrossRepeatedSampleRateChanges() throws {
@@ -54,16 +54,17 @@ final class SystemAudioStorageTests: XCTestCase {
         func mono(_ rate: Double) throws -> AVAudioFormat {
             try XCTUnwrap(AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: rate, channels: 1, interleaved: false))
         }
-        let rate16 = try mono(16_000), rate48 = try mono(48_000)
+        let rate16 = try mono(16_000), rate24 = try mono(24_000), rate48 = try mono(48_000)
         // Non-periodic chirp (200 Hz rising 300 Hz/s): its position in the file is unambiguous.
         func chirp(_ t: Double) -> Float { Float(0.5 * sin(2 * .pi * (200 * t + 150 * t * t))) }
-        let segment = 30, switches = [30, 60, 90, 120], buffers = 150 // 20 ms buffers, 3 s
+        let segment = 30, switches = [30, 60, 90, 120, 150, 180], buffers = 210 // 20 ms buffers, 4.2 s
+        let formats = [rate48, rate16, rate48, rate24, rate48, rate16, rate48]
         do {
             let file = try AVAudioFile(forWriting: url, settings: rate16.settings)
             let writer = TapAudioWriter(file: file, inputFormat: rate48) { _, _ in }
             let start = mach_absolute_time()
             for b in 0..<buffers {
-                let format = (b / segment) % 2 == 1 ? rate16 : rate48
+                let format = formats[b / segment]
                 if switches.contains(b - 1) { writer.updateFormat(format) }
                 let frames = Int(format.sampleRate * 0.02)
                 let pcm = try XCTUnwrap(AVAudioPCMBuffer(pcmFormat: format, frameCapacity: AVAudioFrameCount(frames)))
@@ -71,7 +72,7 @@ final class SystemAudioStorageTests: XCTestCase {
                 for i in 0..<frames { pcm.floatChannelData![0][i] = chirp(Double(b) * 0.02 + Double(i) / format.sampleRate) }
                 writer.consume(pcm.audioBufferList, hostTime: start + AVAudioTime.hostTime(forSeconds: Double(b) * 0.02))
             }
-            XCTAssertEqual(writer.formatChanges, 4)
+            XCTAssertEqual(writer.formatChanges, 6)
             XCTAssertEqual(writer.framesDropped, 0)
         }
 

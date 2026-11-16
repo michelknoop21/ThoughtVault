@@ -67,6 +67,23 @@ it("sends OpenRouter notes to openrouter.ai with the stored key and the configur
   expect(request.url).toBe("https://openrouter.ai/api/v1/chat/completions");
   expect(request.headers.Authorization).toBe("Bearer or-key");
   expect(JSON.parse(request.body).model).toBe("mistralai/mistral-large-4-0");
+  expect(JSON.parse(request.body).reasoning).toEqual({ effort: "low" });
+});
+
+it("asks only OpenRouter for low reasoning effort", async () => {
+  const reply = { status: 200, body: JSON.stringify({ choices: [{ message: { content: "<p>Besluit</p>" } }] }) };
+  useSettingsStore.setState({ notulen_provider: "openai" as never });
+  loadCredential.mockResolvedValue("openai-secret");
+  invoke.mockResolvedValue(reply);
+  await LLMService.generateNotulen("QA test.", profile);
+  expect(JSON.parse(invoke.mock.calls[0][1].request.body)).not.toHaveProperty("reasoning");
+  invoke.mockClear();
+  useSettingsStore.setState({ notulen_provider: "ollama", ollama_url: "http://localhost:11434", ollama_model: "hermes3:8b" });
+  invoke.mockResolvedValue(reply);
+  await LLMService.generateNotulen("QA test.", profile);
+  const local = invoke.mock.calls.find(call => call[1]?.request)![1].request;
+  expect(local.url).toBe("http://localhost:11434/v1/chat/completions");
+  expect(JSON.parse(local.body)).not.toHaveProperty("reasoning");
 });
 
 it("asks for the OpenRouter key when it is missing", async () => {

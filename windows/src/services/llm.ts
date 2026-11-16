@@ -212,7 +212,8 @@ async function openAICompatibleRequest(
   let response: { status: number; body: string };
   try {
     response = await modelRequest({ url: `${base}/v1/chat/completions`, headers,
-      body: JSON.stringify({ model, messages: [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }], stream: false, max_tokens: MAX_OUTPUT_TOKENS }) }, trace);
+      body: JSON.stringify({ model, messages: [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }], stream: false, max_tokens: MAX_OUTPUT_TOKENS,
+        ...(providerKind(baseUrl) === "openrouter" ? { reasoning: { effort: OPENROUTER_REASONING_EFFORT } } : {}) }) }, trace);
   } catch (error) {
     if (error instanceof Error && error.message === TIME_LIMIT_MESSAGE) throw error;
     throw new Error(unreachableMessage(baseUrl, model));
@@ -232,6 +233,10 @@ async function openAICompatibleRequest(
 }
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1";
+/** OpenRouter reasoning effort. Reasoning models spent most of their output thinking (mistral-large-4: 7,382 of
+ * 7,768 output tokens on a 31 s recording) and long meetings ran into the 900 s limit, so OpenRouter requests ask
+ * for low effort. Other endpoints do not get the field. */
+const OPENROUTER_REASONING_EFFORT = "low";
 
 /** OpenRouter speaks the OpenAI chat format; only the base URL and the stored key differ. */
 async function generateWithOpenRouter(model: string, systemPrompt: string, userPrompt: string, step?: ModelStep, meter?: UsageMeter): Promise<string> {

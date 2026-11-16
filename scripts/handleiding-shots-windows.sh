@@ -51,6 +51,8 @@ const STEPS = {
   "win-instellingen-geavanceerd": tab("Geavanceerd"),
   "win-support-melding": feedback,
   "win-support-gesprek": async page => { await feedback(page); await page.click("text=Mijn meldingen"); await page.click("text=TV-2"); },
+  // Three wizard steps forward, then test the fixture key.
+  "win-onboarding-notulen": async page => { for (let i = 0; i < 3; i++) await page.locator("button.btn-accent").last().click(); await page.click("text=Testen"); },
 };
 (async () => {
   const browser = await chromium.launch();

@@ -100,11 +100,66 @@ final class LLMChunkingTests: XCTestCase {
         XCTAssertNil(StubProtocol.sentBody["max_tokens"])
     }
 
-    func testOnlyOpenRouterRequestsAskForLowReasoningEffort() async {
+    /// Six entries of https://openrouter.ai/api/v1/models (16 November 2026), only the fields the app reads.
+    private static let modelList = Data(#"""
+    {"data":[
+     {"id":"anthropic/claude-sonnet-5.5","top_provider":{"max_completion_tokens":128000},"reasoning":{"mandatory":true,"supported_efforts":["max","xhigh","high","medium","low"],"default_effort":"high"}},
+     {"id":"mistralai/mistral-large-4-0","top_provider":{"max_completion_tokens":262144},"reasoning":{"mandatory":false,"default_enabled":true,"supported_efforts":["high","none"],"default_effort":"high"}},
+     {"id":"anthropic/claude-haiku-5.5","top_provider":{"max_completion_tokens":128000},"reasoning":{"mandatory":false,"supported_efforts":["max","xhigh","high","medium","low","none"],"default_effort":"medium"}},
+     {"id":"anthropic/claude-sonnet-4.5","top_provider":{"max_completion_tokens":64000},"reasoning":{"mandatory":false}},
+     {"id":"anthropic/claude-opus-4.8","top_provider":{"max_completion_tokens":128000},"reasoning":{"mandatory":false,"default_enabled":false,"supported_efforts":["high","medium","low","none"],"default_effort":"medium"}},
+     {"id":"deepseek/deepseek-chat","top_provider":{"max_completion_tokens":16000}}
+    ]}
+    """#.utf8)
+
+    func testOpenRouterModelListSaysWhoReasonsByDefault() {
+        let models = OpenRouterModel.parseList(Self.modelList)
+        XCTAssertEqual(models["anthropic/claude-sonnet-5.5"], OpenRouterModel(reasonsByDefault: true, lowEffort: true, maxCompletionTokens: 128_000))
+        XCTAssertEqual(models["mistralai/mistral-large-4-0"], OpenRouterModel(reasonsByDefault: true, lowEffort: false, maxCompletionTokens: 262_144))
+        // No default_enabled, but a default effort: thinks at that effort when nothing is sent.
+        XCTAssertEqual(models["anthropic/claude-haiku-5.5"], OpenRouterModel(reasonsByDefault: true, lowEffort: true, maxCompletionTokens: 128_000))
+        XCTAssertEqual(models["anthropic/claude-sonnet-4.5"], OpenRouterModel(reasonsByDefault: false, lowEffort: false, maxCompletionTokens: 64_000))
+        XCTAssertEqual(models["anthropic/claude-opus-4.8"], OpenRouterModel(reasonsByDefault: false, lowEffort: true, maxCompletionTokens: 128_000))
+        XCTAssertEqual(models["deepseek/deepseek-chat"], OpenRouterModel(reasonsByDefault: false, lowEffort: false, maxCompletionTokens: 16_000))
+    }
+
+    func testOpenRouterRequestFieldsPerModel() {
+        let models = OpenRouterModel.parseList(Self.modelList)
+        func fields(_ id: String?) -> (Int, [String: String]?) {
+            let result = OpenRouterModel.requestFields(id.flatMap { models[$0] }, baseCap: llmMaxOutputTokens)
+            return (result.maxTokens, result.reasoning)
+        }
+        // Low effort only where thinking is on anyway; an effort would switch it on elsewhere.
+        XCTAssertEqual(fields("anthropic/claude-sonnet-5.5").1, ["effort": "low"])
+        XCTAssertEqual(fields("anthropic/claude-haiku-5.5").1, ["effort": "low"])
+        XCTAssertNil(fields("anthropic/claude-sonnet-4.5").1)
+        XCTAssertNil(fields("anthropic/claude-opus-4.8").1)
+        XCTAssertNil(fields("deepseek/deepseek-chat").1)
+        XCTAssertNil(fields("mistralai/mistral-large-4-0").1, "only high or none: provider default")
+        // Thinking and reply share the cap; within the published maximum.
+        XCTAssertEqual(fields("anthropic/claude-sonnet-5.5").0, OpenRouterModel.reasoningOutputTokens)
+        XCTAssertEqual(fields("mistralai/mistral-large-4-0").0, 65_536)
+        XCTAssertEqual(fields("anthropic/claude-sonnet-4.5").0, llmMaxOutputTokens)
+        XCTAssertEqual(fields("deepseek/deepseek-chat").0, 16_000)
+        XCTAssertEqual(fields(nil).0, llmMaxOutputTokens)
+        XCTAssertNil(fields(nil).1)
+    }
+
+    func testOnlyOpenRouterModelsThatReasonByDefaultGetLowEffort() async {
         StubProtocol.reply = .success("data: {\"choices\":[{\"delta\":{\"content\":\"klaar\"}}]}\n\ndata: [DONE]\n\n")
-        let openRouter = OpenAICompatibleLLMService(baseURL: OpenAICompatibleLLMService.openRouterBaseURL, model: "m", apiKey: "k", session: stubSession)
-        _ = await failure { try await openRouter.complete(system: "s", user: "u") }
+        let models = OpenRouterModel.parseList(Self.modelList)
+        func openRouter(_ model: String) -> OpenAICompatibleLLMService {
+            let service = OpenAICompatibleLLMService(baseURL: OpenAICompatibleLLMService.openRouterBaseURL, model: model, apiKey: "k", session: stubSession)
+            service.openRouterModelLookup = { models[$0] }
+            return service
+        }
+        _ = await failure { try await openRouter("anthropic/claude-sonnet-5.5").complete(system: "s", user: "u") }
         XCTAssertEqual((StubProtocol.sentBody["reasoning"] as? [String: Any])?["effort"] as? String, "low")
+        XCTAssertEqual(StubProtocol.sentBody["max_tokens"] as? Int, 65_536)
+
+        _ = await failure { try await openRouter("anthropic/claude-sonnet-4.5").complete(system: "s", user: "u") }
+        XCTAssertNil(StubProtocol.sentBody["reasoning"])
+        XCTAssertEqual(StubProtocol.sentBody["max_tokens"] as? Int, llmMaxOutputTokens)
 
         let openAI = OpenAICompatibleLLMService(baseURL: OpenAICompatibleLLMService.openAIBaseURL, model: "m", apiKey: "k", session: stubSession)
         _ = await failure { try await openAI.complete(system: "s", user: "u") }

@@ -7,6 +7,22 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		5318E63393F44311886DC09F /* SuggestedModelsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1683B00205044715AFD0DC73 /* SuggestedModelsTests.swift */; };
+		3B9347916B10415EA631462E /* TaskHistoryStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 949A9793792E4C1DAC1BACCC /* TaskHistoryStoreTests.swift */; };
+		02A2FD6AFCCF4BD0BDF0BB7B /* TaskHistorySection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0ED7C47424244F318E6E4CD8 /* TaskHistorySection.swift */; };
+		E5338A938CE845CDACAB772F /* TaskHistorySection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0ED7C47424244F318E6E4CD8 /* TaskHistorySection.swift */; };
+		741B2862754C4B6389C228DE /* TaskHistoryDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52C9DDACA00F4CAA9CD5CB86 /* TaskHistoryDetailView.swift */; };
+		84E2633568704A369455B70E /* TaskHistoryDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52C9DDACA00F4CAA9CD5CB86 /* TaskHistoryDetailView.swift */; };
+		7CDFA23848BC4D398BB9DCFA /* TaskReprocessSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2389270880AB44D8A01A34D9 /* TaskReprocessSheet.swift */; };
+		1903C1007D0849DDB0EC31B7 /* TaskReprocessSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2389270880AB44D8A01A34D9 /* TaskReprocessSheet.swift */; };
+		0EE1C66271114026A6306A99 /* TaskHistoryActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 892727C80FFD43C785D625BD /* TaskHistoryActions.swift */; };
+		9DB1C9BC4C2F4EBD8E0349B9 /* TaskHistoryActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 892727C80FFD43C785D625BD /* TaskHistoryActions.swift */; };
+		DC69ADB093FC48EF814D75D3 /* RecordingViewModel+TaskHistory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2268C7E4179E40C0AD926DA4 /* RecordingViewModel+TaskHistory.swift */; };
+		691BE2B70F2B42089832BCB6 /* RecordingViewModel+TaskHistory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2268C7E4179E40C0AD926DA4 /* RecordingViewModel+TaskHistory.swift */; };
+		490D6106853144209D65DDDB /* TaskHistoryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5C1AD17E20D4C3BA6057224 /* TaskHistoryStore.swift */; };
+		77C48E77D5C245F79A5577E1 /* TaskHistoryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5C1AD17E20D4C3BA6057224 /* TaskHistoryStore.swift */; };
+		6AD23642687645549E873335 /* SuggestedModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BDA166E30FC417B9B9FAC26 /* SuggestedModels.swift */; };
+		A150B1BC4BDE40C995440801 /* SuggestedModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BDA166E30FC417B9B9FAC26 /* SuggestedModels.swift */; };
 		AAPK0001 /* ParakeetCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAPK0001 /* ParakeetCatalog.swift */; };
 		ABPK0001 /* ParakeetCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAPK0001 /* ParakeetCatalog.swift */; };
 		AAPK1000 /* ParakeetModelRows.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAPK1000 /* ParakeetModelRows.swift */; };
@@ -62,6 +78,11 @@
 		AA0000S4 /* QuickNoteStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000S4 /* QuickNoteStore.swift */; };
 		AA0000H1 /* HomeView+Studio.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000H1 /* HomeView+Studio.swift */; };
 		AA0000J2 /* OnboardingView+iOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000J2 /* OnboardingView+iOS.swift */; };
+		AA0000W1 /* OnboardingView+Notulen.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000W1 /* OnboardingView+Notulen.swift */; };
+		AS0000W1 /* OnboardingView+Notulen.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000W1 /* OnboardingView+Notulen.swift */; };
+		AA0000W2 /* OnboardingView+NotulenIOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000W2 /* OnboardingView+NotulenIOS.swift */; };
+		AS0000W2 /* OnboardingView+NotulenIOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000W2 /* OnboardingView+NotulenIOS.swift */; };
+		ACON0001 /* OnboardingNotulenTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBON0001 /* OnboardingNotulenTests.swift */; };
 		AA0000J1 /* AccountView+iOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000J1 /* AccountView+iOS.swift */; };
 		AA0000I9 /* ProfilesView+iOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000I9 /* ProfilesView+iOS.swift */; };
 		AA0000I8 /* SettingsView+iOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000I8 /* SettingsView+iOS.swift */; };
@@ -126,6 +147,7 @@
 		AA0000K3 /* WhisperModelStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000K3 /* WhisperModelStore.swift */; };
 		AA0000K2 /* AppleFoundationModelService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000K2 /* AppleFoundationModelService.swift */; };
 		AA0000K1 /* AnthropicLLMService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000K1 /* AnthropicLLMService.swift */; };
+		AA0000OR /* OpenRouterModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000OR /* OpenRouterModels.swift */; };
 		AA000015 /* NetworkMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000015 /* NetworkMonitor.swift */; };
 		AA0F0A01 /* AppLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0F0A01 /* AppLog.swift */; };
 		AA0F0C01 /* SupportRelay.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0F0C01 /* SupportRelay.swift */; };
@@ -302,6 +324,7 @@
 		11685BD636C7AE752A379481 /* WhisperModelStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000K3 /* WhisperModelStore.swift */; };
 		B971B9D6CA39EB0775BCB683 /* AppleFoundationModelService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000K2 /* AppleFoundationModelService.swift */; };
 		29AC450D5D6456AEABE3C258 /* AnthropicLLMService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000K1 /* AnthropicLLMService.swift */; };
+		0A7E5C3B9D1F4E2A8B6C0D1E /* OpenRouterModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000OR /* OpenRouterModels.swift */; };
 		1225DEE54C5F11F501DE7F20 /* NetworkMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000015 /* NetworkMonitor.swift */; };
 		AA0F0A02 /* AppLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0F0A01 /* AppLog.swift */; };
 		AA0F0C02 /* SupportRelay.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0F0C01 /* SupportRelay.swift */; };
@@ -431,10 +454,15 @@
 		FA00PM01 /* PersonMatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonMatcher.swift; sourceTree = "<group>"; };
 		FASIRI01 /* siriwave-MIT.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "siriwave-MIT.txt"; sourceTree = "<group>"; };
 		FB0000S5 /* QuickNoteStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickNoteStoreTests.swift; sourceTree = "<group>"; };
+		1683B00205044715AFD0DC73 /* SuggestedModelsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SuggestedModelsTests.swift; sourceTree = "<group>"; };
+		949A9793792E4C1DAC1BACCC /* TaskHistoryStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskHistoryStoreTests.swift; sourceTree = "<group>"; };
 		FB9E5A02 /* VaultFolderStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VaultFolderStoreTests.swift; sourceTree = "<group>"; };
 		FA0000S4 /* QuickNoteStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickNoteStore.swift; sourceTree = "<group>"; };
 		FA0000H1 /* HomeView+Studio.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "HomeView+Studio.swift"; sourceTree = "<group>"; };
 		FA0000J2 /* OnboardingView+iOS.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "OnboardingView+iOS.swift"; sourceTree = "<group>"; };
+		FA0000W1 /* OnboardingView+Notulen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "OnboardingView+Notulen.swift"; sourceTree = "<group>"; };
+		FA0000W2 /* OnboardingView+NotulenIOS.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "OnboardingView+NotulenIOS.swift"; sourceTree = "<group>"; };
+		FBON0001 /* OnboardingNotulenTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingNotulenTests.swift; sourceTree = "<group>"; };
 		FA0000J1 /* AccountView+iOS.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AccountView+iOS.swift"; sourceTree = "<group>"; };
 		FA0000I9 /* ProfilesView+iOS.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ProfilesView+iOS.swift"; sourceTree = "<group>"; };
 		FA0000I8 /* SettingsView+iOS.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SettingsView+iOS.swift"; sourceTree = "<group>"; };
@@ -494,6 +522,7 @@
 		FA0000K3 /* WhisperModelStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhisperModelStore.swift; sourceTree = "<group>"; };
 		FA0000K2 /* AppleFoundationModelService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleFoundationModelService.swift; sourceTree = "<group>"; };
 		FA0000K1 /* AnthropicLLMService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnthropicLLMService.swift; sourceTree = "<group>"; };
+		FA0000OR /* OpenRouterModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenRouterModels.swift; sourceTree = "<group>"; };
 		FA000015 /* NetworkMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkMonitor.swift; sourceTree = "<group>"; };
 		FA0F0A01 /* AppLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLog.swift; sourceTree = "<group>"; };
 		FA0F0C01 /* SupportRelay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupportRelay.swift; sourceTree = "<group>"; };
@@ -505,6 +534,7 @@
 		FA000019 /* AuthViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthViewModel.swift; sourceTree = "<group>"; };
 		FA000020 /* RecordingViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingViewModel.swift; sourceTree = "<group>"; };
 		FA9E5A01 /* RecordingViewModel+Restart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RecordingViewModel+Restart.swift"; sourceTree = "<group>"; };
+		2268C7E4179E40C0AD926DA4 /* RecordingViewModel+TaskHistory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RecordingViewModel+TaskHistory.swift"; sourceTree = "<group>"; };
 		FA0000T2 /* RecordingViewModel+Notule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RecordingViewModel+Notule.swift"; sourceTree = "<group>"; };
 		FA0000D1 /* RecordingViewModel+Sleep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RecordingViewModel+Sleep.swift"; sourceTree = "<group>"; };
 		FA000022 /* AccountView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountView.swift; sourceTree = "<group>"; };
@@ -555,10 +585,16 @@
 		FA000055 /* TasksViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TasksViewModel.swift; sourceTree = "<group>"; };
 		FA000056 /* TasksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TasksView.swift; sourceTree = "<group>"; };
 		8CCB0A7ED0A93DFB8685F497 /* TasksView+Empty.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TasksView+Empty.swift"; sourceTree = "<group>"; };
+		0ED7C47424244F318E6E4CD8 /* TaskHistorySection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskHistorySection.swift; sourceTree = "<group>"; };
+		52C9DDACA00F4CAA9CD5CB86 /* TaskHistoryDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskHistoryDetailView.swift; sourceTree = "<group>"; };
+		2389270880AB44D8A01A34D9 /* TaskReprocessSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskReprocessSheet.swift; sourceTree = "<group>"; };
+		892727C80FFD43C785D625BD /* TaskHistoryActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskHistoryActions.swift; sourceTree = "<group>"; };
 		FA000057 /* UpdateCheckService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateCheckService.swift; sourceTree = "<group>"; };
 		FA000058 /* GoogleAuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleAuthService.swift; sourceTree = "<group>"; };
 		FA000061 /* TranscriptRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptRecord.swift; sourceTree = "<group>"; };
 		FA000062 /* LocalTranscriptStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalTranscriptStore.swift; sourceTree = "<group>"; };
+		D5C1AD17E20D4C3BA6057224 /* TaskHistoryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskHistoryStore.swift; sourceTree = "<group>"; };
+		9BDA166E30FC417B9B9FAC26 /* SuggestedModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SuggestedModels.swift; sourceTree = "<group>"; };
 		FA000068 /* PersonProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonProfile.swift; sourceTree = "<group>"; };
 		FA000069 /* AppMigrationPlan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppMigrationPlan.swift; sourceTree = "<group>"; };
 		FA000070 /* ProfileSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileSettingsView.swift; sourceTree = "<group>"; };
@@ -756,7 +792,10 @@
 				FAPK0003 /* ParakeetTranscriber.swift */,
 				FA0000K2 /* AppleFoundationModelService.swift */,
 				FA0000K1 /* AnthropicLLMService.swift */,
+				FA0000OR /* OpenRouterModels.swift */,
 				FA000062 /* LocalTranscriptStore.swift */,
+				D5C1AD17E20D4C3BA6057224 /* TaskHistoryStore.swift */,
+				9BDA166E30FC417B9B9FAC26 /* SuggestedModels.swift */,
 				FA000071 /* PersonDirectoryService.swift */,
 				FA000063 /* LocalTranscriber.swift */,
 				FA00PC02 /* PersonalCorrectionsView.swift */,
@@ -794,6 +833,7 @@
 				FA000019 /* AuthViewModel.swift */,
 				FA000020 /* RecordingViewModel.swift */,
 				FA9E5A01 /* RecordingViewModel+Restart.swift */,
+				2268C7E4179E40C0AD926DA4 /* RecordingViewModel+TaskHistory.swift */,
 				FA0000T2 /* RecordingViewModel+Notule.swift */,
 				FA0F0D201 /* RecordingViewModel+Support.swift */,
 				FA0F0D101 /* SupportViewModel.swift */,
@@ -811,6 +851,8 @@
 				FA000024 /* HomeView.swift */,
 				FA0000H1 /* HomeView+Studio.swift */,
 				FA0000J2 /* OnboardingView+iOS.swift */,
+				FA0000W1 /* OnboardingView+Notulen.swift */,
+				FA0000W2 /* OnboardingView+NotulenIOS.swift */,
 				FA0000J1 /* AccountView+iOS.swift */,
 				FA0000I9 /* ProfilesView+iOS.swift */,
 				FA0000I8 /* SettingsView+iOS.swift */,
@@ -860,6 +902,10 @@
 				FA0000X2 /* PrintCommand.swift */,
 				FA000056 /* TasksView.swift */,
 				8CCB0A7ED0A93DFB8685F497 /* TasksView+Empty.swift */,
+				0ED7C47424244F318E6E4CD8 /* TaskHistorySection.swift */,
+				52C9DDACA00F4CAA9CD5CB86 /* TaskHistoryDetailView.swift */,
+				2389270880AB44D8A01A34D9 /* TaskReprocessSheet.swift */,
+				892727C80FFD43C785D625BD /* TaskHistoryActions.swift */,
 				FA000033 /* OnboardingViewiOSStub.swift */,
 				FA000034 /* FloatingWidgetPanel.swift */,
 				GG000061 /* Components */,
@@ -918,6 +964,8 @@
 			children = (
 				FB000001 /* ThoughtVaultTests.swift */,
 				FB0000S5 /* QuickNoteStoreTests.swift */,
+				1683B00205044715AFD0DC73 /* SuggestedModelsTests.swift */,
+				949A9793792E4C1DAC1BACCC /* TaskHistoryStoreTests.swift */,
 				FB9E5A02 /* VaultFolderStoreTests.swift */,
 				FB000002 /* MigrationTests.swift */,
 				FB0F0A03 /* AppLogTests.swift */,
@@ -951,6 +999,7 @@
 				FBPK0001 /* ParakeetCatalogTests.swift */,
 				FBCP0001 /* ContinuedProcessingTests.swift */,
 				FBPK0002 /* NotulenDefaultMigrationTests.swift */,
+				FBON0001 /* OnboardingNotulenTests.swift */,
 				FB0000N9 /* NotuleConstraintTests.swift */,
 				FB00AP01 /* NotuleAuditPartsTests.swift */,
 				FB00ML01 /* ModelRequestLogTests.swift */,
@@ -1126,6 +1175,13 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				E5338A938CE845CDACAB772F /* TaskHistorySection.swift in Sources */,
+				84E2633568704A369455B70E /* TaskHistoryDetailView.swift in Sources */,
+				1903C1007D0849DDB0EC31B7 /* TaskReprocessSheet.swift in Sources */,
+				9DB1C9BC4C2F4EBD8E0349B9 /* TaskHistoryActions.swift in Sources */,
+				691BE2B70F2B42089832BCB6 /* RecordingViewModel+TaskHistory.swift in Sources */,
+				77C48E77D5C245F79A5577E1 /* TaskHistoryStore.swift in Sources */,
+				A150B1BC4BDE40C995440801 /* SuggestedModels.swift in Sources */,
 				AAPK0001 /* ParakeetCatalog.swift in Sources */,
 				AAPK0002 /* ParakeetModelStore.swift in Sources */,
 				AACP0001 /* ContinuedProcessing.swift in Sources */,
@@ -1199,6 +1255,7 @@
 				AA0000K3 /* WhisperModelStore.swift in Sources */,
 				AA0000K2 /* AppleFoundationModelService.swift in Sources */,
 				AA0000K1 /* AnthropicLLMService.swift in Sources */,
+				AA0000OR /* OpenRouterModels.swift in Sources */,
 				AA000015 /* NetworkMonitor.swift in Sources */,
 				AA0F0A01 /* AppLog.swift in Sources */,
 				AA0F0C01 /* SupportRelay.swift in Sources */,
@@ -1231,6 +1288,8 @@
 				AA0000S3 /* MainSidebar.swift in Sources */,
 				AA0000H1 /* HomeView+Studio.swift in Sources */,
 				AA0000J2 /* OnboardingView+iOS.swift in Sources */,
+				AA0000W1 /* OnboardingView+Notulen.swift in Sources */,
+				AA0000W2 /* OnboardingView+NotulenIOS.swift in Sources */,
 				AA0000J1 /* AccountView+iOS.swift in Sources */,
 				AA0000I9 /* ProfilesView+iOS.swift in Sources */,
 				AA0000I8 /* SettingsView+iOS.swift in Sources */,
@@ -1288,9 +1347,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5318E63393F44311886DC09F /* SuggestedModelsTests.swift in Sources */,
+				3B9347916B10415EA631462E /* TaskHistoryStoreTests.swift in Sources */,
 				ACPK0001 /* ParakeetCatalogTests.swift in Sources */,
 				ACCP0001 /* ContinuedProcessingTests.swift in Sources */,
 				ACPK0002 /* NotulenDefaultMigrationTests.swift in Sources */,
+				ACON0001 /* OnboardingNotulenTests.swift in Sources */,
 				AB000001 /* ThoughtVaultTests.swift in Sources */,
 				AB0000S5 /* QuickNoteStoreTests.swift in Sources */,
 				AB9E5A02 /* VaultFolderStoreTests.swift in Sources */,
@@ -1357,6 +1419,13 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				02A2FD6AFCCF4BD0BDF0BB7B /* TaskHistorySection.swift in Sources */,
+				741B2862754C4B6389C228DE /* TaskHistoryDetailView.swift in Sources */,
+				7CDFA23848BC4D398BB9DCFA /* TaskReprocessSheet.swift in Sources */,
+				0EE1C66271114026A6306A99 /* TaskHistoryActions.swift in Sources */,
+				DC69ADB093FC48EF814D75D3 /* RecordingViewModel+TaskHistory.swift in Sources */,
+				490D6106853144209D65DDDB /* TaskHistoryStore.swift in Sources */,
+				6AD23642687645549E873335 /* SuggestedModels.swift in Sources */,
 				ABPK0001 /* ParakeetCatalog.swift in Sources */,
 				ABPK0002 /* ParakeetModelStore.swift in Sources */,
 				ABCP0001 /* ContinuedProcessing.swift in Sources */,
@@ -1430,6 +1499,7 @@
 				11685BD636C7AE752A379481 /* WhisperModelStore.swift in Sources */,
 				B971B9D6CA39EB0775BCB683 /* AppleFoundationModelService.swift in Sources */,
 				29AC450D5D6456AEABE3C258 /* AnthropicLLMService.swift in Sources */,
+				0A7E5C3B9D1F4E2A8B6C0D1E /* OpenRouterModels.swift in Sources */,
 				1225DEE54C5F11F501DE7F20 /* NetworkMonitor.swift in Sources */,
 				AA0F0A02 /* AppLog.swift in Sources */,
 				AA0F0C02 /* SupportRelay.swift in Sources */,
@@ -1462,6 +1532,8 @@
 				430991C83EA855CD3103A0A6 /* MainSidebar.swift in Sources */,
 				CE88FF70931AB410D41B5518 /* HomeView+Studio.swift in Sources */,
 				9B57EB1502C20EDAA98CFC12 /* OnboardingView+iOS.swift in Sources */,
+				AS0000W1 /* OnboardingView+Notulen.swift in Sources */,
+				AS0000W2 /* OnboardingView+NotulenIOS.swift in Sources */,
 				D2526AF56612BC8B19CD0AEA /* AccountView+iOS.swift in Sources */,
 				E79868E1879C0FD03B00A5E6 /* ProfilesView+iOS.swift in Sources */,
 				ADF08833A647392A15993E47 /* SettingsView+iOS.swift in Sources */,
@@ -1663,7 +1735,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 326;
+				CURRENT_PROJECT_VERSION = 327;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = XL9KN38ATX;
 				ENABLE_APP_SANDBOX = YES;
@@ -1681,7 +1753,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.2;
-				MARKETING_VERSION = 1.0.326;
+				MARKETING_VERSION = 1.0.327;
 				PRODUCT_BUNDLE_IDENTIFIER = com.buildmind.ThoughtVault;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "macosx iphoneos iphonesimulator";
@@ -1704,7 +1776,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 326;
+				CURRENT_PROJECT_VERSION = 327;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = XL9KN38ATX;
 				ENABLE_APP_SANDBOX = YES;
@@ -1722,7 +1794,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.2;
-				MARKETING_VERSION = 1.0.326;
+				MARKETING_VERSION = 1.0.327;
 				PRODUCT_BUNDLE_IDENTIFIER = com.buildmind.ThoughtVault;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "macosx iphoneos iphonesimulator";
@@ -1739,12 +1811,12 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 326;
+				CURRENT_PROJECT_VERSION = 327;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.2;
-				MARKETING_VERSION = 1.0.326;
+				MARKETING_VERSION = 1.0.327;
 				PRODUCT_BUNDLE_IDENTIFIER = com.buildmind.ThoughtVaultTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "macosx iphoneos iphonesimulator";
@@ -1759,12 +1831,12 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 326;
+				CURRENT_PROJECT_VERSION = 327;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.2;
-				MARKETING_VERSION = 1.0.326;
+				MARKETING_VERSION = 1.0.327;
 				PRODUCT_BUNDLE_IDENTIFIER = com.buildmind.ThoughtVaultTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "macosx iphoneos iphonesimulator";
@@ -1783,7 +1855,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 326;
+				CURRENT_PROJECT_VERSION = 327;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = XL9KN38ATX;
 				ENABLE_APP_SANDBOX = YES;
@@ -1800,7 +1872,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.2;
-				MARKETING_VERSION = 1.0.326;
+				MARKETING_VERSION = 1.0.327;
 				PRODUCT_BUNDLE_IDENTIFIER = com.buildmind.ThoughtVault;
 				PRODUCT_NAME = ThoughtVault;
 				SUPPORTED_PLATFORMS = macosx;
@@ -1821,7 +1893,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 326;
+				CURRENT_PROJECT_VERSION = 327;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = XL9KN38ATX;
 				ENABLE_APP_SANDBOX = YES;
@@ -1838,7 +1910,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.2;
-				MARKETING_VERSION = 1.0.326;
+				MARKETING_VERSION = 1.0.327;
 				PRODUCT_BUNDLE_IDENTIFIER = com.buildmind.ThoughtVault;
 				PRODUCT_NAME = ThoughtVault;
 				SUPPORTED_PLATFORMS = macosx;

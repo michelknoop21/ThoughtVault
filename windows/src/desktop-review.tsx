@@ -9,6 +9,7 @@ import { OnboardingWizard } from "./components/onboarding/OnboardingWizard";
 import { SeedReviewSheet } from "./pages/SeedReviewSheet";
 import { usePeopleDirectoryStore } from "./stores/peopleDirectoryStore";
 import { useRecordingStore } from "./stores/recordingStore";
+import { useTaskHistory } from "./services/taskHistory";
 // Development-only fixture, excluded from production Vite entrypoints.
 import ReactDOM from "react-dom/client";
 import { HashRouter, Routes, Route } from "react-router-dom";
@@ -35,6 +36,8 @@ let reviewCorrections: unknown = {version:2,dismissed:[],entries:[
 const reviewContextFiles = new Map<string, string>();
 // ?scenario=handleiding: sample data for the manual screenshots (scripts/handleiding-shots-windows.sh).
 const handleiding = new URLSearchParams(location.search).get("scenario") === "handleiding";
+// The wizard reads root-level theme variables; the app sets this in App.tsx.
+if (location.hash.startsWith("#/onboarding")) document.documentElement.dataset.theme = "dark";
 const handleidingReplies: Record<string, unknown> = handleiding ? {
  get_audio_devices: [{id:"mic",name:"Microfoon (Realtek Audio)",is_default:true,is_input:true}],
  get_system_specs: {cpu:"Intel Core i7-1355U",architecture:"x86_64",memory_gb:16,threads:12,os_version:"Windows 11 Pro",free_storage_gb:212},
@@ -52,6 +55,7 @@ Object.assign(window, { __TAURI_INTERNALS__: {
   if (command === "get_system_specs") return { cpu: "Review PC", memory_gb: 16, os_version: "Windows review" };
   if (command === "proxy_request") {
     const request = args?.request;
+    if (handleiding && request?.url === "https://openrouter.ai/api/v1/key") return { status: 200, body: "{}" };
     if (!request || !request.url.startsWith("https://thoughtvault.yinga.ai/support/")) throw new Error("Review fixture blocks proxy access");
     const path = new URL(request.url).pathname.replace("/support", "");
     const response = (data: unknown) => ({ status: 200, body: JSON.stringify(data) });
@@ -109,7 +113,20 @@ if (handleiding) {
  ]});
  useRecordingStore.setState({backgroundTasks:[
   {task_id:"handleiding-1",status:"transcribing",progress:38,filename:"recording_1794562320.wav",mode:"combined",duration_seconds:1860,created_at:new Date(Date.now()-4*60_000).toISOString()},
-  {task_id:"handleiding-2",status:"completed",progress:100,extracted_title:"Weekstart team Schade",mode:"microphone",duration_seconds:1500,created_at:new Date(Date.now()-3*3_600_000).toISOString()},
+ ]});
+ // Finished tasks for Geschiedenis: one with a notule, one failed, one cancelled.
+ const done = (id: string, title: string, hoursAgo: number, status: "completed" | "failed" | "cancelled", steps: [string, number][], extra = {}) => {
+  let t = Date.now() - hoursAgo * 3_600_000;
+  const created = new Date(t).toISOString();
+  const spans = steps.map(([label, seconds]) => { const step = {label, started_at:new Date(t).toISOString(), finished_at:new Date(t + seconds * 1000).toISOString()}; t += seconds * 1000; return step; });
+  return {id, title, transcript_id:id, filename:`${id}.wav`, profile_id:"standaard", profile_name:"Standaard", mode:"combined" as const, created_at:created,
+   finished_at:new Date(t).toISOString(), status, recording_seconds:1500, audio_path:`C:\\Opnames\\${id}.wav`, transcription_engine:"Whisper · medium",
+   notule_provider:"OpenAI", notule_model:"gpt-5.6-terra", steps:spans, ...extra};
+ };
+ useTaskHistory.setState({entries:[
+  done("local-handleiding-1","Weekstart team Schade",3,"completed",[["Transcriberen",210],["Concept schrijven",95],["Inhoudscontrole",48]]),
+  done("local-handleiding-7","Overleg planning vloerherstel",26,"failed",[["Transcriberen",180],["Concept schrijven",30]],{error_message:"API-limiet bereikt (429), ook na een nieuwe poging."}),
+  done("local-handleiding-8","Klantgesprek Bouwbedrijf Noord",50,"cancelled",[["Transcriberen",95]],{recording_deleted:true}),
  ]});
  Object.assign(reviewTicket, {description:"Opnemen stopt onverwacht na een paar minuten.",lastMessage:{senderRole:"ADMIN",createdAt:"2026-11-10T11:00:00Z",excerpt:"Welke microfoon gebruik je?"}});
  reviewTickets[1].description = "Waar vind ik mijn notulen terug?";
@@ -122,7 +139,7 @@ function IdentityReview() {
  useEffect(() => { useSupportStore.setState({ name: "", email: "" }); setReady(true); }, []);
  return <div className="app-shell" data-theme="dark"><TitleBar/>{ready && <IdentityGate/>}</div>;
 }
-const pages = {"/support":<FeedbackWidget initialOpen/>,"/support-thread":<SupportThread ticket={reviewTicket} onBack={() => history.back()}/>,"/onboarding":<OnboardingWizard/>,"/seed-review":<SeedReviewSheet candidates={["voorbeeld@example.test"]} onClose={() => history.back()}/>,"/":<HomePage/>,"/recording":<RecordingPage/>,"/tasks":<TasksPage/>,"/transcripts":<TranscriptsPage/>,"/profiles":<ProfilesPage/>,"/people":<PeoplePage/>,"/settings":<SettingsPage/>};
+const pages = {"/support":<FeedbackWidget initialOpen/>,"/support-thread":<SupportThread ticket={reviewTicket} onBack={() => history.back()}/>,"/seed-review":<SeedReviewSheet candidates={["voorbeeld@example.test"]} onClose={() => history.back()}/>,"/":<HomePage/>,"/recording":<RecordingPage/>,"/tasks":<TasksPage/>,"/transcripts":<TranscriptsPage/>,"/profiles":<ProfilesPage/>,"/people":<PeoplePage/>,"/settings":<SettingsPage/>};
 if (new URLSearchParams(location.search).get("scenario") === "widget") {
  void import("./styles/widget.css").then(() => { const root = document.getElementById("root")!; root.id = "widget-root"; ReactDOM.createRoot(root).render(<RecordingWidget/>); });
-} else ReactDOM.createRoot(document.getElementById("root")!).render(<HashRouter><Routes><Route path="/identity" element={<IdentityReview/>}/><Route path="/*" element={<div className="app-shell" data-theme="dark"><TitleBar/><div style={{flex:1,display:"flex",minHeight:0}}><Sidebar/><main className="app-main"><div className="app-main-content"><Routes>{Object.entries(pages).map(([path,element]) => <Route key={path} path={path} element={element}/>)}</Routes></div></main></div></div>}/></Routes></HashRouter>);
+} else ReactDOM.createRoot(document.getElementById("root")!).render(<HashRouter><Routes><Route path="/identity" element={<IdentityReview/>}/><Route path="/onboarding" element={<div className="app-shell" data-theme="dark"><OnboardingWizard/></div>}/><Route path="/*" element={<div className="app-shell" data-theme="dark"><TitleBar/><div style={{flex:1,display:"flex",minHeight:0}}><Sidebar/><main className="app-main"><div className="app-main-content"><Routes>{Object.entries(pages).map(([path,element]) => <Route key={path} path={path} element={element}/>)}</Routes></div></main></div></div>}/></Routes></HashRouter>);

@@ -1,7 +1,12 @@
-versie: 1.0.325
+versie: 1.0.327
 Nieuw in deze versie:
-- Handleiding: open de handleiding in je browser via het menu Help of via Instellingen, Account, blok Support.
+- Taken: elke verwerking blijft bewaard met details. Je kunt opnieuw verwerken, de titel wijzigen, naar de notule gaan en de opname of taak verwijderen.
+- Eerste start: een nieuwe stap Notulen voor aanbieder, sleutel en model. Overslaan kan.
+- Modelkeuze tot een vaste prijs per notule.
+- Bij elke notule de kosten, lengte en duur.
+- Mac: de opnamewidget toont een timer van meer dan een uur volledig.
 
 Wat we graag van je horen:
-- Opent de knop de handleiding, en komen de pagina's voor de Mac in beeld?
-- Klopt wat er in de handleiding staat met wat je in de app ziet? Meld verschillen via Instellingen, Account, Melding maken.
+- Klopt wat Taken laat zien bij een opname die je net hebt verwerkt?
+- Werkt opnieuw verwerken met een ander profiel?
+- Liep de stap Notulen bij de eerste start soepel? Meld het via Instellingen, Account, Melding maken.

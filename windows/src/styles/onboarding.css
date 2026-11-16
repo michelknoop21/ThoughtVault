@@ -1,0 +1,73 @@
+/* Onboarding wizard: step rail and the notulen step (components/onboarding). */
+
+.onb-scroll { scrollbar-width: thin; scrollbar-color: rgba(212,193,255,.22) transparent; }
+.onb-scroll::-webkit-scrollbar { width: 10px; }
+.onb-scroll::-webkit-scrollbar-thumb { border: 3px solid transparent; border-radius: 10px; background: rgba(212,193,255,.22) padding-box; }
+@media (hover: hover) { .onb-scroll::-webkit-scrollbar-thumb:hover { background-color: rgba(212,193,255,.36); } }
+
+.onb-stepper { display: flex; justify-content: center; gap: 4px; margin: 0 0 28px; padding: 0; list-style: none; }
+.onb-stepper li { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 76px; font-size: 12px; color: #8d8ba6; }
+.onb-stepper i { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; font-style: normal; font-weight: 700; font-size: 12px; box-shadow: inset 0 0 0 1.5px rgba(212,193,255,.25); transition: background-color 200ms var(--ease-out), color 200ms var(--ease-out); }
+.onb-stepper .done i { background: rgba(77,217,120,.18); color: #86eba6; box-shadow: none; }
+.onb-stepper .current { color: #fff; font-weight: 600; }
+.onb-stepper .current i { background: #9048f0; color: #fff; box-shadow: none; }
+@media (max-width: 520px) { .onb-stepper li { width: 44px; font-size: 0; gap: 0; } }
+
+.onb-notulen { display: flex; flex-direction: column; color: var(--text-primary); }
+.onb-title { margin: 0; font-size: 24px; font-weight: 700; line-height: 1.25; }
+.onb-lead { margin: 6px 0 0; color: #a9a7bd; font-size: 14px; line-height: 1.5; }
+.onb-muted { color: #a9a7bd; font-size: 12.5px; }
+
+.onb-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 18px; }
+@media (max-width: 640px) { .onb-tiles { grid-template-columns: 1fr; } }
+.onb-tile { display: flex; flex-direction: column; gap: 4px; padding: 13px 14px; border: 0; border-radius: 12px; background: #14172a; box-shadow: inset 0 0 0 1px rgba(212,193,255,.12); color: inherit; font: inherit; text-align: left; cursor: pointer; transition: background-color 150ms var(--ease-out), box-shadow 150ms var(--ease-out), transform 160ms var(--ease-out); }
+.onb-tile[aria-checked="true"] { background: #1c1838; box-shadow: inset 0 0 0 1.5px #9048f0; }
+@media (hover: hover) { .onb-tile:not([aria-checked="true"]):hover { background: #191c33; } }
+.onb-tile:active { transform: scale(.97); }
+.onb-tile-head { display: flex; align-items: center; gap: 7px; font-size: 14px; }
+.onb-badge { display: inline-flex; align-items: center; height: 19px; padding: 0 7px; border-radius: 6px; background: rgba(144,72,240,.22); color: #d5bbff; font-size: 11px; font-weight: 650; }
+
+.onb-segment { display: inline-flex; align-self: flex-start; gap: 4px; margin-top: 14px; padding: 3px; border-radius: 10px; background: rgba(255,255,255,.05); }
+.onb-segment button { height: 30px; padding: 0 14px; border: 0; border-radius: 8px; background: transparent; color: #a9a7bd; font: inherit; font-size: 13px; cursor: pointer; transition: background-color 150ms var(--ease-out), color 150ms var(--ease-out), transform 160ms var(--ease-out); }
+.onb-segment button[aria-checked="true"] { background: #1c1838; color: #fff; box-shadow: inset 0 0 0 1px #9048f0; }
+@media (hover: hover) { .onb-segment button:not([aria-checked="true"]):hover { color: #e9e8f2; } }
+.onb-segment button:active { transform: scale(.97); }
+
+.onb-key { margin-top: 16px; }
+.onb-key-label { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 6px; color: #a9a7bd; font-size: 12.5px; }
+.onb-key-row { display: flex; gap: 8px; }
+.onb-key-row .btn { flex-shrink: 0; }
+.onb-key-input, .onb-model-input { flex: 1; min-width: 0; font-family: "Cascadia Mono", Consolas, ui-monospace, monospace; font-size: 13.5px; }
+.onb-key-status { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; min-height: 26px; margin-top: 10px; color: #a9a7bd; font-size: 12.5px; }
+.onb-ok { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border-radius: 8px; background: rgba(77,217,120,.14); color: #86eba6; font-weight: 600; }
+.onb-ok::before { content: ""; width: 8px; height: 4px; margin-top: -2px; border: solid currentColor; border-width: 0 0 2px 2px; rotate: -45deg; }
+.onb-error { color: #ff8f8f; }
+.onb-spinner { width: 14px; height: 14px; border-radius: 50%; border: 2px solid rgba(212,193,255,.25); border-top-color: #b995ff; animation: onb-spin 700ms linear infinite; }
+@keyframes onb-spin { to { rotate: 360deg; } }
+.onb-note { margin: 16px 0 0; padding: 14px 16px; border-radius: 12px; background: #10132a; box-shadow: inset 0 0 0 1px rgba(212,193,255,.10); color: #c9c6dd; font-size: 13px; line-height: 1.5; }
+
+.onb-model { margin-top: 18px; }
+.onb-model h2 { margin: 0; font-size: 15px; font-weight: 650; }
+.onb-model p { margin: 2px 0 10px; }
+.onb-model-input { width: 100%; box-sizing: border-box; }
+
+.onb-link { padding: 0; border: 0; background: none; color: #b79bff; font: inherit; font-size: 12.5px; cursor: pointer; }
+@media (hover: hover) { .onb-link:hover { text-decoration: underline; } }
+.onb-footer { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 24px; padding-top: 18px; box-shadow: inset 0 1px 0 rgba(212,193,255,.08); }
+.onb-skip { font-size: 14px; font-weight: 600; }
+.onb-spacer { flex: 1; }
+@media (max-width: 520px) { .onb-later { display: none; } }
+
+.onb-dialog { width: min(460px, calc(100vw - 32px)); box-sizing: border-box; padding: 26px; border-radius: 20px; background: #14172a; box-shadow: inset 0 0 0 1px rgba(212,193,255,.14), 0 30px 80px -20px rgba(0,0,0,.85); }
+.onb-dialog-icon { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 13px; background: rgba(250,184,77,.16); color: #fab84d; font-size: 20px; font-weight: 800; }
+.onb-dialog h2 { margin: 14px 0 0; font-size: 19px; font-weight: 700; }
+.onb-dialog p { margin: 8px 0 0; color: #a9a7bd; font-size: 14px; line-height: 1.5; }
+.onb-dialog-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+
+.onb-tile:focus-visible, .onb-segment button:focus-visible, .onb-link:focus-visible { outline: 2px solid var(--fill-accent-default); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .onb-tile, .onb-segment button, .onb-stepper i { transition: none; }
+  .onb-tile:active, .onb-segment button:active { transform: none; }
+  .onb-spinner { animation-duration: 1.6s; }
+}

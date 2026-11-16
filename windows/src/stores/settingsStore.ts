@@ -16,6 +16,8 @@ export async function migrateLegacySettings(value: unknown): Promise<Record<stri
   }
   // Installs from before OpenRouter existed keep the provider they had (the default then was Ollama).
   if (!state.notulen_provider) state.notulen_provider = "ollama";
+  // The wizard used to run in cloud mode only; local installs that exist already never see it now.
+  if (state.processing_mode !== "cloud") state.has_completed_onboarding = true;
   return state;
 }
 
@@ -34,7 +36,7 @@ export const useSettingsStore = create<SettingsState>()(
     }),
     {
       name: "settings-store",
-      version: 2,
+      version: 3,
       migrate: migrateLegacySettings,
     }
   )

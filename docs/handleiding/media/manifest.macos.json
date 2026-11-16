@@ -21,7 +21,8 @@
     "platform": "macos",
     "args": "-TVDebugTab tasks",
     "sources": [
-      "macos/Views/TasksView.swift"
+      "macos/Views/TasksView.swift",
+      "macos/Views/TaskHistorySection.swift"
     ]
   },
   {
@@ -158,6 +159,14 @@
     "args": "-TVDebugOpen identity",
     "sources": [
       "macos/Views/SupportIdentityView.swift"
+    ]
+  },
+  {
+    "file": "mac-onboarding-notulen.webp",
+    "platform": "macos",
+    "args": "-hasCompletedOnboarding NO -notulenProvider openRouter -TVDebugOpen onboarding-notulen",
+    "sources": [
+      "macos/Views/OnboardingView+Notulen.swift"
     ]
   }
 ]

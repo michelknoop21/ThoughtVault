@@ -1316,6 +1316,7 @@ final class RecordingViewModel {
         if let index = activeTasks.firstIndex(where: { $0.taskId == updatedTask.taskId }) {
             let previous = activeTasks[index].status
             activeTasks[index] = updatedTask
+            taskHistoryDidChange(updatedTask)
             let failure = updatedTask.errorMessage ?? ""
             taskDidChange(from: previous, to: updatedTask.status, message: SupportViewModel.shouldReport(failure) ? "Verwerking op de server mislukt." : failure,
                           shown: failure)
@@ -1429,7 +1430,10 @@ final class RecordingViewModel {
     func addTask(_ task: TranscriptTask) {
         // Avoid duplicates
         if !activeTasks.contains(where: { $0.taskId == task.taskId }) {
+            // A new run under a reused id (regeneration) must not be removed by the previous run's timer.
+            pendingRemovalTasks.removeValue(forKey: task.taskId)?.cancel()
             activeTasks.append(task)
+            taskHistoryDidChange(task)
         }
     }
 
@@ -1443,6 +1447,7 @@ final class RecordingViewModel {
         if let progress { activeTasks[idx].progress = progress }
         if let errorMessage { activeTasks[idx].errorMessage = errorMessage }
         activeTasks[idx].statusDetail = statusDetail
+        taskHistoryDidChange(activeTasks[idx])
         taskDidChange(from: previous, to: status, message: supportMessage ?? activeTasks[idx].errorMessage,
                       shown: activeTasks[idx].errorMessage, failure: failure)
         if !status.isActive {

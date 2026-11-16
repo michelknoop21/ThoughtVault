@@ -58,6 +58,7 @@ final class UsageMeterTests: XCTestCase {
     private func openAICompatible(_ baseURL: String) -> OpenAICompatibleLLMService {
         let service = OpenAICompatibleLLMService(baseURL: baseURL, model: "mistralai/mistral-large-4-0", apiKey: "k", session: stubSession)
         service.rateLimitSleep = { _ in }
+        service.openRouterModelLookup = { _ in nil }
         return service
     }
 
@@ -130,8 +131,8 @@ final class UsageMeterTests: XCTestCase {
         XCTAssertEqual((UsageStub.sent[0]["stream_options"] as? [String: Any])?["include_usage"] as? Bool, true)
         for (index, body) in UsageStub.sent.enumerated().dropFirst() {
             XCTAssertNil(body["stream_options"], "\(body)")
-            // OpenRouter (index 1) also asks for low reasoning effort.
-            XCTAssertEqual(body.keys.sorted(), index == 1 ? ["max_tokens", "messages", "model", "reasoning", "stream"] : ["max_tokens", "messages", "model", "stream"])
+            // The routed provider gets a reasoning field only for a model that reasons by default (LLMChunkingTests).
+            XCTAssertEqual(body.keys.sorted(), ["max_tokens", "messages", "model", "stream"])
         }
     }
 

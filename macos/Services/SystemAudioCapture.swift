@@ -45,6 +45,7 @@ final class SystemAudioCapture {
     private var aggregateID = AudioObjectID(kAudioObjectUnknown)
     private var ioProcID: AudioDeviceIOProcID?
     private var writer: TapAudioWriter?
+    private var formatListener: AudioObjectPropertyListenerBlock?
     private var timer: Timer?
     private var startDate: Date?
     /// Wall-clock start of the last capture; kept after stop for mix alignment.
@@ -94,15 +95,7 @@ final class SystemAudioCapture {
             ]
             try Self.check(AudioHardwareCreateAggregateDevice(aggregate as CFDictionary, &aggregateID), "aggregate device")
 
-            var format = AudioStreamBasicDescription()
-            var size = UInt32(MemoryLayout<AudioStreamBasicDescription>.size)
-            var address = AudioObjectPropertyAddress(mSelector: kAudioTapPropertyFormat,
-                                                     mScope: kAudioObjectPropertyScopeGlobal,
-                                                     mElement: kAudioObjectPropertyElementMain)
-            try Self.check(AudioObjectGetPropertyData(tapID, &address, 0, nil, &size, &format), "tapformaat")
-            guard let inputFormat = AVAudioFormat(streamDescription: &format) else {
-                throw SystemAudioCaptureError.coreAudio("tapformaat", -1)
-            }
+            let inputFormat = try Self.captureFormat(tapID: tapID, aggregateID: aggregateID)
             let writer = TapAudioWriter(file: file, inputFormat: inputFormat) { [weak self] db, bands in
                 Task { @MainActor [weak self] in
                     guard let self, self.isCapturing else { return }
@@ -121,6 +114,24 @@ final class SystemAudioCapture {
                 }
             }
             self.writer = writer
+            // A Bluetooth headset drops to 16 kHz (HFP) once a microphone opens; follow it,
+            // otherwise 16 kHz buffers are read as 48 kHz and come out sped up with gaps.
+            let (tap, device) = (tapID, aggregateID)
+            let listener: AudioObjectPropertyListenerBlock = { @Sendable _, _ in
+                do {
+                    writer.updateFormat(try Self.captureFormat(tapID: tap, aggregateID: device))
+                } catch {
+                    log.error("[SystemAudio] Format refresh failed: \(LogRedact.describe(error))")
+                }
+            }
+            formatListener = listener
+            var tapFormatAddress = Self.formatAddress(kAudioTapPropertyFormat)
+            var rateAddress = Self.formatAddress(kAudioDevicePropertyNominalSampleRate)
+            let tapStatus = AudioObjectAddPropertyListenerBlock(tapID, &tapFormatAddress, ioQueue, listener)
+            let rateStatus = AudioObjectAddPropertyListenerBlock(aggregateID, &rateAddress, ioQueue, listener)
+            if tapStatus != noErr || rateStatus != noErr {
+                log.error("[SystemAudio] Format listener not registered (tap \(tapStatus), device \(rateStatus))")
+            }
             // Core Audio invokes this on ioQueue, not the enclosing MainActor.
             try Self.check(AudioDeviceCreateIOProcIDWithBlock(&ioProcID, aggregateID, ioQueue) {
                 @Sendable now, input, inputTime, _, _ in
@@ -186,10 +197,17 @@ final class SystemAudioCapture {
             AudioDeviceDestroyIOProcID(aggregateID, ioProcID)
         }
         ioProcID = nil
+        if let formatListener {
+            var tapFormatAddress = Self.formatAddress(kAudioTapPropertyFormat)
+            var rateAddress = Self.formatAddress(kAudioDevicePropertyNominalSampleRate)
+            AudioObjectRemovePropertyListenerBlock(tapID, &tapFormatAddress, ioQueue, formatListener)
+            AudioObjectRemovePropertyListenerBlock(aggregateID, &rateAddress, ioQueue, formatListener)
+            self.formatListener = nil
+        }
         ioQueue.sync {
             writer?.finishTimeline()
             if let writer {
-                log.info("[SystemAudio] Captured \(writer.framesReceived) frames, wrote \(writer.framesWritten) frames")
+                log.info("[SystemAudio] Captured \(writer.framesReceived) frames, wrote \(writer.framesWritten), dropped \(writer.framesDropped), skipped \(writer.framesSkipped), \(writer.silenceFills) silence fills, \(writer.formatChanges) format changes")
             }
         }
         writer = nil
@@ -224,8 +242,33 @@ final class SystemAudioCapture {
         micAudioLevels = Array(repeating: 0, count: AudioEnvelopeConfig.historyLength)
     }
 
-    private static func check(_ status: OSStatus, _ operation: String) throws {
+    nonisolated private static func check(_ status: OSStatus, _ operation: String) throws {
         guard status == noErr else { throw SystemAudioCaptureError.coreAudio(operation, status) }
+    }
+
+    nonisolated private static func formatAddress(_ selector: AudioObjectPropertySelector) -> AudioObjectPropertyAddress {
+        AudioObjectPropertyAddress(mSelector: selector, mScope: kAudioObjectPropertyScopeGlobal,
+                                   mElement: kAudioObjectPropertyElementMain)
+    }
+
+    /// Tap channel layout at the aggregate device's current rate: the IO proc delivers at that rate.
+    nonisolated private static func captureFormat(tapID: AudioObjectID, aggregateID: AudioObjectID) throws -> AVAudioFormat {
+        var format = AudioStreamBasicDescription()
+        var size = UInt32(MemoryLayout<AudioStreamBasicDescription>.size)
+        var address = formatAddress(kAudioTapPropertyFormat)
+        try check(AudioObjectGetPropertyData(tapID, &address, 0, nil, &size, &format), "tapformaat")
+        let tapRate = format.mSampleRate
+        var deviceRate = Float64(0)
+        size = UInt32(MemoryLayout<Float64>.size)
+        address = formatAddress(kAudioDevicePropertyNominalSampleRate)
+        if AudioObjectGetPropertyData(aggregateID, &address, 0, nil, &size, &deviceRate) == noErr, deviceRate > 0 {
+            format.mSampleRate = deviceRate
+        }
+        log.info("[SystemAudio] Tap format \(tapRate) Hz, device \(deviceRate) Hz, \(format.mChannelsPerFrame) ch")
+        guard let inputFormat = AVAudioFormat(streamDescription: &format) else {
+            throw SystemAudioCaptureError.coreAudio("tapformaat", -1)
+        }
+        return inputFormat
     }
 
     private static func tapUID(for tapID: AudioObjectID) throws -> String {
@@ -275,10 +318,11 @@ final class SystemAudioLiveHandler: Sendable {
     }
 }
 
-private final class TapAudioWriter: @unchecked Sendable {
+/// Not thread-safe: every call must come from the capture's serial ioQueue.
+final class TapAudioWriter: @unchecked Sendable {
     private let file: AVAudioFile
-    private let inputFormat: AVAudioFormat
-    private let converter: AVAudioConverter?
+    private var inputFormat: AVAudioFormat
+    private var converter: AVAudioConverter?
     private let levelHandler: @Sendable (Float, [Float]) -> Void
     private var spectrum = AudioSpectrumProcessor()
     private var spectralSamples: [Float] = []
@@ -287,6 +331,16 @@ private final class TapAudioWriter: @unchecked Sendable {
     private var lastLevel = Date.distantPast
     private(set) var framesReceived: UInt64 = 0
     private(set) var framesWritten: UInt64 = 0
+    private(set) var framesDropped: UInt64 = 0
+    private(set) var silenceFills: UInt64 = 0
+    private(set) var formatChanges: UInt64 = 0
+    private(set) var framesSkipped: UInt64 = 0
+    private var realign = false
+    private var framesToSkip: Int64 = 0
+    /// 1 ms at 16 kHz: converter latency, not worth a gap or a skip.
+    private static let realignTolerance: Int64 = 16
+    private var lastCallbackFrames: UInt32 = 0
+    private var lastCallbackHostTime: UInt64 = 0
 
     init(file: AVAudioFile, inputFormat: AVAudioFormat, levelHandler: @escaping @Sendable (Float, [Float]) -> Void) {
         self.file = file
@@ -301,6 +355,26 @@ private final class TapAudioWriter: @unchecked Sendable {
         liveHandler.set(handler)
     }
 
+    func updateFormat(_ format: AVAudioFormat) {
+        guard format != inputFormat else { return }
+        inputFormat = format
+        converter = AVAudioConverter(from: format, to: file.processingFormat)
+        formatChanges += 1
+        realign = true
+        log.info("[SystemAudio] Input format now \(format.sampleRate) Hz, converter available: \(converter != nil)")
+    }
+
+    /// Logs whenever the callback size changes, with the rate implied by the previous callback interval,
+    /// so a log shows what the device really delivers next to the format we assume.
+    /// `hostTime` is the buffer's audio timestamp (inputTime), not its arrival time.
+    private func traceCallback(frames: UInt32, hostTime: UInt64) {
+        defer { (lastCallbackFrames, lastCallbackHostTime) = (frames, hostTime) }
+        guard frames != lastCallbackFrames else { return }
+        let interval = lastCallbackHostTime == 0 || hostTime <= lastCallbackHostTime ? 0
+            : AVAudioTime.seconds(forHostTime: hostTime - lastCallbackHostTime)
+        log.info("[SystemAudio] Callback \(frames) frames (was \(lastCallbackFrames)), measured \(interval > 0 ? Double(lastCallbackFrames) / interval : 0) Hz, assumed \(inputFormat.sampleRate) Hz")
+    }
+
     func consume(_ buffers: UnsafePointer<AudioBufferList>, hostTime: UInt64) {
         guard !timeline.isPaused else { return }
         guard buffers.pointee.mNumberBuffers > 0 else { return }
@@ -310,13 +384,20 @@ private final class TapAudioWriter: @unchecked Sendable {
               let pcm = AVAudioPCMBuffer(pcmFormat: inputFormat, bufferListNoCopy: buffers) else { return }
         pcm.frameLength = AVAudioFrameCount(frames)
         framesReceived += UInt64(frames)
+        traceCallback(frames: frames, hostTime: hostTime)
         do {
-            guard let converter else { return }
+            guard let converter else { framesDropped += UInt64(frames); return }
             let capacity = AVAudioFrameCount(ceil(Double(frames) * file.processingFormat.sampleRate / inputFormat.sampleRate) + 32)
             let target = timeline.framePosition(at: AVAudioTime.seconds(forHostTime: hostTime))
-            if target > Int64(framesWritten) + Int64(capacity) {
+            let drift = target - Int64(framesWritten)
+            // Buffers delivered before a format notification are read at the wrong rate and
+            // leave the file behind or ahead; snap back to the timeline on the first good buffer.
+            if drift > Int64(capacity) || (realign && drift > Self.realignTolerance) {
                 try writeSilence(until: target)
+            } else if realign && drift < -Self.realignTolerance {
+                framesToSkip = -drift
             }
+            realign = false
             guard let converted = AVAudioPCMBuffer(pcmFormat: file.processingFormat, frameCapacity: capacity) else { return }
             nonisolated(unsafe) var consumed = false
             var conversionError: NSError?
@@ -327,6 +408,14 @@ private final class TapAudioWriter: @unchecked Sendable {
                 return pcm
             }
             if let conversionError { throw conversionError }
+            if framesToSkip > 0, let data = converted.floatChannelData?[0] {
+                let skip = min(framesToSkip, Int64(converted.frameLength))
+                let keep = Int(converted.frameLength) - Int(skip)
+                memmove(data, data + Int(skip), keep * MemoryLayout<Float>.size)
+                converted.frameLength = AVAudioFrameCount(keep)
+                framesToSkip -= skip
+                framesSkipped += UInt64(skip)
+            }
             if converted.frameLength > 0 {
                 try file.write(from: converted)
                 framesWritten += UInt64(converted.frameLength)
@@ -366,6 +455,7 @@ private final class TapAudioWriter: @unchecked Sendable {
         guard target > Int64(framesWritten),
               let silence = AVAudioPCMBuffer(pcmFormat: file.processingFormat, frameCapacity: 16_000) else { return }
         if let data = silence.floatChannelData?[0] { data.initialize(repeating: 0, count: 16_000) }
+        silenceFills += 1
         while Int64(framesWritten) < target {
             silence.frameLength = AVAudioFrameCount(min(16_000, target - Int64(framesWritten)))
             try file.write(from: silence)

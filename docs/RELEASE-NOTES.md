@@ -8,6 +8,21 @@ Elke release is een blok `## <versie> - <titel>` met direct daaronder een cursie
 met datum en platforms, bijvoorbeeld `*12 november 2026 · macOS · iOS · Windows*`.
 De nieuwste release staat bovenaan.
 
+## 1.0.327 - Taken met geschiedenis, modelkeuze bij de eerste start
+
+*16 november 2026 · macOS · iOS · Windows*
+
+- **Taken** bewaart nu elke verwerking, ook na een herstart. Open een taak voor de details: profiel, duur van de opname en van elke stap, welk model de notule schreef en eventuele foutmeldingen.
+- Vanuit een taak kun je opnieuw verwerken met een ander profiel of model, de titel aanpassen, naar de notule springen, de opname verwijderen of de taak verwijderen. Een notule verdwijnt alleen als je daar zelf voor kiest.
+- Bij de eerste start kies je in de nieuwe stap **Notulen** wie je notulen schrijft: OpenRouter met je eigen sleutel, een model op je apparaat of een andere aanbieder. De app test de sleutel voordat hij hem gebruikt. Overslaan kan; dan maakt de app pas notulen als je een model kiest.
+- De modelkeuze toont alleen modellen tot een vaste prijs per notule. Staat er nog een duurder model ingesteld, dan gebruikt de app het aanbevolen model en meldt dat bij de taak.
+- OpenRouter is de standaard voor nieuwe installaties. Bestaande installaties houden hun aanbieder.
+- Bij elke notule zie je de werkelijke lengte, de kosten, het aantal verzoeken en de duur.
+- Een correctie past notule en transcriptie tegelijk aan.
+- Delen stuurt de notule; het transcript alleen als er geen notule is.
+- Op de iPhone loopt de verwerking door als je naar een andere app gaat.
+- Op de Mac groeit de zwevende opnamewidget mee met de timer, zodat een opname van meer dan een uur volledig in beeld blijft.
+
 ## 1.0.325 - Handleiding openen vanuit de app
 
 *16 november 2026 · macOS · Windows*

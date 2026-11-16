@@ -25,10 +25,11 @@
     "file": "win-taken.webp",
     "platform": "windows",
     "screen": "Taken",
-    "shows": "Het scherm Taken met een opname die nog wordt getranscribeerd en een taak die klaar is.",
+    "shows": "Het scherm Taken met een opname die nog wordt getranscribeerd en de geschiedenis met een voltooide, een mislukte en een geannuleerde taak.",
     "url": "?scenario=handleiding#/tasks",
     "sources": [
       "windows/src/pages/TasksPage.tsx",
+      "windows/src/components/tasks/TaskHistoryList.tsx",
       "windows/src/stores/recordingStore.ts"
     ]
   },
@@ -174,6 +175,17 @@
       "windows/src/components/FeedbackWidget.tsx",
       "windows/src/components/support/SupportThread.tsx",
       "windows/src/components/settings/AccountTab.tsx"
+    ]
+  },
+  {
+    "file": "win-onboarding-notulen.webp",
+    "platform": "windows",
+    "screen": "Eerste start: notulen instellen",
+    "shows": "De stap Notulen van de wizard: OpenRouter gekozen, een geteste sleutel en het ingevulde model.",
+    "url": "?scenario=handleiding#/onboarding",
+    "sources": [
+      "windows/src/components/onboarding/NotulenStep.tsx",
+      "windows/src/components/onboarding/OnboardingWizard.tsx"
     ]
   }
 ]

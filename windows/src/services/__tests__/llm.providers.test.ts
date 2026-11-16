@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { DEFAULT_SETTINGS } from "../../types";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { LLMService, MAX_OUTPUT_TOKENS, TIME_LIMIT_MESSAGE, TRUNCATED_MESSAGE, auditNoteConcurrency, providerKind, rateLimitWaitMs, unreachableMessage } from "../llm";
 import { auditFixture, sourceFixture } from "./notuleAuditFixtures";
@@ -36,7 +37,7 @@ beforeEach(() => {
     const content = auditFixture(JSON.parse(args.request.body).messages.at(-1).content);
     return { status: 200, body: JSON.stringify({ choices: [{ message: { content } }], content: [{ type: "text", text: content }] }) };
   });
-  useSettingsStore.setState({ processing_mode: "local", notulen_provider: "ollama" });
+  useSettingsStore.setState({ ...DEFAULT_SETTINGS, processing_mode: "local", notulen_provider: "ollama" });
 });
 
 it.each(["ollama", "lm-studio"] as const)("uses the native route for %s when WebView CORS is denied", async provider => {

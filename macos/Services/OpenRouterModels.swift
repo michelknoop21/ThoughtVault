@@ -64,6 +64,11 @@ actor OpenRouterModelCatalog {
         request.timeoutInterval = 30
         guard let (data, response) = try? await URLSession.shared.data(for: request),
               (response as? HTTPURLResponse)?.statusCode == 200 else { return nil }
+        if let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let items = root["data"] as? [[String: Any]] {
+            SuggestedModels.rememberReported(SuggestedModels.reportedPrices(items), provider: .openRouter,
+                                              baseURL: OpenAICompatibleLLMService.openRouterBaseURL)
+        }
         let models = OpenRouterModel.parseList(data)
         return models.isEmpty ? nil : models
     }

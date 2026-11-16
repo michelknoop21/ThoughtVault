@@ -620,9 +620,6 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
         onProgress: @Sendable (String) -> Void
     ) async throws -> String {
 
-        if let refusal = SuggestedModels.requestRefusal(for: model, baseURL: baseURL) {
-            throw LLMError.generationFailed(refusal)
-        }
         guard !model.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             throw LLMError.generationFailed("Kies een model bij Instellingen > Verwerking.")
         }
@@ -636,6 +633,9 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
         let isOpenRouter = URL(string: baseURL)?.host?.lowercased() == URL(string: Self.openRouterBaseURL)?.host
         let fields = isOpenRouter ? OpenRouterModel.requestFields(await openRouterModelLookup(model), baseCap: llmMaxOutputTokens)
             : (maxTokens: llmMaxOutputTokens, reasoning: nil)
+        if let refusal = SuggestedModels.requestRefusal(for: model, baseURL: baseURL) {
+            throw LLMError.generationFailed(refusal)
+        }
         var requestBody: [String: Any] = [
             "model": model,
             "stream": true,

@@ -5,7 +5,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { parseArgs } from "node:util";
-import { it, vi } from "vitest";
+import { expect, it, vi } from "vitest";
 import { LLMService } from "../../windows/src/services/llm";
 import { UsageMeter } from "../../windows/src/services/usageMeter";
 import { useSettingsStore } from "../../windows/src/stores/settingsStore";
@@ -16,19 +16,76 @@ import { assertOutsideRepo, htmlToText, loadFacts, nalopenCount, scoreFacts, sec
 const COMMIT = (() => { try { return execFileSync("git", ["rev-parse", "--short", "HEAD"], { encoding: "utf8" }).trim(); } catch { return "onbekend"; } })();
 const state = vi.hoisted(() => ({ dry: false, key: "", dryCost: 0.01, calls: 0, flaky: "" }));
 
-(globalThis as { __evalInvoke?: unknown }).__evalInvoke = async (command: string, args: { request?: { url: string; headers: Record<string, string>; body: string; timeout_seconds: number } }) => {
-  if (command !== "proxy_request" || !args.request) return undefined; // log_write and the like
-  const { url, headers, body, timeout_seconds } = args.request;
-  if (state.dry) return dryResponse(JSON.parse(body));
+const evalInvoke = async (command: string, args: { request?: { url: string; method?: string; headers?: Record<string, string>; body?: string | null; timeout_seconds: number; idle_timeout_seconds?: number } }) => {
+  if (command !== "proxy_request" || !args.request) return undefined;
+  const { url, method = "POST", headers, body, timeout_seconds, idle_timeout_seconds } = args.request;
+  if (state.dry) return method === "GET" ? { status: 200, body: '{"data":[]}' } : dryResponse(JSON.parse(body!));
+  const controller = new AbortController();
+  const total = setTimeout(() => controller.abort(), timeout_seconds * 1000);
+  let idle: ReturnType<typeof setTimeout> | undefined;
+  const progress = () => {
+    if (idle_timeout_seconds) {
+      clearTimeout(idle);
+      idle = setTimeout(() => controller.abort(), idle_timeout_seconds * 1000);
+    }
+  };
+  progress();
   try {
-    const res = await fetch(url, { method: "POST", headers, body, signal: AbortSignal.timeout(timeout_seconds * 1000) });
-    return { status: res.status, body: await res.text(), headers: Object.fromEntries(res.headers) };
+    const res = await fetch(url, { method, headers, body, signal: controller.signal });
+    let text = "";
+    if (idle_timeout_seconds && res.body) {
+      const reader = res.body.getReader(), decoder = new TextDecoder();
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        progress();
+        text += decoder.decode(value, { stream: true });
+      }
+      text += decoder.decode();
+    } else text = await res.text();
+    return { status: res.status, body: text, headers: Object.fromEntries(res.headers) };
   } catch (error) {
-    // Same rejection text as the Tauri proxy_request, so llm.ts reports a timeout as the app does.
-    if ((error as Error).name === "TimeoutError") throw `Tijdslimiet bereikt na ${timeout_seconds} s`;
+    if (controller.signal.aborted) throw `Tijdslimiet bereikt na ${timeout_seconds} s`;
     throw error;
+  } finally {
+    clearTimeout(total);
+    clearTimeout(idle);
   }
 };
+
+(globalThis as { __evalInvoke?: unknown }).__evalInvoke = evalInvoke;
+
+it("forwards catalog GET requests without a body", async () => {
+  const fetchMock = vi.fn().mockResolvedValue({ status: 200, text: async () => '{"data":[]}', headers: new Headers() });
+  vi.stubGlobal("fetch", fetchMock);
+  try {
+    await evalInvoke("proxy_request", { request: { url: "https://fixture.invalid/models", method: "GET", timeout_seconds: 1 } });
+    expect(fetchMock.mock.calls[0][1]).toMatchObject({ method: "GET", body: undefined });
+  } finally { vi.unstubAllGlobals(); }
+});
+
+it("preserves text across streamed byte boundaries", async () => {
+  const bytes = new TextEncoder().encode("één antwoord");
+  const body = new ReadableStream({ start(controller) {
+    controller.enqueue(bytes.slice(0, 1)); controller.enqueue(bytes.slice(1)); controller.close();
+  } });
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(body)));
+  try {
+    const response = await evalInvoke("proxy_request", { request: { url: "https://fixture.invalid/chat",
+      body: "{}", timeout_seconds: 1, idle_timeout_seconds: 0.5 } });
+    expect(response?.body).toBe("één antwoord");
+  } finally { vi.unstubAllGlobals(); }
+});
+
+it("applies the native idle limit before an answer arrives", async () => {
+  vi.stubGlobal("fetch", vi.fn((_url, options) => new Promise((_resolve, reject) =>
+    options.signal.addEventListener("abort", () => reject(new Error("aborted"))))));
+  try {
+    await expect(evalInvoke("proxy_request", { request: { url: "https://fixture.invalid/chat", method: "POST",
+      body: "{}", timeout_seconds: 1, idle_timeout_seconds: 0.02 } })).rejects.toContain("Tijdslimiet bereikt");
+  } finally { vi.unstubAllGlobals(); }
+});
+
 vi.mock("../../windows/src/services/tauriCommands", async importOriginal => ({
   ...(await importOriginal<object>()),
   loadCredential: async (key: string) => (key === "openrouter_api_key" ? state.key : null),

@@ -21,7 +21,7 @@ Bij **Instellingen** > **Verwerking** staan twee keuzes die samen bepalen waar j
 | **Lokaal (aanbevolen)** | De opname wordt op je Mac omgezet naar tekst. De audio verlaat je apparaat niet. |
 | **Cloud** | De opname wordt geüpload naar de ThoughtVault-server. Die maakt de transcriptie en ook de notulen. |
 
-Bij **Lokaal** kies je de engine: **WhisperKit**, waarvoor eenmalig een model wordt gedownload, of **Apple Spraakherkenning**, dat direct werkt zonder download.
+Bij **Lokaal** kies je de engine: **WhisperKit** of **Parakeet**, waarvoor eenmalig een model wordt gedownload, of **Apple Spraakherkenning**, dat direct werkt zonder download. WhisperKit is de engine die de Snelle setup instelt.
 :::
 
 ::: windows
@@ -30,11 +30,11 @@ Bij **Lokaal** kies je de engine: **WhisperKit**, waarvoor eenmalig een model wo
 | **Lokaal** | De opname wordt op je pc omgezet naar tekst. De aanbieder voor de notulen kies je apart. |
 | **Cloud** | De opname wordt geüpload naar de ThoughtVault-server. Die maakt de transcriptie en ook de notulen. |
 
-Bij **Lokaal** download je eenmalig het transcriptiemodel. Het blok **Snelle setup** stelt een model voor dat bij je pc past: met **Toepassen** neem je dat voorstel over.
+Bij **Lokaal** download je eenmalig het transcriptiemodel (Whisper of Parakeet TDT v3). Het blok **Snelle setup** stelt een model voor dat bij je pc past: met **Toepassen** neem je dat voorstel over.
 :::
 
 ::: ios
-In **Instellingen** staat bij **Verwerking** de huidige keuze: **Lokaal op dit apparaat** of **Cloud (server)**. Bij lokaal blijft de audio op je iPhone of iPad.
+In **Instellingen** staat bij **Verwerking** de huidige keuze: **Lokaal op dit apparaat** of **Cloud (server)**. Bij lokaal blijft de audio op je iPhone of iPad. Je kiest daar dezelfde engines als op de Mac: **WhisperKit**, **Parakeet** of **Apple Spraakherkenning**. Houd de app open zolang een opname wordt verwerkt: iOS pauzeert de verwerking op de achtergrond.
 :::
 
 Voor **Cloud** heb je een ThoughtVault-account nodig.
@@ -45,10 +45,11 @@ Kies je **Cloud** zonder ingelogd te zijn, dan opent het inlogscherm. Met **Loka
 
 ## Notulen: welk model krijgt de transcriptie
 
-Het model dat de notulen schrijft, krijgt de tekst van de transcriptie en je eventuele notitie. De audio gaat nooit naar dit model.
+Het model dat de notulen schrijft, krijgt de tekst van de transcriptie en je eventuele notitie. De audio gaat nooit naar dit model. Op een nieuwe installatie staat OpenRouter als aanbieder, dus het transcript gaat daarheen zodra je een sleutel hebt ingevuld. Heb je ThoughtVault al, dan blijft je eigen keuze staan. Wil je dat het transcript je apparaat niet verlaat, kies dan Ollama of LM Studio op je eigen computer, of Apple Intelligence.
 
 | Aanbieder | Waar gaat de transcriptie heen |
 |-----------|--------------------------------|
+| OpenRouter | Naar OpenRouter, met je eigen account en sleutel. Het gebruik kost apart tegoed. |
 | Ollama of LM Studio op je eigen computer | Nergens: alles blijft op je apparaat |
 | Ollama of LM Studio op een andere computer of server | Naar die server |
 | De overige aanbieders in de lijst, met je eigen API-sleutel | Naar die aanbieder. Het gebruik kost apart tegoed bij die aanbieder. |
@@ -63,6 +64,8 @@ De kaart **Privacy & gegevens** op dit scherm vat in twee zinnen samen wat er me
 
 Staat de transcriptie op **Cloud**, dan valt er niets te kiezen: de server schrijft de notulen.
 
+De instelling **Terugval bij fout** laat de app het één keer met een tweede aanbieder proberen als de eerste een fout geeft. Kies je daar een online aanbieder, dan gaat het transcript bij een fout ook naar die aanbieder.
+
 ## Wat werkt zonder internet
 
 Bij lokale transcriptie heb je alleen internet nodig voor wat je zelf naar buiten stuurt.
@@ -72,7 +75,7 @@ Bij lokale transcriptie heb je alleen internet nodig voor wat je zelf naar buite
 | Opnemen | Werkt altijd |
 | Transcriberen, lokaal | Werkt, zodra het transcriptiemodel is gedownload |
 | Notulen met een model op je eigen computer | Werkt |
-| Notulen met een aanbieder op internet | Werkt niet. De transcriptie wordt wel opgeslagen en je start de taak later opnieuw. |
+| Notulen met een aanbieder op internet, zoals OpenRouter | Werkt niet. De transcriptie wordt wel opgeslagen en je start de taak later opnieuw. |
 
 Mislukt het schrijven van de notulen omdat de aanbieder niet bereikbaar is, dan staat de taak als mislukt op het scherm [Taken](taken.html#een-mislukte-taak-opnieuw-starten). Je start hem opnieuw zodra de verbinding terug is.
 

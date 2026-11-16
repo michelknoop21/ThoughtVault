@@ -1019,6 +1019,8 @@ struct TranscriptDetailView: View {
     @State var editedHTML = ""
     @State private var wordCorrection: PersonalCorrection?
     @State private var pendingObsidianImport: (filename: String, markdown: String, html: String)?
+    /// Obsidian actions are only shown while the switch is on.
+    @AppStorage(ObsidianService.enabledKey) var obsidianEnabled = false
 
     // MARK: State - errors
 
@@ -1241,6 +1243,7 @@ struct TranscriptDetailView: View {
 
     @ViewBuilder
     var progressBanners: some View {
+        ObsidianLinkBanner()
         if isRegenerating {
             progressBanner(
                 message: regeneratingMessage.isEmpty
@@ -1491,11 +1494,13 @@ struct TranscriptDetailView: View {
                 Button { exportAsMarkdown() } label: {
                     Label("Markdown", systemImage: "doc.plaintext")
                 }
-                Button { exportToObsidian() } label: {
-                    Label("Exporteer naar Obsidian", systemImage: "tray.and.arrow.down")
-                }
-                Button { importFromObsidian() } label: {
-                    Label("Haal op uit Obsidian", systemImage: "tray.and.arrow.up")
+                if obsidianEnabled {
+                    Button { exportToObsidian() } label: {
+                        Label("Exporteer naar Obsidian", systemImage: "tray.and.arrow.down")
+                    }
+                    Button { importFromObsidian() } label: {
+                        Label("Haal op uit Obsidian", systemImage: "tray.and.arrow.up")
+                    }
                 }
                 Button { exportAsTXT() } label: {
                     Label("Platte tekst", systemImage: "doc.text")
@@ -1760,6 +1765,12 @@ struct TranscriptDetailView: View {
                     RoundedRectangle(cornerRadius: 0)
                         .stroke(Color.brandPrimary.opacity(0.3), lineWidth: 2)
                 }
+            }
+
+            if !isEditingNotule {
+                NotuleUsageFooter(taskId: fullTranscript.taskId, html: html)
+                    .padding(.horizontal, TS.Spacing.md)
+                    .padding(.vertical, TS.Spacing.xs)
             }
 
             if isEditingNotule {
@@ -2059,6 +2070,7 @@ struct TranscriptDetailView: View {
         }
         if ObsidianService.isEnabled {
             do { try await ObsidianService.tryExport(title: fullTranscript.title, html: html, date: fullTranscript.date, participants: [], profileName: fullTranscript.profileName, tags: fullTranscript.tags, noteID: fullTranscript.taskId) }
+            catch ObsidianService.ObsidianError.vaultLinkBroken {}   // shown once by ObsidianLinkBanner
             catch { errorMessage = "Notule opgeslagen, maar Obsidian-sync mislukt: " + error.localizedDescription }
         }
     }
@@ -2083,6 +2095,8 @@ struct TranscriptDetailView: View {
                         title: fullTranscript.title, html: html, date: fullTranscript.date,
                         participants: [], profileName: fullTranscript.profileName,
                         tags: fullTranscript.tags, noteID: fullTranscript.taskId)
+                } catch ObsidianService.ObsidianError.vaultLinkBroken {
+                    // Shown once by ObsidianLinkBanner.
                 } catch {
                     errorMessage = "Notule opgeslagen, maar Obsidian-sync mislukt: \(error.localizedDescription)"
                 }
@@ -2325,6 +2339,8 @@ struct TranscriptDetailView: View {
                     )
                 }
                 errorMessage = nil
+            } catch ObsidianService.ObsidianError.vaultLinkBroken {
+                // Shown once by ObsidianLinkBanner.
             } catch {
                 errorMessage = "Obsidian-export mislukt: \(error.localizedDescription)"
             }
@@ -2337,6 +2353,8 @@ struct TranscriptDetailView: View {
                 let note = try await ObsidianService.readNote(
                     title: fullTranscript.title, date: fullTranscript.date, noteID: fullTranscript.taskId)
                 if note.html != fullTranscript.notuleHtml { pendingObsidianImport = note }
+            } catch ObsidianService.ObsidianError.vaultLinkBroken {
+                // Shown once by ObsidianLinkBanner.
             } catch {
                 errorMessage = "Obsidian ophalen mislukt: \(error.localizedDescription)"
             }
@@ -2362,8 +2380,9 @@ struct TranscriptDetailView: View {
     }
 
     func shareContent() {
-        let text = fullTranscript.rawTranscription
-            ?? HTMLPlainText.from(fullTranscript.notuleHtml ?? "")
+        // The screen shows the notule, so that is what Delen sends; the transcript only when there is no notule.
+        let notule = HTMLPlainText.from(fullTranscript.notuleHtml ?? "")
+        let text = notule.isEmpty ? (fullTranscript.rawTranscription ?? "") : notule
         #if os(macOS)
         let picker = NSSharingServicePicker(items: [text])
         picker.show(relativeTo: .zero, of: NSApp.keyWindow?.contentView ?? NSView(), preferredEdge: .minY)

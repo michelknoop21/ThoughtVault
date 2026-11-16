@@ -32,7 +32,7 @@ export const TaskStatusLabels: Record<TaskStatus, string> = {
 export type RecordingMode = "microphone" | "combined";
 
 // Notulen providers
-export type NotulenProvider = "cloud" | "ollama" | "lm-studio" | "openai" | "anthropic";
+export type NotulenProvider = "cloud" | "ollama" | "lm-studio" | "openai" | "anthropic" | "openrouter";
 
 // Processing mode: "cloud" = upload to backend, "local" = transcribe + generate
 // fully on-device (Whisper + Ollama/LM Studio). Mirrors the macOS processingMode.
@@ -71,8 +71,42 @@ export interface TranscriptTask {
   username?: string;
 }
 
+/** How a notule run is billed: OpenRouter reports a cost, OpenAI and Anthropic do not, local servers are free,
+ * Ollama with a key is a subscription. */
+export type NotuleBilling = "metered" | "unpriced" | "free" | "subscription";
+
+/** Real length, requests and cost of the run that wrote a notule. Absent on notules from before this existed. */
+export interface NotuleUsage {
+  provider: string;
+  model: string;
+  billing: NotuleBilling;
+  transcript_chars: number;
+  notule_chars: number;
+  words: number;
+  sentences: number;
+  requests: number;
+  unknown_requests: number;
+  input_tokens: number;
+  output_tokens: number;
+  reasoning_tokens: number;
+  /** USD; null when unknown (a request that should have a cost lacked it, or the provider reports none). */
+  cost_usd: number | null;
+  duration_ms: number;
+  steps: Record<string, { requests: number; input_tokens: number; output_tokens: number }>;
+  content_check: "ran" | "skipped";
+}
+
+/** Per-device totals for one month ("yyyy-MM"). */
+export interface MonthUsage {
+  notules: number;
+  requests: number;
+  cost_usd: number;
+  unknown_cost_runs: number;
+}
+
 // Completed saved transcript
 export interface Transcript {
+  notule_usage?: NotuleUsage;
   notule_draft_html?: string;
   notule_review_reason?: string;
   profile_id?: string;
@@ -353,6 +387,8 @@ export interface ProfilesResponse {
 
 // Settings
 export interface AppSettings {
+  /** Usage per month, counted on this pc only. */
+  usage_ledger: Record<string, MonthUsage>;
   server_url: string;
   processing_mode: ProcessingMode;
   whisper_model: string;
@@ -365,6 +401,7 @@ export interface AppSettings {
   lm_studio_model: string;
   openai_model: string;
   anthropic_model: string;
+  openrouter_model: string;
   default_profile_id: string;
   default_recording_mode: RecordingMode;
   has_completed_onboarding: boolean;
@@ -380,10 +417,11 @@ export interface AppSettings {
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
+  usage_ledger: {},
   server_url: "https://n8n.prezent.nl/tstudio/api",
   processing_mode: "local",
   whisper_model: "medium",
-  notulen_provider: "ollama",
+  notulen_provider: "openrouter",
   notulen_fallback_provider: "",
   ollama_url: "http://localhost:11434",
   ollama_model: "llama3.2",
@@ -391,6 +429,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   lm_studio_model: "local-model",
   openai_model: "gpt-5.6-terra",
   anthropic_model: "claude-sonnet-5-5",
+  openrouter_model: "mistralai/mistral-large-4-0",
   default_profile_id: "standaard",
   default_recording_mode: "combined",
   has_completed_onboarding: false,

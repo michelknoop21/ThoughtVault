@@ -186,4 +186,31 @@ final class MigrationTests: XCTestCase {
         record.notuleDraftHtml = "<p>Concept</p>"
         try container.mainContext.save()
     }
+
+    /// The same old store opens through the app's own container path after `notuleUsageJSON` was added:
+    /// the record survives, the new field reads nil, and usage can be stored on it.
+    func testOldStoreOpensWithNotuleUsageField() throws {
+        let fixture = try XCTUnwrap(Bundle(for: Self.self).url(forResource: "PreDraftFields", withExtension: "store"))
+        let dir = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let url = dir.appending(path: "Local.store")
+        try FileManager.default.copyItem(at: fixture, to: url)
+        let suite = "MigrationTests-\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        let container = LocalTranscriptStore.makeContainer(at: url, defaults: defaults)
+        XCTAssertEqual(container.configurations.first?.url, url, "must be the on-disk store, not the in-memory fallback")
+        let record = try XCTUnwrap(try container.mainContext.fetch(FetchDescriptor<TranscriptRecord>()).first)
+        XCTAssertEqual(record.id, "fixture-1")
+        XCTAssertEqual(record.notuleHtml, "<p>Sam belt vrijdag.</p>")
+        XCTAssertNil(record.notuleUsageJSON)
+        XCTAssertNil(record.notuleUsage)
+
+        record.notuleUsageJSON = #"{"provider":"openRouter"}"#
+        try container.mainContext.save()
+        let files = try FileManager.default.contentsOfDirectory(atPath: dir.path)
+        XCTAssertFalse(files.contains { $0.contains("incompatible") }, "store was moved aside: \(files)")
+    }
 }

@@ -281,7 +281,9 @@ export function LoginPage() {
                   type="button"
                   className="btn btn-secondary login-btn"
                   onClick={() => {
-                    updateSettings({ processing_mode: "local", notulen_provider: "ollama" });
+                    // A leftover "cloud" provider cannot run without an account; any other choice is kept.
+                    const { notulen_provider } = useSettingsStore.getState();
+                    updateSettings({ processing_mode: "local", ...(notulen_provider === "cloud" && { notulen_provider: "ollama" as const }) });
                     navigate("/recording", { replace: true });
                   }}
                 >

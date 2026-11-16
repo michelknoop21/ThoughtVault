@@ -56,7 +56,8 @@ import SwiftUI
 
 /// Debug-only launch arguments for simulator screenshots, where taps are not
 /// available: `-TVDebugTab transcripts`, `-TVDebugOpen transcript`,
-/// `-TVDebugBottom YES`. Release builds ignore them.
+/// `-TVDebugOpen verwerking` (also `verwerking-transcriptie`, `verwerking-notulen`
+/// with `-TVDebugTab settings`), `-TVDebugBottom YES`. Release builds ignore them.
 enum IOSDebug {
     static func string(_ key: String) -> String? {
         #if DEBUG

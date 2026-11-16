@@ -188,6 +188,57 @@ final class SupportViewModelTests: XCTestCase {
         }
     }
 
+    @MainActor func testAutomaticReportCarriesSafeDiagnosticAndStableFingerprint() async throws {
+        let (vm, relay, defaults, session, directory, suite) = fixture()
+        defer { cleanup(defaults, session, directory, suite) }
+        let shown = ["Lokale transcriptie mislukt: PRIVATE_ONE 300s", "Lokale transcriptie mislukt: PRIVATE_TWO 120s"]
+        let diagnostics = shown.map {
+            RecordingViewModel.failureDiagnostic(shown: $0, error: LocalTranscriberError.timedOut(stage: "model-load", message: $0))
+        }
+        for (text, diagnostic) in zip(shown, diagnostics) {
+            await vm.report(stage: .transcriberen, shown: text, error: text, diagnostic: diagnostic)
+        }
+        let reports = await relay.pendingReports()
+        XCTAssertEqual(reports.count, 2)
+        for (report, diagnostic) in zip(reports, diagnostics) {
+            XCTAssertEqual(report.shownMessage, "Verwerking mislukt tijdens transcriberen.")
+            XCTAssertEqual(report.errorText, "Verwerking mislukt tijdens transcriberen. code=\(diagnostic.code) "
+                           + "error=LocalTranscriberError.timedOut stage=model-load reason=timeout")
+            var again = report
+            again.normalizeAutomatic()
+            XCTAssertEqual(again, report)
+        }
+        // Same kind of failure, different dynamic text: one ticket.
+        XCTAssertEqual(reports[0].fingerprint, reports[1].fingerprint)
+        for file in try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil) {
+            XCTAssertFalse(String(decoding: try Data(contentsOf: file), as: UTF8.self).contains("PRIVATE_"))
+        }
+    }
+
+    func testNormalizationDropsErrorTextThatIsNotADiagnostic() {
+        let forged = SupportReport.make(kind: "manual", category: .bug, stage: "notule", shown: "x",
+                                        error: "Verwerking mislukt tijdens notule. code=x error=PRIVATE, \"quote\"",
+                                        fingerprint: nil, clickPath: [])
+        var report = forged
+        report.kind = "auto"
+        report.normalizeAutomatic()
+        XCTAssertEqual(report.errorText, "Verwerking mislukt tijdens notule.")
+    }
+
+    @MainActor func testFailureShownRecordsStaticCodeAndDescriptor() {
+        let vm = RecordingViewModel()
+        vm.recordingState = .error("Kon het audiobestand niet importeren.")
+        XCTAssertEqual(vm.lastFailureDiagnostic, FailureDiagnostic(code: "import-failed", descriptor: "none"))
+        vm.recordingState = .idle
+        vm.recordingFailed(APIError.httpError(422, "PRIVATE-INHOUD", nil))
+        XCTAssertEqual(vm.lastFailureDiagnostic?.descriptor, "APIError.httpError http=422")
+        XCTAssertEqual(vm.lastFailureDiagnostic?.code, LogRedact.mask("PRIVATE-INHOUD"))
+        let task = TranscriptTask(taskId: UUID().uuidString, status: .transcribing)
+        vm.addTask(task)
+        vm.updateTask(task.id, status: .error, errorMessage: "Geannuleerd door gebruiker.", failure: CancellationError())
+        XCTAssertEqual(vm.lastFailureDiagnostic, FailureDiagnostic(code: "cancelled-by-user", descriptor: "cancelled"))
+    }
+
     @MainActor func testAutomaticClassificationUsesOriginalMessageBeforeNormalization() async {
         let (vm, relay, defaults, session, directory, suite) = fixture()
         defer { cleanup(defaults, session, directory, suite) }

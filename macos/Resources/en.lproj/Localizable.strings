@@ -558,3 +558,79 @@
 "Eerder gekozen klant" = "Previously selected customer";
 
 "Er is nog een onbevestigde offerteaanvraag. Heropen dit venster en rond die eerst af voordat je een andere klant kiest." = "An offer request is still unconfirmed. Reopen this window and finish that request before choosing another customer.";
+
+"OpenRouter" = "OpenRouter";
+"Parakeet" = "Parakeet";
+"Parakeet Ultra" = "Parakeet Ultra";
+"Parakeet TDT v3" = "Parakeet TDT v3";
+"Parakeet Redux" = "Parakeet Redux";
+"Nederlands en 24 andere talen" = "Dutch and 24 other languages";
+"Het transcript wordt naar OpenRouter gestuurd. De kosten lopen via je eigen account." = "The transcript is sent to OpenRouter. Costs are billed to your own account.";
+
+"Parakeet-modellen van NVIDIA, licentie CC BY 4.0" = "Parakeet models by NVIDIA, licensed CC BY 4.0";
+"Aangeraden voor deze Mac" = "Recommended for this Mac";
+"Aangeraden voor dit toestel" = "Recommended for this device";
+"In gebruik" = "In use";
+"Vraagt macOS %lld of nieuwer." = "Requires macOS %lld or later.";
+"Vraagt iOS %lld of nieuwer." = "Requires iOS %lld or later.";
+"Te weinig geheugen: vraagt %lld GB." = "Not enough memory: needs %lld GB.";
+"Te weinig vrije opslag: vraagt %@." = "Not enough free storage: needs %@.";
+"Downloaden" = "Downloading";
+"Verwijder" = "Remove";
+"Downloaden lukte niet: %@" = "Download failed: %@";
+"OpenRouter heeft nog geen sleutel. Vul die in bij Notulen om notulen te maken." = "OpenRouter has no key yet. Enter it under Minutes to generate minutes.";
+"OpenRouter: sleutel nodig" = "OpenRouter: key needed";
+"Vul je sleutel in om notulen te maken." = "Enter your key to generate minutes.";
+"Sleutel invullen" = "Enter key";
+"Stel in hoe ThoughtVault gesprekken transcribeert en notulen genereert." = "Choose how ThoughtVault transcribes conversations and generates minutes.";
+"Snelle setup" = "Quick setup";
+"Aanbevolen instellingen voor dit toestel" = "Recommended settings for this device";
+"Op basis van je systeem en je huidige configuratie stellen we dit voor. Je kunt alles daarna nog aanpassen." = "Based on your system and current configuration we suggest this. You can change everything afterwards.";
+"Lokaal op dit toestel" = "Locally on this device";
+"Het model is nog niet gedownload. Toepassen start de download." = "The model has not been downloaded yet. Apply starts the download.";
+"Toegepast" = "Applied";
+"Toepassen" = "Apply";
+"Verberg details" = "Hide details";
+"Bekijk details" = "View details";
+"Aanbevolen" = "Recommended";
+"Hoe werkt dit?" = "How does this work?";
+"Lokaal zet WhisperKit, Parakeet of Apple Spraakherkenning de opname op dit toestel om naar tekst en verlaat de audio je apparaat niet. Bij Cloud wordt de opname naar de ThoughtVault-server geüpload, die ook de notulen maakt." = "Locally, WhisperKit, Parakeet or Apple Speech Recognition turns the recording into text on this device and the audio never leaves it. With Cloud the recording is uploaded to the ThoughtVault server, which also writes the minutes.";
+"Het transcript gaat naar de aanbieder die je kiest en die schrijft de notulen. Ollama, LM Studio en Apple Intelligence draaien lokaal. OpenRouter, ChatGPT, Claude, Ollama Cloud en een OpenAI-compatibele aanbieder gebruiken je eigen API-sleutel en account." = "The transcript goes to the provider you choose, which writes the minutes. Ollama, LM Studio and Apple Intelligence run locally. OpenRouter, ChatGPT, Claude, Ollama Cloud and an OpenAI-compatible provider use your own API key and account.";
+"Zet audio om naar tekst." = "Turns audio into text.";
+"Locatie" = "Location";
+"Lokaal (aanbevolen)" = "Local (recommended)";
+"Audio verlaat je apparaat niet." = "Audio never leaves your device.";
+"Via de ThoughtVault-server" = "Through the ThoughtVault server";
+"Audio wordt naar de server geüpload voor transcriptie en notulen." = "Audio is uploaded to the server for transcription and minutes.";
+"Model" = "Model";
+"Automatisch (aanbevolen)" = "Automatic (recommended)";
+"%@, beste keuze voor dit toestel" = "%@, best choice for this device";
+"Zelf kiezen" = "Choose yourself";
+"Kies handmatig een model" = "Pick a model manually";
+"Apple Spraakherkenning werkt direct, zonder download." = "Apple Speech Recognition works right away, without a download.";
+"Maak gestructureerde notulen van het transcript." = "Turns the transcript into structured minutes.";
+"Whisper-model, eenmalig downloaden" = "Whisper model, one-time download";
+"Parakeet-model, eenmalig downloaden" = "Parakeet model, one-time download";
+"Werkt direct, zonder download" = "Works right away, without a download";
+"Model verwijderen?" = "Remove model?";
+"Het model wordt van dit toestel verwijderd. Je kunt het later opnieuw downloaden." = "The model is removed from this device. You can download it again later.";
+"Gedownload, %@" = "Downloaded, %@";
+"Wordt gedownload" = "Downloading";
+"Nog niet gedownload. Nodig om op dit toestel te transcriberen." = "Not downloaded yet. Needed to transcribe on this device.";
+"continued.title" = "Processing recording";
+"continued.transcribing" = "Transcribing %d%%";
+"continued.waiting" = "Waiting for previous transcription";
+"Houd ThoughtVault open tot de verwerking klaar is." = "Keep ThoughtVault open until processing is done.";
+
+/* Notule usage */
+"Gebruik deze maand" = "Usage this month";
+"Vorige maand" = "Last month";
+"Geteld op dit apparaat." = "Counted on this device.";
+"De kosten zitten vooral in de controle: die toetst elke zin van de notule apart aan het gesprek." = "Most of the cost is in the check: it tests every sentence of the notes against the conversation separately.";
+
+/* Obsidian link */
+"De koppeling met je Obsidian-vault werkt niet meer. Je notules staan wel in ThoughtVault." = "The link to your Obsidian vault no longer works. Your notes are still in ThoughtVault.";
+"Vault opnieuw kiezen" = "Choose vault again";
+"Obsidian uitzetten" = "Turn off Obsidian";
+"Deze map lijkt geen Obsidian-vault: er staat geen .obsidian-map in." = "This folder does not look like an Obsidian vault: it has no .obsidian folder.";
+"Zet Obsidian eerst aan" = "Turn on Obsidian first";

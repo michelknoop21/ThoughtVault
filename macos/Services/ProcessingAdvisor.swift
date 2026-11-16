@@ -89,7 +89,7 @@ enum ProcessingAdvisor {
         switch provider {
         case .cloud: return false
         case .ollama, .lmStudio: return true
-        case .openAI, .anthropic, .ollamaCloud, .openAICompatible: return provider.hasAPIKey
+        case .openAI, .anthropic, .ollamaCloud, .openAICompatible, .openRouter: return provider.hasAPIKey
         case .appleIntelligence: return appleIntelligenceAvailable
         }
     }

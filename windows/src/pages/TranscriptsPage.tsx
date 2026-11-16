@@ -17,6 +17,7 @@ import { useSettingsStore } from "../stores/settingsStore";
 import { useProfilesStore } from "../stores/profilesStore";
 import { useRecordingStore } from "../stores/recordingStore";
 import { LLMService } from "../services/llm";
+import { UsageMeter } from "../services/usageMeter";
 import { stepLabel } from "../services/modelRequestLog";
 import { NotuleReviewError } from "../services/notuleAudit";
 import { prepareNotuleHtml } from "../services/notulePresentation";
@@ -26,7 +27,7 @@ import { extractTitle } from "../services/titleExtractor";
 import { api } from "../services/api";
 import { createSSEClient } from "../services/sse";
 import { persistNotesSection } from "../services/uploadAndTrack";
-import { exportToObsidian, importFromObsidian, acknowledgeObsidianImport } from "../services/obsidian";
+import { exportToObsidian, importFromObsidian, acknowledgeObsidianImport, ObsidianBrokenError } from "../services/obsidian";
 import { htmlToMarkdown, htmlToPlainText } from "../utils/htmlToMarkdown";
 import { useToast } from "../components/ui/InfoBar";
 import { clampMenuPosition } from "../utils/menuPosition";
@@ -56,6 +57,10 @@ export function TranscriptsPage() {
   const [newTagInput, setNewTagInput] = useState("");
   const [availableTags, setAvailableTags] = useState<string[]>([]);
   const toast = useToast();
+  /** A broken link has its own single notice in the notule view; only other errors get a toast. */
+  const obsidianToast = (error: unknown, fallback: string) => {
+    if (!(error instanceof ObsidianBrokenError)) toast.show(error instanceof Error ? error.message : fallback, "error");
+  };
   const isLoading = useTranscriptsStore((s) => s.isLoading);
   const lastLoadRef = useRef<number>(0);
 
@@ -187,7 +192,7 @@ export function TranscriptsPage() {
         if (syncObsidian && settings.obsidian_enabled) {
           const saved = useTranscriptsStore.getState().transcripts.find((item) => item.id === id);
           if (saved) void exportToObsidian(saved, settings).catch((error) =>
-            toast.show(error instanceof Error ? error.message : "Obsidian-sync mislukt", "error"));
+            obsidianToast(error, "Obsidian-sync mislukt"));
         }
         return;
       }
@@ -198,7 +203,7 @@ export function TranscriptsPage() {
       if (syncObsidian && settings.obsidian_enabled) {
         const saved = useTranscriptsStore.getState().transcripts.find((item) => item.id === id);
         if (saved) void exportToObsidian(saved, settings).catch((error) =>
-          toast.show(error instanceof Error ? error.message : "Obsidian-sync mislukt", "error"));
+          obsidianToast(error, "Obsidian-sync mislukt"));
       }
     } catch {
       toast.show("Opslaan mislukt", "error");
@@ -235,12 +240,13 @@ export function TranscriptsPage() {
       }
       setRegeneratingId(transcript.id);
       try {
+        const meter = new UsageMeter();
         const html = await LLMService.generateNotulen(transcription, profile,
           () => tasks.updateBackgroundTask(taskId, { progress: 60 }), [], transcript.quick_note,
-          step => tasks.updateBackgroundTask(taskId, { message: stepLabel(step) }));
+          step => tasks.updateBackgroundTask(taskId, { message: stepLabel(step) }), meter);
         if (!hasUsableNotule(html)) throw new Error("Geen bruikbare notule gegenereerd");
         const title = extractTitle(html) || transcript.title;
-        const finished = { notule_html: html, has_notes: true, title, profile_name: profile.name, profile_id: profile.id,
+        const finished = { notule_html: html, notule_usage: meter.usageFor(transcription, html), has_notes: true, title, profile_name: profile.name, profile_id: profile.id,
           notule_draft_html: "", notule_review_reason: "", updated_at: new Date().toISOString() };
         await useLocalTranscriptsStore.getState().update(transcript.id, finished);
         updateTranscript(transcript.id, finished);
@@ -250,7 +256,7 @@ export function TranscriptsPage() {
         if (settings.obsidian_enabled) {
           const saved = useLocalTranscriptsStore.getState().items.find((item) => item.id === transcript.id);
           if (saved) void exportToObsidian(saved, settings).catch((error) =>
-            toast.show(error instanceof Error ? error.message : "Obsidian-sync mislukt", "error"));
+            obsidianToast(error, "Obsidian-sync mislukt"));
         }
         toast.show("Notule opnieuw gegenereerd", "success");
       } catch (error) {
@@ -301,7 +307,7 @@ export function TranscriptsPage() {
               updateTranscript(transcript.id, { title: updated.title, notule_html: updated.notule_html, profile_id: profileId, profile_name: profile?.name ?? updated.profile_name });
               const settings = useSettingsStore.getState();
               if (settings.obsidian_enabled && updated.notule_html) {
-                await exportToObsidian(updated, settings);
+                void exportToObsidian(updated, settings).catch((error) => obsidianToast(error, "Obsidian-sync mislukt"));
               }
             } catch (error) {
               toast.show(error instanceof Error ? error.message : "Notule ophalen mislukt", "error");
@@ -423,7 +429,7 @@ export function TranscriptsPage() {
       await exportToObsidian(transcript, settings);
       toast.show("Geëxporteerd naar Obsidian", "success");
     } catch (err) {
-      toast.show(err instanceof Error ? err.message : "Export naar Obsidian mislukt", "error");
+      obsidianToast(err, "Export naar Obsidian mislukt");
     }
   }
 
@@ -441,7 +447,7 @@ export function TranscriptsPage() {
       acknowledgeObsidianImport(transcript, markdown, html);
       toast.show("Wijzigingen uit Obsidian opgehaald", "success");
     } catch (error) {
-      toast.show(error instanceof Error ? error.message : "Obsidian ophalen mislukt", "error");
+      obsidianToast(error, "Obsidian ophalen mislukt");
     }
   }
 

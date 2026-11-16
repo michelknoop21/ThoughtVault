@@ -42,7 +42,8 @@ final class SupportViewModel {
             || defaults.bool(forKey: SupportIdentity.autoReportKey)
     }
 
-    func report(stage: SupportStage, shown: String, error: String) async {
+    /// `diagnostic` (from `RecordingViewModel.failureDiagnostic`) becomes the report's `errorText` and fingerprint.
+    func report(stage: SupportStage, shown: String, error: String, diagnostic: FailureDiagnostic? = nil) async {
         // Error strings can contain provider response text; never copy them into the log.
         logger.warning("Failure during \(stage.rawValue)")
         guard isAutoReportEnabled, Self.shouldReport(shown) else { return }
@@ -50,12 +51,12 @@ final class SupportViewModel {
         guard isAutoReportEnabled else { return }
         let report = SupportReport.make(kind: "auto", category: .bug, stage: stage.rawValue,
                                         shown: shown, error: error,
-                                        fingerprint: Self.fingerprint(stage: stage, error: error),
-                                        clickPath: clickPath)
+                                        fingerprint: Self.fingerprint(stage: stage, error: diagnostic?.fingerprintKey ?? error),
+                                        clickPath: clickPath, diagnostic: diagnostic)
         do {
             try await relay.enqueue(report)
             Task { await relay.flush() }
-        } catch { logger.warning("Automatic support report could not be queued") }
+        } catch { logger.warning("Automatic support report could not be queued error=\(LogRedact.describe(error))") }
     }
 
     func reportCrash(runningStage: SupportStage?) async {

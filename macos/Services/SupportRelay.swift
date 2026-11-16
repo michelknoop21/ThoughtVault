@@ -84,7 +84,7 @@ actor SupportRelay {
             let url = try store(report)
             return await drain(target: url) ?? pendingOutcome(url)
         } catch {
-            logger.warning("Support report could not be queued")
+            logger.warning("Support report could not be queued error=\(LogRedact.describe(error))")
             return .failed
         }
     }
@@ -149,7 +149,7 @@ actor SupportRelay {
                 if url == target { targetOutcome = .failed }
                 cleanup(url)
             } catch {
-                logger.warning("Support queue paused; report retained")
+                logger.warning("Support queue paused; report retained error=\(LogRedact.describe(error))")
                 break
             }
         }

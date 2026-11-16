@@ -32,6 +32,11 @@ function units(text: string, prefix: string): Unit[] {
     .map(normalize).filter(Boolean).map((text, index) => ({ id: `${prefix}${index + 1}`, text }));
 }
 
+/** Sentence count of a notule text, the audit's own unit splitting (comparable with MAX_NOTE_CHECKS). */
+export function noteSentenceCount(text: string): number {
+  return units(text, "N").length;
+}
+
 function verdicts(value: unknown, expected: Unit[], references: Unit[], statuses: string[]): Verdict[] {
   if (!Array.isArray(value) || value.length !== expected.length) throw new Error("Onvolledige inhoudscontrole");
   const ids = new Set(expected.map(unit => unit.id));

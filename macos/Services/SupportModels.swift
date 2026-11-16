@@ -2,6 +2,17 @@ import Darwin
 import Foundation
 
 enum SupportStage: String, Codable, Sendable { case opnemen, transcriberen, notule, crash }
+/// What a failure looked like, safe to log and to send: the shown message as a static code or its mask,
+/// and `LogRedact.describe` of the error ("none" without one).
+struct FailureDiagnostic: Sendable, Equatable {
+    let code: String
+    let descriptor: String
+
+    var logText: String { "code=\(code) error=\(descriptor)" }
+    /// Stable per kind of failure: the descriptor, or a static message code; never the mask of dynamic text.
+    var fingerprintKey: String { descriptor != "none" ? descriptor : (code.hasPrefix("k-") ? "none" : code) }
+}
+
 enum SupportCategory: String, Codable, Sendable, CaseIterable {
     case bug = "BUG", featureRequest = "FEATURE_REQUEST", question = "QUESTION"
 }
@@ -24,12 +35,14 @@ struct SupportReport: Codable, Sendable, Equatable {
     var log: String?
 
     static func make(kind: String, category: SupportCategory, stage: String, shown: String,
-                     error: String, fingerprint: String?, clickPath: [String]) -> SupportReport {
+                     error: String, fingerprint: String?, clickPath: [String],
+                     diagnostic: FailureDiagnostic? = nil) -> SupportReport {
         func capped(_ text: String, _ limit: Int) -> String {
             String((kind == "auto" ? LogRedact.scrub(text) : text).prefix(limit))
         }
+        let errorText = diagnostic.map { automaticMessage(stage: stage) + " " + $0.logText } ?? error
         var report = SupportReport(kind: kind, category: category, stage: stage,
-                             shownMessage: capped(shown, 5_000), errorText: capped(error, 2_000),
+                             shownMessage: capped(shown, 5_000), errorText: capped(errorText, 2_000),
                              fingerprint: kind == "auto" ? fingerprint : nil,
                              clickPath: clickPath.suffix(30).map { capped($0, 80) },
                              appVersion: DeviceInfo.appVersion, os: DeviceInfo.os,
@@ -42,10 +55,22 @@ struct SupportReport: Codable, Sendable, Equatable {
         guard kind == "auto" else { return }
         stage = SupportStage(rawValue: stage)?.rawValue ?? SupportStage.crash.rawValue
         // Only exact static crash messages can survive; arbitrary errors can quote private content.
+        let generic = Self.automaticMessage(stage: stage)
         let message = errorText == "onverwacht gestopt" || errorText == "gestopt tijdens \(stage)"
-            ? errorText : "Verwerking mislukt tijdens \(stage)."
+            ? errorText : generic
         shownMessage = message
-        errorText = message
+        errorText = Self.isDiagnostic(errorText, stage: stage) ? errorText : message
+    }
+
+    private static func automaticMessage(stage: String) -> String { "Verwerking mislukt tijdens \(stage)." }
+
+    /// The only non-static `errorText` an automatic report keeps: the generic sentence plus a
+    /// `FailureDiagnostic.logText`, which is built from codes, type names and numbers only.
+    private static func isDiagnostic(_ text: String, stage: String) -> Bool {
+        let prefix = automaticMessage(stage: stage) + " code="
+        guard text.hasPrefix(prefix), text.count <= 2_000 else { return false }
+        return text.dropFirst(prefix.count).range(of: #"^[A-Za-z0-9_.=:-]+ error=[A-Za-z0-9_.= -]+$"#,
+                                                  options: .regularExpression) != nil
     }
 }
 

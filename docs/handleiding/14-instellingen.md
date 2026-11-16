@@ -52,6 +52,8 @@ De app zet transcriptie op Lokaal met de engine WhisperKit en het aanbevolen mod
 
 Voor de notulen houdt de app je huidige aanbieder aan als die kan werken. Ontbreekt er een sleutel of is de aanbieder niet beschikbaar, dan wordt het Apple Intelligence als je Mac dat ondersteunt, en anders Ollama. Een cloudaanbieder kiest de app nooit voor je.
 
+Op een nieuwe installatie staat OpenRouter als aanbieder, nog zonder sleutel. Het voorstel bij **Notulen** leest dan **OpenRouter: sleutel nodig** en heeft de knop **Sleutel invullen**, die je naar het sleutelveld bij Notulen brengt. OpenRouter blijft in dat geval staan: het heeft een sleutel nodig, geen andere aanbieder.
+
 Heeft je Mac minder dan 16 GB geheugen, dan stelt de app de compacte versie van het model voor (626 MB).
 :::
 
@@ -68,7 +70,12 @@ Het advies kijkt alleen naar geheugen en processor. De app meet geen snelheid en
 :::
 
 ::: ios
-Op iPhone en iPad is er geen blok met aanbevolen instellingen. Je kiest de verwerkingsmodus, de engine en de aanbieder zelf op de pagina **Verwerking**.
+Bovenaan **Verwerking** staat het blok **Snelle setup** met de titel **Aanbevolen instellingen voor dit toestel**. Het toont wat de app voorstelt bij **Transcriptie** (**Lokaal op dit toestel** met het Whisper-model dat bij je toestel past) en bij **Notulen**.
+
+1. Tik op **Bekijk details** als je wilt lezen waarom dit voorstel is gekozen.
+2. Tik op **Toepassen**.
+
+De app zet transcriptie op Lokaal met de engine WhisperKit en het aanbevolen model. Staat dat model nog niet op je toestel, dan begint de download meteen. De knop verandert in **Toegepast**. Voor de notulen geldt hetzelfde als op de Mac: je huidige aanbieder blijft staan als die kan werken, en een cloudaanbieder kiest de app niet voor je. Heeft OpenRouter nog geen sleutel, dan staat er **OpenRouter: sleutel nodig** met de knop **Sleutel invullen**.
 :::
 
 ## Transcriptie instellen
@@ -79,9 +86,10 @@ In de kaart **Transcriptie** kies je bij **Locatie** tussen **Lokaal (aanbevolen
 Bij Lokaal kies je een **Engine**:
 
 - **WhisperKit** gebruikt een model dat je eenmalig downloadt. Laat **Automatisch (aanbevolen)** aan staan, of kies **Zelf kiezen** en selecteer een model uit de lijst. Modellen die al op je Mac staan, hebben de toevoeging "(geïnstalleerd)". Met de knop met de twee pijlen laad je de lijst opnieuw.
+- **Parakeet** (NVIDIA) gebruikt een model dat je eenmalig downloadt. Je kiest het in de lijst onder **Model**, zie [Parakeet-modellen](#parakeet-modellen).
 - **Apple Spraakherkenning** werkt direct, zonder download.
 
-Rechts staat de kaart **Aanbevolen model**. De knop daarin heet **Downloaden** zolang het model ontbreekt, **Gebruik dit model** als het klaarstaat en **In gebruik** als het actief is. Achter de knop met de drie puntjes vind je **Toon in Finder** en **Verwijderen**. Het model dat in gebruik is, kun je niet verwijderen.
+WhisperKit blijft de engine die **Toepassen** in de Snelle setup instelt. Rechts staat de kaart **Aanbevolen model**. De knop daarin heet **Downloaden** zolang het model ontbreekt, **Gebruik dit model** als het klaarstaat en **In gebruik** als het actief is. Achter de knop met de drie puntjes vind je **Toon in Finder** en **Verwijderen**. Het model dat in gebruik is, kun je niet verwijderen. Deze kaart hoort bij WhisperKit.
 
 Bij Cloud verschijnt, als je Mac het ondersteunt, de schakelaar **Transcriptie op apparaat**. Daarmee wordt de spraak toch op je Mac omgezet en gaat er geen audio naar de server.
 :::
@@ -113,11 +121,33 @@ Kies je Cloud zonder dat je bent ingelogd, dan opent het inlogscherm. De tegels 
 
 ::: ios
 1. Tik op **Verwerking**.
-2. Kies bij **Verwerkingsmodus** tussen **Lokaal** en **Cloud**.
-3. Kies bij Lokaal een **Engine**: **WhisperKit** of **Apple**.
-4. Vul bij WhisperKit een **Model** in, of tik op de knop met de twee pijlen om de beschikbare modellen te laden en er een te kiezen.
+2. Kies in de kaart **Transcriptie** bij **Locatie** tussen **Lokaal (aanbevolen)** en **Cloud**.
+3. Kies bij Lokaal een **Engine**: **WhisperKit**, **Parakeet** of **Apple Spraakherkenning**.
+4. Kies onder **Model** het model voor die engine.
 
-WhisperKit downloadt het gekozen model bij het eerste gebruik. Apple Spraakherkenning werkt zonder download.
+Bij **WhisperKit** laat je **Automatisch (aanbevolen)** staan of kies je **Zelf kiezen** en een model uit de lijst. Daaronder staat het gekozen model met de knop **Download**. Tijdens het downloaden zie je het percentage en de knop **Stop**. Is het model geïnstalleerd, dan staat er **Verwijder**, waarna de app om bevestiging vraagt. Mislukt het downloaden, dan verschijnt de reden met de knop **Opnieuw**. Bij **Parakeet** zie je de lijst met modellen, zie [Parakeet-modellen](#parakeet-modellen). **Apple Spraakherkenning** werkt zonder download.
+
+Bij Cloud verschijnt, als je toestel het ondersteunt, de schakelaar **Transcriptie op apparaat**.
+
+Houd ThoughtVault open zolang een opname wordt verwerkt. iOS pauzeert de verwerking als de app naar de achtergrond gaat. Een lokaal model laden mag 300 seconden duren; alleen de tijd dat de app draait telt daarin mee, dus een pauze door iOS laat die limiet niet verlopen.
+:::
+
+### Parakeet-modellen
+
+::: macos ios
+Kies je Parakeet als engine, dan staan er drie modellen onder **Model**: **Parakeet Ultra**, **Parakeet TDT v3** en **Parakeet Redux**. Bij elk model staat de downloadgrootte en "Nederlands en 24 andere talen". Tik of klik op een rij om het model te kiezen.
+
+- Eén model heeft de aanduiding **Aangeraden voor deze Mac** (op iPhone en iPad **Aangeraden voor dit toestel**). De app kiest dat model op basis van het geheugen, de systeemversie en de vrije opslag van het apparaat.
+- Het model dat je gebruikt, heeft de aanduiding **In gebruik**.
+- **Download** haalt het model op. Tijdens het downloaden zie je het percentage en de knop **Stop**. Een geslaagde download kiest het model meteen.
+- **Verwijder** haalt een geïnstalleerd model weer van het apparaat. Mislukt een download, dan staat er de reden en de knop **Opnieuw**.
+- Past een model niet, dan staat er waarom: "Vraagt macOS 15 of nieuwer." (op iPhone en iPad iOS), "Te weinig geheugen" of "Te weinig vrije opslag". De rij is dan uitgeschakeld, behalve voor een model dat al is geïnstalleerd.
+
+Onder de lijst staat "Parakeet-modellen van NVIDIA, licentie CC BY 4.0". De aanbeveling is een schatting op basis van geheugen, systeemversie en vrije opslag, geen meting op je toestel.
+:::
+
+::: windows
+Parakeet staat op Windows in de lijst **Transcriptiemodel**, zie de tabel hierboven.
 :::
 
 ## De aanbieder voor notulen kiezen
@@ -126,10 +156,13 @@ De aanbieder ontvangt het transcript en schrijft de notulen. Ontbreken er feiten
 
 | Aanbieder | Waar het draait | Wat je invult |
 |-----------|-----------------|---------------|
+| **OpenRouter** | Bij OpenRouter, dat het model aanbiedt | Je eigen API-sleutel en een model. Standaard staat `mistralai/mistral-large-4-0` |
 | **Ollama** | Op je eigen computer of server, of bij Ollama Cloud | Adres en model. Voor Ollama Cloud ook een API-sleutel |
 | **LM Studio** | Op je eigen computer of server | Adres (standaard `http://localhost:1234`) en model |
 | **Apple Intelligence** | Op je Mac, iPhone of iPad | Niets |
 | De overige aanbieders in de lijst | Bij een cloudaanbieder | Je eigen API-sleutel en een model |
+
+OpenRouter is de eerste tegel en de standaard op een nieuwe installatie. Had je ThoughtVault al, dan houd je de aanbieder die je had: de app beslist dat één keer bij de eerste start van de nieuwe versie. Op Windows zet de update een ontbrekende keuze op Ollama.
 
 ### Ollama
 
@@ -160,6 +193,10 @@ Voor deze aanbieders heb je een API-sleutel nodig die je bij de aanbieder zelf a
 3. Kies of typ het model.
 
 ::: macos ios
+Onder het sleutelveld staat een link **Sleutel aanmaken bij** gevolgd door de naam van de aanbieder, bijvoorbeeld **Sleutel aanmaken bij OpenRouter**. Die opent de pagina waar je de sleutel aanmaakt.
+:::
+
+::: macos ios
 Onder de velden staat de status: "Geen sleutel ingesteld", "Sleutel opgeslagen", "Verbonden met" gevolgd door de naam van de aanbieder, of "Sleutel geweigerd of niet bereikbaar". Met **Sleutel verwijderen** haal je de sleutel weg. De sleutel staat in de sleutelhanger van je apparaat.
 
 Met **OpenAI-compatibel** gebruik je een aanbieder die niet in de lijst staat. Kies **Toevoegen** en vul een **Naam**, een **Adres** dat met `https://` begint, de sleutel en het model in.
@@ -170,6 +207,10 @@ Klik op **Opslaan** onder het sleutelveld. Het veld toont daarna "Sleutel opgesl
 
 Apple Intelligence staat als tegel in de lijst, maar is op Windows niet beschikbaar.
 :::
+
+### Terugval bij fout
+
+Onder de aanbiedertegels staat **Terugval bij fout**. Geeft de gekozen aanbieder een fout, dan probeert ThoughtVault het één keer met de aanbieder die je daar kiest, met het model dat daar al is ingesteld. Kies je **Geen**, dan gebeurt dat niet. Gaat de terugval naar een online aanbieder zoals OpenRouter, ChatGPT of Claude, dan gaat het transcript naar die aanbieder.
 
 ### Apple Intelligence
 
@@ -194,7 +235,7 @@ De kaart **Privacy & gegevens** rechts op het tabblad **Verwerking** laat voor j
 - Lokale transcriptie: de audio blijft op je apparaat.
 - Ollama of LM Studio op je eigen computer: het transcript blijft daar. Staat de server ergens anders, dan gaat het transcript daarheen.
 - Apple Intelligence: het transcript blijft op je apparaat.
-- Een cloudaanbieder of Ollama Cloud: het transcript wordt naar die aanbieder gestuurd.
+- OpenRouter, een andere cloudaanbieder of Ollama Cloud: het transcript wordt naar die aanbieder gestuurd. Bij OpenRouter loopt dat via je eigen account.
 - Cloud bij Transcriptie: de audio wordt naar de ThoughtVault-server geüpload.
 
 ## De andere tabbladen

@@ -47,7 +47,7 @@ enum PersonalCorrections {
     /// block the minutes, so it is logged and treated as empty.
     static func loadOrEmpty(at path: URL = url) -> [PersonalCorrection] {
         do { return try load(from: path) } catch {
-            logger.error("Glossary unreadable, minutes continue without it: \(LogRedact.mask(error.localizedDescription))")
+            logger.error("Glossary unreadable, minutes continue without it: \(LogRedact.mask(error.localizedDescription)) error=\(LogRedact.describe(error))")
             return []
         }
     }

@@ -108,12 +108,16 @@ final class AnthropicLLMService: LLMService, @unchecked Sendable {
                           let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
                     else { continue }
                     switch json["type"] as? String {
+                    case "message_start":
+                        if let usage = TokenUsage.anthropic((json["message"] as? [String: Any])?["usage"]) { ModelRequestLog.report(usage) }
                     case "content_block_delta":
                         if let delta = json["delta"] as? [String: Any], let text = delta["text"] as? String {
                             fullText += text
                             onProgress(text)
                         }
                     case "message_delta":
+                        // Output tokens here are cumulative, so the last report is the total.
+                        if let usage = TokenUsage.anthropic(json["usage"]) { ModelRequestLog.report(usage) }
                         // A capped answer is incomplete; never parse it as a short one.
                         if (json["delta"] as? [String: Any])?["stop_reason"] as? String == "max_tokens" { throw LLMError.truncated }
                     case "error":
@@ -151,9 +155,12 @@ final class AnthropicLLMService: LLMService, @unchecked Sendable {
         request.timeoutInterval = 300
 
         let (data, response) = try await ModelRequestLog.run(provider: "anthropic", model: model, system: system, user: user) {
-            try await mappingTimeout {
+            let (data, response) = try await mappingTimeout {
                 try await sendRetryingRateLimit(session: session, sleep: rateLimitSleep) { try await $0.data(for: request) }
             }
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let usage = TokenUsage.anthropic(json["usage"]) { ModelRequestLog.report(usage) }
+            return (data, response)
         }
         guard let http = response as? HTTPURLResponse else {
             throw LLMError.generationFailed("Ongeldig serverantwoord.")

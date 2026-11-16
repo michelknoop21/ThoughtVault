@@ -23,7 +23,7 @@ const TABS = [
 
 export function SettingsPage() {
   const [params] = useSearchParams();
-  const [tab, setTab] = useState(params.get("tab") === "notulen" ? "Notulen" : "Verwerking");
+  const [tab, setTab] = useState(params.get("tab") === "notulen" ? "Notulen" : params.get("tab") === "obsidian" ? "Obsidian" : "Verwerking");
 
   return <div className="page-scroll northstar-settings">
     <h1>Instellingen</h1>

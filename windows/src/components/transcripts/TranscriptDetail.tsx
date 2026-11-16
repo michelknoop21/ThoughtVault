@@ -5,6 +5,8 @@ import { usePersonalCorrectionsStore } from "../../stores/personalCorrectionsSto
 import { CorrectionFields, newCorrection } from "../settings/PersonalCorrections";
 import { DesktopDialog } from "../ui/DesktopDialog";
 import { ContextSuggestionBar } from "./ContextSuggestionBar";
+import { ObsidianBrokenNotice } from "../settings/ObsidianBrokenNotice";
+import { useSettingsStore } from "../../stores/settingsStore";
 import { useState, useRef, useEffect } from "react";
 import {
   ArrowLeft24Regular,
@@ -32,6 +34,7 @@ import type { Transcript } from "../../types";
 import { getTranscriptQuickNote } from "../../services/quickNotes";
 import { htmlToPlainText } from "../../utils/htmlToMarkdown";
 import { draftForReview } from "../../services/notuleAudit";
+import { usageLine } from "../../services/usageMeter";
 import { isConfigured, loadOfferRef, openOffer, type OfferRef } from "../../services/prospectFlow";
 import { ProspectFlowDialog } from "./ProspectFlowDialog";
 import { useToast } from "../ui/InfoBar";
@@ -89,6 +92,7 @@ export function TranscriptDetail({
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [pfConfigured, setPfConfigured] = useState(false);
   const [pfDialog, setPfDialog] = useState(false);
+  const obsidianEnabled = useSettingsStore((s) => s.obsidian_enabled);
   const [pfRef, setPfRef] = useState<OfferRef | null>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
   const editorRef = useRef<HTMLDivElement>(null);
@@ -313,12 +317,16 @@ export function TranscriptDetail({
                   <button className="td-export-item" onClick={() => { onExportHTML(transcript); setExportOpen(false); }}>
                     <ArrowDownload24Regular style={{ fontSize: 15 }} /> HTML
                   </button>
-                  <button className="td-export-item" onClick={() => { onExportObsidian(transcript); setExportOpen(false); }}>
-                    <Notebook24Regular style={{ fontSize: 15 }} /> Naar Obsidian
-                  </button>
-                  <button className="td-export-item" onClick={() => { onImportObsidian(transcript); setExportOpen(false); }}>
-                    <Notebook24Regular style={{ fontSize: 15 }} /> Uit Obsidian
-                  </button>
+                  {obsidianEnabled && (
+                    <>
+                      <button className="td-export-item" onClick={() => { onExportObsidian(transcript); setExportOpen(false); }}>
+                        <Notebook24Regular style={{ fontSize: 15 }} /> Naar Obsidian
+                      </button>
+                      <button className="td-export-item" onClick={() => { onImportObsidian(transcript); setExportOpen(false); }}>
+                        <Notebook24Regular style={{ fontSize: 15 }} /> Uit Obsidian
+                      </button>
+                    </>
+                  )}
                 </>
               )}
               <button className="td-export-item" onClick={() => { onExportTXT(transcript); setExportOpen(false); }}>
@@ -361,6 +369,7 @@ export function TranscriptDetail({
           <Delete24Regular style={{ fontSize: 15 }} />
         </button>
       </div>
+      <ObsidianBrokenNotice />
 
       {/* Document content */}
       <div className="td-scroll">
@@ -466,6 +475,9 @@ export function TranscriptDetail({
                 <p>Geen transcriptie beschikbaar</p>
               </div>
             )
+          )}
+          {detailTab === "notule" && transcript.notule_html && !isEditingNotule && (
+            <p className="td-usage-line" style={{ color: "var(--text-secondary)", fontSize: 12, marginTop: 24 }}>{usageLine(transcript.notule_usage, transcript.notule_html)}</p>
           )}
         </div>
       </div>

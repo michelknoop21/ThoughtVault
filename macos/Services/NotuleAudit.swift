@@ -57,6 +57,11 @@ enum NotuleAudit {
             .enumerated().map { (id: "\(prefix)\($0.offset + 1)", text: $0.element) }
     }
 
+    /// Number of notule sentences the audit checks one by one (its N units), comparable with `maxNoteChecks`.
+    static func noteSentenceCount(_ html: String) -> Int {
+        units(HTMLPlainText.from(scan(html, dropping: ["script", "template", "head"]).html), prefix: "N").count
+    }
+
     /// Explicit constraints that remain mandatory audit obligations (llm.ts).
     // ponytail: lexical Dutch/English constraints only; extend for other languages together with
     // their acceptance fixtures, never treat this as a semantic proof.

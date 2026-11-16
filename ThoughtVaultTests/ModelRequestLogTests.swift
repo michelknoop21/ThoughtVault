@@ -135,4 +135,10 @@ final class ModelRequestLogTests: XCTestCase {
         XCTAssertTrue(ModelStep(.sentenceCheck, 12, of: 61).displayLabel.contains("12"))
         XCTAssertTrue(ModelStep(.sentenceCheck, 12, of: 61).displayLabel.contains("61"))
     }
+
+    func testProviderKindNamesOpenRouter() {
+        XCTAssertEqual(OpenAICompatibleLLMService.providerKind(baseURL: OpenAICompatibleLLMService.openRouterBaseURL), "openrouter")
+        XCTAssertEqual(OpenAICompatibleLLMService.providerKind(baseURL: "https://llm.example.com/v1"), "hosted")
+        XCTAssertEqual(OpenAICompatibleLLMService.providerKind(baseURL: "http://localhost:1234/v1"), "local")
+    }
 }

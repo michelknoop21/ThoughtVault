@@ -86,6 +86,26 @@ export function correctHTML(html: string, entries: PersonalCorrection[], profile
     return stack.length ? token : correctText(token, entries, profileId, true);
   }).join("");
 }
+/** Applies one correction to a recording's notule and transcript. */
+export function correctRecording(entry: PersonalCorrection, notule: string, transcript?: string): { notule: string; transcript?: string } {
+  const profileId = entry.scope ?? undefined;
+  return { notule: correctHTML(notule, [entry], profileId), transcript: transcript === undefined ? undefined : correctText(transcript, [entry], profileId) };
+}
+/**
+ * Correction that writes `name` over the heard spellings of a person. Skips empty spellings,
+ * the name itself and spellings that are part of the name ("Sanne" for "Sanne Bakker").
+ * Null when no spelling is left.
+ */
+export function personCorrection(name: string, heardAs: string[], scope: string | null): PersonalCorrection | null {
+  const canonical = name.trim();
+  const seen = new Set<string>();
+  const variants = heardAs.map(h => h.trim()).filter(h => {
+    if (!h || containsWord(h, canonical) || seen.has(h.toLowerCase())) return false;
+    seen.add(h.toLowerCase());
+    return true;
+  });
+  return validTerm(canonical) && variants.length ? { id: crypto.randomUUID(), canonical, variants, scope, enabled: true } : null;
+}
 /** Case-insensitive whole-word match, same boundaries as correctText(). */
 export function containsWord(word: string, text: string): boolean {
   return new RegExp(`(?<![\\p{L}\\p{N}_])${escapeRegex(word)}(?![\\p{L}\\p{N}_])`, "iu").test(text);

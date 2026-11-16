@@ -60,7 +60,7 @@ struct ContextSuggestionBar: View {
     /// Profile scope for a new glossary term (same default as "Woord corrigeren").
     let scope: String?
     let profiles: [Profile]
-    /// Corrects this notule and, with remember, saves the term (TranscriptDetailView.applyWordCorrection).
+    /// Corrects this notule and transcript and, with remember, saves the term (TranscriptDetailView.applyWordCorrection).
     let applyCorrection: (PersonalCorrection, Bool) async throws -> Void
 
     @State private var set = ContextSuggestionSet()
@@ -88,7 +88,7 @@ struct ContextSuggestionBar: View {
             }
             .sheet(item: $addingPerson) { suggestion in
                 // Removed as soon as the person exists, so closing the sheet early cannot leave it to be added twice.
-                PersonEditView(person: nil, prefill: suggestion, prefillMeetingType: profileName, onAdded: { _ in finish(.person(suggestion)) }) { _ in
+                PersonEditView(person: nil, prefill: suggestion, prefillMeetingType: profileName, onAdded: { person in finish(.person(suggestion)); correctText(suggestion, name: person.name) }) { _ in
                     addingPerson = nil
                 }
             }
@@ -247,6 +247,7 @@ struct ContextSuggestionBar: View {
                 ContextSuggestionBarLogic.applyRemainder(s, to: PersonSnapshot(p)).apply(to: p)
             }
             finish(.person(s))
+            correctText(s, name: person.name)
         } catch {
             self.error = "Bijwerken mislukt: \(error.localizedDescription)"
         }
@@ -254,6 +255,7 @@ struct ContextSuggestionBar: View {
 
     /// Fills in the chosen person; what still needs the user stays as a remainder row.
     private func choose(_ id: String, for s: PersonSuggestion) {
+        if let person = directory[id] { correctText(s, name: person.name) }
         do {
             if let rest = try PersonMatcher.autoApply(s, to: id, profileName: profileName, taskId: taskId) {
                 replace(s, with: rest)
@@ -262,6 +264,15 @@ struct ContextSuggestionBar: View {
             }
         } catch {
             self.error = "Koppelen mislukt: \(error.localizedDescription)"
+        }
+    }
+
+    /// Writes the person's name over the heard spellings in this notule and transcript.
+    private func correctText(_ s: PersonSuggestion, name: String) {
+        guard let entry = PersonalCorrections.personCorrection(name: name, heardAs: s.heardAs, scope: scope) else { return }
+        Task {
+            do { try await applyCorrection(entry, false) }
+            catch { self.error = "Naam in de tekst aanpassen mislukt: \(error.localizedDescription)" }
         }
     }
 

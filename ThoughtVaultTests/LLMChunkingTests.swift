@@ -100,6 +100,21 @@ final class LLMChunkingTests: XCTestCase {
         XCTAssertNil(StubProtocol.sentBody["max_tokens"])
     }
 
+    func testOnlyOpenRouterRequestsAskForLowReasoningEffort() async {
+        StubProtocol.reply = .success("data: {\"choices\":[{\"delta\":{\"content\":\"klaar\"}}]}\n\ndata: [DONE]\n\n")
+        let openRouter = OpenAICompatibleLLMService(baseURL: OpenAICompatibleLLMService.openRouterBaseURL, model: "m", apiKey: "k", session: stubSession)
+        _ = await failure { try await openRouter.complete(system: "s", user: "u") }
+        XCTAssertEqual((StubProtocol.sentBody["reasoning"] as? [String: Any])?["effort"] as? String, "low")
+
+        let openAI = OpenAICompatibleLLMService(baseURL: OpenAICompatibleLLMService.openAIBaseURL, model: "m", apiKey: "k", session: stubSession)
+        _ = await failure { try await openAI.complete(system: "s", user: "u") }
+        XCTAssertNil(StubProtocol.sentBody["reasoning"])
+
+        let local = OpenAICompatibleLLMService(baseURL: "http://localhost:11434", model: "m", session: stubSession)
+        _ = await failure { try await local.complete(system: "s", user: "u") }
+        XCTAssertNil(StubProtocol.sentBody["reasoning"])
+    }
+
     func testAnthropicRejectsAnAnswerCutOffAtMaxTokens() async {
         StubProtocol.reply = .success(#"{"stop_reason":"max_tokens","content":[{"type":"text","text":"{\"uncertain\":false"}]}"#)
         let service = AnthropicLLMService(model: "m", apiKey: "k", session: stubSession)

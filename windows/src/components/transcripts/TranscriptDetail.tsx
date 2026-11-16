@@ -1,5 +1,5 @@
 import { openNoteLink } from "../../services/externalLinks";
-import { correctHTML, validateCorrections, upsertCorrection, type PersonalCorrection } from "../../services/personalCorrections";
+import { correctRecording, validateCorrections, upsertCorrection, type PersonalCorrection } from "../../services/personalCorrections";
 import { useProfilesStore } from "../../stores/profilesStore";
 import { usePersonalCorrectionsStore } from "../../stores/personalCorrectionsStore";
 import { CorrectionFields, newCorrection } from "../settings/PersonalCorrections";
@@ -48,7 +48,8 @@ interface TranscriptDetailProps {
   onRegenerate: (transcript: Transcript) => void;
   onDelete: (transcript: Transcript) => void;
   onUpdateTitle: (id: string, title: string) => Promise<void>;
-  onSaveNotule: (id: string, html: string) => Promise<void>;
+  /** `transcription` is passed only when a correction changed the transcript. */
+  onSaveNotule: (id: string, html: string, transcription?: string) => Promise<void>;
   onCopy: (text: string) => void;
   onExportPDF: (transcript: Transcript) => void;
   onExportTXT: (transcript: Transcript) => void;
@@ -180,21 +181,25 @@ export function TranscriptDetail({
     setCorrection({...newCorrection(correctionScope()), variants:[selected]});
     setRememberCorrection(true); setCorrectionError("");
   }
+  /** Corrects this notule and transcript and, with remember, saves the term. Every correction goes through here. */
+  async function applyCorrection(draft: PersonalCorrection, remember: boolean) {
+    const entry = {...draft, canonical:draft.canonical.trim(), variants:draft.variants.map(v=>v.trim())};
+    const store = usePersonalCorrectionsStore.getState();
+    await store.hydrate();
+    validateCorrections({version:1,entries:remember ? upsertCorrection(store.entries,entry) : [entry]});
+    const corrected = correctRecording(entry, isEditingNotule ? editorRef.current?.innerHTML ?? editedHTML : transcript.notule_html || "", transcript.raw_transcription);
+    await onSaveNotule(transcript.id, corrected.notule, corrected.transcript !== transcript.raw_transcription ? corrected.transcript : undefined);
+    if (isEditingNotule) setEditedHTML(corrected.notule);
+    if (remember) {
+      try { await store.save(entry); }
+      catch(e) { throw Error("Notule opgeslagen, maar de correctie is niet onthouden: " + String(e)); }
+    }
+  }
   async function saveCorrection() {
     if (!correction) return;
     setIsSaving(true); setCorrectionError("");
     try {
-      const entry = {...correction, canonical:correction.canonical.trim(), variants:correction.variants.map(v=>v.trim())};
-      const store = usePersonalCorrectionsStore.getState();
-      await store.hydrate();
-      validateCorrections({version:1,entries:rememberCorrection ? upsertCorrection(store.entries,entry) : [entry]});
-      const html = correctHTML(isEditingNotule ? editorRef.current?.innerHTML ?? editedHTML : transcript.notule_html || "", [entry], entry.scope ?? undefined);
-      await onSaveNotule(transcript.id,html);
-      if (isEditingNotule) setEditedHTML(html);
-      if (rememberCorrection) {
-        try { await store.save(entry); }
-        catch(e) { setCorrectionError("Notule opgeslagen, maar de correctie is niet onthouden: " + String(e)); return; }
-      }
+      await applyCorrection(correction, rememberCorrection);
       setCorrection(null);
       suggestionDone.current?.(); suggestionDone.current = null;
     } catch(e) { setCorrectionError(e instanceof Error ? e.message : String(e)); }
@@ -431,7 +436,8 @@ export function TranscriptDetail({
 
           {detailTab === "notule" && transcript.notule_html && !isEditingNotule && (
             <ContextSuggestionBar key={transcript.id} taskId={transcript.id} profileName={transcript.profile_name ?? ""} scope={correctionScope()}
-              onAddTerm={(entry, done) => { suggestionDone.current = done; setCorrection(entry); setRememberCorrection(true); setCorrectionError(""); }} />
+              onAddTerm={(entry, done) => { suggestionDone.current = done; setCorrection(entry); setRememberCorrection(true); setCorrectionError(""); }}
+              onCorrect={(entry) => applyCorrection(entry, false)} />
           )}
 
           {/* Content */}

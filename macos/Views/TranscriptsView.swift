@@ -2056,13 +2056,17 @@ struct TranscriptDetailView: View {
         let entries = try PersonalCorrections.load()
         try PersonalCorrections.validate(CorrectionDocument(entries: remember ? PersonalCorrections.upsert(entries, entry: entry) : [entry]))
         let original = isEditingNotule ? restoreNotuleMarkup(original: fullTranscript.notuleHtml ?? "", editedBody: editedHTML) : fullTranscript.notuleHtml ?? ""
-        let html = PersonalCorrections.html(original, entries: [entry], profileId: entry.scope)
+        let (html, transcript) = PersonalCorrections.apply(entry, notule: original, transcript: fullTranscript.rawTranscription)
         if isLocalTranscript(fullTranscript.taskId) {
-            try LocalTranscriptStore.shared.updateNotule(taskId: fullTranscript.taskId, html: html)
+            try LocalTranscriptStore.shared.updateNotule(taskId: fullTranscript.taskId, html: html, transcription: transcript)
         } else {
             try await APIService.shared.updateNotuleHTML(taskId: fullTranscript.taskId, html: html)
+            if let transcript, transcript != fullTranscript.rawTranscription {
+                try await APIService.shared.updateTranscription(taskId: fullTranscript.taskId, text: transcript)
+            }
         }
         fullTranscript.notuleHtml = html
+        fullTranscript.rawTranscription = transcript
         if isEditingNotule { editedHTML = prepareNotuleContent(html); isEditingNotule = false }
         if remember {
             do { try PersonalCorrections.saveRecording(entry, source: "handmatig") }

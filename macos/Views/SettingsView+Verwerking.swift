@@ -299,6 +299,8 @@ extension SettingsView {
             .buttonStyle(.plain)
         }
         .studioCard()
+        // Screenshot hook, as on iOS: `-TVDebugOpen profiles` (debug builds only).
+        .navigationDestination(isPresented: .constant(IOSDebug.open == "profiles")) { ProfilesView() }
     }
 }
 #endif

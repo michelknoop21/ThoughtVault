@@ -1117,10 +1117,13 @@ struct TranscriptDetailView: View {
             ProspectFlowOfferSheet(transcript: fullTranscript)
         }
         .sheet(isPresented: $showProfileSheet) {
-            ProfileSelectionSheet(mode: profileSheetMode) { profile, usePremium in
+            // Only local records take a detail level; the server's regenerate call has none.
+            ProfileSelectionSheet(mode: profileSheetMode,
+                                  record: profileSheetMode == .regenerate && isLocalTranscript(fullTranscript.taskId)
+                                      ? LocalTranscriptStore.shared.record(forTaskId: fullTranscript.taskId) : nil) { profile, usePremium, level in
                 showProfileSheet = false
                 if profileSheetMode == .regenerate {
-                    Task { await startRegenerate(profileId: profile.id, usePremium: usePremium) }
+                    Task { await startRegenerate(profileId: profile.id, usePremium: usePremium, detailLevel: level) }
                 } else {
                     Task { await startRetranscribe(profileId: profile.id) }
                 }
@@ -1132,6 +1135,11 @@ struct TranscriptDetailView: View {
             // the user taps "Regenereer" (avoids an empty profile list).
             if recordingVM.availableProfiles.isEmpty {
                 await recordingVM.reloadProfiles()
+            }
+            // Screenshot hook: `-TVDebugRegenerate YES` opens the regenerate sheet (debug builds only).
+            if IOSDebug.string("TVDebugRegenerate") == "YES" {
+                profileSheetMode = .regenerate
+                showProfileSheet = true
             }
 
             // Local records already carry full content (raw + notule), no server fetch.
@@ -2111,7 +2119,7 @@ struct TranscriptDetailView: View {
         }
     }
 
-    private func startRegenerate(profileId: String, usePremium: Bool = false) async {
+    private func startRegenerate(profileId: String, usePremium: Bool = false, detailLevel: NotuleDetailLevel? = nil) async {
         isRegenerating = true
         regeneratingMessage = "Notule wordt lokaal geregenereerd..."
 
@@ -2120,7 +2128,7 @@ struct TranscriptDetailView: View {
             defer { isRegenerating = false; regeneratingMessage = "" }
             do {
                 let result = try await recordingVM.regenerateNotuleLocally(
-                    taskId: fullTranscript.taskId, profileId: profileId
+                    taskId: fullTranscript.taskId, profileId: profileId, detailLevel: detailLevel
                 )
                 fullTranscript.notuleHtml = result.html
                 fullTranscript.title = result.title
@@ -2396,89 +2404,6 @@ struct TranscriptDetailView: View {
            let rootVC = windowScene.windows.first?.rootViewController {
             rootVC.present(activityVC, animated: true)
         }
-        #endif
-    }
-}
-
-// MARK: - ProfileSelectionSheet
-
-private struct ProfileSelectionSheet: View {
-
-    @Environment(RecordingViewModel.self) var recordingVM
-    @Environment(\.dismiss) private var dismiss
-
-    let mode: TranscriptDetailView.ProfileSheetMode
-    let onSelect: (Profile, Bool) -> Void
-
-    @State private var usePremium = false
-
-    private var displayProfiles: [Profile] {
-        recordingVM.availableProfiles.isEmpty
-            ? Profile.defaults
-            : recordingVM.availableProfiles
-    }
-
-    var body: some View {
-        NavigationStack {
-            List {
-                Section {
-                    ForEach(displayProfiles) { profile in
-                        Button {
-                            onSelect(profile, usePremium)
-                        } label: {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(profile.name)
-                                    .font(TS.Font.bodyMedium)
-                                    .foregroundStyle(Color.labelPrimary)
-                                if let prompt = profile.description ?? profile.notulePrompt, !prompt.isEmpty {
-                                    Text(prompt)
-                                        .font(TS.Font.caption)
-                                        .foregroundStyle(Color.labelSecondary)
-                                        .lineLimit(2)
-                                }
-                            }
-                        }
-                        .buttonStyle(.plain)
-                    }
-                } header: {
-                    Text("Kies een profiel")
-                }
-
-                Section {
-                    Toggle(isOn: $usePremium) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Premium model")
-                                .font(TS.Font.bodyMedium)
-                                .foregroundStyle(Color.labelPrimary)
-                            Text("Claude: betere kwaliteit, langzamer")
-                                .font(TS.Font.caption)
-                                .foregroundStyle(Color.labelSecondary)
-                        }
-                    }
-                    .tint(Color.brandPrimary)
-                }
-            }
-            .navigationTitle(
-                mode == .regenerate
-                ? "Notule regenereren"
-                : "Hertranscriberen"
-            )
-            #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
-            #endif
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Annuleren") { dismiss() }
-                }
-            }
-            .task {
-                if recordingVM.availableProfiles.isEmpty {
-                    await recordingVM.reloadProfiles()
-                }
-            }
-        }
-        #if os(macOS)
-        .frame(width: 520, height: 560)
         #endif
     }
 }

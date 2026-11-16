@@ -21,6 +21,11 @@ enum NotuleDetailLevel: String, Codable, Sendable, CaseIterable {
         defaults.set(choices, forKey: choicesKey)
     }
 
+    /// Stores a choice made in the profile settings; picking the profile's own default removes the override.
+    static func choose(_ level: NotuleDetailLevel, for profile: Profile, defaults: UserDefaults = .standard) {
+        setChoice(level == profile.detailLevel.flatMap(Self.init(rawValue:)) ? nil : level, for: profile.id, defaults: defaults)
+    }
+
     /// Target notule length in characters for a transcript of `transcriptCharacters` (UTF-16, like JS `.length`),
     /// rounded to a multiple of 100. Nil at volledig.
     func targetLength(transcriptCharacters: Int) -> Int? {

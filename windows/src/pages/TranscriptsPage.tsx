@@ -34,9 +34,10 @@ import { clampMenuPosition } from "../utils/menuPosition";
 import { TranscriptsList } from "../components/transcripts/TranscriptsList";
 import { TranscriptDetail } from "../components/transcripts/TranscriptDetail";
 import { runInBackground } from "../services/contextSuggestions";
-import { effectiveDetailLevel, storedDetailLevel } from "../services/notuleDetailLevel";
+import { regenerateDetailLevel } from "../services/notuleDetailLevel";
+import { RegenerateDialog } from "../components/transcripts/RegenerateDialog";
 import { enrichProfile } from "../services/profileTemplates";
-import type { Transcript } from "../types";
+import type { NotuleDetailLevel, Transcript } from "../types";
 
 interface ContextMenu {
   x: number;
@@ -54,7 +55,6 @@ export function TranscriptsPage() {
   const [contextMenu, setContextMenu] = useState<ContextMenu | null>(null);
   const [regeneratingId, setRegeneratingId] = useState<string | null>(null);
   const [regenerateTarget, setRegenerateTarget] = useState<Transcript | null>(null);
-  const [regenerateProfileId, setRegenerateProfileId] = useState("");
   const [tagsDialogId, setTagsDialogId] = useState<string | null>(null);
   const [newTagInput, setNewTagInput] = useState("");
   const [availableTags, setAvailableTags] = useState<string[]>([]);
@@ -218,13 +218,11 @@ export function TranscriptsPage() {
 
   // --- Regenerate ---
   function requestRegenerate(transcript: Transcript) {
-    const profiles = useProfilesStore.getState().profiles;
-    const current = profiles.find((p) => p.name === transcript.profile_name || p.id === transcript.profile_name);
-    setRegenerateProfileId(current?.id ?? profiles[0]?.id ?? "");
     setRegenerateTarget(transcript);
   }
 
-  async function handleRegenerate(transcript: Transcript, profileId: string) {
+  /** `chosenLevel`: the level picked in the dialog; undefined applies the regenerate rule (DEC-073). */
+  async function handleRegenerate(transcript: Transcript, profileId: string, chosenLevel?: NotuleDetailLevel) {
     if (regeneratingId === transcript.id) return;
     const profile = useProfilesStore.getState().profiles.find((p) => p.id === profileId);
     if (!profile) { toast.show("Kies een notulentemplate", "error"); return; }
@@ -244,9 +242,8 @@ export function TranscriptsPage() {
         return;
       }
       setRegeneratingId(transcript.id);
-      // Same profile: start from the level of the current notule; otherwise the profile's effective level.
-      const detailLevel = storedDetailLevel(transcript, profile.id)
-        ?? effectiveDetailLevel(enrichProfile(profile), useSettingsStore.getState().profile_detail_levels);
+      const detailLevel = chosenLevel
+        ?? regenerateDetailLevel(transcript, enrichProfile(profile), useSettingsStore.getState().profile_detail_levels);
       try {
         const meter = new UsageMeter();
         const html = await LLMService.generateNotulen(transcription, profile,
@@ -595,21 +592,8 @@ export function TranscriptsPage() {
         </div>
       )}
 
-      {regenerateTarget && <DesktopDialog className="td-overlay" label="Notule opnieuw genereren" onClose={() => setRegenerateTarget(null)}>
-        <div className="td-tags-dialog" onClick={(e) => e.stopPropagation()}>
-          <h3 className="td-tags-title">Notulen regenereren</h3>
-          <p className="text-caption">Kies het template voor de nieuwe notulen.</p>
-          <select className="select" value={regenerateProfileId}
-            onChange={(e) => setRegenerateProfileId(e.target.value)}>
-            {useProfilesStore.getState().profiles.map((profile) =>
-              <option key={profile.id} value={profile.id}>{profile.name}</option>)}
-          </select>
-          <div className="flex-row gap-8" style={{ justifyContent: "flex-end", marginTop: 16 }}>
-            <button className="btn" onClick={() => setRegenerateTarget(null)}>Annuleren</button>
-            <button className="btn btn-accent" onClick={() => void handleRegenerate(regenerateTarget, regenerateProfileId)}>Regenereren</button>
-          </div>
-        </div>
-      </DesktopDialog>}
+      {regenerateTarget && <RegenerateDialog transcript={regenerateTarget} onCancel={() => setRegenerateTarget(null)}
+        onConfirm={(profileId, level) => void handleRegenerate(regenerateTarget, profileId, level)} />}
 
       {/* Tags dialog */}
       {tagsDialogId && (

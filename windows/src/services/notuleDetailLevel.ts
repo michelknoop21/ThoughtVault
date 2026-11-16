@@ -55,3 +55,17 @@ export function storedDetailLevel(transcript: Pick<Transcript, "profile_id" | "d
   if (transcript.profile_id !== profileId) return undefined;
   return level(transcript.detail_level ?? transcript.notule_usage?.detail_level);
 }
+
+/** The choices after picking `detail` for `profile` in the profile settings; the profile's own default removes the override. */
+export function chooseDetailLevel(choices: Record<string, NotuleDetailLevel>, profile: Pick<Profile, "id" | "detail_level">, detail: NotuleDetailLevel): Record<string, NotuleDetailLevel> {
+  const rest = { ...choices };
+  delete rest[profile.id];
+  return detail === level(profile.detail_level) ? rest : { ...rest, [profile.id]: detail };
+}
+
+/** The level regenerating `transcript` with an (enriched) `profile` starts from, and the one the regenerate dialog
+ * preselects: the stored level when the profile stays the same, else the profile's effective level. */
+export function regenerateDetailLevel(transcript: Pick<Transcript, "profile_id" | "detail_level" | "notule_usage">,
+  profile: Pick<Profile, "id" | "detail_level">, choices: Record<string, string> = {}): NotuleDetailLevel {
+  return storedDetailLevel(transcript, profile.id) ?? effectiveDetailLevel(profile, choices);
+}

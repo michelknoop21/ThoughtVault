@@ -634,3 +634,13 @@
 "Obsidian uitzetten" = "Turn off Obsidian";
 "Deze map lijkt geen Obsidian-vault: er staat geen .obsidian-map in." = "This folder does not look like an Obsidian vault: it has no .obsidian folder.";
 "Zet Obsidian eerst aan" = "Turn on Obsidian first";
+
+/* Notule detail level (DEC-073) */
+"Detailniveau" = "Detail level";
+"Kort" = "Short";
+"Normaal" = "Normal";
+"Volledig" = "Full";
+"Genereer" = "Generate";
+"Kort: besluiten, acties en bedragen; ongeveer 6% van het gesprek, 1.500 tot 4.000 tekens" = "Short: decisions, actions and amounts; about 6% of the conversation, 1,500 to 4,000 characters";
+"Normaal: ook één of twee zinnen context per onderwerp; ongeveer 15%, 2.500 tot 8.000 tekens" = "Normal: also one or two sentences of context per topic; about 15%, 2,500 to 8,000 characters";
+"Volledig: elke bronzin uit het gesprek komt terug, ook bijzaken" = "Full: every source sentence from the conversation returns, side issues included";

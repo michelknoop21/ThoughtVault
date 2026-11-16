@@ -162,6 +162,20 @@ final class NotuleDetailLevelTests: XCTestCase {
         XCTAssertEqual(NotuleDetailLevel.effective(for: custom, defaults: defaults), .volledig)
     }
 
+    func testChooseStoresTheOverrideAndTheProfileDefaultRemovesIt() throws {
+        let suite = "NotuleDetailLevelTests-\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let executive = Profile(id: "executive", name: "Executive", detailLevel: "kort")
+
+        NotuleDetailLevel.choose(.volledig, for: executive, defaults: defaults)
+        XCTAssertEqual(defaults.dictionary(forKey: NotuleDetailLevel.choicesKey) as? [String: String], ["executive": "volledig"])
+        XCTAssertEqual(NotuleDetailLevel.effective(for: executive, defaults: defaults), .volledig)
+        NotuleDetailLevel.choose(.kort, for: executive, defaults: defaults)
+        XCTAssertEqual(defaults.dictionary(forKey: NotuleDetailLevel.choicesKey) as? [String: String], [:])
+        XCTAssertEqual(NotuleDetailLevel.effective(for: executive, defaults: defaults), .kort)
+    }
+
     func testBundledProfilesCarryTheirDefault() {
         let levels = Dictionary(uniqueKeysWithValues: Profile.defaults.map { ($0.id, $0.detailLevel) })
         XCTAssertEqual(levels["standaard"], "volledig")
@@ -198,6 +212,28 @@ final class NotuleDetailLevelStoreTests: XCTestCase {
         record.detailLevel = nil
         record.notuleUsageJSON = #"{"provider":"","model":"","transcriptCharacters":1,"notuleCharacters":1,"notuleWords":1,"notuleSentences":1,"requests":1,"requestsWithUnknownUsage":0,"inputTokens":0,"outputTokens":0,"reasoningTokens":0,"durationMs":1,"steps":{},"contentCheckSkipped":false,"detailLevel":"normaal"}"#
         XCTAssertEqual(RecordingViewModel.storedDetailLevel(record, profileId: "standaard"), .normaal)
+    }
+
+    func testRegenerateSheetPreselection() throws {
+        let container = try ModelContainer(for: TranscriptRecord.self, PersonProfile.self,
+                                           configurations: ModelConfiguration(isStoredInMemoryOnly: true))
+        let store = LocalTranscriptStore(container: container)
+        try store.save(TranscriptRecord(id: "t1", taskId: "t1", title: "Overleg", rawTranscription: "Sam belt vrijdag.", profileId: "standaard"))
+        try store.finalizeNotule(taskId: "t1", html: "<p>Sam belt vrijdag.</p>", title: "Overleg", detailLevel: .kort)
+        let record = try XCTUnwrap(store.record(forTaskId: "t1"))
+        let suite = "NotuleDetailLevelStoreTests-\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let standaard = Profile(id: "standaard", name: "Standaard", detailLevel: "volledig")
+        let klant = Profile(id: "klantgesprek", name: "Klantgesprek", detailLevel: "normaal")
+
+        XCTAssertEqual(RecordingViewModel.regenerateDetailLevel(record, profile: standaard, defaults: defaults), .kort, "same profile: the stored level")
+        XCTAssertEqual(RecordingViewModel.regenerateDetailLevel(record, profile: klant, defaults: defaults), .normaal, "other profile: its default")
+        NotuleDetailLevel.setChoice(.kort, for: "klantgesprek", defaults: defaults)
+        XCTAssertEqual(RecordingViewModel.regenerateDetailLevel(record, profile: klant, defaults: defaults), .kort, "other profile: the user's choice")
+        XCTAssertEqual(RecordingViewModel.regenerateDetailLevel(nil, profile: standaard, defaults: defaults), .volledig)
+        record.detailLevel = nil
+        XCTAssertEqual(RecordingViewModel.regenerateDetailLevel(record, profile: standaard, defaults: defaults), .volledig, "older record: the profile's level")
     }
 
     /// The pre-draft-fields store opens through the app's own container path after `detailLevel` was added.

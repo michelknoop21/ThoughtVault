@@ -175,7 +175,7 @@ extension RecordingViewModel {
             ?? selectedProfile
             ?? Profile.defaults[0]
 
-        let level = detailLevel ?? Self.storedDetailLevel(record, profileId: profile.id) ?? NotuleDetailLevel.effective(for: profile)
+        let level = detailLevel ?? Self.regenerateDetailLevel(record, profile: profile)
 
         do {
             let provider = Self.localNotuleProvider()
@@ -197,6 +197,12 @@ extension RecordingViewModel {
             updateTask(regenerationId, status: .error, errorMessage: error.localizedDescription, supportMessage: Self.supportFailureMessage(error), failure: error)
             throw error
         }
+    }
+
+    /// The level regenerating `record` with `profile` starts from, and the one the regenerate sheet preselects:
+    /// the stored level when the profile stays the same, else the profile's effective level.
+    static func regenerateDetailLevel(_ record: TranscriptRecord?, profile: Profile, defaults: UserDefaults = .standard) -> NotuleDetailLevel {
+        record.flatMap { storedDetailLevel($0, profileId: profile.id) } ?? NotuleDetailLevel.effective(for: profile, defaults: defaults)
     }
 
     /// The level a record's notule was generated with, for the same profile only; nil for older records.

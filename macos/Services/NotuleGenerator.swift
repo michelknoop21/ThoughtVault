@@ -15,8 +15,10 @@ struct NotuleGenerator: Sendable {
     /// `onStep` reports the running step for the task label (`ModelStep.displayLabel`).
     /// `onUsage` gets length, requests, tokens, cost and duration of a successful run. Every run, also a
     /// failed one, is added to the monthly `UsageLedger`.
+    /// `detailLevel` shortens the notule below volledig; volledig sends exactly the prompts of before.
     func generate(transcription: String, profile: Profile, participants: [Participant], quickNote: String?,
                   createdAt: Date, corrections: [PersonalCorrection], context: String = "",
+                  detailLevel: NotuleDetailLevel = .volledig,
                   onStep: @escaping @Sendable (ModelStep) -> Void = { _ in },
                   onUsage: @Sendable (NotuleUsage) -> Void = { _ in }) async throws -> String {
         let meter = UsageMeter()
@@ -24,7 +26,8 @@ struct NotuleGenerator: Sendable {
         do {
             run = try await UsageMeter.$current.withValue(meter) {
                 try await generateRun(transcription: transcription, profile: profile, participants: participants, quickNote: quickNote,
-                                      createdAt: createdAt, corrections: corrections, context: context, onStep: onStep)
+                                      createdAt: createdAt, corrections: corrections, context: context, detailLevel: detailLevel,
+                                      onStep: onStep)
             }
         } catch {
             recordInLedger(meter.totals, notule: false)
@@ -34,7 +37,8 @@ struct NotuleGenerator: Sendable {
         recordInLedger(totals, notule: true)
         onUsage(NotuleUsage(provider: provider?.rawValue ?? "", model: totals.model ?? "", transcriptCharacters: transcription.count,
                             notuleHtml: run.html, notuleSentences: NotuleAudit.noteSentenceCount(run.checkedHtml),
-                            totals: totals, durationMs: meter.elapsedMilliseconds, contentCheckSkipReason: run.skipReason))
+                            totals: totals, durationMs: meter.elapsedMilliseconds, contentCheckSkipReason: run.skipReason,
+                            detailLevel: detailLevel.rawValue))
         return run.html
     }
 
@@ -53,9 +57,11 @@ struct NotuleGenerator: Sendable {
 
     private func generateRun(transcription: String, profile: Profile, participants: [Participant], quickNote: String?,
                              createdAt: Date, corrections: [PersonalCorrection], context: String,
+                             detailLevel: NotuleDetailLevel,
                              onStep: @escaping @Sendable (ModelStep) -> Void) async throws -> Run {
         let source = PersonalCorrections.text(transcription, entries: corrections, profileId: profile.id)
-        let constraints = NotuleAudit.constraintSentences(source)
+        // Below volledig only the essential constraints stay mandatory, for the draft and for the audit.
+        let constraints = detailLevel == .volledig ? NotuleAudit.constraintSentences(source) : NotuleAudit.essentialConstraints(source)
 
         // NotuleAudit turns every request error into an audit message; remember cancellation separately.
         let cancelled = OSAllocatedUnfairLock(initialState: false)
@@ -81,6 +87,7 @@ struct NotuleGenerator: Sendable {
                     + context,
                 outputTemplate: profile.template,
                 constraints: constraints,
+                detailBlock: detailLevel.draftBlock(transcriptCharacters: source.utf16.count),
                 onProgress: { _ in }
             )
         }
@@ -104,7 +111,7 @@ struct NotuleGenerator: Sendable {
             if Task.isCancelled || cancelled.withLock({ $0 }) { throw CancellationError() }
             try await NotuleAudit.auditNotule(source: source, html: candidate, quickNote: quickNote ?? "",
                                               request: request, requiredSentences: constraints, sourceUnclear: warning != nil,
-                                              noteConcurrency: noteConcurrency, onProgress: onStep)
+                                              noteConcurrency: noteConcurrency, detailLevel: detailLevel, onProgress: onStep)
             log.info("Notule audit ran outcome=ok source_warning=\(warning != nil)")
             return Run(html: NotuleAudit.appendingWarnings([warning].compactMap { $0 }, to: candidate), checkedHtml: candidate, skipReason: nil)
         } catch {

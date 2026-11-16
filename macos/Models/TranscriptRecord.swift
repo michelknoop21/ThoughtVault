@@ -40,6 +40,9 @@ final class TranscriptRecord {
     var durationSeconds: Double?
     /// JSON-encoded `NotuleUsage` of the run that generated `notuleHtml`. Optional → lightweight-migration safe.
     var notuleUsageJSON: String?
+    /// `NotuleDetailLevel` raw value the notule was (or will be) generated with; regenerate and retry start
+    /// from it. Optional → lightweight-migration safe.
+    var detailLevel: String?
 
     init(
         id: String = UUID().uuidString,

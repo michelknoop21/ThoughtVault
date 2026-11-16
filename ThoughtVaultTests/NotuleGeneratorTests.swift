@@ -1,4 +1,6 @@
 import XCTest
+import CryptoKit
+import os
 import SwiftData
 import SwiftUI
 @testable import ThoughtVault
@@ -9,7 +11,7 @@ import SwiftUI
 
 /// Scripted provider: `generateNotulen` returns a fixed draft, `complete` answers the audits.
 private final class StubLLM: LLMService, @unchecked Sendable {
-    struct Generation { let transcription, systemPrompt, notulePrompt: String; let constraints: [String] }
+    struct Generation { let transcription, systemPrompt, notulePrompt: String; let constraints: [String]; var detailBlock = "" }
 
     private let lock = NSLock()
     private let draft: String
@@ -30,9 +32,9 @@ private final class StubLLM: LLMService, @unchecked Sendable {
     var isAvailable: Bool { true }
 
     func generateNotulen(transcription: String, systemPrompt: String, notulePrompt: String, outputTemplate: String?,
-                         constraints: [String], onProgress: @Sendable (String) -> Void) async throws -> String {
+                         constraints: [String], detailBlock: String, onProgress: @Sendable (String) -> Void) async throws -> String {
         lock.withLock { _generations.append(Generation(transcription: transcription, systemPrompt: systemPrompt,
-                                                         notulePrompt: notulePrompt, constraints: constraints)) }
+                                                         notulePrompt: notulePrompt, constraints: constraints, detailBlock: detailBlock)) }
         // Stream the draft like a real provider; the generator must not forward it anywhere.
         onProgress(draft)
         lock.withLock { _progressChunks += 1 }
@@ -76,7 +78,7 @@ private final class OverlapLLM: LLMService, @unchecked Sendable {
     var isAvailable: Bool { true }
 
     func generateNotulen(transcription: String, systemPrompt: String, notulePrompt: String, outputTemplate: String?,
-                         constraints: [String], onProgress: @Sendable (String) -> Void) async throws -> String {
+                         constraints: [String], detailBlock: String, onProgress: @Sendable (String) -> Void) async throws -> String {
         var waited = 0
         while !lock.withLock({ _sourceStarted }), waited < 200 { try await Task.sleep(nanoseconds: 10_000_000); waited += 1 }
         lock.withLock { _startedDuringDraft = _sourceStarted }
@@ -527,4 +529,70 @@ final class ProspectFlowReferenceTests: XCTestCase {
         }
     }
 
+}
+
+// MARK: - Detail level
+
+final class NotuleGeneratorDetailLevelTests: XCTestCase {
+    /// Same input as tests/fixtures/notule-detail/draft-volledig.json, recorded from the Windows code before
+    /// detail levels existed; prompts are byte-identical on both platforms.
+    private let transcription = "Sam belt vrijdag de klant over de planning. We besluiten dat het budget 12.450 euro wordt. Er gaan geen klantgegevens naar leveranciers. Ik denk niet dat het morgen regent. De vorige afspraak vervalt."
+    private let fixtureProfile = Profile(id: "detail-fixture", name: "Fixture", systemPrompt: "Je bent notulist.", notulePrompt: "Maak notulen.")
+    private let html = "<p>Sam belt vrijdag de klant over de planning en het budget wordt 12.450 euro.</p>"
+
+    private func run(_ level: NotuleDetailLevel?) async throws -> (StubLLM.Generation, NotuleUsage?) {
+        let service = StubLLM(draft: html)
+        let usage = OSAllocatedUnfairLock<NotuleUsage?>(initialState: nil)
+        let generator = NotuleGenerator(service: service)
+        if let level {
+            _ = try await generator.generate(transcription: transcription, profile: fixtureProfile, participants: [], quickNote: nil,
+                                             createdAt: Date(timeIntervalSince1970: 0), corrections: [], detailLevel: level,
+                                             onUsage: { run in usage.withLock { $0 = run } })
+        } else {
+            _ = try await generator.generate(transcription: transcription, profile: fixtureProfile, participants: [], quickNote: nil,
+                                             createdAt: Date(timeIntervalSince1970: 0), corrections: [],
+                                             onUsage: { run in usage.withLock { $0 = run } })
+        }
+        return (try XCTUnwrap(service.generations.first), usage.withLock { $0 })
+    }
+
+    private func userMessage(_ call: StubLLM.Generation) -> String {
+        buildNotuleUserContent(notulePrompt: call.notulePrompt, transcription: call.transcription, outputTemplate: nil,
+                               constraints: call.constraints, detailBlock: call.detailBlock)
+    }
+
+    private func sha256(_ text: String) -> String {
+        SHA256.hash(data: Data(text.utf8)).map { String(format: "%02x", $0) }.joined()
+    }
+
+    func testDefaultIsVolledigWithTheDraftOfBefore() async throws {
+        let (call, usage) = try await run(nil)
+        XCTAssertEqual(call.detailBlock, "")
+        XCTAssertEqual(call.constraints, NotuleAudit.constraintSentences(transcription))
+        XCTAssertEqual(sha256(notuleSystemPrompt("Je bent notulist.")), Self.fixtureSystemSha256)
+        XCTAssertEqual(sha256(userMessage(call)), Self.fixtureUserSha256)
+        XCTAssertEqual(usage?.detailLevel, "volledig")
+        let (explicit, _) = try await run(.volledig)
+        XCTAssertEqual(userMessage(explicit), userMessage(call))
+    }
+
+    func testKortAppendsItsBlockAndKeepsOnlyEssentialConstraints() async throws {
+        let (call, usage) = try await run(.kort)
+        XCTAssertEqual(NotuleAudit.constraintSentences(transcription), ["Er gaan geen klantgegevens naar leveranciers.", "De vorige afspraak vervalt."])
+        XCTAssertEqual(call.constraints, ["De vorige afspraak vervalt."])
+        XCTAssertEqual(call.detailBlock, NotuleDetailLevel.kort.draftBlock(transcriptCharacters: transcription.utf16.count))
+        XCTAssertTrue(userMessage(call).hasSuffix("\n1. De vorige afspraak vervalt." + call.detailBlock))
+        XCTAssertTrue(call.detailBlock.contains("ongeveer 1.500 tekens, hooguit 2.000."))
+        XCTAssertEqual(usage?.detailLevel, "kort")
+    }
+
+    func testNormaalAppendsItsBlock() async throws {
+        let (call, usage) = try await run(.normaal)
+        XCTAssertTrue(call.detailBlock.hasPrefix("\n\nDetailniveau Normaal: schrijf een notule van ongeveer 2.500 tekens, hooguit 3.300."))
+        XCTAssertEqual(usage?.detailLevel, "normaal")
+    }
+
+    // SHA-256 of `system` and `user` in tests/fixtures/notule-detail/draft-volledig.json.
+    static let fixtureSystemSha256 = "37bd9bf3f46b319cb8dc0c83d5e7a411cfb1da3c597b47e665b64084ecbc80b8"
+    static let fixtureUserSha256 = "be9c1c4a735a98388848eaeda37b3312ce178a34af34b2ede3bba68c7c143539"
 }

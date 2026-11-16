@@ -28,10 +28,14 @@ def build_entries(source):
             )
         else:
             template = '<h1>[Waar de prompt voor dient, 4-10 woorden]</h1>\n<p>[Kopieerbare prompttekst]</p>'
-        entries.append({
+        entry = {
             'id': item['id'], 'name': item['name'], 'description': item['description'], 'icon': item['icon'], 'emoji': item['emoji'],
             'systemPrompt': common, 'notulePrompt': prompt, 'template': template,
-        })
+        }
+        # Default notule detail level (kort, normaal, volledig); absent means volledig.
+        if item.get('detailLevel'):
+            entry['detailLevel'] = item['detailLevel']
+        entries.append(entry)
     return entries
 
 

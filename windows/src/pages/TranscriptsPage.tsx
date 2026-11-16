@@ -34,6 +34,8 @@ import { clampMenuPosition } from "../utils/menuPosition";
 import { TranscriptsList } from "../components/transcripts/TranscriptsList";
 import { TranscriptDetail } from "../components/transcripts/TranscriptDetail";
 import { runInBackground } from "../services/contextSuggestions";
+import { effectiveDetailLevel, storedDetailLevel } from "../services/notuleDetailLevel";
+import { enrichProfile } from "../services/profileTemplates";
 import type { Transcript } from "../types";
 
 interface ContextMenu {
@@ -239,14 +241,17 @@ export function TranscriptsPage() {
         return;
       }
       setRegeneratingId(transcript.id);
+      // Same profile: start from the level of the current notule; otherwise the profile's effective level.
+      const detailLevel = storedDetailLevel(transcript, profile.id)
+        ?? effectiveDetailLevel(enrichProfile(profile), useSettingsStore.getState().profile_detail_levels);
       try {
         const meter = new UsageMeter();
         const html = await LLMService.generateNotulen(transcription, profile,
           () => tasks.updateBackgroundTask(taskId, { progress: 60 }), [], transcript.quick_note,
-          step => tasks.updateBackgroundTask(taskId, { message: stepLabel(step) }), meter);
+          step => tasks.updateBackgroundTask(taskId, { message: stepLabel(step) }), meter, detailLevel);
         if (!hasUsableNotule(html)) throw new Error("Geen bruikbare notule gegenereerd");
         const title = extractTitle(html) || transcript.title;
-        const finished = { notule_html: html, notule_usage: meter.usageFor(transcription, html), has_notes: true, title, profile_name: profile.name, profile_id: profile.id,
+        const finished = { notule_html: html, notule_usage: meter.usageFor(transcription, html), detail_level: detailLevel, has_notes: true, title, profile_name: profile.name, profile_id: profile.id,
           notule_draft_html: "", notule_review_reason: "", updated_at: new Date().toISOString() };
         await useLocalTranscriptsStore.getState().update(transcript.id, finished);
         updateTranscript(transcript.id, finished);

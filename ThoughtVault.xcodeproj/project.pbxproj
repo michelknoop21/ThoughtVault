@@ -105,11 +105,14 @@
 		AA00ML01 /* ModelRequestLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA00ML01 /* ModelRequestLog.swift */; };
 		AAUM0001 /* UsageMeter.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAUM0001 /* UsageMeter.swift */; };
 		AAUM0002 /* UsageMeter.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAUM0001 /* UsageMeter.swift */; };
+		AADL0001 /* NotuleDetailLevel.swift in Sources */ = {isa = PBXBuildFile; fileRef = FADL0001 /* NotuleDetailLevel.swift */; };
+		AADL0002 /* NotuleDetailLevel.swift in Sources */ = {isa = PBXBuildFile; fileRef = FADL0001 /* NotuleDetailLevel.swift */; };
 		AAUM0003 /* NotuleUsageViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAUM0002 /* NotuleUsageViews.swift */; };
 		AAUM0004 /* NotuleUsageViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAUM0002 /* NotuleUsageViews.swift */; };
 		AAOB0001 /* ObsidianLinkBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAOB0001 /* ObsidianLinkBanner.swift */; };
 		AAOB0002 /* ObsidianLinkBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAOB0001 /* ObsidianLinkBanner.swift */; };
 		ABUM0001 /* UsageMeterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBUM0001 /* UsageMeterTests.swift */; };
+		ABDL0001 /* NotuleDetailLevelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBDL0001 /* NotuleDetailLevelTests.swift */; };
 		AA0000T1 /* NotuleGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000T1 /* NotuleGenerator.swift */; };
 		AA000009 /* BiometricService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000009 /* BiometricService.swift */; };
 		AA000010 /* CalendarService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000010 /* CalendarService.swift */; };
@@ -475,9 +478,11 @@
 		FA00AL01 /* NotuleAuditLong.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotuleAuditLong.swift; sourceTree = "<group>"; };
 		FA00ML01 /* ModelRequestLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelRequestLog.swift; sourceTree = "<group>"; };
 		FAUM0001 /* UsageMeter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageMeter.swift; sourceTree = "<group>"; };
+		FADL0001 /* NotuleDetailLevel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotuleDetailLevel.swift; sourceTree = "<group>"; };
 		FAUM0002 /* NotuleUsageViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotuleUsageViews.swift; sourceTree = "<group>"; };
 		FAOB0001 /* ObsidianLinkBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ObsidianLinkBanner.swift; sourceTree = "<group>"; };
 		FBUM0001 /* UsageMeterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageMeterTests.swift; sourceTree = "<group>"; };
+		FBDL0001 /* NotuleDetailLevelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotuleDetailLevelTests.swift; sourceTree = "<group>"; };
 		FA0000T1 /* NotuleGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotuleGenerator.swift; sourceTree = "<group>"; };
 		FA000009 /* BiometricService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BiometricService.swift; sourceTree = "<group>"; };
 		FA000010 /* CalendarService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarService.swift; sourceTree = "<group>"; };
@@ -736,6 +741,7 @@
 				FA00AL01 /* NotuleAuditLong.swift */,
 				FA00ML01 /* ModelRequestLog.swift */,
 				FAUM0001 /* UsageMeter.swift */,
+				FADL0001 /* NotuleDetailLevel.swift */,
 				FA0000T1 /* NotuleGenerator.swift */,
 				FA0000S4 /* QuickNoteStore.swift */,
 				FA000009 /* BiometricService.swift */,
@@ -952,6 +958,7 @@
 				FB00AP01 /* NotuleAuditPartsTests.swift */,
 				FB00ML01 /* ModelRequestLogTests.swift */,
 				FBUM0001 /* UsageMeterTests.swift */,
+				FBDL0001 /* NotuleDetailLevelTests.swift */,
 				FB0000NA /* NotulePromptTests.swift */,
 				FB0000G1 /* M3LiveContentGateTests.swift */,
 				FB0000G2 /* M3LiveContentGate.swift */,
@@ -1178,6 +1185,7 @@
 				AA00AL01 /* NotuleAuditLong.swift in Sources */,
 				AA00ML01 /* ModelRequestLog.swift in Sources */,
 				AAUM0001 /* UsageMeter.swift in Sources */,
+				AADL0001 /* NotuleDetailLevel.swift in Sources */,
 				AAUM0003 /* NotuleUsageViews.swift in Sources */,
 				AAOB0001 /* ObsidianLinkBanner.swift in Sources */,
 				AA0000T1 /* NotuleGenerator.swift in Sources */,
@@ -1323,6 +1331,7 @@
 				AB00AP01 /* NotuleAuditPartsTests.swift in Sources */,
 				AB00ML01 /* ModelRequestLogTests.swift in Sources */,
 				ABUM0001 /* UsageMeterTests.swift in Sources */,
+				ABDL0001 /* NotuleDetailLevelTests.swift in Sources */,
 				AB0000NA /* NotulePromptTests.swift in Sources */,
 				AB0000G1 /* M3LiveContentGateTests.swift in Sources */,
 				AB0000G2 /* M3LiveContentGate.swift in Sources */,
@@ -1408,6 +1417,7 @@
 				AA00AL02 /* NotuleAuditLong.swift in Sources */,
 				AA00ML02 /* ModelRequestLog.swift in Sources */,
 				AAUM0002 /* UsageMeter.swift in Sources */,
+				AADL0002 /* NotuleDetailLevel.swift in Sources */,
 				AAUM0004 /* NotuleUsageViews.swift in Sources */,
 				AAOB0002 /* ObsidianLinkBanner.swift in Sources */,
 				F2989054FE6E2130E893C3F6 /* NotuleGenerator.swift in Sources */,

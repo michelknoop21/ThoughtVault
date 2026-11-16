@@ -17,8 +17,14 @@ const state = vi.hoisted(() => ({ dry: false, key: "", dryCost: 0.01, calls: 0, 
   if (command !== "proxy_request" || !args.request) return undefined; // log_write and the like
   const { url, headers, body, timeout_seconds } = args.request;
   if (state.dry) return dryResponse(JSON.parse(body));
-  const res = await fetch(url, { method: "POST", headers, body, signal: AbortSignal.timeout(timeout_seconds * 1000) });
-  return { status: res.status, body: await res.text(), headers: Object.fromEntries(res.headers) };
+  try {
+    const res = await fetch(url, { method: "POST", headers, body, signal: AbortSignal.timeout(timeout_seconds * 1000) });
+    return { status: res.status, body: await res.text(), headers: Object.fromEntries(res.headers) };
+  } catch (error) {
+    // Same rejection text as the Tauri proxy_request, so llm.ts reports a timeout as the app does.
+    if ((error as Error).name === "TimeoutError") throw `Tijdslimiet bereikt na ${timeout_seconds} s`;
+    throw error;
+  }
 };
 vi.mock("../../windows/src/services/tauriCommands", async importOriginal => ({
   ...(await importOriginal<object>()),

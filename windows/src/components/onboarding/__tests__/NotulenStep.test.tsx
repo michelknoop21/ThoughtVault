@@ -117,13 +117,12 @@ it("installs the chosen provider on Volgende", async () => {
 
 it("drops a key test that finishes after switching tile", async () => {
   useSettingsStore.setState({ notulen_provider: "lm-studio" });
-  let stored!: () => void;
-  mocks.storeCredential.mockImplementationOnce(() => new Promise<void>(resolve => { stored = resolve; }));
-  mocks.invoke.mockResolvedValueOnce({ status: 200 });
+  let tested!: (value: { status: number }) => void;
+  mocks.invoke.mockImplementationOnce(() => new Promise(resolve => { tested = resolve; }));
   await act(async () => type(host.querySelector<HTMLInputElement>("#onb-key-input")!, "sk-or-v1-voorbeeld"));
   await act(async () => button("Testen").click());
   await act(async () => button("Andere aanbieder").click());
-  await act(async () => stored());
+  await act(async () => tested({ status: 200 }));
   expect(host.textContent).not.toContain("Sleutel werkt");
   await act(async () => button("Volgende").click());
   expect(host.textContent).toContain("Zonder taalmodel verder?");

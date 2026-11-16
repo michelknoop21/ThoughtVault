@@ -70,3 +70,24 @@ productieschema actief is.
 9. Test met een lange synthetische transcriptie (> 1 MiB) en herstart tijdens verzenden/ontvangen.
 10. Herhaal met Production via TestFlight na schema-publicatie. Een simulator- of unittest vervangt
     deze acceptatie niet.
+
+## Gecontroleerde Apple-configuratie (16 november 2026)
+
+De container is geregistreerd en gekoppeld aan app-ID `com.buildmind.ThoughtVault` in team
+`XL9KN38ATX`. Push Notifications en iCloud met CloudKit zijn actief. Vier vernieuwde profielen
+zijn via de bestaande App Store Connect API-sleutel aangemaakt en op hun ondertekende
+entitlements gecontroleerd: ontwikkeling en App Store voor macOS en iOS.
+
+De profielnamen volgen `ThoughtVault iCloud <TYPE> 20261116`, met als type
+`MAC_APP_DEVELOPMENT`, `IOS_APP_DEVELOPMENT`, `MAC_APP_STORE` of `IOS_APP_STORE`.
+De bestaande certificaten zijn hergebruikt. De standaard automatische profielkeuze van Xcode
+selecteerde lokaal nog de oude profielen zonder cloudrechten; gebruik voor de controle expliciet
+het nieuwe profiel op het app-target. Geef dit niet als globale profieloverride aan alle targets:
+het testbundle heeft een eigen identifier en krijgt geen app-profiel.
+
+Bewijs en de lokale targetgebonden configuratie staan op de externe ontwikkelschijf onder
+`task-evidence/thoughtvault-icloud-notulen/`: `profiles/verified.json`,
+`cloud-signing.xcconfig`, `cloud-mac-manual.log` en `mac-signed-entitlements.json`.
+Deze lokale paden of profielnamen zijn geen vereiste voor gebruikers van de app. Bij volgende
+buildmachines moet een geldig profiel met dezelfde container en de gewenste omgeving worden
+geïnstalleerd of vernieuwd.

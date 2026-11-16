@@ -42,7 +42,7 @@ final class ContextHistoryTests: XCTestCase {
         let container = try ModelContainer(
             for: TranscriptRecord.self, PersonProfile.self,
             migrationPlan: AppMigrationPlan.self,
-            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+            configurations: ModelConfiguration(isStoredInMemoryOnly: true, cloudKitDatabase: .none)
         )
         let service = PersonDirectoryService(container: container)
         let person = PersonProfile(name: "Anke Bakker", role: "v0")
@@ -70,7 +70,7 @@ final class ContextHistoryTests: XCTestCase {
         let container = try ModelContainer(
             for: TranscriptRecord.self, PersonProfile.self,
             migrationPlan: AppMigrationPlan.self,
-            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+            configurations: ModelConfiguration(isStoredInMemoryOnly: true, cloudKitDatabase: .none)
         )
         let service = PersonDirectoryService(container: container)
         let person = PersonProfile(name: "Anke Bakker", role: "PM")

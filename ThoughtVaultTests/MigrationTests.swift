@@ -15,7 +15,7 @@ final class MigrationTests: XCTestCase {
     /// (adding PersonProfile as a new @Model). The in-memory container uses the real
     /// AppMigrationPlan so this test will fail to compile until Plan 01 ships those types.
     func testTranscriptRecordSurvivesV1ToV2Migration() throws {
-        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        let config = ModelConfiguration(isStoredInMemoryOnly: true, cloudKitDatabase: .none)
         let container = try ModelContainer(
             for: TranscriptRecord.self, PersonProfile.self,
             migrationPlan: AppMigrationPlan.self,
@@ -51,7 +51,7 @@ final class MigrationTests: XCTestCase {
     /// The `.emails` reference below will fail to compile against the current model —
     /// that compile failure IS the intended RED state proving the migration is unproven.
     func testPersonProfileSurvivesV2ToV3Migration() throws {
-        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        let config = ModelConfiguration(isStoredInMemoryOnly: true, cloudKitDatabase: .none)
         let container = try ModelContainer(
             for: TranscriptRecord.self, PersonProfile.self,
             migrationPlan: AppMigrationPlan.self,

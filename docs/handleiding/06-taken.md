@@ -1,26 +1,28 @@
 groep: Opnemen en verwerken
-samenvatting: Je volgt hoe ver de verwerking van een opname is, leest wat de stapnamen betekenen en start een mislukte taak opnieuw.
+samenvatting: Je volgt hoe ver de verwerking van een opname is, bekijkt eerdere taken met hun details en verwerkt, hernoemt of verwijdert een taak.
 
 # Taken
 
-Elke opname die je stopt en elk audiobestand dat je importeert wordt een taak. Een taak zet eerst de audio om naar tekst en laat daarna de notulen schrijven. Het scherm **Taken** toont alle taken die lopen of zijn mislukt. Is er niets te doen, dan staat er **Geen actieve taken**.
+Elke opname die je stopt en elk audiobestand dat je importeert wordt een taak. Een taak zet eerst de audio om naar tekst en laat daarna de notulen schrijven. Het scherm **Taken** toont bovenaan de taken die nu lopen. Daaronder staat **Geschiedenis**: elke taak die klaar is, mislukt of geannuleerd, ook na het herstarten van de app. De app bewaart de laatste 200 taken.
+
+::: macos
+![Taken op de Mac: de geschiedenis met een voltooide, een mislukte en een geannuleerde taak.](media/mac-taken.webp)
+
+Is er nog nooit een taak geweest, dan zie je **Geen actieve taken** met de knoppen **Start een opname** en **Audiobestand importeren**, en drie kaarten met de stappen die een taak doorloopt: **Transcriberen**, **Concept schrijven** en **Controleren**.
+:::
 
 ::: windows
-![Taken op Windows: een opname die wordt getranscribeerd en een voltooide taak.](media/win-taken.webp)
+![Taken op Windows: een opname die wordt getranscribeerd en daaronder de geschiedenis.](media/win-taken.webp)
 :::
 
 ::: ios
-![Taken op de iPhone, met de keuze tussen Actief, Wachtrij en Voltooid.](media/ios-taken.webp)
-:::
-
-::: macos
-Loopt er niets, dan zie je **Geen actieve taken** met de knoppen **Start een opname** en **Audiobestand importeren**, en drie kaarten met de stappen die een taak doorloopt: **Transcriberen**, **Concept schrijven** en **Controleren**.
+![Taken op de iPhone met het tabblad Geschiedenis open.](media/ios-taken.webp)
 :::
 
 ## Wat je per taak ziet
 
 ::: macos
-Elke regel toont de naam van het audiobestand, hoe lang geleden de taak is gestart (bijvoorbeeld **Zojuist** of **5 minuten geleden**), de status en een voortgangsbalk. Een taak die klaar is, krijgt de status **Voltooid** en verdwijnt na drie seconden uit de lijst. De notulen staan dan bij **Notulen**.
+Elke lopende taak toont de naam van het audiobestand, hoe lang geleden de taak is gestart (bijvoorbeeld **Zojuist** of **5 minuten geleden**), de status en een voortgangsbalk. Een taak die klaar is, krijgt de status **Voltooid** en schuift na drie seconden door naar **Geschiedenis**. De notulen staan dan bij **Notulen**.
 
 Dezelfde voortgang staat in een smalle balk bovenaan het venster, op elk scherm. Je hoeft **Taken** dus niet open te houden.
 :::
@@ -30,7 +32,7 @@ Elke kaart toont de titel of bestandsnaam, een statuslabel, hoe lang geleden de 
 :::
 
 ::: ios
-Bovenaan kies je tussen **Actief**, **Wachtrij** en **Voltooid**. Elke kaart toont de voortgang in procenten en de stap die loopt. Tik op een lopende taak voor het scherm **Verwerken**, met de stappen **Transcriptie**, **Notulen genereren** en **Notulen opslaan** onder elkaar. Trek de lijst omlaag om te verversen.
+Bovenaan kies je tussen **Actief**, **Wachtrij** en **Geschiedenis**. Elke kaart toont de voortgang in procenten en de stap die loopt. Tik op een lopende taak voor het scherm **Verwerken**, met de stappen **Transcriptie**, **Notulen genereren** en **Notulen opslaan** onder elkaar. Trek de lijst omlaag om te verversen.
 :::
 
 ## De fasen van een taak
@@ -77,46 +79,79 @@ Hoeveel controles er zijn, hangt af van de lengte van het gesprek. Een taak die 
 
 De inhoudscontrole en de controles voor lange gesprekken houden verzonnen of weggelaten punten tegen. Keuren ze het concept af, dan wordt het niet als notule opgeslagen. De foutmelding eindigt dan met **Het concept is apart bewaard voor beoordeling; er is geen nieuwe goedgekeurde notule opgeslagen.**
 
+## Geschiedenis en details
+
+Elke taak in **Geschiedenis** toont de titel, de datum, het profiel, de lengte van de opname en de uitkomst: **Voltooid**, **Mislukt**, **Geannuleerd** of **Onderbroken**. Onderbroken betekent dat de app stopte terwijl de taak liep. Bij een mislukte taak staat de foutmelding eronder.
+
+::: macos ios
+Klik of tik op een taak voor de details. Het menu met de drie puntjes naast de taak, of een rechtsklik (Mac) of lang drukken (iPhone), geeft dezelfde acties zonder de details te openen.
+:::
+
+::: windows
+Klik op **Details** bij de taak. De knoppen voor de andere acties staan direct op de kaart.
+:::
+
+De details tonen:
+
+- wanneer de taak startte en klaar was, en hoe lang de verwerking duurde;
+- de stappen, zoals **Transcriberen** en **Concept schrijven**, met de duur van elke stap;
+- welke spraakherkenning en welke aanbieder en welk model de notulen schreven, zoals ingesteld bij de start van de taak;
+- of de opname nog op je apparaat staat en of er een notule is opgeslagen.
+
+## Een taak opnieuw verwerken
+
+Kies **Opnieuw verwerken** bij een taak in **Geschiedenis**. In het venster stel je drie dingen in:
+
+1. **Titel**: de naam van de notule. Met **Titel opslaan** wijzig je alleen de titel, zonder opnieuw te verwerken.
+2. **Profiel**: het profiel dat de opbouw van de notule bepaalt.
+3. **Model**: een van de aanbevolen modellen van de aanbieder die je bij **Instellingen** > **Verwerking** hebt gekozen. Je keuze wordt daar ook je standaardmodel.
+
+Klik daarna op **Opnieuw verwerken**. De taak verschijnt weer bovenaan bij de lopende taken.
+
+::: macos ios
+Is de transcriptie al opgeslagen, dan schrijft de app alleen de notule opnieuw. De bestaande notule wordt pas vervangen als de nieuwe versie door de inhoudscontrole komt. Is er nog geen transcriptie, dan begint de taak bij het transcriberen. Daarvoor moet de opname nog op je apparaat staan.
+:::
+
+::: windows
+Opnieuw verwerken gebruikt de opname, die moet dus nog op je pc staan. Bij een mislukte taak hergebruikt de app een transcriptie die al was opgeslagen. Bij een voltooide taak maakt de app een nieuwe notule en blijft de bestaande notule staan.
+:::
+
+### Welke modellen je kunt kiezen
+
+Bij een aanbieder waarvoor je een eigen API-sleutel invult, betaal je per verwerkt woorddeel (token). De app toont daar alleen aanbevolen modellen die hoogstens $3 per miljoen invoertokens en $15 per miljoen uitvoertokens kosten. Duurdere modellen staan niet in de lijst. Achter elk model staat de prijs. Voor een model op je eigen computer of een abonnement met een vast bedrag betaal je niet per token, daar geldt geen grens.
+
+::: windows
+Dezelfde lijst staat bij **Instellingen** > **Verwerking** onder **Model** voor aanbieders met een eigen API-sleutel. Stond er een duurder model ingesteld, dan zie je dat als **(boven de prijsgrens)** en kies je een van de aanbevolen modellen. Tot je dat doet, gebruikt de app het eerste aanbevolen model van die aanbieder en meldt dat in de details van de taak.
+:::
+
+## Naar de notule
+
+Kies **Naar de notule** om de notule van een voltooide taak te openen bij **Notulen**. De knop staat er alleen als de notule nog bestaat. Bij een taak waarvan alleen de transcriptie is opgeslagen opent hij die transcriptie.
+
+## De opname verwijderen
+
+Kies **Opname verwijderen** om het audiobestand van een taak van je apparaat te halen, bijvoorbeeld als de notule klaar is en je geen geluid wilt bewaren. Na bevestiging is het bestand definitief weg. De notule en de transcriptie blijven staan. In de details staat daarna **Opname: Verwijderd**, en **Opnieuw verwerken** werkt alleen nog als de transcriptie is opgeslagen. Heb je de opname eerder opnieuw verwerkt, dan gebruiken meerdere taken hetzelfde bestand; bij al die taken staat de opname daarna op **Verwijderd**.
+
 ## Een taak annuleren of verwijderen
 
 ::: macos
-1. Klik bij de taak op het kruisje (**Annuleren**).
-2. Klik in het venster **Taak annuleren** op **Annuleer taak**.
-
-Met het prullenbakje (**Verwijderen**) haal je een taak uit de lijst. Ook dat vraagt om bevestiging. De knop **Vernieuwen** in de werkbalk haalt bij verwerking via **Cloud** de stand van de server op. Bij lokale verwerking werkt de lijst zichzelf bij.
+Een lopende taak stop je met het kruisje (**Annuleren**) en daarna **Annuleer taak**. De taak komt in **Geschiedenis** met de uitkomst **Geannuleerd**.
 :::
 
 ::: ios
-1. Houd de taak ingedrukt.
-2. Tik op **Annuleren** om de verwerking te stoppen, of op **Verwijderen** om de taak uit de lijst te halen.
-
-Op het scherm **Verwerken** stop je de taak met **Annuleren** en daarna **Annuleer verwerking**.
+Houd een lopende taak ingedrukt en tik op **Annuleren**. Op het scherm **Verwerken** stop je de taak met **Annuleren** en daarna **Annuleer verwerking**.
 :::
 
 ::: windows
-Bij lokale verwerking kun je een lopende taak op dit scherm niet annuleren. Een taak die is afgelopen of mislukt haal je weg met **Verwijderen**, na bevestiging in het venster **Taak verwijderen**. Bij verwerking via **Cloud** staat er bij een lopende taak ook de knop **Annuleren**.
+Bij lokale verwerking kun je een lopende taak op dit scherm niet annuleren. Bij verwerking via **Cloud** staat bij een lopende taak de knop **Annuleren**.
 :::
 
-Het audiobestand blijft na annuleren of verwijderen van de taak staan bij **Opgeslagen opnames** op het scherm [Opnemen](opnemen.html#opgeslagen-opnames).
+Met **Taak verwijderen** haal je een taak uit **Taken**, ook uit **Geschiedenis**. Je kiest in het venster **Taak verwijderen** tussen:
 
-## Een mislukte taak opnieuw starten
+- **Alleen taak verwijderen**: de taak verdwijnt, de notule en de opname blijven bewaard.
+- **Taak en notule verwijderen**: de notule bij **Notulen** gaat ook weg. Deze knop staat er alleen als er een notule is.
 
-::: macos
-De reden van de fout staat in de balk bovenaan het venster. Bij de taak verschijnt een rond pijltje (**Opnieuw starten**) als de app genoeg heeft om verder te gaan:
-
-- Is de transcriptie al opgeslagen, dan worden alleen de notulen opnieuw geschreven.
-- Is alleen het audiobestand er nog, dan begint de taak opnieuw bij het transcriberen.
-
-Klik op het pijltje om de taak opnieuw te starten.
-:::
-
-::: windows
-De reden van de fout staat op de kaart van de taak. Klik op **Opnieuw verwerken** om de taak opnieuw te starten. De knop staat er alleen als het audiobestand nog op je pc staat.
-:::
-
-::: ios
-Het scherm **Verwerken** toont **Verwerking mislukt** met de reden. Start de verwerking opnieuw via **Opgeslagen opnames** op het scherm [Opnemen](opnemen.html#opgeslagen-opnames).
-:::
+Het audiobestand blijft in beide gevallen staan bij **Opgeslagen opnames** op het scherm [Opnemen](opnemen.html#opgeslagen-opnames). Wil je ook dat kwijt, gebruik dan eerst **Opname verwijderen**.
 
 ## Veelvoorkomende foutmeldingen
 
@@ -126,6 +161,6 @@ Het scherm **Verwerken** toont **Verwerking mislukt** met de reden. Start de ver
 | **Tijdslimiet bereikt: de AI-provider gaf niet op tijd een volledig antwoord.** | Start de taak opnieuw, of kies een sneller model. |
 | **API-limiet bereikt (429), ook na een nieuwe poging.** (Windows) | De aanbieder beperkt het aantal verzoeken. Wacht even en start de taak opnieuw, of verwerk minder opnames tegelijk. |
 | **Het antwoord van de AI-provider is afgebroken omdat het de maximale lengte bereikte.** (Windows) | Start de taak opnieuw. Blijft het terugkomen, kies dan een ander model. |
-| **Geannuleerd door gebruiker.** (Mac, iPhone en iPad) | Je hebt de taak zelf gestopt. Verwijder de taak of start hem opnieuw. |
+| **Geannuleerd door gebruiker.** (Mac, iPhone en iPad) | Je hebt de taak zelf gestopt. Verwijder de taak of kies **Opnieuw verwerken**. |
 
 Bij een fout stuurt de app automatisch een foutrapport naar de ontwikkelaar, zonder je opname, transcriptie of notulen. Meer oorzaken en oplossingen staan in [Problemen oplossen](problemen-oplossen.html).

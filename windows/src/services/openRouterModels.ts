@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { rememberReportedPrices } from "./suggestedModels";
 
 /** the provider's public model list; no key needed. Same source as the routed providerModels.swift on macOS. */
 export const OPENROUTER_MODELS_URL = "https://openrouter.ai/api/v1/models";
@@ -24,7 +25,9 @@ type ListEntry = {
 
 export function parseModelList(body: string): Map<string, OpenRouterModel> {
   const models = new Map<string, OpenRouterModel>();
-  for (const entry of (JSON.parse(body).data ?? []) as ListEntry[]) {
+  const entries = JSON.parse(body).data ?? [];
+  rememberReportedPrices("https://openrouter.ai/api/v1", entries);
+  for (const entry of entries as ListEntry[]) {
     if (!entry.id) continue;
     const r = entry.reasoning;
     const max = entry.top_provider?.max_completion_tokens;

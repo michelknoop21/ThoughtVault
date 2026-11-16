@@ -84,7 +84,7 @@ it("streams OpenRouter notes from openrouter.ai with the stored key, an idle lim
   const body = JSON.parse(request.body);
   expect(body.model).toBe("mistralai/mistral-large-4-0");
   expect(body.stream).toBe(true);
-  // mistral-large-4-0 reasons by default but offers only high or none: no effort is sent.
+  // This model reasons by default but offers only high or none: no effort is sent.
   expect(body).not.toHaveProperty("reasoning");
   expect(body.max_tokens).toBe(65_536);
 });
@@ -103,6 +103,36 @@ it("asks low effort only from an OpenRouter model that reasons by default", asyn
   expect(body).not.toHaveProperty("reasoning");
   expect(body.max_tokens).toBe(MAX_OUTPUT_TOKENS);
 });
+
+it("does not send a stored model above the price cap", async () => {
+  useSettingsStore.setState({ notulen_provider: "openrouter", openrouter_model: "anthropic/claude-opus-5" });
+  loadCredential.mockResolvedValue("or-key");
+  invoke.mockResolvedValue({ status: 200, body: JSON.stringify({ choices: [{ message: { content: "<p>Besluit</p>" } }] }) });
+  await LLMService.generateNotulen("QA test.", profile);
+  expect(JSON.parse(invoke.mock.calls[0][1].request.body).model).toBe("mistralai/mistral-large-4-0");
+});
+
+it("never sends a model with a known price above the cap to a custom endpoint", async () => {
+  useSettingsStore.setState({ notulen_provider: "ollama", ollama_url: "https://api.example.com/v1", ollama_model: "gpt-5.6-sol" });
+  loadCredential.mockResolvedValue("key");
+  invoke.mockResolvedValue({ status: 200, body: JSON.stringify({ choices: [{ message: { content: "<p>Besluit</p>" } }] }) });
+  await expect(LLMService.generateNotulen("QA test.", profile)).rejects.toThrow("gpt-5.6-sol valt boven de prijsgrens en is niet gebruikt. Kies een goedkoper model bij Instellingen > Verwerking.");
+  expect(invoke.mock.calls.some(call => call[1]?.request?.body?.includes("gpt-5.6-sol"))).toBe(false);
+  useSettingsStore.setState({ ollama_model: "eigen-llama-70b" });  // unknown price: usually self-hosted
+  expect(await LLMService.generateNotulen("QA test.", profile)).toBe("<p>Besluit</p>");
+});
+
+it.each([["lm-studio", "http://localhost:1234"], ["ollama", "http://localhost:11434"], ["lm-studio", "https://llm.example.com/v1"]] as const)(
+  "never sends a model with a known price above the cap via %s at %s", async (provider, url) => {
+    useSettingsStore.setState({ notulen_provider: provider, ollama_url: url, lm_studio_url: url, ollama_model: "gpt-5.6-sol", lm_studio_model: "gpt-5.6-sol" });
+    loadCredential.mockResolvedValue("key");
+    invoke.mockResolvedValue({ status: 200, body: JSON.stringify({ choices: [{ message: { content: "<p>Besluit</p>" } }] }) });
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("Failed to fetch")));
+    try {
+      await expect(LLMService.generateNotulen("QA test.", profile)).rejects.toThrow("gpt-5.6-sol valt boven de prijsgrens en is niet gebruikt.");
+      expect(invoke.mock.calls.some(call => call[1]?.request?.body?.includes("gpt-5.6-sol"))).toBe(false);
+    } finally { vi.unstubAllGlobals(); }
+  });
 
 it("asks other providers for no reasoning effort", async () => {
   const reply = { status: 200, body: JSON.stringify({ choices: [{ message: { content: "<p>Besluit</p>" } }] }) };

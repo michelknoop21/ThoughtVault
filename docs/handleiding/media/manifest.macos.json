@@ -21,7 +21,8 @@
     "platform": "macos",
     "args": "-TVDebugTab tasks",
     "sources": [
-      "macos/Views/TasksView.swift"
+      "macos/Views/TasksView.swift",
+      "macos/Views/TaskHistorySection.swift"
     ]
   },
   {

@@ -5,6 +5,7 @@ import { quickNotePrompt, ensureNotesSection } from "./quickNotes";
 import { DEFAULT_SETTINGS } from "../types";
 import type { Profile, NotulenProvider } from "../types";
 import { isHostedURL, isOllamaCloudURL } from "./ollamaModels";
+import { modelRefusal, usableModel } from "./suggestedModels";
 
 import { loadCorrectionsOrEmpty } from "../stores/personalCorrectionsStore";
 import { usePeopleDirectoryStore } from "../stores/peopleDirectoryStore";
@@ -55,9 +56,10 @@ function getConfig(override?: NotulenProvider): LLMConfig {
     ollamaModel: settings.ollama_model || "llama3.2",
     lmStudioUrl: settings.lm_studio_url || "http://localhost:1234",
     lmStudioModel: settings.lm_studio_model || "local-model",
-    openAIModel: settings.openai_model || DEFAULT_SETTINGS.openai_model,
-    anthropicModel: settings.anthropic_model || "claude-sonnet-5-5",
-    openRouterModel: settings.openrouter_model || DEFAULT_SETTINGS.openrouter_model,
+    // Metered providers: never a model above the price cap (the task details say so).
+    openAIModel: usableModel(settings.openai_model || DEFAULT_SETTINGS.openai_model, "openai"),
+    anthropicModel: usableModel(settings.anthropic_model || "claude-sonnet-5-5", "anthropic"),
+    openRouterModel: usableModel(settings.openrouter_model || DEFAULT_SETTINGS.openrouter_model, "openrouter"),
   };
 }
 
@@ -160,9 +162,10 @@ async function openAICompatibleRequest(
   const cloud = isOllamaCloudURL(baseUrl);
   if (cloud && !apiKey) throw new Error("Vul je Ollama Cloud API-sleutel in bij Instellingen.");
   const base = baseUrl.trim().replace(/\/+$/, "").replace(/\/v1$/, "");
-  // OpenRouter streams, so a long reasoning draft is limited by silence instead of total time (as on macOS).
+  // The routed provider streams, so a long reasoning draft is limited by silence instead of total time (as on macOS).
   const openRouter = providerKind(baseUrl) === "openrouter";
   const fields = openRouter ? openRouterRequestFields(await openRouterModel(model), MAX_OUTPUT_TOKENS) : { max_tokens: MAX_OUTPUT_TOKENS };
+  const refusal = modelRefusal(model, baseUrl); if (refusal) throw new Error(refusal);
   let response: { status: number; body: string };
   try {
     response = await modelRequest({ url: `${base}/v1/chat/completions`, headers,

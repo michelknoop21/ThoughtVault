@@ -255,34 +255,38 @@ class LLMServiceFactory {
             return OpenAICompatibleLLMService(baseURL: baseURL, model: model)
 
         case .openAI:
-            guard provider.hasAPIKey else { return MissingAPIKeyLLMService(providerName: provider.studioNameForErrors) }
-            let model = UserDefaults.standard.string(forKey: "openAIModel") ?? OpenAICompatibleLLMService.openAIDefaultModel
+            guard provider.hasAPIKey else { return UnavailableLLMService.missingKey(provider.studioNameForErrors) }
+            let model = SuggestedModels.currentModel(for: .openAI)  // within the price cap
             // Large hosted context: chunk only truly huge transcripts.
             return OpenAICompatibleLLMService(baseURL: OpenAICompatibleLLMService.openAIBaseURL, model: model,
                                               apiKey: KeychainService.shared.load(for: "openAIApiKey"),
                                               maxChunkCharacters: 400_000)
 
         case .anthropic:
-            guard provider.hasAPIKey else { return MissingAPIKeyLLMService(providerName: provider.studioNameForErrors) }
-            let model = UserDefaults.standard.string(forKey: "anthropicModel") ?? AnthropicLLMService.defaultModel
+            guard provider.hasAPIKey else { return UnavailableLLMService.missingKey(provider.studioNameForErrors) }
+            let model = SuggestedModels.currentModel(for: .anthropic)  // within the price cap
             return AnthropicLLMService(model: model, apiKey: KeychainService.shared.load(for: "anthropicApiKey"))
 
         case .ollamaCloud:
-            guard provider.hasAPIKey else { return MissingAPIKeyLLMService(providerName: provider.displayName) }
+            guard provider.hasAPIKey else { return UnavailableLLMService.missingKey(provider.displayName) }
             return OpenAICompatibleLLMService(baseURL: OpenAICompatibleLLMService.ollamaCloudBaseURL,
                                               model: UserDefaults.standard.string(forKey: "ollamaCloudModel") ?? "",
                                               apiKey: KeychainService.shared.load(for: "ollamaApiKey"))
 
         case .openRouter:
-            guard provider.hasAPIKey else { return MissingAPIKeyLLMService(providerName: provider.displayName) }
-            return OpenAICompatibleLLMService.openRouter(model: UserDefaults.standard.string(forKey: "openRouterModel"),
+            guard provider.hasAPIKey else { return UnavailableLLMService.missingKey(provider.displayName) }
+            return OpenAICompatibleLLMService.openRouter(model: SuggestedModels.currentModel(for: .openRouter),
                                                          apiKey: KeychainService.shared.load(for: "openRouterApiKey"))
 
         case .openAICompatible:
             // The bearer token is only sent over HTTPS, so other schemes are refused up front.
             guard let config = CloudAIConfiguration.selected(), provider.hasAPIKey,
                   URL(string: config.baseURL)?.scheme?.lowercased() == "https" else {
-                return MissingAPIKeyLLMService(providerName: provider.displayName)
+                return UnavailableLLMService.missingKey(provider.displayName)
+            }
+            // No fallback model on a custom endpoint: a known price above the cap is refused.
+            if let refusal = SuggestedModels.refusal(for: config.model, provider: .openAICompatible) {
+                return UnavailableLLMService(message: refusal)
             }
             return OpenAICompatibleLLMService.hosted(config, apiKey: KeychainService.shared.load(for: config.keychainKey))
 
@@ -302,13 +306,17 @@ class LLMServiceFactory {
     }
 }
 
-// MARK: - MissingAPIKeyLLMService
+// MARK: - UnavailableLLMService
 
-/// A hosted provider is selected (or synced from another device) but no key is
-/// stored on this device yet.
-private struct MissingAPIKeyLLMService: LLMService {
-    let providerName: String
+/// A provider that cannot be used now (no key, or a refused model); every request fails with `message`.
+private struct UnavailableLLMService: LLMService {
+    let message: String
     var isAvailable: Bool { false }
+
+    /// A hosted provider is selected (or synced from another device) but no key is stored on this device yet.
+    static func missingKey(_ providerName: String) -> UnavailableLLMService {
+        UnavailableLLMService(message: "Geen API-sleutel voor \(providerName) op dit apparaat. Vul die in bij Instellingen > Verwerking.")
+    }
 
     func generateNotulen(
         transcription: String,
@@ -318,11 +326,11 @@ private struct MissingAPIKeyLLMService: LLMService {
         constraints: [String],
         onProgress: @Sendable (String) -> Void
     ) async throws -> String {
-        throw LLMError.generationFailed("Geen API-sleutel voor \(providerName) op dit apparaat. Vul die in bij Instellingen > Verwerking.")
+        throw LLMError.generationFailed(message)
     }
 
     func complete(system: String, user: String) async throws -> String {
-        throw LLMError.generationFailed("Geen API-sleutel voor \(providerName) op dit apparaat. Vul die in bij Instellingen > Verwerking.")
+        throw LLMError.generationFailed(message)
     }
 }
 
@@ -612,6 +620,9 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
         onProgress: @Sendable (String) -> Void
     ) async throws -> String {
 
+        if let refusal = SuggestedModels.requestRefusal(for: model, baseURL: baseURL) {
+            throw LLMError.generationFailed(refusal)
+        }
         guard !model.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             throw LLMError.generationFailed("Kies een model bij Instellingen > Verwerking.")
         }

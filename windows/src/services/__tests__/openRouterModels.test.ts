@@ -59,3 +59,10 @@ it("fetches the list once without a key, and again after a failure", async () =>
   expect(await openRouterModel("anthropic/claude-sonnet-5.5")).toBeDefined();
   expect(invoke).toHaveBeenCalledTimes(2);
 });
+
+
+it("keeps the catalog price for the request cap", async () => {
+  const { modelRefusal } = await import("../suggestedModels");
+  parseModelList(JSON.stringify({ data: [{ id: "openai/gpt-5.6-terra", pricing: { prompt: "0.000004", completion: "0.000020" } }] }));
+  expect(modelRefusal("openai/gpt-5.6-terra", "https://openrouter.ai/api/v1")).toContain("prijsgrens");
+});

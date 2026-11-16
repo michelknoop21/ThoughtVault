@@ -9,6 +9,7 @@
 
 import Foundation
 import CryptoKit
+import os
 
 private let logger = AppLog(category: "ObsidianService")
 
@@ -46,8 +47,22 @@ struct ObsidianService: Sendable {
     /// Auto-export is on when the user enabled the integration in Settings.
     static var isEnabled: Bool { UserDefaults.standard.bool(forKey: enabledKey) }
 
+    private static let loggedSkip = OSAllocatedUnfairLock(initialState: false)
+
+    /// The one switch gate in front of every vault file access (VaultFolderStore)
+    /// and every REST call. Switch off means hands off: nothing is read, written or
+    /// resolved. The skip is logged once per session, not per call.
+    static var isAllowed: Bool {
+        if isEnabled { return true }
+        if loggedSkip.withLock({ logged in defer { logged = true }; return !logged }) {
+            logger.info("Obsidian staat uit: vault en REST-API worden overgeslagen")
+        }
+        return false
+    }
+
     private func localURL(_ path: String) -> URL? {
-        guard let base = URL(string: baseURL),
+        guard Self.isAllowed,
+              let base = URL(string: baseURL),
               ["http", "https"].contains(base.scheme ?? ""),
               ["127.0.0.1", "localhost", "::1"].contains(base.host ?? ""),
               base.user == nil, base.password == nil,
@@ -59,6 +74,7 @@ struct ObsidianService: Sendable {
         case missingConfig
         case badStatus(Int, String)
         case externallyChanged
+        case vaultLinkBroken
 
         var errorDescription: String? {
             switch self {
@@ -68,6 +84,8 @@ struct ObsidianService: Sendable {
                 return "Obsidian gaf status \(code)\(detail.isEmpty ? "" : ": \(detail)")."
             case .externallyChanged:
                 return "Deze notule is gewijzigd in Obsidian. Haal die versie eerst op voordat je exporteert."
+            case .vaultLinkBroken:
+                return String(localized: "De koppeling met je Obsidian-vault werkt niet meer. Je notules staan wel in ThoughtVault.")
             }
         }
     }
@@ -153,7 +171,9 @@ struct ObsidianService: Sendable {
                 markdown = try await ObsidianService().readRemote(filename: filename)
             }
         }
-        guard let markdown else { throw ObsidianError.badStatus(404, "Notule niet gevonden") }
+        guard let markdown else {
+            throw VaultFolderStore.isLinkBroken ? ObsidianError.vaultLinkBroken : ObsidianError.badStatus(404, "Notule niet gevonden")
+        }
         return (filename, markdown, markdownToNotuleHTML(markdown))
     }
 
@@ -269,6 +289,7 @@ struct ObsidianService: Sendable {
         tags: [String],
         noteID: String? = nil
     ) {
+        guard isAllowed else { return }
         // Prefer the file-based vault folder when configured — it is the only path
         // that works on iOS and needs no REST plugin running.
         if VaultFolderStore.isConfigured {
@@ -277,7 +298,8 @@ struct ObsidianService: Sendable {
                 title: title, date: date, participants: participants,
                 profileName: profileName, profileId: profileId, tags: tags, noteID: noteID
             ) + htmlToMarkdown(html) + "\n"
-            if VaultFolderStore.writeNote(filename: filename, markdown: markdown) != .written {
+            // A broken link is logged once by VaultFolderStore and shown as one banner.
+            if VaultFolderStore.writeNote(filename: filename, markdown: markdown) != .written, !VaultFolderStore.isLinkBroken {
                 logger.error("Export naar Obsidian-map mislukt")
             }
             return
@@ -321,7 +343,9 @@ struct ObsidianService: Sendable {
             switch VaultFolderStore.writeNote(filename: filename, markdown: markdown) {
             case .written: break
             case .externallyChanged: throw ObsidianError.externallyChanged
-            case .failed: throw ObsidianError.badStatus(0, "Kon niet naar de vault-map schrijven")
+            case .failed:
+                throw VaultFolderStore.isLinkBroken
+                    ? ObsidianError.vaultLinkBroken : ObsidianError.badStatus(0, "Kon niet naar de vault-map schrijven")
             }
             return
         }

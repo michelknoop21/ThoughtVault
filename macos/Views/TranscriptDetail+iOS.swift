@@ -185,8 +185,10 @@ extension TranscriptDetailView {
             Menu {
                 Button("PDF", systemImage: "doc.richtext") { exportAsPDF() }
                 Button("Markdown", systemImage: "doc.plaintext") { exportAsMarkdown() }
-                Button("Exporteer naar Obsidian", systemImage: "tray.and.arrow.down") { exportToObsidian() }
-                Button("Haal op uit Obsidian", systemImage: "tray.and.arrow.up") { importFromObsidian() }
+                if obsidianEnabled {
+                    Button("Exporteer naar Obsidian", systemImage: "tray.and.arrow.down") { exportToObsidian() }
+                    Button("Haal op uit Obsidian", systemImage: "tray.and.arrow.up") { importFromObsidian() }
+                }
                 Button("Platte tekst", systemImage: "doc.text") { exportAsTXT() }
                 ProspectFlowMenuItems(transcript: fullTranscript, onOpenError: { errorMessage = $0 }) { showProspectFlowSheet = true }
                 Divider()

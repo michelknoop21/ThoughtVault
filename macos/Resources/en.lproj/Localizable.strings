@@ -626,3 +626,10 @@
 "Vorige maand" = "Last month";
 "Geteld op dit apparaat." = "Counted on this device.";
 "De kosten zitten vooral in de controle: die toetst elke zin van de notule apart aan het gesprek." = "Most of the cost is in the check: it tests every sentence of the notes against the conversation separately.";
+
+/* Obsidian link */
+"De koppeling met je Obsidian-vault werkt niet meer. Je notules staan wel in ThoughtVault." = "The link to your Obsidian vault no longer works. Your notes are still in ThoughtVault.";
+"Vault opnieuw kiezen" = "Choose vault again";
+"Obsidian uitzetten" = "Turn off Obsidian";
+"Deze map lijkt geen Obsidian-vault: er staat geen .obsidian-map in." = "This folder does not look like an Obsidian vault: it has no .obsidian folder.";
+"Zet Obsidian eerst aan" = "Turn on Obsidian first";

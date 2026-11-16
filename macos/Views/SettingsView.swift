@@ -217,24 +217,19 @@ struct SettingsView: View {
 
     /// Picker for the vault folder; attached once to whatever hosts the Obsidian rows.
     func vaultFolderImporter<V: View>(_ content: V) -> some View {
-        content.fileImporter(
-            isPresented: $showVaultFolderPicker,
-            allowedContentTypes: [.folder],
-            allowsMultipleSelection: false
-        ) { result in
-            if case .success(let urls) = result, let url = urls.first {
-                do {
-                    try VaultFolderStore.setFolder(url)
-                    vaultFolderName = VaultFolderStore.folderName
-                } catch {
-                    obsidianTestResult = .failure("Map-koppeling mislukt: \(error.localizedDescription)")
-                }
+        content.obsidianVaultPicker(isPresented: $showVaultFolderPicker) { error in
+            if let error {
+                obsidianTestResult = .failure(error)
+            } else {
+                vaultFolderName = VaultFolderStore.folderName
             }
         }
     }
 
     @ViewBuilder
     var obsidianRows: some View {
+        ObsidianLinkBanner { showVaultFolderPicker = true }
+
         Toggle(isOn: $obsidianEnabled) {
             Text("Automatisch exporteren naar Obsidian")
                 .font(TS.Font.body)
@@ -362,7 +357,8 @@ struct SettingsView: View {
             }
         }
         .buttonStyle(SecondaryButtonStyle())
-        .disabled(obsidianTesting)
+        .disabled(obsidianTesting || !obsidianEnabled)
+        .help(obsidianEnabled ? Text(verbatim: "") : Text("Zet Obsidian eerst aan"))
     }
 
     @ViewBuilder

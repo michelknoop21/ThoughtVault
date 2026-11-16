@@ -349,6 +349,7 @@ extension ObsidianService.ObsidianError: LogCoded {
         case .missingConfig: return "missingConfig"
         case .badStatus(let status, _): return "badStatus http=\(status)"
         case .externallyChanged: return "externallyChanged"
+        case .vaultLinkBroken: return "vaultLinkBroken"
         }
     }
 }

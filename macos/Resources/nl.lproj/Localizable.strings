@@ -626,3 +626,10 @@
 "Vorige maand" = "Vorige maand";
 "Geteld op dit apparaat." = "Geteld op dit apparaat.";
 "De kosten zitten vooral in de controle: die toetst elke zin van de notule apart aan het gesprek." = "De kosten zitten vooral in de controle: die toetst elke zin van de notule apart aan het gesprek.";
+
+/* Obsidian link */
+"De koppeling met je Obsidian-vault werkt niet meer. Je notules staan wel in ThoughtVault." = "De koppeling met je Obsidian-vault werkt niet meer. Je notules staan wel in ThoughtVault.";
+"Vault opnieuw kiezen" = "Vault opnieuw kiezen";
+"Obsidian uitzetten" = "Obsidian uitzetten";
+"Deze map lijkt geen Obsidian-vault: er staat geen .obsidian-map in." = "Deze map lijkt geen Obsidian-vault: er staat geen .obsidian-map in.";
+"Zet Obsidian eerst aan" = "Zet Obsidian eerst aan";

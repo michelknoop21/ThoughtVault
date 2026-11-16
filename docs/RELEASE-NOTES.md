@@ -8,6 +8,15 @@ Elke release is een blok `## <versie> - <titel>` met direct daaronder een cursie
 met datum en platforms, bijvoorbeeld `*12 november 2026 · macOS · iOS · Windows*`.
 De nieuwste release staat bovenaan.
 
+## 1.0.328 - Betrouwbaarder opnemen en notulen maken
+
+*16 november 2026 · macOS · iOS · Windows*
+
+- **Systeemaudio op de Mac** volgt veranderingen in de samplefrequentie en blijft gelijklopen met je microfoon. De eerder ontbrekende reparatie voor robotachtige stemmen is weer opgenomen. Lees meer bij [Opnemen](opnemen.html).
+- Bij **Notulen instellen** controleert Volgende de sleutel die je zojuist hebt ingevoerd. Werkt de sleutel niet of is de aanbieder onbereikbaar, dan kun je teruggaan of bewust overslaan. Zie [Aan de slag](aan-de-slag.html).
+- De prijsgrens van USD 3 invoer en USD 15 uitvoer per miljoen tokens wordt ook bij eigen serveradressen gecontroleerd. Een hogere, vers opgehaalde modelprijs telt mee. Zie [Lokaal of cloud](lokaal-of-cloud.html).
+- **Lange notulen op Windows** kunnen doorgaan zolang het antwoord binnenkomt. Een afgebroken antwoord wordt als fout gemeld. Het gekozen model krijgt passende uitvoerlimieten. Zie [Notulen](notulen.html).
+
 ## 1.0.327 - Taken met geschiedenis, modelkeuze bij de eerste start
 
 *16 november 2026 · macOS · iOS · Windows*

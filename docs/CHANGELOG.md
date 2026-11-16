@@ -5,6 +5,14 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2026-11-16]: 1.0.328, opnamekwaliteit en betrouwbaardere notulen
+
+### Fixed
+- macOS: de ontbrekende systeemaudiofix is teruggebracht. Opnamen volgen wijzigingen in samplefrequentie en blijven uitgelijnd met de microfoon. Een regressietest controleert herhaalde wissels tussen 16, 24 en 48 kHz, ook bij een vertraagde formaatmelding.
+- Introductie op macOS, iOS en Windows: Volgende slaat eerst de ingevoerde sleutel op en controleert precies die sleutel. Alleen een geslaagde controle stelt de aanbieder in; bij een weigering of onbereikbare aanbieder kan de gebruiker bewust overslaan.
+- De prijsgrens van USD 3 invoer en USD 15 uitvoer per miljoen tokens geldt in het gedeelde verzoekpad. Een hogere, verse catalogusprijs telt mee, ook bij een eigen serveradres.
+- Windows: lange antwoorden worden gestreamd en afgebroken antwoorden worden als fout gemeld. Het uitvoerplafond en de denkstand volgen de mogelijkheden van het gekozen model.
+
 ## [2026-11-13]: 1.0.322, conceptofferte in Prospect Flow (Windows)
 
 ### Added

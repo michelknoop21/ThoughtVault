@@ -31,9 +31,15 @@ class FloatingWidgetController {
     func show(recordingVM: RecordingViewModel) {
         guard floatingWindow == nil else { return }
 
+        // fixedSize: the widget takes its ideal width, so a longer timer
+        // (1:19:23) or label (PAUZE) grows the panel instead of being truncated.
         let hostingView = NSHostingView(
             rootView: RecordingWidgetView()
+                .fixedSize()
                 .padding(16) // Room for shadows outside the capsule
+                .onGeometryChange(for: CGSize.self) { $0.size } action: { [weak self] size in
+                    self?.fit(to: size)
+                }
                 .environment(recordingVM)
         )
         // Ensure the hosting view has a transparent layer so the capsule
@@ -48,6 +54,8 @@ class FloatingWidgetController {
             defer: false
         )
         panel.contentView = hostingView
+        let fitting = hostingView.fittingSize
+        panel.setContentSize(CGSize(width: ceil(fitting.width), height: ceil(fitting.height)))
         panel.isOpaque = false
         panel.backgroundColor = .clear
         panel.hasShadow = false
@@ -105,6 +113,18 @@ class FloatingWidgetController {
         let x = screen.visibleFrame.maxX - panel.frame.width - margin
         let y = screen.visibleFrame.minY + margin
         panel.setFrameOrigin(NSPoint(x: x, y: y))
+    }
+
+    /// Resizes the panel to the widget's size, keeping the right edge in place
+    /// so a widget the user dragged somewhere stays where they put it.
+    private func fit(to size: CGSize) {
+        guard let panel = floatingWindow else { return }
+        let width = ceil(size.width), height = ceil(size.height)
+        var frame = panel.frame
+        guard frame.width != width || frame.height != height else { return }
+        frame.origin.x += frame.width - width
+        frame.size = CGSize(width: width, height: height)
+        panel.setFrame(frame, display: true)
     }
 
     @objc private func screenParametersDidChange() {

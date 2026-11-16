@@ -171,6 +171,7 @@
 		AB000002 /* MigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000002 /* MigrationTests.swift */; };
 		AB0F0A03 /* AppLogTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0F0A03 /* AppLogTests.swift */; };
 		AB0F0B03 /* SupportRelayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0F0B03 /* SupportRelayTests.swift */; };
+		AB0F0B90 /* RecordingWidgetLayoutTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0F0B90 /* RecordingWidgetLayoutTests.swift */; };
 		AB000003 /* PersonProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000003 /* PersonProfileTests.swift */; };
 		AB0000K1 /* KeychainServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000K1 /* KeychainServiceTests.swift */; };
 		AB000004 /* PersonDirectoryServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000004 /* PersonDirectoryServiceTests.swift */; };
@@ -526,6 +527,7 @@
 		FB000002 /* MigrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MigrationTests.swift; sourceTree = "<group>"; };
 		FB0F0A03 /* AppLogTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLogTests.swift; sourceTree = "<group>"; };
 		FB0F0B03 /* SupportRelayTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupportRelayTests.swift; sourceTree = "<group>"; };
+		FB0F0B90 /* RecordingWidgetLayoutTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingWidgetLayoutTests.swift; sourceTree = "<group>"; };
 		FB0000K1 /* KeychainServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainServiceTests.swift; sourceTree = "<group>"; };
 		FB000003 /* PersonProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonProfileTests.swift; sourceTree = "<group>"; };
 		FB000004 /* PersonDirectoryServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonDirectoryServiceTests.swift; sourceTree = "<group>"; };
@@ -860,6 +862,7 @@
 				FB000002 /* MigrationTests.swift */,
 				FB0F0A03 /* AppLogTests.swift */,
 				FB0F0B03 /* SupportRelayTests.swift */,
+				FB0F0B90 /* RecordingWidgetLayoutTests.swift */,
 				FA0F0D301 /* SupportViewModelTests.swift */,
 				FB000003 /* PersonProfileTests.swift */,
 				FB0000K1 /* KeychainServiceTests.swift */,
@@ -1212,6 +1215,7 @@
 				AB000002 /* MigrationTests.swift in Sources */,
 				AB0F0A03 /* AppLogTests.swift in Sources */,
 				AB0F0B03 /* SupportRelayTests.swift in Sources */,
+				AB0F0B90 /* RecordingWidgetLayoutTests.swift in Sources */,
 				AA0F0D301 /* SupportViewModelTests.swift in Sources */,
 				AB000003 /* PersonProfileTests.swift in Sources */,
 				AB0000K1 /* KeychainServiceTests.swift in Sources */,

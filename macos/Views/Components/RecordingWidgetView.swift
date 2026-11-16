@@ -53,6 +53,7 @@ struct RecordingWidgetView: View {
                 .font(.system(size: 15, weight: .medium, design: .monospaced))
                 .foregroundStyle(Color.labelPrimary)
                 .monospacedDigit()
+                .lineLimit(1)
                 .frame(minWidth: 52, alignment: .trailing)
 
             // Divider before controls

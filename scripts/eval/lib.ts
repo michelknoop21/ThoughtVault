@@ -36,7 +36,7 @@ export interface RunResult { commit?: string;
   model: string; conversation: string; rep: number; detail: string;
   found: number; total: number; missing: string[];
   chars: number; words: number; nalopen: number;
-  durationMs: number; costUsd: number; costKnown: boolean; error: string | null;
+  durationMs: number; costUsd: number; costKnown: boolean; budgetLimited?: boolean; error: string | null;
 }
 
 const mean = (xs: number[]) => xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0;
@@ -75,4 +75,40 @@ export function secureDir(dir: string): void {
 export function secureWrite(file: string, data: string, append = false): void {
   writeFileSync(file, data, { mode: 0o600, flag: append ? "a" : "w" });
   chmodSync(file, 0o600);
+}
+
+/** Reserves a request's upper cost bound before it starts, including concurrent requests. */
+export class SpendBudget {
+  spent = 0;
+  waited = false;
+  blocked = false;
+  private held = 0;
+  private pending = new Set<Promise<void>>();
+
+  constructor(readonly limit: number) {
+    if (!Number.isFinite(limit) || limit <= 0) throw new Error("Ongeldig budget");
+  }
+
+  async reserve(ceiling: number): Promise<(actual?: number) => void> {
+    if (!Number.isFinite(ceiling) || ceiling < 0) throw new Error("Ongeldige kostenraming");
+    while (true) {
+      if (this.blocked) throw new Error("Kosten onbekend; geen nieuwe aanvragen");
+      if (this.spent + ceiling > this.limit) throw new Error("Budget bereikt");
+      if (this.spent + this.held + ceiling <= this.limit) break;
+      this.waited = true;
+      await Promise.race(this.pending);
+    }
+    this.held += ceiling;
+    let finish!: () => void;
+    const ticket = new Promise<void>(resolve => { finish = resolve; });
+    this.pending.add(ticket);
+    return actual => {
+      if (!this.pending.delete(ticket)) return;
+      const known = actual !== undefined && Number.isFinite(actual) && actual >= 0;
+      this.spent += known ? actual : ceiling;
+      this.held -= ceiling;
+      if (!known || actual! > ceiling) this.blocked = true;
+      finish();
+    };
+  }
 }

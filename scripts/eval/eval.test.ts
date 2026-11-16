@@ -7,19 +7,31 @@ import { join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { expect, it, vi } from "vitest";
 import { LLMService } from "../../windows/src/services/llm";
-import { UsageMeter } from "../../windows/src/services/usageMeter";
+import { UsageMeter, parseUsage } from "../../windows/src/services/usageMeter";
 import { useSettingsStore } from "../../windows/src/stores/settingsStore";
+import { readChatCompletion } from "../../windows/src/services/chatCompletion";
+import { PRICE_CAP } from "../../windows/src/services/suggestedModels";
 import { DEFAULT_PROFILES } from "../../windows/src/types";
-import { assertOutsideRepo, htmlToText, loadFacts, nalopenCount, scoreFacts, secureDir, secureWrite, summaryTable, type RunResult } from "./lib";
+import { assertOutsideRepo, htmlToText, loadFacts, nalopenCount, scoreFacts, secureDir, secureWrite, summaryTable, SpendBudget, type RunResult } from "./lib";
 
 /** Commit the pipeline ran on, so results before and after a pipeline change stay comparable. */
 const COMMIT = (() => { try { return execFileSync("git", ["rev-parse", "--short", "HEAD"], { encoding: "utf8" }).trim(); } catch { return "onbekend"; } })();
-const state = vi.hoisted(() => ({ dry: false, key: "", dryCost: 0.01, calls: 0, flaky: "" }));
+const state = vi.hoisted(() => ({ dry: false, key: "", dryCost: 0.01, calls: 0, flaky: "", spendBudget: null as SpendBudget | null }));
 
 const evalInvoke = async (command: string, args: { request?: { url: string; method?: string; headers?: Record<string, string>; body?: string | null; timeout_seconds: number; idle_timeout_seconds?: number } }) => {
   if (command !== "proxy_request" || !args.request) return undefined;
   const { url, method = "POST", headers, body, timeout_seconds, idle_timeout_seconds } = args.request;
   if (state.dry) return method === "GET" ? { status: 200, body: '{"data":[]}' } : dryResponse(JSON.parse(body!));
+  let settle: ((actual?: number) => void) | undefined;
+  if (method === "POST" && new URL(url).hostname === "openrouter.ai") {
+    const request = JSON.parse(body!);
+    if (!Number.isInteger(request.max_tokens) || request.max_tokens <= 0) throw new Error("Geen uitvoerlimiet");
+    // Text-only requests: UTF-8 bytes plus message overhead conservatively bound input tokens.
+    const ceiling = ((new TextEncoder().encode(body!).length + 1024) * PRICE_CAP.input
+      + request.max_tokens * PRICE_CAP.output) / 1_000_000;
+    if (!state.spendBudget) throw new Error("Geen budget ingesteld");
+    settle = await state.spendBudget.reserve(ceiling);
+  }
   const controller = new AbortController();
   const total = setTimeout(() => controller.abort(), timeout_seconds * 1000);
   let idle: ReturnType<typeof setTimeout> | undefined;
@@ -43,17 +55,37 @@ const evalInvoke = async (command: string, args: { request?: { url: string; meth
       }
       text += decoder.decode();
     } else text = await res.text();
+    if (settle) settle(parseUsage(readChatCompletion(text).usage)?.cost);
     return { status: res.status, body: text, headers: Object.fromEntries(res.headers) };
   } catch (error) {
     if (controller.signal.aborted) throw `Tijdslimiet bereikt na ${timeout_seconds} s`;
     throw error;
   } finally {
+    settle?.();
     clearTimeout(total);
     clearTimeout(idle);
   }
 };
 
 (globalThis as { __evalInvoke?: unknown }).__evalInvoke = evalInvoke;
+
+it("reserves concurrent costs and stops on unknown costs", async () => {
+  const budget = new SpendBudget(1);
+  const first = await budget.reserve(0.8);
+  let admitted = false;
+  const second = budget.reserve(0.8).then(release => { admitted = true; return release; });
+  await Promise.resolve();
+  expect(admitted).toBe(false);
+  first(0.1);
+  const release = await second;
+  release(0.1);
+  expect(budget.spent).toBeCloseTo(0.2);
+  await expect(budget.reserve(0.9)).rejects.toThrow("Budget bereikt");
+  const unknown = await budget.reserve(0.2);
+  unknown();
+  expect(budget.spent).toBeCloseTo(0.4);
+  await expect(budget.reserve(0.1)).rejects.toThrow("Kosten onbekend");
+});
 
 it("forwards catalog GET requests without a body", async () => {
   const fetchMock = vi.fn().mockResolvedValue({ status: 200, text: async () => '{"data":[]}', headers: new Headers() });
@@ -128,6 +160,7 @@ it("notule-eval", async () => {
   if (a.detail && !["kort", "normaal", "volledig"].includes(a.detail)) throw new Error("--detail: kort, normaal of volledig");
   const reps = Number(a.reps), budget = Number(a.budget);
   if (!(reps >= 1) || !(budget > 0)) throw new Error("--reps en --budget moeten positief zijn");
+  state.spendBudget = new SpendBudget(budget);
   state.dry = a["dry-run"]; state.dryCost = Number(a["dry-cost"]);
   const dataDir = resolve(a["data-dir"] ?? (state.dry ? join(import.meta.dirname, "fixtures") : join(homedir(), "Documents/ThoughtVault-eval")));
   const conversations = state.dry ? ["demo"] : a.conversations!.split(",");
@@ -170,15 +203,16 @@ it("notule-eval", async () => {
     catch (e) { error = e instanceof Error ? e.message : String(e); }
     const text = htmlToText(html), score = scoreFacts(text, data[conversation].facts);
     const run: RunResult = { model, conversation, rep, detail: "n.v.t.", ...score, chars: text.length, words: text.split(" ").filter(Boolean).length,
-      nalopen: nalopenCount(html), durationMs: Date.now() - started, costUsd: meter.totalCost, costKnown: meter.costKnown, error, commit: COMMIT };
+      nalopen: nalopenCount(html), durationMs: Date.now() - started, costUsd: meter.totalCost, costKnown: meter.costKnown, budgetLimited: state.spendBudget.waited, error, commit: COMMIT };
     runs.push(run); total += run.costUsd;
     secureWrite(join(resultsDir, `${model.replace(/\//g, "_")}__${conversation}__r${rep}.html`), html);
     secureWrite(join(resultsDir, "runs.jsonl"), JSON.stringify(run) + "\n", true);
     console.log(`${model} ${conversation} r${rep}: ${error ? "FOUT" : `${run.found}/${run.total} feiten`}, USD ${run.costUsd.toFixed(4)}, ${(run.durationMs / 1000).toFixed(1)}s`);
     // A failed run counts as an error and the comparison goes on; only a successful run
     // without a reported cost stops it, because then the budget can no longer be tracked.
-    if (!meter.costKnown && !error && !state.dry) { stopped = "Kosten van een verzoek onbekend; gestopt om het budget te bewaken."; break outer; }
+    if ((!meter.costKnown || state.spendBudget.blocked) && !state.dry) { stopped = "Kosten van een verzoek onbekend; gestopt om het budget te bewaken."; break outer; }
   }
+  if (state.spendBudget.waited) stopped += "\nParalleliteit tijdelijk begrensd door het kostenplafond; deze looptijden zijn niet de normale app-snelheid.";
   const summary = summaryTable(runs, total) + (stopped ? `\n${stopped}\n` : "") + `\nDetailniveau: n.v.t. (pijplijn kent het niet)\n`;
   secureWrite(join(resultsDir, "summary.md"), summary);
   console.log(`\n${summary}\nResultaten: ${resultsDir}`);

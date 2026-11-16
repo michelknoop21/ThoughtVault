@@ -124,8 +124,8 @@ enum TaskHistoryFormat {
     }
 
     /// "<model> · $2 / $10 per mln tokens" for models with a known price.
-    static func modelLabel(_ model: String) -> String {
-        guard let price = SuggestedModels.price(of: model) else { return model }
+    static func modelLabel(_ model: String, price reported: ModelPrice? = nil) -> String {
+        guard let price = reported ?? SuggestedModels.price(of: model) else { return model }
         return "\(model) · $\(price.input.formatted()) / $\(price.output.formatted()) per mln tokens"
     }
 }

@@ -32,11 +32,13 @@ enum SuggestedModels {
         "gpt-5.6-luna": ModelPrice(input: 0.20, output: 1.20),
         "gpt-5.6-terra": ModelPrice(input: 2, output: 12),
         "gpt-5.6-sol": ModelPrice(input: 5, output: 30),
+        "mistral-large-4-0": ModelPrice(input: 1.36, output: 4.18),
     ]
 
     /// The short list shown first in every model picker.
     static func suggested(for provider: NotulenProvider) -> [String] {
         switch provider {
+        case .openRouter: return ["mistralai/mistral-large-4-0", "anthropic/claude-sonnet-5-5", "openai/gpt-5.6-terra"]
         case .anthropic: return ["claude-sonnet-5-5", "claude-haiku-5-5"]
         case .openAI: return ["gpt-5.6-terra", "gpt-5.6-luna"]
         case .ollamaCloud: return ["mistral-large-4", "gpt-oss:120b"]
@@ -46,7 +48,7 @@ enum SuggestedModels {
 
     /// Providers that bill every token to the user's own API key.
     static func isMetered(_ provider: NotulenProvider) -> Bool {
-        provider == .openAI || provider == .anthropic || provider == .openAICompatible
+        provider == .openAI || provider == .anthropic || provider == .openAICompatible || provider == .openRouter
     }
 
     /// Known price; a routed id such as `vendor/model` falls back to its last part.
@@ -67,10 +69,12 @@ enum SuggestedModels {
     }
 
     /// Picker choices: suggestions first, then the current and listed models that pass the cap.
-    static func choices(for provider: NotulenProvider, current: String, available: [String] = []) -> [String] {
+    /// `prices` holds what the provider reported for its listed models.
+    static func choices(for provider: NotulenProvider, current: String, available: [String] = [],
+                        prices: [String: ModelPrice] = [:]) -> [String] {
         var seen = Set<String>()
         return (suggested(for: provider) + [current] + available).filter {
-            !$0.isEmpty && isAllowed($0, provider: provider) && seen.insert($0).inserted
+            !$0.isEmpty && isAllowed($0, provider: provider, reportedPrice: prices[$0]) && seen.insert($0).inserted
         }
     }
 
@@ -80,6 +84,30 @@ enum SuggestedModels {
         guard let input = prompt.flatMap(Double.init), let output = completion.flatMap(Double.init),
               input >= 0, output >= 0 else { return nil }
         return ModelPrice(input: input * 1_000_000, output: output * 1_000_000)
+    }
+
+    /// The models a `/models` endpoint lists with the price it reports for each; nil when unreachable.
+    static func fetchReportedPrices(baseURL: String, apiKey: String) async -> [String: ModelPrice]? {
+        guard let url = URL(string: baseURL + "/models") else { return nil }
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 10
+        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        guard let (data, response) = try? await URLSession.shared.data(for: request),
+              (response as? HTTPURLResponse)?.statusCode == 200,
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let items = json["data"] as? [[String: Any]] else { return nil }
+        return reportedPrices(items)
+    }
+
+    /// Model id to reported price; a model without a usable price is left out.
+    static func reportedPrices(_ items: [[String: Any]]) -> [String: ModelPrice] {
+        var result: [String: ModelPrice] = [:]
+        for item in items {
+            guard let id = item["id"] as? String else { continue }
+            let pricing = item["pricing"] as? [String: Any]
+            result[id] = pricePerToken(prompt: pricing?["prompt"] as? String, completion: pricing?["completion"] as? String)
+        }
+        return result
     }
 
     // MARK: - Settings
@@ -92,14 +120,14 @@ enum SuggestedModels {
         case .ollama: return "ollamaModel"
         case .ollamaCloud: return "ollamaCloudModel"
         case .lmStudio: return "lmStudioModel"
+        case .openRouter: return "openRouterModel"
         default: return nil
         }
     }
 
     /// The provider local notule generation uses; the server setting falls back to the local default.
     static var currentProvider: NotulenProvider {
-        let raw = UserDefaults.standard.string(forKey: "notulenProvider") ?? NotulenProvider.platformDefault.rawValue
-        let provider = NotulenProvider(rawValue: raw) ?? .ollama
+        let provider = NotulenProvider.configured()
         return provider == .cloud ? .ollama : provider
     }
 
@@ -108,6 +136,7 @@ enum SuggestedModels {
         switch provider {
         case .openAI: return OpenAICompatibleLLMService.openAIDefaultModel
         case .anthropic: return AnthropicLLMService.defaultModel
+        case .openRouter: return OpenAICompatibleLLMService.openRouterDefaultModel
         case .ollama: return "llama3.2"
         case .lmStudio: return "local-model"
         case .openAICompatible: return CloudAIConfiguration.selected()?.model ?? ""

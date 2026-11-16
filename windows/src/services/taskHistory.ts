@@ -127,7 +127,7 @@ export function currentContext(profileId?: string): TaskHistoryContext {
     return { transcription_engine: "ThoughtVault-server", notule_provider: "ThoughtVault-server", profile_name: profile?.name };
   }
   const provider = modelProvider(settings);
-  const names: Record<string, string> = { openai: "OpenAI", anthropic: "Claude", ollama: "Ollama", "ollama-cloud": "Ollama Cloud", "lm-studio": "LM Studio" };
+  const names: Record<string, string> = { openrouter: "OpenRouter", openai: "OpenAI", anthropic: "Claude", ollama: "Ollama", "ollama-cloud": "Ollama Cloud", "lm-studio": "LM Studio" };
   return {
     transcription_engine: `Whisper · ${settings.whisper_model || "medium"}`,
     notule_provider: names[provider] ?? provider,

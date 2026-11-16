@@ -4,7 +4,7 @@ import XCTest
 final class SuggestedModelsTests: XCTestCase {
 
     func testSuggestionsStayWithinTheCap() {
-        for provider in [NotulenProvider.openAI, .anthropic] {
+        for provider in [NotulenProvider.openAI, .anthropic, .openRouter] {
             let suggested = SuggestedModels.suggested(for: provider)
             XCTAssertFalse(suggested.isEmpty)
             for model in suggested {
@@ -42,5 +42,18 @@ final class SuggestedModelsTests: XCTestCase {
         XCTAssertFalse(SuggestedModels.isAllowed("x/big-model", provider: .openAICompatible, reportedPrice: expensive))
         XCTAssertNil(SuggestedModels.pricePerToken(prompt: "-1", completion: "-1"))
         XCTAssertNil(SuggestedModels.pricePerToken(prompt: nil, completion: "0.1"))
+    }
+
+    func testReportedModelListKeepsOnlyPricedModels() {
+        let prices = SuggestedModels.reportedPrices([
+            ["id": "vendor/cheap", "pricing": ["prompt": "0.000001", "completion": "0.000002"]],
+            ["id": "vendor/costly", "pricing": ["prompt": "0.00001", "completion": "0.00005"]],
+            ["id": "vendor/variable", "pricing": ["prompt": "-1", "completion": "-1"]],
+        ])
+        XCTAssertEqual(Set(prices.keys), ["vendor/cheap", "vendor/costly"])
+        let choices = SuggestedModels.choices(for: .openRouter, current: "", available: prices.keys.sorted(), prices: prices)
+        XCTAssertTrue(choices.contains("vendor/cheap"))
+        XCTAssertFalse(choices.contains("vendor/costly"))
+        XCTAssertEqual(choices.first, "mistralai/mistral-large-4-0")
     }
 }

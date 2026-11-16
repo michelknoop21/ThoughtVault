@@ -3,7 +3,7 @@ import { isModelAllowed, modelChoices, modelProvider, pricePerToken, suggestedMo
 
 describe("suggested models and price cap", () => {
   it("keeps every suggestion of a metered provider within the cap", () => {
-    for (const provider of ["openai", "anthropic"] as const) {
+    for (const provider of ["openai", "anthropic", "openrouter"] as const) {
       expect(suggestedModels(provider).length).toBeGreaterThan(0);
       for (const model of suggestedModels(provider)) expect(isModelAllowed(model, provider)).toBe(true);
     }
@@ -35,6 +35,11 @@ describe("suggested models and price cap", () => {
     expect(isModelAllowed("x/big", "openai", pricePerToken({ prompt: "0.000005", completion: "0.000025" }))).toBe(false);
     expect(pricePerToken({ prompt: "-1", completion: "-1" })).toBeUndefined();
     expect(pricePerToken({ completion: "0.1" })).toBeUndefined();
+  });
+
+  it("caps routed model ids by their last part", () => {
+    expect(isModelAllowed("anthropic/claude-opus-5-5", "openrouter")).toBe(false);
+    expect(modelChoices("openrouter", "mistralai/mistral-large-4-0")[0]).toBe("mistralai/mistral-large-4-0");
   });
 
   it("treats Ollama on ollama.com as the flat-rate cloud", () => {

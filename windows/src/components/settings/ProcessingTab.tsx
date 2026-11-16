@@ -11,7 +11,7 @@ import {
 import { transcriptionAdvice } from "../../services/processingAdvice";
 import type { SystemSpecs } from "../../services/tauriCommands";
 import { fetchOllamaModels, isOllamaCloudURL, OLLAMA_LOCAL_URL, OLLAMA_CLOUD_URL } from "../../services/ollamaModels";
-import { modelChoices, modelLabel } from "../../services/suggestedModels";
+import { CappedModelSelect } from "./CappedModelSelect";
 import { WHISPER_MODELS } from "../../types";
 import { useRecordingStore } from "../../stores/recordingStore";
 import { useSettingsStore } from "../../stores/settingsStore";
@@ -323,8 +323,8 @@ export function ProcessingTab() {
               <div style={{ padding: "0 20px 12px" }}>
                 <p className="settings-desc">Het transcript wordt naar OpenRouter gestuurd. De kosten lopen via je eigen account.</p>
                 <SettingsField label="Model">
-                  <input className="input" type="text" aria-label="OpenRouter model" value={settings.openrouter_model}
-                    onChange={(e) => settings.updateSettings({ openrouter_model: e.target.value })} />
+                  <CappedModelSelect provider="openrouter" label="OpenRouter model" value={settings.openrouter_model}
+                    onChange={(model) => settings.updateSettings({ openrouter_model: model })} />
                 </SettingsField>
                 <CredentialField credentialKey="openrouter_api_key" label="OpenRouter API-sleutel" />
               </div>
@@ -335,19 +335,10 @@ export function ProcessingTab() {
               <div style={{ padding: "0 20px 12px" }}>
                 <p className="settings-desc">Dit gebruikt je eigen API-sleutel met aparte API-kosten. Je ChatGPT- of Claude-abonnement wordt hiervoor niet gebruikt.</p>
                 <SettingsField label="Model">
-                  {(() => {
-                    const current = settings.notulen_provider === "openai" ? settings.openai_model : settings.anthropic_model;
-                    const choices = modelChoices(settings.notulen_provider, current);
-                    return <>
-                      <select className="select" aria-label="Model" style={{ width: "100%" }} value={choices.includes(current) ? current : ""}
-                        onChange={(e) => settings.updateSettings(settings.notulen_provider === "openai"
-                          ? { openai_model: e.target.value } : { anthropic_model: e.target.value })}>
-                        {!choices.includes(current) && <option value="" disabled>{current || "Kies een model"} (boven de prijsgrens)</option>}
-                        {choices.map(model => <option key={model} value={model}>{modelLabel(model)}</option>)}
-                      </select>
-                      <p className="settings-desc">Aanbevolen modellen tot $3 per miljoen invoertokens en $15 per miljoen uitvoertokens. Duurdere modellen zijn niet te kiezen.</p>
-                    </>;
-                  })()}
+                  <CappedModelSelect provider={settings.notulen_provider} label="Model"
+                    value={settings.notulen_provider === "openai" ? settings.openai_model : settings.anthropic_model}
+                    onChange={(model) => settings.updateSettings(settings.notulen_provider === "openai"
+                      ? { openai_model: model } : { anthropic_model: model })} />
                 </SettingsField>
                 <CredentialField key={settings.notulen_provider} credentialKey={`${settings.notulen_provider}_api_key`}
                   label={`${settings.notulen_provider === "openai" ? "OpenAI" : "Anthropic"} API-sleutel`} />

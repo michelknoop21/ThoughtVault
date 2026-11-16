@@ -17,6 +17,8 @@ struct HostedProviderConfig: View {
     @State private var testing = false
     @State private var connected: Bool?
     @State private var models: [String] = []
+    /// Prices the provider reported with its model list (USD per million tokens).
+    @State private var prices: [String: ModelPrice] = [:]
     @State private var loaded = false
     @State private var saveTask: Task<Void, Never>?
     @State private var saveError: String?
@@ -30,9 +32,8 @@ struct HostedProviderConfig: View {
     private var keychainKey: String { provider.apiKeyKeychainKey ?? "" }
     private var hasKey: Bool { !apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
     private var modelBinding: Binding<String> { isOpenAI ? $openAIModel : isOpenRouter ? $openRouterModel : $anthropicModel }
-    private var defaultModel: String {
-        isOpenAI ? OpenAICompatibleLLMService.openAIDefaultModel : isOpenRouter ? OpenAICompatibleLLMService.openRouterDefaultModel : AnthropicLLMService.defaultModel
-    }
+    /// Suggested and listed models within the price cap (all three providers bill per token).
+    private var options: [String] { SuggestedModels.choices(for: provider, current: "", available: models, prices: prices) }
     private var keyURL: URL {
         URL(string: isOpenAI ? "https://platform.openai.com/api-keys"
             : isOpenRouter ? "https://openrouter.ai/settings/keys" : "https://console.anthropic.com/settings/keys")!
@@ -71,21 +72,14 @@ struct HostedProviderConfig: View {
 
             SettingFieldRow("Model") {
                 HStack(spacing: TS.Spacing.sm) {
-                    if models.isEmpty {
-                        TextField(defaultModel, text: modelBinding)
-                            .textFieldStyle(.roundedBorder)
-                            .font(Self.fieldFont)
-                            .autocorrectionDisabled()
-                    } else {
-                        Picker("", selection: modelBinding) {
-                            if !models.contains(modelBinding.wrappedValue) {
-                                Text(modelBinding.wrappedValue).tag(modelBinding.wrappedValue)
-                            }
-                            ForEach(models, id: \.self) { Text($0).tag($0) }
+                    Picker("", selection: modelBinding) {
+                        if !options.contains(modelBinding.wrappedValue) {
+                            Text("\(modelBinding.wrappedValue) (boven de prijsgrens)").tag(modelBinding.wrappedValue)
                         }
-                        .labelsHidden()
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                        ForEach(options, id: \.self) { Text(TaskHistoryFormat.modelLabel($0, price: prices[$0])).tag($0) }
                     }
+                    .labelsHidden()
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     Button { Task { await test() } } label: {
                         if testing { ProgressView().controlSize(.small) } else { Image(systemName: "arrow.triangle.2.circlepath") }
                     }
@@ -95,6 +89,11 @@ struct HostedProviderConfig: View {
                     .accessibilityLabel("Beschikbare modellen laden")
                 }
             }
+
+            Text("Aanbevolen modellen tot $3 per miljoen invoertokens en $15 per miljoen uitvoertokens. Duurdere modellen zijn niet te kiezen.")
+                .font(TS.Font.caption)
+                .foregroundStyle(Color.labelTertiary)
+                .fixedSize(horizontal: false, vertical: true)
 
             HStack(spacing: TS.Spacing.sm) {
                 Circle().fill(status.color).frame(width: 8, height: 8).accessibilityHidden(true)
@@ -178,8 +177,9 @@ struct HostedProviderConfig: View {
             // The list also holds embedding, audio and image models; keep chat models.
             list = all.filter { $0.hasPrefix("gpt-") || $0.hasPrefix("o") }.filter { !$0.contains("audio") && !$0.contains("image") && !$0.contains("realtime") && !$0.contains("transcribe") && !$0.contains("tts") }
         } else if isOpenRouter {
-            list = await OpenAICompatibleLLMService(baseURL: OpenAICompatibleLLMService.openRouterBaseURL,
-                                                    model: openRouterModel, apiKey: key).fetchModels()
+            // One request gives the models and their prices.
+            prices = await SuggestedModels.fetchReportedPrices(baseURL: OpenAICompatibleLLMService.openRouterBaseURL, apiKey: key) ?? [:]
+            list = prices.keys.sorted()
         } else {
             list = await AnthropicLLMService(model: anthropicModel, apiKey: key).fetchModels()
         }

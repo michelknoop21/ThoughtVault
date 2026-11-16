@@ -22,6 +22,7 @@ export const KNOWN_PRICES: Record<string, ModelPrice> = {
   "gpt-5.6-luna": { input: 0.2, output: 1.2 },
   "gpt-5.6-terra": { input: 2, output: 12 },
   "gpt-5.6-sol": { input: 5, output: 30 },
+  "mistral-large-4-0": { input: 1.36, output: 4.18 },
 };
 
 /** Provider as the model choice sees it: the hosted flat-rate endpoint counts as its own provider. */
@@ -33,6 +34,7 @@ export function modelProvider(settings: Pick<AppSettings, "notulen_provider" | "
 }
 
 const SUGGESTED: Partial<Record<ModelProvider, string[]>> = {
+  openrouter: ["mistralai/mistral-large-4-0", "anthropic/claude-sonnet-5-5", "openai/gpt-5.6-terra"],
   anthropic: ["claude-sonnet-5-5", "claude-haiku-5-5"],
   openai: ["gpt-5.6-terra", "gpt-5.6-luna"],
   "ollama-cloud": ["mistral-large-4", "gpt-oss:120b"],
@@ -44,7 +46,7 @@ export function suggestedModels(provider: ModelProvider): string[] {
 
 /** Providers that bill every token to the user's own API key. */
 export function isMetered(provider: ModelProvider): boolean {
-  return provider === "openai" || provider === "anthropic";
+  return provider === "openai" || provider === "anthropic" || provider === "openrouter";
 }
 
 /** Known price; a routed id such as `vendor/model` falls back to its last part. */
@@ -85,13 +87,14 @@ export function modelLabel(model: string): string {
   return price ? `${model} · $${price.input.toLocaleString("nl-NL")} / $${price.output.toLocaleString("nl-NL")} per mln tokens` : model;
 }
 
-type ModelSettingKey = "openai_model" | "anthropic_model" | "ollama_model" | "lm_studio_model";
+type ModelSettingKey = "openai_model" | "anthropic_model" | "openrouter_model" | "ollama_model" | "lm_studio_model";
 
 /** Settings field that holds the model of `provider`. */
 export function modelSettingKey(provider: ModelProvider): ModelSettingKey {
   switch (provider) {
     case "openai": return "openai_model";
     case "anthropic": return "anthropic_model";
+    case "openrouter": return "openrouter_model";
     case "lm-studio": return "lm_studio_model";
     default: return "ollama_model";
   }

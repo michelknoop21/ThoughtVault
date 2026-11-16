@@ -2,7 +2,6 @@ import { useSettingsStore } from "../stores/settingsStore";
 import { enrichProfile } from "./profileTemplates";
 import { loadCredential } from "./tauriCommands";
 import { quickNotePrompt, ensureNotesSection } from "./quickNotes";
-import { invoke } from "@tauri-apps/api/core";
 import { DEFAULT_SETTINGS } from "../types";
 import type { Profile, NotulenProvider } from "../types";
 import { isHostedURL, isOllamaCloudURL } from "./ollamaModels";
@@ -12,7 +11,12 @@ import { usePeopleDirectoryStore } from "../stores/peopleDirectoryStore";
 import { correctText, correctHTML, contextBlock, CONTEXT_BUDGET, type PersonalCorrection } from "./personalCorrections";
 import { auditSource, auditNotule, appendWarnings, AuditFinding, constraintSentences, UNCHECKED_CONTENT_WARNING, AUDIT_CONCURRENCY, HOSTED_AUDIT_CONCURRENCY } from "./notuleAudit";
 import { UsageMeter, parseUsage, addToLedger } from "./usageMeter";
-import { logModelRequest, logRetry, TIME_LIMIT_MESSAGE, TRUNCATED_MESSAGE, type ModelStep, type RequestTrace } from "./modelRequestLog";
+import { logModelRequest, TIME_LIMIT_MESSAGE, TRUNCATED_MESSAGE, type ModelStep, type RequestTrace } from "./modelRequestLog";
+import { openRouterModel, openRouterRequestFields } from "./openRouterModels";
+import { readChatCompletion } from "./chatCompletion";
+import { modelRequest, RATE_LIMIT_MESSAGE, STREAM_IDLE_SECONDS, STREAM_TIME_LIMIT_SECONDS } from "./modelTransport";
+
+export { rateLimitWaitMs, RATE_LIMIT_DEFAULT_WAIT_MS, RATE_LIMIT_MAX_WAIT_MS } from "./modelTransport";
 
 export { TIME_LIMIT_MESSAGE, TRUNCATED_MESSAGE };
 
@@ -29,63 +33,10 @@ interface LLMConfig {
 
 type ProgressCallback = (chunk: string) => void;
 
-/** Total time per model request, as on macOS. A cold local model plus a long non-streamed draft can need it. */
-const LLM_TIME_LIMIT_SECONDS = 900;
 /** Output cap per model request, as on macOS (llmMaxOutputTokens). The largest legitimate output is the
  * single-request audit: one JSON item of about 25 tokens per unit for up to 400 units, so about 10,000 tokens.
  * A long notule draft is several thousand. Reasoning models count their thinking against it, hence 3x headroom. */
 export const MAX_OUTPUT_TOKENS = 32_768;
-/** Prefix of the proxy_request error for a timeout (http.rs). */
-const PROXY_TIMEOUT = "Tijdslimiet bereikt";
-
-/** Wait before retrying an HTTP 429 when the provider sends no usable Retry-After, as on macOS. */
-export const RATE_LIMIT_DEFAULT_WAIT_MS = 2_000;
-/** Longest Retry-After that is waited for; a provider asking more is reported as rate limiting right away. */
-export const RATE_LIMIT_MAX_WAIT_MS = 30_000;
-const RATE_LIMIT_MESSAGE = "API-limiet bereikt (429), ook na een nieuwe poging. Probeer het later opnieuw of verwerk minder opnames tegelijk.";
-
-/** Milliseconds to wait before retrying a 429: Retry-After as delta-seconds or HTTP date, else the default.
- * null when the provider asks for more than RATE_LIMIT_MAX_WAIT_MS. */
-export function rateLimitWaitMs(retryAfter: string | undefined, now = Date.now()): number | null {
-  const value = (retryAfter ?? "").trim();
-  const wait = /^\d+$/.test(value) ? Number(value) * 1000 : /[a-z]/i.test(value) && !Number.isNaN(Date.parse(value))
-    ? Math.max(0, Date.parse(value) - now) : RATE_LIMIT_DEFAULT_WAIT_MS;
-  return wait <= RATE_LIMIT_MAX_WAIT_MS ? wait : null;
-}
-
-type ProxyResponse = { status: number; body: string; headers?: Record<string, string> };
-
-async function proxy(request: { url: string; headers: Record<string, string>; body: string }, timeoutSeconds: number): Promise<ProxyResponse> {
-  try {
-    return await invoke("proxy_request", { request: { ...request, method: "POST", timeout_seconds: timeoutSeconds } });
-  } catch (error) {
-    // Tauri rejects with a string, but an Error with the same text is a timeout too.
-    const message = error instanceof Error ? error.message : String(error);
-    throw message.startsWith(PROXY_TIMEOUT) ? new Error(TIME_LIMIT_MESSAGE) : error;
-  }
-}
-
-/** Every model request goes through here: one total time limit, a timeout named as such, and one retry on HTTP 429
- * after the provider's Retry-After plus up to one second of jitter, so requests that were rate limited together do
- * not collide again. The wait and the retry count against the same time limit. A wait that is too long, and a
- * second 429, return the 429 to the caller, which reports it. Windows requests take no abort signal, so there is
- * no cancellation during the wait. */
-async function modelRequest(request: { url: string; headers: Record<string, string>; body: string }, trace: RequestTrace): Promise<ProxyResponse> {
-  const started = Date.now();
-  const first = await proxy(request, LLM_TIME_LIMIT_SECONDS);
-  trace.status = first.status;
-  const header = Object.entries(first.headers ?? {}).find(([name]) => name.toLowerCase() === "retry-after")?.[1];
-  const wait = first.status === 429 ? rateLimitWaitMs(header) : null;
-  if (wait === null) return first;
-  const jittered = wait + Math.random() * 1000;
-  const remainingSeconds = Math.floor((LLM_TIME_LIMIT_SECONDS * 1000 - (Date.now() - started) - jittered) / 1000);
-  if (remainingSeconds < 1) return first;
-  logRetry(trace, jittered);
-  await new Promise(resolve => setTimeout(resolve, jittered));
-  const second = await proxy(request, remainingSeconds);
-  trace.status = second.status;
-  return second;
-}
 
 // These constraints must survive both chunk summaries and the final profile.
 const FACTUALITY_RULES = "Behoud expliciete ontkenningen, verboden, voorwaarden en vervallen afspraken bij het bijbehorende besluit of de actie, ook in een compacte notule. Behoud ook de aard en status van het besprokene: een fictief of hypothetisch voorbeeld mag geen echte afspraak worden, een voorgenomen proef geen uitgevoerd project. Noem een expliciet fictieve of hypothetische status ook expliciet in de kern van het verslag. Leid daaruit geen ongenoemde uitvoeringsstatus af: zeg alleen dat iets al wel of nog niet is uitgevoerd als de bron dat expliciet vermeldt. Een uitnodiging is geen aanwezigheid; vermeld expliciete afwezigheid. Een open vraag is geen besluit: presenteer onbesliste onderwerpen niet als opdracht of afgesproken vervolg. Voeg geen vervolgafspraken toe die niet zijn genoemd. Een toestemmingsvoorwaarde is geen opdracht of toezegging om die toestemming te geven; maak daar geen actie van. Controleer vóór het antwoorden alle besluiten en acties tegen de transcriptie op deze beperkingen en herstel weglatingen.";
@@ -209,11 +160,14 @@ async function openAICompatibleRequest(
   const cloud = isOllamaCloudURL(baseUrl);
   if (cloud && !apiKey) throw new Error("Vul je Ollama Cloud API-sleutel in bij Instellingen.");
   const base = baseUrl.trim().replace(/\/+$/, "").replace(/\/v1$/, "");
+  // OpenRouter streams, so a long reasoning draft is limited by silence instead of total time (as on macOS).
+  const openRouter = providerKind(baseUrl) === "openrouter";
+  const fields = openRouter ? openRouterRequestFields(await openRouterModel(model), MAX_OUTPUT_TOKENS) : { max_tokens: MAX_OUTPUT_TOKENS };
   let response: { status: number; body: string };
   try {
     response = await modelRequest({ url: `${base}/v1/chat/completions`, headers,
-      body: JSON.stringify({ model, messages: [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }], stream: false, max_tokens: MAX_OUTPUT_TOKENS,
-        ...(providerKind(baseUrl) === "openrouter" ? { reasoning: { effort: OPENROUTER_REASONING_EFFORT } } : {}) }) }, trace);
+      body: JSON.stringify({ model, messages: [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }], stream: openRouter, ...fields }) },
+      trace, openRouter ? { total: STREAM_TIME_LIMIT_SECONDS, idle: STREAM_IDLE_SECONDS } : undefined);
   } catch (error) {
     if (error instanceof Error && error.message === TIME_LIMIT_MESSAGE) throw error;
     throw new Error(unreachableMessage(baseUrl, model));
@@ -221,22 +175,18 @@ async function openAICompatibleRequest(
   if (cloud && response.status === 401) throw new Error("Ollama Cloud API-sleutel geweigerd.");
   if (cloud && response.status === 429) throw new Error(`Ollama Cloud ${RATE_LIMIT_MESSAGE}`);
   if (response.status >= 400) throw new Error(`${cloud ? "Ollama Cloud" : `Notule-generator op ${baseUrl}`} gaf HTTP ${response.status} voor model "${model}".`);
-  const parsed = JSON.parse(response.body);
-  trace.usage = parseUsage(parsed.usage);
-  const choice = parsed.choices?.[0];
+  const completion = readChatCompletion(response.body);
+  trace.usage = parseUsage(completion.usage);
+  if (completion.streamError) throw new Error(`${new URL(baseUrl).host} brak het antwoord af (fout ${completion.streamError}) voor model "${model}".`);
   // A capped answer is incomplete; never parse it as a short one.
-  if (choice?.finish_reason === "length") throw new Error(TRUNCATED_MESSAGE);
-  const text = choice?.message?.content;
-  if (typeof text !== "string" || !text.trim()) throw new Error(cloud ? "Ollama Cloud gaf een leeg antwoord." : "De notule-generator gaf een leeg concept.");
+  if (completion.finishReason === "length") throw new Error(TRUNCATED_MESSAGE);
+  const text = completion.text;
+  if (!text.trim()) throw new Error(cloud ? "Ollama Cloud gaf een leeg antwoord." : "De notule-generator gaf een leeg concept.");
   onProgress?.(text);
   return text;
 }
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1";
-/** OpenRouter reasoning effort. Reasoning models spent most of their output thinking (mistral-large-4: 7,382 of
- * 7,768 output tokens on a 31 s recording) and long meetings ran into the 900 s limit, so OpenRouter requests ask
- * for low effort. Other endpoints do not get the field. */
-const OPENROUTER_REASONING_EFFORT = "low";
 
 /** OpenRouter speaks the OpenAI chat format; only the base URL and the stored key differ. */
 async function generateWithOpenRouter(model: string, systemPrompt: string, userPrompt: string, step?: ModelStep, meter?: UsageMeter): Promise<string> {

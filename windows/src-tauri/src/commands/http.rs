@@ -12,6 +12,8 @@ pub struct HttpRequest {
     pub headers: Option<HashMap<String, String>>,
     pub body: Option<String>,
     pub timeout_seconds: Option<u64>,
+    /// Ends the request after this much silence instead of only at the total limit; for streamed model answers.
+    pub idle_timeout_seconds: Option<u64>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -21,19 +23,31 @@ pub struct HttpResponse {
     pub headers: HashMap<String, String>,
 }
 
+/// Total limit in seconds: 30 by default, at most an hour (a streamed answer with an idle limit).
+fn total_timeout(requested: Option<u64>) -> u64 {
+    requested.unwrap_or(30).min(3600)
+}
+
 /// Generic HTTP proxy — bypasses WebView CORS restrictions.
 #[tauri::command]
 pub async fn proxy_request(request: HttpRequest) -> Result<HttpResponse, String> {
-    let timeout = request.timeout_seconds.unwrap_or(30).min(900);
-    let client = reqwest::Client::builder()
+    let timeout = total_timeout(request.timeout_seconds);
+    let idle = request.idle_timeout_seconds;
+    let mut builder = reqwest::Client::builder()
         .redirect(reqwest::redirect::Policy::none())
-        .timeout(std::time::Duration::from_secs(timeout))
-        .build()
-        .map_err(|e| e.to_string())?;
+        .timeout(std::time::Duration::from_secs(timeout));
+    if let Some(idle) = idle {
+        // Resets on every received chunk, so a steady stream is not cut off.
+        builder = builder.read_timeout(std::time::Duration::from_secs(idle));
+    }
+    let client = builder.build().map_err(|e| e.to_string())?;
     // llm.ts recognises a timeout by this prefix (PROXY_TIMEOUT).
     let request_error = |e: reqwest::Error| {
         if e.is_timeout() {
-            format!("Tijdslimiet bereikt: geen volledig antwoord binnen {} seconden.", timeout)
+            match idle {
+                Some(idle) => format!("Tijdslimiet bereikt: {} seconden geen antwoord of geen volledig antwoord binnen {} seconden.", idle, timeout),
+                None => format!("Tijdslimiet bereikt: geen volledig antwoord binnen {} seconden.", timeout),
+            }
         } else {
             e.to_string()
         }
@@ -612,6 +626,53 @@ mod tests {
 
     // -- Tests --
 
+    /// Serves one response: headers, then `lines` lines `gap` apart, then closes (no Content-Length).
+    async fn start_trickle_server(lines: usize, gap: std::time::Duration) -> String {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = format!("http://127.0.0.1:{}/v1/chat/completions", listener.local_addr().unwrap().port());
+        tokio::spawn(async move {
+            let (mut stream, _) = listener.accept().await.unwrap();
+            let mut bytes = [0_u8; 4096];
+            let _ = stream.read(&mut bytes).await;
+            stream.write_all(b"HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nConnection: close\r\n\r\n").await.unwrap();
+            for index in 0..lines {
+                tokio::time::sleep(gap).await;
+                if stream.write_all(format!("data: {index}\n\n").as_bytes()).await.is_err() { return; }
+            }
+            let _ = stream.shutdown().await;
+        });
+        url
+    }
+
+    fn post(url: String, timeout_seconds: u64, idle_timeout_seconds: Option<u64>) -> HttpRequest {
+        HttpRequest { url, method: "POST".into(), headers: None, body: Some("{}".into()),
+            timeout_seconds: Some(timeout_seconds), idle_timeout_seconds }
+    }
+
+    #[test]
+    fn streamed_requests_may_run_up_to_an_hour() {
+        assert_eq!(total_timeout(None), 30);
+        assert_eq!(total_timeout(Some(3600)), 3600);
+        assert_eq!(total_timeout(Some(7200)), 3600);
+    }
+
+    #[tokio::test]
+    async fn idle_limit_lets_a_steady_stream_run_longer_than_the_limit() {
+        let url = start_trickle_server(5, std::time::Duration::from_millis(400)).await;
+        let response = proxy_request(post(url, 10, Some(1))).await.unwrap();
+        assert_eq!(response.status, 200);
+        assert!(response.body.contains("data: 4"), "{}", response.body);
+    }
+
+    #[tokio::test]
+    async fn idle_limit_ends_a_stalled_stream_as_a_timeout() {
+        let url = start_trickle_server(1, std::time::Duration::from_secs(3)).await;
+        let started = std::time::Instant::now();
+        let error = proxy_request(post(url, 10, Some(1))).await.unwrap_err();
+        assert!(error.starts_with("Tijdslimiet bereikt"), "{error}");
+        assert!(started.elapsed() < std::time::Duration::from_secs(3), "{:?}", started.elapsed());
+    }
+
     #[tokio::test]
     async fn proxy_does_not_forward_credentials_or_content_to_redirect_target() {
         let target = TcpListener::bind("127.0.0.1:0").await.unwrap();
@@ -634,7 +695,7 @@ mod tests {
         });
         let response = proxy_request(HttpRequest { url, method: "POST".into(),
             headers: Some(HashMap::from([("X-API-Key".into(), "fixture-secret".into())])),
-            body: Some("FICTITIOUS_TRANSCRIPT".into()), timeout_seconds: Some(10),
+            body: Some("FICTITIOUS_TRANSCRIPT".into()), timeout_seconds: Some(10), idle_timeout_seconds: None,
         }).await.unwrap();
         redirect.await.unwrap();
         assert!(!received.await.unwrap(), "redirect target received a credential-bearing request");

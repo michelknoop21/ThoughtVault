@@ -364,10 +364,6 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
     static let ollamaCloudBaseURL = "https://ollama.com"
     static let openAIDefaultModel = "gpt-5.6-terra"
     static let openRouterBaseURL = "https://openrouter.ai/api/v1"
-    /// OpenRouter reasoning effort. Reasoning models spent most of their output thinking
-    /// (mistral-large-4: 7,382 of 7,768 output tokens on a 31 s recording) and long meetings
-    /// ran into the 900 s limit, so OpenRouter requests ask for low effort.
-    static let openRouterReasoningEffort = "low"
     static let openRouterDefaultModel = "mistralai/mistral-large-4-0"
 
     /// Transcript size above which it is summarized in chunks first. The default
@@ -378,6 +374,8 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
     var completionOverride: (@Sendable (String, String) async throws -> String)?
     /// Test seam: the wait before retrying an HTTP 429.
     var rateLimitSleep = llmSleep
+    /// Test seam: the routed model list entry that sets the reasoning field and output cap.
+    var openRouterModelLookup: @Sendable (String) async -> OpenRouterModel? = { await OpenRouterModelCatalog.shared.model($0) }
     private let session: URLSession
 
     /// Hosted (HTTPS) providers have a large context window; without the explicit limit the
@@ -624,10 +622,13 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
         // api.openai.com rejects `max_tokens` for newer models; local servers only know `max_tokens`.
         let isOpenAI = URL(string: baseURL)?.host?.lowercased() == "api.openai.com"
         let capKey = isOpenAI ? "max_completion_tokens" : "max_tokens"
+        let isOpenRouter = URL(string: baseURL)?.host?.lowercased() == URL(string: Self.openRouterBaseURL)?.host
+        let fields = isOpenRouter ? OpenRouterModel.requestFields(await openRouterModelLookup(model), baseCap: llmMaxOutputTokens)
+            : (maxTokens: llmMaxOutputTokens, reasoning: nil)
         var requestBody: [String: Any] = [
             "model": model,
             "stream": true,
-            capKey: llmMaxOutputTokens,
+            capKey: fields.maxTokens,
             "messages": [
                 ["role": "system", "content": systemPrompt],
                 ["role": "user", "content": userMessage]
@@ -635,7 +636,7 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
         ]
         // OpenAI streams usage only on request; other servers get the body they always got.
         if isOpenAI { requestBody["stream_options"] = ["include_usage": true] }
-        if URL(string: baseURL)?.host?.lowercased() == URL(string: Self.openRouterBaseURL)?.host { requestBody["reasoning"] = ["effort": Self.openRouterReasoningEffort] }
+        if let reasoning = fields.reasoning { requestBody["reasoning"] = reasoning }
 
         guard let bodyData = try? JSONSerialization.data(withJSONObject: requestBody) else {
             throw LLMError.generationFailed("Kon het verzoek niet serialiseren.")

@@ -2,6 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { LLMService, MAX_OUTPUT_TOKENS, TIME_LIMIT_MESSAGE, TRUNCATED_MESSAGE, auditNoteConcurrency, providerKind, rateLimitWaitMs, unreachableMessage } from "../llm";
 import { auditFixture, sourceFixture } from "./notuleAuditFixtures";
+import { modelListFixture } from "./openRouterModelsFixture";
+import { OPENROUTER_MODELS_URL } from "../openRouterModels";
 
 const corrections = vi.hoisted(() => ({entries:[] as import("../personalCorrections").PersonalCorrection[]}));
 const { loadCredential } = vi.hoisted(() => ({ loadCredential: vi.fn() }));
@@ -12,7 +14,9 @@ vi.mock("../tauriCommands", () => ({ loadCredential }));
 vi.mock("@tauri-apps/api/core", () => ({ invoke: (...args: unknown[]) => {
   // Log lines per model request are tested in modelRequestLog.test.ts; `invoke` counts model requests here.
   if (args[0] === "log_write") return Promise.resolve();
-  const request = (args[1] as { request?: { body?: string } })?.request;
+  const request = (args[1] as { request?: { body?: string; url?: string } })?.request;
+  // The public The routed provider model list is not a model request.
+  if (request?.url === OPENROUTER_MODELS_URL) return Promise.resolve({ status: 200, body: modelListFixture, headers: {} });
   const messages = request?.body ? JSON.parse(request.body).messages : [];
   if (messages.at(-1)?.content.startsWith("Broncontrole")) {
     const content = sourceFixture(messages.at(-1).content);
@@ -57,20 +61,50 @@ it.each(["ollama", "lm-studio"] as const)("uses the native route for %s when Web
   } finally { vi.unstubAllGlobals(); }
 });
 
-it("sends OpenRouter notes to openrouter.ai with the stored key and the configured model", async () => {
+/** An The routed provider SSE body as `stream: true` returns it: keep-alive comment, deltas, final chunk with usage. */
+const openRouterStream = (parts: string[], finish = "stop") => [
+  ": OPENROUTER PROCESSING", "",
+  ...parts.flatMap(part => [`data: ${JSON.stringify({ choices: [{ index: 0, delta: { content: part }, finish_reason: null }] })}`, ""]),
+  `data: ${JSON.stringify({ choices: [{ index: 0, delta: {}, finish_reason: finish }], usage: { prompt_tokens: 1200, completion_tokens: 300, completion_tokens_details: { reasoning_tokens: 40 }, cost: 0.0123 } })}`, "",
+  "data: [DONE]", "",
+].join("\n");
+
+it("streams OpenRouter notes from openrouter.ai with the stored key, an idle limit and the configured model", async () => {
   useSettingsStore.setState({ notulen_provider: "openrouter", openrouter_model: "mistralai/mistral-large-4-0" });
   loadCredential.mockResolvedValue("or-key");
-  invoke.mockResolvedValue({ status: 200, body: JSON.stringify({ choices: [{ message: { content: "<p>Besluit</p>" } }] }) });
+  invoke.mockResolvedValue({ status: 200, body: openRouterStream(["<p>Be", "sluit</p>"]) });
   expect(await LLMService.generateNotulen("QA test.", profile)).toBe("<p>Besluit</p>");
   expect(loadCredential).toHaveBeenCalledWith("openrouter_api_key");
   const request = invoke.mock.calls[0][1].request;
   expect(request.url).toBe("https://openrouter.ai/api/v1/chat/completions");
   expect(request.headers.Authorization).toBe("Bearer or-key");
-  expect(JSON.parse(request.body).model).toBe("mistralai/mistral-large-4-0");
-  expect(JSON.parse(request.body).reasoning).toEqual({ effort: "low" });
+  // The whole answer no longer has to arrive within 900 s: silence ends it, progress keeps it alive.
+  expect(request.idle_timeout_seconds).toBe(300);
+  expect(request.timeout_seconds).toBe(3600);
+  const body = JSON.parse(request.body);
+  expect(body.model).toBe("mistralai/mistral-large-4-0");
+  expect(body.stream).toBe(true);
+  // mistral-large-4-0 reasons by default but offers only high or none: no effort is sent.
+  expect(body).not.toHaveProperty("reasoning");
+  expect(body.max_tokens).toBe(65_536);
 });
 
-it("asks only OpenRouter for low reasoning effort", async () => {
+it("asks low effort only from an OpenRouter model that reasons by default", async () => {
+  useSettingsStore.setState({ notulen_provider: "openrouter", openrouter_model: "anthropic/claude-sonnet-5.5" });
+  loadCredential.mockResolvedValue("or-key");
+  invoke.mockResolvedValue({ status: 200, body: openRouterStream(["<p>Besluit</p>"]) });
+  await LLMService.complete("s", "u");
+  expect(JSON.parse(invoke.mock.calls[0][1].request.body).reasoning).toEqual({ effort: "low" });
+  invoke.mockClear();
+  // Thinking is off by default here; an effort would switch it on.
+  useSettingsStore.setState({ openrouter_model: "anthropic/claude-sonnet-4.5" });
+  await LLMService.complete("s", "u");
+  const body = JSON.parse(invoke.mock.calls[0][1].request.body);
+  expect(body).not.toHaveProperty("reasoning");
+  expect(body.max_tokens).toBe(MAX_OUTPUT_TOKENS);
+});
+
+it("asks other providers for no reasoning effort", async () => {
   const reply = { status: 200, body: JSON.stringify({ choices: [{ message: { content: "<p>Besluit</p>" } }] }) };
   useSettingsStore.setState({ notulen_provider: "openai" as never });
   loadCredential.mockResolvedValue("openai-secret");
@@ -84,6 +118,23 @@ it("asks only OpenRouter for low reasoning effort", async () => {
   const local = invoke.mock.calls.find(call => call[1]?.request)![1].request;
   expect(local.url).toBe("http://localhost:11434/v1/chat/completions");
   expect(JSON.parse(local.body)).not.toHaveProperty("reasoning");
+  expect(JSON.parse(local.body).stream).toBe(false);
+  expect(local).not.toHaveProperty("idle_timeout_seconds");
+});
+
+it("rejects a streamed OpenRouter answer that ended at the output cap", async () => {
+  useSettingsStore.setState({ notulen_provider: "openrouter", openrouter_model: "anthropic/claude-sonnet-5.5" });
+  loadCredential.mockResolvedValue("or-key");
+  invoke.mockResolvedValue({ status: 200, body: openRouterStream(["<p>Half"], "length") });
+  await expect(LLMService.complete("s", "u")).rejects.toThrow(TRUNCATED_MESSAGE);
+});
+
+it("reports an error OpenRouter sends inside the stream instead of a short answer", async () => {
+  useSettingsStore.setState({ notulen_provider: "openrouter", openrouter_model: "anthropic/claude-sonnet-5.5" });
+  loadCredential.mockResolvedValue("or-key");
+  const error = `data: ${JSON.stringify({ error: { code: 502, message: "upstream" }, choices: [{ index: 0, delta: { content: "" }, finish_reason: "error" }] })}`;
+  invoke.mockResolvedValue({ status: 200, body: openRouterStream(["<p>Half"]).replace(": OPENROUTER PROCESSING", error) });
+  await expect(LLMService.complete("s", "u")).rejects.toThrow('openrouter.ai brak het antwoord af (fout 502) voor model "anthropic/claude-sonnet-5.5".');
 });
 
 it("asks for the OpenRouter key when it is missing", async () => {
@@ -139,6 +190,18 @@ describe("HTTP 429", () => {
     await expect(result).resolves.toBe("<p>Akkoord</p>");
     expect(invoke).toHaveBeenCalledTimes(2);
     expect(invoke.mock.calls[1][1].request.timeout_seconds).toBe(893);
+  });
+
+  it("retries a streamed OpenRouter request with the same idle limit, within the longer total limit", async () => {
+    useSettingsStore.setState({ notulen_provider: "openrouter", openrouter_model: "anthropic/claude-sonnet-5.5" });
+    loadCredential.mockResolvedValue("or-key");
+    invoke.mockResolvedValueOnce({ status: 429, body: "{}", headers: { "retry-after": "7" } })
+      .mockResolvedValueOnce({ status: 200, body: openRouterStream(["<p>Akkoord</p>"]) });
+    const result = LLMService.complete("s", "u");
+    await vi.advanceTimersByTimeAsync(7_000);
+    await expect(result).resolves.toBe("<p>Akkoord</p>");
+    expect(invoke.mock.calls[1][1].request.timeout_seconds).toBe(3593);
+    expect(invoke.mock.calls[1][1].request.idle_timeout_seconds).toBe(300);
   });
 
   it("fails on a second 429 with the rate-limit message", async () => {

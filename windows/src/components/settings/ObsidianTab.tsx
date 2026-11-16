@@ -3,6 +3,7 @@ import { Notebook24Regular, CheckmarkCircle24Regular, ErrorCircle24Regular } fro
 import { useSettingsStore } from "../../stores/settingsStore";
 import { testObsidian } from "../../services/obsidian";
 import { SettingsField, CredentialField, CardHead } from "./SettingsFields";
+import { ObsidianBrokenNotice } from "./ObsidianBrokenNotice";
 
 export function ObsidianTab() {
   const settings = useSettingsStore();
@@ -21,6 +22,7 @@ export function ObsidianTab() {
   return <div className="settings-other"><header className="settings-section-header"><div><h2>Obsidian</h2><p>Schrijf je notulen naar je Obsidian-vault.</p></div></header>          {/* Obsidian */}
           <div className="settings-group">
             <CardHead icon={<Notebook24Regular />} title="Obsidian-koppeling" subtitle="Local REST API-plugin" />
+            <ObsidianBrokenNotice onChooseVault={() => document.getElementById("obsidian-base-url")?.focus()} />
             <div className="settings-row">
               <div className="flex-row gap-10 flex-1">
                 <Notebook24Regular className="settings-icon" />
@@ -43,6 +45,7 @@ export function ObsidianTab() {
             <div style={{ padding: "0 14px 4px" }}>
               <SettingsField label="Base-URL">
                 <input
+                  id="obsidian-base-url"
                   type="url"
                   value={settings.obsidian_base_url}
                   onChange={(e) => settings.updateSettings({ obsidian_base_url: e.target.value })}

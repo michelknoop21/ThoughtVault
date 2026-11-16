@@ -5,6 +5,8 @@ import { usePersonalCorrectionsStore } from "../../stores/personalCorrectionsSto
 import { CorrectionFields, newCorrection } from "../settings/PersonalCorrections";
 import { DesktopDialog } from "../ui/DesktopDialog";
 import { ContextSuggestionBar } from "./ContextSuggestionBar";
+import { ObsidianBrokenNotice } from "../settings/ObsidianBrokenNotice";
+import { useSettingsStore } from "../../stores/settingsStore";
 import { useState, useRef, useEffect } from "react";
 import {
   ArrowLeft24Regular,
@@ -90,6 +92,7 @@ export function TranscriptDetail({
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [pfConfigured, setPfConfigured] = useState(false);
   const [pfDialog, setPfDialog] = useState(false);
+  const obsidianEnabled = useSettingsStore((s) => s.obsidian_enabled);
   const [pfRef, setPfRef] = useState<OfferRef | null>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
   const editorRef = useRef<HTMLDivElement>(null);
@@ -314,12 +317,16 @@ export function TranscriptDetail({
                   <button className="td-export-item" onClick={() => { onExportHTML(transcript); setExportOpen(false); }}>
                     <ArrowDownload24Regular style={{ fontSize: 15 }} /> HTML
                   </button>
-                  <button className="td-export-item" onClick={() => { onExportObsidian(transcript); setExportOpen(false); }}>
-                    <Notebook24Regular style={{ fontSize: 15 }} /> Naar Obsidian
-                  </button>
-                  <button className="td-export-item" onClick={() => { onImportObsidian(transcript); setExportOpen(false); }}>
-                    <Notebook24Regular style={{ fontSize: 15 }} /> Uit Obsidian
-                  </button>
+                  {obsidianEnabled && (
+                    <>
+                      <button className="td-export-item" onClick={() => { onExportObsidian(transcript); setExportOpen(false); }}>
+                        <Notebook24Regular style={{ fontSize: 15 }} /> Naar Obsidian
+                      </button>
+                      <button className="td-export-item" onClick={() => { onImportObsidian(transcript); setExportOpen(false); }}>
+                        <Notebook24Regular style={{ fontSize: 15 }} /> Uit Obsidian
+                      </button>
+                    </>
+                  )}
                 </>
               )}
               <button className="td-export-item" onClick={() => { onExportTXT(transcript); setExportOpen(false); }}>
@@ -362,6 +369,7 @@ export function TranscriptDetail({
           <Delete24Regular style={{ fontSize: 15 }} />
         </button>
       </div>
+      <ObsidianBrokenNotice />
 
       {/* Document content */}
       <div className="td-scroll">

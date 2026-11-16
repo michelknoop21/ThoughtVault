@@ -9,7 +9,7 @@ import { LLMService } from "./llm";
 import { UsageMeter } from "./usageMeter";
 import { stepLabel } from "./modelRequestLog";
 import { NotuleReviewError } from "./notuleAudit";
-import { exportToObsidian } from "./obsidian";
+import { exportToObsidian, ObsidianBrokenError } from "./obsidian";
 import { extractTitle } from "./titleExtractor";
 import { getQuickNote } from "./quickNotes";
 import { hasUsableNotule, hasUsableTranscription } from "./notuleValidation";
@@ -164,8 +164,9 @@ export async function processLocally(
 
     if (settings.obsidian_enabled) {
       const saved = useLocalTranscriptsStore.getState().items.find((item) => item.id === taskId);
-      if (saved) void exportToObsidian(saved, settings).catch((error) =>
-        console.warn("Obsidian auto-export mislukt:", error instanceof Error ? error.message : String(error)));
+      if (saved) void exportToObsidian(saved, settings).catch((error) => {
+        if (!(error instanceof ObsidianBrokenError)) console.warn("Obsidian auto-export mislukt:", error instanceof Error ? error.message : String(error));
+      });
     }
 
     updateBackgroundTask(taskId, { status: "completed", progress: 100, message: undefined });

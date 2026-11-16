@@ -32,7 +32,7 @@ export function nalopenCount(html: string): number {
   return at < 0 ? 0 : (html.slice(at).match(/<li>/g) ?? []).length;
 }
 
-export interface RunResult {
+export interface RunResult { commit?: string;
   model: string; conversation: string; rep: number; detail: string;
   found: number; total: number; missing: string[];
   chars: number; words: number; nalopen: number;

@@ -1,5 +1,6 @@
 // Notule evaluation: runs the app's real LLMService (OpenRouter path incl. audit) per model x conversation x rep.
 // Started through eval.mjs; arguments arrive as JSON in EVAL_ARGS. See README.md.
+import { execFileSync } from "node:child_process";
 import { readFileSync, readdirSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -11,6 +12,8 @@ import { useSettingsStore } from "../../windows/src/stores/settingsStore";
 import { DEFAULT_PROFILES } from "../../windows/src/types";
 import { assertOutsideRepo, htmlToText, loadFacts, nalopenCount, scoreFacts, secureDir, secureWrite, summaryTable, type RunResult } from "./lib";
 
+/** Commit the pipeline ran on, so results before and after a pipeline change stay comparable. */
+const COMMIT = (() => { try { return execFileSync("git", ["rev-parse", "--short", "HEAD"], { encoding: "utf8" }).trim(); } catch { return "onbekend"; } })();
 const state = vi.hoisted(() => ({ dry: false, key: "", dryCost: 0.01, calls: 0, flaky: "" }));
 
 (globalThis as { __evalInvoke?: unknown }).__evalInvoke = async (command: string, args: { request?: { url: string; headers: Record<string, string>; body: string; timeout_seconds: number } }) => {
@@ -110,7 +113,7 @@ it("notule-eval", async () => {
     catch (e) { error = e instanceof Error ? e.message : String(e); }
     const text = htmlToText(html), score = scoreFacts(text, data[conversation].facts);
     const run: RunResult = { model, conversation, rep, detail: "n.v.t.", ...score, chars: text.length, words: text.split(" ").filter(Boolean).length,
-      nalopen: nalopenCount(html), durationMs: Date.now() - started, costUsd: meter.totalCost, costKnown: meter.costKnown, error };
+      nalopen: nalopenCount(html), durationMs: Date.now() - started, costUsd: meter.totalCost, costKnown: meter.costKnown, error, commit: COMMIT };
     runs.push(run); total += run.costUsd;
     secureWrite(join(resultsDir, `${model.replace(/\//g, "_")}__${conversation}__r${rep}.html`), html);
     secureWrite(join(resultsDir, "runs.jsonl"), JSON.stringify(run) + "\n", true);

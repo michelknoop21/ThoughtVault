@@ -15,7 +15,7 @@ final class MigrationTests: XCTestCase {
     /// (adding PersonProfile as a new @Model). The in-memory container uses the real
     /// AppMigrationPlan so this test will fail to compile until Plan 01 ships those types.
     func testTranscriptRecordSurvivesV1ToV2Migration() throws {
-        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        let config = ModelConfiguration(isStoredInMemoryOnly: true, cloudKitDatabase: .none)
         let container = try ModelContainer(
             for: TranscriptRecord.self, PersonProfile.self,
             migrationPlan: AppMigrationPlan.self,
@@ -51,7 +51,7 @@ final class MigrationTests: XCTestCase {
     /// The `.emails` reference below will fail to compile against the current model —
     /// that compile failure IS the intended RED state proving the migration is unproven.
     func testPersonProfileSurvivesV2ToV3Migration() throws {
-        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        let config = ModelConfiguration(isStoredInMemoryOnly: true, cloudKitDatabase: .none)
         let container = try ModelContainer(
             for: TranscriptRecord.self, PersonProfile.self,
             migrationPlan: AppMigrationPlan.self,
@@ -145,7 +145,7 @@ final class MigrationTests: XCTestCase {
         let container = try ModelContainer(
             for: TranscriptRecord.self, PersonProfile.self,
             migrationPlan: AppMigrationPlan.self,
-            configurations: ModelConfiguration(url: url)
+            configurations: ModelConfiguration(url: url, cloudKitDatabase: .none)
         )
         let people = try ModelContext(container).fetch(FetchDescriptor<PersonProfile>(sortBy: [SortDescriptor(\.name)]))
         XCTAssertEqual(people.map(\.name), ["Anke Bakker", "Bram Visser"])
@@ -156,7 +156,7 @@ final class MigrationTests: XCTestCase {
     private func makeV3Store(at url: URL) throws {
         let schema = Schema(versionedSchema: AppSchemaV3.self)
         XCTAssertNil(schema.entitiesByName["PersonProfile"]?.attributesByName["responsibilities"], "V3 must be the frozen shape")
-        let container = try ModelContainer(for: schema, configurations: ModelConfiguration(schema: schema, url: url))
+        let container = try ModelContainer(for: schema, configurations: ModelConfiguration(schema: schema, url: url, cloudKitDatabase: .none))
         let context = ModelContext(container)
         context.insert(AppSchemaV3.PersonProfile(name: "Anke Bakker", role: "Projectleider", emails: ["anke@voorbeeld.nl"], isInternal: true))
         context.insert(AppSchemaV3.PersonProfile(name: "Bram Visser"))
@@ -175,7 +175,7 @@ final class MigrationTests: XCTestCase {
         try FileManager.default.copyItem(at: fixture, to: url)
 
         let container = try ModelContainer(for: TranscriptRecord.self, PersonProfile.self,
-                                           configurations: ModelConfiguration(url: url))
+                                           configurations: ModelConfiguration(url: url, cloudKitDatabase: .none))
         let record = try XCTUnwrap(try container.mainContext.fetch(FetchDescriptor<TranscriptRecord>()).first)
         XCTAssertEqual(record.id, "fixture-1")
         XCTAssertEqual(record.notuleHtml, "<p>Sam belt vrijdag.</p>")

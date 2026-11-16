@@ -8,6 +8,14 @@ Elke release is een blok `## <versie> - <titel>` met direct daaronder een cursie
 met datum en platforms, bijvoorbeeld `*12 november 2026 · macOS · iOS · Windows*`.
 De nieuwste release staat bovenaan.
 
+## 1.0.329 - Je notulen op Mac en iPhone
+
+*16 november 2026 · macOS · iOS*
+
+- Zet **iCloud-synchronisatie** op beide apparaten aan om bestaande en nieuwe notulen, transcripties, titels en tags te delen met je eigen Apple-account. Audio blijft op het oorspronkelijke apparaat. Lees de stappen bij [Overige instellingen](overige-instellingen.html#notulen-synchroniseren-via-icloud).
+- Werk offline door; wijzigingen worden later verstuurd. Bij gelijktijdige wijzigingen bewaart ThoughtVault een extra conflictkopie. Bewerken en verwijderen werkt door op je andere aangesloten apparaten.
+- De bestaande lokale geschiedenis blijft bewaard. Uitschakelen verwijdert geen notulen.
+
 ## 1.0.328 - Betrouwbaarder opnemen en notulen maken
 
 *16 november 2026 · macOS · iOS · Windows*

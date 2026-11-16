@@ -70,6 +70,7 @@ struct ThoughtVaultApp: App {
                 .environment(calendarService)
                 .environment(permissionManager)
                 .modelContainer(LocalTranscriptStore.shared.container)
+                .task { await NotuleSyncService.shared.start() }
                 .task {
                     #if os(macOS)
                     while !Task.isCancelled {
@@ -134,6 +135,7 @@ struct ThoughtVaultApp: App {
                 }
                 .onChange(of: NetworkMonitor.shared.isConnected) { _, connected in
                     guard !AppEnvironment.isDebugSnapshot else { return }
+                    if connected { Task { await NotuleSyncService.shared.syncNow() } }
                     if connected && !IOSDebug.supportSeed { Task { await SupportRelay.shared.flush() } }
                 }
                 .onChange(of: scenePhase) { _, phase in
@@ -144,6 +146,7 @@ struct ThoughtVaultApp: App {
                                                     inFlight: recordingVM.activeTasks.filter { $0.status.isActive })
                     #endif
                     if phase == .active {
+                        Task { await NotuleSyncService.shared.syncNow() }
                         #if os(iOS)
                         // Startup must read the previous marker before any resume can replace it.
                         if supportVM.hasBegunSession {

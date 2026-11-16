@@ -5,6 +5,16 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2026-11-16]: 1.0.329, iCloud voor notulen op Mac en iPhone
+
+### Added
+- macOS en iOS: private synchronisatie van notulen, transcripties, titels, tags en bijbehorende notulegegevens via CloudKit; standaard uit en instelbaar per apparaat. Audio blijft lokaal.
+- Offline wachtrij, handmatige synchronisatie, accountbinding en behoud van beide versies bij bewerkingsconflicten. Bestaande SwiftData-opslag blijft expliciet lokaal.
+- CloudKit- en pushrechten voor beide platformen; het schema is gepubliceerd naar Production.
+
+### Tests
+- 61 gerichte tests geslaagd met een cloudondertekende host; lokale testopslag schakelt CloudKit expliciet uit. Ondertekende Mac- en iOS-builds gecontroleerd. Synchronisatie tussen fysieke apparaten is nog te accepteren.
+
 ## [2026-11-16]: 1.0.328, opnamekwaliteit en betrouwbaardere notulen
 
 ### Fixed

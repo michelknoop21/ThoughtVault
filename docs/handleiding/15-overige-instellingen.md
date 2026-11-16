@@ -43,6 +43,28 @@ Onder **Opname** > **Opnameprofielen** kies je het standaardprofiel. Onder **Not
 
 Meer over profielen lees je in [Profielen](profielen.html).
 
+## Notulen synchroniseren via iCloud
+
+::: macos
+Open **Instellingen → Algemeen → iCloud**.
+:::
+
+::: ios
+Open **Instellingen → Integraties → iCloud**.
+:::
+
+::: macos ios
+Zet **Synchroniseer notulen via iCloud** op beide apparaten aan. Gebruik op je Mac en iPhone hetzelfde Apple-account. Ook je bestaande notulen worden meegenomen. De optie staat standaard uit.
+
+Notulen, transcripties, titels en tags verschijnen op beide apparaten. Audio blijft op het apparaat waarop je hebt opgenomen. Bewerken en verwijderen werkt door op je andere apparaten. Offline wijzigingen worden verstuurd zodra synchronisatie weer mogelijk is. Met **Synchroniseer nu** vraag je direct een poging aan; de status staat ernaast.
+
+Bij gelijktijdige wijzigingen bewaart ThoughtVault een extra notule met **(bewerkingsconflict)** in de titel. Vergelijk de twee versies voordat je een kopie verwijdert. Uitschakelen bewaart je notulen op dit apparaat én in iCloud.
+:::
+
+::: windows
+Synchronisatie via iCloud is beschikbaar tussen Mac en iPhone; de Windows-app neemt hier niet aan deel.
+:::
+
 ## Agenda
 
 ::: macos ios

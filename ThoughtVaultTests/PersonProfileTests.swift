@@ -13,7 +13,7 @@ import SwiftData
 // Exercises the same fetch-isSelf→insert/edit upsert logic as LocalTranscriptStore.
 @MainActor
 private func makeInMemoryContainer() throws -> ModelContainer {
-    let config = ModelConfiguration(isStoredInMemoryOnly: true)
+    let config = ModelConfiguration(isStoredInMemoryOnly: true, cloudKitDatabase: .none)
     return try ModelContainer(
         for: TranscriptRecord.self, PersonProfile.self,
         migrationPlan: AppMigrationPlan.self,

@@ -7,6 +7,13 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		AC1C10000000000000000001 /* NotuleSyncTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC1C10000000000000000001 /* NotuleSyncTests.swift */; };
+		D56E9EAF91F5418BA14B1449 /* NotuleSyncSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00773BBDB9DC4E7AA2D0380B /* NotuleSyncSettingsView.swift */; };
+		B019D3DC5CDC48599E7016EB /* NotuleSyncSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00773BBDB9DC4E7AA2D0380B /* NotuleSyncSettingsView.swift */; };
+		DE5117F45C784C99BFDF7173 /* NotuleSyncService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4662911B34EC4590BFA65489 /* NotuleSyncService.swift */; };
+		AAE1E39F656C49EB8718A657 /* NotuleSyncService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4662911B34EC4590BFA65489 /* NotuleSyncService.swift */; };
+		19C4DE95F7454F0F923B2956 /* NotuleSyncState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D82C2DE75784C7699971823 /* NotuleSyncState.swift */; };
+		081405066AC44728868B4997 /* NotuleSyncState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D82C2DE75784C7699971823 /* NotuleSyncState.swift */; };
 		5318E63393F44311886DC09F /* SuggestedModelsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1683B00205044715AFD0DC73 /* SuggestedModelsTests.swift */; };
 		3B9347916B10415EA631462E /* TaskHistoryStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 949A9793792E4C1DAC1BACCC /* TaskHistoryStoreTests.swift */; };
 		02A2FD6AFCCF4BD0BDF0BB7B /* TaskHistorySection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0ED7C47424244F318E6E4CD8 /* TaskHistorySection.swift */; };
@@ -425,6 +432,10 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		FC1C10000000000000000001 /* NotuleSyncTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotuleSyncTests.swift; sourceTree = "<group>"; };
+		00773BBDB9DC4E7AA2D0380B /* NotuleSyncSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotuleSyncSettingsView.swift; sourceTree = "<group>"; };
+		4662911B34EC4590BFA65489 /* NotuleSyncService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotuleSyncService.swift; sourceTree = "<group>"; };
+		2D82C2DE75784C7699971823 /* NotuleSyncState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotuleSyncState.swift; sourceTree = "<group>"; };
 		FAPK0001 /* ParakeetCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParakeetCatalog.swift; sourceTree = "<group>"; };
 		FAPK1000 /* ParakeetModelRows.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParakeetModelRows.swift; sourceTree = "<group>"; };
 		FAPK1100 /* SettingsView+VerwerkingLogic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SettingsView+VerwerkingLogic.swift"; sourceTree = "<group>"; };
@@ -794,6 +805,8 @@
 				FA0000K1 /* AnthropicLLMService.swift */,
 				FA0000OR /* OpenRouterModels.swift */,
 				FA000062 /* LocalTranscriptStore.swift */,
+				4662911B34EC4590BFA65489 /* NotuleSyncService.swift */,
+				2D82C2DE75784C7699971823 /* NotuleSyncState.swift */,
 				D5C1AD17E20D4C3BA6057224 /* TaskHistoryStore.swift */,
 				9BDA166E30FC417B9B9FAC26 /* SuggestedModels.swift */,
 				FA000071 /* PersonDirectoryService.swift */,
@@ -881,6 +894,7 @@
 				FA0000S2 /* RecordingView+Inspector.swift */,
 				FA0000S1 /* RecordingView+Studio.swift */,
 				FA000031 /* SettingsView.swift */,
+				00773BBDB9DC4E7AA2D0380B /* NotuleSyncSettingsView.swift */,
 				FA0000K8 /* SettingsView+VerwerkingSide.swift */,
 				FAPK1200 /* SettingsView+VerwerkingIOS.swift */,
 				FAPK1100 /* SettingsView+VerwerkingLogic.swift */,
@@ -968,6 +982,7 @@
 				949A9793792E4C1DAC1BACCC /* TaskHistoryStoreTests.swift */,
 				FB9E5A02 /* VaultFolderStoreTests.swift */,
 				FB000002 /* MigrationTests.swift */,
+				FC1C10000000000000000001 /* NotuleSyncTests.swift */,
 				FB0F0A03 /* AppLogTests.swift */,
 				FB0F0B03 /* SupportRelayTests.swift */,
 				FB0F0B90 /* RecordingWidgetLayoutTests.swift */,
@@ -1211,6 +1226,8 @@
 				AB000202 /* ParticipantPickerSheet.swift in Sources */,
 				AA000066 /* ProfileTemplates.swift in Sources */,
 				AA000062 /* LocalTranscriptStore.swift in Sources */,
+				AAE1E39F656C49EB8718A657 /* NotuleSyncService.swift in Sources */,
+				081405066AC44728868B4997 /* NotuleSyncState.swift in Sources */,
 				AA000071 /* PersonDirectoryService.swift in Sources */,
 				AA000063 /* LocalTranscriber.swift in Sources */,
 				AA00PC02 /* PersonalCorrectionsView.swift in Sources */,
@@ -1309,6 +1326,7 @@
 				AA0000S2 /* RecordingView+Inspector.swift in Sources */,
 				AA0000S1 /* RecordingView+Studio.swift in Sources */,
 				AA000031 /* SettingsView.swift in Sources */,
+				B019D3DC5CDC48599E7016EB /* NotuleSyncSettingsView.swift in Sources */,
 				AA0000K8 /* SettingsView+VerwerkingSide.swift in Sources */,
 				AA0000K7 /* SettingsView+Verwerking.swift in Sources */,
 				770D9E3134D29B0F7206FC61 /* SettingsView+Cards.swift in Sources */,
@@ -1357,6 +1375,7 @@
 				AB0000S5 /* QuickNoteStoreTests.swift in Sources */,
 				AB9E5A02 /* VaultFolderStoreTests.swift in Sources */,
 				AB000002 /* MigrationTests.swift in Sources */,
+				AC1C10000000000000000001 /* NotuleSyncTests.swift in Sources */,
 				AB0F0A03 /* AppLogTests.swift in Sources */,
 				AB0F0B03 /* SupportRelayTests.swift in Sources */,
 				AB0F0B90 /* RecordingWidgetLayoutTests.swift in Sources */,
@@ -1459,6 +1478,8 @@
 				EC976A08470F53B4CC9F6373 /* ParticipantPickerSheet.swift in Sources */,
 				07B9AB1C5FA8AE056C9DC513 /* ProfileTemplates.swift in Sources */,
 				FF4B2B2EB90A7A4C28013494 /* LocalTranscriptStore.swift in Sources */,
+				DE5117F45C784C99BFDF7173 /* NotuleSyncService.swift in Sources */,
+				19C4DE95F7454F0F923B2956 /* NotuleSyncState.swift in Sources */,
 				9D50F179AF913CBA129AFF66 /* PersonDirectoryService.swift in Sources */,
 				88BAD6D1EE4B2257757B886A /* LocalTranscriber.swift in Sources */,
 				B1D10AB41AA9610D411227AF /* PersonalCorrectionsView.swift in Sources */,
@@ -1553,6 +1574,7 @@
 				B064E235A84FEC734E5D99B0 /* RecordingView+Inspector.swift in Sources */,
 				7CE40F1A7A24022A074685F6 /* RecordingView+Studio.swift in Sources */,
 				DC7D121D186F2C44F0902D68 /* SettingsView.swift in Sources */,
+				D56E9EAF91F5418BA14B1449 /* NotuleSyncSettingsView.swift in Sources */,
 				825525A8990BF36A59F0ACEF /* SettingsView+VerwerkingSide.swift in Sources */,
 				F4571C89E479D18DF7C6601B /* SettingsView+Verwerking.swift in Sources */,
 				E7EE50E3FD80FA8398D11280 /* SettingsView+Cards.swift in Sources */,
@@ -1606,6 +1628,8 @@
 		XC000002 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ICLOUD_PUSH_ENVIRONMENT = development;
+				ICLOUD_CONTAINER_ENVIRONMENT = Development;
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
@@ -1670,6 +1694,8 @@
 		XC000003 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ICLOUD_PUSH_ENVIRONMENT = production;
+				ICLOUD_CONTAINER_ENVIRONMENT = Production;
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;

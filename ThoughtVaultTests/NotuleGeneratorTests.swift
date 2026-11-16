@@ -330,7 +330,7 @@ final class NotuleGeneratorTests: XCTestCase {
 final class RejectedDraftStoreTests: XCTestCase {
     private func makeStore(notuleHtml: String = "") throws -> LocalTranscriptStore {
         let container = try ModelContainer(for: TranscriptRecord.self, PersonProfile.self,
-                                           configurations: ModelConfiguration(isStoredInMemoryOnly: true))
+                                           configurations: ModelConfiguration(isStoredInMemoryOnly: true, cloudKitDatabase: .none))
         let store = LocalTranscriptStore(container: container)
         try store.save(TranscriptRecord(id: "t1", taskId: "t1", title: "Overleg", rawTranscription: "Sam belt vrijdag.", notuleHtml: notuleHtml))
         return store

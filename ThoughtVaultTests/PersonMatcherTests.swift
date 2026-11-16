@@ -34,7 +34,7 @@ final class PersonMatcherTests: XCTestCase {
         try ModelContainer(
             for: TranscriptRecord.self, PersonProfile.self,
             migrationPlan: AppMigrationPlan.self,
-            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+            configurations: ModelConfiguration(isStoredInMemoryOnly: true, cloudKitDatabase: .none)
         )
     }
 

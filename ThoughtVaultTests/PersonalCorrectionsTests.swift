@@ -130,4 +130,22 @@ final class PersonalCorrectionsTests: XCTestCase {
         XCTAssertTrue(AppEnvironment.isRunningTests)
         XCTAssertFalse(PersonalCorrections.url.path.hasPrefix(URL.applicationSupportDirectory.path))
     }
+
+    func testApplyCorrectsNotuleAndTranscript() {
+        let entry = PersonalCorrection(canonical: "Maikel", variants: ["Michael"], scope: nil)
+        let result = PersonalCorrections.apply(entry, notule: "<p>Michael belt.</p>", transcript: "Michael zegt: michael belt.")
+        XCTAssertEqual(result.notule, "<p>Maikel belt.</p>")
+        XCTAssertEqual(result.transcript, "Maikel zegt: Maikel belt.")
+        XCTAssertNil(PersonalCorrections.apply(entry, notule: "", transcript: nil).transcript)
+    }
+
+    func testPersonCorrectionSkipsPartOfNameAndName() throws {
+        let entry = try XCTUnwrap(PersonalCorrections.personCorrection(name: "Sanne Bakker", heardAs: ["Sanne", " ", "sanne bakker", "Sanne Backer", "sanne backer", "Bakker"], scope: "p1"))
+        XCTAssertEqual(entry.variants, ["Sanne Backer"])
+        XCTAssertEqual(entry.scope, "p1")
+        let result = PersonalCorrections.apply(entry, notule: "<p>Sanne Backer en Sanne</p>", transcript: "Sanne zei tegen Sanne Backer")
+        XCTAssertEqual(result.notule, "<p>Sanne Bakker en Sanne</p>")
+        XCTAssertEqual(result.transcript, "Sanne zei tegen Sanne Bakker")
+        XCTAssertNil(PersonalCorrections.personCorrection(name: "Sanne Bakker", heardAs: ["Sanne", "SANNE BAKKER", ""], scope: nil))
+    }
 }

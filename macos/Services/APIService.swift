@@ -718,6 +718,13 @@ actor APIService {
         try await performVoid(req)
     }
 
+    /// Stored by the backend as the edited transcription; the original is kept.
+    func updateTranscription(taskId: String, text: String) async throws {
+        let body = try JSONEncoder().encode(["transcription": text])
+        let req = try request(path: "/transcripts/\(taskId)", method: "PUT", body: body)
+        try await performVoid(req)
+    }
+
     /// Fetch linked notes for a transcript. Returns HTML string if available.
     func getTranscriptNotes(taskId: String) async throws -> String? {
         let req = try request(path: "/transcripts/\(taskId)/notes")

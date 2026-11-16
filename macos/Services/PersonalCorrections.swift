@@ -222,6 +222,21 @@ enum PersonalCorrections {
         }
         return result
     }
+    /// Applies one correction to a recording's notule and transcript.
+    static func apply(_ entry: PersonalCorrection, notule: String, transcript: String?) -> (notule: String, transcript: String?) {
+        (html(notule, entries: [entry], profileId: entry.scope), transcript.map { text($0, entries: [entry], profileId: entry.scope) })
+    }
+    /// Correction that writes `name` over the heard spellings of a person. Skips empty spellings,
+    /// the name itself and spellings that are part of the name ("Sanne" for "Sanne Bakker").
+    /// Nil when no spelling is left.
+    static func personCorrection(name: String, heardAs: [String], scope: String?) -> PersonalCorrection? {
+        let name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        var seen = Set<String>()
+        let variants = heardAs.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty && !containsWord($0, in: name) && seen.insert($0.lowercased()).inserted }
+        guard validTerm(name), !variants.isEmpty else { return nil }
+        return PersonalCorrection(canonical: name, variants: variants, scope: scope)
+    }
     static func escape(_ text: String) -> String {
         text.replacingOccurrences(of: "&", with: "&amp;").replacingOccurrences(of: "<", with: "&lt;").replacingOccurrences(of: ">", with: "&gt;")
     }

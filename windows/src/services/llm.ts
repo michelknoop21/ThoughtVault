@@ -60,7 +60,9 @@ async function proxy(request: { url: string; headers: Record<string, string>; bo
   try {
     return await invoke("proxy_request", { request: { ...request, method: "POST", timeout_seconds: timeoutSeconds } });
   } catch (error) {
-    throw String(error).startsWith(PROXY_TIMEOUT) ? new Error(TIME_LIMIT_MESSAGE) : error;
+    // Tauri rejects with a string, but an Error with the same text is a timeout too.
+    const message = error instanceof Error ? error.message : String(error);
+    throw message.startsWith(PROXY_TIMEOUT) ? new Error(TIME_LIMIT_MESSAGE) : error;
   }
 }
 
@@ -158,6 +160,21 @@ function buildUserContent(
   return content + `\n\nLaatste inhoudsregels: volg de gekozen template en laat lege secties weg. Begin met één h1 die in 4 tot 10 woorden het doel of de uitkomst van het gesprek noemt; nooit alleen een genre-woord als Verslag, Notulen, Meeting, Gesprek of Overleg. Verzin geen feiten, besluiten, eigenaren of termijnen. ${FACTUALITY_RULES} Schrijf eenvoudige HTML zonder CSS, style-blok of code fences.`;
 }
 
+/** Provider kind for the log as on macOS, without the host of a self-configured endpoint. */
+export function providerKind(baseUrl: string): string {
+  if (isOllamaCloudURL(baseUrl)) return "ollama-cloud";
+  try { if (new URL(baseUrl).hostname === new URL(OPENROUTER_URL).hostname) return "openrouter"; } catch { /* not a URL */ }
+  return baseUrl.startsWith("https://") ? "hosted" : "local";
+}
+
+/** Connection failure text: the Ollama/LM Studio hint only for a local endpoint, the bare host for https. */
+export function unreachableMessage(baseUrl: string, model: string): string {
+  if (!baseUrl.startsWith("https://")) return `Kan de notule-generator niet bereiken op ${baseUrl} (model "${model}"). Draait Ollama/LM Studio en klopt de URL in Instellingen?`;
+  let host = baseUrl;
+  try { host = new URL(baseUrl).host; } catch { /* keep as configured */ }
+  return `Kan ${host} niet bereiken (model "${model}"). Controleer je internetverbinding en probeer het opnieuw.`;
+}
+
 function generateWithOpenAICompatible(
   baseUrl: string,
   model: string,
@@ -168,8 +185,7 @@ function generateWithOpenAICompatible(
   step?: ModelStep,
   meter?: UsageMeter,
 ): Promise<string> {
-  // Provider kind as on macOS, without the host of a self-configured endpoint.
-  const provider = isOllamaCloudURL(baseUrl) ? "ollama-cloud" : baseUrl.startsWith("https://") ? "hosted" : "local";
+  const provider = providerKind(baseUrl);
   const trace: RequestTrace = { step, provider, model, system: systemPrompt, user: userPrompt, meter };
   return logModelRequest(trace, () => openAICompatibleRequest(baseUrl, model, systemPrompt, userPrompt, apiKey, trace, onProgress));
 }
@@ -197,10 +213,11 @@ async function openAICompatibleRequest(
   let response: { status: number; body: string };
   try {
     response = await modelRequest({ url: `${base}/v1/chat/completions`, headers,
-      body: JSON.stringify({ model, messages: [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }], stream: false, max_tokens: MAX_OUTPUT_TOKENS }) }, trace);
+      body: JSON.stringify({ model, messages: [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }], stream: false, max_tokens: MAX_OUTPUT_TOKENS,
+        ...(providerKind(baseUrl) === "openrouter" ? { reasoning: { effort: OPENROUTER_REASONING_EFFORT } } : {}) }) }, trace);
   } catch (error) {
     if (error instanceof Error && error.message === TIME_LIMIT_MESSAGE) throw error;
-    throw new Error(`Kan de notule-generator niet bereiken op ${baseUrl} (model "${model}"). Draait Ollama/LM Studio en klopt de URL in Instellingen?`);
+    throw new Error(unreachableMessage(baseUrl, model));
   }
   if (cloud && response.status === 401) throw new Error("Ollama Cloud API-sleutel geweigerd.");
   if (cloud && response.status === 429) throw new Error(`Ollama Cloud ${RATE_LIMIT_MESSAGE}`);
@@ -217,6 +234,10 @@ async function openAICompatibleRequest(
 }
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1";
+/** OpenRouter reasoning effort. Reasoning models spent most of their output thinking (mistral-large-4: 7,382 of
+ * 7,768 output tokens on a 31 s recording) and long meetings ran into the 900 s limit, so OpenRouter requests ask
+ * for low effort. Other endpoints do not get the field. */
+const OPENROUTER_REASONING_EFFORT = "low";
 
 /** OpenRouter speaks the OpenAI chat format; only the base URL and the stored key differ. */
 async function generateWithOpenRouter(model: string, systemPrompt: string, userPrompt: string, step?: ModelStep, meter?: UsageMeter): Promise<string> {

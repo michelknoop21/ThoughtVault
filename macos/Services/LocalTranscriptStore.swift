@@ -254,6 +254,15 @@ final class LocalTranscriptStore {
         do { try context.save() } catch { record.notuleHtml = original; throw error }
     }
 
+    /// Saves a corrected notule and transcript together.
+    func updateNotule(taskId: String, html: String, transcription: String?) throws {
+        guard let record = record(forTaskId: taskId) else { throw LocalStoreError.recordNotFound }
+        let original = (record.notuleHtml, record.rawTranscription)
+        record.notuleHtml = html
+        if let transcription { record.rawTranscription = transcription }
+        do { try context.save() } catch { (record.notuleHtml, record.rawTranscription) = original; throw error }
+    }
+
     func updateParticipants(taskId: String, participants: [Participant]) throws {
         guard let record = record(forTaskId: taskId) else { throw LocalStoreError.recordNotFound }
         let original = record.participantsJSON

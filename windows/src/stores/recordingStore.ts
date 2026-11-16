@@ -3,6 +3,7 @@ import type { RecordingMode, TranscriptTask } from "../types";
 import { saveQuickNoteDraft } from "../services/quickNotes";
 import { isExpectedProcessingNotice } from "../services/automaticFailure";
 import { failureFromTransition, markStage, processingDiagnostic, reportFailure, stageForStatus } from "../services/crashReporter";
+import { useTaskHistory } from "../services/taskHistory";
 
 // AbortController registry — lives outside Zustand (not serializable)
 const abortControllers = new Map<string, AbortController>();
@@ -138,8 +139,10 @@ export const useRecordingStore = create<RecordingState>()((set, get) => ({
       pausedDuration:
         state.pausedDuration + (state.pausedAt ? Date.now() - state.pausedAt : 0),
     })),
-  addBackgroundTask: (task) =>
-    set((state) => ({ backgroundTasks: [...state.backgroundTasks, task] })),
+  addBackgroundTask: (task) => {
+    set((state) => ({ backgroundTasks: [...state.backgroundTasks, task] }));
+    useTaskHistory.getState().track(task);
+  },
   updateBackgroundTask: (taskId, update) => {
     const previous = get().backgroundTasks.find(task => task.task_id === taskId);
     const diagnostic = update.status === "failed" || update.status === "error"
@@ -149,6 +152,8 @@ export const useRecordingStore = create<RecordingState>()((set, get) => ({
         t.task_id === taskId ? { ...t, ...update, ...(diagnostic ? { error_message: diagnostic.shown } : {}) } : t
       ),
     }));
+    const updated = get().backgroundTasks.find(task => task.task_id === taskId);
+    if (updated) useTaskHistory.getState().track(updated);
     if (!previous || !update.status || update.status === previous.status) return;
     void markStage(stageForStatus(update.status));
     // Check cancellation on the original UI message before replacing untrusted bodies.
@@ -165,6 +170,8 @@ export const useRecordingStore = create<RecordingState>()((set, get) => ({
       controller.abort();
       abortControllers.delete(taskId);
     }
+    const task = get().backgroundTasks.find(t => t.task_id === taskId);
+    if (task) useTaskHistory.getState().track({ ...task, status: "cancelled" });
     set((state) => ({
       backgroundTasks: state.backgroundTasks.filter((t) => t.task_id !== taskId),
     }));

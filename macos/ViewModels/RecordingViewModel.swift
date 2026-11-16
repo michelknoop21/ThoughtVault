@@ -1284,6 +1284,7 @@ final class RecordingViewModel {
         if let index = activeTasks.firstIndex(where: { $0.taskId == updatedTask.taskId }) {
             let previous = activeTasks[index].status
             activeTasks[index] = updatedTask
+            taskHistoryDidChange(updatedTask)
             let failure = updatedTask.errorMessage ?? ""
             taskDidChange(from: previous, to: updatedTask.status, message: SupportViewModel.shouldReport(failure) ? "Verwerking op de server mislukt." : failure)
         }
@@ -1397,6 +1398,7 @@ final class RecordingViewModel {
         // Avoid duplicates
         if !activeTasks.contains(where: { $0.taskId == task.taskId }) {
             activeTasks.append(task)
+            taskHistoryDidChange(task)
         }
     }
 
@@ -1410,6 +1412,7 @@ final class RecordingViewModel {
         if let progress { activeTasks[idx].progress = progress }
         if let errorMessage { activeTasks[idx].errorMessage = errorMessage }
         activeTasks[idx].statusDetail = statusDetail
+        taskHistoryDidChange(activeTasks[idx])
         taskDidChange(from: previous, to: status, message: supportMessage ?? activeTasks[idx].errorMessage)
 
         // Local processing reports completion through updateTask (not SSE), so the

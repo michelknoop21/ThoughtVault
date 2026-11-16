@@ -74,7 +74,7 @@ Bij lokale transcriptie heb je alleen internet nodig voor wat je zelf naar buite
 | Notulen met een model op je eigen computer | Werkt |
 | Notulen met een aanbieder op internet | Werkt niet. De transcriptie wordt wel opgeslagen en je start de taak later opnieuw. |
 
-Mislukt het schrijven van de notulen omdat de aanbieder niet bereikbaar is, dan staat de taak als mislukt op het scherm [Taken](taken.html#een-mislukte-taak-opnieuw-starten). Je start hem opnieuw zodra de verbinding terug is.
+Mislukt het schrijven van de notulen omdat de aanbieder niet bereikbaar is, dan staat de taak als mislukt op het scherm [Taken](taken.html#een-taak-opnieuw-verwerken). Je start hem opnieuw zodra de verbinding terug is.
 
 ### Zonder verbinding in de modus Cloud
 

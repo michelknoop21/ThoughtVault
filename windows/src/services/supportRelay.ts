@@ -2,6 +2,13 @@ import { invoke } from "@tauri-apps/api/core";
 
 export const SUPPORT_BASE_URL = "https://thoughtvault.yinga.ai/support";
 export const PRIVACY_URL = "https://thoughtvault.yinga.ai/privacy.html";
+/** Help centre link from the build-time base URL; null (button hidden) when there is none. */
+export function helpUrl(base: string | undefined, platform = "windows"): string | null {
+  const trimmed = base?.trim();
+  if (!trimmed) return null;
+  return `${trimmed.endsWith("/") ? trimmed : `${trimmed}/`}?platform=${platform}`;
+}
+export const HELP_URL = helpUrl(import.meta.env.VITE_HELP_URL);
 export type ReportCategory = "BUG" | "FEATURE_REQUEST" | "QUESTION";
 export type ReportStage = "opnemen" | "transcriberen" | "notule" | "crash";
 export type HubStatus = "NEW" | "IN_PROGRESS" | "WAITING_FOR_USER" | "RESOLVED" | "CLOSED";

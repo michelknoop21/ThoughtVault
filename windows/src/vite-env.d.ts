@@ -1,5 +1,9 @@
 /// <reference types="vite/client" />
 
+interface ImportMetaEnv {
+  readonly VITE_HELP_URL?: string;
+}
+
 declare module "*.png" {
   const src: string;
   export default src;

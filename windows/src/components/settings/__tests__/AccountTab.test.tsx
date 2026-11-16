@@ -133,3 +133,6 @@ it("holds oversized drafts and saves once both contacts are corrected", async ()
   expect(useSupportStore.getState().name).toHaveLength(200);
   expect(useSupportStore.getState().email).toHaveLength(320);
 });
+it("hides Handleiding when the build has no help URL", () => {
+  expect(host.textContent).not.toContain("Handleiding");
+});

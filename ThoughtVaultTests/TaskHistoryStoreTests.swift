@@ -139,4 +139,46 @@ final class TaskHistoryStoreTests: XCTestCase {
         try await Task.sleep(for: .seconds(3.5))
         XCTAssertTrue(vm.activeTasks.contains { $0.taskId == id })
     }
+
+    func testCorruptFileReplacedByAValidOneMeanwhileIsNotMovedAside() throws {
+        try Data("[{".utf8).write(to: url)
+        let valid = TaskHistoryStore(url: FileManager.default.temporaryDirectory.appending(path: "valid-\(UUID().uuidString).json"))
+        valid.track(task(status: .completed), context: context)
+        let validData = try JSONEncoder.historyForTests.encode(valid.entries)
+        let entries = TaskHistoryStore.load(from: url) { url in
+            try? validData.write(to: url, options: .atomic)  // another writer wins the race
+            return try? Data(contentsOf: url)
+        }
+        XCTAssertEqual(entries.map(\.id), ["local-1"])
+        XCTAssertEqual(try Data(contentsOf: url), validData)
+        let siblings = try FileManager.default.contentsOfDirectory(atPath: url.deletingLastPathComponent().path)
+        XCTAssertFalse(siblings.contains { $0.hasPrefix(url.deletingPathExtension().lastPathComponent + ".corrupt-") })
+    }
+
+    func testRunCutOffByAQuitIsInterruptedAndTheNextRunStartsClean() throws {
+        let store = TaskHistoryStore(url: url)
+        store.carryTitle("Oude titel", to: "/tmp/recording_1.wav")
+        store.track(task(status: .transcribing), context: context)  // the app quits during this run
+
+        let reloaded = TaskHistoryStore(url: url)
+        let interrupted = try XCTUnwrap(reloaded.entry("local-1"))
+        XCTAssertFalse(interrupted.status.isActive)
+        XCTAssertEqual(interrupted.outcomeLabel, "Onderbroken")
+
+        let later = TaskHistoryContext(transcriptionEngine: "Engine", notuleProvider: "Provider", notuleModel: "model-b", profileName: "Meeting")
+        reloaded.track(task(status: .transcribing), context: later)
+        let rerun = try XCTUnwrap(reloaded.entry("local-1"))
+        XCTAssertFalse(rerun.titleEdited)
+        XCTAssertEqual(rerun.steps.map(\.label), ["Transcriberen"])
+        XCTAssertEqual(rerun.notuleModel, "model-b")
+        XCTAssertNil(rerun.errorMessage)
+    }
+}
+
+private extension JSONEncoder {
+    static var historyForTests: JSONEncoder {
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        return encoder
+    }
 }

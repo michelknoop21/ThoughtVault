@@ -178,7 +178,7 @@ struct HostedProviderConfig: View {
             list = all.filter { $0.hasPrefix("gpt-") || $0.hasPrefix("o") }.filter { !$0.contains("audio") && !$0.contains("image") && !$0.contains("realtime") && !$0.contains("transcribe") && !$0.contains("tts") }
         } else if isOpenRouter {
             // One request gives the models and their prices.
-            prices = await SuggestedModels.fetchReportedPrices(baseURL: OpenAICompatibleLLMService.openRouterBaseURL, apiKey: key) ?? [:]
+            prices = await SuggestedModels.fetchReportedPrices(provider: .openRouter, baseURL: OpenAICompatibleLLMService.openRouterBaseURL, apiKey: key) ?? [:]
             list = prices.keys.sorted()
         } else {
             list = await AnthropicLLMService(model: anthropicModel, apiKey: key).fetchModels()

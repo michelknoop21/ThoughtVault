@@ -78,6 +78,16 @@ it("does not send a stored model above the price cap", async () => {
   expect(JSON.parse(invoke.mock.calls[0][1].request.body).model).toBe("mistralai/mistral-large-4-0");
 });
 
+it("never sends a model with a known price above the cap to a custom endpoint", async () => {
+  useSettingsStore.setState({ notulen_provider: "ollama", ollama_url: "https://api.example.com/v1", ollama_model: "gpt-5.6-sol" });
+  loadCredential.mockResolvedValue("key");
+  invoke.mockResolvedValue({ status: 200, body: JSON.stringify({ choices: [{ message: { content: "<p>Besluit</p>" } }] }) });
+  await expect(LLMService.generateNotulen("QA test.", profile)).rejects.toThrow("gpt-5.6-sol valt boven de prijsgrens en is niet gebruikt. Kies een goedkoper model bij Instellingen > Verwerking.");
+  expect(invoke.mock.calls.some(call => call[1]?.request?.body?.includes("gpt-5.6-sol"))).toBe(false);
+  useSettingsStore.setState({ ollama_model: "eigen-llama-70b" });  // unknown price: usually self-hosted
+  expect(await LLMService.generateNotulen("QA test.", profile)).toBe("<p>Besluit</p>");
+});
+
 it("asks only OpenRouter for low reasoning effort", async () => {
   const reply = { status: 200, body: JSON.stringify({ choices: [{ message: { content: "<p>Besluit</p>" } }] }) };
   useSettingsStore.setState({ notulen_provider: "openai" as never });

@@ -91,4 +91,35 @@ final class SuggestedModelsTests: XCTestCase {
         XCTAssertEqual(SuggestedModels.currentModel(for: .openRouter), "openai/gpt-5.6-luna")
         XCTAssertNil(SuggestedModels.capNotice(for: .openRouter))
     }
+
+    /// A custom endpoint is usually self-hosted: an unknown price is fine, a known price above the cap is refused.
+    func testCompatibleEndpointRefusesOnlyAKnownPriceAboveTheCap() {
+        XCTAssertTrue(SuggestedModels.isAllowed("eigen-llama-70b", provider: .openAICompatible))
+        XCTAssertTrue(SuggestedModels.isAllowed("gpt-5.6-terra", provider: .openAICompatible))
+        XCTAssertFalse(SuggestedModels.isAllowed("gpt-5.6-sol", provider: .openAICompatible))
+        XCTAssertNil(SuggestedModels.refusal(for: "eigen-llama-70b", provider: .openAICompatible))
+        let refusal = SuggestedModels.refusal(for: "gpt-5.6-sol", provider: .openAICompatible)
+        XCTAssertEqual(refusal, "gpt-5.6-sol valt boven de prijsgrens en is niet gebruikt. Kies een goedkoper model bij Instellingen > Verwerking.")
+        // Providers with suggestions fall back instead of refusing.
+        XCTAssertNil(SuggestedModels.refusal(for: "anthropic/claude-opus-5", provider: .openRouter))
+        XCTAssertFalse(SuggestedModels.isAllowed("vendor/unknown", provider: .openRouter))
+    }
+
+    func testRememberedPricesArePerProviderAndEndpointAndExpire() throws {
+        let suite = "reported-prices-\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let t0 = Date(timeIntervalSince1970: 1_000_000)
+        let cheap = ModelPrice(input: 1, output: 2)
+        SuggestedModels.rememberReported(["vendor/x": cheap], provider: .openRouter, baseURL: "https://a.example/v1",
+                                         at: t0, defaults: defaults)
+        XCTAssertEqual(SuggestedModels.rememberedPrice(of: "vendor/x", provider: .openRouter, baseURL: "https://a.example/v1",
+                                                       now: t0.addingTimeInterval(86_400), defaults: defaults), cheap)
+        XCTAssertNil(SuggestedModels.rememberedPrice(of: "vendor/x", provider: .openAICompatible, baseURL: "https://a.example/v1",
+                                                     now: t0, defaults: defaults))
+        XCTAssertNil(SuggestedModels.rememberedPrice(of: "vendor/x", provider: .openRouter, baseURL: "https://b.example/v1",
+                                                     now: t0, defaults: defaults))
+        XCTAssertNil(SuggestedModels.rememberedPrice(of: "vendor/x", provider: .openRouter, baseURL: "https://a.example/v1",
+                                                     now: t0.addingTimeInterval(8 * 86_400), defaults: defaults))
+    }
 }

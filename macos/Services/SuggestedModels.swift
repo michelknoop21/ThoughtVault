@@ -53,22 +53,23 @@ enum SuggestedModels {
 
     /// Known price; a routed id such as `vendor/model` falls back to its last part, and a
     /// version written with a dot (`x-5.5`) also matches the dashed spelling (`x-5-5`).
-    /// A price the provider reported for a listed model counts as known too.
     static func price(of model: String) -> ModelPrice? {
         let last = model.split(separator: "/").last.map(String.init) ?? model
         return [model, last, last.replacingOccurrences(of: ".", with: "-")].lazy.compactMap { knownPrices[$0] }.first
-            ?? rememberedPrices[model]
     }
 
     static func isWithinCap(_ price: ModelPrice) -> Bool {
         price.input <= cap.input && price.output <= cap.output
     }
 
-    /// Metered providers only allow a model whose price is known (reported or listed) and within
-    /// the cap; an unknown price counts as too expensive. Local and flat-rate providers are free.
+    /// Metered providers only allow a model whose price is known (listed, or reported by that
+    /// endpoint in the last week) and within the cap; an unknown price counts as too expensive,
+    /// except on a custom OpenAI-compatible endpoint, which is usually self-hosted.
+    /// Local and flat-rate providers are free.
     static func isAllowed(_ model: String, provider: NotulenProvider, reportedPrice: ModelPrice? = nil) -> Bool {
         guard isMetered(provider) else { return true }
-        guard let price = reportedPrice ?? price(of: model) else { return false }
+        let remembered = { reportedPriceBaseURL(for: provider).flatMap { rememberedPrice(of: model, provider: provider, baseURL: $0) } }
+        guard let price = reportedPrice ?? price(of: model) ?? remembered() else { return provider == .openAICompatible }
         return isWithinCap(price)
     }
 
@@ -91,7 +92,7 @@ enum SuggestedModels {
     }
 
     /// The models a `/models` endpoint lists with the price it reports for each; nil when unreachable.
-    static func fetchReportedPrices(baseURL: String, apiKey: String) async -> [String: ModelPrice]? {
+    static func fetchReportedPrices(provider: NotulenProvider, baseURL: String, apiKey: String) async -> [String: ModelPrice]? {
         guard let url = URL(string: baseURL + "/models") else { return nil }
         var request = URLRequest(url: url)
         request.timeoutInterval = 10
@@ -102,15 +103,47 @@ enum SuggestedModels {
               let items = json["data"] as? [[String: Any]] else { return nil }
         let prices = reportedPrices(items)
         // Kept so a listed model chosen in settings stays allowed when the request is built later.
-        UserDefaults.standard.set(prices.mapValues { [$0.input, $0.output] }, forKey: rememberedPricesKey)
+        rememberReported(prices, provider: provider, baseURL: baseURL)
         return prices
     }
 
-    private static let rememberedPricesKey = "reportedModelPrices"
+    /// Why `model` is not sent at all: the provider does not allow it and has no suggestion to fall back to.
+    static func refusal(for model: String, provider: NotulenProvider) -> String? {
+        guard !isAllowed(model, provider: provider), suggested(for: provider).isEmpty else { return nil }
+        return "\(model) valt boven de prijsgrens en is niet gebruikt. Kies een goedkoper model bij Instellingen > Verwerking."
+    }
 
-    private static var rememberedPrices: [String: ModelPrice] {
-        let stored = UserDefaults.standard.dictionary(forKey: rememberedPricesKey) as? [String: [Double]] ?? [:]
-        return stored.compactMapValues { $0.count == 2 ? ModelPrice(input: $0[0], output: $0[1]) : nil }
+    // MARK: - Reported prices
+
+    /// Reported prices are kept per provider and endpoint, and trusted for a week.
+    static let rememberedPriceMaxAge: TimeInterval = 7 * 24 * 3600
+    private static let rememberedPricesKey = "reportedModelPricesByEndpoint"
+
+    private static func priceScope(_ provider: NotulenProvider, _ baseURL: String) -> String { provider.rawValue + "|" + baseURL }
+
+    /// The endpoint whose reported prices apply to `provider` now; nil when it reports none.
+    private static func reportedPriceBaseURL(for provider: NotulenProvider) -> String? {
+        switch provider {
+        case .openRouter: return OpenAICompatibleLLMService.openRouterBaseURL
+        case .openAICompatible: return CloudAIConfiguration.selected()?.baseURL
+        default: return nil
+        }
+    }
+
+    static func rememberReported(_ prices: [String: ModelPrice], provider: NotulenProvider, baseURL: String,
+                                 at now: Date = Date(), defaults: UserDefaults = .standard) {
+        var all = defaults.dictionary(forKey: rememberedPricesKey) ?? [:]
+        all[priceScope(provider, baseURL)] = ["at": now.timeIntervalSince1970,
+                                              "prices": prices.mapValues { [$0.input, $0.output] }] as [String: Any]
+        defaults.set(all, forKey: rememberedPricesKey)
+    }
+
+    static func rememberedPrice(of model: String, provider: NotulenProvider, baseURL: String,
+                                now: Date = Date(), defaults: UserDefaults = .standard) -> ModelPrice? {
+        guard let scope = defaults.dictionary(forKey: rememberedPricesKey)?[priceScope(provider, baseURL)] as? [String: Any],
+              let at = scope["at"] as? Double, now.timeIntervalSince1970 - at <= rememberedPriceMaxAge,
+              let price = (scope["prices"] as? [String: [Double]])?[model], price.count == 2 else { return nil }
+        return ModelPrice(input: price[0], output: price[1])
     }
 
     /// Model id to reported price; a model without a usable price is left out.
@@ -154,9 +187,10 @@ enum SuggestedModels {
         return fallback
     }
 
-    /// Short notice when `currentModel(for:)` replaced the stored model; nil otherwise.
+    /// Short notice when `currentModel(for:)` replaced or refused the stored model; nil otherwise.
     static func capNotice(for provider: NotulenProvider) -> String? {
         let stored = storedModel(for: provider), used = currentModel(for: provider)
+        if let refusal = refusal(for: stored, provider: provider) { return refusal }
         return stored == used ? nil : "\(stored) valt boven de prijsgrens, daarom is \(used) gebruikt."
     }
 

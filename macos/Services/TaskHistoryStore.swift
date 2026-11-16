@@ -40,11 +40,13 @@ struct TaskHistoryEntry: Codable, Equatable, Identifiable, Sendable {
     var steps: [TaskHistoryStep] = []
 
     static let cancelledMessage = "Geannuleerd door gebruiker."
+    static let interruptedMessage = "Onderbroken: de app werd afgesloten tijdens de verwerking."
 
     var isCancelled: Bool { status == .error && errorMessage == Self.cancelledMessage }
 
     var outcomeLabel: String {
         if isCancelled { return "Geannuleerd" }
+        if status == .error && errorMessage == Self.interruptedMessage { return "Onderbroken" }
         switch status {
         case .completed: return "Voltooid"
         case .error: return "Mislukt"
@@ -83,20 +85,39 @@ final class TaskHistoryStore {
     init(url: URL = TaskHistoryStore.defaultURL) {
         self.url = url
         entries = Self.load(from: url)
+        if Self.markInterrupted(&entries) { save() }
     }
 
     /// A missing file is an empty history. An unreadable one is kept aside under a timestamped
-    /// name and the history starts empty, so processing never depends on it.
-    private static func load(from url: URL) -> [TaskHistoryEntry] {
-        guard let data = try? Data(contentsOf: url) else { return [] }
-        do {
-            return try JSONDecoder.history.decode([TaskHistoryEntry].self, from: data)
-        } catch {
-            let aside = url.deletingPathExtension().appendingPathExtension("corrupt-\(Int(Date().timeIntervalSince1970)).json")
-            try? FileManager.default.moveItem(at: url, to: aside)
-            AppLog(category: "TaskHistory").error("Task history unreadable (\(type(of: error))), moved aside to \(aside.lastPathComponent)")
-            return []
+    /// name and the history starts empty, so processing never depends on it. Before moving it the
+    /// file is read again: another writer may have replaced it with a valid history meanwhile.
+    static func load(from url: URL, readAgain: (URL) -> Data? = { try? Data(contentsOf: $0) }) -> [TaskHistoryEntry] {
+        guard var data = try? Data(contentsOf: url) else { return [] }
+        for _ in 0..<3 {
+            do {
+                return try JSONDecoder.history.decode([TaskHistoryEntry].self, from: data)
+            } catch {
+                guard let again = readAgain(url) else { return [] }
+                if again != data { data = again; continue }
+                let aside = url.deletingPathExtension().appendingPathExtension("corrupt-\(Int(Date().timeIntervalSince1970)).json")
+                try? FileManager.default.moveItem(at: url, to: aside)
+                AppLog(category: "TaskHistory").error("Task history unreadable (\(type(of: error))), moved aside to \(aside.lastPathComponent)")
+                return []
+            }
         }
+        return []  // ponytail: the file kept changing; start empty and leave it to its writer.
+    }
+
+    /// No local run survives a restart, so an entry that was still active becomes interrupted.
+    /// A server task may still be running and keeps its status.
+    private static func markInterrupted(_ entries: inout [TaskHistoryEntry]) -> Bool {
+        var changed = false
+        for index in entries.indices where entries[index].status.isActive && entries[index].transcriptId.hasPrefix("local-") {
+            entries[index].status = .error
+            entries[index].errorMessage = TaskHistoryEntry.interruptedMessage
+            changed = true
+        }
+        return changed
     }
 
     func entry(_ id: String) -> TaskHistoryEntry? { entries.first { $0.id == id } }
@@ -111,11 +132,20 @@ final class TaskHistoryStore {
         }
         let before = entry
         if entry.status != task.status, !entry.status.isActive, task.status.isActive {
-            // A finished task that runs again (retry under the same id).
+            // A finished task that runs again under the same id starts from a clean per-run state;
+            // only a title carried for this run names it (below).
+            let context = context()
+            entry.createdAt = now
             entry.finishedAt = nil
             entry.errorMessage = nil
-            // A regeneration reuses its id per run: only a title chosen for this run may name the notule.
-            if task.taskId.hasPrefix("local-regen-") { entry.titleEdited = false }
+            entry.steps = []
+            entry.titleEdited = false
+            entry.profileId = task.profileId ?? entry.profileId
+            entry.profileName = context.profileName ?? entry.profileName
+            entry.transcriptionEngine = context.transcriptionEngine
+            entry.notuleProvider = context.notuleProvider
+            entry.notuleModel = context.notuleModel
+            entry.notuleNotice = context.notuleNotice
         }
         if task.status.isActive, let carried = takeCarriedTitle(task, transcriptId: entry.transcriptId) {
             entry.title = carried

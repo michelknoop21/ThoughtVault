@@ -1,5 +1,5 @@
 import type { AppSettings, NotulenProvider } from "../types";
-import { isOllamaCloudURL } from "./ollamaModels";
+import { isHostedURL, isOllamaCloudURL } from "./ollamaModels";
 
 /** List price in USD per million tokens. */
 export interface ModelPrice { input: number; output: number }
@@ -81,6 +81,18 @@ export function usableModel(model: string, provider: ModelProvider): string {
 export function capNotice(model: string, provider: ModelProvider): string | undefined {
   const used = usableModel(model, provider);
   return used === model ? undefined : `${model} valt boven de prijsgrens, daarom is ${used} gebruikt.`;
+}
+
+/**
+ * A custom hosted endpoint (Ollama or LM Studio settings pointing at a paid service) has no fallback
+ * model: a model whose price is known and above the cap is refused. An unknown price is allowed,
+ * because such an endpoint is usually self-hosted.
+ */
+export function compatibleRefusal(model: string, baseURL: string): string | undefined {
+  if (!isHostedURL(baseURL) || isOllamaCloudURL(baseURL)) return undefined;
+  const price = priceOf(model);
+  return price && !isWithinCap(price)
+    ? `${model} valt boven de prijsgrens en is niet gebruikt. Kies een goedkoper model bij Instellingen > Verwerking.` : undefined;
 }
 
 /** Picker choices: suggestions first, then the current and listed models that pass the cap. */

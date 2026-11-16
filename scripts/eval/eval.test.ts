@@ -109,7 +109,9 @@ it("notule-eval", async () => {
     secureWrite(join(resultsDir, `${model.replace(/\//g, "_")}__${conversation}__r${rep}.html`), html);
     secureWrite(join(resultsDir, "runs.jsonl"), JSON.stringify(run) + "\n", true);
     console.log(`${model} ${conversation} r${rep}: ${error ? "FOUT" : `${run.found}/${run.total} feiten`}, USD ${run.costUsd.toFixed(4)}, ${(run.durationMs / 1000).toFixed(1)}s`);
-    if (!meter.costKnown && !state.dry) { stopped = "Kosten van een verzoek onbekend; gestopt om het budget te bewaken."; break outer; }
+    // A failed run counts as an error and the comparison goes on; only a successful run
+    // without a reported cost stops it, because then the budget can no longer be tracked.
+    if (!meter.costKnown && !error && !state.dry) { stopped = "Kosten van een verzoek onbekend; gestopt om het budget te bewaken."; break outer; }
   }
   const summary = summaryTable(runs, total) + (stopped ? `\n${stopped}\n` : "") + `\nDetailniveau: n.v.t. (pijplijn kent het niet)\n`;
   secureWrite(join(resultsDir, "summary.md"), summary);

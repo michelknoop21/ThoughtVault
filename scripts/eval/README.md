@@ -13,7 +13,7 @@ Invoer staat in `~/Documents/ThoughtVault-eval` (transcripties plus feitenlijste
 Vanuit `windows/` moet `node_modules` bestaan (`npm ci`).
 
 ```bash
-vault-exec OPENROUTER_API --env-var OPENROUTER_API_KEY -- \
+vault-exec OPENROUTER_API -- \
   node scripts/eval/eval.mjs --models all --conversations schadebezoek,thuisserver --reps 2 --budget 6
 ```
 

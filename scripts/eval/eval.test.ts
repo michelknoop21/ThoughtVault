@@ -10,7 +10,7 @@ import { LLMService } from "../../windows/src/services/llm";
 import { UsageMeter, parseUsage } from "../../windows/src/services/usageMeter";
 import { useSettingsStore } from "../../windows/src/stores/settingsStore";
 import { readChatCompletion } from "../../windows/src/services/chatCompletion";
-import { PRICE_CAP } from "../../windows/src/services/suggestedModels";
+import { PRICE_CAP, usableModel } from "../../windows/src/services/suggestedModels";
 import { DEFAULT_PROFILES } from "../../windows/src/types";
 import { assertOutsideRepo, htmlToText, loadFacts, nalopenCount, scoreFacts, secureDir, secureWrite, summaryTable, SpendBudget, type RunResult } from "./lib";
 
@@ -177,6 +177,9 @@ it("notule-eval", async () => {
   const known = state.dry ? new Set(all) : new Set<string>((await (await fetch("https://openrouter.ai/api/v1/models")).json()).data.map((m: { id: string }) => m.id));
   const unknown = models.filter(m => !known.has(m));
   if (unknown.length) throw new Error(`Onbekende model-id's, afgebroken: ${unknown.join(", ")}`);
+  if (!state.dry && models.some(model => usableModel(model, "openrouter") !== model)) {
+    throw new Error("Een gekozen model zou door de app worden vervangen; meting afgebroken om onjuiste labels te voorkomen.");
+  }
 
   state.key = state.dry ? "dry-run-key" : process.env.OPENROUTER_API_KEY ?? process.env.VAULT_VALUE ?? "";
   if (!state.dry) {

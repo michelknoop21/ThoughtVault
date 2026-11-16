@@ -166,6 +166,9 @@ extension SettingsView {
     private var supportCard: some View {
         SettingsCard(icon: "lifepreserver", title: "Support",
                      subtitle: "Meld een probleem en lees het antwoord in de app.") {
+            if let help = SupportLinks.help {
+                supportRowButton(icon: "book", title: "Handleiding") { NSWorkspace.shared.open(help) }
+            }
             supportRowButton(icon: "square.and.pencil", title: "Melding maken") { openSupport(.report) }
             supportRowButton(icon: "bubble.left.and.bubble.right", title: "Mijn meldingen",
                              badge: supportVM.unreadCount) { openSupport(.tickets) }

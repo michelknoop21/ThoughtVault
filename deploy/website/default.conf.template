@@ -3,6 +3,8 @@ server {
     server_name thoughtvault.yinga.ai;
     root /usr/share/nginx/html;
     server_tokens off;
+    # Relative Location headers: behind Caddy nginx only sees http on port 80.
+    absolute_redirect off;
     # Do not persist capability URLs in access logs.
     access_log off;
     add_header X-Content-Type-Options nosniff always;
@@ -10,7 +12,7 @@ server {
     gzip on;
     gzip_proxied any;
     gzip_vary on;
-    gzip_types text/css application/javascript image/svg+xml;
+    gzip_types text/css application/javascript application/json image/svg+xml;
     location = /healthz { return 200 'ok'; }
     location = /d-${DOWNLOAD_TOKEN} { return 404; }
     location = /d-${DOWNLOAD_TOKEN}/ {
@@ -29,6 +31,16 @@ server {
         alias /srv/releases/releases.json;
         add_header X-Robots-Tag 'noindex, nofollow, noarchive, nosnippet' always;
         add_header Cache-Control 'private, no-store' always;
+        add_header Referrer-Policy no-referrer always;
+        add_header X-Content-Type-Options nosniff always;
+    }
+    # Help centre (handleiding and release notes), built by scripts/build-helpcentrum.py.
+    location = /d-${DOWNLOAD_TOKEN}/help { return 301 /d-${DOWNLOAD_TOKEN}/help/; }
+    location /d-${DOWNLOAD_TOKEN}/help/ {
+        alias /usr/share/nginx/help/;
+        index index.html;
+        add_header X-Robots-Tag 'noindex, nofollow, noarchive, nosnippet' always;
+        add_header Cache-Control 'private, no-cache' always;
         add_header Referrer-Policy no-referrer always;
         add_header X-Content-Type-Options nosniff always;
     }

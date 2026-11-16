@@ -34,6 +34,14 @@ AUTH_ARGS=(-allowProvisioningUpdates
   -authenticationKeyID "$KEY_ID"
   -authenticationKeyIssuerID "$ISSUER_ID")
 
+# The help centre link is private, so it lives outside the repo and is only
+# injected into Info.plist (TVHelpURL) at archive time.
+HELP_ARGS=()
+HELP_URL_FILE="$HOME/.config/thoughtvault/help-url"
+if [ -f "$HELP_URL_FILE" ]; then
+    HELP_ARGS=(TV_HELP_URL="$(cat "$HELP_URL_FILE")")
+fi
+
 mkdir -p "$BUILD_DIR"
 
 # Export options are generated in the ignored build directory, so a fresh
@@ -68,7 +76,8 @@ archive_and_ship() {
         -configuration Release \
         -destination "$destination" \
         -archivePath "$archive" \
-        "${AUTH_ARGS[@]}"
+        "${AUTH_ARGS[@]}" \
+        ${HELP_ARGS[@]+"${HELP_ARGS[@]}"}
 
     local exportdir="$BUILD_DIR/tf-export-$platform"
     rm -rf "$exportdir"

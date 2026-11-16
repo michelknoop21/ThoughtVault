@@ -3,6 +3,9 @@ import SwiftUI
 extension SettingsView {
     var feedbackSection: some View {
         Section {
+            if let help = SupportLinks.help {
+                Link(destination: help) { Label("Handleiding", systemImage: "book") }
+            }
             #if os(macOS)
             Button { openSupport(.report) } label: {
                 Label("Melding maken", systemImage: "square.and.pencil")

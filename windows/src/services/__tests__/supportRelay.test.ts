@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { invoke } from "@tauri-apps/api/core";
-import { listTickets, postMessage, registerInstallation, sendReport, ticketMessages, unreadCount, type ReportPayload } from "../supportRelay";
+import { helpUrl, listTickets, postMessage, registerInstallation, sendReport, ticketMessages, unreadCount, type ReportPayload } from "../supportRelay";
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
 const inst = { id: "6f1c0d7e-0000-4000-8000-000000000001", secret: "a".repeat(43) };
 const payload: ReportPayload = { kind: "auto", category: "BUG", stage: "crash", shownMessage: "De app is gestopt.", errorText: "failure", fingerprint: "abcdef0123456789", clickPath: ["Instellingen"], appVersion: "1.0.312", os: "Windows 11", device: "PC", platform: "windows", name: "Example", email: "test@example.com", occurredAt: "2026-11-10T10:00:00.123Z", log: "example log" };
@@ -74,5 +74,16 @@ describe("support relay transport", () => {
   });
   it("rejects invalid credentials before invoking", async () => {
     await expect(registerInstallation("bad", inst.secret)).rejects.toMatchObject({ status: 422 }); await expect(listTickets({ ...inst, secret: "bad\r\nheader" })).rejects.toMatchObject({ status: 422 }); expect(invoke).not.toHaveBeenCalled();
+  });
+});
+describe("helpUrl", () => {
+  it("adds the platform with exactly one slash before the query", () => {
+    expect(helpUrl("https://example.com/help/")).toBe("https://example.com/help/?platform=windows");
+    expect(helpUrl("https://example.com/help")).toBe("https://example.com/help/?platform=windows");
+  });
+  it("returns null without a base, so the button stays hidden", () => {
+    expect(helpUrl(undefined)).toBeNull();
+    expect(helpUrl("")).toBeNull();
+    expect(helpUrl("  ")).toBeNull();
   });
 });

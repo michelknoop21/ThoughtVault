@@ -260,6 +260,9 @@ struct SupportCommands: Commands {
 
     var body: some Commands {
         CommandGroup(replacing: .help) {
+            if let help = SupportLinks.help {
+                Button("Handleiding") { NSWorkspace.shared.open(help) }
+            }
             Button("Melding maken…") {
                 supportVM.pane = .report
                 openWindow(id: "support")

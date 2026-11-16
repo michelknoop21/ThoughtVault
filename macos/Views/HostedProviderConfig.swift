@@ -16,6 +16,8 @@ struct HostedProviderConfig: View {
     @State private var reveal = false
     @State private var testing = false
     @State private var connected: Bool?
+    /// Why the last test failed, when the provider says so.
+    @State private var failure: String?
     @State private var models: [String] = []
     @State private var loaded = false
     @State private var saveTask: Task<Void, Never>?
@@ -131,7 +133,7 @@ struct HostedProviderConfig: View {
         if !hasKey { return ("Geen sleutel ingesteld", Color.labelTertiary) }
         switch connected {
         case .some(true):  return ("Verbonden met \(providerName)", Color.statusSuccess)
-        case .some(false): return ("Sleutel geweigerd of niet bereikbaar", Color.statusError)
+        case .some(false): return (failure ?? String(localized: "Sleutel geweigerd of niet bereikbaar"), Color.statusError)
         case .none:        return ("Sleutel opgeslagen", Color.labelSecondary)
         }
     }
@@ -170,7 +172,15 @@ struct HostedProviderConfig: View {
     private func test() async {
         testing = true
         defer { testing = false }
+        failure = nil
         let key = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        // OpenRouter lists its models without a key, so the list alone proves nothing.
+        if isOpenRouter, let problem = await Self.openRouterKeyProblem(key) {
+            failure = problem
+            connected = false
+            models = []
+            return
+        }
         let list: [String]
         if isOpenAI {
             let all = await OpenAICompatibleLLMService(baseURL: OpenAICompatibleLLMService.openAIBaseURL,
@@ -185,5 +195,21 @@ struct HostedProviderConfig: View {
         }
         connected = !list.isEmpty
         models = list
+    }
+
+    /// nil when OpenRouter accepts the key, else what went wrong.
+    private static func openRouterKeyProblem(_ key: String) async -> String? {
+        var request = URLRequest(url: URL(string: "https://openrouter.ai/api/v1/key")!)
+        request.timeoutInterval = 10
+        request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
+        guard let (_, response) = try? await URLSession.shared.data(for: request),
+              let status = (response as? HTTPURLResponse)?.statusCode else {
+            return String(localized: "OpenRouter is niet bereikbaar. Controleer je internetverbinding.")
+        }
+        switch status {
+        case 200: return nil
+        case 401, 403: return String(localized: "OpenRouter weigert deze sleutel. Controleer of je hem volledig hebt geplakt.")
+        default: return String(localized: "OpenRouter gaf foutcode \(status). Probeer het later opnieuw.")
+        }
     }
 }

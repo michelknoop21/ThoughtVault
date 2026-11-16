@@ -221,7 +221,7 @@ function ProtectedRoutes() {
     return <div className="app-shell"><TitleBar /><IdentityGate /></div>;
   }
 
-  if (!has_completed_onboarding && processing_mode !== "local") {
+  if (!has_completed_onboarding) {
     return (
       <div className="app-shell">
         <OnboardingWizard />

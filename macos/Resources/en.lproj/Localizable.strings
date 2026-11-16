@@ -634,3 +634,32 @@
 "Obsidian uitzetten" = "Turn off Obsidian";
 "Deze map lijkt geen Obsidian-vault: er staat geen .obsidian-map in." = "This folder does not look like an Obsidian vault: it has no .obsidian folder.";
 "Zet Obsidian eerst aan" = "Turn on Obsidian first";
+
+/* Onboarding: notulen */
+"Wie schrijft je notulen?" = "Who writes your minutes?";
+"Opnemen en omzetten naar tekst gebeurt op je eigen Mac. Voor de notule kies je een taalmodel: op deze Mac of bij een aanbieder met je eigen sleutel." = "Recording and transcription happen on your own Mac. For the minutes you choose a language model: on this Mac or at a provider with your own key.";
+"STAP %lld VAN %lld" = "STEP %lld OF %lld";
+"Eén sleutel voor veel modellen. Je betaalt per notule." = "One key for many models. You pay per set of minutes.";
+"Op deze Mac" = "On this Mac";
+"Gratis en blijft op je Mac. Kortere, eenvoudiger notulen." = "Free and stays on your Mac. Shorter, simpler minutes.";
+"Andere aanbieder" = "Other provider";
+"Een eigen adres met je eigen sleutel." = "Your own address with your own key.";
+"Kies een model" = "Choose a model";
+"Het aanbevolen model staat al klaar. Later wisselen kan in Instellingen › Verwerking." = "The recommended model is ready. You can switch later in Settings › Processing.";
+"Je kunt dit later doen." = "You can do this later.";
+"Zonder taalmodel verder?" = "Continue without a language model?";
+"Model kiezen" = "Choose model";
+"Toch overslaan" = "Skip anyway";
+"Opnemen en omzetten naar tekst werken gewoon. Notulen maakt de app pas als je een model kiest in Instellingen › Verwerking." = "Recording and transcription work as usual. The app writes minutes once you choose a model in Settings › Processing.";
+"Apple Intelligence schrijft de notule op deze %@. Er gaat niets naar internet." = "Apple Intelligence writes the minutes on this %@. Nothing goes to the internet.";
+"Ollama schrijft de notule op deze Mac. Installeer Ollama en kies het model later in Instellingen › Verwerking." = "Ollama writes the minutes on this Mac. Install Ollama and choose the model later in Settings › Processing.";
+"Apple Intelligence is niet beschikbaar op deze iPhone. Kies OpenRouter of stel later een eigen server in bij Instellingen › Verwerking." = "Apple Intelligence is not available on this iPhone. Choose OpenRouter or set up your own server later in Settings › Processing.";
+"Opnemen en omzetten naar tekst gebeurt op je iPhone. Kies wie de notule schrijft." = "Recording and transcription happen on your iPhone. Choose who writes the minutes.";
+"Eén sleutel voor veel modellen" = "One key for many models";
+"Op deze iPhone" = "On this iPhone";
+"Gratis, kortere notulen" = "Free, shorter minutes";
+"Eigen adres en sleutel" = "Your own address and key";
+"Sleutel geweigerd of niet bereikbaar" = "Key rejected or not reachable";
+"OpenRouter is niet bereikbaar. Controleer je internetverbinding." = "OpenRouter cannot be reached. Check your internet connection.";
+"OpenRouter weigert deze sleutel. Controleer of je hem volledig hebt geplakt." = "OpenRouter rejects this key. Check that you pasted all of it.";
+"OpenRouter gaf foutcode %lld. Probeer het later opnieuw." = "OpenRouter returned error %lld. Try again later.";

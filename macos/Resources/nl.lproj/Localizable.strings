@@ -634,3 +634,32 @@
 "Obsidian uitzetten" = "Obsidian uitzetten";
 "Deze map lijkt geen Obsidian-vault: er staat geen .obsidian-map in." = "Deze map lijkt geen Obsidian-vault: er staat geen .obsidian-map in.";
 "Zet Obsidian eerst aan" = "Zet Obsidian eerst aan";
+
+/* Onboarding: notulen */
+"Wie schrijft je notulen?" = "Wie schrijft je notulen?";
+"Opnemen en omzetten naar tekst gebeurt op je eigen Mac. Voor de notule kies je een taalmodel: op deze Mac of bij een aanbieder met je eigen sleutel." = "Opnemen en omzetten naar tekst gebeurt op je eigen Mac. Voor de notule kies je een taalmodel: op deze Mac of bij een aanbieder met je eigen sleutel.";
+"STAP %lld VAN %lld" = "STAP %lld VAN %lld";
+"Eén sleutel voor veel modellen. Je betaalt per notule." = "Eén sleutel voor veel modellen. Je betaalt per notule.";
+"Op deze Mac" = "Op deze Mac";
+"Gratis en blijft op je Mac. Kortere, eenvoudiger notulen." = "Gratis en blijft op je Mac. Kortere, eenvoudiger notulen.";
+"Andere aanbieder" = "Andere aanbieder";
+"Een eigen adres met je eigen sleutel." = "Een eigen adres met je eigen sleutel.";
+"Kies een model" = "Kies een model";
+"Het aanbevolen model staat al klaar. Later wisselen kan in Instellingen › Verwerking." = "Het aanbevolen model staat al klaar. Later wisselen kan in Instellingen › Verwerking.";
+"Je kunt dit later doen." = "Je kunt dit later doen.";
+"Zonder taalmodel verder?" = "Zonder taalmodel verder?";
+"Model kiezen" = "Model kiezen";
+"Toch overslaan" = "Toch overslaan";
+"Opnemen en omzetten naar tekst werken gewoon. Notulen maakt de app pas als je een model kiest in Instellingen › Verwerking." = "Opnemen en omzetten naar tekst werken gewoon. Notulen maakt de app pas als je een model kiest in Instellingen › Verwerking.";
+"Apple Intelligence schrijft de notule op deze %@. Er gaat niets naar internet." = "Apple Intelligence schrijft de notule op deze %@. Er gaat niets naar internet.";
+"Ollama schrijft de notule op deze Mac. Installeer Ollama en kies het model later in Instellingen › Verwerking." = "Ollama schrijft de notule op deze Mac. Installeer Ollama en kies het model later in Instellingen › Verwerking.";
+"Apple Intelligence is niet beschikbaar op deze iPhone. Kies OpenRouter of stel later een eigen server in bij Instellingen › Verwerking." = "Apple Intelligence is niet beschikbaar op deze iPhone. Kies OpenRouter of stel later een eigen server in bij Instellingen › Verwerking.";
+"Opnemen en omzetten naar tekst gebeurt op je iPhone. Kies wie de notule schrijft." = "Opnemen en omzetten naar tekst gebeurt op je iPhone. Kies wie de notule schrijft.";
+"Eén sleutel voor veel modellen" = "Eén sleutel voor veel modellen";
+"Op deze iPhone" = "Op deze iPhone";
+"Gratis, kortere notulen" = "Gratis, kortere notulen";
+"Eigen adres en sleutel" = "Eigen adres en sleutel";
+"Sleutel geweigerd of niet bereikbaar" = "Sleutel geweigerd of niet bereikbaar";
+"OpenRouter is niet bereikbaar. Controleer je internetverbinding." = "OpenRouter is niet bereikbaar. Controleer je internetverbinding.";
+"OpenRouter weigert deze sleutel. Controleer of je hem volledig hebt geplakt." = "OpenRouter weigert deze sleutel. Controleer of je hem volledig hebt geplakt.";
+"OpenRouter gaf foutcode %lld. Probeer het later opnieuw." = "OpenRouter gaf foutcode %lld. Probeer het later opnieuw.";

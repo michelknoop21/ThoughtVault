@@ -14,7 +14,7 @@ it("moves existing provider and Obsidian keys into keyring before removing plain
 
   expect(storeCredential).toHaveBeenCalledWith("ollama_api_key", "ollama-secret");
   expect(storeCredential).toHaveBeenCalledWith("obsidian_api_key", "obsidian-secret");
-  expect(migrated).toEqual({ processing_mode: "local", notulen_provider: "ollama" });
+  expect(migrated).toEqual({ processing_mode: "local", notulen_provider: "ollama", has_completed_onboarding: true });
 });
 
 it("removes plaintext credentials even when keyring migration fails", async () => {
@@ -39,4 +39,9 @@ it("keeps existing values on migration and a stored install gets an empty usage 
   expect(migrated).toMatchObject({ notulen_provider: "openai", openai_model: "x", usage_ledger: { "2026-11": { notules: 2 } } });
   const { DEFAULT_SETTINGS } = await import("../../types");
   expect(DEFAULT_SETTINGS.usage_ledger).toEqual({});
+});
+
+it("marks existing local installs as onboarded and leaves cloud installs to the wizard", async () => {
+  expect(await migrateLegacySettings({ processing_mode: "local", has_completed_onboarding: false })).toMatchObject({ has_completed_onboarding: true });
+  expect(await migrateLegacySettings({ processing_mode: "cloud", has_completed_onboarding: false })).toMatchObject({ has_completed_onboarding: false });
 });

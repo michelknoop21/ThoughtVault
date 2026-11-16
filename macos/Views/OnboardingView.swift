@@ -27,6 +27,8 @@ struct OnboardingView: View {
     @State var calendarPermission: PermissionState = .unknown
     @State private var systemAudioPermission: PermissionState = .unknown
     @State private var isAnimatingIn: Bool = false
+    @State var notulenChoice = OnboardingNotulen.choice(for: .configured())
+    @State var notulenSkipAsk = false
 
     // Self-profile step fields
     @State private var profielNaam: String = ""
@@ -42,8 +44,9 @@ struct OnboardingView: View {
         case spraak         = 2
         case agenda         = 3
         case systeemaudio   = 4
-        case profiel        = 5
-        case klaar          = 6
+        case notulen        = 5
+        case profiel        = 6
+        case klaar          = 7
 
         var title: String {
             switch self {
@@ -52,6 +55,7 @@ struct OnboardingView: View {
             case .spraak:        return "Spraakherkenning"
             case .agenda:        return "Agenda"
             case .systeemaudio:  return "Systeemaudio"
+            case .notulen:       return "Wie schrijft je notulen?"
             case .profiel:       return "Vertel iets over jezelf"
             case .klaar:         return "Alles klaar!"
             }
@@ -64,6 +68,7 @@ struct OnboardingView: View {
             case .spraak:        return "waveform"
             case .agenda:        return "calendar"
             case .systeemaudio:  return "waveform"
+            case .notulen:       return "doc.text"
             case .profiel:       return "person.crop.circle"
             case .klaar:         return "checkmark.seal.fill"
             }
@@ -114,6 +119,8 @@ struct OnboardingView: View {
         iosBody
             .onAppear {
                 if IOSDebug.open == "onboarding-mic" { currentStep = .microphoon }
+                if IOSDebug.open?.hasPrefix("onboarding-notulen") == true { currentStep = .notulen }
+                if IOSDebug.open == "onboarding-notulen-skip" { notulenSkipAsk = true }
                 Task { await checkExistingPermissions() }
             }
 #else
@@ -155,7 +162,7 @@ struct OnboardingView: View {
 #endif
 
                 // Navigation buttons
-                navigationFooter
+                if currentStep == .notulen { notulenFooter } else { navigationFooter }
             }
 #if os(macOS)
             .toolbar(.hidden)
@@ -165,6 +172,11 @@ struct OnboardingView: View {
             withAnimation(TS.Animation.gentle) {
                 isAnimatingIn = true
             }
+            if IOSDebug.open?.hasPrefix("onboarding-notulen") == true { currentStep = .notulen }
+            if IOSDebug.open == "onboarding-notulen-skip" { notulenSkipAsk = true }
+            #if DEBUG
+            Task { for _ in 0..<5 { try? await Task.sleep(for: .seconds(1)); DebugScreenshotSeed.sizeWindow() } }
+            #endif
             Task { await checkExistingPermissions() }
         }
 #endif
@@ -195,6 +207,7 @@ struct OnboardingView: View {
         case .spraak:        spraakStep
         case .agenda:        agendaStep
         case .systeemaudio:  systeemaudioStep
+        case .notulen:       notulenStep
         case .profiel:       profielStep
         case .klaar:         klaarStep
         }

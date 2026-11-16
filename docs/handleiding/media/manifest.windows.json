@@ -175,5 +175,16 @@
       "windows/src/components/support/SupportThread.tsx",
       "windows/src/components/settings/AccountTab.tsx"
     ]
+  },
+  {
+    "file": "win-onboarding-notulen.webp",
+    "platform": "windows",
+    "screen": "Eerste start: notulen instellen",
+    "shows": "De stap Notulen van de wizard: OpenRouter gekozen, een geteste sleutel en het ingevulde model.",
+    "url": "?scenario=handleiding#/onboarding",
+    "sources": [
+      "windows/src/components/onboarding/NotulenStep.tsx",
+      "windows/src/components/onboarding/OnboardingWizard.tsx"
+    ]
   }
 ]

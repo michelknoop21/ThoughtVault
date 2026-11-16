@@ -364,6 +364,10 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
     static let ollamaCloudBaseURL = "https://ollama.com"
     static let openAIDefaultModel = "gpt-5.6-terra"
     static let openRouterBaseURL = "https://openrouter.ai/api/v1"
+    /// OpenRouter reasoning effort. Reasoning models spent most of their output thinking
+    /// (mistral-large-4: 7,382 of 7,768 output tokens on a 31 s recording) and long meetings
+    /// ran into the 900 s limit, so OpenRouter requests ask for low effort.
+    static let openRouterReasoningEffort = "low"
     static let openRouterDefaultModel = "mistralai/mistral-large-4-0"
 
     /// Transcript size above which it is summarized in chunks first. The default
@@ -567,12 +571,15 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
         }
     }
 
+    private var providerKind: String { Self.providerKind(baseURL: baseURL) }
+
     /// Provider kind for the log, without the host of a self-configured endpoint.
-    private var providerKind: String {
+    static func providerKind(baseURL: String) -> String {
         let url = URL(string: baseURL)
         switch url?.host?.lowercased() {
         case "api.openai.com": return "openai"
         case "ollama.com": return "ollama-cloud"
+        case URL(string: openRouterBaseURL)?.host: return "openrouter"
         default: return url?.scheme?.lowercased() == "https" ? "hosted" : "local"
         }
     }
@@ -628,6 +635,7 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
         ]
         // OpenAI streams usage only on request; other servers get the body they always got.
         if isOpenAI { requestBody["stream_options"] = ["include_usage": true] }
+        if URL(string: baseURL)?.host?.lowercased() == URL(string: Self.openRouterBaseURL)?.host { requestBody["reasoning"] = ["effort": Self.openRouterReasoningEffort] }
 
         guard let bodyData = try? JSONSerialization.data(withJSONObject: requestBody) else {
             throw LLMError.generationFailed("Kon het verzoek niet serialiseren.")

@@ -128,9 +128,10 @@ final class UsageMeterTests: XCTestCase {
         }
         XCTAssertEqual(UsageStub.sent.count, 5)
         XCTAssertEqual((UsageStub.sent[0]["stream_options"] as? [String: Any])?["include_usage"] as? Bool, true)
-        for body in UsageStub.sent.dropFirst() {
+        for (index, body) in UsageStub.sent.enumerated().dropFirst() {
             XCTAssertNil(body["stream_options"], "\(body)")
-            XCTAssertEqual(body.keys.sorted(), ["max_tokens", "messages", "model", "stream"])
+            // OpenRouter (index 1) also asks for low reasoning effort.
+            XCTAssertEqual(body.keys.sorted(), index == 1 ? ["max_tokens", "messages", "model", "reasoning", "stream"] : ["max_tokens", "messages", "model", "stream"])
         }
     }
 

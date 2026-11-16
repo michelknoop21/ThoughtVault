@@ -11,6 +11,8 @@ struct CloudProviderConfig: View {
     /// Outcome of each key test with the key it tested.
     var onKeyTest: (KeyTestOutcome, String) -> Void = { _, _ in }
 
+    var onKeyDraft: (String, String) -> Void = { _, _ in }
+
     @AppStorage("ollamaCloudModel") private var ollamaCloudModel = ""
     @AppStorage(CloudAIConfiguration.selectedKey) private var selected = ""
     @State private var configurations = CloudAIConfiguration.load()
@@ -43,7 +45,7 @@ struct CloudProviderConfig: View {
                         .textFieldStyle(.roundedBorder)
                         .font(TS.Font.bodyMonospaced)
                         .autocorrectionDisabled()
-                        .onChange(of: apiKey) { _, value in scheduleSave(value, for: keychainKey) }
+                        .onChange(of: apiKey) { _, value in onKeyDraft(keychainKey, value); scheduleSave(value, for: keychainKey) }
                         .onSubmit { commit(apiKey, for: keychainKey) }
                 }
 
@@ -208,7 +210,7 @@ struct CloudProviderConfig: View {
         // Listing models can succeed without a valid key, so also probe a protected endpoint.
         let status = await service.checkConnection()
         connected = status == .ready
-        onKeyTest(status == .ready ? .passed : status == .keyRejected ? .rejected : .inconclusive,
+        onKeyTest(KeyTestOutcome(connection: status),
                   apiKey.trimmingCharacters(in: .whitespacesAndNewlines))
     }
     private func loadModels() async {

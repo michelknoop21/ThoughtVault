@@ -74,7 +74,9 @@ extension OnboardingView {
                 .shadow(color: IOSColor.violet.opacity(0.45), radius: 12)
             }
             .buttonStyle(StudioScalePressStyle(scale: 0.97))
+            .disabled(notulenTesting)
             Button("Overslaan") { notulenSkipAsk = true }
+                .disabled(notulenTesting)
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(IOSColor.lavender)
                 .frame(height: 44)

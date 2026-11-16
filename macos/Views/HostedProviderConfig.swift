@@ -12,6 +12,10 @@ import SwiftUI
 enum KeyTestOutcome: Equatable {
     case passed, rejected, inconclusive
 
+    init(connection: OpenAICompatibleLLMService.ConnectionStatus) {
+        self = connection == .ready ? .passed : connection == .keyRejected ? .rejected : .inconclusive
+    }
+
     init(status: Int?) {
         switch status {
         case 200: self = .passed
@@ -27,6 +31,8 @@ struct HostedProviderConfig: View {
     var onKeyChange: () -> Void = {}
     /// Outcome of each key test with the key it tested.
     var onKeyTest: (KeyTestOutcome, String) -> Void = { _, _ in }
+
+    var onKeyDraft: (String, String) -> Void = { _, _ in }
 
     @State private var apiKey = ""
     @State private var reveal = false
@@ -78,7 +84,7 @@ struct HostedProviderConfig: View {
                     .textFieldStyle(.roundedBorder)
                     .font(Self.fieldFont)
                     .autocorrectionDisabled()
-                    .onChange(of: apiKey) { _, value in scheduleSave(value) }
+                    .onChange(of: apiKey) { _, value in onKeyDraft(keychainKey, value); scheduleSave(value) }
                     .onSubmit { commit(apiKey) }
 
                     Button { reveal.toggle() } label: { Image(systemName: reveal ? "eye.slash" : "eye") }

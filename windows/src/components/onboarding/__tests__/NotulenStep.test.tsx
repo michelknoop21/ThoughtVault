@@ -32,6 +32,7 @@ const type = (input: HTMLInputElement, value: string) => {
 beforeEach(async () => {
   vi.clearAllMocks();
   mocks.loadCredential.mockResolvedValue(null);
+  mocks.invoke.mockReset().mockResolvedValue({ status: 200 });
   useSettingsStore.setState({ ...DEFAULT_SETTINGS });
   host = document.createElement("div");
   document.body.appendChild(host);
@@ -116,13 +117,12 @@ it("installs the chosen provider on Volgende", async () => {
 
 it("drops a key test that finishes after switching tile", async () => {
   useSettingsStore.setState({ notulen_provider: "lm-studio" });
-  let stored!: () => void;
-  mocks.storeCredential.mockImplementationOnce(() => new Promise<void>(resolve => { stored = resolve; }));
-  mocks.invoke.mockResolvedValueOnce({ status: 200 });
+  let tested!: (value: { status: number }) => void;
+  mocks.invoke.mockImplementationOnce(() => new Promise(resolve => { tested = resolve; }));
   await act(async () => type(host.querySelector<HTMLInputElement>("#onb-key-input")!, "sk-or-v1-voorbeeld"));
   await act(async () => button("Testen").click());
   await act(async () => button("Andere aanbieder").click());
-  await act(async () => stored());
+  await act(async () => tested({ status: 200 }));
   expect(host.textContent).not.toContain("Sleutel werkt");
   await act(async () => button("Volgende").click());
   expect(host.textContent).toContain("Zonder taalmodel verder?");
@@ -145,7 +145,7 @@ it("locks navigation while Volgende stores the key", async () => {
 
 it("asks the skip question instead of installing a rejected key", async () => {
   useSettingsStore.setState({ notulen_provider: "lm-studio" });
-  mocks.invoke.mockResolvedValueOnce({ status: 401 });
+  mocks.invoke.mockResolvedValue({ status: 401 });
   await act(async () => type(host.querySelector<HTMLInputElement>("#onb-key-input")!, "sk-or-v1-fout"));
   await act(async () => button("Testen").click());
   expect(host.textContent).toContain("OpenRouter weigert deze sleutel");
@@ -155,69 +155,68 @@ it("asks the skip question instead of installing a rejected key", async () => {
   expect(useSettingsStore.getState().notulen_provider).toBe("lm-studio");
 });
 
-describe("a rejected key stays rejected until a passing test or another key", () => {
-  const vault = new Map<string, string>();
+describe("Volgende tests the key it installs and decides on that result only", () => {
   const keyInput = () => host.querySelector<HTMLInputElement>("#onb-key-input")!;
-  const reject = async () => {
-    mocks.invoke.mockResolvedValueOnce({ status: 401 });
-    await act(async () => type(keyInput(), "sk-or-v1-fout"));
-    await act(async () => button("Testen").click());
-    expect(host.textContent).toContain("OpenRouter weigert deze sleutel");
-  };
-  const expectSkipQuestion = async () => {
-    await act(async () => button("Volgende").click());
+  const sentKey = (call: number) => (mocks.invoke.mock.calls[call][1] as { request: { headers: Record<string, string> } }).request.headers.Authorization;
+  const expectSkipQuestion = () => {
     expect(host.textContent).toContain("Zonder taalmodel verder?");
     expect(onDone).not.toHaveBeenCalled();
     expect(useSettingsStore.getState().notulen_provider).toBe("lm-studio");
   };
 
-  beforeEach(() => {
-    vault.clear();
-    mocks.storeCredential.mockImplementation(async (...args: unknown[]) => { vault.set(args[0] as string, args[1] as string); });
-    mocks.loadCredential.mockImplementation(async (...args: unknown[]) => vault.get(args[0] as string) ?? null);
-    useSettingsStore.setState({ notulen_provider: "lm-studio" });
-  });
+  beforeEach(() => { useSettingsStore.setState({ notulen_provider: "lm-studio" }); });
 
-  it("after switching tile and back", async () => {
-    await reject();
-    await act(async () => button("Op deze pc").click());
-    await act(async () => button("OpenRouter").click());
-    await expectSkipQuestion();
-  });
-
-  it("after a passing test of another provider", async () => {
-    await reject();
-    await act(async () => button("Andere aanbieder").click());
-    mocks.invoke.mockResolvedValueOnce({ status: 200 });
-    await act(async () => type(keyInput(), "sk-openai-goed"));
-    await act(async () => button("Testen").click());
-    expect(host.textContent).toContain("Sleutel werkt");
-    await act(async () => button("OpenRouter").click());
-    await expectSkipQuestion();
-  });
-
-  it("while a retry runs and after it ends in a server error", async () => {
-    await reject();
-    let reply!: (value: { status: number }) => void;
-    mocks.invoke.mockImplementationOnce(() => new Promise(resolve => { reply = resolve; }));
-    await act(async () => button("Testen").click());
-    await expectSkipQuestion();
-    await act(async () => button("Model kiezen").click());
-    await act(async () => reply({ status: 500 }));
-    await expectSkipQuestion();
-  });
-
-  it("but a passing retry or another key clears it", async () => {
-    await reject();
-    mocks.invoke.mockResolvedValueOnce({ status: 200 });
-    await act(async () => button("Testen").click());
+  it("tests the stored key after a restart", async () => {
+    mocks.loadCredential.mockResolvedValue("sk-or-v1-oud");
+    mocks.invoke.mockResolvedValueOnce({ status: 401 });
     await act(async () => button("Volgende").click());
-    expect(onDone).toHaveBeenCalledOnce();
+    expect(sentKey(0)).toBe("Bearer sk-or-v1-oud");
+    expect(host.textContent).toContain("OpenRouter weigert deze sleutel");
+    expectSkipQuestion();
+  });
 
-    await reject();
+  it("tests the typed key, not the stored one", async () => {
+    mocks.loadCredential.mockResolvedValue("sk-or-v1-oud");
+    mocks.invoke.mockResolvedValueOnce({ status: 200 });
     await act(async () => type(keyInput(), "sk-or-v1-nieuw"));
     await act(async () => button("Volgende").click());
-    expect(onDone).toHaveBeenCalledTimes(2);
+    expect(mocks.storeCredential).toHaveBeenCalledWith("openrouter_api_key", "sk-or-v1-nieuw");
+    expect(sentKey(0)).toBe("Bearer sk-or-v1-nieuw");
+    expect(onDone).toHaveBeenCalledOnce();
     expect(useSettingsStore.getState().notulen_provider).toBe("openrouter");
   });
+
+  it("does not install on a server error", async () => {
+    mocks.invoke.mockResolvedValueOnce({ status: 500 });
+    await act(async () => type(keyInput(), "sk-or-v1-voorbeeld"));
+    await act(async () => button("Volgende").click());
+    expect(host.textContent).toContain("OpenRouter is niet bereikbaar");
+    expectSkipQuestion();
+  });
+
+  it("ignores a late result for another key", async () => {
+    let reply!: (value: { status: number }) => void;
+    mocks.invoke.mockImplementationOnce(() => new Promise(resolve => { reply = resolve; }));
+    await act(async () => type(keyInput(), "sk-or-v1-a"));
+    await act(async () => button("Testen").click());
+    mocks.invoke.mockResolvedValueOnce({ status: 401 });
+    await act(async () => type(keyInput(), "sk-or-v1-b"));
+    await act(async () => button("Volgende").click());
+    await act(async () => reply({ status: 200 }));
+    expect(sentKey(1)).toBe("Bearer sk-or-v1-b");
+    expect(host.textContent).not.toContain("Sleutel werkt");
+    expectSkipQuestion();
+  });
+});
+
+
+it("locks key changes and Volgende while Testen saves the key", async () => {
+  let finish!: () => void;
+  mocks.storeCredential.mockImplementationOnce(() => new Promise<void>(resolve => { finish = resolve; }));
+  await act(async () => type(host.querySelector<HTMLInputElement>("#onb-key-input")!, "sk-pending"));
+  await act(async () => button("Testen").click());
+  expect(host.querySelector<HTMLInputElement>("#onb-key-input")!.disabled).toBe(true);
+  expect(button("Volgende").disabled).toBe(true);
+  await act(async () => finish());
+  expect(button("Volgende").disabled).toBe(false);
 });

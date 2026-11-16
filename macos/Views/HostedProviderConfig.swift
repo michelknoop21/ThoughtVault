@@ -1,7 +1,7 @@
 // HostedProviderConfig.swift
 // ThoughtVault
 //
-// Settings for the hosted notule providers (OpenAI, Anthropic): the user's
+// Settings for the hosted notule providers (OpenAI, Anthropic, OpenRouter): the user's
 // own API key in the Keychain, a model, and a connection test. Shared by the
 // macOS Verwerking page and the iOS settings subpage.
 
@@ -9,6 +9,8 @@ import SwiftUI
 
 struct HostedProviderConfig: View {
     let provider: NotulenProvider
+    /// Called after the key in the Keychain changed.
+    var onKeyChange: () -> Void = {}
 
     @State private var apiKey = ""
     @State private var reveal = false
@@ -20,15 +22,28 @@ struct HostedProviderConfig: View {
     @State private var saveError: String?
     @AppStorage("openAIModel") private var openAIModel = OpenAICompatibleLLMService.openAIDefaultModel
     @AppStorage("anthropicModel") private var anthropicModel = AnthropicLLMService.defaultModel
+    @AppStorage("openRouterModel") private var openRouterModel = OpenAICompatibleLLMService.openRouterDefaultModel
 
     private var isOpenAI: Bool { provider == .openAI }
-    private var providerName: String { isOpenAI ? "OpenAI" : "Anthropic" }
+    private var isOpenRouter: Bool { provider == .openRouter }
+    private var providerName: String { isOpenAI ? "OpenAI" : isOpenRouter ? "OpenRouter" : "Anthropic" }
     private var keychainKey: String { provider.apiKeyKeychainKey ?? "" }
     private var hasKey: Bool { !apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
-    private var modelBinding: Binding<String> { isOpenAI ? $openAIModel : $anthropicModel }
-    private var keyURL: URL {
-        URL(string: isOpenAI ? "https://platform.openai.com/api-keys" : "https://console.anthropic.com/settings/keys")!
+    private var modelBinding: Binding<String> { isOpenAI ? $openAIModel : isOpenRouter ? $openRouterModel : $anthropicModel }
+    private var defaultModel: String {
+        isOpenAI ? OpenAICompatibleLLMService.openAIDefaultModel : isOpenRouter ? OpenAICompatibleLLMService.openRouterDefaultModel : AnthropicLLMService.defaultModel
     }
+    private var keyURL: URL {
+        URL(string: isOpenAI ? "https://platform.openai.com/api-keys"
+            : isOpenRouter ? "https://openrouter.ai/settings/keys" : "https://console.anthropic.com/settings/keys")!
+    }
+
+    /// Keys and model ids are long; on a phone the body size cut both off ("mistralai/mistral-…").
+    #if os(iOS)
+    private static let fieldFont = TS.Font.footnoteMonospaced
+    #else
+    private static let fieldFont = TS.Font.bodyMonospaced
+    #endif
 
     var body: some View {
         VStack(alignment: .leading, spacing: TS.Spacing.sm) {
@@ -42,7 +57,7 @@ struct HostedProviderConfig: View {
                         }
                     }
                     .textFieldStyle(.roundedBorder)
-                    .font(TS.Font.bodyMonospaced)
+                    .font(Self.fieldFont)
                     .autocorrectionDisabled()
                     .onChange(of: apiKey) { _, value in scheduleSave(value) }
                     .onSubmit { commit(apiKey) }
@@ -57,10 +72,9 @@ struct HostedProviderConfig: View {
             SettingFieldRow("Model") {
                 HStack(spacing: TS.Spacing.sm) {
                     if models.isEmpty {
-                        TextField(isOpenAI ? OpenAICompatibleLLMService.openAIDefaultModel : AnthropicLLMService.defaultModel,
-                                  text: modelBinding)
+                        TextField(defaultModel, text: modelBinding)
                             .textFieldStyle(.roundedBorder)
-                            .font(TS.Font.bodyMonospaced)
+                            .font(Self.fieldFont)
                             .autocorrectionDisabled()
                     } else {
                         Picker("", selection: modelBinding) {
@@ -150,6 +164,7 @@ struct HostedProviderConfig: View {
         }
         saveError = nil
         connected = nil
+        onKeyChange()
     }
 
     private func test() async {
@@ -162,6 +177,9 @@ struct HostedProviderConfig: View {
                                                        model: openAIModel, apiKey: key).fetchModels()
             // The list also holds embedding, audio and image models; keep chat models.
             list = all.filter { $0.hasPrefix("gpt-") || $0.hasPrefix("o") }.filter { !$0.contains("audio") && !$0.contains("image") && !$0.contains("realtime") && !$0.contains("transcribe") && !$0.contains("tts") }
+        } else if isOpenRouter {
+            list = await OpenAICompatibleLLMService(baseURL: OpenAICompatibleLLMService.openRouterBaseURL,
+                                                    model: openRouterModel, apiKey: key).fetchModels()
         } else {
             list = await AnthropicLLMService(model: anthropicModel, apiKey: key).fetchModels()
         }

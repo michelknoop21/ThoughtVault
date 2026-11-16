@@ -15,7 +15,7 @@ vi.mock("../api", () => ({ api: {
 } }));
 vi.mock("../sse", () => ({ createSSEClient: () => ({ connect: (update: typeof mocks.update, _error: unknown, complete: typeof mocks.complete) => { mocks.update = update; mocks.complete = complete; } }) }));
 vi.mock("../quickNotes", () => ({ linkQuickNote: vi.fn() }));
-vi.mock("../obsidian", () => ({ exportToObsidian: vi.fn() }));
+vi.mock("../obsidian", () => ({ exportToObsidian: vi.fn(), ObsidianBrokenError: class extends Error {} }));
 vi.mock("../offlineQueue", () => ({ enqueue: vi.fn() }));
 beforeEach(() => {
   vi.clearAllMocks();

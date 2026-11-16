@@ -22,6 +22,28 @@ final class LocalPipelineTests: XCTestCase {
         }
     }
 
+    func testParakeetWithoutModelThrowsModelNotInstalled() async {
+        let transcriber = ParakeetTranscriber(model: "ultra", isInstalled: { _ in false })
+        do {
+            _ = try await transcriber.transcribe(url: URL(fileURLWithPath: "/nonexistent.wav"), profileId: nil) { _ in }
+            XCTFail("Expected modelNotInstalled")
+        } catch LocalTranscriberError.modelNotInstalled(let model) {
+            XCTAssertEqual(model, "ultra")
+        } catch {
+            XCTFail("Wrong error: \(error)")
+        }
+    }
+
+    func testFactoryBuildsParakeet() throws {
+        let suite = "LocalPipelineTests-\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        defaults.set(LocalTranscriberEngine.parakeet.rawValue, forKey: "localTranscriber")
+        defaults.set("redux", forKey: ParakeetCatalog.defaultsKey)
+        let transcriber = try XCTUnwrap(LocalTranscriberFactory.make(defaults: defaults) as? ParakeetTranscriber)
+        XCTAssertEqual(transcriber.model, "redux")
+    }
+
     func testImportStoresDuration() async throws {
         let url = FileManager.default.temporaryDirectory.appending(path: "\(UUID().uuidString).wav")
         defer { try? FileManager.default.removeItem(at: url) }

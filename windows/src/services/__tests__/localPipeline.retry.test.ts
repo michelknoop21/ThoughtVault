@@ -155,6 +155,7 @@ it("clears stale review fields only when a new validated replacement is saved", 
   await processLocally("C:\\recording.wav", "standaard", "microphone", [], 12, partial.id);
   expect(update).toHaveBeenCalledWith(partial.id, expect.objectContaining({ has_notes: true, notule_draft_html: "", notule_review_reason: "" }));
   expect(useRecordingStore.getState().backgroundTasks[0].status).toBe("completed");
+  expect(invoke).not.toHaveBeenCalledWith("obsidian_get", expect.anything());
 });
 
 it("keeps the recording retryable instead of downloading a missing model without a user action", async () => {

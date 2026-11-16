@@ -23,6 +23,29 @@
 		77C48E77D5C245F79A5577E1 /* TaskHistoryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5C1AD17E20D4C3BA6057224 /* TaskHistoryStore.swift */; };
 		6AD23642687645549E873335 /* SuggestedModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BDA166E30FC417B9B9FAC26 /* SuggestedModels.swift */; };
 		A150B1BC4BDE40C995440801 /* SuggestedModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BDA166E30FC417B9B9FAC26 /* SuggestedModels.swift */; };
+		AAPK0001 /* ParakeetCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAPK0001 /* ParakeetCatalog.swift */; };
+		ABPK0001 /* ParakeetCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAPK0001 /* ParakeetCatalog.swift */; };
+		AAPK1000 /* ParakeetModelRows.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAPK1000 /* ParakeetModelRows.swift */; };
+		ABPK1000 /* ParakeetModelRows.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAPK1000 /* ParakeetModelRows.swift */; };
+		AAPK1100 /* SettingsView+VerwerkingLogic.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAPK1100 /* SettingsView+VerwerkingLogic.swift */; };
+		ABPK1100 /* SettingsView+VerwerkingLogic.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAPK1100 /* SettingsView+VerwerkingLogic.swift */; };
+		AAPK1200 /* SettingsView+VerwerkingIOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAPK1200 /* SettingsView+VerwerkingIOS.swift */; };
+		ABPK1200 /* SettingsView+VerwerkingIOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAPK1200 /* SettingsView+VerwerkingIOS.swift */; };
+		AAPK1300 /* StudioComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAPK1300 /* StudioComponents.swift */; };
+		ABPK1300 /* StudioComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAPK1300 /* StudioComponents.swift */; };
+		AAPK0002 /* ParakeetModelStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAPK0002 /* ParakeetModelStore.swift */; };
+		AACP0001 /* ContinuedProcessing.swift in Sources */ = {isa = PBXBuildFile; fileRef = FACP0001 /* ContinuedProcessing.swift */; };
+		ABCP0001 /* ContinuedProcessing.swift in Sources */ = {isa = PBXBuildFile; fileRef = FACP0001 /* ContinuedProcessing.swift */; };
+		ACCP0001 /* ContinuedProcessingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBCP0001 /* ContinuedProcessingTests.swift */; };
+		AADG0001 /* DiagnosticLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = FADG0001 /* DiagnosticLog.swift */; };
+		ABPK0002 /* ParakeetModelStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAPK0002 /* ParakeetModelStore.swift */; };
+		ABDG0001 /* DiagnosticLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = FADG0001 /* DiagnosticLog.swift */; };
+		AAPK0003 /* ParakeetTranscriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAPK0003 /* ParakeetTranscriber.swift */; };
+		ABPK0003 /* ParakeetTranscriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAPK0003 /* ParakeetTranscriber.swift */; };
+		ACPK0001 /* ParakeetCatalogTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBPK0001 /* ParakeetCatalogTests.swift */; };
+		ACPK0002 /* NotulenDefaultMigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBPK0002 /* NotulenDefaultMigrationTests.swift */; };
+		AFFA0001 /* FluidAudio in Frameworks */ = {isa = PBXBuildFile; productRef = SDFA0001 /* FluidAudio */; };
+		AFFA0002 /* FluidAudio in Frameworks */ = {isa = PBXBuildFile; productRef = SDFA0002 /* FluidAudio */; };
 		AA0F0701 /* SupportIdentityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0F0701 /* SupportIdentityView.swift */; };
 		AA0F0801 /* SupportViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0F0801 /* SupportViews.swift */; };
 		40E8004F9E0DF7B8A00DBC28 /* SupportViews+Mac.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AF241B1198BCA47C72E616A /* SupportViews+Mac.swift */; };
@@ -96,6 +119,13 @@
 		AA0000N8 /* NotuleAudit.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000N8 /* NotuleAudit.swift */; };
 		AA00AL01 /* NotuleAuditLong.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA00AL01 /* NotuleAuditLong.swift */; };
 		AA00ML01 /* ModelRequestLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA00ML01 /* ModelRequestLog.swift */; };
+		AAUM0001 /* UsageMeter.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAUM0001 /* UsageMeter.swift */; };
+		AAUM0002 /* UsageMeter.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAUM0001 /* UsageMeter.swift */; };
+		AAUM0003 /* NotuleUsageViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAUM0002 /* NotuleUsageViews.swift */; };
+		AAUM0004 /* NotuleUsageViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAUM0002 /* NotuleUsageViews.swift */; };
+		AAOB0001 /* ObsidianLinkBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAOB0001 /* ObsidianLinkBanner.swift */; };
+		AAOB0002 /* ObsidianLinkBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAOB0001 /* ObsidianLinkBanner.swift */; };
+		ABUM0001 /* UsageMeterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBUM0001 /* UsageMeterTests.swift */; };
 		AA0000T1 /* NotuleGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000T1 /* NotuleGenerator.swift */; };
 		AA000009 /* BiometricService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000009 /* BiometricService.swift */; };
 		AA000010 /* CalendarService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000010 /* CalendarService.swift */; };
@@ -187,6 +217,7 @@
 		AB000002 /* MigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000002 /* MigrationTests.swift */; };
 		AB0F0A03 /* AppLogTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0F0A03 /* AppLogTests.swift */; };
 		AB0F0B03 /* SupportRelayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0F0B03 /* SupportRelayTests.swift */; };
+		AB0F0B90 /* RecordingWidgetLayoutTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0F0B90 /* RecordingWidgetLayoutTests.swift */; };
 		AB000003 /* PersonProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000003 /* PersonProfileTests.swift */; };
 		AB0000K1 /* KeychainServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000K1 /* KeychainServiceTests.swift */; };
 		AB000004 /* PersonDirectoryServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000004 /* PersonDirectoryServiceTests.swift */; };
@@ -387,6 +418,18 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		FAPK0001 /* ParakeetCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParakeetCatalog.swift; sourceTree = "<group>"; };
+		FAPK1000 /* ParakeetModelRows.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParakeetModelRows.swift; sourceTree = "<group>"; };
+		FAPK1100 /* SettingsView+VerwerkingLogic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SettingsView+VerwerkingLogic.swift"; sourceTree = "<group>"; };
+		FAPK1200 /* SettingsView+VerwerkingIOS.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SettingsView+VerwerkingIOS.swift"; sourceTree = "<group>"; };
+		FAPK1300 /* StudioComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StudioComponents.swift; sourceTree = "<group>"; };
+		FAPK0002 /* ParakeetModelStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParakeetModelStore.swift; sourceTree = "<group>"; };
+		FACP0001 /* ContinuedProcessing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContinuedProcessing.swift; sourceTree = "<group>"; };
+		FBCP0001 /* ContinuedProcessingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContinuedProcessingTests.swift; sourceTree = "<group>"; };
+		FADG0001 /* DiagnosticLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticLog.swift; sourceTree = "<group>"; };
+		FAPK0003 /* ParakeetTranscriber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParakeetTranscriber.swift; sourceTree = "<group>"; };
+		FBPK0001 /* ParakeetCatalogTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParakeetCatalogTests.swift; sourceTree = "<group>"; };
+		FBPK0002 /* NotulenDefaultMigrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotulenDefaultMigrationTests.swift; sourceTree = "<group>"; };
 		FA0F0701 /* SupportIdentityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupportIdentityView.swift; sourceTree = "<group>"; };
 		FB0F0E01 /* envelope-fixture.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "tests/fixtures/envelope-fixture.json"; sourceTree = SOURCE_ROOT; };
 		FA0F0801 /* SupportViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupportViews.swift; sourceTree = "<group>"; };
@@ -450,6 +493,10 @@
 		FA0000N8 /* NotuleAudit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotuleAudit.swift; sourceTree = "<group>"; };
 		FA00AL01 /* NotuleAuditLong.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotuleAuditLong.swift; sourceTree = "<group>"; };
 		FA00ML01 /* ModelRequestLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelRequestLog.swift; sourceTree = "<group>"; };
+		FAUM0001 /* UsageMeter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageMeter.swift; sourceTree = "<group>"; };
+		FAUM0002 /* NotuleUsageViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotuleUsageViews.swift; sourceTree = "<group>"; };
+		FAOB0001 /* ObsidianLinkBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ObsidianLinkBanner.swift; sourceTree = "<group>"; };
+		FBUM0001 /* UsageMeterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageMeterTests.swift; sourceTree = "<group>"; };
 		FA0000T1 /* NotuleGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotuleGenerator.swift; sourceTree = "<group>"; };
 		FA000009 /* BiometricService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BiometricService.swift; sourceTree = "<group>"; };
 		FA000010 /* CalendarService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarService.swift; sourceTree = "<group>"; };
@@ -551,6 +598,7 @@
 		FB000002 /* MigrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MigrationTests.swift; sourceTree = "<group>"; };
 		FB0F0A03 /* AppLogTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLogTests.swift; sourceTree = "<group>"; };
 		FB0F0B03 /* SupportRelayTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupportRelayTests.swift; sourceTree = "<group>"; };
+		FB0F0B90 /* RecordingWidgetLayoutTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingWidgetLayoutTests.swift; sourceTree = "<group>"; };
 		FB0000K1 /* KeychainServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainServiceTests.swift; sourceTree = "<group>"; };
 		FB000003 /* PersonProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonProfileTests.swift; sourceTree = "<group>"; };
 		FB000004 /* PersonDirectoryServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonDirectoryServiceTests.swift; sourceTree = "<group>"; };
@@ -610,6 +658,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				AA000065 /* WhisperKit in Frameworks */,
+				AFFA0001 /* FluidAudio in Frameworks */,
 				AAUP0001 /* Sparkle in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -626,6 +675,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A8E86B545582AEF6E232112A /* WhisperKit in Frameworks */,
+				AFFA0002 /* FluidAudio in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -712,6 +762,7 @@
 				FA0000N8 /* NotuleAudit.swift */,
 				FA00AL01 /* NotuleAuditLong.swift */,
 				FA00ML01 /* ModelRequestLog.swift */,
+				FAUM0001 /* UsageMeter.swift */,
 				FA0000T1 /* NotuleGenerator.swift */,
 				FA0000S4 /* QuickNoteStore.swift */,
 				FA000009 /* BiometricService.swift */,
@@ -723,6 +774,11 @@
 				FA000014 /* LLMService.swift */,
 				FA0000K4 /* ProcessingAdvisor.swift */,
 				FA0000K3 /* WhisperModelStore.swift */,
+				FAPK0001 /* ParakeetCatalog.swift */,
+				FAPK0002 /* ParakeetModelStore.swift */,
+				FACP0001 /* ContinuedProcessing.swift */,
+				FADG0001 /* DiagnosticLog.swift */,
+				FAPK0003 /* ParakeetTranscriber.swift */,
 				FA0000K2 /* AppleFoundationModelService.swift */,
 				FA0000K1 /* AnthropicLLMService.swift */,
 				FA000062 /* LocalTranscriptStore.swift */,
@@ -787,6 +843,8 @@
 				FA0000I9 /* ProfilesView+iOS.swift */,
 				FA0000I8 /* SettingsView+iOS.swift */,
 				FB0PF003 /* NotuleFallbackPicker.swift */,
+				FAUM0002 /* NotuleUsageViews.swift */,
+				FAOB0001 /* ObsidianLinkBanner.swift */,
 				FB0PF002 /* ProspectFlowViews.swift */,
 				FA0000I7 /* TranscriptDetail+iOS.swift */,
 				FA0000I6 /* TranscriptsView+iOS.swift */,
@@ -810,6 +868,9 @@
 				FA0000S1 /* RecordingView+Studio.swift */,
 				FA000031 /* SettingsView.swift */,
 				FA0000K8 /* SettingsView+VerwerkingSide.swift */,
+				FAPK1200 /* SettingsView+VerwerkingIOS.swift */,
+				FAPK1100 /* SettingsView+VerwerkingLogic.swift */,
+				FAPK1000 /* ParakeetModelRows.swift */,
 				FA0000K7 /* SettingsView+Verwerking.swift */,
 				F1D71F9B7A4C14F2548A9932 /* SettingsView+Cards.swift */,
 				FA0000K6 /* SettingsView+Studio.swift */,
@@ -855,6 +916,7 @@
 				FA0000S3 /* MainSidebar.swift */,
 				FA0000H5 /* HomeDecor.swift */,
 				FA0000I1 /* IOSTheme.swift */,
+				FAPK1300 /* StudioComponents.swift */,
 				FA000052 /* PermissionBanner.swift */,
 				FA000053 /* EditableHTMLWebView.swift */,
 				FADF1101 /* DraftReviewSection.swift */,
@@ -894,6 +956,7 @@
 				FB000002 /* MigrationTests.swift */,
 				FB0F0A03 /* AppLogTests.swift */,
 				FB0F0B03 /* SupportRelayTests.swift */,
+				FB0F0B90 /* RecordingWidgetLayoutTests.swift */,
 				FA0F0D301 /* SupportViewModelTests.swift */,
 				FB000003 /* PersonProfileTests.swift */,
 				FB0000K1 /* KeychainServiceTests.swift */,
@@ -919,9 +982,13 @@
 				FB0000N8 /* NotuleAuditTests.swift */,
 				FB0000T3 /* NotuleGeneratorTests.swift */,
 				FB0000T5 /* LocalPipelineTests.swift */,
+				FBPK0001 /* ParakeetCatalogTests.swift */,
+				FBCP0001 /* ContinuedProcessingTests.swift */,
+				FBPK0002 /* NotulenDefaultMigrationTests.swift */,
 				FB0000N9 /* NotuleConstraintTests.swift */,
 				FB00AP01 /* NotuleAuditPartsTests.swift */,
 				FB00ML01 /* ModelRequestLogTests.swift */,
+				FBUM0001 /* UsageMeterTests.swift */,
 				FB0000NA /* NotulePromptTests.swift */,
 				FB0000G1 /* M3LiveContentGateTests.swift */,
 				FB0000G2 /* M3LiveContentGate.swift */,
@@ -969,6 +1036,7 @@
 			name = ThoughtVault;
 			packageProductDependencies = (
 				SD000001 /* WhisperKit */,
+				SDFA0001 /* FluidAudio */,
 			);
 			productName = ThoughtVault;
 			productReference = FC000001 /* ThoughtVault.app */;
@@ -1007,6 +1075,7 @@
 			name = "ThoughtVault AppStore";
 			packageProductDependencies = (
 				FC0416C3791FB02F36F1DFE3 /* WhisperKit */,
+				SDFA0002 /* FluidAudio */,
 			);
 			productName = ThoughtVault;
 			productReference = 4B0C1A153C3D40142C200C53 /* ThoughtVault.app */;
@@ -1043,6 +1112,7 @@
 			mainGroup = GG000000 /* ThoughtVaultApp */;
 			packageReferences = (
 				SP000001 /* XCRemoteSwiftPackageReference "WhisperKit" */,
+				SPFA0001 /* XCRemoteSwiftPackageReference "FluidAudio" */,
 				SPUP0001 /* Sparkle */,
 			);
 			productRefGroup = GG000090 /* Products */;
@@ -1097,6 +1167,15 @@
 				691BE2B70F2B42089832BCB6 /* RecordingViewModel+TaskHistory.swift in Sources */,
 				77C48E77D5C245F79A5577E1 /* TaskHistoryStore.swift in Sources */,
 				A150B1BC4BDE40C995440801 /* SuggestedModels.swift in Sources */,
+				AAPK0001 /* ParakeetCatalog.swift in Sources */,
+				AAPK0002 /* ParakeetModelStore.swift in Sources */,
+				AACP0001 /* ContinuedProcessing.swift in Sources */,
+				AADG0001 /* DiagnosticLog.swift in Sources */,
+				AAPK1300 /* StudioComponents.swift in Sources */,
+				AAPK1200 /* SettingsView+VerwerkingIOS.swift in Sources */,
+				AAPK1100 /* SettingsView+VerwerkingLogic.swift in Sources */,
+				AAPK1000 /* ParakeetModelRows.swift in Sources */,
+				AAPK0003 /* ParakeetTranscriber.swift in Sources */,
 				AA000001 /* ThoughtVaultApp.swift in Sources */,
 				AA0F0601 /* MenuBarViews.swift in Sources */,
 				AA000002 /* ContentView.swift in Sources */,
@@ -1142,6 +1221,9 @@
 				AA0000N8 /* NotuleAudit.swift in Sources */,
 				AA00AL01 /* NotuleAuditLong.swift in Sources */,
 				AA00ML01 /* ModelRequestLog.swift in Sources */,
+				AAUM0001 /* UsageMeter.swift in Sources */,
+				AAUM0003 /* NotuleUsageViews.swift in Sources */,
+				AAOB0001 /* ObsidianLinkBanner.swift in Sources */,
 				AA0000T1 /* NotuleGenerator.swift in Sources */,
 				AA000009 /* BiometricService.swift in Sources */,
 				AA000010 /* CalendarService.swift in Sources */,
@@ -1249,12 +1331,16 @@
 			files = (
 				5318E63393F44311886DC09F /* SuggestedModelsTests.swift in Sources */,
 				3B9347916B10415EA631462E /* TaskHistoryStoreTests.swift in Sources */,
+				ACPK0001 /* ParakeetCatalogTests.swift in Sources */,
+				ACCP0001 /* ContinuedProcessingTests.swift in Sources */,
+				ACPK0002 /* NotulenDefaultMigrationTests.swift in Sources */,
 				AB000001 /* ThoughtVaultTests.swift in Sources */,
 				AB0000S5 /* QuickNoteStoreTests.swift in Sources */,
 				AB9E5A02 /* VaultFolderStoreTests.swift in Sources */,
 				AB000002 /* MigrationTests.swift in Sources */,
 				AB0F0A03 /* AppLogTests.swift in Sources */,
 				AB0F0B03 /* SupportRelayTests.swift in Sources */,
+				AB0F0B90 /* RecordingWidgetLayoutTests.swift in Sources */,
 				AA0F0D301 /* SupportViewModelTests.swift in Sources */,
 				AB000003 /* PersonProfileTests.swift in Sources */,
 				AB0000K1 /* KeychainServiceTests.swift in Sources */,
@@ -1283,6 +1369,7 @@
 				AB0000N9 /* NotuleConstraintTests.swift in Sources */,
 				AB00AP01 /* NotuleAuditPartsTests.swift in Sources */,
 				AB00ML01 /* ModelRequestLogTests.swift in Sources */,
+				ABUM0001 /* UsageMeterTests.swift in Sources */,
 				AB0000NA /* NotulePromptTests.swift in Sources */,
 				AB0000G1 /* M3LiveContentGateTests.swift in Sources */,
 				AB0000G2 /* M3LiveContentGate.swift in Sources */,
@@ -1320,6 +1407,15 @@
 				DC69ADB093FC48EF814D75D3 /* RecordingViewModel+TaskHistory.swift in Sources */,
 				490D6106853144209D65DDDB /* TaskHistoryStore.swift in Sources */,
 				6AD23642687645549E873335 /* SuggestedModels.swift in Sources */,
+				ABPK0001 /* ParakeetCatalog.swift in Sources */,
+				ABPK0002 /* ParakeetModelStore.swift in Sources */,
+				ABCP0001 /* ContinuedProcessing.swift in Sources */,
+				ABDG0001 /* DiagnosticLog.swift in Sources */,
+				ABPK1300 /* StudioComponents.swift in Sources */,
+				ABPK1200 /* SettingsView+VerwerkingIOS.swift in Sources */,
+				ABPK1100 /* SettingsView+VerwerkingLogic.swift in Sources */,
+				ABPK1000 /* ParakeetModelRows.swift in Sources */,
+				ABPK0003 /* ParakeetTranscriber.swift in Sources */,
 				AB00FA00DS01 /* DebugScreenshotSeed.swift in Sources */,
 				AB01FA00CSB1 /* ContextSuggestionBar.swift in Sources */,
 				AB02FA00CH01 /* ContextHistory.swift in Sources */,
@@ -1365,6 +1461,9 @@
 				963E7F6A40A45BEDA7CD6653 /* NotuleAudit.swift in Sources */,
 				AA00AL02 /* NotuleAuditLong.swift in Sources */,
 				AA00ML02 /* ModelRequestLog.swift in Sources */,
+				AAUM0002 /* UsageMeter.swift in Sources */,
+				AAUM0004 /* NotuleUsageViews.swift in Sources */,
+				AAOB0002 /* ObsidianLinkBanner.swift in Sources */,
 				F2989054FE6E2130E893C3F6 /* NotuleGenerator.swift in Sources */,
 				5A935BD00B5251609DE098B6 /* BiometricService.swift in Sources */,
 				AF2C410D5B41F46199D97BEC /* CalendarService.swift in Sources */,
@@ -1614,7 +1713,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 325;
+				CURRENT_PROJECT_VERSION = 326;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = XL9KN38ATX;
 				ENABLE_APP_SANDBOX = YES;
@@ -1632,7 +1731,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.2;
-				MARKETING_VERSION = 1.0.325;
+				MARKETING_VERSION = 1.0.326;
 				PRODUCT_BUNDLE_IDENTIFIER = com.buildmind.ThoughtVault;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "macosx iphoneos iphonesimulator";
@@ -1655,7 +1754,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 325;
+				CURRENT_PROJECT_VERSION = 326;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = XL9KN38ATX;
 				ENABLE_APP_SANDBOX = YES;
@@ -1673,7 +1772,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.2;
-				MARKETING_VERSION = 1.0.325;
+				MARKETING_VERSION = 1.0.326;
 				PRODUCT_BUNDLE_IDENTIFIER = com.buildmind.ThoughtVault;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "macosx iphoneos iphonesimulator";
@@ -1690,12 +1789,12 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 325;
+				CURRENT_PROJECT_VERSION = 326;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.2;
-				MARKETING_VERSION = 1.0.325;
+				MARKETING_VERSION = 1.0.326;
 				PRODUCT_BUNDLE_IDENTIFIER = com.buildmind.ThoughtVaultTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "macosx iphoneos iphonesimulator";
@@ -1710,12 +1809,12 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 325;
+				CURRENT_PROJECT_VERSION = 326;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.2;
-				MARKETING_VERSION = 1.0.325;
+				MARKETING_VERSION = 1.0.326;
 				PRODUCT_BUNDLE_IDENTIFIER = com.buildmind.ThoughtVaultTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "macosx iphoneos iphonesimulator";
@@ -1734,7 +1833,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 325;
+				CURRENT_PROJECT_VERSION = 326;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = XL9KN38ATX;
 				ENABLE_APP_SANDBOX = YES;
@@ -1751,7 +1850,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.2;
-				MARKETING_VERSION = 1.0.325;
+				MARKETING_VERSION = 1.0.326;
 				PRODUCT_BUNDLE_IDENTIFIER = com.buildmind.ThoughtVault;
 				PRODUCT_NAME = ThoughtVault;
 				SUPPORTED_PLATFORMS = macosx;
@@ -1772,7 +1871,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 325;
+				CURRENT_PROJECT_VERSION = 326;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = XL9KN38ATX;
 				ENABLE_APP_SANDBOX = YES;
@@ -1789,7 +1888,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.2;
-				MARKETING_VERSION = 1.0.325;
+				MARKETING_VERSION = 1.0.326;
 				PRODUCT_BUNDLE_IDENTIFIER = com.buildmind.ThoughtVault;
 				PRODUCT_NAME = ThoughtVault;
 				SUPPORTED_PLATFORMS = macosx;
@@ -1843,6 +1942,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		SPFA0001 /* XCRemoteSwiftPackageReference "FluidAudio" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/FluidInference/FluidAudio.git";
+			requirement = {
+				kind = exactVersion;
+				version = 0.18.3;
+			};
+		};
 		SP000001 /* XCRemoteSwiftPackageReference "WhisperKit" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/argmaxinc/WhisperKit.git";
@@ -1855,6 +1962,16 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		SDFA0001 /* FluidAudio */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = SPFA0001 /* XCRemoteSwiftPackageReference "FluidAudio" */;
+			productName = FluidAudio;
+		};
+		SDFA0002 /* FluidAudio */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = SPFA0001 /* XCRemoteSwiftPackageReference "FluidAudio" */;
+			productName = FluidAudio;
+		};
 		SD000001 /* WhisperKit */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = SP000001 /* XCRemoteSwiftPackageReference "WhisperKit" */;

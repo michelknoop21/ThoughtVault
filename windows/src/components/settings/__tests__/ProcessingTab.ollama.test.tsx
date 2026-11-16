@@ -77,3 +77,17 @@ it("reports a server that only lists models the OpenAI way as connected", async 
   expect(test().textContent).toContain("Niet bereikbaar");
   await act(async () => { root.unmount(); }); host.remove();
 });
+
+it("shows the OpenRouter tile first and stores the choice", async () => {
+  useSettingsStore.setState({ processing_mode: "local", notulen_provider: "ollama" });
+  const host = document.createElement("div"); document.body.appendChild(host);
+  const root = createRoot(host);
+  await act(async () => { root.render(<ProcessingTab />); });
+  const tiles = [...host.querySelectorAll<HTMLButtonElement>(".provider-tiles button")];
+  expect(tiles[0].textContent).toContain("OpenRouter");
+  await act(async () => { tiles[0].click(); });
+  expect(useSettingsStore.getState().notulen_provider).toBe("openrouter");
+  expect(host.textContent).toContain("Het transcript wordt naar OpenRouter gestuurd. De kosten lopen via je eigen account.");
+  expect(host.querySelector('[aria-label="OpenRouter model"]')).not.toBeNull();
+  await act(async () => { root.unmount(); }); host.remove();
+});

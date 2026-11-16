@@ -38,6 +38,8 @@ final class TranscriptRecord {
     var notuleReviewReason: String?
     /// Audio length in seconds, set on record/import. Optional → lightweight-migration safe.
     var durationSeconds: Double?
+    /// JSON-encoded `NotuleUsage` of the run that generated `notuleHtml`. Optional → lightweight-migration safe.
+    var notuleUsageJSON: String?
 
     init(
         id: String = UUID().uuidString,
@@ -81,6 +83,9 @@ final class TranscriptRecord {
                 : (try? JSONEncoder().encode(newValue)).flatMap { String(data: $0, encoding: .utf8) }
         }
     }
+
+    /// Typed accessor over notuleUsageJSON; nil for notules generated before usage was stored.
+    var notuleUsage: NotuleUsage? { NotuleUsage(json: notuleUsageJSON) }
 
     /// Maps this record to the `Transcript` value type used throughout the UI.
     var asTranscript: Transcript {

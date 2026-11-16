@@ -36,6 +36,43 @@ enum LogRedact {
         }
         return result
     }
+
+    /// Clear-text error kind that is safe to log: type and case name, or NSError domain and code (plus the
+    /// underlying error's domain and code), never a message or an associated string value.
+    static func describe(_ error: Error) -> String {
+        if error is CancellationError || (error as? URLError)?.code == .cancelled { return "cancelled" }
+        // A URLError passed as `any Error` reports its dynamic type as NSError; name it explicitly.
+        let type = error is URLError ? "URLError" : identifier(String(describing: Swift.type(of: error)))
+        if let coded = error as? LogCoded {
+            let underlying = coded.logUnderlying.map { " underlying=" + domainAndCode($0 as NSError) } ?? ""
+            return "\(type).\(identifier(coded.logCode))" + underlying
+        }
+        let ns = error as NSError
+        let underlying = (ns.userInfo[NSUnderlyingErrorKey] as? NSError).map { " underlying=" + domainAndCode($0) } ?? ""
+        return "\(type) \(domainAndCode(ns))" + underlying
+    }
+
+    private static func domainAndCode(_ error: NSError) -> String {
+        "\(identifier(error.domain).replacingOccurrences(of: " ", with: "_")) \(error.code)"
+    }
+
+    /// Keeps ASCII identifier characters (and `=`, `-`, space for `logCode` details) so no free text gets through.
+    private static func identifier(_ text: String) -> String {
+        let allowed = CharacterSet(charactersIn: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_.=- ")
+        return String(String.UnicodeScalarView(text.unicodeScalars.map { allowed.contains($0) ? $0 : "_" }).prefix(80))
+    }
+}
+
+/// An app error that names its case for `LogRedact.describe`: the case name plus only fixed-set details
+/// (an HTTP status, a stage), never an associated string.
+protocol LogCoded {
+    var logCode: String { get }
+    /// A wrapped error whose domain and code are logged one level deep.
+    var logUnderlying: Error? { get }
+}
+
+extension LogCoded {
+    var logUnderlying: Error? { nil }
 }
 
 // MARK: - File

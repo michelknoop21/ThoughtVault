@@ -210,6 +210,16 @@ final class LLMChunkingTests: XCTestCase {
                                                service: OpenAICompatibleLLMService(baseURL: "https://other.example", model: "m")))
     }
 
+    func testOpenRouterUsesFixedBaseURLAndHostedLimit() {
+        XCTAssertEqual(OpenAICompatibleLLMService.openRouterBaseURL, "https://openrouter.ai/api/v1")
+        XCTAssertEqual(OpenAICompatibleLLMService.openRouterDefaultModel, "mistralai/mistral-large-4-0")
+        XCTAssertEqual(NotulenProvider.openRouter.apiKeyKeychainKey, "openRouterApiKey")
+        XCTAssertEqual(NotulenProvider.openRouter.auditNoteConcurrency, NotuleAudit.hostedAuditConcurrency)
+        let service = OpenAICompatibleLLMService.openRouter(model: nil, apiKey: "k")
+        XCTAssertEqual(service.maxChunkCharacters, 64_000)
+        XCTAssertEqual(service.endpoint("/v1/chat/completions"), "https://openrouter.ai/api/v1/chat/completions")
+    }
+
     func testRateLimitFailureExplainsRetryAndKeepsOtherServerErrors() {
         XCTAssertTrue(LLMError.serverError(429).localizedDescription.contains("gebruikslimiet"))
         XCTAssertTrue(LLMError.serverError(429).localizedDescription.contains("later opnieuw"))

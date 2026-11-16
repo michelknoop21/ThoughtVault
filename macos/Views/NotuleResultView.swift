@@ -24,6 +24,7 @@ struct NotuleResultView: View {
     @State private var selectedTab: ResultTab = .notule
     @State private var showExportMenu: Bool = false
     @State private var exportError: String? = nil
+    @AppStorage(ObsidianService.enabledKey) private var obsidianEnabled = false
     @State private var showAddTag: Bool = false
     @State private var newTagText: String = ""
     @State private var existingTags: [String] = []
@@ -45,6 +46,8 @@ struct NotuleResultView: View {
         VStack(spacing: 0) {
             toolbar
 
+            ObsidianLinkBanner()
+                .padding(.horizontal, TS.Spacing.md)
             resultMetaBar
             tabBar
 
@@ -343,6 +346,7 @@ struct NotuleResultView: View {
                     RoundedRectangle(cornerRadius: TS.Radius.md, style: .continuous)
                         .stroke(Color.borderPrimary.opacity(0.45), lineWidth: 1)
                 }
+            NotuleUsageFooter(taskId: task.taskId, html: html)
         } else {
             emptyNotuleView
         }
@@ -439,8 +443,10 @@ struct NotuleResultView: View {
             Divider()
             exportButton(icon: "doc.plaintext", title: "Platte tekst (.txt)", action: exportAsTXT)
             Divider()
-            exportButton(icon: "tray.and.arrow.down", title: "Exporteer naar Obsidian", action: exportToObsidian)
-            Divider()
+            if obsidianEnabled {
+                exportButton(icon: "tray.and.arrow.down", title: "Exporteer naar Obsidian", action: exportToObsidian)
+                Divider()
+            }
             exportButton(icon: "doc.on.doc", title: "Kopieer tekst", action: copyContent)
             Divider()
             exportButton(icon: "square.and.arrow.up", title: "Delen...", action: shareContent)
@@ -569,6 +575,8 @@ struct NotuleResultView: View {
                 }
                 exportError = nil
                 showExportMenu = false
+            } catch ObsidianService.ObsidianError.vaultLinkBroken {
+                showExportMenu = false   // shown once by ObsidianLinkBanner
             } catch {
                 exportError = "Obsidian: \(error.localizedDescription)"
             }

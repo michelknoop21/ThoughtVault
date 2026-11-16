@@ -131,7 +131,7 @@ final class WhisperModelStore {
                 if Task.isCancelled || error is CancellationError {
                     logger.info("Download cancelled: \(LogRedact.mask(variant))")
                 } else {
-                    logger.error("Download failed \(LogRedact.mask(variant)): \(LogRedact.mask(error.localizedDescription))")
+                    logger.error("Download failed \(LogRedact.mask(variant)): \(LogRedact.mask(error.localizedDescription)) error=\(LogRedact.describe(error))")
                     failure = (variant, error.localizedDescription)
                 }
             }

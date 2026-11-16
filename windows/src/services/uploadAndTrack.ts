@@ -3,7 +3,7 @@ import { useTranscriptsStore } from "../stores/transcriptsStore";
 import { useSettingsStore } from "../stores/settingsStore";
 import { api } from "./api";
 import { createSSEClient } from "./sse";
-import { exportToObsidian } from "./obsidian";
+import { exportToObsidian, ObsidianBrokenError } from "./obsidian";
 import { enqueue } from "./offlineQueue";
 import { linkQuickNote, getTranscriptQuickNote, ensureNotesSection } from "./quickNotes";
 import { usePersonalCorrectionsStore } from "../stores/personalCorrectionsStore";
@@ -94,9 +94,9 @@ export async function uploadAndTrack(
           // Auto-export the freshly completed notule to Obsidian (fire-and-forget).
           const settings = useSettingsStore.getState();
           if (settings.obsidian_enabled) {
-            exportToObsidian(completed, settings).catch((e) =>
-              console.warn("Obsidian auto-export mislukt:", e),
-            );
+            exportToObsidian(completed, settings).catch((e) => {
+              if (!(e instanceof ObsidianBrokenError)) console.warn("Obsidian auto-export mislukt:", e);
+            });
           }
         }
         removeBackgroundTask(task_id);

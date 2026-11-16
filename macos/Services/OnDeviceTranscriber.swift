@@ -164,7 +164,7 @@ final class OnDeviceTranscriber {
 
             recognitionTask = recognizer.recognitionTask(with: request) { result, error in
                 if let error = error {
-                    logger.error("OnDeviceTranscriber: transcription error — \(LogRedact.mask(error.localizedDescription))")
+                    logger.error("OnDeviceTranscriber: transcription error — \(LogRedact.mask(error.localizedDescription)) error=\(LogRedact.describe(error))")
                     resumeOnce(.failure(TranscriberError.recognitionFailed(error.localizedDescription)))
                     return
                 }
@@ -294,7 +294,7 @@ final class OnDeviceTranscriber {
             lastLiveError = "\(error.domain) \(error.code)"
 #endif
             guard Self.isBenignLiveError(error) else {
-                logger.error("OnDeviceTranscriber: live recognition error — \(LogRedact.mask(error.localizedDescription))")
+                logger.error("OnDeviceTranscriber: live recognition error — \(LogRedact.mask(error.localizedDescription)) error=\(LogRedact.describe(error))")
                 onError?(error.localizedDescription)
                 return
             }

@@ -209,7 +209,7 @@ extension SettingsView {
     /// Ollama on an https endpoint is Ollama Cloud; hosted providers always leave the Mac.
     private var notuleLeavesDevice: Bool {
         switch activeLocalProvider {
-        case .openAI, .anthropic, .ollamaCloud, .openAICompatible: return true
+        case .openAI, .anthropic, .ollamaCloud, .openAICompatible, .openRouter: return true
         case .ollama:             return ollamaURL.lowercased().hasPrefix("https://")
         default:                  return false
         }
@@ -221,6 +221,7 @@ extension SettingsView {
         case .anthropic: return "Het transcript wordt naar Anthropic gestuurd om de notulen te maken."
         case .ollamaCloud: return "Het transcript wordt naar Ollama Cloud gestuurd om de notulen te maken."
         case .openAICompatible: return "Het transcript wordt naar het adres van je eigen aanbieder gestuurd om de notulen te maken."
+        case .openRouter: return "Het transcript wordt naar OpenRouter gestuurd. De kosten lopen via je eigen account."
         case .ollama:    return notuleLeavesDevice ? "Het transcript wordt naar Ollama Cloud gestuurd om de notulen te maken."
                                                    : "Het transcript blijft op je eigen Ollama-server."
         case .lmStudio:  return "Het transcript blijft op je eigen LM Studio-server."

@@ -14,6 +14,8 @@ export async function migrateLegacySettings(value: unknown): Promise<Record<stri
     }
     delete state[key];
   }
+  // Installs from before OpenRouter existed keep the provider they had (the default then was Ollama).
+  if (!state.notulen_provider) state.notulen_provider = "ollama";
   return state;
 }
 
@@ -32,7 +34,7 @@ export const useSettingsStore = create<SettingsState>()(
     }),
     {
       name: "settings-store",
-      version: 1,
+      version: 2,
       migrate: migrateLegacySettings,
     }
   )

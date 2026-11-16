@@ -1,4 +1,7 @@
 import Foundation
+#if os(iOS)
+import UIKit
+#endif
 
 private let logger = AppLog(category: "LLMService")
 
@@ -53,8 +56,37 @@ let llmSession: URLSession = {
 
 /// URLSession reports the idle and the total time limit as `.timedOut`; name the cause instead.
 func mappingTimeout<T>(_ body: () async throws -> T) async throws -> T {
-    do { return try await body() } catch let error as URLError where error.code == .timedOut { throw LLMError.timedOut }
+    do { return try await retryingDroppedConnection(body) } catch let error as URLError where error.code == .timedOut { throw LLMError.timedOut }
 }
+
+/// Connection errors iOS causes by suspending the app mid-request.
+let droppedConnectionCodes: Set<URLError.Code> = [.networkConnectionLost, .notConnectedToInternet, .timedOut]
+
+/// iOS: sends a model request once more after it lost its connection, as soon as the app is active again.
+/// Safety net for a request cut off while the app was suspended without a continued processing task.
+/// macOS is never suspended this way and sends once.
+func retryingDroppedConnection<T>(_ body: () async throws -> T) async throws -> T {
+    #if os(iOS)
+    do { return try await body() } catch let error as URLError where droppedConnectionCodes.contains(error.code) {
+        await waitUntilAppActive()
+        try Task.checkCancellation()
+        ModelRequestLog.retryAfterDrop(error)
+        return try await body()
+    }
+    #else
+    return try await body()
+    #endif
+}
+
+#if os(iOS)
+/// Returns once the app is in the foreground; immediately when it already is.
+@MainActor
+func waitUntilAppActive() async {
+    let activations = NotificationCenter.default.notifications(named: UIApplication.didBecomeActiveNotification)
+    guard UIApplication.shared.applicationState != .active else { return }
+    for await _ in activations { return }
+}
+#endif
 
 /// Wait before retrying an HTTP 429 when the provider sends no usable Retry-After.
 let rateLimitDefaultWait: TimeInterval = 2
@@ -241,6 +273,11 @@ class LLMServiceFactory {
                                               model: UserDefaults.standard.string(forKey: "ollamaCloudModel") ?? "",
                                               apiKey: KeychainService.shared.load(for: "ollamaApiKey"))
 
+        case .openRouter:
+            guard provider.hasAPIKey else { return MissingAPIKeyLLMService(providerName: provider.displayName) }
+            return OpenAICompatibleLLMService.openRouter(model: UserDefaults.standard.string(forKey: "openRouterModel"),
+                                                         apiKey: KeychainService.shared.load(for: "openRouterApiKey"))
+
         case .openAICompatible:
             // The bearer token is only sent over HTTPS, so other schemes are refused up front.
             guard let config = CloudAIConfiguration.selected(), provider.hasAPIKey,
@@ -326,6 +363,8 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
     static let openAIBaseURL = "https://api.openai.com"
     static let ollamaCloudBaseURL = "https://ollama.com"
     static let openAIDefaultModel = "gpt-5.6-terra"
+    static let openRouterBaseURL = "https://openrouter.ai/api/v1"
+    static let openRouterDefaultModel = "mistralai/mistral-large-4-0"
 
     /// Transcript size above which it is summarized in chunks first. The default
     /// is what a typical local model handles comfortably (conservative estimate).
@@ -341,6 +380,11 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
     /// 8_000 local-model default would apply to any host other than ollama.com.
     static func hosted(_ config: CloudAIConfiguration, apiKey: String?) -> OpenAICompatibleLLMService {
         OpenAICompatibleLLMService(baseURL: config.baseURL, model: config.model, apiKey: apiKey, maxChunkCharacters: 64_000)
+    }
+
+    /// OpenRouter at its fixed address with the same hosted limit; no stored model means the default.
+    static func openRouter(model: String?, apiKey: String?) -> OpenAICompatibleLLMService {
+        OpenAICompatibleLLMService(baseURL: openRouterBaseURL, model: model ?? openRouterDefaultModel, apiKey: apiKey, maxChunkCharacters: 64_000)
     }
 
     init(baseURL: String, model: String, apiKey: String? = nil, maxChunkCharacters: Int? = nil, session: URLSession = llmSession) {
@@ -403,7 +447,7 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
     }
 
     /// Accepts base URLs with or without a trailing `/v1`, as hosted providers document both.
-    private func endpoint(_ path: String) -> String {
+    func endpoint(_ path: String) -> String {
         let base = baseURL.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
         return base + (base.hasSuffix("/v1") && path.hasPrefix("/v1/") ? String(path.dropFirst(3)) : path)
     }
@@ -571,8 +615,9 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
         }
 
         // api.openai.com rejects `max_tokens` for newer models; local servers only know `max_tokens`.
-        let capKey = URL(string: baseURL)?.host?.lowercased() == "api.openai.com" ? "max_completion_tokens" : "max_tokens"
-        let requestBody: [String: Any] = [
+        let isOpenAI = URL(string: baseURL)?.host?.lowercased() == "api.openai.com"
+        let capKey = isOpenAI ? "max_completion_tokens" : "max_tokens"
+        var requestBody: [String: Any] = [
             "model": model,
             "stream": true,
             capKey: llmMaxOutputTokens,
@@ -581,6 +626,8 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
                 ["role": "user", "content": userMessage]
             ]
         ]
+        // OpenAI streams usage only on request; other servers get the body they always got.
+        if isOpenAI { requestBody["stream_options"] = ["include_usage": true] }
 
         guard let bodyData = try? JSONSerialization.data(withJSONObject: requestBody) else {
             throw LLMError.generationFailed("Kon het verzoek niet serialiseren.")
@@ -620,8 +667,11 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
             if data == "[DONE]" { break }
 
             guard let jsonData = data.data(using: .utf8),
-                  let json = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any],
-                  let choices = json["choices"] as? [[String: Any]],
+                  let json = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any]
+            else { continue }
+            // The final chunk carries usage: OpenAI with empty choices, OpenRouter with one empty delta.
+            if let usage = TokenUsage.openAI(json["usage"]) { ModelRequestLog.report(usage) }
+            guard let choices = json["choices"] as? [[String: Any]],
                   let first = choices.first
             else { continue }
             // A capped answer is incomplete; never parse it as a short one.

@@ -233,7 +233,7 @@ enum ContextSuggestions {
     @MainActor static func recordSkip(_ reason: ContextSuggestionSkip, taskId: String) {
         var set = load(taskId: taskId) ?? ContextSuggestionSet()
         set.skipped = reason
-        do { try save(set, taskId: taskId) } catch { logger.error("Context suggestions skip not stored: \(LogRedact.mask(error.localizedDescription))") }
+        do { try save(set, taskId: taskId) } catch { logger.error("Context suggestions skip not stored: \(LogRedact.mask(error.localizedDescription)) error=\(LogRedact.describe(error))") }
         NotificationCenter.default.post(name: .contextSuggestionsUpdated, object: nil, userInfo: ["taskId": taskId])
     }
 
@@ -264,8 +264,13 @@ enum ContextSuggestions {
                     await MainActor.run { recordSkip(.tooLongForModel, taskId: taskId) }
                     return
                 }
-                let raw = try await ModelStep.$current.withValue(ModelStep(.contextSuggestions)) {
-                    try await service.complete(system: systemPrompt, user: message)
+                // Counted in the monthly ledger like a notule run, also when it fails.
+                let meter = UsageMeter()
+                defer { UsageLedger.record(meter.totals, provider: provider, notule: false) }
+                let raw = try await UsageMeter.$current.withValue(meter) {
+                    try await ModelStep.$current.withValue(ModelStep(.contextSuggestions)) {
+                        try await service.complete(system: systemPrompt, user: message)
+                    }
                 }
                 let parsed = parse(raw, transcript: transcript, entries: entries, dismissed: dismissed, selfNames: [selfName], selfAliases: selfAliases)
                 let set = try await MainActor.run {
@@ -277,7 +282,7 @@ enum ContextSuggestions {
                 }
                 logger.info("Context suggestions: \(set.terms.count) terms, \(set.people.count) people")
             } catch {
-                logger.error("Context suggestions failed: \(LogRedact.mask(error.localizedDescription))")
+                logger.error("Context suggestions failed: \(LogRedact.mask(error.localizedDescription)) error=\(LogRedact.describe(error))")
             }
         }
     }

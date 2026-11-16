@@ -472,7 +472,7 @@ final class NotuleAuditPartsTests: XCTestCase {
     }
 
     func testOnlyHostedProvidersGetTheHigherLimit() {
-        for provider in [NotulenProvider.openAI, .anthropic, .ollamaCloud, .openAICompatible] {
+        for provider in [NotulenProvider.openAI, .anthropic, .ollamaCloud, .openAICompatible, .openRouter] {
             XCTAssertEqual(provider.auditNoteConcurrency, NotuleAudit.hostedAuditConcurrency, provider.rawValue)
         }
         XCTAssertEqual(NotulenProvider.appleIntelligence.auditNoteConcurrency, NotuleAudit.auditConcurrency)

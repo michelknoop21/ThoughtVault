@@ -80,7 +80,7 @@ final class LocalTranscriptStore {
                 return created
             } catch {
                 defaults.set(false, forKey: watchdogKey)
-                logger.error("Persistent store open failed: \(LogRedact.mask(error.localizedDescription))")
+                logger.error("Persistent store open failed: \(LogRedact.mask(error.localizedDescription)) error=\(LogRedact.describe(error))")
                 return nil
             }
         }
@@ -108,6 +108,11 @@ final class LocalTranscriptStore {
             let dest = URL(fileURLWithPath: url.path + ext + "-incompatible-\(stamp)")
             try? fm.moveItem(at: src, to: dest)
         }
+    }
+
+    /// True when an earlier launch created the store. Unlike `storeURL` this creates no folder.
+    nonisolated static var storeFileExists: Bool {
+        FileManager.default.fileExists(atPath: AppEnvironment.supportDirectory.appending(path: "ThoughtVault/Local.store").path)
     }
 
     /// Dedicated on-disk location: `Application Support/ThoughtVault/Local.store`.
@@ -139,7 +144,7 @@ final class LocalTranscriptStore {
             logger.info("Migrated \(oldRecords.count) record(s) from the previous local store.")
         } catch {
             // No compatible local store to migrate (different schema or unreadable). Skip.
-            logger.info("No compatible local store to migrate: \(LogRedact.mask(error.localizedDescription))")
+            logger.info("No compatible local store to migrate: \(LogRedact.mask(error.localizedDescription)) error=\(LogRedact.describe(error))")
         }
     }
 
@@ -211,7 +216,7 @@ final class LocalTranscriptStore {
         do {
             return try context.fetch(descriptor)
         } catch {
-            logger.error("Fetch failed: \(LogRedact.mask(error.localizedDescription))")
+            logger.error("Fetch failed: \(LogRedact.mask(error.localizedDescription)) error=\(LogRedact.describe(error))")
             return []
         }
     }
@@ -272,18 +277,23 @@ final class LocalTranscriptStore {
     /// Updates the generated notule + title for a previously saved (partial) record.
     /// Throwing so callers can surface persistence failures instead of silently
     /// reporting success.
-    func finalizeNotule(taskId: String, html: String, title: String, profileId: String? = nil, profileName: String? = nil) throws {
+    /// `usage` replaces the stored usage, so a regenerated notule never shows the numbers of the previous one.
+    func finalizeNotule(taskId: String, html: String, title: String, profileId: String? = nil, profileName: String? = nil,
+                        usage: NotuleUsage? = nil) throws {
         guard let record = record(forTaskId: taskId) else {
             throw LocalStoreError.recordNotFound
         }
         let original = (record.notuleHtml, record.title, record.profileId, record.profileName, record.notuleDraftHtml, record.notuleReviewReason)
+        let originalUsage = record.notuleUsageJSON
         record.notuleHtml = html
         record.title = title
         if let profileId { record.profileId = profileId; record.profileName = profileName }
         record.notuleDraftHtml = nil
         record.notuleReviewReason = nil
+        record.notuleUsageJSON = usage?.json
         do { try context.save() } catch {
             (record.notuleHtml, record.title, record.profileId, record.profileName, record.notuleDraftHtml, record.notuleReviewReason) = original
+            record.notuleUsageJSON = originalUsage
             throw error
         }
     }

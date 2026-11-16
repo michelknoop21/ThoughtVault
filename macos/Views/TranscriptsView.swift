@@ -2362,8 +2362,9 @@ struct TranscriptDetailView: View {
     }
 
     func shareContent() {
-        let text = fullTranscript.rawTranscription
-            ?? HTMLPlainText.from(fullTranscript.notuleHtml ?? "")
+        // The screen shows the notule, so that is what Delen sends; the transcript only when there is no notule.
+        let notule = HTMLPlainText.from(fullTranscript.notuleHtml ?? "")
+        let text = notule.isEmpty ? (fullTranscript.rawTranscription ?? "") : notule
         #if os(macOS)
         let picker = NSSharingServicePicker(items: [text])
         picker.show(relativeTo: .zero, of: NSApp.keyWindow?.contentView ?? NSView(), preferredEdge: .minY)

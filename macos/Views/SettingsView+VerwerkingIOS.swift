@@ -20,6 +20,7 @@ extension SettingsView {
                     iosQuickSetupCard(advice, proxy)
                     iosTranscriptionCard(advice)
                     iosNotuleCard.id("notuleCard")
+                    iosUsageCard
                 }
                 .padding(.horizontal, IOSMetric.gutter)
                 .padding(.bottom, 28)
@@ -244,6 +245,21 @@ extension SettingsView {
             }
         }
         .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: localTranscriber)
+    }
+
+    // MARK: Gebruik
+
+    private var iosUsageCard: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(alignment: .center, spacing: 14) {
+                StudioIconTile(systemName: "eurosign.circle", size: 40)
+                Text("Gebruik deze maand").font(.system(size: 17, weight: .semibold)).foregroundStyle(HomeColor.text)
+                    .accessibilityAddTraits(.isHeader)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            UsageMonthRows()
+        }
+        .studioCard(padding: 16)
     }
 
     // MARK: Notulen

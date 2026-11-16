@@ -264,8 +264,13 @@ enum ContextSuggestions {
                     await MainActor.run { recordSkip(.tooLongForModel, taskId: taskId) }
                     return
                 }
-                let raw = try await ModelStep.$current.withValue(ModelStep(.contextSuggestions)) {
-                    try await service.complete(system: systemPrompt, user: message)
+                // Counted in the monthly ledger like a notule run, also when it fails.
+                let meter = UsageMeter()
+                defer { UsageLedger.record(meter.totals, provider: provider, notule: false) }
+                let raw = try await UsageMeter.$current.withValue(meter) {
+                    try await ModelStep.$current.withValue(ModelStep(.contextSuggestions)) {
+                        try await service.complete(system: systemPrompt, user: message)
+                    }
                 }
                 let parsed = parse(raw, transcript: transcript, entries: entries, dismissed: dismissed, selfNames: [selfName], selfAliases: selfAliases)
                 let set = try await MainActor.run {

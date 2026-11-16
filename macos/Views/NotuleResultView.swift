@@ -343,6 +343,7 @@ struct NotuleResultView: View {
                     RoundedRectangle(cornerRadius: TS.Radius.md, style: .continuous)
                         .stroke(Color.borderPrimary.opacity(0.45), lineWidth: 1)
                 }
+            NotuleUsageFooter(taskId: task.taskId, html: html)
         } else {
             emptyNotuleView
         }

@@ -620,3 +620,9 @@
 "continued.transcribing" = "Transcribing %d%%";
 "continued.waiting" = "Waiting for previous transcription";
 "Houd ThoughtVault open tot de verwerking klaar is." = "Keep ThoughtVault open until processing is done.";
+
+/* Notule usage */
+"Gebruik deze maand" = "Usage this month";
+"Vorige maand" = "Last month";
+"Geteld op dit apparaat." = "Counted on this device.";
+"De kosten zitten vooral in de controle: die toetst elke zin van de notule apart aan het gesprek." = "Most of the cost is in the check: it tests every sentence of the notes against the conversation separately.";

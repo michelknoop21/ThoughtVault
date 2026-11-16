@@ -615,8 +615,9 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
         }
 
         // api.openai.com rejects `max_tokens` for newer models; local servers only know `max_tokens`.
-        let capKey = URL(string: baseURL)?.host?.lowercased() == "api.openai.com" ? "max_completion_tokens" : "max_tokens"
-        let requestBody: [String: Any] = [
+        let isOpenAI = URL(string: baseURL)?.host?.lowercased() == "api.openai.com"
+        let capKey = isOpenAI ? "max_completion_tokens" : "max_tokens"
+        var requestBody: [String: Any] = [
             "model": model,
             "stream": true,
             capKey: llmMaxOutputTokens,
@@ -625,6 +626,8 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
                 ["role": "user", "content": userMessage]
             ]
         ]
+        // OpenAI streams usage only on request; other servers get the body they always got.
+        if isOpenAI { requestBody["stream_options"] = ["include_usage": true] }
 
         guard let bodyData = try? JSONSerialization.data(withJSONObject: requestBody) else {
             throw LLMError.generationFailed("Kon het verzoek niet serialiseren.")
@@ -664,8 +667,11 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
             if data == "[DONE]" { break }
 
             guard let jsonData = data.data(using: .utf8),
-                  let json = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any],
-                  let choices = json["choices"] as? [[String: Any]],
+                  let json = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any]
+            else { continue }
+            // The final chunk carries usage: OpenAI with empty choices, OpenRouter with one empty delta.
+            if let usage = TokenUsage.openAI(json["usage"]) { ModelRequestLog.report(usage) }
+            guard let choices = json["choices"] as? [[String: Any]],
                   let first = choices.first
             else { continue }
             // A capped answer is incomplete; never parse it as a short one.

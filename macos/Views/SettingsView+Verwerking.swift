@@ -21,6 +21,7 @@ extension SettingsView {
                     quickSetupCard(advice, proxy)
                     transcriptionCard(advice)
                     notuleCard
+                    SettingsCard(icon: "eurosign.circle", title: "Gebruik deze maand") { UsageMonthRows() }
                     if !layout.twoColumn {
                         verwerkingSide(specs, advice)
                     }

@@ -1762,6 +1762,12 @@ struct TranscriptDetailView: View {
                 }
             }
 
+            if !isEditingNotule {
+                NotuleUsageFooter(taskId: fullTranscript.taskId, html: html)
+                    .padding(.horizontal, TS.Spacing.md)
+                    .padding(.vertical, TS.Spacing.xs)
+            }
+
             if isEditingNotule {
                 editingActionBar
                     .padding(.horizontal, TS.Spacing.md)

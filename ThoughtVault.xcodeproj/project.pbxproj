@@ -103,6 +103,11 @@
 		AA0000N8 /* NotuleAudit.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000N8 /* NotuleAudit.swift */; };
 		AA00AL01 /* NotuleAuditLong.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA00AL01 /* NotuleAuditLong.swift */; };
 		AA00ML01 /* ModelRequestLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA00ML01 /* ModelRequestLog.swift */; };
+		AAUM0001 /* UsageMeter.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAUM0001 /* UsageMeter.swift */; };
+		AAUM0002 /* UsageMeter.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAUM0001 /* UsageMeter.swift */; };
+		AAUM0003 /* NotuleUsageViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAUM0002 /* NotuleUsageViews.swift */; };
+		AAUM0004 /* NotuleUsageViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAUM0002 /* NotuleUsageViews.swift */; };
+		ABUM0001 /* UsageMeterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBUM0001 /* UsageMeterTests.swift */; };
 		AA0000T1 /* NotuleGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000T1 /* NotuleGenerator.swift */; };
 		AA000009 /* BiometricService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000009 /* BiometricService.swift */; };
 		AA000010 /* CalendarService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000010 /* CalendarService.swift */; };
@@ -467,6 +472,9 @@
 		FA0000N8 /* NotuleAudit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotuleAudit.swift; sourceTree = "<group>"; };
 		FA00AL01 /* NotuleAuditLong.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotuleAuditLong.swift; sourceTree = "<group>"; };
 		FA00ML01 /* ModelRequestLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelRequestLog.swift; sourceTree = "<group>"; };
+		FAUM0001 /* UsageMeter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageMeter.swift; sourceTree = "<group>"; };
+		FAUM0002 /* NotuleUsageViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotuleUsageViews.swift; sourceTree = "<group>"; };
+		FBUM0001 /* UsageMeterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageMeterTests.swift; sourceTree = "<group>"; };
 		FA0000T1 /* NotuleGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotuleGenerator.swift; sourceTree = "<group>"; };
 		FA000009 /* BiometricService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BiometricService.swift; sourceTree = "<group>"; };
 		FA000010 /* CalendarService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarService.swift; sourceTree = "<group>"; };
@@ -724,6 +732,7 @@
 				FA0000N8 /* NotuleAudit.swift */,
 				FA00AL01 /* NotuleAuditLong.swift */,
 				FA00ML01 /* ModelRequestLog.swift */,
+				FAUM0001 /* UsageMeter.swift */,
 				FA0000T1 /* NotuleGenerator.swift */,
 				FA0000S4 /* QuickNoteStore.swift */,
 				FA000009 /* BiometricService.swift */,
@@ -801,6 +810,7 @@
 				FA0000I9 /* ProfilesView+iOS.swift */,
 				FA0000I8 /* SettingsView+iOS.swift */,
 				FB0PF003 /* NotuleFallbackPicker.swift */,
+				FAUM0002 /* NotuleUsageViews.swift */,
 				FB0PF002 /* ProspectFlowViews.swift */,
 				FA0000I7 /* TranscriptDetail+iOS.swift */,
 				FA0000I6 /* TranscriptsView+iOS.swift */,
@@ -937,6 +947,7 @@
 				FB0000N9 /* NotuleConstraintTests.swift */,
 				FB00AP01 /* NotuleAuditPartsTests.swift */,
 				FB00ML01 /* ModelRequestLogTests.swift */,
+				FBUM0001 /* UsageMeterTests.swift */,
 				FB0000NA /* NotulePromptTests.swift */,
 				FB0000G1 /* M3LiveContentGateTests.swift */,
 				FB0000G2 /* M3LiveContentGate.swift */,
@@ -1162,6 +1173,8 @@
 				AA0000N8 /* NotuleAudit.swift in Sources */,
 				AA00AL01 /* NotuleAuditLong.swift in Sources */,
 				AA00ML01 /* ModelRequestLog.swift in Sources */,
+				AAUM0001 /* UsageMeter.swift in Sources */,
+				AAUM0003 /* NotuleUsageViews.swift in Sources */,
 				AA0000T1 /* NotuleGenerator.swift in Sources */,
 				AA000009 /* BiometricService.swift in Sources */,
 				AA000010 /* CalendarService.swift in Sources */,
@@ -1304,6 +1317,7 @@
 				AB0000N9 /* NotuleConstraintTests.swift in Sources */,
 				AB00AP01 /* NotuleAuditPartsTests.swift in Sources */,
 				AB00ML01 /* ModelRequestLogTests.swift in Sources */,
+				ABUM0001 /* UsageMeterTests.swift in Sources */,
 				AB0000NA /* NotulePromptTests.swift in Sources */,
 				AB0000G1 /* M3LiveContentGateTests.swift in Sources */,
 				AB0000G2 /* M3LiveContentGate.swift in Sources */,
@@ -1388,6 +1402,8 @@
 				963E7F6A40A45BEDA7CD6653 /* NotuleAudit.swift in Sources */,
 				AA00AL02 /* NotuleAuditLong.swift in Sources */,
 				AA00ML02 /* ModelRequestLog.swift in Sources */,
+				AAUM0002 /* UsageMeter.swift in Sources */,
+				AAUM0004 /* NotuleUsageViews.swift in Sources */,
 				F2989054FE6E2130E893C3F6 /* NotuleGenerator.swift in Sources */,
 				5A935BD00B5251609DE098B6 /* BiometricService.swift in Sources */,
 				AF2C410D5B41F46199D97BEC /* CalendarService.swift in Sources */,

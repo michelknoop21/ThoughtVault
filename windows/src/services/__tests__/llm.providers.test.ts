@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useSettingsStore } from "../../stores/settingsStore";
-import { LLMService, MAX_OUTPUT_TOKENS, TIME_LIMIT_MESSAGE, TRUNCATED_MESSAGE, auditNoteConcurrency, providerKind, rateLimitWaitMs } from "../llm";
+import { LLMService, MAX_OUTPUT_TOKENS, TIME_LIMIT_MESSAGE, TRUNCATED_MESSAGE, auditNoteConcurrency, providerKind, rateLimitWaitMs, unreachableMessage } from "../llm";
 import { auditFixture, sourceFixture } from "./notuleAuditFixtures";
 
 const corrections = vi.hoisted(() => ({entries:[] as import("../personalCorrections").PersonalCorrection[]}));
@@ -166,6 +166,12 @@ it("gives only hosted providers the higher step-2 limit", () => {
 it("names a timeout as the time limit instead of an unreachable generator", async () => {
   useSettingsStore.setState({ ollama_url: "http://localhost:11434", ollama_model: "hermes3:8b" });
   invoke.mockRejectedValue("Tijdslimiet bereikt: geen volledig antwoord binnen 900 seconden.");
+  await expect(LLMService.generateNotulen("QA bron.", profile)).rejects.toThrow(TIME_LIMIT_MESSAGE);
+});
+
+it("names a timeout that arrives as an Error object as the time limit", async () => {
+  useSettingsStore.setState({ ollama_url: "http://localhost:11434", ollama_model: "hermes3:8b" });
+  invoke.mockRejectedValue(new Error("Tijdslimiet bereikt: geen volledig antwoord binnen 900 seconden."));
   await expect(LLMService.generateNotulen("QA bron.", profile)).rejects.toThrow(TIME_LIMIT_MESSAGE);
 });
 
@@ -436,4 +442,9 @@ it("logs OpenRouter as its own provider kind", () => {
   expect(providerKind("https://llm.example.com/v1")).toBe("hosted");
   expect(providerKind("https://ollama.com/v1")).toBe("ollama-cloud");
   expect(providerKind("http://localhost:1234/v1")).toBe("local");
+});
+
+it("names the host for an unreachable https endpoint and Ollama/LM Studio only for a local one", () => {
+  expect(unreachableMessage("https://user:key@openrouter.ai/api/v1?key=x", "m")).toBe('Kan openrouter.ai niet bereiken (model "m"). Controleer je internetverbinding en probeer het opnieuw.');
+  expect(unreachableMessage("http://localhost:11434", "m")).toBe('Kan de notule-generator niet bereiken op http://localhost:11434 (model "m"). Draait Ollama/LM Studio en klopt de URL in Instellingen?');
 });

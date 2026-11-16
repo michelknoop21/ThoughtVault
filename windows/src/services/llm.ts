@@ -59,7 +59,9 @@ async function proxy(request: { url: string; headers: Record<string, string>; bo
   try {
     return await invoke("proxy_request", { request: { ...request, method: "POST", timeout_seconds: timeoutSeconds } });
   } catch (error) {
-    throw String(error).startsWith(PROXY_TIMEOUT) ? new Error(TIME_LIMIT_MESSAGE) : error;
+    // Tauri rejects with a string, but an Error with the same text is a timeout too.
+    const message = error instanceof Error ? error.message : String(error);
+    throw message.startsWith(PROXY_TIMEOUT) ? new Error(TIME_LIMIT_MESSAGE) : error;
   }
 }
 
@@ -164,6 +166,14 @@ export function providerKind(baseUrl: string): string {
   return baseUrl.startsWith("https://") ? "hosted" : "local";
 }
 
+/** Connection failure text: the Ollama/LM Studio hint only for a local endpoint, the bare host for https. */
+export function unreachableMessage(baseUrl: string, model: string): string {
+  if (!baseUrl.startsWith("https://")) return `Kan de notule-generator niet bereiken op ${baseUrl} (model "${model}"). Draait Ollama/LM Studio en klopt de URL in Instellingen?`;
+  let host = baseUrl;
+  try { host = new URL(baseUrl).host; } catch { /* keep as configured */ }
+  return `Kan ${host} niet bereiken (model "${model}"). Controleer je internetverbinding en probeer het opnieuw.`;
+}
+
 function generateWithOpenAICompatible(
   baseUrl: string,
   model: string,
@@ -205,7 +215,7 @@ async function openAICompatibleRequest(
       body: JSON.stringify({ model, messages: [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }], stream: false, max_tokens: MAX_OUTPUT_TOKENS }) }, trace);
   } catch (error) {
     if (error instanceof Error && error.message === TIME_LIMIT_MESSAGE) throw error;
-    throw new Error(`Kan de notule-generator niet bereiken op ${baseUrl} (model "${model}"). Draait Ollama/LM Studio en klopt de URL in Instellingen?`);
+    throw new Error(unreachableMessage(baseUrl, model));
   }
   if (cloud && response.status === 401) throw new Error("Ollama Cloud API-sleutel geweigerd.");
   if (cloud && response.status === 429) throw new Error(`Ollama Cloud ${RATE_LIMIT_MESSAGE}`);

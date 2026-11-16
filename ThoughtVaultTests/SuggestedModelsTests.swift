@@ -56,4 +56,25 @@ final class SuggestedModelsTests: XCTestCase {
         XCTAssertFalse(choices.contains("vendor/costly"))
         XCTAssertEqual(choices.first, "mistralai/mistral-large-4-0")
     }
+
+    /// Ids from the routed provider's public model list (November 2026), kept here so the test needs no network.
+    private static let routedListFixture: Set<String> = [
+        "mistralai/mistral-large-4-0", "anthropic/claude-sonnet-5.5", "anthropic/claude-haiku-5.5",
+        "anthropic/claude-opus-5.5", "anthropic/claude-fable-5.2", "openai/gpt-5.6-terra",
+        "openai/gpt-5.6-luna", "openai/gpt-5.6-sol",
+    ]
+
+    func testSuggestedRoutedIdsExistInTheProviderList() {
+        for model in SuggestedModels.suggested(for: .openRouter) {
+            XCTAssertNotNil(model.range(of: #"^[a-z0-9-]+/[a-z0-9.:-]+$"#, options: .regularExpression), model)
+            XCTAssertTrue(Self.routedListFixture.contains(model), model)
+        }
+    }
+
+    func testDottedAndDashedVersionsShareAPrice() {
+        XCTAssertEqual(SuggestedModels.price(of: "anthropic/claude-sonnet-5.5"), SuggestedModels.price(of: "claude-sonnet-5-5"))
+        XCTAssertFalse(SuggestedModels.isAllowed("anthropic/claude-opus-5.5", provider: .openRouter))
+        XCTAssertFalse(SuggestedModels.isAllowed("openai/gpt-5.6-sol", provider: .openRouter))
+        XCTAssertTrue(SuggestedModels.isAllowed("openai/gpt-5.6-luna", provider: .openRouter))
+    }
 }

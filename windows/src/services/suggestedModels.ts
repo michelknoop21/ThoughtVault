@@ -7,7 +7,7 @@ export interface ModelPrice { input: number; output: number }
 /** Mid-tier ceiling: USD 3 per million input tokens and USD 15 per million output tokens. */
 export const PRICE_CAP: ModelPrice = { input: 3, output: 15 };
 
-/** List prices of the hosted models the app knows (checked November 2026). */
+/** List prices of the hosted models the app knows (list prices checked November 2026). */
 export const KNOWN_PRICES: Record<string, ModelPrice> = {
   "claude-haiku-5-5": { input: 0.1, output: 0.5 },
   "claude-haiku-4-5": { input: 1, output: 5 },
@@ -21,8 +21,8 @@ export const KNOWN_PRICES: Record<string, ModelPrice> = {
   "claude-fable-5-1": { input: 10, output: 50 },
   "gpt-5.6-luna": { input: 0.2, output: 1.2 },
   "gpt-5.6-terra": { input: 2, output: 12 },
-  "gpt-5.6-sol": { input: 5, output: 30 },
-  "mistral-large-4-0": { input: 1.36, output: 4.18 },
+  "gpt-5.6-sol": { input: 4, output: 20 },
+  "mistral-large-4-0": { input: 0.7, output: 2.1 },
 };
 
 /** Provider as the model choice sees it: the hosted flat-rate endpoint counts as its own provider. */
@@ -34,7 +34,7 @@ export function modelProvider(settings: Pick<AppSettings, "notulen_provider" | "
 }
 
 const SUGGESTED: Partial<Record<ModelProvider, string[]>> = {
-  openrouter: ["mistralai/mistral-large-4-0", "anthropic/claude-sonnet-5-5", "openai/gpt-5.6-terra"],
+  openrouter: ["mistralai/mistral-large-4-0", "anthropic/claude-sonnet-5.5", "openai/gpt-5.6-terra"],
   anthropic: ["claude-sonnet-5-5", "claude-haiku-5-5"],
   openai: ["gpt-5.6-terra", "gpt-5.6-luna"],
   "ollama-cloud": ["mistral-large-4", "gpt-oss:120b"],
@@ -49,9 +49,13 @@ export function isMetered(provider: ModelProvider): boolean {
   return provider === "openai" || provider === "anthropic" || provider === "openrouter";
 }
 
-/** Known price; a routed id such as `vendor/model` falls back to its last part. */
+/**
+ * Known price; a routed id such as `vendor/model` falls back to its last part, and a version
+ * written with a dot (`x-5.5`) also matches the dashed spelling (`x-5-5`).
+ */
 export function priceOf(model: string): ModelPrice | undefined {
-  return KNOWN_PRICES[model] ?? KNOWN_PRICES[model.split("/").pop() ?? ""];
+  const last = model.split("/").pop() ?? model;
+  return [model, last, last.replace(/\./g, "-")].map(id => KNOWN_PRICES[id]).find(Boolean);
 }
 
 export function isWithinCap(price: ModelPrice): boolean {

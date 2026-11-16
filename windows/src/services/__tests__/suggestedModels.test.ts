@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { isModelAllowed, modelChoices, modelProvider, pricePerToken, suggestedModels } from "../suggestedModels";
+import { isModelAllowed, modelChoices, modelProvider, priceOf, pricePerToken, suggestedModels } from "../suggestedModels";
+
+/** Ids from the routed provider's public model list (November 2026), kept here so the test needs no network. */
+const ROUTED_LIST_FIXTURE = new Set([
+  "mistralai/mistral-large-4-0", "anthropic/claude-sonnet-5.5", "anthropic/claude-haiku-5.5",
+  "anthropic/claude-opus-5.5", "anthropic/claude-fable-5.2", "openai/gpt-5.6-terra",
+  "openai/gpt-5.6-luna", "openai/gpt-5.6-sol",
+]);
 
 describe("suggested models and price cap", () => {
   it("keeps every suggestion of a metered provider within the cap", () => {
@@ -37,8 +44,22 @@ describe("suggested models and price cap", () => {
     expect(pricePerToken({ completion: "0.1" })).toBeUndefined();
   });
 
+  it("suggests only routed ids that exist in the provider list", () => {
+    for (const model of suggestedModels("openrouter")) {
+      expect(model).toMatch(/^[a-z0-9-]+\/[a-z0-9.:-]+$/);
+      expect(ROUTED_LIST_FIXTURE.has(model)).toBe(true);
+    }
+  });
+
+  it("gives dotted and dashed versions the same price", () => {
+    expect(priceOf("anthropic/claude-sonnet-5.5")).toEqual(priceOf("claude-sonnet-5-5"));
+    expect(isModelAllowed("anthropic/claude-opus-5.5", "openrouter")).toBe(false);
+    expect(isModelAllowed("openai/gpt-5.6-sol", "openrouter")).toBe(false);
+    expect(isModelAllowed("openai/gpt-5.6-luna", "openrouter")).toBe(true);
+  });
+
   it("caps routed model ids by their last part", () => {
-    expect(isModelAllowed("anthropic/claude-opus-5-5", "openrouter")).toBe(false);
+    expect(isModelAllowed("anthropic/claude-opus-5.5", "openrouter")).toBe(false);
     expect(modelChoices("openrouter", "mistralai/mistral-large-4-0")[0]).toBe("mistralai/mistral-large-4-0");
   });
 

@@ -17,7 +17,7 @@ enum SuggestedModels {
     /// Mid-tier ceiling: USD 3 per million input tokens and USD 15 per million output tokens.
     static let cap = ModelPrice(input: 3, output: 15)
 
-    /// List prices of the hosted models the app knows (checked November 2026).
+    /// List prices of the hosted models the app knows (list prices checked November 2026).
     static let knownPrices: [String: ModelPrice] = [
         "claude-haiku-5-5": ModelPrice(input: 0.10, output: 0.50),
         "claude-haiku-4-5": ModelPrice(input: 1, output: 5),
@@ -31,14 +31,14 @@ enum SuggestedModels {
         "claude-fable-5-1": ModelPrice(input: 10, output: 50),
         "gpt-5.6-luna": ModelPrice(input: 0.20, output: 1.20),
         "gpt-5.6-terra": ModelPrice(input: 2, output: 12),
-        "gpt-5.6-sol": ModelPrice(input: 5, output: 30),
-        "mistral-large-4-0": ModelPrice(input: 1.36, output: 4.18),
+        "gpt-5.6-sol": ModelPrice(input: 4, output: 20),
+        "mistral-large-4-0": ModelPrice(input: 0.70, output: 2.10),
     ]
 
     /// The short list shown first in every model picker.
     static func suggested(for provider: NotulenProvider) -> [String] {
         switch provider {
-        case .openRouter: return ["mistralai/mistral-large-4-0", "anthropic/claude-sonnet-5-5", "openai/gpt-5.6-terra"]
+        case .openRouter: return ["mistralai/mistral-large-4-0", "anthropic/claude-sonnet-5.5", "openai/gpt-5.6-terra"]
         case .anthropic: return ["claude-sonnet-5-5", "claude-haiku-5-5"]
         case .openAI: return ["gpt-5.6-terra", "gpt-5.6-luna"]
         case .ollamaCloud: return ["mistral-large-4", "gpt-oss:120b"]
@@ -51,9 +51,11 @@ enum SuggestedModels {
         provider == .openAI || provider == .anthropic || provider == .openAICompatible || provider == .openRouter
     }
 
-    /// Known price; a routed id such as `vendor/model` falls back to its last part.
+    /// Known price; a routed id such as `vendor/model` falls back to its last part, and a
+    /// version written with a dot (`x-5.5`) also matches the dashed spelling (`x-5-5`).
     static func price(of model: String) -> ModelPrice? {
-        knownPrices[model] ?? model.split(separator: "/").last.flatMap { knownPrices[String($0)] }
+        let last = model.split(separator: "/").last.map(String.init) ?? model
+        return [model, last, last.replacingOccurrences(of: ".", with: "-")].lazy.compactMap { knownPrices[$0] }.first
     }
 
     static func isWithinCap(_ price: ModelPrice) -> Bool {

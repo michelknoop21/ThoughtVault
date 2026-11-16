@@ -1,14 +1,7 @@
-versie: 1.0.321
+versie: 1.0.325
 Nieuw in deze versie:
-- Support, Instellingen, Mensen, Persoon bewerken en het lege scherm Taken hebben een nieuwe opmaak, ook in een smal venster.
-- Support op de Mac: links je meldingen, rechts het gesprek. Bij Melding maken kies je tussen Fout, Idee en Vraag.
-- Bij een persoon worden aliassen en expertise losse labels: typ een waarde en druk op Enter.
-- Het menubalkmenu op de Mac heeft nu Stop en verwerk, en toont Verwerken... zolang de app je opname verwerkt.
+- Handleiding: open de handleiding in je browser via het menu Help of via Instellingen, Account, blok Support.
 
-Graag testen:
-1. Open Instellingen en loop de tabbladen langs, ook met een smal venster. Valt er iets weg of over elkaar heen?
-2. Open Mensen, bewerk een persoon, voeg een alias toe met Enter en sla op. Staat de alias er na opnieuw openen nog?
-3. Maak via Instellingen, Account, Melding maken een testmelding en lees het antwoord terug onder Mijn meldingen.
-4. Mac: start en stop een opname via het menubalkpictogram. Verschijnt de notule daarna onder Notulen?
-
-Iets vreemds gezien? Meld het via Instellingen, Support, Melding maken.
+Wat we graag van je horen:
+- Opent de knop de handleiding, en komen de pagina's voor de Mac in beeld?
+- Klopt wat er in de handleiding staat met wat je in de app ziet? Meld verschillen via Instellingen, Account, Melding maken.

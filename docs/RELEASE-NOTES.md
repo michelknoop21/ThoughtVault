@@ -8,6 +8,14 @@ Elke release is een blok `## <versie> - <titel>` met direct daaronder een cursie
 met datum en platforms, bijvoorbeeld `*12 november 2026 · macOS · iOS · Windows*`.
 De nieuwste release staat bovenaan.
 
+## 1.0.325 - Handleiding openen vanuit de app
+
+*16 november 2026 · macOS · Windows*
+
+- Met **Handleiding** open je deze handleiding in je browser, op de pagina's voor jouw apparaat.
+- Op de Mac staat de knop bovenaan het menu Help en in Instellingen, Account, in het blok Support.
+- Op Windows staat de knop in Instellingen, Account, onder Feedback, boven Probleem melden of suggestie.
+
 ## 1.0.322 - Conceptofferte in Prospect Flow vanuit een notule
 
 *13 november 2026 · Windows*

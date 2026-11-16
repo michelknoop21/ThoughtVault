@@ -116,7 +116,8 @@ enum SuggestedModels {
     static func requestRefusal(for model: String, baseURL: String) -> String? {
         let provider: NotulenProvider = OpenAICompatibleLLMService.providerKind(baseURL: baseURL) == "openrouter"
             ? .openRouter : .openAICompatible
-        let prices = [price(of: model), rememberedPrice(of: model, provider: provider, baseURL: baseURL)].compactMap { $0 }
+        let priceBaseURL = provider == .openRouter ? OpenAICompatibleLLMService.openRouterBaseURL : baseURL
+        let prices = [price(of: model), rememberedPrice(of: model, provider: provider, baseURL: priceBaseURL)].compactMap { $0 }
         guard prices.contains(where: { !isWithinCap($0) }) else { return nil }
         return "\(model) valt boven de prijsgrens en is niet gebruikt. Kies een goedkoper model bij Instellingen > Verwerking."
     }

@@ -156,6 +156,9 @@ final class SuggestedModelsTests: XCTestCase {
         SuggestedModels.rememberReported(["openai/gpt-5.6-terra": ModelPrice(input: 4, output: 20)], provider: .openRouter,
                                          baseURL: OpenAICompatibleLLMService.openRouterBaseURL)
         XCTAssertFalse(SuggestedModels.isAllowed("openai/gpt-5.6-terra", provider: .openRouter))
+        XCTAssertNotNil(SuggestedModels.requestRefusal(for: "openai/gpt-5.6-terra",
+                                                      baseURL: OpenAICompatibleLLMService.openRouterBaseURL + "/"))
+
         SuggestedModels.rememberReported(["openai/gpt-5.6-terra": ModelPrice(input: 4, output: 20)], provider: .openRouter,
                                          baseURL: OpenAICompatibleLLMService.openRouterBaseURL,
                                          at: Date().addingTimeInterval(-8 * 86_400))

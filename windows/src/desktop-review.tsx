@@ -36,6 +36,8 @@ let reviewCorrections: unknown = {version:2,dismissed:[],entries:[
 const reviewContextFiles = new Map<string, string>();
 // ?scenario=handleiding: sample data for the manual screenshots (scripts/handleiding-shots-windows.sh).
 const handleiding = new URLSearchParams(location.search).get("scenario") === "handleiding";
+// The wizard reads root-level theme variables; the app sets this in App.tsx.
+if (location.hash.startsWith("#/onboarding")) document.documentElement.dataset.theme = "dark";
 const handleidingReplies: Record<string, unknown> = handleiding ? {
  get_audio_devices: [{id:"mic",name:"Microfoon (Realtek Audio)",is_default:true,is_input:true}],
  get_system_specs: {cpu:"Intel Core i7-1355U",architecture:"x86_64",memory_gb:16,threads:12,os_version:"Windows 11 Pro",free_storage_gb:212},
@@ -53,6 +55,7 @@ Object.assign(window, { __TAURI_INTERNALS__: {
   if (command === "get_system_specs") return { cpu: "Review PC", memory_gb: 16, os_version: "Windows review" };
   if (command === "proxy_request") {
     const request = args?.request;
+    if (handleiding && request?.url === "https://openrouter.ai/api/v1/key") return { status: 200, body: "{}" };
     if (!request || !request.url.startsWith("https://thoughtvault.yinga.ai/support/")) throw new Error("Review fixture blocks proxy access");
     const path = new URL(request.url).pathname.replace("/support", "");
     const response = (data: unknown) => ({ status: 200, body: JSON.stringify(data) });
@@ -136,7 +139,7 @@ function IdentityReview() {
  useEffect(() => { useSupportStore.setState({ name: "", email: "" }); setReady(true); }, []);
  return <div className="app-shell" data-theme="dark"><TitleBar/>{ready && <IdentityGate/>}</div>;
 }
-const pages = {"/support":<FeedbackWidget initialOpen/>,"/support-thread":<SupportThread ticket={reviewTicket} onBack={() => history.back()}/>,"/onboarding":<OnboardingWizard/>,"/seed-review":<SeedReviewSheet candidates={["voorbeeld@example.test"]} onClose={() => history.back()}/>,"/":<HomePage/>,"/recording":<RecordingPage/>,"/tasks":<TasksPage/>,"/transcripts":<TranscriptsPage/>,"/profiles":<ProfilesPage/>,"/people":<PeoplePage/>,"/settings":<SettingsPage/>};
+const pages = {"/support":<FeedbackWidget initialOpen/>,"/support-thread":<SupportThread ticket={reviewTicket} onBack={() => history.back()}/>,"/seed-review":<SeedReviewSheet candidates={["voorbeeld@example.test"]} onClose={() => history.back()}/>,"/":<HomePage/>,"/recording":<RecordingPage/>,"/tasks":<TasksPage/>,"/transcripts":<TranscriptsPage/>,"/profiles":<ProfilesPage/>,"/people":<PeoplePage/>,"/settings":<SettingsPage/>};
 if (new URLSearchParams(location.search).get("scenario") === "widget") {
  void import("./styles/widget.css").then(() => { const root = document.getElementById("root")!; root.id = "widget-root"; ReactDOM.createRoot(root).render(<RecordingWidget/>); });
-} else ReactDOM.createRoot(document.getElementById("root")!).render(<HashRouter><Routes><Route path="/identity" element={<IdentityReview/>}/><Route path="/*" element={<div className="app-shell" data-theme="dark"><TitleBar/><div style={{flex:1,display:"flex",minHeight:0}}><Sidebar/><main className="app-main"><div className="app-main-content"><Routes>{Object.entries(pages).map(([path,element]) => <Route key={path} path={path} element={element}/>)}</Routes></div></main></div></div>}/></Routes></HashRouter>);
+} else ReactDOM.createRoot(document.getElementById("root")!).render(<HashRouter><Routes><Route path="/identity" element={<IdentityReview/>}/><Route path="/onboarding" element={<div className="app-shell" data-theme="dark"><OnboardingWizard/></div>}/><Route path="/*" element={<div className="app-shell" data-theme="dark"><TitleBar/><div style={{flex:1,display:"flex",minHeight:0}}><Sidebar/><main className="app-main"><div className="app-main-content"><Routes>{Object.entries(pages).map(([path,element]) => <Route key={path} path={path} element={element}/>)}</Routes></div></main></div></div>}/></Routes></HashRouter>);

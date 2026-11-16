@@ -8,6 +8,8 @@ import SwiftUI
 
 struct CloudProviderConfig: View {
     let provider: NotulenProvider
+    /// Outcome of each key test with the key it tested.
+    var onKeyTest: (KeyTestOutcome, String) -> Void = { _, _ in }
 
     @AppStorage("ollamaCloudModel") private var ollamaCloudModel = ""
     @AppStorage(CloudAIConfiguration.selectedKey) private var selected = ""
@@ -204,7 +206,10 @@ struct CloudProviderConfig: View {
         let service = OpenAICompatibleLLMService(baseURL: baseURL, model: modelBinding.wrappedValue, apiKey: apiKey)
         await loadModels()
         // Listing models can succeed without a valid key, so also probe a protected endpoint.
-        connected = await service.checkConnection() == .ready
+        let status = await service.checkConnection()
+        connected = status == .ready
+        onKeyTest(status == .ready ? .passed : status == .keyRejected ? .rejected : .inconclusive,
+                  apiKey.trimmingCharacters(in: .whitespacesAndNewlines))
     }
     private func loadModels() async {
         loadingModels = true

@@ -3,7 +3,7 @@ samenvatting: Je installeert ThoughtVault, doorloopt de eerste start en geeft de
 
 # Aan de slag
 
-Na de eerste start vraagt ThoughtVault om je naam en e-mailadres en, op Mac, iPhone en iPad, om een paar toestemmingen. Daarna kun je opnemen. Voor het schrijven van notulen moet er nog een AI-model zijn ingesteld: zie [Voor je eerste notulen](#voor-je-eerste-notulen).
+Na de eerste start vraagt ThoughtVault om je naam en e-mailadres en, op Mac, iPhone en iPad, om een paar toestemmingen. Daarna kies je wie je notulen schrijft en kun je opnemen. Sla je die keuze over, dan maakt de app pas notulen als je een model instelt: zie [Voor je eerste notulen](#voor-je-eerste-notulen).
 
 ## Installeren
 
@@ -42,7 +42,7 @@ Het scherm heet **Even voorstellen**. Het automatisch versturen van foutrapporte
 ## De eerste start doorlopen
 
 ::: macos
-Na je naam en e-mailadres volgt een reeks van zeven schermen. Met **Volgende** ga je verder, met **Terug** een scherm terug.
+Na je naam en e-mailadres volgt een reeks van acht schermen. Met **Volgende** ga je verder, met **Terug** een scherm terug.
 
 | Scherm | Wat je doet |
 |--------|-------------|
@@ -51,6 +51,7 @@ Na je naam en e-mailadres volgt een reeks van zeven schermen. Met **Volgende** g
 | **Spraakherkenning** | Klik op **Toegang verlenen**. Deze toestemming is nodig voor transcriptie met Apple Spraakherkenning. |
 | **Agenda** | Kies **Apple Agenda** om de agenda's van je Mac te gebruiken, of klik op **Overslaan**. Staat **Microsoft 365** in de lijst, dan kun je daar met je werkaccount koppelen. |
 | **Systeemaudio** | Hier hoef je niets te doen. macOS vraagt de toestemming zodra je voor het eerst het geluid van je computer opneemt. |
+| **Wie schrijft je notulen?** | Kies wie de notulen schrijft en vul zo nodig je sleutel in. Zie [Notulen instellen](#notulen-instellen). |
 | **Vertel iets over jezelf** | Vul in wat je kwijt wilt, of klik op **Overslaan**. Zie [Vertel iets over jezelf](#vertel-iets-over-jezelf). |
 | **Je bent klaar!** | Je ziet per toestemming of die is verleend. Klik op **Maak je eerste opname**. |
 
@@ -61,13 +62,14 @@ Na **Maak je eerste opname** opent het scherm **Opnemen**.
 :::
 
 ::: ios
-Na je naam en e-mailadres volgen vier genummerde stappen. Bovenaan zie je waar je bent, bijvoorbeeld "2 van 4".
+Na je naam en e-mailadres volgen vijf genummerde stappen. Bovenaan zie je waar je bent, bijvoorbeeld "2 van 5".
 
 1. Tik op het welkomstscherm op **Beginnen**.
 2. Tik bij **Microfoon en spraakherkenning** op **Sta toegang toe** en bevestig de vragen van iOS. Met **Nu overslaan** ga je verder zonder toestemming, maar dan kun je niet opnemen.
 3. Kies bij **Agenda** hoe je je agenda koppelt, of tik op **Overslaan**.
-4. Vul bij **Vertel iets over jezelf** in wat je kwijt wilt, of tik op **Overslaan**.
-5. Tik op het scherm **Je bent klaar!** op **Maak je eerste opname**.
+4. Kies bij **Wie schrijft je notulen?** wie de notulen schrijft en tik op **Volgende**. Zie [Notulen instellen](#notulen-instellen).
+5. Vul bij **Vertel iets over jezelf** in wat je kwijt wilt, of tik op **Overslaan**.
+6. Tik op het scherm **Je bent klaar!** op **Maak je eerste opname**.
 
 Heb je de toegang tot de microfoon geweigerd, dan toont stap 2 de knop **Instellingen openen**. Daar zet je de toestemming alsnog aan.
 
@@ -75,11 +77,11 @@ Heb je de toegang tot de microfoon geweigerd, dan toont stap 2 de knop **Instell
 :::
 
 ::: windows
-Na **Doorgaan** opent meteen het scherm **Home**. Zolang je lokaal werkt, en dat is de standaard, volgt er geen installatiewizard.
+Na **Doorgaan** volgt eenmalig een wizard met de stappen Welkom, Microfoon, Agenda, Notulen, Profiel en Klaar. Met **Volgende** ga je verder, met **Vorige** of **Terug** een stap terug. Bij de stap Notulen kies je wie de notulen schrijft: zie [Notulen instellen](#notulen-instellen).
 
 Toegang tot de microfoon regelt Windows zelf: de controle vindt plaats op het moment dat je een opname start. Wil je het vooraf nakijken, klik dan op **Home** in het kaartje **Nieuwe opname** op **Toegang beheren**. Dat opent de microfooninstellingen van Windows.
 
-Werk je met een ThoughtVault-account en de verwerking **Cloud**, dan volgt na het inloggen eenmalig een wizard met de stappen Welkom, Server, Microfoon, Agenda, Profiel en Klaar.
+Had je ThoughtVault al geïnstalleerd voordat de stap Notulen bestond en werk je lokaal, dan zie je de wizard niet meer.
 :::
 
 ## Vertel iets over jezelf
@@ -89,7 +91,41 @@ Dit scherm van de eerste start heeft zes velden: **Naam**, **Rol / Functie**, **
 :::
 
 ::: windows
-Bij lokaal werken slaat Windows deze vraag over. De velden staan alleen in de wizard die je na het inloggen in de modus **Cloud** te zien krijgt.
+Dezelfde zes velden staan in de wizard bij de stap Profiel. Laat je alles leeg, dan wordt er niets opgeslagen.
+:::
+
+## Notulen instellen
+
+Het scherm **Wie schrijft je notulen?** biedt drie keuzes.
+
+::: macos ios
+- **OpenRouter** (aanbevolen): één sleutel voor veel modellen. Je betaalt per notule bij OpenRouter. Plak je sleutel bij **API-sleutel**, klik op de knop naast **Model** om de sleutel te testen en de modellen te laden. Het aanbevolen model staat al ingevuld.
+- **Op deze Mac** of **Op deze iPhone**: gratis, en de notule blijft op je apparaat. Apple Intelligence schrijft dan de notule. Is dat niet beschikbaar, dan gebruikt de Mac Ollama; op een iPhone kies je dan later een eigen server.
+- **Andere aanbieder**: een eigen adres met je eigen sleutel.
+
+Je sleutel staat in je sleutelhanger. Weigert OpenRouter de sleutel, dan zie je **OpenRouter weigert deze sleutel**. Controleer dan of je hem volledig hebt geplakt.
+:::
+
+::: windows
+- **OpenRouter** (aanbevolen): één sleutel voor veel modellen. Plak je sleutel en klik op **Testen**. Werkt hij, dan zie je **Sleutel werkt**. Het aanbevolen model staat al ingevuld onder **Kies een model**.
+- **Op deze pc**: Ollama op je eigen pc, gratis, maar het vraagt een snelle pc. Installeer Ollama en kies het model later bij **Instellingen** > **Verwerking**.
+- **Andere aanbieder**: je eigen sleutel bij OpenAI of Claude.
+
+Je sleutel staat in Windows Credential Manager. Weigert de aanbieder de sleutel, dan zegt de app dat; is de aanbieder niet bereikbaar, dan vraagt de app je de internetverbinding te controleren.
+:::
+
+Met **Overslaan** vraagt de app eerst **Zonder taalmodel verder?**. Kies **Model kiezen** om terug te gaan, of **Toch overslaan**. Opnemen en omzetten naar tekst werken daarna gewoon, maar notulen maakt de app pas als je een model kiest bij **Instellingen** > **Verwerking**. Klik je op **Volgende** zonder sleutel, dan krijg je dezelfde vraag.
+
+::: macos
+
+![Eerste start op de Mac: de stap Wie schrijft je notulen? met OpenRouter gekozen.](media/mac-onboarding-notulen.webp)
+
+:::
+
+::: windows
+
+![Eerste start op Windows: de stap Notulen met OpenRouter gekozen en een geteste sleutel.](media/win-onboarding-notulen.webp)
+
 :::
 
 ## Toestemmingen in een oogopslag
@@ -115,15 +151,9 @@ Windows controleert alleen de toegang tot de microfoon. De app zelf vraagt geen 
 
 ## Voor je eerste notulen
 
-::: macos windows
-Voor de notulen zoekt de app standaard naar Ollama op je eigen computer. Draait daar geen model, dan eindigt de taak met een fout over de notulen. De transcriptie is dan wel bewaard, zodat je de notulen later opnieuw kunt laten maken.
-:::
+Heb je bij de eerste start een aanbieder gekozen, dan kun je meteen opnemen. Heb je de stap overgeslagen, dan staat de keuze op OpenRouter zonder sleutel. Een opname eindigt dan met een fout over de notulen. De transcriptie is wel bewaard, zodat je de notulen later opnieuw kunt laten maken.
 
-::: ios
-Op een iPhone of iPad die Apple Intelligence ondersteunt, schrijft dat model standaard de notulen. Op andere apparaten staat de keuze op Ollama en stel je zelf een aanbieder in. Lukt het schrijven niet, dan eindigt de taak met een fout over de notulen. De transcriptie is dan wel bewaard.
-:::
-
-Kijk daarom voor je eerste opname de instellingen na:
+Kies dan alsnog een model:
 
 1. Open **Instellingen**.
 2. Ga naar **Verwerking**.

@@ -47,5 +47,14 @@
     "sources": [
       "macos/Views/OnboardingView+iOS.swift"
     ]
+  },
+  {
+    "file": "ios-onboarding-notulen.webp",
+    "platform": "ios",
+    "args": "-hasCompletedOnboarding NO -notulenProvider openRouter -TVDebugOpen onboarding-notulen",
+    "sources": [
+      "macos/Views/OnboardingView+NotulenIOS.swift",
+      "macos/Views/OnboardingView+Notulen.swift"
+    ]
   }
 ]

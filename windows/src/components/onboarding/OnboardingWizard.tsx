@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   MicRecord24Regular,
-  Server24Regular,
   Calendar24Regular,
   Checkmark24Regular,
   Person24Regular,
@@ -15,14 +14,15 @@ import { MicrosoftGraphService } from "../../services/microsoftGraph";
 import { BrandBar } from "../brand/BrandBar";
 import { BrandFooter } from "../brand/BrandFooter";
 import appLogo from "../../assets/app-logo.png";
+import { NotulenStep } from "./NotulenStep";
 
 type Step = 0 | 1 | 2 | 3 | 4 | 5;
 
-const STEPS = ["Welkom", "Server", "Microfoon", "Agenda", "Profiel", "Klaar"];
+const STEPS = ["Welkom", "Microfoon", "Agenda", "Notulen", "Profiel", "Klaar"];
+const NOTULEN_STEP = 3;
 
 export function OnboardingWizard() {
   const [step, setStep] = useState<Step>(0);
-  const [serverUrl, setServerUrl] = useState("https://n8n.prezent.nl/tstudio/api");
   const settings = useSettingsStore();
   const navigate = useNavigate();
 
@@ -43,7 +43,6 @@ export function OnboardingWizard() {
   }
 
   function handleComplete() {
-    settings.updateSettings({ server_url: serverUrl });
     // Write profile only if at least one field is non-empty (D-07: skip writes nothing)
     const hasAnyField =
       profileName.trim() ||
@@ -93,23 +92,15 @@ export function OnboardingWizard() {
       }}
     >
       <BrandBar />
-      <div style={{ flex: 1, display: "flex", alignItems: "safe center", justifyContent: "center", minHeight: 0, overflowY: "auto" }}>
-      <div style={{ width: "100%", maxWidth: 440, padding: 32 }}>
-        {/* Progress dots */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginBottom: 32 }}>
-          {STEPS.map((_, i) => (
-            <div
-              key={i}
-              style={{
-                height: 6,
-                borderRadius: 3,
-                background: i <= step ? "var(--fill-accent-default)" : "var(--stroke-divider)",
-                width: i === step ? 24 : 6,
-                transition: "width 200ms ease, background 200ms ease",
-              }}
-            />
+      <div className="onb-scroll" style={{ flex: 1, display: "flex", alignItems: "safe center", justifyContent: "center", minHeight: 0, overflowY: "auto" }}>
+      <div style={{ width: "100%", maxWidth: step === NOTULEN_STEP ? 780 : 480, padding: "32px clamp(16px, 4vw, 32px)", boxSizing: "border-box" }}>
+        <ol className="onb-stepper" aria-label={`Stap ${step + 1} van ${STEPS.length}`}>
+          {STEPS.map((label, i) => (
+            <li key={label} className={i < step ? "done" : i === step ? "current" : ""} aria-current={i === step ? "step" : undefined}>
+              <i aria-hidden="true">{i < step ? "✓" : i + 1}</i>{label}
+            </li>
           ))}
-        </div>
+        </ol>
 
         {/* Step content */}
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -136,39 +127,6 @@ export function OnboardingWizard() {
 
           {step === 1 && (
             <StepContent
-              icon={<StepIcon icon={<Server24Regular style={{ fontSize: 28 }} />} />}
-              title="Server configuratie"
-              description="Voer het adres in van je ThoughtVault server."
-            >
-              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                <label style={{ fontSize: 13, fontWeight: 500, color: "var(--text-secondary)" }}>
-                  Server URL
-                </label>
-                <input
-                  type="url"
-                  value={serverUrl}
-                  onChange={(e) => setServerUrl(e.target.value)}
-                  placeholder="https://n8n.prezent.nl/tstudio/api"
-                  style={{
-                    width: "100%",
-                    padding: "7px 10px",
-                    background: "var(--fill-control-default)",
-                    border: "1px solid var(--stroke-control-secondary)",
-                    borderBottom: "1px solid var(--stroke-control-default)",
-                    borderRadius: "var(--radius-sm)",
-                    color: "var(--text-primary)",
-                    fontSize: 13,
-                    outline: "none",
-                    fontFamily: "inherit",
-                    boxSizing: "border-box",
-                  }}
-                />
-              </div>
-            </StepContent>
-          )}
-
-          {step === 2 && (
-            <StepContent
               icon={<StepIcon icon={<MicRecord24Regular style={{ fontSize: 28 }} />} />}
               title="Microfoon toegang"
               description="ThoughtVault heeft toegang nodig tot je microfoon voor het opnemen van vergaderingen."
@@ -189,7 +147,7 @@ export function OnboardingWizard() {
             </StepContent>
           )}
 
-          {step === 3 && (
+          {step === 2 && (
             <StepContent
               icon={<StepIcon icon={<Calendar24Regular style={{ fontSize: 28 }} />} />}
               title="Agenda integratie"
@@ -219,6 +177,8 @@ export function OnboardingWizard() {
               </div>
             </StepContent>
           )}
+
+          {step === NOTULEN_STEP && <NotulenStep onBack={handleBack} onDone={handleNext} />}
 
           {step === 4 && (
             <StepContent
@@ -291,8 +251,8 @@ export function OnboardingWizard() {
           )}
         </div>
 
-        {/* Navigation */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 32 }}>
+        {/* Navigation; the notulen step has its own footer */}
+        {step !== NOTULEN_STEP && <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 32 }}>
           {step > 0 ? (
             <button
               onClick={handleBack}
@@ -312,7 +272,7 @@ export function OnboardingWizard() {
               className="btn btn-accent"
               style={{ padding: "8px 20px", gap: 6 }}
             >
-              {step === 3 || step === 4 ? "Overslaan" : "Volgende"}
+              {step === 2 || step === 4 ? "Overslaan" : "Volgende"}
               <ArrowRight24Regular style={{ fontSize: 16 }} />
             </button>
           ) : (
@@ -325,7 +285,7 @@ export function OnboardingWizard() {
               <ArrowRight24Regular style={{ fontSize: 16 }} />
             </button>
           )}
-        </div>
+        </div>}
 
       </div>
       </div>

@@ -160,5 +160,13 @@
     "sources": [
       "macos/Views/SupportIdentityView.swift"
     ]
+  },
+  {
+    "file": "mac-onboarding-notulen.webp",
+    "platform": "macos",
+    "args": "-hasCompletedOnboarding NO -notulenProvider openRouter -TVDebugOpen onboarding-notulen",
+    "sources": [
+      "macos/Views/OnboardingView+Notulen.swift"
+    ]
   }
 ]

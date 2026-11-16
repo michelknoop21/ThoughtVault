@@ -93,6 +93,7 @@ shot mac-support-melding           -TVDebugOpen support-report
 shot mac-support-gesprek           -TVDebugOpen support-thread
 shot mac-notule-voorstellen        -TVDebugOpen transcript -TVDebugSuggestions expanded
 shot mac-eerste-start-contact      -TVDebugOpen identity
+shot mac-onboarding-notulen        -hasCompletedOnboarding NO -notulenProvider openRouter -TVDebugOpen onboarding-notulen
 
 stop_app
 rm -f "$WORK"/*.png

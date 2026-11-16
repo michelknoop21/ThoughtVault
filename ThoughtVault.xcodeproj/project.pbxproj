@@ -78,6 +78,11 @@
 		AA0000S4 /* QuickNoteStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000S4 /* QuickNoteStore.swift */; };
 		AA0000H1 /* HomeView+Studio.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000H1 /* HomeView+Studio.swift */; };
 		AA0000J2 /* OnboardingView+iOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000J2 /* OnboardingView+iOS.swift */; };
+		AA0000W1 /* OnboardingView+Notulen.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000W1 /* OnboardingView+Notulen.swift */; };
+		AS0000W1 /* OnboardingView+Notulen.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000W1 /* OnboardingView+Notulen.swift */; };
+		AA0000W2 /* OnboardingView+NotulenIOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000W2 /* OnboardingView+NotulenIOS.swift */; };
+		AS0000W2 /* OnboardingView+NotulenIOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000W2 /* OnboardingView+NotulenIOS.swift */; };
+		ACON0001 /* OnboardingNotulenTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBON0001 /* OnboardingNotulenTests.swift */; };
 		AA0000J1 /* AccountView+iOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000J1 /* AccountView+iOS.swift */; };
 		AA0000I9 /* ProfilesView+iOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000I9 /* ProfilesView+iOS.swift */; };
 		AA0000I8 /* SettingsView+iOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000I8 /* SettingsView+iOS.swift */; };
@@ -453,6 +458,9 @@
 		FA0000S4 /* QuickNoteStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickNoteStore.swift; sourceTree = "<group>"; };
 		FA0000H1 /* HomeView+Studio.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "HomeView+Studio.swift"; sourceTree = "<group>"; };
 		FA0000J2 /* OnboardingView+iOS.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "OnboardingView+iOS.swift"; sourceTree = "<group>"; };
+		FA0000W1 /* OnboardingView+Notulen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "OnboardingView+Notulen.swift"; sourceTree = "<group>"; };
+		FA0000W2 /* OnboardingView+NotulenIOS.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "OnboardingView+NotulenIOS.swift"; sourceTree = "<group>"; };
+		FBON0001 /* OnboardingNotulenTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingNotulenTests.swift; sourceTree = "<group>"; };
 		FA0000J1 /* AccountView+iOS.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AccountView+iOS.swift"; sourceTree = "<group>"; };
 		FA0000I9 /* ProfilesView+iOS.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ProfilesView+iOS.swift"; sourceTree = "<group>"; };
 		FA0000I8 /* SettingsView+iOS.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SettingsView+iOS.swift"; sourceTree = "<group>"; };
@@ -839,6 +847,8 @@
 				FA000024 /* HomeView.swift */,
 				FA0000H1 /* HomeView+Studio.swift */,
 				FA0000J2 /* OnboardingView+iOS.swift */,
+				FA0000W1 /* OnboardingView+Notulen.swift */,
+				FA0000W2 /* OnboardingView+NotulenIOS.swift */,
 				FA0000J1 /* AccountView+iOS.swift */,
 				FA0000I9 /* ProfilesView+iOS.swift */,
 				FA0000I8 /* SettingsView+iOS.swift */,
@@ -985,6 +995,7 @@
 				FBPK0001 /* ParakeetCatalogTests.swift */,
 				FBCP0001 /* ContinuedProcessingTests.swift */,
 				FBPK0002 /* NotulenDefaultMigrationTests.swift */,
+				FBON0001 /* OnboardingNotulenTests.swift */,
 				FB0000N9 /* NotuleConstraintTests.swift */,
 				FB00AP01 /* NotuleAuditPartsTests.swift */,
 				FB00ML01 /* ModelRequestLogTests.swift */,
@@ -1272,6 +1283,8 @@
 				AA0000S3 /* MainSidebar.swift in Sources */,
 				AA0000H1 /* HomeView+Studio.swift in Sources */,
 				AA0000J2 /* OnboardingView+iOS.swift in Sources */,
+				AA0000W1 /* OnboardingView+Notulen.swift in Sources */,
+				AA0000W2 /* OnboardingView+NotulenIOS.swift in Sources */,
 				AA0000J1 /* AccountView+iOS.swift in Sources */,
 				AA0000I9 /* ProfilesView+iOS.swift in Sources */,
 				AA0000I8 /* SettingsView+iOS.swift in Sources */,
@@ -1334,6 +1347,7 @@
 				ACPK0001 /* ParakeetCatalogTests.swift in Sources */,
 				ACCP0001 /* ContinuedProcessingTests.swift in Sources */,
 				ACPK0002 /* NotulenDefaultMigrationTests.swift in Sources */,
+				ACON0001 /* OnboardingNotulenTests.swift in Sources */,
 				AB000001 /* ThoughtVaultTests.swift in Sources */,
 				AB0000S5 /* QuickNoteStoreTests.swift in Sources */,
 				AB9E5A02 /* VaultFolderStoreTests.swift in Sources */,
@@ -1512,6 +1526,8 @@
 				430991C83EA855CD3103A0A6 /* MainSidebar.swift in Sources */,
 				CE88FF70931AB410D41B5518 /* HomeView+Studio.swift in Sources */,
 				9B57EB1502C20EDAA98CFC12 /* OnboardingView+iOS.swift in Sources */,
+				AS0000W1 /* OnboardingView+Notulen.swift in Sources */,
+				AS0000W2 /* OnboardingView+NotulenIOS.swift in Sources */,
 				D2526AF56612BC8B19CD0AEA /* AccountView+iOS.swift in Sources */,
 				E79868E1879C0FD03B00A5E6 /* ProfilesView+iOS.swift in Sources */,
 				ADF08833A647392A15993E47 /* SettingsView+iOS.swift in Sources */,

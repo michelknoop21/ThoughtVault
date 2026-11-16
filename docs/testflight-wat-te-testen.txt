@@ -1,12 +1,14 @@
-versie: 1.0.327
-Nieuw in deze versie:
-- Taken: elke verwerking blijft bewaard met details. Je kunt opnieuw verwerken, de titel wijzigen, naar de notule gaan en de opname of taak verwijderen.
-- Eerste start: een nieuwe stap Notulen voor aanbieder, sleutel en model. Overslaan kan.
-- Modelkeuze tot een vaste prijs per notule.
-- Bij elke notule de kosten, lengte en duur.
-- Mac: de opnamewidget toont een timer van meer dan een uur volledig.
+versie: 1.0.328
+Wat te testen
 
-Wat we graag van je horen:
-- Klopt wat Taken laat zien bij een opname die je net hebt verwerkt?
-- Werkt opnieuw verwerken met een ander profiel?
-- Liep de stap Notulen bij de eerste start soepel? Meld het via Instellingen, Account, Melding maken.
+Systeemaudio op de Mac
+Neem een gesprek op met je gebruikelijke headset en microfoon. Controleer vanaf het begin of de andere deelnemers natuurlijk en verstaanbaar klinken. Controleer ook een wissel van audioapparaat of microfoon tijdens de opname: stemmen mogen niet versnellen, robotachtig worden of uit de pas lopen.
+
+Sleutel instellen
+Ga in de introductie naar de stap voor notulen. Plak een sleutel en klik meteen op Volgende. De app moet eerst die sleutel opslaan en controleren. Bij een geweigerde sleutel of een onbereikbare aanbieder moet je kunnen teruggaan of bewust overslaan.
+
+Prijsgrens
+Controleer dat een bekend model boven USD 3 invoer of USD 15 uitvoer per miljoen tokens niet wordt gebruikt, ook bij een eigen serveradres. Een hogere, vers opgehaalde prijs moet meetellen.
+
+Lange notulen
+Maak op Windows een notule van een langer gesprek. Een antwoord dat nog binnenkomt moet kunnen doorgaan. Een afgekapt of onderbroken antwoord mag niet als een volledige notule verschijnen. Controleer ook dat de voortgang en eventuele foutmelding duidelijk blijven.

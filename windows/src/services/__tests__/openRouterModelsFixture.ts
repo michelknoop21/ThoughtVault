@@ -1,4 +1,4 @@
-/** Six entries of https://openrouter.ai/api/v1/models (16 November 2026), only the fields the app reads. */
+/** Public model catalog fixture (16 November 2026), only the fields the app reads. */
 export const modelListFixture = JSON.stringify({
   "data": [
     {

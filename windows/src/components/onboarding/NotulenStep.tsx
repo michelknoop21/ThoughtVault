@@ -50,43 +50,52 @@ export function NotulenStep({ onBack, onDone }: { onBack: () => void; onDone: ()
   const [other, setOther] = useState<"openai" | "anthropic">(settings.notulen_provider === "anthropic" ? "anthropic" : "openai");
   const keyed: KeyedProvider | null = choice === "openrouter" ? "openrouter" : choice === "other" ? other : null;
   const [draft, setDraft] = useState("");
-  const [saved, setSaved] = useState(false);
-  const [keyState, setKeyState] = useState<KeyState>("idle");
-  const [keyError, setKeyError] = useState("");
+  const typed = draft.trim();
+  /** Which providers have a key in Credential Manager. */
+  const [saved, setSaved] = useState<Partial<Record<KeyedProvider, boolean>>>({});
+  /** Last test or save, tied to the provider and key it ran for, so a late result never lands on another tile or key. */
+  const [check, setCheck] = useState<{ provider: KeyedProvider; key: string; state: KeyState; error?: string } | null>(null);
+  const keyState: KeyState = check && check.provider === keyed && check.key === typed ? check.state : "idle";
+  const [saving, setSaving] = useState(false);
   const [askSkip, setAskSkip] = useState(false);
 
   useEffect(() => {
-    let active = true;
-    setDraft(""); setSaved(false); setKeyState("idle");
-    if (keyed) loadCredential(`${keyed}_api_key`).then(key => { if (active) setSaved(Boolean(key)); }).catch(() => {});
-    return () => { active = false; };
+    setDraft("");
+    if (keyed) loadCredential(`${keyed}_api_key`)
+      .then(key => setSaved(s => keyed in s ? s : { ...s, [keyed]: Boolean(key) })).catch(() => {});
   }, [keyed]);
 
   /** Stores a typed key; false when Windows Credential Manager refused it. */
-  async function saveDraft(): Promise<boolean> {
-    if (!keyed || !draft.trim()) return true;
+  async function saveDraft(provider: KeyedProvider | null, key: string): Promise<boolean> {
+    if (!provider || !key) return true;
     try {
-      await storeCredential(`${keyed}_api_key`, draft.trim());
-      setSaved(true);
+      await storeCredential(`${provider}_api_key`, key);
+      setSaved(s => ({ ...s, [provider]: true }));
       return true;
     } catch (error) {
-      setKeyError(typeof error === "string" ? error : "Opslaan in Windows Credential Manager mislukt.");
-      setKeyState("error");
+      setCheck({ provider, key, state: "error", error: typeof error === "string" ? error : "Opslaan in Windows Credential Manager mislukt." });
       return false;
     }
   }
 
   async function handleTest() {
     if (!keyed) return;
-    setKeyState("testing");
-    const key = draft.trim();
-    if (!await saveDraft()) return;
-    setKeyState(await testKey(keyed, key || await loadCredential(`${keyed}_api_key`) || ""));
+    const provider = keyed, key = typed;
+    setCheck({ provider, key, state: "testing" });
+    if (!await saveDraft(provider, key)) return;
+    const state = await testKey(provider, key || await loadCredential(`${provider}_api_key`) || "");
+    setCheck(c => c?.provider === provider && c.key === key ? { provider, key, state } : c);
   }
 
   async function handleNext() {
-    if (!await saveDraft()) return;
-    if (keyed && !saved && !draft.trim()) { setAskSkip(true); return; }
+    if (saving) return;
+    // A key the provider just refused cannot write a notule.
+    if (keyState === "rejected") { setAskSkip(true); return; }
+    setSaving(true);
+    const stored = await saveDraft(keyed, typed);
+    setSaving(false);
+    if (!stored) return;
+    if (keyed && !saved[keyed] && !typed) { setAskSkip(true); return; }
     const current = settings.notulen_provider;
     if (choice === "local") {
       const provider = current === "lm-studio" ? "lm-studio" : "ollama";
@@ -108,14 +117,14 @@ export function NotulenStep({ onBack, onDone }: { onBack: () => void; onDone: ()
     <p className="onb-lead">Opnemen en omzetten naar tekst gebeurt op je eigen pc. Voor de notule kies je een taalmodel.</p>
     <div className="onb-tiles" role="radiogroup" aria-label="Aanbieder voor notulen">
       {TILES.map(([id, title, subtitle]) => <button key={id} type="button" role="radio" aria-checked={choice === id}
-        className="onb-tile" onClick={() => setChoice(id)}>
+        className="onb-tile" disabled={saving} onClick={() => setChoice(id)}>
         <span className="onb-tile-head"><strong>{title}</strong>{id === "openrouter" && <span className="onb-badge">Aanbevolen</span>}</span>
         <span className="onb-muted">{subtitle}</span>
       </button>)}
     </div>
 
     {choice === "other" && <div className="onb-segment" role="radiogroup" aria-label="Andere aanbieder">
-      {(["openai", "anthropic"] as const).map(id => <button key={id} type="button" role="radio" aria-checked={other === id}
+      {(["openai", "anthropic"] as const).map(id => <button key={id} type="button" role="radio" aria-checked={other === id} disabled={saving}
         onClick={() => setOther(id)}>{id === "openai" ? "OpenAI" : "Claude"}</button>)}
     </div>}
 
@@ -124,16 +133,16 @@ export function NotulenStep({ onBack, onDone }: { onBack: () => void; onDone: ()
         <button type="button" className="onb-link" onClick={() => void open(KEYED[keyed].keys)}>Waar vind ik mijn sleutel?</button></div>
       <div className="onb-key-row">
         <input id="onb-key-input" className="input onb-key-input" type="password" autoComplete="off" spellCheck={false} value={draft}
-          onChange={event => { setDraft(event.target.value); setKeyState("idle"); }}
-          placeholder={saved ? "Sleutel opgeslagen · plak een nieuwe om te vervangen" : "Plak je sleutel"} />
-        <button type="button" className="btn btn-secondary" disabled={keyState === "testing" || (!draft.trim() && !saved)} onClick={() => void handleTest()}>Testen</button>
+          onChange={event => setDraft(event.target.value)}
+          placeholder={saved[keyed] ? "Sleutel opgeslagen · plak een nieuwe om te vervangen" : "Plak je sleutel"} />
+        <button type="button" className="btn btn-secondary" disabled={saving || keyState === "testing" || (!typed && !saved[keyed])} onClick={() => void handleTest()}>Testen</button>
       </div>
       <div className="onb-key-status" role="status" aria-live="polite">
         {keyState === "testing" && <><span className="onb-spinner" aria-hidden="true" />Sleutel testen…</>}
         {keyState === "ok" && <><span className="onb-ok">Sleutel werkt</span><span className="onb-muted">De sleutel staat in Windows Credential Manager, niet in de app.</span></>}
         {keyState === "rejected" && <span className="onb-error">{name} weigert deze sleutel. Controleer of je hem volledig hebt geplakt.</span>}
         {keyState === "unreachable" && <span className="onb-error">{name} is niet bereikbaar. Controleer je internetverbinding.</span>}
-        {keyState === "error" && <span className="onb-error">{keyError}</span>}
+        {keyState === "error" && <span className="onb-error">{check?.error}</span>}
       </div>
     </div> : <p className="onb-note">Ollama schrijft de notule op deze pc. Installeer Ollama en kies het model later in Instellingen › Verwerking.</p>}
 
@@ -146,11 +155,11 @@ export function NotulenStep({ onBack, onDone }: { onBack: () => void; onDone: ()
     </div>}
 
     <div className="onb-footer">
-      <button type="button" className="onb-link onb-skip" onClick={() => setAskSkip(true)}>Overslaan</button>
+      <button type="button" className="onb-link onb-skip" disabled={saving} onClick={() => setAskSkip(true)}>Overslaan</button>
       <span className="onb-muted onb-later">Je kunt dit later doen.</span>
       <span className="onb-spacer" />
-      <button type="button" className="btn btn-secondary" onClick={onBack}>Terug</button>
-      <button type="button" className="btn btn-accent" onClick={() => void handleNext()}>Volgende</button>
+      <button type="button" className="btn btn-secondary" disabled={saving} onClick={onBack}>Terug</button>
+      <button type="button" className="btn btn-accent" disabled={saving} onClick={() => void handleNext()}>Volgende</button>
     </div>
 
     {askSkip && <DesktopDialog label="Zonder taalmodel verder?" onClose={() => setAskSkip(false)}>

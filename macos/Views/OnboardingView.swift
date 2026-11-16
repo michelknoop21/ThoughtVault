@@ -29,6 +29,8 @@ struct OnboardingView: View {
     @State private var isAnimatingIn: Bool = false
     @State var notulenChoice = OnboardingNotulen.choice(for: .configured())
     @State var notulenSkipAsk = false
+    /// Provider whose key the last test refused (401/403).
+    @State var notulenRejected: NotulenProvider?
 
     // Self-profile step fields
     @State private var profielNaam: String = ""

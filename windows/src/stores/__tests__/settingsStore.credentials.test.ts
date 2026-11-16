@@ -45,3 +45,19 @@ it("marks existing local installs as onboarded and leaves cloud installs to the 
   expect(await migrateLegacySettings({ processing_mode: "local", has_completed_onboarding: false })).toMatchObject({ has_completed_onboarding: true });
   expect(await migrateLegacySettings({ processing_mode: "cloud", has_completed_onboarding: false })).toMatchObject({ has_completed_onboarding: false });
 });
+
+it("runs a v1 snapshot through the v2 and v3 steps when the store loads", async () => {
+  const { useSettingsStore } = await import("../settingsStore");
+  const load = async (state: Record<string, unknown>) => {
+    localStorage.setItem("settings-store", JSON.stringify({ state, version: 1 }));
+    await useSettingsStore.persist.rehydrate();
+    return useSettingsStore.getState();
+  };
+  expect(await load({ processing_mode: "local", notulen_provider: "ollama", has_completed_onboarding: false }))
+    .toMatchObject({ notulen_provider: "ollama", has_completed_onboarding: true });
+  expect(await load({ processing_mode: "local", has_completed_onboarding: false }))
+    .toMatchObject({ notulen_provider: "ollama", has_completed_onboarding: true });
+  expect(await load({ processing_mode: "cloud", notulen_provider: "cloud", has_completed_onboarding: false }))
+    .toMatchObject({ notulen_provider: "cloud", has_completed_onboarding: false });
+  localStorage.removeItem("settings-store");
+});

@@ -113,3 +113,44 @@ it("installs the chosen provider on Volgende", async () => {
   expect(useSettingsStore.getState().notulen_provider).toBe("anthropic");
   expect(onDone).toHaveBeenCalledTimes(3);
 });
+
+it("drops a key test that finishes after switching tile", async () => {
+  useSettingsStore.setState({ notulen_provider: "lm-studio" });
+  let stored!: () => void;
+  mocks.storeCredential.mockImplementationOnce(() => new Promise<void>(resolve => { stored = resolve; }));
+  mocks.invoke.mockResolvedValueOnce({ status: 200 });
+  await act(async () => type(host.querySelector<HTMLInputElement>("#onb-key-input")!, "sk-or-v1-voorbeeld"));
+  await act(async () => button("Testen").click());
+  await act(async () => button("Andere aanbieder").click());
+  await act(async () => stored());
+  expect(host.textContent).not.toContain("Sleutel werkt");
+  await act(async () => button("Volgende").click());
+  expect(host.textContent).toContain("Zonder taalmodel verder?");
+  expect(onDone).not.toHaveBeenCalled();
+  expect(useSettingsStore.getState().notulen_provider).toBe("lm-studio");
+});
+
+it("locks navigation while Volgende stores the key", async () => {
+  let stored!: () => void;
+  mocks.storeCredential.mockImplementationOnce(() => new Promise<void>(resolve => { stored = resolve; }));
+  await act(async () => type(host.querySelector<HTMLInputElement>("#onb-key-input")!, "sk-or-v1-voorbeeld"));
+  await act(async () => button("Volgende").click());
+  expect(button("Terug").disabled).toBe(true);
+  expect(button("Volgende").disabled).toBe(true);
+  await act(async () => button("Volgende").click());
+  await act(async () => stored());
+  expect(mocks.storeCredential).toHaveBeenCalledOnce();
+  expect(onDone).toHaveBeenCalledOnce();
+});
+
+it("asks the skip question instead of installing a rejected key", async () => {
+  useSettingsStore.setState({ notulen_provider: "lm-studio" });
+  mocks.invoke.mockResolvedValueOnce({ status: 401 });
+  await act(async () => type(host.querySelector<HTMLInputElement>("#onb-key-input")!, "sk-or-v1-fout"));
+  await act(async () => button("Testen").click());
+  expect(host.textContent).toContain("OpenRouter weigert deze sleutel");
+  await act(async () => button("Volgende").click());
+  expect(host.textContent).toContain("Zonder taalmodel verder?");
+  expect(onDone).not.toHaveBeenCalled();
+  expect(useSettingsStore.getState().notulen_provider).toBe("lm-studio");
+});

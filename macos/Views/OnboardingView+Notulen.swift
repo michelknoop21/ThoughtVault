@@ -35,11 +35,20 @@ enum OnboardingNotulen {
         }
     }
 
-    /// Hosted providers need a stored key before they can write a notule.
-    static func isReady(_ provider: NotulenProvider) -> Bool {
+    /// Ollama and LM Studio run on a Mac; an iPhone has no local server for them.
+    #if os(macOS)
+    static let localServers = true
+    #else
+    static let localServers = false
+    #endif
+
+    /// Hosted providers need a stored key the provider did not just refuse;
+    /// Ollama and LM Studio need a server on this device.
+    static func isReady(_ provider: NotulenProvider, keyRejected: Bool = false, localServers: Bool = localServers) -> Bool {
         switch provider {
-        case .openRouter, .openAI, .anthropic, .ollamaCloud, .openAICompatible: return provider.hasAPIKey
-        case .appleIntelligence, .ollama, .lmStudio, .cloud: return true
+        case .openRouter, .openAI, .anthropic, .ollamaCloud, .openAICompatible: return !keyRejected && provider.hasAPIKey
+        case .ollama, .lmStudio: return localServers
+        case .appleIntelligence, .cloud: return true
         }
     }
 
@@ -63,7 +72,7 @@ extension OnboardingView {
 
     func notulenNext() {
         let provider = notulenProvider
-        guard OnboardingNotulen.isReady(provider) else { notulenSkipAsk = true; return }
+        guard OnboardingNotulen.isReady(provider, keyRejected: notulenRejected == provider) else { notulenSkipAsk = true; return }
         OnboardingNotulen.apply(provider)
         advanceStep()
     }
@@ -86,9 +95,9 @@ extension OnboardingView {
         let provider = notulenProvider
         switch provider {
         case .openRouter, .openAI, .anthropic:
-            HostedProviderConfig(provider: provider).id(provider)
+            HostedProviderConfig(provider: provider, onKeyRejected: { notulenRejected = $0 ? provider : nil }).id(provider)
         case .ollamaCloud, .openAICompatible:
-            CloudProviderConfig(provider: provider).id(provider)
+            CloudProviderConfig(provider: provider, onKeyRejected: { notulenRejected = $0 ? provider : nil }).id(provider)
         case .appleIntelligence:
             notulenNote("Apple Intelligence schrijft de notule op deze \(device). Er gaat niets naar internet.")
         default:

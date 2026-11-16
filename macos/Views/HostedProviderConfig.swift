@@ -11,6 +11,8 @@ struct HostedProviderConfig: View {
     let provider: NotulenProvider
     /// Called after the key in the Keychain changed.
     var onKeyChange: () -> Void = {}
+    /// True after a test the provider answered with 401/403, false once the key changes or a test passes.
+    var onKeyRejected: (Bool) -> Void = { _ in }
 
     @State private var apiKey = ""
     @State private var reveal = false
@@ -166,6 +168,7 @@ struct HostedProviderConfig: View {
         }
         saveError = nil
         connected = nil
+        onKeyRejected(false)
         onKeyChange()
     }
 
@@ -176,11 +179,13 @@ struct HostedProviderConfig: View {
         let key = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
         // OpenRouter lists its models without a key, so the list alone proves nothing.
         if isOpenRouter, let problem = await Self.openRouterKeyProblem(key) {
-            failure = problem
+            failure = problem.text
             connected = false
             models = []
+            onKeyRejected(problem.rejected)
             return
         }
+        onKeyRejected(false)
         let list: [String]
         if isOpenAI {
             let all = await OpenAICompatibleLLMService(baseURL: OpenAICompatibleLLMService.openAIBaseURL,
@@ -197,19 +202,23 @@ struct HostedProviderConfig: View {
         models = list
     }
 
-    /// nil when OpenRouter accepts the key, else what went wrong.
-    private static func openRouterKeyProblem(_ key: String) async -> String? {
+    /// nil when OpenRouter accepts the key, else what went wrong. Only the status is
+    /// inspected; the key never reaches a log.
+    private static func openRouterKeyProblem(_ key: String) async -> (text: String, rejected: Bool)? {
         var request = URLRequest(url: URL(string: "https://openrouter.ai/api/v1/key")!)
         request.timeoutInterval = 10
         request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
-        guard let (_, response) = try? await URLSession.shared.data(for: request),
-              let status = (response as? HTTPURLResponse)?.statusCode else {
-            return String(localized: "OpenRouter is niet bereikbaar. Controleer je internetverbinding.")
-        }
+        let response = try? await URLSession.shared.data(for: request).1
+        return openRouterKeyProblem(status: (response as? HTTPURLResponse)?.statusCode)
+    }
+
+    /// nil for 200; `rejected` only for 401/403, which say the key itself is wrong.
+    static func openRouterKeyProblem(status: Int?) -> (text: String, rejected: Bool)? {
         switch status {
         case 200: return nil
-        case 401, 403: return String(localized: "OpenRouter weigert deze sleutel. Controleer of je hem volledig hebt geplakt.")
-        default: return String(localized: "OpenRouter gaf foutcode \(status). Probeer het later opnieuw.")
+        case nil: return (String(localized: "OpenRouter is niet bereikbaar. Controleer je internetverbinding."), false)
+        case 401, 403: return (String(localized: "OpenRouter weigert deze sleutel. Controleer of je hem volledig hebt geplakt."), true)
+        case let status?: return (String(localized: "OpenRouter gaf foutcode \(status). Probeer het later opnieuw."), false)
         }
     }
 }

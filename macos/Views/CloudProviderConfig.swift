@@ -8,6 +8,8 @@ import SwiftUI
 
 struct CloudProviderConfig: View {
     let provider: NotulenProvider
+    /// True after a test the endpoint answered with 401/403, false once the key changes or a test passes.
+    var onKeyRejected: (Bool) -> Void = { _ in }
 
     @AppStorage("ollamaCloudModel") private var ollamaCloudModel = ""
     @AppStorage(CloudAIConfiguration.selectedKey) private var selected = ""
@@ -195,6 +197,7 @@ struct CloudProviderConfig: View {
         }
         saveError = nil
         connected = nil
+        onKeyRejected(false)
     }
 
     private func test() async {
@@ -204,7 +207,9 @@ struct CloudProviderConfig: View {
         let service = OpenAICompatibleLLMService(baseURL: baseURL, model: modelBinding.wrappedValue, apiKey: apiKey)
         await loadModels()
         // Listing models can succeed without a valid key, so also probe a protected endpoint.
-        connected = await service.checkConnection() == .ready
+        let status = await service.checkConnection()
+        connected = status == .ready
+        onKeyRejected(status == .keyRejected)
     }
     private func loadModels() async {
         loadingModels = true

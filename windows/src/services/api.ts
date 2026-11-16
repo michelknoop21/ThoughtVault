@@ -323,6 +323,11 @@ class APIService {
     return this.request<Transcript>("PUT", `/transcripts/${id}`, updates);
   }
 
+  /** Stored by the backend as the edited transcription; the original is kept. */
+  async updateTranscription(id: string, transcription: string): Promise<void> {
+    await this.request<unknown>("PUT", `/transcripts/${id}`, { transcription });
+  }
+
   async deleteTranscript(id: string): Promise<void> {
     return this.request<void>("DELETE", `/transcripts/${id}`);
   }

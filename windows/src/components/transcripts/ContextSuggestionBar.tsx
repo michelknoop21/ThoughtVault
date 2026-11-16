@@ -7,7 +7,7 @@ import { usePeopleDirectoryStore } from "../../stores/peopleDirectoryStore";
 import { dismiss, dismissKey, load, remove, replacePerson, SKIP_NOTICES, SUGGESTIONS_UPDATED_EVENT, type ContextSuggestionItem, type ContextSuggestionSet, type PersonSuggestion, type TermSuggestion } from "../../services/contextSuggestions";
 import { autoApply } from "../../services/personMatcher";
 import { personSnapshot } from "../../services/contextHistory";
-import type { PersonalCorrection } from "../../services/personalCorrections";
+import { personCorrection, type PersonalCorrection } from "../../services/personalCorrections";
 import type { PersonProfile } from "../../types";
 import { PersonEditModal } from "../../pages/PersonEditModal";
 import { ambiguousQuestion, applyRemainder, changeSummary, counter } from "./contextSuggestionBarLogic";
@@ -20,11 +20,13 @@ interface ContextSuggestionBarProps {
   scope: string | null;
   /** Opens the word-correction dialog with `entry`; calls `done` once the correction was applied. */
   onAddTerm: (entry: PersonalCorrection, done: () => void) => void;
+  /** Applies `entry` to this notule and transcript without saving it as a term. */
+  onCorrect: (entry: PersonalCorrection) => Promise<void>;
 }
 
 const message = (error: unknown) => error instanceof Error ? error.message : String(error);
 
-export function ContextSuggestionBar({ taskId, profileName, scope, onAddTerm }: ContextSuggestionBarProps) {
+export function ContextSuggestionBar({ taskId, profileName, scope, onAddTerm, onCorrect }: ContextSuggestionBarProps) {
   const people = usePeopleDirectoryStore((s) => s.people);
   const [set, setSet] = useState<ContextSuggestionSet>({ terms: [], people: [] });
   const [expanded, setExpanded] = useState(false);
@@ -73,13 +75,24 @@ export function ContextSuggestionBar({ taskId, profileName, scope, onAddTerm }: 
       const next = applyRemainder(s, personSnapshot(person));
       await usePeopleDirectoryStore.getState().recordUpdate(person.id, `voorstel:${taskId}`, { role: next.role, organization: next.organization, aliases: next.aliases });
       await finish({ person: s });
+      await correctNames(s, person.name);
     } catch (e) {
       setError(`Bijwerken mislukt: ${message(e)}`);
     }
   }
 
+  /** Writes the person's name over the heard spellings in this notule and transcript. */
+  async function correctNames(s: PersonSuggestion, name: string) {
+    const entry = personCorrection(name, s.heardAs, scope);
+    if (!entry) return;
+    try { await onCorrect(entry); }
+    catch (e) { setError(`Naam in de tekst aanpassen mislukt: ${message(e)}`); }
+  }
+
   /** Fills in the chosen person; what still needs the user stays as a remainder row. */
   async function choose(id: string, s: PersonSuggestion) {
+    const person = people.find(p => p.id === id);
+    if (person) await correctNames(s, person.name);
     try {
       const rest = await autoApply(s, id, profileName, taskId);
       if (rest) await replace(s, rest); else await finish({ person: s });
@@ -144,7 +157,7 @@ export function ContextSuggestionBar({ taskId, profileName, scope, onAddTerm }: 
     {error && <p className="context-bar-error" role="alert">{error}</p>}
   </section>}
   {adding && <PersonEditModal person={adding.person} isNew
-    onAdded={() => void finish({ person: adding.suggestion })}
+    onAdded={(person) => { const s = adding.suggestion; void finish({ person: s }).then(() => correctNames(s, person.name)); }}
     onClose={() => setAdding(null)} />}
   </>;
 }

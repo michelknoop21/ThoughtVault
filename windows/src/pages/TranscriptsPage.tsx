@@ -182,11 +182,13 @@ export function TranscriptsPage() {
   }
 
   // --- Notule save ---
-  async function handleSaveNotule(id: string, html: string, syncObsidian = true) {
+  /** `transcription` is the corrected transcript, saved alongside the notule. */
+  async function handleSaveNotule(id: string, html: string, syncObsidian = true, transcription?: string) {
+    const patch = { notule_html: html, has_notes: !!html.trim(), ...(transcription === undefined ? {} : { raw_transcription: transcription }) };
     try {
       if (isLocalId(id)) {
-        await useLocalTranscriptsStore.getState().update(id, { notule_html: html, has_notes: !!html.trim() });
-        updateTranscript(id, { notule_html: html, has_notes: !!html.trim() });
+        await useLocalTranscriptsStore.getState().update(id, patch);
+        updateTranscript(id, patch);
         toast.show("Notule opgeslagen", "success");
         const settings = useSettingsStore.getState();
         if (syncObsidian && settings.obsidian_enabled) {
@@ -197,7 +199,8 @@ export function TranscriptsPage() {
         return;
       }
       await api.updateNotuleHTML(id, html);
-      updateTranscript(id, { notule_html: html, has_notes: !!html.trim() });
+      if (transcription !== undefined) await api.updateTranscription(id, transcription);
+      updateTranscript(id, patch);
       toast.show("Notule opgeslagen", "success");
       const settings = useSettingsStore.getState();
       if (syncObsidian && settings.obsidian_enabled) {
@@ -543,7 +546,7 @@ export function TranscriptsPage() {
           onRegenerate={requestRegenerate}
           onDelete={handleDelete}
           onUpdateTitle={handleUpdateTitle}
-          onSaveNotule={handleSaveNotule}
+          onSaveNotule={(id, html, transcription) => handleSaveNotule(id, html, true, transcription)}
           onCopy={handleCopy}
           onExportPDF={handleExportPDF}
           onExportTXT={handleExportTXT}

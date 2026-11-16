@@ -83,7 +83,7 @@ it("retains the selected-word correction after a failed note save and learns onl
     inputs[0].dispatchEvent(new Event("input",{bubbles:true}));
   });
   await act(async()=>{container.querySelector<HTMLButtonElement>(".correction-dialog .btn-accent")!.click();});
-  expect(save).toHaveBeenCalledWith("local-word","<p>Yinga</p>");
+  expect(save).toHaveBeenCalledWith("local-word","<p>Yinga</p>","Yinga");
   expect(container.textContent).toContain("Schijf vol");expect(inputs[0].value).toBe("Yinga");expect(dictionary.save).not.toHaveBeenCalled();
   await act(async()=>{container.querySelector<HTMLButtonElement>(".correction-dialog .btn-accent")!.click();});
   expect(dictionary.save).toHaveBeenCalledOnce();expect(container.querySelector("dialog")).toBeNull();expect(note.raw_transcription).toBe("Jengo");

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useSettingsStore } from "../../stores/settingsStore";
-import { LLMService, MAX_OUTPUT_TOKENS, TIME_LIMIT_MESSAGE, TRUNCATED_MESSAGE, auditNoteConcurrency, rateLimitWaitMs } from "../llm";
+import { LLMService, MAX_OUTPUT_TOKENS, TIME_LIMIT_MESSAGE, TRUNCATED_MESSAGE, auditNoteConcurrency, providerKind, rateLimitWaitMs } from "../llm";
 import { auditFixture, sourceFixture } from "./notuleAuditFixtures";
 
 const corrections = vi.hoisted(() => ({entries:[] as import("../personalCorrections").PersonalCorrection[]}));
@@ -429,4 +429,11 @@ describe("fallback provider", () => {
     await expect(LLMService.generateNotulen("Het overleg is afgerond.", profile)).rejects.toThrow("aborted");
     expect(invoke).toHaveBeenCalledTimes(1);
   });
+});
+
+it("logs OpenRouter as its own provider kind", () => {
+  expect(providerKind("https://openrouter.ai/api/v1")).toBe("openrouter");
+  expect(providerKind("https://llm.example.com/v1")).toBe("hosted");
+  expect(providerKind("https://ollama.com/v1")).toBe("ollama-cloud");
+  expect(providerKind("http://localhost:1234/v1")).toBe("local");
 });

@@ -157,6 +157,13 @@ function buildUserContent(
   return content + `\n\nLaatste inhoudsregels: volg de gekozen template en laat lege secties weg. Begin met één h1 die in 4 tot 10 woorden het doel of de uitkomst van het gesprek noemt; nooit alleen een genre-woord als Verslag, Notulen, Meeting, Gesprek of Overleg. Verzin geen feiten, besluiten, eigenaren of termijnen. ${FACTUALITY_RULES} Schrijf eenvoudige HTML zonder CSS, style-blok of code fences.`;
 }
 
+/** Provider kind for the log as on macOS, without the host of a self-configured endpoint. */
+export function providerKind(baseUrl: string): string {
+  if (isOllamaCloudURL(baseUrl)) return "ollama-cloud";
+  try { if (new URL(baseUrl).hostname === new URL(OPENROUTER_URL).hostname) return "openrouter"; } catch { /* not a URL */ }
+  return baseUrl.startsWith("https://") ? "hosted" : "local";
+}
+
 function generateWithOpenAICompatible(
   baseUrl: string,
   model: string,
@@ -167,8 +174,7 @@ function generateWithOpenAICompatible(
   step?: ModelStep,
   meter?: UsageMeter,
 ): Promise<string> {
-  // Provider kind as on macOS, without the host of a self-configured endpoint.
-  const provider = isOllamaCloudURL(baseUrl) ? "ollama-cloud" : baseUrl.startsWith("https://") ? "hosted" : "local";
+  const provider = providerKind(baseUrl);
   const trace: RequestTrace = { step, provider, model, system: systemPrompt, user: userPrompt, meter };
   return logModelRequest(trace, () => openAICompatibleRequest(baseUrl, model, systemPrompt, userPrompt, apiKey, trace, onProgress));
 }

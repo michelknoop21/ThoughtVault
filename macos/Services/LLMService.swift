@@ -567,12 +567,15 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
         }
     }
 
+    private var providerKind: String { Self.providerKind(baseURL: baseURL) }
+
     /// Provider kind for the log, without the host of a self-configured endpoint.
-    private var providerKind: String {
+    static func providerKind(baseURL: String) -> String {
         let url = URL(string: baseURL)
         switch url?.host?.lowercased() {
         case "api.openai.com": return "openai"
         case "ollama.com": return "ollama-cloud"
+        case URL(string: openRouterBaseURL)?.host: return "openrouter"
         default: return url?.scheme?.lowercased() == "https" ? "hosted" : "local"
         }
     }

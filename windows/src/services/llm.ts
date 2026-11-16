@@ -6,7 +6,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { DEFAULT_SETTINGS } from "../types";
 import type { Profile, NotulenProvider } from "../types";
 import { isHostedURL, isOllamaCloudURL } from "./ollamaModels";
-import { compatibleRefusal, usableModel } from "./suggestedModels";
+import { modelRefusal, usableModel } from "./suggestedModels";
 
 import { loadCorrectionsOrEmpty } from "../stores/personalCorrectionsStore";
 import { usePeopleDirectoryStore } from "../stores/peopleDirectoryStore";
@@ -186,7 +186,7 @@ function generateWithOpenAICompatible(
   step?: ModelStep,
   meter?: UsageMeter,
 ): Promise<string> {
-  const refusal = compatibleRefusal(model, baseUrl); if (refusal) return Promise.reject(new Error(refusal));
+  const refusal = modelRefusal(model, baseUrl); if (refusal) return Promise.reject(new Error(refusal));
   const provider = providerKind(baseUrl);
   const trace: RequestTrace = { step, provider, model, system: systemPrompt, user: userPrompt, meter };
   return logModelRequest(trace, () => openAICompatibleRequest(baseUrl, model, systemPrompt, userPrompt, apiKey, trace, onProgress));

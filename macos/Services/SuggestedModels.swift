@@ -69,8 +69,8 @@ enum SuggestedModels {
     static func isAllowed(_ model: String, provider: NotulenProvider, reportedPrice: ModelPrice? = nil) -> Bool {
         guard isMetered(provider) else { return true }
         let remembered = { reportedPriceBaseURL(for: provider).flatMap { rememberedPrice(of: model, provider: provider, baseURL: $0) } }
-        guard let price = reportedPrice ?? price(of: model) ?? remembered() else { return provider == .openAICompatible }
-        return isWithinCap(price)
+        let prices = [reportedPrice, price(of: model), remembered()].compactMap { $0 }
+        return prices.isEmpty ? provider == .openAICompatible : prices.allSatisfy(isWithinCap)
     }
 
     /// Picker choices: suggestions first, then the current and listed models that pass the cap.
@@ -110,6 +110,14 @@ enum SuggestedModels {
     /// Why `model` is not sent at all: the provider does not allow it and has no suggestion to fall back to.
     static func refusal(for model: String, provider: NotulenProvider) -> String? {
         guard !isAllowed(model, provider: provider), suggested(for: provider).isEmpty else { return nil }
+        return "\(model) valt boven de prijsgrens en is niet gebruikt. Kies een goedkoper model bij Instellingen > Verwerking."
+    }
+
+    static func requestRefusal(for model: String, baseURL: String) -> String? {
+        let provider: NotulenProvider = OpenAICompatibleLLMService.providerKind(baseURL: baseURL) == "openrouter"
+            ? .openRouter : .openAICompatible
+        let prices = [price(of: model), rememberedPrice(of: model, provider: provider, baseURL: baseURL)].compactMap { $0 }
+        guard prices.contains(where: { !isWithinCap($0) }) else { return nil }
         return "\(model) valt boven de prijsgrens en is niet gebruikt. Kies een goedkoper model bij Instellingen > Verwerking."
     }
 

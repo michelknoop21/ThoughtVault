@@ -7,7 +7,7 @@ import { useSettingsStore } from "../stores/settingsStore";
 import { useProfilesStore } from "../stores/profilesStore";
 import { isLocalId, useLocalTranscriptsStore } from "../stores/localTranscriptsStore";
 import { useTranscriptsStore } from "../stores/transcriptsStore";
-import { capNotice, compatibleRefusal, modelProvider, modelSettingKey, usableModel } from "./suggestedModels";
+import { capNotice, isMetered, modelRefusal, modelProvider, modelSettingKey, usableModel } from "./suggestedModels";
 
 export interface TaskHistoryStep { label: string; started_at: string; finished_at?: string }
 
@@ -142,8 +142,7 @@ export function currentContext(profileId?: string): TaskHistoryContext {
     transcription_engine: `Whisper · ${settings.whisper_model || "medium"}`,
     notule_provider: names[provider] ?? provider,
     notule_model: model ? usableModel(model, provider) : undefined,
-    notule_notice: !model ? undefined : provider === "ollama" || provider === "lm-studio"
-      ? compatibleRefusal(model, provider === "ollama" ? settings.ollama_url : settings.lm_studio_url) : capNotice(model, provider),
+    notule_notice: !model ? undefined : isMetered(provider) ? capNotice(model, provider) : modelRefusal(model),
     profile_name: profile?.name,
   };
 }

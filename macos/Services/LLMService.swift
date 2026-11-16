@@ -622,6 +622,9 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
         onProgress: @Sendable (String) -> Void
     ) async throws -> String {
 
+        if let refusal = SuggestedModels.requestRefusal(for: model, baseURL: baseURL) {
+            throw LLMError.generationFailed(refusal)
+        }
         guard !model.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             throw LLMError.generationFailed("Kies een model bij Instellingen > Verwerking.")
         }

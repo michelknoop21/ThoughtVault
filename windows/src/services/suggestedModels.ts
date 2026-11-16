@@ -1,5 +1,5 @@
 import type { AppSettings, NotulenProvider } from "../types";
-import { isHostedURL, isOllamaCloudURL } from "./ollamaModels";
+import { isOllamaCloudURL } from "./ollamaModels";
 
 /** List price in USD per million tokens. */
 export interface ModelPrice { input: number; output: number }
@@ -65,8 +65,8 @@ export function isWithinCap(price: ModelPrice): boolean {
 /** Metered providers only allow a model with a known price within the cap; local and flat-rate ones are free. */
 export function isModelAllowed(model: string, provider: ModelProvider, reportedPrice?: ModelPrice): boolean {
   if (!isMetered(provider)) return true;
-  const price = reportedPrice ?? priceOf(model);
-  return !!price && isWithinCap(price);
+  const prices = [reportedPrice, priceOf(model)].filter((price): price is ModelPrice => !!price);
+  return prices.length > 0 && prices.every(isWithinCap);
 }
 
 /**
@@ -84,14 +84,14 @@ export function capNotice(model: string, provider: ModelProvider): string | unde
 }
 
 /**
- * A custom hosted endpoint (Ollama or LM Studio settings pointing at a paid service) has no fallback
- * model: a model whose price is known and above the cap is refused. An unknown price is allowed,
- * because such an endpoint is usually self-hosted.
+ * Checked on every compatible request, at any address: a model
+ * whose price is known and above the cap is never sent. There is no fallback model at that point.
+ * An unknown price is allowed, because such an endpoint is usually self-hosted; the metered
+ * providers already replaced an unknown model with a suggestion (usableModel).
  */
-export function compatibleRefusal(model: string, baseURL: string): string | undefined {
-  if (!isHostedURL(baseURL) || isOllamaCloudURL(baseURL)) return undefined;
-  const price = priceOf(model);
-  return price && !isWithinCap(price)
+export function modelRefusal(model: string, baseURL?: string): string | undefined {
+  const prices = [priceOf(model), baseURL ? reportedPrice(model, baseURL) : undefined];
+  return prices.some(price => price && !isWithinCap(price))
     ? `${model} valt boven de prijsgrens en is niet gebruikt. Kies een goedkoper model bij Instellingen > Verwerking.` : undefined;
 }
 
@@ -128,4 +128,25 @@ export function modelSettingKey(provider: ModelProvider): ModelSettingKey {
     case "lm-studio": return "lm_studio_model";
     default: return "ollama_model";
   }
+}
+
+
+// Prices are scoped to the endpoint that reported them; no keys or transcript content is kept.
+const reportedPrices = new Map<string, { at: number; prices: Map<string, ModelPrice> }>();
+const priceScope = (baseURL: string) => baseURL.replace(/\/+$/, "").replace(/\/v1$/, "");
+
+export function rememberReportedPrices(baseURL: string, rows: unknown[], now = Date.now()): void {
+  const prices = new Map<string, ModelPrice>();
+  for (const row of rows) {
+    if (typeof row !== "object" || row === null) continue;
+    const item = row as { id?: string; pricing?: { prompt?: string; completion?: string } };
+    const price = pricePerToken(item.pricing);
+    if (typeof item.id === "string" && price) prices.set(item.id, price);
+  }
+  reportedPrices.set(priceScope(baseURL), { at: now, prices });
+}
+
+function reportedPrice(model: string, baseURL: string): ModelPrice | undefined {
+  const entry = reportedPrices.get(priceScope(baseURL));
+  return entry && Date.now() - entry.at < 7 * 86400_000 ? entry.prices.get(model) : undefined;
 }

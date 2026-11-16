@@ -122,4 +122,43 @@ final class SuggestedModelsTests: XCTestCase {
         XCTAssertNil(SuggestedModels.rememberedPrice(of: "vendor/x", provider: .openRouter, baseURL: "https://a.example/v1",
                                                      now: t0.addingTimeInterval(8 * 86_400), defaults: defaults))
     }
+
+    /// Every provider that ends up at a compatible endpoint is checked
+    /// on the actual model id before anything is sent. The closed local port proves no request was needed.
+    func testCompatibleRequestRefusesAKnownPriceAboveTheCap() async {
+        let service = OpenAICompatibleLLMService(baseURL: "http://127.0.0.1:9", model: "gpt-5.6-sol", apiKey: "key")
+        do {
+            _ = try await service.complete(system: "s", user: "u")
+            XCTFail("an over-cap model was sent")
+        } catch {
+            XCTAssertEqual(error.localizedDescription,
+                           "Generatie mislukt: gpt-5.6-sol valt boven de prijsgrens en is niet gebruikt. Kies een goedkoper model bij Instellingen > Verwerking.")
+        }
+    }
+
+    func testNotuleRequestRefusesAKnownPriceAboveTheCap() async {
+        let service = OpenAICompatibleLLMService(baseURL: "http://127.0.0.1:9", model: "gpt-5.6-sol")
+        do {
+            _ = try await service.generateNotulen(transcription: "short", systemPrompt: "s", notulePrompt: "n",
+                                                  outputTemplate: nil, constraints: [], onProgress: { _ in })
+            XCTFail("an over-cap model was sent")
+        } catch {
+            XCTAssertTrue(error.localizedDescription.contains("valt boven de prijsgrens"), error.localizedDescription)
+        }
+    }
+
+    /// A fresh price reported by the endpoint above the bundled one wins (the higher price counts).
+    func testFreshReportedPriceAboveTheBundledPriceCounts() {
+        let key = "reportedModelPricesByEndpoint"
+        let original = UserDefaults.standard.object(forKey: key)
+        defer { UserDefaults.standard.set(original, forKey: key) }
+        XCTAssertTrue(SuggestedModels.isAllowed("openai/gpt-5.6-terra", provider: .openRouter))
+        SuggestedModels.rememberReported(["openai/gpt-5.6-terra": ModelPrice(input: 4, output: 20)], provider: .openRouter,
+                                         baseURL: OpenAICompatibleLLMService.openRouterBaseURL)
+        XCTAssertFalse(SuggestedModels.isAllowed("openai/gpt-5.6-terra", provider: .openRouter))
+        SuggestedModels.rememberReported(["openai/gpt-5.6-terra": ModelPrice(input: 4, output: 20)], provider: .openRouter,
+                                         baseURL: OpenAICompatibleLLMService.openRouterBaseURL,
+                                         at: Date().addingTimeInterval(-8 * 86_400))
+        XCTAssertTrue(SuggestedModels.isAllowed("openai/gpt-5.6-terra", provider: .openRouter), "a stale report is ignored")
+    }
 }

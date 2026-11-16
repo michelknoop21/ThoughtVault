@@ -75,3 +75,14 @@ describe("suggested models and price cap", () => {
     expect(capNotice("openai/gpt-5.6-luna", "openrouter")).toBeUndefined();
   });
 });
+
+
+it("uses a higher fresh endpoint price and ignores expired reports", async () => {
+  const { rememberReportedPrices, modelRefusal } = await import("../suggestedModels");
+  const rows = [{ id: "gpt-5.6-terra", pricing: { prompt: "0.000004", completion: "0.000020" } }];
+  rememberReportedPrices("https://prices.example/v1", rows);
+  expect(modelRefusal("gpt-5.6-terra", "https://prices.example")).toContain("prijsgrens");
+  expect(modelRefusal("gpt-5.6-terra", "https://other.example")).toBeUndefined();
+  rememberReportedPrices("https://prices.example", rows, Date.now() - 8 * 86400_000);
+  expect(modelRefusal("gpt-5.6-terra", "https://prices.example")).toBeUndefined();
+});

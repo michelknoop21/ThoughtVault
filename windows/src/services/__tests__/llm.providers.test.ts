@@ -88,6 +88,18 @@ it("never sends a model with a known price above the cap to a custom endpoint", 
   expect(await LLMService.generateNotulen("QA test.", profile)).toBe("<p>Besluit</p>");
 });
 
+it.each([["lm-studio", "http://localhost:1234"], ["ollama", "http://localhost:11434"], ["lm-studio", "https://llm.example.com/v1"]] as const)(
+  "never sends a model with a known price above the cap via %s at %s", async (provider, url) => {
+    useSettingsStore.setState({ notulen_provider: provider, ollama_url: url, lm_studio_url: url, ollama_model: "gpt-5.6-sol", lm_studio_model: "gpt-5.6-sol" });
+    loadCredential.mockResolvedValue("key");
+    invoke.mockResolvedValue({ status: 200, body: JSON.stringify({ choices: [{ message: { content: "<p>Besluit</p>" } }] }) });
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("Failed to fetch")));
+    try {
+      await expect(LLMService.generateNotulen("QA test.", profile)).rejects.toThrow("gpt-5.6-sol valt boven de prijsgrens en is niet gebruikt.");
+      expect(invoke.mock.calls.some(call => call[1]?.request?.body?.includes("gpt-5.6-sol"))).toBe(false);
+    } finally { vi.unstubAllGlobals(); }
+  });
+
 it("asks only OpenRouter for low reasoning effort", async () => {
   const reply = { status: 200, body: JSON.stringify({ choices: [{ message: { content: "<p>Besluit</p>" } }] }) };
   useSettingsStore.setState({ notulen_provider: "openai" as never });

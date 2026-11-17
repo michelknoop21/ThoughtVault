@@ -37,3 +37,15 @@ it.each([true, false])("dispatches tv-check-updates from Zoek naar updates with 
     expect(useSettingsStore.getState().check_for_updates).toBe(enabled);
   } finally { window.removeEventListener(CHECK_UPDATES_EVENT, spy); }
 });
+
+it("keeps a dismissed update available in Settings", async () => {
+  const { UpdateContext } = await import("../../../contexts/UpdateContext");
+  useSettingsStore.setState({ dismissed_update_version: "1.0.400" });
+  await act(async () => { root.render(<UpdateContext.Provider value={{
+    isUpdateAvailable: true, latestVersion: "1.0.400", downloadUrl: "https://thoughtvault.yinga.ai/test.msi",
+    nativeUpdate: null, downloaded: false, installNow: vi.fn(async () => {}),
+  }}><GeneralTab /></UpdateContext.Provider>); });
+  expect(host.textContent).toContain("ThoughtVault 1.0.400 is beschikbaar");
+  expect(host.textContent).toContain("Bekijk update");
+  expect(host.querySelector('[aria-label="Updatemelding verbergen"]')).toBeNull();
+});

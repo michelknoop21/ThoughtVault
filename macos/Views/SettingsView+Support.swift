@@ -108,17 +108,30 @@ extension SettingsView {
         }
     }
 
+    @ViewBuilder
     var updatesRows: some View {
         Toggle(isOn: $checkForUpdates) {
             VStack(alignment: .leading, spacing: 2) {
                 Text("Controleer op updates")
                     .font(TS.Font.body)
-                Text("Toon een melding op de homepage als er een nieuwe versie beschikbaar is")
+                Text("Toon een melding als er een nieuwe versie beschikbaar is")
                     .font(TS.Font.caption)
                     .foregroundStyle(Color.labelSecondary)
             }
         }
         .tint(Color.brandPrimary)
+        #if os(macOS) && !APP_STORE
+        if let version = updateCheck.availableVersion {
+            AppUpdateBanner(version: version, dismissible: false)
+        }
+        Button(updateCheck.isChecking ? "Controleren…" : "Zoek naar updates") {
+            Task { await updateCheck.checkForUpdate(force: true) }
+        }
+        .disabled(updateCheck.isChecking)
+        if let error = updateCheck.errorMessage {
+            Text(error).font(TS.Font.caption).foregroundStyle(Color.statusErrorText)
+        }
+        #endif
     }
 
 }

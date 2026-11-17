@@ -1,11 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import { ArrowSync24Regular, Info24Regular } from "../ui/StudioIcons";
 import { getVersion } from "@tauri-apps/api/app";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { CHECK_UPDATES_EVENT } from "../../hooks/useUpdateCheck";
 import { CardHead } from "./SettingsFields";
 
+import { UpdateContext } from "../../contexts/UpdateContext";
+import { UpdateBanner } from "../ui/UpdateBanner";
+
 export function GeneralTab() {
+  const updates = useContext(UpdateContext);
   const settings = useSettingsStore();
   const [appVersion, setAppVersion] = useState("");
 
@@ -15,6 +19,7 @@ export function GeneralTab() {
   return <div className="settings-other"><header className="settings-section-header"><div><h2>Algemeen</h2><p>Updates en informatie over deze app.</p></div></header>          {/* Updates */}
           <div className="settings-group">
             <CardHead icon={<ArrowSync24Regular />} title="Updates" subtitle="Nieuwe versies" />
+            {updates?.latestVersion && <UpdateBanner version={updates.latestVersion} downloadUrl={updates.downloadUrl} nativeUpdate={updates.nativeUpdate} downloaded={updates.downloaded} onInstall={updates.installNow} dismissible={false} onDismiss={() => {}} />}
             <div className="settings-row">
               <div className="flex-row gap-10 flex-1">
                 <ArrowSync24Regular className="settings-icon" />

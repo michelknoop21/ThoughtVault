@@ -32,6 +32,7 @@ enum RecentTranscripts {
 
 #if os(macOS)
 struct MainSidebar: View {
+    @Environment(UpdateCheckService.self) private var updateCheck
     @Environment(SupportViewModel.self) private var supportVM
     @Binding var selectedTab: AppTab
     @Binding var collapsed: Bool
@@ -110,7 +111,7 @@ struct MainSidebar: View {
 
             VStack(spacing: 2) {
                 ForEach(visibleTabs.filter { Self.utilityTabs.contains($0) }) { tab in
-                    SidebarNavItem(tab: tab, isSelected: selectedTab == tab, unreadCount: tab == .settings ? supportVM.unreadCount : 0) { selectedTab = tab }
+                    SidebarNavItem(tab: tab, isSelected: selectedTab == tab, unreadCount: tab == .settings ? supportVM.unreadCount : 0, updateAvailable: tab == .settings && updateCheck.isUpdateAvailable) { selectedTab = tab }
                 }
             }
             .padding(.bottom, 12)
@@ -211,9 +212,11 @@ struct MainSidebar: View {
                             .frame(maxWidth: 28)
                             .offset(x: 4, y: -4)
                             .allowsHitTesting(false)
+                    } else if tab == .settings && updateCheck.isUpdateAvailable {
+                        Circle().fill(Color.brandLink).frame(width: 7, height: 7).allowsHitTesting(false)
                     }
                 }
-                .accessibilityValue(tab == .settings && supportVM.unreadCount > 0 ? Text("\(supportVM.unreadCount) ongelezen meldingen") : Text(""))
+                .accessibilityValue(tab == .settings && supportVM.unreadCount > 0 ? Text("\(supportVM.unreadCount) ongelezen meldingen") : Text(tab == .settings && updateCheck.isUpdateAvailable ? "Update beschikbaar" : ""))
                 .help(tab.title)
             }
             Spacer()
@@ -255,6 +258,7 @@ struct SidebarNavItem: View {
     let tab: AppTab
     let isSelected: Bool
     var unreadCount: Int = 0
+    var updateAvailable = false
     let action: () -> Void
 
     @State private var isHovered = false
@@ -271,6 +275,9 @@ struct SidebarNavItem: View {
                 Text(tab.title)
                     .font(.system(size: 15))
                 Spacer(minLength: 0)
+                if updateAvailable {
+                    Circle().fill(Color.brandLink).frame(width: 7, height: 7).accessibilityHidden(true)
+                }
                 if unreadCount > 0 {
                     SupportUnreadBadge(count: unreadCount)
                         .padding(.trailing, 10)
@@ -298,7 +305,7 @@ struct SidebarNavItem: View {
             withAnimation(TS.Animation.hover) { isHovered = hovering }
         }
         .accessibilityLabel(tab.title)
-        .accessibilityValue(unreadCount > 0 ? Text("\(unreadCount) ongelezen meldingen") : Text(""))
+        .accessibilityValue(unreadCount > 0 ? Text("\(unreadCount) ongelezen meldingen") : Text(updateAvailable ? "Update beschikbaar" : ""))
         .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
     }
 }

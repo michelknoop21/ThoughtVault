@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		AE704DABDC1A4F14A1E36347 /* UpdateCheckServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D70A85129A0F43F08BFFEF6E; };
 		AC1C10000000000000000001 /* NotuleSyncTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC1C10000000000000000001 /* NotuleSyncTests.swift */; };
 		D56E9EAF91F5418BA14B1449 /* NotuleSyncSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00773BBDB9DC4E7AA2D0380B /* NotuleSyncSettingsView.swift */; };
 		B019D3DC5CDC48599E7016EB /* NotuleSyncSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00773BBDB9DC4E7AA2D0380B /* NotuleSyncSettingsView.swift */; };
@@ -448,6 +449,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		D70A85129A0F43F08BFFEF6E /* UpdateCheckServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateCheckServiceTests.swift; sourceTree = "<group>"; };
 		FC1C10000000000000000001 /* NotuleSyncTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotuleSyncTests.swift; sourceTree = "<group>"; };
 		00773BBDB9DC4E7AA2D0380B /* NotuleSyncSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotuleSyncSettingsView.swift; sourceTree = "<group>"; };
 		4662911B34EC4590BFA65489 /* NotuleSyncService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotuleSyncService.swift; sourceTree = "<group>"; };
@@ -1021,6 +1023,7 @@
 				FB0F0B03 /* SupportRelayTests.swift */,
 				FB0F0B90 /* RecordingWidgetLayoutTests.swift */,
 				FA0F0D301 /* SupportViewModelTests.swift */,
+				D70A85129A0F43F08BFFEF6E /* UpdateCheckServiceTests.swift */,
 				FB000003 /* PersonProfileTests.swift */,
 				FB0000K1 /* KeychainServiceTests.swift */,
 				FB000004 /* PersonDirectoryServiceTests.swift */,
@@ -1424,6 +1427,7 @@
 				AB0F0B03 /* SupportRelayTests.swift in Sources */,
 				AB0F0B90 /* RecordingWidgetLayoutTests.swift in Sources */,
 				AA0F0D301 /* SupportViewModelTests.swift in Sources */,
+				AE704DABDC1A4F14A1E36347 /* UpdateCheckServiceTests.swift in Sources */,
 				AB000003 /* PersonProfileTests.swift in Sources */,
 				AB0000K1 /* KeychainServiceTests.swift in Sources */,
 				AB000004 /* PersonDirectoryServiceTests.swift in Sources */,

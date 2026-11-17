@@ -116,6 +116,7 @@ enum DebugScreenshotSeed {
                                note: index % 2 == 0 ? "Voorbeeldterm \(index + 1) voor de schermafbeelding" : nil)
         }
         entries[30].note = "Schaderegelingscentrum van de verzekeraar"
+        entries[11].learned = ["Kuber netes", "Kubernetis"]
         try? PersonalCorrections.save(entries)
         _ = try? PersonalCorrections.saveRecording(PersonalCorrection(id: entries[30].id, canonical: "SRC", variants: ["S R C"], note: "Schaderegelingscentrum"), source: "handmatig")
     }

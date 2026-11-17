@@ -679,6 +679,10 @@
 "De synchronisatiegegevens konden niet veilig worden gelezen. Je lokale notulen blijven bewaard." = "Sync data could not be read safely. Your local minutes are preserved.";
 "De lokale opslag moet eerst worden hersteld. iCloud-synchronisatie is gepauzeerd om je notulen te beschermen." = "Local storage needs recovery first. iCloud sync is paused to protect your minutes.";
 "De notulenopslag is uit iCloud verwijderd. Synchronisatie is gepauzeerd; je lokale notulen blijven bewaard." = "Minutes storage was removed from iCloud. Sync is paused; your local minutes are preserved.";
+"support.unread.summary" = "Unread replies from support: %lld";
+"support.badge.explanation" = "The number only counts new replies from support. Sending an error report does not count.";
+"support.readAll" = "Mark all as read";
+"support.readAll.error" = "Could not mark as read. Please try again.";
 
 /* Recording notebook and reprocessing */
 "Actiepunt" = "Action item";

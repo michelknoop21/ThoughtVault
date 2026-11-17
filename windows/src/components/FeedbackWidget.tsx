@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { DesktopDialog } from "./ui/DesktopDialog";
 import { Bug24Regular, Dismiss16Regular, Send20Regular } from "./ui/StudioIcons";
 import { useToast } from "./ui/InfoBar";
-import { listTickets } from "../services/supportRelay";
+import { listTickets, markAllRead } from "../services/supportRelay";
 import type { ReportCategory, SupportTicket } from "../services/supportRelay";
 import { useSupportStore, withInstallation } from "../stores/supportStore";
 import { SupportThread, TicketRow } from "./support/SupportThread";
@@ -22,11 +22,12 @@ export default function FeedbackWidget({ initialOpen = false }: { initialOpen?: 
   const [selected, setSelected] = useState<SupportTicket | null>(null);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
+  const [markingRead, setMarkingRead] = useState(false);
   const locked = useRef(false);
   const historyRequest = useRef(0);
   const unread = useSupportStore(state => state.unread_count);
   const toast = useToast();
-  const busy = submitting || replying;
+  const busy = submitting || replying || markingRead;
   const close = () => { if (!locked.current) setOpen(false); };
   useEffect(() => {
     if (!open || tab !== "history" || selected) return;
@@ -40,6 +41,18 @@ export default function FeedbackWidget({ initialOpen = false }: { initialOpen?: 
     }).finally(() => { if (generation === historyRequest.current) setLoading(false); });
     return () => { historyRequest.current++; };
   }, [open, tab, selected, toast.show]);
+  const readAll = async () => {
+    if (locked.current) return;
+    locked.current = true; setMarkingRead(true);
+    try {
+      await withInstallation(markAllRead);
+      const items = await withInstallation(listTickets);
+      setTickets(items);
+      await useSupportStore.getState().refreshUnread();
+    } catch {
+      toast.show("Als gelezen markeren lukt nu niet. Probeer het opnieuw.", "error");
+    } finally { locked.current = false; setMarkingRead(false); }
+  };
   const submit = async () => {
     const body = description.trim();
     if (locked.current || !body || Array.from(body).length > 5000) return;
@@ -79,6 +92,7 @@ export default function FeedbackWidget({ initialOpen = false }: { initialOpen?: 
             <p className="text-caption" style={{ color: "var(--text-secondary)" }}>Je melding wordt met je naam, e-mailadres en technische log naar ThoughtVault verstuurd. Voeg geen wachtwoorden of andere gevoelige gegevens toe.</p>
             <button className="btn btn-accent" onClick={() => void submit()} disabled={submitting || !description.trim() || Array.from(description.trim()).length > 5000} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, minHeight: 44 }}><Send20Regular />{submitting ? "Versturen..." : "Versturen"}</button>
           </div> : selected ? <SupportThread key={selected.id} ticket={selected} onBack={() => setSelected(null)} draft={drafts[selected.id] ?? ""} onDraftChange={value => setDrafts(current => ({ ...current, [selected.id]: value }))} onBusyChange={value => { locked.current = value; setReplying(value); }} /> : <div className="flex-col" style={{ gap: 8 }}>
+            <button className="btn btn-secondary" disabled={markingRead || loading || (unread === 0 && !tickets.some(ticket => ticket.unread))} onClick={() => void readAll()} style={{ minHeight: 44 }}>{markingRead ? "Als gelezen markeren..." : "Alles als gelezen markeren"}</button>
             {loading ? <p role="status" className="text-caption">Meldingen laden...</p> : tickets.length === 0 ? <p className="text-caption" style={{ textAlign: "center", padding: 24, color: "var(--text-secondary)" }}>Nog geen meldingen verstuurd.</p> : tickets.map(ticket => <TicketRow key={ticket.id} ticket={ticket} onOpen={() => setSelected(ticket)} />)}
           </div>}
         </div>

@@ -33,6 +33,25 @@ final class PersonalCorrectionsTests: XCTestCase {
         XCTAssertEqual(doc.dismissed, [])
     }
 
+    func testLearnedNotReplacedButInContextBlock() throws {
+        var entry = PersonalCorrection(canonical: "Yinga", variants: ["Jengo"])
+        entry.learned = ["Django"]
+        XCTAssertEqual(PersonalCorrections.text("Jengo en Django", entries: [entry], profileId: nil), "Yinga en Django")
+        let block = PersonalCorrections.contextBlock(entries: [entry], people: [], transcript: "Django", profileId: nil, maxCharacters: 6000)
+        XCTAssertTrue(block.hasSuffix("- Yinga (ook gehoord als: Jengo, Django)"))
+        // Round trip keeps the field; a learned spelling that became a variant is dropped on upsert.
+        try PersonalCorrections.save([entry], to: tmp)
+        XCTAssertEqual(try PersonalCorrections.load(from: tmp), [entry])
+        var fixed = entry; fixed.id = "other"; fixed.variants = ["Django"]; fixed.learned = nil
+        let merged = PersonalCorrections.upsert([entry], entry: fixed)
+        XCTAssertEqual(merged.count, 1)
+        XCTAssertEqual(merged[0].variants, ["Jengo", "Django"])
+        XCTAssertNil(merged[0].learned)
+        // Old files without the field still decode, and it is not written when absent.
+        try PersonalCorrections.save([PersonalCorrection(canonical: "Prezent", variants: [])], to: tmp)
+        XCTAssertFalse(try String(contentsOf: tmp, encoding: .utf8).contains("learned"))
+    }
+
     func testEntryWithoutVariantsIsValid() throws {
         let entry = PersonalCorrection(canonical: "Prezent", variants: [])
         try PersonalCorrections.save([entry], to: tmp)

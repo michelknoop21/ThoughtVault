@@ -58,13 +58,29 @@ extension RecordingViewModel {
                                            onStep: @escaping @Sendable (ModelStep) -> Void,
                                            onUsage: @Sendable (NotuleUsage) -> Void) async throws -> String {
         let corrections = PersonalCorrections.loadOrEmpty()
+        // Context-checked spellings must not become global correction instructions to the generator.
+        let fixedContext = corrections.map { entry in var entry = entry; entry.learned = nil; return entry }
         log.info("Notule start provider=\(provider.rawValue) \(DiagnosticLog.notuleTarget(provider)) transcript_chars=\(transcription.count)")
         return try await NotuleGenerator(service: LLMServiceFactory.service(for: provider, serverURL: ""),
                                          noteConcurrency: provider.auditNoteConcurrency, provider: provider, merging: merging).generate(
             transcription: transcription, profile: profile, participants: participants, quickNote: RecordingFeatures.enabled ? nil : quickNote,
             createdAt: createdAt, corrections: corrections,
-            context: PersonalCorrections.contextBlock(entries: corrections, transcript: transcription, profileId: profile.id, provider: provider),
+            context: PersonalCorrections.contextBlock(entries: fixedContext, transcript: transcription, profileId: profile.id, provider: provider),
             onStep: onStep, onUsage: onUsage)
+    }
+
+    /// Persist corrections before generation, including when generation subsequently fails.
+    private static func correctTranscription(_ transcription: String, profile: Profile, taskId: String, provider: NotulenProvider) async throws -> String {
+        let corrections = PersonalCorrections.loadOrEmpty()
+        let fixed = PersonalCorrections.text(transcription, entries: corrections, profileId: profile.id)
+        let corrected = await GlossaryAutoMatch.matchGlossary(fixed, corrections: corrections, profileId: profile.id,
+                                                             service: LLMServiceFactory.service(for: provider, serverURL: ""), taskId: taskId)
+        try Task.checkCancellation()
+        guard let record = LocalTranscriptStore.shared.record(forTaskId: taskId) else { throw LocalStoreError.recordNotFound }
+        if corrected != transcription {
+            try LocalTranscriptStore.shared.updateNotule(taskId: taskId, html: record.notuleHtml, transcription: corrected)
+        }
+        return corrected
     }
 
     /// Shows the running notule step as the task label; a late update after completion is ignored by `updateTask`.
@@ -93,6 +109,7 @@ extension RecordingViewModel {
         do {
             try Task.checkCancellation()
             let provider = Self.localNotuleProvider()
+            let transcription = try await Self.correctTranscription(transcription, profile: profile, taskId: localId, provider: provider)
             let (generatedHTML, usage) = try await Self.generateNotule(
                 provider: provider, transcription: transcription, profile: profile, participants: participants,
                 quickNote: QuickNoteStore.note(audioFilename: url.lastPathComponent), createdAt: createdAt,
@@ -176,8 +193,10 @@ extension RecordingViewModel {
 
         do {
             let provider = Self.localNotuleProvider()
+            let transcription = record.mergeSourcesJSON != nil ? record.rawTranscription
+                : try await Self.correctTranscription(record.rawTranscription, profile: profile, taskId: taskId, provider: provider)
             let (generatedHTML, usage) = try await Self.generateNotule(
-                provider: provider, merging: record.mergeSourcesJSON != nil, transcription: record.rawTranscription, profile: profile, participants: record.participants,
+                provider: provider, merging: record.mergeSourcesJSON != nil, transcription: transcription, profile: profile, participants: record.participants,
                 quickNote: QuickNoteStore.note(forTranscriptId: taskId), createdAt: record.createdAt,
                 onStep: showStep(taskId: regenerationId))
             let html = RecordingFeatures.enabled ? QuickNoteStore.exportHTML(generatedHTML, note: QuickNoteStore.note(forTranscriptId: taskId), includeNotes: true) : generatedHTML

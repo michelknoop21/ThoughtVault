@@ -14,6 +14,9 @@ import UIKit
 // MARK: - NotuleResultView
 
 struct NotuleResultView: View {
+    #if os(macOS)
+    @State private var printWebView: WKWebView?
+    #endif
 
     let task: TranscriptTask
     let onDismiss: () -> Void
@@ -495,24 +498,7 @@ struct NotuleResultView: View {
         guard let html = exportHTML else { return }
 
         #if os(macOS)
-        let printInfo = NSPrintInfo.shared
-        printInfo.paperSize = NSSize(width: 595, height: 842) // A4
-        printInfo.topMargin = 36
-        printInfo.bottomMargin = 36
-        printInfo.leftMargin = 54
-        printInfo.rightMargin = 54
-
-        let webView = WKWebView(frame: NSRect(x: 0, y: 0, width: 595, height: 842))
-        webView.loadHTMLString(styledHTML(html), baseURL: nil)
-
-        // Brief delay for WKWebView to finish rendering before printing
-        Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(800))
-            let op = webView.printOperation(with: printInfo)
-            op.showsPrintPanel = true
-            op.showsProgressPanel = true
-            op.run()
-        }
+        NotulePrinter.print(html: styledHTML(html)) { printWebView = $0 }
         #else
         let webView = WKWebView(frame: CGRect(x: 0, y: 0, width: 595, height: 842))
         webView.loadHTMLString(styledHTML(html), baseURL: nil)

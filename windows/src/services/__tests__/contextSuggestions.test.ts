@@ -41,8 +41,8 @@ it("parseDropsAlreadyKnownAndDismissed", () => {
   const entries: PersonalCorrection[] = [{ id: "a", canonical: "dakwerk bv", variants: ["dakwerk"], scope: null, enabled: true }];
   const dismissed = [dismissKey({ term: { heard: "Dossier", canonical: "dossier-x", note: "" } }), "person:anke bakker"];
   const set = parse(raw, transcript, entries, dismissed);
-  expect(set.terms.map(t => t.canonical)).toEqual(["Kascop"]);
-  const note = set.terms[0].note;
+  expect(set.terms.map(t => t.canonical)).toEqual(["Dakwerk BV", "Kascop"]);
+  const note = set.terms[1].note;
   expect(note.length).toBeLessThanOrEqual(200);
   expect(/[\r\n<>]/.test(note)).toBe(false);
   expect(set.people.map(p => p.name)).toEqual(["Pieter van Kaskop"]);
@@ -130,4 +130,11 @@ it("recordsASkipNoticeWhenTheTranscriptIsOverTheLimit", async () => {
   await vi.waitFor(async () => expect((await load("t2"))?.skipped).toBe("transcriptTooLong"));
   expect(SKIP_NOTICES.transcriptTooLong).toContain("te lang");
   vi.unstubAllEnvs();
+});
+
+it("keeps a new short variant of a known term as a proposal unless rejected", () => {
+  const raw = '{"terms":[{"heard":"AE","canonical":"AI","note":"Controleer de betekenis"}]}';
+  const entries: PersonalCorrection[] = [{ id: "ai", canonical: "AI", variants: ["A-E"], enabled: true, scope: null }];
+  expect(parse(raw, "AE modellen", entries, []).terms).toHaveLength(1);
+  expect(parse(raw, "AE modellen", entries, ["learned:ai:ae"]).terms).toHaveLength(0);
 });

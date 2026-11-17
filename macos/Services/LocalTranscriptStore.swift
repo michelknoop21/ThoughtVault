@@ -15,6 +15,7 @@ final class LocalTranscriptStore {
 
     static let shared = LocalTranscriptStore()
 
+    static let didChange = Notification.Name("LocalTranscriptStore.didChange")
     static let recoveryKey = "localStoreRecoveryRequiresReview"
     var onTranscriptChange: (() -> Void)?
 
@@ -214,6 +215,7 @@ final class LocalTranscriptStore {
     private func saveTranscriptChanges() throws {
         try context.save()
         onTranscriptChange?()
+        NotificationCenter.default.post(name: Self.didChange, object: self)
     }
 
     func applySyncedNotule(_ note: SyncedNotule, preservingLocalConflict: Bool) throws {
@@ -306,12 +308,13 @@ final class LocalTranscriptStore {
     }
 
     /// Saves a corrected notule and transcript together.
-    func updateNotule(taskId: String, html: String, transcription: String?) throws {
+    func updateNotule(taskId: String, html: String, transcription: String?, title: String? = nil) throws {
         guard let record = record(forTaskId: taskId) else { throw LocalStoreError.recordNotFound }
-        let original = (record.notuleHtml, record.rawTranscription)
+        let original = (record.notuleHtml, record.rawTranscription, record.title)
         record.notuleHtml = html
         if let transcription, record.mergeSourcesJSON == nil { record.rawTranscription = transcription }
-        do { try saveTranscriptChanges() } catch { (record.notuleHtml, record.rawTranscription) = original; throw error }
+        if let title { record.title = title }
+        do { try saveTranscriptChanges() } catch { (record.notuleHtml, record.rawTranscription, record.title) = original; throw error }
     }
 
     func updateParticipants(taskId: String, participants: [Participant]) throws {

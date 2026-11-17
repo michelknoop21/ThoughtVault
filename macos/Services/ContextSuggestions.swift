@@ -137,8 +137,7 @@ enum ContextSuggestions {
               let decoded = try? JSONDecoder().decode(ContextSuggestionSet.self, from: Data(raw[start...end].utf8))
         else { return ContextSuggestionSet() }
         let rejected = Set(dismissed.map { $0.lowercased() })
-        var known = Set<String>()
-        for entry in entries { ([entry.canonical] + entry.variants).forEach { known.insert(trim($0).lowercased()) } }
+        let known = Set(entries.flatMap { entry in entry.variants.map { PersonalCorrections.learnedKey(canonical: entry.canonical, heard: $0) } })
 
         let ownNames = Set(selfNames.map { trim($0).lowercased() }.filter { !$0.isEmpty })
         let ownNamesAndAliases = ownNames.union(selfAliases.map { trim($0).lowercased() }.filter { !$0.isEmpty })
@@ -153,8 +152,8 @@ enum ContextSuggestions {
                 let key = dismissKey(for: .term(cleaned))
                 guard PersonalCorrections.validTerm(cleaned.heard), PersonalCorrections.validTerm(cleaned.canonical),
                       cleaned.heard.lowercased() != cleaned.canonical.lowercased(),
-                      !known.contains(cleaned.canonical.lowercased()),
-                      !rejected.contains(key), PersonalCorrections.containsWord(cleaned.heard, in: transcript),
+                      !known.contains(PersonalCorrections.learnedKey(canonical: cleaned.canonical, heard: cleaned.heard)),
+                      !rejected.contains(key), !rejected.contains(PersonalCorrections.learnedKey(canonical: cleaned.canonical, heard: cleaned.heard)), PersonalCorrections.containsWord(cleaned.heard, in: transcript),
                       seen.insert(key).inserted else { continue }
                 terms.append(cleaned)
             }
@@ -298,7 +297,7 @@ enum ContextSuggestions {
     - Een gewoon Nederlands woord met een herkenningsfout is nooit een term.
     - heard is precies één letterlijke schrijfwijze zoals die in de transcriptie staat. Komt een term in meerdere schrijfwijzen voor, herhaal het item dan per schrijfwijze.
     - canonical is de juiste schrijfwijze. note is een korte toelichting van hooguit één zin.
-    - Stel geen term voor die al in de bekende context staat.
+    - Stel geen reeds bekende combinatie van gehoorde en correcte spelling voor. Een nieuwe schrijfwijze van een bekende term mag wel: toon die bij twijfel als voorstel, zonder de tekst te veranderen.
     - people zijn alleen personen die in het gesprek met naam worden genoemd en een rol spelen. Laat personen zonder naam weg, zoals "mijn schoonvader". Stel de gebruiker zelf nooit voor.
     - Vul role, organization en responsibilities alleen in als dat in het gesprek expliciet wordt gezegd. Anders laat je ze leeg.
     - topics zijn de onderwerpen waar de persoon in dit gesprek bij betrokken is. heardAs bevat letterlijke schrijfwijzen van de naam uit de transcriptie.

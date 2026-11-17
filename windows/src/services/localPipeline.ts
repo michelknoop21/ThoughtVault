@@ -149,6 +149,13 @@ export async function processLocally(
       useTranscriptsStore.getState().addTranscript(record);
     }
 
+    const corrected = await LLMService.correctTranscription(transcription, profile.id, taskId);
+    if (corrected !== transcription) {
+      transcription = corrected;
+      await useLocalTranscriptsStore.getState().update(taskId, { raw_transcription: transcription });
+      useTranscriptsStore.getState().updateTranscript(taskId, { raw_transcription: transcription });
+    }
+
     // 4. Generate the notule via the configured local LLM. Stream progress.
     updateBackgroundTask(taskId, { status: "generating", progress: 55, message: "Notulen genereren" });
     const names = participants.map((p) => p.name).filter(Boolean);

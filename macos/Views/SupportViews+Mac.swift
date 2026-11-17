@@ -231,11 +231,16 @@ extension SupportTicketList {
     var macBody: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
+                markAllReadButton
+                    .buttonStyle(StudioQuietButtonStyle(height: 30))
                 Spacer()
                 Button { Task { await support.loadTickets() } } label: {
                     Label("Vernieuwen", systemImage: "arrow.clockwise")
                 }
                 .buttonStyle(StudioQuietButtonStyle(height: 30))
+            }
+            if let error = support.markReadError {
+                Text(error).font(TS.Font.caption).foregroundStyle(Color.statusError)
             }
             ScrollView(.vertical) {
                 VStack(alignment: .leading, spacing: 10) {

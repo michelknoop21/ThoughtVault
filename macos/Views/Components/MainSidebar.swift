@@ -52,6 +52,11 @@ struct MainSidebar: View {
         .navigationTitle("")
         .toolbar(removing: .sidebarToggle)
         .task(id: selectedTab) { recent = await RecentTranscripts.load(limit: 5).items }
+        .task {
+            for await _ in NotificationCenter.default.notifications(named: LocalTranscriptStore.didChange) {
+                recent = await RecentTranscripts.load(limit: 5).items
+            }
+        }
     }
 
     // MARK: Expanded

@@ -35,7 +35,7 @@ it("finishes the existing partial document on retry without retranscribing", asy
 
   await processLocally("C:\\recording.wav", "standaard", "microphone", [], 12, partial.id);
 
-  expect(invoke).not.toHaveBeenCalled();
+  expect(vi.mocked(invoke).mock.calls.some(([command]) => command === "transcribe_local")).toBe(false);
   expect(add).not.toHaveBeenCalled();
   expect(update).toHaveBeenCalledWith(partial.id, expect.objectContaining({ has_notes: true }));
   expect(useRecordingStore.getState().backgroundTasks).toHaveLength(1);
@@ -181,6 +181,23 @@ it("keeps the recording retryable instead of downloading a missing model without
   expect(add).not.toHaveBeenCalled();
 });
 
+it("saves corrected transcription before generation, even when the model fails", async () => {
+  const input = { ...partial, raw_transcription: "A-E-oplossingen voor het team." };
+  const update = vi.fn().mockResolvedValue(undefined);
+  useLocalTranscriptsStore.setState({ items: [input], add: vi.fn(), update });
+  vi.spyOn(usePersonalCorrectionsStore.getState(), "hydrate").mockResolvedValue(undefined);
+  usePersonalCorrectionsStore.setState({ entries: [{ id: "ai", canonical: "AI", variants: ["A-E"], scope: null, enabled: true }], dismissed: [] });
+  const generate = vi.spyOn(LLMService, "generateNotulen").mockImplementation(async source => {
+    expect(source).toBe("AI-oplossingen voor het team.");
+    expect(update).toHaveBeenCalledWith(input.id, { raw_transcription: source });
+    throw new Error("Model offline");
+  });
+  await processLocally("C:/recording.wav", "standaard", "microphone", [], 12, input.id);
+  expect(generate).toHaveBeenCalled();
+  expect(useTranscriptsStore.getState().transcripts[0].raw_transcription).toBe("AI-oplossingen voor het team.");
+  expect(useRecordingStore.getState().backgroundTasks[0].error_message).toContain("Model offline");
+  usePersonalCorrectionsStore.setState({ entries: [] });
+});
 
 it("creates a new optimized transcription and leaves an existing partial intact", async () => {
   vi.mocked(invoke).mockImplementation(async (command) => {

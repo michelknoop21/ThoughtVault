@@ -70,7 +70,7 @@ it.each([false,true])("retains corrections after failed save without changing me
   dictionary.save.mockClear();
   const container = document.createElement("div");document.body.append(container);
   const root = createRoot(container); const noop=vi.fn();
-  const note={merge_sources:merged?[{id:"a",title:"Bron A",date:"2026-11-10T10:00:00Z"},{id:"b",title:"Bron B",date:"2026-11-12T10:00:00Z"}]:undefined,id:"local-word",title:"Overleg",profile_name:DEFAULT_PROFILES[0].name,raw_transcription:"Jengo",notule_html:"<p>Jengo</p>",duration_seconds:10,tags:[],created_at:new Date().toISOString(),updated_at:new Date().toISOString()};
+  const note={merge_sources:merged?[{id:"a",title:"Bron A",date:"2026-11-10T10:00:00Z"},{id:"b",title:"Bron B",date:"2026-11-12T10:00:00Z"}]:undefined,id:"local-word",title:"Jengo-oplossingen",profile_name:DEFAULT_PROFILES[0].name,raw_transcription:"Jengo",notule_html:"<p>Jengo</p>",duration_seconds:10,tags:[],created_at:new Date().toISOString(),updated_at:new Date().toISOString()};
   await act(async()=>{root.render(<TranscriptDetail transcript={note} regeneratingId={null} onBack={noop} onRegenerate={noop} onDelete={noop} onUpdateTitle={async()=>{}} onSaveNotule={save} onCopy={noop} onExportPDF={noop} onExportTXT={noop} onExportMarkdown={noop} onExportHTML={noop} onExportObsidian={noop} onImportObsidian={noop} onOpenTags={noop} onGenerateTitle={noop}/>);});
   const node=container.querySelector(".td-doc-body p")!.firstChild!;
   const range=document.createRange();range.selectNodeContents(node);window.getSelection()!.removeAllRanges();window.getSelection()!.addRange(range);
@@ -83,7 +83,7 @@ it.each([false,true])("retains corrections after failed save without changing me
     inputs[0].dispatchEvent(new Event("input",{bubbles:true}));
   });
   await act(async()=>{container.querySelector<HTMLButtonElement>(".correction-dialog .btn-accent")!.click();});
-  expect(save).toHaveBeenCalledWith("local-word","<p>Yinga</p>",merged?undefined:"Yinga");
+  expect(save).toHaveBeenCalledWith("local-word","<p>Yinga</p>",merged?undefined:"Yinga","Yinga-oplossingen");
   expect(container.textContent).toContain("Schijf vol");expect(inputs[0].value).toBe("Yinga");expect(dictionary.save).not.toHaveBeenCalled();
   await act(async()=>{container.querySelector<HTMLButtonElement>(".correction-dialog .btn-accent")!.click();});
   expect(dictionary.save).toHaveBeenCalledOnce();expect(container.querySelector("dialog")).toBeNull();expect(note.raw_transcription).toBe("Jengo");

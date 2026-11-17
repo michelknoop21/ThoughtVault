@@ -9,6 +9,8 @@ final class SupportViewModel {
     private(set) var hasBegunSession = false
     @ObservationIgnored private var pollingTask: Task<Void, Never>?
     var unreadCount = 0
+    private(set) var markingAllRead = false
+    private(set) var markReadError: String?
     var tickets: [SupportTicket] = []
     var thread: [SupportMessage] = []
     var pane: SupportPane = .report
@@ -72,20 +74,45 @@ final class SupportViewModel {
     }
 
     func refreshUnread() async {
-        guard !IOSDebug.supportSeed else { return }
+        guard !IOSDebug.supportSeed && !IOSDebug.supportBadgeSnapshot else { return }
         do { unreadCount = try await relay.unreadCount() }
         catch { logger.warning("Support unread count could not be loaded") }
     }
 
     func loadTickets() async {
-        guard !IOSDebug.supportSeed else { return }
+        guard !IOSDebug.supportSeed && !IOSDebug.supportBadgeSnapshot else { return }
         do { tickets = try await relay.tickets() }
         catch { logger.warning("Support tickets could not be loaded") }
     }
 
+    func markAllRead() async {
+        guard !markingAllRead else { return }
+        markingAllRead = true
+        markReadError = nil
+        defer { markingAllRead = false }
+        #if DEBUG
+        if IOSDebug.supportBadgeSnapshot || IOSDebug.supportSeed {
+            tickets = tickets.map { ticket in
+                SupportTicket(id: ticket.id, ref: ticket.ref, status: ticket.status, category: ticket.category,
+                              description: ticket.description, unread: false, createdAt: ticket.createdAt,
+                              updatedAt: ticket.updatedAt, lastMessage: ticket.lastMessage)
+            }
+            unreadCount = 0
+            return
+        }
+        #endif
+        do {
+            try await relay.markAllRead()
+            await loadTickets()
+            await refreshUnread()
+        } catch {
+            markReadError = String(localized: "support.readAll.error")
+        }
+    }
+
     func messages(for ticket: SupportTicket) async -> [SupportMessage]? {
         #if DEBUG
-        if IOSDebug.supportSeed { return DebugScreenshotSeed.supportMessages(for: ticket) }
+        if IOSDebug.supportSeed || IOSDebug.supportBadgeSnapshot { return DebugScreenshotSeed.supportMessages(for: ticket) }
         #endif
         do {
             let messages = try await relay.messages(ticketId: ticket.id)

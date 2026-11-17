@@ -679,6 +679,10 @@
 "De synchronisatiegegevens konden niet veilig worden gelezen. Je lokale notulen blijven bewaard." = "De synchronisatiegegevens konden niet veilig worden gelezen. Je lokale notulen blijven bewaard.";
 "De lokale opslag moet eerst worden hersteld. iCloud-synchronisatie is gepauzeerd om je notulen te beschermen." = "De lokale opslag moet eerst worden hersteld. iCloud-synchronisatie is gepauzeerd om je notulen te beschermen.";
 "De notulenopslag is uit iCloud verwijderd. Synchronisatie is gepauzeerd; je lokale notulen blijven bewaard." = "De notulenopslag is uit iCloud verwijderd. Synchronisatie is gepauzeerd; je lokale notulen blijven bewaard.";
+"support.unread.summary" = "Ongelezen antwoorden van support: %lld";
+"support.badge.explanation" = "Het cijfer telt alleen nieuwe supportantwoorden. Een verstuurd foutrapport telt niet mee.";
+"support.readAll" = "Alles als gelezen markeren";
+"support.readAll.error" = "Als gelezen markeren lukt nu niet. Probeer het opnieuw.";
 
 /* Recording notebook and reprocessing */
 "Actiepunt" = "Actiepunt";

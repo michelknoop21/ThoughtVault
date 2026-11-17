@@ -31,7 +31,7 @@ const reviewTickets: SupportTicket[] = [reviewTicket, { id: "review-b", ref: "TV
 const reviewMessages = [ { id: "review-1", body: "De notule is niet gemaakt.", senderRole: "USER", createdAt: "2026-11-10T10:00:00Z" }, { id: "review-2", body: "Wil je het nog een keer proberen?", senderRole: "ADMIN", createdAt: "2026-11-10T11:00:00Z" } ];
 const reviewStores = new Map<number, Map<string, unknown>>();
 let reviewCorrections: unknown = {version:2,dismissed:[],entries:[
- {id:"review-yinga",canonical:"Yinga",variants:["Jengo","Django"],scope:null,enabled:true,note:"Merknaam van de klant"},
+ {id:"review-yinga",canonical:"Yinga",variants:["Jengo"],learned:["Jinga","Django"],scope:null,enabled:true,note:"Merknaam van de klant"},
  {id:"review-prezent",canonical:"Prezent",variants:[],scope:null,enabled:false}]};
 const reviewContextFiles = new Map<string, string>();
 // ?scenario=handleiding: sample data for the manual screenshots (scripts/handleiding-shots-windows.sh).

@@ -22,6 +22,17 @@ extension SettingsView {
                 IOSScreenTitle(title: "Instellingen", subtitle: "Maak ThoughtVault helemaal van jou.")
                     .padding(.top, -4)
 
+                group("Support") {
+                    link(icon: "bubble.left.and.bubble.right", title: "Mijn meldingen",
+                         subtitle: String(format: String(localized: "support.unread.summary"), supportVM.unreadCount)) {
+                        SupportSettingsTicketsView()
+                    }
+                }
+                Text(String(localized: "support.badge.explanation"))
+                    .font(.caption)
+                    .foregroundStyle(IOSColor.text2)
+                    .padding(.top, 8)
+
                 group("Opname") {
                     if !isLocalProcessing && OnDeviceTranscriber.shared.isAvailable() {
                         IOSRow(icon: "mic", title: "Transcriptie op apparaat", subtitle: "Sneller, geen audiodata naar server") {

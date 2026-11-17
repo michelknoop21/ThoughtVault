@@ -101,7 +101,7 @@ Met **Vernieuwen** haal je de lijst opnieuw op. Is het venster smal, dan zie je 
 :::
 
 ::: ios
-1. Open **Instellingen** > **Over ThoughtVault** en tik op **Mijn meldingen**.
+1. Open **Instellingen** en tik bovenaan onder **Support** op **Mijn meldingen**.
 2. Tik op een melding om het gesprek te openen.
 3. Typ onder **Antwoord** je reactie en tik op **Stuur**.
 :::
@@ -126,6 +126,10 @@ Elke melding heeft een nummer en een status:
 ### Het bolletje met ongelezen antwoorden
 
 Is er een antwoord dat je nog niet hebt gelezen, dan staat er een getal bij **Instellingen** in de navigatie. In de lijst **Mijn meldingen** herken je de melding met het nieuwe antwoord aan een stip achter het nummer. Het getal verdwijnt nadat je het gesprek hebt geopend.
+
+Een eigen melding of automatisch verstuurd crash- of foutrapport verhoogt dit getal niet. Alleen een nieuw antwoord vanuit support telt mee.
+
+Met **Alles als gelezen markeren** wis je in één keer de ongelezen markeringen van al je meldingen. De meldingen en gesprekken blijven bewaard. Een nieuw supportantwoord daarna telt weer als ongelezen. Mislukt het markeren, dan blijft de teller staan en kun je opnieuw proberen.
 
 ::: macos
 Hetzelfde getal staat naast **Mijn meldingen** op het tabblad **Account**.

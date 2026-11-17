@@ -114,6 +114,7 @@ final class SystemAudioCapture {
                 }
             }
             self.writer = writer
+            startedAt = writer.startedAt
             // A Bluetooth headset drops to 16 kHz (HFP) once a microphone opens; follow it,
             // otherwise 16 kHz buffers are read as 48 kHz and come out sped up with gaps.
             let (tap, device) = (tapID, aggregateID)
@@ -155,8 +156,7 @@ final class SystemAudioCapture {
         frequencyBands = Array(repeating: 0, count: AudioSpectrumProcessor.frequencies.count)
         envelope.reset()
         lastMeterDate = nil
-        startDate = Date()
-        startedAt = startDate
+        startDate = startedAt
         timer = Timer.scheduledTimer(withTimeInterval: 1 / AudioEnvelopeConfig.publishRateHz, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated {
                 guard let self, let startDate = self.startDate else { return }
@@ -320,7 +320,8 @@ final class SystemAudioLiveHandler: Sendable {
 
 /// Not thread-safe: every call must come from the capture's serial ioQueue.
 final class TapAudioWriter: @unchecked Sendable {
-    private let file: AVAudioFile
+    let startedAt: Date
+    private var file: AVAudioFile?
     private var inputFormat: AVAudioFormat
     private var converter: AVAudioConverter?
     private let levelHandler: @Sendable (Float, [Float]) -> Void
@@ -335,7 +336,7 @@ final class TapAudioWriter: @unchecked Sendable {
     private(set) var silenceFills: UInt64 = 0
     private(set) var formatChanges: UInt64 = 0
     private(set) var framesSkipped: UInt64 = 0
-    private var realign = false
+    private var converterPendingFrames = 0.0
     private var framesToSkip: Int64 = 0
     /// 1 ms at 16 kHz: converter latency, not worth a gap or a skip.
     private static let realignTolerance: Int64 = 16
@@ -347,6 +348,7 @@ final class TapAudioWriter: @unchecked Sendable {
         self.inputFormat = inputFormat
         self.converter = AVAudioConverter(from: inputFormat, to: file.processingFormat)
         self.levelHandler = levelHandler
+        startedAt = Date()
         timeline = AudioCaptureTimeline(sampleRate: file.processingFormat.sampleRate,
                                         start: AVAudioTime.seconds(forHostTime: mach_absolute_time()))
     }
@@ -356,11 +358,16 @@ final class TapAudioWriter: @unchecked Sendable {
     }
 
     func updateFormat(_ format: AVAudioFormat) {
-        guard format != inputFormat else { return }
+        guard let file, format != inputFormat else { return }
+        do {
+            try drainConverter()
+        } catch {
+            log.error("[SystemAudio] Converter drain failed: code=\((error as NSError).code)")
+        }
         inputFormat = format
         converter = AVAudioConverter(from: format, to: file.processingFormat)
         formatChanges += 1
-        realign = true
+        converterPendingFrames = 0
         log.info("[SystemAudio] Input format now \(format.sampleRate) Hz, converter available: \(converter != nil)")
     }
 
@@ -376,7 +383,7 @@ final class TapAudioWriter: @unchecked Sendable {
     }
 
     func consume(_ buffers: UnsafePointer<AudioBufferList>, hostTime: UInt64) {
-        guard !timeline.isPaused else { return }
+        guard let file, !timeline.isPaused else { return }
         guard buffers.pointee.mNumberBuffers > 0 else { return }
         let bytesPerFrame = max(inputFormat.streamDescription.pointee.mBytesPerFrame, 1)
         let frames = buffers.pointee.mBuffers.mDataByteSize / bytesPerFrame
@@ -389,15 +396,14 @@ final class TapAudioWriter: @unchecked Sendable {
             guard let converter else { framesDropped += UInt64(frames); return }
             let capacity = AVAudioFrameCount(ceil(Double(frames) * file.processingFormat.sampleRate / inputFormat.sampleRate) + 32)
             let target = timeline.framePosition(at: AVAudioTime.seconds(forHostTime: hostTime))
-            let drift = target - Int64(framesWritten)
-            // Buffers delivered before a format notification are read at the wrong rate and
-            // leave the file behind or ahead; snap back to the timeline on the first good buffer.
-            if drift > Int64(capacity) || (realign && drift > Self.realignTolerance) {
-                try writeSilence(until: target)
-            } else if realign && drift < -Self.realignTolerance {
+            // Buffered resampler samples already belong to the timeline, even before file output.
+            let drift = target - Int64(framesWritten) - Int64(max(0, converterPendingFrames).rounded())
+            if drift > Self.realignTolerance {
+                framesToSkip = 0
+                try writeSilence(until: Int64(framesWritten) + drift)
+            } else if drift < -Self.realignTolerance {
                 framesToSkip = -drift
             }
-            realign = false
             guard let converted = AVAudioPCMBuffer(pcmFormat: file.processingFormat, frameCapacity: capacity) else { return }
             nonisolated(unsafe) var consumed = false
             var conversionError: NSError?
@@ -408,34 +414,57 @@ final class TapAudioWriter: @unchecked Sendable {
                 return pcm
             }
             if let conversionError { throw conversionError }
-            if framesToSkip > 0, let data = converted.floatChannelData?[0] {
-                let skip = min(framesToSkip, Int64(converted.frameLength))
-                let keep = Int(converted.frameLength) - Int(skip)
-                memmove(data, data + Int(skip), keep * MemoryLayout<Float>.size)
-                converted.frameLength = AVAudioFrameCount(keep)
-                framesToSkip -= skip
-                framesSkipped += UInt64(skip)
-            }
-            if converted.frameLength > 0 {
-                try file.write(from: converted)
-                framesWritten += UInt64(converted.frameLength)
-                if let samples = converted.floatChannelData?[0] {
-                    spectralSamples.append(contentsOf: UnsafeBufferPointer(start: samples, count: Int(converted.frameLength)))
-                    if spectralSamples.count > 1024 { spectralSamples.removeFirst(spectralSamples.count - 1024) }
-                    let now = Date()
-                    let dt = now.timeIntervalSince(lastLevel)
-                    if dt >= 1 / AudioEnvelopeConfig.publishRateHz {
-                        lastLevel = now
-                        let sum = spectralSamples.reduce(Float(0)) { $0 + $1 * $1 }
-                        let db = 20 * log10(max(sqrt(sum / Float(spectralSamples.count)), 1e-10))
-                        let bands = spectrum.process(samples: spectralSamples, sampleRate: file.processingFormat.sampleRate, dt: dt)
-                        levelHandler(db, bands)
-                    }
-                }
-                liveHandler.append(converted)
-            }
+            if consumed { converterPendingFrames += Double(frames) * file.processingFormat.sampleRate / inputFormat.sampleRate }
+            try writeConverted(converted)
         } catch {
             log.error("[SystemAudio] Audio write failed: code=\((error as NSError).code), \(LogRedact.mask(error.localizedDescription)) error=\(LogRedact.describe(error))")
+        }
+    }
+
+    /// Preserve the resampler's buffered tail before replacing it or ending capture.
+    private func drainConverter() throws {
+        guard let file, let converter,
+              let buffer = AVAudioPCMBuffer(pcmFormat: file.processingFormat, frameCapacity: 1024) else { return }
+        while true {
+            var error: NSError?
+            let status = converter.convert(to: buffer, error: &error) { _, status in
+                status.pointee = .endOfStream
+                return nil
+            }
+            if let error { throw error }
+            try writeConverted(buffer)
+            if status == .endOfStream || buffer.frameLength == 0 { break }
+        }
+    }
+
+    private func writeConverted(_ converted: AVAudioPCMBuffer) throws {
+        guard let file else { return }
+        converterPendingFrames -= Double(converted.frameLength)
+        if framesToSkip > 0, let data = converted.floatChannelData?[0] {
+            let skip = min(framesToSkip, Int64(converted.frameLength))
+            let keep = Int(converted.frameLength) - Int(skip)
+            memmove(data, data + Int(skip), keep * MemoryLayout<Float>.size)
+            converted.frameLength = AVAudioFrameCount(keep)
+            framesToSkip -= skip
+            framesSkipped += UInt64(skip)
+        }
+        if converted.frameLength > 0 {
+            try file.write(from: converted)
+            framesWritten += UInt64(converted.frameLength)
+            if let samples = converted.floatChannelData?[0] {
+                spectralSamples.append(contentsOf: UnsafeBufferPointer(start: samples, count: Int(converted.frameLength)))
+                if spectralSamples.count > 1024 { spectralSamples.removeFirst(spectralSamples.count - 1024) }
+                let now = Date()
+                let dt = now.timeIntervalSince(lastLevel)
+                if dt >= 1 / AudioEnvelopeConfig.publishRateHz {
+                    lastLevel = now
+                    let sum = spectralSamples.reduce(Float(0)) { $0 + $1 * $1 }
+                    let db = 20 * log10(max(sqrt(sum / Float(spectralSamples.count)), 1e-10))
+                    let bands = spectrum.process(samples: spectralSamples, sampleRate: file.processingFormat.sampleRate, dt: dt)
+                    levelHandler(db, bands)
+                }
+            }
+            liveHandler.append(converted)
         }
     }
 
@@ -444,7 +473,13 @@ final class TapAudioWriter: @unchecked Sendable {
     }
 
     func finishTimeline() {
+        // Core Audio may retain callback closures after stop; finalize the WAV before returning it.
+        defer {
+            if #available(macOS 15.0, *) { file?.close() }
+            file = nil
+        }
         do {
+            try drainConverter()
             try writeSilence(until: timeline.framePosition(at: AVAudioTime.seconds(forHostTime: mach_absolute_time())))
         } catch {
             log.error("[SystemAudio] Final timeline write failed: code=\((error as NSError).code), \(LogRedact.mask(error.localizedDescription)) error=\(LogRedact.describe(error))")
@@ -452,7 +487,7 @@ final class TapAudioWriter: @unchecked Sendable {
     }
 
     private func writeSilence(until target: Int64) throws {
-        guard target > Int64(framesWritten),
+        guard let file, target > Int64(framesWritten),
               let silence = AVAudioPCMBuffer(pcmFormat: file.processingFormat, frameCapacity: 16_000) else { return }
         if let data = silence.floatChannelData?[0] { data.initialize(repeating: 0, count: 16_000) }
         silenceFills += 1

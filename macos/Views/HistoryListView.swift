@@ -72,6 +72,7 @@ struct HistoryListView: View {
     static func sourceText(_ source: String) -> String {
         if source.hasPrefix("gesprek:") { return "Uit gesprek" }
         if source.hasPrefix("voorstel:") { return "Voorstel" }
+        if source.hasPrefix("automatisch:") { return "Automatisch" }
         return source == "herstel" ? "Hersteld" : "Handmatig"
     }
 }

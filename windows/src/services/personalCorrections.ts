@@ -6,7 +6,14 @@ export interface PersonalCorrection {
   enabled: boolean;
   /** Short explanation for the minutes AI (max 200 characters). Absent in version 1 files. */
   note?: string;
+  /** Spellings matched automatically from context. Unlike `variants` they are never replaced
+   * blindly: they go along as known candidates and pass the context check per recording. */
+  learned?: string[];
 }
+/** Variants plus learned spellings, trimmed and non-empty: what the minutes AI may have heard. */
+export const heardAs = (entry: PersonalCorrection): string[] => [...entry.variants, ...(entry.learned ?? [])].map(v => v.trim()).filter(Boolean);
+/** Dismissed key for a learned spelling, so automatic matching does not learn it again. Same as macOS. */
+export const learnedKey = (canonical: string, heard: string) => `learned:${canonical.trim().toLowerCase()}:${heard.trim().toLowerCase()}`;
 export interface CorrectionDocument {
   version: 1 | 2;
   entries: PersonalCorrection[];
@@ -44,12 +51,16 @@ export function validateCorrections(document: CorrectionDocument): void {
         if ((entry.scope === null || other.scope === null || entry.scope === other.scope) && other.variants.some(v => typeof v === "string" && v.trim().toLowerCase() === key)) throw Error("Deze variant heeft al een regel binnen dit bereik.");
       }
     }
+    if (!(entry.learned === undefined || Array.isArray(entry.learned) && entry.learned.every(validTerm))) throw Error("Ongeldige geleerde spelling.");
   }
 }
 export function upsertCorrection(entries: PersonalCorrection[], entry: PersonalCorrection): PersonalCorrection[] {
   const previous = entries.find(e => e.id !== entry.id && e.scope === entry.scope && e.canonical.toLowerCase() === entry.canonical.toLowerCase());
   const variants = new Map([...(previous?.variants ?? []), ...entry.variants].map(v => [v.trim().toLowerCase(),v.trim()]));
-  return [...entries.filter(e => e.id !== entry.id && e.id !== previous?.id), {...entry, id:previous?.id ?? entry.id, variants:[...variants.values()]}];
+  // A learned spelling that is also a fixed variant is redundant.
+  const learned = new Map([...(previous?.learned ?? []), ...(entry.learned ?? [])].map(v => [v.trim().toLowerCase(),v.trim()] as const).filter(([key]) => !variants.has(key)));
+  const { learned: _old, ...rest } = entry;
+  return [...entries.filter(e => e.id !== entry.id && e.id !== previous?.id), {...rest, id:previous?.id ?? entry.id, variants:[...variants.values()], ...(learned.size ? { learned: [...learned.values()] } : {})}];
 }
 export function activeCorrections(entries: PersonalCorrection[], profileId?: string): PersonalCorrection[] {
   return entries.filter(e => e.enabled && (e.scope === null || e.scope === profileId));
@@ -57,15 +68,17 @@ export function activeCorrections(entries: PersonalCorrection[], profileId?: str
 const escapeRegex = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const escapeHTML = (text: string) => text.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 
+const spellingKey = (text: string) => text.toLowerCase().replace(/[‐‑‒–—−]/g, "-");
+
 export function correctText(text: string, entries: PersonalCorrection[], profileId?: string, html = false): string {
-  const replacements = new Map(activeCorrections(entries, profileId).flatMap(e => e.variants.map(v => [v.trim().toLowerCase(), e.canonical.trim()] as const)));
+  const replacements = new Map(activeCorrections(entries, profileId).flatMap(e => e.variants.map(v => [spellingKey(v.trim()), e.canonical.trim()] as const)));
   if (!replacements.size) return text;
-  const alternatives = [...replacements.keys()].sort((a,b) => b.length-a.length).map(escapeRegex).join("|");
+  const alternatives = [...replacements.keys()].sort((a,b) => b.length-a.length).map(v => escapeRegex(v).replace(/-/g, "[-‐‑‒–—−]")).join("|");
   // Protected tokens win before word alternatives, so replacements never cascade.
   const pattern = new RegExp(`&(?:#\\d+|#x[\\da-f]+|[a-z]+);|(?:https?:\\/\\/|www\\.)[^\\s<>]+|[\\p{L}\\p{N}._%+-]+@[\\p{L}\\p{N}.-]+\\.[\\p{L}]{2,}|\\x60[^\\x60]*\\x60|(?<![\\p{L}\\p{N}_])(?:${alternatives})(?![\\p{L}\\p{N}_])`,"giu");
   return text.replace(pattern, match => {
     if (/^(?:https?:\/\/|www\.|&|`)/i.test(match) || match.includes("@")) return match;
-    const canonical = replacements.get(match.toLowerCase());
+    const canonical = replacements.get(spellingKey(match));
     return canonical === undefined ? match : html ? escapeHTML(canonical) : canonical;
   });
 }
@@ -87,9 +100,9 @@ export function correctHTML(html: string, entries: PersonalCorrection[], profile
   }).join("");
 }
 /** Applies one correction to a recording's notule and transcript. */
-export function correctRecording(entry: PersonalCorrection, notule: string, transcript?: string): { notule: string; transcript?: string } {
+export function correctRecording(entry: PersonalCorrection, notule: string, transcript?: string, title = ""): { notule: string; transcript?: string; title: string } {
   const profileId = entry.scope ?? undefined;
-  return { notule: correctHTML(notule, [entry], profileId), transcript: transcript === undefined ? undefined : correctText(transcript, [entry], profileId) };
+  return { notule: correctHTML(notule, [entry], profileId), transcript: transcript === undefined ? undefined : correctText(transcript, [entry], profileId), title: correctText(title, [entry], profileId) };
 }
 /**
  * Correction that writes `name` over the heard spellings of a person. Skips empty spellings,
@@ -122,7 +135,7 @@ export function contextBlock(entries: PersonalCorrection[], people: PersonContex
   const candidates: { line: string; rank: number }[] = [];
   // Entries are appended on upsert, so the last one is the newest.
   for (const entry of [...activeCorrections(entries, profileId)].reverse()) {
-    const variants = clean(entry.variants);
+    const variants = heardAs(entry);
     let line = "- " + entry.canonical.trim();
     if (variants.length) line += ` (ook gehoord als: ${variants.join(", ")})`;
     const note = entry.note?.trim();
@@ -142,7 +155,7 @@ export function contextBlock(entries: PersonalCorrection[], people: PersonContex
   const covered = new Set<string>();
   for (const entry of activeCorrections(entries, profileId)) {
     covered.add(entry.canonical.toLowerCase());
-    entry.variants.forEach(v => covered.add(v.trim().toLowerCase()));
+    heardAs(entry).forEach(v => covered.add(v.toLowerCase()));
   }
   people.forEach(person => covered.add(person.name.trim().toLowerCase()));
   for (const term of clean(extraTerms)) {

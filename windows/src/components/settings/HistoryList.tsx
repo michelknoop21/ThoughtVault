@@ -6,6 +6,7 @@ import { historyDate, versions, type HistoryEntry, type HistoryKind } from "../.
 export function sourceText(source: string): string {
   if (source.startsWith("gesprek:")) return "Uit gesprek";
   if (source.startsWith("voorstel:")) return "Voorstel";
+  if (source.startsWith("automatisch:")) return "Automatisch";
   return source === "herstel" ? "Hersteld" : "Handmatig";
 }
 

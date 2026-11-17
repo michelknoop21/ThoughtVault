@@ -180,6 +180,12 @@ final class NotuleSyncTests: XCTestCase {
         let target = try store()
         var count = 0
         target.onTranscriptChange = { count += 1 }
+        let changed = expectation(description: "Every saved local mutation refreshes the lists")
+        changed.expectedFulfillmentCount = 9
+        let observer = NotificationCenter.default.addObserver(forName: LocalTranscriptStore.didChange, object: nil, queue: nil) { notification in
+            if (notification.object as? LocalTranscriptStore) === target { changed.fulfill() }
+        }
+        defer { NotificationCenter.default.removeObserver(observer) }
         let note = TranscriptRecord(id: "a", title: "Een")
         try target.save(note)
         try target.updateTitle(taskId: "a", title: "Twee")
@@ -194,5 +200,30 @@ final class NotuleSyncTests: XCTestCase {
         XCTAssertEqual(count, 8)
         try target.delete(taskId: "a")
         XCTAssertEqual(count, 9)
+        wait(for: [changed], timeout: 1)
     }
+    func testCorrectedRecordingSurvivesReopening() throws {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let url = folder.appendingPathComponent("Corrections.store")
+        func open() throws -> LocalTranscriptStore {
+            try LocalTranscriptStore(container: ModelContainer(for: TranscriptRecord.self, PersonProfile.self,
+                configurations: ModelConfiguration(url: url, cloudKitDatabase: .none)))
+        }
+        do {
+            let target = try open()
+            try target.save(TranscriptRecord(id: "corrected", title: "A-E-oplossingen", rawTranscription: "A-E modellen.", notuleHtml: "<p>A-E werkt.</p>"))
+            let note = try XCTUnwrap(target.record(forTaskId: "corrected"))
+            let corrected = PersonalCorrections.apply(PersonalCorrection(canonical: "AI", variants: ["A-E"]),
+                                                      notule: note.notuleHtml, transcript: note.rawTranscription, title: note.title)
+            try target.updateNotule(taskId: note.id, html: corrected.notule, transcription: corrected.transcript, title: corrected.title)
+        }
+        let reopened = try open()
+        let note = try XCTUnwrap(reopened.record(forTaskId: "corrected"))
+        XCTAssertEqual(note.title, "AI-oplossingen")
+        XCTAssertEqual(note.rawTranscription, "AI modellen.")
+        XCTAssertEqual(note.notuleHtml, "<p>AI werkt.</p>")
+    }
+
 }

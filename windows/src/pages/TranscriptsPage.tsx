@@ -183,8 +183,8 @@ export function TranscriptsPage() {
 
   // --- Notule save ---
   /** `transcription` is the corrected transcript, saved alongside the notule. */
-  async function handleSaveNotule(id: string, html: string, syncObsidian = true, transcription?: string) {
-    const patch = { notule_html: html, has_notes: !!html.trim(), ...(transcription === undefined ? {} : { raw_transcription: transcription }) };
+  async function handleSaveNotule(id: string, html: string, syncObsidian = true, transcription?: string, title?: string) {
+    const patch = { ...(title === undefined ? {} : { title }), notule_html: html, has_notes: !!html.trim(), ...(transcription === undefined ? {} : { raw_transcription: transcription }) };
     try {
       if (isLocalId(id)) {
         await useLocalTranscriptsStore.getState().update(id, patch);
@@ -199,6 +199,7 @@ export function TranscriptsPage() {
         return;
       }
       await api.updateNotuleHTML(id, html);
+      if (title !== undefined) await api.updateTranscript(id, { title });
       if (transcription !== undefined) await api.updateTranscription(id, transcription);
       updateTranscript(id, patch);
       toast.show("Notule opgeslagen", "success");
@@ -235,7 +236,7 @@ export function TranscriptsPage() {
       created_at: new Date().toISOString(), message: `Notulen met ${profile.name}` });
     // Local records: re-run the on-device LLM over the stored transcription.
     if (isLocalId(transcript.id)) {
-      const transcription = transcript.raw_transcription ?? "";
+      let transcription = transcript.raw_transcription ?? "";
       if (!hasUsableTranscription(transcription)) {
         tasks.updateBackgroundTask(taskId, { status: "failed", error_message: "Geen bruikbare transcriptie beschikbaar" });
         toast.show("Geen bruikbare transcriptie beschikbaar", "error");
@@ -243,6 +244,11 @@ export function TranscriptsPage() {
       }
       setRegeneratingId(transcript.id);
       try {
+        transcription = await LLMService.correctTranscription(transcription, profile.id, transcript.id);
+        if (transcription !== transcript.raw_transcription) {
+          await useLocalTranscriptsStore.getState().update(transcript.id, { raw_transcription: transcription });
+          updateTranscript(transcript.id, { raw_transcription: transcription });
+        }
         const meter = new UsageMeter();
         const html = await LLMService.generateNotulen(transcription, profile,
           () => tasks.updateBackgroundTask(taskId, { progress: 60 }), [], transcript.quick_note,
@@ -546,7 +552,7 @@ export function TranscriptsPage() {
           onRegenerate={requestRegenerate}
           onDelete={handleDelete}
           onUpdateTitle={handleUpdateTitle}
-          onSaveNotule={(id, html, transcription) => handleSaveNotule(id, html, true, transcription)}
+          onSaveNotule={(id, html, transcription, title) => handleSaveNotule(id, html, true, transcription, title)}
           onCopy={handleCopy}
           onExportPDF={handleExportPDF}
           onExportTXT={handleExportTXT}

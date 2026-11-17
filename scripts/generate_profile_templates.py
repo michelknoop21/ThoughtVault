@@ -24,7 +24,7 @@ def build_entries(source):
             template = item['template']
         elif sections:
             template = '<h1>[Doel of uitkomst van dit gesprek in 4-10 woorden]</h1>\n' + '\n'.join(
-                f'<section><h2>{section}</h2><p>[Alleen brongebonden inhoud]</p></section>' for section in sections
+                ('<!-- Alleen opnemen bij concrete inhoud uit de bron; anders deze hele sectie weglaten. -->\n' if ' (alleen bij' in section else '') + f'<section><h2>{section.split(" (alleen bij")[0]}</h2><p>[Alleen brongebonden inhoud]</p></section>' for section in sections
             )
         else:
             template = '<h1>[Waar de prompt voor dient, 4-10 woorden]</h1>\n<p>[Kopieerbare prompttekst]</p>'

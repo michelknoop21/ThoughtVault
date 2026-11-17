@@ -51,3 +51,17 @@ def test_fixed_transcript_reaches_each_local_and_cloud_profile_with_distinct_str
     prompt_profile = profiles[-1]
     assert prompt in prompt_profile['notulePrompt'].replace('{{TRANSCRIPTION}}', prompt)
     assert 'geen vergadersecties' in prompt_profile['notulePrompt']
+
+
+def test_all_profiles_make_open_sections_conditional_and_reserve_audit_heading():
+    source = json.loads((ROOT / 'data/profileBlueprints.json').read_text())
+    profiles = json.loads((ROOT / 'macos/Resources/ProfileTemplates.json').read_text())
+    for blueprint, profile in zip(source['profiles'], profiles):
+        assert 'alleen op als de bron daar concrete inhoud voor bevat' in profile['systemPrompt']
+        assert 'Maak zelf geen sectie “Even nalopen”' in profile['systemPrompt']
+        assert 'Even nalopen' not in profile['template']
+        for section in blueprint['sections']:
+            if any(term in section.lower() for term in ['open', 'risico', 'blokkade', 'onderzoek']):
+                assert 'alleen bij concrete inhoud uit de bron' in section
+                assert 'hele sectie weglaten' in profile['template']
+                assert '<h2>' + section + '</h2>' not in profile['template']

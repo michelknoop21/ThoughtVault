@@ -49,7 +49,7 @@ interface TranscriptDetailProps {
   onDelete: (transcript: Transcript) => void;
   onUpdateTitle: (id: string, title: string) => Promise<void>;
   /** `transcription` is passed only when a correction changed the transcript. */
-  onSaveNotule: (id: string, html: string, transcription?: string) => Promise<void>;
+  onSaveNotule: (id: string, html: string, transcription?: string, title?: string) => Promise<void>;
   onCopy: (text: string) => void;
   onExportPDF: (transcript: Transcript) => void;
   onExportTXT: (transcript: Transcript) => void;
@@ -187,8 +187,8 @@ export function TranscriptDetail({
     const store = usePersonalCorrectionsStore.getState();
     await store.hydrate();
     validateCorrections({version:1,entries:remember ? upsertCorrection(store.entries,entry) : [entry]});
-    const corrected = correctRecording(entry, isEditingNotule ? editorRef.current?.innerHTML ?? editedHTML : transcript.notule_html || "", transcript.raw_transcription);
-    await onSaveNotule(transcript.id, corrected.notule, corrected.transcript !== transcript.raw_transcription ? corrected.transcript : undefined);
+    const corrected = correctRecording(entry, isEditingNotule ? editorRef.current?.innerHTML ?? editedHTML : transcript.notule_html || "", transcript.raw_transcription, transcript.title);
+    await onSaveNotule(transcript.id, corrected.notule, corrected.transcript !== transcript.raw_transcription ? corrected.transcript : undefined, corrected.title !== transcript.title ? corrected.title : undefined);
     if (isEditingNotule) setEditedHTML(corrected.notule);
     if (remember) {
       try { await store.save(entry); }

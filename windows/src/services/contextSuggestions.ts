@@ -3,7 +3,7 @@
 // context-suggestions.json until the user accepts or rejects them; nothing is added to
 // the glossary automatically. Port of the macOS ContextSuggestions, same prompt and format.
 import { invoke } from "@tauri-apps/api/core";
-import { containsWord, validTerm, type PersonalCorrection } from "./personalCorrections";
+import { learnedKey, containsWord, validTerm, type PersonalCorrection } from "./personalCorrections";
 import { usePersonalCorrectionsStore, loadCorrectionsOrEmpty } from "../stores/personalCorrectionsStore";
 import { usePersonProfileStore } from "../stores/personProfileStore";
 import { LLMService, minutesContext } from "./llm";
@@ -90,7 +90,7 @@ export function parse(raw: string, transcript: string, entries: PersonalCorrecti
     return { terms: [], people: [] };
   }
   const rejected = new Set(dismissed.map(d => d.toLowerCase()));
-  const known = new Set(entries.flatMap(e => [e.canonical, ...e.variants]).map(v => trim(v).toLowerCase()));
+  const known = new Set(entries.flatMap(e => e.variants.map(v => learnedKey(e.canonical, v))));
   const ownNames = new Set(selfNames.map(n => trim(n).toLowerCase()).filter(Boolean));
   const ownNamesAndAliases = new Set([...ownNames, ...selfAliases.map(a => trim(a).toLowerCase()).filter(Boolean)]);
 
@@ -102,7 +102,7 @@ export function parse(raw: string, transcript: string, entries: PersonalCorrecti
       const cleaned = { heard: trim(heard), canonical: trim(term.canonical), note: noteText(term.note) };
       const key = dismissKey({ term: cleaned });
       if (!validTerm(cleaned.heard) || !validTerm(cleaned.canonical) || cleaned.heard.toLowerCase() === cleaned.canonical.toLowerCase()
-        || known.has(cleaned.canonical.toLowerCase()) || rejected.has(key) || !containsWord(cleaned.heard, transcript) || seen.has(key)) continue;
+        || known.has(learnedKey(cleaned.canonical, cleaned.heard)) || rejected.has(key) || rejected.has(learnedKey(cleaned.canonical, cleaned.heard)) || !containsWord(cleaned.heard, transcript) || seen.has(key)) continue;
       seen.add(key);
       terms.push(cleaned);
     }
@@ -219,7 +219,7 @@ Regels:
 - Een gewoon Nederlands woord met een herkenningsfout is nooit een term.
 - heard is precies één letterlijke schrijfwijze zoals die in de transcriptie staat. Komt een term in meerdere schrijfwijzen voor, herhaal het item dan per schrijfwijze.
 - canonical is de juiste schrijfwijze. note is een korte toelichting van hooguit één zin.
-- Stel geen term voor die al in de bekende context staat.
+- Stel geen reeds bekende combinatie van gehoorde en correcte spelling voor. Een nieuwe schrijfwijze van een bekende term mag wel: toon die bij twijfel als voorstel, zonder de tekst te veranderen.
 - people zijn alleen personen die in het gesprek met naam worden genoemd en een rol spelen. Laat personen zonder naam weg, zoals "mijn schoonvader". Stel de gebruiker zelf nooit voor.
 - Vul role, organization en responsibilities alleen in als dat in het gesprek expliciet wordt gezegd. Anders laat je ze leeg.
 - topics zijn de onderwerpen waar de persoon in dit gesprek bij betrokken is. heardAs bevat letterlijke schrijfwijzen van de naam uit de transcriptie.

@@ -332,6 +332,48 @@ final class SupportViewModelTests: XCTestCase {
         XCTAssertEqual(vm.activeTasks.first?.rawTranscription, "LOCAL-TRANSCRIPT")
     }
 
+    @MainActor func testMarkAllReadRefreshesServerStateIncludingNewReplies() async {
+        let (vm, _, defaults, session, directory, suite) = fixture()
+        defer { cleanup(defaults, session, directory, suite) }
+        SupportStub.handler { request, _ in
+            switch request.url?.lastPathComponent {
+            case "tickets": .init(status: 200, text: #"{"data":[]}"#)
+            case "unread-count": .init(status: 200, text: #"{"data":{"count":1}}"#)
+            default: .init(status: 200, text: "{}")
+            }
+        }
+        vm.unreadCount = 3
+        await vm.markAllRead()
+        XCTAssertEqual(vm.unreadCount, 1)
+        XCTAssertFalse(vm.markingAllRead)
+        XCTAssertNil(vm.markReadError)
+        SupportStub.handler { request, _ in
+            .init(status: 200, text: request.url?.lastPathComponent == "unread-count" ? #"{"data":{"count":0}}"# : #"{"data":[]}"#)
+        }
+        await vm.markAllRead()
+        XCTAssertEqual(vm.unreadCount, 0)
+    }
+
+    @MainActor func testSendingCrashReportDoesNotCreateAnUnreadBadge() async {
+        let (vm, _, defaults, session, directory, suite) = fixture()
+        defer { cleanup(defaults, session, directory, suite) }
+        await vm.report(stage: .crash, shown: "Onverwacht gestopt", error: "crash")
+        XCTAssertEqual(vm.unreadCount, 0)
+        vm.unreadCount = 2
+        await vm.report(stage: .crash, shown: "Onverwacht gestopt", error: "crash")
+        XCTAssertEqual(vm.unreadCount, 2)
+    }
+
+    @MainActor func testMarkAllReadFailurePreservesUnreadState() async {
+        let (vm, _, defaults, session, directory, suite) = fixture()
+        defer { cleanup(defaults, session, directory, suite) }
+        vm.unreadCount = 3
+        await vm.markAllRead()
+        XCTAssertEqual(vm.unreadCount, 3)
+        XCTAssertNotNil(vm.markReadError)
+        XCTAssertFalse(vm.markingAllRead)
+    }
+
     @MainActor func testUnreadBadgeRemainsUntilTheThreadIsOpened() async throws {
         let (vm, _, defaults, session, directory, suite) = fixture()
         defer { cleanup(defaults, session, directory, suite) }

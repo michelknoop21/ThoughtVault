@@ -140,6 +140,9 @@ export async function unreadCount(inst: Installation): Promise<number> {
   if (!object(data) || !object(data.data) || !count(data.data.count)) return invalidResponse();
   return data.data.count;
 }
+export async function markAllRead(inst: Installation): Promise<void> {
+  await call("POST", "/tickets/read-all", inst, {});
+}
 export async function ticketMessages(inst: Installation, ticketId: string): Promise<SupportMessage[]> {
   requireInput(ticketIdValid(ticketId));
   const { data } = await call("GET", `/tickets/${ticketId}/messages`, inst);

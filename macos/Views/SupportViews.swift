@@ -163,6 +163,16 @@ struct SupportTicketList: View {
     var selectedID: String?
     let select: (SupportTicket) -> Void
 
+    var markAllReadButton: some View {
+        Button { Task { await support.markAllRead() } } label: {
+            Text(String(localized: "support.readAll"))
+                #if os(iOS)
+                .frame(minHeight: 44)
+                #endif
+        }
+            .disabled(support.markingAllRead || (support.unreadCount == 0 && !support.tickets.contains(where: \.unread)))
+    }
+
     var body: some View {
         Group {
             #if os(macOS)
@@ -180,6 +190,10 @@ struct SupportTicketList: View {
     private var stackedBody: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: TS.Spacing.md) {
+                markAllReadButton
+                if let error = support.markReadError {
+                    Text(error).foregroundStyle(Color.statusError)
+                }
                 Button("Vernieuwen") { Task { await support.loadTickets() } }
                 if support.tickets.isEmpty {
                     Text("Nog geen meldingen. Via Melding maken stuur je een fout, idee of vraag.")

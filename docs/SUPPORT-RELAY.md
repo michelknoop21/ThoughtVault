@@ -20,6 +20,7 @@ Alle routes behalve `POST /installations` vragen de headers `X-TV-Installation` 
 | `POST /reports` | zie hieronder | 1,5 MB, 20 per uur per installatie, 60 per uur per IP | `{ticketId, ref, repeated, count, logAttached}` |
 | `GET /tickets` | geen | 120 per uur per installatie (gedeeld) | `{data:[...], pagination:{...}}`, maximaal 50 |
 | `GET /unread-count` | geen | gedeeld | `{data:{count}}` |
+| `POST /tickets/read-all` | geen | gedeeld | `{data:{readThrough}}`; alle eigen meldingen gelezen, inclusief andere pagina's |
 | `GET /tickets/{id}/messages` | geen | gedeeld | `{data:[...]}`, markeert als gelezen |
 | `POST /tickets/{id}/messages` | `{body}` van 1 tot 5000 tekens | 16 KB, gedeeld | het nieuwe bericht |
 

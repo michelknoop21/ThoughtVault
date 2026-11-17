@@ -372,7 +372,7 @@ dialog.desktop-dialog > [role="dialog"] > :first-child, dialog.desktop-dialog > 
 /* SettingsLayout and studio card metrics from macOS. */
 .northstar-settings { padding: 21px 20px 24px 24px; }
 .northstar-settings h1 { font-weight: 700; margin-bottom: 19px; }
-.northstar-settings .settings-tabs { max-width: 840px; padding: 3px; gap: 2px; margin-bottom: 28px; border-radius: 11px; }
+.northstar-settings .settings-tabs { max-width: 100%; padding: 3px; gap: 2px; margin-bottom: 28px; border-radius: 11px; }
 .northstar-settings .settings-tabs button { height: 40px; min-height: 40px; padding: 0 12px; font-size: 13.5px; border-radius: 9px; }
 .northstar-settings .settings-section-header h2 { font-size: 28px; }
 .northstar-settings .settings-section-header p { font-size: 15px; margin-bottom: 28px; }
@@ -386,7 +386,6 @@ dialog.desktop-dialog > [role="dialog"] > :first-child, dialog.desktop-dialog > 
 .northstar-settings .provider-tiles button { min-height: 88px; padding: 14px; }
 .northstar-settings .provider-tiles button span { font-size: 12px; }
 @container (min-width: 1100px) { .processing-columns { grid-template-columns: minmax(0,1fr) 342px; gap: 28px; } }
-@container (max-width: 889px) { .northstar-settings .settings-tabs { display: grid; width: 100%; grid-template-columns: repeat(auto-fit,minmax(150px,1fr)); } }
 .desktop-page .page-content { max-width: 860px; margin-inline: auto; }
 .desktop-page .page-header { max-width: none; }
 .desktop-tasks .page-content { flex: 1; }

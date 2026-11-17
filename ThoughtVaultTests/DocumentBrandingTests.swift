@@ -94,6 +94,8 @@ extension DocumentBrandingTests {
         let zoneID = CKRecordZone.ID(zoneName: "BrandingAcceptance-\(run)", ownerName: CKCurrentUserDefaultName)
         let recordID = CKRecord.ID(recordName: "synthetic-note", zoneID: zoneID)
         let snapshot = try example().json()
+        let sourceText = "=== Bronnotule 1 ===\nFictief besluit café ☕\n=== Einde bronnotule 1 ==="
+        let sourceJSON = "[{\"id\":\"fictieve-bron\",\"title\":\"Bronnotule\",\"date\":\"2026-11-10T10:00:00Z\"}]"
         let directory = AppEnvironment.supportDirectory.appending(path: "CloudBrandingAcceptance")
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: directory) }
@@ -113,6 +115,8 @@ extension DocumentBrandingTests {
             let record = TranscriptRecord(id: "synthetic-note", title: "Huisstijlacceptatie",
                                           notuleHtml: "<p>Synthetisch besluit met café ☕.</p>")
             record.documentBrandingJSON = snapshot
+            record.rawTranscription = sourceText
+            record.mergeSourcesJSON = sourceJSON
             try await upload(SyncedNotule(record), record: CKRecord(recordType: "Notule", recordID: recordID))
         } else {
             let cloudRecord = try await database.record(for: recordID)
@@ -120,6 +124,8 @@ extension DocumentBrandingTests {
             let data = try Data(contentsOf: XCTUnwrap(asset.fileURL))
             let payload = try JSONDecoder().decode(SyncedNotule.self, from: data)
             XCTAssertEqual(try payload.digest(), cloudRecord["contentHash"] as? String)
+            XCTAssertEqual(payload.rawTranscription, sourceText)
+            XCTAssertEqual(payload.mergeSourcesJSON, sourceJSON)
             let applied = try DocumentBranding.parse(XCTUnwrap(payload.documentBrandingJSON))
             XCTAssertTrue(applied == (try example()), "Snapshot or embedded assets changed in iCloud")
             if phase == "phone-edit" {
@@ -132,7 +138,9 @@ extension DocumentBrandingTests {
                 let local = TranscriptRecord(id: payload.id, title: "")
                 payload.apply(to: local)
                 try store.save(local)
-                try store.updateNotule(taskId: local.taskId, html: "<p>Bewerkt op fysieke iPhone — café ☕.</p>")
+                try store.updateNotule(taskId: local.taskId, html: "<p>Bewerkt op fysieke iPhone — café ☕.</p>", transcription: "Mag de bronmomentopname niet wijzigen")
+                XCTAssertEqual(local.rawTranscription, sourceText)
+                XCTAssertEqual(local.mergeSourcesJSON, sourceJSON)
                 XCTAssertTrue(local.documentBrandingJSON == payload.documentBrandingJSON, "Editing changed the snapshot")
                 try await upload(SyncedNotule(local), record: cloudRecord)
             } else {

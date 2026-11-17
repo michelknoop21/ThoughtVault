@@ -19,7 +19,10 @@ private let logger = AppLog(category: "TranscriptsView")
 /// Locally processed records carry a deterministic "local-<uuid>" task id (minted in
 /// RecordingViewModel.processLocally) and live in SwiftData, not on the server.
 /// Server ids never use this prefix, so the check is unambiguous.
-func isLocalTranscript(_ taskId: String) -> Bool { taskId.hasPrefix("local-") }
+@MainActor
+func isLocalTranscript(_ taskId: String) -> Bool {
+    taskId.hasPrefix("local-") || LocalTranscriptStore.shared.record(forTaskId: taskId) != nil
+}
 
 
 // MARK: - TranscriptsView
